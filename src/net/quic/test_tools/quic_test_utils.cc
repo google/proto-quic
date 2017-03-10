@@ -25,7 +25,6 @@
 #include "net/spdy/spdy_frame_builder.h"
 #include "third_party/boringssl/src/include/openssl/sha.h"
 
-using base::StringPiece;
 using std::string;
 using testing::_;
 using testing::Invoke;
@@ -97,7 +96,7 @@ QuicFlagSaver::~QuicFlagSaver() {
 #undef QUIC_FLAG
 }
 
-string Sha1Hash(StringPiece data) {
+string Sha1Hash(QuicStringPiece data) {
   char buffer[SHA_DIGEST_LENGTH];
   SHA1(reinterpret_cast<const uint8_t*>(data.data()), data.size(),
        reinterpret_cast<uint8_t*>(buffer));
@@ -106,7 +105,7 @@ string Sha1Hash(StringPiece data) {
 
 uint64_t SimpleRandom::RandUint64() {
   string hash =
-      Sha1Hash(StringPiece(reinterpret_cast<char*>(&seed_), sizeof(seed_)));
+      Sha1Hash(QuicStringPiece(reinterpret_cast<char*>(&seed_), sizeof(seed_)));
   DCHECK_EQ(static_cast<size_t>(SHA_DIGEST_LENGTH), hash.length());
   memcpy(&seed_, hash.data(), sizeof(seed_));
   return seed_;
@@ -612,7 +611,7 @@ QuicEncryptedPacket* ConstructEncryptedPacket(
   header.public_header.reset_flag = reset_flag;
   header.public_header.packet_number_length = packet_number_length;
   header.packet_number = packet_number;
-  QuicStreamFrame stream_frame(1, false, 0, StringPiece(data));
+  QuicStreamFrame stream_frame(1, false, 0, QuicStringPiece(data));
   QuicFrame frame(&stream_frame);
   QuicFrames frames;
   frames.push_back(frame);
@@ -656,7 +655,7 @@ QuicEncryptedPacket* ConstructMisFramedEncryptedPacket(
   header.public_header.reset_flag = reset_flag;
   header.public_header.packet_number_length = packet_number_length;
   header.packet_number = packet_number;
-  QuicStreamFrame stream_frame(1, false, 0, StringPiece(data));
+  QuicStreamFrame stream_frame(1, false, 0, QuicStringPiece(data));
   QuicFrame frame(&stream_frame);
   QuicFrames frames;
   frames.push_back(frame);

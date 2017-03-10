@@ -127,6 +127,11 @@ def _LoadToolchainEnv(cpu, sdk_dir):
                                        os.environ['GYP_MSVS_OVERRIDE_PATH'],
                                        'VC/vcvarsall.bat'))
     if not os.path.exists(script_path):
+      # vcvarsall.bat for VS 2017 fails if run after running vcvarsall.bat from
+      # VS 2013 or VS 2015. Fix this by clearing the vsinstalldir environment
+      # variable.
+      if 'VSINSTALLDIR' in os.environ:
+        del os.environ['VSINSTALLDIR']
       other_path = os.path.normpath(os.path.join(
                                         os.environ['GYP_MSVS_OVERRIDE_PATH'],
                                         'VC/Auxiliary/Build/vcvarsall.bat'))

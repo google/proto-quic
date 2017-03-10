@@ -163,6 +163,12 @@ fuzzer_test("base_json_reader_fuzzer") {
   ]
 }
 
+libpng_seed_corpuses = [
+  "//cc/test/data",
+  "//third_party/WebKit/LayoutTests/images/png-suite/samples",
+  "//third_party/WebKit/LayoutTests/images/resources/pngfuzz",
+]
+
 fuzzer_test("gfx_png_image_fuzzer") {
   sources = [
     "gfx_png_image_fuzzer.cc",
@@ -172,11 +178,7 @@ fuzzer_test("gfx_png_image_fuzzer") {
     "//ui/gfx",
   ]
   dict = "dicts/png.dict"
-  seed_corpuses = [
-    "//cc/test/data",
-    "//third_party/WebKit/LayoutTests/images/png-suite/samples",
-    "//third_party/WebKit/LayoutTests/images/resources/pngfuzz",
-  ]
+  seed_corpuses = libpng_seed_corpuses
 }
 
 fuzzer_test("zlib_uncompress_fuzzer") {
@@ -207,11 +209,20 @@ fuzzer_test("libpng_read_fuzzer") {
     "//third_party/libpng",
   ]
   dict = "dicts/png.dict"
-  seed_corpuses = [
-    "//cc/test/data",
-    "//third_party/WebKit/LayoutTests/images/png-suite/samples",
-    "//third_party/WebKit/LayoutTests/images/resources/pngfuzz",
+  seed_corpuses = libpng_seed_corpuses
+}
+
+fuzzer_test("libpng_progressive_read_fuzzer") {
+  sources = [
+    "libpng_read_fuzzer.cc",
   ]
+  defines = [ "PNG_FUZZ_PROGRESSIVE" ]
+  deps = [
+    "//base",
+    "//third_party/libpng",
+  ]
+  dict = "dicts/png.dict"
+  seed_corpuses = libpng_seed_corpuses
 }
 
 fuzzer_test("v8_script_parser_fuzzer") {

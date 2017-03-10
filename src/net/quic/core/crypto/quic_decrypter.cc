@@ -11,7 +11,6 @@
 #include "net/quic/core/crypto/null_decrypter.h"
 #include "net/quic/platform/api/quic_logging.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -30,15 +29,15 @@ QuicDecrypter* QuicDecrypter::Create(QuicTag algorithm) {
 }
 
 // static
-void QuicDecrypter::DiversifyPreliminaryKey(StringPiece preliminary_key,
-                                            StringPiece nonce_prefix,
+void QuicDecrypter::DiversifyPreliminaryKey(QuicStringPiece preliminary_key,
+                                            QuicStringPiece nonce_prefix,
                                             const DiversificationNonce& nonce,
                                             size_t key_size,
                                             size_t nonce_prefix_size,
                                             string* out_key,
                                             string* out_nonce_prefix) {
   crypto::HKDF hkdf(preliminary_key.as_string() + nonce_prefix.as_string(),
-                    StringPiece(nonce.data(), nonce.size()),
+                    QuicStringPiece(nonce.data(), nonce.size()),
                     "QUIC key diversification", 0, key_size, 0,
                     nonce_prefix_size, 0);
   *out_key = hkdf.server_write_key().as_string();

@@ -12,6 +12,7 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_types.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -78,7 +79,7 @@ class QUIC_EXPORT_PRIVATE ProofVerifier {
       const uint16_t port,
       const std::string& server_config,
       QuicVersion quic_version,
-      base::StringPiece chlo_hash,
+      QuicStringPiece chlo_hash,
       const std::vector<std::string>& certs,
       const std::string& cert_sct,
       const std::string& signature,

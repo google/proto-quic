@@ -1,0 +1,203 @@
+rule irt_x64_cc
+  command = ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-clang -MMD -MF ${out}.d -DNACL_TC_REV=2eeb54c6995817a39e5c5cc0b40e26518396335f ${defines} ${include_dirs} ${cflags} ${cflags_c} -c ${in} -o ${out}
+  description = CC ${out}
+  depfile = ${out}.d
+  deps = gcc
+rule irt_x64_cxx
+  command = ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-clang++ -MMD -MF ${out}.d -DNACL_TC_REV=2eeb54c6995817a39e5c5cc0b40e26518396335f ${defines} ${include_dirs} ${cflags} ${cflags_cc} -c ${in} -o ${out}
+  description = CXX ${out}
+  depfile = ${out}.d
+  deps = gcc
+rule irt_x64_asm
+  command = ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-clang -MMD -MF ${out}.d -DNACL_TC_REV=2eeb54c6995817a39e5c5cc0b40e26518396335f ${defines} ${include_dirs} ${asmflags} -c ${in} -o ${out}
+  description = ASM ${out}
+  depfile = ${out}.d
+  deps = gcc
+rule irt_x64_alink
+  command = python "../../../../../build/toolchain/gcc_ar_wrapper.py" --output=${out} --ar="../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-ar" ${arflags} rcsD @"${out}.rsp"
+  description = AR ${out}
+  rspfile = ${out}.rsp
+  rspfile_content = ${in}
+rule irt_x64_solink
+  command = python "/usr/local/google/home/jokulik/chromium/src/build/toolchain/gcc_solink_wrapper.py" --readelf="../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-readelf" --nm="../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-nm" --strip=../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-strip --sofile="${root_out_dir}/lib.unstripped/${target_output_name}${output_extension}" --tocfile="${output_dir}/${target_output_name}${output_extension}.TOC" --output="${output_dir}/${target_output_name}${output_extension}" -- python ../../../../../native_client/build/link_irt.py --tls-edit=../Default/tls_edit --link-cmd=../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-clang++ --readelf-cmd=../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-readelf -shared ${ldflags} -o "${root_out_dir}/lib.unstripped/${target_output_name}${output_extension}" -Wl,-soname="${target_output_name}${output_extension}" @"${output_dir}/${target_output_name}${output_extension}.rsp"
+  description = SOLINK ${output_dir}/${target_output_name}${output_extension}
+  rspfile = ${output_dir}/${target_output_name}${output_extension}.rsp
+  rspfile_content = -Wl,--whole-archive ${in} ${solibs} -Wl,--no-whole-archive  ${libs} 
+  pool = build_toolchain_link_pool
+  restat = 1
+rule irt_x64_solink_module
+  command = python ../../../../../native_client/build/link_irt.py --tls-edit=../Default/tls_edit --link-cmd=../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-clang++ --readelf-cmd=../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-readelf -shared ${ldflags} -o "${root_out_dir}/lib.unstripped/${target_output_name}${output_extension}" -Wl,-soname="${target_output_name}${output_extension}" @"${output_dir}/${target_output_name}${output_extension}.rsp" && ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-strip --strip-unneeded -o "${output_dir}/${target_output_name}${output_extension}" "${root_out_dir}/lib.unstripped/${target_output_name}${output_extension}"
+  description = SOLINK_MODULE ${output_dir}/${target_output_name}${output_extension}
+  rspfile = ${output_dir}/${target_output_name}${output_extension}.rsp
+  rspfile_content = -Wl,--whole-archive ${in} ${solibs} -Wl,--no-whole-archive  ${libs} 
+  pool = build_toolchain_link_pool
+rule irt_x64_link
+  command = python "../../../../../build/toolchain/gcc_link_wrapper.py" --strip="../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-strip" --unstripped-file="${root_out_dir}/exe.unstripped/${target_output_name}${output_extension}" --output="${output_dir}/${target_output_name}${output_extension}" -- python ../../../../../native_client/build/link_irt.py --tls-edit=../Default/tls_edit --link-cmd=../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-clang++ --readelf-cmd=../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-readelf ${ldflags} -o "${root_out_dir}/exe.unstripped/${target_output_name}${output_extension}" -Wl,--start-group @"${output_dir}/${target_output_name}${output_extension}.rsp" ${solibs} -Wl,--end-group  ${libs} 
+  description = LINK ${output_dir}/${target_output_name}${output_extension}
+  rspfile = ${output_dir}/${target_output_name}${output_extension}.rsp
+  rspfile_content = ${in}
+  pool = build_toolchain_link_pool
+rule irt_x64_stamp
+  command = touch ${out}
+  description = STAMP ${out}
+rule irt_x64_copy
+  command = ln -f ${in} ${out} 2>/dev/null || (rm -rf ${out} && cp -af ${in} ${out})
+  description = COPY ${in} ${out}
+
+subninja irt_x64/obj/base/base.ninja
+build irt_x64/obj/base/base_paths.stamp: irt_x64_stamp
+subninja irt_x64/obj/base/base_static.ninja
+rule __base_build_date___build_toolchain_nacl_irt_x64__rule
+  command = python ../../../../../build/write_build_date_header.py irt_x64/gen/base/generated_build_date.h default
+  description = ACTION //base:build_date(//build/toolchain/nacl:irt_x64)
+  restat = 1
+build irt_x64/obj/base/build_date.inputdeps.stamp: irt_x64_stamp ../../../../../build/write_build_date_header.py ../../../../../build/util/LASTCHANGE ./tls_edit
+
+build irt_x64/gen/base/generated_build_date.h: __base_build_date___build_toolchain_nacl_irt_x64__rule | irt_x64/obj/base/build_date.inputdeps.stamp
+
+build irt_x64/obj/base/build_date.stamp: irt_x64_stamp irt_x64/gen/base/generated_build_date.h
+rule __base_debugging_flags___build_toolchain_nacl_irt_x64__rule
+  rspfile = __base_debugging_flags___build_toolchain_nacl_irt_x64__rule.rsp
+  rspfile_content = --flags ENABLE_PROFILING=false
+  command = python ../../../../../build/write_buildflag_header.py --output base/debug/debugging_flags.h --rulename //base$:debugging_flags --gen-dir irt_x64/gen --definitions ${rspfile}
+  description = ACTION //base:debugging_flags(//build/toolchain/nacl:irt_x64)
+  restat = 1
+build irt_x64/obj/base/debugging_flags.inputdeps.stamp: irt_x64_stamp ../../../../../build/write_buildflag_header.py ./tls_edit
+
+build irt_x64/gen/base/debug/debugging_flags.h: __base_debugging_flags___build_toolchain_nacl_irt_x64__rule | irt_x64/obj/base/debugging_flags.inputdeps.stamp
+
+build irt_x64/obj/base/debugging_flags.stamp: irt_x64_stamp irt_x64/gen/base/debug/debugging_flags.h
+subninja irt_x64/obj/base/i18n.ninja
+build irt_x64/obj/base/allocator/allocator.stamp: irt_x64_stamp
+rule __base_allocator_features___build_toolchain_nacl_irt_x64__rule
+  rspfile = __base_allocator_features___build_toolchain_nacl_irt_x64__rule.rsp
+  rspfile_content = --flags USE_EXPERIMENTAL_ALLOCATOR_SHIM=false ENABLE_WIN_ALLOCATOR_SHIM_TESTS=\(false\$ \|\|\$ false\)
+  command = python ../../../../../build/write_buildflag_header.py --output base/allocator/features.h --rulename //base/allocator$:features --gen-dir irt_x64/gen --definitions ${rspfile}
+  description = ACTION //base/allocator:features(//build/toolchain/nacl:irt_x64)
+  restat = 1
+build irt_x64/obj/base/allocator/features.inputdeps.stamp: irt_x64_stamp ../../../../../build/write_buildflag_header.py ./tls_edit
+
+build irt_x64/gen/base/allocator/features.h: __base_allocator_features___build_toolchain_nacl_irt_x64__rule | irt_x64/obj/base/allocator/features.inputdeps.stamp
+
+build irt_x64/obj/base/allocator/features.stamp: irt_x64_stamp irt_x64/gen/base/allocator/features.h
+subninja irt_x64/obj/base/third_party/dynamic_annotations/dynamic_annotations.ninja
+subninja irt_x64/obj/build/config/nacl/nacl_base.ninja
+build irt_x64/obj/build/config/sanitizers/deps.stamp: irt_x64_stamp irt_x64/obj/build/config/sanitizers/deps_no_options.stamp
+build irt_x64/obj/build/config/sanitizers/deps_no_options.stamp: irt_x64_stamp
+subninja irt_x64/obj/components/tracing/tracing.ninja
+build irt_x64/obj/gpu/command_buffer/client/client.stamp: irt_x64_stamp irt_x64/obj/gpu/command_buffer/client/client_sources.stamp
+subninja irt_x64/obj/gpu/command_buffer/client/client_sources.ninja
+build irt_x64/obj/gpu/command_buffer/client/gles2_cmd_helper.stamp: irt_x64_stamp irt_x64/obj/gpu/command_buffer/client/gles2_cmd_helper_sources.stamp
+subninja irt_x64/obj/gpu/command_buffer/client/gles2_cmd_helper_sources.ninja
+subninja irt_x64/obj/gpu/command_buffer/client/gles2_implementation.ninja
+subninja irt_x64/obj/gpu/command_buffer/client/gles2_interface.ninja
+build irt_x64/obj/gpu/command_buffer/common/common.stamp: irt_x64_stamp irt_x64/obj/gpu/command_buffer/common/common_sources.stamp
+subninja irt_x64/obj/gpu/command_buffer/common/common_sources.ninja
+subninja irt_x64/obj/gpu/command_buffer/common/gles2_utils.ninja
+build irt_x64/obj/gpu/ipc/common/command_buffer_traits.stamp: irt_x64_stamp irt_x64/obj/gpu/ipc/common/command_buffer_traits_sources.stamp
+subninja irt_x64/obj/gpu/ipc/common/command_buffer_traits_sources.ninja
+subninja irt_x64/obj/ipc/ipc.ninja
+subninja irt_x64/obj/ipc/mojom.ninja
+rule __ipc_mojom__generator___build_toolchain_nacl_irt_x64__rule
+  command = python ../../../../../mojo/public/tools/bindings/mojom_bindings_generator.py --use_bundled_pylibs generate ${in} -d ../../../../../ -I ../../../../../ -o /usr/local/google/home/jokulik/chromium/src/net/quic/chromium/out/Default/irt_x64/gen --bytecode_path /usr/local/google/home/jokulik/chromium/src/net/quic/chromium/out/Default/irt_x64/gen/mojo/public/tools/bindings -g c++,javascript,java --typemap irt_x64/gen/ipc/mojom__type_mappings
+  description = ACTION //ipc:mojom__generator(//build/toolchain/nacl:irt_x64)
+  restat = 1
+build irt_x64/obj/ipc/mojom__generator.inputdeps.stamp: irt_x64_stamp ../../../../../mojo/public/tools/bindings/mojom_bindings_generator.py ../../../../../mojo/public/tools/bindings/generators/mojom_cpp_generator.py ../../../../../mojo/public/tools/bindings/generators/mojom_js_generator.py ../../../../../mojo/public/tools/bindings/generators/mojom_java_generator.py ../../../../../mojo/public/tools/bindings/pylib/mojom/__init__.py ../../../../../mojo/public/tools/bindings/pylib/mojom/error.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/__init__.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/constant_resolver.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/data.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/generator.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/module.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/pack.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/template_expander.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/__init__.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/ast.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/lexer.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/parser.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/translate.py ../../../../../mojo/public/tools/bindings/mojom_bindings_generator.py irt_x64/obj/ipc/mojom__type_mappings.stamp irt_x64/obj/mojo/public/tools/bindings/precompile_templates.stamp ./tls_edit
+
+build irt_x64/gen/ipc/ipc.mojom.cc irt_x64/gen/ipc/ipc.mojom.h irt_x64/gen/ipc/ipc.mojom-internal.h irt_x64/gen/ipc/ipc.mojom.srcjar irt_x64/gen/ipc/ipc.mojom.js: __ipc_mojom__generator___build_toolchain_nacl_irt_x64__rule ../../../../../ipc/ipc.mojom | irt_x64/obj/ipc/mojom__generator.inputdeps.stamp
+
+build irt_x64/obj/ipc/mojom__generator.stamp: irt_x64_stamp irt_x64/gen/ipc/ipc.mojom.cc irt_x64/gen/ipc/ipc.mojom.h irt_x64/gen/ipc/ipc.mojom-internal.h irt_x64/gen/ipc/ipc.mojom.srcjar irt_x64/gen/ipc/ipc.mojom.js
+rule __ipc_mojom__type_mappings___build_toolchain_nacl_irt_x64__rule
+  command = python ../../../../../mojo/public/tools/bindings/generate_type_mappings.py --output irt_x64/gen/ipc/mojom__type_mappings
+  description = ACTION //ipc:mojom__type_mappings(//build/toolchain/nacl:irt_x64)
+  restat = 1
+build irt_x64/obj/ipc/mojom__type_mappings.inputdeps.stamp: irt_x64_stamp ../../../../../mojo/public/tools/bindings/generate_type_mappings.py ../../../../../mojo/public/tools/bindings/chromium_bindings_configuration.gni ../../../../../mojo/public/tools/bindings/blink_bindings_configuration.gni ./tls_edit
+
+build irt_x64/gen/ipc/mojom__type_mappings: __ipc_mojom__type_mappings___build_toolchain_nacl_irt_x64__rule | irt_x64/obj/ipc/mojom__type_mappings.inputdeps.stamp
+
+build irt_x64/obj/ipc/mojom__type_mappings.stamp: irt_x64_stamp irt_x64/gen/ipc/mojom__type_mappings
+subninja irt_x64/obj/ipc/mojom_cpp_sources.ninja
+subninja irt_x64/obj/ipc/param_traits.ninja
+subninja irt_x64/obj/media/shared_memory_support.ninja
+subninja irt_x64/obj/mojo/edk/embedder/delegates.ninja
+subninja irt_x64/obj/mojo/edk/embedder/embedder.ninja
+subninja irt_x64/obj/mojo/edk/embedder/headers.ninja
+subninja irt_x64/obj/mojo/edk/embedder/platform.ninja
+subninja irt_x64/obj/mojo/edk/system/system.ninja
+subninja irt_x64/obj/mojo/edk/system/ports/ports.ninja
+subninja irt_x64/obj/mojo/public/c/system/system.ninja
+subninja irt_x64/obj/mojo/public/cpp/bindings/bindings.ninja
+subninja irt_x64/obj/mojo/public/cpp/bindings/struct_traits.ninja
+subninja irt_x64/obj/mojo/public/cpp/system/system.ninja
+rule __mojo_public_interfaces_bindings_bindings__generator___build_toolchain_nacl_irt_x64__rule
+  command = python ../../../../../mojo/public/tools/bindings/mojom_bindings_generator.py --use_bundled_pylibs generate ${in} -d ../../../../../ -I ../../../../../ -o /usr/local/google/home/jokulik/chromium/src/net/quic/chromium/out/Default/irt_x64/gen --bytecode_path /usr/local/google/home/jokulik/chromium/src/net/quic/chromium/out/Default/irt_x64/gen/mojo/public/tools/bindings -g c++,javascript,java --typemap irt_x64/gen/mojo/public/interfaces/bindings/bindings__type_mappings --use_new_wrapper_types
+  description = ACTION //mojo/public/interfaces/bindings:bindings__generator(//build/toolchain/nacl:irt_x64)
+  restat = 1
+build irt_x64/obj/mojo/public/interfaces/bindings/bindings__generator.inputdeps.stamp: irt_x64_stamp ../../../../../mojo/public/tools/bindings/mojom_bindings_generator.py ../../../../../mojo/public/tools/bindings/generators/mojom_cpp_generator.py ../../../../../mojo/public/tools/bindings/generators/mojom_js_generator.py ../../../../../mojo/public/tools/bindings/generators/mojom_java_generator.py ../../../../../mojo/public/tools/bindings/pylib/mojom/__init__.py ../../../../../mojo/public/tools/bindings/pylib/mojom/error.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/__init__.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/constant_resolver.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/data.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/generator.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/module.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/pack.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/template_expander.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/__init__.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/ast.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/lexer.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/parser.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/translate.py ../../../../../mojo/public/tools/bindings/mojom_bindings_generator.py irt_x64/obj/mojo/public/interfaces/bindings/bindings__type_mappings.stamp irt_x64/obj/mojo/public/tools/bindings/precompile_templates.stamp ./tls_edit
+
+build irt_x64/gen/mojo/public/interfaces/bindings/interface_control_messages.mojom.cc irt_x64/gen/mojo/public/interfaces/bindings/interface_control_messages.mojom.h irt_x64/gen/mojo/public/interfaces/bindings/interface_control_messages.mojom-internal.h irt_x64/gen/mojo/public/interfaces/bindings/interface_control_messages.mojom.srcjar irt_x64/gen/mojo/public/interfaces/bindings/interface_control_messages.mojom.js: __mojo_public_interfaces_bindings_bindings__generator___build_toolchain_nacl_irt_x64__rule ../../../../../mojo/public/interfaces/bindings/interface_control_messages.mojom | irt_x64/obj/mojo/public/interfaces/bindings/bindings__generator.inputdeps.stamp
+build irt_x64/gen/mojo/public/interfaces/bindings/pipe_control_messages.mojom.cc irt_x64/gen/mojo/public/interfaces/bindings/pipe_control_messages.mojom.h irt_x64/gen/mojo/public/interfaces/bindings/pipe_control_messages.mojom-internal.h irt_x64/gen/mojo/public/interfaces/bindings/pipe_control_messages.mojom.srcjar irt_x64/gen/mojo/public/interfaces/bindings/pipe_control_messages.mojom.js: __mojo_public_interfaces_bindings_bindings__generator___build_toolchain_nacl_irt_x64__rule ../../../../../mojo/public/interfaces/bindings/pipe_control_messages.mojom | irt_x64/obj/mojo/public/interfaces/bindings/bindings__generator.inputdeps.stamp
+
+build irt_x64/obj/mojo/public/interfaces/bindings/bindings__generator.stamp: irt_x64_stamp irt_x64/gen/mojo/public/interfaces/bindings/interface_control_messages.mojom.cc irt_x64/gen/mojo/public/interfaces/bindings/interface_control_messages.mojom.h irt_x64/gen/mojo/public/interfaces/bindings/interface_control_messages.mojom-internal.h irt_x64/gen/mojo/public/interfaces/bindings/interface_control_messages.mojom.srcjar irt_x64/gen/mojo/public/interfaces/bindings/interface_control_messages.mojom.js irt_x64/gen/mojo/public/interfaces/bindings/pipe_control_messages.mojom.cc irt_x64/gen/mojo/public/interfaces/bindings/pipe_control_messages.mojom.h irt_x64/gen/mojo/public/interfaces/bindings/pipe_control_messages.mojom-internal.h irt_x64/gen/mojo/public/interfaces/bindings/pipe_control_messages.mojom.srcjar irt_x64/gen/mojo/public/interfaces/bindings/pipe_control_messages.mojom.js
+rule __mojo_public_interfaces_bindings_bindings__type_mappings___build_toolchain_nacl_irt_x64__rule
+  command = python ../../../../../mojo/public/tools/bindings/generate_type_mappings.py --output irt_x64/gen/mojo/public/interfaces/bindings/bindings__type_mappings
+  description = ACTION //mojo/public/interfaces/bindings:bindings__type_mappings(//build/toolchain/nacl:irt_x64)
+  restat = 1
+build irt_x64/obj/mojo/public/interfaces/bindings/bindings__type_mappings.inputdeps.stamp: irt_x64_stamp ../../../../../mojo/public/tools/bindings/generate_type_mappings.py ../../../../../mojo/public/tools/bindings/chromium_bindings_configuration.gni ../../../../../mojo/public/tools/bindings/blink_bindings_configuration.gni ./tls_edit
+
+build irt_x64/gen/mojo/public/interfaces/bindings/bindings__type_mappings: __mojo_public_interfaces_bindings_bindings__type_mappings___build_toolchain_nacl_irt_x64__rule | irt_x64/obj/mojo/public/interfaces/bindings/bindings__type_mappings.inputdeps.stamp
+
+build irt_x64/obj/mojo/public/interfaces/bindings/bindings__type_mappings.stamp: irt_x64_stamp irt_x64/gen/mojo/public/interfaces/bindings/bindings__type_mappings
+subninja irt_x64/obj/mojo/public/interfaces/bindings/bindings_cpp_sources.ninja
+rule __mojo_public_tools_bindings_precompile_templates___build_toolchain_nacl_irt_x64__rule
+  command = python ../../../../../mojo/public/tools/bindings/mojom_bindings_generator.py --use_bundled_pylibs precompile -o /usr/local/google/home/jokulik/chromium/src/net/quic/chromium/out/Default/irt_x64/gen/mojo/public/tools/bindings
+  description = ACTION //mojo/public/tools/bindings:precompile_templates(//build/toolchain/nacl:irt_x64)
+  restat = 1
+build irt_x64/obj/mojo/public/tools/bindings/precompile_templates.inputdeps.stamp: irt_x64_stamp ../../../../../mojo/public/tools/bindings/mojom_bindings_generator.py ../../../../../mojo/public/tools/bindings/generators/mojom_cpp_generator.py ../../../../../mojo/public/tools/bindings/generators/mojom_js_generator.py ../../../../../mojo/public/tools/bindings/generators/mojom_java_generator.py ../../../../../mojo/public/tools/bindings/pylib/mojom/__init__.py ../../../../../mojo/public/tools/bindings/pylib/mojom/error.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/__init__.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/constant_resolver.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/data.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/generator.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/module.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/pack.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/template_expander.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/__init__.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/ast.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/lexer.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/parser.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/translate.py ../../../../../mojo/public/tools/bindings/mojom_bindings_generator.py ../../../../../mojo/public/tools/bindings/generators/cpp_templates/enum_macros.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/enum_serialization_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/interface_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/interface_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/interface_macros.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/interface_proxy_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/interface_request_validator_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/interface_response_validator_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/interface_stub_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/module-internal.h.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/module.cc.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/module.h.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/struct_data_view_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/struct_data_view_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/struct_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/struct_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/struct_macros.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/struct_serialization_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/struct_serialization_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/union_data_view_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/union_data_view_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/union_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/union_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/union_serialization_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/union_serialization_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/validation_macros.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/wrapper_class_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/wrapper_class_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/wrapper_class_template_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/wrapper_union_class_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/wrapper_union_class_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/wrapper_union_class_template_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/constant_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/constants.java.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/data_types_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/enum.java.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/enum_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/header.java.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/interface.java.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/interface_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/interface_internal.java.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/struct.java.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/union.java.tmpl ../../../../../mojo/public/tools/bindings/generators/js_templates/enum_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/js_templates/interface_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/js_templates/module.amd.tmpl ../../../../../mojo/public/tools/bindings/generators/js_templates/module_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/js_templates/struct_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/js_templates/union_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/js_templates/validation_macros.tmpl ./tls_edit
+
+build irt_x64/gen/mojo/public/tools/bindings/cpp_templates.zip irt_x64/gen/mojo/public/tools/bindings/java_templates.zip irt_x64/gen/mojo/public/tools/bindings/js_templates.zip: __mojo_public_tools_bindings_precompile_templates___build_toolchain_nacl_irt_x64__rule | irt_x64/obj/mojo/public/tools/bindings/precompile_templates.inputdeps.stamp
+
+build irt_x64/obj/mojo/public/tools/bindings/precompile_templates.stamp: irt_x64_stamp irt_x64/gen/mojo/public/tools/bindings/cpp_templates.zip irt_x64/gen/mojo/public/tools/bindings/java_templates.zip irt_x64/gen/mojo/public/tools/bindings/js_templates.zip
+subninja irt_x64/obj/native_client/src/shared/gio/gio.ninja
+subninja irt_x64/obj/native_client/src/shared/platform/platform.ninja
+subninja irt_x64/obj/native_client/src/untrusted/irt/irt_core_lib.ninja
+subninja irt_x64/obj/native_client/src/untrusted/nacl/imc_syscalls.ninja
+subninja irt_x64/obj/ppapi/c/c.ninja
+subninja irt_x64/obj/ppapi/native_client/nacl_irt.ninja
+build irt_x64/obj/ppapi/native_client/nacl_irt_debug.inputdeps.stamp: irt_x64_stamp irt_x64/obj/base/build_date.stamp irt_x64/obj/base/debugging_flags.stamp irt_x64/obj/base/allocator/features.stamp irt_x64/obj/ipc/mojom__generator.stamp irt_x64/obj/ipc/mojom__type_mappings.stamp irt_x64/obj/mojo/public/interfaces/bindings/bindings__generator.stamp irt_x64/obj/mojo/public/interfaces/bindings/bindings__type_mappings.stamp irt_x64/obj/mojo/public/tools/bindings/precompile_templates.stamp ./tls_edit irt_x64/obj/third_party/icu/icudata.stamp
+build nacl_irt_x86_64.nexe.debug: irt_x64_copy irt_x64/exe.unstripped/nacl_irt.nexe || irt_x64/obj/ppapi/native_client/nacl_irt_debug.inputdeps.stamp
+
+build irt_x64/obj/ppapi/native_client/nacl_irt_debug.stamp: irt_x64_stamp nacl_irt_x86_64.nexe.debug
+rule __ppapi_native_client_nacl_irt_debuglink___build_toolchain_nacl_irt_x64__rule
+  command = python ../../../../../ppapi/native_client/irt_debuglink.py /usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objcopy /usr/local/google/home/jokulik/chromium/src/net/quic/chromium/out/Default/nacl_irt_x86_64.nexe.debug /usr/local/google/home/jokulik/chromium/src/net/quic/chromium/out/Default/irt_x64/nacl_irt.nexe /usr/local/google/home/jokulik/chromium/src/net/quic/chromium/out/Default/nacl_irt_x86_64.nexe
+  description = ACTION //ppapi/native_client:nacl_irt_debuglink(//build/toolchain/nacl:irt_x64)
+  restat = 1
+build irt_x64/obj/ppapi/native_client/nacl_irt_debuglink.inputdeps.stamp: irt_x64_stamp ../../../../../ppapi/native_client/irt_debuglink.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objcopy nacl_irt_x86_64.nexe.debug irt_x64/nacl_irt.nexe irt_x64/obj/base/build_date.stamp irt_x64/obj/base/debugging_flags.stamp irt_x64/obj/base/allocator/features.stamp irt_x64/obj/ipc/mojom__generator.stamp irt_x64/obj/ipc/mojom__type_mappings.stamp irt_x64/obj/mojo/public/interfaces/bindings/bindings__generator.stamp irt_x64/obj/mojo/public/interfaces/bindings/bindings__type_mappings.stamp irt_x64/obj/mojo/public/tools/bindings/precompile_templates.stamp ./tls_edit irt_x64/nacl_irt.nexe irt_x64/obj/ppapi/native_client/nacl_irt_debug.stamp irt_x64/obj/third_party/icu/icudata.stamp
+
+build nacl_irt_x86_64.nexe: __ppapi_native_client_nacl_irt_debuglink___build_toolchain_nacl_irt_x64__rule | irt_x64/obj/ppapi/native_client/nacl_irt_debuglink.inputdeps.stamp
+
+build irt_x64/obj/ppapi/native_client/nacl_irt_debuglink.stamp: irt_x64_stamp nacl_irt_x86_64.nexe
+subninja irt_x64/obj/ppapi/native_client/src/untrusted/pnacl_irt_shim/browser.ninja
+subninja irt_x64/obj/ppapi/native_client/src/untrusted/pnacl_irt_shim/irt.ninja
+build irt_x64/obj/ppapi/proxy/ipc.stamp: irt_x64_stamp irt_x64/obj/ppapi/proxy/ipc_sources.stamp
+subninja irt_x64/obj/ppapi/proxy/ipc_sources.ninja
+subninja irt_x64/obj/ppapi/proxy/proxy.ninja
+subninja irt_x64/obj/ppapi/shared_impl/shared_impl.ninja
+subninja irt_x64/obj/ppapi/thunk/thunk.ninja
+build irt_x64/obj/third_party/icu/icu.stamp: irt_x64_stamp irt_x64/obj/third_party/icu/libicui18n.a irt_x64/obj/third_party/icu/libicuuc.a
+build irt_x64/icudtl.dat: irt_x64_copy ../../../../../third_party/icu/common/icudtl.dat || ./tls_edit
+
+build irt_x64/obj/third_party/icu/icudata.stamp: irt_x64_stamp irt_x64/icudtl.dat
+subninja irt_x64/obj/third_party/icu/icui18n.ninja
+subninja irt_x64/obj/third_party/icu/icuuc.ninja
+subninja irt_x64/obj/third_party/modp_b64/modp_b64.ninja
+subninja irt_x64/obj/ui/gfx/gfx_export.ninja
+build irt_x64/obj/ui/gfx/memory_buffer.stamp: irt_x64_stamp irt_x64/obj/ui/gfx/memory_buffer_sources.stamp
+subninja irt_x64/obj/ui/gfx/memory_buffer_sources.ninja
+build irt_x64/obj/ui/gfx/selection_bound.stamp: irt_x64_stamp irt_x64/obj/ui/gfx/selection_bound_sources.stamp
+subninja irt_x64/obj/ui/gfx/selection_bound_sources.ninja
+subninja irt_x64/obj/ui/gfx/geometry/geometry.ninja
+subninja irt_x64/obj/ui/gfx/ipc/ipc.ninja
+subninja irt_x64/obj/ui/gfx/ipc/geometry/geometry.ninja
+subninja irt_x64/obj/ui/gfx/range/range.ninja
+subninja irt_x64/obj/url/url.ninja

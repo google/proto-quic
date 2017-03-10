@@ -8,7 +8,6 @@
 #include <memory>
 #include <utility>
 
-#include "base/strings/string_piece.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
@@ -22,7 +21,6 @@
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
 using std::string;
 using testing::_;
 using testing::AnyNumber;
@@ -534,7 +532,7 @@ TEST_P(QuicSimpleServerStreamTest, InvalidMultipleContentLength) {
 
   SpdyHeaderBlock request_headers;
   // \000 is a way to write the null byte when followed by a literal digit.
-  header_list_.OnHeader("content-length", StringPiece("11\00012", 5));
+  header_list_.OnHeader("content-length", QuicStringPiece("11\00012", 5));
 
   headers_string_ = SpdyUtils::SerializeUncompressedHeaders(request_headers);
 
@@ -554,7 +552,7 @@ TEST_P(QuicSimpleServerStreamTest, InvalidLeadingNullContentLength) {
 
   SpdyHeaderBlock request_headers;
   // \000 is a way to write the null byte when followed by a literal digit.
-  header_list_.OnHeader("content-length", StringPiece("\00012", 3));
+  header_list_.OnHeader("content-length", QuicStringPiece("\00012", 3));
 
   headers_string_ = SpdyUtils::SerializeUncompressedHeaders(request_headers);
 
@@ -572,7 +570,7 @@ TEST_P(QuicSimpleServerStreamTest, InvalidLeadingNullContentLength) {
 TEST_P(QuicSimpleServerStreamTest, ValidMultipleContentLength) {
   SpdyHeaderBlock request_headers;
   // \000 is a way to write the null byte when followed by a literal digit.
-  header_list_.OnHeader("content-length", StringPiece("11\00011", 5));
+  header_list_.OnHeader("content-length", QuicStringPiece("11\00011", 5));
 
   headers_string_ = SpdyUtils::SerializeUncompressedHeaders(request_headers);
 
@@ -638,7 +636,7 @@ TEST_P(QuicSimpleServerStreamTest, InvalidHeadersWithFin) {
       0x54, 0x54, 0x50, 0x2f,  // TTP/
       0x31, 0x2e, 0x31,        // 1.1
   };
-  StringPiece data(arr, arraysize(arr));
+  QuicStringPiece data(arr, arraysize(arr));
   QuicStreamFrame frame(stream_->id(), true, 0, data);
   // Verify that we don't crash when we get a invalid headers in stream frame.
   stream_->OnStreamFrame(frame);

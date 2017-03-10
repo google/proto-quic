@@ -1100,9 +1100,6 @@ config("default_warnings") {
         # TODO(hans): https://crbug.com/637306
         "-Wno-address-of-packed-member",
 
-        # TODO(thakis): Consider turning this on, https://crbug.com/691120
-        "-Wno-block-capture-autoreleasing",
-
         # TODO(hans): https://crbug.com/681136
         "-Wno-unused-lambda-capture",
 

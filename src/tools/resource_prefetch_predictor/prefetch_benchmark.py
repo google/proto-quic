@@ -29,6 +29,7 @@ sys.path.append(os.path.join(_SRC_PATH, 'build', 'android'))
 import devil_chromium
 
 sys.path.append(os.path.join(_SRC_PATH, 'third_party', 'catapult', 'devil'))
+from devil.android import flag_changer
 from devil.android.sdk import intent
 
 import prefetch_predictor_common
@@ -68,7 +69,7 @@ def _Setup(device, database_filename):
 
   # Make sure that the speculative prefetch predictor is enabled to ensure
   # that the disk database is re-created.
-  with device_setup.FlagReplacer(
+  with flag_changer.CustomCommandLineFlags(
       device, chrome_package.cmdline_file, ['--disable-fre']):
     # Launch Chrome for the first time to recreate the local state.
     launch_intent = intent.Intent(

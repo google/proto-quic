@@ -489,12 +489,52 @@ int TCPSocketWin::Read(IOBuffer* buf,
                        int buf_len,
                        const CompletionCallback& callback) {
   DCHECK(CalledOnValidThread());
+  DCHECK(!core_->read_iobuffer_.get());
+  // base::Unretained() is safe because RetryRead() won't be called when |this|
+  // is gone.
+  int rv =
+      ReadIfReady(buf, buf_len,
+                  base::Bind(&TCPSocketWin::RetryRead, base::Unretained(this)));
+  if (rv != ERR_IO_PENDING)
+    return rv;
+  read_callback_ = callback;
+  core_->read_iobuffer_ = buf;
+  core_->read_buffer_length_ = buf_len;
+  return ERR_IO_PENDING;
+}
+
+int TCPSocketWin::ReadIfReady(IOBuffer* buf,
+                              int buf_len,
+                              const CompletionCallback& callback) {
+  DCHECK(CalledOnValidThread());
   DCHECK_NE(socket_, INVALID_SOCKET);
   DCHECK(!waiting_read_);
-  CHECK(read_callback_.is_null());
-  DCHECK(!core_->read_iobuffer_.get());
+  DCHECK(read_if_ready_callback_.is_null());
 
-  return DoRead(buf, buf_len, callback);
+  if (!core_->non_blocking_reads_initialized_) {
+    WSAEventSelect(socket_, core_->read_overlapped_.hEvent, FD_READ | FD_CLOSE);
+    core_->non_blocking_reads_initialized_ = true;
+  }
+  int rv = recv(socket_, buf->data(), buf_len, 0);
+  int os_error = WSAGetLastError();
+  if (rv == SOCKET_ERROR) {
+    if (os_error != WSAEWOULDBLOCK) {
+      int net_error = MapSystemError(os_error);
+      net_log_.AddEvent(NetLogEventType::SOCKET_READ_ERROR,
+                        CreateNetLogSocketErrorCallback(net_error, os_error));
+      return net_error;
+    }
+  } else {
+    net_log_.AddByteTransferEvent(NetLogEventType::SOCKET_BYTES_RECEIVED, rv,
+                                  buf->data());
+    NetworkActivityMonitor::GetInstance()->IncrementBytesReceived(rv);
+    return rv;
+  }
+
+  waiting_read_ = true;
+  read_if_ready_callback_ = callback;
+  core_->WatchForRead();
+  return ERR_IO_PENDING;
 }
 
 int TCPSocketWin::Write(IOBuffer* buf,
@@ -677,6 +717,7 @@ void TCPSocketWin::Close() {
   waiting_write_ = false;
 
   read_callback_.Reset();
+  read_if_ready_callback_.Reset();
   write_callback_.Reset();
   peer_address_.reset();
   connect_os_error_ = 0;
@@ -871,35 +912,21 @@ void TCPSocketWin::LogConnectEnd(int net_error) {
           sizeof(source_address)));
 }
 
-int TCPSocketWin::DoRead(IOBuffer* buf, int buf_len,
-                         const CompletionCallback& callback) {
-  if (!core_->non_blocking_reads_initialized_) {
-    WSAEventSelect(socket_, core_->read_overlapped_.hEvent,
-                   FD_READ | FD_CLOSE);
-    core_->non_blocking_reads_initialized_ = true;
-  }
-  int rv = recv(socket_, buf->data(), buf_len, 0);
-  int os_error = WSAGetLastError();
-  if (rv == SOCKET_ERROR) {
-    if (os_error != WSAEWOULDBLOCK) {
-      int net_error = MapSystemError(os_error);
-      net_log_.AddEvent(NetLogEventType::SOCKET_READ_ERROR,
-                        CreateNetLogSocketErrorCallback(net_error, os_error));
-      return net_error;
-    }
-  } else {
-    net_log_.AddByteTransferEvent(NetLogEventType::SOCKET_BYTES_RECEIVED, rv,
-                                  buf->data());
-    NetworkActivityMonitor::GetInstance()->IncrementBytesReceived(rv);
-    return rv;
-  }
+void TCPSocketWin::RetryRead(int rv) {
+  DCHECK(core_->read_iobuffer_);
 
-  waiting_read_ = true;
-  read_callback_ = callback;
-  core_->read_iobuffer_ = buf;
-  core_->read_buffer_length_ = buf_len;
-  core_->WatchForRead();
-  return ERR_IO_PENDING;
+  if (rv == OK) {
+    // base::Unretained() is safe because RetryRead() won't be called when
+    // |this| is gone.
+    rv = ReadIfReady(
+        core_->read_iobuffer_.get(), core_->read_buffer_length_,
+        base::Bind(&TCPSocketWin::RetryRead, base::Unretained(this)));
+    if (rv == ERR_IO_PENDING)
+      return;
+  }
+  core_->read_iobuffer_ = nullptr;
+  core_->read_buffer_length_ = 0;
+  base::ResetAndReturn(&read_callback_).Run(rv);
 }
 
 void TCPSocketWin::DidCompleteConnect() {
@@ -981,7 +1008,7 @@ void TCPSocketWin::DidCompleteWrite() {
 
 void TCPSocketWin::DidSignalRead() {
   DCHECK(waiting_read_);
-  DCHECK(!read_callback_.is_null());
+  DCHECK(!read_if_ready_callback_.is_null());
 
   int os_error = 0;
   WSANETWORKEVENTS network_events;
@@ -1002,20 +1029,17 @@ void TCPSocketWin::DidSignalRead() {
     // network_events.iErrorCode[FD_CLOSE_BIT] is 0, it is a graceful
     // connection closure. It is tempting to directly set rv to 0 in
     // this case, but the MSDN pages for WSAEventSelect and
-    // WSAAsyncSelect recommend we still call DoRead():
+    // WSAAsyncSelect recommend we still call RetryRead():
     //   FD_CLOSE should only be posted after all data is read from a
     //   socket, but an application should check for remaining data upon
     //   receipt of FD_CLOSE to avoid any possibility of losing data.
     //
     // If network_events.iErrorCode[FD_READ_BIT] or
     // network_events.iErrorCode[FD_CLOSE_BIT] is nonzero, still call
-    // DoRead() because recv() reports a more accurate error code
+    // RetryRead() because recv() reports a more accurate error code
     // (WSAECONNRESET vs. WSAECONNABORTED) when the connection was
     // reset.
-    rv = DoRead(core_->read_iobuffer_.get(), core_->read_buffer_length_,
-                read_callback_);
-    if (rv == ERR_IO_PENDING)
-      return;
+    rv = OK;
   } else {
     // This may happen because Read() may succeed synchronously and
     // consume all the received data without resetting the event object.
@@ -1023,12 +1047,9 @@ void TCPSocketWin::DidSignalRead() {
     return;
   }
 
-  waiting_read_ = false;
-  core_->read_iobuffer_ = NULL;
-  core_->read_buffer_length_ = 0;
-
   DCHECK_NE(rv, ERR_IO_PENDING);
-  base::ResetAndReturn(&read_callback_).Run(rv);
+  waiting_read_ = false;
+  base::ResetAndReturn(&read_if_ready_callback_).Run(rv);
 }
 
 bool TCPSocketWin::GetEstimatedRoundTripTime(base::TimeDelta* out_rtt) const {

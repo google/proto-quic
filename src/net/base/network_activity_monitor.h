@@ -51,7 +51,7 @@ class NET_EXPORT_PRIVATE NetworkActivityMonitor {
 
   NetworkActivityMonitor();
   ~NetworkActivityMonitor();
-  friend struct base::DefaultLazyInstanceTraits<NetworkActivityMonitor>;
+  friend struct base::LazyInstanceTraitsBase<NetworkActivityMonitor>;
 
   // Protects all the following members.
   mutable base::Lock lock_;

@@ -204,6 +204,39 @@ void CopyCertChainToVerifyResult(CFArrayRef cert_chain,
       X509Certificate::CreateFromHandle(verified_cert, verified_chain);
 }
 
+// Returns true if the certificate uses MD2, MD4, MD5, or SHA1, and false
+// otherwise. A return of false also includes the case where the signature
+// algorithm couldn't be conclusively labeled as weak.
+bool CertUsesWeakHash(X509Certificate::OSCertHandle cert_handle) {
+  x509_util::CSSMCachedCertificate cached_cert;
+  OSStatus status = cached_cert.Init(cert_handle);
+  if (status)
+    return false;
+
+  x509_util::CSSMFieldValue signature_field;
+  status =
+      cached_cert.GetField(&CSSMOID_X509V1SignatureAlgorithm, &signature_field);
+  if (status || !signature_field.field())
+    return false;
+
+  const CSSM_X509_ALGORITHM_IDENTIFIER* sig_algorithm =
+      signature_field.GetAs<CSSM_X509_ALGORITHM_IDENTIFIER>();
+  if (!sig_algorithm)
+    return false;
+
+  const CSSM_OID* alg_oid = &sig_algorithm->algorithm;
+
+  return (CSSMOIDEqual(alg_oid, &CSSMOID_MD2WithRSA) ||
+          CSSMOIDEqual(alg_oid, &CSSMOID_MD4WithRSA) ||
+          CSSMOIDEqual(alg_oid, &CSSMOID_MD5WithRSA) ||
+          CSSMOIDEqual(alg_oid, &CSSMOID_SHA1WithRSA) ||
+          CSSMOIDEqual(alg_oid, &CSSMOID_SHA1WithRSA_OIW) ||
+          CSSMOIDEqual(alg_oid, &CSSMOID_SHA1WithDSA) ||
+          CSSMOIDEqual(alg_oid, &CSSMOID_SHA1WithDSA_CMS) ||
+          CSSMOIDEqual(alg_oid, &CSSMOID_SHA1WithDSA_JDK) ||
+          CSSMOIDEqual(alg_oid, &CSSMOID_ECDSA_WithSHA1));
+}
+
 // Returns true if the intermediates (excluding trusted certificates) use a
 // weak hashing algorithm, but the target does not use a weak hash.
 bool IsWeakChainBasedOnHashingAlgorithms(
@@ -228,22 +261,12 @@ bool IsWeakChainBasedOnHashingAlgorithms(
       continue;
     }
 
-    X509Certificate::SignatureHashAlgorithm hash_algorithm =
-        X509Certificate::GetSignatureHashAlgorithm(chain_cert);
-
-    switch (hash_algorithm) {
-      case X509Certificate::kSignatureHashAlgorithmMd2:
-      case X509Certificate::kSignatureHashAlgorithmMd4:
-      case X509Certificate::kSignatureHashAlgorithmMd5:
-      case X509Certificate::kSignatureHashAlgorithmSha1:
-        if (i == 0) {
-          leaf_uses_weak_hash = true;
-        } else {
-          intermediates_contain_weak_hash = true;
-        }
-        break;
-      case X509Certificate::kSignatureHashAlgorithmOther:
-        break;
+    if (CertUsesWeakHash(chain_cert)) {
+      if (i == 0) {
+        leaf_uses_weak_hash = true;
+      } else {
+        intermediates_contain_weak_hash = true;
+      }
     }
   }
 
@@ -616,7 +639,7 @@ class OSXKnownRootHelper {
   }
 
  private:
-  friend struct base::DefaultLazyInstanceTraits<OSXKnownRootHelper>;
+  friend struct base::LazyInstanceTraitsBase<OSXKnownRootHelper>;
 
   OSXKnownRootHelper() {
     CFArrayRef cert_array = NULL;

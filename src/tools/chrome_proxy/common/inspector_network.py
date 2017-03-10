@@ -4,8 +4,8 @@
 import logging
 
 from telemetry.core import exceptions
-from telemetry.timeline import trace_data
 from telemetry.timeline import model
+from tracing.trace_data import trace_data
 
 
 class InspectorNetworkException(Exception):

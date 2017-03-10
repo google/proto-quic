@@ -235,11 +235,6 @@ SSL_CTX *SSL_CTX_new(const SSL_METHOD *method) {
     return NULL;
   }
 
-  if (SSL_get_ex_data_X509_STORE_CTX_idx() < 0) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_X509_VERIFICATION_SETUP_PROBLEMS);
-    goto err;
-  }
-
   ret = OPENSSL_malloc(sizeof(SSL_CTX));
   if (ret == NULL) {
     goto err;
@@ -271,8 +266,8 @@ SSL_CTX *SSL_CTX_new(const SSL_METHOD *method) {
   if (ret->sessions == NULL) {
     goto err;
   }
-  ret->cert_store = X509_STORE_new();
-  if (ret->cert_store == NULL) {
+
+  if (!ret->x509_method->ssl_ctx_new(ret)) {
     goto err;
   }
 
@@ -284,12 +279,7 @@ SSL_CTX *SSL_CTX_new(const SSL_METHOD *method) {
     goto err2;
   }
 
-  ret->param = X509_VERIFY_PARAM_new();
-  if (!ret->param) {
-    goto err;
-  }
-
-  ret->client_CA = sk_X509_NAME_new_null();
+  ret->client_CA = sk_CRYPTO_BUFFER_new_null();
   if (ret->client_CA == NULL) {
     goto err;
   }
@@ -337,8 +327,6 @@ void SSL_CTX_free(SSL_CTX *ctx) {
     return;
   }
 
-  X509_VERIFY_PARAM_free(ctx->param);
-
   /* Free internal session cache. However: the remove_cb() may reference the
    * ex_data of SSL_CTX, thus the ex_data store can only be removed after the
    * sessions were flushed. As the ex_data handling routines might also touch
@@ -351,14 +339,14 @@ void SSL_CTX_free(SSL_CTX *ctx) {
 
   CRYPTO_MUTEX_cleanup(&ctx->lock);
   lh_SSL_SESSION_free(ctx->sessions);
-  X509_STORE_free(ctx->cert_store);
   ssl_cipher_preference_list_free(ctx->cipher_list);
   ssl_cert_free(ctx->cert);
   sk_SSL_CUSTOM_EXTENSION_pop_free(ctx->client_custom_extensions,
                                    SSL_CUSTOM_EXTENSION_free);
   sk_SSL_CUSTOM_EXTENSION_pop_free(ctx->server_custom_extensions,
                                    SSL_CUSTOM_EXTENSION_free);
-  sk_X509_NAME_pop_free(ctx->client_CA, X509_NAME_free);
+  sk_CRYPTO_BUFFER_pop_free(ctx->client_CA, CRYPTO_BUFFER_free);
+  ctx->x509_method->ssl_ctx_free(ctx);
   sk_SRTP_PROTECTION_PROFILE_free(ctx->srtp_profiles);
   OPENSSL_free(ctx->psk_identity_hint);
   OPENSSL_free(ctx->supported_group_list);
@@ -407,11 +395,6 @@ SSL *SSL_new(SSL_CTX *ctx) {
   ssl->retain_only_sha256_of_client_certs =
       ctx->retain_only_sha256_of_client_certs;
 
-  ssl->param = X509_VERIFY_PARAM_new();
-  if (!ssl->param) {
-    goto err;
-  }
-  X509_VERIFY_PARAM_inherit(ssl->param, ctx->param);
   ssl->quiet_shutdown = ctx->quiet_shutdown;
   ssl->max_send_fragment = ctx->max_send_fragment;
 
@@ -419,6 +402,10 @@ SSL *SSL_new(SSL_CTX *ctx) {
   ssl->ctx = ctx;
   SSL_CTX_up_ref(ctx);
   ssl->initial_ctx = ctx;
+
+  if (!ssl->ctx->x509_method->ssl_new(ssl)) {
+    goto err;
+  }
 
   if (ctx->supported_group_list) {
     ssl->supported_group_list = BUF_memdup(ctx->supported_group_list,
@@ -481,8 +468,7 @@ void SSL_free(SSL *ssl) {
     return;
   }
 
-  X509_VERIFY_PARAM_free(ssl->param);
-
+  ssl->ctx->x509_method->ssl_free(ssl);
   CRYPTO_free_ex_data(&g_ex_data_class_ssl, ssl, &ssl->ex_data);
 
   BIO_free_all(ssl->rbio);
@@ -503,7 +489,7 @@ void SSL_free(SSL *ssl) {
   OPENSSL_free(ssl->alpn_client_proto_list);
   EVP_PKEY_free(ssl->tlsext_channel_id_private);
   OPENSSL_free(ssl->psk_identity_hint);
-  sk_X509_NAME_pop_free(ssl->client_CA, X509_NAME_free);
+  sk_CRYPTO_BUFFER_pop_free(ssl->client_CA, CRYPTO_BUFFER_free);
   sk_SRTP_PROTECTION_PROFILE_free(ssl->srtp_profiles);
 
   if (ssl->method != NULL) {
@@ -1469,6 +1455,10 @@ int SSL_set_tmp_dh(SSL *ssl, const DH *dh) {
   return 1;
 }
 
+OPENSSL_EXPORT STACK_OF(SSL_CIPHER) *SSL_CTX_get_ciphers(const SSL_CTX *ctx) {
+  return ctx->cipher_list->ciphers;
+}
+
 STACK_OF(SSL_CIPHER) *SSL_get_ciphers(const SSL *ssl) {
   if (ssl == NULL) {
     return NULL;
@@ -1484,19 +1474,16 @@ STACK_OF(SSL_CIPHER) *SSL_get_ciphers(const SSL *ssl) {
 }
 
 const char *SSL_get_cipher_list(const SSL *ssl, int n) {
-  const SSL_CIPHER *c;
-  STACK_OF(SSL_CIPHER) *sk;
-
   if (ssl == NULL) {
     return NULL;
   }
 
-  sk = SSL_get_ciphers(ssl);
+  STACK_OF(SSL_CIPHER) *sk = SSL_get_ciphers(ssl);
   if (sk == NULL || n < 0 || (size_t)n >= sk_SSL_CIPHER_num(sk)) {
     return NULL;
   }
 
-  c = sk_SSL_CIPHER_value(sk, n);
+  const SSL_CIPHER *c = sk_SSL_CIPHER_value(sk, n);
   if (c == NULL) {
     return NULL;
   }
@@ -1609,6 +1596,10 @@ int SSL_get_servername_type(const SSL *ssl) {
 
 void SSL_CTX_enable_signed_cert_timestamps(SSL_CTX *ctx) {
   ctx->signed_cert_timestamps_enabled = 1;
+}
+
+void SSL_CTX_i_promise_to_verify_certs_after_the_handshake(SSL_CTX *ctx) {
+  ctx->i_promise_to_verify_certs_after_the_handshake = 1;
 }
 
 void SSL_enable_signed_cert_timestamps(SSL *ssl) {
@@ -1902,9 +1893,9 @@ void ssl_update_cache(SSL_HANDSHAKE *hs, int mode) {
     CRYPTO_MUTEX_unlock_write(&ctx->lock);
 
     if (flush_cache) {
-      struct timeval now;
+      struct OPENSSL_timeval now;
       ssl_get_current_time(ssl, &now);
-      SSL_CTX_flush_sessions(ctx, (long)now.tv_sec);
+      SSL_CTX_flush_sessions(ctx, now.tv_sec);
     }
   }
 }
@@ -2566,8 +2557,8 @@ void SSL_CTX_set_grease_enabled(SSL_CTX *ctx, int enabled) {
   ctx->grease_enabled = !!enabled;
 }
 
-void SSL_CTX_set_short_header_enabled(SSL_CTX *ctx, int enabled) {
-  ctx->short_header_enabled = !!enabled;
+int32_t SSL_get_ticket_age_skew(const SSL *ssl) {
+  return ssl->s3->ticket_age_skew;
 }
 
 int SSL_clear(SSL *ssl) {
@@ -2700,9 +2691,20 @@ int SSL_set_tmp_ecdh(SSL *ssl, const EC_KEY *ec_key) {
   return SSL_set1_curves(ssl, &nid, 1);
 }
 
-void ssl_get_current_time(const SSL *ssl, struct timeval *out_clock) {
+void ssl_get_current_time(const SSL *ssl, struct OPENSSL_timeval *out_clock) {
   if (ssl->ctx->current_time_cb != NULL) {
-    ssl->ctx->current_time_cb(ssl, out_clock);
+    /* TODO(davidben): Update current_time_cb to use OPENSSL_timeval. See
+     * https://crbug.com/boringssl/155. */
+    struct timeval clock;
+    ssl->ctx->current_time_cb(ssl, &clock);
+    if (clock.tv_sec < 0) {
+      assert(0);
+      out_clock->tv_sec = 0;
+      out_clock->tv_usec = 0;
+    } else {
+      out_clock->tv_sec = (uint64_t)clock.tv_sec;
+      out_clock->tv_usec = (uint32_t)clock.tv_usec;
+    }
     return;
   }
 
@@ -2712,10 +2714,25 @@ void ssl_get_current_time(const SSL *ssl, struct timeval *out_clock) {
 #elif defined(OPENSSL_WINDOWS)
   struct _timeb time;
   _ftime(&time);
-  out_clock->tv_sec = time.time;
-  out_clock->tv_usec = time.millitm * 1000;
+  if (time.time < 0) {
+    assert(0);
+    out_clock->tv_sec = 0;
+    out_clock->tv_usec = 0;
+  } else {
+    out_clock->tv_sec = time.time;
+    out_clock->tv_usec = time.millitm * 1000;
+  }
 #else
-  gettimeofday(out_clock, NULL);
+  struct timeval clock;
+  gettimeofday(&clock, NULL);
+  if (clock.tv_sec < 0) {
+    assert(0);
+    out_clock->tv_sec = 0;
+    out_clock->tv_usec = 0;
+  } else {
+    out_clock->tv_sec = (uint64_t)clock.tv_sec;
+    out_clock->tv_usec = (uint32_t)clock.tv_usec;
+  }
 #endif
 }
 

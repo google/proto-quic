@@ -10,7 +10,6 @@
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace {
@@ -158,9 +157,9 @@ namespace test {
 // EncryptWithNonce wraps the |Encrypt| method of |encrypter| to allow passing
 // in an nonce and also to allocate the buffer needed for the ciphertext.
 QuicData* EncryptWithNonce(Aes128Gcm12Encrypter* encrypter,
-                           StringPiece nonce,
-                           StringPiece associated_data,
-                           StringPiece plaintext) {
+                           QuicStringPiece nonce,
+                           QuicStringPiece associated_data,
+                           QuicStringPiece plaintext) {
   size_t ciphertext_size = encrypter->GetCiphertextSize(plaintext.length());
   std::unique_ptr<char[]> ciphertext(new char[ciphertext_size]);
 
@@ -202,7 +201,7 @@ TEST(Aes128Gcm12EncrypterTest, Encrypt) {
           // This deliberately tests that the encrypter can handle an AAD that
           // is set to nullptr, as opposed to a zero-length, non-nullptr
           // pointer.
-          aad.length() ? aad : StringPiece(), pt));
+          aad.length() ? aad : QuicStringPiece(), pt));
       ASSERT_TRUE(encrypted.get());
 
       // The test vectors have 16 byte authenticators but this code only uses

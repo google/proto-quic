@@ -25,6 +25,7 @@
 #include "net/cert/cert_verify_result.h"
 #include "net/cert/crl_set.h"
 #include "net/cert/internal/parse_ocsp.h"
+#include "net/cert/internal/signature_algorithm.h"
 #include "net/cert/ocsp_revocation_status.h"
 #include "net/cert/x509_certificate.h"
 #include "net/der/encode_values.h"
@@ -372,64 +373,129 @@ bool AreSHA1IntermediatesAllowed() {
 // Sets the "has_*" boolean members in |verify_result| that correspond with
 // the the presence of |hash| somewhere in the certificate chain (excluding the
 // trust anchor).
-void MapHashAlgorithmToBool(X509Certificate::SignatureHashAlgorithm hash,
-                            CertVerifyResult* verify_result) {
+void MapAlgorithmToBool(DigestAlgorithm hash, CertVerifyResult* verify_result) {
   switch (hash) {
-    case X509Certificate::kSignatureHashAlgorithmMd2:
+    case DigestAlgorithm::Md2:
       verify_result->has_md2 = true;
       break;
-    case X509Certificate::kSignatureHashAlgorithmMd4:
+    case DigestAlgorithm::Md4:
       verify_result->has_md4 = true;
       break;
-    case X509Certificate::kSignatureHashAlgorithmMd5:
+    case DigestAlgorithm::Md5:
       verify_result->has_md5 = true;
       break;
-    case X509Certificate::kSignatureHashAlgorithmSha1:
+    case DigestAlgorithm::Sha1:
       verify_result->has_sha1 = true;
       break;
-    case X509Certificate::kSignatureHashAlgorithmOther:
+    case DigestAlgorithm::Sha256:
+    case DigestAlgorithm::Sha384:
+    case DigestAlgorithm::Sha512:
       break;
   }
 }
 
-// Sets to true the |verify_result->has_*| boolean members for the hash
-// algorithms present in the certificate chain.
+// Inspects the signature algorithms in a single certificate |cert|.
 //
-// This considers the hash algorithms in all certificates except trusted
-// certificates.
+//   * Sets |verify_result->has_md2| to true if the certificate uses MD2.
+//   * Sets |verify_result->has_md4| to true if the certificate uses MD4.
+//   * Sets |verify_result->has_md5| to true if the certificate uses MD5.
+//   * Sets |verify_result->has_sha1| to true if the certificate uses SHA1.
 //
-// In the case of a successful verification the trust anchor is the final
-// certificate in the chain (either the final intermediate, or the leaf
-// certificate).
+// Returns false if the signature algorithm was unknown or mismatched.
+WARN_UNUSED_RESULT bool InspectSignatureAlgorithmForCert(
+    X509Certificate::OSCertHandle cert,
+    CertVerifyResult* verify_result) {
+  std::string cert_der;
+  base::StringPiece cert_algorithm_sequence;
+  base::StringPiece tbs_algorithm_sequence;
+
+  // Extract the AlgorithmIdentifier SEQUENCEs
+  if (!X509Certificate::GetDEREncoded(cert, &cert_der) ||
+      !asn1::ExtractSignatureAlgorithmsFromDERCert(
+          cert_der, &cert_algorithm_sequence, &tbs_algorithm_sequence)) {
+    return false;
+  }
+
+  if (!SignatureAlgorithm::IsEquivalent(der::Input(cert_algorithm_sequence),
+                                        der::Input(tbs_algorithm_sequence))) {
+    return false;
+  }
+
+  std::unique_ptr<SignatureAlgorithm> algorithm =
+      SignatureAlgorithm::Create(der::Input(cert_algorithm_sequence), nullptr);
+  if (!algorithm)
+    return false;
+
+  MapAlgorithmToBool(algorithm->digest(), verify_result);
+
+  // Check algorithm-specific parameters.
+  switch (algorithm->algorithm()) {
+    case SignatureAlgorithmId::RsaPkcs1:
+    case SignatureAlgorithmId::Ecdsa:
+      DCHECK(!algorithm->has_params());
+      break;
+    case SignatureAlgorithmId::RsaPss:
+      MapAlgorithmToBool(algorithm->ParamsForRsaPss()->mgf1_hash(),
+                         verify_result);
+      break;
+  }
+
+  return true;
+}
+
+// InspectSignatureAlgorithmsInChain() sets |verify_result->has_*| based on
+// the signature algorithms used in the chain, and also checks that certificates
+// don't have contradictory signature algorithms.
 //
-// Whereas if verification was uncessful, the chain may be partial, and the
-// final certificate may not be a trust anchor. This heuristic is used
-// in both successful and failed verifications, despite this ambiguity (failure
-// to tag one of the signature algorithms should only affect the final error).
-void ComputeSignatureHashAlgorithms(CertVerifyResult* verify_result) {
+// Returns false if any signature algorithm in the chain is unknown or
+// mismatched.
+//
+// Background:
+//
+// X.509 certificates contain two redundant descriptors for the signature
+// algorithm; one is covered by the signature, but in order to verify the
+// signature, the other signature algorithm is untrusted.
+//
+// RFC 5280 states that the two should be equal, in order to mitigate risk of
+// signature substitution attacks, but also discourages verifiers from enforcing
+// the profile of RFC 5280.
+//
+// System verifiers are inconsistent - some use the unsigned signature, some use
+// the signed signature, and they generally do not enforce that both match. This
+// creates confusion, as it's possible that the signature itself may be checked
+// using algorithm A, but if subsequent consumers report the certificate
+// algorithm, they may end up reporting algorithm B, which was not used to
+// verify the certificate. This function enforces that the two signatures match
+// in order to prevent such confusion.
+WARN_UNUSED_RESULT bool InspectSignatureAlgorithmsInChain(
+    CertVerifyResult* verify_result) {
   const X509Certificate::OSCertHandles& intermediates =
       verify_result->verified_cert->GetIntermediateCertificates();
 
   // If there are no intermediates, then the leaf is trusted or verification
   // failed.
   if (intermediates.empty())
-    return;
+    return true;
 
   DCHECK(!verify_result->has_sha1);
 
   // Fill in hash algorithms for the leaf certificate.
-  MapHashAlgorithmToBool(X509Certificate::GetSignatureHashAlgorithm(
-                             verify_result->verified_cert->os_cert_handle()),
-                         verify_result);
+  if (!InspectSignatureAlgorithmForCert(
+          verify_result->verified_cert->os_cert_handle(), verify_result)) {
+    return false;
+  }
+
   verify_result->has_sha1_leaf = verify_result->has_sha1;
 
   // Fill in hash algorithms for the intermediate cerificates, excluding the
-  // final one (which is the trust anchor).
+  // final one (which is presumably the trust anchor; may be incorrect for
+  // partial chains).
   for (size_t i = 0; i + 1 < intermediates.size(); ++i) {
-    MapHashAlgorithmToBool(
-        X509Certificate::GetSignatureHashAlgorithm(intermediates[i]),
-        verify_result);
+    if (!InspectSignatureAlgorithmForCert(intermediates[i], verify_result))
+      return false;
   }
+
+  return true;
 }
 
 }  // namespace
@@ -483,7 +549,13 @@ int CertVerifyProc::Verify(X509Certificate* cert,
   int rv = VerifyInternal(cert, hostname, ocsp_response, flags, crl_set,
                           additional_trust_anchors, verify_result);
 
-  ComputeSignatureHashAlgorithms(verify_result);
+  // Check for mismatched signature algorithms and unknown signature algorithms
+  // in the chain. Also fills in the has_* booleans for the digest algorithms
+  // present in the chain.
+  if (!InspectSignatureAlgorithmsInChain(verify_result)) {
+    verify_result->cert_status |= CERT_STATUS_INVALID;
+    rv = MapCertStatusToNetError(verify_result->cert_status);
+  }
 
   bool allow_common_name_fallback =
       !verify_result->is_issued_by_known_root &&

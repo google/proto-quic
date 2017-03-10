@@ -41,7 +41,7 @@ struct CryptoAPIInjector {
   HCRYPTOIDFUNCADDR original_handle;
 
  private:
-  friend struct base::DefaultLazyInstanceTraits<CryptoAPIInjector>;
+  friend struct base::LazyInstanceTraitsBase<CryptoAPIInjector>;
 
   CryptoAPIInjector()
       : original_function(NULL),

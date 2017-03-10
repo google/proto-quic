@@ -46,8 +46,8 @@ TEST(JsonSchemaCompilerChoicesTest, TakesIntegersParamsCreate) {
 TEST(JsonSchemaCompilerChoicesTest, ObjectWithChoicesParamsCreate) {
   {
     std::unique_ptr<ObjectWithChoices::Params> params(
-        ObjectWithChoices::Params::Create(*List(
-            Dictionary("strings", new base::StringValue("asdf")).release())));
+        ObjectWithChoices::Params::Create(
+            *List(Dictionary("strings", new base::Value("asdf")).release())));
     ASSERT_TRUE(params);
     EXPECT_FALSE(params->string_info.strings.as_strings);
     EXPECT_EQ("asdf", *params->string_info.strings.as_string);
@@ -56,8 +56,8 @@ TEST(JsonSchemaCompilerChoicesTest, ObjectWithChoicesParamsCreate) {
   {
     std::unique_ptr<ObjectWithChoices::Params> params(
         ObjectWithChoices::Params::Create(
-            *List(Dictionary("strings", new base::StringValue("asdf"),
-                             "integers", new base::Value(6))
+            *List(Dictionary("strings", new base::Value("asdf"), "integers",
+                             new base::Value(6))
                       .release())));
     ASSERT_TRUE(params);
     EXPECT_FALSE(params->string_info.strings.as_strings);
@@ -85,10 +85,8 @@ TEST(JsonSchemaCompilerChoicesTest, ObjectWithChoicesParamsCreateFail) {
   {
     std::unique_ptr<base::DictionaryValue> object_param(
         new base::DictionaryValue());
-    object_param->SetWithoutPathExpansion("strings",
-                                          new base::StringValue("asdf"));
-    object_param->SetWithoutPathExpansion("integers",
-                                          new base::StringValue("asdf"));
+    object_param->SetWithoutPathExpansion("strings", new base::Value("asdf"));
+    object_param->SetWithoutPathExpansion("integers", new base::Value("asdf"));
     std::unique_ptr<base::ListValue> params_value(new base::ListValue());
     params_value->Append(std::move(object_param));
     std::unique_ptr<ObjectWithChoices::Params> params(

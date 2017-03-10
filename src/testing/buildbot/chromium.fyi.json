@@ -235,7 +235,7 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
-              "android_devices": "1",
+              "android_devices": "4",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }

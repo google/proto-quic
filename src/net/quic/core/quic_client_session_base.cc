@@ -9,7 +9,6 @@
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {

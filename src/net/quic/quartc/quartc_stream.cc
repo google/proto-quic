@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "net/quic/quartc/quartc_stream.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -53,7 +54,7 @@ bool QuartcStream::fin_sent() {
 void QuartcStream::Write(const char* data,
                          size_t size,
                          const WriteParameters& param) {
-  WriteOrBufferData(base::StringPiece(data, size), param.fin, nullptr);
+  WriteOrBufferData(QuicStringPiece(data, size), param.fin, nullptr);
 }
 
 void QuartcStream::Close() {

@@ -57,18 +57,19 @@ SCRIPT_TESTS = [
     'script': 'gtest_perf_test.py',
     'testers': {
       'chromium.perf': [
-        {
-          'name': 'Android Nexus5 Perf',
-          'shards': [2]
-        },
-        {
-          'name': 'Android Nexus6 Perf',
-          'shards': [2]
-        },
-        {
-          'name': 'Android Nexus7v2 Perf',
-          'shards': [2]
-        },
+        # crbug.com/698831
+        # {
+        #   'name': 'Android Nexus5 Perf',
+        #   'shards': [2]
+        # },
+        # {
+        #   'name': 'Android Nexus6 Perf',
+        #   'shards': [2]
+        # },
+        # {
+        #   'name': 'Android Nexus7v2 Perf',
+        #   'shards': [2]
+        # },
         {
           'name': 'Android Nexus9 Perf',
           'shards': [2]
@@ -462,7 +463,8 @@ def get_waterfall_config():
            'build150-m1', 'build151-m1', 'build152-m1'
           ],
        'perf_tests': [
-         ('cc_perftests', 2),
+         # crbug.com/698831
+         # ('cc_perftests', 2),
          ('load_library_perf_tests', 2),
          ('tracing_perftests', 2),
          ('media_perftests', 3)]

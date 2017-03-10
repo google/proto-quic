@@ -12,8 +12,6 @@
 #include "third_party/boringssl/src/include/openssl/nid.h"
 #include "third_party/boringssl/src/include/openssl/sha.h"
 
-using base::StringPiece;
-
 namespace net {
 
 // static
@@ -22,16 +20,16 @@ const char ChannelIDVerifier::kContextStr[] = "QUIC ChannelID";
 const char ChannelIDVerifier::kClientToServerStr[] = "client -> server";
 
 // static
-bool ChannelIDVerifier::Verify(StringPiece key,
-                               StringPiece signed_data,
-                               StringPiece signature) {
+bool ChannelIDVerifier::Verify(QuicStringPiece key,
+                               QuicStringPiece signed_data,
+                               QuicStringPiece signature) {
   return VerifyRaw(key, signed_data, signature, true);
 }
 
 // static
-bool ChannelIDVerifier::VerifyRaw(StringPiece key,
-                                  StringPiece signed_data,
-                                  StringPiece signature,
+bool ChannelIDVerifier::VerifyRaw(QuicStringPiece key,
+                                  QuicStringPiece signed_data,
+                                  QuicStringPiece signature,
                                   bool is_channel_id_signature) {
   if (key.size() != 32 * 2 || signature.size() != 32 * 2) {
     return false;

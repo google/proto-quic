@@ -58,6 +58,9 @@ gcc_toolchain("arm") {
 }
 
 clang_toolchain("clang_x86") {
+  # Output linker map files for binary size analysis.
+  enable_linker_map = true
+
   toolchain_args = {
     current_cpu = "x86"
     current_os = "linux"
@@ -89,6 +92,9 @@ gcc_toolchain("x86") {
   ar = "ar"
   ld = cxx
 
+  # Output linker map files for binary size analysis.
+  enable_linker_map = true
+
   toolchain_args = {
     current_cpu = "x86"
     current_os = "linux"
@@ -97,6 +103,9 @@ gcc_toolchain("x86") {
 }
 
 clang_toolchain("clang_x64") {
+  # Output linker map files for binary size analysis.
+  enable_linker_map = true
+
   toolchain_args = {
     current_cpu = "x64"
     current_os = "linux"
@@ -127,6 +136,9 @@ gcc_toolchain("x64") {
   nm = "nm"
   ar = "ar"
   ld = cxx
+
+  # Output linker map files for binary size analysis.
+  enable_linker_map = true
 
   toolchain_args = {
     current_cpu = "x64"

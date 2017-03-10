@@ -4,14 +4,13 @@
 
 #include "net/quic/platform/api/quic_url.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
 
-QuicUrl::QuicUrl(StringPiece url) : impl_(url) {}
+QuicUrl::QuicUrl(QuicStringPiece url) : impl_(url) {}
 
-QuicUrl::QuicUrl(StringPiece url, StringPiece default_scheme)
+QuicUrl::QuicUrl(QuicStringPiece url, QuicStringPiece default_scheme)
     : impl_(url, default_scheme) {}
 
 QuicUrl::QuicUrl(const QuicUrl& url) : impl_(url.impl()) {}

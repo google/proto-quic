@@ -334,8 +334,7 @@ TEST_P(FileNetLogObserverTest, CustomConstants) {
   TestClosure closure;
 
   const char kConstantString[] = "awesome constant";
-  std::unique_ptr<base::Value> constants(
-      new base::StringValue(kConstantString));
+  std::unique_ptr<base::Value> constants(new base::Value(kConstantString));
 
   CreateAndStartObserving(std::move(constants));
 

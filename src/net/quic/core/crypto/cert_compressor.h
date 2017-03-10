@@ -9,10 +9,10 @@
 #include <vector>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/quic/core/crypto/common_cert_set.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -36,15 +36,15 @@ class QUIC_EXPORT_PRIVATE CertCompressor {
   // the common sets known to the peer. |client_cached_cert_hashes| contains
   // 64-bit, FNV-1a hashes of certificates that the peer already possesses.
   static std::string CompressChain(const std::vector<std::string>& certs,
-                                   base::StringPiece client_common_set_hashes,
-                                   base::StringPiece client_cached_cert_hashes,
+                                   QuicStringPiece client_common_set_hashes,
+                                   QuicStringPiece client_cached_cert_hashes,
                                    const CommonCertSets* common_sets);
 
   // DecompressChain decompresses the result of |CompressChain|, given in |in|,
   // into a series of certificates that are written to |out_certs|.
   // |cached_certs| contains certificates that the peer may have omitted and
   // |common_sets| contains the common certificate sets known locally.
-  static bool DecompressChain(base::StringPiece in,
+  static bool DecompressChain(QuicStringPiece in,
                               const std::vector<std::string>& cached_certs,
                               const CommonCertSets* common_sets,
                               std::vector<std::string>* out_certs);

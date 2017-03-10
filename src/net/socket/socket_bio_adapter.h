@@ -85,6 +85,7 @@ class NET_EXPORT_PRIVATE SocketBIOAdapter {
   int BIORead(char* out, int len);
   void HandleSocketReadResult(int result);
   void OnSocketReadComplete(int result);
+  void OnSocketReadIfReadyComplete(int result);
 
   int BIOWrite(const char* in, int len);
   void SocketWrite();

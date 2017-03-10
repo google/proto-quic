@@ -259,7 +259,7 @@ class RequestCore : public base::RefCountedThreadSafe<RequestCore> {
   // there is no work that will be done on the network thread (e.g. when the
   // network thread has been shutdown before the request begins). See comment in
   // SignalImmediateError.
-  Error error_;
+  Error error_ = OK;
   std::vector<uint8_t> bytes_;
 
   // Indicates when |error_| and |bytes_| have been written to.

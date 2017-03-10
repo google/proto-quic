@@ -14,8 +14,8 @@
 #include "base/logging.h"
 #include "base/memory/weak_ptr.h"
 #include "base/single_thread_task_runner.h"
-#include "base/threading/sequenced_task_runner_handle.h"
 #include "base/threading/thread_restrictions.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
@@ -389,7 +389,7 @@ FakeURLFetcher::~FakeURLFetcher() {}
 
 void FakeURLFetcher::Start() {
   TestURLFetcher::Start();
-  base::SequencedTaskRunnerHandle::Get()->PostTask(
+  base::ThreadTaskRunnerHandle::Get()->PostTask(
       FROM_HERE,
       base::Bind(&FakeURLFetcher::RunDelegate, weak_factory_.GetWeakPtr()));
 }

@@ -982,9 +982,6 @@ void FindBadConstructsConsumer::ParseFunctionTemplates(
 }
 
 void FindBadConstructsConsumer::CheckVarDecl(clang::VarDecl* var_decl) {
-  if (!options_.check_auto_raw_pointer)
-    return;
-
   // Check whether auto deduces to a raw pointer.
   QualType non_reference_type = var_decl->getType().getNonReferenceType();
   // We might have a case where the type is written as auto*, but the actual

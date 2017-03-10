@@ -67,7 +67,7 @@ class NET_EXPORT TestRootCerts {
 
 #if defined(USE_NSS_CERTS)
   bool Contains(CERTCertificate* cert) const;
-#elif defined(OS_MACOSX) && !defined(USE_NSS_CERTS)
+#elif defined(OS_MACOSX)
   CFArrayRef temporary_roots() const { return temporary_roots_; }
 
   // Modifies the root certificates of |trust_ref| to include the
@@ -94,7 +94,7 @@ class NET_EXPORT TestRootCerts {
 #endif
 
  private:
-  friend struct base::DefaultLazyInstanceTraits<TestRootCerts>;
+  friend struct base::LazyInstanceTraitsBase<TestRootCerts>;
 
   TestRootCerts();
   ~TestRootCerts();

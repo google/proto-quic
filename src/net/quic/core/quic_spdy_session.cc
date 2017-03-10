@@ -15,7 +15,6 @@
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -410,8 +409,9 @@ size_t QuicSpdySession::WriteHeadersImpl(
     headers_frame.set_weight(Spdy3PriorityToHttp2Weight(priority));
   }
   SpdySerializedFrame frame(spdy_framer_.SerializeFrame(headers_frame));
-  headers_stream_->WriteOrBufferData(StringPiece(frame.data(), frame.size()),
-                                     false, std::move(ack_notifier_delegate));
+  headers_stream_->WriteOrBufferData(
+      QuicStringPiece(frame.data(), frame.size()), false,
+      std::move(ack_notifier_delegate));
   return frame.size();
 }
 
@@ -430,14 +430,14 @@ size_t QuicSpdySession::WritePushPromise(QuicStreamId original_stream_id,
   push_promise.set_fin(false);
 
   SpdySerializedFrame frame(spdy_framer_.SerializeFrame(push_promise));
-  headers_stream_->WriteOrBufferData(StringPiece(frame.data(), frame.size()),
-                                     false, nullptr);
+  headers_stream_->WriteOrBufferData(
+      QuicStringPiece(frame.data(), frame.size()), false, nullptr);
   return frame.size();
 }
 
 void QuicSpdySession::WriteDataFrame(
     QuicStreamId id,
-    StringPiece data,
+    QuicStringPiece data,
     bool fin,
     QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener) {
   // Note that certain SpdyDataIR constructors perform a deep copy of |data|
@@ -453,8 +453,9 @@ void QuicSpdySession::WriteDataFrame(
   }
   // Use buffered writes so that coherence of framing is preserved
   // between streams.
-  headers_stream_->WriteOrBufferData(StringPiece(frame.data(), frame.size()),
-                                     false, std::move(force_hol_ack_listener));
+  headers_stream_->WriteOrBufferData(
+      QuicStringPiece(frame.data(), frame.size()), false,
+      std::move(force_hol_ack_listener));
 }
 
 QuicConsumedData QuicSpdySession::WritevStreamData(
@@ -470,7 +471,7 @@ QuicConsumedData QuicSpdySession::WritevStreamData(
   size_t total_length = iov.total_length;
 
   if (total_length == 0 && fin) {
-    WriteDataFrame(id, StringPiece(), true, std::move(ack_listener));
+    WriteDataFrame(id, QuicStringPiece(), true, std::move(ack_listener));
     result.fin_consumed = true;
     return result;
   }
@@ -497,7 +498,7 @@ QuicConsumedData QuicSpdySession::WritevStreamData(
       bool last_iov = i == iov.iov_count - 1;
       bool last_fragment_within_iov = src_iov_offset >= src_iov->iov_len;
       bool frame_fin = (last_iov && last_fragment_within_iov) ? fin : false;
-      WriteDataFrame(id, StringPiece(data, len), frame_fin, ack_listener);
+      WriteDataFrame(id, QuicStringPiece(data, len), frame_fin, ack_listener);
       result.bytes_consumed += len;
       if (frame_fin) {
         result.fin_consumed = true;
@@ -518,8 +519,8 @@ size_t QuicSpdySession::SendMaxHeaderListSize(size_t value) {
   settings_frame.AddSetting(SETTINGS_MAX_HEADER_LIST_SIZE, value);
 
   SpdySerializedFrame frame(spdy_framer_.SerializeFrame(settings_frame));
-  headers_stream_->WriteOrBufferData(StringPiece(frame.data(), frame.size()),
-                                     false, nullptr);
+  headers_stream_->WriteOrBufferData(
+      QuicStringPiece(frame.data(), frame.size()), false, nullptr);
   return frame.size();
 }
 
@@ -600,7 +601,8 @@ void QuicSpdySession::OnStreamFrameData(QuicStreamId stream_id,
   }
   const QuicStreamOffset offset =
       stream->flow_controller()->highest_received_byte_offset();
-  const QuicStreamFrame frame(stream_id, fin, offset, StringPiece(data, len));
+  const QuicStreamFrame frame(stream_id, fin, offset,
+                              QuicStringPiece(data, len));
   QUIC_DVLOG(1) << "De-encapsulating DATA frame for stream " << stream_id
                 << " offset " << offset << " len " << len << " fin " << fin;
   OnStreamFrame(frame);

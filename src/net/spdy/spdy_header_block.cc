@@ -343,7 +343,7 @@ std::unique_ptr<base::Value> SpdyHeaderBlockNetLogCallback(
        it != headers->end(); ++it) {
     headers_dict->SetWithoutPathExpansion(
         it->first.as_string(),
-        new base::StringValue(ElideHeaderValueForNetLog(
+        new base::Value(ElideHeaderValueForNetLog(
             capture_mode, it->first.as_string(), it->second.as_string())));
   }
   dict->Set("headers", headers_dict);

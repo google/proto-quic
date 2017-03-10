@@ -9,6 +9,7 @@
 
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -22,7 +23,7 @@ class QUIC_EXPORT_PRIVATE QuicEncrypter {
   //
   // NOTE: The key is the client_write_key or server_write_key derived from
   // the master secret.
-  virtual bool SetKey(base::StringPiece key) = 0;
+  virtual bool SetKey(QuicStringPiece key) = 0;
 
   // Sets the fixed initial bytes of the nonce. Returns true on success,
   // false on failure.
@@ -39,7 +40,7 @@ class QUIC_EXPORT_PRIVATE QuicEncrypter {
   //
   // The security of the nonce format requires that QUIC never reuse a
   // packet number, even when retransmitting a lost packet.
-  virtual bool SetNoncePrefix(base::StringPiece nonce_prefix) = 0;
+  virtual bool SetNoncePrefix(QuicStringPiece nonce_prefix) = 0;
 
   // Writes encrypted |plaintext| and a MAC over |plaintext| and
   // |associated_data| into output. Sets |output_length| to the number of
@@ -50,8 +51,8 @@ class QUIC_EXPORT_PRIVATE QuicEncrypter {
   // |plaintext| must be <= |output|.
   virtual bool EncryptPacket(QuicVersion version,
                              QuicPacketNumber packet_number,
-                             base::StringPiece associated_data,
-                             base::StringPiece plaintext,
+                             QuicStringPiece associated_data,
+                             QuicStringPiece plaintext,
                              char* output,
                              size_t* output_length,
                              size_t max_output_length) = 0;
@@ -76,8 +77,8 @@ class QUIC_EXPORT_PRIVATE QuicEncrypter {
   virtual size_t GetCiphertextSize(size_t plaintext_size) const = 0;
 
   // For use by unit tests only.
-  virtual base::StringPiece GetKey() const = 0;
-  virtual base::StringPiece GetNoncePrefix() const = 0;
+  virtual QuicStringPiece GetKey() const = 0;
+  virtual QuicStringPiece GetNoncePrefix() const = 0;
 };
 
 }  // namespace net

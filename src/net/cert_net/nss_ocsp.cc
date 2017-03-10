@@ -106,7 +106,7 @@ class OCSPIOLoop {
   }
 
  private:
-  friend struct base::DefaultLazyInstanceTraits<OCSPIOLoop>;
+  friend struct base::LazyInstanceTraitsBase<OCSPIOLoop>;
 
   OCSPIOLoop();
 
@@ -164,7 +164,7 @@ char* GetAlternateOCSPAIAInfo(CERTCertificate *cert);
 
 class OCSPNSSInitialization {
  private:
-  friend struct base::DefaultLazyInstanceTraits<OCSPNSSInitialization>;
+  friend struct base::LazyInstanceTraitsBase<OCSPNSSInitialization>;
 
   OCSPNSSInitialization();
   // This class is only instantiated as a leaky LazyInstance, so its destructor

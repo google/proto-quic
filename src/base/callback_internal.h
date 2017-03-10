@@ -82,6 +82,9 @@ class BASE_EXPORT CallbackBase<CopyMode::MoveOnly> {
   explicit CallbackBase(const CallbackBase<CopyMode::Copyable>& c);
   CallbackBase& operator=(const CallbackBase<CopyMode::Copyable>& c);
 
+  explicit CallbackBase(CallbackBase<CopyMode::Copyable>&& c);
+  CallbackBase& operator=(CallbackBase<CopyMode::Copyable>&& c);
+
   // Returns true if Callback is null (doesn't refer to anything).
   bool is_null() const { return bind_state_.get() == NULL; }
   explicit operator bool() const { return !is_null(); }

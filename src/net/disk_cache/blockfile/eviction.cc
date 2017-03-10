@@ -289,14 +289,14 @@ Rankings::List Eviction::GetListForEntry(EntryImpl* entry) {
 
 bool Eviction::EvictEntry(CacheRankingsBlock* node, bool empty,
                           Rankings::List list) {
-  EntryImpl* entry = backend_->GetEnumeratedEntry(node, list);
+  scoped_refptr<EntryImpl> entry = backend_->GetEnumeratedEntry(node, list);
   if (!entry) {
     Trace("NewEntry failed on Trim 0x%x", node->address().value());
     return false;
   }
 
-  web_fonts_histogram::RecordEviction(entry);
-  ReportTrimTimes(entry);
+  web_fonts_histogram::RecordEviction(entry.get());
+  ReportTrimTimes(entry.get());
   if (empty || !new_eviction_) {
     entry->DoomImpl();
   } else {
@@ -304,15 +304,13 @@ bool Eviction::EvictEntry(CacheRankingsBlock* node, bool empty,
     EntryStore* info = entry->entry()->Data();
     DCHECK_EQ(ENTRY_NORMAL, info->state);
 
-    rankings_->Remove(entry->rankings(), GetListForEntryV2(entry), true);
+    rankings_->Remove(entry->rankings(), GetListForEntryV2(entry.get()), true);
     info->state = ENTRY_EVICTED;
     entry->entry()->Store();
     rankings_->Insert(entry->rankings(), true, Rankings::DELETED);
   }
   if (!empty)
     backend_->OnEvent(Stats::TRIM_ENTRY);
-
-  entry->Release();
 
   return true;
 }
@@ -531,7 +529,8 @@ void Eviction::TrimDeleted(bool empty) {
 }
 
 bool Eviction::RemoveDeletedNode(CacheRankingsBlock* node) {
-  EntryImpl* entry = backend_->GetEnumeratedEntry(node, Rankings::DELETED);
+  scoped_refptr<EntryImpl> entry =
+      backend_->GetEnumeratedEntry(node, Rankings::DELETED);
   if (!entry) {
     Trace("NewEntry failed on Trim 0x%x", node->address().value());
     return false;
@@ -540,7 +539,6 @@ bool Eviction::RemoveDeletedNode(CacheRankingsBlock* node) {
   bool doomed = (entry->entry()->Data()->state == ENTRY_DOOMED);
   entry->entry()->Data()->state = ENTRY_DOOMED;
   entry->DoomImpl();
-  entry->Release();
   return !doomed;
 }
 

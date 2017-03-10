@@ -203,7 +203,7 @@ TEST_P(QuicServerSessionBaseTest, ServerPushDisabledByDefault) {
 TEST_P(QuicServerSessionBaseTest, CloseStreamDueToReset) {
   // Open a stream, then reset it.
   // Send two bytes of payload to open it.
-  QuicStreamFrame data1(kClientDataStreamId1, false, 0, StringPiece("HT"));
+  QuicStreamFrame data1(kClientDataStreamId1, false, 0, QuicStringPiece("HT"));
   session_->OnStreamFrame(data1);
   EXPECT_EQ(1u, session_->GetNumOpenIncomingStreams());
 
@@ -233,7 +233,7 @@ TEST_P(QuicServerSessionBaseTest, NeverOpenStreamDueToReset) {
   EXPECT_EQ(0u, session_->GetNumOpenIncomingStreams());
 
   // Send two bytes of payload.
-  QuicStreamFrame data1(kClientDataStreamId1, false, 0, StringPiece("HT"));
+  QuicStreamFrame data1(kClientDataStreamId1, false, 0, QuicStringPiece("HT"));
   visitor_->OnStreamFrame(data1);
 
   // The stream should never be opened, now that the reset is received.
@@ -244,9 +244,9 @@ TEST_P(QuicServerSessionBaseTest, NeverOpenStreamDueToReset) {
 TEST_P(QuicServerSessionBaseTest, AcceptClosedStream) {
   // Send (empty) compressed headers followed by two bytes of data.
   QuicStreamFrame frame1(kClientDataStreamId1, false, 0,
-                         StringPiece("\1\0\0\0\0\0\0\0HT"));
+                         QuicStringPiece("\1\0\0\0\0\0\0\0HT"));
   QuicStreamFrame frame2(kClientDataStreamId2, false, 0,
-                         StringPiece("\2\0\0\0\0\0\0\0HT"));
+                         QuicStringPiece("\2\0\0\0\0\0\0\0HT"));
   visitor_->OnStreamFrame(frame1);
   visitor_->OnStreamFrame(frame2);
   EXPECT_EQ(2u, session_->GetNumOpenIncomingStreams());
@@ -260,8 +260,8 @@ TEST_P(QuicServerSessionBaseTest, AcceptClosedStream) {
   // If we were tracking, we'd probably want to reject this because it's data
   // past the reset point of stream 3.  As it's a closed stream we just drop the
   // data on the floor, but accept the packet because it has data for stream 5.
-  QuicStreamFrame frame3(kClientDataStreamId1, false, 2, StringPiece("TP"));
-  QuicStreamFrame frame4(kClientDataStreamId2, false, 2, StringPiece("TP"));
+  QuicStreamFrame frame3(kClientDataStreamId1, false, 2, QuicStringPiece("TP"));
+  QuicStreamFrame frame4(kClientDataStreamId2, false, 2, QuicStringPiece("TP"));
   visitor_->OnStreamFrame(frame3);
   visitor_->OnStreamFrame(frame4);
   // The stream should never be opened, now that the reset is received.

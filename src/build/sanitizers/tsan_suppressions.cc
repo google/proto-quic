@@ -270,6 +270,10 @@ char kTSanDefaultSuppressions[] =
 // http://crbug.com/587199
 "race:base::TimerTest_OneShotTimer_CustomTaskRunner_Test::TestBody\n"
 
+// http://crbug.com/v8/6065
+"race:net::(anonymous namespace)::ProxyResolverV8TracingImpl::RequestImpl"
+"::~RequestImpl()\n"
+
 // End of suppressions.
 ;  // Please keep this semicolon.
 

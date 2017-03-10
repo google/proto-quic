@@ -15,7 +15,6 @@
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -267,7 +266,7 @@ TEST(CryptoFramerTest, ProcessInput) {
   };
 
   EXPECT_TRUE(
-      framer.ProcessInput(StringPiece(AsChars(input), arraysize(input))));
+      framer.ProcessInput(QuicStringPiece(AsChars(input), arraysize(input))));
   EXPECT_EQ(0u, framer.InputBytesRemaining());
   EXPECT_EQ(0, visitor.error_count_);
   ASSERT_EQ(1u, visitor.messages_.size());
@@ -311,7 +310,7 @@ TEST(CryptoFramerTest, ProcessInputWithThreeKeys) {
   };
 
   EXPECT_TRUE(
-      framer.ProcessInput(StringPiece(AsChars(input), arraysize(input))));
+      framer.ProcessInput(QuicStringPiece(AsChars(input), arraysize(input))));
   EXPECT_EQ(0u, framer.InputBytesRemaining());
   EXPECT_EQ(0, visitor.error_count_);
   ASSERT_EQ(1u, visitor.messages_.size());
@@ -350,7 +349,7 @@ TEST(CryptoFramerTest, ProcessInputIncrementally) {
   };
 
   for (size_t i = 0; i < arraysize(input); i++) {
-    EXPECT_TRUE(framer.ProcessInput(StringPiece(AsChars(input) + i, 1)));
+    EXPECT_TRUE(framer.ProcessInput(QuicStringPiece(AsChars(input) + i, 1)));
   }
   EXPECT_EQ(0u, framer.InputBytesRemaining());
   ASSERT_EQ(1u, visitor.messages_.size());
@@ -384,7 +383,7 @@ TEST(CryptoFramerTest, ProcessInputTagsOutOfOrder) {
   };
 
   EXPECT_FALSE(
-      framer.ProcessInput(StringPiece(AsChars(input), arraysize(input))));
+      framer.ProcessInput(QuicStringPiece(AsChars(input), arraysize(input))));
   EXPECT_EQ(QUIC_CRYPTO_TAGS_OUT_OF_ORDER, framer.error());
   EXPECT_EQ(1, visitor.error_count_);
 }
@@ -412,7 +411,7 @@ TEST(CryptoFramerTest, ProcessEndOffsetsOutOfOrder) {
   };
 
   EXPECT_FALSE(
-      framer.ProcessInput(StringPiece(AsChars(input), arraysize(input))));
+      framer.ProcessInput(QuicStringPiece(AsChars(input), arraysize(input))));
   EXPECT_EQ(QUIC_CRYPTO_TAGS_OUT_OF_ORDER, framer.error());
   EXPECT_EQ(1, visitor.error_count_);
 }
@@ -432,7 +431,7 @@ TEST(CryptoFramerTest, ProcessInputTooManyEntries) {
   };
 
   EXPECT_FALSE(
-      framer.ProcessInput(StringPiece(AsChars(input), arraysize(input))));
+      framer.ProcessInput(QuicStringPiece(AsChars(input), arraysize(input))));
   EXPECT_EQ(QUIC_CRYPTO_TOO_MANY_ENTRIES, framer.error());
   EXPECT_EQ(1, visitor.error_count_);
 }
@@ -460,7 +459,7 @@ TEST(CryptoFramerTest, ProcessInputZeroLength) {
   };
 
   EXPECT_TRUE(
-      framer.ProcessInput(StringPiece(AsChars(input), arraysize(input))));
+      framer.ProcessInput(QuicStringPiece(AsChars(input), arraysize(input))));
   EXPECT_EQ(0, visitor.error_count_);
 }
 

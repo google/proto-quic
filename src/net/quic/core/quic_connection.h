@@ -27,7 +27,6 @@
 #include <vector>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/quic_alarm.h"
 #include "net/quic/core/quic_alarm_factory.h"
@@ -45,6 +44,7 @@
 #include "net/quic/core/quic_types.h"
 #include "net/quic/platform/api/quic_export.h"
 #include "net/quic/platform/api/quic_socket_address.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -673,7 +673,7 @@ class QUIC_EXPORT_PRIVATE QuicConnection
   QuicConnectionHelperInterface* helper() { return helper_; }
   QuicAlarmFactory* alarm_factory() { return alarm_factory_; }
 
-  base::StringPiece GetCurrentPacket();
+  QuicStringPiece GetCurrentPacket();
 
   const QuicPacketGenerator& packet_generator() const {
     return packet_generator_;

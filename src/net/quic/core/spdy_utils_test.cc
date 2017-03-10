@@ -4,12 +4,11 @@
 #include "net/quic/core/spdy_utils.h"
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/test/gtest_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
 using std::string;
 using testing::UnorderedElementsAre;
 using testing::Pair;
@@ -185,12 +184,13 @@ TEST(SpdyUtilsTest, CopyAndValidateHeaders) {
   SpdyHeaderBlock block;
   ASSERT_TRUE(
       SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
-  EXPECT_THAT(block, UnorderedElementsAre(
-                         Pair("cookie", " part 1; part 2 ; part3;  fin!"),
-                         Pair("passed-through", StringPiece("foo\0baz", 7)),
-                         Pair("joined", StringPiece("value 1\0value 2", 15)),
-                         Pair("empty", ""),
-                         Pair("empty-joined", StringPiece("\0foo\0\0", 6))));
+  EXPECT_THAT(block,
+              UnorderedElementsAre(
+                  Pair("cookie", " part 1; part 2 ; part3;  fin!"),
+                  Pair("passed-through", QuicStringPiece("foo\0baz", 7)),
+                  Pair("joined", QuicStringPiece("value 1\0value 2", 15)),
+                  Pair("empty", ""),
+                  Pair("empty-joined", QuicStringPiece("\0foo\0\0", 6))));
   EXPECT_EQ(-1, content_length);
 }
 
@@ -223,10 +223,10 @@ TEST(SpdyUtilsTest, CopyAndValidateHeadersMultipleContentLengths) {
       SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
   EXPECT_THAT(block, UnorderedElementsAre(
                          Pair("foo", "foovalue"), Pair("bar", "barvalue"),
-                         Pair("content-length", StringPiece("9"
-                                                            "\0"
-                                                            "9",
-                                                            3)),
+                         Pair("content-length", QuicStringPiece("9"
+                                                                "\0"
+                                                                "9",
+                                                                3)),
                          Pair("baz", "")));
   EXPECT_EQ(9, content_length);
 }
@@ -254,7 +254,7 @@ TEST(SpdyUtilsTest, CopyAndValidateHeadersLargeContentLength) {
       SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
   EXPECT_THAT(block, UnorderedElementsAre(
                          Pair("foo", "foovalue"), Pair("bar", "barvalue"),
-                         Pair("content-length", StringPiece("9000000000")),
+                         Pair("content-length", QuicStringPiece("9000000000")),
                          Pair("baz", "")));
   EXPECT_EQ(9000000000, content_length);
 }
@@ -269,10 +269,10 @@ TEST(SpdyUtilsTest, CopyAndValidateHeadersMultipleValues) {
   SpdyHeaderBlock block;
   ASSERT_TRUE(
       SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
-  EXPECT_THAT(
-      block, UnorderedElementsAre(Pair("foo", StringPiece("foovalue\0boo", 12)),
-                                  Pair("bar", "barvalue"),
-                                  Pair("baz", StringPiece("\0buzz", 5))));
+  EXPECT_THAT(block, UnorderedElementsAre(
+                         Pair("foo", QuicStringPiece("foovalue\0boo", 12)),
+                         Pair("bar", "barvalue"),
+                         Pair("baz", QuicStringPiece("\0buzz", 5))));
   EXPECT_EQ(-1, content_length);
 }
 
@@ -284,9 +284,9 @@ TEST(SpdyUtilsTest, CopyAndValidateHeadersMoreThanTwoValues) {
   SpdyHeaderBlock block;
   ASSERT_TRUE(
       SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
-  EXPECT_THAT(block,
-              UnorderedElementsAre(Pair(
-                  "set-cookie", StringPiece("value1\0value2\0value3", 20))));
+  EXPECT_THAT(
+      block, UnorderedElementsAre(Pair(
+                 "set-cookie", QuicStringPiece("value1\0value2\0value3", 20))));
   EXPECT_EQ(-1, content_length);
 }
 

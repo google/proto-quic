@@ -360,7 +360,7 @@ class _SchemasCCGenerator(object):
     c.Append('std::map<std::string, const char*> schemas;')
     c.Eblock('};')
     c.Append()
-    c.Append('base::LazyInstance<Static> g_lazy_instance;')
+    c.Append('base::LazyInstance<Static>::DestructorAtExit g_lazy_instance;')
     c.Append()
     c.Append('}  // namespace')
     c.Append()

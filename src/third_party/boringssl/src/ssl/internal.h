@@ -826,11 +826,6 @@ STACK_OF(CRYPTO_BUFFER) *ssl_parse_cert_chain(uint8_t *out_alert,
  * empty certificate list. It returns one on success and zero on error. */
 int ssl_add_cert_chain(SSL *ssl, CBB *cbb);
 
-/* ssl_auto_chain_if_needed runs the deprecated auto-chaining logic if
- * necessary. On success, it updates |ssl|'s certificate configuration as needed
- * and returns one. Otherwise, it returns zero. */
-int ssl_auto_chain_if_needed(SSL *ssl);
-
 /* ssl_cert_check_digital_signature_key_usage parses the DER-encoded, X.509
  * certificate in |in| and returns one if doesn't specify a key usage or, if it
  * does, if it includes digitalSignature. Otherwise it pushes to the error
@@ -844,9 +839,9 @@ EVP_PKEY *ssl_cert_parse_pubkey(const CBS *in);
 
 /* ssl_parse_client_CA_list parses a CA list from |cbs| in the format used by a
  * TLS CertificateRequest message. On success, it returns a newly-allocated
- * |X509_NAME| list and advances |cbs|. Otherwise, it returns NULL and sets
+ * |CRYPTO_BUFFER| list and advances |cbs|. Otherwise, it returns NULL and sets
  * |*out_alert| to an alert to send to the peer. */
-STACK_OF(X509_NAME) *
+STACK_OF(CRYPTO_BUFFER) *
     ssl_parse_client_CA_list(SSL *ssl, uint8_t *out_alert, CBS *cbs);
 
 /* ssl_add_client_CA_list adds the configured CA list to |cbb| in the format
@@ -1037,7 +1032,11 @@ struct ssl_handshake_st {
 
   /* ca_names, on the client, contains the list of CAs received in a
    * CertificateRequest message. */
-  STACK_OF(X509_NAME) *ca_names;
+  STACK_OF(CRYPTO_BUFFER) *ca_names;
+
+  /* cached_x509_ca_names contains a cache of parsed versions of the elements
+   * of |ca_names|. */
+  STACK_OF(X509_NAME) *cached_x509_ca_names;
 
   /* certificate_types, on the client, contains the set of certificate types
    * received in a CertificateRequest message. */
@@ -1159,10 +1158,9 @@ int ssl_ext_key_share_add_serverhello(SSL_HANDSHAKE *hs, CBB *out);
 
 int ssl_ext_pre_shared_key_parse_serverhello(SSL_HANDSHAKE *hs,
                                              uint8_t *out_alert, CBS *contents);
-int ssl_ext_pre_shared_key_parse_clienthello(SSL_HANDSHAKE *hs,
-                                             SSL_SESSION **out_session,
-                                             CBS *out_binders,
-                                             uint8_t *out_alert, CBS *contents);
+int ssl_ext_pre_shared_key_parse_clienthello(
+    SSL_HANDSHAKE *hs, SSL_SESSION **out_session, CBS *out_binders,
+    uint32_t *out_obfuscated_ticket_age, uint8_t *out_alert, CBS *contents);
 int ssl_ext_pre_shared_key_add_serverhello(SSL_HANDSHAKE *hs, CBB *out);
 
 /* ssl_is_sct_list_valid does a shallow parse of the SCT list in |contents| and
@@ -1442,10 +1440,19 @@ struct ssl_protocol_method_st {
 };
 
 struct ssl_x509_method_st {
-  /* cert_clear frees and NULLs all X509-related state. */
+  /* check_client_CA_list returns one if |names| is a good list of X.509
+   * distinguished names and zero otherwise. This is used to ensure that we can
+   * reject unparsable values at handshake time when using crypto/x509. */
+  int (*check_client_CA_list)(STACK_OF(CRYPTO_BUFFER) *names);
+
+  /* cert_clear frees and NULLs all X509 certificate-related state. */
   void (*cert_clear)(CERT *cert);
+  /* cert_free frees all X509-related state. */
+  void (*cert_free)(CERT *cert);
   /* cert_flush_cached_chain drops any cached |X509|-based certificate chain
    * from |cert|. */
+  /* cert_dup duplicates any needed fields from |cert| to |new_cert|. */
+  void (*cert_dup)(CERT *new_cert, const CERT *cert);
   void (*cert_flush_cached_chain)(CERT *cert);
   /* cert_flush_cached_chain drops any cached |X509|-based leaf certificate
    * from |cert|. */
@@ -1460,11 +1467,32 @@ struct ssl_x509_method_st {
   int (*session_dup)(SSL_SESSION *new_session, const SSL_SESSION *session);
   /* session_clear frees any X509-related state from |session|. */
   void (*session_clear)(SSL_SESSION *session);
-};
+  /* session_verify_cert_chain verifies the certificate chain in |session|,
+   * sets |session->verify_result| and returns one on success or zero on
+   * error. */
+  int (*session_verify_cert_chain)(SSL_SESSION *session, SSL *ssl);
 
-/* ssl_noop_x509_method is implements the |ssl_x509_method_st| functions by
- * doing nothing. */
-extern const struct ssl_x509_method_st ssl_noop_x509_method;
+  /* hs_flush_cached_ca_names drops any cached |X509_NAME|s from |hs|. */
+  void (*hs_flush_cached_ca_names)(SSL_HANDSHAKE *hs);
+  /* ssl_new does any neccessary initialisation of |ssl|. It returns one on
+   * success or zero on error. */
+  int (*ssl_new)(SSL *ssl);
+  /* ssl_free frees anything created by |ssl_new|. */
+  void (*ssl_free)(SSL *ssl);
+  /* ssl_flush_cached_client_CA drops any cached |X509_NAME|s from |ssl|. */
+  void (*ssl_flush_cached_client_CA)(SSL *ssl);
+  /* ssl_auto_chain_if_needed runs the deprecated auto-chaining logic if
+   * necessary. On success, it updates |ssl|'s certificate configuration as
+   * needed and returns one. Otherwise, it returns zero. */
+  int (*ssl_auto_chain_if_needed)(SSL *ssl);
+  /* ssl_ctx_new does any neccessary initialisation of |ctx|. It returns one on
+   * success or zero on error. */
+  int (*ssl_ctx_new)(SSL_CTX *ctx);
+  /* ssl_ctx_free frees anything created by |ssl_ctx_new|. */
+  void (*ssl_ctx_free)(SSL_CTX *ctx);
+  /* ssl_ctx_flush_cached_client_CA drops any cached |X509_NAME|s from |ctx|. */
+  void (*ssl_ctx_flush_cached_client_CA)(SSL_CTX *ssl);
+};
 
 /* ssl_crypto_x509_method provides the |ssl_x509_method_st| functions using
  * crypto/x509. */
@@ -1575,10 +1603,6 @@ typedef struct ssl3_state_st {
    * handshake. */
   unsigned tlsext_channel_id_valid:1;
 
-  /* short_header is one if https://github.com/tlswg/tls13-spec/pull/762 has
-   * been negotiated. */
-  unsigned short_header:1;
-
   uint8_t send_alert[2];
 
   /* pending_flight is the pending outgoing flight. This is used to flush each
@@ -1654,6 +1678,11 @@ typedef struct ssl3_state_st {
    *     verified Channel ID from the client: a P256 point, (x,y), where
    *     each are big-endian values. */
   uint8_t tlsext_channel_id[64];
+
+  /* ticket_age_skew is the difference, in seconds, between the client-sent
+   * ticket age and the server-computed value in TLS 1.3 server connections
+   * which resumed a session. */
+  int32_t ticket_age_skew;
 } SSL3_STATE;
 
 /* lengths of messages */
@@ -1690,6 +1719,11 @@ typedef struct hm_fragment_st {
    * the message have been received. It is NULL if the message is complete. */
   uint8_t *reassembly;
 } hm_fragment;
+
+struct OPENSSL_timeval {
+  uint64_t tv_sec;
+  uint32_t tv_usec;
+};
 
 typedef struct dtls1_state_st {
   /* send_cookie is true if we are resending the ClientHello
@@ -1739,7 +1773,7 @@ typedef struct dtls1_state_st {
 
   /* Indicates when the last handshake msg or heartbeat sent will
    * timeout. */
-  struct timeval next_timeout;
+  struct OPENSSL_timeval next_timeout;
 
   /* timeout_duration_ms is the timeout duration in milliseconds. */
   unsigned timeout_duration_ms;
@@ -1832,7 +1866,11 @@ struct ssl_st {
   CRYPTO_EX_DATA ex_data;
 
   /* for server side, keep the list of CA_dn we can use */
-  STACK_OF(X509_NAME) *client_CA;
+  STACK_OF(CRYPTO_BUFFER) *client_CA;
+
+  /* cached_x509_client_CA is a cache of parsed versions of the elements of
+   * |client_CA|. */
+  STACK_OF(X509_NAME) *cached_x509_client_CA;
 
   uint32_t options; /* protocol behaviour */
   uint32_t mode;    /* API behaviour */
@@ -1980,7 +2018,8 @@ void ssl_session_rebase_time(SSL *ssl, SSL_SESSION *session);
 /* ssl_session_renew_timeout calls |ssl_session_rebase_time| and renews
  * |session|'s timeout to |timeout| (measured from the current time). The
  * renewal is clamped to the session's auth_timeout. */
-void ssl_session_renew_timeout(SSL *ssl, SSL_SESSION *session, long timeout);
+void ssl_session_renew_timeout(SSL *ssl, SSL_SESSION *session,
+                               uint32_t timeout);
 
 void ssl_cipher_preference_list_free(
     struct ssl_cipher_preference_list_st *cipher_list);
@@ -1990,11 +2029,7 @@ void ssl_cipher_preference_list_free(
 const struct ssl_cipher_preference_list_st *ssl_get_cipher_preferences(
     const SSL *ssl);
 
-int ssl_verify_cert_chain(SSL *ssl, long *out_verify_result,
-                          STACK_OF(X509) *cert_chain);
 void ssl_update_cache(SSL_HANDSHAKE *hs, int mode);
-
-int ssl_verify_alarm_type(long type);
 
 int ssl3_get_finished(SSL_HANDSHAKE *hs);
 int ssl3_send_alert(SSL *ssl, int level, int desc);
@@ -2172,7 +2207,7 @@ int ssl_get_version_range(const SSL *ssl, uint16_t *out_min_version,
  * call this function before the version is determined. */
 uint16_t ssl3_protocol_version(const SSL *ssl);
 
-void ssl_get_current_time(const SSL *ssl, struct timeval *out_clock);
+void ssl_get_current_time(const SSL *ssl, struct OPENSSL_timeval *out_clock);
 
 /* ssl_reset_error_state resets state for |SSL_get_error|. */
 void ssl_reset_error_state(SSL *ssl);

@@ -639,4 +639,13 @@ public class ApiCompatibilityUtils {
             window.setFeatureInt(featureNumber, featureValue);
         }
     }
+
+    /**
+     *  Null-safe equivalent of {@code a.equals(b)}.
+     *
+     *  @see Objects#equals(Object, Object)
+     */
+    public static boolean objectEquals(Object a, Object b) {
+        return (a == null) ? (b == null) : a.equals(b);
+    }
 }

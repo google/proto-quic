@@ -53,9 +53,8 @@ void ExpectDictStringValue(const std::string& expected_value,
   EXPECT_EQ(expected_value, string_value) << key;
 }
 
-void ExpectStringValue(const std::string& expected_str,
-                       StringValue* actual) {
-  std::unique_ptr<StringValue> scoped_actual(actual);
+void ExpectStringValue(const std::string& expected_str, Value* actual) {
+  std::unique_ptr<Value> scoped_actual(actual);
   std::string actual_str;
   EXPECT_TRUE(scoped_actual->GetAsString(&actual_str));
   EXPECT_EQ(expected_str, actual_str);

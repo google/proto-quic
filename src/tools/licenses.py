@@ -462,11 +462,28 @@ def FindThirdPartyDirsWithFiles(root):
     return FilterDirsWithFiles(third_party_dirs, root)
 
 
+# Many builders do not contain 'gn' in their PATH, so use the GN binary from
+# //buildtools.
+def _GnBinary():
+    exe = 'gn'
+    if sys.platform == 'linux2':
+        subdir = 'linux64'
+    elif sys.platform == 'darwin':
+        subdir = 'mac'
+    elif sys.platform == 'win32':
+        subdir, exe = 'win', 'gn.exe'
+    else:
+        raise RuntimeError("Unsupported platform '%s'." % sys.platform)
+
+    return os.path.join(_REPOSITORY_ROOT, 'buildtools', subdir, exe)
+
+
 def FindThirdPartyDeps(gn_out_dir, gn_target):
     if not gn_out_dir:
         raise RuntimeError("--gn-out-dir is required if --gn-target is used.")
 
-    gn_deps = subprocess.check_output(["gn", "desc", gn_out_dir, gn_target,
+    gn_deps = subprocess.check_output([_GnBinary(), "desc", gn_out_dir,
+                                       gn_target,
                                        "deps", "--as=buildfile", "--all"])
     third_party_deps = set()
     for build_dep in gn_deps.split():

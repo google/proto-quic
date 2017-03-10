@@ -1,0 +1,2 @@
+gen/ui/resources/grit/ui_unscaled_resources.h
+gen/ui/resources/ui_unscaled_resources.rc

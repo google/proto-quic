@@ -15,7 +15,6 @@
 #include "third_party/boringssl/src/include/openssl/err.h"
 #include "third_party/boringssl/src/include/openssl/evp.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -29,7 +28,7 @@ P256KeyExchange::P256KeyExchange(bssl::UniquePtr<EC_KEY> private_key,
 P256KeyExchange::~P256KeyExchange() {}
 
 // static
-P256KeyExchange* P256KeyExchange::New(StringPiece key) {
+P256KeyExchange* P256KeyExchange::New(QuicStringPiece key) {
   if (key.empty()) {
     QUIC_DLOG(INFO) << "Private key is empty";
     return nullptr;
@@ -83,7 +82,7 @@ KeyExchange* P256KeyExchange::NewKeyPair(QuicRandom* /*rand*/) const {
   return P256KeyExchange::New(private_value);
 }
 
-bool P256KeyExchange::CalculateSharedKey(StringPiece peer_public_value,
+bool P256KeyExchange::CalculateSharedKey(QuicStringPiece peer_public_value,
                                          string* out_result) const {
   if (peer_public_value.size() != kUncompressedP256PointBytes) {
     QUIC_DLOG(INFO) << "Peer public value is invalid";
@@ -113,9 +112,9 @@ bool P256KeyExchange::CalculateSharedKey(StringPiece peer_public_value,
   return true;
 }
 
-StringPiece P256KeyExchange::public_value() const {
-  return StringPiece(reinterpret_cast<const char*>(public_key_),
-                     sizeof(public_key_));
+QuicStringPiece P256KeyExchange::public_value() const {
+  return QuicStringPiece(reinterpret_cast<const char*>(public_key_),
+                         sizeof(public_key_));
 }
 
 QuicTag P256KeyExchange::tag() const {

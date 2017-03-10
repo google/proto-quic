@@ -16,10 +16,10 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_session.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "third_party/boringssl/src/include/openssl/sha.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -340,7 +340,8 @@ void QuicCryptoServerStream::FinishSendServerConfigUpdate(
   QUIC_DVLOG(1) << "Server: Sending server config update: "
                 << message.DebugString();
   const QuicData& data = message.GetSerialized();
-  WriteOrBufferData(StringPiece(data.data(), data.length()), false, nullptr);
+  WriteOrBufferData(QuicStringPiece(data.data(), data.length()), false,
+                    nullptr);
 
   ++num_server_config_update_messages_sent_;
 }

@@ -5,7 +5,6 @@
 #ifndef NET_TOOLS_QUIC_STATELESS_REJECTOR_H_
 #define NET_TOOLS_QUIC_STATELESS_REJECTOR_H_
 
-#include "base/strings/string_piece.h"
 #include "net/quic/core/crypto/crypto_framer.h"
 #include "net/quic/core/crypto/quic_crypto_server_config.h"
 #include "net/quic/core/quic_packets.h"

@@ -9810,6 +9810,11 @@ should be able to be added at any place in this file.
   </description>
 </action>
 
+<action name="MobileMenuRequestMobileSite">
+  <owner>liaoyuke@chromium.org</owner>
+  <description>User pressed 'Request Mobile Site' in the app menu.</description>
+</action>
+
 <action name="MobileMenuSettings">
   <owner>aurimas@chromium.org</owner>
   <description>User pressed 'Settings' in the app menu.</description>
@@ -14325,6 +14330,23 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="SettingsResetPrompt_Accepted">
+  <owner>alito@chromium.org</owner>
+  <description>The user accepted the settings reset prompt.</description>
+</action>
+
+<action name="SettingsResetPrompt_Declined">
+  <owner>alito@chromium.org</owner>
+  <description>The user declined the settings reset prompt.</description>
+</action>
+
+<action name="SettingsResetPrompt_Shown">
+  <owner>alito@chromium.org</owner>
+  <description>
+    The settings reset dialog was displayed to the user.
+  </description>
+</action>
+
 <action name="Shelf_AlignmentSetBottom">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
@@ -15898,6 +15920,7 @@ should be able to be added at any place in this file.
 <action name="Unselect">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>Deprecated 03/2017 in issue 697756.</obsolete>
 </action>
 
 <action name="UpdateChrome">

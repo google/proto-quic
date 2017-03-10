@@ -37,7 +37,7 @@ class NET_EXPORT_PRIVATE ProofSourceChromium : public ProofSource {
                 const std::string& hostname,
                 const std::string& server_config,
                 QuicVersion quic_version,
-                base::StringPiece chlo_hash,
+                QuicStringPiece chlo_hash,
                 const QuicTagVector& connection_options,
                 std::unique_ptr<Callback> callback) override;
 
@@ -46,7 +46,7 @@ class NET_EXPORT_PRIVATE ProofSourceChromium : public ProofSource {
                      const std::string& hostname,
                      const std::string& server_config,
                      QuicVersion quic_version,
-                     base::StringPiece chlo_hash,
+                     QuicStringPiece chlo_hash,
                      const QuicTagVector& connection_options,
                      QuicReferenceCountedPointer<ProofSource::Chain>* out_chain,
                      QuicCryptoProof* proof);

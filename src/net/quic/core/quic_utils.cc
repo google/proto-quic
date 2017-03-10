@@ -13,7 +13,6 @@
 #include "net/quic/core/quic_constants.h"
 #include "net/quic/core/quic_flags.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -29,7 +28,7 @@ namespace {
 #endif
 
 #ifdef QUIC_UTIL_HAS_UINT128
-uint128 IncrementalHashFast(uint128 uhash, StringPiece data) {
+uint128 IncrementalHashFast(uint128 uhash, QuicStringPiece data) {
   // This code ends up faster than the naive implementation for 2 reasons:
   // 1. uint128 from base/int128.h is sufficiently complicated that the compiler
   //    cannot transform the multiplication by kPrime into a shift-multiply-add;
@@ -53,7 +52,7 @@ uint128 IncrementalHashFast(uint128 uhash, StringPiece data) {
 
 #ifndef QUIC_UTIL_HAS_UINT128
 // Slow implementation of IncrementalHash. In practice, only used by Chromium.
-uint128 IncrementalHashSlow(uint128 hash, StringPiece data) {
+uint128 IncrementalHashSlow(uint128 hash, QuicStringPiece data) {
   // kPrime = 309485009821345068724781371
   static const uint128 kPrime = MakeUint128(16777216, 315);
   const uint8_t* octets = reinterpret_cast<const uint8_t*>(data.data());
@@ -65,7 +64,7 @@ uint128 IncrementalHashSlow(uint128 hash, StringPiece data) {
 }
 #endif
 
-uint128 IncrementalHash(uint128 hash, StringPiece data) {
+uint128 IncrementalHash(uint128 hash, QuicStringPiece data) {
 #ifdef QUIC_UTIL_HAS_UINT128
   return IncrementalHashFast(hash, data);
 #else
@@ -76,7 +75,7 @@ uint128 IncrementalHash(uint128 hash, StringPiece data) {
 }  // namespace
 
 // static
-uint64_t QuicUtils::FNV1a_64_Hash(StringPiece data) {
+uint64_t QuicUtils::FNV1a_64_Hash(QuicStringPiece data) {
   static const uint64_t kOffset = UINT64_C(14695981039346656037);
   static const uint64_t kPrime = UINT64_C(1099511628211);
 
@@ -93,19 +92,20 @@ uint64_t QuicUtils::FNV1a_64_Hash(StringPiece data) {
 }
 
 // static
-uint128 QuicUtils::FNV1a_128_Hash(StringPiece data) {
-  return FNV1a_128_Hash_Three(data, StringPiece(), StringPiece());
+uint128 QuicUtils::FNV1a_128_Hash(QuicStringPiece data) {
+  return FNV1a_128_Hash_Three(data, QuicStringPiece(), QuicStringPiece());
 }
 
 // static
-uint128 QuicUtils::FNV1a_128_Hash_Two(StringPiece data1, StringPiece data2) {
-  return FNV1a_128_Hash_Three(data1, data2, StringPiece());
+uint128 QuicUtils::FNV1a_128_Hash_Two(QuicStringPiece data1,
+                                      QuicStringPiece data2) {
+  return FNV1a_128_Hash_Three(data1, data2, QuicStringPiece());
 }
 
 // static
-uint128 QuicUtils::FNV1a_128_Hash_Three(StringPiece data1,
-                                        StringPiece data2,
-                                        StringPiece data3) {
+uint128 QuicUtils::FNV1a_128_Hash_Three(QuicStringPiece data1,
+                                        QuicStringPiece data2,
+                                        QuicStringPiece data3) {
   // The two constants are defined as part of the hash algorithm.
   // see http://www.isthe.com/chongo/tech/comp/fnv/
   // kOffset = 144066263297769815596495629667062367629

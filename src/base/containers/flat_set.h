@@ -32,13 +32,13 @@ namespace base {
 //    collecting all data in a vector and then building flat_set out of it.
 //    TODO(dyaroshev): improve the interface to better support this pattern
 //    (crbug.com/682254).
-//  * Sets where mutating happens in big bulks: use erase(std::remove()) idiom
-//    for erasing many elements. Insertion is harder - consider set operations
-//    or building a new vector. Set operations can be slow if one of the sets
-//    is considerably bigger. Also be aware that beating performance of
-//    sort + unique (implementation of flat_set's constructor) is hard, clever
-//    merge of many sets might not win. Generally avoid inserting into flat set
-//    without benchmarks.
+//  * Sets where mutating happens in big bulks: to erase multiple elements, use
+//    base::EraseIf() rather than repeated single-element removal. Insertion is
+//    harder - consider set operations or building a new vector. Set operations
+//    can be slow if one of the sets is considerably bigger. Also be aware that
+//    beating performance of sort + unique (implementation of flat_set's
+//    constructor) is hard, clever merge of many sets might not win. Generally
+//    avoid inserting into flat set without benchmarks.
 //  * Copying and iterating.
 //  * Set operations (union/intersect etc).
 //
@@ -216,8 +216,8 @@ class flat_set {
   // erase(position), erase(first, last) can take O(size).
   // erase(key) may take O(size) + O(log(size)).
   //
-  // Prefer the erase(std::remove(), end()) idiom for deleting multiple
-  // elements.
+  // Prefer base::EraseIf() or some other variation on erase(remove(), end())
+  // idiom when deleting multiple non-consecutive elements.
 
   iterator erase(const_iterator position);
   iterator erase(const_iterator first, const_iterator last);
@@ -655,6 +655,16 @@ auto flat_set<Key, Compare>::upper_bound(const key_type& key) const
 template <class Key, class Compare>
 void flat_set<Key, Compare>::swap(flat_set& other) {
   std::swap(impl_, other.impl_);
+}
+
+// ----------------------------------------------------------------------------
+// Free functions.
+
+// Erases all elements that match predicate. It has O(size) complexity.
+template <typename Key, typename Compare, typename Predicate>
+void EraseIf(base::flat_set<Key, Compare>& container, Predicate pred) {
+  container.erase(std::remove_if(container.begin(), container.end(), pred),
+                  container.end());
 }
 
 }  // namespace  base

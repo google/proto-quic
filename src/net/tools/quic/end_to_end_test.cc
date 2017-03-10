@@ -33,6 +33,7 @@
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/platform/api/quic_str_cat.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_config_peer.h"
@@ -64,7 +65,6 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 using base::IntToString;
-using base::StringPiece;
 using base::WaitableEvent;
 using std::string;
 
@@ -477,7 +477,9 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
     }
   }
 
-  void AddToCache(StringPiece path, int response_code, StringPiece body) {
+  void AddToCache(QuicStringPiece path,
+                  int response_code,
+                  QuicStringPiece body) {
     response_cache_.AddSimpleResponse(server_hostname_, path, response_code,
                                       body);
   }
@@ -1159,13 +1161,7 @@ TEST_P(EndToEndTest, LargeHeaders) {
   headers["key3"] = string(15 * 1024, 'a');
 
   client_->SendCustomSynchronousRequest(headers, body);
-  if (FLAGS_quic_reloadable_flag_quic_limit_uncompressed_headers) {
-    EXPECT_EQ(QUIC_HEADERS_TOO_LARGE, client_->stream_error());
-  } else {
-    EXPECT_EQ(QUIC_STREAM_NO_ERROR, client_->stream_error());
-    EXPECT_EQ(kFooResponseBody, client_->response_body());
-    EXPECT_EQ("200", client_->response_headers()->find(":status")->second);
-  }
+  EXPECT_EQ(QUIC_HEADERS_TOO_LARGE, client_->stream_error());
   EXPECT_EQ(QUIC_NO_ERROR, client_->connection_error());
 }
 

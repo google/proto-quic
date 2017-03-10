@@ -68,7 +68,7 @@ void URLFetcherCore::Registry::CancelAll() {
 // URLFetcherCore -------------------------------------------------------------
 
 // static
-base::LazyInstance<URLFetcherCore::Registry>
+base::LazyInstance<URLFetcherCore::Registry>::DestructorAtExit
     URLFetcherCore::g_registry = LAZY_INSTANCE_INITIALIZER;
 
 URLFetcherCore::URLFetcherCore(URLFetcher* fetcher,

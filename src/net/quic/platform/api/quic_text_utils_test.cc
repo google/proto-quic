@@ -6,10 +6,8 @@
 
 #include <string>
 
-#include "base/strings/string_piece.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -45,7 +43,7 @@ TEST(QuicTextUtilsText, RemoveLeadingAndTrailingWhitespace) {
 
   for (auto* input : {"text", " text", "  text", "text ", "text  ", " text ",
                       "  text  ", "\r\n\ttext", "text\n\r\t"}) {
-    StringPiece piece(input);
+    QuicStringPiece piece(input);
     QuicTextUtils::RemoveLeadingAndTrailingWhitespace(&piece);
     EXPECT_EQ("text", piece);
   }
@@ -190,11 +188,11 @@ TEST(QuicTextUtilsText, ContainsUpperCase) {
 }
 
 TEST(QuicTextUtilsText, Split) {
-  EXPECT_EQ(std::vector<StringPiece>({"a", "b", "c"}),
+  EXPECT_EQ(std::vector<QuicStringPiece>({"a", "b", "c"}),
             QuicTextUtils::Split("a,b,c", ','));
-  EXPECT_EQ(std::vector<StringPiece>({"a", "b", "c"}),
+  EXPECT_EQ(std::vector<QuicStringPiece>({"a", "b", "c"}),
             QuicTextUtils::Split("a:b:c", ':'));
-  EXPECT_EQ(std::vector<StringPiece>({"a:b:c"}),
+  EXPECT_EQ(std::vector<QuicStringPiece>({"a:b:c"}),
             QuicTextUtils::Split("a:b:c", ','));
 }
 

@@ -59,7 +59,7 @@ string QuicCryptoServerConfigPeer::NewSourceAddressToken(
 
 HandshakeFailureReason QuicCryptoServerConfigPeer::ValidateSourceAddressTokens(
     string config_id,
-    StringPiece srct,
+    QuicStringPiece srct,
     const QuicIpAddress& ip,
     QuicWallTime now,
     CachedNetworkParameters* cached_network_params) {
@@ -76,7 +76,7 @@ HandshakeFailureReason QuicCryptoServerConfigPeer::ValidateSourceAddressTokens(
 
 HandshakeFailureReason
 QuicCryptoServerConfigPeer::ValidateSingleSourceAddressToken(
-    StringPiece token,
+    QuicStringPiece token,
     const QuicIpAddress& ip,
     QuicWallTime now) {
   SourceAddressTokens tokens;

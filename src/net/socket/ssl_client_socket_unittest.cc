@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <string.h>
 
+#include <algorithm>
 #include <utility>
 
 #include "base/callback_helpers.h"
@@ -17,12 +18,16 @@
 #include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
+#include "base/test/scoped_feature_list.h"
 #include "base/test/scoped_task_scheduler.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
 #include "base/values.h"
+#include "crypto/rsa_private_key.h"
 #include "net/base/address_list.h"
 #include "net/base/io_buffer.h"
+#include "net/base/ip_address.h"
+#include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
 #include "net/base/test_completion_callback.h"
 #include "net/cert/asn1_util.h"
@@ -46,14 +51,17 @@
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/socket_test_util.h"
+#include "net/socket/ssl_server_socket.h"
 #include "net/socket/stream_socket.h"
 #include "net/socket/tcp_client_socket.h"
+#include "net/socket/tcp_server_socket.h"
 #include "net/ssl/channel_id_service.h"
 #include "net/ssl/default_channel_id_store.h"
 #include "net/ssl/ssl_cert_request_info.h"
 #include "net/ssl/ssl_config_service.h"
 #include "net/ssl/ssl_connection_status_flags.h"
 #include "net/ssl/ssl_info.h"
+#include "net/ssl/ssl_server_config.h"
 #include "net/ssl/test_ssl_private_key.h"
 #include "net/test/cert_test_util.h"
 #include "net/test/gtest_util.h"
@@ -142,6 +150,11 @@ class WrappedStreamSocket : public StreamSocket {
            const CompletionCallback& callback) override {
     return transport_->Read(buf, buf_len, callback);
   }
+  int ReadIfReady(IOBuffer* buf,
+                  int buf_len,
+                  const CompletionCallback& callback) override {
+    return transport_->ReadIfReady(buf, buf_len, callback);
+  }
   int Write(IOBuffer* buf,
             int buf_len,
             const CompletionCallback& callback) override {
@@ -173,6 +186,10 @@ class ReadBufferingStreamSocket : public WrappedStreamSocket {
   int Read(IOBuffer* buf,
            int buf_len,
            const CompletionCallback& callback) override;
+
+  int ReadIfReady(IOBuffer* buf,
+                  int buf_len,
+                  const CompletionCallback& callback) override;
 
   // Sets the internal buffer to |size|. This must not be greater than
   // the largest value supplied to Read() - that is, it does not handle
@@ -210,7 +227,7 @@ ReadBufferingStreamSocket::ReadBufferingStreamSocket(
       buffer_size_(0) {}
 
 void ReadBufferingStreamSocket::SetBufferSize(int size) {
-  DCHECK(!user_read_buf_.get());
+  DCHECK(!user_read_buf_);
   buffer_size_ = size;
   read_buffer_->SetCapacity(size);
 }
@@ -218,20 +235,37 @@ void ReadBufferingStreamSocket::SetBufferSize(int size) {
 int ReadBufferingStreamSocket::Read(IOBuffer* buf,
                                     int buf_len,
                                     const CompletionCallback& callback) {
+  DCHECK(!user_read_buf_);
   if (buffer_size_ == 0)
     return transport_->Read(buf, buf_len, callback);
+  int rv = ReadIfReady(buf, buf_len, callback);
+  if (rv == ERR_IO_PENDING)
+    user_read_buf_ = buf;
+  return rv;
+}
+
+int ReadBufferingStreamSocket::ReadIfReady(IOBuffer* buf,
+                                           int buf_len,
+                                           const CompletionCallback& callback) {
+  DCHECK(!user_read_buf_);
+  if (buffer_size_ == 0)
+    return transport_->ReadIfReady(buf, buf_len, callback);
+
+  if (read_buffer_->RemainingCapacity() == 0) {
+    memcpy(buf->data(), read_buffer_->StartOfBuffer(),
+           read_buffer_->capacity());
+    read_buffer_->set_offset(0);
+    return read_buffer_->capacity();
+  }
 
   if (buf_len < buffer_size_)
     return ERR_UNEXPECTED;
 
   state_ = STATE_READ;
-  user_read_buf_ = buf;
-  int result = DoLoop(OK);
-  if (result == ERR_IO_PENDING)
+  int rv = DoLoop(OK);
+  if (rv == ERR_IO_PENDING)
     user_read_callback_ = callback;
-  else
-    user_read_buf_ = NULL;
-  return result;
+  return rv;
 }
 
 int ReadBufferingStreamSocket::DoLoop(int result) {
@@ -258,16 +292,15 @@ int ReadBufferingStreamSocket::DoLoop(int result) {
 
 int ReadBufferingStreamSocket::DoRead() {
   state_ = STATE_READ_COMPLETE;
-  int rv =
-      transport_->Read(read_buffer_.get(),
-                       read_buffer_->RemainingCapacity(),
-                       base::Bind(&ReadBufferingStreamSocket::OnReadCompleted,
-                                  base::Unretained(this)));
-  return rv;
+  return transport_->Read(
+      read_buffer_.get(), read_buffer_->RemainingCapacity(),
+      base::Bind(&ReadBufferingStreamSocket::OnReadCompleted,
+                 base::Unretained(this)));
 }
 
 int ReadBufferingStreamSocket::DoReadComplete(int result) {
   state_ = STATE_NONE;
+
   if (result <= 0)
     return result;
 
@@ -277,6 +310,11 @@ int ReadBufferingStreamSocket::DoReadComplete(int result) {
     return OK;
   }
 
+  // If ReadIfReady() is called by the user and this is an asynchronous
+  // completion, notify the user that read can be retried.
+  if (user_read_buf_ == nullptr)
+    return OK;
+
   memcpy(user_read_buf_->data(),
          read_buffer_->StartOfBuffer(),
          read_buffer_->capacity());
@@ -285,11 +323,13 @@ int ReadBufferingStreamSocket::DoReadComplete(int result) {
 }
 
 void ReadBufferingStreamSocket::OnReadCompleted(int result) {
+  DCHECK_NE(ERR_IO_PENDING, result);
+  DCHECK(user_read_callback_);
+
   result = DoLoop(result);
   if (result == ERR_IO_PENDING)
     return;
-
-  user_read_buf_ = NULL;
+  user_read_buf_ = nullptr;
   base::ResetAndReturn(&user_read_callback_).Run(result);
 }
 
@@ -304,6 +344,9 @@ class SynchronousErrorStreamSocket : public WrappedStreamSocket {
   int Read(IOBuffer* buf,
            int buf_len,
            const CompletionCallback& callback) override;
+  int ReadIfReady(IOBuffer* buf,
+                  int buf_len,
+                  const CompletionCallback& callback) override;
   int Write(IOBuffer* buf,
             int buf_len,
             const CompletionCallback& callback) override;
@@ -346,6 +389,15 @@ int SynchronousErrorStreamSocket::Read(IOBuffer* buf,
   return transport_->Read(buf, buf_len, callback);
 }
 
+int SynchronousErrorStreamSocket::ReadIfReady(
+    IOBuffer* buf,
+    int buf_len,
+    const CompletionCallback& callback) {
+  if (have_read_error_)
+    return pending_read_error_;
+  return transport_->ReadIfReady(buf, buf_len, callback);
+}
+
 int SynchronousErrorStreamSocket::Write(IOBuffer* buf,
                                         int buf_len,
                                         const CompletionCallback& callback) {
@@ -368,6 +420,9 @@ class FakeBlockingStreamSocket : public WrappedStreamSocket {
   int Read(IOBuffer* buf,
            int buf_len,
            const CompletionCallback& callback) override;
+  int ReadIfReady(IOBuffer* buf,
+                  int buf_len,
+                  const CompletionCallback& callback) override;
   int Write(IOBuffer* buf,
             int buf_len,
             const CompletionCallback& callback) override;
@@ -405,11 +460,20 @@ class FakeBlockingStreamSocket : public WrappedStreamSocket {
   // Handles completion from the underlying transport read.
   void OnReadCompleted(int result);
 
+  // Handles async completion of ReadIfReady().
+  void CompleteReadIfReady(scoped_refptr<IOBuffer> buffer, int rv);
+
   // Finishes the current read.
   void ReturnReadResult();
 
   // True if read callbacks are blocked.
   bool should_block_read_ = false;
+
+  // Used to buffer result returned by a completed ReadIfReady().
+  std::string read_if_ready_buf_;
+
+  // Non-null if there is a pending ReadIfReady().
+  CompletionCallback read_if_ready_callback_;
 
   // The buffer for the pending read, or NULL if not consumed.
   scoped_refptr<IOBuffer> pending_read_buf_;
@@ -451,8 +515,10 @@ int FakeBlockingStreamSocket::Read(IOBuffer* buf,
   DCHECK_EQ(ERR_IO_PENDING, pending_read_result_);
   DCHECK(!callback.is_null());
 
-  int rv = transport_->Read(buf, len, base::Bind(
-      &FakeBlockingStreamSocket::OnReadCompleted, base::Unretained(this)));
+  int rv =
+      transport_->Read(buf, len,
+                       base::Bind(&FakeBlockingStreamSocket::OnReadCompleted,
+                                  base::Unretained(this)));
   if (rv == ERR_IO_PENDING || should_block_read_) {
     // Save the callback to be called later.
     pending_read_buf_ = buf;
@@ -464,6 +530,32 @@ int FakeBlockingStreamSocket::Read(IOBuffer* buf,
       rv = ERR_IO_PENDING;
     }
   }
+  return rv;
+}
+
+int FakeBlockingStreamSocket::ReadIfReady(IOBuffer* buf,
+                                          int len,
+                                          const CompletionCallback& callback) {
+  if (!read_if_ready_buf_.empty()) {
+    // If ReadIfReady() is used, asynchronous reads with a large enough buffer
+    // and no BlockReadResult() are supported by this class. Explicitly check
+    // that |should_block_read_| doesn't apply and |len| is greater than the
+    // size of the buffered data.
+    CHECK(!should_block_read_);
+    CHECK_GE(len, static_cast<int>(read_if_ready_buf_.size()));
+    int rv = read_if_ready_buf_.size();
+    memcpy(buf->data(), read_if_ready_buf_.data(), rv);
+    read_if_ready_buf_.clear();
+    return rv;
+  }
+  scoped_refptr<IOBuffer> buf_copy = new IOBuffer(len);
+  int rv = Read(buf_copy.get(), len,
+                base::Bind(&FakeBlockingStreamSocket::CompleteReadIfReady,
+                           base::Unretained(this), buf_copy));
+  if (rv > 0)
+    memcpy(buf->data(), buf_copy->data(), rv);
+  if (rv == ERR_IO_PENDING)
+    read_if_ready_callback_ = callback;
   return rv;
 }
 
@@ -582,6 +674,16 @@ void FakeBlockingStreamSocket::OnReadCompleted(int result) {
   }
 
   ReturnReadResult();
+}
+
+void FakeBlockingStreamSocket::CompleteReadIfReady(scoped_refptr<IOBuffer> buf,
+                                                   int rv) {
+  DCHECK(read_if_ready_callback_);
+  DCHECK(read_if_ready_buf_.empty());
+  DCHECK(!should_block_read_);
+  if (rv > 0)
+    read_if_ready_buf_ = std::string(buf->data(), buf->data() + rv);
+  base::ResetAndReturn(&read_if_ready_callback_).Run(rv > 0 ? OK : rv);
 }
 
 void FakeBlockingStreamSocket::ReturnReadResult() {
@@ -858,6 +960,66 @@ class SSLClientSocketTest : public PlatformTest {
   AddressList addr_;
 };
 
+// If GetParam(), try ReadIfReady() and fall back to Read() if needed.
+class SSLClientSocketReadTest : public SSLClientSocketTest,
+                                public ::testing::WithParamInterface<bool> {
+ protected:
+  SSLClientSocketReadTest()
+      : SSLClientSocketTest(), read_if_ready_enabled_(GetParam()) {}
+
+  void SetUp() override {
+    if (read_if_ready_enabled())
+      scoped_feature_list_.InitAndEnableFeature(Socket::kReadIfReadyExperiment);
+  }
+
+  // Convienient wrapper to call Read()/ReadIfReady() depending on whether
+  // ReadyIfReady() is enabled.
+  int Read(StreamSocket* socket,
+           IOBuffer* buf,
+           int buf_len,
+           const CompletionCallback& callback) {
+    if (read_if_ready_enabled())
+      return socket->ReadIfReady(buf, buf_len, callback);
+    return socket->Read(buf, buf_len, callback);
+  }
+
+  // Wait for Read()/ReadIfReady() to complete.
+  int WaitForReadCompletion(StreamSocket* socket,
+                            IOBuffer* buf,
+                            int buf_len,
+                            TestCompletionCallback* callback,
+                            int rv) {
+    if (!read_if_ready_enabled())
+      return callback->GetResult(rv);
+    while (rv == ERR_IO_PENDING) {
+      rv = callback->GetResult(rv);
+      if (rv != OK)
+        return rv;
+      rv = socket->ReadIfReady(buf, buf_len, callback->callback());
+    }
+    return rv;
+  }
+
+  // Calls Read()/ReadIfReady() and waits for it to return data.
+  int ReadAndWaitForCompletion(StreamSocket* socket,
+                               IOBuffer* buf,
+                               int buf_len) {
+    TestCompletionCallback callback;
+    int rv = Read(socket, buf, buf_len, callback.callback());
+    return WaitForReadCompletion(socket, buf, buf_len, &callback, rv);
+  }
+
+  bool read_if_ready_enabled() const { return read_if_ready_enabled_; }
+
+ private:
+  base::test::ScopedFeatureList scoped_feature_list_;
+  const bool read_if_ready_enabled_;
+};
+
+INSTANTIATE_TEST_CASE_P(/* no prefix */,
+                        SSLClientSocketReadTest,
+                        ::testing::Bool());
+
 // Verifies the correctness of GetSSLCertRequestInfo.
 class SSLClientSocketCertRequestInfoTest : public SSLClientSocketTest {
  protected:
@@ -1133,8 +1295,8 @@ TEST_F(SSLClientSocketTest, ConnectMismatched) {
 
 #if defined(OS_WIN)
 // Tests that certificates parsable by SSLClientSocket's internal SSL
-// implementation, but not X509Certificate are treated as fatal non-certificate
-// errors. This is regression test for https://crbug.com/91341.
+// implementation, but not X509Certificate are treated as fatal connection
+// errors. This is a regression test for https://crbug.com/91341.
 TEST_F(SSLClientSocketTest, ConnectBadValidity) {
   SpawnedTestServer::SSLOptions ssl_options(
       SpawnedTestServer::SSLOptions::CERT_BAD_VALIDITY);
@@ -1145,10 +1307,6 @@ TEST_F(SSLClientSocketTest, ConnectBadValidity) {
 
   EXPECT_THAT(rv, IsError(ERR_SSL_SERVER_CERT_BAD_FORMAT));
   EXPECT_FALSE(IsCertificateError(rv));
-
-  SSLInfo ssl_info;
-  ASSERT_TRUE(sock_->GetSSLInfo(&ssl_info));
-  EXPECT_FALSE(ssl_info.cert);
 }
 #endif  // defined(OS_WIN)
 
@@ -1206,7 +1364,7 @@ TEST_F(SSLClientSocketTest, ConnectClientAuthSendNullCert) {
 
 // Tests that the socket can be read from successfully. Also test that a peer's
 // close_notify alert is successfully processed without error.
-TEST_F(SSLClientSocketTest, Read) {
+TEST_P(SSLClientSocketReadTest, Read) {
   ASSERT_TRUE(StartTestServer(SpawnedTestServer::SSLOptions()));
 
   TestCompletionCallback callback;
@@ -1242,7 +1400,7 @@ TEST_F(SSLClientSocketTest, Read) {
   int64_t unencrypted_bytes_read = 0;
   int64_t network_bytes_read_during_handshake = sock->GetTotalReceivedBytes();
   do {
-    rv = callback.GetResult(sock->Read(buf.get(), 4096, callback.callback()));
+    rv = ReadAndWaitForCompletion(sock.get(), buf.get(), 4096);
     EXPECT_GE(rv, 0);
     if (rv >= 0) {
       unencrypted_bytes_read += rv;
@@ -1293,7 +1451,7 @@ TEST_F(SSLClientSocketTest, Connect_WithSynchronousError) {
 // synchronously returns an error code - such as if an intermediary terminates
 // the socket connection uncleanly.
 // This is a regression test for http://crbug.com/238536
-TEST_F(SSLClientSocketTest, Read_WithSynchronousError) {
+TEST_P(SSLClientSocketReadTest, Read_WithSynchronousError) {
   ASSERT_TRUE(StartTestServer(SpawnedTestServer::SSLOptions()));
 
   TestCompletionCallback callback;
@@ -1335,7 +1493,7 @@ TEST_F(SSLClientSocketTest, Read_WithSynchronousError) {
   // Note: This test will hang if this bug has regressed. Simply checking that
   // rv != ERR_IO_PENDING is insufficient, as ERR_IO_PENDING is a legitimate
   // result when using a dedicated task runner for NSS.
-  rv = callback.GetResult(sock->Read(buf.get(), 4096, callback.callback()));
+  rv = ReadAndWaitForCompletion(sock.get(), buf.get(), 4096);
   EXPECT_THAT(rv, IsError(ERR_CONNECTION_RESET));
 }
 
@@ -1470,7 +1628,7 @@ TEST_F(SSLClientSocketTest, Write_WithSynchronousErrorNoRead) {
 
 // Test the full duplex mode, with Read and Write pending at the same time.
 // This test also serves as a regression test for http://crbug.com/29815.
-TEST_F(SSLClientSocketTest, Read_FullDuplex) {
+TEST_P(SSLClientSocketReadTest, Read_FullDuplex) {
   ASSERT_TRUE(StartTestServer(SpawnedTestServer::SSLOptions()));
 
   int rv;
@@ -1480,7 +1638,7 @@ TEST_F(SSLClientSocketTest, Read_FullDuplex) {
   // Issue a "hanging" Read first.
   TestCompletionCallback callback;
   scoped_refptr<IOBuffer> buf(new IOBuffer(4096));
-  rv = sock_->Read(buf.get(), 4096, callback.callback());
+  rv = Read(sock_.get(), buf.get(), 4096, callback.callback());
   // We haven't written the request, so there should be no response yet.
   ASSERT_THAT(rv, IsError(ERR_IO_PENDING));
 
@@ -1500,7 +1658,7 @@ TEST_F(SSLClientSocketTest, Read_FullDuplex) {
   EXPECT_EQ(static_cast<int>(request_text.size()), rv);
 
   // Now get the Read result.
-  rv = callback.WaitForResult();
+  rv = WaitForReadCompletion(sock_.get(), buf.get(), 4096, &callback, rv);
   EXPECT_GT(rv, 0);
 }
 
@@ -1510,7 +1668,7 @@ TEST_F(SSLClientSocketTest, Read_FullDuplex) {
 // Read() and Write() callbacks. If the socket is deleted by the Read()
 // callback, the Write() callback should not be invoked.
 // Regression test for http://crbug.com/232633
-TEST_F(SSLClientSocketTest, Read_DeleteWhilePendingFullDuplex) {
+TEST_P(SSLClientSocketReadTest, Read_DeleteWhilePendingFullDuplex) {
   ASSERT_TRUE(StartTestServer(SpawnedTestServer::SSLOptions()));
 
   TestCompletionCallback callback;
@@ -1559,7 +1717,7 @@ TEST_F(SSLClientSocketTest, Read_DeleteWhilePendingFullDuplex) {
   SSLClientSocket* raw_sock = sock.get();
   DeleteSocketCallback read_callback(sock.release());
   scoped_refptr<IOBuffer> read_buf(new IOBuffer(4096));
-  rv = raw_sock->Read(read_buf.get(), 4096, read_callback.callback());
+  rv = Read(raw_sock, read_buf.get(), 4096, read_callback.callback());
 
   // Ensure things didn't complete synchronously, otherwise |sock| is invalid.
   ASSERT_THAT(rv, IsError(ERR_IO_PENDING));
@@ -1578,8 +1736,14 @@ TEST_F(SSLClientSocketTest, Read_DeleteWhilePendingFullDuplex) {
   // the Write() callback.
   raw_transport->UnblockWrite();
 
+  // |read_callback| deletes |sock| so if ReadIfReady() is used, we will get OK
+  // asynchronously but can't continue reading because the socket is gone.
   rv = read_callback.WaitForResult();
-  EXPECT_THAT(rv, IsError(ERR_CONNECTION_RESET));
+  if (read_if_ready_enabled()) {
+    EXPECT_THAT(rv, IsOk());
+  } else {
+    EXPECT_THAT(rv, IsError(ERR_CONNECTION_RESET));
+  }
 
   // The Write callback should not have been called.
   EXPECT_FALSE(callback.have_result());
@@ -1589,7 +1753,7 @@ TEST_F(SSLClientSocketTest, Read_DeleteWhilePendingFullDuplex) {
 // transport socket after a failing write. This can occur if we have a Write
 // error in a SPDY socket.
 // Regression test for http://crbug.com/335557
-TEST_F(SSLClientSocketTest, Read_WithWriteError) {
+TEST_P(SSLClientSocketReadTest, Read_WithWriteError) {
   ASSERT_TRUE(StartTestServer(SpawnedTestServer::SSLOptions()));
 
   TestCompletionCallback callback;
@@ -1634,7 +1798,7 @@ TEST_F(SSLClientSocketTest, Read_WithWriteError) {
   TestCompletionCallback read_callback;
   raw_transport->BlockReadResult();
   scoped_refptr<IOBuffer> buf(new IOBuffer(4096));
-  rv = sock->Read(buf.get(), 4096, read_callback.callback());
+  rv = Read(sock.get(), buf.get(), 4096, read_callback.callback());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
 
   // Perform another write, but have it fail. Write a request larger than the
@@ -1666,7 +1830,7 @@ TEST_F(SSLClientSocketTest, Read_WithWriteError) {
 
   // At this point the Read result is available. Transport write errors are
   // surfaced through Writes. See https://crbug.com/249848.
-  rv = read_callback.WaitForResult();
+  rv = WaitForReadCompletion(sock.get(), buf.get(), 4096, &read_callback, rv);
   EXPECT_THAT(rv, IsError(ERR_CONNECTION_RESET));
 
   // Release the read. This does not cause a crash.
@@ -1702,7 +1866,7 @@ TEST_F(SSLClientSocketTest, Connect_WithZeroReturn) {
 // Tests that SSLClientSocket returns a Read of size 0 if the underlying socket
 // is cleanly closed, but the peer does not send close_notify.
 // This is a regression test for https://crbug.com/422246
-TEST_F(SSLClientSocketTest, Read_WithZeroReturn) {
+TEST_P(SSLClientSocketReadTest, Read_WithZeroReturn) {
   ASSERT_TRUE(StartTestServer(SpawnedTestServer::SSLOptions()));
 
   TestCompletionCallback callback;
@@ -1728,14 +1892,14 @@ TEST_F(SSLClientSocketTest, Read_WithZeroReturn) {
 
   raw_transport->SetNextReadError(0);
   scoped_refptr<IOBuffer> buf(new IOBuffer(4096));
-  rv = callback.GetResult(sock->Read(buf.get(), 4096, callback.callback()));
+  rv = ReadAndWaitForCompletion(sock.get(), buf.get(), 4096);
   EXPECT_EQ(0, rv);
 }
 
 // Tests that SSLClientSocket cleanly returns a Read of size 0 if the
 // underlying socket is cleanly closed asynchronously.
 // This is a regression test for https://crbug.com/422246
-TEST_F(SSLClientSocketTest, Read_WithAsyncZeroReturn) {
+TEST_P(SSLClientSocketReadTest, Read_WithAsyncZeroReturn) {
   ASSERT_TRUE(StartTestServer(SpawnedTestServer::SSLOptions()));
 
   TestCompletionCallback callback;
@@ -1765,17 +1929,18 @@ TEST_F(SSLClientSocketTest, Read_WithAsyncZeroReturn) {
   raw_error_socket->SetNextReadError(0);
   raw_transport->BlockReadResult();
   scoped_refptr<IOBuffer> buf(new IOBuffer(4096));
-  rv = sock->Read(buf.get(), 4096, callback.callback());
+  TestCompletionCallback read_callback;
+  rv = Read(sock.get(), buf.get(), 4096, read_callback.callback());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
 
   raw_transport->UnblockReadResult();
-  rv = callback.GetResult(rv);
+  rv = WaitForReadCompletion(sock.get(), buf.get(), 4096, &read_callback, rv);
   EXPECT_EQ(0, rv);
 }
 
 // Tests that fatal alerts from the peer are processed. This is a regression
 // test for https://crbug.com/466303.
-TEST_F(SSLClientSocketTest, Read_WithFatalAlert) {
+TEST_P(SSLClientSocketReadTest, Read_WithFatalAlert) {
   SpawnedTestServer::SSLOptions ssl_options;
   ssl_options.alert_after_handshake = true;
   ASSERT_TRUE(StartTestServer(ssl_options));
@@ -1787,11 +1952,11 @@ TEST_F(SSLClientSocketTest, Read_WithFatalAlert) {
   // Receive the fatal alert.
   TestCompletionCallback callback;
   scoped_refptr<IOBuffer> buf(new IOBuffer(4096));
-  EXPECT_EQ(ERR_SSL_PROTOCOL_ERROR, callback.GetResult(sock_->Read(
-                                        buf.get(), 4096, callback.callback())));
+  EXPECT_EQ(ERR_SSL_PROTOCOL_ERROR,
+            ReadAndWaitForCompletion(sock_.get(), buf.get(), 4096));
 }
 
-TEST_F(SSLClientSocketTest, Read_SmallChunks) {
+TEST_P(SSLClientSocketReadTest, Read_SmallChunks) {
   ASSERT_TRUE(StartTestServer(SpawnedTestServer::SSLOptions()));
 
   int rv;
@@ -1810,12 +1975,12 @@ TEST_F(SSLClientSocketTest, Read_SmallChunks) {
 
   scoped_refptr<IOBuffer> buf(new IOBuffer(1));
   do {
-    rv = callback.GetResult(sock_->Read(buf.get(), 1, callback.callback()));
+    rv = ReadAndWaitForCompletion(sock_.get(), buf.get(), 1);
     EXPECT_GE(rv, 0);
   } while (rv > 0);
 }
 
-TEST_F(SSLClientSocketTest, Read_ManySmallRecords) {
+TEST_P(SSLClientSocketReadTest, Read_ManySmallRecords) {
   ASSERT_TRUE(StartTestServer(SpawnedTestServer::SSLOptions()));
 
   TestCompletionCallback callback;
@@ -1858,11 +2023,11 @@ TEST_F(SSLClientSocketTest, Read_ManySmallRecords) {
   raw_transport->SetBufferSize(15000);
 
   scoped_refptr<IOBuffer> buffer(new IOBuffer(8192));
-  rv = callback.GetResult(sock->Read(buffer.get(), 8192, callback.callback()));
+  rv = ReadAndWaitForCompletion(sock.get(), buffer.get(), 8192);
   ASSERT_EQ(rv, 8192);
 }
 
-TEST_F(SSLClientSocketTest, Read_Interrupted) {
+TEST_P(SSLClientSocketReadTest, Read_Interrupted) {
   ASSERT_TRUE(StartTestServer(SpawnedTestServer::SSLOptions()));
 
   int rv;
@@ -1881,11 +2046,11 @@ TEST_F(SSLClientSocketTest, Read_Interrupted) {
 
   // Do a partial read and then exit.  This test should not crash!
   scoped_refptr<IOBuffer> buf(new IOBuffer(512));
-  rv = callback.GetResult(sock_->Read(buf.get(), 512, callback.callback()));
+  rv = ReadAndWaitForCompletion(sock_.get(), buf.get(), 512);
   EXPECT_GT(rv, 0);
 }
 
-TEST_F(SSLClientSocketTest, Read_FullLogging) {
+TEST_P(SSLClientSocketReadTest, Read_FullLogging) {
   ASSERT_TRUE(StartTestServer(SpawnedTestServer::SSLOptions()));
 
   TestCompletionCallback callback;
@@ -1921,7 +2086,7 @@ TEST_F(SSLClientSocketTest, Read_FullLogging) {
 
   scoped_refptr<IOBuffer> buf(new IOBuffer(4096));
   for (;;) {
-    rv = callback.GetResult(sock->Read(buf.get(), 4096, callback.callback()));
+    rv = ReadAndWaitForCompletion(sock.get(), buf.get(), 4096);
     EXPECT_GE(rv, 0);
     if (rv <= 0)
       break;
@@ -3046,11 +3211,7 @@ TEST_F(SSLClientSocketTest, AlpnClientDisabled) {
 
 namespace {
 
-// Loads a PEM-encoded private key file into a SSLPrivateKey object.
-// |filepath| is the private key file path.
-// Returns the new SSLPrivateKey.
-scoped_refptr<SSLPrivateKey> LoadPrivateKeyOpenSSL(
-    const base::FilePath& filepath) {
+bssl::UniquePtr<EVP_PKEY> LoadEVP_PKEY(const base::FilePath& filepath) {
   std::string data;
   if (!base::ReadFileToString(filepath, &data)) {
     LOG(ERROR) << "Could not read private key file: " << filepath.value();
@@ -3068,7 +3229,18 @@ scoped_refptr<SSLPrivateKey> LoadPrivateKeyOpenSSL(
     LOG(ERROR) << "Could not decode private key file: " << filepath.value();
     return nullptr;
   }
-  return WrapOpenSSLPrivateKey(std::move(result));
+  return result;
+}
+
+// Loads a PEM-encoded private key file into a SSLPrivateKey object.
+// |filepath| is the private key file path.
+// Returns the new SSLPrivateKey.
+scoped_refptr<SSLPrivateKey> LoadPrivateKeyOpenSSL(
+    const base::FilePath& filepath) {
+  bssl::UniquePtr<EVP_PKEY> key = LoadEVP_PKEY(filepath);
+  if (!key)
+    return nullptr;
+  return WrapOpenSSLPrivateKey(std::move(key));
 }
 
 }  // namespace
@@ -3593,7 +3765,7 @@ TEST_F(SSLClientSocketTest, AccessDeniedClientCerts) {
 }
 
 // Basic test for dumping memory stats.
-TEST_F(SSLClientSocketTest, DumpMemoryStats) {
+TEST_P(SSLClientSocketReadTest, DumpMemoryStats) {
   ASSERT_TRUE(StartTestServer(SpawnedTestServer::SSLOptions()));
 
   int rv;
@@ -3609,16 +3781,98 @@ TEST_F(SSLClientSocketTest, DumpMemoryStats) {
   // Read the response without writing a request, so the read will be pending.
   TestCompletionCallback read_callback;
   scoped_refptr<IOBuffer> buf(new IOBuffer(4096));
-  rv = sock_->Read(buf.get(), 4096, read_callback.callback());
+  rv = Read(sock_.get(), buf.get(), 4096, read_callback.callback());
   EXPECT_EQ(ERR_IO_PENDING, rv);
 
   // Dump memory again and check that |buffer_size| contain the read buffer.
   StreamSocket::SocketMemoryStats stats2;
   sock_->DumpMemoryStats(&stats2);
-  EXPECT_EQ(17 * 1024u, stats2.buffer_size);
+
+  if (read_if_ready_enabled()) {
+    EXPECT_EQ(0u, stats2.buffer_size);
+    EXPECT_EQ(stats.cert_size, stats2.total_size);
+  } else {
+    EXPECT_EQ(17 * 1024u, stats2.buffer_size);
+    EXPECT_LT(17 * 1024u, stats2.total_size);
+  }
   EXPECT_EQ(1u, stats2.cert_count);
   EXPECT_LT(0u, stats2.cert_size);
-  EXPECT_LT(17 * 1024u, stats2.total_size);
+}
+
+TEST_P(SSLClientSocketReadTest, IdleAfterRead) {
+  // Set up a TCP server.
+  TCPServerSocket server_listener(NULL, NetLogSource());
+  ASSERT_THAT(
+      server_listener.Listen(IPEndPoint(IPAddress::IPv4Localhost(), 0), 1),
+      IsOk());
+  IPEndPoint server_address;
+  ASSERT_THAT(server_listener.GetLocalAddress(&server_address), IsOk());
+
+  // Connect a TCP client and server socket.
+  TestCompletionCallback server_callback;
+  std::unique_ptr<StreamSocket> server_transport;
+  int server_rv =
+      server_listener.Accept(&server_transport, server_callback.callback());
+
+  TestCompletionCallback client_callback;
+  std::unique_ptr<TCPClientSocket> client_transport(new TCPClientSocket(
+      AddressList(server_address), NULL, NULL, NetLogSource()));
+  int client_rv = client_transport->Connect(client_callback.callback());
+
+  EXPECT_THAT(server_callback.GetResult(server_rv), IsOk());
+  EXPECT_THAT(client_callback.GetResult(client_rv), IsOk());
+
+  // Set up an SSL server.
+  base::FilePath certs_dir = GetTestCertsDirectory();
+  scoped_refptr<net::X509Certificate> cert =
+      ImportCertFromFile(certs_dir, "ok_cert.pem");
+  ASSERT_TRUE(cert);
+  bssl::UniquePtr<EVP_PKEY> pkey =
+      LoadEVP_PKEY(certs_dir.AppendASCII("ok_cert.pem"));
+  ASSERT_TRUE(pkey);
+  std::unique_ptr<crypto::RSAPrivateKey> key =
+      crypto::RSAPrivateKey::CreateFromKey(pkey.get());
+  ASSERT_TRUE(key);
+  std::unique_ptr<SSLServerContext> server_context =
+      CreateSSLServerContext(cert.get(), *key.get(), SSLServerConfig());
+
+  // Complete the SSL handshake on both sides.
+  std::unique_ptr<SSLClientSocket> client(CreateSSLClientSocket(
+      std::move(client_transport), HostPortPair::FromIPEndPoint(server_address),
+      SSLConfig()));
+  std::unique_ptr<SSLServerSocket> server(
+      server_context->CreateSSLServerSocket(std::move(server_transport)));
+
+  server_rv = server->Handshake(server_callback.callback());
+  client_rv = client->Connect(client_callback.callback());
+
+  EXPECT_THAT(server_callback.GetResult(server_rv), IsOk());
+  EXPECT_THAT(client_callback.GetResult(client_rv), IsOk());
+
+  // Write a single record on the server.
+  scoped_refptr<IOBuffer> write_buf(new StringIOBuffer("a"));
+  server_rv = server->Write(write_buf.get(), 1, server_callback.callback());
+
+  // Read that record on the server, but with a much larger buffer than
+  // necessary.
+  scoped_refptr<IOBuffer> read_buf(new IOBuffer(1024));
+  client_rv =
+      Read(client.get(), read_buf.get(), 1024, client_callback.callback());
+
+  EXPECT_EQ(1, server_callback.GetResult(server_rv));
+  EXPECT_EQ(1, WaitForReadCompletion(client.get(), read_buf.get(), 1024,
+                                     &client_callback, client_rv));
+
+  // At this point the client socket should be idle.
+  EXPECT_TRUE(client->IsConnectedAndIdle());
+
+  // The read buffer should be released.
+  StreamSocket::SocketMemoryStats stats;
+  client->DumpMemoryStats(&stats);
+  EXPECT_EQ(0u, stats.buffer_size);
+  EXPECT_EQ(1u, stats.cert_count);
+  EXPECT_LT(0u, stats.cert_size);
+  EXPECT_EQ(stats.cert_size, stats.total_size);
 }
 
 }  // namespace net

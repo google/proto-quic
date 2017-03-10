@@ -10,8 +10,8 @@
 #include <vector>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/quic/core/crypto/local_strike_register_client.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 namespace test {
@@ -27,7 +27,7 @@ class DelayedVerifyStrikeRegisterClient : public LocalStrikeRegisterClient {
                                     StrikeRegister::StartupType startup);
   ~DelayedVerifyStrikeRegisterClient() override;
 
-  void VerifyNonceIsValidAndUnique(base::StringPiece nonce,
+  void VerifyNonceIsValidAndUnique(QuicStringPiece nonce,
                                    QuicWallTime now,
                                    ResultCallback* cb) override;
 
@@ -40,7 +40,7 @@ class DelayedVerifyStrikeRegisterClient : public LocalStrikeRegisterClient {
 
  private:
   struct VerifyArgs {
-    VerifyArgs(base::StringPiece in_nonce,
+    VerifyArgs(QuicStringPiece in_nonce,
                QuicWallTime in_now,
                ResultCallback* in_cb)
         : nonce(in_nonce.as_string()), now(in_now), cb(in_cb) {}

@@ -23,6 +23,9 @@ class Input;
 
 // The digest algorithm used within a signature.
 enum class DigestAlgorithm {
+  Md2,
+  Md4,
+  Md5,
   Sha1,
   Sha256,
   Sha384,
@@ -49,7 +52,7 @@ enum class SignatureAlgorithmId {
 //         { IDENTIFIER id-sha384 PARAMS TYPE NULL ARE preferredPresent } |
 //         { IDENTIFIER id-sha512 PARAMS TYPE NULL ARE preferredPresent }
 //     }
-WARN_UNUSED_RESULT bool ParseHashAlgorithm(const der::Input input,
+WARN_UNUSED_RESULT bool ParseHashAlgorithm(const der::Input& input,
                                            DigestAlgorithm* out);
 
 // Base class for describing algorithm parameters.
@@ -114,6 +117,13 @@ class NET_EXPORT SignatureAlgorithm {
   //
   // The returned pointer is non-owned, and has the same lifetime as |this|.
   const RsaPssParameters* ParamsForRsaPss() const;
+
+  bool has_params() const { return !!params_; }
+
+  // Returns true if |alg1_tlv| and |alg2_tlv| represent an equivalent
+  // AlgorithmIdentifier once parsed.
+  static bool IsEquivalent(const der::Input& alg1_tlv,
+                           const der::Input& alg2_tlv);
 
  private:
   SignatureAlgorithm(SignatureAlgorithmId algorithm,

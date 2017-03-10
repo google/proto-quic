@@ -12,7 +12,6 @@
 #include "third_party/boringssl/src/include/openssl/err.h"
 #include "third_party/boringssl/src/include/openssl/evp.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -59,7 +58,7 @@ AeadBaseDecrypter::AeadBaseDecrypter(const EVP_AEAD* aead_alg,
 
 AeadBaseDecrypter::~AeadBaseDecrypter() {}
 
-bool AeadBaseDecrypter::SetKey(StringPiece key) {
+bool AeadBaseDecrypter::SetKey(QuicStringPiece key) {
   DCHECK_EQ(key.size(), key_size_);
   if (key.size() != key_size_) {
     return false;
@@ -76,7 +75,7 @@ bool AeadBaseDecrypter::SetKey(StringPiece key) {
   return true;
 }
 
-bool AeadBaseDecrypter::SetNoncePrefix(StringPiece nonce_prefix) {
+bool AeadBaseDecrypter::SetNoncePrefix(QuicStringPiece nonce_prefix) {
   DCHECK_EQ(nonce_prefix.size(), nonce_prefix_size_);
   if (nonce_prefix.size() != nonce_prefix_size_) {
     return false;
@@ -85,7 +84,7 @@ bool AeadBaseDecrypter::SetNoncePrefix(StringPiece nonce_prefix) {
   return true;
 }
 
-bool AeadBaseDecrypter::SetPreliminaryKey(StringPiece key) {
+bool AeadBaseDecrypter::SetPreliminaryKey(QuicStringPiece key) {
   DCHECK(!have_preliminary_key_);
   SetKey(key);
   have_preliminary_key_ = true;
@@ -101,9 +100,9 @@ bool AeadBaseDecrypter::SetDiversificationNonce(
 
   string key, nonce_prefix;
   DiversifyPreliminaryKey(
-      StringPiece(reinterpret_cast<const char*>(key_), key_size_),
-      StringPiece(reinterpret_cast<const char*>(nonce_prefix_),
-                  nonce_prefix_size_),
+      QuicStringPiece(reinterpret_cast<const char*>(key_), key_size_),
+      QuicStringPiece(reinterpret_cast<const char*>(nonce_prefix_),
+                      nonce_prefix_size_),
       nonce, key_size_, nonce_prefix_size_, &key, &nonce_prefix);
 
   if (!SetKey(key) || !SetNoncePrefix(nonce_prefix)) {
@@ -117,8 +116,8 @@ bool AeadBaseDecrypter::SetDiversificationNonce(
 
 bool AeadBaseDecrypter::DecryptPacket(QuicVersion /*version*/,
                                       QuicPacketNumber packet_number,
-                                      StringPiece associated_data,
-                                      StringPiece ciphertext,
+                                      QuicStringPiece associated_data,
+                                      QuicStringPiece ciphertext,
                                       char* output,
                                       size_t* output_length,
                                       size_t max_output_length) {
@@ -150,16 +149,16 @@ bool AeadBaseDecrypter::DecryptPacket(QuicVersion /*version*/,
   return true;
 }
 
-StringPiece AeadBaseDecrypter::GetKey() const {
-  return StringPiece(reinterpret_cast<const char*>(key_), key_size_);
+QuicStringPiece AeadBaseDecrypter::GetKey() const {
+  return QuicStringPiece(reinterpret_cast<const char*>(key_), key_size_);
 }
 
-StringPiece AeadBaseDecrypter::GetNoncePrefix() const {
+QuicStringPiece AeadBaseDecrypter::GetNoncePrefix() const {
   if (nonce_prefix_size_ == 0) {
-    return StringPiece();
+    return QuicStringPiece();
   }
-  return StringPiece(reinterpret_cast<const char*>(nonce_prefix_),
-                     nonce_prefix_size_);
+  return QuicStringPiece(reinterpret_cast<const char*>(nonce_prefix_),
+                         nonce_prefix_size_);
 }
 
 }  // namespace net

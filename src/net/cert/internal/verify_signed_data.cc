@@ -40,6 +40,11 @@ WARN_UNUSED_RESULT bool GetDigest(DigestAlgorithm digest, const EVP_MD** out) {
   *out = nullptr;
 
   switch (digest) {
+    case DigestAlgorithm::Md2:
+    case DigestAlgorithm::Md4:
+    case DigestAlgorithm::Md5:
+      // Unsupported.
+      break;
     case DigestAlgorithm::Sha1:
       *out = EVP_sha1();
       break;
@@ -292,6 +297,7 @@ bool VerifySignedData(const SignatureAlgorithm& signature_algorithm,
                       const SignaturePolicy* policy,
                       CertErrors* errors) {
   if (!policy->IsAcceptableSignatureAlgorithm(signature_algorithm, errors)) {
+    // TODO(crbug.com/634443): Include the DER for the AlgorithmIdentifier
     errors->AddError(kUnacceptableSignatureAlgorithm);
     return false;
   }

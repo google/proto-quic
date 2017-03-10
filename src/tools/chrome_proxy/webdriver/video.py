@@ -18,7 +18,9 @@ class Video(IntegrationTest):
       t.AddChromeArg('--enable-spdy-proxy-auth')
       t.LoadURL(
         'http://check.googlezip.net/cacheable/video/buck_bunny_tiny.html')
-      for response in t.GetHTTPResponses():
+      responses = t.GetHTTPResponses()
+      self.assertEquals(2, len(responses))
+      for response in responses:
         self.assertHasChromeProxyViaHeader(response)
 
   # Videos fetched via an XHR request should not be proxied.
@@ -45,6 +47,7 @@ class Video(IntegrationTest):
 
   # Check the compressed video has the same frame count, width, height, and
   # duration as uncompressed.
+  @NotAndroid
   def testVideoMetrics(self):
     expected = {
       'duration': 3.124,
@@ -75,10 +78,12 @@ class Video(IntegrationTest):
           % (metric, expected[metric], actual), places=None, delta=0.001)
 
   # Check the frames of a compressed video.
+  @NotAndroid
   def testVideoFrames(self):
     self.instrumentedVideoTest('http://check.googlezip.net/cacheable/video/buck_bunny_640x360_24fps_video.html')
 
   # Check the audio volume of a compressed video.
+  @NotAndroid
   def testVideoAudio(self):
     self.instrumentedVideoTest('http://check.googlezip.net/cacheable/video/buck_bunny_640x360_24fps_audio.html')
 

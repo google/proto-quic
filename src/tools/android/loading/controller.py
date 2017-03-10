@@ -40,6 +40,7 @@ _CATAPULT_DIR = os.path.join(_SRC_DIR, 'third_party', 'catapult')
 
 sys.path.append(os.path.join(_CATAPULT_DIR, 'devil'))
 from devil.android import device_errors
+from devil.android import flag_changer
 from devil.android.sdk import intent
 
 sys.path.append(
@@ -325,7 +326,7 @@ class RemoteChromeController(ChromeControllerBase):
           'Remote controller doesn\'t support chrome environment variables.'
     package_info = OPTIONS.ChromePackage()
     self._device.ForceStop(package_info.package)
-    with device_setup.FlagReplacer(
+    with flag_changer.CustomCommandLineFlags(
         self._device, package_info.cmdline_file, self._GetChromeArguments()):
       self._DismissCrashDialogIfNeeded()
       start_intent = intent.Intent(

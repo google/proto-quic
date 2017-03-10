@@ -26,7 +26,7 @@ MemoryCoordinatorProxy* MemoryCoordinatorProxy::GetInstance() {
 // static
 void MemoryCoordinatorProxy::SetMemoryCoordinator(
     MemoryCoordinator* coordinator) {
-  DCHECK(!g_memory_coordinator);
+  DCHECK(!g_memory_coordinator || !coordinator);
   g_memory_coordinator = coordinator;
 }
 

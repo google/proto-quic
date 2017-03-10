@@ -5,7 +5,6 @@
 #include "net/quic/core/frames/quic_frame.h"
 #include "net/quic/platform/api/quic_logging.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {

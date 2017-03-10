@@ -18,7 +18,7 @@ std::unique_ptr<base::DictionaryValue> CreateTestTypeValue() {
   std::unique_ptr<base::DictionaryValue> value(new base::DictionaryValue());
   value->Set("number", new base::Value(1.1));
   value->Set("integer", new base::Value(4));
-  value->Set("string", new base::StringValue("bling"));
+  value->Set("string", new base::Value("bling"));
   value->Set("boolean", new base::Value(true));
   return value;
 }
@@ -28,8 +28,8 @@ std::unique_ptr<base::DictionaryValue> CreateTestTypeValue() {
 TEST(JsonSchemaCompilerCrossrefTest, CrossrefTypePopulateAndToValue) {
   base::DictionaryValue crossref_orig;
   crossref_orig.Set("testType", CreateTestTypeValue().release());
-  crossref_orig.Set("testEnumRequired", new base::StringValue("one"));
-  crossref_orig.Set("testEnumOptional", new base::StringValue("two"));
+  crossref_orig.Set("testEnumRequired", new base::Value("one"));
+  crossref_orig.Set("testEnumOptional", new base::Value("two"));
 
   // Test Populate of the value --> compiled type.
   crossref::CrossrefType crossref_type;
@@ -115,7 +115,7 @@ TEST(JsonSchemaCompilerCrossrefTest, TestTypeInObjectParamsCreate) {
     std::unique_ptr<base::ListValue> params_value(new base::ListValue());
     std::unique_ptr<base::DictionaryValue> param_object_value(
         new base::DictionaryValue());
-    param_object_value->Set("testType", new base::StringValue("invalid"));
+    param_object_value->Set("testType", new base::Value("invalid"));
     param_object_value->Set("boolean", new base::Value(true));
     params_value->Append(std::move(param_object_value));
     std::unique_ptr<crossref::TestTypeInObject::Params> params(

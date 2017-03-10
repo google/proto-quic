@@ -29,7 +29,6 @@
 #include "net/spdy/spdy_http_utils.h"
 
 using std::string;
-using base::StringPiece;
 
 namespace net {
 

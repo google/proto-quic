@@ -1,0 +1,132 @@
+defines = -DGN_BUILD -DV8_DEPRECATION_WARNINGS -DENABLE_MDNS=1 -DENABLE_NOTIFICATIONS -DENABLE_PEPPER_CDMS -DENABLE_PLUGINS=1 -DENABLE_PDF=1 -DENABLE_PRINTING=1 -DENABLE_BASIC_PRINTING=1 -DENABLE_PRINT_PREVIEW=1 -DENABLE_SPELLCHECK=1 -DUSE_UDEV -DUI_COMPOSITOR_IMAGE_TRANSPORT -DUSE_AURA=1 -DUSE_PANGO=1 -DUSE_CAIRO=1 -DUSE_CLIPBOARD_AURAX11=1 -DUSE_DEFAULT_RENDER_THEME=1 -DUSE_GLIB=1 -DUSE_NSS_CERTS=1 -DUSE_X11=1 -DENABLE_WEBRTC=1 -DENABLE_EXTENSIONS=1 -DENABLE_TASK_MANAGER=1 -DENABLE_THEMES=1 -DENABLE_CAPTIVE_PORTAL_DETECTION=1 -DENABLE_SESSION_SERVICE=1 -DENABLE_SUPERVISED_USERS=1 -DENABLE_SERVICE_DISCOVERY=1 -DFULL_SAFE_BROWSING -DSAFE_BROWSING_CSD -DSAFE_BROWSING_DB_LOCAL -DCHROMIUM_BUILD -DENABLE_MEDIA_ROUTER=1 -DFIELDTRIAL_TESTING_ENABLED -DCR_CLANG_REVISION=277962-1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -DCOMPONENT_BUILD -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1 -D_GLIBCXX_DEBUG=1
+include_dirs = -I../../../../.. -Igen -I../../../../../build/linux/debian_wheezy_amd64-sysroot/usr/include/glib-2.0 -I../../../../../build/linux/debian_wheezy_amd64-sysroot/usr/lib/x86_64-linux-gnu/glib-2.0/include
+cflags = -fno-strict-aliasing --param=ssp-buffer-size=4 -fstack-protector -funwind-tables -fPIC -pipe -B../../../../../third_party/binutils/Linux_x64/Release/bin -fcolor-diagnostics -fdebug-prefix-map=/usr/local/google/home/jokulik/chromium/src=. -pthread -m64 -march=x86-64 -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-c++11-narrowing -Wno-covered-switch-default -Wno-deprecated-register -Wno-unneeded-internal-declaration -Wno-inconsistent-missing-override -Wno-shift-negative-value -Wno-undefined-var-template -Wno-nonportable-include-path -O0 -g2 -gsplit-dwarf --sysroot=../../../../../build/linux/debian_wheezy_amd64-sysroot -fvisibility=hidden -Xclang -load -Xclang ../../../../../third_party/llvm-build/Release+Asserts/lib/libFindBadConstructs.so -Xclang -add-plugin -Xclang find-bad-constructs -Xclang -plugin-arg-find-bad-constructs -Xclang check-templates -Xclang -plugin-arg-find-bad-constructs -Xclang follow-macro-expansion -Xclang -plugin-arg-find-bad-constructs -Xclang check-implicit-copy-ctors -Xclang -plugin-arg-find-bad-constructs -Xclang check-ipc -Wheader-hygiene -Wstring-conversion
+cflags_cc = -fno-threadsafe-statics -fvisibility-inlines-hidden -Wno-undefined-bool-conversion -Wno-tautological-undefined-compare -std=gnu++11 -fno-rtti -fno-exceptions
+label_name = gn_lib
+target_out_dir = obj/tools/gn
+target_output_name = libgn_lib
+
+build obj/tools/gn/gn_lib.inputdeps.stamp: stamp obj/base/build_date.stamp obj/base/debugging_flags.stamp obj/base/allocator/features.stamp
+build obj/tools/gn/gn_lib/action_target_generator.o: cxx ../../../../../tools/gn/action_target_generator.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/action_values.o: cxx ../../../../../tools/gn/action_values.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/args.o: cxx ../../../../../tools/gn/args.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/binary_target_generator.o: cxx ../../../../../tools/gn/binary_target_generator.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/build_settings.o: cxx ../../../../../tools/gn/build_settings.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/builder.o: cxx ../../../../../tools/gn/builder.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/builder_record.o: cxx ../../../../../tools/gn/builder_record.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/bundle_data.o: cxx ../../../../../tools/gn/bundle_data.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/bundle_data_target_generator.o: cxx ../../../../../tools/gn/bundle_data_target_generator.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/bundle_file_rule.o: cxx ../../../../../tools/gn/bundle_file_rule.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/c_include_iterator.o: cxx ../../../../../tools/gn/c_include_iterator.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/command_args.o: cxx ../../../../../tools/gn/command_args.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/command_check.o: cxx ../../../../../tools/gn/command_check.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/command_clean.o: cxx ../../../../../tools/gn/command_clean.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/command_desc.o: cxx ../../../../../tools/gn/command_desc.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/command_format.o: cxx ../../../../../tools/gn/command_format.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/command_gen.o: cxx ../../../../../tools/gn/command_gen.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/command_help.o: cxx ../../../../../tools/gn/command_help.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/command_ls.o: cxx ../../../../../tools/gn/command_ls.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/command_path.o: cxx ../../../../../tools/gn/command_path.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/command_refs.o: cxx ../../../../../tools/gn/command_refs.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/commands.o: cxx ../../../../../tools/gn/commands.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/config.o: cxx ../../../../../tools/gn/config.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/config_values.o: cxx ../../../../../tools/gn/config_values.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/config_values_extractors.o: cxx ../../../../../tools/gn/config_values_extractors.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/config_values_generator.o: cxx ../../../../../tools/gn/config_values_generator.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/copy_target_generator.o: cxx ../../../../../tools/gn/copy_target_generator.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/create_bundle_target_generator.o: cxx ../../../../../tools/gn/create_bundle_target_generator.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/deps_iterator.o: cxx ../../../../../tools/gn/deps_iterator.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/desc_builder.o: cxx ../../../../../tools/gn/desc_builder.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/eclipse_writer.o: cxx ../../../../../tools/gn/eclipse_writer.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/err.o: cxx ../../../../../tools/gn/err.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/escape.o: cxx ../../../../../tools/gn/escape.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/exec_process.o: cxx ../../../../../tools/gn/exec_process.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/filesystem_utils.o: cxx ../../../../../tools/gn/filesystem_utils.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/function_exec_script.o: cxx ../../../../../tools/gn/function_exec_script.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/function_foreach.o: cxx ../../../../../tools/gn/function_foreach.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/function_forward_variables_from.o: cxx ../../../../../tools/gn/function_forward_variables_from.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/function_get_label_info.o: cxx ../../../../../tools/gn/function_get_label_info.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/function_get_path_info.o: cxx ../../../../../tools/gn/function_get_path_info.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/function_get_target_outputs.o: cxx ../../../../../tools/gn/function_get_target_outputs.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/function_process_file_template.o: cxx ../../../../../tools/gn/function_process_file_template.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/function_read_file.o: cxx ../../../../../tools/gn/function_read_file.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/function_rebase_path.o: cxx ../../../../../tools/gn/function_rebase_path.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/function_set_default_toolchain.o: cxx ../../../../../tools/gn/function_set_default_toolchain.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/function_set_defaults.o: cxx ../../../../../tools/gn/function_set_defaults.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/function_template.o: cxx ../../../../../tools/gn/function_template.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/function_toolchain.o: cxx ../../../../../tools/gn/function_toolchain.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/function_write_file.o: cxx ../../../../../tools/gn/function_write_file.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/functions.o: cxx ../../../../../tools/gn/functions.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/functions_target.o: cxx ../../../../../tools/gn/functions_target.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/group_target_generator.o: cxx ../../../../../tools/gn/group_target_generator.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/header_checker.o: cxx ../../../../../tools/gn/header_checker.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/import_manager.o: cxx ../../../../../tools/gn/import_manager.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/inherited_libraries.o: cxx ../../../../../tools/gn/inherited_libraries.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/input_conversion.o: cxx ../../../../../tools/gn/input_conversion.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/input_file.o: cxx ../../../../../tools/gn/input_file.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/input_file_manager.o: cxx ../../../../../tools/gn/input_file_manager.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/item.o: cxx ../../../../../tools/gn/item.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/json_project_writer.o: cxx ../../../../../tools/gn/json_project_writer.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/label.o: cxx ../../../../../tools/gn/label.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/label_pattern.o: cxx ../../../../../tools/gn/label_pattern.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/lib_file.o: cxx ../../../../../tools/gn/lib_file.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/loader.o: cxx ../../../../../tools/gn/loader.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/location.o: cxx ../../../../../tools/gn/location.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/ninja_action_target_writer.o: cxx ../../../../../tools/gn/ninja_action_target_writer.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/ninja_binary_target_writer.o: cxx ../../../../../tools/gn/ninja_binary_target_writer.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/ninja_build_writer.o: cxx ../../../../../tools/gn/ninja_build_writer.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/ninja_bundle_data_target_writer.o: cxx ../../../../../tools/gn/ninja_bundle_data_target_writer.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/ninja_copy_target_writer.o: cxx ../../../../../tools/gn/ninja_copy_target_writer.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/ninja_create_bundle_target_writer.o: cxx ../../../../../tools/gn/ninja_create_bundle_target_writer.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/ninja_group_target_writer.o: cxx ../../../../../tools/gn/ninja_group_target_writer.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/ninja_target_writer.o: cxx ../../../../../tools/gn/ninja_target_writer.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/ninja_toolchain_writer.o: cxx ../../../../../tools/gn/ninja_toolchain_writer.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/ninja_utils.o: cxx ../../../../../tools/gn/ninja_utils.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/ninja_writer.o: cxx ../../../../../tools/gn/ninja_writer.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/operators.o: cxx ../../../../../tools/gn/operators.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/output_file.o: cxx ../../../../../tools/gn/output_file.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/parse_node_value_adapter.o: cxx ../../../../../tools/gn/parse_node_value_adapter.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/parse_tree.o: cxx ../../../../../tools/gn/parse_tree.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/parser.o: cxx ../../../../../tools/gn/parser.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/path_output.o: cxx ../../../../../tools/gn/path_output.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/pattern.o: cxx ../../../../../tools/gn/pattern.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/pool.o: cxx ../../../../../tools/gn/pool.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/qt_creator_writer.o: cxx ../../../../../tools/gn/qt_creator_writer.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/runtime_deps.o: cxx ../../../../../tools/gn/runtime_deps.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/scheduler.o: cxx ../../../../../tools/gn/scheduler.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/scope.o: cxx ../../../../../tools/gn/scope.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/scope_per_file_provider.o: cxx ../../../../../tools/gn/scope_per_file_provider.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/settings.o: cxx ../../../../../tools/gn/settings.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/setup.o: cxx ../../../../../tools/gn/setup.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/source_dir.o: cxx ../../../../../tools/gn/source_dir.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/source_file.o: cxx ../../../../../tools/gn/source_file.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/source_file_type.o: cxx ../../../../../tools/gn/source_file_type.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/standard_out.o: cxx ../../../../../tools/gn/standard_out.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/string_utils.o: cxx ../../../../../tools/gn/string_utils.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/substitution_list.o: cxx ../../../../../tools/gn/substitution_list.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/substitution_pattern.o: cxx ../../../../../tools/gn/substitution_pattern.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/substitution_type.o: cxx ../../../../../tools/gn/substitution_type.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/substitution_writer.o: cxx ../../../../../tools/gn/substitution_writer.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/switches.o: cxx ../../../../../tools/gn/switches.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/target.o: cxx ../../../../../tools/gn/target.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/target_generator.o: cxx ../../../../../tools/gn/target_generator.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/template.o: cxx ../../../../../tools/gn/template.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/token.o: cxx ../../../../../tools/gn/token.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/tokenizer.o: cxx ../../../../../tools/gn/tokenizer.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/tool.o: cxx ../../../../../tools/gn/tool.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/toolchain.o: cxx ../../../../../tools/gn/toolchain.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/trace.o: cxx ../../../../../tools/gn/trace.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/value.o: cxx ../../../../../tools/gn/value.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/value_extractors.o: cxx ../../../../../tools/gn/value_extractors.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/variables.o: cxx ../../../../../tools/gn/variables.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/visibility.o: cxx ../../../../../tools/gn/visibility.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/visual_studio_utils.o: cxx ../../../../../tools/gn/visual_studio_utils.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/visual_studio_writer.o: cxx ../../../../../tools/gn/visual_studio_writer.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/xcode_object.o: cxx ../../../../../tools/gn/xcode_object.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/xcode_writer.o: cxx ../../../../../tools/gn/xcode_writer.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+build obj/tools/gn/gn_lib/xml_element_writer.o: cxx ../../../../../tools/gn/xml_element_writer.cc || obj/tools/gn/gn_lib.inputdeps.stamp
+
+build obj/tools/gn/libgn_lib.a: alink obj/tools/gn/gn_lib/action_target_generator.o obj/tools/gn/gn_lib/action_values.o obj/tools/gn/gn_lib/args.o obj/tools/gn/gn_lib/binary_target_generator.o obj/tools/gn/gn_lib/build_settings.o obj/tools/gn/gn_lib/builder.o obj/tools/gn/gn_lib/builder_record.o obj/tools/gn/gn_lib/bundle_data.o obj/tools/gn/gn_lib/bundle_data_target_generator.o obj/tools/gn/gn_lib/bundle_file_rule.o obj/tools/gn/gn_lib/c_include_iterator.o obj/tools/gn/gn_lib/command_args.o obj/tools/gn/gn_lib/command_check.o obj/tools/gn/gn_lib/command_clean.o obj/tools/gn/gn_lib/command_desc.o obj/tools/gn/gn_lib/command_format.o obj/tools/gn/gn_lib/command_gen.o obj/tools/gn/gn_lib/command_help.o obj/tools/gn/gn_lib/command_ls.o obj/tools/gn/gn_lib/command_path.o obj/tools/gn/gn_lib/command_refs.o obj/tools/gn/gn_lib/commands.o obj/tools/gn/gn_lib/config.o obj/tools/gn/gn_lib/config_values.o obj/tools/gn/gn_lib/config_values_extractors.o obj/tools/gn/gn_lib/config_values_generator.o obj/tools/gn/gn_lib/copy_target_generator.o obj/tools/gn/gn_lib/create_bundle_target_generator.o obj/tools/gn/gn_lib/deps_iterator.o obj/tools/gn/gn_lib/desc_builder.o obj/tools/gn/gn_lib/eclipse_writer.o obj/tools/gn/gn_lib/err.o obj/tools/gn/gn_lib/escape.o obj/tools/gn/gn_lib/exec_process.o obj/tools/gn/gn_lib/filesystem_utils.o obj/tools/gn/gn_lib/function_exec_script.o obj/tools/gn/gn_lib/function_foreach.o obj/tools/gn/gn_lib/function_forward_variables_from.o obj/tools/gn/gn_lib/function_get_label_info.o obj/tools/gn/gn_lib/function_get_path_info.o obj/tools/gn/gn_lib/function_get_target_outputs.o obj/tools/gn/gn_lib/function_process_file_template.o obj/tools/gn/gn_lib/function_read_file.o obj/tools/gn/gn_lib/function_rebase_path.o obj/tools/gn/gn_lib/function_set_default_toolchain.o obj/tools/gn/gn_lib/function_set_defaults.o obj/tools/gn/gn_lib/function_template.o obj/tools/gn/gn_lib/function_toolchain.o obj/tools/gn/gn_lib/function_write_file.o obj/tools/gn/gn_lib/functions.o obj/tools/gn/gn_lib/functions_target.o obj/tools/gn/gn_lib/group_target_generator.o obj/tools/gn/gn_lib/header_checker.o obj/tools/gn/gn_lib/import_manager.o obj/tools/gn/gn_lib/inherited_libraries.o obj/tools/gn/gn_lib/input_conversion.o obj/tools/gn/gn_lib/input_file.o obj/tools/gn/gn_lib/input_file_manager.o obj/tools/gn/gn_lib/item.o obj/tools/gn/gn_lib/json_project_writer.o obj/tools/gn/gn_lib/label.o obj/tools/gn/gn_lib/label_pattern.o obj/tools/gn/gn_lib/lib_file.o obj/tools/gn/gn_lib/loader.o obj/tools/gn/gn_lib/location.o obj/tools/gn/gn_lib/ninja_action_target_writer.o obj/tools/gn/gn_lib/ninja_binary_target_writer.o obj/tools/gn/gn_lib/ninja_build_writer.o obj/tools/gn/gn_lib/ninja_bundle_data_target_writer.o obj/tools/gn/gn_lib/ninja_copy_target_writer.o obj/tools/gn/gn_lib/ninja_create_bundle_target_writer.o obj/tools/gn/gn_lib/ninja_group_target_writer.o obj/tools/gn/gn_lib/ninja_target_writer.o obj/tools/gn/gn_lib/ninja_toolchain_writer.o obj/tools/gn/gn_lib/ninja_utils.o obj/tools/gn/gn_lib/ninja_writer.o obj/tools/gn/gn_lib/operators.o obj/tools/gn/gn_lib/output_file.o obj/tools/gn/gn_lib/parse_node_value_adapter.o obj/tools/gn/gn_lib/parse_tree.o obj/tools/gn/gn_lib/parser.o obj/tools/gn/gn_lib/path_output.o obj/tools/gn/gn_lib/pattern.o obj/tools/gn/gn_lib/pool.o obj/tools/gn/gn_lib/qt_creator_writer.o obj/tools/gn/gn_lib/runtime_deps.o obj/tools/gn/gn_lib/scheduler.o obj/tools/gn/gn_lib/scope.o obj/tools/gn/gn_lib/scope_per_file_provider.o obj/tools/gn/gn_lib/settings.o obj/tools/gn/gn_lib/setup.o obj/tools/gn/gn_lib/source_dir.o obj/tools/gn/gn_lib/source_file.o obj/tools/gn/gn_lib/source_file_type.o obj/tools/gn/gn_lib/standard_out.o obj/tools/gn/gn_lib/string_utils.o obj/tools/gn/gn_lib/substitution_list.o obj/tools/gn/gn_lib/substitution_pattern.o obj/tools/gn/gn_lib/substitution_type.o obj/tools/gn/gn_lib/substitution_writer.o obj/tools/gn/gn_lib/switches.o obj/tools/gn/gn_lib/target.o obj/tools/gn/gn_lib/target_generator.o obj/tools/gn/gn_lib/template.o obj/tools/gn/gn_lib/token.o obj/tools/gn/gn_lib/tokenizer.o obj/tools/gn/gn_lib/tool.o obj/tools/gn/gn_lib/toolchain.o obj/tools/gn/gn_lib/trace.o obj/tools/gn/gn_lib/value.o obj/tools/gn/gn_lib/value_extractors.o obj/tools/gn/gn_lib/variables.o obj/tools/gn/gn_lib/visibility.o obj/tools/gn/gn_lib/visual_studio_utils.o obj/tools/gn/gn_lib/visual_studio_writer.o obj/tools/gn/gn_lib/xcode_object.o obj/tools/gn/gn_lib/xcode_writer.o obj/tools/gn/gn_lib/xml_element_writer.o || ./libbase.so.TOC obj/base/third_party/dynamic_annotations/libdynamic_annotations.a
+  arflags =
+  output_extension = .a
+  output_dir = obj/tools/gn

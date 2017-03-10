@@ -14,9 +14,9 @@
 
 #include "base/files/file_path.h"
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_mutex.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/platform/api/quic_url.h"
 #include "net/spdy/spdy_framer.h"
 
@@ -56,7 +56,7 @@ class QuicHttpResponseCache {
     SpecialResponseType response_type() const { return response_type_; }
     const SpdyHeaderBlock& headers() const { return headers_; }
     const SpdyHeaderBlock& trailers() const { return trailers_; }
-    const base::StringPiece body() const { return base::StringPiece(body_); }
+    const QuicStringPiece body() const { return QuicStringPiece(body_); }
 
     void set_response_type(SpecialResponseType response_type) {
       response_type_ = response_type;
@@ -65,7 +65,7 @@ class QuicHttpResponseCache {
     void set_trailers(SpdyHeaderBlock trailers) {
       trailers_ = std::move(trailers);
     }
-    void set_body(base::StringPiece body) { body.CopyToString(&body_); }
+    void set_body(QuicStringPiece body) { body.CopyToString(&body_); }
 
    private:
     SpecialResponseType response_type_;
@@ -88,39 +88,39 @@ class QuicHttpResponseCache {
     void Read();
 
     // |base| is |file_name_| with |cache_directory| prefix stripped.
-    void SetHostPathFromBase(base::StringPiece base);
+    void SetHostPathFromBase(QuicStringPiece base);
 
     const std::string& file_name() { return file_name_string_; }
 
-    base::StringPiece host() { return host_; }
-    void set_host(base::StringPiece host) { host_ = host; }
+    QuicStringPiece host() { return host_; }
+    void set_host(QuicStringPiece host) { host_ = host; }
 
-    base::StringPiece path() { return path_; }
-    void set_path(base::StringPiece path) { path_ = path; }
+    QuicStringPiece path() { return path_; }
+    void set_path(QuicStringPiece path) { path_ = path; }
 
     const SpdyHeaderBlock& spdy_headers() { return spdy_headers_; }
 
-    base::StringPiece body() { return body_; }
+    QuicStringPiece body() { return body_; }
 
-    const std::vector<base::StringPiece>& push_urls() { return push_urls_; }
+    const std::vector<QuicStringPiece>& push_urls() { return push_urls_; }
 
    protected:
     void HandleXOriginalUrl();
-    void HandlePushUrls(const std::vector<base::StringPiece>& push_urls);
-    base::StringPiece RemoveScheme(base::StringPiece url);
+    void HandlePushUrls(const std::vector<QuicStringPiece>& push_urls);
+    QuicStringPiece RemoveScheme(QuicStringPiece url);
 
     const std::string cache_directory_;
     const base::FilePath file_name_;
     const std::string file_name_string_;
     std::string file_contents_;
-    base::StringPiece body_;
+    QuicStringPiece body_;
     SpdyHeaderBlock spdy_headers_;
-    base::StringPiece x_original_url_;
-    std::vector<base::StringPiece> push_urls_;
+    QuicStringPiece x_original_url_;
+    std::vector<QuicStringPiece> push_urls_;
 
    private:
-    base::StringPiece host_;
-    base::StringPiece path_;
+    QuicStringPiece host_;
+    QuicStringPiece path_;
     QuicHttpResponseCache* cache_;
 
     DISALLOW_COPY_AND_ASSIGN(ResourceFile);
@@ -131,43 +131,42 @@ class QuicHttpResponseCache {
 
   // Retrieve a response from this cache for a given host and path..
   // If no appropriate response exists, nullptr is returned.
-  const Response* GetResponse(base::StringPiece host,
-                              base::StringPiece path) const;
+  const Response* GetResponse(QuicStringPiece host, QuicStringPiece path) const;
 
   // Adds a simple response to the cache.  The response headers will
   // only contain the "content-length" header with the length of |body|.
-  void AddSimpleResponse(base::StringPiece host,
-                         base::StringPiece path,
+  void AddSimpleResponse(QuicStringPiece host,
+                         QuicStringPiece path,
                          int response_code,
-                         base::StringPiece body);
+                         QuicStringPiece body);
 
   // Add a simple response to the cache as AddSimpleResponse() does, and add
   // some server push resources(resource path, corresponding response status and
   // path) associated with it.
   // Push resource implicitly come from the same host.
   void AddSimpleResponseWithServerPushResources(
-      base::StringPiece host,
-      base::StringPiece path,
+      QuicStringPiece host,
+      QuicStringPiece path,
       int response_code,
-      base::StringPiece body,
+      QuicStringPiece body,
       std::list<ServerPushInfo> push_resources);
 
   // Add a response to the cache.
-  void AddResponse(base::StringPiece host,
-                   base::StringPiece path,
+  void AddResponse(QuicStringPiece host,
+                   QuicStringPiece path,
                    SpdyHeaderBlock response_headers,
-                   base::StringPiece response_body);
+                   QuicStringPiece response_body);
 
   // Add a response, with trailers, to the cache.
-  void AddResponse(base::StringPiece host,
-                   base::StringPiece path,
+  void AddResponse(QuicStringPiece host,
+                   QuicStringPiece path,
                    SpdyHeaderBlock response_headers,
-                   base::StringPiece response_body,
+                   QuicStringPiece response_body,
                    SpdyHeaderBlock response_trailers);
 
   // Simulate a special behavior at a particular path.
-  void AddSpecialResponse(base::StringPiece host,
-                          base::StringPiece path,
+  void AddSpecialResponse(QuicStringPiece host,
+                          QuicStringPiece path,
                           SpecialResponseType response_type);
 
   // Sets a default response in case of cache misses.  Takes ownership of
@@ -181,19 +180,19 @@ class QuicHttpResponseCache {
   std::list<ServerPushInfo> GetServerPushResources(std::string request_url);
 
  private:
-  void AddResponseImpl(base::StringPiece host,
-                       base::StringPiece path,
+  void AddResponseImpl(QuicStringPiece host,
+                       QuicStringPiece path,
                        SpecialResponseType response_type,
                        SpdyHeaderBlock response_headers,
-                       base::StringPiece response_body,
+                       QuicStringPiece response_body,
                        SpdyHeaderBlock response_trailers);
 
-  std::string GetKey(base::StringPiece host, base::StringPiece path) const;
+  std::string GetKey(QuicStringPiece host, QuicStringPiece path) const;
 
   // Add some server push urls with given responses for specified
   // request if these push resources are not associated with this request yet.
-  void MaybeAddServerPushResources(base::StringPiece request_host,
-                                   base::StringPiece request_path,
+  void MaybeAddServerPushResources(QuicStringPiece request_host,
+                                   QuicStringPiece request_path,
                                    std::list<ServerPushInfo> push_resources);
 
   // Check if push resource(push_host/push_path) associated with given request

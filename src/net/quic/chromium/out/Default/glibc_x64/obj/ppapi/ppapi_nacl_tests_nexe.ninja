@@ -1,0 +1,83 @@
+defines = -DGL_GLEXT_PROTOTYPES -DPPAPI_TEST_IMPLEMENTATION -DV8_DEPRECATION_WARNINGS -DENABLE_NOTIFICATIONS -DENABLE_PLUGINS=1 -DENABLE_PDF=1 -DENABLE_PRINTING=1 -DENABLE_BASIC_PRINTING=1 -DENABLE_PRINT_PREVIEW=1 -DENABLE_SPELLCHECK=1 -DUSE_OPENSSL_CERTS=1 -DNO_TCMALLOC -DENABLE_WEBRTC=1 -DENABLE_EXTENSIONS=1 -DENABLE_TASK_MANAGER=1 -DENABLE_THEMES=1 -DENABLE_CAPTIVE_PORTAL_DETECTION=1 -DENABLE_SESSION_SERVICE=1 -DENABLE_SUPERVISED_USERS=1 -DFULL_SAFE_BROWSING -DSAFE_BROWSING_CSD -DSAFE_BROWSING_DB_LOCAL -DCHROMIUM_BUILD -DENABLE_MEDIA_ROUTER=1 -DFIELDTRIAL_TESTING_ENABLED -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1 -DDYNAMIC_ANNOTATIONS_PREFIX=NACL_ -D_POSIX_C_SOURCE=199506 -D_XOPEN_SOURCE=600 -D_GNU_SOURCE=1 -D__STDC_LIMIT_MACROS=1 -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DDYNAMIC_ANNOTATIONS_PREFIX=NACL_
+include_dirs = -I../../../../../ppapi/lib/gl/include -I../../../../.. -Iglibc_x64/gen
+cflags = -fno-strict-aliasing -m64 -march=x86-64 -Wall -Werror -Wno-unused-local-typedefs -Wno-maybe-uninitialized -Wno-missing-field-initializers -Wno-unused-parameter -O0 -g2 -fvisibility=hidden
+cflags_c =
+cflags_cc = -fno-threadsafe-statics -fvisibility-inlines-hidden -Wno-narrowing -fno-rtti -fno-exceptions
+label_name = ppapi_nacl_tests_nexe
+root_out_dir = glibc_x64
+target_out_dir = glibc_x64/obj/ppapi
+target_output_name = ppapi_nacl_tests_glibc_x86_64
+
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/gl2ext_ppapi.o: glibc_x64_cc ../../../../../ppapi/lib/gl/gles2/gl2ext_ppapi.c
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/gles2.o: glibc_x64_cc ../../../../../ppapi/lib/gl/gles2/gles2.c
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_audio.o: glibc_x64_cxx ../../../../../ppapi/tests/test_audio.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_audio_config.o: glibc_x64_cxx ../../../../../ppapi/tests/test_audio_config.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_audio_encoder.o: glibc_x64_cxx ../../../../../ppapi/tests/test_audio_encoder.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_case.o: glibc_x64_cxx ../../../../../ppapi/tests/test_case.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_compositor.o: glibc_x64_cxx ../../../../../ppapi/tests/test_compositor.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_console.o: glibc_x64_cxx ../../../../../ppapi/tests/test_console.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_core.o: glibc_x64_cxx ../../../../../ppapi/tests/test_core.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_cursor_control.o: glibc_x64_cxx ../../../../../ppapi/tests/test_cursor_control.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_empty.o: glibc_x64_cxx ../../../../../ppapi/tests/test_empty.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_file_io.o: glibc_x64_cxx ../../../../../ppapi/tests/test_file_io.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_file_ref.o: glibc_x64_cxx ../../../../../ppapi/tests/test_file_ref.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_file_system.o: glibc_x64_cxx ../../../../../ppapi/tests/test_file_system.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_fullscreen.o: glibc_x64_cxx ../../../../../ppapi/tests/test_fullscreen.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_graphics_2d.o: glibc_x64_cxx ../../../../../ppapi/tests/test_graphics_2d.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_graphics_3d.o: glibc_x64_cxx ../../../../../ppapi/tests/test_graphics_3d.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_host_resolver.o: glibc_x64_cxx ../../../../../ppapi/tests/test_host_resolver.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_host_resolver_private.o: glibc_x64_cxx ../../../../../ppapi/tests/test_host_resolver_private.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_host_resolver_private_disallowed.o: glibc_x64_cxx ../../../../../ppapi/tests/test_host_resolver_private_disallowed.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_image_data.o: glibc_x64_cxx ../../../../../ppapi/tests/test_image_data.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_ime_input_event.o: glibc_x64_cxx ../../../../../ppapi/tests/test_ime_input_event.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_input_event.o: glibc_x64_cxx ../../../../../ppapi/tests/test_input_event.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_media_stream_audio_track.o: glibc_x64_cxx ../../../../../ppapi/tests/test_media_stream_audio_track.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_media_stream_video_track.o: glibc_x64_cxx ../../../../../ppapi/tests/test_media_stream_video_track.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_memory.o: glibc_x64_cxx ../../../../../ppapi/tests/test_memory.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_message_handler.o: glibc_x64_cxx ../../../../../ppapi/tests/test_message_handler.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_message_loop.o: glibc_x64_cxx ../../../../../ppapi/tests/test_message_loop.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_mouse_cursor.o: glibc_x64_cxx ../../../../../ppapi/tests/test_mouse_cursor.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_mouse_lock.o: glibc_x64_cxx ../../../../../ppapi/tests/test_mouse_lock.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_net_address.o: glibc_x64_cxx ../../../../../ppapi/tests/test_net_address.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_net_address_private_untrusted.o: glibc_x64_cxx ../../../../../ppapi/tests/test_net_address_private_untrusted.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_network_monitor.o: glibc_x64_cxx ../../../../../ppapi/tests/test_network_monitor.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_network_proxy.o: glibc_x64_cxx ../../../../../ppapi/tests/test_network_proxy.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_output_protection_private.o: glibc_x64_cxx ../../../../../ppapi/tests/test_output_protection_private.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_paint_aggregator.o: glibc_x64_cxx ../../../../../ppapi/tests/test_paint_aggregator.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_post_message.o: glibc_x64_cxx ../../../../../ppapi/tests/test_post_message.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_printing.o: glibc_x64_cxx ../../../../../ppapi/tests/test_printing.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_tcp_server_socket_private.o: glibc_x64_cxx ../../../../../ppapi/tests/test_tcp_server_socket_private.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_tcp_socket.o: glibc_x64_cxx ../../../../../ppapi/tests/test_tcp_socket.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_tcp_socket_private.o: glibc_x64_cxx ../../../../../ppapi/tests/test_tcp_socket_private.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_test_internals.o: glibc_x64_cxx ../../../../../ppapi/tests/test_test_internals.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_trace_event.o: glibc_x64_cxx ../../../../../ppapi/tests/test_trace_event.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_truetype_font.o: glibc_x64_cxx ../../../../../ppapi/tests/test_truetype_font.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_udp_socket.o: glibc_x64_cxx ../../../../../ppapi/tests/test_udp_socket.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_udp_socket_private.o: glibc_x64_cxx ../../../../../ppapi/tests/test_udp_socket_private.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_uma.o: glibc_x64_cxx ../../../../../ppapi/tests/test_uma.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_url_loader.o: glibc_x64_cxx ../../../../../ppapi/tests/test_url_loader.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_url_request.o: glibc_x64_cxx ../../../../../ppapi/tests/test_url_request.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_utils.o: glibc_x64_cxx ../../../../../ppapi/tests/test_utils.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_var.o: glibc_x64_cxx ../../../../../ppapi/tests/test_var.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_var_resource.o: glibc_x64_cxx ../../../../../ppapi/tests/test_var_resource.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_video_decoder.o: glibc_x64_cxx ../../../../../ppapi/tests/test_video_decoder.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_video_destination.o: glibc_x64_cxx ../../../../../ppapi/tests/test_video_destination.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_video_encoder.o: glibc_x64_cxx ../../../../../ppapi/tests/test_video_encoder.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_video_source.o: glibc_x64_cxx ../../../../../ppapi/tests/test_video_source.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_view.o: glibc_x64_cxx ../../../../../ppapi/tests/test_view.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_websocket.o: glibc_x64_cxx ../../../../../ppapi/tests/test_websocket.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/testing_instance.o: glibc_x64_cxx ../../../../../ppapi/tests/testing_instance.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_c_includes.o: glibc_x64_cc ../../../../../ppapi/tests/test_c_includes.c
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_cpp_includes.o: glibc_x64_cxx ../../../../../ppapi/tests/test_cpp_includes.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_struct_sizes.o: glibc_x64_cc ../../../../../ppapi/tests/test_struct_sizes.c
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_nacl_irt_stack_alignment.o: glibc_x64_cxx ../../../../../ppapi/tests/test_nacl_irt_stack_alignment.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_tcp_server_socket_private_disallowed.o: glibc_x64_cxx ../../../../../ppapi/tests/test_tcp_server_socket_private_disallowed.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_tcp_socket_private_disallowed.o: glibc_x64_cxx ../../../../../ppapi/tests/test_tcp_socket_private_disallowed.cc
+build glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_udp_socket_private_disallowed.o: glibc_x64_cxx ../../../../../ppapi/tests/test_udp_socket_private_disallowed.cc
+
+build glibc_x64/ppapi_nacl_tests_glibc_x86_64.nexe glibc_x64/exe.unstripped/ppapi_nacl_tests_glibc_x86_64.nexe: glibc_x64_link glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/gl2ext_ppapi.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/gles2.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_audio.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_audio_config.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_audio_encoder.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_case.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_compositor.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_console.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_core.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_cursor_control.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_empty.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_file_io.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_file_ref.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_file_system.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_fullscreen.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_graphics_2d.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_graphics_3d.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_host_resolver.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_host_resolver_private.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_host_resolver_private_disallowed.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_image_data.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_ime_input_event.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_input_event.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_media_stream_audio_track.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_media_stream_video_track.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_memory.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_message_handler.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_message_loop.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_mouse_cursor.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_mouse_lock.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_net_address.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_net_address_private_untrusted.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_network_monitor.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_network_proxy.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_output_protection_private.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_paint_aggregator.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_post_message.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_printing.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_tcp_server_socket_private.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_tcp_socket.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_tcp_socket_private.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_test_internals.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_trace_event.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_truetype_font.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_udp_socket.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_udp_socket_private.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_uma.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_url_loader.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_url_request.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_utils.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_var.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_var_resource.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_video_decoder.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_video_destination.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_video_encoder.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_video_source.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_view.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_websocket.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/testing_instance.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_c_includes.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_cpp_includes.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_struct_sizes.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_nacl_irt_stack_alignment.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_tcp_server_socket_private_disallowed.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_tcp_socket_private_disallowed.o glibc_x64/obj/ppapi/ppapi_nacl_tests_nexe/test_udp_socket_private_disallowed.o glibc_x64/obj/ppapi/native_client/src/untrusted/irt_stub/libppapi_stub.a | glibc_x64/libppapi_cpp_lib.so.TOC || glibc_x64/obj/build/config/nacl/nacl_base.stamp glibc_x64/obj/ppapi/native_client/ppapi_lib.stamp
+  ldflags = -pthread -Wl,--fatal-warnings -m64
+  libs =
+  output_extension = .nexe
+  output_dir = glibc_x64
+  solibs = glibc_x64/libppapi_cpp_lib.so

@@ -7,9 +7,9 @@
 
 #include <string>
 
-#include "base/strings/string_piece.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -29,14 +29,14 @@ class QUIC_EXPORT_PRIVATE KeyExchange {
   // CalculateSharedKey computes the shared key between the local private key
   // (which is implicitly known by a KeyExchange object) and a public value
   // from the peer.
-  virtual bool CalculateSharedKey(base::StringPiece peer_public_value,
+  virtual bool CalculateSharedKey(QuicStringPiece peer_public_value,
                                   std::string* shared_key) const = 0;
 
   // public_value returns the local public key which can be sent to a peer in
-  // order to complete a key exchange. The returned StringPiece is a reference
-  // to a member of the KeyExchange and is only valid for as long as the
-  // KeyExchange exists.
-  virtual base::StringPiece public_value() const = 0;
+  // order to complete a key exchange. The returned QuicStringPiece is a
+  // reference to a member of the KeyExchange and is only valid for as long as
+  // the KeyExchange exists.
+  virtual QuicStringPiece public_value() const = 0;
 
   // tag returns the tag value that identifies this key exchange function.
   virtual QuicTag tag() const = 0;

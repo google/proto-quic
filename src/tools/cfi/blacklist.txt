@@ -66,9 +66,6 @@ src:*wtf/PartitionAllocator.h*
 
 # Skia
 
-# https://crbug.com/638064#c1
-fun:*SkPictureUtils*ApproximateBytesUsed*
-
 # https://crbug.com/638056#c1
 fun:*SkCanvas*onDrawRect*
 

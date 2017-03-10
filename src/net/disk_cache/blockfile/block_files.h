@@ -15,6 +15,7 @@
 #include "base/files/file_path.h"
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
+#include "base/memory/ref_counted.h"
 #include "net/base/net_export.h"
 #include "net/disk_cache/blockfile/addr.h"
 #include "net/disk_cache/blockfile/disk_format_base.h"
@@ -155,7 +156,7 @@ class NET_EXPORT_PRIVATE BlockFiles {
   bool init_;
   char* zero_buffer_;  // Buffer to speed-up cleaning deleted entries.
   base::FilePath path_;  // Path to the backing folder.
-  std::vector<MappedFile*> block_files_;  // The actual files.
+  std::vector<scoped_refptr<MappedFile>> block_files_;  // The actual files.
   std::unique_ptr<base::ThreadChecker> thread_checker_;
 
   FRIEND_TEST_ALL_PREFIXES(DiskCacheTest, BlockFiles_ZeroSizeFile);

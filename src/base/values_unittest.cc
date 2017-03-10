@@ -43,42 +43,42 @@ TEST(ValuesTest, ConstructDouble) {
 
 TEST(ValuesTest, ConstructStringFromConstCharPtr) {
   const char* str = "foobar";
-  StringValue value(str);
+  Value value(str);
   EXPECT_EQ(Value::Type::STRING, value.type());
   EXPECT_EQ("foobar", value.GetString());
 }
 
 TEST(ValuesTest, ConstructStringFromStdStringConstRef) {
   std::string str = "foobar";
-  StringValue value(str);
+  Value value(str);
   EXPECT_EQ(Value::Type::STRING, value.type());
   EXPECT_EQ("foobar", value.GetString());
 }
 
 TEST(ValuesTest, ConstructStringFromStdStringRefRef) {
   std::string str = "foobar";
-  StringValue value(std::move(str));
+  Value value(std::move(str));
   EXPECT_EQ(Value::Type::STRING, value.type());
   EXPECT_EQ("foobar", value.GetString());
 }
 
 TEST(ValuesTest, ConstructStringFromConstChar16Ptr) {
   string16 str = ASCIIToUTF16("foobar");
-  StringValue value(str.c_str());
+  Value value(str.c_str());
   EXPECT_EQ(Value::Type::STRING, value.type());
   EXPECT_EQ("foobar", value.GetString());
 }
 
 TEST(ValuesTest, ConstructStringFromString16) {
   string16 str = ASCIIToUTF16("foobar");
-  StringValue value(str);
+  Value value(str);
   EXPECT_EQ(Value::Type::STRING, value.type());
   EXPECT_EQ("foobar", value.GetString());
 }
 
 TEST(ValuesTest, ConstructStringFromStringPiece) {
   StringPiece str = "foobar";
-  StringValue value(str);
+  Value value(str);
   EXPECT_EQ(Value::Type::STRING, value.type());
   EXPECT_EQ("foobar", value.GetString());
 }
@@ -151,8 +151,8 @@ TEST(ValuesTest, CopyDouble) {
 }
 
 TEST(ValuesTest, CopyString) {
-  StringValue value("foobar");
-  StringValue copied_value(value);
+  Value value("foobar");
+  Value copied_value(value);
   EXPECT_EQ(value.type(), copied_value.type());
   EXPECT_EQ(value.GetString(), copied_value.GetString());
 
@@ -270,14 +270,14 @@ TEST(ValuesTest, MoveDouble) {
 }
 
 TEST(ValuesTest, MoveString) {
-  StringValue value("foobar");
-  StringValue moved_value(std::move(value));
+  Value value("foobar");
+  Value moved_value(std::move(value));
   EXPECT_EQ(Value::Type::STRING, moved_value.type());
   EXPECT_EQ("foobar", moved_value.GetString());
 
   Value blank;
 
-  blank = StringValue("foobar");
+  blank = Value("foobar");
   EXPECT_EQ(Value::Type::STRING, blank.type());
   EXPECT_EQ("foobar", blank.GetString());
 }
@@ -382,7 +382,7 @@ TEST(ValuesTest, List) {
   mixed_list->Set(0, MakeUnique<Value>(true));
   mixed_list->Set(1, MakeUnique<Value>(42));
   mixed_list->Set(2, MakeUnique<Value>(88.8));
-  mixed_list->Set(3, MakeUnique<StringValue>("foo"));
+  mixed_list->Set(3, MakeUnique<Value>("foo"));
   ASSERT_EQ(4u, mixed_list->GetSize());
 
   Value *value = NULL;
@@ -459,17 +459,17 @@ TEST(ValuesTest, BinaryValue) {
 
 TEST(ValuesTest, StringValue) {
   // Test overloaded StringValue constructor.
-  std::unique_ptr<Value> narrow_value(new StringValue("narrow"));
+  std::unique_ptr<Value> narrow_value(new Value("narrow"));
   ASSERT_TRUE(narrow_value.get());
   ASSERT_TRUE(narrow_value->IsType(Value::Type::STRING));
-  std::unique_ptr<Value> utf16_value(new StringValue(ASCIIToUTF16("utf16")));
+  std::unique_ptr<Value> utf16_value(new Value(ASCIIToUTF16("utf16")));
   ASSERT_TRUE(utf16_value.get());
   ASSERT_TRUE(utf16_value->IsType(Value::Type::STRING));
 
   // Test overloaded GetAsString.
   std::string narrow = "http://google.com";
   string16 utf16 = ASCIIToUTF16("http://google.com");
-  const StringValue* string_value = NULL;
+  const Value* string_value = NULL;
   ASSERT_TRUE(narrow_value->GetAsString(&narrow));
   ASSERT_TRUE(narrow_value->GetAsString(&utf16));
   ASSERT_TRUE(narrow_value->GetAsString(&string_value));
@@ -487,8 +487,7 @@ TEST(ValuesTest, StringValue) {
   // Don't choke on NULL values.
   ASSERT_TRUE(narrow_value->GetAsString(static_cast<string16*>(NULL)));
   ASSERT_TRUE(narrow_value->GetAsString(static_cast<std::string*>(NULL)));
-  ASSERT_TRUE(narrow_value->GetAsString(
-                  static_cast<const StringValue**>(NULL)));
+  ASSERT_TRUE(narrow_value->GetAsString(static_cast<const Value**>(NULL)));
 }
 
 TEST(ValuesTest, ListDeletion) {
@@ -651,12 +650,11 @@ TEST(ValuesTest, DeepCopy) {
   std::unique_ptr<Value> scoped_double(new Value(3.14));
   Value* original_double = scoped_double.get();
   original_dict.Set("double", std::move(scoped_double));
-  std::unique_ptr<StringValue> scoped_string(new StringValue("hello"));
-  StringValue* original_string = scoped_string.get();
+  std::unique_ptr<Value> scoped_string(new Value("hello"));
+  Value* original_string = scoped_string.get();
   original_dict.Set("string", std::move(scoped_string));
-  std::unique_ptr<StringValue> scoped_string16(
-      new StringValue(ASCIIToUTF16("hello16")));
-  StringValue* original_string16 = scoped_string16.get();
+  std::unique_ptr<Value> scoped_string16(new Value(ASCIIToUTF16("hello16")));
+  Value* original_string16 = scoped_string16.get();
   original_dict.Set("string16", std::move(scoped_string16));
 
   std::vector<char> original_buffer(42, '!');
@@ -866,11 +864,10 @@ TEST(ValuesTest, DeepCopyCovariantReturnTypes) {
   std::unique_ptr<Value> scoped_double(new Value(3.14));
   Value* original_double = scoped_double.get();
   original_dict.Set("double", std::move(scoped_double));
-  std::unique_ptr<StringValue> scoped_string(new StringValue("hello"));
+  std::unique_ptr<Value> scoped_string(new Value("hello"));
   Value* original_string = scoped_string.get();
   original_dict.Set("string", std::move(scoped_string));
-  std::unique_ptr<StringValue> scoped_string16(
-      new StringValue(ASCIIToUTF16("hello16")));
+  std::unique_ptr<Value> scoped_string16(new Value(ASCIIToUTF16("hello16")));
   Value* original_string16 = scoped_string16.get();
   original_dict.Set("string16", std::move(scoped_string16));
 
@@ -972,7 +969,7 @@ TEST(ValuesTest, RemoveEmptyChildren) {
   {
     std::unique_ptr<ListValue> inner(new ListValue);
     std::unique_ptr<ListValue> inner2(new ListValue);
-    inner2->Append(MakeUnique<StringValue>("hello"));
+    inner2->Append(MakeUnique<Value>("hello"));
     inner->Append(WrapUnique(new DictionaryValue));
     inner->Append(std::move(inner2));
     root->Set("list_with_empty_children", std::move(inner));
@@ -1070,7 +1067,7 @@ TEST(ValuesTest, DictionaryIterator) {
     ADD_FAILURE();
   }
 
-  StringValue value1("value1");
+  Value value1("value1");
   dict.Set("key1", value1.CreateDeepCopy());
   bool seen1 = false;
   for (DictionaryValue::Iterator it(dict); !it.IsAtEnd(); it.Advance()) {
@@ -1081,7 +1078,7 @@ TEST(ValuesTest, DictionaryIterator) {
   }
   EXPECT_TRUE(seen1);
 
-  StringValue value2("value2");
+  Value value2("value2");
   dict.Set("key2", value2.CreateDeepCopy());
   bool seen2 = seen1 = false;
   for (DictionaryValue::Iterator it(dict); !it.IsAtEnd(); it.Advance()) {
@@ -1110,7 +1107,7 @@ TEST(ValuesTest, GetWithNullOutValue) {
   Value bool_value(false);
   Value int_value(1234);
   Value double_value(12.34567);
-  StringValue string_value("foo");
+  Value string_value("foo");
   BinaryValue binary_value(Value::Type::BINARY);
   DictionaryValue dict_value;
   ListValue list_value;

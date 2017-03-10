@@ -1,0 +1,22 @@
+defines = -DV8_DEPRECATION_WARNINGS -DENABLE_NOTIFICATIONS -DENABLE_PLUGINS=1 -DENABLE_PDF=1 -DENABLE_PRINTING=1 -DENABLE_BASIC_PRINTING=1 -DENABLE_PRINT_PREVIEW=1 -DENABLE_SPELLCHECK=1 -DUSE_OPENSSL_CERTS=1 -DNO_TCMALLOC -DENABLE_WEBRTC=1 -DENABLE_EXTENSIONS=1 -DENABLE_TASK_MANAGER=1 -DENABLE_THEMES=1 -DENABLE_CAPTIVE_PORTAL_DETECTION=1 -DENABLE_SESSION_SERVICE=1 -DENABLE_SUPERVISED_USERS=1 -DFULL_SAFE_BROWSING -DSAFE_BROWSING_CSD -DSAFE_BROWSING_DB_LOCAL -DCHROMIUM_BUILD -DENABLE_MEDIA_ROUTER=1 -DFIELDTRIAL_TESTING_ENABLED -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1 -DDYNAMIC_ANNOTATIONS_PREFIX=NACL_ -DGTEST_HAS_POSIX_RE=0 -DGTEST_LANG_CXX11=1 -DUNIT_TEST
+include_dirs = -I../../../../../testing/gtest -I../../../../../native_client/src/public/linux_syscalls -I../../../../.. -Inewlib_pnacl_nonsfi/gen -I../../../../../testing/gtest/include
+cflags = -fno-strict-aliasing -fcolor-diagnostics --pnacl-allow-translate -arch x86-32-nonsfi --pnacl-bias=x86-32-nonsfi --target=i686-unknown-nacl -O0 -g2 -fvisibility=hidden -Werror -Wno-unused-variable -Wno-missing-field-initializers -Wno-unused-parameter -Wno-c++11-narrowing -Wno-covered-switch-default -Wno-deprecated-register -Wno-unneeded-internal-declaration -Wno-inconsistent-missing-override
+cflags_cc = -fno-threadsafe-statics -fvisibility-inlines-hidden -Wno-undefined-bool-conversion -Wno-tautological-undefined-compare -std=gnu++11 -fno-rtti -fno-exceptions
+label_name = gtest
+root_out_dir = newlib_pnacl_nonsfi
+target_out_dir = newlib_pnacl_nonsfi/obj/testing/gtest
+target_output_name = libgtest
+
+build newlib_pnacl_nonsfi/obj/testing/gtest/gtest/gtest-death-test.o: newlib_pnacl_nonsfi_cxx ../../../../../testing/gtest/src/gtest-death-test.cc
+build newlib_pnacl_nonsfi/obj/testing/gtest/gtest/gtest-filepath.o: newlib_pnacl_nonsfi_cxx ../../../../../testing/gtest/src/gtest-filepath.cc
+build newlib_pnacl_nonsfi/obj/testing/gtest/gtest/gtest-port.o: newlib_pnacl_nonsfi_cxx ../../../../../testing/gtest/src/gtest-port.cc
+build newlib_pnacl_nonsfi/obj/testing/gtest/gtest/gtest-printers.o: newlib_pnacl_nonsfi_cxx ../../../../../testing/gtest/src/gtest-printers.cc
+build newlib_pnacl_nonsfi/obj/testing/gtest/gtest/gtest-test-part.o: newlib_pnacl_nonsfi_cxx ../../../../../testing/gtest/src/gtest-test-part.cc
+build newlib_pnacl_nonsfi/obj/testing/gtest/gtest/gtest-typed-test.o: newlib_pnacl_nonsfi_cxx ../../../../../testing/gtest/src/gtest-typed-test.cc
+build newlib_pnacl_nonsfi/obj/testing/gtest/gtest/gtest.o: newlib_pnacl_nonsfi_cxx ../../../../../testing/gtest/src/gtest.cc
+build newlib_pnacl_nonsfi/obj/testing/gtest/gtest/multiprocess_func_list.o: newlib_pnacl_nonsfi_cxx ../../../../../testing/multiprocess_func_list.cc
+
+build newlib_pnacl_nonsfi/obj/testing/gtest/libgtest.a: newlib_pnacl_nonsfi_alink newlib_pnacl_nonsfi/obj/testing/gtest/gtest/gtest-death-test.o newlib_pnacl_nonsfi/obj/testing/gtest/gtest/gtest-filepath.o newlib_pnacl_nonsfi/obj/testing/gtest/gtest/gtest-port.o newlib_pnacl_nonsfi/obj/testing/gtest/gtest/gtest-printers.o newlib_pnacl_nonsfi/obj/testing/gtest/gtest/gtest-test-part.o newlib_pnacl_nonsfi/obj/testing/gtest/gtest/gtest-typed-test.o newlib_pnacl_nonsfi/obj/testing/gtest/gtest/gtest.o newlib_pnacl_nonsfi/obj/testing/gtest/gtest/multiprocess_func_list.o
+  arflags =
+  output_extension = .a
+  output_dir = newlib_pnacl_nonsfi/obj/testing/gtest

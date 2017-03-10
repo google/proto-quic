@@ -1,0 +1,8 @@
+../../../../../remoting/webapp/crd/js/wcs.js
+../../../../../remoting/webapp/crd/js/wcs_loader.js
+../../../../../remoting/webapp/crd/js/wcs_sandbox_content.js
+../../../../../remoting/webapp/crd/js/xhr_proxy.js
+../../../../../remoting/webapp/base/js/chromoting_event.js
+../../../../../remoting/webapp/base/js/error.js
+../../../../../remoting/webapp/base/js/platform.js
+../../../../../remoting/webapp/base/js/plugin_settings.js

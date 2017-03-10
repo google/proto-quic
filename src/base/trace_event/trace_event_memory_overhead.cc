@@ -77,9 +77,9 @@ void TraceEventMemoryOverhead::AddValue(const Value& value) {
       break;
 
     case Value::Type::STRING: {
-      const StringValue* string_value = nullptr;
+      const Value* string_value = nullptr;
       value.GetAsString(&string_value);
-      Add("StringValue", sizeof(StringValue));
+      Add("StringValue", sizeof(Value));
       AddString(string_value->GetString());
     } break;
 

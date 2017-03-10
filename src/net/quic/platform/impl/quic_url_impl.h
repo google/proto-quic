@@ -6,6 +6,7 @@
 #define NET_QUIC_PLATFORM_IMPL_QUIC_URL_IMPL_H_
 
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "url/gurl.h"
 
 namespace net {
@@ -21,11 +22,11 @@ class QUIC_EXPORT_PRIVATE QuicUrlImpl {
   // NOTE: If |url| doesn't have a scheme, it will have an empty scheme
   // field. If that's not what you want, use the QuicUrlImpl(url,
   // default_scheme) form below.
-  explicit QuicUrlImpl(base::StringPiece url);
+  explicit QuicUrlImpl(QuicStringPiece url);
 
   // Constructs a QuicUrlImpl from |url|, assuming that the scheme for the URL
   // is |default_scheme| if there is no scheme specified in |url|.
-  QuicUrlImpl(base::StringPiece url, base::StringPiece default_scheme);
+  QuicUrlImpl(QuicStringPiece url, QuicStringPiece default_scheme);
 
   QuicUrlImpl(const QuicUrlImpl& url);
 

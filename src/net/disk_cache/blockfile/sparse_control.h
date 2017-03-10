@@ -152,7 +152,7 @@ class SparseControl {
   void DoAbortCallbacks();
 
   EntryImpl* entry_;  // The sparse entry.
-  EntryImpl* child_;  // The current child entry.
+  scoped_refptr<EntryImpl> child_;  // The current child entry.
   SparseOperation operation_;
   bool pending_;  // True if any child IO operation returned pending.
   bool finished_;

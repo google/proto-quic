@@ -567,7 +567,7 @@ class _Generator(object):
 
     var: variable or variable*
 
-    E.g for std::string, generate new base::StringValue(var)
+    E.g for std::string, generate new base::Value(var)
     """
     c = Code()
     underlying_type = self._type_helper.FollowRef(type_)
@@ -631,7 +631,7 @@ class _Generator(object):
       maybe_namespace = ''
       if type_.property_type == PropertyType.REF:
         maybe_namespace = '%s::' % underlying_type.namespace.unix_name
-      return 'base::MakeUnique<base::StringValue>(%sToString(%s))' % (
+      return 'base::MakeUnique<base::Value>(%sToString(%s))' % (
           maybe_namespace, var)
     elif underlying_type.property_type == PropertyType.BINARY:
       if is_ptr:
@@ -648,7 +648,7 @@ class _Generator(object):
       if is_ptr:
         var = '*%s' % var
       if underlying_type.property_type == PropertyType.STRING:
-        return 'base::MakeUnique<base::StringValue>(%s)' % var
+        return 'base::MakeUnique<base::Value>(%s)' % var
       else:
         return 'base::MakeUnique<base::Value>(%s)' % var
     else:

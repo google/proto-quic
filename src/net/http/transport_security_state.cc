@@ -91,7 +91,7 @@ std::unique_ptr<base::ListValue> GetPEMEncodedChainAsList(
   std::vector<std::string> pem_encoded_chain;
   cert_chain->GetPEMEncodedChain(&pem_encoded_chain);
   for (const std::string& cert : pem_encoded_chain)
-    result->Append(base::MakeUnique<base::StringValue>(cert));
+    result->Append(base::MakeUnique<base::Value>(cert));
 
   return result;
 }
@@ -157,7 +157,7 @@ bool GetHPKPReport(const HostPortPair& host_port_pair,
     known_pin += "\"" + base64_value + "\"";
 
     known_pin_list->Append(
-        std::unique_ptr<base::Value>(new base::StringValue(known_pin)));
+        std::unique_ptr<base::Value>(new base::Value(known_pin)));
   }
 
   report.Set("known-pins", std::move(known_pin_list));
@@ -729,7 +729,7 @@ TransportSecurityState::TransportSecurityState()
       sent_reports_cache_(kMaxHPKPReportCacheEntries) {
 // Static pinning is only enabled for official builds to make sure that
 // others don't end up with pins that cannot be easily updated.
-#if !defined(OFFICIAL_BUILD) || defined(OS_ANDROID) || defined(OS_IOS)
+#if !defined(GOOGLE_CHROME_BUILD) || defined(OS_ANDROID) || defined(OS_IOS)
   enable_static_pins_ = false;
   enable_static_expect_ct_ = false;
 #endif

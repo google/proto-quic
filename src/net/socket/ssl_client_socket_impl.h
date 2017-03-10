@@ -127,6 +127,9 @@ class SSLClientSocketImpl : public SSLClientSocket,
   int Read(IOBuffer* buf,
            int buf_len,
            const CompletionCallback& callback) override;
+  int ReadIfReady(IOBuffer* buf,
+                  int buf_len,
+                  const CompletionCallback& callback) override;
   int Write(IOBuffer* buf,
             int buf_len,
             const CompletionCallback& callback) override;
@@ -154,12 +157,11 @@ class SSLClientSocketImpl : public SSLClientSocket,
   int DoVerifyCert(int result);
   int DoVerifyCertComplete(int result);
   void DoConnectCallback(int result);
-  void UpdateServerCert();
 
   void OnHandshakeIOComplete(int result);
 
   int DoHandshakeLoop(int last_io_result);
-  int DoPayloadRead();
+  int DoPayloadRead(IOBuffer* buf, int buf_len);
   int DoPayloadWrite();
 
   // Called when an asynchronous event completes which may have blocked the
@@ -172,11 +174,6 @@ class SSLClientSocketImpl : public SSLClientSocket,
   // Callback from the SSL layer that indicates the remote server is requesting
   // a certificate for this client.
   int ClientCertRequestCallback(SSL* ssl);
-
-  // CertVerifyCallback is called to verify the server's certificates. We do
-  // verification after the handshake so this function only enforces that the
-  // certificates don't change during renegotiation.
-  int CertVerifyCallback(X509_STORE_CTX* store_ctx);
 
   // Called after the initial handshake completes and after the server
   // certificate has been verified. The order of handshake completion and
@@ -272,7 +269,6 @@ class SSLClientSocketImpl : public SSLClientSocket,
   OpenSSLErrorInfo pending_read_error_info_;
 
   // Set when Connect finishes.
-  std::unique_ptr<PeerCertificateChain> server_cert_chain_;
   scoped_refptr<X509Certificate> server_cert_;
   CertVerifyResult server_cert_verify_result_;
   bool completed_connect_;

@@ -1,0 +1,122 @@
+defines = -DV8_DEPRECATION_WARNINGS -DENABLE_NOTIFICATIONS -DENABLE_PLUGINS=1 -DENABLE_PDF=1 -DENABLE_PRINTING=1 -DENABLE_BASIC_PRINTING=1 -DENABLE_PRINT_PREVIEW=1 -DENABLE_SPELLCHECK=1 -DUSE_OPENSSL_CERTS=1 -DNO_TCMALLOC -DENABLE_WEBRTC=1 -DENABLE_EXTENSIONS=1 -DENABLE_TASK_MANAGER=1 -DENABLE_THEMES=1 -DENABLE_CAPTIVE_PORTAL_DETECTION=1 -DENABLE_SESSION_SERVICE=1 -DENABLE_SUPERVISED_USERS=1 -DFULL_SAFE_BROWSING -DSAFE_BROWSING_CSD -DSAFE_BROWSING_DB_LOCAL -DCHROMIUM_BUILD -DENABLE_MEDIA_ROUTER=1 -DFIELDTRIAL_TESTING_ENABLED -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1 -DDYNAMIC_ANNOTATIONS_PREFIX=NACL_ -D_POSIX_C_SOURCE=199506 -D_XOPEN_SOURCE=600 -D_GNU_SOURCE=1 -D__STDC_LIMIT_MACROS=1 -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DDYNAMIC_ANNOTATIONS_PREFIX=NACL_
+include_dirs = -I../../../../.. -Iglibc_x64/gen
+cflags = -fPIC -fno-strict-aliasing -m64 -march=x86-64 -Wall -Werror -Wno-unused-local-typedefs -Wno-maybe-uninitialized -Wno-missing-field-initializers -Wno-unused-parameter -O0 -g2 -fvisibility=default
+cflags_cc = -fno-threadsafe-statics -fvisibility-inlines-hidden -Wno-narrowing -fno-rtti -fno-exceptions
+label_name = ppapi_cpp_lib
+root_out_dir = glibc_x64
+target_out_dir = glibc_x64/obj/ppapi
+target_output_name = libppapi_cpp_lib
+
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/array_output.o: glibc_x64_cxx ../../../../../ppapi/cpp/array_output.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/audio.o: glibc_x64_cxx ../../../../../ppapi/cpp/audio.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/audio_buffer.o: glibc_x64_cxx ../../../../../ppapi/cpp/audio_buffer.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/audio_config.o: glibc_x64_cxx ../../../../../ppapi/cpp/audio_config.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/audio_encoder.o: glibc_x64_cxx ../../../../../ppapi/cpp/audio_encoder.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/compositor.o: glibc_x64_cxx ../../../../../ppapi/cpp/compositor.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/compositor_layer.o: glibc_x64_cxx ../../../../../ppapi/cpp/compositor_layer.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/core.o: glibc_x64_cxx ../../../../../ppapi/cpp/core.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/directory_entry.o: glibc_x64_cxx ../../../../../ppapi/cpp/directory_entry.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/file_io.o: glibc_x64_cxx ../../../../../ppapi/cpp/file_io.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/file_ref.o: glibc_x64_cxx ../../../../../ppapi/cpp/file_ref.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/file_system.o: glibc_x64_cxx ../../../../../ppapi/cpp/file_system.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/fullscreen.o: glibc_x64_cxx ../../../../../ppapi/cpp/fullscreen.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/graphics_2d.o: glibc_x64_cxx ../../../../../ppapi/cpp/graphics_2d.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/graphics_3d.o: glibc_x64_cxx ../../../../../ppapi/cpp/graphics_3d.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/graphics_3d_client.o: glibc_x64_cxx ../../../../../ppapi/cpp/graphics_3d_client.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/host_resolver.o: glibc_x64_cxx ../../../../../ppapi/cpp/host_resolver.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/image_data.o: glibc_x64_cxx ../../../../../ppapi/cpp/image_data.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/input_event.o: glibc_x64_cxx ../../../../../ppapi/cpp/input_event.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/instance.o: glibc_x64_cxx ../../../../../ppapi/cpp/instance.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/instance_handle.o: glibc_x64_cxx ../../../../../ppapi/cpp/instance_handle.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/media_stream_audio_track.o: glibc_x64_cxx ../../../../../ppapi/cpp/media_stream_audio_track.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/media_stream_video_track.o: glibc_x64_cxx ../../../../../ppapi/cpp/media_stream_video_track.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/message_loop.o: glibc_x64_cxx ../../../../../ppapi/cpp/message_loop.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/module.o: glibc_x64_cxx ../../../../../ppapi/cpp/module.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/mouse_cursor.o: glibc_x64_cxx ../../../../../ppapi/cpp/mouse_cursor.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/mouse_lock.o: glibc_x64_cxx ../../../../../ppapi/cpp/mouse_lock.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/net_address.o: glibc_x64_cxx ../../../../../ppapi/cpp/net_address.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/network_list.o: glibc_x64_cxx ../../../../../ppapi/cpp/network_list.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/network_monitor.o: glibc_x64_cxx ../../../../../ppapi/cpp/network_monitor.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/network_proxy.o: glibc_x64_cxx ../../../../../ppapi/cpp/network_proxy.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/rect.o: glibc_x64_cxx ../../../../../ppapi/cpp/rect.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/resource.o: glibc_x64_cxx ../../../../../ppapi/cpp/resource.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/tcp_socket.o: glibc_x64_cxx ../../../../../ppapi/cpp/tcp_socket.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/text_input_controller.o: glibc_x64_cxx ../../../../../ppapi/cpp/text_input_controller.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/udp_socket.o: glibc_x64_cxx ../../../../../ppapi/cpp/udp_socket.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/url_loader.o: glibc_x64_cxx ../../../../../ppapi/cpp/url_loader.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/url_request_info.o: glibc_x64_cxx ../../../../../ppapi/cpp/url_request_info.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/url_response_info.o: glibc_x64_cxx ../../../../../ppapi/cpp/url_response_info.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/var.o: glibc_x64_cxx ../../../../../ppapi/cpp/var.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/var_array.o: glibc_x64_cxx ../../../../../ppapi/cpp/var_array.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/var_array_buffer.o: glibc_x64_cxx ../../../../../ppapi/cpp/var_array_buffer.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/var_dictionary.o: glibc_x64_cxx ../../../../../ppapi/cpp/var_dictionary.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/video_decoder.o: glibc_x64_cxx ../../../../../ppapi/cpp/video_decoder.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/video_encoder.o: glibc_x64_cxx ../../../../../ppapi/cpp/video_encoder.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/video_frame.o: glibc_x64_cxx ../../../../../ppapi/cpp/video_frame.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/view.o: glibc_x64_cxx ../../../../../ppapi/cpp/view.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/vpn_provider.o: glibc_x64_cxx ../../../../../ppapi/cpp/vpn_provider.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/websocket.o: glibc_x64_cxx ../../../../../ppapi/cpp/websocket.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/audio_input_dev.o: glibc_x64_cxx ../../../../../ppapi/cpp/dev/audio_input_dev.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/buffer_dev.o: glibc_x64_cxx ../../../../../ppapi/cpp/dev/buffer_dev.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/crypto_dev.o: glibc_x64_cxx ../../../../../ppapi/cpp/dev/crypto_dev.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/cursor_control_dev.o: glibc_x64_cxx ../../../../../ppapi/cpp/dev/cursor_control_dev.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/device_ref_dev.o: glibc_x64_cxx ../../../../../ppapi/cpp/dev/device_ref_dev.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/file_chooser_dev.o: glibc_x64_cxx ../../../../../ppapi/cpp/dev/file_chooser_dev.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/ime_input_event_dev.o: glibc_x64_cxx ../../../../../ppapi/cpp/dev/ime_input_event_dev.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/memory_dev.o: glibc_x64_cxx ../../../../../ppapi/cpp/dev/memory_dev.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/printing_dev.o: glibc_x64_cxx ../../../../../ppapi/cpp/dev/printing_dev.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/text_input_dev.o: glibc_x64_cxx ../../../../../ppapi/cpp/dev/text_input_dev.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/truetype_font_dev.o: glibc_x64_cxx ../../../../../ppapi/cpp/dev/truetype_font_dev.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/url_util_dev.o: glibc_x64_cxx ../../../../../ppapi/cpp/dev/url_util_dev.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/video_capture_client_dev.o: glibc_x64_cxx ../../../../../ppapi/cpp/dev/video_capture_client_dev.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/video_capture_dev.o: glibc_x64_cxx ../../../../../ppapi/cpp/dev/video_capture_dev.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/video_decoder_client_dev.o: glibc_x64_cxx ../../../../../ppapi/cpp/dev/video_decoder_client_dev.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/video_decoder_dev.o: glibc_x64_cxx ../../../../../ppapi/cpp/dev/video_decoder_dev.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/view_dev.o: glibc_x64_cxx ../../../../../ppapi/cpp/dev/view_dev.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/scriptable_object_deprecated.o: glibc_x64_cxx ../../../../../ppapi/cpp/dev/scriptable_object_deprecated.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/camera_capabilities_private.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/camera_capabilities_private.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/camera_device_private.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/camera_device_private.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/content_decryptor_private.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/content_decryptor_private.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/ext_crx_file_system_private.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/ext_crx_file_system_private.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/file_io_private.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/file_io_private.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/find_private.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/find_private.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/flash.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/flash.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/flash_clipboard.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/flash_clipboard.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/flash_device_id.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/flash_device_id.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/flash_drm.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/flash_drm.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/flash_file.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/flash_file.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/flash_font_file.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/flash_font_file.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/flash_fullscreen.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/flash_fullscreen.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/flash_menu.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/flash_menu.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/flash_message_loop.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/flash_message_loop.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/host_resolver_private.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/host_resolver_private.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/instance_private.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/instance_private.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/isolated_file_system_private.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/isolated_file_system_private.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/net_address_private.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/net_address_private.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/output_protection_private.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/output_protection_private.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/pass_file_handle.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/pass_file_handle.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/pdf.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/pdf.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/platform_verification.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/platform_verification.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/tcp_server_socket_private.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/tcp_server_socket_private.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/tcp_socket_private.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/tcp_socket_private.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/udp_socket_private.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/udp_socket_private.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/uma_private.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/uma_private.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/var_private.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/var_private.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/video_destination_private.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/video_destination_private.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/video_frame_private.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/video_frame_private.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/video_source_private.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/video_source_private.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/x509_certificate_private.o: glibc_x64_cxx ../../../../../ppapi/cpp/private/x509_certificate_private.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/browser_font_trusted.o: glibc_x64_cxx ../../../../../ppapi/cpp/trusted/browser_font_trusted.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/file_chooser_trusted.o: glibc_x64_cxx ../../../../../ppapi/cpp/trusted/file_chooser_trusted.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/paint_aggregator.o: glibc_x64_cxx ../../../../../ppapi/utility/graphics/paint_aggregator.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/paint_manager.o: glibc_x64_cxx ../../../../../ppapi/utility/graphics/paint_manager.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/lock.o: glibc_x64_cxx ../../../../../ppapi/utility/threading/lock.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/simple_thread.o: glibc_x64_cxx ../../../../../ppapi/utility/threading/simple_thread.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/websocket_api.o: glibc_x64_cxx ../../../../../ppapi/utility/websocket/websocket_api.cc
+build glibc_x64/obj/ppapi/ppapi_cpp_lib/ppp_entrypoints.o: glibc_x64_cxx ../../../../../ppapi/cpp/ppp_entrypoints.cc
+
+build glibc_x64/libppapi_cpp_lib.so glibc_x64/libppapi_cpp_lib.so.TOC glibc_x64/lib.unstripped/libppapi_cpp_lib.so: glibc_x64_solink glibc_x64/obj/ppapi/ppapi_cpp_lib/array_output.o glibc_x64/obj/ppapi/ppapi_cpp_lib/audio.o glibc_x64/obj/ppapi/ppapi_cpp_lib/audio_buffer.o glibc_x64/obj/ppapi/ppapi_cpp_lib/audio_config.o glibc_x64/obj/ppapi/ppapi_cpp_lib/audio_encoder.o glibc_x64/obj/ppapi/ppapi_cpp_lib/compositor.o glibc_x64/obj/ppapi/ppapi_cpp_lib/compositor_layer.o glibc_x64/obj/ppapi/ppapi_cpp_lib/core.o glibc_x64/obj/ppapi/ppapi_cpp_lib/directory_entry.o glibc_x64/obj/ppapi/ppapi_cpp_lib/file_io.o glibc_x64/obj/ppapi/ppapi_cpp_lib/file_ref.o glibc_x64/obj/ppapi/ppapi_cpp_lib/file_system.o glibc_x64/obj/ppapi/ppapi_cpp_lib/fullscreen.o glibc_x64/obj/ppapi/ppapi_cpp_lib/graphics_2d.o glibc_x64/obj/ppapi/ppapi_cpp_lib/graphics_3d.o glibc_x64/obj/ppapi/ppapi_cpp_lib/graphics_3d_client.o glibc_x64/obj/ppapi/ppapi_cpp_lib/host_resolver.o glibc_x64/obj/ppapi/ppapi_cpp_lib/image_data.o glibc_x64/obj/ppapi/ppapi_cpp_lib/input_event.o glibc_x64/obj/ppapi/ppapi_cpp_lib/instance.o glibc_x64/obj/ppapi/ppapi_cpp_lib/instance_handle.o glibc_x64/obj/ppapi/ppapi_cpp_lib/media_stream_audio_track.o glibc_x64/obj/ppapi/ppapi_cpp_lib/media_stream_video_track.o glibc_x64/obj/ppapi/ppapi_cpp_lib/message_loop.o glibc_x64/obj/ppapi/ppapi_cpp_lib/module.o glibc_x64/obj/ppapi/ppapi_cpp_lib/mouse_cursor.o glibc_x64/obj/ppapi/ppapi_cpp_lib/mouse_lock.o glibc_x64/obj/ppapi/ppapi_cpp_lib/net_address.o glibc_x64/obj/ppapi/ppapi_cpp_lib/network_list.o glibc_x64/obj/ppapi/ppapi_cpp_lib/network_monitor.o glibc_x64/obj/ppapi/ppapi_cpp_lib/network_proxy.o glibc_x64/obj/ppapi/ppapi_cpp_lib/rect.o glibc_x64/obj/ppapi/ppapi_cpp_lib/resource.o glibc_x64/obj/ppapi/ppapi_cpp_lib/tcp_socket.o glibc_x64/obj/ppapi/ppapi_cpp_lib/text_input_controller.o glibc_x64/obj/ppapi/ppapi_cpp_lib/udp_socket.o glibc_x64/obj/ppapi/ppapi_cpp_lib/url_loader.o glibc_x64/obj/ppapi/ppapi_cpp_lib/url_request_info.o glibc_x64/obj/ppapi/ppapi_cpp_lib/url_response_info.o glibc_x64/obj/ppapi/ppapi_cpp_lib/var.o glibc_x64/obj/ppapi/ppapi_cpp_lib/var_array.o glibc_x64/obj/ppapi/ppapi_cpp_lib/var_array_buffer.o glibc_x64/obj/ppapi/ppapi_cpp_lib/var_dictionary.o glibc_x64/obj/ppapi/ppapi_cpp_lib/video_decoder.o glibc_x64/obj/ppapi/ppapi_cpp_lib/video_encoder.o glibc_x64/obj/ppapi/ppapi_cpp_lib/video_frame.o glibc_x64/obj/ppapi/ppapi_cpp_lib/view.o glibc_x64/obj/ppapi/ppapi_cpp_lib/vpn_provider.o glibc_x64/obj/ppapi/ppapi_cpp_lib/websocket.o glibc_x64/obj/ppapi/ppapi_cpp_lib/audio_input_dev.o glibc_x64/obj/ppapi/ppapi_cpp_lib/buffer_dev.o glibc_x64/obj/ppapi/ppapi_cpp_lib/crypto_dev.o glibc_x64/obj/ppapi/ppapi_cpp_lib/cursor_control_dev.o glibc_x64/obj/ppapi/ppapi_cpp_lib/device_ref_dev.o glibc_x64/obj/ppapi/ppapi_cpp_lib/file_chooser_dev.o glibc_x64/obj/ppapi/ppapi_cpp_lib/ime_input_event_dev.o glibc_x64/obj/ppapi/ppapi_cpp_lib/memory_dev.o glibc_x64/obj/ppapi/ppapi_cpp_lib/printing_dev.o glibc_x64/obj/ppapi/ppapi_cpp_lib/text_input_dev.o glibc_x64/obj/ppapi/ppapi_cpp_lib/truetype_font_dev.o glibc_x64/obj/ppapi/ppapi_cpp_lib/url_util_dev.o glibc_x64/obj/ppapi/ppapi_cpp_lib/video_capture_client_dev.o glibc_x64/obj/ppapi/ppapi_cpp_lib/video_capture_dev.o glibc_x64/obj/ppapi/ppapi_cpp_lib/video_decoder_client_dev.o glibc_x64/obj/ppapi/ppapi_cpp_lib/video_decoder_dev.o glibc_x64/obj/ppapi/ppapi_cpp_lib/view_dev.o glibc_x64/obj/ppapi/ppapi_cpp_lib/scriptable_object_deprecated.o glibc_x64/obj/ppapi/ppapi_cpp_lib/camera_capabilities_private.o glibc_x64/obj/ppapi/ppapi_cpp_lib/camera_device_private.o glibc_x64/obj/ppapi/ppapi_cpp_lib/content_decryptor_private.o glibc_x64/obj/ppapi/ppapi_cpp_lib/ext_crx_file_system_private.o glibc_x64/obj/ppapi/ppapi_cpp_lib/file_io_private.o glibc_x64/obj/ppapi/ppapi_cpp_lib/find_private.o glibc_x64/obj/ppapi/ppapi_cpp_lib/flash.o glibc_x64/obj/ppapi/ppapi_cpp_lib/flash_clipboard.o glibc_x64/obj/ppapi/ppapi_cpp_lib/flash_device_id.o glibc_x64/obj/ppapi/ppapi_cpp_lib/flash_drm.o glibc_x64/obj/ppapi/ppapi_cpp_lib/flash_file.o glibc_x64/obj/ppapi/ppapi_cpp_lib/flash_font_file.o glibc_x64/obj/ppapi/ppapi_cpp_lib/flash_fullscreen.o glibc_x64/obj/ppapi/ppapi_cpp_lib/flash_menu.o glibc_x64/obj/ppapi/ppapi_cpp_lib/flash_message_loop.o glibc_x64/obj/ppapi/ppapi_cpp_lib/host_resolver_private.o glibc_x64/obj/ppapi/ppapi_cpp_lib/instance_private.o glibc_x64/obj/ppapi/ppapi_cpp_lib/isolated_file_system_private.o glibc_x64/obj/ppapi/ppapi_cpp_lib/net_address_private.o glibc_x64/obj/ppapi/ppapi_cpp_lib/output_protection_private.o glibc_x64/obj/ppapi/ppapi_cpp_lib/pass_file_handle.o glibc_x64/obj/ppapi/ppapi_cpp_lib/pdf.o glibc_x64/obj/ppapi/ppapi_cpp_lib/platform_verification.o glibc_x64/obj/ppapi/ppapi_cpp_lib/tcp_server_socket_private.o glibc_x64/obj/ppapi/ppapi_cpp_lib/tcp_socket_private.o glibc_x64/obj/ppapi/ppapi_cpp_lib/udp_socket_private.o glibc_x64/obj/ppapi/ppapi_cpp_lib/uma_private.o glibc_x64/obj/ppapi/ppapi_cpp_lib/var_private.o glibc_x64/obj/ppapi/ppapi_cpp_lib/video_destination_private.o glibc_x64/obj/ppapi/ppapi_cpp_lib/video_frame_private.o glibc_x64/obj/ppapi/ppapi_cpp_lib/video_source_private.o glibc_x64/obj/ppapi/ppapi_cpp_lib/x509_certificate_private.o glibc_x64/obj/ppapi/ppapi_cpp_lib/browser_font_trusted.o glibc_x64/obj/ppapi/ppapi_cpp_lib/file_chooser_trusted.o glibc_x64/obj/ppapi/ppapi_cpp_lib/paint_aggregator.o glibc_x64/obj/ppapi/ppapi_cpp_lib/paint_manager.o glibc_x64/obj/ppapi/ppapi_cpp_lib/lock.o glibc_x64/obj/ppapi/ppapi_cpp_lib/simple_thread.o glibc_x64/obj/ppapi/ppapi_cpp_lib/websocket_api.o glibc_x64/obj/ppapi/ppapi_cpp_lib/ppp_entrypoints.o || glibc_x64/obj/build/config/nacl/nacl_base.stamp
+  ldflags = -Wl,--fatal-warnings -m64
+  libs =
+  output_extension = .so
+  output_dir = glibc_x64

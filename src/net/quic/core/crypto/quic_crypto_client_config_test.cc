@@ -180,7 +180,7 @@ TEST(QuicCryptoClientConfigTest, InchoateChlo) {
   QuicTag cver;
   EXPECT_EQ(QUIC_NO_ERROR, msg.GetUint32(kVER, &cver));
   EXPECT_EQ(QuicVersionToQuicTag(QuicVersionMax()), cver);
-  StringPiece proof_nonce;
+  QuicStringPiece proof_nonce;
   EXPECT_TRUE(msg.GetStringPiece(kNONP, &proof_nonce));
   EXPECT_EQ(string(32, 'r'), proof_nonce);
 }
@@ -207,7 +207,7 @@ TEST(QuicCryptoClientConfigTest, InchoateChloSecure) {
   QuicTag pdmd;
   EXPECT_EQ(QUIC_NO_ERROR, msg.GetUint32(kPDMD, &pdmd));
   EXPECT_EQ(kX509, pdmd);
-  StringPiece scid;
+  QuicStringPiece scid;
   EXPECT_FALSE(msg.GetStringPiece(kSCID, &scid));
 }
 
@@ -233,7 +233,7 @@ TEST(QuicCryptoClientConfigTest, InchoateChloSecureWithSCIDNoEXPY) {
   config.FillInchoateClientHello(server_id, QuicVersionMax(), &state, &rand,
                                  /* demand_x509_proof= */ true, params, &msg);
 
-  StringPiece scid;
+  QuicStringPiece scid;
   EXPECT_TRUE(msg.GetStringPiece(kSCID, &scid));
   EXPECT_EQ("12345678", scid);
 }
@@ -259,7 +259,7 @@ TEST(QuicCryptoClientConfigTest, InchoateChloSecureWithSCID) {
   config.FillInchoateClientHello(server_id, QuicVersionMax(), &state, &rand,
                                  /* demand_x509_proof= */ true, params, &msg);
 
-  StringPiece scid;
+  QuicStringPiece scid;
   EXPECT_TRUE(msg.GetStringPiece(kSCID, &scid));
   EXPECT_EQ("12345678", scid);
 }

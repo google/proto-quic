@@ -46,6 +46,7 @@
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/crypto/quic_encrypter.h"
 #include "net/quic/core/quic_framer.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/mock_random.h"
@@ -401,7 +402,7 @@ class QuicNetworkTransactionTest
       bool should_include_version,
       bool fin,
       QuicStreamOffset offset,
-      base::StringPiece data) {
+      QuicStringPiece data) {
     return server_maker_.MakeDataPacket(
         packet_number, stream_id, should_include_version, fin, offset, data);
   }
@@ -412,7 +413,7 @@ class QuicNetworkTransactionTest
       bool should_include_version,
       bool fin,
       QuicStreamOffset offset,
-      base::StringPiece data) {
+      QuicStringPiece data) {
     return client_maker_.MakeDataPacket(
         packet_number, stream_id, should_include_version, fin, offset, data);
   }
@@ -423,7 +424,7 @@ class QuicNetworkTransactionTest
       bool should_include_version,
       bool fin,
       QuicStreamOffset* offset,
-      base::StringPiece data) {
+      QuicStringPiece data) {
     return client_maker_.MakeForceHolDataPacket(
         packet_number, stream_id, should_include_version, fin, offset, data);
   }

@@ -10,12 +10,12 @@
 #include <string>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/base/int128.h"
 #include "net/quic/core/quic_error_codes.h"
 #include "net/quic/core/quic_types.h"
 #include "net/quic/platform/api/quic_export.h"
 #include "net/quic/platform/api/quic_socket_address.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -23,22 +23,22 @@ class QUIC_EXPORT_PRIVATE QuicUtils {
  public:
   // Returns the 64 bit FNV1a hash of the data.  See
   // http://www.isthe.com/chongo/tech/comp/fnv/index.html#FNV-param
-  static uint64_t FNV1a_64_Hash(base::StringPiece data);
+  static uint64_t FNV1a_64_Hash(QuicStringPiece data);
 
   // Returns the 128 bit FNV1a hash of the data.  See
   // http://www.isthe.com/chongo/tech/comp/fnv/index.html#FNV-param
-  static uint128 FNV1a_128_Hash(base::StringPiece data);
+  static uint128 FNV1a_128_Hash(QuicStringPiece data);
 
   // Returns the 128 bit FNV1a hash of the two sequences of data.  See
   // http://www.isthe.com/chongo/tech/comp/fnv/index.html#FNV-param
-  static uint128 FNV1a_128_Hash_Two(base::StringPiece data1,
-                                    base::StringPiece data2);
+  static uint128 FNV1a_128_Hash_Two(QuicStringPiece data1,
+                                    QuicStringPiece data2);
 
   // Returns the 128 bit FNV1a hash of the three sequences of data.  See
   // http://www.isthe.com/chongo/tech/comp/fnv/index.html#FNV-param
-  static uint128 FNV1a_128_Hash_Three(base::StringPiece data1,
-                                      base::StringPiece data2,
-                                      base::StringPiece data3);
+  static uint128 FNV1a_128_Hash_Three(QuicStringPiece data1,
+                                      QuicStringPiece data2,
+                                      QuicStringPiece data3);
 
   // SerializeUint128 writes the first 96 bits of |v| in little-endian form
   // to |out|.

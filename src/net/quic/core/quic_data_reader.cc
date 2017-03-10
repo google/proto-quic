@@ -7,8 +7,6 @@
 #include "net/base/int128.h"
 #include "net/quic/core/quic_packets.h"
 
-using base::StringPiece;
-
 namespace net {
 
 QuicDataReader::QuicDataReader(const char* data, const size_t len)
@@ -59,7 +57,7 @@ bool QuicDataReader::ReadUFloat16(uint64_t* result) {
   return true;
 }
 
-bool QuicDataReader::ReadStringPiece16(StringPiece* result) {
+bool QuicDataReader::ReadStringPiece16(QuicStringPiece* result) {
   // Read resultant length.
   uint16_t result_len;
   if (!ReadUInt16(&result_len)) {
@@ -70,7 +68,7 @@ bool QuicDataReader::ReadStringPiece16(StringPiece* result) {
   return ReadStringPiece(result, result_len);
 }
 
-bool QuicDataReader::ReadStringPiece(StringPiece* result, size_t size) {
+bool QuicDataReader::ReadStringPiece(QuicStringPiece* result, size_t size) {
   // Make sure that we have enough data to read.
   if (!CanRead(size)) {
     OnFailure();
@@ -78,7 +76,7 @@ bool QuicDataReader::ReadStringPiece(StringPiece* result, size_t size) {
   }
 
   // Set result.
-  *result = StringPiece(data_ + pos_, size);
+  *result = QuicStringPiece(data_ + pos_, size);
 
   // Iterate.
   pos_ += size;
@@ -86,14 +84,14 @@ bool QuicDataReader::ReadStringPiece(StringPiece* result, size_t size) {
   return true;
 }
 
-StringPiece QuicDataReader::ReadRemainingPayload() {
-  StringPiece payload = PeekRemainingPayload();
+QuicStringPiece QuicDataReader::ReadRemainingPayload() {
+  QuicStringPiece payload = PeekRemainingPayload();
   pos_ = len_;
   return payload;
 }
 
-StringPiece QuicDataReader::PeekRemainingPayload() {
-  return StringPiece(data_ + pos_, len_ - pos_);
+QuicStringPiece QuicDataReader::PeekRemainingPayload() {
+  return QuicStringPiece(data_ + pos_, len_ - pos_);
 }
 
 bool QuicDataReader::ReadBytes(void* result, size_t size) {

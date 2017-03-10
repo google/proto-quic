@@ -174,6 +174,10 @@ struct TraceEvent {
 
   // The other event associated with this event (or NULL).
   const TraceEvent* other_event;
+
+  // A back-link for |other_event|. That is, if other_event is not null, then
+  // |event->other_event->prev_event == event| is always true.
+  const TraceEvent* prev_event;
 };
 
 typedef std::vector<const TraceEvent*> TraceEventVector;
@@ -351,6 +355,70 @@ class Query {
     return Query(OTHER_ARG, arg_name);
   }
 
+  // Access the associated prev_event's members:
+
+  static Query PrevPid() { return Query(PREV_PID); }
+
+  static Query PrevTid() { return Query(PREV_TID); }
+
+  static Query PrevTime() { return Query(PREV_TIME); }
+
+  static Query PrevPhase() { return Query(PREV_PHASE); }
+
+  static Query PrevCategory() { return Query(PREV_CATEGORY); }
+
+  static Query PrevName() { return Query(PREV_NAME); }
+
+  static Query PrevId() { return Query(PREV_ID); }
+
+  static Query PrevPidIs(int process_id) {
+    return Query(PREV_PID) == Query::Int(process_id);
+  }
+
+  static Query PrevTidIs(int thread_id) {
+    return Query(PREV_TID) == Query::Int(thread_id);
+  }
+
+  static Query PrevThreadIs(const TraceEvent::ProcessThreadID& thread) {
+    return PrevPidIs(thread.process_id) && PrevTidIs(thread.thread_id);
+  }
+
+  static Query PrevTimeIs(double timestamp) {
+    return Query(PREV_TIME) == Query::Double(timestamp);
+  }
+
+  static Query PrevPhaseIs(char phase) {
+    return Query(PREV_PHASE) == Query::Phase(phase);
+  }
+
+  static Query PrevCategoryIs(const std::string& category) {
+    return Query(PREV_CATEGORY) == Query::String(category);
+  }
+
+  static Query PrevNameIs(const std::string& name) {
+    return Query(PREV_NAME) == Query::String(name);
+  }
+
+  static Query PrevIdIs(const std::string& id) {
+    return Query(PREV_ID) == Query::String(id);
+  }
+
+  // Evaluates to true if arg exists and is a string.
+  static Query PrevHasStringArg(const std::string& arg_name) {
+    return Query(PREV_HAS_STRING_ARG, arg_name);
+  }
+
+  // Evaluates to true if arg exists and is a number.
+  // Number arguments include types double, int and bool.
+  static Query PrevHasNumberArg(const std::string& arg_name) {
+    return Query(PREV_HAS_NUMBER_ARG, arg_name);
+  }
+
+  // Evaluates to arg value (string or number).
+  static Query PrevArg(const std::string& arg_name) {
+    return Query(PREV_ARG, arg_name);
+  }
+
   ////////////////////////////////////////////////////////////////
   // Common queries:
 
@@ -438,6 +506,8 @@ class Query {
     EVENT_HAS_NUMBER_ARG,
     EVENT_ARG,
     EVENT_HAS_OTHER,
+    EVENT_HAS_PREV,
+
     OTHER_PID,
     OTHER_TID,
     OTHER_TIME,
@@ -448,6 +518,23 @@ class Query {
     OTHER_HAS_STRING_ARG,
     OTHER_HAS_NUMBER_ARG,
     OTHER_ARG,
+
+    PREV_PID,
+    PREV_TID,
+    PREV_TIME,
+    PREV_PHASE,
+    PREV_CATEGORY,
+    PREV_NAME,
+    PREV_ID,
+    PREV_HAS_STRING_ARG,
+    PREV_HAS_NUMBER_ARG,
+    PREV_ARG,
+
+    OTHER_FIRST_MEMBER = OTHER_PID,
+    OTHER_LAST_MEMBER = OTHER_ARG,
+
+    PREV_FIRST_MEMBER = PREV_PID,
+    PREV_LAST_MEMBER = PREV_ARG,
   };
 
   enum Operator {
@@ -536,6 +623,9 @@ class Query {
     return operator_ != OP_INVALID && operator_ < OP_AND;
   }
 
+  static const TraceEvent* SelectTargetEvent(const TraceEvent* ev,
+                                             TraceEventMember member);
+
   const Query& left() const;
   const Query& right() const;
 
@@ -589,7 +679,10 @@ class TraceAnalyzer {
   // An ASYNC_END event will match the most recent ASYNC_BEGIN or ASYNC_STEP
   // event with the same name, category, and ID. This creates a singly linked
   // list of ASYNC_BEGIN->ASYNC_STEP...->ASYNC_END.
-  void AssociateAsyncBeginEndEvents();
+  // |match_pid| - If true, will only match async events which are running
+  //               under the same process ID, otherwise will allow linking
+  //               async events from different processes.
+  void AssociateAsyncBeginEndEvents(bool match_pid = true);
 
   // AssociateEvents can be used to customize event associations by setting the
   // other_event member of TraceEvent. This should be used to associate two

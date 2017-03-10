@@ -2620,20 +2620,22 @@ if (enable_java_templates) {
         "--srcjar",
         rebase_path(srcjar_path, root_build_dir),
       ]
-      if (defined(invoker.import_include) && invoker.import_include != "") {
+      if (defined(invoker.import_include) && invoker.import_include != []) {
         # TODO(cjhopman): aidl supports creating a depfile. We should be able to
         # switch to constructing a depfile for the overall action from that
         # instead of having all the .java files in the include paths as inputs.
-        rebased_import_includes =
-            rebase_path([ invoker.import_include ], root_build_dir)
-        args += [ "--includes=$rebased_import_includes" ]
-
-        _java_files_build_rel =
-            exec_script("//build/android/gyp/find.py",
-                        rebase_path([ invoker.import_include ], root_build_dir),
-                        "list lines")
-        _java_files = rebase_path(_java_files_build_rel, ".", root_build_dir)
-        inputs += _java_files
+        rebased_import_paths = []
+        foreach(import_path, invoker.import_include) {
+          _rebased_import_path = []
+          _rebased_import_path += rebase_path([ import_path ], root_build_dir)
+          rebased_import_paths += _rebased_import_path
+          _java_files_build_rel = []
+          _java_files_build_rel = exec_script("//build/android/gyp/find.py",
+                                              _rebased_import_path,
+                                              "list lines")
+          inputs += rebase_path(_java_files_build_rel, ".", root_build_dir)
+        }
+        args += [ "--includes=$rebased_import_paths" ]
       }
       args += rebase_path(sources, root_build_dir)
     }

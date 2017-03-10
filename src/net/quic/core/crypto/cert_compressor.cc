@@ -10,7 +10,6 @@
 #include "net/quic/core/quic_utils.h"
 #include "third_party/zlib/zlib.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -176,8 +175,8 @@ struct CertEntry {
 // by |client_common_set_hashes| and who has cached the certificates with the
 // 64-bit, FNV-1a hashes in |client_cached_cert_hashes|.
 std::vector<CertEntry> MatchCerts(const std::vector<string>& certs,
-                                  StringPiece client_common_set_hashes,
-                                  StringPiece client_cached_cert_hashes,
+                                  QuicStringPiece client_common_set_hashes,
+                                  QuicStringPiece client_cached_cert_hashes,
                                   const CommonCertSets* common_sets) {
   std::vector<CertEntry> entries;
   entries.reserve(certs.size());
@@ -334,12 +333,12 @@ std::vector<uint64_t> HashCerts(const std::vector<string>& certs) {
 // |in_out| and writes them to |out_entries|. CACHED and COMMON entries are
 // resolved using |cached_certs| and |common_sets| and written to |out_certs|.
 // |in_out| is updated to contain the trailing data.
-bool ParseEntries(StringPiece* in_out,
+bool ParseEntries(QuicStringPiece* in_out,
                   const std::vector<string>& cached_certs,
                   const CommonCertSets* common_sets,
                   std::vector<CertEntry>* out_entries,
                   std::vector<string>* out_certs) {
-  StringPiece in = *in_out;
+  QuicStringPiece in = *in_out;
   std::vector<uint64_t> cached_hashes;
 
   out_entries->clear();
@@ -398,7 +397,8 @@ bool ParseEntries(StringPiece* in_out,
         memcpy(&entry.index, in.data(), sizeof(uint32_t));
         in.remove_prefix(sizeof(uint32_t));
 
-        StringPiece cert = common_sets->GetCert(entry.set_hash, entry.index);
+        QuicStringPiece cert =
+            common_sets->GetCert(entry.set_hash, entry.index);
         if (cert.empty()) {
           return false;
         }
@@ -454,8 +454,8 @@ class ScopedZLib {
 
 // static
 string CertCompressor::CompressChain(const std::vector<string>& certs,
-                                     StringPiece client_common_set_hashes,
-                                     StringPiece client_cached_cert_hashes,
+                                     QuicStringPiece client_common_set_hashes,
+                                     QuicStringPiece client_cached_cert_hashes,
                                      const CommonCertSets* common_sets) {
   const std::vector<CertEntry> entries = MatchCerts(
       certs, client_common_set_hashes, client_cached_cert_hashes, common_sets);
@@ -554,7 +554,7 @@ string CertCompressor::CompressChain(const std::vector<string>& certs,
 }
 
 // static
-bool CertCompressor::DecompressChain(StringPiece in,
+bool CertCompressor::DecompressChain(QuicStringPiece in,
                                      const std::vector<string>& cached_certs,
                                      const CommonCertSets* common_sets,
                                      std::vector<string>* out_certs) {
@@ -565,7 +565,7 @@ bool CertCompressor::DecompressChain(StringPiece in,
   DCHECK_EQ(entries.size(), out_certs->size());
 
   std::unique_ptr<uint8_t[]> uncompressed_data;
-  StringPiece uncompressed;
+  QuicStringPiece uncompressed;
 
   if (!in.empty()) {
     if (in.size() < sizeof(uint32_t)) {
@@ -610,8 +610,8 @@ bool CertCompressor::DecompressChain(StringPiece in,
       return false;
     }
 
-    uncompressed = StringPiece(reinterpret_cast<char*>(uncompressed_data.get()),
-                               uncompressed_size);
+    uncompressed = QuicStringPiece(
+        reinterpret_cast<char*>(uncompressed_data.get()), uncompressed_size);
   }
 
   for (size_t i = 0; i < entries.size(); i++) {

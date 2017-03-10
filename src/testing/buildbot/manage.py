@@ -60,10 +60,11 @@ SKIP = {
   # http://crbug.com/441429
   'Linux Trusty (32)', 'Linux Trusty (dbg)(32)',
 
-  # swarming may not work on Mac10.10 and 10.11, need to
-  # re-investigate and confirm
+  # Swarming may not work on Mac10.10,11,12; need to
+  # re-investigate and confirm.
   'WebKit Mac10.10',
   'WebKit Mac10.11',
+  'WebKit Mac10.12',
   'WebKit Mac10.11 (dbg)',
   'WebKit Mac10.11 (retina)',
   'Chromium Mac10.10 Tests',

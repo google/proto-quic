@@ -24,8 +24,8 @@ time = common.DEFAULT_TIME
 verify_result = False
 errors = """[Context] Processing Certificate
   index: 1
-      [Error] Invalid or unsupported signature algorithm
-        algorithm: 300D06092A864886F70D0101040500
+      [Error] Unacceptable signature algorithm
+      [Error] VerifySignedData failed
 """
 
 common.write_test_file(__doc__, chain, trusted, time, verify_result, errors)

@@ -331,9 +331,11 @@ void ActivityUserData::Set(StringPiece name,
 
     // Truncate the stored size to the amount of available memory. Stop now if
     // there's not any room for even part of the value.
-    size = std::min(full_size - base_size, size);
-    if (size == 0)
-      return;
+    if (size != 0) {
+      size = std::min(full_size - base_size, size);
+      if (size == 0)
+        return;
+    }
 
     // Allocate a chunk of memory.
     Header* header = reinterpret_cast<Header*>(memory_);

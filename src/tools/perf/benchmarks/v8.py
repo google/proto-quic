@@ -145,19 +145,6 @@ class V8TodoMVC(perf_benchmark.PerfBenchmark):
     return True
 
 
-class V8TodoMVCIgnition(V8TodoMVC):
-  """Measures V8 Execution metrics on the TodoMVC examples using ignition."""
-  page_set = page_sets.TodoMVCPageSet
-
-  def SetExtraBrowserOptions(self, options):
-    super(V8TodoMVCIgnition, self).SetExtraBrowserOptions(options)
-    v8_helper.EnableIgnition(options)
-
-  @classmethod
-  def Name(cls):
-    return 'v8.todomvc-ignition'
-
-
 class V8TodoMVCTurbo(V8TodoMVC):
   """Measures V8 Execution metrics on the TodoMVC examples
   using Ignition+TurboFan."""
@@ -183,18 +170,6 @@ class V8InfiniteScroll(_InfiniteScrollBenchmark):
   @classmethod
   def Name(cls):
     return 'v8.infinite_scroll_tbmv2'
-
-
-class V8InfiniteScrollIgnition(V8InfiniteScroll):
-  """Measures V8 GC metrics using Ignition."""
-
-  def SetExtraBrowserOptions(self, options):
-    super(V8InfiniteScrollIgnition, self).SetExtraBrowserOptions(options)
-    v8_helper.EnableIgnition(options)
-
-  @classmethod
-  def Name(cls):
-    return 'v8.infinite_scroll-ignition_tbmv2'
 
 
 class V8InfiniteScrollTurbo(V8InfiniteScroll):

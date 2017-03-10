@@ -11,6 +11,7 @@
 #include "base/logging.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/time/time.h"
+#include "third_party/icu/source/common/unicode/utypes.h"
 #include "third_party/icu/source/i18n/unicode/datefmt.h"
 #include "third_party/icu/source/i18n/unicode/dtitvfmt.h"
 #include "third_party/icu/source/i18n/unicode/dtptngen.h"
@@ -176,26 +177,51 @@ string16 TimeFormatWithPattern(const Time& time, const char* pattern) {
   return TimeFormat(&formatter, time);
 }
 
-string16 TimeDurationFormat(const TimeDelta time,
-                            const DurationFormatWidth width) {
+bool TimeDurationFormat(const TimeDelta time,
+                        const DurationFormatWidth width,
+                        string16* out) {
+  DCHECK(out);
   UErrorCode status = U_ZERO_ERROR;
   const int total_minutes = static_cast<int>(time.InSecondsF() / 60 + 0.5);
   const int hours = total_minutes / 60;
   const int minutes = total_minutes % 60;
   UMeasureFormatWidth u_width = DurationWidthToMeasureWidth(width);
 
+  // TODO(derat): Delete the |status| checks and LOG(ERROR) calls throughout
+  // this function once the cause of http://crbug.com/677043 is tracked down.
   const icu::Measure measures[] = {
       icu::Measure(hours, icu::MeasureUnit::createHour(status), status),
       icu::Measure(minutes, icu::MeasureUnit::createMinute(status), status)};
+  if (U_FAILURE(status)) {
+    LOG(ERROR) << "Creating MeasureUnit or Measure for " << hours << "h"
+               << minutes << "m failed: " << u_errorName(status);
+    return false;
+  }
+
   icu::MeasureFormat measure_format(icu::Locale::getDefault(), u_width, status);
+  if (U_FAILURE(status)) {
+    LOG(ERROR) << "Creating MeasureFormat for "
+               << icu::Locale::getDefault().getName()
+               << " failed: " << u_errorName(status);
+    return false;
+  }
+
   icu::UnicodeString formatted;
   icu::FieldPosition ignore(icu::FieldPosition::DONT_CARE);
   measure_format.formatMeasures(measures, 2, formatted, ignore, status);
-  return base::string16(formatted.getBuffer(), formatted.length());
+  if (U_FAILURE(status)) {
+    LOG(ERROR) << "formatMeasures failed: " << u_errorName(status);
+    return false;
+  }
+
+  *out = base::string16(formatted.getBuffer(), formatted.length());
+  return true;
 }
 
-string16 TimeDurationFormatWithSeconds(const TimeDelta time,
-                                       const DurationFormatWidth width) {
+bool TimeDurationFormatWithSeconds(const TimeDelta time,
+                                   const DurationFormatWidth width,
+                                   string16* out) {
+  DCHECK(out);
   UErrorCode status = U_ZERO_ERROR;
   const int64_t total_seconds = static_cast<int>(time.InSecondsF() + 0.5);
   const int hours = total_seconds / 3600;
@@ -211,7 +237,8 @@ string16 TimeDurationFormatWithSeconds(const TimeDelta time,
   icu::UnicodeString formatted;
   icu::FieldPosition ignore(icu::FieldPosition::DONT_CARE);
   measure_format.formatMeasures(measures, 3, formatted, ignore, status);
-  return base::string16(formatted.getBuffer(), formatted.length());
+  *out = base::string16(formatted.getBuffer(), formatted.length());
+  return U_SUCCESS(status) == TRUE;
 }
 
 string16 DateIntervalFormat(const Time& begin_time,

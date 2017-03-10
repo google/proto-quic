@@ -34,7 +34,6 @@
 #include "third_party/boringssl/src/include/openssl/obj_mac.h"
 #include "third_party/boringssl/src/include/openssl/sha.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -44,7 +43,7 @@ TestChannelIDKey::TestChannelIDKey(EVP_PKEY* ecdsa_key)
     : ecdsa_key_(ecdsa_key) {}
 TestChannelIDKey::~TestChannelIDKey() {}
 
-bool TestChannelIDKey::Sign(StringPiece signed_data,
+bool TestChannelIDKey::Sign(QuicStringPiece signed_data,
                             string* out_signature) const {
   bssl::ScopedEVP_MD_CTX md_ctx;
   if (EVP_DigestSignInit(md_ctx.get(), nullptr, EVP_sha256(), nullptr,
@@ -342,15 +341,15 @@ class FullChloGenerator {
                 testing::AnyOf(testing::Eq(kSREJ), testing::Eq(kREJ)));
 
     VLOG(1) << "Extract valid STK and SCID from\n" << rej->DebugString();
-    StringPiece srct;
+    QuicStringPiece srct;
     ASSERT_TRUE(rej->GetStringPiece(kSourceAddressTokenTag, &srct));
 
-    StringPiece scfg;
+    QuicStringPiece scfg;
     ASSERT_TRUE(rej->GetStringPiece(kSCFG, &scfg));
     std::unique_ptr<CryptoHandshakeMessage> server_config(
         CryptoFramer::ParseMessage(scfg));
 
-    StringPiece scid;
+    QuicStringPiece scid;
     ASSERT_TRUE(server_config->GetStringPiece(kSCID, &scid));
 
     *out_ = result_->client_hello;
@@ -586,23 +585,23 @@ uint64_t LeafCertHashForTesting() {
 
 class MockCommonCertSets : public CommonCertSets {
  public:
-  MockCommonCertSets(StringPiece cert, uint64_t hash, uint32_t index)
+  MockCommonCertSets(QuicStringPiece cert, uint64_t hash, uint32_t index)
       : cert_(cert.as_string()), hash_(hash), index_(index) {}
 
-  StringPiece GetCommonHashes() const override {
+  QuicStringPiece GetCommonHashes() const override {
     CHECK(false) << "not implemented";
-    return StringPiece();
+    return QuicStringPiece();
   }
 
-  StringPiece GetCert(uint64_t hash, uint32_t index) const override {
+  QuicStringPiece GetCert(uint64_t hash, uint32_t index) const override {
     if (hash == hash_ && index == index_) {
       return cert_;
     }
-    return StringPiece();
+    return QuicStringPiece();
   }
 
-  bool MatchCert(StringPiece cert,
-                 StringPiece common_set_hashes,
+  bool MatchCert(QuicStringPiece cert,
+                 QuicStringPiece common_set_hashes,
                  uint64_t* out_hash,
                  uint32_t* out_index) const override {
     if (cert != cert_) {
@@ -637,7 +636,7 @@ class MockCommonCertSets : public CommonCertSets {
   const uint32_t index_;
 };
 
-CommonCertSets* MockCommonCertSets(StringPiece cert,
+CommonCertSets* MockCommonCertSets(QuicStringPiece cert,
                                    uint64_t hash,
                                    uint32_t index) {
   return new class MockCommonCertSets(cert, hash, index);
@@ -700,34 +699,34 @@ void CompareClientAndServerKeys(QuicCryptoClientStream* client,
   const QuicDecrypter* server_forward_secure_decrypter(
       QuicStreamPeer::session(server)->connection()->alternative_decrypter());
 
-  StringPiece client_encrypter_key = client_encrypter->GetKey();
-  StringPiece client_encrypter_iv = client_encrypter->GetNoncePrefix();
-  StringPiece client_decrypter_key = client_decrypter->GetKey();
-  StringPiece client_decrypter_iv = client_decrypter->GetNoncePrefix();
-  StringPiece client_forward_secure_encrypter_key =
+  QuicStringPiece client_encrypter_key = client_encrypter->GetKey();
+  QuicStringPiece client_encrypter_iv = client_encrypter->GetNoncePrefix();
+  QuicStringPiece client_decrypter_key = client_decrypter->GetKey();
+  QuicStringPiece client_decrypter_iv = client_decrypter->GetNoncePrefix();
+  QuicStringPiece client_forward_secure_encrypter_key =
       client_forward_secure_encrypter->GetKey();
-  StringPiece client_forward_secure_encrypter_iv =
+  QuicStringPiece client_forward_secure_encrypter_iv =
       client_forward_secure_encrypter->GetNoncePrefix();
-  StringPiece client_forward_secure_decrypter_key =
+  QuicStringPiece client_forward_secure_decrypter_key =
       client_forward_secure_decrypter->GetKey();
-  StringPiece client_forward_secure_decrypter_iv =
+  QuicStringPiece client_forward_secure_decrypter_iv =
       client_forward_secure_decrypter->GetNoncePrefix();
-  StringPiece server_encrypter_key = server_encrypter->GetKey();
-  StringPiece server_encrypter_iv = server_encrypter->GetNoncePrefix();
-  StringPiece server_decrypter_key = server_decrypter->GetKey();
-  StringPiece server_decrypter_iv = server_decrypter->GetNoncePrefix();
-  StringPiece server_forward_secure_encrypter_key =
+  QuicStringPiece server_encrypter_key = server_encrypter->GetKey();
+  QuicStringPiece server_encrypter_iv = server_encrypter->GetNoncePrefix();
+  QuicStringPiece server_decrypter_key = server_decrypter->GetKey();
+  QuicStringPiece server_decrypter_iv = server_decrypter->GetNoncePrefix();
+  QuicStringPiece server_forward_secure_encrypter_key =
       server_forward_secure_encrypter->GetKey();
-  StringPiece server_forward_secure_encrypter_iv =
+  QuicStringPiece server_forward_secure_encrypter_iv =
       server_forward_secure_encrypter->GetNoncePrefix();
-  StringPiece server_forward_secure_decrypter_key =
+  QuicStringPiece server_forward_secure_decrypter_key =
       server_forward_secure_decrypter->GetKey();
-  StringPiece server_forward_secure_decrypter_iv =
+  QuicStringPiece server_forward_secure_decrypter_iv =
       server_forward_secure_decrypter->GetNoncePrefix();
 
-  StringPiece client_subkey_secret =
+  QuicStringPiece client_subkey_secret =
       client->crypto_negotiated_params().subkey_secret;
-  StringPiece server_subkey_secret =
+  QuicStringPiece server_subkey_secret =
       server->crypto_negotiated_params().subkey_secret;
 
   const char kSampleLabel[] = "label";
@@ -852,7 +851,7 @@ CryptoHandshakeMessage CreateCHLO(
     size_t value_len = value.length();
     if (value_len > 0 && value[0] == '#') {
       // This is ascii encoded hex.
-      string hex_value = QuicTextUtils::HexDecode(StringPiece(&value[1]));
+      string hex_value = QuicTextUtils::HexDecode(QuicStringPiece(&value[1]));
       msg.SetStringPiece(quic_tag, hex_value);
       continue;
     }
@@ -900,8 +899,8 @@ void MovePackets(PacketSavingConnection* source_conn,
     }
 
     for (const auto& stream_frame : framer.stream_frames()) {
-      ASSERT_TRUE(crypto_framer.ProcessInput(
-          StringPiece(stream_frame->data_buffer, stream_frame->data_length)));
+      ASSERT_TRUE(crypto_framer.ProcessInput(QuicStringPiece(
+          stream_frame->data_buffer, stream_frame->data_length)));
       ASSERT_FALSE(crypto_visitor.error());
     }
     QuicConnectionPeer::SetCurrentPacket(
@@ -916,7 +915,7 @@ void MovePackets(PacketSavingConnection* source_conn,
   for (const CryptoHandshakeMessage& message : crypto_visitor.messages()) {
     dest_stream->OnHandshakeMessage(message);
   }
-  QuicConnectionPeer::SetCurrentPacket(dest_conn, StringPiece(nullptr, 0));
+  QuicConnectionPeer::SetCurrentPacket(dest_conn, QuicStringPiece(nullptr, 0));
 }
 
 CryptoHandshakeMessage GenerateDefaultInchoateCHLO(
@@ -948,13 +947,13 @@ string GenerateClientNonceHex(const QuicClock* clock,
   primary_config->set_primary_time(clock->WallNow().ToUNIXSeconds());
   std::unique_ptr<CryptoHandshakeMessage> msg(
       crypto_config->AddConfig(std::move(primary_config), clock->WallNow()));
-  StringPiece orbit;
+  QuicStringPiece orbit;
   CHECK(msg->GetStringPiece(kORBT, &orbit));
   string nonce;
   CryptoUtils::GenerateNonce(
       clock->WallNow(), QuicRandom::GetInstance(),
-      StringPiece(reinterpret_cast<const char*>(orbit.data()),
-                  sizeof(orbit.size())),
+      QuicStringPiece(reinterpret_cast<const char*>(orbit.data()),
+                      sizeof(orbit.size())),
       &nonce);
   return ("#" + QuicTextUtils::HexEncode(nonce));
 }

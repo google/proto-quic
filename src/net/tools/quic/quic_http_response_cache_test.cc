@@ -11,7 +11,6 @@
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {

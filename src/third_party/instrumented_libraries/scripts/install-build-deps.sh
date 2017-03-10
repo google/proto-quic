@@ -19,6 +19,8 @@ dee \
 freetype \
 libappindicator1 \
 libasound2 \
+libatk-bridge2.0-0 \
+libatspi2.0-0 \
 libcairo2 \
 libcap2 \
 libcups2 \
@@ -35,6 +37,7 @@ libgdk-pixbuf2.0-0 \
 libglib2.0-0 \
 libgnome-keyring0 \
 libgpg-error0 \
+libgtk-3-0 \
 libgtk2.0-0 \
 libnspr4 \
 libp11-kit0 \
@@ -65,7 +68,6 @@ udev \
 zlib1g \
 brltty"
 
-precise_specific_packages="libtasn1-3"
 trusty_specific_packages="\
 libtasn1-6 \
 harfbuzz
@@ -73,9 +75,7 @@ libsecret"
 
 ubuntu_release=$(lsb_release -cs)
 
-if test "$ubuntu_release" = "precise" ; then
-  packages="$common_packages $precise_specific_packages"
-else
+if test "$ubuntu_release" = "trusty" ; then
   packages="$common_packages $trusty_specific_packages"
 fi
 

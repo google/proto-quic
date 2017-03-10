@@ -298,6 +298,7 @@ component("net") {
     "socket/connection_attempts.h",
     "socket/next_proto.cc",
     "socket/next_proto.h",
+    "socket/socket.cc",
     "socket/socket.h",
     "socket/socket_bio_adapter.cc",
     "socket/socket_bio_adapter.h",
@@ -1340,6 +1341,7 @@ component("net") {
       "quic/platform/api/quic_socket_address.h",
       "quic/platform/api/quic_stack_trace.h",
       "quic/platform/api/quic_str_cat.h",
+      "quic/platform/api/quic_string_piece.h",
       "quic/platform/api/quic_text_utils.h",
       "quic/platform/api/quic_url.cc",
       "quic/platform/api/quic_url.h",
@@ -1368,6 +1370,7 @@ component("net") {
       "quic/platform/impl/quic_socket_address_impl.h",
       "quic/platform/impl/quic_stack_trace_impl.h",
       "quic/platform/impl/quic_str_cat_impl.h",
+      "quic/platform/impl/quic_string_piece_impl.h",
       "quic/platform/impl/quic_text_utils_impl.h",
       "quic/platform/impl/quic_url_impl.cc",
       "quic/platform/impl/quic_url_impl.h",
@@ -2020,7 +2023,6 @@ component("net") {
 
 grit("net_resources") {
   source = "base/net_resources.grd"
-  use_qualified_include = true
   outputs = [
     "grit/net_resources.h",
     "net_resources.pak",

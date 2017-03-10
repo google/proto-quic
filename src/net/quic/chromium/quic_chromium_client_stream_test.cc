@@ -90,13 +90,13 @@ class MockQuicClientSessionBase : public QuicClientSessionBase {
                     QuicStreamOffset bytes_written));
 
   MOCK_METHOD2(OnStreamHeaders,
-               void(QuicStreamId stream_id, base::StringPiece headers_data));
+               void(QuicStreamId stream_id, QuicStringPiece headers_data));
   MOCK_METHOD2(OnStreamHeadersPriority,
                void(QuicStreamId stream_id, SpdyPriority priority));
   MOCK_METHOD3(OnStreamHeadersComplete,
                void(QuicStreamId stream_id, bool fin, size_t frame_len));
   MOCK_METHOD2(OnPromiseHeaders,
-               void(QuicStreamId stream_id, StringPiece headers_data));
+               void(QuicStreamId stream_id, QuicStringPiece headers_data));
   MOCK_METHOD3(OnPromiseHeadersComplete,
                void(QuicStreamId stream_id,
                     QuicStreamId promised_stream_id,
@@ -210,12 +210,12 @@ class QuicChromiumClientStreamTest
         "JBCScs_ejbKaqBDoB7ZGxTvqlrB__2ZmnHHjCr8RgMRtKNtIeuZAo ";
   }
 
-  void ReadData(StringPiece expected_data) {
+  void ReadData(QuicStringPiece expected_data) {
     scoped_refptr<IOBuffer> buffer(new IOBuffer(expected_data.length() + 1));
     EXPECT_EQ(static_cast<int>(expected_data.length()),
               stream_->Read(buffer.get(), expected_data.length() + 1));
     EXPECT_EQ(expected_data,
-              StringPiece(buffer->data(), expected_data.length()));
+              QuicStringPiece(buffer->data(), expected_data.length()));
   }
 
   QuicHeaderList ProcessHeaders(const SpdyHeaderBlock& headers) {
@@ -258,7 +258,7 @@ TEST_P(QuicChromiumClientStreamTest, OnFinRead) {
   InitializeHeaders();
   QuicStreamOffset offset = 0;
   ProcessHeadersFull(headers_);
-  QuicStreamFrame frame2(kTestStreamId, true, offset, StringPiece());
+  QuicStreamFrame frame2(kTestStreamId, true, offset, QuicStringPiece());
   EXPECT_CALL(delegate_, OnClose());
   stream_->OnStreamFrame(frame2);
 }
@@ -279,10 +279,9 @@ TEST_P(QuicChromiumClientStreamTest, OnDataAvailable) {
                                          /*offset=*/0, data));
 
   EXPECT_CALL(delegate_, OnDataAvailable())
-      .WillOnce(testing::Invoke(
-          CreateFunctor(&QuicChromiumClientStreamTest::ReadData,
-                        base::Unretained(this),
-                        StringPiece(data, arraysize(data) - 1))));
+      .WillOnce(testing::Invoke(CreateFunctor(
+          &QuicChromiumClientStreamTest::ReadData, base::Unretained(this),
+          QuicStringPiece(data, arraysize(data) - 1))));
   base::RunLoop().RunUntilIdle();
 
   EXPECT_CALL(delegate_, OnClose());
@@ -338,7 +337,7 @@ TEST_P(QuicChromiumClientStreamTest, OnTrailers) {
   EXPECT_CALL(delegate_, OnDataAvailable())
       .WillOnce(testing::Invoke(CreateFunctor(
           &QuicChromiumClientStreamTest::ReadData, base::Unretained(this),
-          StringPiece(data, arraysize(data) - 1))));
+          QuicStringPiece(data, arraysize(data) - 1))));
 
   SpdyHeaderBlock trailers;
   trailers["bar"] = "foo";
@@ -358,7 +357,8 @@ TEST_P(QuicChromiumClientStreamTest, OnTrailers) {
       .Times(1)
       .WillOnce(testing::DoAll(
           testing::Invoke(CreateFunctor(&QuicChromiumClientStreamTest::ReadData,
-                                        base::Unretained(this), StringPiece())),
+                                        base::Unretained(this),
+                                        QuicStringPiece())),
           testing::InvokeWithoutArgs([&run_loop3]() { run_loop3.Quit(); })));
   run_loop3.Run();
 
@@ -385,7 +385,7 @@ TEST_P(QuicChromiumClientStreamTest, MarkTrailersConsumedWhenNotifyDelegate) {
       .WillOnce(testing::DoAll(
           testing::Invoke(CreateFunctor(
               &QuicChromiumClientStreamTest::ReadData, base::Unretained(this),
-              StringPiece(data, arraysize(data) - 1))),
+              QuicStringPiece(data, arraysize(data) - 1))),
           testing::Invoke([&run_loop]() { run_loop.Quit(); })));
 
   // Wait for the read to complete.
@@ -415,7 +415,8 @@ TEST_P(QuicChromiumClientStreamTest, MarkTrailersConsumedWhenNotifyDelegate) {
       .Times(1)
       .WillOnce(testing::DoAll(
           testing::Invoke(CreateFunctor(&QuicChromiumClientStreamTest::ReadData,
-                                        base::Unretained(this), StringPiece())),
+                                        base::Unretained(this),
+                                        QuicStringPiece())),
           testing::InvokeWithoutArgs([&run_loop3]() { run_loop3.Quit(); })));
   run_loop3.Run();
 
@@ -447,7 +448,7 @@ TEST_P(QuicChromiumClientStreamTest, ReadAfterTrailersReceivedButNotDelivered) {
       .WillOnce(testing::DoAll(
           testing::Invoke(CreateFunctor(
               &QuicChromiumClientStreamTest::ReadData, base::Unretained(this),
-              StringPiece(data, arraysize(data) - 1))),
+              QuicStringPiece(data, arraysize(data) - 1))),
           testing::Invoke([&run_loop]() { run_loop.Quit(); })));
 
   // Wait for the read to complete.
@@ -480,7 +481,8 @@ TEST_P(QuicChromiumClientStreamTest, ReadAfterTrailersReceivedButNotDelivered) {
   EXPECT_CALL(delegate_, OnDataAvailable())
       .WillOnce(testing::DoAll(
           testing::Invoke(CreateFunctor(&QuicChromiumClientStreamTest::ReadData,
-                                        base::Unretained(this), StringPiece())),
+                                        base::Unretained(this),
+                                        QuicStringPiece())),
           testing::Invoke([&run_loop3]() { run_loop3.Quit(); })));
   run_loop3.Run();
 
@@ -506,7 +508,7 @@ TEST_P(QuicChromiumClientStreamTest, WriteStreamData) {
   EXPECT_CALL(session_, WritevData(stream_, stream_->id(), _, _, _, _))
       .WillOnce(Return(QuicConsumedData(kDataLen, true)));
   TestCompletionCallback callback;
-  EXPECT_EQ(OK, stream_->WriteStreamData(base::StringPiece(kData1, kDataLen),
+  EXPECT_EQ(OK, stream_->WriteStreamData(QuicStringPiece(kData1, kDataLen),
                                          true, callback.callback()));
 }
 
@@ -522,7 +524,7 @@ TEST_P(QuicChromiumClientStreamTest, WriteStreamDataAsync) {
       .WillOnce(Return(QuicConsumedData(0, false)));
   TestCompletionCallback callback;
   EXPECT_EQ(ERR_IO_PENDING,
-            stream_->WriteStreamData(base::StringPiece(kData1, kDataLen), true,
+            stream_->WriteStreamData(QuicStringPiece(kData1, kDataLen), true,
                                      callback.callback()));
   ASSERT_FALSE(callback.have_result());
 

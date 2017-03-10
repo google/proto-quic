@@ -367,7 +367,7 @@ if (is_android) {
 
   android_aidl("test_support_java_aidl") {
     testonly = true
-    import_include = "android/java/src"
+    import_include = [ "android/java/src" ]
     sources = [
       "android/java/src/org/chromium/base/ITestClient.aidl",
     ]

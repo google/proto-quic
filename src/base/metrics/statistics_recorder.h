@@ -217,7 +217,7 @@ class BASE_EXPORT StatisticsRecorder {
   // |bucket_ranges_|.
   typedef std::map<uint32_t, std::list<const BucketRanges*>*> RangesMap;
 
-  friend struct DefaultLazyInstanceTraits<StatisticsRecorder>;
+  friend struct LazyInstanceTraitsBase<StatisticsRecorder>;
   friend class StatisticsRecorderTest;
 
   // Imports histograms from global persistent memory. The global lock must

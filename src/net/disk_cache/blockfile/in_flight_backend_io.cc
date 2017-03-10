@@ -22,6 +22,18 @@
 
 namespace disk_cache {
 
+namespace {
+
+// Used to leak a strong reference to an EntryImpl to the user of disk_cache.
+EntryImpl* LeakEntryImpl(scoped_refptr<EntryImpl> entry) {
+  // Balanced on OP_CLOSE_ENTRY handling in BackendIO::ExecuteBackendOperation.
+  if (entry)
+    entry->AddRef();
+  return entry.get();
+}
+
+}  // namespace
+
 BackendIO::BackendIO(InFlightIO* controller, BackendImpl* backend,
                      const net::CompletionCallback& callback)
     : BackgroundIO(controller),
@@ -74,11 +86,6 @@ void BackendIO::OnDone(bool cancel) {
 
 bool BackendIO::IsEntryOperation() {
   return operation_ > OP_MAX_BACKEND;
-}
-
-// Runs on the background thread.
-void BackendIO::ReferenceEntry() {
-  entry_->AddRef();
 }
 
 void BackendIO::Init() {
@@ -239,12 +246,18 @@ void BackendIO::ExecuteBackendOperation() {
     case OP_INIT:
       result_ = backend_->SyncInit();
       break;
-    case OP_OPEN:
-      result_ = backend_->SyncOpenEntry(key_, entry_ptr_);
+    case OP_OPEN: {
+      scoped_refptr<EntryImpl> entry;
+      result_ = backend_->SyncOpenEntry(key_, &entry);
+      *entry_ptr_ = LeakEntryImpl(std::move(entry));
       break;
-    case OP_CREATE:
-      result_ = backend_->SyncCreateEntry(key_, entry_ptr_);
+    }
+    case OP_CREATE: {
+      scoped_refptr<EntryImpl> entry;
+      result_ = backend_->SyncCreateEntry(key_, &entry);
+      *entry_ptr_ = LeakEntryImpl(std::move(entry));
       break;
+    }
     case OP_DOOM:
       result_ = backend_->SyncDoomEntry(key_);
       break;
@@ -260,9 +273,12 @@ void BackendIO::ExecuteBackendOperation() {
     case OP_SIZE_ALL:
       result_ = backend_->SyncCalculateSizeOfAllEntries();
       break;
-    case OP_OPEN_NEXT:
-      result_ = backend_->SyncOpenNextEntry(iterator_, entry_ptr_);
+    case OP_OPEN_NEXT: {
+      scoped_refptr<EntryImpl> entry;
+      result_ = backend_->SyncOpenNextEntry(iterator_, &entry);
+      *entry_ptr_ = LeakEntryImpl(std::move(entry));
       break;
+    }
     case OP_END_ENUMERATION:
       backend_->SyncEndEnumeration(std::move(scoped_iterator_));
       result_ = net::OK;
@@ -272,6 +288,8 @@ void BackendIO::ExecuteBackendOperation() {
       result_ = net::OK;
       break;
     case OP_CLOSE_ENTRY:
+      // Collect the reference to |entry_| to balance with the AddRef() in
+      // LeakEntryImpl.
       entry_->Release();
       result_ = net::OK;
       break;

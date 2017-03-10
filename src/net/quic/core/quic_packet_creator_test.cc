@@ -17,13 +17,13 @@
 #include "net/quic/core/quic_simple_buffer_allocator.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_socket_address.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/test_tools/quic_framer_peer.h"
 #include "net/quic/test_tools/quic_packet_creator_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
 using std::string;
 using testing::DoAll;
 using testing::InSequence;
@@ -164,8 +164,8 @@ class QuicPacketCreatorTest : public ::testing::TestWithParam<TestParams> {
     EXPECT_EQ(STREAM_FRAME, frame.type);
     ASSERT_TRUE(frame.stream_frame);
     EXPECT_EQ(stream_id, frame.stream_frame->stream_id);
-    EXPECT_EQ(data, StringPiece(frame.stream_frame->data_buffer,
-                                frame.stream_frame->data_length));
+    EXPECT_EQ(data, QuicStringPiece(frame.stream_frame->data_buffer,
+                                    frame.stream_frame->data_length));
     EXPECT_EQ(offset, frame.stream_frame->offset);
     EXPECT_EQ(fin, frame.stream_frame->fin);
   }
@@ -193,7 +193,7 @@ class QuicPacketCreatorTest : public ::testing::TestWithParam<TestParams> {
                                              true);
   }
 
-  QuicIOVector MakeIOVectorFromStringPiece(StringPiece s) {
+  QuicIOVector MakeIOVectorFromStringPiece(QuicStringPiece s) {
     return MakeIOVector(s, &iov_);
   }
 
@@ -238,9 +238,9 @@ TEST_P(QuicPacketCreatorTest, SerializeFrames) {
     creator_.set_encryption_level(level);
     frames_.push_back(QuicFrame(new QuicAckFrame(MakeAckFrame(0u))));
     frames_.push_back(QuicFrame(
-        new QuicStreamFrame(kCryptoStreamId, false, 0u, StringPiece())));
+        new QuicStreamFrame(kCryptoStreamId, false, 0u, QuicStringPiece())));
     frames_.push_back(QuicFrame(
-        new QuicStreamFrame(kCryptoStreamId, true, 0u, StringPiece())));
+        new QuicStreamFrame(kCryptoStreamId, true, 0u, QuicStringPiece())));
     SerializedPacket serialized = SerializeAllFrames(frames_);
     EXPECT_EQ(level, serialized.encryption_level);
     delete frames_[0].ack_frame;
@@ -270,8 +270,8 @@ TEST_P(QuicPacketCreatorTest, ReserializeFramesWithSequenceNumberLength) {
   // retransmit must sent with the original length and the others do not change.
   QuicPacketCreatorPeer::SetPacketNumberLength(&creator_,
                                                PACKET_2BYTE_PACKET_NUMBER);
-  QuicStreamFrame* stream_frame =
-      new QuicStreamFrame(kCryptoStreamId, /*fin=*/false, 0u, StringPiece());
+  QuicStreamFrame* stream_frame = new QuicStreamFrame(
+      kCryptoStreamId, /*fin=*/false, 0u, QuicStringPiece());
   QuicFrames frames;
   frames.push_back(QuicFrame(stream_frame));
   char buffer[kMaxPacketSize];
@@ -304,8 +304,8 @@ TEST_P(QuicPacketCreatorTest, ReserializeFramesWithSequenceNumberLength) {
 }
 
 TEST_P(QuicPacketCreatorTest, ReserializeCryptoFrameWithForwardSecurity) {
-  QuicStreamFrame* stream_frame =
-      new QuicStreamFrame(kCryptoStreamId, /*fin=*/false, 0u, StringPiece());
+  QuicStreamFrame* stream_frame = new QuicStreamFrame(
+      kCryptoStreamId, /*fin=*/false, 0u, QuicStringPiece());
   QuicFrames frames;
   frames.push_back(QuicFrame(stream_frame));
   creator_.set_encryption_level(ENCRYPTION_FORWARD_SECURE);
@@ -323,7 +323,7 @@ TEST_P(QuicPacketCreatorTest, ReserializeCryptoFrameWithForwardSecurity) {
 
 TEST_P(QuicPacketCreatorTest, ReserializeFrameWithForwardSecurity) {
   QuicStreamFrame* stream_frame =
-      new QuicStreamFrame(0u, /*fin=*/false, 0u, StringPiece());
+      new QuicStreamFrame(0u, /*fin=*/false, 0u, QuicStringPiece());
   QuicFrames frames;
   frames.push_back(QuicFrame(stream_frame));
   creator_.set_encryption_level(ENCRYPTION_FORWARD_SECURE);
@@ -690,7 +690,7 @@ TEST_P(QuicPacketCreatorTest, SerializeFrame) {
     creator_.StopSendingVersion();
   }
   frames_.push_back(QuicFrame(
-      new QuicStreamFrame(kCryptoStreamId, false, 0u, StringPiece())));
+      new QuicStreamFrame(kCryptoStreamId, false, 0u, QuicStringPiece())));
   SerializedPacket serialized = SerializeAllFrames(frames_);
   delete frames_[0].stream_frame;
 
@@ -828,7 +828,7 @@ TEST_P(QuicPacketCreatorTest, AddUnencryptedStreamDataClosesConnection) {
   creator_.set_encryption_level(ENCRYPTION_NONE);
   EXPECT_CALL(delegate_, OnUnrecoverableError(_, _, _));
   QuicStreamFrame stream_frame(kHeadersStreamId, /*fin=*/false, 0u,
-                               StringPiece());
+                               QuicStringPiece());
   EXPECT_QUIC_BUG(creator_.AddSavedFrame(QuicFrame(&stream_frame)),
                   "Cannot send stream data without encryption.");
 }
@@ -843,7 +843,7 @@ TEST_P(QuicPacketCreatorTest, ChloTooLarge) {
 
   struct iovec iov;
   QuicIOVector data_iovec(MakeIOVector(
-      StringPiece(message_data->data(), message_data->length()), &iov));
+      QuicStringPiece(message_data->data(), message_data->length()), &iov));
   QuicFrame frame;
   EXPECT_CALL(delegate_,
               OnUnrecoverableError(QUIC_CRYPTO_CHLO_TOO_LARGE, _, _));

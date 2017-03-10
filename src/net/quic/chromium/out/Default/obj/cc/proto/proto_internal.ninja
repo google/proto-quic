@@ -1,0 +1,45 @@
+defines = -DCC_PROTO_IMPLEMENTATION -DV8_DEPRECATION_WARNINGS -DENABLE_MDNS=1 -DENABLE_NOTIFICATIONS -DENABLE_PEPPER_CDMS -DENABLE_PLUGINS=1 -DENABLE_PDF=1 -DENABLE_PRINTING=1 -DENABLE_BASIC_PRINTING=1 -DENABLE_PRINT_PREVIEW=1 -DENABLE_SPELLCHECK=1 -DUSE_UDEV -DUI_COMPOSITOR_IMAGE_TRANSPORT -DUSE_AURA=1 -DUSE_PANGO=1 -DUSE_CAIRO=1 -DUSE_CLIPBOARD_AURAX11=1 -DUSE_DEFAULT_RENDER_THEME=1 -DUSE_GLIB=1 -DUSE_NSS_CERTS=1 -DUSE_X11=1 -DENABLE_WEBRTC=1 -DENABLE_EXTENSIONS=1 -DENABLE_TASK_MANAGER=1 -DENABLE_THEMES=1 -DENABLE_CAPTIVE_PORTAL_DETECTION=1 -DENABLE_SESSION_SERVICE=1 -DENABLE_SUPERVISED_USERS=1 -DENABLE_SERVICE_DISCOVERY=1 -DFULL_SAFE_BROWSING -DSAFE_BROWSING_CSD -DSAFE_BROWSING_DB_LOCAL -DCHROMIUM_BUILD -DENABLE_MEDIA_ROUTER=1 -DFIELDTRIAL_TESTING_ENABLED -DCR_CLANG_REVISION=277962-1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -DCOMPONENT_BUILD -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1 -D_GLIBCXX_DEBUG=1 -DGOOGLE_PROTOBUF_NO_RTTI -DGOOGLE_PROTOBUF_NO_STATIC_INITIALIZER -DHAVE_PTHREAD -DPROTOBUF_USE_DLLS
+include_dirs = -I../../../../.. -Igen -I../../../../../third_party/protobuf/src -Igen/protoc_out -I../../../../../third_party/protobuf/src
+cflags = -fno-strict-aliasing --param=ssp-buffer-size=4 -fstack-protector -funwind-tables -fPIC -pipe -B../../../../../third_party/binutils/Linux_x64/Release/bin -fcolor-diagnostics -fdebug-prefix-map=/usr/local/google/home/jokulik/chromium/src=. -pthread -m64 -march=x86-64 -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-c++11-narrowing -Wno-covered-switch-default -Wno-deprecated-register -Wno-unneeded-internal-declaration -Wno-inconsistent-missing-override -Wno-shift-negative-value -Wno-undefined-var-template -Wno-nonportable-include-path -O0 -g2 -gsplit-dwarf --sysroot=../../../../../build/linux/debian_wheezy_amd64-sysroot -fvisibility=hidden -Xclang -load -Xclang ../../../../../third_party/llvm-build/Release+Asserts/lib/libFindBadConstructs.so -Xclang -add-plugin -Xclang find-bad-constructs -Xclang -plugin-arg-find-bad-constructs -Xclang check-templates -Xclang -plugin-arg-find-bad-constructs -Xclang follow-macro-expansion -Xclang -plugin-arg-find-bad-constructs -Xclang check-implicit-copy-ctors -Xclang -plugin-arg-find-bad-constructs -Xclang check-ipc -Wheader-hygiene -Wstring-conversion -Wexit-time-destructors
+cflags_cc = -fno-threadsafe-statics -fvisibility-inlines-hidden -Wno-undefined-bool-conversion -Wno-tautological-undefined-compare -std=gnu++11 -fno-rtti -fno-exceptions
+label_name = proto_internal
+target_out_dir = obj/cc/proto
+target_output_name = proto_internal
+
+build obj/cc/proto/proto_internal/begin_main_frame_and_commit_state.pb.o: cxx gen/cc/proto/begin_main_frame_and_commit_state.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/commit_earlyout_reason.pb.o: cxx gen/cc/proto/commit_earlyout_reason.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/compositor_message.pb.o: cxx gen/cc/proto/compositor_message.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/compositor_message_to_impl.pb.o: cxx gen/cc/proto/compositor_message_to_impl.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/compositor_message_to_main.pb.o: cxx gen/cc/proto/compositor_message_to_main.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/display_item.pb.o: cxx gen/cc/proto/display_item.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/element_id.pb.o: cxx gen/cc/proto/element_id.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/layer.pb.o: cxx gen/cc/proto/layer.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/layer_position_constraint.pb.o: cxx gen/cc/proto/layer_position_constraint.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/layer_selection_bound.pb.o: cxx gen/cc/proto/layer_selection_bound.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/layer_tree.pb.o: cxx gen/cc/proto/layer_tree.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/layer_tree_debug_state.pb.o: cxx gen/cc/proto/layer_tree_debug_state.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/layer_tree_host.pb.o: cxx gen/cc/proto/layer_tree_host.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/layer_tree_settings.pb.o: cxx gen/cc/proto/layer_tree_settings.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/managed_memory_policy.pb.o: cxx gen/cc/proto/managed_memory_policy.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/memory_allocation.pb.o: cxx gen/cc/proto/memory_allocation.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/point.pb.o: cxx gen/cc/proto/point.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/point3f.pb.o: cxx gen/cc/proto/point3f.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/pointf.pb.o: cxx gen/cc/proto/pointf.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/property_tree.pb.o: cxx gen/cc/proto/property_tree.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/recording_source.pb.o: cxx gen/cc/proto/recording_source.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/rect.pb.o: cxx gen/cc/proto/rect.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/rectf.pb.o: cxx gen/cc/proto/rectf.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/region.pb.o: cxx gen/cc/proto/region.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/renderer_settings.pb.o: cxx gen/cc/proto/renderer_settings.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/scroll_offset.pb.o: cxx gen/cc/proto/scroll_offset.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/size.pb.o: cxx gen/cc/proto/size.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/sizef.pb.o: cxx gen/cc/proto/sizef.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/skregion.pb.o: cxx gen/cc/proto/skregion.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/skrrect.pb.o: cxx gen/cc/proto/skrrect.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/skxfermode.pb.o: cxx gen/cc/proto/skxfermode.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/synced_property.pb.o: cxx gen/cc/proto/synced_property.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/transform.pb.o: cxx gen/cc/proto/transform.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/vector2d.pb.o: cxx gen/cc/proto/vector2d.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+build obj/cc/proto/proto_internal/vector2df.pb.o: cxx gen/cc/proto/vector2df.pb.cc || obj/cc/proto/proto_internal_gen.stamp
+
+build obj/cc/proto/proto_internal.stamp: stamp obj/cc/proto/proto_internal/begin_main_frame_and_commit_state.pb.o obj/cc/proto/proto_internal/commit_earlyout_reason.pb.o obj/cc/proto/proto_internal/compositor_message.pb.o obj/cc/proto/proto_internal/compositor_message_to_impl.pb.o obj/cc/proto/proto_internal/compositor_message_to_main.pb.o obj/cc/proto/proto_internal/display_item.pb.o obj/cc/proto/proto_internal/element_id.pb.o obj/cc/proto/proto_internal/layer.pb.o obj/cc/proto/proto_internal/layer_position_constraint.pb.o obj/cc/proto/proto_internal/layer_selection_bound.pb.o obj/cc/proto/proto_internal/layer_tree.pb.o obj/cc/proto/proto_internal/layer_tree_debug_state.pb.o obj/cc/proto/proto_internal/layer_tree_host.pb.o obj/cc/proto/proto_internal/layer_tree_settings.pb.o obj/cc/proto/proto_internal/managed_memory_policy.pb.o obj/cc/proto/proto_internal/memory_allocation.pb.o obj/cc/proto/proto_internal/point.pb.o obj/cc/proto/proto_internal/point3f.pb.o obj/cc/proto/proto_internal/pointf.pb.o obj/cc/proto/proto_internal/property_tree.pb.o obj/cc/proto/proto_internal/recording_source.pb.o obj/cc/proto/proto_internal/rect.pb.o obj/cc/proto/proto_internal/rectf.pb.o obj/cc/proto/proto_internal/region.pb.o obj/cc/proto/proto_internal/renderer_settings.pb.o obj/cc/proto/proto_internal/scroll_offset.pb.o obj/cc/proto/proto_internal/size.pb.o obj/cc/proto/proto_internal/sizef.pb.o obj/cc/proto/proto_internal/skregion.pb.o obj/cc/proto/proto_internal/skrrect.pb.o obj/cc/proto/proto_internal/skxfermode.pb.o obj/cc/proto/proto_internal/synced_property.pb.o obj/cc/proto/proto_internal/transform.pb.o obj/cc/proto/proto_internal/vector2d.pb.o obj/cc/proto/proto_internal/vector2df.pb.o || ./libprotobuf_lite.so.TOC obj/cc/proto/proto_internal_gen.stamp

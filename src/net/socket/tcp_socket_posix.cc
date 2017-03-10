@@ -293,6 +293,21 @@ int TCPSocketPosix::Read(IOBuffer* buf,
   return rv;
 }
 
+int TCPSocketPosix::ReadIfReady(IOBuffer* buf,
+                                int buf_len,
+                                const CompletionCallback& callback) {
+  DCHECK(socket_);
+  DCHECK(!callback.is_null());
+
+  int rv =
+      socket_->ReadIfReady(buf, buf_len,
+                           base::Bind(&TCPSocketPosix::ReadIfReadyCompleted,
+                                      base::Unretained(this), callback));
+  if (rv != ERR_IO_PENDING)
+    rv = HandleReadCompleted(buf, rv);
+  return rv;
+}
+
 int TCPSocketPosix::Write(IOBuffer* buf,
                           int buf_len,
                           const CompletionCallback& callback) {
@@ -586,10 +601,37 @@ void TCPSocketPosix::ReadCompleted(const scoped_refptr<IOBuffer>& buf,
                                    const CompletionCallback& callback,
                                    int rv) {
   DCHECK_NE(ERR_IO_PENDING, rv);
+
   callback.Run(HandleReadCompleted(buf.get(), rv));
 }
 
+void TCPSocketPosix::ReadIfReadyCompleted(const CompletionCallback& callback,
+                                          int rv) {
+  DCHECK_NE(ERR_IO_PENDING, rv);
+  DCHECK_GE(OK, rv);
+
+  HandleReadCompletedHelper(rv);
+  callback.Run(rv);
+}
+
 int TCPSocketPosix::HandleReadCompleted(IOBuffer* buf, int rv) {
+  HandleReadCompletedHelper(rv);
+
+  if (rv < 0)
+    return rv;
+
+  // Notify the watcher only if at least 1 byte was read.
+  if (rv > 0)
+    NotifySocketPerformanceWatcher();
+
+  net_log_.AddByteTransferEvent(NetLogEventType::SOCKET_BYTES_RECEIVED, rv,
+                                buf->data());
+  NetworkActivityMonitor::GetInstance()->IncrementBytesReceived(rv);
+
+  return rv;
+}
+
+void TCPSocketPosix::HandleReadCompletedHelper(int rv) {
   if (tcp_fastopen_write_attempted_ && !tcp_fastopen_connected_) {
     // A TCP FastOpen connect-with-write was attempted. This read was a
     // subsequent read, which either succeeded or failed. If the read
@@ -610,18 +652,7 @@ int TCPSocketPosix::HandleReadCompleted(IOBuffer* buf, int rv) {
   if (rv < 0) {
     net_log_.AddEvent(NetLogEventType::SOCKET_READ_ERROR,
                       CreateNetLogSocketErrorCallback(rv, errno));
-    return rv;
   }
-
-  // Notify the watcher only if at least 1 byte was read.
-  if (rv > 0)
-    NotifySocketPerformanceWatcher();
-
-  net_log_.AddByteTransferEvent(NetLogEventType::SOCKET_BYTES_RECEIVED, rv,
-                                buf->data());
-  NetworkActivityMonitor::GetInstance()->IncrementBytesReceived(rv);
-
-  return rv;
 }
 
 void TCPSocketPosix::WriteCompleted(const scoped_refptr<IOBuffer>& buf,

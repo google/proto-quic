@@ -22,7 +22,6 @@ from core import perf_benchmark
 
 from benchmarks import v8_helper
 
-from telemetry import benchmark
 from telemetry import page as page_module
 from telemetry.page import legacy_page_test
 from telemetry import story
@@ -107,17 +106,6 @@ class Speedometer(perf_benchmark.PerfBenchmark):
         'http://browserbench.org/Speedometer/', ps, ps.base_dir,
         make_javascript_deterministic=False))
     return ps
-
-
-@benchmark.Disabled('reference')  # crbug.com/579546
-class SpeedometerIgnition(Speedometer):
-  def SetExtraBrowserOptions(self, options):
-    super(SpeedometerIgnition, self).SetExtraBrowserOptions(options)
-    v8_helper.EnableIgnition(options)
-
-  @classmethod
-  def Name(cls):
-    return 'speedometer-ignition'
 
 
 class SpeedometerTurbo(Speedometer):

@@ -8,7 +8,7 @@
 namespace net {
 
 // Defined type for network traffic annotation tags.
-using NetworkTrafficAnnotationTag = const char*;
+using NetworkTrafficAnnotationTag = const char* const;
 
 // Function to convert a network traffic annotation's unique id and protobuf
 // text into a NetworkTrafficAnnotationTag.
@@ -20,7 +20,7 @@ using NetworkTrafficAnnotationTag = const char*;
 // |unique_id| should be a string that uniquely identifies this annotation
 // across all of Chromium source code.
 // |proto| is a text-encoded NetworkTrafficAnnotation protobuf (see
-// tools/traffic_annotaiton/traffic_annotation.proto)
+// tools/traffic_annotation/traffic_annotation.proto)
 //
 // An empty and a sample template for the text-encoded protobuf can be found in
 // //tools/traffic_annotation/sample_traffic_annotation.cc.

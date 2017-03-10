@@ -11,9 +11,9 @@
 #include <string>
 #include <vector>
 
-#include "base/strings/string_piece.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -66,7 +66,7 @@ class QUIC_EXPORT_PRIVATE CryptoHandshakeMessage {
 
   const QuicTagValueMap& tag_value_map() const { return tag_value_map_; }
 
-  void SetStringPiece(QuicTag tag, base::StringPiece value);
+  void SetStringPiece(QuicTag tag, QuicStringPiece value);
 
   // Erase removes a tag/value, if present, from the message.
   void Erase(QuicTag tag);
@@ -81,7 +81,7 @@ class QUIC_EXPORT_PRIVATE CryptoHandshakeMessage {
                            const QuicTag** out_tags,
                            size_t* out_len) const;
 
-  bool GetStringPiece(QuicTag tag, base::StringPiece* out) const;
+  bool GetStringPiece(QuicTag tag, QuicStringPiece* out) const;
   bool HasStringPiece(QuicTag tag) const;
 
   // GetNthValue24 interprets the value with the given tag to be a series of
@@ -89,7 +89,7 @@ class QUIC_EXPORT_PRIVATE CryptoHandshakeMessage {
   // index.
   QuicErrorCode GetNthValue24(QuicTag tag,
                               unsigned index,
-                              base::StringPiece* out) const;
+                              QuicStringPiece* out) const;
   QuicErrorCode GetUint32(QuicTag tag, uint32_t* out) const;
   QuicErrorCode GetUint64(QuicTag tag, uint64_t* out) const;
 

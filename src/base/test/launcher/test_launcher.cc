@@ -97,12 +97,14 @@ const size_t kOutputSnippetBytesLimit = 300 * 1024;
 
 // Set of live launch test processes with corresponding lock (it is allowed
 // for callers to launch processes on different threads).
-LazyInstance<std::map<ProcessHandle, CommandLine> > g_live_processes
-    = LAZY_INSTANCE_INITIALIZER;
-LazyInstance<Lock> g_live_processes_lock = LAZY_INSTANCE_INITIALIZER;
+LazyInstance<std::map<ProcessHandle, CommandLine>>::DestructorAtExit
+    g_live_processes = LAZY_INSTANCE_INITIALIZER;
+LazyInstance<Lock>::DestructorAtExit g_live_processes_lock =
+    LAZY_INSTANCE_INITIALIZER;
 
 // Performance trace generator.
-LazyInstance<TestLauncherTracer> g_tracer = LAZY_INSTANCE_INITIALIZER;
+LazyInstance<TestLauncherTracer>::DestructorAtExit g_tracer =
+    LAZY_INSTANCE_INITIALIZER;
 
 #if defined(OS_POSIX)
 // Self-pipe that makes it possible to do complex shutdown handling

@@ -15,8 +15,8 @@
 #include "net/quic/platform/api/quic_aligned.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
-using base::StringPiece;
 using std::string;
 
 // If true, enforce that QUIC CHLOs fit in one packet.
@@ -192,7 +192,8 @@ void QuicPacketCreator::CreateStreamFrame(QuicStreamId id,
   if (iov_offset == iov.total_length) {
     QUIC_BUG_IF(!fin) << "Creating a stream frame with no data or fin.";
     // Create a new packet for the fin, if necessary.
-    *frame = QuicFrame(new QuicStreamFrame(id, true, offset, StringPiece()));
+    *frame =
+        QuicFrame(new QuicStreamFrame(id, true, offset, QuicStringPiece()));
     return;
   }
 

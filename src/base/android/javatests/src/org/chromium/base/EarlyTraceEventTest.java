@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2017 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -7,28 +7,34 @@ package org.chromium.base;
 import android.os.Process;
 import android.os.SystemClock;
 import android.support.test.filters.SmallTest;
-import android.test.InstrumentationTestCase;
+
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import org.chromium.base.library_loader.LibraryLoader;
 import org.chromium.base.library_loader.LibraryProcessType;
+import org.chromium.base.test.BaseJUnit4ClassRunner;
 import org.chromium.base.test.util.Feature;
 
 /**
  * Tests for {@link EarlyTraceEvent}.
  */
-public class EarlyTraceEventTest extends InstrumentationTestCase {
+@RunWith(BaseJUnit4ClassRunner.class)
+public class EarlyTraceEventTest {
     private static final String EVENT_NAME = "MyEvent";
     private static final String EVENT_NAME2 = "MyOtherEvent";
 
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
+    @Before
+    public void setUp() throws Exception {
         LibraryLoader.get(LibraryProcessType.PROCESS_BROWSER).ensureInitialized();
         EarlyTraceEvent.sState = EarlyTraceEvent.STATE_DISABLED;
         EarlyTraceEvent.sCompletedEvents = null;
         EarlyTraceEvent.sPendingEvents = null;
     }
 
+    @Test
     @SmallTest
     @Feature({"Android-AppBase"})
     public void testCanRecordEvent() {
@@ -39,28 +45,30 @@ public class EarlyTraceEventTest extends InstrumentationTestCase {
         EarlyTraceEvent.end(EVENT_NAME);
         long afterMs = SystemClock.elapsedRealtime();
 
-        assertEquals(1, EarlyTraceEvent.sCompletedEvents.size());
-        assertTrue(EarlyTraceEvent.sPendingEvents.isEmpty());
+        Assert.assertEquals(1, EarlyTraceEvent.sCompletedEvents.size());
+        Assert.assertTrue(EarlyTraceEvent.sPendingEvents.isEmpty());
         EarlyTraceEvent.Event event = EarlyTraceEvent.sCompletedEvents.get(0);
-        assertEquals(EVENT_NAME, event.mName);
-        assertEquals(myThreadId, event.mThreadId);
-        assertTrue(beforeMs <= event.mBeginTimeMs && event.mBeginTimeMs <= afterMs);
-        assertTrue(event.mBeginTimeMs <= event.mEndTimeMs);
-        assertTrue(beforeMs <= event.mEndTimeMs && event.mEndTimeMs <= afterMs);
+        Assert.assertEquals(EVENT_NAME, event.mName);
+        Assert.assertEquals(myThreadId, event.mThreadId);
+        Assert.assertTrue(beforeMs <= event.mBeginTimeMs && event.mBeginTimeMs <= afterMs);
+        Assert.assertTrue(event.mBeginTimeMs <= event.mEndTimeMs);
+        Assert.assertTrue(beforeMs <= event.mEndTimeMs && event.mEndTimeMs <= afterMs);
     }
 
+    @Test
     @SmallTest
     @Feature({"Android-AppBase"})
     public void testIncompleteEvent() {
         EarlyTraceEvent.enable();
         EarlyTraceEvent.begin(EVENT_NAME);
 
-        assertTrue(EarlyTraceEvent.sCompletedEvents.isEmpty());
-        assertEquals(1, EarlyTraceEvent.sPendingEvents.size());
+        Assert.assertTrue(EarlyTraceEvent.sCompletedEvents.isEmpty());
+        Assert.assertEquals(1, EarlyTraceEvent.sPendingEvents.size());
         EarlyTraceEvent.Event event = EarlyTraceEvent.sPendingEvents.get(EVENT_NAME);
-        assertEquals(EVENT_NAME, event.mName);
+        Assert.assertEquals(EVENT_NAME, event.mName);
     }
 
+    @Test
     @SmallTest
     @Feature({"Android-AppBase"})
     public void testNoDuplicatePendingEvents() {
@@ -72,17 +80,19 @@ public class EarlyTraceEventTest extends InstrumentationTestCase {
             // Expected.
             return;
         }
-        fail();
+        Assert.fail();
     }
 
+    @Test
     @SmallTest
     @Feature({"Android-AppBase"})
     public void testIgnoreEventsWhenDisabled() {
         EarlyTraceEvent.begin(EVENT_NAME);
         EarlyTraceEvent.end(EVENT_NAME);
-        assertNull(EarlyTraceEvent.sCompletedEvents);
+        Assert.assertNull(EarlyTraceEvent.sCompletedEvents);
     }
 
+    @Test
     @SmallTest
     @Feature({"Android-AppBase"})
     public void testIgnoreNewEventsWhenFinishing() {
@@ -90,14 +100,15 @@ public class EarlyTraceEventTest extends InstrumentationTestCase {
         EarlyTraceEvent.begin(EVENT_NAME);
         EarlyTraceEvent.disable();
 
-        assertEquals(EarlyTraceEvent.STATE_FINISHING, EarlyTraceEvent.sState);
+        Assert.assertEquals(EarlyTraceEvent.STATE_FINISHING, EarlyTraceEvent.sState);
         EarlyTraceEvent.begin(EVENT_NAME2);
         EarlyTraceEvent.end(EVENT_NAME2);
 
-        assertEquals(1, EarlyTraceEvent.sPendingEvents.size());
-        assertTrue(EarlyTraceEvent.sCompletedEvents.isEmpty());
+        Assert.assertEquals(1, EarlyTraceEvent.sPendingEvents.size());
+        Assert.assertTrue(EarlyTraceEvent.sCompletedEvents.isEmpty());
     }
 
+    @Test
     @SmallTest
     @Feature({"Android-AppBase"})
     public void testFinishingToFinished() {
@@ -105,14 +116,15 @@ public class EarlyTraceEventTest extends InstrumentationTestCase {
         EarlyTraceEvent.begin(EVENT_NAME);
         EarlyTraceEvent.disable();
 
-        assertEquals(EarlyTraceEvent.STATE_FINISHING, EarlyTraceEvent.sState);
+        Assert.assertEquals(EarlyTraceEvent.STATE_FINISHING, EarlyTraceEvent.sState);
         EarlyTraceEvent.begin(EVENT_NAME2);
         EarlyTraceEvent.end(EVENT_NAME2);
         EarlyTraceEvent.end(EVENT_NAME);
 
-        assertEquals(EarlyTraceEvent.STATE_FINISHED, EarlyTraceEvent.sState);
+        Assert.assertEquals(EarlyTraceEvent.STATE_FINISHED, EarlyTraceEvent.sState);
     }
 
+    @Test
     @SmallTest
     @Feature({"Android-AppBase"})
     public void testCannotBeReenabledOnceFinished() {
@@ -120,12 +132,13 @@ public class EarlyTraceEventTest extends InstrumentationTestCase {
         EarlyTraceEvent.begin(EVENT_NAME);
         EarlyTraceEvent.end(EVENT_NAME);
         EarlyTraceEvent.disable();
-        assertEquals(EarlyTraceEvent.STATE_FINISHED, EarlyTraceEvent.sState);
+        Assert.assertEquals(EarlyTraceEvent.STATE_FINISHED, EarlyTraceEvent.sState);
 
         EarlyTraceEvent.enable();
-        assertEquals(EarlyTraceEvent.STATE_FINISHED, EarlyTraceEvent.sState);
+        Assert.assertEquals(EarlyTraceEvent.STATE_FINISHED, EarlyTraceEvent.sState);
     }
 
+    @Test
     @SmallTest
     @Feature({"Android-AppBase"})
     public void testThreadIdIsRecorded() throws Exception {
@@ -143,8 +156,8 @@ public class EarlyTraceEventTest extends InstrumentationTestCase {
         thread.start();
         thread.join();
 
-        assertEquals(1, EarlyTraceEvent.sCompletedEvents.size());
+        Assert.assertEquals(1, EarlyTraceEvent.sCompletedEvents.size());
         EarlyTraceEvent.Event event = EarlyTraceEvent.sCompletedEvents.get(0);
-        assertEquals(threadId[0], event.mThreadId);
+        Assert.assertEquals(threadId[0], event.mThreadId);
     }
 }

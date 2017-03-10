@@ -14,7 +14,6 @@
 #include <vector>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/quic/core/congestion_control/loss_detection_interface.h"
 #include "net/quic/core/congestion_control/send_algorithm_interface.h"
 #include "net/quic/core/quic_client_push_promise_index.h"
@@ -25,14 +24,13 @@
 #include "net/quic/core/quic_sent_packet_manager.h"
 #include "net/quic/core/quic_server_session_base.h"
 #include "net/quic/core/quic_simple_buffer_allocator.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/mock_random.h"
 #include "net/test/gtest_util.h"
 #include "net/tools/quic/quic_per_connection_packet_writer.h"
 #include "net/tools/quic/test_tools/mock_quic_session_visitor.h"
 #include "testing/gmock/include/gmock/gmock.h"
-
-using base::StringPiece;
 
 // EXPECT_QUIC_BUG is like EXPECT_DFATAL, except it ensures that no DFATAL
 // logging is skipped due to exponential backoff.
@@ -194,7 +192,7 @@ class QuicFlagSaver {
 };
 
 // Compute SHA-1 hash of the supplied std::string.
-std::string Sha1Hash(base::StringPiece data);
+std::string Sha1Hash(QuicStringPiece data);
 
 // Simple random number generator used to compute random numbers suitable
 // for pseudo-randomly dropping packets in tests.  It works by computing
@@ -505,7 +503,7 @@ class MockQuicSession : public QuicSession {
                     QuicStreamOffset bytes_written));
 
   MOCK_METHOD2(OnStreamHeaders,
-               void(QuicStreamId stream_id, base::StringPiece headers_data));
+               void(QuicStreamId stream_id, QuicStringPiece headers_data));
   MOCK_METHOD2(OnStreamHeadersPriority,
                void(QuicStreamId stream_id, SpdyPriority priority));
   MOCK_METHOD3(OnStreamHeadersComplete,
@@ -566,7 +564,7 @@ class MockQuicSpdySession : public QuicSpdySession {
                     QuicStreamOffset bytes_written));
 
   MOCK_METHOD2(OnStreamHeaders,
-               void(QuicStreamId stream_id, StringPiece headers_data));
+               void(QuicStreamId stream_id, QuicStringPiece headers_data));
   MOCK_METHOD2(OnStreamHeadersPriority,
                void(QuicStreamId stream_id, SpdyPriority priority));
   MOCK_METHOD3(OnStreamHeadersComplete,
@@ -578,7 +576,7 @@ class MockQuicSpdySession : public QuicSpdySession {
                     const QuicHeaderList& header_list));
   MOCK_METHOD0(IsCryptoHandshakeConfirmed, bool());
   MOCK_METHOD2(OnPromiseHeaders,
-               void(QuicStreamId stream_id, StringPiece headers_data));
+               void(QuicStreamId stream_id, QuicStringPiece headers_data));
   MOCK_METHOD3(OnPromiseHeadersComplete,
                void(QuicStreamId stream_id,
                     QuicStreamId promised_stream_id,
@@ -981,7 +979,7 @@ QuicHeaderList AsHeaderList(const T& container) {
 
 // Utility function that returns an QuicIOVector object wrapped around |str|.
 // // |str|'s data is stored in |iov|.
-inline QuicIOVector MakeIOVector(base::StringPiece str, struct iovec* iov) {
+inline QuicIOVector MakeIOVector(QuicStringPiece str, struct iovec* iov) {
   iov->iov_base = const_cast<char*>(str.data());
   iov->iov_len = static_cast<size_t>(str.size());
   QuicIOVector quic_iov(iov, 1, str.size());

@@ -332,13 +332,15 @@ void BackendImpl::CleanupCache() {
 
 // ------------------------------------------------------------------------
 
-int BackendImpl::SyncOpenEntry(const std::string& key, Entry** entry) {
+int BackendImpl::SyncOpenEntry(const std::string& key,
+                               scoped_refptr<EntryImpl>* entry) {
   DCHECK(entry);
   *entry = OpenEntryImpl(key);
   return (*entry) ? net::OK : net::ERR_FAILED;
 }
 
-int BackendImpl::SyncCreateEntry(const std::string& key, Entry** entry) {
+int BackendImpl::SyncCreateEntry(const std::string& key,
+                                 scoped_refptr<EntryImpl>* entry) {
   DCHECK(entry);
   *entry = CreateEntryImpl(key);
   return (*entry) ? net::OK : net::ERR_FAILED;
@@ -348,12 +350,11 @@ int BackendImpl::SyncDoomEntry(const std::string& key) {
   if (disabled_)
     return net::ERR_FAILED;
 
-  EntryImpl* entry = OpenEntryImpl(key);
+  scoped_refptr<EntryImpl> entry = OpenEntryImpl(key);
   if (!entry)
     return net::ERR_FAILED;
 
   entry->DoomImpl();
-  entry->Release();
   return net::OK;
 }
 
@@ -387,27 +388,23 @@ int BackendImpl::SyncDoomEntriesBetween(const base::Time initial_time,
   if (disabled_)
     return net::ERR_FAILED;
 
-  EntryImpl* node;
+  scoped_refptr<EntryImpl> node;
   std::unique_ptr<Rankings::Iterator> iterator(new Rankings::Iterator());
-  EntryImpl* next = OpenNextEntryImpl(iterator.get());
+  scoped_refptr<EntryImpl> next = OpenNextEntryImpl(iterator.get());
   if (!next)
     return net::OK;
 
   while (next) {
-    node = next;
+    node = std::move(next);
     next = OpenNextEntryImpl(iterator.get());
 
     if (node->GetLastUsed() >= initial_time &&
         node->GetLastUsed() < end_time) {
       node->DoomImpl();
     } else if (node->GetLastUsed() < initial_time) {
-      if (next)
-        next->Release();
       next = NULL;
       SyncEndEnumeration(std::move(iterator));
     }
-
-    node->Release();
   }
 
   return net::OK;
@@ -431,25 +428,25 @@ int BackendImpl::SyncDoomEntriesSince(const base::Time initial_time) {
   stats_.OnEvent(Stats::DOOM_RECENT);
   for (;;) {
     std::unique_ptr<Rankings::Iterator> iterator(new Rankings::Iterator());
-    EntryImpl* entry = OpenNextEntryImpl(iterator.get());
+    scoped_refptr<EntryImpl> entry = OpenNextEntryImpl(iterator.get());
     if (!entry)
       return net::OK;
 
     if (initial_time > entry->GetLastUsed()) {
-      entry->Release();
+      entry = nullptr;
       SyncEndEnumeration(std::move(iterator));
       return net::OK;
     }
 
     entry->DoomImpl();
-    entry->Release();
+    entry = nullptr;
     SyncEndEnumeration(
         std::move(iterator));  // The doom invalidated the iterator.
   }
 }
 
 int BackendImpl::SyncOpenNextEntry(Rankings::Iterator* iterator,
-                                   Entry** next_entry) {
+                                   scoped_refptr<EntryImpl>* next_entry) {
   *next_entry = OpenNextEntryImpl(iterator);
   return (*next_entry) ? net::OK : net::ERR_FAILED;
 }
@@ -465,16 +462,13 @@ void BackendImpl::SyncOnExternalCacheHit(const std::string& key) {
 
   uint32_t hash = base::Hash(key);
   bool error;
-  EntryImpl* cache_entry = MatchEntry(key, hash, false, Addr(), &error);
-  if (cache_entry) {
-    if (ENTRY_NORMAL == cache_entry->entry()->Data()->state) {
-      UpdateRank(cache_entry, cache_type() == net::SHADER_CACHE);
-    }
-    cache_entry->Release();
-  }
+  scoped_refptr<EntryImpl> cache_entry =
+      MatchEntry(key, hash, false, Addr(), &error);
+  if (cache_entry && ENTRY_NORMAL == cache_entry->entry()->Data()->state)
+    UpdateRank(cache_entry.get(), cache_type() == net::SHADER_CACHE);
 }
 
-EntryImpl* BackendImpl::OpenEntryImpl(const std::string& key) {
+scoped_refptr<EntryImpl> BackendImpl::OpenEntryImpl(const std::string& key) {
   if (disabled_)
     return NULL;
 
@@ -483,10 +477,10 @@ EntryImpl* BackendImpl::OpenEntryImpl(const std::string& key) {
   Trace("Open hash 0x%x", hash);
 
   bool error;
-  EntryImpl* cache_entry = MatchEntry(key, hash, false, Addr(), &error);
+  scoped_refptr<EntryImpl> cache_entry =
+      MatchEntry(key, hash, false, Addr(), &error);
   if (cache_entry && ENTRY_NORMAL != cache_entry->entry()->Data()->state) {
     // The entry was already evicted.
-    cache_entry->Release();
     cache_entry = NULL;
     web_fonts_histogram::RecordEvictedEntry(key);
   } else if (!cache_entry) {
@@ -503,7 +497,7 @@ EntryImpl* BackendImpl::OpenEntryImpl(const std::string& key) {
     return NULL;
   }
 
-  eviction_.OnOpenEntry(cache_entry);
+  eviction_.OnOpenEntry(cache_entry.get());
   entry_count_++;
 
   Trace("Open hash 0x%x end: 0x%x", hash,
@@ -515,11 +509,11 @@ EntryImpl* BackendImpl::OpenEntryImpl(const std::string& key) {
   CACHE_UMA(HOURS, "AllOpenByUseHours.Hit", 0,
             static_cast<base::HistogramBase::Sample>(use_hours));
   stats_.OnEvent(Stats::OPEN_HIT);
-  web_fonts_histogram::RecordCacheHit(cache_entry);
+  web_fonts_histogram::RecordCacheHit(cache_entry.get());
   return cache_entry;
 }
 
-EntryImpl* BackendImpl::CreateEntryImpl(const std::string& key) {
+scoped_refptr<EntryImpl> BackendImpl::CreateEntryImpl(const std::string& key) {
   if (disabled_ || key.empty())
     return NULL;
 
@@ -533,15 +527,14 @@ EntryImpl* BackendImpl::CreateEntryImpl(const std::string& key) {
     // We have an entry already. It could be the one we are looking for, or just
     // a hash conflict.
     bool error;
-    EntryImpl* old_entry = MatchEntry(key, hash, false, Addr(), &error);
+    scoped_refptr<EntryImpl> old_entry =
+        MatchEntry(key, hash, false, Addr(), &error);
     if (old_entry)
-      return ResurrectEntry(old_entry);
+      return ResurrectEntry(std::move(old_entry));
 
-    EntryImpl* parent_entry = MatchEntry(key, hash, true, Addr(), &error);
+    parent = MatchEntry(key, hash, true, Addr(), &error);
     DCHECK(!error);
-    if (parent_entry) {
-      parent.swap(&parent_entry);
-    } else if (data_->table[hash & mask_]) {
+    if (!parent && data_->table[hash & mask_]) {
       // We should have corrected the problem.
       NOTREACHED();
       return NULL;
@@ -613,11 +606,11 @@ EntryImpl* BackendImpl::CreateEntryImpl(const std::string& key) {
   stats_.OnEvent(Stats::CREATE_HIT);
   Trace("create entry hit ");
   FlushIndex();
-  cache_entry->AddRef();
-  return cache_entry.get();
+  return cache_entry;
 }
 
-EntryImpl* BackendImpl::OpenNextEntryImpl(Rankings::Iterator* iterator) {
+scoped_refptr<EntryImpl> BackendImpl::OpenNextEntryImpl(
+    Rankings::Iterator* iterator) {
   if (disabled_)
     return NULL;
 
@@ -629,10 +622,8 @@ EntryImpl* BackendImpl::OpenNextEntryImpl(Rankings::Iterator* iterator) {
 
     // Get an entry from each list.
     for (int i = 0; i < kListsToSearch; i++) {
-      EntryImpl* temp = NULL;
       ret |= OpenFollowingEntryFromList(static_cast<Rankings::List>(i),
-                                        &iterator->nodes[i], &temp);
-      entries[i].swap(&temp);  // The entry was already addref'd.
+                                        &iterator->nodes[i], &entries[i]);
     }
     if (!ret) {
       iterator->Reset();
@@ -642,16 +633,13 @@ EntryImpl* BackendImpl::OpenNextEntryImpl(Rankings::Iterator* iterator) {
     // Get the next entry from the last list, and the actual entries for the
     // elements on the other lists.
     for (int i = 0; i < kListsToSearch; i++) {
-      EntryImpl* temp = NULL;
       if (iterator->list == i) {
-          OpenFollowingEntryFromList(
-              iterator->list, &iterator->nodes[i], &temp);
+        OpenFollowingEntryFromList(iterator->list, &iterator->nodes[i],
+                                   &entries[i]);
       } else {
-        temp = GetEnumeratedEntry(iterator->nodes[i],
-                                  static_cast<Rankings::List>(i));
+        entries[i] = GetEnumeratedEntry(iterator->nodes[i],
+                                        static_cast<Rankings::List>(i));
       }
-
-      entries[i].swap(&temp);  // The entry was already addref'd.
     }
   }
 
@@ -678,10 +666,8 @@ EntryImpl* BackendImpl::OpenNextEntryImpl(Rankings::Iterator* iterator) {
     return NULL;
   }
 
-  EntryImpl* next_entry;
-  next_entry = entries[newest].get();
+  scoped_refptr<EntryImpl> next_entry = entries[newest];
   iterator->list = static_cast<Rankings::List>(newest);
-  next_entry->AddRef();
   return next_entry;
 }
 
@@ -788,14 +774,14 @@ void BackendImpl::UpdateRank(EntryImpl* entry, bool modified) {
 
 void BackendImpl::RecoveredEntry(CacheRankingsBlock* rankings) {
   Addr address(rankings->Data()->contents);
-  EntryImpl* cache_entry = NULL;
+  scoped_refptr<EntryImpl> cache_entry;
   if (NewEntry(address, &cache_entry)) {
     STRESS_NOTREACHED();
     return;
   }
 
   uint32_t hash = cache_entry->GetHash();
-  cache_entry->Release();
+  cache_entry = nullptr;
 
   // Anything on the table means that this entry is there.
   if (data_->table[hash & mask_])
@@ -810,7 +796,8 @@ void BackendImpl::InternalDoomEntry(EntryImpl* entry) {
   std::string key = entry->GetKey();
   Addr entry_addr = entry->entry()->address();
   bool error;
-  EntryImpl* parent_entry = MatchEntry(key, hash, true, entry_addr, &error);
+  scoped_refptr<EntryImpl> parent_entry =
+      MatchEntry(key, hash, true, entry_addr, &error);
   CacheAddr child(entry->GetNextAddress());
 
   Trace("Doom entry 0x%p", entry);
@@ -827,7 +814,7 @@ void BackendImpl::InternalDoomEntry(EntryImpl* entry) {
 
   if (parent_entry) {
     parent_entry->SetNextAddress(Addr(child));
-    parent_entry->Release();
+    parent_entry = nullptr;
   } else if (!error) {
     data_->table[hash & mask_] = child;
   }
@@ -1533,13 +1520,11 @@ void BackendImpl::PrepareForRestart() {
   restarted_ = true;
 }
 
-int BackendImpl::NewEntry(Addr address, EntryImpl** entry) {
+int BackendImpl::NewEntry(Addr address, scoped_refptr<EntryImpl>* entry) {
   EntriesMap::iterator it = open_entries_.find(address.value());
   if (it != open_entries_.end()) {
     // Easy job. This entry is already in memory.
-    EntryImpl* this_entry = it->second;
-    this_entry->AddRef();
-    *entry = this_entry;
+    *entry = make_scoped_refptr(it->second);
     return 0;
   }
 
@@ -1606,18 +1591,17 @@ int BackendImpl::NewEntry(Addr address, EntryImpl** entry) {
   open_entries_[address.value()] = cache_entry.get();
 
   cache_entry->BeginLogging(net_log_, false);
-  cache_entry.swap(entry);
+  *entry = std::move(cache_entry);
   return 0;
 }
 
-EntryImpl* BackendImpl::MatchEntry(const std::string& key,
-                                   uint32_t hash,
-                                   bool find_parent,
-                                   Addr entry_addr,
-                                   bool* match_error) {
+scoped_refptr<EntryImpl> BackendImpl::MatchEntry(const std::string& key,
+                                                 uint32_t hash,
+                                                 bool find_parent,
+                                                 Addr entry_addr,
+                                                 bool* match_error) {
   Addr address(data_->table[hash & mask_]);
   scoped_refptr<EntryImpl> cache_entry, parent_entry;
-  EntryImpl* tmp = NULL;
   bool found = false;
   std::set<CacheAddr> visited;
   *match_error = false;
@@ -1641,9 +1625,7 @@ EntryImpl* BackendImpl::MatchEntry(const std::string& key,
       break;
     }
 
-    int error = NewEntry(address, &tmp);
-    cache_entry.swap(&tmp);
-
+    int error = NewEntry(address, &cache_entry);
     if (error || cache_entry->dirty()) {
       // This entry is dirty on disk (it was not properly closed): we cannot
       // trust it.
@@ -1709,18 +1691,15 @@ EntryImpl* BackendImpl::MatchEntry(const std::string& key,
   if (cache_entry.get() && (find_parent || !found))
     cache_entry = NULL;
 
-  if (find_parent)
-    parent_entry.swap(&tmp);
-  else
-    cache_entry.swap(&tmp);
-
   FlushIndex();
-  return tmp;
+
+  return find_parent ? std::move(parent_entry) : std::move(cache_entry);
 }
 
-bool BackendImpl::OpenFollowingEntryFromList(Rankings::List list,
-                                             CacheRankingsBlock** from_entry,
-                                             EntryImpl** next_entry) {
+bool BackendImpl::OpenFollowingEntryFromList(
+    Rankings::List list,
+    CacheRankingsBlock** from_entry,
+    scoped_refptr<EntryImpl>* next_entry) {
   if (disabled_)
     return false;
 
@@ -1740,12 +1719,13 @@ bool BackendImpl::OpenFollowingEntryFromList(Rankings::List list,
   return true;
 }
 
-EntryImpl* BackendImpl::GetEnumeratedEntry(CacheRankingsBlock* next,
-                                           Rankings::List list) {
+scoped_refptr<EntryImpl> BackendImpl::GetEnumeratedEntry(
+    CacheRankingsBlock* next,
+    Rankings::List list) {
   if (!next || disabled_)
     return NULL;
 
-  EntryImpl* entry;
+  scoped_refptr<EntryImpl> entry;
   int rv = NewEntry(Addr(next->Data()->contents), &entry);
   if (rv) {
     STRESS_NOTREACHED();
@@ -1759,14 +1739,12 @@ EntryImpl* BackendImpl::GetEnumeratedEntry(CacheRankingsBlock* next,
 
   if (entry->dirty()) {
     // We cannot trust this entry.
-    InternalDoomEntry(entry);
-    entry->Release();
+    InternalDoomEntry(entry.get());
     return NULL;
   }
 
   if (!entry->Update()) {
     STRESS_NOTREACHED();
-    entry->Release();
     return NULL;
   }
 
@@ -1784,9 +1762,10 @@ EntryImpl* BackendImpl::GetEnumeratedEntry(CacheRankingsBlock* next,
   return entry;
 }
 
-EntryImpl* BackendImpl::ResurrectEntry(EntryImpl* deleted_entry) {
+scoped_refptr<EntryImpl> BackendImpl::ResurrectEntry(
+    scoped_refptr<EntryImpl> deleted_entry) {
   if (ENTRY_NORMAL == deleted_entry->entry()->Data()->state) {
-    deleted_entry->Release();
+    deleted_entry = nullptr;
     stats_.OnEvent(Stats::CREATE_MISS);
     Trace("create entry miss ");
     return NULL;
@@ -1795,7 +1774,7 @@ EntryImpl* BackendImpl::ResurrectEntry(EntryImpl* deleted_entry) {
   // We are attempting to create an entry and found out that the entry was
   // previously deleted.
 
-  eviction_.OnCreateEntry(deleted_entry);
+  eviction_.OnCreateEntry(deleted_entry.get());
   entry_count_++;
 
   stats_.OnEvent(Stats::RESURRECT_HIT);
@@ -2053,14 +2032,12 @@ int BackendImpl::CheckAllEntries() {
     if (!address.is_initialized())
       continue;
     for (;;) {
-      EntryImpl* tmp;
-      int ret = NewEntry(address, &tmp);
+      scoped_refptr<EntryImpl> cache_entry;
+      int ret = NewEntry(address, &cache_entry);
       if (ret) {
         STRESS_NOTREACHED();
         return ret;
       }
-      scoped_refptr<EntryImpl> cache_entry;
-      cache_entry.swap(&tmp);
 
       if (cache_entry->dirty())
         num_dirty++;

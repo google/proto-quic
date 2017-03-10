@@ -44,7 +44,7 @@ def print_landmines():
   if platform() in ('win', 'mac'):
     print ('Improper dependency for create_nmf.py broke in r240802, '
            'fixed in r240860.')
-  if (platform() == 'win' and gyp_msvs_version().startswith('2015')):
+  if platform() == 'win':
     print 'Switch to VS2015 Update 3, 14393 SDK'
   print 'Need to clobber everything due to an IDL change in r154579 (blink)'
   print 'Need to clobber everything due to gen file moves in r175513 (Blink)'

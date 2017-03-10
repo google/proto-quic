@@ -15,9 +15,9 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
-#include "base/strings/string_piece.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -53,7 +53,7 @@ class QUIC_EXPORT_PRIVATE QuicServerConfigProtobuf {
 
   std::string config() const { return config_; }
 
-  void set_config(base::StringPiece config) { config.CopyToString(&config_); }
+  void set_config(QuicStringPiece config) { config.CopyToString(&config_); }
 
   QuicServerConfigProtobuf::PrivateKey* add_key() {
     keys_.push_back(base::MakeUnique<PrivateKey>());
@@ -83,7 +83,7 @@ class QUIC_EXPORT_PRIVATE QuicServerConfigProtobuf {
   }
 
   void set_source_address_token_secret_override(
-      base::StringPiece source_address_token_secret_override) {
+      QuicStringPiece source_address_token_secret_override) {
     source_address_token_secret_override.CopyToString(
         &source_address_token_secret_override_);
   }

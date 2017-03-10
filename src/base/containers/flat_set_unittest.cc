@@ -1242,3 +1242,17 @@ TEST(FlatSet, Comparison) {
   EXPECT_GE(biggest, middle);
   EXPECT_GE(biggest, biggest);
 }
+
+TEST(FlatSet, EraseIf) {
+  IntSet x;
+  base::EraseIf(x, [](int) { return false; });
+  EXPECT_THAT(x, ElementsAre());
+
+  x = {1, 2, 3};
+  base::EraseIf(x, [](int elem) { return !(elem & 1); });
+  EXPECT_THAT(x, ElementsAre(1, 3));
+
+  x = {1, 2, 3, 4};
+  base::EraseIf(x, [](int elem) { return elem & 1; });
+  EXPECT_THAT(x, ElementsAre(2, 4));
+}

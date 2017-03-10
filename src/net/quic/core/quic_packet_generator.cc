@@ -10,8 +10,6 @@
 #include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_logging.h"
 
-using base::StringPiece;
-
 namespace net {
 
 QuicPacketGenerator::QuicPacketGenerator(QuicConnectionId connection_id,

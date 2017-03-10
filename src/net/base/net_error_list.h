@@ -386,6 +386,10 @@ NET_ERROR(SSL_OBSOLETE_CIPHER, -172)
 // upgraded, the URLRequest is cancelled with this error code.
 NET_ERROR(WS_UPGRADE, -173)
 
+// Socket ReadIfReady support is not implemented. This error should not be user
+// visible, because the normal Read() method is used as a fallback.
+NET_ERROR(READ_IF_READY_NOT_IMPLEMENTED, -174)
+
 // Certificate error codes
 //
 // The values of certificate error codes must be consecutive.

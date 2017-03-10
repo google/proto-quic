@@ -23,7 +23,6 @@
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gmock_mutant.h"
 
-using base::StringPiece;
 using std::string;
 using testing::AnyNumber;
 using testing::AtLeast;
@@ -184,7 +183,7 @@ TEST_F(QuicStreamTest, NoBlockingIfNoDataOrFin) {
 
   // Write no data and no fin.  If we consume nothing we should not be write
   // blocked.
-  EXPECT_QUIC_BUG(stream_->WriteOrBufferData(StringPiece(), false, nullptr),
+  EXPECT_QUIC_BUG(stream_->WriteOrBufferData(QuicStringPiece(), false, nullptr),
                   "");
   EXPECT_FALSE(HasWriteBlockedStreams());
 }
@@ -196,7 +195,7 @@ TEST_F(QuicStreamTest, BlockIfOnlySomeDataConsumed) {
   // we should be write blocked a not all the data was consumed.
   EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(1, false)));
-  stream_->WriteOrBufferData(StringPiece(kData1, 2), false, nullptr);
+  stream_->WriteOrBufferData(QuicStringPiece(kData1, 2), false, nullptr);
   ASSERT_EQ(1u, write_blocked_list_->NumBlockedStreams());
   EXPECT_EQ(1u, stream_->queued_data_bytes());
 }
@@ -210,7 +209,7 @@ TEST_F(QuicStreamTest, BlockIfFinNotConsumedWithData) {
   // last data)
   EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(2, false)));
-  stream_->WriteOrBufferData(StringPiece(kData1, 2), true, nullptr);
+  stream_->WriteOrBufferData(QuicStringPiece(kData1, 2), true, nullptr);
   ASSERT_EQ(1u, write_blocked_list_->NumBlockedStreams());
 }
 
@@ -221,7 +220,7 @@ TEST_F(QuicStreamTest, BlockIfSoloFinNotConsumed) {
   // as the fin was not consumed.
   EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(0, false)));
-  stream_->WriteOrBufferData(StringPiece(), true, nullptr);
+  stream_->WriteOrBufferData(QuicStringPiece(), true, nullptr);
   ASSERT_EQ(1u, write_blocked_list_->NumBlockedStreams());
 }
 
@@ -233,7 +232,7 @@ TEST_F(QuicStreamTest, CloseOnPartialWrite) {
   // crash with an unknown stream.
   EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(Invoke(this, &QuicStreamTest::CloseStreamOnWriteError));
-  stream_->WriteOrBufferData(StringPiece(kData1, 2), false, nullptr);
+  stream_->WriteOrBufferData(QuicStringPiece(kData1, 2), false, nullptr);
   ASSERT_EQ(0u, write_blocked_list_->NumBlockedStreams());
 }
 
@@ -294,7 +293,7 @@ TEST_F(QuicStreamTest, RstAlwaysSentIfNoFinSent) {
   // Write some data, with no FIN.
   EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(1, false)));
-  stream_->WriteOrBufferData(StringPiece(kData1, 1), false, nullptr);
+  stream_->WriteOrBufferData(QuicStringPiece(kData1, 1), false, nullptr);
   EXPECT_FALSE(fin_sent());
   EXPECT_FALSE(rst_sent());
 
@@ -317,7 +316,7 @@ TEST_F(QuicStreamTest, RstNotSentIfFinSent) {
   // Write some data, with FIN.
   EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(1, true)));
-  stream_->WriteOrBufferData(StringPiece(kData1, 1), true, nullptr);
+  stream_->WriteOrBufferData(QuicStringPiece(kData1, 1), true, nullptr);
   EXPECT_TRUE(fin_sent());
   EXPECT_FALSE(rst_sent());
 
@@ -540,7 +539,7 @@ TEST_F(QuicStreamTest, StreamSequencerNeverSeesPacketsViolatingFlowControl) {
   // higher than the receive window offset.
   QuicStreamFrame frame(stream_->id(), false,
                         kInitialSessionFlowControlWindowForTest + 1,
-                        StringPiece("."));
+                        QuicStringPiece("."));
   EXPECT_GT(frame.offset, QuicFlowControllerPeer::ReceiveWindowOffset(
                               stream_->flow_controller()));
 
@@ -581,12 +580,12 @@ TEST_F(QuicStreamTest, FinalByteOffsetFromFin) {
   EXPECT_FALSE(stream_->HasFinalReceivedByteOffset());
 
   QuicStreamFrame stream_frame_no_fin(stream_->id(), false, 1234,
-                                      StringPiece("."));
+                                      QuicStringPiece("."));
   stream_->OnStreamFrame(stream_frame_no_fin);
   EXPECT_FALSE(stream_->HasFinalReceivedByteOffset());
 
   QuicStreamFrame stream_frame_with_fin(stream_->id(), true, 1234,
-                                        StringPiece("."));
+                                        QuicStringPiece("."));
   stream_->OnStreamFrame(stream_frame_with_fin);
   EXPECT_TRUE(stream_->HasFinalReceivedByteOffset());
 }
@@ -622,7 +621,7 @@ TEST_F(QuicStreamTest, FinalByteOffsetFromZeroLengthStreamFrame) {
             current_connection_flow_control_offset);
   QuicStreamFrame zero_length_stream_frame_with_fin(
       stream_->id(), /*fin=*/true, kByteOffsetExceedingFlowControlWindow,
-      StringPiece());
+      QuicStringPiece());
   EXPECT_EQ(0, zero_length_stream_frame_with_fin.data_length);
 
   EXPECT_CALL(*connection_, CloseConnection(_, _, _)).Times(0);
@@ -644,7 +643,7 @@ TEST_F(QuicStreamTest, SetDrainingIncomingOutgoing) {
 
   // Incoming data with FIN.
   QuicStreamFrame stream_frame_with_fin(stream_->id(), true, 1234,
-                                        StringPiece("."));
+                                        QuicStringPiece("."));
   stream_->OnStreamFrame(stream_frame_with_fin);
   // The FIN has been received but not consumed.
   EXPECT_TRUE(stream_->HasFinalReceivedByteOffset());
@@ -656,7 +655,7 @@ TEST_F(QuicStreamTest, SetDrainingIncomingOutgoing) {
   // Outgoing data with FIN.
   EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(2, true)));
-  stream_->WriteOrBufferData(StringPiece(kData1, 2), true, nullptr);
+  stream_->WriteOrBufferData(QuicStringPiece(kData1, 2), true, nullptr);
   EXPECT_TRUE(stream_->write_side_closed());
 
   EXPECT_EQ(1u, QuicSessionPeer::GetDrainingStreams(session_.get())
@@ -671,14 +670,14 @@ TEST_F(QuicStreamTest, SetDrainingOutgoingIncoming) {
   // Outgoing data with FIN.
   EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(2, true)));
-  stream_->WriteOrBufferData(StringPiece(kData1, 2), true, nullptr);
+  stream_->WriteOrBufferData(QuicStringPiece(kData1, 2), true, nullptr);
   EXPECT_TRUE(stream_->write_side_closed());
 
   EXPECT_EQ(1u, session_->GetNumOpenIncomingStreams());
 
   // Incoming data with FIN.
   QuicStreamFrame stream_frame_with_fin(stream_->id(), true, 1234,
-                                        StringPiece("."));
+                                        QuicStringPiece("."));
   stream_->OnStreamFrame(stream_frame_with_fin);
   // The FIN has been received but not consumed.
   EXPECT_TRUE(stream_->HasFinalReceivedByteOffset());
@@ -700,7 +699,7 @@ TEST_F(QuicStreamTest, EarlyResponseFinHandling) {
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
 
   // Receive data for the request.
-  QuicStreamFrame frame1(stream_->id(), false, 0, StringPiece("Start"));
+  QuicStreamFrame frame1(stream_->id(), false, 0, QuicStringPiece("Start"));
   stream_->OnStreamFrame(frame1);
   // When QuicSimpleServerStream sends the response, it calls
   // QuicStream::CloseReadSide() first.
@@ -709,7 +708,7 @@ TEST_F(QuicStreamTest, EarlyResponseFinHandling) {
   stream_->WriteOrBufferData(kData1, false, nullptr);
   EXPECT_TRUE(QuicStreamPeer::read_side_closed(stream_));
   // Receive remaining data and FIN for the request.
-  QuicStreamFrame frame2(stream_->id(), true, 0, StringPiece("End"));
+  QuicStreamFrame frame2(stream_->id(), true, 0, QuicStringPiece("End"));
   stream_->OnStreamFrame(frame2);
   EXPECT_TRUE(stream_->fin_received());
   EXPECT_TRUE(stream_->HasFinalReceivedByteOffset());

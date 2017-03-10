@@ -22,6 +22,7 @@
 #include "net/http/http_stream.h"
 #include "net/log/net_log_with_source.h"
 #include "net/quic/core/quic_spdy_stream.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -88,7 +89,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
   // of client-side streams should be able to set the priority.
   using QuicSpdyStream::SetPriority;
 
-  int WriteStreamData(base::StringPiece data,
+  int WriteStreamData(QuicStringPiece data,
                       bool fin,
                       const CompletionCallback& callback);
   // Same as WriteStreamData except it writes data from a vector of IOBuffers,

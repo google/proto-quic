@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CancellationException;
@@ -186,6 +187,10 @@ public class ResourceExtractor {
             if (locale.startsWith(language)) {
                 activeLocalePakFiles.add(locale + ".pak");
             }
+        }
+        if (activeLocalePakFiles.isEmpty() && BuildConfig.COMPRESSED_LOCALES.length > 0) {
+            assert Arrays.asList(BuildConfig.COMPRESSED_LOCALES).contains(FALLBACK_LOCALE);
+            activeLocalePakFiles.add(FALLBACK_LOCALE + ".pak");
         }
         return activeLocalePakFiles.toArray(new String[activeLocalePakFiles.size()]);
     }

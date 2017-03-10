@@ -1,0 +1,53 @@
+defines = -DV8_DEPRECATION_WARNINGS -DENABLE_MDNS=1 -DENABLE_NOTIFICATIONS -DENABLE_PEPPER_CDMS -DENABLE_PLUGINS=1 -DENABLE_PDF=1 -DENABLE_PRINTING=1 -DENABLE_BASIC_PRINTING=1 -DENABLE_PRINT_PREVIEW=1 -DENABLE_SPELLCHECK=1 -DUSE_UDEV -DUI_COMPOSITOR_IMAGE_TRANSPORT -DUSE_AURA=1 -DUSE_PANGO=1 -DUSE_CAIRO=1 -DUSE_CLIPBOARD_AURAX11=1 -DUSE_DEFAULT_RENDER_THEME=1 -DUSE_GLIB=1 -DUSE_NSS_CERTS=1 -DUSE_X11=1 -DENABLE_WEBRTC=1 -DENABLE_EXTENSIONS=1 -DENABLE_TASK_MANAGER=1 -DENABLE_THEMES=1 -DENABLE_CAPTIVE_PORTAL_DETECTION=1 -DENABLE_SESSION_SERVICE=1 -DENABLE_SUPERVISED_USERS=1 -DENABLE_SERVICE_DISCOVERY=1 -DFULL_SAFE_BROWSING -DSAFE_BROWSING_CSD -DSAFE_BROWSING_DB_LOCAL -DCHROMIUM_BUILD -DENABLE_MEDIA_ROUTER=1 -DFIELDTRIAL_TESTING_ENABLED -DCR_CLANG_REVISION=277962-1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -DCOMPONENT_BUILD -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1 -D_GLIBCXX_DEBUG=1 -DOPJ_STATIC -DPNG_PREFIX -DPNG_USE_READ_MACROS -DPDF_ENABLE_V8
+include_dirs = -I../../../../.. -Igen -I../../../../../third_party/pdfium -I../../../../../third_party/pdfium/third_party/freetype/include -I../../../../../third_party/pdfium/third_party/freetype/include/freetype
+cflags = -fno-strict-aliasing --param=ssp-buffer-size=4 -fstack-protector -funwind-tables -fPIC -pipe -B../../../../../third_party/binutils/Linux_x64/Release/bin -fcolor-diagnostics -fdebug-prefix-map=/usr/local/google/home/jokulik/chromium/src=. -pthread -m64 -march=x86-64 -O0 -g2 -gsplit-dwarf --sysroot=../../../../../build/linux/debian_wheezy_amd64-sysroot -fvisibility=hidden -Xclang -load -Xclang ../../../../../third_party/llvm-build/Release+Asserts/lib/libFindBadConstructs.so -Xclang -add-plugin -Xclang find-bad-constructs -Xclang -plugin-arg-find-bad-constructs -Xclang check-templates -Xclang -plugin-arg-find-bad-constructs -Xclang follow-macro-expansion -Xclang -plugin-arg-find-bad-constructs -Xclang check-implicit-copy-ctors -Xclang -plugin-arg-find-bad-constructs -Xclang check-ipc -Wheader-hygiene -Wstring-conversion -Werror -Wall -Wno-unused-variable -Wno-missing-field-initializers -Wno-unused-parameter -Wno-c++11-narrowing -Wno-covered-switch-default -Wno-deprecated-register -Wno-unneeded-internal-declaration -Wno-inconsistent-missing-override -Wno-shift-negative-value -Wno-undefined-var-template -Wno-nonportable-include-path -Wno-shift-negative-value
+cflags_c =
+label_name = jpeg
+target_out_dir = obj/third_party/pdfium/third_party
+target_output_name = libjpeg
+
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcapimin.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jcapimin.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcapistd.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jcapistd.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jccoefct.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jccoefct.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jccolor.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jccolor.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcdctmgr.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jcdctmgr.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jchuff.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jchuff.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcinit.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jcinit.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcmainct.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jcmainct.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcmarker.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jcmarker.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcmaster.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jcmaster.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcomapi.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jcomapi.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcparam.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jcparam.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcphuff.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jcphuff.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcprepct.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jcprepct.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcsample.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jcsample.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jctrans.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jctrans.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdapimin.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jdapimin.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdapistd.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jdapistd.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdcoefct.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jdcoefct.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdcolor.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jdcolor.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jddctmgr.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jddctmgr.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdhuff.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jdhuff.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdinput.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jdinput.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdmainct.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jdmainct.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdmarker.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jdmarker.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdmaster.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jdmaster.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdmerge.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jdmerge.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdphuff.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jdphuff.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdpostct.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jdpostct.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdsample.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jdsample.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdtrans.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jdtrans.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jerror.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jerror.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jfdctfst.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jfdctfst.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jfdctint.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jfdctint.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jidctfst.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jidctfst.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jidctint.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jidctint.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jidctred.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jidctred.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jmemmgr.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jmemmgr.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jmemnobs.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jmemnobs.c
+build obj/third_party/pdfium/third_party/jpeg/fpdfapi_jutils.o: cc ../../../../../third_party/pdfium/third_party/libjpeg/fpdfapi_jutils.c
+
+build obj/third_party/pdfium/third_party/libjpeg.a: alink obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcapimin.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcapistd.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jccoefct.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jccolor.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcdctmgr.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jchuff.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcinit.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcmainct.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcmarker.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcmaster.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcomapi.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcparam.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcphuff.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcprepct.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jcsample.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jctrans.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdapimin.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdapistd.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdcoefct.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdcolor.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jddctmgr.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdhuff.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdinput.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdmainct.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdmarker.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdmaster.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdmerge.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdphuff.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdpostct.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdsample.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jdtrans.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jerror.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jfdctfst.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jfdctint.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jidctfst.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jidctint.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jidctred.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jmemmgr.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jmemnobs.o obj/third_party/pdfium/third_party/jpeg/fpdfapi_jutils.o
+  arflags =
+  output_extension = .a
+  output_dir = obj/third_party/pdfium/third_party

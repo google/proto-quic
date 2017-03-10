@@ -29,7 +29,6 @@
 #include "net/tools/quic/test_tools/quic_client_peer.h"
 #include "third_party/boringssl/src/include/openssl/x509.h"
 
-using base::StringPiece;
 using std::string;
 using testing::_;
 using testing::Invoke;
@@ -53,7 +52,7 @@ class RecordingProofVerifier : public ProofVerifier {
       const uint16_t port,
       const string& server_config,
       QuicVersion quic_version,
-      StringPiece chlo_hash,
+      QuicStringPiece chlo_hash,
       const std::vector<string>& certs,
       const string& cert_sct,
       const string& signature,
@@ -67,9 +66,9 @@ class RecordingProofVerifier : public ProofVerifier {
     }
 
     // Convert certs to X509Certificate.
-    std::vector<StringPiece> cert_pieces(certs.size());
+    std::vector<QuicStringPiece> cert_pieces(certs.size());
     for (unsigned i = 0; i < certs.size(); i++) {
-      cert_pieces[i] = StringPiece(certs[i]);
+      cert_pieces[i] = QuicStringPiece(certs[i]);
     }
     // TODO(rtenneti): Fix after adding support for real certs. Currently,
     // cert_pieces are "leaf" and "intermediate" and CreateFromDERCertChain
@@ -290,7 +289,7 @@ void QuicTestClient::SendRequestsAndWaitForResponses(
 
 ssize_t QuicTestClient::GetOrCreateStreamAndSendRequest(
     const SpdyHeaderBlock* headers,
-    StringPiece body,
+    QuicStringPiece body,
     bool fin,
     QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener) {
   if (headers) {
@@ -343,12 +342,12 @@ ssize_t QuicTestClient::GetOrCreateStreamAndSendRequest(
 }
 
 ssize_t QuicTestClient::SendMessage(const SpdyHeaderBlock& headers,
-                                    StringPiece body) {
+                                    QuicStringPiece body) {
   return SendMessage(headers, body, /*fin=*/true);
 }
 
 ssize_t QuicTestClient::SendMessage(const SpdyHeaderBlock& headers,
-                                    StringPiece body,
+                                    QuicStringPiece body,
                                     bool fin) {
   stream_ = nullptr;  // Always force creation of a stream for SendMessage.
   // Any response we might have received for a previous request would no longer
@@ -378,8 +377,8 @@ ssize_t QuicTestClient::SendData(
     const string& data,
     bool last_data,
     QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener) {
-  return GetOrCreateStreamAndSendRequest(nullptr, StringPiece(data), last_data,
-                                         std::move(ack_listener));
+  return GetOrCreateStreamAndSendRequest(nullptr, QuicStringPiece(data),
+                                         last_data, std::move(ack_listener));
 }
 
 bool QuicTestClient::response_complete() const {
@@ -683,7 +682,7 @@ void QuicTestClient::WaitForWriteToFlush() {
 
 QuicTestClient::TestClientDataToResend::TestClientDataToResend(
     std::unique_ptr<SpdyHeaderBlock> headers,
-    base::StringPiece body,
+    QuicStringPiece body,
     bool fin,
     QuicTestClient* test_client,
     QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener)

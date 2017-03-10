@@ -340,6 +340,58 @@ bool HasTLSFeatureExtension(base::StringPiece cert) {
   return false;
 }
 
+bool ExtractSignatureAlgorithmsFromDERCert(
+    base::StringPiece cert,
+    base::StringPiece* cert_signature_algorithm_sequence,
+    base::StringPiece* tbs_signature_algorithm_sequence) {
+  // From RFC 5280, section 4.1
+  //    Certificate  ::=  SEQUENCE  {
+  //      tbsCertificate       TBSCertificate,
+  //      signatureAlgorithm   AlgorithmIdentifier,
+  //      signatureValue       BIT STRING  }
+
+  // TBSCertificate  ::=  SEQUENCE  {
+  //      version         [0]  EXPLICIT Version DEFAULT v1,
+  //      serialNumber         CertificateSerialNumber,
+  //      signature            AlgorithmIdentifier,
+  //      issuer               Name,
+  //      validity             Validity,
+  //      subject              Name,
+  //      subjectPublicKeyInfo SubjectPublicKeyInfo,
+  //      ... }
+
+  der::Parser parser((der::Input(cert)));
+  der::Parser certificate;
+  if (!parser.ReadSequence(&certificate))
+    return false;
+
+  der::Parser tbs_certificate;
+  if (!certificate.ReadSequence(&tbs_certificate))
+    return false;
+
+  bool unused;
+  if (!tbs_certificate.SkipOptionalTag(
+          der::kTagConstructed | der::kTagContextSpecific | 0, &unused)) {
+    return false;
+  }
+
+  // serialNumber
+  if (!tbs_certificate.SkipTag(der::kInteger))
+    return false;
+  // signature
+  der::Input tbs_algorithm;
+  if (!tbs_certificate.ReadRawTLV(&tbs_algorithm))
+    return false;
+
+  der::Input cert_algorithm;
+  if (!certificate.ReadRawTLV(&cert_algorithm))
+    return false;
+
+  *cert_signature_algorithm_sequence = cert_algorithm.AsStringPiece();
+  *tbs_signature_algorithm_sequence = tbs_algorithm.AsStringPiece();
+  return true;
+}
+
 } // namespace asn1
 
 } // namespace net

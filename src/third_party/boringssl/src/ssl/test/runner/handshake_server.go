@@ -365,15 +365,6 @@ func (hs *serverHandshakeState) doTLS13Handshake() error {
 		versOverride:    config.Bugs.SendServerHelloVersion,
 		customExtension: config.Bugs.CustomUnencryptedExtension,
 		unencryptedALPN: config.Bugs.SendUnencryptedALPN,
-		shortHeader:     hs.clientHello.shortHeaderSupported && config.Bugs.EnableShortHeader,
-	}
-
-	if config.Bugs.AlwaysNegotiateShortHeader {
-		hs.hello.shortHeader = true
-	}
-
-	if hs.hello.shortHeader {
-		c.setShortHeader()
 	}
 
 	hs.hello.random = make([]byte, 32)
@@ -1025,7 +1016,6 @@ func (hs *serverHandshakeState) processClientHello() (isResume bool, err error) 
 		vers:              versionToWire(c.vers, c.isDTLS),
 		versOverride:      config.Bugs.SendServerHelloVersion,
 		compressionMethod: compressionNone,
-		shortHeader:       config.Bugs.AlwaysNegotiateShortHeader,
 	}
 
 	hs.hello.random = make([]byte, 32)
@@ -1163,6 +1153,10 @@ func (hs *serverHandshakeState) processClientExtensions(serverExtensions *server
 	}
 	if expected := c.config.Bugs.ExpectServerName; expected != "" && expected != hs.clientHello.serverName {
 		return errors.New("tls: unexpected server name")
+	}
+
+	if cert := config.Bugs.RenegotiationCertificate; c.cipherSuite != nil && cert != nil {
+		hs.cert = cert
 	}
 
 	if len(hs.clientHello.alpnProtocols) > 0 {

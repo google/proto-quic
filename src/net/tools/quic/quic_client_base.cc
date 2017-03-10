@@ -11,7 +11,6 @@
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 
-using base::StringPiece;
 using base::StringToInt;
 using std::string;
 
@@ -24,7 +23,7 @@ void QuicClientBase::ClientQuicDataToResend::Resend() {
 
 QuicClientBase::QuicDataToResend::QuicDataToResend(
     std::unique_ptr<SpdyHeaderBlock> headers,
-    StringPiece body,
+    QuicStringPiece body,
     bool fin)
     : headers_(std::move(headers)), body_(body), fin_(fin) {}
 
@@ -207,7 +206,7 @@ bool QuicClientBase::EncryptionBeingEstablished() {
 }
 
 void QuicClientBase::SendRequest(const SpdyHeaderBlock& headers,
-                                 StringPiece body,
+                                 QuicStringPiece body,
                                  bool fin) {
   QuicClientPushPromiseIndex::TryHandle* handle;
   QuicAsyncStatus rv = push_promise_index()->Try(headers, this, &handle);
@@ -232,7 +231,7 @@ void QuicClientBase::SendRequest(const SpdyHeaderBlock& headers,
 
 void QuicClientBase::SendRequestAndWaitForResponse(
     const SpdyHeaderBlock& headers,
-    StringPiece body,
+    QuicStringPiece body,
     bool fin) {
   SendRequest(headers, body, fin);
   while (WaitForEvents()) {
@@ -395,7 +394,7 @@ QuicConnectionId QuicClientBase::GenerateNewConnectionId() {
 }
 
 void QuicClientBase::MaybeAddDataToResend(const SpdyHeaderBlock& headers,
-                                          StringPiece body,
+                                          QuicStringPiece body,
                                           bool fin) {
   if (!FLAGS_quic_reloadable_flag_enable_quic_stateless_reject_support) {
     return;
@@ -437,7 +436,7 @@ void QuicClientBase::ResendSavedData() {
 }
 
 void QuicClientBase::AddPromiseDataToResend(const SpdyHeaderBlock& headers,
-                                            StringPiece body,
+                                            QuicStringPiece body,
                                             bool fin) {
   std::unique_ptr<SpdyHeaderBlock> new_headers(
       new SpdyHeaderBlock(headers.Clone()));

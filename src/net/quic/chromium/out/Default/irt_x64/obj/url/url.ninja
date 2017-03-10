@@ -1,0 +1,36 @@
+defines = -DURL_IMPLEMENTATION -DV8_DEPRECATION_WARNINGS -DENABLE_NOTIFICATIONS -DENABLE_PLUGINS=1 -DENABLE_PDF=1 -DENABLE_PRINTING=1 -DENABLE_BASIC_PRINTING=1 -DENABLE_PRINT_PREVIEW=1 -DENABLE_SPELLCHECK=1 -DUSE_OPENSSL_CERTS=1 -DNO_TCMALLOC -DENABLE_WEBRTC=1 -DENABLE_EXTENSIONS=1 -DENABLE_TASK_MANAGER=1 -DENABLE_THEMES=1 -DENABLE_CAPTIVE_PORTAL_DETECTION=1 -DENABLE_SESSION_SERVICE=1 -DENABLE_SUPERVISED_USERS=1 -DFULL_SAFE_BROWSING -DSAFE_BROWSING_CSD -DSAFE_BROWSING_DB_LOCAL -DCHROMIUM_BUILD -DENABLE_MEDIA_ROUTER=1 -DFIELDTRIAL_TESTING_ENABLED -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1 -DDYNAMIC_ANNOTATIONS_PREFIX=NACL_ -DU_USING_ICU_NAMESPACE=0 -DU_ENABLE_DYLOAD=0 -DU_NOEXCEPT= -DU_STATIC_IMPLEMENTATION -DICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_FILE
+include_dirs = -I../../../../.. -Iirt_x64/gen -I../../../../../third_party/icu/source/common -I../../../../../third_party/icu/source/i18n
+cflags = -fno-strict-aliasing -fcolor-diagnostics -integrated-as -m64 -march=x86-64 -fasynchronous-unwind-tables -fomit-frame-pointer -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-c++11-narrowing -Wno-covered-switch-default -Wno-deprecated-register -Wno-unneeded-internal-declaration -Wno-inconsistent-missing-override -Os -ffunction-sections -fdata-sections -g2 -fvisibility=hidden
+cflags_cc = -fno-threadsafe-statics -fvisibility-inlines-hidden -Wno-undefined-bool-conversion -Wno-tautological-undefined-compare -std=gnu++11 -fno-rtti -fno-exceptions
+label_name = url
+root_out_dir = irt_x64
+target_out_dir = irt_x64/obj/url
+target_output_name = liburl
+
+build irt_x64/obj/url/url.inputdeps.stamp: irt_x64_stamp irt_x64/obj/base/build_date.stamp irt_x64/obj/base/debugging_flags.stamp irt_x64/obj/base/allocator/features.stamp ./tls_edit irt_x64/obj/third_party/icu/icudata.stamp
+build irt_x64/obj/url/url/gurl.o: irt_x64_cxx ../../../../../url/gurl.cc || irt_x64/obj/url/url.inputdeps.stamp
+build irt_x64/obj/url/url/origin.o: irt_x64_cxx ../../../../../url/origin.cc || irt_x64/obj/url/url.inputdeps.stamp
+build irt_x64/obj/url/url/scheme_host_port.o: irt_x64_cxx ../../../../../url/scheme_host_port.cc || irt_x64/obj/url/url.inputdeps.stamp
+build irt_x64/obj/url/url/url_parse.o: irt_x64_cxx ../../../../../url/third_party/mozilla/url_parse.cc || irt_x64/obj/url/url.inputdeps.stamp
+build irt_x64/obj/url/url/url_canon_etc.o: irt_x64_cxx ../../../../../url/url_canon_etc.cc || irt_x64/obj/url/url.inputdeps.stamp
+build irt_x64/obj/url/url/url_canon_filesystemurl.o: irt_x64_cxx ../../../../../url/url_canon_filesystemurl.cc || irt_x64/obj/url/url.inputdeps.stamp
+build irt_x64/obj/url/url/url_canon_fileurl.o: irt_x64_cxx ../../../../../url/url_canon_fileurl.cc || irt_x64/obj/url/url.inputdeps.stamp
+build irt_x64/obj/url/url/url_canon_host.o: irt_x64_cxx ../../../../../url/url_canon_host.cc || irt_x64/obj/url/url.inputdeps.stamp
+build irt_x64/obj/url/url/url_canon_internal.o: irt_x64_cxx ../../../../../url/url_canon_internal.cc || irt_x64/obj/url/url.inputdeps.stamp
+build irt_x64/obj/url/url/url_canon_ip.o: irt_x64_cxx ../../../../../url/url_canon_ip.cc || irt_x64/obj/url/url.inputdeps.stamp
+build irt_x64/obj/url/url/url_canon_mailtourl.o: irt_x64_cxx ../../../../../url/url_canon_mailtourl.cc || irt_x64/obj/url/url.inputdeps.stamp
+build irt_x64/obj/url/url/url_canon_path.o: irt_x64_cxx ../../../../../url/url_canon_path.cc || irt_x64/obj/url/url.inputdeps.stamp
+build irt_x64/obj/url/url/url_canon_pathurl.o: irt_x64_cxx ../../../../../url/url_canon_pathurl.cc || irt_x64/obj/url/url.inputdeps.stamp
+build irt_x64/obj/url/url/url_canon_query.o: irt_x64_cxx ../../../../../url/url_canon_query.cc || irt_x64/obj/url/url.inputdeps.stamp
+build irt_x64/obj/url/url/url_canon_relative.o: irt_x64_cxx ../../../../../url/url_canon_relative.cc || irt_x64/obj/url/url.inputdeps.stamp
+build irt_x64/obj/url/url/url_canon_stdstring.o: irt_x64_cxx ../../../../../url/url_canon_stdstring.cc || irt_x64/obj/url/url.inputdeps.stamp
+build irt_x64/obj/url/url/url_canon_stdurl.o: irt_x64_cxx ../../../../../url/url_canon_stdurl.cc || irt_x64/obj/url/url.inputdeps.stamp
+build irt_x64/obj/url/url/url_constants.o: irt_x64_cxx ../../../../../url/url_constants.cc || irt_x64/obj/url/url.inputdeps.stamp
+build irt_x64/obj/url/url/url_parse_file.o: irt_x64_cxx ../../../../../url/url_parse_file.cc || irt_x64/obj/url/url.inputdeps.stamp
+build irt_x64/obj/url/url/url_util.o: irt_x64_cxx ../../../../../url/url_util.cc || irt_x64/obj/url/url.inputdeps.stamp
+build irt_x64/obj/url/url/url_canon_icu.o: irt_x64_cxx ../../../../../url/url_canon_icu.cc || irt_x64/obj/url/url.inputdeps.stamp
+
+build irt_x64/obj/url/liburl.a: irt_x64_alink irt_x64/obj/url/url/gurl.o irt_x64/obj/url/url/origin.o irt_x64/obj/url/url/scheme_host_port.o irt_x64/obj/url/url/url_parse.o irt_x64/obj/url/url/url_canon_etc.o irt_x64/obj/url/url/url_canon_filesystemurl.o irt_x64/obj/url/url/url_canon_fileurl.o irt_x64/obj/url/url/url_canon_host.o irt_x64/obj/url/url/url_canon_internal.o irt_x64/obj/url/url/url_canon_ip.o irt_x64/obj/url/url/url_canon_mailtourl.o irt_x64/obj/url/url/url_canon_path.o irt_x64/obj/url/url/url_canon_pathurl.o irt_x64/obj/url/url/url_canon_query.o irt_x64/obj/url/url/url_canon_relative.o irt_x64/obj/url/url/url_canon_stdstring.o irt_x64/obj/url/url/url_canon_stdurl.o irt_x64/obj/url/url/url_constants.o irt_x64/obj/url/url/url_parse_file.o irt_x64/obj/url/url/url_util.o irt_x64/obj/url/url/url_canon_icu.o || irt_x64/obj/base/libbase.a irt_x64/obj/base/third_party/dynamic_annotations/dynamic_annotations.stamp irt_x64/obj/third_party/icu/icu.stamp irt_x64/obj/build/config/sanitizers/deps.stamp irt_x64/obj/base/libbase_static.a irt_x64/obj/third_party/modp_b64/libmodp_b64.a irt_x64/obj/third_party/icu/libicui18n.a irt_x64/obj/third_party/icu/libicuuc.a
+  arflags =
+  output_extension = .a
+  output_dir = irt_x64/obj/url

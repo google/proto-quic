@@ -53,7 +53,7 @@
 #       unique, since this can cause files from multiple grit targets to
 #       overwrite each other.
 #
-#   output_name (optiona)
+#   output_name (optional)
 #       Provide an alternate base name for the generated files, like the .d
 #       files. Normally these are based on the target name and go in the
 #       output_dir, but if multiple targets with the same name end up in
@@ -64,7 +64,7 @@
 #       Defaults to output_dir
 #
 #   use_qualified_include (optional)
-#       If set, output_dir is not added to include_dirs.
+#       If set to false, output_dir is added to include_dirs.
 #
 #   configs (optional)
 #       List of additional configs to be applied to the generated target.
@@ -351,7 +351,7 @@ template("grit") {
   # (like "mycomponent/foo.h"). This config sets up the include path.
   grit_config = target_name + "_grit_config"
   config(grit_config) {
-    if (!defined(invoker.use_qualified_include) ||
+    if (defined(invoker.use_qualified_include) &&
         !invoker.use_qualified_include) {
       include_dirs = [ output_dir ]
     }

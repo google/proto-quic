@@ -7,7 +7,6 @@
 #include "net/quic/core/quic_data_writer.h"
 #include "net/quic/core/quic_utils.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -17,18 +16,18 @@ const size_t kHashSizeShort = 12;  // size of uint128 serialized short
 NullEncrypter::NullEncrypter(Perspective perspective)
     : perspective_(perspective) {}
 
-bool NullEncrypter::SetKey(StringPiece key) {
+bool NullEncrypter::SetKey(QuicStringPiece key) {
   return key.empty();
 }
 
-bool NullEncrypter::SetNoncePrefix(StringPiece nonce_prefix) {
+bool NullEncrypter::SetNoncePrefix(QuicStringPiece nonce_prefix) {
   return nonce_prefix.empty();
 }
 
 bool NullEncrypter::EncryptPacket(QuicVersion version,
                                   QuicPacketNumber /*packet_number*/,
-                                  StringPiece associated_data,
-                                  StringPiece plaintext,
+                                  QuicStringPiece associated_data,
+                                  QuicStringPiece plaintext,
                                   char* output,
                                   size_t* output_length,
                                   size_t max_output_length) {
@@ -73,12 +72,12 @@ size_t NullEncrypter::GetCiphertextSize(size_t plaintext_size) const {
   return plaintext_size + GetHashLength();
 }
 
-StringPiece NullEncrypter::GetKey() const {
-  return StringPiece();
+QuicStringPiece NullEncrypter::GetKey() const {
+  return QuicStringPiece();
 }
 
-StringPiece NullEncrypter::GetNoncePrefix() const {
-  return StringPiece();
+QuicStringPiece NullEncrypter::GetNoncePrefix() const {
+  return QuicStringPiece();
 }
 
 size_t NullEncrypter::GetHashLength() const {

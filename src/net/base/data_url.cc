@@ -72,6 +72,8 @@ bool DataURL::Parse(const GURL& url, std::string* mime_type,
     // specified in RFC2045. As specified in RFC2397, we use |charset| even if
     // |mime_type| is empty.
     mime_type->assign("text/plain");
+    if (charset->empty())
+      charset->assign("US-ASCII");
   } else if (!ParseMimeTypeWithoutParameter(*mime_type, NULL, NULL)) {
     // Fallback to the default as recommended in RFC2045 when the mediatype
     // value is invalid. For this case, we don't respect |charset| but force it
@@ -79,8 +81,6 @@ bool DataURL::Parse(const GURL& url, std::string* mime_type,
     mime_type->assign("text/plain");
     charset->assign("US-ASCII");
   }
-  if (charset->empty())
-    charset->assign("US-ASCII");
 
   // The caller may not be interested in receiving the data.
   if (!data)

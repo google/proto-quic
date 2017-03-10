@@ -104,10 +104,59 @@ def MaybeUpload(args, archive_name, platform):
     exit_code = RunGsutil(gsutil_args)
     if exit_code != 0:
       print "gsutil failed, exit_code: %s" % exit_code
-      os.exit(exit_code)
+      sys.exit(exit_code)
   else:
     print 'To upload, run:'
     print ('gsutil %s' % ' '.join(gsutil_args))
+
+
+def UploadPDBToSymbolServer():
+  assert sys.platform == 'win32'
+  # Upload PDB and binary to the symbol server on Windows.  Put them into the
+  # chromium-browser-symsrv bucket, since chrome devs have that in their
+  # _NT_SYMBOL_PATH already. Executable and PDB must be at paths following a
+  # certain pattern for the Microsoft debuggers to be able to load them.
+  # Executable:
+  #  chromium-browser-symsrv/clang-cl.exe/ABCDEFAB01234/clang-cl.ex_
+  #    ABCDEFAB is the executable's timestamp in %08X format, 01234 is the
+  #    executable's image size in %x format. tools/symsrc/img_fingerprint.py
+  #    can compute this ABCDEFAB01234 string for us, so use that.
+  #    The .ex_ instead of .exe at the end means that the file is compressed.
+  # PDB:
+  # gs://chromium-browser-symsrv/clang-cl.exe.pdb/AABBCCDD/clang-cl.dll.pd_
+  #   AABBCCDD here is computed from the output of
+  #      dumpbin /all mybinary.exe | find "Format: RSDS"
+  #   but tools/symsrc/pdb_fingerprint_from_img.py can compute it already, so
+  #   again just use that.
+  sys.path.insert(0, os.path.join(CHROMIUM_DIR, 'tools', 'symsrc'))
+  import img_fingerprint, pdb_fingerprint_from_img
+
+  binaries = [ 'bin/clang-cl.exe', 'bin/lld-link.exe' ]
+  for binary_path in binaries:
+    binary_path = os.path.join(LLVM_RELEASE_DIR, binary_path)
+    binary_id = img_fingerprint.GetImgFingerprint(binary_path)
+    (pdb_id, pdb_path) = pdb_fingerprint_from_img.GetPDBInfoFromImg(binary_path)
+
+    # The build process builds clang.exe and then copies it to clang-cl.exe
+    # (both are the same binary and they behave differently on what their
+    # filename is).  Hence, the pdb is at clang.pdb, not at clang-cl.pdb.
+    # Likewise, lld-link.exe's PDB file is called lld.pdb.
+
+    # Compress and upload.
+    for f, f_id in ((binary_path, binary_id), (pdb_path, pdb_id)):
+      subprocess.check_call(
+          ['makecab', '/D', 'CompressionType=LZX', '/D', 'CompressionMemory=21',
+           f, '/L', os.path.dirname(f)], stdout=open(os.devnull, 'w'))
+      f_cab = f[:-1] + '_'
+
+      dest = '%s/%s/%s' % (os.path.basename(f), f_id, os.path.basename(f_cab))
+      print 'Uploading %s to Google Cloud Storage...' % dest
+      gsutil_args = ['cp', '-n', '-a', 'public-read', f_cab,
+                     'gs://chromium-browser-symsrv/' + dest]
+      exit_code = RunGsutil(gsutil_args)
+      if exit_code != 0:
+        print "gsutil failed, exit_code: %s" % exit_code
+        sys.exit(exit_code)
 
 
 def main():
@@ -301,6 +350,9 @@ def main():
     tar.add(os.path.join(objdumpdir, 'bin'), arcname='bin',
             filter=PrintTarProgress)
   MaybeUpload(args, objdumpdir, platform)
+
+  if sys.platform == 'win32' and args.upload:
+    UploadPDBToSymbolServer()
 
   # FIXME: Warn if the file already exists on the server.
 

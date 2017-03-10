@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium Authors. All rights reserved.
+// Copyright 2017 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -9,15 +9,21 @@ import android.content.ComponentCallbacks;
 import android.content.ComponentCallbacks2;
 import android.content.Context;
 import android.content.res.Configuration;
+import android.support.test.InstrumentationRegistry;
 import android.support.test.filters.SmallTest;
-import android.test.InstrumentationTestCase;
 
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import org.chromium.base.test.BaseJUnit4ClassRunner;
 import org.chromium.base.test.util.AdvancedMockContext;
 
 /**
  * Tests for {@link org.chromium.base.test.util.AdvancedMockContext}.
  */
-public class AdvancedMockContextTest extends InstrumentationTestCase {
+@RunWith(BaseJUnit4ClassRunner.class)
+public class AdvancedMockContextTest {
     private static class Callback1 implements ComponentCallbacks {
         protected Configuration mConfiguration;
         protected boolean mOnLowMemoryCalled;
@@ -42,9 +48,10 @@ public class AdvancedMockContextTest extends InstrumentationTestCase {
         }
     }
 
+    @Test
     @SmallTest
     public void testComponentCallbacksForTargetContext() {
-        Context targetContext = getInstrumentation().getTargetContext();
+        Context targetContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
         Application targetApplication = (Application) targetContext.getApplicationContext();
         AdvancedMockContext context = new AdvancedMockContext(targetContext);
         Callback1 callback1 = new Callback1();
@@ -53,18 +60,18 @@ public class AdvancedMockContextTest extends InstrumentationTestCase {
         context.registerComponentCallbacks(callback2);
 
         targetApplication.onLowMemory();
-        assertTrue("onLowMemory should have been called.", callback1.mOnLowMemoryCalled);
-        assertTrue("onLowMemory should have been called.", callback2.mOnLowMemoryCalled);
+        Assert.assertTrue("onLowMemory should have been called.", callback1.mOnLowMemoryCalled);
+        Assert.assertTrue("onLowMemory should have been called.", callback2.mOnLowMemoryCalled);
 
         Configuration configuration = new Configuration();
         targetApplication.onConfigurationChanged(configuration);
-        assertEquals("onConfigurationChanged should have been called.", configuration,
+        Assert.assertEquals("onConfigurationChanged should have been called.", configuration,
                 callback1.mConfiguration);
-        assertEquals("onConfigurationChanged should have been called.", configuration,
+        Assert.assertEquals("onConfigurationChanged should have been called.", configuration,
                 callback2.mConfiguration);
 
         targetApplication.onTrimMemory(ComponentCallbacks2.TRIM_MEMORY_MODERATE);
-        assertEquals("onTrimMemory should have been called.", ComponentCallbacks2
-                .TRIM_MEMORY_MODERATE, callback2.mLevel);
+        Assert.assertEquals("onTrimMemory should have been called.",
+                ComponentCallbacks2.TRIM_MEMORY_MODERATE, callback2.mLevel);
     }
 }

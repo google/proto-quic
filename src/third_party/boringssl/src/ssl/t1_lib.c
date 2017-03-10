@@ -1901,7 +1901,7 @@ static int ext_pre_shared_key_add_clienthello(SSL_HANDSHAKE *hs, CBB *out) {
     return 1;
   }
 
-  struct timeval now;
+  struct OPENSSL_timeval now;
   ssl_get_current_time(ssl, &now);
   uint32_t ticket_age = 1000 * (now.tv_sec - ssl->session->time);
   uint32_t obfuscated_ticket_age = ticket_age + ssl->session->ticket_age_add;
@@ -1957,18 +1957,15 @@ int ssl_ext_pre_shared_key_parse_serverhello(SSL_HANDSHAKE *hs,
   return 1;
 }
 
-int ssl_ext_pre_shared_key_parse_clienthello(SSL_HANDSHAKE *hs,
-                                             SSL_SESSION **out_session,
-                                             CBS *out_binders,
-                                             uint8_t *out_alert,
-                                             CBS *contents) {
+int ssl_ext_pre_shared_key_parse_clienthello(
+    SSL_HANDSHAKE *hs, SSL_SESSION **out_session, CBS *out_binders,
+    uint32_t *out_obfuscated_ticket_age, uint8_t *out_alert, CBS *contents) {
   SSL *const ssl = hs->ssl;
   /* We only process the first PSK identity since we don't support pure PSK. */
-  uint32_t obfuscated_ticket_age;
   CBS identities, ticket, binders;
   if (!CBS_get_u16_length_prefixed(contents, &identities) ||
       !CBS_get_u16_length_prefixed(&identities, &ticket) ||
-      !CBS_get_u32(&identities, &obfuscated_ticket_age) ||
+      !CBS_get_u32(&identities, out_obfuscated_ticket_age) ||
       !CBS_get_u16_length_prefixed(contents, &binders) ||
       CBS_len(&binders) == 0 ||
       CBS_len(contents) != 0) {
@@ -2403,46 +2400,6 @@ static int ext_cookie_add_clienthello(SSL_HANDSHAKE *hs, CBB *out) {
 }
 
 
-/* Short record headers
- *
- * This is a non-standard extension which negotiates
- * https://github.com/tlswg/tls13-spec/pull/762 for experimenting. */
-
-static int ext_short_header_add_clienthello(SSL_HANDSHAKE *hs, CBB *out) {
-  SSL *const ssl = hs->ssl;
-  uint16_t min_version, max_version;
-  if (!ssl_get_version_range(ssl, &min_version, &max_version)) {
-    return 0;
-  }
-
-  if (max_version < TLS1_3_VERSION ||
-      !ssl->ctx->short_header_enabled) {
-    return 1;
-  }
-
-  return CBB_add_u16(out, TLSEXT_TYPE_short_header) &&
-         CBB_add_u16(out, 0 /* empty extension */);
-}
-
-static int ext_short_header_parse_clienthello(SSL_HANDSHAKE *hs,
-                                              uint8_t *out_alert,
-                                              CBS *contents) {
-  SSL *const ssl = hs->ssl;
-  if (contents == NULL ||
-      !ssl->ctx->short_header_enabled ||
-      ssl3_protocol_version(ssl) < TLS1_3_VERSION) {
-    return 1;
-  }
-
-  if (CBS_len(contents) != 0) {
-    return 0;
-  }
-
-  ssl->s3->short_header = 1;
-  return 1;
-}
-
-
 /* Negotiated Groups
  *
  * https://tools.ietf.org/html/rfc4492#section-5.1.2
@@ -2671,14 +2628,6 @@ static const struct tls_extension kExtensions[] = {
     ext_cookie_add_clienthello,
     forbid_parse_serverhello,
     ignore_parse_clienthello,
-    dont_add_serverhello,
-  },
-  {
-    TLSEXT_TYPE_short_header,
-    NULL,
-    ext_short_header_add_clienthello,
-    forbid_parse_serverhello,
-    ext_short_header_parse_clienthello,
     dont_add_serverhello,
   },
   /* The final extension must be non-empty. WebSphere Application Server 7.0 is

@@ -8,10 +8,10 @@
 #include <string>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/quic/core/crypto/strike_register.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -42,12 +42,12 @@ class QUIC_EXPORT_PRIVATE StrikeRegisterClient {
   virtual ~StrikeRegisterClient() {}
 
   // Returns true iff the strike register knows about the given orbit.
-  virtual bool IsKnownOrbit(base::StringPiece orbit) const = 0;
+  virtual bool IsKnownOrbit(QuicStringPiece orbit) const = 0;
   // Validate a nonce for freshness and uniqueness.
   // Will invoke cb->Run(ValidateResponse::nonce_is_valid_and_unique(),
   //                     ValidateResponse::nonce_error())
   // once the asynchronous operation is complete.
-  virtual void VerifyNonceIsValidAndUnique(base::StringPiece nonce,
+  virtual void VerifyNonceIsValidAndUnique(QuicStringPiece nonce,
                                            QuicWallTime now,
                                            ResultCallback* cb) = 0;
 

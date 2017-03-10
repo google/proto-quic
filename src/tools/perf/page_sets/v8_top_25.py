@@ -41,7 +41,7 @@ urls_list = [
     'http://www.msn.com/ar-ae',
     'http://www.bing.com/search?q=v8+engine',
     'http://www.pinterest.com/categories/popular',
-    'http://www.sina.com.cn',
+    # 'http://www.sina.com.cn', http://crbug.com/699579
     'http://weibo.com',
     'http://yandex.ru/search/?text=v8',
     'http://www.wikiwand.com/en/hill',

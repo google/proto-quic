@@ -22,6 +22,7 @@ _SRC_PATH = os.path.abspath(os.path.join(
 sys.path.append(os.path.join(_SRC_PATH, 'third_party', 'catapult', 'devil'))
 from devil.android import device_errors
 from devil.android import device_utils
+from devil.android import flag_changer
 from devil.android.perf import cache_control
 from devil.android.sdk import intent
 
@@ -36,7 +37,7 @@ import device_setup
 # Local build of Chrome (not Chromium).
 _CHROME_PACKAGE = 'com.google.android.apps.chrome'
 _COMMAND_LINE_FILE = 'chrome-command-line'
-_TEST_APP_PACKAGE_NAME = 'org.chromium.customtabsclient.test'
+_TEST_APP_PACKAGE_NAME = 'org.chromium.customtabs.test'
 _INVALID_VALUE = -1
 
 
@@ -70,7 +71,8 @@ def RunOnce(device, url, warmup, speculation_mode, delay_to_may_launch_url,
   logcat_timeout = int(timeout_s + delay_to_may_launch_url / 1000.
                        + delay_to_launch_url / 1000.) + 3;
 
-  with device_setup.FlagReplacer(device, _COMMAND_LINE_FILE, chrome_args):
+  with flag_changer.CustomCommandLineFlags(
+      device, _COMMAND_LINE_FILE, chrome_args):
     launch_intent = intent.Intent(
         action='android.intent.action.MAIN',
         package=_TEST_APP_PACKAGE_NAME,

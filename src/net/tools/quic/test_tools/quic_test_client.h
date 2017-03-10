@@ -14,10 +14,9 @@
 #include "net/quic/core/quic_framer.h"
 #include "net/quic/core/quic_packet_creator.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/tools/quic/quic_client.h"
 #include "testing/gmock/include/gmock/gmock.h"
-
-using base::StringPiece;
 
 namespace net {
 
@@ -117,12 +116,12 @@ class QuicTestClient : public QuicSpdyStream::Visitor,
       const std::vector<std::string>& url_list);
   // Sends a request containing |headers| and |body| and returns the number of
   // bytes sent (the size of the serialized request headers and body).
-  ssize_t SendMessage(const SpdyHeaderBlock& headers, base::StringPiece body);
+  ssize_t SendMessage(const SpdyHeaderBlock& headers, QuicStringPiece body);
   // Sends a request containing |headers| and |body| with the fin bit set to
   // |fin| and returns the number of bytes sent (the size of the serialized
   // request headers and body).
   ssize_t SendMessage(const SpdyHeaderBlock& headers,
-                      base::StringPiece body,
+                      QuicStringPiece body,
                       bool fin);
   // Sends a request containing |headers| and |body|, waits for the response,
   // and returns the response body.
@@ -208,7 +207,7 @@ class QuicTestClient : public QuicSpdyStream::Visitor,
   // null, only the body will be sent on the stream.
   ssize_t GetOrCreateStreamAndSendRequest(
       const SpdyHeaderBlock* headers,
-      base::StringPiece body,
+      QuicStringPiece body,
       bool fin,
       QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
 
@@ -271,7 +270,7 @@ class QuicTestClient : public QuicSpdyStream::Visitor,
    public:
     TestClientDataToResend(
         std::unique_ptr<SpdyHeaderBlock> headers,
-        base::StringPiece body,
+        QuicStringPiece body,
         bool fin,
         QuicTestClient* test_client,
         QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);

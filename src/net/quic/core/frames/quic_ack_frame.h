@@ -8,7 +8,6 @@
 #include <ostream>
 #include <string>
 
-#include "base/strings/string_piece.h"
 #include "net/quic/core/quic_types.h"
 #include "net/quic/platform/api/quic_containers.h"
 #include "net/quic/platform/api/quic_export.h"

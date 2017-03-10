@@ -4,8 +4,9 @@
 
 from telemetry import benchmark
 from telemetry.testing import tab_test_case
-from telemetry.timeline import trace_data
 from telemetry.timeline import tracing_config
+from tracing.trace_data import trace_data
+
 
 def GetSyncEvents(trace_part):
   return [x for x in trace_part if x['ph'] == 'c']

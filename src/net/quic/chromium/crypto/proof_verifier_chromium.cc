@@ -27,7 +27,6 @@
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/ssl/ssl_config_service.h"
 
-using base::StringPiece;
 using base::StringPrintf;
 using std::string;
 
@@ -69,7 +68,7 @@ class ProofVerifierChromium::Job {
       const uint16_t port,
       const std::string& server_config,
       QuicVersion quic_version,
-      base::StringPiece chlo_hash,
+      QuicStringPiece chlo_hash,
       const std::vector<std::string>& certs,
       const std::string& cert_sct,
       const std::string& signature,
@@ -114,7 +113,7 @@ class ProofVerifierChromium::Job {
 
   bool VerifySignature(const std::string& signed_data,
                        QuicVersion quic_version,
-                       StringPiece chlo_hash,
+                       QuicStringPiece chlo_hash,
                        const std::string& signature,
                        const std::string& cert);
 
@@ -200,7 +199,7 @@ QuicAsyncStatus ProofVerifierChromium::Job::VerifyProof(
     const uint16_t port,
     const string& server_config,
     QuicVersion quic_version,
-    StringPiece chlo_hash,
+    QuicStringPiece chlo_hash,
     const std::vector<string>& certs,
     const std::string& cert_sct,
     const string& signature,
@@ -292,9 +291,9 @@ bool ProofVerifierChromium::Job::GetX509Certificate(
   }
 
   // Convert certs to X509Certificate.
-  std::vector<StringPiece> cert_pieces(certs.size());
+  std::vector<QuicStringPiece> cert_pieces(certs.size());
   for (unsigned i = 0; i < certs.size(); i++) {
-    cert_pieces[i] = base::StringPiece(certs[i]);
+    cert_pieces[i] = QuicStringPiece(certs[i]);
   }
   cert_ = X509Certificate::CreateFromDERCertChain(cert_pieces);
   if (!cert_.get()) {
@@ -472,10 +471,10 @@ int ProofVerifierChromium::Job::DoVerifyCertComplete(int result) {
 
 bool ProofVerifierChromium::Job::VerifySignature(const string& signed_data,
                                                  QuicVersion quic_version,
-                                                 StringPiece chlo_hash,
+                                                 QuicStringPiece chlo_hash,
                                                  const string& signature,
                                                  const string& cert) {
-  StringPiece spki;
+  QuicStringPiece spki;
   if (!asn1::ExtractSPKIFromDERCert(cert, &spki)) {
     DLOG(WARNING) << "ExtractSPKIFromDERCert failed";
     return false;
@@ -556,7 +555,7 @@ QuicAsyncStatus ProofVerifierChromium::VerifyProof(
     const uint16_t port,
     const std::string& server_config,
     QuicVersion quic_version,
-    base::StringPiece chlo_hash,
+    QuicStringPiece chlo_hash,
     const std::vector<std::string>& certs,
     const std::string& cert_sct,
     const std::string& signature,

@@ -6,7 +6,6 @@
 
 #include <string>
 
-#include "base/strings/string_piece.h"
 #include "net/quic/core/crypto/crypto_handshake.h"
 #include "net/quic/core/crypto/crypto_utils.h"
 #include "net/quic/core/quic_connection.h"
@@ -16,7 +15,6 @@
 #include "net/quic/platform/api/quic_logging.h"
 
 using std::string;
-using base::StringPiece;
 
 namespace net {
 
@@ -64,7 +62,7 @@ void QuicCryptoStream::OnDataAvailable() {
       // No more data to read.
       break;
     }
-    StringPiece data(static_cast<char*>(iov.iov_base), iov.iov_len);
+    QuicStringPiece data(static_cast<char*>(iov.iov_base), iov.iov_len);
     if (!crypto_framer_.ProcessInput(data)) {
       CloseConnectionWithDetails(crypto_framer_.error(),
                                  crypto_framer_.error_detail());
@@ -87,11 +85,12 @@ void QuicCryptoStream::SendHandshakeMessage(
   session()->connection()->NeuterUnencryptedPackets();
   session()->OnCryptoHandshakeMessageSent(message);
   const QuicData& data = message.GetSerialized();
-  WriteOrBufferData(StringPiece(data.data(), data.length()), false, nullptr);
+  WriteOrBufferData(QuicStringPiece(data.data(), data.length()), false,
+                    nullptr);
 }
 
-bool QuicCryptoStream::ExportKeyingMaterial(StringPiece label,
-                                            StringPiece context,
+bool QuicCryptoStream::ExportKeyingMaterial(QuicStringPiece label,
+                                            QuicStringPiece context,
                                             size_t result_len,
                                             string* result) const {
   if (!handshake_confirmed()) {

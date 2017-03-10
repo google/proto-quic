@@ -152,8 +152,7 @@ TEST_F(WriteToFileNetLogObserverTest, GeneratesValidJSONWithMultipleEvents) {
 
 TEST_F(WriteToFileNetLogObserverTest, CustomConstants) {
   const char kConstantString[] = "awesome constant";
-  std::unique_ptr<base::Value> constants(
-      new base::StringValue(kConstantString));
+  std::unique_ptr<base::Value> constants(new base::Value(kConstantString));
   base::ScopedFILE file(base::OpenFile(log_path_, "w"));
   ASSERT_TRUE(file);
   std::unique_ptr<WriteToFileNetLogObserver> logger(

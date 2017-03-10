@@ -31,7 +31,7 @@ class JSONParserTest;
 // to be used directly; it encapsulates logic that need not be exposed publicly.
 //
 // This parser guarantees O(n) time through the input string. It also optimizes
-// base::StringValue by using StringPiece where possible when returning Value
+// base::Value by using StringPiece where possible when returning Value
 // objects by using "hidden roots," discussed in the implementation.
 //
 // Iteration happens on the byte level, with the functions CanConsume and

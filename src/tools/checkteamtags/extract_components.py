@@ -153,13 +153,17 @@ Examples:
                     help='Print complete coverage statistic')
   parser.add_option('-s', '--stat_coverage', type="int",
                     help='Specify directory depth to display coverage stats')
+  parser.add_option('--include-subdirs', action='store_true', default=False,
+                    help='List subdirectories without OWNERS file or component '
+                    'tag as having same component as parent')
   options, args = parser.parse_args(argv[1:])
   if args:
     root = args[0]
   else:
     root = _DEFAULT_SRC_LOCATION
 
-  mappings, warnings, errors, stats = aggregate_components_from_owners(root)
+  mappings, warnings, errors, stats = aggregate_components_from_owners(
+      root, include_subdirs=options.include_subdirs)
   if options.verbose:
     for w in warnings:
       print w

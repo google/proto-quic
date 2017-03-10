@@ -6,7 +6,6 @@
 
 #include "net/quic/core/crypto/crypto_protocol.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -23,7 +22,7 @@ LocalStrikeRegisterClient::LocalStrikeRegisterClient(
                        orbit,
                        startup) {}
 
-bool LocalStrikeRegisterClient::IsKnownOrbit(StringPiece orbit) const {
+bool LocalStrikeRegisterClient::IsKnownOrbit(QuicStringPiece orbit) const {
   QuicWriterMutexLock lock(&m_);
   if (orbit.length() != kOrbitSize) {
     return false;
@@ -32,7 +31,7 @@ bool LocalStrikeRegisterClient::IsKnownOrbit(StringPiece orbit) const {
 }
 
 void LocalStrikeRegisterClient::VerifyNonceIsValidAndUnique(
-    StringPiece nonce,
+    QuicStringPiece nonce,
     QuicWallTime now,
     ResultCallback* cb) {
   InsertStatus nonce_error;

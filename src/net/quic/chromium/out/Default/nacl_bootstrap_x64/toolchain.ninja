@@ -1,0 +1,66 @@
+rule nacl_bootstrap_x64_cc
+  command = ../../../../../third_party/llvm-build/Release+Asserts/bin/clang -MMD -MF ${out}.d ${defines} ${include_dirs} ${cflags} ${cflags_c} -c ${in} -o ${out}
+  description = CC ${out}
+  depfile = ${out}.d
+  deps = gcc
+rule nacl_bootstrap_x64_cxx
+  command = ../../../../../third_party/llvm-build/Release+Asserts/bin/clang++ -MMD -MF ${out}.d ${defines} ${include_dirs} ${cflags} ${cflags_cc} -c ${in} -o ${out}
+  description = CXX ${out}
+  depfile = ${out}.d
+  deps = gcc
+rule nacl_bootstrap_x64_asm
+  command = ../../../../../third_party/llvm-build/Release+Asserts/bin/clang -MMD -MF ${out}.d ${defines} ${include_dirs} ${asmflags} -c ${in} -o ${out}
+  description = ASM ${out}
+  depfile = ${out}.d
+  deps = gcc
+rule nacl_bootstrap_x64_alink
+  command = python "../../../../../build/toolchain/gcc_ar_wrapper.py" --output=${out} --ar="ar" ${arflags} rcsD @"${out}.rsp"
+  description = AR ${out}
+  rspfile = ${out}.rsp
+  rspfile_content = ${in}
+rule nacl_bootstrap_x64_solink
+  command = python "/usr/local/google/home/jokulik/chromium/src/build/toolchain/gcc_solink_wrapper.py" --readelf="readelf" --nm="nm"  --sofile="${output_dir}/${target_output_name}${output_extension}" --tocfile="${output_dir}/${target_output_name}${output_extension}.TOC" --output="${output_dir}/${target_output_name}${output_extension}" -- ../../../../../third_party/llvm-build/Release+Asserts/bin/clang++ -shared ${ldflags} -o "${output_dir}/${target_output_name}${output_extension}" -Wl,-soname="${target_output_name}${output_extension}" @"${output_dir}/${target_output_name}${output_extension}.rsp"
+  description = SOLINK ${output_dir}/${target_output_name}${output_extension}
+  rspfile = ${output_dir}/${target_output_name}${output_extension}.rsp
+  rspfile_content = -Wl,--whole-archive ${in} ${solibs} -Wl,--no-whole-archive  ${libs} 
+  pool = build_toolchain_link_pool
+  restat = 1
+rule nacl_bootstrap_x64_solink_module
+  command = ../../../../../third_party/llvm-build/Release+Asserts/bin/clang++ -shared ${ldflags} -o "${output_dir}/${target_output_name}${output_extension}" -Wl,-soname="${target_output_name}${output_extension}" @"${output_dir}/${target_output_name}${output_extension}.rsp"
+  description = SOLINK_MODULE ${output_dir}/${target_output_name}${output_extension}
+  rspfile = ${output_dir}/${target_output_name}${output_extension}.rsp
+  rspfile_content = -Wl,--whole-archive ${in} ${solibs} -Wl,--no-whole-archive  ${libs} 
+  pool = build_toolchain_link_pool
+rule nacl_bootstrap_x64_link
+  command = ../../../../../third_party/llvm-build/Release+Asserts/bin/clang++ ${ldflags} -o "${output_dir}/${target_output_name}${output_extension}" -Wl,--start-group @"${output_dir}/${target_output_name}${output_extension}.rsp" ${solibs} -Wl,--end-group  ${libs} 
+  description = LINK ${output_dir}/${target_output_name}${output_extension}
+  rspfile = ${output_dir}/${target_output_name}${output_extension}.rsp
+  rspfile_content = ${in}
+  pool = build_toolchain_link_pool
+rule nacl_bootstrap_x64_stamp
+  command = touch ${out}
+  description = STAMP ${out}
+rule nacl_bootstrap_x64_copy
+  command = ln -f ${in} ${out} 2>/dev/null || (rm -rf ${out} && cp -af ${in} ${out})
+  description = COPY ${in} ${out}
+
+subninja nacl_bootstrap_x64/obj/build/config/nacl/nacl_base.ninja
+rule __native_client_src_trusted_service_runtime_linux_munge_nacl_helper_bootstrap___native_client_src_trusted_service_runtime_linux_toolchain_nacl_bootstrap_x64__rule
+  command = python ../../../../../native_client/src/trusted/service_runtime/linux/nacl_bootstrap_munge_phdr.py /usr/local/google/home/jokulik/chromium/src/net/quic/chromium/out/Default/nacl_bootstrap_x64/obj/native_client/src/trusted/service_runtime/linux/nacl_bootstrap_raw /usr/local/google/home/jokulik/chromium/src/net/quic/chromium/out/Default/nacl_bootstrap_x64/nacl_helper_bootstrap
+  description = ACTION //native_client/src/trusted/service_runtime/linux:munge_nacl_helper_bootstrap(//native_client/src/trusted/service_runtime/linux/toolchain:nacl_bootstrap_x64)
+  restat = 1
+build nacl_bootstrap_x64/obj/native_client/src/trusted/service_runtime/linux/munge_nacl_helper_bootstrap.inputdeps.stamp: nacl_bootstrap_x64_stamp ../../../../../native_client/src/trusted/service_runtime/linux/nacl_bootstrap_munge_phdr.py nacl_bootstrap_x64/obj/native_client/src/trusted/service_runtime/linux/nacl_bootstrap_raw nacl_bootstrap_x64/obj/native_client/src/trusted/service_runtime/linux/nacl_bootstrap_raw.stamp
+
+build nacl_bootstrap_x64/nacl_helper_bootstrap: __native_client_src_trusted_service_runtime_linux_munge_nacl_helper_bootstrap___native_client_src_trusted_service_runtime_linux_toolchain_nacl_bootstrap_x64__rule | nacl_bootstrap_x64/obj/native_client/src/trusted/service_runtime/linux/munge_nacl_helper_bootstrap.inputdeps.stamp
+
+build nacl_bootstrap_x64/obj/native_client/src/trusted/service_runtime/linux/munge_nacl_helper_bootstrap.stamp: nacl_bootstrap_x64_stamp nacl_bootstrap_x64/nacl_helper_bootstrap
+subninja nacl_bootstrap_x64/obj/native_client/src/trusted/service_runtime/linux/nacl_bootstrap_lib.ninja
+rule __native_client_src_trusted_service_runtime_linux_nacl_bootstrap_raw___native_client_src_trusted_service_runtime_linux_toolchain_nacl_bootstrap_x64__rule
+  command = python ../../../../../native_client/src/trusted/service_runtime/linux/ld_bfd.py --compiler g++ -m elf_x86_64 --build-id -static -z max-page-size=0x1000 --defsym RESERVE_TOP=0x0 --script=/usr/local/google/home/jokulik/chromium/src/native_client/src/trusted/service_runtime/linux/nacl_bootstrap.x -o /usr/local/google/home/jokulik/chromium/src/net/quic/chromium/out/Default/nacl_bootstrap_x64/obj/native_client/src/trusted/service_runtime/linux/nacl_bootstrap_raw --whole-archive /usr/local/google/home/jokulik/chromium/src/net/quic/chromium/out/Default/nacl_bootstrap_x64/obj/native_client/src/trusted/service_runtime/linux/libnacl_bootstrap_lib.a --no-whole-archive
+  description = ACTION //native_client/src/trusted/service_runtime/linux:nacl_bootstrap_raw(//native_client/src/trusted/service_runtime/linux/toolchain:nacl_bootstrap_x64)
+  restat = 1
+build nacl_bootstrap_x64/obj/native_client/src/trusted/service_runtime/linux/nacl_bootstrap_raw.inputdeps.stamp: nacl_bootstrap_x64_stamp ../../../../../native_client/src/trusted/service_runtime/linux/ld_bfd.py ../../../../../native_client/src/trusted/service_runtime/linux/nacl_bootstrap.x nacl_bootstrap_x64/obj/native_client/src/trusted/service_runtime/linux/libnacl_bootstrap_lib.a nacl_bootstrap_x64/obj/native_client/src/trusted/service_runtime/linux/libnacl_bootstrap_lib.a
+
+build nacl_bootstrap_x64/obj/native_client/src/trusted/service_runtime/linux/nacl_bootstrap_raw: __native_client_src_trusted_service_runtime_linux_nacl_bootstrap_raw___native_client_src_trusted_service_runtime_linux_toolchain_nacl_bootstrap_x64__rule | nacl_bootstrap_x64/obj/native_client/src/trusted/service_runtime/linux/nacl_bootstrap_raw.inputdeps.stamp
+
+build nacl_bootstrap_x64/obj/native_client/src/trusted/service_runtime/linux/nacl_bootstrap_raw.stamp: nacl_bootstrap_x64_stamp nacl_bootstrap_x64/obj/native_client/src/trusted/service_runtime/linux/nacl_bootstrap_raw

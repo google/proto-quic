@@ -35,15 +35,8 @@ void NetworkQualityStore::Add(
   DCHECK_LE(cached_network_qualities_.size(),
             static_cast<size_t>(kMaximumNetworkQualityCacheSize));
 
-  // If the network name is unavailable, caching should not be performed. If
-  // |disable_offline_check_| is set to true, cache the network quality even if
-  // the network is set to offline.
-  if (network_id.type != NetworkChangeNotifier::CONNECTION_ETHERNET &&
-      network_id.id.empty() &&
-      (network_id.type != NetworkChangeNotifier::CONNECTION_NONE ||
-       !disable_offline_check_)) {
+  if (!EligibleForCaching(network_id))
     return;
-  }
 
   // Remove the entry from the map, if it is already present.
   cached_network_qualities_.erase(network_id);
@@ -102,6 +95,18 @@ void NetworkQualityStore::RemoveNetworkQualitiesCacheObserver(
     NetworkQualitiesCacheObserver* observer) {
   DCHECK(thread_checker_.CalledOnValidThread());
   network_qualities_cache_observer_list_.RemoveObserver(observer);
+}
+
+bool NetworkQualityStore::EligibleForCaching(
+    const NetworkID& network_id) const {
+  DCHECK(thread_checker_.CalledOnValidThread());
+
+  // |disable_offline_check_| forces caching of the network quality even if
+  // the network is set to offline.
+  return network_id.type == NetworkChangeNotifier::CONNECTION_ETHERNET ||
+         !network_id.id.empty() ||
+         (network_id.type == NetworkChangeNotifier::CONNECTION_NONE &&
+          disable_offline_check_);
 }
 
 void NetworkQualityStore::DisableOfflineCheckForTesting(

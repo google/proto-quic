@@ -15,6 +15,7 @@
 #include "net/quic/core/quic_client_push_promise_index.h"
 #include "net/quic/core/quic_config.h"
 #include "net/quic/platform/api/quic_socket_address.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/tools/quic/quic_client_session.h"
 #include "net/tools/quic/quic_spdy_client_stream.h"
 
@@ -47,7 +48,7 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
    public:
     // |headers| may be null, since it's possible to send data without headers.
     QuicDataToResend(std::unique_ptr<SpdyHeaderBlock> headers,
-                     base::StringPiece body,
+                     QuicStringPiece body,
                      bool fin);
 
     virtual ~QuicDataToResend();
@@ -58,7 +59,7 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
 
    protected:
     std::unique_ptr<SpdyHeaderBlock> headers_;
-    base::StringPiece body_;
+    QuicStringPiece body_;
     bool fin_;
 
    private:
@@ -101,12 +102,12 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
 
   // Sends an HTTP request and does not wait for response before returning.
   void SendRequest(const SpdyHeaderBlock& headers,
-                   base::StringPiece body,
+                   QuicStringPiece body,
                    bool fin);
 
   // Sends an HTTP request and waits for response before returning.
   void SendRequestAndWaitForResponse(const SpdyHeaderBlock& headers,
-                                     base::StringPiece body,
+                                     QuicStringPiece body,
                                      bool fin);
 
   // Sends a request simple GET for each URL in |url_list|, and then waits for
@@ -321,7 +322,7 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
   // queue of data to resend if the client receives a stateless reject.
   // Otherwise, deletes the data.
   void MaybeAddDataToResend(const SpdyHeaderBlock& headers,
-                            base::StringPiece body,
+                            QuicStringPiece body,
                             bool fin);
 
   void ClearDataToResend();
@@ -329,7 +330,7 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
   void ResendSavedData();
 
   void AddPromiseDataToResend(const SpdyHeaderBlock& headers,
-                              base::StringPiece body,
+                              QuicStringPiece body,
                               bool fin);
 
   QuicConnectionHelperInterface* helper() { return helper_.get(); }
@@ -349,7 +350,7 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
   class ClientQuicDataToResend : public QuicDataToResend {
    public:
     ClientQuicDataToResend(std::unique_ptr<SpdyHeaderBlock> headers,
-                           base::StringPiece body,
+                           QuicStringPiece body,
                            bool fin,
                            QuicClientBase* client)
         : QuicDataToResend(std::move(headers), body, fin), client_(client) {

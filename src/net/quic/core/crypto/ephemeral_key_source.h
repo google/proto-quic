@@ -7,9 +7,9 @@
 
 #include <string>
 
-#include "base/strings/string_piece.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -33,7 +33,7 @@ class QUIC_EXPORT_PRIVATE EphemeralKeySource {
       const KeyExchange* key_exchange,
       QuicRandom* rand,
       QuicTime now,
-      base::StringPiece peer_public_value,
+      QuicStringPiece peer_public_value,
       std::string* public_value) = 0;
 };
 

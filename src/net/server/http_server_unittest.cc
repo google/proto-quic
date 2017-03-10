@@ -42,6 +42,7 @@
 #include "net/socket/tcp_client_socket.h"
 #include "net/socket/tcp_server_socket.h"
 #include "net/test/gtest_util.h"
+#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_fetcher.h"
 #include "net/url_request/url_fetcher_delegate.h"
 #include "net/url_request/url_request_context.h"
@@ -503,10 +504,10 @@ TEST_F(HttpServerTest, RequestWithTooLargeBody) {
 
   scoped_refptr<URLRequestContextGetter> request_context_getter(
       new TestURLRequestContextGetter(base::ThreadTaskRunnerHandle::Get()));
-  std::unique_ptr<URLFetcher> fetcher =
-      URLFetcher::Create(GURL(base::StringPrintf("http://127.0.0.1:%d/test",
-                                                 server_address_.port())),
-                         URLFetcher::GET, &delegate);
+  std::unique_ptr<URLFetcher> fetcher = URLFetcher::Create(
+      GURL(base::StringPrintf("http://127.0.0.1:%d/test",
+                              server_address_.port())),
+      URLFetcher::GET, &delegate, TRAFFIC_ANNOTATION_FOR_TESTS);
   fetcher->SetRequestContext(request_context_getter.get());
   fetcher->AddExtraRequestHeader(
       base::StringPrintf("content-length:%d", 1 << 30));

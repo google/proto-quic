@@ -22,8 +22,6 @@
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 
-using base::StringPiece;
-
 namespace net {
 
 // A very simple alarm that just informs the QuicTimeWaitListManager to clean

@@ -11,7 +11,6 @@
 #include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -94,8 +93,8 @@ std::ostream& operator<<(std::ostream& os, const QuicPacketHeader& header) {
   if (header.public_header.nonce != nullptr) {
     os << ", diversification_nonce: "
        << QuicTextUtils::HexEncode(
-              StringPiece(header.public_header.nonce->data(),
-                          header.public_header.nonce->size()));
+              QuicStringPiece(header.public_header.nonce->data(),
+                              header.public_header.nonce->size()));
   }
   os << ", packet_number: " << header.packet_number << " }\n";
   return os;
@@ -183,19 +182,19 @@ std::ostream& operator<<(std::ostream& os, const QuicReceivedPacket& s) {
   return os;
 }
 
-StringPiece QuicPacket::AssociatedData(QuicVersion version) const {
-  return StringPiece(
+QuicStringPiece QuicPacket::AssociatedData(QuicVersion version) const {
+  return QuicStringPiece(
       data(), GetStartOfEncryptedData(
                   version, connection_id_length_, includes_version_,
                   includes_diversification_nonce_, packet_number_length_));
 }
 
-StringPiece QuicPacket::Plaintext(QuicVersion version) const {
+QuicStringPiece QuicPacket::Plaintext(QuicVersion version) const {
   const size_t start_of_encrypted_data = GetStartOfEncryptedData(
       version, connection_id_length_, includes_version_,
       includes_diversification_nonce_, packet_number_length_);
-  return StringPiece(data() + start_of_encrypted_data,
-                     length() - start_of_encrypted_data);
+  return QuicStringPiece(data() + start_of_encrypted_data,
+                         length() - start_of_encrypted_data);
 }
 
 SerializedPacket::SerializedPacket(QuicPacketNumber packet_number,

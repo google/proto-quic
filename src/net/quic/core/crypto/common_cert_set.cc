@@ -10,7 +10,6 @@
 #include "base/memory/singleton.h"
 #include "net/quic/core/quic_utils.h"
 
-using base::StringPiece;
 
 namespace net {
 
@@ -53,7 +52,7 @@ const uint64_t kSetHashes[] = {
 
 // Compare returns a value less than, equal to or greater than zero if |a| is
 // lexicographically less than, equal to or greater than |b|, respectively.
-int Compare(StringPiece a, const unsigned char* b, size_t b_len) {
+int Compare(QuicStringPiece a, const unsigned char* b, size_t b_len) {
   size_t len = a.size();
   if (len > b_len) {
     len = b_len;
@@ -76,16 +75,16 @@ int Compare(StringPiece a, const unsigned char* b, size_t b_len) {
 class CommonCertSetsQUIC : public CommonCertSets {
  public:
   // CommonCertSets interface.
-  StringPiece GetCommonHashes() const override {
-    return StringPiece(reinterpret_cast<const char*>(kSetHashes),
-                       sizeof(uint64_t) * arraysize(kSetHashes));
+  QuicStringPiece GetCommonHashes() const override {
+    return QuicStringPiece(reinterpret_cast<const char*>(kSetHashes),
+                           sizeof(uint64_t) * arraysize(kSetHashes));
   }
 
-  StringPiece GetCert(uint64_t hash, uint32_t index) const override {
+  QuicStringPiece GetCert(uint64_t hash, uint32_t index) const override {
     for (size_t i = 0; i < arraysize(kSets); i++) {
       if (kSets[i].hash == hash) {
         if (index < kSets[i].num_certs) {
-          return StringPiece(
+          return QuicStringPiece(
               reinterpret_cast<const char*>(kSets[i].certs[index]),
               kSets[i].lens[index]);
         }
@@ -93,11 +92,11 @@ class CommonCertSetsQUIC : public CommonCertSets {
       }
     }
 
-    return StringPiece();
+    return QuicStringPiece();
   }
 
-  bool MatchCert(StringPiece cert,
-                 StringPiece common_set_hashes,
+  bool MatchCert(QuicStringPiece cert,
+                 QuicStringPiece common_set_hashes,
                  uint64_t* out_hash,
                  uint32_t* out_index) const override {
     if (common_set_hashes.size() % sizeof(uint64_t) != 0) {

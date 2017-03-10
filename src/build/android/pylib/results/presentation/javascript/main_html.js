@@ -179,7 +179,8 @@ function loadPage() {
 
 function reportIssues() {
   var url = 'https://bugs.chromium.org/p/chromium/issues/entry?' +
-            'labels=Pri-2,Type-Bug&summary=Result Details Feedback:&' +
+            'labels=Pri-2,Type-Bug,Restrict-View-Google&' +
+            'summary=Result Details Feedback:&' +
             'comment=Please check out: ' + window.location;
   var newWindow = window.open(url, '_blank');
   newWindow.focus();

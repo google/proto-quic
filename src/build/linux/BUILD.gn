@@ -58,9 +58,8 @@ if (!is_chromecast) {
 group("freetype2") {
   if (is_chromecast) {
     # Chromecast platform doesn't provide freetype, so use Chromium's.
-    # The version in freetype-android is unmodified from freetype2 upstream.
     public_deps = [
-      "//third_party/freetype-android:freetype",
+      "//third_party/freetype",
     ]
   } else {
     public_configs = [ ":freetype2_config" ]

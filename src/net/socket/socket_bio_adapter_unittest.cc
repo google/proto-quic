@@ -13,6 +13,7 @@
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/run_loop.h"
+#include "base/test/scoped_feature_list.h"
 #include "crypto/openssl_util.h"
 #include "net/base/address_list.h"
 #include "net/base/net_errors.h"
@@ -27,9 +28,25 @@
 
 namespace net {
 
-class SocketBIOAdapterTest : public testing::Test,
+enum ReadIfReadySupport {
+  // ReadIfReady() field trial is enabled, and ReadyIfReady() is implemented.
+  READ_IF_READY_ENABLED_SUPPORTED,
+  // ReadIfReady() field trial is enabled, but ReadyIfReady() is unimplemented.
+  READ_IF_READY_ENABLED_NOT_SUPPORTED,
+  // ReadIfReady() field trial is disabled.
+  READ_IF_READY_DISABLED,
+};
+
+class SocketBIOAdapterTest : public testing::TestWithParam<ReadIfReadySupport>,
                              public SocketBIOAdapter::Delegate {
  protected:
+  void SetUp() override {
+    if (GetParam() != READ_IF_READY_DISABLED)
+      scoped_feature_list_.InitAndEnableFeature(Socket::kReadIfReadyExperiment);
+    if (GetParam() == READ_IF_READY_ENABLED_SUPPORTED)
+      factory_.set_enable_read_if_ready(true);
+  }
+
   std::unique_ptr<StreamSocket> MakeTestSocket(SocketDataProvider* data) {
     data->set_connect_data(MockConnect(SYNCHRONOUS, OK));
     factory_.AddSocketDataProvider(data);
@@ -139,10 +156,17 @@ class SocketBIOAdapterTest : public testing::Test,
   bool expect_write_ready_ = false;
   MockClientSocketFactory factory_;
   std::unique_ptr<SocketBIOAdapter>* reset_on_write_ready_ = nullptr;
+  base::test::ScopedFeatureList scoped_feature_list_;
 };
 
+INSTANTIATE_TEST_CASE_P(/* no prefix */,
+                        SocketBIOAdapterTest,
+                        testing::Values(READ_IF_READY_ENABLED_SUPPORTED,
+                                        READ_IF_READY_ENABLED_NOT_SUPPORTED,
+                                        READ_IF_READY_DISABLED));
+
 // Test that data can be read synchronously.
-TEST_F(SocketBIOAdapterTest, ReadSync) {
+TEST_P(SocketBIOAdapterTest, ReadSync) {
   crypto::OpenSSLErrStackTracer tracer(FROM_HERE);
 
   MockRead reads[] = {
@@ -183,7 +207,7 @@ TEST_F(SocketBIOAdapterTest, ReadSync) {
 }
 
 // Test that data can be read asynchronously.
-TEST_F(SocketBIOAdapterTest, ReadAsync) {
+TEST_P(SocketBIOAdapterTest, ReadAsync) {
   crypto::OpenSSLErrStackTracer tracer(FROM_HERE);
 
   MockRead reads[] = {
@@ -203,9 +227,13 @@ TEST_F(SocketBIOAdapterTest, ReadAsync) {
   ExpectBlockingRead(bio, buf, sizeof(buf));
   EXPECT_FALSE(adapter->HasPendingReadData());
 
-  // After waiting, the data is available.
+  // After waiting, the data is available if Read() is used.
   WaitForReadReady();
-  EXPECT_TRUE(adapter->HasPendingReadData());
+  if (GetParam() == READ_IF_READY_ENABLED_SUPPORTED) {
+    EXPECT_FALSE(adapter->HasPendingReadData());
+  } else {
+    EXPECT_TRUE(adapter->HasPendingReadData());
+  }
 
   // The first read is now available synchronously.
   EXPECT_EQ(5, BIO_read(bio, buf, sizeof(buf)));
@@ -220,8 +248,14 @@ TEST_F(SocketBIOAdapterTest, ReadAsync) {
   // amount.
   ExpectBlockingRead(bio, buf, 1);
   EXPECT_FALSE(adapter->HasPendingReadData());
+
+  // After waiting, the data is available if Read() is used.
   WaitForReadReady();
-  EXPECT_TRUE(adapter->HasPendingReadData());
+  if (GetParam() == READ_IF_READY_ENABLED_SUPPORTED) {
+    EXPECT_FALSE(adapter->HasPendingReadData());
+  } else {
+    EXPECT_TRUE(adapter->HasPendingReadData());
+  }
 
   // The next read is now available synchronously.
   EXPECT_EQ(5, BIO_read(bio, buf, sizeof(buf)));
@@ -237,7 +271,7 @@ TEST_F(SocketBIOAdapterTest, ReadAsync) {
 }
 
 // Test that synchronous EOF is mapped to ERR_CONNECTION_CLOSED.
-TEST_F(SocketBIOAdapterTest, ReadEOFSync) {
+TEST_P(SocketBIOAdapterTest, ReadEOFSync) {
   crypto::OpenSSLErrStackTracer tracer(FROM_HERE);
 
   MockRead reads[] = {
@@ -253,7 +287,7 @@ TEST_F(SocketBIOAdapterTest, ReadEOFSync) {
 }
 
 // Test that asynchronous EOF is mapped to ERR_CONNECTION_CLOSED.
-TEST_F(SocketBIOAdapterTest, ReadEOFAsync) {
+TEST_P(SocketBIOAdapterTest, ReadEOFAsync) {
   crypto::OpenSSLErrStackTracer tracer(FROM_HERE);
 
   MockRead reads[] = {
@@ -272,7 +306,7 @@ TEST_F(SocketBIOAdapterTest, ReadEOFAsync) {
 }
 
 // Test that data can be written synchronously.
-TEST_F(SocketBIOAdapterTest, WriteSync) {
+TEST_P(SocketBIOAdapterTest, WriteSync) {
   crypto::OpenSSLErrStackTracer tracer(FROM_HERE);
 
   MockWrite writes[] = {
@@ -307,7 +341,7 @@ TEST_F(SocketBIOAdapterTest, WriteSync) {
 }
 
 // Test that data can be written asynchronously.
-TEST_F(SocketBIOAdapterTest, WriteAsync) {
+TEST_P(SocketBIOAdapterTest, WriteAsync) {
   crypto::OpenSSLErrStackTracer tracer(FROM_HERE);
 
   MockWrite writes[] = {
@@ -436,7 +470,7 @@ TEST_F(SocketBIOAdapterTest, WriteAsync) {
 
 // Test that a failed socket write is reported through BIO_read and prevents it
 // from scheduling a socket read. See https://crbug.com/249848.
-TEST_F(SocketBIOAdapterTest, WriteStopsRead) {
+TEST_P(SocketBIOAdapterTest, WriteStopsRead) {
   crypto::OpenSSLErrStackTracer tracer(FROM_HERE);
 
   MockWrite writes[] = {
@@ -459,7 +493,7 @@ TEST_F(SocketBIOAdapterTest, WriteStopsRead) {
 
 // Test that a synchronous failed socket write interrupts a blocked
 // BIO_read. See https://crbug.com/249848.
-TEST_F(SocketBIOAdapterTest, SyncWriteInterruptsRead) {
+TEST_P(SocketBIOAdapterTest, SyncWriteInterruptsRead) {
   crypto::OpenSSLErrStackTracer tracer(FROM_HERE);
 
   MockRead reads[] = {
@@ -492,7 +526,7 @@ TEST_F(SocketBIOAdapterTest, SyncWriteInterruptsRead) {
 
 // Test that an asynchronous failed socket write interrupts a blocked
 // BIO_read. See https://crbug.com/249848.
-TEST_F(SocketBIOAdapterTest, AsyncWriteInterruptsRead) {
+TEST_P(SocketBIOAdapterTest, AsyncWriteInterruptsRead) {
   crypto::OpenSSLErrStackTracer tracer(FROM_HERE);
 
   MockRead reads[] = {
@@ -527,7 +561,7 @@ TEST_F(SocketBIOAdapterTest, AsyncWriteInterruptsRead) {
 
 // Test that an asynchronous failed socket write interrupts a blocked BIO_read,
 // signaling both if the buffer was full. See https://crbug.com/249848.
-TEST_F(SocketBIOAdapterTest, AsyncWriteInterruptsBoth) {
+TEST_P(SocketBIOAdapterTest, AsyncWriteInterruptsBoth) {
   crypto::OpenSSLErrStackTracer tracer(FROM_HERE);
 
   MockRead reads[] = {
@@ -562,7 +596,7 @@ TEST_F(SocketBIOAdapterTest, AsyncWriteInterruptsBoth) {
 
 // Test that SocketBIOAdapter handles OnWriteReady deleting itself when both
 // need to be signaled.
-TEST_F(SocketBIOAdapterTest, DeleteOnWriteReady) {
+TEST_P(SocketBIOAdapterTest, DeleteOnWriteReady) {
   crypto::OpenSSLErrStackTracer tracer(FROM_HERE);
 
   MockRead reads[] = {
@@ -595,7 +629,7 @@ TEST_F(SocketBIOAdapterTest, DeleteOnWriteReady) {
 
 // Test that using a BIO after the underlying adapter is destroyed fails
 // gracefully.
-TEST_F(SocketBIOAdapterTest, Detached) {
+TEST_P(SocketBIOAdapterTest, Detached) {
   crypto::OpenSSLErrStackTracer tracer(FROM_HERE);
 
   SequencedSocketData data(nullptr, 0, nullptr, 0);

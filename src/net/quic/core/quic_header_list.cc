@@ -31,11 +31,10 @@ void QuicHeaderList::OnHeaderBlockStart() {
       << "OnHeaderBlockStart called more than once!";
 }
 
-void QuicHeaderList::OnHeader(base::StringPiece name, base::StringPiece value) {
+void QuicHeaderList::OnHeader(QuicStringPiece name, QuicStringPiece value) {
   // Avoid infinte buffering of headers. No longer store headers
   // once the current headers are over the limit.
-  if (!FLAGS_quic_reloadable_flag_quic_limit_uncompressed_headers ||
-      uncompressed_header_bytes_ == 0 || !header_list_.empty()) {
+  if (uncompressed_header_bytes_ == 0 || !header_list_.empty()) {
     header_list_.emplace_back(name.as_string(), value.as_string());
   }
 }
@@ -48,8 +47,7 @@ void QuicHeaderList::OnHeaderBlockEnd(size_t uncompressed_header_bytes,
                                       size_t compressed_header_bytes) {
   uncompressed_header_bytes_ = uncompressed_header_bytes;
   compressed_header_bytes_ = compressed_header_bytes;
-  if (FLAGS_quic_reloadable_flag_quic_limit_uncompressed_headers &&
-      uncompressed_header_bytes_ > max_uncompressed_header_bytes_) {
+  if (uncompressed_header_bytes_ > max_uncompressed_header_bytes_) {
     Clear();
   }
 }

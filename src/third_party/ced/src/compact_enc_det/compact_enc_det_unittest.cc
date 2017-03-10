@@ -4697,9 +4697,15 @@ class CompactEncDetTest : public testing::Test {
   // Every string that is detected as UTF8UTF8 when --ced_allow_utf8utf=true
   // should be detected as some other encoding when --ced_allow_utf8utf8=false.
   void TestUTF8UTF8(const char* str, Encoding other, const char* name) {
+    Encoding encoding;
+#if defined(HTML5_MODE)
+    encoding = ASCII_7BIT;
+#else
+    encoding = UTF8UTF8;
+#endif
     {
       VarSetter<bool> utf8utf8(&FLAGS_ced_allow_utf8utf8, true);
-      EXPECT_EQ(UTF8UTF8, TestCompactEncDet(str, name));
+      EXPECT_EQ(encoding, TestCompactEncDet(str, name));
     }
     {
       VarSetter<bool> noutf8utf8(&FLAGS_ced_allow_utf8utf8, false);
@@ -4838,9 +4844,13 @@ TEST_F(CompactEncDetTest, EasyTests) {
             TestCompactEncDet(kTeststr59, sizeof(kTeststr59), "UTF32LE"));
   EXPECT_EQ(UTF32BE,
             TestCompactEncDet(kTeststr60, sizeof(kTeststr60), "UTF32BE"));
-  EXPECT_EQ(BINARYENC,
+#if defined(HTML5_MODE)
+  EXPECT_EQ(ASCII_7BIT,
             TestCompactEncDet(kTeststr61, sizeof(kTeststr61), "BINARYENC"));
-
+#else
+  EXPECT_EQ(BINARYENC,
+            TestCompactEncDet(kTeststr61, sizeof(kTeststr61), "ASCII_7BIT"));
+#endif
   // Indic. Detection requires a full URL hint
   // dsites 2007.10.10 NO LONGER DETECTED. Will return some LatinX result
   EXPECT_EQ(ISO_8859_10, TestCompactEncDetWithURL(kTeststr52,

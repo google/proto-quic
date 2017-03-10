@@ -7,14 +7,12 @@
 #include <memory>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "base/sys_byteorder.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -71,13 +69,13 @@ class LocalStrikeRegisterClientTest : public ::testing::Test {
 
 TEST_F(LocalStrikeRegisterClientTest, CheckOrbit) {
   EXPECT_TRUE(strike_register_->IsKnownOrbit(
-      StringPiece(reinterpret_cast<const char*>(kOrbit), kOrbitSize)));
+      QuicStringPiece(reinterpret_cast<const char*>(kOrbit), kOrbitSize)));
   EXPECT_FALSE(strike_register_->IsKnownOrbit(
-      StringPiece(reinterpret_cast<const char*>(kOrbit), kOrbitSize - 1)));
+      QuicStringPiece(reinterpret_cast<const char*>(kOrbit), kOrbitSize - 1)));
   EXPECT_FALSE(strike_register_->IsKnownOrbit(
-      StringPiece(reinterpret_cast<const char*>(kOrbit), kOrbitSize + 1)));
+      QuicStringPiece(reinterpret_cast<const char*>(kOrbit), kOrbitSize + 1)));
   EXPECT_FALSE(strike_register_->IsKnownOrbit(
-      StringPiece(reinterpret_cast<const char*>(kOrbit) + 1, kOrbitSize)));
+      QuicStringPiece(reinterpret_cast<const char*>(kOrbit) + 1, kOrbitSize)));
 }
 
 TEST_F(LocalStrikeRegisterClientTest, IncorrectNonceLength) {

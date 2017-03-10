@@ -444,7 +444,7 @@ std::unique_ptr<Value> JSONParser::ConsumeString() {
   if (!ConsumeStringRaw(&string))
     return nullptr;
 
-  return base::MakeUnique<StringValue>(string.DestructiveAsString());
+  return base::MakeUnique<Value>(string.DestructiveAsString());
 }
 
 bool JSONParser::ConsumeStringRaw(StringBuilder* out) {

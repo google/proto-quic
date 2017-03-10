@@ -8,8 +8,6 @@
 
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
-
 namespace net {
 namespace test {
 
@@ -192,8 +190,8 @@ static const unsigned char kGIACertificate3[] = {
 };
 
 TEST(CommonCertSets, FindGIA_2) {
-  StringPiece gia(reinterpret_cast<const char*>(kGIACertificate2),
-                  sizeof(kGIACertificate2));
+  QuicStringPiece gia(reinterpret_cast<const char*>(kGIACertificate2),
+                      sizeof(kGIACertificate2));
 
   const CommonCertSets* sets(CommonCertSets::GetInstanceQUIC());
   // Common Cert Set 2's hash.
@@ -202,19 +200,19 @@ TEST(CommonCertSets, FindGIA_2) {
   uint32_t index;
   ASSERT_TRUE(sets->MatchCert(
       gia,
-      StringPiece(reinterpret_cast<const char*>(&in_hash), sizeof(in_hash)),
+      QuicStringPiece(reinterpret_cast<const char*>(&in_hash), sizeof(in_hash)),
       &hash, &index));
   EXPECT_EQ(in_hash, hash);
 
-  StringPiece gia_copy = sets->GetCert(hash, index);
+  QuicStringPiece gia_copy = sets->GetCert(hash, index);
   EXPECT_FALSE(gia_copy.empty());
   ASSERT_EQ(gia.size(), gia_copy.size());
   EXPECT_EQ(0, memcmp(gia.data(), gia_copy.data(), gia.size()));
 }
 
 TEST(CommonCertSets, FindGIA_3) {
-  StringPiece gia(reinterpret_cast<const char*>(kGIACertificate3),
-                  sizeof(kGIACertificate3));
+  QuicStringPiece gia(reinterpret_cast<const char*>(kGIACertificate3),
+                      sizeof(kGIACertificate3));
 
   const CommonCertSets* sets(CommonCertSets::GetInstanceQUIC());
   // Common Cert Set 3's hash.
@@ -223,11 +221,11 @@ TEST(CommonCertSets, FindGIA_3) {
   uint32_t index;
   ASSERT_TRUE(sets->MatchCert(
       gia,
-      StringPiece(reinterpret_cast<const char*>(&in_hash), sizeof(in_hash)),
+      QuicStringPiece(reinterpret_cast<const char*>(&in_hash), sizeof(in_hash)),
       &hash, &index));
   EXPECT_EQ(in_hash, hash);
 
-  StringPiece gia_copy = sets->GetCert(hash, index);
+  QuicStringPiece gia_copy = sets->GetCert(hash, index);
   EXPECT_FALSE(gia_copy.empty());
   ASSERT_EQ(gia.size(), gia_copy.size());
   EXPECT_EQ(0, memcmp(gia.data(), gia_copy.data(), gia.size()));
@@ -235,13 +233,13 @@ TEST(CommonCertSets, FindGIA_3) {
 
 TEST(CommonCertSets, NonMatch) {
   const CommonCertSets* sets(CommonCertSets::GetInstanceQUIC());
-  StringPiece not_a_cert("hello");
+  QuicStringPiece not_a_cert("hello");
   const uint64_t in_hash = UINT64_C(0xc9fef74053f99f39);
   uint64_t hash;
   uint32_t index;
   EXPECT_FALSE(sets->MatchCert(
       not_a_cert,
-      StringPiece(reinterpret_cast<const char*>(&in_hash), sizeof(in_hash)),
+      QuicStringPiece(reinterpret_cast<const char*>(&in_hash), sizeof(in_hash)),
       &hash, &index));
 }
 

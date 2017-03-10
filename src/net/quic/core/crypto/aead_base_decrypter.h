@@ -12,6 +12,7 @@
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/crypto/scoped_evp_aead_ctx.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -25,19 +26,19 @@ class QUIC_EXPORT_PRIVATE AeadBaseDecrypter : public QuicDecrypter {
   ~AeadBaseDecrypter() override;
 
   // QuicDecrypter implementation
-  bool SetKey(base::StringPiece key) override;
-  bool SetNoncePrefix(base::StringPiece nonce_prefix) override;
-  bool SetPreliminaryKey(base::StringPiece key) override;
+  bool SetKey(QuicStringPiece key) override;
+  bool SetNoncePrefix(QuicStringPiece nonce_prefix) override;
+  bool SetPreliminaryKey(QuicStringPiece key) override;
   bool SetDiversificationNonce(const DiversificationNonce& nonce) override;
   bool DecryptPacket(QuicVersion version,
                      QuicPacketNumber packet_number,
-                     base::StringPiece associated_data,
-                     base::StringPiece ciphertext,
+                     QuicStringPiece associated_data,
+                     QuicStringPiece ciphertext,
                      char* output,
                      size_t* output_length,
                      size_t max_output_length) override;
-  base::StringPiece GetKey() const override;
-  base::StringPiece GetNoncePrefix() const override;
+  QuicStringPiece GetKey() const override;
+  QuicStringPiece GetNoncePrefix() const override;
 
  protected:
   // Make these constants available to the subclasses so that the subclasses

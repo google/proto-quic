@@ -132,13 +132,13 @@ TEST(CryptoTestUtilsTest, TestGenerateFullCHLO) {
   primary_config->set_primary_time(clock.WallNow().ToUNIXSeconds());
   std::unique_ptr<CryptoHandshakeMessage> msg(
       crypto_config.AddConfig(std::move(primary_config), clock.WallNow()));
-  StringPiece orbit;
+  QuicStringPiece orbit;
   ASSERT_TRUE(msg->GetStringPiece(kORBT, &orbit));
   string nonce;
   CryptoUtils::GenerateNonce(
       clock.WallNow(), QuicRandom::GetInstance(),
-      StringPiece(reinterpret_cast<const char*>(orbit.data()),
-                  sizeof(orbit.size())),
+      QuicStringPiece(reinterpret_cast<const char*>(orbit.data()),
+                      sizeof(orbit.size())),
       &nonce);
   string nonce_hex = "#" + QuicTextUtils::HexEncode(nonce);
 

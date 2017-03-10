@@ -9,9 +9,9 @@
 #include <string>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/quic/core/crypto/key_exchange.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "third_party/boringssl/src/include/openssl/base.h"
 
 namespace net {
@@ -24,7 +24,7 @@ class QUIC_EXPORT_PRIVATE P256KeyExchange : public KeyExchange {
 
   // New creates a new key exchange object from a private key. If
   // |private_key| is invalid, nullptr is returned.
-  static P256KeyExchange* New(base::StringPiece private_key);
+  static P256KeyExchange* New(QuicStringPiece private_key);
 
   // |NewPrivateKey| returns a private key, suitable for passing to |New|.
   // If |NewPrivateKey| can't generate a private key, it returns an empty
@@ -33,9 +33,9 @@ class QUIC_EXPORT_PRIVATE P256KeyExchange : public KeyExchange {
 
   // KeyExchange interface.
   KeyExchange* NewKeyPair(QuicRandom* rand) const override;
-  bool CalculateSharedKey(base::StringPiece peer_public_value,
+  bool CalculateSharedKey(QuicStringPiece peer_public_value,
                           std::string* shared_key) const override;
-  base::StringPiece public_value() const override;
+  QuicStringPiece public_value() const override;
   QuicTag tag() const override;
 
  private:

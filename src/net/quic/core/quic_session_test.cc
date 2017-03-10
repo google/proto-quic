@@ -20,6 +20,7 @@
 #include "net/quic/platform/api/quic_map_util.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_str_cat.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/test_tools/quic_config_peer.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_flow_controller_peer.h"
@@ -795,7 +796,7 @@ TEST_P(QuicSessionTestServer, IncreasedTimeoutAfterCryptoHandshake) {
 
 TEST_P(QuicSessionTestServer, RstStreamBeforeHeadersDecompressed) {
   // Send two bytes of payload.
-  QuicStreamFrame data1(kClientDataStreamId1, false, 0, StringPiece("HT"));
+  QuicStreamFrame data1(kClientDataStreamId1, false, 0, QuicStringPiece("HT"));
   session_.OnStreamFrame(data1);
   EXPECT_EQ(1u, session_.GetNumOpenIncomingStreams());
 
@@ -1020,7 +1021,7 @@ TEST_P(QuicSessionTestServer, ConnectionFlowControlAccountingFinAfterRst) {
   // account the total number of bytes sent by the peer.
   const QuicStreamOffset kByteOffset = 5678;
   string body = "hello";
-  QuicStreamFrame frame(stream->id(), true, kByteOffset, StringPiece(body));
+  QuicStreamFrame frame(stream->id(), true, kByteOffset, QuicStringPiece(body));
   session_.OnStreamFrame(frame);
 
   QuicStreamOffset total_stream_bytes_sent_by_peer =
@@ -1115,7 +1116,7 @@ TEST_P(QuicSessionTestServer, FlowControlWithInvalidFinalOffset) {
   TestStream* stream = session_.CreateOutgoingDynamicStream(kDefaultPriority);
   EXPECT_CALL(*connection_, SendRstStream(stream->id(), _, _));
   stream->Reset(QUIC_STREAM_CANCELLED);
-  QuicStreamFrame frame(stream->id(), true, kLargeOffset, StringPiece());
+  QuicStreamFrame frame(stream->id(), true, kLargeOffset, QuicStringPiece());
   session_.OnStreamFrame(frame);
 
   // Check that RST results in connection close.
@@ -1157,7 +1158,7 @@ TEST_P(QuicSessionTestServer, TooManyUnfinishedStreamsCauseServerRejectStream) {
   // Create kMaxStreams data streams, and close them all without receiving a
   // FIN or a RST_STREAM from the client.
   for (QuicStreamId i = kFirstStreamId; i < kFinalStreamId; i += 2) {
-    QuicStreamFrame data1(i, false, 0, StringPiece("HT"));
+    QuicStreamFrame data1(i, false, 0, QuicStringPiece("HT"));
     session_.OnStreamFrame(data1);
     // EXPECT_EQ(1u, session_.GetNumOpenStreams());
     EXPECT_CALL(*connection_, SendRstStream(i, _, _));
@@ -1168,7 +1169,7 @@ TEST_P(QuicSessionTestServer, TooManyUnfinishedStreamsCauseServerRejectStream) {
               SendRstStream(kFinalStreamId, QUIC_REFUSED_STREAM, _))
       .Times(1);
   // Create one more data streams to exceed limit of open stream.
-  QuicStreamFrame data1(kFinalStreamId, false, 0, StringPiece("HT"));
+  QuicStreamFrame data1(kFinalStreamId, false, 0, QuicStringPiece("HT"));
   session_.OnStreamFrame(data1);
 
   // Called after any new data is received by the session, and triggers the
@@ -1189,7 +1190,7 @@ TEST_P(QuicSessionTestServer, DrainingStreamsDoNotCountAsOpened) {
   const QuicStreamId kFinalStreamId =
       kClientDataStreamId1 + 2 * kMaxStreams + 1;
   for (QuicStreamId i = kFirstStreamId; i < kFinalStreamId; i += 2) {
-    QuicStreamFrame data1(i, true, 0, StringPiece("HT"));
+    QuicStreamFrame data1(i, true, 0, QuicStringPiece("HT"));
     session_.OnStreamFrame(data1);
     EXPECT_EQ(1u, session_.GetNumOpenIncomingStreams());
     session_.StreamDraining(i);
@@ -1258,7 +1259,7 @@ TEST_P(QuicSessionTestClient, RecordFinAfterReadSideClosed) {
   QuicStreamPeer::CloseReadSide(stream);
 
   // Receive a stream data frame with FIN.
-  QuicStreamFrame frame(stream_id, true, 0, StringPiece());
+  QuicStreamFrame frame(stream_id, true, 0, QuicStringPiece());
   session_.OnStreamFrame(frame);
   EXPECT_TRUE(stream->fin_received());
 

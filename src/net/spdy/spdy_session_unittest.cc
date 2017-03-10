@@ -5427,6 +5427,79 @@ TEST_F(SpdySessionTest, RejectInvalidUnknownFrames) {
   EXPECT_FALSE(session_->OnUnknownFrame(8, 0));
 }
 
+enum ReadIfReadySupport {
+  // ReadIfReady() field trial is enabled, and ReadIfReady() is implemented.
+  READ_IF_READY_ENABLED_SUPPORTED,
+  // ReadIfReady() field trial is enabled, but ReadIfReady() is unimplemented.
+  READ_IF_READY_ENABLED_NOT_SUPPORTED,
+  // ReadIfReady() field trial is disabled.
+  READ_IF_READY_DISABLED,
+};
+
+class SpdySessionReadIfReadyTest
+    : public SpdySessionTest,
+      public testing::WithParamInterface<ReadIfReadySupport> {
+ public:
+  void SetUp() override {
+    if (GetParam() != READ_IF_READY_DISABLED)
+      scoped_feature_list_.InitAndEnableFeature(Socket::kReadIfReadyExperiment);
+    if (GetParam() == READ_IF_READY_ENABLED_SUPPORTED)
+      session_deps_.socket_factory->set_enable_read_if_ready(true);
+    SpdySessionTest::SetUp();
+  }
+
+ private:
+  base::test::ScopedFeatureList scoped_feature_list_;
+};
+
+INSTANTIATE_TEST_CASE_P(/* no prefix */,
+                        SpdySessionReadIfReadyTest,
+                        testing::Values(READ_IF_READY_ENABLED_SUPPORTED,
+                                        READ_IF_READY_ENABLED_NOT_SUPPORTED,
+                                        READ_IF_READY_DISABLED));
+
+// Tests basic functionality of ReadIfReady() when it is enabled or disabled.
+TEST_P(SpdySessionReadIfReadyTest, ReadIfReady) {
+  SpdySerializedFrame req(
+      spdy_util_.ConstructSpdyGet(nullptr, 0, 1, HIGHEST, true));
+  MockWrite writes[] = {
+      CreateMockWrite(req, 0),
+  };
+
+  SpdySerializedFrame resp(spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
+  SpdySerializedFrame body(spdy_util_.ConstructSpdyDataFrame(1, true));
+  MockRead reads[] = {
+      CreateMockRead(resp, 1), CreateMockRead(body, 2),
+      MockRead(ASYNC, 0, 3)  // EOF
+  };
+
+  session_deps_.host_resolver->set_synchronous_mode(true);
+
+  SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
+  session_deps_.socket_factory->AddSocketDataProvider(&data);
+
+  AddSSLSocketData();
+
+  CreateNetworkSession();
+  CreateSecureSpdySession();
+
+  base::WeakPtr<SpdyStream> spdy_stream =
+      CreateStreamSynchronously(SPDY_REQUEST_RESPONSE_STREAM, session_,
+                                test_url_, HIGHEST, NetLogWithSource());
+  ASSERT_TRUE(spdy_stream);
+  EXPECT_EQ(0u, spdy_stream->stream_id());
+  test::StreamDelegateDoNothing delegate(spdy_stream);
+  spdy_stream->SetDelegate(&delegate);
+
+  SpdyHeaderBlock headers(spdy_util_.ConstructGetHeaderBlock(kDefaultUrl));
+  spdy_stream->SendRequestHeaders(std::move(headers), NO_MORE_DATA_TO_SEND);
+
+  base::RunLoop().RunUntilIdle();
+
+  EXPECT_FALSE(spdy_stream);
+  EXPECT_EQ(1u, delegate.stream_id());
+}
+
 class SendInitialSettingsOnNewSpdySessionTest : public SpdySessionTest {
  protected:
   void RunInitialSettingsTest(const SettingsMap expected_settings) {

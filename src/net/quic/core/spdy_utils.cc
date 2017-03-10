@@ -9,6 +9,7 @@
 
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_map_util.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/platform/api/quic_url_utils.h"
 #include "net/spdy/spdy_flags.h"
@@ -16,7 +17,6 @@
 #include "net/spdy/spdy_framer.h"
 #include "net/spdy/spdy_protocol.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -57,10 +57,10 @@ bool SpdyUtils::ExtractContentLengthFromHeaders(int64_t* content_length,
     return false;
   } else {
     // Check whether multiple values are consistent.
-    StringPiece content_length_header = it->second;
-    std::vector<StringPiece> values =
+    QuicStringPiece content_length_header = it->second;
+    std::vector<QuicStringPiece> values =
         QuicTextUtils::Split(content_length_header, '\0');
-    for (const StringPiece& value : values) {
+    for (const QuicStringPiece& value : values) {
       uint64_t new_value;
       if (!QuicTextUtils::StringToUint64(value, &new_value)) {
         QUIC_DLOG(ERROR)
@@ -109,8 +109,8 @@ bool SpdyUtils::ParseTrailers(const char* data,
 
   // Trailers must not have empty keys, and must not contain pseudo headers.
   for (const auto& trailer : *trailers) {
-    StringPiece key = trailer.first;
-    StringPiece value = trailer.second;
+    QuicStringPiece key = trailer.first;
+    QuicStringPiece value = trailer.second;
     if (QuicTextUtils::StartsWith(key, ":")) {
       QUIC_DVLOG(1) << "Trailers must not contain pseudo-header: '" << key
                     << "','" << value << "'.";

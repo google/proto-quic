@@ -15,6 +15,7 @@
 #include "crypto/openssl_util.h"
 #include "net/base/ip_address.h"
 #include "net/base/net_errors.h"
+#include "net/cert/x509_util.h"
 #include "net/cert/x509_util_openssl.h"
 #include "third_party/boringssl/src/include/openssl/asn1.h"
 #include "third_party/boringssl/src/include/openssl/bytestring.h"
@@ -245,12 +246,9 @@ X509Certificate::OSCertHandle X509Certificate::CreateOSCertHandleFromBytes(
     const char* data,
     size_t length) {
   crypto::EnsureOpenSSLInit();
-  const unsigned char* d2i_data =
-      reinterpret_cast<const unsigned char*>(data);
-  // Don't cache this data for x509_util::GetDER as this wire format
-  // may be not be identical from the i2d_X509 roundtrip.
-  X509* cert = d2i_X509(NULL, &d2i_data, base::checked_cast<long>(length));
-  return cert;
+  bssl::UniquePtr<CRYPTO_BUFFER> buffer = x509_util::CreateCryptoBuffer(
+      reinterpret_cast<const uint8_t*>(data), length);
+  return X509_parse_from_buffer(buffer.get());
 }
 
 // static
@@ -375,24 +373,6 @@ void X509Certificate::GetPublicKeyInfo(OSCertHandle cert_handle,
       *size_bits = EVP_PKEY_size(key) * 8;
       break;
   }
-}
-
-// static
-X509Certificate::SignatureHashAlgorithm
-X509Certificate::GetSignatureHashAlgorithm(OSCertHandle cert_handle) {
-  int sig_alg = OBJ_obj2nid(cert_handle->sig_alg->algorithm);
-  if (sig_alg == NID_md2WithRSAEncryption)
-    return kSignatureHashAlgorithmMd2;
-  if (sig_alg == NID_md4WithRSAEncryption)
-    return kSignatureHashAlgorithmMd4;
-  if (sig_alg == NID_md5WithRSAEncryption || sig_alg == NID_md5WithRSA)
-    return kSignatureHashAlgorithmMd5;
-  if (sig_alg == NID_sha1WithRSAEncryption || sig_alg == NID_dsaWithSHA ||
-      sig_alg == NID_dsaWithSHA1 || sig_alg == NID_dsaWithSHA1_2 ||
-      sig_alg == NID_sha1WithRSA || sig_alg == NID_ecdsa_with_SHA1) {
-    return kSignatureHashAlgorithmSha1;
-  }
-  return kSignatureHashAlgorithmOther;
 }
 
 bool X509Certificate::IsIssuedByEncoded(

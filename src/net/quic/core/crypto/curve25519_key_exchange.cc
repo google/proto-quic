@@ -9,7 +9,6 @@
 #include "net/quic/core/crypto/quic_random.h"
 #include "third_party/boringssl/src/include/openssl/curve25519.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -19,7 +18,7 @@ Curve25519KeyExchange::Curve25519KeyExchange() {}
 Curve25519KeyExchange::~Curve25519KeyExchange() {}
 
 // static
-Curve25519KeyExchange* Curve25519KeyExchange::New(StringPiece private_key) {
+Curve25519KeyExchange* Curve25519KeyExchange::New(QuicStringPiece private_key) {
   Curve25519KeyExchange* ka;
   // We don't want to #include the BoringSSL headers in the public header file,
   // so we use literals for the sizes of private_key_ and public_key_. Here we
@@ -52,8 +51,9 @@ KeyExchange* Curve25519KeyExchange::NewKeyPair(QuicRandom* rand) const {
   return Curve25519KeyExchange::New(private_value);
 }
 
-bool Curve25519KeyExchange::CalculateSharedKey(StringPiece peer_public_value,
-                                               string* out_result) const {
+bool Curve25519KeyExchange::CalculateSharedKey(
+    QuicStringPiece peer_public_value,
+    string* out_result) const {
   if (peer_public_value.size() != X25519_PUBLIC_VALUE_LEN) {
     return false;
   }
@@ -68,9 +68,9 @@ bool Curve25519KeyExchange::CalculateSharedKey(StringPiece peer_public_value,
   return true;
 }
 
-StringPiece Curve25519KeyExchange::public_value() const {
-  return StringPiece(reinterpret_cast<const char*>(public_key_),
-                     sizeof(public_key_));
+QuicStringPiece Curve25519KeyExchange::public_value() const {
+  return QuicStringPiece(reinterpret_cast<const char*>(public_key_),
+                         sizeof(public_key_));
 }
 
 QuicTag Curve25519KeyExchange::tag() const {

@@ -7,7 +7,6 @@
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -95,7 +94,7 @@ TEST(QuicUtilsHashTest, ReferenceTest) {
     data[i] = i % 255;
   }
   EXPECT_EQ(IncrementalHashReference(data.data(), data.size()),
-            QuicUtils::FNV1a_128_Hash(StringPiece(
+            QuicUtils::FNV1a_128_Hash(QuicStringPiece(
                 reinterpret_cast<const char*>(data.data()), data.size())));
 }
 
