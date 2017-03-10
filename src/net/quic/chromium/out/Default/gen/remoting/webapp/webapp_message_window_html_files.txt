@@ -1,2 +1,0 @@
-../../../../../remoting/webapp/base/js/message_window.js
-../../../../../remoting/webapp/base/js/base.js

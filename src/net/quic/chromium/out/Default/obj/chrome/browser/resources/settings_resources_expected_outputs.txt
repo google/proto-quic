@@ -1,4 +1,0 @@
-gen/chrome/grit/settings_resources.h
-gen/chrome/grit/settings_resources_map.cc
-gen/chrome/grit/settings_resources_map.h
-gen/chrome/settings_resources.pak

@@ -1,2 +1,0 @@
-gen/chrome/grit/common_resources.h
-gen/chrome/common_resources.pak

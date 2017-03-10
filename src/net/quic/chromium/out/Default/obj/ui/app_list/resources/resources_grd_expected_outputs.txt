@@ -1,6 +1,0 @@
-gen/ui/app_list/resources/grit/app_list_resources.h
-gen/ui/app_list/resources/grit/app_list_resources_map.cc
-gen/ui/app_list/resources/grit/app_list_resources_map.h
-gen/ui/app_list/resources/app_list_resources_100_percent.pak
-gen/ui/app_list/resources/app_list_resources_200_percent.pak
-gen/ui/app_list/resources/app_list_resources_300_percent.pak
