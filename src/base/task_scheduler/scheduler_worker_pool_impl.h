@@ -67,16 +67,12 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
       const TaskTraits& traits) override;
   scoped_refptr<SequencedTaskRunner> CreateSequencedTaskRunnerWithTraits(
       const TaskTraits& traits) override;
-  scoped_refptr<SingleThreadTaskRunner> CreateSingleThreadTaskRunnerWithTraits(
-      const TaskTraits& traits) override;
   void ReEnqueueSequence(scoped_refptr<Sequence> sequence,
                          const SequenceSortKey& sequence_sort_key) override;
   bool PostTaskWithSequence(std::unique_ptr<Task> task,
-                            scoped_refptr<Sequence> sequence,
-                            SchedulerWorker* worker) override;
+                            scoped_refptr<Sequence> sequence) override;
   void PostTaskWithSequenceNow(std::unique_ptr<Task> task,
-                               scoped_refptr<Sequence> sequence,
-                               SchedulerWorker* worker) override;
+                               scoped_refptr<Sequence> sequence) override;
 
   const HistogramBase* num_tasks_before_detach_histogram() const {
     return num_tasks_before_detach_histogram_;
@@ -111,7 +107,6 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   size_t NumberOfAliveWorkersForTesting();
 
  private:
-  class SchedulerSingleThreadTaskRunner;
   class SchedulerWorkerDelegateImpl;
 
   SchedulerWorkerPoolImpl(const SchedulerWorkerPoolParams& params,
@@ -121,9 +116,6 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   bool Initialize(
       const SchedulerWorkerPoolParams& params,
       const ReEnqueueSequenceCallback& re_enqueue_sequence_callback);
-
-  // Wakes up |worker|.
-  void WakeUpWorker(SchedulerWorker* worker);
 
   // Wakes up the last worker from this worker pool to go idle, if any.
   void WakeUpOneWorker();
@@ -146,13 +138,6 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   // All worker owned by this worker pool. Only modified during initialization
   // of the worker pool.
   std::vector<scoped_refptr<SchedulerWorker>> workers_;
-
-  // Synchronizes access to |next_worker_index_|.
-  SchedulerLock next_worker_index_lock_;
-
-  // Index of the worker that will be assigned to the next single-threaded
-  // TaskRunner returned by this pool.
-  size_t next_worker_index_ = 0;
 
   // PriorityQueue from which all threads of this worker pool get work.
   PriorityQueue shared_priority_queue_;

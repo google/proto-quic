@@ -11,81 +11,76 @@ import os
 import signal
 import subprocess
 import sys
-import urllib
 
+_SRC_PATH = os.path.abspath(os.path.join(
+    os.path.dirname(__file__), '..', '..', '..'))
+sys.path.append(os.path.join(_SRC_PATH, 'third_party', 'catapult', 'devil'))
+sys.path.append(os.path.join(_SRC_PATH, 'third_party', 'catapult', 'common',
+                             'py_utils'))
+
+from devil.utils import signal_handler
+from py_utils import tempfile_ext
+
+PROJECT = 'chromium'
+OUTPUT = 'logdog'
+COORDINATOR_HOST = 'luci-logdog.appspot.com'
+SERVICE_ACCOUNT_JSON = ('/creds/service_accounts'
+                        '/service-account-luci-logdog-publisher.json')
 
 def CommandParser():
   # Parses the command line arguments being passed in
   parser = argparse.ArgumentParser()
+  parser.add_argument('--target', required=True,
+                      help='The test target to be run.')
   parser.add_argument('--logdog-bin-cmd', required=True,
-                      help='Command for running logdog butler binary')
-  parser.add_argument('--project', required=True,
-                      help='Name of logdog project')
-  parser.add_argument('--logdog-server',
-                      default='services-dot-luci-logdog.appspot.com',
-                      help='URL of logdog server, https:// is assumed.')
-  parser.add_argument('--service-account-json', required=True,
-                      help='Location of authentication json')
-  parser.add_argument('--prefix', required=True,
-                      help='Prefix to be used for logdog stream')
-  parser.add_argument('--source', required=True,
-                      help='Location of file for logdog to stream')
-  parser.add_argument('--name', required=True,
-                      help='Name to be used for logdog stream')
+                      help='The logdog bin cmd.')
   return parser
 
-
-def CreateUrl(server, project, prefix, name):
-  stream_name = '%s/%s/+/%s' % (project, prefix, name)
-  return 'https://%s/v/?s=%s' % (server, urllib.quote_plus(stream_name))
-
-
-def CreateSignalForwarder(proc):
-  def handler(signum, _frame):
+def CreateStopTestsMethod(proc):
+  def StopTests(signum, _frame):
     logging.error('Forwarding signal %s to test process', str(signum))
     proc.send_signal(signum)
-
-  return handler
-
+  return StopTests
 
 def main():
   parser = CommandParser()
-  args, test_cmd = parser.parse_known_args(sys.argv[1:])
+  args, extra_cmd_args = parser.parse_known_args(sys.argv[1:])
+
   logging.basicConfig(level=logging.INFO)
-  if not test_cmd:
-    parser.error('Must specify command to run after the logdog flags')
-  test_proc = subprocess.Popen(test_cmd)
-  original_sigterm_handler = signal.signal(
-      signal.SIGTERM, CreateSignalForwarder(test_proc))
-  try:
-    result = test_proc.wait()
-  finally:
-    signal.signal(signal.SIGTERM, original_sigterm_handler)
-  if '${SWARMING_TASK_ID}' in args.prefix:
-    args.prefix = args.prefix.replace('${SWARMING_TASK_ID}',
-                                      os.environ.get('SWARMING_TASK_ID'))
-  url = CreateUrl('luci-logdog.appspot.com', args.project, args.prefix,
-                  args.name)
-  logdog_cmd = [args.logdog_bin_cmd, '-project', args.project,
-                '-output', 'logdog,host=%s' % args.logdog_server,
-                '-prefix', args.prefix,
-                '-service-account-json', args.service_account_json,
-                'stream', '-source', args.source,
-                '-stream', '-name=%s' % args.name]
+  with tempfile_ext.NamedTemporaryDirectory() as logcat_output_dir:
+    test_cmd = [
+        os.path.join('bin', 'run_%s' % args.target),
+        '--logcat-output-file', os.path.join(logcat_output_dir, 'logcats'),
+        '--upload-logcats-file',
+        '--target-devices-file', '${SWARMING_BOT_FILE}',
+        '-v'] + extra_cmd_args
 
-  if not os.path.exists(args.logdog_bin_cmd):
-    logging.error(
-        'Logdog binary %s unavailable. Unable to upload logcats.',
-        args.logdog_bin_cmd)
-  elif not os.path.exists(args.source):
-    logging.error(
-        'Logcat sources not found at %s. Unable to upload logcats.',
-        args.source)
-  else:
-    subprocess.call(logdog_cmd)
-    logging.info('Logcats are located at: %s', url)
-  return result
+    with tempfile_ext.NamedTemporaryDirectory(
+        prefix='tmp_android_logdog_wrapper') as temp_directory:
+      if not os.path.exists(args.logdog_bin_cmd):
+        logging.error(
+            'Logdog binary %s unavailable. Unable to create logdog client',
+            args.logdog_bin_cmd)
+      else:
+        streamserver_uri = 'unix:%s' % os.path.join(temp_directory,
+                                                    'butler.sock')
+        prefix = os.path.join('android', 'swarming', 'logcats',
+                              os.environ.get('SWARMING_TASK_ID'))
 
+        # Call test_cmdline through logdog butler subcommand.
+        test_cmd = [
+            args.logdog_bin_cmd, '-project', PROJECT,
+            '-output', OUTPUT,
+            '-prefix', prefix,
+            '--service-account-json', SERVICE_ACCOUNT_JSON,
+            '-coordinator-host', COORDINATOR_HOST,
+            'run', '-streamserver-uri', streamserver_uri, '--'] + test_cmd
+
+      test_proc = subprocess.Popen(test_cmd)
+      with signal_handler.SignalHandler(signal.SIGTERM,
+                                        CreateStopTestsMethod(test_proc)):
+        result = test_proc.wait()
+    return result
 
 if __name__ == '__main__':
   sys.exit(main())

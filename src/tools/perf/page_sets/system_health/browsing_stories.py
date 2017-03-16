@@ -214,7 +214,6 @@ class TwitterDesktopStory(_NewsBrowsingStory):
   SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
 
 
-@decorators.Disabled('all')  # crbug.com/688190
 class WashingtonPostMobileStory(_NewsBrowsingStory):
   """Progressive website"""
   NAME = 'browse:news:washingtonpost'

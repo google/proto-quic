@@ -20,11 +20,22 @@ void QuicSpdyServerStreamBase::CloseWriteSide() {
     // or RST.
     DCHECK(fin_sent());
     // Tell the peer to stop sending further data.
-    QUIC_DVLOG(0) << " Server: Send QUIC_STREAM_NO_ERROR on stream " << id();
+    QUIC_DVLOG(1) << " Server: Send QUIC_STREAM_NO_ERROR on stream " << id();
     Reset(QUIC_STREAM_NO_ERROR);
   }
 
   QuicSpdyStream::CloseWriteSide();
+}
+
+void QuicSpdyServerStreamBase::StopReading() {
+  if (!fin_received() && !rst_received() && write_side_closed() &&
+      !rst_sent()) {
+    DCHECK(fin_sent());
+    // Tell the peer to stop sending further data.
+    QUIC_DVLOG(1) << " Server: Send QUIC_STREAM_NO_ERROR on stream " << id();
+    Reset(QUIC_STREAM_NO_ERROR);
+  }
+  QuicSpdyStream::StopReading();
 }
 
 }  // namespace net

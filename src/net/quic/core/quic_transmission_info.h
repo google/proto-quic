@@ -58,6 +58,11 @@ struct QUIC_EXPORT_PRIVATE QuicTransmissionInfo {
   // The largest_acked in the ack frame, if the packet contains an ack.
   QuicPacketNumber largest_acked;
 };
+// TODO(ianswett): Add static_assert when size of this struct is reduced below
+// 64 bytes.
+// NOTE(vlovich): Existing static_assert removed because padding differences on
+// 64-bit iOS resulted in an 88-byte struct that is greater than the 84-byte
+// limit on other platforms.  Removing per ianswett's request.
 
 }  // namespace net
 

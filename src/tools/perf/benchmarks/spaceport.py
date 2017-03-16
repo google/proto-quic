@@ -104,6 +104,7 @@ class _SpaceportMeasurement(legacy_page_test.LegacyPageTest):
 # crbug.com/166703: This test frequently times out on Windows.
 @benchmark.Disabled('mac', 'win',
                     'linux', 'android')  # crbug.com/525112
+@benchmark.Owner(emails=['junov@chromium.org'])
 class Spaceport(perf_benchmark.PerfBenchmark):
   """spaceport.io's PerfMarks benchmark.
 

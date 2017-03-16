@@ -11,6 +11,7 @@ from telemetry import benchmark
 
 
 @benchmark.Enabled('android')
+@benchmark.Owner(emails=['perezju@chromium.org'])
 class PowerAndroidAcceptance(perf_benchmark.PerfBenchmark):
   """Android power acceptance test."""
   test = power.Power
@@ -25,6 +26,7 @@ class PowerAndroidAcceptance(perf_benchmark.PerfBenchmark):
 
 
 @benchmark.Enabled('android')
+@benchmark.Owner(emails=['perezju@chromium.org'])
 class PowerTypical10Mobile(perf_benchmark.PerfBenchmark):
   """Android typical 10 mobile power test."""
   test = power.Power
@@ -52,6 +54,7 @@ class PowerTypical10Mobile(perf_benchmark.PerfBenchmark):
 # @benchmark.Enabled('android')
 @benchmark.Disabled('all')
 @benchmark.Disabled('android-webview')  # http://crbug.com/622300
+@benchmark.Owner(emails=['skyostil@chromium.org'])
 class PowerToughAdCases(perf_benchmark.PerfBenchmark):
   """Android power test with tough ad pages."""
   test = power.Power
@@ -196,6 +199,7 @@ class PowerGpuRasterizationTop25(PowerTop25):
 
 
 @benchmark.Enabled('mac')
+@benchmark.Owner(emails=['erikchen@chromium.org'])
 class PowerScrollingTrivialPage(perf_benchmark.PerfBenchmark):
   """Measure power consumption for some very simple pages."""
   test = power.QuiescentPower

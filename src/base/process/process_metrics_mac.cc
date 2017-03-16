@@ -110,10 +110,12 @@ size_t ProcessMetrics::GetPeakPagefileUsage() const {
 }
 
 size_t ProcessMetrics::GetWorkingSetSize() const {
-  task_basic_info_64 task_info_data;
-  if (!GetTaskInfo(TaskForPid(process_), &task_info_data))
+  size_t private_bytes = 0;
+  size_t shared_bytes = 0;
+  size_t resident_bytes = 0;
+  if (!GetMemoryBytes(&private_bytes, &shared_bytes, &resident_bytes))
     return 0;
-  return task_info_data.resident_size;
+  return resident_bytes;
 }
 
 size_t ProcessMetrics::GetPeakWorkingSetSize() const {
@@ -124,7 +126,7 @@ size_t ProcessMetrics::GetPeakWorkingSetSize() const {
 // private_bytes is the size of private resident memory.
 // shared_bytes is the size of shared resident memory.
 bool ProcessMetrics::GetMemoryBytes(size_t* private_bytes,
-                                    size_t* shared_bytes) {
+                                    size_t* shared_bytes) const {
   size_t private_pages_count = 0;
   size_t shared_pages_count = 0;
 
@@ -189,6 +191,7 @@ bool ProcessMetrics::GetMemoryBytes(size_t* private_bytes,
       info.share_mode = SM_PRIVATE;
 
     switch (info.share_mode) {
+      case SM_LARGE_PAGE:
       case SM_PRIVATE:
         private_pages_count += info.private_pages_resident;
         private_pages_count += info.shared_pages_resident;
@@ -197,6 +200,9 @@ bool ProcessMetrics::GetMemoryBytes(size_t* private_bytes,
         private_pages_count += info.private_pages_resident;
         // Fall through
       case SM_SHARED:
+      case SM_PRIVATE_ALIASED:
+      case SM_TRUESHARED:
+      case SM_SHARED_ALIASED:
         if (seen_objects.count(info.obj_id) == 0) {
           // Only count the first reference to this region.
           seen_objects.insert(info.obj_id);
@@ -243,6 +249,15 @@ bool ProcessMetrics::GetCommittedAndWorkingSetKBytes(
   ws_usage->shareable = 0;
   ws_usage->shared = 0;
 
+  return true;
+}
+
+bool ProcessMetrics::GetMemoryBytes(size_t* private_bytes,
+                                    size_t* shared_bytes,
+                                    size_t* resident_bytes) const {
+  if (!GetMemoryBytes(private_bytes, shared_bytes))
+    return false;
+  *resident_bytes = *private_bytes + *shared_bytes;
   return true;
 }
 

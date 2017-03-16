@@ -57,10 +57,6 @@ config("feature_flags") {
     # TODO(brettw) should probably be "=1".
     defines += [ "USE_UDEV" ]
   }
-  if (ui_compositor_image_transport) {
-    # TODO(brettw) should probably be "=1".
-    defines += [ "UI_COMPOSITOR_IMAGE_TRANSPORT" ]
-  }
   if (use_ash) {
     defines += [ "USE_ASH=1" ]
   }
@@ -101,10 +97,7 @@ config("feature_flags") {
     defines += [ "ADDRESS_SANITIZER" ]
   }
   if (is_lsan) {
-    defines += [
-      "LEAK_SANITIZER",
-      "WTF_USE_LEAK_SANITIZER=1",
-    ]
+    defines += [ "LEAK_SANITIZER" ]
   }
   if (is_tsan) {
     defines += [
@@ -119,14 +112,8 @@ config("feature_flags") {
   if (is_ubsan || is_ubsan_null || is_ubsan_vptr || is_ubsan_security) {
     defines += [ "UNDEFINED_SANITIZER" ]
   }
-  if (use_external_popup_menu) {
-    defines += [ "USE_EXTERNAL_POPUP_MENU=1" ]
-  }
   if (!enable_nacl) {
     defines += [ "DISABLE_NACL" ]
-  }
-  if (enable_wayland_server) {
-    defines += [ "ENABLE_WAYLAND_SERVER=1" ]
   }
   if (safe_browsing_mode == 1) {
     defines += [ "FULL_SAFE_BROWSING" ]
@@ -145,9 +132,6 @@ config("feature_flags") {
   }
   if (enable_media_router) {
     defines += [ "ENABLE_MEDIA_ROUTER=1" ]
-  }
-  if (enable_webvr) {
-    defines += [ "ENABLE_WEBVR" ]
   }
   if (is_syzyasan) {
     defines += [

@@ -200,6 +200,7 @@ Value& Value::operator=(Value&& that) {
 
 Value::~Value() {
   InternalCleanup();
+  alive_ = false;
 }
 
 // static
@@ -589,6 +590,8 @@ void Value::InternalMoveAssignFromSameType(Value&& that) {
 }
 
 void Value::InternalCleanup() {
+  CHECK(alive_);
+
   switch (type_) {
     case Type::NONE:
     case Type::BOOLEAN:

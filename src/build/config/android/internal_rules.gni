@@ -483,7 +483,11 @@ template("test_runner_script") {
     script = "//build/android/gyp/create_test_runner_script.py"
     depfile = "$target_gen_dir/$target_name.d"
 
-    data_deps += [ "//build/android:test_runner_py" ]
+    data_deps += [
+      "//build/android:test_runner_py",
+      "//build/android:logdog_wrapper_py",
+    ]
+
     data = []
 
     test_runner_args = [

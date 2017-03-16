@@ -5,6 +5,7 @@
 #ifndef NET_QUIC_TEST_TOOLS_SIMULATOR_QUEUE_H_
 #define NET_QUIC_TEST_TOOLS_SIMULATOR_QUEUE_H_
 
+#include "net/quic/core/quic_alarm.h"
 #include "net/quic/test_tools/simulator/link.h"
 
 namespace net {
@@ -39,14 +40,73 @@ class Queue : public Actor, public UnconstrainedPortInterface {
     listener_ = listener;
   }
 
+  // Enables packet aggregation on the queue.  Packet aggregation makes the
+  // queue bundle packets up until they reach certain size.  When the
+  // aggregation is enabled, the packets are not dequeued until the total size
+  // of packets in the queue reaches |aggregation_threshold|.  The packets are
+  // automatically flushed from the queue if the oldest packet has been in it
+  // for |aggregation_timeout|.
+  //
+  // This method may only be called when the queue is empty.  Once enabled,
+  // aggregation cannot be disabled.
+  void EnableAggregation(QuicByteCount aggregation_threshold,
+                         QuicTime::Delta aggregation_timeout);
+
  private:
+  typedef uint64_t AggregationBundleNumber;
+
+  // In order to implement packet aggregation, each packet is tagged with a
+  // bundle number.  The queue keeps a bundle counter, and whenever a bundle is
+  // ready, it increments the number of the current bundle.  Only the packets
+  // outside of the current bundle are allowed to leave the queue.
+  struct EnqueuedPacket {
+    EnqueuedPacket(std::unique_ptr<Packet> packet,
+                   AggregationBundleNumber bundle);
+    ~EnqueuedPacket();
+
+    std::unique_ptr<Packet> packet;
+    AggregationBundleNumber bundle;
+  };
+
+  // Alarm handler for aggregation timeout.
+  class AggregationAlarmDelegate : public QuicAlarm::Delegate {
+   public:
+    explicit AggregationAlarmDelegate(Queue* queue);
+
+    void OnAlarm() override;
+
+   private:
+    Queue* queue_;
+  };
+
+  inline bool IsAggregationEnabled() const {
+    return aggregation_threshold_ > 0;
+  }
+
+  // Increment the bundle counter and reset the bundle state.  This causes all
+  // packets currently in the bundle to be flushed onto the link.
+  void NextBundle();
+
   void ScheduleNextPacketDequeue();
 
   const QuicByteCount capacity_;
   QuicByteCount bytes_queued_;
 
+  QuicByteCount aggregation_threshold_;
+  QuicTime::Delta aggregation_timeout_;
+  // The number of the current aggregation bundle.  Monotonically increasing.
+  // All packets in the previous bundles are allowed to leave the queue, and
+  // none of the packets in the current one are.
+  AggregationBundleNumber current_bundle_;
+  // Size of the current bundle.  Whenever it exceeds |aggregation_threshold_|,
+  // the next bundle is created.
+  QuicByteCount current_bundle_bytes_;
+  // Alarm responsible for flushing the current bundle upon timeout.  Set when
+  // the first packet in the bundle is enqueued.
+  std::unique_ptr<QuicAlarm> aggregation_timeout_alarm_;
+
   ConstrainedPortInterface* tx_port_;
-  std::queue<std::unique_ptr<Packet>> queue_;
+  std::queue<EnqueuedPacket> queue_;
 
   ListenerInterface* listener_;
 

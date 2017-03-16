@@ -97,14 +97,21 @@ const size_t kOutputSnippetBytesLimit = 300 * 1024;
 
 // Set of live launch test processes with corresponding lock (it is allowed
 // for callers to launch processes on different threads).
-LazyInstance<std::map<ProcessHandle, CommandLine>>::DestructorAtExit
-    g_live_processes = LAZY_INSTANCE_INITIALIZER;
-LazyInstance<Lock>::DestructorAtExit g_live_processes_lock =
-    LAZY_INSTANCE_INITIALIZER;
+Lock* GetLiveProcessesLock() {
+  static auto* lock = new Lock;
+  return lock;
+}
+
+std::map<ProcessHandle, CommandLine>* GetLiveProcesses() {
+  static auto* map = new std::map<ProcessHandle, CommandLine>;
+  return map;
+}
 
 // Performance trace generator.
-LazyInstance<TestLauncherTracer>::DestructorAtExit g_tracer =
-    LAZY_INSTANCE_INITIALIZER;
+TestLauncherTracer* GetTestLauncherTracer() {
+  static auto* tracer = new TestLauncherTracer;
+  return tracer;
+}
 
 #if defined(OS_POSIX)
 // Self-pipe that makes it possible to do complex shutdown handling
@@ -118,19 +125,15 @@ void ShutdownPipeSignalHandler(int signal) {
 void KillSpawnedTestProcesses() {
   // Keep the lock until exiting the process to prevent further processes
   // from being spawned.
-  AutoLock lock(g_live_processes_lock.Get());
+  AutoLock lock(*GetLiveProcessesLock());
 
-  fprintf(stdout,
-          "Sending SIGTERM to %" PRIuS " child processes... ",
-          g_live_processes.Get().size());
+  fprintf(stdout, "Sending SIGTERM to %" PRIuS " child processes... ",
+          GetLiveProcesses()->size());
   fflush(stdout);
 
-  for (std::map<ProcessHandle, CommandLine>::iterator i =
-           g_live_processes.Get().begin();
-       i != g_live_processes.Get().end();
-       ++i) {
+  for (const auto& pair : *GetLiveProcesses()) {
     // Send the signal to entire process group.
-    kill((-1) * (i->first), SIGTERM);
+    kill((-1) * (pair.first), SIGTERM);
   }
 
   fprintf(stdout,
@@ -142,17 +145,13 @@ void KillSpawnedTestProcesses() {
   fprintf(stdout, "done.\n");
   fflush(stdout);
 
-  fprintf(stdout,
-          "Sending SIGKILL to %" PRIuS " child processes... ",
-          g_live_processes.Get().size());
+  fprintf(stdout, "Sending SIGKILL to %" PRIuS " child processes... ",
+          GetLiveProcesses()->size());
   fflush(stdout);
 
-  for (std::map<ProcessHandle, CommandLine>::iterator i =
-           g_live_processes.Get().begin();
-       i != g_live_processes.Get().end();
-       ++i) {
+  for (const auto& pair : *GetLiveProcesses()) {
     // Send the signal to entire process group.
-    kill((-1) * (i->first), SIGKILL);
+    kill((-1) * (pair.first), SIGKILL);
   }
 
   fprintf(stdout, "done.\n");
@@ -309,11 +308,11 @@ int LaunchChildTestProcessWithOptions(
     // Note how we grab the lock before the process possibly gets created.
     // This ensures that when the lock is held, ALL the processes are registered
     // in the set.
-    AutoLock lock(g_live_processes_lock.Get());
+    AutoLock lock(*GetLiveProcessesLock());
 
 #if defined(OS_WIN)
     // Allow the handle used to capture stdio and stdout to be inherited by the
-    // child. Note that this is done under g_live_processes_lock to ensure that
+    // child. Note that this is done under GetLiveProcessesLock() to ensure that
     // only the desired child receives the handle.
     if (new_options.stdout_handle) {
       ::SetHandleInformation(new_options.stdout_handle, HANDLE_FLAG_INHERIT,
@@ -325,7 +324,7 @@ int LaunchChildTestProcessWithOptions(
 
 #if defined(OS_WIN)
     // Revoke inheritance so that the handle isn't leaked into other children.
-    // Note that this is done under g_live_processes_lock to ensure that only
+    // Note that this is done under GetLiveProcessesLock() to ensure that only
     // the desired child receives the handle.
     if (new_options.stdout_handle)
       ::SetHandleInformation(new_options.stdout_handle, HANDLE_FLAG_INHERIT, 0);
@@ -335,8 +334,7 @@ int LaunchChildTestProcessWithOptions(
       return -1;
 
     // TODO(rvargas) crbug.com/417532: Don't store process handles.
-    g_live_processes.Get().insert(std::make_pair(process.Handle(),
-                                                 command_line));
+    GetLiveProcesses()->insert(std::make_pair(process.Handle(), command_line));
   }
 
   if (!launched_callback.is_null())
@@ -355,7 +353,7 @@ int LaunchChildTestProcessWithOptions(
     // Note how we grab the log before issuing a possibly broad process kill.
     // Other code parts that grab the log kill processes, so avoid trying
     // to do that twice and trigger all kinds of log messages.
-    AutoLock lock(g_live_processes_lock.Get());
+    AutoLock lock(*GetLiveProcessesLock());
 
 #if defined(OS_POSIX)
     if (exit_code != 0) {
@@ -367,11 +365,11 @@ int LaunchChildTestProcessWithOptions(
     }
 #endif
 
-    g_live_processes.Get().erase(process.Handle());
+    GetLiveProcesses()->erase(process.Handle());
   }
 
-  g_tracer.Get().RecordProcessExecution(start_time,
-                                        TimeTicks::Now() - start_time);
+  GetTestLauncherTracer()->RecordProcessExecution(
+      start_time, TimeTicks::Now() - start_time);
 
   return exit_code;
 }
@@ -1114,7 +1112,7 @@ void TestLauncher::MaybeSaveSummaryAsJSON(
   if (command_line->HasSwitch(switches::kTestLauncherTrace)) {
     FilePath trace_path(
         command_line->GetSwitchValuePath(switches::kTestLauncherTrace));
-    if (!g_tracer.Get().Dump(trace_path)) {
+    if (!GetTestLauncherTracer()->Dump(trace_path)) {
       LOG(ERROR) << "Failed to save test launcher trace.";
     }
   }
@@ -1159,18 +1157,15 @@ void TestLauncher::OnTestIterationFinished() {
 void TestLauncher::OnOutputTimeout() {
   DCHECK(thread_checker_.CalledOnValidThread());
 
-  AutoLock lock(g_live_processes_lock.Get());
+  AutoLock lock(*GetLiveProcessesLock());
 
   fprintf(stdout, "Still waiting for the following processes to finish:\n");
 
-  for (std::map<ProcessHandle, CommandLine>::iterator i =
-           g_live_processes.Get().begin();
-       i != g_live_processes.Get().end();
-       ++i) {
+  for (const auto& pair : *GetLiveProcesses()) {
 #if defined(OS_WIN)
-    fwprintf(stdout, L"\t%s\n", i->second.GetCommandLineString().c_str());
+    fwprintf(stdout, L"\t%s\n", pair.second.GetCommandLineString().c_str());
 #else
-    fprintf(stdout, "\t%s\n", i->second.GetCommandLineString().c_str());
+    fprintf(stdout, "\t%s\n", pair.second.GetCommandLineString().c_str());
 #endif
   }
 

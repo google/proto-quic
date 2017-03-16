@@ -7,6 +7,7 @@ import os
 
 from core import perf_benchmark
 
+from telemetry import benchmark
 from telemetry import page as page_module
 from telemetry.page import legacy_page_test
 from telemetry import story
@@ -126,6 +127,7 @@ class _SunspiderMeasurement(legacy_page_test.LegacyPageTest):
                     'in sunspider'))
 
 
+@benchmark.Owner(emails=['bmeurer@chromium.org', 'mvstanton@chromium.org'])
 class Sunspider(perf_benchmark.PerfBenchmark):
   """Apple's SunSpider JavaScript benchmark.
 

@@ -95,11 +95,6 @@ bool PriorityQueue::Transaction::IsEmpty() const {
 
 PriorityQueue::PriorityQueue() = default;
 
-PriorityQueue::PriorityQueue(const PriorityQueue* predecessor_priority_queue)
-    : container_lock_(&predecessor_priority_queue->container_lock_) {
-  DCHECK(predecessor_priority_queue);
-}
-
 PriorityQueue::~PriorityQueue() = default;
 
 std::unique_ptr<PriorityQueue::Transaction> PriorityQueue::BeginTransaction() {

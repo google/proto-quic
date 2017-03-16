@@ -1199,8 +1199,6 @@ component("net") {
       "quic/core/frames/quic_mtu_discovery_frame.h",
       "quic/core/frames/quic_padding_frame.cc",
       "quic/core/frames/quic_padding_frame.h",
-      "quic/core/frames/quic_path_close_frame.cc",
-      "quic/core/frames/quic_path_close_frame.h",
       "quic/core/frames/quic_ping_frame.h",
       "quic/core/frames/quic_rst_stream_frame.cc",
       "quic/core/frames/quic_rst_stream_frame.h",

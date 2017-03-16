@@ -66,8 +66,6 @@ class QuicConnectionPeer {
 
   static bool IsSilentCloseEnabled(QuicConnection* connection);
 
-  static bool IsMultipathEnabled(QuicConnection* connection);
-
   static void SwapCrypters(QuicConnection* connection, QuicFramer* framer);
 
   static void SetCurrentPacket(QuicConnection* connection,

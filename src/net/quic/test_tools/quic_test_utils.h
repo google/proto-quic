@@ -70,7 +70,6 @@ QuicVersion QuicVersionMin();
 QuicEncryptedPacket* ConstructEncryptedPacket(
     QuicConnectionId connection_id,
     bool version_flag,
-    bool multipath_flag,
     bool reset_flag,
     QuicPacketNumber packet_number,
     const std::string& data,
@@ -86,7 +85,6 @@ QuicEncryptedPacket* ConstructEncryptedPacket(
 QuicEncryptedPacket* ConstructEncryptedPacket(
     QuicConnectionId connection_id,
     bool version_flag,
-    bool multipath_flag,
     bool reset_flag,
     QuicPacketNumber packet_number,
     const std::string& data,
@@ -98,7 +96,6 @@ QuicEncryptedPacket* ConstructEncryptedPacket(
 QuicEncryptedPacket* ConstructEncryptedPacket(
     QuicConnectionId connection_id,
     bool version_flag,
-    bool multipath_flag,
     bool reset_flag,
     QuicPacketNumber packet_number,
     const std::string& data,
@@ -110,7 +107,6 @@ QuicEncryptedPacket* ConstructEncryptedPacket(
 // |versions| == nullptr.
 QuicEncryptedPacket* ConstructEncryptedPacket(QuicConnectionId connection_id,
                                               bool version_flag,
-                                              bool multipath_flag,
                                               bool reset_flag,
                                               QuicPacketNumber packet_number,
                                               const std::string& data);
@@ -247,7 +243,6 @@ class MockFramerVisitor : public QuicFramerVisitorInterface {
   MOCK_METHOD1(OnGoAwayFrame, bool(const QuicGoAwayFrame& frame));
   MOCK_METHOD1(OnWindowUpdateFrame, bool(const QuicWindowUpdateFrame& frame));
   MOCK_METHOD1(OnBlockedFrame, bool(const QuicBlockedFrame& frame));
-  MOCK_METHOD1(OnPathCloseFrame, bool(const QuicPathCloseFrame& frame));
   MOCK_METHOD0(OnPacketComplete, void());
 
  private:
@@ -279,7 +274,6 @@ class NoOpFramerVisitor : public QuicFramerVisitorInterface {
   bool OnGoAwayFrame(const QuicGoAwayFrame& frame) override;
   bool OnWindowUpdateFrame(const QuicWindowUpdateFrame& frame) override;
   bool OnBlockedFrame(const QuicBlockedFrame& frame) override;
-  bool OnPathCloseFrame(const QuicPathCloseFrame& frame) override;
   void OnPacketComplete() override {}
 
  private:

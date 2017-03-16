@@ -642,13 +642,20 @@ class CertVerifyProcInspectSignatureAlgorithmsTest : public ::testing::Test {
     DigestAlgorithm tbs_algorithm;
   };
 
-  // On iOS trying to import a certificate with mismatched signature will
-  // fail. Consequently the rest of the tests can't be performed.
+  // On some platforms trying to import a certificate with mismatched signature
+  // will fail. Consequently the rest of the tests can't be performed.
   WARN_UNUSED_RESULT bool SupportsImportingMismatchedAlgorithms() const {
 #if defined(OS_IOS)
     LOG(INFO) << "Skipping test on iOS because certs with mismatched "
                  "algorithms cannot be imported";
     return false;
+#elif defined(OS_MACOSX)
+    if (base::mac::IsAtLeastOS10_12()) {
+      LOG(INFO) << "Skipping test on macOS >= 10.12 because certs with "
+                   "mismatched algorithms cannot be imported";
+      return false;
+    }
+    return true;
 #else
     return true;
 #endif

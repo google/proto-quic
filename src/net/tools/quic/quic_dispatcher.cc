@@ -269,8 +269,7 @@ bool QuicDispatcher::OnUnauthenticatedPublicHeader(
     return false;
   }
 
-  if (FLAGS_quic_reloadable_flag_quic_buffer_packets_after_chlo &&
-      buffered_packets_.HasChloForConnection(connection_id)) {
+  if (buffered_packets_.HasChloForConnection(connection_id)) {
     BufferEarlyPacket(connection_id);
     return false;
   }
@@ -626,11 +625,6 @@ bool QuicDispatcher::OnBlockedFrame(const QuicBlockedFrame& frame) {
   return false;
 }
 
-bool QuicDispatcher::OnPathCloseFrame(const QuicPathCloseFrame& frame) {
-  DCHECK(false);
-  return false;
-}
-
 void QuicDispatcher::OnPacketComplete() {
   DCHECK(false);
 }
@@ -723,23 +717,18 @@ void QuicDispatcher::ProcessChlo() {
       FLAGS_quic_reloadable_flag_quic_limit_num_new_sessions_per_epoll_loop &&
       new_sessions_allowed_per_event_loop_ <= 0) {
     // Can't create new session any more. Wait till next event loop.
-    if (!buffered_packets_.HasChloForConnection(current_connection_id_)) {
-      // Only buffer one CHLO per connection. Remove this condition check when
-      // --gfe2_reloadable_flag_quic_buffer_packets_after_chlo
-      // is deprecated because after that retransmitted CHLO should be buffered
-      // earlier in OnUnauthenticatedPublicHeader().
-      bool is_new_connection =
-          !buffered_packets_.HasBufferedPackets(current_connection_id_);
-      EnqueuePacketResult rs = buffered_packets_.EnqueuePacket(
-          current_connection_id_, *current_packet_, current_server_address_,
-          current_client_address_, /*is_chlo=*/true);
-      if (rs != EnqueuePacketResult::SUCCESS) {
-        OnBufferPacketFailure(rs, current_connection_id_);
-      } else if (
-          !FLAGS_quic_reloadable_flag_quic_create_session_after_insertion &&
-          is_new_connection) {
-        ShouldCreateOrBufferPacketForConnection(current_connection_id_);
-      }
+    QUIC_BUG_IF(buffered_packets_.HasChloForConnection(current_connection_id_));
+    bool is_new_connection =
+        !buffered_packets_.HasBufferedPackets(current_connection_id_);
+    EnqueuePacketResult rs = buffered_packets_.EnqueuePacket(
+        current_connection_id_, *current_packet_, current_server_address_,
+        current_client_address_, /*is_chlo=*/true);
+    if (rs != EnqueuePacketResult::SUCCESS) {
+      OnBufferPacketFailure(rs, current_connection_id_);
+    } else if (
+        !FLAGS_quic_reloadable_flag_quic_create_session_after_insertion &&
+        is_new_connection) {
+      ShouldCreateOrBufferPacketForConnection(current_connection_id_);
     }
     return;
   }

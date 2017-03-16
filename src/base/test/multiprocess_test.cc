@@ -13,7 +13,7 @@
 namespace base {
 
 #if !defined(OS_ANDROID)
-Process SpawnMultiProcessTestChild(
+SpawnChildResult SpawnMultiProcessTestChild(
     const std::string& procname,
     const CommandLine& base_command_line,
     const LaunchOptions& options) {
@@ -24,7 +24,9 @@ Process SpawnMultiProcessTestChild(
   if (!command_line.HasSwitch(switches::kTestChildProcess))
     command_line.AppendSwitchASCII(switches::kTestChildProcess, procname);
 
-  return LaunchProcess(command_line, options);
+  SpawnChildResult result;
+  result.process = LaunchProcess(command_line, options);
+  return result;
 }
 
 bool WaitForMultiprocessTestChildExit(const Process& process,
@@ -52,7 +54,7 @@ CommandLine GetMultiProcessTestChildBaseCommandLine() {
 MultiProcessTest::MultiProcessTest() {
 }
 
-Process MultiProcessTest::SpawnChild(const std::string& procname) {
+SpawnChildResult MultiProcessTest::SpawnChild(const std::string& procname) {
   LaunchOptions options;
 #if defined(OS_WIN)
   options.start_hidden = true;
@@ -60,7 +62,7 @@ Process MultiProcessTest::SpawnChild(const std::string& procname) {
   return SpawnChildWithOptions(procname, options);
 }
 
-Process MultiProcessTest::SpawnChildWithOptions(
+SpawnChildResult MultiProcessTest::SpawnChildWithOptions(
     const std::string& procname,
     const LaunchOptions& options) {
   return SpawnMultiProcessTestChild(procname, MakeCmdLine(procname), options);

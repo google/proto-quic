@@ -6,6 +6,7 @@
 
 #include "base/logging.h"
 #include "base/metrics/histogram_macros.h"
+#include "base/stl_util.h"
 #include "base/strings/string_util.h"
 
 namespace {
@@ -50,7 +51,7 @@ void CheckOriginIsValid(const GURL& origin) {
   DCHECK(origin.GetOrigin() == origin);
 }
 
-// Functor used by remove_if.
+// Functor used by EraseIf.
 struct IsEnclosedBy {
   explicit IsEnclosedBy(const std::string& path) : path(path) { }
   bool operator() (const std::string& x) const {
@@ -200,7 +201,7 @@ void HttpAuthCache::Entry::AddPath(const std::string& path) {
   std::string parent_dir = GetParentDirectory(path);
   if (!HasEnclosingPath(parent_dir, NULL)) {
     // Remove any entries that have been subsumed by the new entry.
-    paths_.remove_if(IsEnclosedBy(parent_dir));
+    base::EraseIf(paths_, IsEnclosedBy(parent_dir));
 
     bool evicted = false;
     // Failsafe to prevent unbounded memory growth of the cache.
@@ -254,7 +255,7 @@ bool HttpAuthCache::Remove(const GURL& origin,
 
 void HttpAuthCache::ClearEntriesAddedWithin(base::TimeDelta duration) {
   base::TimeTicks begin_time = base::TimeTicks::Now() - duration;
-  entries_.remove_if([begin_time](const Entry& entry) {
+  base::EraseIf(entries_, [begin_time](const Entry& entry) {
     return entry.creation_time_ >= begin_time;
   });
 }

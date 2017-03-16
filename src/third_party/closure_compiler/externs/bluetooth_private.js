@@ -40,22 +40,15 @@ chrome.bluetoothPrivate.PairingEventType = {
  */
 chrome.bluetoothPrivate.ConnectResultType = {
   ALREADY_CONNECTED: 'alreadyConnected',
-  ATTRIBUTE_LENGTH_INVALID: 'attributeLengthInvalid',
   AUTH_CANCELED: 'authCanceled',
   AUTH_FAILED: 'authFailed',
   AUTH_REJECTED: 'authRejected',
   AUTH_TIMEOUT: 'authTimeout',
-  CONNECTION_CONGESTED: 'connectionCongested',
   FAILED: 'failed',
   IN_PROGRESS: 'inProgress',
-  INSUFFICIENT_ENCRYPTION: 'insufficientEncryption',
-  OFFSET_INVALID: 'offsetInvalid',
-  READ_NOT_PERMITTED: 'readNotPermitted',
-  REQUEST_NOT_SUPPORTED: 'requestNotSupported',
   SUCCESS: 'success',
   UNKNOWN_ERROR: 'unknownError',
   UNSUPPORTED_DEVICE: 'unsupportedDevice',
-  WRITE_NOT_PERMITTED: 'writeNotPermitted',
 };
 
 /**

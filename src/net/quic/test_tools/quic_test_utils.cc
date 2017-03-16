@@ -221,10 +221,6 @@ bool NoOpFramerVisitor::OnBlockedFrame(const QuicBlockedFrame& frame) {
   return true;
 }
 
-bool NoOpFramerVisitor::OnPathCloseFrame(const QuicPathCloseFrame& frame) {
-  return true;
-}
-
 MockQuicConnectionVisitor::MockQuicConnectionVisitor() {}
 
 MockQuicConnectionVisitor::~MockQuicConnectionVisitor() {}
@@ -554,48 +550,44 @@ QuicVersion QuicVersionMin() {
 
 QuicEncryptedPacket* ConstructEncryptedPacket(QuicConnectionId connection_id,
                                               bool version_flag,
-                                              bool multipath_flag,
                                               bool reset_flag,
                                               QuicPacketNumber packet_number,
                                               const string& data) {
   return ConstructEncryptedPacket(
-      connection_id, version_flag, multipath_flag, reset_flag, packet_number,
-      data, PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER);
+      connection_id, version_flag, reset_flag, packet_number, data,
+      PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER);
 }
 
 QuicEncryptedPacket* ConstructEncryptedPacket(
     QuicConnectionId connection_id,
     bool version_flag,
-    bool multipath_flag,
     bool reset_flag,
     QuicPacketNumber packet_number,
     const string& data,
     QuicConnectionIdLength connection_id_length,
     QuicPacketNumberLength packet_number_length) {
-  return ConstructEncryptedPacket(
-      connection_id, version_flag, multipath_flag, reset_flag, packet_number,
-      data, connection_id_length, packet_number_length, nullptr);
+  return ConstructEncryptedPacket(connection_id, version_flag, reset_flag,
+                                  packet_number, data, connection_id_length,
+                                  packet_number_length, nullptr);
 }
 
 QuicEncryptedPacket* ConstructEncryptedPacket(
     QuicConnectionId connection_id,
     bool version_flag,
-    bool multipath_flag,
     bool reset_flag,
     QuicPacketNumber packet_number,
     const string& data,
     QuicConnectionIdLength connection_id_length,
     QuicPacketNumberLength packet_number_length,
     QuicVersionVector* versions) {
-  return ConstructEncryptedPacket(connection_id, version_flag, multipath_flag,
-                                  reset_flag, packet_number, data,
-                                  connection_id_length, packet_number_length,
-                                  versions, Perspective::IS_CLIENT);
+  return ConstructEncryptedPacket(connection_id, version_flag, reset_flag,
+                                  packet_number, data, connection_id_length,
+                                  packet_number_length, versions,
+                                  Perspective::IS_CLIENT);
 }
 QuicEncryptedPacket* ConstructEncryptedPacket(
     QuicConnectionId connection_id,
     bool version_flag,
-    bool multipath_flag,
     bool reset_flag,
     QuicPacketNumber packet_number,
     const string& data,
@@ -607,7 +599,7 @@ QuicEncryptedPacket* ConstructEncryptedPacket(
   header.public_header.connection_id = connection_id;
   header.public_header.connection_id_length = connection_id_length;
   header.public_header.version_flag = version_flag;
-  header.public_header.multipath_flag = multipath_flag;
+  header.public_header.multipath_flag = false;
   header.public_header.reset_flag = reset_flag;
   header.public_header.packet_number_length = packet_number_length;
   header.packet_number = packet_number;

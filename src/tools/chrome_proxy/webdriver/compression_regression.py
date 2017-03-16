@@ -73,7 +73,7 @@ class CompressionRegression(IntegrationTest):
       checking and facilitates the test with all of the helper functions'
       behavior.
       """
-      compression_average = self.getCurrentCompressionMetrics()
+      compression_average = self.getCurrentCompressionMetricsWithRetry()
       self.fetchFromGoogleStorage()
       data = {}
       with open(DATA_FILE, 'r') as data_fp:
@@ -82,6 +82,27 @@ class CompressionRegression(IntegrationTest):
         with open(DATA_FILE, 'w') as data_fp:
           json.dump(data, data_fp)
         self.uploadToGoogleStorage()
+
+  def getCurrentCompressionMetricsWithRetry(self, max_attempts=10):
+    """This function allows some number of attempts to be tried to fetch
+    compressed responses. Sometimes, the proxy will not have compressed results
+    available immediately, especially for video resources.
+
+    Args:
+      max_attempts: the maximum number of attempts to try to fetch compressed
+        resources.
+    Returns:
+      a dict object mapping resource type to compression
+    """
+    attempts = 0
+    while attempts < max_attempts:
+      try:
+        return self.getCurrentCompressionMetrics()
+      except Exception as e:
+        attempts += 1
+        time.sleep(2)
+    if attempts >= max_attempts:
+      raise Exception("Didn't get good response after %d attempts" % attempts)
 
   def getCurrentCompressionMetrics(self):
     """This function uses the ChromeDriver framework to open Chrome and navigate

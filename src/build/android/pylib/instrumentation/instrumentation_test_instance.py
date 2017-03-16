@@ -504,6 +504,9 @@ class InstrumentationTestInstance(test_instance.TestInstance):
     self._edit_shared_prefs = []
     self._initializeEditPrefsAttributes(args)
 
+    self._external_shard_index = args.test_launcher_shard_index
+    self._total_external_shards = args.test_launcher_total_shards
+
   def _initializeApkAttributes(self, args, error_func):
     if args.apk_under_test:
       apk_under_test_path = args.apk_under_test
@@ -734,6 +737,10 @@ class InstrumentationTestInstance(test_instance.TestInstance):
     return self._edit_shared_prefs
 
   @property
+  def external_shard_index(self):
+    return self._external_shard_index
+
+  @property
   def flags(self):
     return self._flags
 
@@ -788,6 +795,10 @@ class InstrumentationTestInstance(test_instance.TestInstance):
   @property
   def timeout_scale(self):
     return self._timeout_scale
+
+  @property
+  def total_external_shards(self):
+    return self._total_external_shards
 
   #override
   def TestType(self):

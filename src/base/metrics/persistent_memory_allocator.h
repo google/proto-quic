@@ -217,6 +217,9 @@ class BASE_EXPORT PersistentMemoryAllocator {
   };
 
   enum : uint32_t {
+    // A value that will match any type when doing lookups.
+    kTypeIdAny = 0x00000000,
+
     // A value indicating that the type is in transition. Work is being done
     // on the contents to prepare it for a new type to come.
     kTypeIdTransitioning = 0xFFFFFFFF,
@@ -400,7 +403,8 @@ class BASE_EXPORT PersistentMemoryAllocator {
   // Changing the type doesn't mean the data is compatible with the new type.
   // Passing true for |clear| will zero the memory after the type has been
   // changed away from |from_type_id| but before it becomes |to_type_id| meaning
-  // that it is done in a manner that is thread-safe.
+  // that it is done in a manner that is thread-safe. Memory is guaranteed to
+  // be zeroed atomically by machine-word in a monotonically increasing order.
   //
   // It will likely be necessary to reconstruct the type before it can be used.
   // Changing the type WILL NOT invalidate existing pointers to the data, either

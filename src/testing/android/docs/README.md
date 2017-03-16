@@ -7,7 +7,7 @@
     - [... set up an emulator for local testing?](/testing/android/docs/todo.md)
   - **writing tests**
     - [... write an instrumentation test?](/testing/android/docs/instrumentation.md)
-    - [... write a Robolectric test?](/testing/android/docs/todo.md)
+    - [... write a JUnit or Robolectric test?](/testing/android/docs/junit.md)
   - **running tests**
     - [... run a gtest?](/testing/android/docs/todo.md)
     - [... run an instrumentation test?](/testing/android/docs/todo.md)

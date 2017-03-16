@@ -21,8 +21,8 @@ namespace net {
 
 class SocketPosix;
 
-// Unix Domain Server Socket Implementation. Supports abstract namespaces on
-// Linux and Android.
+// A server socket that uses unix domain socket as the transport layer.
+// Supports abstract namespaces on Linux and Android.
 class NET_EXPORT UnixDomainServerSocket : public ServerSocket {
  public:
   // Credentials of a peer process connected to the socket.

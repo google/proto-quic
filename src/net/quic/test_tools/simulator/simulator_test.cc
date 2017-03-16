@@ -728,5 +728,81 @@ TEST(SimulatorTest, TrafficPolicerBurst) {
                        saturator2.counter()->bytes(), 0.1f);
 }
 
+// Test that the packet aggregation support in queues work.
+TEST(SimulatorTest, PacketAggregation) {
+  // Model network where the delays are dominated by transfer delay.
+  const QuicBandwidth bandwidth = QuicBandwidth::FromBytesPerSecond(1000);
+  const QuicTime::Delta base_propagation_delay =
+      QuicTime::Delta::FromMicroseconds(1);
+  const QuicByteCount aggregation_threshold = 1000;
+  const QuicTime::Delta aggregation_timeout = QuicTime::Delta::FromSeconds(30);
+
+  Simulator simulator;
+  LinkSaturator saturator1(&simulator, "Saturator 1", 10, "Saturator 2");
+  LinkSaturator saturator2(&simulator, "Saturator 2", 10, "Saturator 1");
+  Switch network_switch(&simulator, "Switch", 8, 10 * aggregation_threshold);
+
+  // Make links with asymmetric propagation delay so that Saturator 2 only
+  // receives packets addressed to it.
+  SymmetricLink link1(&saturator1, network_switch.port(1), bandwidth,
+                      base_propagation_delay);
+  SymmetricLink link2(&saturator2, network_switch.port(2), bandwidth,
+                      2 * base_propagation_delay);
+
+  // Enable aggregation in 1 -> 2 direction.
+  Queue* queue = network_switch.port_queue(2);
+  queue->EnableAggregation(aggregation_threshold, aggregation_timeout);
+
+  // Enable aggregation in 2 -> 1 direction in a way that all packets are larger
+  // than the threshold, so that aggregation is effectively a no-op.
+  network_switch.port_queue(1)->EnableAggregation(5, aggregation_timeout);
+
+  // Fill up the aggregation buffer up to 90% (900 bytes).
+  simulator.RunFor(0.9 * bandwidth.TransferTime(aggregation_threshold));
+  EXPECT_EQ(0u, saturator2.counter()->bytes());
+
+  // Stop sending, ensure that given a timespan much shorter than timeout, the
+  // packets remain in the queue.
+  saturator1.Pause();
+  saturator2.Pause();
+  simulator.RunFor(QuicTime::Delta::FromSeconds(10));
+  EXPECT_EQ(0u, saturator2.counter()->bytes());
+  EXPECT_EQ(900u, queue->bytes_queued());
+
+  // Ensure that all packets have reached the saturator not affected by
+  // aggregation.  Here, 10 extra bytes account for a misrouted packet in the
+  // beginning.
+  EXPECT_EQ(910u, saturator1.counter()->bytes());
+
+  // Send 500 more bytes.  Since the aggregation threshold is 1000 bytes, and
+  // queue already has 900 bytes, 1000 bytes will be send and 400 will be in the
+  // queue.
+  saturator1.Resume();
+  simulator.RunFor(0.5 * bandwidth.TransferTime(aggregation_threshold));
+  saturator1.Pause();
+  simulator.RunFor(QuicTime::Delta::FromSeconds(10));
+  EXPECT_EQ(1000u, saturator2.counter()->bytes());
+  EXPECT_EQ(400u, queue->bytes_queued());
+
+  // Actually time out, and cause all of the data to be received.
+  simulator.RunFor(aggregation_timeout);
+  EXPECT_EQ(1400u, saturator2.counter()->bytes());
+  EXPECT_EQ(0u, queue->bytes_queued());
+
+  // Run saturator for a longer time, to ensure that the logic to cancel and
+  // reset alarms works correctly.
+  saturator1.Resume();
+  simulator.RunFor(5.5 * bandwidth.TransferTime(aggregation_threshold));
+  saturator1.Pause();
+  simulator.RunFor(QuicTime::Delta::FromSeconds(10));
+  EXPECT_EQ(6400u, saturator2.counter()->bytes());
+  EXPECT_EQ(500u, queue->bytes_queued());
+
+  // Time out again.
+  simulator.RunFor(aggregation_timeout);
+  EXPECT_EQ(6900u, saturator2.counter()->bytes());
+  EXPECT_EQ(0u, queue->bytes_queued());
+}
+
 }  // namespace simulator
 }  // namespace net

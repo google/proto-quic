@@ -8,9 +8,7 @@
 #include <gtest/gtest.h>
 
 #if defined(GTEST_OS_MAC)
-#ifndef __OBJC__
-typedef void* id;
-#endif
+#include <objc/objc.h>
 
 // The purpose of this class us to provide a hook for platform-specific
 // operations across unit tests.  For example, on the Mac, it creates and

@@ -4,6 +4,7 @@
 
 from core import perf_benchmark
 
+from telemetry import benchmark
 from telemetry.timeline import chrome_trace_category_filter
 from telemetry.web_perf import timeline_based_measurement
 from telemetry.web_perf.metrics import jitter_timeline
@@ -15,6 +16,7 @@ JITTER_CATEGORY = 'cdp.perf'
 TIMELINE_REQUIRED_CATEGORY = 'blink.console'
 
 
+@benchmark.Owner(emails=['jaydasika@chromium.org'])
 class Jitter(perf_benchmark.PerfBenchmark):
   """Timeline based measurement benchmark for jitter."""
 

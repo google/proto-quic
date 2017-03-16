@@ -21,9 +21,6 @@ sys.path.insert(0, os.path.join(chrome_src, 'tools', 'gyp', 'pylib'))
 json_data_file = os.path.join(script_dir, 'win_toolchain.json')
 
 
-import gyp
-
-
 # Use MSVS2015 as the default toolchain.
 CURRENT_DEFAULT_TOOLCHAIN_VERSION = '2015'
 
@@ -60,6 +57,12 @@ def SetEnvironmentAndGetRuntimeDllDirs():
 
     os.environ['GYP_MSVS_OVERRIDE_PATH'] = toolchain
     os.environ['GYP_MSVS_VERSION'] = version
+
+    # Limit the scope of the gyp import to only where it is used. This
+    # potentially lets build configs that never execute this block to drop
+    # their GYP checkout.
+    import gyp
+
     # We need to make sure windows_sdk_path is set to the automated
     # toolchain values in GYP_DEFINES, but don't want to override any
     # otheroptions.express
@@ -68,6 +71,7 @@ def SetEnvironmentAndGetRuntimeDllDirs():
     gyp_defines_dict['windows_sdk_path'] = win_sdk
     os.environ['GYP_DEFINES'] = ' '.join('%s=%s' % (k, pipes.quote(str(v)))
         for k, v in gyp_defines_dict.iteritems())
+
     os.environ['WINDOWSSDKDIR'] = win_sdk
     os.environ['WDK_DIR'] = wdk
     # Include the VS runtime in the PATH in case it's not machine-installed.
@@ -171,12 +175,11 @@ def _VersionNumber():
   vs_version = GetVisualStudioVersion()
   if vs_version == '2013':
     return '120'
-  elif vs_version == '2015':
+  if vs_version == '2015':
     return '140'
-  elif vs_version == '2017':
+  if vs_version == '2017':
     return '150'
-  else:
-    raise ValueError('Unexpected GYP_MSVS_VERSION')
+  raise ValueError('Unexpected GYP_MSVS_VERSION')
 
 
 def _CopyRuntimeImpl(target, source, verbose=True):
@@ -209,7 +212,7 @@ def _CopyRuntime2013(target_dir, source_dir, dll_pattern):
     _CopyRuntimeImpl(target, source)
 
 
-def _CopyUCRTRuntime(target_dir, source_dir, dll_pattern, suffix):
+def _CopyUCRTRuntime(target_dir, source_dir, target_cpu, dll_pattern, suffix):
   """Copy both the msvcp and vccorlib runtime DLLs, only if the target doesn't
   exist, but the target directory does exist."""
   for file_part in ('msvcp', 'vccorlib', 'vcruntime'):
@@ -217,14 +220,16 @@ def _CopyUCRTRuntime(target_dir, source_dir, dll_pattern, suffix):
     target = os.path.join(target_dir, dll)
     source = os.path.join(source_dir, dll)
     _CopyRuntimeImpl(target, source)
-  # OS installs of Visual Studio (and all installs of Windows 10) put the
-  # universal CRT files in c:\Windows\System32\downlevel - look for them there
-  # to support DEPOT_TOOLS_WIN_TOOLCHAIN=0.
-  if os.path.exists(os.path.join(source_dir, 'downlevel')):
-    ucrt_src_glob = os.path.join(source_dir, 'downlevel', 'api-ms-win-*.dll')
-  else:
-    ucrt_src_glob = os.path.join(source_dir, 'api-ms-win-*.dll')
-  ucrt_files = glob.glob(ucrt_src_glob)
+  # Copy the UCRT files needed by VS 2015 from the Windows SDK. This location
+  # includes the api-ms-win-crt-*.dll files that are not found in the Windows
+  # directory. These files are needed for component builds.
+  # If WINDOWSSDKDIR is not set use the default SDK path. This will be the case
+  # when DEPOT_TOOLS_WIN_TOOLCHAIN=0 and vcvarsall.bat has not been run.
+  win_sdk_dir = os.path.normpath(
+      os.environ.get('WINDOWSSDKDIR',
+                     'C:\\Program Files (x86)\\Windows Kits\\10'))
+  ucrt_dll_dirs = os.path.join(win_sdk_dir, r'Redist\ucrt\DLLs', target_cpu)
+  ucrt_files = glob.glob(os.path.join(ucrt_dll_dirs, 'api-ms-win-*.dll'))
   assert len(ucrt_files) > 0
   for ucrt_src_file in ucrt_files:
     file_part = os.path.basename(ucrt_src_file)
@@ -238,9 +243,10 @@ def _CopyRuntime(target_dir, source_dir, target_cpu, debug):
   """Copy the VS runtime DLLs, only if the target doesn't exist, but the target
   directory does exist. Handles VS 2013, VS 2015, and VS 2017."""
   suffix = "d.dll" if debug else ".dll"
-  if GetVisualStudioVersion() == '2015' or GetVisualStudioVersion() == '2017':
-    # VS 2017 RC uses the same CRT DLLs as VS 2015.
-    _CopyUCRTRuntime(target_dir, source_dir, '%s140' + suffix, suffix)
+  if GetVisualStudioVersion() in ['2015', '2017']:
+    # VS 2017 uses the same CRT DLLs as VS 2015.
+    _CopyUCRTRuntime(target_dir, source_dir, target_cpu, '%s140' + suffix,
+                     suffix)
   else:
     _CopyRuntime2013(target_dir, source_dir, 'msvc%s120' + suffix)
 
@@ -340,11 +346,13 @@ def _CopyDebugger(target_dir, target_cpu):
 def _GetDesiredVsToolchainHashes():
   """Load a list of SHA1s corresponding to the toolchains that we want installed
   to build with."""
-  if GetVisualStudioVersion() == '2015':
+  env_version = GetVisualStudioVersion()
+  if env_version == '2013':
+    return ['03a4e939cd325d6bc5216af41b92d02dda1366a6']
+  if env_version == '2015':
     # Update 3 final with patches with 10.0.14393.0 SDK.
     return ['d3cb0e37bdd120ad0ac4650b674b09e81be45616']
-  else:
-    return ['03a4e939cd325d6bc5216af41b92d02dda1366a6']
+  raise Exception('Unsupported VS version %s' % env_version)
 
 
 def ShouldUpdateToolchain():

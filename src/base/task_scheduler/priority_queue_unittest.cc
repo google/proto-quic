@@ -141,19 +141,6 @@ TEST(TaskSchedulerPriorityQueueTest, IllegalTwoTransactionsSameThread) {
       });
 }
 
-// Check that there is no crash when Transactions are created on the same thread
-// for 2 PriorityQueues which have a predecessor relationship.
-TEST(TaskSchedulerPriorityQueueTest, LegalTwoTransactionsSameThread) {
-  PriorityQueue pq_a;
-  PriorityQueue pq_b(&pq_a);
-
-  // This shouldn't crash.
-  std::unique_ptr<PriorityQueue::Transaction> transaction_a =
-      pq_a.BeginTransaction();
-  std::unique_ptr<PriorityQueue::Transaction> transaction_b =
-      pq_b.BeginTransaction();
-}
-
 // Check that it is possible to begin multiple Transactions for the same
 // PriorityQueue on different threads. The call to BeginTransaction() on the
 // second thread should block until the Transaction has ended on the first

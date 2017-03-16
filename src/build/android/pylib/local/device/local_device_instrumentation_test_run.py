@@ -205,7 +205,11 @@ class LocalDeviceInstrumentationTestRun(
 
   #override
   def _GetTests(self):
-    return self._test_instance.GetTests()
+    tests = self._test_instance.GetTests()
+    tests = self._ApplyExternalSharding(
+        tests, self._test_instance.external_shard_index,
+        self._test_instance.total_external_shards)
+    return tests
 
   #override
   def _GetUniqueTestName(self, test):

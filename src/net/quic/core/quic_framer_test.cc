@@ -57,13 +57,6 @@ size_t GetMinStreamFrameSize() {
   return kQuicFrameTypeSize + kQuicMaxStreamIdSize + kQuicMaxStreamOffsetSize;
 }
 
-// Index into the path id offset in the header (if present).
-size_t GetPathIdOffset(QuicConnectionIdLength connection_id_length,
-                       bool include_version) {
-  return kConnectionIdOffset + connection_id_length +
-         (include_version ? kQuicVersionSize : 0);
-}
-
 // Index into the packet number offset in the header.
 size_t GetPacketNumberOffset(QuicConnectionIdLength connection_id_length,
                              bool include_version) {
@@ -73,23 +66,6 @@ size_t GetPacketNumberOffset(QuicConnectionIdLength connection_id_length,
 
 size_t GetPacketNumberOffset(bool include_version) {
   return GetPacketNumberOffset(PACKET_8BYTE_CONNECTION_ID, include_version);
-}
-
-// Index into the private flags offset in the data packet header.
-size_t GetPrivateFlagsOffset(QuicConnectionIdLength connection_id_length,
-                             bool include_version) {
-  return GetPacketNumberOffset(connection_id_length, include_version) +
-         PACKET_6BYTE_PACKET_NUMBER;
-}
-
-size_t GetPrivateFlagsOffset(bool include_version) {
-  return GetPrivateFlagsOffset(PACKET_8BYTE_CONNECTION_ID, include_version);
-}
-
-size_t GetPrivateFlagsOffset(bool include_version,
-                             QuicPacketNumberLength packet_number_length) {
-  return GetPacketNumberOffset(PACKET_8BYTE_CONNECTION_ID, include_version) +
-         packet_number_length;
 }
 
 // Index into the message tag of the public reset packet.
@@ -129,7 +105,6 @@ class TestEncrypter : public QuicEncrypter {
   QuicStringPiece GetNoncePrefix() const override { return QuicStringPiece(); }
 
   QuicVersion version_;
-  Perspective perspective_;
   QuicPacketNumber packet_number_;
   string associated_data_;
   string plaintext_;
@@ -168,7 +143,6 @@ class TestDecrypter : public QuicDecrypter {
   // Use a distinct value starting with 0xFFFFFF, which is never used by TLS.
   uint32_t cipher_id() const override { return 0xFFFFFFF2; }
   QuicVersion version_;
-  Perspective perspective_;
   QuicPacketNumber packet_number_;
   string associated_data_;
   string ciphertext_;
@@ -288,11 +262,6 @@ class TestQuicVisitor : public QuicFramerVisitorInterface {
     return true;
   }
 
-  bool OnPathCloseFrame(const QuicPathCloseFrame& frame) override {
-    path_close_frame_ = frame;
-    return true;
-  }
-
   // Counters from the visitor_ callbacks.
   int error_count_;
   int version_mismatch_;
@@ -316,7 +285,6 @@ class TestQuicVisitor : public QuicFramerVisitorInterface {
   QuicGoAwayFrame goaway_frame_;
   QuicWindowUpdateFrame window_update_frame_;
   QuicBlockedFrame blocked_frame_;
-  QuicPathCloseFrame path_close_frame_;
   std::vector<std::unique_ptr<string>> stream_data_;
 };
 
@@ -941,7 +909,8 @@ TEST_P(QuicFramerTest, PacketWithDiversificationNonce) {
   // clang-format off
   unsigned char packet[] = {
     // public flags: includes nonce flag
-    0x7C,
+    static_cast<unsigned char>(
+        FLAGS_quic_reloadable_flag_quic_remove_multipath_bit ? 0x3C : 0x7C),
     // connection_id
     0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
     // nonce
@@ -971,7 +940,8 @@ TEST_P(QuicFramerTest, LargePublicFlagWithMismatchedVersions) {
   // clang-format off
   unsigned char packet[] = {
     // public flags (8 byte connection_id, version flag and an unknown flag)
-    0x79,
+    static_cast<unsigned char>(
+        FLAGS_quic_reloadable_flag_quic_remove_multipath_bit ? 0x39 : 0x79),
     // connection_id
     0x10, 0x32, 0x54, 0x76,
     0x98, 0xBA, 0xDC, 0xFE,
@@ -3568,7 +3538,7 @@ TEST_P(QuicFramerTest, ConstructEncryptedPacket) {
   QuicVersionVector versions;
   versions.push_back(framer_.version());
   std::unique_ptr<QuicEncryptedPacket> packet(ConstructEncryptedPacket(
-      42, false, false, false, kTestQuicStreamId, kTestString,
+      42, false, false, kTestQuicStreamId, kTestString,
       PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER, &versions));
 
   MockFramerVisitor visitor;

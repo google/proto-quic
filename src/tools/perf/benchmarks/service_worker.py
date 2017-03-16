@@ -158,6 +158,7 @@ class _ServiceWorkerMicroBenchmarkMeasurement(legacy_page_test.LegacyPageTest):
           results.current_page, key, value['units'], value['value']))
 
 
+@benchmark.Owner(emails=['horo@chromium.org'])
 class ServiceWorkerPerfTest(perf_benchmark.PerfBenchmark):
   """Performance test of pages using ServiceWorker.
 
@@ -175,6 +176,7 @@ class ServiceWorkerPerfTest(perf_benchmark.PerfBenchmark):
 
 
 @benchmark.Disabled('android-webview')  # http://crbug.com/653924
+@benchmark.Owner(emails=['horo@chromium.org'])
 class ServiceWorkerMicroBenchmarkPerfTest(perf_benchmark.PerfBenchmark):
   """This test is a microbenchmark of service worker.
 

@@ -81,7 +81,7 @@ size_t ProcessMetrics::GetPeakWorkingSetSize() const {
 }
 
 bool ProcessMetrics::GetMemoryBytes(size_t* private_bytes,
-                                    size_t* shared_bytes) {
+                                    size_t* shared_bytes) const {
   // PROCESS_MEMORY_COUNTERS_EX is not supported until XP SP2.
   // GetProcessMemoryInfo() will simply fail on prior OS. So the requested
   // information is simply not available. Hence, we will return 0 on unsupported

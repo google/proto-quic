@@ -74,12 +74,15 @@ template("pnacl_toolchain") {
     if (defined(invoker.strip)) {
       strip = scriptprefix + toolprefix + invoker.strip + scriptsuffix
     }
+    forward_variables_from(invoker,
+                           [
+                             "executable_extension",
+                             "is_clang_analysis_supported",
+                           ])
 
     # Note this is not the usual "ld = cxx" because "ld" uses are
     # never run via goma, so this needs scriptprefix.
     ld = scriptprefix + toolprefix + "clang++" + scriptsuffix
-
-    executable_extension = invoker.executable_extension
 
     toolchain_args = {
       is_clang = true
@@ -104,6 +107,10 @@ pnacl_toolchain("newlib_pnacl") {
 pnacl_toolchain("newlib_pnacl_nonsfi") {
   executable_extension = ""
   strip = "strip"
+
+  if (use_clang_static_analyzer) {
+    is_clang_analysis_supported = false
+  }
 }
 
 template("nacl_glibc_toolchain") {

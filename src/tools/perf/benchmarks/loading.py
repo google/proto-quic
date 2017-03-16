@@ -14,6 +14,7 @@ from telemetry.web_perf import timeline_based_measurement
 
 
 @benchmark.Enabled('android')
+@benchmark.Owner(emails=['kouhei@chromium.org', 'ksakamoto@chromium.org'])
 class LoadingMobile(perf_benchmark.PerfBenchmark):
   """ A benchmark measuring loading performance of mobile sites. """
 

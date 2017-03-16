@@ -54,6 +54,17 @@ def SubstituteDeviceRoot(device_path, device_root):
     return device_path
 
 
+class TestsTerminated(Exception):
+  pass
+
+
+class InvalidShardingSettings(Exception):
+  def __init__(self, shard_index, total_shards):
+    super(InvalidShardingSettings, self).__init__(
+        'Invalid sharding settings. shard_index: %d total_shards: %d'
+            % (shard_index, total_shards))
+
+
 class LocalDeviceTestRun(test_run.TestRun):
 
   def __init__(self, env, test_instance):
@@ -94,9 +105,6 @@ class LocalDeviceTestRun(test_run.TestRun):
             tests.test_completed()
 
       logging.info('Finished running tests on this device.')
-
-    class TestsTerminated(Exception):
-      pass
 
     def stop_tests(_signum, _frame):
       logging.critical('Received SIGTERM. Stopping test execution.')
@@ -177,6 +185,17 @@ class LocalDeviceTestRun(test_run.TestRun):
 
     return [t for t in failed_tests if self._ShouldRetry(t)]
 
+  def _ApplyExternalSharding(self, tests, shard_index, total_shards):
+    logging.info('Using external sharding settings. This is shard %d/%d',
+                 shard_index, total_shards)
+
+    if total_shards < 0 or shard_index < 0 or total_shards <= shard_index:
+      raise InvalidShardingSettings(shard_index, total_shards)
+
+    return [
+        t for t in tests
+        if hash(self._GetUniqueTestName(t)) % total_shards == shard_index]
+
   def GetTool(self, device):
     if not str(device) in self._tools:
       self._tools[str(device)] = valgrind_tools.CreateTool(
@@ -196,7 +215,6 @@ class LocalDeviceTestRun(test_run.TestRun):
 
   def _GetTests(self):
     raise NotImplementedError
-
   def _RunTest(self, device, test):
     raise NotImplementedError
 

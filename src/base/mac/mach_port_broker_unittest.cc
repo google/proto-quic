@@ -95,21 +95,21 @@ TEST_F(MachPortBrokerTest, ReceivePortFromChild) {
   CommandLine command_line(
       base::GetMultiProcessTestChildBaseCommandLine());
   broker_.GetLock().Acquire();
-  base::Process test_child_process = base::SpawnMultiProcessTestChild(
+  base::SpawnChildResult spawn_result = base::SpawnMultiProcessTestChild(
       "MachPortBrokerTestChild", command_line, LaunchOptions());
-  broker_.AddPlaceholderForPid(test_child_process.Handle());
+  broker_.AddPlaceholderForPid(spawn_result.process.Handle());
   broker_.GetLock().Release();
 
   WaitForTaskPort();
-  EXPECT_EQ(test_child_process.Handle(), received_process_);
+  EXPECT_EQ(spawn_result.process.Handle(), received_process_);
 
   int rv = -1;
-  ASSERT_TRUE(test_child_process.WaitForExitWithTimeout(
+  ASSERT_TRUE(spawn_result.process.WaitForExitWithTimeout(
       TestTimeouts::action_timeout(), &rv));
   EXPECT_EQ(0, rv);
 
   EXPECT_NE(static_cast<mach_port_t>(MACH_PORT_NULL),
-            broker_.TaskForPid(test_child_process.Handle()));
+            broker_.TaskForPid(spawn_result.process.Handle()));
 }
 
 TEST_F(MachPortBrokerTest, ReceivePortFromChildWithoutAdding) {
@@ -117,17 +117,18 @@ TEST_F(MachPortBrokerTest, ReceivePortFromChildWithoutAdding) {
   CommandLine command_line(
       base::GetMultiProcessTestChildBaseCommandLine());
   broker_.GetLock().Acquire();
-  base::Process test_child_process = base::SpawnMultiProcessTestChild(
+  base::SpawnChildResult spawn_result = base::SpawnMultiProcessTestChild(
       "MachPortBrokerTestChild", command_line, LaunchOptions());
+
   broker_.GetLock().Release();
 
   int rv = -1;
-  ASSERT_TRUE(test_child_process.WaitForExitWithTimeout(
+  ASSERT_TRUE(spawn_result.process.WaitForExitWithTimeout(
       TestTimeouts::action_timeout(), &rv));
   EXPECT_EQ(0, rv);
 
   EXPECT_EQ(static_cast<mach_port_t>(MACH_PORT_NULL),
-            broker_.TaskForPid(test_child_process.Handle()));
+            broker_.TaskForPid(spawn_result.process.Handle()));
 }
 
 }  // namespace base

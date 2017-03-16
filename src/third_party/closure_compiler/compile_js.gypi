@@ -38,12 +38,13 @@
         'disabled_closure_args%': '<(default_disabled_closure_args)',
       },
       'inputs': [
-        'compile_js.gypi',
-        '<(CLOSURE_DIR)/compile.py',
-        '<(CLOSURE_DIR)/processor.py',
         '<(CLOSURE_DIR)/build/inputs.py',
         '<(CLOSURE_DIR)/build/outputs.py',
+        '<(CLOSURE_DIR)/closure_args.gypi',
+        '<(CLOSURE_DIR)/compile.py',
+        '<(CLOSURE_DIR)/compile_js.gypi',
         '<(CLOSURE_DIR)/compiler/compiler.jar',
+        '<(CLOSURE_DIR)/processor.py',
         '<!@(python <(CLOSURE_DIR)/build/inputs.py <@(source_files) -d <@(depends) -e <@(externs))',
       ],
       'outputs': [

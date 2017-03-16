@@ -36,8 +36,6 @@ typedef uint64_t QuicRoundTripCount;
 // pacing is disabled.
 //
 // TODO(vasilvv): implement traffic policer (long-term sampling) mode.
-//
-// TODO(vasilvv): implement packet conservation.
 class QUIC_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
  public:
   enum Mode {
@@ -143,6 +141,12 @@ class QUIC_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
                          QuicRoundTripCount>
       MaxBandwidthFilter;
 
+  typedef WindowedFilter<QuicTime::Delta,
+                         MaxFilter<QuicTime::Delta>,
+                         QuicRoundTripCount,
+                         QuicRoundTripCount>
+      MaxAckDelayFilter;
+
   // Returns the current estimate of the RTT of the connection.  Outside of the
   // edge cases, this is minimum RTT.
   QuicTime::Delta GetMinRtt() const;
@@ -186,6 +190,11 @@ class QUIC_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
                            bool has_losses,
                            bool is_round_start);
 
+  // Updates the ack spacing max filter if a larger value is observed.
+  void UpdateAckSpacing(QuicTime ack_time,
+                        QuicPacketNumber largest_newly_acked,
+                        const CongestionVector& acked_packets);
+
   // Determines the appropriate pacing rate for the connection.
   void CalculatePacingRate();
   // Determines the appropriate congestion window for the connection.
@@ -216,6 +225,13 @@ class QUIC_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
   // The filter that tracks the maximum bandwidth over the multiple recent
   // round-trips.
   MaxBandwidthFilter max_bandwidth_;
+
+  // Tracks the maximum spacing between two acks acknowledging in order packets.
+  MaxAckDelayFilter max_ack_spacing_;
+
+  // The time the largest acked packet was acked and when it was sent.
+  QuicTime largest_acked_time_;
+  QuicTime largest_acked_sent_time_;
 
   // Minimum RTT estimate.  Automatically expires within 10 seconds (and
   // triggers PROBE_RTT mode) if no new value is sampled during that period.

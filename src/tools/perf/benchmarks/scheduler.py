@@ -10,6 +10,7 @@ import page_sets
 
 
 @benchmark.Disabled('reference')  # crbug.com/549428
+@benchmark.Owner(emails=['skyostil@chromium.org', 'brianderson@chromium.org'])
 class SchedulerToughSchedulingCases(perf_benchmark.PerfBenchmark):
   """Measures rendering statistics while interacting with pages that have
   challenging scheduling properties.

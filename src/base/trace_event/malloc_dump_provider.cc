@@ -216,12 +216,18 @@ bool MallocDumpProvider::OnMemoryDump(const MemoryDumpArgs& args,
   total_virtual_size = stats.size_allocated;
   allocated_objects_size = stats.size_in_use;
 
-  // The resident size is approximated to the max size in use, which would count
-  // the total size of all regions other than the free bytes at the end of each
-  // region. In each allocation region the allocations are rounded off to a
-  // fixed quantum, so the excess region will not be resident.
-  // See crrev.com/1531463004 for detailed explanation.
-  resident_size = stats.max_size_in_use;
+  // Resident size is approximated pretty well by stats.max_size_in_use.
+  // However, on macOS, freed blocks are both resident and reusable, which is
+  // semantically equivalent to deallocated. The implementation of libmalloc
+  // will also only hold a fixed number of freed regions before actually
+  // starting to deallocate them, so stats.max_size_in_use is also not
+  // representative of the peak size. As a result, stats.max_size_in_use is
+  // typically somewhere between actually resident [non-reusable] pages, and
+  // peak size. This is not very useful, so we just use stats.size_in_use for
+  // resident_size, even though it's an underestimate and fails to account for
+  // fragmentation. See
+  // https://bugs.chromium.org/p/chromium/issues/detail?id=695263#c1.
+  resident_size = stats.size_in_use;
 #elif defined(OS_WIN)
   WinHeapInfo main_heap_info = {};
   WinHeapMemoryDumpImpl(&main_heap_info);

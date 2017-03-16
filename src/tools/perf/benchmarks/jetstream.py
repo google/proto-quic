@@ -77,6 +77,7 @@ class _JetstreamMeasurement(legacy_page_test.LegacyPageTest):
 
 
 @benchmark.Disabled('android')
+@benchmark.Owner(emails=['bmeurer@chromium.org', 'mvstanton@chromium.org'])
 class Jetstream(perf_benchmark.PerfBenchmark):
   test = _JetstreamMeasurement
 

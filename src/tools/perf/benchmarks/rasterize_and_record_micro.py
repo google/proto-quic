@@ -73,6 +73,7 @@ class RasterizeAndRecordMicroKeyMobileSites(_RasterizeAndRecordMicro):
 
 
 @benchmark.Disabled('all') # http://crbug.com/610424
+@benchmark.Owner(emails=['vmpstr@chromium.org'])
 class RasterizeAndRecordMicroKeySilkCases(_RasterizeAndRecordMicro):
   """Measures rasterize and record performance on the silk sites.
 

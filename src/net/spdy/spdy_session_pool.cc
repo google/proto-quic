@@ -162,15 +162,25 @@ base::WeakPtr<SpdySession> SpdySessionPool::FindAvailableSession(
 
   AvailableSessionMap::iterator it = LookupAvailableSessionByKey(key);
   if (it != available_sessions_.end()) {
-    UMA_HISTOGRAM_ENUMERATION(
-        "Net.SpdySessionGet", FOUND_EXISTING, SPDY_SESSION_GET_MAX);
-    net_log.AddEvent(
-        NetLogEventType::HTTP2_SESSION_POOL_FOUND_EXISTING_SESSION,
-        it->second->net_log().source().ToEventParametersCallback());
+    if (key.Equals(it->second->spdy_session_key())) {
+      UMA_HISTOGRAM_ENUMERATION("Net.SpdySessionGet", FOUND_EXISTING,
+                                SPDY_SESSION_GET_MAX);
+      net_log.AddEvent(
+          NetLogEventType::HTTP2_SESSION_POOL_FOUND_EXISTING_SESSION,
+          it->second->net_log().source().ToEventParametersCallback());
+    } else {
+      UMA_HISTOGRAM_ENUMERATION("Net.SpdySessionGet",
+                                FOUND_EXISTING_FROM_IP_POOL,
+                                SPDY_SESSION_GET_MAX);
+      net_log.AddEvent(
+          NetLogEventType::
+              HTTP2_SESSION_POOL_FOUND_EXISTING_SESSION_FROM_IP_POOL,
+          it->second->net_log().source().ToEventParametersCallback());
+    }
     return it->second;
   }
 
-  // Look up the key's from the resolver's cache.
+  // Look up IP addresses from resolver cache.
   HostResolver::RequestInfo resolve_info(key.host_port_pair());
   AddressList addresses;
   int rv = resolver_->ResolveFromCache(resolve_info, &addresses, net_log);
@@ -282,7 +292,7 @@ void SpdySessionPool::RegisterUnclaimedPushedStream(
     GURL url,
     base::WeakPtr<SpdySession> spdy_session) {
   DCHECK(!url.is_empty());
-  // This SpdySessionPool  must own |spdy_session|.
+  // This SpdySessionPool must own |spdy_session|.
   DCHECK(base::ContainsKey(sessions_, spdy_session.get()));
   UnclaimedPushedStreamMap::iterator url_it =
       unclaimed_pushed_streams_.lower_bound(url);

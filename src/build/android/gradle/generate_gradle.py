@@ -7,7 +7,6 @@
 
 import argparse
 import codecs
-import glob
 import logging
 import os
 import re
@@ -249,7 +248,7 @@ class _ProjectContextGenerator(object):
   def _GenJniLibs(self, root_entry):
     libraries = []
     for entry in self._GetEntries(root_entry):
-      libraries += entry.BuildConfig().get('native', [])
+      libraries += entry.BuildConfig().get('native', {}).get('libraries', [])
     if libraries:
       return _CreateJniLibsDir(constants.GetOutDirectory(),
           self.EntryOutputDir(root_entry), libraries)
@@ -259,9 +258,9 @@ class _ProjectContextGenerator(object):
     java_files = []
     for entry in self._GetEntries(root_entry):
       java_files += entry.JavaFiles()
-    java_dirs, excludes = _ComputeJavaSourceDirsAndExcludes(
+    java_dirs, single_files = _ComputeJavaSourceDirsAndFiles(
         constants.GetOutDirectory(), java_files)
-    return java_dirs, excludes
+    return java_dirs, single_files
 
   def _GenCustomManifest(self, entry):
     """Returns the path to the generated AndroidManifest.xml.
@@ -297,7 +296,8 @@ class _ProjectContextGenerator(object):
   def _Srcjars(self, entry):
     srcjars = _RebasePath(entry.Gradle().get('bundled_srcjars', []))
     if not self.use_gradle_process_resources:
-      srcjars += _RebasePath(entry.BuildConfig()['javac']['srcjars'])
+      srcjars += _RebasePath(entry.Javac()['srcjars'])
+      srcjars += _RebasePath(entry.Gradle().get('srcjars'))
     return srcjars
 
   def _GetEntries(self, entry):
@@ -332,11 +332,11 @@ class _ProjectContextGenerator(object):
     # TODO(agrieve): Add an option to use interface jars and see if that speeds
     # things up at all.
     variables = {}
-    java_dirs, excludes = self._GenJavaDirs(root_entry)
+    java_dirs, java_files = self._GenJavaDirs(root_entry)
     java_dirs.sort()
     variables['java_dirs'] = self._Relativize(root_entry, java_dirs)
     variables['java_dirs'].append(_SRCJARS_SUBDIR)
-    variables['java_excludes'] = excludes
+    variables['java_files'] = self._Relativize(root_entry, java_files)
     variables['jni_libs'] = self._Relativize(
         root_entry, set(self._GenJniLibs(root_entry)))
     variables['prebuilts'] = [
@@ -387,42 +387,18 @@ def _ComputeJavaSourceDirs(java_files):
   return found_roots
 
 
-def _ComputeExcludeFilters(wanted_files, unwanted_files, parent_dir):
-  """Returns exclude patters to exclude unwanted files but keep wanted files.
-
-  - Shortens exclude list by globbing if possible.
-  - Exclude patterns are relative paths from the parent directory.
-  """
-  excludes = []
-  files_to_include = set(wanted_files)
-  files_to_exclude = set(unwanted_files)
-  while files_to_exclude:
-    unwanted_file = files_to_exclude.pop()
-    target_exclude = os.path.join(
-        os.path.dirname(unwanted_file), '*.java')
-    found_files = set(glob.glob(target_exclude))
-    valid_files = found_files & files_to_include
-    if valid_files:
-      excludes.append(os.path.relpath(unwanted_file, parent_dir))
-    else:
-      excludes.append(os.path.relpath(target_exclude, parent_dir))
-      files_to_exclude -= found_files
-  return excludes
-
-
-def _ComputeJavaSourceDirsAndExcludes(output_dir, java_files):
-  """Computes the list of java source directories and exclude patterns.
+def _ComputeJavaSourceDirsAndFiles(output_dir, java_files):
+  """Computes the list of java source directories and single files.
 
   1. Computes the root java source directories from the list of files.
-  2. Compute exclude patterns that exclude all extra files only.
-  3. Returns the list of java source directories and exclude patterns.
+  2. Compute single files that are not included in full directories.
+  3. Returns the list of java source directories and single files.
   """
   java_dirs = []
-  excludes = []
+  single_files = set()
   if java_files:
     java_files = _RebasePath(java_files)
     computed_dirs = _ComputeJavaSourceDirs(java_files)
-    java_dirs = computed_dirs.keys()
     all_found_java_files = set()
 
     for directory, files in computed_dirs.iteritems():
@@ -430,19 +406,20 @@ def _ComputeJavaSourceDirsAndExcludes(output_dir, java_files):
       all_found_java_files.update(found_java_files)
       unwanted_java_files = set(found_java_files) - set(files)
       if unwanted_java_files:
-        logging.debug('Directory requires excludes: %s', directory)
-        excludes.extend(
-            _ComputeExcludeFilters(files, unwanted_java_files, directory))
+        logging.debug('Directory requires single files: %s', directory)
+        single_files.update(files)
+      else:
+        java_dirs.append(directory)
 
     missing_java_files = set(java_files) - all_found_java_files
     # Warn only about non-generated files that are missing.
     missing_java_files = [p for p in missing_java_files
                           if not p.startswith(output_dir)]
     if missing_java_files:
-      logging.warning(
+      logging.error(
           'Some java files were not found: %s', missing_java_files)
 
-  return java_dirs, excludes
+  return java_dirs, list(single_files)
 
 
 def _CreateRelativeSymlink(target_path, link_path):
@@ -518,6 +495,8 @@ def _GenerateGradleFile(entry, generator, build_vars, jinja_processor):
       _RebasePath(os.path.join(build_vars['android_sdk_build_tools'],
                                'source.properties')))
   variables['build_tools_version'] = source_properties['Pkg.Revision']
+  # TODO(wnwen): Remove this line once http://crbug.com/688263 is fixed.
+  variables['build_tools_version'] = '25.0.0'
   variables['compile_sdk_version'] = (
       'android-%s' % build_vars['android_sdk_version'])
   variables['main'] = generator.Generate(entry)
@@ -737,7 +716,7 @@ def main():
     _ExtractZips(generator.project_dir, zip_tuples)
 
   logging.warning('Project created! (%d subprojects)', len(project_entries))
-  logging.warning('Generated projects work best with Android Studio 2.2')
+  logging.warning('Generated projects are targeting Android Studio 2.3')
   logging.warning('For more tips: https://chromium.googlesource.com/chromium'
                   '/src.git/+/master/docs/android_studio.md')
 

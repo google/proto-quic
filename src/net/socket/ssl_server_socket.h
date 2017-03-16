@@ -32,6 +32,7 @@ namespace net {
 struct SSLServerConfig;
 class X509Certificate;
 
+// A server socket that uses SSL as the transport layer.
 class SSLServerSocket : public SSLSocket {
  public:
   ~SSLServerSocket() override {}

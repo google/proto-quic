@@ -28,7 +28,7 @@ class NET_EXPORT_PRIVATE SpdyHeadersHandlerInterface {
   virtual void OnHeader(base::StringPiece key, base::StringPiece value) = 0;
 
   // TODO(yasong): deprecate this method with
-  // --gfe2_reloadable_flag_log_compressed_size.
+  // --chromium_http2_flag_log_compressed_size.
   // A callback method which notifies when the parser finishes handling a
   // header block (i.e. the containing frame has the END_HEADERS flag set).
   // Also indicates the total number of bytes in this block.

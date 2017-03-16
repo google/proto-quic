@@ -354,14 +354,10 @@ class scoped_refptr {
     return *this;
   }
 
-  void swap(T** pp) {
-    T* p = ptr_;
-    ptr_ = *pp;
-    *pp = p;
-  }
-
   void swap(scoped_refptr<T>& r) {
-    swap(&r.ptr_);
+    T* tmp = ptr_;
+    ptr_ = r.ptr_;
+    r.ptr_ = tmp;
   }
 
   explicit operator bool() const { return ptr_ != nullptr; }

@@ -565,6 +565,14 @@ void HttpServerPropertiesImpl::SetServerNetworkStats(
   server_network_stats_map_.Put(server, stats);
 }
 
+void HttpServerPropertiesImpl::ClearServerNetworkStats(
+    const url::SchemeHostPort& server) {
+  ServerNetworkStatsMap::iterator it = server_network_stats_map_.Get(server);
+  if (it != server_network_stats_map_.end()) {
+    server_network_stats_map_.Erase(it);
+  }
+}
+
 const ServerNetworkStats* HttpServerPropertiesImpl::GetServerNetworkStats(
     const url::SchemeHostPort& server) {
   ServerNetworkStatsMap::iterator it = server_network_stats_map_.Get(server);

@@ -3566,6 +3566,14 @@ should be able to be added at any place in this file.
   <description>Close button of the CustomTabActivity was clicked.</description>
 </action>
 
+<action name="CustomTabs.CloseButtonClicked.DownloadsUI">
+  <owner>shaktisahu@chromium.org</owner>
+  <description>
+    The user has clicked on the back arrow while viewing downloaded media on
+    Android.
+  </description>
+</action>
+
 <action name="CustomTabs.StartedInitially">
   <owner>tedchoc@chromium.org</owner>
   <description>A CustomTabActivity was stared for the first time.</description>
@@ -3597,9 +3605,25 @@ should be able to be added at any place in this file.
   <description>Please enter the description of the metric.</description>
 </action>
 
+<action name="CustomTabsCustomActionButtonClick.DownloadsUI.Share">
+  <owner>shaktisahu@chromium.org</owner>
+  <description>
+    The user has clicked on the share button while viewing downloaded media on
+    Android.
+  </description>
+</action>
+
 <action name="CustomTabsMenuCustomMenuItem">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of the metric.</description>
+</action>
+
+<action name="CustomTabsMenuCustomMenuItem.DownloadsUI.OpenWith">
+  <owner>shaktisahu@chromium.org</owner>
+  <description>
+    The user has selected Open With from the menu while viewing downloaded media
+    on Android.
+  </description>
 </action>
 
 <action name="CustomTabsMenuFindInPage">
@@ -8994,9 +9018,27 @@ should be able to be added at any place in this file.
   <description>The user entered fullscreen mode from the controls.</description>
 </action>
 
+<action name="Media.Controls.EnterFullscreen.EmbeddedExperience">
+  <owner>shaktisahu@chromium.org</owner>
+  <description>
+    The user has entered fullscreen mode from the controls. Recorded only for
+    downloaded media on Android and is a subset of
+    Media.Controls.EnterFullscreen.
+  </description>
+</action>
+
 <action name="Media.Controls.ExitFullscreen">
   <owner>mlamouri@chromium.org</owner>
   <description>The user left fullscreen mode from the controls.</description>
+</action>
+
+<action name="Media.Controls.ExitFullscreen.EmbeddedExperience">
+  <owner>shaktisahu@chromium.org</owner>
+  <description>
+    The user has left fullscreen mode from the controls. Recorded only for
+    downloaded media on Android and is a subset of
+    Media.Controls.ExitFullscreen.
+  </description>
 </action>
 
 <action name="Media.Controls.Mute">

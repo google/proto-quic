@@ -10,6 +10,7 @@
 #include "base/bind_helpers.h"
 #include "base/memory/ptr_util.h"
 #include "base/task_scheduler/delayed_task_manager.h"
+#include "base/task_scheduler/scheduler_single_thread_task_runner_manager.h"
 #include "base/task_scheduler/scheduler_worker_pool_params.h"
 #include "base/task_scheduler/sequence_sort_key.h"
 #include "base/task_scheduler/task.h"
@@ -48,7 +49,7 @@ void TaskSchedulerImpl::PostDelayedTaskWithTraits(
   // Post |task| as part of a one-off single-task Sequence.
   GetWorkerPoolForTraits(traits)->PostTaskWithSequence(
       MakeUnique<Task>(from_here, task, traits, delay),
-      make_scoped_refptr(new Sequence), nullptr);
+      make_scoped_refptr(new Sequence));
 }
 
 scoped_refptr<TaskRunner> TaskSchedulerImpl::CreateTaskRunnerWithTraits(
@@ -66,8 +67,8 @@ TaskSchedulerImpl::CreateSequencedTaskRunnerWithTraits(
 scoped_refptr<SingleThreadTaskRunner>
 TaskSchedulerImpl::CreateSingleThreadTaskRunnerWithTraits(
     const TaskTraits& traits) {
-  return GetWorkerPoolForTraits(traits)->CreateSingleThreadTaskRunnerWithTraits(
-      traits);
+  return single_thread_task_runner_manager_
+      ->CreateSingleThreadTaskRunnerWithTraits(traits);
 }
 
 std::vector<const HistogramBase*> TaskSchedulerImpl::GetHistograms() const {
@@ -98,6 +99,7 @@ void TaskSchedulerImpl::JoinForTesting() {
 #if DCHECK_IS_ON()
   DCHECK(!join_for_testing_returned_.IsSet());
 #endif
+  single_thread_task_runner_manager_->JoinForTesting();
   for (const auto& worker_pool : worker_pools_)
     worker_pool->DisallowWorkerDetachmentForTesting();
   for (const auto& worker_pool : worker_pools_)
@@ -147,6 +149,11 @@ void TaskSchedulerImpl::Initialize(
   // thread to get its task_runner().
   delayed_task_manager_ =
       base::MakeUnique<DelayedTaskManager>(service_thread_.task_runner());
+
+  single_thread_task_runner_manager_ =
+      MakeUnique<SchedulerSingleThreadTaskRunnerManager>(
+          worker_pool_params_vector, worker_pool_index_for_traits_callback_,
+          task_tracker_.get(), delayed_task_manager_.get());
 
   // Callback invoked by workers to re-enqueue a sequence in the appropriate
   // PriorityQueue.

@@ -12,6 +12,13 @@ import("//build/toolchain/clang_static_analyzer.gni")
 import("//build/toolchain/goma.gni")
 import("//build/toolchain/toolchain.gni")
 
+# Path to the Clang static analysis wrapper script.
+# REVIEWERS: can you suggest a better location for this?
+# GN is really picky about dead stores of variables except at the global scope.
+analyzer_wrapper =
+    rebase_path("//build/toolchain/clang_static_analyzer_wrapper.py",
+                root_build_dir)
+
 # This template defines a toolchain for something that works like gcc
 # (including clang).
 #
@@ -126,22 +133,49 @@ template("gcc_toolchain") {
     } else {
       toolchain_cc_wrapper = cc_wrapper
     }
+    assert(!(toolchain_cc_wrapper != "" && toolchain_uses_goma),
+           "Goma and cc_wrapper can't be used together.")
 
-    # Compute the compiler prefix.
+    # When the invoker has explicitly overridden use_goma or cc_wrapper in the
+    # toolchain args, use those values, otherwise default to the global one.
+    # This works because the only reasonable override that toolchains might
+    # supply for these values are to force-disable them.
     if (toolchain_uses_goma) {
-      assert(toolchain_cc_wrapper == "",
-             "Goma and cc_wrapper can't be used together.")
-      compiler_prefix = "$goma_dir/gomacc "
-    } else if (toolchain_cc_wrapper != "") {
-      compiler_prefix = toolchain_cc_wrapper + " "
+      goma_path = "$goma_dir/gomacc"
+
+      # Use the static analysis script if static analysis is turned on
+      # AND the tool has not opted out by setting
+      # 'is_clang_static_analysis_supported' to false.
+      if (is_clang && use_clang_static_analyzer &&
+          (!defined(invoker.is_clang_analysis_supported) ||
+           invoker.is_clang_analysis_supported)) {
+        compiler_prefix = "${analyzer_wrapper} ${goma_path} "
+
+        # Create a distinct variable for "asm", since analysis runs pass
+        # a bunch of flags to clang/clang++ that are nonsensical on assembler
+        # runs.
+        asm = "${goma_path} ${invoker.cc}"
+      } else {
+        compiler_prefix = "${goma_path} "
+      }
     } else {
-      compiler_prefix = ""
+      if (is_clang && use_clang_static_analyzer &&
+          (!defined(invoker.is_clang_analysis_supported) ||
+           invoker.is_clang_analysis_supported)) {
+        compiler_prefix = "${analyzer_wrapper} "
+        asm = invoker.cc
+      } else {
+        compiler_prefix = "${toolchain_cc_wrapper} "
+      }
     }
 
     cc = compiler_prefix + invoker.cc
     cxx = compiler_prefix + invoker.cxx
     ar = invoker.ar
     ld = invoker.ld
+    if (!defined(asm)) {
+      asm = cc
+    }
     if (defined(invoker.readelf)) {
       readelf = invoker.readelf
     } else {
@@ -263,7 +297,7 @@ template("gcc_toolchain") {
     tool("asm") {
       # For GCC we can just use the C compiler to compile assembly.
       depfile = "{{output}}.d"
-      command = "$cc -MMD -MF $depfile ${rebuild_string}{{defines}} {{include_dirs}} {{asmflags}} -c {{source}} -o {{output}}"
+      command = "$asm -MMD -MF $depfile ${rebuild_string}{{defines}} {{include_dirs}} {{asmflags}} -c {{source}} -o {{output}}"
       depsformat = "gcc"
       description = "ASM {{output}}"
       outputs = [
@@ -518,34 +552,15 @@ template("clang_toolchain") {
     cc = "$prefix/clang"
     cxx = "$prefix/clang++"
     ld = cxx
-
-    if (use_clang_static_analyzer) {
-      # Static analysis isn't supported under GOMA. See crbug.com/687245
-      # for progress on this issue.
-      assert(!use_goma, "'use_clang_static_analyzer' cannot be used with GOMA.")
-
-      # Call "ccc-analyzer" or "c++-analyzer" instead of directly calling Clang.
-      # |wrapper_tool| sets the environment variables which are read by the
-      # analyzer tools.
-      analyzer_wrapper =
-          rebase_path("//build/toolchain/clang_static_analyzer_wrapper.py",
-                      root_build_dir)
-      cc = analyzer_wrapper + " --clang-cc-path=${cc} --analyzer=" +
-           rebase_path("//third_party/scan-build/src/libexec/ccc-analyzer",
-                       root_build_dir)
-      cxx = analyzer_wrapper + " --clang-cxx-path=${cxx} --analyzer=" +
-            rebase_path("//third_party/scan-build/src/libexec/c++-analyzer",
-                        root_build_dir)
-    }
-
     readelf = "${toolprefix}readelf"
     ar = "${toolprefix}ar"
     nm = "${toolprefix}nm"
 
     forward_variables_from(invoker,
                            [
-                             "enable_linker_map",
                              "strip",
+                             "is_clang_analysis_supported",
+                             "enable_linker_map",
                            ])
 
     toolchain_args = {

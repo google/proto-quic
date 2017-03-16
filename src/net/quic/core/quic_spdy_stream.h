@@ -66,8 +66,6 @@ class QUIC_EXPORT_PRIVATE QuicSpdyStream : public QuicStream {
   QuicSpdyStream(QuicStreamId id, QuicSpdySession* spdy_session);
   ~QuicSpdyStream() override;
 
-  void StopReading() override;
-
   // QuicStream implementation
   void OnClose() override;
 

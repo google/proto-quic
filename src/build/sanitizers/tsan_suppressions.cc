@@ -29,11 +29,6 @@ char kTSanDefaultSuppressions[] =
 // Races in libevent, http://crbug.com/23244.
 "race:libevent/event.c\n"
 
-// http://crbug.com/46840.
-"race:base::HistogramSamples::IncreaseSum\n"
-"race:base::Histogram::Add\n"
-"race:base::HistogramSamples::Add\n"
-
 // http://crbug.com/84094.
 "race:sqlite3StatusSet\n"
 "race:pcache1EnforceMaxPage\n"
@@ -125,12 +120,6 @@ char kTSanDefaultSuppressions[] =
 // http://crbug.com/272095
 "race:base::g_top_manager\n"
 
-// http://crbug.com/280466
-"race:content::WebRtcAudioCapturer::SetCapturerSource\n"
-
-// http://crbug.com/285242
-"race:media::PulseAudioOutputStream::SetVolume\n"
-
 // http://crbug.com/308590
 "race:CustomThreadWatcher::~CustomThreadWatcher\n"
 
@@ -177,21 +166,11 @@ char kTSanDefaultSuppressions[] =
 "race:content::"
     "RendererWebKitPlatformSupportImpl::~RendererWebKitPlatformSupportImpl\n"
 
-// http://crbug.com/345618
-"race:WebCore::AudioDestinationNode::render\n"
-
-// http://crbug.com/345624
-"race:media::DataSource::set_host\n"
-
 // http://crbug.com/347534
 "race:v8::internal::V8::TearDown\n"
 
 // http://crbug.com/347538
 "race:sctp_timer_start\n"
-
-// http://crbug.com/347548
-"race:cricket::WebRtcVideoMediaChannel::MaybeResetVieSendCodec\n"
-"race:cricket::WebRtcVideoMediaChannel::SetSendCodec\n"
 
 // http://crbug.com/347553
 "race:blink::WebString::reset\n"
@@ -235,10 +214,6 @@ char kTSanDefaultSuppressions[] =
 // http://crbug.com/490856
 "deadlock:content::TracingControllerImpl::SetEnabledOnFileThread\n"
 
-// http://crbug.com/417193
-// Suppressing both AudioContext.{cpp,h}.
-"race:modules/webaudio/AudioContext\n"
-
 // https://code.google.com/p/skia/issues/detail?id=3294
 "race:SkBaseMutex::acquire\n"
 
@@ -263,9 +238,6 @@ char kTSanDefaultSuppressions[] =
 
 // http://crbug.com/633145
 "race:third_party/libjpeg_turbo/simd/jsimd_x86_64.c\n"
-
-// http://crbug.com/638583
-"race:webrtc/modules/audio_processing/aec/aec_rdft.cc\n"
 
 // http://crbug.com/587199
 "race:base::TimerTest_OneShotTimer_CustomTaskRunner_Test::TestBody\n"

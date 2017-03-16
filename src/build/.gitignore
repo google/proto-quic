@@ -1,6 +1,7 @@
 # This file is needed for projects that has this directory as a separate Git
 # mirror in DEPS. Without it, a lot is wiped and re-downloaded for each sync.
 /android/bin
+/android/binary_size/apks/**/*.apk
 /Debug
 /Debug_x64
 /goma

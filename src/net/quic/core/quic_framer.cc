@@ -207,11 +207,6 @@ size_t QuicFramer::GetBlockedFrameSize() {
 }
 
 // static
-size_t QuicFramer::GetPathCloseFrameSize() {
-  return kQuicFrameTypeSize + kQuicPathIdSize;
-}
-
-// static
 size_t QuicFramer::GetStreamIdSize(QuicStreamId stream_id) {
   // Sizes are 1 through 4 bytes.
   for (int i = 1; i <= 4; ++i) {
@@ -395,12 +390,6 @@ size_t QuicFramer::BuildDataPacket(const QuicPacketHeader& header,
       case BLOCKED_FRAME:
         if (!AppendBlockedFrame(*frame.blocked_frame, &writer)) {
           QUIC_BUG << "AppendBlockedFrame failed";
-          return 0;
-        }
-        break;
-      case PATH_CLOSE_FRAME:
-        if (!AppendPathCloseFrame(*frame.path_close_frame, &writer)) {
-          QUIC_BUG << "AppendPathCloseFrame failed";
           return 0;
         }
         break;
@@ -784,7 +773,9 @@ bool QuicFramer::ProcessPublicHeader(QuicDataReader* reader,
       (public_flags & PACKET_PUBLIC_FLAGS_VERSION) != 0;
 
   if (validate_flags_ && !public_header->version_flag &&
-      public_flags > PACKET_PUBLIC_FLAGS_MAX) {
+      public_flags > (FLAGS_quic_reloadable_flag_quic_remove_multipath_bit
+                          ? PACKET_PUBLIC_FLAGS_MAX_WITHOUT_MULTIPATH_FLAG
+                          : PACKET_PUBLIC_FLAGS_MAX)) {
     set_detailed_error("Illegal public flags value.");
     return false;
   }
@@ -825,7 +816,10 @@ bool QuicFramer::ProcessPublicHeader(QuicDataReader* reader,
     // If not, this raises an error.
     last_version_tag_ = version_tag;
     QuicVersion version = QuicTagToQuicVersion(version_tag);
-    if (version == quic_version_ && public_flags > PACKET_PUBLIC_FLAGS_MAX) {
+    if (version == quic_version_ &&
+        public_flags > (FLAGS_quic_reloadable_flag_quic_remove_multipath_bit
+                            ? PACKET_PUBLIC_FLAGS_MAX_WITHOUT_MULTIPATH_FLAG
+                            : PACKET_PUBLIC_FLAGS_MAX)) {
       set_detailed_error("Illegal public flags value.");
       return false;
     }
@@ -1106,19 +1100,6 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
         // Ping has no payload.
         QuicPingFrame ping_frame;
         if (!visitor_->OnPingFrame(ping_frame)) {
-          QUIC_DVLOG(1) << ENDPOINT
-                        << "Visitor asked to stop further processing.";
-          // Returning true since there was no parsing error.
-          return true;
-        }
-        continue;
-      }
-      case PATH_CLOSE_FRAME: {
-        QuicPathCloseFrame path_close_frame;
-        if (!ProcessPathCloseFrame(reader, &path_close_frame)) {
-          return RaiseError(QUIC_INVALID_PATH_CLOSE_DATA);
-        }
-        if (!visitor_->OnPathCloseFrame(path_close_frame)) {
           QUIC_DVLOG(1) << ENDPOINT
                         << "Visitor asked to stop further processing.";
           // Returning true since there was no parsing error.
@@ -1449,16 +1430,6 @@ bool QuicFramer::ProcessBlockedFrame(QuicDataReader* reader,
   return true;
 }
 
-bool QuicFramer::ProcessPathCloseFrame(QuicDataReader* reader,
-                                       QuicPathCloseFrame* frame) {
-  if (!reader->ReadBytes(&frame->path_id, 1)) {
-    set_detailed_error("Unable to read path_id.");
-    return false;
-  }
-
-  return true;
-}
-
 // static
 QuicStringPiece QuicFramer::GetAssociatedDataFromEncryptedPacket(
     QuicVersion version,
@@ -1699,8 +1670,6 @@ size_t QuicFramer::ComputeFrameLength(
       return GetWindowUpdateFrameSize();
     case BLOCKED_FRAME:
       return GetBlockedFrameSize();
-    case PATH_CLOSE_FRAME:
-      return GetPathCloseFrameSize();
     case PADDING_FRAME:
       DCHECK(false);
       return 0;
@@ -2129,15 +2098,6 @@ bool QuicFramer::AppendBlockedFrame(const QuicBlockedFrame& frame,
                                     QuicDataWriter* writer) {
   uint32_t stream_id = static_cast<uint32_t>(frame.stream_id);
   if (!writer->WriteUInt32(stream_id)) {
-    return false;
-  }
-  return true;
-}
-
-bool QuicFramer::AppendPathCloseFrame(const QuicPathCloseFrame& frame,
-                                      QuicDataWriter* writer) {
-  uint8_t path_id = static_cast<uint8_t>(frame.path_id);
-  if (!writer->WriteUInt8(path_id)) {
     return false;
   }
   return true;

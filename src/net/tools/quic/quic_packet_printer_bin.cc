@@ -142,10 +142,6 @@ class QuicPacketPrinter : public QuicFramerVisitorInterface {
     std::cerr << "OnBlockedFrame: " << frame;
     return true;
   }
-  bool OnPathCloseFrame(const QuicPathCloseFrame& frame) override {
-    std::cerr << "OnPathCloseFrame:" << frame;
-    return true;
-  }
   void OnPacketComplete() override { std::cerr << "OnPacketComplete\n"; }
 
  private:

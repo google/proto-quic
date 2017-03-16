@@ -312,6 +312,16 @@ void HttpServerPropertiesManager::SetServerNetworkStats(
     ScheduleUpdatePrefsOnNetworkThread(SET_SERVER_NETWORK_STATS);
 }
 
+void HttpServerPropertiesManager::ClearServerNetworkStats(
+    const url::SchemeHostPort& server) {
+  DCHECK(network_task_runner_->RunsTasksOnCurrentThread());
+  bool need_update =
+      http_server_properties_impl_->GetServerNetworkStats(server) != nullptr;
+  http_server_properties_impl_->ClearServerNetworkStats(server);
+  if (need_update)
+    ScheduleUpdatePrefsOnNetworkThread(CLEAR_SERVER_NETWORK_STATS);
+}
+
 const ServerNetworkStats* HttpServerPropertiesManager::GetServerNetworkStats(
     const url::SchemeHostPort& server) {
   DCHECK(network_task_runner_->RunsTasksOnCurrentThread());

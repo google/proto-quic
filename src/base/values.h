@@ -173,6 +173,9 @@ class BASE_EXPORT Value {
   // ListValue are properly inlined.
   Type type_;
 
+  // TODO(crbug.com/697817): Remove after diagnosing the bug.
+  bool alive_ = true;
+
   union {
     bool bool_value_;
     int int_value_;

@@ -21,7 +21,7 @@ static const char* const kExpectStapleReportURIs[] = [[EXPECT_STAPLE_REPORT_URIS
 
 // kNoRejectedPublicKeys is a placeholder for when no public keys are rejected.
 static const char* const kNoRejectedPublicKeys[] = {
-    NULL,
+    nullptr,
 };
 
 // kNoReportURI is a placeholder for when a pinset does not have a report URI.

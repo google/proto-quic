@@ -60,10 +60,12 @@ struct CGroups {
         foreground_type == FILE_SYSTEM_CGROUP &&
         background_type == FILE_SYSTEM_CGROUP;
   }
-};
 
-base::LazyInstance<CGroups>::DestructorAtExit g_cgroups =
-    LAZY_INSTANCE_INITIALIZER;
+  static CGroups& Get() {
+    static auto& groups = *new CGroups;
+    return groups;
+  }
+};
 #else
 const int kBackgroundPriority = 5;
 #endif  // defined(OS_CHROMEOS)
@@ -87,7 +89,7 @@ struct CheckForNicePermission {
 // static
 bool Process::CanBackgroundProcesses() {
 #if defined(OS_CHROMEOS)
-  if (g_cgroups.Get().enabled)
+  if (CGroups::Get().enabled)
     return true;
 #endif  // defined(OS_CHROMEOS)
 
@@ -100,7 +102,7 @@ bool Process::IsProcessBackgrounded() const {
   DCHECK(IsValid());
 
 #if defined(OS_CHROMEOS)
-  if (g_cgroups.Get().enabled) {
+  if (CGroups::Get().enabled) {
     // Used to allow reading the process priority from proc on thread launch.
     base::ThreadRestrictions::ScopedAllowIO allow_io;
     std::string proc;
@@ -119,11 +121,10 @@ bool Process::SetProcessBackgrounded(bool background) {
   DCHECK(IsValid());
 
 #if defined(OS_CHROMEOS)
-  if (g_cgroups.Get().enabled) {
+  if (CGroups::Get().enabled) {
     std::string pid = IntToString(process_);
-    const base::FilePath file =
-        background ?
-            g_cgroups.Get().background_file : g_cgroups.Get().foreground_file;
+    const base::FilePath file = background ? CGroups::Get().background_file
+                                           : CGroups::Get().foreground_file;
     return base::WriteFile(file, pid.c_str(), pid.size()) > 0;
   }
 #endif  // defined(OS_CHROMEOS)

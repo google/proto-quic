@@ -1831,6 +1831,9 @@ TEST_P(QuicNetworkTransactionTest, ConfirmAlternativeService) {
 
   EXPECT_FALSE(http_server_properties_.WasAlternativeServiceRecentlyBroken(
       alternative_service));
+  EXPECT_NE(nullptr,
+            http_server_properties_.GetServerNetworkStats(
+                url::SchemeHostPort("https", request_.url.host(), 443)));
 }
 
 TEST_P(QuicNetworkTransactionTest, UseAlternativeServiceForQuicForHttps) {
@@ -1998,6 +2001,10 @@ TEST_P(QuicNetworkTransactionTest, ZeroRTTWithHttpRace) {
   CreateSession();
   AddQuicAlternateProtocolMapping(MockCryptoClientStream::ZERO_RTT);
   SendRequestAndExpectQuicResponse("hello!");
+
+  EXPECT_EQ(nullptr,
+            http_server_properties_.GetServerNetworkStats(
+                url::SchemeHostPort("https", request_.url.host(), 443)));
 }
 
 TEST_P(QuicNetworkTransactionTest, ZeroRTTWithNoHttpRace) {

@@ -34,6 +34,7 @@ class _ThreadTimes(perf_benchmark.PerfBenchmark):
 
 
 @benchmark.Enabled('android')
+@benchmark.Owner(emails=['vmiura@chromium.org'])
 class ThreadTimesKeySilkCases(_ThreadTimes):
   """Measures timeline metrics while performing smoothness action on key silk
   cases."""
@@ -69,6 +70,7 @@ class ThreadTimesFastPathMobileSites(_ThreadTimes):
 
 
 @benchmark.Enabled('android')
+@benchmark.Owner(emails=['vmiura@chromium.org'])
 class ThreadTimesSimpleMobileSites(_ThreadTimes):
   """Measures timeline metric using smoothness action on simple mobile sites
   http://www.chromium.org/developers/design-documents/rendering-benchmarks"""
@@ -79,6 +81,7 @@ class ThreadTimesSimpleMobileSites(_ThreadTimes):
     return 'thread_times.simple_mobile_sites'
 
 
+@benchmark.Owner(emails=['vmiura@chromium.org'])
 class ThreadTimesCompositorCases(_ThreadTimes):
   """Measures timeline metrics while performing smoothness action on
   tough compositor cases, using software rasterization.
@@ -96,6 +99,7 @@ class ThreadTimesCompositorCases(_ThreadTimes):
 
 
 @benchmark.Enabled('android')
+@benchmark.Owner(emails=['ykyyip@chromium.org'])
 class ThreadTimesPolymer(_ThreadTimes):
   """Measures timeline metrics while performing smoothness action on
   Polymer cases."""
@@ -107,6 +111,7 @@ class ThreadTimesPolymer(_ThreadTimes):
 
 
 @benchmark.Enabled('android')
+@benchmark.Owner(emails=['skyostil@chromium.org'])
 class ThreadTimesKeyIdlePowerCases(_ThreadTimes):
   """Measures timeline metrics for sites that should be idle in foreground
   and background scenarios. The metrics are per-second rather than per-frame."""
@@ -138,6 +143,7 @@ class ThreadTimesKeyNoOpCases(_ThreadTimes):
     return 'per_frame' not in value.name and 'mean_frame' not in value.name
 
 
+@benchmark.Owner(emails=['tdresser@chromium.org'])
 class ThreadTimesToughScrollingCases(_ThreadTimes):
   """Measure timeline metrics while performing smoothness action on tough
   scrolling cases."""

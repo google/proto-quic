@@ -156,17 +156,22 @@ class _V8MobileBrowsingBenchmark(_V8BrowsingBenchmark):
     return possible_browser.platform.GetDeviceTypeName() == 'Desktop'
 
 
+@benchmark.Owner(emails=['ulan@chromium.org'])
 class V8DesktopBrowsingBenchmark(_V8DesktopBrowsingBenchmark):
   PLATFORM = 'desktop'
   TEST_SUFFIX = ''
 
 
+@benchmark.Owner(emails=['ulan@chromium.org'])
 @benchmark.Disabled('reference')  # http://crbug.com/628631
 class V8MobileBrowsingBenchmark(_V8MobileBrowsingBenchmark):
   PLATFORM = 'mobile'
   TEST_SUFFIX = ''
 
 
+@benchmark.Disabled('reference')  # http://crbug.com/700390
+@benchmark.Disabled('all')
+@benchmark.Owner(emails=['mvstaton@chromium.org'])
 class V8DesktopTurboBrowsingBenchmark(_V8DesktopBrowsingBenchmark):
   PLATFORM = 'desktop'
   TEST_SUFFIX = '_turbo'
@@ -178,6 +183,8 @@ class V8DesktopTurboBrowsingBenchmark(_V8DesktopBrowsingBenchmark):
 
 
 @benchmark.Disabled('reference')  # http://crbug.com/628631
+@benchmark.Disabled('all')
+@benchmark.Owner(emails=['mvstaton@chromium.org'])
 class V8MobileTurboBrowsingBenchmark(_V8MobileBrowsingBenchmark):
   PLATFORM = 'mobile'
   TEST_SUFFIX = '_turbo'
@@ -185,8 +192,34 @@ class V8MobileTurboBrowsingBenchmark(_V8MobileBrowsingBenchmark):
   def SetExtraBrowserOptions(self, options):
     super(V8MobileTurboBrowsingBenchmark, self).SetExtraBrowserOptions(
         options)
+    v8_helper.EnableTurbo(options)
 
 
+@benchmark.Disabled('reference')  # http://crbug.com/700390
+@benchmark.Owner(emails=['hablich@chromium.org'])
+class V8DesktopClassicBrowsingBenchmark(_V8DesktopBrowsingBenchmark):
+  PLATFORM = 'desktop'
+  TEST_SUFFIX = '_classic'
+
+  def SetExtraBrowserOptions(self, options):
+    super(V8DesktopClassicBrowsingBenchmark, self).SetExtraBrowserOptions(
+        options)
+    v8_helper.EnableClassic(options)
+
+
+@benchmark.Disabled('reference')  # http://crbug.com/628631
+@benchmark.Owner(emails=['hablich@chromium.org'])
+class V8MobileClassicBrowsingBenchmark(_V8MobileBrowsingBenchmark):
+  PLATFORM = 'mobile'
+  TEST_SUFFIX = '_classic'
+
+  def SetExtraBrowserOptions(self, options):
+    super(V8MobileClassicBrowsingBenchmark, self).SetExtraBrowserOptions(
+        options)
+    v8_helper.EnableClassic(options)
+
+
+@benchmark.Owner(emails=['mythria@chromium.org'])
 class V8RuntimeStatsDesktopBrowsingBenchmark(
     _V8RuntimeStatsBrowsingBenchmark):
   PLATFORM = 'desktop'
@@ -197,6 +230,9 @@ class V8RuntimeStatsDesktopBrowsingBenchmark(
     return possible_browser.platform.GetDeviceTypeName() != 'Desktop'
 
 
+@benchmark.Disabled('reference')  # http://crbug.com/700390
+@benchmark.Disabled('all')
+@benchmark.Owner(emails=['mythria@chromium.org'])
 class V8RuntimeStatsDesktopTurboBrowsingBenchmark(
     _V8RuntimeStatsBrowsingBenchmark):
   PLATFORM = 'desktop'
@@ -212,7 +248,25 @@ class V8RuntimeStatsDesktopTurboBrowsingBenchmark(
     return possible_browser.platform.GetDeviceTypeName() != 'Desktop'
 
 
+@benchmark.Disabled('reference')  # http://crbug.com/700390
+@benchmark.Owner(emails=['hablich@chromium.org'])
+class V8RuntimeStatsDesktopClassicBrowsingBenchmark(
+    _V8RuntimeStatsBrowsingBenchmark):
+  PLATFORM = 'desktop'
+  TEST_SUFFIX = '_classic'
+
+  def SetExtraBrowserOptions(self, options):
+    super(V8RuntimeStatsDesktopClassicBrowsingBenchmark,
+        self).SetExtraBrowserOptions(options)
+    v8_helper.EnableClassic(options)
+
+  @classmethod
+  def ShouldDisable(cls, possible_browser):
+    return possible_browser.platform.GetDeviceTypeName() != 'Desktop'
+
+
 @benchmark.Disabled('reference')  # http://crbug.com/694658
+@benchmark.Owner(emails=['mythria@chromium.org'])
 class V8RuntimeStatsMobileBrowsingBenchmark(
     _V8RuntimeStatsBrowsingBenchmark):
   PLATFORM = 'mobile'
@@ -224,6 +278,8 @@ class V8RuntimeStatsMobileBrowsingBenchmark(
 
 
 @benchmark.Disabled('reference')  # http://crbug.com/694658
+@benchmark.Disabled('all')
+@benchmark.Owner(emails=['mythria@chromium.org'])
 class V8RuntimeStatsMobileTurboBrowsingBenchmark(
     _V8RuntimeStatsBrowsingBenchmark):
   PLATFORM = 'mobile'
@@ -238,3 +294,19 @@ class V8RuntimeStatsMobileTurboBrowsingBenchmark(
   def ShouldDisable(cls, possible_browser):
     return possible_browser.platform.GetDeviceTypeName() == 'Desktop'
 
+
+@benchmark.Disabled('reference')  # http://crbug.com/694658
+@benchmark.Owner(emails=['hablich@chromium.org'])
+class V8RuntimeStatsMobileClassicBrowsingBenchmark(
+    _V8RuntimeStatsBrowsingBenchmark):
+  PLATFORM = 'mobile'
+  TEST_SUFFIX = '_classic'
+
+  def SetExtraBrowserOptions(self, options):
+    super(V8RuntimeStatsMobileClassicBrowsingBenchmark,
+        self).SetExtraBrowserOptions(options)
+    v8_helper.EnableClassic(options)
+
+  @classmethod
+  def ShouldDisable(cls, possible_browser):
+    return possible_browser.platform.GetDeviceTypeName() == 'Desktop'

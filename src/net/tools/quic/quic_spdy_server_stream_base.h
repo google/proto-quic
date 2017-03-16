@@ -16,6 +16,7 @@ class QuicSpdyServerStreamBase : public QuicSpdyStream {
   // Override the base class to send QUIC_STREAM_NO_ERROR to the peer
   // when the stream has not received all the data.
   void CloseWriteSide() override;
+  void StopReading() override;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicSpdyServerStreamBase);

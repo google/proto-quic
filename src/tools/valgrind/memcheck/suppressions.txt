@@ -914,14 +914,6 @@
    fun:_ZN16ExtensionInfoMap12AddExtensionEPK9Extension
 }
 {
-   Bug_69934_a
-   Memcheck:Leak
-   fun:_Znw*
-   fun:_ZN*NPObjectProxy10NPAllocateEP4_NPPP7NPClass
-   fun:_NPN_CreateObject
-   fun:_ZN5blink11WebBindings12createObjectEP4_NPPP7NPClass
-}
-{
    Bug_69934_b
    Memcheck:Leak
    fun:_Znw*
@@ -948,19 +940,6 @@
    fun:_ZN11WebViewHost29postAccessibilityNotificationERKN5blink22WebAccessibilityObjectENS0_28WebAccessibilityNotificationE
    fun:_ZN5blink16ChromeClientImpl29postAccessibilityNotificationEPN7blink19AccessibilityObjectENS1_13AXObjectCache14AXNotificationE
    fun:_ZN5blink13AXObjectCache24postPlatformNotificationEPNS_19AccessibilityObjectENS0_14AXNotificationE
-}
-{
-   bug_73675
-   Memcheck:Leak
-   fun:_Znw*
-   fun:_ZN20LayoutTestController13waitUntilDoneERKN3WTF6VectorI10CppVariantLj0EEEPS2_
-   fun:_ZN13CppBoundClass14MemberCallbackI20LayoutTestControllerE3runERKN3WTF6VectorI10CppVariantLj0EEEPS5_
-   fun:_ZN13CppBoundClass6invokeEPvPK10_NPVariantjPS1_
-   fun:_ZN11CppNPObject6invokeEP8NPObjectPvPK10_NPVariantjPS3_
-   fun:_ZN5blink18npObjectInvokeImplERKN2v89ArgumentsENS_18InvokeFunctionTypeE
-   fun:_ZN5blink21npObjectMethodHandlerERKN2v89ArgumentsE
-   fun:_ZN2v88internal19HandleApiCallHelperILb0EEEPNS0_11MaybeObjectENS0_47_GLOBAL__N_v8_src_builtins.cc_*BuiltinArgumentsILNS0_21BuiltinExtraArgumentsE1EEE
-   obj:*
 }
 {
    bug_75019
@@ -1380,32 +1359,6 @@
    ...
    fun:_ZNK7blink11RenderLayer15parentClipRectsEPKS0_PNS_12RenderRegionENS_13ClipRectsTypeERNS_9ClipRectsENS_29OverlayScrollbarSizeRelevancyE
    fun:_ZNK7blink11RenderLayer18backgroundClipRectEPKS0_PNS_12RenderRegionENS_13ClipRectsTypeENS_29OverlayScrollbarSizeRelevancyE
-}
-{
-   bug_138060
-   Memcheck:Uninitialized
-   fun:_NPN_EvaluateHelper
-   fun:_NPN_Evaluate
-   fun:_ZN5blink11WebBindings8evaluateEP4_NPPP8NPObjectP9_NPStringP10_NPVariant
-   fun:_ZL13executeScriptPK12PluginObjectPKc
-   fun:NPP_Destroy
-   fun:_ZN6webkit5npapi14PluginInstance11NPP_DestroyEv
-   fun:_ZN6webkit5npapi21WebPluginDelegateImpl15DestroyInstanceEv
-   fun:_ZN6webkit5npapi21WebPluginDelegateImplD0Ev
-   fun:_ZN6webkit5npapi21WebPluginDelegateImpl15PluginDestroyedEv
-   fun:_ZN6webkit5npapi13WebPluginImpl22TearDownPluginInstanceEPN5blink12WebURLLoaderE
-   fun:_ZN6webkit5npapi13WebPluginImpl12SetContainerEPN5blink18WebPluginContainerE
-   fun:_ZN6webkit5npapi13WebPluginImpl7destroyEv
-   fun:_ZN5blink22WebPluginContainerImplD0Ev
-   fun:_ZN3WTF10RefCountedIN7blink6WidgetEE5derefEv
-   fun:_ZNSt4pairIN3WTF6RefPtrIN7blink6WidgetEEEPNS2_9FrameViewEED1Ev
-   fun:_ZN3WTF9HashTableINS_6RefPtrIN7blink6WidgetEEESt4pairIS4_PNS2_9FrameViewEENS_18PairFirstExtractorIS8_EENS_7PtrHashIS4_EENS_14PairHashTraitsINS_10HashTraitsIS4_EENSE_IS7_EEEESF_E15deallocateTableEPS8_i
-   fun:_ZN3WTF9HashTableINS_6RefPtrIN7blink6WidgetEEESt4pairIS4_PNS2_9FrameViewEENS_18PairFirstExtractorIS8_EENS_7PtrHashIS4_EENS_14PairHashTraitsINS_10HashTraitsIS4_EENSE_IS7_EEEESF_ED1Ev
-   fun:_ZN3WTF7HashMapINS_6RefPtrIN7blink6WidgetEEEPNS2_9FrameViewENS_7PtrHashIS4_EENS_10HashTraitsIS4_EENS9_IS6_EEED1Ev
-   fun:_ZN5blink12RenderWidget28resumeWidgetHierarchyUpdatesEv
-   fun:_ZN5blink7Element6detachEv
-   fun:_ZN5blink13ContainerNode14detachChildrenEv
-   fun:_ZN5blink13ContainerNode6detachEv
 }
 {
    bug_138233_a

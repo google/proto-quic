@@ -9,6 +9,7 @@ import os
 
 from core import perf_benchmark
 
+from telemetry import benchmark
 from telemetry import page as page_module
 from telemetry.page import legacy_page_test
 from telemetry import story
@@ -115,6 +116,7 @@ class _KrakenMeasurement(legacy_page_test.LegacyPageTest):
                     '(http://krakenbenchmark.mozilla.org/)'))
 
 
+@benchmark.Owner(emails=['bmeurer@chromium.org', 'mvstanton@chromium.org'])
 class Kraken(perf_benchmark.PerfBenchmark):
   """Mozilla's Kraken JavaScript benchmark.
 

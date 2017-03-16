@@ -125,6 +125,16 @@ group("test_runner_py") {
          ]
 }
 
+group("logdog_wrapper_py") {
+  _py_files = read_file("test_wrapper/logdog_wrapper.pydeps", "list lines")
+
+  # Filter out comments.
+  set_sources_assignment_filter([ "#*" ])
+  sources = _py_files
+
+  data = sources
+}
+
 # Create wrapper scripts in out/bin that takes care of setting the
 # --output-directory.
 _scripts_to_wrap = [

@@ -4,5 +4,6 @@
 
 typemaps = [
   "//net/interfaces/host_resolver.typemap",
+  "//net/interfaces/ip_address.typemap",
   "//net/interfaces/proxy_resolver.typemap",
 ]

@@ -1110,6 +1110,17 @@ TEST_F(ServerNetworkStatsServerPropertiesTest, SetServerNetworkStats) {
   EXPECT_EQ(NULL, impl_.GetServerNetworkStats(foo_https_server));
 }
 
+TEST_F(ServerNetworkStatsServerPropertiesTest, ClearServerNetworkStats) {
+  ServerNetworkStats stats;
+  stats.srtt = base::TimeDelta::FromMicroseconds(10);
+  stats.bandwidth_estimate = QuicBandwidth::FromBitsPerSecond(100);
+  url::SchemeHostPort foo_https_server("https", "foo", 443);
+  impl_.SetServerNetworkStats(foo_https_server, stats);
+
+  impl_.ClearServerNetworkStats(foo_https_server);
+  EXPECT_EQ(nullptr, impl_.GetServerNetworkStats(foo_https_server));
+}
+
 typedef HttpServerPropertiesImplTest QuicServerInfoServerPropertiesTest;
 
 TEST_F(QuicServerInfoServerPropertiesTest, Set) {

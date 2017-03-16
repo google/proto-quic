@@ -8,12 +8,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import org.chromium.base.Promise.UnhandledRejectionException;
-import org.chromium.testing.local.LocalRobolectricTestRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLooper;
+
+import org.chromium.base.Promise.UnhandledRejectionException;
+import org.chromium.testing.local.LocalRobolectricTestRunner;
 
 /** Unit tests for {@link Promise}. */
 @RunWith(LocalRobolectricTestRunner.class)
@@ -38,7 +39,7 @@ public class PromiseTest {
         final Value value = new Value();
 
         Promise<Integer> promise = new Promise<Integer>();
-        promise.then(this.<Integer>setValue(value, 1));
+        promise.then(PromiseTest.<Integer>setValue(value, 1));
 
         assertEquals(value.get(), 0);
 
@@ -75,7 +76,7 @@ public class PromiseTest {
         Promise<Integer> promise = Promise.fulfilled(new Integer(0));
         assertEquals(value.get(), 0);
 
-        promise.then(this.<Integer>setValue(value, 1));
+        promise.then(PromiseTest.<Integer>setValue(value, 1));
 
         assertEquals(value.get(), 1);
     }
@@ -158,7 +159,7 @@ public class PromiseTest {
     @Test
     public void rejectPromiseNoHandler() {
         Promise<Integer> promise = new Promise<Integer>();
-        promise.then(this.<Integer>identity()).then(this.<Integer>pass());
+        promise.then(PromiseTest.<Integer>identity()).then(PromiseTest.<Integer>pass());
 
         boolean caught = false;
         try {
@@ -174,7 +175,8 @@ public class PromiseTest {
     @Test
     public void rejectPromiseHandled() {
         Promise<Integer> promise = new Promise<Integer>();
-        promise.then(this.<Integer>identity()).then(this.<Integer>pass(), this.<Exception>pass());
+        promise.then(PromiseTest.<Integer>identity())
+                .then(PromiseTest.<Integer>pass(), PromiseTest.<Exception>pass());
 
         boolean caught = false;
         try {
@@ -190,7 +192,7 @@ public class PromiseTest {
     @Test
     public void rejectionInformation() {
         Promise<Integer> promise = new Promise<Integer>();
-        promise.then(this.<Integer>pass());
+        promise.then(PromiseTest.<Integer>pass());
 
         String message = "Promise Test";
         try {
@@ -209,9 +211,9 @@ public class PromiseTest {
         Promise<Integer> promise = new Promise<Integer>();
 
         Promise<Integer> result =
-                promise.then(this.<Integer>identity()).then(this.<Integer>identity());
+                promise.then(PromiseTest.<Integer>identity()).then(PromiseTest.<Integer>identity());
 
-        result.then(this.<Integer>pass(), this.<Exception>setValue(value, 5));
+        result.then(PromiseTest.<Integer>pass(), PromiseTest.<Exception>setValue(value, 5));
 
         promise.reject(new Exception());
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
@@ -230,7 +232,7 @@ public class PromiseTest {
             public Integer apply(Integer argument) {
                 throw new IllegalArgumentException();
             }
-        }).then(this.<Integer>pass(), this.<Exception>setValue(value, 5));
+        }).then(PromiseTest.<Integer>pass(), PromiseTest.<Exception>setValue(value, 5));
 
         promise.fulfill(0);
 
@@ -249,7 +251,7 @@ public class PromiseTest {
             public Promise<Integer> apply(Integer argument) {
                 throw new IllegalArgumentException();
             }
-        }).then(this.<Integer>pass(), this.<Exception>setValue(value, 5));
+        }).then(PromiseTest.<Integer>pass(), PromiseTest.<Exception>setValue(value, 5));
 
         promise.fulfill(0);
 
@@ -269,7 +271,7 @@ public class PromiseTest {
             public Promise<Integer> apply(Integer argument) {
                 return inner;
             }
-        }).then(this.<Integer>pass(), this.<Exception>setValue(value, 5));
+        }).then(PromiseTest.<Integer>pass(), PromiseTest.<Exception>setValue(value, 5));
 
         promise.fulfill(0);
 
