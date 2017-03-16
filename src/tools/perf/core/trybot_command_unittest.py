@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 import argparse
+import base64
+import io
+import gzip
 import json
 import logging
 import os
@@ -78,8 +81,19 @@ class TrybotCommandTest(unittest.TestCase):
     return builders
 
   def _MockTryserverJson(self, bots_dict):
+    data_to_compress = json.dumps({'builders': bots_dict})
+
+    with io.BytesIO() as dst:
+      with gzip.GzipFile(fileobj=dst, mode='wb') as src:
+        src.write(data_to_compress)
+      compressed_data = dst.getvalue()
+
+    milo_data = {'data': base64.b64encode(compressed_data)}
+    milo_data = json.dumps(milo_data)
+    milo_data = trybot_command._MILO_RESPONSE_PREFIX + milo_data
+
     data = mock.Mock()
-    data.read.return_value = json.dumps(bots_dict)
+    data.read.return_value = milo_data
     self._urllib2_mock.urlopen.return_value = data
 
   def _MockTempFile(self, issue, issue_url):

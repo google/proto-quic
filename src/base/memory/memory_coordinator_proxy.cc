@@ -36,10 +36,4 @@ MemoryState MemoryCoordinatorProxy::GetCurrentMemoryState() const {
   return g_memory_coordinator->GetCurrentMemoryState();
 }
 
-void MemoryCoordinatorProxy::SetCurrentMemoryStateForTesting(
-    MemoryState memory_state) {
-  DCHECK(g_memory_coordinator);
-  g_memory_coordinator->SetCurrentMemoryStateForTesting(memory_state);
-}
-
 }  // namespace base

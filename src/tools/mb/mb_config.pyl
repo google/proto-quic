@@ -206,9 +206,6 @@
       'ThinLTO Linux ToT': 'thin_lto_clang_tot_full_symbols_release_static_use_lld',
       'UBSanVptr Linux': 'ubsan_vptr_release_bot',
       'WebKit Linux - TraceWrappables': 'debug_bot',
-      'WebKit Linux - WPTServe': 'release_bot',
-      'WebKit Mac - WPTServe': 'release_bot',
-      'WebKit Win - WPTServe': 'release_bot_x86',
       'WebKit Linux - RandomOrder': 'release_bot',
       'WebKit Mac - RandomOrder': 'release_bot',
       'WebKit Win - RandomOrder': 'release_bot_x86',
@@ -266,6 +263,7 @@
       'Android Tests': 'android_release_bot_minimal_symbols',
       'Cast Android (dbg)': 'android_cast_debug_static_bot',
       'Cast Linux': 'cast_release_bot',
+      'Cast Audio Linux': 'cast_audio_release_bot',
       'Linux Builder (dbg)': 'debug_bot',
       'Linux Builder (dbg)(32)': 'debug_bot_x86',
       'Linux Builder': 'release_bot',
@@ -343,7 +341,8 @@
     },
 
     'chromium.swarm': {
-      'Android Swarm': 'android_without_codecs_release_bot_minimal_symbols',
+      'Android N5 Swarm': 'android_release_bot_minimal_symbols',
+      'Android N5X Swarm': 'android_release_bot_minimal_symbols_arm64',
       'Linux Swarm': 'release_bot',
       'Mac Swarm': 'release_bot_mac_strip',
       'Windows Swarm': 'release_bot_x86',
@@ -538,6 +537,7 @@
       'Chromium Linux Codesearch Builder': 'codesearch',
       'ChromiumOS Codesearch Builder': 'codesearch',
       'cast_shell_linux': 'cast_release_trybot',
+      'cast_shell_audio_linux': 'cast_audio_release_trybot',
       'chromeos_amd64-generic_chromium_compile_only_ng': 'cros_chrome_sdk',
       'chromeos_daisy_chromium_compile_only_ng': 'cros_chrome_sdk',
       'chromeos_x86-generic_chromium_compile_only_ng': 'cros_chrome_sdk',
@@ -979,6 +979,14 @@
 
     'cast_release_trybot': [
       'cast', 'release_trybot',
+    ],
+
+    'cast_audio_release_bot': [
+      'cast', 'cast_audio', 'release_bot',
+    ],
+
+    'cast_audio_release_trybot': [
+      'cast', 'cast_audio', 'release_trybot',
     ],
 
     'cfi_full_cfi_diag_release_static': [
@@ -1577,6 +1585,10 @@
       'gn_args': 'is_chromecast=true',
     },
 
+    'cast_audio': {
+      'gn_args': 'is_cast_audio_only=true enable_webrtc=false'
+    },
+
     'cfi': {
       'gn_args': 'is_cfi=true',
     },
@@ -1615,7 +1627,7 @@
     },
 
     'clang_tot': {
-      'gn_args': 'llvm_force_head_revision=true clang_use_chrome_plugins=false enable_nocompile_tests=false',
+      'gn_args': 'llvm_force_head_revision=true clang_use_chrome_plugins=false',
       'mixins': ['clang'],
     },
 

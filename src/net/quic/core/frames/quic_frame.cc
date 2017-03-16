@@ -43,9 +43,6 @@ QuicFrame::QuicFrame(QuicWindowUpdateFrame* frame)
 QuicFrame::QuicFrame(QuicBlockedFrame* frame)
     : type(BLOCKED_FRAME), blocked_frame(frame) {}
 
-QuicFrame::QuicFrame(QuicPathCloseFrame* frame)
-    : type(PATH_CLOSE_FRAME), path_close_frame(frame) {}
-
 void DeleteFrames(QuicFrames* frames) {
   for (QuicFrame& frame : *frames) {
     switch (frame.type) {
@@ -77,9 +74,6 @@ void DeleteFrames(QuicFrames* frames) {
         break;
       case WINDOW_UPDATE_FRAME:
         delete frame.window_update_frame;
-        break;
-      case PATH_CLOSE_FRAME:
-        delete frame.path_close_frame;
         break;
       case NUM_FRAME_TYPES:
         DCHECK(false) << "Cannot delete type: " << frame.type;
@@ -145,10 +139,6 @@ std::ostream& operator<<(std::ostream& os, const QuicFrame& frame) {
     }
     case MTU_DISCOVERY_FRAME: {
       os << "type { MTU_DISCOVERY_FRAME } ";
-      break;
-    }
-    case PATH_CLOSE_FRAME: {
-      os << "type { PATH_CLOSE_FRAME } " << *(frame.path_close_frame);
       break;
     }
     default: {

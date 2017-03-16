@@ -20,14 +20,10 @@ Cursors:
 """
 
 import json
-import os
 
-from core import path_util
 from core import perf_benchmark
 
 from telemetry import benchmark
-from telemetry import page as page_module
-from telemetry import story
 from telemetry.page import legacy_page_test
 from telemetry.value import scalar
 
@@ -93,23 +89,7 @@ class _IndexedDbMeasurement(legacy_page_test.LegacyPageTest):
 
 
 @benchmark.Disabled('linux') # crbug.com/677972
-class IndexedDbOriginal(perf_benchmark.PerfBenchmark):
-  """Chromium's IndexedDB Performance tests."""
-  test = _IndexedDbMeasurement
-
-  @classmethod
-  def Name(cls):
-    return 'indexeddb_perf'
-
-  def CreateStorySet(self, options):
-    indexeddb_dir = os.path.join(path_util.GetChromiumSrcDir(), 'chrome',
-                                 'test', 'data', 'indexeddb')
-    ps = story.StorySet(base_dir=indexeddb_dir)
-    ps.AddStory(page_module.Page('file://perf_test.html', ps, ps.base_dir))
-    return ps
-
-
-@benchmark.Disabled('linux') # crbug.com/677972
+@benchmark.Owner(emails=['cmumford@chromium.org'])
 class IndexedDbOriginalSectioned(perf_benchmark.PerfBenchmark):
   """Chromium's IndexedDB Performance tests."""
   test = _IndexedDbMeasurement
@@ -121,6 +101,7 @@ class IndexedDbOriginalSectioned(perf_benchmark.PerfBenchmark):
 
 
 @benchmark.Disabled('linux') # crbug.com/677972
+@benchmark.Owner(emails=['cmumford@chromium.org'])
 class IndexedDbTracing(perf_benchmark.PerfBenchmark):
   """IndexedDB Performance tests that use tracing."""
   page_set = page_sets.IndexedDBEndurePageSet

@@ -9,11 +9,16 @@
 package org.chromium.net;
 
 import android.support.test.filters.SmallTest;
-import android.test.InstrumentationTestCase;
 
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import org.chromium.base.test.BaseJUnit4ClassRunner;
 import org.chromium.base.test.util.Feature;
 
-public class NetErrorsTest extends InstrumentationTestCase {
+@RunWith(BaseJUnit4ClassRunner.class)
+public class NetErrorsTest {
     // These are manually copied and should be kept in sync with net_error_list.h.
     private static final int IO_PENDING_ERROR = -1;
     private static final int FAILED_ERROR = -2;
@@ -23,10 +28,11 @@ public class NetErrorsTest extends InstrumentationTestCase {
      *
      * @throws Exception
      */
+    @Test
     @SmallTest
     @Feature({"Android-AppBase"})
     public void testExampleErrorDefined() throws Exception {
-        assertEquals(IO_PENDING_ERROR, NetError.ERR_IO_PENDING);
-        assertEquals(FAILED_ERROR, NetError.ERR_FAILED);
+        Assert.assertEquals(IO_PENDING_ERROR, NetError.ERR_IO_PENDING);
+        Assert.assertEquals(FAILED_ERROR, NetError.ERR_FAILED);
     }
 }

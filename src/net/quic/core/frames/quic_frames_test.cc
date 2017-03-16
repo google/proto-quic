@@ -9,7 +9,6 @@
 #include "net/quic/core/frames/quic_goaway_frame.h"
 #include "net/quic/core/frames/quic_mtu_discovery_frame.h"
 #include "net/quic/core/frames/quic_padding_frame.h"
-#include "net/quic/core/frames/quic_path_close_frame.h"
 #include "net/quic/core/frames/quic_ping_frame.h"
 #include "net/quic/core/frames/quic_rst_stream_frame.h"
 #include "net/quic/core/frames/quic_stop_waiting_frame.h"
@@ -114,14 +113,6 @@ TEST(QuicFramesTest, StopWaitingFrameToString) {
   std::ostringstream stream;
   stream << frame;
   EXPECT_EQ("{ least_unacked: 2 }\n", stream.str());
-}
-
-TEST(QuicFramesTest, PathCloseFrameToString) {
-  QuicPathCloseFrame frame;
-  frame.path_id = 1;
-  std::ostringstream stream;
-  stream << frame;
-  EXPECT_EQ("{ path_id: 1 }\n", stream.str());
 }
 
 TEST(QuicFramesTest, IsAwaitingPacket) {

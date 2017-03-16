@@ -18,6 +18,7 @@ namespace net {
 class NetLog;
 struct NetLogSource;
 
+// A server socket that uses TCP as the transport layer.
 class NET_EXPORT TCPServerSocket : public ServerSocket {
  public:
   TCPServerSocket(NetLog* net_log, const NetLogSource& source);

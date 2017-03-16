@@ -28,11 +28,6 @@ class TestMemoryPressureMonitor : public MemoryPressureMonitor {
   // 5 second delay between pressure readings.
   void ResetRunLoopUpdateTime() { next_run_loop_update_time_ = 0; }
 
-  // Access to the last-recorded memory pressure level.
-  MemoryPressureListener::MemoryPressureLevel LastPressureLevel() {
-    return last_pressure_level_;
-  }
-
   // Sets the last UMA stat report time. Time spent in memory pressure is
   // recorded in 5-second "ticks" from the last time statistics were recorded.
   void SetLastStatisticReportTime(CFTimeInterval time) {
@@ -111,20 +106,23 @@ TEST(MacMemoryPressureMonitorTest, MemoryPressureConversion) {
   TestMemoryPressureMonitor monitor;
 
   monitor.macos_pressure_level_for_testing_ = DISPATCH_MEMORYPRESSURE_NORMAL;
+  monitor.UpdatePressureLevel();
   MemoryPressureListener::MemoryPressureLevel memory_pressure =
       monitor.GetCurrentPressureLevel();
-  EXPECT_EQ(memory_pressure,
-            MemoryPressureListener::MEMORY_PRESSURE_LEVEL_NONE);
+  EXPECT_EQ(MemoryPressureListener::MEMORY_PRESSURE_LEVEL_NONE,
+            memory_pressure);
 
   monitor.macos_pressure_level_for_testing_ = DISPATCH_MEMORYPRESSURE_WARN;
+  monitor.UpdatePressureLevel();
   memory_pressure = monitor.GetCurrentPressureLevel();
-  EXPECT_EQ(memory_pressure,
-            MemoryPressureListener::MEMORY_PRESSURE_LEVEL_MODERATE);
+  EXPECT_EQ(MemoryPressureListener::MEMORY_PRESSURE_LEVEL_MODERATE,
+            memory_pressure);
 
   monitor.macos_pressure_level_for_testing_ = DISPATCH_MEMORYPRESSURE_CRITICAL;
+  monitor.UpdatePressureLevel();
   memory_pressure = monitor.GetCurrentPressureLevel();
-  EXPECT_EQ(memory_pressure,
-            MemoryPressureListener::MEMORY_PRESSURE_LEVEL_CRITICAL);
+  EXPECT_EQ(MemoryPressureListener::MEMORY_PRESSURE_LEVEL_CRITICAL,
+            memory_pressure);
 }
 
 TEST(MacMemoryPressureMonitorTest, MemoryPressureRunLoopChecking) {
@@ -142,19 +140,19 @@ TEST(MacMemoryPressureMonitorTest, MemoryPressureRunLoopChecking) {
   monitor.macos_pressure_level_for_testing_ = DISPATCH_MEMORYPRESSURE_WARN;
   monitor.ResetRunLoopUpdateTime();
   CFRunLoopRunInMode(kMessageLoopExclusiveRunLoopMode, 0, true);
-  EXPECT_EQ(monitor.LastPressureLevel(),
+  EXPECT_EQ(monitor.GetCurrentPressureLevel(),
             MemoryPressureListener::MEMORY_PRESSURE_LEVEL_MODERATE);
 
   monitor.macos_pressure_level_for_testing_ = DISPATCH_MEMORYPRESSURE_CRITICAL;
   monitor.ResetRunLoopUpdateTime();
   CFRunLoopRunInMode(kMessageLoopExclusiveRunLoopMode, 0, true);
-  EXPECT_EQ(monitor.LastPressureLevel(),
+  EXPECT_EQ(monitor.GetCurrentPressureLevel(),
             MemoryPressureListener::MEMORY_PRESSURE_LEVEL_CRITICAL);
 
   monitor.macos_pressure_level_for_testing_ = DISPATCH_MEMORYPRESSURE_NORMAL;
   monitor.ResetRunLoopUpdateTime();
   CFRunLoopRunInMode(kMessageLoopExclusiveRunLoopMode, 0, true);
-  EXPECT_EQ(monitor.LastPressureLevel(),
+  EXPECT_EQ(monitor.GetCurrentPressureLevel(),
             MemoryPressureListener::MEMORY_PRESSURE_LEVEL_NONE);
 
   CFRunLoopRemoveTimer(CFRunLoopGetCurrent(), timer_ref,

@@ -79,6 +79,15 @@ GURL::GURL(const GURL& other)
   DCHECK(!is_valid_ || !SchemeIsFileSystem() || inner_url_);
 }
 
+GURL::GURL(GURL&& other)
+    : spec_(std::move(other.spec_)),
+      is_valid_(other.is_valid_),
+      parsed_(other.parsed_),
+      inner_url_(std::move(other.inner_url_)) {
+  other.is_valid_ = false;
+  other.parsed_ = url::Parsed();
+}
+
 GURL::GURL(base::StringPiece url_string) {
   InitCanonical(url_string, true);
 }
@@ -168,8 +177,29 @@ void GURL::InitializeFromCanonicalSpec() {
 GURL::~GURL() {
 }
 
-GURL& GURL::operator=(GURL other) {
-  Swap(&other);
+GURL& GURL::operator=(const GURL& other) {
+  spec_ = other.spec_;
+  is_valid_ = other.is_valid_;
+  parsed_ = other.parsed_;
+
+  if (!other.inner_url_)
+    inner_url_.reset();
+  else if (inner_url_)
+    *inner_url_ = *other.inner_url_;
+  else
+    inner_url_.reset(new GURL(*other.inner_url_));
+
+  return *this;
+}
+
+GURL& GURL::operator=(GURL&& other) {
+  spec_ = std::move(other.spec_);
+  is_valid_ = other.is_valid_;
+  parsed_ = other.parsed_;
+  inner_url_ = std::move(other.inner_url_);
+
+  other.is_valid_ = false;
+  other.parsed_ = url::Parsed();
   return *this;
 }
 

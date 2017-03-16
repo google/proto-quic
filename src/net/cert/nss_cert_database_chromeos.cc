@@ -14,6 +14,7 @@
 #include "base/bind.h"
 #include "base/callback.h"
 #include "base/location.h"
+#include "base/stl_util.h"
 #include "base/task_runner.h"
 #include "net/cert/x509_certificate.h"
 
@@ -66,13 +67,9 @@ void NSSCertDatabaseChromeOS::ListModules(
   NSSCertDatabase::ListModules(modules, need_rw);
 
   size_t pre_size = modules->size();
-  modules->erase(
-      std::remove_if(
-          modules->begin(),
-          modules->end(),
-          NSSProfileFilterChromeOS::ModuleNotAllowedForProfilePredicate(
-              profile_filter_)),
-      modules->end());
+  base::EraseIf(*modules,
+                NSSProfileFilterChromeOS::ModuleNotAllowedForProfilePredicate(
+                    profile_filter_));
   DVLOG(1) << "filtered " << pre_size - modules->size() << " of " << pre_size
            << " modules";
 }
@@ -83,12 +80,9 @@ void NSSCertDatabaseChromeOS::ListCertsImpl(
   NSSCertDatabase::ListCertsImpl(crypto::ScopedPK11Slot(), certs);
 
   size_t pre_size = certs->size();
-  certs->erase(std::remove_if(
-                   certs->begin(),
-                   certs->end(),
-                   NSSProfileFilterChromeOS::CertNotAllowedForProfilePredicate(
-                       profile_filter)),
-               certs->end());
+  base::EraseIf(*certs,
+                NSSProfileFilterChromeOS::CertNotAllowedForProfilePredicate(
+                    profile_filter));
   DVLOG(1) << "filtered " << pre_size - certs->size() << " of " << pre_size
            << " certs";
 }

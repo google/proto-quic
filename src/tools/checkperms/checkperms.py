@@ -192,7 +192,6 @@ IGNORED_PATHS = (
   'third_party/libxml/src/ltmain.sh',
   'third_party/mesa/',
   'third_party/protobuf/',
-  'third_party/python_gflags/gflags.py',
   'third_party/sqlite/',
   'third_party/talloc/script/mksyms.sh',
   'third_party/tcmalloc/',

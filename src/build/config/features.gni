@@ -67,22 +67,7 @@ declare_args() {
   use_gconf = is_linux && !is_chromeos && !is_chromecast
 
   use_gio = is_linux && !is_chromeos && !is_chromecast
-
-  # Whether or not to use external popup menu.
-  use_external_popup_menu = is_android || is_mac
-
-  # Enable WebVR support by default on Android
-  # Still requires command line flag to access API
-  # TODO(bshe): Enable for other architecture too. Currently we only support arm
-  # and arm64.
-  enable_webvr = is_android && (current_cpu == "arm" || current_cpu == "arm64")
 }
-
-# Additional dependent variables -----------------------------------------------
-
-# Chrome OS: whether to also build the upcoming version of
-# ChromeVox, which can then be enabled via a command-line switch.
-enable_chromevox_next = false
 #
 # =============================================
 #   PLEASE DO NOT ADD MORE FLAGS TO THIS FILE

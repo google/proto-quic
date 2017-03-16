@@ -162,4 +162,13 @@ public class BuildInfo {
         return !"REL".equals(Build.VERSION.CODENAME)
                 && ("O".equals(Build.VERSION.CODENAME) || Build.VERSION.CODENAME.startsWith("OMR"));
     }
+
+    /**
+     * @return Whether the current app targets the SDK for at least O
+     */
+    public static boolean targetsAtLeastO(Context appContext) {
+        return isAtLeastO()
+                && appContext.getApplicationInfo().targetSdkVersion
+                == Build.VERSION_CODES.CUR_DEVELOPMENT;
+    }
 }

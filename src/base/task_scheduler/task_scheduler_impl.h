@@ -28,6 +28,7 @@ class SchedulerWorkerPoolParams;
 namespace internal {
 
 class DelayedTaskManager;
+class SchedulerSingleThreadTaskRunnerManager;
 class TaskTracker;
 
 // Default TaskScheduler implementation. This class is thread-safe.
@@ -80,6 +81,8 @@ class BASE_EXPORT TaskSchedulerImpl : public TaskScheduler {
   Thread service_thread_;
   std::unique_ptr<TaskTracker> task_tracker_;
   std::unique_ptr<DelayedTaskManager> delayed_task_manager_;
+  std::unique_ptr<SchedulerSingleThreadTaskRunnerManager>
+      single_thread_task_runner_manager_;
   const WorkerPoolIndexForTraitsCallback worker_pool_index_for_traits_callback_;
   std::vector<std::unique_ptr<SchedulerWorkerPoolImpl>> worker_pools_;
 

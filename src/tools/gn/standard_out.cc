@@ -193,15 +193,40 @@ void OutputString(const std::string& output, TextDecoration dec) {
 
 #endif
 
+void PrintSectionHelp(const std::string& line,
+                      const std::string& topic,
+                      const std::string& tag) {
+  EnsureInitialized();
+
+  if (is_markdown) {
+    OutputString("*   [" + line + "](#" + tag + ")\n");
+  } else if (topic.size()) {
+    OutputString("\n" + line + " (type \"gn help " + topic +
+                 "\" for more help):\n");
+  } else {
+    OutputString("\n" + line + ":\n");
+  }
+}
+
 void PrintShortHelp(const std::string& line) {
   EnsureInitialized();
 
   size_t colon_offset = line.find(':');
   size_t first_normal = 0;
   if (colon_offset != std::string::npos) {
-    OutputString("  " + line.substr(0, colon_offset), DECORATION_YELLOW);
-    first_normal = colon_offset;
+    if (is_markdown) {
+      OutputString("    *   [" + line + "](#" + line.substr(0, colon_offset) +
+                   ")\n");
+    } else {
+      OutputString("  " + line.substr(0, colon_offset), DECORATION_YELLOW);
+      first_normal = colon_offset;
+    }
+  } else if (is_markdown) {
+    OutputString("    *   [" + line + "](" + line + ")\n");
   }
+
+  if (is_markdown)
+    return;
 
   // See if the colon is followed by a " [" and if so, dim the contents of [ ].
   if (first_normal > 0 &&
@@ -221,7 +246,7 @@ void PrintShortHelp(const std::string& line) {
   OutputString(line.substr(first_normal) + "\n");
 }
 
-void PrintLongHelp(const std::string& text) {
+void PrintLongHelp(const std::string& text, const std::string& tag) {
   EnsureInitialized();
 
   bool first_header = true;
@@ -232,8 +257,8 @@ void PrintLongHelp(const std::string& text) {
     if (!line.empty() && line[0] != ' ') {
       if (is_markdown) {
         // GN's block-level formatting is converted to markdown as follows:
-        // * The first heading is treated as an H2.
-        // * Subsequent heading are treated as H3s.
+        // * The first heading is treated as an H3.
+        // * Subsequent heading are treated as H4s.
         // * Any other text is wrapped in a code block and displayed as-is.
         //
         // Span-level formatting (the decorations) is converted inside
@@ -244,10 +269,18 @@ void PrintLongHelp(const std::string& text) {
         }
 
         if (first_header) {
-          OutputString("## ", DECORATION_NONE);
+          std::string the_tag = tag;
+          if (the_tag.size() == 0) {
+            if (line.substr(0, 2) == "gn") {
+              the_tag = line.substr(3, line.substr(3).find(' '));
+            } else {
+              the_tag = line.substr(0, line.find(':'));
+            }
+          }
+          OutputString("### <a name=\"" + the_tag + "\"></a>", DECORATION_NONE);
           first_header = false;
         } else {
-          OutputString("### ", DECORATION_NONE);
+          OutputString("#### ", DECORATION_NONE);
         }
       }
 
@@ -257,7 +290,8 @@ void PrintLongHelp(const std::string& text) {
         chars_to_highlight = line.size();
 
       OutputString(line.substr(0, chars_to_highlight), DECORATION_YELLOW);
-      OutputString(line.substr(chars_to_highlight) + "\n");
+      OutputString(line.substr(chars_to_highlight));
+      OutputString("\n");
       continue;
     } else if (is_markdown && !line.empty() && !in_body) {
       OutputString("```\n", DECORATION_NONE);

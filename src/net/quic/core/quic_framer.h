@@ -134,9 +134,6 @@ class QUIC_EXPORT_PRIVATE QuicFramerVisitorInterface {
   // Called when a BlockedFrame has been parsed.
   virtual bool OnBlockedFrame(const QuicBlockedFrame& frame) = 0;
 
-  // Called when a PathCloseFrame has been parsed.
-  virtual bool OnPathCloseFrame(const QuicPathCloseFrame& frame) = 0;
-
   // Called when a packet has been completely processed.
   virtual void OnPacketComplete() = 0;
 };
@@ -211,8 +208,6 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
   static size_t GetWindowUpdateFrameSize();
   // Size in bytes of all Blocked frame fields.
   static size_t GetBlockedFrameSize();
-  // Size in bytes of all PathClose frame fields.
-  static size_t GetPathCloseFrameSize();
   // Size in bytes required to serialize the stream id.
   static size_t GetStreamIdSize(QuicStreamId stream_id);
   // Size in bytes required to serialize the stream offset.
@@ -391,7 +386,6 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
   bool ProcessWindowUpdateFrame(QuicDataReader* reader,
                                 QuicWindowUpdateFrame* frame);
   bool ProcessBlockedFrame(QuicDataReader* reader, QuicBlockedFrame* frame);
-  bool ProcessPathCloseFrame(QuicDataReader* reader, QuicPathCloseFrame* frame);
 
   bool DecryptPayload(QuicDataReader* encrypted_reader,
                       const QuicPacketHeader& header,
@@ -466,8 +460,6 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
                                QuicDataWriter* writer);
   bool AppendBlockedFrame(const QuicBlockedFrame& frame,
                           QuicDataWriter* writer);
-  bool AppendPathCloseFrame(const QuicPathCloseFrame& frame,
-                            QuicDataWriter* writer);
 
   bool RaiseError(QuicErrorCode error);
 

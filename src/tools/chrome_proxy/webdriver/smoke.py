@@ -33,6 +33,16 @@ class Smoke(IntegrationTest):
       self.assertEqual(2, len(responses))
       for response in responses:
         self.assertHasChromeProxyViaHeader(response)
+  
+  # Ensure Chrome uses DataSaver in normal mode.
+  def testCheckPageWithNormalMode(self):
+    with TestDriver() as t:
+      t.AddChromeArg('--enable-spdy-proxy-auth')
+      t.LoadURL('http://check.googlezip.net/test.html')
+      responses = t.GetHTTPResponses()
+      self.assertNotEqual(0, len(responses))
+      for response in responses:
+        self.assertHasChromeProxyViaHeader(response)
 
   # Ensure pageload metric pingback with DataSaver.
   def testPingback(self):

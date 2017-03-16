@@ -293,10 +293,14 @@ class NET_EXPORT HttpServerProperties {
   virtual void SetSupportsQuic(bool used_quic,
                                const IPAddress& last_address) = 0;
 
-  // Sets |stats| for |host_port_pair|.
+  // Sets |stats| for |server|.
   virtual void SetServerNetworkStats(const url::SchemeHostPort& server,
                                      ServerNetworkStats stats) = 0;
 
+  // Clears any stats for |server|.
+  virtual void ClearServerNetworkStats(const url::SchemeHostPort& server) = 0;
+
+  // Returns any stats for |server| or nullptr if there are none.
   virtual const ServerNetworkStats* GetServerNetworkStats(
       const url::SchemeHostPort& server) = 0;
 

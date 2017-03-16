@@ -28,6 +28,7 @@ class OilpanGCTimesBlinkPerfStress(perf_benchmark.PerfBenchmark):
 
 
 @benchmark.Disabled('android')  # crbug.com/589567
+@benchmark.Owner(emails=['peria@chromium.org'])
 class OilpanGCTimesSmoothnessAnimation(perf_benchmark.PerfBenchmark):
   test = oilpan_gc_times.OilpanGCTimesForSmoothness
   page_set = page_sets.ToughAnimationCasesPageSet

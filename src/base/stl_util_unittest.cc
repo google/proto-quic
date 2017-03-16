@@ -79,6 +79,10 @@ void RunEraseIfTest() {
   }
 }
 
+struct CustomIntHash {
+  size_t operator()(int elem) const { return std::hash<int>()(elem) + 1; }
+};
+
 struct HashByFirst {
   size_t operator()(const std::pair<int, int>& elem) const {
     return std::hash<int>()(elem.first);
@@ -377,26 +381,34 @@ TEST(Erase, List) {
 
 TEST(Erase, Map) {
   RunEraseIfTest<std::map<int, int>>();
+  RunEraseIfTest<std::map<int, int, std::greater<int>>>();
 }
 
 TEST(Erase, Multimap) {
   RunEraseIfTest<std::multimap<int, int>>();
+  RunEraseIfTest<std::multimap<int, int, std::greater<int>>>();
 }
 
 TEST(Erase, Set) {
   RunEraseIfTest<std::set<std::pair<int, int>>>();
+  RunEraseIfTest<
+      std::set<std::pair<int, int>, std::greater<std::pair<int, int>>>>();
 }
 
 TEST(Erase, Multiset) {
   RunEraseIfTest<std::multiset<std::pair<int, int>>>();
+  RunEraseIfTest<
+      std::multiset<std::pair<int, int>, std::greater<std::pair<int, int>>>>();
 }
 
 TEST(Erase, UnorderedMap) {
   RunEraseIfTest<std::unordered_map<int, int>>();
+  RunEraseIfTest<std::unordered_map<int, int, CustomIntHash>>();
 }
 
 TEST(Erase, UnorderedMultimap) {
   RunEraseIfTest<std::unordered_multimap<int, int>>();
+  RunEraseIfTest<std::unordered_multimap<int, int, CustomIntHash>>();
 }
 
 TEST(Erase, UnorderedSet) {

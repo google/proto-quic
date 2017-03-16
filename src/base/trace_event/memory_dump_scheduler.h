@@ -41,6 +41,10 @@ class BASE_EXPORT MemoryDumpScheduler {
   // Starts polling memory total.
   void NotifyPollingSupported();
 
+  // Resets time for triggering dump to account for minimum time between the
+  // dumps.
+  void NotifyDumpTriggered();
+
   // Disables all triggers.
   void DisableAllTriggers();
 
@@ -68,12 +72,22 @@ class BASE_EXPORT MemoryDumpScheduler {
   };
 
   struct PollingTriggerState {
+    enum State {
+      CONFIGURED,  // Polling trigger was added.
+      ENABLED,     // Polling is running.
+      DISABLED     // Polling is disabled.
+    };
+
+    static const uint32_t kMaxNumMemorySamples = 50;
+
     explicit PollingTriggerState(
         scoped_refptr<SingleThreadTaskRunner> polling_task_runner);
     ~PollingTriggerState();
 
-    bool is_configured;
-    bool is_polling_enabled;
+    // Helper to clear the tracked memory totals and poll count from last dump.
+    void ResetTotals();
+
+    State current_state;
     MemoryDumpLevelOfDetail level_of_detail;
 
     scoped_refptr<SingleThreadTaskRunner> polling_task_runner;
@@ -85,6 +99,9 @@ class BASE_EXPORT MemoryDumpScheduler {
     int num_polls_from_last_dump;
 
     uint64_t last_dump_memory_total;
+    int64_t memory_increase_threshold;
+    uint64_t last_memory_totals_kb[kMaxNumMemorySamples];
+    uint32_t last_memory_totals_kb_index;
 
     DISALLOW_COPY_AND_ASSIGN(PollingTriggerState);
   };
@@ -100,6 +117,9 @@ class BASE_EXPORT MemoryDumpScheduler {
 
   // Returns true if peak memory value is detected.
   bool ShouldTriggerDump(uint64_t current_memory_total);
+
+  // Helper to detect peaks in memory usage.
+  bool IsCurrentSamplePeak(uint64_t current_memory_total);
 
   // Must be set before enabling tracing.
   static void SetPollingIntervalForTesting(uint32_t interval);

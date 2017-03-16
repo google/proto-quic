@@ -397,8 +397,9 @@ def VeryifyVersionOfBuiltClangMatchesVERSION():
 def UpdateClang(args):
   print 'Updating Clang to %s...' % PACKAGE_VERSION
 
-  # Required for LTO, which is used when is_official_build = true.
-  need_gold_plugin = sys.platform.startswith('linux')
+  need_gold_plugin = 'LLVM_DOWNLOAD_GOLD_PLUGIN' in os.environ or (
+      sys.platform.startswith('linux') and
+      'buildtype=Official' in os.environ.get('GYP_DEFINES', ''))
 
   if ReadStampFile() == PACKAGE_VERSION and not args.force_local_build:
     print 'Clang is already up to date.'
@@ -457,7 +458,7 @@ def UpdateClang(args):
 
   Checkout('LLVM', LLVM_REPO_URL + '/llvm/trunk', LLVM_DIR)
   Checkout('Clang', LLVM_REPO_URL + '/cfe/trunk', CLANG_DIR)
-  if sys.platform == 'win32' or use_head_revision:
+  if sys.platform != 'darwin':
     Checkout('LLD', LLVM_REPO_URL + '/lld/trunk', LLD_DIR)
   elif os.path.exists(LLD_DIR):
     # In case someone sends a tryjob that temporary adds lld to the checkout,
@@ -497,7 +498,6 @@ def UpdateClang(args):
   base_cmake_args = ['-GNinja',
                      '-DCMAKE_BUILD_TYPE=Release',
                      '-DLLVM_ENABLE_ASSERTIONS=ON',
-                     '-DLLVM_ENABLE_THREADS=OFF',
                      # Statically link MSVCRT to avoid DLL dependencies.
                      '-DLLVM_USE_CRT_RELEASE=MT',
                      ]
@@ -566,8 +566,8 @@ def UpdateClang(args):
                 os.path.join(LLVM_BOOTSTRAP_INSTALL_DIR, 'lib', 'LLVMgold.so'),
                 os.path.join(BFD_PLUGINS_DIR, 'LLVMgold.so')])
 
-    lto_cflags = ['-flto']
-    lto_ldflags = ['-fuse-ld=gold']
+    lto_cflags = ['-flto=thin']
+    lto_ldflags = ['-fuse-ld=lld']
     if args.gcc_toolchain:
       # Tell the bootstrap compiler to use a specific gcc prefix to search
       # for standard library headers and shared object files.
@@ -588,7 +588,7 @@ def UpdateClang(args):
 
     RmCmakeCache('.')
     RunCommand(['cmake'] + lto_cmake_args + [LLVM_DIR], env=lto_env)
-    RunCommand(['ninja', 'LLVMgold'], env=lto_env)
+    RunCommand(['ninja', 'LLVMgold', 'lld'], env=lto_env)
 
 
   # LLVM uses C++11 starting in llvm 3.5. On Linux, this means libstdc++4.7+ is
@@ -640,6 +640,7 @@ def UpdateClang(args):
   if cxx is not None: cc_args.append('-DCMAKE_CXX_COMPILER=' + cxx)
   chrome_tools = list(set(['plugins', 'blink_gc_plugin'] + args.extra_tools))
   cmake_args += base_cmake_args + [
+      '-DLLVM_ENABLE_THREADS=OFF',
       '-DLLVM_BINUTILS_INCDIR=' + binutils_incdir,
       '-DCMAKE_C_FLAGS=' + ' '.join(cflags),
       '-DCMAKE_CXX_FLAGS=' + ' '.join(cxxflags),
@@ -669,6 +670,11 @@ def UpdateClang(args):
 
   RunCommand(['ninja'], msvc_arch='x64')
 
+  # Copy LTO-optimized lld, if any.
+  if args.bootstrap and args.lto_gold_plugin:
+    CopyFile(os.path.join(LLVM_LTO_GOLD_PLUGIN_DIR, 'bin', 'lld'),
+             os.path.join(LLVM_BUILD_DIR, 'bin'))
+
   if chrome_tools:
     # If any Chromium tools were built, install those now.
     RunCommand(['ninja', 'cr-install'], msvc_arch='x64')
@@ -697,6 +703,7 @@ def UpdateClang(args):
     #cflags += ['-m32']
     #cxxflags += ['-m32']
   compiler_rt_args = base_cmake_args + [
+      '-DLLVM_ENABLE_THREADS=OFF',
       '-DCMAKE_C_FLAGS=' + ' '.join(cflags),
       '-DCMAKE_CXX_FLAGS=' + ' '.join(cxxflags)]
   if sys.platform == 'darwin':
@@ -799,6 +806,7 @@ def UpdateClang(args):
                 '--sysroot=%s/sysroot' % toolchain_dir,
                 '-B%s' % toolchain_dir]
       android_args = base_cmake_args + [
+        '-DLLVM_ENABLE_THREADS=OFF',
         '-DCMAKE_C_COMPILER=' + os.path.join(LLVM_BUILD_DIR, 'bin/clang'),
         '-DCMAKE_CXX_COMPILER=' + os.path.join(LLVM_BUILD_DIR, 'bin/clang++'),
         '-DLLVM_CONFIG_PATH=' + os.path.join(LLVM_BUILD_DIR, 'bin/llvm-config'),

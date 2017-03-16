@@ -514,6 +514,9 @@ void MemoryDumpManager::CreateProcessDump(const MemoryDumpRequestArgs& args,
     // disabled.
     CHECK(!session_state_ ||
           session_state_->IsDumpModeAllowed(args.level_of_detail));
+
+    if (dump_scheduler_)
+      dump_scheduler_->NotifyDumpTriggered();
   }
 
   TRACE_EVENT_WITH_FLOW0(kTraceCategory, "MemoryDumpManager::CreateProcessDump",

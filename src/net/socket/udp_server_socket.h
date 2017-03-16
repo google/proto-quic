@@ -20,7 +20,7 @@ class IPEndPoint;
 class NetLog;
 struct NetLogSource;
 
-// A client socket that uses UDP as the transport layer.
+// A server socket that uses UDP as the transport layer.
 class NET_EXPORT UDPServerSocket : public DatagramServerSocket {
  public:
   UDPServerSocket(net::NetLog* net_log, const net::NetLogSource& source);

@@ -32,6 +32,7 @@ template("nacl_toolchain") {
                              "cc",
                              "cxx",
                              "deps",
+                             "is_clang_analysis_supported",
                              "ld",
                              "link_outputs",
                              "nm",

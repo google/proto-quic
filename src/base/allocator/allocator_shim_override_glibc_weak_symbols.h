@@ -56,23 +56,21 @@ void* GlibcMemalignHook(size_t align, size_t size, const void* caller) {
 
 }  // namespace
 
-SHIM_ALWAYS_EXPORT void* (*MALLOC_HOOK_MAYBE_VOLATILE __malloc_hook)(
-    size_t,
-    const void*) = &GlibcMallocHook;
+__attribute__((visibility("default"))) void* (
+    *MALLOC_HOOK_MAYBE_VOLATILE __malloc_hook)(size_t,
+                                               const void*) = &GlibcMallocHook;
 
-SHIM_ALWAYS_EXPORT void* (*MALLOC_HOOK_MAYBE_VOLATILE __realloc_hook)(
-    void*,
-    size_t,
-    const void*) = &GlibcReallocHook;
+__attribute__((visibility("default"))) void* (
+    *MALLOC_HOOK_MAYBE_VOLATILE __realloc_hook)(void*, size_t, const void*) =
+    &GlibcReallocHook;
 
-SHIM_ALWAYS_EXPORT void (*MALLOC_HOOK_MAYBE_VOLATILE __free_hook)(void*,
-                                                                  const void*) =
-    &GlibcFreeHook;
+__attribute__((visibility("default"))) void (
+    *MALLOC_HOOK_MAYBE_VOLATILE __free_hook)(void*,
+                                             const void*) = &GlibcFreeHook;
 
-SHIM_ALWAYS_EXPORT void* (*MALLOC_HOOK_MAYBE_VOLATILE __memalign_hook)(
-    size_t,
-    size_t,
-    const void*) = &GlibcMemalignHook;
+__attribute__((visibility("default"))) void* (
+    *MALLOC_HOOK_MAYBE_VOLATILE __memalign_hook)(size_t, size_t, const void*) =
+    &GlibcMemalignHook;
 
 // 2) Redefine libc symbols themselves.
 

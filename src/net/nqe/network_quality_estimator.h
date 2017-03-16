@@ -160,6 +160,8 @@ class NET_EXPORT NetworkQualityEstimator
     // Returns the current effective connection type.
     virtual EffectiveConnectionType GetEffectiveConnectionType() const = 0;
 
+    virtual ~NetworkQualityProvider() {}
+
     // Adds |observer| to a list of effective connection type observers.
     virtual void AddEffectiveConnectionTypeObserver(
         EffectiveConnectionTypeObserver* observer) = 0;
@@ -168,7 +170,16 @@ class NET_EXPORT NetworkQualityEstimator
     virtual void RemoveEffectiveConnectionTypeObserver(
         EffectiveConnectionTypeObserver* observer) = 0;
 
-    virtual ~NetworkQualityProvider() {}
+    // Adds |observer| to the list of RTT and throughput estimate observers.
+    // |observer| would be notified of the current RTT and throughput estimates
+    // in the next message pump.
+    virtual void AddRTTAndThroughputEstimatesObserver(
+        RTTAndThroughputEstimatesObserver* observer) = 0;
+
+    // Removes |observer| from the list of RTT and throughput estimate
+    // observers.
+    virtual void RemoveRTTAndThroughputEstimatesObserver(
+        RTTAndThroughputEstimatesObserver* observer) = 0;
 
    protected:
     NetworkQualityProvider() {}
@@ -295,6 +306,11 @@ class NET_EXPORT NetworkQualityEstimator
   // EffectiveConnectionTypeObservers.
   void ReportEffectiveConnectionTypeForTesting(
       EffectiveConnectionType effective_connection_type);
+
+  // Reports the RTTs and throughput to all RTTAndThroughputEstimatesObservers.
+  void ReportRTTsAndThroughputForTesting(base::TimeDelta http_rtt,
+                                         base::TimeDelta transport_rtt,
+                                         int32_t downstream_throughput_kbps);
 
   // Adds and removes |observer| from the list of cache observers.
   void AddNetworkQualitiesCacheObserver(

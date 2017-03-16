@@ -64,6 +64,7 @@ class _PageCyclerV2(perf_benchmark.PerfBenchmark):
 
 @benchmark.Disabled('win10')
 @benchmark.Disabled('android')  # crbug.com/654217
+@benchmark.Owner(emails=['kouhei@chromium.org', 'ksakamoto@chromium.org'])
 class PageCyclerV2Typical25(_PageCyclerV2):
   """Page load time benchmark for a 25 typical web pages.
 
@@ -81,6 +82,7 @@ class PageCyclerV2Typical25(_PageCyclerV2):
           cache_temperature.PCV1_COLD, cache_temperature.PCV1_WARM])
 
 
+@benchmark.Owner(emails=['kouhei@chromium.org', 'ksakamoto@chromium.org'])
 class PageCyclerV2IntlArFaHe(_PageCyclerV2):
   """Page load time for a variety of pages in Arabic, Farsi and Hebrew.
 
@@ -97,6 +99,7 @@ class PageCyclerV2IntlArFaHe(_PageCyclerV2):
           cache_temperature.PCV1_COLD, cache_temperature.PCV1_WARM])
 
 
+@benchmark.Owner(emails=['kouhei@chromium.org', 'ksakamoto@chromium.org'])
 class PageCyclerV2IntlEsFrPtBr(_PageCyclerV2):
   """Page load time for a pages in Spanish, French and Brazilian Portuguese.
 
@@ -113,6 +116,7 @@ class PageCyclerV2IntlEsFrPtBr(_PageCyclerV2):
           cache_temperature.PCV1_COLD, cache_temperature.PCV1_WARM])
 
 
+@benchmark.Owner(emails=['kouhei@chromium.org', 'ksakamoto@chromium.org'])
 class PageCyclerV2IntlHiRu(_PageCyclerV2):
   """Page load time benchmark for a variety of pages in Hindi and Russian.
 
@@ -130,6 +134,7 @@ class PageCyclerV2IntlHiRu(_PageCyclerV2):
 
 
 @benchmark.Disabled('android')  # crbug.com/666898
+@benchmark.Owner(emails=['kouhei@chromium.org', 'ksakamoto@chromium.org'])
 class PageCyclerV2IntlJaZh(_PageCyclerV2):
   """Page load time benchmark for a variety of pages in Japanese and Chinese.
 
@@ -145,6 +150,7 @@ class PageCyclerV2IntlJaZh(_PageCyclerV2):
           cache_temperature.PCV1_COLD, cache_temperature.PCV1_WARM])
 
 
+@benchmark.Owner(emails=['kouhei@chromium.org', 'ksakamoto@chromium.org'])
 class PageCyclerV2IntlKoThVi(_PageCyclerV2):
   """Page load time for a variety of pages in Korean, Thai and Vietnamese.
 
@@ -162,6 +168,7 @@ class PageCyclerV2IntlKoThVi(_PageCyclerV2):
 
 
 @benchmark.Enabled('android')
+@benchmark.Owner(emails=['kouhei@chromium.org', 'ksakamoto@chromium.org'])
 class PageCyclerV2Top10Mobile(_PageCyclerV2):
   """Page load time benchmark for the top 10 mobile web pages.
 
@@ -178,6 +185,7 @@ class PageCyclerV2Top10Mobile(_PageCyclerV2):
             cache_temperature.PCV1_COLD, cache_temperature.PCV1_WARM])
 
 
+@benchmark.Owner(emails=['kouhei@chromium.org', 'ksakamoto@chromium.org'])
 class PageCyclerV2ToughLayoutCases(_PageCyclerV2):
   """Page loading for the slowest layouts observed in the Alexa top 1 million.
 
@@ -195,6 +203,7 @@ class PageCyclerV2ToughLayoutCases(_PageCyclerV2):
 
 
 @benchmark.Disabled('reference', 'android')
+@benchmark.Owner(emails=['nasko@chromium.org'])
 class PageCyclerV2BasicOopifIsolated(_PageCyclerV2):
   """ A benchmark measuring performance of out-of-process iframes. """
   page_set = page_sets.OopifBasicPageSet
@@ -211,6 +220,7 @@ class PageCyclerV2BasicOopifIsolated(_PageCyclerV2):
           cache_temperature.PCV1_COLD, cache_temperature.PCV1_WARM])
 
 @benchmark.Disabled('android')
+@benchmark.Owner(emails=['nasko@chromium.org'])
 class PageCyclerV2BasicOopif(_PageCyclerV2):
   """ A benchmark measuring performance of the out-of-process iframes page
   set, without running in out-of-process iframes mode.. """

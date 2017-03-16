@@ -6,8 +6,10 @@ from core import perf_benchmark
 
 from telemetry import benchmark
 from telemetry.page import legacy_page_test
+from telemetry.timeline import chrome_trace_category_filter
 from telemetry.value import list_of_scalar_values
 from telemetry.value import scalar
+from telemetry.web_perf import timeline_based_measurement
 
 from measurements import media
 import page_sets
@@ -40,7 +42,7 @@ class _MSEMeasurement(legacy_page_test.LegacyPageTest):
 # android: See media.android.tough_video_cases below
 # crbug.com/565180: Only include cases that report time_to_play
 @benchmark.Disabled('android')
-class Media(perf_benchmark.PerfBenchmark):
+class MediaToughVideoCases(perf_benchmark.PerfBenchmark):
   """Obtains media metrics for key user scenarios."""
   test = media.Media
   page_set = page_sets.ToughVideoCasesPageSet
@@ -50,8 +52,39 @@ class Media(perf_benchmark.PerfBenchmark):
     return 'media.tough_video_cases'
 
 
+@benchmark.Owner(emails=['johnchen@chromium.org', 'crouleau@chromium.org'],
+                 component='Internals>Media')
+@benchmark.Disabled('android')
+class MediaToughVideoCasesTBMv2(perf_benchmark.PerfBenchmark):
+  """Obtains media metrics using TBMv2.
+  Will eventually replace MediaToughVideoCases class."""
+  page_set = page_sets.ToughVideoCasesPageSet
+
+  def CreateTimelineBasedMeasurementOptions(self):
+    category_filter = chrome_trace_category_filter.ChromeTraceCategoryFilter()
+
+    # 'toplevel' category provides CPU time slices used by # cpuTimeMetric.
+    category_filter.AddIncludedCategory('toplevel')
+
+    # 'rail' category is used by powerMetric to attribute different period of
+    # time to different activities, such as video_animation, etc.
+    category_filter.AddIncludedCategory('rail')
+
+    options = timeline_based_measurement.Options(category_filter)
+    options.config.enable_atrace_trace = True
+    options.config.atrace_config.categories = ['sched']
+    options.config.enable_battor_trace = True
+    options.SetTimelineBasedMetrics(['powerMetric', 'cpuTimeMetric'])
+    return options
+
+  @classmethod
+  def Name(cls):
+    return 'media.tough_video_cases_tbmv2'
+
+
 # crbug.com/565180: Only include cases that don't report time_to_play
 @benchmark.Disabled('android')
+@benchmark.Owner(emails=['crouleau@chromium.org', 'videostack-eng@google.com'])
 class MediaExtra(perf_benchmark.PerfBenchmark):
   """Obtains extra media metrics for key user scenarios."""
   test = media.Media
@@ -63,6 +96,7 @@ class MediaExtra(perf_benchmark.PerfBenchmark):
 
 
 @benchmark.Disabled('android', 'mac')
+@benchmark.Owner(emails=['crouleau@chromium.org', 'videostack-eng@google.com'])
 class MediaNetworkSimulation(perf_benchmark.PerfBenchmark):
   """Obtains media metrics under different network simulations."""
   test = media.Media
@@ -130,6 +164,7 @@ class MediaChromeOS(perf_benchmark.PerfBenchmark):
 
 
 @benchmark.Disabled('android-webview')  # crbug.com/419689
+@benchmark.Owner(emails=['crouleau@chromium.org', 'videostack-eng@google.com'])
 class MediaSourceExtensions(perf_benchmark.PerfBenchmark):
   """Obtains media metrics for key media source extensions functions."""
   test = _MSEMeasurement

@@ -12,6 +12,7 @@
 #include "net/quic/core/quic_socket_address_coder.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_flag_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_string_piece.h"
 
@@ -337,11 +338,12 @@ QuicConfig::QuicConfig()
       initial_stream_flow_control_window_bytes_(kSFCW, PRESENCE_OPTIONAL),
       initial_session_flow_control_window_bytes_(kCFCW, PRESENCE_OPTIONAL),
       socket_receive_buffer_(kSRBF, PRESENCE_OPTIONAL),
-      multipath_enabled_(kMPTH, PRESENCE_OPTIONAL),
       connection_migration_disabled_(kNCMR, PRESENCE_OPTIONAL),
       alternate_server_address_(kASAD, PRESENCE_OPTIONAL),
       force_hol_blocking_(kFHL2, PRESENCE_OPTIONAL),
-      support_max_header_list_size_(kSMHL, PRESENCE_OPTIONAL) {
+      support_max_header_list_size_(kSMHL, PRESENCE_OPTIONAL),
+      latched_no_socket_receive_buffer_(
+          FLAGS_quic_reloadable_flag_quic_no_socket_receive_buffer) {
   SetDefaults();
 }
 
@@ -543,7 +545,11 @@ uint32_t QuicConfig::ReceivedInitialSessionFlowControlWindowBytes() const {
 }
 
 void QuicConfig::SetSocketReceiveBufferToSend(uint32_t tcp_receive_window) {
-  socket_receive_buffer_.SetSendValue(tcp_receive_window);
+  if (latched_no_socket_receive_buffer_) {
+    QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_no_socket_receive_buffer, 1, 3);
+  } else {
+    socket_receive_buffer_.SetSendValue(tcp_receive_window);
+  }
 }
 
 bool QuicConfig::HasReceivedSocketReceiveBuffer() const {
@@ -552,15 +558,6 @@ bool QuicConfig::HasReceivedSocketReceiveBuffer() const {
 
 uint32_t QuicConfig::ReceivedSocketReceiveBuffer() const {
   return socket_receive_buffer_.GetReceivedValue();
-}
-
-void QuicConfig::SetMultipathEnabled(bool multipath_enabled) {
-  uint32_t value = multipath_enabled ? 1 : 0;
-  multipath_enabled_.set(value, value);
-}
-
-bool QuicConfig::MultipathEnabled() const {
-  return multipath_enabled_.GetUint32() > 0;
 }
 
 void QuicConfig::SetDisableConnectionMigration() {
@@ -641,7 +638,11 @@ void QuicConfig::ToHandshakeMessage(CryptoHandshakeMessage* out) const {
   initial_round_trip_time_us_.ToHandshakeMessage(out);
   initial_stream_flow_control_window_bytes_.ToHandshakeMessage(out);
   initial_session_flow_control_window_bytes_.ToHandshakeMessage(out);
-  socket_receive_buffer_.ToHandshakeMessage(out);
+  if (latched_no_socket_receive_buffer_) {
+    QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_no_socket_receive_buffer, 2, 3);
+  } else {
+    socket_receive_buffer_.ToHandshakeMessage(out);
+  }
   connection_migration_disabled_.ToHandshakeMessage(out);
   connection_options_.ToHandshakeMessage(out);
   alternate_server_address_.ToHandshakeMessage(out);
@@ -688,7 +689,9 @@ QuicErrorCode QuicConfig::ProcessPeerHello(
     error = initial_session_flow_control_window_bytes_.ProcessPeerHello(
         peer_hello, hello_type, error_details);
   }
-  if (error == QUIC_NO_ERROR) {
+  if (latched_no_socket_receive_buffer_) {
+    QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_no_socket_receive_buffer, 3, 3);
+  } else if (error == QUIC_NO_ERROR) {
     error = socket_receive_buffer_.ProcessPeerHello(peer_hello, hello_type,
                                                     error_details);
   }

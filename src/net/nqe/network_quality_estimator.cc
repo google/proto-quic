@@ -808,6 +808,17 @@ void NetworkQualityEstimator::ReportEffectiveConnectionTypeForTesting(
                                   effective_connection_type));
 }
 
+void NetworkQualityEstimator::ReportRTTsAndThroughputForTesting(
+    base::TimeDelta http_rtt,
+    base::TimeDelta transport_rtt,
+    int32_t downstream_throughput_kbps) {
+  DCHECK(thread_checker_.CalledOnValidThread());
+
+  for (auto& observer : rtt_and_throughput_estimates_observer_list_)
+    observer.OnRTTOrThroughputEstimatesComputed(http_rtt, transport_rtt,
+                                                downstream_throughput_kbps);
+}
+
 bool NetworkQualityEstimator::RequestProvidesRTTObservation(
     const URLRequest& request) const {
   DCHECK(thread_checker_.CalledOnValidThread());

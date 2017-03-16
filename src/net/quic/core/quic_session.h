@@ -438,7 +438,7 @@ class QUIC_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   // call stack of OnCanWrite.
   QuicStreamId currently_writing_stream_id_;
 
-  // Latched value of gfe2_reloadable_flag_quic_flow_control_invariant.
+  // Latched value of quic_reloadable_flag_quic_flow_control_invariant.
   const bool flow_control_invariant_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicSession);

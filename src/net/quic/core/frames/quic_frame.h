@@ -15,7 +15,6 @@
 #include "net/quic/core/frames/quic_goaway_frame.h"
 #include "net/quic/core/frames/quic_mtu_discovery_frame.h"
 #include "net/quic/core/frames/quic_padding_frame.h"
-#include "net/quic/core/frames/quic_path_close_frame.h"
 #include "net/quic/core/frames/quic_ping_frame.h"
 #include "net/quic/core/frames/quic_rst_stream_frame.h"
 #include "net/quic/core/frames/quic_stop_waiting_frame.h"
@@ -40,7 +39,6 @@ struct QUIC_EXPORT_PRIVATE QuicFrame {
   explicit QuicFrame(QuicGoAwayFrame* frame);
   explicit QuicFrame(QuicWindowUpdateFrame* frame);
   explicit QuicFrame(QuicBlockedFrame* frame);
-  explicit QuicFrame(QuicPathCloseFrame* frame);
 
   QUIC_EXPORT_PRIVATE friend std::ostream& operator<<(std::ostream& os,
                                                       const QuicFrame& frame);
@@ -61,7 +59,6 @@ struct QUIC_EXPORT_PRIVATE QuicFrame {
     QuicGoAwayFrame* goaway_frame;
     QuicWindowUpdateFrame* window_update_frame;
     QuicBlockedFrame* blocked_frame;
-    QuicPathCloseFrame* path_close_frame;
   };
 };
 // QuicFrameType consumes 8 bytes with padding.

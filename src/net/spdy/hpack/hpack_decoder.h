@@ -145,7 +145,7 @@ class NET_EXPORT_PRIVATE HpackDecoder : public HpackDecoderInterface {
   // at the start, but not once we've seen a header entry.
   bool size_updates_allowed_;
 
-  // Saved value of --gfe2_reloadable_flag_add_hpack_incremental_decode.
+  // Saved value of --chromium_http2_flag_add_hpack_incremental_decode.
   bool incremental_decode_;
 
   DISALLOW_COPY_AND_ASSIGN(HpackDecoder);

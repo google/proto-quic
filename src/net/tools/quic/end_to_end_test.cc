@@ -1322,9 +1322,6 @@ TEST_P(EndToEndTest, SetIndependentMaxIncomingDynamicStreamsLimits) {
 
 TEST_P(EndToEndTest, NegotiateCongestionControl) {
   FLAGS_quic_reloadable_flag_quic_allow_new_bbr = true;
-  // Disable this flag because if connection uses multipath sent packet manager,
-  // static_cast here does not work.
-  FLAGS_quic_reloadable_flag_quic_enable_multipath = false;
   ASSERT_TRUE(Initialize());
   EXPECT_TRUE(client_->client()->WaitForCryptoHandshakeConfirmed());
 
@@ -2205,7 +2202,7 @@ TEST_P(EndToEndTest, BadEncryptedData) {
 
   std::unique_ptr<QuicEncryptedPacket> packet(ConstructEncryptedPacket(
       client_->client()->session()->connection()->connection_id(), false, false,
-      false, 1, "At least 20 characters.", PACKET_8BYTE_CONNECTION_ID,
+      1, "At least 20 characters.", PACKET_8BYTE_CONNECTION_ID,
       PACKET_6BYTE_PACKET_NUMBER));
   // Damage the encrypted data.
   string damaged_packet(packet->data(), packet->length());
@@ -3007,6 +3004,21 @@ TEST_P(EndToEndTest, ReleaseHeadersStreamBufferWhenIdle) {
       QuicSpdySessionPeer::GetHeadersStream(client_->client()->session());
   QuicStreamSequencer* sequencer = QuicStreamPeer::sequencer(headers_stream);
   EXPECT_FALSE(QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
+}
+
+TEST_P(EndToEndTest, WayTooLongRequestHeaders) {
+  ASSERT_TRUE(Initialize());
+  SpdyHeaderBlock headers;
+  headers[":method"] = "GET";
+  headers[":path"] = "/foo";
+  headers[":scheme"] = "https";
+  headers[":authority"] = server_hostname_;
+  headers["key"] = string(64 * 1024, 'a');
+
+  client_->SendMessage(headers, "");
+  client_->WaitForResponse();
+  EXPECT_EQ(QUIC_HEADERS_STREAM_DATA_DECOMPRESS_FAILURE,
+            client_->connection_error());
 }
 
 class EndToEndBufferedPacketsTest : public EndToEndTest {

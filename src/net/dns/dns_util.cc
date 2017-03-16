@@ -15,20 +15,6 @@
 #include "build/build_config.h"
 #include "net/base/address_list.h"
 
-#if defined(OS_POSIX)
-#include <netinet/in.h>
-#if !defined(OS_NACL)
-#include <net/if.h>
-#if !defined(OS_ANDROID)
-#include <ifaddrs.h>
-#endif  // !defined(OS_ANDROID)
-#endif  // !defined(OS_NACL)
-#endif  // defined(OS_POSIX)
-
-#if defined(OS_ANDROID)
-#include "net/android/network_library.h"
-#endif
-
 namespace net {
 
 // Based on DJB's public domain code.
@@ -108,57 +94,6 @@ std::string DNSDomainToString(const base::StringPiece& domain) {
     domain.substr(i + 1, domain[i]).AppendToString(&ret);
   }
   return ret;
-}
-
-bool HaveOnlyLoopbackAddresses() {
-#if defined(OS_ANDROID)
-  return android::HaveOnlyLoopbackAddresses();
-#elif defined(OS_NACL)
-  NOTIMPLEMENTED();
-  return false;
-#elif defined(OS_POSIX)
-  struct ifaddrs* interface_addr = NULL;
-  int rv = getifaddrs(&interface_addr);
-  if (rv != 0) {
-    DVLOG(1) << "getifaddrs() failed with errno = " << errno;
-    return false;
-  }
-
-  bool result = true;
-  for (struct ifaddrs* interface = interface_addr;
-       interface != NULL;
-       interface = interface->ifa_next) {
-    if (!(IFF_UP & interface->ifa_flags))
-      continue;
-    if (IFF_LOOPBACK & interface->ifa_flags)
-      continue;
-    const struct sockaddr* addr = interface->ifa_addr;
-    if (!addr)
-      continue;
-    if (addr->sa_family == AF_INET6) {
-      // Safe cast since this is AF_INET6.
-      const struct sockaddr_in6* addr_in6 =
-          reinterpret_cast<const struct sockaddr_in6*>(addr);
-      const struct in6_addr* sin6_addr = &addr_in6->sin6_addr;
-      if (IN6_IS_ADDR_LOOPBACK(sin6_addr) || IN6_IS_ADDR_LINKLOCAL(sin6_addr))
-        continue;
-    }
-    if (addr->sa_family != AF_INET6 && addr->sa_family != AF_INET)
-      continue;
-
-    result = false;
-    break;
-  }
-  freeifaddrs(interface_addr);
-  return result;
-#elif defined(OS_WIN)
-  // TODO(wtc): implement with the GetAdaptersAddresses function.
-  NOTIMPLEMENTED();
-  return false;
-#else
-  NOTIMPLEMENTED();
-  return false;
-#endif  // defined(various platforms)
 }
 
 #if !defined(OS_NACL)

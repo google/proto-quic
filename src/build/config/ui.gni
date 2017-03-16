@@ -35,12 +35,6 @@ declare_args() {
 
   # Whether we should use glib, a low level C utility library.
   use_glib = is_linux
-
-  # Indicates if Wayland display server support is enabled.
-  enable_wayland_server = is_chromeos
-
-  # Enable experimental vulkan backend.
-  enable_vulkan = false
 }
 
 declare_args() {
@@ -52,10 +46,6 @@ declare_args() {
 # Additional dependent variables -----------------------------------------------
 #
 # These variables depend on other variables and can't be set externally.
-
-# Use GPU accelerated cross process image transport by default on linux builds
-# with the Aura window manager.
-ui_compositor_image_transport = use_aura && is_linux
 
 # Indicates if the UI toolkit depends on X11.
 use_x11 = is_linux && !use_ozone

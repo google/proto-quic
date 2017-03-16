@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import devil_chromium
+from pylib import constants
 from pylib.base import environment
 
 
@@ -9,6 +11,9 @@ class LocalMachineEnvironment(environment.Environment):
 
   def __init__(self, _args, _error_func):
     super(LocalMachineEnvironment, self).__init__()
+
+    devil_chromium.Initialize(
+        output_directory=constants.GetOutDirectory())
 
   #override
   def SetUp(self):

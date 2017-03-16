@@ -85,6 +85,9 @@ class BASE_EXPORT SchedulerWorker
     // acquire a SchedulerLock because it is called within the scope of another
     // SchedulerLock.
     virtual void OnDetach() = 0;
+
+    // Called by a thread right before the main function exits.
+    virtual void OnMainExit() {}
   };
 
   enum class InitialState { ALIVE, DETACHED };

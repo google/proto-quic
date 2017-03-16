@@ -100,7 +100,7 @@ std::string WritePinsetList(const std::string& name,
 
   output.append(kIndent);
   output.append(kIndent);
-  output.append("NULL,");
+  output.append("nullptr,");
   output.append(kNewLine);
   output.append("};");
 
@@ -271,7 +271,7 @@ void PreloadedStateGenerator::ProcessExpectCTURIs(
 
   output.append(kIndent);
   output.append(kIndent);
-  output.append("NULL,");
+  output.append("nullptr,");
   output.append(kNewLine);
 
   output.append("}");
@@ -303,7 +303,7 @@ void PreloadedStateGenerator::ProcessExpectStapleURIs(
 
   output.append(kIndent);
   output.append(kIndent);
-  output.append("NULL,");
+  output.append("nullptr,");
   output.append(kNewLine);
 
   output.append("}");

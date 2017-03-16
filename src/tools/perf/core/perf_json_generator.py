@@ -682,7 +682,7 @@ def get_sorted_benchmark_list_by_time(all_benchmarks):
   runtime_list = []
   benchmark_avgs = {}
   new_benchmarks = []
-  timing_file_path = os.path.join(src_dir(), 'tools', 'perf',
+  timing_file_path = os.path.join(src_dir(), 'tools', 'perf', 'core',
       'desktop_benchmark_avg_times.json')
   # Load in the avg times as calculated on Nov 1st, 2016
   with open(timing_file_path) as f:
@@ -809,7 +809,8 @@ def update_all_tests(waterfall):
 
 def src_dir():
   file_path = os.path.abspath(__file__)
-  return os.path.dirname(os.path.dirname(os.path.dirname(file_path)))
+  return os.path.dirname(os.path.dirname(
+      os.path.dirname(os.path.dirname(file_path))))
 
 
 def main(args):
@@ -842,6 +843,3 @@ def main(args):
     update_all_tests(fyi_waterfall)
     update_all_tests(waterfall)
   return 0
-
-if __name__ == '__main__':
-  sys.exit(main(sys.argv[1:]))

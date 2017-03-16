@@ -45,15 +45,6 @@ def main ():
   (v8_shell, mock_js, test_api, js2webui, test_type,
       inputfile, inputrelfile, cxxoutfile, jsoutfile) = args
   cmd = [v8_shell]
-  icudatafile = os.path.join(os.path.dirname(v8_shell), 'icudtl.dat')
-  if os.path.exists(icudatafile):
-    cmd.extend(['--icu-data-file=%s' % icudatafile])
-  v8nativesfile = os.path.join(os.path.dirname(v8_shell), 'natives_blob.bin')
-  if opts.external == 'y' and os.path.exists(v8nativesfile):
-    cmd.extend(['--natives_blob=%s' % v8nativesfile])
-  v8snapshotfile = os.path.join(os.path.dirname(v8_shell), 'snapshot_blob.bin')
-  if opts.external == 'y' and os.path.exists(v8snapshotfile):
-    cmd.extend(['--snapshot_blob=%s' % v8snapshotfile])
   arguments = [js2webui, inputfile, inputrelfile, opts.deps_js,
                cxxoutfile, test_type]
   cmd.extend(['-e', "arguments=" + json.dumps(arguments), mock_js,

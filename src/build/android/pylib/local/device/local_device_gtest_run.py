@@ -359,7 +359,6 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
         logging.info('No tests found. Output:')
         for l in raw_test_list:
           logging.info('  %s', l)
-      tests = self._test_instance.FilterTests(tests)
       return tests
 
     # Query all devices in case one fails.
@@ -370,7 +369,12 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
     if all(not tl for tl in test_lists):
       raise device_errors.CommandFailedError(
           'Failed to list tests on any device')
-    return list(sorted(set().union(*[set(tl) for tl in test_lists if tl])))
+    tests = list(sorted(set().union(*[set(tl) for tl in test_lists if tl])))
+    tests = self._test_instance.FilterTests(tests)
+    tests = self._ApplyExternalSharding(
+        tests, self._test_instance.external_shard_index,
+        self._test_instance.total_external_shards)
+    return tests
 
   #override
   def _RunTest(self, device, test):
@@ -438,7 +442,12 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
                 stream_name, resolved_tombstones)
           result.SetLink('tombstones', tombstones_url)
 
-    not_run_tests = set(test).difference(set(r.GetName() for r in results))
+    tests_stripped_disabled_prefix = set()
+    for t in test:
+      tests_stripped_disabled_prefix.add(
+          gtest_test_instance.TestNameWithoutDisabledPrefix(t))
+    not_run_tests = tests_stripped_disabled_prefix.difference(
+        set(r.GetName() for r in results))
     return results, list(not_run_tests) if results else None
 
   #override

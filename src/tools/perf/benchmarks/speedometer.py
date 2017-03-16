@@ -22,6 +22,7 @@ from core import perf_benchmark
 
 from benchmarks import v8_helper
 
+from telemetry import benchmark
 from telemetry import page as page_module
 from telemetry.page import legacy_page_test
 from telemetry import story
@@ -90,6 +91,7 @@ class SpeedometerMeasurement(legacy_page_test.LegacyPageTest):
     keychain_metric.KeychainMetric().AddResults(tab, results)
 
 
+@benchmark.Owner(emails=['bmeurer@chromium.org', 'mvstanton@chromium.org'])
 class Speedometer(perf_benchmark.PerfBenchmark):
   test = SpeedometerMeasurement
 
@@ -108,6 +110,8 @@ class Speedometer(perf_benchmark.PerfBenchmark):
     return ps
 
 
+@benchmark.Owner(emails=['hablich@chromium.org'])
+@benchmark.Disabled('all')
 class SpeedometerTurbo(Speedometer):
   def SetExtraBrowserOptions(self, options):
     super(SpeedometerTurbo, self).SetExtraBrowserOptions(options)
@@ -116,3 +120,14 @@ class SpeedometerTurbo(Speedometer):
   @classmethod
   def Name(cls):
     return 'speedometer-turbo'
+
+
+@benchmark.Owner(emails=['hablich@chromium.org'])
+class SpeedometerClassic(Speedometer):
+  def SetExtraBrowserOptions(self, options):
+    super(SpeedometerClassic, self).SetExtraBrowserOptions(options)
+    v8_helper.EnableClassic(options)
+
+  @classmethod
+  def Name(cls):
+    return 'speedometer-classic'

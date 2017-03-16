@@ -929,10 +929,6 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
     ProcessFramePacket(QuicFrame(frame));
   }
 
-  void ProcessPathClosePacket(QuicPathCloseFrame* frame) {
-    ProcessFramePacket(QuicFrame(frame));
-  }
-
   bool IsMissing(QuicPacketNumber number) {
     return IsAwaitingPacket(*outgoing_ack(), number, 0);
   }
@@ -4847,8 +4843,6 @@ TEST_P(QuicConnectionTest, OnPacketHeaderDebugVisitor) {
 }
 
 TEST_P(QuicConnectionTest, Pacing) {
-  // static_cast here does not work if using multipath_sent_packet_manager.
-  FLAGS_quic_reloadable_flag_quic_enable_multipath = false;
   TestConnection server(connection_id_, kSelfAddress, helper_.get(),
                         alarm_factory_.get(), writer_.get(),
                         Perspective::IS_SERVER, version());
@@ -4977,32 +4971,6 @@ TEST_P(QuicConnectionTest, SendingUnencryptedStreamDataFails) {
   EXPECT_QUIC_BUG(connection_.SendStreamData(3, data_iov, 0, kFin, nullptr),
                   "Cannot send stream data without encryption.");
   EXPECT_FALSE(connection_.connected());
-}
-
-TEST_P(QuicConnectionTest, EnableMultipathNegotiation) {
-  // Test multipath negotiation during crypto handshake. Multipath is enabled
-  // when both endpoints enable multipath.
-  FLAGS_quic_reloadable_flag_quic_enable_multipath = true;
-  EXPECT_TRUE(connection_.connected());
-  EXPECT_FALSE(QuicConnectionPeer::IsMultipathEnabled(&connection_));
-  EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
-  QuicConfig config;
-  // Enable multipath on server side.
-  config.SetMultipathEnabled(true);
-
-  // Create a handshake message enables multipath.
-  CryptoHandshakeMessage msg;
-  string error_details;
-  QuicConfig client_config;
-  // Enable multipath on client side.
-  client_config.SetMultipathEnabled(true);
-  client_config.ToHandshakeMessage(&msg);
-  const QuicErrorCode error =
-      config.ProcessPeerHello(msg, CLIENT, &error_details);
-  EXPECT_EQ(QUIC_NO_ERROR, error);
-
-  connection_.SetFromConfig(config);
-  EXPECT_TRUE(QuicConnectionPeer::IsMultipathEnabled(&connection_));
 }
 
 TEST_P(QuicConnectionTest, OnPathDegrading) {

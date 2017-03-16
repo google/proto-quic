@@ -136,6 +136,13 @@ class BbrSenderTest : public ::testing::Test {
         kTestPropagationDelay));
   }
 
+  void EnableAggregation(QuicByteCount aggregation_bytes,
+                         QuicTime::Delta aggregation_timeout) {
+    // Enable aggregation on the path from the receiver to the sender.
+    switch_->port_queue(1)->EnableAggregation(aggregation_bytes,
+                                              aggregation_timeout);
+  }
+
   void DoSimpleTransfer(QuicByteCount transfer_size, QuicTime::Delta deadline) {
     bbr_sender_.AddBytesToTransfer(transfer_size);
     bool simulator_result = simulator_.RunUntilOrTimeout(
@@ -221,6 +228,29 @@ TEST_F(BbrSenderTest, SimpleTransferSmallBuffer) {
   ExpectApproxEq(kTestLinkBandwidth, sender_->ExportDebugState().max_bandwidth,
                  0.01f);
   EXPECT_GE(bbr_sender_.connection()->GetStats().packets_lost, 0u);
+  EXPECT_FALSE(sender_->ExportDebugState().last_sample_is_app_limited);
+}
+
+// Test a simple long data transfer with 2 rtts of aggregation.
+TEST_F(BbrSenderTest, DISABLED_SimpleTransfer2RTTAggregation) {
+  QuicFlagSaver flags;
+  FLAGS_quic_reloadable_flag_quic_bbr_ack_spacing2 = true;
+  CreateDefaultSetup();
+  // 2 RTTs of aggregation, with a max of 10kb.
+  EnableAggregation(10 * 1024, 2 * kTestRtt);
+
+  // Transfer 12MB.
+  DoSimpleTransfer(12 * 1024 * 1024, QuicTime::Delta::FromSeconds(35));
+  EXPECT_EQ(BbrSender::PROBE_BW, sender_->ExportDebugState().mode);
+  // It's possible to read a bandwidth as much as 25% too high with aggregation.
+  EXPECT_LE(kTestLinkBandwidth * 0.99f,
+            sender_->ExportDebugState().max_bandwidth);
+  // TODO(ianswett): Tighten this bound once we understand why BBR is
+  // overestimating bandwidth with aggregation. b/36022633
+  EXPECT_GE(kTestLinkBandwidth * 1.25f,
+            sender_->ExportDebugState().max_bandwidth);
+  // TODO(ianswett): Expect 0 packets are lost once BBR no longer measures
+  // bandwidth higher than the link rate.
   EXPECT_FALSE(sender_->ExportDebugState().last_sample_is_app_limited);
 }
 

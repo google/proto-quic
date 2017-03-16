@@ -788,7 +788,10 @@ void ClientSocketPoolBaseHelper::CleanupIdleSockets(bool force) {
     CleanupIdleSocketsInGroup(force, group, now);
     // Delete group if no longer needed.
     if (group->IsEmpty()) {
-      RemoveGroup(i++);
+      // TODO(xunjieli): Evaluate other RemoveGroup() instances after
+      // crbug.com/700549 is fixed.
+      GroupMap::iterator old = i++;
+      RemoveGroup(old);
     } else {
       ++i;
     }

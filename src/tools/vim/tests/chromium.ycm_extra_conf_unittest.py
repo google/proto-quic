@@ -3,7 +3,6 @@
 # Copyright 2015 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Tests for chromium.ycm_extra_conf.
 
 These tests should be getting picked up by the PRESUBMIT.py in /tools/vim.
@@ -21,10 +20,8 @@ import sys
 import tempfile
 import unittest
 
-def CreateFile(path,
-               copy_from = None,
-               format_with = None,
-               make_executable = False):
+
+def CreateFile(path, copy_from=None, format_with=None, make_executable=False):
   """Creates a file.
 
   If a file already exists at |path|, it will be overwritten.
@@ -53,20 +50,25 @@ def CreateFile(path,
     statinfo = os.stat(path)
     os.chmod(path, statinfo.st_mode | stat.S_IXUSR)
 
+
 def GetLastLangFlag(flags):
   lastLang = None
   for i, flag in enumerate(flags):
-      if flag =='-x':
-        lastLang = flags[i+1]
+    if flag == '-x':
+      lastLang = flags[i + 1]
   return lastLang
 
+
 def TestLanguage(test_file, language):
+
   def test(self):
     result = self.ycm_extra_conf.FlagsForFile(
         os.path.join(self.chrome_root, test_file))
     self.assertTrue(result)
     self.assertEqual(GetLastLangFlag(result['flags']), language)
+
   return test
+
 
 class Chromium_ycmExtraConfTest(unittest.TestCase):
 
@@ -89,8 +91,8 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
           +-- gn
                 build.ninja
     """
-    self.chrome_root = os.path.abspath(os.path.normpath(
-        os.path.join(self.test_root, 'src')))
+    self.chrome_root = os.path.abspath(
+        os.path.normpath(os.path.join(self.test_root, 'src')))
     self.out_dir = os.path.join(self.chrome_root, 'out', 'gn')
 
     os.makedirs(self.chrome_root)
@@ -104,9 +106,9 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     # Fake ninja build file. Applications of 'cxx' rule are tagged by which
     # source file was used as input so that the test can verify that the correct
     # build dependency was used.
-    CreateFile(os.path.join(self.out_dir, 'build.ninja'),
-               copy_from=os.path.join(self.test_data_path,
-                                      'fake_build_ninja.txt'))
+    CreateFile(
+        os.path.join(self.out_dir, 'build.ninja'),
+        copy_from=os.path.join(self.test_data_path, 'fake_build_ninja.txt'))
 
   def NormalizeString(self, string):
     return string.replace(self.out_dir, '[OUT]').\
@@ -147,8 +149,8 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
   def testCommandLineForKnownCppFile(self):
     command_line = self.ycm_extra_conf.GetClangCommandLineFromNinjaForSource(
         self.out_dir, os.path.join(self.chrome_root, 'one.cpp'))
-    self.assertEquals(
-        command_line, ('../../fake-clang++ -Ia -isysroot /mac.sdk -Itag-one '
+    self.assertEquals(command_line,
+                      ('../../fake-clang++ -Ia -isysroot /mac.sdk -Itag-one '
                        '../../one.cpp -o obj/one.o'))
 
   def testCommandLineForUnknownCppFile(self):
@@ -160,28 +162,24 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     clang_options = \
         self.ycm_extra_conf.GetClangOptionsFromNinjaForFilename(
             self.chrome_root, os.path.join(self.chrome_root, 'one.cpp'))
-    self.assertEquals(self.NormalizeStringsInList(clang_options), [
-        '-I[SRC]',
-        '-Wno-unknown-warning-option',
-        '-I[OUT]/a',
-        '-isysroot',
-        '/mac.sdk',
-        '-I[OUT]/tag-one'
+    self.assertEquals(
+        self.NormalizeStringsInList(clang_options), [
+            '-I[SRC]', '-Wno-unknown-warning-option', '-I[OUT]/a', '-isysroot',
+            '/mac.sdk', '-I[OUT]/tag-one'
         ])
 
   def testOutDirNames(self):
     out_root = os.path.join(self.chrome_root, 'out_with_underscore')
     out_dir = os.path.join(out_root, 'gn')
-    shutil.move(os.path.join(self.chrome_root, 'out'),
-        out_root)
+    shutil.move(os.path.join(self.chrome_root, 'out'), out_root)
 
     clang_options = \
         self.ycm_extra_conf.GetClangOptionsFromNinjaForFilename(
             self.chrome_root, os.path.join(self.chrome_root, 'one.cpp'))
     self.assertIn('-I%s/a' % self.NormalizeString(out_dir),
-        self.NormalizeStringsInList(clang_options))
+                  self.NormalizeStringsInList(clang_options))
     self.assertIn('-I%s/tag-one' % self.NormalizeString(out_dir),
-        self.NormalizeStringsInList(clang_options))
+                  self.NormalizeStringsInList(clang_options))
 
   def testGetFlagsForFileForKnownCppFile(self):
     result = self.ycm_extra_conf.FlagsForFile(
@@ -190,16 +188,11 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertTrue('do_cache' in result)
     self.assertTrue(result['do_cache'])
     self.assertTrue('flags' in result)
-    self.assertEquals(self.NormalizeStringsInList(result['flags']), [
-        '-DUSE_CLANG_COMPLETER',
-        '-std=c++11',
-        '-x', 'c++',
-        '-I[SRC]',
-        '-Wno-unknown-warning-option',
-        '-I[OUT]/a',
-        '-isysroot',
-        '/mac.sdk',
-        '-I[OUT]/tag-one'
+    self.assertEquals(
+        self.NormalizeStringsInList(result['flags']), [
+            '-DUSE_CLANG_COMPLETER', '-std=c++11', '-x', 'c++', '-I[SRC]',
+            '-Wno-unknown-warning-option', '-I[OUT]/a', '-isysroot', '/mac.sdk',
+            '-I[OUT]/tag-one'
         ])
 
   def testGetFlagsForFileForUnknownCppFile(self):
@@ -209,16 +202,11 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertTrue('do_cache' in result)
     self.assertTrue(result['do_cache'])
     self.assertTrue('flags' in result)
-    self.assertEquals(self.NormalizeStringsInList(result['flags']), [
-        '-DUSE_CLANG_COMPLETER',
-        '-std=c++11',
-        '-x', 'c++',
-        '-I[SRC]',
-        '-Wno-unknown-warning-option',
-        '-I[OUT]/a',
-        '-isysroot',
-        '/mac.sdk',
-        '-I[OUT]/tag-default'
+    self.assertEquals(
+        self.NormalizeStringsInList(result['flags']), [
+            '-DUSE_CLANG_COMPLETER', '-std=c++11', '-x', 'c++', '-I[SRC]',
+            '-Wno-unknown-warning-option', '-I[OUT]/a', '-isysroot', '/mac.sdk',
+            '-I[OUT]/tag-default'
         ])
 
   def testGetFlagsForFileForUnknownCppNotTestFile(self):
@@ -228,26 +216,20 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertTrue('do_cache' in result)
     self.assertTrue(result['do_cache'])
     self.assertTrue('flags' in result)
-    self.assertEquals(self.NormalizeStringsInList(result['flags']), [
-        '-DUSE_CLANG_COMPLETER',
-        '-std=c++11',
-        '-x', 'c++',
-        '-I[SRC]',
-        '-Wno-unknown-warning-option',
-        '-I[OUT]/a',
-        '-isysroot',
-        '/mac.sdk',
-        '-I[OUT]/tag-default'
+    self.assertEquals(
+        self.NormalizeStringsInList(result['flags']), [
+            '-DUSE_CLANG_COMPLETER', '-std=c++11', '-x', 'c++', '-I[SRC]',
+            '-Wno-unknown-warning-option', '-I[OUT]/a', '-isysroot', '/mac.sdk',
+            '-I[OUT]/tag-default'
         ])
 
-  testGetFlagsForFileForKnownObjcFile = TestLanguage(
-      'eight.m', 'objective-c')
+  testGetFlagsForFileForKnownObjcFile = TestLanguage('eight.m', 'objective-c')
   testGetFlagsForFileForKnownObjcHeaderFile = TestLanguage(
       'eight.h', 'objective-c')
-  testGetFlagsForFileForUnknownObjcFile = TestLanguage(
-      'nonexistent.m', 'objective-c')
-  testGetFlagsForFileForKnownObjcppFile = TestLanguage(
-      'nine.mm', 'objective-c++')
+  testGetFlagsForFileForUnknownObjcFile = TestLanguage('nonexistent.m',
+                                                       'objective-c')
+  testGetFlagsForFileForKnownObjcppFile = TestLanguage('nine.mm',
+                                                       'objective-c++')
   testGetFlagsForFileForKnownObjcppHeaderFile = TestLanguage(
       'nine.h', 'objective-c++')
   testGetFlagsForFileForUnknownObjcppFile = TestLanguage(
@@ -260,16 +242,11 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertTrue('do_cache' in result)
     self.assertTrue(result['do_cache'])
     self.assertTrue('flags' in result)
-    self.assertEquals(self.NormalizeStringsInList(result['flags']), [
-        '-DUSE_CLANG_COMPLETER',
-        '-std=c++11',
-        '-x', 'c++',
-        '-I[SRC]',
-        '-Wno-unknown-warning-option',
-        '-I[OUT]/a',
-        '-isysroot',
-        '/mac.sdk',
-        '-I[OUT]/tag-default'
+    self.assertEquals(
+        self.NormalizeStringsInList(result['flags']), [
+            '-DUSE_CLANG_COMPLETER', '-std=c++11', '-x', 'c++', '-I[SRC]',
+            '-Wno-unknown-warning-option', '-I[OUT]/a', '-isysroot', '/mac.sdk',
+            '-I[OUT]/tag-default'
         ])
 
   def testGetFlagsForFileForUnknownUnittestFile(self):
@@ -279,16 +256,11 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertTrue('do_cache' in result)
     self.assertTrue(result['do_cache'])
     self.assertTrue('flags' in result)
-    self.assertEquals(self.NormalizeStringsInList(result['flags']), [
-        '-DUSE_CLANG_COMPLETER',
-        '-std=c++11',
-        '-x', 'c++',
-        '-I[SRC]',
-        '-Wno-unknown-warning-option',
-        '-I[OUT]/a',
-        '-isysroot',
-        '/mac.sdk',
-        '-I[OUT]/tag-default-test'
+    self.assertEquals(
+        self.NormalizeStringsInList(result['flags']), [
+            '-DUSE_CLANG_COMPLETER', '-std=c++11', '-x', 'c++', '-I[SRC]',
+            '-Wno-unknown-warning-option', '-I[OUT]/a', '-isysroot', '/mac.sdk',
+            '-I[OUT]/tag-default-test'
         ])
 
   def testGetFlagsForFileForUnknownBrowsertestFile2(self):
@@ -298,16 +270,11 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertTrue('do_cache' in result)
     self.assertTrue(result['do_cache'])
     self.assertTrue('flags' in result)
-    self.assertEquals(self.NormalizeStringsInList(result['flags']), [
-        '-DUSE_CLANG_COMPLETER',
-        '-std=c++11',
-        '-x', 'c++',
-        '-I[SRC]',
-        '-Wno-unknown-warning-option',
-        '-I[OUT]/a',
-        '-isysroot',
-        '/mac.sdk',
-        '-I[OUT]/tag-default-test'
+    self.assertEquals(
+        self.NormalizeStringsInList(result['flags']), [
+            '-DUSE_CLANG_COMPLETER', '-std=c++11', '-x', 'c++', '-I[SRC]',
+            '-Wno-unknown-warning-option', '-I[OUT]/a', '-isysroot', '/mac.sdk',
+            '-I[OUT]/tag-default-test'
         ])
 
   def testGetFlagsForFileForKnownHeaderFileWithAssociatedCppFile(self):
@@ -317,29 +284,24 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertTrue('do_cache' in result)
     self.assertTrue(result['do_cache'])
     self.assertTrue('flags' in result)
-    self.assertEquals(self.NormalizeStringsInList(result['flags']), [
-        '-DUSE_CLANG_COMPLETER',
-        '-std=c++11',
-        '-x', 'c++',
-        '-I[SRC]',
-        '-Wno-unknown-warning-option',
-        '-I[OUT]/a',
-        '-isysroot',
-        '/mac.sdk',
-        '-I[OUT]/tag-three'
+    self.assertEquals(
+        self.NormalizeStringsInList(result['flags']), [
+            '-DUSE_CLANG_COMPLETER', '-std=c++11', '-x', 'c++', '-I[SRC]',
+            '-Wno-unknown-warning-option', '-I[OUT]/a', '-isysroot', '/mac.sdk',
+            '-I[OUT]/tag-three'
         ])
 
   def testSourceFileWithNonClangOutputs(self):
     # Verify assumption that four.cc has non-compiler-output listed as the first
     # output.
-    p = subprocess.Popen(['ninja', '-C', self.out_dir, '-t',
-                          'query', '../../four.cc'],
-                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                         universal_newlines=True)
+    p = subprocess.Popen(
+        ['ninja', '-C', self.out_dir, '-t', 'query', '../../four.cc'],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        universal_newlines=True)
     stdout, _ = p.communicate()
     self.assertFalse(p.returncode)
-    self.assertEquals(stdout,
-                      '../../four.cc:\n'
+    self.assertEquals(stdout, '../../four.cc:\n'
                       '  outputs:\n'
                       '    obj/linker-output.o\n'
                       '    obj/four.o\n')
@@ -350,16 +312,11 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertTrue('do_cache' in result)
     self.assertTrue(result['do_cache'])
     self.assertTrue('flags' in result)
-    self.assertEquals(self.NormalizeStringsInList(result['flags']), [
-        '-DUSE_CLANG_COMPLETER',
-        '-std=c++11',
-        '-x', 'c++',
-        '-I[SRC]',
-        '-Wno-unknown-warning-option',
-        '-I[OUT]/a',
-        '-isysroot',
-        '/mac.sdk',
-        '-I[OUT]/tag-four'
+    self.assertEquals(
+        self.NormalizeStringsInList(result['flags']), [
+            '-DUSE_CLANG_COMPLETER', '-std=c++11', '-x', 'c++', '-I[SRC]',
+            '-Wno-unknown-warning-option', '-I[OUT]/a', '-isysroot', '/mac.sdk',
+            '-I[OUT]/tag-four'
         ])
 
   def testSourceFileWithOnlyNonClangOutputs(self):
@@ -369,16 +326,11 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertTrue('do_cache' in result)
     self.assertTrue(result['do_cache'])
     self.assertTrue('flags' in result)
-    self.assertEquals(self.NormalizeStringsInList(result['flags']), [
-        '-DUSE_CLANG_COMPLETER',
-        '-std=c++11',
-        '-x', 'c++',
-        '-I[SRC]',
-        '-Wno-unknown-warning-option',
-        '-I[OUT]/a',
-        '-isysroot',
-        '/mac.sdk',
-        '-I[OUT]/tag-default'
+    self.assertEquals(
+        self.NormalizeStringsInList(result['flags']), [
+            '-DUSE_CLANG_COMPLETER', '-std=c++11', '-x', 'c++', '-I[SRC]',
+            '-Wno-unknown-warning-option', '-I[OUT]/a', '-isysroot', '/mac.sdk',
+            '-I[OUT]/tag-default'
         ])
 
   def testGetFlagsForSysrootAbsPath(self):
@@ -388,14 +340,16 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertTrue('do_cache' in result)
     self.assertTrue(result['do_cache'])
     self.assertTrue('flags' in result)
-    self.assertEquals(self.NormalizeStringsInList(result['flags']), [
-        '-DUSE_CLANG_COMPLETER',
-        '-std=c++11',
-        '-x', 'c++',
-        '-I[SRC]',
-        '-Wno-unknown-warning-option',
-        '-I[OUT]/a',
-        '--sysroot=/usr/lib/sysroot-image',
+    self.assertEquals(
+        self.NormalizeStringsInList(result['flags']), [
+            '-DUSE_CLANG_COMPLETER',
+            '-std=c++11',
+            '-x',
+            'c++',
+            '-I[SRC]',
+            '-Wno-unknown-warning-option',
+            '-I[OUT]/a',
+            '--sysroot=/usr/lib/sysroot-image',
         ])
 
   def testGetFlagsForSysrootRelPath(self):
@@ -405,15 +359,18 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertTrue('do_cache' in result)
     self.assertTrue(result['do_cache'])
     self.assertTrue('flags' in result)
-    self.assertEquals(self.NormalizeStringsInList(result['flags']), [
-        '-DUSE_CLANG_COMPLETER',
-        '-std=c++11',
-        '-x', 'c++',
-        '-I[SRC]',
-        '-Wno-unknown-warning-option',
-        '-I[OUT]/a',
-        '--sysroot=[SRC]/build/sysroot-image',
+    self.assertEquals(
+        self.NormalizeStringsInList(result['flags']), [
+            '-DUSE_CLANG_COMPLETER',
+            '-std=c++11',
+            '-x',
+            'c++',
+            '-I[SRC]',
+            '-Wno-unknown-warning-option',
+            '-I[OUT]/a',
+            '--sysroot=[SRC]/build/sysroot-image',
         ])
+
 
 if __name__ == '__main__':
   if not os.path.isfile('chromium.ycm_extra_conf.py'):

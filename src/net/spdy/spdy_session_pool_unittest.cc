@@ -12,12 +12,15 @@
 #include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted.h"
 #include "base/run_loop.h"
+#include "base/test/histogram_tester.h"
 #include "base/trace_event/memory_allocator_dump.h"
 #include "base/trace_event/process_memory_dump.h"
 #include "base/trace_event/trace_event_argument.h"
 #include "net/dns/host_cache.h"
 #include "net/http/http_network_session.h"
 #include "net/log/net_log_with_source.h"
+#include "net/log/test_net_log.h"
+#include "net/log/test_net_log_entry.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/transport_client_socket_pool.h"
 #include "net/spdy/spdy_session.h"
@@ -165,7 +168,7 @@ TEST_F(SpdySessionPoolTest, CloseCurrentIdleSessions) {
   CreateNetworkSession();
 
   // Set up session 1
-  const std::string kTestHost1("http://www.example.org");
+  const std::string kTestHost1("www.example.org");
   HostPortPair test_host_port_pair1(kTestHost1, 80);
   SpdySessionKey key1(test_host_port_pair1, ProxyServer::Direct(),
                       PRIVACY_MODE_DISABLED);
@@ -180,7 +183,7 @@ TEST_F(SpdySessionPoolTest, CloseCurrentIdleSessions) {
   StaticSocketDataProvider data2(reads, arraysize(reads), nullptr, 0);
   data2.set_connect_data(connect_data);
   session_deps_.socket_factory->AddSocketDataProvider(&data2);
-  const std::string kTestHost2("http://mail.example.org");
+  const std::string kTestHost2("mail.example.org");
   HostPortPair test_host_port_pair2(kTestHost2, 80);
   SpdySessionKey key2(test_host_port_pair2, ProxyServer::Direct(),
                       PRIVACY_MODE_DISABLED);
@@ -195,7 +198,7 @@ TEST_F(SpdySessionPoolTest, CloseCurrentIdleSessions) {
   StaticSocketDataProvider data3(reads, arraysize(reads), nullptr, 0);
   data3.set_connect_data(connect_data);
   session_deps_.socket_factory->AddSocketDataProvider(&data3);
-  const std::string kTestHost3("http://mail.example.com");
+  const std::string kTestHost3("mail.example.com");
   HostPortPair test_host_port_pair3(kTestHost3, 80);
   SpdySessionKey key3(test_host_port_pair3, ProxyServer::Direct(),
                       PRIVACY_MODE_DISABLED);
@@ -509,6 +512,85 @@ TEST_F(SpdySessionPoolTest, IPPoolingCloseIdleSessions) {
   RunIPPoolingTest(SPDY_POOL_CLOSE_IDLE_SESSIONS);
 }
 
+// Regression test for https://crbug.com/643025.
+TEST_F(SpdySessionPoolTest, IPPoolingNetLog) {
+  // Define two hosts with identical IP address.
+  const int kTestPort = 443;
+  struct TestHosts {
+    std::string name;
+    std::string iplist;
+    SpdySessionKey key;
+    AddressList addresses;
+    std::unique_ptr<HostResolver::Request> request;
+  } test_hosts[] = {
+      {"www.example.org", "192.168.0.1"}, {"mail.example.org", "192.168.0.1"},
+  };
+
+  // Populate the HostResolver cache.
+  session_deps_.host_resolver->set_synchronous_mode(true);
+  for (size_t i = 0; i < arraysize(test_hosts); i++) {
+    session_deps_.host_resolver->rules()->AddIPLiteralRule(
+        test_hosts[i].name, test_hosts[i].iplist, std::string());
+
+    HostResolver::RequestInfo info(HostPortPair(test_hosts[i].name, kTestPort));
+    session_deps_.host_resolver->Resolve(
+        info, DEFAULT_PRIORITY, &test_hosts[i].addresses, CompletionCallback(),
+        &test_hosts[i].request, NetLogWithSource());
+
+    test_hosts[i].key =
+        SpdySessionKey(HostPortPair(test_hosts[i].name, kTestPort),
+                       ProxyServer::Direct(), PRIVACY_MODE_DISABLED);
+  }
+
+  MockRead reads[] = {MockRead(SYNCHRONOUS, ERR_IO_PENDING)};
+  StaticSocketDataProvider data(reads, arraysize(reads), nullptr, 0);
+  MockConnect connect_data(SYNCHRONOUS, OK);
+  data.set_connect_data(connect_data);
+
+  session_deps_.socket_factory->AddSocketDataProvider(&data);
+  AddSSLSocketData();
+
+  CreateNetworkSession();
+
+  // Open SpdySession to the first host.
+  base::WeakPtr<SpdySession> session0 = CreateSecureSpdySession(
+      http_session_.get(), test_hosts[0].key, NetLogWithSource());
+
+  // A request to the second host should pool to the existing connection.
+  BoundTestNetLog net_log;
+  base::HistogramTester histogram_tester;
+  base::WeakPtr<SpdySession> session1 =
+      spdy_session_pool_->FindAvailableSession(test_hosts[1].key, GURL(),
+                                               net_log.bound());
+  EXPECT_EQ(session0.get(), session1.get());
+
+  ASSERT_EQ(1u, net_log.GetSize());
+  histogram_tester.ExpectTotalCount("Net.SpdySessionGet", 1);
+
+  // A request to the second host should still pool to the existing connection.
+  session1 = spdy_session_pool_->FindAvailableSession(test_hosts[1].key, GURL(),
+                                                      net_log.bound());
+  EXPECT_EQ(session0.get(), session1.get());
+
+  ASSERT_EQ(2u, net_log.GetSize());
+  histogram_tester.ExpectTotalCount("Net.SpdySessionGet", 2);
+
+  // Both FindAvailableSession() calls should log netlog events
+  // indicating IP pooling.
+  TestNetLogEntry::List entry_list;
+  net_log.GetEntries(&entry_list);
+  EXPECT_EQ(
+      NetLogEventType::HTTP2_SESSION_POOL_FOUND_EXISTING_SESSION_FROM_IP_POOL,
+      entry_list[0].type);
+  EXPECT_EQ(
+      NetLogEventType::HTTP2_SESSION_POOL_FOUND_EXISTING_SESSION_FROM_IP_POOL,
+      entry_list[1].type);
+
+  // Both FindAvailableSession() calls should log histogram entries
+  // indicating IP pooling.
+  histogram_tester.ExpectUniqueSample("Net.SpdySessionGet", 2, 2);
+}
+
 // Construct a Pool with SpdySessions in various availability states. Simulate
 // an IP address change. Ensure sessions gracefully shut down. Regression test
 // for crbug.com/379469.
@@ -539,14 +621,14 @@ TEST_F(SpdySessionPoolTest, IPAddressChanged) {
   CreateNetworkSession();
 
   // Set up session A: Going away, but with an active stream.
-  const std::string kTestHostA("http://www.example.org");
+  const std::string kTestHostA("www.example.org");
   HostPortPair test_host_port_pairA(kTestHostA, 80);
   SpdySessionKey keyA(
       test_host_port_pairA, ProxyServer::Direct(), PRIVACY_MODE_DISABLED);
   base::WeakPtr<SpdySession> sessionA =
       CreateSecureSpdySession(http_session_.get(), keyA, NetLogWithSource());
 
-  GURL urlA(kTestHostA);
+  GURL urlA("http://www.example.org");
   base::WeakPtr<SpdyStream> spdy_streamA = CreateStreamSynchronously(
       SPDY_BIDIRECTIONAL_STREAM, sessionA, urlA, MEDIUM, NetLogWithSource());
   test::StreamDelegateDoNothing delegateA(spdy_streamA);
@@ -570,7 +652,7 @@ TEST_F(SpdySessionPoolTest, IPAddressChanged) {
 
   AddSSLSocketData();
 
-  const std::string kTestHostB("http://mail.example.org");
+  const std::string kTestHostB("mail.example.org");
   HostPortPair test_host_port_pairB(kTestHostB, 80);
   SpdySessionKey keyB(
       test_host_port_pairB, ProxyServer::Direct(), PRIVACY_MODE_DISABLED);
@@ -578,7 +660,7 @@ TEST_F(SpdySessionPoolTest, IPAddressChanged) {
       CreateSecureSpdySession(http_session_.get(), keyB, NetLogWithSource());
   EXPECT_TRUE(sessionB->IsAvailable());
 
-  GURL urlB(kTestHostB);
+  GURL urlB("http://mail.example.org");
   base::WeakPtr<SpdyStream> spdy_streamB = CreateStreamSynchronously(
       SPDY_BIDIRECTIONAL_STREAM, sessionB, urlB, MEDIUM, NetLogWithSource());
   test::StreamDelegateDoNothing delegateB(spdy_streamB);
@@ -592,7 +674,7 @@ TEST_F(SpdySessionPoolTest, IPAddressChanged) {
 
   AddSSLSocketData();
 
-  const std::string kTestHostC("http://mail.example.com");
+  const std::string kTestHostC("mail.example.com");
   HostPortPair test_host_port_pairC(kTestHostC, 80);
   SpdySessionKey keyC(
       test_host_port_pairC, ProxyServer::Direct(), PRIVACY_MODE_DISABLED);

@@ -64,6 +64,8 @@ static_library("ced") {
   } else {
     defines = [ "COMPILER_GCC" ]
   }
+
+  defines += [ "HTML5_MODE" ]
 }
 
 test("ced_unittests") {
@@ -85,6 +87,8 @@ test("ced_unittests") {
   } else {
     defines = [ "COMPILER_GCC" ]
   }
+
+  defines += [ "HTML5_MODE" ]
 
   deps = [
     ":ced",

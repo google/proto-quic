@@ -45,7 +45,6 @@ class ChloFramerVisitor : public QuicFramerVisitorInterface,
   bool OnGoAwayFrame(const QuicGoAwayFrame& frame) override;
   bool OnWindowUpdateFrame(const QuicWindowUpdateFrame& frame) override;
   bool OnBlockedFrame(const QuicBlockedFrame& frame) override;
-  bool OnPathCloseFrame(const QuicPathCloseFrame& frame) override;
   bool OnPaddingFrame(const QuicPaddingFrame& frame) override;
   void OnPacketComplete() override {}
 
@@ -133,10 +132,6 @@ bool ChloFramerVisitor::OnWindowUpdateFrame(
 }
 
 bool ChloFramerVisitor::OnBlockedFrame(const QuicBlockedFrame& frame) {
-  return true;
-}
-
-bool ChloFramerVisitor::OnPathCloseFrame(const QuicPathCloseFrame& frame) {
   return true;
 }
 

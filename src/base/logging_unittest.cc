@@ -69,16 +69,14 @@ class MockLogSource {
 
 TEST_F(LoggingTest, BasicLogging) {
   MockLogSource mock_log_source;
-  EXPECT_CALL(mock_log_source, Log()).Times(DEBUG_MODE ? 16 : 8).
-      WillRepeatedly(Return("log message"));
+  EXPECT_CALL(mock_log_source, Log())
+      .Times(DCHECK_IS_ON() ? 16 : 8)
+      .WillRepeatedly(Return("log message"));
 
   SetMinLogLevel(LOG_INFO);
 
   EXPECT_TRUE(LOG_IS_ON(INFO));
-  // As of g++-4.5, the first argument to EXPECT_EQ cannot be a
-  // constant expression.
-  const bool kIsDebugMode = (DEBUG_MODE != 0);
-  EXPECT_TRUE(kIsDebugMode == DLOG_IS_ON(INFO));
+  EXPECT_TRUE((DCHECK_IS_ON() != 0) == DLOG_IS_ON(INFO));
   EXPECT_TRUE(VLOG_IS_ON(0));
 
   LOG(INFO) << mock_log_source.Log();

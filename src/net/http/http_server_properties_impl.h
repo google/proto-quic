@@ -109,6 +109,7 @@ class NET_EXPORT HttpServerPropertiesImpl
   void SetSupportsQuic(bool used_quic, const IPAddress& address) override;
   void SetServerNetworkStats(const url::SchemeHostPort& server,
                              ServerNetworkStats stats) override;
+  void ClearServerNetworkStats(const url::SchemeHostPort& server) override;
   const ServerNetworkStats* GetServerNetworkStats(
       const url::SchemeHostPort& server) override;
   const ServerNetworkStatsMap& server_network_stats_map() const override;

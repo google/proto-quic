@@ -322,5 +322,49 @@ TEST_F(TaskSchedulerImplTest, GetMaxConcurrentTasksWithTraitsDeprecated) {
           TaskTraits().WithPriority(TaskPriority::USER_BLOCKING).MayBlock()));
 }
 
+// Verify that the RunsTasksOnCurrentThread() method of a SequencedTaskRunner
+// returns false when called from a task that isn't part of the sequence.
+TEST_F(TaskSchedulerImplTest, SequencedRunsTasksOnCurrentThread) {
+  auto single_thread_task_runner =
+      scheduler_->CreateSingleThreadTaskRunnerWithTraits(TaskTraits());
+  auto sequenced_task_runner =
+      scheduler_->CreateSequencedTaskRunnerWithTraits(TaskTraits());
+
+  WaitableEvent task_ran(WaitableEvent::ResetPolicy::MANUAL,
+                         WaitableEvent::InitialState::NOT_SIGNALED);
+  single_thread_task_runner->PostTask(
+      FROM_HERE,
+      Bind(
+          [](scoped_refptr<TaskRunner> sequenced_task_runner,
+             WaitableEvent* task_ran) {
+            EXPECT_FALSE(sequenced_task_runner->RunsTasksOnCurrentThread());
+            task_ran->Signal();
+          },
+          sequenced_task_runner, Unretained(&task_ran)));
+  task_ran.Wait();
+}
+
+// Verify that the RunsTasksOnCurrentThread() method of a SingleThreadTaskRunner
+// returns false when called from a task that isn't part of the sequence.
+TEST_F(TaskSchedulerImplTest, SingleThreadRunsTasksOnCurrentThread) {
+  auto sequenced_task_runner =
+      scheduler_->CreateSequencedTaskRunnerWithTraits(TaskTraits());
+  auto single_thread_task_runner =
+      scheduler_->CreateSingleThreadTaskRunnerWithTraits(TaskTraits());
+
+  WaitableEvent task_ran(WaitableEvent::ResetPolicy::MANUAL,
+                         WaitableEvent::InitialState::NOT_SIGNALED);
+  sequenced_task_runner->PostTask(
+      FROM_HERE,
+      Bind(
+          [](scoped_refptr<TaskRunner> single_thread_task_runner,
+             WaitableEvent* task_ran) {
+            EXPECT_FALSE(single_thread_task_runner->RunsTasksOnCurrentThread());
+            task_ran->Signal();
+          },
+          single_thread_task_runner, Unretained(&task_ran)));
+  task_ran.Wait();
+}
+
 }  // namespace internal
 }  // namespace base

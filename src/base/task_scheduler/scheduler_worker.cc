@@ -67,7 +67,6 @@ class SchedulerWorker::Thread : public PlatformThread::Delegate {
         if (outer_->delegate_->CanDetach(outer_.get())) {
           detached_thread = outer_->DetachThreadObject(DetachNotify::DELEGATE);
           if (detached_thread) {
-            outer_ = nullptr;
             DCHECK_EQ(detached_thread.get(), this);
             PlatformThread::Detach(thread_handle_);
             break;
@@ -119,6 +118,8 @@ class SchedulerWorker::Thread : public PlatformThread::Delegate {
     //           nullptr. JoinForTesting() cleans up if we get nullptr.
     if (!detached_thread)
       detached_thread = outer_->DetachThreadObject(DetachNotify::SILENT);
+
+    outer_->delegate_->OnMainExit();
   }
 
   void Join() { PlatformThread::Join(thread_handle_); }

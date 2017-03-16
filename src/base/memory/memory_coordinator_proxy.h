@@ -19,7 +19,6 @@ class BASE_EXPORT MemoryCoordinator {
   virtual ~MemoryCoordinator() {}
 
   virtual MemoryState GetCurrentMemoryState() const = 0;
-  virtual void SetCurrentMemoryStateForTesting(MemoryState memory_state) = 0;
 };
 
 // The proxy of MemoryCoordinator to be accessed from components that are not
@@ -35,9 +34,6 @@ class BASE_EXPORT MemoryCoordinatorProxy {
 
   // Returns the current memory state.
   MemoryState GetCurrentMemoryState() const;
-
-  // Sets the current memory state. This function is for testing only.
-  void SetCurrentMemoryStateForTesting(MemoryState memory_state);
 
  private:
   friend struct base::DefaultSingletonTraits<MemoryCoordinatorProxy>;

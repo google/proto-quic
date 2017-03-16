@@ -23,13 +23,23 @@ struct _EXCEPTION_POINTERS;
 struct _CONTEXT;
 #endif
 
-#if defined(OS_POSIX) && ( \
-    defined(__i386__) || defined(__x86_64__) || \
-    (defined(__arm__) && !defined(__thumb__)))
+// TODO(699863): Clean up HAVE_TRACE_STACK_FRAME_POINTERS.
+#if defined(OS_POSIX)
+
+#if defined(__i386__) || defined(__x86_64__)
 #define HAVE_TRACE_STACK_FRAME_POINTERS 1
-#else
+#elif defined(__arm__) && !defined(__thumb__)
+#define HAVE_TRACE_STACK_FRAME_POINTERS 1
+#else  // defined(__arm__) && !defined(__thumb__)
 #define HAVE_TRACE_STACK_FRAME_POINTERS 0
-#endif
+#endif  // defined(__arm__) && !defined(__thumb__)
+
+#elif defined(OS_WIN)
+#define HAVE_TRACE_STACK_FRAME_POINTERS 1
+
+#else  // defined(OS_WIN)
+#define HAVE_TRACE_STACK_FRAME_POINTERS 0
+#endif  // defined(OS_WIN)
 
 namespace base {
 namespace debug {
@@ -122,6 +132,7 @@ BASE_EXPORT size_t TraceStackFramePointers(const void** out_trace,
                                            size_t max_depth,
                                            size_t skip_initial);
 
+#if !defined(OS_WIN)
 // Links stack frame |fp| to |parent_fp|, so that during stack unwinding
 // TraceStackFramePointers() visits |parent_fp| after visiting |fp|.
 // Both frame pointers must come from __builtin_frame_address().
@@ -171,6 +182,7 @@ class BASE_EXPORT ScopedStackFrameLinker {
 
   DISALLOW_COPY_AND_ASSIGN(ScopedStackFrameLinker);
 };
+#endif  // !defined(OS_WIN)
 
 #endif  // HAVE_TRACE_STACK_FRAME_POINTERS
 

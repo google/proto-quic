@@ -54,7 +54,7 @@ def _CheckPerfJsonUpToDate(input_api, output_api):
   perf_dir = input_api.PresubmitLocalPath()
   out, return_code = _RunArgs([
       input_api.python_executable,
-      input_api.os_path.join(perf_dir, 'generate_perf_json.py'),
+      input_api.os_path.join(perf_dir, 'generate_perf_json'),
       '--validate-only'], input_api)
   if return_code:
       results.append(output_api.PresubmitError(

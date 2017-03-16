@@ -19,6 +19,12 @@ enum TextDecoration {
 void OutputString(const std::string& output,
                   TextDecoration dec = DECORATION_NONE);
 
+// If printing markdown, this generates table-of-contents entries with
+// links to the actual help; otherwise, prints a one-line description.
+void PrintSectionHelp(const std::string& line,
+                      const std::string& topic,
+                      const std::string& tag);
+
 // Prints a line for a command, assuming there is a colon. Everything before
 // the colon is the command (and is highlighted). After the colon if there is
 // a square bracket, the contents of the bracket is dimmed.
@@ -30,6 +36,6 @@ void PrintShortHelp(const std::string& line);
 // - Lines beginning with non-whitespace are highlighted up to the first
 //   colon (or the whole line if not).
 // - Lines whose first non-whitespace character is a # are dimmed.
-void PrintLongHelp(const std::string& text);
+void PrintLongHelp(const std::string& text, const std::string& tag = "");
 
 #endif  // TOOLS_GN_STANDARD_OUT_H_

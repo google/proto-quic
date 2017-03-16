@@ -64,7 +64,7 @@ size_t ProcessMetrics::GetPeakWorkingSetSize() const {
 }
 
 bool ProcessMetrics::GetMemoryBytes(size_t* private_bytes,
-                                    size_t* shared_bytes) {
+                                    size_t* shared_bytes) const {
   WorkingSetKBytes ws_usage;
 
   if (!GetWorkingSetKBytes(&ws_usage))

@@ -104,7 +104,7 @@ JUnit4:
        - `//third_party/android_support_test_runner:runner_java` (for `AndroidJUnitRunner`, etc)
        - `//third_party/android_support_test_runner:rules_java` (for `ActivityTestRule`, etc)
 2. Add class runner to your test apk manifest.
-   ([example][3])
+   ([example][2])
     - Keep in mind you can have multiple instrumentations in your manifest. Our
       test runner will run JUnit4 tests with JUnit4 runner and JUnit3 tests
       with non-JUnit4 runner.

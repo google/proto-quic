@@ -23,18 +23,6 @@ bool DetectEncoding(const std::string& text, std::string* encoding) {
   if (enc == UNKNOWN_ENCODING)
     return false;
 
-  // 7-bit encodings (except ISO-2022-JP) are not supported in web standard.
-  // Mark them as ascii to keep the raw bytes intact.
-  switch (enc) {
-    case HZ_GB_2312:
-    case ISO_2022_KR:
-    case ISO_2022_CN:
-    case UTF7:
-      enc = ASCII_7BIT;
-      break;
-    default:
-      break;
-  }
   *encoding = MimeEncodingName(enc);
   return true;
 }

@@ -79,6 +79,9 @@ BbrSender::BbrSender(const RttStats* rtt_stats,
       last_sent_packet_(0),
       current_round_trip_end_(0),
       max_bandwidth_(kBandwidthWindowSize, QuicBandwidth::Zero(), 0),
+      max_ack_spacing_(kBandwidthWindowSize, QuicTime::Delta::Zero(), 0),
+      largest_acked_time_(QuicTime::Zero()),
+      largest_acked_sent_time_(QuicTime::Zero()),
       min_rtt_(QuicTime::Delta::Zero()),
       min_rtt_timestamp_(QuicTime::Zero()),
       congestion_window_(initial_tcp_congestion_window * kDefaultTCPMSS),
@@ -173,7 +176,7 @@ bool BbrSender::InRecovery() const {
 void BbrSender::SetFromConfig(const QuicConfig& config,
                               Perspective perspective) {
   if (FLAGS_quic_reloadable_flag_quic_allow_2_rtt_bbr_startup) {
-    QUIC_FLAG_COUNT(gfe2_reloadable_flag_quic_allow_2_rtt_bbr_startup);
+    QUIC_FLAG_COUNT(quic_reloadable_flag_quic_allow_2_rtt_bbr_startup);
     if (config.HasClientRequestedIndependentOption(k1RTT, perspective)) {
       num_startup_rtts_ = 1;
     }
@@ -202,6 +205,10 @@ void BbrSender::OnCongestionEvent(bool /*rtt_updated*/,
     min_rtt_expired = UpdateBandwidthAndMinRtt(event_time, acked_packets);
     UpdateRecoveryState(last_acked_packet, !lost_packets.empty(),
                         is_round_start);
+    if (FLAGS_quic_reloadable_flag_quic_bbr_ack_spacing2) {
+      QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_ack_spacing2, 1, 2);
+      UpdateAckSpacing(event_time, last_acked_packet, acked_packets);
+    }
   }
 
   // Handle logic specific to PROBE_BW mode.
@@ -466,6 +473,41 @@ void BbrSender::UpdateRecoveryState(QuicPacketNumber last_acked_packet,
   }
 }
 
+// TODO(ianswett): Move this logic into BandwidthSampler.
+void BbrSender::UpdateAckSpacing(QuicTime ack_time,
+                                 QuicPacketNumber largest_newly_acked,
+                                 const CongestionVector& acked_packets) {
+  // Ignore acks of reordered packets.
+  if (largest_newly_acked < unacked_packets_->largest_observed()) {
+    return;
+  }
+  // Ignore acks of only one packet to filter out delayed acks.
+  if (acked_packets.size() == 1) {
+    return;
+  }
+  QuicTime largest_newly_acked_sent_time =
+      unacked_packets_->GetTransmissionInfo(largest_newly_acked).sent_time;
+  // Initialize on the first ack.
+  if (!largest_acked_time_.IsInitialized()) {
+    largest_acked_time_ = ack_time;
+    largest_acked_sent_time_ = largest_newly_acked_sent_time;
+    return;
+  }
+  QuicTime::Delta ack_delta = ack_time - largest_acked_time_;
+  QuicTime::Delta send_delta =
+      largest_newly_acked_sent_time - largest_acked_sent_time_;
+  largest_acked_time_ = ack_time;
+  largest_acked_sent_time_ = largest_newly_acked_sent_time;
+  if (ack_delta <= send_delta) {
+    return;
+  }
+
+  // Limit the ack spacing to SRTT to filter outliers.
+  QuicTime::Delta ack_spacing =
+      std::min(ack_delta - send_delta, rtt_stats_->smoothed_rtt());
+  max_ack_spacing_.Update(ack_spacing, round_trip_count_);
+}
+
 void BbrSender::CalculatePacingRate() {
   if (BandwidthEstimate().IsZero()) {
     return;
@@ -500,18 +542,23 @@ void BbrSender::CalculateCongestionWindow(QuicByteCount bytes_acked) {
   if (rtt_variance_weight_ > 0.f && !BandwidthEstimate().IsZero()) {
     target_window += rtt_variance_weight_ * rtt_stats_->mean_deviation() *
                      BandwidthEstimate();
+  } else if (FLAGS_quic_reloadable_flag_quic_bbr_ack_spacing2 &&
+             is_at_full_bandwidth_) {
+    QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_ack_spacing2, 2, 2);
+    // Add CWND for inter-ack spacing once STARTUP has been exited.
+    target_window += max_ack_spacing_.GetBest() * BandwidthEstimate();
   }
 
   // Instead of immediately setting the target CWND as the new one, BBR grows
   // the CWND towards |target_window| by only increasing it |bytes_acked| at a
   // time.
   if (is_at_full_bandwidth_) {
-    // If the connection is not yet out of startup phase, do not decrease the
-    // window.
     congestion_window_ =
         std::min(target_window, congestion_window_ + bytes_acked);
   } else if (congestion_window_ < target_window ||
              sampler_.total_bytes_acked() < initial_congestion_window_) {
+    // If the connection is not yet out of startup phase, do not decrease the
+    // window.
     congestion_window_ = congestion_window_ + bytes_acked;
   }
 

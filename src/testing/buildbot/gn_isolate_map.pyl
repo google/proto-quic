@@ -421,6 +421,10 @@
     "label": "//services/ui/display:display_service_unittests",
     "type": "console_test_launcher",
   },
+  "dump_syms" : {
+    "label": "//breakpad:dump_syms",
+    "type": "additional_compile_target",
+  },
   "events_unittests": {
     "label": "//ui/events:events_unittests",
     "type": "windowed_test_launcher",

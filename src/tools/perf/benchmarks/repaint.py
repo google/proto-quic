@@ -45,6 +45,7 @@ class _Repaint(perf_benchmark.PerfBenchmark):
 
 
 @benchmark.Disabled('all')
+@benchmark.Owner(emails=['wkorman@chromium.org', 'vmpstr@chromium.org'])
 class RepaintKeyMobileSites(_Repaint):
   """Measures repaint performance on the key mobile sites.
 
@@ -58,6 +59,7 @@ class RepaintKeyMobileSites(_Repaint):
 # crbug.com/502179
 @benchmark.Enabled('android')
 @benchmark.Disabled('all')
+@benchmark.Owner(emails=['wkorman@chromium.org', 'vmpstr@chromium.org'])
 class RepaintGpuRasterizationKeyMobileSites(_Repaint):
   """Measures repaint performance on the key mobile sites with forced GPU
   rasterization.

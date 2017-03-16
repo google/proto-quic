@@ -154,6 +154,33 @@
       },
       {
         "args": [
+          "info_collection",
+          "--show-stdout",
+          "--browser=debug",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc",
+          "--expected-vendor-id",
+          "10de",
+          "--expected-device-id",
+          "104a"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "info_collection_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test_run"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "gpu": "10de:104a",
+              "os": "Ubuntu"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
           "maps",
           "--show-stdout",
           "--browser=debug",
@@ -452,6 +479,33 @@
       },
       {
         "args": [
+          "info_collection",
+          "--show-stdout",
+          "--browser=release",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc",
+          "--expected-vendor-id",
+          "10de",
+          "--expected-device-id",
+          "104a"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "info_collection_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test_run"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "gpu": "10de:104a",
+              "os": "Ubuntu"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
           "maps",
           "--show-stdout",
           "--browser=release",
@@ -719,6 +773,33 @@
         ],
         "isolate_name": "telemetry_gpu_integration_test",
         "name": "hardware_accelerated_feature_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test_run"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "gpu": "8086:0a2e",
+              "os": "Mac-10.12"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "info_collection",
+          "--show-stdout",
+          "--browser=debug",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc",
+          "--expected-vendor-id",
+          "8086",
+          "--expected-device-id",
+          "0a2e"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "info_collection_tests",
         "override_compile_targets": [
           "telemetry_gpu_integration_test_run"
         ],
@@ -1032,6 +1113,33 @@
       },
       {
         "args": [
+          "info_collection",
+          "--show-stdout",
+          "--browser=release",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc",
+          "--expected-vendor-id",
+          "8086",
+          "--expected-device-id",
+          "0a2e"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "info_collection_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test_run"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "gpu": "8086:0a2e",
+              "os": "Mac-10.12"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
           "maps",
           "--show-stdout",
           "--browser=release",
@@ -1305,6 +1413,34 @@
         ],
         "isolate_name": "telemetry_gpu_integration_test",
         "name": "hardware_accelerated_feature_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test_run"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "gpu": "1002:6821",
+              "hidpi": "1",
+              "os": "Mac"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "info_collection",
+          "--show-stdout",
+          "--browser=debug",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc",
+          "--expected-vendor-id",
+          "1002",
+          "--expected-device-id",
+          "6821"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "info_collection_tests",
         "override_compile_targets": [
           "telemetry_gpu_integration_test_run"
         ],
@@ -1632,6 +1768,34 @@
       },
       {
         "args": [
+          "info_collection",
+          "--show-stdout",
+          "--browser=release",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc",
+          "--expected-vendor-id",
+          "1002",
+          "--expected-device-id",
+          "6821"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "info_collection_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test_run"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "gpu": "1002:6821",
+              "hidpi": "1",
+              "os": "Mac"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
           "maps",
           "--show-stdout",
           "--browser=release",
@@ -1921,6 +2085,33 @@
         ],
         "isolate_name": "telemetry_gpu_integration_test",
         "name": "hardware_accelerated_feature_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test_run"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "gpu": "10de:104a",
+              "os": "Windows-2008ServerR2-SP1"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "info_collection",
+          "--show-stdout",
+          "--browser=debug",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc",
+          "--expected-vendor-id",
+          "10de",
+          "--expected-device-id",
+          "104a"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "info_collection_tests",
         "override_compile_targets": [
           "telemetry_gpu_integration_test_run"
         ],
@@ -2236,6 +2427,33 @@
         ],
         "isolate_name": "telemetry_gpu_integration_test",
         "name": "hardware_accelerated_feature_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test_run"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "gpu": "10de:104a",
+              "os": "Windows-2008ServerR2-SP1"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "info_collection",
+          "--show-stdout",
+          "--browser=release",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc",
+          "--expected-vendor-id",
+          "10de",
+          "--expected-device-id",
+          "104a"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "info_collection_tests",
         "override_compile_targets": [
           "telemetry_gpu_integration_test_run"
         ],

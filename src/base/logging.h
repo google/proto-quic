@@ -747,13 +747,6 @@ DEFINE_CHECK_OP_IMPL(GT, > )
 
 #endif  // DCHECK_IS_ON()
 
-// DEBUG_MODE is for runtime uses like
-//   if (DEBUG_MODE) foo.CheckThatFoo();
-// We tie its state to DCHECK_IS_ON().
-//
-// For compile-time checks, #if DCHECK_IS_ON() can be used.
-enum { DEBUG_MODE = DCHECK_IS_ON() };
-
 #define DLOG(severity)                                          \
   LAZY_STREAM(LOG_STREAM(severity), DLOG_IS_ON(severity))
 

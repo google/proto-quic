@@ -229,9 +229,6 @@ class QUIC_EXPORT_PRIVATE QuicConnectionDebugVisitor
   // Called when a BlockedFrame has been parsed.
   virtual void OnBlockedFrame(const QuicBlockedFrame& frame) {}
 
-  // Called when a PathCloseFrame has been parsed.
-  virtual void OnPathCloseFrame(const QuicPathCloseFrame& frame) {}
-
   // Called when a public reset packet has been received.
   virtual void OnPublicResetPacket(const QuicPublicResetPacket& packet) {}
 
@@ -445,7 +442,6 @@ class QUIC_EXPORT_PRIVATE QuicConnection
   bool OnGoAwayFrame(const QuicGoAwayFrame& frame) override;
   bool OnWindowUpdateFrame(const QuicWindowUpdateFrame& frame) override;
   bool OnBlockedFrame(const QuicBlockedFrame& frame) override;
-  bool OnPathCloseFrame(const QuicPathCloseFrame& frame) override;
   void OnPacketComplete() override;
 
   // QuicConnectionCloseDelegateInterface
@@ -1078,9 +1074,6 @@ class QUIC_EXPORT_PRIVATE QuicConnection
 
   // Whether a GoAway has been received.
   bool goaway_received_;
-
-  // If true, multipath is enabled for this connection.
-  bool multipath_enabled_;
 
   // Indicates whether a write error is encountered currently. This is used to
   // avoid infinite write errors.

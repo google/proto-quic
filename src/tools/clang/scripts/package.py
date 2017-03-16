@@ -271,6 +271,9 @@ def main():
   elif sys.platform.startswith('linux'):
     # Copy the libstdc++.so.6 we linked Clang against so it can run.
     want.append('lib/libstdc++.so.6')
+    # Add llvm-ar and lld for LTO.
+    want.append('bin/llvm-ar')
+    want.append('bin/lld')
     # Copy only
     # lib/clang/*/lib/linux/libclang_rt.{[atm]san,san,ubsan,profile}-*.a ,
     # but not dfsan.
@@ -310,6 +313,9 @@ def main():
   if sys.platform != 'win32':
     os.symlink('clang', os.path.join(pdir, 'bin', 'clang++'))
     os.symlink('clang', os.path.join(pdir, 'bin', 'clang-cl'))
+
+  if sys.platform.startswith('linux'):
+    os.symlink('lld', os.path.join(pdir, 'bin', 'ld.lld'))
 
   # Copy libc++ headers.
   if sys.platform == 'darwin':

@@ -7,6 +7,7 @@ import("//mojo/public/tools/bindings/mojom.gni")
 mojom("interfaces") {
   sources = [
     "host_resolver_service.mojom",
+    "ip_address.mojom",
     "proxy_resolver_service.mojom",
   ]
   public_deps = [

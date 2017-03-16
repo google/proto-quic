@@ -404,10 +404,20 @@ void XcodeWriter::CreateProductsProject(
       new PBXProject("products", config_name, source_path, attributes));
   SourceDir source_dir("//");
 
-  // Add all source files for indexing.
+  // Add all source files for indexing, both private and public.
   std::vector<SourceFile> sources;
   for (const Target* target : all_targets) {
     for (const SourceFile& source : target->sources()) {
+      if (IsStringInOutputDir(build_settings->build_dir(), source.value()))
+        continue;
+
+      sources.push_back(source);
+    }
+
+    if (target->all_headers_public())
+      continue;
+
+    for (const SourceFile& source : target->public_headers()) {
       if (IsStringInOutputDir(build_settings->build_dir(), source.value()))
         continue;
 

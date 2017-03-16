@@ -7,8 +7,10 @@
 #include <cstdint>
 
 #include "net/quic/core/quic_connection.h"
+#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_flag_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 
@@ -183,6 +185,14 @@ void QuicFlowController::MaybeSendWindowUpdate() {
   DCHECK_LE(bytes_consumed_, receive_window_offset_);
   QuicStreamOffset available_window = receive_window_offset_ - bytes_consumed_;
   QuicByteCount threshold = WindowUpdateThreshold();
+
+  if (FLAGS_quic_reloadable_flag_quic_flow_control_faster_autotune &&
+      !prev_window_update_time_.IsInitialized()) {
+    QUIC_FLAG_COUNT(quic_reloadable_flag_quic_flow_control_faster_autotune);
+    // Treat the initial window as if it is a window update, so if 1/2 the
+    // window is used in less than 2 RTTs, the window is increased.
+    prev_window_update_time_ = connection_->clock()->ApproximateNow();
+  }
 
   if (available_window >= threshold) {
     QUIC_DVLOG(1) << ENDPOINT << "Not sending WindowUpdate for stream " << id_

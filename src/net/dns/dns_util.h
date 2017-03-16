@@ -32,11 +32,6 @@ NET_EXPORT_PRIVATE bool IsValidDNSDomain(const base::StringPiece& dotted);
 NET_EXPORT_PRIVATE std::string DNSDomainToString(
     const base::StringPiece& domain);
 
-// Returns true if it can determine that only loopback addresses are configured.
-// i.e. if only 127.0.0.1 and ::1 are routable.
-// Also returns false if it cannot determine this.
-NET_EXPORT_PRIVATE bool HaveOnlyLoopbackAddresses();
-
 #if !defined(OS_NACL)
 NET_EXPORT_PRIVATE
 base::TimeDelta GetTimeDeltaForConnectionTypeFromFieldTrialOrDefault(

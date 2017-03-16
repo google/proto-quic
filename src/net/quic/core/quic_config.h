@@ -351,10 +351,6 @@ class QUIC_EXPORT_PRIVATE QuicConfig {
 
   uint32_t ReceivedSocketReceiveBuffer() const;
 
-  void SetMultipathEnabled(bool multipath_enabled);
-
-  bool MultipathEnabled() const;
-
   void SetDisableConnectionMigration();
 
   bool DisableConnectionMigration() const;
@@ -428,9 +424,6 @@ class QUIC_EXPORT_PRIVATE QuicConfig {
   // TODO(ianswett): Deprecate once QUIC_VERSION_34 is deprecated.
   QuicFixedUint32 socket_receive_buffer_;
 
-  // Whether to support multipath for this connection.
-  QuicNegotiableUint32 multipath_enabled_;
-
   // Whether tell peer not to attempt connection migration.
   QuicFixedUint32 connection_migration_disabled_;
 
@@ -442,6 +435,9 @@ class QUIC_EXPORT_PRIVATE QuicConfig {
 
   // Whether support HTTP/2 SETTINGS_MAX_HEADER_LIST_SIZE SETTINGS frame.
   QuicFixedUint32 support_max_header_list_size_;
+
+  // Latched copy of FLAGS_quic_reloadable_flag_quic_no_socket_receive_buffer
+  bool latched_no_socket_receive_buffer_;
 };
 
 }  // namespace net

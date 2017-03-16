@@ -21,9 +21,9 @@ SchedulerWorkerPoolParams::SchedulerWorkerPoolParams(
       backward_compatibility_(backward_compatibility) {}
 
 SchedulerWorkerPoolParams::SchedulerWorkerPoolParams(
-    SchedulerWorkerPoolParams&& other) = default;
+    const SchedulerWorkerPoolParams& other) = default;
 
 SchedulerWorkerPoolParams& SchedulerWorkerPoolParams::operator=(
-    SchedulerWorkerPoolParams&& other) = default;
+    const SchedulerWorkerPoolParams& other) = default;
 
 }  // namespace base

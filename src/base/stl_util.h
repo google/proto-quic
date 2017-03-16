@@ -222,43 +222,68 @@ void EraseIf(std::list<T, Allocator>& container, Predicate pred) {
   container.remove_if(pred);
 }
 
-template <class T, class Allocator, class Predicate>
-void EraseIf(std::map<T, Allocator>& container, Predicate pred) {
+template <class Key, class T, class Compare, class Allocator, class Predicate>
+void EraseIf(std::map<Key, T, Compare, Allocator>& container, Predicate pred) {
   internal::IterateAndEraseIf(container, pred);
 }
 
-template <class T, class Allocator, class Predicate>
-void EraseIf(std::multimap<T, Allocator>& container, Predicate pred) {
+template <class Key, class T, class Compare, class Allocator, class Predicate>
+void EraseIf(std::multimap<Key, T, Compare, Allocator>& container,
+             Predicate pred) {
   internal::IterateAndEraseIf(container, pred);
 }
 
-template <class T, class Allocator, class Predicate>
-void EraseIf(std::set<T, Allocator>& container, Predicate pred) {
+template <class Key, class Compare, class Allocator, class Predicate>
+void EraseIf(std::set<Key, Compare, Allocator>& container, Predicate pred) {
   internal::IterateAndEraseIf(container, pred);
 }
 
-template <class T, class Allocator, class Predicate>
-void EraseIf(std::multiset<T, Allocator>& container, Predicate pred) {
+template <class Key, class Compare, class Allocator, class Predicate>
+void EraseIf(std::multiset<Key, Compare, Allocator>& container,
+             Predicate pred) {
   internal::IterateAndEraseIf(container, pred);
 }
 
-template <class T, class Allocator, class Predicate>
-void EraseIf(std::unordered_map<T, Allocator>& container, Predicate pred) {
+template <class Key,
+          class T,
+          class Hash,
+          class KeyEqual,
+          class Allocator,
+          class Predicate>
+void EraseIf(std::unordered_map<Key, T, Hash, KeyEqual, Allocator>& container,
+             Predicate pred) {
   internal::IterateAndEraseIf(container, pred);
 }
 
-template <class T, class Allocator, class Predicate>
-void EraseIf(std::unordered_multimap<T, Allocator>& container, Predicate pred) {
+template <class Key,
+          class T,
+          class Hash,
+          class KeyEqual,
+          class Allocator,
+          class Predicate>
+void EraseIf(
+    std::unordered_multimap<Key, T, Hash, KeyEqual, Allocator>& container,
+    Predicate pred) {
   internal::IterateAndEraseIf(container, pred);
 }
 
-template <class T, class Allocator, class Predicate>
-void EraseIf(std::unordered_set<T, Allocator>& container, Predicate pred) {
+template <class Key,
+          class Hash,
+          class KeyEqual,
+          class Allocator,
+          class Predicate>
+void EraseIf(std::unordered_set<Key, Hash, KeyEqual, Allocator>& container,
+             Predicate pred) {
   internal::IterateAndEraseIf(container, pred);
 }
 
-template <class T, class Allocator, class Predicate>
-void EraseIf(std::unordered_multiset<T, Allocator>& container, Predicate pred) {
+template <class Key,
+          class Hash,
+          class KeyEqual,
+          class Allocator,
+          class Predicate>
+void EraseIf(std::unordered_multiset<Key, Hash, KeyEqual, Allocator>& container,
+             Predicate pred) {
   internal::IterateAndEraseIf(container, pred);
 }
 

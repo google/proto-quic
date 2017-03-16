@@ -36,6 +36,7 @@ const char kSwitchIdeValueQtCreator[] = "qtcreator";
 const char kSwitchIdeValueVs[] = "vs";
 const char kSwitchIdeValueVs2013[] = "vs2013";
 const char kSwitchIdeValueVs2015[] = "vs2015";
+const char kSwitchIdeValueVs2017[] = "vs2017";
 const char kSwitchIdeValueXcode[] = "xcode";
 const char kSwitchIdeValueJson[] = "json";
 const char kSwitchNinjaExtraArgs[] = "ninja-extra-args";
@@ -193,10 +194,13 @@ bool RunIdeWriter(const std::string& ide,
     }
     return res;
   } else if (ide == kSwitchIdeValueVs || ide == kSwitchIdeValueVs2013 ||
-             ide == kSwitchIdeValueVs2015) {
-    VisualStudioWriter::Version version =
-        ide == kSwitchIdeValueVs2013 ? VisualStudioWriter::Version::Vs2013
-                                     : VisualStudioWriter::Version::Vs2015;
+             ide == kSwitchIdeValueVs2015 || ide == kSwitchIdeValueVs2017) {
+    VisualStudioWriter::Version version = VisualStudioWriter::Version::Vs2015;
+    if (ide == kSwitchIdeValueVs2013)
+      version = VisualStudioWriter::Version::Vs2013;
+    else if (ide == kSwitchIdeValueVs2017)
+      version = VisualStudioWriter::Version::Vs2017;
+
     std::string sln_name;
     if (command_line->HasSwitch(kSwitchSln))
       sln_name = command_line->GetSwitchValueASCII(kSwitchSln);
@@ -293,6 +297,7 @@ IDE options
              (default Visual Studio version: 2015)
       "vs2013" - Visual Studio 2013 project/solution files.
       "vs2015" - Visual Studio 2015 project/solution files.
+      "vs2017" - Visual Studio 2017 project/solution files.
       "xcode" - Xcode workspace/solution files.
       "qtcreator" - QtCreator project files.
       "json" - JSON file containing target information

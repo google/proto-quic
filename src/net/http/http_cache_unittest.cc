@@ -18,6 +18,7 @@
 #include "base/memory/ptr_util.h"
 #include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
+#include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
@@ -649,9 +650,7 @@ bool ShouldIgnoreLogEntry(const TestNetLogEntry& entry) {
 // Modifies |entries| to only include log entries created by the cache layer and
 // asserted on in these tests.
 void FilterLogEntries(TestNetLogEntry::List* entries) {
-  entries->erase(std::remove_if(entries->begin(), entries->end(),
-                                &ShouldIgnoreLogEntry),
-                 entries->end());
+  base::EraseIf(*entries, ShouldIgnoreLogEntry);
 }
 
 bool LogContainsEventType(const BoundTestNetLog& log,

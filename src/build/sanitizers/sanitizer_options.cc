@@ -66,7 +66,7 @@ void _sanitizer_options_link_helper() { }
 const char kAsanDefaultOptions[] =
     "legacy_pthread_cond=1 malloc_context_size=5 "
     "symbolize=1 check_printf=1 use_sigaltstack=1 detect_leaks=0 "
-    "strip_path_prefix=/../../ fast_unwind_on_fatal=1"
+    "strip_path_prefix=/../../ fast_unwind_on_fatal=1 "
     "allow_user_segv_handler=1 ";
 #else
 // Default AddressSanitizer options for buildbots and non-official builds.

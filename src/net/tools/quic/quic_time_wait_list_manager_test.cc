@@ -125,7 +125,7 @@ class QuicTimeWaitListManagerTest : public ::testing::Test {
       QuicConnectionId connection_id,
       QuicPacketNumber packet_number) {
     return net::test::ConstructEncryptedPacket(connection_id, false, false,
-                                               false, packet_number, "data");
+                                               packet_number, "data");
   }
 
   QuicFlagSaver flags_;  // Save/restore all QUIC flag values.

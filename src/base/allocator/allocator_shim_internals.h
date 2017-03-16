@@ -18,7 +18,26 @@
 #endif
 
 // Shim layer symbols need to be ALWAYS exported, regardless of component build.
-#define SHIM_ALWAYS_EXPORT __attribute__((visibility("default")))
+//
+// If an exported symbol is linked into a DSO, it may be preempted by a
+// definition in the main executable. If this happens to an allocator symbol, it
+// will mean that the DSO will use the main executable's allocator. This is
+// normally relatively harmless -- regular allocations should all use the same
+// allocator, but if the DSO tries to hook the allocator it will not see any
+// allocations.
+//
+// However, if LLVM LTO is enabled, the compiler may inline the shim layer
+// symbols into callers. The end result is that allocator calls in DSOs may use
+// either the main executable's allocator or the DSO's allocator, depending on
+// whether the call was inlined. This is arguably a bug in LLVM caused by its
+// somewhat irregular handling of symbol interposition (see llvm.org/PR23501).
+// To work around the bug we use noinline to prevent the symbols from being
+// inlined.
+//
+// In the long run we probably want to avoid linking the allocator bits into
+// DSOs altogether. This will save a little space and stop giving DSOs the false
+// impression that they can hook the allocator.
+#define SHIM_ALWAYS_EXPORT __attribute__((visibility("default"), noinline))
 
 #endif  // __GNUC__
 

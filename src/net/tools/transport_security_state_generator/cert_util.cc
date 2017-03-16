@@ -89,7 +89,7 @@ bssl::UniquePtr<X509> GetX509CertificateFromPEM(base::StringPiece pem_data) {
 
   const uint8_t* der_data = reinterpret_cast<const uint8_t*>(der.c_str());
   return bssl::UniquePtr<X509>(
-      d2i_X509(NULL, &der_data, base::checked_cast<long>(der.size())));
+      d2i_X509(nullptr, &der_data, base::checked_cast<long>(der.size())));
 }
 
 bool ExtractSubjectNameFromCertificate(X509* certificate, std::string* name) {

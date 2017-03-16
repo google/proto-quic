@@ -50,6 +50,14 @@ android_aar_prebuilt("android_support_design_java") {
   aar_path = "$lib_path/$_lib_name/$lib_version/$_lib_name-$lib_version.aar"
 }
 
+android_aar_prebuilt("android_support_transition_java") {
+  deps = [
+    ":android_support_v7_appcompat_java",
+  ]
+  _lib_name = "transition"
+  aar_path = "$lib_path/$_lib_name/$lib_version/$_lib_name-$lib_version.aar"
+}
+
 android_aar_prebuilt("android_support_multidex_java") {
   # TODO(jbudorick): remove requires_android after crbug.com/522043 is fixed.
   requires_android = false

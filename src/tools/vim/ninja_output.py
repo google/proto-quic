@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-
 import sys
 import os
 import itertools
@@ -12,6 +11,7 @@ try:
   from exceptions import RuntimeError
 except ImportError:
   pass
+
 
 def GetNinjaOutputDirectory(chrome_root):
   """Returns <chrome_root>/<output_dir>/(Release|Debug|<other>).
@@ -65,8 +65,8 @@ def GetNinjaOutputDirectory(chrome_root):
   try:
     return max(generate_paths(), key=approx_directory_mtime)
   except ValueError:
-    raise RuntimeError(
-      'Unable to find a valid ninja output directory.')
+    raise RuntimeError('Unable to find a valid ninja output directory.')
+
 
 if __name__ == '__main__':
   if len(sys.argv) != 2:

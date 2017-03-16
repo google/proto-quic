@@ -10,6 +10,7 @@
 #include <algorithm>
 
 #include "base/logging.h"
+#include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/string_tokenizer.h"
@@ -707,8 +708,8 @@ std::string HttpUtil::AssembleRawHeaders(const char* input_begin,
   // Use '\0' as the canonical line terminator. If the input already contained
   // any embeded '\0' characters we will strip them first to avoid interpreting
   // them as line breaks.
-  raw_headers.erase(std::remove(raw_headers.begin(), raw_headers.end(), '\0'),
-                    raw_headers.end());
+  base::Erase(raw_headers, '\0');
+
   std::replace(raw_headers.begin(), raw_headers.end(), '\n', '\0');
 
   return raw_headers;

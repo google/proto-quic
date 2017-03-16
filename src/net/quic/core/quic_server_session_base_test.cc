@@ -409,8 +409,6 @@ TEST_P(QuicServerSessionBaseTest, BandwidthEstimates) {
   // and we don't have any other data to write.
 
   // Client has sent kBWRE connection option to trigger bandwidth resumption.
-  // Disable this flag because if connection uses multipath sent packet manager,
-  // static_cast here does not work.
   QuicTagVector copt;
   copt.push_back(kBWRE);
   QuicConfigPeer::SetReceivedConnectionOptions(session_->config(), copt);
@@ -613,8 +611,8 @@ TEST_P(StreamMemberLifetimeTest, Basic) {
   chlo.SetVector(kCOPT, QuicTagVector{kSREJ});
   std::vector<QuicVersion> packet_version_list = {version};
   std::unique_ptr<QuicEncryptedPacket> packet(ConstructEncryptedPacket(
-      1, true, false, false, 1,
-      chlo.GetSerialized().AsStringPiece().as_string(),
+      1, true, false, 1,
+      string(chlo.GetSerialized().AsStringPiece().as_string()),
       PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER,
       &packet_version_list));
 
@@ -625,7 +623,7 @@ TEST_P(StreamMemberLifetimeTest, Basic) {
 
   // Set the current packet
   QuicConnectionPeer::SetCurrentPacket(session_->connection(),
-                                       packet->AsStringPiece());
+                                       packet->AsStringPiece().as_string());
 
   // Yes, this is horrible.  But it's the easiest way to trigger the behavior we
   // need to exercise.

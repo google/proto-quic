@@ -6,8 +6,9 @@
 
 #include <limits.h>
 
+#include <atomic>
+
 #include "base/allocator/partition_allocator/address_space_randomization.h"
-#include "base/atomicops.h"
 #include "base/base_export.h"
 #include "base/logging.h"
 #include "build/build_config.h"
@@ -27,7 +28,7 @@
 
 // On POSIX |mmap| uses a nearby address if the hint address is blocked.
 static const bool kHintIsAdvisory = true;
-static volatile base::subtle::Atomic32 s_allocPageErrorCode = 0;
+static std::atomic<int32_t> s_allocPageErrorCode{0};
 
 #elif defined(OS_WIN)
 
@@ -35,7 +36,7 @@ static volatile base::subtle::Atomic32 s_allocPageErrorCode = 0;
 
 // |VirtualAlloc| will fail if allocation at the hint address is blocked.
 static const bool kHintIsAdvisory = false;
-static base::subtle::Atomic32 s_allocPageErrorCode = ERROR_SUCCESS;
+static std::atomic<int32_t> s_allocPageErrorCode{ERROR_SUCCESS};
 
 #else
 #error Unknown OS
@@ -58,14 +59,14 @@ static void* SystemAllocPages(
       page_accessibility == PageAccessible ? PAGE_READWRITE : PAGE_NOACCESS;
   ret = VirtualAlloc(hint, length, MEM_RESERVE | MEM_COMMIT, access_flag);
   if (!ret)
-    base::subtle::Release_Store(&s_allocPageErrorCode, GetLastError());
+    s_allocPageErrorCode = GetLastError();
 #else
   int access_flag = page_accessibility == PageAccessible
                         ? (PROT_READ | PROT_WRITE)
                         : PROT_NONE;
   ret = mmap(hint, length, access_flag, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   if (ret == MAP_FAILED) {
-    base::subtle::Release_Store(&s_allocPageErrorCode, errno);
+    s_allocPageErrorCode = errno;
     ret = 0;
   }
 #endif
@@ -272,7 +273,7 @@ void DiscardSystemPages(void* address, size_t length) {
 }
 
 uint32_t GetAllocPageErrorCode() {
-  return base::subtle::Acquire_Load(&s_allocPageErrorCode);
+  return s_allocPageErrorCode;
 }
 
 }  // namespace base
