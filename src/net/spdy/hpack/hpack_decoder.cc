@@ -14,7 +14,6 @@
 
 namespace net {
 
-using base::StringPiece;
 using std::string;
 
 HpackDecoder::HpackDecoder()
@@ -128,8 +127,8 @@ size_t HpackDecoder::EstimateMemoryUsage() const {
          SpdyEstimateMemoryUsage(value_buffer_);
 }
 
-bool HpackDecoder::HandleHeaderRepresentation(StringPiece name,
-                                              StringPiece value) {
+bool HpackDecoder::HandleHeaderRepresentation(SpdyStringPiece name,
+                                              SpdyStringPiece value) {
   size_updates_allowed_ = false;
   total_header_bytes_ += name.size() + value.size();
 
@@ -219,12 +218,12 @@ bool HpackDecoder::DecodeNextIndexedHeader(HpackInputStream* input_stream) {
 
 bool HpackDecoder::DecodeNextLiteralHeader(HpackInputStream* input_stream,
                                            bool should_index) {
-  StringPiece name;
+  SpdyStringPiece name;
   if (!DecodeNextName(input_stream, &name)) {
     return false;
   }
 
-  StringPiece value;
+  SpdyStringPiece value;
   if (!DecodeNextStringLiteral(input_stream, false, &value)) {
     return false;
   }
@@ -242,7 +241,7 @@ bool HpackDecoder::DecodeNextLiteralHeader(HpackInputStream* input_stream,
 }
 
 bool HpackDecoder::DecodeNextName(HpackInputStream* input_stream,
-                                  StringPiece* next_name) {
+                                  SpdyStringPiece* next_name) {
   uint32_t index_or_zero = 0;
   if (!input_stream->DecodeNextUint32(&index_or_zero)) {
     DVLOG(1) << "Failed to decode the next uint.";
@@ -270,11 +269,11 @@ bool HpackDecoder::DecodeNextName(HpackInputStream* input_stream,
 
 bool HpackDecoder::DecodeNextStringLiteral(HpackInputStream* input_stream,
                                            bool is_key,
-                                           StringPiece* output) {
+                                           SpdyStringPiece* output) {
   if (input_stream->MatchPrefixAndConsume(kStringLiteralHuffmanEncoded)) {
     string* buffer = is_key ? &key_buffer_ : &value_buffer_;
     bool result = input_stream->DecodeNextHuffmanString(buffer);
-    *output = StringPiece(*buffer);
+    *output = SpdyStringPiece(*buffer);
     return result;
   } else if (input_stream->MatchPrefixAndConsume(
                  kStringLiteralIdentityEncoded)) {

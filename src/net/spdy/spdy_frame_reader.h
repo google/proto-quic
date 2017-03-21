@@ -8,8 +8,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 
 namespace net {
 
@@ -74,7 +74,7 @@ class NET_EXPORT_PRIVATE SpdyFrameReader {
   //
   // Forwards the internal iterator on success.
   // Returns true on success, false otherwise.
-  bool ReadStringPiece16(base::StringPiece* result);
+  bool ReadStringPiece16(SpdyStringPiece* result);
 
   // Reads a string prefixed with 32-bit length into the given output parameter.
   //
@@ -83,7 +83,7 @@ class NET_EXPORT_PRIVATE SpdyFrameReader {
   //
   // Forwards the internal iterator on success.
   // Returns true on success, false otherwise.
-  bool ReadStringPiece32(base::StringPiece* result);
+  bool ReadStringPiece32(SpdyStringPiece* result);
 
   // Reads a given number of bytes into the given buffer. The buffer
   // must be of adequate size.

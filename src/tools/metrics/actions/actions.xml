@@ -1116,6 +1116,58 @@ should be able to be added at any place in this file.
   </description>
 </action>
 
+<action name="Android.ChromeHome.Closed">
+  <owner>mdjones@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <description>User closed the Chrome Home bottom sheet.</description>
+</action>
+
+<action name="Android.ChromeHome.FullState">
+  <owner>mdjones@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User put the Chrome Home bottom sheet in the fully-open state.
+  </description>
+</action>
+
+<action name="Android.ChromeHome.HalfState">
+  <owner>mdjones@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User put the Chrome Home bottom sheet in the half-open state.
+  </description>
+</action>
+
+<action name="Android.ChromeHome.Opened">
+  <owner>mdjones@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <description>User opened the Chrome Home bottom sheet.</description>
+</action>
+
+<action name="Android.ChromeHome.ShowBookmarks">
+  <owner>mdjones@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <description>User showed the bookmarks bottom sheet content.</description>
+</action>
+
+<action name="Android.ChromeHome.ShowDownloads">
+  <owner>mdjones@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <description>User showed the downloads bottom sheet content.</description>
+</action>
+
+<action name="Android.ChromeHome.ShowHistory">
+  <owner>mdjones@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <description>User showed the history bottom sheet content.</description>
+</action>
+
+<action name="Android.ChromeHome.ShowSuggestions">
+  <owner>mdjones@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <description>User showed the suggestions bottom sheet content.</description>
+</action>
+
 <action name="Android.ContentDetectorActivated">
   <owner>twellington@chromium.org</owner>
   <description>
@@ -9983,6 +10035,14 @@ should be able to be added at any place in this file.
 <action name="MobileNTPMostVisited">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+</action>
+
+<action name="MobileNTPOpenedInNewTab">
+  <owner>fhorschig@chromium.org</owner>
+  <description>
+    The user manually created a New Tab Page (NTP) in a new tab that has not
+    been shown before. This includes the initial tab (when starting Chrome).
+  </description>
 </action>
 
 <action name="MobileNTPRecentlyClosed">

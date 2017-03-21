@@ -173,9 +173,6 @@ class BASE_EXPORT Value {
   // ListValue are properly inlined.
   Type type_;
 
-  // TODO(crbug.com/697817): Remove after diagnosing the bug.
-  bool alive_ = true;
-
   union {
     bool bool_value_;
     int int_value_;
@@ -194,7 +191,6 @@ class BASE_EXPORT Value {
   void InternalCopyConstructFrom(const Value& that);
   void InternalMoveConstructFrom(Value&& that);
   void InternalCopyAssignFromSameType(const Value& that);
-  void InternalMoveAssignFromSameType(Value&& that);
   void InternalCleanup();
 };
 

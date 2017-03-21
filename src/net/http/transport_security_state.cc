@@ -47,6 +47,9 @@ const size_t kMaxHPKPReportCacheEntries = 50;
 const int kTimeToRememberHPKPReportsMins = 60;
 const size_t kReportCacheKeyLength = 16;
 
+// Points to the active transport security state source.
+const TransportSecurityStateSource* g_hsts_source = &kHSTSSource;
+
 // Override for ShouldRequireCT() for unit tests. Possible values:
 //  -1: Unless a delegate says otherwise, do not require CT.
 //   0: Use the default implementation (e.g. production)
@@ -434,9 +437,11 @@ struct PreloadResult {
 bool DecodeHSTSPreloadRaw(const std::string& search_hostname,
                           bool* out_found,
                           PreloadResult* out) {
-  HuffmanDecoder huffman(kHSTSHuffmanTree, sizeof(kHSTSHuffmanTree));
-  BitReader reader(kPreloadedHSTSData, kPreloadedHSTSBits);
-  size_t bit_offset = kHSTSRootPosition;
+  HuffmanDecoder huffman(g_hsts_source->huffman_tree,
+                         g_hsts_source->huffman_tree_size);
+  BitReader reader(g_hsts_source->preloaded_data,
+                   g_hsts_source->preloaded_bits);
+  size_t bit_offset = g_hsts_source->root_position;
   static const char kEndOfString = 0;
   static const char kEndOfTable = 127;
 
@@ -720,6 +725,11 @@ bool SerializeExpectStapleReport(const HostPortPair& host_port_pair,
 }
 
 }  // namespace
+
+void SetTransportSecurityStateSourceForTesting(
+    const TransportSecurityStateSource* source) {
+  g_hsts_source = source ? source : &kHSTSSource;
+}
 
 TransportSecurityState::TransportSecurityState()
     : enable_static_pins_(true),
@@ -1104,8 +1114,8 @@ bool TransportSecurityState::GetStaticExpectCTState(
     return false;
 
   expect_ct_state->domain = host.substr(result.hostname_offset);
-  expect_ct_state->report_uri =
-      GURL(kExpectCTReportURIs[result.expect_ct_report_uri_id]);
+  expect_ct_state->report_uri = GURL(
+      g_hsts_source->expect_ct_report_uris[result.expect_ct_report_uri_id]);
   return true;
 }
 
@@ -1128,7 +1138,8 @@ bool TransportSecurityState::GetStaticExpectStapleState(
   expect_staple_state->include_subdomains =
       result.expect_staple_include_subdomains;
   expect_staple_state->report_uri =
-      GURL(kExpectStapleReportURIs[result.expect_staple_report_uri_id]);
+      GURL(g_hsts_source
+               ->expect_staple_report_uris[result.expect_staple_report_uri_id]);
   return true;
 }
 
@@ -1432,9 +1443,10 @@ bool TransportSecurityState::GetStaticDomainState(const std::string& host,
     pkp_state->include_subdomains = result.pkp_include_subdomains;
     pkp_state->last_observed = base::GetBuildTime();
 
-    if (result.pinset_id >= arraysize(kPinsets))
+    if (result.pinset_id >= g_hsts_source->pinsets_count)
       return false;
-    const Pinset *pinset = &kPinsets[result.pinset_id];
+    const TransportSecurityStateSource::Pinset* pinset =
+        &g_hsts_source->pinsets[result.pinset_id];
 
     if (pinset->report_uri != kNoReportURI)
       pkp_state->report_uri = GURL(pinset->report_uri);

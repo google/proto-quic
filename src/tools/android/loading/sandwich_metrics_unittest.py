@@ -15,7 +15,7 @@ import page_track
 import sandwich_metrics as puller
 import sandwich_runner
 import request_track
-import tracing
+import tracing_track
 
 
 _BLINK_CAT = 'blink.user_timing'
@@ -51,7 +51,7 @@ _MINIMALIST_TRACE_EVENTS = [
 
 
 def TracingTrack(events):
-  return tracing.TracingTrack.FromJsonDict({
+  return tracing_track.TracingTrack.FromJsonDict({
       'events': events,
       'categories': (sandwich_runner._TRACING_CATEGORIES +
           [sandwich_runner.MEMORY_DUMP_CATEGORY])})

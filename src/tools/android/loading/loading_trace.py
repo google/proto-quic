@@ -14,7 +14,7 @@ import time
 import devtools_monitor
 import page_track
 import request_track
-import tracing
+import tracing_track
 
 
 class LoadingTrace(object):
@@ -25,7 +25,7 @@ class LoadingTrace(object):
   _REQUEST_KEY = 'request_track'
   _TRACING_KEY = 'tracing_track'
 
-  def __init__(self, url, metadata, page, request, tracing_track):
+  def __init__(self, url, metadata, page, request, track):
     """Initializes a loading trace instance.
 
     Args:
@@ -33,13 +33,13 @@ class LoadingTrace(object):
       metadata: (dict) Metadata associated with the load.
       page: (PageTrack) instance of PageTrack.
       request: (RequestTrack) instance of RequestTrack.
-      tracing_track: (TracingTrack) instance of TracingTrack.
+      track: (TracingTrack) instance of TracingTrack.
     """
     self.url = url
     self.metadata = metadata
     self.page_track = page
     self.request_track = request
-    self._tracing_track = tracing_track
+    self._tracing_track = track
     self._tracing_json_str = None
 
   def ToJsonDict(self):
@@ -66,10 +66,10 @@ class LoadingTrace(object):
     page = page_track.PageTrack.FromJsonDict(json_dict[cls._PAGE_KEY])
     request = request_track.RequestTrack.FromJsonDict(
         json_dict[cls._REQUEST_KEY])
-    tracing_track = tracing.TracingTrack.FromJsonDict(
+    track = tracing_track.TracingTrack.FromJsonDict(
         json_dict[cls._TRACING_KEY])
     return LoadingTrace(json_dict[cls._URL_KEY], json_dict[cls._METADATA_KEY],
-                        page, request, tracing_track)
+                        page, request, track)
 
   @classmethod
   def FromJsonFile(cls, json_path):
@@ -88,7 +88,7 @@ class LoadingTrace(object):
       url: (str) url to fetch.
       connection: An opened devtools connection.
       chrome_metadata: Dictionary of chrome metadata.
-      categories: as in tracing.TracingTrack
+      categories: as in tracing_track.TracingTrack
       timeout_seconds: monitoring connection timeout in seconds.
       stop_delay_multiplier: How long to wait after page load completed before
         tearing down, relative to the time it took to reach the page load to
@@ -99,7 +99,7 @@ class LoadingTrace(object):
     """
     page = page_track.PageTrack(connection)
     request = request_track.RequestTrack(connection)
-    trace = tracing.TracingTrack(connection, categories)
+    trace = tracing_track.TracingTrack(connection, categories)
     start_date_str = datetime.datetime.utcnow().isoformat()
     seconds_since_epoch=time.time()
     connection.MonitorUrl(url,
@@ -127,6 +127,6 @@ class LoadingTrace(object):
   def _RestoreTracingTrack(self):
     if not self._tracing_json_str:
       return None
-    self._tracing_track = tracing.TracingTrack.FromJsonDict(
+    self._tracing_track = tracing_track.TracingTrack.FromJsonDict(
         json.loads(self._tracing_json_str))
     self._tracing_json_str = None

@@ -9,8 +9,6 @@
 #include "net/http2/decoder/decode_status.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 
-using base::StringPiece;
-
 namespace net {
 namespace {
 const size_t kMaxDecodeBufferSizeBytes = 32 * 1024;  // 32 KB
@@ -160,7 +158,7 @@ void HpackDecoder3::ListenerAdapter::OnHeaderListEnd() {
 }
 
 void HpackDecoder3::ListenerAdapter::OnHeaderErrorDetected(
-    StringPiece error_message) {
+    SpdyStringPiece error_message) {
   VLOG(1) << error_message;
 }
 

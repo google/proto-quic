@@ -41,7 +41,7 @@ class SchedulerWorker::Thread : public PlatformThread::Delegate {
     outer_->delegate_->OnMainEntry(outer_.get());
 
     // A SchedulerWorker starts out waiting for work.
-    WaitForWork();
+    outer_->delegate_->WaitForWork(&wake_up_event_);
 
 #if defined(OS_WIN)
     std::unique_ptr<win::ScopedCOMInitializer> com_initializer;
@@ -72,7 +72,7 @@ class SchedulerWorker::Thread : public PlatformThread::Delegate {
             break;
           }
         }
-        WaitForWork();
+        outer_->delegate_->WaitForWork(&wake_up_event_);
         continue;
       }
 
@@ -143,19 +143,6 @@ class SchedulerWorker::Thread : public PlatformThread::Delegate {
                                        current_thread_priority_);
   }
 
-  void WaitForWork() {
-    DCHECK(outer_);
-    const TimeDelta sleep_time = outer_->delegate_->GetSleepTimeout();
-    if (sleep_time.is_max()) {
-      // Calling TimedWait with TimeDelta::Max is not recommended per
-      // http://crbug.com/465948.
-      wake_up_event_.Wait();
-    } else {
-      wake_up_event_.TimedWait(sleep_time);
-    }
-    wake_up_event_.Reset();
-  }
-
   // Returns the priority for which the thread should be set based on the
   // priority hint, current shutdown state, and platform capabilities.
   ThreadPriority GetDesiredThreadPriority() {
@@ -200,6 +187,19 @@ class SchedulerWorker::Thread : public PlatformThread::Delegate {
 
   DISALLOW_COPY_AND_ASSIGN(Thread);
 };
+
+void SchedulerWorker::Delegate::WaitForWork(WaitableEvent* wake_up_event) {
+  DCHECK(wake_up_event);
+  const TimeDelta sleep_time = GetSleepTimeout();
+  if (sleep_time.is_max()) {
+    // Calling TimedWait with TimeDelta::Max is not recommended per
+    // http://crbug.com/465948.
+    wake_up_event->Wait();
+  } else {
+    wake_up_event->TimedWait(sleep_time);
+  }
+  wake_up_event->Reset();
+}
 
 scoped_refptr<SchedulerWorker> SchedulerWorker::Create(
     ThreadPriority priority_hint,

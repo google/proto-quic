@@ -34,6 +34,8 @@ def CommandParser():
                       help='The test target to be run.')
   parser.add_argument('--logdog-bin-cmd', required=True,
                       help='The logdog bin cmd.')
+  parser.add_argument('--target-devices-file', required=False,
+                      help='The target devices file.')
   return parser
 
 def CreateStopTestsMethod(proc):
@@ -52,7 +54,7 @@ def main():
         os.path.join('bin', 'run_%s' % args.target),
         '--logcat-output-file', os.path.join(logcat_output_dir, 'logcats'),
         '--upload-logcats-file',
-        '--target-devices-file', '${SWARMING_BOT_FILE}',
+        '--target-devices-file', args.target_devices_file,
         '-v'] + extra_cmd_args
 
     with tempfile_ext.NamedTemporaryDirectory(

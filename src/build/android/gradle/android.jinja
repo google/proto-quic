@@ -9,12 +9,14 @@
 {% for path in variables.java_dirs %}
                 "{{ path }}",
 {% endfor %}
-{% if variables.java_files %}
-{% for path in variables.java_files %}
+            ]
+{% if variables.java_excludes %}
+            java.filter.exclude(
+{% for path in variables.java_excludes %}
                 "{{ path }}",
 {% endfor %}
+            )
 {% endif %}
-            ]
             jniLibs.srcDirs = [
 {% for path in variables.jni_libs %}
                 "{{ path }}",

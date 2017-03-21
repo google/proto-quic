@@ -56,8 +56,11 @@ class _MemoryInfra(perf_benchmark.PerfBenchmark):
 @benchmark.Owner(emails=['erikchen@chromium.org'])
 class MemoryBenchmarkTrivialSitesDesktop(_MemoryInfra):
   """Measure memory usage on trivial sites."""
-  page_set = page_sets.TrivialSitesStorySet
   options = {'pageset_repeat': 5}
+
+  def CreateStorySet(self, options):
+    return page_sets.TrivialSitesStorySet(wait_in_seconds=0,
+                                          measure_memory=True)
 
   @classmethod
   def Name(cls):

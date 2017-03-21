@@ -148,6 +148,23 @@ TEST_F(CallbackTest, ResetAndReturn) {
   ASSERT_TRUE(tfr.cb_already_run);
 }
 
+TEST_F(CallbackTest, NullAfterMoveRun) {
+  Closure cb = Bind([] {});
+  ASSERT_TRUE(cb);
+  std::move(cb).Run();
+  ASSERT_FALSE(cb);
+
+  const Closure cb2 = Bind([] {});
+  ASSERT_TRUE(cb2);
+  std::move(cb2).Run();
+  ASSERT_TRUE(cb2);
+
+  OnceClosure cb3 = BindOnce([] {});
+  ASSERT_TRUE(cb3);
+  std::move(cb3).Run();
+  ASSERT_FALSE(cb3);
+}
+
 class CallbackOwner : public base::RefCounted<CallbackOwner> {
  public:
   explicit CallbackOwner(bool* deleted) {

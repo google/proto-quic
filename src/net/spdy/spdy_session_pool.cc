@@ -130,6 +130,7 @@ base::WeakPtr<SpdySession> SpdySessionPool::CreateAvailableSessionFromSocket(
 base::WeakPtr<SpdySession> SpdySessionPool::FindAvailableSession(
     const SpdySessionKey& key,
     const GURL& url,
+    bool enable_ip_based_pooling,
     const NetLogWithSource& net_log) {
   UnclaimedPushedStreamMap::iterator url_it =
       unclaimed_pushed_streams_.find(url);
@@ -169,6 +170,16 @@ base::WeakPtr<SpdySession> SpdySessionPool::FindAvailableSession(
           NetLogEventType::HTTP2_SESSION_POOL_FOUND_EXISTING_SESSION,
           it->second->net_log().source().ToEventParametersCallback());
     } else {
+      if (!enable_ip_based_pooling) {
+        // Remove session from available sessions and from aliases, and remove
+        // key from the session's pooled alias set, so that a new session can be
+        // created with this |key|.
+        it->second->RemovePooledAlias(key);
+        UnmapKey(key);
+        RemoveAliases(key);
+        return base::WeakPtr<SpdySession>();
+      }
+
       UMA_HISTOGRAM_ENUMERATION("Net.SpdySessionGet",
                                 FOUND_EXISTING_FROM_IP_POOL,
                                 SPDY_SESSION_GET_MAX);
@@ -179,6 +190,9 @@ base::WeakPtr<SpdySession> SpdySessionPool::FindAvailableSession(
     }
     return it->second;
   }
+
+  if (!enable_ip_based_pooling)
+    return base::WeakPtr<SpdySession>();
 
   // Look up IP addresses from resolver cache.
   HostResolver::RequestInfo resolve_info(key.host_port_pair());

@@ -442,7 +442,7 @@ std::unique_ptr<QuicEncryptedPacket> QuicFramer::BuildPublicResetPacket(
     return nullptr;
   }
 
-  if (!writer.WriteUInt64(packet.public_header.connection_id)) {
+  if (!writer.WriteConnectionId(packet.public_header.connection_id)) {
     return nullptr;
   }
 
@@ -470,7 +470,7 @@ std::unique_ptr<QuicEncryptedPacket> QuicFramer::BuildVersionNegotiationPacket(
     return nullptr;
   }
 
-  if (!writer.WriteUInt64(connection_id)) {
+  if (!writer.WriteConnectionId(connection_id)) {
     return nullptr;
   }
 
@@ -674,7 +674,7 @@ bool QuicFramer::AppendPacketHeader(const QuicPacketHeader& header,
         public_flags |= PACKET_PUBLIC_FLAGS_8BYTE_CONNECTION_ID_OLD;
       }
       if (!writer->WriteUInt8(public_flags) ||
-          !writer->WriteUInt64(header.public_header.connection_id)) {
+          !writer->WriteConnectionId(header.public_header.connection_id)) {
         return false;
       }
       break;
@@ -787,7 +787,7 @@ bool QuicFramer::ProcessPublicHeader(QuicDataReader* reader,
 
   switch (public_flags & PACKET_PUBLIC_FLAGS_8BYTE_CONNECTION_ID) {
     case PACKET_PUBLIC_FLAGS_8BYTE_CONNECTION_ID:
-      if (!reader->ReadUInt64(&public_header->connection_id)) {
+      if (!reader->ReadConnectionId(&public_header->connection_id)) {
         set_detailed_error("Unable to read ConnectionId.");
         return false;
       }

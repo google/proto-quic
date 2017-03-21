@@ -62,6 +62,9 @@ def aggregate_components_from_owners(root, include_subdirs=False):
   warnings = []
   component_to_team = defaultdict(set)
   dir_to_component = {}
+  # TODO(sergiyb): Remove this mapping. Please do not use it as it is going to
+  # be removed in the future. See http://crbug.com/702202.
+  dir_to_team = {}
   for dirname, _, files in os.walk(root):
     # Proofing against windows casing oddities.
     owners_file_names = [f for f in files if f.upper() == 'OWNERS']
@@ -84,13 +87,22 @@ def aggregate_components_from_owners(root, include_subdirs=False):
       else:
         warnings.append('%s has no COMPONENT tag' % owners_rel_path)
 
+      # Add dir-to-team mapping unless there is also dir-to-component mapping.
+      if (include_subdirs and team and not component and
+          rel_dirname.startswith('third_party/WebKit/LayoutTests')):
+        dir_to_team[rel_dirname] = team
+
     if include_subdirs and rel_dirname not in dir_to_component:
       rel_parent_dirname = os.path.relpath(os.path.dirname(dirname), root)
       if rel_parent_dirname in dir_to_component:
         dir_to_component[rel_dirname] = dir_to_component[rel_parent_dirname]
+      if rel_parent_dirname in dir_to_team:
+        dir_to_team[rel_dirname] = dir_to_team[rel_parent_dirname]
 
   mappings = {'component-to-team': component_to_team,
               'dir-to-component': dir_to_component}
+  if include_subdirs:
+    mappings['dir-to-team'] = dir_to_team
   errors = validate_one_team_per_component(mappings)
   stats = {'OWNERS-count': num_total,
            'OWNERS-with-component-only-count': num_with_component,

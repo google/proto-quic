@@ -104,6 +104,28 @@ HttpStreamFactoryImpl::HttpStreamFactoryImpl(HttpNetworkSession* session,
 HttpStreamFactoryImpl::~HttpStreamFactoryImpl() {
   DCHECK(request_map_.empty());
   DCHECK(spdy_session_request_map_.empty());
+  int alt_job_count = 0;
+  int main_job_count = 0;
+  int preconnect_controller_count = 0;
+  for (const auto& it : job_controller_set_) {
+    DCHECK(it->HasPendingAltJob() || it->HasPendingMainJob());
+    // For a preconnect controller, it should have exactly the main job.
+    if (it->is_preconnect()) {
+      preconnect_controller_count++;
+      continue;
+    }
+    // For non-preconnects.
+    if (it->HasPendingAltJob())
+      alt_job_count++;
+    if (it->HasPendingMainJob())
+      main_job_count++;
+  }
+  UMA_HISTOGRAM_COUNTS_1M("Net.JobControllerSet.CountOfPreconnect",
+                          preconnect_controller_count);
+  UMA_HISTOGRAM_COUNTS_1M("Net.JobControllerSet.CountOfNonPreconnectAltJob",
+                          alt_job_count);
+  UMA_HISTOGRAM_COUNTS_1M("Net.JobControllerSet.CountOfNonPreconnectMainJob",
+                          main_job_count);
 }
 
 HttpStreamRequest* HttpStreamFactoryImpl::RequestStream(

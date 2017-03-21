@@ -29,8 +29,8 @@ TEST(SpdyFrameBuilderTest, GetWritableBuffer) {
   SpdySerializedFrame frame(builder.take());
   char expected[kBuilderSize];
   memset(expected, ~1, kBuilderSize);
-  EXPECT_EQ(base::StringPiece(expected, kBuilderSize),
-            base::StringPiece(frame.data(), kBuilderSize));
+  EXPECT_EQ(SpdyStringPiece(expected, kBuilderSize),
+            SpdyStringPiece(frame.data(), kBuilderSize));
 }
 
 // Verifies that SpdyFrameBuilder::GetWritableBuffer() can be used to build a
@@ -46,8 +46,8 @@ TEST(SpdyFrameBuilderTest, GetWritableOutput) {
   SpdySerializedFrame frame(output.Begin(), kBuilderSize, false);
   char expected[kBuilderSize];
   memset(expected, ~1, kBuilderSize);
-  EXPECT_EQ(base::StringPiece(expected, kBuilderSize),
-            base::StringPiece(frame.data(), kBuilderSize));
+  EXPECT_EQ(SpdyStringPiece(expected, kBuilderSize),
+            SpdyStringPiece(frame.data(), kBuilderSize));
 }
 
 // Verifies the case that the buffer's capacity is too small.

@@ -10,7 +10,7 @@
 
 #include <string>
 
-#include "base/strings/string_piece.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/server_push_delegate.h"
 #include "net/spdy/spdy_bug_tracker.h"
 #include "net/spdy/spdy_header_block.h"
@@ -25,7 +25,7 @@ namespace net {
 class HashValue;
 class TransportSecurityState;
 
-inline bool operator==(base::StringPiece x,
+inline bool operator==(SpdyStringPiece x,
                        const SpdyHeaderBlock::ValueProxy& y) {
   return x == y.as_string();
 }
@@ -69,7 +69,7 @@ class TestHeadersHandler : public SpdyHeadersHandlerInterface {
 
   void OnHeaderBlockStart() override;
 
-  void OnHeader(base::StringPiece name, base::StringPiece value) override;
+  void OnHeader(SpdyStringPiece name, SpdyStringPiece value) override;
 
   void OnHeaderBlockEnd(size_t header_bytes_parsed) override;
 

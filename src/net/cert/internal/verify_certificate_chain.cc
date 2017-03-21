@@ -22,6 +22,9 @@
 
 namespace net {
 
+DEFINE_CERT_ERROR_ID(kValidityFailedNotAfter, "Time is after notAfter");
+DEFINE_CERT_ERROR_ID(kValidityFailedNotBefore, "Time is before notBefore");
+
 namespace {
 
 // -----------------------------------------------
@@ -50,8 +53,6 @@ DEFINE_CERT_ERROR_ID(kNotPermittedByNameConstraints,
 DEFINE_CERT_ERROR_ID(kSubjectDoesNotMatchIssuer,
                      "subject does not match issuer");
 DEFINE_CERT_ERROR_ID(kVerifySignedDataFailed, "VerifySignedData failed");
-DEFINE_CERT_ERROR_ID(kValidityFailedNotAfter, "Time is after notAfter");
-DEFINE_CERT_ERROR_ID(kValidityFailedNotBefore, "Time is before notBefore");
 DEFINE_CERT_ERROR_ID(kSignatureAlgorithmsDifferentEncoding,
                      "Certificate.signatureAlgorithm is encoded differently "
                      "than TBSCertificate.signature");

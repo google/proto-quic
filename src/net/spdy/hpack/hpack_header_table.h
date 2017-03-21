@@ -12,9 +12,9 @@
 #include <unordered_set>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
 #include "net/spdy/hpack/hpack_entry.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 
 // All section references below are to http://tools.ietf.org/html/rfc7541.
 
@@ -67,9 +67,8 @@ class NET_EXPORT_PRIVATE HpackHeaderTable {
 
   using UnorderedEntrySet =
       std::unordered_set<HpackEntry*, EntryHasher, EntriesEq>;
-  using NameToEntryMap = std::unordered_map<base::StringPiece,
-                                            const HpackEntry*,
-                                            base::StringPieceHash>;
+  using NameToEntryMap = std::
+      unordered_map<SpdyStringPiece, const HpackEntry*, base::StringPieceHash>;
 
   HpackHeaderTable();
 
@@ -87,11 +86,11 @@ class NET_EXPORT_PRIVATE HpackHeaderTable {
   const HpackEntry* GetByIndex(size_t index);
 
   // Returns the lowest-value entry having |name|, or NULL.
-  const HpackEntry* GetByName(base::StringPiece name);
+  const HpackEntry* GetByName(SpdyStringPiece name);
 
   // Returns the lowest-index matching entry, or NULL.
-  const HpackEntry* GetByNameAndValue(base::StringPiece name,
-                                      base::StringPiece value);
+  const HpackEntry* GetByNameAndValue(SpdyStringPiece name,
+                                      SpdyStringPiece value);
 
   // Returns the index of an entry within this header table.
   size_t IndexOf(const HpackEntry* entry) const;
@@ -107,8 +106,8 @@ class NET_EXPORT_PRIVATE HpackHeaderTable {
   // Determine the set of entries which would be evicted by the insertion
   // of |name| & |value| into the table, as per section 4.4. No eviction
   // actually occurs. The set is returned via range [begin_out, end_out).
-  void EvictionSet(base::StringPiece name,
-                   base::StringPiece value,
+  void EvictionSet(SpdyStringPiece name,
+                   SpdyStringPiece value,
                    EntryTable::iterator* begin_out,
                    EntryTable::iterator* end_out);
 
@@ -116,8 +115,7 @@ class NET_EXPORT_PRIVATE HpackHeaderTable {
   // and |value| must not be owned by an entry which could be evicted. The
   // added HpackEntry is returned, or NULL is returned if all entries were
   // evicted and the empty table is of insufficent size for the representation.
-  const HpackEntry* TryAddEntry(base::StringPiece name,
-                                base::StringPiece value);
+  const HpackEntry* TryAddEntry(SpdyStringPiece name, SpdyStringPiece value);
 
   void DebugLogTableState() const;
 
@@ -130,8 +128,8 @@ class NET_EXPORT_PRIVATE HpackHeaderTable {
 
  private:
   // Returns number of evictions required to enter |name| & |value|.
-  size_t EvictionCountForEntry(base::StringPiece name,
-                               base::StringPiece value) const;
+  size_t EvictionCountForEntry(SpdyStringPiece name,
+                               SpdyStringPiece value) const;
 
   // Returns number of evictions required to reclaim |reclaim_size| table size.
   size_t EvictionCountToReclaim(size_t reclaim_size) const;

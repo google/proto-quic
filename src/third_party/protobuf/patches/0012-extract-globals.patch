@@ -1,0 +1,844 @@
+diff -ru --new-file protobuf/src/google/protobuf/arena.cc protobuf2/src/google/protobuf/arena.cc
+--- protobuf/src/google/protobuf/arena.cc	2017-03-17 22:40:59.379153132 -0700
++++ protobuf2/src/google/protobuf/arena.cc	2017-03-17 22:40:52.667151339 -0700
+@@ -39,7 +39,6 @@
+ namespace protobuf {
+ 
+ 
+-google::protobuf::internal::SequenceNumber Arena::lifecycle_id_generator_;
+ #if defined(GOOGLE_PROTOBUF_NO_THREADLOCAL)
+ Arena::ThreadCache& Arena::thread_cache() {
+   static internal::ThreadLocalStorage<ThreadCache>* thread_cache_ =
+@@ -56,7 +55,7 @@
+ #endif
+ 
+ void Arena::Init() {
+-  lifecycle_id_ = lifecycle_id_generator_.GetNext();
++  lifecycle_id_ = internal::cr_lifecycle_id_generator_.GetNext();
+   blocks_ = 0;
+   hint_ = 0;
+   owns_first_block_ = true;
+@@ -99,7 +98,7 @@
+ 
+ uint64 Arena::Reset() {
+   // Invalidate any ThreadCaches pointing to any blocks we just destroyed.
+-  lifecycle_id_ = lifecycle_id_generator_.GetNext();
++  lifecycle_id_ = internal::cr_lifecycle_id_generator_.GetNext();
+   return ResetInternal();
+ }
+ 
+diff -ru --new-file protobuf/src/google/protobuf/arena.h protobuf2/src/google/protobuf/arena.h
+--- protobuf/src/google/protobuf/arena.h	2017-03-17 22:40:59.379153132 -0700
++++ protobuf2/src/google/protobuf/arena.h	2017-03-17 22:40:52.667151339 -0700
+@@ -70,6 +70,9 @@
+ template<typename Type>
+ class GenericTypeHandler; // repeated_field.h
+ 
++LIBPROTOBUF_EXPORT extern google::protobuf::internal::SequenceNumber
++    cr_lifecycle_id_generator_;
++
+ // Templated cleanup methods.
+ template<typename T> void arena_destruct_object(void* object) {
+   reinterpret_cast<T*>(object)->~T();
+@@ -552,7 +555,6 @@
+   };
+ 
+   static const size_t kHeaderSize = sizeof(Block);
+-  static google::protobuf::internal::SequenceNumber lifecycle_id_generator_;
+ #if defined(GOOGLE_PROTOBUF_NO_THREADLOCAL)
+   // Android ndk does not support GOOGLE_THREAD_LOCAL keyword so we use a custom thread
+   // local storage class we implemented.
+diff -ru --new-file protobuf/src/google/protobuf/extension_set.cc protobuf2/src/google/protobuf/extension_set.cc
+--- protobuf/src/google/protobuf/extension_set.cc	2017-03-17 22:40:59.379153132 -0700
++++ protobuf2/src/google/protobuf/extension_set.cc	2017-03-17 22:40:52.667151339 -0700
+@@ -46,6 +46,12 @@
+ namespace protobuf {
+ namespace internal {
+ 
++// Registry stuff.
++typedef hash_map<pair<const MessageLite*, int>, ExtensionInfo>
++    ExtensionRegistry;
++extern ExtensionRegistry* cr_registry_;
++extern ProtobufOnceType cr_registry_init_;
++
+ namespace {
+ 
+ inline WireFormatLite::FieldType real_type(FieldType type) {
+@@ -75,19 +81,13 @@
+   return false;
+ }
+ 
+-// Registry stuff.
+-typedef hash_map<pair<const MessageLite*, int>,
+-                 ExtensionInfo> ExtensionRegistry;
+-ExtensionRegistry* registry_ = NULL;
+-GOOGLE_PROTOBUF_DECLARE_ONCE(registry_init_);
+-
+ void DeleteRegistry() {
+-  delete registry_;
+-  registry_ = NULL;
++  delete cr_registry_;
++  cr_registry_ = NULL;
+ }
+ 
+ void InitRegistry() {
+-  registry_ = new ExtensionRegistry;
++  cr_registry_ = new ExtensionRegistry;
+   OnShutdown(&DeleteRegistry);
+ }
+ 
+@@ -95,9 +95,9 @@
+ // safety.
+ void Register(const MessageLite* containing_type,
+               int number, ExtensionInfo info) {
+-  ::google::protobuf::GoogleOnceInit(&registry_init_, &InitRegistry);
++  ::google::protobuf::GoogleOnceInit(&cr_registry_init_, &InitRegistry);
+ 
+-  if (!InsertIfNotPresent(registry_, std::make_pair(containing_type, number),
++  if (!InsertIfNotPresent(cr_registry_, std::make_pair(containing_type, number),
+                           info)) {
+     GOOGLE_LOG(FATAL) << "Multiple extension registrations for type \""
+                << containing_type->GetTypeName()
+@@ -107,9 +107,10 @@
+ 
+ const ExtensionInfo* FindRegisteredExtension(
+     const MessageLite* containing_type, int number) {
+-  return (registry_ == NULL)
++  return (cr_registry_ == NULL)
+              ? NULL
+-             : FindOrNull(*registry_, std::make_pair(containing_type, number));
++             : FindOrNull(*cr_registry_,
++                          std::make_pair(containing_type, number));
+ }
+ 
+ }  // namespace
+@@ -1748,68 +1749,45 @@
+ // ==================================================================
+ // Default repeated field instances for iterator-compatible accessors
+ 
+-GOOGLE_PROTOBUF_DECLARE_ONCE(repeated_primitive_generic_type_traits_once_init_);
+-GOOGLE_PROTOBUF_DECLARE_ONCE(repeated_string_type_traits_once_init_);
+-GOOGLE_PROTOBUF_DECLARE_ONCE(repeated_message_generic_type_traits_once_init_);
+-
+ void RepeatedPrimitiveGenericTypeTraits::InitializeDefaultRepeatedFields() {
+-  default_repeated_field_int32_ = new RepeatedField<int32>;
+-  default_repeated_field_int64_ = new RepeatedField<int64>;
+-  default_repeated_field_uint32_ = new RepeatedField<uint32>;
+-  default_repeated_field_uint64_ = new RepeatedField<uint64>;
+-  default_repeated_field_double_ = new RepeatedField<double>;
+-  default_repeated_field_float_ = new RepeatedField<float>;
+-  default_repeated_field_bool_ = new RepeatedField<bool>;
++  cr_default_repeated_field_int32_ = new RepeatedField<int32>;
++  cr_default_repeated_field_int64_ = new RepeatedField<int64>;
++  cr_default_repeated_field_uint32_ = new RepeatedField<uint32>;
++  cr_default_repeated_field_uint64_ = new RepeatedField<uint64>;
++  cr_default_repeated_field_double_ = new RepeatedField<double>;
++  cr_default_repeated_field_float_ = new RepeatedField<float>;
++  cr_default_repeated_field_bool_ = new RepeatedField<bool>;
+   OnShutdown(&DestroyDefaultRepeatedFields);
+ }
+ 
+ void RepeatedPrimitiveGenericTypeTraits::DestroyDefaultRepeatedFields() {
+-  delete default_repeated_field_int32_;
+-  delete default_repeated_field_int64_;
+-  delete default_repeated_field_uint32_;
+-  delete default_repeated_field_uint64_;
+-  delete default_repeated_field_double_;
+-  delete default_repeated_field_float_;
+-  delete default_repeated_field_bool_;
++  delete cr_default_repeated_field_int32_;
++  delete cr_default_repeated_field_int64_;
++  delete cr_default_repeated_field_uint32_;
++  delete cr_default_repeated_field_uint64_;
++  delete cr_default_repeated_field_double_;
++  delete cr_default_repeated_field_float_;
++  delete cr_default_repeated_field_bool_;
+ }
+ 
+ void RepeatedStringTypeTraits::InitializeDefaultRepeatedFields() {
+-  default_repeated_field_ = new RepeatedFieldType;
++  cr_default_repeated_field_ = new RepeatedFieldType;
+   OnShutdown(&DestroyDefaultRepeatedFields);
+ }
+ 
+ void RepeatedStringTypeTraits::DestroyDefaultRepeatedFields() {
+-  delete default_repeated_field_;
++  delete cr_default_repeated_field_;
+ }
+ 
+ void RepeatedMessageGenericTypeTraits::InitializeDefaultRepeatedFields() {
+-  default_repeated_field_ = new RepeatedFieldType;
++  cr_default_repeated_field_ = new RepeatedFieldType;
+   OnShutdown(&DestroyDefaultRepeatedFields);
+ }
+ 
+ void RepeatedMessageGenericTypeTraits::DestroyDefaultRepeatedFields() {
+-  delete default_repeated_field_;
++  delete cr_default_repeated_field_;
+ }
+ 
+-const RepeatedField<int32>*
+-RepeatedPrimitiveGenericTypeTraits::default_repeated_field_int32_ = NULL;
+-const RepeatedField<int64>*
+-RepeatedPrimitiveGenericTypeTraits::default_repeated_field_int64_ = NULL;
+-const RepeatedField<uint32>*
+-RepeatedPrimitiveGenericTypeTraits::default_repeated_field_uint32_ = NULL;
+-const RepeatedField<uint64>*
+-RepeatedPrimitiveGenericTypeTraits::default_repeated_field_uint64_ = NULL;
+-const RepeatedField<double>*
+-RepeatedPrimitiveGenericTypeTraits::default_repeated_field_double_ = NULL;
+-const RepeatedField<float>*
+-RepeatedPrimitiveGenericTypeTraits::default_repeated_field_float_ = NULL;
+-const RepeatedField<bool>*
+-RepeatedPrimitiveGenericTypeTraits::default_repeated_field_bool_ = NULL;
+-const RepeatedStringTypeTraits::RepeatedFieldType*
+-RepeatedStringTypeTraits::default_repeated_field_ = NULL;
+-const RepeatedMessageGenericTypeTraits::RepeatedFieldType*
+-RepeatedMessageGenericTypeTraits::default_repeated_field_ = NULL;
+-
+ }  // namespace internal
+ }  // namespace protobuf
+ }  // namespace google
+diff -ru --new-file protobuf/src/google/protobuf/extension_set.h protobuf2/src/google/protobuf/extension_set.h
+--- protobuf/src/google/protobuf/extension_set.h	2017-03-17 22:40:59.379153132 -0700
++++ protobuf2/src/google/protobuf/extension_set.h	2017-03-17 22:40:52.675151341 -0700
+@@ -731,13 +731,13 @@
+   template<typename Type> friend class RepeatedPrimitiveTypeTraits;
+   static void InitializeDefaultRepeatedFields();
+   static void DestroyDefaultRepeatedFields();
+-  static const RepeatedField<int32>* default_repeated_field_int32_;
+-  static const RepeatedField<int64>* default_repeated_field_int64_;
+-  static const RepeatedField<uint32>* default_repeated_field_uint32_;
+-  static const RepeatedField<uint64>* default_repeated_field_uint64_;
+-  static const RepeatedField<double>* default_repeated_field_double_;
+-  static const RepeatedField<float>* default_repeated_field_float_;
+-  static const RepeatedField<bool>* default_repeated_field_bool_;
++  static const RepeatedField<int32>* cr_default_repeated_field_int32_;
++  static const RepeatedField<int64>* cr_default_repeated_field_int64_;
++  static const RepeatedField<uint32>* cr_default_repeated_field_uint32_;
++  static const RepeatedField<uint64>* cr_default_repeated_field_uint64_;
++  static const RepeatedField<double>* cr_default_repeated_field_double_;
++  static const RepeatedField<float>* cr_default_repeated_field_float_;
++  static const RepeatedField<bool>* cr_default_repeated_field_bool_;
+ };
+ 
+ #define PROTOBUF_DEFINE_PRIMITIVE_TYPE(TYPE, METHOD)                       \
+@@ -769,7 +769,7 @@
+       &repeated_primitive_generic_type_traits_once_init_,                  \
+       &RepeatedPrimitiveGenericTypeTraits::InitializeDefaultRepeatedFields); \
+   return RepeatedPrimitiveGenericTypeTraits::                              \
+-      default_repeated_field_##TYPE##_;                                    \
++      cr_default_repeated_field_##TYPE##_;                                    \
+ }                                                                          \
+ template<> inline const RepeatedField<TYPE>&                               \
+     RepeatedPrimitiveTypeTraits<TYPE>::GetRepeated(int number,             \
+@@ -821,7 +821,8 @@
+   }
+ };
+ 
+-LIBPROTOBUF_EXPORT extern ProtobufOnceType repeated_string_type_traits_once_init_;
++LIBPROTOBUF_EXPORT extern ProtobufOnceType
++    cr_repeated_string_type_traits_once_init_;
+ 
+ class LIBPROTOBUF_EXPORT RepeatedStringTypeTraits {
+  public:
+@@ -866,15 +867,16 @@
+   }
+ 
+   static const RepeatedFieldType* GetDefaultRepeatedField() {
+-    ::google::protobuf::GoogleOnceInit(&repeated_string_type_traits_once_init_,
+-                   &InitializeDefaultRepeatedFields);
+-    return default_repeated_field_;
++    ::google::protobuf::GoogleOnceInit(
++        &cr_repeated_string_type_traits_once_init_,
++        &InitializeDefaultRepeatedFields);
++    return cr_default_repeated_field_;
+   }
+ 
+  private:
+   static void InitializeDefaultRepeatedFields();
+   static void DestroyDefaultRepeatedFields();
+-  static const RepeatedFieldType *default_repeated_field_;
++  static const RepeatedFieldType* cr_default_repeated_field_;
+ };
+ 
+ // -------------------------------------------------------------------
+@@ -1043,7 +1045,7 @@
+   template<typename Type> friend class RepeatedMessageTypeTraits;
+   static void InitializeDefaultRepeatedFields();
+   static void DestroyDefaultRepeatedFields();
+-  static const RepeatedFieldType* default_repeated_field_;
++  static const RepeatedFieldType* cr_default_repeated_field_;
+ };
+ 
+ template<typename Type> inline
+@@ -1053,7 +1055,7 @@
+       &repeated_message_generic_type_traits_once_init_,
+       &RepeatedMessageGenericTypeTraits::InitializeDefaultRepeatedFields);
+   return reinterpret_cast<const RepeatedFieldType*>(
+-      RepeatedMessageGenericTypeTraits::default_repeated_field_);
++      RepeatedMessageGenericTypeTraits::cr_default_repeated_field_);
+ }
+ 
+ // -------------------------------------------------------------------
+diff -ru --new-file protobuf/src/google/protobuf/generated_message_util.cc protobuf2/src/google/protobuf/generated_message_util.cc
+--- protobuf/src/google/protobuf/generated_message_util.cc	2017-03-17 22:40:59.379153132 -0700
++++ protobuf2/src/google/protobuf/generated_message_util.cc	2017-03-17 22:40:52.691151345 -0700
+@@ -48,20 +48,18 @@
+   return std::numeric_limits<double>::quiet_NaN();
+ }
+ 
+-const ::std::string* empty_string_;
+-GOOGLE_PROTOBUF_DECLARE_ONCE(empty_string_once_init_);
+-
+ void DeleteEmptyString() {
+-  delete empty_string_;
++  delete cr_empty_string_;
+ }
+ 
+ void InitEmptyString() {
+-  empty_string_ = new string;
++  cr_empty_string_ = new string;
+   OnShutdown(&DeleteEmptyString);
+ }
+ 
+ const ::std::string& GetEmptyString() {
+-  ::google::protobuf::GoogleOnceInit(&empty_string_once_init_, &InitEmptyString);
++  ::google::protobuf::GoogleOnceInit(&cr_empty_string_once_init_,
++                                     &InitEmptyString);
+   return GetEmptyStringAlreadyInited();
+ }
+ 
+diff -ru --new-file protobuf/src/google/protobuf/generated_message_util.h protobuf2/src/google/protobuf/generated_message_util.h
+--- protobuf/src/google/protobuf/generated_message_util.h	2017-03-17 22:40:59.379153132 -0700
++++ protobuf2/src/google/protobuf/generated_message_util.h	2017-03-17 22:40:52.655151335 -0700
+@@ -77,14 +77,14 @@
+ 
+ // Default empty string object. Don't use the pointer directly. Instead, call
+ // GetEmptyString() to get the reference.
+-LIBPROTOBUF_EXPORT extern const ::std::string* empty_string_;
+-LIBPROTOBUF_EXPORT extern ProtobufOnceType empty_string_once_init_;
++LIBPROTOBUF_EXPORT extern const ::std::string* cr_empty_string_;
++LIBPROTOBUF_EXPORT extern ProtobufOnceType cr_empty_string_once_init_;
+ LIBPROTOBUF_EXPORT void InitEmptyString();
+ 
+ 
+ LIBPROTOBUF_EXPORT inline const ::std::string& GetEmptyStringAlreadyInited() {
+-  assert(empty_string_ != NULL);
+-  return *empty_string_;
++  assert(cr_empty_string_ != NULL);
++  return *cr_empty_string_;
+ }
+ 
+ LIBPROTOBUF_EXPORT const ::std::string& GetEmptyString();
+diff -ru --new-file protobuf/src/google/protobuf/globals.cc protobuf2/src/google/protobuf/globals.cc
+--- protobuf/src/google/protobuf/globals.cc	1969-12-31 16:00:00.000000000 -0800
++++ protobuf2/src/google/protobuf/globals.cc	2017-03-17 22:40:52.655151335 -0700
+@@ -0,0 +1,113 @@
++// Protocol Buffers - Google's data interchange format
++// Copyright 2017 Google Inc.  All rights reserved.
++// https://developers.google.com/protocol-buffers/
++//
++// Redistribution and use in source and binary forms, with or without
++// modification, are permitted provided that the following conditions are
++// met:
++//
++//     * Redistributions of source code must retain the above copyright
++// notice, this list of conditions and the following disclaimer.
++//     * Redistributions in binary form must reproduce the above
++// copyright notice, this list of conditions and the following disclaimer
++// in the documentation and/or other materials provided with the
++// distribution.
++//     * Neither the name of Google Inc. nor the names of its
++// contributors may be used to endorse or promote products derived from
++// this software without specific prior written permission.
++//
++// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
++// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
++// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
++// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++
++#include <google/protobuf/extension_set.h>
++#include <google/protobuf/generated_message_util.h>
++#include <google/protobuf/stubs/atomicops.h>
++#include <google/protobuf/stubs/hash.h>
++
++namespace google {
++namespace protobuf {
++namespace internal {
++
++SequenceNumber cr_lifecycle_id_generator_;
++
++const ::std::string* cr_empty_string_;
++GOOGLE_PROTOBUF_DECLARE_ONCE(cr_empty_string_once_init_);
++
++const RepeatedField<int32>*
++    RepeatedPrimitiveGenericTypeTraits::cr_default_repeated_field_int32_ = NULL;
++const RepeatedField<int64>*
++    RepeatedPrimitiveGenericTypeTraits::cr_default_repeated_field_int64_ = NULL;
++const RepeatedField<uint32>*
++    RepeatedPrimitiveGenericTypeTraits::cr_default_repeated_field_uint32_ =
++        NULL;
++const RepeatedField<uint64>*
++    RepeatedPrimitiveGenericTypeTraits::cr_default_repeated_field_uint64_ =
++        NULL;
++const RepeatedField<double>*
++    RepeatedPrimitiveGenericTypeTraits::cr_default_repeated_field_double_ =
++        NULL;
++const RepeatedField<float>*
++    RepeatedPrimitiveGenericTypeTraits::cr_default_repeated_field_float_ = NULL;
++const RepeatedField<bool>*
++    RepeatedPrimitiveGenericTypeTraits::cr_default_repeated_field_bool_ = NULL;
++const RepeatedStringTypeTraits::RepeatedFieldType*
++    RepeatedStringTypeTraits::cr_default_repeated_field_ = NULL;
++const RepeatedMessageGenericTypeTraits::RepeatedFieldType*
++    RepeatedMessageGenericTypeTraits::cr_default_repeated_field_ = NULL;
++
++LIBPROTOBUF_EXPORT vector<void (*)()>* cr_shutdown_functions = NULL;
++LIBPROTOBUF_EXPORT Mutex* cr_shutdown_functions_mutex = NULL;
++LIBPROTOBUF_EXPORT GOOGLE_PROTOBUF_DECLARE_ONCE(cr_shutdown_functions_init);
++
++LIBPROTOBUF_EXPORT LogHandler* cr_log_handler_ = NULL;
++LIBPROTOBUF_EXPORT int cr_log_silencer_count_ = 0;
++
++LIBPROTOBUF_EXPORT Mutex* cr_log_silencer_count_mutex_ = NULL;
++LIBPROTOBUF_EXPORT GOOGLE_PROTOBUF_DECLARE_ONCE(cr_log_silencer_count_init_);
++
++GOOGLE_PROTOBUF_DECLARE_ONCE(
++    cr_repeated_primitive_generic_type_traits_once_init_);
++GOOGLE_PROTOBUF_DECLARE_ONCE(cr_repeated_string_type_traits_once_init_);
++GOOGLE_PROTOBUF_DECLARE_ONCE(
++    cr_repeated_message_generic_type_traits_once_init_);
++
++LIBPROTOBUF_EXPORT hash_map<pair<const MessageLite*, int>, ExtensionInfo>*
++    cr_registry_ = NULL;
++LIBPROTOBUF_EXPORT GOOGLE_PROTOBUF_DECLARE_ONCE(cr_registry_init_);
++
++LIBPROTOBUF_EXPORT bool cr_module_initialized_ = false;
++struct InitDetector {
++  InitDetector() { cr_module_initialized_ = true; }
++};
++InitDetector cr_init_detector;
++
++#ifdef GOOGLE_PROTOBUF_ATOMICOPS_INTERNALS_X86_GCC_H_
++// Set the flags so that code will run correctly and conservatively, so even
++// if we haven't been initialized yet, we're probably single threaded, and our
++// default values should hopefully be pretty safe.
++LIBPROTOBUF_EXPORT struct AtomicOps_x86CPUFeatureStruct
++    cr_AtomicOps_Internalx86CPUFeatures = {
++        false,  // bug can't exist before process spawns multiple threads
++        false,  // no SSE2
++};
++
++class AtomicOpsx86Initializer {
++ public:
++  AtomicOpsx86Initializer() { AtomicOps_Internalx86CPUFeaturesInit(); }
++};
++
++AtomicOpsx86Initializer cr_g_initer;
++#endif
++
++}  // namespace internal
++}  // namespace protobuf
++}  // namespace google
+diff -ru --new-file protobuf/src/google/protobuf/io/coded_stream.cc protobuf2/src/google/protobuf/io/coded_stream.cc
+--- protobuf/src/google/protobuf/io/coded_stream.cc	2017-03-17 22:40:59.383153133 -0700
++++ protobuf2/src/google/protobuf/io/coded_stream.cc	2017-03-17 22:40:52.659151336 -0700
+@@ -83,7 +83,7 @@
+ }
+ 
+ // Static.
+-int CodedInputStream::default_recursion_limit_ = 100;
++int const CodedInputStream::default_recursion_limit_ = 100;
+ 
+ 
+ void CodedOutputStream::EnableAliasing(bool enabled) {
+diff -ru --new-file protobuf/src/google/protobuf/io/coded_stream.h protobuf2/src/google/protobuf/io/coded_stream.h
+--- protobuf/src/google/protobuf/io/coded_stream.h	2017-03-17 22:40:59.383153133 -0700
++++ protobuf2/src/google/protobuf/io/coded_stream.h	2017-03-17 22:40:52.659151336 -0700
+@@ -613,7 +613,7 @@
+ 
+   static const int kDefaultTotalBytesWarningThreshold = 32 << 20;  // 32MB
+ 
+-  static int default_recursion_limit_;  // 100 by default.
++  static const int default_recursion_limit_;  // 100 by default.
+ };
+ 
+ // Class which encodes and writes binary data which is composed of varint-
+diff -ru --new-file protobuf/src/google/protobuf/stubs/atomicops_internals_x86_gcc.cc protobuf2/src/google/protobuf/stubs/atomicops_internals_x86_gcc.cc
+--- protobuf/src/google/protobuf/stubs/atomicops_internals_x86_gcc.cc	2017-03-17 22:40:59.383153133 -0700
++++ protobuf2/src/google/protobuf/stubs/atomicops_internals_x86_gcc.cc	2017-03-17 22:40:52.671151340 -0700
+@@ -58,23 +58,13 @@
+       : "=a" (a), "=D" (b), "=c" (c), "=d" (d) : "a" (inp))
+ #endif
+ 
+-#if defined(cpuid)        // initialize the struct only on x86
+-
+ namespace google {
+ namespace protobuf {
+ namespace internal {
+ 
+-// Set the flags so that code will run correctly and conservatively, so even
+-// if we haven't been initialized yet, we're probably single threaded, and our
+-// default values should hopefully be pretty safe.
+-struct AtomicOps_x86CPUFeatureStruct AtomicOps_Internalx86CPUFeatures = {
+-  false,          // bug can't exist before process spawns multiple threads
+-  false,          // no SSE2
+-};
+-
+-namespace {
++#if defined(cpuid)        // initialize the struct only on x86
+ 
+-// Initialize the AtomicOps_Internalx86CPUFeatures struct.
++// Initialize the cr_AtomicOps_Internalx86CPUFeatures struct.
+ void AtomicOps_Internalx86CPUFeaturesInit() {
+   uint32_t eax;
+   uint32_t ebx;
+@@ -107,31 +97,20 @@
+   if (strcmp(vendor, "AuthenticAMD") == 0 &&       // AMD
+       family == 15 &&
+       32 <= model && model <= 63) {
+-    AtomicOps_Internalx86CPUFeatures.has_amd_lock_mb_bug = true;
++    cr_AtomicOps_Internalx86CPUFeatures.has_amd_lock_mb_bug = true;
+   } else {
+-    AtomicOps_Internalx86CPUFeatures.has_amd_lock_mb_bug = false;
++    cr_AtomicOps_Internalx86CPUFeatures.has_amd_lock_mb_bug = false;
+   }
+ 
+   // edx bit 26 is SSE2 which we use to tell use whether we can use mfence
+-  AtomicOps_Internalx86CPUFeatures.has_sse2 = ((edx >> 26) & 1);
++  cr_AtomicOps_Internalx86CPUFeatures.has_sse2 = ((edx >> 26) & 1);
+ }
+-
+-class AtomicOpsx86Initializer {
+- public:
+-  AtomicOpsx86Initializer() {
+-    AtomicOps_Internalx86CPUFeaturesInit();
+-  }
+-};
+-
+-// A global to get use initialized on startup via static initialization :/
+-AtomicOpsx86Initializer g_initer;
+-
+-}  // namespace
++#else
++void AtomicOps_Internalx86CPUFeaturesInit() {}
++#endif  // __i386__
+ 
+ }  // namespace internal
+ }  // namespace protobuf
+ }  // namespace google
+ 
+-#endif  // __i386__
+-
+ #endif  // GOOGLE_PROTOBUF_ATOMICOPS_INTERNALS_X86_GCC_H_
+diff -ru --new-file protobuf/src/google/protobuf/stubs/atomicops_internals_x86_gcc.h protobuf2/src/google/protobuf/stubs/atomicops_internals_x86_gcc.h
+--- protobuf/src/google/protobuf/stubs/atomicops_internals_x86_gcc.h	2017-03-17 22:40:59.383153133 -0700
++++ protobuf2/src/google/protobuf/stubs/atomicops_internals_x86_gcc.h	2017-03-17 22:40:52.671151340 -0700
+@@ -46,7 +46,9 @@
+                              // after acquire compare-and-swap.
+   bool has_sse2;             // Processor has SSE2.
+ };
+-extern struct AtomicOps_x86CPUFeatureStruct AtomicOps_Internalx86CPUFeatures;
++extern struct AtomicOps_x86CPUFeatureStruct cr_AtomicOps_Internalx86CPUFeatures;
++
++void AtomicOps_Internalx86CPUFeaturesInit();
+ 
+ #define ATOMICOPS_COMPILER_BARRIER() __asm__ __volatile__("" : : : "memory")
+ 
+@@ -89,7 +91,7 @@
+                        : "+r" (temp), "+m" (*ptr)
+                        : : "memory");
+   // temp now holds the old value of *ptr
+-  if (AtomicOps_Internalx86CPUFeatures.has_amd_lock_mb_bug) {
++  if (cr_AtomicOps_Internalx86CPUFeatures.has_amd_lock_mb_bug) {
+     __asm__ __volatile__("lfence" : : : "memory");
+   }
+   return temp + increment;
+@@ -99,7 +101,7 @@
+                                        Atomic32 old_value,
+                                        Atomic32 new_value) {
+   Atomic32 x = NoBarrier_CompareAndSwap(ptr, old_value, new_value);
+-  if (AtomicOps_Internalx86CPUFeatures.has_amd_lock_mb_bug) {
++  if (cr_AtomicOps_Internalx86CPUFeatures.has_amd_lock_mb_bug) {
+     __asm__ __volatile__("lfence" : : : "memory");
+   }
+   return x;
+@@ -131,7 +133,7 @@
+ #else
+ 
+ inline void MemoryBarrier() {
+-  if (AtomicOps_Internalx86CPUFeatures.has_sse2) {
++  if (cr_AtomicOps_Internalx86CPUFeatures.has_sse2) {
+     __asm__ __volatile__("mfence" : : : "memory");
+   } else {  // mfence is faster but not present on PIII
+     Atomic32 x = 0;
+@@ -140,7 +142,7 @@
+ }
+ 
+ inline void Acquire_Store(volatile Atomic32* ptr, Atomic32 value) {
+-  if (AtomicOps_Internalx86CPUFeatures.has_sse2) {
++  if (cr_AtomicOps_Internalx86CPUFeatures.has_sse2) {
+     *ptr = value;
+     __asm__ __volatile__("mfence" : : : "memory");
+   } else {
+@@ -213,7 +215,7 @@
+                        : "+r" (temp), "+m" (*ptr)
+                        : : "memory");
+   // temp now contains the previous value of *ptr
+-  if (AtomicOps_Internalx86CPUFeatures.has_amd_lock_mb_bug) {
++  if (cr_AtomicOps_Internalx86CPUFeatures.has_amd_lock_mb_bug) {
+     __asm__ __volatile__("lfence" : : : "memory");
+   }
+   return temp + increment;
+@@ -270,7 +272,7 @@
+                                        Atomic64 old_value,
+                                        Atomic64 new_value) {
+   Atomic64 x = NoBarrier_CompareAndSwap(ptr, old_value, new_value);
+-  if (AtomicOps_Internalx86CPUFeatures.has_amd_lock_mb_bug) {
++  if (cr_AtomicOps_Internalx86CPUFeatures.has_amd_lock_mb_bug) {
+     __asm__ __volatile__("lfence" : : : "memory");
+   }
+   return x;
+diff -ru --new-file protobuf/src/google/protobuf/stubs/common.cc protobuf2/src/google/protobuf/stubs/common.cc
+--- protobuf/src/google/protobuf/stubs/common.cc	2017-03-17 22:40:59.383153133 -0700
++++ protobuf2/src/google/protobuf/stubs/common.cc	2017-03-17 22:40:52.671151340 -0700
+@@ -116,7 +116,8 @@
+   if (level < GOOGLE_PROTOBUF_MIN_LOG_LEVEL) {
+     return;
+   }
+-  static const char* level_names[] = {"INFO", "WARNING", "ERROR", "FATAL"};
++  static const char* const level_names[] = {"INFO", "WARNING", "ERROR",
++                                            "FATAL"};
+ 
+   static const int android_log_levels[] = {
+       ANDROID_LOG_INFO,   // LOG(INFO),
+@@ -148,7 +149,8 @@
+ #else
+ void DefaultLogHandler(LogLevel level, const char* filename, int line,
+                        const string& message) {
+-  static const char* level_names[] = { "INFO", "WARNING", "ERROR", "FATAL" };
++  static const char* const level_names[] = {"INFO", "WARNING", "ERROR",
++                                            "FATAL"};
+ 
+   // We use fprintf() instead of cerr because we want this to work at static
+   // initialization time.
+@@ -163,22 +165,22 @@
+   // Nothing.
+ }
+ 
+-static LogHandler* log_handler_ = &DefaultLogHandler;
+-static int log_silencer_count_ = 0;
++extern LogHandler* cr_log_handler_;
++extern int cr_log_silencer_count_;
+ 
+-static Mutex* log_silencer_count_mutex_ = NULL;
+-GOOGLE_PROTOBUF_DECLARE_ONCE(log_silencer_count_init_);
++extern Mutex* cr_log_silencer_count_mutex_;
++extern ProtobufOnceType cr_log_silencer_count_init_;
+ 
+ void DeleteLogSilencerCount() {
+-  delete log_silencer_count_mutex_;
+-  log_silencer_count_mutex_ = NULL;
++  delete cr_log_silencer_count_mutex_;
++  cr_log_silencer_count_mutex_ = NULL;
+ }
+ void InitLogSilencerCount() {
+-  log_silencer_count_mutex_ = new Mutex;
++  cr_log_silencer_count_mutex_ = new Mutex;
+   OnShutdown(&DeleteLogSilencerCount);
+ }
+ void InitLogSilencerCountOnce() {
+-  GoogleOnceInit(&log_silencer_count_init_, &InitLogSilencerCount);
++  GoogleOnceInit(&cr_log_silencer_count_init_, &InitLogSilencerCount);
+ }
+ 
+ LogMessage& LogMessage::operator<<(const string& value) {
+@@ -246,12 +248,13 @@
+ 
+   if (level_ != LOGLEVEL_FATAL) {
+     InitLogSilencerCountOnce();
+-    MutexLock lock(log_silencer_count_mutex_);
+-    suppress = log_silencer_count_ > 0;
++    MutexLock lock(cr_log_silencer_count_mutex_);
++    suppress = cr_log_silencer_count_ > 0;
+   }
+ 
+   if (!suppress) {
+-    log_handler_(level_, filename_, line_, message_);
++    (cr_log_handler_ ? cr_log_handler_ : DefaultLogHandler)(level_, filename_,
++                                                            line_, message_);
+   }
+ 
+   if (level_ == LOGLEVEL_FATAL) {
+@@ -270,28 +273,29 @@
+ }  // namespace internal
+ 
+ LogHandler* SetLogHandler(LogHandler* new_func) {
+-  LogHandler* old = internal::log_handler_;
++  LogHandler* old = internal::cr_log_handler_ ? internal::cr_log_handler_
++                                              : internal::DefaultLogHandler;
+   if (old == &internal::NullLogHandler) {
+     old = NULL;
+   }
+   if (new_func == NULL) {
+-    internal::log_handler_ = &internal::NullLogHandler;
++    internal::cr_log_handler_ = &internal::NullLogHandler;
+   } else {
+-    internal::log_handler_ = new_func;
++    internal::cr_log_handler_ = new_func;
+   }
+   return old;
+ }
+ 
+ LogSilencer::LogSilencer() {
+   internal::InitLogSilencerCountOnce();
+-  MutexLock lock(internal::log_silencer_count_mutex_);
+-  ++internal::log_silencer_count_;
++  MutexLock lock(internal::cr_log_silencer_count_mutex_);
++  ++internal::cr_log_silencer_count_;
+ };
+ 
+ LogSilencer::~LogSilencer() {
+   internal::InitLogSilencerCountOnce();
+-  MutexLock lock(internal::log_silencer_count_mutex_);
+-  --internal::log_silencer_count_;
++  MutexLock lock(internal::cr_log_silencer_count_mutex_);
++  --internal::cr_log_silencer_count_;
+ };
+ 
+ // ===================================================================
+@@ -407,23 +411,23 @@
+ namespace internal {
+ 
+ typedef void OnShutdownFunc();
+-vector<void (*)()>* shutdown_functions = NULL;
+-Mutex* shutdown_functions_mutex = NULL;
+-GOOGLE_PROTOBUF_DECLARE_ONCE(shutdown_functions_init);
++extern vector<void (*)()>* cr_shutdown_functions;
++extern Mutex* cr_shutdown_functions_mutex;
++extern ProtobufOnceType cr_shutdown_functions_init;
+ 
+ void InitShutdownFunctions() {
+-  shutdown_functions = new vector<void (*)()>;
+-  shutdown_functions_mutex = new Mutex;
++  cr_shutdown_functions = new vector<void (*)()>;
++  cr_shutdown_functions_mutex = new Mutex;
+ }
+ 
+ inline void InitShutdownFunctionsOnce() {
+-  GoogleOnceInit(&shutdown_functions_init, &InitShutdownFunctions);
++  GoogleOnceInit(&cr_shutdown_functions_init, &InitShutdownFunctions);
+ }
+ 
+ void OnShutdown(void (*func)()) {
+   InitShutdownFunctionsOnce();
+-  MutexLock lock(shutdown_functions_mutex);
+-  shutdown_functions->push_back(func);
++  MutexLock lock(cr_shutdown_functions_mutex);
++  cr_shutdown_functions->push_back(func);
+ }
+ 
+ }  // namespace internal
+@@ -431,20 +435,20 @@
+ void ShutdownProtobufLibrary() {
+   internal::InitShutdownFunctionsOnce();
+ 
+-  // We don't need to lock shutdown_functions_mutex because it's up to the
++  // We don't need to lock cr_shutdown_functions_mutex because it's up to the
+   // caller to make sure that no one is using the library before this is
+   // called.
+ 
+   // Make it safe to call this multiple times.
+-  if (internal::shutdown_functions == NULL) return;
++  if (internal::cr_shutdown_functions == NULL) return;
+ 
+-  for (int i = 0; i < internal::shutdown_functions->size(); i++) {
+-    internal::shutdown_functions->at(i)();
++  for (int i = 0; i < internal::cr_shutdown_functions->size(); i++) {
++    internal::cr_shutdown_functions->at(i)();
+   }
+-  delete internal::shutdown_functions;
+-  internal::shutdown_functions = NULL;
+-  delete internal::shutdown_functions_mutex;
+-  internal::shutdown_functions_mutex = NULL;
++  delete internal::cr_shutdown_functions;
++  internal::cr_shutdown_functions = NULL;
++  delete internal::cr_shutdown_functions_mutex;
++  internal::cr_shutdown_functions_mutex = NULL;
+ }
+ 
+ #if PROTOBUF_USE_EXCEPTIONS
+diff -ru --new-file protobuf/src/google/protobuf/stubs/structurally_valid.cc protobuf2/src/google/protobuf/stubs/structurally_valid.cc
+--- protobuf/src/google/protobuf/stubs/structurally_valid.cc	2017-03-17 22:40:59.383153133 -0700
++++ protobuf2/src/google/protobuf/stubs/structurally_valid.cc	2017-03-17 22:40:52.675151341 -0700
+@@ -511,21 +511,10 @@
+ //   UTF-8 strings.  Since UTF-8 validation is only used for debugging
+ //   anyway, we simply always return success if initialization hasn't
+ //   occurred yet.
+-namespace {
+-
+-bool module_initialized_ = false;
+-
+-struct InitDetector {
+-  InitDetector() {
+-    module_initialized_ = true;
+-  }
+-};
+-InitDetector init_detector;
+-
+-}  // namespace
++extern bool cr_module_initialized_;
+ 
+ bool IsStructurallyValidUTF8(const char* buf, int len) {
+-  if (!module_initialized_) return true;
++  if (!cr_module_initialized_) return true;
+   
+   int bytes_consumed = 0;
+   UTF8GenericScanFastAscii(&utf8acceptnonsurrogates_obj,
+@@ -534,7 +523,7 @@
+ }
+ 
+ int UTF8SpnStructurallyValid(const StringPiece& str) {
+-  if (!module_initialized_) return str.size();
++  if (!cr_module_initialized_) return str.size();
+ 
+   int bytes_consumed = 0;
+   UTF8GenericScanFastAscii(&utf8acceptnonsurrogates_obj,
+diff -ru --new-file protobuf/src/google/protobuf/stubs/strutil.cc protobuf2/src/google/protobuf/stubs/strutil.cc
+--- protobuf/src/google/protobuf/stubs/strutil.cc	2017-03-17 22:40:59.383153133 -0700
++++ protobuf2/src/google/protobuf/stubs/strutil.cc	2017-03-17 22:40:52.671151340 -0700
+@@ -528,7 +528,7 @@
+ // Assumes that non-printable characters are escaped using octal sequences, and
+ // that UTF-8 bytes are not handled specially.
+ static inline size_t CEscapedLength(StringPiece src) {
+-  static char c_escaped_len[256] = {
++  static const char c_escaped_len[256] = {
+     4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 2, 4, 4, 2, 4, 4,  // \t, \n, \r
+     4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+     1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1,  // ", '
+@@ -891,7 +891,7 @@
+ char *FastHexToBuffer(int i, char* buffer) {
+   GOOGLE_CHECK(i >= 0) << "FastHexToBuffer() wants non-negative integers, not " << i;
+ 
+-  static const char *hexdigits = "0123456789abcdef";
++  static const char hexdigits[] = "0123456789abcdef";
+   char *p = buffer + 21;
+   *p-- = '\0';
+   do {
+@@ -902,7 +902,7 @@
+ }
+ 
+ char *InternalFastHexToBuffer(uint64 value, char* buffer, int num_byte) {
+-  static const char *hexdigits = "0123456789abcdef";
++  static const char hexdigits[] = "0123456789abcdef";
+   buffer[num_byte] = '\0';
+   for (int i = num_byte - 1; i >= 0; i--) {
+ #ifdef _M_X64

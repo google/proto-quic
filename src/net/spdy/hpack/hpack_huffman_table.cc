@@ -16,7 +16,6 @@
 
 namespace net {
 
-using base::StringPiece;
 using std::string;
 
 namespace {
@@ -219,7 +218,7 @@ bool HpackHuffmanTable::IsInitialized() const {
   return !code_by_id_.empty();
 }
 
-void HpackHuffmanTable::EncodeString(StringPiece in,
+void HpackHuffmanTable::EncodeString(SpdyStringPiece in,
                                      HpackOutputStream* out) const {
   size_t bit_remnant = 0;
   for (size_t i = 0; i != in.size(); i++) {
@@ -252,7 +251,7 @@ void HpackHuffmanTable::EncodeString(StringPiece in,
   }
 }
 
-size_t HpackHuffmanTable::EncodedSize(StringPiece in) const {
+size_t HpackHuffmanTable::EncodedSize(SpdyStringPiece in) const {
   size_t bit_count = 0;
   for (size_t i = 0; i != in.size(); i++) {
     uint16_t symbol_id = static_cast<uint8_t>(in[i]);

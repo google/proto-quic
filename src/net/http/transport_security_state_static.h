@@ -9,6 +9,8 @@
 
 #include <stdint.h>
 
+#include "net/http/transport_security_state_source.h"
+
 enum SecondLevelDomainName {
   DOMAIN_NOT_PINNED,
   DOMAIN_GOOGLE_COM,
@@ -781,13 +783,7 @@ static const char* const kYahooAcceptableCerts[] = {
     nullptr,
 };
 
-struct Pinset {
-  const char* const* const accepted_pins;
-  const char* const* const rejected_pins;
-  const char* const report_uri;
-};
-
-static const struct Pinset kPinsets[] = {
+static const net::TransportSecurityStateSource::Pinset kPinsets[] = {
     {kDropboxAcceptableCerts, kNoRejectedPublicKeys, kDropboxReportURI},
     {kFacebookAcceptableCerts, kNoRejectedPublicKeys, kNoReportURI},
     {kGoogleAcceptableCerts, kNoRejectedPublicKeys, kGoogleReportURI},
@@ -18425,5 +18421,12 @@ static const uint8_t kPreloadedHSTSData[] = {
 
 static const unsigned kPreloadedHSTSBits = 1689888;
 static const unsigned kHSTSRootPosition = 1689210;
+
+static const net::TransportSecurityStateSource kHSTSSource = {
+    kHSTSHuffmanTree,        sizeof(kHSTSHuffmanTree),
+    kPreloadedHSTSData,      kPreloadedHSTSBits,
+    kHSTSRootPosition,       kExpectCTReportURIs,
+    kExpectStapleReportURIs, kPinsets,
+    arraysize(kPinsets)};
 
 #endif  // NET_HTTP_TRANSPORT_SECURITY_STATE_STATIC_H_

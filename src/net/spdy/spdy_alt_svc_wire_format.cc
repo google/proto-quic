@@ -14,13 +14,11 @@
 
 namespace net {
 
-using base::StringPiece;
-
 namespace {
 
 template <class T>
-bool ParsePositiveIntegerImpl(StringPiece::const_iterator c,
-                              StringPiece::const_iterator end,
+bool ParsePositiveIntegerImpl(SpdyStringPiece::const_iterator c,
+                              SpdyStringPiece::const_iterator end,
                               T* value) {
   *value = 0;
   // TODO(mmenke):  This really should be using methods in parse_number.h.
@@ -60,20 +58,20 @@ SpdyAltSvcWireFormat::AlternativeService::AlternativeService(
 
 // static
 bool SpdyAltSvcWireFormat::ParseHeaderFieldValue(
-    StringPiece value,
+    SpdyStringPiece value,
     AlternativeServiceVector* altsvc_vector) {
   // Empty value is invalid according to the specification.
   if (value.empty()) {
     return false;
   }
   altsvc_vector->clear();
-  if (value == StringPiece("clear")) {
+  if (value == SpdyStringPiece("clear")) {
     return true;
   }
-  StringPiece::const_iterator c = value.begin();
+  SpdyStringPiece::const_iterator c = value.begin();
   while (c != value.end()) {
     // Parse protocol-id.
-    StringPiece::const_iterator percent_encoded_protocol_id_end =
+    SpdyStringPiece::const_iterator percent_encoded_protocol_id_end =
         std::find(c, value.end(), '=');
     std::string protocol_id;
     if (percent_encoded_protocol_id_end == c ||
@@ -91,7 +89,7 @@ bool SpdyAltSvcWireFormat::ParseHeaderFieldValue(
       return false;
     }
     ++c;
-    StringPiece::const_iterator alt_authority_begin = c;
+    SpdyStringPiece::const_iterator alt_authority_begin = c;
     for (; c != value.end() && *c != '"'; ++c) {
       // Decode backslash encoding.
       if (*c != '\\') {
@@ -115,7 +113,8 @@ bool SpdyAltSvcWireFormat::ParseHeaderFieldValue(
     // Parse parameters.
     uint32_t max_age = 86400;
     VersionVector version;
-    StringPiece::const_iterator parameters_end = std::find(c, value.end(), ',');
+    SpdyStringPiece::const_iterator parameters_end =
+        std::find(c, value.end(), ',');
     while (c != parameters_end) {
       SkipWhiteSpace(&c, parameters_end);
       if (c == parameters_end) {
@@ -139,7 +138,7 @@ bool SpdyAltSvcWireFormat::ParseHeaderFieldValue(
       }
       ++c;
       SkipWhiteSpace(&c, parameters_end);
-      StringPiece::const_iterator parameter_value_begin = c;
+      SpdyStringPiece::const_iterator parameter_value_begin = c;
       for (; c != parameters_end && *c != ';' && *c != ' ' && *c != '\t'; ++c) {
       }
       if (c == parameter_value_begin) {
@@ -163,9 +162,9 @@ bool SpdyAltSvcWireFormat::ParseHeaderFieldValue(
         }
         ++c;
         parameters_end = std::find(c, value.end(), ',');
-        StringPiece::const_iterator v_begin = parameter_value_begin + 1;
+        SpdyStringPiece::const_iterator v_begin = parameter_value_begin + 1;
         while (v_begin < c) {
-          StringPiece::const_iterator v_end = v_begin;
+          SpdyStringPiece::const_iterator v_end = v_begin;
           while (v_end < c - 1 && *v_end != ',') {
             ++v_end;
           }
@@ -261,15 +260,15 @@ std::string SpdyAltSvcWireFormat::SerializeHeaderFieldValue(
 }
 
 // static
-void SpdyAltSvcWireFormat::SkipWhiteSpace(StringPiece::const_iterator* c,
-                                          StringPiece::const_iterator end) {
+void SpdyAltSvcWireFormat::SkipWhiteSpace(SpdyStringPiece::const_iterator* c,
+                                          SpdyStringPiece::const_iterator end) {
   for (; *c != end && (**c == ' ' || **c == '\t'); ++*c) {
   }
 }
 
 // static
-bool SpdyAltSvcWireFormat::PercentDecode(StringPiece::const_iterator c,
-                                         StringPiece::const_iterator end,
+bool SpdyAltSvcWireFormat::PercentDecode(SpdyStringPiece::const_iterator c,
+                                         SpdyStringPiece::const_iterator end,
                                          std::string* output) {
   output->clear();
   for (; c != end; ++c) {
@@ -298,10 +297,11 @@ bool SpdyAltSvcWireFormat::PercentDecode(StringPiece::const_iterator c,
 }
 
 // static
-bool SpdyAltSvcWireFormat::ParseAltAuthority(StringPiece::const_iterator c,
-                                             StringPiece::const_iterator end,
-                                             std::string* host,
-                                             uint16_t* port) {
+bool SpdyAltSvcWireFormat::ParseAltAuthority(
+    SpdyStringPiece::const_iterator c,
+    SpdyStringPiece::const_iterator end,
+    std::string* host,
+    uint16_t* port) {
   host->clear();
   if (c == end) {
     return false;
@@ -345,16 +345,16 @@ bool SpdyAltSvcWireFormat::ParseAltAuthority(StringPiece::const_iterator c,
 
 // static
 bool SpdyAltSvcWireFormat::ParsePositiveInteger16(
-    StringPiece::const_iterator c,
-    StringPiece::const_iterator end,
+    SpdyStringPiece::const_iterator c,
+    SpdyStringPiece::const_iterator end,
     uint16_t* value) {
   return ParsePositiveIntegerImpl<uint16_t>(c, end, value);
 }
 
 // static
 bool SpdyAltSvcWireFormat::ParsePositiveInteger32(
-    StringPiece::const_iterator c,
-    StringPiece::const_iterator end,
+    SpdyStringPiece::const_iterator c,
+    SpdyStringPiece::const_iterator end,
     uint32_t* value) {
   return ParsePositiveIntegerImpl<uint32_t>(c, end, value);
 }

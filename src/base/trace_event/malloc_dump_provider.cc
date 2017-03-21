@@ -54,10 +54,10 @@ void* HookZeroInitAlloc(const AllocatorDispatch* self,
   return ptr;
 }
 
-void* HookllocAligned(const AllocatorDispatch* self,
-                      size_t alignment,
-                      size_t size,
-                      void* context) {
+void* HookAllocAligned(const AllocatorDispatch* self,
+                       size_t alignment,
+                       size_t size,
+                       void* context) {
   const AllocatorDispatch* const next = self->next;
   void* ptr = next->alloc_aligned_function(next, alignment, size, context);
   if (ptr)
@@ -129,7 +129,7 @@ void HookFreeDefiniteSize(const AllocatorDispatch* self,
 AllocatorDispatch g_allocator_hooks = {
     &HookAlloc,            /* alloc_function */
     &HookZeroInitAlloc,    /* alloc_zero_initialized_function */
-    &HookllocAligned,      /* alloc_aligned_function */
+    &HookAllocAligned,     /* alloc_aligned_function */
     &HookRealloc,          /* realloc_function */
     &HookFree,             /* free_function */
     &HookGetSizeEstimate,  /* get_size_estimate_function */

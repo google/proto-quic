@@ -11,10 +11,10 @@
 #include <vector>
 
 #include "base/logging.h"
-#include "net/http2/decoder/frame_parts.h"
-#include "net/http2/decoder/frame_parts_collector_listener.h"
 #include "net/http2/http2_constants.h"
 #include "net/http2/platform/api/http2_reconstruct_object.h"
+#include "net/http2/test_tools/frame_parts.h"
+#include "net/http2/test_tools/frame_parts_collector_listener.h"
 #include "net/http2/tools/failure.h"
 #include "net/http2/tools/http2_random.h"
 #include "net/http2/tools/random_decoder_test.h"

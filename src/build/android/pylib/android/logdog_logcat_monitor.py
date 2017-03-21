@@ -59,10 +59,14 @@ class LogdogLogcatMonitor(logcat_monitor.LogcatMonitor):
     def record_to_stream():
       if self._logdog_stream:
         for data in self._adb.Logcat(filter_specs=self._filter_specs,
-                                     logcat_format='threadtime'):
+                                     logcat_format='threadtime',
+                                     iter_timeout=0.08):
           if self._stop_recording_event.isSet():
             return
-          self._logdog_stream.write(data + '\n')
+          if data:
+            self._logdog_stream.write(data + '\n')
+          if self._stop_recording_event.isSet():
+            return
 
     self._stop_recording_event.clear()
     if not self._record_thread:

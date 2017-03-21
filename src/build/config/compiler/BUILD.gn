@@ -471,7 +471,11 @@ config("compiler") {
       # linker jobs. This is still suboptimal to a potential dynamic
       # resource allocation scheme, but should be good enough.
       if (use_lld) {
-        ldflags += [ "-Wl,--thinlto-jobs=8" ]
+        ldflags += [
+          "-Wl,--thinlto-jobs=8",
+          "-Wl,--thinlto-cache-dir=" +
+              rebase_path("$root_out_dir/thinlto-cache", root_build_dir),
+        ]
       } else {
         ldflags += [ "-Wl,-plugin-opt,jobs=8" ]
       }

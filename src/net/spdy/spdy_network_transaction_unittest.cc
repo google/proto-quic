@@ -14,7 +14,6 @@
 #include "base/files/scoped_temp_dir.h"
 #include "base/memory/ptr_util.h"
 #include "base/run_loop.h"
-#include "base/strings/string_piece.h"
 #include "base/test/test_file_util.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "net/base/auth.h"
@@ -40,6 +39,7 @@
 #include "net/socket/client_socket_pool_base.h"
 #include "net/socket/next_proto.h"
 #include "net/spdy/buffered_spdy_framer.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/spdy_http_stream.h"
 #include "net/spdy/spdy_http_utils.h"
 #include "net/spdy/spdy_protocol.h"
@@ -437,7 +437,9 @@ class SpdyNetworkTransactionTest : public ::testing::Test {
     NetLogWithSource log;
     HttpNetworkSession* session = helper.session();
     base::WeakPtr<SpdySession> spdy_session =
-        session->spdy_session_pool()->FindAvailableSession(key, url, log);
+        session->spdy_session_pool()->FindAvailableSession(
+            key, url,
+            /* enable_ip_based_pooling = */ true, log);
     ASSERT_TRUE(spdy_session);
     EXPECT_EQ(0u, spdy_session->num_active_streams());
     EXPECT_EQ(0u, spdy_session->num_unclaimed_pushed_streams());
@@ -3167,7 +3169,7 @@ TEST_F(SpdyNetworkTransactionTest, ResponseHeaders) {
   test_cases[1].expected_headers["hello"] = "bye";
   test_cases[2].expected_headers["hello"] = "bye";
 
-  test_cases[0].expected_headers["cookie"] = base::StringPiece("val1\0val2", 9);
+  test_cases[0].expected_headers["cookie"] = SpdyStringPiece("val1\0val2", 9);
   test_cases[2].expected_headers["cookie"] = "val1,val2";
 
   for (size_t i = 0; i < arraysize(test_cases); ++i) {
@@ -4057,7 +4059,9 @@ TEST_F(SpdyNetworkTransactionTest, GracefulGoaway) {
                      PRIVACY_MODE_DISABLED);
   NetLogWithSource log;
   base::WeakPtr<SpdySession> spdy_session =
-      spdy_session_pool->FindAvailableSession(key, GURL(), log);
+      spdy_session_pool->FindAvailableSession(
+          key, GURL(),
+          /* enable_ip_based_pooling = */ true, log);
   EXPECT_TRUE(spdy_session);
 
   // Start second transaction.
@@ -4087,7 +4091,9 @@ TEST_F(SpdyNetworkTransactionTest, GracefulGoaway) {
   EXPECT_EQ("hello!", response_data);
 
   // Graceful GOAWAY was received, SpdySession should be unavailable.
-  spdy_session = spdy_session_pool->FindAvailableSession(key, GURL(), log);
+  spdy_session = spdy_session_pool->FindAvailableSession(
+      key, GURL(),
+      /* enable_ip_based_pooling = */ true, log);
   EXPECT_FALSE(spdy_session);
 
   helper.VerifyDataConsumed();
@@ -5035,7 +5041,9 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushValidCrossOrigin) {
   SpdySessionKey key(host_port_pair_, ProxyServer::Direct(),
                      PRIVACY_MODE_DISABLED);
   base::WeakPtr<SpdySession> spdy_session =
-      spdy_session_pool->FindAvailableSession(key, GURL(), log);
+      spdy_session_pool->FindAvailableSession(
+          key, GURL(),
+          /* enable_ip_based_pooling = */ true, log);
 
   EXPECT_FALSE(spdy_session->unclaimed_pushed_streams_.empty());
   EXPECT_EQ(1u, spdy_session->unclaimed_pushed_streams_.size());
@@ -5182,7 +5190,9 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushValidCrossOriginWithOpenSession) {
   SpdySessionKey key0(host_port_pair0, ProxyServer::Direct(),
                       PRIVACY_MODE_DISABLED);
   base::WeakPtr<SpdySession> spdy_session0 =
-      spdy_session_pool->FindAvailableSession(key0, GURL(), log);
+      spdy_session_pool->FindAvailableSession(
+          key0, GURL(),
+          /* enable_ip_based_pooling = */ true, log);
 
   EXPECT_TRUE(spdy_session0->unclaimed_pushed_streams_.empty());
   EXPECT_EQ(0u, spdy_session0->unclaimed_pushed_streams_.size());
@@ -5191,7 +5201,9 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushValidCrossOriginWithOpenSession) {
   SpdySessionKey key1(host_port_pair1, ProxyServer::Direct(),
                       PRIVACY_MODE_DISABLED);
   base::WeakPtr<SpdySession> spdy_session1 =
-      spdy_session_pool->FindAvailableSession(key1, GURL(), log);
+      spdy_session_pool->FindAvailableSession(
+          key1, GURL(),
+          /* enable_ip_based_pooling = */ true, log);
 
   EXPECT_FALSE(spdy_session1->unclaimed_pushed_streams_.empty());
   EXPECT_EQ(1u, spdy_session1->unclaimed_pushed_streams_.size());
@@ -5674,7 +5686,7 @@ TEST_F(SpdyNetworkTransactionTest, WindowUpdateSent) {
             trans->Read(buf.get(), kTargetSize, CompletionCallback()));
   EXPECT_EQ(static_cast<int>(stream_max_recv_window_size),
             stream->stream()->recv_window_size());
-  EXPECT_THAT(base::StringPiece(buf->data(), kTargetSize), Each(Eq('x')));
+  EXPECT_THAT(SpdyStringPiece(buf->data(), kTargetSize), Each(Eq('x')));
 
   // Allow scheduled WINDOW_UPDATE frames to write.
   base::RunLoop().RunUntilIdle();

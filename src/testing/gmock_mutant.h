@@ -113,6 +113,12 @@ CallbackToFunctor(const base::Callback<Signature>& cb) {
   return CallbackToFunctorHelper<Signature>(cb);
 }
 
+template <typename Functor>
+CallbackToFunctorHelper<typename Functor::RunType> CreateFunctor(
+    Functor functor) {
+  return CallbackToFunctor(functor);
+}
+
 template <typename Functor, typename... BoundArgs>
 CallbackToFunctorHelper<base::MakeUnboundRunType<Functor, BoundArgs...>>
 CreateFunctor(Functor functor, const BoundArgs&... args) {

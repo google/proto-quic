@@ -15,7 +15,6 @@
 #include "base/metrics/histogram_macros.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_number_conversions.h"
-#include "base/strings/string_piece.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -24,6 +23,7 @@
 #include "net/log/net_log_capture_mode.h"
 #include "net/log/net_log_event_type.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/spdy_buffer_producer.h"
 #include "net/spdy/spdy_http_utils.h"
 #include "net/spdy/spdy_session.h"
@@ -47,13 +47,13 @@ StatusHeader ParseStatusHeaderImpl(const SpdyHeaderBlock& response_headers,
     return STATUS_HEADER_NOT_INCLUDED;
 
   // Save status in |*status| even if some text follows the status code.
-  base::StringPiece status_string = it->second;
-  base::StringPiece::size_type end = status_string.find(' ');
+  SpdyStringPiece status_string = it->second;
+  SpdyStringPiece::size_type end = status_string.find(' ');
   if (!StringToInt(status_string.substr(0, end), status))
     return STATUS_HEADER_DOES_NOT_START_WITH_NUMBER;
 
-  return end == base::StringPiece::npos ? STATUS_HEADER_IS_NUMBER
-                                        : STATUS_HEADER_HAS_STATUS_TEXT;
+  return end == SpdyStringPiece::npos ? STATUS_HEADER_IS_NUMBER
+                                      : STATUS_HEADER_HAS_STATUS_TEXT;
 }
 
 StatusHeader ParseStatusHeader(const SpdyHeaderBlock& response_headers,
@@ -88,7 +88,7 @@ std::unique_ptr<base::Value> NetLogSpdyStreamWindowUpdateCallback(
   return std::move(dict);
 }
 
-bool ContainsUppercaseAscii(base::StringPiece str) {
+bool ContainsUppercaseAscii(SpdyStringPiece str) {
   return std::any_of(str.begin(), str.end(), base::IsAsciiUpper<char>);
 }
 

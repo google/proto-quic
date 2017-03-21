@@ -905,6 +905,8 @@ bool GlobalHistogramAllocator::WriteToPersistentLocation() {
 }
 
 void GlobalHistogramAllocator::DeletePersistentLocation() {
+  memory_allocator()->SetMemoryState(PersistentMemoryAllocator::MEMORY_DELETED);
+
 #if defined(OS_NACL)
   NOTREACHED();
 #else

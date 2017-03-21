@@ -642,21 +642,23 @@ class InstrumentationTestInstance(test_instance.TestInstance):
 
   def _initializeFlagAttributes(self, args):
     self._flags = ['--enable-test-intents']
-    # TODO(jbudorick): Transition "--device-flags" to "--device-flags-file"
-    if hasattr(args, 'device_flags') and args.device_flags:
-      with open(args.device_flags) as device_flags_file:
-        stripped_lines = (l.strip() for l in device_flags_file)
-        self._flags.extend([flag for flag in stripped_lines if flag])
-    if hasattr(args, 'device_flags_file') and args.device_flags_file:
+    if args.command_line_flags:
+      self._flags.extend(args.command_line_flags)
+    if args.device_flags_file:
       with open(args.device_flags_file) as device_flags_file:
         stripped_lines = (l.strip() for l in device_flags_file)
-        self._flags.extend([flag for flag in stripped_lines if flag])
-    if (hasattr(args, 'strict_mode') and
-        args.strict_mode and
-        args.strict_mode != 'off'):
+        self._flags.extend(flag for flag in stripped_lines if flag)
+    if args.strict_mode and args.strict_mode != 'off':
       self._flags.append('--strict-mode=' + args.strict_mode)
-    if hasattr(args, 'regenerate_goldens') and args.regenerate_goldens:
+    if args.regenerate_goldens:
       self._flags.append('--regenerate-goldens')
+
+    if args.test_arguments:
+      # --test-arguments is deprecated for gtests and is in the process of
+      # being removed.
+      raise Exception(
+          '--test-arguments is not supported for instrumentation '
+          'tests. Pass command-line flags directly instead.')
 
   def _initializeDriverAttributes(self):
     self._driver_apk = os.path.join(

@@ -42,8 +42,8 @@ def main():
 
   def set_java_asserts_and_restart(device):
     if device.SetJavaAsserts(args.set_asserts):
-      device.RunShellCommand('stop')
-      device.RunShellCommand('start')
+      device.RunShellCommand(['stop'], check_return=True)
+      device.RunShellCommand(['start'], check_return=True)
 
   devices.pMap(set_java_asserts_and_restart)
   return 0

@@ -6,8 +6,6 @@
 
 #include "net/spdy/spdy_bug_tracker.h"
 
-using base::StringPiece;
-
 namespace net {
 
 int32_t FLAGS_gfe_spdy_indexing_set_bound = 50;
@@ -134,7 +132,8 @@ void HeaderIndexing::CreateInitIndexingHeaders() {
       HeaderSet(initial_fields, initial_fields + arraysize(initial_fields));
 }
 
-bool HeaderIndexing::ShouldIndex(StringPiece header, StringPiece /* value */) {
+bool HeaderIndexing::ShouldIndex(SpdyStringPiece header,
+                                 SpdyStringPiece /* value */) {
   total_header_count_++;
   if (header.empty()) {
     return false;

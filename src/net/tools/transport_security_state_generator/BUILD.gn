@@ -1,0 +1,36 @@
+# Copyright 2017 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(current_toolchain == host_toolchain)
+
+executable("transport_security_state_generator") {
+  sources = [
+    "bit_writer.cc",
+    "bit_writer.h",
+    "cert_util.cc",
+    "cert_util.h",
+    "huffman/huffman_builder.cc",
+    "huffman/huffman_builder.h",
+    "pinset.cc",
+    "pinset.h",
+    "pinsets.cc",
+    "pinsets.h",
+    "preloaded_state_generator.cc",
+    "preloaded_state_generator.h",
+    "spki_hash.cc",
+    "spki_hash.h",
+    "transport_security_state_entry.cc",
+    "transport_security_state_entry.h",
+    "transport_security_state_generator.cc",
+    "trie/trie_bit_buffer.cc",
+    "trie/trie_bit_buffer.h",
+    "trie/trie_writer.cc",
+    "trie/trie_writer.h",
+  ]
+  deps = [
+    "//base",
+    "//crypto",
+    "//third_party/boringssl",
+  ]
+}

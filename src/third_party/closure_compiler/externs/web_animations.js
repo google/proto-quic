@@ -187,13 +187,6 @@ Animation.prototype.reverse = function() {};
 
 Animation.prototype.cancel = function() {};
 
-/**
- * @param {boolean=} opt_useCapture
- * @override
- */
-Animation.prototype.addEventListener = function(
-    type, listener, opt_useCapture) {};
-
 /** @type {EventHandler} */
 Animation.prototype.onfinish;
 

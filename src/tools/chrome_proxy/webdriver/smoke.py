@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import common
+import time
 from common import TestDriver
 from common import IntegrationTest
 from common import NotAndroid
@@ -33,6 +34,21 @@ class Smoke(IntegrationTest):
       self.assertEqual(2, len(responses))
       for response in responses:
         self.assertHasChromeProxyViaHeader(response)
+
+      # Verify that histogram DataReductionProxy.Quic.ProxyStatus has at least 1
+      # sample. This sample must be in bucket 0 (QUIC_PROXY_STATUS_AVAILABLE).
+      proxy_status = t.GetHistogram('DataReductionProxy.Quic.ProxyStatus')
+      self.assertLessEqual(1, proxy_status['count'])
+      self.assertEqual(0, proxy_status['sum'])
+
+      # Navigate to one more page to ensure that established QUIC connection
+      # is used for the next request. Give 3 seconds extra headroom for the QUIC
+      # connection to be established.
+      time.sleep(3)
+      t.LoadURL('http://check.googlezip.net/test.html')
+      proxy_usage = t.GetHistogram('Net.QuicAlternativeProxy.Usage')
+      # Bucket ALTERNATIVE_PROXY_USAGE_NO_RACE should have at least onesample.
+      self.assertLessEqual(1, proxy_usage['buckets'][0]['count'])
   
   # Ensure Chrome uses DataSaver in normal mode.
   def testCheckPageWithNormalMode(self):
@@ -57,6 +73,25 @@ class Smoke(IntegrationTest):
       self.assertEqual(1, attempted['count'])
       succeeded = t.GetHistogram('DataReductionProxy.Pingback.Succeeded')
       self.assertEqual(1, succeeded['count'])
+
+  # Ensure client config is fetched at the start of the Chrome session, and the
+  # session ID is correctly set in the chrome-proxy request header.
+  def testClientConfig(self):
+    with TestDriver() as t:
+      t.AddChromeArg('--enable-spdy-proxy-auth')
+      t.SleepUntilHistogramHasEntry(
+        'DataReductionProxy.ConfigService.FetchResponseCode')
+      t.LoadURL('http://check.googlezip.net/test.html')
+      responses = t.GetHTTPResponses()
+      self.assertEqual(2, len(responses))
+      for response in responses:
+        chrome_proxy_header = response.request_headers['chrome-proxy']
+        self.assertIn('s=', chrome_proxy_header)
+        self.assertNotIn('ps=', chrome_proxy_header)
+        self.assertNotIn('sid=', chrome_proxy_header)
+        # Verify that the proxy server honored the session ID.
+        self.assertHasChromeProxyViaHeader(response)
+        self.assertEqual(200, response.status)
 
 if __name__ == '__main__':
   IntegrationTest.RunAllTests()

@@ -613,7 +613,7 @@ class LIBPROTOBUF_EXPORT CodedInputStream {
 
   static const int kDefaultTotalBytesWarningThreshold = 32 << 20;  // 32MB
 
-  static int default_recursion_limit_;  // 100 by default.
+  static const int default_recursion_limit_;  // 100 by default.
 };
 
 // Class which encodes and writes binary data which is composed of varint-

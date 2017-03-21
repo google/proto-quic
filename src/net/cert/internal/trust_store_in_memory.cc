@@ -27,4 +27,12 @@ void TrustStoreInMemory::FindTrustAnchorsForCert(
     matches->push_back(it->second);
 }
 
+bool TrustStoreInMemory::Contains(const TrustAnchor* anchor) const {
+  for (const auto& it : anchors_) {
+    if (anchor == it.second.get())
+      return true;
+  }
+  return false;
+}
+
 }  // namespace net

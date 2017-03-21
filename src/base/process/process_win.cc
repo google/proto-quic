@@ -139,6 +139,10 @@ bool Process::Terminate(int exit_code, bool wait) const {
   } else if (!result) {
     DPLOG(ERROR) << "Unable to terminate process";
   }
+  if (result) {
+    base::debug::GlobalActivityTracker::RecordProcessExitIfEnabled(Pid(),
+                                                                   exit_code);
+  }
   return result;
 }
 
@@ -162,6 +166,9 @@ bool Process::WaitForExitWithTimeout(TimeDelta timeout, int* exit_code) const {
 
   if (exit_code)
     *exit_code = temp_code;
+
+  base::debug::GlobalActivityTracker::RecordProcessExitIfEnabled(
+      Pid(), static_cast<int>(temp_code));
   return true;
 }
 

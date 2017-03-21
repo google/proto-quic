@@ -60,6 +60,7 @@
 // - Better freelist masking function to guarantee fault on 32-bit.
 
 #include <limits.h>
+#include <string.h>
 
 #include "base/allocator/partition_allocator/page_allocator.h"
 #include "base/allocator/partition_allocator/spin_lock.h"

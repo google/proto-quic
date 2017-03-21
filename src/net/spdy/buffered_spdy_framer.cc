@@ -194,7 +194,7 @@ void BufferedSpdyFramer::OnPushPromise(SpdyStreamId stream_id,
 
 void BufferedSpdyFramer::OnAltSvc(
     SpdyStreamId stream_id,
-    base::StringPiece origin,
+    SpdyStringPiece origin,
     const SpdyAltSvcWireFormat::AlternativeServiceVector& altsvc_vector) {
   visitor_->OnAltSvc(stream_id, origin, altsvc_vector);
 }
@@ -284,8 +284,7 @@ std::unique_ptr<SpdySerializedFrame> BufferedSpdyFramer::CreateDataFrame(
     const char* data,
     uint32_t len,
     SpdyDataFlags flags) {
-  SpdyDataIR data_ir(stream_id,
-                     base::StringPiece(data, len));
+  SpdyDataIR data_ir(stream_id, SpdyStringPiece(data, len));
   data_ir.set_fin((flags & DATA_FLAG_FIN) != 0);
   return base::MakeUnique<SpdySerializedFrame>(
       spdy_framer_.SerializeData(data_ir));

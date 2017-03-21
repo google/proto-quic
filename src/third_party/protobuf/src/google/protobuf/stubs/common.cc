@@ -116,7 +116,8 @@ inline void DefaultLogHandler(LogLevel level, const char* filename, int line,
   if (level < GOOGLE_PROTOBUF_MIN_LOG_LEVEL) {
     return;
   }
-  static const char* level_names[] = {"INFO", "WARNING", "ERROR", "FATAL"};
+  static const char* const level_names[] = {"INFO", "WARNING", "ERROR",
+                                            "FATAL"};
 
   static const int android_log_levels[] = {
       ANDROID_LOG_INFO,   // LOG(INFO),
@@ -148,7 +149,8 @@ inline void DefaultLogHandler(LogLevel level, const char* filename, int line,
 #else
 void DefaultLogHandler(LogLevel level, const char* filename, int line,
                        const string& message) {
-  static const char* level_names[] = { "INFO", "WARNING", "ERROR", "FATAL" };
+  static const char* const level_names[] = {"INFO", "WARNING", "ERROR",
+                                            "FATAL"};
 
   // We use fprintf() instead of cerr because we want this to work at static
   // initialization time.
@@ -163,22 +165,22 @@ void NullLogHandler(LogLevel /* level */, const char* /* filename */,
   // Nothing.
 }
 
-static LogHandler* log_handler_ = &DefaultLogHandler;
-static int log_silencer_count_ = 0;
+extern LogHandler* cr_log_handler_;
+extern int cr_log_silencer_count_;
 
-static Mutex* log_silencer_count_mutex_ = NULL;
-GOOGLE_PROTOBUF_DECLARE_ONCE(log_silencer_count_init_);
+extern Mutex* cr_log_silencer_count_mutex_;
+extern ProtobufOnceType cr_log_silencer_count_init_;
 
 void DeleteLogSilencerCount() {
-  delete log_silencer_count_mutex_;
-  log_silencer_count_mutex_ = NULL;
+  delete cr_log_silencer_count_mutex_;
+  cr_log_silencer_count_mutex_ = NULL;
 }
 void InitLogSilencerCount() {
-  log_silencer_count_mutex_ = new Mutex;
+  cr_log_silencer_count_mutex_ = new Mutex;
   OnShutdown(&DeleteLogSilencerCount);
 }
 void InitLogSilencerCountOnce() {
-  GoogleOnceInit(&log_silencer_count_init_, &InitLogSilencerCount);
+  GoogleOnceInit(&cr_log_silencer_count_init_, &InitLogSilencerCount);
 }
 
 LogMessage& LogMessage::operator<<(const string& value) {
@@ -246,12 +248,13 @@ void LogMessage::Finish() {
 
   if (level_ != LOGLEVEL_FATAL) {
     InitLogSilencerCountOnce();
-    MutexLock lock(log_silencer_count_mutex_);
-    suppress = log_silencer_count_ > 0;
+    MutexLock lock(cr_log_silencer_count_mutex_);
+    suppress = cr_log_silencer_count_ > 0;
   }
 
   if (!suppress) {
-    log_handler_(level_, filename_, line_, message_);
+    (cr_log_handler_ ? cr_log_handler_ : DefaultLogHandler)(level_, filename_,
+                                                            line_, message_);
   }
 
   if (level_ == LOGLEVEL_FATAL) {
@@ -270,28 +273,29 @@ void LogFinisher::operator=(LogMessage& other) {
 }  // namespace internal
 
 LogHandler* SetLogHandler(LogHandler* new_func) {
-  LogHandler* old = internal::log_handler_;
+  LogHandler* old = internal::cr_log_handler_ ? internal::cr_log_handler_
+                                              : internal::DefaultLogHandler;
   if (old == &internal::NullLogHandler) {
     old = NULL;
   }
   if (new_func == NULL) {
-    internal::log_handler_ = &internal::NullLogHandler;
+    internal::cr_log_handler_ = &internal::NullLogHandler;
   } else {
-    internal::log_handler_ = new_func;
+    internal::cr_log_handler_ = new_func;
   }
   return old;
 }
 
 LogSilencer::LogSilencer() {
   internal::InitLogSilencerCountOnce();
-  MutexLock lock(internal::log_silencer_count_mutex_);
-  ++internal::log_silencer_count_;
+  MutexLock lock(internal::cr_log_silencer_count_mutex_);
+  ++internal::cr_log_silencer_count_;
 };
 
 LogSilencer::~LogSilencer() {
   internal::InitLogSilencerCountOnce();
-  MutexLock lock(internal::log_silencer_count_mutex_);
-  --internal::log_silencer_count_;
+  MutexLock lock(internal::cr_log_silencer_count_mutex_);
+  --internal::cr_log_silencer_count_;
 };
 
 // ===================================================================
@@ -407,23 +411,23 @@ uint32 ghtonl(uint32 x) {
 namespace internal {
 
 typedef void OnShutdownFunc();
-vector<void (*)()>* shutdown_functions = NULL;
-Mutex* shutdown_functions_mutex = NULL;
-GOOGLE_PROTOBUF_DECLARE_ONCE(shutdown_functions_init);
+extern vector<void (*)()>* cr_shutdown_functions;
+extern Mutex* cr_shutdown_functions_mutex;
+extern ProtobufOnceType cr_shutdown_functions_init;
 
 void InitShutdownFunctions() {
-  shutdown_functions = new vector<void (*)()>;
-  shutdown_functions_mutex = new Mutex;
+  cr_shutdown_functions = new vector<void (*)()>;
+  cr_shutdown_functions_mutex = new Mutex;
 }
 
 inline void InitShutdownFunctionsOnce() {
-  GoogleOnceInit(&shutdown_functions_init, &InitShutdownFunctions);
+  GoogleOnceInit(&cr_shutdown_functions_init, &InitShutdownFunctions);
 }
 
 void OnShutdown(void (*func)()) {
   InitShutdownFunctionsOnce();
-  MutexLock lock(shutdown_functions_mutex);
-  shutdown_functions->push_back(func);
+  MutexLock lock(cr_shutdown_functions_mutex);
+  cr_shutdown_functions->push_back(func);
 }
 
 }  // namespace internal
@@ -431,20 +435,20 @@ void OnShutdown(void (*func)()) {
 void ShutdownProtobufLibrary() {
   internal::InitShutdownFunctionsOnce();
 
-  // We don't need to lock shutdown_functions_mutex because it's up to the
+  // We don't need to lock cr_shutdown_functions_mutex because it's up to the
   // caller to make sure that no one is using the library before this is
   // called.
 
   // Make it safe to call this multiple times.
-  if (internal::shutdown_functions == NULL) return;
+  if (internal::cr_shutdown_functions == NULL) return;
 
-  for (int i = 0; i < internal::shutdown_functions->size(); i++) {
-    internal::shutdown_functions->at(i)();
+  for (int i = 0; i < internal::cr_shutdown_functions->size(); i++) {
+    internal::cr_shutdown_functions->at(i)();
   }
-  delete internal::shutdown_functions;
-  internal::shutdown_functions = NULL;
-  delete internal::shutdown_functions_mutex;
-  internal::shutdown_functions_mutex = NULL;
+  delete internal::cr_shutdown_functions;
+  internal::cr_shutdown_functions = NULL;
+  delete internal::cr_shutdown_functions_mutex;
+  internal::cr_shutdown_functions_mutex = NULL;
 }
 
 #if PROTOBUF_USE_EXCEPTIONS

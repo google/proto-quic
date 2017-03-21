@@ -77,14 +77,14 @@ LIBPROTOBUF_EXPORT double NaN();
 
 // Default empty string object. Don't use the pointer directly. Instead, call
 // GetEmptyString() to get the reference.
-LIBPROTOBUF_EXPORT extern const ::std::string* empty_string_;
-LIBPROTOBUF_EXPORT extern ProtobufOnceType empty_string_once_init_;
+LIBPROTOBUF_EXPORT extern const ::std::string* cr_empty_string_;
+LIBPROTOBUF_EXPORT extern ProtobufOnceType cr_empty_string_once_init_;
 LIBPROTOBUF_EXPORT void InitEmptyString();
 
 
 LIBPROTOBUF_EXPORT inline const ::std::string& GetEmptyStringAlreadyInited() {
-  assert(empty_string_ != NULL);
-  return *empty_string_;
+  assert(cr_empty_string_ != NULL);
+  return *cr_empty_string_;
 }
 
 LIBPROTOBUF_EXPORT const ::std::string& GetEmptyString();

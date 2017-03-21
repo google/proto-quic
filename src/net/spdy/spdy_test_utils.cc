@@ -123,8 +123,9 @@ HashValue GetTestHashValue(uint8_t label) {
 string GetTestPin(uint8_t label) {
   HashValue hash_value = GetTestHashValue(label);
   string base64;
-  base::Base64Encode(base::StringPiece(
-      reinterpret_cast<char*>(hash_value.data()), hash_value.size()), &base64);
+  base::Base64Encode(SpdyStringPiece(reinterpret_cast<char*>(hash_value.data()),
+                                     hash_value.size()),
+                     &base64);
 
   return string("pin-sha256=\"") + base64 + "\"";
 }
@@ -148,8 +149,7 @@ void TestHeadersHandler::OnHeaderBlockStart() {
   block_.clear();
 }
 
-void TestHeadersHandler::OnHeader(base::StringPiece name,
-                                  base::StringPiece value) {
+void TestHeadersHandler::OnHeader(SpdyStringPiece name, SpdyStringPiece value) {
   block_.AppendValueOrAddHeader(name, value);
 }
 

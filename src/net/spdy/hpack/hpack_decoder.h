@@ -14,11 +14,11 @@
 #include <vector>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
 #include "net/spdy/hpack/hpack_decoder_interface.h"
 #include "net/spdy/hpack/hpack_header_table.h"
 #include "net/spdy/hpack/hpack_input_stream.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/spdy_headers_handler_interface.h"
 #include "net/spdy/spdy_protocol.h"
 
@@ -94,8 +94,7 @@ class NET_EXPORT_PRIVATE HpackDecoder : public HpackDecoderInterface {
   // MUST be treated as malformed, as per sections 8.1.2.3. of the HTTP2
   // specification (RFC 7540).
   //
-  bool HandleHeaderRepresentation(base::StringPiece name,
-                                  base::StringPiece value);
+  bool HandleHeaderRepresentation(SpdyStringPiece name, SpdyStringPiece value);
 
   // Handlers for decoding HPACK opcodes and header representations
   // (or parts thereof). These methods return true on success and
@@ -107,10 +106,10 @@ class NET_EXPORT_PRIVATE HpackDecoder : public HpackDecoderInterface {
   bool DecodeNextLiteralHeader(HpackInputStream* input_stream,
                                bool should_index);
   bool DecodeNextName(HpackInputStream* input_stream,
-                      base::StringPiece* next_name);
+                      SpdyStringPiece* next_name);
   bool DecodeNextStringLiteral(HpackInputStream* input_stream,
                                bool is_header_key,  // As distinct from a value.
-                               base::StringPiece* output);
+                               SpdyStringPiece* output);
 
   HpackHeaderTable header_table_;
 

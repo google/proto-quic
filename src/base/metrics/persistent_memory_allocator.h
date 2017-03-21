@@ -96,6 +96,29 @@ class BASE_EXPORT PersistentMemoryAllocator {
  public:
   typedef uint32_t Reference;
 
+  // These states are used to indicate the overall condition of the memory
+  // segment irrespective of what is stored within it. Because the data is
+  // often persistent and thus needs to be readable by different versions of
+  // a program, these values are fixed and can never change.
+  enum MemoryState : uint8_t {
+    // Persistent memory starts all zeros and so shows "uninitialized".
+    MEMORY_UNINITIALIZED = 0,
+
+    // The header has been written and the memory is ready for use.
+    MEMORY_INITIALIZED = 1,
+
+    // The data should be considered deleted. This would be set when the
+    // allocator is being cleaned up. If file-backed, the file is likely
+    // to be deleted but since deletion can fail for a variety of reasons,
+    // having this extra status means a future reader can realize what
+    // should have happened.
+    MEMORY_DELETED = 2,
+
+    // Outside code can create states starting with this number; these too
+    // must also never change between code versions.
+    MEMORY_USER_DEFINED = 100,
+  };
+
   // Iterator for going through all iterable memory records in an allocator.
   // Like the allocator itself, iterators are lock-free and thread-secure.
   // That means that multiple threads can share an iterator and the same
@@ -280,7 +303,11 @@ class BASE_EXPORT PersistentMemoryAllocator {
   const char* Name() const;
 
   // Is this segment open only for read?
-  bool IsReadonly() { return readonly_; }
+  bool IsReadonly() const { return readonly_; }
+
+  // Manage the saved state of the memory.
+  void SetMemoryState(uint8_t memory_state);
+  uint8_t GetMemoryState() const;
 
   // Create internal histograms for tracking memory use and allocation sizes
   // for allocator of |name| (which can simply be the result of Name()). This
@@ -292,6 +319,17 @@ class BASE_EXPORT PersistentMemoryAllocator {
   //    UMA.PersistentAllocator.name.Errors
   //    UMA.PersistentAllocator.name.UsedPct
   void CreateTrackingHistograms(base::StringPiece name);
+
+  // Flushes the persistent memory to any backing store. This typically does
+  // nothing but is used by the FilePersistentMemoryAllocator to inform the
+  // OS that all the data should be sent to the disk immediately. This is
+  // useful in the rare case where something has just been stored that needs
+  // to survive a hard shutdown of the machine like from a power failure.
+  // The |sync| parameter indicates if this call should block until the flush
+  // is complete but is only advisory and may or may not have an effect
+  // depending on the capabilities of the OS. Synchronous flushes are allowed
+  // only from theads that are allowed to do I/O.
+  void Flush(bool sync);
 
   // Direct access to underlying memory segment. If the segment is shared
   // across threads or processes, reading data through these values does
@@ -580,6 +618,9 @@ class BASE_EXPORT PersistentMemoryAllocator {
                             uint64_t id, base::StringPiece name,
                             bool readonly);
 
+  // Implementation of Flush that accepts how much to flush.
+  virtual void FlushPartial(size_t length, bool sync);
+
   volatile char* const mem_base_;  // Memory base. (char so sizeof guaranteed 1)
   const MemoryType mem_type_;      // Type of memory allocation.
   const uint32_t mem_size_;        // Size of entire memory segment.
@@ -714,6 +755,10 @@ class BASE_EXPORT FilePersistentMemoryAllocator
   // won't cause the program to abort. The existing IsCorrupt() call will handle
   // the rest.
   static bool IsFileAcceptable(const MemoryMappedFile& file, bool read_only);
+
+ protected:
+  // PersistentMemoryAllocator:
+  void FlushPartial(size_t length, bool sync) override;
 
  private:
   std::unique_ptr<MemoryMappedFile> mapped_file_;

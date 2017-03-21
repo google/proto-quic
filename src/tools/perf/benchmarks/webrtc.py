@@ -98,7 +98,7 @@ class WebrtcRendering(perf_benchmark.PerfBenchmark):
 
 # WebrtcRenderingTBMv2 must be a PerfBenchmark, and not a _Webrtc, because it is
 # a timeline-based metric.
-print dir(benchmark)
+@benchmark.Disabled('android')  # crbug.com/702201
 @benchmark.Owner(emails=['ehmaldonado@chromium.org',
                          'phoglund@chromium.org',
                          'qiangchen@chromium.org'])

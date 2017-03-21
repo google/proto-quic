@@ -12,7 +12,19 @@ if (is_android) {
                   [ rebase_path("//clank", root_build_dir) ],
                   "string") == "True"
 
-  if (has_chrome_android_internal) {
+  # We are using a separate declare_args block for only this argument so that
+  # we can decide if we have to pull in definitions from the internal config
+  # early.
+  declare_args() {
+    # Enables using the internal Chrome for Android repository. The default
+    # value depends on whether the repository is available, and if it's not but
+    # this argument is manually set to True, the generation will fail.
+    # The main purpose of this argument is to avoid having to maintain 2
+    # repositories to support both public only and internal builds.
+    enable_chrome_android_internal = has_chrome_android_internal
+  }
+
+  if (enable_chrome_android_internal) {
     import("//clank/config.gni")
   }
 

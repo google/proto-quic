@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "base/logging.h"
-#include "base/strings/string_piece.h"
 #include "net/spdy/hpack/hpack_constants.h"
 #include "net/spdy/spdy_test_utils.h"
 #include "net/test/gtest_util.h"
@@ -19,7 +18,6 @@ namespace net {
 
 namespace test {
 
-using base::StringPiece;
 using std::string;
 using test::a2b_hex;
 
@@ -50,7 +48,7 @@ class HpackInputStreamPeer {
 
 // Utility function to decode an assumed-valid uint32_t with an N-bit
 // prefix.
-uint32_t DecodeValidUint32(uint8_t N, StringPiece str) {
+uint32_t DecodeValidUint32(uint8_t N, SpdyStringPiece str) {
   EXPECT_GT(N, 0);
   EXPECT_LE(N, 8);
   HpackInputStream input_stream(str);
@@ -65,7 +63,7 @@ uint32_t DecodeValidUint32(uint8_t N, StringPiece str) {
 
 // Utility function to decode an assumed-invalid uint32_t with an N-bit
 // prefix.
-void ExpectDecodeUint32Invalid(uint8_t N, StringPiece str) {
+void ExpectDecodeUint32Invalid(uint8_t N, SpdyStringPiece str) {
   EXPECT_GT(N, 0);
   EXPECT_LE(N, 8);
   HpackInputStream input_stream(str);
@@ -498,7 +496,7 @@ TEST(HpackInputStreamTest, DecodeNextIdentityString) {
   HpackInputStreamPeer input_stream_peer(&input_stream);
 
   EXPECT_TRUE(input_stream.HasMoreData());
-  StringPiece string_piece;
+  SpdyStringPiece string_piece;
   EXPECT_TRUE(input_stream.DecodeNextIdentityString(&string_piece));
   EXPECT_EQ("string literal", string_piece);
   EXPECT_FALSE(input_stream.HasMoreData());
@@ -513,7 +511,7 @@ TEST(HpackInputStreamTest, DecodeNextIdentityStringNotEnoughInput) {
   HpackInputStream input_stream("\x0fstring literal");
 
   EXPECT_TRUE(input_stream.HasMoreData());
-  StringPiece string_piece;
+  SpdyStringPiece string_piece;
   EXPECT_FALSE(input_stream.DecodeNextIdentityString(&string_piece));
   EXPECT_TRUE(input_stream.NeedMoreData());
 }
@@ -748,7 +746,7 @@ TEST(HpackInputStreamTest, IncompleteHeaderDecodeNextUint32) {
 TEST(HpackInputStreamTest, IncompleteHeaderDecodeNextIdentityString) {
   HpackInputStream input_stream1("\x0estring litera");
   HpackInputStreamPeer input_stream1_peer(&input_stream1);
-  StringPiece string_piece;
+  SpdyStringPiece string_piece;
   EXPECT_FALSE(input_stream1.DecodeNextIdentityString(&string_piece));
   // Only parsed first byte.
   EXPECT_EQ(1u, input_stream1_peer.ParsedBytesCurrent());

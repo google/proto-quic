@@ -14,7 +14,6 @@
 #include <memory>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
 #include "net/http2/hpack/decoder/hpack_decoder_listener.h"
 #include "net/http2/hpack/decoder/http2_hpack_decoder.h"
@@ -22,6 +21,7 @@
 #include "net/http2/hpack/http2_hpack_constants.h"
 #include "net/spdy/hpack/hpack_decoder_interface.h"
 #include "net/spdy/hpack/hpack_header_table.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/spdy_header_block.h"
 #include "net/spdy/spdy_headers_handler_interface.h"
 
@@ -76,7 +76,7 @@ class NET_EXPORT_PRIVATE HpackDecoder3 : public HpackDecoderInterface {
                   const HpackString& name,
                   const HpackString& value) override;
     void OnHeaderListEnd() override;
-    void OnHeaderErrorDetected(base::StringPiece error_message) override;
+    void OnHeaderErrorDetected(SpdyStringPiece error_message) override;
 
     // Override the HpackDecoderTablesDebugListener methods:
     int64_t OnEntryInserted(const HpackStringPair& entry,

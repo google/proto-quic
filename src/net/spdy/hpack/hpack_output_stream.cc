@@ -11,7 +11,6 @@
 
 namespace net {
 
-using base::StringPiece;
 using std::string;
 
 HpackOutputStream::HpackOutputStream() : bit_offset_(0) {}
@@ -44,7 +43,7 @@ void HpackOutputStream::AppendPrefix(HpackPrefix prefix) {
   AppendBits(prefix.bits, prefix.bit_size);
 }
 
-void HpackOutputStream::AppendBytes(StringPiece buffer) {
+void HpackOutputStream::AppendBytes(SpdyStringPiece buffer) {
   DCHECK_EQ(bit_offset_, 0u);
   buffer_.append(buffer.data(), buffer.size());
 }

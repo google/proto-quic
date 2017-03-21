@@ -46,6 +46,12 @@ namespace google {
 namespace protobuf {
 namespace internal {
 
+// Registry stuff.
+typedef hash_map<pair<const MessageLite*, int>, ExtensionInfo>
+    ExtensionRegistry;
+extern ExtensionRegistry* cr_registry_;
+extern ProtobufOnceType cr_registry_init_;
+
 namespace {
 
 inline WireFormatLite::FieldType real_type(FieldType type) {
@@ -75,19 +81,13 @@ inline bool is_packable(WireFormatLite::WireType type) {
   return false;
 }
 
-// Registry stuff.
-typedef hash_map<pair<const MessageLite*, int>,
-                 ExtensionInfo> ExtensionRegistry;
-ExtensionRegistry* registry_ = NULL;
-GOOGLE_PROTOBUF_DECLARE_ONCE(registry_init_);
-
 void DeleteRegistry() {
-  delete registry_;
-  registry_ = NULL;
+  delete cr_registry_;
+  cr_registry_ = NULL;
 }
 
 void InitRegistry() {
-  registry_ = new ExtensionRegistry;
+  cr_registry_ = new ExtensionRegistry;
   OnShutdown(&DeleteRegistry);
 }
 
@@ -95,9 +95,9 @@ void InitRegistry() {
 // safety.
 void Register(const MessageLite* containing_type,
               int number, ExtensionInfo info) {
-  ::google::protobuf::GoogleOnceInit(&registry_init_, &InitRegistry);
+  ::google::protobuf::GoogleOnceInit(&cr_registry_init_, &InitRegistry);
 
-  if (!InsertIfNotPresent(registry_, std::make_pair(containing_type, number),
+  if (!InsertIfNotPresent(cr_registry_, std::make_pair(containing_type, number),
                           info)) {
     GOOGLE_LOG(FATAL) << "Multiple extension registrations for type \""
                << containing_type->GetTypeName()
@@ -107,9 +107,10 @@ void Register(const MessageLite* containing_type,
 
 const ExtensionInfo* FindRegisteredExtension(
     const MessageLite* containing_type, int number) {
-  return (registry_ == NULL)
+  return (cr_registry_ == NULL)
              ? NULL
-             : FindOrNull(*registry_, std::make_pair(containing_type, number));
+             : FindOrNull(*cr_registry_,
+                          std::make_pair(containing_type, number));
 }
 
 }  // namespace
@@ -1748,67 +1749,44 @@ void ExtensionSet::Extension::Free() {
 // ==================================================================
 // Default repeated field instances for iterator-compatible accessors
 
-GOOGLE_PROTOBUF_DECLARE_ONCE(repeated_primitive_generic_type_traits_once_init_);
-GOOGLE_PROTOBUF_DECLARE_ONCE(repeated_string_type_traits_once_init_);
-GOOGLE_PROTOBUF_DECLARE_ONCE(repeated_message_generic_type_traits_once_init_);
-
 void RepeatedPrimitiveGenericTypeTraits::InitializeDefaultRepeatedFields() {
-  default_repeated_field_int32_ = new RepeatedField<int32>;
-  default_repeated_field_int64_ = new RepeatedField<int64>;
-  default_repeated_field_uint32_ = new RepeatedField<uint32>;
-  default_repeated_field_uint64_ = new RepeatedField<uint64>;
-  default_repeated_field_double_ = new RepeatedField<double>;
-  default_repeated_field_float_ = new RepeatedField<float>;
-  default_repeated_field_bool_ = new RepeatedField<bool>;
+  cr_default_repeated_field_int32_ = new RepeatedField<int32>;
+  cr_default_repeated_field_int64_ = new RepeatedField<int64>;
+  cr_default_repeated_field_uint32_ = new RepeatedField<uint32>;
+  cr_default_repeated_field_uint64_ = new RepeatedField<uint64>;
+  cr_default_repeated_field_double_ = new RepeatedField<double>;
+  cr_default_repeated_field_float_ = new RepeatedField<float>;
+  cr_default_repeated_field_bool_ = new RepeatedField<bool>;
   OnShutdown(&DestroyDefaultRepeatedFields);
 }
 
 void RepeatedPrimitiveGenericTypeTraits::DestroyDefaultRepeatedFields() {
-  delete default_repeated_field_int32_;
-  delete default_repeated_field_int64_;
-  delete default_repeated_field_uint32_;
-  delete default_repeated_field_uint64_;
-  delete default_repeated_field_double_;
-  delete default_repeated_field_float_;
-  delete default_repeated_field_bool_;
+  delete cr_default_repeated_field_int32_;
+  delete cr_default_repeated_field_int64_;
+  delete cr_default_repeated_field_uint32_;
+  delete cr_default_repeated_field_uint64_;
+  delete cr_default_repeated_field_double_;
+  delete cr_default_repeated_field_float_;
+  delete cr_default_repeated_field_bool_;
 }
 
 void RepeatedStringTypeTraits::InitializeDefaultRepeatedFields() {
-  default_repeated_field_ = new RepeatedFieldType;
+  cr_default_repeated_field_ = new RepeatedFieldType;
   OnShutdown(&DestroyDefaultRepeatedFields);
 }
 
 void RepeatedStringTypeTraits::DestroyDefaultRepeatedFields() {
-  delete default_repeated_field_;
+  delete cr_default_repeated_field_;
 }
 
 void RepeatedMessageGenericTypeTraits::InitializeDefaultRepeatedFields() {
-  default_repeated_field_ = new RepeatedFieldType;
+  cr_default_repeated_field_ = new RepeatedFieldType;
   OnShutdown(&DestroyDefaultRepeatedFields);
 }
 
 void RepeatedMessageGenericTypeTraits::DestroyDefaultRepeatedFields() {
-  delete default_repeated_field_;
+  delete cr_default_repeated_field_;
 }
-
-const RepeatedField<int32>*
-RepeatedPrimitiveGenericTypeTraits::default_repeated_field_int32_ = NULL;
-const RepeatedField<int64>*
-RepeatedPrimitiveGenericTypeTraits::default_repeated_field_int64_ = NULL;
-const RepeatedField<uint32>*
-RepeatedPrimitiveGenericTypeTraits::default_repeated_field_uint32_ = NULL;
-const RepeatedField<uint64>*
-RepeatedPrimitiveGenericTypeTraits::default_repeated_field_uint64_ = NULL;
-const RepeatedField<double>*
-RepeatedPrimitiveGenericTypeTraits::default_repeated_field_double_ = NULL;
-const RepeatedField<float>*
-RepeatedPrimitiveGenericTypeTraits::default_repeated_field_float_ = NULL;
-const RepeatedField<bool>*
-RepeatedPrimitiveGenericTypeTraits::default_repeated_field_bool_ = NULL;
-const RepeatedStringTypeTraits::RepeatedFieldType*
-RepeatedStringTypeTraits::default_repeated_field_ = NULL;
-const RepeatedMessageGenericTypeTraits::RepeatedFieldType*
-RepeatedMessageGenericTypeTraits::default_repeated_field_ = NULL;
 
 }  // namespace internal
 }  // namespace protobuf

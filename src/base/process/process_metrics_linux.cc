@@ -311,6 +311,32 @@ int ProcessMetrics::GetOpenFdCount() const {
 
   return total_count;
 }
+
+int ProcessMetrics::GetOpenFdSoftLimit() const {
+  // Use /proc/<pid>/limits to read the open fd limit.
+  FilePath fd_path = internal::GetProcPidDir(process_).Append("limits");
+
+  std::string limits_contents;
+  if (!ReadFileToString(fd_path, &limits_contents))
+    return -1;
+
+  for (const auto& line :
+       base::SplitStringPiece(limits_contents, "\n", base::KEEP_WHITESPACE,
+                              base::SPLIT_WANT_NONEMPTY)) {
+    if (line.starts_with("Max open files")) {
+      auto tokens = base::SplitStringPiece(line, " ", base::TRIM_WHITESPACE,
+                                           base::SPLIT_WANT_NONEMPTY);
+      if (tokens.size() > 3) {
+        int limit = -1;
+        if (StringToInt(tokens[3], &limit))
+          return limit;
+        return -1;
+      }
+    }
+  }
+  return -1;
+}
+
 #endif  // defined(OS_LINUX)
 
 ProcessMetrics::ProcessMetrics(ProcessHandle process)

@@ -34,6 +34,7 @@
 #include "net/spdy/buffered_spdy_framer.h"
 #include "net/spdy/http2_priority_dependencies.h"
 #include "net/spdy/multiplexed_session.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/server_push_delegate.h"
 #include "net/spdy/spdy_alt_svc_wire_format.h"
 #include "net/spdy/spdy_buffer.h"
@@ -532,6 +533,9 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // Adds |alias| to set of aliases associated with this session.
   void AddPooledAlias(const SpdySessionKey& alias_key);
 
+  // Removes |alias| from set of aliases associated with this session.
+  void RemovePooledAlias(const SpdySessionKey& alias_key);
+
   // Returns the set of aliases associated with this session.
   const std::set<SpdySessionKey>& pooled_aliases() const {
     return pooled_aliases_;
@@ -872,7 +876,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   void OnRstStream(SpdyStreamId stream_id, SpdyErrorCode error_code) override;
   void OnGoAway(SpdyStreamId last_accepted_stream_id,
                 SpdyErrorCode error_code,
-                base::StringPiece debug_data) override;
+                SpdyStringPiece debug_data) override;
   void OnDataFrameHeader(SpdyStreamId stream_id,
                          size_t length,
                          bool fin) override;
@@ -895,7 +899,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
                  bool fin,
                  SpdyHeaderBlock headers) override;
   void OnAltSvc(SpdyStreamId stream_id,
-                base::StringPiece origin,
+                SpdyStringPiece origin,
                 const SpdyAltSvcWireFormat::AlternativeServiceVector&
                     altsvc_vector) override;
   bool OnUnknownFrame(SpdyStreamId stream_id, uint8_t frame_type) override;

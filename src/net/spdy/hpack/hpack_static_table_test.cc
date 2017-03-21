@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "net/spdy/hpack/hpack_constants.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
@@ -38,7 +39,7 @@ TEST_F(HpackStaticTableTest, Initialize) {
 
   HpackHeaderTable::NameToEntryMap static_name_index =
       table_.GetStaticNameIndex();
-  std::set<base::StringPiece> names;
+  std::set<SpdyStringPiece> names;
   for (auto* entry : static_index) {
     names.insert(entry->name());
   }

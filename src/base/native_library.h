@@ -91,16 +91,6 @@ BASE_EXPORT NativeLibrary LoadNativeLibraryWithOptions(
     const NativeLibraryOptions& options,
     NativeLibraryLoadError* error);
 
-#if defined(OS_WIN)
-// Loads a native library from disk.  Release it with UnloadNativeLibrary when
-// you're done.
-// This function retrieves the LoadLibrary function exported from kernel32.dll
-// and calls it instead of directly calling the LoadLibrary function via the
-// import table.
-BASE_EXPORT NativeLibrary LoadNativeLibraryDynamically(
-    const FilePath& library_path);
-#endif  // OS_WIN
-
 // Unloads a native library.
 BASE_EXPORT void UnloadNativeLibrary(NativeLibrary library);
 

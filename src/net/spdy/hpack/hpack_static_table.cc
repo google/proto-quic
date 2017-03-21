@@ -8,6 +8,7 @@
 #include "net/spdy/hpack/hpack_constants.h"
 #include "net/spdy/hpack/hpack_entry.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 
 namespace net {
 
@@ -23,8 +24,8 @@ void HpackStaticTable::Initialize(const HpackStaticEntry* static_entry_table,
   for (const HpackStaticEntry* it = static_entry_table;
        it != static_entry_table + static_entry_count; ++it) {
     static_entries_.push_back(
-        HpackEntry(base::StringPiece(it->name, it->name_len),
-                   base::StringPiece(it->value, it->value_len),
+        HpackEntry(SpdyStringPiece(it->name, it->name_len),
+                   SpdyStringPiece(it->value, it->value_len),
                    true,  // is_static
                    total_insertions));
     HpackEntry* entry = &static_entries_.back();

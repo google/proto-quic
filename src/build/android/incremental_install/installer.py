@@ -196,12 +196,13 @@ def Install(device, apk, split_globs=None, native_libs=None, dex_files=None,
     cmd = ('D="%s";'
            'mkdir -p $D &&'
            'echo -n >$D/install.lock 2>$D/firstrun.lock')
-    device.RunShellCommand(cmd % device_incremental_dir, check_return=True)
+    device.RunShellCommand(
+        cmd % device_incremental_dir, shell=True, check_return=True)
 
   # The firstrun.lock is released by the app itself.
   def release_installer_lock():
     device.RunShellCommand('echo > %s/install.lock' % device_incremental_dir,
-                           check_return=True)
+                           check_return=True, shell=True)
 
   # Concurrency here speeds things up quite a bit, but DeviceUtils hasn't
   # been designed for multi-threading. Enabling only because this is a

@@ -19,6 +19,7 @@
 #include "net/base/expiring_cache.h"
 #include "net/base/hash_value.h"
 #include "net/base/net_export.h"
+#include "net/http/transport_security_state_source.h"
 #include "url/gurl.h"
 
 namespace net {
@@ -26,6 +27,9 @@ namespace net {
 class HostPortPair;
 class SSLInfo;
 class X509Certificate;
+
+void NET_EXPORT_PRIVATE SetTransportSecurityStateSourceForTesting(
+    const TransportSecurityStateSource* source);
 
 // Tracks which hosts have enabled strict transport security and/or public
 // key pins.

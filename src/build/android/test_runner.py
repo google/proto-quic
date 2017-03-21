@@ -44,7 +44,7 @@ _DEVIL_STATIC_CONFIG_FILE = os.path.abspath(os.path.join(
     host_paths.DIR_SOURCE_ROOT, 'build', 'android', 'devil_config.json'))
 
 
-def AddTestLauncherArgs(parser):
+def AddTestLauncherOptions(parser):
   """Adds arguments mirroring //base/test/launcher.
 
   Args:
@@ -75,6 +75,23 @@ def AddTestLauncherArgs(parser):
       help='Total number of external shards.')
 
   return parser
+
+
+def AddCommandLineOptions(parser):
+  """Adds arguments to support passing command-line flags to the device."""
+  parser.add_argument(
+      '--device-flags-file',
+      type=os.path.realpath,
+      help='The relative filepath to a file containing '
+           'command-line flags to set on the device')
+  # TODO(jbudorick): This is deprecated. Remove once clients have switched
+  # to passing command-line flags directly.
+  parser.add_argument(
+      '-a', '--test-arguments',
+      dest='test_arguments', default='',
+      help=argparse.SUPPRESS)
+  parser.set_defaults(allow_unknown=True)
+  parser.set_defaults(command_line_flags=None)
 
 
 def AddTracingOptions(parser):
@@ -162,7 +179,7 @@ def AddCommonOptions(parser):
       dest='verbose_count', default=0, action='count',
       help='Verbose level (multiple times for more)')
 
-  AddTestLauncherArgs(parser)
+  AddTestLauncherOptions(parser)
 
 
 def ProcessCommonOptions(args):
@@ -293,10 +310,6 @@ def AddGTestOptions(parser):
       '--test-apk-incremental-install-script',
       type=os.path.realpath,
       help='Path to install script for the test apk.')
-  parser.add_argument(
-      '-a', '--test-arguments',
-      dest='test_arguments', default='',
-      help='Additional arguments to pass to the test.')
 
   filter_group = parser.add_mutually_exclusive_group()
   filter_group.add_argument(
@@ -342,17 +355,6 @@ def AddInstrumentationTestOptions(parser):
       '--delete-stale-data',
       action='store_true', dest='delete_stale_data',
       help='Delete stale test data on the device.')
-  parser.add_argument(
-      '--device-flags',
-      dest='device_flags',
-      type=os.path.realpath,
-      help='The relative filepath to a file containing '
-           'command-line flags to set on the device')
-  parser.add_argument(
-      '--device-flags-file',
-      type=os.path.realpath,
-      help='The relative filepath to a file containing '
-           'command-line flags to set on the device')
   parser.add_argument(
       '--disable-dalvik-asserts',
       dest='set_asserts', action='store_false', default=True,
@@ -851,6 +853,7 @@ def main():
   AddDeviceOptions(subp)
   AddGTestOptions(subp)
   AddTracingOptions(subp)
+  AddCommandLineOptions(subp)
 
   subp = command_parsers.add_parser(
       'instrumentation',
@@ -859,6 +862,7 @@ def main():
   AddDeviceOptions(subp)
   AddInstrumentationTestOptions(subp)
   AddTracingOptions(subp)
+  AddCommandLineOptions(subp)
 
   subp = command_parsers.add_parser(
       'junit',
@@ -894,7 +898,12 @@ def main():
   AddCommonOptions(subp)
   AddPythonTestOptions(subp)
 
-  args = parser.parse_args()
+  args, unknown_args = parser.parse_known_args()
+  if unknown_args:
+    if hasattr(args, 'allow_unknown') and args.allow_unknown:
+      args.command_line_flags = unknown_args
+    else:
+      parser.error('unrecognized arguments: %s' % ' '.join(unknown_args))
 
   try:
     return RunTestsCommand(args)

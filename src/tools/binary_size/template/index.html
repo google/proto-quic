@@ -24,6 +24,7 @@ body {
 var treemap;
 var filterChanging = false;
 var savedSettings = {};
+var NUM_SYMBOL_TYPES = 6
 
 function init() {
     if (window.metadata !== undefined && window.metadata.subtitle) {
@@ -186,7 +187,7 @@ function symbolFilterTextChanged() {
     if (filterChanging) return true;
     filterChanging = true;
     var enabled = document.getElementById('symbol_types_filter').value;
-    for (var x=0; x<=25; x++) {
+    for (var x=0; x<NUM_SYMBOL_TYPES; x++) {
         var checkBox = document.getElementById('check_' + x);
         checkBox.checked = (enabled.indexOf(checkBox.value) != -1);
     }
@@ -197,7 +198,7 @@ function updateFilterText() {
     if (filterChanging) return true;
     filterChanging = true;
     var text = '';
-    for (var x=0; x<=25; x++) {
+    for (var x=0; x<NUM_SYMBOL_TYPES; x++) {
         var checkBox = document.getElementById('check_' + x);
         if (checkBox.checked) {
             text += checkBox.value;
@@ -209,7 +210,7 @@ function updateFilterText() {
 
 function initFilterOptions() {
     updateFilterText();
-    for (var x=0; x<=25; x++) {
+    for (var x=0; x<NUM_SYMBOL_TYPES; x++) {
         var checkBox = document.getElementById('check_' + x);
         checkBox.onchange=updateFilterText;
         var swatch = document.getElementById('swatch_' + x);
@@ -234,7 +235,7 @@ function initFilterOptions() {
 }
 
 function filterSetAll(enabled) {
-    for (var x=0; x<=25; x++) {
+    for (var x=0; x<NUM_SYMBOL_TYPES; x++) {
         var checkBox = document.getElementById('check_' + x);
         checkBox.checked = enabled;
     }
@@ -423,42 +424,18 @@ function escape(str) {
 </div>
 <table id='options_container' style='visibility: hidden; border: 3px ridge grey; padding: 0px; top: 50%; left: 50%; position: fixed; z-index: 2147483646; overflow: auto; background-color: rgba(255,255,255,0.9); border-radius: 10px; box-shadow: 10px 10px 5px rgba(80,80,80,0.7);'><tr><td style='vertical-align: top'>
     <table cellspacing=0 cellborder=0 style='width:100%'>
-        <tr><th colspan=3 style='padding-bottom: .25em; text-decoration: underline;'>Symbol Types To Show</th></tr>
+        <tr><th style='padding-bottom: .25em; text-decoration: underline;'>Symbol Types To Show</th></tr>
         <tr>
-            <td style='width: 33%; white-space: nowrap; vertical-align: top;'>
-                    <span class='swatch' id='swatch_0'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_0' value='A'>Global absolute (A)
-                <br><span class='swatch' id='swatch_1'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_1' value='B'>Global uninitialized data (B)
-                <br><span class='swatch' id='swatch_2'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_2' value='b'>Local uninitialized data (b)
-                <br><span class='swatch' id='swatch_3'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_3' value='C'>Global uninitialized common (C)
-                <br><span class='swatch' id='swatch_4'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_4' value='D'>Global initialized data (D)
-                <br><span class='swatch' id='swatch_5'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_5' value='d'>Local initialized data (d)
-                <br><span class='swatch' id='swatch_6'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_6' value='G'>Global small initialized data (G)
-                <br><span class='swatch' id='swatch_7'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_7' value='g'>Local small initialized data (g)
-                <br><span class='swatch' id='swatch_8'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_8' value='i'>Indirect function (i)
-            </td>
-            <td style='width: 33%; white-space: nowrap; vertical-align: top;'>
-                    <span class='swatch' id='swatch_9'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_9' value='N'>Debugging (N)
-                <br><span class='swatch' id='swatch_10'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_10' value='p'>Stack unwind (p)
-                <br><span class='swatch' id='swatch_11'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_11' value='R'>Global read-only data (R)
-                <br><span class='swatch' id='swatch_12'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_12' value='r'>Local read-only data (r)
-                <br><span class='swatch' id='swatch_13'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_13' value='S'>Global small uninitialized data (S)
-                <br><span class='swatch' id='swatch_14'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_14' value='s'>Local small uninitialized data (s)
-                <br><span class='swatch' id='swatch_15'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_15' value='T'>Global code (T)
-                <br><span class='swatch' id='swatch_16'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_16' value='t'>Local code (t)
-                <br><span class='swatch' id='swatch_17'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_17' value='U'>Undefined (U)
-            </td>
-            <td style='width: 33%; white-space: nowrap; vertical-align: top;'>
-                    <span class='swatch' id='swatch_18'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_18' value='u'>Unique (u)
-                <br><span class='swatch' id='swatch_19'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_19' value='V'>Global weak object (V)
-                <br><span class='swatch' id='swatch_20'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_20' value='v'>Local weak object (v)
-                <br><span class='swatch' id='swatch_21'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_21' value='W'>Global weak symbol (W)
-                <br><span class='swatch' id='swatch_22'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_22' value='w'>Local weak symbol (w)
-                <br><span class='swatch' id='swatch_23'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_23' value='@'>Vtable entry (@)
-                <br><span class='swatch' id='swatch_24'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_24' value='-'>STABS debugging (-)
-                <br><span class='swatch' id='swatch_25'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_25' value='?'>Unrecognized (?)
+            <td style='white-space: nowrap; vertical-align: top;'>
+                <br><span class='swatch' id='swatch_0'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_0' value='b'>Uninitialized data (.bss)
+                <br><span class='swatch' id='swatch_1'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_1' value='d'>Initialized data (.data)
+                <br><span class='swatch' id='swatch_2'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_2' value='r'>Read-only data (.rodata)
+                <br><span class='swatch' id='swatch_3'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_3' value='t'>Code (.text)
+                <br><span class='swatch' id='swatch_4'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_4' value='v'>Vtable entries
+                <br><span class='swatch' id='swatch_5'>&nbsp;&nbsp;&nbsp;</span><input checked type='checkbox' id='check_5' value='!'>Generated Symbols (typeinfo, thunks, etc)
             </td>
         </tr>
-        <tr><td colspan=3 style='text-align: center; white-space: nowrap; padding-top: 1em;'>
+        <tr><td style='text-align: center; white-space: nowrap; padding-top: 1em;'>
             Select <input type='button' onclick='filterSetAll(true)' value='All'>,
             <input type='button' onclick='filterSetAll(false)' value='None'>,
             or type a string: <input id='symbol_types_filter' size=30 value='' onkeyup='symbolFilterTextChanged()' onblur='updateFilterText()'>

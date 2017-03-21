@@ -1834,4 +1834,20 @@ const char* NetworkQualityEstimator::GetNameForStatistic(int i) const {
   return "";
 }
 
+base::Optional<base::TimeDelta>
+NetworkQualityEstimator::NetworkQualityProvider::GetHttpRTT() const {
+  return base::Optional<base::TimeDelta>();
+}
+
+base::Optional<base::TimeDelta>
+NetworkQualityEstimator::NetworkQualityProvider::GetTransportRTT() const {
+  return base::Optional<base::TimeDelta>();
+}
+
+base::Optional<int32_t>
+NetworkQualityEstimator::NetworkQualityProvider::GetDownstreamThroughputKbps()
+    const {
+  return base::Optional<int32_t>();
+}
+
 }  // namespace net

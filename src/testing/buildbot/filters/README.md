@@ -58,7 +58,7 @@ When running tests on Android, the test filter file can be specified using
 
 ```bash
 $ out/android/bin/run_content_browsertests \
-    --test-arguments=--site-per-process \
+    --site-per-process \
     --gtest-filter-file=testing/buildbot/filters/site-per-process.content_browsertests.filter
 ```
 

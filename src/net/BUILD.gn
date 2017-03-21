@@ -281,6 +281,7 @@ component("net") {
     "http/http_vary_data.h",
     "http/transport_security_state.cc",
     "http/transport_security_state.h",
+    "http/transport_security_state_source.h",
     "log/net_log.cc",
     "log/net_log.h",
     "log/net_log_capture_mode.cc",
@@ -510,6 +511,8 @@ component("net") {
       "cert/cert_verify_proc.h",
       "cert/cert_verify_proc_android.cc",
       "cert/cert_verify_proc_android.h",
+      "cert/cert_verify_proc_builtin.cc",
+      "cert/cert_verify_proc_builtin.h",
       "cert/cert_verify_proc_ios.cc",
       "cert/cert_verify_proc_ios.h",
       "cert/cert_verify_proc_mac.cc",
@@ -1470,8 +1473,6 @@ component("net") {
       "spdy/hpack/hpack_constants.h",
       "spdy/hpack/hpack_decoder.cc",
       "spdy/hpack/hpack_decoder.h",
-      "spdy/hpack/hpack_decoder2.cc",
-      "spdy/hpack/hpack_decoder2.h",
       "spdy/hpack/hpack_decoder3.cc",
       "spdy/hpack/hpack_decoder3.h",
       "spdy/hpack/hpack_decoder_interface.h",
@@ -1501,7 +1502,9 @@ component("net") {
       "spdy/multiplexed_session.cc",
       "spdy/multiplexed_session.h",
       "spdy/platform/api/spdy_estimate_memory_usage.h",
+      "spdy/platform/api/spdy_string_piece.h",
       "spdy/platform/impl/spdy_estimate_memory_usage_impl.h",
+      "spdy/platform/impl/spdy_string_piece_impl.h",
       "spdy/priority_write_scheduler.h",
       "spdy/server_push_delegate.h",
       "spdy/spdy_alt_svc_wire_format.cc",
@@ -4267,12 +4270,6 @@ test("net_unittests") {
     "http2/decoder/decode_http2_structures_test.cc",
     "http2/decoder/frame_decoder_state_test_util.cc",
     "http2/decoder/frame_decoder_state_test_util.h",
-    "http2/decoder/frame_parts.cc",
-    "http2/decoder/frame_parts.h",
-    "http2/decoder/frame_parts_collector.cc",
-    "http2/decoder/frame_parts_collector.h",
-    "http2/decoder/frame_parts_collector_listener.cc",
-    "http2/decoder/frame_parts_collector_listener.h",
     "http2/decoder/http2_frame_decoder_listener_test_util.cc",
     "http2/decoder/http2_frame_decoder_listener_test_util.h",
     "http2/decoder/http2_frame_decoder_test.cc",
@@ -4323,6 +4320,12 @@ test("net_unittests") {
     "http2/http2_structures_test.cc",
     "http2/http2_structures_test_util.cc",
     "http2/http2_structures_test_util.h",
+    "http2/test_tools/frame_parts.cc",
+    "http2/test_tools/frame_parts.h",
+    "http2/test_tools/frame_parts_collector.cc",
+    "http2/test_tools/frame_parts_collector.h",
+    "http2/test_tools/frame_parts_collector_listener.cc",
+    "http2/test_tools/frame_parts_collector_listener.h",
     "http2/tools/failure.cc",
     "http2/tools/failure.h",
     "http2/tools/http2_frame_builder.cc",
@@ -4611,7 +4614,6 @@ test("net_unittests") {
     "spdy/buffered_spdy_framer_unittest.cc",
     "spdy/fuzzing/hpack_fuzz_util_test.cc",
     "spdy/header_coalescer_test.cc",
-    "spdy/hpack/hpack_decoder2_test.cc",
     "spdy/hpack/hpack_decoder3_test.cc",
     "spdy/hpack/hpack_decoder_test.cc",
     "spdy/hpack/hpack_encoder_test.cc",
@@ -4735,8 +4737,10 @@ test("net_unittests") {
     "//crypto:platform",
     "//crypto:test_support",
     "//net/base/registry_controlled_domains",
+    "//net/http:transport_security_state_unittest_data",
     "//testing/gmock",
     "//testing/gtest",
+    "//third_party/protobuf:protobuf_lite",
     "//third_party/zlib",
     "//url",
     "//url:url_features",
@@ -5108,7 +5112,6 @@ if (!is_ios && !is_proto_quic) {
       "cookies/cookie_monster_perftest.cc",
       "disk_cache/disk_cache_perftest.cc",
       "extras/sqlite/sqlite_persistent_cookie_store_perftest.cc",
-      "proxy/proxy_resolver_perftest.cc",
       "socket/udp_socket_perftest.cc",
     ]
 
@@ -5129,12 +5132,6 @@ if (!is_ios && !is_proto_quic) {
 
     if (enable_websockets) {
       sources += [ "websockets/websocket_frame_perftest.cc" ]
-    }
-
-    if (use_v8_in_net) {
-      deps += [ ":net_with_v8" ]
-    } else {
-      sources -= [ "proxy/proxy_resolver_perftest.cc" ]
     }
 
     # Some linker failures have been observed for this target on the Win64
@@ -5677,37 +5674,4 @@ fuzzer_test("net_spdy_session_fuzzer") {
   ]
   dict = "data/fuzzer_dictionaries/net_spdy_session_fuzzer.dict"
   seed_corpus = "data/fuzzer_data/net_spdy_session_fuzzer/"
-}
-
-if (host_toolchain == current_toolchain && !is_proto_quic) {
-  executable("transport_security_state_generator") {
-    sources = [
-      "tools/transport_security_state_generator/bit_writer.cc",
-      "tools/transport_security_state_generator/bit_writer.h",
-      "tools/transport_security_state_generator/cert_util.cc",
-      "tools/transport_security_state_generator/cert_util.h",
-      "tools/transport_security_state_generator/huffman/huffman_builder.cc",
-      "tools/transport_security_state_generator/huffman/huffman_builder.h",
-      "tools/transport_security_state_generator/pinset.cc",
-      "tools/transport_security_state_generator/pinset.h",
-      "tools/transport_security_state_generator/pinsets.cc",
-      "tools/transport_security_state_generator/pinsets.h",
-      "tools/transport_security_state_generator/preloaded_state_generator.cc",
-      "tools/transport_security_state_generator/preloaded_state_generator.h",
-      "tools/transport_security_state_generator/spki_hash.cc",
-      "tools/transport_security_state_generator/spki_hash.h",
-      "tools/transport_security_state_generator/transport_security_state_entry.cc",
-      "tools/transport_security_state_generator/transport_security_state_entry.h",
-      "tools/transport_security_state_generator/transport_security_state_generator.cc",
-      "tools/transport_security_state_generator/trie/trie_bit_buffer.cc",
-      "tools/transport_security_state_generator/trie/trie_bit_buffer.h",
-      "tools/transport_security_state_generator/trie/trie_writer.cc",
-      "tools/transport_security_state_generator/trie/trie_writer.h",
-    ]
-    deps = [
-      "//base",
-      "//crypto",
-      "//third_party/boringssl",
-    ]
-  }
 }

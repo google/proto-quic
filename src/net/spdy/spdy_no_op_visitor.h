@@ -11,6 +11,7 @@
 
 #include <cstdint>
 
+#include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/spdy_framer.h"
 #include "net/spdy/spdy_protocol.h"
 
@@ -57,7 +58,7 @@ class SpdyNoOpVisitor : public SpdyFramerVisitorInterface,
                      bool end) override {}
   void OnContinuation(SpdyStreamId stream_id, bool end) override {}
   void OnAltSvc(SpdyStreamId stream_id,
-                base::StringPiece origin,
+                SpdyStringPiece origin,
                 const SpdyAltSvcWireFormat::AlternativeServiceVector&
                     altsvc_vector) override {}
   void OnPriority(SpdyStreamId stream_id,
@@ -77,7 +78,7 @@ class SpdyNoOpVisitor : public SpdyFramerVisitorInterface,
 
   // SpdyHeadersHandlerInterface methods:
   void OnHeaderBlockStart() override {}
-  void OnHeader(base::StringPiece key, base::StringPiece value) override {}
+  void OnHeader(SpdyStringPiece key, SpdyStringPiece value) override {}
   void OnHeaderBlockEnd(size_t uncompressed_header_bytes) override {}
   void OnHeaderBlockEnd(size_t /* uncompressed_header_bytes */,
                         size_t /* compressed_header_bytes */) override {}

@@ -7,6 +7,8 @@
 
 # pylint: disable=protected-access
 
+import collections
+import tempfile
 import unittest
 
 from pylib.base import base_test_result
@@ -37,6 +39,64 @@ class InstrumentationTestInstanceTest(unittest.TestCase):
          mock.patch('%s._initializeTestCoverageAttributes' % c)):
       return instrumentation_test_instance.InstrumentationTestInstance(
           mock.MagicMock(), mock.MagicMock(), lambda s: None)
+
+  _FlagAttributesArgs = collections.namedtuple(
+      '_FlagAttributesArgs',
+      [
+        'command_line_flags',
+        'device_flags_file',
+        'strict_mode',
+        'regenerate_goldens',
+        'test_arguments',
+      ])
+
+  def createFlagAttributesArgs(
+      self, command_line_flags=None, device_flags_file=None,
+      strict_mode=None, regenerate_goldens=None, test_arguments=None):
+    return self._FlagAttributesArgs(
+        command_line_flags, device_flags_file, strict_mode,
+        regenerate_goldens, test_arguments)
+
+  def test_initializeFlagAttributes_commandLineFlags(self):
+    o = self.createTestInstance()
+    args = self.createFlagAttributesArgs(command_line_flags=['--foo', '--bar'])
+    o._initializeFlagAttributes(args)
+    self.assertEquals(o._flags, ['--enable-test-intents', '--foo', '--bar'])
+
+  def test_initializeFlagAttributes_deviceFlagsFile(self):
+    o = self.createTestInstance()
+    with tempfile.NamedTemporaryFile() as flags_file:
+      flags_file.write('\n'.join(['--foo', '--bar']))
+      flags_file.flush()
+
+      args = self.createFlagAttributesArgs(device_flags_file=flags_file.name)
+      o._initializeFlagAttributes(args)
+      self.assertEquals(o._flags, ['--enable-test-intents', '--foo', '--bar'])
+
+  def test_initializeFlagAttributes_strictModeOn(self):
+    o = self.createTestInstance()
+    args = self.createFlagAttributesArgs(strict_mode='on')
+    o._initializeFlagAttributes(args)
+    self.assertEquals(o._flags, ['--enable-test-intents', '--strict-mode=on'])
+
+  def test_initializeFlagAttributes_strictModeOff(self):
+    o = self.createTestInstance()
+    args = self.createFlagAttributesArgs(strict_mode='off')
+    o._initializeFlagAttributes(args)
+    self.assertEquals(o._flags, ['--enable-test-intents'])
+
+  def test_initializeFlagAttributes_regenerateGoldens(self):
+    o = self.createTestInstance()
+    args = self.createFlagAttributesArgs(regenerate_goldens=True)
+    o._initializeFlagAttributes(args)
+    self.assertEquals(
+        o._flags, ['--enable-test-intents', '--regenerate-goldens'])
+
+  def test_initializeFlagAttributes_testArgumentsRaisesException(self):
+    o = self.createTestInstance()
+    args = self.createFlagAttributesArgs(test_arguments='--foo --bar')
+    with self.assertRaises(Exception):
+      o._initializeFlagAttributes(args)
 
   def testGetTests_noFilter(self):
     o = self.createTestInstance()

@@ -472,6 +472,7 @@ def write_gn_ninja(path, root_gen_dir, options):
       'base/task_scheduler/post_task.cc',
       'base/task_scheduler/priority_queue.cc',
       'base/task_scheduler/scheduler_lock_impl.cc',
+      'base/task_scheduler/scheduler_single_thread_task_runner_manager.cc',
       'base/task_scheduler/scheduler_worker.cc',
       'base/task_scheduler/scheduler_worker_pool_impl.cc',
       'base/task_scheduler/scheduler_worker_pool_params.cc',

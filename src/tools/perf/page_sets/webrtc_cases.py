@@ -149,6 +149,7 @@ class Page8(WebrtcPage):
   def RunPageInteractions(self, action_runner):
     with action_runner.CreateInteraction('Action_Canvas_PeerConnection',
                                          repeatable=False):
+      action_runner.WaitForJavaScriptCondition('typeof draw !== "undefined"')
       action_runner.ExecuteJavaScript('draw();')
       action_runner.ExecuteJavaScript('doCanvasCaptureAndPeerConnection();')
       action_runner.Wait(10)

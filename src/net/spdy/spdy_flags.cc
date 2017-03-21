@@ -12,9 +12,6 @@ bool FLAGS_chromium_http2_flag_log_compressed_size = true;
 // If true, remove use of SpdyFrameBuilder::OverwriteLength().
 bool FLAGS_chromium_http2_flag_remove_rewritelength = true;
 
-// Use //net/http2/hpack/decoder as HPACK entry decoder.
-bool FLAGS_chromium_http2_flag_spdy_use_hpack_decoder2 = false;
-
 // Use //net/http2/hpack/decoder as complete HPACK decoder.
 bool FLAGS_chromium_http2_flag_spdy_use_hpack_decoder3 = true;
 

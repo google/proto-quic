@@ -14,6 +14,7 @@
 #include "base/macros.h"
 #include "net/base/net_export.h"
 #include "net/spdy/header_coalescer.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/spdy_alt_svc_wire_format.h"
 #include "net/spdy/spdy_framer.h"
 #include "net/spdy/spdy_header_block.h"
@@ -86,7 +87,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramerVisitorInterface {
   // Called when a GOAWAY frame has been parsed.
   virtual void OnGoAway(SpdyStreamId last_accepted_stream_id,
                         SpdyErrorCode error_code,
-                        base::StringPiece debug_data) = 0;
+                        SpdyStringPiece debug_data) = 0;
 
   // Called when a WINDOW_UPDATE frame has been parsed.
   virtual void OnWindowUpdate(SpdyStreamId stream_id,
@@ -100,7 +101,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramerVisitorInterface {
   // Called when an ALTSVC frame has been parsed.
   virtual void OnAltSvc(
       SpdyStreamId stream_id,
-      base::StringPiece origin,
+      SpdyStringPiece origin,
       const SpdyAltSvcWireFormat::AlternativeServiceVector& altsvc_vector) = 0;
 
   // Called when a frame type we don't recognize is received.
@@ -164,7 +165,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
                      SpdyStreamId promised_stream_id,
                      bool end) override;
   void OnAltSvc(SpdyStreamId stream_id,
-                base::StringPiece origin,
+                SpdyStringPiece origin,
                 const SpdyAltSvcWireFormat::AlternativeServiceVector&
                     altsvc_vector) override;
   void OnDataFrameHeader(SpdyStreamId stream_id,

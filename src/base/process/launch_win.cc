@@ -17,6 +17,7 @@
 #include "base/bind.h"
 #include "base/bind_helpers.h"
 #include "base/command_line.h"
+#include "base/debug/activity_tracker.h"
 #include "base/debug/stack_trace.h"
 #include "base/logging.h"
 #include "base/message_loop/message_loop.h"
@@ -94,7 +95,12 @@ bool GetAppOutputInternal(const StringPiece16& cl,
     NOTREACHED() << "Failed to start process";
     return false;
   }
+
   base::win::ScopedProcessInformation proc_info(temp_process_info);
+  base::debug::GlobalActivityTracker* tracker =
+      base::debug::GlobalActivityTracker::Get();
+  if (tracker)
+    tracker->RecordProcessLaunch(proc_info.process_id(), cl.as_string());
 
   // Close our writing end of pipe now. Otherwise later read would not be able
   // to detect end of child's output.
@@ -119,6 +125,8 @@ bool GetAppOutputInternal(const StringPiece16& cl,
   int exit_code;
   base::TerminationStatus status = GetTerminationStatus(
       proc_info.process_handle(), &exit_code);
+  base::debug::GlobalActivityTracker::RecordProcessExitIfEnabled(
+      proc_info.process_id(), exit_code);
   return status != base::TERMINATION_STATUS_PROCESS_CRASHED &&
          status != base::TERMINATION_STATUS_ABNORMAL_TERMINATION;
 }
@@ -142,7 +150,14 @@ void RouteStdioToConsole(bool create_console_if_not_found) {
   // _fileno(stdout) will return -2 (_NO_CONSOLE_FILENO) if stdout was
   // invalid.
   if (_fileno(stdout) >= 0 || _fileno(stderr) >= 0) {
-    return;
+    // _fileno was broken for SUBSYSTEM:WINDOWS from VS2010 to VS2012/2013.
+    // http://crbug.com/358267. Confirm that the underlying HANDLE is valid
+    // before aborting.
+
+    intptr_t stdout_handle = _get_osfhandle(_fileno(stdout));
+    intptr_t stderr_handle = _get_osfhandle(_fileno(stderr));
+    if (stdout_handle >= 0 || stderr_handle >= 0)
+      return;
   }
 
   if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
@@ -317,6 +332,8 @@ Process LaunchProcess(const string16& cmdline,
   if (options.wait)
     WaitForSingleObject(process_info.process_handle(), INFINITE);
 
+  base::debug::GlobalActivityTracker::RecordProcessLaunchIfEnabled(
+      process_info.process_id(), cmdline);
   return Process(process_info.TakeProcessHandle());
 }
 
@@ -344,6 +361,8 @@ Process LaunchElevatedProcess(const CommandLine& cmdline,
   if (options.wait)
     WaitForSingleObject(shex_info.hProcess, INFINITE);
 
+  base::debug::GlobalActivityTracker::RecordProcessLaunchIfEnabled(
+      GetProcessId(shex_info.hProcess), file, arguments);
   return Process(shex_info.hProcess);
 }
 

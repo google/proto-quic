@@ -52,7 +52,8 @@ if (enable_java_templates) {
   _data +=
       "android_sdk_root=" + rebase_path(android_sdk_root, root_build_dir) + CR
   _data += "android_sdk_version=$android_sdk_version$CR"
-  _data += "android_tool_prefix=$android_tool_prefix"
+  _data += "android_tool_prefix=" +
+           rebase_path(android_tool_prefix, root_build_dir) + CR
   write_file("$root_build_dir/build_vars.txt", _data)
 }
 
@@ -114,11 +115,11 @@ group("test_runner_py") {
            "devil_chromium.json",
            "pylib/gtest/filter/",
            "test_wrapper/logdog_wrapper.py",
-           "//third_party/android_tools/sdk/build-tools/24.0.2/aapt",
-           "//third_party/android_tools/sdk/build-tools/24.0.2/dexdump",
-           "//third_party/android_tools/sdk/build-tools/24.0.2/lib64/libc++.so",
-           "//third_party/android_tools/sdk/build-tools/24.0.2/split-select",
-           "//third_party/android_tools/sdk/platform-tools/adb",
+           "${android_sdk_build_tools}/aapt",
+           "${android_sdk_build_tools}/dexdump",
+           "${android_sdk_build_tools}/lib64/libc++.so",
+           "${android_sdk_build_tools}/split-select",
+           "${android_sdk_root}/platform-tools/adb",
            "//third_party/catapult/third_party/gsutil/",
            "//third_party/catapult/devil/devil/devil_dependencies.json",
            "//third_party/proguard/lib/proguard.jar",

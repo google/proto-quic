@@ -62,6 +62,11 @@ declare_args() {
   # https://crbug.com/626794
   use_cfi_cast = false
 
+  # Enable checks for indirect function calls via a function pointer.
+  # TODO(pcc): remove this when we're ready to add these checks by default.
+  # https://crbug.com/701919
+  use_cfi_icall = false
+
   # By default, Control Flow Integrity will crash the program if it detects a
   # violation. Set this to true to print detailed diagnostics instead.
   use_cfi_diag = false

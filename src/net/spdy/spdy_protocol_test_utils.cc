@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 
+#include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/spdy_protocol_test_utils.h"
 
 namespace net {
@@ -52,8 +53,8 @@ namespace test {
     return ::testing::AssertionFailure();
   if (expected.data() == nullptr && actual.data() != nullptr)
     return ::testing::AssertionFailure();
-  if (base::StringPiece(expected.data(), expected.data_len()) !=
-      base::StringPiece(actual.data(), actual.data_len()))
+  if (SpdyStringPiece(expected.data(), expected.data_len()) !=
+      SpdyStringPiece(actual.data(), actual.data_len()))
     return ::testing::AssertionFailure();
   if (!VerifySpdyFrameWithPaddingIREquals(expected, actual))
     return ::testing::AssertionFailure();

@@ -6,6 +6,7 @@ scottmg@chromium.org
 thakis@chromium.org
 brucedawson@chromium.org
 
+per-file .gitignore=*
 per-file mac_toolchain.py=erikchen@chromium.org
 per-file mac_toolchain.py=justincohen@chromium.org
 per-file package_mac_toolchain.py=erikchen@chromium.org

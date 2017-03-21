@@ -17,7 +17,6 @@
 namespace net {
 namespace test {
 
-using base::StringPiece;
 using std::map;
 using std::string;
 using test::a2b_hex;
@@ -66,7 +65,7 @@ TEST(HpackFuzzUtilTest, ParsesSequenceOfHeaderBlocks) {
   HpackFuzzUtil::Input input;
   input.input.assign(fixture, arraysize(fixture) - 1);
 
-  StringPiece block;
+  SpdyStringPiece block;
 
   EXPECT_TRUE(HpackFuzzUtil::NextHeaderBlock(&input, &block));
   EXPECT_EQ("aaaaa", block);
@@ -127,7 +126,7 @@ TEST(HpackFuzzUtilTest, ValidFuzzExamplesRegressionTest) {
   HpackFuzzUtil::FuzzerContext context;
   HpackFuzzUtil::InitializeFuzzerContext(&context);
 
-  StringPiece block;
+  SpdyStringPiece block;
   while (HpackFuzzUtil::NextHeaderBlock(&input, &block)) {
     // As these are valid examples, all fuzz stages should succeed.
     EXPECT_TRUE(HpackFuzzUtil::RunHeaderBlockThroughFuzzerStages(

@@ -30,6 +30,11 @@ class NET_EXPORT TrustStoreInMemory : public TrustStore {
   void FindTrustAnchorsForCert(const scoped_refptr<ParsedCertificate>& cert,
                                TrustAnchors* matches) const override;
 
+  // Returns true if the trust store contains the given TrustAnchor instance.
+  // Note that this considers only pointer equality and not a more
+  // broad notion of equivalence based on the object's content.
+  bool Contains(const TrustAnchor* anchor) const;
+
  private:
   // Multimap from normalized subject -> TrustAnchor.
   std::unordered_multimap<base::StringPiece,

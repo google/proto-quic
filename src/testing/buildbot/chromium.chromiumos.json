@@ -43,9 +43,6 @@
         "test": "ash_content_unittests"
       },
       {
-        "args": [
-          "--ozone-platform=headless"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -194,18 +191,12 @@
         "test": "google_apis_unittests"
       },
       {
-        "args": [
-          "--ozone-platform=headless"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
         "test": "gpu_ipc_service_unittests"
       },
       {
-        "args": [
-          "--ozone-platform=headless"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },

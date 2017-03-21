@@ -11,8 +11,8 @@
 #include <unordered_set>
 #include <utility>
 
-#include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 
 namespace net {
 
@@ -38,10 +38,10 @@ class NET_EXPORT HeaderIndexing {
 
   // Decide if a header should be indexed. We only use |header|. Add |value| to
   // be consistent with HPACK indexing policy interface.
-  bool ShouldIndex(base::StringPiece header, base::StringPiece value);
+  bool ShouldIndex(SpdyStringPiece header, SpdyStringPiece value);
 
   // Not to make the indexing decision but to update sets.
-  void UpdateSets(base::StringPiece header, base::StringPiece value) {
+  void UpdateSets(SpdyStringPiece header, SpdyStringPiece value) {
     update_only_header_count_++;
     ShouldIndex(header, value);
   }

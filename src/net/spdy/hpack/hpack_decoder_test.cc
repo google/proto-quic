@@ -8,7 +8,6 @@
 #include <string>
 
 #include "base/logging.h"
-#include "base/strings/string_piece.h"
 #include "net/spdy/hpack/hpack_encoder.h"
 #include "net/spdy/hpack/hpack_input_stream.h"
 #include "net/spdy/hpack/hpack_output_stream.h"
@@ -21,24 +20,23 @@
 namespace net {
 namespace test {
 
-using base::StringPiece;
 using std::string;
 
 class HpackDecoderPeer {
  public:
   explicit HpackDecoderPeer(HpackDecoder* decoder) : decoder_(decoder) {}
 
-  void HandleHeaderRepresentation(StringPiece name, StringPiece value) {
+  void HandleHeaderRepresentation(SpdyStringPiece name, SpdyStringPiece value) {
     decoder_->HandleHeaderRepresentation(name, value);
   }
-  bool DecodeNextName(HpackInputStream* in, StringPiece* out) {
+  bool DecodeNextName(HpackInputStream* in, SpdyStringPiece* out) {
     return decoder_->DecodeNextName(in, out);
   }
   HpackHeaderTable* header_table() { return &decoder_->header_table_; }
 
   bool DecodeNextStringLiteral(HpackInputStream* in,
                                bool is_header_key,
-                               StringPiece* str) {
+                               SpdyStringPiece* str) {
     return decoder_->DecodeNextStringLiteral(in, is_header_key, str);
   }
 
@@ -52,7 +50,6 @@ class HpackDecoderPeer {
 
 namespace {
 
-using base::StringPiece;
 using std::string;
 using test::a2b_hex;
 
@@ -65,7 +62,7 @@ class HpackDecoderTest : public ::testing::TestWithParam<bool> {
 
   void SetUp() override { handler_exists_ = GetParam(); }
 
-  bool DecodeHeaderBlock(StringPiece str) {
+  bool DecodeHeaderBlock(SpdyStringPiece str) {
     if (handler_exists_) {
       decoder_.HandleControlFrameHeadersStart(&handler_);
     }
@@ -73,7 +70,7 @@ class HpackDecoderTest : public ::testing::TestWithParam<bool> {
            decoder_.HandleControlFrameHeadersComplete(nullptr);
   }
 
-  bool HandleControlFrameHeadersData(StringPiece str) {
+  bool HandleControlFrameHeadersData(SpdyStringPiece str) {
     return decoder_.HandleControlFrameHeadersData(str.data(), str.size());
   }
 
@@ -89,7 +86,7 @@ class HpackDecoderTest : public ::testing::TestWithParam<bool> {
     }
   }
 
-  const SpdyHeaderBlock& DecodeBlockExpectingSuccess(StringPiece str) {
+  const SpdyHeaderBlock& DecodeBlockExpectingSuccess(SpdyStringPiece str) {
     EXPECT_TRUE(DecodeHeaderBlock(str));
     return decoded_block();
   }
@@ -203,20 +200,21 @@ TEST_P(HpackDecoderTest, HandleHeaderRepresentation) {
   decoder_.HandleControlFrameHeadersComplete(nullptr);
 
   // Resulting decoded headers are in the same order as input.
-  EXPECT_THAT(decoded_block(),
-              ElementsAre(Pair("cookie", " part 1; part 2 ; part3;  fin!"),
-                          Pair("passed-through", StringPiece("foo\0baz", 7)),
-                          Pair("joined", "not joined"),
-                          Pair("joineD", StringPiece("value 1\0value 2", 15)),
-                          Pair("empty", ""),
-                          Pair("empty-joined", StringPiece("\0foo\0\0", 6))));
+  EXPECT_THAT(
+      decoded_block(),
+      ElementsAre(Pair("cookie", " part 1; part 2 ; part3;  fin!"),
+                  Pair("passed-through", SpdyStringPiece("foo\0baz", 7)),
+                  Pair("joined", "not joined"),
+                  Pair("joineD", SpdyStringPiece("value 1\0value 2", 15)),
+                  Pair("empty", ""),
+                  Pair("empty-joined", SpdyStringPiece("\0foo\0\0", 6))));
 }
 
 // Decoding an encoded name with a valid string literal should work.
 TEST_P(HpackDecoderTest, DecodeNextNameLiteral) {
-  HpackInputStream input_stream(StringPiece("\x00\x04name", 6));
+  HpackInputStream input_stream(SpdyStringPiece("\x00\x04name", 6));
 
-  StringPiece string_piece;
+  SpdyStringPiece string_piece;
   EXPECT_TRUE(decoder_peer_.DecodeNextName(&input_stream, &string_piece));
   EXPECT_EQ("name", string_piece);
   EXPECT_FALSE(input_stream.HasMoreData());
@@ -227,9 +225,9 @@ TEST_P(HpackDecoderTest, DecodeNextNameLiteral) {
 
 // Decoding an encoded name with an incomplete string literal.
 TEST_P(HpackDecoderTest, DecodeNextNameLiteralWithIncompleteHeader) {
-  HpackInputStream input_stream(StringPiece("\x00\x04name\x00\x02g", 9));
+  HpackInputStream input_stream(SpdyStringPiece("\x00\x04name\x00\x02g", 9));
 
-  StringPiece string_piece;
+  SpdyStringPiece string_piece;
   EXPECT_TRUE(decoder_peer_.DecodeNextName(&input_stream, &string_piece));
   EXPECT_FALSE(input_stream.NeedMoreData());
   input_stream.MarkCurrentPosition();
@@ -245,7 +243,7 @@ TEST_P(HpackDecoderTest, DecodeNextNameLiteralWithHuffmanEncoding) {
   string input = a2b_hex("008825a849e95ba97d7f");
   HpackInputStream input_stream(input);
 
-  StringPiece string_piece;
+  SpdyStringPiece string_piece;
   EXPECT_TRUE(decoder_peer_.DecodeNextName(&input_stream, &string_piece));
   EXPECT_EQ("custom-key", string_piece);
   EXPECT_FALSE(input_stream.HasMoreData());
@@ -263,7 +261,7 @@ TEST_P(HpackDecoderTest, DecodeNextNameLiteralWithIncompleteHuffmanEncoding) {
   input.resize(input.size() - 1);  // Remove the last byte.
   HpackInputStream input_stream(input);
 
-  StringPiece string_piece;
+  SpdyStringPiece string_piece;
   EXPECT_TRUE(decoder_peer_.DecodeNextName(&input_stream, &string_piece));
   EXPECT_FALSE(input_stream.NeedMoreData());
   input_stream.MarkCurrentPosition();
@@ -279,7 +277,7 @@ TEST_P(HpackDecoderTest, DecodeNextNameLiteralWithIncompleteHuffmanEncoding) {
 TEST_P(HpackDecoderTest, DecodeNextNameIndexed) {
   HpackInputStream input_stream("\x01");
 
-  StringPiece string_piece;
+  SpdyStringPiece string_piece;
   EXPECT_TRUE(decoder_peer_.DecodeNextName(&input_stream, &string_piece));
   EXPECT_EQ(":authority", string_piece);
   EXPECT_FALSE(input_stream.HasMoreData());
@@ -293,7 +291,7 @@ TEST_P(HpackDecoderTest, DecodeNextNameInvalidIndex) {
   // One more than the number of static table entries.
   HpackInputStream input_stream("\x3e");
 
-  StringPiece string_piece;
+  SpdyStringPiece string_piece;
   EXPECT_FALSE(decoder_peer_.DecodeNextName(&input_stream, &string_piece));
   EXPECT_FALSE(input_stream.NeedMoreData());
   input_stream.MarkCurrentPosition();
@@ -348,7 +346,7 @@ TEST_P(HpackDecoderTest, IndexedHeaderDynamic) {
 // Test a too-large indexed header.
 TEST_P(HpackDecoderTest, InvalidIndexedHeader) {
   // High-bit set, and a prefix of one more than the number of static entries.
-  EXPECT_FALSE(DecodeHeaderBlock(StringPiece("\xbe", 1)));
+  EXPECT_FALSE(DecodeHeaderBlock(SpdyStringPiece("\xbe", 1)));
 }
 
 TEST_P(HpackDecoderTest, ContextUpdateMaximumSize) {
@@ -362,7 +360,7 @@ TEST_P(HpackDecoderTest, ContextUpdateMaximumSize) {
     output_stream.AppendUint32(126);
 
     output_stream.TakeString(&input);
-    EXPECT_TRUE(DecodeHeaderBlock(StringPiece(input)));
+    EXPECT_TRUE(DecodeHeaderBlock(SpdyStringPiece(input)));
     EXPECT_EQ(126u, decoder_peer_.header_table()->max_size());
   }
   {
@@ -372,7 +370,7 @@ TEST_P(HpackDecoderTest, ContextUpdateMaximumSize) {
     output_stream.AppendUint32(kDefaultHeaderTableSizeSetting);
 
     output_stream.TakeString(&input);
-    EXPECT_TRUE(DecodeHeaderBlock(StringPiece(input)));
+    EXPECT_TRUE(DecodeHeaderBlock(SpdyStringPiece(input)));
     EXPECT_EQ(kDefaultHeaderTableSizeSetting,
               decoder_peer_.header_table()->max_size());
   }
@@ -383,7 +381,7 @@ TEST_P(HpackDecoderTest, ContextUpdateMaximumSize) {
     output_stream.AppendUint32(kDefaultHeaderTableSizeSetting + 1);
 
     output_stream.TakeString(&input);
-    EXPECT_FALSE(DecodeHeaderBlock(StringPiece(input)));
+    EXPECT_FALSE(DecodeHeaderBlock(SpdyStringPiece(input)));
     EXPECT_EQ(kDefaultHeaderTableSizeSetting,
               decoder_peer_.header_table()->max_size());
   }
@@ -401,7 +399,7 @@ TEST_P(HpackDecoderTest, TwoTableSizeUpdates) {
     output_stream.AppendUint32(122);
 
     output_stream.TakeString(&input);
-    EXPECT_TRUE(DecodeHeaderBlock(StringPiece(input)));
+    EXPECT_TRUE(DecodeHeaderBlock(SpdyStringPiece(input)));
     EXPECT_EQ(122u, decoder_peer_.header_table()->max_size());
   }
 }
@@ -421,7 +419,7 @@ TEST_P(HpackDecoderTest, ThreeTableSizeUpdatesError) {
 
     output_stream.TakeString(&input);
 
-    EXPECT_FALSE(DecodeHeaderBlock(StringPiece(input)));
+    EXPECT_FALSE(DecodeHeaderBlock(SpdyStringPiece(input)));
     EXPECT_EQ(10u, decoder_peer_.header_table()->max_size());
   }
 }
@@ -440,7 +438,7 @@ TEST_P(HpackDecoderTest, TableSizeUpdateSecondError) {
 
     output_stream.TakeString(&input);
 
-    EXPECT_FALSE(DecodeHeaderBlock(StringPiece(input)));
+    EXPECT_FALSE(DecodeHeaderBlock(SpdyStringPiece(input)));
     EXPECT_EQ(kDefaultHeaderTableSizeSetting,
               decoder_peer_.header_table()->max_size());
   }
@@ -463,7 +461,7 @@ TEST_P(HpackDecoderTest, TableSizeUpdateFirstThirdError) {
 
     output_stream.TakeString(&input);
 
-    EXPECT_FALSE(DecodeHeaderBlock(StringPiece(input)));
+    EXPECT_FALSE(DecodeHeaderBlock(SpdyStringPiece(input)));
     EXPECT_EQ(60u, decoder_peer_.header_table()->max_size());
   }
 }
@@ -475,7 +473,7 @@ TEST_P(HpackDecoderTest, LiteralHeaderNoIndexing) {
   // name.
   const char input[] = "\x04\x0c/sample/path\x00\x06:path2\x0e/sample/path/2";
   const SpdyHeaderBlock& header_set =
-      DecodeBlockExpectingSuccess(StringPiece(input, arraysize(input) - 1));
+      DecodeBlockExpectingSuccess(SpdyStringPiece(input, arraysize(input) - 1));
 
   SpdyHeaderBlock expected_header_set;
   expected_header_set[":path"] = "/sample/path";
@@ -488,7 +486,7 @@ TEST_P(HpackDecoderTest, LiteralHeaderNoIndexing) {
 TEST_P(HpackDecoderTest, LiteralHeaderIncrementalIndexing) {
   const char input[] = "\x44\x0c/sample/path\x40\x06:path2\x0e/sample/path/2";
   const SpdyHeaderBlock& header_set =
-      DecodeBlockExpectingSuccess(StringPiece(input, arraysize(input) - 1));
+      DecodeBlockExpectingSuccess(SpdyStringPiece(input, arraysize(input) - 1));
 
   SpdyHeaderBlock expected_header_set;
   expected_header_set[":path"] = "/sample/path";
@@ -500,30 +498,30 @@ TEST_P(HpackDecoderTest, LiteralHeaderWithIndexingInvalidNameIndex) {
   decoder_.ApplyHeaderTableSizeSetting(0);
 
   // Name is the last static index. Works.
-  EXPECT_TRUE(DecodeHeaderBlock(StringPiece("\x7d\x03ooo")));
+  EXPECT_TRUE(DecodeHeaderBlock(SpdyStringPiece("\x7d\x03ooo")));
   // Name is one beyond the last static index. Fails.
-  EXPECT_FALSE(DecodeHeaderBlock(StringPiece("\x7e\x03ooo")));
+  EXPECT_FALSE(DecodeHeaderBlock(SpdyStringPiece("\x7e\x03ooo")));
 }
 
 TEST_P(HpackDecoderTest, LiteralHeaderNoIndexingInvalidNameIndex) {
   // Name is the last static index. Works.
-  EXPECT_TRUE(DecodeHeaderBlock(StringPiece("\x0f\x2e\x03ooo")));
+  EXPECT_TRUE(DecodeHeaderBlock(SpdyStringPiece("\x0f\x2e\x03ooo")));
   // Name is one beyond the last static index. Fails.
-  EXPECT_FALSE(DecodeHeaderBlock(StringPiece("\x0f\x2f\x03ooo")));
+  EXPECT_FALSE(DecodeHeaderBlock(SpdyStringPiece("\x0f\x2f\x03ooo")));
 }
 
 TEST_P(HpackDecoderTest, LiteralHeaderNeverIndexedInvalidNameIndex) {
   // Name is the last static index. Works.
-  EXPECT_TRUE(DecodeHeaderBlock(StringPiece("\x1f\x2e\x03ooo")));
+  EXPECT_TRUE(DecodeHeaderBlock(SpdyStringPiece("\x1f\x2e\x03ooo")));
   // Name is one beyond the last static index. Fails.
-  EXPECT_FALSE(DecodeHeaderBlock(StringPiece("\x1f\x2f\x03ooo")));
+  EXPECT_FALSE(DecodeHeaderBlock(SpdyStringPiece("\x1f\x2f\x03ooo")));
 }
 
 // Decode with incomplete string literal.
 TEST_P(HpackDecoderTest, StringLiteralIncomplete) {
   const char input[] = "\x0c/sample/path\x06:path2\x0e/sample/path/";
   HpackInputStream input_stream(input);
-  StringPiece str;
+  SpdyStringPiece str;
   EXPECT_TRUE(
       decoder_peer_.DecodeNextStringLiteral(&input_stream, false, &str));
   EXPECT_FALSE(input_stream.NeedMoreData());

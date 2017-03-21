@@ -111,9 +111,8 @@ StreamDelegateDoNothing::~StreamDelegateDoNothing() {
 
 StreamDelegateSendImmediate::StreamDelegateSendImmediate(
     const base::WeakPtr<SpdyStream>& stream,
-    base::StringPiece data)
-    : StreamDelegateBase(stream),
-      data_(data) {}
+    SpdyStringPiece data)
+    : StreamDelegateBase(stream), data_(data) {}
 
 StreamDelegateSendImmediate::~StreamDelegateSendImmediate() {
 }
@@ -129,9 +128,8 @@ void StreamDelegateSendImmediate::OnHeadersReceived(
 
 StreamDelegateWithBody::StreamDelegateWithBody(
     const base::WeakPtr<SpdyStream>& stream,
-    base::StringPiece data)
-    : StreamDelegateBase(stream),
-      buf_(new StringIOBuffer(data.as_string())) {}
+    SpdyStringPiece data)
+    : StreamDelegateBase(stream), buf_(new StringIOBuffer(data.as_string())) {}
 
 StreamDelegateWithBody::~StreamDelegateWithBody() {
 }

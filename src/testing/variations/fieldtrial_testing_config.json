@@ -1270,18 +1270,6 @@
             ]
         }
     ],
-    "ModerateBindingOnBackgroundTabCreation": [
-        {
-            "platforms": [
-                "android"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled"
-                }
-            ]
-        }
-    ],
     "MojoChannel": [
         {
             "platforms": [
@@ -1298,7 +1286,30 @@
             ]
         }
     ],
-    "NTPBookmarkSuggestion": [
+    "NTPArticleSuggestions": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "EnabledSoftFetches",
+                    "params": {
+                        "fetching_interval_hours-wifi-active_ntp_user": "8",
+                        "scheduler_trigger_types": "persistent_scheduler_wake_up,ntp_opened",
+                        "send_top_languages": "true",
+                        "soft_fetching_interval_hours-active-active_ntp_user": "2",
+                        "soft_fetching_interval_hours-active-active_suggestions_consumer": "1",
+                        "soft_fetching_interval_hours-active-rare_ntp_user": "4"
+                    },
+                    "enable_features": [
+                        "NTPArticleSuggestions"
+                    ]
+                }
+            ]
+        }
+    ],
+    "NTPBookmarkSuggestions": [
         {
             "platforms": [
                 "android"
@@ -1445,7 +1456,7 @@
             ],
             "experiments": [
                 {
-                    "name": "NetProxyPreconnects",
+                    "name": "Enabled",
                     "params": {
                         "restrict_to_one_preconnect_for_proxies": "true"
                     }
@@ -2437,7 +2448,7 @@
             ]
         }
     ],
-    "SearchGeolocationDisclosure": [
+    "SearchGeolocationConsistency": [
         {
             "platforms": [
                 "android"
@@ -2831,6 +2842,21 @@
                         "enable_update_menu_item": "true",
                         "show_summary": "true"
                     }
+                }
+            ]
+        }
+    ],
+    "UploadCrashReportsUsingJobScheduler": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "UploadCrashReportsUsingJobScheduler"
+                    ]
                 }
             ]
         }

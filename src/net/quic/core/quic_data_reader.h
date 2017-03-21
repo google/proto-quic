@@ -72,6 +72,15 @@ class QUIC_EXPORT_PRIVATE QuicDataReader {
   // Returns true on success, false otherwise.
   bool ReadStringPiece(QuicStringPiece* result, size_t len);
 
+  // Reads connection ID represented as 64-bit unsigned integer into the given
+  // output parameter.
+  // Forwards the internal iterator on success.
+  // Returns true on success, false otherwise.
+  // TODO(fayang): Remove this method and use ReadUInt64() once deprecating
+  // quic_restart_flag_quic_rw_cid_in_big_endian and QuicDataReader has a mode
+  // indicating reading in little/big endian.
+  bool ReadConnectionId(uint64_t* connection_id);
+
   // Returns the remaining payload as a QuicStringPiece.
   //
   // NOTE: Does not copy but rather references strings in the underlying buffer.

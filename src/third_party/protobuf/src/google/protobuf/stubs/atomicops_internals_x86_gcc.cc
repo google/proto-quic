@@ -58,23 +58,13 @@
       : "=a" (a), "=D" (b), "=c" (c), "=d" (d) : "a" (inp))
 #endif
 
-#if defined(cpuid)        // initialize the struct only on x86
-
 namespace google {
 namespace protobuf {
 namespace internal {
 
-// Set the flags so that code will run correctly and conservatively, so even
-// if we haven't been initialized yet, we're probably single threaded, and our
-// default values should hopefully be pretty safe.
-struct AtomicOps_x86CPUFeatureStruct AtomicOps_Internalx86CPUFeatures = {
-  false,          // bug can't exist before process spawns multiple threads
-  false,          // no SSE2
-};
+#if defined(cpuid)        // initialize the struct only on x86
 
-namespace {
-
-// Initialize the AtomicOps_Internalx86CPUFeatures struct.
+// Initialize the cr_AtomicOps_Internalx86CPUFeatures struct.
 void AtomicOps_Internalx86CPUFeaturesInit() {
   uint32_t eax;
   uint32_t ebx;
@@ -107,31 +97,20 @@ void AtomicOps_Internalx86CPUFeaturesInit() {
   if (strcmp(vendor, "AuthenticAMD") == 0 &&       // AMD
       family == 15 &&
       32 <= model && model <= 63) {
-    AtomicOps_Internalx86CPUFeatures.has_amd_lock_mb_bug = true;
+    cr_AtomicOps_Internalx86CPUFeatures.has_amd_lock_mb_bug = true;
   } else {
-    AtomicOps_Internalx86CPUFeatures.has_amd_lock_mb_bug = false;
+    cr_AtomicOps_Internalx86CPUFeatures.has_amd_lock_mb_bug = false;
   }
 
   // edx bit 26 is SSE2 which we use to tell use whether we can use mfence
-  AtomicOps_Internalx86CPUFeatures.has_sse2 = ((edx >> 26) & 1);
+  cr_AtomicOps_Internalx86CPUFeatures.has_sse2 = ((edx >> 26) & 1);
 }
-
-class AtomicOpsx86Initializer {
- public:
-  AtomicOpsx86Initializer() {
-    AtomicOps_Internalx86CPUFeaturesInit();
-  }
-};
-
-// A global to get use initialized on startup via static initialization :/
-AtomicOpsx86Initializer g_initer;
-
-}  // namespace
+#else
+void AtomicOps_Internalx86CPUFeaturesInit() {}
+#endif  // __i386__
 
 }  // namespace internal
 }  // namespace protobuf
 }  // namespace google
-
-#endif  // __i386__
 
 #endif  // GOOGLE_PROTOBUF_ATOMICOPS_INTERNALS_X86_GCC_H_

@@ -70,6 +70,9 @@ class LazyField;   // lazy_field.h
 template<typename Type>
 class GenericTypeHandler; // repeated_field.h
 
+LIBPROTOBUF_EXPORT extern google::protobuf::internal::SequenceNumber
+    cr_lifecycle_id_generator_;
+
 // Templated cleanup methods.
 template<typename T> void arena_destruct_object(void* object) {
   reinterpret_cast<T*>(object)->~T();
@@ -552,7 +555,6 @@ class LIBPROTOBUF_EXPORT Arena {
   };
 
   static const size_t kHeaderSize = sizeof(Block);
-  static google::protobuf::internal::SequenceNumber lifecycle_id_generator_;
 #if defined(GOOGLE_PROTOBUF_NO_THREADLOCAL)
   // Android ndk does not support GOOGLE_THREAD_LOCAL keyword so we use a custom thread
   // local storage class we implemented.

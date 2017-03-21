@@ -541,8 +541,9 @@ int HttpStreamFactoryImpl::Job::OnHostResolution(
   // It is OK to dereference spdy_session_pool, because the
   // ClientSocketPoolManager will be destroyed in the same callback that
   // destroys the SpdySessionPool.
-  return spdy_session_pool->FindAvailableSession(spdy_session_key, origin_url,
-                                                 net_log)
+  return spdy_session_pool->FindAvailableSession(
+             spdy_session_key, origin_url, /* enable_ip_based_pooling = */ true,
+             net_log)
              ? ERR_SPDY_SESSION_ALREADY_EXISTS
              : OK;
 }
@@ -952,7 +953,8 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionImpl() {
   if (CanUseExistingSpdySession()) {
     base::WeakPtr<SpdySession> spdy_session =
         session_->spdy_session_pool()->FindAvailableSession(
-            spdy_session_key, origin_url_, net_log_);
+            spdy_session_key, origin_url_, /* enable_ip_based_pooling = */ true,
+            net_log_);
     if (spdy_session) {
       // If we're preconnecting, but we already have a SpdySession, we don't
       // actually need to preconnect any sockets, so we're done.
@@ -1034,7 +1036,8 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionComplete(int result) {
     SpdySessionKey spdy_session_key = GetSpdySessionKey();
     existing_spdy_session_ =
         session_->spdy_session_pool()->FindAvailableSession(
-            spdy_session_key, origin_url_, net_log_);
+            spdy_session_key, origin_url_,
+            /* enable_ip_based_pooling = */ true, net_log_);
     if (existing_spdy_session_) {
       using_spdy_ = true;
       next_state_ = STATE_CREATE_STREAM;
@@ -1246,7 +1249,8 @@ int HttpStreamFactoryImpl::Job::DoCreateStream() {
   if (!existing_spdy_session_) {
     existing_spdy_session_ =
         session_->spdy_session_pool()->FindAvailableSession(
-            spdy_session_key, origin_url_, net_log_);
+            spdy_session_key, origin_url_,
+            /* enable_ip_based_pooling = */ true, net_log_);
   }
   bool direct = !IsHttpsProxyAndHttpUrl();
   if (existing_spdy_session_.get()) {

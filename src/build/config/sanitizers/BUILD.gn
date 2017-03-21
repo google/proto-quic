@@ -385,6 +385,10 @@ config("cfi_flags") {
       ]
     }
 
+    if (use_cfi_icall) {
+      cflags += [ "-fsanitize=cfi-icall" ]
+    }
+
     if (use_cfi_diag) {
       cflags += [
         "-fno-sanitize-trap=cfi",

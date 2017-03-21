@@ -216,9 +216,6 @@ class NET_EXPORT X509Certificate
   }
 
 #if defined(OS_MACOSX)
-  // Does this certificate's usage allow SSL client authentication?
-  bool SupportsSSLClientAuth() const;
-
   // Returns a new CFMutableArrayRef containing this certificate and its
   // intermediate certificates in the form expected by Security.framework
   // and Keychain Services, or NULL on failure.

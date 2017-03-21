@@ -10,15 +10,13 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/rand_util.h"
-#include "base/strings/string_piece.h"
 #include "net/spdy/hpack/hpack_constants.h"
 #include "net/spdy/hpack/hpack_huffman_table.h"
 #include "net/spdy/hpack/hpack_input_stream.h"
 #include "net/spdy/hpack/hpack_output_stream.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/spdy_test_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
-
-using base::StringPiece;
 
 namespace net {
 namespace test {
@@ -74,7 +72,7 @@ class HpackHuffmanDecoderTest : public ::testing::Test {
         HpackHuffmanDecoderPeer::CanonicalToSource(canonical));
   }
 
-  void EncodeString(StringPiece input, std::string* encoded) {
+  void EncodeString(SpdyStringPiece input, std::string* encoded) {
     HpackOutputStream output_stream;
     table_.EncodeString(input, &output_stream);
     encoded->clear();
@@ -83,7 +81,7 @@ class HpackHuffmanDecoderTest : public ::testing::Test {
     EXPECT_EQ(encoded->size(), table_.EncodedSize(input));
   }
 
-  std::string EncodeString(StringPiece input) {
+  std::string EncodeString(SpdyStringPiece input) {
     std::string result;
     EncodeString(input, &result);
     return result;
@@ -223,7 +221,7 @@ TEST_F(HpackHuffmanDecoderTest, RoundTripIndividualSymbols) {
   for (size_t i = 0; i != 256; i++) {
     char c = static_cast<char>(i);
     char storage[3] = {c, c, c};
-    StringPiece input(storage, arraysize(storage));
+    SpdyStringPiece input(storage, arraysize(storage));
     std::string buffer_in = EncodeString(input);
     std::string buffer_out;
     HpackInputStream input_stream(buffer_in);

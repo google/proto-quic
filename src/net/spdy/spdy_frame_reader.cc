@@ -10,8 +10,6 @@
 
 namespace net {
 
-using base::StringPiece;
-
 SpdyFrameReader::SpdyFrameReader(const char* data, const size_t len)
     : data_(data),
       len_(len),
@@ -117,7 +115,7 @@ bool SpdyFrameReader::ReadUInt24(uint32_t* result) {
   return true;
 }
 
-bool SpdyFrameReader::ReadStringPiece16(StringPiece* result) {
+bool SpdyFrameReader::ReadStringPiece16(SpdyStringPiece* result) {
   // Read resultant length.
   uint16_t result_len;
   if (!ReadUInt16(&result_len)) {
@@ -132,7 +130,7 @@ bool SpdyFrameReader::ReadStringPiece16(StringPiece* result) {
   }
 
   // Set result.
-  *result = StringPiece(data_ + ofs_, result_len);
+  *result = SpdyStringPiece(data_ + ofs_, result_len);
 
   // Iterate.
   ofs_ += result_len;
@@ -140,7 +138,7 @@ bool SpdyFrameReader::ReadStringPiece16(StringPiece* result) {
   return true;
 }
 
-bool SpdyFrameReader::ReadStringPiece32(StringPiece* result) {
+bool SpdyFrameReader::ReadStringPiece32(SpdyStringPiece* result) {
   // Read resultant length.
   uint32_t result_len;
   if (!ReadUInt32(&result_len)) {
@@ -155,7 +153,7 @@ bool SpdyFrameReader::ReadStringPiece32(StringPiece* result) {
   }
 
   // Set result.
-  *result = StringPiece(data_ + ofs_, result_len);
+  *result = SpdyStringPiece(data_ + ofs_, result_len);
 
   // Iterate.
   ofs_ += result_len;

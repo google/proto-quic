@@ -66,7 +66,7 @@ TEST(SpdyFrameReaderTest, ReadStringPiece16) {
   SpdyFrameReader frame_reader(kFrameData, arraysize(kFrameData));
   EXPECT_FALSE(frame_reader.IsDoneReading());
 
-  base::StringPiece stringpiece_val;
+  SpdyStringPiece stringpiece_val;
   EXPECT_TRUE(frame_reader.ReadStringPiece16(&stringpiece_val));
   EXPECT_FALSE(frame_reader.IsDoneReading());
   EXPECT_EQ(0, stringpiece_val.compare("Hi"));
@@ -89,7 +89,7 @@ TEST(SpdyFrameReaderTest, ReadStringPiece32) {
   SpdyFrameReader frame_reader(kFrameData, arraysize(kFrameData));
   EXPECT_FALSE(frame_reader.IsDoneReading());
 
-  base::StringPiece stringpiece_val;
+  SpdyStringPiece stringpiece_val;
   EXPECT_TRUE(frame_reader.ReadStringPiece32(&stringpiece_val));
   EXPECT_FALSE(frame_reader.IsDoneReading());
   EXPECT_EQ(0, stringpiece_val.compare("foo"));
@@ -142,7 +142,7 @@ TEST(SpdyFrameReaderTest, ReadStringPiece16WithBufferTooSmall) {
   SpdyFrameReader frame_reader(kFrameData, arraysize(kFrameData));
   EXPECT_FALSE(frame_reader.IsDoneReading());
 
-  base::StringPiece stringpiece_val;
+  SpdyStringPiece stringpiece_val;
   EXPECT_FALSE(frame_reader.ReadStringPiece16(&stringpiece_val));
 
   // Also make sure that trying to read a uint16_t, which technically could
@@ -162,7 +162,7 @@ TEST(SpdyFrameReaderTest, ReadStringPiece16WithBufferWayTooSmall) {
   SpdyFrameReader frame_reader(kFrameData, arraysize(kFrameData));
   EXPECT_FALSE(frame_reader.IsDoneReading());
 
-  base::StringPiece stringpiece_val;
+  SpdyStringPiece stringpiece_val;
   EXPECT_FALSE(frame_reader.ReadStringPiece16(&stringpiece_val));
 
   // Also make sure that trying to read a uint16_t, which technically could
@@ -183,7 +183,7 @@ TEST(SpdyFrameReaderTest, ReadStringPiece32WithBufferTooSmall) {
   SpdyFrameReader frame_reader(kFrameData, arraysize(kFrameData));
   EXPECT_FALSE(frame_reader.IsDoneReading());
 
-  base::StringPiece stringpiece_val;
+  SpdyStringPiece stringpiece_val;
   EXPECT_FALSE(frame_reader.ReadStringPiece32(&stringpiece_val));
 
   // Also make sure that trying to read a uint16_t, which technically could
@@ -203,7 +203,7 @@ TEST(SpdyFrameReaderTest, ReadStringPiece32WithBufferWayTooSmall) {
   SpdyFrameReader frame_reader(kFrameData, arraysize(kFrameData));
   EXPECT_FALSE(frame_reader.IsDoneReading());
 
-  base::StringPiece stringpiece_val;
+  SpdyStringPiece stringpiece_val;
   EXPECT_FALSE(frame_reader.ReadStringPiece32(&stringpiece_val));
 
   // Also make sure that trying to read a uint16_t, which technically could
@@ -226,12 +226,12 @@ TEST(SpdyFrameReaderTest, ReadBytes) {
   char dest1[3] = {};
   EXPECT_TRUE(frame_reader.ReadBytes(&dest1, arraysize(dest1)));
   EXPECT_FALSE(frame_reader.IsDoneReading());
-  EXPECT_EQ("foo", base::StringPiece(dest1, arraysize(dest1)));
+  EXPECT_EQ("foo", SpdyStringPiece(dest1, arraysize(dest1)));
 
   char dest2[2] = {};
   EXPECT_TRUE(frame_reader.ReadBytes(&dest2, arraysize(dest2)));
   EXPECT_TRUE(frame_reader.IsDoneReading());
-  EXPECT_EQ("Hi", base::StringPiece(dest2, arraysize(dest2)));
+  EXPECT_EQ("Hi", SpdyStringPiece(dest2, arraysize(dest2)));
 }
 
 TEST(SpdyFrameReaderTest, ReadBytesWithBufferTooSmall) {

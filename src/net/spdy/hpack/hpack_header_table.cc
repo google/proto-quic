@@ -14,8 +14,6 @@
 
 namespace net {
 
-using base::StringPiece;
-
 size_t HpackHeaderTable::EntryHasher::operator()(
     const HpackEntry* entry) const {
   return base::StringPieceHash()(entry->name()) ^
@@ -63,7 +61,7 @@ const HpackEntry* HpackHeaderTable::GetByIndex(size_t index) {
   return NULL;
 }
 
-const HpackEntry* HpackHeaderTable::GetByName(StringPiece name) {
+const HpackEntry* HpackHeaderTable::GetByName(SpdyStringPiece name) {
   {
     NameToEntryMap::const_iterator it = static_name_index_.find(name);
     if (it != static_name_index_.end()) {
@@ -83,8 +81,8 @@ const HpackEntry* HpackHeaderTable::GetByName(StringPiece name) {
   return NULL;
 }
 
-const HpackEntry* HpackHeaderTable::GetByNameAndValue(StringPiece name,
-                                                      StringPiece value) {
+const HpackEntry* HpackHeaderTable::GetByNameAndValue(SpdyStringPiece name,
+                                                      SpdyStringPiece value) {
   HpackEntry query(name, value);
   {
     UnorderedEntrySet::const_iterator it = static_index_.find(&query);
@@ -130,8 +128,8 @@ void HpackHeaderTable::SetSettingsHeaderTableSize(size_t settings_size) {
   SetMaxSize(settings_size_bound_);
 }
 
-void HpackHeaderTable::EvictionSet(StringPiece name,
-                                   StringPiece value,
+void HpackHeaderTable::EvictionSet(SpdyStringPiece name,
+                                   SpdyStringPiece value,
                                    EntryTable::iterator* begin_out,
                                    EntryTable::iterator* end_out) {
   size_t eviction_count = EvictionCountForEntry(name, value);
@@ -139,8 +137,8 @@ void HpackHeaderTable::EvictionSet(StringPiece name,
   *end_out = dynamic_entries_.end();
 }
 
-size_t HpackHeaderTable::EvictionCountForEntry(StringPiece name,
-                                               StringPiece value) const {
+size_t HpackHeaderTable::EvictionCountForEntry(SpdyStringPiece name,
+                                               SpdyStringPiece value) const {
   size_t available_size = max_size_ - size_;
   size_t entry_size = HpackEntry::Size(name, value);
 
@@ -186,8 +184,8 @@ void HpackHeaderTable::Evict(size_t count) {
   }
 }
 
-const HpackEntry* HpackHeaderTable::TryAddEntry(StringPiece name,
-                                                StringPiece value) {
+const HpackEntry* HpackHeaderTable::TryAddEntry(SpdyStringPiece name,
+                                                SpdyStringPiece value) {
   Evict(EvictionCountForEntry(name, value));
 
   size_t entry_size = HpackEntry::Size(name, value);

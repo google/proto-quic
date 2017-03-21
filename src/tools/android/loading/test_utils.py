@@ -10,7 +10,7 @@ import devtools_monitor
 import loading_trace
 import page_track
 import request_track
-import tracing
+import tracing_track
 import user_satisfied_lens
 
 
@@ -141,14 +141,14 @@ def LoadingTraceFromEvents(requests, page_events=None, trace_events=None):
   request = FakeRequestTrack(requests)
   page_event_track = FakePageTrack(page_events if page_events else [])
   if trace_events is not None:
-    tracing_track = tracing.TracingTrack(None,
+    track = tracing_track.TracingTrack(None,
         clovis_constants.DEFAULT_CATEGORIES)
-    tracing_track.Handle('Tracing.dataCollected',
-                         {'params': {'value': [e for e in trace_events]}})
+    track.Handle('Tracing.dataCollected',
+                 {'params': {'value': [e for e in trace_events]}})
   else:
-    tracing_track = None
+    track = None
   return loading_trace.LoadingTrace(
-      None, None, page_event_track, request, tracing_track)
+      None, None, page_event_track, request, track)
 
 
 class SimpleLens(object):
