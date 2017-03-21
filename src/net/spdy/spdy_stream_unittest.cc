@@ -16,7 +16,6 @@
 
 #include "base/memory/ref_counted.h"
 #include "base/run_loop.h"
-#include "base/strings/string_piece.h"
 #include "net/base/completion_callback.h"
 #include "net/base/request_priority.h"
 #include "net/log/net_log_event_type.h"
@@ -25,6 +24,7 @@
 #include "net/log/test_net_log_util.h"
 #include "net/socket/socket_test_util.h"
 #include "net/spdy/buffered_spdy_framer.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/spdy_http_utils.h"
 #include "net/spdy/spdy_protocol.h"
 #include "net/spdy/spdy_session.h"
@@ -47,7 +47,7 @@ namespace {
 const char kPushUrl[] = "https://www.example.org/push";
 const char kPostBody[] = "\0hello!\xff";
 const size_t kPostBodyLength = arraysize(kPostBody);
-const base::StringPiece kPostBodyStringPiece(kPostBody, kPostBodyLength);
+const SpdyStringPiece kPostBodyStringPiece(kPostBody, kPostBodyLength);
 
 static base::TimeTicks g_time_now;
 
@@ -205,7 +205,7 @@ TEST_F(SpdyStreamTest, SendDataAfterOpen) {
 class StreamDelegateWithTrailers : public test::StreamDelegateWithBody {
  public:
   StreamDelegateWithTrailers(const base::WeakPtr<SpdyStream>& stream,
-                             base::StringPiece data)
+                             SpdyStringPiece data)
       : StreamDelegateWithBody(stream, data) {}
 
   ~StreamDelegateWithTrailers() override {}
@@ -300,12 +300,12 @@ TEST_F(SpdyStreamTest, PushedStream) {
 
   AddReadPause();
 
-  base::StringPiece pushed_msg("foo");
+  SpdyStringPiece pushed_msg("foo");
   SpdySerializedFrame pushed_body(spdy_util_.ConstructSpdyDataFrame(
       2, pushed_msg.data(), pushed_msg.size(), true));
   AddRead(pushed_body);
 
-  base::StringPiece msg("bar");
+  SpdyStringPiece msg("bar");
   SpdySerializedFrame body(
       spdy_util_.ConstructSpdyDataFrame(1, msg.data(), msg.size(), true));
   AddRead(body);

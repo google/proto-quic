@@ -45,7 +45,7 @@
 //    framer.set_visitor(the_deframer.get());
 //
 //    // Process frames.
-//    StringPiece input = ...
+//    SpdyStringPiece input = ...
 //    while (!input.empty() && !framer.HasError()) {
 //      size_t consumed = framer.ProcessInput(input.data(), input.size());
 //      input.remove_prefix(consumed);

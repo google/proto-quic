@@ -40,7 +40,8 @@ def DoPush(options):
 
     def Push():
       if needs_directory:
-        device.RunShellCommand('mkdir -p ' + options.device_dir)
+        device.RunShellCommand(
+            ['mkdir', '-p', options.device_dir], check_return=True)
         needs_directory[:] = [] # = False
       device.PushChangedFiles([(os.path.abspath(host_path), device_path)])
 

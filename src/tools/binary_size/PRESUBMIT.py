@@ -15,7 +15,7 @@ def CommonChecks(input_api, output_api):
       input_api.canned_checks.RunUnitTestsInDirectory(
           input_api, output_api,
           input_api.PresubmitLocalPath(),
-          whitelist=[r'.+_unittest\.py$']))
+          whitelist=[r'.+_test\.py$']))
 
   if input_api.is_committing:
     output.extend(input_api.canned_checks.PanProjectChecks(input_api,

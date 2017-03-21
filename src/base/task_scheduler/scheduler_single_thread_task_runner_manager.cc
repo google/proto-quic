@@ -229,7 +229,7 @@ SchedulerSingleThreadTaskRunnerManager::
   size_t workers_unregistered_during_join =
       subtle::NoBarrier_Load(&workers_unregistered_during_join_);
   DCHECK_EQ(workers_unregistered_during_join, workers_.size())
-      << "There cannot be outstanding SingleThreadTaskRunners upon destruction"
+      << "There cannot be outstanding SingleThreadTaskRunners upon destruction "
          "of SchedulerSingleThreadTaskRunnerManager or the Task Scheduler";
 #endif
 }

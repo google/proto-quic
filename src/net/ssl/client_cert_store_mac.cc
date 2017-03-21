@@ -121,6 +121,57 @@ bool IsIssuedByInKeychain(const std::vector<std::string>& valid_issuers,
   return true;
 }
 
+// Returns true if |purpose| is listed as allowed in |usage|. This
+// function also considers the "Any" purpose. If the attribute is
+// present and empty, we return false.
+bool ExtendedKeyUsageAllows(const CE_ExtendedKeyUsage* usage,
+                            const CSSM_OID* purpose) {
+  for (unsigned p = 0; p < usage->numPurposes; ++p) {
+    if (CSSMOIDEqual(&usage->purposes[p], purpose))
+      return true;
+    if (CSSMOIDEqual(&usage->purposes[p], &CSSMOID_ExtendedKeyUsageAny))
+      return true;
+  }
+  return false;
+}
+
+// Does |cert|'s usage allow SSL client authentication?
+bool SupportsSSLClientAuth(SecCertificateRef cert) {
+  x509_util::CSSMCachedCertificate cached_cert;
+  OSStatus status = cached_cert.Init(cert);
+  if (status)
+    return false;
+
+  // RFC5280 says to take the intersection of the two extensions.
+  //
+  // Our underlying crypto libraries don't expose
+  // ClientCertificateType, so for now we will not support fixed
+  // Diffie-Hellman mechanisms. For rsa_sign, we need the
+  // digitalSignature bit.
+  //
+  // In particular, if a key has the nonRepudiation bit and not the
+  // digitalSignature one, we will not offer it to the user.
+  x509_util::CSSMFieldValue key_usage;
+  status = cached_cert.GetField(&CSSMOID_KeyUsage, &key_usage);
+  if (status == CSSM_OK && key_usage.field()) {
+    const CSSM_X509_EXTENSION* ext = key_usage.GetAs<CSSM_X509_EXTENSION>();
+    const CE_KeyUsage* key_usage_value =
+        reinterpret_cast<const CE_KeyUsage*>(ext->value.parsedValue);
+    if (!((*key_usage_value) & CE_KU_DigitalSignature))
+      return false;
+  }
+
+  status = cached_cert.GetField(&CSSMOID_ExtendedKeyUsage, &key_usage);
+  if (status == CSSM_OK && key_usage.field()) {
+    const CSSM_X509_EXTENSION* ext = key_usage.GetAs<CSSM_X509_EXTENSION>();
+    const CE_ExtendedKeyUsage* ext_key_usage =
+        reinterpret_cast<const CE_ExtendedKeyUsage*>(ext->value.parsedValue);
+    if (!ExtendedKeyUsageAllows(ext_key_usage, &CSSMOID_ClientAuth))
+      return false;
+  }
+  return true;
+}
+
 // Examines the certificates in |preferred_cert| and |regular_certs| to find
 // all certificates that match the client certificate request in |request|,
 // storing the matching certificates in |selected_certs|.
@@ -142,7 +193,7 @@ void GetClientCertsImpl(const scoped_refptr<X509Certificate>& preferred_cert,
   selected_certs->clear();
   for (size_t i = 0; i < preliminary_list.size(); ++i) {
     scoped_refptr<X509Certificate>& cert = preliminary_list[i];
-    if (cert->HasExpired() || !cert->SupportsSSLClientAuth())
+    if (cert->HasExpired() || !SupportsSSLClientAuth(cert->os_cert_handle()))
       continue;
 
     // Skip duplicates (a cert may be in multiple keychains).

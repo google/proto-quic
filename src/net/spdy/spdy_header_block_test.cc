@@ -13,7 +13,6 @@
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
 using std::make_pair;
 using std::string;
 using ::testing::ElementsAre;
@@ -23,10 +22,11 @@ namespace test {
 
 class ValueProxyPeer {
  public:
-  static StringPiece key(SpdyHeaderBlock::ValueProxy* p) { return p->key_; }
+  static SpdyStringPiece key(SpdyHeaderBlock::ValueProxy* p) { return p->key_; }
 };
 
-std::pair<StringPiece, StringPiece> Pair(StringPiece k, StringPiece v) {
+std::pair<SpdyStringPiece, SpdyStringPiece> Pair(SpdyStringPiece k,
+                                                 SpdyStringPiece v) {
   return make_pair(k, v);
 }
 
@@ -44,19 +44,19 @@ TEST(SpdyHeaderBlockTest, EmptyBlock) {
 
 TEST(SpdyHeaderBlockTest, KeyMemoryReclaimedOnLookup) {
   SpdyHeaderBlock block;
-  StringPiece copied_key1;
+  SpdyStringPiece copied_key1;
   {
     auto proxy1 = block["some key name"];
     copied_key1 = ValueProxyPeer::key(&proxy1);
   }
-  StringPiece copied_key2;
+  SpdyStringPiece copied_key2;
   {
     auto proxy2 = block["some other key name"];
     copied_key2 = ValueProxyPeer::key(&proxy2);
   }
   // Because proxy1 was never used to modify the block, the memory used for the
   // key could be reclaimed and used for the second call to operator[].
-  // Therefore, we expect the pointers of the two StringPieces to be equal.
+  // Therefore, we expect the pointers of the two SpdyStringPieces to be equal.
   EXPECT_EQ(copied_key1.data(), copied_key2.data());
 
   {
@@ -196,29 +196,29 @@ TEST(SpdyHeaderBlockTest, AppendHeaders) {
 }
 
 TEST(JoinTest, JoinEmpty) {
-  std::vector<StringPiece> empty;
-  StringPiece separator = ", ";
+  std::vector<SpdyStringPiece> empty;
+  SpdyStringPiece separator = ", ";
   char buf[10] = "";
   size_t written = Join(buf, empty, separator);
   EXPECT_EQ(0u, written);
 }
 
 TEST(JoinTest, JoinOne) {
-  std::vector<StringPiece> v = {"one"};
-  StringPiece separator = ", ";
+  std::vector<SpdyStringPiece> v = {"one"};
+  SpdyStringPiece separator = ", ";
   char buf[15];
   size_t written = Join(buf, v, separator);
   EXPECT_EQ(3u, written);
-  EXPECT_EQ("one", StringPiece(buf, written));
+  EXPECT_EQ("one", SpdyStringPiece(buf, written));
 }
 
 TEST(JoinTest, JoinMultiple) {
-  std::vector<StringPiece> v = {"one", "two", "three"};
-  StringPiece separator = ", ";
+  std::vector<SpdyStringPiece> v = {"one", "two", "three"};
+  SpdyStringPiece separator = ", ";
   char buf[15];
   size_t written = Join(buf, v, separator);
   EXPECT_EQ(15u, written);
-  EXPECT_EQ("one, two, three", StringPiece(buf, written));
+  EXPECT_EQ("one, two, three", SpdyStringPiece(buf, written));
 }
 
 }  // namespace test

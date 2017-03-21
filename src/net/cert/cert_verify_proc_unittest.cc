@@ -21,6 +21,7 @@
 #include "net/cert/asn1_util.h"
 #include "net/cert/cert_status_flags.h"
 #include "net/cert/cert_verifier.h"
+#include "net/cert/cert_verify_proc_builtin.h"
 #include "net/cert/cert_verify_result.h"
 #include "net/cert/crl_set.h"
 #include "net/cert/crl_set_storage.h"
@@ -113,6 +114,7 @@ enum CertVerifyProcType {
   CERT_VERIFY_PROC_IOS,
   CERT_VERIFY_PROC_MAC,
   CERT_VERIFY_PROC_WIN,
+  CERT_VERIFY_PROC_BUILTIN,
 };
 
 // Returns the CertVerifyProcType corresponding to what
@@ -162,6 +164,8 @@ std::string VerifyProcTypeToName(
       return "CertVerifyProcMac";
     case CERT_VERIFY_PROC_WIN:
       return "CertVerifyProcWin";
+    case CERT_VERIFY_PROC_BUILTIN:
+      return "CertVerifyProcBuiltin";
   }
 
   return nullptr;
@@ -170,13 +174,21 @@ std::string VerifyProcTypeToName(
 // The set of all CertVerifyProcTypes that tests should be
 // parameterized on.
 const std::vector<CertVerifyProcType> kAllCertVerifiers = {
-    GetDefaultCertVerifyProcType()};
+    GetDefaultCertVerifyProcType()
+
+// TODO(crbug.com/649017): Enable this everywhere. Right now this is
+// gated on having CertVerifyProcBuiltin understand the roots added
+// via TestRootCerts.
+#if defined(USE_NSS_CERTS)
+        ,
+    CERT_VERIFY_PROC_BUILTIN
+#endif
+};
 
 }  // namespace
 
 // This fixture is for tests that apply to concrete implementations of
-// CertVerifyProc. It will be run for all of the concrete
-// CertVerifyProc types.
+// CertVerifyProc. It will be run for all of the concrete CertVerifyProc types.
 //
 // It is called "Internal" as it tests the internal methods like
 // "VerifyInternal()".
@@ -184,8 +196,14 @@ class CertVerifyProcInternalTest
     : public testing::TestWithParam<CertVerifyProcType> {
  protected:
   void SetUp() override {
-    EXPECT_EQ(verify_proc_type(), GetDefaultCertVerifyProcType());
-    verify_proc_ = CertVerifyProc::CreateDefault();
+    CertVerifyProcType type = verify_proc_type();
+    if (type == CERT_VERIFY_PROC_BUILTIN) {
+      verify_proc_ = CreateCertVerifyProcBuiltin();
+    } else if (type == GetDefaultCertVerifyProcType()) {
+      verify_proc_ = CertVerifyProc::CreateDefault();
+    } else {
+      ADD_FAILURE() << "Unhandled CertVerifyProcType";
+    }
   }
 
   int Verify(X509Certificate* cert,
@@ -243,12 +261,14 @@ class CertVerifyProcInternalTest
   }
 
   bool SupportsCRLSet() const {
+    // TODO(crbug.com/649017): Return true for CERT_VERIFY_PROC_BUILTIN.
     return verify_proc_type() == CERT_VERIFY_PROC_NSS ||
            verify_proc_type() == CERT_VERIFY_PROC_WIN ||
            verify_proc_type() == CERT_VERIFY_PROC_MAC;
   }
 
   bool SupportsCRLSetsInPathBuilding() const {
+    // TODO(crbug.com/649017): Return true for CERT_VERIFY_PROC_BUILTIN.
     return verify_proc_type() == CERT_VERIFY_PROC_WIN ||
            verify_proc_type() == CERT_VERIFY_PROC_NSS;
   }
@@ -1136,6 +1156,11 @@ TEST_P(CertVerifyProcInternalTest, PublicKeyHashes) {
 // The Key Usage extension in this RSA SSL server certificate does not have
 // the keyEncipherment bit.
 TEST_P(CertVerifyProcInternalTest, InvalidKeyUsage) {
+  if (verify_proc_type() == CERT_VERIFY_PROC_BUILTIN) {
+    LOG(INFO) << "TODO(crbug.com/649017): Skipping test as not yet implemented "
+                 "in builting verifier";
+    return;
+  }
   base::FilePath certs_dir = GetTestCertsDirectory();
 
   scoped_refptr<X509Certificate> server_cert =

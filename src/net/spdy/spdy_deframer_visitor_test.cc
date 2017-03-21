@@ -13,7 +13,6 @@
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
 #include "base/rand_util.h"
-#include "base/strings/string_piece.h"
 #include "net/spdy/hpack/hpack_constants.h"
 #include "net/spdy/mock_spdy_framer_visitor.h"
 #include "net/spdy/spdy_frame_builder.h"

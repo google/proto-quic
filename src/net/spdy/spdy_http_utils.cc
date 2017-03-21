@@ -18,6 +18,7 @@
 #include "net/http/http_response_headers.h"
 #include "net/http/http_response_info.h"
 #include "net/http/http_util.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 
 namespace net {
 
@@ -133,11 +134,11 @@ NET_EXPORT_PRIVATE void ConvertHeaderBlockToHttpRequestHeaders(
     const SpdyHeaderBlock& spdy_headers,
     HttpRequestHeaders* http_headers) {
   for (const auto& it : spdy_headers) {
-    base::StringPiece key = it.first;
+    SpdyStringPiece key = it.first;
     if (key[0] == ':') {
       key.remove_prefix(1);
     }
-    std::vector<base::StringPiece> values = base::SplitStringPiece(
+    std::vector<SpdyStringPiece> values = base::SplitStringPiece(
         it.second, "\0", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
     for (const auto& value : values) {
       http_headers->SetHeader(key, value);

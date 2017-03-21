@@ -9,8 +9,8 @@
 
 #include <memory>
 
-#include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 
 namespace net {
 
@@ -33,9 +33,7 @@ struct NET_EXPORT_PRIVATE SpdyPinnableBufferPiece {
     return length_;
   }
 
-  operator base::StringPiece() const {
-    return base::StringPiece(buffer_, length_);
-  }
+  operator SpdyStringPiece() const { return SpdyStringPiece(buffer_, length_); }
 
   // Allocates and copies the buffer to internal storage.
   void Pin();

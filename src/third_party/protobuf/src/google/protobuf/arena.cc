@@ -39,7 +39,6 @@ namespace google {
 namespace protobuf {
 
 
-google::protobuf::internal::SequenceNumber Arena::lifecycle_id_generator_;
 #if defined(GOOGLE_PROTOBUF_NO_THREADLOCAL)
 Arena::ThreadCache& Arena::thread_cache() {
   static internal::ThreadLocalStorage<ThreadCache>* thread_cache_ =
@@ -56,7 +55,7 @@ GOOGLE_THREAD_LOCAL Arena::ThreadCache Arena::thread_cache_ = { -1, NULL };
 #endif
 
 void Arena::Init() {
-  lifecycle_id_ = lifecycle_id_generator_.GetNext();
+  lifecycle_id_ = internal::cr_lifecycle_id_generator_.GetNext();
   blocks_ = 0;
   hint_ = 0;
   owns_first_block_ = true;
@@ -99,7 +98,7 @@ Arena::~Arena() {
 
 uint64 Arena::Reset() {
   // Invalidate any ThreadCaches pointing to any blocks we just destroyed.
-  lifecycle_id_ = lifecycle_id_generator_.GetNext();
+  lifecycle_id_ = internal::cr_lifecycle_id_generator_.GetNext();
   return ResetInternal();
 }
 

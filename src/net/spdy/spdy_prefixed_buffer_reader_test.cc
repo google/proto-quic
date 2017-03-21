@@ -4,6 +4,7 @@
 
 #include "net/spdy/spdy_prefixed_buffer_reader.h"
 
+#include "net/spdy/platform/api/spdy_string_piece.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -11,7 +12,6 @@ namespace net {
 
 namespace test {
 
-using base::StringPiece;
 using testing::ElementsAreArray;
 
 class SpdyPrefixedBufferReaderTest : public ::testing::Test {
@@ -45,7 +45,7 @@ TEST_F(SpdyPrefixedBufferReaderTest, ReadPieceFromPrefix) {
   EXPECT_FALSE(reader.ReadN(10, &piece));  // Not enough buffer.
   EXPECT_TRUE(reader.ReadN(6, &piece));
   EXPECT_FALSE(piece.IsPinned());
-  EXPECT_EQ(StringPiece("foobar"), piece);
+  EXPECT_EQ(SpdyStringPiece("foobar"), piece);
   EXPECT_EQ(0u, reader.Available());
 }
 
@@ -68,7 +68,7 @@ TEST_F(SpdyPrefixedBufferReaderTest, ReadPieceFromSuffix) {
   EXPECT_FALSE(reader.ReadN(10, &piece));  // Not enough buffer.
   EXPECT_TRUE(reader.ReadN(6, &piece));
   EXPECT_FALSE(piece.IsPinned());
-  EXPECT_EQ(StringPiece("foobar"), piece);
+  EXPECT_EQ(SpdyStringPiece("foobar"), piece);
   EXPECT_EQ(0u, reader.Available());
 }
 
@@ -91,7 +91,7 @@ TEST_F(SpdyPrefixedBufferReaderTest, ReadPieceSpanning) {
   EXPECT_FALSE(reader.ReadN(10, &piece));  // Not enough buffer.
   EXPECT_TRUE(reader.ReadN(6, &piece));
   EXPECT_TRUE(piece.IsPinned());
-  EXPECT_EQ(StringPiece("foobar"), piece);
+  EXPECT_EQ(SpdyStringPiece("foobar"), piece);
   EXPECT_EQ(0u, reader.Available());
 }
 
@@ -111,12 +111,12 @@ TEST_F(SpdyPrefixedBufferReaderTest, ReadMixed) {
   EXPECT_EQ(6u, reader.Available());
 
   EXPECT_TRUE(reader.ReadN(3, &piece));
-  EXPECT_EQ(StringPiece("fhi"), piece);
+  EXPECT_EQ(SpdyStringPiece("fhi"), piece);
   EXPECT_TRUE(piece.IsPinned());
   EXPECT_EQ(3u, reader.Available());
 
   EXPECT_TRUE(reader.ReadN(2, &piece));
-  EXPECT_EQ(StringPiece("jk"), piece);
+  EXPECT_EQ(SpdyStringPiece("jk"), piece);
   EXPECT_FALSE(piece.IsPinned());
   EXPECT_EQ(1u, reader.Available());
 

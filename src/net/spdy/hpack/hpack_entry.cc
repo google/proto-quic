@@ -10,12 +10,10 @@
 
 namespace net {
 
-using base::StringPiece;
-
 const size_t HpackEntry::kSizeOverhead = 32;
 
-HpackEntry::HpackEntry(StringPiece name,
-                       StringPiece value,
+HpackEntry::HpackEntry(SpdyStringPiece name,
+                       SpdyStringPiece value,
                        bool is_static,
                        size_t insertion_index)
     : name_(name.data(), name.size()),
@@ -26,7 +24,7 @@ HpackEntry::HpackEntry(StringPiece name,
       type_(is_static ? STATIC : DYNAMIC),
       time_added_(0) {}
 
-HpackEntry::HpackEntry(StringPiece name, StringPiece value)
+HpackEntry::HpackEntry(SpdyStringPiece name, SpdyStringPiece value)
     : name_ref_(name),
       value_ref_(value),
       insertion_index_(0),
@@ -45,8 +43,8 @@ HpackEntry::HpackEntry(const HpackEntry& other)
   } else {
     name_ = other.name_;
     value_ = other.value_;
-    name_ref_ = StringPiece(name_.data(), name_.size());
-    value_ref_ = StringPiece(value_.data(), value_.size());
+    name_ref_ = SpdyStringPiece(name_.data(), name_.size());
+    value_ref_ = SpdyStringPiece(value_.data(), value_.size());
   }
 }
 
@@ -60,15 +58,15 @@ HpackEntry& HpackEntry::operator=(const HpackEntry& other) {
   }
   name_ = other.name_;
   value_ = other.value_;
-  name_ref_ = StringPiece(name_.data(), name_.size());
-  value_ref_ = StringPiece(value_.data(), value_.size());
+  name_ref_ = SpdyStringPiece(name_.data(), name_.size());
+  value_ref_ = SpdyStringPiece(value_.data(), value_.size());
   return *this;
 }
 
 HpackEntry::~HpackEntry() {}
 
 // static
-size_t HpackEntry::Size(StringPiece name, StringPiece value) {
+size_t HpackEntry::Size(SpdyStringPiece name, SpdyStringPiece value) {
   return name.size() + value.size() + kSizeOverhead;
 }
 
@@ -77,9 +75,9 @@ size_t HpackEntry::Size() const {
 }
 
 std::string HpackEntry::GetDebugString() const {
-  return "{ name: \"" + name_ref_.as_string() + "\", value: \"" +
-         value_ref_.as_string() + "\", index: " +
-         base::SizeTToString(insertion_index_) +
+  return "{ name: \"" + std::string(name_ref_) + "\", value: \"" +
+         std::string(value_ref_) +
+         "\", index: " + base::SizeTToString(insertion_index_) +
          (IsStatic() ? " static" : (IsLookup() ? " lookup" : " dynamic")) +
          " }";
 }

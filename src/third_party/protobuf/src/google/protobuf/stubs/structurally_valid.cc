@@ -511,21 +511,10 @@ int UTF8GenericScanFastAscii(const UTF8ScanObj* st,
 //   UTF-8 strings.  Since UTF-8 validation is only used for debugging
 //   anyway, we simply always return success if initialization hasn't
 //   occurred yet.
-namespace {
-
-bool module_initialized_ = false;
-
-struct InitDetector {
-  InitDetector() {
-    module_initialized_ = true;
-  }
-};
-InitDetector init_detector;
-
-}  // namespace
+extern bool cr_module_initialized_;
 
 bool IsStructurallyValidUTF8(const char* buf, int len) {
-  if (!module_initialized_) return true;
+  if (!cr_module_initialized_) return true;
   
   int bytes_consumed = 0;
   UTF8GenericScanFastAscii(&utf8acceptnonsurrogates_obj,
@@ -534,7 +523,7 @@ bool IsStructurallyValidUTF8(const char* buf, int len) {
 }
 
 int UTF8SpnStructurallyValid(const StringPiece& str) {
-  if (!module_initialized_) return str.size();
+  if (!cr_module_initialized_) return str.size();
 
   int bytes_consumed = 0;
   UTF8GenericScanFastAscii(&utf8acceptnonsurrogates_obj,

@@ -48,7 +48,8 @@ class V8Top25(perf_benchmark.PerfBenchmark):
     return 'v8.top_25_smooth'
 
 
-@benchmark.Enabled('android')
+@benchmark.Disabled('all')  # crbug.com/702194
+#@benchmark.Enabled('android')
 @benchmark.Owner(emails=['hpayer@chromium.org', 'rmcilroy@chromium.org'])
 class V8KeyMobileSites(perf_benchmark.PerfBenchmark):
   """Measures V8 GC metrics on the while scrolling down key mobile sites.
@@ -98,19 +99,30 @@ class _InfiniteScrollBenchmark(perf_benchmark.PerfBenchmark):
     v8_helper.AppendJSFlags(options, '--heap-growing-percent=10')
 
   def CreateTimelineBasedMeasurementOptions(self):
-    v8_categories = [
-        'blink.console', 'disabled-by-default-v8.gc',
-        'renderer.scheduler', 'v8', 'webkit.console']
-    smoothness_categories = [
-        'webkit.console', 'blink.console', 'benchmark', 'trace_event_overhead']
-    memory_categories = ['blink.console', 'disabled-by-default-memory-infra']
+    categories = [
+      # Disable all categories by default.
+      '-*',
+      # Memory categories.
+      'disabled-by-default-memory-infra',
+      # EQT categories.
+      'blink.user_timing',
+      'loading',
+      'navigation',
+      'toplevel',
+      # V8 categories.
+      'blink.console',
+      'disabled-by-default-v8.gc',
+      'renderer.scheduler',
+      'v8',
+      'webkit.console'
+    ]
     category_filter = chrome_trace_category_filter.ChromeTraceCategoryFilter(
-        ','.join(['-*'] + v8_categories +
-                 smoothness_categories + memory_categories))
+        ','.join(categories))
     options = timeline_based_measurement.Options(category_filter)
     # TODO(ulan): Add frame time discrepancy once it is ported to TBMv2,
     # see crbug.com/606841.
-    options.SetTimelineBasedMetrics(['v8AndMemoryMetrics'])
+    options.SetTimelineBasedMetrics([
+      'expectedQueueingTimeMetric', 'v8AndMemoryMetrics'])
     # Setting an empty memory dump config disables periodic dumps.
     options.config.chrome_trace_config.SetMemoryDumpConfig(
         chrome_trace_config.MemoryDumpConfig())
@@ -118,7 +130,7 @@ class _InfiniteScrollBenchmark(perf_benchmark.PerfBenchmark):
 
   @classmethod
   def ValueCanBeAddedPredicate(cls, value, _):
-    return 'v8' in value.name
+    return ('v8' in value.name) or ('eqt' in value.name)
 
   @classmethod
   def ShouldTearDownStateAfterEachStoryRun(cls):

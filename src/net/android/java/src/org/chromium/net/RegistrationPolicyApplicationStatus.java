@@ -23,6 +23,7 @@ public class RegistrationPolicyApplicationStatus
         onApplicationStateChange(getApplicationState());
     }
 
+    @Override
     protected void destroy() {
         if (mDestroyed) return;
         ApplicationStatus.unregisterApplicationStateListener(this);

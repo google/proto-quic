@@ -15,5 +15,6 @@ public class RegistrationPolicyAlwaysRegister
         register();
     }
 
+    @Override
     protected void destroy() {}
 }

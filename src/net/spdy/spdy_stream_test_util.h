@@ -9,9 +9,9 @@
 
 #include "base/compiler_specific.h"
 #include "base/memory/ref_counted.h"
-#include "base/strings/string_piece.h"
 #include "net/base/io_buffer.h"
 #include "net/base/test_completion_callback.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/spdy_read_queue.h"
 #include "net/spdy/spdy_stream.h"
 
@@ -98,20 +98,20 @@ class StreamDelegateSendImmediate : public StreamDelegateBase {
  public:
   // |data| can be NULL.
   StreamDelegateSendImmediate(const base::WeakPtr<SpdyStream>& stream,
-                              base::StringPiece data);
+                              SpdyStringPiece data);
   ~StreamDelegateSendImmediate() override;
 
   void OnHeadersReceived(const SpdyHeaderBlock& response_headers) override;
 
  private:
-  base::StringPiece data_;
+  SpdyStringPiece data_;
 };
 
 // Test delegate that sends body data.
 class StreamDelegateWithBody : public StreamDelegateBase {
  public:
   StreamDelegateWithBody(const base::WeakPtr<SpdyStream>& stream,
-                         base::StringPiece data);
+                         SpdyStringPiece data);
   ~StreamDelegateWithBody() override;
 
   void OnHeadersSent() override;

@@ -157,10 +157,10 @@ class NET_EXPORT NetworkQualityEstimator
   // Provides simple interface to obtain the effective connection type.
   class NET_EXPORT NetworkQualityProvider {
    public:
+    virtual ~NetworkQualityProvider() {}
+
     // Returns the current effective connection type.
     virtual EffectiveConnectionType GetEffectiveConnectionType() const = 0;
-
-    virtual ~NetworkQualityProvider() {}
 
     // Adds |observer| to a list of effective connection type observers.
     virtual void AddEffectiveConnectionTypeObserver(
@@ -169,6 +169,19 @@ class NET_EXPORT NetworkQualityEstimator
     // Removes |observer| from a list of effective connection type observers.
     virtual void RemoveEffectiveConnectionTypeObserver(
         EffectiveConnectionTypeObserver* observer) = 0;
+
+    // Returns the current HTTP RTT estimate. If the estimate is unavailable,
+    // the returned optional value is null.
+    virtual base::Optional<base::TimeDelta> GetHttpRTT() const;
+
+    // Returns the current transport RTT estimate. If the estimate is
+    // unavailable, the returned optional value is null.
+    virtual base::Optional<base::TimeDelta> GetTransportRTT() const;
+
+    // Returns the current downstream throughput estimate (in kilobits per
+    // second). If the estimate is unavailable, the returned optional value is
+    // null.
+    virtual base::Optional<int32_t> GetDownstreamThroughputKbps() const;
 
     // Adds |observer| to the list of RTT and throughput estimate observers.
     // |observer| would be notified of the current RTT and throughput estimates

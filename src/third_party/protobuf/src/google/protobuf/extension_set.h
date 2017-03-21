@@ -731,13 +731,13 @@ class LIBPROTOBUF_EXPORT RepeatedPrimitiveGenericTypeTraits {
   template<typename Type> friend class RepeatedPrimitiveTypeTraits;
   static void InitializeDefaultRepeatedFields();
   static void DestroyDefaultRepeatedFields();
-  static const RepeatedField<int32>* default_repeated_field_int32_;
-  static const RepeatedField<int64>* default_repeated_field_int64_;
-  static const RepeatedField<uint32>* default_repeated_field_uint32_;
-  static const RepeatedField<uint64>* default_repeated_field_uint64_;
-  static const RepeatedField<double>* default_repeated_field_double_;
-  static const RepeatedField<float>* default_repeated_field_float_;
-  static const RepeatedField<bool>* default_repeated_field_bool_;
+  static const RepeatedField<int32>* cr_default_repeated_field_int32_;
+  static const RepeatedField<int64>* cr_default_repeated_field_int64_;
+  static const RepeatedField<uint32>* cr_default_repeated_field_uint32_;
+  static const RepeatedField<uint64>* cr_default_repeated_field_uint64_;
+  static const RepeatedField<double>* cr_default_repeated_field_double_;
+  static const RepeatedField<float>* cr_default_repeated_field_float_;
+  static const RepeatedField<bool>* cr_default_repeated_field_bool_;
 };
 
 #define PROTOBUF_DEFINE_PRIMITIVE_TYPE(TYPE, METHOD)                       \
@@ -769,7 +769,7 @@ template<> inline const RepeatedField<TYPE>*                               \
       &repeated_primitive_generic_type_traits_once_init_,                  \
       &RepeatedPrimitiveGenericTypeTraits::InitializeDefaultRepeatedFields); \
   return RepeatedPrimitiveGenericTypeTraits::                              \
-      default_repeated_field_##TYPE##_;                                    \
+      cr_default_repeated_field_##TYPE##_;                                    \
 }                                                                          \
 template<> inline const RepeatedField<TYPE>&                               \
     RepeatedPrimitiveTypeTraits<TYPE>::GetRepeated(int number,             \
@@ -821,7 +821,8 @@ class LIBPROTOBUF_EXPORT StringTypeTraits {
   }
 };
 
-LIBPROTOBUF_EXPORT extern ProtobufOnceType repeated_string_type_traits_once_init_;
+LIBPROTOBUF_EXPORT extern ProtobufOnceType
+    cr_repeated_string_type_traits_once_init_;
 
 class LIBPROTOBUF_EXPORT RepeatedStringTypeTraits {
  public:
@@ -866,15 +867,16 @@ class LIBPROTOBUF_EXPORT RepeatedStringTypeTraits {
   }
 
   static const RepeatedFieldType* GetDefaultRepeatedField() {
-    ::google::protobuf::GoogleOnceInit(&repeated_string_type_traits_once_init_,
-                   &InitializeDefaultRepeatedFields);
-    return default_repeated_field_;
+    ::google::protobuf::GoogleOnceInit(
+        &cr_repeated_string_type_traits_once_init_,
+        &InitializeDefaultRepeatedFields);
+    return cr_default_repeated_field_;
   }
 
  private:
   static void InitializeDefaultRepeatedFields();
   static void DestroyDefaultRepeatedFields();
-  static const RepeatedFieldType *default_repeated_field_;
+  static const RepeatedFieldType* cr_default_repeated_field_;
 };
 
 // -------------------------------------------------------------------
@@ -1043,7 +1045,7 @@ class LIBPROTOBUF_EXPORT RepeatedMessageGenericTypeTraits {
   template<typename Type> friend class RepeatedMessageTypeTraits;
   static void InitializeDefaultRepeatedFields();
   static void DestroyDefaultRepeatedFields();
-  static const RepeatedFieldType* default_repeated_field_;
+  static const RepeatedFieldType* cr_default_repeated_field_;
 };
 
 template<typename Type> inline
@@ -1053,7 +1055,7 @@ template<typename Type> inline
       &repeated_message_generic_type_traits_once_init_,
       &RepeatedMessageGenericTypeTraits::InitializeDefaultRepeatedFields);
   return reinterpret_cast<const RepeatedFieldType*>(
-      RepeatedMessageGenericTypeTraits::default_repeated_field_);
+      RepeatedMessageGenericTypeTraits::cr_default_repeated_field_);
 }
 
 // -------------------------------------------------------------------

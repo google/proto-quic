@@ -19,16 +19,6 @@ fuzzer_test("empty_fuzzer") {
   additional_configs = [ "//testing/libfuzzer:no_clusterfuzz" ]
 }
 
-fuzzer_test("brotli_fuzzer") {
-  sources = [
-    "brotli_fuzzer.cc",
-  ]
-  deps = [
-    "//third_party/brotli:dec",
-  ]
-  libfuzzer_options = [ "max_len=1280" ]
-}
-
 fuzzer_test("courgette_fuzzer") {
   sources = [
     "courgette_fuzzer.cc",

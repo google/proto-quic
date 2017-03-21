@@ -20,7 +20,6 @@
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
 using std::string;
 using testing::ElementsAreArray;
 using testing::Pointwise;
@@ -67,7 +66,7 @@ class GenericHuffmanTableTest : public ::testing::TestWithParam<bool> {
  protected:
   GenericHuffmanTableTest() : table_(), peer_(table_) {}
 
-  string EncodeString(StringPiece input) {
+  string EncodeString(SpdyStringPiece input) {
     string result;
     HpackOutputStream output_stream;
     table_.EncodeString(input, &output_stream);
@@ -229,11 +228,11 @@ TEST_F(GenericHuffmanTableTest, ValidateInternalsWithSmallCode) {
   EXPECT_EQ(bits8("10011000"), peer_.pad_bits());
 
   char input_storage[] = {2, 3, 2, 7, 4};
-  StringPiece input(input_storage, arraysize(input_storage));
+  SpdyStringPiece input(input_storage, arraysize(input_storage));
   // By symbol: (2) 00 (3) 010 (2) 00 (7) 10010 (4) 10000 (6 as pad) 1001100.
   char expect_storage[] = {bits8("00010001"), bits8("00101000"),
                            bits8("01001100")};
-  StringPiece expect(expect_storage, arraysize(expect_storage));
+  SpdyStringPiece expect(expect_storage, arraysize(expect_storage));
 
   string buffer_in = EncodeString(input);
   EXPECT_EQ(expect, buffer_in);
@@ -301,7 +300,7 @@ TEST_F(GenericHuffmanTableTest, DecodeWithBadInput) {
   {
     // This example works: (2) 00 (3) 010 (2) 00 (6) 100110 (pad) 100.
     char input_storage[] = {bits8("00010001"), bits8("00110100")};
-    StringPiece input(input_storage, arraysize(input_storage));
+    SpdyStringPiece input(input_storage, arraysize(input_storage));
 
     HpackInputStream input_stream(input);
     EXPECT_TRUE(table_.GenericDecodeString(&input_stream, &buffer));
@@ -311,7 +310,7 @@ TEST_F(GenericHuffmanTableTest, DecodeWithBadInput) {
     // Expect to fail on an invalid code prefix.
     // (2) 00 (3) 010 (2) 00 (too-large) 101000 (pad) 100.
     char input_storage[] = {bits8("00010001"), bits8("01000111")};
-    StringPiece input(input_storage, arraysize(input_storage));
+    SpdyStringPiece input(input_storage, arraysize(input_storage));
 
     HpackInputStream input_stream(input);
     EXPECT_FALSE(table_.GenericDecodeString(&input_stream, &buffer));
@@ -321,7 +320,7 @@ TEST_F(GenericHuffmanTableTest, DecodeWithBadInput) {
     // Expect to fail if more than a byte of unconsumed input remains.
     // (6) 100110 (8 truncated) 1001110000
     char input_storage[] = {bits8("10011010"), bits8("01110000")};
-    StringPiece input(input_storage, arraysize(input_storage));
+    SpdyStringPiece input(input_storage, arraysize(input_storage));
 
     HpackInputStream input_stream(input);
     EXPECT_FALSE(table_.GenericDecodeString(&input_stream, &buffer));
@@ -412,7 +411,7 @@ TEST_F(HpackHuffmanTableTest, RoundTripIndividualSymbols) {
   for (size_t i = 0; i != 256; i++) {
     char c = static_cast<char>(i);
     char storage[3] = {c, c, c};
-    StringPiece input(storage, arraysize(storage));
+    SpdyStringPiece input(storage, arraysize(storage));
     string buffer_in = EncodeString(input);
     string buffer_out;
     DecodeStringTwice(buffer_in, &buffer_out);
@@ -426,7 +425,7 @@ TEST_F(HpackHuffmanTableTest, RoundTripSymbolSequence) {
     storage[i] = static_cast<char>(i);
     storage[511 - i] = static_cast<char>(i);
   }
-  StringPiece input(storage, arraysize(storage));
+  SpdyStringPiece input(storage, arraysize(storage));
 
   string buffer_in = EncodeString(input);
   string buffer_out;

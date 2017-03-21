@@ -358,10 +358,6 @@ void X509Certificate::GetPublicKeyInfo(OSCertHandle os_cert,
   *size_bits = EVP_PKEY_bits(key);
 }
 
-bool X509Certificate::SupportsSSLClientAuth() const {
-  return false;
-}
-
 CFMutableArrayRef X509Certificate::CreateOSCertChainForCert() const {
   CFMutableArrayRef cert_list =
       CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);

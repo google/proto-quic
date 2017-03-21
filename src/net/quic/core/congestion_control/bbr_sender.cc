@@ -82,6 +82,9 @@ BbrSender::BbrSender(const RttStats* rtt_stats,
       max_ack_spacing_(kBandwidthWindowSize, QuicTime::Delta::Zero(), 0),
       largest_acked_time_(QuicTime::Zero()),
       largest_acked_sent_time_(QuicTime::Zero()),
+      max_ack_height_(kBandwidthWindowSize, 0, 0),
+      aggregation_epoch_start_time_(QuicTime::Zero()),
+      aggregation_epoch_bytes_(0),
       min_rtt_(QuicTime::Delta::Zero()),
       min_rtt_timestamp_(QuicTime::Zero()),
       congestion_window_(initial_tcp_congestion_window * kDefaultTCPMSS),
@@ -208,6 +211,12 @@ void BbrSender::OnCongestionEvent(bool /*rtt_updated*/,
     if (FLAGS_quic_reloadable_flag_quic_bbr_ack_spacing2) {
       QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_ack_spacing2, 1, 2);
       UpdateAckSpacing(event_time, last_acked_packet, acked_packets);
+    }
+    if (FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes) {
+      QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_ack_aggregation_bytes, 1,
+                        2);
+      UpdateAckAggregationBytes(
+          event_time, sampler_.total_bytes_acked() - total_bytes_acked_before);
     }
   }
 
@@ -508,6 +517,29 @@ void BbrSender::UpdateAckSpacing(QuicTime ack_time,
   max_ack_spacing_.Update(ack_spacing, round_trip_count_);
 }
 
+// TODO(ianswett): Move this logic into BandwidthSampler.
+void BbrSender::UpdateAckAggregationBytes(QuicTime ack_time,
+                                          QuicByteCount newly_acked_bytes) {
+  // Compute how many bytes are expected to be delivered, assuming max bandwidth
+  // is correct.
+  QuicByteCount expected_bytes_acked =
+      max_bandwidth_.GetBest() * (ack_time - aggregation_epoch_start_time_);
+  // Reset the current aggregation epoch as soon as the ack arrival rate is less
+  // than or equal to the max bandwidth.
+  if (aggregation_epoch_bytes_ <= expected_bytes_acked) {
+    // Reset to start measuring a new aggregation epoch.
+    aggregation_epoch_bytes_ = newly_acked_bytes;
+    aggregation_epoch_start_time_ = ack_time;
+    return;
+  }
+
+  // Compute how many extra bytes were delivered vs max bandwidth.
+  // Include the bytes most recently acknowledged to account for stretch acks.
+  aggregation_epoch_bytes_ += newly_acked_bytes;
+  max_ack_height_.Update(aggregation_epoch_bytes_ - expected_bytes_acked,
+                         round_trip_count_);
+}
+
 void BbrSender::CalculatePacingRate() {
   if (BandwidthEstimate().IsZero()) {
     return;
@@ -547,6 +579,11 @@ void BbrSender::CalculateCongestionWindow(QuicByteCount bytes_acked) {
     QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_ack_spacing2, 2, 2);
     // Add CWND for inter-ack spacing once STARTUP has been exited.
     target_window += max_ack_spacing_.GetBest() * BandwidthEstimate();
+  } else if (FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes &&
+             is_at_full_bandwidth_) {
+    QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_ack_aggregation_bytes, 2,
+                      2);
+    target_window += max_ack_height_.GetBest();
   }
 
   // Instead of immediately setting the target CWND as the new one, BBR grows

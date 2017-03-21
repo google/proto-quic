@@ -72,6 +72,18 @@ void AppendNodeToDebugString(CertErrorNode* node,
   AppendChildrenToDebugString(node->children, cur_indentation, out);
 }
 
+// Returns true if |children| contains the error |id| anywhere within it or its
+// children recursively.
+bool NodesContainError(const CertErrorNodes& children, CertErrorId id) {
+  for (const auto& child : children) {
+    if (child->node_type == CertErrorNodeType::TYPE_ERROR && child->id == id)
+      return true;
+    if (NodesContainError(child->children, id))
+      return true;
+  }
+  return false;
+}
+
 }  // namespace
 
 CertErrorNode::CertErrorNode(CertErrorNodeType node_type,
@@ -122,6 +134,10 @@ std::string CertErrors::ToDebugString() const {
   std::string result;
   AppendChildrenToDebugString(nodes_, std::string(), &result);
   return result;
+}
+
+bool CertErrors::ContainsError(CertErrorId id) const {
+  return NodesContainError(nodes_, id);
 }
 
 void CertErrors::AddNode(std::unique_ptr<CertErrorNode> node) {

@@ -295,6 +295,8 @@ TYPED_TEST(CommonStringPieceTest, CheckFind) {
   ASSERT_EQ(b.rfind(c, 0U), Piece::npos);
   ASSERT_EQ(a.rfind(d), static_cast<size_t>(a.as_string().rfind(TypeParam())));
   ASSERT_EQ(a.rfind(e), a.as_string().rfind(TypeParam()));
+  ASSERT_EQ(a.rfind(d), static_cast<size_t>(TypeParam(a).rfind(TypeParam())));
+  ASSERT_EQ(a.rfind(e), TypeParam(a).rfind(TypeParam()));
   ASSERT_EQ(a.rfind(d, 12), 12U);
   ASSERT_EQ(a.rfind(e, 17), 17U);
   ASSERT_EQ(a.rfind(g), Piece::npos);
@@ -518,6 +520,12 @@ TYPED_TEST(CommonStringPieceTest, CheckCustom) {
   ASSERT_TRUE(c == s3);
   TypeParam s4(e.as_string());
   ASSERT_TRUE(s4.empty());
+
+  // operator STRING_TYPE()
+  TypeParam s5(TypeParam(a).c_str(), 7);  // Note, has an embedded NULL
+  ASSERT_TRUE(c == s5);
+  TypeParam s6(e);
+  ASSERT_TRUE(s6.empty());
 }
 
 TEST(StringPieceTest, CheckCustom) {
@@ -591,7 +599,11 @@ TYPED_TEST(CommonStringPieceTest, CheckNULL) {
   ASSERT_EQ(s.data(), (const typename TypeParam::value_type*)NULL);
   ASSERT_EQ(s.size(), 0U);
 
-  TypeParam str = s.as_string();
+  TypeParam str(s);
+  ASSERT_EQ(str.length(), 0U);
+  ASSERT_EQ(str, TypeParam());
+
+  str = s.as_string();
   ASSERT_EQ(str.length(), 0U);
   ASSERT_EQ(str, TypeParam());
 }

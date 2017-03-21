@@ -46,7 +46,7 @@ def CreateIncludeGyp(directory):
 
 
 def ShowUsageAndDie():
-  print "usage: tools/create_include_gyp.py externs > externs/compiled_resources2.gyp"
+  print "usage: tools/create_include_gyp.py externs/ > externs/compiled_resources2.gyp"
   sys.exit(1)
 
 

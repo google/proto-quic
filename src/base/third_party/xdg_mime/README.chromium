@@ -10,4 +10,5 @@ In addition, we have the following patch(es):
   - compile.patch: small tweaks to make the code compile.
   - free_pointer_later.patch: small patch that fixes potential crash in
       xdg_mime_get_mime_type_for_file() - use of pointer after being freed.
+  - function_casts.patch: fix bad function casts.
   - Added a LICENSE file.

@@ -22,9 +22,9 @@
 #include "base/compiler_specific.h"
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "base/sys_byteorder.h"
 #include "net/base/net_export.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/spdy_alt_svc_wire_format.h"
 #include "net/spdy/spdy_bitmasks.h"
 #include "net/spdy/spdy_bug_tracker.h"
@@ -433,7 +433,7 @@ class NET_EXPORT_PRIVATE SpdyFrameWithHeaderBlockIR
     // Deep copy.
     header_block_ = std::move(header_block);
   }
-  void SetHeader(base::StringPiece name, base::StringPiece value) {
+  void SetHeader(SpdyStringPiece name, SpdyStringPiece value) {
     header_block_[name] = value;
   }
 
@@ -451,7 +451,7 @@ class NET_EXPORT_PRIVATE SpdyDataIR
     : public NON_EXPORTED_BASE(SpdyFrameWithFinIR) {
  public:
   // Performs a deep copy on data.
-  SpdyDataIR(SpdyStreamId stream_id, base::StringPiece data);
+  SpdyDataIR(SpdyStreamId stream_id, SpdyStringPiece data);
 
   // Performs a deep copy on data.
   SpdyDataIR(SpdyStreamId stream_id, const char* data);
@@ -480,14 +480,14 @@ class NET_EXPORT_PRIVATE SpdyDataIR
   }
 
   // Deep-copy of data (keep private copy).
-  void SetDataDeep(base::StringPiece data) {
+  void SetDataDeep(SpdyStringPiece data) {
     data_store_.reset(new std::string(data.data(), data.size()));
     data_ = data_store_->data();
     data_len_ = data.size();
   }
 
   // Shallow-copy of data (do not keep private copy).
-  void SetDataShallow(base::StringPiece data) {
+  void SetDataShallow(SpdyStringPiece data) {
     data_store_.reset();
     data_ = data.data();
     data_len_ = data.size();
@@ -579,7 +579,7 @@ class NET_EXPORT_PRIVATE SpdyGoAwayIR : public SpdyFrameIR {
   // this SpdyGoAwayIR.
   SpdyGoAwayIR(SpdyStreamId last_good_stream_id,
                SpdyErrorCode error_code,
-               base::StringPiece description);
+               SpdyStringPiece description);
 
   // References description, doesn't copy it, so description must outlast
   // this SpdyGoAwayIR.
@@ -606,7 +606,7 @@ class NET_EXPORT_PRIVATE SpdyGoAwayIR : public SpdyFrameIR {
     error_code_ = error_code;
   }
 
-  const base::StringPiece& description() const { return description_; }
+  const SpdyStringPiece& description() const { return description_; }
 
   void Visit(SpdyFrameVisitor* visitor) const override;
 
@@ -614,7 +614,7 @@ class NET_EXPORT_PRIVATE SpdyGoAwayIR : public SpdyFrameIR {
   SpdyStreamId last_good_stream_id_;
   SpdyErrorCode error_code_;
   const std::string description_store_;
-  const base::StringPiece description_;
+  const SpdyStringPiece description_;
 
   DISALLOW_COPY_AND_ASSIGN(SpdyGoAwayIR);
 };

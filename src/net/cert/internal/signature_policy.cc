@@ -11,11 +11,12 @@
 
 namespace net {
 
+DEFINE_CERT_ERROR_ID(kRsaModulusTooSmall, "RSA modulus too small");
+
 namespace {
 
 DEFINE_CERT_ERROR_ID(kUnacceptableCurveForEcdsa,
                      "Only P-256, P-384, P-521 are supported for ECDSA");
-DEFINE_CERT_ERROR_ID(kRsaModulusTooSmall, "RSA modulus too small");
 
 bool IsModulusSizeGreaterOrEqual(size_t modulus_length_bits,
                                  size_t min_length_bits,

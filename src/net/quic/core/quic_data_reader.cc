@@ -5,7 +5,9 @@
 #include "net/quic/core/quic_data_reader.h"
 
 #include "net/base/int128.h"
+#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_endian.h"
 
 namespace net {
 
@@ -80,6 +82,18 @@ bool QuicDataReader::ReadStringPiece(QuicStringPiece* result, size_t size) {
 
   // Iterate.
   pos_ += size;
+
+  return true;
+}
+
+bool QuicDataReader::ReadConnectionId(uint64_t* connection_id) {
+  if (!ReadUInt64(connection_id)) {
+    return false;
+  }
+
+  if (FLAGS_quic_restart_flag_quic_big_endian_connection_id) {
+    *connection_id = QuicEndian::NetToHost64(*connection_id);
+  }
 
   return true;
 }

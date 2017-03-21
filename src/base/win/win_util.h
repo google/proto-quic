@@ -137,6 +137,8 @@ BASE_EXPORT bool IsWindows10TabletMode(HWND hwnd);
 // 1. Metrics:- To gain insight into how users use Chrome.
 // 2. Physical keyboard presence :- If a device is in tablet mode, it means
 //    that there is no physical keyboard attached.
+// 3. To set the right interactions media queries,
+//    see https://drafts.csswg.org/mediaqueries-4/#mf-interaction
 // This function optionally sets the |reason| parameter to determine as to why
 // or why not a device was deemed to be a tablet.
 // Returns true if the device is in tablet mode.

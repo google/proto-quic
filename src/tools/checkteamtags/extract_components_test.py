@@ -172,29 +172,40 @@ class ExtractComponentsTest(unittest.TestCase):
   @mock_file_tree(OrderedDict([
       ('chromium/src', 'boss@chromium.org\n'),
       ('chromium/src/dir1', 'dummy@chromium.org\n'
-                           '# TEAM: dummy-team@chromium.org\n'
-                           '# COMPONENT: Dummy>Component'),
+                            '# TEAM: dummy-team@chromium.org\n'
+                            '# COMPONENT: Dummy>Component'),
       ('chromium/src/dir2', 'dummy2@chromium.org\n'
-                           '# TEAM: other-dummy-team@chromium.org\n'
-                           '# COMPONENT: Dummy>Component2'),
+                            '# TEAM: other-dummy-team@chromium.org\n'
+                            '# COMPONENT: Dummy>Component2'),
       ('chromium/src/dir1/subdir', 'dummy@chromium.org'),
-      ('chromium/src/dir2/subdir', None)]))
+      ('chromium/src/dir2/subdir', None),
+      ('third_party/WebKit/LayoutTests/foo',
+           '# TEAM: dummy-team-3@chromium.org\n'),
+      ('third_party/WebKit/LayoutTests/bar',
+           '# TEAM: dummy-team-3@chromium.org\n'
+           '# COMPONENT: Dummy>Component3\n'),
+  ]))
   def testIncludesSubdirectoriesWithNoOwnersFileOrNoComponentTag(self):
     self.maxDiff = None  # This helps to see assertDictEqual errors in full.
     saved_output = StringIO()
     with mock.patch('sys.stdout', saved_output):
-      error_code = extract_components.main(['%prog', '--include-subdirs'])
+      error_code = extract_components.main(['%prog', '--include-subdirs', ''])
     self.assertEqual(0, error_code)
     result_minus_readme = json.loads(saved_output.getvalue())
     del result_minus_readme['AAA-README']
     self.assertDictEqual(result_minus_readme, {
         u'component-to-team': {
+            u'Dummy>Component': u'dummy-team@chromium.org',
             u'Dummy>Component2': u'other-dummy-team@chromium.org',
-            u'Dummy>Component': u'dummy-team@chromium.org'
+            u'Dummy>Component3': u'dummy-team-3@chromium.org',
         },
         u'dir-to-component': {
-            u'tools/checkteamtags/chromium/src/dir1': u'Dummy>Component',
-            u'tools/checkteamtags/chromium/src/dir1/subdir': u'Dummy>Component',
-            u'tools/checkteamtags/chromium/src/dir2': u'Dummy>Component2',
-            u'tools/checkteamtags/chromium/src/dir2/subdir': u'Dummy>Component2'
+            u'chromium/src/dir1': u'Dummy>Component',
+            u'chromium/src/dir1/subdir': u'Dummy>Component',
+            u'chromium/src/dir2': u'Dummy>Component2',
+            u'chromium/src/dir2/subdir': u'Dummy>Component2',
+            u'third_party/WebKit/LayoutTests/bar': u'Dummy>Component3',
+        },
+        u'dir-to-team': {
+            u'third_party/WebKit/LayoutTests/foo': u'dummy-team-3@chromium.org',
         }})

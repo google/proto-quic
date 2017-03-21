@@ -106,6 +106,7 @@
       'CFI Linux ToT': 'cfi_full_clang_tot_release_static',
       'CFI Linux': 'cfi_release_static',
       'CFI Linux Full': 'cfi_full_release_static',
+      'CFI ThinLTO Linux ToT': 'cfi_thin_lto_clang_tot_full_symbols_release_static_use_lld',
       'Chromium Linux Goma Canary': 'release_bot',
       'Chromium Linux Goma Canary': 'release_bot',
       'Chromium Linux Goma Canary (clobber)': 'release_bot',
@@ -564,6 +565,7 @@
       'linux_chromium_gn_upload': 'gn_linux_upload',
       'linux_chromium_headless_rel': 'headless_linux_release_trybot',
       'linux_chromium_ozone_compile_only_ng': 'ozone_linux_release_trybot',
+      'linux_chromium_ozone_ng': 'ozone_linux_release_trybot',
 
       # This is intentionally a release_bot and not a release_trybot;
       # enabling DCHECKs seems to cause flaky failures that don't show up
@@ -1009,6 +1011,10 @@
       'cfi', 'release', 'static',
     ],
 
+    'cfi_thin_lto_clang_tot_full_symbols_release_static_use_lld': [
+      'cfi', 'thin_lto', 'clang_tot', 'full_symbols', 'release', 'static', 'use_lld',
+    ],
+
     'chrome_with_codecs_blink_logging_release_trybot': [
       'chrome_with_codecs', 'blink_logging', 'release_trybot',
     ],
@@ -1034,11 +1040,11 @@
     ],
 
     'chromeos_with_codecs_ozone_release_bot': [
-      'chromeos_with_codecs', 'ozone', 'default_ozone_platform_x11', 'release_bot',
+      'chromeos_with_codecs', 'ozone', 'release_bot',
     ],
 
     'chromeos_with_codecs_ozone_release_trybot': [
-      'chromeos_with_codecs', 'ozone', 'default_ozone_platform_x11', 'release_trybot',
+      'chromeos_with_codecs', 'ozone', 'release_trybot',
     ],
 
     'chromeos_with_codecs_release_bot': [
@@ -1680,10 +1686,6 @@
       'mixins': ['debug_bot', 'minimal_symbols'],
     },
 
-    'default_ozone_platform_x11': {
-      'gn_args': 'ozone_platform="x11"',
-    },
-
     'disable_nacl': {
       'gn_args': 'enable_nacl=false',
     },
@@ -1830,6 +1832,7 @@
 
     'ozone_linux': {
       'gn_args': ('ozone_auto_platforms=false ozone_platform_wayland=true '
+                  'ozone_platform="x11" '
                   'ozone_platform_x11=true ozone_platform_gbm=true '
                   'enable_package_mash_services=true use_ash=false '
                   'use_jessie_sysroot=true use_xkbcommon=true'),

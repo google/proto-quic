@@ -6,6 +6,7 @@
 #define BASE_TASK_SCHEDULER_TASK_SCHEDULER_H_
 
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "base/base_export.h"
@@ -107,10 +108,13 @@ class BASE_EXPORT TaskScheduler {
   // synchronization is required to use the post_task.h API after registering a
   // new TaskScheduler.
 
-  // Creates and sets a task scheduler with one worker pool that can have up to
-  // |max_threads| threads. CHECKs on failure. For tests, prefer
-  // base::test::ScopedTaskScheduler (ensures isolation).
-  static void CreateAndSetSimpleTaskScheduler(int max_threads);
+#if !defined(OS_NACL)
+  // Creates and sets a task scheduler using default params. |name| is used to
+  // label threads and histograms. It should identify the component that calls
+  // this. CHECKs on failure. For tests, prefer base::test::ScopedTaskScheduler
+  // (ensures isolation).
+  static void CreateAndSetSimpleTaskScheduler(const std::string& name);
+#endif  // !defined(OS_NACL)
 
   // Creates and sets a task scheduler with custom worker pools. CHECKs on
   // failure. |worker_pool_params_vector| describes the worker pools to create.

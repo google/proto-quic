@@ -18,7 +18,6 @@
 
 #include "base/logging.h"
 #include "base/optional.h"
-#include "base/strings/string_piece.h"
 #include "base/sys_byteorder.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"

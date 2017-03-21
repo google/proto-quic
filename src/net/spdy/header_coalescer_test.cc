@@ -6,7 +6,6 @@
 
 #include <string>
 
-#include "base/strings/string_piece.h"
 #include "base/strings/stringprintf.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -67,7 +66,7 @@ TEST_F(HeaderCoalescerTest, Append) {
 
   SpdyHeaderBlock header_block = header_coalescer_.release_headers();
   EXPECT_THAT(header_block,
-              ElementsAre(Pair("foo", base::StringPiece("bar\0quux", 8)),
+              ElementsAre(Pair("foo", SpdyStringPiece("bar\0quux", 8)),
                           Pair("cookie", "baz; qux")));
 }
 
@@ -78,7 +77,7 @@ TEST_F(HeaderCoalescerTest, CRLFInHeaderValue) {
 }
 
 TEST_F(HeaderCoalescerTest, HeaderNameNotValid) {
-  base::StringPiece header_name("\x01\x7F\x80\xff");
+  SpdyStringPiece header_name("\x01\x7F\x80\xff");
   header_coalescer_.OnHeader(header_name, "foo");
   EXPECT_TRUE(header_coalescer_.error_seen());
 }
@@ -89,7 +88,7 @@ TEST_F(HeaderCoalescerTest, HeaderNameNotValid) {
 // tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." /
 //                  "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
 TEST_F(HeaderCoalescerTest, HeaderNameValid) {
-  base::StringPiece header_name(
+  SpdyStringPiece header_name(
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&'*+-."
       "^_`|~");
   header_coalescer_.OnHeader(header_name, "foo");
@@ -123,17 +122,16 @@ TEST_F(HeaderCoalescerTest, HeaderValueValid) {
     }
     header_coalescer_.OnHeader(
         base::StringPrintf("%s_%d", "foo", i),
-        base::StringPiece(header_values[i].data(), header_values[i].size()));
+        SpdyStringPiece(header_values[i].data(), header_values[i].size()));
     EXPECT_FALSE(header_coalescer_.error_seen());
   }
   SpdyHeaderBlock header_block = header_coalescer_.release_headers();
-  EXPECT_THAT(header_block,
-              ElementsAre(Pair("foo_0",
-                               base::StringPiece(header_values[0].data(),
-                                                 header_values[0].size())),
-                          Pair("foo_1",
-                               base::StringPiece(header_values[1].data(),
-                                                 header_values[1].size()))));
+  EXPECT_THAT(
+      header_block,
+      ElementsAre(Pair("foo_0", SpdyStringPiece(header_values[0].data(),
+                                                header_values[0].size())),
+                  Pair("foo_1", SpdyStringPiece(header_values[1].data(),
+                                                header_values[1].size()))));
 }
 
 }  // namespace test

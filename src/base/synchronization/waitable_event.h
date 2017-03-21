@@ -112,6 +112,9 @@ class BASE_EXPORT WaitableEvent {
   // You MUST NOT delete any of the WaitableEvent objects while this wait is
   // happening, however WaitMany's return "happens after" the |Signal| call
   // that caused it has completed, like |Wait|.
+  //
+  // If more than one WaitableEvent is signaled to unblock WaitMany, the lowest
+  // index among them is returned.
   static size_t WaitMany(WaitableEvent** waitables, size_t count);
 
   // For asynchronous waiting, see WaitableEventWatcher

@@ -124,13 +124,25 @@ class JobControllerPeer {
 class HttpStreamFactoryImplJobControllerTest : public ::testing::Test {
  public:
   HttpStreamFactoryImplJobControllerTest()
-      : session_deps_(ProxyService::CreateDirect()) {
+      : session_deps_(ProxyService::CreateDirect()),
+        use_alternative_proxy_(false),
+        is_preconnect_(false),
+        test_proxy_delegate_(nullptr) {
     session_deps_.enable_quic = true;
   }
 
-  void Initialize(const HttpRequestInfo& request_info,
-                  bool use_alternative_proxy,
-                  bool is_preconnect) {
+  void UseAlternativeProxy() {
+    ASSERT_FALSE(test_proxy_delegate_);
+    use_alternative_proxy_ = true;
+  }
+
+  void SetPreconnect() {
+    ASSERT_FALSE(test_proxy_delegate_);
+    is_preconnect_ = true;
+  }
+
+  void Initialize(const HttpRequestInfo& request_info) {
+    ASSERT_FALSE(test_proxy_delegate_);
     std::unique_ptr<TestProxyDelegate> test_proxy_delegate(
         new TestProxyDelegate());
     test_proxy_delegate_ = test_proxy_delegate.get();
@@ -140,7 +152,7 @@ class HttpStreamFactoryImplJobControllerTest : public ::testing::Test {
     EXPECT_TRUE(test_proxy_delegate->alternative_proxy_server().is_quic());
     session_deps_.proxy_delegate = std::move(test_proxy_delegate);
 
-    if (use_alternative_proxy) {
+    if (use_alternative_proxy_) {
       std::unique_ptr<ProxyService> proxy_service =
           ProxyService::CreateFixedFromPacResult("HTTPS myproxy.org:443");
       session_deps_.proxy_service = std::move(proxy_service);
@@ -150,7 +162,7 @@ class HttpStreamFactoryImplJobControllerTest : public ::testing::Test {
         static_cast<HttpStreamFactoryImpl*>(session_->http_stream_factory());
     job_controller_ = new HttpStreamFactoryImpl::JobController(
         factory_, &request_delegate_, session_.get(), &job_factory_,
-        request_info, is_preconnect);
+        request_info, is_preconnect_);
     HttpStreamFactoryImplPeer::AddJobController(factory_, job_controller_);
   }
 
@@ -180,8 +192,6 @@ class HttpStreamFactoryImplJobControllerTest : public ::testing::Test {
                   alternative_service_vector[0]));
   }
 
-  // Not owned by |this|.
-  TestProxyDelegate* test_proxy_delegate_;
   TestJobFactory job_factory_;
   MockHttpStreamRequestDelegate request_delegate_;
   SpdySessionDependencies session_deps_;
@@ -189,6 +199,12 @@ class HttpStreamFactoryImplJobControllerTest : public ::testing::Test {
   HttpStreamFactoryImpl* factory_;
   HttpStreamFactoryImpl::JobController* job_controller_;
   std::unique_ptr<HttpStreamFactoryImpl::Request> request_;
+
+ private:
+  bool use_alternative_proxy_;
+  bool is_preconnect_;
+  // Not owned by |this|.
+  TestProxyDelegate* test_proxy_delegate_;
 
   DISALLOW_COPY_AND_ASSIGN(HttpStreamFactoryImplJobControllerTest);
 };
@@ -208,7 +224,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   request_info.method = "GET";
   request_info.url = GURL("http://www.google.com");
 
-  Initialize(request_info, false, false);
+  Initialize(request_info);
 
   request_.reset(
       job_controller_->Start(request_info, &request_delegate_, nullptr,
@@ -238,7 +254,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   request_info.method = "GET";
   request_info.url = GURL("http://www.google.com");
 
-  Initialize(request_info, false, false);
+  Initialize(request_info);
 
   request_.reset(
       job_controller_->Start(request_info, &request_delegate_, nullptr,
@@ -272,7 +288,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, CancelJobsBeforeBinding) {
   request_info.method = "GET";
   request_info.url = GURL("https://www.google.com");
 
-  Initialize(request_info, false, false);
+  Initialize(request_info);
   url::SchemeHostPort server(request_info.url);
   AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
   SetAlternativeService(request_info, alternative_service);
@@ -306,7 +322,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, OnStreamFailedForBothJobs) {
   request_info.method = "GET";
   request_info.url = GURL("https://www.google.com");
 
-  Initialize(request_info, false, false);
+  Initialize(request_info);
   url::SchemeHostPort server(request_info.url);
   AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
   SetAlternativeService(request_info, alternative_service);
@@ -350,7 +366,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   request_info.method = "GET";
   request_info.url = GURL("https://www.google.com");
 
-  Initialize(request_info, false, false);
+  Initialize(request_info);
   url::SchemeHostPort server(request_info.url);
   AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
   SetAlternativeService(request_info, alternative_service);
@@ -401,7 +417,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   request_info.method = "GET";
   request_info.url = GURL("https://www.google.com");
 
-  Initialize(request_info, false, false);
+  Initialize(request_info);
 
   url::SchemeHostPort server(request_info.url);
   AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
@@ -448,7 +464,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   request_info.method = "GET";
   request_info.url = GURL("https://www.google.com");
 
-  Initialize(request_info, false, false);
+  Initialize(request_info);
 
   url::SchemeHostPort server(request_info.url);
   AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
@@ -515,7 +531,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   request_info.method = "GET";
   request_info.url = GURL("https://www.google.com");
 
-  Initialize(request_info, false, false);
+  Initialize(request_info);
 
   url::SchemeHostPort server(request_info.url);
   AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
@@ -560,7 +576,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   request_info.method = "GET";
   request_info.url = GURL("https://www.google.com");
 
-  Initialize(request_info, false, false);
+  Initialize(request_info);
 
   url::SchemeHostPort server(request_info.url);
   AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
@@ -612,7 +628,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   HttpRequestInfo request_info;
   request_info.method = "GET";
   request_info.url = GURL("https://www.google.com");
-  Initialize(request_info, false, false);
+  Initialize(request_info);
 
   url::SchemeHostPort server(request_info.url);
   AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
@@ -662,7 +678,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, GetLoadStateAfterMainJobFailed) {
   request_info.method = "GET";
   request_info.url = GURL("https://www.google.com");
 
-  Initialize(request_info, false, false);
+  Initialize(request_info);
   url::SchemeHostPort server(request_info.url);
   AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
   SetAlternativeService(request_info, alternative_service);
@@ -709,7 +725,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, DoNotResumeMainJobBeforeWait) {
   request_info.method = "GET";
   request_info.url = GURL("https://www.google.com");
 
-  Initialize(request_info, false, false);
+  Initialize(request_info);
   url::SchemeHostPort server(request_info.url);
   AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
   SetAlternativeService(request_info, alternative_service);
@@ -733,7 +749,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, InvalidPortForQuic) {
 
   // Using a restricted port 101 for QUIC should fail and the alternative job
   // should post OnStreamFailedCall on the controller to resume the main job.
-  Initialize(request_info, false, false);
+  Initialize(request_info);
 
   url::SchemeHostPort server(request_info.url);
   AlternativeService alternative_service(kProtoQUIC, server.host(), 101);
@@ -774,7 +790,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   request_info.method = "GET";
   request_info.url = GURL("https://www.google.com");
 
-  Initialize(request_info, false, false);
+  Initialize(request_info);
 
   // Set a SPDY alternative service for the server.
   url::SchemeHostPort server(request_info.url);
@@ -837,7 +853,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   request_info.method = "GET";
   request_info.url = GURL("https://www.google.com");
 
-  Initialize(request_info, false, false);
+  Initialize(request_info);
   url::SchemeHostPort server(request_info.url);
   AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
   SetAlternativeService(request_info, alternative_service);
@@ -889,7 +905,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, DelayedTCP) {
   request_info.method = "GET";
   request_info.url = GURL("https://www.google.com");
 
-  Initialize(request_info, false, false);
+  Initialize(request_info);
 
   // Enable delayed TCP and set time delay for waiting job.
   QuicStreamFactory* quic_stream_factory = session_->quic_stream_factory();
@@ -954,7 +970,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, DelayedTCPWithLargeSrtt) {
   request_info.method = "GET";
   request_info.url = GURL("https://www.google.com");
 
-  Initialize(request_info, false, false);
+  Initialize(request_info);
 
   // Enable delayed TCP and set a extremely large time delay for waiting job.
   QuicStreamFactory* quic_stream_factory = session_->quic_stream_factory();
@@ -1003,7 +1019,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   request_info.method = "GET";
   request_info.url = GURL("https://www.google.com");
 
-  Initialize(request_info, false, false);
+  Initialize(request_info);
 
   // Enable delayed TCP and set time delay for waiting job.
   QuicStreamFactory* quic_stream_factory = session_->quic_stream_factory();
@@ -1064,7 +1080,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, HttpsURL) {
   HttpRequestInfo request_info;
   request_info.method = "GET";
   request_info.url = GURL("https://mail.example.org/");
-  Initialize(request_info, false, false);
+  Initialize(request_info);
   EXPECT_TRUE(test_proxy_delegate()->alternative_proxy_server().is_quic());
 
   request_.reset(
@@ -1091,7 +1107,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, HttpURLWithNoProxy) {
   request_info.method = "GET";
   request_info.url = GURL("http://mail.example.org/");
 
-  Initialize(request_info, false, false);
+  Initialize(request_info);
   EXPECT_TRUE(test_proxy_delegate()->alternative_proxy_server().is_quic());
 
   request_.reset(
@@ -1119,10 +1135,12 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, DelayedTCPAlternativeProxy) {
   HangingResolver* resolver = new HangingResolver();
   session_deps_.host_resolver.reset(resolver);
 
+  UseAlternativeProxy();
+
   HttpRequestInfo request_info;
   request_info.method = "GET";
   request_info.url = GURL("http://mail.example.org/");
-  Initialize(request_info, true, false);
+  Initialize(request_info);
 
   EXPECT_TRUE(test_proxy_delegate()->alternative_proxy_server().is_quic());
 
@@ -1174,10 +1192,12 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, FailAlternativeProxy) {
   FailingHostResolver* resolver = new FailingHostResolver();
   session_deps_.host_resolver.reset(resolver);
 
+  UseAlternativeProxy();
+
   HttpRequestInfo request_info;
   request_info.method = "GET";
   request_info.url = GURL("http://mail.example.org/");
-  Initialize(request_info, true, false);
+  Initialize(request_info);
   EXPECT_TRUE(test_proxy_delegate()->alternative_proxy_server().is_quic());
 
   // Enable delayed TCP and set time delay for waiting job.
@@ -1220,10 +1240,13 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, FailAlternativeProxy) {
 TEST_F(HttpStreamFactoryImplJobControllerTest,
        AlternativeProxyServerJobFailsAfterMainJobSucceeds) {
   base::HistogramTester histogram_tester;
+
+  UseAlternativeProxy();
+
   HttpRequestInfo request_info;
   request_info.method = "GET";
   request_info.url = GURL("http://www.google.com");
-  Initialize(request_info, true, false);
+  Initialize(request_info);
 
   url::SchemeHostPort server(request_info.url);
 
@@ -1267,10 +1290,12 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   SequencedSocketData data(reads, arraysize(reads), nullptr, 0);
   session_deps_.socket_factory->AddSocketDataProvider(&data);
 
+  SetPreconnect();
+
   HttpRequestInfo request_info;
   request_info.method = "GET";
   request_info.url = GURL("http://www.example.com");
-  Initialize(request_info, false, /*is_preconnect=*/true);
+  Initialize(request_info);
 
   url::SchemeHostPort server(request_info.url);
 

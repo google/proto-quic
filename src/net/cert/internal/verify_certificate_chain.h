@@ -74,6 +74,10 @@ NET_EXPORT bool VerifyCertificateChain(const ParsedCertificateList& certs,
                                        const der::GeneralizedTime& time,
                                        CertErrors* errors) WARN_UNUSED_RESULT;
 
+// TODO(crbug.com/634443): Move exported errors to a central location?
+extern CertErrorId kValidityFailedNotAfter;
+extern CertErrorId kValidityFailedNotBefore;
+
 }  // namespace net
 
 #endif  // NET_CERT_INTERNAL_VERIFY_CERTIFICATE_CHAIN_H_

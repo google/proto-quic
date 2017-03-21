@@ -280,6 +280,7 @@ class CallJoinFromDifferentThread : public SimpleThread {
  private:
   SchedulerSingleThreadTaskRunnerManager* const manager_to_join_;
   WaitableEvent run_started_event_;
+
   DISALLOW_COPY_AND_ASSIGN(CallJoinFromDifferentThread);
 };
 
@@ -302,6 +303,8 @@ class TaskSchedulerSingleThreadTaskRunnerManagerJoinTest
 }  // namespace
 
 TEST_F(TaskSchedulerSingleThreadTaskRunnerManagerJoinTest, ConcurrentJoin) {
+  // Exercises the codepath where the workers are unavailable for unregistration
+  // because of a Join call.
   WaitableEvent task_running(WaitableEvent::ResetPolicy::MANUAL,
                              WaitableEvent::InitialState::NOT_SIGNALED);
   WaitableEvent task_blocking(WaitableEvent::ResetPolicy::MANUAL,
@@ -328,6 +331,8 @@ TEST_F(TaskSchedulerSingleThreadTaskRunnerManagerJoinTest, ConcurrentJoin) {
 
 TEST_F(TaskSchedulerSingleThreadTaskRunnerManagerJoinTest,
        ConcurrentJoinExtraSkippedTask) {
+  // Tests to make sure that tasks are properly cleaned up at Join, allowing
+  // SingleThreadTaskRunners to unregister themselves.
   WaitableEvent task_running(WaitableEvent::ResetPolicy::MANUAL,
                              WaitableEvent::InitialState::NOT_SIGNALED);
   WaitableEvent task_blocking(WaitableEvent::ResetPolicy::MANUAL,

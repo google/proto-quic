@@ -9,6 +9,7 @@
 
 #include "base/compiler_specific.h"
 #include "net/base/net_export.h"
+#include "net/cert/internal/cert_errors.h"
 #include "net/cert/internal/signature_algorithm.h"
 
 namespace net {
@@ -60,6 +61,9 @@ class NET_EXPORT SimpleSignaturePolicy : public SignaturePolicy {
  private:
   const size_t min_rsa_modulus_length_bits_;
 };
+
+// TODO(crbug.com/634443): Move exported errors to a central location?
+extern CertErrorId kRsaModulusTooSmall;
 
 }  // namespace net
 

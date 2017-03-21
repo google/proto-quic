@@ -210,7 +210,7 @@ SpdyFrameWithHeaderBlockIR::SpdyFrameWithHeaderBlockIR(
 
 SpdyFrameWithHeaderBlockIR::~SpdyFrameWithHeaderBlockIR() {}
 
-SpdyDataIR::SpdyDataIR(SpdyStreamId stream_id, base::StringPiece data)
+SpdyDataIR::SpdyDataIR(SpdyStreamId stream_id, SpdyStringPiece data)
     : SpdyFrameWithFinIR(stream_id),
       data_(nullptr),
       data_len_(0),
@@ -220,7 +220,7 @@ SpdyDataIR::SpdyDataIR(SpdyStreamId stream_id, base::StringPiece data)
 }
 
 SpdyDataIR::SpdyDataIR(SpdyStreamId stream_id, const char* data)
-    : SpdyDataIR(stream_id, base::StringPiece(data)) {}
+    : SpdyDataIR(stream_id, SpdyStringPiece(data)) {}
 
 SpdyDataIR::SpdyDataIR(SpdyStreamId stream_id, std::string data)
     : SpdyFrameWithFinIR(stream_id),
@@ -269,7 +269,7 @@ void SpdyPingIR::Visit(SpdyFrameVisitor* visitor) const {
 
 SpdyGoAwayIR::SpdyGoAwayIR(SpdyStreamId last_good_stream_id,
                            SpdyErrorCode error_code,
-                           base::StringPiece description)
+                           SpdyStringPiece description)
     : description_(description) {
   set_last_good_stream_id(last_good_stream_id);
   set_error_code(error_code);
@@ -280,7 +280,7 @@ SpdyGoAwayIR::SpdyGoAwayIR(SpdyStreamId last_good_stream_id,
                            const char* description)
     : SpdyGoAwayIR(last_good_stream_id,
                    error_code,
-                   base::StringPiece(description)) {}
+                   SpdyStringPiece(description)) {}
 
 SpdyGoAwayIR::SpdyGoAwayIR(SpdyStreamId last_good_stream_id,
                            SpdyErrorCode error_code,

@@ -293,6 +293,10 @@ class BlinkPerfShadowDOM(_BlinkPerfBenchmark):
   tag = 'shadow_dom'
   subdir = 'ShadowDOM'
 
+  @classmethod
+  def ShouldDisable(cls, possible_browser):  # http://crbug.com/702319
+    return possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X'
+
 
 # This benchmark is for local testing, doesn't need to run on bots.
 @benchmark.Disabled('all')

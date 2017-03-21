@@ -20,7 +20,6 @@
 #include <typeinfo>
 
 #include "base/logging.h"
-#include "base/strings/string_piece.h"
 #include "net/spdy/spdy_protocol.h"
 #include "net/spdy/spdy_test_utils.h"
 #include "testing/gmock/include/gmock/gmock.h"

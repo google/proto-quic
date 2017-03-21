@@ -17,7 +17,7 @@ import("//build/toolchain/toolchain.gni")
 # GN is really picky about dead stores of variables except at the global scope.
 analyzer_wrapper =
     rebase_path("//build/toolchain/clang_static_analyzer_wrapper.py",
-                root_build_dir)
+                root_build_dir) + " --mode=clang"
 
 # This template defines a toolchain for something that works like gcc
 # (including clang).

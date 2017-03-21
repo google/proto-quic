@@ -11,9 +11,9 @@
 #include <string>
 #include <vector>
 
-#include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
 #include "net/spdy/hpack/hpack_constants.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 
 namespace net {
 
@@ -77,10 +77,10 @@ class NET_EXPORT_PRIVATE HpackHuffmanTable {
 
   // Encodes the input string to the output stream using the table's Huffman
   // context.
-  void EncodeString(base::StringPiece in, HpackOutputStream* out) const;
+  void EncodeString(SpdyStringPiece in, HpackOutputStream* out) const;
 
   // Returns the encoded size of the input string.
-  size_t EncodedSize(base::StringPiece in) const;
+  size_t EncodedSize(SpdyStringPiece in) const;
 
   // Decodes symbols from |in| into |out|, using the support for generic (any)
   // huffman tables, not just those defined in the HPACK spec. It is the

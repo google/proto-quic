@@ -12,9 +12,9 @@
 #include <string>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
 #include "net/spdy/hpack/hpack_constants.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 
 // All section references below are to
 // http://tools.ietf.org/html/draft-ietf-httpbis-header-compression-08
@@ -38,7 +38,7 @@ class NET_EXPORT_PRIVATE HpackOutputStream {
   void AppendPrefix(HpackPrefix prefix);
 
   // Directly appends |buffer|.
-  void AppendBytes(base::StringPiece buffer);
+  void AppendBytes(SpdyStringPiece buffer);
 
   // Appends the given integer using the representation described in
   // 6.1. If the internal buffer ends on a byte boundary, the prefix

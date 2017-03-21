@@ -833,7 +833,7 @@ bool CertVerifyProc::HasNameConstraintsViolation(
           kDomainsIndiaCCA,
       },
       // Not a real certificate - just for testing. This is the SPKI hash of
-      // the keys used in net/data/ssl/certificates/name_constraint_*.crt.
+      // the keys used in net/data/ssl/certificates/name_constraint_*.pem.
       {
           {0x48, 0x49, 0x4a, 0xc5, 0x5a, 0x3e, 0xcd, 0xc5, 0x62, 0x9f, 0xef,
            0x23, 0x14, 0xad, 0x05, 0xa9, 0x2a, 0x5c, 0x39, 0xc0},

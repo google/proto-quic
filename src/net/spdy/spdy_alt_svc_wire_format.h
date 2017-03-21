@@ -14,8 +14,8 @@
 
 #include <vector>
 
-#include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 
 namespace net {
 
@@ -59,26 +59,26 @@ class NET_EXPORT_PRIVATE SpdyAltSvcWireFormat {
   typedef std::vector<AlternativeService> AlternativeServiceVector;
 
   friend class test::SpdyAltSvcWireFormatPeer;
-  static bool ParseHeaderFieldValue(base::StringPiece value,
+  static bool ParseHeaderFieldValue(SpdyStringPiece value,
                                     AlternativeServiceVector* altsvc_vector);
   static std::string SerializeHeaderFieldValue(
       const AlternativeServiceVector& altsvc_vector);
 
  private:
-  static void SkipWhiteSpace(base::StringPiece::const_iterator* c,
-                             base::StringPiece::const_iterator end);
-  static bool PercentDecode(base::StringPiece::const_iterator c,
-                            base::StringPiece::const_iterator end,
+  static void SkipWhiteSpace(SpdyStringPiece::const_iterator* c,
+                             SpdyStringPiece::const_iterator end);
+  static bool PercentDecode(SpdyStringPiece::const_iterator c,
+                            SpdyStringPiece::const_iterator end,
                             std::string* output);
-  static bool ParseAltAuthority(base::StringPiece::const_iterator c,
-                                base::StringPiece::const_iterator end,
+  static bool ParseAltAuthority(SpdyStringPiece::const_iterator c,
+                                SpdyStringPiece::const_iterator end,
                                 std::string* host,
                                 uint16_t* port);
-  static bool ParsePositiveInteger16(base::StringPiece::const_iterator c,
-                                     base::StringPiece::const_iterator end,
+  static bool ParsePositiveInteger16(SpdyStringPiece::const_iterator c,
+                                     SpdyStringPiece::const_iterator end,
                                      uint16_t* value);
-  static bool ParsePositiveInteger32(base::StringPiece::const_iterator c,
-                                     base::StringPiece::const_iterator end,
+  static bool ParsePositiveInteger32(SpdyStringPiece::const_iterator c,
+                                     SpdyStringPiece::const_iterator end,
                                      uint32_t* value);
 };
 

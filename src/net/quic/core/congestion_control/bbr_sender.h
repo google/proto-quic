@@ -147,6 +147,12 @@ class QUIC_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
                          QuicRoundTripCount>
       MaxAckDelayFilter;
 
+  typedef WindowedFilter<QuicByteCount,
+                         MaxFilter<QuicByteCount>,
+                         QuicRoundTripCount,
+                         QuicRoundTripCount>
+      MaxAckHeightFilter;
+
   // Returns the current estimate of the RTT of the connection.  Outside of the
   // edge cases, this is minimum RTT.
   QuicTime::Delta GetMinRtt() const;
@@ -195,6 +201,10 @@ class QUIC_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
                         QuicPacketNumber largest_newly_acked,
                         const CongestionVector& acked_packets);
 
+  // Updates the ack aggregation max filter in bytes.
+  void UpdateAckAggregationBytes(QuicTime ack_time,
+                                 QuicByteCount newly_acked_bytes);
+
   // Determines the appropriate pacing rate for the connection.
   void CalculatePacingRate();
   // Determines the appropriate congestion window for the connection.
@@ -232,6 +242,13 @@ class QUIC_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
   // The time the largest acked packet was acked and when it was sent.
   QuicTime largest_acked_time_;
   QuicTime largest_acked_sent_time_;
+
+  // Tracks the maximum number of bytes acked faster than the sending rate.
+  MaxAckHeightFilter max_ack_height_;
+
+  // The time this aggregation started and the number of bytes acked during it.
+  QuicTime aggregation_epoch_start_time_;
+  QuicByteCount aggregation_epoch_bytes_;
 
   // Minimum RTT estimate.  Automatically expires within 10 seconds (and
   // triggers PROBE_RTT mode) if no new value is sampled during that period.

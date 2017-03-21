@@ -71,33 +71,12 @@ D3SymbolTreeMap._byteify = function(num) {
 }
 
 D3SymbolTreeMap._NM_SYMBOL_TYPE_DESCRIPTIONS = {
-  // Definitions concisely derived from the nm 'man' page
-  'A': 'Global absolute (A)',
-  'B': 'Global uninitialized data (B)',
-  'b': 'Local uninitialized data (b)',
-  'C': 'Global uninitialized common (C)',
-  'D': 'Global initialized data (D)',
-  'd': 'Local initialized data (d)',
-  'G': 'Global small initialized data (G)',
-  'g': 'Local small initialized data (g)',
-  'i': 'Indirect function (i)',
-  'N': 'Debugging (N)',
-  'p': 'Stack unwind (p)',
-  'R': 'Global read-only data (R)',
-  'r': 'Local read-only data (r)',
-  'S': 'Global small uninitialized data (S)',
-  's': 'Local small uninitialized data (s)',
-  'T': 'Global code (T)',
-  't': 'Local code (t)',
-  'U': 'Undefined (U)',
-  'u': 'Unique (u)',
-  'V': 'Global weak object (V)',
-  'v': 'Local weak object (v)',
-  'W': 'Global weak symbol (W)',
-  'w': 'Local weak symbol (w)',
-  '@': 'Vtable entry (@)', // non-standard, hack.
-  '-': 'STABS debugging (-)',
-  '?': 'Unrecognized (?)',
+  'b': '.bss',
+  'd': '.data and .data.*',
+  'r': '.rodata',
+  't': '.text',
+  'v': 'Vtable entry',
+  '!': 'Generated Symbols (typeinfo, thunks, etc)',
 };
 D3SymbolTreeMap._NM_SYMBOL_TYPES = '';
 for (var symbol_type in D3SymbolTreeMap._NM_SYMBOL_TYPE_DESCRIPTIONS) {
@@ -118,20 +97,14 @@ D3SymbolTreeMap._getSymbolDescription = function(type) {
   return result;
 }
 
-// Qualitative 12-value pastel Brewer palette.
 D3SymbolTreeMap._colorArray = [
-  'rgb(141,211,199)',
-  'rgb(255,255,179)',
   'rgb(190,186,218)',
-  'rgb(251,128,114)',
-  'rgb(128,177,211)',
   'rgb(253,180,98)',
-  'rgb(179,222,105)',
-  'rgb(252,205,229)',
-  'rgb(217,217,217)',
-  'rgb(188,128,189)',
+  'rgb(141,211,199)',
+  'rgb(128,177,211)',
+  'rgb(255,237,111)',
   'rgb(204,235,197)',
-  'rgb(255,237,111)'];
+]
 
 D3SymbolTreeMap._initColorMap = function() {
   var map = {};

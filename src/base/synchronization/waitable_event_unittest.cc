@@ -6,6 +6,8 @@
 
 #include <stddef.h>
 
+#include <algorithm>
+
 #include "base/compiler_specific.h"
 #include "base/threading/platform_thread.h"
 #include "base/time/time.h"
@@ -75,6 +77,42 @@ TEST(WaitableEventTest, WaitManyShortcut) {
   EXPECT_EQ(WaitableEvent::WaitMany(ev, 5), 0u);
 
   for (unsigned i = 0; i < 5; ++i)
+    delete ev[i];
+}
+
+TEST(WaitableEventTest, WaitManyLeftToRight) {
+  WaitableEvent* ev[5];
+  for (size_t i = 0; i < 5; ++i) {
+    ev[i] = new WaitableEvent(WaitableEvent::ResetPolicy::AUTOMATIC,
+                              WaitableEvent::InitialState::NOT_SIGNALED);
+  }
+
+  // Test for consistent left-to-right return behavior across all permutations
+  // of the input array. This is to verify that only the indices -- and not
+  // the WaitableEvents' addresses -- are relevant in determining who wins when
+  // multiple events are signaled.
+
+  std::sort(ev, ev + 5);
+  do {
+    ev[0]->Signal();
+    ev[1]->Signal();
+    EXPECT_EQ(0u, WaitableEvent::WaitMany(ev, 5));
+
+    ev[2]->Signal();
+    EXPECT_EQ(1u, WaitableEvent::WaitMany(ev, 5));
+    EXPECT_EQ(2u, WaitableEvent::WaitMany(ev, 5));
+
+    ev[3]->Signal();
+    ev[4]->Signal();
+    ev[0]->Signal();
+    EXPECT_EQ(0u, WaitableEvent::WaitMany(ev, 5));
+    EXPECT_EQ(3u, WaitableEvent::WaitMany(ev, 5));
+    ev[2]->Signal();
+    EXPECT_EQ(2u, WaitableEvent::WaitMany(ev, 5));
+    EXPECT_EQ(4u, WaitableEvent::WaitMany(ev, 5));
+  } while (std::next_permutation(ev, ev + 5));
+
+  for (size_t i = 0; i < 5; ++i)
     delete ev[i];
 }
 

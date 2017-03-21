@@ -7,6 +7,9 @@
 #include <algorithm>
 #include <limits>
 
+#include "net/quic/core/quic_flags.h"
+#include "net/quic/platform/api/quic_endian.h"
+
 namespace net {
 
 QuicDataWriter::QuicDataWriter(size_t size, char* buffer)
@@ -136,6 +139,14 @@ void QuicDataWriter::WritePadding() {
   }
   memset(buffer_ + length_, 0x00, capacity_ - length_);
   length_ = capacity_;
+}
+
+bool QuicDataWriter::WriteConnectionId(uint64_t connection_id) {
+  if (FLAGS_quic_restart_flag_quic_big_endian_connection_id) {
+    connection_id = QuicEndian::HostToNet64(connection_id);
+  }
+
+  return WriteUInt64(connection_id);
 }
 
 }  // namespace net

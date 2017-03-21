@@ -177,3 +177,13 @@ QUIC_FLAG(bool,
 // Only consider using the ack spacing in QUIC BBR if 2 packets are acked at
 // once.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_ack_spacing2, false)
+
+// If true, 8-byte connection ID in public header is read and written in big
+// endian.
+QUIC_FLAG(bool, FLAGS_quic_restart_flag_quic_big_endian_connection_id, false)
+
+// If true, QUIC BBR stores a max filtered number of bytes delivered at a rate
+// faster than the sending rate.
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes,
+          false)

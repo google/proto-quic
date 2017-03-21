@@ -138,6 +138,10 @@ class Handler(SimpleHTTPServer.SimpleHTTPRequestHandler):
       self._DoMD(path)
     elif os.path.exists(full_path + '/README.md'):
       self._DoMD(path + '/README.md')
+    elif path.lower().endswith('.png'):
+      self._DoImage(full_path, 'image/png')
+    elif path.lower().endswith('.jpg'):
+      self._DoImage(full_path, 'image/jpeg')
     else:
       self._DoDirListing(full_path)
 
@@ -222,6 +226,12 @@ class Handler(SimpleHTTPServer.SimpleHTTPRequestHandler):
       break
 
     self._WriteTemplate('footer.html')
+
+  def _DoImage(self, full_path, mime_type):
+    self._WriteHeader(mime_type)
+    with open(full_path) as f:
+      self.wfile.write(f.read())
+      f.close()
 
   def _Read(self, relpath, relative_to=None):
     if relative_to is None:

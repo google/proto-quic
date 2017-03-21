@@ -64,7 +64,7 @@ EOT
 fi
 
 echo "Building Closure Compiler"
-mvn install -DskipTests=true --projects com.google.javascript:closure-compiler
+mvn clean install -DskipTests=true --projects com.google.javascript:closure-compiler,com.google.javascript:closure-compiler-externs
 
 if [[ "$?" -ne 0 ]]; then
   echo "Failed to build jar, copying nothing" >&2

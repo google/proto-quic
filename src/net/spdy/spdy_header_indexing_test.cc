@@ -5,11 +5,8 @@
 #include "net/spdy/spdy_header_indexing.h"
 
 #include "base/memory/ptr_util.h"
-#include "base/strings/string_piece.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/platform_test.h"
-
-using base::StringPiece;
 
 namespace net {
 
@@ -27,7 +24,9 @@ class HeaderIndexingPeer {
         HeaderIndexing::HeaderSet(input, input + arraysize(input));
   }
 
-  bool ShouldIndex(StringPiece header) { return hi_.ShouldIndex(header, ""); }
+  bool ShouldIndex(SpdyStringPiece header) {
+    return hi_.ShouldIndex(header, "");
+  }
 
   void CreateInitIndexingHeaders() { hi_.CreateInitIndexingHeaders(); }
 

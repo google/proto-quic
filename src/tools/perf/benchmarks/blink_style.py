@@ -22,7 +22,8 @@ class BlinkStyleTop25(perf_benchmark.PerfBenchmark):
     return 'blink_style.top_25'
 
 
-@benchmark.Enabled('android')
+@benchmark.Disabled('all')  # crbug.com/702194
+#@benchmark.Enabled('android')
 class BlinkStyleKeyMobileSites(perf_benchmark.PerfBenchmark):
   """Measures performance of Blink's style engine (CSS Parsing, Style Recalc,
   etc.) on key mobile sites.

@@ -6,9 +6,10 @@ package org.chromium.base.test;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;
+import android.support.test.internal.runner.junit4.AndroidJUnit4ClassRunner;
+import android.support.test.internal.util.AndroidRunnerParams;
 
 import org.junit.runner.notification.RunNotifier;
-import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
 
@@ -25,8 +26,13 @@ import java.util.List;
 
 /**
  *  A custom runner for JUnit4 tests that checks requirements to conditionally ignore tests.
+ *
+ *  This ClassRunner imports from AndroidJUnit4ClassRunner which is a hidden but accessible
+ *  class. The reason is that default JUnit4 runner for Android is a final class,
+ *  {@link AndroidJUnit4}. We need to extends an inheritable class to change {@link runChild}
+ *  and {@link isIgnored} to add SkipChecks and PreTesthook.
  */
-public class BaseJUnit4ClassRunner extends BlockJUnit4ClassRunner {
+public class BaseJUnit4ClassRunner extends AndroidJUnit4ClassRunner {
     private final List<SkipCheck> mSkipChecks;
     private final List<PreTestHook> mPreTestHooks;
 
@@ -74,7 +80,9 @@ public class BaseJUnit4ClassRunner extends BlockJUnit4ClassRunner {
     public BaseJUnit4ClassRunner(
             final Class<?> klass, List<SkipCheck> checks, List<PreTestHook> hooks)
             throws InitializationError {
-        super(klass);
+        super(klass,
+                new AndroidRunnerParams(InstrumentationRegistry.getInstrumentation(),
+                        InstrumentationRegistry.getArguments(), false, 0L, false));
         mSkipChecks = mergeList(checks, defaultSkipChecks());
         mPreTestHooks = defaultPreTestHooks();
     }

@@ -14,10 +14,10 @@
 #include <vector>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/base/linked_hash_map.h"
 #include "net/base/net_export.h"
 #include "net/log/net_log.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 
 namespace base {
 class Value;
@@ -36,10 +36,10 @@ class ValueProxyPeer;
 // names and values. This data structure preserves insertion order.
 //
 // Under the hood, this data structure uses large, contiguous blocks of memory
-// to store names and values. Lookups may be performed with StringPiece keys,
-// and values are returned as StringPieces (via ValueProxy, below).
-// Value StringPieces are valid as long as the SpdyHeaderBlock exists; allocated
-// memory is never freed until SpdyHeaderBlock's destruction.
+// to store names and values. Lookups may be performed with SpdyStringPiece
+// keys, and values are returned as SpdyStringPieces (via ValueProxy, below).
+// Value SpdyStringPieces are valid as long as the SpdyHeaderBlock exists;
+// allocated memory is never freed until SpdyHeaderBlock's destruction.
 //
 // This implementation does not make much of an effort to minimize wasted space.
 // It's expected that keys are rarely deleted from a SpdyHeaderBlock.
@@ -52,8 +52,8 @@ class NET_EXPORT SpdyHeaderBlock {
   class NET_EXPORT HeaderValue {
    public:
     HeaderValue(Storage* storage,
-                base::StringPiece key,
-                base::StringPiece initial_value);
+                SpdyStringPiece key,
+                SpdyStringPiece initial_value);
 
     // Moves are allowed.
     HeaderValue(HeaderValue&& other);
@@ -66,36 +66,37 @@ class NET_EXPORT SpdyHeaderBlock {
     ~HeaderValue();
 
     // Consumes at most |fragment.size()| bytes of memory.
-    void Append(base::StringPiece fragment);
+    void Append(SpdyStringPiece fragment);
 
-    base::StringPiece value() const { return as_pair().second; }
-    const std::pair<base::StringPiece, base::StringPiece>& as_pair() const;
+    SpdyStringPiece value() const { return as_pair().second; }
+    const std::pair<SpdyStringPiece, SpdyStringPiece>& as_pair() const;
 
    private:
     // May allocate a large contiguous region of memory to hold the concatenated
     // fragments and separators.
-    base::StringPiece ConsolidatedValue() const;
+    SpdyStringPiece ConsolidatedValue() const;
 
     mutable Storage* storage_;
-    mutable std::vector<base::StringPiece> fragments_;
+    mutable std::vector<SpdyStringPiece> fragments_;
     // The first element is the key; the second is the consolidated value.
-    mutable std::pair<base::StringPiece, base::StringPiece> pair_;
+    mutable std::pair<SpdyStringPiece, SpdyStringPiece> pair_;
   };
 
-  typedef linked_hash_map<base::StringPiece, HeaderValue, base::StringPieceHash>
+  typedef linked_hash_map<SpdyStringPiece, HeaderValue, base::StringPieceHash>
       MapType;
 
  public:
-  typedef std::pair<base::StringPiece, base::StringPiece> value_type;
+  typedef std::pair<SpdyStringPiece, SpdyStringPiece> value_type;
 
-  // Provides iteration over a sequence of std::pair<StringPiece, StringPiece>,
-  // even though the underlying MapType::value_type is different. Dereferencing
-  // the iterator will result in memory allocation for multi-value headers.
+  // Provides iteration over a sequence of std::pair<SpdyStringPiece,
+  // SpdyStringPiece>, even though the underlying MapType::value_type is
+  // different. Dereferencing the iterator will result in memory allocation for
+  // multi-value headers.
   class NET_EXPORT iterator {
    public:
     // The following type definitions fulfill the requirements for iterator
     // implementations.
-    typedef std::pair<base::StringPiece, base::StringPiece> value_type;
+    typedef std::pair<SpdyStringPiece, SpdyStringPiece> value_type;
     typedef value_type& reference;
     typedef value_type* pointer;
     typedef std::forward_iterator_tag iterator_category;
@@ -157,11 +158,11 @@ class NET_EXPORT SpdyHeaderBlock {
   const_iterator end() const { return const_iterator(block_.end()); }
   bool empty() const { return block_.empty(); }
   size_t size() const { return block_.size(); }
-  iterator find(base::StringPiece key) { return iterator(block_.find(key)); }
-  const_iterator find(base::StringPiece key) const {
+  iterator find(SpdyStringPiece key) { return iterator(block_.find(key)); }
+  const_iterator find(SpdyStringPiece key) const {
     return const_iterator(block_.find(key));
   }
-  void erase(base::StringPiece key) { block_.erase(key); }
+  void erase(SpdyStringPiece key) { block_.erase(key); }
 
   // Clears both our MapType member and the memory used to hold headers.
   void clear();
@@ -176,11 +177,11 @@ class NET_EXPORT SpdyHeaderBlock {
   // existing header value, NUL ("\0") separated unless the key is cookie, in
   // which case the separator is "; ".
   // If there is no such key, a new header with the key and value is added.
-  void AppendValueOrAddHeader(const base::StringPiece key,
-                              const base::StringPiece value);
+  void AppendValueOrAddHeader(const SpdyStringPiece key,
+                              const SpdyStringPiece value);
 
   // Allows either lookup or mutation of the value associated with a key.
-  ValueProxy operator[](const base::StringPiece key);
+  ValueProxy operator[](const SpdyStringPiece key);
 
   // This object provides automatic conversions that allow SpdyHeaderBlock to be
   // nearly a drop-in replacement for linked_hash_map<string, string>. It reads
@@ -198,7 +199,7 @@ class NET_EXPORT SpdyHeaderBlock {
     ValueProxy& operator=(const ValueProxy& other) = delete;
 
     // Assignment modifies the underlying SpdyHeaderBlock.
-    ValueProxy& operator=(const base::StringPiece other);
+    ValueProxy& operator=(const SpdyStringPiece other);
 
     std::string as_string() const;
 
@@ -209,12 +210,12 @@ class NET_EXPORT SpdyHeaderBlock {
     ValueProxy(SpdyHeaderBlock::MapType* block,
                SpdyHeaderBlock::Storage* storage,
                SpdyHeaderBlock::MapType::iterator lookup_result,
-               const base::StringPiece key);
+               const SpdyStringPiece key);
 
     SpdyHeaderBlock::MapType* block_;
     SpdyHeaderBlock::Storage* storage_;
     SpdyHeaderBlock::MapType::iterator lookup_result_;
-    base::StringPiece key_;
+    SpdyStringPiece key_;
     bool valid_;
   };
 
@@ -224,11 +225,11 @@ class NET_EXPORT SpdyHeaderBlock {
  private:
   friend class test::SpdyHeaderBlockPeer;
 
-  void AppendHeader(const base::StringPiece key, const base::StringPiece value);
+  void AppendHeader(const SpdyStringPiece key, const SpdyStringPiece value);
   Storage* GetStorage();
   size_t bytes_allocated() const;
 
-  // StringPieces held by |block_| point to memory owned by |*storage_|.
+  // SpdyStringPieces held by |block_| point to memory owned by |*storage_|.
   // |storage_| might be nullptr as long as |block_| is empty.
   MapType block_;
   std::unique_ptr<Storage> storage_;
@@ -237,8 +238,8 @@ class NET_EXPORT SpdyHeaderBlock {
 // Writes |fragments| to |dst|, joined by |separator|. |dst| must be large
 // enough to hold the result. Returns the number of bytes written.
 NET_EXPORT size_t Join(char* dst,
-                       const std::vector<base::StringPiece>& fragments,
-                       base::StringPiece separator);
+                       const std::vector<SpdyStringPiece>& fragments,
+                       SpdyStringPiece separator);
 
 // Converts a SpdyHeaderBlock into NetLog event parameters.
 NET_EXPORT std::unique_ptr<base::Value> SpdyHeaderBlockNetLogCallback(

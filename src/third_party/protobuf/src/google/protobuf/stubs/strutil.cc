@@ -528,7 +528,7 @@ int CEscapeInternal(const char* src, int src_len, char* dest,
 // Assumes that non-printable characters are escaped using octal sequences, and
 // that UTF-8 bytes are not handled specially.
 static inline size_t CEscapedLength(StringPiece src) {
-  static char c_escaped_len[256] = {
+  static const char c_escaped_len[256] = {
     4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 2, 4, 4, 2, 4, 4,  // \t, \n, \r
     4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
     1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1,  // ", '
@@ -891,7 +891,7 @@ char *FastInt32ToBuffer(int32 i, char* buffer) {
 char *FastHexToBuffer(int i, char* buffer) {
   GOOGLE_CHECK(i >= 0) << "FastHexToBuffer() wants non-negative integers, not " << i;
 
-  static const char *hexdigits = "0123456789abcdef";
+  static const char hexdigits[] = "0123456789abcdef";
   char *p = buffer + 21;
   *p-- = '\0';
   do {
@@ -902,7 +902,7 @@ char *FastHexToBuffer(int i, char* buffer) {
 }
 
 char *InternalFastHexToBuffer(uint64 value, char* buffer, int num_byte) {
-  static const char *hexdigits = "0123456789abcdef";
+  static const char hexdigits[] = "0123456789abcdef";
   buffer[num_byte] = '\0';
   for (int i = num_byte - 1; i >= 0; i--) {
 #ifdef _M_X64

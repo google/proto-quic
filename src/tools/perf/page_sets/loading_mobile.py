@@ -91,32 +91,36 @@ class LoadingMobileStorySet(story.StorySet):
       'http://www.localmoxie.com',
       'http://www.dawn.com',
       'http://www.thairath.co.th',
-      'http://www.hashocean.com',
-      'http://www.163.com',
+      # Disabled to avoid Nexus5X bot timeout crbug.com/702175
+      # 'http://www.hashocean.com',
+      # 'http://www.163.com',
     ], cache_temperatures, traffic_settings)
 
     self.AddStories(['easy_ttfmp'], [
       'http://www.slideshare.net',
       'http://www.bradesco.com.br',
       'http://www.gsshop.com',
-      'http://www.sbs.co.kr',
-      'http://www.futura-sciences.com',
+      # Disabled to avoid Nexus5X bot timeout crbug.com/702175
+      # 'http://www.sbs.co.kr',
+      # 'http://www.futura-sciences.com',
     ], cache_temperatures, traffic_settings)
 
     self.AddStories(['tough_tti'], [
       'http://www.thestar.com.my',
       'http://www.58pic.com',
       'http://www.hongkiat.com',
-      'http://www.ebs.in',
-      'http://www.ibicn.com',
+      # Disabled to avoid Nexus5X bot timeout crbug.com/702175
+      # 'http://www.ebs.in',
+      # 'http://www.ibicn.com',
     ], cache_temperatures, traffic_settings)
 
     self.AddStories(['easy_tti'], [
       'http://www.dramaq.com.tw',
       'http://www.locanto.in',
       'http://www.francetvinfo.fr',
-      'http://www.gfk.com',
-      'http://www.mlsmatrix.com'
+      # Disabled to avoid Nexus5X bot timeout crbug.com/702175
+      # 'http://www.gfk.com',
+      # 'http://www.mlsmatrix.com'
     ], cache_temperatures, traffic_settings)
 
   def AddStories(self, tags, urls, cache_temperatures, traffic_settings):

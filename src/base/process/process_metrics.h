@@ -188,6 +188,10 @@ class BASE_EXPORT ProcessMetrics {
   // Returns the number of file descriptors currently open by the process, or
   // -1 on error.
   int GetOpenFdCount() const;
+
+  // Returns the soft limit of file descriptors that can be opened by the
+  // process, or -1 on error.
+  int GetOpenFdSoftLimit() const;
 #endif  // defined(OS_LINUX)
 
  private:

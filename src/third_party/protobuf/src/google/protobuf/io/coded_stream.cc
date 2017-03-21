@@ -83,7 +83,7 @@ CodedInputStream::~CodedInputStream() {
 }
 
 // Static.
-int CodedInputStream::default_recursion_limit_ = 100;
+int const CodedInputStream::default_recursion_limit_ = 100;
 
 
 void CodedOutputStream::EnableAliasing(bool enabled) {

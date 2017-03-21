@@ -9,6 +9,8 @@
 
 #include <stdint.h>
 
+#include "net/http/transport_security_state_source.h"
+
 enum SecondLevelDomainName [[DOMAIN_IDS]];
 
 // These are SubjectPublicKeyInfo hashes for public key pinning. The
@@ -29,13 +31,7 @@ static const char kNoReportURI[] = "";
 
 [[ACCEPTABLE_CERTS]]
 
-struct Pinset {
-  const char* const* const accepted_pins;
-  const char* const* const rejected_pins;
-  const char* const report_uri;
-};
-
-static const struct Pinset kPinsets[] = [[PINSETS]];
+static const net::TransportSecurityStateSource::Pinset kPinsets[] = [[PINSETS]];
 
 // kHSTSHuffmanTree describes a Huffman tree. The nodes of the tree are pairs
 // of uint8s. The last node in the array is the root of the tree. Each pair is
@@ -48,5 +44,17 @@ static const uint8_t kPreloadedHSTSData[] = [[HSTS_TRIE]];
 
 static const unsigned kPreloadedHSTSBits = [[HSTS_TRIE_BITS]];
 static const unsigned kHSTSRootPosition = [[HSTS_TRIE_ROOT]];
+
+static const net::TransportSecurityStateSource kHSTSSource = {
+  kHSTSHuffmanTree,
+  sizeof(kHSTSHuffmanTree),
+  kPreloadedHSTSData,
+  kPreloadedHSTSBits,
+  kHSTSRootPosition,
+  kExpectCTReportURIs,
+  kExpectStapleReportURIs,
+  kPinsets,
+  arraysize(kPinsets)
+};
 
 #endif  // NET_HTTP_TRANSPORT_SECURITY_STATE_STATIC_H_

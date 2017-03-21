@@ -31,6 +31,7 @@
 #include "net/proxy/proxy_server.h"
 #include "net/proxy/proxy_service.h"
 #include "net/socket/socket_test_util.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/spdy_protocol.h"
 #include "net/ssl/ssl_config_service_defaults.h"
 #include "net/url_request/url_request_context.h"
@@ -258,6 +259,13 @@ base::WeakPtr<SpdySession> CreateSecureSpdySession(
     const SpdySessionKey& key,
     const NetLogWithSource& net_log);
 
+// Like CreateSecureSpdySession(), but does not fail if there is already an IP
+// pooled session for |key|.
+base::WeakPtr<SpdySession> CreateSecureSpdySessionWithIpBasedPoolingDisabled(
+    HttpNetworkSession* http_session,
+    const SpdySessionKey& key,
+    const NetLogWithSource& net_log);
+
 // Creates an insecure SPDY session for the given key and puts it in
 // |pool|. The returned session will neither receive nor send any
 // data. A SPDY session for |key| must not already exist.
@@ -293,16 +301,15 @@ class SpdyTestUtil {
   ~SpdyTestUtil();
 
   // Add the appropriate headers to put |url| into |block|.
-  void AddUrlToHeaderBlock(base::StringPiece url,
-                           SpdyHeaderBlock* headers) const;
+  void AddUrlToHeaderBlock(SpdyStringPiece url, SpdyHeaderBlock* headers) const;
 
-  static SpdyHeaderBlock ConstructGetHeaderBlock(base::StringPiece url);
-  static SpdyHeaderBlock ConstructGetHeaderBlockForProxy(base::StringPiece url);
-  static SpdyHeaderBlock ConstructHeadHeaderBlock(base::StringPiece url,
+  static SpdyHeaderBlock ConstructGetHeaderBlock(SpdyStringPiece url);
+  static SpdyHeaderBlock ConstructGetHeaderBlockForProxy(SpdyStringPiece url);
+  static SpdyHeaderBlock ConstructHeadHeaderBlock(SpdyStringPiece url,
                                                   int64_t content_length);
-  static SpdyHeaderBlock ConstructPostHeaderBlock(base::StringPiece url,
+  static SpdyHeaderBlock ConstructPostHeaderBlock(SpdyStringPiece url,
                                                   int64_t content_length);
-  static SpdyHeaderBlock ConstructPutHeaderBlock(base::StringPiece url,
+  static SpdyHeaderBlock ConstructPutHeaderBlock(SpdyStringPiece url,
                                                  int64_t content_length);
 
   // Construct an expected SPDY reply string from the given headers.
@@ -515,8 +522,8 @@ class SpdyTestUtil {
  private:
   // |content_length| may be NULL, in which case the content-length
   // header will be omitted.
-  static SpdyHeaderBlock ConstructHeaderBlock(base::StringPiece method,
-                                              base::StringPiece url,
+  static SpdyHeaderBlock ConstructHeaderBlock(SpdyStringPiece method,
+                                              SpdyStringPiece url,
                                               int64_t* content_length);
 
   // Multiple SpdyFramers are required to keep track of header compression

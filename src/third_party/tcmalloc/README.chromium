@@ -105,3 +105,5 @@ Modifications:
 - Added TCMALLOC_DONT_REPLACE_SYSTEM_ALLOC which bypasses the libc_override logic.
 - Backported 7df7f14 "issue-693: enable futex usage on arm" from upstream.
 - Don't use the tls model 'initial-exec' in chromeos on arm with gcc.
+- Update addr2line-pdb.c to fix format string errors and use relative addresses
+  matching linux's behavior more closely.

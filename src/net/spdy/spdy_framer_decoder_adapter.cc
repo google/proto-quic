@@ -163,7 +163,7 @@ void SpdyFramerVisitorAdapter::OnPriority(SpdyStreamId stream_id,
 
 void SpdyFramerVisitorAdapter::OnAltSvc(
     SpdyStreamId stream_id,
-    base::StringPiece origin,
+    SpdyStringPiece origin,
     const SpdyAltSvcWireFormat::AlternativeServiceVector& altsvc_vector) {
   visitor_->OnAltSvc(stream_id, origin, altsvc_vector);
 }

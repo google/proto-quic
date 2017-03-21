@@ -30,7 +30,7 @@ from telemetry.util import rgba_color
 import common_util
 import loading_trace as loading_trace_module
 import sandwich_runner
-import tracing
+import tracing_track
 
 
 COMMON_CSV_COLUMN_NAMES = [
@@ -70,16 +70,16 @@ CompletenessPoint = collections.namedtuple('CompletenessPoint',
     ('time', 'frame_completeness'))
 
 
-def _GetBrowserPID(tracing_track):
+def _GetBrowserPID(track):
   """Get the browser PID from a trace.
 
   Args:
-    tracing_track: The tracing.TracingTrack.
+    track: The tracing_track.TracingTrack.
 
   Returns:
     The browser's PID as an integer.
   """
-  for event in tracing_track.GetEvents():
+  for event in track.GetEvents():
     if event.category != '__metadata' or event.name != 'process_name':
       continue
     if event.args['name'] == 'Browser':
@@ -87,19 +87,19 @@ def _GetBrowserPID(tracing_track):
   raise ValueError('couldn\'t find browser\'s PID')
 
 
-def _GetBrowserDumpEvents(tracing_track):
+def _GetBrowserDumpEvents(track):
   """Get the browser memory dump events from a tracing track.
 
   Args:
-    tracing_track: The tracing.TracingTrack.
+    track: The tracing_track.TracingTrack.
 
   Returns:
     List of memory dump events.
   """
-  assert sandwich_runner.MEMORY_DUMP_CATEGORY in tracing_track.Categories()
-  browser_pid = _GetBrowserPID(tracing_track)
+  assert sandwich_runner.MEMORY_DUMP_CATEGORY in track.Categories()
+  browser_pid = _GetBrowserPID(track)
   browser_dumps_events = []
-  for event in tracing_track.GetEvents():
+  for event in track.GetEvents():
     if event.category != 'disabled-by-default-memory-infra':
       continue
     if event.type != 'v' or event.name != 'periodic_interval':
@@ -113,19 +113,19 @@ def _GetBrowserDumpEvents(tracing_track):
   return browser_dumps_events
 
 
-def _GetWebPageTrackedEvents(tracing_track):
+def _GetWebPageTrackedEvents(track):
   """Get the web page's tracked events from a tracing track.
 
   Args:
-    tracing_track: The tracing.TracingTrack.
+    track: The tracing_track.TracingTrack.
 
   Returns:
-    A dict mapping event.name -> tracing.Event for each first occurrence of a
-        tracked event.
+    A dict mapping event.name -> tracing_track.Event for each first occurrence
+        of a tracked event.
   """
   main_frame_id = None
   tracked_events = {}
-  sorted_events = sorted(tracing_track.GetEvents(),
+  sorted_events = sorted(track.GetEvents(),
                          key=lambda event: event.start_msec)
   for event in sorted_events:
     if event.category != 'blink.user_timing':

@@ -8,8 +8,8 @@
 // generated).  Instead, consider adding methods here.
 //
 // ResetAndReturn(&cb) is like cb.Reset() but allows executing a callback (via a
-// copy) after the original callback is Reset().  This can be handy if Run()
-// reads/writes the variable holding the Callback.
+// move or copy) after the original callback is Reset().  This can be handy if
+// Run() reads/writes the variable holding the Callback.
 
 #ifndef BASE_CALLBACK_HELPERS_H_
 #define BASE_CALLBACK_HELPERS_H_

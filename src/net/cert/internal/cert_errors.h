@@ -139,6 +139,9 @@ class NET_EXPORT CertErrors {
   // Dumps a textual representation of the errors for debugging purposes.
   std::string ToDebugString() const;
 
+  // Returns true the error |id| was added to this CertErrors (at any depth).
+  bool ContainsError(CertErrorId id) const;
+
  private:
   // CertErrorScoper manipulates the CertErrors object.
   friend class CertErrorScoper;

@@ -7,7 +7,6 @@ from telemetry.page import cache_temperature as cache_temperature_module
 from telemetry.page import shared_page_state
 
 
-_TTI_WAIT_TIME = 10
 _NAVIGATION_TIMEOUT = 180
 _WEB_CONTENTS_TIMEOUT = 180
 
@@ -31,4 +30,3 @@ class PageCyclerStory(page.Page):
   def RunPageInteractions(self, action_runner):
     action_runner.tab.WaitForDocumentReadyStateToBeComplete(
         _WEB_CONTENTS_TIMEOUT)
-    action_runner.Wait(_TTI_WAIT_TIME)

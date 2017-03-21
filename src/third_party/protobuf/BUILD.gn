@@ -136,7 +136,38 @@ if (is_win) {
   ]
 }
 
-component("protobuf_lite") {
+# Do not allow libprotobuf_lite to be dynamically linked on Linux.  Later
+# versions of Ubuntu like Xenial and Yakkety link in the system
+# libprotobuf_lite by the following dependency chain: chrome -> gtk ->
+# libmirclient -> libmirprotobuf -> libprotobuf-lite.  Trying to load
+# the system libprotobuf-lite after already having loaded the libprotobuf_lite
+# component will result in an immediate crash. (crbug.com/700120)
+if (is_linux && !is_chromeos) {
+  link_target_type = "static_library"
+} else {
+  link_target_type = "component"
+}
+
+if (is_component_build && is_linux && !is_chromeos) {
+  # Even though protobuf is statically linked on Linux, global data must
+  # be shared across different copies of the library in each component.
+  # protobuf_globals is a shared library that provides this state, but is
+  # careful to prefix all exported symbols with 'cr_' so they don't conflict
+  # with other versions of protobuf.
+  component("protobuf_globals") {
+    configs += [
+      ":protobuf_config",
+      ":protobuf_use_dlls",
+    ]
+    defines = [ "LIBPROTOBUF_EXPORTS" ]
+    sources = [
+      "src/google/protobuf/globals.cc",
+      "src/google/protobuf/stubs/atomicops_internals_x86_gcc.cc",
+    ]
+  }
+}
+
+target(link_target_type, "protobuf_lite") {
   sources = protobuf_lite_sources
 
   configs -= [ "//build/config/compiler:chromium_code" ]
@@ -165,8 +196,14 @@ component("protobuf_lite") {
 
   cflags = protobuf_lite_cflags
 
+  if (is_component_build && is_linux && !is_chromeos) {
+    deps += [ ":protobuf_globals" ]
+  } else {
+    sources += [ "src/google/protobuf/globals.cc" ]
+  }
+
   # Required for component builds. See http://crbug.com/172800.
-  if (is_component_build) {
+  if (is_component_build && (!is_linux || is_chromeos)) {
     public_configs += [ ":protobuf_use_dlls" ]
     defines = [ "LIBPROTOBUF_EXPORTS" ]
   }
@@ -215,6 +252,7 @@ static_library("protobuf_full") {
     "src/google/protobuf/generated_enum_util.h",
     "src/google/protobuf/generated_message_reflection.cc",
     "src/google/protobuf/generated_message_reflection.h",
+    "src/google/protobuf/globals.cc",
 
     # gzip_stream.cc pulls in zlib, but it's not actually used by protoc, just
     # by test code, so instead of compiling zlib for the host, let's just

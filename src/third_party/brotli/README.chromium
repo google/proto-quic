@@ -11,9 +11,10 @@ byte-compression level in WOFF 2.0 font file format. This library is used
 to decode WOFF 2.0 fonts.
 
 Local Modifications:
-- This only includes the enc/, dec/ and tools/ directories, the README.md and
-  the LICENSE files, removing unneeded directories such as docs, tests, and
-  tools.
+- This only includes the common/, dec/, enc/, fuzz/ and tools/ directories, the
+  README.md and the LICENSE files, removing unneeded directories such as docs,
+  java, and tests.
+- Auxiliary fuzzer runners removed from fuzz/
 - Line 19 of enc/cluster_inc.h was modified to eliminate build error on Windows.
 - BUILD.gn: Added.
 - brotli.gyp: Added.

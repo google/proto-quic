@@ -87,12 +87,19 @@ class NET_EXPORT SpdySessionPool
       const NetLogWithSource& net_log,
       bool is_secure);
 
-  // Return an available session for |key| that has an unclaimed push stream for
-  // |url| if such exists and |url| is not empty, or else an available session
-  // for |key| if such exists, or else nullptr.
+  // If |url| is not empty and there is a session for |key| that has an
+  // unclaimed push stream for |url|, return it.
+  // Otherwise if there is an available session for |key|, return it.
+  // Otherwise if there is a session to pool to based on IP address:
+  //   * if |enable_ip_based_pooling == true|,
+  //     then mark it as available for |key| and return it;
+  //   * if |enable_ip_based_pooling == false|,
+  //     then remove it from the available sessions, and return nullptr.
+  // Otherwise return nullptr.
   base::WeakPtr<SpdySession> FindAvailableSession(
       const SpdySessionKey& key,
       const GURL& url,
+      bool enable_ip_based_pooling,
       const NetLogWithSource& net_log);
 
   // Remove all mappings and aliases for the given session, which must

@@ -32,6 +32,9 @@ class SignaturePolicy;
 //   certs[0] is the target certificate
 //   certs[i] was issued by certs[i+1]
 //   certs.back() was issued by trust_anchor
+//
+// TODO(eroman): The current code doesn't allow for the target certificate to
+//               be the trust anchor. Should it?
 struct NET_EXPORT CertPath {
   CertPath();
   ~CertPath();

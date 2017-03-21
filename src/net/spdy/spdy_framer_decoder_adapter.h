@@ -10,8 +10,8 @@
 #include <cstdint>
 #include <memory>
 
-#include "base/strings/string_piece.h"
 #include "net/spdy/hpack/hpack_header_table.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/spdy_alt_svc_wire_format.h"
 #include "net/spdy/spdy_framer.h"
 #include "net/spdy/spdy_headers_handler_interface.h"
@@ -146,7 +146,7 @@ class SpdyFramerVisitorAdapter : public SpdyFramerVisitorInterface {
                   int weight,
                   bool exclusive) override;
   void OnAltSvc(SpdyStreamId stream_id,
-                base::StringPiece origin,
+                SpdyStringPiece origin,
                 const SpdyAltSvcWireFormat::AlternativeServiceVector&
                     altsvc_vector) override;
   bool OnUnknownFrame(SpdyStreamId stream_id, uint8_t frame_type) override;

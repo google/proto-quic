@@ -25,27 +25,20 @@
 
 ### What to do once the commit is identified:
  * If the code seems to justify the size increase:
-    1. Annotate the code review with the following (replacing **bold** parts):
+    * Annotate the code review with the following (replacing **bold** parts):
        > FYI - this added **20kb** to Chrome on Android. No action is required
        > (unless you can think of an obvious way to reduce the overhead).
        >
        > Link to size graph:
 [https://chromeperf.appspot.com/report?sid=cfc29eed1238fd38fb5e6cf83bdba6c619be621b606e03e5dfc2e99db14c418b&rev=**440074**](https://chromeperf.appspot.com/report?sid=cfc29eed1238fd38fb5e6cf83bdba6c619be621b606e03e5dfc2e99db14c418b&rev=440074)
-    2. Add an entry to
-      [this spreadsheet](https://docs.google.com/spreadsheets/d/1GrRkszV7Oy5pVsaMb5Eb6s8izW9t4dElBxIH3iGq93o/edit#gid=1894856744)
-      to document the increase (also Update the "Themes / Thoughts" tab if
-      applicable).
  * If the code might not justify the size increase:
-    1. File a bug and assign to the author to follow-up.
+    * File a bug and assign to the author to follow-up.
         * Change the bug's title from X% to XXkb
         * Paste in link to commit or review URL that is at fault.
         * Paste in link to [https://chromium.googlesource.com/chromium/src/+/master/tools/perf/docs/apk_size_regressions.md#Debugging-Apk-Size-Increase](https://chromium.googlesource.com/chromium/src/+/master/tools/perf/docs/apk_size_regressions.md#Debugging-Apk-Size-Increase).
         * Remove label: `Restrict-View-Google`
         * Add label: `binary-size`
         * TODO(agrieve): [https://github.com/catapult-project/catapult/issues/3150](Change bug template to match these instructions)
-    2. Add an entry to
-      [this spreadsheet](https://docs.google.com/spreadsheets/d/1GrRkszV7Oy5pVsaMb5Eb6s8izW9t4dElBxIH3iGq93o/edit#gid=1894856744)
-      to document the increase.
 
 # Debugging Apk Size Increase
 
@@ -56,8 +49,7 @@ showing the breakdowns.
 
  * Refer to the chromeperf link that should have been posted to your code
    review (see above).
- * Alternatively, refer to "Apk Size" section here:
-   [https://goto.google.com/clank/dashboards](https://goto.google.com/clank/dashboards) (*googler only*).
+ * Alternatively, refer to [go/chrome-binary-size](https://goto.google.com/chrome-binary-size) (*googler only*).
 
 ## Step 2: Reproduce build results locally
 
