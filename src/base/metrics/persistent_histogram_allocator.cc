@@ -785,24 +785,6 @@ void GlobalHistogramAllocator::ConstructFilePaths(const FilePath& dir,
 #endif  // !defined(OS_NACL)
 
 // static
-void GlobalHistogramAllocator::CreateWithSharedMemory(
-    std::unique_ptr<SharedMemory> memory,
-    size_t size,
-    uint64_t id,
-    StringPiece name) {
-  if ((!memory->memory() && !memory->Map(size)) ||
-      !SharedPersistentMemoryAllocator::IsSharedMemoryAcceptable(*memory)) {
-    NOTREACHED();
-    return;
-  }
-
-  DCHECK_LE(memory->mapped_size(), size);
-  Set(WrapUnique(
-      new GlobalHistogramAllocator(MakeUnique<SharedPersistentMemoryAllocator>(
-          std::move(memory), 0, StringPiece(), /*readonly=*/false))));
-}
-
-// static
 void GlobalHistogramAllocator::CreateWithSharedMemoryHandle(
     const SharedMemoryHandle& handle,
     size_t size) {

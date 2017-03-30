@@ -108,6 +108,7 @@ struct TestState {
   bssl::UniquePtr<SSL_SESSION> new_session;
   bool ticket_decrypt_done = false;
   bool alpn_select_done = false;
+  bool is_resume = false;
   bool early_callback_ready = false;
 };
 
@@ -533,7 +534,8 @@ static bool InstallCertificate(SSL *ssl) {
   return true;
 }
 
-static int SelectCertificateCallback(const SSL_CLIENT_HELLO *client_hello) {
+static enum ssl_select_cert_result_t SelectCertificateCallback(
+    const SSL_CLIENT_HELLO *client_hello) {
   const TestConfig *config = GetTestConfig(client_hello->ssl);
   GetTestState(client_hello->ssl)->early_callback_called = true;
 
@@ -547,7 +549,7 @@ static int SelectCertificateCallback(const SSL_CLIENT_HELLO *client_hello) {
             client_hello, TLSEXT_TYPE_server_name, &extension_data,
             &extension_len)) {
       fprintf(stderr, "Could not find server_name extension.\n");
-      return -1;
+      return ssl_select_cert_error;
     }
 
     CBS_init(&extension, extension_data, extension_len);
@@ -558,7 +560,7 @@ static int SelectCertificateCallback(const SSL_CLIENT_HELLO *client_hello) {
         !CBS_get_u16_length_prefixed(&server_name_list, &host_name) ||
         CBS_len(&server_name_list) != 0) {
       fprintf(stderr, "Could not decode server_name extension.\n");
-      return -1;
+      return ssl_select_cert_error;
     }
 
     if (!CBS_mem_equal(&host_name,
@@ -569,7 +571,7 @@ static int SelectCertificateCallback(const SSL_CLIENT_HELLO *client_hello) {
   }
 
   if (config->fail_early_callback) {
-    return -1;
+    return ssl_select_cert_error;
   }
 
   // Install the certificate in the early callback.
@@ -578,13 +580,13 @@ static int SelectCertificateCallback(const SSL_CLIENT_HELLO *client_hello) {
         GetTestState(client_hello->ssl)->early_callback_ready;
     if (config->async && !early_callback_ready) {
       // Install the certificate asynchronously.
-      return 0;
+      return ssl_select_cert_retry;
     }
     if (!InstallCertificate(client_hello->ssl)) {
-      return -1;
+      return ssl_select_cert_error;
     }
   }
-  return 1;
+  return ssl_select_cert_success;
 }
 
 static bool CheckCertificateRequest(SSL *ssl) {
@@ -763,6 +765,10 @@ static int AlpnSelectCallback(SSL* ssl, const uint8_t** out, uint8_t* outlen,
 
   *out = (const uint8_t*)config->select_alpn.data();
   *outlen = config->select_alpn.size();
+  if (GetTestState(ssl)->is_resume && config->select_resume_alpn.size() > 0) {
+    *out = (const uint8_t*)config->select_resume_alpn.data();
+    *outlen = config->select_resume_alpn.size();
+  }
   return SSL_TLSEXT_ERR_OK;
 }
 
@@ -1108,7 +1114,8 @@ static bssl::UniquePtr<SSL_CTX> SetupCtx(const TestConfig *config) {
                                      NULL);
   }
 
-  if (!config->select_alpn.empty() || config->decline_alpn) {
+  if (!config->select_alpn.empty() || !config->select_resume_alpn.empty() ||
+      config->decline_alpn) {
     SSL_CTX_set_alpn_select_cb(ssl_ctx.get(), AlpnSelectCallback, NULL);
   }
 
@@ -1361,7 +1368,9 @@ static bool CheckHandshakeProperties(SSL *ssl, bool is_resume) {
     return false;
   }
 
-  bool expect_handshake_done = is_resume || !config->false_start;
+  bool expect_handshake_done =
+      (is_resume || !config->false_start) &&
+      !(config->is_server && SSL_early_data_accepted(ssl));
   if (expect_handshake_done != GetTestState(ssl)->handshake_done) {
     fprintf(stderr, "handshake was%s completed\n",
             GetTestState(ssl)->handshake_done ? "" : " not");
@@ -1421,13 +1430,22 @@ static bool CheckHandshakeProperties(SSL *ssl, bool is_resume) {
     }
   }
 
-  if (!config->expected_alpn.empty()) {
+  std::string expected_alpn = config->expected_alpn;
+  if (is_resume && !config->expected_resume_alpn.empty()) {
+    expected_alpn = config->expected_resume_alpn;
+  }
+  bool expect_no_alpn = (!is_resume && config->expect_no_alpn) ||
+      (is_resume && config->expect_no_resume_alpn);
+  if (expect_no_alpn) {
+    expected_alpn.clear();
+  }
+
+  if (!expected_alpn.empty() || expect_no_alpn) {
     const uint8_t *alpn_proto;
     unsigned alpn_proto_len;
     SSL_get0_alpn_selected(ssl, &alpn_proto, &alpn_proto_len);
-    if (alpn_proto_len != config->expected_alpn.size() ||
-        OPENSSL_memcmp(alpn_proto, config->expected_alpn.data(),
-                       alpn_proto_len) != 0) {
+    if (alpn_proto_len != expected_alpn.size() ||
+        OPENSSL_memcmp(alpn_proto, expected_alpn.data(), alpn_proto_len) != 0) {
       fprintf(stderr, "negotiated alpn proto mismatch\n");
       return false;
     }
@@ -1539,6 +1557,15 @@ static bool CheckHandshakeProperties(SSL *ssl, bool is_resume) {
     return false;
   }
 
+  if (is_resume) {
+    if ((config->expect_accept_early_data && !SSL_early_data_accepted(ssl)) ||
+        (config->expect_reject_early_data && SSL_early_data_accepted(ssl))) {
+      fprintf(stderr,
+              "Early data was%s accepted, but we expected the opposite\n",
+              SSL_early_data_accepted(ssl) ? "" : " not");
+      return false;
+    }
+  }
 
   if (!config->psk.empty()) {
     if (SSL_get_peer_cert_chain(ssl) != nullptr) {
@@ -1628,6 +1655,10 @@ static bool CheckHandshakeProperties(SSL *ssl, bool is_resume) {
 static bool DoExchange(bssl::UniquePtr<SSL_SESSION> *out_session,
                        SSL_CTX *ssl_ctx, const TestConfig *config,
                        bool is_resume, SSL_SESSION *session) {
+  if (is_resume && config->enable_resume_early_data) {
+    SSL_CTX_set_early_data_enabled(ssl_ctx, 1);
+  }
+
   bssl::UniquePtr<SSL> ssl(SSL_new(ssl_ctx));
   if (!ssl) {
     return false;
@@ -1637,6 +1668,8 @@ static bool DoExchange(bssl::UniquePtr<SSL_SESSION> *out_session,
       !SetTestState(ssl.get(), std::unique_ptr<TestState>(new TestState))) {
     return false;
   }
+
+  GetTestState(ssl.get())->is_resume = is_resume;
 
   if (config->fallback_scsv &&
       !SSL_set_mode(ssl.get(), SSL_MODE_SEND_FALLBACK_SCSV)) {
@@ -1834,23 +1867,35 @@ static bool DoExchange(bssl::UniquePtr<SSL_SESSION> *out_session,
     return false;
   }
 
-  int ret;
-  if (config->implicit_handshake) {
-    if (config->is_server) {
-      SSL_set_accept_state(ssl.get());
-    } else {
-      SSL_set_connect_state(ssl.get());
-    }
+  if (config->is_server) {
+    SSL_set_accept_state(ssl.get());
   } else {
+    SSL_set_connect_state(ssl.get());
+  }
+
+  int ret;
+  if (!config->implicit_handshake) {
     do {
-      if (config->is_server) {
-        ret = SSL_accept(ssl.get());
-      } else {
-        ret = SSL_connect(ssl.get());
-      }
+      ret = SSL_do_handshake(ssl.get());
     } while (config->async && RetryAsync(ssl.get(), ret));
     if (ret != 1 ||
         !CheckHandshakeProperties(ssl.get(), is_resume)) {
+      return false;
+    }
+
+    if (config->handshake_twice) {
+      do {
+        ret = SSL_do_handshake(ssl.get());
+      } while (config->async && RetryAsync(ssl.get(), ret));
+      if (ret != 1) {
+        return false;
+      }
+    }
+
+    // Skip the |config->async| logic as this should be a no-op.
+    if (config->no_op_extra_handshake &&
+        SSL_do_handshake(ssl.get()) != 1) {
+      fprintf(stderr, "Extra SSL_do_handshake was not a no-op.\n");
       return false;
     }
 
@@ -1978,8 +2023,9 @@ static bool DoExchange(bssl::UniquePtr<SSL_SESSION> *out_session,
         }
 
         // After a successful read, with or without False Start, the handshake
-        // must be complete.
-        if (!GetTestState(ssl.get())->handshake_done) {
+        // must be complete unless we are doing early data.
+        if (!GetTestState(ssl.get())->handshake_done &&
+            !SSL_early_data_accepted(ssl.get())) {
           fprintf(stderr, "handshake was not completed after SSL_read\n");
           return false;
         }

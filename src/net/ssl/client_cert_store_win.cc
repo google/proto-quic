@@ -149,7 +149,8 @@ void GetClientCertsImpl(HCERTSTORE cert_store,
     // pair<X509Certificate, SSLPrivateKeyCallback>.
     scoped_refptr<X509Certificate> cert = X509Certificate::CreateFromHandle(
         cert_context2, intermediates);
-    selected_certs->push_back(cert);
+    if (cert)
+      selected_certs->push_back(std::move(cert));
     CertFreeCertificateContext(cert_context2);
     for (size_t i = 0; i < intermediates.size(); ++i)
       CertFreeCertificateContext(intermediates[i]);

@@ -167,12 +167,10 @@ void SdchDictionaryFetcher::OnResponseStarted(URLRequest* request,
   // HTTP, it is presumed to be fresh.
   HttpResponseHeaders* response_headers = request->response_headers();
   if (net_error == OK && response_headers) {
-    ValidationType validation_type = response_headers->RequiresValidation(
+    bool requires_validation = response_headers->RequiresValidation(
         request->response_info().request_time,
         request->response_info().response_time, base::Time::Now());
-    // TODO(rdsmith): Maybe handle VALIDATION_ASYNCHRONOUS by queueing
-    // a non-reload request for the dictionary.
-    if (validation_type != VALIDATION_NONE)
+    if (requires_validation)
       net_error = ERR_FAILED;
   }
 

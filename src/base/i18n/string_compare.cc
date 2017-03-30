@@ -6,6 +6,7 @@
 
 #include "base/logging.h"
 #include "base/strings/utf_string_conversions.h"
+#include "third_party/icu/source/common/unicode/unistr.h"
 
 namespace base {
 namespace i18n {
@@ -17,8 +18,8 @@ UCollationResult CompareString16WithCollator(const icu::Collator& collator,
                                              const string16& rhs) {
   UErrorCode error = U_ZERO_ERROR;
   UCollationResult result = collator.compare(
-      static_cast<const UChar*>(lhs.c_str()), static_cast<int>(lhs.length()),
-      static_cast<const UChar*>(rhs.c_str()), static_cast<int>(rhs.length()),
+      icu::UnicodeString(FALSE, lhs.c_str(), static_cast<int>(lhs.length())),
+      icu::UnicodeString(FALSE, rhs.c_str(), static_cast<int>(rhs.length())),
       error);
   DCHECK(U_SUCCESS(error));
   return result;

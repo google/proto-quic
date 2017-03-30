@@ -20,7 +20,6 @@
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
 #include "net/base/network_activity_monitor.h"
-#include "net/http/http_log_util.h"
 #include "net/http/transport_security_state.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_source_type.h"
@@ -34,6 +33,7 @@
 #include "net/quic/core/spdy_utils.h"
 #include "net/socket/datagram_client_socket.h"
 #include "net/spdy/spdy_http_utils.h"
+#include "net/spdy/spdy_log_util.h"
 #include "net/spdy/spdy_session.h"
 #include "net/ssl/channel_id_service.h"
 #include "net/ssl/ssl_connection_status_flags.h"
@@ -669,6 +669,11 @@ int QuicChromiumClientSession::CryptoConnect(
   RecordHandshakeState(STATE_STARTED);
   DCHECK(flow_controller());
   crypto_stream_->CryptoConnect();
+
+  // Check if the connection is still open, issues during CryptoConnect like
+  // packet write error could cause the connection to be torn down.
+  if (!connection()->connected())
+    return ERR_QUIC_HANDSHAKE_FAILED;
 
   if (IsCryptoHandshakeConfirmed()) {
     connect_timing_.connect_end = base::TimeTicks::Now();
@@ -1344,9 +1349,8 @@ void QuicChromiumClientSession::OnReadError(
   }
   DVLOG(1) << "Closing session on read error: " << result;
   UMA_HISTOGRAM_SPARSE_SLOWLY("Net.QuicSession.ReadError", -result);
-  NotifyFactoryOfSessionGoingAway();
-  CloseSessionOnErrorInner(result, QUIC_PACKET_READ_ERROR);
-  NotifyFactoryOfSessionClosedLater();
+  connection()->CloseConnection(QUIC_PACKET_READ_ERROR, ErrorToString(result),
+                                ConnectionCloseBehavior::SILENT_CLOSE);
 }
 
 bool QuicChromiumClientSession::OnPacket(const QuicReceivedPacket& packet,

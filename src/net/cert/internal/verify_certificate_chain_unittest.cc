@@ -24,14 +24,13 @@ class VerifyCertificateChainDelegate {
 
     SimpleSignaturePolicy signature_policy(1024);
 
-    CertErrors errors;
+    CertPathErrors errors;
     bool result = VerifyCertificateChain(chain, trust_anchor.get(),
                                          &signature_policy, time, &errors);
     EXPECT_EQ(expected_result, result);
-    EXPECT_EQ(expected_errors, errors.ToDebugString()) << "Test file: "
-                                                       << test_file_path;
-    if (!result)
-      EXPECT_FALSE(errors.empty());
+    EXPECT_EQ(expected_errors, errors.ToDebugString(chain))
+        << "Test file: " << test_file_path;
+    EXPECT_EQ(result, !errors.ContainsHighSeverityErrors());
   }
 };
 

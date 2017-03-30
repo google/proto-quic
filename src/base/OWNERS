@@ -36,11 +36,6 @@ per-file BUILD.gn=file://base/android/OWNERS
 per-file feature_list*=asvitkine@chromium.org
 per-file feature_list*=isherman@chromium.org
 
-# For bot infrastructure:
-per-file *.isolate=maruel@chromium.org
-per-file *.isolate=tandrii@chromium.org
-per-file *.isolate=vadimsh@chromium.org
-
 # For TCMalloc tests:
 per-file security_unittest.cc=jln@chromium.org
 

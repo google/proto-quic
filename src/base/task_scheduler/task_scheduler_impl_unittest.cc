@@ -28,6 +28,10 @@
 #include "base/time/time.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
+#if defined(OS_WIN)
+#include <objbase.h>
+#endif  // defined(OS_WIN)
+
 namespace base {
 namespace internal {
 
@@ -365,6 +369,30 @@ TEST_F(TaskSchedulerImplTest, SingleThreadRunsTasksOnCurrentThread) {
           single_thread_task_runner, Unretained(&task_ran)));
   task_ran.Wait();
 }
+
+#if defined(OS_WIN)
+TEST_F(TaskSchedulerImplTest, COMSTATaskRunnersRunWithCOMSTA) {
+  auto com_sta_task_runner =
+      scheduler_->CreateCOMSTATaskRunnerWithTraits(TaskTraits());
+
+  WaitableEvent task_ran(WaitableEvent::ResetPolicy::MANUAL,
+                         WaitableEvent::InitialState::NOT_SIGNALED);
+  com_sta_task_runner->PostTask(
+      FROM_HERE,
+      Bind(
+          [](scoped_refptr<TaskRunner> single_thread_task_runner,
+             WaitableEvent* task_ran) {
+            HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+            if (SUCCEEDED(hr)) {
+              ADD_FAILURE() << "COM STA was not initialized on this thread";
+              CoUninitialize();
+            }
+            task_ran->Signal();
+          },
+          com_sta_task_runner, Unretained(&task_ran)));
+  task_ran.Wait();
+}
+#endif  // defined(OS_WIN)
 
 }  // namespace internal
 }  // namespace base

@@ -61,18 +61,18 @@ class TrustAnchor;
 // ---------
 //
 //   Returns true if the target certificate can be verified.
+//   TODO(eroman): This return value is redundant with the |errors| parameter.
 //
 //   errors:
 //     Must be non-null. The set of errors/warnings encountered while
-//     validating the path are appended to this structure. There is no
-//     guarantee that on success |errors| is empty, or conversely that
-//     on failure |errors| is non-empty. Consumers must only use the
-//     boolean return value to determine success/failure.
+//     validating the path are appended to this structure. If verification
+//     failed, then there is guaranteed to be at least 1 error written to
+//     |errors|.
 NET_EXPORT bool VerifyCertificateChain(const ParsedCertificateList& certs,
                                        const TrustAnchor* trust_anchor,
                                        const SignaturePolicy* signature_policy,
                                        const der::GeneralizedTime& time,
-                                       CertErrors* errors) WARN_UNUSED_RESULT;
+                                       CertPathErrors* errors);
 
 // TODO(crbug.com/634443): Move exported errors to a central location?
 extern CertErrorId kValidityFailedNotAfter;

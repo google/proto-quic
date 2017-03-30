@@ -558,45 +558,12 @@ const size_t kDiskWeightedIOTime = 13;
 
 }  // namespace
 
-SystemMemoryInfoKB::SystemMemoryInfoKB() {
-  total = 0;
-  free = 0;
-#if defined(OS_LINUX)
-  available = 0;
-#endif
-  buffers = 0;
-  cached = 0;
-  active_anon = 0;
-  inactive_anon = 0;
-  active_file = 0;
-  inactive_file = 0;
-  swap_total = 0;
-  swap_free = 0;
-  dirty = 0;
-
-  pswpin = 0;
-  pswpout = 0;
-  pgmajfault = 0;
-
-#ifdef OS_CHROMEOS
-  shmem = 0;
-  slab = 0;
-  gem_objects = -1;
-  gem_size = -1;
-#endif
-}
-
-SystemMemoryInfoKB::SystemMemoryInfoKB(const SystemMemoryInfoKB& other) =
-    default;
-
 std::unique_ptr<Value> SystemMemoryInfoKB::ToValue() const {
   std::unique_ptr<DictionaryValue> res(new DictionaryValue());
 
   res->SetInteger("total", total);
   res->SetInteger("free", free);
-#if defined(OS_LINUX)
   res->SetInteger("available", available);
-#endif
   res->SetInteger("buffers", buffers);
   res->SetInteger("cached", cached);
   res->SetInteger("active_anon", active_anon);
@@ -607,6 +574,7 @@ std::unique_ptr<Value> SystemMemoryInfoKB::ToValue() const {
   res->SetInteger("swap_free", swap_free);
   res->SetInteger("swap_used", swap_total - swap_free);
   res->SetInteger("dirty", dirty);
+  res->SetInteger("reclaimable", reclaimable);
   res->SetInteger("pswpin", pswpin);
   res->SetInteger("pswpout", pswpout);
   res->SetInteger("pgmajfault", pgmajfault);
@@ -654,10 +622,8 @@ bool ParseProcMeminfo(const std::string& meminfo_data,
       target = &meminfo->total;
     else if (tokens[0] == "MemFree:")
       target = &meminfo->free;
-#if defined(OS_LINUX)
     else if (tokens[0] == "MemAvailable:")
       target = &meminfo->available;
-#endif
     else if (tokens[0] == "Buffers:")
       target = &meminfo->buffers;
     else if (tokens[0] == "Cached:")
@@ -676,6 +642,8 @@ bool ParseProcMeminfo(const std::string& meminfo_data,
       target = &meminfo->swap_free;
     else if (tokens[0] == "Dirty:")
       target = &meminfo->dirty;
+    else if (tokens[0] == "SReclaimable:")
+      target = &meminfo->reclaimable;
 #if defined(OS_CHROMEOS)
     // Chrome OS has a tweaked kernel that allows us to query Shmem, which is
     // usually video memory otherwise invisible to the OS.

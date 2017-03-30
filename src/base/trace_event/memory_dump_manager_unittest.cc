@@ -7,9 +7,11 @@
 #include <stdint.h>
 
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "base/bind_helpers.h"
+#include "base/callback.h"
 #include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted_memory.h"
 #include "base/message_loop/message_loop.h"
@@ -102,10 +104,10 @@ void OnTraceDataCollected(Closure quit_closure,
 // Posts |task| to |task_runner| and blocks until it is executed.
 void PostTaskAndWait(const tracked_objects::Location& from_here,
                      SequencedTaskRunner* task_runner,
-                     const base::Closure& task) {
+                     base::Closure task) {
   base::WaitableEvent event(WaitableEvent::ResetPolicy::MANUAL,
                             WaitableEvent::InitialState::NOT_SIGNALED);
-  task_runner->PostTask(from_here, task);
+  task_runner->PostTask(from_here, std::move(task));
   task_runner->PostTask(
       FROM_HERE, base::Bind(&WaitableEvent::Signal, base::Unretained(&event)));
   // The SequencedTaskRunner guarantees that |event| will only be signaled after
@@ -181,19 +183,19 @@ class TestSequencedTaskRunner : public SequencedTaskRunner {
   unsigned no_of_post_tasks() const { return num_of_post_tasks_; }
 
   bool PostNonNestableDelayedTask(const tracked_objects::Location& from_here,
-                                  const Closure& task,
+                                  Closure task,
                                   TimeDelta delay) override {
     NOTREACHED();
     return false;
   }
 
   bool PostDelayedTask(const tracked_objects::Location& from_here,
-                       const Closure& task,
+                       Closure task,
                        TimeDelta delay) override {
     num_of_post_tasks_++;
     if (enabled_) {
       return worker_pool_.pool()->PostSequencedWorkerTask(token_, from_here,
-                                                          task);
+                                                          std::move(task));
     }
     return false;
   }
@@ -275,7 +277,8 @@ class MemoryDumpManagerTest : public testing::Test {
   void DisableTracing() { TraceLog::GetInstance()->SetDisabled(); }
 
   bool IsPeriodicDumpingEnabled() const {
-    return mdm_->dump_scheduler_->IsPeriodicTimerRunningForTesting();
+    return MemoryDumpScheduler::GetInstance()
+        ->IsPeriodicTimerRunningForTesting();
   }
 
   int GetMaxConsecutiveFailuresCount() const {

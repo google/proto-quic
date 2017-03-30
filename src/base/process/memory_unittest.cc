@@ -79,6 +79,10 @@ TEST(ProcessMemoryTest, MacTerminateOnHeapCorruption) {
 #else
   ADD_FAILURE() << "This test is not supported in this build configuration.";
 #endif
+
+#if BUILDFLAG(USE_EXPERIMENTAL_ALLOCATOR_SHIM)
+  base::allocator::UninterceptMallocZonesForTesting();
+#endif
 }
 
 #endif  // defined(OS_MACOSX)
@@ -91,6 +95,10 @@ TEST(MemoryTest, AllocatorShimWorking) {
   base::allocator::InterceptAllocationsMac();
 #endif
   ASSERT_TRUE(base::allocator::IsAllocatorInitialized());
+
+#if defined(OS_MACOSX)
+  base::allocator::UninterceptMallocZonesForTesting();
+#endif
 }
 
 // OpenBSD does not support these tests. Don't test these on ASan/TSan/MSan
@@ -146,6 +154,12 @@ class OutOfMemoryDeathTest : public OutOfMemoryTest {
     // should be done inside of the ASSERT_DEATH.
     base::EnableTerminationOnOutOfMemory();
   }
+
+#if defined(OS_MACOSX)
+  void TearDown() override {
+    base::allocator::UninterceptMallocZonesForTesting();
+  }
+#endif
 };
 
 TEST_F(OutOfMemoryDeathTest, New) {
@@ -421,6 +435,12 @@ class OutOfMemoryHandledTest : public OutOfMemoryTest {
     // initialization - and test that UncheckedMalloc and  UncheckedCalloc
     // properly by-pass this in order to allow the caller to handle OOM.
     base::EnableTerminationOnOutOfMemory();
+  }
+
+  void TearDown() override {
+#if defined(OS_MACOSX)
+    base::allocator::UninterceptMallocZonesForTesting();
+#endif
   }
 };
 

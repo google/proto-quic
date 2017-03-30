@@ -22,6 +22,7 @@
 #include "net/base/test_completion_callback.h"
 #include "net/base/upload_bytes_element_reader.h"
 #include "net/http/http_response_headers.h"
+#include "net/http/http_server_properties_impl.h"
 #include "net/http/transport_security_state.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/test_net_log.h"
@@ -101,8 +102,9 @@ class TestQuicConnection : public QuicConnection {
 class AutoClosingStream : public QuicHttpStream {
  public:
   explicit AutoClosingStream(
-      const base::WeakPtr<QuicChromiumClientSession>& session)
-      : QuicHttpStream(session) {}
+      const base::WeakPtr<QuicChromiumClientSession>& session,
+      HttpServerProperties* http_server_properties)
+      : QuicHttpStream(session, http_server_properties) {}
 
   void OnHeadersAvailable(const SpdyHeaderBlock& headers,
                           size_t frame_len) override {
@@ -289,6 +291,7 @@ class QuicHttpStreamTest : public ::testing::TestWithParam<QuicVersion> {
     EXPECT_CALL(*send_algorithm_, BandwidthEstimate())
         .WillRepeatedly(Return(QuicBandwidth::Zero()));
     EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _)).Times(AnyNumber());
+    EXPECT_CALL(*send_algorithm_, OnApplicationLimited(_)).Times(AnyNumber());
     helper_.reset(
         new QuicChromiumConnectionHelper(&clock_, &random_generator_));
     alarm_factory_.reset(new QuicChromiumAlarmFactory(runner_.get(), &clock_));
@@ -329,12 +332,16 @@ class QuicHttpStreamTest : public ::testing::TestWithParam<QuicVersion> {
     session_->CryptoConnect(callback.callback());
     EXPECT_TRUE(session_->IsCryptoHandshakeConfirmed());
     stream_.reset(use_closing_stream_
-                      ? new AutoClosingStream(session_->GetWeakPtr())
-                      : new QuicHttpStream(session_->GetWeakPtr()));
+                      ? new AutoClosingStream(session_->GetWeakPtr(),
+                                              &http_server_properties_)
+                      : new QuicHttpStream(session_->GetWeakPtr(),
+                                           &http_server_properties_));
 
     promised_stream_.reset(use_closing_stream_
-                               ? new AutoClosingStream(session_->GetWeakPtr())
-                               : new QuicHttpStream(session_->GetWeakPtr()));
+                               ? new AutoClosingStream(session_->GetWeakPtr(),
+                                                       &http_server_properties_)
+                               : new QuicHttpStream(session_->GetWeakPtr(),
+                                                    &http_server_properties_));
 
     push_promise_[":path"] = "/bar";
     push_promise_[":authority"] = "www.example.org";
@@ -558,6 +565,7 @@ class QuicHttpStreamTest : public ::testing::TestWithParam<QuicVersion> {
   scoped_refptr<TestTaskRunner> runner_;
   std::unique_ptr<MockWrite[]> mock_writes_;
   MockClock clock_;
+  HttpServerPropertiesImpl http_server_properties_;
   TestQuicConnection* connection_;
   std::unique_ptr<QuicChromiumConnectionHelper> helper_;
   std::unique_ptr<QuicChromiumAlarmFactory> alarm_factory_;
@@ -717,7 +725,7 @@ TEST_P(QuicHttpStreamTest, LoadTimingTwoRequests) {
             stream_->SendRequest(headers_, &response_, callback_.callback()));
 
   // Start a second request.
-  QuicHttpStream stream2(session_->GetWeakPtr());
+  QuicHttpStream stream2(session_->GetWeakPtr(), &http_server_properties_);
   TestCompletionCallback callback2;
   EXPECT_EQ(OK,
             stream2.InitializeStream(&request_, DEFAULT_PRIORITY,

@@ -7,9 +7,20 @@
 # correctness of the .apk we are testing, since it will apply to that .apk as
 # well.
 
-# We want all tests to stick around.
+# Keep all junit3 tests
 -keep class * extends junit.framework.TestCase {
   *;
+}
+
+# Keep all junit4 tests
+-keep @**.RunWith class * {
+    *;
+}
+
+# Keep any class inherited from junit Runner since their constructor is called
+# reflectively
+-keep class * extends org.junit.runner.Runner {
+    *;
 }
 
 # TODO(yfriedman): Remove when crbug.com/488192 is fixed.

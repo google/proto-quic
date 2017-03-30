@@ -87,13 +87,13 @@ void PrintSwitchHelp() {
       "  help on your specific command for more.\n\n");
 
   if (is_markdown)
-    OutputString("```\n\n", DECORATION_NONE);
+    OutputString("```\n", DECORATION_NONE);
 
   for (const auto& s : switches::GetSwitches())
     PrintShortHelp(s.second.short_help);
 
   if (is_markdown)
-    OutputString("\n```\n", DECORATION_NONE);
+    OutputString("```\n", DECORATION_NONE);
 
   OutputString("\n");
 }

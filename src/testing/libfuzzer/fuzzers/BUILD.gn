@@ -8,7 +8,7 @@ import("//build/config/features.gni")
 import("//media/media_options.gni")
 import("//testing/libfuzzer/fuzzer_test.gni")
 
-# root BUILD depenends on this target. Needed for package discovery
+# root BUILD depends on this target. Needed for package discovery
 group("fuzzers") {
 }
 
@@ -111,6 +111,17 @@ fuzzer_test("string_to_int_fuzzer") {
   deps = [
     "//base",
   ]
+}
+
+fuzzer_test("template_url_parser_fuzzer") {
+  sources = [
+    "template_url_parser_fuzzer.cc",
+  ]
+  deps = [
+    "//components/search_engines:search_engines",
+  ]
+  dict = "dicts/xml.dict"
+  libfuzzer_options = [ "max_len=4096" ]
 }
 
 fuzzer_test("url_parse_fuzzer") {

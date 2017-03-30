@@ -5,7 +5,9 @@ cbentzel@chromium.org
 davidben@chromium.org
 eroman@chromium.org
 gavinp@chromium.org
+jkarlin@chromium.org
 jri@chromium.org
+juliatuttle@chromium.org
 mattm@chromium.org
 mef@chromium.org
 mmenke@chromium.org
@@ -13,13 +15,8 @@ pauljensen@chromium.org
 rch@chromium.org
 rdsmith@chromium.org
 rsleevi@chromium.org
-juliatuttle@chromium.org
 xunjieli@chromium.org
 zhongyi@chromium.org
-
-per-file *.isolate=maruel@chromium.org
-per-file *.isolate=tandrii@chromium.org
-per-file *.isolate=vadimsh@chromium.org
 
 per-file BUILD.gn=bengr@chromium.org
 per-file net.gyp*=bengr@chromium.org

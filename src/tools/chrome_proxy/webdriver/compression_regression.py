@@ -16,6 +16,20 @@ from common import NotAndroid
 # The maximum number of data points that will be saved.
 MAX_DATA_POINTS = 365
 
+# The number of days in the past to compute the average of for regression
+# alerting.
+ALERT_WINDOW = 31
+
+# The amount of tolerable difference a single data point can be away from the
+# average without alerting. This is a percentage from 0.0 to 1.0 inclusive.
+# 3% was chosen because over the course of the first month no change was seen to
+# 8 decimal places. Erring on the more sensitive side to begin with is also
+# better so we get a better feel for the timing and degree of regressions.
+THRESHOLD = 0.03
+
+# The format to use when recording dates in the DATA_FILE
+DATE_FORMAT = '%Y-%m-%d'
+
 # The persistant storage for compression data is kept in Google Storage with
 # this bucket name.
 BUCKET = 'chrome_proxy_compression'
@@ -165,12 +179,12 @@ class CompressionRegression(IntegrationTest):
     Args:
       compression_average: the compression data from
         getCurrentCompressionMetrics()
-      data: the current data object, a dict
+      data: all saved results from previous runs
       today: a date object, specifiable here for testing purposes.
     Returns:
       True iff the data object was changed
     """
-    datestamp = today.strftime('%Y-%m-%d')
+    datestamp = today.strftime(DATE_FORMAT)
     # Check if this data has already been recorded.
     if datestamp in data:
       return False
@@ -182,8 +196,43 @@ class CompressionRegression(IntegrationTest):
         date = datetime.date(*[int(d) for d in date_str.split('-')])
         if min_date == None or date < min_date:
           min_date = date
-      del data[min_date.strftime('%Y-%m-%d')]
+      del data[min_date.strftime(DATE_FORMAT)]
     return True
+
+  def checkForRegression(self, data, compression_average):
+    """This function checks whether the current data point in
+    compression_average falls outside an allowable tolerance for the last
+    ALERT_WINDOW days of data points in data. If so, an expection will be
+    rasied.
+
+    Args:
+      data: all saved results from previous runs
+      compression_average: the most recent data point
+    """
+    # Restructure data to be easily summable.
+    data_sum_rt = {}
+    for date in sorted(data, reverse=True):
+      for resource_type in data[date]:
+        if resource_type not in data_sum_rt:
+          data_sum_rt[resource_type] = []
+        data_sum_rt[resource_type].append(data[date][resource_type])
+    # Compute average over ALERT_WINDOW if there is enough data points.
+    # Data average will contain average compression ratios (eg: 1 - cl / xocl).
+    data_average = {}
+    for resource_type in data_sum_rt:
+      if len(data_sum_rt[resource_type]) >= ALERT_WINDOW:
+        data_average[resource_type] = sum(
+          data_sum_rt[resource_type][:ALERT_WINDOW]) / ALERT_WINDOW
+    # Check regression, raising an exception if anything is detected.
+    for resource_type in compression_average:
+      if resource_type in data_average:
+        expected = data_average[resource_type]
+        actual = compression_average[resource_type]
+        # Going over the max is ok, better compression is better.
+        min_allowable = expected - THRESHOLD
+        if actual < min_allowable:
+          raise Exception('%s compression has regressed to %f' %
+            (resource_type, actual))
 
   def uploadToGoogleStorage(self):
     """This function uses the gsutil command to upload the local data file to
@@ -228,7 +277,7 @@ class CompressionRegression(IntegrationTest):
     data = {}
     for i in range(MAX_DATA_POINTS):
       date_obj = start_date + datetime.timedelta(days=i)
-      datestamp = date_obj.strftime('%Y-%m-%d')
+      datestamp = date_obj.strftime(DATE_FORMAT)
       data[datestamp] = {'hello': 'world'}
     new_data = {'Benoit': 'Mandelbrot'}
     test_day = datetime.date(2017, 02, 06) + datetime.timedelta(
@@ -236,7 +285,96 @@ class CompressionRegression(IntegrationTest):
     changed = self.updateDataObject(new_data, data, today=test_day)
     self.assertTrue(changed, "Data should have been recorded!")
     self.assertNotIn('2017-02-06', data)
-    self.assertIn(test_day.strftime('%Y-%m-%d'), data)
+    self.assertIn(test_day.strftime(DATE_FORMAT), data)
+
+  def test0CheckForRegressionAverageRecent(self):
+    """Make sure the checkForRegression() uses only the most recent data points.
+    """
+    data = {}
+    start_date = datetime.date(2017, 2, 6)
+    for i in range(2 * ALERT_WINDOW):
+      date_obj = start_date + datetime.timedelta(days=i)
+      datestamp = date_obj.strftime(DATE_FORMAT)
+      data[datestamp] = {'mp4': 0.1}
+    start_date = datetime.date(2017, 2, 6) + datetime.timedelta(days=(2 *
+      ALERT_WINDOW))
+    for i in range(ALERT_WINDOW):
+      date_obj = start_date + datetime.timedelta(days=i)
+      datestamp = date_obj.strftime(DATE_FORMAT)
+      data[datestamp] = {'mp4': 0.9}
+    # Expect no exception since the most recent data should have been used.
+    self.checkForRegression(data, {'mp4': 0.9})
+
+  def test0CheckForRegressionOnlySufficientData(self):
+    """Make sure the checkForRegression() only checks resource types that have
+    at least ALERT_WINDOW many data points.
+    """
+    data = {}
+    start_date = datetime.date(2017, 2, 6)
+    for i in range(2 * ALERT_WINDOW):
+      date_obj = start_date + datetime.timedelta(days=i)
+      datestamp = date_obj.strftime(DATE_FORMAT)
+      data[datestamp] = {'mp4': 0.1}
+    start_date = datetime.date(2017, 2, 6) + datetime.timedelta(days=(2 *
+      ALERT_WINDOW))
+    for i in range(ALERT_WINDOW):
+      date_obj = start_date + datetime.timedelta(days=i)
+      datestamp = date_obj.strftime(DATE_FORMAT)
+      data[datestamp] = {'mp4': 0.9}
+    for i in range(ALERT_WINDOW / 2):
+      date_obj = start_date + datetime.timedelta(days=i)
+      datestamp = date_obj.strftime(DATE_FORMAT)
+      data[datestamp] = {'html': 0.3}
+    # Expect no exception since the html should have been ignored for not having
+    # enough data points.
+    self.checkForRegression(data, {'mp4': 0.9, 'html': 0.1})
+
+  def test0CheckForRegressionMismatchResourceTypes(self):
+    """Make sure resource types that appear in only one of compression_average,
+    data are not used or expected.
+    """
+    # Check using an extra resource type in the compression_average object.
+    data = {}
+    start_date = datetime.date(2017, 2, 6)
+    for i in range(ALERT_WINDOW):
+      date_obj = start_date + datetime.timedelta(days=i)
+      datestamp = date_obj.strftime(DATE_FORMAT)
+      data[datestamp] = {'mp4': 0.9}
+    self.checkForRegression(data, {'mp4': 0.9, 'html': 0.2})
+    # Check using an extra resource type in the data object.
+    data = {}
+    start_date = datetime.date(2017, 2, 6)
+    for i in range(ALERT_WINDOW):
+      date_obj = start_date + datetime.timedelta(days=i)
+      datestamp = date_obj.strftime(DATE_FORMAT)
+      data[datestamp] = {'mp4': 0.9, 'html': 0.2}
+    self.checkForRegression(data, {'mp4': 0.9})
+
+  def test0CheckForRegressionNoAlert(self):
+    """Make sure checkForRegression does not alert when a new data point falls
+    on the threshold.
+    """
+    data = {}
+    start_date = datetime.date(2017, 2, 6)
+    for i in range(ALERT_WINDOW):
+      date_obj = start_date + datetime.timedelta(days=i)
+      datestamp = date_obj.strftime(DATE_FORMAT)
+      data[datestamp] = {'mp4': 0.9}
+    self.checkForRegression(data, {'mp4': (0.9 - THRESHOLD)})
+
+  def test0CheckForRegressionAlert(self):
+    """Make sure checkForRegression does alert when a new data point falls
+    outside of the threshold.
+    """
+    data = {}
+    start_date = datetime.date(2017, 2, 6)
+    for i in range(ALERT_WINDOW):
+      date_obj = start_date + datetime.timedelta(days=i)
+      datestamp = date_obj.strftime(DATE_FORMAT)
+      data[datestamp] = {'mp4': 0.9}
+    self.assertRaises(Exception, self.checkForRegression, data, {'mp4':
+      (0.9 - THRESHOLD - 0.01)})
+
 
 if __name__ == '__main__':
   IntegrationTest.RunAllTests()

@@ -202,6 +202,11 @@ if (current_toolchain == host_toolchain) {
         # reg3264type in x86expr.c is unused.
         "-Wno-unused-local-typedef",
       ]
+    } else if (is_linux) {
+      cflags = [
+        # dosexe_objfmt_output ignores the return value of ftruncate.
+        "-Wno-unused-result",
+      ]
     }
   }
 

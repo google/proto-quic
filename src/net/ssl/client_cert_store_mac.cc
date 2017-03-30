@@ -114,7 +114,7 @@ bool IsIssuedByInKeychain(const std::vector<std::string>& valid_issuers,
       cert_handle, intermediates));
   CFRelease(cert_chain);  // Also frees |intermediates|.
 
-  if (!new_cert->IsIssuedByEncoded(valid_issuers))
+  if (!new_cert || !new_cert->IsIssuedByEncoded(valid_issuers))
     return false;
 
   cert->swap(new_cert);
@@ -290,6 +290,8 @@ void ClientCertStoreMac::GetClientCerts(const SSLCertRequestInfo& request,
     scoped_refptr<X509Certificate> cert(
         X509Certificate::CreateFromHandle(cert_handle,
                                           X509Certificate::OSCertHandles()));
+    if (!cert)
+      continue;
 
     if (preferred_identity && CFEqual(preferred_identity, identity)) {
       // Only one certificate should match.

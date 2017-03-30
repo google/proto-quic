@@ -273,6 +273,14 @@ class CertVerifyProcInternalTest
            verify_proc_type() == CERT_VERIFY_PROC_NSS;
   }
 
+  bool SupportsEV() const {
+    // TODO(crbug.com/649017): CertVerifyProcBuiltin does not support EV.
+    // TODO(crbug.com/117478): Android and iOS do not support EV.
+    return verify_proc_type() == CERT_VERIFY_PROC_NSS ||
+           verify_proc_type() == CERT_VERIFY_PROC_WIN ||
+           verify_proc_type() == CERT_VERIFY_PROC_MAC;
+  }
+
   CertVerifyProc* verify_proc() const { return verify_proc_.get(); }
 
  private:
@@ -287,10 +295,7 @@ INSTANTIATE_TEST_CASE_P(,
 // TODO(rsleevi): Reenable this test once comodo.chaim.pem is no longer
 // expired, http://crbug.com/502818
 TEST_P(CertVerifyProcInternalTest, DISABLED_EVVerification) {
-  if (verify_proc_type() == CERT_VERIFY_PROC_ANDROID ||
-      verify_proc_type() == CERT_VERIFY_PROC_OPENSSL) {
-    // TODO(jnd): http://crbug.com/117478 - EV verification is not yet
-    // supported.
+  if (!SupportsEV()) {
     LOG(INFO) << "Skipping test as EV verification is not yet supported";
     return;
   }
@@ -306,6 +311,39 @@ TEST_P(CertVerifyProcInternalTest, DISABLED_EVVerification) {
   int flags = CertVerifier::VERIFY_EV_CERT;
   int error = Verify(comodo_chain.get(), "comodo.com", flags, crl_set.get(),
                      CertificateList(), &verify_result);
+  EXPECT_THAT(error, IsOk());
+  EXPECT_TRUE(verify_result.cert_status & CERT_STATUS_IS_EV);
+}
+
+// Tests that a certificate is recognized as EV, when the valid EV policy OID
+// for the trust anchor is the second candidate EV oid in the target
+// certificate. This is a regression test for crbug.com/705285.
+TEST_P(CertVerifyProcInternalTest, EVVerificationMultipleOID) {
+  if (!SupportsEV()) {
+    LOG(INFO) << "Skipping test as EV verification is not yet supported";
+    return;
+  }
+
+  // TODO(eroman): Update this test to use a synthetic certificate, so the test
+  // does not break in the future. The certificate chain in question expires on
+  // Dec 22 23:59:59 2018 GMT 2018, at which point this test will start failing.
+  if (base::Time::Now() >
+      base::Time::UnixEpoch() + base::TimeDelta::FromSeconds(1545523199)) {
+    FAIL() << "This test uses a certificate chain which is now expired. Please "
+              "disable and file a bug.";
+    return;
+  }
+
+  scoped_refptr<X509Certificate> chain = CreateCertificateChainFromFile(
+      GetTestCertsDirectory(), "trustcenter.websecurity.symantec.com.pem",
+      X509Certificate::FORMAT_PEM_CERT_SEQUENCE);
+  ASSERT_TRUE(chain);
+
+  scoped_refptr<CRLSet> crl_set(CRLSet::ForTesting(false, NULL, ""));
+  CertVerifyResult verify_result;
+  int flags = CertVerifier::VERIFY_EV_CERT;
+  int error = Verify(chain.get(), "trustcenter.websecurity.symantec.com", flags,
+                     crl_set.get(), CertificateList(), &verify_result);
   EXPECT_THAT(error, IsOk());
   EXPECT_TRUE(verify_result.cert_status & CERT_STATUS_IS_EV);
 }
@@ -470,6 +508,7 @@ TEST_P(CertVerifyProcInternalTest, RejectWeakKeys) {
       scoped_refptr<X509Certificate> cert_chain =
           X509Certificate::CreateFromHandle(ee_cert->os_cert_handle(),
                                             intermediates);
+      ASSERT_TRUE(cert_chain);
 
       CertVerifyResult verify_result;
       int error = Verify(cert_chain.get(), "127.0.0.1", 0, NULL,
@@ -525,6 +564,7 @@ TEST_P(CertVerifyProcInternalTest, ExtraneousMD5RootCert) {
   intermediates.push_back(extra_cert->os_cert_handle());
   scoped_refptr<X509Certificate> cert_chain = X509Certificate::CreateFromHandle(
       server_cert->os_cert_handle(), intermediates);
+  ASSERT_TRUE(cert_chain);
 
   CertVerifyResult verify_result;
   int flags = 0;
@@ -559,6 +599,7 @@ TEST_P(CertVerifyProcInternalTest, GoogleDigiNotarTest) {
   intermediates.push_back(intermediate_cert->os_cert_handle());
   scoped_refptr<X509Certificate> cert_chain = X509Certificate::CreateFromHandle(
       server_cert->os_cert_handle(), intermediates);
+  ASSERT_TRUE(cert_chain);
 
   CertVerifyResult verify_result;
   int flags = CertVerifier::VERIFY_REV_CHECKING_ENABLED;
@@ -1028,6 +1069,7 @@ TEST_P(CertVerifyProcInternalTest, NameConstraintsFailure) {
   X509Certificate::OSCertHandles intermediates;
   scoped_refptr<X509Certificate> leaf = X509Certificate::CreateFromHandle(
       cert_list[0]->os_cert_handle(), intermediates);
+  ASSERT_TRUE(leaf);
 
   int flags = 0;
   CertVerifyResult verify_result;
@@ -1085,6 +1127,7 @@ TEST_P(CertVerifyProcInternalTest, DISABLED_TestKnownRoot) {
 
   scoped_refptr<X509Certificate> cert_chain = X509Certificate::CreateFromHandle(
       certs[0]->os_cert_handle(), intermediates);
+  ASSERT_TRUE(cert_chain);
 
   int flags = 0;
   CertVerifyResult verify_result;

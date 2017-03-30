@@ -140,8 +140,8 @@ class MethodBlocklist {
     if (!method.getDeclName().isIdentifier())
       return false;
 
-    auto it = method_to_class_to_args_.find(method.getName());
-    if (it == method_to_class_to_args_.end())
+    auto it = method_to_classes_.find(method.getName());
+    if (it == method_to_classes_.end())
       return false;
 
     // |method_context| is either
@@ -154,32 +154,19 @@ class MethodBlocklist {
     if (!method_context->getDeclName().isIdentifier())
       return false;
 
-    const llvm::StringMap<std::set<unsigned>>& class_to_args = it->second;
-    auto it2 = class_to_args.find(method_context->getName());
-    if (it2 == class_to_args.end())
+    const llvm::StringSet<>& classes = it->second;
+    auto it2 = classes.find(method_context->getName());
+    if (it2 == classes.end())
       return false;
-
-    const std::set<unsigned>& arg_counts = it2->second;
-    unsigned method_param_count = method.param_size();
-    unsigned method_non_optional_param_count = method_param_count;
-    for (const clang::ParmVarDecl* param : method.parameters()) {
-      if (param->hasInit())
-        method_non_optional_param_count--;
-    }
-    bool found_matching_arg_count =
-        std::any_of(arg_counts.begin(), arg_counts.end(),
-                    [method_param_count,
-                     method_non_optional_param_count](unsigned arg_count) {
-                      return (method_non_optional_param_count <= arg_count) &&
-                             (arg_count <= method_param_count);
-                    });
 
     // No need to verify here that |actual_class| is in the |blink| namespace -
     // this will be done by other matchers elsewhere.
 
     // TODO(lukasza): Do we need to consider return type and/or param types?
 
-    return found_matching_arg_count;
+    // TODO(lukasza): Do we need to consider param count?
+
+    return true;
   }
 
  private:
@@ -218,24 +205,16 @@ class MethodBlocklist {
       // Parse individual parts.
       llvm::StringRef class_name = parts[0];
       llvm::StringRef method_name = parts[1];
-      unsigned number_of_method_args;
-      if (parts[2].getAsInteger(0, number_of_method_args)) {
-        llvm::errs() << "ERROR: Parsing error - '" << parts[2] << "' "
-                     << "is not an unsigned integer: " << filepath << ":"
-                     << it.line_number() << ": " << line << "\n";
-        assert(false);
-        continue;
-      }
+      // ignoring parts[2] - the (not so trustworthy) number of parameters.
 
       // Store the new entry.
-      method_to_class_to_args_[method_name][class_name].insert(
-          number_of_method_args);
+      method_to_classes_[method_name].insert(class_name);
     }
   }
 
   // Stores methods to blacklist in a map:
   // method name -> class name -> set of all allowed numbers of arguments.
-  llvm::StringMap<llvm::StringMap<std::set<unsigned>>> method_to_class_to_args_;
+  llvm::StringMap<llvm::StringSet<>> method_to_classes_;
 };
 
 AST_MATCHER_P(clang::FunctionDecl,

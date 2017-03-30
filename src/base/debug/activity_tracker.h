@@ -96,6 +96,10 @@ struct OwningProcess {
 // sized types to ensure no interoperability problems between 32-bit and
 // 64-bit systems.
 union ActivityData {
+  // Expected size for 32/64-bit check.
+  // TODO(bcwhite): VC2015 doesn't allow statics in unions. Fix when it does.
+  // static constexpr size_t kExpectedInstanceSize = 8;
+
   // Generic activities don't have any defined structure.
   struct {
     uint32_t id;   // An arbitrary identifier used for association.
@@ -116,6 +120,9 @@ union ActivityData {
   struct {
     int64_t process_id;  // A unique identifier for a process.
   } process;
+  struct {
+    uint32_t code;  // An "exception code" number.
+  } exception;
 
   // These methods create an ActivityData object from the appropriate
   // parameters. Objects of this type should always be created this way to
@@ -159,6 +166,12 @@ union ActivityData {
   static ActivityData ForProcess(const int64_t id) {
     ActivityData data;
     data.process.process_id = id;
+    return data;
+  }
+
+  static ActivityData ForException(const uint32_t code) {
+    ActivityData data;
+    data.exception.code = code;
     return data;
   }
 };
@@ -271,6 +284,9 @@ struct Activity {
     ACT_PROCESS = 5 << 4,
     ACT_PROCESS_START = ACT_PROCESS,
     ACT_PROCESS_WAIT,
+
+    // Exception activities indicate the occurence of something unexpected.
+    ACT_EXCEPTION = 14 << 4,
 
     // Generic activities are user defined and can be anything.
     ACT_GENERIC = 15 << 4,
@@ -385,6 +401,9 @@ class BASE_EXPORT ActivityUserData {
 
   using Snapshot = std::map<std::string, TypedValue>;
 
+  // Initialize the object either as a "sink" that just accepts and discards
+  // data or an active one that writes to a given (zeroed) memory block.
+  ActivityUserData();
   ActivityUserData(void* memory, size_t size);
   virtual ~ActivityUserData();
 
@@ -579,6 +598,9 @@ class BASE_EXPORT ThreadActivityTracker {
     // The current total depth of the activity stack, including those later
     // entries not recorded in the |activity_stack| vector.
     uint32_t activity_stack_depth = 0;
+
+    // The last recorded "exception" activity.
+    Activity last_exception;
   };
 
   // This is the base class for having the compiler manage an activity on the
@@ -662,6 +684,12 @@ class BASE_EXPORT ThreadActivityTracker {
   void ReleaseUserData(ActivityId id,
                        ActivityTrackerMemoryAllocator* allocator);
 
+  // Save an exception. |origin| is the location of the exception.
+  void RecordExceptionActivity(const void* program_counter,
+                               const void* origin,
+                               Activity::Type type,
+                               const ActivityData& data);
+
   // Returns whether the current data is valid or not. It is not valid if
   // corruption has been detected in the header or other data structures.
   bool IsValid() const;
@@ -691,6 +719,10 @@ class BASE_EXPORT ThreadActivityTracker {
 
  private:
   friend class ActivityTrackerTest;
+
+  std::unique_ptr<ActivityUserData> CreateUserDataForActivity(
+      Activity* activity,
+      ActivityTrackerMemoryAllocator* allocator);
 
   Header* const header_;        // Pointer to the Header structure.
   Activity* const stack_;       // The stack of activities.
@@ -920,6 +952,7 @@ class BASE_EXPORT GlobalActivityTracker {
     if (tracker)
       tracker->RecordProcessExit(process_id, exit_code);
   }
+
   // Sets the "phase" of the current process, useful for knowing what it was
   // doing when it last reported.
   void SetProcessPhase(ProcessPhase phase);
@@ -956,6 +989,13 @@ class BASE_EXPORT GlobalActivityTracker {
     GlobalActivityTracker* tracker = Get();
     if (tracker)
       tracker->RecordFieldTrial(trial_name, group_name);
+  }
+
+  // Record exception information for the current thread.
+  ALWAYS_INLINE
+  void RecordException(const void* origin, uint32_t code) {
+    return RecordExceptionImpl(::tracked_objects::GetProgramCounter(), origin,
+                               code);
   }
 
   // Accesses the process data record for storing arbitrary key/value pairs.
@@ -1074,6 +1114,9 @@ class BASE_EXPORT GlobalActivityTracker {
   // Returns the memory used by an activity-tracker managed by this class.
   // It is called during the destruction of a ManagedActivityTracker object.
   void ReturnTrackerMemory(ManagedActivityTracker* tracker);
+
+  // Records exception information.
+  void RecordExceptionImpl(const void* pc, const void* origin, uint32_t code);
 
   // Releases the activity-tracker associcated with thread. It is called
   // automatically when a thread is joined and thus there is nothing more to

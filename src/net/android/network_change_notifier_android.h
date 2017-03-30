@@ -59,6 +59,8 @@ class NET_EXPORT_PRIVATE NetworkChangeNotifierAndroid
   void GetCurrentConnectedNetworks(NetworkList* network_list) const override;
   ConnectionType GetCurrentNetworkConnectionType(
       NetworkHandle network) const override;
+  NetworkChangeNotifier::ConnectionSubtype GetCurrentConnectionSubtype()
+      const override;
   NetworkHandle GetCurrentDefaultNetwork() const override;
 
   // NetworkChangeNotifierDelegateAndroid::Observer:

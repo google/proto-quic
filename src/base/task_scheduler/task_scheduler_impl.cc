@@ -24,6 +24,57 @@
 namespace base {
 namespace internal {
 
+namespace {
+
+enum EnvironmentType {
+  BACKGROUND = 0,
+  BACKGROUND_BLOCKING,
+  FOREGROUND,
+  FOREGROUND_BLOCKING,
+  ENVIRONMENT_COUNT  // Always last.
+};
+
+// Order must match the EnvironmentType enum.
+constexpr struct {
+  // The threads and histograms of this environment will be labeled with
+  // the task scheduler name concatenated to this.
+  const char* name_suffix;
+
+  // Preferred priority for threads in this environment; the actual thread
+  // priority depends on shutdown state and platform capabilities.
+  ThreadPriority priority_hint;
+} kEnvironmentParams[] = {
+    {"Background", base::ThreadPriority::BACKGROUND},
+    {"BackgroundBlocking", base::ThreadPriority::BACKGROUND},
+    {"Foreground", base::ThreadPriority::NORMAL},
+    {"ForegroundBlocking", base::ThreadPriority::NORMAL},
+};
+
+size_t GetEnvironmentIndexForTraits(const TaskTraits& traits) {
+  const bool is_background =
+      traits.priority() == base::TaskPriority::BACKGROUND;
+  if (traits.may_block() || traits.with_base_sync_primitives())
+    return is_background ? BACKGROUND_BLOCKING : FOREGROUND_BLOCKING;
+  return is_background ? BACKGROUND : FOREGROUND;
+}
+
+void AddAugmentedSchedulerWorkerPoolParamsToVector(
+    EnvironmentType environment_type,
+    const std::string& task_scheduler_name,
+    const SchedulerWorkerPoolParams& params,
+    std::vector<SchedulerWorkerPoolParams>*
+        scheduler_worker_pool_params_vector) {
+  DCHECK_EQ(static_cast<size_t>(environment_type),
+            scheduler_worker_pool_params_vector->size());
+  scheduler_worker_pool_params_vector->emplace_back(
+      task_scheduler_name + kEnvironmentParams[environment_type].name_suffix,
+      kEnvironmentParams[environment_type].priority_hint,
+      params.standby_thread_policy(), params.max_threads(),
+      params.suggested_reclaim_time(), params.backward_compatibility());
+}
+
+}  // namespace
+
 // static
 std::unique_ptr<TaskSchedulerImpl> TaskSchedulerImpl::Create(
     const std::vector<SchedulerWorkerPoolParams>& worker_pool_params_vector,
@@ -35,6 +86,33 @@ std::unique_ptr<TaskSchedulerImpl> TaskSchedulerImpl::Create(
   return scheduler;
 }
 
+// static
+std::unique_ptr<TaskSchedulerImpl> TaskSchedulerImpl::Create(
+    const std::string& name,
+    const TaskScheduler::InitParams& init_params) {
+  // Create a vector of SchedulerWorkerPoolParams using names and priority hints
+  // derived from |kEnvironmentParams| and other params from |init_params|.
+  std::vector<SchedulerWorkerPoolParams> worker_pool_params_vector;
+  AddAugmentedSchedulerWorkerPoolParamsToVector(
+      BACKGROUND, name, init_params.background_worker_pool_params,
+      &worker_pool_params_vector);
+  AddAugmentedSchedulerWorkerPoolParamsToVector(
+      BACKGROUND_BLOCKING, name,
+      init_params.background_blocking_worker_pool_params,
+      &worker_pool_params_vector);
+  AddAugmentedSchedulerWorkerPoolParamsToVector(
+      FOREGROUND, name, init_params.foreground_worker_pool_params,
+      &worker_pool_params_vector);
+  AddAugmentedSchedulerWorkerPoolParamsToVector(
+      FOREGROUND_BLOCKING, name,
+      init_params.foreground_blocking_worker_pool_params,
+      &worker_pool_params_vector);
+  DCHECK_EQ(static_cast<size_t>(ENVIRONMENT_COUNT),
+            worker_pool_params_vector.size());
+
+  return Create(worker_pool_params_vector, Bind(&GetEnvironmentIndexForTraits));
+}
+
 TaskSchedulerImpl::~TaskSchedulerImpl() {
 #if DCHECK_IS_ON()
   DCHECK(join_for_testing_returned_.IsSet());
@@ -44,11 +122,11 @@ TaskSchedulerImpl::~TaskSchedulerImpl() {
 void TaskSchedulerImpl::PostDelayedTaskWithTraits(
     const tracked_objects::Location& from_here,
     const TaskTraits& traits,
-    const Closure& task,
+    Closure task,
     TimeDelta delay) {
   // Post |task| as part of a one-off single-task Sequence.
   GetWorkerPoolForTraits(traits)->PostTaskWithSequence(
-      MakeUnique<Task>(from_here, task, traits, delay),
+      MakeUnique<Task>(from_here, std::move(task), traits, delay),
       make_scoped_refptr(new Sequence));
 }
 
@@ -70,6 +148,14 @@ TaskSchedulerImpl::CreateSingleThreadTaskRunnerWithTraits(
   return single_thread_task_runner_manager_
       ->CreateSingleThreadTaskRunnerWithTraits(traits);
 }
+
+#if defined(OS_WIN)
+scoped_refptr<SingleThreadTaskRunner>
+TaskSchedulerImpl::CreateCOMSTATaskRunnerWithTraits(const TaskTraits& traits) {
+  return single_thread_task_runner_manager_->CreateCOMSTATaskRunnerWithTraits(
+      traits);
+}
+#endif  // defined(OS_WIN)
 
 std::vector<const HistogramBase*> TaskSchedulerImpl::GetHistograms() const {
   std::vector<const HistogramBase*> histograms;

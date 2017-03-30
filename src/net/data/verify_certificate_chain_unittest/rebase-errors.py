@@ -15,7 +15,7 @@ To use this run the affected tests, and then pass the input to this script
      net/data/verify_certificate_chain_unittest/rebase-errors.py
 
 The script works by scanning the stdout looking for gtest failures when
-comparing "errors.ToDebugString()". The C++ test side should have been
+comparing "errors.ToDebugString(chain)". The C++ test side should have been
 instrumented to dump out the test file's path on mismatch.
 
 This script will then update the corresponding file(s) -- a .pem file, and
@@ -33,7 +33,7 @@ import re
 #  * Group 2 of the match is file path (relative to //src) where the expected
 #    errors were read from.
 failed_test_regex = re.compile(r"""
-Value of: errors.ToDebugString\(\)
+Value of: errors.ToDebugString\((?:chain)?\)
   Actual: "(.*)"
 (?:.|\n)+?
 Test file: (.*)

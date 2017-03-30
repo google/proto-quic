@@ -917,28 +917,14 @@ bool HttpResponseHeaders::IsRedirectResponseCode(int response_code) {
 // Of course, there are other factors that can force a response to always be
 // validated or re-fetched.
 //
-// From RFC 5861 section 3, a stale response may be used while revalidation is
-// performed in the background if
-//
-//   freshness_lifetime + stale_while_revalidate > current_age
-//
-ValidationType HttpResponseHeaders::RequiresValidation(
-    const Time& request_time,
-    const Time& response_time,
-    const Time& current_time) const {
+bool HttpResponseHeaders::RequiresValidation(const Time& request_time,
+                                             const Time& response_time,
+                                             const Time& current_time) const {
   FreshnessLifetimes lifetimes = GetFreshnessLifetimes(response_time);
-  if (lifetimes.freshness.is_zero() && lifetimes.staleness.is_zero())
-    return VALIDATION_SYNCHRONOUS;
-
-  TimeDelta age = GetCurrentAge(request_time, response_time, current_time);
-
-  if (lifetimes.freshness > age)
-    return VALIDATION_NONE;
-
-  if (lifetimes.freshness + lifetimes.staleness > age)
-    return VALIDATION_ASYNCHRONOUS;
-
-  return VALIDATION_SYNCHRONOUS;
+  if (lifetimes.freshness.is_zero())
+    return true;
+  return lifetimes.freshness <=
+         GetCurrentAge(request_time, response_time, current_time);
 }
 
 // From RFC 2616 section 13.2.4:
@@ -961,9 +947,6 @@ ValidationType HttpResponseHeaders::RequiresValidation(
 //
 //   freshness_lifetime = (date_value - last_modified_value) * 0.10
 //
-// If the stale-while-revalidate directive is present, then it is used to set
-// the |staleness| time, unless it overridden by another directive.
-//
 HttpResponseHeaders::FreshnessLifetimes
 HttpResponseHeaders::GetFreshnessLifetimes(const Time& response_time) const {
   FreshnessLifetimes lifetimes;
@@ -976,13 +959,6 @@ HttpResponseHeaders::GetFreshnessLifetimes(const Time& response_time) const {
       // Vary: * is never usable: see RFC 2616 section 13.6.
       HasHeaderValue("vary", "*")) {
     return lifetimes;
-  }
-
-  // Cache-Control directive must_revalidate overrides stale-while-revalidate.
-  bool must_revalidate = HasHeaderValue("cache-control", "must-revalidate");
-
-  if (must_revalidate || !GetStaleWhileRevalidateValue(&lifetimes.staleness)) {
-    DCHECK_EQ(TimeDelta(), lifetimes.staleness);
   }
 
   // NOTE: "Cache-Control: max-age" overrides Expires, so we only check the
@@ -1035,7 +1011,8 @@ HttpResponseHeaders::GetFreshnessLifetimes(const Time& response_time) const {
   // experimental RFC that adds 308 permanent redirect as well, for which "any
   // future references ... SHOULD use one of the returned URIs."
   if ((response_code_ == 200 || response_code_ == 203 ||
-       response_code_ == 206) && !must_revalidate) {
+       response_code_ == 206) &&
+      !HasHeaderValue("cache-control", "must-revalidate")) {
     // TODO(darin): Implement a smarter heuristic.
     Time last_modified_value;
     if (GetLastModifiedValue(&last_modified_value)) {
@@ -1051,13 +1028,11 @@ HttpResponseHeaders::GetFreshnessLifetimes(const Time& response_time) const {
   if (response_code_ == 300 || response_code_ == 301 || response_code_ == 308 ||
       response_code_ == 410) {
     lifetimes.freshness = TimeDelta::Max();
-    lifetimes.staleness = TimeDelta();  // It should never be stale.
     return lifetimes;
   }
 
   // Our heuristic freshness estimate for this resource is 0 seconds, in
-  // accordance with common browser behaviour. However, stale-while-revalidate
-  // may still apply.
+  // accordance with common browser behaviour.
   DCHECK_EQ(TimeDelta(), lifetimes.freshness);
   return lifetimes;
 }
@@ -1166,11 +1141,6 @@ bool HttpResponseHeaders::GetLastModifiedValue(Time* result) const {
 
 bool HttpResponseHeaders::GetExpiresValue(Time* result) const {
   return GetTimeValuedHeader("Expires", result);
-}
-
-bool HttpResponseHeaders::GetStaleWhileRevalidateValue(
-    TimeDelta* result) const {
-  return GetCacheControlDirective("stale-while-revalidate", result);
 }
 
 bool HttpResponseHeaders::GetTimeValuedHeader(const std::string& name,

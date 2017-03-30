@@ -172,6 +172,16 @@ TEST(MemoryAllocatorDumpTest, DumpIntoProcessMemoryDump) {
   pmd.AsValueInto(traced_value.get());
 }
 
+TEST(MemoryAllocatorDumpTest, GetSize) {
+  MemoryDumpArgs dump_args = {MemoryDumpLevelOfDetail::DETAILED};
+  ProcessMemoryDump pmd(new MemoryDumpSessionState, dump_args);
+  MemoryAllocatorDump* dump = pmd.CreateAllocatorDump("allocator_for_size");
+  dump->AddScalar(MemoryAllocatorDump::kNameSize,
+                  MemoryAllocatorDump::kUnitsBytes, 1);
+  dump->AddScalar("foo", MemoryAllocatorDump::kUnitsBytes, 2);
+  EXPECT_EQ(1u, dump->GetSize());
+}
+
 // DEATH tests are not supported in Android / iOS.
 #if !defined(NDEBUG) && !defined(OS_ANDROID) && !defined(OS_IOS)
 TEST(MemoryAllocatorDumpTest, ForbidDuplicatesDeathTest) {

@@ -27,7 +27,6 @@
 
 #include <new>
 
-#include "base/allocator/allocator_shim.h"
 #include "base/allocator/features.h"
 #include "base/allocator/malloc_zone_functions_mac.h"
 #include "base/logging.h"
@@ -264,36 +263,6 @@ id oom_killer_allocWithZone(id self, SEL _cmd, NSZone* zone) {
   return result;
 }
 
-}  // namespace
-
-bool UncheckedMallocMac(size_t size, void** result) {
-#if defined(ADDRESS_SANITIZER)
-  *result = malloc(size);
-#else
-  if (g_old_zone.malloc) {
-    *result = g_old_zone.malloc(malloc_default_zone(), size);
-  } else {
-    *result = malloc(size);
-  }
-#endif  // defined(ADDRESS_SANITIZER)
-
-  return *result != NULL;
-}
-
-bool UncheckedCallocMac(size_t num_items, size_t size, void** result) {
-#if defined(ADDRESS_SANITIZER)
-  *result = calloc(num_items, size);
-#else
-  if (g_old_zone.calloc) {
-    *result = g_old_zone.calloc(malloc_default_zone(), num_items, size);
-  } else {
-    *result = calloc(num_items, size);
-  }
-#endif  // defined(ADDRESS_SANITIZER)
-
-  return *result != NULL;
-}
-
 void ReplaceZoneFunctions(ChromeMallocZone* zone,
                           const MallocZoneFunctions* functions) {
   // Remove protection.
@@ -332,6 +301,44 @@ void ReplaceZoneFunctions(ChromeMallocZone* zone,
   }
 }
 
+void UninterceptMallocZoneForTesting(struct _malloc_zone_t* zone) {
+  ChromeMallocZone* chrome_zone = reinterpret_cast<ChromeMallocZone*>(zone);
+  if (!IsMallocZoneAlreadyStored(chrome_zone))
+    return;
+  MallocZoneFunctions& functions = GetFunctionsForZone(zone);
+  ReplaceZoneFunctions(chrome_zone, &functions);
+}
+
+}  // namespace
+
+bool UncheckedMallocMac(size_t size, void** result) {
+#if defined(ADDRESS_SANITIZER)
+  *result = malloc(size);
+#else
+  if (g_old_zone.malloc) {
+    *result = g_old_zone.malloc(malloc_default_zone(), size);
+  } else {
+    *result = malloc(size);
+  }
+#endif  // defined(ADDRESS_SANITIZER)
+
+  return *result != NULL;
+}
+
+bool UncheckedCallocMac(size_t num_items, size_t size, void** result) {
+#if defined(ADDRESS_SANITIZER)
+  *result = calloc(num_items, size);
+#else
+  if (g_old_zone.calloc) {
+    *result = g_old_zone.calloc(malloc_default_zone(), num_items, size);
+  } else {
+    *result = calloc(num_items, size);
+  }
+#endif  // defined(ADDRESS_SANITIZER)
+
+  return *result != NULL;
+}
+
 void StoreFunctionsForDefaultZone() {
   ChromeMallocZone* default_zone = reinterpret_cast<ChromeMallocZone*>(
       malloc_default_zone());
@@ -355,6 +362,13 @@ void StoreFunctionsForAllZones() {
 }
 
 void ReplaceFunctionsForStoredZones(const MallocZoneFunctions* functions) {
+  // The default zone does not get returned in malloc_get_all_zones().
+  ChromeMallocZone* default_zone =
+      reinterpret_cast<ChromeMallocZone*>(malloc_default_zone());
+  if (DoesMallocZoneNeedReplacing(default_zone, functions)) {
+    ReplaceZoneFunctions(default_zone, functions);
+  }
+
   vm_address_t* zones;
   unsigned int count;
   kern_return_t kr =
@@ -363,7 +377,7 @@ void ReplaceFunctionsForStoredZones(const MallocZoneFunctions* functions) {
     return;
   for (unsigned int i = 0; i < count; ++i) {
     ChromeMallocZone* zone = reinterpret_cast<ChromeMallocZone*>(zones[i]);
-    if (IsMallocZoneAlreadyStored(zone) && zone->malloc != functions->malloc) {
+    if (DoesMallocZoneNeedReplacing(zone, functions)) {
       ReplaceZoneFunctions(zone, functions);
     }
   }
@@ -392,7 +406,7 @@ void InterceptAllocationsMac() {
       reinterpret_cast<ChromeMallocZone*>(malloc_default_zone());
   if (!IsMallocZoneAlreadyStored(default_zone)) {
     StoreZoneFunctions(default_zone, &g_old_zone);
-    MallocZoneFunctions new_functions;
+    MallocZoneFunctions new_functions = {};
     new_functions.malloc = oom_killer_malloc;
     new_functions.calloc = oom_killer_calloc;
     new_functions.valloc = oom_killer_valloc;
@@ -408,7 +422,7 @@ void InterceptAllocationsMac() {
       reinterpret_cast<ChromeMallocZone*>(malloc_default_purgeable_zone());
   if (purgeable_zone && !IsMallocZoneAlreadyStored(purgeable_zone)) {
     StoreZoneFunctions(purgeable_zone, &g_old_purgeable_zone);
-    MallocZoneFunctions new_functions;
+    MallocZoneFunctions new_functions = {};
     new_functions.malloc = oom_killer_malloc_purgeable;
     new_functions.calloc = oom_killer_calloc_purgeable;
     new_functions.valloc = oom_killer_valloc_purgeable;
@@ -494,6 +508,20 @@ void InterceptAllocationsMac() {
       << "Failed to get allocWithZone allocation function.";
   method_setImplementation(orig_method,
                            reinterpret_cast<IMP>(oom_killer_allocWithZone));
+}
+
+void UninterceptMallocZonesForTesting() {
+  UninterceptMallocZoneForTesting(malloc_default_zone());
+  vm_address_t* zones;
+  unsigned int count;
+  kern_return_t kr = malloc_get_all_zones(mach_task_self(), 0, &zones, &count);
+  CHECK(kr == KERN_SUCCESS);
+  for (unsigned int i = 0; i < count; ++i) {
+    UninterceptMallocZoneForTesting(
+        reinterpret_cast<struct _malloc_zone_t*>(zones[i]));
+  }
+
+  ClearAllMallocZonesForTesting();
 }
 
 }  // namespace allocator

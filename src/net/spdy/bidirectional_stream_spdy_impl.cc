@@ -30,10 +30,12 @@ const int kBufferTimeMs = 1;
 }  // namespace
 
 BidirectionalStreamSpdyImpl::BidirectionalStreamSpdyImpl(
-    const base::WeakPtr<SpdySession>& spdy_session)
+    const base::WeakPtr<SpdySession>& spdy_session,
+    NetLogSource source_dependency)
     : spdy_session_(spdy_session),
       request_info_(nullptr),
       delegate_(nullptr),
+      source_dependency_(source_dependency),
       negotiated_protocol_(kProtoUnknown),
       more_read_data_pending_(false),
       read_buffer_len_(0),
@@ -291,6 +293,10 @@ void BidirectionalStreamSpdyImpl::OnClose(int status) {
   DoBufferedRead();
   if (weak_this.get() && write_pending_)
     OnDataSent();
+}
+
+NetLogSource BidirectionalStreamSpdyImpl::source_dependency() const {
+  return source_dependency_;
 }
 
 int BidirectionalStreamSpdyImpl::SendRequestHeadersHelper() {

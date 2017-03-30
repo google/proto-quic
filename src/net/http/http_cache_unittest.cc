@@ -7944,149 +7944,6 @@ TEST_F(HttpCachePrefetchValidationTest, ValidateOnDelayedSecondPrefetch) {
   EXPECT_FALSE(TransactionRequiredNetwork(LOAD_NORMAL));
 }
 
-static void CheckResourceFreshnessHeader(const HttpRequestInfo* request,
-                                         std::string* response_status,
-                                         std::string* response_headers,
-                                         std::string* response_data) {
-  std::string value;
-  EXPECT_TRUE(request->extra_headers.GetHeader("Resource-Freshness", &value));
-  EXPECT_EQ("max-age=3600,stale-while-revalidate=7200,age=10801", value);
-}
-
-// Verify that the Resource-Freshness header is sent on a revalidation if the
-// stale-while-revalidate directive was on the response.
-TEST(HttpCache, ResourceFreshnessHeaderSent) {
-  MockHttpCache cache;
-
-  ScopedMockTransaction stale_while_revalidate_transaction(
-      kSimpleGET_Transaction);
-  stale_while_revalidate_transaction.response_headers =
-      "Last-Modified: Sat, 18 Apr 2007 01:10:43 GMT\n"
-      "Age: 10801\n"
-      "Cache-Control: max-age=3600,stale-while-revalidate=7200\n";
-
-  // Write to the cache.
-  RunTransactionTest(cache.http_cache(), stale_while_revalidate_transaction);
-
-  EXPECT_EQ(1, cache.network_layer()->transaction_count());
-
-  // Send the request again and check that Resource-Freshness header is added.
-  stale_while_revalidate_transaction.handler = CheckResourceFreshnessHeader;
-
-  RunTransactionTest(cache.http_cache(), stale_while_revalidate_transaction);
-
-  EXPECT_EQ(2, cache.network_layer()->transaction_count());
-}
-
-static void CheckResourceFreshnessAbsent(const HttpRequestInfo* request,
-                                         std::string* response_status,
-                                         std::string* response_headers,
-                                         std::string* response_data) {
-  EXPECT_FALSE(request->extra_headers.HasHeader("Resource-Freshness"));
-}
-
-// Verify that the Resource-Freshness header is not sent when
-// stale-while-revalidate is 0.
-TEST(HttpCache, ResourceFreshnessHeaderNotSent) {
-  MockHttpCache cache;
-
-  ScopedMockTransaction stale_while_revalidate_transaction(
-      kSimpleGET_Transaction);
-  stale_while_revalidate_transaction.response_headers =
-      "Last-Modified: Sat, 18 Apr 2007 01:10:43 GMT\n"
-      "Age: 10801\n"
-      "Cache-Control: max-age=3600,stale-while-revalidate=0\n";
-
-  // Write to the cache.
-  RunTransactionTest(cache.http_cache(), stale_while_revalidate_transaction);
-
-  EXPECT_EQ(1, cache.network_layer()->transaction_count());
-
-  // Send the request again and check that Resource-Freshness header is absent.
-  stale_while_revalidate_transaction.handler = CheckResourceFreshnessAbsent;
-
-  RunTransactionTest(cache.http_cache(), stale_while_revalidate_transaction);
-
-  EXPECT_EQ(2, cache.network_layer()->transaction_count());
-}
-
-TEST(HttpCache, StaleContentNotUsedWhenLoadFlagNotSet) {
-  MockHttpCache cache;
-
-  ScopedMockTransaction stale_while_revalidate_transaction(
-      kSimpleGET_Transaction);
-
-  stale_while_revalidate_transaction.response_headers =
-      "Last-Modified: Sat, 18 Apr 2007 01:10:43 GMT\n"
-      "Age: 10801\n"
-      "Cache-Control: max-age=0,stale-while-revalidate=86400\n";
-
-  // Write to the cache.
-  RunTransactionTest(cache.http_cache(), stale_while_revalidate_transaction);
-
-  EXPECT_EQ(1, cache.network_layer()->transaction_count());
-
-  // Send the request again and check that it is sent to the network again.
-  HttpResponseInfo response_info;
-  RunTransactionTestWithResponseInfo(
-      cache.http_cache(), stale_while_revalidate_transaction, &response_info);
-
-  EXPECT_EQ(2, cache.network_layer()->transaction_count());
-  EXPECT_FALSE(response_info.async_revalidation_required);
-}
-
-TEST(HttpCache, StaleContentUsedWhenLoadFlagSetAndUsable) {
-  MockHttpCache cache;
-
-  ScopedMockTransaction stale_while_revalidate_transaction(
-      kSimpleGET_Transaction);
-  stale_while_revalidate_transaction.load_flags |=
-      LOAD_SUPPORT_ASYNC_REVALIDATION;
-  stale_while_revalidate_transaction.response_headers =
-      "Last-Modified: Sat, 18 Apr 2007 01:10:43 GMT\n"
-      "Age: 10801\n"
-      "Cache-Control: max-age=0,stale-while-revalidate=86400\n";
-
-  // Write to the cache.
-  RunTransactionTest(cache.http_cache(), stale_while_revalidate_transaction);
-
-  EXPECT_EQ(1, cache.network_layer()->transaction_count());
-
-  // Send the request again and check that it is not sent to the network again.
-  HttpResponseInfo response_info;
-  RunTransactionTestWithResponseInfo(
-      cache.http_cache(), stale_while_revalidate_transaction, &response_info);
-
-  EXPECT_EQ(1, cache.network_layer()->transaction_count());
-  EXPECT_TRUE(response_info.async_revalidation_required);
-}
-
-TEST(HttpCache, StaleContentNotUsedWhenUnusable) {
-  MockHttpCache cache;
-
-  ScopedMockTransaction stale_while_revalidate_transaction(
-      kSimpleGET_Transaction);
-  stale_while_revalidate_transaction.load_flags |=
-      LOAD_SUPPORT_ASYNC_REVALIDATION;
-  stale_while_revalidate_transaction.response_headers =
-      "Last-Modified: Sat, 18 Apr 2007 01:10:43 GMT\n"
-      "Age: 10801\n"
-      "Cache-Control: max-age=0,stale-while-revalidate=1800\n";
-
-  // Write to the cache.
-  RunTransactionTest(cache.http_cache(), stale_while_revalidate_transaction);
-
-  EXPECT_EQ(1, cache.network_layer()->transaction_count());
-
-  // Send the request again and check that it is sent to the network again.
-  HttpResponseInfo response_info;
-  RunTransactionTestWithResponseInfo(
-      cache.http_cache(), stale_while_revalidate_transaction, &response_info);
-
-  EXPECT_EQ(2, cache.network_layer()->transaction_count());
-  EXPECT_FALSE(response_info.async_revalidation_required);
-}
-
 // Tests that we allow multiple simultaneous, non-overlapping transactions to
 // take place on a sparse entry.
 TEST(HttpCache, RangeGET_MultipleRequests) {
@@ -8386,13 +8243,14 @@ TEST_P(HttpCacheMemoryDumpTest, DumpMemoryStats) {
   std::unique_ptr<base::trace_event::ProcessMemoryDump> process_memory_dump(
       new base::trace_event::ProcessMemoryDump(nullptr, dump_args));
   base::trace_event::MemoryAllocatorDump* parent_dump =
-      process_memory_dump->CreateAllocatorDump("net/url_request_context_0x123");
+      process_memory_dump->CreateAllocatorDump(
+          "net/url_request_context/main/0x123");
   cache.http_cache()->DumpMemoryStats(process_memory_dump.get(),
                                       parent_dump->absolute_name());
 
   const base::trace_event::MemoryAllocatorDump* dump =
       process_memory_dump->GetAllocatorDump(
-          "net/url_request_context_0x123/http_cache");
+          "net/url_request_context/main/0x123/http_cache");
   ASSERT_NE(nullptr, dump);
   std::unique_ptr<base::Value> raw_attrs =
       dump->attributes_for_testing()->ToBaseValue();

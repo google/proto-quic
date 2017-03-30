@@ -282,6 +282,7 @@ TEST(X509UtilTest, CreateChannelBindings_SHA1) {
   scoped_refptr<X509Certificate> cert = X509Certificate::CreateFromBytes(
       reinterpret_cast<const char*>(kCertificateDataDER),
       sizeof(kCertificateDataDER));
+  ASSERT_TRUE(cert);
 
   std::string channel_bindings;
   ASSERT_TRUE(
@@ -390,6 +391,7 @@ TEST(X509UtilTest, CreateChannelBindings_SHA256) {
   scoped_refptr<X509Certificate> cert = X509Certificate::CreateFromBytes(
       reinterpret_cast<const char*>(kCertificateDataDER),
       sizeof(kCertificateDataDER));
+  ASSERT_TRUE(cert);
 
   std::string channel_bindings;
   ASSERT_TRUE(
@@ -506,6 +508,7 @@ TEST(X509UtilTest, CreateChannelBindings_SHA384) {
   scoped_refptr<X509Certificate> cert = X509Certificate::CreateFromBytes(
       reinterpret_cast<const char*>(kCertificateDataDER),
       sizeof(kCertificateDataDER));
+  ASSERT_TRUE(cert);
 
   std::string channel_bindings;
   ASSERT_TRUE(
@@ -617,6 +620,7 @@ TEST(X509UtilTest, CreateChannelBindings_SHA512) {
   scoped_refptr<X509Certificate> cert = X509Certificate::CreateFromBytes(
       reinterpret_cast<const char*>(kCertificateDataDER),
       sizeof(kCertificateDataDER));
+  ASSERT_TRUE(cert);
 
   std::string channel_bindings;
   ASSERT_TRUE(
@@ -717,6 +721,7 @@ TEST(X509UtilTest, CreateChannelBindings_Unsupported_MD4) {
   scoped_refptr<X509Certificate> cert = X509Certificate::CreateFromBytes(
       reinterpret_cast<const char*>(kCertificateDataDER),
       sizeof(kCertificateDataDER));
+  ASSERT_TRUE(cert);
 
   std::string channel_bindings;
   ASSERT_FALSE(

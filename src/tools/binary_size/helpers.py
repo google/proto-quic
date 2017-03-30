@@ -16,7 +16,7 @@ import sys
 SRC_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
 
-def AddCommonOptionsAndParseArgs(parser):
+def AddCommonOptionsAndParseArgs(parser, argv):
   parser.add_argument('--no-pypy', action='store_true',
                       help='Do not automatically switch to pypy when available')
   parser.add_argument('-v',
@@ -24,8 +24,7 @@ def AddCommonOptionsAndParseArgs(parser):
                       default=0,
                       action='count',
                       help='Verbose level (multiple times for more)')
-
-  args = parser.parse_args()
+  args = parser.parse_args(argv[1:])
 
   logging.basicConfig(level=logging.WARNING - args.verbose * 10,
                       format='%(levelname).1s %(relativeCreated)6d %(message)s')

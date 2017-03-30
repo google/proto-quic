@@ -1674,7 +1674,7 @@ xmlZMemBuffExtend( xmlZMemBuffPtr buff, size_t ext_amt ) {
 	xmlStrPrintf(msg, 500,
 		    "xmlZMemBuffExtend:  %s %lu bytes.\n",
 		    "Allocation failure extending output buffer to",
-		    new_size );
+		    (unsigned long) new_size );
 	xmlIOErr(XML_IO_WRITE, (const char *) msg);
     }
 

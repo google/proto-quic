@@ -10,6 +10,7 @@
 
 #include "base/format_macros.h"
 #include "base/i18n/message_formatter.h"
+#include "base/i18n/unicodestring.h"
 #include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/strings/string_util.h"
@@ -60,7 +61,7 @@ string16 FormatNumber(int64_t number) {
   icu::UnicodeString ustr;
   number_format->format(number, ustr);
 
-  return string16(ustr.getBuffer(), static_cast<size_t>(ustr.length()));
+  return i18n::UnicodeStringToString16(ustr);
 }
 
 string16 FormatDouble(double number, int fractional_digits) {
@@ -76,7 +77,7 @@ string16 FormatDouble(double number, int fractional_digits) {
   icu::UnicodeString ustr;
   number_format->format(number, ustr);
 
-  return string16(ustr.getBuffer(), static_cast<size_t>(ustr.length()));
+  return i18n::UnicodeStringToString16(ustr);
 }
 
 string16 FormatPercent(int number) {

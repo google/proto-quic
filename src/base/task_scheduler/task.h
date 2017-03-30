@@ -6,7 +6,7 @@
 #define BASE_TASK_SCHEDULER_TASK_H_
 
 #include "base/base_export.h"
-#include "base/callback_forward.h"
+#include "base/callback.h"
 #include "base/location.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
@@ -28,7 +28,7 @@ struct BASE_EXPORT Task : public PendingTask {
   // behavior in |traits| is BLOCK_SHUTDOWN, the shutdown behavior is
   // automatically adjusted to SKIP_ON_SHUTDOWN.
   Task(const tracked_objects::Location& posted_from,
-       const Closure& task,
+       Closure task,
        const TaskTraits& traits,
        TimeDelta delay);
   ~Task();

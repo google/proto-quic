@@ -19,6 +19,7 @@
 #include "net/base/io_buffer.h"
 #include "net/base/net_export.h"
 #include "net/base/request_priority.h"
+#include "net/log/net_log_source.h"
 #include "net/log/net_log_with_source.h"
 #include "net/socket/next_proto.h"
 #include "net/socket/ssl_client_socket.h"
@@ -101,6 +102,8 @@ class NET_EXPORT_PRIVATE SpdyStream {
     // TODO(akalin): Allow this function to re-close the stream and
     // handle it gracefully.
     virtual void OnClose(int status) = 0;
+
+    virtual NetLogSource source_dependency() const = 0;
 
    protected:
     virtual ~Delegate() {}

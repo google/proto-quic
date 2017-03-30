@@ -506,6 +506,12 @@ OPENSSL_EXPORT int SSL_get_error(const SSL *ssl, int ret_code);
  * |SSL_CTX_set_private_key_method|. */
 #define SSL_ERROR_WANT_PRIVATE_KEY_OPERATION 13
 
+/* SSL_ERROR_PENDING_TICKET indicates that a ticket decryption is pending. The
+ * caller may retry the operation when the decryption is ready.
+ *
+ * See also |SSL_CTX_set_ticket_aead_method|. */
+#define SSL_ERROR_PENDING_TICKET 14
+
 /* SSL_set_mtu sets the |ssl|'s MTU in DTLS to |mtu|. It returns one on success
  * and zero on failure. */
 OPENSSL_EXPORT int SSL_set_mtu(SSL *ssl, unsigned mtu);
@@ -1955,7 +1961,14 @@ OPENSSL_EXPORT SSL_SESSION *SSL_magic_pending_session_ptr(void);
  * On the server, tickets are encrypted and authenticated with a secret key. By
  * default, an |SSL_CTX| generates a key on creation. Tickets are minted and
  * processed transparently. The following functions may be used to configure a
- * persistent key or implement more custom behavior. */
+ * persistent key or implement more custom behavior. There are three levels of
+ * customisation possible:
+ *
+ * 1) One can simply set the keys with |SSL_CTX_set_tlsext_ticket_keys|.
+ * 2) One can configure an |EVP_CIPHER_CTX| and |HMAC_CTX| directly for
+ *    encryption and authentication.
+ * 3) One can configure an |SSL_TICKET_ENCRYPTION_METHOD| to have more control
+ *    and the option of asynchronous decryption. */
 
 /* SSL_CTX_get_tlsext_ticket_keys writes |ctx|'s session ticket key material to
  * |len| bytes of |out|. It returns one on success and zero if |len| is not
@@ -2000,6 +2013,55 @@ OPENSSL_EXPORT int SSL_CTX_set_tlsext_ticket_key_cb(
     SSL_CTX *ctx, int (*callback)(SSL *ssl, uint8_t *key_name, uint8_t *iv,
                                   EVP_CIPHER_CTX *ctx, HMAC_CTX *hmac_ctx,
                                   int encrypt));
+
+/* ssl_ticket_aead_result_t enumerates the possible results from decrypting a
+ * ticket with an |SSL_TICKET_AEAD_METHOD|. */
+enum ssl_ticket_aead_result_t {
+  /* ssl_ticket_aead_success indicates that the ticket was successfully
+   * decrypted. */
+  ssl_ticket_aead_success,
+  /* ssl_ticket_aead_retry indicates that the operation could not be
+   * immediately completed and must be reattempted, via |open|, at a later
+   * point. */
+  ssl_ticket_aead_retry,
+  /* ssl_ticket_aead_ignore_ticket indicates that the ticket should be ignored
+   * (i.e. is corrupt or otherwise undecryptable). */
+  ssl_ticket_aead_ignore_ticket,
+  /* ssl_ticket_aead_error indicates that a fatal error occured and the
+   * handshake should be terminated. */
+  ssl_ticket_aead_error,
+};
+
+/* ssl_ticket_aead_method_st (aka |SSL_TICKET_ENCRYPTION_METHOD|) contains
+ * methods for encrypting and decrypting session tickets. */
+struct ssl_ticket_aead_method_st {
+  /* max_overhead returns the maximum number of bytes of overhead that |seal|
+   * may add. */
+  size_t (*max_overhead)(SSL *ssl);
+
+  /* seal encrypts and authenticates |in_len| bytes from |in|, writes, at most,
+   * |max_out_len| bytes to |out|, and puts the number of bytes written in
+   * |*out_len|. The |in| and |out| buffers may be equal but will not otherwise
+   * alias. It returns one on success or zero on error. */
+  int (*seal)(SSL *ssl, uint8_t *out, size_t *out_len, size_t max_out_len,
+              const uint8_t *in, size_t in_len);
+
+  /* open authenticates and decrypts |in_len| bytes from |in|, writes, at most,
+   * |max_out_len| bytes of plaintext to |out|, and puts the number of bytes
+   * written in |*out_len|. The |in| and |out| buffers may be equal but will
+   * not otherwise alias. See |ssl_ticket_aead_result_t| for details of the
+   * return values. In the case that a retry is indicated, the caller should
+   * arrange for the high-level operation on |ssl| to be retried when the
+   * operation is completed, which will result in another call to |open|. */
+  enum ssl_ticket_aead_result_t (*open)(SSL *ssl, uint8_t *out, size_t *out_len,
+                                        size_t max_out_len, const uint8_t *in,
+                                        size_t in_len);
+};
+
+/* SSL_CTX_set_ticket_aead_method configures a custom ticket AEAD method table
+ * on |ctx|. |aead_method| must remain valid for the lifetime of |ctx|. */
+OPENSSL_EXPORT void SSL_CTX_set_ticket_aead_method(
+    SSL_CTX *ctx, const SSL_TICKET_AEAD_METHOD *aead_method);
 
 
 /* Elliptic curve Diffie-Hellman.
@@ -2453,6 +2515,21 @@ OPENSSL_EXPORT int SSL_CTX_set_tlsext_servername_arg(SSL_CTX *ctx, void *arg);
 #define SSL_TLSEXT_ERR_ALERT_WARNING 1
 #define SSL_TLSEXT_ERR_ALERT_FATAL 2
 #define SSL_TLSEXT_ERR_NOACK 3
+
+/* SSL_set_SSL_CTX changes |ssl|'s |SSL_CTX|. |ssl| will use the
+ * certificate-related settings from |ctx|, and |SSL_get_SSL_CTX| will report
+ * |ctx|. This function may be used during the callbacks registered by
+ * |SSL_CTX_set_select_certificate_cb|,
+ * |SSL_CTX_set_tlsext_servername_callback|, and |SSL_CTX_set_cert_cb| or when
+ * the handshake is paused from them. It is typically used to switch
+ * certificates based on SNI.
+ *
+ * Note the session cache and related settings will continue to use the initial
+ * |SSL_CTX|. Callers should use |SSL_CTX_set_session_id_context| to partition
+ * the session cache between different domains.
+ *
+ * TODO(davidben): Should other settings change after this call? */
+OPENSSL_EXPORT SSL_CTX *SSL_set_SSL_CTX(SSL *ssl, SSL_CTX *ctx);
 
 
 /* Application-layer protocol negotiation.
@@ -3001,9 +3078,25 @@ OPENSSL_EXPORT int SSL_renegotiate_pending(SSL *ssl);
 OPENSSL_EXPORT int SSL_total_renegotiations(const SSL *ssl);
 
 /* SSL_CTX_set_early_data_enabled sets whether early data is allowed to be used
- * with resumptions using |ctx|. WARNING: This is experimental and may cause
- * interoperability failures until fully implemented. */
+ * with resumptions using |ctx|.
+ *
+ * As a server, if the client's early data is accepted, |SSL_do_handshake| will
+ * complete as soon as the ClientHello is processed and server flight sent.
+ * |SSL_write| may be used to send half-RTT data. |SSL_read| will consume early
+ * data and transition to 1-RTT data as appropriate.
+ *
+ * Note early data is replayable by a network attacker. |SSL_in_init| and
+ * |SSL_is_init_finished| will report the handshake is still in progress until
+ * the client's Finished message is received. Callers may use these functions
+ * to defer some processing if desired.
+ *
+ * WARNING: This is experimental and may cause interoperability failures until
+ * fully implemented. */
 OPENSSL_EXPORT void SSL_CTX_set_early_data_enabled(SSL_CTX *ctx, int enabled);
+
+/* SSL_early_data_accepted returns whether early data was accepted on the
+ * handshake performed by |ssl|. */
+OPENSSL_EXPORT int SSL_early_data_accepted(const SSL *ssl);
 
 /* SSL_MAX_CERT_LIST_DEFAULT is the default maximum length, in bytes, of a peer
  * certificate chain. */
@@ -3067,6 +3160,20 @@ typedef struct ssl_early_callback_ctx {
   size_t extensions_len;
 } SSL_CLIENT_HELLO;
 
+/* ssl_select_cert_result_t enumerates the possible results from selecting a
+ * certificate with |select_certificate_cb|. */
+enum ssl_select_cert_result_t {
+  /* ssl_select_cert_success indicates that the certificate selection was
+   * successful. */
+  ssl_select_cert_success = 1,
+  /* ssl_select_cert_retry indicates that the operation could not be
+   * immediately completed and must be reattempted at a later point. */
+  ssl_select_cert_retry = 0,
+  /* ssl_select_cert_error indicates that a fatal error occured and the
+   * handshake should be terminated. */
+  ssl_select_cert_error = -1,
+};
+
 /* SSL_early_callback_ctx_extension_get searches the extensions in
  * |client_hello| for an extension of the given type. If not found, it returns
  * zero. Otherwise it sets |out_data| to point to the extension contents (not
@@ -3079,14 +3186,18 @@ OPENSSL_EXPORT int SSL_early_callback_ctx_extension_get(
 /* SSL_CTX_set_select_certificate_cb sets a callback that is called before most
  * ClientHello processing and before the decision whether to resume a session
  * is made. The callback may inspect the ClientHello and configure the
- * connection. It may then return one to continue the handshake or zero to
- * pause the handshake to perform an asynchronous operation. If paused,
- * |SSL_get_error| will return |SSL_ERROR_PENDING_CERTIFICATE|.
+ * connection. See |ssl_select_cert_result_t| for details of the return values.
+ *
+ * In the case that a retry is indicated, |SSL_get_error| will return
+ * |SSL_ERROR_PENDING_CERTIFICATE| and the caller should arrange for the
+ * high-level operation on |ssl| to be retried at a later time, which will
+ * result in another call to |cb|.
  *
  * Note: The |SSL_CLIENT_HELLO| is only valid for the duration of the callback
  * and is not valid while the handshake is paused. */
 OPENSSL_EXPORT void SSL_CTX_set_select_certificate_cb(
-    SSL_CTX *ctx, int (*cb)(const SSL_CLIENT_HELLO *));
+    SSL_CTX *ctx,
+    enum ssl_select_cert_result_t (*cb)(const SSL_CLIENT_HELLO *));
 
 /* SSL_CTX_set_dos_protection_cb sets a callback that is called once the
  * resumption decision for a ClientHello has been made. It can return one to
@@ -3173,20 +3284,6 @@ OPENSSL_EXPORT void (*SSL_get_info_callback(const SSL *ssl))(const SSL *ssl,
 /* SSL_state_string_long returns the current state of the handshake state
  * machine as a string. This may be useful for debugging and logging. */
 OPENSSL_EXPORT const char *SSL_state_string_long(const SSL *ssl);
-
-/* SSL_set_SSL_CTX partially changes |ssl|'s |SSL_CTX|. |ssl| will use the
- * certificate and session_id_context from |ctx|, and |SSL_get_SSL_CTX| will
- * report |ctx|. However most settings and the session cache itself will
- * continue to use the initial |SSL_CTX|. It is often used as part of SNI.
- *
- * TODO(davidben): Make a better story here and get rid of this API. Also
- * determine if there's anything else affected by |SSL_set_SSL_CTX| that
- * matters. Not as many values are affected as one might initially think. The
- * session cache explicitly selects the initial |SSL_CTX|. Most settings are
- * copied at |SSL_new| so |ctx|'s versions don't apply. This, notably, has some
- * consequences for any plans to make |SSL| copy-on-write most of its
- * configuration. */
-OPENSSL_EXPORT SSL_CTX *SSL_set_SSL_CTX(SSL *ssl, SSL_CTX *ctx);
 
 #define SSL_SENT_SHUTDOWN 1
 #define SSL_RECEIVED_SHUTDOWN 2
@@ -3571,6 +3668,7 @@ OPENSSL_EXPORT void SSL_CTX_set_client_cert_cb(
 #define SSL_PENDING_SESSION 7
 #define SSL_CERTIFICATE_SELECTION_PENDING 8
 #define SSL_PRIVATE_KEY_OPERATION 9
+#define SSL_PENDING_TICKET 10
 
 /* SSL_want returns one of the above values to determine what the most recent
  * operation on |ssl| was blocked on. Use |SSL_get_error| instead. */
@@ -3735,6 +3833,12 @@ OPENSSL_EXPORT const BIO_METHOD *BIO_f_ssl(void);
  * call |SSL_free| on |ssl| when closed. It returns one on success or something
  * other than one on error. */
 OPENSSL_EXPORT long BIO_set_ssl(BIO *bio, SSL *ssl, int take_owership);
+
+/* SSL_CTX_set_ecdh_auto returns one. */
+#define SSL_CTX_set_ecdh_auto(ctx, onoff) 1
+
+/* SSL_set_ecdh_auto returns one. */
+#define SSL_set_ecdh_auto(ssl, onoff) 1
 
 
 /* Private structures.
@@ -4042,12 +4146,10 @@ struct ssl_ctx_st {
   X509_VERIFY_PARAM *param;
 
   /* select_certificate_cb is called before most ClientHello processing and
-   * before the decision whether to resume a session is made. It may return one
-   * to continue the handshake or zero to cause the handshake loop to return
-   * with an error and cause SSL_get_error to return
-   * SSL_ERROR_PENDING_CERTIFICATE. Note: when the handshake loop is resumed, it
-   * will not call the callback a second time. */
-  int (*select_certificate_cb)(const SSL_CLIENT_HELLO *);
+   * before the decision whether to resume a session is made. See
+   * |ssl_select_cert_result_t| for details of the return values. */
+  enum ssl_select_cert_result_t (*select_certificate_cb)(
+      const SSL_CLIENT_HELLO *);
 
   /* dos_protection_cb is called once the resumption decision for a ClientHello
    * has been made. It returns one to continue the handshake or zero to
@@ -4143,6 +4245,10 @@ struct ssl_ctx_st {
    * memory. */
   CRYPTO_BUFFER_POOL *pool;
 
+  /* ticket_aead_method contains function pointers for opening and sealing
+   * session tickets. */
+  const SSL_TICKET_AEAD_METHOD *ticket_aead_method;
+
   /* quiet_shutdown is true if the connection should not send a close_notify on
    * shutdown. */
   unsigned quiet_shutdown:1;
@@ -4226,6 +4332,7 @@ struct ssl_ctx_st {
 #define SSL_CTRL_SESS_NUMBER doesnt_exist
 #define SSL_CTRL_SET_CURVES doesnt_exist
 #define SSL_CTRL_SET_CURVES_LIST doesnt_exist
+#define SSL_CTRL_SET_ECDH_AUTO doesnt_exist
 #define SSL_CTRL_SET_MAX_CERT_LIST doesnt_exist
 #define SSL_CTRL_SET_MAX_SEND_FRAGMENT doesnt_exist
 #define SSL_CTRL_SET_MSG_CALLBACK doesnt_exist
@@ -4396,7 +4503,6 @@ BORINGSSL_MAKE_DELETER(SSL_SESSION, SSL_SESSION_free)
 #define SSL_R_INVALID_SSL_SESSION 160
 #define SSL_R_INVALID_TICKET_KEYS_LENGTH 161
 #define SSL_R_LENGTH_MISMATCH 162
-#define SSL_R_LIBRARY_HAS_NO_CIPHERS 163
 #define SSL_R_MISSING_EXTENSION 164
 #define SSL_R_MISSING_RSA_CERTIFICATE 165
 #define SSL_R_MISSING_TMP_DH_KEY 166
@@ -4509,6 +4615,10 @@ BORINGSSL_MAKE_DELETER(SSL_SESSION, SSL_SESSION_free)
 #define SSL_R_SERVER_CERT_CHANGED 273
 #define SSL_R_CERTIFICATE_AND_PRIVATE_KEY_MISMATCH 274
 #define SSL_R_CANNOT_HAVE_BOTH_PRIVKEY_AND_METHOD 275
+#define SSL_R_TICKET_ENCRYPTION_FAILED 276
+#define SSL_R_ALPN_MISMATCH_ON_EARLY_DATA 277
+#define SSL_R_WRONG_VERSION_ON_EARLY_DATA 278
+#define SSL_R_CHANNEL_ID_ON_EARLY_DATA 279
 #define SSL_R_SSLV3_ALERT_CLOSE_NOTIFY 1000
 #define SSL_R_SSLV3_ALERT_UNEXPECTED_MESSAGE 1010
 #define SSL_R_SSLV3_ALERT_BAD_RECORD_MAC 1020

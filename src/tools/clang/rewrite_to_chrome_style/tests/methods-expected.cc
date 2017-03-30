@@ -305,36 +305,22 @@ class InternalClass {
 // Tests for --method-blocklist cmdline parameter.
 class IdlTestClass {
  public:
-  static int IdlTestMethodNoParams(char x) { return 123; }
-  static int idlTestMethodOneParam(char x) { return 123; }
+  static int NotBlocklistedMethod() { return 123; }
+  int NotBlocklistedMethod(int x) { return 123; }
 
-  int idlTestMethodNoParams() { return 123; }
-  int IdlTestMethodNoParams(int x) { return 123; }
-
-  int IdlTestMethodOneParam() { return 123; }
-  int idlTestMethodOneParam(int x) { return 123; }
-
-  int IdlTestMethodTwoOrThreeParams() { return 123; }
-  int idlTestMethodTwoOrThreeParams(int x, int y) { return 123; }
-  int idlTestMethodTwoOrThreeParams(int x, int y, int z) { return 123; }
-
-  int idlOptionalArgsPass(int x = 0) { return x; }
-  int IdlOptionalArgsStillTooMany(int x, int y = 0) { return x + y; }
-  int IdlOptionalArgsTooLittle(int x = 0) { return x; }
+  static int idlStaticMethod() { return 123; }
+  int idlInstanceMethod() { return 123; }
 
   template <typename T>
   int idlTemplateMethod(T x) {
     return 123;
   }
-
-  int path() { return 123; }
-  int GetPath(int x) { return 123; }
 };
 
 template <typename T>
 class IdlTemplateClass {
  public:
-  int idlTestMethod(T x) { return 123; }
+  int idlInstanceMethod(T x) { return 123; }
 };
 
 }  // namespace blink

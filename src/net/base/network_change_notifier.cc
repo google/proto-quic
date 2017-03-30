@@ -547,6 +547,14 @@ NetworkChangeNotifier::GetConnectionType() {
 }
 
 // static
+NetworkChangeNotifier::ConnectionSubtype
+NetworkChangeNotifier::GetConnectionSubtype() {
+  return g_network_change_notifier
+             ? g_network_change_notifier->GetCurrentConnectionSubtype()
+             : SUBTYPE_UNKNOWN;
+}
+
+// static
 void NetworkChangeNotifier::GetMaxBandwidthAndConnectionType(
     double* max_bandwidth_mbps,
     ConnectionType* connection_type) {
@@ -922,6 +930,12 @@ void NetworkChangeNotifier::NotifyObserversOfConnectionTypeChangeForTests(
 }
 
 // static
+void NetworkChangeNotifier::NotifyObserversOfDNSChangeForTests() {
+  if (g_network_change_notifier)
+    g_network_change_notifier->NotifyObserversOfDNSChangeImpl();
+}
+
+// static
 void NetworkChangeNotifier::NotifyObserversOfNetworkChangeForTests(
     ConnectionType type) {
   if (g_network_change_notifier)
@@ -984,6 +998,11 @@ NetworkChangeNotifier::GetAddressTrackerInternal() const {
   return NULL;
 }
 #endif
+
+NetworkChangeNotifier::ConnectionSubtype
+NetworkChangeNotifier::GetCurrentConnectionSubtype() const {
+  return SUBTYPE_UNKNOWN;
+}
 
 void NetworkChangeNotifier::GetCurrentMaxBandwidthAndConnectionType(
     double* max_bandwidth_mbps,

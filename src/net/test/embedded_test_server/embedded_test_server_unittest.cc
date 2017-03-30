@@ -479,7 +479,7 @@ const CertificateValuesEntry kCertificateValuesEntry[] = {
      "Test Root CA"},
     {EmbeddedTestServer::CERT_EXPIRED, true, "127.0.0.1", "Test Root CA"},
     {EmbeddedTestServer::CERT_CHAIN_WRONG_ROOT, false, "127.0.0.1", "B CA"},
-#if !defined(OS_WIN)
+#if !defined(OS_WIN) && !defined(OS_ANDROID)
     {EmbeddedTestServer::CERT_BAD_VALIDITY, true, "Leaf Certificate",
      "Test Root CA"},
 #endif
@@ -490,9 +490,10 @@ TEST_P(EmbeddedTestServerTest, GetCertificate) {
     return;
 
   for (const auto& certEntry : kCertificateValuesEntry) {
+    SCOPED_TRACE(certEntry.server_cert);
     server_->SetSSLConfig(certEntry.server_cert);
     scoped_refptr<X509Certificate> cert = server_->GetCertificate();
-    DCHECK(cert.get());
+    ASSERT_TRUE(cert);
     EXPECT_EQ(cert->HasExpired(), certEntry.is_expired);
     EXPECT_EQ(cert->subject().common_name, certEntry.common_name);
     EXPECT_EQ(cert->issuer().common_name, certEntry.root);

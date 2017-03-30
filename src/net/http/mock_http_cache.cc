@@ -515,8 +515,10 @@ void MockDiskCache::GetStats(base::StringPairs* stats) {
 void MockDiskCache::OnExternalCacheHit(const std::string& key) {
 }
 
-size_t MockDiskCache::EstimateMemoryUsage() const {
-  return 0;
+size_t MockDiskCache::DumpMemoryStats(
+    base::trace_event::ProcessMemoryDump* pmd,
+    const std::string& parent_absolute_name) const {
+  return 0u;
 }
 
 void MockDiskCache::ReleaseAll() {

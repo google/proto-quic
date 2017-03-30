@@ -109,6 +109,11 @@ URL_EXPORT const std::vector<std::string>& GetWebStorageSchemes();
 URL_EXPORT void AddCSPBypassingScheme(const char* new_scheme);
 URL_EXPORT const std::vector<std::string>& GetCSPBypassingSchemes();
 
+// Adds an application-defined scheme to the list of schemes that are strictly
+// empty documents, allowing them to commit synchronously.
+URL_EXPORT void AddEmptyDocumentScheme(const char* new_scheme);
+URL_EXPORT const std::vector<std::string>& GetEmptyDocumentSchemes();
+
 // Sets a flag to prevent future calls to Add*Scheme from succeeding.
 //
 // This is designed to help prevent errors for multithreaded applications.

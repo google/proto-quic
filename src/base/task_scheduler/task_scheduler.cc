@@ -23,6 +23,20 @@ TaskScheduler* g_task_scheduler = nullptr;
 
 }  // namespace
 
+TaskScheduler::InitParams::InitParams(
+    const SchedulerWorkerPoolParams& background_worker_pool_params_in,
+    const SchedulerWorkerPoolParams& background_blocking_worker_pool_params_in,
+    const SchedulerWorkerPoolParams& foreground_worker_pool_params_in,
+    const SchedulerWorkerPoolParams& foreground_blocking_worker_pool_params_in)
+    : background_worker_pool_params(background_worker_pool_params_in),
+      background_blocking_worker_pool_params(
+          background_blocking_worker_pool_params_in),
+      foreground_worker_pool_params(foreground_worker_pool_params_in),
+      foreground_blocking_worker_pool_params(
+          foreground_blocking_worker_pool_params_in) {}
+
+TaskScheduler::InitParams::~InitParams() = default;
+
 #if !defined(OS_NACL)
 // static
 void TaskScheduler::CreateAndSetSimpleTaskScheduler(const std::string& name) {
@@ -31,7 +45,7 @@ void TaskScheduler::CreateAndSetSimpleTaskScheduler(const std::string& name) {
   worker_pool_params_vector.emplace_back(
       name, ThreadPriority::NORMAL,
       SchedulerWorkerPoolParams::StandbyThreadPolicy::LAZY,
-      std::max(kMinNumThreads, base::SysInfo::NumberOfProcessors()),
+      std::max(kMinNumThreads, SysInfo::NumberOfProcessors()),
       TimeDelta::FromSeconds(30));
   CreateAndSetDefaultTaskScheduler(
       worker_pool_params_vector,
@@ -46,6 +60,12 @@ void TaskScheduler::CreateAndSetDefaultTaskScheduler(
         worker_pool_index_for_traits_callback) {
   SetInstance(internal::TaskSchedulerImpl::Create(
       worker_pool_params_vector, worker_pool_index_for_traits_callback));
+}
+
+void TaskScheduler::CreateAndSetDefaultTaskScheduler(
+    const std::string& name,
+    const InitParams& init_params) {
+  SetInstance(internal::TaskSchedulerImpl::Create(name, init_params));
 }
 
 // static

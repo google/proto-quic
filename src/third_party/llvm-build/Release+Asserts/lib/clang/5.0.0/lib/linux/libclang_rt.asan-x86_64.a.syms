@@ -125,6 +125,7 @@
   __interceptor_getifaddrs;
   __interceptor_getitimer;
   __interceptor_getline;
+  __interceptor_getloadavg;
   __interceptor_getmntent;
   __interceptor_getmntent_r;
   __interceptor_getnameinfo;
@@ -452,7 +453,6 @@
   __sanitizer_get_unmapped_bytes;
   __sanitizer_install_malloc_and_free_hooks;
   __sanitizer_maybe_open_cov_file;
-  __sanitizer_print_memory_profile;
   __sanitizer_print_memory_profile;
   __sanitizer_print_stack_trace;
   __sanitizer_ptr_cmp;
@@ -1228,6 +1228,7 @@
   getifaddrs;
   getitimer;
   getline;
+  getloadavg;
   getmntent;
   getmntent_r;
   getnameinfo;

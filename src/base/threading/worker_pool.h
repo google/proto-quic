@@ -32,7 +32,8 @@ class BASE_EXPORT WorkerPool {
   // false if |task| could not be posted to a worker thread.  Regardless of
   // return value, ownership of |task| is transferred to the worker pool.
   static bool PostTask(const tracked_objects::Location& from_here,
-                       const base::Closure& task, bool task_is_slow);
+                       Closure task,
+                       bool task_is_slow);
 
   // Just like TaskRunner::PostTaskAndReply, except the destination
   // for |task| is a worker thread and you can specify |task_is_slow| just

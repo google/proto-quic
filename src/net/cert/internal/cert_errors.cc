@@ -7,24 +7,14 @@
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
 #include "base/strings/string_split.h"
+#include "base/strings/stringprintf.h"
 #include "net/cert/internal/cert_error_params.h"
-#include "net/cert/internal/cert_error_scoper.h"
+#include "net/cert/internal/parse_name.h"
+#include "net/cert/internal/parsed_certificate.h"
 
 namespace net {
 
 namespace {
-
-// Helpers for pretty-printing CertErrors to a string.
-void AppendNodeToDebugString(CertErrorNode* node,
-                             const std::string& indentation,
-                             std::string* out);
-
-void AppendChildrenToDebugString(const CertErrorNodes& children,
-                                 const std::string& indentation,
-                                 std::string* out) {
-  for (const auto& child : children)
-    AppendNodeToDebugString(child.get(), indentation, out);
-}
 
 void AppendLinesWithIndentation(const std::string& text,
                                 const std::string& indentation,
@@ -39,78 +29,54 @@ void AppendLinesWithIndentation(const std::string& text,
   }
 }
 
-const char* CertErrorNodeTypeToString(CertErrorNodeType type) {
-  switch (type) {
-    case CertErrorNodeType::TYPE_CONTEXT:
-      return "[Context] ";
-    case CertErrorNodeType::TYPE_WARNING:
-      return "[Warning] ";
-    case CertErrorNodeType::TYPE_ERROR:
-      return "[Error] ";
-  }
-  return nullptr;
-}
-
-void AppendNodeToDebugString(CertErrorNode* node,
-                             const std::string& indentation,
-                             std::string* out) {
-  std::string cur_indentation = indentation;
-
-  *out += cur_indentation;
-  *out += CertErrorNodeTypeToString(node->node_type);
-  *out += CertErrorIdToDebugString(node->id);
-  *out += +"\n";
-
-  if (node->params) {
-    cur_indentation += "  ";
-    AppendLinesWithIndentation(node->params->ToDebugString(), cur_indentation,
-                               out);
-  }
-
-  cur_indentation += "    ";
-
-  AppendChildrenToDebugString(node->children, cur_indentation, out);
-}
-
-// Returns true if |children| contains the error |id| anywhere within it or its
-// children recursively.
-bool NodesContainError(const CertErrorNodes& children, CertErrorId id) {
-  for (const auto& child : children) {
-    if (child->node_type == CertErrorNodeType::TYPE_ERROR && child->id == id)
-      return true;
-    if (NodesContainError(child->children, id))
-      return true;
-  }
-  return false;
-}
-
 }  // namespace
 
-CertErrorNode::CertErrorNode(CertErrorNodeType node_type,
-                             CertErrorId id,
-                             std::unique_ptr<CertErrorParams> params)
-    : node_type(node_type), id(id), params(std::move(params)) {}
+CertError::CertError() = default;
 
-CertErrorNode::~CertErrorNode() = default;
+CertError::CertError(Severity severity,
+                     CertErrorId id,
+                     std::unique_ptr<CertErrorParams> params)
+    : severity(severity), id(id), params(std::move(params)) {}
 
-void CertErrorNode::AddChild(std::unique_ptr<CertErrorNode> child) {
-  DCHECK_EQ(CertErrorNodeType::TYPE_CONTEXT, node_type);
-  children.push_back(std::move(child));
+CertError::CertError(CertError&& other) = default;
+
+CertError& CertError::operator=(CertError&&) = default;
+
+CertError::~CertError() = default;
+
+std::string CertError::ToDebugString() const {
+  std::string result;
+  switch (severity) {
+    case SEVERITY_WARNING:
+      result += "WARNING: ";
+      break;
+    case SEVERITY_HIGH:
+      result += "ERROR: ";
+      break;
+  }
+  result += CertErrorIdToDebugString(id);
+  result += +"\n";
+
+  if (params)
+    AppendLinesWithIndentation(params->ToDebugString(), "  ", &result);
+
+  return result;
 }
 
 CertErrors::CertErrors() = default;
-
+CertErrors::CertErrors(CertErrors&& other) = default;
+CertErrors& CertErrors::operator=(CertErrors&&) = default;
 CertErrors::~CertErrors() = default;
 
-void CertErrors::Add(CertErrorNodeType node_type,
+void CertErrors::Add(CertError::Severity severity,
                      CertErrorId id,
                      std::unique_ptr<CertErrorParams> params) {
-  AddNode(base::MakeUnique<CertErrorNode>(node_type, id, std::move(params)));
+  nodes_.push_back(CertError(severity, id, std::move(params)));
 }
 
 void CertErrors::AddError(CertErrorId id,
                           std::unique_ptr<CertErrorParams> params) {
-  Add(CertErrorNodeType::TYPE_ERROR, id, std::move(params));
+  Add(CertError::SEVERITY_HIGH, id, std::move(params));
 }
 
 void CertErrors::AddError(CertErrorId id) {
@@ -119,38 +85,124 @@ void CertErrors::AddError(CertErrorId id) {
 
 void CertErrors::AddWarning(CertErrorId id,
                             std::unique_ptr<CertErrorParams> params) {
-  Add(CertErrorNodeType::TYPE_WARNING, id, std::move(params));
+  Add(CertError::SEVERITY_WARNING, id, std::move(params));
 }
 
 void CertErrors::AddWarning(CertErrorId id) {
   AddWarning(id, nullptr);
 }
 
-bool CertErrors::empty() const {
-  return nodes_.empty();
-}
-
 std::string CertErrors::ToDebugString() const {
   std::string result;
-  AppendChildrenToDebugString(nodes_, std::string(), &result);
+  for (const CertError& node : nodes_)
+    result += node.ToDebugString();
+
   return result;
 }
 
 bool CertErrors::ContainsError(CertErrorId id) const {
-  return NodesContainError(nodes_, id);
+  for (const CertError& node : nodes_) {
+    if (node.id == id)
+      return true;
+  }
+  return false;
 }
 
-void CertErrors::AddNode(std::unique_ptr<CertErrorNode> node) {
-  if (current_scoper_)
-    current_scoper_->LazyGetRootNode()->AddChild(std::move(node));
-  else
-    nodes_.push_back(std::move(node));
+bool CertErrors::ContainsAnyErrorWithSeverity(
+    CertError::Severity severity) const {
+  for (const CertError& node : nodes_) {
+    if (node.severity == severity)
+      return true;
+  }
+  return false;
 }
 
-CertErrorScoper* CertErrors::SetScoper(CertErrorScoper* scoper) {
-  CertErrorScoper* prev = current_scoper_;
-  current_scoper_ = scoper;
-  return prev;
+CertPathErrors::CertPathErrors() = default;
+
+CertPathErrors::CertPathErrors(CertPathErrors&& other) = default;
+CertPathErrors& CertPathErrors::operator=(CertPathErrors&&) = default;
+
+CertPathErrors::~CertPathErrors() = default;
+
+CertErrors* CertPathErrors::GetErrorsForCert(size_t cert_index) {
+  if (cert_index >= cert_errors_.size())
+    cert_errors_.resize(cert_index + 1);
+  return &cert_errors_[cert_index];
+}
+
+CertErrors* CertPathErrors::GetOtherErrors() {
+  return &other_errors_;
+}
+
+bool CertPathErrors::ContainsError(CertErrorId id) const {
+  for (const CertErrors& errors : cert_errors_) {
+    if (errors.ContainsError(id))
+      return true;
+  }
+
+  if (other_errors_.ContainsError(id))
+    return true;
+
+  return false;
+}
+
+bool CertPathErrors::ContainsAnyErrorWithSeverity(
+    CertError::Severity severity) const {
+  for (const CertErrors& errors : cert_errors_) {
+    if (errors.ContainsAnyErrorWithSeverity(severity))
+      return true;
+  }
+
+  if (other_errors_.ContainsAnyErrorWithSeverity(severity))
+    return true;
+
+  return false;
+}
+
+std::string CertPathErrors::ToDebugString(
+    const ParsedCertificateList& certs) const {
+  std::string result;
+
+  for (size_t i = 0; i < cert_errors_.size(); ++i) {
+    // Pretty print the current CertErrors. If there were no errors/warnings,
+    // then continue.
+    const CertErrors& errors = cert_errors_[i];
+    std::string cert_errors_string = errors.ToDebugString();
+    if (cert_errors_string.empty())
+      continue;
+
+    // Add a header for the CertErrors that describes which certificate they
+    // apply to.
+    //
+    // TODO(eroman): Show the subject for trust anchor (which currently uses the
+    // bucket cert_errors_[certs.size()]).
+    std::string cert_name_debug_str;
+    if (i < certs.size() && certs[i]) {
+      RDNSequence subject;
+      if (ParseName(certs[i]->tbs().subject_tlv, &subject) &&
+          ConvertToRFC2253(subject, &cert_name_debug_str)) {
+        cert_name_debug_str = " (" + cert_name_debug_str + ")";
+      }
+    }
+
+    result +=
+        base::StringPrintf("----- Certificate i=%d%s -----\n",
+                           static_cast<int>(i), cert_name_debug_str.c_str());
+
+    result += cert_errors_string;
+    result += "\n";
+  }
+
+  // Print any other errors that aren't associated with a particular certificate
+  // in the chain.
+  std::string other_errors = other_errors_.ToDebugString();
+  if (!other_errors.empty()) {
+    result += "----- Other errors (not certificate specific) -----\n";
+    result += other_errors;
+    result += "\n";
+  }
+
+  return result;
 }
 
 }  // namespace net

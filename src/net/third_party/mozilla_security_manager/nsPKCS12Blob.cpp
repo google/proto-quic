@@ -225,8 +225,10 @@ nsPKCS12Blob_ImportHelper(const char* pkcs12_data,
     if (imported_certs) {
       // Empty list of intermediates.
       net::X509Certificate::OSCertHandles intermediates;
-      imported_certs->push_back(
-          net::X509Certificate::CreateFromHandle(cert, intermediates));
+      scoped_refptr<net::X509Certificate> x509_cert =
+          net::X509Certificate::CreateFromHandle(cert, intermediates);
+      if (x509_cert)
+        imported_certs->push_back(std::move(x509_cert));
     }
 
     // Once we have determined that the imported certificate has an

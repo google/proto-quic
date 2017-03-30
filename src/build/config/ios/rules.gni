@@ -1146,13 +1146,16 @@ template("ios_framework_bundle") {
         ":$_link_target_name($default_toolchain)",
       ]
 
-      if (!defined(public_configs)) {
-        public_configs = []
-      }
-      public_configs += [ ":$_framework_public_config" ]
       if (_has_public_headers) {
+        if (!defined(public_configs)) {
+          public_configs = []
+        }
         public_configs += [ ":$_framework_headers_config" ]
       }
+      if (!defined(all_dependent_configs)) {
+        all_dependent_configs = []
+      }
+      all_dependent_configs += [ ":$_framework_public_config" ]
     }
 
     if (defined(invoker.bundle_deps)) {
@@ -1297,13 +1300,16 @@ template("ios_framework_bundle") {
       }
       public_deps += [ ":$_target_name" ]
 
-      if (!defined(public_configs)) {
-        public_configs = []
-      }
-      public_configs += [ ":$_framework_public_config" ]
       if (_has_public_headers) {
+        if (!defined(public_configs)) {
+          public_configs = []
+        }
         public_configs += [ ":$_framework_headers_config" ]
       }
+      if (!defined(all_dependent_configs)) {
+        all_dependent_configs = []
+      }
+      all_dependent_configs += [ ":$_framework_public_config" ]
     }
 
     bundle_data(_target_name + "+bundle") {

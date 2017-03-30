@@ -205,6 +205,9 @@ class HttpProxyClientSocketWrapper : public ProxyClientSocket {
 
   base::OneShotTimer connect_timer_;
 
+  // Time when the connection to the proxy was started.
+  base::TimeTicks connect_start_time_;
+
   DISALLOW_COPY_AND_ASSIGN(HttpProxyClientSocketWrapper);
 };
 

@@ -47,7 +47,7 @@ struct NET_EXPORT CertPath {
   // Resets the path to empty path (same as if default constructed).
   void Clear();
 
-  // Returns true if the path is empty.
+  // TODO(eroman): Can we remove this? Unclear on how this relates to validity.
   bool IsEmpty() const;
 };
 
@@ -64,19 +64,17 @@ class NET_EXPORT CertPathBuilder {
     ResultPath();
     ~ResultPath();
 
+    // Returns true if the candidate path is valid, false otherwise.
+    bool IsValid() const;
+
     // The (possibly partial) certificate path. Consumers must always test
-    // |valid| before using |path|. When |!valid| path.trust_anchor may be
-    // nullptr, and the path may be otherwise incomplete/invalid.
+    // |errors.IsValid()| before using |path|. When invalid,
+    // |path.trust_anchor| may be null, and the path may be incomplete.
     CertPath path;
 
-    // The errors/warnings from this path. Note that the list of errors is
-    // independent of whether the path was |valid| (a valid path may
-    // contain errors/warnings, and vice versa an invalid path may not have
-    // logged any errors).
-    CertErrors errors;
-
-    // True if |path| is a correct verified certificate chain.
-    bool valid = false;
+    // The errors/warnings from this path. Use |IsValid()| to determine if the
+    // path is valid.
+    CertPathErrors errors;
   };
 
   // Provides the overall result of path building. This includes the paths that

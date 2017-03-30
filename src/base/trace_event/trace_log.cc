@@ -19,8 +19,10 @@
 #include "base/memory/ref_counted_memory.h"
 #include "base/memory/singleton.h"
 #include "base/message_loop/message_loop.h"
+#include "base/process/process_info.h"
 #include "base/process/process_metrics.h"
 #include "base/stl_util.h"
+#include "base/strings/string_piece.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_tokenizer.h"
 #include "base/strings/stringprintf.h"
@@ -1500,8 +1502,18 @@ void TraceLog::AddMetadataEventsWhileLocked() {
                             process_name_);
   }
 
+#if !defined(OS_NACL) && !defined(OS_IOS)
+  Time process_creation_time = CurrentProcessInfo::CreationTime();
+  if (!process_creation_time.is_null()) {
+    TimeDelta process_uptime = Time::Now() - process_creation_time;
+    InitializeMetadataEvent(AddEventToThreadSharedChunkWhileLocked(NULL, false),
+                            current_thread_id, "process_uptime_seconds",
+                            "uptime", process_uptime.InSeconds());
+  }
+#endif  // !defined(OS_NACL) && !defined(OS_IOS)
+
   if (!process_labels_.empty()) {
-    std::vector<std::string> labels;
+    std::vector<base::StringPiece> labels;
     for (const auto& it : process_labels_)
       labels.push_back(it.second);
     InitializeMetadataEvent(AddEventToThreadSharedChunkWhileLocked(NULL, false),

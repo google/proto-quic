@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "base/bind.h"
 #include "base/callback.h"
@@ -22,6 +23,12 @@
 #include "base/task_scheduler/task_traits.h"
 #include "base/threading/platform_thread.h"
 #include "base/time/time.h"
+
+#if defined(OS_WIN)
+#include <windows.h>
+
+#include "base/win/scoped_com_initializer.h"
+#endif  // defined(OS_WIN)
 
 namespace base {
 namespace internal {
@@ -129,6 +136,105 @@ class SchedulerWorkerDelegate : public SchedulerWorker::Delegate {
   DISALLOW_COPY_AND_ASSIGN(SchedulerWorkerDelegate);
 };
 
+#if defined(OS_WIN)
+
+class SchedulerWorkerCOMDelegate : public SchedulerWorkerDelegate {
+ public:
+  SchedulerWorkerCOMDelegate(const std::string& thread_name,
+                             TaskTracker* task_tracker)
+      : SchedulerWorkerDelegate(thread_name), task_tracker_(task_tracker) {}
+
+  ~SchedulerWorkerCOMDelegate() override { DCHECK(!scoped_com_initializer_); }
+
+  // SchedulerWorker::Delegate:
+  void OnMainEntry(SchedulerWorker* worker) override {
+    SchedulerWorkerDelegate::OnMainEntry(worker);
+
+    scoped_com_initializer_ = MakeUnique<win::ScopedCOMInitializer>();
+  }
+
+  scoped_refptr<Sequence> GetWork(SchedulerWorker* worker) override {
+    // This scheme below allows us to cover the following scenarios:
+    // * Only SchedulerWorkerDelegate::GetWork() has work:
+    //   Always return the sequence from GetWork().
+    // * Only the Windows Message Queue has work:
+    //   Always return the sequence from GetWorkFromWindowsMessageQueue();
+    // * Both SchedulerWorkerDelegate::GetWork() and the Windows Message Queue
+    //   have work:
+    //   Process sequences from each source round-robin style.
+    scoped_refptr<Sequence> sequence;
+    if (get_work_first_) {
+      sequence = SchedulerWorkerDelegate::GetWork(worker);
+      if (sequence)
+        get_work_first_ = false;
+    }
+
+    if (!sequence) {
+      sequence = GetWorkFromWindowsMessageQueue();
+      if (sequence)
+        get_work_first_ = true;
+    }
+
+    if (!sequence && !get_work_first_) {
+      // This case is important if we checked the Windows Message Queue first
+      // and found there was no work. We don't want to return null immediately
+      // as that could cause the thread to go to sleep while work is waiting via
+      // SchedulerWorkerDelegate::GetWork().
+      sequence = SchedulerWorkerDelegate::GetWork(worker);
+    }
+    return sequence;
+  }
+
+  void OnMainExit() override { scoped_com_initializer_.reset(); }
+
+  void WaitForWork(WaitableEvent* wake_up_event) override {
+    DCHECK(wake_up_event);
+    const TimeDelta sleep_time = GetSleepTimeout();
+    const DWORD milliseconds_wait =
+        sleep_time.is_max() ? INFINITE : sleep_time.InMilliseconds();
+    HANDLE wake_up_event_handle = wake_up_event->handle();
+    DWORD result = MsgWaitForMultipleObjectsEx(
+        1, &wake_up_event_handle, milliseconds_wait, QS_ALLINPUT, 0);
+    if (result == WAIT_OBJECT_0) {
+      // Reset the event since we woke up due to it.
+      wake_up_event->Reset();
+    }
+  }
+
+ private:
+  scoped_refptr<Sequence> GetWorkFromWindowsMessageQueue() {
+    MSG msg;
+    if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) != FALSE) {
+      auto pump_message_task =
+          MakeUnique<Task>(FROM_HERE,
+                           Bind(
+                               [](MSG msg) {
+                                 TranslateMessage(&msg);
+                                 DispatchMessage(&msg);
+                               },
+                               std::move(msg)),
+                           TaskTraits().MayBlock(), TimeDelta());
+      if (task_tracker_->WillPostTask(pump_message_task.get())) {
+        bool was_empty =
+            message_pump_sequence_->PushTask(std::move(pump_message_task));
+        DCHECK(was_empty) << "GetWorkFromWindowsMessageQueue() does not expect "
+                             "queueing of pump tasks.";
+        return message_pump_sequence_;
+      }
+    }
+    return nullptr;
+  }
+
+  bool get_work_first_ = true;
+  const scoped_refptr<Sequence> message_pump_sequence_ = new Sequence;
+  TaskTracker* const task_tracker_;
+  std::unique_ptr<win::ScopedCOMInitializer> scoped_com_initializer_;
+
+  DISALLOW_COPY_AND_ASSIGN(SchedulerWorkerCOMDelegate);
+};
+
+#endif  // defined(OS_WIN)
+
 }  // namespace
 
 class SchedulerSingleThreadTaskRunnerManager::SchedulerSingleThreadTaskRunner
@@ -147,9 +253,9 @@ class SchedulerSingleThreadTaskRunnerManager::SchedulerSingleThreadTaskRunner
 
   // SingleThreadTaskRunner:
   bool PostDelayedTask(const tracked_objects::Location& from_here,
-                       const Closure& closure,
+                       Closure closure,
                        TimeDelta delay) override {
-    auto task = MakeUnique<Task>(from_here, closure, traits_, delay);
+    auto task = MakeUnique<Task>(from_here, std::move(closure), traits_, delay);
     task->single_thread_task_runner_ref = this;
 
     if (!outer_->task_tracker_->WillPostTask(task.get()))
@@ -166,10 +272,10 @@ class SchedulerSingleThreadTaskRunnerManager::SchedulerSingleThreadTaskRunner
   }
 
   bool PostNonNestableDelayedTask(const tracked_objects::Location& from_here,
-                                  const Closure& closure,
-                                  base::TimeDelta delay) override {
+                                  Closure closure,
+                                  TimeDelta delay) override {
     // Tasks are never nested within the task scheduler.
-    return PostDelayedTask(from_here, closure, delay);
+    return PostDelayedTask(from_here, std::move(closure), delay);
   }
 
   bool RunsTasksOnCurrentThread() const override {
@@ -237,12 +343,18 @@ SchedulerSingleThreadTaskRunnerManager::
 scoped_refptr<SingleThreadTaskRunner>
 SchedulerSingleThreadTaskRunnerManager::CreateSingleThreadTaskRunnerWithTraits(
     const TaskTraits& traits) {
-  size_t index = worker_pool_index_for_traits_callback_.Run(traits);
-  DCHECK_LT(index, worker_pool_params_vector_.size());
-  return new SchedulerSingleThreadTaskRunner(
-      this, traits,
-      CreateAndRegisterSchedulerWorker(worker_pool_params_vector_[index]));
+  return CreateSingleThreadTaskRunnerWithDelegate<SchedulerWorkerDelegate>(
+      traits);
 }
+
+#if defined(OS_WIN)
+scoped_refptr<SingleThreadTaskRunner>
+SchedulerSingleThreadTaskRunnerManager::CreateCOMSTATaskRunnerWithTraits(
+    const TaskTraits& traits) {
+  return CreateSingleThreadTaskRunnerWithDelegate<SchedulerWorkerCOMDelegate>(
+      traits);
+}
+#endif  // defined(OS_WIN)
 
 void SchedulerSingleThreadTaskRunnerManager::JoinForTesting() {
   decltype(workers_) local_workers;
@@ -262,15 +374,48 @@ void SchedulerSingleThreadTaskRunnerManager::JoinForTesting() {
   }
 }
 
+template <typename DelegateType>
+scoped_refptr<SingleThreadTaskRunner> SchedulerSingleThreadTaskRunnerManager::
+    CreateSingleThreadTaskRunnerWithDelegate(const TaskTraits& traits) {
+  size_t index = worker_pool_index_for_traits_callback_.Run(traits);
+  DCHECK_LT(index, worker_pool_params_vector_.size());
+  return new SchedulerSingleThreadTaskRunner(
+      this, traits,
+      CreateAndRegisterSchedulerWorker<DelegateType>(
+          worker_pool_params_vector_[index]));
+}
+
+template <>
+std::unique_ptr<SchedulerWorkerDelegate>
+SchedulerSingleThreadTaskRunnerManager::CreateSchedulerWorkerDelegate<
+    SchedulerWorkerDelegate>(const SchedulerWorkerPoolParams& params, int id) {
+  return MakeUnique<SchedulerWorkerDelegate>(StringPrintf(
+      "TaskSchedulerSingleThreadWorker%d%s", id, params.name().c_str()));
+}
+
+#if defined(OS_WIN)
+template <>
+std::unique_ptr<SchedulerWorkerDelegate>
+SchedulerSingleThreadTaskRunnerManager::CreateSchedulerWorkerDelegate<
+    SchedulerWorkerCOMDelegate>(const SchedulerWorkerPoolParams& params,
+                                int id) {
+  return MakeUnique<SchedulerWorkerCOMDelegate>(
+      StringPrintf("TaskSchedulerSingleThreadWorker%d%sCOMSTA", id,
+                   params.name().c_str()),
+      task_tracker_);
+}
+#endif  // defined(OS_WIN)
+
+template <typename DelegateType>
 SchedulerWorker*
 SchedulerSingleThreadTaskRunnerManager::CreateAndRegisterSchedulerWorker(
     const SchedulerWorkerPoolParams& params) {
   AutoSchedulerLock auto_lock(workers_lock_);
   int id = next_worker_id_++;
-  auto delegate = MakeUnique<SchedulerWorkerDelegate>(base::StringPrintf(
-      "TaskSchedulerSingleThreadWorker%d%s", id, params.name().c_str()));
+
   workers_.emplace_back(SchedulerWorker::Create(
-      params.priority_hint(), std::move(delegate), task_tracker_,
+      params.priority_hint(),
+      CreateSchedulerWorkerDelegate<DelegateType>(params, id), task_tracker_,
       SchedulerWorker::InitialState::DETACHED));
   return workers_.back().get();
 }

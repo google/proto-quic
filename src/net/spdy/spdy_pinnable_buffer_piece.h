@@ -33,7 +33,9 @@ struct NET_EXPORT_PRIVATE SpdyPinnableBufferPiece {
     return length_;
   }
 
-  operator SpdyStringPiece() const { return SpdyStringPiece(buffer_, length_); }
+  explicit operator SpdyStringPiece() const {
+    return SpdyStringPiece(buffer_, length_);
+  }
 
   // Allocates and copies the buffer to internal storage.
   void Pin();

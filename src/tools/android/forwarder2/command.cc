@@ -104,7 +104,7 @@ bool ReceivedCommandWithTimeout(command::Type command,
                                 int timeout_secs) {
   int port;
   command::Type received_command;
-  if (!ReadCommand(socket, &port, &received_command))
+  if (!ReadCommandWithTimeout(socket, &port, &received_command, timeout_secs))
     return false;
   return received_command == command;
 }

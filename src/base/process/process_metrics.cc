@@ -12,6 +12,11 @@
 
 namespace base {
 
+SystemMemoryInfoKB::SystemMemoryInfoKB() = default;
+
+SystemMemoryInfoKB::SystemMemoryInfoKB(const SystemMemoryInfoKB& other) =
+    default;
+
 SystemMetrics::SystemMetrics() {
   committed_memory_ = 0;
 }

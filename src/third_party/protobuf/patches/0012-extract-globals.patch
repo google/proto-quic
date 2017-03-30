@@ -1,15 +1,26 @@
 diff -ru --new-file protobuf/src/google/protobuf/arena.cc protobuf2/src/google/protobuf/arena.cc
---- protobuf/src/google/protobuf/arena.cc	2017-03-17 22:40:59.379153132 -0700
-+++ protobuf2/src/google/protobuf/arena.cc	2017-03-17 22:40:52.667151339 -0700
-@@ -39,7 +39,6 @@
+--- protobuf/src/google/protobuf/arena.cc	2017-03-21 21:50:28.399255503 -0700
++++ protobuf2/src/google/protobuf/arena.cc	2017-03-21 21:50:11.671241466 -0700
+@@ -39,24 +39,18 @@
  namespace protobuf {
  
  
 -google::protobuf::internal::SequenceNumber Arena::lifecycle_id_generator_;
  #if defined(GOOGLE_PROTOBUF_NO_THREADLOCAL)
- Arena::ThreadCache& Arena::thread_cache() {
+-Arena::ThreadCache& Arena::thread_cache() {
++Arena::ThreadCache& Arena::cr_thread_cache() {
    static internal::ThreadLocalStorage<ThreadCache>* thread_cache_ =
-@@ -56,7 +55,7 @@
+       new internal::ThreadLocalStorage<ThreadCache>();
+   return *thread_cache_->Get();
+ }
+-#elif defined(PROTOBUF_USE_DLLS)
+-Arena::ThreadCache& Arena::thread_cache() {
+-  static GOOGLE_THREAD_LOCAL ThreadCache thread_cache_ = { -1, NULL };
+-  return thread_cache_;
+-}
+-#else
++#elif !defined(PROTOBUF_USE_DLLS)
+ GOOGLE_THREAD_LOCAL Arena::ThreadCache Arena::thread_cache_ = { -1, NULL };
  #endif
  
  void Arena::Init() {
@@ -18,7 +29,16 @@ diff -ru --new-file protobuf/src/google/protobuf/arena.cc protobuf2/src/google/p
    blocks_ = 0;
    hint_ = 0;
    owns_first_block_ = true;
-@@ -99,7 +98,7 @@
+@@ -74,7 +68,7 @@
+     // Thread which calls Init() owns the first block. This allows the
+     // single-threaded case to allocate on the first block without taking any
+     // locks.
+-    first_block->owner = &thread_cache();
++    first_block->owner = &cr_thread_cache();
+     SetThreadCacheBlock(first_block);
+     AddBlockInternal(first_block);
+     owns_first_block_ = false;
+@@ -99,7 +93,7 @@
  
  uint64 Arena::Reset() {
    // Invalidate any ThreadCaches pointing to any blocks we just destroyed.
@@ -27,9 +47,51 @@ diff -ru --new-file protobuf/src/google/protobuf/arena.cc protobuf2/src/google/p
    return ResetInternal();
  }
  
+@@ -184,18 +178,18 @@
+   // If this thread already owns a block in this arena then try to use that.
+   // This fast path optimizes the case where multiple threads allocate from the
+   // same arena.
+-  if (thread_cache().last_lifecycle_id_seen == lifecycle_id_ &&
+-      thread_cache().last_block_used_ != NULL) {
+-    if (thread_cache().last_block_used_->avail() < n) {
++  if (cr_thread_cache().last_lifecycle_id_seen == lifecycle_id_ &&
++      cr_thread_cache().last_block_used_ != NULL) {
++    if (cr_thread_cache().last_block_used_->avail() < n) {
+       return SlowAlloc(n);
+     }
+-    return AllocFromBlock(thread_cache().last_block_used_, n);
++    return AllocFromBlock(cr_thread_cache().last_block_used_, n);
+   }
+ 
+   // Check whether we own the last accessed block on this arena.
+   // This fast path optimizes the case where a single thread uses multiple
+   // arenas.
+-  void* me = &thread_cache();
++  void* me = &cr_thread_cache();
+   Block* b = reinterpret_cast<Block*>(google::protobuf::internal::Acquire_Load(&hint_));
+   if (!b || b->owner != me || b->avail() < n) {
+     return SlowAlloc(n);
+@@ -213,7 +207,7 @@
+ }
+ 
+ void* Arena::SlowAlloc(size_t n) {
+-  void* me = &thread_cache();
++  void* me = &cr_thread_cache();
+   Block* b = FindBlock(me);  // Find block owned by me.
+   // See if allocation fits in my latest block.
+   if (b != NULL && b->avail() >= n) {
+@@ -290,7 +284,7 @@
+     // Thread which calls Reset() owns the first block. This allows the
+     // single-threaded case to allocate on the first block without taking any
+     // locks.
+-    first_block->owner = &thread_cache();
++    first_block->owner = &cr_thread_cache();
+     SetThreadCacheBlock(first_block);
+     AddBlockInternal(first_block);
+   }
 diff -ru --new-file protobuf/src/google/protobuf/arena.h protobuf2/src/google/protobuf/arena.h
---- protobuf/src/google/protobuf/arena.h	2017-03-17 22:40:59.379153132 -0700
-+++ protobuf2/src/google/protobuf/arena.h	2017-03-17 22:40:52.667151339 -0700
+--- protobuf/src/google/protobuf/arena.h	2017-03-21 21:50:28.399255503 -0700
++++ protobuf2/src/google/protobuf/arena.h	2017-03-21 21:50:11.671241466 -0700
 @@ -70,6 +70,9 @@
  template<typename Type>
  class GenericTypeHandler; // repeated_field.h
@@ -40,7 +102,7 @@ diff -ru --new-file protobuf/src/google/protobuf/arena.h protobuf2/src/google/pr
  // Templated cleanup methods.
  template<typename T> void arena_destruct_object(void* object) {
    reinterpret_cast<T*>(object)->~T();
-@@ -552,7 +555,6 @@
+@@ -552,19 +555,20 @@
    };
  
    static const size_t kHeaderSize = sizeof(Block);
@@ -48,9 +110,37 @@ diff -ru --new-file protobuf/src/google/protobuf/arena.h protobuf2/src/google/pr
  #if defined(GOOGLE_PROTOBUF_NO_THREADLOCAL)
    // Android ndk does not support GOOGLE_THREAD_LOCAL keyword so we use a custom thread
    // local storage class we implemented.
+   // iOS also does not support the GOOGLE_THREAD_LOCAL keyword.
+-  static ThreadCache& thread_cache();
++  static ThreadCache& cr_thread_cache();
+ #elif defined(PROTOBUF_USE_DLLS)
+   // Thread local variables cannot be exposed through DLL interface but we can
+   // wrap them in static functions.
+-  static ThreadCache& thread_cache();
++  static ThreadCache& cr_thread_cache();
+ #else
+   static GOOGLE_THREAD_LOCAL ThreadCache thread_cache_;
+-  static ThreadCache& thread_cache() { return thread_cache_; }
++  static ThreadCache& cr_thread_cache() {
++    return thread_cache_;
++  }
+ #endif
+ 
+   // SFINAE for skipping addition to delete list for a message type when created
+@@ -872,8 +876,8 @@
+   uint64 ResetInternal();
+ 
+   inline void SetThreadCacheBlock(Block* block) {
+-    thread_cache().last_block_used_ = block;
+-    thread_cache().last_lifecycle_id_seen = lifecycle_id_;
++    cr_thread_cache().last_block_used_ = block;
++    cr_thread_cache().last_lifecycle_id_seen = lifecycle_id_;
+   }
+ 
+   int64 lifecycle_id_;  // Unique for each arena. Changes on Reset().
 diff -ru --new-file protobuf/src/google/protobuf/extension_set.cc protobuf2/src/google/protobuf/extension_set.cc
---- protobuf/src/google/protobuf/extension_set.cc	2017-03-17 22:40:59.379153132 -0700
-+++ protobuf2/src/google/protobuf/extension_set.cc	2017-03-17 22:40:52.667151339 -0700
+--- protobuf/src/google/protobuf/extension_set.cc	2017-03-21 21:50:28.399255503 -0700
++++ protobuf2/src/google/protobuf/extension_set.cc	2017-03-21 21:50:11.671241466 -0700
 @@ -46,6 +46,12 @@
  namespace protobuf {
  namespace internal {
@@ -200,8 +290,8 @@ diff -ru --new-file protobuf/src/google/protobuf/extension_set.cc protobuf2/src/
  }  // namespace protobuf
  }  // namespace google
 diff -ru --new-file protobuf/src/google/protobuf/extension_set.h protobuf2/src/google/protobuf/extension_set.h
---- protobuf/src/google/protobuf/extension_set.h	2017-03-17 22:40:59.379153132 -0700
-+++ protobuf2/src/google/protobuf/extension_set.h	2017-03-17 22:40:52.675151341 -0700
+--- protobuf/src/google/protobuf/extension_set.h	2017-03-21 21:50:28.399255503 -0700
++++ protobuf2/src/google/protobuf/extension_set.h	2017-03-21 21:50:11.679241474 -0700
 @@ -731,13 +731,13 @@
    template<typename Type> friend class RepeatedPrimitiveTypeTraits;
    static void InitializeDefaultRepeatedFields();
@@ -282,8 +372,8 @@ diff -ru --new-file protobuf/src/google/protobuf/extension_set.h protobuf2/src/g
  
  // -------------------------------------------------------------------
 diff -ru --new-file protobuf/src/google/protobuf/generated_message_util.cc protobuf2/src/google/protobuf/generated_message_util.cc
---- protobuf/src/google/protobuf/generated_message_util.cc	2017-03-17 22:40:59.379153132 -0700
-+++ protobuf2/src/google/protobuf/generated_message_util.cc	2017-03-17 22:40:52.691151345 -0700
+--- protobuf/src/google/protobuf/generated_message_util.cc	2017-03-21 21:50:28.399255503 -0700
++++ protobuf2/src/google/protobuf/generated_message_util.cc	2017-03-21 21:50:11.695241487 -0700
 @@ -48,20 +48,18 @@
    return std::numeric_limits<double>::quiet_NaN();
  }
@@ -310,8 +400,8 @@ diff -ru --new-file protobuf/src/google/protobuf/generated_message_util.cc proto
  }
  
 diff -ru --new-file protobuf/src/google/protobuf/generated_message_util.h protobuf2/src/google/protobuf/generated_message_util.h
---- protobuf/src/google/protobuf/generated_message_util.h	2017-03-17 22:40:59.379153132 -0700
-+++ protobuf2/src/google/protobuf/generated_message_util.h	2017-03-17 22:40:52.655151335 -0700
+--- protobuf/src/google/protobuf/generated_message_util.h	2017-03-21 21:50:28.399255503 -0700
++++ protobuf2/src/google/protobuf/generated_message_util.h	2017-03-21 21:50:11.659241456 -0700
 @@ -77,14 +77,14 @@
  
  // Default empty string object. Don't use the pointer directly. Instead, call
@@ -333,8 +423,8 @@ diff -ru --new-file protobuf/src/google/protobuf/generated_message_util.h protob
  LIBPROTOBUF_EXPORT const ::std::string& GetEmptyString();
 diff -ru --new-file protobuf/src/google/protobuf/globals.cc protobuf2/src/google/protobuf/globals.cc
 --- protobuf/src/google/protobuf/globals.cc	1969-12-31 16:00:00.000000000 -0800
-+++ protobuf2/src/google/protobuf/globals.cc	2017-03-17 22:40:52.655151335 -0700
-@@ -0,0 +1,113 @@
++++ protobuf2/src/google/protobuf/globals.cc	2017-03-21 21:50:11.659241456 -0700
+@@ -0,0 +1,122 @@
 +// Protocol Buffers - Google's data interchange format
 +// Copyright 2017 Google Inc.  All rights reserved.
 +// https://developers.google.com/protocol-buffers/
@@ -365,6 +455,7 @@ diff -ru --new-file protobuf/src/google/protobuf/globals.cc protobuf2/src/google
 +// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 +// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +
++#include <google/protobuf/arena.h>
 +#include <google/protobuf/extension_set.h>
 +#include <google/protobuf/generated_message_util.h>
 +#include <google/protobuf/stubs/atomicops.h>
@@ -372,6 +463,14 @@ diff -ru --new-file protobuf/src/google/protobuf/globals.cc protobuf2/src/google
 +
 +namespace google {
 +namespace protobuf {
++
++#if !defined(GOOGLE_PROTOBUF_NO_THREADLOCAL) && defined(PROTOBUF_USE_DLLS)
++Arena::ThreadCache& Arena::cr_thread_cache() {
++  static GOOGLE_THREAD_LOCAL ThreadCache cr_thread_cache_ = {-1, NULL};
++  return cr_thread_cache_;
++}
++#endif
++
 +namespace internal {
 +
 +SequenceNumber cr_lifecycle_id_generator_;
@@ -449,8 +548,8 @@ diff -ru --new-file protobuf/src/google/protobuf/globals.cc protobuf2/src/google
 +}  // namespace protobuf
 +}  // namespace google
 diff -ru --new-file protobuf/src/google/protobuf/io/coded_stream.cc protobuf2/src/google/protobuf/io/coded_stream.cc
---- protobuf/src/google/protobuf/io/coded_stream.cc	2017-03-17 22:40:59.383153133 -0700
-+++ protobuf2/src/google/protobuf/io/coded_stream.cc	2017-03-17 22:40:52.659151336 -0700
+--- protobuf/src/google/protobuf/io/coded_stream.cc	2017-03-21 21:50:28.399255503 -0700
++++ protobuf2/src/google/protobuf/io/coded_stream.cc	2017-03-21 21:50:11.663241460 -0700
 @@ -83,7 +83,7 @@
  }
  
@@ -461,8 +560,8 @@ diff -ru --new-file protobuf/src/google/protobuf/io/coded_stream.cc protobuf2/sr
  
  void CodedOutputStream::EnableAliasing(bool enabled) {
 diff -ru --new-file protobuf/src/google/protobuf/io/coded_stream.h protobuf2/src/google/protobuf/io/coded_stream.h
---- protobuf/src/google/protobuf/io/coded_stream.h	2017-03-17 22:40:59.383153133 -0700
-+++ protobuf2/src/google/protobuf/io/coded_stream.h	2017-03-17 22:40:52.659151336 -0700
+--- protobuf/src/google/protobuf/io/coded_stream.h	2017-03-21 21:50:28.399255503 -0700
++++ protobuf2/src/google/protobuf/io/coded_stream.h	2017-03-21 21:50:11.663241460 -0700
 @@ -613,7 +613,7 @@
  
    static const int kDefaultTotalBytesWarningThreshold = 32 << 20;  // 32MB
@@ -473,8 +572,8 @@ diff -ru --new-file protobuf/src/google/protobuf/io/coded_stream.h protobuf2/src
  
  // Class which encodes and writes binary data which is composed of varint-
 diff -ru --new-file protobuf/src/google/protobuf/stubs/atomicops_internals_x86_gcc.cc protobuf2/src/google/protobuf/stubs/atomicops_internals_x86_gcc.cc
---- protobuf/src/google/protobuf/stubs/atomicops_internals_x86_gcc.cc	2017-03-17 22:40:59.383153133 -0700
-+++ protobuf2/src/google/protobuf/stubs/atomicops_internals_x86_gcc.cc	2017-03-17 22:40:52.671151340 -0700
+--- protobuf/src/google/protobuf/stubs/atomicops_internals_x86_gcc.cc	2017-03-21 21:50:28.399255503 -0700
++++ protobuf2/src/google/protobuf/stubs/atomicops_internals_x86_gcc.cc	2017-03-21 21:50:11.675241470 -0700
 @@ -58,23 +58,13 @@
        : "=a" (a), "=D" (b), "=c" (c), "=d" (d) : "a" (inp))
  #endif
@@ -540,8 +639,8 @@ diff -ru --new-file protobuf/src/google/protobuf/stubs/atomicops_internals_x86_g
 -
  #endif  // GOOGLE_PROTOBUF_ATOMICOPS_INTERNALS_X86_GCC_H_
 diff -ru --new-file protobuf/src/google/protobuf/stubs/atomicops_internals_x86_gcc.h protobuf2/src/google/protobuf/stubs/atomicops_internals_x86_gcc.h
---- protobuf/src/google/protobuf/stubs/atomicops_internals_x86_gcc.h	2017-03-17 22:40:59.383153133 -0700
-+++ protobuf2/src/google/protobuf/stubs/atomicops_internals_x86_gcc.h	2017-03-17 22:40:52.671151340 -0700
+--- protobuf/src/google/protobuf/stubs/atomicops_internals_x86_gcc.h	2017-03-21 21:50:28.399255503 -0700
++++ protobuf2/src/google/protobuf/stubs/atomicops_internals_x86_gcc.h	2017-03-21 21:50:11.675241470 -0700
 @@ -46,7 +46,9 @@
                               // after acquire compare-and-swap.
    bool has_sse2;             // Processor has SSE2.
@@ -608,8 +707,8 @@ diff -ru --new-file protobuf/src/google/protobuf/stubs/atomicops_internals_x86_g
    }
    return x;
 diff -ru --new-file protobuf/src/google/protobuf/stubs/common.cc protobuf2/src/google/protobuf/stubs/common.cc
---- protobuf/src/google/protobuf/stubs/common.cc	2017-03-17 22:40:59.383153133 -0700
-+++ protobuf2/src/google/protobuf/stubs/common.cc	2017-03-17 22:40:52.671151340 -0700
+--- protobuf/src/google/protobuf/stubs/common.cc	2017-03-21 21:50:28.399255503 -0700
++++ protobuf2/src/google/protobuf/stubs/common.cc	2017-03-21 21:50:11.675241470 -0700
 @@ -116,7 +116,8 @@
    if (level < GOOGLE_PROTOBUF_MIN_LOG_LEVEL) {
      return;
@@ -777,8 +876,8 @@ diff -ru --new-file protobuf/src/google/protobuf/stubs/common.cc protobuf2/src/g
  
  #if PROTOBUF_USE_EXCEPTIONS
 diff -ru --new-file protobuf/src/google/protobuf/stubs/structurally_valid.cc protobuf2/src/google/protobuf/stubs/structurally_valid.cc
---- protobuf/src/google/protobuf/stubs/structurally_valid.cc	2017-03-17 22:40:59.383153133 -0700
-+++ protobuf2/src/google/protobuf/stubs/structurally_valid.cc	2017-03-17 22:40:52.675151341 -0700
+--- protobuf/src/google/protobuf/stubs/structurally_valid.cc	2017-03-21 21:50:28.399255503 -0700
++++ protobuf2/src/google/protobuf/stubs/structurally_valid.cc	2017-03-21 21:50:11.679241474 -0700
 @@ -511,21 +511,10 @@
  //   UTF-8 strings.  Since UTF-8 validation is only used for debugging
  //   anyway, we simply always return success if initialization hasn't
@@ -813,8 +912,8 @@ diff -ru --new-file protobuf/src/google/protobuf/stubs/structurally_valid.cc pro
    int bytes_consumed = 0;
    UTF8GenericScanFastAscii(&utf8acceptnonsurrogates_obj,
 diff -ru --new-file protobuf/src/google/protobuf/stubs/strutil.cc protobuf2/src/google/protobuf/stubs/strutil.cc
---- protobuf/src/google/protobuf/stubs/strutil.cc	2017-03-17 22:40:59.383153133 -0700
-+++ protobuf2/src/google/protobuf/stubs/strutil.cc	2017-03-17 22:40:52.671151340 -0700
+--- protobuf/src/google/protobuf/stubs/strutil.cc	2017-03-21 21:50:28.399255503 -0700
++++ protobuf2/src/google/protobuf/stubs/strutil.cc	2017-03-21 21:50:11.675241470 -0700
 @@ -528,7 +528,7 @@
  // Assumes that non-printable characters are escaped using octal sequences, and
  // that UTF-8 bytes are not handled specially.

@@ -1362,6 +1362,17 @@ now we are only interested in H264, VP8 and VP9.
   </summary>
 </rappor-metric>
 
+<rappor-metric name="Media.Video.Autoplay.Muted.DualSource.Frame"
+    type="ETLD_PLUS_ONE">
+  <owner>avayvod@chromium.org</owner>
+  <owner>mlamouri@chromium.org</owner>
+  <owner>zqzhang@chromium.org</owner>
+  <summary>
+    The eTLD+1 of the frame URL that has an autoplay muted video by both
+    attribute and play() method.
+  </summary>
+</rappor-metric>
+
 <rappor-metric name="Media.Video.Autoplay.Muted.PlayMethod.Frame"
     type="ETLD_PLUS_ONE">
   <owner>avayvod@chromium.org</owner>
@@ -1370,6 +1381,16 @@ now we are only interested in H264, VP8 and VP9.
   <summary>
     The eTLD+1 of the frame URL that has an autoplay muted video by play()
     method.
+  </summary>
+</rappor-metric>
+
+<rappor-metric name="Media.VideoPersistence.TopFrame" type="ETLD_PLUS_ONE">
+  <owner>mlamouri@chromium.org</owner>
+  <owner>peconn@chromium.org</owner>
+  <owner>zqzhang@chromium.org</owner>
+  <summary>
+    The eTLD+1 of the top frame of the tab when a video persistence session is
+    initialized.
   </summary>
 </rappor-metric>
 

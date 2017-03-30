@@ -226,14 +226,14 @@ const EVP_MD *ssl_get_handshake_digest(uint32_t algorithm_prf,
 
 /* ssl_create_cipher_list evaluates |rule_str| according to the ciphers in
  * |ssl_method|. It sets |*out_cipher_list| to a newly-allocated
- * |ssl_cipher_preference_list_st| containing the result. It returns
- * |(*out_cipher_list)->ciphers| on success and NULL on failure. If |strict| is
- * true, nonsense will be rejected. If false, nonsense will be silently
- * ignored. */
-STACK_OF(SSL_CIPHER) *
-ssl_create_cipher_list(const SSL_PROTOCOL_METHOD *ssl_method,
-                       struct ssl_cipher_preference_list_st **out_cipher_list,
-                       const char *rule_str, int strict);
+ * |ssl_cipher_preference_list_st| containing the result. It returns 1 on
+ * success and 0 on failure. If |strict| is true, nonsense will be rejected. If
+ * false, nonsense will be silently ignored. An empty result is considered an
+ * error regardless of |strict|. */
+int ssl_create_cipher_list(
+    const SSL_PROTOCOL_METHOD *ssl_method,
+    struct ssl_cipher_preference_list_st **out_cipher_list,
+    const char *rule_str, int strict);
 
 /* ssl_cipher_get_value returns the cipher suite id of |cipher|. */
 uint16_t ssl_cipher_get_value(const SSL_CIPHER *cipher);
@@ -352,6 +352,8 @@ typedef struct ssl_aead_ctx_st {
    * records. */
   uint8_t fixed_nonce[12];
   uint8_t fixed_nonce_len, variable_nonce_len;
+  /* version is the protocol version that should be used with this AEAD. */
+  uint16_t version;
   /* variable_nonce_included_in_record is non-zero if the variable nonce
    * for a record is included as a prefix before the ciphertext. */
   unsigned variable_nonce_included_in_record : 1;
@@ -863,6 +865,11 @@ int ssl_check_leaf_certificate(SSL_HANDSHAKE *hs, EVP_PKEY *pkey,
  * It returns one on success and zero on error. */
 int tls13_init_key_schedule(SSL_HANDSHAKE *hs);
 
+/* tls13_init_early_key_schedule initializes the handshake hash and key
+ * derivation state from the resumption secret to derive the early secrets. It
+ * returns one on success and zero on error. */
+int tls13_init_early_key_schedule(SSL_HANDSHAKE *hs);
+
 /* tls13_advance_key_schedule incorporates |in| into the key schedule with
  * HKDF-Extract. It returns one on success and zero on error. */
 int tls13_advance_key_schedule(SSL_HANDSHAKE *hs, const uint8_t *in,
@@ -873,6 +880,10 @@ int tls13_advance_key_schedule(SSL_HANDSHAKE *hs, const uint8_t *in,
 int tls13_set_traffic_key(SSL *ssl, enum evp_aead_direction_t direction,
                           const uint8_t *traffic_secret,
                           size_t traffic_secret_len);
+
+/* tls13_derive_early_secrets derives the early traffic secret. It returns one
+ * on success and zero on error. */
+int tls13_derive_early_secrets(SSL_HANDSHAKE *hs);
 
 /* tls13_derive_handshake_secrets derives the handshake traffic secret. It
  * returns one on success and zero on error. */
@@ -927,6 +938,8 @@ enum ssl_hs_wait_t {
   ssl_hs_x509_lookup,
   ssl_hs_channel_id_lookup,
   ssl_hs_private_key_operation,
+  ssl_hs_pending_ticket,
+  ssl_hs_read_end_of_early_data,
 };
 
 struct ssl_handshake_st {
@@ -954,10 +967,12 @@ struct ssl_handshake_st {
 
   size_t hash_len;
   uint8_t secret[EVP_MAX_MD_SIZE];
+  uint8_t early_traffic_secret[EVP_MAX_MD_SIZE];
   uint8_t client_handshake_secret[EVP_MAX_MD_SIZE];
   uint8_t server_handshake_secret[EVP_MAX_MD_SIZE];
   uint8_t client_traffic_secret_0[EVP_MAX_MD_SIZE];
   uint8_t server_traffic_secret_0[EVP_MAX_MD_SIZE];
+  uint8_t expected_client_finished[EVP_MAX_MD_SIZE];
 
   union {
     /* sent is a bitset where the bits correspond to elements of kExtensions
@@ -1060,10 +1075,6 @@ struct ssl_handshake_st {
   uint8_t *key_block;
   uint8_t key_block_len;
 
-  /* session_tickets_sent, in TLS 1.3, is the number of tickets the server has
-   * sent. */
-  uint8_t session_tickets_sent;
-
   /* scts_requested is one if the SCT extension is in the ClientHello. */
   unsigned scts_requested:1;
 
@@ -1097,6 +1108,17 @@ struct ssl_handshake_st {
    * Start. The client may write data at this point. */
   unsigned in_false_start:1;
 
+  /* early_data_offered is one if the client sent the early_data extension. */
+  unsigned early_data_offered:1;
+
+  /* can_early_read is one if application data may be read at this point in the
+   * handshake. */
+  unsigned can_early_read:1;
+
+  /* can_early_write is one if application data may be written at this point in
+   * the handshake. */
+  unsigned can_early_write:1;
+
   /* next_proto_neg_seen is one of NPN was negotiated. */
   unsigned next_proto_neg_seen:1;
 
@@ -1125,8 +1147,9 @@ void ssl_handshake_free(SSL_HANDSHAKE *hs);
 int ssl_check_message_type(SSL *ssl, int type);
 
 /* tls13_handshake runs the TLS 1.3 handshake. It returns one on success and <=
- * 0 on error. */
-int tls13_handshake(SSL_HANDSHAKE *hs);
+ * 0 on error. It sets |out_early_return| to one if we've completed the
+ * handshake early. */
+int tls13_handshake(SSL_HANDSHAKE *hs, int *out_early_return);
 
 /* The following are implementations of |do_tls13_handshake| for the client and
  * server. */
@@ -1139,7 +1162,11 @@ int tls13_post_handshake(SSL *ssl);
 
 int tls13_process_certificate(SSL_HANDSHAKE *hs, int allow_anonymous);
 int tls13_process_certificate_verify(SSL_HANDSHAKE *hs);
-int tls13_process_finished(SSL_HANDSHAKE *hs);
+
+/* tls13_process_finished processes the current message as a Finished message
+ * from the peer. If |use_saved_value| is one, the verify_data is compared
+ * against |hs->expected_client_finished| rather than computed fresh. */
+int tls13_process_finished(SSL_HANDSHAKE *hs, int use_saved_value);
 
 int tls13_add_certificate(SSL_HANDSHAKE *hs);
 enum ssl_private_key_result_t tls13_add_certificate_verify(SSL_HANDSHAKE *hs,
@@ -1159,7 +1186,7 @@ int ssl_ext_key_share_add_serverhello(SSL_HANDSHAKE *hs, CBB *out);
 int ssl_ext_pre_shared_key_parse_serverhello(SSL_HANDSHAKE *hs,
                                              uint8_t *out_alert, CBS *contents);
 int ssl_ext_pre_shared_key_parse_clienthello(
-    SSL_HANDSHAKE *hs, SSL_SESSION **out_session, CBS *out_binders,
+    SSL_HANDSHAKE *hs, CBS *out_ticket, CBS *out_binders,
     uint32_t *out_obfuscated_ticket_age, uint8_t *out_alert, CBS *contents);
 int ssl_ext_pre_shared_key_add_serverhello(SSL_HANDSHAKE *hs, CBB *out);
 
@@ -1626,9 +1653,11 @@ typedef struct ssl3_state_st {
   uint8_t write_traffic_secret[EVP_MAX_MD_SIZE];
   uint8_t read_traffic_secret[EVP_MAX_MD_SIZE];
   uint8_t exporter_secret[EVP_MAX_MD_SIZE];
+  uint8_t early_exporter_secret[EVP_MAX_MD_SIZE];
   uint8_t write_traffic_secret_len;
   uint8_t read_traffic_secret_len;
   uint8_t exporter_secret_len;
+  uint8_t early_exporter_secret_len;
 
   /* Connection binding to prevent renegotiation attacks */
   uint8_t previous_client_finished[12];
@@ -1879,7 +1908,9 @@ struct ssl_st {
   size_t supported_group_list_len;
   uint16_t *supported_group_list; /* our list */
 
-  SSL_CTX *initial_ctx; /* initial ctx, used to store sessions */
+  /* session_ctx is the |SSL_CTX| used for the session cache and related
+   * settings. */
+  SSL_CTX *session_ctx;
 
   /* srtp_profiles is the list of configured SRTP protection profiles for
    * DTLS-SRTP. */
@@ -1928,6 +1959,9 @@ struct ssl_st {
    * hash of the peer's certificate and then discard it to save memory and
    * session space. Only effective on the server side. */
   unsigned retain_only_sha256_of_client_certs:1;
+
+  /* early_data_accepted is true if early data was accepted by the server. */
+  unsigned early_data_accepted:1;
 };
 
 /* From draft-ietf-tls-tls13-18, used in determining PSK modes. */
@@ -1987,13 +2021,15 @@ enum ssl_session_result_t {
   ssl_session_success,
   ssl_session_error,
   ssl_session_retry,
+  ssl_session_ticket_retry,
 };
 
 /* ssl_get_prev_session looks up the previous session based on |client_hello|.
  * On success, it sets |*out_session| to the session or NULL if none was found.
  * If the session could not be looked up synchronously, it returns
- * |ssl_session_retry| and should be called again. Otherwise, it returns
- * |ssl_session_error|.  */
+ * |ssl_session_retry| and should be called again. If a ticket could not be
+ * decrypted immediately it returns |ssl_session_ticket_retry| and should also
+ * be called again. Otherwise, it returns |ssl_session_error|.  */
 enum ssl_session_result_t ssl_get_prev_session(
     SSL *ssl, SSL_SESSION **out_session, int *out_tickets_supported,
     int *out_renew_ticket, const SSL_CLIENT_HELLO *client_hello);
@@ -2161,15 +2197,19 @@ int ssl_parse_serverhello_tlsext(SSL_HANDSHAKE *hs, CBS *cbs);
 
 #define tlsext_tick_md EVP_sha256
 
-/* tls_process_ticket processes a session ticket from the client. On success,
- * it sets |*out_session| to the decrypted session or NULL if the ticket was
- * rejected. If the ticket was valid, it sets |*out_renew_ticket| to whether
- * the ticket should be renewed. It returns one on success and zero on fatal
- * error. */
-int tls_process_ticket(SSL *ssl, SSL_SESSION **out_session,
-                       int *out_renew_ticket, const uint8_t *ticket,
-                       size_t ticket_len, const uint8_t *session_id,
-                       size_t session_id_len);
+/* ssl_process_ticket processes a session ticket from the client. It returns
+ * one of:
+ *   |ssl_ticket_aead_success|: |*out_session| is set to the parsed session and
+ *       |*out_renew_ticket| is set to whether the ticket should be renewed.
+ *   |ssl_ticket_aead_ignore_ticket|: |*out_renew_ticket| is set to whether a
+ *       fresh ticket should be sent, but the given ticket cannot be used.
+ *   |ssl_ticket_aead_retry|: the ticket could not be immediately decrypted.
+ *       Retry later.
+ *   |ssl_ticket_aead_error|: an error occured that is fatal to the connection. */
+enum ssl_ticket_aead_result_t ssl_process_ticket(
+    SSL *ssl, SSL_SESSION **out_session, int *out_renew_ticket,
+    const uint8_t *ticket, size_t ticket_len, const uint8_t *session_id,
+    size_t session_id_len);
 
 /* tls1_verify_channel_id processes the current message as a Channel ID message,
  * and verifies the signature. If the key is valid, it saves the Channel ID and
@@ -2197,6 +2237,12 @@ int ssl_do_channel_id_callback(SSL *ssl);
 /* ssl3_can_false_start returns one if |ssl| is allowed to False Start and zero
  * otherwise. */
 int ssl3_can_false_start(const SSL *ssl);
+
+/* ssl_can_write returns one if |ssl| is allowed to write and zero otherwise. */
+int ssl_can_write(const SSL *ssl);
+
+/* ssl_can_read returns one if |ssl| is allowed to read and zero otherwise. */
+int ssl_can_read(const SSL *ssl);
 
 /* ssl_get_version_range sets |*out_min_version| and |*out_max_version| to the
  * minimum and maximum enabled protocol versions, respectively. */

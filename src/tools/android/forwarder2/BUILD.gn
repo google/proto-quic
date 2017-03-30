@@ -3,10 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/symlink.gni")
+import("//testing/test.gni")
 
 group("forwarder2") {
+  testonly = true
   data_deps = [
     ":host_forwarder",
+    ":host_forwarder_unittests",
     ":device_forwarder_prepare_dist($default_toolchain)",
   ]
 }
@@ -58,7 +61,7 @@ if (current_toolchain == default_toolchain) {
 }
 
 if (current_toolchain != default_toolchain) {
-  executable("host_forwarder") {
+  source_set("host_forwarder_source_set") {
     sources = [
       "command.cc",
       "command.h",
@@ -72,7 +75,8 @@ if (current_toolchain != default_toolchain) {
       "forwarders_manager.h",
       "host_controller.cc",
       "host_controller.h",
-      "host_forwarder_main.cc",
+      "host_controllers_manager.cc",
+      "host_controllers_manager.h",
       "pipe_notifier.cc",
       "pipe_notifier.h",
       "self_deleter_helper.h",
@@ -86,9 +90,36 @@ if (current_toolchain != default_toolchain) {
       "//tools/android/common",
     ]
   }
+
+  executable("host_forwarder") {
+    sources = [
+      "host_forwarder_main.cc",
+    ]
+    deps = [
+      ":host_forwarder_source_set",
+      "//base",
+    ]
+  }
+
+  test("host_forwarder_unittests") {
+    testonly = true
+    sources = [
+      "host_controllers_manager_unittest.cc",
+    ]
+    deps = [
+      ":host_forwarder_source_set",
+      "//base",
+      "//testing/gtest",
+      "//testing/gtest:gtest_main",
+    ]
+  }
 } else {
   # Create a symlink from root_build_dir -> clang_x64/host_forwarder.
   binary_symlink("host_forwarder") {
+    binary_label = ":$target_name($host_toolchain)"
+  }
+  binary_symlink("host_forwarder_unittests") {
+    testonly = true
     binary_label = ":$target_name($host_toolchain)"
   }
 }

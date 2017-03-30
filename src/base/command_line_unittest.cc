@@ -406,4 +406,35 @@ TEST(CommandLineTest, Copy) {
     EXPECT_TRUE(assigned.HasSwitch(pair.first));
 }
 
+TEST(CommandLineTest, PrependSimpleWrapper) {
+  CommandLine cl(FilePath(FILE_PATH_LITERAL("Program")));
+  cl.AppendSwitch("a");
+  cl.AppendSwitch("b");
+  cl.PrependWrapper(FILE_PATH_LITERAL("wrapper --foo --bar"));
+
+  EXPECT_EQ(6u, cl.argv().size());
+  EXPECT_EQ(FILE_PATH_LITERAL("wrapper"), cl.argv()[0]);
+  EXPECT_EQ(FILE_PATH_LITERAL("--foo"), cl.argv()[1]);
+  EXPECT_EQ(FILE_PATH_LITERAL("--bar"), cl.argv()[2]);
+  EXPECT_EQ(FILE_PATH_LITERAL("Program"), cl.argv()[3]);
+  EXPECT_EQ(FILE_PATH_LITERAL("--a"), cl.argv()[4]);
+  EXPECT_EQ(FILE_PATH_LITERAL("--b"), cl.argv()[5]);
+}
+
+TEST(CommandLineTest, PrependComplexWrapper) {
+  CommandLine cl(FilePath(FILE_PATH_LITERAL("Program")));
+  cl.AppendSwitch("a");
+  cl.AppendSwitch("b");
+  cl.PrependWrapper(
+      FILE_PATH_LITERAL("wrapper --foo='hello world' --bar=\"let's go\""));
+
+  EXPECT_EQ(6u, cl.argv().size());
+  EXPECT_EQ(FILE_PATH_LITERAL("wrapper"), cl.argv()[0]);
+  EXPECT_EQ(FILE_PATH_LITERAL("--foo='hello world'"), cl.argv()[1]);
+  EXPECT_EQ(FILE_PATH_LITERAL("--bar=\"let's go\""), cl.argv()[2]);
+  EXPECT_EQ(FILE_PATH_LITERAL("Program"), cl.argv()[3]);
+  EXPECT_EQ(FILE_PATH_LITERAL("--a"), cl.argv()[4]);
+  EXPECT_EQ(FILE_PATH_LITERAL("--b"), cl.argv()[5]);
+}
+
 } // namespace base

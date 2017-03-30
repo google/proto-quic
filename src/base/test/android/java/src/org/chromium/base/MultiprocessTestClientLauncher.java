@@ -14,6 +14,7 @@ import android.os.RemoteException;
 
 import org.chromium.base.annotations.CalledByNative;
 import org.chromium.base.annotations.JNINamespace;
+import org.chromium.base.process_launcher.FileDescriptorInfo;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -288,6 +289,6 @@ public final class MultiprocessTestClientLauncher {
             Log.e(TAG, "Invalid FD provided for process connection, aborting connection.", e);
             return null;
         }
-        return new FileDescriptorInfo(id, parcelableFd);
+        return new FileDescriptorInfo(id, parcelableFd, 0 /* offset */, 0 /* size */);
     }
 }

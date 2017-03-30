@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include "base/strings/stringprintf.h"
+#include "net/spdy/platform/api/spdy_string_utils.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -121,7 +121,7 @@ TEST_F(HeaderCoalescerTest, HeaderValueValid) {
       header_values[i].push_back(j);
     }
     header_coalescer_.OnHeader(
-        base::StringPrintf("%s_%d", "foo", i),
+        SpdyStringPrintf("%s_%d", "foo", i),
         SpdyStringPiece(header_values[i].data(), header_values[i].size()));
     EXPECT_FALSE(header_coalescer_.error_seen());
   }

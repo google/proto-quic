@@ -36,6 +36,11 @@ config("using_proto") {
   ]
 }
 
+protobuf_globals_sources = [
+  "src/google/protobuf/globals.cc",
+  "src/google/protobuf/stubs/atomicops_internals_x86_gcc.cc",
+]
+
 protobuf_lite_sources = [
   "src/google/protobuf/arena.cc",
   "src/google/protobuf/arena.h",
@@ -73,7 +78,6 @@ protobuf_lite_sources = [
   "src/google/protobuf/stubs/atomicops_internals_ppc_gcc.h",
   "src/google/protobuf/stubs/atomicops_internals_solaris.h",
   "src/google/protobuf/stubs/atomicops_internals_tsan.h",
-  "src/google/protobuf/stubs/atomicops_internals_x86_gcc.cc",
   "src/google/protobuf/stubs/atomicops_internals_x86_gcc.h",
   "src/google/protobuf/stubs/atomicops_internals_x86_msvc.cc",
   "src/google/protobuf/stubs/atomicops_internals_x86_msvc.h",
@@ -160,10 +164,7 @@ if (is_component_build && is_linux && !is_chromeos) {
       ":protobuf_use_dlls",
     ]
     defines = [ "LIBPROTOBUF_EXPORTS" ]
-    sources = [
-      "src/google/protobuf/globals.cc",
-      "src/google/protobuf/stubs/atomicops_internals_x86_gcc.cc",
-    ]
+    sources = protobuf_globals_sources
   }
 }
 
@@ -199,13 +200,15 @@ target(link_target_type, "protobuf_lite") {
   if (is_component_build && is_linux && !is_chromeos) {
     deps += [ ":protobuf_globals" ]
   } else {
-    sources += [ "src/google/protobuf/globals.cc" ]
+    sources += protobuf_globals_sources
   }
 
   # Required for component builds. See http://crbug.com/172800.
-  if (is_component_build && (!is_linux || is_chromeos)) {
+  if (is_component_build) {
     public_configs += [ ":protobuf_use_dlls" ]
-    defines = [ "LIBPROTOBUF_EXPORTS" ]
+    if (!is_linux || is_chromeos) {
+      defines = [ "LIBPROTOBUF_EXPORTS" ]
+    }
   }
 }
 
@@ -221,8 +224,7 @@ static_library("protobuf_full") {
     "//third_party/libprotobuf-mutator:*",
   ]
 
-  sources = protobuf_lite_sources
-  sources += [
+  sources = protobuf_lite_sources + protobuf_globals_sources + [
     "src/google/protobuf/any.cc",
     "src/google/protobuf/any.h",
     "src/google/protobuf/any.pb.cc",
@@ -252,7 +254,6 @@ static_library("protobuf_full") {
     "src/google/protobuf/generated_enum_util.h",
     "src/google/protobuf/generated_message_reflection.cc",
     "src/google/protobuf/generated_message_reflection.h",
-    "src/google/protobuf/globals.cc",
 
     # gzip_stream.cc pulls in zlib, but it's not actually used by protoc, just
     # by test code, so instead of compiling zlib for the host, let's just

@@ -9,6 +9,7 @@
 
 #include "base/i18n/case_conversion.h"
 #include "base/i18n/char_iterator.h"
+#include "base/i18n/unicodestring.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/singleton.h"
@@ -175,8 +176,8 @@ class AbbreviatedMonthsMap {
           format_symbols.getShortMonths(months_count);
 
       for (int32_t month = 0; month < months_count; month++) {
-        base::string16 month_name(months[month].getBuffer(),
-                            static_cast<size_t>(months[month].length()));
+        base::string16 month_name(
+            base::i18n::UnicodeStringToString16(months[month]));
 
         // Ignore the case of the month names. The simplest way to handle that
         // is to make everything lowercase.

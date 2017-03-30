@@ -300,14 +300,18 @@ bool VerifyFromAndroidTrustManager(
     scoped_refptr<X509Certificate> verified_cert =
         X509Certificate::CreateFromDERCertChain(verified_chain_pieces);
     if (verified_cert.get())
-      verify_result->verified_cert = verified_cert;
+      verify_result->verified_cert = std::move(verified_cert);
+    else
+      verify_result->cert_status |= CERT_STATUS_INVALID;
   }
 
   // Extract the public key hashes.
   for (size_t i = 0; i < verified_chain.size(); i++) {
     base::StringPiece spki_bytes;
-    if (!asn1::ExtractSPKIFromDERCert(verified_chain[i], &spki_bytes))
+    if (!asn1::ExtractSPKIFromDERCert(verified_chain[i], &spki_bytes)) {
+      verify_result->cert_status |= CERT_STATUS_INVALID;
       continue;
+    }
 
     HashValue sha1(HASH_VALUE_SHA1);
     base::SHA1HashBytes(reinterpret_cast<const uint8_t*>(spki_bytes.data()),

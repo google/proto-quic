@@ -71,10 +71,9 @@
 
 /* TODO(fork): don't the check functions have to be constant time? */
 
-int RSA_padding_add_PKCS1_type_1(uint8_t *to, unsigned to_len,
-                                 const uint8_t *from, unsigned from_len) {
-  unsigned j;
-
+int RSA_padding_add_PKCS1_type_1(uint8_t *to, size_t to_len,
+                                 const uint8_t *from, size_t from_len) {
+  /* See RFC 8017, section 9.2. */
   if (to_len < RSA_PKCS1_PADDING_SIZE) {
     OPENSSL_PUT_ERROR(RSA, RSA_R_KEY_SIZE_TOO_SMALL);
     return 0;
@@ -85,17 +84,11 @@ int RSA_padding_add_PKCS1_type_1(uint8_t *to, unsigned to_len,
     return 0;
   }
 
-  uint8_t *p = to;
-
-  *(p++) = 0;
-  *(p++) = 1; /* Private Key BT (Block Type) */
-
-  /* pad out with 0xff data */
-  j = to_len - 3 - from_len;
-  OPENSSL_memset(p, 0xff, j);
-  p += j;
-  *(p++) = 0;
-  OPENSSL_memcpy(p, from, from_len);
+  to[0] = 0;
+  to[1] = 1;
+  OPENSSL_memset(to + 2, 0xff, to_len - 3 - from_len);
+  to[to_len - from_len - 1] = 0;
+  OPENSSL_memcpy(to + to_len - from_len, from, from_len);
   return 1;
 }
 
@@ -151,10 +144,25 @@ int RSA_padding_check_PKCS1_type_1(uint8_t *to, unsigned to_len,
   return j;
 }
 
-int RSA_padding_add_PKCS1_type_2(uint8_t *to, unsigned to_len,
-                                 const uint8_t *from, unsigned from_len) {
-  unsigned i, j;
+static int rand_nonzero(uint8_t *out, size_t len) {
+  if (!RAND_bytes(out, len)) {
+    return 0;
+  }
 
+  for (size_t i = 0; i < len; i++) {
+    while (out[i] == 0) {
+      if (!RAND_bytes(out + i, 1)) {
+        return 0;
+      }
+    }
+  }
+
+  return 1;
+}
+
+int RSA_padding_add_PKCS1_type_2(uint8_t *to, size_t to_len,
+                                 const uint8_t *from, size_t from_len) {
+  /* See RFC 8017, section 7.2.1. */
   if (to_len < RSA_PKCS1_PADDING_SIZE) {
     OPENSSL_PUT_ERROR(RSA, RSA_R_KEY_SIZE_TOO_SMALL);
     return 0;
@@ -165,30 +173,16 @@ int RSA_padding_add_PKCS1_type_2(uint8_t *to, unsigned to_len,
     return 0;
   }
 
-  uint8_t *p = to;
+  to[0] = 0;
+  to[1] = 2;
 
-  *(p++) = 0;
-  *(p++) = 2; /* Public Key BT (Block Type) */
-
-  /* pad out with non-zero random data */
-  j = to_len - 3 - from_len;
-
-  if (!RAND_bytes(p, j)) {
+  size_t padding_len = to_len - 3 - from_len;
+  if (!rand_nonzero(to + 2, padding_len)) {
     return 0;
   }
 
-  for (i = 0; i < j; i++) {
-    while (*p == 0) {
-      if (!RAND_bytes(p, 1)) {
-        return 0;
-      }
-    }
-    p++;
-  }
-
-  *(p++) = 0;
-
-  OPENSSL_memcpy(p, from, from_len);
+  to[2 + padding_len] = 0;
+  OPENSSL_memcpy(to + to_len - from_len, from, from_len);
   return 1;
 }
 
@@ -258,8 +252,8 @@ int RSA_padding_check_PKCS1_type_2(uint8_t *to, unsigned to_len,
   return (int)msg_len;
 }
 
-int RSA_padding_add_none(uint8_t *to, unsigned to_len, const uint8_t *from,
-                         unsigned from_len) {
+int RSA_padding_add_none(uint8_t *to, size_t to_len, const uint8_t *from,
+                         size_t from_len) {
   if (from_len > to_len) {
     OPENSSL_PUT_ERROR(RSA, RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE);
     return 0;
@@ -317,15 +311,10 @@ err:
   return ret;
 }
 
-int RSA_padding_add_PKCS1_OAEP_mgf1(uint8_t *to, unsigned to_len,
-                                    const uint8_t *from, unsigned from_len,
-                                    const uint8_t *param, unsigned param_len,
+int RSA_padding_add_PKCS1_OAEP_mgf1(uint8_t *to, size_t to_len,
+                                    const uint8_t *from, size_t from_len,
+                                    const uint8_t *param, size_t param_len,
                                     const EVP_MD *md, const EVP_MD *mgf1md) {
-  unsigned i, emlen, mdlen;
-  uint8_t *db, *seed;
-  uint8_t *dbmask = NULL, seedmask[EVP_MAX_MD_SIZE];
-  int ret = 0;
-
   if (md == NULL) {
     md = EVP_sha1();
   }
@@ -333,14 +322,14 @@ int RSA_padding_add_PKCS1_OAEP_mgf1(uint8_t *to, unsigned to_len,
     mgf1md = md;
   }
 
-  mdlen = EVP_MD_size(md);
+  size_t mdlen = EVP_MD_size(md);
 
   if (to_len < 2 * mdlen + 2) {
     OPENSSL_PUT_ERROR(RSA, RSA_R_KEY_SIZE_TOO_SMALL);
     return 0;
   }
 
-  emlen = to_len - 1;
+  size_t emlen = to_len - 1;
   if (from_len > emlen - 2 * mdlen - 1) {
     OPENSSL_PUT_ERROR(RSA, RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE);
     return 0;
@@ -352,8 +341,8 @@ int RSA_padding_add_PKCS1_OAEP_mgf1(uint8_t *to, unsigned to_len,
   }
 
   to[0] = 0;
-  seed = to + 1;
-  db = to + mdlen + 1;
+  uint8_t *seed = to + 1;
+  uint8_t *db = to + mdlen + 1;
 
   if (!EVP_Digest(param, param_len, db, NULL, md, NULL)) {
     return 0;
@@ -365,23 +354,25 @@ int RSA_padding_add_PKCS1_OAEP_mgf1(uint8_t *to, unsigned to_len,
     return 0;
   }
 
-  dbmask = OPENSSL_malloc(emlen - mdlen);
+  uint8_t *dbmask = OPENSSL_malloc(emlen - mdlen);
   if (dbmask == NULL) {
     OPENSSL_PUT_ERROR(RSA, ERR_R_MALLOC_FAILURE);
     return 0;
   }
 
+  int ret = 0;
   if (!PKCS1_MGF1(dbmask, emlen - mdlen, seed, mdlen, mgf1md)) {
     goto out;
   }
-  for (i = 0; i < emlen - mdlen; i++) {
+  for (size_t i = 0; i < emlen - mdlen; i++) {
     db[i] ^= dbmask[i];
   }
 
+  uint8_t seedmask[EVP_MAX_MD_SIZE];
   if (!PKCS1_MGF1(seedmask, mdlen, db, emlen - mdlen, mgf1md)) {
     goto out;
   }
-  for (i = 0; i < mdlen; i++) {
+  for (size_t i = 0; i < mdlen; i++) {
     seed[i] ^= seedmask[i];
   }
   ret = 1;
@@ -486,7 +477,7 @@ decoding_err:
   return -1;
 }
 
-static const unsigned char zeroes[] = {0,0,0,0,0,0,0,0};
+static const uint8_t kPSSZeroes[] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 int RSA_verify_PKCS1_PSS_mgf1(RSA *rsa, const uint8_t *mHash,
                               const EVP_MD *Hash, const EVP_MD *mgf1Hash,
@@ -530,7 +521,7 @@ int RSA_verify_PKCS1_PSS_mgf1(RSA *rsa, const uint8_t *mHash,
     EM++;
     emLen--;
   }
-  if (emLen < ((int)hLen + sLen + 2)) {
+  if (emLen < (int)hLen + 2 || emLen < ((int)hLen + sLen + 2)) {
     /* sLen can be small negative */
     OPENSSL_PUT_ERROR(RSA, RSA_R_DATA_TOO_LARGE);
     goto err;
@@ -567,16 +558,10 @@ int RSA_verify_PKCS1_PSS_mgf1(RSA *rsa, const uint8_t *mHash,
     goto err;
   }
   if (!EVP_DigestInit_ex(&ctx, Hash, NULL) ||
-      !EVP_DigestUpdate(&ctx, zeroes, sizeof zeroes) ||
-      !EVP_DigestUpdate(&ctx, mHash, hLen)) {
-    goto err;
-  }
-  if (maskedDBLen - i) {
-    if (!EVP_DigestUpdate(&ctx, DB + i, maskedDBLen - i)) {
-      goto err;
-    }
-  }
-  if (!EVP_DigestFinal_ex(&ctx, H_, NULL)) {
+      !EVP_DigestUpdate(&ctx, kPSSZeroes, sizeof(kPSSZeroes)) ||
+      !EVP_DigestUpdate(&ctx, mHash, hLen) ||
+      !EVP_DigestUpdate(&ctx, DB + i, maskedDBLen - i) ||
+      !EVP_DigestFinal_ex(&ctx, H_, NULL)) {
     goto err;
   }
   if (OPENSSL_memcmp(H_, H, hLen)) {
@@ -601,7 +586,6 @@ int RSA_padding_add_PKCS1_PSS_mgf1(RSA *rsa, unsigned char *EM,
   size_t maskedDBLen, MSBits, emLen;
   size_t hLen;
   unsigned char *H, *salt = NULL, *p;
-  EVP_MD_CTX ctx;
 
   if (mgf1Hash == NULL) {
     mgf1Hash = Hash;
@@ -660,19 +644,18 @@ int RSA_padding_add_PKCS1_PSS_mgf1(RSA *rsa, unsigned char *EM,
   }
   maskedDBLen = emLen - hLen - 1;
   H = EM + maskedDBLen;
+
+  EVP_MD_CTX ctx;
   EVP_MD_CTX_init(&ctx);
-  if (!EVP_DigestInit_ex(&ctx, Hash, NULL) ||
-      !EVP_DigestUpdate(&ctx, zeroes, sizeof zeroes) ||
-      !EVP_DigestUpdate(&ctx, mHash, hLen)) {
-    goto err;
-  }
-  if (sLen && !EVP_DigestUpdate(&ctx, salt, sLen)) {
-    goto err;
-  }
-  if (!EVP_DigestFinal_ex(&ctx, H, NULL)) {
-    goto err;
-  }
+  int digest_ok = EVP_DigestInit_ex(&ctx, Hash, NULL) &&
+                  EVP_DigestUpdate(&ctx, kPSSZeroes, sizeof(kPSSZeroes)) &&
+                  EVP_DigestUpdate(&ctx, mHash, hLen) &&
+                  EVP_DigestUpdate(&ctx, salt, sLen) &&
+                  EVP_DigestFinal_ex(&ctx, H, NULL);
   EVP_MD_CTX_cleanup(&ctx);
+  if (!digest_ok) {
+    goto err;
+  }
 
   /* Generate dbMask in place then perform XOR on it */
   if (!PKCS1_MGF1(EM, maskedDBLen, H, hLen, mgf1Hash)) {

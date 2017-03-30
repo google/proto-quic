@@ -9,6 +9,7 @@
 
 #include <vector>
 
+#include "base/callback.h"
 #include "base/macros.h"
 #include "base/task_runner.h"
 #include "base/test/test_pending_task.h"
@@ -27,7 +28,7 @@ class TestTaskRunner : public base::TaskRunner {
 
   // base::TaskRunner implementation.
   bool PostDelayedTask(const tracked_objects::Location& from_here,
-                       const base::Closure& task,
+                       base::Closure task,
                        base::TimeDelta delay) override;
   bool RunsTasksOnCurrentThread() const override;
 

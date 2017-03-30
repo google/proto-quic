@@ -230,7 +230,11 @@ scoped_refptr<X509Certificate> X509Certificate::CreateFromHandle(
     OSCertHandle cert_handle,
     const OSCertHandles& intermediates) {
   DCHECK(cert_handle);
-  return new X509Certificate(cert_handle, intermediates);
+  scoped_refptr<X509Certificate> cert(
+      new X509Certificate(cert_handle, intermediates));
+  if (!cert->os_cert_handle())
+    return nullptr;  // Initialize() failed.
+  return cert;
 }
 
 // static
@@ -445,7 +449,10 @@ CertificateList X509Certificate::CreateCertificateListFromBytes(
 
   for (OSCertHandles::iterator it = certificates.begin();
        it != certificates.end(); ++it) {
-    results.push_back(CreateFromHandle(*it, OSCertHandles()));
+    scoped_refptr<X509Certificate> cert =
+        CreateFromHandle(*it, OSCertHandles());
+    if (cert)
+      results.push_back(std::move(cert));
     FreeOSCertHandle(*it);
   }
 
@@ -711,7 +718,12 @@ X509Certificate::X509Certificate(OSCertHandle cert_handle,
     intermediate_ca_certs_.push_back(intermediate);
   }
   // Platform-specific initialization.
-  Initialize();
+  if (!Initialize() && cert_handle_) {
+    // Signal initialization failure by clearing cert_handle_.
+    RemoveFromCache(cert_handle_);
+    FreeOSCertHandle(cert_handle_);
+    cert_handle_ = nullptr;
+  }
 }
 
 X509Certificate::~X509Certificate() {

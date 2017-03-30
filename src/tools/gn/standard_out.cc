@@ -251,10 +251,14 @@ void PrintLongHelp(const std::string& text, const std::string& tag) {
 
   bool first_header = true;
   bool in_body = false;
+  std::size_t empty_lines = 0;
   for (const std::string& line : base::SplitString(
            text, "\n", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL)) {
     // Check for a heading line.
     if (!line.empty() && line[0] != ' ') {
+      // New paragraph, just skip any trailing empty lines.
+      empty_lines = 0;
+
       if (is_markdown) {
         // GN's block-level formatting is converted to markdown as follows:
         // * The first heading is treated as an H3.
@@ -298,6 +302,18 @@ void PrintLongHelp(const std::string& text, const std::string& tag) {
       in_body = true;
     }
 
+    // We buffer empty lines, so we can skip them if needed
+    // (i.e. new paragraph body, end of final paragraph body).
+    if (in_body && is_markdown) {
+      if (!line.empty() && empty_lines != 0) {
+        OutputString(std::string(empty_lines, '\n'));
+        empty_lines = 0;
+      } else if (line.empty()) {
+        ++empty_lines;
+        continue;
+      }
+    }
+
     // Check for a comment.
     TextDecoration dec = DECORATION_NONE;
     for (const auto& elem : line) {
@@ -314,6 +330,6 @@ void PrintLongHelp(const std::string& text, const std::string& tag) {
   }
 
   if (is_markdown && in_body)
-    OutputString("\n```\n");
+    OutputString("```\n");
 }
 

@@ -10,7 +10,7 @@
 
 #include "base/logging.h"
 #include "base/strings/string_util.h"
-#include "base/strings/stringprintf.h"
+#include "net/spdy/platform/api/spdy_string_utils.h"
 
 namespace net {
 
@@ -240,9 +240,9 @@ std::string SpdyAltSvcWireFormat::SerializeHeaderFieldValue(
       }
       value.push_back(c);
     }
-    base::StringAppendF(&value, ":%d\"", altsvc.port);
+    SpdyStringAppendF(&value, ":%d\"", altsvc.port);
     if (altsvc.max_age != 86400) {
-      base::StringAppendF(&value, "; ma=%d", altsvc.max_age);
+      SpdyStringAppendF(&value, "; ma=%d", altsvc.max_age);
     }
     if (!altsvc.version.empty()) {
       value.append("; v=\"");
@@ -251,7 +251,7 @@ std::string SpdyAltSvcWireFormat::SerializeHeaderFieldValue(
         if (it != altsvc.version.begin()) {
           value.append(",");
         }
-        base::StringAppendF(&value, "%d", *it);
+        SpdyStringAppendF(&value, "%d", *it);
       }
       value.append("\"");
     }

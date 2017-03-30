@@ -78,6 +78,7 @@ using net::test::IsError;
 using net::test::IsOk;
 
 using testing::_;
+using testing::AnyOf;
 using testing::Return;
 using testing::Truly;
 
@@ -1293,7 +1294,6 @@ TEST_F(SSLClientSocketTest, ConnectMismatched) {
   EXPECT_TRUE(LogContainsEndEvent(entries, -1, NetLogEventType::SSL_CONNECT));
 }
 
-#if defined(OS_WIN)
 // Tests that certificates parsable by SSLClientSocket's internal SSL
 // implementation, but not X509Certificate are treated as fatal connection
 // errors. This is a regression test for https://crbug.com/91341.
@@ -1301,14 +1301,23 @@ TEST_F(SSLClientSocketTest, ConnectBadValidity) {
   SpawnedTestServer::SSLOptions ssl_options(
       SpawnedTestServer::SSLOptions::CERT_BAD_VALIDITY);
   ASSERT_TRUE(StartTestServer(ssl_options));
+  cert_verifier_->set_default_result(ERR_CERT_DATE_INVALID);
+
   SSLConfig ssl_config;
   int rv;
   ASSERT_TRUE(CreateAndConnectSSLClientSocket(ssl_config, &rv));
 
+#if defined(OS_WIN)
   EXPECT_THAT(rv, IsError(ERR_SSL_SERVER_CERT_BAD_FORMAT));
   EXPECT_FALSE(IsCertificateError(rv));
+#elif defined(OS_ANDROID)
+  // Android date handling behavior can vary depending on the platform.
+  EXPECT_THAT(rv, AnyOf(IsError(ERR_SSL_SERVER_CERT_BAD_FORMAT),
+                        IsError(ERR_CERT_DATE_INVALID)));
+#else  // !(defined(OS_WIN) || defined(OS_ANDROID))
+  EXPECT_THAT(rv, IsError(ERR_CERT_DATE_INVALID));
+#endif
 }
-#endif  // defined(OS_WIN)
 
 // Attempt to connect to a page which requests a client certificate. It should
 // return an error code on connect.
@@ -2347,6 +2356,7 @@ TEST_F(SSLClientSocketTest, VerifyReturnChainProperlyOrdered) {
   CertVerifyResult verify_result;
   verify_result.verified_cert = X509Certificate::CreateFromHandle(
       certs[0]->os_cert_handle(), temp_intermediates);
+  ASSERT_TRUE(verify_result.verified_cert);
 
   // Add a rule that maps the server cert (A) to the chain of A->B->C2
   // rather than A->B->C.

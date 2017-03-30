@@ -18,6 +18,7 @@
 #include "base/task_runner.h"
 #include "base/task_scheduler/task_traits.h"
 #include "base/time/time.h"
+#include "build/build_config.h"
 
 namespace base {
 
@@ -70,7 +71,7 @@ namespace base {
 // Posts |task| to the TaskScheduler. Calling this is equivalent to calling
 // PostTaskWithTraits with plain TaskTraits.
 BASE_EXPORT void PostTask(const tracked_objects::Location& from_here,
-                          const Closure& task);
+                          Closure task);
 
 // Posts |task| to the TaskScheduler. |task| will not run before |delay|
 // expires. Calling this is equivalent to calling PostDelayedTaskWithTraits with
@@ -79,7 +80,7 @@ BASE_EXPORT void PostTask(const tracked_objects::Location& from_here,
 // Use PostDelayedTaskWithTraits to specify a BACKGROUND priority if the task
 // doesn't have to run as soon as |delay| expires.
 BASE_EXPORT void PostDelayedTask(const tracked_objects::Location& from_here,
-                                 const Closure& task,
+                                 Closure task,
                                  TimeDelta delay);
 
 // Posts |task| to the TaskScheduler and posts |reply| on the caller's execution
@@ -107,7 +108,7 @@ void PostTaskAndReplyWithResult(const tracked_objects::Location& from_here,
 // Posts |task| with specific |traits| to the TaskScheduler.
 BASE_EXPORT void PostTaskWithTraits(const tracked_objects::Location& from_here,
                                     const TaskTraits& traits,
-                                    const Closure& task);
+                                    Closure task);
 
 // Posts |task| with specific |traits| to the TaskScheduler. |task| will not run
 // before |delay| expires.
@@ -117,7 +118,7 @@ BASE_EXPORT void PostTaskWithTraits(const tracked_objects::Location& from_here,
 BASE_EXPORT void PostDelayedTaskWithTraits(
     const tracked_objects::Location& from_here,
     const TaskTraits& traits,
-    const Closure& task,
+    Closure task,
     TimeDelta delay);
 
 // Posts |task| with specific |traits| to the TaskScheduler and posts |reply| on
@@ -170,6 +171,19 @@ CreateSequencedTaskRunnerWithTraits(const TaskTraits& traits);
 // using thread-local storage.
 BASE_EXPORT scoped_refptr<SingleThreadTaskRunner>
 CreateSingleThreadTaskRunnerWithTraits(const TaskTraits& traits);
+
+#if defined(OS_WIN)
+// Returns a SingleThreadTaskRunner whose PostTask invocations result in
+// scheduling tasks using |traits| in a COM Single-Threaded Apartment. Tasks run
+// in the same Single-Threaded Apartment in posting order for the returned
+// SingleThreadTaskRunner. There is not necessarily a one-to-one correspondence
+// between SingleThreadTaskRunners and Single-Threaded Apartments. The
+// implementation is free to share apartments or create new apartments as
+// necessary. In either case, care should be taken to make sure COM pointers are
+// not smuggled across apartments.
+BASE_EXPORT scoped_refptr<SingleThreadTaskRunner>
+CreateCOMSTATaskRunnerWithTraits(const TaskTraits& traits);
+#endif  // defined(OS_WIN)
 
 }  // namespace base
 

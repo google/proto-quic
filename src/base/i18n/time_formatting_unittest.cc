@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "base/i18n/rtl.h"
+#include "base/i18n/unicodestring.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/test/icu_test_util.h"
 #include "base/time/time.h"
@@ -37,7 +38,7 @@ string16 GetShortTimeZone(const Time& time) {
   zone_formatter->format(UTZFMT_STYLE_SPECIFIC_SHORT, *zone,
                          static_cast<UDate>(time.ToDoubleT() * 1000),
                          name, nullptr);
-  return string16(name.getBuffer(), name.length());
+  return i18n::UnicodeStringToString16(name);
 }
 
 // Calls TimeDurationFormat() with |delta| and |width| and returns the resulting

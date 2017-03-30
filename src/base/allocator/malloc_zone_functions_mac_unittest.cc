@@ -10,7 +10,7 @@ namespace allocator {
 
 class MallocZoneFunctionsTest : public testing::Test {
  protected:
-  void SetUp() override { ClearAllMallocZonesForTesting(); }
+  void TearDown() override { ClearAllMallocZonesForTesting(); }
 };
 
 TEST_F(MallocZoneFunctionsTest, TestDefaultZoneMallocFree) {

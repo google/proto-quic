@@ -40,6 +40,10 @@ void ClosingDelegate::OnClose(int status) {
   // The |stream_| may still be alive (if it is our delegate).
 }
 
+NetLogSource ClosingDelegate::source_dependency() const {
+  return NetLogSource();
+}
+
 StreamDelegateBase::StreamDelegateBase(
     const base::WeakPtr<SpdyStream>& stream)
     : stream_(stream),
@@ -77,6 +81,10 @@ void StreamDelegateBase::OnClose(int status) {
   stream_id_ = stream_->stream_id();
   stream_.reset();
   callback_.callback().Run(status);
+}
+
+NetLogSource StreamDelegateBase::source_dependency() const {
+  return NetLogSource();
 }
 
 int StreamDelegateBase::WaitForClose() {

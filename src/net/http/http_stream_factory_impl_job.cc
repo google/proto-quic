@@ -216,7 +216,8 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
       using_ssl_(false),
       using_spdy_(false),
       using_quic_(false),
-      quic_request_(session_->quic_stream_factory()),
+      quic_request_(session_->quic_stream_factory(),
+                    session_->http_server_properties()),
       using_existing_quic_session_(false),
       establishing_tunnel_(false),
       was_alpn_negotiated_(false),
@@ -1186,7 +1187,8 @@ int HttpStreamFactoryImpl::Job::SetSpdyHttpStreamOrBidirectionalStreamImpl(
   if (delegate_->for_websockets())
     return ERR_NOT_IMPLEMENTED;
   if (stream_type_ == HttpStreamRequest::BIDIRECTIONAL_STREAM) {
-    bidirectional_stream_impl_.reset(new BidirectionalStreamSpdyImpl(session));
+    bidirectional_stream_impl_.reset(
+        new BidirectionalStreamSpdyImpl(session, net_log_.source()));
     return OK;
   }
 
@@ -1196,7 +1198,8 @@ int HttpStreamFactoryImpl::Job::SetSpdyHttpStreamOrBidirectionalStreamImpl(
 
   bool use_relative_url =
       direct || request_info_.url.SchemeIs(url::kHttpsScheme);
-  stream_.reset(new SpdyHttpStream(session, use_relative_url));
+  stream_.reset(
+      new SpdyHttpStream(session, use_relative_url, net_log_.source()));
   return OK;
 }
 

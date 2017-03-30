@@ -935,7 +935,7 @@ struct _xmlXPathStepOp {
     int value3;
     void *value4;
     void *value5;
-    void *cache;
+    xmlXPathFunction cache;
     void *cacheURI;
 };
 
@@ -3342,13 +3342,13 @@ xmlXPathCmpNodes(xmlNodePtr node1, xmlNodePtr node2) {
      * compute depth to root
      */
     for (depth2 = 0, cur = node2;cur->parent != NULL;cur = cur->parent) {
-	if (cur == node1)
+	if (cur->parent == node1)
 	    return(1);
 	depth2++;
     }
     root = cur;
     for (depth1 = 0, cur = node1;cur->parent != NULL;cur = cur->parent) {
-	if (cur == node2)
+	if (cur->parent == node2)
 	    return(-1);
 	depth1++;
     }
@@ -10698,9 +10698,11 @@ xmlXPathCompPathExpr(xmlXPathParserContextPtr ctxt) {
 				"PathExpr: Type search\n");
 #endif
 			lc = 1;
+#ifdef LIBXML_XPTR_ENABLED
                     } else if (ctxt->xptr &&
                                xmlStrEqual(name, BAD_CAST "range-to")) {
                         lc = 1;
+#endif
 		    } else {
 #ifdef DEBUG_STEP
 		        xmlGenericError(xmlGenericErrorContext,
@@ -13563,7 +13565,7 @@ xmlXPathCompOpEval(xmlXPathParserContextPtr ctxt, xmlXPathStepOpPtr op)
 		    }
                 }
                 if (op->cache != NULL)
-                    XML_CAST_FPTR(func) = op->cache;
+                    func = op->cache;
                 else {
                     const xmlChar *URI = NULL;
 
@@ -13590,7 +13592,7 @@ xmlXPathCompOpEval(xmlXPathParserContextPtr ctxt, xmlXPathStepOpPtr op)
                                         (char *)op->value4);
                         XP_ERROR0(XPATH_UNKNOWN_FUNC_ERROR);
                     }
-                    op->cache = XML_CAST_FPTR(func);
+                    op->cache = func;
                     op->cacheURI = (void *) URI;
                 }
                 oldFunc = ctxt->context->function;

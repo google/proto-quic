@@ -10,22 +10,48 @@
 #include <cstring>
 
 #include "base/metrics/field_trial.h"
+#include "base/metrics/histogram_macros.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
 #include "build/build_config.h"
 #include "net/base/address_list.h"
+#include "net/dns/dns_protocol.h"
+
+namespace {
+
+// RFC 1035, section 2.3.4: labels 63 octets or less.
+// Section 3.1: Each label is represented as a one octet length field followed
+// by that number of octets.
+const int kMaxLabelLength = 63;
+
+}  // namespace
+
+#if defined(OS_POSIX)
+#include <netinet/in.h>
+#if !defined(OS_NACL)
+#include <net/if.h>
+#if !defined(OS_ANDROID)
+#include <ifaddrs.h>
+#endif  // !defined(OS_ANDROID)
+#endif  // !defined(OS_NACL)
+#endif  // defined(OS_POSIX)
+
+#if defined(OS_ANDROID)
+#include "net/android/network_library.h"
+#endif
 
 namespace net {
 
 // Based on DJB's public domain code.
 bool DNSDomainFromDot(const base::StringPiece& dotted, std::string* out) {
   const char* buf = dotted.data();
-  unsigned n = dotted.size();
-  char label[63];
+  size_t n = dotted.size();
+  char label[kMaxLabelLength];
   size_t labellen = 0; /* <= sizeof label */
-  char name[255];
+  char name[dns_protocol::kMaxNameLength];
   size_t namelen = 0; /* <= sizeof name */
   char ch;
+  bool valid_name = true;
 
   for (;;) {
     if (!n)
@@ -46,8 +72,15 @@ bool DNSDomainFromDot(const base::StringPiece& dotted, std::string* out) {
     }
     if (labellen >= sizeof label)
       return false;
+    if (!IsValidHostLabelCharacter(ch, labellen == 0)) {
+      // TODO(palmer): In the future, when we can remove support for invalid
+      // names, return false here instead (and remove the UMA counter).
+      valid_name = false;
+    }
     label[labellen++] = ch;
   }
+
+  UMA_HISTOGRAM_BOOLEAN("Net.ValidDNSName", valid_name);
 
   // Allow empty label at end of name to disable suffix search.
   if (labellen) {
@@ -74,6 +107,11 @@ bool IsValidDNSDomain(const base::StringPiece& dotted) {
   return DNSDomainFromDot(dotted, &dns_formatted);
 }
 
+bool IsValidHostLabelCharacter(char c, bool is_first_char) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+         (c >= '0' && c <= '9') || (!is_first_char && c == '-') || c == '_';
+}
+
 std::string DNSDomainToString(const base::StringPiece& domain) {
   std::string ret;
 
@@ -82,7 +120,7 @@ std::string DNSDomainToString(const base::StringPiece& domain) {
     if (domain[i] < 0)
       return std::string();
 #endif
-    if (domain[i] > 63)
+    if (domain[i] > kMaxLabelLength)
       return std::string();
 
     if (i)

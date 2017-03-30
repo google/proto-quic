@@ -104,6 +104,11 @@ size_t RoundUpToAlignment(size_t index, size_t alignment) {
   return (index + (alignment - 1)) & (0 - alignment);
 }
 
+// Converts "tick" timing into wall time.
+Time WallTimeFromTickTime(int64_t ticks_start, int64_t ticks, Time time_start) {
+  return time_start + TimeDelta::FromInternalValue(ticks - ticks_start);
+}
+
 }  // namespace
 
 OwningProcess::OwningProcess() {}
@@ -316,6 +321,8 @@ ActivityUserData::MemoryHeader::MemoryHeader() {}
 ActivityUserData::MemoryHeader::~MemoryHeader() {}
 ActivityUserData::FieldHeader::FieldHeader() {}
 ActivityUserData::FieldHeader::~FieldHeader() {}
+
+ActivityUserData::ActivityUserData() : ActivityUserData(nullptr, 0) {}
 
 ActivityUserData::ActivityUserData(void* memory, size_t size)
     : memory_(reinterpret_cast<char*>(memory)),
@@ -560,7 +567,8 @@ struct ThreadActivityTracker::Header {
 
   // Expected size for 32/64-bit check.
   static constexpr size_t kExpectedInstanceSize =
-      OwningProcess::kExpectedInstanceSize + 72;
+      OwningProcess::kExpectedInstanceSize + Activity::kExpectedInstanceSize +
+      72;
 
   // This information uniquely identifies a process.
   OwningProcess owner;
@@ -588,7 +596,7 @@ struct ThreadActivityTracker::Header {
   // won't be recorded.
   std::atomic<uint32_t> current_depth;
 
-  // A memory location used to indicate if changes have been made to the stack
+  // A memory location used to indicate if changes have been made to the data
   // that would invalidate an in-progress read of its contents. The active
   // tracker will zero the value whenever something gets popped from the
   // stack. A monitoring tracker can write a non-zero value here, copy the
@@ -596,7 +604,11 @@ struct ThreadActivityTracker::Header {
   // the contents didn't change while being copied. This can handle concurrent
   // snapshot operations only if each snapshot writes a different bit (which
   // is not the current implementation so no parallel snapshots allowed).
-  std::atomic<uint32_t> stack_unchanged;
+  std::atomic<uint32_t> data_unchanged;
+
+  // The last "exception" activity. This can't be stored on the stack because
+  // that could get popped as things unwind.
+  Activity last_exception;
 
   // The name of the thread (up to a maximum length). Dynamic-length names
   // are not practical since the memory has to come from the same persistent
@@ -674,7 +686,7 @@ ThreadActivityTracker::ThreadActivityTracker(void* base, size_t size)
     DCHECK_EQ(0, header_->start_ticks);
     DCHECK_EQ(0U, header_->stack_slots);
     DCHECK_EQ(0U, header_->current_depth.load(std::memory_order_relaxed));
-    DCHECK_EQ(0U, header_->stack_unchanged.load(std::memory_order_relaxed));
+    DCHECK_EQ(0U, header_->data_unchanged.load(std::memory_order_relaxed));
     DCHECK_EQ(0, stack_[0].time_internal);
     DCHECK_EQ(0U, stack_[0].origin_address);
     DCHECK_EQ(0U, stack_[0].call_stack[0]);
@@ -788,40 +800,28 @@ void ThreadActivityTracker::PopActivity(ActivityId id) {
 
   // The stack has shrunk meaning that some other thread trying to copy the
   // contents for reporting purposes could get bad data. That thread would
-  // have written a non-zero value into |stack_unchanged|; clearing it here
+  // have written a non-zero value into |data_unchanged|; clearing it here
   // will let that thread detect that something did change. This needs to
   // happen after the atomic |depth| operation above so a "release" store
   // is required.
-  header_->stack_unchanged.store(0, std::memory_order_release);
+  header_->data_unchanged.store(0, std::memory_order_release);
 }
 
 std::unique_ptr<ActivityUserData> ThreadActivityTracker::GetUserData(
     ActivityId id,
     ActivityTrackerMemoryAllocator* allocator) {
-  // User-data is only stored for activities actually held in the stack.
-  if (id < stack_slots_) {
-    // Don't allow user data for lock acquisition as recursion may occur.
-    if (stack_[id].activity_type == Activity::ACT_LOCK_ACQUIRE) {
-      NOTREACHED();
-      return MakeUnique<ActivityUserData>(nullptr, 0);
-    }
-
-    // Get (or reuse) a block of memory and create a real UserData object
-    // on it.
-    PersistentMemoryAllocator::Reference ref = allocator->GetObjectReference();
-    void* memory =
-        allocator->GetAsArray<char>(ref, PersistentMemoryAllocator::kSizeAny);
-    if (memory) {
-      std::unique_ptr<ActivityUserData> user_data =
-          MakeUnique<ActivityUserData>(memory, kUserDataSize);
-      stack_[id].user_data_ref = ref;
-      stack_[id].user_data_id = user_data->id();
-      return user_data;
-    }
+  // Don't allow user data for lock acquisition as recursion may occur.
+  if (stack_[id].activity_type == Activity::ACT_LOCK_ACQUIRE) {
+    NOTREACHED();
+    return MakeUnique<ActivityUserData>();
   }
 
-  // Return a dummy object that will still accept (but ignore) Set() calls.
-  return MakeUnique<ActivityUserData>(nullptr, 0);
+  // User-data is only stored for activities actually held in the stack.
+  if (id >= stack_slots_)
+    return MakeUnique<ActivityUserData>();
+
+  // Create and return a real UserData object.
+  return CreateUserDataForActivity(&stack_[id], allocator);
 }
 
 bool ThreadActivityTracker::HasUserData(ActivityId id) {
@@ -837,6 +837,23 @@ void ThreadActivityTracker::ReleaseUserData(
     allocator->ReleaseObjectReference(stack_[id].user_data_ref);
     stack_[id].user_data_ref = 0;
   }
+}
+
+void ThreadActivityTracker::RecordExceptionActivity(const void* program_counter,
+                                                    const void* origin,
+                                                    Activity::Type type,
+                                                    const ActivityData& data) {
+  // A thread-checker creates a lock to check the thread-id which means
+  // re-entry into this code if lock acquisitions are being tracked.
+  DCHECK(thread_checker_.CalledOnValidThread());
+
+  // Fill the reusable exception activity.
+  Activity::FillFrom(&header_->last_exception, program_counter, origin, type,
+                     data);
+
+  // The data has changed meaning that some other thread trying to copy the
+  // contents for reporting purposes could get bad data.
+  header_->data_unchanged.store(0, std::memory_order_relaxed);
 }
 
 bool ThreadActivityTracker::IsValid() const {
@@ -881,12 +898,12 @@ bool ThreadActivityTracker::CreateSnapshot(Snapshot* output_snapshot) const {
     const int64_t starting_process_id = header_->owner.process_id;
     const int64_t starting_thread_id = header_->thread_ref.as_id;
 
-    // Write a non-zero value to |stack_unchanged| so it's possible to detect
+    // Write a non-zero value to |data_unchanged| so it's possible to detect
     // at the end that nothing has changed since copying the data began. A
     // "cst" operation is required to ensure it occurs before everything else.
     // Using "cst" memory ordering is relatively expensive but this is only
     // done during analysis so doesn't directly affect the worker threads.
-    header_->stack_unchanged.store(1, std::memory_order_seq_cst);
+    header_->data_unchanged.store(1, std::memory_order_seq_cst);
 
     // Fetching the current depth also "acquires" the contents of the stack.
     depth = header_->current_depth.load(std::memory_order_acquire);
@@ -898,15 +915,19 @@ bool ThreadActivityTracker::CreateSnapshot(Snapshot* output_snapshot) const {
              count * sizeof(Activity));
     }
 
+    // Capture the last exception.
+    memcpy(&output_snapshot->last_exception, &header_->last_exception,
+           sizeof(Activity));
+
+    // TODO(bcwhite): Snapshot other things here.
+
     // Retry if something changed during the copy. A "cst" operation ensures
     // it must happen after all the above operations.
-    if (!header_->stack_unchanged.load(std::memory_order_seq_cst))
+    if (!header_->data_unchanged.load(std::memory_order_seq_cst))
       continue;
 
     // Stack copied. Record it's full depth.
     output_snapshot->activity_stack_depth = depth;
-
-    // TODO(bcwhite): Snapshot other things here.
 
     // Get the general thread information.
     output_snapshot->thread_name =
@@ -939,10 +960,14 @@ bool ThreadActivityTracker::CreateSnapshot(Snapshot* output_snapshot) const {
     const int64_t start_ticks = header_->start_ticks;
     for (Activity& activity : output_snapshot->activity_stack) {
       activity.time_internal =
-          (start_time +
-           TimeDelta::FromInternalValue(activity.time_internal - start_ticks))
+          WallTimeFromTickTime(start_ticks, activity.time_internal, start_time)
               .ToInternalValue();
     }
+    output_snapshot->last_exception.time_internal =
+        WallTimeFromTickTime(start_ticks,
+                             output_snapshot->last_exception.time_internal,
+                             start_time)
+            .ToInternalValue();
 
     // Success!
     return true;
@@ -972,6 +997,26 @@ bool ThreadActivityTracker::GetOwningProcessId(const void* memory,
 // static
 size_t ThreadActivityTracker::SizeForStackDepth(int stack_depth) {
   return static_cast<size_t>(stack_depth) * sizeof(Activity) + sizeof(Header);
+}
+
+std::unique_ptr<ActivityUserData>
+ThreadActivityTracker::CreateUserDataForActivity(
+    Activity* activity,
+    ActivityTrackerMemoryAllocator* allocator) {
+  DCHECK_EQ(0U, activity->user_data_ref);
+
+  PersistentMemoryAllocator::Reference ref = allocator->GetObjectReference();
+  void* memory = allocator->GetAsArray<char>(ref, kUserDataSize);
+  if (memory) {
+    std::unique_ptr<ActivityUserData> user_data =
+        MakeUnique<ActivityUserData>(memory, kUserDataSize);
+    activity->user_data_ref = ref;
+    activity->user_data_id = user_data->id();
+    return user_data;
+  }
+
+  // Return a dummy object that will still accept (but ignore) Set() calls.
+  return MakeUnique<ActivityUserData>();
 }
 
 // The instantiation of the GlobalActivityTracker object.
@@ -1127,7 +1172,7 @@ ActivityUserData& GlobalActivityTracker::ScopedThreadActivity::user_data() {
       user_data_ =
           tracker_->GetUserData(activity_id_, &global->user_data_allocator_);
     } else {
-      user_data_ = MakeUnique<ActivityUserData>(nullptr, 0);
+      user_data_ = MakeUnique<ActivityUserData>();
     }
   }
   return *user_data_;
@@ -1557,6 +1602,23 @@ void GlobalActivityTracker::ReturnTrackerMemory(
   // Release this memory for re-use at a later time.
   base::AutoLock autolock(thread_tracker_allocator_lock_);
   thread_tracker_allocator_.ReleaseObjectReference(mem_reference);
+}
+
+void GlobalActivityTracker::RecordExceptionImpl(const void* pc,
+                                                const void* origin,
+                                                uint32_t code) {
+  // Get an existing tracker for this thread. It's not possible to create
+  // one at this point because such would involve memory allocations and
+  // other potentially complex operations that can cause failures if done
+  // within an exception handler. In most cases various operations will
+  // have already created the tracker so this shouldn't generally be a
+  // problem.
+  ThreadActivityTracker* tracker = GetTrackerForCurrentThread();
+  if (!tracker)
+    return;
+
+  tracker->RecordExceptionActivity(pc, origin, Activity::ACT_EXCEPTION,
+                                   ActivityData::ForException(code));
 }
 
 // static

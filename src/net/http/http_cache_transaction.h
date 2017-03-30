@@ -179,6 +179,8 @@ class HttpCache::Transaction : public HttpTransaction {
   };
 
   enum State {
+    STATE_UNSET,
+
     // Normally, states are traversed in approximately this order.
     STATE_NONE,
     STATE_GET_BACKEND,
@@ -336,9 +338,8 @@ class HttpCache::Transaction : public HttpTransaction {
   // Returns network error code.
   int RestartNetworkRequestWithAuth(const AuthCredentials& credentials);
 
-  // Called to determine if we need to validate the cache entry before using it,
-  // and whether the validation should be synchronous or asynchronous.
-  ValidationType RequiresValidation();
+  // Called to determine if we need to validate the cache entry before using it.
+  bool RequiresValidation();
 
   // Called to make the request conditional (to ask the server if the cached
   // copy is valid).  Returns true if able to make the request conditional.
@@ -432,6 +433,10 @@ class HttpCache::Transaction : public HttpTransaction {
   // Called to signal completion of asynchronous IO.
   void OnIOComplete(int result);
 
+  // When in a DoLoop, use this to set the next state as it verifies that the
+  // state isn't set twice.
+  void TransitionToState(State state);
+
   State next_state_;
   const HttpRequestInfo* request_;
   RequestPriority priority_;
@@ -505,6 +510,9 @@ class HttpCache::Transaction : public HttpTransaction {
 
   BeforeNetworkStartCallback before_network_start_callback_;
   BeforeHeadersSentCallback before_headers_sent_callback_;
+
+  // True if the Transaction is currently processing the DoLoop.
+  bool in_do_loop_;
 
   base::WeakPtrFactory<Transaction> weak_factory_;
 

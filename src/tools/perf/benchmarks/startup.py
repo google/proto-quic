@@ -85,6 +85,7 @@ class StartupLargeProfileColdBlankPage(_StartupCold):
                     'android',                     # http://crbug.com/481919
                     'yosemite',                    # http://crbug.com/605485
                     'mac',                         # http://crbug.com/700843
+                    'win',                         # http://crbug.com/704137
                     'content-shell')               # No pregenerated profiles.
 class StartupLargeProfileWarmBlankPage(_StartupWarm):
   """Measures warm startup time with a large profile."""

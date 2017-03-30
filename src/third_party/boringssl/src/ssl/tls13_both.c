@@ -33,7 +33,7 @@
  * without being able to return application data. */
 static const uint8_t kMaxKeyUpdates = 32;
 
-int tls13_handshake(SSL_HANDSHAKE *hs) {
+int tls13_handshake(SSL_HANDSHAKE *hs, int *out_early_return) {
   SSL *const ssl = hs->ssl;
   for (;;) {
     /* Resolve the operation the handshake was waiting on. */
@@ -64,6 +64,16 @@ int tls13_handshake(SSL_HANDSHAKE *hs) {
         break;
       }
 
+      case ssl_hs_read_end_of_early_data: {
+        if (ssl->s3->hs->can_early_read) {
+          /* While we are processing early data, the handshake returns early. */
+          *out_early_return = 1;
+          return 1;
+        }
+        hs->wait = ssl_hs_ok;
+        break;
+      }
+
       case ssl_hs_x509_lookup:
         ssl->rwstate = SSL_X509_LOOKUP;
         hs->wait = ssl_hs_ok;
@@ -76,6 +86,11 @@ int tls13_handshake(SSL_HANDSHAKE *hs) {
 
       case ssl_hs_private_key_operation:
         ssl->rwstate = SSL_PRIVATE_KEY_OPERATION;
+        hs->wait = ssl_hs_ok;
+        return -1;
+
+      case ssl_hs_pending_ticket:
+        ssl->rwstate = SSL_PENDING_TICKET;
         hs->wait = ssl_hs_ok;
         return -1;
 
@@ -397,12 +412,21 @@ err:
   return ret;
 }
 
-int tls13_process_finished(SSL_HANDSHAKE *hs) {
+int tls13_process_finished(SSL_HANDSHAKE *hs, int use_saved_value) {
   SSL *const ssl = hs->ssl;
-  uint8_t verify_data[EVP_MAX_MD_SIZE];
+  uint8_t verify_data_buf[EVP_MAX_MD_SIZE];
+  const uint8_t *verify_data;
   size_t verify_data_len;
-  if (!tls13_finished_mac(hs, verify_data, &verify_data_len, !ssl->server)) {
-    return 0;
+  if (use_saved_value) {
+    assert(ssl->server);
+    verify_data = hs->expected_client_finished;
+    verify_data_len = hs->hash_len;
+  } else {
+    if (!tls13_finished_mac(hs, verify_data_buf, &verify_data_len,
+                            !ssl->server)) {
+      return 0;
+    }
+    verify_data = verify_data_buf;
   }
 
   int finished_ok =

@@ -1,0 +1,11 @@
+Section Sizes (Total=0 bytes):
+.bss: 0 bytes (not included in totals)
+.data: 0 bytes (0.0%)
+.data.rel.ro: 0 bytes (0.0%)
+.data.rel.ro.local: 0 bytes (0.0%)
+.rodata: 0 bytes (0.0%)
+.text: 0 bytes (0.0%)
+
+0 symbols added (+), 0 changed (~), 0 removed (-), 43 unchanged (not shown)
+Showing 0 symbols with total size: 0 bytes
+First columns are: running total, type, size

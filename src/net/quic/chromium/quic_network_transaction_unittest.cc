@@ -2670,7 +2670,10 @@ TEST_P(QuicNetworkTransactionTest, SecureResourceOverSecureQuic) {
       test_socket_performance_watcher_factory_.rtt_notification_received());
 }
 
-TEST_P(QuicNetworkTransactionTest, QuicUploadToAlternativeProxyServer) {
+// TODO(zhongyi): disabled this broken test as it was not testing the correct
+// code path. Need a fix to re-enable this test, tracking at crbug.com/704596.
+TEST_P(QuicNetworkTransactionTest,
+       DISABLED_QuicUploadToAlternativeProxyServer) {
   base::HistogramTester histogram_tester;
   proxy_service_ =
       ProxyService::CreateFixedFromPacResult("HTTPS mail.example.org:443");

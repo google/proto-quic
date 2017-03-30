@@ -6,6 +6,7 @@
 
 #include "base/allocator/partition_allocator/page_allocator.h"
 #include "base/allocator/partition_allocator/spin_lock.h"
+#include "base/win/windows_version.h"
 #include "build/build_config.h"
 
 #if defined(OS_WIN)
@@ -89,11 +90,11 @@ void* GetRandomPageBase() {
 // This address mask gives a low likelihood of address space collisions. We
 // handle the situation gracefully if there is a collision.
 #if defined(OS_WIN)
-  // 64-bit Windows has a bizarrely small 8TB user address space. Allocates in
-  // the 1-5TB region. TODO(palmer): See if Windows >= 8.1 has the full 47 bits,
-  // and use it if so. crbug.com/672219
   random &= 0x3ffffffffffUL;
-  random += 0x10000000000UL;
+  // Windows >= 8.1 has the full 47 bits. Use them where available.
+  if (base::win::GetVersion() < base::win::Version::VERSION_WIN8_1) {
+    random += 0x10000000000UL;
+  }
 #elif defined(MEMORY_TOOL_REPLACES_ALLOCATOR)
   // This range is copied from the TSan source, but works for all tools.
   random &= 0x007fffffffffUL;

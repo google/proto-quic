@@ -60,6 +60,12 @@ config("libxml_warnings") {
       # used with certain preprocessor defines set.
       "-Wno-unused-function",
     ]
+  } else if (is_linux) {
+    cflags = [
+      # gcc spits out a bunch of warnings about passing too many arguments to
+      # __xmlSimpleError.
+      "-Wno-format-extra-args",
+    ]
   }
 }
 

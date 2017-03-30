@@ -9,7 +9,9 @@
 #include <stddef.h>
 
 #include "base/logging.h"
+#include "base/mac/scoped_mach_port.h"
 #include "base/memory/ptr_util.h"
+#include "base/numerics/safe_conversions.h"
 
 namespace base {
 
@@ -25,11 +27,6 @@ bool GetTaskInfo(task_basic_info_64* task_info_data) {
 }
 
 }  // namespace
-
-SystemMemoryInfoKB::SystemMemoryInfoKB() : total(0), free(0) {}
-
-SystemMemoryInfoKB::SystemMemoryInfoKB(const SystemMemoryInfoKB& other) =
-    default;
 
 ProcessMetrics::ProcessMetrics(ProcessHandle process) {}
 
@@ -91,11 +88,40 @@ size_t GetSystemCommitCharge() {
   return 0;
 }
 
-// Bytes committed by the system.
 bool GetSystemMemoryInfo(SystemMemoryInfoKB* meminfo) {
-  // Unimplemented. Must enable unittest for IOS when this gets implemented.
-  NOTIMPLEMENTED();
-  return false;
+  struct host_basic_info hostinfo;
+  mach_msg_type_number_t count = HOST_BASIC_INFO_COUNT;
+  base::mac::ScopedMachSendRight host(mach_host_self());
+  int result = host_info(host.get(), HOST_BASIC_INFO,
+                         reinterpret_cast<host_info_t>(&hostinfo), &count);
+  if (result != KERN_SUCCESS)
+    return false;
+
+  DCHECK_EQ(HOST_BASIC_INFO_COUNT, count);
+  meminfo->total = static_cast<int>(hostinfo.max_mem / 1024);
+
+  vm_statistics64_data_t vm_info;
+  count = HOST_VM_INFO64_COUNT;
+
+  if (host_statistics64(host.get(), HOST_VM_INFO64,
+                        reinterpret_cast<host_info64_t>(&vm_info),
+                        &count) != KERN_SUCCESS) {
+    return false;
+  }
+  DCHECK_EQ(HOST_VM_INFO64_COUNT, count);
+
+  // Check that PAGE_SIZE is divisible by 1024 (2^10).
+  CHECK_EQ(PAGE_SIZE, (PAGE_SIZE >> 10) << 10);
+  meminfo->free = saturated_cast<int>(
+      PAGE_SIZE / 1024 * (vm_info.free_count - vm_info.speculative_count));
+  meminfo->speculative =
+      saturated_cast<int>(PAGE_SIZE / 1024 * vm_info.speculative_count);
+  meminfo->file_backed =
+      saturated_cast<int>(PAGE_SIZE / 1024 * vm_info.external_page_count);
+  meminfo->purgeable =
+      saturated_cast<int>(PAGE_SIZE / 1024 * vm_info.purgeable_count);
+
+  return true;
 }
 
 }  // namespace base

@@ -156,9 +156,10 @@ class BASE_EXPORT FeatureList {
   // called after the singleton instance has been registered via SetInstance().
   static FieldTrial* GetFieldTrial(const Feature& feature);
 
-  // Splits a comma-separated string containing feature names into a vector.
-  static std::vector<std::string> SplitFeatureListString(
-      const std::string& input);
+  // Splits a comma-separated string containing feature names into a vector. The
+  // resulting pieces point to parts of |input|.
+  static std::vector<base::StringPiece> SplitFeatureListString(
+      base::StringPiece input);
 
   // Initializes and sets an instance of FeatureList with feature overrides via
   // command-line flags |enable_features| and |disable_features| if one has not

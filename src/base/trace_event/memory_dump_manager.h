@@ -18,6 +18,7 @@
 #include "base/memory/ref_counted.h"
 #include "base/memory/singleton.h"
 #include "base/synchronization/lock.h"
+#include "base/trace_event/memory_allocator_dump.h"
 #include "base/trace_event/memory_dump_request_args.h"
 #include "base/trace_event/process_memory_dump.h"
 #include "base/trace_event/trace_event.h"
@@ -297,6 +298,7 @@ class BASE_EXPORT MemoryDumpManager : public TraceLog::EnabledStateObserver {
   ~MemoryDumpManager() override;
 
   static void SetInstanceForTesting(MemoryDumpManager* instance);
+  static uint32_t GetDumpsSumKb(const std::string&, const ProcessMemoryDump*);
   static void FinalizeDumpAndAddToTrace(
       std::unique_ptr<ProcessMemoryDumpAsyncState> pmd_async_state);
 
@@ -369,9 +371,6 @@ class BASE_EXPORT MemoryDumpManager : public TraceLog::EnabledStateObserver {
   // Optimization to avoid attempting any memory dump (i.e. to not walk an empty
   // dump_providers_enabled_ list) when tracing is not enabled.
   subtle::AtomicWord memory_tracing_enabled_;
-
-  // For triggering memory dumps.
-  std::unique_ptr<MemoryDumpScheduler> dump_scheduler_;
 
   // Thread used for MemoryDumpProviders which don't specify a task runner
   // affinity.

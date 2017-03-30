@@ -7,14 +7,10 @@ from telemetry import story
 from telemetry.page import page as page_module
 
 
-WEBRTC_TEST_PAGES_URL = 'https://test.webrtc.org/manual/'
-WEBRTC_GITHUB_SAMPLES_URL = 'https://webrtc.github.io/samples/src/content/'
-MEDIARECORDER_GITHUB_URL = 'https://rawgit.com/cricdecyan/mediarecorder/master/'
-
-
 class WebrtcPage(page_module.Page):
 
   def __init__(self, url, page_set, name):
+    assert url.startswith('file://webrtc_cases/')
     super(WebrtcPage, self).__init__(
         url=url, page_set=page_set, name=name)
 
@@ -28,7 +24,7 @@ class Page1(WebrtcPage):
 
   def __init__(self, page_set):
     super(Page1, self).__init__(
-        url=WEBRTC_GITHUB_SAMPLES_URL + 'getusermedia/resolution/',
+        url='file://webrtc_cases/resolution.html',
         name='hd_local_stream_10s',
         page_set=page_set)
 
@@ -42,7 +38,7 @@ class Page2(WebrtcPage):
 
   def __init__(self, page_set):
     super(Page2, self).__init__(
-        url=WEBRTC_GITHUB_SAMPLES_URL + 'peerconnection/constraints/',
+        url='file://webrtc_cases/constraints.html',
         name='720p_call_45s',
         page_set=page_set)
 
@@ -64,7 +60,7 @@ class Page3(WebrtcPage):
 
   def __init__(self, page_set):
     super(Page3, self).__init__(
-        url=WEBRTC_GITHUB_SAMPLES_URL + 'datachannel/datatransfer',
+        url='file://webrtc_cases/datatransfer.html',
         name='30s_datachannel_transfer',
         page_set=page_set)
 
@@ -81,7 +77,7 @@ class Page4(WebrtcPage):
 
   def __init__(self, page_set):
     super(Page4, self).__init__(
-        url=WEBRTC_GITHUB_SAMPLES_URL + 'peerconnection/audio/?codec=OPUS',
+        url='file://webrtc_cases/audio.html?codec=OPUS',
         name='audio_call_opus_10s',
         page_set=page_set)
 
@@ -96,7 +92,7 @@ class Page5(WebrtcPage):
 
   def __init__(self, page_set):
     super(Page5, self).__init__(
-        url=WEBRTC_GITHUB_SAMPLES_URL + 'peerconnection/audio/?codec=G722',
+        url='file://webrtc_cases/audio.html?codec=G722',
         name='audio_call_g722_10s',
         page_set=page_set)
 
@@ -111,7 +107,7 @@ class Page6(WebrtcPage):
 
   def __init__(self, page_set):
     super(Page6, self).__init__(
-        url=WEBRTC_GITHUB_SAMPLES_URL + 'peerconnection/audio/?codec=PCMU',
+        url='file://webrtc_cases/audio.html?codec=PCMU',
         name='audio_call_pcmu_10s',
         page_set=page_set)
 
@@ -126,7 +122,7 @@ class Page7(WebrtcPage):
 
   def __init__(self, page_set):
     super(Page7, self).__init__(
-        url=WEBRTC_GITHUB_SAMPLES_URL + 'peerconnection/audio/?codec=ISAC_16K',
+        url='file://webrtc_cases/audio.html?codec=ISAC_16K',
         name='audio_call_isac16k_10s',
         page_set=page_set)
 
@@ -140,18 +136,15 @@ class Page8(WebrtcPage):
   """Why: Sets up a canvas capture stream connection to a peer connection."""
 
   def __init__(self, page_set):
-    canvas_capure_html = 'canvascapture/canvas_capture_peerconnection.html'
     super(Page8, self).__init__(
-        url=MEDIARECORDER_GITHUB_URL + canvas_capure_html,
+        url='file://webrtc_cases/canvas-capture.html',
         name='canvas_capture_peer_connection',
         page_set=page_set)
 
   def RunPageInteractions(self, action_runner):
     with action_runner.CreateInteraction('Action_Canvas_PeerConnection',
                                          repeatable=False):
-      action_runner.WaitForJavaScriptCondition('typeof draw !== "undefined"')
-      action_runner.ExecuteJavaScript('draw();')
-      action_runner.ExecuteJavaScript('doCanvasCaptureAndPeerConnection();')
+      action_runner.ClickElement('button[id="startButton"]')
       action_runner.Wait(10)
 
 
@@ -160,7 +153,7 @@ class Page9(WebrtcPage):
 
   def __init__(self, page_set):
     super(Page9, self).__init__(
-        url= WEBRTC_TEST_PAGES_URL + 'multiple-peerconnections/',
+        url='file://webrtc_cases/multiple-peerconnections.html',
         name='multiple_peerconnections',
         page_set=page_set)
 
@@ -181,7 +174,6 @@ class WebrtcGetusermediaPageSet(story.StorySet):
 
   def __init__(self):
     super(WebrtcGetusermediaPageSet, self).__init__(
-        archive_data_file='data/webrtc_getusermedia_cases.json',
         cloud_storage_bucket=story.PUBLIC_BUCKET)
 
     self.AddStory(Page1(self))
@@ -192,7 +184,6 @@ class WebrtcStresstestPageSet(story.StorySet):
 
   def __init__(self):
     super(WebrtcStresstestPageSet, self).__init__(
-        archive_data_file='data/webrtc_stresstest_cases.json',
         cloud_storage_bucket=story.PUBLIC_BUCKET)
 
     self.AddStory(Page9(self))
@@ -203,7 +194,6 @@ class WebrtcPeerconnectionPageSet(story.StorySet):
 
   def __init__(self):
     super(WebrtcPeerconnectionPageSet, self).__init__(
-        archive_data_file='data/webrtc_peerconnection_cases.json',
         cloud_storage_bucket=story.PUBLIC_BUCKET)
 
     self.AddStory(Page2(self))
@@ -214,7 +204,6 @@ class WebrtcDatachannelPageSet(story.StorySet):
 
   def __init__(self):
     super(WebrtcDatachannelPageSet, self).__init__(
-        archive_data_file='data/webrtc_datachannel_cases.json',
         cloud_storage_bucket=story.PUBLIC_BUCKET)
 
     self.AddStory(Page3(self))
@@ -225,7 +214,6 @@ class WebrtcAudioPageSet(story.StorySet):
 
   def __init__(self):
     super(WebrtcAudioPageSet, self).__init__(
-        archive_data_file='data/webrtc_audio_cases.json',
         cloud_storage_bucket=story.PUBLIC_BUCKET)
 
     self.AddStory(Page4(self))
@@ -239,7 +227,6 @@ class WebrtcRenderingPageSet(story.StorySet):
 
   def __init__(self):
     super(WebrtcRenderingPageSet, self).__init__(
-        archive_data_file='data/webrtc_smoothness_cases.json',
         cloud_storage_bucket=story.PARTNER_BUCKET)
 
     self.AddStory(Page2(self))

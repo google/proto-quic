@@ -39,6 +39,7 @@ component("crypto") {
     "mock_apple_keychain.h",
     "mock_apple_keychain_ios.cc",
     "mock_apple_keychain_mac.cc",
+    "nss_crypto_module_delegate.h",
     "nss_key_util.cc",
     "nss_key_util.h",
     "nss_util.cc",
@@ -68,6 +69,7 @@ component("crypto") {
     "signature_verifier.h",
     "symmetric_key.cc",
     "symmetric_key.h",
+    "wincrypt_shim.h",
   ]
 
   # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.

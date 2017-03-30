@@ -130,9 +130,9 @@ struct HttpCache::PendingOp {
 
   // Returns the estimate of dynamically allocated memory in bytes.
   size_t EstimateMemoryUsage() const {
-    // |disk_entry| is tracked in |backend|.
-    return base::trace_event::EstimateMemoryUsage(backend) +
-           base::trace_event::EstimateMemoryUsage(writer) +
+    // Note that backend isn't counted because it doesn't provide an EMU
+    // function.
+    return base::trace_event::EstimateMemoryUsage(writer) +
            base::trace_event::EstimateMemoryUsage(pending_queue);
   }
 
@@ -512,16 +512,17 @@ void HttpCache::DumpMemoryStats(base::trace_event::ProcessMemoryDump* pmd,
                                 const std::string& parent_absolute_name) const {
   // Skip tracking members like |clock_| and |backend_factory_| because they
   // don't allocate.
-  base::trace_event::MemoryAllocatorDump* dump =
-      pmd->CreateAllocatorDump(parent_absolute_name + "/http_cache");
-  dump->AddScalar(
-      base::trace_event::MemoryAllocatorDump::kNameSize,
-      base::trace_event::MemoryAllocatorDump::kUnitsBytes,
-      base::trace_event::EstimateMemoryUsage(disk_cache_) +
-          base::trace_event::EstimateMemoryUsage(active_entries_) +
-          base::trace_event::EstimateMemoryUsage(doomed_entries_) +
-          base::trace_event::EstimateMemoryUsage(playback_cache_map_) +
-          base::trace_event::EstimateMemoryUsage(pending_ops_));
+  std::string name = parent_absolute_name + "/http_cache";
+  base::trace_event::MemoryAllocatorDump* dump = pmd->CreateAllocatorDump(name);
+  size_t size = base::trace_event::EstimateMemoryUsage(active_entries_) +
+                base::trace_event::EstimateMemoryUsage(doomed_entries_) +
+                base::trace_event::EstimateMemoryUsage(playback_cache_map_) +
+                base::trace_event::EstimateMemoryUsage(pending_ops_);
+  if (disk_cache_)
+    size += disk_cache_->DumpMemoryStats(pmd, name);
+
+  dump->AddScalar(base::trace_event::MemoryAllocatorDump::kNameSize,
+                  base::trace_event::MemoryAllocatorDump::kUnitsBytes, size);
 }
 
 //-----------------------------------------------------------------------------

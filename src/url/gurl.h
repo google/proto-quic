@@ -54,7 +54,7 @@ class URL_EXPORT GURL {
   // Copy construction is relatively inexpensive, with most of the time going
   // to reallocating the string. It does not re-parse.
   GURL(const GURL& other);
-  GURL(GURL&& other);
+  GURL(GURL&& other) noexcept;
 
   // The strings to this contructor should be UTF-8 / UTF-16.
   explicit GURL(base::StringPiece url_string);

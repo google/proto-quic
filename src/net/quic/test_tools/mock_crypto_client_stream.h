@@ -20,6 +20,8 @@ namespace net {
 
 class MockCryptoClientStream : public QuicCryptoClientStream {
  public:
+  // TODO(zhongyi): might consider move HandshakeMode up to
+  // MockCryptoClientStreamFactory.
   // HandshakeMode enumerates the handshake mode MockCryptoClientStream should
   // mock in CryptoConnect.
   enum HandshakeMode {
@@ -35,6 +37,11 @@ class MockCryptoClientStream : public QuicCryptoClientStream {
     // COLD_START indicates that CryptoConnect will neither establish encryption
     // nor confirm the handshake
     COLD_START,
+
+    // USE_DEFAULT_CRYPTO_STREAM indicates that MockCryptoClientStreamFactory
+    // will create a QuicCryptoClientStream instead of a
+    // MockCryptoClientStream.
+    USE_DEFAULT_CRYPTO_STREAM,
   };
 
   MockCryptoClientStream(

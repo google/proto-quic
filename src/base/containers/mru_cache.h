@@ -105,8 +105,6 @@ class MRUCacheBase {
   // Retrieves the contents of the given key, or end() if not found. This method
   // has the side effect of moving the requested item to the front of the
   // recency list.
-  //
-  // TODO(brettw) We may want a const version of this function in the future.
   iterator Get(const KeyType& key) {
     typename KeyIndex::iterator index_iter = index_.find(key);
     if (index_iter == index_.end())

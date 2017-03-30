@@ -37,7 +37,6 @@
         * Paste in link to commit or review URL that is at fault.
         * Paste in link to [https://chromium.googlesource.com/chromium/src/+/master/tools/perf/docs/apk_size_regressions.md#Debugging-Apk-Size-Increase](https://chromium.googlesource.com/chromium/src/+/master/tools/perf/docs/apk_size_regressions.md#Debugging-Apk-Size-Increase).
         * Remove label: `Restrict-View-Google`
-        * Add label: `binary-size`
         * TODO(agrieve): [https://github.com/catapult-project/catapult/issues/3150](Change bug template to match these instructions)
 
 # Debugging Apk Size Increase

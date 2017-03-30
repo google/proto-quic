@@ -28,9 +28,9 @@ trusted = common.TrustAnchor(root, constrained=False)
 # intermediate certificate is not.
 time = common.MARCH_2_2015_UTC
 verify_result = False
-errors = """[Context] Processing Certificate
-  index: 0
-      [Error] Time is after notAfter
+errors = """----- Certificate i=1 (CN=Intermediate) -----
+ERROR: Time is after notAfter
+
 """
 
 common.write_test_file(__doc__, chain, trusted, time, verify_result, errors)

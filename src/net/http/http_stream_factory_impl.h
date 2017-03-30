@@ -19,6 +19,7 @@
 #include "net/base/privacy_mode.h"
 #include "net/base/request_priority.h"
 #include "net/http/http_stream_factory.h"
+#include "net/log/net_log_source.h"
 #include "net/proxy/proxy_server.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/spdy/spdy_session_key.h"
@@ -132,7 +133,8 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
                              const ProxyInfo& used_proxy_info,
                              bool was_alpn_negotiated,
                              NextProto negotiated_protocol,
-                             bool using_spdy);
+                             bool using_spdy,
+                             NetLogSource source_dependency);
 
   // Called when the Job detects that the endpoint indicated by the
   // Alternate-Protocol does not work. Lets the factory update

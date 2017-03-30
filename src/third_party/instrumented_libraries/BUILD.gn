@@ -57,18 +57,27 @@ if (prebuilt_instrumented_libraries_available) {
     }
   }
 
-  # TODO(GYP): scripts/download_binaries.py uses GYP_DEFINES to decide whether
-  # to download the archives extracted here.
+  action("download_prebuilt_instrumented_libraries") {
+    tarfile_name = "$archive_prefix-$instrumented_libraries_platform.tgz"
+    shafile = "binaries/$tarfile_name.sha1"
+    tarfile = "$target_out_dir/$tarfile_name"
+    inputs = [ shafile ]
+    outputs = [ tarfile ]
+    script = "scripts/download_binaries.py"
+    args = [ rebase_path(shafile), rebase_path(tarfile) ]
+  }
+
   # Note: This requires a clobber whenever Ubuntu version changes.
   action("extract_prebuilt_instrumented_libraries") {
+    deps = [ ":download_prebuilt_instrumented_libraries" ]
     visibility = [ ":prebuilt" ]
     script = "scripts/unpack_binaries.py"
     depfile = "$target_out_dir/$archive_prefix.d"
+    tarfile = get_target_outputs(":download_prebuilt_instrumented_libraries")
     args = [
-      archive_prefix,
-      rebase_path("binaries"),
+      rebase_path(tarfile[0]),
+      rebase_path("$target_out_dir/$archive_prefix.txt"),
       rebase_path(root_out_dir + "/instrumented_libraries_prebuilt"),
-      rebase_path(target_out_dir, root_out_dir),
     ]
     outputs = [
       "$target_out_dir/$archive_prefix.txt",

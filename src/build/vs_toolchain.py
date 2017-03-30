@@ -137,7 +137,6 @@ def DetectVisualStudioPath():
   # build/toolchain/win/setup_toolchain.py as well.
   version_as_year = GetVisualStudioVersion()
   year_to_version = {
-      '2013': '12.0',
       '2015': '14.0',
       '2017': '15.0',
   }
@@ -173,8 +172,6 @@ def _VersionNumber():
   """Gets the standard version number ('120', '140', etc.) based on
   GYP_MSVS_VERSION."""
   vs_version = GetVisualStudioVersion()
-  if vs_version == '2013':
-    return '120'
   if vs_version == '2015':
     return '140'
   if vs_version == '2017':
@@ -200,16 +197,6 @@ def _CopyRuntimeImpl(target, source, verbose=True):
     shutil.copy2(source, target)
     # Make the file writable so that we can overwrite or delete it later.
     os.chmod(target, stat.S_IWRITE)
-
-
-def _CopyRuntime2013(target_dir, source_dir, dll_pattern):
-  """Copy both the msvcr and msvcp runtime DLLs, only if the target doesn't
-  exist, but the target directory does exist."""
-  for file_part in ('p', 'r'):
-    dll = dll_pattern % file_part
-    target = os.path.join(target_dir, dll)
-    source = os.path.join(source_dir, dll)
-    _CopyRuntimeImpl(target, source)
 
 
 def _CopyUCRTRuntime(target_dir, source_dir, target_cpu, dll_pattern, suffix):
@@ -241,14 +228,11 @@ def _CopyUCRTRuntime(target_dir, source_dir, target_cpu, dll_pattern, suffix):
 
 def _CopyRuntime(target_dir, source_dir, target_cpu, debug):
   """Copy the VS runtime DLLs, only if the target doesn't exist, but the target
-  directory does exist. Handles VS 2013, VS 2015, and VS 2017."""
+  directory does exist. Handles VS 2015 and VS 2017."""
   suffix = "d.dll" if debug else ".dll"
-  if GetVisualStudioVersion() in ['2015', '2017']:
-    # VS 2017 uses the same CRT DLLs as VS 2015.
-    _CopyUCRTRuntime(target_dir, source_dir, target_cpu, '%s140' + suffix,
-                     suffix)
-  else:
-    _CopyRuntime2013(target_dir, source_dir, 'msvc%s120' + suffix)
+  # VS 2017 uses the same CRT DLLs as VS 2015.
+  _CopyUCRTRuntime(target_dir, source_dir, target_cpu, '%s140' + suffix,
+                    suffix)
 
   # Copy the PGO runtime library to the release directories.
   if not debug and os.environ.get('GYP_MSVS_OVERRIDE_PATH'):
@@ -347,11 +331,12 @@ def _GetDesiredVsToolchainHashes():
   """Load a list of SHA1s corresponding to the toolchains that we want installed
   to build with."""
   env_version = GetVisualStudioVersion()
-  if env_version == '2013':
-    return ['03a4e939cd325d6bc5216af41b92d02dda1366a6']
   if env_version == '2015':
     # Update 3 final with patches with 10.0.14393.0 SDK.
     return ['d3cb0e37bdd120ad0ac4650b674b09e81be45616']
+  if env_version == '2017':
+    # VS 2017 RTM with 10.0.14393.0 SDK and dbghelp.dll fixes.
+    return ['4e8a360587a3c8ff3fa46aa9271e982bf3e948ec']
   raise Exception('Unsupported VS version %s' % env_version)
 
 

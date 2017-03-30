@@ -100,6 +100,11 @@ void MockCryptoClientStream::CryptoConnect() {
       encryption_established_ = false;
       break;
     }
+
+    case USE_DEFAULT_CRYPTO_STREAM: {
+      NOTREACHED();
+      break;
+    }
   }
 }
 

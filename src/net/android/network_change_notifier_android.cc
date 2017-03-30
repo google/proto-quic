@@ -160,6 +160,11 @@ NetworkChangeNotifierAndroid::GetCurrentConnectionType() const {
   return delegate_->GetCurrentConnectionType();
 }
 
+NetworkChangeNotifier::ConnectionSubtype
+NetworkChangeNotifierAndroid::GetCurrentConnectionSubtype() const {
+  return delegate_->GetCurrentConnectionSubtype();
+}
+
 void NetworkChangeNotifierAndroid::GetCurrentMaxBandwidthAndConnectionType(
     double* max_bandwidth_mbps,
     ConnectionType* connection_type) const {

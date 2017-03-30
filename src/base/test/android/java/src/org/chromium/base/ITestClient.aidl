@@ -4,8 +4,8 @@
 
 package org.chromium.base;
 
-import org.chromium.base.FileDescriptorInfo;
 import org.chromium.base.MainReturnCodeResult;
+import org.chromium.base.process_launcher.FileDescriptorInfo;
 
 /**
  * This interface is used to control child processes.

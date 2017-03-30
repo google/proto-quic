@@ -34,7 +34,7 @@ class BASE_EXPORT PostTaskAndReplyImpl {
 
  private:
   virtual bool PostTask(const tracked_objects::Location& from_here,
-                        const Closure& task) = 0;
+                        Closure task) = 0;
 };
 
 }  // namespace internal

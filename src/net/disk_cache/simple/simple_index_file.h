@@ -105,7 +105,10 @@ class NET_EXPORT_PRIVATE SimpleIndexFile {
   friend class WrappedSimpleIndexFile;
 
   // Used for cache directory traversal.
-  typedef base::Callback<void (const base::FilePath&)> EntryFileCallback;
+  using EntryFileCallback = base::Callback<void(const base::FilePath&,
+                                                base::Time last_accessed,
+                                                base::Time last_modified,
+                                                int64_t size)>;
 
   // When loading the entries from disk, add this many extra hash buckets to
   // prevent reallocation on the IO thread when merging in new live entries.

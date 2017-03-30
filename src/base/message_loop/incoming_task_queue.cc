@@ -5,6 +5,7 @@
 #include "base/message_loop/incoming_task_queue.h"
 
 #include <limits>
+#include <utility>
 
 #include "base/location.h"
 #include "base/message_loop/message_loop.h"
@@ -59,7 +60,7 @@ IncomingTaskQueue::IncomingTaskQueue(MessageLoop* message_loop)
 
 bool IncomingTaskQueue::AddToIncomingQueue(
     const tracked_objects::Location& from_here,
-    const Closure& task,
+    Closure task,
     TimeDelta delay,
     bool nestable) {
   DLOG_IF(WARNING,
@@ -67,8 +68,8 @@ bool IncomingTaskQueue::AddToIncomingQueue(
       << "Requesting super-long task delay period of " << delay.InSeconds()
       << " seconds from here: " << from_here.ToString();
 
-  PendingTask pending_task(from_here, task, CalculateDelayedRuntime(delay),
-                           nestable);
+  PendingTask pending_task(from_here, std::move(task),
+                           CalculateDelayedRuntime(delay), nestable);
 #if defined(OS_WIN)
   // We consider the task needs a high resolution timer if the delay is
   // more than 0 and less than 32ms. This caps the relative error to

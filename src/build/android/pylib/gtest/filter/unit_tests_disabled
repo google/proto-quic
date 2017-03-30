@@ -26,7 +26,7 @@ DownloadItemModelTest.InterruptTooltip
 # l10n_util.cc(655)] Check failed: std::string::npos != pos
 DownloadItemModelTest.InterruptStatus
 # l10n_util.cc(655)] Check failed: std::string::npos != pos
-WebsiteSettingsTest.OnSiteDataAccessed
+PageInfoTest.OnSiteDataAccessed
 
 # crbug.com/139423
 ValueStoreFrontendTest.GetExistingData

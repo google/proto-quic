@@ -25,7 +25,9 @@ bool SimpleIndexFile::TraverseCacheDirectory(
        file_path = enumerator.Next()) {
     if (file_path == current_directory || file_path == parent_directory)
       continue;
-    entry_file_callback.Run(file_path);
+    base::FileEnumerator::FileInfo info = enumerator.GetInfo();
+    entry_file_callback.Run(file_path, base::Time(), info.GetLastModifiedTime(),
+                            info.GetSize());
   }
   return true;
 }

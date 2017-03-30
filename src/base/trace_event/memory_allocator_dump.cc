@@ -29,7 +29,8 @@ MemoryAllocatorDump::MemoryAllocatorDump(const std::string& absolute_name,
       process_memory_dump_(process_memory_dump),
       attributes_(new TracedValue),
       guid_(guid),
-      flags_(Flags::DEFAULT) {
+      flags_(Flags::DEFAULT),
+      size_(0) {
   // The |absolute_name| cannot be empty.
   DCHECK(!absolute_name.empty());
 
@@ -59,6 +60,8 @@ MemoryAllocatorDump::~MemoryAllocatorDump() {
 void MemoryAllocatorDump::AddScalar(const char* name,
                                     const char* units,
                                     uint64_t value) {
+  if (strcmp(kNameSize, name) == 0)
+    size_ = value;
   SStringPrintf(&string_conversion_buffer_, "%" PRIx64, value);
   attributes_->BeginDictionary(name);
   attributes_->SetString("type", kTypeScalar);

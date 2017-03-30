@@ -22,7 +22,6 @@
 #include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
-#include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
@@ -34,7 +33,6 @@
 #include "net/cert/asn1_util.h"
 #include "net/cert/cert_verify_result.h"
 #include "net/cert/ct_policy_status.h"
-#include "net/http/http_log_util.h"
 #include "net/http/http_network_session.h"
 #include "net/http/http_server_properties.h"
 #include "net/http/http_util.h"
@@ -42,16 +40,17 @@
 #include "net/log/net_log.h"
 #include "net/log/net_log_capture_mode.h"
 #include "net/log/net_log_event_type.h"
-#include "net/log/net_log_source.h"
 #include "net/log/net_log_source_type.h"
 #include "net/log/net_log_with_source.h"
 #include "net/proxy/proxy_server.h"
 #include "net/socket/socket.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
+#include "net/spdy/platform/api/spdy_string_utils.h"
 #include "net/spdy/spdy_buffer_producer.h"
 #include "net/spdy/spdy_frame_builder.h"
 #include "net/spdy/spdy_http_utils.h"
+#include "net/spdy/spdy_log_util.h"
 #include "net/spdy/spdy_protocol.h"
 #include "net/spdy/spdy_session_pool.h"
 #include "net/spdy/spdy_stream.h"
@@ -111,6 +110,7 @@ std::unique_ptr<base::Value> NetLogSpdyHeadersSentCallback(
     int weight,
     SpdyStreamId parent_stream_id,
     bool exclusive,
+    NetLogSource source_dependency,
     NetLogCaptureMode capture_mode) {
   auto dict = base::MakeUnique<base::DictionaryValue>();
   dict->Set("headers", ElideSpdyHeaderBlockForNetLog(*headers, capture_mode));
@@ -121,6 +121,9 @@ std::unique_ptr<base::Value> NetLogSpdyHeadersSentCallback(
     dict->SetInteger("parent_stream_id", parent_stream_id);
     dict->SetInteger("weight", weight);
     dict->SetBoolean("exclusive", exclusive);
+  }
+  if (source_dependency.IsValid()) {
+    source_dependency.AddToEventParameters(dict.get());
   }
   return std::move(dict);
 }
@@ -178,8 +181,8 @@ std::unique_ptr<base::Value> NetLogSpdySendSettingsCallback(
     const uint32_t value = it->second;
     const char* settings_string;
     SettingsIdToString(id, &settings_string);
-    settings_list->AppendString(base::StringPrintf("[id:%u (%s) value:%u]", id,
-                                                   settings_string, value));
+    settings_list->AppendString(
+        SpdyStringPrintf("[id:%u (%s) value:%u]", id, settings_string, value));
   }
   dict->Set("settings", std::move(settings_list));
   return std::move(dict);
@@ -200,7 +203,7 @@ std::unique_ptr<base::Value> NetLogSpdyRecvSettingCallback(
   auto dict = base::MakeUnique<base::DictionaryValue>();
   const char* settings_string;
   SettingsIdToString(id, &settings_string);
-  dict->SetString("id", base::StringPrintf("%u (%s)", id, settings_string));
+  dict->SetString("id", SpdyStringPrintf("%u (%s)", id, settings_string));
   dict->SetInteger("value", value);
   return std::move(dict);
 }
@@ -245,7 +248,7 @@ std::unique_ptr<base::Value> NetLogSpdyRecvRstStreamCallback(
   dict->SetInteger("stream_id", static_cast<int>(stream_id));
   dict->SetString(
       "error_code",
-      base::StringPrintf("%u (%s)", error_code, ErrorCodeToString(error_code)));
+      SpdyStringPrintf("%u (%s)", error_code, ErrorCodeToString(error_code)));
   return std::move(dict);
 }
 
@@ -258,7 +261,7 @@ std::unique_ptr<base::Value> NetLogSpdySendRstStreamCallback(
   dict->SetInteger("stream_id", static_cast<int>(stream_id));
   dict->SetString(
       "error_code",
-      base::StringPrintf("%u (%s)", error_code, ErrorCodeToString(error_code)));
+      SpdyStringPrintf("%u (%s)", error_code, ErrorCodeToString(error_code)));
   dict->SetString("description", *description);
   return std::move(dict);
 }
@@ -288,7 +291,7 @@ std::unique_ptr<base::Value> NetLogSpdyRecvGoAwayCallback(
   dict->SetInteger("unclaimed_streams", unclaimed_streams);
   dict->SetString(
       "error_code",
-      base::StringPrintf("%u (%s)", error_code, ErrorCodeToString(error_code)));
+      SpdyStringPrintf("%u (%s)", error_code, ErrorCodeToString(error_code)));
   dict->SetString("debug_data",
                   ElideGoAwayDebugDataForNetLog(capture_mode, debug_data));
   return std::move(dict);
@@ -941,7 +944,8 @@ std::unique_ptr<SpdySerializedFrame> SpdySession::CreateHeaders(
     SpdyStreamId stream_id,
     RequestPriority priority,
     SpdyControlFlags flags,
-    SpdyHeaderBlock block) {
+    SpdyHeaderBlock block,
+    NetLogSource source_dependency) {
   ActiveStreamMap::const_iterator it = active_streams_.find(stream_id);
   CHECK(it != active_streams_.end());
   CHECK_EQ(it->second->stream_id(), stream_id);
@@ -965,7 +969,7 @@ std::unique_ptr<SpdySerializedFrame> SpdySession::CreateHeaders(
         NetLogEventType::HTTP2_SESSION_SEND_HEADERS,
         base::Bind(&NetLogSpdyHeadersSentCallback, &block,
                    (flags & CONTROL_FLAG_FIN) != 0, stream_id, has_priority,
-                   weight, dependent_stream_id, exclusive));
+                   weight, dependent_stream_id, exclusive, source_dependency));
   }
 
   SpdyHeadersIR headers(stream_id, std::move(block));
@@ -1579,7 +1583,7 @@ void SpdySession::TryCreatePushStream(SpdyStreamId stream_id,
   if (associated_stream_id == 0) {
     // In HTTP/2 0 stream id in PUSH_PROMISE frame leads to framer error and
     // session going away. We should never get here.
-    std::string description = base::StringPrintf(
+    std::string description = SpdyStringPrintf(
         "Received invalid associated stream id %d for pushed stream %d",
         associated_stream_id, stream_id);
     EnqueueResetStreamFrame(stream_id, request_priority,
@@ -1606,8 +1610,8 @@ void SpdySession::TryCreatePushStream(SpdyStreamId stream_id,
   if (associated_it == active_streams_.end()) {
     EnqueueResetStreamFrame(
         stream_id, request_priority, ERROR_CODE_STREAM_CLOSED,
-        base::StringPrintf("Received push for inactive associated stream %d",
-                           associated_stream_id));
+        SpdyStringPrintf("Received push for inactive associated stream %d",
+                         associated_stream_id));
     return;
   }
 
@@ -1625,9 +1629,9 @@ void SpdySession::TryCreatePushStream(SpdyStreamId stream_id,
       if (gurl.SchemeIs("https")) {
         EnqueueResetStreamFrame(
             stream_id, request_priority, ERROR_CODE_REFUSED_STREAM,
-            base::StringPrintf("Rejected push of cross origin HTTPS content %d "
-                               "from trusted proxy",
-                               associated_stream_id));
+            SpdyStringPrintf("Rejected push of cross origin HTTPS content %d "
+                             "from trusted proxy",
+                             associated_stream_id));
         return;
       }
     } else {
@@ -1640,8 +1644,8 @@ void SpdySession::TryCreatePushStream(SpdyStreamId stream_id,
                      gurl.host())) {
           EnqueueResetStreamFrame(
               stream_id, request_priority, ERROR_CODE_REFUSED_STREAM,
-              base::StringPrintf("Rejected push stream %d on secure connection",
-                                 associated_stream_id));
+              SpdyStringPrintf("Rejected push stream %d on secure connection",
+                               associated_stream_id));
           return;
         }
       } else {
@@ -1649,7 +1653,7 @@ void SpdySession::TryCreatePushStream(SpdyStreamId stream_id,
         if (associated_url.GetOrigin() != gurl.GetOrigin()) {
           EnqueueResetStreamFrame(
               stream_id, request_priority, ERROR_CODE_REFUSED_STREAM,
-              base::StringPrintf(
+              SpdyStringPrintf(
                   "Rejected cross origin push stream %d on insecure connection",
                   associated_stream_id));
           return;
@@ -1916,9 +1920,8 @@ int SpdySession::DoReadComplete(int result) {
   }
 
   if (result < 0) {
-    DoDrainSession(
-        static_cast<Error>(result),
-        base::StringPrintf("Error %d reading from socket.", -result));
+    DoDrainSession(static_cast<Error>(result),
+                   SpdyStringPrintf("Error %d reading from socket.", -result));
     return result;
   }
   CHECK_LE(result, kReadBufferSize);
@@ -2506,7 +2509,7 @@ void SpdySession::DoDrainSession(Error err, const std::string& description) {
 void SpdySession::LogAbandonedStream(SpdyStream* stream, Error status) {
   DCHECK(stream);
   std::string description =
-      base::StringPrintf("ABANDONED (stream_id=%d): ", stream->stream_id()) +
+      SpdyStringPrintf("ABANDONED (stream_id=%d): ", stream->stream_id()) +
       stream->url().spec();
   stream->LogStreamError(status, description);
   // We don't increment the streams abandoned counter here. If the
@@ -2588,9 +2591,9 @@ void SpdySession::OnError(SpdyFramer::SpdyFramerError spdy_framer_error) {
 
   RecordProtocolErrorHistogram(
       MapFramerErrorToProtocolError(spdy_framer_error));
-  std::string description = base::StringPrintf(
-      "Framer error: %d (%s).", spdy_framer_error,
-      SpdyFramer::SpdyFramerErrorToString(spdy_framer_error));
+  std::string description =
+      SpdyStringPrintf("Framer error: %d (%s).", spdy_framer_error,
+                       SpdyFramer::SpdyFramerErrorToString(spdy_framer_error));
   DoDrainSession(MapFramerErrorToNetError(spdy_framer_error), description);
 }
 
@@ -2664,7 +2667,7 @@ void SpdySession::OnRstStream(SpdyStreamId stream_id,
     // TODO(bnc): Record histogram with number of open streams capped at 50.
     it->second->LogStreamError(
         ERR_HTTP_1_1_REQUIRED,
-        base::StringPrintf(
+        SpdyStringPrintf(
             "SPDY session closed because of stream with error_code: %u",
             error_code));
     DoDrainSession(ERR_HTTP_1_1_REQUIRED, "HTTP_1_1_REQUIRED for stream.");
@@ -2673,8 +2676,7 @@ void SpdySession::OnRstStream(SpdyStreamId stream_id,
         PROTOCOL_ERROR_RST_STREAM_FOR_NON_ACTIVE_STREAM);
     it->second->LogStreamError(
         ERR_SPDY_PROTOCOL_ERROR,
-        base::StringPrintf("SPDY stream closed with error_code: %u",
-                           error_code));
+        SpdyStringPrintf("SPDY stream closed with error_code: %u", error_code));
     // TODO(mbelshe): Map from Spdy-protocol errors to something sensical.
     //                For now, it doesn't matter much - it is a protocol error.
     CloseActiveStreamIterator(it, ERR_SPDY_PROTOCOL_ERROR);
@@ -2866,9 +2868,9 @@ void SpdySession::OnWindowUpdate(SpdyStreamId stream_id,
     if (delta_window_size < 1) {
       ResetStreamIterator(
           it, ERROR_CODE_FLOW_CONTROL_ERROR,
-          base::StringPrintf("Received WINDOW_UPDATE with an invalid "
-                             "delta_window_size %d",
-                             delta_window_size));
+          SpdyStringPrintf("Received WINDOW_UPDATE with an invalid "
+                           "delta_window_size %d",
+                           delta_window_size));
       return;
     }
 

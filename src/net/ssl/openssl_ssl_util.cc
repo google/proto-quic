@@ -61,8 +61,13 @@ int OpenSSLNetErrorLib() {
 int MapOpenSSLErrorSSL(uint32_t error_code) {
   DCHECK_EQ(ERR_LIB_SSL, ERR_GET_LIB(error_code));
 
+#if DCHECK_IS_ON()
+  char buf[ERR_ERROR_STRING_BUF_LEN];
+  ERR_error_string_n(error_code, buf, sizeof(buf));
   DVLOG(1) << "OpenSSL SSL error, reason: " << ERR_GET_REASON(error_code)
-           << ", name: " << ERR_error_string(error_code, NULL);
+           << ", name: " << buf;
+#endif
+
   switch (ERR_GET_REASON(error_code)) {
     case SSL_R_READ_TIMEOUT_EXPIRED:
       return ERR_TIMED_OUT;

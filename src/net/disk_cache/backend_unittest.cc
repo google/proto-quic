@@ -18,7 +18,9 @@
 #include "base/threading/platform_thread.h"
 #include "base/threading/thread_restrictions.h"
 #include "base/threading/thread_task_runner_handle.h"
-#include "base/trace_event/memory_usage_estimator.h"
+#include "base/trace_event/memory_allocator_dump.h"
+#include "base/trace_event/process_memory_dump.h"
+#include "base/trace_event/trace_event_argument.h"
 #include "net/base/cache_type.h"
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
@@ -324,9 +326,6 @@ void DiskCacheBackendTest::BackendBasics() {
   ASSERT_TRUE(NULL != entry1);
   entry1->Close();
   entry1 = NULL;
-  // base::trace_event::EstimateMemoryUsage(cache_) is added to make sure
-  // tracking memory doesn't introduce crashes.
-  EXPECT_LT(0u, base::trace_event::EstimateMemoryUsage(cache_));
 
   ASSERT_THAT(OpenEntry("the first key", &entry1), IsOk());
   ASSERT_TRUE(NULL != entry1);
@@ -340,20 +339,17 @@ void DiskCacheBackendTest::BackendBasics() {
   ASSERT_TRUE(NULL != entry1);
   ASSERT_TRUE(NULL != entry2);
   EXPECT_EQ(2, cache_->GetEntryCount());
-  EXPECT_LT(0u, base::trace_event::EstimateMemoryUsage(cache_));
 
   disk_cache::Entry* entry3 = NULL;
   ASSERT_THAT(OpenEntry("some other key", &entry3), IsOk());
   ASSERT_TRUE(NULL != entry3);
   EXPECT_TRUE(entry2 == entry3);
-  EXPECT_LT(0u, base::trace_event::EstimateMemoryUsage(cache_));
 
   EXPECT_THAT(DoomEntry("some other key"), IsOk());
   EXPECT_EQ(1, cache_->GetEntryCount());
   entry1->Close();
   entry2->Close();
   entry3->Close();
-  EXPECT_LT(0u, base::trace_event::EstimateMemoryUsage(cache_));
 
   EXPECT_THAT(DoomEntry("the first key"), IsOk());
   EXPECT_EQ(0, cache_->GetEntryCount());
@@ -365,7 +361,6 @@ void DiskCacheBackendTest::BackendBasics() {
   EXPECT_THAT(DoomEntry("some other key"), IsOk());
   EXPECT_EQ(0, cache_->GetEntryCount());
   entry2->Close();
-  EXPECT_LT(0u, base::trace_event::EstimateMemoryUsage(cache_));
 }
 
 TEST_F(DiskCacheBackendTest, Basics) {
@@ -518,6 +513,74 @@ TEST_F(DiskCacheBackendTest, CreateBackend_MissingFile) {
 
   cache.reset();
   DisableIntegrityCheck();
+}
+
+TEST_F(DiskCacheBackendTest, MemCacheMemoryDump) {
+  memory_only_ = true;
+  BackendBasics();
+  base::trace_event::MemoryDumpArgs args = {
+      base::trace_event::MemoryDumpLevelOfDetail::BACKGROUND};
+  base::trace_event::ProcessMemoryDump pmd(nullptr, args);
+  base::trace_event::MemoryAllocatorDump* parent =
+      pmd.CreateAllocatorDump("net/url_request_context/main/0x123/http_cache");
+
+  ASSERT_LT(0u, cache_->DumpMemoryStats(&pmd, parent->absolute_name()));
+  EXPECT_EQ(2u, pmd.allocator_dumps().size());
+  const base::trace_event::MemoryAllocatorDump* sub_dump =
+      pmd.GetAllocatorDump(parent->absolute_name() + "/memory_backend");
+  ASSERT_NE(nullptr, sub_dump);
+
+  // Verify that the appropriate attributes were set.
+  std::unique_ptr<base::Value> raw_attrs =
+      sub_dump->attributes_for_testing()->ToBaseValue();
+  base::DictionaryValue* attrs;
+  ASSERT_TRUE(raw_attrs->GetAsDictionary(&attrs));
+  EXPECT_EQ(3u, attrs->size());
+  base::DictionaryValue* size_attrs;
+  ASSERT_TRUE(attrs->GetDictionary(
+      base::trace_event::MemoryAllocatorDump::kNameSize, &size_attrs));
+  ASSERT_TRUE(attrs->GetDictionary("mem_backend_size", &size_attrs));
+  ASSERT_TRUE(attrs->GetDictionary("mem_backend_max_size", &size_attrs));
+}
+
+TEST_F(DiskCacheBackendTest, SimpleCacheMemoryDump) {
+  simple_cache_mode_ = true;
+  BackendBasics();
+  base::trace_event::MemoryDumpArgs args = {
+      base::trace_event::MemoryDumpLevelOfDetail::BACKGROUND};
+  base::trace_event::ProcessMemoryDump pmd(nullptr, args);
+  base::trace_event::MemoryAllocatorDump* parent =
+      pmd.CreateAllocatorDump("net/url_request_context/main/0x123/http_cache");
+
+  ASSERT_LT(0u, cache_->DumpMemoryStats(&pmd, parent->absolute_name()));
+  EXPECT_EQ(2u, pmd.allocator_dumps().size());
+  const base::trace_event::MemoryAllocatorDump* sub_dump =
+      pmd.GetAllocatorDump(parent->absolute_name() + "/simple_backend");
+  ASSERT_NE(nullptr, sub_dump);
+
+  // Verify that the appropriate attributes were set.
+  std::unique_ptr<base::Value> raw_attrs =
+      sub_dump->attributes_for_testing()->ToBaseValue();
+  base::DictionaryValue* attrs;
+  ASSERT_TRUE(raw_attrs->GetAsDictionary(&attrs));
+  EXPECT_EQ(1u, attrs->size());
+  base::DictionaryValue* size_attrs;
+  ASSERT_TRUE(attrs->GetDictionary(
+      base::trace_event::MemoryAllocatorDump::kNameSize, &size_attrs));
+}
+
+TEST_F(DiskCacheBackendTest, BlockFileCacheMemoryDump) {
+  // TODO(jkarlin): If the blockfile cache gets memory dump support, update
+  // this test.
+  BackendBasics();
+  base::trace_event::MemoryDumpArgs args = {
+      base::trace_event::MemoryDumpLevelOfDetail::BACKGROUND};
+  base::trace_event::ProcessMemoryDump pmd(nullptr, args);
+  base::trace_event::MemoryAllocatorDump* parent =
+      pmd.CreateAllocatorDump("net/url_request_context/main/0x123/http_cache");
+
+  ASSERT_EQ(0u, cache_->DumpMemoryStats(&pmd, parent->absolute_name()));
+  EXPECT_EQ(1u, pmd.allocator_dumps().size());
 }
 
 TEST_F(DiskCacheBackendTest, ExternalFiles) {

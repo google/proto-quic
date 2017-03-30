@@ -4,7 +4,6 @@
 
 package org.chromium.base;
 
-import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
 import android.util.Log;
@@ -24,14 +23,13 @@ public class ApkAssets {
     private static final String LOGTAG = "ApkAssets";
 
     @CalledByNative
-    public static long[] open(Context context, String fileName) {
+    public static long[] open(String fileName) {
         AssetFileDescriptor afd = null;
         try {
-            AssetManager manager = context.getAssets();
+            AssetManager manager = ContextUtils.getApplicationContext().getAssets();
             afd = manager.openNonAssetFd(fileName);
-            return new long[] { afd.getParcelFileDescriptor().detachFd(),
-                                afd.getStartOffset(),
-                                afd.getLength() };
+            return new long[] {afd.getParcelFileDescriptor().detachFd(), afd.getStartOffset(),
+                    afd.getLength()};
         } catch (IOException e) {
             // As a general rule there's no point logging here because the caller should handle
             // receiving an fd of -1 sensibly, and the log message is either mirrored later, or

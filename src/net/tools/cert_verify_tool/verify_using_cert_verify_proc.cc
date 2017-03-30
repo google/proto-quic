@@ -62,6 +62,8 @@ std::string SubjectFromOSCertHandle(
   scoped_refptr<net::X509Certificate> cert =
       net::X509Certificate::CreateFromHandle(
           cert_handle, net::X509Certificate::OSCertHandles());
+  if (!cert)
+    return std::string();
   return SubjectFromX509Certificate(cert.get());
 }
 

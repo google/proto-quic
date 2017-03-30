@@ -615,13 +615,12 @@ public class ApiCompatibilityUtils {
      * Get a URI for |file| which has the image capture. This function assumes that path of |file|
      * is based on the result of UiUtils.getDirectoryForImageCapture().
      *
-     * @param context The application context.
      * @param file image capture file.
      * @return URI for |file|.
      */
-    public static Uri getUriForImageCaptureFile(Context context, File file) {
+    public static Uri getUriForImageCaptureFile(File file) {
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2
-                ? ContentUriUtils.getContentUriFromFile(context, file)
+                ? ContentUriUtils.getContentUriFromFile(file)
                 : Uri.fromFile(file);
     }
 

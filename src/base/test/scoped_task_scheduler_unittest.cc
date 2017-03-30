@@ -20,6 +20,10 @@
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
+#if defined(OS_WIN)
+#include <objbase.h>
+#endif  // defined(OS_WIN)
+
 namespace base {
 namespace test {
 
@@ -223,6 +227,32 @@ TEST(ScopedTaskSchedulerTest, CreateSingleThreadTaskRunnerAndPostTask) {
   EXPECT_TRUE(first_task_ran);
   EXPECT_TRUE(second_task_ran);
 }
+
+#if defined(OS_WIN)
+// Verify that COM STAs work correctly from the ScopedTaskScheduler.
+TEST(ScopedTaskSchedulerTest, COMSTAAvailable) {
+  ScopedTaskScheduler scoped_task_scheduler;
+  auto com_task_runner = CreateCOMSTATaskRunnerWithTraits(TaskTraits());
+
+  bool com_task_ran = false;
+  com_task_runner->PostTask(
+      FROM_HERE,
+      Bind(
+          [](bool* com_task_ran) {
+            *com_task_ran = true;
+            HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+            if (SUCCEEDED(hr)) {
+              ADD_FAILURE() << "COM STA was not initialized on this thread";
+              CoUninitialize();
+            }
+          },
+          &com_task_ran));
+
+  RunLoop().RunUntilIdle();
+
+  EXPECT_TRUE(com_task_ran);
+}
+#endif  // defined(OS_WIN)
 
 TEST(ScopedTaskSchedulerTest, NonBlockShutdownTasksPostedAfterShutdownDontRun) {
   ScopedTaskScheduler scoped_task_scheduler;

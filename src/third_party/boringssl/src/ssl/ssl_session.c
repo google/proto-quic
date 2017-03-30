@@ -535,13 +535,13 @@ int ssl_get_new_session(SSL_HANDSHAKE *hs, int is_server) {
   if (version >= TLS1_3_VERSION) {
     /* TLS 1.3 uses tickets as authenticators, so we are willing to use them for
      * longer. */
-    session->timeout = ssl->initial_ctx->session_psk_dhe_timeout;
+    session->timeout = ssl->session_ctx->session_psk_dhe_timeout;
     session->auth_timeout = SSL_DEFAULT_SESSION_AUTH_TIMEOUT;
   } else {
     /* TLS 1.2 resumption does not incorporate new key material, so we use a
      * much shorter timeout. */
-    session->timeout = ssl->initial_ctx->session_timeout;
-    session->auth_timeout = ssl->initial_ctx->session_timeout;
+    session->timeout = ssl->session_ctx->session_timeout;
+    session->auth_timeout = ssl->session_ctx->session_timeout;
   }
 
   if (is_server) {
@@ -581,15 +581,10 @@ err:
   return 0;
 }
 
-int ssl_encrypt_ticket(SSL *ssl, CBB *out, const SSL_SESSION *session) {
+static int ssl_encrypt_ticket_with_cipher_ctx(SSL *ssl, CBB *out,
+                                              const uint8_t *session_buf,
+                                              size_t session_len) {
   int ret = 0;
-
-  /* Serialize the SSL_SESSION to be encoded into the ticket. */
-  uint8_t *session_buf = NULL;
-  size_t session_len;
-  if (!SSL_SESSION_to_bytes_for_ticket(session, &session_buf, &session_len)) {
-    return -1;
-  }
 
   EVP_CIPHER_CTX ctx;
   EVP_CIPHER_CTX_init(&ctx);
@@ -611,7 +606,7 @@ int ssl_encrypt_ticket(SSL *ssl, CBB *out, const SSL_SESSION *session) {
 
   /* Initialize HMAC and cipher contexts. If callback present it does all the
    * work otherwise use generated values from parent ctx. */
-  SSL_CTX *tctx = ssl->initial_ctx;
+  SSL_CTX *tctx = ssl->session_ctx;
   uint8_t iv[EVP_MAX_IV_LENGTH];
   uint8_t key_name[16];
   if (tctx->tlsext_ticket_key_cb != NULL) {
@@ -667,9 +662,57 @@ int ssl_encrypt_ticket(SSL *ssl, CBB *out, const SSL_SESSION *session) {
   ret = 1;
 
 err:
-  OPENSSL_free(session_buf);
   EVP_CIPHER_CTX_cleanup(&ctx);
   HMAC_CTX_cleanup(&hctx);
+  return ret;
+}
+
+static int ssl_encrypt_ticket_with_method(SSL *ssl, CBB *out,
+                                          const uint8_t *session_buf,
+                                          size_t session_len) {
+  const SSL_TICKET_AEAD_METHOD *method = ssl->session_ctx->ticket_aead_method;
+  const size_t max_overhead = method->max_overhead(ssl);
+  const size_t max_out = session_len + max_overhead;
+  if (max_out < max_overhead) {
+    OPENSSL_PUT_ERROR(SSL, ERR_R_OVERFLOW);
+    return 0;
+  }
+
+  uint8_t *ptr;
+  if (!CBB_reserve(out, &ptr, max_out)) {
+    return 0;
+  }
+
+  size_t out_len;
+  if (!method->seal(ssl, ptr, &out_len, max_out, session_buf, session_len)) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_TICKET_ENCRYPTION_FAILED);
+    return 0;
+  }
+
+  if (!CBB_did_write(out, out_len)) {
+    return 0;
+  }
+
+  return 1;
+}
+
+int ssl_encrypt_ticket(SSL *ssl, CBB *out, const SSL_SESSION *session) {
+  /* Serialize the SSL_SESSION to be encoded into the ticket. */
+  uint8_t *session_buf = NULL;
+  size_t session_len;
+  if (!SSL_SESSION_to_bytes_for_ticket(session, &session_buf, &session_len)) {
+    return -1;
+  }
+
+  int ret = 0;
+  if (ssl->session_ctx->ticket_aead_method) {
+    ret = ssl_encrypt_ticket_with_method(ssl, out, session_buf, session_len);
+  } else {
+    ret =
+        ssl_encrypt_ticket_with_cipher_ctx(ssl, out, session_buf, session_len);
+  }
+
+  OPENSSL_free(session_buf);
   return ret;
 }
 
@@ -736,27 +779,27 @@ static enum ssl_session_result_t ssl_lookup_session(
 
   SSL_SESSION *session = NULL;
   /* Try the internal cache, if it exists. */
-  if (!(ssl->initial_ctx->session_cache_mode &
+  if (!(ssl->session_ctx->session_cache_mode &
         SSL_SESS_CACHE_NO_INTERNAL_LOOKUP)) {
     SSL_SESSION data;
     data.ssl_version = ssl->version;
     data.session_id_length = session_id_len;
     OPENSSL_memcpy(data.session_id, session_id, session_id_len);
 
-    CRYPTO_MUTEX_lock_read(&ssl->initial_ctx->lock);
-    session = lh_SSL_SESSION_retrieve(ssl->initial_ctx->sessions, &data);
+    CRYPTO_MUTEX_lock_read(&ssl->session_ctx->lock);
+    session = lh_SSL_SESSION_retrieve(ssl->session_ctx->sessions, &data);
     if (session != NULL) {
       SSL_SESSION_up_ref(session);
     }
     /* TODO(davidben): This should probably move it to the front of the list. */
-    CRYPTO_MUTEX_unlock_read(&ssl->initial_ctx->lock);
+    CRYPTO_MUTEX_unlock_read(&ssl->session_ctx->lock);
   }
 
   /* Fall back to the external cache, if it exists. */
   if (session == NULL &&
-      ssl->initial_ctx->get_session_cb != NULL) {
+      ssl->session_ctx->get_session_cb != NULL) {
     int copy = 1;
-    session = ssl->initial_ctx->get_session_cb(ssl, (uint8_t *)session_id,
+    session = ssl->session_ctx->get_session_cb(ssl, (uint8_t *)session_id,
                                                session_id_len, &copy);
 
     if (session == NULL) {
@@ -776,16 +819,16 @@ static enum ssl_session_result_t ssl_lookup_session(
     }
 
     /* Add the externally cached session to the internal cache if necessary. */
-    if (!(ssl->initial_ctx->session_cache_mode &
+    if (!(ssl->session_ctx->session_cache_mode &
           SSL_SESS_CACHE_NO_INTERNAL_STORE)) {
-      SSL_CTX_add_session(ssl->initial_ctx, session);
+      SSL_CTX_add_session(ssl->session_ctx, session);
     }
   }
 
   if (session != NULL &&
       !ssl_session_is_time_valid(ssl, session)) {
     /* The session was from the cache, so remove it. */
-    SSL_CTX_remove_session(ssl->initial_ctx, session);
+    SSL_CTX_remove_session(ssl->session_ctx, session);
     SSL_SESSION_free(session);
     session = NULL;
   }
@@ -811,10 +854,18 @@ enum ssl_session_result_t ssl_get_prev_session(
       SSL_early_callback_ctx_extension_get(
           client_hello, TLSEXT_TYPE_session_ticket, &ticket, &ticket_len);
   if (tickets_supported && ticket_len > 0) {
-    if (!tls_process_ticket(ssl, &session, &renew_ticket, ticket, ticket_len,
-                            client_hello->session_id,
-                            client_hello->session_id_len)) {
-      return ssl_session_error;
+    switch (ssl_process_ticket(ssl, &session, &renew_ticket, ticket, ticket_len,
+                               client_hello->session_id,
+                               client_hello->session_id_len)) {
+      case ssl_ticket_aead_success:
+        break;
+      case ssl_ticket_aead_ignore_ticket:
+        assert(session == NULL);
+        break;
+      case ssl_ticket_aead_error:
+        return ssl_session_error;
+      case ssl_ticket_aead_retry:
+        return ssl_session_ticket_retry;
     }
   } else {
     /* The client didn't send a ticket, so the session ID is a real ID. */

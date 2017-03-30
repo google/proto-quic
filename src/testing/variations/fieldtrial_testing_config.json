@@ -556,21 +556,6 @@
             ]
         }
     ],
-    "DisableFirstRunAutoImport": [
-        {
-            "platforms": [
-                "win"
-            ],
-            "experiments": [
-                {
-                    "name": "AutoImportDisabled",
-                    "enable_features": [
-                        "DisableFirstRunAutoImport"
-                    ]
-                }
-            ]
-        }
-    ],
     "DisallowFetchForDocWrittenScriptsInMainFrame": [
         {
             "platforms": [
@@ -1901,17 +1886,9 @@
             ],
             "experiments": [
                 {
-                    "name": "EnabledInMemory",
+                    "name": "EnabledOnDiskNoStability3",
                     "params": {
-                        "storage": "LocalMemory"
-                    },
-                    "enable_features": [
-                        "PersistentHistograms"
-                    ]
-                },
-                {
-                    "name": "EnabledOnDisk",
-                    "params": {
+                        "send_unreported_metrics": "no",
                         "storage": "MappedFile"
                     },
                     "enable_features": [
@@ -2362,6 +2339,31 @@
                     "disable_features": [
                         "CanShowScoutOptIn",
                         "OnlyShowScoutOptIn"
+                    ]
+                },
+                {
+                    "name": "Default"
+                }
+            ]
+        }
+    ],
+    "SafeBrowsingThreatDomDetailsTagAttributes": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "params": {
+                        "tag_attribute_csv": "div,id,iframe,id"
+                    },
+                    "enable_features": [
+                        "ThreatDomDetailsTagAttributes"
                     ]
                 },
                 {
@@ -2846,21 +2848,6 @@
             ]
         }
     ],
-    "UploadCrashReportsUsingJobScheduler": [
-        {
-            "platforms": [
-                "android"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled",
-                    "enable_features": [
-                        "UploadCrashReportsUsingJobScheduler"
-                    ]
-                }
-            ]
-        }
-    ],
     "V8CacheStrategiesForCacheStorage": [
         {
             "platforms": [
@@ -2930,6 +2917,26 @@
                     "name": "Enabled",
                     "enable_features": [
                         "VrShell"
+                    ]
+                }
+            ]
+        }
+    ],
+    "VsyncAlignedInput": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enable",
+                    "enable_features": [
+                        "RequestUnbufferedDispatch",
+                        "VsyncAlignedInput"
                     ]
                 }
             ]
@@ -3039,6 +3046,12 @@
                     "name": "TunedClippingLevelMin070",
                     "enable_features": [
                         "TunedClippingLevelMin70"
+                    ],
+                    "disable_features": [
+                        "TunedClippingLevelMin110",
+                        "TunedClippingLevelMin150",
+                        "TunedClippingLevelMin170",
+                        "TunedClippingLevelMin30"
                     ]
                 }
             ]

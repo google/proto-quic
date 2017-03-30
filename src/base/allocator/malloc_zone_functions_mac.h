@@ -40,24 +40,23 @@ typedef void (*free_definite_size_type)(struct _malloc_zone_t* zone,
 typedef size_t (*size_fn_type)(struct _malloc_zone_t* zone, const void* ptr);
 
 struct MallocZoneFunctions {
-  MallocZoneFunctions();
-  malloc_type malloc = nullptr;
-  calloc_type calloc = nullptr;
-  valloc_type valloc = nullptr;
-  free_type free = nullptr;
-  realloc_type realloc = nullptr;
-  memalign_type memalign = nullptr;
-  batch_malloc_type batch_malloc = nullptr;
-  batch_free_type batch_free = nullptr;
-  free_definite_size_type free_definite_size = nullptr;
-  size_fn_type size = nullptr;
-  const ChromeMallocZone* context = nullptr;
+  malloc_type malloc;
+  calloc_type calloc;
+  valloc_type valloc;
+  free_type free;
+  realloc_type realloc;
+  memalign_type memalign;
+  batch_malloc_type batch_malloc;
+  batch_free_type batch_free;
+  free_definite_size_type free_definite_size;
+  size_fn_type size;
+  const ChromeMallocZone* context;
 };
 
-void StoreZoneFunctions(const ChromeMallocZone* zone,
-                        MallocZoneFunctions* functions);
+BASE_EXPORT void StoreZoneFunctions(const ChromeMallocZone* zone,
+                                    MallocZoneFunctions* functions);
 static constexpr int kMaxZoneCount = 30;
-BASE_EXPORT extern MallocZoneFunctions* g_malloc_zones;
+BASE_EXPORT extern MallocZoneFunctions g_malloc_zones[kMaxZoneCount];
 
 // The array g_malloc_zones stores all information about malloc zones before
 // they are shimmed. This information needs to be accessed during dispatch back
@@ -79,8 +78,13 @@ BASE_EXPORT extern MallocZoneFunctions* g_malloc_zones;
 //
 // Most allocations go through the default allocator. We will ensure that the
 // default allocator is stored as the first MallocZoneFunctions.
-BASE_EXPORT void StoreMallocZone(ChromeMallocZone* zone);
+//
+// Returns whether the zone was successfully stored.
+BASE_EXPORT bool StoreMallocZone(ChromeMallocZone* zone);
 BASE_EXPORT bool IsMallocZoneAlreadyStored(ChromeMallocZone* zone);
+BASE_EXPORT bool DoesMallocZoneNeedReplacing(
+    ChromeMallocZone* zone,
+    const MallocZoneFunctions* functions);
 
 BASE_EXPORT int GetMallocZoneCountForTesting();
 BASE_EXPORT void ClearAllMallocZonesForTesting();

@@ -59,7 +59,7 @@ BASE_EXPORT void UmaHistogramPercentage(const std::string& name, int percent);
 
 // For adding counts histogram.
 // Sample usage:
-//   base::UmaHistogramCounts("My.Counts", some_value, 1, 600, 30)
+//   base::UmaHistogramCustomCounts("My.Counts", some_value, 1, 600, 30)
 BASE_EXPORT void UmaHistogramCustomCounts(const std::string& name,
                                           int sample,
                                           int min,

@@ -663,8 +663,10 @@ int QuicStreamFactory::Job::DoConnectComplete(int rv) {
   return OK;
 }
 
-QuicStreamRequest::QuicStreamRequest(QuicStreamFactory* factory)
-    : factory_(factory) {}
+QuicStreamRequest::QuicStreamRequest(
+    QuicStreamFactory* factory,
+    HttpServerProperties* http_server_properties)
+    : factory_(factory), http_server_properties_(http_server_properties) {}
 
 QuicStreamRequest::~QuicStreamRequest() {
   if (factory_ && !callback_.is_null())
@@ -714,7 +716,7 @@ base::TimeDelta QuicStreamRequest::GetTimeDelayForWaitingJob() const {
 std::unique_ptr<QuicHttpStream> QuicStreamRequest::CreateStream() {
   if (!session_)
     return nullptr;
-  return base::MakeUnique<QuicHttpStream>(session_);
+  return base::MakeUnique<QuicHttpStream>(session_, http_server_properties_);
 }
 
 std::unique_ptr<BidirectionalStreamImpl>
@@ -1190,7 +1192,7 @@ void QuicStreamFactory::OnCertVerifyJobComplete(CertVerifierJob* job, int rv) {
 std::unique_ptr<QuicHttpStream> QuicStreamFactory::CreateFromSession(
     QuicChromiumClientSession* session) {
   return std::unique_ptr<QuicHttpStream>(
-      new QuicHttpStream(session->GetWeakPtr()));
+      new QuicHttpStream(session->GetWeakPtr(), http_server_properties_));
 }
 
 bool QuicStreamFactory::IsQuicDisabled() const {

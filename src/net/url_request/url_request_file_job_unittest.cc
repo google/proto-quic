@@ -37,6 +37,7 @@ class TestURLRequestFileJob : public URLRequestFileJob {
                         const scoped_refptr<base::TaskRunner>& file_task_runner,
                         int* open_result,
                         int64_t* seek_position,
+                        bool* done_reading,
                         std::string* observed_content)
       : URLRequestFileJob(request,
                           network_delegate,
@@ -44,9 +45,11 @@ class TestURLRequestFileJob : public URLRequestFileJob {
                           file_task_runner),
         open_result_(open_result),
         seek_position_(seek_position),
+        done_reading_(done_reading),
         observed_content_(observed_content) {
     *open_result_ = ERR_IO_PENDING;
     *seek_position_ = ERR_IO_PENDING;
+    *done_reading_ = false;
     observed_content_->clear();
   }
 
@@ -73,8 +76,11 @@ class TestURLRequestFileJob : public URLRequestFileJob {
     observed_content_->append(std::string(buf->data(), result));
   }
 
+  void DoneReading() override { *done_reading_ = true; }
+
   int* const open_result_;
   int64_t* const seek_position_;
+  bool* done_reading_;
   std::string* const observed_content_;
 };
 
@@ -85,13 +91,16 @@ class TestJobFactory : public URLRequestJobFactory {
   TestJobFactory(const base::FilePath& path,
                  int* open_result,
                  int64_t* seek_position,
+                 bool* done_reading,
                  std::string* observed_content)
       : path_(path),
         open_result_(open_result),
         seek_position_(seek_position),
+        done_reading_(done_reading),
         observed_content_(observed_content) {
     CHECK(open_result_);
     CHECK(seek_position_);
+    CHECK(done_reading_);
     CHECK(observed_content_);
   }
 
@@ -103,12 +112,14 @@ class TestJobFactory : public URLRequestJobFactory {
       NetworkDelegate* network_delegate) const override {
     CHECK(open_result_);
     CHECK(seek_position_);
+    CHECK(done_reading_);
     CHECK(observed_content_);
     URLRequestJob* job = new TestURLRequestFileJob(
         request, network_delegate, path_, base::ThreadTaskRunnerHandle::Get(),
-        open_result_, seek_position_, observed_content_);
+        open_result_, seek_position_, done_reading_, observed_content_);
     open_result_ = nullptr;
     seek_position_ = nullptr;
+    done_reading_ = nullptr;
     observed_content_ = nullptr;
     return job;
   }
@@ -143,6 +154,7 @@ class TestJobFactory : public URLRequestJobFactory {
   // These are mutable because MaybeCreateJobWithProtocolHandler is const.
   mutable int* open_result_;
   mutable int64_t* seek_position_;
+  mutable bool* done_reading_;
   mutable std::string* observed_content_;
 };
 
@@ -150,7 +162,7 @@ class TestJobFactory : public URLRequestJobFactory {
 // Returns true on success.
 bool CreateFileWithContent(const std::string& content,
                            const base::FilePath& path) {
-  return base::WriteFile(path, content.c_str(), content.length());
+  return base::WriteFile(path, content.c_str(), content.length()) != -1;
 }
 
 // A simple holder for start/end used in http range requests.
@@ -203,6 +215,7 @@ class URLRequestFileJobEventsTest : public testing::Test {
                           const std::string& range,
                           int* open_result,
                           int64_t* seek_position,
+                          bool* done_reading,
                           std::string* observed_content);
 
   TestURLRequestContext context_;
@@ -247,9 +260,10 @@ void URLRequestFileJobEventsTest::RunSuccessfulRequestWithString(
   {
     int open_result;
     int64_t seek_position;
+    bool done_reading;
     std::string observed_content;
     RunRequestWithPath(path, range_value, &open_result, &seek_position,
-                       &observed_content);
+                       &done_reading, &observed_content);
 
     EXPECT_EQ(OK, open_result);
     EXPECT_FALSE(delegate_.request_failed());
@@ -269,6 +283,7 @@ void URLRequestFileJobEventsTest::RunSuccessfulRequestWithString(
 
     EXPECT_EQ(expected_data_received, delegate_.data_received());
     EXPECT_EQ(seek_position, range ? range->start : 0);
+    EXPECT_TRUE(done_reading);
   }
 }
 
@@ -277,8 +292,10 @@ void URLRequestFileJobEventsTest::RunRequestWithPath(
     const std::string& range,
     int* open_result,
     int64_t* seek_position,
+    bool* done_reading,
     std::string* observed_content) {
-  TestJobFactory factory(path, open_result, seek_position, observed_content);
+  TestJobFactory factory(path, open_result, seek_position, done_reading,
+                         observed_content);
   context_.set_job_factory(&factory);
 
   std::unique_ptr<URLRequest> request(context_.CreateRequest(
@@ -302,6 +319,10 @@ std::string MakeContentOfSize(int size) {
     result.append(1, static_cast<char>(i % 256));
   }
   return result;
+}
+
+TEST_F(URLRequestFileJobEventsTest, ZeroByteFile) {
+  RunSuccessfulRequestWithString(std::string(""), nullptr);
 }
 
 TEST_F(URLRequestFileJobEventsTest, TinyFile) {
@@ -345,11 +366,13 @@ TEST_F(URLRequestFileJobEventsTest, OpenNonExistentFile) {
 
   int open_result;
   int64_t seek_position;
+  bool done_reading;
   std::string observed_content;
   RunRequestWithPath(path, std::string(), &open_result, &seek_position,
-                     &observed_content);
+                     &done_reading, &observed_content);
 
   EXPECT_EQ(ERR_FILE_NOT_FOUND, open_result);
+  EXPECT_FALSE(done_reading);
   EXPECT_TRUE(delegate_.request_failed());
 }
 
@@ -361,12 +384,14 @@ TEST_F(URLRequestFileJobEventsTest, MultiRangeRequestNotSupported) {
 
   int open_result;
   int64_t seek_position;
+  bool done_reading;
   std::string observed_content;
   RunRequestWithPath(path, "bytes=1-5,20-30", &open_result, &seek_position,
-                     &observed_content);
+                     &done_reading, &observed_content);
 
   EXPECT_EQ(OK, open_result);
   EXPECT_EQ(ERR_REQUEST_RANGE_NOT_SATISFIABLE, seek_position);
+  EXPECT_FALSE(done_reading);
   EXPECT_TRUE(delegate_.request_failed());
 }
 
@@ -378,12 +403,14 @@ TEST_F(URLRequestFileJobEventsTest, RangeExceedingFileSize) {
 
   int open_result;
   int64_t seek_position;
+  bool done_reading;
   std::string observed_content;
   RunRequestWithPath(path, "bytes=50000-", &open_result, &seek_position,
-                     &observed_content);
+                     &done_reading, &observed_content);
 
   EXPECT_EQ(OK, open_result);
   EXPECT_EQ(ERR_REQUEST_RANGE_NOT_SATISFIABLE, seek_position);
+  EXPECT_FALSE(done_reading);
   EXPECT_TRUE(delegate_.request_failed());
 }
 
@@ -395,13 +422,15 @@ TEST_F(URLRequestFileJobEventsTest, IgnoreRangeParsingError) {
 
   int open_result;
   int64_t seek_position;
+  bool done_reading;
   std::string observed_content;
   RunRequestWithPath(path, "bytes=3-z", &open_result, &seek_position,
-                     &observed_content);
+                     &done_reading, &observed_content);
 
   EXPECT_EQ(OK, open_result);
   EXPECT_EQ(0, seek_position);
   EXPECT_EQ("hello\n", observed_content);
+  EXPECT_TRUE(done_reading);
   EXPECT_FALSE(delegate_.request_failed());
 }
 

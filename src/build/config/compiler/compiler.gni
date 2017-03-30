@@ -58,6 +58,9 @@ declare_args() {
   #
   # See crbug.com/669854.
   linkrepro_root_dir = ""
+
+  # Whether or not we should use position independent code.
+  use_pic = true
 }
 
 declare_args() {

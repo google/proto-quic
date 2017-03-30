@@ -134,7 +134,7 @@ void PrintResultPath(const net::CertPathBuilder::ResultPath* result_path,
                      size_t index,
                      bool is_best) {
   std::cout << "path " << index << " "
-            << (result_path->valid ? "valid" : "invalid")
+            << (result_path->IsValid() ? "valid" : "invalid")
             << (is_best ? " (best)" : "") << "\n";
 
   // Print the certificate chain.
@@ -155,10 +155,12 @@ void PrintResultPath(const net::CertPathBuilder::ResultPath* result_path,
               << SubjectFromTrustAnchor(trust_anchor.get()) << "\n";
   }
 
-  // Print the errors.
-  if (!result_path->errors.empty()) {
+  // Print the errors/warnings if there were any.
+  std::string errors_str =
+      result_path->errors.ToDebugString(result_path->path.certs);
+  if (!errors_str.empty()) {
     std::cout << "Errors:\n";
-    std::cout << result_path->errors.ToDebugString() << "\n";
+    std::cout << errors_str << "\n";
   }
 }
 

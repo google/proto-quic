@@ -143,11 +143,6 @@ class NET_EXPORT HttpResponseInfo {
   // used since.
   bool unused_since_prefetch;
 
-  // True if this resource is stale and requires async revalidation.
-  // This value is not persisted by Persist(); it is only ever set when the
-  // response is retrieved from the cache.
-  bool async_revalidation_required;
-
   // Remote address of the socket which fetched this resource.
   //
   // NOTE: If the response was served from the cache (was_cached is true),

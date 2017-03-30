@@ -49,7 +49,8 @@ URLRequestContext::URLRequestContext()
       network_quality_estimator_(nullptr),
       url_requests_(new std::set<const URLRequest*>),
       enable_brotli_(false),
-      check_cleartext_permitted_(false) {
+      check_cleartext_permitted_(false),
+      name_(nullptr) {
   base::trace_event::MemoryDumpManager::GetInstance()->RegisterDumpProvider(
       this, "URLRequestContext", base::ThreadTaskRunnerHandle::Get());
 }
@@ -139,23 +140,19 @@ void URLRequestContext::AssertNoURLRequests() const {
 bool URLRequestContext::OnMemoryDump(
     const base::trace_event::MemoryDumpArgs& args,
     base::trace_event::ProcessMemoryDump* pmd) {
-  if (name_.empty())
+  if (!name_)
     name_ = "unknown";
 
   SSLClientSocketImpl::DumpSSLClientSessionMemoryStats(pmd);
 
-  std::string dump_name = base::StringPrintf(
-      "net/url_request_context_0x%" PRIxPTR, reinterpret_cast<uintptr_t>(this));
+  std::string dump_name =
+      base::StringPrintf("net/url_request_context/%s/0x%" PRIxPTR, name_,
+                         reinterpret_cast<uintptr_t>(this));
   base::trace_event::MemoryAllocatorDump* dump =
       pmd->CreateAllocatorDump(dump_name);
   dump->AddScalar(base::trace_event::MemoryAllocatorDump::kNameObjectCount,
                   base::trace_event::MemoryAllocatorDump::kUnitsObjects,
                   url_requests_->size());
-  if (args.level_of_detail !=
-      base::trace_event::MemoryDumpLevelOfDetail::BACKGROUND) {
-    dump->AddString("origin",
-                    base::trace_event::MemoryAllocatorDump::kTypeString, name_);
-  }
   HttpTransactionFactory* transaction_factory = http_transaction_factory();
   if (transaction_factory) {
     HttpNetworkSession* network_session = transaction_factory->GetSession();

@@ -4,6 +4,8 @@
 
 #include "base/threading/post_task_and_reply_impl.h"
 
+#include <utility>
+
 #include "base/bind.h"
 #include "base/bind_helpers.h"
 #include "base/macros.h"
@@ -27,8 +29,8 @@ class PostTaskAndReplyTaskRunner : public internal::PostTaskAndReplyImpl {
 
  private:
   bool PostTask(const tracked_objects::Location& from_here,
-                const Closure& task) override {
-    return destination_->PostTask(from_here, task);
+                Closure task) override {
+    return destination_->PostTask(from_here, std::move(task));
   }
 
   // Non-owning.

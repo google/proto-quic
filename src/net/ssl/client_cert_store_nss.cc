@@ -99,6 +99,8 @@ void ClientCertStoreNSS::FilterCertsOnWorkerThread(
     // https://crbug.com/548631.
     filtered_certs->push_back(
         X509Certificate::CreateFromHandle(handle, intermediates_raw));
+    // |handle| was successfully parsed by |cert|, so this should never fail.
+    DCHECK(filtered_certs->back());
   }
   DVLOG(2) << "num_raw:" << num_raw
            << " num_filtered:" << filtered_certs->size();
@@ -131,8 +133,13 @@ void ClientCertStoreNSS::GetPlatformCertsOnWorkerThread(
   }
   for (CERTCertListNode* node = CERT_LIST_HEAD(found_certs);
        !CERT_LIST_END(node, found_certs); node = CERT_LIST_NEXT(node)) {
-    certs->push_back(X509Certificate::CreateFromHandle(
-        node->cert, X509Certificate::OSCertHandles()));
+    scoped_refptr<X509Certificate> cert = X509Certificate::CreateFromHandle(
+        node->cert, X509Certificate::OSCertHandles());
+    if (!cert) {
+      DVLOG(2) << "X509Certificate::CreateFromHandle failed";
+      continue;
+    }
+    certs->push_back(std::move(cert));
   }
   CERT_DestroyCertList(found_certs);
 }

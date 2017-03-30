@@ -64,9 +64,17 @@ EVENT_TYPE(HOST_RESOLVER_IMPL_REQUEST)
 EVENT_TYPE(HOST_RESOLVER_IMPL_IPV6_REACHABILITY_CHECK)
 
 // This event is logged when a request is handled by a cache entry.
+// It contains the following parameter:
+//   {
+//     "address_list": <The resolved addresses>,
+//   }
 EVENT_TYPE(HOST_RESOLVER_IMPL_CACHE_HIT)
 
 // This event is logged when a request is handled by a HOSTS entry.
+// It contains the following parameter:
+//   {
+//     "address_list": <The resolved addresses>,
+//   }
 EVENT_TYPE(HOST_RESOLVER_IMPL_HOSTS_HIT)
 
 // This event is created when a new HostResolverImpl::Job is about to be created

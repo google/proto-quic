@@ -5,6 +5,8 @@
 #ifndef BASE_TRACE_EVENT_MEMORY_DUMP_SCHEDULER_H
 #define BASE_TRACE_EVENT_MEMORY_DUMP_SCHEDULER_H
 
+#include <memory>
+
 #include "base/base_export.h"
 #include "base/gtest_prod_util.h"
 #include "base/memory/ref_counted.h"
@@ -18,42 +20,50 @@ namespace trace_event {
 
 class MemoryDumpManager;
 
-// Schedules global dump requests based on the triggers added.
+// Schedules global dump requests based on the triggers added. The methods of
+// this class are NOT thread safe and the client has to take care of invoking
+// all the methods of the class safely.
 class BASE_EXPORT MemoryDumpScheduler {
  public:
-  MemoryDumpScheduler(
-      MemoryDumpManager* mdm_,
-      scoped_refptr<SingleThreadTaskRunner> polling_task_runner);
-  ~MemoryDumpScheduler();
+  static MemoryDumpScheduler* GetInstance();
+
+  // Initializes the scheduler. NOT thread safe.
+  void Setup(MemoryDumpManager* mdm_,
+             scoped_refptr<SingleThreadTaskRunner> polling_task_runner);
 
   // Adds triggers for scheduling global dumps. Both periodic and peak triggers
   // cannot be added together. At the moment the periodic support is limited to
   // at most one periodic trigger per dump mode and peak triggers are limited to
   // at most one. All intervals should be an integeral multiple of the smallest
-  // interval specified.
+  // interval specified. NOT thread safe.
   void AddTrigger(MemoryDumpType trigger_type,
                   MemoryDumpLevelOfDetail level_of_detail,
                   uint32_t min_time_between_dumps_ms);
 
-  // Starts periodic dumps.
-  void NotifyPeriodicTriggerSupported();
+  // Starts periodic dumps. NOT thread safe and triggers must be added before
+  // enabling.
+  void EnablePeriodicTriggerIfNeeded();
 
-  // Starts polling memory total.
-  void NotifyPollingSupported();
+  // Starts polling memory total. NOT thread safe and triggers must be added
+  // before enabling.
+  void EnablePollingIfNeeded();
 
   // Resets time for triggering dump to account for minimum time between the
-  // dumps.
+  // dumps. NOT thread safe.
   void NotifyDumpTriggered();
 
-  // Disables all triggers.
+  // Disables all triggers. NOT thread safe. This should be called before
+  // polling thread is stopped to stop polling cleanly.
   void DisableAllTriggers();
 
  private:
   friend class MemoryDumpManagerTest;
+  friend class MemoryDumpSchedulerPollingTest;
   FRIEND_TEST_ALL_PREFIXES(MemoryDumpManagerTest, TestPollingOnDumpThread);
+  FRIEND_TEST_ALL_PREFIXES(MemoryDumpSchedulerPollingTest, NotifyDumpTriggered);
 
   // Helper class to schdule periodic memory dumps.
-  struct PeriodicTriggerState {
+  struct BASE_EXPORT PeriodicTriggerState {
     PeriodicTriggerState();
     ~PeriodicTriggerState();
 
@@ -71,7 +81,7 @@ class BASE_EXPORT MemoryDumpScheduler {
     DISALLOW_COPY_AND_ASSIGN(PeriodicTriggerState);
   };
 
-  struct PollingTriggerState {
+  struct BASE_EXPORT PollingTriggerState {
     enum State {
       CONFIGURED,  // Polling trigger was added.
       ENABLED,     // Polling is running.
@@ -80,8 +90,7 @@ class BASE_EXPORT MemoryDumpScheduler {
 
     static const uint32_t kMaxNumMemorySamples = 50;
 
-    explicit PollingTriggerState(
-        scoped_refptr<SingleThreadTaskRunner> polling_task_runner);
+    PollingTriggerState();
     ~PollingTriggerState();
 
     // Helper to clear the tracked memory totals and poll count from last dump.
@@ -90,7 +99,6 @@ class BASE_EXPORT MemoryDumpScheduler {
     State current_state;
     MemoryDumpLevelOfDetail level_of_detail;
 
-    scoped_refptr<SingleThreadTaskRunner> polling_task_runner;
     uint32_t polling_interval_ms;
 
     // Minimum numer of polls after the last dump at which next dump can be
@@ -106,8 +114,11 @@ class BASE_EXPORT MemoryDumpScheduler {
     DISALLOW_COPY_AND_ASSIGN(PollingTriggerState);
   };
 
-  // Helper to set polling disabled on the polling thread.
-  void DisablePolling();
+  MemoryDumpScheduler();
+  ~MemoryDumpScheduler();
+
+  // Helper to set polling disabled.
+  void DisablePollingOnPollingThread();
 
   // Periodically called by the timer.
   void RequestPeriodicGlobalDump();
@@ -129,8 +140,19 @@ class BASE_EXPORT MemoryDumpScheduler {
 
   MemoryDumpManager* mdm_;
 
-  PeriodicTriggerState periodic_state_;
-  PollingTriggerState polling_state_;
+  // Accessed on the thread of the client before enabling and only accessed on
+  // the thread that called "EnablePeriodicTriggersIfNeeded()" after enabling.
+  std::unique_ptr<PeriodicTriggerState> periodic_state_;
+
+  // Accessed on the thread of the client before enabling and only accessed on
+  // the polling thread after enabling.
+  std::unique_ptr<PollingTriggerState> polling_state_;
+
+  // Accessed on the thread of the client only.
+  scoped_refptr<SingleThreadTaskRunner> polling_task_runner_;
+
+  // True when the scheduler is setup. Accessed on the thread of client only.
+  bool is_setup_;
 
   DISALLOW_COPY_AND_ASSIGN(MemoryDumpScheduler);
 };
