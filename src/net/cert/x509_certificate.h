@@ -127,7 +127,11 @@ class NET_EXPORT X509Certificate
   };
 
   // Create an X509Certificate from a handle to the certificate object in the
-  // underlying crypto library.
+  // underlying crypto library. Returns NULL on failure to parse or extract
+  // data from the the certificate. Note that this does not guarantee the
+  // certificate is fully parsed and validated, only that the members of this
+  // class, such as subject, issuer, expiry times, and serial number, could be
+  // successfully initialized from the certificate.
   static scoped_refptr<X509Certificate> CreateFromHandle(
       OSCertHandle cert_handle,
       const OSCertHandles& intermediates);
@@ -197,8 +201,10 @@ class NET_EXPORT X509Certificate
   // Gets the subjectAltName extension field from the certificate, if any.
   // For future extension; currently this only returns those name types that
   // are required for HTTP certificate name verification - see VerifyHostname.
-  // Unrequired parameters may be passed as NULL.
-  void GetSubjectAltName(std::vector<std::string>* dns_names,
+  // Returns true if any dNSName or iPAddress SAN was present. If |dns_names|
+  // is non-null, it will be set to all dNSNames present. If |ip_addrs| is
+  // non-null, it will be set to all iPAddresses present.
+  bool GetSubjectAltName(std::vector<std::string>* dns_names,
                          std::vector<std::string>* ip_addrs) const;
 
   // Convenience method that returns whether this certificate has expired as of
@@ -383,7 +389,7 @@ class NET_EXPORT X509Certificate
   ~X509Certificate();
 
   // Common object initialization code.  Called by the constructors only.
-  void Initialize();
+  bool Initialize();
 
 #if defined(USE_OPENSSL_CERTS)
   // Resets the store returned by cert_store() to default state. Used by

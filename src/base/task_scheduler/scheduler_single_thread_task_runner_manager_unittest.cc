@@ -18,6 +18,13 @@
 #include "base/threading/thread.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
+#if defined(OS_WIN)
+#include <windows.h>
+#include <objbase.h>
+
+#include "base/win/current_module.h"
+#endif  // defined(OS_WIN)
+
 namespace base {
 namespace internal {
 
@@ -357,6 +364,101 @@ TEST_F(TaskSchedulerSingleThreadTaskRunnerManagerJoinTest,
   task_blocking.Signal();
   join_from_different_thread.Join();
 }
+
+#if defined(OS_WIN)
+
+TEST_F(TaskSchedulerSingleThreadTaskRunnerManagerTest, COMSTAInitialized) {
+  scoped_refptr<SingleThreadTaskRunner> com_task_runner =
+      single_thread_task_runner_manager_->CreateCOMSTATaskRunnerWithTraits(
+          TaskTraits().WithShutdownBehavior(
+              TaskShutdownBehavior::BLOCK_SHUTDOWN));
+
+  com_task_runner->PostTask(
+      FROM_HERE, Bind([]() {
+        HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+        if (SUCCEEDED(hr)) {
+          ADD_FAILURE() << "COM STA was not initialized on this thread";
+          CoUninitialize();
+        }
+      }));
+
+  task_tracker_.Shutdown();
+}
+
+namespace {
+
+const wchar_t* const kTestWindowClassName =
+    L"TaskSchedulerSingleThreadTaskRunnerManagerTestWinMessageWindow";
+
+class TaskSchedulerSingleThreadTaskRunnerManagerTestWin
+    : public TaskSchedulerSingleThreadTaskRunnerManagerTest {
+ public:
+  TaskSchedulerSingleThreadTaskRunnerManagerTestWin() = default;
+
+  void SetUp() override {
+    TaskSchedulerSingleThreadTaskRunnerManagerTest::SetUp();
+    register_class_succeeded_ = RegisterTestWindowClass();
+    ASSERT_TRUE(register_class_succeeded_);
+  }
+
+  void TearDown() override {
+    if (register_class_succeeded_)
+      ::UnregisterClass(kTestWindowClassName, CURRENT_MODULE());
+
+    TaskSchedulerSingleThreadTaskRunnerManagerTest::TearDown();
+  }
+
+  HWND CreateTestWindow() {
+    return CreateWindow(kTestWindowClassName, kTestWindowClassName, 0, 0, 0, 0,
+                        0, HWND_MESSAGE, nullptr, CURRENT_MODULE(), nullptr);
+  }
+
+ private:
+  bool RegisterTestWindowClass() {
+    WNDCLASSEX window_class = {};
+    window_class.cbSize = sizeof(window_class);
+    window_class.lpfnWndProc = &::DefWindowProc;
+    window_class.hInstance = CURRENT_MODULE();
+    window_class.lpszClassName = kTestWindowClassName;
+    return !!::RegisterClassEx(&window_class);
+  }
+
+  bool register_class_succeeded_ = false;
+
+  DISALLOW_COPY_AND_ASSIGN(TaskSchedulerSingleThreadTaskRunnerManagerTestWin);
+};
+
+}  // namespace
+
+TEST_F(TaskSchedulerSingleThreadTaskRunnerManagerTestWin, PumpsMessages) {
+  scoped_refptr<SingleThreadTaskRunner> com_task_runner =
+      single_thread_task_runner_manager_->CreateCOMSTATaskRunnerWithTraits(
+          TaskTraits().WithShutdownBehavior(
+              TaskShutdownBehavior::BLOCK_SHUTDOWN));
+  HWND hwnd = nullptr;
+  // HWNDs process messages on the thread that created them, so we have to
+  // create them within the context of the task runner to properly simulate a
+  // COM callback.
+  com_task_runner->PostTask(
+      FROM_HERE,
+      Bind([](TaskSchedulerSingleThreadTaskRunnerManagerTestWin* test_harness,
+              HWND* hwnd) { *hwnd = test_harness->CreateTestWindow(); },
+           Unretained(this), &hwnd));
+
+  task_tracker_.Flush();
+
+  ASSERT_NE(hwnd, nullptr);
+  // If the message pump isn't running, we will hang here. This simulates how
+  // COM would receive a callback with its own message HWND.
+  SendMessage(hwnd, WM_USER, 0, 0);
+
+  com_task_runner->PostTask(
+      FROM_HERE, Bind([](HWND hwnd) { ::DestroyWindow(hwnd); }, hwnd));
+
+  task_tracker_.Shutdown();
+}
+
+#endif  // defined(OS_WIN)
 
 }  // namespace internal
 }  // namespace base

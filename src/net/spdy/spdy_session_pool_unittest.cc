@@ -93,6 +93,8 @@ class SessionOpeningDelegate : public SpdyStream::Delegate {
     ignore_result(CreateFakeSpdySession(spdy_session_pool_, key_));
   }
 
+  NetLogSource source_dependency() const override { return NetLogSource(); }
+
  private:
   SpdySessionPool* const spdy_session_pool_;
   const SpdySessionKey key_;

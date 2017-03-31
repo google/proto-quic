@@ -431,15 +431,6 @@ class BASE_EXPORT GlobalHistogramAllocator
                                  FilePath* out_active_path);
 #endif
 
-  // Create a global allocator using a block of shared |memory| of the
-  // specified |size|. The allocator takes ownership of the shared memory
-  // and releases it upon destruction, though the memory will continue to
-  // live if other processes have access to it.
-  static void CreateWithSharedMemory(std::unique_ptr<SharedMemory> memory,
-                                     size_t size,
-                                     uint64_t id,
-                                     StringPiece name);
-
   // Create a global allocator using a block of shared memory accessed
   // through the given |handle| and |size|. The allocator takes ownership
   // of the handle and closes it upon destruction, though the memory will

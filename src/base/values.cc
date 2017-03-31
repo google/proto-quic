@@ -91,7 +91,7 @@ Value::Value(const Value& that) {
   InternalCopyConstructFrom(that);
 }
 
-Value::Value(Value&& that) {
+Value::Value(Value&& that) noexcept {
   InternalMoveConstructFrom(std::move(that));
 }
 
@@ -392,61 +392,115 @@ std::unique_ptr<Value> Value::CreateDeepCopy() const {
   return WrapUnique(DeepCopy());
 }
 
-bool Value::Equals(const Value* other) const {
-  if (other->type() != type())
+bool operator==(const Value& lhs, const Value& rhs) {
+  if (lhs.type_ != rhs.type_)
     return false;
 
-  switch (type()) {
-    case Type::NONE:
+  switch (lhs.type_) {
+    case Value::Type::NONE:
       return true;
-    case Type::BOOLEAN:
-      return bool_value_ == other->bool_value_;
-    case Type::INTEGER:
-      return int_value_ == other->int_value_;
-    case Type::DOUBLE:
-      return double_value_ == other->double_value_;
-    case Type::STRING:
-      return *string_value_ == *(other->string_value_);
-    case Type::BINARY:
-      return *binary_value_ == *(other->binary_value_);
+    case Value::Type::BOOLEAN:
+      return lhs.bool_value_ == rhs.bool_value_;
+    case Value::Type::INTEGER:
+      return lhs.int_value_ == rhs.int_value_;
+    case Value::Type::DOUBLE:
+      return lhs.double_value_ == rhs.double_value_;
+    case Value::Type::STRING:
+      return *lhs.string_value_ == *rhs.string_value_;
+    case Value::Type::BINARY:
+      return *lhs.binary_value_ == *rhs.binary_value_;
     // TODO(crbug.com/646113): Clean this up when DictionaryValue and ListValue
     // are completely inlined.
-    case Type::DICTIONARY: {
-      if ((*dict_ptr_)->size() != (*other->dict_ptr_)->size())
+    case Value::Type::DICTIONARY:
+      if ((*lhs.dict_ptr_)->size() != (*rhs.dict_ptr_)->size())
         return false;
-
-      return std::equal(std::begin(**dict_ptr_), std::end(**dict_ptr_),
-                        std::begin(**(other->dict_ptr_)),
-                        [](const DictStorage::value_type& lhs,
-                           const DictStorage::value_type& rhs) {
-                          if (lhs.first != rhs.first)
-                            return false;
-
-                          return lhs.second->Equals(rhs.second.get());
+      return std::equal(std::begin(**lhs.dict_ptr_), std::end(**lhs.dict_ptr_),
+                        std::begin(**rhs.dict_ptr_),
+                        [](const Value::DictStorage::value_type& u,
+                           const Value::DictStorage::value_type& v) {
+                          return std::tie(u.first, *u.second) ==
+                                 std::tie(v.first, *v.second);
                         });
-    }
-    case Type::LIST: {
-      if (list_->size() != other->list_->size())
+    case Value::Type::LIST:
+      if (lhs.list_->size() != rhs.list_->size())
         return false;
-
-      return std::equal(std::begin(*list_), std::end(*list_),
-                        std::begin(*(other->list_)),
-                        [](const ListStorage::value_type& lhs,
-                           const ListStorage::value_type& rhs) {
-                          return lhs->Equals(rhs.get());
-                        });
-    }
+      return std::equal(
+          std::begin(*lhs.list_), std::end(*lhs.list_), std::begin(*rhs.list_),
+          [](const Value::ListStorage::value_type& u,
+             const Value::ListStorage::value_type& v) { return *u == *v; });
   }
 
   NOTREACHED();
   return false;
 }
 
+bool operator!=(const Value& lhs, const Value& rhs) {
+  return !(lhs == rhs);
+}
+
+bool operator<(const Value& lhs, const Value& rhs) {
+  if (lhs.type_ != rhs.type_)
+    return lhs.type_ < rhs.type_;
+
+  switch (lhs.type_) {
+    case Value::Type::NONE:
+      return false;
+    case Value::Type::BOOLEAN:
+      return lhs.bool_value_ < rhs.bool_value_;
+    case Value::Type::INTEGER:
+      return lhs.int_value_ < rhs.int_value_;
+    case Value::Type::DOUBLE:
+      return lhs.double_value_ < rhs.double_value_;
+    case Value::Type::STRING:
+      return *lhs.string_value_ < *rhs.string_value_;
+    case Value::Type::BINARY:
+      return *lhs.binary_value_ < *rhs.binary_value_;
+    // TODO(crbug.com/646113): Clean this up when DictionaryValue and ListValue
+    // are completely inlined.
+    case Value::Type::DICTIONARY:
+      return std::lexicographical_compare(
+          std::begin(**lhs.dict_ptr_), std::end(**lhs.dict_ptr_),
+          std::begin(**rhs.dict_ptr_), std::end(**rhs.dict_ptr_),
+          [](const Value::DictStorage::value_type& u,
+             const Value::DictStorage::value_type& v) {
+            return std::tie(u.first, *u.second) < std::tie(v.first, *v.second);
+          });
+    case Value::Type::LIST:
+      return std::lexicographical_compare(
+          std::begin(*lhs.list_), std::end(*lhs.list_), std::begin(*rhs.list_),
+          std::end(*rhs.list_),
+          [](const Value::ListStorage::value_type& u,
+             const Value::ListStorage::value_type& v) { return *u < *v; });
+  }
+
+  NOTREACHED();
+  return false;
+}
+
+bool operator>(const Value& lhs, const Value& rhs) {
+  return rhs < lhs;
+}
+
+bool operator<=(const Value& lhs, const Value& rhs) {
+  return !(rhs < lhs);
+}
+
+bool operator>=(const Value& lhs, const Value& rhs) {
+  return !(lhs < rhs);
+}
+
+bool Value::Equals(const Value* other) const {
+  DCHECK(other);
+  return *this == *other;
+}
+
 // static
 bool Value::Equals(const Value* a, const Value* b) {
-  if ((a == NULL) && (b == NULL)) return true;
-  if ((a == NULL) ^  (b == NULL)) return false;
-  return a->Equals(b);
+  if ((a == NULL) && (b == NULL))
+    return true;
+  if ((a == NULL) ^ (b == NULL))
+    return false;
+  return *a == *b;
 }
 
 void Value::InternalCopyFundamentalValue(const Value& that) {
@@ -1207,7 +1261,7 @@ bool ListValue::Remove(size_t index, std::unique_ptr<Value>* out_value) {
 
 bool ListValue::Remove(const Value& value, size_t* index) {
   for (auto it = list_->begin(); it != list_->end(); ++it) {
-    if ((*it)->Equals(&value)) {
+    if (**it == value) {
       size_t previous_index = it - list_->begin();
       list_->erase(it);
 
@@ -1275,9 +1329,8 @@ void ListValue::AppendStrings(const std::vector<string16>& in_values) {
 bool ListValue::AppendIfNotPresent(std::unique_ptr<Value> in_value) {
   DCHECK(in_value);
   for (const auto& entry : *list_) {
-    if (entry->Equals(in_value.get())) {
+    if (*entry == *in_value)
       return false;
-    }
   }
   list_->push_back(std::move(in_value));
   return true;
@@ -1295,7 +1348,7 @@ bool ListValue::Insert(size_t index, std::unique_ptr<Value> in_value) {
 ListValue::const_iterator ListValue::Find(const Value& value) const {
   return std::find_if(list_->begin(), list_->end(),
                       [&value](const std::unique_ptr<Value>& entry) {
-                        return entry->Equals(&value);
+                        return *entry == value;
                       });
 }
 

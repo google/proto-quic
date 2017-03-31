@@ -29,10 +29,13 @@ Steps used to create the current version:
 5. Extract all globals to src/google/protobuf/globals.cc and prefix these
    symbols with 'cr_'.  On Linux, the command
 
-   $ objdump -t -j.data -j.bss obj/third_party/protobuf/libprotobuf_lite.a
+   $ objdump -t -j.data -j.bss -j.tdata -j.tbss \
+     obj/third_party/protobuf/libprotobuf_lite.a
 
    should produce the output
 
+   objdump: section '.tbss' mentioned in a -j option, but not found in any input file
+   objdump: section '.tdata' mentioned in a -j option, but not found in any input file
    objdump: section '.bss' mentioned in a -j option, but not found in any input file
    objdump: section '.data' mentioned in a -j option, but not found in any input file
 

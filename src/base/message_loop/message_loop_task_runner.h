@@ -6,6 +6,7 @@
 #define BASE_MESSAGE_LOOP_MESSAGE_LOOP_TASK_RUNNER_H_
 
 #include "base/base_export.h"
+#include "base/callback.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/pending_task.h"
@@ -31,10 +32,10 @@ class BASE_EXPORT MessageLoopTaskRunner : public SingleThreadTaskRunner {
 
   // SingleThreadTaskRunner implementation
   bool PostDelayedTask(const tracked_objects::Location& from_here,
-                       const base::Closure& task,
+                       Closure task,
                        base::TimeDelta delay) override;
   bool PostNonNestableDelayedTask(const tracked_objects::Location& from_here,
-                                  const base::Closure& task,
+                                  Closure task,
                                   base::TimeDelta delay) override;
   bool RunsTasksOnCurrentThread() const override;
 

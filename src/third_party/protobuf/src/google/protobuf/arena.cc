@@ -40,17 +40,12 @@ namespace protobuf {
 
 
 #if defined(GOOGLE_PROTOBUF_NO_THREADLOCAL)
-Arena::ThreadCache& Arena::thread_cache() {
+Arena::ThreadCache& Arena::cr_thread_cache() {
   static internal::ThreadLocalStorage<ThreadCache>* thread_cache_ =
       new internal::ThreadLocalStorage<ThreadCache>();
   return *thread_cache_->Get();
 }
-#elif defined(PROTOBUF_USE_DLLS)
-Arena::ThreadCache& Arena::thread_cache() {
-  static GOOGLE_THREAD_LOCAL ThreadCache thread_cache_ = { -1, NULL };
-  return thread_cache_;
-}
-#else
+#elif !defined(PROTOBUF_USE_DLLS)
 GOOGLE_THREAD_LOCAL Arena::ThreadCache Arena::thread_cache_ = { -1, NULL };
 #endif
 
@@ -73,7 +68,7 @@ void Arena::Init() {
     // Thread which calls Init() owns the first block. This allows the
     // single-threaded case to allocate on the first block without taking any
     // locks.
-    first_block->owner = &thread_cache();
+    first_block->owner = &cr_thread_cache();
     SetThreadCacheBlock(first_block);
     AddBlockInternal(first_block);
     owns_first_block_ = false;
@@ -183,18 +178,18 @@ void* Arena::AllocateAligned(const std::type_info* allocated, size_t n) {
   // If this thread already owns a block in this arena then try to use that.
   // This fast path optimizes the case where multiple threads allocate from the
   // same arena.
-  if (thread_cache().last_lifecycle_id_seen == lifecycle_id_ &&
-      thread_cache().last_block_used_ != NULL) {
-    if (thread_cache().last_block_used_->avail() < n) {
+  if (cr_thread_cache().last_lifecycle_id_seen == lifecycle_id_ &&
+      cr_thread_cache().last_block_used_ != NULL) {
+    if (cr_thread_cache().last_block_used_->avail() < n) {
       return SlowAlloc(n);
     }
-    return AllocFromBlock(thread_cache().last_block_used_, n);
+    return AllocFromBlock(cr_thread_cache().last_block_used_, n);
   }
 
   // Check whether we own the last accessed block on this arena.
   // This fast path optimizes the case where a single thread uses multiple
   // arenas.
-  void* me = &thread_cache();
+  void* me = &cr_thread_cache();
   Block* b = reinterpret_cast<Block*>(google::protobuf::internal::Acquire_Load(&hint_));
   if (!b || b->owner != me || b->avail() < n) {
     return SlowAlloc(n);
@@ -212,7 +207,7 @@ void* Arena::AllocFromBlock(Block* b, size_t n) {
 }
 
 void* Arena::SlowAlloc(size_t n) {
-  void* me = &thread_cache();
+  void* me = &cr_thread_cache();
   Block* b = FindBlock(me);  // Find block owned by me.
   // See if allocation fits in my latest block.
   if (b != NULL && b->avail() >= n) {
@@ -289,7 +284,7 @@ uint64 Arena::FreeBlocks() {
     // Thread which calls Reset() owns the first block. This allows the
     // single-threaded case to allocate on the first block without taking any
     // locks.
-    first_block->owner = &thread_cache();
+    first_block->owner = &cr_thread_cache();
     SetThreadCacheBlock(first_block);
     AddBlockInternal(first_block);
   }

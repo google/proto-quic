@@ -57,8 +57,9 @@ class ScopedTaskScheduler {
   ScopedTaskScheduler();
 
   // Registers a synchronous TaskScheduler on a thread that already has a
-  // |message_loop|. Calling RunLoop::Run/RunUntilIdle() on the thread where
-  // this lives runs the MessageLoop and TaskScheduler tasks in posting order.
+  // |message_loop| assumed to be associated with the caller's thread. Calling
+  // RunLoop::Run/RunUntilIdle() on the thread where this lives runs the
+  // MessageLoop and TaskScheduler tasks in posting order.
   //
   // In general, you don't need a ScopedTaskScheduler and a MessageLoop because
   // ScopedTaskScheduler provides most MessageLoop features.

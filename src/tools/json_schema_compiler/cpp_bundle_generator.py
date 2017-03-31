@@ -32,10 +32,12 @@ def _RemoveUnneededFields(schema):
   # Return a copy so that we don't pollute the global api object, which may be
   # used elsewhere.
   ret = copy.deepcopy(schema)
-  _RemoveKey(ret, "description", basestring)
-  _RemoveKey(ret, "compiler_options", dict)
-  _RemoveKey(ret, "nodoc", bool)
-  _RemoveKey(ret, "noinline_doc", bool)
+  _RemoveKey(ret, 'description', basestring)
+  _RemoveKey(ret, 'compiler_options', dict)
+  _RemoveKey(ret, 'nodoc', bool)
+  _RemoveKey(ret, 'nocompile', bool)
+  _RemoveKey(ret, 'noinline_doc', bool)
+  _RemoveKey(ret, 'jsexterns', object)
   return ret
 
 def _PrefixSchemaWithNamespace(schema):

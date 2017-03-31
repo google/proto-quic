@@ -33,6 +33,8 @@ class BASE_EXPORT SchedulerWorkerPoolParams final {
   // suggestion on when to reclaim idle threads. The pool is free to ignore this
   // value for performance or correctness reasons. |backward_compatibility|
   // indicates whether backward compatibility is enabled.
+  //
+  // TODO(fdoray): Remove this constructor. https://crbug.com/690706
   SchedulerWorkerPoolParams(
       const std::string& name,
       ThreadPriority priority_hint,
@@ -41,6 +43,15 @@ class BASE_EXPORT SchedulerWorkerPoolParams final {
       TimeDelta suggested_reclaim_time,
       SchedulerBackwardCompatibility backward_compatibility =
           SchedulerBackwardCompatibility::DISABLED);
+
+  // Same as above, with no explicit |name| and |priority_hint|.
+  SchedulerWorkerPoolParams(
+      StandbyThreadPolicy standby_thread_policy,
+      int max_threads,
+      TimeDelta suggested_reclaim_time,
+      SchedulerBackwardCompatibility backward_compatibility =
+          SchedulerBackwardCompatibility::DISABLED);
+
   SchedulerWorkerPoolParams(const SchedulerWorkerPoolParams& other);
   SchedulerWorkerPoolParams& operator=(const SchedulerWorkerPoolParams& other);
 
@@ -56,6 +67,7 @@ class BASE_EXPORT SchedulerWorkerPoolParams final {
   }
 
  private:
+  // TODO(fdoray): Remove |name_| and |priority_hint_|. https://crbug.com/690706
   std::string name_;
   ThreadPriority priority_hint_;
   StandbyThreadPolicy standby_thread_policy_;

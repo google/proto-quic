@@ -4,6 +4,8 @@
 
 #include "base/test/test_simple_task_runner.h"
 
+#include <utility>
+
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -16,23 +18,23 @@ TestSimpleTaskRunner::~TestSimpleTaskRunner() = default;
 
 bool TestSimpleTaskRunner::PostDelayedTask(
     const tracked_objects::Location& from_here,
-    const Closure& task,
+    Closure task,
     TimeDelta delay) {
   AutoLock auto_lock(lock_);
-  pending_tasks_.push_back(
-      TestPendingTask(from_here, task, TimeTicks(), delay,
-                      TestPendingTask::NESTABLE));
+  pending_tasks_.push_back(TestPendingTask(from_here, std::move(task),
+                                           TimeTicks(), delay,
+                                           TestPendingTask::NESTABLE));
   return true;
 }
 
 bool TestSimpleTaskRunner::PostNonNestableDelayedTask(
     const tracked_objects::Location& from_here,
-    const Closure& task,
+    Closure task,
     TimeDelta delay) {
   AutoLock auto_lock(lock_);
-  pending_tasks_.push_back(
-      TestPendingTask(from_here, task, TimeTicks(), delay,
-                      TestPendingTask::NON_NESTABLE));
+  pending_tasks_.push_back(TestPendingTask(from_here, std::move(task),
+                                           TimeTicks(), delay,
+                                           TestPendingTask::NON_NESTABLE));
   return true;
 }
 

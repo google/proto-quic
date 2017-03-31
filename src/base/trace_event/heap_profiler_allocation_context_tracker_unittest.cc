@@ -34,7 +34,9 @@ const char kFilteringTraceConfig[] =
     "      \"excluded_categories\": [],"
     "      \"filter_args\": {},"
     "      \"filter_predicate\": \"heap_profiler_predicate\","
-    "      \"included_categories\": [\"*\"]"
+    "      \"included_categories\": ["
+    "        \"*\","
+    "        \"" TRACE_DISABLED_BY_DEFAULT("Testing") "\"]"
     "    }"
     "  ]"
     "}";
@@ -122,6 +124,7 @@ TEST_F(AllocationContextTrackerTest, PseudoStackScopedTrace) {
     }
 
     {
+      TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("NotTesting"), kDonut);
       TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("Testing"), kCupcake);
       StackFrame frame_cc[] = {t, c, c};
       AssertBacktraceEquals(frame_cc);

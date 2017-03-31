@@ -4,7 +4,6 @@
 
 #include "net/http/http_log_util.h"
 
-#include "net/log/net_log_capture_mode.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
@@ -70,14 +69,4 @@ TEST(HttpLogUtilTest, ElideHeaderValueForNetLog) {
                                       "WWW-Authenticate", "NTLM  1234 "));
 }
 
-TEST(HttpLogUtilTest, ElideGoAwayDebugDataForNetLog) {
-  // Only elide for appropriate log level.
-  EXPECT_EQ(
-      "[6 bytes were stripped]",
-      ElideGoAwayDebugDataForNetLog(NetLogCaptureMode::Default(), "foobar"));
-  EXPECT_EQ("foobar",
-            ElideGoAwayDebugDataForNetLog(
-                NetLogCaptureMode::IncludeCookiesAndCredentials(), "foobar"));
-}
-
-}  // namspace net
+}  // namespace net

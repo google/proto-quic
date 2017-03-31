@@ -8,6 +8,7 @@
 
 #include <memory>
 
+#include "base/i18n/unicodestring.h"
 #include "base/logging.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/time/time.h"
@@ -28,8 +29,7 @@ string16 TimeFormat(const icu::DateFormat* formatter,
   icu::UnicodeString date_string;
 
   formatter->format(static_cast<UDate>(time.ToDoubleT() * 1000), date_string);
-  return string16(date_string.getBuffer(),
-                  static_cast<size_t>(date_string.length()));
+  return i18n::UnicodeStringToString16(date_string);
 }
 
 string16 TimeFormatWithoutAmPm(const icu::DateFormat* formatter,
@@ -48,8 +48,7 @@ string16 TimeFormatWithoutAmPm(const icu::DateFormat* formatter,
       begin--;
     time_string.removeBetween(begin, ampm_field.getEndIndex());
   }
-  return string16(time_string.getBuffer(),
-                  static_cast<size_t>(time_string.length()));
+  return i18n::UnicodeStringToString16(time_string);
 }
 
 icu::SimpleDateFormat CreateSimpleDateFormatter(const char* pattern) {
@@ -214,7 +213,7 @@ bool TimeDurationFormat(const TimeDelta time,
     return false;
   }
 
-  *out = base::string16(formatted.getBuffer(), formatted.length());
+  *out = i18n::UnicodeStringToString16(formatted);
   return true;
 }
 
@@ -237,7 +236,7 @@ bool TimeDurationFormatWithSeconds(const TimeDelta time,
   icu::UnicodeString formatted;
   icu::FieldPosition ignore(icu::FieldPosition::DONT_CARE);
   measure_format.formatMeasures(measures, 3, formatted, ignore, status);
-  *out = base::string16(formatted.getBuffer(), formatted.length());
+  *out = i18n::UnicodeStringToString16(formatted);
   return U_SUCCESS(status) == TRUE;
 }
 
@@ -256,8 +255,7 @@ string16 DateIntervalFormat(const Time& begin_time,
   icu::DateInterval interval(start_date, end_date);
   icu::UnicodeString formatted;
   formatter->format(&interval, formatted, pos, status);
-  return string16(formatted.getBuffer(),
-                  static_cast<size_t>(formatted.length()));
+  return i18n::UnicodeStringToString16(formatted);
 }
 
 HourClockType GetHourClockType() {

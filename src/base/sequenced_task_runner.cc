@@ -4,14 +4,17 @@
 
 #include "base/sequenced_task_runner.h"
 
+#include <utility>
+
 #include "base/bind.h"
 
 namespace base {
 
 bool SequencedTaskRunner::PostNonNestableTask(
     const tracked_objects::Location& from_here,
-    const Closure& task) {
-  return PostNonNestableDelayedTask(from_here, task, base::TimeDelta());
+    Closure task) {
+  return PostNonNestableDelayedTask(from_here, std::move(task),
+                                    base::TimeDelta());
 }
 
 bool SequencedTaskRunner::DeleteOrReleaseSoonInternal(

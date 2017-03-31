@@ -4,18 +4,23 @@
 # found in the LICENSE file.
 
 """Script to generate chromium.perf.json and chromium.perf.fyi.json in
-the src/testing/buildbot directory. Maintaining these files by hand is
-too unwieldy.
+the src/testing/buildbot directory and benchmark.csv in the src/tools/perf
+directory. Maintaining these files by hand is too unwieldy.
 """
 import argparse
+import collections
+import csv
 import json
 import os
+import re
 import sys
+import sets
 
 from chrome_telemetry_build import chromium_config
 
 sys.path.append(chromium_config.GetTelemetryDir())
 from telemetry import benchmark as benchmark_module
+from telemetry import decorators
 from telemetry.core import discover
 from telemetry.util import bot_utils
 
@@ -252,7 +257,8 @@ def get_waterfall_config():
        'os': 'Windows-10-10240',
        'device_ids': [
            'build117-b1', 'build118-b1',
-           'build119-b1', 'build120-b1', 'build121-b1'
+           'build119-b1', 'build120-b1',
+           'build180-b4' # Added in https://crbug.com/695613
           ]
       }
     ])
@@ -489,7 +495,7 @@ def generate_isolate_script_entry(swarming_dimensions, test_args,
       # Always say this is true regardless of whether the tester
       # supports swarming. It doesn't hurt.
       'can_use_on_swarming_builders': True,
-      'expiration': 7 * 60 * 60, # 7 hour timeout for now. See crbug.com/699312
+      'expiration': 10 * 60 * 60, # 10 hour timeout for now (crbug.com/699312)
       'hard_timeout': swarming_timeout if swarming_timeout else 7200,
       'io_timeout': 3600,
       'dimension_sets': swarming_dimensions,
@@ -789,22 +795,34 @@ def get_json_config_file_for_waterfall(waterfall):
   return os.path.join(buildbot_dir, filename)
 
 
-def tests_are_up_to_date(waterfall):
-  tests = generate_all_tests(waterfall)
-  tests_data = json.dumps(tests, indent=2, separators=(',', ': '),
-                          sort_keys=True)
-  config_file = get_json_config_file_for_waterfall(waterfall)
-  with open(config_file, 'r') as fp:
-    config_data = fp.read().strip()
-  return tests_data == config_data
+def tests_are_up_to_date(waterfalls):
+  up_to_date = True
+  all_tests = {}
+  for w in waterfalls:
+    tests = generate_all_tests(w)
+    tests_data = json.dumps(tests, indent=2, separators=(',', ': '),
+                            sort_keys=True)
+    config_file = get_json_config_file_for_waterfall(w)
+    with open(config_file, 'r') as fp:
+      config_data = fp.read().strip()
+    all_tests.update(tests)
+    up_to_date &= tests_data == config_data
+  verify_all_tests_in_benchmark_csv(all_tests,
+                                    get_all_waterfall_benchmarks_metadata())
+  return up_to_date
 
 
-def update_all_tests(waterfall):
-  tests = generate_all_tests(waterfall)
-  config_file = get_json_config_file_for_waterfall(waterfall)
-  with open(config_file, 'w') as fp:
-    json.dump(tests, fp, indent=2, separators=(',', ': '), sort_keys=True)
-    fp.write('\n')
+def update_all_tests(waterfalls):
+  all_tests = {}
+  for w in waterfalls:
+    tests = generate_all_tests(w)
+    config_file = get_json_config_file_for_waterfall(w)
+    with open(config_file, 'w') as fp:
+      json.dump(tests, fp, indent=2, separators=(',', ': '), sort_keys=True)
+      fp.write('\n')
+    all_tests.update(tests)
+  verify_all_tests_in_benchmark_csv(all_tests,
+                                    get_all_waterfall_benchmarks_metadata())
 
 
 def src_dir():
@@ -813,11 +831,115 @@ def src_dir():
       os.path.dirname(os.path.dirname(file_path))))
 
 
+BenchmarkMetadata = collections.namedtuple(
+    'BenchmarkMetadata', 'emails component')
+NON_TELEMETRY_BENCHMARKS = {
+    'angle_perftests': BenchmarkMetadata('jmadill@chromium.org', None),
+    'cc_perftests': BenchmarkMetadata('enne@chromium.org', None),
+    'gpu_perftests': BenchmarkMetadata('reveman@chromium.org', None),
+    'tracing_perftests': BenchmarkMetadata(
+        'kkraynov@chromium.org, primiano@chromium.org', None),
+    'load_library_perf_tests': BenchmarkMetadata(None, None),
+    'media_perftests': BenchmarkMetadata('crouleau@chromium.org', None),
+    'performance_browser_tests': BenchmarkMetadata(
+        'hubbe@chromium.org, justinlin@chromium.org, miu@chromium.org', None)
+}
+
+
+# If you change this dictionary, run tools/perf/generate_perf_data
+NON_WATERFALL_BENCHMARKS = {
+    'sizes (mac)': BenchmarkMetadata('tapted@chromium.org', None),
+    'sizes (win)': BenchmarkMetadata('grt@chromium.org', None),
+    'sizes (linux)': BenchmarkMetadata('thestig@chromium.org', None),
+    'resource_sizes': BenchmarkMetadata(
+        'agrieve@chromium.org, rnephew@chromium.org, perezju@chromium.org',
+        None)
+}
+
+
+# Returns a dictionary mapping waterfall benchmark name to benchmark owner
+# metadata
+def get_all_waterfall_benchmarks_metadata():
+  return get_all_benchmarks_metadata(NON_TELEMETRY_BENCHMARKS)
+
+
+def get_all_benchmarks_metadata(metadata):
+  benchmark_list = current_benchmarks(False)
+
+  for benchmark in benchmark_list:
+    emails = decorators.GetEmails(benchmark)
+    if emails:
+      emails = ', '.join(emails)
+    metadata[benchmark.Name()] = BenchmarkMetadata(
+        emails, decorators.GetComponent(benchmark))
+  return metadata
+
+
+def verify_all_tests_in_benchmark_csv(tests, benchmark_metadata):
+  benchmark_names = sets.Set(benchmark_metadata)
+  test_names = sets.Set()
+  for t in tests:
+    scripts = []
+    if 'isolated_scripts' in tests[t]:
+      scripts = tests[t]['isolated_scripts']
+    elif 'scripts' in tests[t]:
+      scripts = tests[t]['scripts']
+    else:
+      assert('Android Compile' == t
+        or 'Android arm64 Compile' == t
+        or t.startswith('AAAAA')), 'Unknown test data %s' % t
+    for s in scripts:
+      name = s['name']
+      name = re.sub('\\.reference$', '', name)
+      test_names.add(name)
+
+  error_messages = []
+  for test in benchmark_names - test_names:
+    error_messages.append('Remove ' + test + ' from NON_TELEMETRY_BENCHMARKS')
+  for test in test_names - benchmark_names:
+    error_messages.append('Add ' + test + ' to NON_TELEMETRY_BENCHMARKS')
+
+  assert benchmark_names == test_names, ('Please update '
+      'NON_TELEMETRY_BENCHMARKS as below:\n' + '\n'.join(error_messages))
+
+
+def update_benchmark_csv():
+  """Updates go/chrome-benchmarks.
+
+  Updates telemetry/perf/benchmark.csv containing the current benchmark names,
+  owners, and components.
+  """
+  header_data = [['AUTOGENERATED FILE DO NOT EDIT'],
+      ['See //tools/perf/generate_perf_data.py to make changes'],
+      ['Benchmark name', 'Individual owners', 'Component']
+  ]
+
+  csv_data = []
+  all_benchmarks = NON_TELEMETRY_BENCHMARKS
+  all_benchmarks.update(NON_WATERFALL_BENCHMARKS)
+  benchmark_metadata = get_all_benchmarks_metadata(all_benchmarks)
+  for benchmark_name in benchmark_metadata:
+    csv_data.append([
+        benchmark_name,
+        benchmark_metadata[benchmark_name].emails,
+        benchmark_metadata[benchmark_name].component
+    ])
+
+  csv_data = sorted(csv_data, key=lambda b: b[0])
+  csv_data = header_data + csv_data
+
+  perf_dir = os.path.join(src_dir(), 'tools', 'perf')
+  benchmark_file = os.path.join(perf_dir, 'benchmark.csv')
+  with open(benchmark_file, 'wb') as f:
+    writer = csv.writer(f, lineterminator="\n")
+    writer.writerows(csv_data)
+
+
 def main(args):
   parser = argparse.ArgumentParser(
-      description=('Generate perf test\' json config. This need to be done '
-                   'anytime you add/remove any existing benchmarks in '
-                   'tools/perf/benchmarks.'))
+      description=('Generate perf test\' json config and benchmark.csv. '
+                   'This needs to be done anytime you add/remove any existing'
+                   'benchmarks in tools/perf/benchmarks.'))
   parser.add_argument(
       '--validate-only', action='store_true', default=False,
       help=('Validate whether the perf json generated will be the same as the '
@@ -831,15 +953,15 @@ def main(args):
   fyi_waterfall['name'] = 'chromium.perf.fyi'
 
   if options.validate_only:
-    if tests_are_up_to_date(fyi_waterfall) and tests_are_up_to_date(waterfall):
+    if tests_are_up_to_date([fyi_waterfall, waterfall]):
       print 'All the perf JSON config files are up-to-date. \\o/'
       return 0
     else:
       print ('The perf JSON config files are not up-to-date. Please run %s '
              'without --validate-only flag to update the perf JSON '
-             'configs.') % sys.argv[0]
+             'configs and benchmark.csv.') % sys.argv[0]
       return 1
   else:
-    update_all_tests(fyi_waterfall)
-    update_all_tests(waterfall)
+    update_all_tests([fyi_waterfall, waterfall])
+    update_benchmark_csv()
   return 0

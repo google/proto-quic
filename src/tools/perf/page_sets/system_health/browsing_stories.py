@@ -382,6 +382,8 @@ class ImgurMobileStory(_MediaBrowsingStory):
   IS_SINGLE_PAGE_APP = True
 
 
+# crbug.com/704197 for win and mac
+@decorators.Disabled('win', 'mac')
 class ImgurDesktopStory(_MediaBrowsingStory):
   NAME = 'browse:media:imgur'
   URL = 'http://imgur.com/gallery/5UlBN'

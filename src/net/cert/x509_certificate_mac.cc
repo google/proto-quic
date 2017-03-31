@@ -35,16 +35,17 @@ namespace net {
 
 namespace {
 
-void GetCertDistinguishedName(
+bool GetCertDistinguishedName(
     const x509_util::CSSMCachedCertificate& cached_cert,
     const CSSM_OID* oid,
     CertPrincipal* result) {
   x509_util::CSSMFieldValue distinguished_name;
   OSStatus status = cached_cert.GetField(oid, &distinguished_name);
   if (status || !distinguished_name.field())
-    return;
+    return false;
   result->ParseDistinguishedName(distinguished_name.field()->Data,
                                  distinguished_name.field()->Length);
+  return true;
 }
 
 bool IsCertIssuerInEncodedList(X509Certificate::OSCertHandle cert_handle,
@@ -73,7 +74,7 @@ bool IsCertIssuerInEncodedList(X509Certificate::OSCertHandle cert_handle,
   return false;
 }
 
-void GetCertDateForOID(const x509_util::CSSMCachedCertificate& cached_cert,
+bool GetCertDateForOID(const x509_util::CSSMCachedCertificate& cached_cert,
                        const CSSM_OID* oid,
                        Time* result) {
   *result = Time();
@@ -81,14 +82,14 @@ void GetCertDateForOID(const x509_util::CSSMCachedCertificate& cached_cert,
   x509_util::CSSMFieldValue field;
   OSStatus status = cached_cert.GetField(oid, &field);
   if (status)
-    return;
+    return false;
 
   const CSSM_X509_TIME* x509_time = field.GetAs<CSSM_X509_TIME>();
   if (x509_time->timeType != BER_TAG_UTC_TIME &&
       x509_time->timeType != BER_TAG_GENERALIZED_TIME) {
     LOG(ERROR) << "Unsupported date/time format "
                << x509_time->timeType;
-    return;
+    return false;
   }
 
   base::StringPiece time_string(
@@ -96,8 +97,11 @@ void GetCertDateForOID(const x509_util::CSSMCachedCertificate& cached_cert,
       x509_time->time.Length);
   CertDateFormat format = x509_time->timeType == BER_TAG_UTC_TIME ?
       CERT_DATE_FORMAT_UTC_TIME : CERT_DATE_FORMAT_GENERALIZED_TIME;
-  if (!ParseCertificateDate(time_string, format, result))
+  if (!ParseCertificateDate(time_string, format, result)) {
     LOG(ERROR) << "Invalid certificate date/time " << time_string;
+    return false;
+  }
+  return true;
 }
 
 std::string GetCertSerialNumber(
@@ -188,19 +192,21 @@ void AddCertificatesFromBytes(const char* data, size_t length,
 
 }  // namespace
 
-void X509Certificate::Initialize() {
+bool X509Certificate::Initialize() {
   x509_util::CSSMCachedCertificate cached_cert;
-  if (cached_cert.Init(cert_handle_) == CSSM_OK) {
-    GetCertDistinguishedName(cached_cert, &CSSMOID_X509V1SubjectNameStd,
-                             &subject_);
-    GetCertDistinguishedName(cached_cert, &CSSMOID_X509V1IssuerNameStd,
-                             &issuer_);
-    GetCertDateForOID(cached_cert, &CSSMOID_X509V1ValidityNotBefore,
-                      &valid_start_);
-    GetCertDateForOID(cached_cert, &CSSMOID_X509V1ValidityNotAfter,
-                      &valid_expiry_);
-    serial_number_ = GetCertSerialNumber(cached_cert);
-  }
+  if (cached_cert.Init(cert_handle_) != CSSM_OK)
+    return false;
+  serial_number_ = GetCertSerialNumber(cached_cert);
+
+  return (!serial_number_.empty() &&
+          GetCertDistinguishedName(cached_cert, &CSSMOID_X509V1SubjectNameStd,
+                                   &subject_) &&
+          GetCertDistinguishedName(cached_cert, &CSSMOID_X509V1IssuerNameStd,
+                                   &issuer_) &&
+          GetCertDateForOID(cached_cert, &CSSMOID_X509V1ValidityNotBefore,
+                            &valid_start_) &&
+          GetCertDateForOID(cached_cert, &CSSMOID_X509V1ValidityNotAfter,
+                            &valid_expiry_));
 }
 
 bool X509Certificate::IsIssuedByEncoded(
@@ -216,7 +222,7 @@ bool X509Certificate::IsIssuedByEncoded(
   return false;
 }
 
-void X509Certificate::GetSubjectAltName(
+bool X509Certificate::GetSubjectAltName(
     std::vector<std::string>* dns_names,
     std::vector<std::string>* ip_addrs) const {
   if (dns_names)
@@ -227,34 +233,47 @@ void X509Certificate::GetSubjectAltName(
   x509_util::CSSMCachedCertificate cached_cert;
   OSStatus status = cached_cert.Init(cert_handle_);
   if (status)
-    return;
+    return false;
+
   x509_util::CSSMFieldValue subject_alt_name;
   status = cached_cert.GetField(&CSSMOID_SubjectAltName, &subject_alt_name);
   if (status || !subject_alt_name.field())
-    return;
+    return false;
+
   const CSSM_X509_EXTENSION* cssm_ext =
       subject_alt_name.GetAs<CSSM_X509_EXTENSION>();
   if (!cssm_ext || !cssm_ext->value.parsedValue)
-    return;
+    return false;
   const CE_GeneralNames* alt_name =
       reinterpret_cast<const CE_GeneralNames*>(cssm_ext->value.parsedValue);
 
+  bool has_san = false;
   for (size_t name = 0; name < alt_name->numNames; ++name) {
     const CE_GeneralName& name_struct = alt_name->generalName[name];
     const CSSM_DATA& name_data = name_struct.name;
     // DNSName and IPAddress are encoded as IA5String and OCTET STRINGs
     // respectively, both of which can be byte copied from
     // CSSM_DATA::data into the appropriate output vector.
-    if (dns_names && name_struct.nameType == GNT_DNSName) {
-      dns_names->push_back(std::string(
-          reinterpret_cast<const char*>(name_data.Data),
-          name_data.Length));
-    } else if (ip_addrs && name_struct.nameType == GNT_IPAddress) {
-      ip_addrs->push_back(std::string(
-          reinterpret_cast<const char*>(name_data.Data),
-          name_data.Length));
+    if (name_struct.nameType == GNT_DNSName) {
+      has_san = true;
+      if (dns_names) {
+        dns_names->push_back(std::string(
+            reinterpret_cast<const char*>(name_data.Data), name_data.Length));
+      }
+    } else if (name_struct.nameType == GNT_IPAddress) {
+      has_san = true;
+      if (ip_addrs) {
+        ip_addrs->push_back(std::string(
+            reinterpret_cast<const char*>(name_data.Data), name_data.Length));
+      }
     }
+    // Fast path: Found at least one subjectAltName and the caller doesn't
+    // need the actual values.
+    if (has_san && !ip_addrs && !dns_names)
+      return true;
   }
+
+  return has_san;
 }
 
 // static

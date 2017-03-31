@@ -329,6 +329,7 @@ if (is_android) {
   generate_jni("base_unittests_jni_headers") {
     sources = [
       "android/java/src/org/chromium/base/ContentUriTestUtils.java",
+      "android/java/src/org/chromium/base/JavaHandlerThreadTest.java",
       "android/java/src/org/chromium/base/TestSystemMessageHandler.java",
       "android/java/src/org/chromium/base/TestUiThread.java",
     ]
@@ -353,7 +354,6 @@ if (is_android) {
     ]
     srcjar_deps = [ ":test_support_java_aidl" ]
     java_files = [
-      "android/java/src/org/chromium/base/FileDescriptorInfo.java",
       "android/java/src/org/chromium/base/MainReturnCodeResult.java",
       "android/java/src/org/chromium/base/MultiprocessTestClientLauncher.java",
       "android/java/src/org/chromium/base/MultiprocessTestClientService.java",
@@ -367,7 +367,10 @@ if (is_android) {
 
   android_aidl("test_support_java_aidl") {
     testonly = true
-    import_include = [ "android/java/src" ]
+    import_include = [
+      "android/java/src",
+      "//base/android/java/src",
+    ]
     sources = [
       "android/java/src/org/chromium/base/ITestClient.aidl",
     ]

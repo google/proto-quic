@@ -369,8 +369,12 @@ void GetCertChainInfo(PCCERT_CHAIN_CONTEXT chain_context,
     // Add the root certificate, if present, as it was not added above.
     if (has_root_ca)
       verified_chain.push_back(element[num_elements]->pCertContext);
-    verify_result->verified_cert =
-          X509Certificate::CreateFromHandle(verified_cert, verified_chain);
+    scoped_refptr<X509Certificate> verified_cert_with_chain =
+        X509Certificate::CreateFromHandle(verified_cert, verified_chain);
+    if (verified_cert_with_chain)
+      verify_result->verified_cert = std::move(verified_cert_with_chain);
+    else
+      verify_result->cert_status |= CERT_STATUS_INVALID;
   }
 }
 
@@ -942,7 +946,11 @@ int CertVerifyProcWin::VerifyInternal(
           chain_para.RequestedIssuancePolicy.Usage.cUsageIdentifier = 1;
           chain_para.RequestedIssuancePolicy.Usage.rgpszUsageIdentifier =
               &ev_policy_oid;
-          break;
+
+          // De-prioritize the CA/Browser forum Extended Validation policy
+          // (2.23.140.1.1). See crbug.com/705285.
+          if (!EVRootCAMetadata::IsCaBrowserForumEvOid(ev_policy_oid))
+            break;
         }
       }
     }

@@ -4,16 +4,12 @@
 
 # Line with whitespace only below:
     
-IdlTestClass:::idlTestMethodNoParams:::0
-IdlTestClass:::idlTestMethodOneParam:::1
-IdlTestClass:::idlTestMethodTwoOrThreeParams:::2
-IdlTestClass:::idlTestMethodTwoOrThreeParams:::3
-IdlTestClass:::idlTemplateMethod:::1
-IdlTestClass:::path:::0
-IdlTestClass:::idlOptionalArgsPass:::0
-IdlTestClass:::idlOptionalArgsStillTooMany:::0
-IdlTestClass:::idlOptionalArgsTooLittle:::2
-IdlTemplateClass:::idlTestMethod:::1
+
+# Some tests:
+IdlTestClass:::idlStaticMethod:::1234
+IdlTestClass:::idlInstanceMethod:::1234
+IdlTestClass:::idlTemplateMethod:::1234
+IdlTemplateClass:::idlInstanceMethod:::1234
 
 # Test for free functions:
 IdlFunctions:::foo:::0

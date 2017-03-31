@@ -174,7 +174,7 @@ FilePath::FilePath() {
 
 FilePath::FilePath(const FilePath& that) : path_(that.path_) {
 }
-FilePath::FilePath(FilePath&& that) = default;
+FilePath::FilePath(FilePath&& that) noexcept = default;
 
 FilePath::FilePath(StringPieceType path) {
   path.CopyToString(&path_);

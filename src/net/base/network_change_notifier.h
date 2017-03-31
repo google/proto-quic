@@ -270,11 +270,17 @@ class NET_EXPORT NetworkChangeNotifier {
   // value doesn't imply that the user will be able to connect to remote sites;
   // even if some link is up, it is uncertain whether a particular connection
   // attempt to a particular remote site will be successful.
-  // The returned value only describes the connection currently used by the
-  // device, and does not take into account other machines on the network. For
-  // example, if the device is connected using Wifi to a 3G gateway to access
-  // the internet, the connection type is CONNECTION_WIFI.
+  // The returned value only describes the first-hop connection, for example if
+  // the device is connected via WiFi to a 4G hotspot, the returned value will
+  // be CONNECTION_WIFI, not CONNECTION_4G.
   static ConnectionType GetConnectionType();
+
+  // Returns the device's current default active network connection's subtype.
+  // The returned value only describes the first-hop connection, for example if
+  // the device is connected via WiFi to a 4G hotspot, the returned value will
+  // reflect WiFi, not 4G. This method may return SUBTYPE_UNKNOWN even if the
+  // connection type is known.
+  static ConnectionSubtype GetConnectionSubtype();
 
   // Sets |max_bandwidth_mbps| to a theoretical upper limit on download
   // bandwidth, potentially based on underlying connection type, signal
@@ -393,6 +399,7 @@ class NET_EXPORT NetworkChangeNotifier {
   static void NotifyObserversOfIPAddressChangeForTests();
   static void NotifyObserversOfConnectionTypeChangeForTests(
       ConnectionType type);
+  static void NotifyObserversOfDNSChangeForTests();
   static void NotifyObserversOfNetworkChangeForTests(ConnectionType type);
   static void NotifyObserversOfInitialDNSConfigReadForTests();
   static void NotifyObserversOfMaxBandwidthChangeForTests(
@@ -498,6 +505,7 @@ class NET_EXPORT NetworkChangeNotifier {
   // Implementations must be thread-safe. Implementations must also be
   // cheap as they are called often.
   virtual ConnectionType GetCurrentConnectionType() const = 0;
+  virtual ConnectionSubtype GetCurrentConnectionSubtype() const;
   virtual void GetCurrentMaxBandwidthAndConnectionType(
       double* max_bandwidth_mbps,
       ConnectionType* connection_type) const;

@@ -26,6 +26,7 @@
 #include "net/base/net_errors.h"
 #include "net/base/net_export.h"
 #include "net/base/request_priority.h"
+#include "net/log/net_log_source.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/client_socket_pool.h"
 #include "net/socket/next_proto.h"
@@ -377,10 +378,12 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
                           std::unique_ptr<SpdyBufferProducer> producer);
 
   // Creates and returns a HEADERS frame for |stream_id|.
-  std::unique_ptr<SpdySerializedFrame> CreateHeaders(SpdyStreamId stream_id,
-                                                     RequestPriority priority,
-                                                     SpdyControlFlags flags,
-                                                     SpdyHeaderBlock headers);
+  std::unique_ptr<SpdySerializedFrame> CreateHeaders(
+      SpdyStreamId stream_id,
+      RequestPriority priority,
+      SpdyControlFlags flags,
+      SpdyHeaderBlock headers,
+      NetLogSource source_dependency);
 
   // Creates and returns a SpdyBuffer holding a data frame with the
   // given data. May return NULL if stalled by flow control.

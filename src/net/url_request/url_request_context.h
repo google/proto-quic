@@ -265,7 +265,7 @@ class NET_EXPORT URLRequestContext
   // Sets a name for this URLRequestContext. Currently the name is used in
   // MemoryDumpProvier to annotate memory usage. The name does not need to be
   // unique.
-  void set_name(const std::string& name) { name_ = name; }
+  void set_name(const char* name) { name_ = name; }
 
   // MemoryDumpProvider implementation:
   bool OnMemoryDump(const base::trace_event::MemoryDumpArgs& args,
@@ -316,7 +316,7 @@ class NET_EXPORT URLRequestContext
   // An optional name which can be set to describe this URLRequestContext.
   // Used in MemoryDumpProvier to annotate memory usage. The name does not need
   // to be unique.
-  std::string name_;
+  const char* name_;
 
   DISALLOW_COPY_AND_ASSIGN(URLRequestContext);
 };

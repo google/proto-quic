@@ -35,6 +35,11 @@ bool UncheckedCallocMac(size_t num_items, size_t size, void** result);
 // Has no effect on the default malloc zone if the allocator shim already
 // performs that interception.
 BASE_EXPORT void InterceptAllocationsMac();
+
+// Updates all malloc zones to use their original functions.
+// Also calls ClearAllMallocZonesForTesting.
+BASE_EXPORT void UninterceptMallocZonesForTesting();
+
 }  // namespace allocator
 }  // namespace base
 

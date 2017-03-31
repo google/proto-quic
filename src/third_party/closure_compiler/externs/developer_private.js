@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2017 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -415,7 +415,9 @@ chrome.developerPrivate.ReloadOptions;
 
 /**
  * @typedef {{
- *   failQuietly: (boolean|undefined)
+ *   failQuietly: (boolean|undefined),
+ *   populateError: (boolean|undefined),
+ *   retryGuid: (string|undefined)
  * }}
  * @see https://developer.chrome.com/extensions/developerPrivate#type-LoadUnpackedOptions
  */
@@ -495,6 +497,27 @@ chrome.developerPrivate.ProjectInfo;
  * @see https://developer.chrome.com/extensions/developerPrivate#type-EventData
  */
 chrome.developerPrivate.EventData;
+
+/**
+ * @typedef {{
+ *   beforeHighlight: string,
+ *   highlight: string,
+ *   afterHighlight: string
+ * }}
+ * @see https://developer.chrome.com/extensions/developerPrivate#type-ErrorFileSource
+ */
+chrome.developerPrivate.ErrorFileSource;
+
+/**
+ * @typedef {{
+ *   error: string,
+ *   path: string,
+ *   source: (!chrome.developerPrivate.ErrorFileSource|undefined),
+ *   retryGuid: string
+ * }}
+ * @see https://developer.chrome.com/extensions/developerPrivate#type-LoadError
+ */
+chrome.developerPrivate.LoadError;
 
 /**
  * @typedef {{
@@ -632,7 +655,8 @@ chrome.developerPrivate.updateExtensionConfiguration = function(update, callback
  * Loads a user-selected unpacked item.
  * @param {!chrome.developerPrivate.LoadUnpackedOptions=} options Additional
  *     configuration parameters.
- * @param {function():void=} callback
+ * @param {function((!chrome.developerPrivate.LoadError|undefined)):void=}
+ *     callback
  * @see https://developer.chrome.com/extensions/developerPrivate#method-loadUnpacked
  */
 chrome.developerPrivate.loadUnpacked = function(options, callback) {};

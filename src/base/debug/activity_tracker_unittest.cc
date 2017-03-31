@@ -250,6 +250,28 @@ TEST_F(ActivityTrackerTest, ScopedTaskTest) {
   ASSERT_EQ(2U, GetGlobalUserDataMemoryCacheUsed());
 }
 
+TEST_F(ActivityTrackerTest, ExceptionTest) {
+  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3);
+  GlobalActivityTracker* global = GlobalActivityTracker::Get();
+
+  ThreadActivityTracker* tracker =
+      GlobalActivityTracker::Get()->GetOrCreateTrackerForCurrentThread();
+  ThreadActivityTracker::Snapshot snapshot;
+  ASSERT_EQ(0U, GetGlobalUserDataMemoryCacheUsed());
+
+  ASSERT_TRUE(tracker->CreateSnapshot(&snapshot));
+  ASSERT_EQ(0U, snapshot.last_exception.activity_type);
+
+  char origin;
+  global->RecordException(&origin, 42);
+
+  ASSERT_TRUE(tracker->CreateSnapshot(&snapshot));
+  EXPECT_EQ(Activity::ACT_EXCEPTION, snapshot.last_exception.activity_type);
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(&origin),
+            snapshot.last_exception.origin_address);
+  EXPECT_EQ(42U, snapshot.last_exception.data.exception.code);
+}
+
 TEST_F(ActivityTrackerTest, CreateWithFileTest) {
   const char temp_name[] = "CreateWithFileTest";
   ScopedTempDir temp_dir;

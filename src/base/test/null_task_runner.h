@@ -5,6 +5,7 @@
 #ifndef BASE_TEST_NULL_TASK_RUNNER_H_
 #define BASE_TEST_NULL_TASK_RUNNER_H_
 
+#include "base/callback.h"
 #include "base/compiler_specific.h"
 #include "base/macros.h"
 #include "base/single_thread_task_runner.h"
@@ -19,10 +20,10 @@ class NullTaskRunner : public base::SingleThreadTaskRunner {
   NullTaskRunner();
 
   bool PostDelayedTask(const tracked_objects::Location& from_here,
-                       const base::Closure& task,
+                       base::Closure task,
                        base::TimeDelta delay) override;
   bool PostNonNestableDelayedTask(const tracked_objects::Location& from_here,
-                                  const base::Closure& task,
+                                  base::Closure task,
                                   base::TimeDelta delay) override;
   // Always returns true to avoid triggering DCHECKs.
   bool RunsTasksOnCurrentThread() const override;

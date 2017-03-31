@@ -2,78 +2,76 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-function get_query(uri, key) {
-  if (uri.includes('?')) {
-    let query_str = uri.split('?')[1];
-    let queries = query_str.split('&');
-    for (let query of queries) {
-      let ss = query.split('=');
-      if (ss.length == 2 && ss[0] == key)
-        return ss[1];
-    }
-  }
-  return undefined;
+// lineNumber defaults to 1 if it doesn't parse as an int or is zero.
+function openFile(filepath, lineNumber) {
+  lineNumber = parseInt(lineNumber);
+  if (!lineNumber)
+    lineNumber = 1;
+  fetch('http://127.0.0.1:8989/file?f=' + filepath + '&l=' + lineNumber);
 }
 
-function open_by_selection(selectionText) {
-  if (selectionText)
-    fetch('http://127.0.0.1:8989/file?f=' + selectionText + '&l=1');
+function openFiles(filepaths) {
+  fetch('http://127.0.0.1:8989/files?f=' + filepaths.join(',,'));
 }
 
-function open_by_link(pageUrl, info, tabId) {
-  if (pageUrl.startsWith('https://cs.chromium.org/')) {
-    if (info.linkUrl.startsWith('https://cs.chromium.org/chromium/src/')) {
-      let filepath =
-          info.linkUrl.replace('https://cs.chromium.org/chromium/src/', '')
-              .replace(/\?.*/, '');
-      let line = get_query(info.linkUrl, 'l');
-      line = line != undefined ? line : '1';
-      fetch('http://127.0.0.1:8989/file?f=' + filepath + '&l=' + line);
-    }
-  } else if (pageUrl.startsWith('https://codereview.chromium.org/')) {
-    if (info.linkUrl.match('https://codereview.chromium.org/.*/patch/') !=
-        null) {
+function openByLink(info, tabId) {
+  let pageHostname = new URL(info.pageUrl).hostname;
+  let linkUrl = new URL(info.linkUrl);
+
+  if (pageHostname == 'cs.chromium.org') {
+    let match = linkUrl.pathname.match(/^\/chromium\/src\/(.*)/);
+    let line = linkUrl.searchParams.get('l');
+    if (match)
+      openFile(match[1], line);
+  } else if (pageHostname == 'codereview.chromium.org') {
+    // 'patch' links don't contain the filename so we query the page.
+    if (linkUrl.pathname.match(/^\/\d+\/patch\//)) {
       chrome.tabs.sendMessage(tabId, 'getFile', (res) => {
         if (res.file)
-          fetch('http://127.0.0.1:8989/file?f=' + res.file + '&l=1');
+          openFile(res.file);
       });
-    } else if (
-        info.linkUrl.match(
-            /https:\/\/codereview.chromium.org\/\d*\/diff\/\d*\//) != null) {
-      let filepath = info.linkUrl.replace(
-          /https:\/\/codereview.chromium.org\/\d*\/diff\/\d*\//, '');
-      fetch('http://127.0.0.1:8989/file?f=' + filepath + '&l=1');
+      return;
     }
+
+    // See if it's a 'diff' link with the filename in the pathname.
+    let match = linkUrl.pathname.match(/^\/\d+\/diff\/\d+\/(.*)/);
+    if (!match)
+      return;
+    filepath = match[1];
+
+    // Comment links may have the line number in the hash component.
+    let line = linkUrl.hash.replace(/#newcode/, '')
+    openFile(filepath, line);
   }
 }
 
-function cs_open_by_current_line(tabId, url) {
+function csOpenCurrentFile(tabId, pageUrl) {
   chrome.tabs.sendMessage(tabId, 'getLine', (res) => {
-    let line = res.line;
-
-    let filepath = url.replace('https://cs.chromium.org/chromium/src/', '')
-                       .replace(/\?.*/, '');
-
-    fetch('http://127.0.0.1:8989/file?f=' + filepath + '&l=' + line);
+    let filepath = pageUrl.pathname.replace(/\/chromium\/src\//, '');
+    // If we couldn't get the line number by inspecting the clicked element,
+    // try to get it from the query params.
+    let line = res.line ? res.line : pageUrl.searchParams.get('l');
+    openFile(filepath, line);
   });
 }
 
-function cr_open_all_in_patchset(tabId) {
+function crOpenAllInPatchset(tabId) {
   chrome.tabs.sendMessage(tabId, 'getFiles', (res) => {
-    fetch('http://127.0.0.1:8989/files?f=' + res.files.join(',,'));
+    openFiles(res.files);
   });
 }
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId == 'ome-selection') {
-    open_by_selection(info.selectionText);
+    openFile(info.selectionText.replace(/\s*/g, ''));
   } else if (info.menuItemId == 'ome-link') {
-    open_by_link(tab.url, info, tab.id);
+    openByLink(info, tab.id);
   } else if (info.menuItemId == 'ome') {
-    if (tab.url.startsWith('https://cs.chromium.org/chromium/src/')) {
-      cs_open_by_current_line(tab.id, tab.url);
-    } else if (tab.url.startsWith('https://codereview.chromium.org/')) {
-      cr_open_all_in_patchset(tab.id);
+    let pageUrl = new URL(info.pageUrl);
+    if (pageUrl.hostname == 'cs.chromium.org') {
+      csOpenCurrentFile(tab.id, pageUrl);
+    } else if (pageUrl.hostname == 'codereview.chromium.org') {
+      crOpenAllInPatchset(tab.id);
     }
   }
 });

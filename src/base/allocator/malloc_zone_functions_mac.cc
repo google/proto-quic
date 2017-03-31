@@ -10,11 +10,13 @@
 namespace base {
 namespace allocator {
 
-MallocZoneFunctions* g_malloc_zones = nullptr;
-MallocZoneFunctions::MallocZoneFunctions() {}
+MallocZoneFunctions g_malloc_zones[kMaxZoneCount];
+static_assert(std::is_pod<MallocZoneFunctions>::value,
+              "MallocZoneFunctions must be POD");
 
 void StoreZoneFunctions(const ChromeMallocZone* zone,
                         MallocZoneFunctions* functions) {
+  memset(functions, 0, sizeof(MallocZoneFunctions));
   functions->malloc = zone->malloc;
   functions->calloc = zone->calloc;
   functions->valloc = zone->valloc;
@@ -51,10 +53,6 @@ base::Lock& GetLock() {
 
 void EnsureMallocZonesInitializedLocked() {
   GetLock().AssertAcquired();
-  if (!g_malloc_zones) {
-    g_malloc_zones = reinterpret_cast<base::allocator::MallocZoneFunctions*>(
-        calloc(kMaxZoneCount, sizeof(MallocZoneFunctions)));
-  }
 }
 
 int g_zone_count = 0;
@@ -71,14 +69,14 @@ bool IsMallocZoneAlreadyStoredLocked(ChromeMallocZone* zone) {
 
 }  // namespace
 
-void StoreMallocZone(ChromeMallocZone* zone) {
+bool StoreMallocZone(ChromeMallocZone* zone) {
   base::AutoLock l(GetLock());
   EnsureMallocZonesInitializedLocked();
   if (IsMallocZoneAlreadyStoredLocked(zone))
-    return;
+    return false;
 
   if (g_zone_count == kMaxZoneCount)
-    return;
+    return false;
 
   StoreZoneFunctions(zone, &g_malloc_zones[g_zone_count]);
   ++g_zone_count;
@@ -87,11 +85,17 @@ void StoreMallocZone(ChromeMallocZone* zone) {
   // reads these values is triggered after this function returns. so we want to
   // guarantee that they are committed at this stage"
   base::subtle::MemoryBarrier();
+  return true;
 }
 
 bool IsMallocZoneAlreadyStored(ChromeMallocZone* zone) {
   base::AutoLock l(GetLock());
   return IsMallocZoneAlreadyStoredLocked(zone);
+}
+
+bool DoesMallocZoneNeedReplacing(ChromeMallocZone* zone,
+                                 const MallocZoneFunctions* functions) {
+  return IsMallocZoneAlreadyStored(zone) && zone->malloc != functions->malloc;
 }
 
 int GetMallocZoneCountForTesting() {

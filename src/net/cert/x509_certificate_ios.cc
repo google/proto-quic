@@ -75,11 +75,11 @@ void ParsePrincipalValues(X509_NAME* name,
   }
 }
 
-void ParsePrincipal(X509Certificate::OSCertHandle os_cert,
+bool ParsePrincipal(X509Certificate::OSCertHandle os_cert,
                     X509_NAME* x509_name,
                     CertPrincipal* principal) {
   if (!x509_name)
-    return;
+    return false;
 
   ParsePrincipalValues(x509_name, NID_streetAddress,
                        &principal->street_addresses);
@@ -98,51 +98,56 @@ void ParsePrincipal(X509Certificate::OSCertHandle os_cert,
                                       &principal->state_or_province_name);
   x509_util::ParsePrincipalValueByNID(x509_name, NID_countryName,
                                       &principal->country_name);
+  return true;
 }
 
-void ParseSubjectAltName(X509Certificate::OSCertHandle os_cert,
+bool ParseSubjectAltName(X509Certificate::OSCertHandle os_cert,
                          std::vector<std::string>* dns_names,
                          std::vector<std::string>* ip_addresses) {
-  DCHECK(dns_names || ip_addresses);
   bssl::UniquePtr<X509> cert = OSCertHandleToOpenSSL(os_cert);
   if (!cert.get())
-    return;
+    return false;
   int index = X509_get_ext_by_NID(cert.get(), NID_subject_alt_name, -1);
   X509_EXTENSION* alt_name_ext = X509_get_ext(cert.get(), index);
   if (!alt_name_ext)
-    return;
+    return false;
 
   bssl::UniquePtr<GENERAL_NAMES> alt_names(
       reinterpret_cast<GENERAL_NAMES*>(X509V3_EXT_d2i(alt_name_ext)));
   if (!alt_names.get())
-    return;
+    return false;
 
+  bool has_san = false;
   for (size_t i = 0; i < sk_GENERAL_NAME_num(alt_names.get()); ++i) {
     const GENERAL_NAME* name = sk_GENERAL_NAME_value(alt_names.get(), i);
-    if (name->type == GEN_DNS && dns_names) {
-      const unsigned char* dns_name = ASN1_STRING_data(name->d.dNSName);
-      if (!dns_name)
-        continue;
-      int dns_name_len = ASN1_STRING_length(name->d.dNSName);
-      dns_names->push_back(
-          std::string(reinterpret_cast<const char*>(dns_name), dns_name_len));
-    } else if (name->type == GEN_IPADD && ip_addresses) {
-      const unsigned char* ip_addr = name->d.iPAddress->data;
-      if (!ip_addr)
-        continue;
-      int ip_addr_len = name->d.iPAddress->length;
-      if (ip_addr_len != static_cast<int>(IPAddress::kIPv4AddressSize) &&
-          ip_addr_len != static_cast<int>(IPAddress::kIPv6AddressSize)) {
-        // http://www.ietf.org/rfc/rfc3280.txt requires subjectAltName iPAddress
-        // to have 4 or 16 bytes, whereas in a name constraint it includes a
-        // net mask hence 8 or 32 bytes. Logging to help diagnose any mixup.
-        LOG(WARNING) << "Bad sized IP Address in cert: " << ip_addr_len;
-        continue;
+    if (name->type == GEN_DNS) {
+      has_san = true;
+      if (dns_names) {
+        const unsigned char* dns_name = ASN1_STRING_data(name->d.dNSName);
+        int dns_name_len = ASN1_STRING_length(name->d.dNSName);
+        dns_names->push_back(
+            base::StringPiece(reinterpret_cast<const char*>(dns_name),
+                              dns_name_len)
+                .as_string());
       }
-      ip_addresses->push_back(
-          std::string(reinterpret_cast<const char*>(ip_addr), ip_addr_len));
+    } else if (name->type == GEN_IPADD) {
+      has_san = true;
+      if (ip_addresses) {
+        const unsigned char* ip_addr = name->d.iPAddress->data;
+        int ip_addr_len = name->d.iPAddress->length;
+        ip_addresses->push_back(
+            base::StringPiece(reinterpret_cast<const char*>(ip_addr),
+                              ip_addr_len)
+                .as_string());
+      }
     }
+    // Fast path: Found at least one subjectAltName and the caller doesn't
+    // need the actual values.
+    if (has_san && !ip_addresses && !dns_names)
+      return true;
   }
+
+  return has_san;
 }
 
 }  // namespace
@@ -161,31 +166,34 @@ void X509Certificate::FreeOSCertHandle(OSCertHandle cert_handle) {
     CFRelease(cert_handle);
 }
 
-void X509Certificate::Initialize() {
+bool X509Certificate::Initialize() {
   crypto::EnsureOpenSSLInit();
   bssl::UniquePtr<X509> x509_cert = OSCertHandleToOpenSSL(cert_handle_);
   if (!x509_cert)
-    return;
+    return false;
   ASN1_INTEGER* serial_num = X509_get_serialNumber(x509_cert.get());
-  if (serial_num) {
-    // ASN1_INTEGERS represent the decoded number, in a format internal to
-    // OpenSSL. Most notably, this may have leading zeroes stripped off for
-    // numbers whose first byte is >= 0x80. Thus, it is necessary to
-    // re-encoded the integer back into DER, which is what the interface
-    // of X509Certificate exposes, to ensure callers get the proper (DER)
-    // value.
-    int bytes_required = i2c_ASN1_INTEGER(serial_num, nullptr);
-    unsigned char* buffer = reinterpret_cast<unsigned char*>(
-        base::WriteInto(&serial_number_, bytes_required + 1));
-    int bytes_written = i2c_ASN1_INTEGER(serial_num, &buffer);
-    DCHECK_EQ(static_cast<size_t>(bytes_written), serial_number_.size());
-  }
+  if (!serial_num)
+    return false;
+  // ASN1_INTEGERS represent the decoded number, in a format internal to
+  // OpenSSL. Most notably, this may have leading zeroes stripped off for
+  // numbers whose first byte is >= 0x80. Thus, it is necessary to
+  // re-encoded the integer back into DER, which is what the interface
+  // of X509Certificate exposes, to ensure callers get the proper (DER)
+  // value.
+  int bytes_required = i2c_ASN1_INTEGER(serial_num, nullptr);
+  unsigned char* buffer = reinterpret_cast<unsigned char*>(
+      base::WriteInto(&serial_number_, bytes_required + 1));
+  int bytes_written = i2c_ASN1_INTEGER(serial_num, &buffer);
+  DCHECK_EQ(static_cast<size_t>(bytes_written), serial_number_.size());
 
-  ParsePrincipal(cert_handle_, X509_get_subject_name(x509_cert.get()),
-                 &subject_);
-  ParsePrincipal(cert_handle_, X509_get_issuer_name(x509_cert.get()), &issuer_);
-  x509_util::ParseDate(X509_get_notBefore(x509_cert.get()), &valid_start_);
-  x509_util::ParseDate(X509_get_notAfter(x509_cert.get()), &valid_expiry_);
+  return (
+      ParsePrincipal(cert_handle_, X509_get_subject_name(x509_cert.get()),
+                     &subject_) &&
+      ParsePrincipal(cert_handle_, X509_get_issuer_name(x509_cert.get()),
+                     &issuer_) &&
+      x509_util::ParseDate(X509_get_notBefore(x509_cert.get()),
+                           &valid_start_) &&
+      x509_util::ParseDate(X509_get_notAfter(x509_cert.get()), &valid_expiry_));
 }
 
 // static
@@ -271,7 +279,7 @@ X509Certificate::OSCertHandles X509Certificate::CreateOSCertHandlesFromBytes(
   return results;
 }
 
-void X509Certificate::GetSubjectAltName(
+bool X509Certificate::GetSubjectAltName(
     std::vector<std::string>* dns_names,
     std::vector<std::string>* ip_addrs) const {
   if (dns_names)
@@ -279,7 +287,7 @@ void X509Certificate::GetSubjectAltName(
   if (ip_addrs)
     ip_addrs->clear();
 
-  ParseSubjectAltName(cert_handle_, dns_names, ip_addrs);
+  return ParseSubjectAltName(cert_handle_, dns_names, ip_addrs);
 }
 
 // static

@@ -80,15 +80,10 @@ LOAD_FLAG(MAYBE_USER_GESTURE, 1 << 15)
 // be honored, but that other forms of authority may be used.
 LOAD_FLAG(DO_NOT_USE_EMBEDDED_IDENTITY, 1 << 16)
 
-// The creator of this URLRequest wishes to receive stale responses when allowed
-// by the "Cache-Control: stale-while-revalidate" directive and is able to issue
-// an async revalidation to update the cache.
-LOAD_FLAG(SUPPORT_ASYNC_REVALIDATION, 1 << 17)
-
 // Indicates that this request is not to be migrated to a new network when QUIC
 // connection migration is enabled.
-LOAD_FLAG(DISABLE_CONNECTION_MIGRATION, 1 << 18)
+LOAD_FLAG(DISABLE_CONNECTION_MIGRATION, 1 << 17)
 
 // Indicates that the cache should not check that the request matches the
 // response's vary header.
-LOAD_FLAG(SKIP_VARY_CHECK, 1 << 19)
+LOAD_FLAG(SKIP_VARY_CHECK, 1 << 18)

@@ -28,9 +28,9 @@ trusted = common.TrustAnchor(root, constrained=False)
 # target is not.
 time = common.MARCH_1_2015_UTC
 verify_result = False
-errors = """[Context] Processing Certificate
-  index: 1
-      [Error] Time is before notBefore
+errors = """----- Certificate i=0 (CN=Target) -----
+ERROR: Time is before notBefore
+
 """
 
 common.write_test_file(__doc__, chain, trusted, time, verify_result, errors)

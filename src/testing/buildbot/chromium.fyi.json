@@ -10630,15 +10630,6 @@
   "Linux ARM": {
     "gtest_tests": [
       {
-        "args": [
-          "--gtest_filter=*NaCl*.*"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
-        "test": "browser_tests"
-      },
-      {
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -12933,7 +12924,7 @@
               "os": "Ubuntu-14.04"
             }
           ],
-          "shards": 20
+          "shards": 6
         }
       }
     ]

@@ -228,9 +228,9 @@ FieldTrial* FeatureList::GetFieldTrial(const Feature& feature) {
 }
 
 // static
-std::vector<std::string> FeatureList::SplitFeatureListString(
-    const std::string& input) {
-  return SplitString(input, ",", TRIM_WHITESPACE, SPLIT_WANT_NONEMPTY);
+std::vector<base::StringPiece> FeatureList::SplitFeatureListString(
+    base::StringPiece input) {
+  return SplitStringPiece(input, ",", TRIM_WHITESPACE, SPLIT_WANT_NONEMPTY);
 }
 
 // static
@@ -340,7 +340,7 @@ void FeatureList::RegisterOverridesFromCommandLine(
     const std::string& feature_list,
     OverrideState overridden_state) {
   for (const auto& value : SplitFeatureListString(feature_list)) {
-    StringPiece feature_name(value);
+    StringPiece feature_name = value;
     base::FieldTrial* trial = nullptr;
 
     // The entry may be of the form FeatureName<FieldTrialName - in which case,
@@ -348,7 +348,7 @@ void FeatureList::RegisterOverridesFromCommandLine(
     std::string::size_type pos = feature_name.find('<');
     if (pos != std::string::npos) {
       feature_name.set(value.data(), pos);
-      trial = base::FieldTrialList::Find(value.substr(pos + 1));
+      trial = base::FieldTrialList::Find(value.substr(pos + 1).as_string());
     }
 
     RegisterOverride(feature_name, overridden_state, trial);

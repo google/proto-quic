@@ -58,11 +58,11 @@ class SchedulerParallelTaskRunner : public TaskRunner {
 
   // TaskRunner:
   bool PostDelayedTask(const tracked_objects::Location& from_here,
-                       const Closure& closure,
+                       Closure closure,
                        TimeDelta delay) override {
     // Post the task as part of a one-off single-task Sequence.
     return worker_pool_->PostTaskWithSequence(
-        MakeUnique<Task>(from_here, closure, traits_, delay),
+        MakeUnique<Task>(from_here, std::move(closure), traits_, delay),
         make_scoped_refptr(new Sequence));
   }
 
@@ -93,9 +93,10 @@ class SchedulerSequencedTaskRunner : public SequencedTaskRunner {
 
   // SequencedTaskRunner:
   bool PostDelayedTask(const tracked_objects::Location& from_here,
-                       const Closure& closure,
+                       Closure closure,
                        TimeDelta delay) override {
-    std::unique_ptr<Task> task(new Task(from_here, closure, traits_, delay));
+    std::unique_ptr<Task> task(
+        new Task(from_here, std::move(closure), traits_, delay));
     task->sequenced_task_runner_ref = this;
 
     // Post the task as part of |sequence_|.
@@ -103,10 +104,10 @@ class SchedulerSequencedTaskRunner : public SequencedTaskRunner {
   }
 
   bool PostNonNestableDelayedTask(const tracked_objects::Location& from_here,
-                                  const Closure& closure,
+                                  Closure closure,
                                   base::TimeDelta delay) override {
     // Tasks are never nested within the task scheduler.
-    return PostDelayedTask(from_here, closure, delay);
+    return PostDelayedTask(from_here, std::move(closure), delay);
   }
 
   bool RunsTasksOnCurrentThread() const override {

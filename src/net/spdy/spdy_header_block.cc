@@ -16,6 +16,7 @@
 #include "net/http/http_log_util.h"
 #include "net/log/net_log_capture_mode.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
+#include "net/spdy/platform/api/spdy_string_utils.h"
 
 using std::dec;
 using std::hex;
@@ -256,10 +257,9 @@ string SpdyHeaderBlock::DebugString() const {
 
   string output = "\n{\n";
   for (auto it = begin(); it != end(); ++it) {
-    output +=
-        "  " + it->first.as_string() + " " + it->second.as_string() + "\n";
+    SpdyStrAppend(&output, "  ", it->first, " ", it->second, "\n");
   }
-  output.append("}\n");
+  SpdyStrAppend(&output, "}\n");
   return output;
 }
 

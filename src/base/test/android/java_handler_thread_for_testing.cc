@@ -4,7 +4,9 @@
 
 #include "base/test/android/java_handler_thread_for_testing.h"
 
+#include "base/memory/ptr_util.h"
 #include "base/message_loop/message_loop.h"
+#include "jni/JavaHandlerThreadTest_jni.h"
 
 namespace base {
 namespace android {
@@ -19,6 +21,20 @@ TestJavaMessageHandlerFactory::CreateMessageHandler(
       env, delegate, message_pump, test_done_event);
 }
 
+// static
+std::unique_ptr<JavaHandlerThreadForTesting>
+JavaHandlerThreadForTesting::Create(const char* name,
+                                    base::WaitableEvent* test_done_event) {
+  return WrapUnique(new JavaHandlerThreadForTesting(name, test_done_event));
+}
+
+// static
+std::unique_ptr<JavaHandlerThreadForTesting>
+JavaHandlerThreadForTesting::CreateJavaFirst(
+    base::WaitableEvent* test_done_event) {
+  return WrapUnique(new JavaHandlerThreadForTesting(test_done_event));
+}
+
 JavaHandlerThreadForTesting::JavaHandlerThreadForTesting(
     const char* name,
     base::WaitableEvent* test_done_event)
@@ -26,13 +42,18 @@ JavaHandlerThreadForTesting::JavaHandlerThreadForTesting(
       message_handler_factory_(new TestJavaMessageHandlerFactory()),
       test_done_event_(test_done_event) {}
 
+JavaHandlerThreadForTesting::JavaHandlerThreadForTesting(
+    base::WaitableEvent* test_done_event)
+    : JavaHandlerThread(Java_JavaHandlerThreadTest_testAndGetJavaHandlerThread(
+          base::android::AttachCurrentThread())),
+      message_handler_factory_(new TestJavaMessageHandlerFactory()),
+      test_done_event_(test_done_event) {}
+
 JavaHandlerThreadForTesting::~JavaHandlerThreadForTesting() = default;
 
 void JavaHandlerThreadForTesting::StartMessageLoop() {
   static_cast<MessageLoopForUI*>(message_loop_.get())
-      ->StartForTesting(
-          message_handler_factory_.get(),
-          reinterpret_cast<base::WaitableEvent*>(test_done_event_));
+      ->StartForTesting(message_handler_factory_.get(), test_done_event_);
 }
 
 void JavaHandlerThreadForTesting::StopMessageLoop() {

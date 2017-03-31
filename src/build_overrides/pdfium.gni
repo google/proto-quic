@@ -8,6 +8,9 @@ pdf_enable_v8_override = true
 # Disable XFA forms in Chromium builds.
 pdf_enable_xfa_override = false
 
+# Bundle FreeType on all platforms expect Linux. Use system FreeType on Linux.
+pdf_bundle_freetype_override = !is_linux
+
 # Disable use of Skia backend.
 pdf_use_skia_override = false
 

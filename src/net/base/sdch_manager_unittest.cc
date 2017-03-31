@@ -672,11 +672,11 @@ TEST_P(SdchManagerMemoryDumpTest, DumpMemoryStats) {
       new base::trace_event::ProcessMemoryDump(nullptr, dump_args));
 
   base::trace_event::MemoryAllocatorDump* parent =
-      pmd->CreateAllocatorDump("net/url_request_context_0x123");
+      pmd->CreateAllocatorDump("net/url_request_context/main/0x123");
   sdch_manager()->DumpMemoryStats(pmd.get(), parent->absolute_name());
 
   const base::trace_event::MemoryAllocatorDump* sub_dump =
-      pmd->GetAllocatorDump("net/url_request_context_0x123/sdch_manager");
+      pmd->GetAllocatorDump("net/url_request_context/main/0x123/sdch_manager");
   ASSERT_NE(nullptr, sub_dump);
   const base::trace_event::MemoryAllocatorDump* dump = pmd->GetAllocatorDump(
       base::StringPrintf("net/sdch_manager_0x%" PRIxPTR,

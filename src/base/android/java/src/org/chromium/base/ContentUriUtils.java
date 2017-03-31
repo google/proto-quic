@@ -38,10 +38,10 @@ public abstract class ContentUriUtils {
     public interface FileProviderUtil {
         /**
          * Generate a content URI from the given file.
-         * @param context Application context.
+         *
          * @param file The file to be translated.
          */
-        Uri getContentUriFromFile(Context context, File file);
+        Uri getContentUriFromFile(File file);
     }
 
     // Prevent instantiation.
@@ -53,10 +53,10 @@ public abstract class ContentUriUtils {
         }
     }
 
-    public static Uri getContentUriFromFile(Context context, File file) {
+    public static Uri getContentUriFromFile(File file) {
         synchronized (sLock) {
             if (sFileProviderUtil != null) {
-                return sFileProviderUtil.getContentUriFromFile(context, file);
+                return sFileProviderUtil.getContentUriFromFile(file);
             }
         }
         return null;
@@ -64,15 +64,14 @@ public abstract class ContentUriUtils {
 
     /**
      * Opens the content URI for reading, and returns the file descriptor to
-     * the caller. The caller is responsible for closing the file desciptor.
+     * the caller. The caller is responsible for closing the file descriptor.
      *
-     * @param context {@link Context} in interest
      * @param uriString the content URI to open
-     * @return file desciptor upon success, or -1 otherwise.
+     * @return file descriptor upon success, or -1 otherwise.
      */
     @CalledByNative
-    public static int openContentUriForRead(Context context, String uriString) {
-        AssetFileDescriptor afd = getAssetFileDescriptor(context, uriString);
+    public static int openContentUriForRead(String uriString) {
+        AssetFileDescriptor afd = getAssetFileDescriptor(uriString);
         if (afd != null) {
             return afd.getParcelFileDescriptor().detachFd();
         }
@@ -82,15 +81,14 @@ public abstract class ContentUriUtils {
     /**
      * Check whether a content URI exists.
      *
-     * @param context {@link Context} in interest.
      * @param uriString the content URI to query.
      * @return true if the URI exists, or false otherwise.
      */
     @CalledByNative
-    public static boolean contentUriExists(Context context, String uriString) {
+    public static boolean contentUriExists(String uriString) {
         AssetFileDescriptor asf = null;
         try {
-            asf = getAssetFileDescriptor(context, uriString);
+            asf = getAssetFileDescriptor(uriString);
             return asf != null;
         } finally {
             // Do not use StreamUtil.closeQuietly here, as AssetFileDescriptor
@@ -108,15 +106,14 @@ public abstract class ContentUriUtils {
     /**
      * Retrieve the MIME type for the content URI.
      *
-     * @param context {@link Context} in interest.
      * @param uriString the content URI to look up.
      * @return MIME type or null if the input params are empty or invalid.
      */
     @CalledByNative
-    public static String getMimeType(Context context, String uriString) {
-        ContentResolver resolver = context.getContentResolver();
+    public static String getMimeType(String uriString) {
+        ContentResolver resolver = ContextUtils.getApplicationContext().getContentResolver();
         Uri uri = Uri.parse(uriString);
-        if (isVirtualDocument(uri, context)) {
+        if (isVirtualDocument(uri)) {
             String[] streamTypes = resolver.getStreamTypes(uri, "*/*");
             return (streamTypes != null && streamTypes.length > 0) ? streamTypes[0] : null;
         }
@@ -126,21 +123,20 @@ public abstract class ContentUriUtils {
     /**
      * Helper method to open a content URI and returns the ParcelFileDescriptor.
      *
-     * @param context {@link Context} in interest.
      * @param uriString the content URI to open.
      * @return AssetFileDescriptor of the content URI, or NULL if the file does not exist.
      */
-    private static AssetFileDescriptor getAssetFileDescriptor(Context context, String uriString) {
-        ContentResolver resolver = context.getContentResolver();
+    private static AssetFileDescriptor getAssetFileDescriptor(String uriString) {
+        ContentResolver resolver = ContextUtils.getApplicationContext().getContentResolver();
         Uri uri = Uri.parse(uriString);
 
         try {
-            if (isVirtualDocument(uri, context)) {
+            if (isVirtualDocument(uri)) {
                 String[] streamTypes = resolver.getStreamTypes(uri, "*/*");
                 if (streamTypes != null && streamTypes.length > 0) {
                     AssetFileDescriptor afd =
                             resolver.openTypedAssetFileDescriptor(uri, streamTypes[0], null);
-                    if (afd.getStartOffset() != 0) {
+                    if (afd != null && afd.getStartOffset() != 0) {
                         // Do not use StreamUtil.closeQuietly here, as AssetFileDescriptor
                         // does not implement Closeable until KitKat.
                         try {
@@ -162,9 +158,7 @@ public abstract class ContentUriUtils {
             Log.w(TAG, "Cannot find content uri: " + uriString, e);
         } catch (SecurityException e) {
             Log.w(TAG, "Cannot open content uri: " + uriString, e);
-        } catch (IllegalArgumentException e) {
-            Log.w(TAG, "Unknown content uri: " + uriString, e);
-        } catch (IllegalStateException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             Log.w(TAG, "Unknown content uri: " + uriString, e);
         }
 
@@ -174,11 +168,11 @@ public abstract class ContentUriUtils {
     /**
      * Method to resolve the display name of a content URI.
      *
-     * @param uri the content URI to be resolved.
-     * @param context {@link Context} in interest.
+     * @param uri         the content URI to be resolved.
+     * @param context     {@link Context} in interest.
      * @param columnField the column field to query.
      * @return the display name of the @code uri if present in the database
-     *  or an empty string otherwise.
+     * or an empty string otherwise.
      */
     public static String getDisplayName(Uri uri, Context context, String columnField) {
         if (uri == null) return "";
@@ -224,14 +218,15 @@ public abstract class ContentUriUtils {
      * Checks whether the passed Uri represents a virtual document.
      *
      * @param uri the content URI to be resolved.
-     * @param contentResolver the content resolver to query.
      * @return True for virtual file, false for any other file.
      */
-    private static boolean isVirtualDocument(Uri uri, Context context) {
+    private static boolean isVirtualDocument(Uri uri) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) return false;
         if (uri == null) return false;
-        if (!DocumentsContract.isDocumentUri(context, uri)) return false;
-        ContentResolver contentResolver = context.getContentResolver();
+        if (!DocumentsContract.isDocumentUri(ContextUtils.getApplicationContext(), uri)) {
+            return false;
+        }
+        ContentResolver contentResolver = ContextUtils.getApplicationContext().getContentResolver();
         Cursor cursor = null;
         try {
             cursor = contentResolver.query(uri, null, null, null, null);
@@ -261,9 +256,7 @@ public abstract class ContentUriUtils {
     private static boolean hasVirtualFlag(Cursor cursor) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return false;
         int index = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_FLAGS);
-        if (index > -1) {
-            return (cursor.getLong(index) & DocumentsContract.Document.FLAG_VIRTUAL_DOCUMENT) != 0;
-        }
-        return false;
+        return index > -1
+                && (cursor.getLong(index) & DocumentsContract.Document.FLAG_VIRTUAL_DOCUMENT) != 0;
     }
 }

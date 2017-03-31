@@ -118,6 +118,19 @@ class TrivialGifPage(_BasePage):
         measure_memory=measure_memory)
 
 
+class TrivialAnimationPage(_BasePage):
+
+  def __init__(self, page_set, shared_page_state_class, wait_in_seconds,
+               measure_memory):
+    super(TrivialAnimationPage, self).__init__(
+        url='file://trivial_sites/trivial_animation.html',
+        page_set=page_set,
+        name=self.__class__.__name__ + shared_page_state_class.__name__,
+        shared_page_state_class=shared_page_state_class,
+        wait_in_seconds=wait_in_seconds,
+        measure_memory=measure_memory)
+
+
 class TrivialSitesStorySet(story.StorySet):
   def __init__(self, shared_state = shared_page_state.SharedPageState,
                wait_in_seconds=0, measure_memory=False):
@@ -137,4 +150,6 @@ class TrivialSitesStorySet(story.StorySet):
     self.AddStory(TrivialFullscreenVideoPage(
         self, shared_state, wait_in_seconds, measure_memory))
     self.AddStory(TrivialGifPage(
+        self, shared_state, wait_in_seconds, measure_memory))
+    self.AddStory(TrivialAnimationPage(
         self, shared_state, wait_in_seconds, measure_memory))

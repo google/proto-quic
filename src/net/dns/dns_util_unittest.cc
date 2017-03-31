@@ -6,6 +6,28 @@
 
 #include "testing/gtest/include/gtest/gtest.h"
 
+namespace {
+
+bool IsValidDNSDomainName(const char* name) {
+  size_t length = strlen(name);
+  for (size_t i = 0; i < length; ++i) {
+    if (name[i] == '.') {
+      if (i == 0 || name[i - 1] == '.') {
+        return false;
+      }
+      continue;
+    }
+
+    if (!net::IsValidHostLabelCharacter(name[i],
+                                        i == 0 || name[i - 1] == '.')) {
+      return false;
+    }
+  }
+  return true;
+}
+
+}  // namespace
+
 namespace net {
 
 class DNSUtilTest : public testing::Test {
@@ -67,6 +89,32 @@ TEST_F(DNSUtilTest, DNSDomainToString) {
   // Invalid inputs should return an empty string.
   EXPECT_EQ("", DNSDomainToString(IncludeNUL("\x80")));
   EXPECT_EQ("", DNSDomainToString("\x06"));
+}
+
+TEST_F(DNSUtilTest, IsValidDNSDomain) {
+  const char* const bad_hostnames[] = {
+      "%20%20noodles.blorg", "noo dles.blorg ",    "noo dles.blorg. ",
+      "^noodles.blorg",      "noodles^.blorg",     "noo&dles.blorg",
+      "noodles.blorg`",      "www.-noodles.blorg",
+  };
+
+  // TODO(palmer): In the future, when we can remove support for invalid names,
+  // change the calls to from |IsValidDNSDomainName| to |IsValidDNSDomain|, and
+  // remove |IsValidDNSDomainName| (defined above).
+
+  for (size_t i = 0; i < arraysize(bad_hostnames); ++i) {
+    EXPECT_FALSE(IsValidDNSDomainName(bad_hostnames[i]));
+  }
+
+  const char* const good_hostnames[] = {
+      "www.noodles.blorg",   "1www.noodles.blorg", "www.2noodles.blorg",
+      "www.n--oodles.blorg", "www.noodl_es.blorg", "www.no-_odles.blorg",
+      "www_.noodles.blorg",  "www.noodles.blorg.", "_privet._tcp.local",
+  };
+
+  for (size_t i = 0; i < arraysize(good_hostnames); ++i) {
+    EXPECT_TRUE(IsValidDNSDomainName(good_hostnames[i]));
+  }
 }
 
 }  // namespace net

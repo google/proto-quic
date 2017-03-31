@@ -9,6 +9,7 @@
 #include "base/test/fuzzed_data_provider.h"
 #include "net/base/net_errors.h"
 #include "net/base/request_priority.h"
+#include "net/log/net_log_source.h"
 #include "net/log/test_net_log.h"
 #include "net/socket/fuzzed_socket_factory.h"
 #include "net/spdy/spdy_test_util_common.h"
@@ -28,6 +29,10 @@ class FuzzerDelegate : public net::SpdyStream::Delegate {
   void OnTrailers(const net::SpdyHeaderBlock& trailers) override {}
 
   void OnClose(int status) override { done_closure_.Run(); }
+
+  net::NetLogSource source_dependency() const override {
+    return net::NetLogSource();
+  }
 
  private:
   base::Closure done_closure_;

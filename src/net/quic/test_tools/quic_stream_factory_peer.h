@@ -37,6 +37,9 @@ class QuicStreamFactoryPeer {
   static bool HasActiveSession(QuicStreamFactory* factory,
                                const QuicServerId& server_id);
 
+  static bool HasActiveJob(QuicStreamFactory* factory,
+                           const QuicServerId& server_id);
+
   static bool HasActiveCertVerifierJob(QuicStreamFactory* factory,
                                        const QuicServerId& server_id);
 

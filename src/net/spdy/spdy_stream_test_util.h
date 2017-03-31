@@ -11,6 +11,7 @@
 #include "base/memory/ref_counted.h"
 #include "net/base/io_buffer.h"
 #include "net/base/test_completion_callback.h"
+#include "net/log/net_log_source.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/spdy_read_queue.h"
 #include "net/spdy/spdy_stream.h"
@@ -33,6 +34,7 @@ class ClosingDelegate : public SpdyStream::Delegate {
   void OnDataSent() override;
   void OnTrailers(const SpdyHeaderBlock& trailers) override;
   void OnClose(int status) override;
+  NetLogSource source_dependency() const override;
 
   // Returns whether or not the stream is closed.
   bool StreamIsClosed() const { return !stream_.get(); }
@@ -54,6 +56,7 @@ class StreamDelegateBase : public SpdyStream::Delegate {
   void OnDataSent() override;
   void OnTrailers(const SpdyHeaderBlock& trailers) override;
   void OnClose(int status) override;
+  NetLogSource source_dependency() const override;
 
   // Waits for the stream to be closed and returns the status passed
   // to OnClose().

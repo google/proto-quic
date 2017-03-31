@@ -990,6 +990,16 @@ chrome.automation.AutomationNode.prototype.focus = function() {};
 chrome.automation.AutomationNode.prototype.getImageData = function(maxWidth, maxHeight) {};
 
 /**
+ * Does a hit test of the given global screen coordinates, and fires eventToFire
+ * on the resulting object.
+ * @param {number} x
+ * @param {number} y
+ * @param {!chrome.automation.EventType} eventToFire
+ * @see https://developer.chrome.com/extensions/automation#method-hitTest
+ */
+chrome.automation.AutomationNode.prototype.hitTest = function(x, y, eventToFire) {};
+
+/**
  * Scrolls this node to make it visible.
  * @see https://developer.chrome.com/extensions/automation#method-makeVisible
  */

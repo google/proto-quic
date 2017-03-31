@@ -461,6 +461,7 @@ void HttpStreamFactoryImpl::JobController::OnNewSpdySessionReady(
   const bool was_alpn_negotiated = job->was_alpn_negotiated();
   const NextProto negotiated_protocol = job->negotiated_protocol();
   const bool using_spdy = job->using_spdy();
+  const NetLogSource source_dependency = job->net_log().source();
 
   // Cache this so we can still use it if the JobController is deleted.
   HttpStreamFactoryImpl* factory = factory_;
@@ -504,7 +505,8 @@ void HttpStreamFactoryImpl::JobController::OnNewSpdySessionReady(
   if (spdy_session && spdy_session->IsAvailable()) {
     factory->OnNewSpdySessionReady(spdy_session, direct, used_ssl_config,
                                    used_proxy_info, was_alpn_negotiated,
-                                   negotiated_protocol, using_spdy);
+                                   negotiated_protocol, using_spdy,
+                                   source_dependency);
   }
   if (is_job_orphaned) {
     OnOrphanedJobComplete(job);

@@ -13,16 +13,20 @@
 #include "base/threading/thread_restrictions.h"
 #include "jni/JavaHandlerThread_jni.h"
 
+using base::android::AttachCurrentThread;
+
 namespace base {
 
 namespace android {
 
-JavaHandlerThread::JavaHandlerThread(const char* name) {
-  JNIEnv* env = base::android::AttachCurrentThread();
+JavaHandlerThread::JavaHandlerThread(const char* name)
+    : JavaHandlerThread(Java_JavaHandlerThread_create(
+          AttachCurrentThread(),
+          ConvertUTF8ToJavaString(AttachCurrentThread(), name))) {}
 
-  java_thread_.Reset(
-      Java_JavaHandlerThread_create(env, ConvertUTF8ToJavaString(env, name)));
-}
+JavaHandlerThread::JavaHandlerThread(
+    const base::android::ScopedJavaLocalRef<jobject>& obj)
+    : java_thread_(obj) {}
 
 JavaHandlerThread::~JavaHandlerThread() {
 }
@@ -35,9 +39,9 @@ void JavaHandlerThread::Start() {
   base::WaitableEvent initialize_event(
       WaitableEvent::ResetPolicy::AUTOMATIC,
       WaitableEvent::InitialState::NOT_SIGNALED);
-  Java_JavaHandlerThread_start(env, java_thread_,
-                               reinterpret_cast<intptr_t>(this),
-                               reinterpret_cast<intptr_t>(&initialize_event));
+  Java_JavaHandlerThread_startAndInitialize(
+      env, java_thread_, reinterpret_cast<intptr_t>(this),
+      reinterpret_cast<intptr_t>(&initialize_event));
   // Wait for thread to be initialized so it is ready to be used when Start
   // returns.
   base::ThreadRestrictions::ScopedAllowWait wait_allowed;

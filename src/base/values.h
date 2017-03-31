@@ -74,7 +74,7 @@ class BASE_EXPORT Value {
                                                              size_t size);
 
   Value(const Value& that);
-  Value(Value&& that);
+  Value(Value&& that) noexcept;
   Value();  // A null value.
   explicit Value(Type type);
   explicit Value(bool in_bool);
@@ -161,11 +161,24 @@ class BASE_EXPORT Value {
   // Preferred version of DeepCopy. TODO(estade): remove the above.
   std::unique_ptr<Value> CreateDeepCopy() const;
 
+  // Comparison operators so that Values can easily be used with standard
+  // library algorithms and associative containers.
+  BASE_EXPORT friend bool operator==(const Value& lhs, const Value& rhs);
+  BASE_EXPORT friend bool operator!=(const Value& lhs, const Value& rhs);
+  BASE_EXPORT friend bool operator<(const Value& lhs, const Value& rhs);
+  BASE_EXPORT friend bool operator>(const Value& lhs, const Value& rhs);
+  BASE_EXPORT friend bool operator<=(const Value& lhs, const Value& rhs);
+  BASE_EXPORT friend bool operator>=(const Value& lhs, const Value& rhs);
+
   // Compares if two Value objects have equal contents.
+  // DEPRECATED, use operator==(const Value& lhs, const Value& rhs) instead.
+  // TODO(crbug.com/646113): Delete this and migrate callsites.
   bool Equals(const Value* other) const;
 
   // Compares if two Value objects have equal contents. Can handle NULLs.
   // NULLs are considered equal but different from Value::CreateNullValue().
+  // DEPRECATED, use operator==(const Value& lhs, const Value& rhs) instead.
+  // TODO(crbug.com/646113): Delete this and migrate callsites.
   static bool Equals(const Value* a, const Value* b);
 
  protected:

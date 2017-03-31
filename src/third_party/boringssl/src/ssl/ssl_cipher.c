@@ -193,6 +193,7 @@ static const SSL_CIPHER kCiphers[] = {
      SSL_HANDSHAKE_MAC_DEFAULT,
     },
 
+#ifdef BORINGSSL_ENABLE_DHE_TLS
     /* Cipher 33 */
     {
      TLS1_TXT_DHE_RSA_WITH_AES_128_SHA,
@@ -203,6 +204,7 @@ static const SSL_CIPHER kCiphers[] = {
      SSL_SHA1,
      SSL_HANDSHAKE_MAC_DEFAULT,
     },
+#endif
 
     /* Cipher 35 */
     {
@@ -215,6 +217,7 @@ static const SSL_CIPHER kCiphers[] = {
      SSL_HANDSHAKE_MAC_DEFAULT,
     },
 
+#ifdef BORINGSSL_ENABLE_DHE_TLS
     /* Cipher 39 */
     {
      TLS1_TXT_DHE_RSA_WITH_AES_256_SHA,
@@ -225,6 +228,7 @@ static const SSL_CIPHER kCiphers[] = {
      SSL_SHA1,
      SSL_HANDSHAKE_MAC_DEFAULT,
     },
+#endif
 
 
     /* TLS v1.2 ciphersuites */
@@ -251,6 +255,7 @@ static const SSL_CIPHER kCiphers[] = {
      SSL_HANDSHAKE_MAC_SHA256,
     },
 
+#ifdef BORINGSSL_ENABLE_DHE_TLS
     /* Cipher 67 */
     {
      TLS1_TXT_DHE_RSA_WITH_AES_128_SHA256,
@@ -272,6 +277,7 @@ static const SSL_CIPHER kCiphers[] = {
      SSL_SHA256,
      SSL_HANDSHAKE_MAC_SHA256,
     },
+#endif
 
     /* PSK cipher suites. */
 
@@ -321,6 +327,7 @@ static const SSL_CIPHER kCiphers[] = {
      SSL_HANDSHAKE_MAC_SHA384,
     },
 
+#ifdef BORINGSSL_ENABLE_DHE_TLS
     /* Cipher 9E */
     {
      TLS1_TXT_DHE_RSA_WITH_AES_128_GCM_SHA256,
@@ -342,6 +349,7 @@ static const SSL_CIPHER kCiphers[] = {
      SSL_AEAD,
      SSL_HANDSHAKE_MAC_SHA384,
     },
+#endif
 
     /* TLS 1.3 suites. */
 
@@ -622,9 +630,11 @@ static const CIPHER_ALIAS kCipherAliases[] = {
      * e.g. kEDH combines DHE_DSS and DHE_RSA) */
     {"kRSA", SSL_kRSA, ~0u, ~0u, ~0u, 0},
 
+#ifdef BORINGSSL_ENABLE_DHE_TLS
     {"kDHE", SSL_kDHE, ~0u, ~0u, ~0u, 0},
     {"kEDH", SSL_kDHE, ~0u, ~0u, ~0u, 0},
     {"DH", SSL_kDHE, ~0u, ~0u, ~0u, 0},
+#endif
 
     {"kECDHE", SSL_kECDHE, ~0u, ~0u, ~0u, 0},
     {"kEECDH", SSL_kECDHE, ~0u, ~0u, ~0u, 0},
@@ -639,8 +649,10 @@ static const CIPHER_ALIAS kCipherAliases[] = {
     {"aPSK", ~0u, SSL_aPSK, ~0u, ~0u, 0},
 
     /* aliases combining key exchange and server authentication */
+#ifdef BORINGSSL_ENABLE_DHE_TLS
     {"DHE", SSL_kDHE, ~0u, ~0u, ~0u, 0},
     {"EDH", SSL_kDHE, ~0u, ~0u, ~0u, 0},
+#endif
     {"ECDHE", SSL_kECDHE, ~0u, ~0u, ~0u, 0},
     {"EECDH", SSL_kECDHE, ~0u, ~0u, ~0u, 0},
     {"RSA", SSL_kRSA, SSL_aRSA, ~SSL_eNULL, ~0u, 0},
@@ -1254,10 +1266,10 @@ static int ssl_cipher_process_rulestr(const SSL_PROTOCOL_METHOD *ssl_method,
   return 1;
 }
 
-STACK_OF(SSL_CIPHER) *
-ssl_create_cipher_list(const SSL_PROTOCOL_METHOD *ssl_method,
-                       struct ssl_cipher_preference_list_st **out_cipher_list,
-                       const char *rule_str, int strict) {
+int ssl_create_cipher_list(
+    const SSL_PROTOCOL_METHOD *ssl_method,
+    struct ssl_cipher_preference_list_st **out_cipher_list,
+    const char *rule_str, int strict) {
   STACK_OF(SSL_CIPHER) *cipherstack = NULL;
   CIPHER_ORDER *co_list = NULL, *head = NULL, *tail = NULL, *curr;
   uint8_t *in_group_flags = NULL;
@@ -1266,7 +1278,7 @@ ssl_create_cipher_list(const SSL_PROTOCOL_METHOD *ssl_method,
 
   /* Return with error if nothing to do. */
   if (rule_str == NULL || out_cipher_list == NULL) {
-    return NULL;
+    return 0;
   }
 
   /* Now we have to collect the available ciphers from the compiled in ciphers.
@@ -1275,7 +1287,7 @@ ssl_create_cipher_list(const SSL_PROTOCOL_METHOD *ssl_method,
   co_list = OPENSSL_malloc(sizeof(CIPHER_ORDER) * kCiphersLen);
   if (co_list == NULL) {
     OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
-    return NULL;
+    return 0;
   }
 
   ssl_cipher_collect_ciphers(ssl_method, co_list, &head, &tail);
@@ -1395,7 +1407,14 @@ ssl_create_cipher_list(const SSL_PROTOCOL_METHOD *ssl_method,
   *out_cipher_list = pref_list;
   pref_list = NULL;
 
-  return cipherstack;
+  /* Configuring an empty cipher list is an error but still updates the
+   * output. */
+  if (sk_SSL_CIPHER_num((*out_cipher_list)->ciphers) == 0) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_NO_CIPHER_MATCH);
+    return 0;
+  }
+
+  return 1;
 
 err:
   OPENSSL_free(co_list);
@@ -1405,7 +1424,7 @@ err:
     OPENSSL_free(pref_list->in_group_flags);
   }
   OPENSSL_free(pref_list);
-  return NULL;
+  return 0;
 }
 
 uint32_t SSL_CIPHER_get_id(const SSL_CIPHER *cipher) { return cipher->id; }

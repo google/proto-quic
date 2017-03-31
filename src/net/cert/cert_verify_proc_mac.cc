@@ -197,11 +197,16 @@ void CopyCertChainToVerifyResult(CFArrayRef cert_chain,
   }
   if (!verified_cert) {
     NOTREACHED();
+    verify_result->cert_status |= CERT_STATUS_INVALID;
     return;
   }
 
-  verify_result->verified_cert =
+  scoped_refptr<X509Certificate> verified_cert_with_chain =
       X509Certificate::CreateFromHandle(verified_cert, verified_chain);
+  if (verified_cert_with_chain)
+    verify_result->verified_cert = std::move(verified_cert_with_chain);
+  else
+    verify_result->cert_status |= CERT_STATUS_INVALID;
 }
 
 // Returns true if the certificate uses MD2, MD4, MD5, or SHA1, and false
@@ -338,7 +343,11 @@ void GetCandidateEVPolicy(const X509Certificate* cert_input,
   for (const der::Input& policy_oid : policies) {
     if (metadata->IsEVPolicyOID(policy_oid)) {
       *ev_policy_oid = policy_oid.AsString();
-      return;
+
+      // De-prioritize the CA/Browser forum Extended Validation policy
+      // (2.23.140.1.1). See crbug.com/705285.
+      if (!EVRootCAMetadata::IsCaBrowserForumEvOid(policy_oid))
+        break;
     }
   }
 }

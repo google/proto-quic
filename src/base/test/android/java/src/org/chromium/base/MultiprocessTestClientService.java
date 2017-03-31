@@ -14,6 +14,7 @@ import org.chromium.base.annotations.SuppressFBWarnings;
 import org.chromium.base.library_loader.LibraryLoader;
 import org.chromium.base.library_loader.LibraryProcessType;
 import org.chromium.base.library_loader.ProcessInitException;
+import org.chromium.base.process_launcher.FileDescriptorInfo;
 import org.chromium.native_test.MainRunner;
 
 import javax.annotation.concurrent.GuardedBy;
@@ -39,7 +40,7 @@ public class MultiprocessTestClientService extends Service {
             final int[] fdKeys = new int[fdsToMap.length];
             final int[] fdFds = new int[fdsToMap.length];
             for (int i = 0; i < fdsToMap.length; i++) {
-                fdKeys[i] = fdsToMap[i].key;
+                fdKeys[i] = fdsToMap[i].id;
                 // Take ownership of the file descriptor so they outlive the FileDescriptorInfo
                 // instances. Native code will own them.
                 fdFds[i] = fdsToMap[i].fd.detachFd();

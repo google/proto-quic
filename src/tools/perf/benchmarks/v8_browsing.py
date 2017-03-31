@@ -243,6 +243,7 @@ class V8MobileClassicBrowsingBenchmark(_V8MobileBrowsingBenchmark):
 
 
 @benchmark.Owner(emails=['mythria@chromium.org'])
+@benchmark.Disabled('win')  # http://crbug.com/704197
 class V8RuntimeStatsDesktopBrowsingBenchmark(
     _V8RuntimeStatsBrowsingBenchmark):
   PLATFORM = 'desktop'
@@ -277,7 +278,8 @@ class V8RuntimeStatsDesktopTurboBrowsingBenchmark(
     return 'v8.runtimestats.browsing_desktop_turbo'
 
 
-@benchmark.Disabled('reference')  # http://crbug.com/700390
+@benchmark.Disabled('reference',  # http://crbug.com/700390
+                    'win')        # http://crbug.com/704197
 @benchmark.Owner(emails=['hablich@chromium.org'])
 class V8RuntimeStatsDesktopClassicBrowsingBenchmark(
     _V8RuntimeStatsBrowsingBenchmark):

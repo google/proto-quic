@@ -1,0 +1,17 @@
+Section Sizes (Total=0 bytes):
+.bss: 0 bytes (not included in totals)
+.data: 0 bytes (0.0%)
+.data.rel.ro: 0 bytes (0.0%)
+.data.rel.ro.local: 0 bytes (0.0%)
+.rodata: 0 bytes (0.0%)
+.text: 0 bytes (0.0%)
+
+1 symbols added (+), 1 changed (~), 1 removed (-), 40 unchanged (not shown)
+Showing 3 symbols with total size: 0 bytes
+First columns are: running total, type, size
++        0 b@0x0         262144  third_party/ffmpeg/libffmpeg_internal.a/fft_float.o
++        0                       ff_cos_131072
+~        0 b@0x0         -10     third_party/ffmpeg/libffmpeg_internal.a/fft_fixed.o
+~        0                       ff_cos_131072_fixed
+-        0 b@0x2dffe84   -4      base/base/animation_frame_time_histogram.o
+-        0                       _ZN12_GLOBAL__N_135g_AnimationFrameTimeHistogram_clazzE

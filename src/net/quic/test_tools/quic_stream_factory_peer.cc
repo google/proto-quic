@@ -35,6 +35,11 @@ bool QuicStreamFactoryPeer::HasActiveSession(QuicStreamFactory* factory,
   return factory->HasActiveSession(server_id);
 }
 
+bool QuicStreamFactoryPeer::HasActiveJob(QuicStreamFactory* factory,
+                                         const QuicServerId& server_id) {
+  return factory->HasActiveJob(server_id);
+}
+
 bool QuicStreamFactoryPeer::HasActiveCertVerifierJob(
     QuicStreamFactory* factory,
     const QuicServerId& server_id) {

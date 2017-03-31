@@ -111,12 +111,14 @@ if ! which lsb_release > /dev/null; then
 fi
 
 lsb_release=$(lsb_release --codename --short)
-supported_releases="(precise|trusty|utopic|vivid|wily|xenial|yakkety|jessie)"
+supported_releases="(trusty|xenial|yakkety|jessie)"
 if [ 0 -eq "${do_unsupported-0}" ] && [ 0 -eq "${do_quick_check-0}" ] ; then
   if [[ ! $lsb_release =~ $supported_releases ]]; then
-    echo "ERROR: Only Ubuntu 12.04 (precise), 14.04 (trusty), " \
-      "14.10 (utopic), 15.04 (vivid), 15.10 (wily), 16.04 (xenial), " \
-      "16.10 (yakkety) and Debian 8 (jessie) are currently supported" >&2
+    echo -e "ERROR: The only supported distros are\n" \
+      "\tUbuntu 14.04 (trusty)\n" \
+      "\tUbuntu 16.04 (xenial)\n" \
+      "\tUbuntu 16.10 (yakkety)\n" \
+      "\tDebian 8 (jessie)" >&2
     exit 1
   fi
 
@@ -282,7 +284,6 @@ dbg_list="\
   libxdamage1-dbg
   libxdmcp6-dbg
   libxext6-dbg
-  libxfixes3-dbg
   libxi6-dbg
   libxinerama1-dbg
   libxrandr2-dbg
@@ -291,10 +292,12 @@ dbg_list="\
   zlib1g-dbg
 "
 
+if [[ ! $lsb_release =~ "yakkety" ]]; then
+  dbg_list="${dbg_list} libxfixes3-dbg"
+fi
+
 # Find the proper version of libstdc++6-4.x-dbg.
-if [ "x$lsb_release" = "xprecise" ]; then
-  dbg_list="${dbg_list} libstdc++6-4.6-dbg"
-elif [ "x$lsb_release" = "xtrusty" ]; then
+if [ "x$lsb_release" = "xtrusty" ]; then
   dbg_list="${dbg_list} libstdc++6-4.8-dbg"
 else
   dbg_list="${dbg_list} libstdc++6-4.9-dbg"
@@ -337,11 +340,6 @@ case $lsb_release in
       fi
     fi
     ;;
-  "precise")
-    arm_list="libc6-dev-armhf-cross
-              linux-libc-dev-armhf-cross
-              ${GPP_ARM_PACKAGE}"
-    ;;
   "*")
     arm_list="binutils-aarch64-linux-gnu
               libc6-dev-armhf-cross
@@ -356,7 +354,7 @@ case $lsb_release in
     arm_list+=" g++-4.8-multilib-arm-linux-gnueabihf
                 gcc-4.8-multilib-arm-linux-gnueabihf"
     ;;
-  wily|xenial|yakkety)
+  xenial|yakkety)
     arm_list+=" g++-5-multilib-arm-linux-gnueabihf
                 gcc-5-multilib-arm-linux-gnueabihf
                 gcc-arm-linux-gnueabihf"
@@ -582,9 +580,7 @@ if [ 1 -eq "${do_quick_check-0}" ] ; then
 fi
 
 if test "$do_inst_lib32" = "1" || test "$do_inst_nacl" = "1"; then
-  if [[ ! $lsb_release =~ (precise) ]]; then
-    sudo dpkg --add-architecture i386
-  fi
+  sudo dpkg --add-architecture i386
   if [[ $lsb_release = "jessie" ]]; then
     sudo dpkg --add-architecture armhf
   fi

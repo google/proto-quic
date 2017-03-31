@@ -31,12 +31,6 @@ typedef NTSTATUS(WINAPI* NTQUERYSYSTEMINFORMATION)(
 
 }  // namespace
 
-SystemMemoryInfoKB::SystemMemoryInfoKB()
-    : total(0), free(0), swap_total(0), swap_free(0) {}
-
-SystemMemoryInfoKB::SystemMemoryInfoKB(const SystemMemoryInfoKB& other) =
-    default;
-
 ProcessMetrics::~ProcessMetrics() { }
 
 // static
@@ -349,7 +343,7 @@ size_t GetPageSize() {
 // This function uses the following mapping between MEMORYSTATUSEX and
 // SystemMemoryInfoKB:
 //   ullTotalPhys ==> total
-//   ullAvailPhys ==> free
+//   ullAvailPhys ==> avail_phys
 //   ullTotalPageFile ==> swap_total
 //   ullAvailPageFile ==> swap_free
 bool GetSystemMemoryInfo(SystemMemoryInfoKB* meminfo) {
@@ -359,7 +353,7 @@ bool GetSystemMemoryInfo(SystemMemoryInfoKB* meminfo) {
     return false;
 
   meminfo->total = mem_status.ullTotalPhys / 1024;
-  meminfo->free = mem_status.ullAvailPhys / 1024;
+  meminfo->avail_phys = mem_status.ullAvailPhys / 1024;
   meminfo->swap_total = mem_status.ullTotalPageFile / 1024;
   meminfo->swap_free = mem_status.ullAvailPageFile / 1024;
 

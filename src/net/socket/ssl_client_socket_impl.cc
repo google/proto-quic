@@ -12,7 +12,6 @@
 
 #include "base/bind.h"
 #include "base/callback_helpers.h"
-#include "base/feature_list.h"
 #include "base/lazy_instance.h"
 #include "base/macros.h"
 #include "base/memory/singleton.h"
@@ -218,21 +217,6 @@ int GetBufferSize(const char* field_trial) {
 #endif  // !defined(OS_NACL)
   return buffer_size;
 }
-
-#if defined(OS_NACL)
-bool AreLegacyECDSACiphersEnabled() {
-  return false;
-}
-#else
-// TODO(davidben): Remove this after the ECDSA CBC removal sticks.
-// https:/crbug.com/666191.
-const base::Feature kLegacyECDSACiphersFeature{
-    "SSLLegacyECDSACiphers", base::FEATURE_DISABLED_BY_DEFAULT};
-
-bool AreLegacyECDSACiphersEnabled() {
-  return base::FeatureList::IsEnabled(kLegacyECDSACiphersFeature);
-}
-#endif
 
 scoped_refptr<X509Certificate> OSChainFromBuffers(STACK_OF(CRYPTO_BUFFER) *
                                                   openssl_chain) {
@@ -929,15 +913,12 @@ int SSLClientSocketImpl::Init() {
 
   // Use BoringSSL defaults, but disable HMAC-SHA256 and HMAC-SHA384 ciphers
   // (note that SHA256 and SHA384 only select legacy CBC ciphers).
-  std::string command("ALL:!SHA256:!SHA384:!kDHE:!aPSK:!RC4");
+  // Additionally disable HMAC-SHA1 ciphers in ECDSA. These are the remaining
+  // CBC-mode ECDSA ciphers.
+  std::string command("ALL:!SHA256:!SHA384:!kDHE:!aPSK:!RC4:!ECDSA+SHA1");
 
   if (ssl_config_.require_ecdhe)
     command.append(":!kRSA:!kDHE");
-
-  // Additionally disable HMAC-SHA1 ciphers in ECDSA. These are the remaining
-  // CBC-mode ECDSA ciphers.
-  if (!AreLegacyECDSACiphersEnabled())
-    command.append("!ECDSA+SHA1");
 
   // Remove any disabled ciphers.
   for (uint16_t id : ssl_config_.disabled_cipher_suites) {

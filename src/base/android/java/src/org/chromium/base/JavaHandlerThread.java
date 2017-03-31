@@ -8,19 +8,23 @@ import android.annotation.TargetApi;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 
 import org.chromium.base.annotations.CalledByNative;
 import org.chromium.base.annotations.JNINamespace;
 
 /**
- * This class is an internal detail of the native counterpart.
- * It is instantiated and owned by the native object.
+ * Thread in Java with an Anroid Handler. This class is not thread safe.
  */
 @JNINamespace("base::android")
-class JavaHandlerThread {
-    final HandlerThread mThread;
+public class JavaHandlerThread {
+    private final HandlerThread mThread;
 
-    private JavaHandlerThread(String name) {
+    /**
+     * Construct a java-only instance. Can be connected with native side later.
+     * Useful for cases where a java thread is needed before native library is loaded.
+     */
+    public JavaHandlerThread(String name) {
         mThread = new HandlerThread(name);
     }
 
@@ -29,9 +33,18 @@ class JavaHandlerThread {
         return new JavaHandlerThread(name);
     }
 
-    @CalledByNative
-    private void start(final long nativeThread, final long nativeEvent) {
+    public Looper getLooper() {
+        return mThread.getLooper();
+    }
+
+    public void maybeStart() {
+        if (hasStarted()) return;
         mThread.start();
+    }
+
+    @CalledByNative
+    private void startAndInitialize(final long nativeThread, final long nativeEvent) {
+        maybeStart();
         new Handler(mThread.getLooper()).post(new Runnable() {
             @Override
             public void run() {
@@ -43,6 +56,7 @@ class JavaHandlerThread {
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
     @CalledByNative
     private void stop(final long nativeThread, final long nativeEvent) {
+        assert hasStarted();
         final boolean quitSafely = Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2;
         new Handler(mThread.getLooper()).post(new Runnable() {
             @Override
@@ -52,6 +66,10 @@ class JavaHandlerThread {
             }
         });
         if (quitSafely) mThread.quitSafely();
+    }
+
+    private boolean hasStarted() {
+        return mThread.getState() != Thread.State.NEW;
     }
 
     private native void nativeInitializeThread(long nativeJavaHandlerThread, long nativeEvent);

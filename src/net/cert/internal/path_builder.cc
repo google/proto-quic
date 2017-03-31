@@ -459,6 +459,12 @@ void CertPathIter::DoBackTrack() {
 
 CertPathBuilder::ResultPath::ResultPath() = default;
 CertPathBuilder::ResultPath::~ResultPath() = default;
+
+bool CertPathBuilder::ResultPath::IsValid() const {
+  return !path.certs.empty() && path.trust_anchor &&
+         !errors.ContainsHighSeverityErrors();
+}
+
 CertPathBuilder::Result::Result() = default;
 CertPathBuilder::Result::~Result() = default;
 
@@ -471,7 +477,7 @@ const CertPathBuilder::ResultPath* CertPathBuilder::Result::GetBestValidPath()
     return nullptr;
 
   const ResultPath* result_path = paths[best_result_index].get();
-  if (result_path->valid)
+  if (result_path->IsValid())
     return result_path;
 
   return nullptr;
@@ -539,9 +545,9 @@ void CertPathBuilder::DoGetNextPathComplete() {
       VerifyCertificateChain(next_path_.certs, next_path_.trust_anchor.get(),
                              signature_policy_, time_, &result_path->errors);
   DVLOG(1) << "CertPathBuilder VerifyCertificateChain result = "
-           << result_path->valid;
+           << verify_result;
   result_path->path = next_path_;
-  result_path->valid = verify_result;
+  DCHECK_EQ(verify_result, !result_path->errors.ContainsHighSeverityErrors());
   AddResultPath(std::move(result_path));
 
   if (verify_result) {
@@ -559,7 +565,7 @@ void CertPathBuilder::DoGetNextPathComplete() {
 
 void CertPathBuilder::AddResultPath(std::unique_ptr<ResultPath> result_path) {
   // TODO(mattm): set best_result_index based on number or severity of errors.
-  if (result_path->valid)
+  if (result_path->IsValid())
     out_result_->best_result_index = out_result_->paths.size();
   // TODO(mattm): add flag to only return a single path or all attempted paths?
   out_result_->paths.push_back(std::move(result_path));

@@ -107,8 +107,13 @@ class CertDatabaseNSSTest : public testing::Test {
     for (CERTCertListNode* node = CERT_LIST_HEAD(cert_list);
          !CERT_LIST_END(node, cert_list);
          node = CERT_LIST_NEXT(node)) {
-      result.push_back(X509Certificate::CreateFromHandle(
-          node->cert, X509Certificate::OSCertHandles()));
+      scoped_refptr<X509Certificate> cert = X509Certificate::CreateFromHandle(
+          node->cert, X509Certificate::OSCertHandles());
+      if (!cert) {
+        ADD_FAILURE() << "X509Certificate::CreateFromHandle failed";
+        continue;
+      }
+      result.push_back(cert);
     }
     CERT_DestroyCertList(cert_list);
 

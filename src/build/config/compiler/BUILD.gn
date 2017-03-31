@@ -4,6 +4,7 @@
 
 import("//build/config/android/config.gni")
 import("//build/config/chrome_build.gni")
+import("//build/config/chromecast_build.gni")
 import("//build/config/compiler/compiler.gni")
 import("//build/config/nacl/config.gni")
 import("//build/toolchain/cc_wrapper.gni")
@@ -61,11 +62,8 @@ declare_args() {
 
   # Omit unwind support in official builds to save space.
   # We can use breakpad for these builds.
-  exclude_unwind_tables = is_chrome_branded && is_official_build
-
-  # If true, gold linker will save symbol table inside object files.
-  # This speeds up gdb startup by 60%
-  gdb_index = false
+  exclude_unwind_tables = (is_chrome_branded && is_official_build) ||
+                          (is_chromecast && !is_cast_desktop_build && !is_debug)
 
   # If true, optimize for size. Does not affect windows builds.
   # Linux & Mac favor speed over size.
@@ -164,11 +162,6 @@ config("compiler") {
     configs += [ "//build/config/nacl:compiler" ]
   } else if (is_ios || is_mac) {
     configs += [ "//build/config/mac:compiler" ]
-  }
-
-  # Applies to all Posix systems.
-  if (is_posix) {
-    configs += [ "//build/config/posix:compiler" ]
   }
 
   # See the definitions below.
@@ -302,13 +295,15 @@ config("compiler") {
   # Linux/Android common flags setup.
   # ---------------------------------
   if (is_linux || is_android) {
-    cflags += [
-      "-fPIC",
-      "-pipe",  # Use pipes for communicating between sub-processes. Faster.
-    ]
+    if (use_pic) {
+      cflags += [ "-fPIC" ]
+      ldflags += [ "-fPIC" ]
+    }
+
+    # Use pipes for communicating between sub-processes. Faster.
+    cflags += [ "-pipe" ]
 
     ldflags += [
-      "-fPIC",
       "-Wl,-z,noexecstack",
       "-Wl,-z,now",
       "-Wl,-z,relro",
@@ -370,10 +365,6 @@ config("compiler") {
           "-Wl,--thread-count=4",
         ]
       }
-    }
-
-    if (gdb_index) {
-      ldflags += [ "-Wl,--gdb-index" ]
     }
 
     # TODO(thestig): Make this flag work with GN.
@@ -898,6 +889,10 @@ config("default_warnings") {
       # This is necessary for the shared library build.
       "/wd4251",
 
+      # C4312 is a VS 2015 64-bit warning for integer to larger pointer.
+      # TODO(brucedawson): fix warnings, crbug.com/554200
+      "/wd4312",
+
       # C4351: new behavior: elements of array 'array' will be default
       #        initialized
       # This is a silly "warning" that basically just alerts you that the
@@ -960,10 +955,10 @@ config("default_warnings") {
       "/wd4459",
     ]
 
-    cflags += [
-      # C4312 is a VS 2015 64-bit warning for integer to larger pointer.
-      # TODO(brucedawson): fix warnings, crbug.com/554200
-      "/wd4312",
+    cflags_cc += [
+      # Allow "noexcept" annotations even though we compile with exceptions
+      # disabled.
+      "/wd4577",
     ]
 
     if (current_cpu == "x86") {
@@ -1655,6 +1650,20 @@ config("symbols") {
     }
     asmflags = cflags
     ldflags = []
+
+    # TODO(thakis): Figure out if there's a way to make this go for 32-bit,
+    # currently we get "warning:
+    # obj/native_client/src/trusted/service_runtime/sel_asm/nacl_switch_32.o:
+    # DWARF info may be corrupt; offsets in a range list entry are in different
+    # sections" there.  Maybe just a bug in nacl_switch_32.S.
+    # TODO(thakis): Figure out if there's a way to make this go for official
+    # builds, currently get
+    # "third_party/binutils/Linux_x64/Release/bin/ld.gold: warning:
+    # /tmp/lto-llvm-0b5201.o: corrupt debug info in .debug_info"
+    if (!is_mac && !is_ios && !is_nacl && target_cpu != "x86" &&
+        !allow_posix_link_time_opt && !is_official_build) {
+      ldflags += [ "-Wl,--gdb-index" ]
+    }
   }
 }
 
@@ -1676,9 +1685,8 @@ config("minimal_symbols") {
     } else {
       cflags = [ "-g1" ]
     }
-    if (use_debug_fission) {
-      cflags += [ "-gsplit-dwarf" ]
-    }
+
+    # Note: -gsplit-dwarf implicitly turns on -g2 with clang, so don't pass it.
     asmflags = cflags
     ldflags = []
   }

@@ -542,7 +542,7 @@ xmlXPtrNewRangeNodeObject(xmlNodePtr start, xmlXPathObjectPtr end) {
 	    /*
 	     * Empty set ...
 	     */
-	    if (end->nodesetval->nodeNr <= 0)
+	    if ((end->nodesetval == NULL) || (end->nodesetval->nodeNr <= 0))
 		return(NULL);
 	    endNode = end->nodesetval->nodeTab[end->nodesetval->nodeNr - 1];
 	    endIndex = -1;
@@ -1361,7 +1361,7 @@ xmlXPtrEval(const xmlChar *str, xmlXPathContextPtr ctx) {
 		     */
 		    xmlNodeSetPtr set;
 		    set = tmp->nodesetval;
-		    if ((set->nodeNr != 1) ||
+		    if ((set == NULL) || (set->nodeNr != 1) ||
 			(set->nodeTab[0] != (xmlNodePtr) ctx->doc))
 			stack++;
 		} else
@@ -1796,8 +1796,8 @@ xmlXPtrStartPointFunction(xmlXPathParserContextPtr ctxt, int nargs) {
 		case XPATH_RANGE: {
 		    xmlNodePtr node = tmp->user;
 		    if (node != NULL) {
-			if (node->type == XML_ATTRIBUTE_NODE) {
-			    /* TODO: Namespace Nodes ??? */
+			if ((node->type == XML_ATTRIBUTE_NODE) ||
+                            (node->type == XML_NAMESPACE_DECL)) {
 			    xmlXPathFreeObject(obj);
 			    xmlXPtrFreeLocationSet(newset);
 			    XP_ERROR(XPTR_SYNTAX_ERROR);
@@ -1892,8 +1892,8 @@ xmlXPtrEndPointFunction(xmlXPathParserContextPtr ctxt, int nargs) {
 		case XPATH_RANGE: {
 		    xmlNodePtr node = tmp->user2;
 		    if (node != NULL) {
-			if (node->type == XML_ATTRIBUTE_NODE) {
-			    /* TODO: Namespace Nodes ??? */
+			if ((node->type == XML_ATTRIBUTE_NODE) ||
+                            (node->type == XML_NAMESPACE_DECL)) {
 			    xmlXPathFreeObject(obj);
 			    xmlXPtrFreeLocationSet(newset);
 			    XP_ERROR(XPTR_SYNTAX_ERROR);
@@ -2034,9 +2034,11 @@ xmlXPtrRangeFunction(xmlXPathParserContextPtr ctxt, int nargs) {
 	xmlXPathFreeObject(set);
         XP_ERROR(XPATH_MEMORY_ERROR);
     }
-    for (i = 0;i < oldset->locNr;i++) {
-	xmlXPtrLocationSetAdd(newset,
-		xmlXPtrCoveringRange(ctxt, oldset->locTab[i]));
+    if (oldset != NULL) {
+        for (i = 0;i < oldset->locNr;i++) {
+            xmlXPtrLocationSetAdd(newset,
+                    xmlXPtrCoveringRange(ctxt, oldset->locTab[i]));
+        }
     }
 
     /*

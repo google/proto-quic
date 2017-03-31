@@ -11,6 +11,7 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/strings/string_split.h"
+#include "base/strings/string_tokenizer.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
 #include "build/build_config.h"
@@ -411,11 +412,15 @@ void CommandLine::AppendArguments(const CommandLine& other,
 void CommandLine::PrependWrapper(const CommandLine::StringType& wrapper) {
   if (wrapper.empty())
     return;
-  // The wrapper may have embedded arguments (like "gdb --args"). In this case,
-  // we don't pretend to do anything fancy, we just split on spaces.
-  StringVector wrapper_argv = SplitString(
-      wrapper, FilePath::StringType(1, ' '), base::TRIM_WHITESPACE,
-      base::SPLIT_WANT_ALL);
+  // Split the wrapper command based on whitespace (with quoting).
+  using CommandLineTokenizer =
+      StringTokenizerT<StringType, StringType::const_iterator>;
+  CommandLineTokenizer tokenizer(wrapper, FILE_PATH_LITERAL(" "));
+  tokenizer.set_quote_chars(FILE_PATH_LITERAL("'\""));
+  std::vector<StringType> wrapper_argv;
+  while (tokenizer.GetNext())
+    wrapper_argv.emplace_back(tokenizer.token());
+
   // Prepend the wrapper and update the switches/arguments |begin_args_|.
   argv_.insert(argv_.begin(), wrapper_argv.begin(), wrapper_argv.end());
   begin_args_ += wrapper_argv.size();

@@ -22,6 +22,7 @@ namespace {
 const char kVerisignPolicy[] = "2.16.840.1.113733.1.7.23.6";
 const char kThawtePolicy[] = "2.16.840.1.113733.1.7.48.1";
 const char kFakePolicy[] = "2.16.840.1.42";
+const char kCabEvPolicy[] = "2.23.140.1.1";
 #elif defined(OS_MACOSX)
 // DER OID values (no tag or length).
 const uint8_t kVerisignPolicy[] = {0x60, 0x86, 0x48, 0x01, 0x86, 0xf8,
@@ -29,6 +30,7 @@ const uint8_t kVerisignPolicy[] = {0x60, 0x86, 0x48, 0x01, 0x86, 0xf8,
 const uint8_t kThawtePolicy[] = {0x60, 0x86, 0x48, 0x01, 0x86, 0xf8,
                                  0x45, 0x01, 0x07, 0x30, 0x01};
 const uint8_t kFakePolicy[] = {0x60, 0x86, 0x48, 0x01, 0x2a};
+const uint8_t kCabEvPolicy[] = {0x67, 0x81, 0x0c, 0x01, 0x01};
 #endif
 
 #if defined(USE_NSS_CERTS) || defined(OS_WIN) || defined(OS_MACOSX)
@@ -48,6 +50,7 @@ class EVOidData {
   EVRootCAMetadata::PolicyOID verisign_policy;
   EVRootCAMetadata::PolicyOID thawte_policy;
   EVRootCAMetadata::PolicyOID fake_policy;
+  EVRootCAMetadata::PolicyOID cab_ev_policy;
 };
 
 #endif  // defined(USE_NSS_CERTS) || defined(OS_WIN) || defined(OS_MACOSX)
@@ -72,8 +75,8 @@ SECOidTag RegisterOID(PLArenaPool* arena, const char* oid_string) {
 EVOidData::EVOidData()
     : verisign_policy(SEC_OID_UNKNOWN),
       thawte_policy(SEC_OID_UNKNOWN),
-      fake_policy(SEC_OID_UNKNOWN) {
-}
+      fake_policy(SEC_OID_UNKNOWN),
+      cab_ev_policy(SEC_OID_UNKNOWN) {}
 
 bool EVOidData::Init() {
   crypto::EnsureNSSInit();
@@ -84,10 +87,11 @@ bool EVOidData::Init() {
   verisign_policy = RegisterOID(pool.get(), kVerisignPolicy);
   thawte_policy = RegisterOID(pool.get(), kThawtePolicy);
   fake_policy = RegisterOID(pool.get(), kFakePolicy);
+  cab_ev_policy = RegisterOID(pool.get(), kCabEvPolicy);
 
   return verisign_policy != SEC_OID_UNKNOWN &&
-         thawte_policy != SEC_OID_UNKNOWN &&
-         fake_policy != SEC_OID_UNKNOWN;
+         thawte_policy != SEC_OID_UNKNOWN && fake_policy != SEC_OID_UNKNOWN &&
+         cab_ev_policy != SEC_OID_UNKNOWN;
 }
 
 #elif defined(OS_WIN) || defined(OS_MACOSX)
@@ -95,7 +99,8 @@ bool EVOidData::Init() {
 EVOidData::EVOidData()
     : verisign_policy(kVerisignPolicy),
       thawte_policy(kThawtePolicy),
-      fake_policy(kFakePolicy) {}
+      fake_policy(kFakePolicy),
+      cab_ev_policy(kCabEvPolicy) {}
 
 bool EVOidData::Init() {
   return true;
@@ -146,6 +151,16 @@ TEST_F(EVRootCAMetadataTest, AddRemove) {
   EXPECT_FALSE(ev_metadata->IsEVPolicyOID(ev_oid_data.fake_policy));
   EXPECT_FALSE(ev_metadata->HasEVPolicyOID(kFakeFingerprint,
                                            ev_oid_data.fake_policy));
+}
+
+TEST_F(EVRootCAMetadataTest, IsCaBrowserForumEvOid) {
+  EXPECT_TRUE(
+      EVRootCAMetadata::IsCaBrowserForumEvOid(ev_oid_data.cab_ev_policy));
+
+  EXPECT_FALSE(
+      EVRootCAMetadata::IsCaBrowserForumEvOid(ev_oid_data.fake_policy));
+  EXPECT_FALSE(
+      EVRootCAMetadata::IsCaBrowserForumEvOid(ev_oid_data.verisign_policy));
 }
 
 #endif  // defined(USE_NSS_CERTS) || defined(OS_WIN) || defined(OS_MACOSX)

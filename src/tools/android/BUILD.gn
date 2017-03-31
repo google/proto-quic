@@ -5,6 +5,7 @@
 # Intermediate target grouping the android tools needed to run native
 # unittests and instrumentation test apks.
 group("android_tools") {
+  testonly = true
   deps = [
     "//build/android:wrapper_scripts",
     "//build/android/pylib/device/commands",

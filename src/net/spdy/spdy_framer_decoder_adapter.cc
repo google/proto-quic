@@ -10,15 +10,15 @@
 
 #include "base/format_macros.h"
 #include "base/logging.h"
-#include "base/strings/stringprintf.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
+#include "net/spdy/platform/api/spdy_string_utils.h"
 
 #if defined(COMPILER_GCC)
-#define PRETTY_THIS base::StringPrintf("%s@%p ", __PRETTY_FUNCTION__, this)
+#define PRETTY_THIS SpdyStringPrintf("%s@%p ", __PRETTY_FUNCTION__, this)
 #elif defined(COMPILER_MSVC)
-#define PRETTY_THIS base::StringPrintf("%s@%p ", __FUNCSIG__, this)
+#define PRETTY_THIS SpdyStringPrintf("%s@%p ", __FUNCSIG__, this)
 #else
-#define PRETTY_THIS base::StringPrintf("%s@%p ", __func__, this)
+#define PRETTY_THIS SpdyStringPrintf("%s@%p ", __func__, this)
 #endif
 
 namespace net {

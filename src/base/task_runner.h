@@ -61,8 +61,7 @@ class BASE_EXPORT TaskRunner
   // will not be run.
   //
   // Equivalent to PostDelayedTask(from_here, task, 0).
-  bool PostTask(const tracked_objects::Location& from_here,
-                const Closure& task);
+  bool PostTask(const tracked_objects::Location& from_here, Closure task);
 
   // Like PostTask, but tries to run the posted task only after
   // |delay_ms| has passed.
@@ -70,7 +69,7 @@ class BASE_EXPORT TaskRunner
   // It is valid for an implementation to ignore |delay_ms|; that is,
   // to have PostDelayedTask behave the same as PostTask.
   virtual bool PostDelayedTask(const tracked_objects::Location& from_here,
-                               const Closure& task,
+                               Closure task,
                                base::TimeDelta delay) = 0;
 
   // Returns true if the current thread is a thread on which a task

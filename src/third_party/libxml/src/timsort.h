@@ -323,7 +323,7 @@ static void TIM_SORT_RESIZE(TEMP_STORAGE_T *store, const size_t new_size)
     SORT_TYPE *tempstore = (SORT_TYPE *)realloc(store->storage, new_size * sizeof(SORT_TYPE));
     if (tempstore == NULL)
     {
-      fprintf(stderr, "Error allocating temporary storage for tim sort: need %llu bytes", (unsigned long long)(sizeof(SORT_TYPE) * new_size));
+      fprintf(stderr, "Error allocating temporary storage for tim sort: need %lu bytes", (unsigned long) (sizeof(SORT_TYPE) * new_size));
       exit(1);
     }
     store->storage = tempstore;
@@ -394,7 +394,7 @@ static int TIM_SORT_COLLAPSE(SORT_TYPE *dst, TIM_SORT_RUN_T *stack, int stack_cu
 {
   while (1) {
     int64_t A, B, C, D;
-    int ABC, BCD, BD, CD;
+    int ABC, BCD, CD;
 
     /* if the stack only has one thing on it, we are done with the collapse */
     if (stack_curr <= 1) {
@@ -431,7 +431,6 @@ static int TIM_SORT_COLLAPSE(SORT_TYPE *dst, TIM_SORT_RUN_T *stack, int stack_cu
 
     BCD = (B <= C + D) || ABC;
     CD = (C <= D);
-    BD = (B < D);
 
     /* Both invariants are good */
     if (!BCD && !CD) {

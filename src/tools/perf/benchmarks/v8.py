@@ -39,16 +39,11 @@ class V8Top25(perf_benchmark.PerfBenchmark):
   page_set = page_sets.V8Top25SmoothPageSet
 
   @classmethod
-  def ShouldDisable(cls, possible_browser):  # http://crbug.com/597656
-    return (possible_browser.browser_type == 'reference' and
-            possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X')
-
-  @classmethod
   def Name(cls):
     return 'v8.top_25_smooth'
 
 
-@benchmark.Disabled('all')  # crbug.com/702194
+@benchmark.Disabled('all') # crbug.com/702194
 #@benchmark.Enabled('android')
 @benchmark.Owner(emails=['hpayer@chromium.org', 'rmcilroy@chromium.org'])
 class V8KeyMobileSites(perf_benchmark.PerfBenchmark):
@@ -61,11 +56,6 @@ class V8KeyMobileSites(perf_benchmark.PerfBenchmark):
   @classmethod
   def Name(cls):
     return 'v8.key_mobile_sites_smooth'
-
-  @classmethod
-  def ShouldDisable(cls, possible_browser):  # http://crbug.com/597656
-      return (possible_browser.browser_type == 'reference' and
-              possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X')
 
 
 class V8DetachedContextAgeInGC(perf_benchmark.PerfBenchmark):
@@ -242,11 +232,6 @@ class V8MobileInfiniteScroll(_InfiniteScrollBenchmark):
   @classmethod
   def Name(cls):
     return 'v8.mobile_infinite_scroll_tbmv2'
-
-  @classmethod
-  def ShouldDisable(cls, possible_browser):  # http://crbug.com/597656
-      return (possible_browser.browser_type == 'reference' and
-              possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X')
 
 
 @benchmark.Disabled('all') # was enabled only on android

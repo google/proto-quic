@@ -83,7 +83,8 @@ class DeviceHelper(object):
     try:
       process_name = process_name.split(':')[0]
       cmd = ['dumpsys', 'package', process_name]
-      user_id_lines = adb.RunShellCommand(cmd, large_output=True)
+      user_id_lines = adb.RunShellCommand(
+          cmd, large_output=True, check_return=True)
       user_id_lines = Utils.FindLines(user_id_lines, 'userId=')
 
       if not user_id_lines:
@@ -126,7 +127,9 @@ class DeviceHelper(object):
     intersect the two.  The returned result is sorted based on userid."""
     pids = []
     try:
-      pid_lines = adb.RunShellCommand(['ps'], large_output=True)
+      # TODO(catapult:#3215): Migrate to adb.GetPids().
+      pid_lines = adb.RunShellCommand(
+          ['ps'], large_output=True, check_return=True)
       if default_pid:
         pid_lines = Utils.FindLines(pid_lines, str(default_pid))
       if process_filter:
@@ -209,7 +212,8 @@ class MemoryHelper(object):
     found it will return [ 0, 0, 0 ]."""
     results = [0, 0, 0]
 
-    mem_lines = adb.RunShellCommand(['dumpsys', 'meminfo', pid])
+    mem_lines = adb.RunShellCommand(
+        ['dumpsys', 'meminfo', pid], check_return=True)
     for line in mem_lines:
       match = re.split('\s+', line.strip())
 
@@ -263,7 +267,7 @@ class GraphicsHelper(object):
     represents the graphics memory usage.  Will return this as a single entry
     array of [ Graphics ].  If not found, will return [ 0 ]."""
     try:
-      mem_lines = adb.RunShellCommand(['showmap', '-t', pid])
+      mem_lines = adb.RunShellCommand(['showmap', '-t', pid], check_return=True)
       for line in mem_lines:
         match = re.split('[ ]+', line.strip())
         if match[-1] in GraphicsHelper.__SHOWMAP_KEY_MATCHES:
@@ -1009,4 +1013,3 @@ def main(argv):
 
 if __name__ == '__main__':
   sys.exit(main(sys.argv))
-

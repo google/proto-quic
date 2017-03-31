@@ -19,7 +19,6 @@
 #include "net/http/http_request_info.h"
 #include "net/http/http_response_headers.h"
 #include "net/http/http_response_info.h"
-#include "net/log/net_log_source.h"
 #include "net/log/test_net_log.h"
 #include "net/socket/socket_test_util.h"
 #include "net/spdy/spdy_session.h"
@@ -69,7 +68,7 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
   TestDelegateBase(base::WeakPtr<SpdySession> session,
                    IOBuffer* read_buf,
                    int read_buf_len)
-      : stream_(new BidirectionalStreamSpdyImpl(session)),
+      : stream_(new BidirectionalStreamSpdyImpl(session, NetLogSource())),
         read_buf_(read_buf),
         read_buf_len_(read_buf_len),
         loop_(nullptr),

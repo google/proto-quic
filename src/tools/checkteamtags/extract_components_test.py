@@ -209,3 +209,21 @@ class ExtractComponentsTest(unittest.TestCase):
         u'dir-to-team': {
             u'third_party/WebKit/LayoutTests/foo': u'dummy-team-3@chromium.org',
         }})
+
+  @mock_file_tree({
+      'src': 'boss@chromium.org\n',
+      'src/dummydir1': 'dummy@chromium.org\n'
+                       '# TEAM: dummy-team@chromium.org\n'
+                       '# COMPONENT: Dummy>Component',
+      'src/dummydir1/innerdir1': 'dummy@chromium.org\n'
+                                 '# TEAM: dummy-specialist-team@chromium.org\n'
+                                 '# COMPONENT: Dummy>Component>Subcomponent'})
+  def testDisplayFile(self):
+    saved_output = StringIO()
+    with mock.patch('sys.stdout', saved_output):
+      extract_components.main(['%prog', '-m 2'])
+    output = saved_output.getvalue()
+    self.assertIn('OWNERS files that have missing team and component by depth:',
+                  output)
+    self.assertIn('at depth 0', output)
+    self.assertIn('[\'tools/checkteamtags/src/OWNERS\']', output)

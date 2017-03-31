@@ -23,6 +23,7 @@
 #include "net/http/http_request_info.h"
 #include "net/http/http_response_info.h"
 #include "net/http/proxy_client_socket.h"
+#include "net/log/net_log_source.h"
 #include "net/log/net_log_with_source.h"
 #include "net/spdy/spdy_http_stream.h"
 #include "net/spdy/spdy_protocol.h"
@@ -97,6 +98,7 @@ class NET_EXPORT_PRIVATE SpdyProxyClientSocket : public ProxyClientSocket,
   void OnDataSent() override;
   void OnTrailers(const SpdyHeaderBlock& trailers) override;
   void OnClose(int status) override;
+  NetLogSource source_dependency() const override;
 
  private:
   enum State {
@@ -169,6 +171,7 @@ class NET_EXPORT_PRIVATE SpdyProxyClientSocket : public ProxyClientSocket,
   LoadTimingInfo redirect_load_timing_info_;
 
   const NetLogWithSource net_log_;
+  const NetLogSource source_dependency_;
 
   // The default weak pointer factory.
   base::WeakPtrFactory<SpdyProxyClientSocket> weak_factory_;

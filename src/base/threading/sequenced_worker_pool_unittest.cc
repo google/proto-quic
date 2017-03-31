@@ -244,14 +244,12 @@ class SequencedWorkerPoolTest
 
   void SetUp() override {
     if (RedirectedToTaskScheduler()) {
-      std::vector<SchedulerWorkerPoolParams> worker_pool_params;
-      worker_pool_params.emplace_back(
-          "SchedulerWorkerPoolName", ThreadPriority::NORMAL,
+      const SchedulerWorkerPoolParams worker_pool_params(
           SchedulerWorkerPoolParams::StandbyThreadPolicy::LAZY,
-          kNumWorkerThreads, TimeDelta::Max());
+          static_cast<int>(kNumWorkerThreads), TimeDelta::Max());
       TaskScheduler::CreateAndSetDefaultTaskScheduler(
-          std::move(worker_pool_params),
-          base::Bind([](const TaskTraits&) -> size_t { return 0U; }));
+          "SequencedWorkerPoolTest", {worker_pool_params, worker_pool_params,
+                                      worker_pool_params, worker_pool_params});
 
       // Unit tests run in an environment where SequencedWorkerPool is enabled
       // without redirection to TaskScheduler. For the current unit test,

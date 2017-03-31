@@ -26,6 +26,7 @@
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
 #include "base/timer/timer.h"
+#include "base/trace_event/process_memory_dump.h"
 #include "net/base/net_errors.h"
 #include "net/disk_cache/blockfile/disk_format.h"
 #include "net/disk_cache/blockfile/entry_impl.h"
@@ -1320,9 +1321,11 @@ void BackendImpl::OnExternalCacheHit(const std::string& key) {
   background_queue_.OnExternalCacheHit(key);
 }
 
-size_t BackendImpl::EstimateMemoryUsage() const {
+size_t BackendImpl::DumpMemoryStats(
+    base::trace_event::ProcessMemoryDump* pmd,
+    const std::string& parent_absolute_name) const {
   // TODO(xunjieli): Implement this. crbug.com/669108.
-  return 0;
+  return 0u;
 }
 
 // ------------------------------------------------------------------------

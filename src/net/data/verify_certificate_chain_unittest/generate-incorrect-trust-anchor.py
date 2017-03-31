@@ -26,10 +26,11 @@ chain = [target, intermediate]
 trusted = common.TrustAnchor(bogus_root, constrained=False)
 time = common.DEFAULT_TIME
 verify_result = False
-errors = """[Context] Processing Certificate
-  index: 0
-      [Error] Signature verification failed
-      [Error] VerifySignedData failed
+errors = """----- Certificate i=1 (CN=Intermediate) -----
+ERROR: Signature verification failed
+ERROR: VerifySignedData failed
+ERROR: subject does not match issuer
+
 """
 
 common.write_test_file(__doc__, chain, trusted, time, verify_result, errors)

@@ -21,6 +21,7 @@ from devil.android import device_utils
 from devil.android import forwarder
 from devil.android.sdk import adb_wrapper
 from devil.android.sdk import intent
+from devil.android.sdk import keyevent
 
 sys.path.append(os.path.join(_SRC_DIR, 'build', 'android'))
 from pylib import constants
@@ -91,7 +92,7 @@ def Reboot(device):
   device.Reboot()
   # Pass through the lock screen.
   time.sleep(3)
-  device.RunShellCommand(['input', 'keyevent', '82'])
+  device.SendKeyEvent(keyevent.KEYCODE_MENU)
 
 
 def DeviceSubmitShellCommandQueue(device, command_queue):

@@ -10,6 +10,7 @@
 #include "base/bind_helpers.h"
 #include "base/callback_helpers.h"
 #include "base/memory/weak_ptr.h"
+#include "base/metrics/histogram_macros.h"
 #include "base/profiler/scoped_tracker.h"
 #include "base/values.h"
 #include "net/base/proxy_delegate.h"
@@ -387,6 +388,7 @@ int HttpProxyClientSocketWrapper::DoLoop(int result) {
 }
 
 int HttpProxyClientSocketWrapper::DoBeginConnect() {
+  connect_start_time_ = base::TimeTicks::Now();
   SetConnectTimer(connect_timeout_duration_);
   if (transport_params_) {
     next_state_ = STATE_TCP_CONNECT;
@@ -408,8 +410,11 @@ int HttpProxyClientSocketWrapper::DoTransportConnect() {
 }
 
 int HttpProxyClientSocketWrapper::DoTransportConnectComplete(int result) {
-  if (result != OK)
+  if (result != OK) {
+    UMA_HISTOGRAM_MEDIUM_TIMES("Net.HttpProxy.ConnectLatency.Insecure.Error",
+                               base::TimeTicks::Now() - connect_start_time_);
     return ERR_PROXY_CONNECTION_FAILED;
+  }
 
   // Reset the timer to just the length of time allowed for HttpProxy handshake
   // so that a fast TCP connection plus a slow HttpProxy failure doesn't take
@@ -445,6 +450,8 @@ int HttpProxyClientSocketWrapper::DoSSLConnectComplete(int result) {
   if (result == ERR_SSL_CLIENT_AUTH_CERT_NEEDED) {
     DCHECK(
         transport_socket_handle_->ssl_error_response_info().cert_request_info);
+    UMA_HISTOGRAM_MEDIUM_TIMES("Net.HttpProxy.ConnectLatency.Secure.Error",
+                               base::TimeTicks::Now() - connect_start_time_);
     error_response_info_.reset(new HttpResponseInfo(
         transport_socket_handle_->ssl_error_response_info()));
     error_response_info_->cert_request_info->is_proxy = true;
@@ -452,6 +459,8 @@ int HttpProxyClientSocketWrapper::DoSSLConnectComplete(int result) {
   }
 
   if (IsCertificateError(result)) {
+    UMA_HISTOGRAM_MEDIUM_TIMES("Net.HttpProxy.ConnectLatency.Secure.Error",
+                               base::TimeTicks::Now() - connect_start_time_);
     if (ssl_params_->load_flags() & LOAD_IGNORE_ALL_CERT_ERRORS) {
       result = OK;
     } else {
@@ -469,6 +478,8 @@ int HttpProxyClientSocketWrapper::DoSSLConnectComplete(int result) {
     return ERR_SPDY_SESSION_ALREADY_EXISTS;
   }
   if (result < 0) {
+    UMA_HISTOGRAM_MEDIUM_TIMES("Net.HttpProxy.ConnectLatency.Secure.Error",
+                               base::TimeTicks::Now() - connect_start_time_);
     if (transport_socket_handle_->socket())
       transport_socket_handle_->socket()->Disconnect();
     return ERR_PROXY_CONNECTION_FAILED;
@@ -500,6 +511,14 @@ int HttpProxyClientSocketWrapper::DoSSLConnectComplete(int result) {
 
 int HttpProxyClientSocketWrapper::DoHttpProxyConnect() {
   next_state_ = STATE_HTTP_PROXY_CONNECT_COMPLETE;
+
+  if (transport_params_) {
+    UMA_HISTOGRAM_MEDIUM_TIMES("Net.HttpProxy.ConnectLatency.Insecure.Success",
+                               base::TimeTicks::Now() - connect_start_time_);
+  } else {
+    UMA_HISTOGRAM_MEDIUM_TIMES("Net.HttpProxy.ConnectLatency.Secure.Success",
+                               base::TimeTicks::Now() - connect_start_time_);
+  }
 
   // Add a HttpProxy connection on top of the tcp socket.
   transport_socket_.reset(new HttpProxyClientSocket(
@@ -617,6 +636,18 @@ void HttpProxyClientSocketWrapper::ConnectTimeout() {
   // Timer shouldn't be running if next_state_ is STATE_NONE.
   DCHECK_NE(STATE_NONE, next_state_);
   DCHECK(!connect_callback_.is_null());
+
+  if (next_state_ == STATE_TCP_CONNECT_COMPLETE ||
+      next_state_ == STATE_SSL_CONNECT_COMPLETE) {
+    if (transport_params_) {
+      UMA_HISTOGRAM_MEDIUM_TIMES(
+          "Net.HttpProxy.ConnectLatency.Insecure.TimedOut",
+          base::TimeTicks::Now() - connect_start_time_);
+    } else {
+      UMA_HISTOGRAM_MEDIUM_TIMES("Net.HttpProxy.ConnectLatency.Secure.TimedOut",
+                                 base::TimeTicks::Now() - connect_start_time_);
+    }
+  }
 
   NotifyProxyDelegateOfCompletion(ERR_CONNECTION_TIMED_OUT);
 

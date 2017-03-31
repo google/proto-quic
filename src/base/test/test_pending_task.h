@@ -23,7 +23,7 @@ struct TestPendingTask {
   TestPendingTask();
   TestPendingTask(TestPendingTask&& other);
   TestPendingTask(const tracked_objects::Location& location,
-                  const Closure& task,
+                  Closure task,
                   TimeTicks post_time,
                   TimeDelta delay,
                   TestNestability nestability);

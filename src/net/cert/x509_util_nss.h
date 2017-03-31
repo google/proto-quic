@@ -29,22 +29,22 @@ namespace net {
 namespace x509_util {
 
 // Parses the Principal attribute from |name| and outputs the result in
-// |principal|.
-void ParsePrincipal(CERTName* name,
-                    CertPrincipal* principal);
+// |principal|. Returns true on success.
+bool ParsePrincipal(CERTName* name, CertPrincipal* principal);
 
 // Parses the date from |der_date| and outputs the result in |result|.
-void ParseDate(const SECItem* der_date, base::Time* result);
+// Returns true on success.
+bool ParseDate(const SECItem* der_date, base::Time* result);
 
 // Parses the serial number from |certificate|.
 std::string ParseSerialNumber(const CERTCertificate* certificate);
 
-// Gets the dNSName and iPAddress name types from the subjectAltName
-// extension of |cert_handle|, storing them in |dns_names| and
-// |ip_addrs|, respectively.
-// If no subjectAltName is present, or no names of that type are
-// present, the relevant vectors are cleared.
-void GetSubjectAltName(CERTCertificate* cert_handle,
+// Gets the dNSName and iPAddress name fields from the subjectAltName
+// extension of |cert_handle|.
+// If |dns_names| is non-null, each dNSName will be stored in |*dns_names|.
+// If |ip_addrs| is non-null, each iPAddress will be stored in |*ip_addrs|.
+// Returns true if any dNSName or iPAddress was present.
+bool GetSubjectAltName(CERTCertificate* cert_handle,
                        std::vector<std::string>* dns_names,
                        std::vector<std::string>* ip_addrs);
 

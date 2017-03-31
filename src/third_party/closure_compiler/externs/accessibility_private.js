@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2017 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -91,6 +91,13 @@ chrome.accessibilityPrivate.setFocusRing = function(rects) {};
  * @see https://developer.chrome.com/extensions/accessibilityPrivate#method-setKeyboardListener
  */
 chrome.accessibilityPrivate.setKeyboardListener = function(enabled, capture) {};
+
+/**
+ * Darkens or undarkens the screen.
+ * @param {boolean} enabled True to darken screen; false to undarken screen.
+ * @see https://developer.chrome.com/extensions/accessibilityPrivate#method-darkenScreen
+ */
+chrome.accessibilityPrivate.darkenScreen = function(enabled) {};
 
 /**
  * Fired whenever ChromeVox should output introduction.

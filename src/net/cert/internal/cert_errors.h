@@ -6,46 +6,29 @@
 // Overview of error design
 // ----------------------------
 //
-// Certificate path validation/parsing may emit a sequence of
-// errors/warnings/context. These are represented by a tree of CertErrorNodes.
-// Each node is comprised of:
+// Certificate path building/validation/parsing may emit a sequence of errors
+// and warnings.
+//
+// Each individual error/warning entry (CertError) is comprised of:
 //
 //   * A unique identifier.
 //
-//     This serves similarly to an error code, and is useful for querying if a
-//     particular error occurred.
+//     This serves similarly to an error code, and is used to query if a
+//     particular error/warning occurred.
 //
 //   * [optional] A parameters object.
 //
-//     Nodes may attach a heap-allocated subclass of CertErrorParams, to carry
-//     extra information that is useful when reporting the error. For instance
-//     a parsing error may want to describe where in the DER the failure
-//     happened, or what the unexpected value was.
+//     Nodes may attach a heap-allocated subclass of CertErrorParams to carry
+//     extra information that is used when reporting the error. For instance
+//     a parsing error may describe where in the DER the failure happened, or
+//     what the unexpected value was.
 //
-//   * [optional] Child nodes.
+// A collection of errors is represented by the CertErrors object. This may be
+// used to group errors that have a common context, such as all the
+// errors/warnings that apply to a specific certificate.
 //
-//     Error nodes are arranged in a tree. The parent/child hierarchy is used to
-//     group errors that share some common state.
-//     For instance during path processing it is useful to group the
-//     errors/warnings that happened while processing certificate "i" as
-//     children of a shared "context" node. The context node in this case
-//     doesn't describe a particular error, but rather some shared event and
-//     its parameters.
-//
-// ----------------------------
-// Using errors in other APIs
-// ----------------------------
-//
-// The top level object used in APIs is CertErrors. A pointer to a CertErrors
-// object is typically given as an out-parameter for code that may generate
-// errors.
-//
-// Note that CertErrors gives a non-hiearhical interface for emitting errors.
-// In other words, it doesn't let you create parent/child relationships
-// directly.
-//
-// To change the parent node for subsequently emitted errors in the CertErrors
-// object, one constructs a CertErrorScoper on the stack.
+// Lastly, CertPathErrors composes multiple CertErrors -- one for each
+// certificate in the verified chain.
 //
 // ----------------------------
 // Defining new errors
@@ -70,95 +53,110 @@
 #include "base/macros.h"
 #include "net/base/net_export.h"
 #include "net/cert/internal/cert_error_id.h"
+#include "net/cert/internal/parsed_certificate.h"
 
 namespace net {
 
 class CertErrorParams;
-class CertErrorScoper;
 
-// The type of a particular CertErrorNode.
-enum class CertErrorNodeType {
-  // Note the TYPE_ prefix is to avoid compile errors. Because ERROR() is a
-  // commonly used macro name.
+// CertError represents either an error or a warning.
+struct NET_EXPORT CertError {
+  enum Severity {
+    SEVERITY_HIGH,
+    SEVERITY_WARNING,
+  };
 
-  // Node that represents a single error.
-  TYPE_ERROR,
+  CertError();
+  CertError(Severity severity,
+            CertErrorId id,
+            std::unique_ptr<CertErrorParams> params);
+  CertError(CertError&& other);
+  CertError& operator=(CertError&&);
+  ~CertError();
 
-  // Node that represents a single non-fatal error.
-  TYPE_WARNING,
+  // Pretty-prints the error and its parameters.
+  std::string ToDebugString() const;
 
-  // Parent node for other errors/warnings.
-  TYPE_CONTEXT,
-};
-
-struct CertErrorNode;
-using CertErrorNodes = std::vector<std::unique_ptr<CertErrorNode>>;
-
-// CertErrorNode represents a node in the error tree. This could be an error,
-// warning, or simply contextual parent node. See the error design overview for
-// a better description of how this is used.
-struct NET_EXPORT CertErrorNode {
-  CertErrorNode(CertErrorNodeType node_type,
-                CertErrorId id,
-                std::unique_ptr<CertErrorParams> params);
-  ~CertErrorNode();
-
-  void AddChild(std::unique_ptr<CertErrorNode> child);
-
-  CertErrorNodeType node_type;
+  Severity severity;
   CertErrorId id;
   std::unique_ptr<CertErrorParams> params;
-  CertErrorNodes children;
 };
 
-// CertErrors is the main object for emitting errors and internally builds up
-// the error tree.
+// CertErrors is a collection of CertError, along with convenience methods to
+// add and inspect errors.
 class NET_EXPORT CertErrors {
  public:
   CertErrors();
+  CertErrors(CertErrors&& other);
+  CertErrors& operator=(CertErrors&&);
   ~CertErrors();
 
-  // Adds a node to the current insertion point in the error tree. |params| may
-  // be null.
-  void Add(CertErrorNodeType node_type,
+  // Adds an error/warning. |params| may be null.
+  void Add(CertError::Severity severity,
            CertErrorId id,
            std::unique_ptr<CertErrorParams> params);
 
+  // Adds a high severity error.
   void AddError(CertErrorId id, std::unique_ptr<CertErrorParams> params);
   void AddError(CertErrorId id);
 
+  // Adds a low severity error.
   void AddWarning(CertErrorId id, std::unique_ptr<CertErrorParams> params);
   void AddWarning(CertErrorId id);
-
-  // Returns true if the tree is empty. Note that emptiness of the error tree
-  // is NOT equivalent to success for some call, and vice versa. (For instance
-  // consumers may forget to emit errors on failures, or some errors may be
-  // non-fatal warnings).
-  bool empty() const;
 
   // Dumps a textual representation of the errors for debugging purposes.
   std::string ToDebugString() const;
 
-  // Returns true the error |id| was added to this CertErrors (at any depth).
+  // Returns true if the error |id| was added to this CertErrors (of any
+  // severity).
   bool ContainsError(CertErrorId id) const;
 
+  // Returns true if this contains any errors of the given severity level.
+  bool ContainsAnyErrorWithSeverity(CertError::Severity severity) const;
+
  private:
-  // CertErrorScoper manipulates the CertErrors object.
-  friend class CertErrorScoper;
+  std::vector<CertError> nodes_;
+};
 
-  void AddNode(std::unique_ptr<CertErrorNode> node);
+// CertPathErrors is a collection of CertErrors, to group errors into different
+// buckets for different certificates. The "index" should correspond with that
+// of the certificate relative to its chain.
+class NET_EXPORT CertPathErrors {
+ public:
+  CertPathErrors();
+  CertPathErrors(CertPathErrors&& other);
+  CertPathErrors& operator=(CertPathErrors&&);
+  ~CertPathErrors();
 
-  // Used by CertErrorScoper to register itself as the top-level scoper.
-  // Returns the previously set scoper, or nullptr if there was none.
-  CertErrorScoper* SetScoper(CertErrorScoper* scoper);
+  // Gets a bucket to put errors in for |cert_index|. This will lookup and
+  // return the existing error bucket if one exists, or create a new one for the
+  // specified index. It is expected that |cert_index| is the corresponding
+  // index in a certificate chain (with 0 being the target).
+  CertErrors* GetErrorsForCert(size_t cert_index);
 
-  CertErrorNodes nodes_;
+  // Returns a bucket to put errors that are not associated with a particular
+  // certificate.
+  CertErrors* GetOtherErrors();
 
-  // The top-most CertErrorScoper that is currently in scope (and which affects
-  // the parent node for newly added errors).
-  CertErrorScoper* current_scoper_ = nullptr;
+  // Returns true if CertPathErrors contains the specified error (of any
+  // severity).
+  bool ContainsError(CertErrorId id) const;
 
-  DISALLOW_COPY_AND_ASSIGN(CertErrors);
+  // Returns true if this contains any errors of the given severity level.
+  bool ContainsAnyErrorWithSeverity(CertError::Severity severity) const;
+
+  // Shortcut for ContainsAnyErrorWithSeverity(CertError::SEVERITY_HIGH).
+  bool ContainsHighSeverityErrors() const {
+    return ContainsAnyErrorWithSeverity(CertError::SEVERITY_HIGH);
+  }
+
+  // Pretty-prints all the errors in the CertPathErrors. If there were no
+  // errors/warnings, returns an empty string.
+  std::string ToDebugString(const ParsedCertificateList& certs) const;
+
+ private:
+  std::vector<CertErrors> cert_errors_;
+  CertErrors other_errors_;
 };
 
 }  // namespace net

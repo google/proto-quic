@@ -21,13 +21,13 @@
 #include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/strings/string_util.h"
-#include "base/strings/stringprintf.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/spdy/hpack/hpack_constants.h"
 #include "net/spdy/hpack/hpack_decoder.h"
 #include "net/spdy/hpack/hpack_decoder3.h"
 #include "net/spdy/http2_frame_decoder_adapter.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
+#include "net/spdy/platform/api/spdy_string_utils.h"
 #include "net/spdy/spdy_bitmasks.h"
 #include "net/spdy/spdy_bug_tracker.h"
 #include "net/spdy/spdy_flags.h"
@@ -605,7 +605,7 @@ SpdyFrameType SpdyFramer::ValidateFrameHeader(bool is_control_frame,
       // if we expect a continuation and receive an unknown frame.
       DLOG(ERROR) << "The framer was expecting to receive a CONTINUATION "
                   << "frame, but instead received an unknown frame of type "
-                  << base::StringPrintf("%x", frame_type_field);
+                  << SpdyStringPrintf("%x", frame_type_field);
       set_error(SPDY_UNEXPECTED_FRAME);
       return DATA;
     }
@@ -625,7 +625,7 @@ SpdyFrameType SpdyFramer::ValidateFrameHeader(bool is_control_frame,
       // Report an invalid frame error and close the stream if the
       // stream_id is not valid.
       DLOG(WARNING) << "Unknown control frame type "
-                    << base::StringPrintf("%x", frame_type_field)
+                    << SpdyStringPrintf("%x", frame_type_field)
                     << " received on invalid stream "
                     << current_frame_stream_id_;
       set_error(SPDY_INVALID_CONTROL_FRAME);

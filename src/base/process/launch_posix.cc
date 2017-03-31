@@ -663,6 +663,14 @@ bool GetAppOutputAndError(const CommandLine& cl, std::string* output) {
   return result && exit_code == EXIT_SUCCESS;
 }
 
+bool GetAppOutputAndError(const std::vector<std::string>& argv,
+                          std::string* output) {
+  int exit_code;
+  bool result =
+      GetAppOutputInternal(argv, nullptr, true, output, true, &exit_code);
+  return result && exit_code == EXIT_SUCCESS;
+}
+
 bool GetAppOutputWithExitCode(const CommandLine& cl,
                               std::string* output,
                               int* exit_code) {

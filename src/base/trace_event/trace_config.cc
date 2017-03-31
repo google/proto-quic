@@ -11,11 +11,7 @@
 #include "base/json/json_reader.h"
 #include "base/json/json_writer.h"
 #include "base/memory/ptr_util.h"
-#include "base/strings/pattern.h"
 #include "base/strings/string_split.h"
-#include "base/strings/string_tokenizer.h"
-#include "base/strings/string_util.h"
-#include "base/strings/stringprintf.h"
 #include "base/trace_event/memory_dump_manager.h"
 #include "base/trace_event/memory_dump_request_args.h"
 #include "base/trace_event/trace_event.h"
@@ -37,11 +33,6 @@ const char kEnableArgumentFilter[] = "enable-argument-filter";
 const char kRecordModeParam[] = "record_mode";
 const char kEnableSystraceParam[] = "enable_systrace";
 const char kEnableArgumentFilterParam[] = "enable_argument_filter";
-const char kIncludedCategoriesParam[] = "included_categories";
-const char kExcludedCategoriesParam[] = "excluded_categories";
-const char kSyntheticDelaysParam[] = "synthetic_delays";
-
-const char kSyntheticDelayCategoryFilterPrefix[] = "DELAY(";
 
 // String parameters that is used to parse memory dump config in trace config
 // string.
@@ -148,27 +139,36 @@ TraceConfig::EventFilterConfig& TraceConfig::EventFilterConfig::operator=(
     return *this;
 
   predicate_name_ = rhs.predicate_name_;
-  included_categories_ = rhs.included_categories_;
-  excluded_categories_ = rhs.excluded_categories_;
+  category_filter_ = rhs.category_filter_;
+
   if (rhs.args_)
     args_ = rhs.args_->CreateDeepCopy();
 
   return *this;
 }
 
-void TraceConfig::EventFilterConfig::AddIncludedCategory(
-    const std::string& category) {
-  included_categories_.push_back(category);
+void TraceConfig::EventFilterConfig::InitializeFromConfigDict(
+    const base::DictionaryValue* event_filter) {
+  category_filter_.InitializeFromConfigDict(*event_filter);
+
+  const base::DictionaryValue* args_dict = nullptr;
+  if (event_filter->GetDictionary(kFilterArgsParam, &args_dict))
+    args_ = args_dict->CreateDeepCopy();
 }
 
-void TraceConfig::EventFilterConfig::AddExcludedCategory(
-    const std::string& category) {
-  excluded_categories_.push_back(category);
+void TraceConfig::EventFilterConfig::SetCategoryFilter(
+    const TraceConfigCategoryFilter& category_filter) {
+  category_filter_ = category_filter;
 }
 
-void TraceConfig::EventFilterConfig::SetArgs(
-    std::unique_ptr<base::DictionaryValue> args) {
-  args_ = std::move(args);
+void TraceConfig::EventFilterConfig::ToDict(
+    DictionaryValue* filter_dict) const {
+  filter_dict->SetString(kFilterPredicateParam, predicate_name());
+
+  category_filter_.ToDict(filter_dict);
+
+  if (args_)
+    filter_dict->Set(kFilterArgsParam, args_->CreateDeepCopy());
 }
 
 bool TraceConfig::EventFilterConfig::GetArgAsSet(
@@ -187,26 +187,7 @@ bool TraceConfig::EventFilterConfig::GetArgAsSet(
 
 bool TraceConfig::EventFilterConfig::IsCategoryGroupEnabled(
     const char* category_group_name) const {
-  CStringTokenizer category_group_tokens(
-      category_group_name, category_group_name + strlen(category_group_name),
-      ",");
-  while (category_group_tokens.GetNext()) {
-    std::string category_group_token = category_group_tokens.token();
-
-    for (const auto& excluded_category : excluded_categories_) {
-      if (base::MatchPattern(category_group_token, excluded_category)) {
-        return false;
-      }
-    }
-
-    for (const auto& included_category : included_categories_) {
-      if (base::MatchPattern(category_group_token, included_category)) {
-        return true;
-      }
-    }
-  }
-
-  return false;
+  return category_filter_.IsCategoryGroupEnabled(category_group_name);
 }
 
 TraceConfig::TraceConfig() {
@@ -255,11 +236,8 @@ TraceConfig::TraceConfig(const TraceConfig& tc)
     : record_mode_(tc.record_mode_),
       enable_systrace_(tc.enable_systrace_),
       enable_argument_filter_(tc.enable_argument_filter_),
+      category_filter_(tc.category_filter_),
       memory_dump_config_(tc.memory_dump_config_),
-      included_categories_(tc.included_categories_),
-      disabled_categories_(tc.disabled_categories_),
-      excluded_categories_(tc.excluded_categories_),
-      synthetic_delays_(tc.synthetic_delays_),
       event_filters_(tc.event_filters_) {}
 
 TraceConfig::~TraceConfig() {
@@ -272,17 +250,14 @@ TraceConfig& TraceConfig::operator=(const TraceConfig& rhs) {
   record_mode_ = rhs.record_mode_;
   enable_systrace_ = rhs.enable_systrace_;
   enable_argument_filter_ = rhs.enable_argument_filter_;
+  category_filter_ = rhs.category_filter_;
   memory_dump_config_ = rhs.memory_dump_config_;
-  included_categories_ = rhs.included_categories_;
-  disabled_categories_ = rhs.disabled_categories_;
-  excluded_categories_ = rhs.excluded_categories_;
-  synthetic_delays_ = rhs.synthetic_delays_;
   event_filters_ = rhs.event_filters_;
   return *this;
 }
 
 const TraceConfig::StringList& TraceConfig::GetSyntheticDelayValues() const {
-  return synthetic_delays_;
+  return category_filter_.synthetic_delays();
 }
 
 std::string TraceConfig::ToString() const {
@@ -298,69 +273,14 @@ TraceConfig::AsConvertableToTraceFormat() const {
 }
 
 std::string TraceConfig::ToCategoryFilterString() const {
-  std::string filter_string;
-  WriteCategoryFilterString(included_categories_, &filter_string, true);
-  WriteCategoryFilterString(disabled_categories_, &filter_string, true);
-  WriteCategoryFilterString(excluded_categories_, &filter_string, false);
-  WriteCategoryFilterString(synthetic_delays_, &filter_string);
-  return filter_string;
+  return category_filter_.ToFilterString();
 }
 
 bool TraceConfig::IsCategoryGroupEnabled(
     const char* category_group_name) const {
   // TraceLog should call this method only as part of enabling/disabling
   // categories.
-
-  bool had_enabled_by_default = false;
-  DCHECK(category_group_name);
-  std::string category_group_name_str = category_group_name;
-  StringTokenizer category_group_tokens(category_group_name_str, ",");
-  while (category_group_tokens.GetNext()) {
-    std::string category_group_token = category_group_tokens.token();
-    // Don't allow empty tokens, nor tokens with leading or trailing space.
-    DCHECK(!TraceConfig::IsEmptyOrContainsLeadingOrTrailingWhitespace(
-               category_group_token))
-        << "Disallowed category string";
-    if (IsCategoryEnabled(category_group_token.c_str()))
-      return true;
-
-    if (!MatchPattern(category_group_token, TRACE_DISABLED_BY_DEFAULT("*")))
-      had_enabled_by_default = true;
-  }
-  // Do a second pass to check for explicitly disabled categories
-  // (those explicitly enabled have priority due to first pass).
-  category_group_tokens.Reset();
-  bool category_group_disabled = false;
-  while (category_group_tokens.GetNext()) {
-    std::string category_group_token = category_group_tokens.token();
-    for (const std::string& category : excluded_categories_) {
-      if (MatchPattern(category_group_token, category)) {
-        // Current token of category_group_name is present in excluded_list.
-        // Flag the exclusion and proceed further to check if any of the
-        // remaining categories of category_group_name is not present in the
-        // excluded_ list.
-        category_group_disabled = true;
-        break;
-      }
-      // One of the category of category_group_name is not present in
-      // excluded_ list. So, if it's not a disabled-by-default category,
-      // it has to be included_ list. Enable the category_group_name
-      // for recording.
-      if (!MatchPattern(category_group_token, TRACE_DISABLED_BY_DEFAULT("*"))) {
-        category_group_disabled = false;
-      }
-    }
-    // One of the categories present in category_group_name is not present in
-    // excluded_ list. Implies this category_group_name group can be enabled
-    // for recording, since one of its groups is enabled for recording.
-    if (!category_group_disabled)
-      break;
-  }
-  // If the category group is not excluded, and there are no included patterns
-  // we consider this category group enabled, as long as it had categories
-  // other than disabled-by-default.
-  return !category_group_disabled && had_enabled_by_default &&
-         included_categories_.empty();
+  return category_filter_.IsCategoryGroupEnabled(category_group_name);
 }
 
 void TraceConfig::Merge(const TraceConfig& config) {
@@ -371,28 +291,10 @@ void TraceConfig::Merge(const TraceConfig& config) {
                 << "set of options.";
   }
 
-  // Keep included patterns only if both filters have an included entry.
-  // Otherwise, one of the filter was specifying "*" and we want to honor the
-  // broadest filter.
-  if (HasIncludedPatterns() && config.HasIncludedPatterns()) {
-    included_categories_.insert(included_categories_.end(),
-                                config.included_categories_.begin(),
-                                config.included_categories_.end());
-  } else {
-    included_categories_.clear();
-  }
+  category_filter_.Merge(config.category_filter_);
 
   memory_dump_config_.Merge(config.memory_dump_config_);
 
-  disabled_categories_.insert(disabled_categories_.end(),
-                              config.disabled_categories_.begin(),
-                              config.disabled_categories_.end());
-  excluded_categories_.insert(excluded_categories_.end(),
-                              config.excluded_categories_.begin(),
-                              config.excluded_categories_.end());
-  synthetic_delays_.insert(synthetic_delays_.end(),
-                           config.synthetic_delays_.begin(),
-                           config.synthetic_delays_.end());
   event_filters_.insert(event_filters_.end(), config.event_filters().begin(),
                         config.event_filters().end());
 }
@@ -401,10 +303,7 @@ void TraceConfig::Clear() {
   record_mode_ = RECORD_UNTIL_FULL;
   enable_systrace_ = false;
   enable_argument_filter_ = false;
-  included_categories_.clear();
-  disabled_categories_.clear();
-  excluded_categories_.clear();
-  synthetic_delays_.clear();
+  category_filter_.Clear();
   memory_dump_config_.Clear();
   event_filters_.clear();
 }
@@ -435,19 +334,13 @@ void TraceConfig::InitializeFromConfigDict(const DictionaryValue& dict) {
   enable_argument_filter_ =
       dict.GetBoolean(kEnableArgumentFilterParam, &val) ? val : false;
 
-  const ListValue* category_list = nullptr;
-  if (dict.GetList(kIncludedCategoriesParam, &category_list))
-    SetCategoriesFromIncludedList(*category_list);
-  if (dict.GetList(kExcludedCategoriesParam, &category_list))
-    SetCategoriesFromExcludedList(*category_list);
-  if (dict.GetList(kSyntheticDelaysParam, &category_list))
-    SetSyntheticDelaysFromList(*category_list);
+  category_filter_.InitializeFromConfigDict(dict);
 
   const base::ListValue* category_event_filters = nullptr;
   if (dict.GetList(kEventFiltersParam, &category_event_filters))
     SetEventFiltersFromConfigList(*category_event_filters);
 
-  if (IsCategoryEnabled(MemoryDumpManager::kTraceCategory)) {
+  if (category_filter_.IsCategoryEnabled(MemoryDumpManager::kTraceCategory)) {
     // If dump triggers not set, the client is using the legacy with just
     // category enabled. So, use the default periodic dump config.
     const DictionaryValue* memory_dump_config = nullptr;
@@ -468,37 +361,8 @@ void TraceConfig::InitializeFromConfigString(StringPiece config_string) {
 
 void TraceConfig::InitializeFromStrings(StringPiece category_filter_string,
                                         StringPiece trace_options_string) {
-  if (!category_filter_string.empty()) {
-    std::vector<std::string> split = SplitString(
-        category_filter_string, ",", TRIM_WHITESPACE, SPLIT_WANT_ALL);
-    for (const std::string& category : split) {
-      // Ignore empty categories.
-      if (category.empty())
-        continue;
-      // Synthetic delays are of the form 'DELAY(delay;option;option;...)'.
-      if (StartsWith(category, kSyntheticDelayCategoryFilterPrefix,
-                     CompareCase::SENSITIVE) &&
-          category.back() == ')') {
-        std::string synthetic_category = category.substr(
-            strlen(kSyntheticDelayCategoryFilterPrefix),
-            category.size() - strlen(kSyntheticDelayCategoryFilterPrefix) - 1);
-        size_t name_length = synthetic_category.find(';');
-        if (name_length != std::string::npos && name_length > 0 &&
-            name_length != synthetic_category.size() - 1) {
-          synthetic_delays_.push_back(synthetic_category);
-        }
-      } else if (category.front() == '-') {
-        // Excluded categories start with '-'.
-        // Remove '-' from category string.
-        excluded_categories_.push_back(category.substr(1));
-      } else if (category.compare(0, strlen(TRACE_DISABLED_BY_DEFAULT("")),
-                                  TRACE_DISABLED_BY_DEFAULT("")) == 0) {
-        disabled_categories_.push_back(category);
-      } else {
-        included_categories_.push_back(category);
-      }
-    }
-  }
+  if (!category_filter_string.empty())
+    category_filter_.InitializeFromString(category_filter_string);
 
   record_mode_ = RECORD_UNTIL_FULL;
   enable_systrace_ = false;
@@ -523,62 +387,9 @@ void TraceConfig::InitializeFromStrings(StringPiece category_filter_string,
     }
   }
 
-  if (IsCategoryEnabled(MemoryDumpManager::kTraceCategory)) {
+  if (category_filter_.IsCategoryEnabled(MemoryDumpManager::kTraceCategory)) {
     SetDefaultMemoryDumpConfig();
   }
-}
-
-void TraceConfig::SetCategoriesFromIncludedList(
-    const ListValue& included_list) {
-  included_categories_.clear();
-  for (size_t i = 0; i < included_list.GetSize(); ++i) {
-    std::string category;
-    if (!included_list.GetString(i, &category))
-      continue;
-    if (category.compare(0, strlen(TRACE_DISABLED_BY_DEFAULT("")),
-                         TRACE_DISABLED_BY_DEFAULT("")) == 0) {
-      disabled_categories_.push_back(category);
-    } else {
-      included_categories_.push_back(category);
-    }
-  }
-}
-
-void TraceConfig::SetCategoriesFromExcludedList(
-    const ListValue& excluded_list) {
-  excluded_categories_.clear();
-  for (size_t i = 0; i < excluded_list.GetSize(); ++i) {
-    std::string category;
-    if (excluded_list.GetString(i, &category))
-      excluded_categories_.push_back(category);
-  }
-}
-
-void TraceConfig::SetSyntheticDelaysFromList(const ListValue& list) {
-  synthetic_delays_.clear();
-  for (size_t i = 0; i < list.GetSize(); ++i) {
-    std::string delay;
-    if (!list.GetString(i, &delay))
-      continue;
-    // Synthetic delays are of the form "delay;option;option;...".
-    size_t name_length = delay.find(';');
-    if (name_length != std::string::npos && name_length > 0 &&
-        name_length != delay.size() - 1) {
-      synthetic_delays_.push_back(delay);
-    }
-  }
-}
-
-void TraceConfig::AddCategoryToDict(DictionaryValue* dict,
-                                    const char* param,
-                                    const StringList& categories) const {
-  if (categories.empty())
-    return;
-
-  auto list = MakeUnique<ListValue>();
-  for (const std::string& category : categories)
-    list->AppendString(category);
-  dict->Set(param, std::move(list));
 }
 
 void TraceConfig::SetMemoryDumpConfigFromConfigDict(
@@ -673,29 +484,7 @@ void TraceConfig::SetEventFiltersFromConfigList(
         << "Invalid predicate name in category event filter.";
 
     EventFilterConfig new_config(predicate_name);
-    const base::ListValue* included_list = nullptr;
-    CHECK(event_filter->GetList(kIncludedCategoriesParam, &included_list))
-        << "Missing included_categories in category event filter.";
-
-    for (size_t i = 0; i < included_list->GetSize(); ++i) {
-      std::string category;
-      if (included_list->GetString(i, &category))
-        new_config.AddIncludedCategory(category);
-    }
-
-    const base::ListValue* excluded_list = nullptr;
-    if (event_filter->GetList(kExcludedCategoriesParam, &excluded_list)) {
-      for (size_t i = 0; i < excluded_list->GetSize(); ++i) {
-        std::string category;
-        if (excluded_list->GetString(i, &category))
-          new_config.AddExcludedCategory(category);
-      }
-    }
-
-    const base::DictionaryValue* args_dict = nullptr;
-    if (event_filter->GetDictionary(kFilterArgsParam, &args_dict))
-      new_config.SetArgs(args_dict->CreateDeepCopy());
-
+    new_config.InitializeFromConfigDict(event_filter);
     event_filters_.push_back(new_config);
   }
 }
@@ -722,50 +511,20 @@ std::unique_ptr<DictionaryValue> TraceConfig::ToDict() const {
   dict->SetBoolean(kEnableSystraceParam, enable_systrace_);
   dict->SetBoolean(kEnableArgumentFilterParam, enable_argument_filter_);
 
-  StringList categories(included_categories_);
-  categories.insert(categories.end(),
-                    disabled_categories_.begin(),
-                    disabled_categories_.end());
-  AddCategoryToDict(dict.get(), kIncludedCategoriesParam, categories);
-  AddCategoryToDict(dict.get(), kExcludedCategoriesParam, excluded_categories_);
-  AddCategoryToDict(dict.get(), kSyntheticDelaysParam, synthetic_delays_);
+  category_filter_.ToDict(dict.get());
 
   if (!event_filters_.empty()) {
     std::unique_ptr<base::ListValue> filter_list(new base::ListValue());
     for (const EventFilterConfig& filter : event_filters_) {
       std::unique_ptr<base::DictionaryValue> filter_dict(
           new base::DictionaryValue());
-      filter_dict->SetString(kFilterPredicateParam, filter.predicate_name());
-
-      std::unique_ptr<base::ListValue> included_categories_list(
-          new base::ListValue());
-      for (const std::string& included_category : filter.included_categories())
-        included_categories_list->AppendString(included_category);
-
-      filter_dict->Set(kIncludedCategoriesParam,
-                       std::move(included_categories_list));
-
-      if (!filter.excluded_categories().empty()) {
-        std::unique_ptr<base::ListValue> excluded_categories_list(
-            new base::ListValue());
-        for (const std::string& excluded_category :
-             filter.excluded_categories())
-          excluded_categories_list->AppendString(excluded_category);
-
-        filter_dict->Set(kExcludedCategoriesParam,
-                         std::move(excluded_categories_list));
-      }
-
-      if (filter.filter_args())
-        filter_dict->Set(kFilterArgsParam,
-                         filter.filter_args()->CreateDeepCopy());
-
+      filter.ToDict(filter_dict.get());
       filter_list->Append(std::move(filter_dict));
     }
     dict->Set(kEventFiltersParam, std::move(filter_list));
   }
 
-  if (IsCategoryEnabled(MemoryDumpManager::kTraceCategory)) {
+  if (category_filter_.IsCategoryEnabled(MemoryDumpManager::kTraceCategory)) {
     auto allowed_modes = MakeUnique<ListValue>();
     for (auto dump_mode : memory_dump_config_.allowed_dump_modes)
       allowed_modes->AppendString(MemoryDumpLevelOfDetailToString(dump_mode));
@@ -827,60 +586,6 @@ std::string TraceConfig::ToTraceOptionsString() const {
   if (enable_argument_filter_)
     ret = ret + "," + kEnableArgumentFilter;
   return ret;
-}
-
-void TraceConfig::WriteCategoryFilterString(const StringList& values,
-                                            std::string* out,
-                                            bool included) const {
-  bool prepend_comma = !out->empty();
-  int token_cnt = 0;
-  for (const std::string& category : values) {
-    if (token_cnt > 0 || prepend_comma)
-      StringAppendF(out, ",");
-    StringAppendF(out, "%s%s", (included ? "" : "-"), category.c_str());
-    ++token_cnt;
-  }
-}
-
-void TraceConfig::WriteCategoryFilterString(const StringList& delays,
-                                            std::string* out) const {
-  bool prepend_comma = !out->empty();
-  int token_cnt = 0;
-  for (const std::string& category : delays) {
-    if (token_cnt > 0 || prepend_comma)
-      StringAppendF(out, ",");
-    StringAppendF(out, "%s%s)", kSyntheticDelayCategoryFilterPrefix,
-                  category.c_str());
-    ++token_cnt;
-  }
-}
-
-bool TraceConfig::IsCategoryEnabled(const char* category_name) const {
-  // Check the disabled- filters and the disabled-* wildcard first so that a
-  // "*" filter does not include the disabled.
-  for (const std::string& category : disabled_categories_) {
-    if (MatchPattern(category_name, category))
-      return true;
-  }
-
-  if (MatchPattern(category_name, TRACE_DISABLED_BY_DEFAULT("*")))
-    return false;
-
-  for (const std::string& category : included_categories_) {
-    if (MatchPattern(category_name, category))
-      return true;
-  }
-
-  return false;
-}
-
-bool TraceConfig::IsEmptyOrContainsLeadingOrTrailingWhitespace(
-    StringPiece str) {
-  return str.empty() || str.front() == ' ' || str.back() == ' ';
-}
-
-bool TraceConfig::HasIncludedPatterns() const {
-  return !included_categories_.empty();
 }
 
 }  // namespace trace_event

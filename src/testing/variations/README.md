@@ -1,14 +1,14 @@
 # Field Trial Testing Configuration
 
-This directory contains the field trial configuration used to ensure testing
-coverage of the experiments defined in `fieldtrial_testing_config.json`.
+This directory contains the `fieldtrial_testing_config.json` configuration file,
+which is used to ensure test coverage of active field trials.
 
-Note that these apply specifically for Chromium builds. Chrome branded /
-official builds do not use these definitions.
+For each study, the first available experiment after platform filtering is used
+as the default experiment for Chromium builds. This experiment is also used for
+perf bots and browser tests in the waterfall.
 
-The first available experiment after platform filtering and concatenation is the
-default experiment for Chromium builds. This experiment is also used for perf
-bots and browser tests in the waterfall.
+> Note: This configuration applies specifically to Chromium developer builds.
+> Chrome branded / official builds do not use these definitions.
 
 ## Config File Format
 
@@ -35,27 +35,55 @@ bots and browser tests in the waterfall.
 ```
 
 The config file is a dictionary at the top level mapping a study name to an
-array of *study configurations*. The study name should match the Field Trial
-study name.
+array of *study configurations*. The study name in the configuration file should
+match the FieldTrial name used in the Chromium client code.
+
+> Note: Many newer studies do not use study names in the client code at all, and
+> rely on the [Feature List API][FeatureListAPI] instead. Nonetheless, if a
+> study has a server-side configuration, the study `name` specified here should
+> match the name specified in the server-side configuration; this is used to
+> implement sanity-checks on the server.
 
 ### Study Configurations
 
-Each *study configuration* is a dictionary containing both `platform` and
+Each *study configuration* is a dictionary containing `platforms` and
 `experiments`.
 
-`platform` is an array of strings of valid platforms and the
+`platforms` is an array of strings, indicating the targetted platforms. The
 strings may be `android`, `chromeos`, `ios`, `linux`, `mac`, or `windows`.
 
 `experiments` is an array containing the *experiments*.
 
-The converter uses the platforms array to determine what experiments to include
-for the study. All matching platforms will have their experiments concatenated
-together for the study.
+The converter uses the `platforms` array to determine which experiment to use
+for the study. The first experiment matching the active platform will be used.
+
+> Note: While `experiments` is defined as an array, currently only the first
+> entry is used*\**. We would love to be able to test all possible study
+> configurations, but don't currently have the buildbot resources to do so.
+> Hence, the current best-practice is to identify which experiment group is the
+> most likely candidate for ultimate launch, and to test that configuration. If
+> there is a server-side configuration for this study, it's typically
+> appropriate to copy/paste one of the experiment definitions into this file.
+>
+> *\**
+> <small>
+>   Technically, there is one exception: If there's a forcing_flag group
+>   specified in the config, that group will be used if there's a corresponding
+>   forcing_flag specified on the command line. You, dear reader, should
+>   probably not use this fancy mechanism unless you're <em>quite</em> sure you
+>   know what you're doing =)
+> </small>
 
 ### Experiments (Groups)
 Each *experiment* is a dictionary that must contain the `name` key, identifying
-the experiment group name which should match the Field Trial experiment group
-name.
+the experiment group name. This name should match the FieldTrial experiment
+group name used in the Chromium client code.
+
+> Note: Many newer studies do not use experiment names in the client code at
+> all, and rely on the [Feature List API][FeatureListAPI] instead. Nonetheless,
+> if a study has a server-side configuration, the experiment `name` specified
+> here should match the name specified in the server-side configuration; this is
+> used to implement sanity-checks on the server.
 
 The remaining keys, `params`, `enable_features`, and `disable_features` are
 optional.
@@ -63,11 +91,14 @@ optional.
 `params` is a dictionary mapping parameter name to parameter.
 
 `enable_features` and `disable_features` indicate which features should be
-enabled and disabled respectively through the
-[Feature List API](https://cs.chromium.org/chromium/src/base/feature_list.h). As
-a reminder, as the variations framework does not actually fetch the Field Trial
-definitions from the server for Chromium builds, so any feature enabling or
-disabling must be done here.
+enabled and disabled, respectively, through the
+[Feature List API][FeatureListAPI].
+
+> Reminder: The variations framework does not actually fetch any field trial
+> definitions from the server for Chromium builds, so any feature enabling or
+> disabling must be configured here.
+
+[FeatureListAPI]: https://cs.chromium.org/chromium/src/base/feature_list.h
 
 #### Comments
 

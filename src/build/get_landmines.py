@@ -72,7 +72,8 @@ def print_landmines():
     print 'Clobber to remove libsystem.dylib. See crbug.com/620075'
   if platform() == 'mac':
     print 'Clobber to get past mojo gen build error (crbug.com/679607)'
-
+  if platform() == 'win':
+    print 'Clobber Windows to fix strange PCH-not-rebuilt errors.'
 
 def main():
   print_landmines()

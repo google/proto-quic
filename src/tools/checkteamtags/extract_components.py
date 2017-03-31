@@ -124,6 +124,28 @@ def display_stat(stats, root, options):
               file_pct_with_team_component_by_depth}
 
 
+def display_missing_info_OWNERS_files(stats, num_output_depth):
+  """Display OWNERS files that have missing team and component by depth.
+
+  OWNERS files that have no team and no component information will be shown
+  for each depth level (up to the level given by num_output_depth).
+
+  Args:
+    stats (dict): The statistics in dictionary form as produced by the
+      owners_file_tags module.
+    num_output_depth (int): number of levels to be displayed.
+  """
+  print "OWNERS files that have missing team and component by depth:"
+  max_output_depth = len(stats['OWNERS-count-by-depth'])
+  if (num_output_depth < 0
+      or num_output_depth > max_output_depth):
+    num_output_depth = max_output_depth
+
+  for depth in range(0, num_output_depth):
+    print 'at depth %(depth)d'%{'depth': depth}
+    print stats['OWNERS-missing-info-by-depth'][depth]
+
+
 def main(argv):
   usage = """Usage: python %prog [options] [<root_dir>]
   root_dir  specifies the topmost directory to traverse looking for OWNERS
@@ -138,6 +160,7 @@ Examples:
   python %prog -o ~/components.json /b/build/src
   python %prog -c /b/build/src
   python %prog -s 3 /b/build/src
+  python %prog -m 2 /b/build/src
   """
   parser = optparse.OptionParser(usage=usage)
   parser.add_option('-w', '--write', action='store_true',
@@ -156,6 +179,9 @@ Examples:
   parser.add_option('--include-subdirs', action='store_true', default=False,
                     help='List subdirectories without OWNERS file or component '
                     'tag as having same component as parent')
+  parser.add_option('-m', '--list_missing_info_by_depth', type="int",
+                    help='List OWNERS files that have missing team and '
+                    'component information by depth')
   options, args = parser.parse_args(argv[1:])
   if args:
     root = args[0]
@@ -173,6 +199,10 @@ Examples:
 
   if options.stat_coverage or options.complete_coverage:
     display_stat(stats, root, options)
+
+  if options.list_missing_info_by_depth:
+    display_missing_info_OWNERS_files(stats,
+                                      options.list_missing_info_by_depth)
 
   mappings['AAA-README']= _README
   mapping_file_contents = json.dumps(mappings, sort_keys=True, indent=2)

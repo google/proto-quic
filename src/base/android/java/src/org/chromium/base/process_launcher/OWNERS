@@ -1,3 +1,6 @@
 boliu@chromium.org
 mariakhomenko@chromium.org
 jcivelli@chromium.org
+
+per-file *.aidl=set noparent
+per-file *.aidl=file://ipc/SECURITY_OWNERS

@@ -6518,6 +6518,52 @@ TEST_F(SpdyNetworkTransactionTest, ResponseAndRstStreamBeforePostDataSent) {
   EXPECT_EQ("hello!", out.response_data);
 }
 
+// Unsupported frames must be ignored.  This is especially important for frame
+// type 0xb, which used to be the BLOCKED frame in previous versions of SPDY,
+// but is going to be used for the ORIGIN frame.
+// TODO(bnc): Implement ORIGIN frame support.  https://crbug.com/697333
+TEST_F(SpdyNetworkTransactionTest, IgnoreUnsupportedOriginFrame) {
+  SpdySerializedFrame req(
+      spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
+  MockWrite writes[] = {CreateMockWrite(req, 0)};
+
+  const char origin_frame_on_stream_zero[] = {
+      0x00, 0x00, 0x05,        // Length
+      0x0b,                    // Type
+      0x00,                    // Flags
+      0x00, 0x00, 0x00, 0x00,  // Stream ID
+      0x00, 0x03,              // Origin-Len
+      'f',  'o',  'o'          // ASCII-Origin
+  };
+
+  const char origin_frame_on_stream_one[] = {
+      0x00, 0x00, 0x05,        // Length
+      0x0b,                    // Type
+      0x00,                    // Flags
+      0x00, 0x00, 0x00, 0x01,  // Stream ID
+      0x00, 0x03,              // Origin-Len
+      'b',  'a',  'r'          // ASCII-Origin
+  };
+
+  SpdySerializedFrame resp(spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
+  SpdySerializedFrame body(spdy_util_.ConstructSpdyDataFrame(1, true));
+  MockRead reads[] = {MockRead(ASYNC, origin_frame_on_stream_zero,
+                               arraysize(origin_frame_on_stream_zero), 1),
+                      CreateMockRead(resp, 2),
+                      MockRead(ASYNC, origin_frame_on_stream_one,
+                               arraysize(origin_frame_on_stream_one), 3),
+                      CreateMockRead(body, 4), MockRead(ASYNC, 0, 5)};
+
+  SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
+  NormalSpdyTransactionHelper helper(CreateGetRequest(), DEFAULT_PRIORITY,
+                                     NetLogWithSource(), nullptr);
+  helper.RunToCompletion(&data);
+  TransactionHelperResult out = helper.output();
+  EXPECT_THAT(out.rv, IsOk());
+  EXPECT_EQ("HTTP/1.1 200", out.status_line);
+  EXPECT_EQ("hello!", out.response_data);
+}
+
 class SpdyNetworkTransactionTLSUsageCheckTest
     : public SpdyNetworkTransactionTest {
  protected:

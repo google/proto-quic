@@ -79,7 +79,7 @@ GURL::GURL(const GURL& other)
   DCHECK(!is_valid_ || !SchemeIsFileSystem() || inner_url_);
 }
 
-GURL::GURL(GURL&& other)
+GURL::GURL(GURL&& other) noexcept
     : spec_(std::move(other.spec_)),
       is_valid_(other.is_valid_),
       parsed_(other.parsed_),

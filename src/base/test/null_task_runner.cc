@@ -10,16 +10,15 @@ NullTaskRunner::NullTaskRunner() {}
 
 NullTaskRunner::~NullTaskRunner() {}
 
-bool NullTaskRunner::PostDelayedTask(
-    const tracked_objects::Location& from_here,
-    const base::Closure& task,
-    base::TimeDelta delay) {
+bool NullTaskRunner::PostDelayedTask(const tracked_objects::Location& from_here,
+                                     Closure task,
+                                     base::TimeDelta delay) {
   return false;
 }
 
 bool NullTaskRunner::PostNonNestableDelayedTask(
     const tracked_objects::Location& from_here,
-    const base::Closure& task,
+    Closure task,
     base::TimeDelta delay) {
   return false;
 }

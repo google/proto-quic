@@ -756,6 +756,10 @@ def RunTestsInPlatformMode(args):
           dst = logdog_helper.open_text('unified_logcats')
           if dst:
             shutil.copyfileobj(src, dst)
+            dst.close()
+            logging.critical(
+                'Logcat: %s', logdog_helper.get_viewer_url('unified_logcats'))
+
 
   logcats_uploader = contextlib_ext.Optional(
       upload_logcats_file(),

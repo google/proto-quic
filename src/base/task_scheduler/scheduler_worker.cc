@@ -331,8 +331,12 @@ void SchedulerWorker::CreateThreadAssertSynchronized() {
 }
 
 bool SchedulerWorker::ShouldExit() {
-  return task_tracker_->IsShutdownComplete() ||
-         join_called_for_testing_.IsSet() || should_exit_.IsSet();
+  // The ordering of the checks is important below. This SchedulerWorker may be
+  // released and outlive |task_tracker_| in unit tests. However, when the
+  // SchedulerWorker is released, |should_exit_| will be set, so check that
+  // first.
+  return should_exit_.IsSet() || join_called_for_testing_.IsSet() ||
+         task_tracker_->IsShutdownComplete();
 }
 
 }  // namespace internal

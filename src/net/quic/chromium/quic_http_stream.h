@@ -18,6 +18,7 @@
 #include "net/base/load_timing_info.h"
 #include "net/base/net_export.h"
 #include "net/http/http_response_info.h"
+#include "net/http/http_server_properties.h"
 #include "net/log/net_log_with_source.h"
 #include "net/quic/chromium/quic_chromium_client_session.h"
 #include "net/quic/chromium/quic_chromium_client_stream.h"
@@ -40,8 +41,8 @@ class NET_EXPORT_PRIVATE QuicHttpStream
       public QuicClientPushPromiseIndex::Delegate,
       public MultiplexedHttpStream {
  public:
-  explicit QuicHttpStream(
-      const base::WeakPtr<QuicChromiumClientSession>& session);
+  QuicHttpStream(const base::WeakPtr<QuicChromiumClientSession>& session,
+                 HttpServerProperties* http_server_properties);
 
   ~QuicHttpStream() override;
 
@@ -137,6 +138,9 @@ class NET_EXPORT_PRIVATE QuicHttpStream
   State next_state_;
 
   base::WeakPtr<QuicChromiumClientSession> session_;
+
+  HttpServerProperties* http_server_properties_;
+
   QuicVersion quic_version_;
   int session_error_;             // Error code from the connection shutdown.
   bool was_handshake_confirmed_;  // True if the crypto handshake succeeded.

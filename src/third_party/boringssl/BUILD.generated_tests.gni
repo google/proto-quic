@@ -16,7 +16,10 @@ test_support_sources = [
 ]
 
 crypto_test_sources = [
+  "src/crypto/asn1/asn1_test.cc",
+  "src/crypto/bio/bio_test.cc",
   "src/crypto/chacha/chacha_test.cc",
+  "src/crypto/constant_time_test.cc",
   "src/crypto/curve25519/x25519_test.cc",
   "src/crypto/dh/dh_test.cc",
   "src/crypto/dsa/dsa_test.cc",
@@ -45,33 +48,9 @@ template("create_tests") {
     deps = invoker.deps
   }
 
-  executable("boringssl_asn1_test") {
-    sources = [
-      "src/crypto/asn1/asn1_test.cc",
-    ]
-    sources += test_support_sources
-    if (defined(invoker.configs_exclude)) {
-      configs -= invoker.configs_exclude
-    }
-    configs += invoker.configs
-    deps = invoker.deps
-  }
-
   executable("boringssl_base64_test") {
     sources = [
       "src/crypto/base64/base64_test.cc",
-    ]
-    sources += test_support_sources
-    if (defined(invoker.configs_exclude)) {
-      configs -= invoker.configs_exclude
-    }
-    configs += invoker.configs
-    deps = invoker.deps
-  }
-
-  executable("boringssl_bio_test") {
-    sources = [
-      "src/crypto/bio/bio_test.cc",
     ]
     sources += test_support_sources
     if (defined(invoker.configs_exclude)) {
@@ -132,18 +111,6 @@ template("create_tests") {
   executable("boringssl_cmac_test") {
     sources = [
       "src/crypto/cmac/cmac_test.cc",
-    ]
-    sources += test_support_sources
-    if (defined(invoker.configs_exclude)) {
-      configs -= invoker.configs_exclude
-    }
-    configs += invoker.configs
-    deps = invoker.deps
-  }
-
-  executable("boringssl_constant_time_test") {
-    sources = [
-      "src/crypto/constant_time_test.cc",
     ]
     sources += test_support_sources
     if (defined(invoker.configs_exclude)) {
@@ -469,14 +436,11 @@ template("create_tests") {
     deps = [
       ":boringssl_aead_test",
       ":boringssl_aes_test",
-      ":boringssl_asn1_test",
       ":boringssl_base64_test",
-      ":boringssl_bio_test",
       ":boringssl_bn_test",
       ":boringssl_bytestring_test",
       ":boringssl_cipher_test",
       ":boringssl_cmac_test",
-      ":boringssl_constant_time_test",
       ":boringssl_digest_test",
       ":boringssl_ecdh_test",
       ":boringssl_ecdsa_sign_test",

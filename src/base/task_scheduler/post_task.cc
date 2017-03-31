@@ -21,8 +21,8 @@ class PostTaskAndReplyTaskRunner : public internal::PostTaskAndReplyImpl {
 
  private:
   bool PostTask(const tracked_objects::Location& from_here,
-                const Closure& task) override {
-    PostTaskWithTraits(from_here, traits_, task);
+                Closure task) override {
+    PostTaskWithTraits(from_here, traits_, std::move(task));
     return true;
   }
 
@@ -32,14 +32,14 @@ class PostTaskAndReplyTaskRunner : public internal::PostTaskAndReplyImpl {
 
 }  // namespace
 
-void PostTask(const tracked_objects::Location& from_here, const Closure& task) {
-  PostDelayedTask(from_here, task, TimeDelta());
+void PostTask(const tracked_objects::Location& from_here, Closure task) {
+  PostDelayedTask(from_here, std::move(task), TimeDelta());
 }
 
 void PostDelayedTask(const tracked_objects::Location& from_here,
-                     const Closure& task,
+                     Closure task,
                      TimeDelta delay) {
-  PostDelayedTaskWithTraits(from_here, TaskTraits(), task, delay);
+  PostDelayedTaskWithTraits(from_here, TaskTraits(), std::move(task), delay);
 }
 
 void PostTaskAndReply(const tracked_objects::Location& from_here,
@@ -51,18 +51,18 @@ void PostTaskAndReply(const tracked_objects::Location& from_here,
 
 void PostTaskWithTraits(const tracked_objects::Location& from_here,
                         const TaskTraits& traits,
-                        const Closure& task) {
-  PostDelayedTaskWithTraits(from_here, traits, task, TimeDelta());
+                        Closure task) {
+  PostDelayedTaskWithTraits(from_here, traits, std::move(task), TimeDelta());
 }
 
 void PostDelayedTaskWithTraits(const tracked_objects::Location& from_here,
                                const TaskTraits& traits,
-                               const Closure& task,
+                               Closure task,
                                TimeDelta delay) {
   DCHECK(TaskScheduler::GetInstance())
       << "Ref. Prerequisite section of post_task.h";
-  TaskScheduler::GetInstance()->PostDelayedTaskWithTraits(from_here, traits,
-                                                          task, delay);
+  TaskScheduler::GetInstance()->PostDelayedTaskWithTraits(
+      from_here, traits, std::move(task), delay);
 }
 
 void PostTaskWithTraitsAndReply(const tracked_objects::Location& from_here,
@@ -94,5 +94,14 @@ scoped_refptr<SingleThreadTaskRunner> CreateSingleThreadTaskRunnerWithTraits(
   return TaskScheduler::GetInstance()->CreateSingleThreadTaskRunnerWithTraits(
       traits);
 }
+
+#if defined(OS_WIN)
+scoped_refptr<SingleThreadTaskRunner> CreateCOMSTATaskRunnerWithTraits(
+    const TaskTraits& traits) {
+  DCHECK(TaskScheduler::GetInstance())
+      << "Ref. Prerequisite section of post_task.h";
+  return TaskScheduler::GetInstance()->CreateCOMSTATaskRunnerWithTraits(traits);
+}
+#endif  // defined(OS_WIN)
 
 }  // namespace base

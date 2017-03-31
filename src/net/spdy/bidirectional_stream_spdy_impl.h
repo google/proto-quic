@@ -18,6 +18,7 @@
 #include "net/http/bidirectional_stream_impl.h"
 #include "net/http/bidirectional_stream_request_info.h"
 #include "net/http/http_request_info.h"
+#include "net/log/net_log_source.h"
 #include "net/spdy/spdy_read_queue.h"
 #include "net/spdy/spdy_session.h"
 #include "net/spdy/spdy_stream.h"
@@ -36,8 +37,8 @@ class NET_EXPORT_PRIVATE BidirectionalStreamSpdyImpl
     : public BidirectionalStreamImpl,
       public SpdyStream::Delegate {
  public:
-  explicit BidirectionalStreamSpdyImpl(
-      const base::WeakPtr<SpdySession>& spdy_session);
+  BidirectionalStreamSpdyImpl(const base::WeakPtr<SpdySession>& spdy_session,
+                              NetLogSource source_dependency);
 
   ~BidirectionalStreamSpdyImpl() override;
 
@@ -67,6 +68,7 @@ class NET_EXPORT_PRIVATE BidirectionalStreamSpdyImpl
   void OnDataSent() override;
   void OnTrailers(const SpdyHeaderBlock& trailers) override;
   void OnClose(int status) override;
+  NetLogSource source_dependency() const override;
 
  private:
   int SendRequestHeadersHelper();
@@ -87,6 +89,7 @@ class NET_EXPORT_PRIVATE BidirectionalStreamSpdyImpl
   std::unique_ptr<base::Timer> timer_;
   SpdyStreamRequest stream_request_;
   base::WeakPtr<SpdyStream> stream_;
+  const NetLogSource source_dependency_;
 
   NextProto negotiated_protocol_;
 

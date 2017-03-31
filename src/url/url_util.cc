@@ -81,6 +81,10 @@ const char* kWebStorageSchemes[] = {
   kWssScheme,
 };
 
+const char* kEmptyDocumentSchemes[] = {
+    kAboutScheme,
+};
+
 bool initialized = false;
 
 // Lists of the currently installed standard and referrer schemes. These lists
@@ -96,6 +100,7 @@ std::vector<std::string>* no_access_schemes = nullptr;
 std::vector<std::string>* cors_enabled_schemes = nullptr;
 std::vector<std::string>* web_storage_schemes = nullptr;
 std::vector<std::string>* csp_bypassing_schemes = nullptr;
+std::vector<std::string>* empty_document_schemes = nullptr;
 
 // See the LockSchemeRegistries declaration in the header.
 bool scheme_registries_locked = false;
@@ -525,6 +530,8 @@ void Initialize() {
   InitSchemes(&web_storage_schemes, kWebStorageSchemes,
               arraysize(kWebStorageSchemes));
   InitSchemes(&csp_bypassing_schemes, nullptr, 0);
+  InitSchemes(&empty_document_schemes, kEmptyDocumentSchemes,
+              arraysize(kEmptyDocumentSchemes));
   initialized = true;
 }
 
@@ -546,6 +553,8 @@ void Shutdown() {
   web_storage_schemes = nullptr;
   delete csp_bypassing_schemes;
   csp_bypassing_schemes = nullptr;
+  delete empty_document_schemes;
+  empty_document_schemes = nullptr;
 }
 
 void AddStandardScheme(const char* new_scheme, SchemeType type) {
@@ -616,6 +625,16 @@ void AddCSPBypassingScheme(const char* new_scheme) {
 const std::vector<std::string>& GetCSPBypassingSchemes() {
   Initialize();
   return *csp_bypassing_schemes;
+}
+
+void AddEmptyDocumentScheme(const char* new_scheme) {
+  Initialize();
+  DoAddScheme(new_scheme, empty_document_schemes);
+}
+
+const std::vector<std::string>& GetEmptyDocumentSchemes() {
+  Initialize();
+  return *empty_document_schemes;
 }
 
 void LockSchemeRegistries() {

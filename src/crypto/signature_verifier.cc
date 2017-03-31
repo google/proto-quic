@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "base/logging.h"
+#include "base/numerics/safe_conversions.h"
 #include "crypto/openssl_util.h"
 #include "third_party/boringssl/src/include/openssl/bytestring.h"
 #include "third_party/boringssl/src/include/openssl/digest.h"
@@ -42,9 +43,9 @@ SignatureVerifier::~SignatureVerifier() {}
 
 bool SignatureVerifier::VerifyInit(SignatureAlgorithm signature_algorithm,
                                    const uint8_t* signature,
-                                   int signature_len,
+                                   size_t signature_len,
                                    const uint8_t* public_key_info,
-                                   int public_key_info_len) {
+                                   size_t public_key_info_len) {
   int pkey_type = EVP_PKEY_NONE;
   const EVP_MD* digest = nullptr;
   switch (signature_algorithm) {
@@ -70,11 +71,11 @@ bool SignatureVerifier::VerifyInit(SignatureAlgorithm signature_algorithm,
 
 bool SignatureVerifier::VerifyInitRSAPSS(HashAlgorithm hash_alg,
                                          HashAlgorithm mask_hash_alg,
-                                         int salt_len,
+                                         size_t salt_len,
                                          const uint8_t* signature,
-                                         int signature_len,
+                                         size_t signature_len,
                                          const uint8_t* public_key_info,
-                                         int public_key_info_len) {
+                                         size_t public_key_info_len) {
   OpenSSLErrStackTracer err_tracer(FROM_HERE);
   const EVP_MD* const digest = ToOpenSSLDigest(hash_alg);
   DCHECK(digest);
@@ -97,15 +98,16 @@ bool SignatureVerifier::VerifyInitRSAPSS(HashAlgorithm hash_alg,
     return false;
   }
   return EVP_PKEY_CTX_set_rsa_mgf1_md(pkey_ctx, mgf_digest) &&
-         EVP_PKEY_CTX_set_rsa_pss_saltlen(pkey_ctx, salt_len);
+         EVP_PKEY_CTX_set_rsa_pss_saltlen(pkey_ctx,
+                                          base::checked_cast<int>(salt_len));
 }
 
 void SignatureVerifier::VerifyUpdate(const uint8_t* data_part,
-                                     int data_part_len) {
+                                     size_t data_part_len) {
   DCHECK(verify_context_);
   OpenSSLErrStackTracer err_tracer(FROM_HERE);
-  int rv = EVP_DigestVerifyUpdate(verify_context_->ctx.get(),
-                                  data_part, data_part_len);
+  int rv = EVP_DigestVerifyUpdate(verify_context_->ctx.get(), data_part,
+                                  data_part_len);
   DCHECK_EQ(rv, 1);
 }
 
@@ -122,9 +124,9 @@ bool SignatureVerifier::VerifyFinal() {
 bool SignatureVerifier::CommonInit(int pkey_type,
                                    const EVP_MD* digest,
                                    const uint8_t* signature,
-                                   int signature_len,
+                                   size_t signature_len,
                                    const uint8_t* public_key_info,
-                                   int public_key_info_len,
+                                   size_t public_key_info_len,
                                    EVP_PKEY_CTX** pkey_ctx) {
   if (verify_context_)
     return false;

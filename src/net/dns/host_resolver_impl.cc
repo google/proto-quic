@@ -2156,7 +2156,8 @@ int HostResolverImpl::ResolveHelper(const Key& key,
   }
   if (ServeFromCache(key, info, &net_error, addresses, allow_stale,
                      stale_info)) {
-    source_net_log.AddEvent(NetLogEventType::HOST_RESOLVER_IMPL_CACHE_HIT);
+    source_net_log.AddEvent(NetLogEventType::HOST_RESOLVER_IMPL_CACHE_HIT,
+                            addresses->CreateNetLogCallback());
     // |ServeFromCache()| will set |*stale_info| as needed.
     RunCacheHitCallbacks(key, info);
     return net_error;
@@ -2164,7 +2165,8 @@ int HostResolverImpl::ResolveHelper(const Key& key,
   // TODO(szym): Do not do this if nsswitch.conf instructs not to.
   // http://crbug.com/117655
   if (ServeFromHosts(key, info, addresses)) {
-    source_net_log.AddEvent(NetLogEventType::HOST_RESOLVER_IMPL_HOSTS_HIT);
+    source_net_log.AddEvent(NetLogEventType::HOST_RESOLVER_IMPL_HOSTS_HIT,
+                            addresses->CreateNetLogCallback());
     MakeNotStale(stale_info);
     return OK;
   }
@@ -2591,11 +2593,11 @@ void HostResolverImpl::UpdateDNSConfig(bool config_changed) {
 
   if (config_changed) {
     // If the DNS server has changed, existing cached info could be wrong so we
-    // have to drop our internal cache :( Note that OS level DNS caches, such
+    // have to expire our internal cache :( Note that OS level DNS caches, such
     // as NSCD's cache should be dropped automatically by the OS when
     // resolv.conf changes so we don't need to do anything to clear that cache.
     if (cache_.get()) {
-      cache_->clear();
+      cache_->OnNetworkChange();
       cache_hit_callbacks_.clear();
     }
 

@@ -28,6 +28,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include <google/protobuf/arena.h>
 #include <google/protobuf/extension_set.h>
 #include <google/protobuf/generated_message_util.h>
 #include <google/protobuf/stubs/atomicops.h>
@@ -35,6 +36,14 @@
 
 namespace google {
 namespace protobuf {
+
+#if !defined(GOOGLE_PROTOBUF_NO_THREADLOCAL) && defined(PROTOBUF_USE_DLLS)
+Arena::ThreadCache& Arena::cr_thread_cache() {
+  static GOOGLE_THREAD_LOCAL ThreadCache cr_thread_cache_ = {-1, NULL};
+  return cr_thread_cache_;
+}
+#endif
+
 namespace internal {
 
 SequenceNumber cr_lifecycle_id_generator_;

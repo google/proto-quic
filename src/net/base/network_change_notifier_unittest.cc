@@ -123,4 +123,9 @@ TEST(NetworkChangeNotifierTest, IgnoreVMInterfaces) {
             NetworkChangeNotifier::ConnectionTypeFromInterfaceList(list));
 }
 
+TEST(NetworkChangeNotifierTest, GetConnectionSubtype) {
+  // Call GetConnectionSubtype() and ensure that there is no crash.
+  NetworkChangeNotifier::GetConnectionSubtype();
+}
+
 }  // namespace net

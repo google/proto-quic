@@ -1409,7 +1409,7 @@ should be able to be added at any place in this file.
   <owner>mariakhomenko@chromium.org</owner>
   <owner>tedchoc@chromium.org</owner>
   <description>
-    An instant app was launched from the website settings popup.
+    An instant app was launched from the page info popup.
   </description>
 </action>
 
@@ -4460,6 +4460,7 @@ should be able to be added at any place in this file.
 <action name="FirstRunDef_Accept">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>Deprecated 02/2017.</obsolete>
 </action>
 
 <action name="Flash.JavaScriptUsed" not_user_triggered="true">
@@ -10368,11 +10369,51 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="MobileStartup.MainIntent.NTPCreatedDueToInactivity">
+  <owner>tedchoc@chromium.org</owner>
+  <description>
+    An ACTION_MAIN intent was received by Chrome and an NTP was created due to
+    the time elapsed since Chrome was last visited.
+  </description>
+</action>
+
 <action name="MobileStartup.MainIntentReceived">
   <owner>tedchoc@chromium.org</owner>
   <description>
     An ACTION_MAIN intent was received by Chrome.  This is the best indicator we
     have to signal the user tapped on the Chrome icon from the launcher.
+  </description>
+</action>
+
+<action name="MobileStartup.MainIntentReceived.After12Hours">
+  <owner>tedchoc@chromium.org</owner>
+  <description>
+    An ACTION_MAIN intent was received by Chrome after the user had not used
+    Chrome for 12 hours but fewer than 24 hours.
+  </description>
+</action>
+
+<action name="MobileStartup.MainIntentReceived.After1Hour">
+  <owner>tedchoc@chromium.org</owner>
+  <description>
+    An ACTION_MAIN intent was received by Chrome after the user had not used
+    Chrome for 1 hour but fewer than 6 hours.
+  </description>
+</action>
+
+<action name="MobileStartup.MainIntentReceived.After24Hours">
+  <owner>tedchoc@chromium.org</owner>
+  <description>
+    An ACTION_MAIN intent was received by Chrome after the user had not used
+    Chrome for 24 hours.
+  </description>
+</action>
+
+<action name="MobileStartup.MainIntentReceived.After6Hours">
+  <owner>tedchoc@chromium.org</owner>
+  <description>
+    An ACTION_MAIN intent was received by Chrome after the user had not used
+    Chrome for 6 hours but fewer than 12 hours.
   </description>
 </action>
 
@@ -10517,13 +10558,13 @@ should be able to be added at any place in this file.
 
 <action name="MobileWebsiteSettingsOpenedFromMenu">
   <owner>tedchoc@chromium.org</owner>
-  <description>Website Settings opened via the menu.</description>
+  <description>Page Info opened via the menu.</description>
 </action>
 
 <action name="MobileWebsiteSettingsOpenedFromToolbar">
   <owner>tedchoc@chromium.org</owner>
   <description>
-    Website Settings opened via the toolbar page info (i.e. https lock) icon.
+    Page Info opened via the toolbar page info (i.e. https lock) icon.
   </description>
 </action>
 

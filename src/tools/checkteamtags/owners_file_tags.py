@@ -62,6 +62,7 @@ def aggregate_components_from_owners(root, include_subdirs=False):
   warnings = []
   component_to_team = defaultdict(set)
   dir_to_component = {}
+  dir_missing_info_by_depth = defaultdict(list)
   # TODO(sergiyb): Remove this mapping. Please do not use it as it is going to
   # be removed in the future. See http://crbug.com/702202.
   dir_to_team = {}
@@ -86,6 +87,8 @@ def aggregate_components_from_owners(root, include_subdirs=False):
           component_to_team[component].add(team)
       else:
         warnings.append('%s has no COMPONENT tag' % owners_rel_path)
+        if not team:
+          dir_missing_info_by_depth[file_depth].append(owners_rel_path)
 
       # Add dir-to-team mapping unless there is also dir-to-component mapping.
       if (include_subdirs and team and not component and
@@ -111,7 +114,9 @@ def aggregate_components_from_owners(root, include_subdirs=False):
            'OWNERS-with-component-only-count-by-depth':
            num_with_component_by_depth,
            'OWNERS-with-team-and-component-count-by-depth':
-           num_with_team_component_by_depth}
+           num_with_team_component_by_depth,
+           'OWNERS-missing-info-by-depth':
+           dir_missing_info_by_depth}
   return unwrap(mappings), warnings, errors, stats
 
 

@@ -225,7 +225,8 @@ void HttpStreamFactoryImpl::OnNewSpdySessionReady(
     const ProxyInfo& used_proxy_info,
     bool was_alpn_negotiated,
     NextProto negotiated_protocol,
-    bool using_spdy) {
+    bool using_spdy,
+    NetLogSource source_dependency) {
   while (true) {
     if (!spdy_session)
       break;
@@ -249,13 +250,13 @@ void HttpStreamFactoryImpl::OnNewSpdySessionReady(
                HttpStreamRequest::BIDIRECTIONAL_STREAM) {
       request->OnBidirectionalStreamImplReady(
           used_ssl_config, used_proxy_info,
-          new BidirectionalStreamSpdyImpl(spdy_session));
+          new BidirectionalStreamSpdyImpl(spdy_session, source_dependency));
     } else {
       bool use_relative_url =
           direct || request->url().SchemeIs(url::kHttpsScheme);
-      request->OnStreamReady(
-          used_ssl_config, used_proxy_info,
-          new SpdyHttpStream(spdy_session, use_relative_url));
+      request->OnStreamReady(used_ssl_config, used_proxy_info,
+                             new SpdyHttpStream(spdy_session, use_relative_url,
+                                                source_dependency));
     }
   }
   // TODO(mbelshe): Alert other valid requests.

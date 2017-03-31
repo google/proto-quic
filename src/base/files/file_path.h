@@ -184,7 +184,7 @@ class BASE_EXPORT FilePath {
 
   // Constructs FilePath with the contents of |that|, which is left in valid but
   // unspecified state.
-  FilePath(FilePath&& that);
+  FilePath(FilePath&& that) noexcept;
   // Replaces the contents with those of |that|, which is left in valid but
   // unspecified state.
   FilePath& operator=(FilePath&& that);

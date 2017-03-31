@@ -5,6 +5,7 @@
 #include "net/quic/test_tools/test_task_runner.h"
 
 #include <algorithm>
+#include <utility>
 
 #include "net/quic/test_tools/mock_clock.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -17,11 +18,11 @@ TestTaskRunner::TestTaskRunner(MockClock* clock) : clock_(clock) {}
 TestTaskRunner::~TestTaskRunner() {}
 
 bool TestTaskRunner::PostDelayedTask(const tracked_objects::Location& from_here,
-                                     const base::Closure& task,
+                                     base::Closure task,
                                      base::TimeDelta delay) {
   EXPECT_GE(delay, base::TimeDelta());
-  tasks_.push_back(PostedTask(from_here, task, clock_->NowInTicks(), delay,
-                              base::TestPendingTask::NESTABLE));
+  tasks_.push_back(PostedTask(from_here, std::move(task), clock_->NowInTicks(),
+                              delay, base::TestPendingTask::NESTABLE));
   return false;
 }
 

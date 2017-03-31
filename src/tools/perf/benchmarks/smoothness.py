@@ -153,7 +153,7 @@ class SmoothnessKeyDesktopMoveCases(_Smoothness):
               possible_browser.platform.GetOSName() == 'win')
 
 
-@benchmark.Disabled('all')
+@benchmark.Disabled('all') # crbug.com/702194
 #@benchmark.Enabled('android')
 @benchmark.Owner(emails=['vmiura@chromium.org', 'tdresser@chromium.org'])
 class SmoothnessKeyMobileSites(_Smoothness):
@@ -277,7 +277,7 @@ class SmoothnessGpuRasterizationFiltersCases(_Smoothness):
             possible_browser.browser_type == 'reference')
 
 
-@benchmark.Disabled('all')
+@benchmark.Disabled('all') # crbug.com/702194
 #@benchmark.Enabled('android')
 @benchmark.Owner(emails=['tdresser@chromium.org', 'rbyers@chromium.org'])
 class SmoothnessSyncScrollKeyMobileSites(_Smoothness):

@@ -10,13 +10,15 @@
 #include <vector>
 
 #include "base/base_export.h"
-#include "base/callback_forward.h"
+#include "base/callback.h"
 #include "base/memory/ref_counted.h"
 #include "base/sequenced_task_runner.h"
 #include "base/single_thread_task_runner.h"
 #include "base/task_runner.h"
+#include "base/task_scheduler/scheduler_worker_pool_params.h"
 #include "base/task_scheduler/task_traits.h"
 #include "base/time/time.h"
+#include "build/build_config.h"
 
 namespace gin {
 class V8Platform;
@@ -29,7 +31,6 @@ class Location;
 namespace base {
 
 class HistogramBase;
-class SchedulerWorkerPoolParams;
 
 // Interface for a task scheduler and static methods to manage the instance used
 // by the post_task.h API. Note: all base/task_scheduler users should go through
@@ -37,6 +38,22 @@ class SchedulerWorkerPoolParams;
 // which manages the process' instance.
 class BASE_EXPORT TaskScheduler {
  public:
+  struct BASE_EXPORT InitParams {
+    InitParams(
+        const SchedulerWorkerPoolParams& background_worker_pool_params_in,
+        const SchedulerWorkerPoolParams&
+            background_blocking_worker_pool_params_in,
+        const SchedulerWorkerPoolParams& foreground_worker_pool_params_in,
+        const SchedulerWorkerPoolParams&
+            foreground_blocking_worker_pool_params_in);
+    ~InitParams();
+
+    const SchedulerWorkerPoolParams background_worker_pool_params;
+    const SchedulerWorkerPoolParams background_blocking_worker_pool_params;
+    const SchedulerWorkerPoolParams foreground_worker_pool_params;
+    const SchedulerWorkerPoolParams foreground_blocking_worker_pool_params;
+  };
+
   // Returns the index of the worker pool in which a task with |traits| should
   // run. This should be coded in a future-proof way: new traits should
   // gracefully map to a default pool.
@@ -53,7 +70,7 @@ class BASE_EXPORT TaskScheduler {
   virtual void PostDelayedTaskWithTraits(
       const tracked_objects::Location& from_here,
       const TaskTraits& traits,
-      const Closure& task,
+      Closure task,
       TimeDelta delay) = 0;
 
   // Returns a TaskRunner whose PostTask invocations result in scheduling tasks
@@ -71,6 +88,19 @@ class BASE_EXPORT TaskScheduler {
   // order.
   virtual scoped_refptr<SingleThreadTaskRunner>
   CreateSingleThreadTaskRunnerWithTraits(const TaskTraits& traits) = 0;
+
+#if defined(OS_WIN)
+  // Returns a SingleThreadTaskRunner whose PostTask invocations result in
+  // scheduling tasks using |traits| in a COM Single-Threaded Apartment. Tasks
+  // run in the same Single-Threaded Apartment in posting order for the returned
+  // SingleThreadTaskRunner. There is not necessarily a one-to-one
+  // correspondence between SingleThreadTaskRunners and Single-Threaded
+  // Apartments. The implementation is free to share apartments or create new
+  // apartments as necessary. In either case, care should be taken to make sure
+  // COM pointers are not smuggled across apartments.
+  virtual scoped_refptr<SingleThreadTaskRunner>
+  CreateCOMSTATaskRunnerWithTraits(const TaskTraits& traits) = 0;
+#endif  // defined(OS_WIN)
 
   // Returns a vector of all histograms available in this task scheduler.
   virtual std::vector<const HistogramBase*> GetHistograms() const = 0;
@@ -121,10 +151,23 @@ class BASE_EXPORT TaskScheduler {
   // |worker_pool_index_for_traits_callback| returns the index in |worker_pools|
   // of the worker pool in which a task with given traits should run. For tests,
   // prefer base::test::ScopedTaskScheduler (ensures isolation).
+  //
+  // Deprecated. Use the overload below instead. https://crbug.com/690706
   static void CreateAndSetDefaultTaskScheduler(
       const std::vector<SchedulerWorkerPoolParams>& worker_pool_params_vector,
       const WorkerPoolIndexForTraitsCallback&
           worker_pool_index_for_traits_callback);
+
+  // Creates and sets a task scheduler using custom params. |name| is used to
+  // label threads and histograms. It should identify the component that creates
+  // the TaskScheduler. |init_params| is used to initialize the worker pools.
+  // CHECKs on failure. For tests, prefer base::test::ScopedTaskScheduler
+  // (ensures isolation).
+  //
+  // Note: The names and priority hints in |init_params| are ignored (ref. TODO
+  // to remove them).
+  static void CreateAndSetDefaultTaskScheduler(const std::string& name,
+                                               const InitParams& init_params);
 
   // Registers |task_scheduler| to handle tasks posted through the post_task.h
   // API for this process. For tests, prefer base::test::ScopedTaskScheduler

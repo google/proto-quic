@@ -11,6 +11,7 @@
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
 #include "base/path_service.h"
+#include "base/strings/string_util.h"
 #include "base/third_party/xdg_user_dirs/xdg_user_dir_lookup.h"
 
 namespace {
@@ -57,7 +58,8 @@ DesktopEnvironment GetDesktopEnvironment(Environment* env) {
   std::string xdg_current_desktop;
   if (env->GetVar("XDG_CURRENT_DESKTOP", &xdg_current_desktop)) {
     // Not all desktop environments set this env var as of this writing.
-    if (xdg_current_desktop == "Unity") {
+    if (base::StartsWith(xdg_current_desktop, "Unity",
+                         base::CompareCase::SENSITIVE)) {
       // gnome-fallback sessions set XDG_CURRENT_DESKTOP to Unity
       // DESKTOP_SESSION can be gnome-fallback or gnome-fallback-compiz
       std::string desktop_session;

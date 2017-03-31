@@ -306,6 +306,7 @@ TEST_P(QuicChromiumClientStreamTest, OnDataAvailableWithError) {
   InitializeHeaders();
   auto headers = AsHeaderList(headers_);
   ProcessHeadersFull(headers_);
+  EXPECT_CALL(session_, SendRstStream(kTestStreamId, QUIC_STREAM_CANCELLED, 0));
 
   const char data[] = "hello world!";
   stream_->OnStreamFrame(QuicStreamFrame(kTestStreamId, /*fin=*/false,

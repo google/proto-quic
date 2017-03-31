@@ -63,6 +63,8 @@ namespace fakeApi {
 
   callback BazGreekCallback = void(Baz baz, Greek greek);
 
+  callback OptionalParamCallback = void(optional Qux qux);
+
   interface Functions {
     // Does something exciting! And what's more, this is a multiline function
     // comment! It goes onto multiple lines!
@@ -75,6 +77,8 @@ namespace fakeApi {
     static void bazGreek(optional BazGreekCallback callback);
 
     [deprecated="Use a new method."] static DOMString returnString();
+
+    static void optionalParam(optional OptionalParamCallback callback);
   };
 
   interface Events {
@@ -203,6 +207,12 @@ chrome.fakeApi.bazGreek = function(callback) {};
  * @see https://developer.chrome.com/extensions/fakeApi#method-returnString
  */
 chrome.fakeApi.returnString = function() {};
+
+/**
+ * @param {function((!chrome.fakeApi.Qux|undefined)):void=} callback
+ * @see https://developer.chrome.com/extensions/fakeApi#method-optionalParam
+ */
+chrome.fakeApi.optionalParam = function(callback) {};
 
 /**
  * Fired when we realize it's a trap!

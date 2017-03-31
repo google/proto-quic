@@ -14,6 +14,7 @@
 
 #include "base/bind.h"
 #include "base/logging.h"
+#include "base/metrics/histogram_macros.h"
 #include "base/numerics/safe_conversions.h"
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
@@ -211,6 +212,7 @@ int WebSocketBasicStream::WriteEverything(
                    buffer,
                    callback));
     if (result > 0) {
+      UMA_HISTOGRAM_COUNTS_100000("Net.WebSocket.DataUse.Upstream", result);
       buffer->DidConsume(result);
     } else {
       return result;
@@ -230,6 +232,8 @@ void WebSocketBasicStream::OnWriteComplete(
   }
 
   DCHECK_NE(0, result);
+  UMA_HISTOGRAM_COUNTS_100000("Net.WebSocket.DataUse.Upstream", result);
+
   buffer->DidConsume(result);
   result = WriteEverything(buffer, callback);
   if (result != ERR_IO_PENDING)
@@ -245,6 +249,9 @@ int WebSocketBasicStream::HandleReadResult(
     return result;
   if (result == 0)
     return ERR_CONNECTION_CLOSED;
+
+  UMA_HISTOGRAM_COUNTS_100000("Net.WebSocket.DataUse.Downstream", result);
+
   std::vector<std::unique_ptr<WebSocketFrameChunk>> frame_chunks;
   if (!parser_.Decode(read_buffer_->data(), result, &frame_chunks))
     return WebSocketErrorToNetError(parser_.websocket_error());

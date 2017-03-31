@@ -23,6 +23,8 @@
 
 #if defined(OS_MACOSX)
 #include <malloc/malloc.h>
+
+#include "base/allocator/allocator_interception_mac.h"
 #endif
 
 // No calls to malloc / new in this file. They would would cause re-entrancy of
@@ -326,9 +328,11 @@ void InitializeAllocatorShim() {
   // traversed the shim this will route them to the default malloc zone.
   InitializeDefaultDispatchToMacAllocator();
 
+  MallocZoneFunctions functions = MallocZoneFunctionsToReplaceDefault();
+
   // This replaces the default malloc zone, causing calls to malloc & friends
   // from the codebase to be routed to ShimMalloc() above.
-  OverrideMacSymbols();
+  base::allocator::ReplaceFunctionsForStoredZones(&functions);
 }
 }  // namespace allocator
 }  // namespace base

@@ -51,7 +51,6 @@ class WebrtcDataChannel(_Webrtc):
     return 'webrtc.datachannel'
 
 
-@benchmark.Disabled('android')  # http://crbug.com/663802
 @benchmark.Owner(emails=['ehmaldonado@chromium.org', 'phoglund@chromium.org'])
 class WebrtcStressTest(perf_benchmark.PerfBenchmark):
   """Measures WebRtc CPU and GPU usage with multiple peer connections."""
@@ -98,7 +97,6 @@ class WebrtcRendering(perf_benchmark.PerfBenchmark):
 
 # WebrtcRenderingTBMv2 must be a PerfBenchmark, and not a _Webrtc, because it is
 # a timeline-based metric.
-@benchmark.Disabled('android')  # crbug.com/702201
 @benchmark.Owner(emails=['ehmaldonado@chromium.org',
                          'phoglund@chromium.org',
                          'qiangchen@chromium.org'])

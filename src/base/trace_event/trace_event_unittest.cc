@@ -3087,11 +3087,15 @@ TEST_F(TraceEventTestFixture, EventFiltering) {
       "{"
       "  \"included_categories\": ["
       "    \"filtered_cat\","
-      "    \"unfiltered_cat\"],"
+      "    \"unfiltered_cat\","
+      "    \"" TRACE_DISABLED_BY_DEFAULT("filtered_cat") "\","
+      "    \"" TRACE_DISABLED_BY_DEFAULT("unfiltered_cat") "\"],"
       "  \"event_filters\": ["
       "     {"
       "       \"filter_predicate\": \"testing_predicate\", "
-      "       \"included_categories\": [\"filtered_cat\"]"
+      "       \"included_categories\": ["
+      "         \"filtered_cat\","
+      "         \"" TRACE_DISABLED_BY_DEFAULT("filtered_cat") "\"]"
       "     }"
       "    "
       "  ]"
@@ -3110,12 +3114,15 @@ TEST_F(TraceEventTestFixture, EventFiltering) {
   TRACE_EVENT0("filtered_cat", "a mushroom");
   TRACE_EVENT0("unfiltered_cat", "a horse");
 
+  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("filtered_cat"), "a dog");
+  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("unfiltered_cat"), "a pony");
+
   // This is scoped so we can test the end event being filtered.
   { TRACE_EVENT0("filtered_cat", "another cat whoa"); }
 
   EndTraceAndFlush();
 
-  EXPECT_EQ(3u, filter_hits_counter.filter_trace_event_hit_count);
+  EXPECT_EQ(4u, filter_hits_counter.filter_trace_event_hit_count);
   EXPECT_EQ(1u, filter_hits_counter.end_event_hit_count);
 }
 
@@ -3124,12 +3131,14 @@ TEST_F(TraceEventTestFixture, EventWhitelistFiltering) {
       "{"
       "  \"included_categories\": ["
       "    \"filtered_cat\","
-      "    \"unfiltered_cat\"],"
+      "    \"unfiltered_cat\","
+      "    \"" TRACE_DISABLED_BY_DEFAULT("filtered_cat") "\"],"
       "  \"event_filters\": ["
       "     {"
       "       \"filter_predicate\": \"%s\", "
-      "       \"included_categories\": [\"*\"], "
-      "       \"excluded_categories\": [\"unfiltered_cat\"], "
+      "       \"included_categories\": ["
+      "         \"filtered_cat\","
+      "         \"" TRACE_DISABLED_BY_DEFAULT("*") "\"], "
       "       \"filter_args\": {"
       "           \"event_name_whitelist\": [\"a snake\", \"a dog\"]"
       "         }"
@@ -3147,12 +3156,16 @@ TEST_F(TraceEventTestFixture, EventWhitelistFiltering) {
   TRACE_EVENT0("filtered_cat", "a snake");
   TRACE_EVENT0("filtered_cat", "a mushroom");
   TRACE_EVENT0("unfiltered_cat", "a cat");
+  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("filtered_cat"), "a dog");
+  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("filtered_cat"), "a pony");
 
   EndTraceAndFlush();
 
   EXPECT_TRUE(FindMatchingValue("name", "a snake"));
   EXPECT_FALSE(FindMatchingValue("name", "a mushroom"));
   EXPECT_TRUE(FindMatchingValue("name", "a cat"));
+  EXPECT_TRUE(FindMatchingValue("name", "a dog"));
+  EXPECT_FALSE(FindMatchingValue("name", "a pony"));
 }
 
 TEST_F(TraceEventTestFixture, HeapProfilerFiltering) {
@@ -3160,12 +3173,16 @@ TEST_F(TraceEventTestFixture, HeapProfilerFiltering) {
       "{"
       "  \"included_categories\": ["
       "    \"filtered_cat\","
-      "    \"unfiltered_cat\"],"
+      "    \"unfiltered_cat\","
+      "    \"" TRACE_DISABLED_BY_DEFAULT("filtered_cat") "\","
+      "    \"" TRACE_DISABLED_BY_DEFAULT("unfiltered_cat") "\"],"
       "  \"excluded_categories\": [\"excluded_cat\"],"
       "  \"event_filters\": ["
       "     {"
       "       \"filter_predicate\": \"%s\", "
-      "       \"included_categories\": [\"*\"]"
+      "       \"included_categories\": ["
+      "         \"*\","
+      "         \"" TRACE_DISABLED_BY_DEFAULT("filtered_cat") "\"]"
       "     }"
       "  ]"
       "}",
@@ -3179,6 +3196,8 @@ TEST_F(TraceEventTestFixture, HeapProfilerFiltering) {
   TRACE_EVENT0("filtered_cat", "a snake");
   TRACE_EVENT0("excluded_cat", "a mushroom");
   TRACE_EVENT0("unfiltered_cat", "a cat");
+  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("filtered_cat"), "a dog");
+  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("unfiltered_cat"), "a pony");
 
   EndTraceAndFlush();
 
@@ -3186,6 +3205,8 @@ TEST_F(TraceEventTestFixture, HeapProfilerFiltering) {
   EXPECT_TRUE(FindMatchingValue("name", "a snake"));
   EXPECT_FALSE(FindMatchingValue("name", "a mushroom"));
   EXPECT_TRUE(FindMatchingValue("name", "a cat"));
+  EXPECT_TRUE(FindMatchingValue("name", "a dog"));
+  EXPECT_TRUE(FindMatchingValue("name", "a pony"));
 }
 
 TEST_F(TraceEventTestFixture, ClockSyncEventsAreAlwaysAddedToTrace) {

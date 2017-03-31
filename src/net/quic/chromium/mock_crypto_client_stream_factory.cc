@@ -29,6 +29,11 @@ MockCryptoClientStreamFactory::CreateQuicCryptoClientStream(
     QuicChromiumClientSession* session,
     std::unique_ptr<ProofVerifyContext> /*proof_verify_context*/,
     QuicCryptoClientConfig* crypto_config) {
+  if (handshake_mode_ == MockCryptoClientStream::USE_DEFAULT_CRYPTO_STREAM) {
+    return new QuicCryptoClientStream(server_id, session, nullptr,
+                                      crypto_config, session);
+  }
+
   const ProofVerifyDetailsChromium* proof_verify_details = nullptr;
   if (!proof_verify_details_queue_.empty()) {
     proof_verify_details = proof_verify_details_queue_.front();

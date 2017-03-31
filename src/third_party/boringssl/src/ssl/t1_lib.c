@@ -719,6 +719,7 @@ static int ext_ri_parse_serverhello(SSL_HANDSHAKE *hs, uint8_t *out_alert,
                                     CBS *contents) {
   SSL *const ssl = hs->ssl;
   if (contents != NULL && ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
+    *out_alert = SSL_AD_ILLEGAL_PARAMETER;
     return 0;
   }
 
@@ -1958,13 +1959,12 @@ int ssl_ext_pre_shared_key_parse_serverhello(SSL_HANDSHAKE *hs,
 }
 
 int ssl_ext_pre_shared_key_parse_clienthello(
-    SSL_HANDSHAKE *hs, SSL_SESSION **out_session, CBS *out_binders,
+    SSL_HANDSHAKE *hs, CBS *out_ticket, CBS *out_binders,
     uint32_t *out_obfuscated_ticket_age, uint8_t *out_alert, CBS *contents) {
-  SSL *const ssl = hs->ssl;
   /* We only process the first PSK identity since we don't support pure PSK. */
-  CBS identities, ticket, binders;
+  CBS identities, binders;
   if (!CBS_get_u16_length_prefixed(contents, &identities) ||
-      !CBS_get_u16_length_prefixed(&identities, &ticket) ||
+      !CBS_get_u16_length_prefixed(&identities, out_ticket) ||
       !CBS_get_u32(&identities, out_obfuscated_ticket_age) ||
       !CBS_get_u16_length_prefixed(contents, &binders) ||
       CBS_len(&binders) == 0 ||
@@ -2008,18 +2008,6 @@ int ssl_ext_pre_shared_key_parse_clienthello(
   if (num_identities != num_binders) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_PSK_IDENTITY_BINDER_COUNT_MISMATCH);
     *out_alert = SSL_AD_ILLEGAL_PARAMETER;
-    return 0;
-  }
-
-  /* TODO(svaldez): Check that the ticket_age is valid when attempting to use
-   * the PSK for 0-RTT. http://crbug.com/boringssl/113 */
-
-  /* TLS 1.3 session tickets are renewed separately as part of the
-   * NewSessionTicket. */
-  int unused_renew;
-  if (!tls_process_ticket(ssl, out_session, &unused_renew, CBS_data(&ticket),
-                          CBS_len(&ticket), NULL, 0)) {
-    *out_alert = SSL_AD_INTERNAL_ERROR;
     return 0;
   }
 
@@ -2099,11 +2087,30 @@ static int ext_psk_key_exchange_modes_parse_clienthello(SSL_HANDSHAKE *hs,
  * https://tools.ietf.org/html/draft-ietf-tls-tls13-18#section-4.2.8 */
 
 static int ext_early_data_add_clienthello(SSL_HANDSHAKE *hs, CBB *out) {
-  /* TODO(svaldez): Support 0RTT. */
+  SSL *const ssl = hs->ssl;
+  uint16_t session_version;
+  if (ssl->session == NULL ||
+      !ssl->method->version_from_wire(&session_version,
+                                      ssl->session->ssl_version) ||
+      session_version < TLS1_3_VERSION ||
+      ssl->session->ticket_max_early_data == 0 ||
+      hs->received_hello_retry_request ||
+      !ssl->ctx->enable_early_data) {
+    return 1;
+  }
+
+  hs->early_data_offered = 1;
+
+  if (!CBB_add_u16(out, TLSEXT_TYPE_early_data) ||
+      !CBB_add_u16(out, 0) ||
+      !CBB_flush(out)) {
+    return 0;
+  }
+
   return 1;
 }
 
-static int ext_early_data_parse_clienthello(SSL_HANDSHAKE *hs,
+static int ext_early_data_parse_serverhello(SSL_HANDSHAKE *hs,
                                             uint8_t *out_alert, CBS *contents) {
   SSL *const ssl = hs->ssl;
   if (contents == NULL) {
@@ -2115,11 +2122,44 @@ static int ext_early_data_parse_clienthello(SSL_HANDSHAKE *hs,
     return 0;
   }
 
-  /* Since we don't currently accept 0-RTT, we have to skip past any early data
-   * the client might have sent. */
-  if (ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
-    ssl->s3->skip_early_data = 1;
+  if (!ssl->s3->session_reused) {
+    *out_alert = SSL_AD_UNSUPPORTED_EXTENSION;
+    OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_EXTENSION);
+    return 0;
   }
+
+  ssl->early_data_accepted = 1;
+  return 1;
+}
+
+static int ext_early_data_parse_clienthello(SSL_HANDSHAKE *hs,
+                                            uint8_t *out_alert, CBS *contents) {
+  SSL *const ssl = hs->ssl;
+  if (contents == NULL ||
+      ssl3_protocol_version(ssl) < TLS1_3_VERSION) {
+    return 1;
+  }
+
+  if (CBS_len(contents) != 0) {
+    *out_alert = SSL_AD_DECODE_ERROR;
+    return 0;
+  }
+
+  hs->early_data_offered = 1;
+  return 1;
+}
+
+static int ext_early_data_add_serverhello(SSL_HANDSHAKE *hs, CBB *out) {
+  if (!hs->ssl->early_data_accepted) {
+    return 1;
+  }
+
+  if (!CBB_add_u16(out, TLSEXT_TYPE_early_data) ||
+      !CBB_add_u16(out, 0) ||
+      !CBB_flush(out)) {
+    return 0;
+  }
+
   return 1;
 }
 
@@ -2610,9 +2650,9 @@ static const struct tls_extension kExtensions[] = {
     TLSEXT_TYPE_early_data,
     NULL,
     ext_early_data_add_clienthello,
-    forbid_parse_serverhello,
+    ext_early_data_parse_serverhello,
     ext_early_data_parse_clienthello,
-    dont_add_serverhello,
+    ext_early_data_add_serverhello,
   },
   {
     TLSEXT_TYPE_supported_versions,
@@ -3013,9 +3053,9 @@ static int ssl_check_clienthello_tlsext(SSL_HANDSHAKE *hs) {
   if (ssl->ctx->tlsext_servername_callback != 0) {
     ret = ssl->ctx->tlsext_servername_callback(ssl, &al,
                                                ssl->ctx->tlsext_servername_arg);
-  } else if (ssl->initial_ctx->tlsext_servername_callback != 0) {
-    ret = ssl->initial_ctx->tlsext_servername_callback(
-        ssl, &al, ssl->initial_ctx->tlsext_servername_arg);
+  } else if (ssl->session_ctx->tlsext_servername_callback != 0) {
+    ret = ssl->session_ctx->tlsext_servername_callback(
+        ssl, &al, ssl->session_ctx->tlsext_servername_arg);
   }
 
   switch (ret) {
@@ -3043,12 +3083,12 @@ int ssl_parse_serverhello_tlsext(SSL_HANDSHAKE *hs, CBS *cbs) {
   return 1;
 }
 
-int tls_process_ticket(SSL *ssl, SSL_SESSION **out_session,
-                       int *out_renew_ticket, const uint8_t *ticket,
-                       size_t ticket_len, const uint8_t *session_id,
-                       size_t session_id_len) {
-  int ret = 1; /* Most errors are non-fatal. */
-  SSL_CTX *ssl_ctx = ssl->initial_ctx;
+static enum ssl_ticket_aead_result_t
+ssl_decrypt_ticket_with_cipher_ctx(SSL *ssl, uint8_t **out, size_t *out_len,
+                                   int *out_renew_ticket, const uint8_t *ticket,
+                                   size_t ticket_len) {
+  enum ssl_ticket_aead_result_t ret = ssl_ticket_aead_ignore_ticket;
+  const SSL_CTX *const ssl_ctx = ssl->session_ctx;
   uint8_t *plaintext = NULL;
 
   HMAC_CTX hmac_ctx;
@@ -3056,23 +3096,12 @@ int tls_process_ticket(SSL *ssl, SSL_SESSION **out_session,
   EVP_CIPHER_CTX cipher_ctx;
   EVP_CIPHER_CTX_init(&cipher_ctx);
 
-  *out_renew_ticket = 0;
-  *out_session = NULL;
-
-  if (SSL_get_options(ssl) & SSL_OP_NO_TICKET) {
-    goto done;
-  }
-
-  if (session_id_len > SSL_MAX_SSL_SESSION_ID_LENGTH) {
-    goto done;
-  }
-
   /* Ensure there is room for the key name and the largest IV
    * |tlsext_ticket_key_cb| may try to consume. The real limit may be lower, but
    * the maximum IV length should be well under the minimum size for the
    * session material and HMAC. */
   if (ticket_len < SSL_TICKET_KEY_NAME_LEN + EVP_MAX_IV_LENGTH) {
-    goto done;
+    goto out;
   }
   const uint8_t *iv = ticket + SSL_TICKET_KEY_NAME_LEN;
 
@@ -3081,28 +3110,26 @@ int tls_process_ticket(SSL *ssl, SSL_SESSION **out_session,
         ssl, (uint8_t *)ticket /* name */, (uint8_t *)iv, &cipher_ctx,
         &hmac_ctx, 0 /* decrypt */);
     if (cb_ret < 0) {
-      ret = 0;
-      goto done;
-    }
-    if (cb_ret == 0) {
-      goto done;
-    }
-    if (cb_ret == 2) {
+      ret = ssl_ticket_aead_error;
+      goto out;
+    } else if (cb_ret == 0) {
+      goto out;
+    } else if (cb_ret == 2) {
       *out_renew_ticket = 1;
     }
   } else {
     /* Check the key name matches. */
     if (OPENSSL_memcmp(ticket, ssl_ctx->tlsext_tick_key_name,
                        SSL_TICKET_KEY_NAME_LEN) != 0) {
-      goto done;
+      goto out;
     }
     if (!HMAC_Init_ex(&hmac_ctx, ssl_ctx->tlsext_tick_hmac_key,
                       sizeof(ssl_ctx->tlsext_tick_hmac_key), tlsext_tick_md(),
                       NULL) ||
         !EVP_DecryptInit_ex(&cipher_ctx, EVP_aes_128_cbc(), NULL,
                             ssl_ctx->tlsext_tick_aes_key, iv)) {
-      ret = 0;
-      goto done;
+      ret = ssl_ticket_aead_error;
+      goto out;
     }
   }
   size_t iv_len = EVP_CIPHER_CTX_iv_length(&cipher_ctx);
@@ -3112,7 +3139,7 @@ int tls_process_ticket(SSL *ssl, SSL_SESSION **out_session,
   size_t mac_len = HMAC_size(&hmac_ctx);
   if (ticket_len < SSL_TICKET_KEY_NAME_LEN + iv_len + 1 + mac_len) {
     /* The ticket must be large enough for key name, IV, data, and MAC. */
-    goto done;
+    goto out;
   }
   HMAC_Update(&hmac_ctx, ticket, ticket_len - mac_len);
   HMAC_Final(&hmac_ctx, mac, NULL);
@@ -3122,7 +3149,7 @@ int tls_process_ticket(SSL *ssl, SSL_SESSION **out_session,
   mac_ok = 1;
 #endif
   if (!mac_ok) {
-    goto done;
+    goto out;
   }
 
   /* Decrypt the session data. */
@@ -3131,8 +3158,8 @@ int tls_process_ticket(SSL *ssl, SSL_SESSION **out_session,
                           mac_len;
   plaintext = OPENSSL_malloc(ciphertext_len);
   if (plaintext == NULL) {
-    ret = 0;
-    goto done;
+    ret = ssl_ticket_aead_error;
+    goto out;
   }
   size_t plaintext_len;
 #if defined(BORINGSSL_UNSAFE_FUZZER_MODE)
@@ -3140,24 +3167,89 @@ int tls_process_ticket(SSL *ssl, SSL_SESSION **out_session,
   plaintext_len = ciphertext_len;
 #else
   if (ciphertext_len >= INT_MAX) {
-    goto done;
+    goto out;
   }
   int len1, len2;
   if (!EVP_DecryptUpdate(&cipher_ctx, plaintext, &len1, ciphertext,
                          (int)ciphertext_len) ||
       !EVP_DecryptFinal_ex(&cipher_ctx, plaintext + len1, &len2)) {
-    ERR_clear_error(); /* Don't leave an error on the queue. */
-    goto done;
+    ERR_clear_error();
+    goto out;
   }
-  plaintext_len = (size_t)(len1 + len2);
+  plaintext_len = (size_t)(len1) + len2;
 #endif
+
+  *out = plaintext;
+  plaintext = NULL;
+  *out_len = plaintext_len;
+  ret = ssl_ticket_aead_success;
+
+out:
+  OPENSSL_free(plaintext);
+  HMAC_CTX_cleanup(&hmac_ctx);
+  EVP_CIPHER_CTX_cleanup(&cipher_ctx);
+  return ret;
+}
+
+static enum ssl_ticket_aead_result_t ssl_decrypt_ticket_with_method(
+    SSL *ssl, uint8_t **out, size_t *out_len, int *out_renew_ticket,
+    const uint8_t *ticket, size_t ticket_len) {
+  uint8_t *plaintext = OPENSSL_malloc(ticket_len);
+  if (plaintext == NULL) {
+    OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
+    return ssl_ticket_aead_error;
+  }
+
+  size_t plaintext_len;
+  const enum ssl_ticket_aead_result_t result =
+      ssl->session_ctx->ticket_aead_method->open(
+          ssl, plaintext, &plaintext_len, ticket_len, ticket, ticket_len);
+
+  if (result == ssl_ticket_aead_success) {
+    *out = plaintext;
+    plaintext = NULL;
+    *out_len = plaintext_len;
+  }
+
+  OPENSSL_free(plaintext);
+  return result;
+}
+
+enum ssl_ticket_aead_result_t ssl_process_ticket(
+    SSL *ssl, SSL_SESSION **out_session, int *out_renew_ticket,
+    const uint8_t *ticket, size_t ticket_len, const uint8_t *session_id,
+    size_t session_id_len) {
+  *out_renew_ticket = 0;
+  *out_session = NULL;
+
+  if ((SSL_get_options(ssl) & SSL_OP_NO_TICKET) ||
+      session_id_len > SSL_MAX_SSL_SESSION_ID_LENGTH) {
+    return ssl_ticket_aead_ignore_ticket;
+  }
+
+  uint8_t *plaintext = NULL;
+  size_t plaintext_len;
+  enum ssl_ticket_aead_result_t result;
+  if (ssl->session_ctx->ticket_aead_method != NULL) {
+    result = ssl_decrypt_ticket_with_method(
+        ssl, &plaintext, &plaintext_len, out_renew_ticket, ticket, ticket_len);
+  } else {
+    result = ssl_decrypt_ticket_with_cipher_ctx(
+        ssl, &plaintext, &plaintext_len, out_renew_ticket, ticket, ticket_len);
+  }
+
+  if (result != ssl_ticket_aead_success) {
+    return result;
+  }
 
   /* Decode the session. */
   SSL_SESSION *session =
       SSL_SESSION_from_bytes(plaintext, plaintext_len, ssl->ctx);
+  OPENSSL_free(plaintext);
+
   if (session == NULL) {
     ERR_clear_error(); /* Don't leave an error on the queue. */
-    goto done;
+    return ssl_ticket_aead_ignore_ticket;
   }
 
   /* Copy the client's session ID into the new session, to denote the ticket has
@@ -3166,12 +3258,7 @@ int tls_process_ticket(SSL *ssl, SSL_SESSION **out_session,
   session->session_id_length = session_id_len;
 
   *out_session = session;
-
-done:
-  OPENSSL_free(plaintext);
-  HMAC_CTX_cleanup(&hmac_ctx);
-  EVP_CIPHER_CTX_cleanup(&cipher_ctx);
-  return ret;
+  return ssl_ticket_aead_success;
 }
 
 int tls1_parse_peer_sigalgs(SSL_HANDSHAKE *hs, const CBS *in_sigalgs) {

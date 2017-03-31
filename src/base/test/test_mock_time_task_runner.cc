@@ -4,6 +4,8 @@
 
 #include "base/test/test_mock_time_task_runner.h"
 
+#include <utility>
+
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
@@ -79,7 +81,7 @@ struct TestMockTimeTaskRunner::TestOrderedPendingTask
     : public base::TestPendingTask {
   TestOrderedPendingTask();
   TestOrderedPendingTask(const tracked_objects::Location& location,
-                         const Closure& task,
+                         Closure task,
                          TimeTicks post_time,
                          TimeDelta delay,
                          size_t ordinal,
@@ -104,12 +106,16 @@ TestMockTimeTaskRunner::TestOrderedPendingTask::TestOrderedPendingTask(
 
 TestMockTimeTaskRunner::TestOrderedPendingTask::TestOrderedPendingTask(
     const tracked_objects::Location& location,
-    const Closure& task,
+    Closure task,
     TimeTicks post_time,
     TimeDelta delay,
     size_t ordinal,
     TestNestability nestability)
-    : base::TestPendingTask(location, task, post_time, delay, nestability),
+    : base::TestPendingTask(location,
+                            std::move(task),
+                            post_time,
+                            delay,
+                            nestability),
       ordinal(ordinal) {}
 
 TestMockTimeTaskRunner::TestOrderedPendingTask::~TestOrderedPendingTask() {
@@ -234,20 +240,20 @@ bool TestMockTimeTaskRunner::RunsTasksOnCurrentThread() const {
 
 bool TestMockTimeTaskRunner::PostDelayedTask(
     const tracked_objects::Location& from_here,
-    const Closure& task,
+    Closure task,
     TimeDelta delay) {
   AutoLock scoped_lock(tasks_lock_);
-  tasks_.push(TestOrderedPendingTask(from_here, task, now_ticks_, delay,
-                                     next_task_ordinal_++,
+  tasks_.push(TestOrderedPendingTask(from_here, std::move(task), now_ticks_,
+                                     delay, next_task_ordinal_++,
                                      TestPendingTask::NESTABLE));
   return true;
 }
 
 bool TestMockTimeTaskRunner::PostNonNestableDelayedTask(
     const tracked_objects::Location& from_here,
-    const Closure& task,
+    Closure task,
     TimeDelta delay) {
-  return PostDelayedTask(from_here, task, delay);
+  return PostDelayedTask(from_here, std::move(task), delay);
 }
 
 bool TestMockTimeTaskRunner::IsElapsingStopped() {

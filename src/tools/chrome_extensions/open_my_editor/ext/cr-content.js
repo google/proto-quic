@@ -6,15 +6,14 @@
 
 let clicked_element = null;
 
-document.addEventListener('mousedown', (event) => {
-  // right click
-  if (event.button == 2)
-    clicked_element = event.target;
+document.addEventListener('contextmenu', (event) => {
+  clicked_element = event.target;
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request == 'getFiles') {
     let element = clicked_element;
+    clicked_element = null;
     while (element != null && element.tagName != 'TABLE')
       element = element.parentElement;
 
@@ -22,7 +21,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (trs.length == 0)
       alert('Please toggle one patchset.');
 
-    let files = [];
+    // TODO(watk): Sometimes this approach collects duplicates, but I'm not
+    // sure of the conditions under which it happens, so use a Set for now.
+    let files = new Set();
     for (let i = 1; i < trs.length; ++i) {
       let tr = trs[i];
       if (tr.getAttribute('name') != 'patch')
@@ -31,11 +32,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       if (tr.children[1].firstChild.data == 'D')
         continue;
 
-      files.push(tr.children[2].children[0].text.replace(/\s*/g, ''));
+      files.add(tr.children[2].children[0].text.replace(/\s*/g, ''));
     }
 
-    sendResponse({files: files});
+    sendResponse({files: Array.from(files)});
   } else if (request == 'getFile' && clicked_element.tagName == 'A') {
-    sendResponse({file: clicked_element.text});
+    let filepath = clicked_element.text.replace(/\s*/g, '');
+    clicked_element = null;
+    sendResponse({file: filepath});
   }
 });

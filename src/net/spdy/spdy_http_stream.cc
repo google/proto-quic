@@ -34,10 +34,12 @@ namespace net {
 const size_t SpdyHttpStream::kRequestBodyBufferSize = 1 << 14;  // 16KB
 
 SpdyHttpStream::SpdyHttpStream(const base::WeakPtr<SpdySession>& spdy_session,
-                               bool direct)
+                               bool direct,
+                               NetLogSource source_dependency)
     : MultiplexedHttpStream(MultiplexedSessionHandle(spdy_session)),
       spdy_session_(spdy_session),
       is_reused_(spdy_session_->IsReused()),
+      source_dependency_(source_dependency),
       stream_(nullptr),
       stream_closed_(false),
       closed_stream_status_(ERR_FAILED),
@@ -393,6 +395,10 @@ void SpdyHttpStream::OnClose(int status) {
   if (!response_callback_.is_null()) {
     DoResponseCallback(status);
   }
+}
+
+NetLogSource SpdyHttpStream::source_dependency() const {
+  return source_dependency_;
 }
 
 bool SpdyHttpStream::HasUploadData() const {

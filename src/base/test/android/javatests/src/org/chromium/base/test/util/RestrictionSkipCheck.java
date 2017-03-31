@@ -27,6 +27,10 @@ public class RestrictionSkipCheck extends SkipCheck {
         mTargetContext = targetContext;
     }
 
+    protected Context getTargetContext() {
+        return mTargetContext;
+    }
+
     @Override
     public boolean shouldSkip(FrameworkMethod frameworkMethod) {
         if (frameworkMethod == null) return true;

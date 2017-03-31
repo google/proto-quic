@@ -28,7 +28,7 @@
 #include <queue>
 #include <string>
 
-#include "base/callback_forward.h"
+#include "base/callback.h"
 #include "base/location.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
@@ -51,8 +51,7 @@ class BASE_EXPORT PosixDynamicThreadPool
                          int idle_seconds_before_exit);
 
   // Adds |task| to the thread pool.
-  void PostTask(const tracked_objects::Location& from_here,
-                const Closure& task);
+  void PostTask(const tracked_objects::Location& from_here, Closure task);
 
   // Worker thread method to wait for up to |idle_seconds_before_exit| for more
   // work from the thread pool.  Returns NULL if no work is available.

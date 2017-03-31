@@ -5,6 +5,8 @@
 #ifndef BASE_ANDROID_JAVA_HANDLER_THREAD_FOR_TESTING_H_
 #define BASE_ANDROID_JAVA_HANDLER_THREAD_FOR_TESTING_H_
 
+#include <memory>
+
 #include "base/android/java_handler_thread.h"
 #include "base/android/java_message_handler_factory.h"
 #include "base/message_loop/message_loop.h"
@@ -36,14 +38,24 @@ class TestJavaMessageHandlerFactory : public JavaMessageHandlerFactory {
 // instead.
 class JavaHandlerThreadForTesting : public JavaHandlerThread {
  public:
-  JavaHandlerThreadForTesting(const char* name,
-                              base::WaitableEvent* test_done_event);
   ~JavaHandlerThreadForTesting() override;
+
+  static std::unique_ptr<JavaHandlerThreadForTesting> Create(
+      const char* name,
+      base::WaitableEvent* test_done_event);
+  // Create the Java peer first and test that it works before connecting to the
+  // native object.
+  static std::unique_ptr<JavaHandlerThreadForTesting> CreateJavaFirst(
+      base::WaitableEvent* test_done_event);
 
   void StartMessageLoop() override;
   void StopMessageLoop() override;
 
  private:
+  JavaHandlerThreadForTesting(const char* name,
+                              base::WaitableEvent* test_done_event);
+  explicit JavaHandlerThreadForTesting(base::WaitableEvent* test_done_event);
+
   std::unique_ptr<JavaMessageHandlerFactory> message_handler_factory_;
   base::WaitableEvent* test_done_event_;
 };

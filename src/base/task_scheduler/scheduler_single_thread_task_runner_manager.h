@@ -5,6 +5,7 @@
 #ifndef BASE_TASK_SCHEDULER_SCHEDULER_SINGLE_THREAD_TASK_RUNNER_MANAGER_H_
 #define BASE_TASK_SCHEDULER_SCHEDULER_SINGLE_THREAD_TASK_RUNNER_MANAGER_H_
 
+#include <memory>
 #include <vector>
 
 #include "base/atomicops.h"
@@ -15,6 +16,7 @@
 #include "base/task_scheduler/scheduler_lock.h"
 #include "base/task_scheduler/scheduler_worker_pool_params.h"
 #include "base/task_scheduler/task_scheduler.h"
+#include "build/build_config.h"
 
 namespace base {
 
@@ -26,6 +28,12 @@ namespace internal {
 class DelayedTaskManager;
 class SchedulerWorker;
 class TaskTracker;
+
+namespace {
+
+class SchedulerWorkerDelegate;
+
+}  // namespace
 
 class BASE_EXPORT SchedulerSingleThreadTaskRunnerManager final {
  public:
@@ -40,11 +48,26 @@ class BASE_EXPORT SchedulerSingleThreadTaskRunnerManager final {
   scoped_refptr<SingleThreadTaskRunner> CreateSingleThreadTaskRunnerWithTraits(
       const TaskTraits& traits);
 
+#if defined(OS_WIN)
+  scoped_refptr<SingleThreadTaskRunner> CreateCOMSTATaskRunnerWithTraits(
+      const TaskTraits& traits);
+#endif  // defined(OS_WIN)
+
   void JoinForTesting();
 
  private:
   class SchedulerSingleThreadTaskRunner;
 
+  template <typename DelegateType>
+  scoped_refptr<SingleThreadTaskRunner>
+  CreateSingleThreadTaskRunnerWithDelegate(const TaskTraits& traits);
+
+  template <typename DelegateType>
+  std::unique_ptr<SchedulerWorkerDelegate> CreateSchedulerWorkerDelegate(
+      const SchedulerWorkerPoolParams& params,
+      int id);
+
+  template <typename DelegateType>
   SchedulerWorker* CreateAndRegisterSchedulerWorker(
       const SchedulerWorkerPoolParams& params);
 

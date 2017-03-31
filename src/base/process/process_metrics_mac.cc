@@ -16,6 +16,7 @@
 #include "base/mac/mach_logging.h"
 #include "base/mac/scoped_mach_port.h"
 #include "base/memory/ptr_util.h"
+#include "base/numerics/safe_conversions.h"
 #include "base/sys_info.h"
 
 #if !defined(TASK_POWER_INFO)
@@ -79,11 +80,6 @@ bool IsAddressInSharedRegion(mach_vm_address_t addr, cpu_type_t type) {
 }
 
 }  // namespace
-
-SystemMemoryInfoKB::SystemMemoryInfoKB() : total(0), free(0) {}
-
-SystemMemoryInfoKB::SystemMemoryInfoKB(const SystemMemoryInfoKB& other) =
-    default;
 
 // Getting a mach task from a pid for another process requires permissions in
 // general, so there doesn't really seem to be a way to do these (and spinning
@@ -392,7 +388,6 @@ size_t GetSystemCommitCharge() {
   return (data.active_count * PAGE_SIZE) / 1024;
 }
 
-// On Mac, We only get total memory and free memory from the system.
 bool GetSystemMemoryInfo(SystemMemoryInfoKB* meminfo) {
   struct host_basic_info hostinfo;
   mach_msg_type_number_t count = HOST_BASIC_INFO_COUNT;
@@ -405,17 +400,25 @@ bool GetSystemMemoryInfo(SystemMemoryInfoKB* meminfo) {
   DCHECK_EQ(HOST_BASIC_INFO_COUNT, count);
   meminfo->total = static_cast<int>(hostinfo.max_mem / 1024);
 
-  vm_statistics_data_t vm_info;
-  count = HOST_VM_INFO_COUNT;
+  vm_statistics64_data_t vm_info;
+  count = HOST_VM_INFO64_COUNT;
 
-  if (host_statistics(host.get(), HOST_VM_INFO,
-                      reinterpret_cast<host_info_t>(&vm_info),
-                      &count) != KERN_SUCCESS) {
+  if (host_statistics64(host.get(), HOST_VM_INFO64,
+                        reinterpret_cast<host_info64_t>(&vm_info),
+                        &count) != KERN_SUCCESS) {
     return false;
   }
+  DCHECK_EQ(HOST_VM_INFO64_COUNT, count);
 
-  meminfo->free = static_cast<int>(
-      (vm_info.free_count - vm_info.speculative_count) * PAGE_SIZE / 1024);
+  static_assert(PAGE_SIZE % 1024 == 0, "Invalid page size");
+  meminfo->free = saturated_cast<int>(
+      PAGE_SIZE / 1024 * (vm_info.free_count - vm_info.speculative_count));
+  meminfo->speculative =
+      saturated_cast<int>(PAGE_SIZE / 1024 * vm_info.speculative_count);
+  meminfo->file_backed =
+      saturated_cast<int>(PAGE_SIZE / 1024 * vm_info.external_page_count);
+  meminfo->purgeable =
+      saturated_cast<int>(PAGE_SIZE / 1024 * vm_info.purgeable_count);
 
   return true;
 }

@@ -11,7 +11,6 @@
 #include "base/metrics/histogram_macros.h"
 #include "base/profiler/scoped_tracker.h"
 #include "base/stl_util.h"
-#include "base/strings/stringprintf.h"
 #include "base/trace_event/memory_allocator_dump.h"
 #include "base/trace_event/process_memory_dump.h"
 #include "base/trace_event/trace_event.h"
@@ -27,6 +26,7 @@
 #include "net/spdy/hpack/hpack_huffman_table.h"
 #include "net/spdy/hpack/hpack_static_table.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
+#include "net/spdy/platform/api/spdy_string_utils.h"
 #include "net/spdy/spdy_session.h"
 
 namespace net {
@@ -419,7 +419,7 @@ void SpdySessionPool::DumpMemoryStats(
   total_size += SpdyEstimateMemoryUsage(ObtainHpackHuffmanTable()) +
                 SpdyEstimateMemoryUsage(ObtainHpackStaticTable());
   base::trace_event::MemoryAllocatorDump* dump =
-      pmd->CreateAllocatorDump(base::StringPrintf(
+      pmd->CreateAllocatorDump(SpdyStringPrintf(
           "%s/spdy_session_pool", parent_dump_absolute_name.c_str()));
   dump->AddScalar(base::trace_event::MemoryAllocatorDump::kNameSize,
                   base::trace_event::MemoryAllocatorDump::kUnitsBytes,

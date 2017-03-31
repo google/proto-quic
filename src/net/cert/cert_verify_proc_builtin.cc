@@ -250,25 +250,19 @@ void AppendPublicKeyHashes(const CertPathBuilder::ResultPath& partial_path,
     AppendPublicKeyHashes(partial_path.path.trust_anchor->spki(), hashes);
 }
 
-// Sets the bits on |cert_status| for all the errors encountered during the path
-// building of |partial_path|.
-void MapPathBuilderErrorsToCertStatus(
-    const CertPathBuilder::ResultPath& partial_path,
-    const std::string& hostname,
-    CertStatus* cert_status) {
-  // If path building was successful, there are no errors to map (there may have
-  // been warnings but they do not map to CertStatus).
-  if (partial_path.valid)
+// Sets the bits on |cert_status| for all the errors present in |errors| (the
+// errors for a particular path).
+void MapPathBuilderErrorsToCertStatus(const CertPathErrors& errors,
+                                      CertStatus* cert_status) {
+  // If there were no errors, nothing to do.
+  if (!errors.ContainsHighSeverityErrors())
     return;
 
-  LOG(ERROR) << "CertVerifyProcBuiltin for " << hostname << " failed:\n"
-             << partial_path.errors.ToDebugString();
-
-  if (partial_path.errors.ContainsError(kRsaModulusTooSmall))
+  if (errors.ContainsError(kRsaModulusTooSmall))
     *cert_status |= CERT_STATUS_WEAK_KEY;
 
-  if (partial_path.errors.ContainsError(kValidityFailedNotAfter) ||
-      partial_path.errors.ContainsError(kValidityFailedNotBefore)) {
+  if (errors.ContainsError(kValidityFailedNotAfter) ||
+      errors.ContainsError(kValidityFailedNotBefore)) {
     *cert_status |= CERT_STATUS_DATE_INVALID;
   }
 
@@ -309,6 +303,8 @@ scoped_refptr<X509Certificate> CreateVerifiedCertChain(
 
   scoped_refptr<X509Certificate> result = X509Certificate::CreateFromHandle(
       target_cert->os_cert_handle(), intermediates);
+  // |target_cert| was already successfully parsed, so this should never fail.
+  DCHECK(result);
 
   for (const X509Certificate::OSCertHandle handle : intermediates)
     X509Certificate::FreeOSCertHandle(handle);
@@ -328,11 +324,11 @@ void DoVerify(X509Certificate* input_cert,
               CRLSet* crl_set,
               const CertificateList& additional_trust_anchors,
               CertVerifyResult* verify_result) {
-  CertErrors errors;
+  CertErrors parsing_errors;
 
   // Parse the target certificate.
-  scoped_refptr<ParsedCertificate> target =
-      ParseCertificateFromOSHandle(input_cert->os_cert_handle(), &errors);
+  scoped_refptr<ParsedCertificate> target = ParseCertificateFromOSHandle(
+      input_cert->os_cert_handle(), &parsing_errors);
   if (!target) {
     // TODO(crbug.com/634443): Surface these parsing errors?
     verify_result->cert_status |= CERT_STATUS_INVALID;
@@ -400,6 +396,8 @@ void DoVerify(X509Certificate* input_cert,
     verify_result->is_issued_by_additional_trust_anchor =
         trust_store->IsAdditionalTrustAnchor(partial_path.path.trust_anchor);
   } else {
+    // TODO(eroman): This shouldn't be necessary -- partial_path.errors should
+    // contain an error if it didn't chain to trust anchor.
     verify_result->cert_status |= CERT_STATUS_AUTHORITY_INVALID;
   }
 
@@ -407,8 +405,18 @@ void DoVerify(X509Certificate* input_cert,
       CreateVerifiedCertChain(input_cert, partial_path);
 
   AppendPublicKeyHashes(partial_path, &verify_result->public_key_hashes);
-  MapPathBuilderErrorsToCertStatus(partial_path, hostname,
+  MapPathBuilderErrorsToCertStatus(partial_path.errors,
                                    &verify_result->cert_status);
+
+  // TODO(eroman): Is it possible that IsValid() fails but no errors were set in
+  // partial_path.errors?
+  CHECK(partial_path.IsValid() ||
+        IsCertStatusError(verify_result->cert_status));
+
+  if (partial_path.errors.ContainsHighSeverityErrors()) {
+    LOG(ERROR) << "CertVerifyProcBuiltin for " << hostname << " failed:\n"
+               << partial_path.errors.ToDebugString(partial_path.path.certs);
+  }
 }
 
 int CertVerifyProcBuiltin::VerifyInternal(

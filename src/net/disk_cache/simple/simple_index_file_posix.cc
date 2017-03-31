@@ -12,6 +12,7 @@
 #include <memory>
 #include <string>
 
+#include "base/files/file_util.h"
 #include "base/logging.h"
 
 namespace disk_cache {
@@ -43,7 +44,14 @@ bool SimpleIndexFile::TraverseCacheDirectory(
       continue;
     const base::FilePath file_path = cache_path.Append(
         base::FilePath(file_name));
-    entry_file_callback.Run(file_path);
+    base::File::Info file_info;
+    if (!base::GetFileInfo(file_path, &file_info)) {
+      LOG(ERROR) << "Could not get file info for " << file_path.value();
+      continue;
+    }
+
+    entry_file_callback.Run(file_path, file_info.last_accessed,
+                            file_info.last_modified, file_info.size);
   }
   PLOG(ERROR) << "readdir_r " << cache_path.value();
   return false;

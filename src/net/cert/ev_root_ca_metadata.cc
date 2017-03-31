@@ -666,6 +666,16 @@ bool EVRootCAMetadata::HasEVPolicyOID(
   return false;
 }
 
+// static
+bool EVRootCAMetadata::IsCaBrowserForumEvOid(PolicyOID policy_oid) {
+  // OID: 2.23.140.1.1
+  const uint8_t kCabEvOid[] = {0x67, 0x81, 0x0c, 0x01, 0x01};
+  SECItem item;
+  item.data = const_cast<uint8_t*>(&kCabEvOid[0]);
+  item.len = sizeof(kCabEvOid);
+  return policy_oid == SECOID_FindOIDTag(&item);
+}
+
 bool EVRootCAMetadata::AddEVCA(const SHA1HashValue& fingerprint,
                                const char* policy) {
   if (ev_policy_.find(fingerprint) != ev_policy_.end())
@@ -753,6 +763,11 @@ bool EVRootCAMetadata::HasEVPolicyOID(const SHA1HashValue& fingerprint,
   return it != extra_cas_.end() && it->second == policy_oid;
 }
 
+// static
+bool EVRootCAMetadata::IsCaBrowserForumEvOid(PolicyOID policy_oid) {
+  return strcmp(policy_oid, "2.23.140.1.1") == 0;
+}
+
 bool EVRootCAMetadata::AddEVCA(const SHA1HashValue& fingerprint,
                                const char* policy) {
   for (size_t i = 0; i < arraysize(ev_root_ca_metadata); i++) {
@@ -804,6 +819,12 @@ bool EVRootCAMetadata::HasEVPolicyOID(const SHA1HashValue& fingerprint,
       return true;
   }
   return false;
+}
+
+// static
+bool EVRootCAMetadata::IsCaBrowserForumEvOid(PolicyOID policy_oid) {
+  const uint8_t kCabEvOid[] = {0x67, 0x81, 0x0c, 0x01, 0x01};
+  return der::Input(kCabEvOid) == policy_oid;
 }
 
 bool EVRootCAMetadata::AddEVCA(const SHA1HashValue& fingerprint,

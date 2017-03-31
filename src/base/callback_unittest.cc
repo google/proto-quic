@@ -21,24 +21,13 @@ void NopInvokeFunc() {}
 // based on a type we declared in the anonymous namespace above to remove any
 // chance of colliding with another instantiation and breaking the
 // one-definition-rule.
-struct FakeBindState1 : internal::BindStateBase {
-  FakeBindState1() : BindStateBase(&NopInvokeFunc, &Destroy, &IsCancelled) {}
- private:
-  ~FakeBindState1() {}
-  static void Destroy(const internal::BindStateBase* self) {
-    delete static_cast<const FakeBindState1*>(self);
-  }
-  static bool IsCancelled(const internal::BindStateBase*) {
-    return false;
-  }
-};
+struct FakeBindState : internal::BindStateBase {
+  FakeBindState() : BindStateBase(&NopInvokeFunc, &Destroy, &IsCancelled) {}
 
-struct FakeBindState2 : internal::BindStateBase {
-  FakeBindState2() : BindStateBase(&NopInvokeFunc, &Destroy, &IsCancelled) {}
  private:
-  ~FakeBindState2() {}
+  ~FakeBindState() {}
   static void Destroy(const internal::BindStateBase* self) {
-    delete static_cast<const FakeBindState2*>(self);
+    delete static_cast<const FakeBindState*>(self);
   }
   static bool IsCancelled(const internal::BindStateBase*) {
     return false;
@@ -50,9 +39,7 @@ namespace {
 class CallbackTest : public ::testing::Test {
  public:
   CallbackTest()
-      : callback_a_(new FakeBindState1()),
-        callback_b_(new FakeBindState2()) {
-  }
+      : callback_a_(new FakeBindState()), callback_b_(new FakeBindState()) {}
 
   ~CallbackTest() override {}
 
@@ -94,7 +81,7 @@ TEST_F(CallbackTest, Equals) {
   EXPECT_FALSE(callback_b_.Equals(callback_a_));
 
   // We should compare based on instance, not type.
-  Callback<void()> callback_c(new FakeBindState1());
+  Callback<void()> callback_c(new FakeBindState());
   Callback<void()> callback_a2 = callback_a_;
   EXPECT_TRUE(callback_a_.Equals(callback_a2));
   EXPECT_FALSE(callback_a_.Equals(callback_c));

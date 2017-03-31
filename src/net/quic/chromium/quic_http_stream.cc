@@ -45,10 +45,12 @@ std::unique_ptr<base::Value> NetLogQuicPushStreamCallback(
 }  // namespace
 
 QuicHttpStream::QuicHttpStream(
-    const base::WeakPtr<QuicChromiumClientSession>& session)
+    const base::WeakPtr<QuicChromiumClientSession>& session,
+    HttpServerProperties* http_server_properties)
     : MultiplexedHttpStream(MultiplexedSessionHandle(session)),
       next_state_(STATE_NONE),
       session_(session),
+      http_server_properties_(http_server_properties),
       quic_version_(session->GetQuicVersion()),
       session_error_(OK),
       was_handshake_confirmed_(session->IsCryptoHandshakeConfirmed()),
@@ -157,6 +159,11 @@ int QuicHttpStream::InitializeStream(const HttpRequestInfo* request_info,
                                      const CompletionCallback& callback) {
   CHECK(callback_.is_null());
   DCHECK(!stream_);
+
+  // HttpNetworkTransaction will retry any request that fails with
+  // ERR_QUIC_HANDSHAKE_FAILED. It will retry any request with
+  // ERR_CONNECTION_CLOSED so long as the connection has been used for other
+  // streams first and headers have not yet been received.
   if (!session_)
     return was_handshake_confirmed_ ? ERR_CONNECTION_CLOSED
                                     : ERR_QUIC_HANDSHAKE_FAILED;
@@ -250,6 +257,9 @@ int QuicHttpStream::SendRequest(const HttpRequestHeaders& request_headers,
     UMA_HISTOGRAM_BOOLEAN("Net.QuicSession.CookieSentToAccountsOverChannelId",
                           ssl_info.channel_id_sent);
   }
+
+  // In order to rendezvous with a push stream, the session still needs to be
+  // available. Otherwise the stream needs to be available.
   if ((!found_promise_ && !stream_) || !session_) {
     return was_handshake_confirmed_ ? ERR_CONNECTION_CLOSED
                                     : ERR_QUIC_HANDSHAKE_FAILED;

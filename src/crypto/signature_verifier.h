@@ -54,9 +54,9 @@ class CRYPTO_EXPORT SignatureVerifier {
   //       subjectPublicKey     BIT STRING  }
   bool VerifyInit(SignatureAlgorithm signature_algorithm,
                   const uint8_t* signature,
-                  int signature_len,
+                  size_t signature_len,
                   const uint8_t* public_key_info,
-                  int public_key_info_len);
+                  size_t public_key_info_len);
 
   // Initiates a RSA-PSS signature verification operation.  This should be
   // followed by one or more VerifyUpdate calls and a VerifyFinal call.
@@ -76,14 +76,14 @@ class CRYPTO_EXPORT SignatureVerifier {
   //       subjectPublicKey     BIT STRING  }
   bool VerifyInitRSAPSS(HashAlgorithm hash_alg,
                         HashAlgorithm mask_hash_alg,
-                        int salt_len,
+                        size_t salt_len,
                         const uint8_t* signature,
-                        int signature_len,
+                        size_t signature_len,
                         const uint8_t* public_key_info,
-                        int public_key_info_len);
+                        size_t public_key_info_len);
 
   // Feeds a piece of the data to the signature verifier.
-  void VerifyUpdate(const uint8_t* data_part, int data_part_len);
+  void VerifyUpdate(const uint8_t* data_part, size_t data_part_len);
 
   // Concludes a signature verification operation.  Returns true if the
   // signature is valid.  Returns false if the signature is invalid or an
@@ -94,9 +94,9 @@ class CRYPTO_EXPORT SignatureVerifier {
   bool CommonInit(int pkey_type,
                   const EVP_MD* digest,
                   const uint8_t* signature,
-                  int signature_len,
+                  size_t signature_len,
                   const uint8_t* public_key_info,
-                  int public_key_info_len,
+                  size_t public_key_info_len,
                   EVP_PKEY_CTX** pkey_ctx);
 
   void Reset();

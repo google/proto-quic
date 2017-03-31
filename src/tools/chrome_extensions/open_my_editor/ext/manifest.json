@@ -1,7 +1,7 @@
 {
   "name": "OME",
   "description": "OME gives you a context menu for opening files in your editor on Chromium Code Search and Code Review.",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "permissions": [
     "contextMenus",
     "tabs",

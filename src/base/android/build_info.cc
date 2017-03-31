@@ -6,7 +6,6 @@
 
 #include <string>
 
-#include "base/android/context_utils.h"
 #include "base/android/jni_android.h"
 #include "base/android/jni_string.h"
 #include "base/android/scoped_java_ref.h"
@@ -49,22 +48,18 @@ BuildInfo::BuildInfo(JNIEnv* env)
       model_(StrDupJString(Java_BuildInfo_getDeviceModel(env))),
       brand_(StrDupJString(Java_BuildInfo_getBrand(env))),
       android_build_id_(StrDupJString(Java_BuildInfo_getAndroidBuildId(env))),
-      android_build_fp_(StrDupJString(
-          Java_BuildInfo_getAndroidBuildFingerprint(env))),
-      gms_version_code_(StrDupJString(Java_BuildInfo_getGMSVersionCode(
-          env, GetApplicationContext()))),
-      package_version_code_(StrDupJString(Java_BuildInfo_getPackageVersionCode(
-          env, GetApplicationContext()))),
-      package_version_name_(StrDupJString(Java_BuildInfo_getPackageVersionName(
-          env, GetApplicationContext()))),
-      package_label_(StrDupJString(Java_BuildInfo_getPackageLabel(
-          env, GetApplicationContext()))),
-      package_name_(StrDupJString(Java_BuildInfo_getPackageName(
-          env, GetApplicationContext()))),
+      android_build_fp_(
+          StrDupJString(Java_BuildInfo_getAndroidBuildFingerprint(env))),
+      gms_version_code_(StrDupJString(Java_BuildInfo_getGMSVersionCode(env))),
+      package_version_code_(
+          StrDupJString(Java_BuildInfo_getPackageVersionCode(env))),
+      package_version_name_(
+          StrDupJString(Java_BuildInfo_getPackageVersionName(env))),
+      package_label_(StrDupJString(Java_BuildInfo_getPackageLabel(env))),
+      package_name_(StrDupJString(Java_BuildInfo_getPackageName(env))),
       build_type_(StrDupJString(Java_BuildInfo_getBuildType(env))),
       sdk_int_(Java_BuildInfo_getSdkInt(env)),
-      java_exception_info_(NULL) {
-}
+      java_exception_info_(NULL) {}
 
 // static
 BuildInfo* BuildInfo::GetInstance() {

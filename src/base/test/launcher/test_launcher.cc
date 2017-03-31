@@ -27,6 +27,7 @@
 #include "base/single_thread_task_runner.h"
 #include "base/strings/pattern.h"
 #include "base/strings/string_number_conversions.h"
+#include "base/strings/string_piece.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringize_macros.h"
@@ -615,9 +616,9 @@ void TestLauncher::OnTestFinished(const TestResult& original_result) {
                  << ": " << print_test_stdio;
   }
   if (print_snippet) {
-    std::vector<std::string> snippet_lines = SplitString(
-        result.output_snippet, "\n", base::KEEP_WHITESPACE,
-        base::SPLIT_WANT_ALL);
+    std::vector<base::StringPiece> snippet_lines =
+        SplitStringPiece(result.output_snippet, "\n", base::KEEP_WHITESPACE,
+                         base::SPLIT_WANT_ALL);
     if (snippet_lines.size() > kOutputSnippetLinesLimit) {
       size_t truncated_size = snippet_lines.size() - kOutputSnippetLinesLimit;
       snippet_lines.erase(

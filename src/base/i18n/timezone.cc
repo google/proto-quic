@@ -610,9 +610,9 @@ std::string CountryCodeForCurrentTimezone() {
   std::unique_ptr<icu::TimeZone> zone(icu::TimeZone::createDefault());
   icu::UnicodeString id;
   zone->getID(id);
-  string16 olson_code(id.getBuffer(), id.length());
+  std::string olson_code;
   return TimezoneMap::GetInstance()->CountryCodeForTimezone(
-      UTF16ToUTF8(olson_code));
+      id.toUTF8String(olson_code));
 }
 
 }  // namespace base

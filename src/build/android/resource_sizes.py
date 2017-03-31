@@ -736,6 +736,9 @@ def main():
   argparser.add_argument('--no-output-dir', action='store_true',
                          help='Skip all measurements that rely on having '
                          'output-dir')
+  argparser.add_argument('--no-static-initializer-check', action='store_false',
+                         dest='static_initializer_check', default=True,
+                         help='Skip checking for static initializers')
   argparser.add_argument('-d', '--device',
                          help='Dummy option for perf runner.')
   argparser.add_argument('--estimate-patch-size', action='store_true',
@@ -772,8 +775,9 @@ def main():
                             args.reference_apk_bucket, chartjson=chartjson)
   if not args.no_output_dir:
     PrintPakAnalysis(args.apk, args.min_pak_resource_size)
-    _PrintStaticInitializersCountFromApk(
-        args.apk, tools_prefix, chartjson=chartjson)
+    if args.static_initializer_check:
+      _PrintStaticInitializersCountFromApk(
+          args.apk, tools_prefix, chartjson=chartjson)
   if chartjson:
     results_path = os.path.join(args.output_dir, 'results-chart.json')
     logging.critical('Dumping json to %s', results_path)

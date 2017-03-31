@@ -596,7 +596,6 @@ class NET_EXPORT_PRIVATE SpdyGoAwayIR : public SpdyFrameIR {
   ~SpdyGoAwayIR() override;
   SpdyStreamId last_good_stream_id() const { return last_good_stream_id_; }
   void set_last_good_stream_id(SpdyStreamId last_good_stream_id) {
-    DCHECK_LE(0u, last_good_stream_id);
     DCHECK_EQ(0u, last_good_stream_id & ~kStreamIdMask);
     last_good_stream_id_ = last_good_stream_id;
   }

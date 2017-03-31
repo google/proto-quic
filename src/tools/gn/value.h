@@ -43,7 +43,7 @@ class Value {
   Value(const ParseNode* origin, std::unique_ptr<Scope> scope);
 
   Value(const Value& other);
-  Value(Value&& other);
+  Value(Value&& other) noexcept;
   ~Value();
 
   Value& operator=(const Value& other);
