@@ -3,7 +3,9 @@
 # found in the LICENSE file.
 """Methods for converting model objects to human-readable formats."""
 
+import datetime
 import itertools
+import time
 
 import models
 
@@ -35,7 +37,8 @@ class Describer(object):
       return
 
     yield '{}@0x{:<8x}  {:<7} {}'.format(
-        sym.section, sym.address, sym.size, sym.path or '<no path>')
+        sym.section, sym.address, sym.size,
+        sym.source_path or sym.object_path or '{no path}')
     if sym.name:
       yield '{:22}{}'.format('', sym.name)
 
@@ -78,9 +81,10 @@ class Describer(object):
 
   def GenerateLines(self, obj):
     if isinstance(obj, models.SizeInfo):
+      metadata_desc = 'Metadata: %s' % DescribeSizeInfoMetadata(obj)
       section_desc = self._DescribeSectionSizes(obj.section_sizes)
       group_desc = self.GenerateLines(obj.symbols)
-      return itertools.chain(section_desc, ('',), group_desc)
+      return itertools.chain((metadata_desc,), section_desc, ('',), group_desc)
 
     if isinstance(obj, models.SymbolDiff):
       return self._DescribeSymbolDiff(obj)
@@ -127,6 +131,20 @@ def DescribeSizeInfoCoverage(size_info):
                   'accounting for %d bytes):') % (
           len(star_syms),  len(anonymous_syms), missing_size)
       yield '+ ' + one_stat(attributed_syms)
+
+
+def _UtcToLocal(utc):
+    epoch = time.mktime(utc.timetuple())
+    offset = (datetime.datetime.fromtimestamp(epoch) -
+              datetime.datetime.utcfromtimestamp(epoch))
+    return utc + offset
+
+
+def DescribeSizeInfoMetadata(size_info):
+  time_str = 'Unknown'
+  if size_info.timestamp:
+    time_str = _UtcToLocal(size_info.timestamp).strftime('%Y-%m-%d %H:%M:%S')
+  return 'time=%s tag=%s' % (time_str, size_info.tag)
 
 
 def GenerateLines(obj, verbose=False):

@@ -42,8 +42,9 @@ Cubic::Cubic(const QuicClock* clock)
       app_limited_start_time_(QuicTime::Zero()),
       last_update_time_(QuicTime::Zero()),
       fix_convex_mode_(false),
-      fix_beta_last_max_(false) {
-  Reset();
+      fix_beta_last_max_(false),
+      allow_per_ack_updates_(false) {
+  ResetCubicState();
 }
 
 void Cubic::SetNumConnections(int num_connections) {
@@ -76,7 +77,7 @@ float Cubic::BetaLastMax() const {
              : kBetaLastMax;
 }
 
-void Cubic::Reset() {
+void Cubic::ResetCubicState() {
   epoch_ = QuicTime::Zero();  // Reset time.
   app_limited_start_time_ = QuicTime::Zero();
   last_update_time_ = QuicTime::Zero();  // Reset time.
@@ -104,6 +105,10 @@ void Cubic::SetFixBetaLastMax(bool fix_beta_last_max) {
   fix_beta_last_max_ = fix_beta_last_max;
 }
 
+void Cubic::SetAllowPerAckUpdates(bool allow_per_ack_updates) {
+  allow_per_ack_updates_ = allow_per_ack_updates;
+}
+
 QuicPacketCount Cubic::CongestionWindowAfterPacketLoss(
     QuicPacketCount current_congestion_window) {
   if (current_congestion_window < last_max_congestion_window_) {
@@ -125,7 +130,8 @@ QuicPacketCount Cubic::CongestionWindowAfterAck(
   acked_packets_count_ += 1;  // Packets acked.
   epoch_packets_count_ += 1;
   // Cubic is "independent" of RTT, the update is limited by the time elapsed.
-  if (last_congestion_window_ == current_congestion_window &&
+  if (!allow_per_ack_updates_ &&
+      last_congestion_window_ == current_congestion_window &&
       (event_time - last_update_time_ <= MaxCubicTimeInterval())) {
     return std::max(last_target_congestion_window_,
                     estimated_tcp_congestion_window_);

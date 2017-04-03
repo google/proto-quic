@@ -8,6 +8,10 @@ from core.perf_data_generator import BenchmarkMetadata
 
 
 class PerfDataGeneratorTest(unittest.TestCase):
+  def setUp(self):
+    # Test config can be big, so set maxDiff to None to see the full comparision
+    # diff when assertEquals fails.
+    self.maxDiff = None
 
   def testVerifyAllTestsInBenchmarkCsvPassesWithCorrectInput(self):
     tests = {
@@ -64,3 +68,46 @@ class PerfDataGeneratorTest(unittest.TestCase):
     with self.assertRaises(AssertionError) as context:
       perf_data_generator.verify_all_tests_in_benchmark_csv(tests, benchmarks)
     self.assertTrue('Unknown test' in context.exception.message)
+
+  def testGenerateTelemetryTestForNonReferenceBuild(self):
+    swarming_dimensions = [{'os': 'SkyNet', 'id': 'T-850', 'pool': 'T-RIP'}]
+    test = perf_data_generator.generate_telemetry_test(
+        swarming_dimensions, 'speedometer', 'release')
+    expected_generated_test = {
+        'override_compile_targets': ['telemetry_perf_tests'],
+        'args': ['speedometer', '-v', '--upload-results',
+                 '--output-format=chartjson', '--browser=release'],
+        'swarming': {
+          'ignore_swarming_task_failure': False,
+          'dimension_sets': [{'os': 'SkyNet', 'id': 'T-850', 'pool': 'T-RIP'}],
+          'hard_timeout': 7200,
+          'can_use_on_swarming_builders': True,
+          'expiration': 36000,
+          'io_timeout': 3600,
+        },
+        'name': 'speedometer',
+        'isolate_name': 'telemetry_perf_tests',
+      }
+    self.assertEquals(test, expected_generated_test)
+
+  def testGenerateTelemetryTestForReferenceBuild(self):
+    swarming_dimensions = [{'os': 'SkyNet', 'id': 'T-850', 'pool': 'T-RIP'}]
+    test = perf_data_generator.generate_telemetry_test(
+        swarming_dimensions, 'speedometer', 'reference')
+    expected_generated_test = {
+        'override_compile_targets': ['telemetry_perf_tests'],
+        'args': ['speedometer', '-v', '--upload-results',
+                 '--output-format=chartjson', '--browser=reference',
+                 '--output-trace-tag=_ref'],
+        'swarming': {
+          'ignore_swarming_task_failure': True,
+          'dimension_sets': [{'os': 'SkyNet', 'id': 'T-850', 'pool': 'T-RIP'}],
+          'hard_timeout': 7200,
+          'can_use_on_swarming_builders': True,
+          'expiration': 36000,
+          'io_timeout': 3600,
+        },
+        'name': 'speedometer.reference',
+        'isolate_name': 'telemetry_perf_tests',
+      }
+    self.assertEquals(test, expected_generated_test)

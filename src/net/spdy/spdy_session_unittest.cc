@@ -5621,7 +5621,7 @@ class AltSvcFrameTest : public SpdySessionTest {
 
 TEST_F(AltSvcFrameTest, ProcessAltSvcFrame) {
   const char origin[] = "https://mail.example.org";
-  SpdyAltSvcIR altsvc_ir(0);
+  SpdyAltSvcIR altsvc_ir(/* stream_id = */ 0);
   altsvc_ir.add_altsvc(alternative_service_);
   altsvc_ir.set_origin(origin);
   AddSocketData(altsvc_ir);
@@ -5650,7 +5650,7 @@ TEST_F(AltSvcFrameTest, ProcessAltSvcFrame) {
 
 TEST_F(AltSvcFrameTest, DoNotProcessAltSvcFrameOnInsecureSession) {
   const char origin[] = "https://mail.example.org";
-  SpdyAltSvcIR altsvc_ir(0);
+  SpdyAltSvcIR altsvc_ir(/* stream_id = */ 0);
   altsvc_ir.add_altsvc(alternative_service_);
   altsvc_ir.set_origin(origin);
   AddSocketData(altsvc_ir);
@@ -5676,7 +5676,7 @@ TEST_F(AltSvcFrameTest, DoNotProcessAltSvcFrameOnInsecureSession) {
 
 TEST_F(AltSvcFrameTest, DoNotProcessAltSvcFrameForOriginNotCoveredByCert) {
   const char origin[] = "https://invalid.example.org";
-  SpdyAltSvcIR altsvc_ir(0);
+  SpdyAltSvcIR altsvc_ir(/* stream_id = */ 0);
   altsvc_ir.add_altsvc(alternative_service_);
   altsvc_ir.set_origin(origin);
   AddSocketData(altsvc_ir);
@@ -5703,7 +5703,7 @@ TEST_F(AltSvcFrameTest, DoNotProcessAltSvcFrameForOriginNotCoveredByCert) {
 // An ALTSVC frame on stream 0 with empty origin MUST be ignored.
 // (RFC 7838 Section 4)
 TEST_F(AltSvcFrameTest, DoNotProcessAltSvcFrameWithEmptyOriginOnStreamZero) {
-  SpdyAltSvcIR altsvc_ir(0);
+  SpdyAltSvcIR altsvc_ir(/* stream_id = */ 0);
   altsvc_ir.add_altsvc(alternative_service_);
   AddSocketData(altsvc_ir);
   AddSSLSocketData();
@@ -5725,7 +5725,7 @@ TEST_F(AltSvcFrameTest, DoNotProcessAltSvcFrameWithEmptyOriginOnStreamZero) {
 // ignored.  (RFC 7838 Section 4)
 TEST_F(AltSvcFrameTest,
        DoNotProcessAltSvcFrameWithNonEmptyOriginOnNonZeroStream) {
-  SpdyAltSvcIR altsvc_ir(1);
+  SpdyAltSvcIR altsvc_ir(/* stream_id = */ 1);
   altsvc_ir.add_altsvc(alternative_service_);
   altsvc_ir.set_origin("https://mail.example.org");
   AddSocketData(altsvc_ir);
@@ -5745,7 +5745,7 @@ TEST_F(AltSvcFrameTest,
 }
 
 TEST_F(AltSvcFrameTest, ProcessAltSvcFrameOnActiveStream) {
-  SpdyAltSvcIR altsvc_ir(1);
+  SpdyAltSvcIR altsvc_ir(/* stream_id = */ 1);
   altsvc_ir.add_altsvc(alternative_service_);
 
   SpdySerializedFrame altsvc_frame(spdy_util_.SerializeFrame(altsvc_ir));
@@ -5799,7 +5799,7 @@ TEST_F(AltSvcFrameTest, ProcessAltSvcFrameOnActiveStream) {
 }
 
 TEST_F(AltSvcFrameTest, DoNotProcessAltSvcFrameOnStreamWithInsecureOrigin) {
-  SpdyAltSvcIR altsvc_ir(1);
+  SpdyAltSvcIR altsvc_ir(/* stream_id = */ 1);
   altsvc_ir.add_altsvc(alternative_service_);
 
   SpdySerializedFrame altsvc_frame(spdy_util_.SerializeFrame(altsvc_ir));
@@ -5850,7 +5850,7 @@ TEST_F(AltSvcFrameTest, DoNotProcessAltSvcFrameOnStreamWithInsecureOrigin) {
 }
 
 TEST_F(AltSvcFrameTest, DoNotProcessAltSvcFrameOnNonExistentStream) {
-  SpdyAltSvcIR altsvc_ir(1);
+  SpdyAltSvcIR altsvc_ir(/* stream_id = */ 1);
   altsvc_ir.add_altsvc(alternative_service_);
   AddSocketData(altsvc_ir);
   AddSSLSocketData();
@@ -6104,87 +6104,6 @@ TEST(CanPoolTest, CanPoolWithAcceptablePins) {
 
   EXPECT_TRUE(SpdySession::CanPool(
       &tss, ssl_info, "www.example.org", "mail.example.org"));
-}
-
-class SpdySessionCloseIdleConnectionTest
-    : public SpdySessionTest,
-      public ::testing::WithParamInterface<bool> {
- protected:
-  SpdySessionCloseIdleConnectionTest() : experiment_enabled_(GetParam()) {}
-  void SetUp() override {
-    if (experiment_enabled_) {
-      scoped_feature_list_.InitFromCommandLine("CloseIdleH2SocketsEarly",
-                                               std::string());
-    }
-  }
-
- protected:
-  const bool experiment_enabled_;
-
- private:
-  base::test::ScopedFeatureList scoped_feature_list_;
-  HttpRequestInfo request_info_;
-};
-
-INSTANTIATE_TEST_CASE_P(/* no prefix */,
-                        SpdySessionCloseIdleConnectionTest,
-                        ::testing::Bool());
-
-TEST_P(SpdySessionCloseIdleConnectionTest, CloseIdleConnectionsInGroup) {
-  session_deps_.host_resolver->set_synchronous_mode(true);
-
-  const int kNumIdleSockets = 4;
-  MockRead reads[] = {MockRead(ASYNC, 0, 0)};
-  std::vector<std::unique_ptr<SequencedSocketData>> providers;
-  for (int i = 0; i < kNumIdleSockets; i++) {
-    auto provider = base::MakeUnique<SequencedSocketData>(
-        reads, arraysize(reads), nullptr, 0);
-    session_deps_.socket_factory->AddSocketDataProvider(provider.get());
-    providers.push_back(std::move(provider));
-    AddSSLSocketData();
-  }
-
-  CreateNetworkSession();
-
-  // Create some HTTP/2 sockets.
-  std::vector<std::unique_ptr<ClientSocketHandle>> handles;
-  for (size_t i = 0; i < kNumIdleSockets; i++) {
-    scoped_refptr<TransportSocketParams> transport_params(
-        new TransportSocketParams(
-            key_.host_port_pair(), false, OnHostResolutionCallback(),
-            TransportSocketParams::COMBINE_CONNECT_AND_WRITE_DEFAULT));
-
-    auto connection = base::MakeUnique<ClientSocketHandle>();
-    TestCompletionCallback callback;
-
-    SSLConfig ssl_config;
-    scoped_refptr<SSLSocketParams> ssl_params(new SSLSocketParams(
-        transport_params, nullptr, nullptr, key_.host_port_pair(), ssl_config,
-        key_.privacy_mode(), 0, false));
-    int rv = connection->Init(
-        key_.host_port_pair().ToString(), ssl_params, MEDIUM,
-        ClientSocketPool::RespectLimits::ENABLED, callback.callback(),
-        http_session_->GetSSLSocketPool(HttpNetworkSession::NORMAL_SOCKET_POOL),
-        NetLogWithSource());
-    rv = callback.GetResult(rv);
-    handles.push_back(std::move(connection));
-  }
-
-  // Releases handles now, and these sockets should go into the socket pool.
-  handles.clear();
-  EXPECT_EQ(
-      kNumIdleSockets,
-      http_session_->GetSSLSocketPool(HttpNetworkSession::NORMAL_SOCKET_POOL)
-          ->IdleSocketCount());
-
-  // The new SpdySession will reuse one socket from the pool.
-  CreateSecureSpdySession();
-
-  // If the experiment is enabled, the SpdySession will close idle sockets.
-  EXPECT_EQ(
-      experiment_enabled_ ? 0 : kNumIdleSockets - 1,
-      http_session_->GetSSLSocketPool(HttpNetworkSession::NORMAL_SOCKET_POOL)
-          ->IdleSocketCount());
 }
 
 }  // namespace net

@@ -106,7 +106,7 @@ QuicData* CryptoFramer::ConstructHandshakeMessage(
 
   std::unique_ptr<char[]> buffer(new char[len]);
   QuicDataWriter writer(len, buffer.get());
-  if (!writer.WriteUInt32(message.tag())) {
+  if (!writer.WriteTag(message.tag())) {
     DCHECK(false) << "Failed to write message tag.";
     return nullptr;
   }
@@ -138,7 +138,7 @@ QuicData* CryptoFramer::ConstructHandshakeMessage(
       }
     }
 
-    if (!writer.WriteUInt32(it->first)) {
+    if (!writer.WriteTag(it->first)) {
       DCHECK(false) << "Failed to write tag.";
       return nullptr;
     }
@@ -201,7 +201,7 @@ QuicErrorCode CryptoFramer::Process(QuicStringPiece input) {
         break;
       }
       QuicTag message_tag;
-      reader.ReadUInt32(&message_tag);
+      reader.ReadTag(&message_tag);
       message_.set_tag(message_tag);
       state_ = STATE_READING_NUM_ENTRIES;
     case STATE_READING_NUM_ENTRIES:
@@ -228,7 +228,7 @@ QuicErrorCode CryptoFramer::Process(QuicStringPiece input) {
       uint32_t last_end_offset = 0;
       for (unsigned i = 0; i < num_entries_; ++i) {
         QuicTag tag;
-        reader.ReadUInt32(&tag);
+        reader.ReadTag(&tag);
         if (i > 0 && tag <= tags_and_lengths_[i - 1].first) {
           if (tag == tags_and_lengths_[i - 1].first) {
             error_detail_ = QuicStrCat("Duplicate tag:", tag);
@@ -276,7 +276,7 @@ QuicErrorCode CryptoFramer::Process(QuicStringPiece input) {
 bool CryptoFramer::WritePadTag(QuicDataWriter* writer,
                                size_t pad_length,
                                uint32_t* end_offset) {
-  if (!writer->WriteUInt32(kPAD)) {
+  if (!writer->WriteTag(kPAD)) {
     DCHECK(false) << "Failed to write tag.";
     return false;
   }

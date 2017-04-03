@@ -12,22 +12,18 @@ def CheckChange(input_api, output_api):
   """Checks that histograms.xml is pretty-printed and well-formatted."""
   for f in input_api.AffectedTextFiles():
     p = f.AbsoluteLocalPath()
-    if (input_api.basename(p) == 'histograms.xml'
-        and input_api.os_path.dirname(p) == input_api.PresubmitLocalPath()):
-      cwd = input_api.os_path.dirname(p)
-      exit_code = input_api.subprocess.call(
-          ['python', 'pretty_print.py', '--presubmit'], cwd=cwd)
-      if exit_code != 0:
-        return [output_api.PresubmitError(
-            'histograms.xml is not formatted correctly; run %s/pretty_print.py '
-            'to fix' % input_api.PresubmitLocalPath())]
+    if input_api.basename(p) != 'histograms.xml':
+      continue
+    cwd = input_api.os_path.dirname(p)
+    if cwd != input_api.PresubmitLocalPath():
+      continue
 
-      exit_code = input_api.subprocess.call(
-          ['python', 'validate_format.py'], cwd=cwd)
-      if exit_code != 0:
-        return [output_api.PresubmitError(
-            'histograms.xml is not well formatted; run %s/validate_format.py '
-            'and fix the reported errors' % input_api.PresubmitLocalPath())]
+    exit_code = input_api.subprocess.call(
+        ['python', 'validate_format.py'], cwd=cwd)
+    if exit_code != 0:
+      return [output_api.PresubmitError(
+          'histograms.xml is not well formatted; run %s/validate_format.py '
+          'and fix the reported errors' % cwd)]
   return []
 
 

@@ -16,13 +16,13 @@ URL_TEMPLATE = ('https://commondatastorage.googleapis.com/chromeos-localmirror/'
                 'distfiles/%(name)s-%(version)s.tar.bz2')
 
 # Taken from the media-fonts/<name> ebuilds in chromiumos-overlay.
+# noto-cjk used to be here, but is removed because fc-cache takes too long
+# regenerating the fontconfig cache (See crbug.com/697954.)
+# TODO(jshin): Add it back when the above issue can be avoided.
 SOURCES = [
   {
     'name': 'notofonts',
     'version': '20161129'
-  }, {
-    'name': 'noto-cjk',
-    'version': '20150910'
   }, {
     'name': 'robotofonts',
     'version': '2.132'

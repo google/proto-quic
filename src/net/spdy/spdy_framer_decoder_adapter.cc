@@ -139,10 +139,6 @@ bool SpdyFramerVisitorAdapter::OnGoAwayFrameData(const char* goaway_data,
   return visitor_->OnGoAwayFrameData(goaway_data, len);
 }
 
-void SpdyFramerVisitorAdapter::OnBlocked(SpdyStreamId stream_id) {
-  visitor_->OnBlocked(stream_id);
-}
-
 void SpdyFramerVisitorAdapter::OnPushPromise(SpdyStreamId stream_id,
                                              SpdyStreamId promised_stream_id,
                                              bool end) {

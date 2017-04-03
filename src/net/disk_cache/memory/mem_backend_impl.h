@@ -73,6 +73,10 @@ class NET_EXPORT_PRIVATE MemBackendImpl final : public Backend {
   // determine if eviction is neccessary and when eviction is finished.
   void ModifyStorageSize(int32_t delta);
 
+  // Returns true if the cache's size is greater than the maximum allowed
+  // size.
+  bool HasExceededStorageSize() const;
+
   // Backend interface.
   net::CacheType GetCacheType() const override;
   int32_t GetEntryCount() const override;

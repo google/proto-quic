@@ -412,6 +412,24 @@ QuicTestPacketMaker::MakeRequestHeadersPacket(QuicPacketNumber packet_number,
                                               SpdyHeaderBlock headers,
                                               size_t* spdy_headers_frame_length,
                                               QuicStreamOffset* offset) {
+  std::string unused_stream_data;
+  return MakeRequestHeadersPacketAndSaveData(
+      packet_number, stream_id, should_include_version, fin, priority,
+      std::move(headers), spdy_headers_frame_length, offset,
+      &unused_stream_data);
+}
+
+std::unique_ptr<QuicReceivedPacket>
+QuicTestPacketMaker::MakeRequestHeadersPacketAndSaveData(
+    QuicPacketNumber packet_number,
+    QuicStreamId stream_id,
+    bool should_include_version,
+    bool fin,
+    SpdyPriority priority,
+    SpdyHeaderBlock headers,
+    size_t* spdy_headers_frame_length,
+    QuicStreamOffset* offset,
+    std::string* stream_data) {
   InitializeHeader(packet_number, should_include_version);
   SpdySerializedFrame spdy_frame;
   SpdyHeadersIR headers_frame(stream_id, std::move(headers));
@@ -419,10 +437,11 @@ QuicTestPacketMaker::MakeRequestHeadersPacket(QuicPacketNumber packet_number,
   headers_frame.set_weight(Spdy3PriorityToHttp2Weight(priority));
   headers_frame.set_has_priority(true);
   spdy_frame = spdy_request_framer_.SerializeFrame(headers_frame);
+  *stream_data = std::string(spdy_frame.data(), spdy_frame.size());
 
-  if (spdy_headers_frame_length) {
+  if (spdy_headers_frame_length)
     *spdy_headers_frame_length = spdy_frame.size();
-  }
+
   if (offset != nullptr) {
     QuicStreamFrame frame(
         kHeadersStreamId, false, *offset,
@@ -636,11 +655,25 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeSettingsPacket(
     size_t value,
     bool should_include_version,
     QuicStreamOffset* offset) {
+  std::string unused_data;
+  return MakeSettingsPacketAndSaveData(
+      packet_number, id, value, should_include_version, offset, &unused_data);
+}
+
+std::unique_ptr<QuicReceivedPacket>
+QuicTestPacketMaker::MakeSettingsPacketAndSaveData(
+    QuicPacketNumber packet_number,
+    SpdySettingsIds id,
+    size_t value,
+    bool should_include_version,
+    QuicStreamOffset* offset,
+    std::string* stream_data) {
   SpdySettingsIR settings_frame;
   settings_frame.AddSetting(id, value);
   SpdySerializedFrame spdy_frame(
       spdy_request_framer_.SerializeFrame(settings_frame));
   InitializeHeader(packet_number, should_include_version);
+  *stream_data = std::string(spdy_frame.data(), spdy_frame.size());
   if (offset != nullptr) {
     QuicStreamFrame quic_frame(
         kHeadersStreamId, false, *offset,

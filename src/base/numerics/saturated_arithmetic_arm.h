@@ -33,6 +33,12 @@ inline int32_t SaturatedNegative(int32_t a) {
   return SaturatedSubtraction(0, a);
 }
 
+inline int32_t SaturatedAbsolute(int32_t a) {
+  if (a >= 0)
+    return a;
+  return SaturatedNegative(a);
+}
+
 inline int GetMaxSaturatedSetResultForTesting(int fractional_shift) {
   // For ARM Asm version the set function maxes out to the biggest
   // possible integer part with the fractional part zero'd out.

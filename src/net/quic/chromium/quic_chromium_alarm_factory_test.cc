@@ -4,8 +4,8 @@
 
 #include "net/quic/chromium/quic_chromium_alarm_factory.h"
 
+#include "net/quic/chromium/test_task_runner.h"
 #include "net/quic/test_tools/mock_clock.h"
-#include "net/quic/test_tools/test_task_runner.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

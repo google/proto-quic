@@ -390,6 +390,11 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
         FLAGS_quic_reloadable_flag_quic_fix_cubic_bytes_quantization) {
       copt.push_back(kCBQT);
     }
+    if (GetParam().congestion_control_tag == kQBIC &&
+        FLAGS_quic_reloadable_flag_quic_enable_cubic_per_ack_updates) {
+      copt.push_back(kCPAU);
+    }
+
     if (support_server_push_) {
       copt.push_back(kSPSH);
     }
@@ -671,6 +676,31 @@ TEST_P(EndToEndTest, MultipleRequestResponse) {
   EXPECT_EQ("200", client_->response_headers()->find(":status")->second);
   EXPECT_EQ(kBarResponseBody, client_->SendSynchronousRequest("/bar"));
   EXPECT_EQ("200", client_->response_headers()->find(":status")->second);
+}
+
+TEST_P(EndToEndTest, MultipleStreams) {
+  // Verifies quic_test_client can track responses of all active streams.
+  ASSERT_TRUE(Initialize());
+
+  const int kNumRequests = 10;
+
+  SpdyHeaderBlock headers;
+  headers[":method"] = "POST";
+  headers[":path"] = "/foo";
+  headers[":scheme"] = "https";
+  headers[":authority"] = server_hostname_;
+  headers["content-length"] = "3";
+
+  for (int i = 0; i < kNumRequests; ++i) {
+    client_->SendMessage(headers, "bar", /*fin=*/true);
+  }
+
+  while (kNumRequests > client_->num_responses()) {
+    client_->ClearPerRequestState();
+    client_->WaitForResponse();
+    EXPECT_EQ(kFooResponseBody, client_->response_body());
+    EXPECT_EQ("200", client_->response_headers()->find(":status")->second);
+  }
 }
 
 TEST_P(EndToEndTest, MultipleClients) {

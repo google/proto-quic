@@ -317,7 +317,7 @@ EOF
 EM_ARCHIVE_KEY_FINGER="084C6C6F39159EDB67969AA87DE089671804772E"
 GPP_ARM_PACKAGE="g++-arm-linux-gnueabihf"
 case $lsb_release in
-  "jessie")
+  jessie)
     eval $(apt-config shell APT_SOURCESDIR 'Dir::Etc::sourceparts/d')
     CROSSTOOLS_LIST="${APT_SOURCESDIR}/crosstools.list"
     arm_list="libc6-dev:armhf
@@ -340,7 +340,7 @@ case $lsb_release in
       fi
     fi
     ;;
-  "*")
+  *)
     arm_list="binutils-aarch64-linux-gnu
               libc6-dev-armhf-cross
               linux-libc-dev-armhf-cross

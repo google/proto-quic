@@ -222,7 +222,7 @@ void TestTaskScheduler::Shutdown() {
 }
 
 void TestTaskScheduler::FlushForTesting() {
-  NOTREACHED();
+  RunLoop().RunUntilIdle();
 }
 
 void TestTaskScheduler::JoinForTesting() {

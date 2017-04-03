@@ -67,7 +67,7 @@
      "$t": "2014-10-20T22:13:38.000Z"
     },
     "title": {
-     "$t": "11.1% regression in indexeddb_perf at 298653:298680"
+     "$t": "11.1% regression in speedometer at 298653:298680"
     },
     "content": {
      "$t": "See the link to graphs below.",

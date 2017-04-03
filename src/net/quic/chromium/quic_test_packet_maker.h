@@ -148,6 +148,18 @@ class QuicTestPacketMaker {
       size_t* spdy_headers_frame_length,
       QuicStreamOffset* offset);
 
+  // Saves the serialized QUIC stream data in |stream_data|.
+  std::unique_ptr<QuicReceivedPacket> MakeRequestHeadersPacketAndSaveData(
+      QuicPacketNumber packet_number,
+      QuicStreamId stream_id,
+      bool should_include_version,
+      bool fin,
+      SpdyPriority priority,
+      SpdyHeaderBlock headers,
+      size_t* spdy_headers_frame_length,
+      QuicStreamOffset* offset,
+      std::string* stream_data);
+
   // Convenience method for calling MakeRequestHeadersPacket with nullptr for
   // |spdy_headers_frame_length|.
   std::unique_ptr<QuicReceivedPacket>
@@ -206,6 +218,16 @@ class QuicTestPacketMaker {
       size_t value,
       bool should_include_version,
       QuicStreamOffset* offset);
+
+  // Same as above, but also saves the serialized QUIC stream data in
+  // |stream_data|.
+  std::unique_ptr<QuicReceivedPacket> MakeSettingsPacketAndSaveData(
+      QuicPacketNumber packet_number,
+      SpdySettingsIds id,
+      size_t value,
+      bool should_include_version,
+      QuicStreamOffset* offset,
+      std::string* stream_data);
 
   SpdyHeaderBlock GetRequestHeaders(const std::string& method,
                                     const std::string& scheme,

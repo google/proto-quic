@@ -254,8 +254,10 @@ TEST_F(StackTraceTest, itoa_r) {
 }
 #endif  // defined(OS_POSIX) && !defined(OS_ANDROID)
 
-#if HAVE_TRACE_STACK_FRAME_POINTERS
-
+#if HAVE_TRACE_STACK_FRAME_POINTERS && !defined(OS_WIN)
+// Windows x64 binaries cannot be built with frame pointer, and MSVC doesn't
+// provide intrinsics to query the frame pointer even for the x86 build, nor
+// does it allow us to take the address of labels, so skip these under Windows.
 template <size_t Depth>
 void NOINLINE ExpectStackFramePointers(const void** frames,
                                        size_t max_depth) {
@@ -313,7 +315,7 @@ TEST_F(StackTraceTest, MAYBE_StackEnd) {
   EXPECT_NE(0u, GetStackEnd());
 }
 
-#endif  // HAVE_TRACE_STACK_FRAME_POINTERS
+#endif  // HAVE_TRACE_STACK_FRAME_POINTERS && !defined(OS_WIN)
 
 }  // namespace debug
 }  // namespace base

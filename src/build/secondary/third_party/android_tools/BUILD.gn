@@ -59,8 +59,6 @@ android_aar_prebuilt("android_support_transition_java") {
 }
 
 android_aar_prebuilt("android_support_multidex_java") {
-  # TODO(jbudorick): remove requires_android after crbug.com/522043 is fixed.
-  requires_android = false
   aar_path = "$lib_path/multidex/1.0.1/multidex-1.0.1.aar"
 }
 

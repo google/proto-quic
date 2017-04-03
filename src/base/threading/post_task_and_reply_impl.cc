@@ -39,12 +39,11 @@ class PostTaskAndReplyRelay {
 
   ~PostTaskAndReplyRelay() {
     DCHECK(sequence_checker_.CalledOnValidSequence());
-    task_.Reset();
-    reply_.Reset();
   }
 
   void RunTaskAndPostReply() {
     task_.Run();
+    task_.Reset();
     origin_task_runner_->PostTask(
         from_here_, Bind(&PostTaskAndReplyRelay::RunReplyAndSelfDestruct,
                          base::Unretained(this)));
@@ -54,10 +53,10 @@ class PostTaskAndReplyRelay {
   void RunReplyAndSelfDestruct() {
     DCHECK(sequence_checker_.CalledOnValidSequence());
 
-    // Force |task_| to be released before |reply_| is to ensure that no one
-    // accidentally depends on |task_| keeping one of its arguments alive while
-    // |reply_| is executing.
-    task_.Reset();
+    // Ensure |task_| has already been released before |reply_| to ensure that
+    // no one accidentally depends on |task_| keeping one of its arguments alive
+    // while |reply_| is executing.
+    DCHECK(!task_);
 
     reply_.Run();
 

@@ -16,10 +16,6 @@ declare_args() {
   target_sysroot_dir = ""
 
   use_sysroot = true
-
-  # TODO(tonikitoo): Remove this arg when wheezy is finally dropped and we
-  # can just use debian/jessie everywhere by default. crbug.com/564904.
-  use_jessie_sysroot = false
 }
 
 if (is_linux && target_sysroot_dir != "") {
@@ -51,32 +47,19 @@ if (is_linux && target_sysroot_dir != "") {
 } else if (is_linux && use_sysroot) {
   # By default build against a sysroot image downloaded from Cloud Storage
   # during gclient runhooks.
-  if (is_chromeos) {
-    # Regular ChromeOS builds use custom sysroots, but desktop ChromeOS (where
-    # we're building linux desktop binaries but using the ChromeOS UI and
-    # functionality where possible) needs to run on the buliders, which are
-    # running precise.  The precise build has a different set of dependencies
-    # from the wheezy build, so we cannot use the wheezy sysroot.
-    sysroot = "//build/linux/ubuntu_precise_amd64-sysroot"
+  if (current_cpu == "x64") {
+    sysroot = "//build/linux/debian_jessie_amd64-sysroot"
+  } else if (current_cpu == "x86") {
+    sysroot = "//build/linux/debian_jessie_i386-sysroot"
+  } else if (current_cpu == "mipsel") {
+    sysroot = "//build/linux/debian_jessie_mips-sysroot"
+  } else if (current_cpu == "arm") {
+    sysroot = "//build/linux/debian_jessie_arm-sysroot"
+  } else if (current_cpu == "arm64") {
+    sysroot = "//build/linux/debian_jessie_arm64-sysroot"
   } else {
-    if (current_cpu == "x64") {
-      sysroot = "//build/linux/debian_wheezy_amd64-sysroot"
-
-      if (use_jessie_sysroot) {
-        sysroot = "//build/linux/debian_jessie_amd64-sysroot"
-      }
-    } else if (current_cpu == "x86") {
-      sysroot = "//build/linux/debian_wheezy_i386-sysroot"
-    } else if (current_cpu == "mipsel") {
-      sysroot = "//build/linux/debian_wheezy_mips-sysroot"
-    } else if (current_cpu == "arm") {
-      sysroot = "//build/linux/debian_wheezy_arm-sysroot"
-    } else if (current_cpu == "arm64") {
-      sysroot = "//build/linux/debian_jessie_arm64-sysroot"
-    } else {
-      # Any other builds don't use a sysroot.
-      sysroot = ""
-    }
+    # Any other builds don't use a sysroot.
+    sysroot = ""
   }
 
   if (sysroot != "") {

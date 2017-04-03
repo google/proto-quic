@@ -719,6 +719,7 @@ bool ShouldPrefixFunctionName(const std::string& old_method_name) {
       "screenInfo",
       "screenOrientationController",
       "scrollAnimator",
+      "selectionInDOMTree",
       "selectionInFlatTree",
       "settings",
       "signalingState",

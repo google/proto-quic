@@ -41,10 +41,9 @@
 // delete and reused. The value in |sample| must be strictly less than
 // |enum_max|.
 
-#define UMA_HISTOGRAM_ENUMERATION(name, sample, enum_max)                      \
-    INTERNAL_HISTOGRAM_ENUMERATION_WITH_FLAG(                                  \
-        name, sample, enum_max,                                                \
-        base::HistogramBase::kUmaTargetedHistogramFlag)
+#define UMA_HISTOGRAM_ENUMERATION(name, sample, enum_max) \
+  INTERNAL_HISTOGRAM_ENUMERATION_WITH_FLAG(               \
+      name, sample, enum_max, base::HistogramBase::kUmaTargetedHistogramFlag)
 
 // Histogram for boolean values.
 
@@ -68,14 +67,15 @@
 // Sample usage:
 //   UMA_HISTOGRAM_EXACT_LINEAR("Histogram.Linear", count, 10);
 #define UMA_HISTOGRAM_EXACT_LINEAR(name, sample, value_max) \
-  UMA_HISTOGRAM_ENUMERATION(name, sample, value_max)
+  INTERNAL_HISTOGRAM_EXACT_LINEAR_WITH_FLAG(                \
+      name, sample, value_max, base::HistogramBase::kUmaTargetedHistogramFlag)
 
 // Used for capturing basic percentages. This will be 100 buckets of size 1.
 
 // Sample usage:
 //   UMA_HISTOGRAM_PERCENTAGE("Histogram.Percent", percent_as_int);
-#define UMA_HISTOGRAM_PERCENTAGE(name, percent_as_int)                         \
-    UMA_HISTOGRAM_ENUMERATION(name, percent_as_int, 101)
+#define UMA_HISTOGRAM_PERCENTAGE(name, percent_as_int) \
+  UMA_HISTOGRAM_EXACT_LINEAR(name, percent_as_int, 101)
 
 //------------------------------------------------------------------------------
 // Count histograms. These are used for collecting numeric data. Note that we

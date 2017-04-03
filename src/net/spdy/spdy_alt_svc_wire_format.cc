@@ -5,11 +5,11 @@
 #include "net/spdy/spdy_alt_svc_wire_format.h"
 
 #include <algorithm>
+#include <cctype>
 #include <limits>
 #include <string>
 
 #include "base/logging.h"
-#include "base/strings/string_util.h"
 #include "net/spdy/platform/api/spdy_string_utils.h"
 
 namespace net {
@@ -21,8 +21,7 @@ bool ParsePositiveIntegerImpl(SpdyStringPiece::const_iterator c,
                               SpdyStringPiece::const_iterator end,
                               T* value) {
   *value = 0;
-  // TODO(mmenke):  This really should be using methods in parse_number.h.
-  for (; c != end && '0' <= *c && *c <= '9'; ++c) {
+  for (; c != end && std::isdigit(*c); ++c) {
     if (*value > std::numeric_limits<T>::max() / 10) {
       return false;
     }
@@ -278,20 +277,17 @@ bool SpdyAltSvcWireFormat::PercentDecode(SpdyStringPiece::const_iterator c,
     }
     DCHECK_EQ('%', *c);
     ++c;
-    if (c == end || !base::IsHexDigit(*c)) {
+    if (c == end || !std::isxdigit(*c)) {
       return false;
     }
     // Network byte order is big-endian.
-    int decoded = base::HexDigitToInt(*c) << 4;
-
+    char decoded = SpdyHexDigitToInt(*c) << 4;
     ++c;
-    if (c == end || !base::IsHexDigit(*c)) {
+    if (c == end || !std::isxdigit(*c)) {
       return false;
     }
-    // Network byte order is big-endian.
-    decoded += base::HexDigitToInt(*c);
-
-    output->push_back(static_cast<char>(decoded));
+    decoded += SpdyHexDigitToInt(*c);
+    output->push_back(decoded);
   }
   return true;
 }

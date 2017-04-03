@@ -127,7 +127,7 @@ TEST_F(MessageLoopTaskRunnerTest, PostTaskAndReply_Basic) {
   RunLoop().Run();
 
   EXPECT_EQ(task_thread_.message_loop(), task_run_on);
-  EXPECT_EQ(current_loop_.get(), task_deleted_on);
+  EXPECT_EQ(task_thread_.message_loop(), task_deleted_on);
   EXPECT_EQ(current_loop_.get(), reply_run_on);
   EXPECT_EQ(current_loop_.get(), reply_deleted_on);
   EXPECT_LT(task_delete_order, reply_delete_order);
@@ -200,7 +200,8 @@ TEST_F(MessageLoopTaskRunnerTest, PostTaskAndReply_SameLoop) {
   EXPECT_LT(task_delete_order, reply_delete_order);
 }
 
-TEST_F(MessageLoopTaskRunnerTest, PostTaskAndReply_DeadReplyLoopDoesNotDelete) {
+TEST_F(MessageLoopTaskRunnerTest,
+       PostTaskAndReply_DeadReplyTaskRunnerBehavior) {
   // Annotate the scope as having memory leaks to suppress heapchecker reports.
   ANNOTATE_SCOPED_MEMORY_LEAK;
   MessageLoop* task_run_on = NULL;
@@ -237,11 +238,13 @@ TEST_F(MessageLoopTaskRunnerTest, PostTaskAndReply_DeadReplyLoopDoesNotDelete) {
   MessageLoop* task_loop = task_thread_.message_loop();
   task_thread_.Stop();
 
+  // Even if the reply task runner is already gone, the original task should
+  // already be deleted. However, the reply which hasn't executed yet should
+  // leak to avoid thread-safety issues.
   EXPECT_EQ(task_loop, task_run_on);
-  ASSERT_FALSE(task_deleted_on);
+  EXPECT_EQ(task_loop, task_deleted_on);
   EXPECT_FALSE(reply_run_on);
   ASSERT_FALSE(reply_deleted_on);
-  EXPECT_EQ(task_delete_order, reply_delete_order);
 
   // The PostTaskAndReplyRelay is leaked here.  Even if we had a reference to
   // it, we cannot just delete it because PostTaskAndReplyRelay's destructor

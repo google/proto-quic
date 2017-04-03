@@ -15,7 +15,9 @@ declare_args() {
   # How many symbols to include in the build. This affects the performance of
   # the build since the symbols are large and dealing with them is slow.
   #   2 means regular build with symbols.
-  #   1 means minimal symbols, usually enough for backtraces only.
+  #   1 means minimal symbols, usually enough for backtraces only. Symbols with
+  # internal linkage (static functions or those in anonymous namespaces) may not
+  # appear when using this level.
   #   0 means no symbols.
   #   -1 means auto-set according to debug/release and platform.
   symbol_level = -1

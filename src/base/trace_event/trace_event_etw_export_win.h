@@ -56,7 +56,7 @@ class BASE_EXPORT TraceEventETWExport {
   static void AddCompleteEndEvent(const char* name);
 
   // Returns true if any category in the group is enabled.
-  static bool IsCategoryGroupEnabled(const char* category_group_name);
+  static bool IsCategoryGroupEnabled(StringPiece category_group_name);
 
  private:
   // Ensure only the provider can construct us.
@@ -70,7 +70,7 @@ class BASE_EXPORT TraceEventETWExport {
   bool UpdateEnabledCategories();
 
   // Returns true if the category is enabled.
-  bool IsCategoryEnabled(const char* category_name) const;
+  bool IsCategoryEnabled(StringPiece category_name) const;
 
   // Called back by the update thread to check for potential changes to the
   // keyword.

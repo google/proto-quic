@@ -12,6 +12,10 @@ class LitePage(IntegrationTest):
   # Checks that a Lite Page is served and that the ignore_preview_blacklist
   # experiment is being used.
   def testLitePage(self):
+    # If it was attempted to run with another experiment, skip this test.
+    if common.ParseFlags().browser_args and ('--data-reduction-proxy-experiment'
+        in common.ParseFlags().browser_args):
+      self.skipTest('This test cannot be run with other experiments.')
     with TestDriver() as test_driver:
       test_driver.AddChromeArg('--enable-spdy-proxy-auth')
       test_driver.AddChromeArg('--data-reduction-proxy-lo-fi=always-on')

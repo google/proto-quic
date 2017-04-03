@@ -115,7 +115,7 @@ class _Session(object):
         '',
         '# Show two levels of .text, grouped by first two subdirectories',
         'text_syms = size_info1.symbols.WhereInSection("t")',
-        'by_path = text_syms.GroupByPath(depth=2)',
+        'by_path = text_syms.GroupBySourcePath(depth=2)',
         'Print(by_path.WhereBiggerThan(1024))',
         '',
         '# Show all non-vtable generated symbols',

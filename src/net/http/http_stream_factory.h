@@ -208,6 +208,7 @@ class NET_EXPORT HttpStreamFactory {
       const SSLConfig& server_ssl_config,
       const SSLConfig& proxy_ssl_config,
       HttpStreamRequest::Delegate* delegate,
+      bool enable_ip_based_pooling,
       const NetLogWithSource& net_log) = 0;
 
   // Request a WebSocket handshake stream.
@@ -220,6 +221,7 @@ class NET_EXPORT HttpStreamFactory {
       const SSLConfig& proxy_ssl_config,
       HttpStreamRequest::Delegate* delegate,
       WebSocketHandshakeStreamBase::CreateHelper* create_helper,
+      bool enable_ip_based_pooling,
       const NetLogWithSource& net_log) = 0;
 
   // Request a BidirectionalStreamImpl.
@@ -231,6 +233,7 @@ class NET_EXPORT HttpStreamFactory {
       const SSLConfig& server_ssl_config,
       const SSLConfig& proxy_ssl_config,
       HttpStreamRequest::Delegate* delegate,
+      bool enable_ip_based_pooling,
       const NetLogWithSource& net_log) = 0;
 
   // Requests that enough connections for |num_streams| be opened.

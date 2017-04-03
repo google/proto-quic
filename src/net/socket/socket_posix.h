@@ -144,6 +144,10 @@ class NET_EXPORT_PRIVATE SocketPosix : public base::MessageLoopForIO::Watcher {
   DISALLOW_COPY_AND_ASSIGN(SocketPosix);
 };
 
+// SetReuseAddr() sets the SO_REUSEADDR socket option. Use |reuse| to enable or
+// disable it. On error returns a net error code, on success returns OK.
+int SetReuseAddr(int fd, bool reuse);
+
 }  // namespace net
 
 #endif  // NET_SOCKET_SOCKET_POSIX_H_

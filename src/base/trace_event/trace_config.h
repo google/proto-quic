@@ -103,7 +103,7 @@ class BASE_EXPORT TraceConfig {
 
     bool GetArgAsSet(const char* key, std::unordered_set<std::string>*) const;
 
-    bool IsCategoryGroupEnabled(const char* category_group_name) const;
+    bool IsCategoryGroupEnabled(const StringPiece& category_group_name) const;
 
     const std::string& predicate_name() const { return predicate_name_; }
     base::DictionaryValue* filter_args() const { return args_.get(); }
@@ -231,7 +231,7 @@ class BASE_EXPORT TraceConfig {
   // Returns true if at least one category in the list is enabled by this
   // trace config. This is used to determine if the category filters are
   // enabled in the TRACE_* macros.
-  bool IsCategoryGroupEnabled(const char* category_group_name) const;
+  bool IsCategoryGroupEnabled(const StringPiece& category_group_name) const;
 
   // Merges config with the current TraceConfig
   void Merge(const TraceConfig& config);

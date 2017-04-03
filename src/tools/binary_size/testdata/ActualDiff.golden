@@ -1,3 +1,4 @@
+Metadata: time=Unknown tag=
 Section Sizes (Total=0 bytes):
 .bss: 0 bytes (not included in totals)
 .data: 0 bytes (0.0%)
@@ -6,12 +7,12 @@ Section Sizes (Total=0 bytes):
 .rodata: 0 bytes (0.0%)
 .text: 0 bytes (0.0%)
 
-1 symbols added (+), 1 changed (~), 1 removed (-), 40 unchanged (not shown)
+1 symbols added (+), 1 changed (~), 1 removed (-), 42 unchanged (not shown)
 Showing 3 symbols with total size: 0 bytes
 First columns are: running total, type, size
-+        0 b@0x0         262144  third_party/ffmpeg/libffmpeg_internal.a/fft_float.o
++        0 b@0x0         262144  third_party/fft_float.cc
 +        0                       ff_cos_131072
-~        0 b@0x0         -10     third_party/ffmpeg/libffmpeg_internal.a/fft_fixed.o
+~        0 b@0x0         -10     third_party/fft_fixed.cc
 ~        0                       ff_cos_131072_fixed
--        0 b@0x2dffe84   -4      base/base/animation_frame_time_histogram.o
--        0                       _ZN12_GLOBAL__N_135g_AnimationFrameTimeHistogram_clazzE
+-        0 b@0x2dffe84   -4      third_party/icu/ucnv_ext.c
+-        0                       g_AnimationFrameTimeHistogram_clazz

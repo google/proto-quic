@@ -49,6 +49,7 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
                                    const SSLConfig& server_ssl_config,
                                    const SSLConfig& proxy_ssl_config,
                                    HttpStreamRequest::Delegate* delegate,
+                                   bool enable_ip_based_pooling,
                                    const NetLogWithSource& net_log) override;
 
   HttpStreamRequest* RequestWebSocketHandshakeStream(
@@ -58,6 +59,7 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
       const SSLConfig& proxy_ssl_config,
       HttpStreamRequest::Delegate* delegate,
       WebSocketHandshakeStreamBase::CreateHelper* create_helper,
+      bool enable_ip_based_pooling,
       const NetLogWithSource& net_log) override;
 
   HttpStreamRequest* RequestBidirectionalStreamImpl(
@@ -66,6 +68,7 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
       const SSLConfig& server_ssl_config,
       const SSLConfig& proxy_ssl_config,
       HttpStreamRequest::Delegate* delegate,
+      bool enable_ip_based_pooling,
       const NetLogWithSource& net_log) override;
 
   void PreconnectStreams(int num_streams, const HttpRequestInfo& info) override;
@@ -122,6 +125,7 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
       HttpStreamRequest::Delegate* delegate,
       WebSocketHandshakeStreamBase::CreateHelper* create_helper,
       HttpStreamRequest::StreamType stream_type,
+      bool enable_ip_based_pooling,
       const NetLogWithSource& net_log);
 
   // Called when a SpdySession is ready. It will find appropriate Requests and
@@ -164,11 +168,6 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
   bool ProxyServerSupportsPriorities(const ProxyInfo& proxy_info) const;
 
   HttpNetworkSession* const session_;
-
-  // All Requests are handed out to clients. By the time HttpStreamFactoryImpl
-  // is destroyed, all Requests should be deleted (which should remove them from
-  // |request_map_|. The Requests will delete the corresponding job.
-  std::map<const Job*, Request*> request_map_;
 
   // All Requests/Preconnects are assigned with a JobController to manage
   // serving Job(s). JobController might outlive Request when Request

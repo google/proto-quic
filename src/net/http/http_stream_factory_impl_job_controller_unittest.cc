@@ -23,7 +23,7 @@
 #include "net/proxy/proxy_config_service_fixed.h"
 #include "net/proxy/proxy_info.h"
 #include "net/proxy/proxy_service.h"
-#include "net/quic/test_tools/quic_stream_factory_peer.h"
+#include "net/quic/chromium/quic_stream_factory_peer.h"
 #include "net/socket/socket_test_util.h"
 #include "net/spdy/spdy_test_util_common.h"
 #include "testing/gmock/include/gmock/gmock.h"
@@ -162,7 +162,7 @@ class HttpStreamFactoryImplJobControllerTest : public ::testing::Test {
         static_cast<HttpStreamFactoryImpl*>(session_->http_stream_factory());
     job_controller_ = new HttpStreamFactoryImpl::JobController(
         factory_, &request_delegate_, session_.get(), &job_factory_,
-        request_info, is_preconnect_);
+        request_info, is_preconnect_, /* enable_ip_based_pooling = */ true);
     HttpStreamFactoryImplPeer::AddJobController(factory_, job_controller_);
   }
 
@@ -203,6 +203,7 @@ class HttpStreamFactoryImplJobControllerTest : public ::testing::Test {
  private:
   bool use_alternative_proxy_;
   bool is_preconnect_;
+
   // Not owned by |this|.
   TestProxyDelegate* test_proxy_delegate_;
 
@@ -1336,7 +1337,8 @@ class HttpStreamFactoryImplJobControllerPreconnectTest
     request_info_.url = GURL("https://www.example.com");
     job_controller_ = new HttpStreamFactoryImpl::JobController(
         factory_, &request_delegate_, session_.get(), &job_factory_,
-        request_info_, true);
+        request_info_, /* is_preconnect = */ true,
+        /* enable_ip_based_pooling = */ true);
     HttpStreamFactoryImplPeer::AddJobController(factory_, job_controller_);
   }
 

@@ -32,6 +32,10 @@ inline void SpdyStringAppendF(const Args&... args) {
   SpdyStringAppendFImpl(std::forward<const Args&>(args)...);
 }
 
+inline char SpdyHexDigitToInt(char c) {
+  return SpdyHexDigitToIntImpl(c);
+}
+
 }  // namespace net
 
 #endif  // NET_SPDY_PLATFORM_API_SPDY_STRING_UTILS_H_

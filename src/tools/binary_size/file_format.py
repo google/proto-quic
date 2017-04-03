@@ -4,82 +4,178 @@
 
 """Deals with loading & saving .size files."""
 
-import ast
+import cStringIO
+import calendar
+import collections
+import datetime
 import gzip
+import json
 import models
+import logging
+import os
+import shutil
 
 
 # File format version for .size files.
-_SERIALIZATION_VERSION = 1
+_SERIALIZATION_VERSION = 'Size File Format v1'
 
 
-def EndsWithMaybeGz(path, suffix):
-  return path.endswith(suffix) or path.endswith(suffix + '.gz')
+def _LogSize(file_obj, desc):
+  if not hasattr(file_obj, 'fileno'):
+    return
+  file_obj.flush()
+  size = os.fstat(file_obj.fileno()).st_size
+  logging.debug('File size with %s: %d' % (desc, size))
 
 
-def OpenMaybeGz(path, mode=None):
-  """Calls `gzip.open()` if |path| ends in ".gz", otherwise calls `open()`."""
-  if path.endswith('.gz'):
-    if mode and 'w' in mode:
-      return gzip.GzipFile(path, mode, 1)
-    return gzip.open(path, mode)
-  return open(path, mode or 'r')
+def _SaveSizeInfoToFile(size_info, file_obj):
+  file_obj.write('# Created by //tools/binary_size\n')
+  file_obj.write('%s\n' % _SERIALIZATION_VERSION)
+  headers = {
+      'tag': size_info.tag,
+      'section_sizes': size_info.section_sizes,
+  }
+  if size_info.timestamp:
+    headers['timestamp'] = calendar.timegm(size_info.timestamp.timetuple())
+  metadata_str = json.dumps(headers, file_obj, indent=2, sort_keys=True)
+  file_obj.write('%d\n' % len(metadata_str))
+  file_obj.write(metadata_str)
+  file_obj.write('\n')
+  _LogSize(file_obj, 'header')  # For libchrome: 570 bytes.
 
+  # Store a single copy of all paths and have them referenced by index.
+  # Using an OrderedDict makes the indices more repetitive (better compression).
+  path_tuples = collections.OrderedDict.fromkeys(
+      (s.object_path, s.source_path) for s in size_info.symbols)
+  for i, key in enumerate(path_tuples):
+    path_tuples[key] = i
+  file_obj.write('%d\n' % len(path_tuples))
+  file_obj.writelines('%s\t%s\n' % pair for pair in path_tuples)
+  _LogSize(file_obj, 'paths')  # For libchrome, adds 200kb.
 
-def _SaveSizeInfoToFile(result, file_obj):
-  """Saves the result to the given file object."""
-  # Store one bucket per line.
-  file_obj.write('%d\n' % _SERIALIZATION_VERSION)
-  file_obj.write('%r\n' % result.section_sizes)
-  file_obj.write('%d\n' % len(result.symbols))
-  prev_section_name = None
-  # Store symbol fields as tab-separated.
-  # Store only non-derived fields.
-  for symbol in result.symbols:
-    if symbol.section_name != prev_section_name:
-      file_obj.write('%s\n' % symbol.section_name)
-      prev_section_name = symbol.section_name
-    # Don't write padding nor name since these are derived values.
-    file_obj.write('%x\t%x\t%s\t%s\n' % (
-        symbol.address, symbol.size_without_padding,
-        symbol.function_signature or symbol.name, symbol.path))
+  # Symbol counts by section.
+  by_section = size_info.symbols.GroupBySectionName().SortedByName()
+  file_obj.write('%s\n' % '\t'.join(g.name for g in by_section))
+  file_obj.write('%s\n' % '\t'.join(str(len(g)) for g in by_section))
+
+  def write_numeric(func, delta=False):
+    for group in by_section:
+      prev_value = 0
+      last_sym = group[-1]
+      for symbol in group:
+        value = func(symbol)
+        if delta:
+          value, prev_value = value - prev_value, value
+        file_obj.write(str(value))
+        if symbol is not last_sym:
+          file_obj.write(' ')
+      file_obj.write('\n')
+
+  write_numeric(lambda s: s.address, delta=True)
+  _LogSize(file_obj, 'addresses')  # For libchrome, adds 300kb.
+  # Do not write padding, it will be recalcualted from addresses on load.
+  write_numeric(lambda s: s.size_without_padding)
+  _LogSize(file_obj, 'sizes')  # For libchrome, adds 300kb
+  write_numeric(lambda s: path_tuples[(s.object_path, s.source_path)],
+                delta=True)
+  _LogSize(file_obj, 'path indices')  # For libchrome: adds 125kb.
+
+  for group in by_section:
+    for symbol in group:
+      # Do not write name when full_name exists. It will be derived on load.
+      file_obj.write(symbol.full_name or symbol.name)
+      if symbol.is_anonymous:
+        file_obj.write('\t1')
+      file_obj.write('\n')
+  _LogSize(file_obj, 'names (final)')  # For libchrome: adds 3.5mb.
 
 
 def _LoadSizeInfoFromFile(file_obj):
-  """Loads a result from the given file."""
+  """Loads a size_info from the given file."""
   lines = iter(file_obj)
-  actual_version = int(next(lines))
+  next(lines)  # Comment line.
+  actual_version = next(lines)[:-1]
   assert actual_version == _SERIALIZATION_VERSION, (
       'Version mismatch. Need to write some upgrade code.')
+  json_len = int(next(lines))
+  json_str = file_obj.read(json_len)
+  metadata = json.loads(json_str)
+  timestamp = metadata.get('timestamp')
+  if timestamp is not None:
+    timestamp = datetime.datetime.utcfromtimestamp(timestamp)
+  tag = metadata['tag']
+  section_sizes = metadata['section_sizes']
 
-  section_sizes = ast.literal_eval(next(lines))
-  num_syms = int(next(lines))
-  symbol_list = [None] * num_syms
-  section_name = None
-  for i in xrange(num_syms):
-    line = next(lines)[:-1]
-    if '\t' not in line:
-      section_name = line
+  lines = iter(file_obj)
+  next(lines)  # newline after closing } of json.
+
+  num_path_tuples = int(next(lines))
+  path_tuples = [None] * num_path_tuples
+  for i in xrange(num_path_tuples):
+    path_tuples[i] = next(lines)[:-1].split('\t')
+
+  section_names = next(lines)[:-1].split('\t')
+  section_counts = [int(c) for c in next(lines)[:-1].split('\t')]
+
+  def read_numeric(delta=False):
+    ret = []
+    delta_multiplier = int(delta)
+    for _ in section_counts:
+      value = 0
+      fields = next(lines).split(' ')
+      for i, f in enumerate(fields):
+        value = value * delta_multiplier + int(f)
+        fields[i] = value
+      ret.append(fields)
+    return ret
+
+  addresses = read_numeric(delta=True)
+  sizes = read_numeric(delta=False)
+  path_indices = read_numeric(delta=True)
+
+  symbol_list = [None] * sum(section_counts)
+  symbol_idx = 0
+  for section_index, cur_section_name in enumerate(section_names):
+    for i in xrange(section_counts[section_index]):
       line = next(lines)[:-1]
-    new_sym = models.Symbol.__new__(models.Symbol)
-    parts = line.split('\t')
-    new_sym.section_name = section_name
-    new_sym.address = int(parts[0], 16)
-    new_sym.size = int(parts[1], 16)
-    new_sym.name = parts[2]
-    new_sym.path = parts[3]
-    new_sym.padding = 0  # Derived
-    new_sym.function_signature = None  # Derived
-    symbol_list[i] = new_sym
+      is_anonymous = line.endswith('\t1')
+      name = line[:-2] if is_anonymous else line
 
-  return models.SizeInfo(models.SymbolGroup(symbol_list), section_sizes)
+      new_sym = models.Symbol.__new__(models.Symbol)
+      new_sym.section_name = cur_section_name
+      new_sym.address = addresses[section_index][i]
+      new_sym.size = sizes[section_index][i]
+      new_sym.name = name
+      paths = path_tuples[path_indices[section_index][i]]
+      new_sym.object_path = paths[0]
+      new_sym.source_path = paths[1]
+      new_sym.is_anonymous = is_anonymous
+      new_sym.padding = 0  # Derived
+      new_sym.full_name = None  # Derived
+      symbol_list[symbol_idx] = new_sym
+      symbol_idx += 1
+
+  symbols = models.SymbolGroup(symbol_list)
+  return models.SizeInfo(section_sizes, symbols, timestamp=timestamp, tag=tag)
 
 
-def SaveSizeInfo(result, path):
-  with OpenMaybeGz(path, 'wb') as f:
-    _SaveSizeInfoToFile(result, f)
+def SaveSizeInfo(size_info, path):
+  """Saves |size_info| to |path}."""
+  if os.environ.get('MEASURE_GZIP') == '1':
+    with gzip.open(path, 'wb') as f:
+      _SaveSizeInfoToFile(size_info, f)
+  else:
+    # It is seconds faster to do gzip in a separate step. 6s -> 3.5s.
+    stringio = cStringIO.StringIO()
+    _SaveSizeInfoToFile(size_info, stringio)
+
+    logging.debug('Serialization complete. Gzipping...')
+    stringio.seek(0)
+    with gzip.open(path, 'wb') as f:
+      shutil.copyfileobj(stringio, f)
 
 
 def LoadSizeInfo(path):
-  with OpenMaybeGz(path) as f:
+  """Returns a SizeInfo loaded from |path|."""
+  with gzip.open(path) as f:
     return _LoadSizeInfoFromFile(f)

@@ -187,3 +187,15 @@ QUIC_FLAG(bool, FLAGS_quic_restart_flag_quic_big_endian_connection_id, false)
 QUIC_FLAG(bool,
           FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes,
           false)
+
+// If true, allow cubic updates on every ack, rather than occasionally limiting
+// the frequency to once every 30ms.
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_enable_cubic_per_ack_updates,
+          false)
+
+// Support bandwidth resumption in QUIC BBR.
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_bandwidth_resumption, false)
+
+// Add the equivalent number of bytes as 3 TCP TSO segments to QUIC's BBR CWND.
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_add_tso_cwnd, false)

@@ -24,6 +24,9 @@ bool FLAGS_quic_enforce_single_packet_chlo = true;
 
 namespace net {
 
+#define ENDPOINT \
+  (framer_->perspective() == Perspective::IS_SERVER ? "Server: " : "Client: ")
+
 QuicPacketCreator::QuicPacketCreator(QuicConnectionId connection_id,
                                      QuicFramer* framer,
                                      QuicBufferAllocator* buffer_allocator,
@@ -377,7 +380,7 @@ void QuicPacketCreator::CreateAndSerializeStreamFrame(
   CopyToBuffer(iov, iov_offset, bytes_consumed, stream_buffer.get());
   std::unique_ptr<QuicStreamFrame> frame(new QuicStreamFrame(
       id, set_fin, stream_offset, bytes_consumed, std::move(stream_buffer)));
-  QUIC_DVLOG(1) << "Adding frame: " << *frame;
+  QUIC_DVLOG(1) << ENDPOINT << "Adding frame: " << *frame;
 
   // TODO(ianswett): AppendTypeByte and AppendStreamFrame could be optimized
   // into one method that takes a QuicStreamFrame, if warranted.
@@ -559,7 +562,7 @@ bool QuicPacketCreator::ShouldRetransmit(const QuicFrame& frame) {
 
 bool QuicPacketCreator::AddFrame(const QuicFrame& frame,
                                  bool save_retransmittable_frames) {
-  QUIC_DVLOG(1) << "Adding frame: " << frame;
+  QUIC_DVLOG(1) << ENDPOINT << "Adding frame: " << frame;
   if (frame.type == STREAM_FRAME &&
       frame.stream_frame->stream_id != kCryptoStreamId &&
       packet_.encryption_level == ENCRYPTION_NONE) {

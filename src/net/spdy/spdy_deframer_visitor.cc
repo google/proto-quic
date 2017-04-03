@@ -140,7 +140,6 @@ class SpdyTestDeframerImpl : public SpdyTestDeframer,
                 SpdyStringPiece origin,
                 const SpdyAltSvcWireFormat::AlternativeServiceVector&
                     altsvc_vector) override;
-  void OnBlocked(SpdyStreamId stream_id) override;
   void OnContinuation(SpdyStreamId stream_id, bool end) override;
   SpdyHeadersHandlerInterface* OnHeaderFrameStart(
       SpdyStreamId stream_id) override;
@@ -424,22 +423,6 @@ void SpdyTestDeframerImpl::OnAltSvc(
     ptr->add_altsvc(altsvc);
   }
   listener_->OnAltSvc(std::move(ptr));
-}
-
-// Frame type BLOCKED was removed in draft 12 of HTTP/2. The intent appears to
-// have been to support debugging; it is not expected to be seen except if the
-// peer "thinks" that a bug exists in the flow control such that the peer can't
-// send because the receiver hasn't sent WINDOW_UPDATE frames. Since we might
-// be talking to multiple backends, it is quite plausible that one backend
-// is unable to take more input from the client (hence no WINDOW_UPDATE), yet
-// other backends can take more input.
-void SpdyTestDeframerImpl::OnBlocked(SpdyStreamId stream_id) {
-  LOG(FATAL) << "OnBlocked stream_id: " << stream_id;
-  CHECK_EQ(frame_type_, UNSET) << "   frame_type_="
-                               << Http2FrameTypeToString(frame_type_);
-  CHECK_GT(stream_id, 0u);
-  frame_type_ = UNSET;
-  stream_id_ = stream_id;
 }
 
 // A CONTINUATION frame contains a Header Block Fragment, and immediately

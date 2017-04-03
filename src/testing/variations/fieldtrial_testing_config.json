@@ -132,10 +132,9 @@
             ],
             "experiments": [
                 {
-                    "name": "LastUsedDateAndExpDate_IncreaseDropdownItemHeight_Experiment",
+                    "name": "LastUsedDate_IncreaseDropdownItemHeight_Experiment",
                     "params": {
-                        "dropdown_item_height": "56",
-                        "show_expiration_date": "true"
+                        "dropdown_item_height": "56"
                     },
                     "enable_features": [
                         "AutofillCreditCardLastUsedDateDisplay",
@@ -294,6 +293,7 @@
                 {
                     "name": "Default",
                     "params": {
+                        "RedirectNonUINonIOBrowserThreads": "true",
                         "RedirectSequencedWorkerPools": "true"
                     }
                 },
@@ -469,6 +469,30 @@
             ]
         }
     ],
+    "DataReductionProxyMainMenu": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "DataReductionProxyMainMenu"
+                    ]
+                },
+                {
+                    "name": "Enabled_Persistent",
+                    "params": {
+                        "persistent_menu_item_enabled": "true"
+                    },
+                    "enable_features": [
+                        "DataReductionProxyMainMenu"
+                    ]
+                }
+            ]
+        }
+    ],
     "DataReductionProxyServerExperiments": [
         {
             "platforms": [
@@ -544,7 +568,9 @@
         {
             "platforms": [
                 "mac",
-                "win"
+                "win",
+                "chromeos",
+                "android"
             ],
             "experiments": [
                 {
@@ -954,7 +980,7 @@
                 {
                     "name": "Enabled",
                     "params": {
-                        "engagement_threshold_for_flash": "4"
+                        "engagement_threshold_for_flash": "8"
                     },
                     "enable_features": [
                         "PreferHtmlOverPlugins"
@@ -1372,22 +1398,6 @@
                     "enable_features": [
                         "NTPForeignSessionsSuggestions"
                     ]
-                }
-            ]
-        }
-    ],
-    "NTPSnippets": [
-        {
-            "platforms": [
-                "android"
-            ],
-            "experiments": [
-                {
-                    "//1": "This represents a group that controls how we hit the content",
-                    "//2": "suggestions server, but there's nothing to specify as experiment_id",
-                    "//3": "and send_to_gws are not allowed in the test config. This exists to",
-                    "//4": "silence warnings for real configs that must have a matching group.",
-                    "name": "ContentSuggestionsBackend-FCS"
                 }
             ]
         }
@@ -2922,21 +2932,16 @@
             ]
         }
     ],
-    "VsyncAlignedInput": [
+    "WebApkGooglePlay": [
         {
             "platforms": [
-                "android",
-                "chromeos",
-                "linux",
-                "mac",
-                "win"
+                "android"
             ],
             "experiments": [
                 {
-                    "name": "Enable",
+                    "name": "Enabled",
                     "enable_features": [
-                        "RequestUnbufferedDispatch",
-                        "VsyncAlignedInput"
+                        "ImprovedA2HS"
                     ]
                 }
             ]

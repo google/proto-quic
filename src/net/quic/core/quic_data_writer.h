@@ -59,6 +59,12 @@ class QUIC_EXPORT_PRIVATE QuicDataWriter {
   // indicating writing in little/big endian.
   bool WriteConnectionId(uint64_t connection_id);
 
+  // Write tag as a 32-bit unsigned integer to the payload. As tags are already
+  // converted to big endian (e.g., CHLO is 'C','H','L','O') in memory by TAG or
+  // MakeQuicTag and tags are written in byte order, so tags on the wire are
+  // in big endian.
+  bool WriteTag(uint32_t tag);
+
   size_t capacity() const { return capacity_; }
 
  private:

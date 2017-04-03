@@ -585,8 +585,16 @@ def GenerateCredits(
                                           escape=False)
 
     if output_file:
-      with open(output_file, 'w') as output:
-        output.write(template_contents)
+      changed = True
+      try:
+        old_output = open(output_file, 'r').read()
+        if old_output == template_contents:
+          changed = False
+      except:
+        pass
+      if changed:
+        with open(output_file, 'w') as output:
+          output.write(template_contents)
     else:
       print template_contents
 

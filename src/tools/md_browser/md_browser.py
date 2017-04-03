@@ -142,8 +142,12 @@ class Handler(SimpleHTTPServer.SimpleHTTPRequestHandler):
       self._DoImage(full_path, 'image/png')
     elif path.lower().endswith('.jpg'):
       self._DoImage(full_path, 'image/jpeg')
-    else:
+    elif os.path.isdir(full_path):
       self._DoDirListing(full_path)
+    elif os.path.exists(full_path):
+      self._DoRawSourceFile(full_path)
+    else:
+      self._DoUnknown()
 
   def _DoMD(self, path):
     extensions = [
@@ -165,6 +169,7 @@ class Handler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 
     md = markdown.Markdown(extensions=extensions,
                            extension_configs=extension_configs,
+                           tab_length=2,
                            output_format='html4')
 
     has_a_single_h1 = (len([line for line in contents.splitlines()
@@ -178,10 +183,37 @@ class Handler(SimpleHTTPServer.SimpleHTTPRequestHandler):
     try:
       self._WriteHeader('text/html')
       self._WriteTemplate('header.html')
+      self.wfile.write('<div class="doc">')
       self.wfile.write(md_fragment)
+      self.wfile.write('</div>')
       self._WriteTemplate('footer.html')
     except:
       raise
+
+  def _DoRawSourceFile(self, full_path):
+      self._WriteHeader('text/html')
+      self._WriteTemplate('header.html')
+
+      self.wfile.write('<table class="FileContents">')
+      with open(full_path) as fp:
+          # Escape html over the entire file at once.
+          data = fp.read().replace(
+              '&', '&amp;').replace(
+              '<', '&lt;').replace(
+              '>', '&gt;').replace(
+              '"', '&quot;')
+          for i, line in enumerate(data.splitlines()):
+              self.wfile.write(
+                  ('<tr class="u-pre u-monospace FileContents-line">'
+                   '<td class="u-lineNum u-noSelect FileContents-lineNum">'
+                   '<a name="%(num)s" '
+                   'onclick="window.location.hash=%(quot)s#%(num)s%(quot)s">'
+                   '%(num)s</a></td>'
+                   '<td class="FileContents-lineContents">%(line)s</td></tr>')
+                  % {'num': i, 'quot': "'", 'line': line})
+      self.wfile.write('</table>')
+
+      self._WriteTemplate('footer.html')
 
   def _DoCSS(self, template):
     self._WriteHeader('text/css')
@@ -199,6 +231,7 @@ class Handler(SimpleHTTPServer.SimpleHTTPRequestHandler):
   def _DoDirListing(self, full_path):
     self._WriteHeader('text/html')
     self._WriteTemplate('header.html')
+    self.wfile.write('<div class="doc">')
 
     self.wfile.write('<div class="Breadcrumbs">\n')
     self.wfile.write('<a class="Breadcrumbs-crumb">%s</a>\n' % self.path)
@@ -225,6 +258,7 @@ class Handler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 
       break
 
+    self.wfile.write('</div>')
     self._WriteTemplate('footer.html')
 
   def _DoImage(self, full_path, mime_type):

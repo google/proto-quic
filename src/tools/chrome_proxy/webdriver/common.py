@@ -561,9 +561,12 @@ class IntegrationTest(unittest.TestCase):
     Args:
       http_response: The HTTPResponse object to check.
     """
-    expected_via_header = ParseFlags().via_header_value
     self.assertIn('via', http_response.response_headers)
-    self.assertEqual(expected_via_header, http_response.response_headers['via'])
+    expected_via_header = ParseFlags().via_header_value
+    actual_via_headers = http_response.response_headers['via'].split(',')
+    self.assertIn(expected_via_header, actual_via_headers, "Via header not in "
+      "response headers! Expected: %s, Actual: %s" %
+      (expected_via_header, actual_via_headers))
 
   def assertNotHasChromeProxyViaHeader(self, http_response):
     """Asserts that the Via header in the given HTTPResponse does not match the
@@ -572,11 +575,12 @@ class IntegrationTest(unittest.TestCase):
     Args:
       http_response: The HTTPResponse object to check.
     """
-    expected_via_header = ParseFlags().via_header_value
-    self.assertNotIn('via', http_response.response_headers)
     if 'via' in http_response.response_headers:
-      self.assertNotIn(expected_via_header,
-        http_response.response_headers['via'])
+      expected_via_header = ParseFlags().via_header_value
+      actual_via_headers = http_response.response_headers['via'].split(',')
+      self.assertNotIn(expected_via_header, actual_via_headers, "Via header "
+        "found in response headers! Not expected: %s, Actual: %s" %
+        (expected_via_header, actual_via_headers))
 
   def checkLoFiResponse(self, http_response, expected_lo_fi):
     """Asserts that if expected the response headers contain the Lo-Fi directive

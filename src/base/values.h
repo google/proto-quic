@@ -75,7 +75,7 @@ class BASE_EXPORT Value {
 
   Value(const Value& that);
   Value(Value&& that) noexcept;
-  Value();  // A null value.
+  Value() noexcept;  // A null value.
   explicit Value(Type type);
   explicit Value(bool in_bool);
   explicit Value(int in_int);
@@ -89,16 +89,16 @@ class BASE_EXPORT Value {
   // arguments.
   explicit Value(const char* in_string);
   explicit Value(const std::string& in_string);
-  explicit Value(std::string&& in_string);
+  explicit Value(std::string&& in_string) noexcept;
   explicit Value(const char16* in_string);
   explicit Value(const string16& in_string);
   explicit Value(StringPiece in_string);
 
   explicit Value(const std::vector<char>& in_blob);
-  explicit Value(std::vector<char>&& in_blob);
+  explicit Value(std::vector<char>&& in_blob) noexcept;
 
   Value& operator=(const Value& that);
-  Value& operator=(Value&& that);
+  Value& operator=(Value&& that) noexcept;
 
   ~Value();
 

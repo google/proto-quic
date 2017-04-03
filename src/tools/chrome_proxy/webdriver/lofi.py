@@ -45,6 +45,10 @@ class LoFi(IntegrationTest):
   # load should not pick the Lo-Fi placeholder from cache and original image
   # should be loaded.
   def testLoFiCacheBypass(self):
+    # If it was attempted to run with another experiment, skip this test.
+    if common.ParseFlags().browser_args and ('--data-reduction-proxy-experiment'
+        in common.ParseFlags().browser_args):
+      self.skipTest('This test cannot be run with other experiments.')
     with TestDriver() as test_driver:
       # First page load, enable Lo-Fi and chrome proxy. Disable server
       # experiments such as tamper detection. This test should be run with

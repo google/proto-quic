@@ -516,7 +516,7 @@ TEST_F(DiskCacheBackendTest, CreateBackend_MissingFile) {
 }
 
 TEST_F(DiskCacheBackendTest, MemCacheMemoryDump) {
-  memory_only_ = true;
+  SetMemoryOnlyMode();
   BackendBasics();
   base::trace_event::MemoryDumpArgs args = {
       base::trace_event::MemoryDumpLevelOfDetail::BACKGROUND};
@@ -3180,15 +3180,54 @@ TEST_F(DiskCacheBackendTest, MemoryOnlyUseAfterFree) {
   std::string key_prefix("prefix");
   for (int i = 0; i < kTooManyEntriesCount; ++i) {
     ASSERT_THAT(CreateEntry(key_prefix + base::IntToString(i), &entry), IsOk());
-    EXPECT_EQ(kWriteSize,
-              WriteData(entry, 1, 0, buffer.get(), kWriteSize, false));
+    // Not checking the result because it will start to fail once the max size
+    // is reached.
+    WriteData(entry, 1, 0, buffer.get(), kWriteSize, false);
     open_entries.push_back(disk_cache::ScopedEntryPtr(entry));
   }
-  EXPECT_LT(kMaxSize, CalculateSizeOfAllEntries());
 
-  // Writing this sparse data should not crash.
-  EXPECT_EQ(1024, first_parent->WriteSparseData(32768, buffer.get(), 1024,
-                                                net::CompletionCallback()));
+  // Writing this sparse data should not crash. Ignoring the result because
+  // we're only concerned with not crashing in this particular test.
+  first_parent->WriteSparseData(32768, buffer.get(), 1024,
+                                net::CompletionCallback());
+}
+
+TEST_F(DiskCacheBackendTest, MemoryCapsWritesToMaxSize) {
+  // Verify that the memory backend won't grow beyond its max size if lots of
+  // open entries (each smaller than the max entry size) are trying to write
+  // beyond the max size.
+  SetMemoryOnlyMode();
+
+  const int kMaxSize = 100 * 1024;       // 100KB cache
+  const int kNumEntries = 20;            // 20 entries to write
+  const int kWriteSize = kMaxSize / 10;  // Each entry writes 1/10th the max
+
+  SetMaxSize(kMaxSize);
+  InitCache();
+
+  scoped_refptr<net::IOBuffer> buffer(new net::IOBuffer(kWriteSize));
+  CacheTestFillBuffer(buffer->data(), kWriteSize, false);
+
+  // Create an entry to be the final entry that gets written later.
+  disk_cache::Entry* entry;
+  ASSERT_THAT(CreateEntry("final", &entry), IsOk());
+  disk_cache::ScopedEntryPtr final_entry(entry);
+
+  // Create a ton of entries, write to the cache, and keep the entries open.
+  // They should start failing writes once the cache fills.
+  std::list<disk_cache::ScopedEntryPtr> open_entries;
+  std::string key_prefix("prefix");
+  for (int i = 0; i < kNumEntries; ++i) {
+    ASSERT_THAT(CreateEntry(key_prefix + base::IntToString(i), &entry), IsOk());
+    WriteData(entry, 1, 0, buffer.get(), kWriteSize, false);
+    open_entries.push_back(disk_cache::ScopedEntryPtr(entry));
+  }
+  EXPECT_GE(kMaxSize, CalculateSizeOfAllEntries());
+
+  // Any more writing at this point should cause an error.
+  EXPECT_THAT(
+      WriteData(final_entry.get(), 1, 0, buffer.get(), kWriteSize, false),
+      IsError(net::ERR_INSUFFICIENT_RESOURCES));
 }
 
 TEST_F(DiskCacheTest, Backend_UsageStatsTimer) {

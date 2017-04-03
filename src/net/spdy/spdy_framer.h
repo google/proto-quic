@@ -176,9 +176,6 @@ class NET_EXPORT_PRIVATE SpdyFramerVisitorInterface {
   // occurred while processing the data. Default implementation returns true.
   virtual bool OnGoAwayFrameData(const char* goaway_data, size_t len);
 
-  // Called when a BLOCKED frame has been parsed.
-  virtual void OnBlocked(SpdyStreamId stream_id) {}
-
   // Called when a PUSH_PROMISE frame is received.
   // Note that header block data is not included. See OnHeaderFrameStart().
   virtual void OnPushPromise(SpdyStreamId stream_id,
@@ -442,12 +439,6 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   SpdySerializedFrame SerializeWindowUpdate(
       const SpdyWindowUpdateIR& window_update) const;
 
-  // Serializes a BLOCKED frame. The BLOCKED frame is used to
-  // indicate to the remote endpoint that this endpoint believes itself to be
-  // flow-control blocked but otherwise ready to send data. The BLOCKED frame
-  // is purely advisory and optional.
-  SpdySerializedFrame SerializeBlocked(const SpdyBlockedIR& blocked) const;
-
   // Serializes a PUSH_PROMISE frame. The PUSH_PROMISE frame is used
   // to inform the client that it will be receiving an additional stream
   // in response to the original request. The frame includes synthesized
@@ -511,13 +502,6 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   bool SerializeWindowUpdate(const SpdyWindowUpdateIR& window_update,
                              ZeroCopyOutputBuffer* output) const;
 
-  // Serializes a BLOCKED frame. The BLOCKED frame is used to
-  // indicate to the remote endpoint that this endpoint believes itself to be
-  // flow-control blocked but otherwise ready to send data. The BLOCKED frame
-  // is purely advisory and optional.
-  bool SerializeBlocked(const SpdyBlockedIR& blocked,
-                        ZeroCopyOutputBuffer* output) const;
-
   // Serializes a PUSH_PROMISE frame. The PUSH_PROMISE frame is used
   // to inform the client that it will be receiving an additional stream
   // in response to the original request. The frame includes synthesized
@@ -561,7 +545,6 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   size_t GetGoAwayMinimumSize() const;
   size_t GetHeadersMinimumSize() const;
   size_t GetWindowUpdateSize() const;
-  size_t GetBlockedSize() const;
   size_t GetPushPromiseMinimumSize() const;
   size_t GetContinuationMinimumSize() const;
   size_t GetAltSvcMinimumSize() const;

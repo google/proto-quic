@@ -24,7 +24,7 @@ class MapFileParser(object):
       lines: Iterable of lines.
 
     Returns:
-      A SizeInfo object.
+      A tuple of (section_sizes, symbols).
     """
     self._lines = iter(lines)
     logging.info('Parsing common symbols')
@@ -32,8 +32,7 @@ class MapFileParser(object):
     logging.debug('.bss common entries: %d', len(self._symbols))
     logging.info('Parsing section symbols')
     self._ParseSections()
-    return models.SizeInfo(models.SymbolGroup(self._symbols),
-                           self._section_sizes)
+    return self._section_sizes, self._symbols
 
   def _SkipToLineWithPrefix(self, prefix):
     for l in self._lines:
@@ -67,7 +66,8 @@ class MapFileParser(object):
         break
       name, size_str, path = parts
       self._symbols.append(
-          models.Symbol('.bss',  int(size_str[2:], 16), name=name, path=path))
+          models.Symbol('.bss',  int(size_str[2:], 16), name=name,
+                        object_path=path))
 
   def _ParseSections(self):
 # .text           0x0028c600  0x22d3468
@@ -141,7 +141,7 @@ class MapFileParser(object):
               path = None
               syms.append(
                   models.Symbol(section_name, size, address=address, name=name,
-                                path=path))
+                                object_path=path))
             else:
               # A normal symbol entry.
               subsection_name, address_str, size_str, path = (
@@ -189,7 +189,8 @@ class MapFileParser(object):
                   sym = models.Symbol(
                       section_name, merge_size,
                       address=merge_symbol_start_address,
-                      name='** symbol gap %d' % symbol_gap_count, path=path)
+                      name='** symbol gap %d' % symbol_gap_count,
+                      object_path=path)
                   symbol_gap_count += 1
                   syms.append(sym)
                   merge_symbol_start_address = 0
@@ -200,7 +201,8 @@ class MapFileParser(object):
               if address == -1:
                 address = syms[-1].end_address
               syms.append(models.Symbol(section_name, size, address=address,
-                                        name=name or mangled_name, path=path))
+                                        name=name or mangled_name,
+                                        object_path=path))
           logging.debug('Symbol count for %s: %d', section_name,
                         len(syms) - sym_count_at_start)
       except:

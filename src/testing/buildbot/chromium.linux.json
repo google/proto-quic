@@ -2529,12 +2529,12 @@
       {
         "args": [
           "--enable-local-file-accesses",
-          "--ozone-platform=cast",
+          "--ozone-platform=headless",
           "--no-sandbox",
           "--test-launcher-jobs=1"
         ],
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "cast_shell_browsertests"
       },
@@ -2549,7 +2549,7 @@
           "--test-launcher-filter-file=src/testing/buildbot/filters/cast-linux.content_browsertests.filter"
         ],
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "content_browsertests"
       },
@@ -2612,12 +2612,6 @@
           "can_use_on_swarming_builders": true
         },
         "test": "net_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
-        "test": "ppapi_unittests"
       },
       {
         "swarming": {

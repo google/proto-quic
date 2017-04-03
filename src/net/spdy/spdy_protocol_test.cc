@@ -79,31 +79,31 @@ TEST(SpdyProtocolTest, Http2WeightToSpdy3Priority) {
 
 TEST(SpdyProtocolTest, IsValidHTTP2FrameStreamId) {
   // Stream-specific frames must have non-zero stream ids
-  EXPECT_TRUE(IsValidHTTP2FrameStreamId(1, DATA));
-  EXPECT_FALSE(IsValidHTTP2FrameStreamId(0, DATA));
-  EXPECT_TRUE(IsValidHTTP2FrameStreamId(1, HEADERS));
-  EXPECT_FALSE(IsValidHTTP2FrameStreamId(0, HEADERS));
-  EXPECT_TRUE(IsValidHTTP2FrameStreamId(1, PRIORITY));
-  EXPECT_FALSE(IsValidHTTP2FrameStreamId(0, PRIORITY));
-  EXPECT_TRUE(IsValidHTTP2FrameStreamId(1, RST_STREAM));
-  EXPECT_FALSE(IsValidHTTP2FrameStreamId(0, RST_STREAM));
-  EXPECT_TRUE(IsValidHTTP2FrameStreamId(1, CONTINUATION));
-  EXPECT_FALSE(IsValidHTTP2FrameStreamId(0, CONTINUATION));
-  EXPECT_TRUE(IsValidHTTP2FrameStreamId(1, PUSH_PROMISE));
-  EXPECT_FALSE(IsValidHTTP2FrameStreamId(0, PUSH_PROMISE));
+  EXPECT_TRUE(IsValidHTTP2FrameStreamId(1, SpdyFrameType::DATA));
+  EXPECT_FALSE(IsValidHTTP2FrameStreamId(0, SpdyFrameType::DATA));
+  EXPECT_TRUE(IsValidHTTP2FrameStreamId(1, SpdyFrameType::HEADERS));
+  EXPECT_FALSE(IsValidHTTP2FrameStreamId(0, SpdyFrameType::HEADERS));
+  EXPECT_TRUE(IsValidHTTP2FrameStreamId(1, SpdyFrameType::PRIORITY));
+  EXPECT_FALSE(IsValidHTTP2FrameStreamId(0, SpdyFrameType::PRIORITY));
+  EXPECT_TRUE(IsValidHTTP2FrameStreamId(1, SpdyFrameType::RST_STREAM));
+  EXPECT_FALSE(IsValidHTTP2FrameStreamId(0, SpdyFrameType::RST_STREAM));
+  EXPECT_TRUE(IsValidHTTP2FrameStreamId(1, SpdyFrameType::CONTINUATION));
+  EXPECT_FALSE(IsValidHTTP2FrameStreamId(0, SpdyFrameType::CONTINUATION));
+  EXPECT_TRUE(IsValidHTTP2FrameStreamId(1, SpdyFrameType::PUSH_PROMISE));
+  EXPECT_FALSE(IsValidHTTP2FrameStreamId(0, SpdyFrameType::PUSH_PROMISE));
 
   // Connection-level frames must have zero stream ids
-  EXPECT_FALSE(IsValidHTTP2FrameStreamId(1, GOAWAY));
-  EXPECT_TRUE(IsValidHTTP2FrameStreamId(0, GOAWAY));
-  EXPECT_FALSE(IsValidHTTP2FrameStreamId(1, SETTINGS));
-  EXPECT_TRUE(IsValidHTTP2FrameStreamId(0, SETTINGS));
-  EXPECT_FALSE(IsValidHTTP2FrameStreamId(1, PING));
-  EXPECT_TRUE(IsValidHTTP2FrameStreamId(0, PING));
+  EXPECT_FALSE(IsValidHTTP2FrameStreamId(1, SpdyFrameType::GOAWAY));
+  EXPECT_TRUE(IsValidHTTP2FrameStreamId(0, SpdyFrameType::GOAWAY));
+  EXPECT_FALSE(IsValidHTTP2FrameStreamId(1, SpdyFrameType::SETTINGS));
+  EXPECT_TRUE(IsValidHTTP2FrameStreamId(0, SpdyFrameType::SETTINGS));
+  EXPECT_FALSE(IsValidHTTP2FrameStreamId(1, SpdyFrameType::PING));
+  EXPECT_TRUE(IsValidHTTP2FrameStreamId(0, SpdyFrameType::PING));
 
   // Frames that are neither stream-specific nor connection-level
   // should not have their stream id declared invalid
-  EXPECT_TRUE(IsValidHTTP2FrameStreamId(1, WINDOW_UPDATE));
-  EXPECT_TRUE(IsValidHTTP2FrameStreamId(0, WINDOW_UPDATE));
+  EXPECT_TRUE(IsValidHTTP2FrameStreamId(1, SpdyFrameType::WINDOW_UPDATE));
+  EXPECT_TRUE(IsValidHTTP2FrameStreamId(0, SpdyFrameType::WINDOW_UPDATE));
 }
 
 TEST(SpdyProtocolTest, ParseSettingsId) {

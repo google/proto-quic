@@ -536,6 +536,11 @@
     "type": "raw",
     "args": [],
   },
+  "ios_chrome_reading_list_egtests": {
+    "label": "//ios/chrome/test/earl_grey:ios_chrome_reading_list_egtests",
+    "type": "raw",
+    "args": [],
+  },
   "ios_chrome_settings_egtests": {
     "label": "//ios/chrome/test/earl_grey:ios_chrome_settings_egtests",
     "type": "raw",
@@ -1095,7 +1100,7 @@
     "type": "windowed_test_launcher",
   },
   "wtf_unittests": {
-    "label": "//third_party/WebKit/Source/wtf:wtf_unittests",
+    "label": "//third_party/WebKit/Source/platform/wtf:wtf_unittests",
     "type": "console_test_launcher",
   },
 }

@@ -54,7 +54,6 @@ class MockSpdyFramerVisitor : public SpdyFramerVisitorInterface {
                     bool end));
   MOCK_METHOD2(OnWindowUpdate,
                void(SpdyStreamId stream_id, int delta_window_size));
-  MOCK_METHOD1(OnBlocked, void(SpdyStreamId stream_id));
   MOCK_METHOD3(OnPushPromise, void(SpdyStreamId stream_id,
                                    SpdyStreamId promised_stream_id,
                                    bool end));

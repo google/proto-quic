@@ -9,7 +9,7 @@
 
 #include <map>
 #include <memory>
-#include <set>
+#include <unordered_set>
 #include <vector>
 
 #include "base/atomicops.h"
@@ -19,6 +19,7 @@
 #include "base/memory/singleton.h"
 #include "base/synchronization/lock.h"
 #include "base/trace_event/memory_allocator_dump.h"
+#include "base/trace_event/memory_dump_provider_info.h"
 #include "base/trace_event/memory_dump_request_args.h"
 #include "base/trace_event/process_memory_dump.h"
 #include "base/trace_event/trace_event.h"
@@ -169,70 +170,6 @@ class BASE_EXPORT MemoryDumpManager : public TraceLog::EnabledStateObserver {
   friend class MemoryDumpManagerTest;
   friend class MemoryDumpScheduler;
   friend class memory_instrumentation::MemoryDumpManagerDelegateImplTest;
-
-  // Descriptor used to hold information about registered MDPs.
-  // Some important considerations about lifetime of this object:
-  // - In nominal conditions, all the MemoryDumpProviderInfo instances live in
-  //   the |dump_providers_| collection (% unregistration while dumping).
-  // - Upon each dump they (actually their scoped_refptr-s) are copied into
-  //   the ProcessMemoryDumpAsyncState. This is to allow removal (see below).
-  // - When the MDP.OnMemoryDump() is invoked, the corresponding MDPInfo copy
-  //   inside ProcessMemoryDumpAsyncState is removed.
-  // - In most cases, the MDPInfo is destroyed within UnregisterDumpProvider().
-  // - If UnregisterDumpProvider() is called while a dump is in progress, the
-  //   MDPInfo is destroyed in SetupNextMemoryDump() or InvokeOnMemoryDump(),
-  //   when the copy inside ProcessMemoryDumpAsyncState is erase()-d.
-  // - The non-const fields of MemoryDumpProviderInfo are safe to access only
-  //   on tasks running in the |task_runner|, unless the thread has been
-  //   destroyed.
-  struct MemoryDumpProviderInfo
-      : public RefCountedThreadSafe<MemoryDumpProviderInfo> {
-    // Define a total order based on the |task_runner| affinity, so that MDPs
-    // belonging to the same SequencedTaskRunner are adjacent in the set.
-    struct Comparator {
-      bool operator()(const scoped_refptr<MemoryDumpProviderInfo>& a,
-                      const scoped_refptr<MemoryDumpProviderInfo>& b) const;
-    };
-    using OrderedSet =
-        std::set<scoped_refptr<MemoryDumpProviderInfo>, Comparator>;
-
-    MemoryDumpProviderInfo(MemoryDumpProvider* dump_provider,
-                           const char* name,
-                           scoped_refptr<SequencedTaskRunner> task_runner,
-                           const MemoryDumpProvider::Options& options,
-                           bool whitelisted_for_background_mode);
-
-    MemoryDumpProvider* const dump_provider;
-
-    // Used to transfer ownership for UnregisterAndDeleteDumpProviderSoon().
-    // nullptr in all other cases.
-    std::unique_ptr<MemoryDumpProvider> owned_dump_provider;
-
-    // Human readable name, for debugging and testing. Not necessarily unique.
-    const char* const name;
-
-    // The task runner affinity. Can be nullptr, in which case the dump provider
-    // will be invoked on |dump_thread_|.
-    const scoped_refptr<SequencedTaskRunner> task_runner;
-
-    // The |options| arg passed to RegisterDumpProvider().
-    const MemoryDumpProvider::Options options;
-
-    // For fail-safe logic (auto-disable failing MDPs).
-    int consecutive_failures;
-
-    // Flagged either by the auto-disable logic or during unregistration.
-    bool disabled;
-
-    // True if the dump provider is whitelisted for background mode.
-    const bool whitelisted_for_background_mode;
-
-   private:
-    friend class base::RefCountedThreadSafe<MemoryDumpProviderInfo>;
-    ~MemoryDumpProviderInfo();
-
-    DISALLOW_COPY_AND_ASSIGN(MemoryDumpProviderInfo);
-  };
 
   // Holds the state of a process memory dump that needs to be carried over
   // across task runners in order to fulfil an asynchronous CreateProcessDump()

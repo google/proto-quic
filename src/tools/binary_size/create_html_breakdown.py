@@ -121,7 +121,7 @@ def _MakeCompactTree(symbols, include_symbols):
       _NODE_MAX_DEPTH_KEY: 0,
   }
   for symbol in symbols:
-    file_path = symbol.path or _NAME_NO_PATH_BUCKET
+    file_path = symbol.source_path or symbol.object_path or _NAME_NO_PATH_BUCKET
     node = result
     depth = 0
     for path_part in file_path.split(os.path.sep):
@@ -182,7 +182,7 @@ def main(argv):
   size_info = map2size.AnalyzeWithArgs(args, args.input_file)
   symbols = size_info.symbols
   if not args.include_bss:
-    symbols = size_info.WhereInSection('b').Inverted()
+    symbols = symbols.WhereInSection('b').Inverted()
   symbols = symbols.WhereBiggerThan(0)
 
   # Copy report boilerplate into output directory. This also proves that the

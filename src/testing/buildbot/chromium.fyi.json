@@ -12915,7 +12915,7 @@
           ],
           "script": "//third_party/WebKit/Tools/Scripts/merge-layout-test-results"
         },
-        "name": "webkit_layout_tests_exparchive",
+        "name": "webkit_layout_tests",
         "results_handler": "layout tests",
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -12933,7 +12933,7 @@
     "isolated_scripts": [
       {
         "isolate_name": "webkit_layout_tests_exparchive",
-        "name": "webkit_layout_tests_exparchive",
+        "name": "webkit_layout_tests",
         "swarming": {
           "can_use_on_swarming_builders": true,
           "shards": 1
@@ -12945,7 +12945,7 @@
     "isolated_scripts": [
       {
         "isolate_name": "webkit_layout_tests_exparchive",
-        "name": "webkit_layout_tests_exparchive",
+        "name": "webkit_layout_tests",
         "swarming": {
           "can_use_on_swarming_builders": true,
           "shards": 1

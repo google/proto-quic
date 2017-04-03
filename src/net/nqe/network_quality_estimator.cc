@@ -34,7 +34,6 @@
 #include "net/http/http_response_headers.h"
 #include "net/http/http_response_info.h"
 #include "net/http/http_status_code.h"
-#include "net/nqe/network_quality_estimator_params.h"
 #include "net/nqe/socket_watcher_factory.h"
 #include "net/nqe/throughput_analyzer.h"
 #include "net/url_request/url_request.h"
@@ -60,7 +59,9 @@ base::HistogramBase* GetHistogram(const std::string& statistic_name,
   const size_t kBucketCount = 50;
 
   return base::Histogram::FactoryGet(
-      "NQE." + statistic_name + nqe::internal::GetNameForConnectionType(type),
+      "NQE." + statistic_name +
+          nqe::internal::NetworkQualityEstimatorParams::
+              GetNameForConnectionType(type),
       kLowerLimit, max_limit, kBucketCount,
       base::HistogramBase::kUmaTargetedHistogramFlag);
 }
@@ -247,22 +248,20 @@ NetworkQualityEstimator::NetworkQualityEstimator(
                                {"TransportRTTOrDownstreamThroughput",
                                 EffectiveConnectionTypeAlgorithm::
                                     TRANSPORT_RTT_OR_DOWNSTREAM_THROUGHOUT}}),
+      params_(variation_params),
       use_localhost_requests_(use_local_host_requests_for_tests),
       use_small_responses_(use_smaller_responses_for_tests),
       disable_offline_check_(false),
       add_default_platform_observations_(add_default_platform_observations),
-      weight_multiplier_per_second_(
-          nqe::internal::GetWeightMultiplierPerSecond(variation_params)),
-      weight_multiplier_per_dbm_(
-          nqe::internal::GetWeightMultiplierPerDbm(variation_params)),
+      weight_multiplier_per_second_(params_.GetWeightMultiplierPerSecond()),
+      weight_multiplier_per_dbm_(params_.GetWeightMultiplierPerDbm()),
       effective_connection_type_algorithm_(
           algorithm_name_to_enum_.find(
-              nqe::internal::GetEffectiveConnectionTypeAlgorithm(
-                  variation_params)) == algorithm_name_to_enum_.end()
+              params_.GetEffectiveConnectionTypeAlgorithm()) ==
+                  algorithm_name_to_enum_.end()
               ? kDefaultEffectiveConnectionTypeAlgorithm
               : algorithm_name_to_enum_
-                    .find(nqe::internal::GetEffectiveConnectionTypeAlgorithm(
-                        variation_params))
+                    .find(params_.GetEffectiveConnectionTypeAlgorithm())
                     ->second),
       tick_clock_(new base::DefaultTickClock()),
       last_connection_change_(tick_clock_->NowTicks()),
@@ -285,14 +284,13 @@ NetworkQualityEstimator::NetworkQualityEstimator(
       min_signal_strength_since_connection_change_(INT32_MAX),
       max_signal_strength_since_connection_change_(INT32_MIN),
       correlation_uma_logging_probability_(
-          nqe::internal::correlation_uma_logging_probability(variation_params)),
+          params_.correlation_uma_logging_probability()),
       forced_effective_connection_type_set_(
-          nqe::internal::forced_effective_connection_type_set(
-              variation_params)),
+          params_.forced_effective_connection_type_set()),
       forced_effective_connection_type_(
-          nqe::internal::forced_effective_connection_type(variation_params)),
+          params_.forced_effective_connection_type()),
       persistent_cache_reading_enabled_(
-          nqe::internal::persistent_cache_reading_enabled(variation_params)),
+          params_.persistent_cache_reading_enabled()),
       event_creator_(net_log),
       disallowed_observation_sources_for_http_(
           {NETWORK_QUALITY_OBSERVATION_SOURCE_TCP,
@@ -317,7 +315,7 @@ NetworkQualityEstimator::NetworkQualityEstimator(
             effective_connection_type_algorithm_);
 
   network_quality_store_.reset(new nqe::internal::NetworkQualityStore());
-  ObtainOperatingParams(variation_params);
+  ObtainOperatingParams();
   NetworkChangeNotifier::AddConnectionTypeObserver(this);
   if (external_estimate_provider_) {
     RecordExternalEstimateProviderMetrics(
@@ -338,7 +336,7 @@ NetworkQualityEstimator::NetworkQualityEstimator(
 
   watcher_factory_.reset(new nqe::internal::SocketWatcherFactory(
       base::ThreadTaskRunnerHandle::Get(),
-      nqe::internal::GetMinSocketWatcherNotificationInterval(variation_params),
+      params_.GetMinSocketWatcherNotificationInterval(),
       base::Bind(&NetworkQualityEstimator::OnUpdatedRTTAvailable,
                  base::Unretained(this)),
       tick_clock_.get()));
@@ -352,14 +350,11 @@ NetworkQualityEstimator::NetworkQualityEstimator(
     http_rtt_at_last_main_frame_[i] = nqe::internal::InvalidRTT();
 }
 
-void NetworkQualityEstimator::ObtainOperatingParams(
-    const std::map<std::string, std::string>& variation_params) {
+void NetworkQualityEstimator::ObtainOperatingParams() {
   DCHECK(thread_checker_.CalledOnValidThread());
-  nqe::internal::ObtainDefaultObservations(variation_params,
-                                           default_observations_);
-  nqe::internal::ObtainEffectiveConnectionTypeModelParams(
-      variation_params, connection_thresholds_);
-  nqe::internal::ObtainTypicalNetworkQuality(typical_network_quality_);
+  params_.ObtainDefaultObservations(default_observations_);
+  params_.ObtainEffectiveConnectionTypeModelParams(connection_thresholds_);
+  params_.ObtainTypicalNetworkQuality(typical_network_quality_);
 }
 
 void NetworkQualityEstimator::AddDefaultEstimates() {
@@ -1053,7 +1048,8 @@ void NetworkQualityEstimator::RecordMetricsOnMainFrameRequest() const {
   base::HistogramBase* effective_connection_type_histogram =
       base::Histogram::FactoryGet(
           std::string("NQE.MainFrame.EffectiveConnectionType.") +
-              nqe::internal::GetNameForConnectionType(current_network_id_.type),
+              nqe::internal::NetworkQualityEstimatorParams::
+                  GetNameForConnectionType(current_network_id_.type),
           0, EFFECTIVE_CONNECTION_TYPE_LAST,
           EFFECTIVE_CONNECTION_TYPE_LAST /* Number of buckets */,
           base::HistogramBase::kUmaTargetedHistogramFlag);

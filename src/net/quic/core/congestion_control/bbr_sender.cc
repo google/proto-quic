@@ -9,6 +9,7 @@
 
 #include "net/quic/core/congestion_control/rtt_stats.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
+#include "net/quic/core/proto/cached_network_parameters.pb.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_flag_utils.h"
@@ -186,6 +187,26 @@ void BbrSender::SetFromConfig(const QuicConfig& config,
     if (config.HasClientRequestedIndependentOption(k2RTT, perspective)) {
       num_startup_rtts_ = 2;
     }
+  }
+}
+
+void BbrSender::ResumeConnectionState(
+    const CachedNetworkParameters& cached_network_params,
+    bool max_bandwidth_resumption) {
+  if (!FLAGS_quic_reloadable_flag_quic_bbr_bandwidth_resumption) {
+    return;
+  }
+
+  QuicBandwidth bandwidth = QuicBandwidth::FromBytesPerSecond(
+      max_bandwidth_resumption
+          ? cached_network_params.max_bandwidth_estimate_bytes_per_second()
+          : cached_network_params.bandwidth_estimate_bytes_per_second());
+  QuicTime::Delta rtt =
+      QuicTime::Delta::FromMilliseconds(cached_network_params.min_rtt_ms());
+
+  max_bandwidth_.Update(bandwidth, round_trip_count_);
+  if (!rtt.IsZero() && (min_rtt_ > rtt || min_rtt_.IsZero())) {
+    min_rtt_ = rtt;
   }
 }
 
@@ -584,6 +605,21 @@ void BbrSender::CalculateCongestionWindow(QuicByteCount bytes_acked) {
     QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_ack_aggregation_bytes, 2,
                       2);
     target_window += max_ack_height_.GetBest();
+  }
+  if (FLAGS_quic_reloadable_flag_quic_bbr_add_tso_cwnd) {
+    // QUIC doesn't have TSO, but it does have similarly quantized pacing, so
+    // allow extra CWND to make QUIC's BBR CWND identical to TCP's.
+    QuicByteCount tso_segs_goal = 0;
+    if (pacing_rate_ < QuicBandwidth::FromKBitsPerSecond(1200)) {
+      tso_segs_goal = kDefaultTCPMSS;
+    } else if (pacing_rate_ < QuicBandwidth::FromKBitsPerSecond(24000)) {
+      tso_segs_goal = 2 * kDefaultTCPMSS;
+    } else {
+      tso_segs_goal =
+          std::min(pacing_rate_ * QuicTime::Delta::FromMilliseconds(1),
+                   /* 64k */ static_cast<QuicByteCount>(1 << 16));
+    }
+    target_window += 3 * tso_segs_goal;
   }
 
   // Instead of immediately setting the target CWND as the new one, BBR grows

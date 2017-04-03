@@ -18,11 +18,6 @@
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 #include "net/spdy/platform/api/spdy_string_utils.h"
 
-using std::dec;
-using std::hex;
-using std::make_pair;
-using std::max;
-using std::min;
 using std::string;
 
 namespace net {
@@ -203,7 +198,7 @@ SpdyHeaderBlock::ValueProxy& SpdyHeaderBlock::ValueProxy::operator=(
     DVLOG(1) << "Inserting: (" << key_ << ", " << value << ")";
     lookup_result_ =
         block_
-            ->emplace(make_pair(
+            ->emplace(std::make_pair(
                 key_, HeaderValue(storage_, key_, storage_->Write(value))))
             .first;
   } else {
@@ -323,7 +318,7 @@ void SpdyHeaderBlock::AppendHeader(const SpdyStringPiece key,
                                    const SpdyStringPiece value) {
   auto* storage = GetStorage();
   auto backed_key = storage->Write(key);
-  block_.emplace(make_pair(
+  block_.emplace(std::make_pair(
       backed_key, HeaderValue(storage, backed_key, storage->Write(value))));
 }
 

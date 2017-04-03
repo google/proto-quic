@@ -74,9 +74,11 @@ chrome.accessibilityPrivate.setNativeAccessibilityEnabled = function(enabled) {}
  * Set the bounds of the accessibility focus ring.
  * @param {!Array<!chrome.accessibilityPrivate.ScreenRect>} rects Array of
  *     rectangles to draw the accessibility focus ring around.
+ * @param {string=} opt_color CSS-style hex color string beginning with "#"
+ *     like "#FF9982" or "#EEE".
  * @see https://developer.chrome.com/extensions/accessibilityPrivate#method-setFocusRing
  */
-chrome.accessibilityPrivate.setFocusRing = function(rects) {};
+chrome.accessibilityPrivate.setFocusRing = function(rects, opt_color) {};
 
 /**
  * Sets the calling extension as a listener of all keyboard events optionally

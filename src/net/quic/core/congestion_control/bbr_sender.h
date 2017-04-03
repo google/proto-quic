@@ -104,7 +104,7 @@ class QUIC_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
 
   void ResumeConnectionState(
       const CachedNetworkParameters& cached_network_params,
-      bool max_bandwidth_resumption) override {}
+      bool max_bandwidth_resumption) override;
   void SetNumEmulatedConnections(int num_connections) override {}
   void OnCongestionEvent(bool rtt_updated,
                          QuicByteCount prior_in_flight,

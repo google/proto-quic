@@ -60,13 +60,15 @@ class IntegrationTest(unittest.TestCase):
 
   def _GetParsedMap(self):
     if not IntegrationTest.size_info:
-      IntegrationTest.size_info = map2size.Analyze(_TEST_MAP_PATH)
+      IntegrationTest.size_info = map2size.Analyze(
+          _TEST_MAP_PATH, output_directory=_TEST_DATA_DIR)
     return copy.deepcopy(IntegrationTest.size_info)
 
   @_CompareWithGolden
   def test_Map2Size(self):
     with tempfile.NamedTemporaryFile(suffix='.size') as temp_file:
-      _RunApp('map2size.py', _TEST_MAP_PATH, temp_file.name)
+      _RunApp('map2size.py', '--output-directory', _TEST_DATA_DIR,
+              _TEST_MAP_PATH, temp_file.name)
       size_info = map2size.Analyze(temp_file.name)
     sym_strs = (repr(sym) for sym in size_info.symbols)
     stats = describe.DescribeSizeInfoCoverage(size_info)
@@ -74,7 +76,8 @@ class IntegrationTest(unittest.TestCase):
 
   @_CompareWithGolden
   def test_ConsoleNullDiff(self):
-    return _RunApp('console.py', '--query', 'Diff(size_info1, size_info2)',
+    return _RunApp('console.py', '--output-directory', _TEST_DATA_DIR,
+                   '--query', 'Diff(size_info1, size_info2)',
                    _TEST_MAP_PATH, _TEST_MAP_PATH)
 
   @_CompareWithGolden
@@ -87,6 +90,7 @@ class IntegrationTest(unittest.TestCase):
     diff = models.Diff(map1, map2)
     return describe.GenerateLines(diff)
 
+  @_CompareWithGolden
   def test_SymbolGroupMethods(self):
     all_syms = self._GetParsedMap().symbols
     global_syms = all_syms.WhereNameMatches('GLOBAL')
@@ -96,8 +100,18 @@ class IntegrationTest(unittest.TestCase):
     # Tests Sorted() and __add__().
     self.assertEqual(all_syms.Sorted().symbols,
                      (global_syms + non_global_syms).Sorted().symbols)
-    # Tests GroupByPath() and __len__().
-    self.assertEqual(6, len(all_syms.GroupByPath()))
+    # Tests GroupByNamespace() and __len__().
+    return itertools.chain(
+        ['GroupByNamespace()'],
+        describe.GenerateLines(all_syms.GroupByNamespace()),
+        ['GroupByNamespace(depth=1)'],
+        describe.GenerateLines(all_syms.GroupByNamespace(depth=1)),
+        ['GroupByNamespace(depth=1, fallback=None)'],
+        describe.GenerateLines(all_syms.GroupByNamespace(depth=1,
+                                                         fallback=None)),
+        ['GroupByNamespace(depth=1, min_count=2)'],
+        describe.GenerateLines(all_syms.GroupByNamespace(depth=1, min_count=2)),
+    )
 
 
 def main():

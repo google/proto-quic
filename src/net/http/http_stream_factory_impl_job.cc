@@ -170,6 +170,7 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
                                 const SSLConfig& proxy_ssl_config,
                                 HostPortPair destination,
                                 GURL origin_url,
+                                bool enable_ip_based_pooling,
                                 NetLog* net_log)
     : Job(delegate,
           job_type,
@@ -182,6 +183,7 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
           origin_url,
           AlternativeService(),
           ProxyServer(),
+          enable_ip_based_pooling,
           net_log) {}
 
 HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
@@ -195,6 +197,7 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
                                 GURL origin_url,
                                 AlternativeService alternative_service,
                                 const ProxyServer& alternative_proxy_server,
+                                bool enable_ip_based_pooling,
                                 NetLog* net_log)
     : request_info_(request_info),
       priority_(priority),
@@ -211,6 +214,7 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
       origin_url_(origin_url),
       alternative_service_(alternative_service),
       alternative_proxy_server_(alternative_proxy_server),
+      enable_ip_based_pooling_(enable_ip_based_pooling),
       delegate_(delegate),
       job_type_(job_type),
       using_ssl_(false),
@@ -524,10 +528,6 @@ void HttpStreamFactoryImpl::Job::OnHttpsProxyTunnelResponseCallback(
 void HttpStreamFactoryImpl::Job::OnPreconnectsComplete() {
   DCHECK(!new_spdy_session_);
 
-  if (new_spdy_session_.get()) {
-    delegate_->OnNewSpdySessionReady(this, new_spdy_session_,
-                                     spdy_session_direct_);
-  }
   delegate_->OnPreconnectsComplete(this);
   // |this| may be deleted after this call.
 }
@@ -537,14 +537,14 @@ int HttpStreamFactoryImpl::Job::OnHostResolution(
     SpdySessionPool* spdy_session_pool,
     const SpdySessionKey& spdy_session_key,
     const GURL& origin_url,
+    bool enable_ip_based_pooling,
     const AddressList& addresses,
     const NetLogWithSource& net_log) {
   // It is OK to dereference spdy_session_pool, because the
   // ClientSocketPoolManager will be destroyed in the same callback that
   // destroys the SpdySessionPool.
   return spdy_session_pool->FindAvailableSession(
-             spdy_session_key, origin_url, /* enable_ip_based_pooling = */ true,
-             net_log)
+             spdy_session_key, origin_url, enable_ip_based_pooling, net_log)
              ? ERR_SPDY_SESSION_ALREADY_EXISTS
              : OK;
 }
@@ -954,8 +954,7 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionImpl() {
   if (CanUseExistingSpdySession()) {
     base::WeakPtr<SpdySession> spdy_session =
         session_->spdy_session_pool()->FindAvailableSession(
-            spdy_session_key, origin_url_, /* enable_ip_based_pooling = */ true,
-            net_log_);
+            spdy_session_key, origin_url_, enable_ip_based_pooling_, net_log_);
     if (spdy_session) {
       // If we're preconnecting, but we already have a SpdySession, we don't
       // actually need to preconnect any sockets, so we're done.
@@ -1002,7 +1001,7 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionImpl() {
   OnHostResolutionCallback resolution_callback =
       CanUseExistingSpdySession()
           ? base::Bind(&Job::OnHostResolution, session_->spdy_session_pool(),
-                       spdy_session_key, origin_url_)
+                       spdy_session_key, origin_url_, enable_ip_based_pooling_)
           : OnHostResolutionCallback();
   if (delegate_->for_websockets()) {
     // TODO(ricea): Re-enable NPN when WebSockets over SPDY is supported.
@@ -1037,8 +1036,7 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionComplete(int result) {
     SpdySessionKey spdy_session_key = GetSpdySessionKey();
     existing_spdy_session_ =
         session_->spdy_session_pool()->FindAvailableSession(
-            spdy_session_key, origin_url_,
-            /* enable_ip_based_pooling = */ true, net_log_);
+            spdy_session_key, origin_url_, enable_ip_based_pooling_, net_log_);
     if (existing_spdy_session_) {
       using_spdy_ = true;
       next_state_ = STATE_CREATE_STREAM;
@@ -1252,8 +1250,7 @@ int HttpStreamFactoryImpl::Job::DoCreateStream() {
   if (!existing_spdy_session_) {
     existing_spdy_session_ =
         session_->spdy_session_pool()->FindAvailableSession(
-            spdy_session_key, origin_url_,
-            /* enable_ip_based_pooling = */ true, net_log_);
+            spdy_session_key, origin_url_, enable_ip_based_pooling_, net_log_);
   }
   bool direct = !IsHttpsProxyAndHttpUrl();
   if (existing_spdy_session_.get()) {
@@ -1267,6 +1264,11 @@ int HttpStreamFactoryImpl::Job::DoCreateStream() {
     existing_spdy_session_.reset();
     return set_result;
   }
+
+  // Close idle sockets in this group, since subsequent requests will go over
+  // |spdy_session|.
+  if (connection_->socket()->IsConnected())
+    connection_->CloseIdleSocketsInGroup();
 
   base::WeakPtr<SpdySession> spdy_session =
       session_->spdy_session_pool()->CreateAvailableSessionFromSocket(

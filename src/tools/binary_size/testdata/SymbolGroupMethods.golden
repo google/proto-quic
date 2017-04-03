@@ -1,0 +1,46 @@
+GroupByNamespace()
+Showing 10 symbols with total size: 2652154 bytes
+First columns are: running total, type, size
+ 2651884 * 2651884  {global} (count=27)
+ 2651978 * 94       blink::PaintChunker (count=1)
+ 2652034 * 56       blink::ContiguousContainerBase (count=2)
+ 2652082 * 48       chrome::mojom (count=2)
+ 2652114 * 32       chrome::mojom::FilePatcher (count=1)
+ 2652138 * 24       mojo (count=1)
+ 2652146 * 8        google::protobuf::internal (count=2)
+ 2652150 * 4        base::android (count=1)
+ 2652154 * 4        blink::CSSValueKeywordsHash::findValueImpl (count=1)
+ 2652154 * 0        SaveHistogram (count=1)
+GroupByNamespace(depth=1)
+Showing 7 symbols with total size: 2652154 bytes
+First columns are: running total, type, size
+ 2651884 * 2651884  {global} (count=27)
+ 2652038 * 154      blink (count=4)
+ 2652118 * 80       chrome (count=3)
+ 2652142 * 24       mojo (count=1)
+ 2652150 * 8        google (count=2)
+ 2652154 * 4        base (count=1)
+ 2652154 * 0        SaveHistogram (count=1)
+GroupByNamespace(depth=1, fallback=None)
+Showing 7 symbols with total size: 2652154 bytes
+First columns are: running total, type, size
+ 2651884 * 2651884   (count=27)
+ 2652038 * 154      blink (count=4)
+ 2652118 * 80       chrome (count=3)
+ 2652142 * 24       mojo (count=1)
+ 2652150 * 8        google (count=2)
+ 2652154 * 4        base (count=1)
+ 2652154 * 0        SaveHistogram (count=1)
+GroupByNamespace(depth=1, min_count=2)
+Showing 7 symbols with total size: 2652154 bytes
+First columns are: running total, type, size
+ 2651884 * 2651884  {global} (count=27)
+ 2652038 * 154      blink (count=4)
+ 2652118 * 80       chrome (count=3)
+ 2652142 d@0x2cd8538   24      base/page_allocator.cc
+ 2652142                       mojo::MessageReceiver [vtable]
+ 2652150 * 8        google (count=2)
+ 2652154 d@0x2de70a0   4       third_party/container.c
+ 2652154                       base::android::g_renderer_histogram_code
+ 2652154 b@0x2dffe80   200     third_party/icu/ucnv_ext.c
+ 2652154                       SaveHistogram::atomic_histogram_pointer

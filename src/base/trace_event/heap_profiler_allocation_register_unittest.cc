@@ -245,24 +245,59 @@ TEST_F(AllocationRegisterTest, ChangeContextAfterInsertion) {
   EXPECT_FALSE(reg.Get(reinterpret_cast<void*>(19), &a));
 }
 
-// Check that the process aborts due to hitting the guard page when inserting
-// too many elements.
-#if GTEST_HAS_DEATH_TEST
-TEST_F(AllocationRegisterTest, OverflowDeathTest) {
+// Check that the table handles overflows of the allocation storage gracefully.
+TEST_F(AllocationRegisterTest, OverflowAllocationTest) {
   const size_t allocation_capacity = GetAllocationCapacityPerPage();
   AllocationRegister reg(allocation_capacity, kBacktraceCapacity);
   AllocationContext ctx;
   size_t i;
 
-  // Fill up all of the memory allocated for the register's allocation map.
-  for (i = 0; i < allocation_capacity; i++) {
-    reg.Insert(reinterpret_cast<void*>(i + 1), 1, ctx);
+  for (int repetition = 0; repetition < 3; repetition++) {
+    // Fill up all of the memory allocated for the register's allocation map.
+    for (i = 0; i < allocation_capacity; i++)
+      ASSERT_TRUE(reg.Insert(reinterpret_cast<void*>(i + 1), 1, ctx));
+
+    // Adding just one extra element should cause overflow.
+    ASSERT_FALSE(reg.Insert(reinterpret_cast<void*>(i + 1), 1, ctx));
+
+    // Removing all allocations shouldn't cause any crash.
+    for (i = 0; i < allocation_capacity; i++) {
+      reg.Remove(reinterpret_cast<void*>(i + 1));
+    }
+  }
+}
+
+// Check that the table handles overflows of the backtrace storage (but not the
+// allocations storage) gracefully.
+TEST_F(AllocationRegisterTest, OverflowBacktraceTest) {
+  const size_t backtrace_capacity = GetAllocationCapacityPerPage();
+  const size_t allocation_capacity = 3 * GetAllocationCapacityPerPage();
+  AllocationRegister reg(allocation_capacity, backtrace_capacity);
+  AllocationContext ctx;
+  size_t i;
+
+  // Fill up all of the memory allocated for the backtrace allocation map,
+  // but do not fill the allocations map.
+  for (i = 1; i <= backtrace_capacity * 2; i++) {
+    void* addr = reinterpret_cast<void*>(i);
+    ctx.backtrace.frames[0] = StackFrame::FromProgramCounter(addr);
+    ctx.backtrace.frame_count = 1;
+    ASSERT_TRUE(reg.Insert(addr, 1, ctx));
   }
 
-  // Adding just one extra element should cause overflow.
-  ASSERT_DEATH(reg.Insert(reinterpret_cast<void*>(i + 1), 1, ctx), "");
+  // Removing all allocations shouldn't cause any crash.
+  for (i = 1; i <= backtrace_capacity * 2; i++) {
+    AllocationRegister::Allocation allocation = {};
+    ASSERT_TRUE(reg.Get(reinterpret_cast<void*>(i), &allocation));
+
+    // This is just to check the integrity of the backtrace sentinel and to make
+    // sure that we don't hit the guard page.
+    ASSERT_LT(allocation.context.backtrace.frame_count,
+              static_cast<size_t>(Backtrace::kMaxFrameCount));
+
+    reg.Remove(reinterpret_cast<void*>(i));
+  }
 }
-#endif
 
 }  // namespace trace_event
 }  // namespace base

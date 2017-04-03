@@ -81,6 +81,10 @@ void AtExitManager::ProcessCallbacksNow() {
     g_top_manager->processing_callbacks_ = true;
   }
 
+  // Relax the cross-thread access restriction to non-thread-safe RefCount.
+  // It's safe since all other threads should be terminated at this point.
+  ScopedAllowCrossThreadRefCountAccess allow_cross_thread_ref_count_access;
+
   while (!tasks.empty()) {
     base::Closure task = tasks.top();
     task.Run();

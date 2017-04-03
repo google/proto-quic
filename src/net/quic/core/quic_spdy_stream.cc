@@ -70,7 +70,7 @@ size_t QuicSpdyStream::WriteTrailers(
     SpdyHeaderBlock trailer_block,
     QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener) {
   if (fin_sent()) {
-    QUIC_BUG << "Trailers cannot be sent after a FIN.";
+    QUIC_BUG << "Trailers cannot be sent after a FIN, on stream " << id();
     return 0;
   }
 
@@ -222,7 +222,7 @@ void QuicSpdyStream::OnTrailingHeadersComplete(
   size_t final_byte_offset = 0;
   if (!SpdyUtils::CopyAndValidateTrailers(header_list, &final_byte_offset,
                                           &received_trailers_)) {
-    QUIC_DLOG(ERROR) << "Trailers are malformed: " << id();
+    QUIC_DLOG(ERROR) << "Trailers for stream " << id() << " are malformed.";
     session()->connection()->CloseConnection(
         QUIC_INVALID_HEADERS_STREAM_DATA, "Trailers are malformed",
         ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);

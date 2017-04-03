@@ -170,10 +170,10 @@
       'CrWinAsanCov': 'asan_clang_edge_fuzzer_static_v8_heap_x86_full_symbols_release',
       'CrWinClang(shared)': 'clang_minimal_symbols_shared_release_bot_x86',
       'CrWinClang64(dbg)': 'win_clang_debug_bot',
-      'CrWinClangLLD': 'clang_tot_official_minimal_symbols_static_use_lld_x86',
-      'CrWinClangLLD64': 'clang_tot_minimal_symbols_shared_release_use_lld',
-      'CrWinClngLLD64dbg': 'clang_tot_minimal_symbols_shared_debug_use_lld',
-      'CrWinClngLLDdbg': 'clang_tot_minimal_symbols_shared_debug_use_lld_x86',
+      'CrWinClangLLD': 'clang_tot_official_static_use_lld_x86',
+      'CrWinClangLLD64': 'clang_tot_shared_release_use_lld',
+      'CrWinClngLLD64dbg': 'clang_tot_full_symbols_shared_debug_use_lld',
+      'CrWinClngLLDdbg': 'clang_tot_full_symbols_shared_debug_use_lld_x86',
       'EarlGreyiOS': 'ios',
       'GomaCanaryiOS': 'ios',
       'ios-simulator': 'ios',
@@ -195,7 +195,6 @@
       'Linux deterministic (dbg)': 'debug_bot',
       'Linux remote_run Builder': 'release_bot',
       'Linux remote_run Tester': 'release_bot',
-      'Linux V8 API Stability': 'release_bot',
       'Mac deterministic': 'release_bot_mac_strip',
       'Mac deterministic (dbg)': 'debug_bot',
       'Mojo ChromiumOS': 'chromeos_with_codecs_ozone_release_trybot',
@@ -206,7 +205,6 @@
       'Site Isolation Win': 'release_trybot_x86',
       'ThinLTO Linux ToT': 'thin_lto_clang_tot_full_symbols_release_static_use_lld',
       'UBSanVptr Linux': 'ubsan_vptr_release_bot',
-      'WebKit Linux - TraceWrappables': 'debug_bot',
       'WebKit Linux - RandomOrder': 'release_bot',
       'WebKit Mac - RandomOrder': 'release_bot',
       'WebKit Win - RandomOrder': 'release_bot_x86',
@@ -361,6 +359,7 @@
     'client.v8.chromium': {
       'Linux - Future': 'v8_future_release_bot',
       'Linux - Future (dbg)': 'v8_future_debug_bot',
+      'Linux V8 API Stability': 'release_bot',
     },
 
     'client.v8.fyi': {
@@ -1112,28 +1111,26 @@
       'clang_tot', 'minimal_symbols', 'shared', 'debug',
     ],
 
-    'clang_tot_minimal_symbols_shared_debug_use_lld': [
-      'clang_tot', 'minimal_symbols', 'shared', 'debug', 'use_lld',
+    'clang_tot_full_symbols_shared_debug_use_lld': [
+      'clang_tot', 'full_symbols', 'shared', 'debug', 'use_lld',
     ],
 
-    'clang_tot_minimal_symbols_shared_debug_use_lld_x86': [
-      'clang_tot', 'minimal_symbols', 'shared', 'debug', 'use_lld', 'x86',
-    ],
-
-    'clang_tot_minimal_symbols_shared_debug': [
-      'clang_tot', 'minimal_symbols', 'shared', 'debug',
+    'clang_tot_full_symbols_shared_debug_use_lld_x86': [
+      'clang_tot', 'full_symbols', 'shared', 'debug', 'use_lld', 'x86',
     ],
 
     'clang_tot_minimal_symbols_shared_debug_x86': [
       'clang_tot', 'minimal_symbols', 'shared', 'debug', 'x86',
     ],
 
-    'clang_tot_minimal_symbols_shared_release_use_lld': [
-      'clang_tot', 'minimal_symbols', 'shared', 'release', 'use_lld',
+    'clang_tot_shared_release_use_lld': [
+      # TODO(crbug.com/706492): Enable symbols when LLD makes PDBs.
+      'clang_tot', 'no_symbols', 'shared', 'release', 'use_lld',
     ],
 
-    'clang_tot_official_minimal_symbols_static_use_lld_x86': [
-      'clang_tot', 'official', 'minimal_symbols', 'static', 'release', 'use_lld', 'x86',
+    'clang_tot_official_static_use_lld_x86': [
+      # TODO(crbug.com/706492): Enable symbols when LLD makes PDBs.
+      'clang_tot', 'no_symbols', 'official', 'static', 'release', 'use_lld', 'x86',
     ],
 
     'clang_tot_minimal_symbols_shared_release': [
@@ -1834,7 +1831,7 @@
                   'ozone_platform="x11" '
                   'ozone_platform_x11=true ozone_platform_gbm=true '
                   'enable_package_mash_services=true use_ash=false '
-                  'use_jessie_sysroot=true use_xkbcommon=true'),
+                  'use_xkbcommon=true'),
     },
 
     'pdf_xfa': {

@@ -6,9 +6,12 @@
 """Main Python API for analyzing binary size."""
 
 import argparse
+import datetime
 import distutils.spawn
+import gzip
 import logging
 import os
+import re
 import subprocess
 import sys
 
@@ -18,16 +21,16 @@ import function_signature
 import helpers
 import linker_map_parser
 import models
+import ninja_parser
 
 
-def _IterLines(s):
-  prev_idx = -1
-  while True:
-    idx = s.find('\n', prev_idx + 1)
-    if idx == -1:
-      return
-    yield s[prev_idx + 1:idx]
-    prev_idx = idx
+def _OpenMaybeGz(path, mode=None):
+  """Calls `gzip.open()` if |path| ends in ".gz", otherwise calls `open()`."""
+  if path.endswith('.gz'):
+    if mode and 'w' in mode:
+      return gzip.GzipFile(path, mode, 1)
+    return gzip.open(path, mode)
+  return open(path, mode or 'r')
 
 
 def _UnmangleRemainingSymbols(symbol_group, tool_prefix):
@@ -42,7 +45,7 @@ def _UnmangleRemainingSymbols(symbol_group, tool_prefix):
   stdout = proc.communicate('\n'.join(s.name for s in to_process))[0]
   assert proc.returncode == 0
 
-  for i, line in enumerate(_IterLines(stdout)):
+  for i, line in enumerate(stdout.splitlines()):
     to_process[i].name = line
 
 
@@ -50,8 +53,8 @@ def _NormalizeNames(symbol_group):
   """Ensures that all names are formatted in a useful way.
 
   This includes:
-    - Assigning of |function_signature| (for functions).
-    - Stripping of return types in |function_signature| and |name|.
+    - Assigning of |full_name|.
+    - Stripping of return types in |full_name| and |name| (for functions).
     - Stripping parameters from |name|.
     - Moving "vtable for" and the like to be suffixes rather than prefixes.
   """
@@ -76,11 +79,21 @@ def _NormalizeNames(symbol_group):
 
     # Strip out return type, and identify where parameter list starts.
     if symbol.section == 't':
-      symbol.function_signature, symbol.name = (
-          function_signature.Parse(symbol.name))
+      symbol.full_name, symbol.name = function_signature.Parse(symbol.name)
 
     # Remove anonymous namespaces (they just harm clustering).
-    symbol.name = symbol.name.replace('(anonymous namespace)::', '')
+    non_anonymous = symbol.name.replace('(anonymous namespace)::', '')
+    if symbol.name != non_anonymous:
+      symbol.is_anonymous = True
+      symbol.name = non_anonymous
+      symbol.full_name = symbol.full_name.replace(
+          '(anonymous namespace)::', '')
+
+    if symbol.section != 't' and '(' in symbol.name:
+      # Pretty rare. Example:
+      # blink::CSSValueKeywordsHash::findValueImpl(char const*)::value_word_list
+      symbol.full_name = symbol.name
+      symbol.name = re.sub(r'\(.*\)', '', symbol.full_name)
 
   logging.debug('Found name prefixes of: %r', found_prefixes)
 
@@ -88,17 +101,46 @@ def _NormalizeNames(symbol_group):
 def _NormalizeObjectPaths(symbol_group):
   """Ensures that all paths are formatted in a useful way."""
   for symbol in symbol_group:
-    if symbol.path.startswith('obj/'):
+    path = symbol.object_path
+    if path.startswith('obj/'):
       # Convert obj/third_party/... -> third_party/...
-      symbol.path = symbol.path[4:]
-    elif symbol.path.startswith('../../'):
+      path = path[4:]
+    elif path.startswith('../../'):
       # Convert ../../third_party/... -> third_party/...
-      symbol.path = symbol.path[6:]
-    if symbol.path.endswith(')'):
-      # Convert foo/bar.a(baz.o) -> foo/bar.a/baz.o
-      start_idx = symbol.path.index('(')
-      paren_path = symbol.path[start_idx + 1:-1]
-      symbol.path = symbol.path[:start_idx] + os.path.sep + paren_path
+      path = path[6:]
+    if path.endswith(')'):
+      # Convert foo/bar.a(baz.o) -> foo/bar.a/(baz.o)
+      start_idx = path.index('(')
+      path = os.path.join(path[:start_idx], path[start_idx:])
+    symbol.object_path = path
+
+
+def _NormalizeSourcePath(path):
+  if path.startswith('gen/'):
+    # Convert gen/third_party/... -> third_party/...
+    return path[4:]
+  if path.startswith('../../'):
+    # Convert ../../third_party/... -> third_party/...
+    return path[6:]
+  return path
+
+
+def _ExtractSourcePaths(symbol_group, output_directory):
+  """Fills in the .source_path attribute of all symbols."""
+  mapper = ninja_parser.SourceFileMapper(output_directory)
+
+  for symbol in symbol_group:
+    object_path = symbol.object_path
+    if symbol.source_path or not object_path:
+      continue
+    # We don't have source info for prebuilt .a files.
+    if not object_path.startswith('..'):
+      source_path = mapper.FindSourceForPath(object_path)
+      if source_path:
+        symbol.source_path = _NormalizeSourcePath(source_path)
+      else:
+        logging.warning('Could not find source path for %s', object_path)
+  logging.debug('Parsed %d .ninja files.', mapper.GetParsedFileCount())
 
 
 def _RemoveDuplicatesAndCalculatePadding(symbol_group):
@@ -106,19 +148,17 @@ def _RemoveDuplicatesAndCalculatePadding(symbol_group):
 
   Symbols must already be sorted by |address|.
   """
-  i = 0
   to_remove = set()
   all_symbols = symbol_group.symbols
-  for i in xrange(len(all_symbols)):
-    prev_symbol = all_symbols[i - 1]
-    symbol = all_symbols[i]
+  for i, symbol in enumerate(all_symbols[1:]):
+    prev_symbol = all_symbols[i]
     if prev_symbol.section_name != symbol.section_name:
       continue
     if symbol.address > 0 and prev_symbol.address > 0:
       # Fold symbols that are at the same address (happens in nm output).
       if symbol.address == prev_symbol.address:
         symbol.size = max(prev_symbol.size, symbol.size)
-        to_remove.add(i)
+        to_remove.add(i + 1)
         continue
       # Even with symbols at the same address removed, overlaps can still
       # happen. In this case, padding will be negative (and this is fine).
@@ -140,7 +180,8 @@ def _RemoveDuplicatesAndCalculatePadding(symbol_group):
         continue
       symbol.padding = padding
       symbol.size += padding
-      assert symbol.size >= 0, 'Symbol has negative size: %r' % symbol
+      assert symbol.size >= 0, 'Symbol has negative size: ' + (
+          '%r\nprev symbol: %r' % (symbol, prev_symbol))
   # Map files have no overlaps, so worth special-casing the no-op case.
   if to_remove:
     logging.info('Removing %d overlapping symbols', len(to_remove))
@@ -156,7 +197,7 @@ def AddOptions(parser):
 
 
 def _DetectToolPrefix(tool_prefix, input_file, output_directory=None):
-  """Calls Analyze with values from args."""
+  """Detects values for --tool-prefix and --output-directory."""
   if not output_directory:
     abs_path = os.path.abspath(input_file)
     release_idx = abs_path.find('Release')
@@ -180,10 +221,14 @@ def _DetectToolPrefix(tool_prefix, input_file, output_directory=None):
   else:
     full_path = tool_prefix + 'c++filt'
 
-  if not os.path.isfile(full_path):
+  if not full_path or not os.path.isfile(full_path):
     raise Exception('Bad --tool-prefix. Path not found: %s' % full_path)
+  if not output_directory or not os.path.isdir(output_directory):
+    raise Exception('Bad --output-directory. Path not found: %s' %
+                    output_directory)
+  logging.info('Using --output-directory=%s', output_directory)
   logging.info('Using --tool-prefix=%s', tool_prefix)
-  return tool_prefix
+  return output_directory, tool_prefix
 
 
 def AnalyzeWithArgs(args, input_path):
@@ -191,7 +236,7 @@ def AnalyzeWithArgs(args, input_path):
 
 
 def Analyze(path, output_directory=None, tool_prefix=''):
-  if file_format.EndsWithMaybeGz(path, '.size'):
+  if path.endswith('.size'):
     logging.debug('Loading results from: %s', path)
     size_info = file_format.LoadSizeInfo(path)
     # Recompute derived values (padding and function names).
@@ -199,22 +244,28 @@ def Analyze(path, output_directory=None, tool_prefix=''):
     _RemoveDuplicatesAndCalculatePadding(size_info.symbols)
     logging.info('Deriving signatures')
     # Re-parse out function parameters.
-    _NormalizeNames(size_info.symbols.WhereInSection('t'))
+    _NormalizeNames(size_info.symbols)
     return size_info
-  elif not file_format.EndsWithMaybeGz(path, '.map'):
+  elif not path.endswith('.map') and not path.endswith('.map.gz'):
     raise Exception('Expected input to be a .map or a .size')
   else:
     # Verify tool_prefix early.
-    tool_prefix = _DetectToolPrefix(tool_prefix, path, output_directory)
+    output_directory, tool_prefix = (
+        _DetectToolPrefix(tool_prefix, path, output_directory))
 
-    with file_format.OpenMaybeGz(path) as map_file:
-      size_info = linker_map_parser.MapFileParser().Parse(map_file)
+    with _OpenMaybeGz(path) as map_file:
+      section_sizes, symbols = linker_map_parser.MapFileParser().Parse(map_file)
+    timestamp = datetime.datetime.utcfromtimestamp(os.path.getmtime(path))
+    size_info = models.SizeInfo(section_sizes, models.SymbolGroup(symbols),
+                                timestamp=timestamp)
 
     # Map file for some reason doesn't unmangle all names.
     logging.info('Calculating padding')
     _RemoveDuplicatesAndCalculatePadding(size_info.symbols)
     # Unmangle prints its own log statement.
     _UnmangleRemainingSymbols(size_info.symbols, tool_prefix)
+    logging.info('Extracting source paths from .ninja files')
+    _ExtractSourcePaths(size_info.symbols, output_directory)
     # Resolve paths prints its own log statement.
     logging.info('Normalizing names')
     _NormalizeNames(size_info.symbols)
@@ -228,16 +279,32 @@ def Analyze(path, output_directory=None, tool_prefix=''):
   return size_info
 
 
+def _DetectGitRevision(path):
+  try:
+    git_rev = subprocess.check_output(
+        ['git', '-C', os.path.dirname(path), 'rev-parse', 'HEAD'])
+    return git_rev.rstrip()
+  except Exception:
+    logging.warning('Failed to detect git revision for file metadata.')
+    return None
+
+
 def main(argv):
   parser = argparse.ArgumentParser(argv)
   parser.add_argument('input_file', help='Path to input .map file.')
   parser.add_argument('output_file', help='Path to output .size(.gz) file.')
   AddOptions(parser)
   args = helpers.AddCommonOptionsAndParseArgs(parser, argv)
-  if not file_format.EndsWithMaybeGz(args.output_file, '.size'):
-    parser.error('output_file must end with .size or .size.gz')
+  if not args.output_file.endswith('.size'):
+    parser.error('output_file must end with .size')
 
   size_info = AnalyzeWithArgs(args, args.input_file)
+  if not args.input_file.endswith('.size'):
+    git_rev = _DetectGitRevision(args.input_file)
+    size_info.tag = 'Filename=%s git_rev=%s' % (
+        os.path.basename(args.input_file), git_rev)
+  logging.info('Recording metadata: %s',
+               describe.DescribeSizeInfoMetadata(size_info))
   logging.info('Saving result to %s', args.output_file)
   file_format.SaveSizeInfo(size_info, args.output_file)
 

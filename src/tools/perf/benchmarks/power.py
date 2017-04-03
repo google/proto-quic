@@ -4,7 +4,6 @@
 
 from core import perf_benchmark
 
-from benchmarks import silk_flags
 from measurements import power
 import page_sets
 from telemetry import benchmark
@@ -90,37 +89,6 @@ class PowerTypical10MobileReload(perf_benchmark.PerfBenchmark):
     return 'power.typical_10_mobile_reload'
 
 
-@benchmark.Enabled('android')
-class PowerGpuRasterizationTypical10Mobile(perf_benchmark.PerfBenchmark):
-  """Measures power on key mobile sites with GPU rasterization."""
-  tag = 'gpu_rasterization'
-  test = power.Power
-  page_set = page_sets.Typical10MobilePageSet
-
-  def SetExtraBrowserOptions(self, options):
-    silk_flags.CustomizeBrowserOptionsForGpuRasterization(options)
-    options.full_performance_mode = False
-
-  @classmethod
-  def Name(cls):
-    return 'power.gpu_rasterization.typical_10_mobile'
-
-  @classmethod
-  def ShouldDisable(cls, possible_browser):
-    # http://crbug.com/563968
-    if cls.IsSvelte(possible_browser):
-      return True
-
-
-    # http://crbug.com/593973
-    if (possible_browser.browser_type ==  'reference' and
-        possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X'):
-      return True
-
-    # http://crbug.com/671631
-    return possible_browser.platform.GetDeviceTypeName() == 'Nexus 9'
-
-
 @benchmark.Enabled('mac')
 class PowerTop10(perf_benchmark.PerfBenchmark):
   """Top 10 quiescent power test."""
@@ -133,22 +101,6 @@ class PowerTop10(perf_benchmark.PerfBenchmark):
   @classmethod
   def Name(cls):
     return 'power.top_10'
-
-
-@benchmark.Enabled('mac')
-class PowerGpuRasterizationTop10(perf_benchmark.PerfBenchmark):
-  """Top 10 quiescent power test with GPU rasterization enabled."""
-  tag = 'gpu_rasterization'
-  test = power.QuiescentPower
-  page_set = page_sets.Top10QuiescentPageSet
-
-  def SetExtraBrowserOptions(self, options):
-    silk_flags.CustomizeBrowserOptionsForGpuRasterization(options)
-    options.full_performance_mode = False
-
-  @classmethod
-  def Name(cls):
-    return 'power.gpu_rasterization.top_10'
 
 
 @benchmark.Enabled('mac')
@@ -182,20 +134,6 @@ class PowerTop25(perf_benchmark.PerfBenchmark):
     ]
 
     return any(url in page_url for url in non_quiescent_urls)
-
-
-@benchmark.Enabled('mac')
-class PowerGpuRasterizationTop25(PowerTop25):
-  """Top 25 quiescent power test with GPU rasterization enabled."""
-  tag = 'gpu_rasterization'
-
-  def SetExtraBrowserOptions(self, options):
-    silk_flags.CustomizeBrowserOptionsForGpuRasterization(options)
-    options.full_performance_mode = False
-
-  @classmethod
-  def Name(cls):
-    return 'power.gpu_rasterization.top_25'
 
 
 @benchmark.Enabled('mac')

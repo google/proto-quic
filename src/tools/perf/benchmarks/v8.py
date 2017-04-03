@@ -101,6 +101,7 @@ class _InfiniteScrollBenchmark(perf_benchmark.PerfBenchmark):
       'toplevel',
       # V8 categories.
       'blink.console',
+      'disabled-by-default-v8.compile',
       'disabled-by-default-v8.gc',
       'renderer.scheduler',
       'v8',

@@ -139,7 +139,7 @@ class HpackEncoderTest : public ::testing::TestWithParam<bool> {
                       name.size());
     SpdyStringPiece v(headers_storage_.Memdup(value.data(), value.size()),
                       value.size());
-    headers_observed_.push_back(make_pair(n, v));
+    headers_observed_.push_back(std::make_pair(n, v));
   }
 
   void ExpectIndex(size_t index) {

@@ -43,8 +43,9 @@ CubicBytes::CubicBytes(const QuicClock* clock)
       last_update_time_(QuicTime::Zero()),
       fix_convex_mode_(false),
       fix_cubic_quantization_(false),
-      fix_beta_last_max_(false) {
-  Reset();
+      fix_beta_last_max_(false),
+      allow_per_ack_updates_(false) {
+  ResetCubicState();
 }
 
 void CubicBytes::SetNumConnections(int num_connections) {
@@ -77,7 +78,7 @@ float CubicBytes::BetaLastMax() const {
              : kBetaLastMax;
 }
 
-void CubicBytes::Reset() {
+void CubicBytes::ResetCubicState() {
   epoch_ = QuicTime::Zero();             // Reset time.
   last_update_time_ = QuicTime::Zero();  // Reset time.
   last_congestion_window_ = 0;
@@ -87,7 +88,6 @@ void CubicBytes::Reset() {
   origin_point_congestion_window_ = 0;
   time_to_origin_point_ = 0;
   last_target_congestion_window_ = 0;
-  fix_convex_mode_ = false;
 }
 
 void CubicBytes::SetFixConvexMode(bool fix_convex_mode) {
@@ -100,6 +100,10 @@ void CubicBytes::SetFixCubicQuantization(bool fix_cubic_quantization) {
 
 void CubicBytes::SetFixBetaLastMax(bool fix_beta_last_max) {
   fix_beta_last_max_ = fix_beta_last_max;
+}
+
+void CubicBytes::SetAllowPerAckUpdates(bool allow_per_ack_updates) {
+  allow_per_ack_updates_ = allow_per_ack_updates;
 }
 
 void CubicBytes::OnApplicationLimited() {
@@ -142,8 +146,9 @@ QuicByteCount CubicBytes::CongestionWindowAfterAck(
     QuicTime event_time) {
   acked_bytes_count_ += acked_bytes;
   // Cubic is "independent" of RTT, the update is limited by the time elapsed.
-  if (last_congestion_window_ == current_congestion_window &&
-      (event_time - last_update_time_ <= MaxCubicTimeInterval())) {
+  if (!allow_per_ack_updates_ &&
+      (last_congestion_window_ == current_congestion_window &&
+       (event_time - last_update_time_ <= MaxCubicTimeInterval()))) {
     return std::max(last_target_congestion_window_,
                     estimated_tcp_congestion_window_);
   }

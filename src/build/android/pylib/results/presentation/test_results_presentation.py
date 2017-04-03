@@ -7,7 +7,10 @@
 import argparse
 import collections
 import json
+import tempfile
+import time
 import os
+import subprocess
 import sys
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -232,7 +235,7 @@ def create_suite_table(results_dict):
           footer_row)
 
 
-def results_to_html(results_dict, cs_base_url, master_name):
+def results_to_html(results_dict, cs_base_url, bucket, server_url):
   """Convert list of test results into html format."""
 
   test_rows_header, test_rows = create_test_table(results_dict, cs_base_url)
@@ -256,10 +259,10 @@ def results_to_html(results_dict, cs_base_url, master_name):
       os.path.join('template', 'main.html'))
   return main_template.render(  #  pylint: disable=no-member
       {'tb_values': [suite_table_values, test_table_values],
-       'master_name': master_name})
+       'bucket': bucket, 'server_url': server_url})
 
 
-def result_details(json_path, cs_base_url, master_name):
+def result_details(json_path, cs_base_url, bucket, server_url):
   """Get result details from json path and then convert results to html."""
 
   with open(json_path) as json_file:
@@ -272,21 +275,52 @@ def result_details(json_path, cs_base_url, master_name):
   for testsuite_run in json_object['per_iteration_data']:
     for test, test_runs in testsuite_run.iteritems():
       results_dict[test].extend(test_runs)
-  return results_to_html(results_dict, cs_base_url, master_name)
+  return results_to_html(results_dict, cs_base_url, bucket, server_url)
 
+
+def upload_to_google_bucket(html, test_name, builder_name, build_number,
+                            bucket, server_url, content_type):
+  with tempfile.NamedTemporaryFile(suffix='.html') as temp_file:
+    temp_file.write(html)
+    temp_file.flush()
+    dest = 'html/%s_%s_%s_%s.html' % (
+        test_name, builder_name, build_number,
+        time.strftime('%Y_%m_%d_T%H_%M_%S'))
+    gsutil_path = os.path.join(BASE_DIR, 'third_party', 'catapult',
+                               'third_party', 'gsutil', 'gsutil.py')
+    subprocess.check_call([
+        sys.executable, gsutil_path, '-h', "Content-Type:%s" % content_type,
+        'cp', temp_file.name, 'gs://%s/%s' % (bucket, dest)])
+
+  return '%s/%s/%s' % (server_url, bucket, dest)
 
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('--json-file', help='Path of json file.', required=True)
   parser.add_argument('--cs-base-url', help='Base url for code search.',
                       default='http://cs.chromium.org')
-  parser.add_argument('--master-name', help='Master name in urls.')
+  parser.add_argument('--bucket', default='chromium-result-details')
+  parser.add_argument('--builder-name', help='Builder name.', required=True)
+  parser.add_argument('--build-number', help='Build number.', required=True)
+  parser.add_argument('--test-name', help='The name of the test.',
+                      required=True)
+  parser.add_argument('--server-url', help='The url of the server.',
+                      default='https://storage.googleapis.com')
+  parser.add_argument(
+      '--content-type',
+      help=('Content type, which is used to determine '
+            'whether to download the file, or view in browser.'),
+      default='text/html',
+      choices=['text/html', 'application/octet-stream'])
 
   args = parser.parse_args()
   if os.path.exists(args.json_file):
     result_html_string = result_details(args.json_file, args.cs_base_url,
-                                        args.master_name)
-    print result_html_string.encode('UTF-8')
+                                        args.bucket, args.server_url)
+    print upload_to_google_bucket(result_html_string.encode('UTF-8'),
+                                  args.test_name, args.builder_name,
+                                  args.build_number, args.bucket,
+                                  args.server_url, args.content_type)
   else:
     raise IOError('--json-file %s not found.' % args.json_file)
 

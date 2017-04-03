@@ -44,11 +44,11 @@ _BENCHMARKS_TO_RUN = {
   'dromaeo.jslibstyleprototype',
   'dromaeo.jslibtraversejquery',
   'dromaeo.jslibtraverseprototype',
-  'indexeddb_perf',
   'media.tough_video_cases',
   'octane',
   'smoothness.top_25_smooth',
   'speedometer',
+  'storage.indexeddb_endure_tracing',
   'sunspider',
 }
 

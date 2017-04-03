@@ -225,114 +225,440 @@
   "Lollipop Low-end Tester": {
     "gtest_tests": [
       {
+        "override_compile_targets": [
+          "android_webview_test_apk"
+        ],
+        "override_isolate_target": "android_webview_test_apk",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ],
+          "shards": 2
+        },
+        "test": "android_webview_test_apk"
+      },
+      {
+        "override_isolate_target": "android_webview_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
         "test": "android_webview_unittests"
       },
       {
+        "override_isolate_target": "base_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
         "test": "base_unittests"
       },
       {
-        "override_compile_targets": [
-          "breakpad_unittests_deps"
-        ],
+        "override_isolate_target": "blink_heap_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
+        "test": "blink_heap_unittests"
+      },
+      {
+        "override_isolate_target": "breakpad_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
         "test": "breakpad_unittests"
       },
       {
+        "override_isolate_target": "capture_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
         "test": "capture_unittests"
       },
       {
+        "override_isolate_target": "cc_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
         "test": "cc_unittests"
       },
       {
-        "test": "components_browsertests"
-      },
-      {
-        "test": "components_unittests"
-      },
-      {
-        "args": [
-          "--shard-timeout",
-          "600"
+        "override_compile_targets": [
+          "chrome_public_test_apk"
         ],
-        "test": "content_browsertests"
-      },
-      {
-        "test": "content_unittests"
-      },
-      {
-        "test": "device_unittests"
-      },
-      {
-        "test": "events_unittests"
-      },
-      {
-        "test": "gfx_unittests"
-      },
-      {
-        "test": "gl_tests"
-      },
-      {
-        "test": "gl_unittests"
-      },
-      {
-        "test": "gpu_ipc_service_unittests"
-      },
-      {
-        "test": "gpu_unittests"
-      },
-      {
-        "args": [
-          "--shard-timeout",
-          "600"
-        ],
-        "test": "ipc_tests"
-      },
-      {
-        "test": "media_unittests"
-      },
-      {
-        "test": "net_unittests"
+        "override_isolate_target": "chrome_public_test_apk",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ],
+          "shards": 3
+        },
+        "test": "chrome_public_test_apk"
       },
       {
         "override_compile_targets": [
-          "sandbox_linux_unittests_deps"
+          "chrome_sync_shell_test_apk"
         ],
+        "override_isolate_target": "chrome_sync_shell_test_apk",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ],
+          "shards": 2
+        },
+        "test": "chrome_sync_shell_test_apk"
+      },
+      {
+        "override_isolate_target": "components_browsertests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
+        "test": "components_browsertests"
+      },
+      {
+        "override_isolate_target": "components_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
+        "test": "components_unittests"
+      },
+      {
+        "override_isolate_target": "content_browsertests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
+        "test": "content_browsertests"
+      },
+      {
+        "override_compile_targets": [
+          "content_shell_test_apk"
+        ],
+        "override_isolate_target": "content_shell_test_apk",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ],
+          "shards": 2
+        },
+        "test": "content_shell_test_apk"
+      },
+      {
+        "override_isolate_target": "content_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
+        "test": "content_unittests"
+      },
+      {
+        "override_isolate_target": "device_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
+        "test": "device_unittests"
+      },
+      {
+        "override_isolate_target": "events_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
+        "test": "events_unittests"
+      },
+      {
+        "override_isolate_target": "gl_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
+        "test": "gl_tests"
+      },
+      {
+        "override_isolate_target": "gl_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
+        "test": "gl_unittests"
+      },
+      {
+        "override_isolate_target": "gpu_ipc_service_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
+        "test": "gpu_ipc_service_unittests"
+      },
+      {
+        "override_isolate_target": "gpu_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
+        "test": "gpu_unittests"
+      },
+      {
+        "override_isolate_target": "ipc_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
+        "test": "ipc_tests"
+      },
+      {
+        "override_isolate_target": "media_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
+        "test": "media_unittests"
+      },
+      {
+        "override_isolate_target": "net_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
+        "test": "net_unittests"
+      },
+      {
+        "override_isolate_target": "sandbox_linux_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
         "test": "sandbox_linux_unittests"
       },
       {
+        "override_isolate_target": "sql_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
         "test": "sql_unittests"
       },
       {
+        "override_isolate_target": "storage_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
         "test": "storage_unittests"
       },
       {
+        "override_isolate_target": "ui_android_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
         "test": "ui_android_unittests"
       },
       {
+        "override_isolate_target": "ui_base_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
         "test": "ui_base_unittests"
       },
       {
+        "override_isolate_target": "ui_touch_selection_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
         "test": "ui_touch_selection_unittests"
       },
       {
+        "override_isolate_target": "unit_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "LMY47W",
+              "device_type": "sprout"
+            }
+          ]
+        },
         "test": "unit_tests"
-      }
-    ],
-    "instrumentation_tests": [
-      {
-        "test": "android_webview_test_apk",
-        "timeout_scale": 4
-      },
-      {
-        "test": "chrome_public_test_apk",
-        "timeout_scale": 4
-      },
-      {
-        "test": "chrome_sync_shell_test_apk",
-        "timeout_scale": 4
-      },
-      {
-        "test": "content_shell_test_apk",
-        "timeout_scale": 4
       }
     ]
   },

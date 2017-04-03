@@ -79,6 +79,56 @@ bool IsAddressInSharedRegion(mach_vm_address_t addr, cpu_type_t type) {
   }
 }
 
+enum MachVMRegionResult { Finished, Error, Success };
+
+// Both |size| and |address| are in-out parameters.
+// |info| is an output parameter, only valid on Success.
+MachVMRegionResult GetTopInfo(mach_port_t task,
+                              mach_vm_size_t* size,
+                              mach_vm_address_t* address,
+                              vm_region_top_info_data_t* info) {
+  mach_msg_type_number_t info_count = VM_REGION_TOP_INFO_COUNT;
+  mach_port_t object_name;
+  kern_return_t kr = mach_vm_region(task, address, size, VM_REGION_TOP_INFO,
+                                    reinterpret_cast<vm_region_info_t>(info),
+                                    &info_count, &object_name);
+  // We're at the end of the address space.
+  if (kr == KERN_INVALID_ADDRESS)
+    return Finished;
+
+  if (kr != KERN_SUCCESS)
+    return Error;
+
+  // The kernel always returns a null object for VM_REGION_TOP_INFO, but
+  // balance it with a deallocate in case this ever changes. See 10.9.2
+  // xnu-2422.90.20/osfmk/vm/vm_map.c vm_map_region.
+  mach_port_deallocate(task, object_name);
+  return Success;
+}
+
+MachVMRegionResult GetBasicInfo(mach_port_t task,
+                                mach_vm_size_t* size,
+                                mach_vm_address_t* address,
+                                vm_region_basic_info_64* info) {
+  mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
+  mach_port_t object_name;
+  kern_return_t kr = mach_vm_region(
+      task, address, size, VM_REGION_BASIC_INFO_64,
+      reinterpret_cast<vm_region_info_t>(info), &info_count, &object_name);
+  if (kr == KERN_INVALID_ADDRESS) {
+    // We're at the end of the address space.
+    return Finished;
+  } else if (kr != KERN_SUCCESS) {
+    return Error;
+  }
+
+  // The kernel always returns a null object for VM_REGION_BASIC_INFO_64, but
+  // balance it with a deallocate in case this ever changes. See 10.9.2
+  // xnu-2422.90.20/osfmk/vm/vm_map.c vm_map_region.
+  mach_port_deallocate(task, object_name);
+  return Success;
+}
+
 }  // namespace
 
 // Getting a mach task from a pid for another process requires permissions in
@@ -106,10 +156,8 @@ size_t ProcessMetrics::GetPeakPagefileUsage() const {
 }
 
 size_t ProcessMetrics::GetWorkingSetSize() const {
-  size_t private_bytes = 0;
-  size_t shared_bytes = 0;
   size_t resident_bytes = 0;
-  if (!GetMemoryBytes(&private_bytes, &shared_bytes, &resident_bytes))
+  if (!GetMemoryBytes(nullptr, nullptr, &resident_bytes, nullptr))
     return 0;
   return resident_bytes;
 }
@@ -118,16 +166,21 @@ size_t ProcessMetrics::GetPeakWorkingSetSize() const {
   return 0;
 }
 
+bool ProcessMetrics::GetMemoryBytes(size_t* private_bytes,
+                                    size_t* shared_bytes) const {
+  return GetMemoryBytes(private_bytes, shared_bytes, nullptr, nullptr);
+}
+
 // This is a rough approximation of the algorithm that libtop uses.
 // private_bytes is the size of private resident memory.
 // shared_bytes is the size of shared resident memory.
 bool ProcessMetrics::GetMemoryBytes(size_t* private_bytes,
-                                    size_t* shared_bytes) const {
+                                    size_t* shared_bytes,
+                                    size_t* resident_bytes,
+                                    size_t* locked_bytes) const {
   size_t private_pages_count = 0;
   size_t shared_pages_count = 0;
-
-  if (!private_bytes && !shared_bytes)
-    return true;
+  size_t wired_pages_count = 0;
 
   mach_port_t task = TaskForPid(process_);
   if (task == MACH_PORT_NULL) {
@@ -156,28 +209,26 @@ bool ProcessMetrics::GetMemoryBytes(size_t* private_bytes,
   // http://www.opensource.apple.com/source/top/top-67/libtop.c
   mach_vm_size_t size = 0;
   for (mach_vm_address_t address = MACH_VM_MIN_ADDRESS;; address += size) {
-    vm_region_top_info_data_t info;
-    mach_msg_type_number_t info_count = VM_REGION_TOP_INFO_COUNT;
-    mach_port_t object_name;
-    kern_return_t kr = mach_vm_region(task,
-                                      &address,
-                                      &size,
-                                      VM_REGION_TOP_INFO,
-                                      reinterpret_cast<vm_region_info_t>(&info),
-                                      &info_count,
-                                      &object_name);
-    if (kr == KERN_INVALID_ADDRESS) {
-      // We're at the end of the address space.
-      break;
-    } else if (kr != KERN_SUCCESS) {
-      MACH_DLOG(ERROR, kr) << "mach_vm_region";
-      return false;
-    }
+    mach_vm_size_t size_copy = size;
+    mach_vm_address_t address_copy = address;
 
-    // The kernel always returns a null object for VM_REGION_TOP_INFO, but
-    // balance it with a deallocate in case this ever changes. See 10.9.2
-    // xnu-2422.90.20/osfmk/vm/vm_map.c vm_map_region.
-    mach_port_deallocate(mach_task_self(), object_name);
+    vm_region_top_info_data_t info;
+    MachVMRegionResult result = GetTopInfo(task, &size, &address, &info);
+    if (result == Error)
+      return false;
+    if (result == Finished)
+      break;
+
+    vm_region_basic_info_64 basic_info;
+    result = GetBasicInfo(task, &size_copy, &address_copy, &basic_info);
+    switch (result) {
+      case Finished:
+      case Error:
+        return false;
+      case Success:
+        break;
+    }
+    bool is_wired = basic_info.user_wired_count > 0;
 
     if (IsAddressInSharedRegion(address, cpu_type) &&
         info.share_mode != SM_PRIVATE)
@@ -208,12 +259,20 @@ bool ProcessMetrics::GetMemoryBytes(size_t* private_bytes,
       default:
         break;
     }
+    if (is_wired) {
+      wired_pages_count +=
+          info.private_pages_resident + info.shared_pages_resident;
+    }
   }
 
   if (private_bytes)
     *private_bytes = private_pages_count * PAGE_SIZE;
   if (shared_bytes)
     *shared_bytes = shared_pages_count * PAGE_SIZE;
+  if (resident_bytes)
+    *resident_bytes = (private_pages_count + shared_pages_count) * PAGE_SIZE;
+  if (locked_bytes)
+    *locked_bytes = wired_pages_count * PAGE_SIZE;
 
   return true;
 }
@@ -245,15 +304,6 @@ bool ProcessMetrics::GetCommittedAndWorkingSetKBytes(
   ws_usage->shareable = 0;
   ws_usage->shared = 0;
 
-  return true;
-}
-
-bool ProcessMetrics::GetMemoryBytes(size_t* private_bytes,
-                                    size_t* shared_bytes,
-                                    size_t* resident_bytes) const {
-  if (!GetMemoryBytes(private_bytes, shared_bytes))
-    return false;
-  *resident_bytes = *private_bytes + *shared_bytes;
   return true;
 }
 

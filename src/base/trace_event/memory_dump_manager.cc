@@ -38,7 +38,6 @@
 #include "base/trace_event/trace_event.h"
 #include "base/trace_event/trace_event_argument.h"
 #include "build/build_config.h"
-#include "build/buildflag.h"
 
 #if defined(OS_ANDROID)
 #include "base/trace_event/java_heap_dump_provider_android.h"
@@ -196,11 +195,14 @@ void MemoryDumpManager::EnableHeapProfilingIfNeeded() {
   if (profiling_mode == "") {
     AllocationContextTracker::SetCaptureMode(
         AllocationContextTracker::CaptureMode::PSEUDO_STACK);
+#if HAVE_TRACE_STACK_FRAME_POINTERS && \
+    (BUILDFLAG(ENABLE_PROFILING) || !defined(NDEBUG))
   } else if (profiling_mode == switches::kEnableHeapProfilingModeNative) {
-    // If we don't have frame pointers then native tracing falls-back to
-    // using base::debug::StackTrace, which may be slow.
+    // We need frame pointers for native tracing to work, and they are
+    // enabled in profiling and debug builds.
     AllocationContextTracker::SetCaptureMode(
         AllocationContextTracker::CaptureMode::NATIVE_STACK);
+#endif
 #if BUILDFLAG(ENABLE_MEMORY_TASK_PROFILER)
   } else if (profiling_mode == switches::kEnableHeapProfilingTaskProfiler) {
     // Enable heap tracking, which in turn enables capture of heap usage
@@ -424,7 +426,7 @@ void MemoryDumpManager::UnregisterDumpProviderInternal(
 }
 
 void MemoryDumpManager::RegisterPollingMDPOnDumpThread(
-    scoped_refptr<MemoryDumpManager::MemoryDumpProviderInfo> mdpinfo) {
+    scoped_refptr<MemoryDumpProviderInfo> mdpinfo) {
   AutoLock lock(lock_);
   dump_providers_for_polling_.insert(mdpinfo);
 
@@ -436,7 +438,7 @@ void MemoryDumpManager::RegisterPollingMDPOnDumpThread(
 }
 
 void MemoryDumpManager::UnregisterPollingMDPOnDumpThread(
-    scoped_refptr<MemoryDumpManager::MemoryDumpProviderInfo> mdpinfo) {
+    scoped_refptr<MemoryDumpProviderInfo> mdpinfo) {
   mdpinfo->dump_provider->SuspendFastMemoryPolling();
 
   AutoLock lock(lock_);
@@ -952,34 +954,6 @@ bool MemoryDumpManager::IsDumpModeAllowed(MemoryDumpLevelOfDetail dump_mode) {
   if (!session_state_)
     return false;
   return session_state_->IsDumpModeAllowed(dump_mode);
-}
-
-MemoryDumpManager::MemoryDumpProviderInfo::MemoryDumpProviderInfo(
-    MemoryDumpProvider* dump_provider,
-    const char* name,
-    scoped_refptr<SequencedTaskRunner> task_runner,
-    const MemoryDumpProvider::Options& options,
-    bool whitelisted_for_background_mode)
-    : dump_provider(dump_provider),
-      name(name),
-      task_runner(std::move(task_runner)),
-      options(options),
-      consecutive_failures(0),
-      disabled(false),
-      whitelisted_for_background_mode(whitelisted_for_background_mode) {}
-
-MemoryDumpManager::MemoryDumpProviderInfo::~MemoryDumpProviderInfo() {}
-
-bool MemoryDumpManager::MemoryDumpProviderInfo::Comparator::operator()(
-    const scoped_refptr<MemoryDumpManager::MemoryDumpProviderInfo>& a,
-    const scoped_refptr<MemoryDumpManager::MemoryDumpProviderInfo>& b) const {
-  if (!a || !b)
-    return a.get() < b.get();
-  // Ensure that unbound providers (task_runner == nullptr) always run last.
-  // Rationale: some unbound dump providers are known to be slow, keep them last
-  // to avoid skewing timings of the other dump providers.
-  return std::tie(a->task_runner, a->dump_provider) >
-         std::tie(b->task_runner, b->dump_provider);
 }
 
 MemoryDumpManager::ProcessMemoryDumpAsyncState::ProcessMemoryDumpAsyncState(

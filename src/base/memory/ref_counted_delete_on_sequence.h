@@ -33,10 +33,14 @@ namespace base {
 template <class T>
 class RefCountedDeleteOnSequence : public subtle::RefCountedThreadSafeBase {
  public:
+  static constexpr subtle::StartRefCountFromZeroTag kRefCountPreference =
+      subtle::kStartRefCountFromZeroTag;
+
   // A SequencedTaskRunner for the current sequence can be acquired by calling
   // SequencedTaskRunnerHandle::Get().
   RefCountedDeleteOnSequence(scoped_refptr<SequencedTaskRunner> task_runner)
-      : task_runner_(std::move(task_runner)) {
+      : subtle::RefCountedThreadSafeBase(T::kRefCountPreference),
+        task_runner_(std::move(task_runner)) {
     DCHECK(task_runner_);
   }
 

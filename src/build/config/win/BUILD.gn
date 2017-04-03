@@ -123,7 +123,7 @@ config("compiler") {
 }
 
 config("vs_code_analysis") {
-  if (use_vs_code_analysis) {
+  if (use_vs_code_analysis && !is_clang) {
     # When use_vs_code_analysis is specified add the /analyze switch to enable
     # static analysis. Specifying /analyze:WX- says that /analyze warnings
     # should not be treated as errors.

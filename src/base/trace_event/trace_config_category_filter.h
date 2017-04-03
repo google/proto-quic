@@ -40,13 +40,13 @@ class BASE_EXPORT TraceConfigCategoryFilter {
   // Returns true if at least one category in the list is enabled by this
   // trace config. This is used to determine if the category filters are
   // enabled in the TRACE_* macros.
-  bool IsCategoryGroupEnabled(const char* category_group_name) const;
+  bool IsCategoryGroupEnabled(const StringPiece& category_group_name) const;
 
   // Returns true if the category is enabled according to this trace config.
   // This tells whether a category is enabled from the TraceConfig's
   // perspective. Please refer to IsCategoryGroupEnabled() to determine if a
   // category is enabled from the tracing runtime's perspective.
-  bool IsCategoryEnabled(const char* category_name) const;
+  bool IsCategoryEnabled(const StringPiece& category_name) const;
 
   void ToDict(DictionaryValue* dict) const;
 

@@ -66,7 +66,8 @@ bool SpdyFrameBuilder::BeginNewFrame(const SpdyFramer& framer,
                                      SpdyFrameType type,
                                      uint8_t flags,
                                      SpdyStreamId stream_id) {
-  DCHECK(IsDefinedFrameType(type));
+  uint8_t raw_frame_type = SerializeFrameType(type);
+  DCHECK(IsDefinedFrameType(raw_frame_type));
   DCHECK_EQ(0u, stream_id & ~kStreamIdMask);
   bool success = true;
   if (length_ > 0) {
@@ -116,7 +117,7 @@ bool SpdyFrameBuilder::BeginNewFrame(const SpdyFramer& framer,
   if (!length_written) {
     success &= WriteUInt24(capacity_ - offset_ - kFrameHeaderSize);
   }
-  success &= WriteUInt8(type);
+  success &= WriteUInt8(raw_frame_type);
   success &= WriteUInt8(flags);
   success &= WriteUInt32(stream_id);
   DCHECK_EQ(framer.GetDataFrameMinimumSize(), length_);
@@ -128,7 +129,8 @@ bool SpdyFrameBuilder::BeginNewFrame(const SpdyFramer& framer,
                                      uint8_t flags,
                                      SpdyStreamId stream_id,
                                      size_t length) {
-  DCHECK(IsDefinedFrameType(type));
+  uint8_t raw_frame_type = SerializeFrameType(type);
+  DCHECK(IsDefinedFrameType(raw_frame_type));
   DCHECK_EQ(0u, stream_id & ~kStreamIdMask);
   bool success = true;
   SPDY_BUG_IF(framer.GetFrameMaximumSize() < length_)
@@ -139,7 +141,7 @@ bool SpdyFrameBuilder::BeginNewFrame(const SpdyFramer& framer,
   length_ = 0;
 
   success &= WriteUInt24(length);
-  success &= WriteUInt8(type);
+  success &= WriteUInt8(raw_frame_type);
   success &= WriteUInt8(flags);
   success &= WriteUInt32(stream_id);
   DCHECK_EQ(framer.GetDataFrameMinimumSize(), length_);

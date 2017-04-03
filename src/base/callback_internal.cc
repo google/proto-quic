@@ -17,6 +17,10 @@ bool ReturnFalse(const BindStateBase*) {
 
 }  // namespace
 
+void BindStateBaseRefCountTraits::Destruct(const BindStateBase* bind_state) {
+  bind_state->destructor_(bind_state);
+}
+
 BindStateBase::BindStateBase(InvokeFuncStorage polymorphic_invoke,
                              void (*destructor)(const BindStateBase*))
     : BindStateBase(polymorphic_invoke, destructor, &ReturnFalse) {
@@ -26,18 +30,8 @@ BindStateBase::BindStateBase(InvokeFuncStorage polymorphic_invoke,
                              void (*destructor)(const BindStateBase*),
                              bool (*is_cancelled)(const BindStateBase*))
     : polymorphic_invoke_(polymorphic_invoke),
-      ref_count_(0),
       destructor_(destructor),
       is_cancelled_(is_cancelled) {}
-
-void BindStateBase::AddRef() const {
-  AtomicRefCountInc(&ref_count_);
-}
-
-void BindStateBase::Release() const {
-  if (!AtomicRefCountDec(&ref_count_))
-    destructor_(this);
-}
 
 CallbackBase<CopyMode::MoveOnly>::CallbackBase(CallbackBase&& c) = default;
 
@@ -80,10 +74,9 @@ bool CallbackBase<CopyMode::MoveOnly>::EqualsInternal(
   return bind_state_ == other.bind_state_;
 }
 
-CallbackBase<CopyMode::MoveOnly>::CallbackBase(
-    BindStateBase* bind_state)
-    : bind_state_(bind_state) {
-  DCHECK(!bind_state_.get() || bind_state_->ref_count_ == 1);
+CallbackBase<CopyMode::MoveOnly>::CallbackBase(BindStateBase* bind_state)
+    : bind_state_(bind_state ? AdoptRef(bind_state) : nullptr) {
+  DCHECK(!bind_state_.get() || bind_state_->HasOneRef());
 }
 
 CallbackBase<CopyMode::MoveOnly>::~CallbackBase() {}

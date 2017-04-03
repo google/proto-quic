@@ -18,6 +18,10 @@ std::ostream& operator<<(std::ostream& out, SpdySettingsIds id) {
   return out << static_cast<uint16_t>(id);
 }
 
+std::ostream& operator<<(std::ostream& out, SpdyFrameType frame_type) {
+  return out << SerializeFrameType(frame_type);
+}
+
 SpdyPriority ClampSpdy3Priority(SpdyPriority priority) {
   if (priority < kV3HighestPriority) {
     SPDY_BUG << "Invalid priority: " << static_cast<int>(priority);
@@ -55,7 +59,7 @@ SpdyPriority Http2WeightToSpdy3Priority(int weight) {
 }
 
 bool IsDefinedFrameType(uint8_t frame_type_field) {
-  return frame_type_field <= MAX_FRAME_TYPE;
+  return frame_type_field <= SerializeFrameType(SpdyFrameType::MAX_FRAME_TYPE);
 }
 
 SpdyFrameType ParseFrameType(uint8_t frame_type_field) {
@@ -64,16 +68,20 @@ SpdyFrameType ParseFrameType(uint8_t frame_type_field) {
   return static_cast<SpdyFrameType>(frame_type_field);
 }
 
+uint8_t SerializeFrameType(SpdyFrameType frame_type) {
+  return static_cast<uint8_t>(frame_type);
+}
+
 bool IsValidHTTP2FrameStreamId(SpdyStreamId current_frame_stream_id,
                                SpdyFrameType frame_type_field) {
   if (current_frame_stream_id == 0) {
     switch (frame_type_field) {
-      case DATA:
-      case HEADERS:
-      case PRIORITY:
-      case RST_STREAM:
-      case CONTINUATION:
-      case PUSH_PROMISE:
+      case SpdyFrameType::DATA:
+      case SpdyFrameType::HEADERS:
+      case SpdyFrameType::PRIORITY:
+      case SpdyFrameType::RST_STREAM:
+      case SpdyFrameType::CONTINUATION:
+      case SpdyFrameType::PUSH_PROMISE:
         // These frame types must specify a stream
         return false;
       default:
@@ -81,9 +89,9 @@ bool IsValidHTTP2FrameStreamId(SpdyStreamId current_frame_stream_id,
     }
   } else {
     switch (frame_type_field) {
-      case GOAWAY:
-      case SETTINGS:
-      case PING:
+      case SpdyFrameType::GOAWAY:
+      case SpdyFrameType::SETTINGS:
+      case SpdyFrameType::PING:
         // These frame types must not specify a stream
         return false;
       default:
@@ -94,31 +102,29 @@ bool IsValidHTTP2FrameStreamId(SpdyStreamId current_frame_stream_id,
 
 const char* FrameTypeToString(SpdyFrameType frame_type) {
   switch (frame_type) {
-    case DATA:
+    case SpdyFrameType::DATA:
       return "DATA";
-    case RST_STREAM:
+    case SpdyFrameType::RST_STREAM:
       return "RST_STREAM";
-    case SETTINGS:
+    case SpdyFrameType::SETTINGS:
       return "SETTINGS";
-    case PING:
+    case SpdyFrameType::PING:
       return "PING";
-    case GOAWAY:
+    case SpdyFrameType::GOAWAY:
       return "GOAWAY";
-    case HEADERS:
+    case SpdyFrameType::HEADERS:
       return "HEADERS";
-    case WINDOW_UPDATE:
+    case SpdyFrameType::WINDOW_UPDATE:
       return "WINDOW_UPDATE";
-    case PUSH_PROMISE:
+    case SpdyFrameType::PUSH_PROMISE:
       return "PUSH_PROMISE";
-    case CONTINUATION:
+    case SpdyFrameType::CONTINUATION:
       return "CONTINUATION";
-    case PRIORITY:
+    case SpdyFrameType::PRIORITY:
       return "PRIORITY";
-    case ALTSVC:
+    case SpdyFrameType::ALTSVC:
       return "ALTSVC";
-    case BLOCKED:
-      return "BLOCKED";
-    case EXTENSION:
+    case SpdyFrameType::EXTENSION:
       return "EXTENSION (unspecified)";
   }
   return "UNKNOWN_FRAME_TYPE";
@@ -243,6 +249,10 @@ void SpdyDataIR::Visit(SpdyFrameVisitor* visitor) const {
   return visitor->VisitData(*this);
 }
 
+SpdyFrameType SpdyDataIR::frame_type() const {
+  return SpdyFrameType::DATA;
+}
+
 SpdyRstStreamIR::SpdyRstStreamIR(SpdyStreamId stream_id,
                                  SpdyErrorCode error_code)
     : SpdyFrameWithStreamIdIR(stream_id) {
@@ -255,6 +265,10 @@ void SpdyRstStreamIR::Visit(SpdyFrameVisitor* visitor) const {
   return visitor->VisitRstStream(*this);
 }
 
+SpdyFrameType SpdyRstStreamIR::frame_type() const {
+  return SpdyFrameType::RST_STREAM;
+}
+
 SpdySettingsIR::SpdySettingsIR() : is_ack_(false) {}
 
 SpdySettingsIR::~SpdySettingsIR() {}
@@ -263,8 +277,16 @@ void SpdySettingsIR::Visit(SpdyFrameVisitor* visitor) const {
   return visitor->VisitSettings(*this);
 }
 
+SpdyFrameType SpdySettingsIR::frame_type() const {
+  return SpdyFrameType::SETTINGS;
+}
+
 void SpdyPingIR::Visit(SpdyFrameVisitor* visitor) const {
   return visitor->VisitPing(*this);
+}
+
+SpdyFrameType SpdyPingIR::frame_type() const {
+  return SpdyFrameType::PING;
 }
 
 SpdyGoAwayIR::SpdyGoAwayIR(SpdyStreamId last_good_stream_id,
@@ -293,6 +315,14 @@ SpdyGoAwayIR::SpdyGoAwayIR(SpdyStreamId last_good_stream_id,
 
 SpdyGoAwayIR::~SpdyGoAwayIR() {}
 
+void SpdyGoAwayIR::Visit(SpdyFrameVisitor* visitor) const {
+  return visitor->VisitGoAway(*this);
+}
+
+SpdyFrameType SpdyGoAwayIR::frame_type() const {
+  return SpdyFrameType::GOAWAY;
+}
+
 SpdyContinuationIR::SpdyContinuationIR(SpdyStreamId stream_id)
     : SpdyFrameWithStreamIdIR(stream_id), end_headers_(false) {
   encoding_ = base::MakeUnique<std::string>();
@@ -300,28 +330,36 @@ SpdyContinuationIR::SpdyContinuationIR(SpdyStreamId stream_id)
 
 SpdyContinuationIR::~SpdyContinuationIR() {}
 
-void SpdyGoAwayIR::Visit(SpdyFrameVisitor* visitor) const {
-  return visitor->VisitGoAway(*this);
+void SpdyContinuationIR::Visit(SpdyFrameVisitor* visitor) const {
+  return visitor->VisitContinuation(*this);
+}
+
+SpdyFrameType SpdyContinuationIR::frame_type() const {
+  return SpdyFrameType::CONTINUATION;
 }
 
 void SpdyHeadersIR::Visit(SpdyFrameVisitor* visitor) const {
   return visitor->VisitHeaders(*this);
 }
 
+SpdyFrameType SpdyHeadersIR::frame_type() const {
+  return SpdyFrameType::HEADERS;
+}
+
 void SpdyWindowUpdateIR::Visit(SpdyFrameVisitor* visitor) const {
   return visitor->VisitWindowUpdate(*this);
 }
 
-void SpdyBlockedIR::Visit(SpdyFrameVisitor* visitor) const {
-  return visitor->VisitBlocked(*this);
+SpdyFrameType SpdyWindowUpdateIR::frame_type() const {
+  return SpdyFrameType::WINDOW_UPDATE;
 }
 
 void SpdyPushPromiseIR::Visit(SpdyFrameVisitor* visitor) const {
   return visitor->VisitPushPromise(*this);
 }
 
-void SpdyContinuationIR::Visit(SpdyFrameVisitor* visitor) const {
-  return visitor->VisitContinuation(*this);
+SpdyFrameType SpdyPushPromiseIR::frame_type() const {
+  return SpdyFrameType::PUSH_PROMISE;
 }
 
 SpdyAltSvcIR::SpdyAltSvcIR(SpdyStreamId stream_id)
@@ -335,8 +373,16 @@ void SpdyAltSvcIR::Visit(SpdyFrameVisitor* visitor) const {
   return visitor->VisitAltSvc(*this);
 }
 
+SpdyFrameType SpdyAltSvcIR::frame_type() const {
+  return SpdyFrameType::ALTSVC;
+}
+
 void SpdyPriorityIR::Visit(SpdyFrameVisitor* visitor) const {
   return visitor->VisitPriority(*this);
+}
+
+SpdyFrameType SpdyPriorityIR::frame_type() const {
+  return SpdyFrameType::PRIORITY;
 }
 
 }  // namespace net

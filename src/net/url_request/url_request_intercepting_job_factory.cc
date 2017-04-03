@@ -76,10 +76,6 @@ bool URLRequestInterceptingJobFactory::IsHandledProtocol(
   return job_factory_->IsHandledProtocol(scheme);
 }
 
-bool URLRequestInterceptingJobFactory::IsHandledURL(const GURL& url) const {
-  return job_factory_->IsHandledURL(url);
-}
-
 bool URLRequestInterceptingJobFactory::IsSafeRedirectTarget(
     const GURL& location) const {
   return job_factory_->IsSafeRedirectTarget(location);

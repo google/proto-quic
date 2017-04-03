@@ -79,6 +79,9 @@ class NET_EXPORT HostCache : NON_EXPORTED_BASE(public base::NonThreadSafe) {
 
     base::TimeTicks expires() const { return expires_; }
 
+    // Public for the net-internals UI.
+    int network_changes() const { return network_changes_; }
+
    private:
     friend class HostCache;
 
@@ -87,7 +90,6 @@ class NET_EXPORT HostCache : NON_EXPORTED_BASE(public base::NonThreadSafe) {
           base::TimeDelta ttl,
           int network_changes);
 
-    int network_changes() const { return network_changes_; }
     int total_hits() const { return total_hits_; }
     int stale_hits() const { return stale_hits_; }
 
@@ -158,7 +160,7 @@ class NET_EXPORT HostCache : NON_EXPORTED_BASE(public base::NonThreadSafe) {
 
   // Following are used by net_internals UI.
   size_t max_entries() const;
-
+  int network_changes() const { return network_changes_; }
   const EntryMap& entries() const { return entries_; }
 
   // Creates a default cache.

@@ -413,7 +413,13 @@ public class ApiCompatibilityUtils {
      */
     public static void setStatusBarColor(Window window, int statusBarColor) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+            // If both system bars are black, we can remove these from our layout,
+            // removing or shrinking the SurfaceFlinger overlay required for our views.
+            if (statusBarColor == Color.BLACK && window.getNavigationBarColor() == Color.BLACK) {
+                window.clearFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+            } else {
+                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+            }
             window.setStatusBarColor(statusBarColor);
         }
     }

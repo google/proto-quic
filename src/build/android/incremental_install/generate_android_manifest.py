@@ -22,9 +22,15 @@ ElementTree.register_namespace('android', _ANDROID_NAMESPACE)
 
 _INCREMENTAL_APP_NAME = 'org.chromium.incrementalinstall.BootstrapApplication'
 _META_DATA_APP_NAME = 'incremental-install-real-app'
-_META_DATA_INSTRUMENTATION_NAME = 'incremental-install-real-instrumentation'
 _DEFAULT_APPLICATION_CLASS = 'android.app.Application'
-_DEFAULT_INSTRUMENTATION_CLASS = 'android.app.Instrumentation'
+_META_DATA_INSTRUMENTATION_NAMES = [
+    'incremental-install-real-instrumentation-0',
+    'incremental-install-real-instrumentation-1',
+]
+_INCREMENTAL_INSTRUMENTATION_CLASSES = [
+    'android.app.Instrumentation',
+    'org.chromium.incrementalinstall.SecondInstrumentation',
+]
 
 
 def _AddNamespace(name):
@@ -84,12 +90,13 @@ def _ProcessManifest(main_manifest, disable_isolated_processes):
 
   # Seems to be a bug in ElementTree, as doc.find() doesn't work here.
   instrumentation_nodes = doc.findall('instrumentation')
-  if instrumentation_nodes:
-    instrumentation_node = instrumentation_nodes[0]
+  assert len(instrumentation_nodes) <= 2, (
+      'Need to update incremental install to support >2 <instrumentation> tags')
+  for i, instrumentation_node in enumerate(instrumentation_nodes):
     real_instrumentation_class = instrumentation_node.get(_AddNamespace('name'))
     instrumentation_node.set(_AddNamespace('name'),
-                             _DEFAULT_INSTRUMENTATION_CLASS)
-    _CreateMetaData(app_node, _META_DATA_INSTRUMENTATION_NAME,
+                             _INCREMENTAL_INSTRUMENTATION_CLASSES[i])
+    _CreateMetaData(app_node, _META_DATA_INSTRUMENTATION_NAMES[i],
                     real_instrumentation_class)
 
   return ElementTree.tostring(doc, encoding='UTF-8')

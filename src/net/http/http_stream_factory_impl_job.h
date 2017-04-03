@@ -170,6 +170,7 @@ class HttpStreamFactoryImpl::Job {
       const SSLConfig& proxy_ssl_config,
       HostPortPair destination,
       GURL origin_url,
+      bool enable_ip_based_pooling,
       NetLog* net_log);
 
   // Constructor for the alternative Job. The Job is owned by |delegate|, hence
@@ -191,6 +192,7 @@ class HttpStreamFactoryImpl::Job {
       GURL origin_url,
       AlternativeService alternative_service,
       const ProxyServer& alternative_proxy_server,
+      bool enable_ip_based_pooling,
       NetLog* net_log);
   virtual ~Job();
 
@@ -392,6 +394,7 @@ class HttpStreamFactoryImpl::Job {
   static int OnHostResolution(SpdySessionPool* spdy_session_pool,
                               const SpdySessionKey& spdy_session_key,
                               const GURL& origin_url,
+                              bool enable_ip_based_pooling,
                               const AddressList& addresses,
                               const NetLogWithSource& net_log);
 
@@ -423,6 +426,10 @@ class HttpStreamFactoryImpl::Job {
   // Alternative proxy server that should be used by |this| to fetch the
   // request.
   const ProxyServer alternative_proxy_server_;
+
+  // Enable pooling to a SpdySession with matching IP and certificate
+  // even if the SpdySessionKey is different.
+  const bool enable_ip_based_pooling_;
 
   // Unowned. |this| job is owned by |delegate_|.
   Delegate* delegate_;
@@ -502,6 +509,7 @@ class HttpStreamFactoryImpl::JobFactory {
       HostPortPair destination,
       GURL origin_url,
       AlternativeService alternative_service,
+      bool enable_ip_based_pooling,
       NetLog* net_log) = 0;
 
   // Creates an alternative proxy server Job.
@@ -516,6 +524,7 @@ class HttpStreamFactoryImpl::JobFactory {
       HostPortPair destination,
       GURL origin_url,
       const ProxyServer& alternative_proxy_server,
+      bool enable_ip_based_pooling,
       NetLog* net_log) = 0;
 
   // Creates a non-alternative Job.
@@ -529,6 +538,7 @@ class HttpStreamFactoryImpl::JobFactory {
       const SSLConfig& proxy_ssl_config,
       HostPortPair destination,
       GURL origin_url,
+      bool enable_ip_based_pooling,
       NetLog* net_log) = 0;
 };
 

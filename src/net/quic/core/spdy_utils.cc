@@ -100,8 +100,8 @@ bool SpdyUtils::ParseTrailers(const char* data,
   auto it = trailers->find(kFinalOffsetHeaderKey);
   if (it == trailers->end() ||
       !QuicTextUtils::StringToSizeT(it->second, final_byte_offset)) {
-    QUIC_DVLOG(1) << "Required key '" << kFinalOffsetHeaderKey
-                  << "' not present";
+    QUIC_DLOG(ERROR) << "Required key '" << kFinalOffsetHeaderKey
+                     << "' not present";
     return false;
   }
   // The final offset header is no longer needed.
@@ -130,7 +130,7 @@ bool SpdyUtils::CopyAndValidateHeaders(const QuicHeaderList& header_list,
   for (const auto& p : header_list) {
     const string& name = p.first;
     if (name.empty()) {
-      QUIC_DVLOG(1) << "Header name must not be empty.";
+      QUIC_DLOG(ERROR) << "Header name must not be empty.";
       return false;
     }
 
@@ -168,20 +168,21 @@ bool SpdyUtils::CopyAndValidateTrailers(const QuicHeaderList& header_list,
     }
 
     if (name.empty() || name[0] == ':') {
-      QUIC_DVLOG(1)
+      QUIC_DLOG(ERROR)
           << "Trailers must not be empty, and must not contain pseudo-"
           << "headers. Found: '" << name << "'";
       return false;
     }
 
     if (QuicTextUtils::ContainsUpperCase(name)) {
-      QUIC_DLOG(INFO) << "Malformed header: Header name " << name
-                      << " contains upper-case characters.";
+      QUIC_DLOG(ERROR) << "Malformed header: Header name " << name
+                       << " contains upper-case characters.";
       return false;
     }
 
     if (trailers->find(name) != trailers->end()) {
-      QUIC_DLOG(INFO) << "Duplicate header '" << name << "' found in trailers.";
+      QUIC_DLOG(ERROR) << "Duplicate header '" << name
+                       << "' found in trailers.";
       return false;
     }
 
@@ -189,8 +190,8 @@ bool SpdyUtils::CopyAndValidateTrailers(const QuicHeaderList& header_list,
   }
 
   if (!found_final_byte_offset) {
-    QUIC_DVLOG(1) << "Required key '" << kFinalOffsetHeaderKey
-                  << "' not present";
+    QUIC_DLOG(ERROR) << "Required key '" << kFinalOffsetHeaderKey
+                     << "' not present";
     return false;
   }
 

@@ -458,6 +458,7 @@ component("net") {
       "base/network_delegate_impl.cc",
       "base/network_delegate_impl.h",
       "base/network_interfaces_linux.cc",
+      "base/network_interfaces_linux.h",
       "base/network_interfaces_mac.cc",
       "base/network_interfaces_win.cc",
       "base/network_interfaces_win.h",
@@ -1400,10 +1401,14 @@ component("net") {
       "reporting/reporting_cache.h",
       "reporting/reporting_client.cc",
       "reporting/reporting_client.h",
+      "reporting/reporting_endpoint_manager.cc",
+      "reporting/reporting_endpoint_manager.h",
       "reporting/reporting_header_parser.cc",
       "reporting/reporting_header_parser.h",
       "reporting/reporting_report.cc",
       "reporting/reporting_report.h",
+      "reporting/reporting_uploader.cc",
+      "reporting/reporting_uploader.h",
       "sdch/sdch_owner.cc",
       "sdch/sdch_owner.h",
       "socket/client_socket_factory.cc",
@@ -4425,10 +4430,14 @@ test("net_unittests") {
     "quic/chromium/quic_http_stream_test.cc",
     "quic/chromium/quic_http_utils_test.cc",
     "quic/chromium/quic_network_transaction_unittest.cc",
+    "quic/chromium/quic_stream_factory_peer.cc",
+    "quic/chromium/quic_stream_factory_peer.h",
     "quic/chromium/quic_stream_factory_test.cc",
     "quic/chromium/quic_test_packet_maker.cc",
     "quic/chromium/quic_test_packet_maker.h",
     "quic/chromium/quic_utils_chromium_test.cc",
+    "quic/chromium/test_task_runner.cc",
+    "quic/chromium/test_task_runner.h",
     "quic/core/congestion_control/bandwidth_sampler_test.cc",
     "quic/core/congestion_control/bbr_sender_test.cc",
     "quic/core/congestion_control/cubic_bytes_test.cc",
@@ -4568,8 +4577,6 @@ test("net_unittests") {
     "quic/test_tools/quic_spdy_session_peer.h",
     "quic/test_tools/quic_spdy_stream_peer.cc",
     "quic/test_tools/quic_spdy_stream_peer.h",
-    "quic/test_tools/quic_stream_factory_peer.cc",
-    "quic/test_tools/quic_stream_factory_peer.h",
     "quic/test_tools/quic_stream_peer.cc",
     "quic/test_tools/quic_stream_peer.h",
     "quic/test_tools/quic_stream_sequencer_buffer_peer.cc",
@@ -4609,12 +4616,12 @@ test("net_unittests") {
     "quic/test_tools/simulator/switch.h",
     "quic/test_tools/simulator/traffic_policer.cc",
     "quic/test_tools/simulator/traffic_policer.h",
-    "quic/test_tools/test_task_runner.cc",
-    "quic/test_tools/test_task_runner.h",
     "reporting/reporting_cache_unittest.cc",
+    "reporting/reporting_endpoint_manager_unittest.cc",
     "reporting/reporting_header_parser_unittest.cc",
     "reporting/reporting_test_util.cc",
     "reporting/reporting_test_util.h",
+    "reporting/reporting_uploader_unittest.cc",
     "sdch/sdch_owner_unittest.cc",
     "socket/client_socket_pool_base_unittest.cc",
     "socket/mock_client_socket_pool_manager.cc",
@@ -5131,6 +5138,11 @@ test("net_unittests") {
   if (is_chromecast && use_nss_certs) {
     sources += [ "ssl/ssl_platform_key_chromecast_unittest.cc" ]
     sources -= [ "ssl/ssl_platform_key_nss_unittest.cc" ]
+  }
+
+  # Include transport_security_state_generator tests.
+  if (host_toolchain == current_toolchain) {
+    deps += [ "//net/tools/transport_security_state_generator:transport_security_state_generator_test_sources" ]
   }
 }
 

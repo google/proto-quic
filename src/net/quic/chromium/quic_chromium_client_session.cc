@@ -1189,6 +1189,10 @@ void QuicChromiumClientSession::OnNetworkConnected(
 void QuicChromiumClientSession::OnWriteError(int error_code) {
   DCHECK_NE(ERR_IO_PENDING, error_code);
   DCHECK_GT(0, error_code);
+  if (IsCryptoHandshakeConfirmed()) {
+    UMA_HISTOGRAM_SPARSE_SLOWLY("Net.QuicSession.WriteError.HandshakeConfirmed",
+                                -error_code);
+  }
   connection()->OnWriteError(error_code);
 }
 

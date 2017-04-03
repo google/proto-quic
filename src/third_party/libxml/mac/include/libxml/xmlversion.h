@@ -192,7 +192,7 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether the DTD validation support is configured in
  */
-#if 1
+#if 0
 #define LIBXML_VALID_ENABLED
 #endif
 
@@ -264,7 +264,7 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether XInclude is configured in
  */
-#if 1
+#if 0
 #define LIBXML_XINCLUDE_ENABLED
 #endif
 
@@ -363,7 +363,7 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether the Schemas validation interfaces are compiled in
  */
-#if 1
+#if 0
 #define LIBXML_SCHEMAS_ENABLED
 #endif
 
