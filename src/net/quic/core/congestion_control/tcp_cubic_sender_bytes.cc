@@ -63,6 +63,11 @@ void TcpCubicSenderBytes::SetFromConfig(const QuicConfig& config,
       ContainsQuicTag(config.ReceivedConnectionOptions(), kBLMX)) {
     cubic_.SetFixBetaLastMax(true);
   }
+  if (FLAGS_quic_reloadable_flag_quic_enable_cubic_per_ack_updates &&
+      config.HasReceivedConnectionOptions() &&
+      ContainsQuicTag(config.ReceivedConnectionOptions(), kCPAU)) {
+    cubic_.SetAllowPerAckUpdates(true);
+  }
 }
 
 void TcpCubicSenderBytes::SetCongestionWindowFromBandwidthAndRtt(
@@ -208,14 +213,14 @@ void TcpCubicSenderBytes::MaybeIncreaseCwnd(
 }
 
 void TcpCubicSenderBytes::HandleRetransmissionTimeout() {
-  cubic_.Reset();
+  cubic_.ResetCubicState();
   slowstart_threshold_ = congestion_window_ / 2;
   congestion_window_ = min_congestion_window_;
 }
 
 void TcpCubicSenderBytes::OnConnectionMigration() {
   TcpCubicSenderBase::OnConnectionMigration();
-  cubic_.Reset();
+  cubic_.ResetCubicState();
   num_acked_packets_ = 0;
   congestion_window_ = initial_tcp_congestion_window_;
   max_congestion_window_ = initial_max_tcp_congestion_window_;

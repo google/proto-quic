@@ -41,7 +41,7 @@ std::unique_ptr<ProcessMetrics> ProcessMetrics::CreateProcessMetrics(
 
 size_t ProcessMetrics::GetPagefileUsage() const {
   PROCESS_MEMORY_COUNTERS pmc;
-  if (GetProcessMemoryInfo(process_, &pmc, sizeof(pmc))) {
+  if (GetProcessMemoryInfo(process_.Get(), &pmc, sizeof(pmc))) {
     return pmc.PagefileUsage;
   }
   return 0;
@@ -50,7 +50,7 @@ size_t ProcessMetrics::GetPagefileUsage() const {
 // Returns the peak space allocated for the pagefile, in bytes.
 size_t ProcessMetrics::GetPeakPagefileUsage() const {
   PROCESS_MEMORY_COUNTERS pmc;
-  if (GetProcessMemoryInfo(process_, &pmc, sizeof(pmc))) {
+  if (GetProcessMemoryInfo(process_.Get(), &pmc, sizeof(pmc))) {
     return pmc.PeakPagefileUsage;
   }
   return 0;
@@ -59,7 +59,7 @@ size_t ProcessMetrics::GetPeakPagefileUsage() const {
 // Returns the current working set size, in bytes.
 size_t ProcessMetrics::GetWorkingSetSize() const {
   PROCESS_MEMORY_COUNTERS pmc;
-  if (GetProcessMemoryInfo(process_, &pmc, sizeof(pmc))) {
+  if (GetProcessMemoryInfo(process_.Get(), &pmc, sizeof(pmc))) {
     return pmc.WorkingSetSize;
   }
   return 0;
@@ -68,7 +68,7 @@ size_t ProcessMetrics::GetWorkingSetSize() const {
 // Returns the peak working set size, in bytes.
 size_t ProcessMetrics::GetPeakWorkingSetSize() const {
   PROCESS_MEMORY_COUNTERS pmc;
-  if (GetProcessMemoryInfo(process_, &pmc, sizeof(pmc))) {
+  if (GetProcessMemoryInfo(process_.Get(), &pmc, sizeof(pmc))) {
     return pmc.PeakWorkingSetSize;
   }
   return 0;
@@ -82,7 +82,7 @@ bool ProcessMetrics::GetMemoryBytes(size_t* private_bytes,
   // OSes. Unlike most Win32 API, we don't need to initialize the "cb" member.
   PROCESS_MEMORY_COUNTERS_EX pmcx;
   if (private_bytes &&
-      GetProcessMemoryInfo(process_,
+      GetProcessMemoryInfo(process_.Get(),
                            reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&pmcx),
                            sizeof(pmcx))) {
     *private_bytes = pmcx.PrivateUsage;
@@ -105,8 +105,8 @@ void ProcessMetrics::GetCommittedKBytes(CommittedKBytes* usage) const {
   size_t committed_mapped = 0;
   size_t committed_image = 0;
   void* base_address = NULL;
-  while (VirtualQueryEx(process_, base_address, &mbi, sizeof(mbi)) ==
-      sizeof(mbi)) {
+  while (VirtualQueryEx(process_.Get(), base_address, &mbi, sizeof(mbi)) ==
+         sizeof(mbi)) {
     if (mbi.State == MEM_COMMIT) {
       if (mbi.Type == MEM_PRIVATE) {
         committed_private += mbi.RegionSize;
@@ -154,7 +154,7 @@ class WorkingSetInformationBuffer {
   size_t GetPageEntryCount() const { return number_of_entries; }
 
   // This function is used to get page entries for a process.
-  bool QueryPageEntries(const ProcessHandle& process_) {
+  bool QueryPageEntries(const ProcessHandle& process) {
     int retries = 5;
     number_of_entries = 4096;  // Just a guess.
 
@@ -167,9 +167,9 @@ class WorkingSetInformationBuffer {
         return false;
 
       // On success, |buffer_| is populated with info about the working set of
-      // |process_|. On ERROR_BAD_LENGTH failure, increase the size of the
+      // |process|. On ERROR_BAD_LENGTH failure, increase the size of the
       // buffer and try again.
-      if (QueryWorkingSet(process_, buffer_, buffer_size))
+      if (QueryWorkingSet(process, buffer_, buffer_size))
         break;  // Success
 
       if (GetLastError() != ERROR_BAD_LENGTH)
@@ -226,7 +226,7 @@ bool ProcessMetrics::GetWorkingSetKBytes(WorkingSetKBytes* ws_usage) const {
   memset(ws_usage, 0, sizeof(*ws_usage));
 
   WorkingSetInformationBuffer buffer;
-  if (!buffer.QueryPageEntries(process_))
+  if (!buffer.QueryPageEntries(process_.Get()))
     return false;
 
   size_t num_page_entries = buffer.GetPageEntryCount();
@@ -252,7 +252,7 @@ bool ProcessMetrics::GetProportionalSetSizeBytes(uint64_t* pss_bytes) const {
   double ws_pss = 0.0;
 
   WorkingSetInformationBuffer buffer;
-  if (!buffer.QueryPageEntries(process_))
+  if (!buffer.QueryPageEntries(process_.Get()))
     return false;
 
   size_t num_page_entries = buffer.GetPageEntryCount();
@@ -281,8 +281,8 @@ double ProcessMetrics::GetCPUUsage() {
   FILETIME kernel_time;
   FILETIME user_time;
 
-  if (!GetProcessTimes(process_, &creation_time, &exit_time,
-                       &kernel_time, &user_time)) {
+  if (!GetProcessTimes(process_.Get(), &creation_time, &exit_time, &kernel_time,
+                       &user_time)) {
     // We don't assert here because in some cases (such as in the Task Manager)
     // we may call this function on a process that has just exited but we have
     // not yet received the notification.
@@ -315,13 +315,20 @@ double ProcessMetrics::GetCPUUsage() {
 }
 
 bool ProcessMetrics::GetIOCounters(IoCounters* io_counters) const {
-  return GetProcessIoCounters(process_, io_counters) != FALSE;
+  return GetProcessIoCounters(process_.Get(), io_counters) != FALSE;
 }
 
 ProcessMetrics::ProcessMetrics(ProcessHandle process)
-    : process_(process),
-      processor_count_(SysInfo::NumberOfProcessors()),
-      last_system_time_(0) {}
+    : processor_count_(SysInfo::NumberOfProcessors()), last_system_time_(0) {
+  if (process) {
+    HANDLE duplicate_handle;
+    BOOL result = ::DuplicateHandle(::GetCurrentProcess(), process,
+                                    ::GetCurrentProcess(), &duplicate_handle,
+                                    PROCESS_QUERY_INFORMATION, FALSE, 0);
+    DCHECK(result);
+    process_.Set(duplicate_handle);
+  }
+}
 
 size_t GetSystemCommitCharge() {
   // Get the System Page Size.

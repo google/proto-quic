@@ -41,6 +41,7 @@ static_library("gn_lib") {
     "command_clean.cc",
     "command_desc.cc",
     "command_format.cc",
+    "command_format.h",
     "command_gen.cc",
     "command_help.cc",
     "command_ls.cc",

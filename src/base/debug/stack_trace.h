@@ -11,7 +11,6 @@
 #include <string>
 
 #include "base/base_export.h"
-#include "base/debug/debugging_flags.h"
 #include "base/macros.h"
 #include "build/build_config.h"
 
@@ -24,27 +23,23 @@ struct _EXCEPTION_POINTERS;
 struct _CONTEXT;
 #endif
 
-// Fast stack trace capture using frame pointers is only available under POSIX
-// platforms, and only for certain architectures, and only when frame pointers
-// are enabled in the build.
+// TODO(699863): Clean up HAVE_TRACE_STACK_FRAME_POINTERS.
 #if defined(OS_POSIX)
-#if BUILDFLAG(ENABLE_PROFILING) || !defined(NDEBUG)
 
 #if defined(__i386__) || defined(__x86_64__)
 #define HAVE_TRACE_STACK_FRAME_POINTERS 1
 #elif defined(__arm__) && !defined(__thumb__)
 #define HAVE_TRACE_STACK_FRAME_POINTERS 1
-#else  //  defined(__arm__) && !defined(__thumb__)
+#else  // defined(__arm__) && !defined(__thumb__)
 #define HAVE_TRACE_STACK_FRAME_POINTERS 0
-#endif  //  defined(__arm__) && !defined(__thumb__)
+#endif  // defined(__arm__) && !defined(__thumb__)
 
-#else  //  BUILDFLAG(ENABLE_PROFILING) || !defined(NDEBUG)
-#define HAVE_TRACE_STACK_FRAME_POINTERS 0
-#endif  //  BUILDFLAG(ENABLE_PROFILING) || !defined(NDEBUG)
+#elif defined(OS_WIN)
+#define HAVE_TRACE_STACK_FRAME_POINTERS 1
 
-#else  // defined(OS_POSIX)
+#else  // defined(OS_WIN)
 #define HAVE_TRACE_STACK_FRAME_POINTERS 0
-#endif  // defined(OS_POSIX)
+#endif  // defined(OS_WIN)
 
 namespace base {
 namespace debug {
@@ -137,6 +132,7 @@ BASE_EXPORT size_t TraceStackFramePointers(const void** out_trace,
                                            size_t max_depth,
                                            size_t skip_initial);
 
+#if !defined(OS_WIN)
 // Links stack frame |fp| to |parent_fp|, so that during stack unwinding
 // TraceStackFramePointers() visits |parent_fp| after visiting |fp|.
 // Both frame pointers must come from __builtin_frame_address().
@@ -186,6 +182,7 @@ class BASE_EXPORT ScopedStackFrameLinker {
 
   DISALLOW_COPY_AND_ASSIGN(ScopedStackFrameLinker);
 };
+#endif  // !defined(OS_WIN)
 
 #endif  // HAVE_TRACE_STACK_FRAME_POINTERS
 

@@ -58,8 +58,6 @@ class NET_EXPORT URLRequestJobFactory
 
   virtual bool IsHandledProtocol(const std::string& scheme) const = 0;
 
-  virtual bool IsHandledURL(const GURL& url) const = 0;
-
   virtual bool IsSafeRedirectTarget(const GURL& location) const = 0;
 
  private:

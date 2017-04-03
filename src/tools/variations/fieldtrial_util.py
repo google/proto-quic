@@ -95,9 +95,9 @@ def GenerateArgs(config_path, platform):
   if len(params):
     args.append('--force-fieldtrial-params=%s' % ','.join(params))
   if len(enable_features):
-    args.append('--enable-features="%s"' % ','.join(enable_features))
+    args.append('--enable-features=%s' % ','.join(enable_features))
   if len(disable_features):
-    args.append('--disable-features="%s"' % ','.join(disable_features))
+    args.append('--disable-features=%s' % ','.join(disable_features))
   return args
 
 def main():

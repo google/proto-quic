@@ -7,6 +7,7 @@
 #include <atomic>
 #include <memory>
 
+#include "base/auto_reset.h"
 #include "base/bind.h"
 #include "base/debug/activity_tracker.h"
 #include "base/files/file.h"
@@ -63,6 +64,26 @@ class ActivityAnalyzerTest : public testing::Test {
   std::unique_ptr<ThreadActivityTracker> CreateActivityTracker() {
     std::unique_ptr<char[]> memory(new char[kStackSize]);
     return MakeUnique<TestActivityTracker>(std::move(memory), kStackSize);
+  }
+
+  template <typename Function>
+  void AsOtherProcess(int64_t pid, Function function) {
+    std::unique_ptr<GlobalActivityTracker> old_global =
+        GlobalActivityTracker::ReleaseForTesting();
+    ASSERT_TRUE(old_global);
+
+    PersistentMemoryAllocator* old_allocator = old_global->allocator();
+    std::unique_ptr<PersistentMemoryAllocator> new_allocator(
+        MakeUnique<PersistentMemoryAllocator>(
+            const_cast<void*>(old_allocator->data()), old_allocator->size(), 0,
+            0, "", false));
+    GlobalActivityTracker::CreateWithAllocator(std::move(new_allocator), 3,
+                                               pid);
+
+    function();
+
+    GlobalActivityTracker::ReleaseForTesting();
+    GlobalActivityTracker::SetForTesting(std::move(old_global));
   }
 
   static void DoNothing() {}
@@ -138,19 +159,23 @@ class SimpleActivityThread : public SimpleThread {
 };
 
 TEST_F(ActivityAnalyzerTest, GlobalAnalyzerConstruction) {
-  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3);
+  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3, 0);
+  GlobalActivityTracker::Get()->process_data().SetString("foo", "bar");
 
   PersistentMemoryAllocator* allocator =
       GlobalActivityTracker::Get()->allocator();
   GlobalActivityAnalyzer analyzer(MakeUnique<PersistentMemoryAllocator>(
       const_cast<void*>(allocator->data()), allocator->size(), 0, 0, "", true));
 
-  // The only thread at thois point is the test thread.
-  ThreadActivityAnalyzer* ta1 = analyzer.GetFirstAnalyzer();
+  // The only thread at this point is the test thread of this process.
+  const int64_t pid = analyzer.GetFirstProcess();
+  ASSERT_NE(0, pid);
+  ThreadActivityAnalyzer* ta1 = analyzer.GetFirstAnalyzer(pid);
   ASSERT_TRUE(ta1);
   EXPECT_FALSE(analyzer.GetNextAnalyzer());
   ThreadActivityAnalyzer::ThreadKey tk1 = ta1->GetThreadKey();
   EXPECT_EQ(ta1, analyzer.GetAnalyzerForThread(tk1));
+  EXPECT_EQ(0, analyzer.GetNextProcess());
 
   // Create a second thread that will do something.
   SimpleActivityThread t2("t2", nullptr, Activity::ACT_TASK,
@@ -158,28 +183,38 @@ TEST_F(ActivityAnalyzerTest, GlobalAnalyzerConstruction) {
   t2.Start();
   t2.WaitReady();
 
-  // Now there should be two.
-  EXPECT_TRUE(analyzer.GetFirstAnalyzer());
+  // Now there should be two. Calling GetFirstProcess invalidates any
+  // previously returned analyzer pointers.
+  ASSERT_EQ(pid, analyzer.GetFirstProcess());
+  EXPECT_TRUE(analyzer.GetFirstAnalyzer(pid));
   EXPECT_TRUE(analyzer.GetNextAnalyzer());
   EXPECT_FALSE(analyzer.GetNextAnalyzer());
+  EXPECT_EQ(0, analyzer.GetNextProcess());
 
   // Let thread exit.
   t2.Exit();
   t2.Join();
 
-  // Now there should be only one again. Calling GetFirstAnalyzer invalidates
-  // any previously returned analyzer pointers.
-  ThreadActivityAnalyzer* ta2 = analyzer.GetFirstAnalyzer();
+  // Now there should be only one again.
+  ASSERT_EQ(pid, analyzer.GetFirstProcess());
+  ThreadActivityAnalyzer* ta2 = analyzer.GetFirstAnalyzer(pid);
   ASSERT_TRUE(ta2);
   EXPECT_FALSE(analyzer.GetNextAnalyzer());
   ThreadActivityAnalyzer::ThreadKey tk2 = ta2->GetThreadKey();
   EXPECT_EQ(ta2, analyzer.GetAnalyzerForThread(tk2));
   EXPECT_EQ(tk1, tk2);
+  EXPECT_EQ(0, analyzer.GetNextProcess());
+
+  // Verify that there is process data.
+  const ActivityUserData::Snapshot& data_snapshot =
+      analyzer.GetProcessDataSnapshot(pid);
+  ASSERT_LE(1U, data_snapshot.size());
+  EXPECT_EQ("bar", data_snapshot.at("foo").GetString());
 }
 
 TEST_F(ActivityAnalyzerTest, UserDataSnapshotTest) {
-  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3);
-  ThreadActivityAnalyzer::Snapshot snapshot;
+  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3, 0);
+  ThreadActivityAnalyzer::Snapshot tracker_snapshot;
 
   const char string1a[] = "string1a";
   const char string1b[] = "string1b";
@@ -218,16 +253,16 @@ TEST_F(ActivityAnalyzerTest, UserDataSnapshotTest) {
       user_data2.SetReference("ref2", string2a, sizeof(string2a));
       user_data2.SetStringReference("sref2", string2b);
 
-      ASSERT_TRUE(tracker->CreateSnapshot(&snapshot));
-      ASSERT_EQ(2U, snapshot.activity_stack.size());
+      ASSERT_TRUE(tracker->CreateSnapshot(&tracker_snapshot));
+      ASSERT_EQ(2U, tracker_snapshot.activity_stack.size());
 
       ThreadActivityAnalyzer analyzer(*tracker);
       analyzer.AddGlobalInformation(&global_analyzer);
-      const ThreadActivityAnalyzer::Snapshot& snapshot =
+      const ThreadActivityAnalyzer::Snapshot& analyzer_snapshot =
           analyzer.activity_snapshot();
-      ASSERT_EQ(2U, snapshot.user_data_stack.size());
+      ASSERT_EQ(2U, analyzer_snapshot.user_data_stack.size());
       const ActivityUserData::Snapshot& user_data =
-          snapshot.user_data_stack.at(1);
+          analyzer_snapshot.user_data_stack.at(1);
       EXPECT_EQ(8U, user_data.size());
       ASSERT_TRUE(ContainsKey(user_data, "raw2"));
       EXPECT_EQ("foo2", user_data.at("raw2").Get().as_string());
@@ -250,16 +285,16 @@ TEST_F(ActivityAnalyzerTest, UserDataSnapshotTest) {
                 user_data.at("sref2").GetStringReference().size());
     }
 
-    ASSERT_TRUE(tracker->CreateSnapshot(&snapshot));
-    ASSERT_EQ(1U, snapshot.activity_stack.size());
+    ASSERT_TRUE(tracker->CreateSnapshot(&tracker_snapshot));
+    ASSERT_EQ(1U, tracker_snapshot.activity_stack.size());
 
     ThreadActivityAnalyzer analyzer(*tracker);
     analyzer.AddGlobalInformation(&global_analyzer);
-    const ThreadActivityAnalyzer::Snapshot& snapshot =
+    const ThreadActivityAnalyzer::Snapshot& analyzer_snapshot =
         analyzer.activity_snapshot();
-    ASSERT_EQ(1U, snapshot.user_data_stack.size());
+    ASSERT_EQ(1U, analyzer_snapshot.user_data_stack.size());
     const ActivityUserData::Snapshot& user_data =
-        snapshot.user_data_stack.at(0);
+        analyzer_snapshot.user_data_stack.at(0);
     EXPECT_EQ(8U, user_data.size());
     EXPECT_EQ("foo1", user_data.at("raw1").Get().as_string());
     EXPECT_EQ("bar1", user_data.at("string1").GetString().as_string());
@@ -274,12 +309,12 @@ TEST_F(ActivityAnalyzerTest, UserDataSnapshotTest) {
               user_data.at("sref1").GetStringReference().size());
   }
 
-  ASSERT_TRUE(tracker->CreateSnapshot(&snapshot));
-  ASSERT_EQ(0U, snapshot.activity_stack.size());
+  ASSERT_TRUE(tracker->CreateSnapshot(&tracker_snapshot));
+  ASSERT_EQ(0U, tracker_snapshot.activity_stack.size());
 }
 
 TEST_F(ActivityAnalyzerTest, GlobalUserDataTest) {
-  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3);
+  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3, 0);
 
   const char string1[] = "foo";
   const char string2[] = "bar";
@@ -299,8 +334,8 @@ TEST_F(ActivityAnalyzerTest, GlobalUserDataTest) {
   global_data.SetReference("ref", string1, sizeof(string1));
   global_data.SetStringReference("sref", string2);
 
-  ActivityUserData::Snapshot snapshot =
-      global_analyzer.GetGlobalUserDataSnapshot();
+  const ActivityUserData::Snapshot& snapshot =
+      global_analyzer.GetGlobalDataSnapshot();
   ASSERT_TRUE(ContainsKey(snapshot, "raw"));
   EXPECT_EQ("foo", snapshot.at("raw").Get().as_string());
   ASSERT_TRUE(ContainsKey(snapshot, "string"));
@@ -322,7 +357,7 @@ TEST_F(ActivityAnalyzerTest, GlobalUserDataTest) {
 }
 
 TEST_F(ActivityAnalyzerTest, GlobalModulesTest) {
-  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3);
+  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3, 0);
 
   PersistentMemoryAllocator* allocator =
       GlobalActivityTracker::Get()->allocator();
@@ -398,7 +433,7 @@ TEST_F(ActivityAnalyzerTest, GlobalModulesTest) {
 }
 
 TEST_F(ActivityAnalyzerTest, GlobalLogMessages) {
-  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3);
+  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3, 0);
 
   PersistentMemoryAllocator* allocator =
       GlobalActivityTracker::Get()->allocator();
@@ -412,6 +447,56 @@ TEST_F(ActivityAnalyzerTest, GlobalLogMessages) {
   ASSERT_EQ(2U, messages.size());
   EXPECT_EQ("hello world", messages[0]);
   EXPECT_EQ("foo bar", messages[1]);
+}
+
+TEST_F(ActivityAnalyzerTest, GlobalMultiProcess) {
+  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3, 1001);
+  GlobalActivityTracker* global = GlobalActivityTracker::Get();
+  PersistentMemoryAllocator* allocator = global->allocator();
+  EXPECT_EQ(1001, global->process_id());
+
+  int64_t process_id;
+  int64_t create_stamp;
+  ActivityUserData::GetOwningProcessId(
+      GlobalActivityTracker::Get()->process_data().GetBaseAddress(),
+      &process_id, &create_stamp);
+  ASSERT_EQ(1001, process_id);
+
+  GlobalActivityTracker::Get()->process_data().SetInt("pid",
+                                                      global->process_id());
+
+  GlobalActivityAnalyzer analyzer(MakeUnique<PersistentMemoryAllocator>(
+      const_cast<void*>(allocator->data()), allocator->size(), 0, 0, "", true));
+
+  AsOtherProcess(2002, [&global]() {
+    ASSERT_NE(global, GlobalActivityTracker::Get());
+    EXPECT_EQ(2002, GlobalActivityTracker::Get()->process_id());
+
+    int64_t process_id;
+    int64_t create_stamp;
+    ActivityUserData::GetOwningProcessId(
+        GlobalActivityTracker::Get()->process_data().GetBaseAddress(),
+        &process_id, &create_stamp);
+    ASSERT_EQ(2002, process_id);
+
+    GlobalActivityTracker::Get()->process_data().SetInt(
+        "pid", GlobalActivityTracker::Get()->process_id());
+  });
+  ASSERT_EQ(global, GlobalActivityTracker::Get());
+  EXPECT_EQ(1001, GlobalActivityTracker::Get()->process_id());
+
+  const int64_t pid1 = analyzer.GetFirstProcess();
+  ASSERT_EQ(1001, pid1);
+  const int64_t pid2 = analyzer.GetNextProcess();
+  ASSERT_EQ(2002, pid2);
+  EXPECT_EQ(0, analyzer.GetNextProcess());
+
+  const ActivityUserData::Snapshot& pdata1 =
+      analyzer.GetProcessDataSnapshot(pid1);
+  const ActivityUserData::Snapshot& pdata2 =
+      analyzer.GetProcessDataSnapshot(pid2);
+  EXPECT_EQ(1001, pdata1.at("pid").GetInt());
+  EXPECT_EQ(2002, pdata2.at("pid").GetInt());
 }
 
 }  // namespace debug

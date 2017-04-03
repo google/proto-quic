@@ -204,7 +204,7 @@ TEST_F(ActivityTrackerTest, PushPopTest) {
 }
 
 TEST_F(ActivityTrackerTest, ScopedTaskTest) {
-  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3);
+  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3, 0);
 
   ThreadActivityTracker* tracker =
       GlobalActivityTracker::Get()->GetOrCreateTrackerForCurrentThread();
@@ -251,7 +251,7 @@ TEST_F(ActivityTrackerTest, ScopedTaskTest) {
 }
 
 TEST_F(ActivityTrackerTest, ExceptionTest) {
-  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3);
+  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3, 0);
   GlobalActivityTracker* global = GlobalActivityTracker::Get();
 
   ThreadActivityTracker* tracker =
@@ -301,7 +301,7 @@ TEST_F(ActivityTrackerTest, CreateWithFileTest) {
 // GlobalActivityTracker tests below.
 
 TEST_F(ActivityTrackerTest, BasicTest) {
-  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3);
+  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3, 0);
   GlobalActivityTracker* global = GlobalActivityTracker::Get();
 
   // Ensure the data repositories have backing store, indicated by non-zero ID.
@@ -364,7 +364,7 @@ class SimpleActivityThread : public SimpleThread {
 };
 
 TEST_F(ActivityTrackerTest, ThreadDeathTest) {
-  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3);
+  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3, 0);
   GlobalActivityTracker::Get()->GetOrCreateTrackerForCurrentThread();
   const size_t starting_active = GetGlobalActiveTrackerCount();
   const size_t starting_inactive = GetGlobalInactiveTrackerCount();
@@ -401,7 +401,7 @@ TEST_F(ActivityTrackerTest, ProcessDeathTest) {
   // testing interfaces to simulate data created by other processes.
   const ProcessId other_process_id = GetCurrentProcId() + 1;
 
-  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3);
+  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3, 0);
   GlobalActivityTracker* global = GlobalActivityTracker::Get();
   ThreadActivityTracker* thread = global->GetOrCreateTrackerForCurrentThread();
 
@@ -441,7 +441,7 @@ TEST_F(ActivityTrackerTest, ProcessDeathTest) {
   memcpy(tracker_copy.get(), thread->GetBaseAddress(), tracker_size);
 
   // Change the objects to appear to be owned by another process.
-  ProcessId owning_id;
+  int64_t owning_id;
   int64_t stamp;
   ASSERT_TRUE(ActivityUserData::GetOwningProcessId(
       global->process_data().GetBaseAddress(), &owning_id, &stamp));

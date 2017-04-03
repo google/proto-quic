@@ -13,7 +13,6 @@
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using std::make_pair;
 using std::string;
 using ::testing::ElementsAre;
 
@@ -27,7 +26,7 @@ class ValueProxyPeer {
 
 std::pair<SpdyStringPiece, SpdyStringPiece> Pair(SpdyStringPiece k,
                                                  SpdyStringPiece v) {
-  return make_pair(k, v);
+  return std::make_pair(k, v);
 }
 
 // This test verifies that SpdyHeaderBlock behaves correctly when empty.
@@ -96,7 +95,7 @@ TEST(SpdyHeaderBlockTest, CopyBlocks) {
   SpdyHeaderBlock block1;
   block1["foo"] = string(300, 'x');
   block1["bar"] = "baz";
-  block1.insert(make_pair("qux", "qux1"));
+  block1.insert(std::make_pair("qux", "qux1"));
 
   SpdyHeaderBlock block2 = block1.Clone();
   SpdyHeaderBlock block3(block1.Clone());

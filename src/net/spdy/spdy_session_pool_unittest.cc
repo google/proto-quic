@@ -393,6 +393,14 @@ void SpdySessionPoolTest::RunIPPoolingTest(
   // The second host overlaps with the first, and should IP pool.
   EXPECT_TRUE(HasSpdySession(spdy_session_pool_, test_hosts[1].key));
 
+  // However, if IP pooling is disabled, FindAvailableSession() should not find
+  // |session| for the second host.
+  base::WeakPtr<SpdySession> session1 =
+      spdy_session_pool_->FindAvailableSession(
+          test_hosts[1].key, GURL(test_hosts[1].url),
+          /* enable_ip_based_pooling = */ false, NetLogWithSource());
+  EXPECT_FALSE(session1);
+
   // Verify that the second host, through a proxy, won't share the IP.
   SpdySessionKey proxy_key(test_hosts[1].key.host_port_pair(),
       ProxyServer::FromPacString("HTTP http://proxy.foo.com/"),
@@ -419,10 +427,9 @@ void SpdySessionPoolTest::RunIPPoolingTest(
 
   // Grab the session to host 1 and verify that it is the same session
   // we got with host 0, and that is a different from host 2's session.
-  base::WeakPtr<SpdySession> session1 =
-      spdy_session_pool_->FindAvailableSession(
-          test_hosts[1].key, GURL(test_hosts[1].url),
-          /* enable_ip_based_pooling = */ true, NetLogWithSource());
+  session1 = spdy_session_pool_->FindAvailableSession(
+      test_hosts[1].key, GURL(test_hosts[1].url),
+      /* enable_ip_based_pooling = */ true, NetLogWithSource());
   EXPECT_EQ(session.get(), session1.get());
   EXPECT_NE(session2.get(), session1.get());
 

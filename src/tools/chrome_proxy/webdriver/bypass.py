@@ -137,6 +137,10 @@ class Bypass(IntegrationTest):
 
   # Verify that the Data Reduction Proxy understands the "exp" directive.
   def testExpDirectiveBypass(self):
+    # If it was attempted to run with another experiment, skip this test.
+    if common.ParseFlags().browser_args and ('--data-reduction-proxy-experiment'
+        in common.ParseFlags().browser_args):
+      self.skipTest('This test cannot be run with other experiments.')
     with TestDriver() as test_driver:
       test_driver.AddChromeArg('--enable-spdy-proxy-auth')
       test_driver.AddChromeArg('--data-reduction-proxy-experiment=test')

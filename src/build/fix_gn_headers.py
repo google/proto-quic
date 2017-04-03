@@ -17,6 +17,33 @@ import subprocess
 import sys
 
 
+def GitGrep(pattern):
+  p = subprocess.Popen(
+      ['git', 'grep', '-En', pattern, '--', '*.gn', '*.gni'],
+      stdout=subprocess.PIPE)
+  out, _ = p.communicate()
+  return out, p.returncode
+
+
+def ValidMatches(basename, cc, grep_lines):
+  """Filter out 'git grep' matches with header files already."""
+  matches = []
+  for line in grep_lines:
+    gnfile, linenr, contents = line.split(':')
+    linenr = int(linenr)
+    new = re.sub(cc, basename, contents)
+    lines = open(gnfile).read().splitlines()
+    assert contents in lines[linenr - 1]
+    # Skip if it's already there. It could be before or after the match.
+    if lines[linenr] == new:
+      continue
+    if lines[linenr - 2] == new:
+      continue
+    print '    ', gnfile, linenr, new
+    matches.append((gnfile, linenr, new))
+  return matches
+
+
 def AddHeadersNextToCC(headers, skip_ambiguous=True):
   """Add header files next to the corresponding .cc files in GN files.
 
@@ -34,29 +61,31 @@ def AddHeadersNextToCC(headers, skip_ambiguous=True):
     basename = os.path.basename(filename)
     print filename
     cc = r'\b' + os.path.splitext(basename)[0] + r'\.(cc|cpp|mm)\b'
-    p = subprocess.Popen(
-        ['git', 'grep', '-En', cc + '"', '--', '*.gn', '*.gni'],
-        stdout=subprocess.PIPE)
-    out, _ = p.communicate()
-    if p.returncode != 0 or not out:
+    out, returncode = GitGrep('(/|")' + cc + '"')
+    if returncode != 0 or not out:
       unhandled.append(filename)
       continue
 
-    if skip_ambiguous and len(out.splitlines()) > 1:
-      print '\n[WARNING] Ambiguous matching for', filename
-      print out
-      continue
+    matches = ValidMatches(basename, cc, out.splitlines())
 
-    for gnline in out.splitlines():
-      gnfile, linenr, contents = gnline.split(':')
-      linenr = int(linenr)
-      new = re.sub(cc, basename, contents)
-      lines = open(gnfile).read().splitlines()
-      # Skip if it's already there. It could be before or after the match.
-      if lines[linenr] == new:
+    if len(matches) == 0:
+      continue
+    if len(matches) > 1:
+      print '\n[WARNING] Ambiguous matching for', filename
+      for i in enumerate(matches, 1):
+        print '%d: %s' % (i[0], i[1])
+      print
+      if skip_ambiguous:
         continue
-      if lines[linenr - 2] == new:
+
+      picked = raw_input('Pick the matches ("2,3" for multiple): ')
+      try:
+        matches = [matches[int(i) - 1] for i in picked.split(',')]
+      except (ValueError, IndexError):
         continue
+
+    for match in matches:
+      gnfile, linenr, new = match
       print '  ', gnfile, linenr, new
       edits.setdefault(gnfile, {})[linenr] = new
 

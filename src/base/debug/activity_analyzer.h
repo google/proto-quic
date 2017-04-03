@@ -9,6 +9,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <vector>
 
 #include "base/base_export.h"
 #include "base/debug/activity_tracker.h"
@@ -77,6 +78,13 @@ class BASE_EXPORT ThreadActivityAnalyzer {
   // methods are undefined if this returns false.
   bool IsValid() { return activity_snapshot_valid_; }
 
+  // Gets the process id and its creation stamp.
+  int64_t GetProcessId(int64_t* out_stamp = nullptr) {
+    if (out_stamp)
+      *out_stamp = activity_snapshot_.create_stamp;
+    return activity_snapshot_.process_id;
+  }
+
   // Gets the name of the thread.
   const std::string& GetThreadName() {
     return activity_snapshot_.thread_name;
@@ -136,10 +144,23 @@ class BASE_EXPORT GlobalActivityAnalyzer {
       const FilePath& file_path);
 #endif  // !defined(OS_NACL)
 
-  // Iterates over all known valid analyzers or returns null if there are no
-  // more. Ownership stays with the global analyzer object and all existing
-  // analyzer pointers are invalidated when GetFirstAnalyzer() is called.
-  ThreadActivityAnalyzer* GetFirstAnalyzer();
+  // Iterates over all known valid processes and returns their PIDs or zero
+  // if there are no more. Calls to GetFirstProcess() will perform a global
+  // snapshot in order to provide a relatively consistent state across the
+  // future calls to GetNextProcess() and GetFirst/NextAnalyzer(). PIDs are
+  // returned in the order they're found meaning that a first-launched
+  // controlling process will be found first. Note, however, that space
+  // freed by an exiting process may be re-used by a later process.
+  int64_t GetFirstProcess();
+  int64_t GetNextProcess();
+
+  // Iterates over all known valid analyzers for the a given process or returns
+  // null if there are no more.
+  //
+  // GetFirstProcess() must be called first in order to capture a global
+  // snapshot! Ownership stays with the global analyzer object and all existing
+  // analyzer pointers are invalidated when GetFirstProcess() is called.
+  ThreadActivityAnalyzer* GetFirstAnalyzer(int64_t pid);
   ThreadActivityAnalyzer* GetNextAnalyzer();
 
   // Gets the analyzer for a specific thread or null if there is none.
@@ -147,10 +168,16 @@ class BASE_EXPORT GlobalActivityAnalyzer {
   ThreadActivityAnalyzer* GetAnalyzerForThread(const ThreadKey& key);
 
   // Extract user data based on a reference and its identifier.
-  ActivityUserData::Snapshot GetUserDataSnapshot(uint32_t ref, uint32_t id);
+  ActivityUserData::Snapshot GetUserDataSnapshot(int64_t pid,
+                                                 uint32_t ref,
+                                                 uint32_t id);
 
-  // Extract the global user data.
-  ActivityUserData::Snapshot GetGlobalUserDataSnapshot();
+  // Extract the data for a specific process. An empty snapshot will be
+  // returned if the process is not known.
+  const ActivityUserData::Snapshot& GetProcessDataSnapshot(int64_t pid);
+
+  // Extract the global data.
+  const ActivityUserData::Snapshot& GetGlobalDataSnapshot();
 
   // Gets all log messages stored within.
   std::vector<std::string> GetLogMessages();
@@ -166,17 +193,40 @@ class BASE_EXPORT GlobalActivityAnalyzer {
   using AnalyzerMap =
       std::map<ThreadKey, std::unique_ptr<ThreadActivityAnalyzer>>;
 
+  struct UserDataSnapshot {
+    // Complex class needs out-of-line ctor/dtor.
+    UserDataSnapshot();
+    UserDataSnapshot(const UserDataSnapshot& rhs);
+    UserDataSnapshot(UserDataSnapshot&& rhs);
+    ~UserDataSnapshot();
+
+    int64_t process_id;
+    int64_t create_stamp;
+    ActivityUserData::Snapshot data;
+  };
+
   // Finds, creates, and indexes analyzers for all known processes and threads.
   void PrepareAllAnalyzers();
 
   // The persistent memory allocator holding all tracking data.
   std::unique_ptr<PersistentMemoryAllocator> allocator_;
 
+  // The time stamp when analysis began. This is used to prevent looking into
+  // process IDs that get reused when analyzing a live system.
+  int64_t analysis_stamp_;
+
   // The iterator for finding tracking information in the allocator.
   PersistentMemoryAllocator::Iterator allocator_iterator_;
 
-  // A set of all tracker memory references found within the allocator.
-  std::set<PersistentMemoryAllocator::Reference> tracker_references_;
+  // A set of all interesting memory references found within the allocator.
+  std::set<PersistentMemoryAllocator::Reference> memory_references_;
+
+  // A set of all process-data memory references found within the allocator.
+  std::map<int64_t, UserDataSnapshot> process_data_;
+
+  // A set of all process IDs collected during PrepareAllAnalyzers. These are
+  // popped and returned one-by-one with calls to GetFirst/NextProcess().
+  std::vector<int64_t> process_ids_;
 
   // A map, keyed by ThreadKey, of all valid activity analyzers.
   AnalyzerMap analyzers_;
@@ -184,6 +234,10 @@ class BASE_EXPORT GlobalActivityAnalyzer {
   // The iterator within the analyzers_ map for returning analyzers through
   // first/next iteration.
   AnalyzerMap::iterator analyzers_iterator_;
+  int64_t analyzers_iterator_pid_;
+
+  // Snapshot of the global data.
+  ActivityUserData::Snapshot global_data_snapshot_;
 
   DISALLOW_COPY_AND_ASSIGN(GlobalActivityAnalyzer);
 };

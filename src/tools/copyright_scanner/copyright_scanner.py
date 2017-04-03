@@ -70,13 +70,14 @@ def FindFiles(input_api, root_dir, start_paths_list, excluded_dirs_list):
     path_join('build', 'goma', 'client'),
     # Ignore sysroots.
     path_join('build', 'linux', 'debian_jessie_arm64-sysroot'),
+    path_join('build', 'linux', 'debian_jessie_arm-sysroot'),
+    path_join('build', 'linux', 'debian_jessie_mips-sysroot'),
+    path_join('build', 'linux', 'debian_jessie_i386-sysroot'),
     path_join('build', 'linux', 'debian_wheezy_amd64-sysroot'),
     path_join('build', 'linux', 'debian_wheezy_arm-sysroot'),
     path_join('build', 'linux', 'debian_wheezy_mips-sysroot'),
     path_join('build', 'linux', 'debian_wheezy_i386-sysroot'),
     path_join('build', 'linux', 'ubuntu_precise_amd64-sysroot'),
-    # Old location (TODO(sbc): Remove this once it no longer exists on any bots)
-    path_join('chrome', 'installer', 'linux', 'debian_wheezy_arm-sysroot'),
     # Data is not part of open source chromium, but are included on some bots.
     path_join('data'),
     # This is not part of open source chromium, but are included on some bots.

@@ -80,14 +80,6 @@ bool URLRequestJobFactoryImpl::IsHandledProtocol(
          URLRequestJobManager::GetInstance()->SupportsScheme(scheme);
 }
 
-bool URLRequestJobFactoryImpl::IsHandledURL(const GURL& url) const {
-  if (!url.is_valid()) {
-    // We handle error cases.
-    return true;
-  }
-  return IsHandledProtocol(url.scheme());
-}
-
 bool URLRequestJobFactoryImpl::IsSafeRedirectTarget(
     const GURL& location) const {
   DCHECK(CalledOnValidThread());

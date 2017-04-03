@@ -136,7 +136,6 @@ class SpdyFramerVisitorAdapter : public SpdyFramerVisitorInterface {
                  bool end) override;
   void OnWindowUpdate(SpdyStreamId stream_id, int delta_window_size) override;
   bool OnGoAwayFrameData(const char* goaway_data, size_t len) override;
-  void OnBlocked(SpdyStreamId stream_id) override;
   void OnPushPromise(SpdyStreamId stream_id,
                      SpdyStreamId promised_stream_id,
                      bool end) override;

@@ -475,7 +475,7 @@ std::unique_ptr<QuicEncryptedPacket> QuicFramer::BuildVersionNegotiationPacket(
   }
 
   for (QuicVersion version : versions) {
-    if (!writer.WriteUInt32(QuicVersionToQuicTag(version))) {
+    if (!writer.WriteTag(QuicVersionToQuicTag(version))) {
       return nullptr;
     }
   }
@@ -539,7 +539,7 @@ bool QuicFramer::ProcessVersionNegotiationPacket(
   // Try reading at least once to raise error if the packet is invalid.
   do {
     QuicTag version;
-    if (!reader->ReadBytes(&version, kQuicVersionSize)) {
+    if (!reader->ReadTag(&version)) {
       set_detailed_error("Unable to read supported version in negotiation.");
       return RaiseError(QUIC_INVALID_VERSION_NEGOTIATION_PACKET);
     }
@@ -684,7 +684,7 @@ bool QuicFramer::AppendPacketHeader(const QuicPacketHeader& header,
   if (header.public_header.version_flag) {
     DCHECK_EQ(Perspective::IS_CLIENT, perspective_);
     QuicTag tag = QuicVersionToQuicTag(quic_version_);
-    if (!writer->WriteUInt32(tag)) {
+    if (!writer->WriteTag(tag)) {
       return false;
     }
     QUIC_DVLOG(1) << ENDPOINT << "version = " << quic_version_ << ", tag = '"
@@ -806,7 +806,7 @@ bool QuicFramer::ProcessPublicHeader(QuicDataReader* reader,
   // version flag from the server means version negotiation packet.
   if (public_header->version_flag && perspective_ == Perspective::IS_SERVER) {
     QuicTag version_tag;
-    if (!reader->ReadUInt32(&version_tag)) {
+    if (!reader->ReadTag(&version_tag)) {
       set_detailed_error("Unable to read protocol version.");
       return false;
     }

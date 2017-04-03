@@ -209,10 +209,6 @@ class MockURLRequestJobFactory : public URLRequestJobFactory {
     return scheme == "http";
   };
 
-  bool IsHandledURL(const GURL& url) const override {
-    return url.SchemeIs("http");
-  }
-
   bool IsSafeRedirectTarget(const GURL& location) const override {
     return false;
   }

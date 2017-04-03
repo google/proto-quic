@@ -495,7 +495,7 @@ class Page36(ToughVideoCasesPage):
     super(Page36, self).__init__(
       url=('file://tough_video_cases/video.html?src='
            'smpte_3840x2160_60fps_vp9.webm'),
-      page_set=page_set)
+      page_set=page_set, tags=['is_4k'])
 
     self.add_browser_metrics = True
 

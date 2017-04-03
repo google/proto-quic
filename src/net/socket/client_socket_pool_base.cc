@@ -782,14 +782,11 @@ void ClientSocketPoolBaseHelper::CleanupIdleSockets(bool force) {
   // inside the inner loop, since it shouldn't change by any meaningful amount.
   base::TimeTicks now = base::TimeTicks::Now();
 
-  GroupMap::iterator i = group_map_.begin();
-  while (i != group_map_.end()) {
+  for (GroupMap::iterator i = group_map_.begin(); i != group_map_.end();) {
     Group* group = i->second;
     CleanupIdleSocketsInGroup(force, group, now);
     // Delete group if no longer needed.
     if (group->IsEmpty()) {
-      // TODO(xunjieli): Evaluate other RemoveGroup() instances after
-      // crbug.com/700549 is fixed.
       GroupMap::iterator old = i++;
       RemoveGroup(old);
     } else {
@@ -1155,10 +1152,8 @@ void ClientSocketPoolBaseHelper::CancelAllConnectJobs() {
 
     // Delete group if no longer needed.
     if (group->IsEmpty()) {
-      // RemoveGroup() will call .erase() which will invalidate the iterator,
-      // but i will already have been incremented to a valid iterator before
-      // RemoveGroup() is called.
-      RemoveGroup(i++);
+      GroupMap::iterator old = i++;
+      RemoveGroup(old);
     } else {
       ++i;
     }
@@ -1179,10 +1174,8 @@ void ClientSocketPoolBaseHelper::CancelAllRequestsWithError(int error) {
 
     // Delete group if no longer needed.
     if (group->IsEmpty()) {
-      // RemoveGroup() will call .erase() which will invalidate the iterator,
-      // but i will already have been incremented to a valid iterator before
-      // RemoveGroup() is called.
-      RemoveGroup(i++);
+      GroupMap::iterator old = i++;
+      RemoveGroup(old);
     } else {
       ++i;
     }

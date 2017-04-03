@@ -27,6 +27,10 @@
 #include "base/process/port_provider_mac.h"
 #endif
 
+#if defined(OS_WIN)
+#include "base/win/scoped_handle.h"
+#endif
+
 namespace base {
 
 #if defined(OS_WIN)
@@ -154,10 +158,13 @@ class BASE_EXPORT ProcessMetrics {
   // system call.
   bool GetCommittedAndWorkingSetKBytes(CommittedKBytes* usage,
                                        WorkingSetKBytes* ws_usage) const;
-  // Returns private, shared, and total resident bytes.
+  // Returns private, shared, and total resident bytes. |locked_bytes| refers to
+  // bytes that must stay resident. |locked_bytes| only counts bytes locked by
+  // this task, not bytes locked by the kernel.
   bool GetMemoryBytes(size_t* private_bytes,
                       size_t* shared_bytes,
-                      size_t* resident_bytes) const;
+                      size_t* resident_bytes,
+                      size_t* locked_bytes) const;
 #endif
 
   // Returns the CPU usage in percent since the last time this method or
@@ -213,7 +220,11 @@ class BASE_EXPORT ProcessMetrics {
   int CalculateIdleWakeupsPerSecond(uint64_t absolute_idle_wakeups);
 #endif
 
+#if defined(OS_WIN)
+  win::ScopedHandle process_;
+#else
   ProcessHandle process_;
+#endif
 
   int processor_count_;
 

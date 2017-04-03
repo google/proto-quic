@@ -465,10 +465,10 @@ class BisectPerfRegressionTest(unittest.TestCase):
 
   def testGetCommitPositionForV8(self):
     bisect_instance = _GetBisectPerformanceMetricsInstance(DEFAULT_OPTIONS)
-    v8_rev = '21d700eedcdd6570eff22ece724b63a5eefe78cb'
+    v8_rev = '818769db41cb3e83979aa16cc76c69b66045e369'
     depot_path = os.path.join(bisect_instance.src_cwd, 'v8')
     self.assertEqual(
-        23634, source_control.GetCommitPosition(v8_rev, depot_path))
+        43769, source_control.GetCommitPosition(v8_rev, depot_path))
 
   def testGetCommitPositionForSkia(self):
     bisect_instance = _GetBisectPerformanceMetricsInstance(DEFAULT_OPTIONS)

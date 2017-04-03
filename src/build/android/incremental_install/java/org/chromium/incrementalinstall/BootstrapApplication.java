@@ -32,8 +32,10 @@ public final class BootstrapApplication extends Application {
     private static final String TAG = "cr.incrementalinstall";
     private static final String MANAGED_DIR_PREFIX = "/data/local/tmp/incremental-app-";
     private static final String REAL_APP_META_DATA_NAME = "incremental-install-real-app";
-    private static final String REAL_INSTRUMENTATION_META_DATA_NAME =
-            "incremental-install-real-instrumentation";
+    private static final String REAL_INSTRUMENTATION_META_DATA_NAME0 =
+            "incremental-install-real-instrumentation-0";
+    private static final String REAL_INSTRUMENTATION_META_DATA_NAME1 =
+            "incremental-install-real-instrumentation-1";
 
     private ClassLoaderPatcher mClassLoaderPatcher;
     private Application mRealApplication;
@@ -113,9 +115,11 @@ public final class BootstrapApplication extends Application {
             // mInstrumentationAppDir is one of a set of fields that is initialized only when
             // instrumentation is active.
             if (Reflect.getField(mActivityThread, "mInstrumentationAppDir") != null) {
-                String realInstrumentationName =
-                        getClassNameFromMetadata(REAL_INSTRUMENTATION_META_DATA_NAME, instContext);
-                initInstrumentation(realInstrumentationName);
+                String metaDataName = REAL_INSTRUMENTATION_META_DATA_NAME0;
+                if (mOrigInstrumentation instanceof SecondInstrumentation) {
+                    metaDataName = REAL_INSTRUMENTATION_META_DATA_NAME1;
+                }
+                initInstrumentation(getClassNameFromMetadata(metaDataName, instContext));
             } else {
                 Log.i(TAG, "No instrumentation active.");
             }

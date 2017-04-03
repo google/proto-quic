@@ -369,6 +369,10 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
   // read from the socket until the tunnel is done.
   bool establishing_tunnel_;
 
+  // Enable pooling to a SpdySession with matching IP and certificate
+  // even if the SpdySessionKey is different.
+  bool enable_ip_based_pooling_;
+
   // The helper object to use to create WebSocketHandshakeStreamBase
   // objects. Only relevant when establishing a WebSocket connection.
   WebSocketHandshakeStreamBase::CreateHelper*

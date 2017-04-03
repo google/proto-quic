@@ -58,14 +58,7 @@ class MockObject {
   MockObject() = default;
 
   MOCK_METHOD1(Task, void(scoped_refptr<ObjectToDelete>));
-
-  void Reply(bool* delete_flag) {
-    // Expect the task's deletion flag to be set before the reply runs.
-    EXPECT_TRUE(*delete_flag);
-    ReplyMock();
-  }
-
-  MOCK_METHOD0(ReplyMock, void());
+  MOCK_METHOD0(Reply, void());
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockObject);
@@ -87,25 +80,25 @@ TEST(PostTaskAndReplyImplTest, PostTaskAndReply) {
               FROM_HERE,
               Bind(&MockObject::Task, Unretained(&mock_object),
                    make_scoped_refptr(new ObjectToDelete(&delete_flag))),
-              Bind(&MockObject::Reply, Unretained(&mock_object),
-                   Unretained(&delete_flag))));
-
-  // Expect no reply in |reply_runner|.
-  EXPECT_FALSE(reply_runner->HasPendingTask());
+              Bind(&MockObject::Reply, Unretained(&mock_object))));
 
   // Expect the task to be posted to |post_runner|.
   EXPECT_TRUE(post_runner->HasPendingTask());
+  EXPECT_FALSE(reply_runner->HasPendingTask());
+  EXPECT_FALSE(delete_flag);
+
   EXPECT_CALL(mock_object, Task(_));
   post_runner->RunUntilIdle();
   testing::Mock::VerifyAndClear(&mock_object);
 
-  // Expect the task's argument not to have been deleted yet.
-  EXPECT_FALSE(delete_flag);
+  // |task| should have been deleted right after being run.
+  EXPECT_TRUE(delete_flag);
 
   // Expect the reply to be posted to |reply_runner|.
   EXPECT_FALSE(post_runner->HasPendingTask());
   EXPECT_TRUE(reply_runner->HasPendingTask());
-  EXPECT_CALL(mock_object, ReplyMock());
+
+  EXPECT_CALL(mock_object, Reply());
   reply_runner->RunUntilIdle();
   testing::Mock::VerifyAndClear(&mock_object);
   EXPECT_TRUE(delete_flag);

@@ -13,7 +13,7 @@ namespace net {
 namespace test {
 namespace {
 
-TEST(SpdyStrUtilsTest, SpdyStrCat) {
+TEST(SpdyStringUtilsTest, SpdyStrCat) {
   // No arguments.
   EXPECT_EQ("", SpdyStrCat());
 
@@ -70,7 +70,7 @@ TEST(SpdyStrUtilsTest, SpdyStrCat) {
             SpdyStrCat(d, t, t, string_bar, i, u, kBar, t, d, f));
 }
 
-TEST(SpdyStrUtilsTest, SpdyStrAppend) {
+TEST(SpdyStringUtilsTest, SpdyStrAppend) {
   // No arguments on empty string.
   std::string output;
   SpdyStrAppend(&output);
@@ -165,14 +165,14 @@ TEST(SpdyStrUtilsTest, SpdyStrAppend) {
   EXPECT_EQ("foo1foo081bar3.141513.141511bar18bar13.14150", output);
 }
 
-TEST(SpdyStrUtilsTest, SpdyStringPrintf) {
+TEST(SpdyStringUtilsTest, SpdyStringPrintf) {
   EXPECT_EQ("", SpdyStringPrintf("%s", ""));
   EXPECT_EQ("foobar", SpdyStringPrintf("%sbar", "foo"));
   EXPECT_EQ("foobar", SpdyStringPrintf("%s%s", "foo", "bar"));
   EXPECT_EQ("foo: 1, bar: 2.0", SpdyStringPrintf("foo: %d, bar: %.1f", 1, 2.0));
 }
 
-TEST(SpdyStrUtilsTest, SpdyStringAppendF) {
+TEST(SpdyStringUtilsTest, SpdyStringAppendF) {
   std::string output;
 
   SpdyStringAppendF(&output, "%s", "");
@@ -186,6 +186,33 @@ TEST(SpdyStrUtilsTest, SpdyStringAppendF) {
 
   SpdyStringAppendF(&output, "foo: %d, bar: %.1f", 1, 2.0);
   EXPECT_EQ("foobarfoobarfoo: 1, bar: 2.0", output);
+}
+
+TEST(SpdyStringUtilsTest, SpdyHexDigitToInt) {
+  EXPECT_EQ(0, SpdyHexDigitToInt('0'));
+  EXPECT_EQ(1, SpdyHexDigitToInt('1'));
+  EXPECT_EQ(2, SpdyHexDigitToInt('2'));
+  EXPECT_EQ(3, SpdyHexDigitToInt('3'));
+  EXPECT_EQ(4, SpdyHexDigitToInt('4'));
+  EXPECT_EQ(5, SpdyHexDigitToInt('5'));
+  EXPECT_EQ(6, SpdyHexDigitToInt('6'));
+  EXPECT_EQ(7, SpdyHexDigitToInt('7'));
+  EXPECT_EQ(8, SpdyHexDigitToInt('8'));
+  EXPECT_EQ(9, SpdyHexDigitToInt('9'));
+
+  EXPECT_EQ(10, SpdyHexDigitToInt('a'));
+  EXPECT_EQ(11, SpdyHexDigitToInt('b'));
+  EXPECT_EQ(12, SpdyHexDigitToInt('c'));
+  EXPECT_EQ(13, SpdyHexDigitToInt('d'));
+  EXPECT_EQ(14, SpdyHexDigitToInt('e'));
+  EXPECT_EQ(15, SpdyHexDigitToInt('f'));
+
+  EXPECT_EQ(10, SpdyHexDigitToInt('A'));
+  EXPECT_EQ(11, SpdyHexDigitToInt('B'));
+  EXPECT_EQ(12, SpdyHexDigitToInt('C'));
+  EXPECT_EQ(13, SpdyHexDigitToInt('D'));
+  EXPECT_EQ(14, SpdyHexDigitToInt('E'));
+  EXPECT_EQ(15, SpdyHexDigitToInt('F'));
 }
 
 }  // namespace

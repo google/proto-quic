@@ -39,7 +39,6 @@ config("compiler") {
   }
 
   ldflags = [
-    "-Wl,--build-id=sha1",
     "-Wl,--no-undefined",
 
     # Don't allow visible symbols from libgcc or libc++ to be

@@ -22,14 +22,6 @@ The following command can be used to match certificates and their key hashes:
 
 ## Excluded Sub-CAs
 
-### Aetna
-
-WebTrust audit confirmed out-of-band.
-[Certification Practices Statement](http://crl.aetna.com/aetnacps.pdf)
-Note: Not issuing new certificates and can be removed after October 2016.
-
-  * [d6e4e7b9af3bd5a8f2d6321cde26639c25644f7307ce16aad347d9ad53d3ce13.pem](excluded/d6e4e7b9af3bd5a8f2d6321cde26639c25644f7307ce16aad347d9ad53d3ce13.pem)
-
 ### Apple
 
 [WebTrust Audit](https://cert.webtrust.org/ViewSeal?id=1917)

@@ -702,6 +702,10 @@ NET_ERROR(CONTENT_DECODING_INIT_FAILED, -371)
 // SpdyStream layer.
 NET_ERROR(SPDY_RST_STREAM_NO_ERROR_RECEIVED, -372)
 
+// Received HTTP status code 421 Misdirected Request (RFC7540 Section 9.1.2).
+// The client MAY retry the request over a different connection.
+NET_ERROR(MISDIRECTED_REQUEST, -373)
+
 // The cache does not have the requested entry.
 NET_ERROR(CACHE_MISS, -400)
 

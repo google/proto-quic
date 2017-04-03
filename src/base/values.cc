@@ -95,7 +95,7 @@ Value::Value(Value&& that) noexcept {
   InternalMoveConstructFrom(std::move(that));
 }
 
-Value::Value() : type_(Type::NONE) {}
+Value::Value() noexcept : type_(Type::NONE) {}
 
 Value::Value(Type type) : type_(type) {
   // Initialize with the default value.
@@ -149,7 +149,7 @@ Value::Value(const std::string& in_string) : type_(Type::STRING) {
   DCHECK(IsStringUTF8(*string_value_));
 }
 
-Value::Value(std::string&& in_string) : type_(Type::STRING) {
+Value::Value(std::string&& in_string) noexcept : type_(Type::STRING) {
   string_value_.Init(std::move(in_string));
   DCHECK(IsStringUTF8(*string_value_));
 }
@@ -168,7 +168,7 @@ Value::Value(const std::vector<char>& in_blob) : type_(Type::BINARY) {
   binary_value_.Init(in_blob);
 }
 
-Value::Value(std::vector<char>&& in_blob) : type_(Type::BINARY) {
+Value::Value(std::vector<char>&& in_blob) noexcept : type_(Type::BINARY) {
   binary_value_.Init(std::move(in_blob));
 }
 
@@ -184,7 +184,7 @@ Value& Value::operator=(const Value& that) {
   return *this;
 }
 
-Value& Value::operator=(Value&& that) {
+Value& Value::operator=(Value&& that) noexcept {
   DCHECK(this != &that) << "attempt to self move assign.";
   InternalCleanup();
   InternalMoveConstructFrom(std::move(that));

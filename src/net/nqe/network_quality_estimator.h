@@ -28,6 +28,7 @@
 #include "net/nqe/external_estimate_provider.h"
 #include "net/nqe/network_id.h"
 #include "net/nqe/network_quality.h"
+#include "net/nqe/network_quality_estimator_params.h"
 #include "net/nqe/network_quality_observation.h"
 #include "net/nqe/network_quality_observation_source.h"
 #include "net/nqe/network_quality_store.h"
@@ -536,8 +537,7 @@ class NET_EXPORT NetworkQualityEstimator
   // the field trial parameters. For each effective connection type, a model
   // (currently composed of a RTT threshold and a downlink throughput threshold)
   // is provided by the field trial.
-  void ObtainOperatingParams(
-      const std::map<std::string, std::string>& variation_params);
+  void ObtainOperatingParams();
 
   // Adds the default median RTT and downstream throughput estimate for the
   // current connection type to the observation buffer.
@@ -649,6 +649,9 @@ class NET_EXPORT NetworkQualityEstimator
       const nqe::internal::CachedNetworkQuality& cached_network_quality);
 
   const char* GetNameForStatistic(int i) const;
+
+  // Params to configure the network quality estimator.
+  const nqe::internal::NetworkQualityEstimatorParams params_;
 
   // Determines if the requests to local host can be used in estimating the
   // network quality. Set to true only for tests.

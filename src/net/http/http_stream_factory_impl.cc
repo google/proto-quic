@@ -50,10 +50,12 @@ class DefaultJobFactory : public HttpStreamFactoryImpl::JobFactory {
       const SSLConfig& proxy_ssl_config,
       HostPortPair destination,
       GURL origin_url,
+      bool enable_ip_based_pooling,
       NetLog* net_log) override {
     return new HttpStreamFactoryImpl::Job(
         delegate, job_type, session, request_info, priority, server_ssl_config,
-        proxy_ssl_config, destination, origin_url, net_log);
+        proxy_ssl_config, destination, origin_url, enable_ip_based_pooling,
+        net_log);
   }
 
   HttpStreamFactoryImpl::Job* CreateJob(
@@ -67,11 +69,12 @@ class DefaultJobFactory : public HttpStreamFactoryImpl::JobFactory {
       HostPortPair destination,
       GURL origin_url,
       AlternativeService alternative_service,
+      bool enable_ip_based_pooling,
       NetLog* net_log) override {
     return new HttpStreamFactoryImpl::Job(
         delegate, job_type, session, request_info, priority, server_ssl_config,
         proxy_ssl_config, destination, origin_url, alternative_service,
-        ProxyServer(), net_log);
+        ProxyServer(), enable_ip_based_pooling, net_log);
   }
 
   HttpStreamFactoryImpl::Job* CreateJob(
@@ -85,11 +88,12 @@ class DefaultJobFactory : public HttpStreamFactoryImpl::JobFactory {
       HostPortPair destination,
       GURL origin_url,
       const ProxyServer& alternative_proxy_server,
+      bool enable_ip_based_pooling,
       NetLog* net_log) override {
     return new HttpStreamFactoryImpl::Job(
         delegate, job_type, session, request_info, priority, server_ssl_config,
         proxy_ssl_config, destination, origin_url, AlternativeService(),
-        alternative_proxy_server, net_log);
+        alternative_proxy_server, enable_ip_based_pooling, net_log);
   }
 };
 
@@ -102,7 +106,6 @@ HttpStreamFactoryImpl::HttpStreamFactoryImpl(HttpNetworkSession* session,
       for_websockets_(for_websockets) {}
 
 HttpStreamFactoryImpl::~HttpStreamFactoryImpl() {
-  DCHECK(request_map_.empty());
   DCHECK(spdy_session_request_map_.empty());
   int alt_job_count = 0;
   int main_job_count = 0;
@@ -134,11 +137,13 @@ HttpStreamRequest* HttpStreamFactoryImpl::RequestStream(
     const SSLConfig& server_ssl_config,
     const SSLConfig& proxy_ssl_config,
     HttpStreamRequest::Delegate* delegate,
+    bool enable_ip_based_pooling,
     const NetLogWithSource& net_log) {
   DCHECK(!for_websockets_);
   return RequestStreamInternal(request_info, priority, server_ssl_config,
                                proxy_ssl_config, delegate, nullptr,
-                               HttpStreamRequest::HTTP_STREAM, net_log);
+                               HttpStreamRequest::HTTP_STREAM,
+                               enable_ip_based_pooling, net_log);
 }
 
 HttpStreamRequest* HttpStreamFactoryImpl::RequestWebSocketHandshakeStream(
@@ -148,12 +153,14 @@ HttpStreamRequest* HttpStreamFactoryImpl::RequestWebSocketHandshakeStream(
     const SSLConfig& proxy_ssl_config,
     HttpStreamRequest::Delegate* delegate,
     WebSocketHandshakeStreamBase::CreateHelper* create_helper,
+    bool enable_ip_based_pooling,
     const NetLogWithSource& net_log) {
   DCHECK(for_websockets_);
   DCHECK(create_helper);
   return RequestStreamInternal(request_info, priority, server_ssl_config,
                                proxy_ssl_config, delegate, create_helper,
-                               HttpStreamRequest::HTTP_STREAM, net_log);
+                               HttpStreamRequest::HTTP_STREAM,
+                               enable_ip_based_pooling, net_log);
 }
 
 HttpStreamRequest* HttpStreamFactoryImpl::RequestBidirectionalStreamImpl(
@@ -162,13 +169,15 @@ HttpStreamRequest* HttpStreamFactoryImpl::RequestBidirectionalStreamImpl(
     const SSLConfig& server_ssl_config,
     const SSLConfig& proxy_ssl_config,
     HttpStreamRequest::Delegate* delegate,
+    bool enable_ip_based_pooling,
     const NetLogWithSource& net_log) {
   DCHECK(!for_websockets_);
   DCHECK(request_info.url.SchemeIs(url::kHttpsScheme));
 
-  return RequestStreamInternal(
-      request_info, priority, server_ssl_config, proxy_ssl_config, delegate,
-      nullptr, HttpStreamRequest::BIDIRECTIONAL_STREAM, net_log);
+  return RequestStreamInternal(request_info, priority, server_ssl_config,
+                               proxy_ssl_config, delegate, nullptr,
+                               HttpStreamRequest::BIDIRECTIONAL_STREAM,
+                               enable_ip_based_pooling, net_log);
 }
 
 HttpStreamRequest* HttpStreamFactoryImpl::RequestStreamInternal(
@@ -180,10 +189,11 @@ HttpStreamRequest* HttpStreamFactoryImpl::RequestStreamInternal(
     WebSocketHandshakeStreamBase::CreateHelper*
         websocket_handshake_stream_create_helper,
     HttpStreamRequest::StreamType stream_type,
+    bool enable_ip_based_pooling,
     const NetLogWithSource& net_log) {
   auto job_controller = base::MakeUnique<JobController>(
       this, delegate, session_, job_factory_.get(), request_info,
-      /*is_preconnect=*/false);
+      /* is_preconnect = */ false, enable_ip_based_pooling);
   JobController* job_controller_raw_ptr = job_controller.get();
   job_controller_set_.insert(std::move(job_controller));
   Request* request = job_controller_raw_ptr->Start(
@@ -207,7 +217,8 @@ void HttpStreamFactoryImpl::PreconnectStreams(
 
   auto job_controller = base::MakeUnique<JobController>(
       this, nullptr, session_, job_factory_.get(), request_info,
-      /*is_preconnect=*/true);
+      /* is_preconnect = */ true,
+      /* enable_ip_based_pooling = */ true);
   JobController* job_controller_raw_ptr = job_controller.get();
   job_controller_set_.insert(std::move(job_controller));
   job_controller_raw_ptr->Preconnect(num_streams, request_info,

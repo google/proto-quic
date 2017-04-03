@@ -722,6 +722,7 @@ component("base") {
     "process/process_win.cc",
     "profiler/native_stack_sampler.cc",
     "profiler/native_stack_sampler.h",
+    "profiler/native_stack_sampler_mac.cc",
     "profiler/native_stack_sampler_posix.cc",
     "profiler/native_stack_sampler_win.cc",
     "profiler/scoped_profile.cc",
@@ -997,6 +998,8 @@ component("base") {
     "trace_event/memory_dump_manager.cc",
     "trace_event/memory_dump_manager.h",
     "trace_event/memory_dump_provider.h",
+    "trace_event/memory_dump_provider_info.cc",
+    "trace_event/memory_dump_provider_info.h",
     "trace_event/memory_dump_request_args.cc",
     "trace_event/memory_dump_request_args.h",
     "trace_event/memory_dump_scheduler.cc",
@@ -1466,6 +1469,10 @@ component("base") {
       "strings/sys_string_conversions_posix.cc",
       "threading/platform_thread_internal_posix.cc",
     ]
+
+    if (is_mac) {
+      sources -= [ "profiler/native_stack_sampler_posix.cc" ]
+    }
   } else {
     # Non-Mac/ios.
     sources -= [
@@ -1838,7 +1845,9 @@ if (is_win) {
       "//base/win:base_win_features",
     ]
   }
+}
 
+if (is_win || is_mac) {
   if (current_cpu == "x64") {
     # Must be a shared library so that it can be unloaded during testing.
     shared_library("base_profiler_test_support_library") {
@@ -2300,6 +2309,9 @@ test("base_unittests") {
       "CoreFoundation.framework",
       "Foundation.framework",
     ]
+    if (current_cpu == "x64") {
+      data_deps += [ ":base_profiler_test_support_library" ]
+    }
   }
 
   if (is_linux) {
@@ -2338,7 +2350,7 @@ test("base_unittests") {
     deps += [ "//base:scoped_handle_test_dll" ]
     if (current_cpu == "x64") {
       sources += [ "profiler/win32_stack_frame_unwinder_unittest.cc" ]
-      deps += [ ":base_profiler_test_support_library" ]
+      data_deps += [ ":base_profiler_test_support_library" ]
     }
   }
 
@@ -2396,6 +2408,7 @@ if (enable_nocompile_tests) {
       "bind_unittest.nc",
       "callback_list_unittest.nc",
       "callback_unittest.nc",
+      "memory/ref_counted_unittest.nc",
       "memory/weak_ptr_unittest.nc",
       "metrics/histogram_unittest.nc",
     ]
@@ -2461,6 +2474,7 @@ if (is_android) {
     srcjar_deps = [
       ":base_android_java_enums_srcjar",
       ":base_build_config_gen",
+      ":base_java_aidl",
       ":base_native_libraries_gen",
     ]
 
@@ -2549,6 +2563,13 @@ if (is_android) {
       "*/BuildConfig.class",
       "*/NativeLibraries.class",
       "*/NativeLibraries##*.class",
+    ]
+  }
+
+  android_aidl("base_java_aidl") {
+    import_include = [ "android/java/src" ]
+    sources = [
+      "android/java/src/org/chromium/base/process_launcher/IChildProcessService.aidl",
     ]
   }
 

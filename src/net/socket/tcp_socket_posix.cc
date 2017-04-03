@@ -401,25 +401,7 @@ void TCPSocketPosix::SetDefaultOptionsForClient() {
 int TCPSocketPosix::SetAddressReuse(bool allow) {
   DCHECK(socket_);
 
-  // SO_REUSEADDR is useful for server sockets to bind to a recently unbound
-  // port. When a socket is closed, the end point changes its state to TIME_WAIT
-  // and wait for 2 MSL (maximum segment lifetime) to ensure the remote peer
-  // acknowledges its closure. For server sockets, it is usually safe to
-  // bind to a TIME_WAIT end point immediately, which is a widely adopted
-  // behavior.
-  //
-  // Note that on *nix, SO_REUSEADDR does not enable the TCP socket to bind to
-  // an end point that is already bound by another socket. To do that one must
-  // set SO_REUSEPORT instead. This option is not provided on Linux prior
-  // to 3.9.
-  //
-  // SO_REUSEPORT is provided in MacOS X and iOS.
-  int boolean_value = allow ? 1 : 0;
-  int rv = setsockopt(socket_->socket_fd(), SOL_SOCKET, SO_REUSEADDR,
-                      &boolean_value, sizeof(boolean_value));
-  if (rv < 0)
-    return MapSystemError(errno);
-  return OK;
+  return SetReuseAddr(socket_->socket_fd(), allow);
 }
 
 int TCPSocketPosix::SetReceiveBufferSize(int32_t size) {

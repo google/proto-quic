@@ -17,6 +17,22 @@ void WontCompile() {
   UMA_HISTOGRAM_ENUMERATION("", A, B);
 }
 
+#elif defined(NCTEST_NEGATIVE_ENUM_MAX)  // [r'static_assert failed "\|boundary\| is out of range of HistogramBase::Sample"']
+
+void WontCompile() {
+  // Buckets for enumeration start from 0, so a boundary < 0 is illegal.
+  enum class TypeA { A = -1 };
+  UMA_HISTOGRAM_ENUMERATION("", TypeA::A, TypeA::A);
+}
+
+#elif defined(NCTEST_ENUM_MAX_OUT_OF_RANGE)  // [r'static_assert failed "\|boundary\| is out of range of HistogramBase::Sample"']
+
+void WontCompile() {
+  // HistogramBase::Sample is an int and can't hold larger values.
+  enum class TypeA : uint32_t { A = 0xffffffff };
+  UMA_HISTOGRAM_ENUMERATION("", TypeA::A, TypeA::A);
+}
+
 #endif
 
 }  // namespace base

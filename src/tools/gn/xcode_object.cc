@@ -244,6 +244,8 @@ const char* ToString(PBXObjectClass cls) {
       return "PBXAggregateTarget";
     case PBXBuildFileClass:
       return "PBXBuildFile";
+    case PBXContainerItemProxyClass:
+      return "PBXContainerItemProxy";
     case PBXFileReferenceClass:
       return "PBXFileReference";
     case PBXFrameworksBuildPhaseClass:
@@ -258,6 +260,8 @@ const char* ToString(PBXObjectClass cls) {
       return "PBXShellScriptBuildPhase";
     case PBXSourcesBuildPhaseClass:
       return "PBXSourcesBuildPhase";
+    case PBXTargetDependencyClass:
+      return "PBXTargetDependency";
     case XCBuildConfigurationClass:
       return "XCBuildConfiguration";
     case XCConfigurationListClass:
@@ -323,6 +327,11 @@ PBXTarget::PBXTarget(const std::string& name,
 
 PBXTarget::~PBXTarget() {}
 
+void PBXTarget::AddDependency(std::unique_ptr<PBXTargetDependency> dependency) {
+  DCHECK(dependency);
+  dependencies_.push_back(std::move(dependency));
+}
+
 std::string PBXTarget::Name() const {
   return name_;
 }
@@ -330,9 +339,10 @@ std::string PBXTarget::Name() const {
 void PBXTarget::Visit(PBXObjectVisitor& visitor) {
   PBXObject::Visit(visitor);
   configurations_->Visit(visitor);
-  for (const auto& build_phase : build_phases_) {
+  for (const auto& dependency : dependencies_)
+    dependency->Visit(visitor);
+  for (const auto& build_phase : build_phases_)
     build_phase->Visit(visitor);
-  }
 }
 
 // PBXAggregateTarget ---------------------------------------------------------
@@ -397,6 +407,37 @@ void PBXBuildFile::Print(std::ostream& out, unsigned indent) const {
     PrintProperty(out, rules, "settings", settings);
   }
   out << "};\n";
+}
+
+// PBXContainerItemProxy ------------------------------------------------------
+PBXContainerItemProxy::PBXContainerItemProxy(const PBXProject* project,
+                                             const PBXTarget* target)
+    : project_(project), target_(target) {}
+
+PBXContainerItemProxy::~PBXContainerItemProxy() {}
+
+PBXObjectClass PBXContainerItemProxy::Class() const {
+  return PBXContainerItemProxyClass;
+}
+
+void PBXContainerItemProxy::Visit(PBXObjectVisitor& visitor) {
+  PBXObject::Visit(visitor);
+}
+
+std::string PBXContainerItemProxy::Name() const {
+  return "PBXContainerItemProxy";
+}
+
+void PBXContainerItemProxy::Print(std::ostream& out, unsigned indent) const {
+  const std::string indent_str(indent, '\t');
+  const IndentRules rules = {true, 0};
+  out << indent_str << Reference() << " = {";
+  PrintProperty(out, rules, "isa", ToString(Class()));
+  PrintProperty(out, rules, "containerPortal", project_);
+  PrintProperty(out, rules, "proxyType", 1u);
+  PrintProperty(out, rules, "remoteGlobalIDString", target_);
+  PrintProperty(out, rules, "remoteInfo", target_->Name());
+  out << indent_str << "};\n";
 }
 
 // PBXFileReference -----------------------------------------------------------
@@ -604,7 +645,7 @@ void PBXNativeTarget::Print(std::ostream& out, unsigned indent) const {
   PrintProperty(out, rules, "buildConfigurationList", configurations_);
   PrintProperty(out, rules, "buildPhases", build_phases_);
   PrintProperty(out, rules, "buildRules", EmptyPBXObjectVector());
-  PrintProperty(out, rules, "dependencies", EmptyPBXObjectVector());
+  PrintProperty(out, rules, "dependencies", dependencies_);
   PrintProperty(out, rules, "name", name_);
   PrintProperty(out, rules, "productName", product_name_);
   PrintProperty(out, rules, "productReference", product_reference_);
@@ -840,6 +881,33 @@ void PBXSourcesBuildPhase::Print(std::ostream& out, unsigned indent) const {
   PrintProperty(out, rules, "buildActionMask", 0x7fffffffu);
   PrintProperty(out, rules, "files", files_);
   PrintProperty(out, rules, "runOnlyForDeploymentPostprocessing", 0u);
+  out << indent_str << "};\n";
+}
+
+PBXTargetDependency::PBXTargetDependency(
+    const PBXTarget* target,
+    std::unique_ptr<PBXContainerItemProxy> container_item_proxy)
+    : target_(target), container_item_proxy_(std::move(container_item_proxy)) {}
+
+PBXTargetDependency::~PBXTargetDependency() {}
+
+PBXObjectClass PBXTargetDependency::Class() const {
+  return PBXTargetDependencyClass;
+}
+std::string PBXTargetDependency::Name() const {
+  return "PBXTargetDependency";
+}
+void PBXTargetDependency::Visit(PBXObjectVisitor& visitor) {
+  PBXObject::Visit(visitor);
+  container_item_proxy_->Visit(visitor);
+}
+void PBXTargetDependency::Print(std::ostream& out, unsigned indent) const {
+  const std::string indent_str(indent, '\t');
+  const IndentRules rules = {false, indent + 1};
+  out << indent_str << Reference() << " = {\n";
+  PrintProperty(out, rules, "isa", ToString(Class()));
+  PrintProperty(out, rules, "target", target_);
+  PrintProperty(out, rules, "targetProxy", container_item_proxy_);
   out << indent_str << "};\n";
 }
 

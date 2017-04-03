@@ -10103,10 +10103,14 @@ should be able to be added at any place in this file.
 <action name="MobileOmniboxClipboardChanged">
   <owner>jif@chromium.org</owner>
   <description>
-    Emitted when Chrome detects that the clipboard contains a new URL. This
-    occurs either when Chrome enters the foreground and notices that the content
-    of the clipboard changed, or when the clipboard changes while Chrome is in
-    the foreground.
+    Emitted when Chrome detects that the clipboard contains a new URL.
+
+    On iOS: this occurs either when Chrome enters the foreground and notices
+    that the content of the clipboard changed, or when the clipboard changes
+    while Chrome is in the foreground.
+
+    On Android: this occurs when Chrome starts up or when the clipboard changes
+    while Chrome is running (in the foreground or not).
   </description>
 </action>
 
@@ -15288,6 +15292,20 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="StatusArea_CaretHighlightDisabled">
+  <owner>minch@chromium.org</owner>
+  <description>
+    Ash system menu: Accessibility: Disable caret highlighting
+  </description>
+</action>
+
+<action name="StatusArea_CaretHighlightEnabled">
+  <owner>minch@chromium.org</owner>
+  <description>
+    Ash system menu: Accessibility: Enable caret highlighting
+  </description>
+</action>
+
 <action name="StatusArea_Cast_Detailed">
   <owner>jdufault@chromium.org</owner>
   <description>
@@ -15392,6 +15410,34 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="StatusArea_HighlightKeyboardFocusDisabled">
+  <owner>minch@chromium.org</owner>
+  <description>
+    Ash system menu: Accessibility: Disable keyboard focus highlighting
+  </description>
+</action>
+
+<action name="StatusArea_HighlightKeyboardFocusEnabled">
+  <owner>minch@chromium.org</owner>
+  <description>
+    Ash system menu: Accessibility: Enable keyboard focus highlighting
+  </description>
+</action>
+
+<action name="StatusArea_HighlightMouseCursorDisabled">
+  <owner>minch@chromium.org</owner>
+  <description>
+    Ash system menu: Accessibility: Disable mouse cursor highlighting
+  </description>
+</action>
+
+<action name="StatusArea_HighlightMouseCursorEnabled">
+  <owner>minch@chromium.org</owner>
+  <description>
+    Ash system menu: Accessibility: Enable mouse cursor highlighting
+  </description>
+</action>
+
 <action name="StatusArea_IME_Detailed">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
@@ -15425,6 +15471,16 @@ should be able to be added at any place in this file.
 <action name="StatusArea_MenuOpened">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+</action>
+
+<action name="StatusArea_MonoAudioDisabled">
+  <owner>minch@chromium.org</owner>
+  <description>Ash system menu: Accessibility: Disable mono audio</description>
+</action>
+
+<action name="StatusArea_MonoAudioEnabled">
+  <owner>minch@chromium.org</owner>
+  <description>Ash system menu: Accessibility: Enable mono audio</description>
 </action>
 
 <action name="StatusArea_Network_ConnectConfigured">

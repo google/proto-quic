@@ -15,4 +15,35 @@ TEST(ScopedHistogramTimer, TwoTimersOneScope) {
   SCOPED_UMA_HISTOGRAM_LONG_TIMER("TestLongTimer1");
 }
 
+// Compile tests for UMA_HISTOGRAM_ENUMERATION with the three different types it
+// accepts:
+// - integral types
+// - unscoped enums
+// - scoped enums
+TEST(HistogramMacro, IntegralPsuedoEnumeration) {
+  UMA_HISTOGRAM_ENUMERATION("Test.FauxEnumeration", 1, 10000);
+}
+
+TEST(HistogramMacro, UnscopedEnumeration) {
+  enum TestEnum : char {
+    FIRST_VALUE,
+    SECOND_VALUE,
+    THIRD_VALUE,
+    MAX_ENTRIES,
+  };
+  UMA_HISTOGRAM_ENUMERATION("Test.UnscopedEnumeration", SECOND_VALUE,
+                            MAX_ENTRIES);
+}
+
+TEST(HistogramMacro, ScopedEnumeration) {
+  enum class TestEnum {
+    FIRST_VALUE,
+    SECOND_VALUE,
+    THIRD_VALUE,
+    MAX_ENTRIES,
+  };
+  UMA_HISTOGRAM_ENUMERATION("Test.ScopedEnumeration", TestEnum::SECOND_VALUE,
+                            TestEnum::MAX_ENTRIES);
+}
+
 }  // namespace base

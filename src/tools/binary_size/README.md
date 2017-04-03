@@ -38,9 +38,6 @@ Starts a Python interpreter where you can run custom queries.
 
   Tracked in https://crbug.com/681694
 
-  1. Better serialization format (finalize it before people start to use it).
-      * Store only mangled names.
-      * Save space by clustering by path (in addition to section_name).
   1. More console.py features:
       * Template Symbols - shows when templates lead to code bloat.
       * Duplicate Symbols - shows when statics in headers are an issue.
@@ -48,9 +45,8 @@ Starts a Python interpreter where you can run custom queries.
       * Per-class / namespace size (no way to distinguish class vs namespace).
       * Per-Chrome package (Chrome-specific grouping. e.g. name prefixes).
       * CSV output (for pasting into a spreadsheet).
+      * Allow Print() to not sort.
   1. More create_html_breakdown.py features:
-      * Convert paths from .o path to .cc path (better breakdowns).
-        * Via "ninja -t commands libchrome.so" (3 seconds on my machine).
       * Break down by other groupings (e.g. create from nested `SymbolGroups`)
   1. More `map2size.py` features:
       * Find out more about 0xffffffffffffffff addresses, and why such large
@@ -60,3 +56,4 @@ Starts a Python interpreter where you can run custom queries.
      components separately: chrome vs blink vs skia vs v8.
   1. Speed up some steps (like normalizing names) via multiprocessing.
   1. Use resource whitelist information to attribute .pak file size to .o files.
+  1. Add dependency graph info, perhaps just on a per-file basis.

@@ -30,7 +30,7 @@ class QUIC_EXPORT_PRIVATE Cubic {
   void SetNumConnections(int num_connections);
 
   // Call after a timeout to reset the cubic state.
-  void Reset();
+  void ResetCubicState();
 
   // Compute a new congestion window to use after a loss event.
   // Returns the new congestion window in packets. The new congestion window is
@@ -49,10 +49,15 @@ class QUIC_EXPORT_PRIVATE Cubic {
   // window. Resets Cubic state during quiescence.
   void OnApplicationLimited();
 
+  // Methods for enabling experimental modes.
   // If true, enable the fix for the convex-mode signing bug.  See
   // b/32170105 for more information about the bug.
   // TODO(jokulik):  Remove once the fix is enabled by default.
   void SetFixConvexMode(bool fix_convex_mode);
+  // If true, enable per-ack updates.  See b/32170105 for more
+  // information about the bug.  TODO(jokulik): Remove once this
+  // change is enabled by default.
+  void SetAllowPerAckUpdates(bool allow_per_ack_updates);
 
   // If true, enable the fix for scaling BetaLastMax for n-nonnection
   // emulation.  See b/33272010 for more information about the bug.
@@ -126,6 +131,10 @@ class QUIC_EXPORT_PRIVATE Cubic {
   // Fix beta last max for n-connection-emulation.
   // TODO(jokulik):  Remove once the corresponding experiment is done.
   bool fix_beta_last_max_;
+
+  // Allow cubic per ack updates.
+  // TODO(jokulik):  Remove once the per ack update experiment is done.
+  bool allow_per_ack_updates_;
 
   DISALLOW_COPY_AND_ASSIGN(Cubic);
 };

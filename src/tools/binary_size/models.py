@@ -5,6 +5,7 @@
 
 import collections
 import copy
+import os
 import re
 
 
@@ -24,14 +25,19 @@ class SizeInfo(object):
     symbols: A SymbolGroup (or SymbolDiff) with all symbols in it.
   """
   __slots__ = (
-      'symbols',
       'section_sizes',
+      'symbols',
+      'tag',
+      'timestamp',
   )
 
   """Root size information."""
-  def __init__(self, symbols, section_sizes):
-    self.symbols = symbols
+  def __init__(self, section_sizes, symbols, timestamp=None, tag=''):
     self.section_sizes = section_sizes  # E.g. {'.text': 0}
+    self.symbols = symbols  # List of symbols sorted by address per-section.
+    self.timestamp = timestamp  # UTC datetime object.
+    self.tag = tag  # E.g. git revision.
+    assert not tag or '\n' not in tag  # Simplifies file format.
 
 
 class BaseSymbol(object):
@@ -71,36 +77,45 @@ class BaseSymbol(object):
     Keys are not guaranteed to be unique within a SymbolGroup. For example, it
     is common to have multiple "** merge strings" symbols, which will have a
     common key."""
-    return (self.section_name, self.function_signature or self.name)
+    return (self.section_name, self.full_name or self.name)
 
 
 class Symbol(BaseSymbol):
   """Represents a single symbol within a binary."""
 
   __slots__ = (
-      'section_name',
       'address',
-      'size',
-      'padding',
+      'full_name',
+      'is_anonymous',
+      'object_path',
       'name',
-      'function_signature',
-      'path',
+      'flags',
+      'padding',
+      'section_name',
+      'source_path',
+      'size',
   )
 
   def __init__(self, section_name, size_without_padding, address=None,
-               name=None, path=None, function_signature=None):
+               name=None, source_path=None, object_path=None,
+               full_name=None, is_anonymous=False):
     self.section_name = section_name
     self.address = address or 0
     self.name = name or ''
-    self.function_signature = function_signature or ''
-    self.path = path or ''
+    self.full_name = full_name or ''
+    self.source_path = source_path or ''
+    self.object_path = object_path or ''
     self.size = size_without_padding
+    # Change this to be a bitfield of flags if ever there is a need to add
+    # another similar thing.
+    self.is_anonymous = is_anonymous
     self.padding = 0
 
   def __repr__(self):
-    return '%s@%x(size=%d,padding=%d,name=%s,path=%s)' % (
+    return '%s@%x(size=%d,padding=%d,name=%s,path=%s,anon=%d)' % (
         self.section_name, self.address, self.size_without_padding,
-        self.padding, self.name, self.path)
+        self.padding, self.name, self.source_path or self.object_path,
+        int(self.is_anonymous))
 
 
 class SymbolGroup(BaseSymbol):
@@ -152,11 +167,15 @@ class SymbolGroup(BaseSymbol):
     return 0
 
   @property
-  def function_signature(self):
+  def full_name(self):
     return None
 
   @property
-  def path(self):
+  def is_anonymous(self):
+    return False
+
+  @property
+  def source_path(self):
     return None
 
   @property
@@ -188,6 +207,16 @@ class SymbolGroup(BaseSymbol):
                                    filtered_symbols=self.filtered_symbols,
                                    section_name=self.section_name)
 
+  def SortedByName(self, reverse=False):
+    return self.Sorted(key=(lambda s:s.name), reverse=reverse)
+
+  def SortedByAddress(self, reverse=False):
+    return self.Sorted(key=(lambda s:s.address), reverse=reverse)
+
+  def SortedByCount(self, reverse=False):
+    return self.Sorted(key=(lambda s:len(s) if s.IsGroup() else 1),
+                       reverse=not reverse)
+
   def Filter(self, func):
     filtered_and_kept = ([], [])
     for symbol in self:
@@ -215,58 +244,135 @@ class SymbolGroup(BaseSymbol):
     regex = re.compile(pattern)
     return self.Filter(lambda s: regex.search(s.name))
 
+  def WhereObjectPathMatches(self, pattern):
+    regex = re.compile(pattern)
+    return self.Filter(lambda s: regex.search(s.object_path))
+
+  def WhereSourcePathMatches(self, pattern):
+    regex = re.compile(pattern)
+    return self.Filter(lambda s: regex.search(s.source_path))
+
   def WherePathMatches(self, pattern):
     regex = re.compile(pattern)
-    return self.Filter(lambda s: s.path and regex.search(s.path))
+    return self.Filter(lambda s: regex.search(s.source_path or s.object_path))
 
   def WhereAddressInRange(self, start, end):
     return self.Filter(lambda s: s.address >= start and s.address <= end)
 
   def WhereHasAnyAttribution(self):
-    return self.Filter(lambda s: s.name or s.path)
+    return self.Filter(lambda s: s.name or s.source_path or s.object_path)
 
   def Inverted(self):
     return self._CreateTransformed(self.filtered_symbols,
                                    filtered_symbols=self.symbols)
 
-  def GroupBy(self, func):
+  def GroupBy(self, func, min_count=0):
+    """Returns a SymbolGroup of SymbolGroups, indexed by |func|.
+
+    Args:
+      func: Grouping function. Passed a symbol and returns a string for the
+            name of the subgroup to put the symbol in. If None is returned, the
+            symbol is omitted.
+      min_count: Miniumum number of symbols for a group. If fewer than this many
+                 symbols end up in a group, they will not be put within a group.
+                 Use a negative value to omit symbols entirely rather than
+                 include them outside of a group.
+    """
     new_syms = []
     filtered_symbols = []
     symbols_by_token = collections.defaultdict(list)
+    # Index symbols by |func|.
     for symbol in self:
       token = func(symbol)
-      if not token:
+      if token is None:
         filtered_symbols.append(symbol)
-        continue
       symbols_by_token[token].append(symbol)
+    # Create the subgroups.
+    include_singles = min_count >= 0
+    min_count = abs(min_count)
     for token, symbols in symbols_by_token.iteritems():
-      new_syms.append(self._CreateTransformed(symbols, name=token,
-                                              section_name=self.section_name))
+      if len(symbols) >= min_count:
+        new_syms.append(self._CreateTransformed(symbols, name=token,
+                                                section_name=self.section_name))
+      elif include_singles:
+        new_syms.extend(symbols)
+      else:
+        filtered_symbols.extend(symbols)
     return self._CreateTransformed(new_syms, filtered_symbols=filtered_symbols,
                                    section_name=self.section_name)
 
-  def GroupByNamespace(self, depth=1):
-    def extract_namespace(symbol):
-      # Does not distinguish between classes and namespaces.
-      idx = -2
-      for _ in xrange(depth):
-        idx = symbol.name.find('::', idx + 2)
-      if idx != -1:
-        ret = symbol.name[:idx]
-        if '<' not in ret:
-          return ret
-      return '{global}'
-    return self.GroupBy(extract_namespace)
+  def GroupBySectionName(self):
+    return self.GroupBy(lambda s: s.section_name)
 
-  def GroupByPath(self, depth=1):
+  def GroupByNamespace(self, depth=0, fallback='{global}', min_count=0):
+    """Groups by symbol namespace (as denoted by ::s).
+
+    Does not differentiate between C++ namespaces and C++ classes.
+
+    Args:
+      depth: When 0 (default), groups by entire namespace. When 1, groups by
+             top-level name, when 2, groups by top 2 names, etc.
+      fallback: Use this value when no namespace exists.
+      min_count: Miniumum number of symbols for a group. If fewer than this many
+                 symbols end up in a group, they will not be put within a group.
+                 Use a negative value to omit symbols entirely rather than
+                 include them outside of a group.
+    """
+    def extract_namespace(symbol):
+      # Remove template params.
+      name = symbol.name
+      template_idx = name.find('<')
+      if template_idx:
+        name = name[:template_idx]
+
+      # Remove after the final :: (not part of the namespace).
+      colon_idx = name.rfind('::')
+      if colon_idx == -1:
+        return fallback
+      name = name[:colon_idx]
+
+      return _ExtractPrefixBeforeSeparator(name, '::', depth)
+    return self.GroupBy(extract_namespace, min_count=min_count)
+
+  def GroupBySourcePath(self, depth=0, fallback='{no path}',
+                        fallback_to_object_path=True, min_count=0):
+    """Groups by source_path.
+
+    Args:
+      depth: When 0 (default), groups by entire path. When 1, groups by
+             top-level directory, when 2, groups by top 2 directories, etc.
+      fallback: Use this value when no namespace exists.
+      fallback_to_object_path: When True (default), uses object_path when
+             source_path is missing.
+      min_count: Miniumum number of symbols for a group. If fewer than this many
+                 symbols end up in a group, they will not be put within a group.
+                 Use a negative value to omit symbols entirely rather than
+                 include them outside of a group.
+    """
     def extract_path(symbol):
-      idx = -1
-      for _ in xrange(depth):
-        idx = symbol.path.find('/', idx + 1)
-      if idx != -1:
-        return symbol.path[:idx]
-      return '{path unknown}'
-    return self.GroupBy(extract_path)
+      path = symbol.source_path
+      if fallback_to_object_path and not path:
+        path = symbol.object_path
+      path = path or fallback
+      return _ExtractPrefixBeforeSeparator(path, os.path.sep, depth)
+    return self.GroupBy(extract_path, min_count=min_count)
+
+  def GroupByObjectPath(self, depth=0, fallback='{no path}', min_count=0):
+    """Groups by object_path.
+
+    Args:
+      depth: When 0 (default), groups by entire path. When 1, groups by
+             top-level directory, when 2, groups by top 2 directories, etc.
+      fallback: Use this value when no namespace exists.
+      min_count: Miniumum number of symbols for a group. If fewer than this many
+                 symbols end up in a group, they will not be put within a group.
+                 Use a negative value to omit symbols entirely rather than
+                 include them outside of a group.
+    """
+    def extract_path(symbol):
+      path = symbol.object_path or fallback
+      return _ExtractPrefixBeforeSeparator(path, os.path.sep, depth)
+    return self.GroupBy(extract_path, min_count=min_count)
 
 
 class SymbolDiff(SymbolGroup):
@@ -358,7 +464,7 @@ def Diff(new, old):
     section_sizes = {
         k:new.section_sizes[k] - v for k, v in old.section_sizes.iteritems()}
     symbol_diff = Diff(new.symbols, old.symbols)
-    return SizeInfo(symbol_diff, section_sizes)
+    return SizeInfo(section_sizes, symbol_diff)
 
   assert isinstance(new, SymbolGroup) and isinstance(old, SymbolGroup)
   symbols_by_key = collections.defaultdict(list)
@@ -378,10 +484,12 @@ def Diff(new, old):
       # More stable/useful to compare size without padding.
       size_diff = (new_sym.size_without_padding -
                    old_sym.size_without_padding)
-      merged_sym = Symbol(old_sym.section_name, size_diff,
-                          address=old_sym.address, name=old_sym.name,
-                          path=old_sym.path,
-                          function_signature=old_sym.function_signature)
+      merged_sym = Symbol(new_sym.section_name, size_diff,
+                          address=new_sym.address, name=new_sym.name,
+                          source_path=new_sym.source_path,
+                          object_path=new_sym.object_path,
+                          full_name=new_sym.full_name,
+                          is_anonymous=new_sym.is_anonymous)
       similar.append(merged_sym)
       padding_by_section_name[new_sym.section_name] += (
           new_sym.padding - old_sym.padding)
@@ -399,3 +507,14 @@ def Diff(new, old):
     similar.append(Symbol(section_name, padding,
                           name='** aggregate padding of delta symbols'))
   return SymbolDiff(added, removed, similar)
+
+
+def _ExtractPrefixBeforeSeparator(string, separator, count=1):
+  idx = -len(separator)
+  prev_idx = None
+  for _ in xrange(count):
+    idx = string.find(separator, idx + len(separator))
+    if idx < 0:
+      break
+    prev_idx = idx
+  return string[:prev_idx]

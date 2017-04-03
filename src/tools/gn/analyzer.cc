@@ -59,7 +59,9 @@ LabelSet LabelsFor(const TargetSet& targets) {
 bool AnyBuildFilesWereModified(const SourceFileSet& source_files) {
   for (auto* file : source_files) {
     if (base::EndsWith(file->value(), ".gn", base::CompareCase::SENSITIVE) ||
-        base::EndsWith(file->value(), ".gni", base::CompareCase::SENSITIVE))
+        base::EndsWith(file->value(), ".gni", base::CompareCase::SENSITIVE) ||
+        base::EndsWith(file->value(), "build/vs_toolchain.py",
+                       base::CompareCase::SENSITIVE))
       return true;
   }
   return false;
@@ -262,7 +264,7 @@ std::string Analyzer::Analyze(const std::string& input, Err* err) const {
 
   // TODO(crbug.com/555273): We can do smarter things when we detect changes
   // to build files. For example, if all of the ninja files are unchanged,
-  // we know that we can ignore changes to these files. Also, for most .gn
+  // we know that we can ignore changes to .gn* files. Also, for most .gn
   // files, we can treat a change as simply affecting every target, config,
   // or toolchain defined in that file.
   if (AnyBuildFilesWereModified(inputs.source_files)) {

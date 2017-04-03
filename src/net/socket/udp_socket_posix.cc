@@ -33,6 +33,7 @@
 #include "net/log/net_log_source.h"
 #include "net/log/net_log_source_type.h"
 #include "net/socket/socket_descriptor.h"
+#include "net/socket/socket_posix.h"
 #include "net/socket/udp_net_log_parameters.h"
 
 #if defined(OS_ANDROID)
@@ -549,10 +550,7 @@ int UDPSocketPosix::AllowAddressReuse() {
   DCHECK_NE(socket_, kInvalidSocket);
   DCHECK(CalledOnValidThread());
   DCHECK(!is_connected());
-  int true_value = 1;
-  int rv = setsockopt(
-      socket_, SOL_SOCKET, SO_REUSEADDR, &true_value, sizeof(true_value));
-  return rv == 0 ? OK : MapSystemError(errno);
+  return SetReuseAddr(socket_, true);
 }
 
 int UDPSocketPosix::SetBroadcast(bool broadcast) {

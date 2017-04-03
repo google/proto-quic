@@ -186,7 +186,7 @@ bool TraceConfig::EventFilterConfig::GetArgAsSet(
 }
 
 bool TraceConfig::EventFilterConfig::IsCategoryGroupEnabled(
-    const char* category_group_name) const {
+    const StringPiece& category_group_name) const {
   return category_filter_.IsCategoryGroupEnabled(category_group_name);
 }
 
@@ -277,7 +277,7 @@ std::string TraceConfig::ToCategoryFilterString() const {
 }
 
 bool TraceConfig::IsCategoryGroupEnabled(
-    const char* category_group_name) const {
+    const StringPiece& category_group_name) const {
   // TraceLog should call this method only as part of enabling/disabling
   // categories.
   return category_filter_.IsCategoryGroupEnabled(category_group_name);

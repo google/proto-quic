@@ -171,8 +171,10 @@ void MemoryDumpScheduler::RequestPeriodicGlobalDump() {
 }
 
 void MemoryDumpScheduler::PollMemoryOnPollingThread() {
-  if (polling_state_->current_state != PollingTriggerState::ENABLED)
+  if (!polling_state_)
     return;
+
+  DCHECK_EQ(PollingTriggerState::ENABLED, polling_state_->current_state);
 
   uint64_t polled_memory = 0;
   bool res = mdm_->PollFastMemoryTotal(&polled_memory);

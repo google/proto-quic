@@ -67,16 +67,16 @@ struct OwningProcess {
   // Initializes structure with the current process id and the current time.
   // These can uniquely identify a process. A unique non-zero data_id will be
   // set making it possible to tell using atomic reads if the data has changed.
-  void Release_Initialize();
+  void Release_Initialize(int64_t pid = 0);
 
   // Explicitly sets the process ID.
-  void SetOwningProcessIdForTesting(ProcessId pid, int64_t stamp);
+  void SetOwningProcessIdForTesting(int64_t pid, int64_t stamp);
 
   // Gets the associated process ID, in native form, and the creation timestamp
   // from memory without loading the entire structure for analysis. This will
   // return false if no valid process ID is available.
   static bool GetOwningProcessId(const void* memory,
-                                 ProcessId* out_id,
+                                 int64_t* out_id,
                                  int64_t* out_stamp);
 
   // SHA1(base::debug::OwningProcess): Increment this if structure changes!
@@ -393,7 +393,7 @@ class BASE_EXPORT ActivityUserData {
    private:
     friend class ActivityUserData;
 
-    ValueType type_;
+    ValueType type_ = END_OF_VALUES;
     uint64_t short_value_;    // Used to hold copy of numbers, etc.
     std::string long_value_;  // Used to hold copy of raw/string data.
     StringPiece ref_value_;   // Used to hold reference to external data.
@@ -404,7 +404,7 @@ class BASE_EXPORT ActivityUserData {
   // Initialize the object either as a "sink" that just accepts and discards
   // data or an active one that writes to a given (zeroed) memory block.
   ActivityUserData();
-  ActivityUserData(void* memory, size_t size);
+  ActivityUserData(void* memory, size_t size, int64_t pid = 0);
   virtual ~ActivityUserData();
 
   // Gets the unique ID number for this user data. If this changes then the
@@ -459,22 +459,22 @@ class BASE_EXPORT ActivityUserData {
 
   // Creates a snapshot of the key/value pairs contained within. The returned
   // data will be fixed, independent of whatever changes afterward. There is
-  // protection against concurrent modification of the values but no protection
-  // against a complete overwrite of the contents; the caller must ensure that
-  // the memory segment is not going to be re-initialized while this runs.
+  // some protection against concurrent modification. This will return false
+  // if the data is invalid or if a complete overwrite of the contents is
+  // detected.
   bool CreateSnapshot(Snapshot* output_snapshot) const;
 
   // Gets the base memory address used for storing data.
   const void* GetBaseAddress() const;
 
   // Explicitly sets the process ID.
-  void SetOwningProcessIdForTesting(ProcessId pid, int64_t stamp);
+  void SetOwningProcessIdForTesting(int64_t pid, int64_t stamp);
 
   // Gets the associated process ID, in native form, and the creation timestamp
   // from tracker memory without loading the entire structure for analysis. This
   // will return false if no valid process ID is available.
   static bool GetOwningProcessId(const void* memory,
-                                 ProcessId* out_id,
+                                 int64_t* out_id,
                                  int64_t* out_stamp);
 
  protected:
@@ -533,7 +533,10 @@ class BASE_EXPORT ActivityUserData {
                     size_t size);
 
   // Loads any data already in the memory segment. This allows for accessing
-  // records created previously.
+  // records created previously. If this detects that the underlying data has
+  // gone away (cleared by another thread/process), it will invalidate all the
+  // data in this object and turn it into simple "sink" with no values to
+  // return.
   void ImportExistingData() const;
 
   // A map of all the values within the memory block, keyed by name for quick
@@ -549,6 +552,12 @@ class BASE_EXPORT ActivityUserData {
 
   // A pointer to the memory header for this instance.
   MemoryHeader* const header_;
+
+  // These hold values used when initially creating the object. They are
+  // compared against current header values to check for outside changes.
+  const uint32_t orig_data_id;
+  const int64_t orig_process_id;
+  const int64_t orig_create_stamp;
 
   DISALLOW_COPY_AND_ASSIGN(ActivityUserData);
 };
@@ -583,6 +592,9 @@ class BASE_EXPORT ThreadActivityTracker {
     // The name of the thread as set when it was created. The name may be
     // truncated due to internal length limitations.
     std::string thread_name;
+
+    // The timestamp at which this process was created.
+    int64_t create_stamp;
 
     // The process and thread IDs. These values have no meaning other than
     // they uniquely identify a running process and a running thread within
@@ -704,13 +716,13 @@ class BASE_EXPORT ThreadActivityTracker {
   const void* GetBaseAddress();
 
   // Explicitly sets the process ID.
-  void SetOwningProcessIdForTesting(ProcessId pid, int64_t stamp);
+  void SetOwningProcessIdForTesting(int64_t pid, int64_t stamp);
 
   // Gets the associated process ID, in native form, and the creation timestamp
   // from tracker memory without loading the entire structure for analysis. This
   // will return false if no valid process ID is available.
   static bool GetOwningProcessId(const void* memory,
-                                 ProcessId* out_id,
+                                 int64_t* out_id,
                                  int64_t* out_stamp);
 
   // Calculates the memory size required for a given stack depth, including
@@ -857,9 +869,12 @@ class BASE_EXPORT GlobalActivityTracker {
   // Creates a global tracker using a given persistent-memory |allocator| and
   // providing the given |stack_depth| to each thread tracker it manages. The
   // created object is activated so tracking will begin immediately upon return.
+  // The |process_id| can be zero to get it from the OS but is taken for testing
+  // purposes.
   static void CreateWithAllocator(
       std::unique_ptr<PersistentMemoryAllocator> allocator,
-      int stack_depth);
+      int stack_depth,
+      int64_t process_id);
 
 #if !defined(OS_NACL)
   // Like above but internally creates an allocator around a disk file with
@@ -874,17 +889,28 @@ class BASE_EXPORT GlobalActivityTracker {
 #endif  // !defined(OS_NACL)
 
   // Like above but internally creates an allocator using local heap memory of
-  // the specified size. This is used primarily for unit tests.
+  // the specified size. This is used primarily for unit tests. The |process_id|
+  // can be zero to get it from the OS but is taken for testing purposes.
   static void CreateWithLocalMemory(size_t size,
                                     uint64_t id,
                                     StringPiece name,
-                                    int stack_depth);
+                                    int stack_depth,
+                                    int64_t process_id);
 
   // Gets the global activity-tracker or null if none exists.
   static GlobalActivityTracker* Get() {
     return reinterpret_cast<GlobalActivityTracker*>(
         subtle::Acquire_Load(&g_tracker_));
   }
+
+  // Sets the global activity-tracker for testing purposes.
+  static void SetForTesting(std::unique_ptr<GlobalActivityTracker> tracker);
+
+  // This access to the persistent allocator is only for testing; it extracts
+  // the global tracker completely. All tracked threads must exit before
+  // calling this. Tracking for the current thread will be automatically
+  // stopped.
+  static std::unique_ptr<GlobalActivityTracker> ReleaseForTesting();
 
   // Convenience method for determining if a global tracker is active.
   static bool IsEnabled() { return Get() != nullptr; }
@@ -998,6 +1024,10 @@ class BASE_EXPORT GlobalActivityTracker {
                                code);
   }
 
+  // Gets the process ID used for tracking. This is typically the same as what
+  // the OS thinks is the current process but can be overridden for testing.
+  int64_t process_id() { return process_id_; };
+
   // Accesses the process data record for storing arbitrary key/value pairs.
   // Updates to this are thread-safe.
   ActivityUserData& process_data() { return process_data_; }
@@ -1024,7 +1054,7 @@ class BASE_EXPORT GlobalActivityTracker {
   // thread.
   class ThreadSafeUserData : public ActivityUserData {
    public:
-    ThreadSafeUserData(void* memory, size_t size);
+    ThreadSafeUserData(void* memory, size_t size, int64_t pid = 0);
     ~ThreadSafeUserData() override;
 
    private:
@@ -1108,8 +1138,11 @@ class BASE_EXPORT GlobalActivityTracker {
   // Creates a global tracker using a given persistent-memory |allocator| and
   // providing the given |stack_depth| to each thread tracker it manages. The
   // created object is activated so tracking has already started upon return.
+  // The |process_id| can be zero to get it from the OS but is taken for testing
+  // purposes.
   GlobalActivityTracker(std::unique_ptr<PersistentMemoryAllocator> allocator,
-                        int stack_depth);
+                        int stack_depth,
+                        int64_t process_id);
 
   // Returns the memory used by an activity-tracker managed by this class.
   // It is called during the destruction of a ManagedActivityTracker object.
@@ -1124,7 +1157,7 @@ class BASE_EXPORT GlobalActivityTracker {
   static void OnTLSDestroy(void* value);
 
   // Does process-exit work. This can be run on any thread.
-  void CleanupAfterProcess(ProcessId process_id,
+  void CleanupAfterProcess(int64_t process_id,
                            int64_t exit_stamp,
                            int exit_code,
                            std::string&& command_line);
@@ -1136,6 +1169,10 @@ class BASE_EXPORT GlobalActivityTracker {
   // The size (in bytes) of memory required by a ThreadActivityTracker to
   // provide the stack-depth requested during construction.
   const size_t stack_memory_size_;
+
+  // The process-id of the current process. This is kept as a member variable,
+  // defined during initialization, for testing purposes.
+  const int64_t process_id_;
 
   // The activity tracker for the currently executing thread.
   base::ThreadLocalStorage::Slot this_thread_tracker_;

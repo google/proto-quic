@@ -101,6 +101,7 @@ class MockHttpStreamFactoryImplJob : public HttpStreamFactoryImpl::Job {
                                const SSLConfig& proxy_ssl_config,
                                HostPortPair destination,
                                GURL origin_url,
+                               bool enable_ip_based_pooling,
                                NetLog* net_log);
 
   MockHttpStreamFactoryImplJob(HttpStreamFactoryImpl::Job::Delegate* delegate,
@@ -114,6 +115,7 @@ class MockHttpStreamFactoryImplJob : public HttpStreamFactoryImpl::Job {
                                GURL origin_url,
                                AlternativeService alternative_service,
                                const ProxyServer& alternative_proxy_server,
+                               bool enable_ip_based_pooling,
                                NetLog* net_log);
 
   ~MockHttpStreamFactoryImplJob() override;
@@ -139,6 +141,7 @@ class TestJobFactory : public HttpStreamFactoryImpl::JobFactory {
       const SSLConfig& proxy_ssl_config,
       HostPortPair destination,
       GURL origin_url,
+      bool enable_ip_based_pooling,
       NetLog* net_log) override;
 
   HttpStreamFactoryImpl::Job* CreateJob(
@@ -152,6 +155,7 @@ class TestJobFactory : public HttpStreamFactoryImpl::JobFactory {
       HostPortPair destination,
       GURL origin_url,
       AlternativeService alternative_service,
+      bool enable_ip_based_pooling,
       NetLog* net_log) override;
 
   HttpStreamFactoryImpl::Job* CreateJob(
@@ -165,6 +169,7 @@ class TestJobFactory : public HttpStreamFactoryImpl::JobFactory {
       HostPortPair destination,
       GURL origin_url,
       const ProxyServer& alternative_proxy_server,
+      bool enable_ip_based_pooling,
       NetLog* net_log) override;
 
   MockHttpStreamFactoryImplJob* main_job() const { return main_job_; }

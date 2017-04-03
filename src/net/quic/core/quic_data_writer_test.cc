@@ -222,6 +222,23 @@ TEST(QuicDataWriterTest, WriteConnectionId) {
   EXPECT_EQ(connection_id, read_connection_id);
 }
 
+TEST(QuicDataWriterTest, WriteTag) {
+  char CHLO[] = {
+      'C', 'H', 'L', 'O',
+  };
+  const int kBufferLength = sizeof(QuicTag);
+  char buffer[kBufferLength];
+  QuicDataWriter writer(kBufferLength, buffer);
+  writer.WriteTag(kCHLO);
+  test::CompareCharArraysWithHexError("CHLO", buffer, kBufferLength, CHLO,
+                                      kBufferLength);
+
+  QuicTag read_chlo;
+  QuicDataReader reader(buffer, kBufferLength);
+  reader.ReadTag(&read_chlo);
+  EXPECT_EQ(kCHLO, read_chlo);
+}
+
 }  // namespace
 }  // namespace test
 }  // namespace net

@@ -8,6 +8,7 @@
 #include <sstream>
 #include <string>
 
+#include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 
 namespace net {
@@ -33,6 +34,10 @@ inline std::string SpdyStringPrintfImpl(const Args&... args) {
 template <typename... Args>
 inline void SpdyStringAppendFImpl(const Args&... args) {
   base::StringAppendF(std::forward<const Args&>(args)...);
+}
+
+inline char SpdyHexDigitToIntImpl(char c) {
+  return base::HexDigitToInt(c);
 }
 
 }  // namespace net

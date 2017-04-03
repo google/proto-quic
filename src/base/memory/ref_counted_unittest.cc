@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include "base/test/gtest_util.h"
 #include "base/test/opaque_ref_counted.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -122,6 +123,16 @@ scoped_refptr<SelfAssign> Overloaded(scoped_refptr<SelfAssign> self_assign) {
   return self_assign;
 }
 
+class InitialRefCountIsOne : public base::RefCounted<InitialRefCountIsOne> {
+ public:
+  REQUIRE_ADOPTION_FOR_REFCOUNTED_TYPE();
+
+  InitialRefCountIsOne() {}
+
+ private:
+  friend class base::RefCounted<InitialRefCountIsOne>;
+  ~InitialRefCountIsOne() {}
+};
 
 }  // end namespace
 
@@ -527,4 +538,31 @@ TEST(RefCountedUnitTest, TestOverloadResolutionMove) {
   scoped_refptr<Other> other(new Other);
   scoped_refptr<Other> other2(other);
   EXPECT_EQ(other2, Overloaded(std::move(other)));
+}
+
+TEST(RefCountedUnitTest, TestInitialRefCountIsOne) {
+  scoped_refptr<InitialRefCountIsOne> obj =
+      base::MakeShared<InitialRefCountIsOne>();
+  EXPECT_TRUE(obj->HasOneRef());
+  obj = nullptr;
+
+  scoped_refptr<InitialRefCountIsOne> obj2 =
+      base::AdoptRef(new InitialRefCountIsOne);
+  EXPECT_TRUE(obj2->HasOneRef());
+  obj2 = nullptr;
+
+  scoped_refptr<Other> obj3 = base::MakeShared<Other>();
+  EXPECT_TRUE(obj3->HasOneRef());
+  obj3 = nullptr;
+}
+
+TEST(RefCountedDeathTest, TestAdoptRef) {
+  EXPECT_DCHECK_DEATH(make_scoped_refptr(new InitialRefCountIsOne));
+
+  InitialRefCountIsOne* ptr = nullptr;
+  EXPECT_DCHECK_DEATH(base::AdoptRef(ptr));
+
+  scoped_refptr<InitialRefCountIsOne> obj =
+      base::MakeShared<InitialRefCountIsOne>();
+  EXPECT_DCHECK_DEATH(base::AdoptRef(obj.get()));
 }

@@ -633,8 +633,13 @@ def main():
   parser.add_argument('--target',
                       dest='targets',
                       action='append',
-                      help='GN target to generate project for. '
-                           'May be repeated.')
+                      help='GN target to generate project for. Replaces set of '
+                           'default targets. May be repeated.')
+  parser.add_argument('--extra-target',
+                      dest='extra_targets',
+                      action='append',
+                      help='GN target to generate project for, in addition to '
+                           'the default ones. May be repeated.')
   parser.add_argument('--project-dir',
                       help='Root of the output project.',
                       default=os.path.join('$CHROMIUM_OUTPUT_DIR', 'gradle'))
@@ -676,6 +681,8 @@ def main():
     targets = _QueryForAllGnTargets(output_dir)
   else:
     targets = args.targets or _DEFAULT_TARGETS
+    if args.extra_targets:
+      targets.extend(args.extra_targets)
     targets = [re.sub(r'_test_apk$', '_test_apk__apk', t) for t in targets]
     # TODO(wnwen): Utilize Gradle's test constructs for our junit tests?
     targets = [re.sub(r'_junit_tests$', '_junit_tests__java_binary', t)

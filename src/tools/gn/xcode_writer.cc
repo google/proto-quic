@@ -33,6 +33,7 @@ namespace {
 
 using TargetToFileList = std::unordered_map<const Target*, Target::FileList>;
 using TargetToTarget = std::unordered_map<const Target*, const Target*>;
+using TargetToPBXTarget = std::unordered_map<const Target*, PBXTarget*>;
 
 const char kEarlGreyFileNameIdentifier[] = "egtest.mm";
 const char kXCTestFileNameIdentifier[] = "xctest.mm";
@@ -460,6 +461,8 @@ void XcodeWriter::CreateProductsProject(
   DCHECK_EQ(xctest_application_targets.size(),
             xctest_files_per_application_target.size());
 
+  TargetToPBXTarget bundle_target_to_pbxtarget;
+
   std::string build_path;
   std::unique_ptr<base::Environment> env(base::Environment::Create());
 
@@ -505,6 +508,8 @@ void XcodeWriter::CreateProductsProject(
             target->bundle_data().product_type(),
             GetBuildScript(target->label().name(), ninja_extra_args, env.get()),
             extra_attributes);
+        bundle_target_to_pbxtarget.insert(
+            std::make_pair(target, native_target));
 
         if (!IsXCTestModuleTarget(target))
           continue;
@@ -533,6 +538,31 @@ void XcodeWriter::CreateProductsProject(
       default:
         break;
     }
+  }
+
+  // Add corresponding application target as dependency of xctest module target
+  // so that application target is re-compiled when compiling xctest module
+  // target.
+  for (const Target* target : targets) {
+    if (target->output_type() != Target::CREATE_BUNDLE)
+      continue;
+    if (!IsXCTestModuleTarget(target))
+      continue;
+
+    const Target* application_target =
+        FindXCTestApplicationTarget(target, targets);
+    PBXTarget* application_pbxtarget =
+        bundle_target_to_pbxtarget[application_target];
+    DCHECK(application_pbxtarget);
+    PBXTarget* xctest_module_pbxtarget = bundle_target_to_pbxtarget[target];
+    DCHECK(xctest_module_pbxtarget);
+
+    std::unique_ptr<PBXContainerItemProxy> container_item_proxy(
+        new PBXContainerItemProxy(main_project.get(), application_pbxtarget));
+    std::unique_ptr<PBXTargetDependency> dependency(new PBXTargetDependency(
+        application_pbxtarget, std::move(container_item_proxy)));
+
+    xctest_module_pbxtarget->AddDependency(std::move(dependency));
   }
 
   projects_.push_back(std::move(main_project));

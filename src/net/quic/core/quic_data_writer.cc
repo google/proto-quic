@@ -149,4 +149,8 @@ bool QuicDataWriter::WriteConnectionId(uint64_t connection_id) {
   return WriteUInt64(connection_id);
 }
 
+bool QuicDataWriter::WriteTag(uint32_t tag) {
+  return WriteBytes(&tag, sizeof(tag));
+}
+
 }  // namespace net

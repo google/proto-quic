@@ -5,6 +5,11 @@
 #ifndef BASE_METRICS_HISTOGRAM_MACROS_INTERNAL_H_
 #define BASE_METRICS_HISTOGRAM_MACROS_INTERNAL_H_
 
+#include <stdint.h>
+
+#include <limits>
+#include <type_traits>
+
 #include "base/atomicops.h"
 #include "base/logging.h"
 #include "base/metrics/histogram.h"
@@ -96,17 +101,42 @@
         base::Histogram::FactoryGet(name, min, max, bucket_count, flag))
 
 // This is a helper macro used by other macros and shouldn't be used directly.
-// For an enumeration with N items, recording values in the range [0, N - 1],
-// this macro creates a linear histogram with N + 1 buckets:
-//   [0, 1), [1, 2), ..., [N - 1, N), and an overflow bucket [N, infinity).
+// The bucketing scheme is linear with a bucket size of 1. For N items,
+// recording values in the range [0, N - 1] creates a linear histogram with N +
+// 1 buckets:
+//   [0, 1), [1, 2), ..., [N - 1, N)
+// and an overflow bucket [N, infinity).
+//
 // Code should never emit to the overflow bucket; only to the other N buckets.
-// This allows future versions of Chrome to safely append new entries to the
-// enumeration. Otherwise, the histogram would have [N - 1, infinity) as its
-// overflow bucket, and so the maximal value (N - 1) would be emitted to this
-// overflow bucket. But, if an additional enumerated value were later added, the
-// bucket label for the value (N - 1) would change to [N - 1, N), which would
-// result in different versions of Chrome using different bucket labels for
-// identical data.
+// This allows future versions of Chrome to safely increase the boundary size.
+// Otherwise, the histogram would have [N - 1, infinity) as its overflow bucket,
+// and so the maximal value (N - 1) would be emitted to this overflow bucket.
+// But, if an additional value were later added, the bucket label for
+// the value (N - 1) would change to [N - 1, N), which would result in different
+// versions of Chrome using different bucket labels for identical data.
+#define INTERNAL_HISTOGRAM_EXACT_LINEAR_WITH_FLAG(name, sample, boundary,  \
+                                                  flag)                    \
+  do {                                                                     \
+    static_assert(!std::is_enum<decltype(sample)>::value,                  \
+                  "|sample| should not be an enum type!");                 \
+    static_assert(!std::is_enum<decltype(boundary)>::value,                \
+                  "|boundary| should not be an enum type!");               \
+    STATIC_HISTOGRAM_POINTER_BLOCK(                                        \
+        name, Add(sample),                                                 \
+        base::LinearHistogram::FactoryGet(name, 1, boundary, boundary + 1, \
+                                          flag));                          \
+  } while (0)
+
+// Similar to the previous macro but intended for enumerations. This delegates
+// the work to the previous macro, but supports scoped enumerations as well by
+// forcing an explicit cast to the HistogramBase::Sample integral type.
+//
+// Note the range checks verify two separate issues:
+// - that the declared enum max isn't out of range of HistogramBase::Sample
+// - that the declared enum max is > 0
+//
+// TODO(dcheng): This should assert that the passed in types are actually enum
+// types.
 #define INTERNAL_HISTOGRAM_ENUMERATION_WITH_FLAG(name, sample, boundary, flag) \
   do {                                                                         \
     static_assert(                                                             \
@@ -115,9 +145,14 @@
             std::is_same<std::remove_const<decltype(sample)>::type,            \
                          std::remove_const<decltype(boundary)>::type>::value,  \
         "|sample| and |boundary| shouldn't be of different enums");            \
-    STATIC_HISTOGRAM_POINTER_BLOCK(                                            \
-        name, Add(sample), base::LinearHistogram::FactoryGet(                  \
-                               name, 1, boundary, boundary + 1, flag));        \
+    static_assert(                                                             \
+        static_cast<uintmax_t>(boundary) <                                     \
+            static_cast<uintmax_t>(                                            \
+                std::numeric_limits<base::HistogramBase::Sample>::max()),      \
+        "|boundary| is out of range of HistogramBase::Sample");                \
+    INTERNAL_HISTOGRAM_EXACT_LINEAR_WITH_FLAG(                                 \
+        name, static_cast<base::HistogramBase::Sample>(sample),                \
+        static_cast<base::HistogramBase::Sample>(boundary), flag);             \
   } while (0)
 
 // This is a helper macro used by other macros and shouldn't be used directly.

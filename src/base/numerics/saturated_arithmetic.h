@@ -56,6 +56,12 @@ ALWAYS_INLINE int32_t SaturatedNegative(int32_t a) {
   return -a;
 }
 
+ALWAYS_INLINE int32_t SaturatedAbsolute(int32_t a) {
+  if (a >= 0)
+    return a;
+  return SaturatedNegative(a);
+}
+
 ALWAYS_INLINE int GetMaxSaturatedSetResultForTesting(int fractional_shift) {
   // For C version the set function maxes out to max int, this differs from
   // the ARM asm version, see saturated_arithmetic_arm.h for the equivalent asm

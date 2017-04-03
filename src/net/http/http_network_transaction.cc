@@ -100,9 +100,9 @@ HttpNetworkTransaction::HttpNetworkTransaction(RequestPriority priority,
       total_sent_bytes_(0),
       next_state_(STATE_NONE),
       establishing_tunnel_(false),
+      enable_ip_based_pooling_(true),
       websocket_handshake_stream_base_create_helper_(NULL),
-      net_error_details_() {
-}
+      net_error_details_() {}
 
 HttpNetworkTransaction::~HttpNetworkTransaction() {
   if (stream_.get()) {
@@ -847,22 +847,13 @@ int HttpNetworkTransaction::DoCreateStream() {
     stream_request_.reset(
         session_->http_stream_factory_for_websocket()
             ->RequestWebSocketHandshakeStream(
-                  *request_,
-                  priority_,
-                  server_ssl_config_,
-                  proxy_ssl_config_,
-                  this,
-                  websocket_handshake_stream_base_create_helper_,
-                  net_log_));
+                *request_, priority_, server_ssl_config_, proxy_ssl_config_,
+                this, websocket_handshake_stream_base_create_helper_,
+                enable_ip_based_pooling_, net_log_));
   } else {
-    stream_request_.reset(
-        session_->http_stream_factory()->RequestStream(
-            *request_,
-            priority_,
-            server_ssl_config_,
-            proxy_ssl_config_,
-            this,
-            net_log_));
+    stream_request_.reset(session_->http_stream_factory()->RequestStream(
+        *request_, priority_, server_ssl_config_, proxy_ssl_config_, this,
+        enable_ip_based_pooling_, net_log_));
   }
   DCHECK(stream_request_.get());
   return ERR_IO_PENDING;
@@ -1292,6 +1283,10 @@ int HttpNetworkTransaction::DoReadHeadersComplete(int result) {
     return OK;
   }
 
+  if (response_.headers->response_code() == 421) {
+    return HandleIOError(ERR_MISDIRECTED_REQUEST);
+  }
+
   if (IsSecureRequest()) {
     session_->http_stream_factory()->ProcessAlternativeServices(
         session_, response_.headers.get(), url::SchemeHostPort(request_->url));
@@ -1541,6 +1536,18 @@ int HttpNetworkTransaction::HandleIOError(int error) {
     case ERR_SPDY_PING_FAILED:
     case ERR_SPDY_SERVER_REFUSED_STREAM:
     case ERR_QUIC_HANDSHAKE_FAILED:
+      net_log_.AddEventWithNetErrorCode(
+          NetLogEventType::HTTP_TRANSACTION_RESTART_AFTER_ERROR, error);
+      ResetConnectionAndRequestForResend();
+      error = OK;
+      break;
+    case ERR_MISDIRECTED_REQUEST:
+      // If this is the second try, just give up.
+      if (!enable_ip_based_pooling_)
+        return OK;
+      // Otherwise, since the response status was 421 Misdirected Request,
+      // retry the request with IP based pooling disabled.
+      enable_ip_based_pooling_ = false;
       net_log_.AddEventWithNetErrorCode(
           NetLogEventType::HTTP_TRANSACTION_RESTART_AFTER_ERROR, error);
       ResetConnectionAndRequestForResend();

@@ -66,8 +66,8 @@ class FieldTrialUtilUnittest(unittest.TestCase):
         '--force-fieldtrial-params='
         'SimpleParams.Default:id/abc,'
         'c.d%2E:url/http%3A%2F%2Fwww%2Egoogle%2Ecom',
-        '--enable-features="a<SimpleParams,b<SimpleParams,x<c"',
-        '--disable-features="y<c"'], result)
+        '--enable-features=a<SimpleParams,b<SimpleParams,x<c',
+        '--disable-features=y<c'], result)
 
   def test_DuplicateEnableFeatures(self):
     config = '''{

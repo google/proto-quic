@@ -13,6 +13,7 @@ android_library("bootstrap_java") {
     "java/org/chromium/incrementalinstall/ClassLoaderPatcher.java",
     "java/org/chromium/incrementalinstall/LockFile.java",
     "java/org/chromium/incrementalinstall/Reflect.java",
+    "java/org/chromium/incrementalinstall/SecondInstrumentation.java",
   ]
   emma_never_instrument = true
   run_findbugs_override = false

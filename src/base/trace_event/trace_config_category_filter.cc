@@ -45,9 +45,9 @@ TraceConfigCategoryFilter& TraceConfigCategoryFilter::operator=(
 
 void TraceConfigCategoryFilter::InitializeFromString(
     const StringPiece& category_filter_string) {
-  std::vector<std::string> split =
-      SplitString(category_filter_string, ",", TRIM_WHITESPACE, SPLIT_WANT_ALL);
-  for (const std::string& category : split) {
+  std::vector<StringPiece> split = SplitStringPiece(
+      category_filter_string, ",", TRIM_WHITESPACE, SPLIT_WANT_ALL);
+  for (const StringPiece& category : split) {
     // Ignore empty categories.
     if (category.empty())
       continue;
@@ -55,23 +55,22 @@ void TraceConfigCategoryFilter::InitializeFromString(
     if (StartsWith(category, kSyntheticDelayCategoryFilterPrefix,
                    CompareCase::SENSITIVE) &&
         category.back() == ')') {
-      std::string synthetic_category = category.substr(
+      StringPiece synthetic_category = category.substr(
           strlen(kSyntheticDelayCategoryFilterPrefix),
           category.size() - strlen(kSyntheticDelayCategoryFilterPrefix) - 1);
       size_t name_length = synthetic_category.find(';');
       if (name_length != std::string::npos && name_length > 0 &&
           name_length != synthetic_category.size() - 1) {
-        synthetic_delays_.push_back(synthetic_category);
+        synthetic_delays_.push_back(synthetic_category.as_string());
       }
     } else if (category.front() == '-') {
       // Excluded categories start with '-'.
       // Remove '-' from category string.
-      excluded_categories_.push_back(category.substr(1));
-    } else if (category.compare(0, strlen(TRACE_DISABLED_BY_DEFAULT("")),
-                                TRACE_DISABLED_BY_DEFAULT("")) == 0) {
-      disabled_categories_.push_back(category);
+      excluded_categories_.push_back(category.substr(1).as_string());
+    } else if (category.starts_with(TRACE_DISABLED_BY_DEFAULT(""))) {
+      disabled_categories_.push_back(category.as_string());
     } else {
-      included_categories_.push_back(category);
+      included_categories_.push_back(category.as_string());
     }
   }
 }
@@ -88,17 +87,17 @@ void TraceConfigCategoryFilter::InitializeFromConfigDict(
 }
 
 bool TraceConfigCategoryFilter::IsCategoryGroupEnabled(
-    const char* category_group_name) const {
+    const StringPiece& category_group_name) const {
   bool had_enabled_by_default = false;
-  DCHECK(category_group_name);
-  std::string category_group_name_str = category_group_name;
-  StringTokenizer category_group_tokens(category_group_name_str, ",");
+  DCHECK(!category_group_name.empty());
+  CStringTokenizer category_group_tokens(category_group_name.begin(),
+                                         category_group_name.end(), ",");
   while (category_group_tokens.GetNext()) {
-    std::string category_group_token = category_group_tokens.token();
+    StringPiece category_group_token = category_group_tokens.token_piece();
     // Don't allow empty tokens, nor tokens with leading or trailing space.
     DCHECK(IsCategoryNameAllowed(category_group_token))
         << "Disallowed category string";
-    if (IsCategoryEnabled(category_group_token.c_str()))
+    if (IsCategoryEnabled(category_group_token))
       return true;
 
     if (!MatchPattern(category_group_token, TRACE_DISABLED_BY_DEFAULT("*")))
@@ -109,7 +108,7 @@ bool TraceConfigCategoryFilter::IsCategoryGroupEnabled(
   category_group_tokens.Reset();
   bool category_group_disabled = false;
   while (category_group_tokens.GetNext()) {
-    std::string category_group_token = category_group_tokens.token();
+    StringPiece category_group_token = category_group_tokens.token_piece();
     for (const std::string& category : excluded_categories_) {
       if (MatchPattern(category_group_token, category)) {
         // Current token of category_group_name is present in excluded_list.
@@ -140,7 +139,7 @@ bool TraceConfigCategoryFilter::IsCategoryGroupEnabled(
 }
 
 bool TraceConfigCategoryFilter::IsCategoryEnabled(
-    const char* category_name) const {
+    const StringPiece& category_name) const {
   // Check the disabled- filters and the disabled-* wildcard first so that a
   // "*" filter does not include the disabled.
   for (const std::string& category : disabled_categories_) {

@@ -240,7 +240,7 @@ template <class Key, class Mapped, class Compare>
 auto flat_map<Key, Mapped, Compare>::operator[](const Key& key) -> Mapped& {
   typename tree::iterator found = tree::lower_bound(key);
   if (found == tree::end() || tree::key_comp()(key, found->first))
-    found = unsafe_emplace(found, key, Mapped());
+    found = tree::unsafe_emplace(found, key, Mapped());
   return found->second;
 }
 

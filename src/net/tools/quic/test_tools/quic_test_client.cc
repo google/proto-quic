@@ -217,7 +217,6 @@ QuicTestClient::QuicTestClient(QuicSocketAddress server_address,
                                      config,
                                      supported_versions,
                                      &epoll_server_)),
-      response_complete_(false),
       allow_bidirectional_data_(false) {
   Initialize();
 }
@@ -235,17 +234,15 @@ QuicTestClient::QuicTestClient(QuicSocketAddress server_address,
                                      supported_versions,
                                      &epoll_server_,
                                      std::move(proof_verifier))),
-      response_complete_(false),
       allow_bidirectional_data_(false) {
   Initialize();
 }
 
-QuicTestClient::QuicTestClient()
-    : response_complete_(false), allow_bidirectional_data_(false) {}
+QuicTestClient::QuicTestClient() : allow_bidirectional_data_(false) {}
 
 QuicTestClient::~QuicTestClient() {
-  if (stream_) {
-    stream_->set_visitor(nullptr);
+  for (std::pair<QuicStreamId, QuicSpdyClientStream*> stream : open_streams_) {
+    stream.second->set_visitor(nullptr);
   }
   client_->Disconnect();
 }
@@ -257,7 +254,7 @@ void QuicTestClient::Initialize() {
   buffer_body_ = true;
   num_requests_ = 0;
   num_responses_ = 0;
-  ClearPerRequestState();
+  ClearPerConnectionState();
   // As chrome will generally do this, we want it to be the default when it's
   // not overridden.
   if (!client_->config()->HasSetBytesForConnectionIdToSend()) {
@@ -349,12 +346,8 @@ ssize_t QuicTestClient::SendMessage(const SpdyHeaderBlock& headers,
 ssize_t QuicTestClient::SendMessage(const SpdyHeaderBlock& headers,
                                     QuicStringPiece body,
                                     bool fin) {
-  stream_ = nullptr;  // Always force creation of a stream for SendMessage.
-  // Any response we might have received for a previous request would no longer
-  // be valid.  TODO(jeffpiazza): There's probably additional client state that
-  // should be reset here, too, if we were being more careful.
-  response_complete_ = false;
-
+  // Always force creation of a stream for SendMessage.
+  latest_created_stream_ = nullptr;
   // If we're not connected, try to find an sni hostname.
   if (!connected()) {
     QuicUrl url(SpdyUtils::GetUrlFromHeaderBlock(headers));
@@ -397,13 +390,15 @@ void QuicTestClient::set_buffer_body(bool buffer_body) {
   buffer_body_ = buffer_body;
 }
 
-const string& QuicTestClient::response_body() {
+const string& QuicTestClient::response_body() const {
   return response_;
 }
 
 string QuicTestClient::SendCustomSynchronousRequest(
     const SpdyHeaderBlock& headers,
     const string& body) {
+  // Clear connection state here and only track this synchronous request.
+  ClearPerConnectionState();
   if (SendMessage(headers, body) == 0) {
     QUIC_DLOG(ERROR) << "Failed the request for: " << headers.DebugString();
     // Set the response_ explicitly.  Otherwise response_ will contain the
@@ -423,11 +418,11 @@ string QuicTestClient::SendSynchronousRequest(const string& uri) {
   return SendCustomSynchronousRequest(headers, "");
 }
 
-void QuicTestClient::SetStream(QuicSpdyClientStream* stream) {
-  stream_ = stream;
-  if (stream_ != nullptr) {
-    response_complete_ = false;
-    stream_->set_visitor(this);
+void QuicTestClient::SetLatestCreatedStream(QuicSpdyClientStream* stream) {
+  latest_created_stream_ = stream;
+  if (latest_created_stream_ != nullptr) {
+    open_streams_[stream->id()] = stream;
+    stream->set_visitor(this);
   }
 }
 
@@ -440,15 +435,19 @@ QuicSpdyClientStream* QuicTestClient::GetOrCreateStream() {
       return nullptr;
     }
   }
-  if (!stream_) {
-    SetStream(client_->CreateClientStream());
-    if (stream_) {
-      stream_->SetPriority(priority_);
-      stream_->set_allow_bidirectional_data(allow_bidirectional_data_);
+  if (open_streams_.empty()) {
+    ClearPerConnectionState();
+  }
+  if (!latest_created_stream_) {
+    SetLatestCreatedStream(client_->CreateClientStream());
+    if (latest_created_stream_) {
+      latest_created_stream_->SetPriority(priority_);
+      latest_created_stream_->set_allow_bidirectional_data(
+          allow_bidirectional_data_);
     }
   }
 
-  return stream_;
+  return latest_created_stream_;
 }
 
 QuicErrorCode QuicTestClient::connection_error() {
@@ -500,6 +499,7 @@ void QuicTestClient::ResetConnection() {
 }
 
 void QuicTestClient::Disconnect() {
+  ClearPerConnectionState();
   client_->Disconnect();
   connect_attempted_ = false;
 }
@@ -510,20 +510,19 @@ QuicSocketAddress QuicTestClient::local_address() const {
 
 void QuicTestClient::ClearPerRequestState() {
   stream_error_ = QUIC_STREAM_NO_ERROR;
-  stream_ = nullptr;
   response_ = "";
   response_complete_ = false;
   response_headers_complete_ = false;
+  preliminary_headers_.clear();
   response_headers_.clear();
+  response_trailers_.clear();
   bytes_read_ = 0;
   bytes_written_ = 0;
   response_body_size_ = 0;
 }
 
 bool QuicTestClient::HaveActiveStream() {
-  return push_promise_data_to_resend_.get() ||
-         (stream_ != nullptr &&
-          !client_->session()->IsClosedStream(stream_->id()));
+  return push_promise_data_to_resend_.get() || !open_streams_.empty();
 }
 
 bool QuicTestClient::WaitUntil(int timeout_ms, std::function<bool()> trigger) {
@@ -541,6 +540,7 @@ bool QuicTestClient::WaitUntil(int timeout_ms, std::function<bool()> trigger) {
          (timeout_us < 0 || clock->Now() < end_waiting_time)) {
     client_->WaitForEvents();
   }
+  ReadNextResponse();
   if (timeout_us > 0) {
     epoll_server()->set_timeout_in_us(old_timeout_us);
   }
@@ -557,22 +557,34 @@ ssize_t QuicTestClient::Send(const void* buffer, size_t size) {
 }
 
 bool QuicTestClient::response_headers_complete() const {
-  if (stream_ != nullptr) {
-    return stream_->headers_decompressed();
+  for (std::pair<QuicStreamId, QuicSpdyClientStream*> stream : open_streams_) {
+    if (stream.second->headers_decompressed()) {
+      return true;
+    }
   }
   return response_headers_complete_;
 }
 
 const SpdyHeaderBlock* QuicTestClient::response_headers() const {
-  if (stream_ != nullptr) {
-    response_headers_ = stream_->response_headers().Clone();
+  for (std::pair<QuicStreamId, QuicSpdyClientStream*> stream : open_streams_) {
+    size_t bytes_read =
+        stream.second->stream_bytes_read() + stream.second->header_bytes_read();
+    if (bytes_read > 0) {
+      response_headers_ = stream.second->response_headers().Clone();
+      break;
+    }
   }
   return &response_headers_;
 }
 
 const SpdyHeaderBlock* QuicTestClient::preliminary_headers() const {
-  if (stream_ != nullptr) {
-    preliminary_headers_ = stream_->preliminary_headers().Clone();
+  for (std::pair<QuicStreamId, QuicSpdyClientStream*> stream : open_streams_) {
+    size_t bytes_read =
+        stream.second->stream_bytes_read() + stream.second->header_bytes_read();
+    if (bytes_read > 0) {
+      preliminary_headers_ = stream.second->preliminary_headers().Clone();
+      break;
+    }
   }
   return &preliminary_headers_;
 }
@@ -586,50 +598,60 @@ int64_t QuicTestClient::response_size() const {
 }
 
 size_t QuicTestClient::bytes_read() const {
-  // While stream_ is available, its member functions provide more accurate
-  // information.  bytes_read_ is updated only when stream_ becomes null.
-  if (stream_) {
-    return stream_->stream_bytes_read() + stream_->header_bytes_read();
-  } else {
-    return bytes_read_;
+  for (std::pair<QuicStreamId, QuicSpdyClientStream*> stream : open_streams_) {
+    size_t bytes_read =
+        stream.second->stream_bytes_read() + stream.second->header_bytes_read();
+    if (bytes_read > 0) {
+      return bytes_read;
+    }
   }
+  return bytes_read_;
 }
 
 size_t QuicTestClient::bytes_written() const {
-  // While stream_ is available, its member functions provide more accurate
-  // information.  bytes_written_ is updated only when stream_ becomes null.
-  if (stream_) {
-    return stream_->stream_bytes_written() + stream_->header_bytes_written();
-  } else {
-    return bytes_written_;
+  for (std::pair<QuicStreamId, QuicSpdyClientStream*> stream : open_streams_) {
+    size_t bytes_written = stream.second->stream_bytes_written() +
+                           stream.second->header_bytes_written();
+    if (bytes_written > 0) {
+      return bytes_written;
+    }
   }
+  return bytes_written_;
 }
 
 void QuicTestClient::OnClose(QuicSpdyStream* stream) {
-  if (stream != nullptr) {
-    // Always close the stream, regardless of whether it was the last stream
-    // written.
-    client()->OnClose(stream);
-    ++num_responses_;
-  }
-  if (stream_ != stream) {
+  if (stream == nullptr) {
     return;
   }
-  if (buffer_body()) {
-    // TODO(fnk): The stream still buffers the whole thing. Fix that.
-    response_ = stream_->data();
+  // Always close the stream, regardless of whether it was the last stream
+  // written.
+  client()->OnClose(stream);
+  ++num_responses_;
+  if (!QuicContainsKey(open_streams_, stream->id())) {
+    return;
   }
-  response_complete_ = true;
-  response_headers_complete_ = stream_->headers_decompressed();
-  response_headers_ = stream_->response_headers().Clone();
-  response_trailers_ = stream_->received_trailers().Clone();
-  preliminary_headers_ = stream_->preliminary_headers().Clone();
-  stream_error_ = stream_->stream_error();
-  bytes_read_ = stream_->stream_bytes_read() + stream_->header_bytes_read();
-  bytes_written_ =
-      stream_->stream_bytes_written() + stream_->header_bytes_written();
-  response_body_size_ = stream_->data().size();
-  stream_ = nullptr;
+  if (latest_created_stream_ == stream) {
+    latest_created_stream_ = nullptr;
+  }
+  QuicSpdyClientStream* client_stream =
+      static_cast<QuicSpdyClientStream*>(stream);
+  QuicStreamId id = client_stream->id();
+  closed_stream_states_.insert(std::make_pair(
+      id,
+      PerStreamState(
+          client_stream->stream_error(), true,
+          client_stream->headers_decompressed(),
+          client_stream->response_headers(),
+          client_stream->preliminary_headers(),
+          (buffer_body() ? client_stream->data() : ""),
+          client_stream->received_trailers(),
+          // Use NumBytesConsumed to avoid counting retransmitted stream frames.
+          QuicStreamPeer::sequencer(client_stream)->NumBytesConsumed() +
+              client_stream->header_bytes_read(),
+          client_stream->stream_bytes_written() +
+              client_stream->header_bytes_written(),
+          client_stream->data().size())));
+  open_streams_.erase(id);
 }
 
 bool QuicTestClient::CheckVary(const SpdyHeaderBlock& client_request,
@@ -641,7 +663,7 @@ bool QuicTestClient::CheckVary(const SpdyHeaderBlock& client_request,
 void QuicTestClient::OnRendezvousResult(QuicSpdyStream* stream) {
   std::unique_ptr<TestClientDataToResend> data_to_resend =
       std::move(push_promise_data_to_resend_);
-  SetStream(static_cast<QuicSpdyClientStream*>(stream));
+  SetLatestCreatedStream(static_cast<QuicSpdyClientStream*>(stream));
   if (stream) {
     stream->OnDataAvailable();
   } else if (data_to_resend.get()) {
@@ -698,6 +720,42 @@ void QuicTestClient::TestClientDataToResend::Resend() {
   headers_.reset();
 }
 
+QuicTestClient::PerStreamState::PerStreamState(const PerStreamState& other)
+    : stream_error(other.stream_error),
+      response_complete(other.response_complete),
+      response_headers_complete(other.response_headers_complete),
+      response_headers(other.response_headers.Clone()),
+      preliminary_headers(other.preliminary_headers.Clone()),
+      response(other.response),
+      response_trailers(other.response_trailers.Clone()),
+      bytes_read(other.bytes_read),
+      bytes_written(other.bytes_written),
+      response_body_size(other.response_body_size) {}
+
+QuicTestClient::PerStreamState::PerStreamState(
+    QuicRstStreamErrorCode stream_error,
+    bool response_complete,
+    bool response_headers_complete,
+    const SpdyHeaderBlock& response_headers,
+    const SpdyHeaderBlock& preliminary_headers,
+    const string& response,
+    const SpdyHeaderBlock& response_trailers,
+    uint64_t bytes_read,
+    uint64_t bytes_written,
+    int64_t response_body_size)
+    : stream_error(stream_error),
+      response_complete(response_complete),
+      response_headers_complete(response_headers_complete),
+      response_headers(response_headers.Clone()),
+      preliminary_headers(preliminary_headers.Clone()),
+      response(response),
+      response_trailers(response_trailers.Clone()),
+      bytes_read(bytes_read),
+      bytes_written(bytes_written),
+      response_body_size(response_body_size) {}
+
+QuicTestClient::PerStreamState::~PerStreamState() {}
+
 bool QuicTestClient::PopulateHeaderBlockFromUrl(const string& uri,
                                                 SpdyHeaderBlock* headers) {
   string url;
@@ -710,6 +768,34 @@ bool QuicTestClient::PopulateHeaderBlockFromUrl(const string& uri,
     url = "https://" + uri;
   }
   return SpdyUtils::PopulateHeaderBlockFromUrl(url, headers);
+}
+
+void QuicTestClient::ReadNextResponse() {
+  if (closed_stream_states_.empty()) {
+    return;
+  }
+
+  PerStreamState state(closed_stream_states_.front().second);
+
+  stream_error_ = state.stream_error;
+  response_ = state.response;
+  response_complete_ = state.response_complete;
+  response_headers_complete_ = state.response_headers_complete;
+  preliminary_headers_ = state.preliminary_headers.Clone();
+  response_headers_ = state.response_headers.Clone();
+  response_trailers_ = state.response_trailers.Clone();
+  bytes_read_ = state.bytes_read;
+  bytes_written_ = state.bytes_written;
+  response_body_size_ = state.response_body_size;
+
+  closed_stream_states_.pop_front();
+}
+
+void QuicTestClient::ClearPerConnectionState() {
+  ClearPerRequestState();
+  open_streams_.clear();
+  closed_stream_states_.clear();
+  latest_created_stream_ = nullptr;
 }
 
 }  // namespace test

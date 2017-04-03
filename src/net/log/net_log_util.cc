@@ -382,6 +382,7 @@ NET_EXPORT std::unique_ptr<base::DictionaryValue> GetNetInfo(
 
       cache_info_dict->SetInteger("capacity",
                                   static_cast<int>(cache->max_entries()));
+      cache_info_dict->SetInteger("network_changes", cache->network_changes());
 
       base::ListValue* entry_list = new base::ListValue();
 
@@ -397,6 +398,8 @@ NET_EXPORT std::unique_ptr<base::DictionaryValue> GetNetInfo(
                                static_cast<int>(key.address_family));
         entry_dict->SetString("expiration",
                               NetLog::TickCountToString(entry.expires()));
+        entry_dict->SetInteger("ttl", entry.ttl().InMilliseconds());
+        entry_dict->SetInteger("network_changes", entry.network_changes());
 
         if (entry.error() != OK) {
           entry_dict->SetInteger("error", entry.error());

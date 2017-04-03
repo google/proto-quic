@@ -69,7 +69,7 @@ NET_EXPORT_PRIVATE extern const char* const kHttp2ConnectionHeaderPrefix;
 const int kHttp2ConnectionHeaderPrefixSize = 24;
 
 // Wire values for HTTP2 frame types.
-enum SpdyFrameType : uint8_t {
+enum class SpdyFrameType : uint8_t {
   DATA = 0x00,
   HEADERS = 0x01,
   PRIORITY = 0x02,
@@ -82,9 +82,7 @@ enum SpdyFrameType : uint8_t {
   CONTINUATION = 0x09,
   // ALTSVC is a public extension.
   ALTSVC = 0x0a,
-  // BLOCKED was never standardized, and should be deleted.
-  BLOCKED = 0x0b,
-  MAX_FRAME_TYPE = BLOCKED,
+  MAX_FRAME_TYPE = ALTSVC,
   // The specific value of EXTENSION is meaningless; it is a placeholder used
   // within SpdyFramer's state machine when handling unknown frames via an
   // extension API.
@@ -152,6 +150,11 @@ enum SpdySettingsIds : uint16_t {
 // overloaded operator to be ambiguous.
 NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
                                             SpdySettingsIds id);
+
+// This operator is needed, because SpdyFrameType is an enum class,
+// therefore implicit conversion to underlying integer type is not allowed.
+NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
+                                            SpdyFrameType frame_type);
 
 using SettingsMap = std::map<SpdySettingsIds, uint32_t>;
 
@@ -221,6 +224,9 @@ NET_EXPORT_PRIVATE bool IsDefinedFrameType(uint8_t frame_type_field);
 // Behavior is undefined for invalid frame type fields; consumers should first
 // use IsValidFrameType() to verify validity of frame type fields.
 NET_EXPORT_PRIVATE SpdyFrameType ParseFrameType(uint8_t frame_type_field);
+
+// Serializes a frame type to the on-the-wire value.
+NET_EXPORT_PRIVATE uint8_t SerializeFrameType(SpdyFrameType frame_type);
 
 // (HTTP/2) All standard frame types except WINDOW_UPDATE are
 // (stream-specific xor connection-level). Returns false iff we know
@@ -372,6 +378,7 @@ class NET_EXPORT_PRIVATE SpdyFrameIR {
   virtual ~SpdyFrameIR() {}
 
   virtual void Visit(SpdyFrameVisitor* visitor) const = 0;
+  virtual SpdyFrameType frame_type() const = 0;
 
  protected:
   SpdyFrameIR() {}
@@ -503,6 +510,8 @@ class NET_EXPORT_PRIVATE SpdyDataIR
 
   void Visit(SpdyFrameVisitor* visitor) const override;
 
+  SpdyFrameType frame_type() const override;
+
  private:
   // Used to store data that this SpdyDataIR should own.
   std::unique_ptr<std::string> data_store_;
@@ -527,6 +536,8 @@ class NET_EXPORT_PRIVATE SpdyRstStreamIR : public SpdyFrameWithStreamIdIR {
 
   void Visit(SpdyFrameVisitor* visitor) const override;
 
+  SpdyFrameType frame_type() const override;
+
  private:
   SpdyErrorCode error_code_;
 
@@ -549,6 +560,8 @@ class NET_EXPORT_PRIVATE SpdySettingsIR : public SpdyFrameIR {
 
   void Visit(SpdyFrameVisitor* visitor) const override;
 
+  SpdyFrameType frame_type() const override;
+
  private:
   SettingsMap values_;
   bool is_ack_;
@@ -565,6 +578,8 @@ class NET_EXPORT_PRIVATE SpdyPingIR : public SpdyFrameIR {
   void set_is_ack(bool is_ack) { is_ack_ = is_ack; }
 
   void Visit(SpdyFrameVisitor* visitor) const override;
+
+  SpdyFrameType frame_type() const override;
 
  private:
   SpdyPingId id_;
@@ -609,6 +624,8 @@ class NET_EXPORT_PRIVATE SpdyGoAwayIR : public SpdyFrameIR {
 
   void Visit(SpdyFrameVisitor* visitor) const override;
 
+  SpdyFrameType frame_type() const override;
+
  private:
   SpdyStreamId last_good_stream_id_;
   SpdyErrorCode error_code_;
@@ -626,6 +643,8 @@ class NET_EXPORT_PRIVATE SpdyHeadersIR : public SpdyFrameWithHeaderBlockIR {
       : SpdyFrameWithHeaderBlockIR(stream_id, std::move(header_block)) {}
 
   void Visit(SpdyFrameVisitor* visitor) const override;
+
+  SpdyFrameType frame_type() const override;
 
   bool has_priority() const { return has_priority_; }
   void set_has_priority(bool has_priority) { has_priority_ = has_priority; }
@@ -674,22 +693,12 @@ class NET_EXPORT_PRIVATE SpdyWindowUpdateIR : public SpdyFrameWithStreamIdIR {
 
   void Visit(SpdyFrameVisitor* visitor) const override;
 
+  SpdyFrameType frame_type() const override;
+
  private:
   int32_t delta_;
 
   DISALLOW_COPY_AND_ASSIGN(SpdyWindowUpdateIR);
-};
-
-class NET_EXPORT_PRIVATE SpdyBlockedIR
-    : public NON_EXPORTED_BASE(SpdyFrameWithStreamIdIR) {
- public:
-  explicit SpdyBlockedIR(SpdyStreamId stream_id)
-      : SpdyFrameWithStreamIdIR(stream_id) {}
-
-  void Visit(SpdyFrameVisitor* visitor) const override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SpdyBlockedIR);
 };
 
 class NET_EXPORT_PRIVATE SpdyPushPromiseIR : public SpdyFrameWithHeaderBlockIR {
@@ -706,6 +715,8 @@ class NET_EXPORT_PRIVATE SpdyPushPromiseIR : public SpdyFrameWithHeaderBlockIR {
   SpdyStreamId promised_stream_id() const { return promised_stream_id_; }
 
   void Visit(SpdyFrameVisitor* visitor) const override;
+
+  SpdyFrameType frame_type() const override;
 
   bool padded() const { return padded_; }
   int padding_payload_len() const { return padding_payload_len_; }
@@ -732,6 +743,8 @@ class NET_EXPORT_PRIVATE SpdyContinuationIR : public SpdyFrameWithStreamIdIR {
   ~SpdyContinuationIR() override;
 
   void Visit(SpdyFrameVisitor* visitor) const override;
+
+  SpdyFrameType frame_type() const override;
 
   bool end_headers() const { return end_headers_; }
   void set_end_headers(bool end_headers) {end_headers_ = end_headers;}
@@ -763,6 +776,8 @@ class NET_EXPORT_PRIVATE SpdyAltSvcIR : public SpdyFrameWithStreamIdIR {
 
   void Visit(SpdyFrameVisitor* visitor) const override;
 
+  SpdyFrameType frame_type() const override;
+
  private:
   std::string origin_;
   SpdyAltSvcWireFormat::AlternativeServiceVector altsvc_vector_;
@@ -792,6 +807,8 @@ class NET_EXPORT_PRIVATE SpdyPriorityIR : public SpdyFrameWithStreamIdIR {
   void set_exclusive(bool exclusive) { exclusive_ = exclusive; }
 
   void Visit(SpdyFrameVisitor* visitor) const override;
+
+  SpdyFrameType frame_type() const override;
 
  private:
   SpdyStreamId parent_stream_id_;
@@ -890,7 +907,6 @@ class SpdyFrameVisitor {
   virtual void VisitGoAway(const SpdyGoAwayIR& goaway) = 0;
   virtual void VisitHeaders(const SpdyHeadersIR& headers) = 0;
   virtual void VisitWindowUpdate(const SpdyWindowUpdateIR& window_update) = 0;
-  virtual void VisitBlocked(const SpdyBlockedIR& blocked) = 0;
   virtual void VisitPushPromise(const SpdyPushPromiseIR& push_promise) = 0;
   virtual void VisitContinuation(const SpdyContinuationIR& continuation) = 0;
   virtual void VisitAltSvc(const SpdyAltSvcIR& altsvc) = 0;

@@ -5,6 +5,7 @@
 #include "base/trace_event/heap_profiler_allocation_register.h"
 
 #include <algorithm>
+#include <limits>
 
 #include "base/trace_event/trace_event_memory_overhead.h"
 
@@ -12,9 +13,9 @@ namespace base {
 namespace trace_event {
 
 AllocationRegister::ConstIterator::ConstIterator(
-    const AllocationRegister& alloc_register, AllocationIndex index)
-    : register_(alloc_register),
-      index_(index) {}
+    const AllocationRegister& alloc_register,
+    AllocationIndex index)
+    : register_(alloc_register), index_(index) {}
 
 void AllocationRegister::ConstIterator::operator++() {
   index_ = register_.allocations_.Next(index_ + 1);
@@ -25,12 +26,12 @@ bool AllocationRegister::ConstIterator::operator!=(
   return index_ != other.index_;
 }
 
-AllocationRegister::Allocation
-AllocationRegister::ConstIterator::operator*() const {
+AllocationRegister::Allocation AllocationRegister::ConstIterator::operator*()
+    const {
   return register_.GetAllocation(index_);
 }
 
-size_t AllocationRegister::BacktraceHasher::operator () (
+size_t AllocationRegister::BacktraceHasher::operator()(
     const Backtrace& backtrace) const {
   const size_t kSampleLength = 10;
 
@@ -42,7 +43,7 @@ size_t AllocationRegister::BacktraceHasher::operator () (
   }
 
   size_t tail_start = backtrace.frame_count -
-      std::min(backtrace.frame_count - head_end, kSampleLength);
+                      std::min(backtrace.frame_count - head_end, kSampleLength);
   for (size_t i = tail_start; i != backtrace.frame_count; ++i) {
     total_value += reinterpret_cast<uintptr_t>(backtrace.frames[i].value);
   }
@@ -55,7 +56,7 @@ size_t AllocationRegister::BacktraceHasher::operator () (
   return (total_value * 131101) >> 14;
 }
 
-size_t AllocationRegister::AddressHasher::operator () (
+size_t AllocationRegister::AddressHasher::operator()(
     const void* address) const {
   // The multiplicative hashing scheme from [Knuth 1998]. The value of |a| has
   // been chosen carefully based on measurements with real-word data (addresses
@@ -75,34 +76,48 @@ AllocationRegister::AllocationRegister()
 
 AllocationRegister::AllocationRegister(size_t allocation_capacity,
                                        size_t backtrace_capacity)
-    : allocations_(allocation_capacity),
-      backtraces_(backtrace_capacity) {}
+    : allocations_(allocation_capacity), backtraces_(backtrace_capacity) {
+  Backtrace sentinel = {};
+  sentinel.frames[0] = StackFrame::FromThreadName("[out of heap profiler mem]");
+  sentinel.frame_count = 1;
 
-AllocationRegister::~AllocationRegister() {
+  // Rationale for max / 2: in theory we could just start the sentinel with a
+  // refcount == 0. However, this optimization avoids to hit the 2nd condition
+  // of the "if" in RemoveBacktrace, hence reducing the chances of hurting the
+  // fastpath. From a functional viewpoint, the sentinel is safe even if we wrap
+  // over the refcount.
+  BacktraceMap::KVPair::second_type sentinel_refcount =
+      std::numeric_limits<BacktraceMap::KVPair::second_type>::max() / 2;
+  auto index_and_flag = backtraces_.Insert(sentinel, sentinel_refcount);
+  DCHECK(index_and_flag.second);
+  out_of_storage_backtrace_index_ = index_and_flag.first;
 }
 
-void AllocationRegister::Insert(const void* address,
+AllocationRegister::~AllocationRegister() {}
+
+bool AllocationRegister::Insert(const void* address,
                                 size_t size,
                                 const AllocationContext& context) {
   DCHECK(address != nullptr);
   if (size == 0) {
-    return;
+    return false;
   }
 
-  AllocationInfo info = {
-      size,
-      context.type_name,
-      InsertBacktrace(context.backtrace)
-  };
+  AllocationInfo info = {size, context.type_name,
+                         InsertBacktrace(context.backtrace)};
 
   // Try to insert the allocation.
   auto index_and_flag = allocations_.Insert(address, info);
-  if (!index_and_flag.second) {
+  if (!index_and_flag.second &&
+      index_and_flag.first != AllocationMap::kInvalidKVIndex) {
     // |address| is already there - overwrite the allocation info.
     auto& old_info = allocations_.Get(index_and_flag.first).second;
     RemoveBacktrace(old_info.backtrace_index);
     old_info = info;
+    return true;
   }
+
+  return index_and_flag.second;
 }
 
 void AllocationRegister::Remove(const void* address) {
@@ -140,15 +155,17 @@ AllocationRegister::ConstIterator AllocationRegister::end() const {
 void AllocationRegister::EstimateTraceMemoryOverhead(
     TraceEventMemoryOverhead* overhead) const {
   size_t allocated = sizeof(AllocationRegister);
-  size_t resident = sizeof(AllocationRegister)
-                    + allocations_.EstimateUsedMemory()
-                    + backtraces_.EstimateUsedMemory();
+  size_t resident = sizeof(AllocationRegister) +
+                    allocations_.EstimateUsedMemory() +
+                    backtraces_.EstimateUsedMemory();
   overhead->Add("AllocationRegister", allocated, resident);
 }
 
 AllocationRegister::BacktraceMap::KVIndex AllocationRegister::InsertBacktrace(
     const Backtrace& backtrace) {
   auto index = backtraces_.Insert(backtrace, 0).first;
+  if (index == BacktraceMap::kInvalidKVIndex)
+    return out_of_storage_backtrace_index_;
   auto& backtrace_and_count = backtraces_.Get(index);
   backtrace_and_count.second++;
   return index;
@@ -156,7 +173,8 @@ AllocationRegister::BacktraceMap::KVIndex AllocationRegister::InsertBacktrace(
 
 void AllocationRegister::RemoveBacktrace(BacktraceMap::KVIndex index) {
   auto& backtrace_and_count = backtraces_.Get(index);
-  if (--backtrace_and_count.second == 0) {
+  if (--backtrace_and_count.second == 0 &&
+      index != out_of_storage_backtrace_index_) {
     // Backtrace is not referenced anymore - remove it.
     backtraces_.Remove(index);
   }
@@ -165,15 +183,11 @@ void AllocationRegister::RemoveBacktrace(BacktraceMap::KVIndex index) {
 AllocationRegister::Allocation AllocationRegister::GetAllocation(
     AllocationMap::KVIndex index) const {
   const auto& address_and_info = allocations_.Get(index);
-  const auto& backtrace_and_count = backtraces_.Get(
-      address_and_info.second.backtrace_index);
-  return {
-      address_and_info.first,
-      address_and_info.second.size,
-      AllocationContext(
-          backtrace_and_count.first,
-          address_and_info.second.type_name)
-  };
+  const auto& backtrace_and_count =
+      backtraces_.Get(address_and_info.second.backtrace_index);
+  return {address_and_info.first, address_and_info.second.size,
+          AllocationContext(backtrace_and_count.first,
+                            address_and_info.second.type_name)};
 }
 
 }  // namespace trace_event

@@ -112,6 +112,8 @@ static_library("libxml") {
     "src/include/libxml/globals.h",
     "src/include/libxml/hash.h",
     "src/include/libxml/list.h",
+    "src/include/libxml/nanoftp.h",
+    "src/include/libxml/nanohttp.h",
     "src/include/libxml/parser.h",
     "src/include/libxml/parserInternals.h",
     "src/include/libxml/pattern.h",
@@ -155,6 +157,8 @@ static_library("libxml") {
     "src/threads.c",
     "src/timsort.h",
     "src/tree.c",
+    "src/triodef.h",
+    "src/trionan.h",
 
     #"src/trio.c",
     #"src/trio.h",

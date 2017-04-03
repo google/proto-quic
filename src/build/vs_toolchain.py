@@ -304,28 +304,6 @@ def CopyDlls(target_dir, configuration, target_cpu):
   if configuration == 'Debug':
     _CopyRuntime(target_dir, runtime_dir, target_cpu, debug=True)
 
-  _CopyDebugger(target_dir, target_cpu)
-
-
-def _CopyDebugger(target_dir, target_cpu):
-  """Copy cdb.exe into the requested directory as needed.
-
-  target_cpu is one of 'x86' or 'x64'.
-
-  This is used for the GN build.
-  """
-  win_sdk_dir = SetEnvironmentAndGetSDKDir()
-  if not win_sdk_dir:
-    return
-
-  debugger_files = (
-        'cdb.exe', 'dbgeng.dll', 'dbghelp.dll', 'dbgmodel.dll', 'dbgcore.dll')
-
-  for debug_file in debugger_files:
-    full_path = os.path.join(win_sdk_dir, 'Debuggers', target_cpu, debug_file)
-    target_path = os.path.join(target_dir, debug_file)
-    _CopyRuntimeImpl(target_path, full_path)
-
 
 def _GetDesiredVsToolchainHashes():
   """Load a list of SHA1s corresponding to the toolchains that we want installed

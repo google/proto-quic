@@ -98,6 +98,10 @@ bool QuicDataReader::ReadConnectionId(uint64_t* connection_id) {
   return true;
 }
 
+bool QuicDataReader::ReadTag(uint32_t* tag) {
+  return ReadBytes(tag, sizeof(*tag));
+}
+
 QuicStringPiece QuicDataReader::ReadRemainingPayload() {
   QuicStringPiece payload = PeekRemainingPayload();
   pos_ = len_;

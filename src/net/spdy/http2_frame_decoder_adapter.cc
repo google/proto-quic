@@ -44,8 +44,6 @@ namespace {
 const bool kHasPriorityFields = true;
 const bool kNotHasPriorityFields = false;
 
-const Http2FrameType kFrameTypeBlocked = Http2FrameType(11);
-
 bool IsPaddable(Http2FrameType type) {
   return type == Http2FrameType::DATA || type == Http2FrameType::HEADERS ||
          type == Http2FrameType::PUSH_PROMISE;
@@ -164,8 +162,7 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
     const uint8_t raw_frame_type = static_cast<uint8_t>(header.type);
     visitor()->OnCommonHeader(header.stream_id, header.payload_length,
                               raw_frame_type, header.flags);
-    if (!IsSupportedHttp2FrameType(header.type) &&
-        header.type != kFrameTypeBlocked) {
+    if (!IsSupportedHttp2FrameType(header.type)) {
       // In HTTP2 we ignore unknown frame types for extensibility, as long as
       // the rest of the control frame header is valid.
       // We rely on the visitor to check validity of stream_id.
@@ -523,11 +520,6 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
   // effectively dropped.
   void OnUnknownStart(const Http2FrameHeader& header) override {
     DVLOG(1) << "OnUnknownStart: " << header;
-    if (IsOkToStartFrame(header)) {
-      if (header.type == kFrameTypeBlocked) {
-        visitor()->OnBlocked(header.stream_id);
-      }
-    }
   }
 
   void OnUnknownPayload(const char* data, size_t len) override {

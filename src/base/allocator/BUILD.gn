@@ -65,12 +65,10 @@ config("tcmalloc_flags") {
       # tcmalloc contains some unused local template specializations.
       "-Wno-unused-function",
 
-      # tcmalloc uses COMPILE_ASSERT without static_assert but with
-      # typedefs.
+      # tcmalloc uses COMPILE_ASSERT without static_assert but with typedefs.
       "-Wno-unused-local-typedefs",
 
-      # for magic2_ in debugallocation.cc (only built in Debug builds)
-      # typedefs.
+      # for magic2_ in debugallocation.cc (only built in Debug builds) typedefs.
       "-Wno-unused-private-field",
     ]
   } else {
@@ -166,12 +164,15 @@ if (use_allocator == "tcmalloc") {
       "$tcmalloc_dir/src/heap-profile-table.cc",
       "$tcmalloc_dir/src/heap-profile-table.h",
       "$tcmalloc_dir/src/heap-profiler.cc",
+      "$tcmalloc_dir/src/heap-profiler.h",
       "$tcmalloc_dir/src/internal_logging.cc",
       "$tcmalloc_dir/src/internal_logging.h",
       "$tcmalloc_dir/src/linked_list.h",
       "$tcmalloc_dir/src/malloc_extension.cc",
+      "$tcmalloc_dir/src/malloc_extension.h",
       "$tcmalloc_dir/src/malloc_hook-inl.h",
       "$tcmalloc_dir/src/malloc_hook.cc",
+      "$tcmalloc_dir/src/malloc_hook.h",
       "$tcmalloc_dir/src/maybe_threads.cc",
       "$tcmalloc_dir/src/maybe_threads.h",
       "$tcmalloc_dir/src/memory_region_map.cc",
@@ -187,6 +188,7 @@ if (use_allocator == "tcmalloc") {
       "$tcmalloc_dir/src/stack_trace_table.cc",
       "$tcmalloc_dir/src/stack_trace_table.h",
       "$tcmalloc_dir/src/stacktrace.cc",
+      "$tcmalloc_dir/src/stacktrace.h",
       "$tcmalloc_dir/src/static_vars.cc",
       "$tcmalloc_dir/src/static_vars.h",
       "$tcmalloc_dir/src/symbolize.cc",
@@ -196,6 +198,7 @@ if (use_allocator == "tcmalloc") {
 
       # #included by debugallocation_shim.cc
       #"$tcmalloc_dir/src/tcmalloc.cc",
+      #"$tcmalloc_dir/src/tcmalloc.h",
       "$tcmalloc_dir/src/thread_cache.cc",
       "$tcmalloc_dir/src/thread_cache.h",
       "$tcmalloc_dir/src/windows/port.cc",

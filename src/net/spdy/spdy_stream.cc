@@ -32,38 +32,6 @@ namespace net {
 
 namespace {
 
-enum StatusHeader {
-  STATUS_HEADER_NOT_INCLUDED = 0,
-  STATUS_HEADER_DOES_NOT_START_WITH_NUMBER = 1,
-  STATUS_HEADER_IS_NUMBER = 2,
-  STATUS_HEADER_HAS_STATUS_TEXT = 3,
-  STATUS_HEADER_MAX = STATUS_HEADER_HAS_STATUS_TEXT
-};
-
-StatusHeader ParseStatusHeaderImpl(const SpdyHeaderBlock& response_headers,
-                                   int* status) {
-  SpdyHeaderBlock::const_iterator it = response_headers.find(":status");
-  if (it == response_headers.end())
-    return STATUS_HEADER_NOT_INCLUDED;
-
-  // Save status in |*status| even if some text follows the status code.
-  SpdyStringPiece status_string = it->second;
-  SpdyStringPiece::size_type end = status_string.find(' ');
-  if (!StringToInt(status_string.substr(0, end), status))
-    return STATUS_HEADER_DOES_NOT_START_WITH_NUMBER;
-
-  return end == SpdyStringPiece::npos ? STATUS_HEADER_IS_NUMBER
-                                      : STATUS_HEADER_HAS_STATUS_TEXT;
-}
-
-StatusHeader ParseStatusHeader(const SpdyHeaderBlock& response_headers,
-                               int* status) {
-  StatusHeader status_header = ParseStatusHeaderImpl(response_headers, status);
-  UMA_HISTOGRAM_ENUMERATION("Net.Http2ResponseStatusHeader", status_header,
-                            STATUS_HEADER_MAX + 1);
-  return status_header;
-}
-
 std::unique_ptr<base::Value> NetLogSpdyStreamErrorCallback(
     SpdyStreamId stream_id,
     int status,
@@ -412,34 +380,32 @@ void SpdyStream::OnHeadersReceived(const SpdyHeaderBlock& response_headers,
                                    base::Time response_time,
                                    base::TimeTicks recv_first_byte_time) {
   switch (response_state_) {
-    case READY_FOR_HEADERS: {
+    case READY_FOR_HEADERS:
       // No header block has been received yet.
       DCHECK(response_headers_.empty());
-      int status;
-      switch (ParseStatusHeader(response_headers, &status)) {
-        case STATUS_HEADER_NOT_INCLUDED: {
+
+      {
+        SpdyHeaderBlock::const_iterator it = response_headers.find(":status");
+        if (it == response_headers.end()) {
           const std::string error("Response headers do not include :status.");
           LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
           session_->ResetStream(stream_id_, ERROR_CODE_PROTOCOL_ERROR, error);
           return;
         }
-        case STATUS_HEADER_DOES_NOT_START_WITH_NUMBER: {
+
+        int status;
+        if (!StringToInt(it->second, &status)) {
           const std::string error("Cannot parse :status.");
           LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
           session_->ResetStream(stream_id_, ERROR_CODE_PROTOCOL_ERROR, error);
           return;
         }
-        // Intentional fallthrough for the following two cases,
-        // to maintain compatibility with broken servers that include
-        // status text in the response.
-        case STATUS_HEADER_IS_NUMBER:
-        case STATUS_HEADER_HAS_STATUS_TEXT:
-          // Ignore informational headers.
-          // TODO(bnc): Add support for 103 Early Hints,
-          // https://crbug.com/671310.
-          if (status / 100 == 1) {
-            return;
-          }
+
+        // Ignore informational headers.
+        // TODO(bnc): Add support for 103 Early Hints, https://crbug.com/671310.
+        if (status / 100 == 1) {
+          return;
+        }
       }
 
       response_state_ = READY_FOR_DATA_OR_TRAILERS;
@@ -477,7 +443,7 @@ void SpdyStream::OnHeadersReceived(const SpdyHeaderBlock& response_headers,
       SaveResponseHeaders(response_headers);
 
       break;
-    }
+
     case READY_FOR_DATA_OR_TRAILERS:
       // Second header block is trailers.
       if (type_ == SPDY_PUSH_STREAM) {
@@ -594,15 +560,17 @@ void SpdyStream::OnPaddingConsumed(size_t len) {
 void SpdyStream::OnFrameWriteComplete(SpdyFrameType frame_type,
                                       size_t frame_size) {
   // PRIORITY writes are allowed at any time and do not trigger a state update.
-  if (frame_type == PRIORITY) {
+  if (frame_type == SpdyFrameType::PRIORITY) {
     return;
   }
 
   DCHECK_NE(type_, SPDY_PUSH_STREAM);
-  CHECK(frame_type == HEADERS || frame_type == DATA) << frame_type;
+  CHECK(frame_type == SpdyFrameType::HEADERS ||
+        frame_type == SpdyFrameType::DATA)
+      << frame_type;
 
-  int result =
-      (frame_type == HEADERS) ? OnHeadersSent() : OnDataSent(frame_size);
+  int result = (frame_type == SpdyFrameType::HEADERS) ? OnHeadersSent()
+                                                      : OnDataSent(frame_size);
   if (result == ERR_IO_PENDING) {
     // The write operation hasn't completed yet.
     return;
@@ -622,7 +590,7 @@ void SpdyStream::OnFrameWriteComplete(SpdyFrameType frame_type,
   {
     base::WeakPtr<SpdyStream> weak_this = GetWeakPtr();
     write_handler_guard_ = true;
-    if (frame_type == HEADERS) {
+    if (frame_type == SpdyFrameType::HEADERS) {
       delegate_->OnHeadersSent();
     } else {
       delegate_->OnDataSent();
@@ -735,7 +703,7 @@ int SpdyStream::SendRequestHeaders(SpdyHeaderBlock request_headers,
   request_headers_valid_ = true;
   url_from_header_block_ = GetUrlFromHeaderBlock(request_headers_);
   pending_send_status_ = send_status;
-  session_->EnqueueStreamWrite(GetWeakPtr(), HEADERS,
+  session_->EnqueueStreamWrite(GetWeakPtr(), SpdyFrameType::HEADERS,
                                std::unique_ptr<SpdyBufferProducer>(
                                    new HeadersBufferProducer(GetWeakPtr())));
   return ERR_IO_PENDING;
@@ -905,7 +873,7 @@ void SpdyStream::QueueNextDataFrame() {
   }
 
   session_->EnqueueStreamWrite(
-      GetWeakPtr(), DATA,
+      GetWeakPtr(), SpdyFrameType::DATA,
       std::unique_ptr<SpdyBufferProducer>(
           new SimpleBufferProducer(std::move(data_buffer))));
 }

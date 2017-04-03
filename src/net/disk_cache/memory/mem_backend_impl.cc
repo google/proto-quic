@@ -48,7 +48,7 @@ MemBackendImpl::~MemBackendImpl() {
   DCHECK(CheckLRUListOrder(lru_list_));
   while (!entries_.empty())
     entries_.begin()->second->Doom();
-  DCHECK(!current_size_);
+  DCHECK_EQ(0, current_size_);
 }
 
 // static
@@ -126,6 +126,10 @@ void MemBackendImpl::ModifyStorageSize(int32_t delta) {
   current_size_ += delta;
   if (delta > 0)
     EvictIfNeeded();
+}
+
+bool MemBackendImpl::HasExceededStorageSize() const {
+  return current_size_ > max_size_;
 }
 
 net::CacheType MemBackendImpl::GetCacheType() const {
