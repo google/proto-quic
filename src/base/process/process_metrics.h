@@ -67,8 +67,12 @@ struct IoCounters {
 // shareable:      0
 // swapped         Pages swapped out to zram.
 //
-// On OS X: TODO(thakis): Revise.
-// priv:           Memory.
+// On macOS:
+// priv:           Resident size (RSS) including shared memory. Warning: This
+//                 does not include compressed size and does not always
+//                 accurately account for shared memory due to things like
+//                 copy-on-write. TODO(erikchen): Revamp this with something
+//                 more accurate.
 // shared:         0
 // shareable:      0
 //

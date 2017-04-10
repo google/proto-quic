@@ -43,7 +43,7 @@ bool NullDecrypter::DecryptPacket(QuicVersion version,
                                   char* output,
                                   size_t* output_length,
                                   size_t max_output_length) {
-  QuicDataReader reader(ciphertext.data(), ciphertext.length());
+  QuicDataReader reader(ciphertext.data(), ciphertext.length(), perspective_);
   uint128 hash;
 
   if (!ReadHash(&reader, &hash)) {

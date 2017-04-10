@@ -832,7 +832,11 @@ int SSL_send_fatal_alert(SSL *ssl, uint8_t alert) {
 }
 
 void SSL_CTX_set_early_data_enabled(SSL_CTX *ctx, int enabled) {
-  ctx->enable_early_data = !!enabled;
+  ctx->cert->enable_early_data = !!enabled;
+}
+
+void SSL_set_early_data_enabled(SSL *ssl, int enabled) {
+  ssl->cert->enable_early_data = !!enabled;
 }
 
 int SSL_early_data_accepted(const SSL *ssl) {
@@ -1749,6 +1753,9 @@ void SSL_get0_alpn_selected(const SSL *ssl, const uint8_t **out_data,
   }
 }
 
+void SSL_CTX_set_allow_unknown_alpn_protos(SSL_CTX *ctx, int enabled) {
+  ctx->allow_unknown_alpn_protos = !!enabled;
+}
 
 void SSL_CTX_set_tls_channel_id_enabled(SSL_CTX *ctx, int enabled) {
   ctx->tlsext_channel_id_enabled = !!enabled;

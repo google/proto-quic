@@ -216,9 +216,6 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   // Performs a crypto handshake with the server.
   int CryptoConnect(const CompletionCallback& callback);
 
-  // Resumes a crypto handshake with the server after a timeout.
-  int ResumeCryptoConnect(const CompletionCallback& callback);
-
   // Causes the QuicConnectionHelper to start reading from all sockets
   // and passing the data along to the QuicConnection.
   void StartReading();

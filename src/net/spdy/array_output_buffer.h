@@ -5,7 +5,7 @@
 #ifndef NET_SPDY_ARRAY_OUTPUT_BUFFER_H_
 #define NET_SPDY_ARRAY_OUTPUT_BUFFER_H_
 
-#include <string.h>
+#include <cstddef>
 #include "net/spdy/zero_copy_output_buffer.h"
 
 namespace net {

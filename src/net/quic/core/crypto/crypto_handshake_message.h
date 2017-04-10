@@ -34,7 +34,7 @@ class QUIC_EXPORT_PRIVATE CryptoHandshakeMessage {
 
   // GetSerialized returns the serialized form of this message and caches the
   // result. Subsequently altering the message does not invalidate the cache.
-  const QuicData& GetSerialized() const;
+  const QuicData& GetSerialized(Perspective perspective) const;
 
   // MarkDirty invalidates the cache created by |GetSerialized|.
   void MarkDirty();
@@ -110,7 +110,7 @@ class QUIC_EXPORT_PRIVATE CryptoHandshakeMessage {
 
   // DebugString returns a multi-line, string representation of the message
   // suitable for including in debug output.
-  std::string DebugString() const;
+  std::string DebugString(Perspective perspective) const;
 
  private:
   // GetPOD is a utility function for extracting a plain-old-data value. If
@@ -122,7 +122,7 @@ class QUIC_EXPORT_PRIVATE CryptoHandshakeMessage {
   // little-endian.
   QuicErrorCode GetPOD(QuicTag tag, void* out, size_t len) const;
 
-  std::string DebugStringInternal(size_t indent) const;
+  std::string DebugStringInternal(size_t indent, Perspective perspective) const;
 
   QuicTag tag_;
   QuicTagValueMap tag_value_map_;

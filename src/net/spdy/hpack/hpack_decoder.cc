@@ -14,8 +14,6 @@
 
 namespace net {
 
-using std::string;
-
 HpackDecoder::HpackDecoder()
     : handler_(nullptr),
       total_header_bytes_(0),
@@ -271,7 +269,7 @@ bool HpackDecoder::DecodeNextStringLiteral(HpackInputStream* input_stream,
                                            bool is_key,
                                            SpdyStringPiece* output) {
   if (input_stream->MatchPrefixAndConsume(kStringLiteralHuffmanEncoded)) {
-    string* buffer = is_key ? &key_buffer_ : &value_buffer_;
+    SpdyString* buffer = is_key ? &key_buffer_ : &value_buffer_;
     bool result = input_stream->DecodeNextHuffmanString(buffer);
     *output = SpdyStringPiece(*buffer);
     return result;

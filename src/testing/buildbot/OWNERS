@@ -9,7 +9,6 @@ machenbach@chromium.org
 maruel@chromium.org
 phajdan.jr@chromium.org
 sky@chromium.org
-stip@chromium.org
 tansell@chromium.org
 thakis@chromium.org
 
@@ -31,4 +30,5 @@ per-file chromium.perf.json=sullivan@chromium.org
 per-file chromium.webrtc.json=kjellander@chromium.org
 per-file chromium.webrtc.fyi.json=kjellander@chromium.org
 
-# COMPONENT: Infra>Client
+# TEAM: infra-dev@chromium.org
+# COMPONENT: Infra>Client>Chrome

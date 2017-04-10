@@ -246,6 +246,9 @@ char kTSanDefaultSuppressions[] =
 "race:net::(anonymous namespace)::ProxyResolverV8TracingImpl::RequestImpl"
 "::~RequestImpl()\n"
 
+// http://crbug.com/691029
+"deadlock:libGLX.so*\n"
+
 // End of suppressions.
 ;  // Please keep this semicolon.
 

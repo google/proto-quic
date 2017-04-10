@@ -29,7 +29,9 @@ trusted = common.TrustAnchor(root, constrained=True)
 # Both the target and intermediate are valid at this time, however the
 # root is not.
 time = common.MARCH_2_2015_UTC
+key_purpose = common.DEFAULT_KEY_PURPOSE
 verify_result = True
 errors = None
 
-common.write_test_file(__doc__, chain, trusted, time, verify_result, errors)
+common.write_test_file(__doc__, chain, trusted, time, key_purpose,
+                       verify_result, errors)

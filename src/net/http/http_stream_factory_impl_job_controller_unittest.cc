@@ -72,6 +72,8 @@ class FailingHostResolver : public MockHostResolverBase {
   }
 };
 
+// TODO(xunjieli): This should just use HangingHostResolver from
+// mock_host_resolver.h
 class HangingResolver : public MockHostResolverBase {
  public:
   HangingResolver() : MockHostResolverBase(false /*use_caching*/) {}
@@ -127,6 +129,8 @@ class HttpStreamFactoryImplJobControllerTest : public ::testing::Test {
       : session_deps_(ProxyService::CreateDirect()),
         use_alternative_proxy_(false),
         is_preconnect_(false),
+        enable_ip_based_pooling_(true),
+        enable_alternative_services_(true),
         test_proxy_delegate_(nullptr) {
     session_deps_.enable_quic = true;
   }
@@ -139,6 +143,16 @@ class HttpStreamFactoryImplJobControllerTest : public ::testing::Test {
   void SetPreconnect() {
     ASSERT_FALSE(test_proxy_delegate_);
     is_preconnect_ = true;
+  }
+
+  void DisableIPBasedPooling() {
+    ASSERT_FALSE(test_proxy_delegate_);
+    enable_ip_based_pooling_ = false;
+  }
+
+  void DisableAlternativeServices() {
+    ASSERT_FALSE(test_proxy_delegate_);
+    enable_alternative_services_ = false;
   }
 
   void Initialize(const HttpRequestInfo& request_info) {
@@ -162,7 +176,8 @@ class HttpStreamFactoryImplJobControllerTest : public ::testing::Test {
         static_cast<HttpStreamFactoryImpl*>(session_->http_stream_factory());
     job_controller_ = new HttpStreamFactoryImpl::JobController(
         factory_, &request_delegate_, session_.get(), &job_factory_,
-        request_info, is_preconnect_, /* enable_ip_based_pooling = */ true);
+        request_info, is_preconnect_, enable_ip_based_pooling_,
+        enable_alternative_services_);
     HttpStreamFactoryImplPeer::AddJobController(factory_, job_controller_);
   }
 
@@ -203,6 +218,8 @@ class HttpStreamFactoryImplJobControllerTest : public ::testing::Test {
  private:
   bool use_alternative_proxy_;
   bool is_preconnect_;
+  bool enable_ip_based_pooling_;
+  bool enable_alternative_services_;
 
   // Not owned by |this|.
   TestProxyDelegate* test_proxy_delegate_;
@@ -899,8 +916,10 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
 
 TEST_F(HttpStreamFactoryImplJobControllerTest, DelayedTCP) {
   base::ScopedMockTimeMessageLoopTaskRunner test_task_runner;
-  HangingResolver* resolver = new HangingResolver();
-  session_deps_.host_resolver.reset(resolver);
+  auto failing_resolver = base::MakeUnique<MockHostResolver>();
+  failing_resolver->set_ondemand_mode(true);
+  failing_resolver->rules()->AddSimulatedFailure("*google.com");
+  session_deps_.host_resolver = std::move(failing_resolver);
 
   HttpRequestInfo request_info;
   request_info.method = "GET";
@@ -948,10 +967,12 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, DelayedTCP) {
   // OnStreamFailed will post a task to resume the main job immediately but
   // won't call Resume() on the main job since it's been resumed already.
   EXPECT_CALL(*job_factory_.main_job(), Resume()).Times(0);
-  job_controller_->OnStreamFailed(job_factory_.alternative_job(),
-                                  ERR_NETWORK_CHANGED, SSLConfig());
+  // Now unblock Resolver so that alternate job (and QuicStreamFactory::Job) can
+  // be cleaned up.
+  session_deps_.host_resolver->ResolveAllPending();
   EXPECT_EQ(1u, test_task_runner->GetPendingTaskCount());
   test_task_runner->FastForwardUntilNoTasksRemain();
+  EXPECT_FALSE(job_controller_->alternative_job());
 }
 
 // Test that main job is blocked for kMaxDelayTimeForMainJob(3s) if
@@ -964,8 +985,10 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, DelayedTCPWithLargeSrtt) {
   base::ScopedMockTimeMessageLoopTaskRunner test_task_runner;
   // The max delay time should be in sync with .cc file.
   base::TimeDelta kMaxDelayTimeForMainJob = base::TimeDelta::FromSeconds(3);
-  HangingResolver* resolver = new HangingResolver();
-  session_deps_.host_resolver.reset(resolver);
+  auto failing_resolver = base::MakeUnique<MockHostResolver>();
+  failing_resolver->set_ondemand_mode(true);
+  failing_resolver->rules()->AddSimulatedFailure("*google.com");
+  session_deps_.host_resolver = std::move(failing_resolver);
 
   HttpRequestInfo request_info;
   request_info.method = "GET";
@@ -1005,6 +1028,13 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, DelayedTCPWithLargeSrtt) {
   // main job is resumed.
   test_task_runner->FastForwardBy(kMaxDelayTimeForMainJob);
   EXPECT_FALSE(test_task_runner->HasPendingTask());
+
+  // Now unblock Resolver so that alternate job (and QuicStreamFactory::Job) can
+  // be cleaned up.
+  session_deps_.host_resolver->ResolveAllPending();
+  EXPECT_EQ(1u, test_task_runner->GetPendingTaskCount());
+  test_task_runner->FastForwardUntilNoTasksRemain();
+  EXPECT_FALSE(job_controller_->alternative_job());
 }
 
 TEST_F(HttpStreamFactoryImplJobControllerTest,
@@ -1013,8 +1043,10 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   // could verify the main job is resumed with appropriate delay.
   base::ScopedMockTimeMessageLoopTaskRunner test_task_runner;
 
-  HangingResolver* resolver = new HangingResolver();
-  session_deps_.host_resolver.reset(resolver);
+  auto failing_resolver = base::MakeUnique<MockHostResolver>();
+  failing_resolver->set_ondemand_mode(true);
+  failing_resolver->rules()->AddSimulatedFailure("*google.com");
+  session_deps_.host_resolver = std::move(failing_resolver);
 
   HttpRequestInfo request_info;
   request_info.method = "GET";
@@ -1052,8 +1084,8 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
 
   // |alternative_job| fails but should not report status to Request.
   EXPECT_CALL(request_delegate_, OnStreamFailed(_, _)).Times(0);
-  job_controller_->OnStreamFailed(job_factory_.alternative_job(),
-                                  ERR_NETWORK_CHANGED, SSLConfig());
+  // Now unblock Resolver to fail the alternate job.
+  session_deps_.host_resolver->ResolveAllPending();
   EXPECT_EQ(2u, test_task_runner->GetPendingTaskCount());
 
   // Verify the main job will be resumed immediately.
@@ -1069,6 +1101,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   EXPECT_CALL(*job_factory_.main_job(), Resume()).Times(0);
   test_task_runner->FastForwardBy(base::TimeDelta::FromMicroseconds(15));
   EXPECT_FALSE(test_task_runner->HasPendingTask());
+  EXPECT_FALSE(job_controller_->alternative_job());
 }
 
 // Verifies that the alternative proxy server job is not created if the URL
@@ -1132,9 +1165,10 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, DelayedTCPAlternativeProxy) {
   // could verify the main job is resumed with appropriate delay.
   base::ScopedMockTimeMessageLoopTaskRunner test_task_runner;
 
-  // Using hanging resolver will cause the alternative job to hang indefinitely.
-  HangingResolver* resolver = new HangingResolver();
-  session_deps_.host_resolver.reset(resolver);
+  auto failing_resolver = base::MakeUnique<MockHostResolver>();
+  failing_resolver->set_ondemand_mode(true);
+  failing_resolver->rules()->AddSimulatedFailure("*myproxy.org");
+  session_deps_.host_resolver = std::move(failing_resolver);
 
   UseAlternativeProxy();
 
@@ -1183,6 +1217,13 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, DelayedTCPAlternativeProxy) {
   EXPECT_TRUE(test_proxy_delegate()->alternative_proxy_server().is_valid());
   EXPECT_EQ(1, test_proxy_delegate()->get_alternative_proxy_invocations());
   EXPECT_FALSE(test_task_runner->HasPendingTask());
+
+  // Now unblock Resolver so that alternate job (and QuicStreamFactory::Job) can
+  // be cleaned up.
+  session_deps_.host_resolver->ResolveAllPending();
+  EXPECT_EQ(1u, test_task_runner->GetPendingTaskCount());
+  test_task_runner->FastForwardUntilNoTasksRemain();
+  EXPECT_FALSE(job_controller_->alternative_job());
 }
 
 // Verifies that the alternative proxy server job fails immediately, and the
@@ -1316,6 +1357,64 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   EXPECT_TRUE(HttpStreamFactoryImplPeer::IsJobControllerDeleted(factory_));
 }
 
+class HttpStreamFactoryImplJobControllerMisdirectedRequestRetry
+    : public HttpStreamFactoryImplJobControllerTest,
+      public ::testing::WithParamInterface<::testing::tuple<bool, bool>> {};
+
+INSTANTIATE_TEST_CASE_P(
+    /* no prefix */,
+    HttpStreamFactoryImplJobControllerMisdirectedRequestRetry,
+    ::testing::Combine(::testing::Bool(), ::testing::Bool()));
+
+TEST_P(HttpStreamFactoryImplJobControllerMisdirectedRequestRetry,
+       DisableIPBasedPoolingAndAlternativeServices) {
+  const bool enable_ip_based_pooling = ::testing::get<0>(GetParam());
+  const bool enable_alternative_services = ::testing::get<1>(GetParam());
+
+  ProxyConfig proxy_config;
+  proxy_config.set_auto_detect(true);
+  // Use asynchronous proxy resolver.
+  MockAsyncProxyResolverFactory* proxy_resolver_factory =
+      new MockAsyncProxyResolverFactory(false);
+  session_deps_.proxy_service.reset(
+      new ProxyService(base::MakeUnique<ProxyConfigServiceFixed>(proxy_config),
+                       base::WrapUnique(proxy_resolver_factory), nullptr));
+  HttpRequestInfo request_info;
+  request_info.method = "GET";
+  request_info.url = GURL("https://www.google.com");
+
+  if (!enable_ip_based_pooling)
+    DisableIPBasedPooling();
+  if (!enable_alternative_services)
+    DisableAlternativeServices();
+
+  Initialize(request_info);
+
+  url::SchemeHostPort server(request_info.url);
+  AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
+  SetAlternativeService(request_info, alternative_service);
+
+  request_.reset(
+      job_controller_->Start(request_info, &request_delegate_, nullptr,
+                             NetLogWithSource(), HttpStreamRequest::HTTP_STREAM,
+                             DEFAULT_PRIORITY, SSLConfig(), SSLConfig()));
+  EXPECT_TRUE(job_controller_->main_job());
+  if (enable_alternative_services) {
+    EXPECT_TRUE(job_controller_->alternative_job());
+  } else {
+    EXPECT_FALSE(job_controller_->alternative_job());
+  }
+
+  // |main_job| succeeds and should report status to Request.
+  HttpStream* http_stream =
+      new HttpBasicStream(base::MakeUnique<ClientSocketHandle>(), false, false);
+  job_factory_.main_job()->SetStream(http_stream);
+
+  EXPECT_CALL(request_delegate_, OnStreamReady(_, _, http_stream))
+      .WillOnce(Invoke(DeleteHttpStreamPointer));
+  job_controller_->OnStreamReady(job_factory_.main_job(), SSLConfig());
+}
+
 class HttpStreamFactoryImplJobControllerPreconnectTest
     : public HttpStreamFactoryImplJobControllerTest,
       public ::testing::WithParamInterface<bool> {
@@ -1338,7 +1437,8 @@ class HttpStreamFactoryImplJobControllerPreconnectTest
     job_controller_ = new HttpStreamFactoryImpl::JobController(
         factory_, &request_delegate_, session_.get(), &job_factory_,
         request_info_, /* is_preconnect = */ true,
-        /* enable_ip_based_pooling = */ true);
+        /* enable_ip_based_pooling = */ true,
+        /* enable_alternative_services = */ true);
     HttpStreamFactoryImplPeer::AddJobController(factory_, job_controller_);
   }
 

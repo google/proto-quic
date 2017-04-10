@@ -19,6 +19,13 @@ namespace base {
 
 class Pickle;
 
+#if !defined(OS_NACL_NONSFI)
+// Creates a connected pair of UNIX-domain SOCK_SEQPACKET sockets, and passes
+// ownership of the newly allocated file descriptors to |one| and |two|.
+// Returns true on success.
+bool BASE_EXPORT CreateSocketPair(ScopedFD* one, ScopedFD* two);
+#endif
+
 class BASE_EXPORT UnixDomainSocket {
  public:
   // Maximum number of file descriptors that can be read by RecvMsg().

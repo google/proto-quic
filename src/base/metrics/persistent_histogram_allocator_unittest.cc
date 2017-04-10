@@ -281,4 +281,41 @@ TEST_F(PersistentHistogramAllocatorTest, StatisticsRecorderMergeTest) {
   EXPECT_EQ(1, snapshot->GetCount(7));
 }
 
+TEST_F(PersistentHistogramAllocatorTest, RangesDeDuplication) {
+  // This corresponds to the "ranges_ref" field of the PersistentHistogramData
+  // structure defined (privately) inside persistent_histogram_allocator.cc.
+  const int kRangesRefIndex = 5;
+
+  // Create two histograms with the same ranges.
+  HistogramBase* histogram1 =
+      Histogram::FactoryGet("TestHistogram1", 1, 1000, 10, 0);
+  HistogramBase* histogram2 =
+      Histogram::FactoryGet("TestHistogram2", 1, 1000, 10, 0);
+  const uint32_t ranges_ref = static_cast<Histogram*>(histogram1)
+                                  ->bucket_ranges()
+                                  ->persistent_reference();
+  ASSERT_NE(0U, ranges_ref);
+  EXPECT_EQ(ranges_ref, static_cast<Histogram*>(histogram2)
+                            ->bucket_ranges()
+                            ->persistent_reference());
+
+  // Make sure that the persistent data record is also correct. Two histograms
+  // will be fetched; other allocations are not "iterable".
+  PersistentMemoryAllocator::Iterator iter(allocator_);
+  uint32_t type;
+  uint32_t ref1 = iter.GetNext(&type);
+  uint32_t ref2 = iter.GetNext(&type);
+  EXPECT_EQ(0U, iter.GetNext(&type));
+  EXPECT_NE(0U, ref1);
+  EXPECT_NE(0U, ref2);
+  EXPECT_NE(ref1, ref2);
+
+  uint32_t* data1 =
+      allocator_->GetAsArray<uint32_t>(ref1, 0, kRangesRefIndex + 1);
+  uint32_t* data2 =
+      allocator_->GetAsArray<uint32_t>(ref2, 0, kRangesRefIndex + 1);
+  EXPECT_EQ(ranges_ref, data1[kRangesRefIndex]);
+  EXPECT_EQ(ranges_ref, data2[kRangesRefIndex]);
+}
+
 }  // namespace base

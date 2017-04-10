@@ -8,6 +8,7 @@
 #include <iterator>
 
 #include "base/atomicops.h"
+#include "base/debug/debugging_flags.h"
 #include "base/debug/leak_annotations.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/thread_local_storage.h"
@@ -206,7 +207,7 @@ bool AllocationContextTracker::GetContextSnapshot(AllocationContext* ctx) {
         const void* frames[128];
         static_assert(arraysize(frames) >= Backtrace::kMaxFrameCount,
                       "not requesting enough frames to fill Backtrace");
-#if HAVE_TRACE_STACK_FRAME_POINTERS && !defined(OS_NACL)
+#if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS) && !defined(OS_NACL)
         size_t frame_count = debug::TraceStackFramePointers(
             frames,
             arraysize(frames),

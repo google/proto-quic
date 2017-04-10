@@ -33,7 +33,7 @@ namespace net {
 
 SpdyProxyClientSocket::SpdyProxyClientSocket(
     const base::WeakPtr<SpdyStream>& spdy_stream,
-    const std::string& user_agent,
+    const SpdyString& user_agent,
     const HostPortPair& endpoint,
     const HostPortPair& proxy_server,
     const NetLogWithSource& source_net_log,
@@ -351,7 +351,7 @@ int SpdyProxyClientSocket::DoSendRequest() {
     auth_->AddAuthorizationHeader(&authorization_headers);
   }
 
-  std::string request_line;
+  SpdyString request_line;
   BuildTunnelRequest(endpoint_, authorization_headers, user_agent_,
                      &request_line, &request_.extra_headers);
 

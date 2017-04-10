@@ -18,20 +18,14 @@ template <typename TestDelegate>
 class VerifyCertificateChainTest : public ::testing::Test {
  public:
   void RunTest(const char* file_name) {
-    ParsedCertificateList chain;
-    scoped_refptr<TrustAnchor> trust_anchor;
-    der::GeneralizedTime time;
-    bool expected_result;
-    std::string expected_errors;
+    VerifyCertChainTest test;
 
     std::string path =
         std::string("net/data/verify_certificate_chain_unittest/") + file_name;
 
-    ReadVerifyCertChainTestFromFile(path, &chain, &trust_anchor, &time,
-                                    &expected_result, &expected_errors);
+    ReadVerifyCertChainTestFromFile(path, &test);
 
-    TestDelegate::Verify(chain, trust_anchor, time, expected_result,
-                         expected_errors, path);
+    TestDelegate::Verify(test, path);
   }
 };
 

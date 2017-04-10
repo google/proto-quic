@@ -12,6 +12,8 @@ source_set("transport_security_state_generator_sources") {
     "cert_util.h",
     "huffman/huffman_builder.cc",
     "huffman/huffman_builder.h",
+    "input_file_parsers.cc",
+    "input_file_parsers.h",
     "pinset.cc",
     "pinset.h",
     "pinsets.cc",
@@ -37,7 +39,9 @@ source_set("transport_security_state_generator_test_sources") {
   testonly = true
   sources = [
     "bit_writer_unittest.cc",
+    "cert_util_unittest.cc",
     "huffman/huffman_builder_unittest.cc",
+    "input_file_parsers_unittest.cc",
     "spki_hash_unittest.cc",
     "trie/trie_bit_buffer_unittest.cc",
   ]
@@ -47,6 +51,7 @@ source_set("transport_security_state_generator_test_sources") {
     "//base/test:test_support",
     "//testing/gmock",
     "//testing/gtest",
+    "//third_party/boringssl",
   ]
 }
 

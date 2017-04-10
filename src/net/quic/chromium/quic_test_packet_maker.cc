@@ -228,6 +228,18 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckPacket(
     QuicPacketNumber ack_least_unacked,
     QuicPacketNumber stop_least_unacked,
     bool send_feedback) {
+  return MakeAckPacket(packet_number, largest_received, ack_least_unacked,
+                       stop_least_unacked, send_feedback,
+                       QuicTime::Delta::Zero());
+}
+
+std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckPacket(
+    QuicPacketNumber packet_number,
+    QuicPacketNumber largest_received,
+    QuicPacketNumber ack_least_unacked,
+    QuicPacketNumber stop_least_unacked,
+    bool send_feedback,
+    QuicTime::Delta ack_delay_time) {
   QuicPacketHeader header;
   header.public_header.connection_id = connection_id_;
   header.public_header.reset_flag = false;
@@ -236,7 +248,7 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckPacket(
   header.packet_number = packet_number;
 
   QuicAckFrame ack(MakeAckFrame(largest_received));
-  ack.ack_delay_time = QuicTime::Delta::Zero();
+  ack.ack_delay_time = ack_delay_time;
   for (QuicPacketNumber i = ack_least_unacked; i <= largest_received; ++i) {
     ack.received_packet_times.push_back(std::make_pair(i, clock_->Now()));
   }

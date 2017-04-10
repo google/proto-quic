@@ -190,9 +190,7 @@ TEST_F(URLRequestHttpJobSetUpSourceTest, SdchNotAdvertisedGotSdchResponse) {
   request->Start();
 
   base::RunLoop().Run();
-  // Pass through the raw response the same way as if received unknown encoding.
-  EXPECT_EQ(OK, delegate_.request_status());
-  EXPECT_EQ("Test Content", delegate_.data_received());
+  EXPECT_EQ(ERR_CONTENT_DECODING_FAILED, delegate_.request_status());
 }
 
 class URLRequestHttpJobTest : public ::testing::Test {

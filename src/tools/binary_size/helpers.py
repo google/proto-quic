@@ -16,7 +16,7 @@ import sys
 SRC_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
 
-def AddCommonOptionsAndParseArgs(parser, argv):
+def AddCommonOptionsAndParseArgs(parser, argv, pypy_warn=True):
   parser.add_argument('--no-pypy', action='store_true',
                       help='Do not automatically switch to pypy when available')
   parser.add_argument('-v',
@@ -36,7 +36,9 @@ def AddCommonOptionsAndParseArgs(parser, argv):
       logging.debug('Switching to pypy.')
       os.execv(pypy_path, [pypy_path] + sys.argv)
     # NOTE! Running with python: 6s. Running with pypy: 3s
-    logging.warning('This script runs more than 2x faster if you install pypy.')
+    if pypy_warn:
+      logging.warning(
+          'This script runs more than 2x faster if you install pypy.')
 
   if logging.getLogger().isEnabledFor(logging.DEBUG):
     atexit.register(_LogPeakRamUsage)

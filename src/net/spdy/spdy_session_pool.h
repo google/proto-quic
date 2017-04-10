@@ -10,7 +10,6 @@
 #include <map>
 #include <memory>
 #include <set>
-#include <string>
 #include <vector>
 
 #include "base/macros.h"
@@ -24,6 +23,7 @@
 #include "net/cert/cert_database.h"
 #include "net/proxy/proxy_config.h"
 #include "net/proxy/proxy_server.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/server_push_delegate.h"
 #include "net/spdy/spdy_protocol.h"
 #include "net/spdy/spdy_session_key.h"
@@ -164,7 +164,7 @@ class NET_EXPORT SpdySessionPool
   void OnCertDBChanged() override;
 
   void DumpMemoryStats(base::trace_event::ProcessMemoryDump* pmd,
-                       const std::string& parent_dump_absolute_name) const;
+                       const SpdyString& parent_dump_absolute_name) const;
 
  private:
   friend class SpdySessionPoolPeer;  // For testing.
@@ -202,10 +202,9 @@ class NET_EXPORT SpdySessionPool
   // Close only the currently existing SpdySessions with |error|.  Let
   // any new ones created while this method is running continue to
   // live. If |idle_only| is true only idle sessions are closed.
-  void CloseCurrentSessionsHelper(
-      Error error,
-      const std::string& description,
-      bool idle_only);
+  void CloseCurrentSessionsHelper(Error error,
+                                  const SpdyString& description,
+                                  bool idle_only);
 
   HttpServerProperties* http_server_properties_;
 

@@ -93,6 +93,7 @@ ac.uk, 0
 ac.vn, 0
 ac.za, 0
 ac.zm, 0
+ac.zw, 0
 aca.pro, 0
 academy, 0
 academy.museum, 0
@@ -118,6 +119,7 @@ adult, 0
 adult.ht, 0
 adv.br, 0
 adv.mz, 0
+advisor.ws, 6
 adygeya.ru, 4
 adygeya.su, 4
 ae, 0
@@ -465,6 +467,7 @@ avocat.pro, 0
 avoues.fr, 0
 aw, 0
 awaji.hyogo.jp, 0
+awdev.ca, 6
 aws, 0
 ax, 0
 axa, 0
@@ -859,6 +862,7 @@ c.bg, 0
 c.cdn77.org, 4
 c.la, 4
 c.se, 0
+c66.me, 4
 ca, 0
 ca.eu.org, 4
 ca.it, 0
@@ -1123,6 +1127,7 @@ clinton.museum, 0
 clock.museum, 0
 clothing, 0
 cloud, 0
+cloud.fedoraproject.org, 4
 cloudapp.net, 4
 cloudcontrolapp.com, 4
 cloudcontrolled.com, 4
@@ -1217,6 +1222,7 @@ co.ve, 0
 co.vi, 0
 co.za, 0
 co.zm, 0
+co.zw, 0
 coach, 0
 coal.museum, 0
 coastaldefence.museum, 0
@@ -1462,6 +1468,7 @@ cw, 0
 cx, 0
 cy, 0
 cy.eu.org, 4
+cya.gg, 4
 cyber.museum, 0
 cymru, 0
 cymru.museum, 0
@@ -1642,7 +1649,6 @@ dvag, 0
 dvr, 0
 dvrcam.info, 4
 dvrdns.org, 4
-dwg, 0
 dy.fi, 4
 dyn-ip24.de, 4
 dyn-o-saur.com, 4
@@ -1932,6 +1938,7 @@ etnedal.no, 0
 eu, 0
 eu-1.evennode.com, 4
 eu-2.evennode.com, 4
+eu-3.evennode.com, 4
 eu.com, 4
 eu.int, 0
 eu.meteorapp.com, 4
@@ -1992,6 +1999,8 @@ fed.us, 0
 federation.aero, 0
 fedex, 0
 fedje.no, 0
+fedorainfracloud.org, 4
+fedorapeople.org, 4
 feedback, 0
 fermo.it, 0
 ferrara.it, 0
@@ -2125,6 +2134,7 @@ freebox-os.fr, 4
 freeboxos.com, 4
 freeboxos.fr, 4
 freemasonry.museum, 0
+freetls.fastly.net, 4
 frei.no, 0
 freiburg.museum, 0
 freight.aero, 0
@@ -2585,6 +2595,7 @@ gov.vn, 0
 gov.ws, 0
 gov.za, 0
 gov.zm, 0
+gov.zw, 0
 government.aero, 0
 govt.nz, 0
 gp, 0
@@ -3021,7 +3032,6 @@ iheya.okinawa.jp, 0
 iida.nagano.jp, 0
 iide.yamagata.jp, 0
 iijima.nagano.jp, 0
-iinet, 0
 iitate.fukushima.jp, 0
 iiyama.nagano.jp, 0
 iizuka.fukuoka.jp, 0
@@ -3169,6 +3179,7 @@ investments, 0
 inzai.chiba.jp, 0
 io, 0
 ip6.arpa, 0
+ipifony.net, 4
 ipiranga, 0
 iq, 0
 ir, 0
@@ -4055,6 +4066,7 @@ loabat.no, 0
 loan, 0
 loans, 0
 localhistory.museum, 0
+localhost.daplie.me, 4
 locker, 0
 locus, 0
 lodi.it, 0
@@ -4379,6 +4391,7 @@ mil.vc, 0
 mil.ve, 0
 mil.za, 0
 mil.zm, 0
+mil.zw, 0
 milan.it, 0
 milano.it, 0
 military.museum, 0
@@ -4530,6 +4543,7 @@ monza.it, 0
 monzabrianza.it, 0
 monzaebrianza.it, 0
 monzaedellabrianza.it, 0
+moonscale.net, 4
 mopar, 0
 mordovia.ru, 4
 mordovia.su, 4
@@ -4617,7 +4631,6 @@ music.museum, 0
 mutsu.aomori.jp, 0
 mutsuzawa.chiba.jp, 0
 mutual, 0
-mutuelle, 0
 mv, 0
 mw, 0
 mw.gov.pl, 0
@@ -5462,6 +5475,7 @@ org.vu, 0
 org.ws, 0
 org.za, 0
 org.zm, 0
+org.zw, 0
 organic, 0
 orientexpress, 0
 origins, 0
@@ -5984,6 +5998,7 @@ ru, 0
 ru.com, 4
 ru.eu.org, 4
 ru.net, 4
+rugby, 0
 ruhr, 0
 run, 0
 ruovat.no, 0
@@ -6630,6 +6645,7 @@ store.ro, 0
 store.st, 0
 store.ve, 0
 storfjord.no, 0
+storj.farm, 4
 stpetersburg.museum, 0
 strand.no, 0
 stranda.no, 0
@@ -6871,7 +6887,6 @@ thd, 0
 theater, 0
 theater.museum, 0
 theatre, 0
-theguardian, 0
 thruhere.net, 4
 tiaa, 0
 tickets, 0
@@ -7159,6 +7174,7 @@ u.se, 0
 ua, 0
 ubank, 0
 ube.yamaguchi.jp, 0
+uber.space, 4
 ubs, 0
 uchihara.ibaraki.jp, 0
 uchiko.ehime.jp, 0
@@ -7230,6 +7246,7 @@ uryu.hokkaido.jp, 0
 us, 0
 us-1.evennode.com, 4
 us-2.evennode.com, 4
+us-3.evennode.com, 4
 us-east-1.amazonaws.com, 4
 us.com, 4
 us.eu.org, 4
@@ -7404,6 +7421,7 @@ vote, 0
 voting, 0
 voto, 0
 voyage, 0
+vpnplus.to, 4
 vr.it, 0
 vs.it, 0
 vt.it, 0
@@ -7566,7 +7584,6 @@ xn--42c2d9a, 0
 xn--45brj9c, 0
 xn--45q11c, 0
 xn--4gbrim, 0
-xn--4gq48lf9j, 0
 xn--4it168d.jp, 0
 xn--4it797k.jp, 0
 xn--4pvxs.jp, 0
@@ -7954,6 +7971,7 @@ xn--zf0ao64a.tw, 0
 xn--zf0avx.hk, 0
 xn--zfr164b, 0
 xperia, 0
+xs4all.space, 4
 xxx, 0
 xyz, 0
 xz.cn, 0
@@ -8120,5 +8138,5 @@ zp.ua, 0
 zt.ua, 0
 zuerich, 0
 zushi.kanagawa.jp, 0
-zw, 2
+zw, 0
 %%

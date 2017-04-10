@@ -24,6 +24,7 @@ target.get_extensions().add_property('1.2.3.4',
 chain = [target, intermediate]
 trusted = common.TrustAnchor(root, constrained=False)
 time = common.DEFAULT_TIME
+key_purpose = common.DEFAULT_KEY_PURPOSE
 verify_result = False
 errors = """----- Certificate i=0 (CN=Target) -----
 ERROR: Unconsumed critical extension
@@ -32,4 +33,5 @@ ERROR: Unconsumed critical extension
 
 """
 
-common.write_test_file(__doc__, chain, trusted, time, verify_result, errors)
+common.write_test_file(__doc__, chain, trusted, time, key_purpose,
+                       verify_result, errors)

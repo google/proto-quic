@@ -105,6 +105,17 @@ TEST(FileTest, Create) {
   EXPECT_FALSE(base::PathExists(file_path));
 }
 
+TEST(FileTest, SelfSwap) {
+  base::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
+  FilePath file_path = temp_dir.GetPath().AppendASCII("create_file_1");
+  File file(file_path,
+            base::File::FLAG_OPEN_ALWAYS | base::File::FLAG_DELETE_ON_CLOSE);
+  using namespace std;
+  swap(file, file);
+  EXPECT_TRUE(file.IsValid());
+}
+
 TEST(FileTest, Async) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());

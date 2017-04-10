@@ -1,4 +1,4 @@
-#if defined(__x86_64__)
+#if defined(__x86_64__) && !defined(OPENSSL_NO_ASM)
 .text	
 .type	_x86_64_AES_encrypt,@function
 .align	16

@@ -10,13 +10,14 @@
 #include <list>
 #include <map>
 #include <memory>
-#include <string>
+#include <utility>
 #include <vector>
 
 #include "base/macros.h"
 #include "net/base/linked_hash_map.h"
 #include "net/base/net_export.h"
 #include "net/log/net_log.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
 namespace base {
@@ -150,7 +151,7 @@ class NET_EXPORT SpdyHeaderBlock {
 
   // Provides a human readable multi-line representation of the stored header
   // keys and values.
-  std::string DebugString() const;
+  SpdyString DebugString() const;
 
   iterator begin() { return iterator(block_.begin()); }
   iterator end() { return iterator(block_.end()); }
@@ -184,8 +185,8 @@ class NET_EXPORT SpdyHeaderBlock {
   ValueProxy operator[](const SpdyStringPiece key);
 
   // This object provides automatic conversions that allow SpdyHeaderBlock to be
-  // nearly a drop-in replacement for linked_hash_map<string, string>. It reads
-  // data from or writes data to a SpdyHeaderBlock::Storage.
+  // nearly a drop-in replacement for linked_hash_map<SpdyString, SpdyString>.
+  // It reads data from or writes data to a SpdyHeaderBlock::Storage.
   class NET_EXPORT ValueProxy {
    public:
     ~ValueProxy();
@@ -201,7 +202,7 @@ class NET_EXPORT SpdyHeaderBlock {
     // Assignment modifies the underlying SpdyHeaderBlock.
     ValueProxy& operator=(const SpdyStringPiece other);
 
-    std::string as_string() const;
+    SpdyString as_string() const;
 
    private:
     friend class SpdyHeaderBlock;

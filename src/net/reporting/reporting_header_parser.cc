@@ -8,11 +8,11 @@
 
 #include "base/json/json_reader.h"
 #include "base/logging.h"
+#include "base/time/tick_clock.h"
 #include "base/time/time.h"
 #include "base/values.h"
 #include "net/reporting/reporting_cache.h"
-#include "url/gurl.h"
-#include "url/origin.h"
+#include "net/reporting/reporting_context.h"
 
 namespace net {
 
@@ -27,8 +27,7 @@ const char kMaxAgeKey[] = "max-age";
 }  // namespace
 
 // static
-void ReportingHeaderParser::ParseHeader(ReportingCache* cache,
-                                        base::TimeTicks now,
+void ReportingHeaderParser::ParseHeader(ReportingContext* context,
                                         const GURL& url,
                                         const std::string& json_value) {
   DCHECK(url.SchemeIsCryptographic());
@@ -42,6 +41,8 @@ void ReportingHeaderParser::ParseHeader(ReportingCache* cache,
   bool is_list = value->GetAsList(&list);
   DCHECK(is_list);
 
+  ReportingCache* cache = context->cache();
+  base::TimeTicks now = context->tick_clock()->NowTicks();
   for (size_t i = 0; i < list->GetSize(); i++) {
     const base::Value* endpoint = nullptr;
     bool got_endpoint = list->Get(i, &endpoint);

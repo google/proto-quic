@@ -27,7 +27,7 @@ TEST(SpdyLogUtilTest, ElideSpdyHeaderBlockForNetLog) {
   std::unique_ptr<base::ListValue> list =
       ElideSpdyHeaderBlockForNetLog(headers, NetLogCaptureMode::Default());
   EXPECT_EQ(2u, list->GetSize());
-  std::string field;
+  SpdyString field;
   EXPECT_TRUE(list->GetString(0, &field));
   EXPECT_EQ("foo: bar", field);
   EXPECT_TRUE(list->GetString(1, &field));

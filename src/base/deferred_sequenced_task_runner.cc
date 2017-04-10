@@ -34,7 +34,7 @@ DeferredSequencedTaskRunner::~DeferredSequencedTaskRunner() {
 
 bool DeferredSequencedTaskRunner::PostDelayedTask(
     const tracked_objects::Location& from_here,
-    Closure task,
+    OnceClosure task,
     TimeDelta delay) {
   AutoLock lock(lock_);
   if (started_) {
@@ -54,7 +54,7 @@ bool DeferredSequencedTaskRunner::RunsTasksOnCurrentThread() const {
 
 bool DeferredSequencedTaskRunner::PostNonNestableDelayedTask(
     const tracked_objects::Location& from_here,
-    Closure task,
+    OnceClosure task,
     TimeDelta delay) {
   AutoLock lock(lock_);
   if (started_) {
@@ -69,9 +69,11 @@ bool DeferredSequencedTaskRunner::PostNonNestableDelayedTask(
 
 void DeferredSequencedTaskRunner::QueueDeferredTask(
     const tracked_objects::Location& from_here,
-    Closure task,
+    OnceClosure task,
     TimeDelta delay,
     bool is_non_nestable) {
+  DCHECK(task);
+
   DeferredTask deferred_task;
   deferred_task.posted_from = from_here;
   deferred_task.task = std::move(task);

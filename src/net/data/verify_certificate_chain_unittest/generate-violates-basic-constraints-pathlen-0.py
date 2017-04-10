@@ -29,10 +29,12 @@ target = common.create_end_entity_certificate('Target', intermediate2)
 chain = [target, intermediate2, intermediate1]
 trusted = common.TrustAnchor(root, constrained=False)
 time = common.DEFAULT_TIME
+key_purpose = common.DEFAULT_KEY_PURPOSE
 verify_result = False
 errors = """----- Certificate i=1 (CN=Intermediate2) -----
 ERROR: max_path_length reached
 
 """
 
-common.write_test_file(__doc__, chain, trusted, time, verify_result, errors)
+common.write_test_file(__doc__, chain, trusted, time, key_purpose,
+                       verify_result, errors)

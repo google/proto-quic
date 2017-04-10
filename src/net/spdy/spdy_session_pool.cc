@@ -398,7 +398,7 @@ void SpdySessionPool::OnCertDBChanged() {
 
 void SpdySessionPool::DumpMemoryStats(
     base::trace_event::ProcessMemoryDump* pmd,
-    const std::string& parent_dump_absolute_name) const {
+    const SpdyString& parent_dump_absolute_name) const {
   if (sessions_.empty())
     return;
   size_t total_size = 0;
@@ -495,10 +495,9 @@ SpdySessionPool::WeakSessionList SpdySessionPool::GetCurrentSessions() const {
   return current_sessions;
 }
 
-void SpdySessionPool::CloseCurrentSessionsHelper(
-    Error error,
-    const std::string& description,
-    bool idle_only) {
+void SpdySessionPool::CloseCurrentSessionsHelper(Error error,
+                                                 const SpdyString& description,
+                                                 bool idle_only) {
   WeakSessionList current_sessions = GetCurrentSessions();
   for (WeakSessionList::const_iterator it = current_sessions.begin();
        it != current_sessions.end(); ++it) {

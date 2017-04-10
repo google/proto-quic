@@ -60,9 +60,10 @@ IncomingTaskQueue::IncomingTaskQueue(MessageLoop* message_loop)
 
 bool IncomingTaskQueue::AddToIncomingQueue(
     const tracked_objects::Location& from_here,
-    Closure task,
+    OnceClosure task,
     TimeDelta delay,
     bool nestable) {
+  DCHECK(task);
   DLOG_IF(WARNING,
           delay.InSeconds() > kTaskDelayWarningThresholdInSeconds)
       << "Requesting super-long task delay period of " << delay.InSeconds()

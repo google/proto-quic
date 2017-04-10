@@ -76,17 +76,22 @@ class NodeType(object):
     extra_newlines: None or a triple of integers describing the number of
         newlines that should be printed (after_open, before_close, after_close)
     single_line: True iff this node may be squashed into a single line.
+    alphabetization: A (tag, keyfn) pair, which specifies the tag of the
+       children that should be sorted, and a function to get the sort key from
+       the xml node.
   """
   __metaclass__ = abc.ABCMeta
 
   def __init__(self, tag,
                indent=True,
                extra_newlines=None,
-               single_line=False):
+               single_line=False,
+               alphabetization=None):
     self.tag = tag
     self.indent = indent
     self.extra_newlines = extra_newlines
     self.single_line = single_line
+    self.alphabetization = alphabetization
 
   @abc.abstractmethod
   def Unmarshall(self, node):
@@ -369,7 +374,8 @@ class DocumentType(object):
                                       if types[t].extra_newlines},
         tags_that_dont_indent=[t for t in types if not types[t].indent],
         tags_that_allow_single_line=[t for t in types if types[t].single_line],
-        tags_alphabetization_rules={})
+        tags_alphabetization_rules={t: types[t].alphabetization for t in types
+                                    if types[t].alphabetization})
 
   def _ToXML(self, obj):
     """Converts an object into an XML document.
@@ -393,4 +399,4 @@ class DocumentType(object):
     Returns:
       A string containing pretty printed XML.
     """
-    return self.GetPrintStyle().PrettyPrintNode(self._ToXML(obj))
+    return self.GetPrintStyle().PrettyPrintXml(self._ToXML(obj))

@@ -32,11 +32,9 @@ def _SaveSizeInfoToFile(size_info, file_obj):
   file_obj.write('# Created by //tools/binary_size\n')
   file_obj.write('%s\n' % _SERIALIZATION_VERSION)
   headers = {
-      'tag': size_info.tag,
+      'metadata': size_info.metadata,
       'section_sizes': size_info.section_sizes,
   }
-  if size_info.timestamp:
-    headers['timestamp'] = calendar.timegm(size_info.timestamp.timetuple())
   metadata_str = json.dumps(headers, file_obj, indent=2, sort_keys=True)
   file_obj.write('%d\n' % len(metadata_str))
   file_obj.write(metadata_str)
@@ -99,13 +97,9 @@ def _LoadSizeInfoFromFile(file_obj):
       'Version mismatch. Need to write some upgrade code.')
   json_len = int(next(lines))
   json_str = file_obj.read(json_len)
-  metadata = json.loads(json_str)
-  timestamp = metadata.get('timestamp')
-  if timestamp is not None:
-    timestamp = datetime.datetime.utcfromtimestamp(timestamp)
-  tag = metadata['tag']
-  section_sizes = metadata['section_sizes']
-
+  headers = json.loads(json_str)
+  section_sizes = headers['section_sizes']
+  metadata = headers.get('metadata')
   lines = iter(file_obj)
   next(lines)  # newline after closing } of json.
 
@@ -156,7 +150,7 @@ def _LoadSizeInfoFromFile(file_obj):
       symbol_idx += 1
 
   symbols = models.SymbolGroup(symbol_list)
-  return models.SizeInfo(section_sizes, symbols, timestamp=timestamp, tag=tag)
+  return models.SizeInfo(section_sizes, symbols, metadata=metadata)
 
 
 def SaveSizeInfo(size_info, path):

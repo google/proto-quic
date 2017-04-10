@@ -19,12 +19,13 @@
 namespace net {
 
 class NetLogWithSource;
+class QuicAlarmFactory;
+class QuicChromiumClientSession;
+class QuicClientPushPromiseIndex;
 class QuicConfig;
 class QuicCryptoClientConfig;
 class QuicHttpStream;
 class QuicStreamFactory;
-class QuicChromiumClientSession;
-class QuicClientPushPromiseIndex;
 
 namespace test {
 
@@ -58,8 +59,6 @@ class QuicStreamFactoryPeer {
                             base::TaskRunner* task_runner);
 
   static QuicTime::Delta GetPingTimeout(QuicStreamFactory* factory);
-
-  static bool IsQuicDisabled(QuicStreamFactory* factory);
 
   static bool GetDelayTcpRace(QuicStreamFactory* factory);
 
@@ -102,6 +101,9 @@ class QuicStreamFactoryPeer {
       QuicStreamFactory* factory);
 
   static int GetNumPushStreamsCreated(QuicStreamFactory* factory);
+
+  static void SetAlarmFactory(QuicStreamFactory* factory,
+                              std::unique_ptr<QuicAlarmFactory> alarm_factory);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicStreamFactoryPeer);

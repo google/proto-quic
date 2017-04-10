@@ -35,7 +35,7 @@ namespace {
 std::unique_ptr<base::Value> NetLogSpdyStreamErrorCallback(
     SpdyStreamId stream_id,
     int status,
-    const std::string* description,
+    const SpdyString* description,
     NetLogCaptureMode /* capture_mode */) {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->SetInteger("stream_id", static_cast<int>(stream_id));
@@ -257,7 +257,7 @@ void SpdyStream::IncreaseSendWindowSize(int32_t delta_window_size) {
     int32_t max_delta_window_size =
         std::numeric_limits<int32_t>::max() - send_window_size_;
     if (delta_window_size > max_delta_window_size) {
-      std::string desc = SpdyStringPrintf(
+      SpdyString desc = SpdyStringPrintf(
           "Received WINDOW_UPDATE [delta: %d] for stream %d overflows "
           "send_window_size_ [current: %d]",
           delta_window_size, stream_id_, send_window_size_);
@@ -387,7 +387,7 @@ void SpdyStream::OnHeadersReceived(const SpdyHeaderBlock& response_headers,
       {
         SpdyHeaderBlock::const_iterator it = response_headers.find(":status");
         if (it == response_headers.end()) {
-          const std::string error("Response headers do not include :status.");
+          const SpdyString error("Response headers do not include :status.");
           LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
           session_->ResetStream(stream_id_, ERROR_CODE_PROTOCOL_ERROR, error);
           return;
@@ -395,7 +395,7 @@ void SpdyStream::OnHeadersReceived(const SpdyHeaderBlock& response_headers,
 
         int status;
         if (!StringToInt(it->second, &status)) {
-          const std::string error("Cannot parse :status.");
+          const SpdyString error("Cannot parse :status.");
           LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
           session_->ResetStream(stream_id_, ERROR_CODE_PROTOCOL_ERROR, error);
           return;
@@ -416,7 +416,7 @@ void SpdyStream::OnHeadersReceived(const SpdyHeaderBlock& response_headers,
           // A bidirectional stream or a request/response stream is ready for
           // the response headers only after request headers are sent.
           if (io_state_ == STATE_IDLE) {
-            const std::string error("Response received before request sent.");
+            const SpdyString error("Response received before request sent.");
             LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
             session_->ResetStream(stream_id_, ERROR_CODE_PROTOCOL_ERROR, error);
             return;
@@ -447,7 +447,7 @@ void SpdyStream::OnHeadersReceived(const SpdyHeaderBlock& response_headers,
     case READY_FOR_DATA_OR_TRAILERS:
       // Second header block is trailers.
       if (type_ == SPDY_PUSH_STREAM) {
-        const std::string error("Trailers not supported for push stream.");
+        const SpdyString error("Trailers not supported for push stream.");
         LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
         session_->ResetStream(stream_id_, ERROR_CODE_PROTOCOL_ERROR, error);
         return;
@@ -459,7 +459,7 @@ void SpdyStream::OnHeadersReceived(const SpdyHeaderBlock& response_headers,
 
     case TRAILERS_RECEIVED:
       // No further header blocks are allowed after trailers.
-      const std::string error("Header block received after trailers.");
+      const SpdyString error("Header block received after trailers.");
       LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
       session_->ResetStream(stream_id_, ERROR_CODE_PROTOCOL_ERROR, error);
       break;
@@ -482,14 +482,14 @@ void SpdyStream::OnDataReceived(std::unique_ptr<SpdyBuffer> buffer) {
   DCHECK(session_->IsStreamActive(stream_id_));
 
   if (response_state_ == READY_FOR_HEADERS) {
-    const std::string error("DATA received before headers.");
+    const SpdyString error("DATA received before headers.");
     LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
     session_->ResetStream(stream_id_, ERROR_CODE_PROTOCOL_ERROR, error);
     return;
   }
 
   if (response_state_ == TRAILERS_RECEIVED && buffer) {
-    const std::string error("DATA received after trailers.");
+    const SpdyString error("DATA received after trailers.");
     LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
     session_->ResetStream(stream_id_, ERROR_CODE_PROTOCOL_ERROR, error);
     return;
@@ -636,7 +636,7 @@ int SpdyStream::OnDataSent(size_t frame_size) {
   }
 }
 
-void SpdyStream::LogStreamError(int status, const std::string& description) {
+void SpdyStream::LogStreamError(int status, const SpdyString& description) {
   net_log_.AddEvent(NetLogEventType::HTTP2_STREAM_ERROR,
                     base::Bind(&NetLogSpdyStreamErrorCallback, stream_id_,
                                status, &description));
@@ -668,7 +668,7 @@ void SpdyStream::Cancel() {
     return;
 
   if (stream_id_ != 0) {
-    session_->ResetStream(stream_id_, ERROR_CODE_CANCEL, std::string());
+    session_->ResetStream(stream_id_, ERROR_CODE_CANCEL, SpdyString());
   } else {
     session_->CloseCreatedStream(GetWeakPtr(), ERROR_CODE_CANCEL);
   }
@@ -910,8 +910,8 @@ void SpdyStream::SaveResponseHeaders(const SpdyHeaderBlock& response_headers) {
     description = SpdyStringPrintf("%s (0x%08X)", #s, s); \
     break
 
-std::string SpdyStream::DescribeState(State state) {
-  std::string description;
+SpdyString SpdyStream::DescribeState(State state) {
+  SpdyString description;
   switch (state) {
     STATE_CASE(STATE_IDLE);
     STATE_CASE(STATE_OPEN);

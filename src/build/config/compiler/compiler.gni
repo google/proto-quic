@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/android/config.gni")
+import("//build/config/arm.gni")
 import("//build/config/chrome_build.gni")
 import("//build/config/chromecast_build.gni")
 import("//build/config/compiler/pgo/pgo.gni")
@@ -63,6 +64,34 @@ declare_args() {
 
   # Whether or not we should use position independent code.
   use_pic = true
+}
+
+# Whether to emit frame pointers by default.
+if (is_mac || is_ios) {
+  enabled_frame_pointers = true
+} else if (is_win) {
+  # 64-bit Windows ABI doesn't support frame pointers.
+  if (target_cpu == "x64") {
+    enabled_frame_pointers = false
+  } else {
+    enabled_frame_pointers = true
+  }
+} else {
+  # Explicitly ask for frame pointers, otherwise:
+  # * Stacks may be missing for sanitizer and profiling builds.
+  # * Debug tcmalloc can crash (crbug.com/636489).
+  # * Stacks may be missing for arm64 crash dumps (crbug.com/391706).
+  enabled_frame_pointers =
+      using_sanitizer || enable_profiling || is_debug || current_cpu == "arm64"
+}
+
+# Unwinding with frame pointers requires that frame pointers are enabled by
+# default for most translation units, and that the architecture isn't thumb, as
+# frame pointers are not correctly emitted for thumb.
+if (enabled_frame_pointers && !(current_cpu == "arm" && arm_use_thumb)) {
+  can_unwind_with_frame_pointers = true
+} else {
+  can_unwind_with_frame_pointers = false
 }
 
 declare_args() {

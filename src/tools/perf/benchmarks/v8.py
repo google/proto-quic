@@ -188,7 +188,7 @@ class V8InfiniteScroll(_InfiniteScrollBenchmark):
   """Measures V8 GC metrics and memory usage while scrolling the top web pages.
   http://www.chromium.org/developers/design-documents/rendering-benchmarks"""
 
-  page_set = page_sets.InfiniteScrollPageSet
+  page_set = page_sets.InfiniteScrollStorySet
 
   @classmethod
   def Name(cls):
@@ -228,7 +228,7 @@ class V8MobileInfiniteScroll(_InfiniteScrollBenchmark):
   web pages.
   http://www.chromium.org/developers/design-documents/rendering-benchmarks"""
 
-  page_set = page_sets.MobileInfiniteScrollPageSet
+  page_set = page_sets.MobileInfiniteScrollStorySet
 
   @classmethod
   def Name(cls):

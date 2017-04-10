@@ -199,3 +199,7 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_bandwidth_resumption, false)
 
 // Add the equivalent number of bytes as 3 TCP TSO segments to QUIC's BBR CWND.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_add_tso_cwnd, false)
+
+// Fix a crash that occurs when a client sends multiple CHLOs close together on
+// the same connection.
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_fix_quic_callback_crash, true)

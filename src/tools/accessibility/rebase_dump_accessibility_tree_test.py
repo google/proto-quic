@@ -22,6 +22,7 @@ import re
 import sys
 import time
 import urllib
+import urlparse
 
 # Load BeautifulSoup. It's checked into two places in the Chromium tree.
 sys.path.append('third_party/WebKit/Tools/Scripts/webkitpy/thirdparty/')
@@ -44,11 +45,14 @@ def ParseFailure(name, url):
   '''Parse given the name of a failing trybot and the url of its build log.'''
   print
   print "Checking trybot: %s" % name
-  url = url.replace('/builders/', '/json/builders/')
+  parse_result = urlparse.urlsplit(url)
+  url = "http://chrome-build-extract.appspot.com" + parse_result.path + "?json=1"
   response = urllib.urlopen(url)
-  if response.getcode() == 200:
-    jsondata = response.read()
+  if response.getcode() != 200:
+    print 'Error code %d accessing trybot url: %s' % (response.getcode(), url)
+    return
 
+  jsondata = response.read()
   if not jsondata:
     print "Failed to fetch from: " + url
     return
@@ -69,15 +73,16 @@ def ParseFailure(name, url):
       print "Found content_browsertests logs"
       for log in step["logs"]:
         (log_name, log_url) = log
-        if log_name == "stdio":
+        if log_name == "stdio" or log_name == "swarming.summary" or log_name == "step_metadata":
           continue
         log_url += '/text'
         log_response = urllib.urlopen(log_url)
         if log_response.getcode() == 200:
           logdata = log_response.read()
+          print "Parsing test log: %s" % log_name
           ParseLog(logdata)
         else:
-          print "Failed to fetch test log data from: " + url
+          print "Error code %d when fetching test log data from url: %s" % (log_response.getcode(), url)
 
 def Fix(line):
   if line[:3] == '@@@':

@@ -126,7 +126,7 @@ HttpNetworkSession::Params::Params()
       enable_http2_alternative_service_with_different_host(false),
       enable_quic_alternative_service_with_different_host(true),
       enable_quic(false),
-      disable_quic_on_timeout_with_open_streams(false),
+      mark_quic_broken_when_network_blackholes(false),
       quic_always_require_handshake_confirmation(false),
       quic_disable_connection_pooling(false),
       quic_load_server_info_timeout_srtt_multiplier(0.25f),
@@ -210,7 +210,7 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
           params.quic_delay_tcp_race,
           params.quic_max_server_configs_stored_in_properties,
           params.quic_close_sessions_on_ip_change,
-          params.disable_quic_on_timeout_with_open_streams,
+          params.mark_quic_broken_when_network_blackholes,
           params.quic_idle_connection_timeout_seconds,
           params.quic_reduced_ping_timeout_seconds,
           params.quic_packet_reader_yield_after_duration_milliseconds,
@@ -358,9 +358,6 @@ std::unique_ptr<base::Value> HttpNetworkSession::QuicInfoToValue() const {
       params_.quic_packet_reader_yield_after_duration_milliseconds);
   dict->SetBoolean("disable_preconnect_if_0rtt",
                    params_.quic_disable_preconnect_if_0rtt);
-  dict->SetBoolean("disable_quic_on_timeout_with_open_streams",
-                   params_.disable_quic_on_timeout_with_open_streams);
-  dict->SetBoolean("is_quic_disabled", quic_stream_factory_.IsQuicDisabled());
   dict->SetBoolean("force_hol_blocking", params_.quic_force_hol_blocking);
   dict->SetBoolean("race_cert_verification",
                    params_.quic_race_cert_verification);

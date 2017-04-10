@@ -15,7 +15,9 @@ namespace net {
 namespace test {
 namespace {
 
-TEST(QuicDataWriterTest, SanityCheckUFloat16Consts) {
+class QuicDataWriterTest : public ::testing::TestWithParam<Perspective> {};
+
+TEST_P(QuicDataWriterTest, SanityCheckUFloat16Consts) {
   // Check the arithmetic on the constants - otherwise the values below make
   // no sense.
   EXPECT_EQ(30, kUFloat16MaxExponent);
@@ -24,7 +26,7 @@ TEST(QuicDataWriterTest, SanityCheckUFloat16Consts) {
   EXPECT_EQ(UINT64_C(0x3FFC0000000), kUFloat16MaxValue);
 }
 
-TEST(QuicDataWriterTest, WriteUFloat16) {
+TEST_P(QuicDataWriterTest, WriteUFloat16) {
   struct TestCase {
     uint64_t decoded;
     uint16_t encoded;
@@ -96,14 +98,14 @@ TEST(QuicDataWriterTest, WriteUFloat16) {
 
   for (int i = 0; i < num_test_cases; ++i) {
     char buffer[2];
-    QuicDataWriter writer(2, buffer);
+    QuicDataWriter writer(2, buffer, GetParam());
     EXPECT_TRUE(writer.WriteUFloat16(test_cases[i].decoded));
     EXPECT_EQ(test_cases[i].encoded,
               *reinterpret_cast<uint16_t*>(writer.data()));
   }
 }
 
-TEST(QuicDataWriterTest, ReadUFloat16) {
+TEST_P(QuicDataWriterTest, ReadUFloat16) {
   struct TestCase {
     uint64_t decoded;
     uint16_t encoded;
@@ -156,19 +158,20 @@ TEST(QuicDataWriterTest, ReadUFloat16) {
   int num_test_cases = sizeof(test_cases) / sizeof(test_cases[0]);
 
   for (int i = 0; i < num_test_cases; ++i) {
-    QuicDataReader reader(reinterpret_cast<char*>(&test_cases[i].encoded), 2);
+    QuicDataReader reader(reinterpret_cast<char*>(&test_cases[i].encoded), 2,
+                          GetParam());
     uint64_t value;
     EXPECT_TRUE(reader.ReadUFloat16(&value));
     EXPECT_EQ(test_cases[i].decoded, value);
   }
 }
 
-TEST(QuicDataWriterTest, RoundTripUFloat16) {
+TEST_P(QuicDataWriterTest, RoundTripUFloat16) {
   // Just test all 16-bit encoded values. 0 and max already tested above.
   uint64_t previous_value = 0;
   for (uint16_t i = 1; i < 0xFFFF; ++i) {
     // Read the two bytes.
-    QuicDataReader reader(reinterpret_cast<char*>(&i), 2);
+    QuicDataReader reader(reinterpret_cast<char*>(&i), 2, GetParam());
     uint64_t value;
     // All values must be decodable.
     EXPECT_TRUE(reader.ReadUFloat16(&value));
@@ -184,7 +187,7 @@ TEST(QuicDataWriterTest, RoundTripUFloat16) {
     EXPECT_LT(value, UINT64_C(0x3FFC0000000));
     previous_value = value;
     char buffer[6];
-    QuicDataWriter writer(6, buffer);
+    QuicDataWriter writer(6, buffer, GetParam());
     EXPECT_TRUE(writer.WriteUFloat16(value - 1));
     EXPECT_TRUE(writer.WriteUFloat16(value));
     EXPECT_TRUE(writer.WriteUFloat16(value + 1));
@@ -198,7 +201,7 @@ TEST(QuicDataWriterTest, RoundTripUFloat16) {
   }
 }
 
-TEST(QuicDataWriterTest, WriteConnectionId) {
+TEST_P(QuicDataWriterTest, WriteConnectionId) {
   uint64_t connection_id = 0x0011223344556677;
   char little_endian[] = {
       0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00,
@@ -208,7 +211,7 @@ TEST(QuicDataWriterTest, WriteConnectionId) {
   };
   const int kBufferLength = sizeof(connection_id);
   char buffer[kBufferLength];
-  QuicDataWriter writer(kBufferLength, buffer);
+  QuicDataWriter writer(kBufferLength, buffer, GetParam());
   writer.WriteConnectionId(connection_id);
   test::CompareCharArraysWithHexError(
       "connection_id", buffer, kBufferLength,
@@ -217,24 +220,24 @@ TEST(QuicDataWriterTest, WriteConnectionId) {
       kBufferLength);
 
   uint64_t read_connection_id;
-  QuicDataReader reader(buffer, kBufferLength);
+  QuicDataReader reader(buffer, kBufferLength, GetParam());
   reader.ReadConnectionId(&read_connection_id);
   EXPECT_EQ(connection_id, read_connection_id);
 }
 
-TEST(QuicDataWriterTest, WriteTag) {
+TEST_P(QuicDataWriterTest, WriteTag) {
   char CHLO[] = {
       'C', 'H', 'L', 'O',
   };
   const int kBufferLength = sizeof(QuicTag);
   char buffer[kBufferLength];
-  QuicDataWriter writer(kBufferLength, buffer);
+  QuicDataWriter writer(kBufferLength, buffer, GetParam());
   writer.WriteTag(kCHLO);
   test::CompareCharArraysWithHexError("CHLO", buffer, kBufferLength, CHLO,
                                       kBufferLength);
 
   QuicTag read_chlo;
-  QuicDataReader reader(buffer, kBufferLength);
+  QuicDataReader reader(buffer, kBufferLength, GetParam());
   reader.ReadTag(&read_chlo);
   EXPECT_EQ(kCHLO, read_chlo);
 }

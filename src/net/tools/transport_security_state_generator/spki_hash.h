@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+#include "base/strings/string_piece.h"
+
 namespace net {
 
 namespace transport_security_state {
@@ -24,7 +26,7 @@ class SPKIHash {
   // SPKI hashes are SHA256. Other algorithms are not supported. Returns true
   // on success and copies the decoded bytes to |data_|. Returns false on
   // failure.
-  bool FromString(const std::string& hash_string);
+  bool FromString(base::StringPiece hash_string);
 
   // Calculates the SHA256 digest over |*input| and copies the result to
   // |data_|.

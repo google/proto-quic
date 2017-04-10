@@ -38,7 +38,6 @@
     "exclusions": [
       "chrome/browser/resources/.*(css|html|js)",
       "chrome/browser/ui/webui/.*browsertest.*js",
-      "chrome/installer/linux/sysroot_scripts/install-debian.wheezy.sysroot.py",
       "chrome/test/data/.*",
       "components/about_ui/resources/.*(css|html|js)",
       "components/flags_ui/resources/.*(css|html|js)",

@@ -612,7 +612,9 @@ TEST_P(StreamMemberLifetimeTest, Basic) {
   std::vector<QuicVersion> packet_version_list = {version};
   std::unique_ptr<QuicEncryptedPacket> packet(ConstructEncryptedPacket(
       1, true, false, 1,
-      string(chlo.GetSerialized().AsStringPiece().as_string()),
+      string(chlo.GetSerialized(Perspective::IS_CLIENT)
+                 .AsStringPiece()
+                 .as_string()),
       PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER,
       &packet_version_list));
 

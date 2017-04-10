@@ -30,30 +30,13 @@
 #include "net/log/net_log_source_type.h"
 #include "net/socket/socket_descriptor.h"
 #include "net/socket/socket_net_log_params.h"
+#include "net/socket/socket_options.h"
 
 namespace net {
 
 namespace {
 
 const int kTCPKeepAliveSeconds = 45;
-
-int SetSocketReceiveBufferSize(SOCKET socket, int32_t size) {
-  int rv = setsockopt(socket, SOL_SOCKET, SO_RCVBUF,
-                      reinterpret_cast<const char*>(&size), sizeof(size));
-  int os_error = WSAGetLastError();
-  int net_error = (rv == 0) ? OK : MapSystemError(os_error);
-  DCHECK(!rv) << "Could not set socket receive buffer size: " << net_error;
-  return net_error;
-}
-
-int SetSocketSendBufferSize(SOCKET socket, int32_t size) {
-  int rv = setsockopt(socket, SOL_SOCKET, SO_SNDBUF,
-                      reinterpret_cast<const char*>(&size), sizeof(size));
-  int os_error = WSAGetLastError();
-  int net_error = (rv == 0) ? OK : MapSystemError(os_error);
-  DCHECK(!rv) << "Could not set socket send buffer size: " << net_error;
-  return net_error;
-}
 
 // Disable Nagle.
 // Enable TCP Keep-Alive to prevent NAT routers from timing out TCP

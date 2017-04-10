@@ -17,6 +17,11 @@ namespace test {
 //
 // To wait until all tasks posted without a delay have run, use
 // TaskScheduler::GetInstance()->FlushForTesting().
+//
+// Deprecated. Use ScopedTaskEnvironment instead. https://crbug.com/708584
+//
+// TODO(fdoray): Replace ScopedAsyncTaskScheduler instances by
+// ScopedTaskEnvironment.
 class ScopedAsyncTaskScheduler {
  public:
   // Registers a single-threaded TaskScheduler.

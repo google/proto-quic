@@ -8,6 +8,7 @@
 #include "base/compiler_specific.h"
 #include "base/logging.h"
 #include "base/process/process_metrics.h"
+#include "base/sys_info.h"
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -86,6 +87,10 @@ static void TestCalloc(size_t n, size_t s, bool ok) {
   }
 }
 
+bool IsLowMemoryDevice() {
+  return base::SysInfo::AmountOfPhysicalMemory() <= 256LL * 1024 * 1024;
+}
+
 }  // namespace
 
 TEST(TCMallocTest, Malloc) {
@@ -153,6 +158,12 @@ TEST(TCMallocTest, Realloc) {
         free(dst);
     }
   }
+
+  // The logic below tries to allocate kNumEntries * 9000 ~= 130 MB of memory.
+  // This would cause the test to crash on low memory devices with no VM
+  // overcommit (e.g., chromecast).
+  if (IsLowMemoryDevice())
+    return;
 
   // Now make sure realloc works correctly even when we overflow the
   // packed cache, so some entries are evicted from the cache.

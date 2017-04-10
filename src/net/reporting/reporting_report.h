@@ -29,23 +29,26 @@ struct NET_EXPORT ReportingReport {
                   int attempts);
   ~ReportingReport();
 
-  // The URL of the document that triggered the report.
+  // The URL of the document that triggered the report. (Included in the
+  // delivered report.)
   GURL url;
 
-  // The endpoint group that should be used to deliver the report.
+  // The endpoint group that should be used to deliver the report. (Not included
+  // in the delivered report.)
   std::string group;
 
-  // The type of the report.
+  // The type of the report. (Included in the delivered report.)
   std::string type;
 
-  // The body of the report.
+  // The body of the report. (Included in the delivered report.)
   std::unique_ptr<const base::Value> body;
 
-  // When the report was queued.
+  // When the report was queued. (Included in the delivered report as an age
+  // relative to the time of the delivery attempt.)
   base::TimeTicks queued;
 
   // The number of delivery attempts made so far, not including an active
-  // attempt.
+  // attempt. (Not included in the delivered report.)
   int attempts = 0;
 
  private:

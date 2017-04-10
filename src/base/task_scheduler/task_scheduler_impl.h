@@ -62,7 +62,7 @@ class BASE_EXPORT TaskSchedulerImpl : public TaskScheduler {
   // TaskScheduler:
   void PostDelayedTaskWithTraits(const tracked_objects::Location& from_here,
                                  const TaskTraits& traits,
-                                 Closure task,
+                                 OnceClosure task,
                                  TimeDelta delay) override;
   scoped_refptr<TaskRunner> CreateTaskRunnerWithTraits(
       const TaskTraits& traits) override;

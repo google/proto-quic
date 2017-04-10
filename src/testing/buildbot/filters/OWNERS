@@ -10,4 +10,5 @@ per-file browser-side-navigation*=nasko@chromium.org
 per-file browser-side-navigation*=scottmg@chromium.org
 per-file browser-side-navigation*=yzshen@chromium.org
 
-# COMPONENT: Infra>Platform>Buildbot
+# TEAM: infra-dev@chromium.org
+# COMPONENT: Infra>Client>Chrome

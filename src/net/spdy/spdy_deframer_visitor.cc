@@ -5,7 +5,6 @@
 #include "net/spdy/spdy_deframer_visitor.h"
 
 #include <stdlib.h>
-#include <string.h>
 
 #include <algorithm>
 #include <cstdint>
@@ -21,7 +20,6 @@
 #include "net/spdy/spdy_test_utils.h"
 
 using ::base::MakeUnique;
-using ::std::string;
 using ::testing::AssertionFailure;
 using ::testing::AssertionResult;
 using ::testing::AssertionSuccess;
@@ -212,7 +210,7 @@ class SpdyTestDeframerImpl : public SpdyTestDeframer,
   bool fin_ = false;
   bool got_hpack_end_ = false;
 
-  std::unique_ptr<string> data_;
+  std::unique_ptr<SpdyString> data_;
 
   // Total length of the data frame.
   size_t data_len_ = 0;
@@ -221,7 +219,7 @@ class SpdyTestDeframerImpl : public SpdyTestDeframer,
   // Length field).
   size_t padding_len_ = 0;
 
-  std::unique_ptr<string> goaway_description_;
+  std::unique_ptr<SpdyString> goaway_description_;
   std::unique_ptr<StringPairVector> headers_;
   std::unique_ptr<SettingVector> settings_;
   std::unique_ptr<TestHeadersHandler> headers_handler_;
@@ -418,7 +416,7 @@ void SpdyTestDeframerImpl::OnAltSvc(
                                << Http2FrameTypeToString(frame_type_);
   CHECK_GT(stream_id, 0u);
   auto ptr = MakeUnique<SpdyAltSvcIR>(stream_id);
-  ptr->set_origin(std::string(origin));
+  ptr->set_origin(SpdyString(origin));
   for (auto& altsvc : altsvc_vector) {
     ptr->add_altsvc(altsvc);
   }
@@ -457,7 +455,7 @@ void SpdyTestDeframerImpl::OnDataFrameHeader(SpdyStreamId stream_id,
   stream_id_ = stream_id;
   fin_ = fin;
   data_len_ = length;
-  data_.reset(new string());
+  data_.reset(new SpdyString());
 }
 
 // The SpdyFramer will not process any more data at this point.
@@ -481,7 +479,7 @@ void SpdyTestDeframerImpl::OnGoAway(SpdyStreamId last_good_stream_id,
                                << Http2FrameTypeToString(frame_type_);
   frame_type_ = GOAWAY;
   goaway_ir_ = MakeUnique<SpdyGoAwayIR>(last_good_stream_id, error_code, "");
-  goaway_description_.reset(new string());
+  goaway_description_.reset(new SpdyString());
 }
 
 // If len==0 then we've reached the end of the GOAWAY frame.
@@ -744,7 +742,7 @@ void SpdyTestDeframerImpl::OnHeader(SpdyStringPiece key,
       << "   frame_type_=" << Http2FrameTypeToString(frame_type_);
   CHECK(!got_hpack_end_);
   CHECK(headers_);
-  headers_->emplace_back(std::string(key), std::string(value));
+  headers_->emplace_back(SpdyString(key), SpdyString(value));
   CHECK(headers_handler_);
   headers_handler_->OnHeader(key, value);
 }

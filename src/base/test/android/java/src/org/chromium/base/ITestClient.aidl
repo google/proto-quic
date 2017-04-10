@@ -9,37 +9,22 @@ import org.chromium.base.process_launcher.FileDescriptorInfo;
 
 /**
  * This interface is used to control child processes.
+ * TODO(jcivelli): http://crbug.com/702316 remove this once ChildProcessLauncher has moved to base/.
  */
 interface ITestClient {
+  // On the first call to this method, the service will record the calling PID
+  // and return true. Subsequent calls will only return true if the calling PID
+  // is the same as the recorded one.
+  boolean bindToCaller();
+
   /**
    * Runs the native <code>main</code> method in that service's process.
-   * @param args the arguments passed to <code>main</code>
-   * @param fdsToMap a list of file descriptors that are mapped in the native code
-   * in <code>base::GlobalDescriptors</code>.
+   * @param args contains the arguments passed to <code>main</code> as well as the files to be
+   * mapped in the service process, see <code>org.chromium.base.ChildProcessConstants</code>.
+   * @param callback a callback used to communicate back to the parent process. (until we use the
+   * common launcher in base/, we'll use this test implentation and this callback is an
+   * ITestCallback).
    * @return the process ID for the service's process.
    */
-  int launch(in String[] args, in FileDescriptorInfo[] fdsToMap);
-
-  /**
-   * Blocks until the <code>main</code> method started with {@link #launch()} returns, or returns
-   * immediately if main has already returned.
-   * @param timeoutMs time in milliseconds after which this method returns even if the main method
-   * has not returned yet.
-   * @return a result containing whether a timeout occured and the value returned by the
-   * <code>main</code> method
-   */
-  MainReturnCodeResult waitForMainToReturn(int timeoutMs);
-
-  /**
-   * Forces the service process to terminate and block until the process stops.
-   * @param exitCode the exit code the process should terminate with.
-   * @return always true, a return value is only returned to force the call to be synchronous.
-   */
-  boolean forceStopSynchronous(int exitCode);
-
-  /**
-   * Forces the service process to terminate.
-   * @param exitCode the exit code the process should terminate with.
-   */
-  void forceStop(int exitCode);
+  int setupConnection(in Bundle args, IBinder callback);
 }

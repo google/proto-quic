@@ -11,16 +11,16 @@
 
 namespace net {
 
-std::string ElideGoAwayDebugDataForNetLog(NetLogCaptureMode capture_mode,
-                                          base::StringPiece debug_data) {
+SpdyString ElideGoAwayDebugDataForNetLog(NetLogCaptureMode capture_mode,
+                                         base::StringPiece debug_data) {
   // Note: this logic should be kept in sync with stripGoAwayDebugData in
   // chrome/browser/resources/net_internals/log_view_painter.js.
   if (capture_mode.include_cookies_and_credentials()) {
     return debug_data.as_string();
   }
 
-  return std::string("[") + base::SizeTToString(debug_data.size()) +
-         std::string(" bytes were stripped]");
+  return SpdyString("[") + base::SizeTToString(debug_data.size()) +
+         SpdyString(" bytes were stripped]");
 }
 
 std::unique_ptr<base::ListValue> ElideSpdyHeaderBlockForNetLog(

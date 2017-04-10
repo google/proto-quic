@@ -19,8 +19,8 @@ SPKIHash::SPKIHash() {}
 
 SPKIHash::~SPKIHash() {}
 
-bool SPKIHash::FromString(const std::string& hash_string) {
-  std::string base64_string;
+bool SPKIHash::FromString(base::StringPiece hash_string) {
+  base::StringPiece base64_string;
 
   if (!base::StartsWith(hash_string, "sha256/",
                         base::CompareCase::INSENSITIVE_ASCII)) {

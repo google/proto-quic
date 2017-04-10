@@ -224,8 +224,7 @@
       {
         "args": [
           "--shared-prefs-file=../../chrome/android/shared_preference_files/test/vr_cardboard_skipdon_setupcomplete.json",
-          "--additional-apk=../../third_party/gvr-android-sdk/test-apks/vr_services/vr_services_current.apk",
-          "--strict-mode=off"
+          "--additional-apk=../../third_party/gvr-android-sdk/test-apks/vr_services/vr_services_current.apk"
         ],
         "name": "chrome_public_test_vr_apk-nonddready-cardboard-current-kitkat",
         "override_compile_targets": [
@@ -248,8 +247,7 @@
       {
         "args": [
           "--shared-prefs-file=../../chrome/android/shared_preference_files/test/vr_cardboard_skipdon_setupcomplete.json",
-          "--additional-apk=../../third_party/gvr-android-sdk/test-apks/vr_services/vr_services_current.apk",
-          "--strict-mode=off"
+          "--additional-apk=../../third_party/gvr-android-sdk/test-apks/vr_services/vr_services_current.apk"
         ],
         "name": "chrome_public_test_vr_apk-nonddready-cardboard-current-lollipop",
         "override_compile_targets": [
@@ -272,8 +270,7 @@
       {
         "args": [
           "--shared-prefs-file=../../chrome/android/shared_preference_files/test/vr_cardboard_skipdon_setupcomplete.json",
-          "--additional-apk=../../third_party/gvr-android-sdk/test-apks/vr_services/vr_services_current.apk",
-          "--strict-mode=off"
+          "--additional-apk=../../third_party/gvr-android-sdk/test-apks/vr_services/vr_services_current.apk"
         ],
         "name": "chrome_public_test_vr_apk-nonddready-cardboard-current-marshmallow",
         "override_compile_targets": [
@@ -304,8 +301,7 @@
       {
         "args": [
           "--shared-prefs-file=src/chrome/android/shared_preference_files/test/vr_cardboard_skipdon_setupcomplete.json",
-          "--additional-apk=src/third_party/gvr-android-sdk/test-apks/vr_services/vr_services_current.apk",
-          "--strict-mode=off"
+          "--additional-apk=src/third_party/gvr-android-sdk/test-apks/vr_services/vr_services_current.apk"
         ],
         "test": "chrome_public_test_vr_apk"
       },
@@ -313,8 +309,7 @@
         "args": [
           "--shared-prefs-file=src/chrome/android/shared_preference_files/test/vr_ddview_skipdon_setupcomplete.json",
           "--additional-apk=src/third_party/gvr-android-sdk/test-apks/vr_services/vr_services_current.apk",
-          "--additional-apk=src/third_party/gvr-android-sdk/test-apks/daydream_home/daydream_home_current.apk",
-          "--strict-mode=off"
+          "--additional-apk=src/third_party/gvr-android-sdk/test-apks/daydream_home/daydream_home_current.apk"
         ],
         "test": "chrome_public_test_vr_apk"
       }
@@ -11788,6 +11783,16 @@
       "mash:all"
     ],
     "gtest_tests": [
+      {
+        "args": [
+          "--mus",
+          "--test-launcher-filter-file=../../testing/buildbot/filters/ash_mus_unittests.filter"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "ash_mus_unittests"
+      },
       {
         "args": [
           "--override-use-software-gl-for-tests",

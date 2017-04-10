@@ -13,7 +13,6 @@
 
 #include <cstdint>
 #include <cstring>
-#include <string>
 #include <utility>
 
 #include "base/logging.h"
@@ -28,14 +27,13 @@
 #include "net/spdy/hpack/hpack_decoder_interface.h"
 #include "net/spdy/hpack/hpack_header_table.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/spdy_alt_svc_wire_format.h"
 #include "net/spdy/spdy_bug_tracker.h"
 #include "net/spdy/spdy_frame_builder.h"
 #include "net/spdy/spdy_header_block.h"
 #include "net/spdy/spdy_headers_handler_interface.h"
 #include "net/spdy/spdy_protocol.h"
-
-using std::string;
 
 namespace net {
 
@@ -94,6 +92,10 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
   // Implementations of the pure virtual methods from SpdyFramerDecoderAdapter;
   // the other virtual methods of SpdyFramerDecoderAdapter have satsifactory
   // default implementations.
+
+  void set_extension_visitor(ExtensionVisitorInterface* visitor) override {
+    extension_ = visitor;
+  }
 
   // Passes the call on to the HPACK decoder.
   void SetDecoderHeaderTableDebugVisitor(
@@ -162,23 +164,28 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
     const uint8_t raw_frame_type = static_cast<uint8_t>(header.type);
     visitor()->OnCommonHeader(header.stream_id, header.payload_length,
                               raw_frame_type, header.flags);
+    if (has_expected_frame_type_ && header.type != expected_frame_type_) {
+      // Report an unexpected frame error and close the connection if we
+      // expect a known frame type (probably CONTINUATION) and receive an
+      // unknown frame.
+      VLOG(1) << "The framer was expecting to receive a "
+              << expected_frame_type_
+              << " frame, but instead received an unknown frame of type "
+              << header.type;
+      SetSpdyErrorAndNotify(SpdyFramerError::SPDY_UNEXPECTED_FRAME);
+      return false;
+    }
     if (!IsSupportedHttp2FrameType(header.type)) {
+      if (extension_ != nullptr) {
+        // Unknown frames will be passed to the registered extension.
+        return true;
+      }
       // In HTTP2 we ignore unknown frame types for extensibility, as long as
       // the rest of the control frame header is valid.
       // We rely on the visitor to check validity of stream_id.
       bool valid_stream =
           visitor()->OnUnknownFrame(header.stream_id, raw_frame_type);
-      if (has_expected_frame_type_ && header.type != expected_frame_type_) {
-        // Report an unexpected frame error and close the connection if we
-        // expect a known frame type (probably CONTINUATION) and receive an
-        // unknown frame.
-        VLOG(1) << "The framer was expecting to receive a "
-                << expected_frame_type_
-                << " frame, but instead received an unknown frame of type "
-                << header.type;
-        SetSpdyErrorAndNotify(SpdyFramerError::SPDY_UNEXPECTED_FRAME);
-        return false;
-      } else if (!valid_stream) {
+      if (!valid_stream) {
         // Report an invalid frame error if the stream_id is not valid.
         VLOG(1) << "Unknown control frame type " << header.type
                 << " received on invalid stream " << header.stream_id;
@@ -374,10 +381,14 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
 
   void OnSetting(const Http2SettingFields& setting_fields) override {
     DVLOG(1) << "OnSetting: " << setting_fields;
+    const uint16_t parameter = static_cast<uint16_t>(setting_fields.parameter);
     SpdySettingsIds setting_id;
-    if (!ParseSettingsId(static_cast<uint16_t>(setting_fields.parameter),
-                         &setting_id)) {
-      DVLOG(1) << "Ignoring invalid setting id: " << setting_fields;
+    if (!ParseSettingsId(parameter, &setting_id)) {
+      if (extension_ == nullptr) {
+        DVLOG(1) << "Ignoring unknown setting id: " << setting_fields;
+      } else {
+        extension_->OnSetting(parameter, setting_fields.value);
+      }
       return;
     }
     visitor()->OnSetting(setting_id, setting_fields.value);
@@ -516,17 +527,32 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
     alt_svc_value_.shrink_to_fit();
   }
 
-  // Except for BLOCKED frames, all other unknown frames are
-  // effectively dropped.
+  // Except for BLOCKED frames, all other unknown frames are either dropped or
+  // passed to a registered extension.
   void OnUnknownStart(const Http2FrameHeader& header) override {
     DVLOG(1) << "OnUnknownStart: " << header;
+    if (IsOkToStartFrame(header)) {
+      if (extension_ != nullptr) {
+        const uint8_t type = static_cast<uint8_t>(header.type);
+        const uint8_t flags = static_cast<uint8_t>(header.flags);
+        handling_extension_payload_ = extension_->OnFrameHeader(
+            header.stream_id, header.payload_length, type, flags);
+      }
+    }
   }
 
   void OnUnknownPayload(const char* data, size_t len) override {
-    DVLOG(1) << "OnUnknownPayload: len=" << len;
+    if (handling_extension_payload_) {
+      extension_->OnFramePayload(data, len);
+    } else {
+      DVLOG(1) << "OnUnknownPayload: len=" << len;
+    }
   }
 
-  void OnUnknownEnd() override { DVLOG(1) << "OnUnknownEnd"; }
+  void OnUnknownEnd() override {
+    DVLOG(1) << "OnUnknownEnd";
+    handling_extension_payload_ = false;
+  }
 
   void OnPaddingTooLong(const Http2FrameHeader& header,
                         size_t missing_length) override {
@@ -888,6 +914,9 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
   // The SpdyFramer that created this Http2FrameDecoderAdapter.
   SpdyFramer* const outer_framer_;
 
+  // If non-null, unknown frames and settings are passed to the extension.
+  ExtensionVisitorInterface* extension_ = nullptr;
+
   // The HPACK decoder that we're using for the HPACK block that is currently
   // being decoded. Cleared at the end of the block. Owned by the SpdyFramer.
   HpackDecoderInterface* hpack_decoder_ = nullptr;
@@ -909,8 +938,8 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
   base::Optional<size_t> opt_pad_length_;
 
   // Temporary buffers for the AltSvc fields.
-  string alt_svc_origin_;
-  string alt_svc_value_;
+  SpdyString alt_svc_origin_;
+  SpdyString alt_svc_value_;
 
   // Listener used if we transition to an error state; the listener ignores all
   // the callbacks.
@@ -957,6 +986,9 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
 
   // Is expected_frame_type_ set?
   bool has_expected_frame_type_ = false;
+
+  // Is the current frame payload destined for |extension_|?
+  bool handling_extension_payload_ = false;
 };
 
 }  // namespace

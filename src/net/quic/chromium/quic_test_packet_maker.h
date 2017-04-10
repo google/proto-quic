@@ -84,6 +84,13 @@ class QuicTestPacketMaker {
       QuicPacketNumber ack_least_unacked,
       QuicPacketNumber stop_least_unacked,
       bool send_feedback);
+  std::unique_ptr<QuicReceivedPacket> MakeAckPacket(
+      QuicPacketNumber packet_number,
+      QuicPacketNumber largest_received,
+      QuicPacketNumber ack_least_unacked,
+      QuicPacketNumber stop_least_unacked,
+      bool send_feedback,
+      QuicTime::Delta ack_delay_time);
   std::unique_ptr<QuicReceivedPacket> MakeDataPacket(
       QuicPacketNumber packet_number,
       QuicStreamId stream_id,

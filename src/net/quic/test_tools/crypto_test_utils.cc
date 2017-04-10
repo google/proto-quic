@@ -340,14 +340,15 @@ class FullChloGenerator {
     EXPECT_THAT(rej->tag(),
                 testing::AnyOf(testing::Eq(kSREJ), testing::Eq(kREJ)));
 
-    VLOG(1) << "Extract valid STK and SCID from\n" << rej->DebugString();
+    VLOG(1) << "Extract valid STK and SCID from\n"
+            << rej->DebugString(Perspective::IS_SERVER);
     QuicStringPiece srct;
     ASSERT_TRUE(rej->GetStringPiece(kSourceAddressTokenTag, &srct));
 
     QuicStringPiece scfg;
     ASSERT_TRUE(rej->GetStringPiece(kSCFG, &scfg));
     std::unique_ptr<CryptoHandshakeMessage> server_config(
-        CryptoFramer::ParseMessage(scfg));
+        CryptoFramer::ParseMessage(scfg, Perspective::IS_SERVER));
 
     QuicStringPiece scid;
     ASSERT_TRUE(server_config->GetStringPiece(kSCID, &scid));
@@ -860,9 +861,10 @@ CryptoHandshakeMessage CreateCHLO(
 
   // The CryptoHandshakeMessage needs to be serialized and parsed to ensure
   // that any padding is included.
-  std::unique_ptr<QuicData> bytes(CryptoFramer::ConstructHandshakeMessage(msg));
-  std::unique_ptr<CryptoHandshakeMessage> parsed(
-      CryptoFramer::ParseMessage(bytes->AsStringPiece()));
+  std::unique_ptr<QuicData> bytes(
+      CryptoFramer::ConstructHandshakeMessage(msg, Perspective::IS_CLIENT));
+  std::unique_ptr<CryptoHandshakeMessage> parsed(CryptoFramer::ParseMessage(
+      bytes->AsStringPiece(), Perspective::IS_CLIENT));
   CHECK(parsed.get());
 
   return *parsed;
@@ -899,8 +901,9 @@ void MovePackets(PacketSavingConnection* source_conn,
     }
 
     for (const auto& stream_frame : framer.stream_frames()) {
-      ASSERT_TRUE(crypto_framer.ProcessInput(QuicStringPiece(
-          stream_frame->data_buffer, stream_frame->data_length)));
+      ASSERT_TRUE(crypto_framer.ProcessInput(
+          QuicStringPiece(stream_frame->data_buffer, stream_frame->data_length),
+          dest_perspective));
       ASSERT_FALSE(crypto_visitor.error());
     }
     QuicConnectionPeer::SetCurrentPacket(

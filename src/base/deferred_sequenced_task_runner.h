@@ -28,13 +28,13 @@ class BASE_EXPORT DeferredSequencedTaskRunner : public SequencedTaskRunner {
 
   // TaskRunner implementation
   bool PostDelayedTask(const tracked_objects::Location& from_here,
-                       Closure task,
+                       OnceClosure task,
                        TimeDelta delay) override;
   bool RunsTasksOnCurrentThread() const override;
 
   // SequencedTaskRunner implementation
   bool PostNonNestableDelayedTask(const tracked_objects::Location& from_here,
-                                  Closure task,
+                                  OnceClosure task,
                                   TimeDelta delay) override;
 
   // Start the execution - posts all queued tasks to the target executor. The
@@ -51,7 +51,7 @@ class BASE_EXPORT DeferredSequencedTaskRunner : public SequencedTaskRunner {
     DeferredTask& operator=(DeferredTask&& other);
 
     tracked_objects::Location posted_from;
-    Closure task;
+    OnceClosure task;
     // The delay this task was initially posted with.
     TimeDelta delay;
     bool is_non_nestable;
@@ -61,7 +61,7 @@ class BASE_EXPORT DeferredSequencedTaskRunner : public SequencedTaskRunner {
 
   // Creates a |Task| object and adds it to |deferred_tasks_queue_|.
   void QueueDeferredTask(const tracked_objects::Location& from_here,
-                         Closure task,
+                         OnceClosure task,
                          TimeDelta delay,
                          bool is_non_nestable);
 

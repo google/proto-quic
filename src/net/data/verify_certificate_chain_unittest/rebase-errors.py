@@ -33,7 +33,7 @@ import re
 #  * Group 2 of the match is file path (relative to //src) where the expected
 #    errors were read from.
 failed_test_regex = re.compile(r"""
-Value of: errors.ToDebugString\((?:chain)?\)
+Value of: errors.ToDebugString\((?:test.chain)?\)
   Actual: "(.*)"
 (?:.|\n)+?
 Test file: (.*)

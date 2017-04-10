@@ -40,16 +40,29 @@ TaskScheduler::InitParams::~InitParams() = default;
 #if !defined(OS_NACL)
 // static
 void TaskScheduler::CreateAndSetSimpleTaskScheduler(const std::string& name) {
-  constexpr int kMinNumThreads = 1;
-  std::vector<SchedulerWorkerPoolParams> worker_pool_params_vector;
-  worker_pool_params_vector.emplace_back(
-      name, ThreadPriority::NORMAL,
-      SchedulerWorkerPoolParams::StandbyThreadPolicy::LAZY,
-      std::max(kMinNumThreads, SysInfo::NumberOfProcessors()),
-      TimeDelta::FromSeconds(30));
+  using StandbyThreadPolicy = SchedulerWorkerPoolParams::StandbyThreadPolicy;
+
+  // Values were chosen so that:
+  // * There are few background threads.
+  // * Background threads never outnumber foreground threads.
+  // * The system is utilized maximally by foreground threads.
+  const int num_cores = SysInfo::NumberOfProcessors();
+  constexpr int kBackgroundMaxThreads = 1;
+  constexpr int kBackgroundBlockingMaxThreads = 2;
+  const int kForegroundMaxThreads = std::max(1, num_cores);
+  const int kForegroundBlockingMaxThreads = std::max(2, num_cores);
+
+  constexpr TimeDelta kSuggestedReclaimTime = TimeDelta::FromSeconds(30);
+
   CreateAndSetDefaultTaskScheduler(
-      worker_pool_params_vector,
-      Bind([](const TaskTraits&) -> size_t { return 0; }));
+      name, {{StandbyThreadPolicy::LAZY, kBackgroundMaxThreads,
+              kSuggestedReclaimTime},
+             {StandbyThreadPolicy::LAZY, kBackgroundBlockingMaxThreads,
+              kSuggestedReclaimTime},
+             {StandbyThreadPolicy::LAZY, kForegroundMaxThreads,
+              kSuggestedReclaimTime},
+             {StandbyThreadPolicy::LAZY, kForegroundBlockingMaxThreads,
+              kSuggestedReclaimTime}});
 }
 #endif  // !defined(OS_NACL)
 

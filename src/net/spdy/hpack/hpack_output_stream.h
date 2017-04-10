@@ -9,11 +9,11 @@
 #include <stdint.h>
 
 #include <map>
-#include <string>
 
 #include "base/macros.h"
 #include "net/base/net_export.h"
 #include "net/spdy/hpack/hpack_constants.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
 // All section references below are to
@@ -25,7 +25,7 @@ namespace net {
 // header fields.
 class NET_EXPORT_PRIVATE HpackOutputStream {
  public:
-  explicit HpackOutputStream();
+  HpackOutputStream();
   ~HpackOutputStream();
 
   // Appends the lower |bit_size| bits of |bits| to the internal buffer.
@@ -50,11 +50,11 @@ class NET_EXPORT_PRIVATE HpackOutputStream {
   void AppendUint32(uint32_t I);
 
   // Swaps the internal buffer with |output|, then resets state.
-  void TakeString(std::string* output);
+  void TakeString(SpdyString* output);
 
   // Gives up to |max_size| bytes of the internal buffer to |output|. Resets
   // internal state with the overflow.
-  void BoundedTakeString(size_t max_size, std::string* output);
+  void BoundedTakeString(size_t max_size, SpdyString* output);
 
   // Size in bytes of stream's internal buffer.
   size_t size() const { return buffer_.size(); }
@@ -64,7 +64,7 @@ class NET_EXPORT_PRIVATE HpackOutputStream {
 
  private:
   // The internal bit buffer.
-  std::string buffer_;
+  SpdyString buffer_;
 
   // If 0, the buffer ends on a byte boundary. If non-zero, the buffer
   // ends on the nth most significant bit. Guaranteed to be < 8.

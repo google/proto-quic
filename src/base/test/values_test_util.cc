@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "base/json/json_reader.h"
+#include "base/memory/ptr_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/values.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -68,7 +69,7 @@ std::unique_ptr<Value> ParseJson(base::StringPiece json) {
       json, base::JSON_ALLOW_TRAILING_COMMAS, NULL, &error_msg);
   if (!result) {
     ADD_FAILURE() << "Failed to parse \"" << json << "\": " << error_msg;
-    result = Value::CreateNullValue();
+    result = MakeUnique<Value>();
   }
   return result;
 }

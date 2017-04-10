@@ -4,37 +4,33 @@
 
 #include "base/test/scoped_async_task_scheduler.h"
 
-#include <vector>
-
-#include "base/bind.h"
 #include "base/logging.h"
 #include "base/task_scheduler/scheduler_worker_pool_params.h"
 #include "base/task_scheduler/task_scheduler.h"
-#include "base/task_scheduler/task_scheduler_impl.h"
 
 namespace base {
 namespace test {
 
 ScopedAsyncTaskScheduler::ScopedAsyncTaskScheduler() {
   DCHECK(!TaskScheduler::GetInstance());
+
+  // Instantiate a TaskScheduler with 1 thread in each of its 4 pools. Threads
+  // stay alive even when they don't have work.
   constexpr int kMaxThreads = 1;
   const TimeDelta kSuggestedReclaimTime = TimeDelta::Max();
-  std::vector<SchedulerWorkerPoolParams> worker_pool_params_vector;
-  worker_pool_params_vector.emplace_back(
-      "ScopedAsyncTaskScheduler", ThreadPriority::NORMAL,
-      SchedulerWorkerPoolParams::StandbyThreadPolicy::LAZY, kMaxThreads,
+  const SchedulerWorkerPoolParams worker_pool_params(
+      SchedulerWorkerPoolParams::StandbyThreadPolicy::ONE, kMaxThreads,
       kSuggestedReclaimTime);
   TaskScheduler::CreateAndSetDefaultTaskScheduler(
-      worker_pool_params_vector,
-      Bind([](const TaskTraits&) -> size_t { return 0; }));
+      "ScopedAsync", {worker_pool_params, worker_pool_params,
+                      worker_pool_params, worker_pool_params});
   task_scheduler_ = TaskScheduler::GetInstance();
 }
 
 ScopedAsyncTaskScheduler::~ScopedAsyncTaskScheduler() {
   DCHECK_EQ(TaskScheduler::GetInstance(), task_scheduler_);
   TaskScheduler::GetInstance()->Shutdown();
-  static_cast<internal::TaskSchedulerImpl*>(TaskScheduler::GetInstance())
-      ->JoinForTesting();
+  TaskScheduler::GetInstance()->JoinForTesting();
   TaskScheduler::SetInstance(nullptr);
 }
 

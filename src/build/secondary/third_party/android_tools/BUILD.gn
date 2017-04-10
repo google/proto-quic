@@ -155,6 +155,44 @@ android_aar_prebuilt("android_support_v7_recyclerview_java") {
   aar_path = "$lib_path/$_lib_name/$lib_version/$_lib_name-$lib_version.aar"
 }
 
+android_aar_prebuilt("android_support_v7_preference_java") {
+  deps = [
+    ":android_support_v7_appcompat_java",
+  ]
+  _lib_name = "preference-v7"
+  aar_path = "$lib_path/$_lib_name/$lib_version/$_lib_name-$lib_version.aar"
+}
+
+android_aar_prebuilt("android_support_v14_preference_java") {
+  deps = [
+    ":android_support_v7_preference_java",
+  ]
+  _lib_name = "preference-v14"
+  aar_path = "$lib_path/$_lib_name/$lib_version/$_lib_name-$lib_version.aar"
+}
+
+android_aar_prebuilt("android_support_v17_leanback_java") {
+  deps = [
+    ":android_support_v4_java",
+    ":android_support_v7_recyclerview_java",
+  ]
+  _lib_name = "leanback-v17"
+  aar_path = "$lib_path/$_lib_name/$lib_version/$_lib_name-$lib_version.aar"
+}
+
+android_aar_prebuilt("android_support_v17_preference_java") {
+  deps = [
+    ":android_support_v14_preference_java",
+    ":android_support_v17_leanback_java",
+    ":android_support_v4_java",
+    ":android_support_v7_appcompat_java",
+    ":android_support_v7_preference_java",
+    ":android_support_v7_recyclerview_java",
+  ]
+  _lib_name = "preference-leanback-v17"
+  aar_path = "$lib_path/$_lib_name/$lib_version/$_lib_name-$lib_version.aar"
+}
+
 # TODO(dgn): Remove this once no other target has a dependency on it
 java_group("google_play_services_default_resources") {
   deps = []
@@ -174,20 +212,6 @@ java_group("google_play_services_default_java") {
     ":google_play_services_nearby_java",
     ":google_play_services_vision_java",
   ]
-}
-
-android_aar_prebuilt("android_support_v17_leanback_java") {
-  deps = [
-    ":android_support_v7_recyclerview_java",
-  ]
-  _lib_name = "leanback-v17"
-  aar_path = "$lib_path/$_lib_name/$lib_version/$_lib_name-$lib_version.aar"
-}
-
-# TODO(jbudorick): Remove this once net_java_test_support no longer needs it.
-android_java_prebuilt("legacy_http_javalib") {
-  testonly = true
-  jar_path = "$android_sdk/optional/org.apache.http.legacy.jar"
 }
 
 # TODO(dgn): Use the POM files instead of hardcoding the dependencies.

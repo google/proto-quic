@@ -9,6 +9,7 @@
 #include "base/strings/string_util.h"
 #include "net/http/http_util.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
+#include "net/spdy/platform/api/spdy_string.h"
 
 namespace net {
 
@@ -61,7 +62,7 @@ void HeaderCoalescer::OnHeader(SpdyStringPiece key, SpdyStringPiece value) {
   } else {
     // This header had multiple values, so it must be reconstructed.
     SpdyStringPiece v = iter->second;
-    std::string s(v.data(), v.length());
+    SpdyString s(v.data(), v.length());
     if (key == "cookie") {
       // Obeys section 8.1.2.5 in RFC 7540 for cookie reconstruction.
       s.append("; ");

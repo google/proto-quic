@@ -20,6 +20,8 @@ void PrintUsage() {
       "test.\n"
       "  -e  Specifies an environment key=value pair that will be"
       " set in the simulated application's environment.\n"
+      "  -o  Specifies a test or test suite that should be included in the"
+      "test run. All other tests will be excluded from this run.\n"
       "  -c  Specifies command line flags to pass to application.\n"
       "  -p  Print the device's home directory, does not run a test.\n"
       "  -s  Specifies the SDK version to use (e.g '9.3'). Will use system "
@@ -222,7 +224,8 @@ void RunApplication(NSString* app_path,
                     NSString* xctest_path,
                     NSString* udid,
                     NSMutableDictionary* app_env,
-                    NSString* cmd_args) {
+                    NSString* cmd_args,
+                    NSMutableArray* only_testing_tests) {
   NSString* tempFilePath = [NSTemporaryDirectory()
       stringByAppendingPathComponent:[[NSUUID UUID] UUIDString]];
   [[NSFileManager defaultManager] createFileAtPath:tempFilePath
@@ -236,6 +239,15 @@ void RunApplication(NSString* app_path,
       [NSMutableDictionary dictionary];
   [testingEnvironmentVariables setValue:[app_path lastPathComponent]
                                  forKey:@"IDEiPhoneInternalTestBundleName"];
+
+  NSString* frameworkPath =
+      @"__PLATFORMS__/iPhoneSimulator.platform/Developer/Library/Frameworks";
+  [testingEnvironmentVariables setValue:frameworkPath
+                                 forKey:@"DYLD_FRAMEWORK_PATH"];
+  NSString* libraryPath =
+      @"__PLATFORMS__/iPhoneSimulator.platform/Developer/Library";
+  [testingEnvironmentVariables setValue:libraryPath
+                                 forKey:@"DYLD_LIBRARY_PATH"];
 
   if (xctest_path) {
     [testTargetName setValue:xctest_path forKey:@"TestBundlePath"];
@@ -255,6 +267,10 @@ void RunApplication(NSString* app_path,
 
   if (cmd_args) {
     [testTargetName setObject:@[ cmd_args ] forKey:@"CommandLineArguments"];
+  }
+
+  if (only_testing_tests) {
+    [testTargetName setObject:only_testing_tests forKey:@"OnlyTestIdentifiers"];
   }
 
   [testTargetName setObject:testingEnvironmentVariables
@@ -321,9 +337,10 @@ int main(int argc, char* const argv[]) {
   }
   NSString* sdk_version = [NSString stringWithFormat:@"%0.1f", sdk];
   NSMutableDictionary* app_env = [NSMutableDictionary dictionary];
+  NSMutableArray* only_testing_tests = [NSMutableArray array];
 
   int c;
-  while ((c = getopt(argc, argv, "hs:d:u:t:e:c:pwl")) != -1) {
+  while ((c = getopt(argc, argv, "hs:d:u:t:e:c:o:pwl")) != -1) {
     switch (c) {
       case 's':
         sdk_version = [NSString stringWithUTF8String:optarg];
@@ -337,6 +354,10 @@ int main(int argc, char* const argv[]) {
       case 'c':
         cmd_args = [NSString stringWithUTF8String:optarg];
         break;
+      case 'o': {
+        NSString* only_testing_test = [NSString stringWithUTF8String:optarg];
+        [only_testing_tests addObject:only_testing_test];
+      } break;
       case 'e': {
         NSString* envLine = [NSString stringWithUTF8String:optarg];
         NSRange range = [envLine rangeOfString:@"="];
@@ -414,7 +435,8 @@ int main(int argc, char* const argv[]) {
     exit(kExitInvalidArguments);
   }
 
-  RunApplication(app_path, xctest_path, udid, app_env, cmd_args);
+  RunApplication(app_path, xctest_path, udid, app_env, cmd_args,
+                 only_testing_tests);
   KillSimulator();
   return kExitSuccess;
 }

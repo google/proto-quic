@@ -36,7 +36,8 @@ TEST_F(HttpStreamFactoryImplRequestTest, SetPriority) {
   auto job_controller = base::MakeUnique<HttpStreamFactoryImpl::JobController>(
       factory, &request_delegate, session.get(), &job_factory, request_info,
       /* is_preconnect = */ false,
-      /* enable_ip_based_pooling = */ true);
+      /* enable_ip_based_pooling = */ true,
+      /* enable_alternative_services = */ true);
   HttpStreamFactoryImpl::JobController* job_controller_raw_ptr =
       job_controller.get();
   factory->job_controller_set_.insert(std::move(job_controller));

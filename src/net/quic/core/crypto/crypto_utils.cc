@@ -292,8 +292,9 @@ const char* CryptoUtils::HandshakeFailureReasonToString(
 
 // static
 void CryptoUtils::HashHandshakeMessage(const CryptoHandshakeMessage& message,
-                                       string* output) {
-  const QuicData& serialized = message.GetSerialized();
+                                       string* output,
+                                       Perspective perspective) {
+  const QuicData& serialized = message.GetSerialized(perspective);
   uint8_t digest[SHA256_DIGEST_LENGTH];
   SHA256(reinterpret_cast<const uint8_t*>(serialized.data()),
          serialized.length(), digest);

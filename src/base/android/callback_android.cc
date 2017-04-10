@@ -4,6 +4,8 @@
 
 #include "base/android/callback_android.h"
 
+#include "base/android/jni_array.h"
+#include "base/android/scoped_java_ref.h"
 #include "jni/Callback_jni.h"
 
 namespace base {
@@ -23,6 +25,14 @@ void RunCallbackAndroid(const JavaRef<jobject>& callback, bool arg) {
 void RunCallbackAndroid(const JavaRef<jobject>& callback, int arg) {
   Java_Callback_onResultFromNativeV_I(base::android::AttachCurrentThread(),
                                       callback, arg);
+}
+
+void RunCallbackAndroid(const JavaRef<jobject>& callback,
+                        const std::vector<uint8_t>& arg) {
+  JNIEnv* env = base::android::AttachCurrentThread();
+  base::android::ScopedJavaLocalRef<jbyteArray> j_bytes =
+      base::android::ToJavaByteArray(env, arg);
+  Java_Callback_onResultFromNativeV_AB(env, callback, j_bytes);
 }
 
 }  // namespace android

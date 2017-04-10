@@ -21,7 +21,7 @@ HeaderIndexing::HeaderIndexing()
 HeaderIndexing::~HeaderIndexing() {}
 
 void HeaderIndexing::CreateInitIndexingHeaders() {
-  const std::string initial_fields[] = {
+  const SpdyString initial_fields[] = {
       // Estimated top 100 fields.
       "alt-svc",
       "date",
@@ -139,7 +139,7 @@ bool HeaderIndexing::ShouldIndex(SpdyStringPiece header,
     return false;
   }
   // header is in indexing set.
-  std::string header_str(header.data(), header.size());
+  SpdyString header_str(header.data(), header.size());
   if (indexing_set_.find(header_str) != indexing_set_.end()) {
     return true;
   }
@@ -156,7 +156,7 @@ bool HeaderIndexing::ShouldIndex(SpdyStringPiece header,
   return false;
 }
 
-void HeaderIndexing::TryInsertHeader(std::string&& header,
+void HeaderIndexing::TryInsertHeader(SpdyString&& header,
                                      HeaderSet* set,
                                      size_t bound) {
   std::pair<HeaderSet::iterator, bool> result = set->insert(std::move(header));

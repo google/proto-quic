@@ -11,8 +11,9 @@ namespace base {
 
 // Overview:
 // This file implements flat_set container. It is an alternative to standard
-// sorted containers that stores it's elements in contiguous memory (current
-// version uses sorted std::vector).
+// sorted containers that stores it's elements in contiguous memory using a
+// std::vector.
+//
 // Discussion that preceded introduction of this container can be found here:
 // https://groups.google.com/a/chromium.org/forum/#!searchin/chromium-dev/vector$20based/chromium-dev/4uQMma9vj9w/HaQ-WvMOAwAJ
 //
@@ -24,11 +25,11 @@ namespace base {
 // Usage guidance:
 // Prefer base::flat_set for:
 //  * Very small sets, something that is an easy fit for cache. Consider
-//    "very small" to be under a 100 32bit integers.
+//    "very small" to be under 100 32bit integers.
 //  * Sets that are built once (using flat_set::flat_set(first, last)). Consider
 //    collecting all data in a vector and then building flat_set out of it.
-//    TODO(dyaroshev): improve the interface to better support this pattern
-//    (crbug.com/682254).
+//    Using the constructor that takes a moved vector allows you to re-use
+//    storage.
 //  * Sets where mutating happens in big bulks: to erase multiple elements, use
 //    base::EraseIf() rather than repeated single-element removal. Insertion is
 //    harder - consider set operations or building a new vector. Set operations
@@ -40,7 +41,9 @@ namespace base {
 //  * Set operations (union/intersect etc).
 //
 // Prefer to build a new flat_set from a std::vector (or similar) instead of
-// calling insert() repeatedly, which would have O(size^2) complexity.
+// calling insert() repeatedly, which would have O(size^2) complexity. The
+// constructor that can accept a moved vector (not required to be sorted) is
+// the most efficient.
 //
 // TODO(dyaroshev): develop standalone benchmarks to find performance boundaries
 // for different types of sets crbug.com/682215.
@@ -57,12 +60,6 @@ namespace base {
 //     - we ask (for now) to assume that move operations invalidate iterators.
 //       TODO(dyaroshev): Research the possibility of using a small buffer
 //       optimization crbug.com/682240.
-//   * Constructor sorts elements in a non-stable manner (unlike std::set). So
-//     among equivalent (with respect to provided compare) elements passed to
-//     the constructor it is unspecified with one will end up in the set.
-//     However insert()/emplace() methods are stable with respect to already
-//     inserted elements - an element that is already in the set will not be
-//     replaced.
 //   * allocator support is not implemented.
 //   * insert(first, last) and insert(std::initializer_list) are not
 //     implemented (see Notes section).
@@ -81,6 +78,15 @@ namespace base {
 // Most of the core functionality is inherited from flat_tree. Please see
 // flat_tree.h for more details for most of these functions. As a quick
 // reference, the functions available are:
+//
+// Constructors (inputs need not be sorted):
+//   flat_set(InputIterator first, InputIterator last,
+//            FlatContainerDupes, const Compare& compare = Compare());
+//   flat_set(const flat_set&);
+//   flat_set(flat_set&&);
+//   flat_set(std::vector<Key>, FlatContainerDupes);  // Re-use storage.
+//   flat_set(std::initializer_list<value_type> ilist,
+//            const Compare& comp = Compare());
 //
 // Assignment functions:
 //   flat_set& operator=(const flat_set&);
@@ -137,7 +143,7 @@ namespace base {
 //   iterator                 upper_bound(const Key&);
 //   const_iterator           upper_bound(const Key&) const;
 //
-// General functions
+// General functions:
 //   void swap(flat_set&&)
 //
 // Non-member operators:

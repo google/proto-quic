@@ -238,6 +238,7 @@
               "device_type": "sprout"
             }
           ],
+          "expiration": 14400,
           "shards": 2
         },
         "test": "android_webview_test_apk"
@@ -252,7 +253,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "android_webview_unittests"
       },
@@ -266,7 +268,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "base_unittests"
       },
@@ -280,7 +283,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "blink_heap_unittests"
       },
@@ -294,7 +298,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "breakpad_unittests"
       },
@@ -308,7 +313,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "capture_unittests"
       },
@@ -322,7 +328,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "cc_unittests"
       },
@@ -340,7 +347,8 @@
               "device_type": "sprout"
             }
           ],
-          "shards": 3
+          "expiration": 14400,
+          "shards": 6
         },
         "test": "chrome_public_test_apk"
       },
@@ -358,7 +366,7 @@
               "device_type": "sprout"
             }
           ],
-          "shards": 2
+          "expiration": 14400
         },
         "test": "chrome_sync_shell_test_apk"
       },
@@ -372,7 +380,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "components_browsertests"
       },
@@ -386,7 +395,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "components_unittests"
       },
@@ -400,7 +410,9 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400,
+          "shards": 4
         },
         "test": "content_browsertests"
       },
@@ -418,7 +430,7 @@
               "device_type": "sprout"
             }
           ],
-          "shards": 2
+          "expiration": 14400
         },
         "test": "content_shell_test_apk"
       },
@@ -432,7 +444,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "content_unittests"
       },
@@ -446,7 +459,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "device_unittests"
       },
@@ -460,7 +474,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "events_unittests"
       },
@@ -474,7 +489,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "gl_tests"
       },
@@ -488,7 +504,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "gl_unittests"
       },
@@ -502,7 +519,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "gpu_ipc_service_unittests"
       },
@@ -516,7 +534,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "gpu_unittests"
       },
@@ -530,7 +549,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "ipc_tests"
       },
@@ -544,7 +564,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "media_unittests"
       },
@@ -558,7 +579,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "net_unittests"
       },
@@ -572,7 +594,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "sandbox_linux_unittests"
       },
@@ -586,7 +609,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "sql_unittests"
       },
@@ -600,7 +624,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "storage_unittests"
       },
@@ -614,7 +639,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "ui_android_unittests"
       },
@@ -628,7 +654,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "ui_base_unittests"
       },
@@ -642,7 +669,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "ui_touch_selection_unittests"
       },
@@ -656,7 +684,8 @@
               "device_os": "LMY47W",
               "device_type": "sprout"
             }
-          ]
+          ],
+          "expiration": 14400
         },
         "test": "unit_tests"
       }

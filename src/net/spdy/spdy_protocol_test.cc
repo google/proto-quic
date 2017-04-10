@@ -14,8 +14,6 @@
 #include "net/test/gtest_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using std::string;
-
 namespace net {
 
 std::ostream& operator<<(std::ostream& os,
@@ -128,7 +126,7 @@ TEST(SpdyProtocolTest, SettingsIdToString) {
   struct {
     SpdySettingsIds setting_id;
     bool expected_bool;
-    const string expected_string;
+    const SpdyString expected_string;
   } test_cases[] = {
       {static_cast<SpdySettingsIds>(0), false, "SETTINGS_UNKNOWN"},
       {SETTINGS_HEADER_TABLE_SIZE, true, "SETTINGS_HEADER_TABLE_SIZE"},
@@ -234,19 +232,19 @@ TEST(SpdyDataIRTest, Construct) {
   EXPECT_NE(SpdyStringPiece(d1.data(), d1.data_len()), s2);
 
   // Confirm copies a const string.
-  const string foo = "foo";
+  const SpdyString foo = "foo";
   SpdyDataIR d3(3, foo);
   EXPECT_EQ(foo, d3.data());
 
   // Confirm copies a non-const string.
-  string bar = "bar";
+  SpdyString bar = "bar";
   SpdyDataIR d4(4, bar);
   EXPECT_EQ("bar", bar);
   EXPECT_EQ("bar", SpdyStringPiece(d4.data(), d4.data_len()));
 
   // Confirm moves an rvalue reference. Note that the test string "baz" is too
   // short to trigger the move optimization, and instead a copy occurs.
-  string baz = "the quick brown fox";
+  SpdyString baz = "the quick brown fox";
   SpdyDataIR d5(5, std::move(baz));
   EXPECT_EQ("", baz);
   EXPECT_EQ(SpdyStringPiece(d5.data(), d5.data_len()), "the quick brown fox");

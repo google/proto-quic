@@ -45,22 +45,32 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   // from it.
   using ReEnqueueSequenceCallback = Callback<void(scoped_refptr<Sequence>)>;
 
+  // Constructs a pool without workers. Tasks can be posted to the pool, but
+  // they won't run until workers are created. To create workers and start
+  // running tasks, call Start().
+  //
+  // |name| is used to label the pool's threads ("TaskScheduler" + |name| +
+  // index) and histograms ("TaskScheduler." + histogram name + "." + |name| +
+  // extra suffixes). |priority_hint| is the preferred thread priority; the
+  // actual thread priority depends on shutdown state and platform capabilities.
+  // |re_enqueue_sequence_callback| is invoked when a Sequence isn't empty after
+  // a worker pops a Task from it. |task_tracker| keeps track of tasks.
+  // |delayed_task_manager| handles tasks posted with a delay.
+  SchedulerWorkerPoolImpl(
+      const std::string& name,
+      ThreadPriority priority_hint,
+      ReEnqueueSequenceCallback re_enqueue_sequence_callback,
+      TaskTracker* task_tracker,
+      DelayedTaskManager* delayed_task_manager);
+
+  // Creates workers following the |params| specification, allowing existing and
+  // future tasks to run. Can only be called once. CHECKs on failure.
+  void Start(const SchedulerWorkerPoolParams& params);
+
   // Destroying a SchedulerWorkerPoolImpl returned by Create() is not allowed in
   // production; it is always leaked. In tests, it can only be destroyed after
   // JoinForTesting() has returned.
   ~SchedulerWorkerPoolImpl() override;
-
-  // Creates a SchedulerWorkerPoolImpl following the |worker_pool_params|
-  // specification. |re_enqueue_sequence_callback| will be invoked after a
-  // worker of this worker pool tries to run a Task. |task_tracker| is used to
-  // handle shutdown behavior of Tasks. |delayed_task_manager| handles Tasks
-  // posted with a delay. Returns nullptr on failure to create a worker pool
-  // with at least one thread.
-  static std::unique_ptr<SchedulerWorkerPoolImpl> Create(
-      const SchedulerWorkerPoolParams& params,
-      const ReEnqueueSequenceCallback& re_enqueue_sequence_callback,
-      TaskTracker* task_tracker,
-      DelayedTaskManager* delayed_task_manager);
 
   // SchedulerWorkerPool:
   scoped_refptr<TaskRunner> CreateTaskRunnerWithTraits(
@@ -113,10 +123,6 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
                           TaskTracker* task_tracker,
                           DelayedTaskManager* delayed_task_manager);
 
-  bool Initialize(
-      const SchedulerWorkerPoolParams& params,
-      const ReEnqueueSequenceCallback& re_enqueue_sequence_callback);
-
   // Wakes up the last worker from this worker pool to go idle, if any.
   void WakeUpOneWorker();
 
@@ -132,23 +138,27 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   // Returns true if worker thread detachment is permitted.
   bool CanWorkerDetachForTesting();
 
-  // The name of this worker pool, used to label its worker threads.
   const std::string name_;
-
-  // All worker owned by this worker pool. Only modified during initialization
-  // of the worker pool.
-  std::vector<scoped_refptr<SchedulerWorker>> workers_;
+  const ThreadPriority priority_hint_;
+  const ReEnqueueSequenceCallback re_enqueue_sequence_callback_;
 
   // PriorityQueue from which all threads of this worker pool get work.
   PriorityQueue shared_priority_queue_;
 
-  // Suggested reclaim time for workers.
-  const TimeDelta suggested_reclaim_time_;
+  // All workers owned by this worker pool. Initialized by Start() within the
+  // scope of |idle_workers_stack_lock_|. Never modified afterwards (i.e. can be
+  // read without synchronization once |workers_created_.IsSignaled()|).
+  std::vector<scoped_refptr<SchedulerWorker>> workers_;
 
-  // Synchronizes access to |idle_workers_stack_| and
-  // |idle_workers_stack_cv_for_testing_|. Has |shared_priority_queue_|'s
-  // lock as its predecessor so that a worker can be pushed to
-  // |idle_workers_stack_| within the scope of a Transaction (more
+  // Suggested reclaim time for workers. Initialized by Start(). Never modified
+  // afterwards (i.e. can be read without synchronization once
+  // |workers_created_.IsSignaled()|).
+  TimeDelta suggested_reclaim_time_;
+
+  // Synchronizes access to |idle_workers_stack_|,
+  // |idle_workers_stack_cv_for_testing_| and |num_wake_ups_before_start_|. Has
+  // |shared_priority_queue_|'s lock as its predecessor so that a worker can be
+  // pushed to |idle_workers_stack_| within the scope of a Transaction (more
   // details in GetWork()).
   mutable SchedulerLock idle_workers_stack_lock_;
 
@@ -162,6 +172,9 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   // Signaled when all workers become idle.
   std::unique_ptr<ConditionVariable> idle_workers_stack_cv_for_testing_;
 
+  // Number of wake ups that occurred before Start().
+  int num_wake_ups_before_start_ = 0;
+
   // Signaled once JoinForTesting() has returned.
   WaitableEvent join_for_testing_returned_;
 
@@ -171,7 +184,7 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
 
 #if DCHECK_IS_ON()
   // Signaled when all workers have been created.
-  WaitableEvent workers_created_;
+  mutable WaitableEvent workers_created_;
 #endif
 
   // TaskScheduler.DetachDuration.[worker pool name] histogram. Intentionally

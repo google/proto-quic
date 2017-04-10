@@ -98,6 +98,15 @@ void OnGlobalDumpDone(MemoryDumpCallback wrapped_callback,
   }
 }
 
+void FillOsDumpFromProcessMemoryDump(
+    const ProcessMemoryDump* pmd,
+    MemoryDumpCallbackResult::OSMemDump* osDump) {
+  if (pmd->has_process_totals()) {
+    const ProcessMemoryTotals* totals = pmd->process_totals();
+    osDump->resident_set_kb = totals->resident_set_bytes() / 1024;
+  }
+}
+
 // Proxy class which wraps a ConvertableToTraceFormat owned by the
 // |session_state| into a proxy object that can be added to the trace event log.
 // This is to solve the problem that the MemoryDumpSessionState is refcounted
@@ -195,8 +204,7 @@ void MemoryDumpManager::EnableHeapProfilingIfNeeded() {
   if (profiling_mode == "") {
     AllocationContextTracker::SetCaptureMode(
         AllocationContextTracker::CaptureMode::PSEUDO_STACK);
-#if HAVE_TRACE_STACK_FRAME_POINTERS && \
-    (BUILDFLAG(ENABLE_PROFILING) || !defined(NDEBUG))
+#if (BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS) || !defined(NDEBUG))
   } else if (profiling_mode == switches::kEnableHeapProfilingModeNative) {
     // We need frame pointers for native tracing to work, and they are
     // enabled in profiling and debug builds.
@@ -807,6 +815,10 @@ void MemoryDumpManager::FinalizeDumpAndAddToTrace(
           GetDumpsSumKb("partition_alloc/partitions/*", process_memory_dump);
       result.chrome_dump.blink_gc_total_kb =
           GetDumpsSumKb("blink_gc", process_memory_dump);
+      FillOsDumpFromProcessMemoryDump(process_memory_dump, &result.os_dump);
+    } else {
+      auto& os_dump = result.extra_processes_dump[pid];
+      FillOsDumpFromProcessMemoryDump(process_memory_dump, &os_dump);
     }
   }
 

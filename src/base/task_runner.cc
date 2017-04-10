@@ -23,7 +23,7 @@ class PostTaskAndReplyTaskRunner : public internal::PostTaskAndReplyImpl {
 
  private:
   bool PostTask(const tracked_objects::Location& from_here,
-                Closure task) override;
+                OnceClosure task) override;
 
   // Non-owning.
   TaskRunner* destination_;
@@ -36,20 +36,20 @@ PostTaskAndReplyTaskRunner::PostTaskAndReplyTaskRunner(
 
 bool PostTaskAndReplyTaskRunner::PostTask(
     const tracked_objects::Location& from_here,
-    Closure task) {
+    OnceClosure task) {
   return destination_->PostTask(from_here, std::move(task));
 }
 
 }  // namespace
 
 bool TaskRunner::PostTask(const tracked_objects::Location& from_here,
-                          Closure task) {
+                          OnceClosure task) {
   return PostDelayedTask(from_here, std::move(task), base::TimeDelta());
 }
 
 bool TaskRunner::PostTaskAndReply(const tracked_objects::Location& from_here,
-                                  Closure task,
-                                  Closure reply) {
+                                  OnceClosure task,
+                                  OnceClosure reply) {
   return PostTaskAndReplyTaskRunner(this).PostTaskAndReply(
       from_here, std::move(task), std::move(reply));
 }

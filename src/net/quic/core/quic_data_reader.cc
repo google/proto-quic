@@ -8,11 +8,19 @@
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/platform/api/quic_endian.h"
+#include "net/quic/platform/api/quic_logging.h"
 
 namespace net {
 
-QuicDataReader::QuicDataReader(const char* data, const size_t len)
-    : data_(data), len_(len), pos_(0) {}
+#define ENDPOINT \
+  (perspective_ == Perspective::IS_SERVER ? "Server: " : "Client: ")
+
+QuicDataReader::QuicDataReader(const char* data,
+                               const size_t len,
+                               Perspective perspective)
+    : data_(data), len_(len), pos_(0), perspective_(perspective) {
+  QUIC_DVLOG(1) << ENDPOINT << "QuicDataReader";
+}
 
 bool QuicDataReader::ReadUInt16(uint16_t* result) {
   return ReadBytes(result, sizeof(*result));

@@ -29,7 +29,7 @@
 #define HAVE_DLFCN_H 1
 
 /* Have dlopen based dso */
-#define HAVE_DLOPEN /**/
+/* #undef HAVE_DLOPEN */
 
 /* Define to 1 if you have the <dl.h> header file. */
 /* #undef HAVE_DL_H */
@@ -98,7 +98,7 @@
 /* #undef HAVE_LIBREADLINE */
 
 /* Have compression library */
-#define HAVE_LIBZ 1
+/* #undef HAVE_LIBZ */
 
 /* Define to 1 if you have the <limits.h> header file. */
 #define HAVE_LIMITS_H 1
@@ -264,7 +264,7 @@
 #define HAVE_VSPRINTF 1
 
 /* Define to 1 if you have the <zlib.h> header file. */
-#define HAVE_ZLIB_H 1
+/* #undef HAVE_ZLIB_H */
 
 /* Define to 1 if you have the `_stat' function. */
 /* #undef HAVE__STAT */

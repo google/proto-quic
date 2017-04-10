@@ -15,7 +15,7 @@ TEST(JSONWriterTest, BasicTypes) {
   std::string output_js;
 
   // Test null.
-  EXPECT_TRUE(JSONWriter::Write(*Value::CreateNullValue(), &output_js));
+  EXPECT_TRUE(JSONWriter::Write(Value(), &output_js));
   EXPECT_EQ("null", output_js);
 
   // Test empty dict.

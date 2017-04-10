@@ -9,7 +9,6 @@
 #include <stdint.h>
 
 #include <memory>
-#include <string>
 
 #include "base/gtest_prod_util.h"
 #include "base/sys_byteorder.h"
@@ -54,13 +53,21 @@ class NET_EXPORT_PRIVATE SpdyFrameBuilder {
                      uint8_t flags,
                      SpdyStreamId stream_id);
 
-  // Populates this frame with a HTTP2 frame prefix with length information.
-  // The given type must be a control frame type.
+  // Populates this frame with a HTTP2 frame prefix with type and length
+  // information.  |type| must be a defined type.
   bool BeginNewFrame(const SpdyFramer& framer,
                      SpdyFrameType type,
                      uint8_t flags,
                      SpdyStreamId stream_id,
                      size_t length);
+
+  // Populates this frame with a HTTP2 frame prefix with type and length
+  // information.  |raw_frame_type| must not be a defined frame type.
+  bool BeginNewExtensionFrame(const SpdyFramer& framer,
+                              uint8_t raw_frame_type,
+                              uint8_t flags,
+                              SpdyStreamId stream_id,
+                              size_t length);
 
   // Takes the buffer from the SpdyFrameBuilder.
   SpdySerializedFrame take() {
@@ -114,6 +121,14 @@ class NET_EXPORT_PRIVATE SpdyFrameBuilder {
   FRIEND_TEST_ALL_PREFIXES(SpdyFrameBuilderTest, GetWritableBuffer);
   FRIEND_TEST_ALL_PREFIXES(SpdyFrameBuilderTest, GetWritableOutput);
   FRIEND_TEST_ALL_PREFIXES(SpdyFrameBuilderTest, GetWritableOutputNegative);
+
+  // Populates this frame with a HTTP2 frame prefix with type and length
+  // information.
+  bool BeginNewFrameInternal(const SpdyFramer& framer,
+                             uint8_t raw_frame_type,
+                             uint8_t flags,
+                             SpdyStreamId stream_id,
+                             size_t length);
 
   // Returns a writeable buffer of given size in bytes, to be appended to the
   // currently written frame. Does bounds checking on length but does not

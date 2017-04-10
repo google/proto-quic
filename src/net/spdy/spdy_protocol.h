@@ -16,7 +16,6 @@
 #include <limits>
 #include <map>
 #include <memory>
-#include <string>
 #include <utility>
 
 #include "base/compiler_specific.h"
@@ -24,6 +23,7 @@
 #include "base/macros.h"
 #include "base/sys_byteorder.h"
 #include "net/base/net_export.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/spdy_alt_svc_wire_format.h"
 #include "net/spdy/spdy_bitmasks.h"
@@ -464,7 +464,7 @@ class NET_EXPORT_PRIVATE SpdyDataIR
   SpdyDataIR(SpdyStreamId stream_id, const char* data);
 
   // Moves data into data_store_. Makes a copy if passed a non-movable string.
-  SpdyDataIR(SpdyStreamId stream_id, std::string data);
+  SpdyDataIR(SpdyStreamId stream_id, SpdyString data);
 
   // Use in conjunction with SetDataShallow() for shallow-copy on data.
   explicit SpdyDataIR(SpdyStreamId stream_id);
@@ -488,7 +488,7 @@ class NET_EXPORT_PRIVATE SpdyDataIR
 
   // Deep-copy of data (keep private copy).
   void SetDataDeep(SpdyStringPiece data) {
-    data_store_.reset(new std::string(data.data(), data.size()));
+    data_store_.reset(new SpdyString(data.data(), data.size()));
     data_ = data_store_->data();
     data_len_ = data.size();
   }
@@ -514,7 +514,7 @@ class NET_EXPORT_PRIVATE SpdyDataIR
 
  private:
   // Used to store data that this SpdyDataIR should own.
-  std::unique_ptr<std::string> data_store_;
+  std::unique_ptr<SpdyString> data_store_;
   const char* data_;
   size_t data_len_;
 
@@ -606,7 +606,7 @@ class NET_EXPORT_PRIVATE SpdyGoAwayIR : public SpdyFrameIR {
   // keep description live after constructing this SpdyGoAwayIR.
   SpdyGoAwayIR(SpdyStreamId last_good_stream_id,
                SpdyErrorCode error_code,
-               std::string description);
+               SpdyString description);
 
   ~SpdyGoAwayIR() override;
   SpdyStreamId last_good_stream_id() const { return last_good_stream_id_; }
@@ -629,7 +629,7 @@ class NET_EXPORT_PRIVATE SpdyGoAwayIR : public SpdyFrameIR {
  private:
   SpdyStreamId last_good_stream_id_;
   SpdyErrorCode error_code_;
-  const std::string description_store_;
+  const SpdyString description_store_;
   const SpdyStringPiece description_;
 
   DISALLOW_COPY_AND_ASSIGN(SpdyGoAwayIR);
@@ -748,13 +748,13 @@ class NET_EXPORT_PRIVATE SpdyContinuationIR : public SpdyFrameWithStreamIdIR {
 
   bool end_headers() const { return end_headers_; }
   void set_end_headers(bool end_headers) {end_headers_ = end_headers;}
-  const std::string& encoding() const { return *encoding_; }
-  void take_encoding(std::unique_ptr<std::string> encoding) {
+  const SpdyString& encoding() const { return *encoding_; }
+  void take_encoding(std::unique_ptr<SpdyString> encoding) {
     encoding_ = std::move(encoding);
   }
 
  private:
-  std::unique_ptr<std::string> encoding_;
+  std::unique_ptr<SpdyString> encoding_;
   bool end_headers_;
   DISALLOW_COPY_AND_ASSIGN(SpdyContinuationIR);
 };
@@ -764,12 +764,12 @@ class NET_EXPORT_PRIVATE SpdyAltSvcIR : public SpdyFrameWithStreamIdIR {
   explicit SpdyAltSvcIR(SpdyStreamId stream_id);
   ~SpdyAltSvcIR() override;
 
-  std::string origin() const { return origin_; }
+  SpdyString origin() const { return origin_; }
   const SpdyAltSvcWireFormat::AlternativeServiceVector& altsvc_vector() const {
     return altsvc_vector_;
   }
 
-  void set_origin(std::string origin) { origin_ = std::move(origin); }
+  void set_origin(SpdyString origin) { origin_ = std::move(origin); }
   void add_altsvc(const SpdyAltSvcWireFormat::AlternativeService& altsvc) {
     altsvc_vector_.push_back(altsvc);
   }
@@ -779,7 +779,7 @@ class NET_EXPORT_PRIVATE SpdyAltSvcIR : public SpdyFrameWithStreamIdIR {
   SpdyFrameType frame_type() const override;
 
  private:
-  std::string origin_;
+  SpdyString origin_;
   SpdyAltSvcWireFormat::AlternativeServiceVector altsvc_vector_;
   DISALLOW_COPY_AND_ASSIGN(SpdyAltSvcIR);
 };

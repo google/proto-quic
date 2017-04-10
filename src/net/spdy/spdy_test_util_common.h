@@ -10,7 +10,6 @@
 
 #include <map>
 #include <memory>
-#include <string>
 #include <vector>
 
 #include "base/macros.h"
@@ -31,6 +30,7 @@
 #include "net/proxy/proxy_server.h"
 #include "net/proxy/proxy_service.h"
 #include "net/socket/socket_test_util.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/spdy_protocol.h"
 #include "net/ssl/ssl_config_service_defaults.h"
@@ -313,7 +313,7 @@ class SpdyTestUtil {
                                                  int64_t content_length);
 
   // Construct an expected SPDY reply string from the given headers.
-  std::string ConstructSpdyReplyString(const SpdyHeaderBlock& headers) const;
+  SpdyString ConstructSpdyReplyString(const SpdyHeaderBlock& headers) const;
 
   // Construct an expected SPDY SETTINGS frame.
   // |settings| are the settings to set.
@@ -340,7 +340,7 @@ class SpdyTestUtil {
   // ownership of the frame.
   SpdySerializedFrame ConstructSpdyGoAway(SpdyStreamId last_good_stream_id,
                                           SpdyErrorCode error_code,
-                                          const std::string& desc);
+                                          const SpdyString& desc);
 
   // Construct a SPDY WINDOW_UPDATE frame.
   // Returns the constructed frame.  The caller takes ownership of the frame.

@@ -21,6 +21,7 @@ target.set_signature_hash('md5')
 chain = [target, intermediate]
 trusted = common.TrustAnchor(root, constrained=False)
 time = common.DEFAULT_TIME
+key_purpose = common.DEFAULT_KEY_PURPOSE
 verify_result = False
 errors = """----- Certificate i=0 (CN=Target) -----
 ERROR: Unacceptable signature algorithm
@@ -28,4 +29,5 @@ ERROR: VerifySignedData failed
 
 """
 
-common.write_test_file(__doc__, chain, trusted, time, verify_result, errors)
+common.write_test_file(__doc__, chain, trusted, time, key_purpose,
+                       verify_result, errors)

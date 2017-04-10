@@ -7,11 +7,11 @@
 #include <cstddef>
 #include <cstring>
 #include <memory>
-#include <string>
 
 #include "base/bind.h"
 #include "base/memory/ref_counted.h"
 #include "net/base/io_buffer.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/spdy_protocol.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -25,8 +25,8 @@ const size_t kDataSize = arraysize(kData);
 class SpdyBufferTest : public ::testing::Test {};
 
 // Make a string from the data remaining in |buffer|.
-std::string BufferToString(const SpdyBuffer& buffer) {
-  return std::string(buffer.GetRemainingData(), buffer.GetRemainingSize());
+SpdyString BufferToString(const SpdyBuffer& buffer) {
+  return SpdyString(buffer.GetRemainingData(), buffer.GetRemainingSize());
 }
 
 // Construct a SpdyBuffer from a SpdySerializedFrame and make sure its data
@@ -43,14 +43,14 @@ TEST_F(SpdyBufferTest, FrameConstructor) {
 // Construct a SpdyBuffer from a const char*/size_t pair and make sure
 // it makes a copy of the data.
 TEST_F(SpdyBufferTest, DataConstructor) {
-  std::string data(kData, kDataSize);
+  SpdyString data(kData, kDataSize);
   SpdyBuffer buffer(data.data(), data.size());
   // This mutation shouldn't affect |buffer|'s data.
   data[0] = 'H';
 
   EXPECT_NE(kData, buffer.GetRemainingData());
   EXPECT_EQ(kDataSize, buffer.GetRemainingSize());
-  EXPECT_EQ(std::string(kData, kDataSize), BufferToString(buffer));
+  EXPECT_EQ(SpdyString(kData, kDataSize), BufferToString(buffer));
 }
 
 void IncrementBy(size_t* x,
@@ -74,10 +74,10 @@ TEST_F(SpdyBufferTest, Consume) {
   buffer.AddConsumeCallback(
       base::Bind(&IncrementBy, &x2, SpdyBuffer::CONSUME));
 
-  EXPECT_EQ(std::string(kData, kDataSize), BufferToString(buffer));
+  EXPECT_EQ(SpdyString(kData, kDataSize), BufferToString(buffer));
 
   buffer.Consume(5);
-  EXPECT_EQ(std::string(kData + 5, kDataSize - 5), BufferToString(buffer));
+  EXPECT_EQ(SpdyString(kData + 5, kDataSize - 5), BufferToString(buffer));
   EXPECT_EQ(5u, x1);
   EXPECT_EQ(5u, x2);
 
@@ -110,11 +110,11 @@ TEST_F(SpdyBufferTest, GetIOBufferForRemainingData) {
   buffer.Consume(5);
   scoped_refptr<IOBuffer> io_buffer = buffer.GetIOBufferForRemainingData();
   size_t io_buffer_size = buffer.GetRemainingSize();
-  const std::string expectedData(kData + 5, kDataSize - 5);
-  EXPECT_EQ(expectedData, std::string(io_buffer->data(), io_buffer_size));
+  const SpdyString expectedData(kData + 5, kDataSize - 5);
+  EXPECT_EQ(expectedData, SpdyString(io_buffer->data(), io_buffer_size));
 
   buffer.Consume(kDataSize - 5);
-  EXPECT_EQ(expectedData, std::string(io_buffer->data(), io_buffer_size));
+  EXPECT_EQ(expectedData, SpdyString(io_buffer->data(), io_buffer_size));
 }
 
 // Make sure the IOBuffer returned by GetIOBufferForRemainingData()

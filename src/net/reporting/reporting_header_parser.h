@@ -20,16 +20,11 @@ class Value;
 namespace net {
 
 class ReportingCache;
+class ReportingContext;
 
-// Parses Report-To headers and writes the endpoint configurations to the
-// ReportingCache.
 class NET_EXPORT ReportingHeaderParser {
  public:
-  // Parses the normalized Report-To header value |json_value| sent in response
-  // to a request for |url| at |now|, and applies the endpoint configurations
-  // to |cache|.
-  static void ParseHeader(ReportingCache* cache,
-                          base::TimeTicks now,
+  static void ParseHeader(ReportingContext* context,
                           const GURL& url,
                           const std::string& json_value);
 

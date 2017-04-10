@@ -37,9 +37,41 @@
 
 namespace {
 
+std::string EscapeString(const std::string& value) {
+  std::string result;
+  for (char c : value) {
+    switch (c) {
+      case '\n':
+        result += "&#10;";
+        break;
+      case '\r':
+        result += "&#13;";
+        break;
+      case '\t':
+        result += "&#9;";
+        break;
+      case '"':
+        result += "&quot;";
+        break;
+      case '<':
+        result += "&lt;";
+        break;
+      case '>':
+        result += "&gt;";
+        break;
+      case '&':
+        result += "&amp;";
+        break;
+      default:
+        result += c;
+    }
+  }
+  return result;
+}
+
 struct SemicolonSeparatedWriter {
   void operator()(const std::string& value, std::ostream& out) const {
-    out << value + ';';
+    out << EscapeString(value) + ';';
   }
 };
 

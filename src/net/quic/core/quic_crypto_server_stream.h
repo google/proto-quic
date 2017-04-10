@@ -221,12 +221,6 @@ class QUIC_EXPORT_PRIVATE QuicCryptoServerStream
   // server config update messages.
   std::string chlo_hash_;
 
-  // Pointer to the active callback that will receive the result of
-  // the client hello validation request and forward it to
-  // FinishProcessingHandshakeMessage for processing.  nullptr if no
-  // handshake message is being validated.
-  ValidateCallback* validate_client_hello_cb_;
-
   // Pointer to the helper for this crypto stream. Must outlive this stream.
   Helper* helper_;
 
@@ -269,9 +263,16 @@ class QUIC_EXPORT_PRIVATE QuicCryptoServerStream
   // Size of the packet containing the most recently received CHLO.
   QuicByteCount chlo_packet_size_;
 
+  // Pointer to the active callback that will receive the result of the client
+  // hello validation request and forward it to FinishProcessingHandshakeMessage
+  // for processing.  nullptr if no handshake message is being validated.  Note
+  // that this field is mutually exclusive with process_client_hello_cb_.
+  ValidateCallback* validate_client_hello_cb_;
+
   // Pointer to the active callback which will receive the results of
   // ProcessClientHello and forward it to
-  // FinishProcessingHandshakeMessageAfterProcessClientHello.
+  // FinishProcessingHandshakeMessageAfterProcessClientHello.  Note that this
+  // field is mutually exclusive with validate_client_hello_cb_.
   ProcessClientHelloCallback* process_client_hello_cb_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicCryptoServerStream);

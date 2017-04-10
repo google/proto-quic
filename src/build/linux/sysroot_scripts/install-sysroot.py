@@ -122,12 +122,6 @@ def InstallDefaultSysroots(host_arch):
   if host_arch == 'amd64':
     InstallDefaultSysrootForArch('i386')
 
-  # Desktop Chromium OS builds require the precise sysroot.
-  # TODO(thomasanderson): only download this when the GN arg target_os
-  # == 'chromeos', when the functionality to perform the check becomes
-  # available.
-  InstallSysroot('Precise', 'amd64')
-
   # If we can detect a non-standard target_arch such as ARM or MIPS,
   # then install the sysroot too.  Don't attempt to install arm64
   # since this is currently and android-only architecture.

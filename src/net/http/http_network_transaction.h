@@ -296,6 +296,10 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
 
   void CopyConnectionAttemptsFromStreamRequest();
 
+  // Returns true if response "Content-Encoding" headers respect
+  // "Accept-Encoding".
+  bool ContentEncodingsValid() const;
+
   scoped_refptr<HttpAuthController>
       auth_controllers_[HttpAuth::AUTH_NUM_TARGETS];
 
@@ -372,6 +376,9 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
   // Enable pooling to a SpdySession with matching IP and certificate
   // even if the SpdySessionKey is different.
   bool enable_ip_based_pooling_;
+
+  // Enable using alternative services for the request.
+  bool enable_alternative_services_;
 
   // The helper object to use to create WebSocketHandshakeStreamBase
   // objects. Only relevant when establishing a WebSocket connection.

@@ -7,7 +7,6 @@
 #include <string.h>
 #include <vector>
 
-#include "base/android/context_utils.h"
 #include "base/android/jni_android.h"
 #include "base/android/jni_array.h"
 #include "base/android/scoped_java_ref.h"
@@ -54,7 +53,7 @@ SpawnChildResult SpawnMultiProcessTestChild(
   android::ScopedJavaLocalRef<jobjectArray> j_argv =
       android::ToJavaArrayOfStrings(env, command_line.argv());
   jint pid = android::Java_MultiprocessTestClientLauncher_launchClient(
-      env, android::GetApplicationContext(), j_argv, fds);
+      env, j_argv, fds);
 
   SpawnChildResult result;
   result.process = Process(pid);
@@ -69,8 +68,7 @@ bool WaitForMultiprocessTestChildExit(const Process& process,
 
   base::android::ScopedJavaLocalRef<jobject> result_code =
       android::Java_MultiprocessTestClientLauncher_waitForMainToReturn(
-          env, android::GetApplicationContext(), process.Pid(),
-          static_cast<int32_t>(timeout.InMilliseconds()));
+          env, process.Pid(), static_cast<int32_t>(timeout.InMilliseconds()));
   if (result_code.is_null() ||
       Java_MainReturnCodeResult_hasTimedOut(env, result_code)) {
     return false;
@@ -88,7 +86,7 @@ bool TerminateMultiProcessTestChild(const Process& process,
   DCHECK(env);
 
   return android::Java_MultiprocessTestClientLauncher_terminate(
-      env, android::GetApplicationContext(), process.Pid(), exit_code, wait);
+      env, process.Pid(), exit_code, wait);
 }
 
 }  // namespace base

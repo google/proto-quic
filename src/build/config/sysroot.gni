@@ -63,12 +63,6 @@ if (is_linux && target_sysroot_dir != "") {
   }
 
   if (sysroot != "") {
-    # Our sysroot images only contains gcc 4.6 headers, but chromium requires
-    # gcc 4.9. Clang is able to detect and work with the 4.6 headers while
-    # gcc is not. This check can be removed if we ever update to a more modern
-    # sysroot.
-    assert(is_clang, "sysroot images require clang (try use_sysroot=false)")
-
     _script_arch = current_cpu
     if (_script_arch == "x86") {
       _script_arch = "i386"

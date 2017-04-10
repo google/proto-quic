@@ -1,0 +1,11 @@
+{
+  "pylib": "2af6a38142b87bc78f57f65030de579820406c4b",
+  "data": "2a75d6c41ca69e5278a46eb271296b9354d2728d",
+  "bin-darwin": "f45f58ccbf42a26b0704f63d8740cf008b84afcc",
+  "include-darwin": "1a5693595308ffc3c2cd826ac21e538aeafe5345",
+  "lib-darwin": "29baf57b55dd0ab060baf0cd6461a7e0fa0105f4",
+  "bin-linux*": "c7c76f202a6d0feb77dd946b2e605a1ba56d3046",
+  "lib-linux*": "508b0ba0de0b4191a54360330f74cea8afd5ee93",
+  "bin-win32": "f8ff17a5f080cef7639140b057a0f61b4d1a4f8f",
+  "lib-win32": "afb47503a4fd442c353ddaba6f17a81e6aa5a20f"
+}

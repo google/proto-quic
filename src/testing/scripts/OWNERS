@@ -5,6 +5,9 @@ dpranke@chromium.org
 iannucci@chromium.org
 phajdan.jr@chromium.org
 
+# TEAM: infra-dev@chromium.org
+# COMPONENT: Infra>Client>Chrome
+
 # Wrappers for Telemetry based tests.
 per-file run_gpu*=kbr@chromium.org
 per-file run_gpu*=nednguyen@google.com

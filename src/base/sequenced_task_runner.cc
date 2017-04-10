@@ -12,7 +12,7 @@ namespace base {
 
 bool SequencedTaskRunner::PostNonNestableTask(
     const tracked_objects::Location& from_here,
-    Closure task) {
+    OnceClosure task) {
   return PostNonNestableDelayedTask(from_here, std::move(task),
                                     base::TimeDelta());
 }

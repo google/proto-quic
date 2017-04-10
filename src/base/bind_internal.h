@@ -360,7 +360,7 @@ struct Invoker<StorageType, R(UnboundArgs...)> {
 
     return InvokeHelper<is_weak_call, R>::MakeItSo(
         std::forward<Functor>(functor),
-        Unwrap(base::get<indices>(std::forward<BoundArgsTuple>(bound)))...,
+        Unwrap(std::get<indices>(std::forward<BoundArgsTuple>(bound)))...,
         std::forward<UnboundArgs>(unbound_args)...);
   }
 };
@@ -393,7 +393,7 @@ bool ApplyCancellationTraitsImpl(const Functor& functor,
                                  const BoundArgsTuple& bound_args,
                                  IndexSequence<indices...>) {
   return CallbackCancellationTraits<Functor, BoundArgsTuple>::IsCancelled(
-      functor, base::get<indices>(bound_args)...);
+      functor, std::get<indices>(bound_args)...);
 }
 
 // Relays |base| to corresponding CallbackCancellationTraits<>::Run(). Returns

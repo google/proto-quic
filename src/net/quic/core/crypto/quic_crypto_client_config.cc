@@ -112,7 +112,7 @@ QuicCryptoClientConfig::CachedState::GetServerConfig() const {
   }
 
   if (!scfg_.get()) {
-    scfg_ = CryptoFramer::ParseMessage(server_config_);
+    scfg_ = CryptoFramer::ParseMessage(server_config_, Perspective::IS_CLIENT);
     DCHECK(scfg_.get());
   }
   return scfg_.get();
@@ -151,7 +151,8 @@ QuicCryptoClientConfig::CachedState::SetServerConfig(
   const CryptoHandshakeMessage* new_scfg;
 
   if (!matches_existing) {
-    new_scfg_storage = CryptoFramer::ParseMessage(server_config);
+    new_scfg_storage =
+        CryptoFramer::ParseMessage(server_config, Perspective::IS_CLIENT);
     new_scfg = new_scfg_storage.get();
   } else {
     new_scfg = GetServerConfig();
@@ -625,7 +626,8 @@ QuicErrorCode QuicCryptoClientConfig::FillClientHello(
     cetv.set_tag(kCETV);
 
     string hkdf_input;
-    const QuicData& client_hello_serialized = out->GetSerialized();
+    const QuicData& client_hello_serialized =
+        out->GetSerialized(Perspective::IS_CLIENT);
     hkdf_input.append(QuicCryptoConfig::kCETVLabel,
                       strlen(QuicCryptoConfig::kCETVLabel) + 1);
     hkdf_input.append(reinterpret_cast<char*>(&connection_id),
@@ -654,7 +656,7 @@ QuicErrorCode QuicCryptoClientConfig::FillClientHello(
       return QUIC_CRYPTO_SYMMETRIC_KEY_SETUP_FAILED;
     }
 
-    const QuicData& cetv_plaintext = cetv.GetSerialized();
+    const QuicData& cetv_plaintext = cetv.GetSerialized(Perspective::IS_CLIENT);
     const size_t encrypted_len =
         crypters.encrypter->GetCiphertextSize(cetv_plaintext.length());
     std::unique_ptr<char[]> output(new char[encrypted_len]);
@@ -681,7 +683,8 @@ QuicErrorCode QuicCryptoClientConfig::FillClientHello(
   out_params->hkdf_input_suffix.clear();
   out_params->hkdf_input_suffix.append(reinterpret_cast<char*>(&connection_id),
                                        sizeof(connection_id));
-  const QuicData& client_hello_serialized = out->GetSerialized();
+  const QuicData& client_hello_serialized =
+      out->GetSerialized(Perspective::IS_CLIENT);
   out_params->hkdf_input_suffix.append(client_hello_serialized.data(),
                                        client_hello_serialized.length());
   out_params->hkdf_input_suffix.append(cached->server_config());

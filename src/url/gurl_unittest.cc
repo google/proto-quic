@@ -645,10 +645,12 @@ TEST(GURLTest, Newlines) {
   // Constructor.
   GURL url_1(" \t ht\ntp://\twww.goo\rgle.com/as\ndf \n ");
   EXPECT_EQ("http://www.google.com/asdf", url_1.spec());
+  EXPECT_TRUE(url_1.parsed_for_possibly_invalid_spec().whitespace_removed);
 
   // Relative path resolver.
   GURL url_2 = url_1.Resolve(" \n /fo\to\r ");
   EXPECT_EQ("http://www.google.com/foo", url_2.spec());
+  EXPECT_TRUE(url_2.parsed_for_possibly_invalid_spec().whitespace_removed);
 
   // Note that newlines are NOT stripped from ReplaceComponents.
 }

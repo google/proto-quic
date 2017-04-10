@@ -195,6 +195,9 @@ def main():
       action='store_true',
       help='regenerate the compile database before running the tool')
   parser.add_argument(
+      '--shard',
+      metavar='<n>-of-<count>')
+  parser.add_argument(
       'compile_database',
       help='path to the directory that contains the compile database')
   parser.add_argument(
@@ -225,6 +228,19 @@ def main():
     source_filenames = [f
                         for f in git_filenames
                         if os.path.splitext(f)[1] in extensions]
+
+  if args.shard:
+    total_length = len(source_filenames)
+    match = re.match(r'(\d+)-of-(\d+)$', args.shard)
+    # Input is 1-based, but modular arithmetic is 0-based.
+    shard_number = int(match.group(1)) - 1
+    shard_count = int(match.group(2))
+    source_filenames = [
+        f[1] for f in enumerate(sorted(source_filenames))
+        if f[0] % shard_count == shard_number
+    ]
+    print 'Shard %d-of-%d will process %d entries out of %d' % (
+        shard_number, shard_count, len(source_filenames), total_length)
 
   dispatcher = _CompilerDispatcher(args.tool, args.tool_args,
                                    args.compile_database,

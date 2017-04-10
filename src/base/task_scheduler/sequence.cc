@@ -15,6 +15,8 @@ namespace internal {
 Sequence::Sequence() = default;
 
 bool Sequence::PushTask(std::unique_ptr<Task> task) {
+  DCHECK(task);
+  DCHECK(task->task);
   DCHECK(task->sequenced_time.is_null());
   task->sequenced_time = base::TimeTicks::Now();
 

@@ -32,6 +32,7 @@
 #include "net/base/net_errors.h"
 #include "net/base/upload_data_stream.h"
 #include "net/base/url_util.h"
+#include "net/filter/filter_source_stream.h"
 #include "net/http/http_auth.h"
 #include "net/http/http_auth_handler.h"
 #include "net/http/http_auth_handler_factory.h"
@@ -101,6 +102,7 @@ HttpNetworkTransaction::HttpNetworkTransaction(RequestPriority priority,
       next_state_(STATE_NONE),
       establishing_tunnel_(false),
       enable_ip_based_pooling_(true),
+      enable_alternative_services_(true),
       websocket_handshake_stream_base_create_helper_(NULL),
       net_error_details_() {}
 
@@ -545,6 +547,12 @@ void HttpNetworkTransaction::OnNeedsProxyAuth(
   establishing_tunnel_ = true;
   response_.headers = proxy_response.headers;
   response_.auth_challenge = proxy_response.auth_challenge;
+
+  if (response_.headers.get() && !ContentEncodingsValid()) {
+    DoCallback(ERR_CONTENT_DECODING_FAILED);
+    return;
+  }
+
   headers_valid_ = true;
   server_ssl_config_ = used_ssl_config;
   proxy_info_ = used_proxy_info;
@@ -843,17 +851,21 @@ int HttpNetworkTransaction::DoCreateStream() {
   response_.network_accessed = true;
 
   next_state_ = STATE_CREATE_STREAM_COMPLETE;
+  // IP based pooling and Alternative Services are disabled under the same
+  // circumstances: on a retry after 421 Misdirected Request is received.
+  DCHECK(enable_ip_based_pooling_ == enable_alternative_services_);
   if (ForWebSocketHandshake()) {
     stream_request_.reset(
         session_->http_stream_factory_for_websocket()
             ->RequestWebSocketHandshakeStream(
                 *request_, priority_, server_ssl_config_, proxy_ssl_config_,
                 this, websocket_handshake_stream_base_create_helper_,
-                enable_ip_based_pooling_, net_log_));
+                enable_ip_based_pooling_, enable_alternative_services_,
+                net_log_));
   } else {
     stream_request_.reset(session_->http_stream_factory()->RequestStream(
         *request_, priority_, server_ssl_config_, proxy_ssl_config_, this,
-        enable_ip_based_pooling_, net_log_));
+        enable_ip_based_pooling_, enable_alternative_services_, net_log_));
   }
   DCHECK(stream_request_.get());
   return ERR_IO_PENDING;
@@ -1237,6 +1249,9 @@ int HttpNetworkTransaction::DoReadHeadersComplete(int result) {
 
   DCHECK(response_.headers.get());
 
+  if (response_.headers.get() && !ContentEncodingsValid())
+    return ERR_CONTENT_DECODING_FAILED;
+
   // On a 408 response from the server ("Request Timeout") on a stale socket,
   // retry the request.
   // Headers can be NULL because of http://crbug.com/384554.
@@ -1533,6 +1548,13 @@ int HttpNetworkTransaction::HandleIOError(int error) {
         error = OK;
       }
       break;
+    case ERR_QUIC_BROKEN_ERROR:
+      DCHECK(GetResponseHeaders() == nullptr);
+      net_log_.AddEventWithNetErrorCode(
+          NetLogEventType::HTTP_TRANSACTION_RESTART_AFTER_ERROR, error);
+      ResetConnectionAndRequestForResend();
+      error = OK;
+      break;
     case ERR_SPDY_PING_FAILED:
     case ERR_SPDY_SERVER_REFUSED_STREAM:
     case ERR_QUIC_HANDSHAKE_FAILED:
@@ -1543,11 +1565,12 @@ int HttpNetworkTransaction::HandleIOError(int error) {
       break;
     case ERR_MISDIRECTED_REQUEST:
       // If this is the second try, just give up.
-      if (!enable_ip_based_pooling_)
+      if (!enable_ip_based_pooling_ && !enable_alternative_services_)
         return OK;
-      // Otherwise, since the response status was 421 Misdirected Request,
-      // retry the request with IP based pooling disabled.
+      // Otherwise retry the request with both IP based pooling
+      // and Alternative Services disabled.
       enable_ip_based_pooling_ = false;
+      enable_alternative_services_ = false;
       net_log_.AddEventWithNetErrorCode(
           NetLogEventType::HTTP_TRANSACTION_RESTART_AFTER_ERROR, error);
       ResetConnectionAndRequestForResend();
@@ -1716,6 +1739,47 @@ void HttpNetworkTransaction::CopyConnectionAttemptsFromStreamRequest() {
   // those streams by appending them to the vector:
   for (const auto& attempt : stream_request_->connection_attempts())
     connection_attempts_.push_back(attempt);
+}
+
+bool HttpNetworkTransaction::ContentEncodingsValid() const {
+  HttpResponseHeaders* headers = GetResponseHeaders();
+  DCHECK(headers);
+
+  std::string accept_encoding;
+  request_headers_.GetHeader(HttpRequestHeaders::kAcceptEncoding,
+                             &accept_encoding);
+  std::set<std::string> allowed_encodings;
+  if (!HttpUtil::ParseAcceptEncoding(accept_encoding, &allowed_encodings)) {
+    FilterSourceStream::ReportContentDecodingFailed(SourceStream::TYPE_INVALID);
+    return false;
+  }
+
+  std::string content_encoding;
+  headers->GetNormalizedHeader("Content-Encoding", &content_encoding);
+  std::set<std::string> used_encodings;
+  if (!HttpUtil::ParseContentEncoding(content_encoding, &used_encodings)) {
+    FilterSourceStream::ReportContentDecodingFailed(SourceStream::TYPE_INVALID);
+    return false;
+  }
+
+  // When "Accept-Encoding" is not specified, it is parsed as "*".
+  // If "*" encoding is advertised, then any encoding should be "accepted".
+  // This does not mean, that it will be successfully decoded.
+  if (allowed_encodings.find("*") != allowed_encodings.end())
+    return true;
+
+  for (auto const& encoding : used_encodings) {
+    SourceStream::SourceType source_type =
+        FilterSourceStream::ParseEncodingType(encoding);
+    // We don't reject encodings we are not aware. They just will not decode.
+    if (source_type == SourceStream::TYPE_UNKNOWN)
+      continue;
+    if (allowed_encodings.find(encoding) == allowed_encodings.end()) {
+      FilterSourceStream::ReportContentDecodingFailed(source_type);
+      return false;
+    }
+  }
+  return true;
 }
 
 }  // namespace net

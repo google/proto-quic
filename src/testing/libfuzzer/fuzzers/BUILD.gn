@@ -118,6 +118,8 @@ fuzzer_test("template_url_parser_fuzzer") {
     "template_url_parser_fuzzer.cc",
   ]
   deps = [
+    "//base",
+    "//base:i18n",
     "//components/search_engines:search_engines",
   ]
   dict = "dicts/xml.dict"
@@ -353,17 +355,6 @@ fuzzer_test("v8_wasm_types_section_fuzzer") {
   libfuzzer_options = [ "max_len=500" ]
 }
 
-fuzzer_test("libxml_xml_regexp_compile_fuzzer") {
-  sources = [
-    "libxml_xml_regexp_compile_fuzzer.cc",
-  ]
-  deps = [
-    "//third_party/libxml",
-  ]
-  libfuzzer_options = [ "max_len=32" ]
-  additional_configs = [ "//testing/libfuzzer:no_clusterfuzz" ]
-}
-
 fuzzer_test("convert_woff2ttf_fuzzer") {
   sources = [
     "convert_woff2ttf_fuzzer.cc",
@@ -418,6 +409,19 @@ fuzzer_test("skia_pathop_fuzzer") {
     # Disabled due to crashing on SkASSERT (crbug.com/642750, crbug.com/643275).
     additional_configs = [ "//testing/libfuzzer:no_clusterfuzz" ]
   }
+}
+
+fuzzer_test("skia_color_space_fuzzer") {
+  sources = [
+    "color_space_data.h",
+    "skia_color_space_fuzzer.cc",
+  ]
+  deps = [
+    "//base",
+    "//skia",
+  ]
+  dict = "dicts/icc.dict"
+  libfuzzer_options = [ "max_len=4194304" ]
 }
 
 fuzzer_test("prtime_fuzzer") {

@@ -10,6 +10,7 @@
 #include "net/spdy/fuzzing/hpack_fuzz_util.h"
 #include "net/spdy/hpack/hpack_constants.h"
 #include "net/spdy/hpack/hpack_encoder.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/spdy_protocol.h"
 
 namespace {
@@ -23,8 +24,8 @@ const char kExampleCount[] = "example-count";
 }  // namespace
 
 using net::HpackFuzzUtil;
+using net::SpdyString;
 using std::map;
-using std::string;
 
 // Generates a configurable number of header sets (using HpackFuzzUtil), and
 // sequentially encodes each header set with an HpackEncoder. Encoded header
@@ -43,7 +44,7 @@ int main(int argc, char** argv) {
                << " --" << kExampleCount << "=1000";
     return -1;
   }
-  string file_to_write = command_line.GetSwitchValueASCII(kFileToWrite);
+  SpdyString file_to_write = command_line.GetSwitchValueASCII(kFileToWrite);
 
   int example_count = 0;
   base::StringToInt(command_line.GetSwitchValueASCII(kExampleCount),
@@ -62,10 +63,10 @@ int main(int argc, char** argv) {
     net::SpdyHeaderBlock headers =
         HpackFuzzUtil::NextGeneratedHeaderSet(&context);
 
-    string buffer;
+    SpdyString buffer;
     CHECK(encoder.EncodeHeaderSet(headers, &buffer));
 
-    string prefix = HpackFuzzUtil::HeaderBlockPrefix(buffer.size());
+    SpdyString prefix = HpackFuzzUtil::HeaderBlockPrefix(buffer.size());
 
     CHECK_LT(0, file_out.WriteAtCurrentPos(prefix.data(), prefix.size()));
     CHECK_LT(0, file_out.WriteAtCurrentPos(buffer.data(), buffer.size()));

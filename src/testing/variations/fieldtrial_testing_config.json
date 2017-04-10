@@ -293,7 +293,6 @@
                 {
                     "name": "Default",
                     "params": {
-                        "RedirectNonUINonIOBrowserThreads": "true",
                         "RedirectSequencedWorkerPools": "true"
                     }
                 },
@@ -577,6 +576,45 @@
                     "name": "DefaultEnableGpuRasterization",
                     "enable_features": [
                         "DefaultEnableGpuRasterization"
+                    ]
+                }
+            ]
+        }
+    ],
+    "DelayNavigation": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "DelayNavigation",
+                    "params": {
+                        "delay_millis": "4",
+                        "delay_probability": "0.5",
+                        "randomize_delay": "true"
+                    },
+                    "enable_features": [
+                        "DelayNavigation"
+                    ]
+                }
+            ]
+        }
+    ],
+    "DirectCompositionOverlays": [
+        {
+            "platforms": [
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "DirectCompositionOverlays",
+                    "enable_features": [
+                        "DirectCompositionOverlays"
                     ]
                 }
             ]
@@ -1339,6 +1377,24 @@
             ]
         }
     ],
+    "NTPLaunchAfterInactivity": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "OneHourDelay",
+                    "params": {
+                        "delay_in_mins": "60"
+                    },
+                    "enable_features": [
+                        "NTPLaunchAfterInactivity"
+                    ]
+                }
+            ]
+        }
+    ],
     "NTPPersonalizedSectionRanking": [
         {
             "platforms": [
@@ -1593,6 +1649,22 @@
             "experiments": [
                 {
                     "name": "Enabled"
+                }
+            ]
+        }
+    ],
+    "OfflinePageCache": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "OfflineBookmarks",
+                        "OfflineRecentPages"
+                    ]
                 }
             ]
         }
@@ -2629,6 +2701,34 @@
             ]
         }
     ],
+    "SubresourceFilter": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "EnabledForPhishingSites",
+                    "params": {
+                        "activation_lists": "phishing_interstitial",
+                        "activation_scope": "activation_list",
+                        "activation_state": "enabled"
+                    },
+                    "enable_features": [
+                        "SubresourceFilter"
+                    ]
+                },
+                {
+                    "name": "VerifyFeatureIsStillDisabledByDefault",
+                    "forcing_flag": "suppress-enabling-subresource-filter-from-fieldtrial-testing-config"
+                }
+            ]
+        }
+    ],
     "SyncUSSAutocomplete": [
         {
             "platforms": [
@@ -2717,6 +2817,29 @@
             ]
         }
     ],
+    "TranslateRanker": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "ios",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "EnforcementEnabled",
+                    "params": {
+                        "translate-ranker-model-url": "https://www.gstatic.com/chrome/intelligence/assist/ranker/models/translate/2017/02/translate_ranker_model_20170217.pb.bin"
+                    },
+                    "enable_features": [
+                        "TranslateRankerEnforcement"
+                    ]
+                }
+            ]
+        }
+    ],
     "TranslateRankerLogging": [
         {
             "platforms": [
@@ -2770,6 +2893,15 @@
                     "enable_features": [
                         "TranslateUI2016Q2"
                     ]
+                },
+                {
+                    "name": "DoNotDefaultAlways",
+                    "params": {
+                        "always_translate_offer_threshold": "0"
+                    },
+                    "enable_features": [
+                        "TranslateUI2016Q2"
+                    ]
                 }
             ]
         }
@@ -2797,6 +2929,29 @@
             "experiments": [
                 {
                     "name": "On"
+                }
+            ]
+        }
+    ],
+    "UKM": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "linux",
+                "mac",
+                "win",
+                "ios"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "params": {
+                        "RecordSessionId": "true"
+                    },
+                    "enable_features": [
+                        "Ukm"
+                    ]
                 }
             ]
         }

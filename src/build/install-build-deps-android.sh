@@ -32,11 +32,7 @@ sudo apt-get -y install lib32z1 lighttpd python-pexpect xvfb x11-utils
 
 # Some binaries in the Android SDK require 32-bit libraries on the host.
 # See https://developer.android.com/sdk/installing/index.html?pkg=tools
-if [[ $lsb_release == "precise" ]]; then
-  sudo apt-get -y install ia32-libs
-else
-  sudo apt-get -y install libncurses5:i386 libstdc++6:i386 zlib1g:i386
-fi
+sudo apt-get -y install libncurses5:i386 libstdc++6:i386 zlib1g:i386
 
 # Required by //components/cronet/tools/generate_javadoc.py
 # TODO(375324): Stop requiring ANT.

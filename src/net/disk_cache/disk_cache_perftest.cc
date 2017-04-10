@@ -27,6 +27,8 @@
 #include "net/disk_cache/disk_cache_test_base.h"
 #include "net/disk_cache/disk_cache_test_util.h"
 #include "net/disk_cache/simple/simple_backend_impl.h"
+#include "net/disk_cache/simple/simple_index.h"
+#include "net/disk_cache/simple/simple_index_file.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "testing/platform_test.h"
 
@@ -303,6 +305,44 @@ TEST_F(DiskCachePerfTest, BlockFilesPerformance) {
 
   timer2.Done();
   base::RunLoop().RunUntilIdle();
+}
+
+// Measures how quickly SimpleIndex can compute which entries to evict.
+TEST(SimpleIndexPerfTest, EvictionPerformance) {
+  const int kEntries = 10000;
+
+  class NoOpDelegate : public disk_cache::SimpleIndexDelegate {
+    void DoomEntries(std::vector<uint64_t>* entry_hashes,
+                     const net::CompletionCallback& callback) override {}
+  };
+
+  NoOpDelegate delegate;
+  base::Time start(base::Time::Now());
+
+  double evict_elapsed_ms = 0;
+  int iterations = 0;
+  while (iterations < 61000) {
+    ++iterations;
+    disk_cache::SimpleIndex index(nullptr, &delegate, net::DISK_CACHE, nullptr);
+
+    // Make sure large enough to not evict on insertion.
+    index.SetMaxSize(kEntries * 2);
+
+    for (int i = 0; i < kEntries; ++i) {
+      index.InsertEntryForTesting(
+          i, disk_cache::EntryMetadata(start + base::TimeDelta::FromSeconds(i),
+                                       1u));
+    }
+
+    // Trigger an eviction.
+    base::ElapsedTimer timer;
+    index.SetMaxSize(kEntries);
+    index.UpdateEntrySize(0, 1u);
+    evict_elapsed_ms += timer.Elapsed().InMillisecondsF();
+  }
+
+  LOG(ERROR) << "Average time to evict:" << (evict_elapsed_ms / iterations)
+             << "ms";
 }
 
 }  // namespace

@@ -4,6 +4,7 @@
 
 #include "base/win/scoped_comptr.h"
 
+#include <objbase.h>
 #include <shlobj.h>
 
 #include <memory>
@@ -18,8 +19,8 @@ namespace {
 
 struct Dummy {
   Dummy() : adds(0), releases(0) { }
-  void AddRef() { ++adds; }
-  void Release() { ++releases; }
+  unsigned long AddRef() { return ++adds; }
+  unsigned long Release() { return ++releases; }
 
   int adds;
   int releases;
@@ -34,9 +35,6 @@ const IID dummy_iid = {0x12345678u,
 }  // namespace
 
 TEST(ScopedComPtrTest, ScopedComPtr) {
-  EXPECT_EQ(memcmp(&ScopedComPtr<IUnknown>::iid(), &IID_IUnknown, sizeof(IID)),
-            0);
-
   base::win::ScopedCOMInitializer com_initializer;
   EXPECT_TRUE(com_initializer.succeeded());
 
@@ -51,10 +49,9 @@ TEST(ScopedComPtrTest, ScopedComPtr) {
   EXPECT_TRUE(SUCCEEDED(CoGetMalloc(1, mem_alloc.Receive())));
 
   ScopedComPtr<IUnknown> qi_test;
-  EXPECT_HRESULT_SUCCEEDED(mem_alloc.QueryInterface(IID_IUnknown,
-      reinterpret_cast<void**>(qi_test.Receive())));
+  EXPECT_HRESULT_SUCCEEDED(mem_alloc.QueryInterface(IID_PPV_ARGS(&qi_test)));
   EXPECT_TRUE(qi_test.get() != NULL);
-  qi_test.Release();
+  qi_test.Reset();
 
   // test ScopedComPtr& constructor
   ScopedComPtr<IMalloc> copy1(mem_alloc);
@@ -66,7 +63,7 @@ TEST(ScopedComPtrTest, ScopedComPtr) {
   copy1 = naked_copy;  // Test the =(T*) operator.
   naked_copy->Release();
 
-  copy1.Release();
+  copy1.Reset();
   EXPECT_FALSE(copy1.IsSameObject(unk2.get()));  // unk2 is valid, copy1 is not
 
   // test Interface* constructor
@@ -75,7 +72,7 @@ TEST(ScopedComPtrTest, ScopedComPtr) {
 
   EXPECT_TRUE(SUCCEEDED(unk.QueryFrom(mem_alloc.get())));
   EXPECT_TRUE(unk.get() != NULL);
-  unk.Release();
+  unk.Reset();
   EXPECT_TRUE(unk.get() == NULL);
   EXPECT_TRUE(unk.IsSameObject(copy1.get()));  // both are NULL
 }

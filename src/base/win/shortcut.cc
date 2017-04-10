@@ -29,14 +29,14 @@ void InitializeShortcutInterfaces(
     const wchar_t* shortcut,
     ScopedComPtr<IShellLink>* i_shell_link,
     ScopedComPtr<IPersistFile>* i_persist_file) {
-  i_shell_link->Release();
-  i_persist_file->Release();
+  i_shell_link->Reset();
+  i_persist_file->Reset();
   if (FAILED(i_shell_link->CreateInstance(CLSID_ShellLink, NULL,
                                           CLSCTX_INPROC_SERVER)) ||
       FAILED(i_persist_file->QueryFrom(i_shell_link->get())) ||
       (shortcut && FAILED((*i_persist_file)->Load(shortcut, STGM_READWRITE)))) {
-    i_shell_link->Release();
-    i_persist_file->Release();
+    i_shell_link->Reset();
+    i_persist_file->Reset();
   }
 }
 
@@ -158,15 +158,15 @@ bool CreateOrUpdateShortcutLink(const FilePath& shortcut_path,
 
   // Release the interfaces to the old shortcut to make sure it doesn't prevent
   // overwriting it if needed.
-  old_i_persist_file.Release();
-  old_i_shell_link.Release();
+  old_i_persist_file.Reset();
+  old_i_shell_link.Reset();
 
   HRESULT result = i_persist_file->Save(shortcut_path.value().c_str(), TRUE);
 
   // Release the interfaces in case the SHChangeNotify call below depends on
   // the operations above being fully completed.
-  i_persist_file.Release();
-  i_shell_link.Release();
+  i_persist_file.Reset();
+  i_shell_link.Reset();
 
   // If we successfully created/updated the icon, notify the shell that we have
   // done so.

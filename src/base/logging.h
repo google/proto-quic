@@ -642,7 +642,7 @@ inline typename std::enable_if<
         std::is_enum<T>::value,
     void>::type
 MakeCheckOpValueString(std::ostream* os, const T& v) {
-  (*os) << static_cast<typename base::underlying_type<T>::type>(v);
+  (*os) << static_cast<typename std::underlying_type<T>::type>(v);
 }
 
 // We need an explicit overload for std::nullptr_t.

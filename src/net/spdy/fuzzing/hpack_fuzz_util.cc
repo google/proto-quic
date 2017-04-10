@@ -33,7 +33,6 @@ const size_t kValueLengthMax = 75;
 
 using base::RandBytesAsString;
 using std::map;
-using std::string;
 
 HpackFuzzUtil::GeneratorContext::GeneratorContext() {}
 HpackFuzzUtil::GeneratorContext::~GeneratorContext() {}
@@ -82,7 +81,7 @@ SpdyHeaderBlock HpackFuzzUtil::NextGeneratedHeaderSet(
                                           kHeaderIndexMax);
     size_t value_index = SampleExponential(kHeaderIndexMean,
                                            kHeaderIndexMax);
-    string name, value;
+    SpdyString name, value;
     if (name_index >= context->names.size()) {
       context->names.push_back(
           RandBytesAsString(1 + SampleExponential(kNameLengthMean,
@@ -132,9 +131,9 @@ bool HpackFuzzUtil::NextHeaderBlock(Input* input, SpdyStringPiece* out) {
 }
 
 // static
-string HpackFuzzUtil::HeaderBlockPrefix(size_t block_size) {
+SpdyString HpackFuzzUtil::HeaderBlockPrefix(size_t block_size) {
   uint32_t length = base::HostToNet32(static_cast<uint32_t>(block_size));
-  return string(reinterpret_cast<char*>(&length), sizeof(uint32_t));
+  return SpdyString(reinterpret_cast<char*>(&length), sizeof(uint32_t));
 }
 
 // static
@@ -157,7 +156,7 @@ bool HpackFuzzUtil::RunHeaderBlockThroughFuzzerStages(
     return false;
   }
   // Second stage: Re-encode the decoded header block. This must succeed.
-  string second_stage_out;
+  SpdyString second_stage_out;
   CHECK(context->second_stage->EncodeHeaderSet(
       context->first_stage->decoded_block(), &second_stage_out));
 

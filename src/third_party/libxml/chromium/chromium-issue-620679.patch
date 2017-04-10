@@ -1,0 +1,24 @@
+diff --git a/third_party/libxml/src/parser.c b/third_party/libxml/src/parser.c
+index e3136123dca6..33786f08354d 100644
+--- a/parser.c
++++ b/parser.c
+@@ -3426,8 +3426,15 @@ xmlParseNameComplex(xmlParserCtxtPtr ctxt) {
+         xmlFatalErr(ctxt, XML_ERR_NAME_TOO_LONG, "Name");
+         return(NULL);
+     }
+-    if ((*ctxt->input->cur == '\n') && (ctxt->input->cur[-1] == '\r'))
++    if ((*ctxt->input->cur == '\n') && (ctxt->input->cur[-1] == '\r')) {
++        if (ctxt->input->base > ctxt->input->cur - (len + 1)) {
++            return(NULL);
++        }
+         return(xmlDictLookup(ctxt->dict, ctxt->input->cur - (len + 1), len));
++    }
++    if (ctxt->input->base > ctxt->input->cur - len) {
++        return(NULL);
++    }
+     return(xmlDictLookup(ctxt->dict, ctxt->input->cur - len, len));
+ }
+ 
+-- 
+2.12.2.715.g7642488e1d-goog
+

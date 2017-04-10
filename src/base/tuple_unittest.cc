@@ -114,30 +114,4 @@ TEST(TupleTest, Copying) {
   EXPECT_EQ(2, CopyLogger::TimesCopied);
 }
 
-TEST(TupleTest, Get) {
-  int i = 1;
-  int j = 2;
-  std::tuple<int, int&, int&&> t(3, i, std::move(j));
-  EXPECT_TRUE((std::is_same<int&, decltype(base::get<0>(t))>::value));
-  EXPECT_EQ(3, base::get<0>(t));
-
-  EXPECT_TRUE((std::is_same<int&, decltype(base::get<1>(t))>::value));
-  EXPECT_EQ(1, base::get<1>(t));
-
-  EXPECT_TRUE((std::is_same<int&, decltype(base::get<2>(t))>::value));
-  EXPECT_EQ(2, base::get<2>(t));
-
-  EXPECT_TRUE((std::is_same<int&&,
-               decltype(base::get<0>(std::move(t)))>::value));
-  EXPECT_EQ(3, base::get<0>(std::move(t)));
-
-  EXPECT_TRUE((std::is_same<int&,
-               decltype(base::get<1>(std::move(t)))>::value));
-  EXPECT_EQ(1, base::get<1>(std::move(t)));
-
-  EXPECT_TRUE((std::is_same<int&&,
-               decltype(base::get<2>(std::move(t)))>::value));
-  EXPECT_EQ(2, base::get<2>(std::move(t)));
-}
-
 }  // namespace base

@@ -63,8 +63,6 @@ class BASE_EXPORT Value {
     // Note: Do not add more types. See the file-level comment above for why.
   };
 
-  static std::unique_ptr<Value> CreateNullValue();
-
   // For situations where you want to keep ownership of your buffer, this
   // factory method creates a new BinaryValue by copying the contents of the
   // buffer that's passed in.
@@ -157,6 +155,8 @@ class BASE_EXPORT Value {
   // to the copy. The caller gets ownership of the copy, of course.
   // Subclasses return their own type directly in their overrides;
   // this works because C++ supports covariant return types.
+  // DEPRECATED, use Value's copy constructor instead.
+  // TODO(crbug.com/646113): Delete this and migrate callsites.
   Value* DeepCopy() const;
   // Preferred version of DeepCopy. TODO(estade): remove the above.
   std::unique_ptr<Value> CreateDeepCopy() const;
@@ -176,7 +176,7 @@ class BASE_EXPORT Value {
   bool Equals(const Value* other) const;
 
   // Compares if two Value objects have equal contents. Can handle NULLs.
-  // NULLs are considered equal but different from Value::CreateNullValue().
+  // NULLs are considered equal but different from Value(Value::Type::NONE).
   // DEPRECATED, use operator==(const Value& lhs, const Value& rhs) instead.
   // TODO(crbug.com/646113): Delete this and migrate callsites.
   static bool Equals(const Value* a, const Value* b);
@@ -364,6 +364,8 @@ class BASE_EXPORT DictionaryValue : public Value {
     DictStorage::const_iterator it_;
   };
 
+  // DEPRECATED, use DictionaryValue's copy constructor instead.
+  // TODO(crbug.com/646113): Delete this and migrate callsites.
   DictionaryValue* DeepCopy() const;
   // Preferred version of DeepCopy. TODO(estade): remove the above.
   std::unique_ptr<DictionaryValue> CreateDeepCopy() const;
@@ -480,6 +482,8 @@ class BASE_EXPORT ListValue : public Value {
   const_iterator begin() const { return list_->begin(); }
   const_iterator end() const { return list_->end(); }
 
+  // DEPRECATED, use ListValue's copy constructor instead.
+  // TODO(crbug.com/646113): Delete this and migrate callsites.
   ListValue* DeepCopy() const;
   // Preferred version of DeepCopy. TODO(estade): remove DeepCopy.
   std::unique_ptr<ListValue> CreateDeepCopy() const;

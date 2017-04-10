@@ -3565,6 +3565,7 @@ should be able to be added at any place in this file.
 <action name="CreateShortcut">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>Deprecated as of 04/2017 (replaced by CreateHostedApp).</obsolete>
 </action>
 
 <action name="CredentialManager_AccountChooser_Accepted">
@@ -9524,6 +9525,21 @@ should be able to be added at any place in this file.
   <obsolete>Deprecated as of at least 2017/02/28.</obsolete>
 </action>
 
+<action name="MobileClipboardChanged">
+  <owner>jif@chromium.org</owner>
+  <owner>mpearson@chromium.org</owner>
+  <description>
+    Emitted when Chrome detects that the clipboard contains new content.
+
+    On iOS: this occurs either when Chrome enters the foreground and notices
+    that the content of the clipboard changed, or when the users selects the
+    omnibox and Chrome notices that the content of the clipboard changed.
+
+    On Android: this occurs when Chrome starts up or when the clipboard changes
+    while Chrome is running (in the foreground or not).
+  </description>
+</action>
+
 <action name="MobileComeToForeground">
   <owner>tedchoc@chromium.org</owner>
   <description>
@@ -9794,6 +9810,11 @@ should be able to be added at any place in this file.
   <obsolete>This menu item was never added to the app menu.</obsolete>
 </action>
 
+<action name="MobileMenuDataSaverOpened">
+  <owner>megjablon@chromium.org</owner>
+  <description>User opened the data saver item in the app menu.</description>
+</action>
+
 <action name="MobileMenuDirectShare">
   <owner>aurimas@chromium.org</owner>
   <description>
@@ -9896,6 +9917,11 @@ should be able to be added at any place in this file.
     Prior to M55, the menu reload counts were combined with the toolbar counts,
     which were all reported as MobileToolbarReload.
   </description>
+</action>
+
+<action name="MobileMenuReportAnIssue">
+  <owner>rohitrao@chromium.org</owner>
+  <description>User pressed 'Report an Issue' in the app menu.</description>
 </action>
 
 <action name="MobileMenuRequestDesktopSite">
@@ -10112,6 +10138,9 @@ should be able to be added at any place in this file.
     On Android: this occurs when Chrome starts up or when the clipboard changes
     while Chrome is running (in the foreground or not).
   </description>
+  <obsolete>
+    Replaced with MobileOmniboxClipboardChanged in April 2017.
+  </obsolete>
 </action>
 
 <action name="MobileOmniboxDeleteGesture">
@@ -15597,6 +15626,28 @@ should be able to be added at any place in this file.
 <action name="StatusArea_SpokenFeedbackEnabled">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+</action>
+
+<action name="StatusArea_StickyKeysDisabled">
+  <owner>minch@chromium.org</owner>
+  <description>Ash system menu: Accessibility: Disable sticky keys</description>
+</action>
+
+<action name="StatusArea_StickyKeysEnabled">
+  <owner>minch@chromium.org</owner>
+  <description>Ash system menu: Accessibility: Enable sticky keys</description>
+</action>
+
+<action name="StatusArea_TapDraggingDisabled">
+  <owner>minch@chromium.org</owner>
+  <description>
+    Ash system menu: Accessibility: Disable tap dragging
+  </description>
+</action>
+
+<action name="StatusArea_TapDraggingEnabled">
+  <owner>minch@chromium.org</owner>
+  <description>Ash system menu: Accessibility: Enable tap dragging</description>
 </action>
 
 <action name="StatusArea_Tracing_Default_Selected">

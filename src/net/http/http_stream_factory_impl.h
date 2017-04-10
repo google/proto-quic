@@ -50,6 +50,7 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
                                    const SSLConfig& proxy_ssl_config,
                                    HttpStreamRequest::Delegate* delegate,
                                    bool enable_ip_based_pooling,
+                                   bool enable_alternative_services,
                                    const NetLogWithSource& net_log) override;
 
   HttpStreamRequest* RequestWebSocketHandshakeStream(
@@ -60,6 +61,7 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
       HttpStreamRequest::Delegate* delegate,
       WebSocketHandshakeStreamBase::CreateHelper* create_helper,
       bool enable_ip_based_pooling,
+      bool enable_alternative_services,
       const NetLogWithSource& net_log) override;
 
   HttpStreamRequest* RequestBidirectionalStreamImpl(
@@ -69,6 +71,7 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
       const SSLConfig& proxy_ssl_config,
       HttpStreamRequest::Delegate* delegate,
       bool enable_ip_based_pooling,
+      bool enable_alternative_services,
       const NetLogWithSource& net_log) override;
 
   void PreconnectStreams(int num_streams, const HttpRequestInfo& info) override;
@@ -126,6 +129,7 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
       WebSocketHandshakeStreamBase::CreateHelper* create_helper,
       HttpStreamRequest::StreamType stream_type,
       bool enable_ip_based_pooling,
+      bool enable_alternative_services,
       const NetLogWithSource& net_log);
 
   // Called when a SpdySession is ready. It will find appropriate Requests and

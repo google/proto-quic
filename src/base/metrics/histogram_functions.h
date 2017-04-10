@@ -43,7 +43,10 @@ template <typename T>
 void UmaHistogramEnumeration(const std::string& name, T sample, T max) {
   static_assert(std::is_enum<T>::value,
                 "Non enum passed to UmaHistogramEnumeration");
-  return UmaHistogramExactLinear(name, static_cast<int>(sample), max);
+  DCHECK_LE(static_cast<uintmax_t>(max), static_cast<uintmax_t>(INT_MAX));
+  DCHECK_LE(static_cast<uintmax_t>(sample), static_cast<uintmax_t>(max));
+  return UmaHistogramExactLinear(name, static_cast<int>(sample),
+                                 static_cast<int>(max));
 }
 
 // For adding boolean sample to histogram.

@@ -14,10 +14,11 @@
 #include "base/atomicops.h"
 #include "base/base_export.h"
 #include "base/compiler_specific.h"
+#include "base/debug/debugging_flags.h"
 #include "base/debug/stack_trace.h"
 #include "base/macros.h"
 
-#if HAVE_TRACE_STACK_FRAME_POINTERS
+#if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 
 // When profiling is enabled (enable_profiling=true) this macro is added to
 // all generated JNI stubs so that it becomes the last thing that runs before
@@ -46,7 +47,7 @@
 #define JNI_SAVE_FRAME_POINTER
 #define JNI_LINK_SAVED_FRAME_POINTER
 
-#endif  // HAVE_TRACE_STACK_FRAME_POINTERS
+#endif  // BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 
 namespace base {
 namespace android {
@@ -166,7 +167,7 @@ BASE_EXPORT void CheckException(JNIEnv* env);
 BASE_EXPORT std::string GetJavaExceptionInfo(JNIEnv* env,
                                              jthrowable java_throwable);
 
-#if HAVE_TRACE_STACK_FRAME_POINTERS
+#if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 
 // Saves caller's PC and stack frame in a thread-local variable.
 // Implemented only when profiling is enabled (enable_profiling=true).
@@ -182,7 +183,7 @@ class BASE_EXPORT JNIStackFrameSaver {
   DISALLOW_COPY_AND_ASSIGN(JNIStackFrameSaver);
 };
 
-#endif  // HAVE_TRACE_STACK_FRAME_POINTERS
+#endif  // BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 
 }  // namespace android
 }  // namespace base

@@ -12,7 +12,7 @@ namespace base {
 TestPendingTask::TestPendingTask() : nestability(NESTABLE) {}
 
 TestPendingTask::TestPendingTask(const tracked_objects::Location& location,
-                                 Closure task,
+                                 OnceClosure task,
                                  TimeTicks post_time,
                                  TimeDelta delay,
                                  TestNestability nestability)

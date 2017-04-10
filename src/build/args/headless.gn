@@ -23,7 +23,6 @@ icu_use_data_file = false
 # to simplify deployment.
 v8_use_external_startup_data = false
 
-enable_basic_printing = false
 enable_nacl = false
 enable_print_preview = false
 enable_remoting = false

@@ -33,7 +33,8 @@ static const char kNistSPKIHash[] =
 #define VARIABLE_IS_NOT_USED
 #endif
 
-// Google's cert.
+// Google's 2009 cert. Lacks a SubjectAltName, but contains www.google.com in
+// the Subject CN field.
 
 unsigned char VARIABLE_IS_NOT_USED google_der[] = {
   0x30, 0x82, 0x03, 0x21, 0x30, 0x82, 0x02, 0x8a, 0xa0, 0x03, 0x02, 0x01,
@@ -106,7 +107,8 @@ unsigned char VARIABLE_IS_NOT_USED google_der[] = {
   0xdf
 };
 
-// webkit.org's cert.
+// webkit.org's 2008 cert. Contains a SubjectAltName field with *.webkit.org and
+// webkit.org. The Subject CN field contains *.webkit.org.
 
 unsigned char VARIABLE_IS_NOT_USED webkit_der[] = {
   0x30, 0x82, 0x05, 0x0d, 0x30, 0x82, 0x03, 0xf5, 0xa0, 0x03, 0x02, 0x01,
@@ -220,7 +222,9 @@ unsigned char VARIABLE_IS_NOT_USED webkit_der[] = {
   0x8a
 };
 
-// thawte.com's cert (it's EV-licious!).
+// thawte.com 2008 Extended Validation cert. Lacks a SubjectAltName, but
+// contains www.thawte.com in the Subject CN field.
+
 unsigned char VARIABLE_IS_NOT_USED thawte_der[] = {
   0x30, 0x82, 0x04, 0xa5, 0x30, 0x82, 0x03, 0x8d, 0xa0, 0x03, 0x02, 0x01,
   0x02, 0x02, 0x10, 0x17, 0x76, 0x05, 0x88, 0x95, 0x58, 0xee, 0xbb, 0x00,

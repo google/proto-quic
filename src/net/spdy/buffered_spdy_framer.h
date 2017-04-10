@@ -9,11 +9,11 @@
 #include <stdint.h>
 
 #include <memory>
-#include <string>
 
 #include "base/macros.h"
 #include "net/base/net_export.h"
 #include "net/spdy/header_coalescer.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/spdy_alt_svc_wire_format.h"
 #include "net/spdy/spdy_framer.h"
@@ -31,7 +31,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramerVisitorInterface {
 
   // Called if an error is detected in a HTTP2 stream.
   virtual void OnStreamError(SpdyStreamId stream_id,
-                             const std::string& description) = 0;
+                             const SpdyString& description) = 0;
 
   // Called after all the header data for HEADERS control frame is received.
   virtual void OnHeaders(SpdyStreamId stream_id,
@@ -261,7 +261,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
   struct GoAwayFields {
     SpdyStreamId last_accepted_stream_id;
     SpdyErrorCode error_code;
-    std::string debug_data;
+    SpdyString debug_data;
 
     // Returns the estimate of dynamically allocated memory in bytes.
     size_t EstimateMemoryUsage() const;

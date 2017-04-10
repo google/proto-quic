@@ -93,9 +93,9 @@ int StreamDelegateBase::WaitForClose() {
   return result;
 }
 
-std::string StreamDelegateBase::TakeReceivedData() {
+SpdyString StreamDelegateBase::TakeReceivedData() {
   size_t len = received_data_queue_.GetTotalSize();
-  std::string received_data(len, '\0');
+  SpdyString received_data(len, '\0');
   if (len > 0) {
     EXPECT_EQ(len, received_data_queue_.Dequeue(
                        base::string_as_array(&received_data), len));
@@ -103,10 +103,10 @@ std::string StreamDelegateBase::TakeReceivedData() {
   return received_data;
 }
 
-std::string StreamDelegateBase::GetResponseHeaderValue(
-    const std::string& name) const {
+SpdyString StreamDelegateBase::GetResponseHeaderValue(
+    const SpdyString& name) const {
   SpdyHeaderBlock::const_iterator it = response_headers_.find(name);
-  return (it == response_headers_.end()) ? std::string()
+  return (it == response_headers_.end()) ? SpdyString()
                                          : it->second.as_string();
 }
 
@@ -160,6 +160,6 @@ void StreamDelegateCloseOnHeaders::OnHeadersReceived(
   stream()->Cancel();
 }
 
-} // namespace test
+}  // namespace test
 
-} // namespace net
+}  // namespace net

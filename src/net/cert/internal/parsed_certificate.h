@@ -142,6 +142,16 @@ class NET_EXPORT ParsedCertificate
     return key_usage_;
   }
 
+  // Returns true if the certificate has a ExtendedKeyUsage extension.
+  bool has_extended_key_usage() const { return has_extended_key_usage_; }
+
+  // Returns the ExtendedKeyUsage key purpose OIDs. Caller must check
+  // has_extended_key_usage() before accessing this.
+  const std::vector<der::Input>& extended_key_usage() const {
+    DCHECK(has_extended_key_usage_);
+    return extended_key_usage_;
+  }
+
   // Returns true if the certificate has a SubjectAltName extension.
   bool has_subject_alt_names() const { return subject_alt_names_ != nullptr; }
 
@@ -184,10 +194,23 @@ class NET_EXPORT ParsedCertificate
   // Returns any OCSP URIs from the AuthorityInfoAccess extension.
   const std::vector<base::StringPiece>& ocsp_uris() const { return ocsp_uris_; }
 
-  // Returns a map of unhandled extensions (excludes the ones above).
-  const ExtensionsMap& unparsed_extensions() const {
-    return unparsed_extensions_;
+  // Returns true if the certificate has a Policies extension.
+  bool has_policy_oids() const { return has_policy_oids_; }
+
+  // Returns the policy OIDs. Caller must check has_policy_oids() before
+  // accessing this.
+  const std::vector<der::Input>& policy_oids() const {
+    DCHECK(has_policy_oids());
+    return policy_oids_;
   }
+
+  // Returns a map of all the extensions in the certificate.
+  const ExtensionsMap& extensions() const { return extensions_; }
+
+  // Gets the value for extension matching |extension_oid|. Returns false if the
+  // extension is not present.
+  bool GetExtension(const der::Input& extension_oid,
+                    ParsedExtension* parsed_extension) const;
 
  private:
   friend class base::RefCountedThreadSafe<ParsedCertificate>;
@@ -232,6 +255,10 @@ class NET_EXPORT ParsedCertificate
   bool has_key_usage_ = false;
   der::BitString key_usage_;
 
+  // ExtendedKeyUsage extension.
+  bool has_extended_key_usage_ = false;
+  std::vector<der::Input> extended_key_usage_;
+
   // Raw SubjectAltName extension.
   ParsedExtension subject_alt_names_extension_;
   // Parsed SubjectAltName extension.
@@ -249,8 +276,12 @@ class NET_EXPORT ParsedCertificate
   std::vector<base::StringPiece> ca_issuers_uris_;
   std::vector<base::StringPiece> ocsp_uris_;
 
-  // The remaining extensions (excludes the standard ones above).
-  ExtensionsMap unparsed_extensions_;
+  // Policies extension.
+  bool has_policy_oids_ = false;
+  std::vector<der::Input> policy_oids_;
+
+  // All of the extensions.
+  ExtensionsMap extensions_;
 
   DISALLOW_COPY_AND_ASSIGN(ParsedCertificate);
 };

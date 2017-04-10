@@ -5021,7 +5021,8 @@ TEST_P(QuicConnectionTest, ServerReceivesChloOnNonCryptoStream) {
   CryptoHandshakeMessage message;
   CryptoFramer framer;
   message.set_tag(kCHLO);
-  std::unique_ptr<QuicData> data(framer.ConstructHandshakeMessage(message));
+  std::unique_ptr<QuicData> data(
+      framer.ConstructHandshakeMessage(message, Perspective::IS_CLIENT));
   frame1_.stream_id = 10;
   frame1_.data_buffer = data->data();
   frame1_.data_length = data->length();
@@ -5037,7 +5038,8 @@ TEST_P(QuicConnectionTest, ClientReceivesRejOnNonCryptoStream) {
   CryptoHandshakeMessage message;
   CryptoFramer framer;
   message.set_tag(kREJ);
-  std::unique_ptr<QuicData> data(framer.ConstructHandshakeMessage(message));
+  std::unique_ptr<QuicData> data(
+      framer.ConstructHandshakeMessage(message, Perspective::IS_SERVER));
   frame1_.stream_id = 10;
   frame1_.data_buffer = data->data();
   frame1_.data_length = data->length();

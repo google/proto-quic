@@ -78,6 +78,7 @@ chrome.automation.RoleType = {
   ABBR: 'abbr',
   ALERT_DIALOG: 'alertDialog',
   ALERT: 'alert',
+  ANCHOR: 'anchor',
   ANNOTATION: 'annotation',
   APPLICATION: 'application',
   ARTICLE: 'article',
@@ -261,7 +262,7 @@ chrome.automation.NameFromType = {
   ATTRIBUTE: 'attribute',
   CONTENTS: 'contents',
   PLACEHOLDER: 'placeholder',
-  RELATED_ELEMENT: 'related_element',
+  RELATED_ELEMENT: 'relatedElement',
   VALUE: 'value',
 };
 
@@ -515,6 +516,13 @@ chrome.automation.AutomationNode.prototype.labelledBy;
  * @see https://developer.chrome.com/extensions/automation#type-activeDescendant
  */
 chrome.automation.AutomationNode.prototype.activeDescendant;
+
+/**
+ * The target of an in-page link.
+ * @type {(!chrome.automation.AutomationNode|undefined)}
+ * @see https://developer.chrome.com/extensions/automation#type-inPageLinkTarget
+ */
+chrome.automation.AutomationNode.prototype.inPageLinkTarget;
 
 /**
  * The URL that this link will navigate to.
@@ -1121,8 +1129,8 @@ chrome.automation.AutomationNode.prototype.matches = function(params) {};
  * placeholder root node; listen for the "loadComplete" event to get a
  * notification that the tree has fully loaded (the previous root node reference
  * will stop working at or before this point).
- * @param {number} tabId
- * @param {function(!chrome.automation.AutomationNode):void} callback Called
+ * @param {number=} tabId
+ * @param {function(!chrome.automation.AutomationNode):void=} callback Called
  *     when the <code>AutomationNode</code> for the page is available.
  * @see https://developer.chrome.com/extensions/automation#method-getTree
  */

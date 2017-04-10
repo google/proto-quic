@@ -9,7 +9,38 @@
 #include <vector>
 
 namespace base {
+
+enum FlatContainerDupes {
+  KEEP_FIRST_OF_DUPES,
+  KEEP_LAST_OF_DUPES,
+};
+
 namespace internal {
+
+// This algorithm is like unique() from the standard library except it
+// selects only the last of consecutive values instead of the first.
+template <class Iterator, class BinaryPredicate>
+Iterator LastUnique(Iterator first, Iterator last, BinaryPredicate compare) {
+  if (first == last)
+    return last;
+
+  Iterator dest = first;
+  Iterator cur = first;
+  Iterator prev = cur;
+  while (++cur != last) {
+    if (!compare(*prev, *cur)) {
+      // Non-identical one.
+      if (dest != prev)
+        *dest = std::move(*prev);
+      ++dest;
+    }
+    prev = cur;
+  }
+
+  if (dest != prev)
+    *dest = std::move(*prev);
+  return ++dest;
+}
 
 // Implementation of a sorted vector for backing flat_set and flat_map. Do not
 // use directly.
@@ -24,7 +55,6 @@ namespace internal {
 //   const Key& operator()(const Value&).
 template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
 class flat_tree {
- public:
  private:
   using underlying_type = std::vector<Value>;
 
@@ -71,21 +101,28 @@ class flat_tree {
   // length).
   //
   // Assume that move constructors invalidate iterators and references.
+  //
+  // The constructors that take ranges, lists, and vectors do not require that
+  // the input be sorted.
 
   flat_tree();
   explicit flat_tree(const key_compare& comp);
 
-  // Not stable in the presence of duplicates in the initializer list.
   template <class InputIterator>
   flat_tree(InputIterator first,
             InputIterator last,
+            FlatContainerDupes dupe_handling,
             const key_compare& comp = key_compare());
 
   flat_tree(const flat_tree&);
   flat_tree(flat_tree&&);
 
-  // Not stable in the presence of duplicates in the initializer list.
+  flat_tree(std::vector<value_type> items,
+            FlatContainerDupes dupe_handling,
+            const key_compare& comp = key_compare());
+
   flat_tree(std::initializer_list<value_type> ilist,
+            FlatContainerDupes dupe_handling,
             const key_compare& comp = key_compare());
 
   ~flat_tree();
@@ -97,7 +134,7 @@ class flat_tree {
 
   flat_tree& operator=(const flat_tree&);
   flat_tree& operator=(flat_tree&&);
-  // Not stable in the presence of duplicates in the initializer list.
+  // Takes the first if there are duplicates in the initializer list.
   flat_tree& operator=(std::initializer_list<value_type> ilist);
 
   // --------------------------------------------------------------------------
@@ -248,7 +285,7 @@ class flat_tree {
 
  protected:
   // Emplaces a new item into the tree that is known not to be in it. This
-  // is for implementing map [] and at().
+  // is for implementing map operator[].
   template <class... Args>
   iterator unsafe_emplace(const_iterator position, Args&&... args);
 
@@ -276,17 +313,26 @@ class flat_tree {
     return std::next(begin(), distance);
   }
 
-  void sort_and_unique() {
-    // std::set sorts elements preserving stability because it doesn't have any
-    // performance wins in not doing that. We do, so we use an unstable sort.
-    std::sort(begin(), end(), impl_.get_value_comp());
-    erase(std::unique(begin(), end(),
-                      [this](const value_type& lhs, const value_type& rhs) {
-                        // lhs is already <= rhs due to sort, therefore
-                        // !(lhs < rhs) <=> lhs == rhs.
-                        return !impl_.get_value_comp()(lhs, rhs);
-                      }),
-          end());
+  void sort_and_unique(FlatContainerDupes dupes) {
+    // Preserve stability for the unique code below.
+    std::stable_sort(begin(), end(), impl_.get_value_comp());
+
+    auto comparator = [this](const value_type& lhs, const value_type& rhs) {
+      // lhs is already <= rhs due to sort, therefore
+      // !(lhs < rhs) <=> lhs == rhs.
+      return !impl_.get_value_comp()(lhs, rhs);
+    };
+
+    iterator erase_after;
+    switch (dupes) {
+      case KEEP_FIRST_OF_DUPES:
+        erase_after = std::unique(begin(), end(), comparator);
+        break;
+      case KEEP_LAST_OF_DUPES:
+        erase_after = LastUnique(begin(), end(), comparator);
+        break;
+    }
+    erase(erase_after, end());
   }
 
   // To support comparators that may not be possible to default-construct, we
@@ -325,9 +371,10 @@ template <class InputIterator>
 flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::flat_tree(
     InputIterator first,
     InputIterator last,
+    FlatContainerDupes dupe_handling,
     const KeyCompare& comp)
     : impl_(comp, first, last) {
-  sort_and_unique();
+  sort_and_unique(dupe_handling);
 }
 
 template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
@@ -340,9 +387,19 @@ flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::flat_tree(flat_tree&&) =
 
 template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
 flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::flat_tree(
-    std::initializer_list<value_type> ilist,
+    std::vector<value_type> items,
+    FlatContainerDupes dupe_handling,
     const KeyCompare& comp)
-    : flat_tree(std::begin(ilist), std::end(ilist), comp) {}
+    : impl_(comp, std::move(items)) {
+  sort_and_unique(dupe_handling);
+}
+
+template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
+flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::flat_tree(
+    std::initializer_list<value_type> ilist,
+    FlatContainerDupes dupe_handling,
+    const KeyCompare& comp)
+    : flat_tree(std::begin(ilist), std::end(ilist), dupe_handling, comp) {}
 
 template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
 flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::~flat_tree() = default;
@@ -362,7 +419,7 @@ template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
 auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::operator=(
     std::initializer_list<value_type> ilist) -> flat_tree& {
   impl_.body_ = ilist;
-  sort_and_unique();
+  sort_and_unique(KEEP_FIRST_OF_DUPES);
   return *this;
 }
 
@@ -683,8 +740,8 @@ auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::unsafe_emplace(
     const_iterator position,
     Args&&... args) -> iterator {
   // We have to cast away const because of crbug.com/677044.
-  return impl_.body_.insert(const_cast_it(position),
-                            value_type(std::forward<Args>(args)...));
+  return impl_.body_.emplace(const_cast_it(position),
+                             std::forward<Args>(args)...);
 }
 
 // For containers like sets, the key is the same as the value. This implements

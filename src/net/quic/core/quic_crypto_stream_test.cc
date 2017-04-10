@@ -53,12 +53,13 @@ class QuicCryptoStreamTest : public ::testing::Test {
     message_.set_tag(kSHLO);
     message_.SetStringPiece(1, "abc");
     message_.SetStringPiece(2, "def");
-    ConstructHandshakeMessage();
+    ConstructHandshakeMessage(Perspective::IS_SERVER);
   }
 
-  void ConstructHandshakeMessage() {
+  void ConstructHandshakeMessage(Perspective perspective) {
     CryptoFramer framer;
-    message_data_.reset(framer.ConstructHandshakeMessage(message_));
+    message_data_.reset(
+        framer.ConstructHandshakeMessage(message_, perspective));
   }
 
  protected:

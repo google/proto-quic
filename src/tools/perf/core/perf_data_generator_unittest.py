@@ -78,7 +78,7 @@ class PerfDataGeneratorTest(unittest.TestCase):
         'args': ['speedometer', '-v', '--upload-results',
                  '--output-format=chartjson', '--browser=release'],
         'swarming': {
-          'ignore_swarming_task_failure': False,
+          'ignore_task_failure': False,
           'dimension_sets': [{'os': 'SkyNet', 'id': 'T-850', 'pool': 'T-RIP'}],
           'hard_timeout': 7200,
           'can_use_on_swarming_builders': True,
@@ -100,7 +100,7 @@ class PerfDataGeneratorTest(unittest.TestCase):
                  '--output-format=chartjson', '--browser=reference',
                  '--output-trace-tag=_ref'],
         'swarming': {
-          'ignore_swarming_task_failure': True,
+          'ignore_task_failure': True,
           'dimension_sets': [{'os': 'SkyNet', 'id': 'T-850', 'pool': 'T-RIP'}],
           'hard_timeout': 7200,
           'can_use_on_swarming_builders': True,

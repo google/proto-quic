@@ -185,7 +185,13 @@ TEST_F(LoggingTest, LoggingIsLazyByDestination) {
 // Official builds have CHECKs directly call BreakDebugger.
 #if !defined(OFFICIAL_BUILD)
 
-TEST_F(LoggingTest, CheckStreamsAreLazy) {
+// https://crbug.com/709067 tracks test flakiness on iOS.
+#if defined(OS_IOS)
+#define MAYBE_CheckStreamsAreLazy DISABLED_CheckStreamsAreLazy
+#else
+#define MAYBE_CheckStreamsAreLazy CheckStreamsAreLazy
+#endif
+TEST_F(LoggingTest, MAYBE_CheckStreamsAreLazy) {
   MockLogSource mock_log_source, uncalled_mock_log_source;
   EXPECT_CALL(mock_log_source, Log()).Times(8).
       WillRepeatedly(Return("check message"));
@@ -386,7 +392,13 @@ void DcheckEmptyFunction1() {
 }
 void DcheckEmptyFunction2() {}
 
-TEST_F(LoggingTest, Dcheck) {
+// https://crbug.com/709067 tracks test flakiness on iOS.
+#if defined(OS_IOS)
+#define MAYBE_Dcheck DISABLED_Dcheck
+#else
+#define MAYBE_Dcheck Dcheck
+#endif
+TEST_F(LoggingTest, MAYBE_Dcheck) {
 #if defined(NDEBUG) && !defined(DCHECK_ALWAYS_ON)
   // Release build.
   EXPECT_FALSE(DCHECK_IS_ON());

@@ -167,6 +167,7 @@ class BASE_EXPORT ProcessMemoryDump {
   void AsValueInto(TracedValue* value) const;
 
   ProcessMemoryTotals* process_totals() { return &process_totals_; }
+  const ProcessMemoryTotals* process_totals() const { return &process_totals_; }
   bool has_process_totals() const { return has_process_totals_; }
   void set_has_process_totals() { has_process_totals_ = true; }
 

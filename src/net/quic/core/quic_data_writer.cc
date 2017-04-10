@@ -9,11 +9,19 @@
 
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/platform/api/quic_endian.h"
+#include "net/quic/platform/api/quic_logging.h"
 
 namespace net {
 
-QuicDataWriter::QuicDataWriter(size_t size, char* buffer)
-    : buffer_(buffer), capacity_(size), length_(0) {}
+#define ENDPOINT \
+  (perspective_ == Perspective::IS_SERVER ? "Server: " : "Client: ")
+
+QuicDataWriter::QuicDataWriter(size_t size,
+                               char* buffer,
+                               Perspective perspective)
+    : buffer_(buffer), capacity_(size), length_(0), perspective_(perspective) {
+  QUIC_DVLOG(1) << ENDPOINT << "QuicDataReader";
+}
 
 QuicDataWriter::~QuicDataWriter() {}
 

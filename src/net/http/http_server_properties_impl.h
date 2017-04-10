@@ -139,8 +139,6 @@ class NET_EXPORT HttpServerPropertiesImpl
                           base::TimeTicks,
                           AlternativeServiceHash>
       BrokenAlternativeServices;
-  // Map to the number of times each alternative service has been marked broken.
-  typedef std::map<AlternativeService, int> RecentlyBrokenAlternativeServices;
 
   // Return the iterator for |server|, or for its canonical host, or end.
   AlternativeServiceMap::const_iterator GetAlternateProtocolIterator(

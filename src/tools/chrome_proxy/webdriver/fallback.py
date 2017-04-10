@@ -68,6 +68,30 @@ class Fallback(IntegrationTest):
       self.assertEqual(1, histogram['count'])
       self.assertIn({'count': 1, 'high': 6, 'low': 5}, histogram['buckets'])
 
+  # DataSaver uses a https proxy by default, if that fails it will fall back to 
+  # a http proxy; and if that fails, it will fall back to a direct connection
+  def testHTTPToDirectFallback(self):
+    with TestDriver() as test_driver:
+      test_driver.AddChromeArg('--enable-spdy-proxy-auth')
+      # set the primary (https) proxy to a bad one.  
+      # That will force DataSaver to the http proxy for normal page requests.
+      test_driver.AddChromeArg('--spdy-proxy-auth-origin='
+                               'https://nonexistent.googlezip.net')
+      test_driver.AddChromeArg('--data-reduction-proxy-http-proxies='
+                               'http://nonexistent.googlezip.net;'
+                               'http://compress.googlezip.net')  
+          
+      test_driver.LoadURL('http://check.googlezip.net/fallback/')
+      responses = test_driver.GetHTTPResponses()      
+      self.assertNotEqual(0, len(responses))
+      for response in responses:        
+        self.assertEqual(80, response.port)
 
+      test_driver.LoadURL('http://check.googlezip.net/block/')
+      responses = test_driver.GetHTTPResponses()
+      self.assertNotEqual(0, len(responses))
+      for response in responses:
+        self.assertNotHasChromeProxyViaHeader(response)
+        
 if __name__ == '__main__':
   IntegrationTest.RunAllTests()

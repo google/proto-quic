@@ -358,7 +358,7 @@ def ParseDir(path, root, require_license_file=True, optional_keys=None):
         readme_path = os.path.join(root, path, 'README.chromium')
         if not os.path.exists(readme_path):
             raise LicenseError("missing README.chromium or licenses.py "
-                               "SPECIAL_CASES entry")
+                               "SPECIAL_CASES entry in %s" % path)
 
         for line in open(readme_path):
             line = line.strip()

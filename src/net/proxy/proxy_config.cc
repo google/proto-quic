@@ -195,27 +195,12 @@ ProxyConfig::ProxyConfig()
       source_(PROXY_CONFIG_SOURCE_UNKNOWN), id_(kInvalidConfigID)  {
 }
 
-ProxyConfig::ProxyConfig(const ProxyConfig& config)
-    : auto_detect_(config.auto_detect_),
-      pac_url_(config.pac_url_),
-      pac_mandatory_(config.pac_mandatory_),
-      proxy_rules_(config.proxy_rules_),
-      source_(config.source_),
-      id_(config.id_) {
-}
+ProxyConfig::ProxyConfig(const ProxyConfig& config) = default;
 
 ProxyConfig::~ProxyConfig() {
 }
 
-ProxyConfig& ProxyConfig::operator=(const ProxyConfig& config) {
-  auto_detect_ = config.auto_detect_;
-  pac_url_ = config.pac_url_;
-  pac_mandatory_ = config.pac_mandatory_;
-  proxy_rules_ = config.proxy_rules_;
-  source_ = config.source_;
-  id_ = config.id_;
-  return *this;
-}
+ProxyConfig& ProxyConfig::operator=(const ProxyConfig& config) = default;
 
 bool ProxyConfig::Equals(const ProxyConfig& other) const {
   // The two configs can have different IDs and sources.  We are just interested

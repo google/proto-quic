@@ -102,15 +102,13 @@ der::Input SequenceValueFromString(const std::string* s) {
   return ::testing::AssertionSuccess();
 }
 
+VerifyCertChainTest::VerifyCertChainTest() = default;
+VerifyCertChainTest::~VerifyCertChainTest() = default;
+
 void ReadVerifyCertChainTestFromFile(const std::string& file_path_ascii,
-                                     ParsedCertificateList* chain,
-                                     scoped_refptr<TrustAnchor>* trust_anchor,
-                                     der::GeneralizedTime* time,
-                                     bool* verify_result,
-                                     std::string* expected_errors) {
-  chain->clear();
-  *trust_anchor = nullptr;
-  expected_errors->clear();
+                                     VerifyCertChainTest* test) {
+  // Reset all the out parameters to their defaults.
+  *test = {};
 
   std::string file_data = ReadTestFileToString(file_path_ascii);
 
@@ -124,6 +122,7 @@ void ReadVerifyCertChainTestFromFile(const std::string& file_path_ascii,
   const char kTimeHeader[] = "TIME";
   const char kResultHeader[] = "VERIFY_RESULT";
   const char kErrorsHeader[] = "ERRORS";
+  const char kKeyPurpose[] = "KEY_PURPOSE";
 
   pem_headers.push_back(kCertificateHeader);
   pem_headers.push_back(kTrustAnchorUnconstrained);
@@ -131,10 +130,12 @@ void ReadVerifyCertChainTestFromFile(const std::string& file_path_ascii,
   pem_headers.push_back(kTimeHeader);
   pem_headers.push_back(kResultHeader);
   pem_headers.push_back(kErrorsHeader);
+  pem_headers.push_back(kKeyPurpose);
 
   bool has_time = false;
   bool has_result = false;
   bool has_errors = false;
+  bool has_key_purpose = false;
 
   PEMTokenizer pem_tokenizer(file_data, pem_headers);
   while (pem_tokenizer.GetNext()) {
@@ -147,11 +148,11 @@ void ReadVerifyCertChainTestFromFile(const std::string& file_path_ascii,
           bssl::UniquePtr<CRYPTO_BUFFER>(CRYPTO_BUFFER_new(
               reinterpret_cast<const uint8_t*>(block_data.data()),
               block_data.size(), nullptr)),
-          {}, chain, &errors))
+          {}, &test->chain, &errors))
           << errors.ToDebugString();
     } else if (block_type == kTrustAnchorUnconstrained ||
                block_type == kTrustAnchorConstrained) {
-      ASSERT_FALSE(*trust_anchor) << "Duplicate trust anchor";
+      ASSERT_FALSE(test->trust_anchor) << "Duplicate trust anchor";
       CertErrors errors;
       scoped_refptr<ParsedCertificate> root = net::ParsedCertificate::Create(
           bssl::UniquePtr<CRYPTO_BUFFER>(CRYPTO_BUFFER_new(
@@ -159,7 +160,7 @@ void ReadVerifyCertChainTestFromFile(const std::string& file_path_ascii,
               block_data.size(), nullptr)),
           {}, &errors);
       ASSERT_TRUE(root) << errors.ToDebugString();
-      *trust_anchor =
+      test->trust_anchor =
           block_type == kTrustAnchorUnconstrained
               ? TrustAnchor::CreateFromCertificateNoConstraints(std::move(root))
               : TrustAnchor::CreateFromCertificateWithConstraints(
@@ -167,23 +168,37 @@ void ReadVerifyCertChainTestFromFile(const std::string& file_path_ascii,
     } else if (block_type == kTimeHeader) {
       ASSERT_FALSE(has_time) << "Duplicate " << kTimeHeader;
       has_time = true;
-      ASSERT_TRUE(der::ParseUTCTime(der::Input(&block_data), time));
+      ASSERT_TRUE(der::ParseUTCTime(der::Input(&block_data), &test->time));
+    } else if (block_type == kKeyPurpose) {
+      ASSERT_FALSE(has_key_purpose) << "Duplicate " << kKeyPurpose;
+      has_key_purpose = true;
+
+      if (block_data == "anyExtendedKeyUsage") {
+        // TODO(eroman): test->key_purpose = ....
+      } else if (block_data == "serverAuth") {
+        // TODO(eroman): test->key_purpose = ....
+      } else if (block_data == "clientAuth") {
+        // TODO(eroman): test->key_purpose = ....
+      } else {
+        ADD_FAILURE() << "Unrecognized " << block_type << ": " << block_data;
+      }
     } else if (block_type == kResultHeader) {
       ASSERT_FALSE(has_result) << "Duplicate " << kResultHeader;
       ASSERT_TRUE(block_data == "SUCCESS" || block_data == "FAIL")
           << "Unrecognized result: " << block_data;
       has_result = true;
-      *verify_result = block_data == "SUCCESS";
+      test->expected_result = block_data == "SUCCESS";
     } else if (block_type == kErrorsHeader) {
       ASSERT_FALSE(has_errors) << "Duplicate " << kErrorsHeader;
       has_errors = true;
-      *expected_errors = block_data;
+      test->expected_errors = block_data;
     }
   }
 
   ASSERT_TRUE(has_time);
   ASSERT_TRUE(has_result);
-  ASSERT_TRUE(*trust_anchor);
+  ASSERT_TRUE(test->trust_anchor);
+  ASSERT_TRUE(has_key_purpose);
 }
 
 std::string ReadTestFileToString(const std::string& file_path_ascii) {

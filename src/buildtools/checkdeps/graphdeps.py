@@ -12,7 +12,7 @@ dependencies, including answering questions such as "if a new source must
 depend on modules A, B, and C, what valid options among the existing modules
 are there to put it in."
 
-See builddeps.py for a detailed description of the DEPS format.
+See README.md for a detailed description of the DEPS format.
 """
 
 import os

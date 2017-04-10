@@ -114,6 +114,8 @@ message NetworkTrafficAnnotation {
       WEBSITE = 0;
       // A Google owned service, like SafeBrowsing, spellchecking, ...
       GOOGLE_OWNED_SERVICE = 1;
+      // Does not go to the network and just fetches a resource locally.
+      LOCAL = 2;
       // Other endpoints, e.g. a service hosting a PAC script. In case of doubt,
       // use this category. We will audit it in the future to see whether we
       // need more categories.

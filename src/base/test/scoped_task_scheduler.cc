@@ -49,7 +49,7 @@ class TestTaskScheduler : public TaskScheduler {
   // TaskScheduler:
   void PostDelayedTaskWithTraits(const tracked_objects::Location& from_here,
                                  const TaskTraits& traits,
-                                 Closure task,
+                                 OnceClosure task,
                                  TimeDelta delay) override;
   scoped_refptr<TaskRunner> CreateTaskRunnerWithTraits(
       const TaskTraits& traits) override;
@@ -134,10 +134,10 @@ class TestTaskSchedulerTaskRunner : public SingleThreadTaskRunner {
 
   // SingleThreadTaskRunner:
   bool PostDelayedTask(const tracked_objects::Location& from_here,
-                       Closure closure,
+                       OnceClosure closure,
                        TimeDelta delay) override;
   bool PostNonNestableDelayedTask(const tracked_objects::Location& from_here,
-                                  Closure closure,
+                                  OnceClosure closure,
                                   TimeDelta delay) override;
   bool RunsTasksOnCurrentThread() const override;
 
@@ -167,7 +167,7 @@ TestTaskScheduler::~TestTaskScheduler() {
 void TestTaskScheduler::PostDelayedTaskWithTraits(
     const tracked_objects::Location& from_here,
     const TaskTraits& traits,
-    Closure task,
+    OnceClosure task,
     TimeDelta delay) {
   CreateTaskRunnerWithTraits(traits)->PostDelayedTask(from_here,
                                                       std::move(task), delay);
@@ -280,7 +280,7 @@ TestTaskSchedulerTaskRunner::TestTaskSchedulerTaskRunner(
 
 bool TestTaskSchedulerTaskRunner::PostDelayedTask(
     const tracked_objects::Location& from_here,
-    Closure closure,
+    OnceClosure closure,
     TimeDelta delay) {
   auto task =
       MakeUnique<internal::Task>(from_here, std::move(closure), traits_, delay);
@@ -293,7 +293,7 @@ bool TestTaskSchedulerTaskRunner::PostDelayedTask(
 
 bool TestTaskSchedulerTaskRunner::PostNonNestableDelayedTask(
     const tracked_objects::Location& from_here,
-    Closure closure,
+    OnceClosure closure,
     TimeDelta delay) {
   // Tasks are never nested within the task scheduler.
   return PostDelayedTask(from_here, std::move(closure), delay);

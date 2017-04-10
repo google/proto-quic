@@ -144,6 +144,7 @@ BASE_EXPORT extern NSString* const NSAppearanceNameVibrantLight;
 
 @interface NSView (YosemiteSDK)
 - (BOOL)isAccessibilitySelectorAllowed:(SEL)selector;
+@property(copy) NSString* accessibilityLabel;
 @end
 
 #endif  // MAC_OS_X_VERSION_10_10

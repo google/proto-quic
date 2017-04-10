@@ -81,6 +81,13 @@ email = test@test.example
 otherName = 1.2.3.4;UTF8:ignore me
 dirName = more_san_sanity
 
+[req_san_example]
+basicConstraints = critical, CA:true
+subjectAltName   = @san_example
+
+[san_example]
+DNS = www.example.com
+
 [req_spdy_pooling]
 subjectAltName = @spdy_pooling
 

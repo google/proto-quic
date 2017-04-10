@@ -71,7 +71,7 @@ namespace base {
 // Posts |task| to the TaskScheduler. Calling this is equivalent to calling
 // PostTaskWithTraits with plain TaskTraits.
 BASE_EXPORT void PostTask(const tracked_objects::Location& from_here,
-                          Closure task);
+                          OnceClosure task);
 
 // Posts |task| to the TaskScheduler. |task| will not run before |delay|
 // expires. Calling this is equivalent to calling PostDelayedTaskWithTraits with
@@ -80,7 +80,7 @@ BASE_EXPORT void PostTask(const tracked_objects::Location& from_here,
 // Use PostDelayedTaskWithTraits to specify a BACKGROUND priority if the task
 // doesn't have to run as soon as |delay| expires.
 BASE_EXPORT void PostDelayedTask(const tracked_objects::Location& from_here,
-                                 Closure task,
+                                 OnceClosure task,
                                  TimeDelta delay);
 
 // Posts |task| to the TaskScheduler and posts |reply| on the caller's execution
@@ -89,8 +89,8 @@ BASE_EXPORT void PostDelayedTask(const tracked_objects::Location& from_here,
 // PostTaskWithTraitsAndReply with plain TaskTraits. Can only be called when
 // SequencedTaskRunnerHandle::IsSet().
 BASE_EXPORT void PostTaskAndReply(const tracked_objects::Location& from_here,
-                                  Closure task,
-                                  Closure reply);
+                                  OnceClosure task,
+                                  OnceClosure reply);
 
 // Posts |task| to the TaskScheduler and posts |reply| with the return value of
 // |task| as argument on the caller's execution context (i.e. same sequence or
@@ -99,16 +99,30 @@ BASE_EXPORT void PostTaskAndReply(const tracked_objects::Location& from_here,
 // TaskTraits. Can only be called when SequencedTaskRunnerHandle::IsSet().
 template <typename TaskReturnType, typename ReplyArgType>
 void PostTaskAndReplyWithResult(const tracked_objects::Location& from_here,
-                                Callback<TaskReturnType(void)> task,
-                                Callback<void(ReplyArgType)> reply) {
+                                OnceCallback<TaskReturnType()> task,
+                                OnceCallback<void(ReplyArgType)> reply) {
   PostTaskWithTraitsAndReplyWithResult(from_here, TaskTraits(), std::move(task),
                                        std::move(reply));
+}
+
+// Callback version of PostTaskAndReplyWithResult above.
+// Though RepeatingCallback is convertible to OnceCallback, we need this since
+// we can not use template deduction and object conversion at once on the
+// overload resolution.
+// TODO(tzik): Update all callers of the Callback version to use OnceCallback.
+template <typename TaskReturnType, typename ReplyArgType>
+void PostTaskAndReplyWithResult(const tracked_objects::Location& from_here,
+                                Callback<TaskReturnType()> task,
+                                Callback<void(ReplyArgType)> reply) {
+  PostTaskAndReplyWithResult(
+      from_here, OnceCallback<TaskReturnType()>(std::move(task)),
+      OnceCallback<void(ReplyArgType)>(std::move(reply)));
 }
 
 // Posts |task| with specific |traits| to the TaskScheduler.
 BASE_EXPORT void PostTaskWithTraits(const tracked_objects::Location& from_here,
                                     const TaskTraits& traits,
-                                    Closure task);
+                                    OnceClosure task);
 
 // Posts |task| with specific |traits| to the TaskScheduler. |task| will not run
 // before |delay| expires.
@@ -118,7 +132,7 @@ BASE_EXPORT void PostTaskWithTraits(const tracked_objects::Location& from_here,
 BASE_EXPORT void PostDelayedTaskWithTraits(
     const tracked_objects::Location& from_here,
     const TaskTraits& traits,
-    Closure task,
+    OnceClosure task,
     TimeDelta delay);
 
 // Posts |task| with specific |traits| to the TaskScheduler and posts |reply| on
@@ -128,8 +142,8 @@ BASE_EXPORT void PostDelayedTaskWithTraits(
 BASE_EXPORT void PostTaskWithTraitsAndReply(
     const tracked_objects::Location& from_here,
     const TaskTraits& traits,
-    Closure task,
-    Closure reply);
+    OnceClosure task,
+    OnceClosure reply);
 
 // Posts |task| with specific |traits| to the TaskScheduler and posts |reply|
 // with the return value of |task| as argument on the caller's execution context
@@ -139,14 +153,31 @@ template <typename TaskReturnType, typename ReplyArgType>
 void PostTaskWithTraitsAndReplyWithResult(
     const tracked_objects::Location& from_here,
     const TaskTraits& traits,
-    Callback<TaskReturnType()> task,
-    Callback<void(ReplyArgType)> reply) {
+    OnceCallback<TaskReturnType()> task,
+    OnceCallback<void(ReplyArgType)> reply) {
   TaskReturnType* result = new TaskReturnType();
   return PostTaskWithTraitsAndReply(
-      from_here, traits, Bind(&internal::ReturnAsParamAdapter<TaskReturnType>,
-                              std::move(task), result),
-      Bind(&internal::ReplyAdapter<TaskReturnType, ReplyArgType>,
-           std::move(reply), Owned(result)));
+      from_here, traits,
+      BindOnce(&internal::ReturnAsParamAdapter<TaskReturnType>, std::move(task),
+               result),
+      BindOnce(&internal::ReplyAdapter<TaskReturnType, ReplyArgType>,
+               std::move(reply), Owned(result)));
+}
+
+// Callback version of PostTaskWithTraitsAndReplyWithResult above.
+// Though RepeatingCallback is convertible to OnceCallback, we need this since
+// we can not use template deduction and object conversion at once on the
+// overload resolution.
+// TODO(tzik): Update all callers of the Callback version to use OnceCallback.
+template <typename TaskReturnType, typename ReplyArgType>
+void PostTaskWithTraitsAndReplyWithResult(
+    const tracked_objects::Location& from_here,
+    const TaskTraits& traits,
+    Callback<TaskReturnType()> task,
+    Callback<void(ReplyArgType)> reply) {
+  PostTaskWithTraitsAndReplyWithResult(
+      from_here, traits, OnceCallback<TaskReturnType()>(std::move(task)),
+      OnceCallback<void(ReplyArgType)>(std::move(reply)));
 }
 
 // Returns a TaskRunner whose PostTask invocations result in scheduling tasks

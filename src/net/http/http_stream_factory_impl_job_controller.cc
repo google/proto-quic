@@ -13,6 +13,7 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
 #include "base/threading/thread_task_runner_handle.h"
+#include "base/trace_event/memory_usage_estimator.h"
 #include "base/values.h"
 #include "net/base/host_mapping_rules.h"
 #include "net/base/proxy_delegate.h"
@@ -49,7 +50,8 @@ HttpStreamFactoryImpl::JobController::JobController(
     JobFactory* job_factory,
     const HttpRequestInfo& request_info,
     bool is_preconnect,
-    bool enable_ip_based_pooling)
+    bool enable_ip_based_pooling,
+    bool enable_alternative_services)
     : factory_(factory),
       session_(session),
       job_factory_(job_factory),
@@ -57,6 +59,7 @@ HttpStreamFactoryImpl::JobController::JobController(
       delegate_(delegate),
       is_preconnect_(is_preconnect),
       enable_ip_based_pooling_(enable_ip_based_pooling),
+      enable_alternative_services_(enable_alternative_services),
       alternative_job_net_error_(OK),
       job_bound_(false),
       main_job_is_blocked_(false),
@@ -657,8 +660,8 @@ void HttpStreamFactoryImpl::JobController::
   }
 }
 
-const NetLogWithSource* HttpStreamFactoryImpl::JobController::GetNetLog(
-    Job* job) const {
+const NetLogWithSource* HttpStreamFactoryImpl::JobController::GetNetLog()
+    const {
   return &net_log_;
 }
 
@@ -679,12 +682,8 @@ bool HttpStreamFactoryImpl::JobController::HasPendingAltJob() const {
 }
 
 size_t HttpStreamFactoryImpl::JobController::EstimateMemoryUsage() const {
-  size_t estimated_size = 0;
-  if (main_job_)
-    estimated_size += main_job_->EstimateMemoryUsage();
-  if (alternative_job_)
-    estimated_size += alternative_job_->EstimateMemoryUsage();
-  return estimated_size;
+  return base::trace_event::EstimateMemoryUsage(main_job_) +
+         base::trace_event::EstimateMemoryUsage(alternative_job_);
 }
 
 WebSocketHandshakeStreamBase::CreateHelper* HttpStreamFactoryImpl::
@@ -774,10 +773,11 @@ void HttpStreamFactoryImpl::JobController::CancelJobs() {
 
 void HttpStreamFactoryImpl::JobController::OrphanUnboundJob() {
   DCHECK(request_);
+  DCHECK(bound_job_);
   RemoveRequestFromSpdySessionRequestMap();
 
-  DCHECK(bound_job_);
   if (bound_job_->job_type() == MAIN && alternative_job_) {
+    DCHECK(!for_websockets());
     alternative_job_->Orphan();
   } else if (bound_job_->job_type() == ALTERNATIVE && main_job_) {
     // Orphan main job.
@@ -790,6 +790,7 @@ void HttpStreamFactoryImpl::JobController::OrphanUnboundJob() {
       DCHECK(alternative_job_);
       main_job_.reset();
     } else {
+      DCHECK(!for_websockets());
       main_job_->Orphan();
     }
   }
@@ -883,7 +884,6 @@ void HttpStreamFactoryImpl::JobController::ReportBrokenAlternativeService() {
     session_->http_server_properties()->MarkAlternativeServiceBroken(
         failed_alternative_service_);
   }
-  session_->quic_stream_factory()->OnTcpJobCompleted(true);
 }
 
 void HttpStreamFactoryImpl::JobController::MaybeNotifyFactoryOfCompletion() {
@@ -927,6 +927,9 @@ HttpStreamFactoryImpl::JobController::GetAlternativeServiceFor(
     const HttpRequestInfo& request_info,
     HttpStreamRequest::Delegate* delegate,
     HttpStreamRequest::StreamType stream_type) {
+  if (!enable_alternative_services_)
+    return AlternativeService();
+
   AlternativeService alternative_service =
       GetAlternativeServiceForInternal(request_info, delegate, stream_type);
   AlternativeServiceType type;
@@ -1030,9 +1033,6 @@ HttpStreamFactoryImpl::JobController::GetAlternativeServiceForInternal(
       continue;
     }
 
-    if (session_->quic_stream_factory()->IsQuicDisabled())
-      continue;
-
     if (!original_url.SchemeIs(url::kHttpsScheme))
       continue;
 
@@ -1068,6 +1068,10 @@ bool HttpStreamFactoryImpl::JobController::
         const GURL& url,
         ProxyServer* alternative_proxy_server) const {
   DCHECK(!alternative_proxy_server->is_valid());
+
+  if (!enable_alternative_services_)
+    return false;
+
   if (!can_start_alternative_proxy_job_) {
     // Either an alternative service job or an alternative proxy server job has
     // already been started.
@@ -1118,11 +1122,9 @@ bool HttpStreamFactoryImpl::JobController::
   }
 
   if (alternative_proxy_server->is_quic()) {
-    // Check that QUIC is enabled globally, and it is not disabled.
-    if (!session_->IsQuicEnabled() ||
-        session_->quic_stream_factory()->IsQuicDisabled()) {
+    // Check that QUIC is enabled globally.
+    if (!session_->IsQuicEnabled())
       return false;
-    }
   }
 
   return true;

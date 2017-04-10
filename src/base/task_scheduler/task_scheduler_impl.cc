@@ -122,7 +122,7 @@ TaskSchedulerImpl::~TaskSchedulerImpl() {
 void TaskSchedulerImpl::PostDelayedTaskWithTraits(
     const tracked_objects::Location& from_here,
     const TaskTraits& traits,
-    Closure task,
+    OnceClosure task,
     TimeDelta delay) {
   // Post |task| as part of a one-off single-task Sequence.
   GetWorkerPoolForTraits(traits)->PostTaskWithSequence(
@@ -252,10 +252,11 @@ void TaskSchedulerImpl::Initialize(
     // Passing pointers to objects owned by |this| to
     // SchedulerWorkerPoolImpl::Create() is safe because a TaskSchedulerImpl
     // can't be deleted before all its worker pools have been joined.
-    worker_pools_.push_back(SchedulerWorkerPoolImpl::Create(
-        worker_pool_params, re_enqueue_sequence_callback, task_tracker_.get(),
+    worker_pools_.push_back(MakeUnique<SchedulerWorkerPoolImpl>(
+        worker_pool_params.name(), worker_pool_params.priority_hint(),
+        re_enqueue_sequence_callback, task_tracker_.get(),
         delayed_task_manager_.get()));
-    CHECK(worker_pools_.back());
+    worker_pools_.back()->Start(worker_pool_params);
   }
 }
 

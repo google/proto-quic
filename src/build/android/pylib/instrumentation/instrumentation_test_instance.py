@@ -321,8 +321,8 @@ def _GetTestsFromPickle(pickle_path, jar_path):
     raise TestListPickleException(
         '%s newer than %s.' % (jar_path, pickle_path))
 
-  with open(pickle_path, 'r') as pickle_file:
-    pickle_data = pickle.loads(pickle_file.read())
+  with open(pickle_path, 'r') as f:
+    pickle_data = pickle.load(f)
   jar_md5 = md5sum.CalculateHostMd5Sums(jar_path)[jar_path]
 
   if pickle_data['VERSION'] != _PICKLE_FORMAT_VERSION:

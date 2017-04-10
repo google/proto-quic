@@ -8,10 +8,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <string>
-
 #include "net/base/net_export.h"
 #include "net/spdy/hpack/hpack_input_stream.h"
+#include "net/spdy/platform/api/spdy_string.h"
 
 namespace net {
 namespace test {
@@ -35,7 +34,7 @@ class NET_EXPORT_PRIVATE HpackHuffmanDecoder {
   // DecodeString() halts when |in| runs out of input, in which case true is
   // returned. It also halts (returning false) if an invalid Huffman code
   // prefix is read.
-  static bool DecodeString(HpackInputStream* in, std::string* out);
+  static bool DecodeString(HpackInputStream* in, SpdyString* out);
 
  private:
   friend class test::HpackHuffmanDecoderPeer;

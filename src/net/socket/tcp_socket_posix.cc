@@ -31,6 +31,7 @@
 #include "net/log/net_log_source.h"
 #include "net/log/net_log_source_type.h"
 #include "net/socket/socket_net_log_params.h"
+#include "net/socket/socket_options.h"
 #include "net/socket/socket_posix.h"
 
 // If we don't have a definition for TCPI_OPT_SYN_DATA, create one.
@@ -406,16 +407,12 @@ int TCPSocketPosix::SetAddressReuse(bool allow) {
 
 int TCPSocketPosix::SetReceiveBufferSize(int32_t size) {
   DCHECK(socket_);
-  int rv = setsockopt(socket_->socket_fd(), SOL_SOCKET, SO_RCVBUF,
-                      reinterpret_cast<const char*>(&size), sizeof(size));
-  return (rv == 0) ? OK : MapSystemError(errno);
+  return SetSocketReceiveBufferSize(socket_->socket_fd(), size);
 }
 
 int TCPSocketPosix::SetSendBufferSize(int32_t size) {
   DCHECK(socket_);
-  int rv = setsockopt(socket_->socket_fd(), SOL_SOCKET, SO_SNDBUF,
-                      reinterpret_cast<const char*>(&size), sizeof(size));
-  return (rv == 0) ? OK : MapSystemError(errno);
+  return SetSocketSendBufferSize(socket_->socket_fd(), size);
 }
 
 bool TCPSocketPosix::SetKeepAlive(bool enable, int delay) {

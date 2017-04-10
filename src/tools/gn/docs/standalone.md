@@ -35,7 +35,10 @@ that then running GN in your subdirectory will configure a build for
 your subproject rather than for all of Chrome. This could be an
 advantage or a disadvantage.
 
-If you would rather avoid using this file, you can use the command-line
-flags `--root` and `--dotfile` to set these values.
+If you are in a directory with such a file and you want to not use it
+(e.g., to do the full Chrome build instead), you can use the command-line
+flags `--root` and `--dotfile` to set the values you want.
 
-# How the standalone and Chrome builds interact
+If you want a completely standalone build that has nothing to do w/ Chrome
+and doesn't use Chrome's //build files, you can look at an example in
+[//tools/gn/example](../example).

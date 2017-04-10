@@ -5,7 +5,6 @@
 #include "net/spdy/bidirectional_stream_spdy_impl.h"
 
 #include <memory>
-#include <string>
 
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
@@ -21,6 +20,7 @@
 #include "net/http/http_response_info.h"
 #include "net/log/test_net_log.h"
 #include "net/socket/socket_test_util.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/spdy_session.h"
 #include "net/spdy/spdy_test_util_common.h"
 #include "net/test/cert_test_util.h"
@@ -196,7 +196,7 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
   }
 
   // Const getters for internal states.
-  const std::string& data_received() const { return data_received_; }
+  const SpdyString& data_received() const { return data_received_; }
   int bytes_read() const { return bytes_read_; }
   int error() const { return error_; }
   const SpdyHeaderBlock& response_headers() const { return response_headers_; }
@@ -214,7 +214,7 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
   std::unique_ptr<BidirectionalStreamSpdyImpl> stream_;
   scoped_refptr<IOBuffer> read_buf_;
   int read_buf_len_;
-  std::string data_received_;
+  SpdyString data_received_;
   std::unique_ptr<base::RunLoop> loop_;
   SpdyHeaderBlock response_headers_;
   SpdyHeaderBlock trailers_;
@@ -313,7 +313,7 @@ TEST_F(BidirectionalStreamSpdyImplTest, SimplePostRequest) {
   sequenced_data_->RunUntilPaused();
 
   scoped_refptr<StringIOBuffer> write_buffer(
-      new StringIOBuffer(std::string(kBodyData, kBodyDataSize)));
+      new StringIOBuffer(SpdyString(kBodyData, kBodyDataSize)));
   delegate->SendData(write_buffer.get(), write_buffer->size(), true);
   sequenced_data_->Resume();
   base::RunLoop().RunUntilIdle();
@@ -465,7 +465,7 @@ TEST_P(BidirectionalStreamSpdyImplTest, RstWithNoErrorBeforeSendIsComplete) {
   sequenced_data_->RunUntilPaused();
   // Make a write pending before receiving RST_STREAM.
   scoped_refptr<StringIOBuffer> write_buffer(
-      new StringIOBuffer(std::string(kBodyData, kBodyDataSize)));
+      new StringIOBuffer(SpdyString(kBodyData, kBodyDataSize)));
   delegate->SendData(write_buffer.get(), write_buffer->size(), false);
   sequenced_data_->Resume();
   base::RunLoop().RunUntilIdle();

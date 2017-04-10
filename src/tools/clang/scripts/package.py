@@ -186,8 +186,8 @@ def main():
 
   # Check if Google Cloud Storage already has the artifacts we want to build.
   if (args.upload and GsutilArchiveExists(pdir, platform) and
-      not sys.platform.startswith('linux') or
-      GsutilArchiveExists(golddir, platform)):
+      (not sys.platform.startswith('linux') or
+      GsutilArchiveExists(golddir, platform))):
     print ('Desired toolchain revision %s is already available '
            'in Google Cloud Storage:') % expected_stamp
     print 'gs://chromium-browser-clang-staging/%s/%s.tgz' % (platform, pdir)

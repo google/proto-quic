@@ -4,15 +4,11 @@
 
 #include "net/spdy/hpack/hpack_entry.h"
 
-#include <string>
-
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
 
 namespace {
-
-using std::string;
 
 class HpackEntryTest : public ::testing::Test {
  protected:
@@ -46,7 +42,7 @@ class HpackEntryTest : public ::testing::Test {
     return name_.size() + value_.size() + HpackEntry::kSizeOverhead;
   }
 
-  string name_, value_;
+  SpdyString name_, value_;
 
  private:
   // Referenced by HpackEntry instances.

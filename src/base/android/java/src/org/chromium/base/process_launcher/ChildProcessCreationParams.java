@@ -73,12 +73,14 @@ public class ChildProcessCreationParams {
     private final String mPackageName;
     private final boolean mIsExternalService;
     private final int mLibraryProcessType;
+    private final boolean mBindToCallerCheck;
 
-    public ChildProcessCreationParams(
-            String packageName, boolean isExternalService, int libraryProcessType) {
+    public ChildProcessCreationParams(String packageName, boolean isExternalService,
+            int libraryProcessType, boolean bindToCallerCheck) {
         mPackageName = packageName;
         mIsExternalService = isExternalService;
         mLibraryProcessType = libraryProcessType;
+        mBindToCallerCheck = bindToCallerCheck;
     }
 
     public String getPackageName() {
@@ -91,6 +93,10 @@ public class ChildProcessCreationParams {
 
     public int getLibraryProcessType() {
         return mLibraryProcessType;
+    }
+
+    public boolean getBindToCallerCheck() {
+        return mBindToCallerCheck;
     }
 
     public void addIntentExtras(Intent intent) {

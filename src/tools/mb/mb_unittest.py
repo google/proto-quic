@@ -118,9 +118,13 @@ TEST_CONFIG = """\
       'fake_gyp_builder': 'gyp_debug',
       'fake_gn_args_bot': '//build/args/bots/fake_master/fake_gn_args_bot.gn',
       'fake_multi_phase': { 'phase_1': 'gn_phase_1', 'phase_2': 'gn_phase_2'},
+      'fake_args_file': 'args_file_goma',
+      'fake_args_file_twice': 'args_file_twice',
     },
   },
   'configs': {
+    'args_file_goma': ['args_file', 'goma'],
+    'args_file_twice': ['args_file', 'args_file'],
     'gyp_rel_bot': ['gyp', 'rel', 'goma'],
     'gn_debug_goma': ['gn', 'debug', 'goma'],
     'gyp_debug': ['gyp', 'debug', 'fake_feature1'],
@@ -142,6 +146,9 @@ TEST_CONFIG = """\
     'goma': {
       'gn_args': 'use_goma=true',
       'gyp_defines': 'goma=1',
+    },
+    'args_file': {
+      'args_file': '//build/args/fake.gn',
     },
     'phase_1': {
       'gn_args': 'phase=1',
@@ -335,6 +342,19 @@ class UnitTest(unittest.TestCase):
         mbw.files['/fake_src/out/Debug/args.gn'],
         'import("//build/args/bots/fake_master/fake_gn_args_bot.gn")\n')
 
+  def test_gn_gen_args_file_mixins(self):
+    mbw = self.fake_mbw()
+    self.check(['gen', '-m', 'fake_master', '-b', 'fake_args_file',
+                '//out/Debug'], mbw=mbw, ret=0)
+
+    self.assertEqual(
+        mbw.files['/fake_src/out/Debug/args.gn'],
+        ('import("//build/args/fake.gn")\n'
+         'use_goma = true\n'))
+
+    mbw = self.fake_mbw()
+    self.check(['gen', '-m', 'fake_master', '-b', 'fake_args_file_twice',
+                '//out/Debug'], mbw=mbw, ret=1)
 
   def test_gn_gen_fails(self):
     mbw = self.fake_mbw()

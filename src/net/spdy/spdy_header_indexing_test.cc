@@ -17,7 +17,7 @@ class HeaderIndexingPeer {
   HeaderIndexingPeer() : hi_() {}
 
   void CreateTestInit() {
-    std::string input[] = {"key1", "key2", "key3"};
+    SpdyString input[] = {"key1", "key2", "key3"};
     hi_.indexing_set_ =
         HeaderIndexing::HeaderSet(input, input + arraysize(input));
     hi_.tracking_set_ =
@@ -30,12 +30,12 @@ class HeaderIndexingPeer {
 
   void CreateInitIndexingHeaders() { hi_.CreateInitIndexingHeaders(); }
 
-  void TryInsert(std::string&& header) {
+  void TryInsert(SpdyString&& header) {
     hi_.TryInsertHeader(std::move(header), &(hi_.indexing_set_),
                         hi_.indexing_set_bound_);
   }
 
-  bool InTrackingSet(std::string str) {
+  bool InTrackingSet(const SpdyString& str) {
     return hi_.tracking_set_.find(str) != hi_.tracking_set_.end();
   }
 
@@ -67,16 +67,16 @@ class SpdyHeaderIndexingTest : public ::testing::Test {
 };
 
 TEST_F(SpdyHeaderIndexingTest, TestTryInsertHeader) {
-  std::string key("key4");
+  SpdyString key("key4");
   hi_->TryInsert(std::move(key));
   EXPECT_EQ(3u, hi_->indexing_set_size());
   EXPECT_TRUE(hi_->ShouldIndex("key4"));
 }
 
 TEST_F(SpdyHeaderIndexingTest, TestShouldIndex) {
-  std::string key3 = "key3";
-  std::string key4 = "key4";
-  std::string key5 = "key5";
+  SpdyString key3 = "key3";
+  SpdyString key4 = "key4";
+  SpdyString key5 = "key5";
   // Cache hit.
   EXPECT_TRUE(hi_->ShouldIndex(key3));
   EXPECT_EQ(3u, hi_->indexing_set_size());

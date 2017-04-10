@@ -38,7 +38,8 @@ def Log(message):
 
 
 def ReadHistogramValues(filename, start_marker, end_marker):
-  """Returns a dictionary of enum values, read from a C++ file.
+  """Returns a dictionary of enum values and a pair of labels that have the same
+     enum values, read from a C++ file.
 
   Args:
       filename: The unix-style path (relative to src/) of the file to open.
@@ -75,13 +76,16 @@ def ReadHistogramValues(filename, start_marker, end_marker):
             label = m.group(1)
           else:
             continue
+        # If two enum labels have the same value
+        if enum_value in result:
+          return result, (result[enum_value], label)
         result[enum_value] = label
         enum_value += 1
     else:
       if START_REGEX.match(line):
         inside_enum = True
         enum_value = 0
-  return result
+  return result, None
 
 
 def CreateEnumItemNode(document, value, label):
@@ -180,12 +184,14 @@ def HistogramNeedsUpdate(histogram_enum_name, source_enum_path, start_marker,
       end_marker: A regular expression that matches the end of the C++ enum.
   """
   Log('Reading histogram enum definition from "{0}".'.format(source_enum_path))
-  source_enum_values = ReadHistogramValues(source_enum_path, start_marker,
-                                           end_marker)
+  source_enum_values, duplicated_values = ReadHistogramValues(
+      source_enum_path, start_marker, end_marker)
+  if duplicated_values:
+    return False, duplicated_values
 
   (xml, new_xml) = _GetOldAndUpdatedXml(histogram_enum_name, source_enum_values,
                                         source_enum_path)
-  return xml != new_xml
+  return xml != new_xml, None
 
 
 def UpdateHistogramFromDict(histogram_enum_name, source_enum_values,

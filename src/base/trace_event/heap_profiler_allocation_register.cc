@@ -82,15 +82,15 @@ AllocationRegister::AllocationRegister(size_t allocation_capacity,
   sentinel.frame_count = 1;
 
   // Rationale for max / 2: in theory we could just start the sentinel with a
-  // refcount == 0. However, this optimization avoids to hit the 2nd condition
-  // of the "if" in RemoveBacktrace, hence reducing the chances of hurting the
-  // fastpath. From a functional viewpoint, the sentinel is safe even if we wrap
-  // over the refcount.
+  // refcount == 0. However, using max / 2 allows short circuiting of the
+  // conditional in RemoveBacktrace() keeping the sentinel logic out of the fast
+  // path. From a functional viewpoint, the sentinel is safe even if we wrap
+  // over refcount because .
   BacktraceMap::KVPair::second_type sentinel_refcount =
       std::numeric_limits<BacktraceMap::KVPair::second_type>::max() / 2;
   auto index_and_flag = backtraces_.Insert(sentinel, sentinel_refcount);
   DCHECK(index_and_flag.second);
-  out_of_storage_backtrace_index_ = index_and_flag.first;
+  DCHECK_EQ(index_and_flag.first, kOutOfStorageBacktraceIndex);
 }
 
 AllocationRegister::~AllocationRegister() {}
@@ -165,7 +165,7 @@ AllocationRegister::BacktraceMap::KVIndex AllocationRegister::InsertBacktrace(
     const Backtrace& backtrace) {
   auto index = backtraces_.Insert(backtrace, 0).first;
   if (index == BacktraceMap::kInvalidKVIndex)
-    return out_of_storage_backtrace_index_;
+    return kOutOfStorageBacktraceIndex;
   auto& backtrace_and_count = backtraces_.Get(index);
   backtrace_and_count.second++;
   return index;
@@ -174,7 +174,7 @@ AllocationRegister::BacktraceMap::KVIndex AllocationRegister::InsertBacktrace(
 void AllocationRegister::RemoveBacktrace(BacktraceMap::KVIndex index) {
   auto& backtrace_and_count = backtraces_.Get(index);
   if (--backtrace_and_count.second == 0 &&
-      index != out_of_storage_backtrace_index_) {
+      index != kOutOfStorageBacktraceIndex) {
     // Backtrace is not referenced anymore - remove it.
     backtraces_.Remove(index);
   }

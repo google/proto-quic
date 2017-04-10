@@ -2088,6 +2088,27 @@ TEST(PartitionAllocTest, PurgeDiscardable) {
   }
 }
 
+TEST(PartitionAllocTest, ReallocMovesCookies) {
+  TestSetup();
+
+  // Resize so as to be sure to hit a "resize in place" case, and ensure that
+  // use of the entire result is compatible with the debug mode's cookies, even
+  // when the bucket size is large enough to span more than one partition page
+  // and we can track the "raw" size. See https://crbug.com/709271
+  const size_t kSize = base::kMaxSystemPagesPerSlotSpan * base::kSystemPageSize;
+  void* ptr =
+      PartitionAllocGeneric(generic_allocator.root(), kSize + 1, type_name);
+  EXPECT_TRUE(ptr);
+
+  memset(ptr, 0xbd, kSize + 1);
+  ptr = PartitionReallocGeneric(generic_allocator.root(), ptr, kSize + 2,
+                                type_name);
+  EXPECT_TRUE(ptr);
+
+  memset(ptr, 0xbd, kSize + 2);
+  PartitionFreeGeneric(generic_allocator.root(), ptr);
+}
+
 }  // namespace base
 
 #endif  // !defined(MEMORY_TOOL_REPLACES_ALLOCATOR)

@@ -14,8 +14,10 @@ import sys
 import tempfile
 
 import describe
+import file_format
 import map2size
 import models
+import paths
 
 
 _SCRIPT_DIR = os.path.dirname(__file__)
@@ -58,17 +60,17 @@ def _RunApp(name, *args):
 class IntegrationTest(unittest.TestCase):
   size_info = None
 
-  def _GetParsedMap(self):
+  def _CloneSizeInfo(self):
     if not IntegrationTest.size_info:
-      IntegrationTest.size_info = map2size.Analyze(
-          _TEST_MAP_PATH, output_directory=_TEST_DATA_DIR)
+      lazy_paths = paths.LazyPaths(output_directory=_TEST_DATA_DIR)
+      IntegrationTest.size_info = map2size.Analyze(_TEST_MAP_PATH, lazy_paths)
     return copy.deepcopy(IntegrationTest.size_info)
 
   @_CompareWithGolden
   def test_Map2Size(self):
     with tempfile.NamedTemporaryFile(suffix='.size') as temp_file:
       _RunApp('map2size.py', '--output-directory', _TEST_DATA_DIR,
-              _TEST_MAP_PATH, temp_file.name)
+              '--map-file', _TEST_MAP_PATH, '', temp_file.name)
       size_info = map2size.Analyze(temp_file.name)
     sym_strs = (repr(sym) for sym in size_info.symbols)
     stats = describe.DescribeSizeInfoCoverage(size_info)
@@ -76,30 +78,33 @@ class IntegrationTest(unittest.TestCase):
 
   @_CompareWithGolden
   def test_ConsoleNullDiff(self):
-    return _RunApp('console.py', '--output-directory', _TEST_DATA_DIR,
-                   '--query', 'Diff(size_info1, size_info2)',
-                   _TEST_MAP_PATH, _TEST_MAP_PATH)
+    with tempfile.NamedTemporaryFile(suffix='.size') as temp_file:
+      file_format.SaveSizeInfo(self._CloneSizeInfo(), temp_file.name)
+      return _RunApp('console.py', '--query', 'Diff(size_info1, size_info2)',
+                     temp_file.name, temp_file.name)
 
   @_CompareWithGolden
   def test_ActualDiff(self):
-    map1 = self._GetParsedMap()
-    map2 = self._GetParsedMap()
-    map1.symbols.symbols.pop(-1)
-    map2.symbols.symbols.pop(0)
-    map1.symbols[1].size -= 10
-    diff = models.Diff(map1, map2)
-    return describe.GenerateLines(diff)
+    size_info1 = self._CloneSizeInfo()
+    size_info2 = self._CloneSizeInfo()
+    size_info1.metadata = {"foo": 1, "bar": [1,2,3], "baz": "yes"}
+    size_info2.metadata = {"foo": 1, "bar": [1,3], "baz": "yes"}
+    size_info1.symbols -= size_info1.symbols[:2]
+    size_info2.symbols -= size_info2.symbols[-3:]
+    size_info1.symbols[1].size -= 10
+    diff = models.Diff(size_info1, size_info2)
+    return describe.GenerateLines(diff, verbose=True)
 
   @_CompareWithGolden
   def test_SymbolGroupMethods(self):
-    all_syms = self._GetParsedMap().symbols
+    all_syms = self._CloneSizeInfo().symbols
     global_syms = all_syms.WhereNameMatches('GLOBAL')
     # Tests Filter(), Inverted(), and __sub__().
     non_global_syms = global_syms.Inverted()
-    self.assertEqual(non_global_syms.symbols, (all_syms - global_syms).symbols)
+    self.assertEqual(non_global_syms, (all_syms - global_syms))
     # Tests Sorted() and __add__().
-    self.assertEqual(all_syms.Sorted().symbols,
-                     (global_syms + non_global_syms).Sorted().symbols)
+    self.assertEqual(all_syms.Sorted(),
+                     (global_syms + non_global_syms).Sorted())
     # Tests GroupByNamespace() and __len__().
     return itertools.chain(
         ['GroupByNamespace()'],

@@ -122,17 +122,17 @@ class BaseDescBuilder {
   }
 
   ValuePtr RenderValue(const std::string& s, bool optional = false) {
-    return (s.empty() && optional) ? base::Value::CreateNullValue()
+    return (s.empty() && optional) ? base::MakeUnique<base::Value>()
                                    : ValuePtr(new base::Value(s));
   }
 
   ValuePtr RenderValue(const SourceDir& d) {
-    return d.is_null() ? base::Value::CreateNullValue()
+    return d.is_null() ? base::MakeUnique<base::Value>()
                        : ValuePtr(new base::Value(FormatSourceDir(d)));
   }
 
   ValuePtr RenderValue(const SourceFile& f) {
-    return f.is_null() ? base::Value::CreateNullValue()
+    return f.is_null() ? base::MakeUnique<base::Value>()
                        : ValuePtr(new base::Value(f.value()));
   }
 

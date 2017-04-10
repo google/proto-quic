@@ -50,6 +50,7 @@ QuicHttpStream::QuicHttpStream(
     : MultiplexedHttpStream(MultiplexedSessionHandle(session)),
       next_state_(STATE_NONE),
       session_(session),
+      server_id_(session->server_id()),
       http_server_properties_(http_server_properties),
       quic_version_(session->GetQuicVersion()),
       session_error_(ERR_UNEXPECTED),
@@ -274,7 +275,6 @@ int QuicHttpStream::SendRequest(const HttpRequestHeaders& request_headers,
     // A request with a body is ineligible for push, so reset the
     // promised stream and request a new stream.
     if (found_promise_) {
-      found_promise_ = false;
       std::string url(request_info_->url.spec());
       QuicClientPromisedInfo* promised =
           session_->push_promise_index()->GetPromised(url);
@@ -301,10 +301,13 @@ int QuicHttpStream::SendRequest(const HttpRequestHeaders& request_headers,
 
   int rv;
 
-  if (found_promise_) {
+  if (!found_promise_) {
+    next_state_ = STATE_SET_REQUEST_PRIORITY;
+  } else if (!request_body_stream_) {
     next_state_ = STATE_HANDLE_PROMISE;
   } else {
-    next_state_ = STATE_SET_REQUEST_PRIORITY;
+    found_promise_ = false;
+    next_state_ = STATE_REQUEST_STREAM;
   }
   rv = DoLoop(OK);
 
@@ -320,7 +323,6 @@ int QuicHttpStream::ReadResponseHeaders(const CompletionCallback& callback) {
 
   if (stream_ == nullptr)
     return GetResponseStatus();
-
   // Check if we already have the response headers. If so, return synchronously.
   if (response_headers_received_)
     return OK;
@@ -362,6 +364,7 @@ int QuicHttpStream::ReadResponseBody(IOBuffer* buf,
 }
 
 void QuicHttpStream::Close(bool /*not_reusable*/) {
+  session_error_ = ERR_ABORTED;
   SaveResponseStatus();
   // Note: the not_reusable flag has no meaning for QUIC streams.
   if (stream_) {
@@ -857,8 +860,8 @@ void QuicHttpStream::SetResponseStatus(int response_status) {
 int QuicHttpStream::ComputeResponseStatus() const {
   DCHECK(!has_response_status_);
 
-  // If the handshake has failed this will be handled by the
-  // QuicStreamFactory and HttpStreamFactory to mark QUIC as broken.
+  // If the handshake has failed this will be handled by the QuicStreamFactory
+  // and HttpStreamFactory to mark QUIC as broken if TCP is actually working.
   if (!was_handshake_confirmed_)
     return ERR_QUIC_HANDSHAKE_FAILED;
 
@@ -871,6 +874,23 @@ int QuicHttpStream::ComputeResponseStatus() const {
   // retry the request.
   if (!response_info_)
     return ERR_CONNECTION_CLOSED;
+
+  // Explicit stream error are always fatal.
+  if (quic_stream_error_ != QUIC_STREAM_NO_ERROR &&
+      quic_stream_error_ != QUIC_STREAM_CONNECTION_ERROR) {
+    return ERR_QUIC_PROTOCOL_ERROR;
+  }
+
+  DCHECK_NE(QUIC_HANDSHAKE_TIMEOUT, quic_connection_error_);
+
+  // If the headers have not been received and QUIC is now broken, return
+  // ERR_QUIC_BROKEN_ERROR to permit HttpNetworkTransaction to retry the request
+  // over TCP.
+  if (!response_headers_received_ &&
+      http_server_properties_->IsAlternativeServiceBroken(AlternativeService(
+          kProtoQUIC, server_id_.host(), server_id_.port()))) {
+    return ERR_QUIC_BROKEN_ERROR;
+  }
 
   return ERR_QUIC_PROTOCOL_ERROR;
 }

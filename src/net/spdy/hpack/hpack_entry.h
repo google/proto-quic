@@ -7,10 +7,9 @@
 
 #include <stddef.h>
 
-#include <string>
-
 #include "base/macros.h"
 #include "net/base/net_export.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
 // All section references below are to
@@ -71,7 +70,7 @@ class NET_EXPORT_PRIVATE HpackEntry {
   static size_t Size(SpdyStringPiece name, SpdyStringPiece value);
   size_t Size() const;
 
-  std::string GetDebugString() const;
+  SpdyString GetDebugString() const;
 
   int64_t time_added() const { return time_added_; }
   void set_time_added(int64_t now) { time_added_ = now; }
@@ -87,8 +86,8 @@ class NET_EXPORT_PRIVATE HpackEntry {
   };
 
   // These members are not used for LOOKUP entries.
-  std::string name_;
-  std::string value_;
+  SpdyString name_;
+  SpdyString value_;
 
   // These members are always valid. For DYNAMIC and STATIC entries, they
   // always point to |name_| and |value_|.

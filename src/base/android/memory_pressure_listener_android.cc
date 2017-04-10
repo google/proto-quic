@@ -4,7 +4,6 @@
 
 #include "base/android/memory_pressure_listener_android.h"
 
-#include "base/android/context_utils.h"
 #include "base/memory/memory_pressure_listener.h"
 #include "jni/MemoryPressureListener_jni.h"
 
@@ -27,8 +26,7 @@ bool MemoryPressureListenerAndroid::Register(JNIEnv* env) {
 }
 
 void MemoryPressureListenerAndroid::RegisterSystemCallback(JNIEnv* env) {
-  Java_MemoryPressureListener_registerSystemCallback(
-      env, GetApplicationContext());
+  Java_MemoryPressureListener_registerSystemCallback(env);
 }
 
 }  // namespace android

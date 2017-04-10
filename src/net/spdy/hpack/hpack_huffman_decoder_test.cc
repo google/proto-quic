@@ -72,7 +72,7 @@ class HpackHuffmanDecoderTest : public ::testing::Test {
         HpackHuffmanDecoderPeer::CanonicalToSource(canonical));
   }
 
-  void EncodeString(SpdyStringPiece input, std::string* encoded) {
+  void EncodeString(SpdyStringPiece input, SpdyString* encoded) {
     HpackOutputStream output_stream;
     table_.EncodeString(input, &output_stream);
     encoded->clear();
@@ -81,8 +81,8 @@ class HpackHuffmanDecoderTest : public ::testing::Test {
     EXPECT_EQ(encoded->size(), table_.EncodedSize(input));
   }
 
-  std::string EncodeString(SpdyStringPiece input) {
-    std::string result;
+  SpdyString EncodeString(SpdyStringPiece input) {
+    SpdyString result;
     EncodeString(input, &result);
     return result;
   }
@@ -162,8 +162,8 @@ TEST_F(HpackHuffmanDecoderTest, DecodeToSource) {
 }
 
 TEST_F(HpackHuffmanDecoderTest, SpecRequestExamples) {
-  std::string buffer;
-  std::string test_table[] = {
+  SpdyString buffer;
+  SpdyString test_table[] = {
       a2b_hex("f1e3c2e5f23a6ba0ab90f4ff"),
       "www.example.com",
       a2b_hex("a8eb10649cbf"),
@@ -175,8 +175,8 @@ TEST_F(HpackHuffmanDecoderTest, SpecRequestExamples) {
   };
   // Round-trip each test example.
   for (size_t i = 0; i != arraysize(test_table); i += 2) {
-    const std::string& encodedFixture(test_table[i]);
-    const std::string& decodedFixture(test_table[i + 1]);
+    const SpdyString& encodedFixture(test_table[i]);
+    const SpdyString& decodedFixture(test_table[i + 1]);
     HpackInputStream input_stream(encodedFixture);
     EXPECT_TRUE(HpackHuffmanDecoder::DecodeString(&input_stream, &buffer));
     EXPECT_EQ(decodedFixture, buffer);
@@ -186,9 +186,9 @@ TEST_F(HpackHuffmanDecoderTest, SpecRequestExamples) {
 }
 
 TEST_F(HpackHuffmanDecoderTest, SpecResponseExamples) {
-  std::string buffer;
+  SpdyString buffer;
   // clang-format off
-  std::string test_table[] = {
+  SpdyString test_table[] = {
     a2b_hex("6402"),
     "302",
     a2b_hex("aec3771a4b"),
@@ -207,8 +207,8 @@ TEST_F(HpackHuffmanDecoderTest, SpecResponseExamples) {
   // clang-format on
   // Round-trip each test example.
   for (size_t i = 0; i != arraysize(test_table); i += 2) {
-    const std::string& encodedFixture(test_table[i]);
-    const std::string& decodedFixture(test_table[i + 1]);
+    const SpdyString& encodedFixture(test_table[i]);
+    const SpdyString& decodedFixture(test_table[i + 1]);
     HpackInputStream input_stream(encodedFixture);
     EXPECT_TRUE(HpackHuffmanDecoder::DecodeString(&input_stream, &buffer));
     EXPECT_EQ(decodedFixture, buffer);
@@ -222,8 +222,8 @@ TEST_F(HpackHuffmanDecoderTest, RoundTripIndividualSymbols) {
     char c = static_cast<char>(i);
     char storage[3] = {c, c, c};
     SpdyStringPiece input(storage, arraysize(storage));
-    std::string buffer_in = EncodeString(input);
-    std::string buffer_out;
+    SpdyString buffer_in = EncodeString(input);
+    SpdyString buffer_out;
     HpackInputStream input_stream(buffer_in);
     EXPECT_TRUE(HpackHuffmanDecoder::DecodeString(&input_stream, &buffer_out));
     EXPECT_EQ(input, buffer_out);
@@ -233,9 +233,9 @@ TEST_F(HpackHuffmanDecoderTest, RoundTripIndividualSymbols) {
 // Creates 256 input strings, each with a unique byte value i used to sandwich
 // all the other higher byte values.
 TEST_F(HpackHuffmanDecoderTest, RoundTripSymbolSequences) {
-  std::string input;
-  std::string encoded;
-  std::string decoded;
+  SpdyString input;
+  SpdyString encoded;
+  SpdyString decoded;
   for (size_t i = 0; i != 256; i++) {
     input.clear();
     auto ic = static_cast<char>(i);

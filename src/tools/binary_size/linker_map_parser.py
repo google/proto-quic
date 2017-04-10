@@ -175,10 +175,16 @@ class MapFileParser(object):
                 # There seems to be no corelation between where these gaps occur
                 # and the symbols they come in-between.
                 # TODO(agrieve): Learn more about why this happens.
-                address = -1
-                if syms and syms[-1].address > 0:
-                  merge_symbol_start_address = syms[-1].end_address
-                merge_symbol_start_address += size
+                if address_str2:
+                  address = int(address_str2[2:], 16) - 1
+                elif syms and syms[-1].address > 0:
+                  # Merge sym with no second line showing real address.
+                  address = syms[-1].end_address
+                else:
+                  logging.warning('First symbol of section had address -1')
+                  address = 0
+
+                merge_symbol_start_address = address + size
               else:
                 address = int(address_str[2:], 16)
                 # Finish off active address gap / merge section.
@@ -186,20 +192,16 @@ class MapFileParser(object):
                   merge_size = address - merge_symbol_start_address
                   logging.debug('Merge symbol of size %d found at:\n  %r',
                                 merge_size, syms[-1])
+                  # Set size=0 so that it will show up as padding.
                   sym = models.Symbol(
-                      section_name, merge_size,
-                      address=merge_symbol_start_address,
+                      section_name, 0,
+                      address=address,
                       name='** symbol gap %d' % symbol_gap_count,
                       object_path=path)
                   symbol_gap_count += 1
                   syms.append(sym)
                   merge_symbol_start_address = 0
 
-              if address == -1 and address_str2:
-                address = int(address_str2[2:], 16) - 1
-              # Merge sym with no second line showing real address.
-              if address == -1:
-                address = syms[-1].end_address
               syms.append(models.Symbol(section_name, size, address=address,
                                         name=name or mangled_name,
                                         object_path=path))

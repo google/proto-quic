@@ -28,6 +28,7 @@
 #include "net/log/net_log_source.h"
 #include "net/log/net_log_source_type.h"
 #include "net/socket/socket_descriptor.h"
+#include "net/socket/socket_options.h"
 #include "net/socket/udp_net_log_parameters.h"
 
 namespace {
@@ -499,8 +500,8 @@ int UDPSocketWin::BindToNetwork(NetworkChangeNotifier::NetworkHandle network) {
 int UDPSocketWin::SetReceiveBufferSize(int32_t size) {
   DCHECK_NE(socket_, INVALID_SOCKET);
   DCHECK(CalledOnValidThread());
-  int rv = setsockopt(socket_, SOL_SOCKET, SO_RCVBUF,
-                      reinterpret_cast<const char*>(&size), sizeof(size));
+  int rv = SetSocketReceiveBufferSize(socket_, size);
+
   if (rv != 0)
     return MapSystemError(WSAGetLastError());
 
@@ -522,8 +523,7 @@ int UDPSocketWin::SetReceiveBufferSize(int32_t size) {
 int UDPSocketWin::SetSendBufferSize(int32_t size) {
   DCHECK_NE(socket_, INVALID_SOCKET);
   DCHECK(CalledOnValidThread());
-  int rv = setsockopt(socket_, SOL_SOCKET, SO_SNDBUF,
-                      reinterpret_cast<const char*>(&size), sizeof(size));
+  int rv = SetSocketSendBufferSize(socket_, size);
   if (rv != 0)
     return MapSystemError(WSAGetLastError());
   // According to documentation, setsockopt may succeed, but we need to check

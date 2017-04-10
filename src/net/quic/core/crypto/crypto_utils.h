@@ -145,7 +145,8 @@ class QUIC_EXPORT_PRIVATE CryptoUtils {
 
   // Writes a hash of the serialized |message| into |output|.
   static void HashHandshakeMessage(const CryptoHandshakeMessage& message,
-                                   std::string* output);
+                                   std::string* output,
+                                   Perspective perspective);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(CryptoUtils);

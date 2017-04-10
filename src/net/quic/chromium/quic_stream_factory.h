@@ -61,7 +61,7 @@ class HttpServerProperties;
 class NetLog;
 class ProxyDelegate;
 class QuicClock;
-class QuicChromiumAlarmFactory;
+class QuicAlarmFactory;
 class QuicChromiumConnectionHelper;
 class QuicCryptoClientStreamFactory;
 class QuicRandom;
@@ -219,7 +219,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
       bool delay_tcp_race,
       int max_server_configs_stored_in_properties,
       bool close_sessions_on_ip_change,
-      bool disable_quic_on_timeout_with_open_streams,
+      bool mark_quic_broken_when_network_blackholes,
       int idle_connection_timeout_seconds,
       int reduced_ping_timeout_seconds,
       int packet_reader_yield_after_duration_milliseconds,
@@ -261,9 +261,6 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   // could be used for.
   void OnTcpJobCompleted(bool succeeded);
 
-  // Returns true if QUIC is disabled.
-  bool IsQuicDisabled() const;
-
   // Called by a session when it becomes idle.
   void OnIdleSession(QuicChromiumClientSession* session);
 
@@ -274,8 +271,8 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   // Called by a session after it shuts down.
   void OnSessionClosed(QuicChromiumClientSession* session);
 
-  // Called by a session when it times out with open streams.
-  void OnTimeoutWithOpenStreams();
+  // Called by a session when it blackholes after the handshake is confirmed.
+  void OnBlackholeAfterHandshakeConfirmed(QuicChromiumClientSession* session);
 
   // Cancels a pending request.
   void CancelRequest(QuicStreamRequest* request);
@@ -376,7 +373,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
 
   QuicChromiumConnectionHelper* helper() { return helper_.get(); }
 
-  QuicChromiumAlarmFactory* alarm_factory() { return alarm_factory_.get(); }
+  QuicAlarmFactory* alarm_factory() { return alarm_factory_.get(); }
 
   bool has_quic_server_info_factory() const {
     return quic_server_info_factory_.get() != nullptr;
@@ -406,6 +403,10 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
     return migrate_sessions_on_network_change_;
   }
 
+  bool mark_quic_broken_when_network_blackholes() const {
+    return mark_quic_broken_when_network_blackholes_;
+  }
+
   // Dumps memory allocation stats. |parent_dump_absolute_name| is the name
   // used by the parent MemoryAllocatorDump in the memory dump hierarchy.
   void DumpMemoryStats(base::trace_event::ProcessMemoryDump* pmd,
@@ -425,17 +426,10 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   typedef std::map<QuicChromiumClientSession*, IPEndPoint> SessionPeerIPMap;
   typedef std::map<Job*, std::unique_ptr<Job>> JobSet;
   typedef std::map<QuicServerId, JobSet> JobMap;
-  typedef std::map<QuicStreamRequest*, QuicServerId> RequestMap;
   typedef std::set<QuicStreamRequest*> RequestSet;
   typedef std::map<QuicServerId, RequestSet> ServerIDRequestsMap;
   typedef std::map<QuicServerId, std::unique_ptr<CertVerifierJob>>
       CertVerifierJobMap;
-
-  enum FactoryStatus {
-    OPEN,     // New streams may be created.
-    CLOSED,   // No new streams may be created temporarily.
-    DISABLED  // No more streams may be created until the network changes.
-  };
 
   // Creates a job which doesn't wait for server config to be loaded from the
   // disk cache. This job is started via a PostTask.
@@ -521,12 +515,6 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
       bool close_session_on_error,
       const NetLogWithSource& net_log);
 
-  // Called to re-enable QUIC when QUIC has been disabled.
-  void OpenFactory();
-  // If QUIC has been working well after having been recently
-  // disabled, clear the |consecutive_disabled_count_|.
-  void MaybeClearConsecutiveDisabledCount();
-
   bool require_confirmation_;
   NetLog* net_log_;
   HostResolver* host_resolver_;
@@ -552,7 +540,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   std::unique_ptr<QuicChromiumConnectionHelper> helper_;
 
   // The alarm factory used for all connections.
-  std::unique_ptr<QuicChromiumAlarmFactory> alarm_factory_;
+  std::unique_ptr<QuicAlarmFactory> alarm_factory_;
 
   // Contains owning pointers to all sessions that currently exist.
   SessionIdMap all_sessions_;
@@ -573,8 +561,8 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   QuicCryptoClientConfig crypto_config_;
 
   JobMap active_jobs_;
+  // Map from QuicServerId to a set of non-owning QuicStreamRequest pointers.
   ServerIDRequestsMap job_requests_map_;
-  RequestMap active_requests_;
 
   CertVerifierJobMap active_cert_verifier_jobs_;
 
@@ -607,13 +595,9 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   // Set if AES-GCM should be preferred, even if there is no hardware support.
   bool prefer_aes_;
 
-  // True if QUIC should be disabled when there are timeouts with open
-  // streams.
-  bool disable_quic_on_timeout_with_open_streams_;
-
-  // Number of times in a row that QUIC has been disabled.
-  int consecutive_disabled_count_;
-  bool need_to_evaluate_consecutive_disabled_count_;
+  // True if QUIC should be marked as broken when a connection blackholes after
+  // the handshake is confirmed.
+  bool mark_quic_broken_when_network_blackholes_;
 
   // Size of the UDP receive buffer.
   int socket_receive_buffer_size_;
@@ -669,9 +653,6 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   int num_push_streams_created_;
 
   QuicClientPushPromiseIndex push_promise_index_;
-
-  // Current status of the factory's ability to create streams.
-  FactoryStatus status_;
 
   base::TaskRunner* task_runner_;
 

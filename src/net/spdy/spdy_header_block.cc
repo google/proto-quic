@@ -18,8 +18,6 @@
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 #include "net/spdy/platform/api/spdy_string_utils.h"
 
-using std::string;
-
 namespace net {
 namespace {
 
@@ -209,11 +207,11 @@ SpdyHeaderBlock::ValueProxy& SpdyHeaderBlock::ValueProxy::operator=(
   return *this;
 }
 
-string SpdyHeaderBlock::ValueProxy::as_string() const {
+SpdyString SpdyHeaderBlock::ValueProxy::as_string() const {
   if (lookup_result_ == block_->end()) {
     return "";
   } else {
-    return std::string(lookup_result_->second.value());
+    return SpdyString(lookup_result_->second.value());
   }
 }
 
@@ -245,12 +243,12 @@ bool SpdyHeaderBlock::operator!=(const SpdyHeaderBlock& other) const {
   return !(operator==(other));
 }
 
-string SpdyHeaderBlock::DebugString() const {
+SpdyString SpdyHeaderBlock::DebugString() const {
   if (empty()) {
     return "{}";
   }
 
-  string output = "\n{\n";
+  SpdyString output = "\n{\n";
   for (auto it = begin(); it != end(); ++it) {
     SpdyStrAppend(&output, "  ", it->first, " ", it->second, "\n");
   }
@@ -361,7 +359,7 @@ bool SpdyHeaderBlockFromNetLogParam(
 
   for (base::DictionaryValue::Iterator it(*header_dict); !it.IsAtEnd();
        it.Advance()) {
-    string value;
+    SpdyString value;
     if (!it.value().GetAsString(&value)) {
       headers->clear();
       return false;

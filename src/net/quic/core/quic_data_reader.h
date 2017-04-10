@@ -10,6 +10,7 @@
 
 #include "base/macros.h"
 #include "net/base/int128.h"
+#include "net/quic/core/quic_types.h"
 #include "net/quic/platform/api/quic_export.h"
 #include "net/quic/platform/api/quic_string_piece.h"
 
@@ -32,7 +33,7 @@ namespace net {
 class QUIC_EXPORT_PRIVATE QuicDataReader {
  public:
   // Caller must provide an underlying buffer to work on.
-  QuicDataReader(const char* data, const size_t len);
+  QuicDataReader(const char* data, const size_t len, Perspective perspective);
 
   // Empty destructor.
   ~QuicDataReader() {}
@@ -133,6 +134,11 @@ class QUIC_EXPORT_PRIVATE QuicDataReader {
 
   // The location of the next read from our data buffer.
   size_t pos_;
+
+  // Perspective of this data reader. Please note, although client and server
+  // may have different in-memory representation of the same field, the on wire
+  // representation must be consistent.
+  Perspective perspective_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicDataReader);
 };
