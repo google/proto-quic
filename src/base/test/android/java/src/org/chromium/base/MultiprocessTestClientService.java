@@ -6,9 +6,12 @@ package org.chromium.base;
 
 import android.app.Service;
 import android.content.Intent;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Parcelable;
 import android.os.Process;
+import android.os.RemoteException;
 
 import org.chromium.base.annotations.SuppressFBWarnings;
 import org.chromium.base.library_loader.LibraryLoader;
@@ -34,29 +37,7 @@ public class MultiprocessTestClientService extends Service {
     @GuardedBy("mResultLock")
     private MainReturnCodeResult mResult;
 
-    private final ITestClient.Stub mBinder = new ITestClient.Stub() {
-        @Override
-        public int launch(final String[] commandLine, FileDescriptorInfo[] fdsToMap) {
-            final int[] fdKeys = new int[fdsToMap.length];
-            final int[] fdFds = new int[fdsToMap.length];
-            for (int i = 0; i < fdsToMap.length; i++) {
-                fdKeys[i] = fdsToMap[i].id;
-                // Take ownership of the file descriptor so they outlive the FileDescriptorInfo
-                // instances. Native code will own them.
-                fdFds[i] = fdsToMap[i].fd.detachFd();
-            }
-            // Don't run main directly, it would block and the response would not be returned.
-            // We post to the main thread as this thread does not have a Looper.
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    int result = MainRunner.runMain(commandLine, fdKeys, fdFds);
-                    setMainReturnValue(result);
-                }
-            });
-            return Process.myPid();
-        }
-
+    private final ITestController.Stub mTestController = new ITestController.Stub() {
         @SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_OF_NULL_VALUE")
         @Override
         public MainReturnCodeResult waitForMainToReturn(int timeoutMs) {
@@ -88,6 +69,63 @@ public class MultiprocessTestClientService extends Service {
         @Override
         public void forceStop(int exitCode) {
             System.exit(exitCode);
+        }
+    };
+
+    private final ITestClient.Stub mBinder = new ITestClient.Stub() {
+        @Override
+        public boolean bindToCaller() {
+            return true;
+        }
+
+        @Override
+        public int setupConnection(Bundle args, final IBinder callback) {
+            // Required to unparcel FileDescriptorInfo.
+            args.setClassLoader(getApplicationContext().getClassLoader());
+
+            final String[] commandLine =
+                    args.getStringArray(ChildProcessConstants.EXTRA_COMMAND_LINE);
+            final Parcelable[] fdInfosAsParcelable =
+                    args.getParcelableArray(ChildProcessConstants.EXTRA_FILES);
+
+            FileDescriptorInfo[] fdsToMap = new FileDescriptorInfo[fdInfosAsParcelable.length];
+            System.arraycopy(fdInfosAsParcelable, 0, fdsToMap, 0, fdInfosAsParcelable.length);
+
+            final int[] fdKeys = new int[fdsToMap.length];
+            final int[] fdFds = new int[fdsToMap.length];
+            for (int i = 0; i < fdsToMap.length; i++) {
+                fdKeys[i] = fdsToMap[i].id;
+                // Take ownership of the file descriptor so they outlive the FileDescriptorInfo
+                // instances. Native code will own them.
+                fdFds[i] = fdsToMap[i].fd.detachFd();
+            }
+
+            // Prevent potential deadlocks by letting this method return before calling back to the
+            // launcher: the childConnected implementation on the launcher side might block until
+            // this method returns.
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        ITestCallback testCallback = ITestCallback.Stub.asInterface(callback);
+                        testCallback.childConnected(mTestController);
+                    } catch (RemoteException re) {
+                        Log.e(TAG, "Failed to notify parent process of connection.");
+                    }
+                }
+            });
+
+            // Don't run main directly, it would block and the response would not be returned.
+            // We post to the main thread as this thread does not have a Looper.
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    int result = MainRunner.runMain(commandLine, fdKeys, fdFds);
+                    setMainReturnValue(result);
+                }
+            });
+
+            return Process.myPid();
         }
     };
 

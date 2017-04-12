@@ -6,6 +6,8 @@
 
 #include <memory>
 
+#include "base/bind.h"
+#include "base/bind_helpers.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted.h"
@@ -59,26 +61,26 @@ TEST(TaskSchedulerPriorityQueueTest, PushPopPeek) {
   // Create test sequences.
   scoped_refptr<Sequence> sequence_a(new Sequence);
   sequence_a->PushTask(MakeUnique<Task>(
-      FROM_HERE, Closure(),
+      FROM_HERE, Bind(&DoNothing),
       TaskTraits().WithPriority(TaskPriority::USER_VISIBLE), TimeDelta()));
   SequenceSortKey sort_key_a = sequence_a->GetSortKey();
 
   scoped_refptr<Sequence> sequence_b(new Sequence);
   sequence_b->PushTask(MakeUnique<Task>(
-      FROM_HERE, Closure(),
+      FROM_HERE, Bind(&DoNothing),
       TaskTraits().WithPriority(TaskPriority::USER_BLOCKING), TimeDelta()));
   SequenceSortKey sort_key_b = sequence_b->GetSortKey();
 
   scoped_refptr<Sequence> sequence_c(new Sequence);
   sequence_c->PushTask(MakeUnique<Task>(
-      FROM_HERE, Closure(),
+      FROM_HERE, Bind(&DoNothing),
       TaskTraits().WithPriority(TaskPriority::USER_BLOCKING), TimeDelta()));
   SequenceSortKey sort_key_c = sequence_c->GetSortKey();
 
   scoped_refptr<Sequence> sequence_d(new Sequence);
   sequence_d->PushTask(MakeUnique<Task>(
-      FROM_HERE, Closure(), TaskTraits().WithPriority(TaskPriority::BACKGROUND),
-      TimeDelta()));
+      FROM_HERE, Bind(&DoNothing),
+      TaskTraits().WithPriority(TaskPriority::BACKGROUND), TimeDelta()));
   SequenceSortKey sort_key_d = sequence_d->GetSortKey();
 
   // Create a PriorityQueue and a Transaction.

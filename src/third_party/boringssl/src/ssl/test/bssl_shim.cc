@@ -1187,6 +1187,10 @@ static bssl::UniquePtr<SSL_CTX> SetupCtx(const TestConfig *config) {
     SSL_CTX_set_early_data_enabled(ssl_ctx.get(), 1);
   }
 
+  if (config->allow_unknown_alpn_protos) {
+    SSL_CTX_set_allow_unknown_alpn_protos(ssl_ctx.get(), 1);
+  }
+
   return ssl_ctx;
 }
 
@@ -1793,7 +1797,8 @@ static bool DoExchange(bssl::UniquePtr<SSL_SESSION> *out_session,
   }
   if (config->enable_all_curves) {
     static const int kAllCurves[] = {
-      NID_X9_62_prime256v1, NID_secp384r1, NID_secp521r1, NID_X25519,
+        NID_secp224r1, NID_X9_62_prime256v1, NID_secp384r1,
+        NID_secp521r1, NID_X25519,
     };
     if (!SSL_set1_curves(ssl.get(), kAllCurves,
                          OPENSSL_ARRAY_SIZE(kAllCurves))) {

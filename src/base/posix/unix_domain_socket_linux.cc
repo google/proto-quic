@@ -26,10 +26,7 @@ namespace base {
 const size_t UnixDomainSocket::kMaxFileDescriptors = 16;
 
 #if !defined(OS_NACL_NONSFI)
-// Creates a connected pair of UNIX-domain SOCK_SEQPACKET sockets, and passes
-// ownership of the newly allocated file descriptors to |one| and |two|.
-// Returns true on success.
-static bool CreateSocketPair(ScopedFD* one, ScopedFD* two) {
+bool CreateSocketPair(ScopedFD* one, ScopedFD* two) {
   int raw_socks[2];
   if (socketpair(AF_UNIX, SOCK_SEQPACKET, 0, raw_socks) == -1)
     return false;

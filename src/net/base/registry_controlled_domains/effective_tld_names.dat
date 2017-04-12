@@ -6793,11 +6793,16 @@ net.zm
 org.zm
 sch.zm
 
-// zw : https://en.wikipedia.org/wiki/.zw
-*.zw
+// zw : https://www.potraz.gov.zw/
+// Confirmed by registry <bmtengwa@potraz.gov.zw> 2017-01-25
+zw
+ac.zw
+co.zw
+gov.zw
+mil.zw
+org.zw
 
-
-// List of new gTLDs imported from https://newgtlds.icann.org/newgtlds.csv on 2016-11-29T01:06:51Z
+// List of new gTLDs imported from https://newgtlds.icann.org/newgtlds.csv on 2017-02-23T00:46:09Z
 
 // aaa : 2015-02-26 American Automobile Association, Inc.
 aaa
@@ -7729,9 +7734,6 @@ dvag
 // dvr : 2016-05-26 Hughes Satellite Systems Corporation
 dvr
 
-// dwg : 2015-07-23 Autodesk, Inc.
-dwg
-
 // earth : 2014-12-04 Interlink Co., Ltd.
 earth
 
@@ -8298,9 +8300,6 @@ ieee
 
 // ifm : 2014-01-30 ifm electronic gmbh
 ifm
-
-// iinet : 2014-07-03 Connect West Pty. Ltd.
-iinet
 
 // ikano : 2015-07-09 Ikano S.A.
 ikano
@@ -8869,9 +8868,6 @@ mtr
 // mutual : 2015-04-02 Northwestern Mutual MU TLD Registry, LLC
 mutual
 
-// mutuelle : 2015-06-18 Fédération Nationale de la Mutualité Française
-mutuelle
-
 // nab : 2015-08-20 National Australia Bank Limited
 nab
 
@@ -9370,6 +9366,9 @@ room
 // rsvp : 2014-05-08 Charleston Road Registry Inc.
 rsvp
 
+// rugby : 2016-12-15 World Rugby Strategic Developments Limited
+rugby
+
 // ruhr : 2013-10-02 regiodot GmbH & Co. KG
 ruhr
 
@@ -9796,9 +9795,6 @@ theater
 // theatre : 2015-05-07
 theatre
 
-// theguardian : 2015-04-30 Guardian News and Media Limited
-theguardian
-
 // tiaa : 2015-07-23 Teachers Insurance and Annuity Association of America
 tiaa
 
@@ -9946,7 +9942,7 @@ ventures
 // verisign : 2015-08-13 VeriSign, Inc.
 verisign
 
-// versicherung : 2014-03-20 dotversicherung-registry GmbH
+// versicherung : 2014-03-20
 versicherung
 
 // vet : 2014-03-06
@@ -10171,9 +10167,6 @@ xin
 // xn--4gbrim : 2013-10-04 Suhub Electronic Establishment
 موقع
 
-// xn--4gq48lf9j : 2015-07-31 Wal-Mart Stores, Inc.
-一号店
-
 // xn--55qw42g : 2013-11-08 China Organizational Name Administration Center
 公益
 
@@ -10234,7 +10227,7 @@ xin
 // xn--cg4bki : 2013-09-27 SAMSUNG SDS CO., LTD
 삼성
 
-// xn--czr694b : 2014-01-16 Dot Trademark TLD Holding Company Limted
+// xn--czr694b : 2014-01-16 Dot Trademark TLD Holding Company Limited
 商标
 
 // xn--czrs0t : 2013-12-19 Wild Island, LLC
@@ -10291,7 +10284,7 @@ xin
 // xn--i1b6b1a6a2e : 2013-11-14 Public Interest Registry
 संगठन
 
-// xn--imr513n : 2014-12-11 Dot Trademark TLD Holding Company Limted
+// xn--imr513n : 2014-12-11 Dot Trademark TLD Holding Company Limited
 餐厅
 
 // xn--io0a7i : 2013-11-14 Computer Network Information Center of Chinese Academy of Sciences （China Internet Network Information Center）
@@ -10600,6 +10593,11 @@ myasustor.com
 // Submitted by Andreas Weise <a.weise@avm.de>
 myfritz.net
 
+// AW AdvisorWebsites.com Software Inc : https://advisorwebsites.com
+// Submitted by James Kennedy <domains@advisorwebsites.com>
+*.awdev.ca
+*.advisor.ws
+
 // backplane : https://www.backplane.io
 // Submitted by Anthony Voutas <anthony@backplane.io>
 backplaneapp.io
@@ -10690,6 +10688,10 @@ xenapponazure.com
 // Submitted by Leon Rowland <leon@clearvox.nl>
 virtueeldomein.nl
 
+// Cloud66 : https://www.cloud66.com/
+// Submitted by Khash Sajadi <khash@cloud66.com>
+c66.me
+
 // cloudControl : https://www.cloudcontrol.com/
 // Submitted by Tobias Wilken <tw@cloudcontrol.com>
 cloudcontrolled.com
@@ -10765,6 +10767,7 @@ cyon.site
 // Daplie, Inc : https://daplie.com
 // Submitted by AJ ONeal <aj@daplie.com>
 daplie.me
+localhost.daplie.me
 
 // Dansk.net : http://www.dansk.net/
 // Submitted by Anani Voule <digital@digital.co.dk>
@@ -11173,8 +11176,10 @@ us.eu.org
 // Submitted by Michal Kralik <support@evennode.com>
 eu-1.evennode.com
 eu-2.evennode.com
+eu-3.evennode.com
 us-1.evennode.com
 us-2.evennode.com
+us-3.evennode.com
 
 // Facebook, Inc.
 // Submitted by Peter Ruibal <public-suffix@fb.com>
@@ -11258,18 +11263,25 @@ vologda.su
 
 // Fastly Inc. : http://www.fastly.com/
 // Submitted by Fastly Security <security@fastly.com>
+fastlylb.net
+map.fastlylb.net
+freetls.fastly.net
 map.fastly.net
 a.prod.fastly.net
 global.prod.fastly.net
 a.ssl.fastly.net
 b.ssl.fastly.net
 global.ssl.fastly.net
-fastlylb.net
-map.fastlylb.net
 
 // Featherhead : https://featherhead.xyz/
 // Submitted by Simon Menke <simon@featherhead.xyz>
 fhapp.xyz
+
+// Fedora : https://fedoraproject.org/
+// submitted by Patrick Uiterwijk <puiterwijk@fedoraproject.org>
+fedorainfracloud.org
+fedorapeople.org
+cloud.fedoraproject.org
 
 // Firebase, Inc.
 // Submitted by Chris Raynor <chris@firebase.com>
@@ -11434,6 +11446,10 @@ hepforge.org
 herokuapp.com
 herokussl.com
 
+// Ici la Lune : http://www.icilalune.com/
+// Submitted by Simon Morvan <simon@icilalune.com>
+moonscale.net
+
 // iki.fi
 // Submitted by Hannu Aronsson <haa@iki.fi>
 iki.fi
@@ -11471,6 +11487,10 @@ sc.leg.br
 se.leg.br
 sp.leg.br
 to.leg.br
+
+// IPiFony Systems, Inc. : https://www.ipifony.com/
+// Submitted by Matthew Hardeman <mhardeman@ipifony.com>
+ipifony.net
 
 // Joyent : https://www.joyent.com/
 // Submitted by Brian Bennett <brian.bennett@joyent.com>
@@ -11623,6 +11643,10 @@ zapto.org
 // NYC.mn : http://www.information.nyc.mn
 // Submitted by Matthew Brown <mattbrown@nyc.mn>
 nyc.mn
+
+// Octopodal Solutions, LLC. : https://ulterius.io/
+// Submitted by Andrew Sampson <andrew@ulterius.io>
+cya.gg
 
 // One Fold Media : http://www.onefoldmedia.com/
 // Submitted by Eddie Jones <eddie@onefoldmedia.com>
@@ -11791,6 +11815,10 @@ spacekit.io
 // Submitted by Lina He <info@stackspace.io>
 stackspace.space
 
+// Storj Labs Inc. : https://storj.io/
+// Submitted by Philip Hutchins <hostmaster@storj.io>
+storj.farm
+
 // Synology, Inc. : https://www.synology.com/
 // Submitted by Rony Weng <ronyweng@synology.com>
 diskstation.me
@@ -11806,6 +11834,7 @@ familyds.org
 i234.me
 myds.me
 synology.me
+vpnplus.to
 
 // TAIFUN Software AG : http://taifun-software.de
 // Submitted by Bjoern Henke <dev-server@taifun-software.de>
@@ -11849,6 +11878,10 @@ syno-ds.de
 synology-diskstation.de
 synology-ds.de
 
+// Uberspace : https://uberspace.de
+// Submitted by Moritz Werner <mwerner@jonaspasche.com>
+uber.space
+
 // UDR Limited : http://www.udr.hk.com
 // Submitted by registry <hostmaster@udr.hk.com>
 hk.com
@@ -11871,6 +11904,10 @@ remotewd.com
 // Wikimedia Labs : https://wikitech.wikimedia.org
 // Submitted by Yuvi Panda <yuvipanda@wikimedia.org>
 wmflabs.org
+
+// XS4ALL Internet bv: https://www.xs4all.nl/
+// Submitted by Daniel Mostertman <unixbeheer+publicsuffix@xs4all.net>
+xs4all.space
 
 // Yola : https://www.yola.com/
 // Submitted by Stefano Rivera <stefano@yola.com>

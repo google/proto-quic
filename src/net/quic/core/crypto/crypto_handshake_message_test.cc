@@ -12,31 +12,34 @@ namespace net {
 namespace test {
 namespace {
 
-TEST(CryptoHandshakeMessageTest, DebugString) {
+class CryptoHandshakeMessageTest
+    : public ::testing::TestWithParam<Perspective> {};
+
+TEST_P(CryptoHandshakeMessageTest, DebugString) {
   const char* str = "SHLO<\n>";
 
   CryptoHandshakeMessage message;
   message.set_tag(kSHLO);
-  EXPECT_EQ(str, message.DebugString());
+  EXPECT_EQ(str, message.DebugString(GetParam()));
 
   // Test copy
   CryptoHandshakeMessage message2(message);
-  EXPECT_EQ(str, message2.DebugString());
+  EXPECT_EQ(str, message2.DebugString(GetParam()));
 
   // Test move
   CryptoHandshakeMessage message3(std::move(message));
-  EXPECT_EQ(str, message3.DebugString());
+  EXPECT_EQ(str, message3.DebugString(GetParam()));
 
   // Test assign
   CryptoHandshakeMessage message4 = message3;
-  EXPECT_EQ(str, message4.DebugString());
+  EXPECT_EQ(str, message4.DebugString(GetParam()));
 
   // Test move-assign
   CryptoHandshakeMessage message5 = std::move(message3);
-  EXPECT_EQ(str, message5.DebugString());
+  EXPECT_EQ(str, message5.DebugString(GetParam()));
 }
 
-TEST(CryptoHandshakeMessageTest, DebugStringWithUintVector) {
+TEST_P(CryptoHandshakeMessageTest, DebugStringWithUintVector) {
   const char* str =
       "REJ <\n  RREJ: "
       "SOURCE_ADDRESS_TOKEN_DIFFERENT_IP_ADDRESS_FAILURE,"
@@ -48,76 +51,76 @@ TEST(CryptoHandshakeMessageTest, DebugStringWithUintVector) {
       SOURCE_ADDRESS_TOKEN_DIFFERENT_IP_ADDRESS_FAILURE,
       CLIENT_NONCE_NOT_UNIQUE_FAILURE};
   message.SetVector(kRREJ, reasons);
-  EXPECT_EQ(str, message.DebugString());
+  EXPECT_EQ(str, message.DebugString(GetParam()));
 
   // Test copy
   CryptoHandshakeMessage message2(message);
-  EXPECT_EQ(str, message2.DebugString());
+  EXPECT_EQ(str, message2.DebugString(GetParam()));
 
   // Test move
   CryptoHandshakeMessage message3(std::move(message));
-  EXPECT_EQ(str, message3.DebugString());
+  EXPECT_EQ(str, message3.DebugString(GetParam()));
 
   // Test assign
   CryptoHandshakeMessage message4 = message3;
-  EXPECT_EQ(str, message4.DebugString());
+  EXPECT_EQ(str, message4.DebugString(GetParam()));
 
   // Test move-assign
   CryptoHandshakeMessage message5 = std::move(message3);
-  EXPECT_EQ(str, message5.DebugString());
+  EXPECT_EQ(str, message5.DebugString(GetParam()));
 }
 
-TEST(CryptoHandshakeMessageTest, DebugStringWithTagVector) {
+TEST_P(CryptoHandshakeMessageTest, DebugStringWithTagVector) {
   const char* str = "CHLO<\n  COPT: 'TBBR','PAD ','BYTE'\n>";
 
   CryptoHandshakeMessage message;
   message.set_tag(kCHLO);
   message.SetVector(kCOPT, QuicTagVector{kTBBR, kPAD, kBYTE});
-  EXPECT_EQ(str, message.DebugString());
+  EXPECT_EQ(str, message.DebugString(GetParam()));
 
   // Test copy
   CryptoHandshakeMessage message2(message);
-  EXPECT_EQ(str, message2.DebugString());
+  EXPECT_EQ(str, message2.DebugString(GetParam()));
 
   // Test move
   CryptoHandshakeMessage message3(std::move(message));
-  EXPECT_EQ(str, message3.DebugString());
+  EXPECT_EQ(str, message3.DebugString(GetParam()));
 
   // Test assign
   CryptoHandshakeMessage message4 = message3;
-  EXPECT_EQ(str, message4.DebugString());
+  EXPECT_EQ(str, message4.DebugString(GetParam()));
 
   // Test move-assign
   CryptoHandshakeMessage message5 = std::move(message3);
-  EXPECT_EQ(str, message5.DebugString());
+  EXPECT_EQ(str, message5.DebugString(GetParam()));
 }
 
-TEST(CryptoHandshakeMessageTest, ServerDesignatedConnectionId) {
+TEST_P(CryptoHandshakeMessageTest, ServerDesignatedConnectionId) {
   const char* str = "SREJ<\n  RCID: 18364758544493064720\n>";
 
   CryptoHandshakeMessage message;
   message.set_tag(kSREJ);
   message.SetValue(kRCID, UINT64_C(18364758544493064720));
-  EXPECT_EQ(str, message.DebugString());
+  EXPECT_EQ(str, message.DebugString(GetParam()));
 
   // Test copy
   CryptoHandshakeMessage message2(message);
-  EXPECT_EQ(str, message2.DebugString());
+  EXPECT_EQ(str, message2.DebugString(GetParam()));
 
   // Test move
   CryptoHandshakeMessage message3(std::move(message));
-  EXPECT_EQ(str, message3.DebugString());
+  EXPECT_EQ(str, message3.DebugString(GetParam()));
 
   // Test assign
   CryptoHandshakeMessage message4 = message3;
-  EXPECT_EQ(str, message4.DebugString());
+  EXPECT_EQ(str, message4.DebugString(GetParam()));
 
   // Test move-assign
   CryptoHandshakeMessage message5 = std::move(message3);
-  EXPECT_EQ(str, message5.DebugString());
+  EXPECT_EQ(str, message5.DebugString(GetParam()));
 }
 
-TEST(CryptoHandshakeMessageTest, HasStringPiece) {
+TEST_P(CryptoHandshakeMessageTest, HasStringPiece) {
   CryptoHandshakeMessage message;
   EXPECT_FALSE(message.HasStringPiece(kRCID));
   message.SetStringPiece(kRCID, "foo");

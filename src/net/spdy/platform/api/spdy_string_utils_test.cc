@@ -19,7 +19,7 @@ TEST(SpdyStringUtilsTest, SpdyStrCat) {
 
   // Single string-like argument.
   const char kFoo[] = "foo";
-  const std::string string_foo(kFoo);
+  const SpdyString string_foo(kFoo);
   const SpdyStringPiece stringpiece_foo(string_foo);
   EXPECT_EQ("foo", SpdyStrCat(kFoo));
   EXPECT_EQ("foo", SpdyStrCat(string_foo));
@@ -28,7 +28,7 @@ TEST(SpdyStringUtilsTest, SpdyStrCat) {
   // Two string-like arguments.
   const char kBar[] = "bar";
   const SpdyStringPiece stringpiece_bar(kBar);
-  const std::string string_bar(kBar);
+  const SpdyString string_bar(kBar);
   EXPECT_EQ("foobar", SpdyStrCat(kFoo, kBar));
   EXPECT_EQ("foobar", SpdyStrCat(kFoo, string_bar));
   EXPECT_EQ("foobar", SpdyStrCat(kFoo, stringpiece_bar));
@@ -72,13 +72,13 @@ TEST(SpdyStringUtilsTest, SpdyStrCat) {
 
 TEST(SpdyStringUtilsTest, SpdyStrAppend) {
   // No arguments on empty string.
-  std::string output;
+  SpdyString output;
   SpdyStrAppend(&output);
   EXPECT_TRUE(output.empty());
 
   // Single string-like argument.
   const char kFoo[] = "foo";
-  const std::string string_foo(kFoo);
+  const SpdyString string_foo(kFoo);
   const SpdyStringPiece stringpiece_foo(string_foo);
   SpdyStrAppend(&output, kFoo);
   EXPECT_EQ("foo", output);
@@ -96,7 +96,7 @@ TEST(SpdyStringUtilsTest, SpdyStrAppend) {
   // Two string-like arguments.
   const char kBar[] = "bar";
   const SpdyStringPiece stringpiece_bar(kBar);
-  const std::string string_bar(kBar);
+  const SpdyString string_bar(kBar);
   SpdyStrAppend(&output, kFoo, kBar);
   EXPECT_EQ("foobar", output);
   SpdyStrAppend(&output, kFoo, string_bar);
@@ -173,7 +173,7 @@ TEST(SpdyStringUtilsTest, SpdyStringPrintf) {
 }
 
 TEST(SpdyStringUtilsTest, SpdyStringAppendF) {
-  std::string output;
+  SpdyString output;
 
   SpdyStringAppendF(&output, "%s", "");
   EXPECT_TRUE(output.empty());

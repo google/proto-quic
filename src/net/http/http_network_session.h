@@ -119,8 +119,9 @@ class NET_EXPORT HttpNetworkSession
 
     // Enables QUIC support.
     bool enable_quic;
-    // Disable QUIC if a connection times out with open streams.
-    bool disable_quic_on_timeout_with_open_streams;
+    // Marks a QUIC server broken when a connection blackholes after the
+    // handshake is confirmed.
+    bool mark_quic_broken_when_network_blackholes;
     // Disables QUIC's 0-RTT behavior.
     bool quic_always_require_handshake_confirmation;
     // Disables QUIC connection pooling.

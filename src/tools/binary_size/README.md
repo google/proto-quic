@@ -1,17 +1,17 @@
 # map2size.py
 
-Parses a linker .map(.gz) file and outputs the result as a .size(.gz) file.
+Parses a linker .map file and outputs the result as a .size file.
 
 ## Example Usage:
 
     # Android:
     gn gen out/Release --args='target_os="android" is_official_build=true'
     ninja -C out/Release -j 1000 libchrome.so
-    tools/binary_size/map2size.py out/Release/lib.unstripped/libchrome.so.map.gz chrome.size -v
+    tools/binary_size/map2size.py out/Release/lib.unstripped/libchrome.so chrome.size -v
     # Linux:
     gn gen out/Release --args='is_official_build=true'
     ninja -C out/Release -j 1000 chrome
-    tools/binary_size/map2size.py out/Release/chrome.map.gz chrome.size -v
+    tools/binary_size/map2size.py out/Release/chrome chrome.size -v
 
 # create_html_breakdown.py
 
@@ -34,6 +34,18 @@ Starts a Python interpreter where you can run custom queries.
     # Enters a Python REPL (it will print more guidance).
     tools/binary_size/console.py chrome.size
 
+# diagnose_apk_bloat.py
+
+Determine the cause of binary size bloat for a patch.
+
+## Example Usage:
+
+    # Sync, build, and store MonochromePublic.apk for HEAD and HEAD^.
+    tools/binary_size/diagnose_apk_bloat.py -v
+
+    # Display detailed usage info (there are many options).
+    tools/binary_size/diagnose_apk_bloat.py -h
+
 # Roadmap:
 
   Tracked in https://crbug.com/681694
@@ -45,13 +57,15 @@ Starts a Python interpreter where you can run custom queries.
       * Per-class / namespace size (no way to distinguish class vs namespace).
       * Per-Chrome package (Chrome-specific grouping. e.g. name prefixes).
       * CSV output (for pasting into a spreadsheet).
-      * Allow Print() to not sort.
   1. More create_html_breakdown.py features:
       * Break down by other groupings (e.g. create from nested `SymbolGroups`)
   1. More `map2size.py` features:
       * Find out more about 0xffffffffffffffff addresses, and why such large
         gaps exist after them.
       * Use nm to get the full list of symbols that share the same address.
+  1. More diagnose_apk_bloat.py features:
+      * Add diffing functionality to see diff stats for two commits.
+      * Add --cloud option for using artifacts from perf builders.
   1. Integrate with `resource_sizes.py` so that it tracks size of major
      components separately: chrome vs blink vs skia vs v8.
   1. Speed up some steps (like normalizing names) via multiprocessing.

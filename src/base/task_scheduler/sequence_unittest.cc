@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "base/bind.h"
+#include "base/bind_helpers.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/test/gtest_util.h"
@@ -24,27 +25,27 @@ class TaskSchedulerSequenceTest : public testing::Test {
   TaskSchedulerSequenceTest()
       : task_a_owned_(
             new Task(FROM_HERE,
-                     Closure(),
+                     Bind(&DoNothing),
                      TaskTraits().WithPriority(TaskPriority::BACKGROUND),
                      TimeDelta())),
         task_b_owned_(
             new Task(FROM_HERE,
-                     Closure(),
+                     Bind(&DoNothing),
                      TaskTraits().WithPriority(TaskPriority::USER_VISIBLE),
                      TimeDelta())),
         task_c_owned_(
             new Task(FROM_HERE,
-                     Closure(),
+                     Bind(&DoNothing),
                      TaskTraits().WithPriority(TaskPriority::USER_BLOCKING),
                      TimeDelta())),
         task_d_owned_(
             new Task(FROM_HERE,
-                     Closure(),
+                     Bind(&DoNothing),
                      TaskTraits().WithPriority(TaskPriority::USER_BLOCKING),
                      TimeDelta())),
         task_e_owned_(
             new Task(FROM_HERE,
-                     Closure(),
+                     Bind(&DoNothing),
                      TaskTraits().WithPriority(TaskPriority::BACKGROUND),
                      TimeDelta())),
         task_a_(task_a_owned_.get()),

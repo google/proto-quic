@@ -33,8 +33,8 @@
 namespace {
 
 // Version number of the database.
-const int kCurrentVersionNumber = 5;
-const int kCompatibleVersionNumber = 5;
+const int kCurrentVersionNumber = 6;
+const int kCompatibleVersionNumber = 6;
 
 }  // namespace
 
@@ -179,10 +179,6 @@ void SQLiteChannelIDStore::Backend::LoadInBackground(
   if (!base::PathExists(dir) && !base::CreateDirectory(dir))
     return;
 
-  int64_t db_size = 0;
-  if (base::GetFileSize(path_, &db_size))
-    UMA_HISTOGRAM_COUNTS("DomainBoundCerts.DBSizeInKB", db_size / 1024);
-
   db_.reset(new sql::Connection);
   db_->set_histogram_tag("DomainBoundCerts");
 
@@ -212,7 +208,7 @@ void SQLiteChannelIDStore::Backend::LoadInBackground(
 
   // Slurp all the certs into the out-vector.
   sql::Statement smt(db_->GetUniqueStatement(
-      "SELECT host, private_key, public_key, creation_time FROM channel_id"));
+      "SELECT host, private_key, creation_time FROM channel_id"));
   if (!smt.is_valid()) {
     if (corruption_detected_)
       KillDatabase();
@@ -222,18 +218,16 @@ void SQLiteChannelIDStore::Backend::LoadInBackground(
   }
 
   while (smt.Step()) {
-    std::vector<uint8_t> private_key_from_db, public_key_from_db;
+    std::vector<uint8_t> private_key_from_db;
     smt.ColumnBlobAsVector(1, &private_key_from_db);
-    smt.ColumnBlobAsVector(2, &public_key_from_db);
     std::unique_ptr<crypto::ECPrivateKey> key(
-        crypto::ECPrivateKey::CreateFromEncryptedPrivateKeyInfo(
-            private_key_from_db, public_key_from_db));
+        crypto::ECPrivateKey::CreateFromPrivateKeyInfo(private_key_from_db));
     if (!key)
       continue;
     std::unique_ptr<DefaultChannelIDStore::ChannelID> channel_id(
         new DefaultChannelIDStore::ChannelID(
             smt.ColumnString(0),  // host
-            base::Time::FromInternalValue(smt.ColumnInt64(3)), std::move(key)));
+            base::Time::FromInternalValue(smt.ColumnInt64(2)), std::move(key)));
     channel_ids->push_back(std::move(channel_id));
   }
 
@@ -286,10 +280,10 @@ bool SQLiteChannelIDStore::Backend::EnsureDatabaseVersion() {
         "SELECT origin, cert, private_key, cert_type FROM origin_bound_certs"));
     sql::Statement insert_statement(db_->GetUniqueStatement(
         "INSERT INTO channel_id (host, private_key, public_key, creation_time) "
-        "VALUES (?, ?, ?, ?)"));
+        "VALUES (?, ?, \"\", ?)"));
     if (!statement.is_valid() || !insert_statement.is_valid()) {
       LOG(WARNING) << "Unable to update server bound cert database to "
-                   << "version 5.";
+                   << "version 6.";
       return false;
     }
 
@@ -299,8 +293,16 @@ bool SQLiteChannelIDStore::Backend::EnsureDatabaseVersion() {
       std::string origin = statement.ColumnString(0);
       std::string cert_from_db;
       statement.ColumnBlobAsString(1, &cert_from_db);
-      std::string private_key;
-      statement.ColumnBlobAsString(2, &private_key);
+      std::vector<uint8_t> encrypted_private_key, private_key;
+      statement.ColumnBlobAsVector(2, &encrypted_private_key);
+      std::unique_ptr<crypto::ECPrivateKey> key(
+          crypto::ECPrivateKey::CreateFromEncryptedPrivateKeyInfo(
+              encrypted_private_key, std::vector<uint8_t>()));
+      if (!key || !key->ExportPrivateKey(&private_key)) {
+        LOG(WARNING) << "Unable to parse encrypted private key when migrating "
+                        "Channel ID database to version 6.";
+        continue;
+      }
       // Parse the cert and extract the real value and then update the DB.
       scoped_refptr<X509Certificate> cert(X509Certificate::CreateFromBytes(
           cert_from_db.data(), static_cast<int>(cert_from_db.size())));
@@ -309,18 +311,10 @@ bool SQLiteChannelIDStore::Backend::EnsureDatabaseVersion() {
         insert_statement.BindString(0, origin);
         insert_statement.BindBlob(1, private_key.data(),
                                   static_cast<int>(private_key.size()));
-        base::StringPiece spki;
-        if (!asn1::ExtractSPKIFromDERCert(cert_from_db, &spki)) {
-          LOG(WARNING) << "Unable to extract SPKI from cert when migrating "
-                          "channel id database to version 5.";
-          return false;
-        }
-        insert_statement.BindBlob(2, spki.data(),
-                                  static_cast<int>(spki.size()));
-        insert_statement.BindInt64(3, cert->valid_start().ToInternalValue());
+        insert_statement.BindInt64(2, cert->valid_start().ToInternalValue());
         if (!insert_statement.Run()) {
           LOG(WARNING) << "Unable to update channel id database to "
-                       << "version 5.";
+                       << "version 6.";
           return false;
         }
       } else {
@@ -330,14 +324,50 @@ bool SQLiteChannelIDStore::Backend::EnsureDatabaseVersion() {
                      << statement.ColumnString(0);
       }
     }
+  } else if (cur_version == 5) {
+    sql::Statement select(
+        db_->GetUniqueStatement("SELECT host, private_key FROM channel_id"));
+    sql::Statement update(
+        db_->GetUniqueStatement("UPDATE channel_id SET private_key = ?, "
+                                "public_key = \"\" WHERE host = ?"));
+    if (!select.is_valid() || !update.is_valid()) {
+      LOG(WARNING) << "Invalid SQL statements to update Channel ID database to "
+                      "version 6.";
+      return false;
+    }
+
+    while (select.Step()) {
+      std::string host = select.ColumnString(0);
+      std::vector<uint8_t> encrypted_private_key, private_key;
+      select.ColumnBlobAsVector(1, &encrypted_private_key);
+      std::unique_ptr<crypto::ECPrivateKey> key(
+          crypto::ECPrivateKey::CreateFromEncryptedPrivateKeyInfo(
+              encrypted_private_key, std::vector<uint8_t>()));
+      if (!key || !key->ExportPrivateKey(&private_key)) {
+        LOG(WARNING) << "Unable to parse encrypted private key when migrating "
+                        "Channel ID database to version 6.";
+        continue;
+      }
+      update.Reset(true);
+      update.BindBlob(0, private_key.data(),
+                      static_cast<int>(private_key.size()));
+      update.BindString(1, host);
+      if (!update.Run()) {
+        LOG(WARNING) << "UPDATE statement failed when updating Channel ID "
+                        "database to version 6.";
+        return false;
+      }
+    }
   }
 
   if (cur_version < kCurrentVersionNumber) {
-    sql::Statement statement(
-        db_->GetUniqueStatement("DROP TABLE origin_bound_certs"));
-    if (!statement.Run()) {
-      LOG(WARNING) << "Error dropping old origin_bound_certs table";
-      return false;
+    if (cur_version <= 4) {
+      sql::Statement statement(
+          db_->GetUniqueStatement("DROP TABLE origin_bound_certs"));
+      if (!statement.Run()) {
+        LOG(WARNING) << "Error dropping old origin_bound_certs table";
+        return false;
+      }
     }
     meta_table_.SetVersionNumber(kCurrentVersionNumber);
     meta_table_.SetCompatibleVersionNumber(kCompatibleVersionNumber);
@@ -408,10 +438,17 @@ void SQLiteChannelIDStore::Backend::DeleteAllInList(
 void SQLiteChannelIDStore::Backend::BatchOperation(
     PendingOperation::OperationType op,
     const DefaultChannelIDStore::ChannelID& channel_id) {
-  // Commit every 30 seconds.
-  static const int kCommitIntervalMs = 30 * 1000;
-  // Commit right away if we have more than 512 outstanding operations.
-  static const size_t kCommitAfterBatchSize = 512;
+  // These thresholds used to be 30 seconds or 512 outstanding operations (the
+  // same values used in CookieMonster). Since cookies can be bound to Channel
+  // IDs, it's possible for a cookie to get committed to the cookie database
+  // before the Channel ID it is bound to gets committed. Decreasing these
+  // thresholds increases the chance that the Channel ID will be committed
+  // before or at the same time as the cookie.
+
+  // Commit every 2 seconds.
+  static const int kCommitIntervalMs = 2 * 1000;
+  // Commit right away if we have more than 3 outstanding operations.
+  static const size_t kCommitAfterBatchSize = 3;
 
   // We do a full copy of the cert here, and hopefully just here.
   std::unique_ptr<PendingOperation> po(new PendingOperation(op, channel_id));
@@ -474,8 +511,8 @@ void SQLiteChannelIDStore::Backend::Commit() {
 
   sql::Statement add_statement(db_->GetCachedStatement(
       SQL_FROM_HERE,
-      "INSERT INTO channel_id (host, private_key, public_key, "
-      "creation_time) VALUES (?,?,?,?)"));
+      "INSERT INTO channel_id (host, private_key, public_key, creation_time) "
+      "VALUES (?,?,\"\",?)"));
   if (!add_statement.is_valid())
     return;
 
@@ -496,17 +533,13 @@ void SQLiteChannelIDStore::Backend::Commit() {
       case PendingOperation::CHANNEL_ID_ADD: {
         add_statement.Reset(true);
         add_statement.BindString(0, po->channel_id().server_identifier());
-        std::vector<uint8_t> private_key, public_key;
-        if (!po->channel_id().key()->ExportEncryptedPrivateKey(&private_key))
-          continue;
-        if (!po->channel_id().key()->ExportPublicKey(&public_key))
+        std::vector<uint8_t> private_key;
+        if (!po->channel_id().key()->ExportPrivateKey(&private_key))
           continue;
         add_statement.BindBlob(
             1, private_key.data(), static_cast<int>(private_key.size()));
-        add_statement.BindBlob(2, public_key.data(),
-                               static_cast<int>(public_key.size()));
         add_statement.BindInt64(
-            3, po->channel_id().creation_time().ToInternalValue());
+            2, po->channel_id().creation_time().ToInternalValue());
         if (!add_statement.Run())
           NOTREACHED() << "Could not add a server bound cert to the DB.";
         break;

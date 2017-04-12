@@ -7,11 +7,11 @@
 
 #include <stdint.h>
 #include <memory>
-#include <string>
 #include <unordered_set>
 #include <utility>
 
 #include "net/base/net_export.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
 namespace net {
@@ -29,7 +29,7 @@ NET_EXPORT_PRIVATE extern int32_t FLAGS_gfe_spdy_tracking_set_bound;
 // UpdateSets to log the headers into both sets.
 class NET_EXPORT HeaderIndexing {
  public:
-  using HeaderSet = std::unordered_set<std::string>;
+  using HeaderSet = std::unordered_set<SpdyString>;
 
   HeaderIndexing();
   ~HeaderIndexing();
@@ -53,7 +53,7 @@ class NET_EXPORT HeaderIndexing {
 
  private:
   friend class test::HeaderIndexingPeer;
-  void TryInsertHeader(std::string&& header, HeaderSet* set, size_t bound);
+  void TryInsertHeader(SpdyString&& header, HeaderSet* set, size_t bound);
   // Headers to index.
   HeaderSet indexing_set_;
   // Headers seen so far.

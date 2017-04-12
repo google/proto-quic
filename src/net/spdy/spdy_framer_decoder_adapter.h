@@ -32,6 +32,10 @@ class SpdyFramerDecoderAdapter {
   virtual void set_visitor(SpdyFramerVisitorInterface* visitor);
   SpdyFramerVisitorInterface* visitor() const { return visitor_; }
 
+  // Set extension callbacks to be called from the framer or decoder. Optional.
+  // If called multiple times, only the last visitor will be used.
+  virtual void set_extension_visitor(ExtensionVisitorInterface* visitor) = 0;
+
   // Set debug callbacks to be called from the framer. The debug visitor is
   // completely optional and need not be set in order for normal operation.
   // If this is called multiple times, only the last visitor will be used.

@@ -6,23 +6,26 @@
 #define BASE_ANDROID_CALLBACK_ANDROID_H_
 
 #include <jni.h>
+#include <vector>
 
 #include "base/android/scoped_java_ref.h"
 #include "base/base_export.h"
 
+// Provides helper utility methods that run the given callback with the
+// specified argument.
 namespace base {
 namespace android {
 
-// Runs the given |callback| with the specified |arg|.
 void BASE_EXPORT RunCallbackAndroid(const JavaRef<jobject>& callback,
                                     const JavaRef<jobject>& arg);
 
-// Runs the given |callback| with the specified |arg|.
 void BASE_EXPORT RunCallbackAndroid(const JavaRef<jobject>& callback,
                                     bool arg);
 
-// Runs the given |callback| with the specified |arg|.
 void BASE_EXPORT RunCallbackAndroid(const JavaRef<jobject>& callback, int arg);
+
+void BASE_EXPORT RunCallbackAndroid(const JavaRef<jobject>& callback,
+                                    const std::vector<uint8_t>& arg);
 
 }  // namespace android
 }  // namespace base

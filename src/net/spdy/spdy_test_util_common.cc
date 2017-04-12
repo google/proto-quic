@@ -50,9 +50,9 @@ namespace {
 // Parses a URL into the scheme, host, and path components required for a
 // SPDY request.
 void ParseUrl(SpdyStringPiece url,
-              std::string* scheme,
-              std::string* host,
-              std::string* path) {
+              SpdyString* scheme,
+              SpdyString* host,
+              SpdyString* path) {
   GURL gurl(url);
   path->assign(gurl.PathForRequest());
   scheme->assign(gurl.scheme());
@@ -89,8 +89,8 @@ MockWrite* ChopWriteFrame(const SpdySerializedFrame& frame, int num_chunks) {
 void AppendToHeaderBlock(const char* const extra_headers[],
                          int extra_header_count,
                          SpdyHeaderBlock* headers) {
-  std::string this_header;
-  std::string this_value;
+  SpdyString this_header;
+  SpdyString this_value;
 
   if (!extra_header_count)
     return;
@@ -104,11 +104,11 @@ void AppendToHeaderBlock(const char* const extra_headers[],
     // Sanity check: Non-empty header.
     DCHECK_NE('\0', *extra_headers[i * 2]) << "Empty header value pair";
     this_header = extra_headers[i * 2];
-    std::string::size_type header_len = this_header.length();
+    SpdyString::size_type header_len = this_header.length();
     if (!header_len)
       continue;
     this_value = extra_headers[1 + (i * 2)];
-    std::string new_value;
+    SpdyString new_value;
     if (headers->find(this_header) != headers->end()) {
       // More than one entry in the header.
       // Don't add the header again, just the append to the value,
@@ -193,7 +193,7 @@ class PriorityGetter : public BufferedSpdyFramerVisitorInterface {
 
   void OnError(SpdyFramer::SpdyFramerError spdy_framer_error) override {}
   void OnStreamError(SpdyStreamId stream_id,
-                     const std::string& description) override {}
+                     const SpdyString& description) override {}
   void OnHeaders(SpdyStreamId stream_id,
                  bool has_priority,
                  int weight,
@@ -291,8 +291,8 @@ bool MockECSignatureCreator::Sign(const uint8_t* data,
   std::vector<uint8_t> private_key;
   if (!key_->ExportPrivateKey(&private_key))
     return false;
-  std::string head = "fakesignature";
-  std::string tail = "/fakesignature";
+  SpdyString head = "fakesignature";
+  SpdyString tail = "/fakesignature";
 
   signature->clear();
   signature->insert(signature->end(), head.begin(), head.end());
@@ -703,7 +703,7 @@ SpdyTestUtil::~SpdyTestUtil() {}
 
 void SpdyTestUtil::AddUrlToHeaderBlock(SpdyStringPiece url,
                                        SpdyHeaderBlock* headers) const {
-  std::string scheme, host, path;
+  SpdyString scheme, host, path;
   ParseUrl(url, &scheme, &host, &path);
   (*headers)[GetHostKey()] = host;
   (*headers)[GetSchemeKey()] = scheme;
@@ -739,16 +739,16 @@ SpdyHeaderBlock SpdyTestUtil::ConstructPutHeaderBlock(SpdyStringPiece url,
   return ConstructHeaderBlock("PUT", url, &content_length);
 }
 
-std::string SpdyTestUtil::ConstructSpdyReplyString(
+SpdyString SpdyTestUtil::ConstructSpdyReplyString(
     const SpdyHeaderBlock& headers) const {
-  std::string reply_string;
+  SpdyString reply_string;
   for (SpdyHeaderBlock::const_iterator it = headers.begin();
        it != headers.end(); ++it) {
-    std::string key = it->first.as_string();
+    SpdyString key = it->first.as_string();
     // Remove leading colon from pseudo headers.
     if (key[0] == ':')
       key = key.substr(1);
-    for (const std::string& value :
+    for (const SpdyString& value :
          base::SplitString(it->second, SpdyStringPiece("\0", 1),
                            base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL)) {
       reply_string += key + ": " + value + "\n";
@@ -797,7 +797,7 @@ SpdySerializedFrame SpdyTestUtil::ConstructSpdyGoAway(
 SpdySerializedFrame SpdyTestUtil::ConstructSpdyGoAway(
     SpdyStreamId last_good_stream_id,
     SpdyErrorCode error_code,
-    const std::string& desc) {
+    const SpdyString& desc) {
   SpdyGoAwayIR go_ir(last_good_stream_id, error_code, desc);
   return SpdySerializedFrame(headerless_spdy_framer_.SerializeFrame(go_ir));
 }
@@ -1150,7 +1150,7 @@ const char* SpdyTestUtil::GetPathKey() {
 SpdyHeaderBlock SpdyTestUtil::ConstructHeaderBlock(SpdyStringPiece method,
                                                    SpdyStringPiece url,
                                                    int64_t* content_length) {
-  std::string scheme, host, path;
+  SpdyString scheme, host, path;
   ParseUrl(url, &scheme, &host, &path);
   SpdyHeaderBlock headers;
   headers[GetMethodKey()] = method.as_string();
@@ -1158,7 +1158,7 @@ SpdyHeaderBlock SpdyTestUtil::ConstructHeaderBlock(SpdyStringPiece method,
   headers[GetSchemeKey()] = scheme.c_str();
   headers[GetPathKey()] = path.c_str();
   if (content_length) {
-    std::string length_str = base::Int64ToString(*content_length);
+    SpdyString length_str = base::Int64ToString(*content_length);
     headers["content-length"] = length_str;
   }
   return headers;

@@ -26,6 +26,7 @@
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/failing_proof_source.h"
+#include "net/quic/test_tools/fake_proof_source.h"
 #include "net/quic/test_tools/quic_crypto_server_config_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "testing/gmock/include/gmock/gmock.h"
@@ -127,9 +128,10 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
     client_session_.reset(client_session);
   }
 
-  void ConstructHandshakeMessage() {
+  void ConstructHandshakeMessage(Perspective perspective) {
     CryptoFramer framer;
-    message_data_.reset(framer.ConstructHandshakeMessage(message_));
+    message_data_.reset(
+        framer.ConstructHandshakeMessage(message_, perspective));
   }
 
   int CompleteCryptoHandshake() {
@@ -365,7 +367,7 @@ TEST_P(QuicCryptoServerStreamTest, MessageAfterHandshake) {
       *server_connection_,
       CloseConnection(QUIC_CRYPTO_MESSAGE_AFTER_HANDSHAKE_COMPLETE, _, _));
   message_.set_tag(kCHLO);
-  ConstructHandshakeMessage();
+  ConstructHandshakeMessage(Perspective::IS_CLIENT);
   server_stream()->OnStreamFrame(
       QuicStreamFrame(kCryptoStreamId, /*fin=*/false, /*offset=*/0,
                       message_data_->AsStringPiece()));
@@ -375,7 +377,7 @@ TEST_P(QuicCryptoServerStreamTest, BadMessageType) {
   Initialize();
 
   message_.set_tag(kSHLO);
-  ConstructHandshakeMessage();
+  ConstructHandshakeMessage(Perspective::IS_SERVER);
   EXPECT_CALL(*server_connection_,
               CloseConnection(QUIC_INVALID_CRYPTO_MESSAGE_TYPE, _, _));
   server_stream()->OnStreamFrame(
@@ -448,7 +450,7 @@ TEST_P(QuicCryptoServerStreamTest, SendSCUPAfterHandshakeComplete) {
 TEST_P(QuicCryptoServerStreamTest, DoesPeerSupportStatelessRejects) {
   Initialize();
 
-  ConstructHandshakeMessage();
+  ConstructHandshakeMessage(Perspective::IS_CLIENT);
   QuicConfig stateless_reject_config = DefaultQuicConfigStatelessRejects();
   stateless_reject_config.ToHandshakeMessage(&message_);
   EXPECT_TRUE(
@@ -503,6 +505,58 @@ TEST_P(QuicCryptoServerStreamTestWithFailingProofSource, Test) {
   AdvanceHandshakeWithFakeClient();
   EXPECT_FALSE(server_stream()->encryption_established());
   EXPECT_FALSE(server_stream()->handshake_confirmed());
+}
+
+class QuicCryptoServerStreamTestWithFakeProofSource
+    : public QuicCryptoServerStreamTest {
+ public:
+  QuicCryptoServerStreamTestWithFakeProofSource()
+      : QuicCryptoServerStreamTest(
+            std::unique_ptr<FakeProofSource>(new FakeProofSource)),
+        crypto_config_peer_(&server_crypto_config_) {}
+
+  FakeProofSource* GetFakeProofSource() const {
+    return static_cast<FakeProofSource*>(crypto_config_peer_.GetProofSource());
+  }
+
+ protected:
+  QuicCryptoServerConfigPeer crypto_config_peer_;
+};
+
+INSTANTIATE_TEST_CASE_P(YetMoreTests,
+                        QuicCryptoServerStreamTestWithFakeProofSource,
+                        testing::Bool());
+
+// Regression test for b/35422225, in which multiple CHLOs arriving on the same
+// connection in close succession could cause a crash, especially when the use
+// of Mentat signing meant that it took a while for each CHLO to be processed.
+TEST_P(QuicCryptoServerStreamTestWithFakeProofSource, MultipleChlo) {
+  Initialize();
+  GetFakeProofSource()->Activate();
+  base::SetFlag(&FLAGS_quic_reloadable_flag_fix_quic_callback_crash, true);
+  EXPECT_CALL(*server_session_->helper(), CanAcceptClientHello(_, _, _))
+      .WillOnce(testing::Return(true));
+
+  // Create a minimal CHLO
+  MockClock clock;
+  QuicVersion version = AllSupportedVersions().front();
+  CryptoHandshakeMessage chlo = crypto_test_utils::GenerateDefaultInchoateCHLO(
+      &clock, version, &server_crypto_config_);
+
+  // Send in the CHLO, and check that a callback is now pending in the
+  // ProofSource.
+  server_stream()->OnHandshakeMessage(chlo);
+  EXPECT_EQ(GetFakeProofSource()->NumPendingCallbacks(), 1);
+
+  // Send in a second CHLO while processing of the first is still pending.
+  // Verify that the server closes the connection rather than crashing.  Note
+  // that the crash is a use-after-free, so it may only show up consistently in
+  // ASAN tests.
+  EXPECT_CALL(
+      *server_connection_,
+      CloseConnection(QUIC_CRYPTO_MESSAGE_WHILE_VALIDATING_CLIENT_HELLO,
+                      "Unexpected handshake message while processing CHLO", _));
+  server_stream()->OnHandshakeMessage(chlo);
 }
 
 }  // namespace

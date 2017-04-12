@@ -81,7 +81,7 @@ struct TestMockTimeTaskRunner::TestOrderedPendingTask
     : public base::TestPendingTask {
   TestOrderedPendingTask();
   TestOrderedPendingTask(const tracked_objects::Location& location,
-                         Closure task,
+                         OnceClosure task,
                          TimeTicks post_time,
                          TimeDelta delay,
                          size_t ordinal,
@@ -106,7 +106,7 @@ TestMockTimeTaskRunner::TestOrderedPendingTask::TestOrderedPendingTask(
 
 TestMockTimeTaskRunner::TestOrderedPendingTask::TestOrderedPendingTask(
     const tracked_objects::Location& location,
-    Closure task,
+    OnceClosure task,
     TimeTicks post_time,
     TimeDelta delay,
     size_t ordinal,
@@ -240,7 +240,7 @@ bool TestMockTimeTaskRunner::RunsTasksOnCurrentThread() const {
 
 bool TestMockTimeTaskRunner::PostDelayedTask(
     const tracked_objects::Location& from_here,
-    Closure task,
+    OnceClosure task,
     TimeDelta delay) {
   AutoLock scoped_lock(tasks_lock_);
   tasks_.push(TestOrderedPendingTask(from_here, std::move(task), now_ticks_,
@@ -251,7 +251,7 @@ bool TestMockTimeTaskRunner::PostDelayedTask(
 
 bool TestMockTimeTaskRunner::PostNonNestableDelayedTask(
     const tracked_objects::Location& from_here,
-    Closure task,
+    OnceClosure task,
     TimeDelta delay) {
   return PostDelayedTask(from_here, std::move(task), delay);
 }

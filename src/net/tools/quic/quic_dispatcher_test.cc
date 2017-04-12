@@ -310,7 +310,9 @@ class QuicDispatcherTest : public ::testing::Test {
   string SerializeCHLO() {
     CryptoHandshakeMessage client_hello;
     client_hello.set_tag(kCHLO);
-    return client_hello.GetSerialized().AsStringPiece().as_string();
+    return client_hello.GetSerialized(Perspective::IS_CLIENT)
+        .AsStringPiece()
+        .as_string();
   }
 
   QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
@@ -819,7 +821,9 @@ TEST_P(QuicDispatcherStatelessRejectTest, CheapRejects) {
                                     kClientHelloMinimumSize);
 
   ProcessPacket(client_address, connection_id, true,
-                client_hello.GetSerialized().AsStringPiece().as_string());
+                client_hello.GetSerialized(Perspective::IS_CLIENT)
+                    .AsStringPiece()
+                    .as_string());
 
   if (GetParam().enable_stateless_rejects_via_flag) {
     EXPECT_EQ(true,
@@ -863,7 +867,9 @@ TEST_P(QuicDispatcherStatelessRejectTest, BufferNonChlo) {
                                  base::Unretained(this), connection_id))))
         .RetiresOnSaturation();
     ProcessPacket(client_address, connection_id, true,
-                  client_hello.GetSerialized().AsStringPiece().as_string());
+                  client_hello.GetSerialized(Perspective::IS_CLIENT)
+                      .AsStringPiece()
+                      .as_string());
     EXPECT_FALSE(
         time_wait_list_manager_->IsConnectionIdInTimeWait(connection_id));
 }
@@ -1164,7 +1170,9 @@ class BufferedPacketStoreTest
   }
 
   string SerializeFullCHLO() {
-    return full_chlo_.GetSerialized().AsStringPiece().as_string();
+    return full_chlo_.GetSerialized(Perspective::IS_CLIENT)
+        .AsStringPiece()
+        .as_string();
   }
 
  protected:
@@ -1609,11 +1617,15 @@ class AsyncGetProofTest : public QuicDispatcherTest {
   }
 
   string SerializeFullCHLO() {
-    return full_chlo_.GetSerialized().AsStringPiece().as_string();
+    return full_chlo_.GetSerialized(Perspective::IS_CLIENT)
+        .AsStringPiece()
+        .as_string();
   }
 
   string SerializeCHLO() {
-    return chlo_.GetSerialized().AsStringPiece().as_string();
+    return chlo_.GetSerialized(Perspective::IS_CLIENT)
+        .AsStringPiece()
+        .as_string();
   }
 
   // Sets up a session, and crypto stream based on the test parameters.

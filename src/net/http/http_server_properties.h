@@ -59,6 +59,7 @@ enum BrokenAlternateProtocolLocation {
   BROKEN_ALTERNATE_PROTOCOL_LOCATION_QUIC_STREAM_FACTORY = 1,
   BROKEN_ALTERNATE_PROTOCOL_LOCATION_HTTP_STREAM_FACTORY_IMPL_JOB_ALT = 2,
   BROKEN_ALTERNATE_PROTOCOL_LOCATION_HTTP_STREAM_FACTORY_IMPL_JOB_MAIN = 3,
+  BROKEN_ALTERNATE_PROTOCOL_LOCATION_QUIC_HTTP_STREAM = 4,
   BROKEN_ALTERNATE_PROTOCOL_LOCATION_MAX,
 };
 
@@ -175,6 +176,9 @@ typedef std::vector<AlternativeService> AlternativeServiceVector;
 typedef std::vector<AlternativeServiceInfo> AlternativeServiceInfoVector;
 typedef base::MRUCache<url::SchemeHostPort, AlternativeServiceInfoVector>
     AlternativeServiceMap;
+// Map to the number of times each alternative service has been marked broken.
+typedef base::MRUCache<AlternativeService, int>
+    RecentlyBrokenAlternativeServices;
 typedef base::MRUCache<url::SchemeHostPort, ServerNetworkStats>
     ServerNetworkStatsMap;
 typedef base::MRUCache<QuicServerId, std::string> QuicServerInfoMap;

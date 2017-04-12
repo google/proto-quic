@@ -70,13 +70,13 @@
 #include <stdint.h>
 
 #include <memory>
-#include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
 #include "base/logging.h"
 #include "base/macros.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/spdy_framer.h"
 #include "net/spdy/spdy_protocol.h"
 #include "net/spdy/spdy_protocol_test_utils.h"
@@ -92,7 +92,7 @@ typedef std::vector<std::pair<SpdySettingsIds, uint32_t>> SettingVector;
 // particular the order of each header entry, though it doesn't expose the
 // inner details of the HPACK block, such as the type of encoding selected
 // for each header entry, nor dynamic table size changes.
-typedef std::pair<std::string, std::string> StringPair;
+typedef std::pair<SpdyString, SpdyString> StringPair;
 typedef std::vector<StringPair> StringPairVector;
 
 // Forward decl.

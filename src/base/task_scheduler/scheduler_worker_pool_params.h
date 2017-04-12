@@ -60,7 +60,7 @@ class BASE_EXPORT SchedulerWorkerPoolParams final {
   StandbyThreadPolicy standby_thread_policy() const {
     return standby_thread_policy_;
   }
-  size_t max_threads() const { return max_threads_; }
+  int max_threads() const { return max_threads_; }
   TimeDelta suggested_reclaim_time() const { return suggested_reclaim_time_; }
   SchedulerBackwardCompatibility backward_compatibility() const {
     return backward_compatibility_;
@@ -71,7 +71,7 @@ class BASE_EXPORT SchedulerWorkerPoolParams final {
   std::string name_;
   ThreadPriority priority_hint_;
   StandbyThreadPolicy standby_thread_policy_;
-  size_t max_threads_;
+  int max_threads_;
   TimeDelta suggested_reclaim_time_;
   SchedulerBackwardCompatibility backward_compatibility_;
 };

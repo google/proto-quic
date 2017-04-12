@@ -30,16 +30,15 @@ class Predictor;
 namespace content {
 class BrowserGpuChannelHostFactory;
 class BrowserGpuMemoryBufferManager;
-class BrowserMainLoop;
 class BrowserShutdownProfileDumper;
 class BrowserSurfaceViewManager;
 class BrowserTestBase;
-class CategorizedWorkerPool;
 class NestedMessagePumpAndroid;
 class ScopedAllowWaitForAndroidLayoutTests;
 class ScopedAllowWaitForDebugURL;
 class SoftwareOutputDeviceMus;
 class TextInputClientMac;
+class CategorizedWorkerPool;
 }  // namespace content
 namespace dbus {
 class Bus;
@@ -175,7 +174,6 @@ class BASE_EXPORT ThreadRestrictions {
  private:
   // DO NOT ADD ANY OTHER FRIEND STATEMENTS, talk to jam or brettw first.
   // BEGIN ALLOWED USAGE.
-  friend class content::BrowserMainLoop;
   friend class content::BrowserShutdownProfileDumper;
   friend class content::BrowserSurfaceViewManager;
   friend class content::BrowserTestBase;

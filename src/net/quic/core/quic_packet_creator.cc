@@ -357,7 +357,8 @@ void QuicPacketCreator::CreateAndSerializeStreamFrame(
   QuicPacketHeader header;
   FillPacketHeader(&header);
   QUIC_CACHELINE_ALIGNED char encrypted_buffer[kMaxPacketSize];
-  QuicDataWriter writer(arraysize(encrypted_buffer), encrypted_buffer);
+  QuicDataWriter writer(arraysize(encrypted_buffer), encrypted_buffer,
+                        framer_->perspective());
   if (!framer_->AppendPacketHeader(header, &writer)) {
     QUIC_BUG << "AppendPacketHeader failed";
     return;

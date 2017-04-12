@@ -71,7 +71,6 @@ File File::CreateForAsyncHandle(PlatformFile platform_file) {
 }
 
 File& File::operator=(File&& other) {
-  DCHECK_NE(this, &other);
   Close();
   SetPlatformFile(other.TakePlatformFile());
   tracing_path_ = other.tracing_path_;

@@ -6,19 +6,18 @@
 
 #include <algorithm>
 #include <set>
-#include <string>
 #include <vector>
 
 #include "base/macros.h"
 #include "net/spdy/hpack/hpack_constants.h"
 #include "net/spdy/hpack/hpack_entry.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/spdy_flags.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
 
 using std::distance;
-using std::string;
 
 namespace test {
 
@@ -77,8 +76,8 @@ class HpackHeaderTableTest : public ::testing::Test {
   // Returns an entry whose Size() is equal to the given one.
   static HpackEntry MakeEntryOfSize(uint32_t size) {
     EXPECT_GE(size, HpackEntry::kSizeOverhead);
-    string name((size - HpackEntry::kSizeOverhead) / 2, 'n');
-    string value(size - HpackEntry::kSizeOverhead - name.size(), 'v');
+    SpdyString name((size - HpackEntry::kSizeOverhead) / 2, 'n');
+    SpdyString value(size - HpackEntry::kSizeOverhead - name.size(), 'v');
     HpackEntry entry(name, value, false, 0);
     EXPECT_EQ(size, entry.Size());
     return entry;
@@ -124,7 +123,7 @@ class HpackHeaderTableTest : public ::testing::Test {
     }
   }
 
-  HpackEntry DynamicEntry(string name, string value) {
+  HpackEntry DynamicEntry(const SpdyString& name, const SpdyString& value) {
     peer_.AddDynamicEntry(name, value);
     return peer_.dynamic_entries().back();
   }
@@ -259,7 +258,7 @@ TEST_F(HpackHeaderTableTest, EntryIndexing) {
 }
 
 TEST_F(HpackHeaderTableTest, SetSizes) {
-  string key = "key", value = "value";
+  SpdyString key = "key", value = "value";
   const HpackEntry* entry1 = table_.TryAddEntry(key, value);
   const HpackEntry* entry2 = table_.TryAddEntry(key, value);
   const HpackEntry* entry3 = table_.TryAddEntry(key, value);
@@ -291,7 +290,7 @@ TEST_F(HpackHeaderTableTest, SetSizes) {
 }
 
 TEST_F(HpackHeaderTableTest, EvictionCountForEntry) {
-  string key = "key", value = "value";
+  SpdyString key = "key", value = "value";
   const HpackEntry* entry1 = table_.TryAddEntry(key, value);
   const HpackEntry* entry2 = table_.TryAddEntry(key, value);
   size_t entry3_size = HpackEntry::Size(key, value);
@@ -308,7 +307,7 @@ TEST_F(HpackHeaderTableTest, EvictionCountForEntry) {
 }
 
 TEST_F(HpackHeaderTableTest, EvictionCountToReclaim) {
-  string key = "key", value = "value";
+  SpdyString key = "key", value = "value";
   const HpackEntry* entry1 = table_.TryAddEntry(key, value);
   const HpackEntry* entry2 = table_.TryAddEntry(key, value);
 

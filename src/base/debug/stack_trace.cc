@@ -12,7 +12,7 @@
 #include "base/logging.h"
 #include "base/macros.h"
 
-#if HAVE_TRACE_STACK_FRAME_POINTERS
+#if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 
 #if defined(OS_LINUX) || defined(OS_ANDROID)
 #include <pthread.h>
@@ -28,14 +28,14 @@
 extern "C" void* __libc_stack_end;
 #endif
 
-#endif  // HAVE_TRACE_STACK_FRAME_POINTERS
+#endif  // BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 
 namespace base {
 namespace debug {
 
 namespace {
 
-#if HAVE_TRACE_STACK_FRAME_POINTERS && !defined(OS_WIN)
+#if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS) && !defined(OS_WIN)
 
 #if defined(__arm__) && defined(__GNUC__) && !defined(__clang__)
 // GCC and LLVM generate slightly different frames on ARM, see
@@ -142,11 +142,11 @@ void* LinkStackFrames(void* fpp, void* parent_fp) {
   return prev_parent_fp;
 }
 
-#endif  // HAVE_TRACE_STACK_FRAME_POINTERS && !defined(OS_WIN)
+#endif  // BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS) && !defined(OS_WIN)
 
 }  // namespace
 
-#if HAVE_TRACE_STACK_FRAME_POINTERS
+#if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 uintptr_t GetStackEnd() {
 #if defined(OS_ANDROID)
   // Bionic reads proc/maps on every call to pthread_getattr_np() when called
@@ -194,7 +194,7 @@ uintptr_t GetStackEnd() {
   // Don't know how to get end of the stack.
   return 0;
 }
-#endif  // HAVE_TRACE_STACK_FRAME_POINTERS
+#endif  // BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 
 StackTrace::StackTrace() : StackTrace(arraysize(trace_)) {}
 
@@ -220,7 +220,7 @@ std::string StackTrace::ToString() const {
   return stream.str();
 }
 
-#if HAVE_TRACE_STACK_FRAME_POINTERS
+#if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 
 size_t TraceStackFramePointers(const void** out_trace,
                                size_t max_depth,
@@ -286,7 +286,7 @@ ScopedStackFrameLinker::~ScopedStackFrameLinker() {
 }
 #endif  // !defined(OS_WIN)
 
-#endif  // HAVE_TRACE_STACK_FRAME_POINTERS
+#endif  // BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 
 }  // namespace debug
 }  // namespace base

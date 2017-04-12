@@ -18,7 +18,7 @@ TestTaskRunner::TestTaskRunner(MockClock* clock) : clock_(clock) {}
 TestTaskRunner::~TestTaskRunner() {}
 
 bool TestTaskRunner::PostDelayedTask(const tracked_objects::Location& from_here,
-                                     base::Closure task,
+                                     base::OnceClosure task,
                                      base::TimeDelta delay) {
   EXPECT_GE(delay, base::TimeDelta());
   tasks_.push_back(PostedTask(from_here, std::move(task), clock_->NowInTicks(),
@@ -35,8 +35,6 @@ const std::vector<PostedTask>& TestTaskRunner::GetPostedTasks() const {
 }
 
 void TestTaskRunner::RunNextTask() {
-  // Find the next task to run, advance the time to the correct time
-  // and then run the task.
   std::vector<PostedTask>::iterator next = FindNextTask();
   DCHECK(next != tasks_.end());
   clock_->AdvanceTime(QuicTime::Delta::FromMicroseconds(
@@ -46,6 +44,10 @@ void TestTaskRunner::RunNextTask() {
   std::move(task.task).Run();
 }
 
+void TestTaskRunner::RunUntilIdle() {
+  while (!tasks_.empty())
+    RunNextTask();
+}
 namespace {
 
 struct ShouldRunBeforeLessThan {

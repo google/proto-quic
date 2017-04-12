@@ -87,35 +87,6 @@ if (is_nacl_nonsfi) {
   }
 }
 
-if (is_nacl) {
-  # None of the files apply to nacl, and we can't make an empty static library.
-  group("base_paths") {
-  }
-} else {
-  static_library("base_paths") {
-    sources = [
-      "base_paths.cc",
-      "base_paths.h",
-      "base_paths_android.cc",
-      "base_paths_android.h",
-      "base_paths_mac.h",
-      "base_paths_mac.mm",
-      "base_paths_posix.cc",
-      "base_paths_posix.h",
-      "base_paths_win.cc",
-      "base_paths_win.h",
-    ]
-
-    if (is_android || is_mac || is_ios) {
-      sources -= [ "base_paths_posix.cc" ]
-    }
-
-    configs += [ ":base_implementation" ]
-
-    visibility = [ ":base" ]
-  }
-}
-
 if (is_android) {
   config("android_system_libs") {
     libs = [ "log" ]  # Used by logging.cc.
@@ -722,7 +693,6 @@ component("base") {
     "process/process_win.cc",
     "profiler/native_stack_sampler.cc",
     "profiler/native_stack_sampler.h",
-    "profiler/native_stack_sampler_mac.cc",
     "profiler/native_stack_sampler_posix.cc",
     "profiler/native_stack_sampler_win.cc",
     "profiler/scoped_profile.cc",
@@ -1008,6 +978,8 @@ component("base") {
     "trace_event/memory_dump_session_state.h",
     "trace_event/memory_infra_background_whitelist.cc",
     "trace_event/memory_infra_background_whitelist.h",
+    "trace_event/memory_peak_detector.cc",
+    "trace_event/memory_peak_detector.h",
     "trace_event/memory_usage_estimator.cc",
     "trace_event/memory_usage_estimator.h",
     "trace_event/process_memory_dump.cc",
@@ -1113,6 +1085,24 @@ component("base") {
     "win/wrapped_window_proc.h",
   ]
 
+  if (!is_nacl) {
+    sources += [
+      "base_paths.cc",
+      "base_paths.h",
+      "base_paths_android.cc",
+      "base_paths_android.h",
+      "base_paths_mac.h",
+      "base_paths_mac.mm",
+      "base_paths_posix.h",
+      "base_paths_win.cc",
+      "base_paths_win.h",
+    ]
+
+    if (is_linux) {
+      sources += [ "base_paths_posix.cc" ]
+    }
+  }
+
   all_dependent_configs = []
   defines = []
   data = []
@@ -1132,7 +1122,6 @@ component("base") {
   ]
 
   public_deps = [
-    ":base_paths",
     ":base_static",
     ":build_date",
     ":debugging_flags",
@@ -1469,10 +1458,6 @@ component("base") {
       "strings/sys_string_conversions_posix.cc",
       "threading/platform_thread_internal_posix.cc",
     ]
-
-    if (is_mac) {
-      sources -= [ "profiler/native_stack_sampler_posix.cc" ]
-    }
   } else {
     # Non-Mac/ios.
     sources -= [
@@ -1633,8 +1618,6 @@ component("base") {
     configs -= [ "//build/config/compiler:default_optimization" ]
     configs += [ "//build/config/compiler:optimize_max" ]
   }
-
-  allow_circular_includes_from = public_deps
 }
 
 buildflag_header("debugging_flags") {
@@ -1643,6 +1626,7 @@ buildflag_header("debugging_flags") {
   flags = [
     "ENABLE_PROFILING=$enable_profiling",
     "ENABLE_MEMORY_TASK_PROFILER=$enable_memory_task_profiler",
+    "CAN_UNWIND_WITH_FRAME_POINTERS=$can_unwind_with_frame_pointers",
   ]
 }
 
@@ -1845,9 +1829,7 @@ if (is_win) {
       "//base/win:base_win_features",
     ]
   }
-}
 
-if (is_win || is_mac) {
   if (current_cpu == "x64") {
     # Must be a shared library so that it can be unloaded during testing.
     shared_library("base_profiler_test_support_library") {
@@ -1911,6 +1893,7 @@ if (is_ios || is_mac) {
 
 test("base_unittests") {
   sources = [
+    "allocator/allocator_interception_mac_unittest.mm",
     "allocator/malloc_zone_functions_mac_unittest.cc",
     "allocator/tcmalloc_unittest.cc",
     "android/application_status_listener_unittest.cc",
@@ -2178,6 +2161,7 @@ test("base_unittests") {
     "trace_event/memory_allocator_dump_unittest.cc",
     "trace_event/memory_dump_manager_unittest.cc",
     "trace_event/memory_dump_scheduler_unittest.cc",
+    "trace_event/memory_peak_detector_unittest.cc",
     "trace_event/memory_usage_estimator_unittest.cc",
     "trace_event/process_memory_dump_unittest.cc",
     "trace_event/trace_category_unittest.cc",
@@ -2309,9 +2293,6 @@ test("base_unittests") {
       "CoreFoundation.framework",
       "Foundation.framework",
     ]
-    if (current_cpu == "x64") {
-      data_deps += [ ":base_profiler_test_support_library" ]
-    }
   }
 
   if (is_linux) {
@@ -2350,7 +2331,7 @@ test("base_unittests") {
     deps += [ "//base:scoped_handle_test_dll" ]
     if (current_cpu == "x64") {
       sources += [ "profiler/win32_stack_frame_unwinder_unittest.cc" ]
-      data_deps += [ ":base_profiler_test_support_library" ]
+      deps += [ ":base_profiler_test_support_library" ]
     }
   }
 

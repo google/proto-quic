@@ -7,6 +7,7 @@
 
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -23,6 +24,7 @@
 
 namespace net {
 
+class ReportingContext;
 struct ReportingReport;
 
 // The cache holds undelivered reports and clients (per-origin endpoint
@@ -38,7 +40,8 @@ struct ReportingReport;
 // "doomed", which will cause it to be deallocated once it is no longer pending.
 class NET_EXPORT ReportingCache {
  public:
-  ReportingCache();
+  // |context| must outlive the ReportingCache.
+  ReportingCache(ReportingContext* context);
 
   ~ReportingCache();
 
@@ -145,6 +148,8 @@ class NET_EXPORT ReportingCache {
   }
 
  private:
+  ReportingContext* context_;
+
   // Owns all clients, keyed by origin, then endpoint URL.
   // (These would be unordered_map, but neither url::Origin nor GURL has a hash
   // function implemented.)
@@ -155,11 +160,11 @@ class NET_EXPORT ReportingCache {
   std::unordered_map<const ReportingReport*, std::unique_ptr<ReportingReport>>
       reports_;
 
-  // Reports that have been marked "pending" (in use elsewhere and should not be
+  // Reports that have been marked pending (in use elsewhere and should not be
   // deleted until no longer pending).
   std::unordered_set<const ReportingReport*> pending_reports_;
 
-  // Reports that have been marked "doomed" (would have been deleted, but were
+  // Reports that have been marked doomed (would have been deleted, but were
   // pending when the deletion was requested).
   std::unordered_set<const ReportingReport*> doomed_reports_;
 

@@ -89,11 +89,11 @@ class NonTriviallyDestructible {
 
 }  // anonymous namespace
 
-static_assert(is_trivially_destructible<Optional<int>>::value,
+static_assert(std::is_trivially_destructible<Optional<int>>::value,
               "OptionalIsTriviallyDestructible");
 
 static_assert(
-    !is_trivially_destructible<Optional<NonTriviallyDestructible>>::value,
+    !std::is_trivially_destructible<Optional<NonTriviallyDestructible>>::value,
     "OptionalIsTriviallyDestructible");
 
 TEST(OptionalTest, DefaultConstructor) {

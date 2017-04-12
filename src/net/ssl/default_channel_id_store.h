@@ -134,7 +134,6 @@ class NET_EXPORT DefaultChannelIDStore : public ChannelIDStore {
 
   // Tasks that are waiting to be run once we finish loading.
   std::vector<std::unique_ptr<Task>> waiting_tasks_;
-  base::TimeTicks waiting_tasks_start_time_;
 
   scoped_refptr<PersistentStore> store_;
 

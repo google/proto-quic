@@ -27,7 +27,7 @@ class TestDelegate : public ChloExtractor::Delegate {
               const CryptoHandshakeMessage& chlo) override {
     version_ = version;
     connection_id_ = connection_id;
-    chlo_ = chlo.DebugString();
+    chlo_ = chlo.DebugString(Perspective::IS_SERVER);
   }
 
   QuicConnectionId connection_id() const { return connection_id_; }
@@ -82,8 +82,9 @@ TEST_F(ChloExtractorTest, FindsValidChlo) {
   CryptoHandshakeMessage client_hello;
   client_hello.set_tag(kCHLO);
 
-  string client_hello_str(
-      client_hello.GetSerialized().AsStringPiece().as_string());
+  string client_hello_str(client_hello.GetSerialized(Perspective::IS_CLIENT)
+                              .AsStringPiece()
+                              .as_string());
   // Construct a CHLO with each supported version
   for (QuicVersion version : AllSupportedVersions()) {
     QuicVersionVector versions(SupportedVersions(version));
@@ -94,7 +95,8 @@ TEST_F(ChloExtractorTest, FindsValidChlo) {
         << QuicVersionToString(version);
     EXPECT_EQ(version, delegate_.version());
     EXPECT_EQ(header_.public_header.connection_id, delegate_.connection_id());
-    EXPECT_EQ(client_hello.DebugString(), delegate_.chlo())
+    EXPECT_EQ(client_hello.DebugString(Perspective::IS_SERVER),
+              delegate_.chlo())
         << QuicVersionToString(version);
   }
 }
@@ -103,8 +105,9 @@ TEST_F(ChloExtractorTest, DoesNotFindValidChloOnWrongStream) {
   CryptoHandshakeMessage client_hello;
   client_hello.set_tag(kCHLO);
 
-  string client_hello_str(
-      client_hello.GetSerialized().AsStringPiece().as_string());
+  string client_hello_str(client_hello.GetSerialized(Perspective::IS_CLIENT)
+                              .AsStringPiece()
+                              .as_string());
   MakePacket(
       new QuicStreamFrame(kCryptoStreamId + 1, false, 0, client_hello_str));
   EXPECT_FALSE(
@@ -115,8 +118,9 @@ TEST_F(ChloExtractorTest, DoesNotFindValidChloOnWrongOffset) {
   CryptoHandshakeMessage client_hello;
   client_hello.set_tag(kCHLO);
 
-  string client_hello_str(
-      client_hello.GetSerialized().AsStringPiece().as_string());
+  string client_hello_str(client_hello.GetSerialized(Perspective::IS_CLIENT)
+                              .AsStringPiece()
+                              .as_string());
   MakePacket(new QuicStreamFrame(kCryptoStreamId, false, 1, client_hello_str));
   EXPECT_FALSE(
       ChloExtractor::Extract(*packet_, AllSupportedVersions(), &delegate_));

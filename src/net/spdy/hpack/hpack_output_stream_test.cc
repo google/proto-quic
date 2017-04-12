@@ -12,13 +12,11 @@ namespace net {
 
 namespace {
 
-using std::string;
-
 // Make sure that AppendBits() appends bits starting from the most
 // significant bit, and that it can handle crossing a byte boundary.
 TEST(HpackOutputStreamTest, AppendBits) {
   HpackOutputStream output_stream;
-  string expected_str;
+  SpdyString expected_str;
 
   output_stream.AppendBits(0x1, 1);
   expected_str.append(1, 0x00);
@@ -39,20 +37,20 @@ TEST(HpackOutputStreamTest, AppendBits) {
 
   output_stream.AppendBits(0x0, 7);
 
-  string str;
+  SpdyString str;
   output_stream.TakeString(&str);
   EXPECT_EQ(expected_str, str);
 }
 
 // Utility function to return I as a string encoded with an N-bit
 // prefix.
-string EncodeUint32(uint8_t N, uint32_t I) {
+SpdyString EncodeUint32(uint8_t N, uint32_t I) {
   HpackOutputStream output_stream;
   if (N < 8) {
     output_stream.AppendBits(0x00, 8 - N);
   }
   output_stream.AppendUint32(I);
-  string str;
+  SpdyString str;
   output_stream.TakeString(&str);
   return str;
 }
@@ -63,7 +61,7 @@ string EncodeUint32(uint8_t N, uint32_t I) {
 
 TEST(HpackOutputStreamTest, OneByteIntegersEightBitPrefix) {
   // Minimum.
-  EXPECT_EQ(string("\x00", 1), EncodeUint32(8, 0x00));
+  EXPECT_EQ(SpdyString("\x00", 1), EncodeUint32(8, 0x00));
   EXPECT_EQ("\x7f", EncodeUint32(8, 0x7f));
   // Maximum.
   EXPECT_EQ("\xfe", EncodeUint32(8, 0xfe));
@@ -71,7 +69,7 @@ TEST(HpackOutputStreamTest, OneByteIntegersEightBitPrefix) {
 
 TEST(HpackOutputStreamTest, TwoByteIntegersEightBitPrefix) {
   // Minimum.
-  EXPECT_EQ(string("\xff\x00", 2), EncodeUint32(8, 0xff));
+  EXPECT_EQ(SpdyString("\xff\x00", 2), EncodeUint32(8, 0xff));
   EXPECT_EQ("\xff\x01", EncodeUint32(8, 0x0100));
   // Maximum.
   EXPECT_EQ("\xff\x7f", EncodeUint32(8, 0x017e));
@@ -114,13 +112,13 @@ TEST(HpackOutputStreamTest, SixByteIntegersEightBitPrefix) {
 
 TEST(HpackOutputStreamTest, OneByteIntegersOneToSevenBitPrefixes) {
   // Minimums.
-  EXPECT_EQ(string("\x00", 1), EncodeUint32(7, 0x00));
-  EXPECT_EQ(string("\x00", 1), EncodeUint32(6, 0x00));
-  EXPECT_EQ(string("\x00", 1), EncodeUint32(5, 0x00));
-  EXPECT_EQ(string("\x00", 1), EncodeUint32(4, 0x00));
-  EXPECT_EQ(string("\x00", 1), EncodeUint32(3, 0x00));
-  EXPECT_EQ(string("\x00", 1), EncodeUint32(2, 0x00));
-  EXPECT_EQ(string("\x00", 1), EncodeUint32(1, 0x00));
+  EXPECT_EQ(SpdyString("\x00", 1), EncodeUint32(7, 0x00));
+  EXPECT_EQ(SpdyString("\x00", 1), EncodeUint32(6, 0x00));
+  EXPECT_EQ(SpdyString("\x00", 1), EncodeUint32(5, 0x00));
+  EXPECT_EQ(SpdyString("\x00", 1), EncodeUint32(4, 0x00));
+  EXPECT_EQ(SpdyString("\x00", 1), EncodeUint32(3, 0x00));
+  EXPECT_EQ(SpdyString("\x00", 1), EncodeUint32(2, 0x00));
+  EXPECT_EQ(SpdyString("\x00", 1), EncodeUint32(1, 0x00));
 
   // Maximums.
   EXPECT_EQ("\x7e", EncodeUint32(7, 0x7e));
@@ -129,18 +127,18 @@ TEST(HpackOutputStreamTest, OneByteIntegersOneToSevenBitPrefixes) {
   EXPECT_EQ("\x0e", EncodeUint32(4, 0x0e));
   EXPECT_EQ("\x06", EncodeUint32(3, 0x06));
   EXPECT_EQ("\x02", EncodeUint32(2, 0x02));
-  EXPECT_EQ(string("\x00", 1), EncodeUint32(1, 0x00));
+  EXPECT_EQ(SpdyString("\x00", 1), EncodeUint32(1, 0x00));
 }
 
 TEST(HpackOutputStreamTest, TwoByteIntegersOneToSevenBitPrefixes) {
   // Minimums.
-  EXPECT_EQ(string("\x7f\x00", 2), EncodeUint32(7, 0x7f));
-  EXPECT_EQ(string("\x3f\x00", 2), EncodeUint32(6, 0x3f));
-  EXPECT_EQ(string("\x1f\x00", 2), EncodeUint32(5, 0x1f));
-  EXPECT_EQ(string("\x0f\x00", 2), EncodeUint32(4, 0x0f));
-  EXPECT_EQ(string("\x07\x00", 2), EncodeUint32(3, 0x07));
-  EXPECT_EQ(string("\x03\x00", 2), EncodeUint32(2, 0x03));
-  EXPECT_EQ(string("\x01\x00", 2), EncodeUint32(1, 0x01));
+  EXPECT_EQ(SpdyString("\x7f\x00", 2), EncodeUint32(7, 0x7f));
+  EXPECT_EQ(SpdyString("\x3f\x00", 2), EncodeUint32(6, 0x3f));
+  EXPECT_EQ(SpdyString("\x1f\x00", 2), EncodeUint32(5, 0x1f));
+  EXPECT_EQ(SpdyString("\x0f\x00", 2), EncodeUint32(4, 0x0f));
+  EXPECT_EQ(SpdyString("\x07\x00", 2), EncodeUint32(3, 0x07));
+  EXPECT_EQ(SpdyString("\x03\x00", 2), EncodeUint32(2, 0x03));
+  EXPECT_EQ(SpdyString("\x01\x00", 2), EncodeUint32(1, 0x01));
 
   // Maximums.
   EXPECT_EQ("\x7f\x7f", EncodeUint32(7, 0xfe));
@@ -238,9 +236,9 @@ TEST(HpackOutputStreamTest, AppendUint32PreservesUpperBits) {
   HpackOutputStream output_stream;
   output_stream.AppendBits(0x7f, 7);
   output_stream.AppendUint32(0x01);
-  string str;
+  SpdyString str;
   output_stream.TakeString(&str);
-  EXPECT_EQ(string("\xff\x00", 2), str);
+  EXPECT_EQ(SpdyString("\xff\x00", 2), str);
 }
 
 TEST(HpackOutputStreamTest, AppendBytes) {
@@ -249,7 +247,7 @@ TEST(HpackOutputStreamTest, AppendBytes) {
   output_stream.AppendBytes("buffer1");
   output_stream.AppendBytes("buffer2");
 
-  string str;
+  SpdyString str;
   output_stream.TakeString(&str);
   EXPECT_EQ("buffer1buffer2", str);
 }
@@ -260,7 +258,7 @@ TEST(HpackOutputStreamTest, BoundedTakeString) {
   output_stream.AppendBytes("buffer12");
   output_stream.AppendBytes("buffer456");
 
-  string str;
+  SpdyString str;
   output_stream.BoundedTakeString(9, &str);
   EXPECT_EQ("buffer12b", str);
 

@@ -22,6 +22,7 @@
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_aligned.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_flag_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_map_util.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
@@ -318,7 +319,7 @@ size_t QuicFramer::BuildDataPacket(const QuicPacketHeader& header,
                                    const QuicFrames& frames,
                                    char* buffer,
                                    size_t packet_length) {
-  QuicDataWriter writer(packet_length, buffer);
+  QuicDataWriter writer(packet_length, buffer, perspective_);
   if (!AppendPacketHeader(header, &writer)) {
     QUIC_BUG << "AppendPacketHeader failed";
     return 0;
@@ -425,12 +426,13 @@ std::unique_ptr<QuicEncryptedPacket> QuicFramer::BuildPublicResetPacket(
     }
     reset.SetStringPiece(kCADR, serialized_address);
   }
-  const QuicData& reset_serialized = reset.GetSerialized();
+  const QuicData& reset_serialized =
+      reset.GetSerialized(Perspective::IS_SERVER);
 
   size_t len =
       kPublicFlagsSize + PACKET_8BYTE_CONNECTION_ID + reset_serialized.length();
   std::unique_ptr<char[]> buffer(new char[len]);
-  QuicDataWriter writer(len, buffer.get());
+  QuicDataWriter writer(len, buffer.get(), Perspective::IS_SERVER);
 
   uint8_t flags = static_cast<uint8_t>(PACKET_PUBLIC_FLAGS_RST |
                                        PACKET_PUBLIC_FLAGS_8BYTE_CONNECTION_ID);
@@ -460,7 +462,7 @@ std::unique_ptr<QuicEncryptedPacket> QuicFramer::BuildVersionNegotiationPacket(
   DCHECK(!versions.empty());
   size_t len = GetVersionNegotiationPacketSize(versions.size());
   std::unique_ptr<char[]> buffer(new char[len]);
-  QuicDataWriter writer(len, buffer.get());
+  QuicDataWriter writer(len, buffer.get(), Perspective::IS_SERVER);
 
   uint8_t flags = static_cast<uint8_t>(
       PACKET_PUBLIC_FLAGS_VERSION | PACKET_PUBLIC_FLAGS_8BYTE_CONNECTION_ID |
@@ -484,7 +486,7 @@ std::unique_ptr<QuicEncryptedPacket> QuicFramer::BuildVersionNegotiationPacket(
 }
 
 bool QuicFramer::ProcessPacket(const QuicEncryptedPacket& packet) {
-  QuicDataReader reader(packet.data(), packet.length());
+  QuicDataReader reader(packet.data(), packet.length(), perspective_);
 
   visitor_->OnPacket();
 
@@ -572,7 +574,7 @@ bool QuicFramer::ProcessDataPacket(QuicDataReader* encrypted_reader,
     return RaiseError(QUIC_DECRYPTION_FAILURE);
   }
 
-  QuicDataReader reader(decrypted_buffer, decrypted_length);
+  QuicDataReader reader(decrypted_buffer, decrypted_length, perspective_);
 
   // Set the last packet number after we have decrypted the packet
   // so we are confident is not attacker controlled.
@@ -608,7 +610,7 @@ bool QuicFramer::ProcessPublicResetPacket(
   QuicPublicResetPacket packet(public_header);
 
   std::unique_ptr<CryptoHandshakeMessage> reset(
-      CryptoFramer::ParseMessage(reader->ReadRemainingPayload()));
+      CryptoFramer::ParseMessage(reader->ReadRemainingPayload(), perspective_));
   if (!reset.get()) {
     set_detailed_error("Unable to read reset message.");
     return RaiseError(QUIC_INVALID_PUBLIC_RST_PACKET);
@@ -776,6 +778,9 @@ bool QuicFramer::ProcessPublicHeader(QuicDataReader* reader,
       public_flags > (FLAGS_quic_reloadable_flag_quic_remove_multipath_bit
                           ? PACKET_PUBLIC_FLAGS_MAX_WITHOUT_MULTIPATH_FLAG
                           : PACKET_PUBLIC_FLAGS_MAX)) {
+    if (FLAGS_quic_reloadable_flag_quic_remove_multipath_bit) {
+      QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_remove_multipath_bit, 1, 2);
+    }
     set_detailed_error("Illegal public flags value.");
     return false;
   }
@@ -820,6 +825,9 @@ bool QuicFramer::ProcessPublicHeader(QuicDataReader* reader,
         public_flags > (FLAGS_quic_reloadable_flag_quic_remove_multipath_bit
                             ? PACKET_PUBLIC_FLAGS_MAX_WITHOUT_MULTIPATH_FLAG
                             : PACKET_PUBLIC_FLAGS_MAX)) {
+      if (FLAGS_quic_reloadable_flag_quic_remove_multipath_bit) {
+        QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_remove_multipath_bit, 1, 2);
+      }
       set_detailed_error("Illegal public flags value.");
       return false;
     }

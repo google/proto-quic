@@ -11,6 +11,7 @@
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_flag_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_stack_trace.h"
@@ -694,6 +695,8 @@ void QuicDispatcher::BufferEarlyPacket(QuicConnectionId connection_id) {
   if (FLAGS_quic_reloadable_flag_quic_create_session_after_insertion &&
       is_new_connection &&
       !ShouldCreateOrBufferPacketForConnection(connection_id)) {
+    QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_create_session_after_insertion,
+                      1, 5);
     return;
   }
   EnqueuePacketResult rs = buffered_packets_.EnqueuePacket(
@@ -711,6 +714,8 @@ void QuicDispatcher::ProcessChlo() {
   if (FLAGS_quic_reloadable_flag_quic_create_session_after_insertion &&
       !buffered_packets_.HasBufferedPackets(current_connection_id_) &&
       !ShouldCreateOrBufferPacketForConnection(current_connection_id_)) {
+    QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_create_session_after_insertion,
+                      2, 5);
     return;
   }
   if (FLAGS_quic_allow_chlo_buffering &&
@@ -951,8 +956,9 @@ void QuicDispatcher::ProcessStatelessRejectorState(
       StatelessConnectionTerminator terminator(rejector->connection_id(),
                                                &framer_, helper(),
                                                time_wait_list_manager_.get());
-      terminator.RejectConnection(
-          rejector->reply().GetSerialized().AsStringPiece());
+      terminator.RejectConnection(rejector->reply()
+                                      .GetSerialized(Perspective::IS_SERVER)
+                                      .AsStringPiece());
       OnConnectionRejectedStatelessly();
       fate = kFateTimeWait;
       break;

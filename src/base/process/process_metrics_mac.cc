@@ -19,23 +19,6 @@
 #include "base/numerics/safe_conversions.h"
 #include "base/sys_info.h"
 
-#if !defined(TASK_POWER_INFO)
-// Doesn't exist in the 10.6 or 10.7 SDKs.
-#define TASK_POWER_INFO        21
-struct task_power_info {
-        uint64_t                total_user;
-        uint64_t                total_system;
-        uint64_t                task_interrupt_wakeups;
-        uint64_t                task_platform_idle_wakeups;
-        uint64_t                task_timer_wakeups_bin_1;
-        uint64_t                task_timer_wakeups_bin_2;
-};
-typedef struct task_power_info        task_power_info_data_t;
-typedef struct task_power_info        *task_power_info_t;
-#define TASK_POWER_INFO_COUNT        ((mach_msg_type_number_t) \
-                (sizeof (task_power_info_data_t) / sizeof (natural_t)))
-#endif
-
 namespace base {
 
 namespace {

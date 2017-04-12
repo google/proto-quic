@@ -56,15 +56,32 @@ DEFINE_CERT_ERROR_ID(kSignatureAlgorithmsDifferentEncoding,
                      "Certificate.signatureAlgorithm is encoded differently "
                      "than TBSCertificate.signature");
 
+bool IsHandledCriticalExtensionOid(const der::Input& oid) {
+  if (oid == BasicConstraintsOid())
+    return true;
+  if (oid == KeyUsageOid())
+    return true;
+  if (oid == NameConstraintsOid())
+    return true;
+  // TODO(eroman): SubjectAltName isn't actually used here, but rather is being
+  // checked by a higher layer.
+  if (oid == SubjectAltNameOid())
+    return true;
+
+  // TODO(eroman): Make this more complete.
+  return false;
+}
+
 // Adds errors to |errors| if the certificate contains unconsumed _critical_
 // extensions.
 void VerifyNoUnconsumedCriticalExtensions(const ParsedCertificate& cert,
                                           CertErrors* errors) {
-  for (const auto& entry : cert.unparsed_extensions()) {
-    if (entry.second.critical) {
+  for (const auto& it : cert.extensions()) {
+    const ParsedExtension& extension = it.second;
+    if (extension.critical && !IsHandledCriticalExtensionOid(extension.oid)) {
       errors->AddError(kUnconsumedCriticalExtension,
-                       CreateCertErrorParams2Der("oid", entry.second.oid,
-                                                 "value", entry.second.value));
+                       CreateCertErrorParams2Der("oid", extension.oid, "value",
+                                                 extension.value));
     }
   }
 }

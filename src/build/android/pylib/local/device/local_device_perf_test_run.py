@@ -206,10 +206,10 @@ class TestShard(object):
     pickled = os.path.join(constants.PERF_OUTPUT_DIR, result['name'])
     if os.path.exists(pickled):
       with file(pickled, 'r') as f:
-        previous = pickle.loads(f.read())
+        previous = pickle.load(f)
         result['output'] = previous['output'] + result['output']
     with file(pickled, 'w') as f:
-      f.write(pickle.dumps(result))
+      pickle.dump(result, f)
 
   def _TestTearDown(self):
     if self._output_dir:

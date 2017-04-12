@@ -30,7 +30,7 @@ bool GetCommonName(const der::Input& tlv, std::string* common_name) {
   for (const auto& rdn : rdn_sequence) {
     for (const auto& atv : rdn) {
       if (atv.type == TypeCommonNameOid()) {
-        return atv.ValueAsStringUnsafe(common_name);
+        return atv.ValueAsString(common_name);
       }
     }
   }

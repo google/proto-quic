@@ -17,6 +17,12 @@ namespace net {
 
 namespace {
 
+const char kDeflate[] = "deflate";
+const char kGZip[] = "gzip";
+const char kSdch[] = "sdch";
+const char kXGZip[] = "x-gzip";
+const char kBrotli[] = "br";
+
 const size_t kBufferSize = 32 * 1024;
 
 }  // namespace
@@ -65,6 +71,28 @@ std::string FilterSourceStream::Description() const {
   if (next_type_string.empty())
     return GetTypeAsString();
   return next_type_string + "," + GetTypeAsString();
+}
+
+FilterSourceStream::SourceType FilterSourceStream::ParseEncodingType(
+    const std::string& encoding) {
+  if (encoding.empty()) {
+    return TYPE_NONE;
+  } else if (base::LowerCaseEqualsASCII(encoding, kBrotli)) {
+    return TYPE_BROTLI;
+  } else if (base::LowerCaseEqualsASCII(encoding, kDeflate)) {
+    return TYPE_DEFLATE;
+  } else if (base::LowerCaseEqualsASCII(encoding, kGZip) ||
+             base::LowerCaseEqualsASCII(encoding, kXGZip)) {
+    return TYPE_GZIP;
+  } else if (base::LowerCaseEqualsASCII(encoding, kSdch)) {
+    return TYPE_SDCH;
+  } else {
+    return TYPE_UNKNOWN;
+  }
+}
+
+void FilterSourceStream::ReportContentDecodingFailed(SourceType type) {
+  UMA_HISTOGRAM_ENUMERATION("Net.ContentDecodingFailed2", type, TYPE_MAX);
 }
 
 int FilterSourceStream::DoLoop(int result) {
@@ -136,8 +164,7 @@ int FilterSourceStream::DoFilterData() {
          consumed_bytes == drainable_input_buffer_->BytesRemaining());
 
   if (bytes_output == ERR_CONTENT_DECODING_FAILED) {
-    UMA_HISTOGRAM_ENUMERATION("Net.ContentDecodingFailed2.FilterType", type(),
-                              TYPE_MAX);
+    ReportContentDecodingFailed(type());
   }
   // FilterData() is not allowed to return ERR_IO_PENDING.
   DCHECK_NE(ERR_IO_PENDING, bytes_output);

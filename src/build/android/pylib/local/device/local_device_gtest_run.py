@@ -418,6 +418,9 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
     if not self._env.skip_clear_data:
       self._delegate.Clear(device)
 
+    for l in output:
+      logging.info(l)
+
     # Parse the output.
     # TODO(jbudorick): Transition test scripts away from parsing stdout.
     if self._test_instance.enable_xml_result_parsing:
@@ -443,7 +446,7 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
                 time.strftime('%Y%m%dT%H%M%S', time.localtime()),
                 device.serial)
             tombstones_url = logdog_helper.text(
-                stream_name, resolved_tombstones)
+                stream_name, '\n'.join(resolved_tombstones))
           result.SetLink('tombstones', tombstones_url)
 
     tests_stripped_disabled_prefix = set()

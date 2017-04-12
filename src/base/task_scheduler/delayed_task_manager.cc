@@ -26,6 +26,7 @@ void DelayedTaskManager::AddDelayedTask(
     std::unique_ptr<Task> task,
     const PostTaskNowCallback& post_task_now_callback) {
   DCHECK(task);
+  DCHECK(task->task);
 
   const TimeDelta delay = task->delay;
   DCHECK(!delay.is_zero());

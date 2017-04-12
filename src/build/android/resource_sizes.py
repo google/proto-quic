@@ -299,6 +299,8 @@ class _FileGroup(object):
                 None)
 
   def FindLargest(self):
+    if not self._zip_infos:
+      return None
     return max(self._zip_infos, key=lambda i: i.file_size)
 
   def ComputeZippedSize(self):

@@ -308,7 +308,6 @@ Pickle::~Pickle() {
 
 Pickle& Pickle::operator=(const Pickle& other) {
   if (this == &other) {
-    NOTREACHED();
     return *this;
   }
   if (capacity_after_header_ == kCapacityReadOnly) {

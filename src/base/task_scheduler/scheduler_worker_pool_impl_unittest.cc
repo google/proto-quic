@@ -67,7 +67,7 @@ class TaskSchedulerWorkerPoolImplTest
       : service_thread_("TaskSchedulerServiceThread") {}
 
   void SetUp() override {
-    InitializeWorkerPool(TimeDelta::Max(), kNumWorkersInWorkerPool);
+    CreateAndStartWorkerPool(TimeDelta::Max(), kNumWorkersInWorkerPool);
   }
 
   void TearDown() override {
@@ -76,21 +76,31 @@ class TaskSchedulerWorkerPoolImplTest
     worker_pool_->JoinForTesting();
   }
 
-  void InitializeWorkerPool(TimeDelta suggested_reclaim_time,
-                            size_t num_workers) {
+  void CreateWorkerPool() {
     ASSERT_FALSE(worker_pool_);
     ASSERT_FALSE(delayed_task_manager_);
     service_thread_.Start();
     delayed_task_manager_ =
         base::MakeUnique<DelayedTaskManager>(service_thread_.task_runner());
-    worker_pool_ = SchedulerWorkerPoolImpl::Create(
-        SchedulerWorkerPoolParams("TestWorkerPool", ThreadPriority::NORMAL,
-                                  StandbyThreadPolicy::LAZY, num_workers,
-                                  suggested_reclaim_time),
+    worker_pool_ = MakeUnique<SchedulerWorkerPoolImpl>(
+        "TestWorkerPool", ThreadPriority::NORMAL,
         Bind(&TaskSchedulerWorkerPoolImplTest::ReEnqueueSequenceCallback,
              Unretained(this)),
         &task_tracker_, delayed_task_manager_.get());
     ASSERT_TRUE(worker_pool_);
+  }
+
+  void StartWorkerPool(TimeDelta suggested_reclaim_time, size_t num_workers) {
+    ASSERT_TRUE(worker_pool_);
+    worker_pool_->Start(SchedulerWorkerPoolParams(
+        "TestWorkerPool", ThreadPriority::NORMAL, StandbyThreadPolicy::LAZY,
+        num_workers, suggested_reclaim_time));
+  }
+
+  void CreateAndStartWorkerPool(TimeDelta suggested_reclaim_time,
+                                size_t num_workers) {
+    CreateWorkerPool();
+    StartWorkerPool(suggested_reclaim_time, num_workers);
   }
 
   std::unique_ptr<SchedulerWorkerPoolImpl> worker_pool_;
@@ -377,6 +387,75 @@ INSTANTIATE_TEST_CASE_P(Sequenced,
 
 namespace {
 
+class TaskSchedulerWorkerPoolImplPostTaskBeforeStartTest
+    : public TaskSchedulerWorkerPoolImplTest {
+ public:
+  void SetUp() override {
+    CreateWorkerPool();
+    // Let the test start the worker pool.
+  }
+};
+
+void TaskPostedBeforeStart(PlatformThreadRef* platform_thread_ref,
+                           WaitableEvent* task_scheduled,
+                           WaitableEvent* barrier) {
+  *platform_thread_ref = PlatformThread::CurrentRef();
+  task_scheduled->Signal();
+  barrier->Wait();
+}
+
+}  // namespace
+
+// Verify that 2 tasks posted before Start() to a SchedulerWorkerPoolImpl with
+// more than 2 workers are scheduled on different workers when Start() is
+// called.
+TEST_F(TaskSchedulerWorkerPoolImplPostTaskBeforeStartTest,
+       PostTasksBeforeStart) {
+  PlatformThreadRef task_1_thread_ref;
+  PlatformThreadRef task_2_thread_ref;
+  WaitableEvent task_1_scheduled(WaitableEvent::ResetPolicy::MANUAL,
+                                 WaitableEvent::InitialState::NOT_SIGNALED);
+  WaitableEvent task_2_scheduled(WaitableEvent::ResetPolicy::MANUAL,
+                                 WaitableEvent::InitialState::NOT_SIGNALED);
+
+  // This event is used to prevent a task from completing before the other task
+  // is scheduled. If that happened, both tasks could run on the same worker and
+  // this test couldn't verify that the correct number of workers were woken up.
+  WaitableEvent barrier(WaitableEvent::ResetPolicy::MANUAL,
+                        WaitableEvent::InitialState::NOT_SIGNALED);
+
+  worker_pool_
+      ->CreateTaskRunnerWithTraits(TaskTraits().WithBaseSyncPrimitives())
+      ->PostTask(FROM_HERE,
+                 Bind(&TaskPostedBeforeStart, Unretained(&task_1_thread_ref),
+                      Unretained(&task_1_scheduled), Unretained(&barrier)));
+  worker_pool_
+      ->CreateTaskRunnerWithTraits(TaskTraits().WithBaseSyncPrimitives())
+      ->PostTask(FROM_HERE,
+                 Bind(&TaskPostedBeforeStart, Unretained(&task_2_thread_ref),
+                      Unretained(&task_2_scheduled), Unretained(&barrier)));
+
+  // Workers should not be created and tasks should not run before the pool is
+  // started.
+  EXPECT_EQ(0U, worker_pool_->NumberOfAliveWorkersForTesting());
+  EXPECT_FALSE(task_1_scheduled.IsSignaled());
+  EXPECT_FALSE(task_2_scheduled.IsSignaled());
+
+  StartWorkerPool(TimeDelta::Max(), kNumWorkersInWorkerPool);
+
+  // Tasks should be scheduled shortly after the pool is started.
+  task_1_scheduled.Wait();
+  task_2_scheduled.Wait();
+
+  // Tasks should be scheduled on different threads.
+  EXPECT_NE(task_1_thread_ref, task_2_thread_ref);
+
+  barrier.Signal();
+  task_tracker_.Flush();
+}
+
+namespace {
+
 constexpr size_t kMagicTlsValue = 42;
 
 class TaskSchedulerWorkerPoolCheckTlsReuse
@@ -401,7 +480,8 @@ class TaskSchedulerWorkerPoolCheckTlsReuse
               WaitableEvent::InitialState::NOT_SIGNALED) {}
 
   void SetUp() override {
-    InitializeWorkerPool(kReclaimTimeForDetachTests, kNumWorkersInWorkerPool);
+    CreateAndStartWorkerPool(kReclaimTimeForDetachTests,
+                             kNumWorkersInWorkerPool);
   }
 
   subtle::Atomic32 zero_tls_values_ = 0;
@@ -493,7 +573,7 @@ class TaskSchedulerWorkerPoolHistogramTest
 TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBetweenWaits) {
   WaitableEvent event(WaitableEvent::ResetPolicy::MANUAL,
                       WaitableEvent::InitialState::NOT_SIGNALED);
-  InitializeWorkerPool(TimeDelta::Max(), kNumWorkersInWorkerPool);
+  CreateAndStartWorkerPool(TimeDelta::Max(), kNumWorkersInWorkerPool);
   auto task_runner = worker_pool_->CreateSequencedTaskRunnerWithTraits(
       TaskTraits().WithBaseSyncPrimitives());
 
@@ -537,7 +617,7 @@ void SignalAndWaitEvent(WaitableEvent* signal_event,
 TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBetweenWaitsWithDetach) {
   WaitableEvent tasks_can_exit_event(WaitableEvent::ResetPolicy::MANUAL,
                                      WaitableEvent::InitialState::NOT_SIGNALED);
-  InitializeWorkerPool(kReclaimTimeForDetachTests, kNumWorkersInWorkerPool);
+  CreateAndStartWorkerPool(kReclaimTimeForDetachTests, kNumWorkersInWorkerPool);
   auto task_runner = worker_pool_->CreateTaskRunnerWithTraits(
       TaskTraits().WithBaseSyncPrimitives());
 
@@ -599,7 +679,7 @@ TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBetweenWaitsWithDetach) {
 }
 
 TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBeforeDetach) {
-  InitializeWorkerPool(kReclaimTimeForDetachTests, kNumWorkersInWorkerPool);
+  CreateAndStartWorkerPool(kReclaimTimeForDetachTests, kNumWorkersInWorkerPool);
 
   auto histogrammed_thread_task_runner =
       worker_pool_->CreateSequencedTaskRunnerWithTraits(
@@ -714,12 +794,12 @@ TEST(TaskSchedulerWorkerPoolStandbyPolicyTest, InitLazy) {
   TaskTracker task_tracker;
   DelayedTaskManager delayed_task_manager(
       make_scoped_refptr(new TestSimpleTaskRunner));
-  auto worker_pool = SchedulerWorkerPoolImpl::Create(
-      SchedulerWorkerPoolParams("LazyPolicyWorkerPool", ThreadPriority::NORMAL,
-                                StandbyThreadPolicy::LAZY, 8U,
-                                TimeDelta::Max()),
+  auto worker_pool = MakeUnique<SchedulerWorkerPoolImpl>(
+      "LazyPolicyWorkerPool", ThreadPriority::NORMAL,
       Bind(&NotReachedReEnqueueSequenceCallback), &task_tracker,
       &delayed_task_manager);
+  worker_pool->Start(SchedulerWorkerPoolParams(StandbyThreadPolicy::LAZY, 8U,
+                                               TimeDelta::Max()));
   ASSERT_TRUE(worker_pool);
   EXPECT_EQ(0U, worker_pool->NumberOfAliveWorkersForTesting());
   worker_pool->JoinForTesting();
@@ -729,11 +809,12 @@ TEST(TaskSchedulerWorkerPoolStandbyPolicyTest, InitOne) {
   TaskTracker task_tracker;
   DelayedTaskManager delayed_task_manager(
       make_scoped_refptr(new TestSimpleTaskRunner));
-  auto worker_pool = SchedulerWorkerPoolImpl::Create(
-      SchedulerWorkerPoolParams("LazyPolicyWorkerPool", ThreadPriority::NORMAL,
-                                StandbyThreadPolicy::ONE, 8U, TimeDelta::Max()),
+  auto worker_pool = MakeUnique<SchedulerWorkerPoolImpl>(
+      "OnePolicyWorkerPool", ThreadPriority::NORMAL,
       Bind(&NotReachedReEnqueueSequenceCallback), &task_tracker,
       &delayed_task_manager);
+  worker_pool->Start(SchedulerWorkerPoolParams(StandbyThreadPolicy::ONE, 8U,
+                                               TimeDelta::Max()));
   ASSERT_TRUE(worker_pool);
   EXPECT_EQ(1U, worker_pool->NumberOfAliveWorkersForTesting());
   worker_pool->JoinForTesting();

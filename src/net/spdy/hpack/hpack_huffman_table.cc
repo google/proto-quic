@@ -16,8 +16,6 @@
 
 namespace net {
 
-using std::string;
-
 namespace {
 
 // How many bits to index in the root decode table.
@@ -266,7 +264,7 @@ size_t HpackHuffmanTable::EncodedSize(SpdyStringPiece in) const {
 }
 
 bool HpackHuffmanTable::GenericDecodeString(HpackInputStream* in,
-                                            string* out) const {
+                                            SpdyString* out) const {
   // Number of decode iterations required for a 32-bit code.
   const int kDecodeIterations = static_cast<int>(
       std::ceil((32.f - kDecodeTableRootBits) / kDecodeTableBranchBits));

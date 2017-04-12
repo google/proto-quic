@@ -283,7 +283,6 @@ def CreateChromeToolsShim():
     f.write('# two arg version to specify where build artifacts go. CMake\n')
     f.write('# disallows reuse of the same binary dir for multiple source\n')
     f.write('# dirs, so the build artifacts need to go into a subdirectory.\n')
-    f.write('# dirs, so the build artifacts need to go into a subdirectory.\n')
     f.write('if (CHROMIUM_TOOLS_SRC)\n')
     f.write('  add_subdirectory(${CHROMIUM_TOOLS_SRC} ' +
               '${CMAKE_CURRENT_BINARY_DIR}/a)\n')
@@ -647,9 +646,6 @@ def UpdateClang(args):
       '-DCMAKE_SHARED_LINKER_FLAGS=' + ' '.join(ldflags),
       '-DCMAKE_MODULE_LINKER_FLAGS=' + ' '.join(ldflags),
       '-DCMAKE_INSTALL_PREFIX=' + LLVM_BUILD_DIR,
-      # TODO(thakis): Remove this once official builds pass -Wl,--build-id
-      # explicitly, https://crbug.com/622775
-      '-DENABLE_LINKER_BUILD_ID=ON',
       '-DCHROMIUM_TOOLS_SRC=%s' % os.path.join(CHROMIUM_DIR, 'tools', 'clang'),
       '-DCHROMIUM_TOOLS=%s' % ';'.join(chrome_tools)]
 

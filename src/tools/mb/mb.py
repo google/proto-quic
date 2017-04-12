@@ -748,6 +748,11 @@ class MetaBuildWrapper(object):
 
       if 'cros_passthrough' in mixin_vals:
         vals['cros_passthrough'] = mixin_vals['cros_passthrough']
+      if 'args_file' in mixin_vals:
+        if vals['args_file']:
+            raise MBErr('args_file specified multiple times in mixins '
+                        'for %s on %s' % (self.args.builder, self.args.master))
+        vals['args_file'] = mixin_vals['args_file']
       if 'gn_args' in mixin_vals:
         if vals['gn_args']:
           vals['gn_args'] += ' ' + mixin_vals['gn_args']
@@ -1091,7 +1096,8 @@ class MetaBuildWrapper(object):
           '../../build/android/test_wrapper/logdog_wrapper.py',
           '--target', target,
           '--target-devices-file', '${SWARMING_BOT_FILE}',
-          '--logdog-bin-cmd', '../../bin/logdog_butler']
+          '--logdog-bin-cmd', '../../bin/logdog_butler',
+          '--logcat-output-file', '${ISOLATED_OUTDIR}/logcats']
     elif use_xvfb and test_type == 'windowed_test_launcher':
       extra_files = [
           '../../testing/test_env.py',

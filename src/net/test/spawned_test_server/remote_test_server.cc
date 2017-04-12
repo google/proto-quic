@@ -15,6 +15,7 @@
 #include "base/json/json_writer.h"
 #include "base/lazy_instance.h"
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/path_service.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
@@ -127,7 +128,7 @@ bool RemoteTestServer::Start() {
   if (!GenerateArguments(&arguments_dict))
     return false;
 
-  arguments_dict.Set("on-remote-server", base::Value::CreateNullValue());
+  arguments_dict.Set("on-remote-server", base::MakeUnique<base::Value>());
 
   // Append the 'server-type' argument which is used by spawner server to
   // pass right server type to Python test server.

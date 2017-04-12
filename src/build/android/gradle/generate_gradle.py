@@ -745,7 +745,7 @@ def main():
     _ExtractZips(generator.project_dir, zip_tuples)
 
   logging.warning('Project created! (%d subprojects)', len(project_entries))
-  logging.warning('Generated projects work best with Android Studio 2.2')
+  logging.warning('Generated projects work with Android Studio 2.3')
   logging.warning('For more tips: https://chromium.googlesource.com/chromium'
                   '/src.git/+/master/docs/android_studio.md')
 

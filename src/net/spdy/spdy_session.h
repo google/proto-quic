@@ -12,7 +12,6 @@
 #include <map>
 #include <memory>
 #include <set>
-#include <string>
 #include <vector>
 
 #include "base/gtest_prod_util.h"
@@ -35,6 +34,7 @@
 #include "net/spdy/buffered_spdy_framer.h"
 #include "net/spdy/http2_priority_dependencies.h"
 #include "net/spdy/multiplexed_session.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/server_push_delegate.h"
 #include "net/spdy/spdy_alt_svc_wire_format.h"
@@ -292,8 +292,8 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // |old_hostname| associated with |ssl_info|.
   static bool CanPool(TransportSecurityState* transport_security_state,
                       const SSLInfo& ssl_info,
-                      const std::string& old_hostname,
-                      const std::string& new_hostname);
+                      const SpdyString& old_hostname,
+                      const SpdyString& new_hostname);
 
   // Create a new SpdySession.
   // |spdy_session_key| is the host/port that this session connects to, privacy
@@ -368,7 +368,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // TODO(wtc): rename this function and the Net.SpdyIPPoolDomainMatch
   // histogram because this function does more than verifying domain
   // authentication now.
-  bool VerifyDomainAuthentication(const std::string& domain);
+  bool VerifyDomainAuthentication(const SpdyString& domain);
 
   // Pushes the given producer into the write queue for
   // |stream|. |stream| is guaranteed to be activated before the
@@ -407,7 +407,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // that that stream may hold the last reference to the session.
   void ResetStream(SpdyStreamId stream_id,
                    SpdyErrorCode error_code,
-                   const std::string& description);
+                   const SpdyString& description);
 
   // Check if a stream is active.
   bool IsStreamActive(SpdyStreamId stream_id) const;
@@ -451,7 +451,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // |err| should be < ERR_IO_PENDING; this function is intended to be
   // called on error.
   // |description| indicates the reason for the error.
-  void CloseSessionOnError(Error err, const std::string& description);
+  void CloseSessionOnError(Error err, const SpdyString& description);
 
   // Mark this session as unavailable, meaning that it will not be used to
   // service new streams. Unlike when a GOAWAY frame is received, this function
@@ -706,7 +706,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // CloseActiveStreamIterator().
   void ResetStreamIterator(ActiveStreamMap::iterator it,
                            SpdyErrorCode error_code,
-                           const std::string& description);
+                           const SpdyString& description);
 
   // Send a RST_STREAM frame with the given parameters. There should
   // either be no active stream with the given ID, or that active
@@ -714,7 +714,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   void EnqueueResetStreamFrame(SpdyStreamId stream_id,
                                RequestPriority priority,
                                SpdyErrorCode error_code,
-                               const std::string& description);
+                               const SpdyString& description);
 
   // Send a PRIORITY frame with the given parameters.
   void EnqueuePriorityFrame(SpdyStreamId stream_id,
@@ -852,7 +852,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
 
   // If the session is already draining, does nothing. Otherwise, moves
   // the session to the draining state.
-  void DoDrainSession(Error err, const std::string& description);
+  void DoDrainSession(Error err, const SpdyString& description);
 
   // Called right before closing a (possibly-inactive) stream for a
   // reason other than being requested to by the stream.
@@ -874,7 +874,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // BufferedSpdyFramerVisitorInterface:
   void OnError(SpdyFramer::SpdyFramerError spdy_framer_error) override;
   void OnStreamError(SpdyStreamId stream_id,
-                     const std::string& description) override;
+                     const SpdyString& description) override;
   void OnPing(SpdyPingId unique_id, bool is_ack) override;
   void OnRstStream(SpdyStreamId stream_id, SpdyErrorCode error_code) override;
   void OnGoAway(SpdyStreamId last_accepted_stream_id,

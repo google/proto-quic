@@ -8,7 +8,6 @@
 #include <type_traits>
 
 #include "base/logging.h"
-#include "base/template_util.h"
 
 namespace base {
 
@@ -32,7 +31,7 @@ constexpr nullopt_t nullopt(0);
 
 namespace internal {
 
-template <typename T, bool = base::is_trivially_destructible<T>::value>
+template <typename T, bool = std::is_trivially_destructible<T>::value>
 struct OptionalStorage {
   // Initializing |empty_| here instead of using default member initializing
   // to avoid errors in g++ 4.8.

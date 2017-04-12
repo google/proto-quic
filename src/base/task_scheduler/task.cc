@@ -12,7 +12,7 @@ namespace base {
 namespace internal {
 
 Task::Task(const tracked_objects::Location& posted_from,
-           Closure task,
+           OnceClosure task,
            const TaskTraits& traits,
            TimeDelta delay)
     : PendingTask(

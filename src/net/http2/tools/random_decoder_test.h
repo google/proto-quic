@@ -19,7 +19,6 @@
 
 #include "base/logging.h"
 #include "base/strings/string_piece.h"
-#include "base/template_util.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
 #include "net/http2/tools/failure.h"
@@ -49,9 +48,9 @@ void CorruptEnum(T* out, RandomBase* rng) {
   // resulting value is the smallest unsigned value equal to the source value
   // modulo 2^n, where n is the number of bits used to represent the
   // destination type unsigned U.
-  typedef typename base::underlying_type<T>::type underlying_type_T;
-  typedef typename std::make_unsigned<underlying_type_T>::type
-      unsigned_underlying_type_T;
+  using underlying_type_T = typename std::underlying_type<T>::type;
+  using unsigned_underlying_type_T =
+      typename std::make_unsigned<underlying_type_T>::type;
   auto r = static_cast<unsigned_underlying_type_T>(rng->Rand32());
   *out = static_cast<T>(r);
 }

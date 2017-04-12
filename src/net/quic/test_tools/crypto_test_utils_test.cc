@@ -93,7 +93,8 @@ class ShloVerifier {
   void ProcessClientHelloDone(std::unique_ptr<CryptoHandshakeMessage> message) {
     // Verify output is a SHLO.
     EXPECT_EQ(message->tag(), kSHLO)
-        << "Fail to pass validation. Get " << message->DebugString();
+        << "Fail to pass validation. Get "
+        << message->DebugString(Perspective::IS_SERVER);
   }
 
   QuicCryptoServerConfig* crypto_config_;

@@ -8,6 +8,7 @@
 #include <memory>
 #include <set>
 
+#include "base/base_export.h"
 #include "base/memory/ref_counted.h"
 #include "base/trace_event/memory_dump_provider.h"
 
@@ -41,7 +42,7 @@ namespace trace_event {
 //   MDM::SetupNextMemoryDump() or MDM::InvokeOnMemoryDump(), when the copy
 //   inside ProcessMemoryDumpAsyncState is erase()-d.
 // - The PeakDetector can keep extra refptrs when enabled.
-struct MemoryDumpProviderInfo
+struct BASE_EXPORT MemoryDumpProviderInfo
     : public RefCountedThreadSafe<MemoryDumpProviderInfo> {
  public:
   // Define a total order based on the |task_runner| affinity, so that MDPs

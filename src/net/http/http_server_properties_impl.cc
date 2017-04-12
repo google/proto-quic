@@ -33,6 +33,8 @@ const int kBrokenDelayMaxShift = 9;
 HttpServerPropertiesImpl::HttpServerPropertiesImpl()
     : spdy_servers_map_(SpdyServersMap::NO_AUTO_EVICT),
       alternative_service_map_(AlternativeServiceMap::NO_AUTO_EVICT),
+      recently_broken_alternative_services_(
+          RecentlyBrokenAlternativeServices::NO_AUTO_EVICT),
       server_network_stats_map_(ServerNetworkStatsMap::NO_AUTO_EVICT),
       quic_server_info_map_(QuicServerInfoMap::NO_AUTO_EVICT),
       max_server_configs_stored_in_properties_(kMaxQuicServersToPersist),
@@ -454,8 +456,13 @@ void HttpServerPropertiesImpl::MarkAlternativeServiceBroken(
     LOG(DFATAL) << "Trying to mark unknown alternate protocol broken.";
     return;
   }
-  ++recently_broken_alternative_services_[alternative_service];
-  int shift = recently_broken_alternative_services_[alternative_service] - 1;
+  auto it = recently_broken_alternative_services_.Get(alternative_service);
+  int shift = 0;
+  if (it == recently_broken_alternative_services_.end()) {
+    recently_broken_alternative_services_.Put(alternative_service, 1);
+  } else {
+    shift = it->second++;
+  }
   if (shift > kBrokenDelayMaxShift)
     shift = kBrokenDelayMaxShift;
   base::TimeDelta delay =
@@ -477,9 +484,10 @@ void HttpServerPropertiesImpl::MarkAlternativeServiceBroken(
 
 void HttpServerPropertiesImpl::MarkAlternativeServiceRecentlyBroken(
     const AlternativeService& alternative_service) {
-  if (!base::ContainsKey(recently_broken_alternative_services_,
-                         alternative_service))
-    recently_broken_alternative_services_[alternative_service] = 1;
+  if (recently_broken_alternative_services_.Get(alternative_service) ==
+      recently_broken_alternative_services_.end()) {
+    recently_broken_alternative_services_.Put(alternative_service, 1);
+  }
 }
 
 bool HttpServerPropertiesImpl::IsAlternativeServiceBroken(
@@ -493,8 +501,9 @@ bool HttpServerPropertiesImpl::WasAlternativeServiceRecentlyBroken(
     const AlternativeService& alternative_service) {
   if (alternative_service.protocol == kProtoUnknown)
     return false;
-  return base::ContainsKey(recently_broken_alternative_services_,
-                           alternative_service);
+
+  return recently_broken_alternative_services_.Get(alternative_service) !=
+         recently_broken_alternative_services_.end();
 }
 
 void HttpServerPropertiesImpl::ConfirmAlternativeService(
@@ -502,7 +511,10 @@ void HttpServerPropertiesImpl::ConfirmAlternativeService(
   if (alternative_service.protocol == kProtoUnknown)
     return;
   broken_alternative_services_.erase(alternative_service);
-  recently_broken_alternative_services_.erase(alternative_service);
+  auto it = recently_broken_alternative_services_.Get(alternative_service);
+  if (it != recently_broken_alternative_services_.end()) {
+    recently_broken_alternative_services_.Erase(it);
+  }
 }
 
 const AlternativeServiceMap& HttpServerPropertiesImpl::alternative_service_map()

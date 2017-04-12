@@ -263,24 +263,34 @@ TEST_P(TaskSchedulerTaskTrackerTest, WillPostAndRunBeforeShutdown) {
 }
 
 TEST_P(TaskSchedulerTaskTrackerTest, WillPostAndRunLongTaskBeforeShutdown) {
-  // Create a task that will block until |event| is signaled.
-  WaitableEvent event(WaitableEvent::ResetPolicy::AUTOMATIC,
-                      WaitableEvent::InitialState::NOT_SIGNALED);
+  // Create a task that signals |task_running| and blocks until |task_barrier|
+  // is signaled.
+  WaitableEvent task_running(WaitableEvent::ResetPolicy::AUTOMATIC,
+                             WaitableEvent::InitialState::NOT_SIGNALED);
+  WaitableEvent task_barrier(WaitableEvent::ResetPolicy::AUTOMATIC,
+                             WaitableEvent::InitialState::NOT_SIGNALED);
   auto blocked_task = base::MakeUnique<Task>(
-      FROM_HERE, Bind(&WaitableEvent::Wait, Unretained(&event)),
+      FROM_HERE,
+      Bind(
+          [](WaitableEvent* task_running, WaitableEvent* task_barrier) {
+            task_running->Signal();
+            task_barrier->Wait();
+          },
+          Unretained(&task_running), base::Unretained(&task_barrier)),
       TaskTraits().WithBaseSyncPrimitives().WithShutdownBehavior(GetParam()),
       TimeDelta());
 
   // Inform |task_tracker_| that |blocked_task| will be posted.
   EXPECT_TRUE(tracker_.WillPostTask(blocked_task.get()));
 
-  // Run the task asynchronouly.
+  // Create a thread to run the task. Wait until the task starts running.
   ThreadPostingAndRunningTask thread_running_task(
       &tracker_, std::move(blocked_task),
       ThreadPostingAndRunningTask::Action::RUN, false);
   thread_running_task.Start();
+  task_running.Wait();
 
-  // Initiate shutdown while the task is running.
+  // Initiate shutdown after the task has been scheduled.
   CallShutdownAsync();
 
   if (GetParam() == TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN) {
@@ -292,7 +302,7 @@ TEST_P(TaskSchedulerTaskTrackerTest, WillPostAndRunLongTaskBeforeShutdown) {
   }
 
   // Unblock the task.
-  event.Signal();
+  task_barrier.Signal();
   thread_running_task.Join();
 
   // Shutdown should now complete for a non CONTINUE_ON_SHUTDOWN task.

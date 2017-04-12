@@ -138,7 +138,7 @@ std::unique_ptr<base::Value> NetLogSpdyHeadersReceivedCallback(
 
 std::unique_ptr<base::Value> NetLogSpdySessionCloseCallback(
     int net_error,
-    const std::string* description,
+    const SpdyString* description,
     NetLogCaptureMode /* capture_mode */) {
   auto dict = base::MakeUnique<base::DictionaryValue>();
   dict->SetInteger("net_error", net_error);
@@ -251,7 +251,7 @@ std::unique_ptr<base::Value> NetLogSpdyRecvRstStreamCallback(
 std::unique_ptr<base::Value> NetLogSpdySendRstStreamCallback(
     SpdyStreamId stream_id,
     SpdyErrorCode error_code,
-    const std::string* description,
+    const SpdyString* description,
     NetLogCaptureMode /* capture_mode */) {
   auto dict = base::MakeUnique<base::DictionaryValue>();
   dict->SetInteger("stream_id", static_cast<int>(stream_id));
@@ -320,7 +320,7 @@ std::unique_ptr<base::Value> NetLogSpdySessionStalledCallback(
     size_t num_created_streams,
     size_t num_pushed_streams,
     size_t max_concurrent_streams,
-    const std::string& url,
+    const SpdyString& url,
     NetLogCaptureMode capture_mode) {
   auto dict = base::MakeUnique<base::DictionaryValue>();
   dict->SetInteger("num_active_streams", num_active_streams);
@@ -678,8 +678,8 @@ size_t SpdySession::UnclaimedPushedStreamContainer::EstimateMemoryUsage()
 // static
 bool SpdySession::CanPool(TransportSecurityState* transport_security_state,
                           const SSLInfo& ssl_info,
-                          const std::string& old_hostname,
-                          const std::string& new_hostname) {
+                          const SpdyString& old_hostname,
+                          const SpdyString& new_hostname) {
   // Pooling is prohibited if the server cert is not valid for the new domain,
   // and for connections on which client certs were sent. It is also prohibited
   // when channel ID was sent if the hosts are from different eTLDs+1.
@@ -698,7 +698,7 @@ bool SpdySession::CanPool(TransportSecurityState* transport_security_state,
   if (!ssl_info.cert->VerifyNameMatch(new_hostname, false))
     return false;
 
-  std::string pinning_failure_log;
+  SpdyString pinning_failure_log;
   // DISABLE_PIN_REPORTS is set here because this check can fail in
   // normal operation without being indicative of a misconfiguration or
   // attack. Port is left at 0 as it is never used.
@@ -910,7 +910,7 @@ void SpdySession::InitializeWithSocket(
                  READ_STATE_DO_READ, OK));
 }
 
-bool SpdySession::VerifyDomainAuthentication(const std::string& domain) {
+bool SpdySession::VerifyDomainAuthentication(const SpdyString& domain) {
   if (availability_state_ == STATE_DRAINING)
     return false;
 
@@ -1115,7 +1115,7 @@ void SpdySession::CloseCreatedStream(const base::WeakPtr<SpdyStream>& stream,
 
 void SpdySession::ResetStream(SpdyStreamId stream_id,
                               SpdyErrorCode error_code,
-                              const std::string& description) {
+                              const SpdyString& description) {
   DCHECK_NE(stream_id, 0u);
 
   ActiveStreamMap::iterator it = active_streams_.find(stream_id);
@@ -1179,7 +1179,7 @@ void SpdySession::SendStreamWindowUpdate(SpdyStreamId stream_id,
 }
 
 void SpdySession::CloseSessionOnError(Error err,
-                                      const std::string& description) {
+                                      const SpdyString& description) {
   DCHECK_LT(err, ERR_IO_PENDING);
   DoDrainSession(err, description);
 }
@@ -1574,7 +1574,7 @@ void SpdySession::TryCreatePushStream(SpdyStreamId stream_id,
   if (associated_stream_id == 0) {
     // In HTTP/2 0 stream id in PUSH_PROMISE frame leads to framer error and
     // session going away. We should never get here.
-    std::string description = SpdyStringPrintf(
+    SpdyString description = SpdyStringPrintf(
         "Received invalid associated stream id %d for pushed stream %d",
         associated_stream_id, stream_id);
     EnqueueResetStreamFrame(stream_id, request_priority,
@@ -1754,7 +1754,7 @@ void SpdySession::CloseCreatedStreamIterator(CreatedStreamSet::iterator it,
 
 void SpdySession::ResetStreamIterator(ActiveStreamMap::iterator it,
                                       SpdyErrorCode error_code,
-                                      const std::string& description) {
+                                      const SpdyString& description) {
   // Send the RST_STREAM frame first as CloseActiveStreamIterator()
   // may close us.
   SpdyStreamId stream_id = it->first;
@@ -1769,7 +1769,7 @@ void SpdySession::ResetStreamIterator(ActiveStreamMap::iterator it,
 void SpdySession::EnqueueResetStreamFrame(SpdyStreamId stream_id,
                                           RequestPriority priority,
                                           SpdyErrorCode error_code,
-                                          const std::string& description) {
+                                          const SpdyString& description) {
   DCHECK_NE(stream_id, 0u);
 
   net_log().AddEvent(NetLogEventType::HTTP2_SESSION_SEND_RST_STREAM,
@@ -2453,7 +2453,7 @@ void SpdySession::DcheckDraining() const {
   DCHECK(unclaimed_pushed_streams_.empty());
 }
 
-void SpdySession::DoDrainSession(Error err, const std::string& description) {
+void SpdySession::DoDrainSession(Error err, const SpdyString& description) {
   if (availability_state_ == STATE_DRAINING) {
     return;
   }
@@ -2504,7 +2504,7 @@ void SpdySession::DoDrainSession(Error err, const std::string& description) {
 
 void SpdySession::LogAbandonedStream(SpdyStream* stream, Error status) {
   DCHECK(stream);
-  std::string description =
+  SpdyString description =
       SpdyStringPrintf("ABANDONED (stream_id=%d): ", stream->stream_id()) +
       stream->url().spec();
   stream->LogStreamError(status, description);
@@ -2587,14 +2587,14 @@ void SpdySession::OnError(SpdyFramer::SpdyFramerError spdy_framer_error) {
 
   RecordProtocolErrorHistogram(
       MapFramerErrorToProtocolError(spdy_framer_error));
-  std::string description =
+  SpdyString description =
       SpdyStringPrintf("Framer error: %d (%s).", spdy_framer_error,
                        SpdyFramer::SpdyFramerErrorToString(spdy_framer_error));
   DoDrainSession(MapFramerErrorToNetError(spdy_framer_error), description);
 }
 
 void SpdySession::OnStreamError(SpdyStreamId stream_id,
-                                const std::string& description) {
+                                const SpdyString& description) {
   CHECK(in_io_loop_);
 
   ActiveStreamMap::iterator it = active_streams_.find(stream_id);

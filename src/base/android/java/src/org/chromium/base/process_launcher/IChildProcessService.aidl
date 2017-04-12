@@ -16,5 +16,5 @@ interface IChildProcessService {
   int setupConnection(in Bundle args, IBinder callback);
 
   // Asks the child service to crash so that we can test the termination logic.
-  void crashIntentionallyForTesting();
+  oneway void crashIntentionallyForTesting();
 }

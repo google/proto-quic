@@ -1049,4 +1049,108 @@ bool HttpUtil::NameValuePairsIterator::IsQuote(char c) const {
   return HttpUtil::IsQuote(c);
 }
 
+bool HttpUtil::ParseAcceptEncoding(const std::string& accept_encoding,
+                                   std::set<std::string>* allowed_encodings) {
+  DCHECK(allowed_encodings);
+  if (accept_encoding.find_first_of("\"") != std::string::npos)
+    return false;
+  allowed_encodings->clear();
+
+  base::StringTokenizer tokenizer(accept_encoding.begin(),
+                                  accept_encoding.end(), ",");
+  while (tokenizer.GetNext()) {
+    base::StringPiece entry = tokenizer.token_piece();
+    entry = TrimLWS(entry);
+    size_t semicolon_pos = entry.find(';');
+    if (semicolon_pos == base::StringPiece::npos) {
+      if (entry.find_first_of(HTTP_LWS) != base::StringPiece::npos)
+        return false;
+      allowed_encodings->insert(base::ToLowerASCII(entry));
+      continue;
+    }
+    base::StringPiece encoding = entry.substr(0, semicolon_pos);
+    encoding = TrimLWS(encoding);
+    if (encoding.find_first_of(HTTP_LWS) != base::StringPiece::npos)
+      return false;
+    base::StringPiece params = entry.substr(semicolon_pos + 1);
+    params = TrimLWS(params);
+    size_t equals_pos = params.find('=');
+    if (equals_pos == base::StringPiece::npos)
+      return false;
+    base::StringPiece param_name = params.substr(0, equals_pos);
+    param_name = TrimLWS(param_name);
+    if (!base::LowerCaseEqualsASCII(param_name, "q"))
+      return false;
+    base::StringPiece qvalue = params.substr(equals_pos + 1);
+    qvalue = TrimLWS(qvalue);
+    if (qvalue.empty())
+      return false;
+    if (qvalue[0] == '1') {
+      if (base::StringPiece("1.000").starts_with(qvalue)) {
+        allowed_encodings->insert(base::ToLowerASCII(encoding));
+        continue;
+      }
+      return false;
+    }
+    if (qvalue[0] != '0')
+      return false;
+    if (qvalue.length() == 1)
+      continue;
+    if (qvalue.length() <= 2 || qvalue.length() > 5)
+      return false;
+    if (qvalue[1] != '.')
+      return false;
+    bool nonzero_number = false;
+    for (size_t i = 2; i < qvalue.length(); ++i) {
+      if (!base::IsAsciiDigit(qvalue[i]))
+        return false;
+      if (qvalue[i] != '0')
+        nonzero_number = true;
+    }
+    if (nonzero_number)
+      allowed_encodings->insert(base::ToLowerASCII(encoding));
+  }
+
+  // RFC 7231 5.3.4 "A request without an Accept-Encoding header field implies
+  // that the user agent has no preferences regarding content-codings."
+  if (allowed_encodings->empty()) {
+    allowed_encodings->insert("*");
+    return true;
+  }
+
+  // Any browser must support "identity".
+  allowed_encodings->insert("identity");
+
+  // RFC says gzip == x-gzip; mirror it here for easier matching.
+  if (allowed_encodings->find("gzip") != allowed_encodings->end())
+    allowed_encodings->insert("x-gzip");
+  if (allowed_encodings->find("x-gzip") != allowed_encodings->end())
+    allowed_encodings->insert("gzip");
+
+  // RFC says compress == x-compress; mirror it here for easier matching.
+  if (allowed_encodings->find("compress") != allowed_encodings->end())
+    allowed_encodings->insert("x-compress");
+  if (allowed_encodings->find("x-compress") != allowed_encodings->end())
+    allowed_encodings->insert("compress");
+  return true;
+}
+
+bool HttpUtil::ParseContentEncoding(const std::string& content_encoding,
+                                    std::set<std::string>* used_encodings) {
+  DCHECK(used_encodings);
+  if (content_encoding.find_first_of("\"=;*") != std::string::npos)
+    return false;
+  used_encodings->clear();
+
+  base::StringTokenizer encoding_tokenizer(content_encoding.begin(),
+                                           content_encoding.end(), ",");
+  while (encoding_tokenizer.GetNext()) {
+    base::StringPiece encoding = TrimLWS(encoding_tokenizer.token_piece());
+    if (encoding.find_first_of(HTTP_LWS) != base::StringPiece::npos)
+      return false;
+    used_encodings->insert(base::ToLowerASCII(encoding));
+  }
+  return true;
+}
+
 }  // namespace net

@@ -29,7 +29,13 @@ class HttpServerPropertiesImplPeer {
       base::TimeTicks when) {
     impl.broken_alternative_services_.insert(
         std::make_pair(alternative_service, when));
-    ++impl.recently_broken_alternative_services_[alternative_service];
+    auto it =
+        impl.recently_broken_alternative_services_.Get(alternative_service);
+    if (it == impl.recently_broken_alternative_services_.end()) {
+      impl.recently_broken_alternative_services_.Put(alternative_service, 1);
+    } else {
+      it->second++;
+    }
   }
 
   static void ExpireBrokenAlternateProtocolMappings(

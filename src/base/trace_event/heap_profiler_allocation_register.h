@@ -8,13 +8,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <type_traits>
 #include <utility>
 
 #include "base/bits.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/process/process_metrics.h"
-#include "base/template_util.h"
 #include "base/trace_event/heap_profiler_allocation_context.h"
 #include "build/build_config.h"
 
@@ -39,9 +39,10 @@ void FreeGuardedVirtualMemory(void* address, size_t allocated_size);
 template <size_t NumBuckets, class Key, class Value, class KeyHasher>
 class FixedHashMap {
   // To keep things simple we don't call destructors.
-  static_assert(is_trivially_destructible<Key>::value &&
-                    is_trivially_destructible<Value>::value,
+  static_assert(std::is_trivially_destructible<Key>::value &&
+                    std::is_trivially_destructible<Value>::value,
                 "Key and Value shouldn't have destructors");
+
  public:
   using KVPair = std::pair<const Key, Value>;
 
@@ -52,7 +53,7 @@ class FixedHashMap {
 
   // Capacity controls how many items this hash map can hold, and largely
   // affects memory footprint.
-  FixedHashMap(size_t capacity)
+  explicit FixedHashMap(size_t capacity)
       : num_cells_(capacity),
         num_inserts_dropped_(0),
         cells_(static_cast<Cell*>(
@@ -252,6 +253,8 @@ class TraceEventMemoryOverhead;
 // freed. Internally it has two hashtables: one for Backtraces and one for
 // actual allocations. Sizes of both hashtables are fixed, and this class
 // allocates (mmaps) only in its constructor.
+//
+// When either hash table hits max size, new inserts are dropped.
 class BASE_EXPORT AllocationRegister {
  public:
   // Details about an allocation.
@@ -366,8 +369,13 @@ class BASE_EXPORT AllocationRegister {
   AllocationMap allocations_;
   BacktraceMap backtraces_;
 
-  // Sentinel used when we run out of backtraces_ storage.
-  BacktraceMap::KVIndex out_of_storage_backtrace_index_;
+  // Sentinel used when the |backtraces_| table is full.
+  //
+  // This is a slightly abstraction to allow for constant propagation. It
+  // knows that the sentinel will be the first item inserted into the table
+  // and that the first index retuned will be 0. The constructor DCHECKs
+  // this assumption.
+  enum : BacktraceMap::KVIndex { kOutOfStorageBacktraceIndex = 0 };
 
   DISALLOW_COPY_AND_ASSIGN(AllocationRegister);
 };

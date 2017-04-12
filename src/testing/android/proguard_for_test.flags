@@ -23,17 +23,6 @@
     *;
 }
 
-# TODO(yfriedman): Remove when crbug.com/488192 is fixed.
--dontwarn org.apache.http.conn.scheme.LayeredSocketFactory
-
 # We have some "library class WebView depends on program class SslCertificate"
 # warnings, and they don't affect us.
 -dontwarn android.webkit.WebView*
-
-# We don't want BasicHttpParams or AbstractHttpParams to get renamed since that
-# then makes our calls to them use the implementation that we find in our .dex
-# file, which is broken. We need to rely on these calls resolving to the
-# system's implementation. See crbug.com/488192#c36.
--keepnames class org.apache.** {
-  *;
-}

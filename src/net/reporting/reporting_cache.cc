@@ -14,12 +14,15 @@
 #include "base/stl_util.h"
 #include "base/time/time.h"
 #include "net/reporting/reporting_client.h"
+#include "net/reporting/reporting_context.h"
 #include "net/reporting/reporting_report.h"
 #include "url/gurl.h"
 
 namespace net {
 
-ReportingCache::ReportingCache() {}
+ReportingCache::ReportingCache(ReportingContext* context) : context_(context) {
+  DCHECK(context_);
+}
 
 ReportingCache::~ReportingCache() {}
 
@@ -35,6 +38,8 @@ void ReportingCache::AddReport(const GURL& url,
   auto inserted =
       reports_.insert(std::make_pair(report.get(), std::move(report)));
   DCHECK(inserted.second);
+
+  context_->NotifyCacheUpdated();
 }
 
 void ReportingCache::GetReports(
@@ -76,6 +81,8 @@ void ReportingCache::IncrementReportsAttempts(
     DCHECK(base::ContainsKey(reports_, report));
     reports_[report]->attempts++;
   }
+
+  context_->NotifyCacheUpdated();
 }
 
 void ReportingCache::RemoveReports(
@@ -89,6 +96,8 @@ void ReportingCache::RemoveReports(
       reports_.erase(report);
     }
   }
+
+  context_->NotifyCacheUpdated();
 }
 
 void ReportingCache::RemoveAllReports() {
@@ -105,6 +114,8 @@ void ReportingCache::RemoveAllReports() {
 
   for (auto& it : reports_to_remove)
     reports_.erase(it);
+
+  context_->NotifyCacheUpdated();
 }
 
 void ReportingCache::GetClients(
@@ -140,6 +151,8 @@ void ReportingCache::SetClient(const url::Origin& origin,
 
   clients_[origin][endpoint] = base::MakeUnique<ReportingClient>(
       origin, endpoint, subdomains, group, expires);
+
+  context_->NotifyCacheUpdated();
 }
 
 void ReportingCache::RemoveClients(
@@ -149,6 +162,8 @@ void ReportingCache::RemoveClients(
     DCHECK(clients_[client->origin][client->endpoint].get() == client);
     clients_[client->origin].erase(client->endpoint);
   }
+
+  context_->NotifyCacheUpdated();
 }
 
 void ReportingCache::RemoveClientForOriginAndEndpoint(const url::Origin& origin,
@@ -156,15 +171,21 @@ void ReportingCache::RemoveClientForOriginAndEndpoint(const url::Origin& origin,
   DCHECK(base::ContainsKey(clients_, origin));
   DCHECK(base::ContainsKey(clients_[origin], endpoint));
   clients_[origin].erase(endpoint);
+
+  context_->NotifyCacheUpdated();
 }
 
 void ReportingCache::RemoveClientsForEndpoint(const GURL& endpoint) {
   for (auto& it : clients_)
     it.second.erase(endpoint);
+
+  context_->NotifyCacheUpdated();
 }
 
 void ReportingCache::RemoveAllClients() {
   clients_.clear();
+
+  context_->NotifyCacheUpdated();
 }
 
 }  // namespace net

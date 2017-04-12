@@ -8,6 +8,8 @@
 #include <random>
 #include <string>
 
+#include "base/at_exit.h"
+#include "base/i18n/icu_util.h"
 #include "components/search_engines/search_terms_data.h"
 #include "components/search_engines/template_url.h"
 #include "components/search_engines/template_url_parser.h"
@@ -34,6 +36,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   if (size < sizeof(FuzzerFixedParams)) {
     return 0;
   }
+  base::AtExitManager at_exit_manager;  // used by ICU integration.
+  base::i18n::InitializeICU();
   const FuzzerFixedParams* params =
       reinterpret_cast<const FuzzerFixedParams*>(data);
   size -= sizeof(FuzzerFixedParams);

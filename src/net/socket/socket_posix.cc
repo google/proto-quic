@@ -547,24 +547,4 @@ void SocketPosix::StopWatchingAndCleanUp() {
   peer_address_.reset();
 }
 
-int SetReuseAddr(int fd, bool reuse) {
-  // SO_REUSEADDR is useful for server sockets to bind to a recently unbound
-  // port. When a socket is closed, the end point changes its state to TIME_WAIT
-  // and wait for 2 MSL (maximum segment lifetime) to ensure the remote peer
-  // acknowledges its closure. For server sockets, it is usually safe to
-  // bind to a TIME_WAIT end point immediately, which is a widely adopted
-  // behavior.
-  //
-  // Note that on *nix, SO_REUSEADDR does not enable the socket (which can be
-  // either TCP or UDP) to bind to an end point that is already bound by another
-  // socket. To do that one must set SO_REUSEPORT instead. This option is not
-  // provided on Linux prior to 3.9.
-  //
-  // SO_REUSEPORT is provided in MacOS X and iOS.
-  int boolean_value = reuse ? 1 : 0;
-  int rv = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &boolean_value,
-                      sizeof(boolean_value));
-  return rv == -1 ? MapSystemError(errno) : OK;
-}
-
 }  // namespace net

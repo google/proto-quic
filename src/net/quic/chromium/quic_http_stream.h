@@ -150,8 +150,9 @@ class NET_EXPORT_PRIVATE QuicHttpStream
   State next_state_;
 
   base::WeakPtr<QuicChromiumClientSession> session_;
+  const QuicServerId server_id_;  // The ID of the QUIC server for this stream.
 
-  HttpServerProperties* http_server_properties_;
+  HttpServerProperties* http_server_properties_;  // Unowned.
 
   QuicVersion quic_version_;
   int session_error_;             // Error code from the connection shutdown.

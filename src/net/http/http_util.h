@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <set>
 #include <string>
 #include <vector>
 
@@ -229,6 +230,21 @@ class NET_EXPORT HttpUtil {
   // Maps an HTTP status code to one of the status codes in the vector
   // returned by GetStatusCodesForHistogram.
   static int MapStatusCodeForHistogram(int code);
+
+  // Returns true if |accept_encoding| is well-formed.  Parsed encodings turned
+  // to lower case, are placed to provided string-set. Resulting set is
+  // augmented to fulfill the RFC 2616 and RFC 7231 recommendations, e.g. if
+  // there is no encodings specified, then {"*"} is returned to denote that
+  // client has to encoding preferences (but it does not imply that the
+  // user agent will be able to correctly process all encodings).
+  static bool ParseAcceptEncoding(const std::string& accept_encoding,
+                                  std::set<std::string>* allowed_encodings);
+
+  // Returns true if |content_encoding| is well-formed.  Parsed encodings turned
+  // to lower case, are placed to provided string-set. See sections 14.11 and
+  // 3.5 of RFC 2616.
+  static bool ParseContentEncoding(const std::string& content_encoding,
+                                   std::set<std::string>* used_encodings);
 
   // Used to iterate over the name/value pairs of HTTP headers.  To iterate
   // over the values in a multi-value header, use ValuesIterator.

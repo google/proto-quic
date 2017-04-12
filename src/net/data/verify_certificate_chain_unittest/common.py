@@ -42,6 +42,12 @@ JANUARY_1_2021_UTC = '210101120000Z'
 # The default time tests should use when verifying.
 DEFAULT_TIME = MARCH_2_2015_UTC
 
+KEY_PURPOSE_ANY = 'anyExtendedKeyUsage'
+KEY_PURPOSE_SERVER_AUTH = 'serverAuth'
+KEY_PURPOSE_CLIENT_AUTH = 'clientAuth'
+
+DEFAULT_KEY_PURPOSE = KEY_PURPOSE_SERVER_AUTH
+
 # Counters used to generate unique (but readable) path names.
 g_cur_path_id = {}
 
@@ -451,10 +457,10 @@ class TrustAnchor(object):
     return cert_data.replace('CERTIFICATE', block_name)
 
 
-def write_test_file(description, chain, trust_anchor, utc_time, verify_result,
-                    errors, out_pem=None):
+def write_test_file(description, chain, trust_anchor, utc_time, key_purpose,
+                    verify_result, errors, out_pem=None):
   """Writes a test file that contains all the inputs necessary to run a
-  verification on a certificate chain"""
+  verification on a certificate chain."""
 
   # Prepend the script name that generated the file to the description.
   test_data = '[Created by: %s]\n\n%s\n' % (sys.argv[0], description)
@@ -468,6 +474,8 @@ def write_test_file(description, chain, trust_anchor, utc_time, verify_result,
 
   verify_result_string = 'SUCCESS' if verify_result else 'FAIL'
   test_data += '\n' + text_data_to_pem('VERIFY_RESULT', verify_result_string)
+
+  test_data += '\n' + text_data_to_pem('KEY_PURPOSE', key_purpose)
 
   if errors is not None:
     test_data += '\n' + text_data_to_pem('ERRORS', errors)

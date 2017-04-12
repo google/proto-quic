@@ -26,8 +26,8 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CommonOptionsParser.h"
@@ -37,6 +37,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
 
 #include "EditTracker.h"
@@ -50,9 +51,6 @@ namespace {
 
 const char kBlinkFieldPrefix[] = "m_";
 const char kBlinkStaticMemberPrefix[] = "s_";
-const char kGeneratedFileRegex[] = "^gen/|/gen/";
-const char kGeneratedFileExclusionRegex[] =
-    "(^gen/|/gen/).*/ComputedStyleBase\\.h$";
 const char kGMockMethodNamePrefix[] = "gmock_";
 const char kMethodBlocklistParamName[] = "method-blocklist";
 
@@ -425,7 +423,7 @@ bool IsBlacklistedInstanceMethodName(llvm::StringRef name) {
 
       // https://crbug.com/672902: Should not rewrite names that mimick methods
       // from std library.
-      "back", "empty", "erase", "front", "insert", "length", "size",
+      "at", "back", "empty", "erase", "front", "insert", "length", "size",
   };
   for (const auto& b : kBlacklistedNames) {
     if (name == b)
@@ -516,12 +514,22 @@ AST_MATCHER(clang::Decl, isDeclInGeneratedFile) {
   if (!file_entry)
     return false;
 
-  static llvm::Regex exclusion_regex(kGeneratedFileExclusionRegex);
-  if (exclusion_regex.match(file_entry->getName()))
-    return false;
-
-  static llvm::Regex generated_file_regex(kGeneratedFileRegex);
-  return generated_file_regex.match(file_entry->getName());
+  bool is_generated_file = false;
+  bool is_computed_style_base_cpp =
+      llvm::sys::path::filename(file_entry->getName())
+          .equals("ComputedStyleBase.h");
+  for (auto it = llvm::sys::path::begin(file_entry->getName());
+       it != llvm::sys::path::end(file_entry->getName()); ++it) {
+    if (it->equals("gen")) {
+      is_generated_file = true;
+      break;
+    }
+  }
+  // ComputedStyleBase is intentionally not treated as a generated file, since
+  // style definitions are split between generated and non-generated code. It's
+  // easier to have the tool just automatically rewrite references to generated
+  // code as well, with a small manual patch to fix the code generators.
+  return is_generated_file && !is_computed_style_base_cpp;
 }
 
 // Helper to convert from a camelCaseName to camel_case_name. It uses some
@@ -657,93 +665,118 @@ AST_MATCHER_P(clang::QualType, hasString, std::string, ExpectedString) {
 bool ShouldPrefixFunctionName(const std::string& old_method_name) {
   // Functions that are named similarily to a type - they should be prefixed
   // with a "Get" prefix.
-  static const char* kConflictingMethods[] = {
-      "animationWorklet",
-      "audioWorklet",
-      "binaryType",
-      "blob",
-      "channelCountMode",
-      "color",
-      "compositorElementId",
-      "counterDirectives",
-      "document",
-      "element",
-      "emptyChromeClient",
-      "emptyEditorClient",
-      "emptySpellCheckerClient",
-      "entryType",
-      "error",
-      "fileUtilities",
-      "font",
-      "frame",
-      "frameBlameContext",
-      "frontend",
-      "gridCell",
-      "hash",
-      "heapObjectHeader",
-      "iconURL",
-      "image",
-      "inputMethodController",
-      "inputType",
-      "interpolationTypes",
-      "layout",
-      "layoutBlock",
-      "layoutObject",
-      "layoutSize",
-      "lineCap",
-      "lineEndings",
-      "lineJoin",
-      "listItems",
-      "matchedProperties",
-      "midpointState",
-      "modifiers",
-      "mouseEvent",
-      "name",
-      "navigationType",
-      "node",
-      "notificationManager",
-      "outcome",
-      "pagePopup",
-      "paintWorklet",
-      "path",
-      "position",
-      "processingInstruction",
-      "readyState",
-      "relList",
-      "referrer",
-      "referrerPolicy",
-      "resource",
-      "response",
-      "restrictedKeyMap",
-      "sandboxSupport",
-      "screenInfo",
-      "screenOrientationController",
-      "scrollAnimator",
-      "selectionInDOMTree",
-      "selectionInFlatTree",
-      "settings",
-      "signalingState",
-      "snapshotById",
-      "state",
-      "string",
-      "styleSheet",
-      "supplementable",
-      "text",
-      "textAlign",
-      "textBaseline",
-      "theme",
-      "thread",
-      "timing",
-      "topLevelBlameContext",
-      "type",
-      "vector",
-      "visibleSelection",
-      "visibleSelectionInFlatTree",
-      "webFrame",
-      "widget",
-      "wordBoundaries",
-      "wrapperTypeInfo",
-  };
+  static const char* kConflictingMethods[] = {"accumulatorMap",
+                                              "animationWorklet",
+                                              "attrNodeList",
+                                              "audioWorklet",
+                                              "binaryType",
+                                              "blob",
+                                              "channelCountMode",
+                                              "color",
+                                              "compositorElementId",
+                                              "constructionStack",
+                                              "controlSize",
+                                              "counterDirectives",
+                                              "counterMaps",
+                                              "document",
+                                              "dragOperation",
+                                              "element",
+                                              "emptyChromeClient",
+                                              "emptyEditorClient",
+                                              "emptySpellCheckerClient",
+                                              "entryType",
+                                              "error",
+                                              "eventTargetDataMap",
+                                              "fileUtilities",
+                                              "font",
+                                              "frame",
+                                              "frameBlameContext",
+                                              "frontend",
+                                              "gridCell",
+                                              "harfBuzzFontCache",
+                                              "hash",
+                                              "heapObjectHeader",
+                                              "heapObjectSet",
+                                              "iconURL",
+                                              "image",
+                                              "infoMap",
+                                              "inputMethodController",
+                                              "inputType",
+                                              "interpolationTypes",
+                                              "intervalArena",
+                                              "layout",
+                                              "layoutBlock",
+                                              "layoutObject",
+                                              "layoutSize",
+                                              "lineCap",
+                                              "lineEndings",
+                                              "lineJoin",
+                                              "listItems",
+                                              "locationInBackingMap",
+                                              "matchedProperties",
+                                              "midpointState",
+                                              "modifiers",
+                                              "mouseEvent",
+                                              "name",
+                                              "navigationType",
+                                              "node",
+                                              "notificationManager",
+                                              "originAccessMap",
+                                              "outcome",
+                                              "pagePopup",
+                                              "paintWorklet",
+                                              "path",
+                                              "position",
+                                              "presentationAttributeCache",
+                                              "processingInstruction",
+                                              "qualifiedNameCache",
+                                              "readyState",
+                                              "referrer",
+                                              "referrerPolicy",
+                                              "relList",
+                                              "resource",
+                                              "response",
+                                              "restrictedKeyMap",
+                                              "sandboxSupport",
+                                              "screenInfo",
+                                              "screenOrientationController",
+                                              "scrollAnimator",
+                                              "scrollbarPainterMap",
+                                              "scrollbarSet",
+                                              "selectionInDOMTree",
+                                              "selectionInFlatTree",
+                                              "selectionVisualRectMap",
+                                              "selectorTextCache",
+                                              "settings",
+                                              "shadowRootType",
+                                              "signalingState",
+                                              "snapshotById",
+                                              "state",
+                                              "stickyConstraintsMap",
+                                              "string",
+                                              "styleSharingList",
+                                              "styleSheet",
+                                              "supplementable",
+                                              "text",
+                                              "textAlign",
+                                              "textBaseline",
+                                              "textDirection",
+                                              "theme",
+                                              "thread",
+                                              "timing",
+                                              "topLevelBlameContext",
+                                              "type",
+                                              "vector",
+                                              "visibleSelection",
+                                              "visibleSelectionInFlatTree",
+                                              "weakHeapObjectSet",
+                                              "webFrame",
+                                              "widget",
+                                              "wordBoundaries",
+                                              "workerThread",
+                                              "worldId",
+                                              "worldMap",
+                                              "wrapperTypeInfo"};
   for (const auto& conflicting_method : kConflictingMethods) {
     if (old_method_name == conflicting_method)
       return true;

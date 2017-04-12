@@ -24,10 +24,12 @@ target.get_extensions().set_property('basicConstraints',
 chain = [target, intermediate]
 trusted = common.TrustAnchor(root, constrained=False)
 time = common.DEFAULT_TIME
+key_purpose = common.DEFAULT_KEY_PURPOSE
 verify_result = False
 errors = """----- Certificate i=0 (CN=Target) -----
 ERROR: Target certificate looks like a CA but does not set all CA properties
 
 """
 
-common.write_test_file(__doc__, chain, trusted, time, verify_result, errors)
+common.write_test_file(__doc__, chain, trusted, time, key_purpose,
+                       verify_result, errors)

@@ -25,7 +25,7 @@ namespace net {
 class QUIC_EXPORT_PRIVATE QuicDataWriter {
  public:
   // Creates a QuicDataWriter where |buffer| is not owned.
-  QuicDataWriter(size_t size, char* buffer);
+  QuicDataWriter(size_t size, char* buffer, Perspective perspective);
 
   ~QuicDataWriter();
 
@@ -76,6 +76,11 @@ class QUIC_EXPORT_PRIVATE QuicDataWriter {
   char* buffer_;
   size_t capacity_;  // Allocation size of payload (or -1 if buffer is const).
   size_t length_;    // Current length of the buffer.
+
+  // Perspective of this data writer. Please note, although client and server
+  // may have different in-memory representation of the same field, the on wire
+  // representation must be consistent.
+  Perspective perspective_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicDataWriter);
 };

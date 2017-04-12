@@ -278,34 +278,14 @@ bool IsWeakChainBasedOnHashingAlgorithms(
   return !leaf_uses_weak_hash && intermediates_contain_weak_hash;
 }
 
-using ExtensionsMap = std::map<net::der::Input, net::ParsedExtension>;
-
-// Helper that looks up an extension by OID given a map of extensions.
-bool GetExtensionValue(const ExtensionsMap& extensions,
-                       const net::der::Input& oid,
-                       net::der::Input* value) {
-  auto it = extensions.find(oid);
-  if (it == extensions.end())
-    return false;
-  *value = it->second.value;
-  return true;
-}
-
 // Checks if |*cert| has a Certificate Policies extension containing either
 // of |ev_policy_oid| or anyPolicy.
 bool HasPolicyOrAnyPolicy(const ParsedCertificate* cert,
                           const der::Input& ev_policy_oid) {
-  der::Input extension_value;
-  if (!GetExtensionValue(cert->unparsed_extensions(), CertificatePoliciesOid(),
-                         &extension_value)) {
-    return false;
-  }
-
-  std::vector<der::Input> policies;
-  if (!ParseCertificatePoliciesExtension(extension_value, &policies))
+  if (!cert->has_policy_oids())
     return false;
 
-  for (const der::Input& policy_oid : policies) {
+  for (const der::Input& policy_oid : cert->policy_oids()) {
     if (policy_oid == ev_policy_oid || policy_oid == AnyPolicy())
       return true;
   }
@@ -329,18 +309,11 @@ void GetCandidateEVPolicy(const X509Certificate* cert_input,
   if (!cert)
     return;
 
-  der::Input extension_value;
-  if (!GetExtensionValue(cert->unparsed_extensions(), CertificatePoliciesOid(),
-                         &extension_value)) {
-    return;
-  }
-
-  std::vector<der::Input> policies;
-  if (!ParseCertificatePoliciesExtension(extension_value, &policies))
+  if (!cert->has_policy_oids())
     return;
 
   EVRootCAMetadata* metadata = EVRootCAMetadata::GetInstance();
-  for (const der::Input& policy_oid : policies) {
+  for (const der::Input& policy_oid : cert->policy_oids()) {
     if (metadata->IsEVPolicyOID(policy_oid)) {
       *ev_policy_oid = policy_oid.AsString();
 

@@ -77,8 +77,7 @@ base::TimeTicks InstantaneousReads() {
 
 class MockRequireCTDelegate : public TransportSecurityState::RequireCTDelegate {
  public:
-  MOCK_METHOD1(IsCTRequiredForHost,
-               CTRequirementLevel(const std::string& host));
+  MOCK_METHOD1(IsCTRequiredForHost, CTRequirementLevel(const SpdyString& host));
 };
 
 }  // namespace
@@ -2005,10 +2004,10 @@ TEST_F(SpdySessionTest, NetLogOnSessionGoaway) {
   int unclaimed_streams;
   ASSERT_TRUE(entry.GetIntegerValue("unclaimed_streams", &unclaimed_streams));
   EXPECT_EQ(0, unclaimed_streams);
-  std::string error_code;
+  SpdyString error_code;
   ASSERT_TRUE(entry.GetStringValue("error_code", &error_code));
   EXPECT_EQ("11 (ENHANCE_YOUR_CALM)", error_code);
-  std::string debug_data;
+  SpdyString debug_data;
   ASSERT_TRUE(entry.GetStringValue("debug_data", &debug_data));
   EXPECT_EQ("foo", debug_data);
 
@@ -2290,7 +2289,7 @@ TEST_F(SpdySessionTest, CloseSessionWithTwoCreatedSelfClosingStreams) {
   EXPECT_EQ(0u, spdy_stream2->stream_id());
 
   // Ensure we don't crash while closing the session.
-  session_->CloseSessionOnError(ERR_ABORTED, std::string());
+  session_->CloseSessionOnError(ERR_ABORTED, SpdyString());
 
   EXPECT_FALSE(spdy_stream1);
   EXPECT_FALSE(spdy_stream2);
@@ -2346,7 +2345,7 @@ TEST_F(SpdySessionTest, CloseSessionWithTwoCreatedMutuallyClosingStreams) {
   EXPECT_EQ(0u, spdy_stream2->stream_id());
 
   // Ensure we don't crash while closing the session.
-  session_->CloseSessionOnError(ERR_ABORTED, std::string());
+  session_->CloseSessionOnError(ERR_ABORTED, SpdyString());
 
   EXPECT_FALSE(spdy_stream1);
   EXPECT_FALSE(spdy_stream2);
@@ -2417,7 +2416,7 @@ TEST_F(SpdySessionTest, CloseSessionWithTwoActivatedSelfClosingStreams) {
   EXPECT_EQ(3u, spdy_stream2->stream_id());
 
   // Ensure we don't crash while closing the session.
-  session_->CloseSessionOnError(ERR_ABORTED, std::string());
+  session_->CloseSessionOnError(ERR_ABORTED, SpdyString());
 
   EXPECT_FALSE(spdy_stream1);
   EXPECT_FALSE(spdy_stream2);
@@ -2492,7 +2491,7 @@ TEST_F(SpdySessionTest, CloseSessionWithTwoActivatedMutuallyClosingStreams) {
   EXPECT_EQ(3u, spdy_stream2->stream_id());
 
   // Ensure we don't crash while closing the session.
-  session_->CloseSessionOnError(ERR_ABORTED, std::string());
+  session_->CloseSessionOnError(ERR_ABORTED, SpdyString());
 
   EXPECT_FALSE(spdy_stream1);
   EXPECT_FALSE(spdy_stream2);
@@ -3395,12 +3394,12 @@ TEST_F(SpdySessionTest, CloseOneIdleConnectionWithAlias) {
 
   session_deps_.host_resolver->set_synchronous_mode(true);
   session_deps_.host_resolver->rules()->AddIPLiteralRule(
-      "www.example.org", "192.168.0.2", std::string());
+      "www.example.org", "192.168.0.2", SpdyString());
   session_deps_.host_resolver->rules()->AddIPLiteralRule(
-      "mail.example.org", "192.168.0.2", std::string());
+      "mail.example.org", "192.168.0.2", SpdyString());
   // Not strictly needed.
-  session_deps_.host_resolver->rules()->AddIPLiteralRule(
-      "3.com", "192.168.0.3", std::string());
+  session_deps_.host_resolver->rules()->AddIPLiteralRule("3.com", "192.168.0.3",
+                                                         SpdyString());
 
   CreateNetworkSession();
 
@@ -3571,11 +3570,11 @@ TEST_F(SpdySessionTest, SpdySessionKeyPrivacyMode) {
   EXPECT_TRUE(HasSpdySession(spdy_session_pool_, key_privacy_enabled));
   EXPECT_TRUE(HasSpdySession(spdy_session_pool_, key_privacy_disabled));
 
-  session_privacy_enabled->CloseSessionOnError(ERR_ABORTED, std::string());
+  session_privacy_enabled->CloseSessionOnError(ERR_ABORTED, SpdyString());
   EXPECT_FALSE(HasSpdySession(spdy_session_pool_, key_privacy_enabled));
   EXPECT_TRUE(HasSpdySession(spdy_session_pool_, key_privacy_disabled));
 
-  session_privacy_disabled->CloseSessionOnError(ERR_ABORTED, std::string());
+  session_privacy_disabled->CloseSessionOnError(ERR_ABORTED, SpdyString());
   EXPECT_FALSE(HasSpdySession(spdy_session_pool_, key_privacy_enabled));
   EXPECT_FALSE(HasSpdySession(spdy_session_pool_, key_privacy_disabled));
 }
@@ -3885,7 +3884,7 @@ TEST_F(SpdySessionTest, StreamFlowControlTooMuchData) {
   };
 
   SpdySerializedFrame resp(spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
-  const std::string payload(data_frame_size, 'a');
+  const SpdyString payload(data_frame_size, 'a');
   SpdySerializedFrame data_frame(spdy_util_.ConstructSpdyDataFrame(
       1, payload.data(), data_frame_size, false));
   MockRead reads[] = {
@@ -3959,10 +3958,10 @@ TEST_F(SpdySessionTest, SessionFlowControlTooMuchDataTwoDataFrames) {
       CreateMockWrite(goaway, 4),
   };
 
-  const std::string first_data_frame(first_data_frame_size, 'a');
+  const SpdyString first_data_frame(first_data_frame_size, 'a');
   SpdySerializedFrame first(spdy_util_.ConstructSpdyDataFrame(
       1, first_data_frame.data(), first_data_frame_size, false));
-  const std::string second_data_frame(second_data_frame_size, 'b');
+  const SpdyString second_data_frame(second_data_frame_size, 'b');
   SpdySerializedFrame second(spdy_util_.ConstructSpdyDataFrame(
       1, second_data_frame.data(), second_data_frame_size, false));
   MockRead reads[] = {
@@ -4019,10 +4018,10 @@ TEST_F(SpdySessionTest, StreamFlowControlTooMuchDataTwoDataFrames) {
   };
 
   SpdySerializedFrame resp(spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
-  const std::string first_data_frame(first_data_frame_size, 'a');
+  const SpdyString first_data_frame(first_data_frame_size, 'a');
   SpdySerializedFrame first(spdy_util_.ConstructSpdyDataFrame(
       1, first_data_frame.data(), first_data_frame_size, false));
-  const std::string second_data_frame(second_data_frame_size, 'b');
+  const SpdyString second_data_frame(second_data_frame_size, 'b');
   SpdySerializedFrame second(spdy_util_.ConstructSpdyDataFrame(
       1, second_data_frame.data(), second_data_frame_size, false));
   MockRead reads[] = {
@@ -4066,7 +4065,7 @@ TEST_F(SpdySessionTest, StreamFlowControlTooMuchDataTwoDataFrames) {
             spdy_stream->recv_window_size());
 
   // Consume first data frame.  This does not trigger a WINDOW_UPDATE.
-  std::string received_data = delegate.TakeReceivedData();
+  SpdyString received_data = delegate.TakeReceivedData();
   EXPECT_EQ(static_cast<size_t>(first_data_frame_size), received_data.size());
   EXPECT_EQ(stream_max_recv_window_size, spdy_stream->recv_window_size());
 
@@ -4100,7 +4099,7 @@ class DropReceivedDataDelegate : public test::StreamDelegateSendImmediate {
 // value, i.e. we shouldn't "leak" receive window bytes.
 TEST_F(SpdySessionTest, SessionFlowControlNoReceiveLeaks) {
   const int32_t kMsgDataSize = 100;
-  const std::string msg_data(kMsgDataSize, 'a');
+  const SpdyString msg_data(kMsgDataSize, 'a');
 
   SpdySerializedFrame req(spdy_util_.ConstructSpdyPost(
       kDefaultUrl, 1, kMsgDataSize, MEDIUM, nullptr, 0));
@@ -4171,7 +4170,7 @@ TEST_F(SpdySessionTest, SessionFlowControlNoReceiveLeaks) {
 // to its original value, i.e. we shouldn't "leak" send window bytes.
 TEST_F(SpdySessionTest, SessionFlowControlNoSendLeaks) {
   const int32_t kMsgDataSize = 100;
-  const std::string msg_data(kMsgDataSize, 'a');
+  const SpdyString msg_data(kMsgDataSize, 'a');
 
   SpdySerializedFrame req(spdy_util_.ConstructSpdyPost(
       kDefaultUrl, 1, kMsgDataSize, MEDIUM, nullptr, 0));
@@ -4243,7 +4242,7 @@ TEST_F(SpdySessionTest, SessionFlowControlNoSendLeaks) {
 // change appropriately.
 TEST_F(SpdySessionTest, SessionFlowControlEndToEnd) {
   const int32_t kMsgDataSize = 100;
-  const std::string msg_data(kMsgDataSize, 'a');
+  const SpdyString msg_data(kMsgDataSize, 'a');
 
   SpdySerializedFrame req(spdy_util_.ConstructSpdyPost(
       kDefaultUrl, 1, kMsgDataSize, MEDIUM, nullptr, 0));
@@ -4406,7 +4405,7 @@ void SpdySessionTest::RunResumeAfterUnstallTest(
 
   EXPECT_TRUE(delegate.send_headers_completed());
   EXPECT_EQ("200", delegate.GetResponseHeaderValue(":status"));
-  EXPECT_EQ(std::string(), delegate.TakeReceivedData());
+  EXPECT_EQ(SpdyString(), delegate.TakeReceivedData());
 
   // Run SpdySession::PumpWriteLoop which destroys |session_|.
   base::RunLoop().RunUntilIdle();
@@ -4567,11 +4566,11 @@ TEST_F(SpdySessionTest, ResumeByPriorityAfterSendWindowSizeIncrease) {
 
   EXPECT_TRUE(delegate1.send_headers_completed());
   EXPECT_EQ("200", delegate1.GetResponseHeaderValue(":status"));
-  EXPECT_EQ(std::string(), delegate1.TakeReceivedData());
+  EXPECT_EQ(SpdyString(), delegate1.TakeReceivedData());
 
   EXPECT_TRUE(delegate2.send_headers_completed());
   EXPECT_EQ("200", delegate2.GetResponseHeaderValue(":status"));
-  EXPECT_EQ(std::string(), delegate2.TakeReceivedData());
+  EXPECT_EQ(SpdyString(), delegate2.TakeReceivedData());
 
   EXPECT_FALSE(session_);
   EXPECT_TRUE(data.AllWriteDataConsumed());
@@ -4729,14 +4728,14 @@ TEST_F(SpdySessionTest, SendWindowSizeIncreaseWithDeletedStreams) {
   EXPECT_THAT(delegate3.WaitForClose(), IsOk());
 
   EXPECT_TRUE(delegate1.send_headers_completed());
-  EXPECT_EQ(std::string(), delegate1.TakeReceivedData());
+  EXPECT_EQ(SpdyString(), delegate1.TakeReceivedData());
 
   EXPECT_TRUE(delegate2.send_headers_completed());
   EXPECT_EQ("200", delegate2.GetResponseHeaderValue(":status"));
-  EXPECT_EQ(std::string(), delegate2.TakeReceivedData());
+  EXPECT_EQ(SpdyString(), delegate2.TakeReceivedData());
 
   EXPECT_TRUE(delegate3.send_headers_completed());
-  EXPECT_EQ(std::string(), delegate3.TakeReceivedData());
+  EXPECT_EQ(SpdyString(), delegate3.TakeReceivedData());
 
   EXPECT_TRUE(data.AllWriteDataConsumed());
 }
@@ -4828,10 +4827,10 @@ TEST_F(SpdySessionTest, SendWindowSizeIncreaseWithDeletedSession) {
   EXPECT_THAT(delegate2.WaitForClose(), IsError(ERR_CONNECTION_CLOSED));
 
   EXPECT_TRUE(delegate1.send_headers_completed());
-  EXPECT_EQ(std::string(), delegate1.TakeReceivedData());
+  EXPECT_EQ(SpdyString(), delegate1.TakeReceivedData());
 
   EXPECT_TRUE(delegate2.send_headers_completed());
-  EXPECT_EQ(std::string(), delegate2.TakeReceivedData());
+  EXPECT_EQ(SpdyString(), delegate2.TakeReceivedData());
 
   EXPECT_TRUE(data.AllWriteDataConsumed());
 }

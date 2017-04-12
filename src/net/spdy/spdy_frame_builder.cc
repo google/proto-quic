@@ -131,6 +131,25 @@ bool SpdyFrameBuilder::BeginNewFrame(const SpdyFramer& framer,
                                      size_t length) {
   uint8_t raw_frame_type = SerializeFrameType(type);
   DCHECK(IsDefinedFrameType(raw_frame_type));
+  return BeginNewFrameInternal(framer, raw_frame_type, flags, stream_id,
+                               length);
+}
+
+bool SpdyFrameBuilder::BeginNewExtensionFrame(const SpdyFramer& framer,
+                                              uint8_t raw_frame_type,
+                                              uint8_t flags,
+                                              SpdyStreamId stream_id,
+                                              size_t length) {
+  DCHECK(!IsDefinedFrameType(raw_frame_type));
+  return BeginNewFrameInternal(framer, raw_frame_type, flags, stream_id,
+                               length);
+}
+
+bool SpdyFrameBuilder::BeginNewFrameInternal(const SpdyFramer& framer,
+                                             uint8_t raw_frame_type,
+                                             uint8_t flags,
+                                             SpdyStreamId stream_id,
+                                             size_t length) {
   DCHECK_EQ(0u, stream_id & ~kStreamIdMask);
   bool success = true;
   SPDY_BUG_IF(framer.GetFrameMaximumSize() < length_)

@@ -58,7 +58,7 @@ class MockCryptoClientStream : public QuicCryptoClientStream {
   void OnHandshakeMessage(const CryptoHandshakeMessage& message) override;
 
   // QuicCryptoClientStream implementation.
-  void CryptoConnect() override;
+  bool CryptoConnect() override;
 
   // Invokes the sessions's CryptoHandshakeEvent method with the specified
   // event.

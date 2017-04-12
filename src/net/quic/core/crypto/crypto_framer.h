@@ -44,7 +44,8 @@ class QUIC_EXPORT_PRIVATE CryptoFramer {
   // there is an error, the message is truncated, or the message has trailing
   // garbage then nullptr will be returned.
   static std::unique_ptr<CryptoHandshakeMessage> ParseMessage(
-      QuicStringPiece in);
+      QuicStringPiece in,
+      Perspective perspective);
 
   // Set callbacks to be called from the framer.  A visitor must be set, or
   // else the framer will crash.  It is acceptable for the visitor to do
@@ -59,7 +60,7 @@ class QUIC_EXPORT_PRIVATE CryptoFramer {
 
   // Processes input data, which must be delivered in order. Returns
   // false if there was an error, and true otherwise.
-  bool ProcessInput(QuicStringPiece input);
+  bool ProcessInput(QuicStringPiece input, Perspective perspective);
 
   // Returns the number of bytes of buffered input data remaining to be
   // parsed.
@@ -68,7 +69,8 @@ class QUIC_EXPORT_PRIVATE CryptoFramer {
   // Returns a new QuicData owned by the caller that contains a serialized
   // |message|, or nullptr if there was an error.
   static QuicData* ConstructHandshakeMessage(
-      const CryptoHandshakeMessage& message);
+      const CryptoHandshakeMessage& message,
+      Perspective perspective);
 
  private:
   // Clears per-message state.  Does not clear the visitor.
@@ -76,7 +78,7 @@ class QUIC_EXPORT_PRIVATE CryptoFramer {
 
   // Process does does the work of |ProcessInput|, but returns an error code,
   // doesn't set error_ and doesn't call |visitor_->OnError()|.
-  QuicErrorCode Process(QuicStringPiece input);
+  QuicErrorCode Process(QuicStringPiece input, Perspective perspective);
 
   static bool WritePadTag(QuicDataWriter* writer,
                           size_t pad_length,

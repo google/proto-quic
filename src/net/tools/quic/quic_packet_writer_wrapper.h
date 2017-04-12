@@ -40,6 +40,8 @@ class QuicPacketWriterWrapper : public QuicPacketWriter {
 
   virtual void set_peer_address(const QuicSocketAddress& peer_address) {}
 
+  QuicPacketWriter* writer() { return writer_.get(); }
+
  private:
   std::unique_ptr<QuicPacketWriter> writer_;
 

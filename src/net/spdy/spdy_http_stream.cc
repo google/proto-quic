@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <list>
 #include <memory>
-#include <string>
 #include <utility>
 
 #include "base/bind.h"
@@ -24,6 +23,7 @@
 #include "net/http/http_response_info.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_with_source.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/spdy_header_block.h"
 #include "net/spdy/spdy_http_utils.h"
 #include "net/spdy/spdy_protocol.h"
@@ -445,7 +445,7 @@ void SpdyHttpStream::InitializeStreamHelper() {
 
 void SpdyHttpStream::ResetStreamInternal() {
   spdy_session_->ResetStream(stream()->stream_id(), ERROR_CODE_INTERNAL_ERROR,
-                             std::string());
+                             SpdyString());
 }
 
 void SpdyHttpStream::OnRequestBodyReadCompleted(int status) {

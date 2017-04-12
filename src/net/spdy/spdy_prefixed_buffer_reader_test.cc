@@ -4,6 +4,7 @@
 
 #include "net/spdy/spdy_prefixed_buffer_reader.h"
 
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -16,14 +17,14 @@ using testing::ElementsAreArray;
 
 class SpdyPrefixedBufferReaderTest : public ::testing::Test {
  protected:
-  SpdyPrefixedBufferReader Build(const std::string& prefix,
-                                 const std::string& suffix) {
+  SpdyPrefixedBufferReader Build(const SpdyString& prefix,
+                                 const SpdyString& suffix) {
     prefix_ = prefix;
     suffix_ = suffix;
     return SpdyPrefixedBufferReader(prefix_.data(), prefix_.length(),
                                     suffix_.data(), suffix_.length());
   }
-  std::string prefix_, suffix_;
+  SpdyString prefix_, suffix_;
 };
 
 TEST_F(SpdyPrefixedBufferReaderTest, ReadRawFromPrefix) {

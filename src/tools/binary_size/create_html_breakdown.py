@@ -14,6 +14,7 @@ import sys
 
 import helpers
 import map2size
+import paths
 
 
 # Node dictionary keys. These are output in json read by the webapp so
@@ -176,10 +177,11 @@ def main(argv):
                            'space)')
   parser.add_argument('--include-symbols', action='store_true',
                       help='Use per-symbol granularity rather than per-file.')
-  map2size.AddOptions(parser)
+  paths.AddOptions(parser)
   args = helpers.AddCommonOptionsAndParseArgs(parser, argv)
 
-  size_info = map2size.AnalyzeWithArgs(args, args.input_file)
+  lazy_paths = paths.LazyPaths(args=args, input_file=args.input_file)
+  size_info = map2size.Analyze(args.input_file, lazy_paths)
   symbols = size_info.symbols
   if not args.include_bss:
     symbols = symbols.WhereInSection('b').Inverted()

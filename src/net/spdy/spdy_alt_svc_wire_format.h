@@ -10,11 +10,11 @@
 #ifndef NET_SPDY_SPDY_ALT_SVC_WIRE_FORMAT_H_
 #define NET_SPDY_SPDY_ALT_SVC_WIRE_FORMAT_H_
 
-#include <stdint.h>
-
+#include <cstdint>
 #include <vector>
 
 #include "net/base/net_export.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
 namespace net {
@@ -28,8 +28,8 @@ class NET_EXPORT_PRIVATE SpdyAltSvcWireFormat {
   using VersionVector = std::vector<uint16_t>;
 
   struct NET_EXPORT_PRIVATE AlternativeService {
-    std::string protocol_id;
-    std::string host;
+    SpdyString protocol_id;
+    SpdyString host;
 
     // Default is 0: invalid port.
     uint16_t port = 0;
@@ -39,8 +39,8 @@ class NET_EXPORT_PRIVATE SpdyAltSvcWireFormat {
     VersionVector version;
 
     AlternativeService();
-    AlternativeService(const std::string& protocol_id,
-                       const std::string& host,
+    AlternativeService(const SpdyString& protocol_id,
+                       const SpdyString& host,
                        uint16_t port,
                        uint32_t max_age,
                        VersionVector version);
@@ -61,7 +61,7 @@ class NET_EXPORT_PRIVATE SpdyAltSvcWireFormat {
   friend class test::SpdyAltSvcWireFormatPeer;
   static bool ParseHeaderFieldValue(SpdyStringPiece value,
                                     AlternativeServiceVector* altsvc_vector);
-  static std::string SerializeHeaderFieldValue(
+  static SpdyString SerializeHeaderFieldValue(
       const AlternativeServiceVector& altsvc_vector);
 
  private:
@@ -69,10 +69,10 @@ class NET_EXPORT_PRIVATE SpdyAltSvcWireFormat {
                              SpdyStringPiece::const_iterator end);
   static bool PercentDecode(SpdyStringPiece::const_iterator c,
                             SpdyStringPiece::const_iterator end,
-                            std::string* output);
+                            SpdyString* output);
   static bool ParseAltAuthority(SpdyStringPiece::const_iterator c,
                                 SpdyStringPiece::const_iterator end,
-                                std::string* host,
+                                SpdyString* host,
                                 uint16_t* port);
   static bool ParsePositiveInteger16(SpdyStringPiece::const_iterator c,
                                      SpdyStringPiece::const_iterator end,

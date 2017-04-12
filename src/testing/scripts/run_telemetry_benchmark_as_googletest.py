@@ -66,6 +66,8 @@ def main():
     failures = []
     chartjson_results_present = '--output-format=chartjson' in rest_args
     chartresults = None
+
+    results = None
     try:
       rc = common.run_command([sys.executable] + rest_args + [
         '--output-dir', tempfile_dir,
@@ -87,11 +89,19 @@ def main():
           results = json.load(f)
         for value in results['per_page_values']:
           if value['type'] == 'failure':
-            failures.append(results['pages'][str(value['page_id'])]['name'])
+            page_data = results['pages'][str(value['page_id'])]
+            name = page_data.get('name')
+            if not name:
+              name = page_data['url']
+
+            failures.append(name)
         valid = bool(rc == 0 or failures)
 
     except Exception:
       traceback.print_exc()
+      if results:
+        print 'results, which possibly caused exception: %s' % json.dumps(
+            results, indent=2)
       valid = False
     finally:
       shutil.rmtree(tempfile_dir)

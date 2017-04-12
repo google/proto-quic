@@ -706,6 +706,9 @@ NET_ERROR(SPDY_RST_STREAM_NO_ERROR_RECEIVED, -372)
 // The client MAY retry the request over a different connection.
 NET_ERROR(MISDIRECTED_REQUEST, -373)
 
+// There is a QUIC protocol error and QUIC has been marked as broken.
+NET_ERROR(QUIC_BROKEN_ERROR, -374)
+
 // The cache does not have the requested entry.
 NET_ERROR(CACHE_MISS, -400)
 

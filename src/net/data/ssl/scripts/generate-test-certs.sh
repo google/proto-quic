@@ -201,6 +201,11 @@ try openssl req -x509 -days 3650 -extensions req_san_sanity \
     -config ../scripts/ee.cnf -newkey rsa:2048 -text \
     -out ../certificates/subjectAltName_sanity_check.pem
 
+## SubjectAltName containing www.example.com
+try openssl req -x509 -days 3650 -extensions req_san_example \
+    -config ../scripts/ee.cnf -newkey rsa:2048 -text \
+    -out ../certificates/subjectAltName_www_example_com.pem
+
 ## Punycode handling
 SUBJECT_NAME="req_punycode_dn" \
   try openssl req -x509 -days 3650 -extensions req_punycode \

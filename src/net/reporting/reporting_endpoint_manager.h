@@ -11,8 +11,10 @@
 #include <string>
 
 #include "base/macros.h"
+#include "base/time/tick_clock.h"
 #include "net/base/backoff_entry.h"
 #include "net/base/net_export.h"
+#include "net/reporting/reporting_context.h"
 
 class GURL;
 
@@ -27,16 +29,15 @@ class Origin;
 namespace net {
 
 class ReportingCache;
+struct ReportingPolicy;
 
 // Keeps track of which endpoints are pending (have active delivery attempts to
 // them) or in exponential backoff after one or more failures, and chooses an
 // endpoint from an endpoint group to receive reports for an origin.
 class NET_EXPORT ReportingEndpointManager {
  public:
-  // Note: All three parameters must outlive the endpoint manager.
-  ReportingEndpointManager(base::TickClock* clock,
-                           const ReportingCache* cache,
-                           const BackoffEntry::Policy* backoff_policy);
+  // |context| must outlive the ReportingEndpointManager.
+  ReportingEndpointManager(ReportingContext* context);
   ~ReportingEndpointManager();
 
   // Finds an endpoint configured by |origin| in group |group| that is not
@@ -64,9 +65,11 @@ class NET_EXPORT ReportingEndpointManager {
   void InformOfEndpointRequest(const GURL& endpoint, bool succeeded);
 
  private:
-  base::TickClock* clock_;
-  const ReportingCache* cache_;
-  const BackoffEntry::Policy* backoff_policy_;
+  const ReportingPolicy& policy() { return context_->policy(); }
+  base::TickClock* tick_clock() { return context_->tick_clock(); }
+  ReportingCache* cache() { return context_->cache(); }
+
+  ReportingContext* context_;
 
   std::set<GURL> pending_endpoints_;
   std::map<GURL, std::unique_ptr<net::BackoffEntry>> endpoint_backoff_;

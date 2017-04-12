@@ -28,7 +28,7 @@ struct BASE_EXPORT Task : public PendingTask {
   // behavior in |traits| is BLOCK_SHUTDOWN, the shutdown behavior is
   // automatically adjusted to SKIP_ON_SHUTDOWN.
   Task(const tracked_objects::Location& posted_from,
-       Closure task,
+       OnceClosure task,
        const TaskTraits& traits,
        TimeDelta delay);
   ~Task();

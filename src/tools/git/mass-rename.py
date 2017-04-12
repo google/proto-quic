@@ -28,13 +28,18 @@ def main():
   out, _ = popen.communicate()
   if popen.returncode != 0:
     return 1
-  for line in out.splitlines():
+  lines = out.splitlines()
+  for item, line in enumerate(lines, 1):
+    # Print progress
+    print '[%d/%d]' % (item, len(lines)),
+
     parts = line.split('\t')
     if len(parts) != 3:
       print 'Skipping: %s -- not a rename?' % parts
       continue
     attrs, fro, to = parts
     if attrs.split()[4].startswith('R'):
+      print 'Moving: %s' % fro
       subprocess.check_call([
         sys.executable,
         os.path.join(BASE_DIR, 'move_source_file.py'),

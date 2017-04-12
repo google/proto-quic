@@ -10,7 +10,6 @@
 #include <functional>
 #include <map>
 #include <memory>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -18,6 +17,7 @@
 #include "net/base/net_export.h"
 #include "net/spdy/hpack/hpack_header_table.h"
 #include "net/spdy/hpack/hpack_output_stream.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/spdy_protocol.h"
 
@@ -52,11 +52,11 @@ class NET_EXPORT_PRIVATE HpackEncoder {
 
   // Encodes a sequence of Representations into the given string.
   void EncodeHeaderSet(const Representations& representations,
-                       std::string* output);
+                       SpdyString* output);
 
   // Encodes the given header set into the given string. Returns
   // whether or not the encoding was successful.
-  bool EncodeHeaderSet(const SpdyHeaderBlock& header_set, std::string* output);
+  bool EncodeHeaderSet(const SpdyHeaderBlock& header_set, SpdyString* output);
 
   class NET_EXPORT_PRIVATE ProgressiveEncoder {
    public:
@@ -67,7 +67,7 @@ class NET_EXPORT_PRIVATE HpackEncoder {
 
     // Encodes up to max_encoded_bytes of the current header block into the
     // given output string.
-    virtual void Next(size_t max_encoded_bytes, std::string* output) = 0;
+    virtual void Next(size_t max_encoded_bytes, SpdyString* output) = 0;
   };
 
   // Returns a ProgressiveEncoder which must be outlived by both the given
@@ -109,7 +109,7 @@ class NET_EXPORT_PRIVATE HpackEncoder {
   class Encoderator;
 
   // Encodes a sequence of header name-value pairs as a single header block.
-  void EncodeRepresentations(RepresentationIterator* iter, std::string* output);
+  void EncodeRepresentations(RepresentationIterator* iter, SpdyString* output);
 
   // Emits a static/dynamic indexed representation (Section 7.1).
   void EmitIndex(const HpackEntry* entry);

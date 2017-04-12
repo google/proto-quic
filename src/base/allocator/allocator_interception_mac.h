@@ -8,6 +8,7 @@
 #include <stddef.h>
 
 #include "base/base_export.h"
+#include "third_party/apple_apsl/malloc.h"
 
 namespace base {
 namespace allocator {
@@ -39,6 +40,15 @@ BASE_EXPORT void InterceptAllocationsMac();
 // Updates all malloc zones to use their original functions.
 // Also calls ClearAllMallocZonesForTesting.
 BASE_EXPORT void UninterceptMallocZonesForTesting();
+
+// Periodically checks for, and shims new malloc zones. Stops checking after 1
+// minute.
+BASE_EXPORT void PeriodicallyShimNewMallocZones();
+
+// Exposed for testing.
+BASE_EXPORT void ShimNewMallocZones();
+BASE_EXPORT void ReplaceZoneFunctions(ChromeMallocZone* zone,
+                                      const MallocZoneFunctions* functions);
 
 }  // namespace allocator
 }  // namespace base

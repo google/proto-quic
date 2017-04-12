@@ -804,7 +804,7 @@ std::unique_ptr<Value> JSONParser::ConsumeLiteral() {
         return nullptr;
       }
       NextNChars(kNullLen - 1);
-      return Value::CreateNullValue();
+      return MakeUnique<Value>();
     }
     default:
       ReportError(JSONReader::JSON_UNEXPECTED_TOKEN, 1);

@@ -70,7 +70,7 @@ class BASE_EXPORT TaskScheduler {
   virtual void PostDelayedTaskWithTraits(
       const tracked_objects::Location& from_here,
       const TaskTraits& traits,
-      Closure task,
+      OnceClosure task,
       TimeDelta delay) = 0;
 
   // Returns a TaskRunner whose PostTask invocations result in scheduling tasks

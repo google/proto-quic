@@ -431,8 +431,24 @@ size_t StatisticsRecorder::GetHistogramCount() {
 
 // static
 void StatisticsRecorder::ForgetHistogramForTesting(base::StringPiece name) {
-  if (histograms_)
-    histograms_->erase(name);
+  if (!histograms_)
+    return;
+
+  HistogramMap::iterator found = histograms_->find(name);
+  if (found == histograms_->end())
+    return;
+
+  HistogramBase* base = found->second;
+  if (base->GetHistogramType() != SPARSE_HISTOGRAM) {
+    // When forgetting a histogram, it's likely that other information is
+    // also becoming invalid. Clear the persistent reference that may no
+    // longer be valid. There's no danger in this as, at worst, duplicates
+    // will be created in persistent memory.
+    Histogram* histogram = static_cast<Histogram*>(base);
+    histogram->bucket_ranges()->set_persistent_reference(0);
+  }
+
+  histograms_->erase(found);
 }
 
 // static

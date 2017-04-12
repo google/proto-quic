@@ -4,7 +4,6 @@
 
 #include <cmath>
 #include <memory>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -39,6 +38,7 @@
 #include "net/socket/client_socket_pool_base.h"
 #include "net/socket/next_proto.h"
 #include "net/spdy/buffered_spdy_framer.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/spdy_http_stream.h"
 #include "net/spdy/spdy_http_utils.h"
@@ -93,8 +93,8 @@ class SpdyNetworkTransactionTest : public ::testing::Test {
 
   struct TransactionHelperResult {
     int rv;
-    std::string status_line;
-    std::string response_data;
+    SpdyString status_line;
+    SpdyString response_data;
     HttpResponseInfo response_info;
   };
 
@@ -407,8 +407,7 @@ class SpdyNetworkTransactionTest : public ::testing::Test {
   // multiple transactions in the read pipeline; so as we read, we may have
   // to skip over data destined for other transactions while we consume
   // the data for |trans|.
-  int ReadResult(HttpNetworkTransaction* trans,
-                 std::string* result) {
+  int ReadResult(HttpNetworkTransaction* trans, SpdyString* result) {
     const int kSize = 3000;
 
     int bytes_read = 0;
@@ -448,7 +447,7 @@ class SpdyNetworkTransactionTest : public ::testing::Test {
   void RunServerPushTest(SequencedSocketData* data,
                          HttpResponseInfo* response,
                          HttpResponseInfo* push_response,
-                         const std::string& expected) {
+                         const SpdyString& expected) {
     NormalSpdyTransactionHelper helper(CreateGetRequest(), DEFAULT_PRIORITY,
                                        NetLogWithSource(), nullptr);
     helper.RunPreTestSetup();
@@ -477,10 +476,10 @@ class SpdyNetworkTransactionTest : public ::testing::Test {
     // the results into a single string.
 
     // Read the server push body.
-    std::string result2;
+    SpdyString result2;
     ReadResult(&trans2, &result2);
     // Read the response body.
-    std::string result;
+    SpdyString result;
     ReadResult(trans, &result);
 
     // Verify that we consumed all test data.
@@ -565,8 +564,8 @@ class SpdyNetworkTransactionTest : public ::testing::Test {
     return upload_chunked_data_stream_.get();
   }
 
-  std::string GetDefaultUrlWithPath(const char* path) {
-    return std::string(kDefaultUrl) + path;
+  SpdyString GetDefaultUrlWithPath(const char* path) {
+    return SpdyString(kDefaultUrl) + path;
   }
 
   const GURL default_url_;
@@ -1672,7 +1671,7 @@ TEST_F(SpdyNetworkTransactionTest, DelayedChunkedPost) {
   helper.FinishDefaultTest();
   helper.VerifyDataConsumed();
 
-  std::string expected_response;
+  SpdyString expected_response;
   expected_response += kUploadData;
   expected_response += kUploadData;
   expected_response += kUploadData;
@@ -1798,7 +1797,7 @@ TEST_F(SpdyNetworkTransactionTest, ResponseBeforePostCompletes) {
   helper.WaitForCallbackToComplete();
   EXPECT_THAT(helper.output().rv, IsOk());
 
-  std::string response_body;
+  SpdyString response_body;
   EXPECT_THAT(ReadTransaction(helper.trans(), &response_body), IsOk());
   EXPECT_EQ(kUploadData, response_body);
 
@@ -1903,7 +1902,7 @@ TEST_F(SpdyNetworkTransactionTest, ResponseWithTwoSynReplies) {
   ASSERT_TRUE(response);
   EXPECT_TRUE(response->headers);
   EXPECT_TRUE(response->was_fetched_via_spdy);
-  std::string response_data;
+  SpdyString response_data;
   rv = ReadTransaction(trans, &response_data);
   EXPECT_THAT(rv, IsError(ERR_SPDY_PROTOCOL_ERROR));
 
@@ -2237,7 +2236,7 @@ TEST_F(SpdyNetworkTransactionTest,
       spdy_util_.ConstructSpdyDataFrame(1, "should not include", 18, true));
 
   SpdyHeaderBlock push_headers;
-  spdy_util_.AddUrlToHeaderBlock(std::string(kDefaultUrl) + "b.dat",
+  spdy_util_.AddUrlToHeaderBlock(SpdyString(kDefaultUrl) + "b.dat",
                                  &push_headers);
 
   SpdySerializedFrame push_init_frame(
@@ -2354,7 +2353,7 @@ TEST_F(SpdyNetworkTransactionTest, DISABLED_RedirectGetRequest) {
     EXPECT_EQ(1, d.response_started_count());
     EXPECT_FALSE(d.received_data_before_response());
     EXPECT_EQ(OK, d.request_status());
-    std::string contents("hello!");
+    SpdyString contents("hello!");
     EXPECT_EQ(contents, d.data_received());
   }
   EXPECT_TRUE(data.AllReadDataConsumed());
@@ -2422,7 +2421,7 @@ TEST_F(SpdyNetworkTransactionTest, DISABLED_RedirectServerPush) {
     base::RunLoop().Run();
 
     EXPECT_EQ(0, d.received_redirect_count());
-    std::string contents("hello!");
+    SpdyString contents("hello!");
     EXPECT_EQ(contents, d.data_received());
 
     std::unique_ptr<URLRequest> r2(spdy_url_request_context.CreateRequest(
@@ -2440,7 +2439,7 @@ TEST_F(SpdyNetworkTransactionTest, DISABLED_RedirectServerPush) {
     EXPECT_EQ(1, d2.response_started_count());
     EXPECT_FALSE(d2.received_data_before_response());
     EXPECT_EQ(OK, d2.request_status());
-    std::string contents2("hello!");
+    SpdyString contents2("hello!");
     EXPECT_EQ(contents2, d2.data_received());
   }
   EXPECT_TRUE(data.AllReadDataConsumed());
@@ -2474,7 +2473,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushSingleDataFrame) {
 
   HttpResponseInfo response;
   HttpResponseInfo response2;
-  std::string expected_push_result("pushed");
+  SpdyString expected_push_result("pushed");
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
   RunServerPushTest(&data,
                     &response,
@@ -2517,7 +2516,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushBeforeHeaders) {
 
   HttpResponseInfo response;
   HttpResponseInfo response2;
-  std::string expected_push_result("pushed");
+  SpdyString expected_push_result("pushed");
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
   RunServerPushTest(&data,
                     &response,
@@ -2560,7 +2559,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushSingleDataFrame2) {
 
   HttpResponseInfo response;
   HttpResponseInfo response2;
-  std::string expected_push_result("pushed");
+  SpdyString expected_push_result("pushed");
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
   RunServerPushTest(&data,
                     &response,
@@ -2773,7 +2772,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushDuplicate) {
 
   HttpResponseInfo response;
   HttpResponseInfo response2;
-  std::string expected_push_result("pushed");
+  SpdyString expected_push_result("pushed");
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
   RunServerPushTest(&data,
                     &response,
@@ -2829,7 +2828,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushMultipleDataFrame) {
 
   HttpResponseInfo response;
   HttpResponseInfo response2;
-  std::string expected_push_result("pushed my darling hello my baby");
+  SpdyString expected_push_result("pushed my darling hello my baby");
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
   RunServerPushTest(&data, &response, &response2, kPushedData);
 
@@ -3128,7 +3127,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushOnClosedPushedStream) {
   response = *trans2.GetResponseInfo();
   EXPECT_TRUE(response.headers);
   EXPECT_EQ("HTTP/1.1 200", response.headers->GetStatusLine());
-  std::string result;
+  SpdyString result;
   ReadResult(&trans2, &result);
   EXPECT_EQ(kPushedData, result);
 
@@ -3200,14 +3199,14 @@ TEST_F(SpdyNetworkTransactionTest, ResponseHeaders) {
     scoped_refptr<HttpResponseHeaders> headers = out.response_info.headers;
     EXPECT_TRUE(headers);
     size_t iter = 0;
-    std::string name, value;
+    SpdyString name, value;
     SpdyHeaderBlock header_block;
     while (headers->EnumerateHeaderLines(&iter, &name, &value)) {
       auto value_it = header_block.find(name);
       if (value_it == header_block.end() || value_it->second.empty()) {
         header_block[name] = value;
       } else {
-        std::string joint_value = value_it->second.as_string();
+        SpdyString joint_value = value_it->second.as_string();
         joint_value.append(1, '\0');
         joint_value.append(value);
         header_block[name] = joint_value;
@@ -3270,7 +3269,7 @@ TEST_F(SpdyNetworkTransactionTest, ResponseHeadersVary) {
                         test_cases[i].num_headers[1],
                         &reply_headers);
     // Construct the expected header reply string before moving |reply_headers|.
-    std::string expected_reply =
+    SpdyString expected_reply =
         spdy_test_util.ConstructSpdyReplyString(reply_headers);
 
     SpdySerializedFrame frame_reply(
@@ -3311,7 +3310,7 @@ TEST_F(SpdyNetworkTransactionTest, ResponseHeadersVary) {
     scoped_refptr<HttpResponseHeaders> headers = out.response_info.headers;
     ASSERT_TRUE(headers) << i;
     size_t iter = 0;
-    std::string name, value, lines;
+    SpdyString name, value, lines;
     while (headers->EnumerateHeaderLines(&iter, &name, &value)) {
       lines.append(name);
       lines.append(": ");
@@ -3568,18 +3567,16 @@ TEST_F(SpdyNetworkTransactionTest, NetLog) {
   ASSERT_TRUE(entries[pos].params.get());
   ASSERT_TRUE(entries[pos].params->GetList("headers", &header_list));
 
-  std::vector<std::string> expected;
-  expected.push_back(std::string(spdy_util_.GetHostKey()) +
-                     ": www.example.org");
-  expected.push_back(std::string(spdy_util_.GetPathKey()) + ": /");
-  expected.push_back(std::string(spdy_util_.GetSchemeKey()) + ": " +
+  std::vector<SpdyString> expected;
+  expected.push_back(SpdyString(spdy_util_.GetHostKey()) + ": www.example.org");
+  expected.push_back(SpdyString(spdy_util_.GetPathKey()) + ": /");
+  expected.push_back(SpdyString(spdy_util_.GetSchemeKey()) + ": " +
                      default_url_.scheme());
-  expected.push_back(std::string(spdy_util_.GetMethodKey()) + ": GET");
+  expected.push_back(SpdyString(spdy_util_.GetMethodKey()) + ": GET");
   expected.push_back("user-agent: Chrome");
   EXPECT_EQ(expected.size(), header_list->GetSize());
-  for (std::vector<std::string>::const_iterator it = expected.begin();
-       it != expected.end();
-       ++it) {
+  for (std::vector<SpdyString>::const_iterator it = expected.begin();
+       it != expected.end(); ++it) {
     base::Value header(*it);
     EXPECT_NE(header_list->end(), header_list->Find(header)) <<
         "Header not found: " << *it;
@@ -3646,7 +3643,7 @@ TEST_F(SpdyNetworkTransactionTest, BufferFull) {
   // Read Data
   TestCompletionCallback read_callback;
 
-  std::string content;
+  SpdyString content;
   do {
     // Read small chunks at a time.
     const int kSmallReadSize = 3;
@@ -3731,7 +3728,7 @@ TEST_F(SpdyNetworkTransactionTest, Buffering) {
   // Read Data
   TestCompletionCallback read_callback;
 
-  std::string content;
+  SpdyString content;
   int reads_completed = 0;
   do {
     // Read small chunks at a time.
@@ -3817,7 +3814,7 @@ TEST_F(SpdyNetworkTransactionTest, BufferedAll) {
   // Read Data
   TestCompletionCallback read_callback;
 
-  std::string content;
+  SpdyString content;
   int reads_completed = 0;
   do {
     // Read small chunks at a time.
@@ -3900,7 +3897,7 @@ TEST_F(SpdyNetworkTransactionTest, BufferedClosed) {
   // Read Data
   TestCompletionCallback read_callback;
 
-  std::string content;
+  SpdyString content;
   int reads_completed = 0;
   do {
     // Read small chunks at a time.
@@ -4085,7 +4082,7 @@ TEST_F(SpdyNetworkTransactionTest, GracefulGoaway) {
   EXPECT_TRUE(response->was_alpn_negotiated);
   EXPECT_EQ("127.0.0.1", response->socket_address.host());
   EXPECT_EQ(443, response->socket_address.port());
-  std::string response_data;
+  SpdyString response_data;
   rv = ReadTransaction(&trans2, &response_data);
   EXPECT_THAT(rv, IsOk());
   EXPECT_EQ("hello!", response_data);
@@ -4201,7 +4198,7 @@ TEST_F(SpdyNetworkTransactionTest, HTTP11RequiredRetry) {
   EXPECT_TRUE(request.url.SchemeIs("https"));
   EXPECT_EQ("127.0.0.1", response->socket_address.host());
   EXPECT_EQ(443, response->socket_address.port());
-  std::string response_data;
+  SpdyString response_data;
   ASSERT_THAT(ReadTransaction(helper.trans(), &response_data), IsOk());
   EXPECT_EQ("hello", response_data);
 }
@@ -4296,7 +4293,7 @@ TEST_F(SpdyNetworkTransactionTest, HTTP11RequiredProxyRetry) {
   EXPECT_TRUE(request.url.SchemeIs("https"));
   EXPECT_EQ("127.0.0.1", response->socket_address.host());
   EXPECT_EQ(70, response->socket_address.port());
-  std::string response_data;
+  SpdyString response_data;
   ASSERT_THAT(ReadTransaction(helper.trans(), &response_data), IsOk());
   EXPECT_EQ("hello", response_data);
 }
@@ -4348,7 +4345,7 @@ TEST_F(SpdyNetworkTransactionTest, ProxyConnect) {
   ASSERT_TRUE(response.headers);
   EXPECT_EQ("HTTP/1.1 200", response.headers->GetStatusLine());
 
-  std::string response_data;
+  SpdyString response_data;
   ASSERT_THAT(ReadTransaction(trans, &response_data), IsOk());
   EXPECT_EQ("hello!", response_data);
   helper.VerifyDataConsumed();
@@ -4471,7 +4468,7 @@ TEST_F(SpdyNetworkTransactionTest, DirectConnectProxyReconnect) {
   ASSERT_TRUE(response_proxy.headers);
   EXPECT_EQ("HTTP/1.1 200", response_proxy.headers->GetStatusLine());
 
-  std::string response_data;
+  SpdyString response_data;
   ASSERT_THAT(ReadTransaction(trans_proxy, &response_data), IsOk());
   EXPECT_EQ("hello!", response_data);
 
@@ -4554,7 +4551,7 @@ TEST_F(SpdyNetworkTransactionTest, VerifyRetryOnConnectionReset) {
       ASSERT_TRUE(response);
       EXPECT_TRUE(response->headers);
       EXPECT_TRUE(response->was_fetched_via_spdy);
-      std::string response_data;
+      SpdyString response_data;
       rv = ReadTransaction(&trans, &response_data);
       EXPECT_THAT(rv, IsOk());
       EXPECT_EQ("HTTP/1.1 200", response->headers->GetStatusLine());
@@ -4695,7 +4692,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushWithHeaders) {
 
   HttpResponseInfo response;
   HttpResponseInfo response2;
-  std::string expected_push_result("pushed");
+  SpdyString expected_push_result("pushed");
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
   RunServerPushTest(&data,
                     &response,
@@ -4747,7 +4744,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushClaimBeforeHeaders) {
 
   HttpResponseInfo response;
   HttpResponseInfo response2;
-  std::string expected_push_result("pushed");
+  SpdyString expected_push_result("pushed");
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
 
   NormalSpdyTransactionHelper helper(CreateGetRequest(), DEFAULT_PRIORITY,
@@ -4779,10 +4776,10 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushClaimBeforeHeaders) {
   base::RunLoop().RunUntilIdle();
 
   // Read the server push body.
-  std::string result2;
+  SpdyString result2;
   ReadResult(&trans2, &result2);
   // Read the response body.
-  std::string result;
+  SpdyString result;
   ReadResult(trans, &result);
 
   // Verify that the received push data is same as the expected push data.
@@ -4970,7 +4967,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushCrossOriginCorrectness) {
     base::RunLoop().RunUntilIdle();
 
     // Read the response body.
-    std::string result;
+    SpdyString result;
     ReadResult(trans, &result);
 
     // Verify that we consumed all test data.
@@ -5067,7 +5064,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushValidCrossOrigin) {
   EXPECT_TRUE(response.headers);
   EXPECT_EQ("HTTP/1.1 200", response.headers->GetStatusLine());
 
-  std::string result0;
+  SpdyString result0;
   ReadResult(trans0, &result0);
   EXPECT_EQ("hello!", result0);
 
@@ -5075,7 +5072,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushValidCrossOrigin) {
   EXPECT_TRUE(push_response.headers);
   EXPECT_EQ("HTTP/1.1 200", push_response.headers->GetStatusLine());
 
-  std::string result1;
+  SpdyString result1;
   ReadResult(&trans1, &result1);
   EXPECT_EQ(kPushedData, result1);
 
@@ -5231,7 +5228,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushValidCrossOriginWithOpenSession) {
   EXPECT_TRUE(response0.headers);
   EXPECT_EQ("HTTP/1.1 200", response0.headers->GetStatusLine());
 
-  std::string result0;
+  SpdyString result0;
   ReadResult(trans0, &result0);
   EXPECT_EQ(kData0, result0);
 
@@ -5239,7 +5236,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushValidCrossOriginWithOpenSession) {
   EXPECT_TRUE(response1.headers);
   EXPECT_EQ("HTTP/1.1 200", response1.headers->GetStatusLine());
 
-  std::string result1;
+  SpdyString result1;
   ReadResult(&trans1, &result1);
   EXPECT_EQ(kData1, result1);
 
@@ -5247,7 +5244,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushValidCrossOriginWithOpenSession) {
   EXPECT_TRUE(push_response.headers);
   EXPECT_EQ("HTTP/1.1 200", push_response.headers->GetStatusLine());
 
-  std::string result2;
+  SpdyString result2;
   ReadResult(&trans2, &result2);
   EXPECT_EQ(kPushedData, result2);
 
@@ -5472,8 +5469,8 @@ TEST_F(SpdyNetworkTransactionTest, OutOfOrderHeaders) {
 // fail under specific circumstances.
 TEST_F(SpdyNetworkTransactionTest, WindowUpdateReceived) {
   static int kFrameCount = 2;
-  std::unique_ptr<std::string> content(
-      new std::string(kMaxSpdyFrameChunkSize, 'a'));
+  std::unique_ptr<SpdyString> content(
+      new SpdyString(kMaxSpdyFrameChunkSize, 'a'));
   SpdySerializedFrame req(spdy_util_.ConstructSpdyPost(
       kDefaultUrl, 1, kMaxSpdyFrameChunkSize * kFrameCount, LOWEST, nullptr,
       0));
@@ -5616,7 +5613,7 @@ TEST_F(SpdyNetworkTransactionTest, WindowUpdateSent) {
   reads.push_back(CreateMockRead(resp, writes.size() + reads.size()));
 
   std::vector<SpdySerializedFrame> body_frames;
-  const std::string body_data(kChunkSize, 'x');
+  const SpdyString body_data(kChunkSize, 'x');
   for (size_t remaining = kTargetSize; remaining != 0;) {
     size_t frame_size = std::min(remaining, body_data.size());
     body_frames.push_back(spdy_util_.ConstructSpdyDataFrame(1, body_data.data(),
@@ -5699,8 +5696,8 @@ TEST_F(SpdyNetworkTransactionTest, WindowUpdateOverflow) {
   // set content-length header correctly)
   static int kFrameCount = 3;
 
-  std::unique_ptr<std::string> content(
-      new std::string(kMaxSpdyFrameChunkSize, 'a'));
+  std::unique_ptr<SpdyString> content(
+      new SpdyString(kMaxSpdyFrameChunkSize, 'a'));
   SpdySerializedFrame req(spdy_util_.ConstructSpdyPost(
       kDefaultUrl, 1, kMaxSpdyFrameChunkSize * kFrameCount, LOWEST, nullptr,
       0));
@@ -5784,7 +5781,7 @@ TEST_F(SpdyNetworkTransactionTest, FlowControlStallResume) {
       ceil(static_cast<double>(kBufferSize) / kMaxSpdyFrameChunkSize);
 
   // Construct content for a data frame of maximum size.
-  std::string content(kMaxSpdyFrameChunkSize, 'a');
+  SpdyString content(kMaxSpdyFrameChunkSize, 'a');
 
   SpdySerializedFrame req(spdy_util_.ConstructSpdyPost(
       kDefaultUrl, 1,
@@ -5808,8 +5805,8 @@ TEST_F(SpdyNetworkTransactionTest, FlowControlStallResume) {
 
   // If kBufferSize * num_upload_buffers > initial_window_size,
   // we need one additional frame to send the rest of 'a'.
-  std::string last_body(kBufferSize * num_upload_buffers - initial_window_size,
-                        'a');
+  SpdyString last_body(kBufferSize * num_upload_buffers - initial_window_size,
+                       'a');
   SpdySerializedFrame body4(spdy_util_.ConstructSpdyDataFrame(
       1, last_body.c_str(), last_body.size(), false));
 
@@ -5866,7 +5863,7 @@ TEST_F(SpdyNetworkTransactionTest, FlowControlStallResume) {
                            writes.size());
 
   std::vector<std::unique_ptr<UploadElementReader>> element_readers;
-  std::string upload_data_string(kBufferSize * num_upload_buffers, 'a');
+  SpdyString upload_data_string(kBufferSize * num_upload_buffers, 'a');
   upload_data_string.append(kUploadData, kUploadDataSize);
   element_readers.push_back(base::WrapUnique(new UploadBytesElementReader(
       upload_data_string.c_str(), upload_data_string.size())));
@@ -5934,7 +5931,7 @@ TEST_F(SpdyNetworkTransactionTest, FlowControlStallResumeAfterSettings) {
       ceil(static_cast<double>(kBufferSize) / kMaxSpdyFrameChunkSize);
 
   // Construct content for a data frame of maximum size.
-  std::string content(kMaxSpdyFrameChunkSize, 'a');
+  SpdyString content(kMaxSpdyFrameChunkSize, 'a');
 
   SpdySerializedFrame req(spdy_util_.ConstructSpdyPost(
       kDefaultUrl, 1,
@@ -5958,8 +5955,8 @@ TEST_F(SpdyNetworkTransactionTest, FlowControlStallResumeAfterSettings) {
 
   // If kBufferSize * num_upload_buffers > initial_window_size,
   // we need one additional frame to send the rest of 'a'.
-  std::string last_body(kBufferSize * num_upload_buffers - initial_window_size,
-                        'a');
+  SpdyString last_body(kBufferSize * num_upload_buffers - initial_window_size,
+                       'a');
   SpdySerializedFrame body4(spdy_util_.ConstructSpdyDataFrame(
       1, last_body.c_str(), last_body.size(), false));
 
@@ -6025,7 +6022,7 @@ TEST_F(SpdyNetworkTransactionTest, FlowControlStallResumeAfterSettings) {
                            writes.size());
 
   std::vector<std::unique_ptr<UploadElementReader>> element_readers;
-  std::string upload_data_string(kBufferSize * num_upload_buffers, 'a');
+  SpdyString upload_data_string(kBufferSize * num_upload_buffers, 'a');
   upload_data_string.append(kUploadData, kUploadDataSize);
   element_readers.push_back(base::WrapUnique(new UploadBytesElementReader(
       upload_data_string.c_str(), upload_data_string.size())));
@@ -6096,7 +6093,7 @@ TEST_F(SpdyNetworkTransactionTest, FlowControlNegativeSendWindowSize) {
       ceil(static_cast<double>(kBufferSize) / kMaxSpdyFrameChunkSize);
 
   // Construct content for a data frame of maximum size.
-  std::string content(kMaxSpdyFrameChunkSize, 'a');
+  SpdyString content(kMaxSpdyFrameChunkSize, 'a');
 
   SpdySerializedFrame req(spdy_util_.ConstructSpdyPost(
       kDefaultUrl, 1,
@@ -6120,8 +6117,8 @@ TEST_F(SpdyNetworkTransactionTest, FlowControlNegativeSendWindowSize) {
 
   // If kBufferSize * num_upload_buffers > initial_window_size,
   // we need one additional frame to send the rest of 'a'.
-  std::string last_body(kBufferSize * num_upload_buffers - initial_window_size,
-                        'a');
+  SpdyString last_body(kBufferSize * num_upload_buffers - initial_window_size,
+                       'a');
   SpdySerializedFrame body4(spdy_util_.ConstructSpdyDataFrame(
       1, last_body.c_str(), last_body.size(), false));
 
@@ -6189,7 +6186,7 @@ TEST_F(SpdyNetworkTransactionTest, FlowControlNegativeSendWindowSize) {
                            writes.size());
 
   std::vector<std::unique_ptr<UploadElementReader>> element_readers;
-  std::string upload_data_string(kBufferSize * num_upload_buffers, 'a');
+  SpdyString upload_data_string(kBufferSize * num_upload_buffers, 'a');
   upload_data_string.append(kUploadData, kUploadDataSize);
   element_readers.push_back(base::WrapUnique(new UploadBytesElementReader(
       upload_data_string.c_str(), upload_data_string.size())));
@@ -6297,8 +6294,8 @@ TEST_F(SpdyNetworkTransactionTest,
 // Regression test for https://crbug.com/493348: request header exceeds 16 kB
 // and thus sent in multiple frames when using HTTP/2.
 TEST_F(SpdyNetworkTransactionTest, LargeRequest) {
-  const std::string kKey("foo");
-  const std::string kValue(1 << 15, 'z');
+  const SpdyString kKey("foo");
+  const SpdyString kValue(1 << 15, 'z');
 
   HttpRequestInfo request;
   request.method = "GET";
@@ -6342,9 +6339,9 @@ TEST_F(SpdyNetworkTransactionTest, LargeResponseHeader) {
 
   // HPACK decoder implementation limits string literal length to 16 kB.
   const char* response_headers[2];
-  const std::string kKey(16 * 1024, 'a');
+  const SpdyString kKey(16 * 1024, 'a');
   response_headers[0] = kKey.data();
-  const std::string kValue(16 * 1024, 'b');
+  const SpdyString kValue(16 * 1024, 'b');
   response_headers[1] = kValue.data();
 
   SpdySerializedFrame resp(

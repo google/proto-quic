@@ -11,18 +11,6 @@
 # https://dl.google.com/closure-compiler/compiler-latest.zip and unzip. And get
 # the externs from rawgit.com.
 
-java -version 2>&1 | head -1 | egrep -q '\b1\.7'
-if [[ $? -ne 0 ]]; then
-  echo "This script requires Java 1.7" >&2
-  exit 1
-fi
-
-javac -version 2>&1 | egrep -q '\b1\.7'
-if [[ $? -ne 0 ]]; then
-  echo "This script requires JDK 1.7" >&2
-  exit 1
-fi
-
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly TEMP_DIR=$(mktemp -d)
 readonly EXTERNS_DIR="${SCRIPT_DIR}/externs"
@@ -62,6 +50,26 @@ https://github.com/google/closure-compiler/compare/${old_head}...${new_head}
 EOT
 )
 fi
+
+check_jdk_version() {
+  # Pretty contrived checks modeling how we write Maven XML files.
+  if [ ! -r "$2" ]; then
+    echo "Could not find $2" >&2
+    exit 1
+  elif ! fgrep -q '<jdk.version>'$1'</jdk.version>' "$2"; then
+    echo "JDK version $1 must be specified in $2" >&2
+    exit 1
+  elif ! fgrep -q '<source>${jdk.version}</source>' "$2"; then
+    echo "Java source must be specified to be \${jdk.version} in $2" >&2
+    exit 1
+  elif ! fgrep -q '<target>${jdk.version}</target>' "$2"; then
+    echo "Java target must be specified to be \${jdk.version} in $2" >&2
+    exit 1
+  fi
+}
+
+echo "Checking JDK Version Used to Build"
+check_jdk_version 1.7 pom.xml
 
 echo "Building Closure Compiler"
 mvn clean install -DskipTests=true --projects com.google.javascript:closure-compiler,com.google.javascript:closure-compiler-externs

@@ -51,20 +51,6 @@ template <size_t N, size_t... Ns>
 struct MakeIndexSequenceImpl<N, Ns...>
     : MakeIndexSequenceImpl<N - 1, N - 1, Ns...> {};
 
-// std::get() in <=libstdc++-4.6 returns an lvalue-reference for
-// rvalue-reference of a tuple, where an rvalue-reference is expected.
-template <size_t I, typename... Ts>
-typename std::tuple_element<I, std::tuple<Ts...>>::type&& get(
-    std::tuple<Ts...>&& t) {
-  using ElemType = typename std::tuple_element<I, std::tuple<Ts...>>::type;
-  return std::forward<ElemType>(std::get<I>(t));
-}
-
-template <size_t I, typename T>
-auto get(T& t) -> decltype(std::get<I>(t)) {
-  return std::get<I>(t);
-}
-
 template <size_t N>
 using MakeIndexSequence = typename MakeIndexSequenceImpl<N>::Type;
 
@@ -88,7 +74,7 @@ inline void DispatchToMethodImpl(const ObjT& obj,
                                  Method method,
                                  Tuple&& args,
                                  IndexSequence<Ns...>) {
-  (obj->*method)(base::get<Ns>(std::forward<Tuple>(args))...);
+  (obj->*method)(std::get<Ns>(std::forward<Tuple>(args))...);
 }
 
 template <typename ObjT, typename Method, typename Tuple>
@@ -105,7 +91,7 @@ template <typename Function, typename Tuple, size_t... Ns>
 inline void DispatchToFunctionImpl(Function function,
                                    Tuple&& args,
                                    IndexSequence<Ns...>) {
-  (*function)(base::get<Ns>(std::forward<Tuple>(args))...);
+  (*function)(std::get<Ns>(std::forward<Tuple>(args))...);
 }
 
 template <typename Function, typename Tuple>
@@ -128,7 +114,7 @@ inline void DispatchToMethodImpl(const ObjT& obj,
                                  OutTuple* out,
                                  IndexSequence<InNs...>,
                                  IndexSequence<OutNs...>) {
-  (obj->*method)(base::get<InNs>(std::forward<InTuple>(in))...,
+  (obj->*method)(std::get<InNs>(std::forward<InTuple>(in))...,
                  &std::get<OutNs>(*out)...);
 }
 

@@ -200,7 +200,10 @@ config("default_sanitizer_ldflags") {
     ldflags = []
     if (is_asan) {
       ldflags += [ "-fsanitize=address" ]
-      if (!is_mac) {
+      if (is_mac) {
+        # https://crbug.com/708707
+        ldflags += [ "-fno-sanitize-address-use-after-scope" ]
+      } else {
         ldflags += [ "-fsanitize-address-use-after-scope" ]
       }
     }
@@ -314,6 +317,9 @@ config("asan_flags") {
     cflags += [ "-fsanitize=address" ]
     if (!is_mac && !is_win) {
       cflags += [ "-fsanitize-address-use-after-scope" ]
+    } else {
+      # https://crbug.com/708707
+      cflags += [ "-fno-sanitize-address-use-after-scope" ]
     }
     if (!asan_globals) {
       cflags += [

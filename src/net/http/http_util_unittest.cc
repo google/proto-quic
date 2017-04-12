@@ -1322,4 +1322,84 @@ TEST(HttpUtilTest, IsLWS) {
   EXPECT_TRUE(HttpUtil::IsLWS(' '));
 }
 
+TEST(HttpUtilTest, ParseAcceptEncoding) {
+  const struct {
+    const char* const value;
+    const char* const expected;
+  } tests[] = {
+      {"", "*"},
+      {"identity;q=1, *;q=0", "identity"},
+      {"identity", "identity"},
+      {"FOO, Bar", "bar|foo|identity"},
+      {"foo; q=1", "foo|identity"},
+      {"abc, foo; Q=1.0", "abc|foo|identity"},
+      {"abc, foo;q= 1.00 , bar", "abc|bar|foo|identity"},
+      {"abc, foo; q=1.000, bar", "abc|bar|foo|identity"},
+      {"abc, foo ; q = 0 , bar", "abc|bar|identity"},
+      {"abc, foo; q=0.0, bar", "abc|bar|identity"},
+      {"abc, foo; q=0.00, bar", "abc|bar|identity"},
+      {"abc, foo; q=0.000, bar", "abc|bar|identity"},
+      {"abc, foo; q=0.001, bar", "abc|bar|foo|identity"},
+      {"gzip", "gzip|identity|x-gzip"},
+      {"x-gzip", "gzip|identity|x-gzip"},
+      {"compress", "compress|identity|x-compress"},
+      {"x-compress", "compress|identity|x-compress"},
+      {"x-compress", "compress|identity|x-compress"},
+      {"foo bar", "INVALID"},
+      {"foo;", "INVALID"},
+      {"foo;w=1", "INVALID"},
+      {"foo;q+1", "INVALID"},
+      {"foo;q=2", "INVALID"},
+      {"foo;q=1.001", "INVALID"},
+      {"foo;q=0.", "INVALID"},
+      {"foo,\"bar\"", "INVALID"},
+  };
+
+  for (size_t i = 0; i < arraysize(tests); ++i) {
+    std::string value(tests[i].value);
+    std::string reformatted;
+    std::set<std::string> allowed_encodings;
+    if (!HttpUtil::ParseAcceptEncoding(value, &allowed_encodings)) {
+      reformatted = "INVALID";
+    } else {
+      std::vector<std::string> encodings_list;
+      for (auto const& encoding : allowed_encodings)
+        encodings_list.push_back(encoding);
+      reformatted = base::JoinString(encodings_list, "|");
+    }
+    EXPECT_STREQ(tests[i].expected, reformatted.c_str())
+        << "value=\"" << value << "\"";
+  }
+}
+
+TEST(HttpUtilTest, ParseContentEncoding) {
+  const struct {
+    const char* const value;
+    const char* const expected;
+  } tests[] = {
+      {"", ""},
+      {"identity;q=1, *;q=0", "INVALID"},
+      {"identity", "identity"},
+      {"FOO, zergli , Bar", "bar|foo|zergli"},
+      {"foo, *", "INVALID"},
+      {"foo,\"bar\"", "INVALID"},
+  };
+
+  for (size_t i = 0; i < arraysize(tests); ++i) {
+    std::string value(tests[i].value);
+    std::string reformatted;
+    std::set<std::string> used_encodings;
+    if (!HttpUtil::ParseContentEncoding(value, &used_encodings)) {
+      reformatted = "INVALID";
+    } else {
+      std::vector<std::string> encodings_list;
+      for (auto const& encoding : used_encodings)
+        encodings_list.push_back(encoding);
+      reformatted = base::JoinString(encodings_list, "|");
+    }
+    EXPECT_STREQ(tests[i].expected, reformatted.c_str())
+        << "value=\"" << value << "\"";
+  }
+}
+
 }  // namespace net

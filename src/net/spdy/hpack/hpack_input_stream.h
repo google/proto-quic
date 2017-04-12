@@ -8,13 +8,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <string>
 #include <utility>
 
 #include "base/macros.h"
 #include "net/base/net_export.h"
 #include "net/spdy/hpack/hpack_constants.h"
 #include "net/spdy/hpack/hpack_huffman_table.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
 // All section references below are to
@@ -49,7 +49,7 @@ class NET_EXPORT_PRIVATE HpackInputStream {
 
   bool DecodeNextUint32(uint32_t* I);
   bool DecodeNextIdentityString(SpdyStringPiece* str);
-  bool DecodeNextHuffmanString(std::string* str);
+  bool DecodeNextHuffmanString(SpdyString* str);
 
   // Stores input bits into the most-significant, unfilled bits of |out|.
   // |peeked_count| is the number of filled bits in |out| which have been

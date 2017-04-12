@@ -192,10 +192,13 @@ class NET_EXPORT X509Certificate
   const base::Time& valid_start() const { return valid_start_; }
   const base::Time& valid_expiry() const { return valid_expiry_; }
 
-  // Gets the DNS names in the certificate.  Pursuant to RFC 2818, Section 3.1
+  // Gets the DNS names in the certificate. Pursuant to RFC 2818, Section 3.1
   // Server Identity, if the certificate has a subjectAltName extension of
   // type dNSName, this method gets the DNS names in that extension.
   // Otherwise, it gets the common name in the subject field.
+  //
+  // Note: Chrome has deprecated fallback to the subject field, see
+  // https://crbug.com/308330; prefer GetSubjectAltName() instead.
   void GetDNSNames(std::vector<std::string>* dns_names) const;
 
   // Gets the subjectAltName extension field from the certificate, if any.

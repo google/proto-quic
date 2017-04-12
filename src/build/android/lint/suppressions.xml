@@ -94,7 +94,7 @@ Still reading?
   </issue>
   <issue id="IconDensities">
     <!-- The large assets below only include a few densities to reduce APK size. -->
-    <ignore regexp=": data_reduction_illustration.png, google_icon_sprite.png, physical_web_logo.png, physical_web_logo_anim1.png, physical_web_logo_anim2.png$"/>
+    <ignore regexp=": data_reduction_illustration.png, physical_web_logo.png, physical_web_logo_anim1.png, physical_web_logo_anim2.png$"/>
     <!-- crbug.com/457918 is tracking missing assets -->
     <ignore regexp="chrome/android/java/res/drawable-xxhdpi"/>
     <ignore regexp="chrome/android/java/res/drawable-xxxhdpi"/>
@@ -108,7 +108,6 @@ Still reading?
   </issue>
   <issue id="IconDipSize">
     <ignore regexp="chromecast/internal"/>
-    <ignore regexp="google_icon_sprite.png.*"/>
   </issue>
   <issue id="IconDuplicates" severity="Error">
     <ignore regexp="chromecast/internal"/>
@@ -323,12 +322,6 @@ Still reading?
     <ignore regexp="chrome/android/java/res/drawable-hdpi/signin_promo_illustration.png"/>
     <ignore regexp="chrome/android/java/res/drawable-nodpi/missing.png"/>
     <ignore regexp="chrome/android/java/res/values-v17/styles.xml"/>
-    <!--
-        This file isn't used if the target SDK version is less than 24.
-        TODO(estevenson) remove this and the conditional inclusion in
-        AndroidManifest.xml after rolling to SDK 24.
-    -->
-    <ignore regexp="chrome/android/java/res/xml/network_security_config.xml"/>
     <ignore regexp="chromecast/browser/android/apk/res/values/strings.xml"/>
     <ignore regexp="chromecast/internal"/>
     <ignore regexp="clank"/>

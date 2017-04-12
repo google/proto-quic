@@ -517,37 +517,15 @@ struct FastIntegerArithmeticPromotion<Lhs, Rhs, false> {
   static const bool is_contained = false;
 };
 
-// This hacks around libstdc++ 4.6 missing stuff in type_traits.
-#if defined(__GLIBCXX__)
-#define PRIV_GLIBCXX_4_7_0 20120322
-#define PRIV_GLIBCXX_4_5_4 20120702
-#define PRIV_GLIBCXX_4_6_4 20121127
-#if (__GLIBCXX__ < PRIV_GLIBCXX_4_7_0 || __GLIBCXX__ == PRIV_GLIBCXX_4_5_4 || \
-     __GLIBCXX__ == PRIV_GLIBCXX_4_6_4)
-#define PRIV_USE_FALLBACKS_FOR_OLD_GLIBCXX
-#undef PRIV_GLIBCXX_4_7_0
-#undef PRIV_GLIBCXX_4_5_4
-#undef PRIV_GLIBCXX_4_6_4
-#endif
-#endif
-
 // Extracts the underlying type from an enum.
 template <typename T, bool is_enum = std::is_enum<T>::value>
 struct ArithmeticOrUnderlyingEnum;
 
 template <typename T>
 struct ArithmeticOrUnderlyingEnum<T, true> {
-#if defined(PRIV_USE_FALLBACKS_FOR_OLD_GLIBCXX)
-  using type = __underlying_type(T);
-#else
   using type = typename std::underlying_type<T>::type;
-#endif
   static const bool value = std::is_arithmetic<type>::value;
 };
-
-#if defined(PRIV_USE_FALLBACKS_FOR_OLD_GLIBCXX)
-#undef PRIV_USE_FALLBACKS_FOR_OLD_GLIBCXX
-#endif
 
 template <typename T>
 struct ArithmeticOrUnderlyingEnum<T, false> {

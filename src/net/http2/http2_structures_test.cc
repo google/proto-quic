@@ -18,7 +18,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "base/template_util.h"
 #include "net/http2/http2_structures_test_util.h"
 #include "net/http2/tools/failure.h"
 #include "net/http2/tools/http2_random.h"
@@ -42,7 +41,7 @@ namespace {
 
 template <typename E>
 E IncrementEnum(E e) {
-  typedef typename base::underlying_type<E>::type I;
+  using I = typename std::underlying_type<E>::type;
   return static_cast<E>(1 + static_cast<I>(e));
 }
 

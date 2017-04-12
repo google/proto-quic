@@ -10,7 +10,6 @@
 
 #include <map>
 #include <memory>
-#include <string>
 #include <vector>
 
 #include "base/macros.h"
@@ -18,6 +17,7 @@
 #include "net/spdy/hpack/hpack_decoder_interface.h"
 #include "net/spdy/hpack/hpack_header_table.h"
 #include "net/spdy/hpack/hpack_input_stream.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/spdy_headers_handler_interface.h"
 #include "net/spdy/spdy_protocol.h"
@@ -116,11 +116,11 @@ class NET_EXPORT_PRIVATE HpackDecoder : public HpackDecoderInterface {
   // TODO(jgraettinger): Buffer for headers data, and storage for the last-
   // processed headers block. Both will be removed with the switch to
   // SpdyHeadersHandlerInterface.
-  std::string headers_block_buffer_;
+  SpdyString headers_block_buffer_;
   SpdyHeaderBlock decoded_block_;
 
   // Scratch space for storing decoded literals.
-  std::string key_buffer_, value_buffer_;
+  SpdyString key_buffer_, value_buffer_;
 
   // If non-NULL, handles decoded headers.
   SpdyHeadersHandlerInterface* handler_;

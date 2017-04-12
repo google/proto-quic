@@ -153,13 +153,6 @@ public class BuildInfo {
     }
 
     /**
-     * @return Whether the current build version is greater than Android N.
-     */
-    public static boolean isGreaterThanN() {
-        return Build.VERSION.SDK_INT > 24 || Build.VERSION.CODENAME.equals("NMR1");
-    }
-
-    /**
      * @return Whether the current device is running Android O release or newer.
      */
     public static boolean isAtLeastO() {

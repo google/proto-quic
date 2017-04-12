@@ -28,7 +28,9 @@ import describe
 import file_format
 import helpers
 import map2size
+import match_util
 import models
+import paths
 
 
 # Number of lines before using less for Print().
@@ -42,7 +44,6 @@ def _LessPipe():
     proc = subprocess.Popen(['less'], stdin=subprocess.PIPE, stdout=sys.stdout)
     yield proc.stdin
     proc.stdin.close()
-
     proc.wait()
   except IOError:
     pass  # Happens when less is quit before all data is written.
@@ -50,88 +51,156 @@ def _LessPipe():
     pass  # Assume used to break out of less.
 
 
+def _WriteToStream(lines, use_pager=None, to_file=None):
+  if to_file:
+    use_pager = False
+  if use_pager is None and sys.stdout.isatty():
+    # Does not take into account line-wrapping... Oh well.
+    first_lines = list(itertools.islice(lines, _THRESHOLD_FOR_PAGER))
+    if len(first_lines) == _THRESHOLD_FOR_PAGER:
+      use_pager = True
+    lines = itertools.chain(first_lines, lines)
+
+  if use_pager:
+    with _LessPipe() as stdin:
+      describe.WriteLines(lines, stdin.write)
+  elif to_file:
+    with open(to_file, 'w') as file_obj:
+      describe.WriteLines(lines, file_obj.write)
+  else:
+    describe.WriteLines(lines, sys.stdout.write)
+
+
 class _Session(object):
   _readline_initialized = False
 
-  def __init__(self, extra_vars):
+  def __init__(self, size_infos, lazy_paths):
     self._variables = {
         'Print': self._PrintFunc,
-        'Write': self._WriteFunc,
         'Diff': models.Diff,
+        'Disassemble': self._DisassembleFunc,
+        'ExpandRegex': match_util.ExpandRegexIdentifierPlaceholder,
+        'ShowExamples': self._ShowExamplesFunc,
     }
-    self._variables.update(extra_vars)
+    self._lazy_paths = lazy_paths
+    self._size_infos = size_infos
 
-  def _PrintFunc(self, obj, verbose=False, use_pager=None):
+    if len(size_infos) == 1:
+      self._variables['size_info'] = size_infos[0]
+      self._variables['symbols'] = size_infos[0].symbols
+    else:
+      for i, size_info in enumerate(size_infos):
+        self._variables['size_info%d' % (i + 1)] = size_info
+        self._variables['symbols%d' % (i + 1)] = size_info.symbols
+
+  def _PrintFunc(self, obj, verbose=False, use_pager=None, to_file=None):
     """Prints out the given Symbol / SymbolGroup / SymbolDiff / SizeInfo.
 
     Args:
       obj: The object to be printed.
-      use_pager: Whether to pipe output through `less`. Ignored when |obj| is a
-          Symbol.
+      verbose: Show more detailed output.
+      use_pager: Pipe output through `less`. Ignored when |obj| is a Symbol.
+          default is to automatically pipe when output is long.
+      to_file: Rather than print to stdio, write to the given file.
     """
     lines = describe.GenerateLines(obj, verbose=verbose)
-    if use_pager is None and sys.stdout.isatty():
-      # Does not take into account line-wrapping... Oh well.
-      first_lines = list(itertools.islice(lines, _THRESHOLD_FOR_PAGER))
-      if len(first_lines) == _THRESHOLD_FOR_PAGER:
-        use_pager = True
-      lines = itertools.chain(first_lines, lines)
+    _WriteToStream(lines, use_pager=use_pager, to_file=to_file)
 
-    if use_pager:
-      with _LessPipe() as stdin:
-        describe.WriteLines(lines, stdin.write)
+  def _ElfPathForSymbol(self, symbol):
+    size_info = None
+    for size_info in self._size_infos:
+      if symbol in size_info.symbols:
+        break
     else:
-      describe.WriteLines(lines, sys.stdout.write)
+      assert False, 'Symbol does not belong to a size_info.'
 
+    filename = size_info.metadata.get(models.METADATA_ELF_FILENAME)
+    output_dir = self._lazy_paths.output_directory or ''
+    path = os.path.normpath(os.path.join(output_dir, filename))
 
-  def _WriteFunc(self, obj, path, verbose=False):
-    """Same as Print(), but writes to a file.
+    found_build_id = map2size.BuildIdFromElf(
+        path, self._lazy_paths.tool_prefix)
+    expected_build_id = size_info.metadata.get(models.METADATA_ELF_BUILD_ID)
+    assert found_build_id == expected_build_id, (
+        'Build ID does not match for %s' % path)
+    return path
 
-    Example: Write(Diff(size_info2, size_info1), 'output.txt')
+  def _DisassembleFunc(self, symbol, elf_path=None, use_pager=None,
+                       to_file=None):
+    """Shows objdump disassembly for the given symbol.
+
+    Args:
+      symbol: Must be a .text symbol and not a SymbolGroup.
+      elf_path: Path to the executable containing the symbol. Required only
+          when auto-detection fails.
     """
-    parent_dir = os.path.dirname(path)
-    if parent_dir and not os.path.exists(parent_dir):
-      os.makedirs(parent_dir)
-    with file_format.OpenMaybeGz(path, 'w') as file_obj:
-      lines = describe.GenerateLines(obj, verbose=verbose)
-      describe.WriteLines(lines, file_obj.write)
+    assert symbol.address and symbol.section_name == '.text'
+    if not elf_path:
+      elf_path = self._ElfPathForSymbol(symbol)
+    tool_prefix = self._lazy_paths.tool_prefix
+    args = [tool_prefix + 'objdump', '--disassemble', '--source',
+            '--line-numbers', '--demangle',
+            '--start-address=0x%x' % symbol.address,
+            '--stop-address=0x%x' % symbol.end_address, elf_path]
+    proc = subprocess.Popen(args, stdout=subprocess.PIPE)
+    lines = itertools.chain(('Showing disassembly for %r' % symbol,
+                             'Command: %s' % ' '.join(args)),
+                            (l.rstrip() for l in proc.stdout))
+    _WriteToStream(lines, use_pager=use_pager, to_file=to_file)
+    proc.kill()
 
-
-  def _CreateBanner(self):
-    symbol_info_keys = sorted(m for m in dir(models.SizeInfo) if m[0] != '_')
-    symbol_group_keys = sorted(m for m in dir(models.SymbolGroup)
-                               if m[0] != '_')
-    symbol_diff_keys = sorted(m for m in dir(models.SymbolDiff)
-                              if m[0] != '_' and m not in symbol_group_keys)
-    functions = sorted(k for k in self._variables if k[0].isupper())
-    variables = sorted(k for k in self._variables if k[0].islower())
-    return '\n'.join([
-        '*' * 80,
-        'Entering interactive Python shell. Here is some inspiration:',
-        '',
+  def _ShowExamplesFunc(self):
+    print '\n'.join([
         '# Show pydoc for main types:',
         'import models',
         'help(models)',
         '',
+        '# Show all attributes of all symbols & per-section totals:',
+        'Print(size_info, verbose=True)',
+        '',
         '# Show two levels of .text, grouped by first two subdirectories',
-        'text_syms = size_info1.symbols.WhereInSection("t")',
+        'text_syms = symbols.WhereInSection("t")',
         'by_path = text_syms.GroupBySourcePath(depth=2)',
         'Print(by_path.WhereBiggerThan(1024))',
         '',
         '# Show all non-vtable generated symbols',
-        'generated_syms = size_info1.symbols.WhereIsGenerated()',
-        'Print(generated_syms.WhereNameMatches("vtable").Inverted())',
+        'generated_syms = symbols.WhereIsGenerated()',
+        'Print(generated_syms.WhereNameMatches(r"vtable").Inverted())',
         '',
+        '# Show all symbols that have "print" in their name or path, except',
+        '# those within components/.',
+        '# Note: Could have also used Inverted(), as above.',
+        '# Note: Use "help(ExpandRegex)" for more about what {{_print_}} does.',
+        'print_syms = symbols.WhereMatches(r"{{_print_}}")',
+        'Print(print_syms - print_syms.WherePathMatches(r"^components/"))',
+        '',
+        '# Diff two .size files and save result to a file:',
+        'Print(Diff(size_info1, size_info2), to_file="output.txt")',
+        '',
+    ])
+
+  def _CreateBanner(self):
+    symbol_info_keys = sorted(m for m in dir(models.SizeInfo) if m[0] != '_')
+    symbol_keys = sorted(m for m in dir(models.Symbol) if m[0] != '_')
+    symbol_group_keys = [m for m in dir(models.SymbolGroup) if m[0] != '_']
+    symbol_diff_keys = sorted(m for m in dir(models.SymbolDiff)
+                              if m[0] != '_' and m not in symbol_group_keys)
+    symbol_group_keys = sorted(m for m in symbol_group_keys
+                               if m not in symbol_keys)
+    functions = sorted(k for k in self._variables if k[0].isupper())
+    variables = sorted(k for k in self._variables if k[0].islower())
+    return '\n'.join([
         '*' * 80,
-        'Here is some quick reference:',
+        'Entering interactive Python shell. Quick reference:',
         '',
         'SizeInfo: %s' % ', '.join(symbol_info_keys),
-        'SymbolGroup: %s' % ', '.join(symbol_group_keys),
+        'Symbol: %s' % ', '.join(symbol_keys),
+        'SymbolGroup (extends Symbol): %s' % ', '.join(symbol_group_keys),
         'SymbolDiff (extends SymbolGroup): %s' % ', '.join(symbol_diff_keys),
         '',
         'Functions: %s' % ', '.join('%s()' % f for f in functions),
         'Variables: %s' % ', '.join(variables),
-        '',
+        '*' * 80,
     ])
 
   @classmethod
@@ -159,23 +228,26 @@ class _Session(object):
 
 def main(argv):
   parser = argparse.ArgumentParser()
-  parser.add_argument('inputs', nargs='*',
-                      help='Input .size/.map files to load. They will be '
-                           'mapped to variables as: size_info1, size_info2,'
-                           ' etc.')
+  parser.add_argument('inputs', nargs='+',
+                      help='Input .size files to load. For a single file, '
+                           'it will be mapped to variables as: size_info & '
+                           'symbols (where symbols = size_info.symbols). For '
+                           'multiple inputs, the names will be size_info1, '
+                           'symbols1, etc.')
   parser.add_argument('--query',
                       help='Print the result of the given snippet. Example: '
-                           'size_info1.symbols.WhereInSection("d").'
+                           'symbols.WhereInSection("d").'
                            'WhereBiggerThan(100)')
-  map2size.AddOptions(parser)
+  paths.AddOptions(parser)
   args = helpers.AddCommonOptionsAndParseArgs(parser, argv)
 
-  info_variables = {}
-  for i, path in enumerate(args.inputs):
-    size_info = map2size.AnalyzeWithArgs(args, path)
-    info_variables['size_info%d' % (i + 1)] = size_info
+  for path in args.inputs:
+    if not path.endswith('.size'):
+      parser.error('All inputs must end with ".size"')
 
-  session = _Session(info_variables)
+  size_infos = [map2size.Analyze(p) for p in args.inputs]
+  lazy_paths = paths.LazyPaths(args=args, input_file=args.inputs[0])
+  session = _Session(size_infos, lazy_paths)
 
   if args.query:
     logging.info('Running query from command-line.')

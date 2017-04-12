@@ -68,9 +68,8 @@ TEST(ParsedCertificateTest, ExtensionCritical) {
 
   const uint8_t kExpectedValue[] = {0x30, 0x00};
 
-  auto it = cert->unparsed_extensions().find(DavidBenOid());
-  ASSERT_NE(cert->unparsed_extensions().end(), it);
-  const auto& extension = it->second;
+  ParsedExtension extension;
+  ASSERT_TRUE(cert->GetExtension(DavidBenOid(), &extension));
 
   EXPECT_TRUE(extension.critical);
   EXPECT_EQ(DavidBenOid(), extension.oid);
@@ -85,9 +84,8 @@ TEST(ParsedCertificateTest, ExtensionNotCritical) {
 
   const uint8_t kExpectedValue[] = {0x30, 0x00};
 
-  auto it = cert->unparsed_extensions().find(DavidBenOid());
-  ASSERT_NE(cert->unparsed_extensions().end(), it);
-  const auto& extension = it->second;
+  ParsedExtension extension;
+  ASSERT_TRUE(cert->GetExtension(DavidBenOid(), &extension));
 
   EXPECT_FALSE(extension.critical);
   EXPECT_EQ(DavidBenOid(), extension.oid);
@@ -134,13 +132,16 @@ TEST(ParsedCertificateTest, ExtendedKeyUsage) {
       ParseCertificateFromFile("extended_key_usage.pem");
   ASSERT_TRUE(cert);
 
-  const auto& extensions = cert->unparsed_extensions();
-  ASSERT_EQ(3u, extensions.size());
+  ASSERT_EQ(4u, cert->extensions().size());
 
-  auto iter = extensions.find(ExtKeyUsageOid());
-  ASSERT_TRUE(iter != extensions.end());
-  EXPECT_FALSE(iter->second.critical);
-  EXPECT_EQ(45u, iter->second.value.Length());
+  ParsedExtension extension;
+  ASSERT_TRUE(cert->GetExtension(ExtKeyUsageOid(), &extension));
+
+  EXPECT_FALSE(extension.critical);
+  EXPECT_EQ(45u, extension.value.Length());
+
+  EXPECT_TRUE(cert->has_extended_key_usage());
+  EXPECT_EQ(4u, cert->extended_key_usage().size());
 }
 
 // Parses an Extensions that contains a key usage.
@@ -166,13 +167,16 @@ TEST(ParsedCertificateTest, Policies) {
       ParseCertificateFromFile("policies.pem");
   ASSERT_TRUE(cert);
 
-  const auto& extensions = cert->unparsed_extensions();
-  ASSERT_EQ(3u, extensions.size());
+  ASSERT_EQ(4u, cert->extensions().size());
 
-  auto iter = extensions.find(CertificatePoliciesOid());
-  ASSERT_TRUE(iter != extensions.end());
-  EXPECT_FALSE(iter->second.critical);
-  EXPECT_EQ(95u, iter->second.value.Length());
+  ParsedExtension extension;
+  ASSERT_TRUE(cert->GetExtension(CertificatePoliciesOid(), &extension));
+
+  EXPECT_FALSE(extension.critical);
+  EXPECT_EQ(95u, extension.value.Length());
+
+  EXPECT_TRUE(cert->has_policy_oids());
+  EXPECT_EQ(2u, cert->policy_oids().size());
 }
 
 // Parses an Extensions that contains a subjectaltname extension.
@@ -191,16 +195,17 @@ TEST(ParsedCertificateTest, ExtensionsReal) {
       ParseCertificateFromFile("extensions_real.pem");
   ASSERT_TRUE(cert);
 
-  const auto& extensions = cert->unparsed_extensions();
-  ASSERT_EQ(4u, extensions.size());
+  ASSERT_EQ(7u, cert->extensions().size());
 
   EXPECT_TRUE(cert->has_key_usage());
   EXPECT_TRUE(cert->has_basic_constraints());
+  EXPECT_TRUE(cert->has_policy_oids());
 
-  auto iter = extensions.find(CertificatePoliciesOid());
-  ASSERT_TRUE(iter != extensions.end());
-  EXPECT_FALSE(iter->second.critical);
-  EXPECT_EQ(16u, iter->second.value.Length());
+  ParsedExtension extension;
+  ASSERT_TRUE(cert->GetExtension(CertificatePoliciesOid(), &extension));
+
+  EXPECT_FALSE(extension.critical);
+  EXPECT_EQ(16u, extension.value.Length());
 
   // TODO(eroman): Verify the other 4 extensions' values.
 }

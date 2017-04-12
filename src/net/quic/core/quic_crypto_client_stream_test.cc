@@ -58,9 +58,10 @@ class QuicCryptoClientStreamTest : public ::testing::Test {
                                                stream(), server_options_);
   }
 
-  void ConstructHandshakeMessage() {
+  void ConstructHandshakeMessage(Perspective perspective) {
     CryptoFramer framer;
-    message_data_.reset(framer.ConstructHandshakeMessage(message_));
+    message_data_.reset(
+        framer.ConstructHandshakeMessage(message_, perspective));
   }
 
   QuicCryptoClientStream* stream() { return session_->GetCryptoStream(); }
@@ -95,7 +96,7 @@ TEST_F(QuicCryptoClientStreamTest, MessageAfterHandshake) {
       *connection_,
       CloseConnection(QUIC_CRYPTO_MESSAGE_AFTER_HANDSHAKE_COMPLETE, _, _));
   message_.set_tag(kCHLO);
-  ConstructHandshakeMessage();
+  ConstructHandshakeMessage(Perspective::IS_CLIENT);
   stream()->OnStreamFrame(QuicStreamFrame(kCryptoStreamId, /*fin=*/false,
                                           /*offset=*/0,
                                           message_data_->AsStringPiece()));
@@ -105,7 +106,7 @@ TEST_F(QuicCryptoClientStreamTest, BadMessageType) {
   stream()->CryptoConnect();
 
   message_.set_tag(kCHLO);
-  ConstructHandshakeMessage();
+  ConstructHandshakeMessage(Perspective::IS_CLIENT);
 
   EXPECT_CALL(*connection_, CloseConnection(QUIC_INVALID_CRYPTO_MESSAGE_TYPE,
                                             "Expected REJ", _));
@@ -216,8 +217,8 @@ TEST_F(QuicCryptoClientStreamTest, ServerConfigUpdate) {
   const uint64_t expiry_seconds = 60 * 60 * 24 * 2;
   server_config_update.SetValue(kSTTL, expiry_seconds);
 
-  std::unique_ptr<QuicData> data(
-      CryptoFramer::ConstructHandshakeMessage(server_config_update));
+  std::unique_ptr<QuicData> data(CryptoFramer::ConstructHandshakeMessage(
+      server_config_update, Perspective::IS_SERVER));
   stream()->OnStreamFrame(QuicStreamFrame(kCryptoStreamId, /*fin=*/false,
                                           /*offset=*/0, data->AsStringPiece()));
 
@@ -277,8 +278,8 @@ TEST_F(QuicCryptoClientStreamTest, ServerConfigUpdateWithCert) {
           new Callback(&ok, &server_config_update)));
   EXPECT_TRUE(ok);
 
-  std::unique_ptr<QuicData> data(
-      CryptoFramer::ConstructHandshakeMessage(server_config_update));
+  std::unique_ptr<QuicData> data(CryptoFramer::ConstructHandshakeMessage(
+      server_config_update, Perspective::IS_SERVER));
   stream()->OnStreamFrame(QuicStreamFrame(kCryptoStreamId, /*fin=*/false,
                                           /*offset=*/0, data->AsStringPiece()));
 
@@ -295,8 +296,8 @@ TEST_F(QuicCryptoClientStreamTest, ServerConfigUpdateBeforeHandshake) {
       CloseConnection(QUIC_CRYPTO_UPDATE_BEFORE_HANDSHAKE_COMPLETE, _, _));
   CryptoHandshakeMessage server_config_update;
   server_config_update.set_tag(kSCUP);
-  std::unique_ptr<QuicData> data(
-      CryptoFramer::ConstructHandshakeMessage(server_config_update));
+  std::unique_ptr<QuicData> data(CryptoFramer::ConstructHandshakeMessage(
+      server_config_update, Perspective::IS_SERVER));
   stream()->OnStreamFrame(QuicStreamFrame(kCryptoStreamId, /*fin=*/false,
                                           /*offset=*/0, data->AsStringPiece()));
 }

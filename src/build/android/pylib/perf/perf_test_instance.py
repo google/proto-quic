@@ -26,7 +26,7 @@ def _GetPersistedResult(test_name):
     return None
 
   with file(file_name, 'r') as f:
-    return pickle.loads(f.read())
+    return pickle.load(f)
 
 
 def _GetChromiumRevision():

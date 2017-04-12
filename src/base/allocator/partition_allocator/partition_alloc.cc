@@ -1051,8 +1051,13 @@ void* PartitionReallocGeneric(PartitionRootGeneric* root,
   // determine it is a win.
   if (actual_new_size == actual_old_size) {
     // Trying to allocate a block of size new_size would give us a block of
-    // the same size as the one we've already got, so no point in doing
-    // anything here.
+    // the same size as the one we've already got, so re-use the allocation
+    // after updating statistics (and cookies, if present).
+    PartitionPageSetRawSize(page, PartitionCookieSizeAdjustAdd(new_size));
+#if DCHECK_IS_ON()
+    // Write a new trailing cookie.
+    PartitionCookieWriteValue(static_cast<char*>(ptr) + new_size);
+#endif
     return ptr;
   }
 

@@ -143,7 +143,6 @@ def ParseGTestOutput(output):
           duration, log=('\n'.join(log) if log else '')))
 
   for l in output:
-    logging.info(l)
     matcher = _RE_TEST_STATUS.match(l)
     if matcher:
       if matcher.group(1) == 'RUN':

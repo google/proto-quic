@@ -12,7 +12,6 @@
 
 #include "base/bind.h"
 #include "base/compiler_specific.h"
-#include "base/files/file_util.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/message_loop/message_loop.h"
@@ -39,8 +38,8 @@
 #endif
 
 // STACK_SAMPLING_PROFILER_SUPPORTED is used to conditionally enable the tests
-// below for supported platforms (currently Win x64 and Mac x64).
-#if defined(_WIN64) || (defined(OS_MACOSX) && !defined(OS_IOS))
+// below for supported platforms (currently Win x64).
+#if defined(_WIN64)
 #define STACK_SAMPLING_PROFILER_SUPPORTED 1
 #endif
 
@@ -307,8 +306,6 @@ void SynchronousUnloadNativeLibrary(NativeLibrary library) {
          ::GetLastError() != ERROR_MOD_NOT_FOUND) {
     PlatformThread::Sleep(TimeDelta::FromMilliseconds(1));
   }
-#elif defined(OS_MACOSX)
-// Unloading a library on the Mac is synchronous.
 #else
   NOTIMPLEMENTED();
 #endif
@@ -545,7 +542,7 @@ void TestLibraryUnload(bool wait_until_unloaded) {
         << "Stack:\n"
         << FormatSampleForDiagnosticOutput(sample, profile.modules);
   } else {
-    // We didn't wait for the asynchronous unloading to complete, so the results
+    // We didn't wait for the asynchonous unloading to complete, so the results
     // are non-deterministic: if the library finished unloading we should have
     // the same stack as |wait_until_unloaded|, if not we should have the full
     // stack. The important thing is that we should not crash.
@@ -625,8 +622,7 @@ TEST(StackSamplingProfilerTest, MAYBE_Basic) {
       << FormatSampleForDiagnosticOutput(sample, profile.modules);
   FilePath executable_path;
   EXPECT_TRUE(PathService::Get(FILE_EXE, &executable_path));
-  EXPECT_EQ(executable_path,
-            MakeAbsoluteFilePath(profile.modules[loc->module_index].filename));
+  EXPECT_EQ(executable_path, profile.modules[loc->module_index].filename);
 }
 
 // Checks that annotations are recorded in samples.
@@ -1007,8 +1003,7 @@ TEST(StackSamplingProfilerTest, MAYBE_OtherLibrary) {
 
 // Checks that a stack that runs through a library that is unloading produces a
 // stack, and doesn't crash.
-// Unloading is synchronous on the Mac, so this test is inapplicable.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED) && !defined(OS_MACOSX)
+#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
 #define MAYBE_UnloadingLibrary UnloadingLibrary
 #else
 #define MAYBE_UnloadingLibrary DISABLED_UnloadingLibrary

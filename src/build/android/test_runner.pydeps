@@ -47,7 +47,6 @@
 ../../third_party/catapult/devil/devil/android/sdk/aapt.py
 ../../third_party/catapult/devil/devil/android/sdk/adb_wrapper.py
 ../../third_party/catapult/devil/devil/android/sdk/build_tools.py
-../../third_party/catapult/devil/devil/android/sdk/gce_adb_wrapper.py
 ../../third_party/catapult/devil/devil/android/sdk/intent.py
 ../../third_party/catapult/devil/devil/android/sdk/keyevent.py
 ../../third_party/catapult/devil/devil/android/sdk/shared_prefs.py

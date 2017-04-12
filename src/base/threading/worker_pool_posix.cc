@@ -49,7 +49,7 @@ class WorkerPoolImpl {
   ~WorkerPoolImpl() = delete;
 
   void PostTask(const tracked_objects::Location& from_here,
-                base::Closure task,
+                base::OnceClosure task,
                 bool task_is_slow);
 
  private:
@@ -61,7 +61,7 @@ WorkerPoolImpl::WorkerPoolImpl()
                                              kIdleSecondsBeforeExit)) {}
 
 void WorkerPoolImpl::PostTask(const tracked_objects::Location& from_here,
-                              base::Closure task,
+                              base::OnceClosure task,
                               bool task_is_slow) {
   pool_->PostTask(from_here, std::move(task));
 }
@@ -114,7 +114,7 @@ void WorkerThread::ThreadMain() {
 
 // static
 bool WorkerPool::PostTask(const tracked_objects::Location& from_here,
-                          base::Closure task,
+                          base::OnceClosure task,
                           bool task_is_slow) {
   g_lazy_worker_pool.Pointer()->PostTask(from_here, std::move(task),
                                          task_is_slow);
@@ -140,12 +140,14 @@ PosixDynamicThreadPool::~PosixDynamicThreadPool() {
 
 void PosixDynamicThreadPool::PostTask(
     const tracked_objects::Location& from_here,
-    base::Closure task) {
+    base::OnceClosure task) {
   PendingTask pending_task(from_here, std::move(task));
   AddTask(&pending_task);
 }
 
 void PosixDynamicThreadPool::AddTask(PendingTask* pending_task) {
+  DCHECK(pending_task);
+  DCHECK(pending_task->task);
   AutoLock locked(lock_);
 
   pending_tasks_.push(std::move(*pending_task));

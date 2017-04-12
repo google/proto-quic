@@ -1,0 +1,44 @@
+<!--
+Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<!--
+This file is used to generate a comprehensive list of Chrome UKM metrics
+along with a detailed description for each metric.
+-->
+
+<ukm-configuration>
+
+<event name="PageLoad">
+  <owner>bmcquade@chromium.org</owner>
+  <summary>
+    Recorded when Pageload observer events fire.
+  </summary>
+  <metric name="DocumentTiming.NavigationToDOMContentLoadedEventFired">
+    <summary>
+      Time from navigation to dom content loaded in ms.
+    </summary>
+  </metric>
+  <metric name="DocumentTiming.NavigationToLoadEventFired"/>
+  <metric name="Experimental.PaintTiming.NavigationToFirstMeaningfulPaint"/>
+  <metric name="Navigation.PageTransition"/>
+  <metric name="Net.EffectiveConnectionType.OnNavigationStart"/>
+  <metric name="Net.ErrorCode.OnFailedProvisionalLoad"/>
+  <metric name="PageTiming.ForegroundDuration"/>
+  <metric name="PageTiming.NavigationToFailedProvisionalLoad"/>
+  <metric name="PaintTiming.NavigationToFirstContentfulPaint"/>
+  <metric name="ParseTiming.NavigationToParseStart">
+    <summary>
+      Time from navigation to parse start in ms.
+    </summary>
+  </metric>
+</event>
+
+<event name="Autofill.CardUploadDecision">
+  <owner>sebsg@chromium.org</owner>
+  <metric name="UploadDecision"/>
+</event>
+
+</ukm-configuration>

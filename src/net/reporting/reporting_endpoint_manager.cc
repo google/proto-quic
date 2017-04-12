@@ -15,16 +15,14 @@
 #include "net/base/backoff_entry.h"
 #include "net/reporting/reporting_cache.h"
 #include "net/reporting/reporting_client.h"
+#include "net/reporting/reporting_policy.h"
 #include "url/gurl.h"
 #include "url/origin.h"
 
 namespace net {
 
-ReportingEndpointManager::ReportingEndpointManager(
-    base::TickClock* clock,
-    const ReportingCache* cache,
-    const BackoffEntry::Policy* backoff_policy)
-    : clock_(clock), cache_(cache), backoff_policy_(backoff_policy) {}
+ReportingEndpointManager::ReportingEndpointManager(ReportingContext* context)
+    : context_(context) {}
 
 ReportingEndpointManager::~ReportingEndpointManager() {}
 
@@ -33,11 +31,11 @@ bool ReportingEndpointManager::FindEndpointForOriginAndGroup(
     const std::string& group,
     GURL* endpoint_url_out) {
   std::vector<const ReportingClient*> clients;
-  cache_->GetClientsForOriginAndGroup(origin, group, &clients);
+  cache()->GetClientsForOriginAndGroup(origin, group, &clients);
 
   // Filter out expired, pending, and backed-off endpoints.
   std::vector<const ReportingClient*> available_clients;
-  base::TimeTicks now = clock_->NowTicks();
+  base::TimeTicks now = tick_clock()->NowTicks();
   for (const ReportingClient* client : clients) {
     if (client->expires < now)
       continue;
@@ -73,8 +71,8 @@ void ReportingEndpointManager::ClearEndpointPending(const GURL& endpoint) {
 void ReportingEndpointManager::InformOfEndpointRequest(const GURL& endpoint,
                                                        bool succeeded) {
   if (!base::ContainsKey(endpoint_backoff_, endpoint)) {
-    endpoint_backoff_[endpoint] =
-        base::MakeUnique<BackoffEntry>(backoff_policy_, clock_);
+    endpoint_backoff_[endpoint] = base::MakeUnique<BackoffEntry>(
+        &policy().endpoint_backoff_policy, tick_clock());
   }
   endpoint_backoff_[endpoint]->InformOfRequest(succeeded);
 }

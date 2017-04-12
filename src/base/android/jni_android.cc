@@ -29,7 +29,7 @@ base::LazyInstance<base::android::ScopedJavaGlobalRef<jobject>>::Leaky
     g_class_loader = LAZY_INSTANCE_INITIALIZER;
 jmethodID g_class_loader_load_class_method_id = 0;
 
-#if BUILDFLAG(ENABLE_PROFILING) && HAVE_TRACE_STACK_FRAME_POINTERS
+#if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 base::LazyInstance<base::ThreadLocalPointer<void>>::Leaky
     g_stack_frame_pointer = LAZY_INSTANCE_INITIALIZER;
 #endif
@@ -289,7 +289,7 @@ std::string GetJavaExceptionInfo(JNIEnv* env, jthrowable java_throwable) {
   return ConvertJavaStringToUTF8(exception_string);
 }
 
-#if BUILDFLAG(ENABLE_PROFILING) && HAVE_TRACE_STACK_FRAME_POINTERS
+#if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 
 JNIStackFrameSaver::JNIStackFrameSaver(void* current_fp) {
   previous_fp_ = g_stack_frame_pointer.Pointer()->Get();
@@ -304,7 +304,7 @@ void* JNIStackFrameSaver::SavedFrame() {
   return g_stack_frame_pointer.Pointer()->Get();
 }
 
-#endif  // ENABLE_PROFILING && HAVE_TRACE_STACK_FRAME_POINTERS
+#endif  // BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 
 }  // namespace android
 }  // namespace base

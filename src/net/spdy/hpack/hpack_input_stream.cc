@@ -12,8 +12,6 @@
 
 namespace net {
 
-using std::string;
-
 HpackInputStream::HpackInputStream(SpdyStringPiece buffer)
     : buffer_(buffer),
       bit_offset_(0),
@@ -135,7 +133,7 @@ bool HpackInputStream::DecodeNextIdentityString(SpdyStringPiece* str) {
   return true;
 }
 
-bool HpackInputStream::DecodeNextHuffmanString(string* str) {
+bool HpackInputStream::DecodeNextHuffmanString(SpdyString* str) {
   uint32_t encoded_size = 0;
   if (!DecodeNextUint32(&encoded_size)) {
     if (!need_more_data_) {

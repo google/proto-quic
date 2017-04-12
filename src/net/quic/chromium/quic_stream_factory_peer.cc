@@ -80,10 +80,6 @@ QuicTime::Delta QuicStreamFactoryPeer::GetPingTimeout(
   return factory->ping_timeout_;
 }
 
-bool QuicStreamFactoryPeer::IsQuicDisabled(QuicStreamFactory* factory) {
-  return factory->IsQuicDisabled();
-}
-
 bool QuicStreamFactoryPeer::GetDelayTcpRace(QuicStreamFactory* factory) {
   return factory->delay_tcp_race_;
 }
@@ -201,6 +197,12 @@ QuicClientPushPromiseIndex* QuicStreamFactoryPeer::GetPushPromiseIndex(
 int QuicStreamFactoryPeer::GetNumPushStreamsCreated(
     QuicStreamFactory* factory) {
   return factory->num_push_streams_created_;
+}
+
+void QuicStreamFactoryPeer::SetAlarmFactory(
+    QuicStreamFactory* factory,
+    std::unique_ptr<QuicAlarmFactory> alarm_factory) {
+  factory->alarm_factory_ = std::move(alarm_factory);
 }
 
 }  // namespace test

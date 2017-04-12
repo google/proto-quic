@@ -1,12 +1,41 @@
 # Copyright 2017 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-"""Classes that comprise the data model for binary size analysis."""
+"""Classes that comprise the data model for binary size analysis.
+
+The primary classes are Symbol, and SymbolGroup.
+
+Description of common properties:
+  * address: The start address of the symbol.
+        May be 0 (e.g. for .bss or for SymbolGroups).
+  * size: The number of bytes this symbol takes up, including padding that comes
+       before |address|.
+  * padding: The number of bytes of padding before |address| due to this symbol.
+  * name: Symbol names with parameter list removed.
+        Never None, but will be '' for anonymous symbols.
+  * full_name: Symbols names with parameter list left in.
+       Never None, but will be '' for anonymous symbols, and for symbols that do
+       not contain a parameter list.
+  * is_anonymous: True when the symbol exists in an anonymous namespace (which
+       are removed from both full_name and name during normalization).
+  * section_name: E.g. ".text", ".rodata", ".data.rel.local"
+  * section: The second character of |section_name|. E.g. "t", "r", "d".
+"""
 
 import collections
 import copy
 import os
 import re
+
+import match_util
+
+
+METADATA_GIT_REVISION = 'git_revision'
+METADATA_MAP_FILENAME = 'map_file_name'  # Path relative to output_directory.
+METADATA_ELF_FILENAME = 'elf_file_name'  # Path relative to output_directory.
+METADATA_ELF_MTIME = 'elf_mtime'  # int timestamp in utc.
+METADATA_ELF_BUILD_ID = 'elf_build_id'
+METADATA_GN_ARGS = 'gn_args'
 
 
 SECTION_TO_SECTION_NAME = {
@@ -22,26 +51,50 @@ class SizeInfo(object):
 
   Fields:
     section_sizes: A dict of section_name -> size.
-    symbols: A SymbolGroup (or SymbolDiff) with all symbols in it.
+    symbols: A SymbolGroup with all symbols in it.
+    metadata: A dict.
   """
   __slots__ = (
       'section_sizes',
       'symbols',
-      'tag',
-      'timestamp',
+      'metadata',
   )
 
   """Root size information."""
-  def __init__(self, section_sizes, symbols, timestamp=None, tag=''):
+  def __init__(self, section_sizes, symbols, metadata=None):
     self.section_sizes = section_sizes  # E.g. {'.text': 0}
     self.symbols = symbols  # List of symbols sorted by address per-section.
-    self.timestamp = timestamp  # UTC datetime object.
-    self.tag = tag  # E.g. git revision.
-    assert not tag or '\n' not in tag  # Simplifies file format.
+    self.metadata = metadata or {}
+
+
+class SizeInfoDiff(object):
+  """What you get when you Diff() two SizeInfo objects.
+
+  Fields:
+    section_sizes: A dict of section_name -> size delta.
+    symbols: A SymbolDiff with all symbols in it.
+    old_metadata: metadata of the "old" SizeInfo.
+    new_metadata: metadata of the "new" SizeInfo.
+  """
+  __slots__ = (
+      'section_sizes',
+      'symbols',
+      'old_metadata',
+      'new_metadata',
+  )
+
+  def __init__(self, section_sizes, symbols, old_metadata, new_metadata):
+    self.section_sizes = section_sizes
+    self.symbols = symbols
+    self.old_metadata = old_metadata
+    self.new_metadata = new_metadata
 
 
 class BaseSymbol(object):
-  """Base class for Symbol and SymbolGroup."""
+  """Base class for Symbol and SymbolGroup.
+
+  Refer to module docs for field descriptions.
+  """
   __slots__ = ()
 
   @property
@@ -81,7 +134,10 @@ class BaseSymbol(object):
 
 
 class Symbol(BaseSymbol):
-  """Represents a single symbol within a binary."""
+  """Represents a single symbol within a binary.
+
+  Refer to module docs for field descriptions.
+  """
 
   __slots__ = (
       'address',
@@ -89,7 +145,6 @@ class Symbol(BaseSymbol):
       'is_anonymous',
       'object_path',
       'name',
-      'flags',
       'padding',
       'section_name',
       'source_path',
@@ -112,10 +167,10 @@ class Symbol(BaseSymbol):
     self.padding = 0
 
   def __repr__(self):
-    return '%s@%x(size=%d,padding=%d,name=%s,path=%s,anon=%d)' % (
-        self.section_name, self.address, self.size_without_padding,
-        self.padding, self.name, self.source_path or self.object_path,
-        int(self.is_anonymous))
+    return ('%s@%x(size_without_padding=%d,padding=%d,name=%s,path=%s,anon=%d)'
+            % (self.section_name, self.address, self.size_without_padding,
+               self.padding, self.name, self.source_path or self.object_path,
+               int(self.is_anonymous)))
 
 
 class SymbolGroup(BaseSymbol):
@@ -123,34 +178,62 @@ class SymbolGroup(BaseSymbol):
 
   SymbolGroups are immutable. All filtering / sorting will return new
   SymbolGroups objects.
+
+  Overrides many __functions__. E.g. the following are all valid:
+  * len(group)
+  * iter(group)
+  * group[0]
+  * group['0x1234']  # By symbol address
+  * without_group2 = group1 - group2
+  * unioned = group1 + group2
   """
 
   __slots__ = (
-      'symbols',
-      'filtered_symbols',
+      '_padding',
+      '_size',
+      '_symbols',
+      '_filtered_symbols',
       'name',
       'section_name',
+      'is_sorted',
   )
 
   def __init__(self, symbols, filtered_symbols=None, name=None,
-               section_name=None):
-    self.symbols = symbols
-    self.filtered_symbols = filtered_symbols or []
+               section_name=None, is_sorted=False):
+    self._padding = None
+    self._size = None
+    self._symbols = symbols
+    self._filtered_symbols = filtered_symbols or []
     self.name = name or ''
     self.section_name = section_name or '.*'
+    self.is_sorted = is_sorted
 
   def __repr__(self):
     return 'Group(name=%s,count=%d,size=%d)' % (
         self.name, len(self), self.size)
 
   def __iter__(self):
-    return iter(self.symbols)
+    return iter(self._symbols)
 
   def __len__(self):
-    return len(self.symbols)
+    return len(self._symbols)
 
-  def __getitem__(self, index):
-    return self.symbols[index]
+  def __eq__(self, other):
+    return self._symbols == other._symbols
+
+  def __getitem__(self, key):
+    """|key| can be an index or an address.
+
+    Raises if multiple symbols map to the address.
+    """
+    if isinstance(key, slice):
+      return self._symbols.__getitem__(key)
+    if isinstance(key, basestring) or key > len(self._symbols):
+      found = self.WhereAddressInRange(key)
+      if len(found) != 1:
+        raise KeyError('%d symbols found at address %s.' % (len(found), key))
+      return found[0]
+    return self._symbols[key]
 
   def __sub__(self, other):
     other_ids = set(id(s) for s in other)
@@ -159,8 +242,9 @@ class SymbolGroup(BaseSymbol):
 
   def __add__(self, other):
     self_ids = set(id(s) for s in self)
-    new_symbols = self.symbols + [s for s in other if id(s) not in self_ids]
-    return self._CreateTransformed(new_symbols, section_name=self.section_name)
+    new_symbols = self._symbols + [s for s in other if id(s) not in self_ids]
+    return self._CreateTransformed(new_symbols, section_name=self.section_name,
+                                   is_sorted=False)
 
   @property
   def address(self):
@@ -175,26 +259,36 @@ class SymbolGroup(BaseSymbol):
     return False
 
   @property
+  def object_path(self):
+    return None
+
+  @property
   def source_path(self):
     return None
 
   @property
   def size(self):
-    if self.IsBss():
-      return sum(s.size for s in self)
-    return sum(s.size for s in self if not s.IsBss())
+    if self._size is None:
+      if self.IsBss():
+        self._size = sum(s.size for s in self)
+      self._size = sum(s.size for s in self if not s.IsBss())
+    return self._size
 
   @property
   def padding(self):
-    return sum(s.padding for s in self)
+    if self._padding is None:
+      self._padding = sum(s.padding for s in self)
+    return self._padding
 
   def IsGroup(self):
     return True
 
   def _CreateTransformed(self, symbols, filtered_symbols=None, name=None,
-                         section_name=None):
+                         section_name=None, is_sorted=None):
+    if is_sorted is None:
+      is_sorted = self.is_sorted
     return SymbolGroup(symbols, filtered_symbols=filtered_symbols, name=name,
-                       section_name=section_name)
+                       section_name=section_name, is_sorted=is_sorted)
 
   def Sorted(self, cmp_func=None, key=None, reverse=False):
     # Default to sorting by abs(size) then name.
@@ -202,10 +296,10 @@ class SymbolGroup(BaseSymbol):
       cmp_func = lambda a, b: cmp((a.IsBss(), abs(b.size), a.name),
                                   (b.IsBss(), abs(a.size), b.name))
 
-    new_symbols = sorted(self.symbols, cmp_func, key, reverse)
-    return self._CreateTransformed(new_symbols,
-                                   filtered_symbols=self.filtered_symbols,
-                                   section_name=self.section_name)
+    new_symbols = sorted(self._symbols, cmp_func, key, reverse)
+    return self._CreateTransformed(
+        new_symbols, filtered_symbols=self._filtered_symbols,
+        section_name=self.section_name, is_sorted=True)
 
   def SortedByName(self, reverse=False):
     return self.Sorted(key=(lambda s:s.name), reverse=reverse)
@@ -241,30 +335,57 @@ class SymbolGroup(BaseSymbol):
     return self.Filter(lambda s: s.IsGenerated())
 
   def WhereNameMatches(self, pattern):
-    regex = re.compile(pattern)
+    regex = re.compile(match_util.ExpandRegexIdentifierPlaceholder(pattern))
     return self.Filter(lambda s: regex.search(s.name))
 
   def WhereObjectPathMatches(self, pattern):
-    regex = re.compile(pattern)
+    regex = re.compile(match_util.ExpandRegexIdentifierPlaceholder(pattern))
     return self.Filter(lambda s: regex.search(s.object_path))
 
   def WhereSourcePathMatches(self, pattern):
-    regex = re.compile(pattern)
+    regex = re.compile(match_util.ExpandRegexIdentifierPlaceholder(pattern))
     return self.Filter(lambda s: regex.search(s.source_path))
 
   def WherePathMatches(self, pattern):
-    regex = re.compile(pattern)
-    return self.Filter(lambda s: regex.search(s.source_path or s.object_path))
+    regex = re.compile(match_util.ExpandRegexIdentifierPlaceholder(pattern))
+    return self.Filter(lambda s: (regex.search(s.source_path) or
+                                  regex.search(s.object_path)))
 
-  def WhereAddressInRange(self, start, end):
-    return self.Filter(lambda s: s.address >= start and s.address <= end)
+  def WhereMatches(self, pattern):
+    """Looks for |pattern| within all paths & names."""
+    regex = re.compile(match_util.ExpandRegexIdentifierPlaceholder(pattern))
+    return self.Filter(lambda s: (regex.search(s.source_path) or
+                                  regex.search(s.object_path) or
+                                  regex.search(s.full_name or '') or
+                                  regex.search(s.name)))
+
+  def WhereAddressInRange(self, start, end=None):
+    """Searches for addesses within [start, end).
+
+    Args may be ints or hex strings. Default value for |end| is |start| + 1.
+    """
+    if isinstance(start, basestring):
+      start = int(start, 16)
+    if end is None:
+      end = start + 1
+    return self.Filter(lambda s: s.address >= start and s.address < end)
 
   def WhereHasAnyAttribution(self):
     return self.Filter(lambda s: s.name or s.source_path or s.object_path)
 
   def Inverted(self):
-    return self._CreateTransformed(self.filtered_symbols,
-                                   filtered_symbols=self.symbols)
+    """Returns the symbols that were filtered out by the previous filter.
+
+    Applies only when the previous call was a filter.
+
+    Example:
+        # Symbols that do not have "third_party" in their path.
+        symbols.WherePathMatches(r'third_party').Inverted()
+        # Symbols within third_party that do not contain the string "foo".
+        symbols.WherePathMatches(r'third_party').WhereMatches('foo').Inverted()
+    """
+    return self._CreateTransformed(
+        self._filtered_symbols, filtered_symbols=self._symbols, is_sorted=False)
 
   def GroupBy(self, func, min_count=0):
     """Returns a SymbolGroup of SymbolGroups, indexed by |func|.
@@ -292,14 +413,16 @@ class SymbolGroup(BaseSymbol):
     min_count = abs(min_count)
     for token, symbols in symbols_by_token.iteritems():
       if len(symbols) >= min_count:
-        new_syms.append(self._CreateTransformed(symbols, name=token,
-                                                section_name=self.section_name))
+        new_syms.append(self._CreateTransformed(
+            symbols, name=token, section_name=self.section_name,
+            is_sorted=False))
       elif include_singles:
         new_syms.extend(symbols)
       else:
         filtered_symbols.extend(symbols)
-    return self._CreateTransformed(new_syms, filtered_symbols=filtered_symbols,
-                                   section_name=self.section_name)
+    return self._CreateTransformed(
+        new_syms, filtered_symbols=filtered_symbols,
+        section_name=self.section_name, is_sorted=False)
 
   def GroupBySectionName(self):
     return self.GroupBy(lambda s: s.section_name)
@@ -402,18 +525,18 @@ class SymbolDiff(SymbolGroup):
         self.unchanged_count, self.size)
 
   def _CreateTransformed(self, symbols, filtered_symbols=None, name=None,
-                         section_name=None):
+                         section_name=None, is_sorted=None):
     ret = SymbolDiff.__new__(SymbolDiff)
     # Printing sorts, so fast-path the same symbols case.
-    if len(symbols) == len(self.symbols):
+    if len(symbols) == len(self._symbols):
       ret._added_ids = self._added_ids
       ret._removed_ids = self._removed_ids
     else:
       ret._added_ids = set(id(s) for s in symbols if self.IsAdded(s))
       ret._removed_ids = set(id(s) for s in symbols if self.IsRemoved(s))
-    super(SymbolDiff, ret).__init__(symbols, filtered_symbols=filtered_symbols,
-                                    name=name, section_name=section_name)
-
+    super(SymbolDiff, ret).__init__(
+        symbols, filtered_symbols=filtered_symbols, name=name,
+        section_name=section_name, is_sorted=is_sorted)
     return ret
 
   @property
@@ -450,9 +573,7 @@ class SymbolDiff(SymbolGroup):
 def Diff(new, old):
   """Diffs two SizeInfo or SymbolGroup objects.
 
-  When diffing SizeInfos, ret.section_sizes are the result of |new| - |old|, and
-  ret.symbols will be a SymbolDiff.
-
+  When diffing SizeInfos, a SizeInfoDiff is returned.
   When diffing SymbolGroups, a SymbolDiff is returned.
 
   Returns:
@@ -464,7 +585,7 @@ def Diff(new, old):
     section_sizes = {
         k:new.section_sizes[k] - v for k, v in old.section_sizes.iteritems()}
     symbol_diff = Diff(new.symbols, old.symbols)
-    return SizeInfo(section_sizes, symbol_diff)
+    return SizeInfoDiff(section_sizes, symbol_diff, old.metadata, new.metadata)
 
   assert isinstance(new, SymbolGroup) and isinstance(old, SymbolGroup)
   symbols_by_key = collections.defaultdict(list)
@@ -505,7 +626,7 @@ def Diff(new, old):
 
   for section_name, padding in padding_by_section_name.iteritems():
     similar.append(Symbol(section_name, padding,
-                          name='** aggregate padding of delta symbols'))
+                          name="** aggregate padding of diff'ed symbols"))
   return SymbolDiff(added, removed, similar)
 
 

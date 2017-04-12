@@ -36,6 +36,8 @@ def CommandParser():
                       help='The logdog bin cmd.')
   parser.add_argument('--target-devices-file', required=False,
                       help='The target devices file.')
+  parser.add_argument('--logcat-output-file',
+                      help='The logcat output file.')
   return parser
 
 def CreateStopTestsMethod(proc):
@@ -52,7 +54,9 @@ def main():
   with tempfile_ext.NamedTemporaryDirectory() as logcat_output_dir:
     test_cmd = [
         os.path.join('bin', 'run_%s' % args.target),
-        '--logcat-output-file', os.path.join(logcat_output_dir, 'logcats'),
+        '--logcat-output-file',
+        (args.logcat_output_file if args.logcat_output_file
+            else os.path.join(logcat_output_dir, 'logcats')),
         '--upload-logcats-file',
         '--target-devices-file', args.target_devices_file,
         '-v'] + extra_cmd_args

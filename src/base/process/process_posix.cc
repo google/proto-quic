@@ -225,7 +225,6 @@ Process::Process(Process&& other) : process_(other.process_) {
 }
 
 Process& Process::operator=(Process&& other) {
-  DCHECK_NE(this, &other);
   process_ = other.process_;
   other.Close();
   return *this;

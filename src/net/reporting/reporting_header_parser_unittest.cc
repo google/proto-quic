@@ -21,21 +21,13 @@
 namespace net {
 namespace {
 
-class ReportingHeaderParserTest : public ::testing::Test {
+class ReportingHeaderParserTest : public ReportingTestBase {
  protected:
-  void ParseHeader(const GURL& url, const std::string& header_value) {
-    ReportingHeaderParser::ParseHeader(&cache_, clock_.NowTicks(), url,
-                                       header_value);
-  }
-
   const GURL kUrl_ = GURL("https://origin/path");
   const url::Origin kOrigin_ = url::Origin(GURL("https://origin/"));
   const GURL kEndpoint_ = GURL("https://endpoint/");
   const std::string kGroup_ = "group";
   const std::string kType_ = "type";
-
-  base::SimpleTestTickClock clock_;
-  ReportingCache cache_;
 };
 
 TEST_F(ReportingHeaderParserTest, Invalid) {
@@ -64,10 +56,11 @@ TEST_F(ReportingHeaderParserTest, Invalid) {
 
   for (size_t i = 0; i < arraysize(kInvalidHeaderTestCases); ++i) {
     auto& test_case = kInvalidHeaderTestCases[i];
-    ParseHeader(kUrl_, test_case.header_value);
+    ReportingHeaderParser::ParseHeader(context(), kUrl_,
+                                       test_case.header_value);
 
     std::vector<const ReportingClient*> clients;
-    cache_.GetClients(&clients);
+    cache()->GetClients(&clients);
     EXPECT_TRUE(clients.empty())
         << "Invalid Report-To header (" << test_case.description << ": \""
         << test_case.header_value << "\") parsed as valid.";
@@ -75,36 +68,41 @@ TEST_F(ReportingHeaderParserTest, Invalid) {
 }
 
 TEST_F(ReportingHeaderParserTest, Valid) {
-  ParseHeader(kUrl_,
-              "{\"url\":\"" + kEndpoint_.spec() + "\",\"max-age\":86400}");
+  ReportingHeaderParser::ParseHeader(
+      context(), kUrl_,
+      "{\"url\":\"" + kEndpoint_.spec() + "\",\"max-age\":86400}");
 
   const ReportingClient* client =
-      FindClientInCache(&cache_, kOrigin_, kEndpoint_);
+      FindClientInCache(cache(), kOrigin_, kEndpoint_);
   ASSERT_TRUE(client);
   EXPECT_EQ(kOrigin_, client->origin);
   EXPECT_EQ(kEndpoint_, client->endpoint);
   EXPECT_EQ(ReportingClient::Subdomains::EXCLUDE, client->subdomains);
-  EXPECT_EQ(86400, (client->expires - clock_.NowTicks()).InSeconds());
+  EXPECT_EQ(86400, (client->expires - tick_clock()->NowTicks()).InSeconds());
 }
 
 TEST_F(ReportingHeaderParserTest, Subdomains) {
-  ParseHeader(kUrl_, "{\"url\":\"" + kEndpoint_.spec() +
-                         "\",\"max-age\":86400,"
-                         "\"includeSubdomains\":true}");
+  ReportingHeaderParser::ParseHeader(context(), kUrl_,
+                                     "{\"url\":\"" + kEndpoint_.spec() +
+                                         "\",\"max-age\":86400,"
+                                         "\"includeSubdomains\":true}");
 
   const ReportingClient* client =
-      FindClientInCache(&cache_, kOrigin_, kEndpoint_);
+      FindClientInCache(cache(), kOrigin_, kEndpoint_);
   ASSERT_TRUE(client);
   EXPECT_EQ(ReportingClient::Subdomains::INCLUDE, client->subdomains);
 }
 
 TEST_F(ReportingHeaderParserTest, ZeroMaxAge) {
-  cache_.SetClient(kOrigin_, kEndpoint_, ReportingClient::Subdomains::EXCLUDE,
-                   kGroup_, clock_.NowTicks() + base::TimeDelta::FromDays(1));
+  cache()->SetClient(kOrigin_, kEndpoint_, ReportingClient::Subdomains::EXCLUDE,
+                     kGroup_,
+                     tick_clock()->NowTicks() + base::TimeDelta::FromDays(1));
 
-  ParseHeader(kUrl_, "{\"url\":\"" + kEndpoint_.spec() + "\",\"max-age\":0}");
+  ReportingHeaderParser::ParseHeader(
+      context(), kUrl_,
+      "{\"url\":\"" + kEndpoint_.spec() + "\",\"max-age\":0}");
 
-  EXPECT_EQ(nullptr, FindClientInCache(&cache_, kOrigin_, kEndpoint_));
+  EXPECT_EQ(nullptr, FindClientInCache(cache(), kOrigin_, kEndpoint_));
 }
 
 }  // namespace

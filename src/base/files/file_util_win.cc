@@ -20,6 +20,7 @@
 
 #include "base/files/file_enumerator.h"
 #include "base/files/file_path.h"
+#include "base/guid.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/metrics/histogram.h"
@@ -340,25 +341,47 @@ FILE* CreateAndOpenTemporaryFileInDir(const FilePath& dir, FilePath* path) {
 bool CreateTemporaryFileInDir(const FilePath& dir, FilePath* temp_file) {
   ThreadRestrictions::AssertIOAllowed();
 
-  wchar_t temp_name[MAX_PATH + 1];
+  // Use GUID instead of ::GetTempFileName() to generate unique file names.
+  // "Due to the algorithm used to generate file names, GetTempFileName can
+  // perform poorly when creating a large number of files with the same prefix.
+  // In such cases, it is recommended that you construct unique file names based
+  // on GUIDs."
+  // https://msdn.microsoft.com/en-us/library/windows/desktop/aa364991(v=vs.85).aspx
 
-  if (!GetTempFileName(dir.value().c_str(), L"", 0, temp_name)) {
+  FilePath temp_name;
+  bool create_file_success = false;
+
+  // Although it is nearly impossible to get a duplicate name with GUID, we
+  // still use a loop here in case it happens.
+  for (int i = 0; i < 100; ++i) {
+    temp_name = dir.Append(ASCIIToUTF16(base::GenerateGUID()) + L".tmp");
+    File file(temp_name,
+              File::FLAG_CREATE | File::FLAG_READ | File::FLAG_WRITE);
+    if (file.IsValid()) {
+      file.Close();
+      create_file_success = true;
+      break;
+    }
+  }
+
+  if (!create_file_success) {
     DPLOG(WARNING) << "Failed to get temporary file name in "
                    << UTF16ToUTF8(dir.value());
     return false;
   }
 
   wchar_t long_temp_name[MAX_PATH + 1];
-  DWORD long_name_len = GetLongPathName(temp_name, long_temp_name, MAX_PATH);
+  DWORD long_name_len =
+      GetLongPathName(temp_name.value().c_str(), long_temp_name, MAX_PATH);
   if (long_name_len > MAX_PATH || long_name_len == 0) {
     // GetLongPathName() failed, but we still have a temporary file.
-    *temp_file = FilePath(temp_name);
+    *temp_file = std::move(temp_name);
     return true;
   }
 
   FilePath::StringType long_temp_name_str;
   long_temp_name_str.assign(long_temp_name, long_name_len);
-  *temp_file = FilePath(long_temp_name_str);
+  *temp_file = FilePath(std::move(long_temp_name_str));
   return true;
 }
 

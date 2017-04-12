@@ -34,4 +34,10 @@ public abstract class Callback<T> {
     private void onResultFromNative(int result) {
         onResult((T) Integer.valueOf(result));
     }
+
+    @SuppressWarnings("unchecked")
+    @CalledByNative
+    private void onResultFromNative(byte[] result) {
+        onResult((T) result);
+    }
 }

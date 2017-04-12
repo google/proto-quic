@@ -2105,6 +2105,7 @@ OPENSSL_EXPORT int SSL_CTX_set1_curves_list(SSL_CTX *ctx, const char *curves);
 OPENSSL_EXPORT int SSL_set1_curves_list(SSL *ssl, const char *curves);
 
 /* SSL_CURVE_* define TLS curve IDs. */
+#define SSL_CURVE_SECP224R1 21
 #define SSL_CURVE_SECP256R1 23
 #define SSL_CURVE_SECP384R1 24
 #define SSL_CURVE_SECP521R1 25
@@ -2584,6 +2585,13 @@ OPENSSL_EXPORT void SSL_CTX_set_alpn_select_cb(
 OPENSSL_EXPORT void SSL_get0_alpn_selected(const SSL *ssl,
                                            const uint8_t **out_data,
                                            unsigned *out_len);
+
+/* SSL_CTX_set_allow_unknown_alpn_protos configures client connections on |ctx|
+ * to allow unknown ALPN protocols from the server. Otherwise, by default, the
+ * client will require that the protocol be advertised in
+ * |SSL_CTX_set_alpn_protos|. */
+OPENSSL_EXPORT void SSL_CTX_set_allow_unknown_alpn_protos(SSL_CTX *ctx,
+                                                          int enabled);
 
 
 /* Next protocol negotiation.
@@ -3093,6 +3101,11 @@ OPENSSL_EXPORT int SSL_total_renegotiations(const SSL *ssl);
  * WARNING: This is experimental and may cause interoperability failures until
  * fully implemented. */
 OPENSSL_EXPORT void SSL_CTX_set_early_data_enabled(SSL_CTX *ctx, int enabled);
+
+/* SSL_set_early_data_enabled sets whether early data is allowed to be used
+ * with resumptions using |ssl|. See |SSL_CTX_set_early_data_enabled| for more
+ * information. */
+OPENSSL_EXPORT void SSL_set_early_data_enabled(SSL *ssl, int enabled);
 
 /* SSL_early_data_accepted returns whether early data was accepted on the
  * handshake performed by |ssl|. */
@@ -4253,10 +4266,6 @@ struct ssl_ctx_st {
    * shutdown. */
   unsigned quiet_shutdown:1;
 
-  /* If enable_early_data is non-zero, early data can be sent and accepted over
-   * new connections. */
-  unsigned enable_early_data:1;
-
   /* ocsp_stapling_enabled is only used by client connections and indicates
    * whether OCSP stapling will be requested. */
   unsigned ocsp_stapling_enabled:1;
@@ -4278,6 +4287,10 @@ struct ssl_ctx_st {
    * that this currently requires post-handshake verification of
    * certificates. */
   unsigned i_promise_to_verify_certs_after_the_handshake:1;
+
+  /* allow_unknown_alpn_protos is one if the client allows unsolicited ALPN
+   * protocols from the peer. */
+  unsigned allow_unknown_alpn_protos:1;
 };
 
 

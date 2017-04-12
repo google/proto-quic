@@ -439,12 +439,15 @@ class PathBuilderKeyRolloverTest : public ::testing::Test {
 
   void SetUp() override {
     ParsedCertificateList path;
-    bool unused_result;
-    std::string unused_errors;
 
+    VerifyCertChainTest test;
     ReadVerifyCertChainTestFromFile(
         "net/data/verify_certificate_chain_unittest/key-rollover-oldchain.pem",
-        &path, &oldroot_, &time_, &unused_result, &unused_errors);
+        &test);
+    path = test.chain;
+    oldroot_ = test.trust_anchor;
+    time_ = test.time;
+
     ASSERT_EQ(2U, path.size());
     target_ = path[0];
     oldintermediate_ = path[1];
@@ -454,7 +457,9 @@ class PathBuilderKeyRolloverTest : public ::testing::Test {
     ReadVerifyCertChainTestFromFile(
         "net/data/verify_certificate_chain_unittest/"
         "key-rollover-longrolloverchain.pem",
-        &path, &oldroot_, &time_, &unused_result, &unused_errors);
+        &test);
+    path = test.chain;
+
     ASSERT_EQ(4U, path.size());
     newintermediate_ = path[1];
     newroot_ = path[2];

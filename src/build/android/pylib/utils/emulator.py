@@ -417,7 +417,6 @@ class Emulator(object):
     if self.headless:
       emulator_command.extend([
         '-no-skin',
-        '-no-audio',
         '-no-window'
         ])
     else:

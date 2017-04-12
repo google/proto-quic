@@ -9,7 +9,7 @@ Checks DEPS files in the source tree for rules, and applies those rules to
 "#include" and "import" directives in the .cpp, .java, and .proto source files.
 Any source file including something not permitted by the DEPS files will fail.
 
-See builddeps.py for a detailed description of the DEPS format.
+See README.md for a detailed description of the DEPS format.
 """
 
 import os

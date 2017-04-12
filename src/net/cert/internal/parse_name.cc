@@ -176,6 +176,43 @@ der::Input TypeGenerationQualifierOid() {
   return der::Input(oid);
 }
 
+bool X509NameAttribute::ValueAsString(std::string* out) const {
+  switch (value_tag) {
+    case der::kTeletexString:
+      for (char c : value.AsStringPiece()) {
+        if (c < 32 || c > 126)
+          return false;
+      }
+      *out = value.AsString();
+      return true;
+    case der::kIA5String:
+      for (char c : value.AsStringPiece()) {
+        if (static_cast<uint8_t>(c) > 127)
+          return false;
+      }
+      *out = value.AsString();
+      return true;
+    case der::kPrintableString:
+      for (char c : value.AsStringPiece()) {
+        if (!(base::IsAsciiAlpha(c) || c == ' ' || (c >= '\'' && c <= ':') ||
+              c == '=' || c == '?')) {
+          return false;
+        }
+      }
+      *out = value.AsString();
+      return true;
+    case der::kUtf8String:
+      *out = value.AsString();
+      return true;
+    case der::kUniversalString:
+      return ConvertUniversalStringValue(value, out);
+    case der::kBmpString:
+      return ConvertBmpStringValue(value, out);
+    default:
+      return false;
+  }
+}
+
 bool X509NameAttribute::ValueAsStringUnsafe(std::string* out) const {
   switch (value_tag) {
     case der::kIA5String:

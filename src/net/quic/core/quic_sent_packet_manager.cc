@@ -867,6 +867,10 @@ std::string QuicSentPacketManager::GetDebugState() const {
   return send_algorithm_->GetDebugState();
 }
 
+QuicByteCount QuicSentPacketManager::GetBytesInFlight() const {
+  return unacked_packets_.bytes_in_flight();
+}
+
 void QuicSentPacketManager::CancelRetransmissionsForStream(
     QuicStreamId stream_id) {
   unacked_packets_.CancelRetransmissionsForStream(stream_id);

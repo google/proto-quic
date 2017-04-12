@@ -6,15 +6,16 @@
 #define NET_SPDY_PLATFORM_IMPL_SPDY_STRING_UTILS_IMPL_H_
 
 #include <sstream>
-#include <string>
+#include <utility>
 
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
+#include "net/spdy/platform/api/spdy_string.h"
 
 namespace net {
 
 template <typename... Args>
-inline std::string SpdyStrCatImpl(const Args&... args) {
+inline SpdyString SpdyStrCatImpl(const Args&... args) {
   std::ostringstream oss;
   int dummy[] = {1, (oss << args, 0)...};
   static_cast<void>(dummy);
@@ -22,12 +23,12 @@ inline std::string SpdyStrCatImpl(const Args&... args) {
 }
 
 template <typename... Args>
-inline void SpdyStrAppendImpl(std::string* output, Args... args) {
+inline void SpdyStrAppendImpl(SpdyString* output, Args... args) {
   output->append(SpdyStrCatImpl(args...));
 }
 
 template <typename... Args>
-inline std::string SpdyStringPrintfImpl(const Args&... args) {
+inline SpdyString SpdyStringPrintfImpl(const Args&... args) {
   return base::StringPrintf(std::forward<const Args&>(args)...);
 }
 

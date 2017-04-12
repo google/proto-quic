@@ -9,6 +9,12 @@ dpranke@chromium.org
 scottmg@chromium.org
 thakis@chromium.org
 
+# These aren't actually great contact points for this directory, but
+# changes in this directory are rare and most changes happen in better-owned
+# subdirectories.
+#
+# TEAM: infra-dev@chromium.org
+# COMPONENT: Build
 
 per-file bisect*.py=anantha@chromium.org
 per-file bisect*.py=prasadv@chromium.org

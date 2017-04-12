@@ -29,13 +29,13 @@ bool IsMultiTaskingSupported();
 // |ios::ScopedCriticalAction|.
 class CriticalClosure {
  public:
-  explicit CriticalClosure(Closure closure);
+  explicit CriticalClosure(OnceClosure closure);
   ~CriticalClosure();
   void Run();
 
  private:
   ios::ScopedCriticalAction critical_action_;
-  Closure closure_;
+  OnceClosure closure_;
 
   DISALLOW_COPY_AND_ASSIGN(CriticalClosure);
 };
@@ -57,13 +57,14 @@ class CriticalClosure {
 // background running time, |MakeCriticalClosure| should be applied on them
 // before posting.
 #if defined(OS_IOS)
-inline Closure MakeCriticalClosure(Closure closure) {
+inline OnceClosure MakeCriticalClosure(OnceClosure closure) {
   DCHECK(internal::IsMultiTaskingSupported());
-  return base::Bind(&internal::CriticalClosure::Run,
-                    Owned(new internal::CriticalClosure(std::move(closure))));
+  return base::BindOnce(
+      &internal::CriticalClosure::Run,
+      Owned(new internal::CriticalClosure(std::move(closure))));
 }
 #else  // defined(OS_IOS)
-inline Closure MakeCriticalClosure(Closure closure) {
+inline OnceClosure MakeCriticalClosure(OnceClosure closure) {
   // No-op for platforms where the application does not need to acquire
   // background time for closures to finish when it goes into the background.
   return closure;

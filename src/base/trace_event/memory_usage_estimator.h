@@ -24,7 +24,6 @@
 #include "base/base_export.h"
 #include "base/containers/linked_list.h"
 #include "base/strings/string16.h"
-#include "base/template_util.h"
 
 // Composable memory usage estimators.
 //
@@ -207,7 +206,7 @@ template <class T>
 struct EMUCaller<
     T,
     typename std::enable_if<!HasEMU<T>::value &&
-                            is_trivially_destructible<T>::value>::type> {
+                            std::is_trivially_destructible<T>::value>::type> {
   static size_t Call(const T& value) { return 0; }
 };
 

@@ -194,6 +194,10 @@ class QUIC_EXPORT_PRIVATE QuicSentPacketManager {
   // Returns debugging information about the state of the congestion controller.
   std::string GetDebugState() const;
 
+  // Returns the number of bytes that are considered in-flight, i.e. not lost or
+  // acknowledged.
+  QuicByteCount GetBytesInFlight() const;
+
   // No longer retransmit data for |stream_id|.
   void CancelRetransmissionsForStream(QuicStreamId stream_id);
 

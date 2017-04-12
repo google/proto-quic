@@ -105,7 +105,7 @@ void OnTraceDataCollected(Closure quit_closure,
 // Posts |task| to |task_runner| and blocks until it is executed.
 void PostTaskAndWait(const tracked_objects::Location& from_here,
                      SequencedTaskRunner* task_runner,
-                     base::Closure task) {
+                     base::OnceClosure task) {
   base::WaitableEvent event(WaitableEvent::ResetPolicy::MANUAL,
                             WaitableEvent::InitialState::NOT_SIGNALED);
   task_runner->PostTask(from_here, std::move(task));
@@ -115,8 +115,6 @@ void PostTaskAndWait(const tracked_objects::Location& from_here,
   // |task| is executed.
   event.Wait();
 }
-
-}  // namespace
 
 // Testing MemoryDumpManagerDelegate which, by default, short-circuits dump
 // requests locally to the MemoryDumpManager instead of performing IPC dances.
@@ -184,14 +182,14 @@ class TestSequencedTaskRunner : public SequencedTaskRunner {
   unsigned no_of_post_tasks() const { return num_of_post_tasks_; }
 
   bool PostNonNestableDelayedTask(const tracked_objects::Location& from_here,
-                                  Closure task,
+                                  OnceClosure task,
                                   TimeDelta delay) override {
     NOTREACHED();
     return false;
   }
 
   bool PostDelayedTask(const tracked_objects::Location& from_here,
-                       Closure task,
+                       OnceClosure task,
                        TimeDelta delay) override {
     num_of_post_tasks_++;
     if (enabled_) {
@@ -213,6 +211,8 @@ class TestSequencedTaskRunner : public SequencedTaskRunner {
   bool enabled_;
   unsigned num_of_post_tasks_;
 };
+
+}  // namespace
 
 class MemoryDumpManagerTest : public testing::Test {
  public:

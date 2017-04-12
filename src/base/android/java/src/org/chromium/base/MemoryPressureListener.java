@@ -6,7 +6,6 @@ package org.chromium.base;
 
 import android.app.Activity;
 import android.content.ComponentCallbacks2;
-import android.content.Context;
 import android.content.res.Configuration;
 
 import org.chromium.base.annotations.CalledByNative;
@@ -47,8 +46,8 @@ public class MemoryPressureListener {
             "org.chromium.base.ACTION_TRIM_MEMORY_MODERATE";
 
     @CalledByNative
-    private static void registerSystemCallback(Context context) {
-        context.registerComponentCallbacks(
+    private static void registerSystemCallback() {
+        ContextUtils.getApplicationContext().registerComponentCallbacks(
                 new ComponentCallbacks2() {
                     @Override
                     public void onTrimMemory(int level) {

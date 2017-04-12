@@ -13,7 +13,6 @@
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using std::string;
 using ::testing::ElementsAre;
 
 namespace net {
@@ -73,15 +72,15 @@ TEST(SpdyHeaderBlockTest, KeyMemoryReclaimedOnLookup) {
 // This test verifies that headers can be set in a variety of ways.
 TEST(SpdyHeaderBlockTest, AddHeaders) {
   SpdyHeaderBlock block;
-  block["foo"] = string(300, 'x');
+  block["foo"] = SpdyString(300, 'x');
   block["bar"] = "baz";
   block["qux"] = "qux1";
   block["qux"] = "qux2";
   block.insert(std::make_pair("key", "value"));
 
-  EXPECT_EQ(Pair("foo", string(300, 'x')), *block.find("foo"));
+  EXPECT_EQ(Pair("foo", SpdyString(300, 'x')), *block.find("foo"));
   EXPECT_EQ("baz", block["bar"]);
-  string qux("qux");
+  SpdyString qux("qux");
   EXPECT_EQ("qux2", block[qux]);
   ASSERT_NE(block.end(), block.find("key"));
   EXPECT_EQ(Pair("key", "value"), *block.find("key"));
@@ -93,7 +92,7 @@ TEST(SpdyHeaderBlockTest, AddHeaders) {
 // This test verifies that SpdyHeaderBlock can be copied using Clone().
 TEST(SpdyHeaderBlockTest, CopyBlocks) {
   SpdyHeaderBlock block1;
-  block1["foo"] = string(300, 'x');
+  block1["foo"] = SpdyString(300, 'x');
   block1["bar"] = "baz";
   block1.insert(std::make_pair("qux", "qux1"));
 
@@ -164,7 +163,7 @@ TEST(SpdyHeaderBlockTest, AppendHeaders) {
   SpdyHeaderBlock block;
   block["foo"] = "foo";
   block.AppendValueOrAddHeader("foo", "bar");
-  EXPECT_EQ(Pair("foo", string("foo\0bar", 7)), *block.find("foo"));
+  EXPECT_EQ(Pair("foo", SpdyString("foo\0bar", 7)), *block.find("foo"));
 
   block.insert(std::make_pair("foo", "baz"));
   EXPECT_EQ("baz", block["foo"]);
@@ -188,9 +187,9 @@ TEST(SpdyHeaderBlockTest, AppendHeaders) {
 
   EXPECT_EQ("key1=value1; key2=value2; key3=value3", block["cookie"]);
   EXPECT_EQ("baz", block["foo"]);
-  EXPECT_EQ(string("h1v1\0h1v2\0h1v3", 14), block["h1"]);
-  EXPECT_EQ(string("h2v1\0h2v2\0h2v3", 14), block["h2"]);
-  EXPECT_EQ(string("h3v2\0h3v3", 9), block["h3"]);
+  EXPECT_EQ(SpdyString("h1v1\0h1v2\0h1v3", 14), block["h1"]);
+  EXPECT_EQ(SpdyString("h2v1\0h2v2\0h2v3", 14), block["h2"]);
+  EXPECT_EQ(SpdyString("h3v2\0h3v3", 9), block["h3"]);
   EXPECT_EQ("singleton", block["h4"]);
 }
 

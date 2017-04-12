@@ -7,7 +7,6 @@
 #include <cstddef>
 #include <cstring>
 #include <memory>
-#include <string>
 #include <utility>
 
 #include "base/logging.h"
@@ -15,6 +14,7 @@
 #include "base/strings/string_number_conversions.h"
 #include "net/base/request_priority.h"
 #include "net/log/net_log_with_source.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/spdy_buffer_producer.h"
 #include "net/spdy/spdy_stream.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -24,8 +24,6 @@ namespace net {
 
 namespace {
 
-using std::string;
-
 const char kOriginal[] = "original";
 const char kRequeued[] = "requeued";
 
@@ -33,7 +31,7 @@ class SpdyWriteQueueTest : public ::testing::Test {};
 
 // Makes a SpdyFrameProducer producing a frame with the data in the
 // given string.
-std::unique_ptr<SpdyBufferProducer> StringToProducer(const std::string& s) {
+std::unique_ptr<SpdyBufferProducer> StringToProducer(const SpdyString& s) {
   std::unique_ptr<char[]> data(new char[s.size()]);
   std::memcpy(data.get(), s.data(), s.size());
   return std::unique_ptr<SpdyBufferProducer>(
@@ -52,7 +50,7 @@ std::unique_ptr<SpdyBufferProducer> IntToProducer(int i) {
 // SpdyWriteQueue upon destruction.
 class RequeingBufferProducer : public SpdyBufferProducer {
  public:
-  RequeingBufferProducer(SpdyWriteQueue* queue) {
+  explicit RequeingBufferProducer(SpdyWriteQueue* queue) {
     buffer_.reset(new SpdyBuffer(kOriginal, arraysize(kOriginal)));
     buffer_->AddConsumeCallback(
         base::Bind(RequeingBufferProducer::ConsumeCallback, queue));
@@ -84,9 +82,9 @@ class RequeingBufferProducer : public SpdyBufferProducer {
 
 // Produces a frame with the given producer and returns a copy of its
 // data as a string.
-std::string ProducerToString(std::unique_ptr<SpdyBufferProducer> producer) {
+SpdyString ProducerToString(std::unique_ptr<SpdyBufferProducer> producer) {
   std::unique_ptr<SpdyBuffer> buffer = producer->ProduceBuffer();
-  return std::string(buffer->GetRemainingData(), buffer->GetRemainingSize());
+  return SpdyString(buffer->GetRemainingData(), buffer->GetRemainingSize());
 }
 
 // Produces a frame with the given producer and returns a copy of its
@@ -300,7 +298,8 @@ TEST_F(SpdyWriteQueueTest, RequeingProducerWithoutReentrance) {
 
     EXPECT_TRUE(queue.Dequeue(&frame_type, &producer, &stream));
     EXPECT_TRUE(queue.IsEmpty());
-    EXPECT_EQ(string(kOriginal), producer->ProduceBuffer()->GetRemainingData());
+    EXPECT_EQ(SpdyString(kOriginal),
+              producer->ProduceBuffer()->GetRemainingData());
   }
   // |producer| was destroyed, and a buffer is re-queued.
   EXPECT_FALSE(queue.IsEmpty());
@@ -310,7 +309,8 @@ TEST_F(SpdyWriteQueueTest, RequeingProducerWithoutReentrance) {
   base::WeakPtr<SpdyStream> stream;
 
   EXPECT_TRUE(queue.Dequeue(&frame_type, &producer, &stream));
-  EXPECT_EQ(string(kRequeued), producer->ProduceBuffer()->GetRemainingData());
+  EXPECT_EQ(SpdyString(kRequeued),
+            producer->ProduceBuffer()->GetRemainingData());
 }
 
 TEST_F(SpdyWriteQueueTest, ReentranceOnClear) {
@@ -328,7 +328,8 @@ TEST_F(SpdyWriteQueueTest, ReentranceOnClear) {
   base::WeakPtr<SpdyStream> stream;
 
   EXPECT_TRUE(queue.Dequeue(&frame_type, &producer, &stream));
-  EXPECT_EQ(string(kRequeued), producer->ProduceBuffer()->GetRemainingData());
+  EXPECT_EQ(SpdyString(kRequeued),
+            producer->ProduceBuffer()->GetRemainingData());
 }
 
 TEST_F(SpdyWriteQueueTest, ReentranceOnRemovePendingWritesAfter) {
@@ -349,7 +350,8 @@ TEST_F(SpdyWriteQueueTest, ReentranceOnRemovePendingWritesAfter) {
   base::WeakPtr<SpdyStream> weak_stream;
 
   EXPECT_TRUE(queue.Dequeue(&frame_type, &producer, &weak_stream));
-  EXPECT_EQ(string(kRequeued), producer->ProduceBuffer()->GetRemainingData());
+  EXPECT_EQ(SpdyString(kRequeued),
+            producer->ProduceBuffer()->GetRemainingData());
 }
 
 TEST_F(SpdyWriteQueueTest, ReentranceOnRemovePendingWritesForStream) {
@@ -370,7 +372,8 @@ TEST_F(SpdyWriteQueueTest, ReentranceOnRemovePendingWritesForStream) {
   base::WeakPtr<SpdyStream> weak_stream;
 
   EXPECT_TRUE(queue.Dequeue(&frame_type, &producer, &weak_stream));
-  EXPECT_EQ(string(kRequeued), producer->ProduceBuffer()->GetRemainingData());
+  EXPECT_EQ(SpdyString(kRequeued),
+            producer->ProduceBuffer()->GetRemainingData());
 }
 
 }  // namespace

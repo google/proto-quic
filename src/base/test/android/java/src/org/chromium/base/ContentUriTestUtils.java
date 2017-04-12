@@ -5,7 +5,6 @@
 package org.chromium.base;
 
 import android.content.ContentValues;
-import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
 import android.provider.MediaStore;
@@ -20,19 +19,16 @@ public class ContentUriTestUtils {
      * Insert an image into the MediaStore, and return the content URI. If the
      * image already exists in the MediaStore, just retrieve the URI.
      *
-     * @param context Application context.
      * @param path Path to the image file.
      * @return Content URI of the image.
      */
     @CalledByNative
-    private static String insertImageIntoMediaStore(Context context, String path) {
+    private static String insertImageIntoMediaStore(String path) {
         // Check whether the content URI exists.
-        Cursor c = context.getContentResolver().query(
+        Cursor c = ContextUtils.getApplicationContext().getContentResolver().query(
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                new String[] { MediaStore.Video.VideoColumns._ID },
-                MediaStore.Images.Media.DATA + " LIKE ?",
-                new String[] { path },
-                null);
+                new String[] {MediaStore.Video.VideoColumns._ID},
+                MediaStore.Images.Media.DATA + " LIKE ?", new String[] {path}, null);
         if (c != null && c.getCount() > 0) {
             c.moveToFirst();
             int id = c.getInt(0);
@@ -43,7 +39,7 @@ public class ContentUriTestUtils {
         // Insert the content URI into MediaStore.
         ContentValues values = new ContentValues();
         values.put(MediaStore.MediaColumns.DATA, path);
-        Uri uri = context.getContentResolver().insert(
+        Uri uri = ContextUtils.getApplicationContext().getContentResolver().insert(
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
         return uri.toString();
     }

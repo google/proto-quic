@@ -8,11 +8,11 @@
 #include <stdint.h>
 
 #include <cstddef>
-#include <string>
 #include <vector>
 
 #include "net/base/net_export.h"
 #include "net/spdy/hpack/hpack_constants.h"
+#include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
 namespace net {
@@ -91,8 +91,7 @@ class NET_EXPORT_PRIVATE HpackHuffmanTable {
   // otherwise be overflowed.
   // DEPRECATED: HpackHuffmanDecoder is now used for decoding strings encoded
   // according to the Huffman Table in the HPACK spec.
-  bool GenericDecodeString(HpackInputStream* in,
-                           std::string* out) const;
+  bool GenericDecodeString(HpackInputStream* in, SpdyString* out) const;
 
   // Returns the estimate of dynamically allocated memory in bytes.
   size_t EstimateMemoryUsage() const;

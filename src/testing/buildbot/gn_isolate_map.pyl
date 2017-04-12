@@ -148,6 +148,13 @@
     "label": "//ash:ash_unittests",
     "type": "windowed_test_launcher",
   },
+  "ash_mus_unittests": {
+    "label": "//ash:ash_unittests",
+    "type": "windowed_test_launcher",
+    "args": [
+      "--mus",
+    ],
+  },
   "audio_unittests": {
     "label": "//media:audio_unittests",
     "type": "raw",
