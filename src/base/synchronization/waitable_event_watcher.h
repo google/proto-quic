@@ -35,7 +35,7 @@ class WaitableEvent;
 //    public:
 //     void DoStuffWhenSignaled(WaitableEvent *waitable_event) {
 //       watcher_.StartWatching(waitable_event,
-//           base::Bind(&MyClass::OnWaitableEventSignaled, this);
+//           base::BindOnce(&MyClass::OnWaitableEventSignaled, this);
 //     }
 //    private:
 //     void OnWaitableEventSignaled(WaitableEvent* waitable_event) {
@@ -64,7 +64,7 @@ class BASE_EXPORT WaitableEventWatcher
 #endif
 {
  public:
-  typedef Callback<void(WaitableEvent*)> EventCallback;
+  using EventCallback = OnceCallback<void(WaitableEvent*)>;
   WaitableEventWatcher();
 
 #if defined(OS_WIN)
@@ -75,7 +75,7 @@ class BASE_EXPORT WaitableEventWatcher
 
   // When |event| is signaled, |callback| is called on the sequence that called
   // StartWatching().
-  bool StartWatching(WaitableEvent* event, const EventCallback& callback);
+  bool StartWatching(WaitableEvent* event, EventCallback callback);
 
   // Cancel the current watch. Must be called from the same sequence which
   // started the watch.

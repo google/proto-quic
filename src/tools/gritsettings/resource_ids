@@ -172,10 +172,10 @@
     "structures": [15920],
   },
   "components/resources/components_resources.grd": {
-    "includes": [15930],
+    "includes": [16030],
   },
   "components/resources/components_scaled_resources.grd": {
-    "structures": [16050],
+    "structures": [16150],
   },
   # END components/ section.
 

@@ -24,7 +24,10 @@ class ReportingCache;
 class ReportingDelegate;
 class ReportingDeliveryAgent;
 class ReportingEndpointManager;
+class ReportingGarbageCollector;
+class ReportingNetworkChangeObserver;
 class ReportingObserver;
+class ReportingPersister;
 class ReportingUploader;
 class URLRequestContext;
 
@@ -39,6 +42,16 @@ class NET_EXPORT ReportingContext {
 
   ~ReportingContext();
 
+  // Initializes the ReportingContext. This may take a while (e.g. it may
+  // involve reloading state persisted to disk). Should be called only once.
+  //
+  // Components of the ReportingContext won't reference their dependencies (e.g.
+  // the Clock/TickClock or Timers inside the individual components) until
+  // during/after the call to Init.
+  void Initialize();
+
+  bool initialized() const { return initialized_; }
+
   const ReportingPolicy& policy() { return policy_; }
   ReportingDelegate* delegate() { return delegate_.get(); }
 
@@ -51,6 +64,11 @@ class NET_EXPORT ReportingContext {
     return endpoint_manager_.get();
   }
   ReportingDeliveryAgent* delivery_agent() { return delivery_agent_.get(); }
+  ReportingGarbageCollector* garbage_collector() {
+    return garbage_collector_.get();
+  }
+
+  ReportingPersister* persister() { return persister_.get(); }
 
   void AddObserver(ReportingObserver* observer);
   void RemoveObserver(ReportingObserver* observer);
@@ -73,6 +91,7 @@ class NET_EXPORT ReportingContext {
   std::unique_ptr<ReportingUploader> uploader_;
 
   base::ObserverList<ReportingObserver, /* check_empty= */ true> observers_;
+  bool initialized_;
 
   std::unique_ptr<ReportingCache> cache_;
 
@@ -82,6 +101,16 @@ class NET_EXPORT ReportingContext {
   // |delivery_agent_| must come after |tick_clock_|, |uploader_|, |cache_|,
   // and |endpoint_manager_|.
   std::unique_ptr<ReportingDeliveryAgent> delivery_agent_;
+
+  // |persister_| must come after |delegate_|, |clock_|, |tick_clock_|, and
+  // |cache_|.
+  std::unique_ptr<ReportingPersister> persister_;
+
+  // |garbage_collector_| must come after |tick_clock_| and |cache_|.
+  std::unique_ptr<ReportingGarbageCollector> garbage_collector_;
+
+  // |network_change_observer_| must come after |cache_|.
+  std::unique_ptr<ReportingNetworkChangeObserver> network_change_observer_;
 
   DISALLOW_COPY_AND_ASSIGN(ReportingContext);
 };

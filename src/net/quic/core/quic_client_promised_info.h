@@ -14,7 +14,7 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_spdy_stream.h"
 #include "net/quic/platform/api/quic_export.h"
-#include "net/spdy/spdy_framer.h"
+#include "net/spdy/core/spdy_framer.h"
 
 namespace net {
 

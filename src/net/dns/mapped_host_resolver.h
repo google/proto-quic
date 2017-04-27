@@ -57,8 +57,8 @@ class NET_EXPORT MappedHostResolver : public HostResolver {
   void SetDnsClientEnabled(bool enabled) override;
   HostCache* GetHostCache() override;
   std::unique_ptr<base::Value> GetDnsConfigAsValue() const override;
-  void SetDefaultAddressFamily(AddressFamily address_family) override;
-  AddressFamily GetDefaultAddressFamily() const override;
+  void SetNoIPv6OnWifi(bool no_ipv6_on_wifi) override;
+  bool GetNoIPv6OnWifi() override;
 
  private:
   // Modify the request |info| according to |rules_|. Returns either OK or

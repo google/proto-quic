@@ -10,7 +10,7 @@
 #include "net/quic/core/quic_client_promised_info.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
-#include "net/spdy/spdy_protocol.h"
+#include "net/spdy/core/spdy_protocol.h"
 #include "net/tools/quic/quic_client_session.h"
 
 using std::string;

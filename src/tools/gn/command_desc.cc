@@ -39,7 +39,7 @@ void PrintValue(const base::Value* value, int indentLevel) {
   bool bool_value = false;
   if (value->GetAsList(&list_value)) {
     for (const auto& v : *list_value) {
-      PrintValue(v.get(), indentLevel);
+      PrintValue(&v, indentLevel);
     }
   } else if (value->GetAsString(&string_value)) {
     OutputString(indent);

@@ -6,6 +6,7 @@
 #define BASE_TASK_SCHEDULER_SCHEDULER_SINGLE_THREAD_TASK_RUNNER_MANAGER_H_
 
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "base/atomicops.h"
@@ -14,8 +15,7 @@
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/task_scheduler/scheduler_lock.h"
-#include "base/task_scheduler/scheduler_worker_pool_params.h"
-#include "base/task_scheduler/task_scheduler.h"
+#include "base/threading/platform_thread.h"
 #include "build/build_config.h"
 
 namespace base {
@@ -35,21 +35,40 @@ class SchedulerWorkerDelegate;
 
 }  // namespace
 
+// Manages a pool of threads which are each associated with one
+// SingleThreadTaskRunner.
+//
+// No threads are created (and hence no tasks can run) before Start() is called.
+//
+// This class is thread-safe.
 class BASE_EXPORT SchedulerSingleThreadTaskRunnerManager final {
  public:
   SchedulerSingleThreadTaskRunnerManager(
-      const std::vector<SchedulerWorkerPoolParams>& worker_pool_params_vector,
-      const TaskScheduler::WorkerPoolIndexForTraitsCallback&
-          worker_pool_index_for_traits_callback,
       TaskTracker* task_tracker,
       DelayedTaskManager* delayed_task_manager);
   ~SchedulerSingleThreadTaskRunnerManager();
 
+  // Starts threads for existing SingleThreadTaskRunners and allows threads to
+  // be started when SingleThreadTaskRunners are created in the future.
+  void Start();
+
+  // Creates a SingleThreadTaskRunner which runs tasks with |traits| on a
+  // dedicated thread named "TaskSchedulerSingleThread" + |name| +  index.
+  // |priority_hint| is the preferred thread priority; the actual thread
+  // priority depends on shutdown state and platform capabilities.
   scoped_refptr<SingleThreadTaskRunner> CreateSingleThreadTaskRunnerWithTraits(
+      const std::string& name,
+      ThreadPriority priority_hint,
       const TaskTraits& traits);
 
 #if defined(OS_WIN)
+  // Creates a SingleThreadTaskRunner which runs tasks with |traits| on a
+  // dedicated COM STA thread named "TaskSchedulerSingleThreadCOMSTA" + |name| +
+  // index. |priority_hint| is the preferred thread priority; the actual thread
+  // priority depends on shutdown state and platform capabilities.
   scoped_refptr<SingleThreadTaskRunner> CreateCOMSTATaskRunnerWithTraits(
+      const std::string& name,
+      ThreadPriority priority_hint,
       const TaskTraits& traits);
 #endif  // defined(OS_WIN)
 
@@ -60,29 +79,32 @@ class BASE_EXPORT SchedulerSingleThreadTaskRunnerManager final {
 
   template <typename DelegateType>
   scoped_refptr<SingleThreadTaskRunner>
-  CreateSingleThreadTaskRunnerWithDelegate(const TaskTraits& traits);
+  CreateSingleThreadTaskRunnerWithDelegate(const std::string& name,
+                                           ThreadPriority priority_hint,
+                                           const TaskTraits& traits);
 
   template <typename DelegateType>
   std::unique_ptr<SchedulerWorkerDelegate> CreateSchedulerWorkerDelegate(
-      const SchedulerWorkerPoolParams& params,
+      const std::string& name,
       int id);
 
   template <typename DelegateType>
   SchedulerWorker* CreateAndRegisterSchedulerWorker(
-      const SchedulerWorkerPoolParams& params);
+      const std::string& name,
+      ThreadPriority priority_hint);
 
   void UnregisterSchedulerWorker(SchedulerWorker* worker);
 
-  const std::vector<SchedulerWorkerPoolParams> worker_pool_params_vector_;
-  const TaskScheduler::WorkerPoolIndexForTraitsCallback
-      worker_pool_index_for_traits_callback_;
   TaskTracker* const task_tracker_;
   DelayedTaskManager* const delayed_task_manager_;
 
-  // Synchronizes access to |workers_| and |worker_id_|.
-  SchedulerLock workers_lock_;
+  // Synchronizes access to |workers_|, |next_worker_id_| and |started_|.
+  SchedulerLock lock_;
   std::vector<scoped_refptr<SchedulerWorker>> workers_;
   int next_worker_id_ = 0;
+
+  // Set to true when Start() is called.
+  bool started_ = false;
 
 #if DCHECK_IS_ON()
   subtle::Atomic32 workers_unregistered_during_join_ = 0;

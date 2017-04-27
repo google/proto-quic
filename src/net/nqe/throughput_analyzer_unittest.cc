@@ -17,6 +17,7 @@
 #include "base/single_thread_task_runner.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "net/base/url_util.h"
+#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_test_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -92,7 +93,8 @@ TEST(ThroughputAnalyzerTest, MaximumRequests) {
                                 : "http://example.com/test.html";
     for (size_t i = 0; i < 1000; ++i) {
       std::unique_ptr<URLRequest> request(
-          context.CreateRequest(GURL(url), DEFAULT_PRIORITY, &test_delegate));
+          context.CreateRequest(GURL(url), DEFAULT_PRIORITY, &test_delegate,
+                                TRAFFIC_ANNOTATION_FOR_TESTS));
       ASSERT_EQ(test.use_local_requests, IsLocalhost(request->url().host()));
 
       throughput_analyzer.NotifyStartTransaction(*(request.get()));
@@ -133,14 +135,15 @@ TEST(ThroughputAnalyzerTest, TestThroughputWithMultipleRequestsOverlap) {
 
     std::unique_ptr<URLRequest> request_local;
 
-    std::unique_ptr<URLRequest> request_not_local(
-        context.CreateRequest(GURL("http://example.com/echo.html"),
-                              DEFAULT_PRIORITY, &test_delegate));
+    std::unique_ptr<URLRequest> request_not_local(context.CreateRequest(
+        GURL("http://example.com/echo.html"), DEFAULT_PRIORITY, &test_delegate,
+        TRAFFIC_ANNOTATION_FOR_TESTS));
     request_not_local->Start();
 
     if (test.start_local_request) {
       request_local = context.CreateRequest(GURL("http://localhost/echo.html"),
-                                            DEFAULT_PRIORITY, &test_delegate);
+                                            DEFAULT_PRIORITY, &test_delegate,
+                                            TRAFFIC_ANNOTATION_FOR_TESTS);
       request_local->Start();
     }
 
@@ -203,9 +206,11 @@ TEST(ThroughputAnalyzerTest, TestThroughputWithNetworkRequestsOverlap) {
     EXPECT_EQ(0, throughput_analyzer.throughput_observations_received());
 
     std::unique_ptr<URLRequest> request_network_1 = context.CreateRequest(
-        GURL("http://example.com/echo.html"), DEFAULT_PRIORITY, &test_delegate);
+        GURL("http://example.com/echo.html"), DEFAULT_PRIORITY, &test_delegate,
+        TRAFFIC_ANNOTATION_FOR_TESTS);
     std::unique_ptr<URLRequest> request_network_2 = context.CreateRequest(
-        GURL("http://example.com/echo.html"), DEFAULT_PRIORITY, &test_delegate);
+        GURL("http://example.com/echo.html"), DEFAULT_PRIORITY, &test_delegate,
+        TRAFFIC_ANNOTATION_FOR_TESTS);
     request_network_1->Start();
     request_network_2->Start();
 

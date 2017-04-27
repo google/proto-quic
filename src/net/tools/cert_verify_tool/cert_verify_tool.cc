@@ -126,6 +126,8 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  // TODO(eroman): Also use CertVerifyProcBuiltin.
+
   std::cout << "CertVerifyProc:\n";
   bool cert_verify_proc_ok = true;
   if (!time_flag.empty()) {

@@ -126,8 +126,8 @@ bool FileEnumerator::ReadDirectory(std::vector<FileInfo>* entries,
     return false;
 
 #if !defined(OS_LINUX) && !defined(OS_MACOSX) && !defined(OS_BSD) && \
-    !defined(OS_SOLARIS) && !defined(OS_ANDROID)
-  #error Port warning: depending on the definition of struct dirent, \
+    !defined(OS_SOLARIS) && !defined(OS_ANDROID) && !defined(OS_AIX)
+#error Port warning: depending on the definition of struct dirent, \
          additional space for pathname may be needed
 #endif
 

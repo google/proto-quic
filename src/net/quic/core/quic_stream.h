@@ -186,6 +186,9 @@ class QUIC_EXPORT_PRIVATE QuicStream {
       bool fin,
       QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
 
+  // Adds random padding after the fin is consumed for this stream.
+  void AddRandomPaddingAfterFin();
+
  protected:
   // Sends as many bytes in the first |count| buffers of |iov| to the connection
   // as the connection will consume.
@@ -316,6 +319,10 @@ class QUIC_EXPORT_PRIVATE QuicStream {
   // A counter incremented when OnCanWrite() is called and no progress is made.
   // For debugging only.
   size_t busy_counter_;
+
+  // Indicates whether paddings will be added after the fin is consumed for this
+  // stream.
+  bool add_random_padding_after_fin_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicStream);
 };

@@ -476,7 +476,7 @@ def _OnStaleMd5(options):
       # - there was already a dependent android_resources() with the same
       #   package (occurs mostly when an apk target and resources target share
       #   an AndroidManifest.xml)
-      if cur_package != 'dummy.package' and cur_package not in packages:
+      if cur_package != 'org.dummy' and cur_package not in packages:
         packages.append(cur_package)
         r_txt_files.append(r_txt_path)
 

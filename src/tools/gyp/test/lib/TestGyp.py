@@ -6,6 +6,7 @@
 TestGyp.py:  a testing framework for GYP integration tests.
 """
 
+import errno
 import collections
 from contextlib import contextmanager
 import itertools
@@ -303,7 +304,7 @@ class TestGypBase(TestCommon.TestCommon):
     # TODO:  --depth=. works around Chromium-specific tree climbing.
     depth = kw.pop('depth', '.')
     run_args = ['--depth='+depth]
-    run_args.extend(['--format='+f for f in self.formats]);
+    run_args.extend(['--format='+f for f in self.formats])
     run_args.append(gyp_file)
     if self.no_parallel:
       run_args += ['--no-parallel']
@@ -312,8 +313,9 @@ class TestGypBase(TestCommon.TestCommon):
     run_args.extend(self.extra_args)
     # Default xcode_ninja_target_pattern to ^.*$ to fix xcode-ninja tests
     xcode_ninja_target_pattern = kw.pop('xcode_ninja_target_pattern', '.*')
-    run_args.extend(
-      ['-G', 'xcode_ninja_target_pattern=%s' % xcode_ninja_target_pattern])
+    if self is TestGypXcodeNinja:
+      run_args.extend(
+        ['-G', 'xcode_ninja_target_pattern=%s' % xcode_ninja_target_pattern])
     run_args.extend(args)
     return self.run(program=self.gyp, arguments=run_args, **kw)
 
@@ -702,10 +704,15 @@ def FindVisualStudioInstallation():
   search %PATH% and %PATHEXT% for a devenv.{exe,bat,...} executable.
   Failing that, we search for likely deployment paths.
   """
+  override_build_tool = os.environ.get('GYP_BUILD_TOOL')
+  if override_build_tool:
+    return override_build_tool, True, override_build_tool
+
   possible_roots = ['%s:\\Program Files%s' % (chr(drive), suffix)
                     for drive in range(ord('C'), ord('Z') + 1)
                     for suffix in ['', ' (x86)']]
   possible_paths = {
+      '2017': r'Microsoft Visual Studio\2017',
       '2015': r'Microsoft Visual Studio 14.0\Common7\IDE\devenv.com',
       '2013': r'Microsoft Visual Studio 12.0\Common7\IDE\devenv.com',
       '2012': r'Microsoft Visual Studio 11.0\Common7\IDE\devenv.com',
@@ -719,6 +726,36 @@ def FindVisualStudioInstallation():
   for flag in (f for f in sys.argv if f.startswith('msvs_version=')):
     msvs_version = flag.split('=')[-1]
   msvs_version = os.environ.get('GYP_MSVS_VERSION', msvs_version)
+
+  if msvs_version in ['2017', 'auto']:
+    msbuild_exes = []
+    try:
+      path = possible_paths['2017']
+      for r in possible_roots:
+        build_tool = os.path.join(r, path)
+        if os.path.exists(build_tool):
+          break;
+        else:
+          build_tool = None
+      if not build_tool:
+        args1 = ['reg', 'query',
+                    'HKLM\Software\Microsoft\VisualStudio\SxS\VS7',
+                    '/v', '15.0', '/reg:32']
+        build_tool = subprocess.check_output(args1)\
+          .strip().split('\r\n').pop().split(' ').pop()
+      if build_tool:
+        args2 = ['cmd.exe', '/d', '/c',
+                'cd', '/d', build_tool,
+                '&', 'dir', '/b', '/s', 'msbuild.exe']
+        msbuild_exes = subprocess.check_output(args2).strip().split('\r\n')
+      if len(msbuild_exes):
+        msbuild_Path = os.path.join(build_tool, msbuild_exes[0])
+        if os.path.exists(msbuild_Path):
+          os.environ['GYP_MSVS_VERSION'] = '2017'
+          os.environ['GYP_BUILD_TOOL'] = msbuild_Path
+          return msbuild_Path, True, msbuild_Path
+    except Exception as e:
+      pass
 
   if msvs_version in possible_paths:
     # Check that the path to the specified GYP_MSVS_VERSION exists.
@@ -864,22 +901,38 @@ class TestGypMSVS(TestGypOnMSToolchain):
     Runs a Visual Studio build using the configuration generated
     from the specified gyp_file.
     """
-    configuration = self.configuration_buildname()
-    if clean:
-      build = '/Clean'
-    elif rebuild:
-      build = '/Rebuild'
+    if '15.0' in self.build_tool:
+      configuration = '/p:Configuration=' + (
+        self.configuration or self.configuration_buildname())
+      build = '/t'
+      if target not in (None, self.ALL, self.DEFAULT):
+        build += ':' + target
+      if clean:
+        build += ':Clean'
+      elif rebuild:
+        build += ':Rebuild'
+      elif ':' not in build:
+        build += ':Build'
+      arguments = kw.get('arguments', [])[:]
+      arguments.extend([gyp_file.replace('.gyp', '.sln'),
+                        build, configuration])
     else:
-      build = '/Build'
-    arguments = kw.get('arguments', [])[:]
-    arguments.extend([gyp_file.replace('.gyp', '.sln'),
-                      build, configuration])
-    # Note:  the Visual Studio generator doesn't add an explicit 'all'
-    # target, so we just treat it the same as the default.
-    if target not in (None, self.ALL, self.DEFAULT):
-      arguments.extend(['/Project', target])
-    if self.configuration:
-      arguments.extend(['/ProjectConfig', self.configuration])
+      configuration = self.configuration_buildname()
+      if clean:
+        build = '/Clean'
+      elif rebuild:
+        build = '/Rebuild'
+      else:
+        build = '/Build'
+      arguments = kw.get('arguments', [])[:]
+      arguments.extend([gyp_file.replace('.gyp', '.sln'),
+                        build, configuration])
+      # Note:  the Visual Studio generator doesn't add an explicit 'all'
+      # target, so we just treat it the same as the default.
+      if target not in (None, self.ALL, self.DEFAULT):
+        arguments.extend(['/Project', target])
+      if self.configuration:
+        arguments.extend(['/ProjectConfig', self.configuration])
     kw['arguments'] = arguments
     return self.run(program=self.build_tool, **kw)
   def up_to_date(self, gyp_file, target=None, **kw):

@@ -126,6 +126,9 @@ class SimpleFramerVisitor : public QuicFramerVisitorInterface {
     return stop_waiting_frames_;
   }
   const std::vector<QuicPingFrame>& ping_frames() const { return ping_frames_; }
+  const std::vector<QuicPaddingFrame>& padding_frames() const {
+    return padding_frames_;
+  }
   const QuicVersionNegotiationPacket* version_negotiation_packet() const {
     return version_negotiation_packet_.get();
   }
@@ -192,7 +195,7 @@ size_t SimpleQuicFramer::num_frames() const {
   return ack_frames().size() + goaway_frames().size() +
          rst_stream_frames().size() + stop_waiting_frames().size() +
          stream_frames().size() + ping_frames().size() +
-         connection_close_frames().size();
+         connection_close_frames().size() + padding_frames().size();
 }
 
 const std::vector<QuicAckFrame>& SimpleQuicFramer::ack_frames() const {
@@ -225,6 +228,10 @@ const std::vector<QuicGoAwayFrame>& SimpleQuicFramer::goaway_frames() const {
 const std::vector<QuicConnectionCloseFrame>&
 SimpleQuicFramer::connection_close_frames() const {
   return visitor_->connection_close_frames();
+}
+
+const std::vector<QuicPaddingFrame>& SimpleQuicFramer::padding_frames() const {
+  return visitor_->padding_frames();
 }
 
 }  // namespace test

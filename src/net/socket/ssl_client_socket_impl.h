@@ -201,8 +201,6 @@ class SSLClientSocketImpl : public SSLClientSocket,
   bool IsRenegotiationAllowed() const;
 
   // Callbacks for operations with the private key.
-  int PrivateKeyTypeCallback();
-  size_t PrivateKeyMaxSignatureLenCallback();
   ssl_private_key_result_t PrivateKeySignDigestCallback(uint8_t* out,
                                                         size_t* out_len,
                                                         size_t max_out,
@@ -214,6 +212,12 @@ class SSLClientSocketImpl : public SSLClientSocket,
                                                       size_t max_out);
 
   void OnPrivateKeyComplete(Error error, const std::vector<uint8_t>& signature);
+
+  // Called whenever BoringSSL processes a protocol message.
+  void MessageCallback(int is_write,
+                       int content_type,
+                       const void* buf,
+                       size_t len);
 
   int TokenBindingAdd(const uint8_t** out,
                       size_t* out_len,

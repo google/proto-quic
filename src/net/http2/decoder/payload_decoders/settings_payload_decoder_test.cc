@@ -33,7 +33,7 @@ class SettingsPayloadDecoderPeer {
   // Returns the mask of flags that affect the decoding of the payload (i.e.
   // flags that that indicate the presence of certain fields or padding).
   static constexpr uint8_t FlagsAffectingPayloadDecoding() {
-    return Http2FrameFlag::FLAG_ACK;
+    return Http2FrameFlag::ACK;
   }
 
   static void Randomize(SettingsPayloadDecoder* p, RandomBase* rng) {
@@ -107,7 +107,7 @@ TEST_F(SettingsPayloadDecoderTest, SettingsAkcWrongSize) {
   fb.Append(RandSettingsFields());
   fb.Append(RandSettingsFields());
   fb.Append(RandSettingsFields());
-  EXPECT_TRUE(VerifyDetectsFrameSizeError(Http2FrameFlag::FLAG_ACK, fb.buffer(),
+  EXPECT_TRUE(VerifyDetectsFrameSizeError(Http2FrameFlag::ACK, fb.buffer(),
                                           approve_size));
 }
 
@@ -115,7 +115,7 @@ TEST_F(SettingsPayloadDecoderTest, SettingsAkcWrongSize) {
 TEST_F(SettingsPayloadDecoderTest, SettingsAck) {
   for (int stream_id = 0; stream_id < 3; ++stream_id) {
     Http2FrameHeader header(0, Http2FrameType::SETTINGS,
-                            RandFlags() | Http2FrameFlag::FLAG_ACK, stream_id);
+                            RandFlags() | Http2FrameFlag::ACK, stream_id);
     set_frame_header(header);
     FrameParts expected(header);
     EXPECT_TRUE(DecodePayloadAndValidateSeveralWays("", expected));
@@ -145,7 +145,7 @@ TEST_F(SettingsPayloadDecoderTest, ManySettings) {
   const size_t num_settings = 100;
   const size_t size = Http2SettingFields::EncodedSize() * num_settings;
   Http2FrameHeader header(size, Http2FrameType::SETTINGS,
-                          RandFlags(),  // & ~Http2FrameFlag::FLAG_ACK,
+                          RandFlags(),  // & ~Http2FrameFlag::ACK,
                           RandStreamId());
   set_frame_header(header);
   FrameParts expected(header);

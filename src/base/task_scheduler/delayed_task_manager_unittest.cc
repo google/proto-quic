@@ -42,13 +42,29 @@ class MockTaskTarget {
 class TaskSchedulerDelayedTaskManagerTest : public testing::Test {
  public:
   TaskSchedulerDelayedTaskManagerTest()
-      : service_thread_task_runner_(new TestMockTimeTaskRunner),
-        delayed_task_manager_(service_thread_task_runner_) {}
+      : delayed_task_manager_(service_thread_task_runner_->GetMockTickClock()) {
+  }
   ~TaskSchedulerDelayedTaskManagerTest() override = default;
 
  protected:
-  scoped_refptr<TestMockTimeTaskRunner> service_thread_task_runner_;
+  std::unique_ptr<Task> CreateTask(TimeDelta delay) {
+    auto task =
+        MakeUnique<Task>(FROM_HERE, BindOnce(&DoNothing), TaskTraits(), delay);
+
+    // The constructor of Task computes |delayed_run_time| by adding |delay| to
+    // the real time. Recompute it by adding |delay| to the mock time.
+    task->delayed_run_time =
+        service_thread_task_runner_->GetMockTickClock()->NowTicks() + delay;
+
+    return task;
+  }
+
+  testing::StrictMock<MockTaskTarget> task_target_;
+  const scoped_refptr<TestMockTimeTaskRunner> service_thread_task_runner_ =
+      make_scoped_refptr(new TestMockTimeTaskRunner);
   DelayedTaskManager delayed_task_manager_;
+  std::unique_ptr<Task> task_ = CreateTask(kLongDelay);
+  Task* const task_raw_ = task_.get();
 
  private:
   DISALLOW_COPY_AND_ASSIGN(TaskSchedulerDelayedTaskManagerTest);
@@ -56,84 +72,137 @@ class TaskSchedulerDelayedTaskManagerTest : public testing::Test {
 
 }  // namespace
 
-// Verify that a delayed task isn't forwarded before it is ripe for execution.
-TEST_F(TaskSchedulerDelayedTaskManagerTest, DelayedTaskDoesNotRunTooEarly) {
-  auto task =
-      MakeUnique<Task>(FROM_HERE, Bind(&DoNothing), TaskTraits(), kLongDelay);
-
-  testing::StrictMock<MockTaskTarget> task_target;
-
+// Verify that a delayed task isn't forwarded before Start().
+TEST_F(TaskSchedulerDelayedTaskManagerTest, DelayedTaskDoesNotRunBeforeStart) {
   // Send |task| to the DelayedTaskManager.
   delayed_task_manager_.AddDelayedTask(
-      std::move(task),
-      Bind(&MockTaskTarget::PostTaskNowCallback, Unretained(&task_target)));
+      std::move(task_), BindOnce(&MockTaskTarget::PostTaskNowCallback,
+                                 Unretained(&task_target_)));
 
-  // Run tasks that are ripe for execution. Don't expect any forwarding to
-  // |task_target|.
-  service_thread_task_runner_->RunUntilIdle();
-}
-
-// Verify that a delayed task is forwarded when it is ripe for execution.
-TEST_F(TaskSchedulerDelayedTaskManagerTest, DelayedTaskRunsAfterDelay) {
-  auto task =
-      MakeUnique<Task>(FROM_HERE, Bind(&DoNothing), TaskTraits(), kLongDelay);
-  const Task* task_raw = task.get();
-
-  testing::StrictMock<MockTaskTarget> task_target;
-
-  // Send |task| to the DelayedTaskManager.
-  delayed_task_manager_.AddDelayedTask(
-      std::move(task),
-      Bind(&MockTaskTarget::PostTaskNowCallback, Unretained(&task_target)));
-
-  // Fast-forward time. Expect the task is forwarded to |task_target|.
-  EXPECT_CALL(task_target, DoPostTaskNowCallback(task_raw));
+  // Fast-forward time until the task is ripe for execution. Since Start() has
+  // not been called, the task should be forwarded to |task_target_|
+  // (|task_target_| is a StrictMock without expectations, so the test will fail
+  // if the task is forwarded to it).
   service_thread_task_runner_->FastForwardBy(kLongDelay);
 }
 
-// Verify that multiple delayed tasks are forwarded when they are ripe for
-// execution.
+// Verify that a delayed task added before Start() and whose delay expires after
+// Start() is forwarded when its delay expires.
+TEST_F(TaskSchedulerDelayedTaskManagerTest,
+       DelayedTaskPostedBeforeStartExpiresAfterStartRunsOnExpire) {
+  // Send |task| to the DelayedTaskManager.
+  delayed_task_manager_.AddDelayedTask(
+      std::move(task_), BindOnce(&MockTaskTarget::PostTaskNowCallback,
+                                 Unretained(&task_target_)));
+
+  delayed_task_manager_.Start(service_thread_task_runner_);
+
+  // Run tasks on the service thread. Don't expect any forwarding to
+  // |task_target_| since the task isn't ripe for execution.
+  service_thread_task_runner_->RunUntilIdle();
+
+  // Fast-forward time until the task is ripe for execution. Expect the task to
+  // be forwarded to |task_target_|.
+  EXPECT_CALL(task_target_, DoPostTaskNowCallback(task_raw_));
+  service_thread_task_runner_->FastForwardBy(kLongDelay);
+}
+
+// Verify that a delayed task added before Start() and whose delay expires
+// before Start() is forwarded when Start() is called.
+TEST_F(TaskSchedulerDelayedTaskManagerTest,
+       DelayedTaskPostedBeforeStartExpiresBeforeStartRunsOnStart) {
+  // Send |task| to the DelayedTaskManager.
+  delayed_task_manager_.AddDelayedTask(
+      std::move(task_), BindOnce(&MockTaskTarget::PostTaskNowCallback,
+                                 Unretained(&task_target_)));
+
+  // Run tasks on the service thread. Don't expect any forwarding to
+  // |task_target_| since the task isn't ripe for execution.
+  service_thread_task_runner_->RunUntilIdle();
+
+  // Fast-forward time until the task is ripe for execution. Don't expect the
+  // task to be forwarded since Start() hasn't been called yet.
+  service_thread_task_runner_->FastForwardBy(kLongDelay);
+
+  // Start the DelayedTaskManager. Expect the task to be forwarded to
+  // |task_target_|.
+  EXPECT_CALL(task_target_, DoPostTaskNowCallback(task_raw_));
+  delayed_task_manager_.Start(service_thread_task_runner_);
+  service_thread_task_runner_->RunUntilIdle();
+}
+
+// Verify that a delayed task added after Start() isn't forwarded before it is
+// ripe for execution.
+TEST_F(TaskSchedulerDelayedTaskManagerTest, DelayedTaskDoesNotRunTooEarly) {
+  delayed_task_manager_.Start(service_thread_task_runner_);
+
+  // Send |task| to the DelayedTaskManager.
+  delayed_task_manager_.AddDelayedTask(
+      std::move(task_), BindOnce(&MockTaskTarget::PostTaskNowCallback,
+                                 Unretained(&task_target_)));
+
+  // Run tasks that are ripe for execution. Don't expect any forwarding to
+  // |task_target_|.
+  service_thread_task_runner_->RunUntilIdle();
+}
+
+// Verify that a delayed task added after Start() is forwarded when it is ripe
+// for execution.
+TEST_F(TaskSchedulerDelayedTaskManagerTest, DelayedTaskRunsAfterDelay) {
+  delayed_task_manager_.Start(service_thread_task_runner_);
+
+  // Send |task| to the DelayedTaskManager.
+  delayed_task_manager_.AddDelayedTask(
+      std::move(task_), BindOnce(&MockTaskTarget::PostTaskNowCallback,
+                                 Unretained(&task_target_)));
+
+  // Fast-forward time. Expect the task is forwarded to |task_target_|.
+  EXPECT_CALL(task_target_, DoPostTaskNowCallback(task_raw_));
+  service_thread_task_runner_->FastForwardBy(kLongDelay);
+}
+
+// Verify that multiple delayed tasks added after Start() are forwarded when
+// they are ripe for execution.
 TEST_F(TaskSchedulerDelayedTaskManagerTest, DelayedTasksRunAfterDelay) {
-  auto task_a = MakeUnique<Task>(FROM_HERE, Bind(&DoNothing), TaskTraits(),
+  delayed_task_manager_.Start(service_thread_task_runner_);
+  auto task_a = MakeUnique<Task>(FROM_HERE, BindOnce(&DoNothing), TaskTraits(),
                                  TimeDelta::FromHours(1));
   const Task* task_a_raw = task_a.get();
 
-  auto task_b = MakeUnique<Task>(FROM_HERE, Bind(&DoNothing), TaskTraits(),
+  auto task_b = MakeUnique<Task>(FROM_HERE, BindOnce(&DoNothing), TaskTraits(),
                                  TimeDelta::FromHours(2));
   const Task* task_b_raw = task_b.get();
 
-  auto task_c = MakeUnique<Task>(FROM_HERE, Bind(&DoNothing), TaskTraits(),
+  auto task_c = MakeUnique<Task>(FROM_HERE, BindOnce(&DoNothing), TaskTraits(),
                                  TimeDelta::FromHours(1));
   const Task* task_c_raw = task_c.get();
 
-  testing::StrictMock<MockTaskTarget> task_target;
-
   // Send tasks to the DelayedTaskManager.
   delayed_task_manager_.AddDelayedTask(
-      std::move(task_a),
-      Bind(&MockTaskTarget::PostTaskNowCallback, Unretained(&task_target)));
+      std::move(task_a), BindOnce(&MockTaskTarget::PostTaskNowCallback,
+                                  Unretained(&task_target_)));
   delayed_task_manager_.AddDelayedTask(
-      std::move(task_b),
-      Bind(&MockTaskTarget::PostTaskNowCallback, Unretained(&task_target)));
+      std::move(task_b), BindOnce(&MockTaskTarget::PostTaskNowCallback,
+                                  Unretained(&task_target_)));
   delayed_task_manager_.AddDelayedTask(
-      std::move(task_c),
-      Bind(&MockTaskTarget::PostTaskNowCallback, Unretained(&task_target)));
+      std::move(task_c), BindOnce(&MockTaskTarget::PostTaskNowCallback,
+                                  Unretained(&task_target_)));
 
   // Run tasks that are ripe for execution on the service thread. Don't expect
-  // any call to |task_target|.
+  // any call to |task_target_|.
   service_thread_task_runner_->RunUntilIdle();
 
   // Fast-forward time. Expect |task_a_raw| and |task_c_raw| to be forwarded to
-  // |task_target|.
-  EXPECT_CALL(task_target, DoPostTaskNowCallback(task_a_raw));
-  EXPECT_CALL(task_target, DoPostTaskNowCallback(task_c_raw));
+  // |task_target_|.
+  EXPECT_CALL(task_target_, DoPostTaskNowCallback(task_a_raw));
+  EXPECT_CALL(task_target_, DoPostTaskNowCallback(task_c_raw));
   service_thread_task_runner_->FastForwardBy(TimeDelta::FromHours(1));
-  testing::Mock::VerifyAndClear(&task_target);
+  testing::Mock::VerifyAndClear(&task_target_);
 
-  // Fast-forward time. Expect |task_b_raw| to be forwarded to |task_target|.
-  EXPECT_CALL(task_target, DoPostTaskNowCallback(task_b_raw));
+  // Fast-forward time. Expect |task_b_raw| to be forwarded to |task_target_|.
+  EXPECT_CALL(task_target_, DoPostTaskNowCallback(task_b_raw));
   service_thread_task_runner_->FastForwardBy(TimeDelta::FromHours(1));
-  testing::Mock::VerifyAndClear(&task_target);
+  testing::Mock::VerifyAndClear(&task_target_);
 }
 
 }  // namespace internal

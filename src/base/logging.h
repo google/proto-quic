@@ -15,9 +15,11 @@
 #include <utility>
 
 #include "base/base_export.h"
+#include "base/callback_forward.h"
 #include "base/compiler_specific.h"
 #include "base/debug/debugger.h"
 #include "base/macros.h"
+#include "base/strings/string_piece_forward.h"
 #include "base/template_util.h"
 #include "build/build_config.h"
 
@@ -274,11 +276,24 @@ BASE_EXPORT void SetLogItems(bool enable_process_id, bool enable_thread_id,
 BASE_EXPORT void SetShowErrorDialogs(bool enable_dialogs);
 
 // Sets the Log Assert Handler that will be used to notify of check failures.
+// Resets Log Assert Handler on object destruction.
 // The default handler shows a dialog box and then terminate the process,
 // however clients can use this function to override with their own handling
 // (e.g. a silent one for Unit Tests)
-typedef void (*LogAssertHandlerFunction)(const std::string& str);
-BASE_EXPORT void SetLogAssertHandler(LogAssertHandlerFunction handler);
+using LogAssertHandlerFunction =
+    base::Callback<void(const char* file,
+                        int line,
+                        const base::StringPiece message,
+                        const base::StringPiece stack_trace)>;
+
+class BASE_EXPORT ScopedLogAssertHandler {
+ public:
+  explicit ScopedLogAssertHandler(LogAssertHandlerFunction handler);
+  ~ScopedLogAssertHandler();
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(ScopedLogAssertHandler);
+};
 
 // Sets the Log Message Handler that gets passed every log message before
 // it's sent to other log destinations (if any).
@@ -288,6 +303,30 @@ typedef bool (*LogMessageHandlerFunction)(int severity,
     const char* file, int line, size_t message_start, const std::string& str);
 BASE_EXPORT void SetLogMessageHandler(LogMessageHandlerFunction handler);
 BASE_EXPORT LogMessageHandlerFunction GetLogMessageHandler();
+
+// The ANALYZER_ASSUME_TRUE(bool arg) macro adds compiler-specific hints
+// to Clang which control what code paths are statically analyzed,
+// and is meant to be used in conjunction with assert & assert-like functions.
+// The expression is passed straight through if analysis isn't enabled.
+#if defined(__clang_analyzer__)
+
+inline constexpr bool AnalyzerNoReturn() __attribute__((analyzer_noreturn)) {
+  return false;
+}
+
+inline constexpr bool AnalyzerAssumeTrue(bool arg) {
+  // AnalyzerNoReturn() is invoked and analysis is terminated if |arg| is
+  // false.
+  return arg || AnalyzerNoReturn();
+}
+
+#define ANALYZER_ASSUME_TRUE(arg) ::logging::AnalyzerAssumeTrue(!!(arg))
+
+#else  // !defined(__clang_analyzer__)
+
+#define ANALYZER_ASSUME_TRUE(arg) (arg)
+
+#endif  // defined(__clang_analyzer__)
 
 typedef int LogSeverity;
 const LogSeverity LOG_VERBOSE = -1;  // This is level 1 verbosity
@@ -408,8 +447,9 @@ const LogSeverity LOG_0 = LOG_ERROR;
 
 // TODO(akalin): Add more VLOG variants, e.g. VPLOG.
 
-#define LOG_ASSERT(condition) \
-  LOG_IF(FATAL, !(condition)) << "Assert failed: " #condition ". "
+#define LOG_ASSERT(condition)                       \
+  LOG_IF(FATAL, !(ANALYZER_ASSUME_TRUE(condition))) \
+      << "Assert failed: " #condition ". "
 
 #if defined(OS_WIN)
 #define PLOG_STREAM(severity) \
@@ -585,10 +625,10 @@ class CheckOpResult {
 // Do as much work as possible out of line to reduce inline code size.
 #define CHECK(condition)                                                      \
   LAZY_STREAM(::logging::LogMessage(__FILE__, __LINE__, #condition).stream(), \
-              !(condition))
+              !ANALYZER_ASSUME_TRUE(condition))
 
-#define PCHECK(condition)                       \
-  LAZY_STREAM(PLOG_STREAM(FATAL), !(condition)) \
+#define PCHECK(condition)                                           \
+  LAZY_STREAM(PLOG_STREAM(FATAL), !ANALYZER_ASSUME_TRUE(condition)) \
       << "Check failed: " #condition ". "
 
 #endif  // _PREFAST_
@@ -685,17 +725,21 @@ std::string* MakeCheckOpString<std::string, std::string>(
 // The (int, int) specialization works around the issue that the compiler
 // will not instantiate the template version of the function on values of
 // unnamed enum type - see comment below.
+//
+// The checked condition is wrapped with ANALYZER_ASSUME_TRUE, which under
+// static analysis builds, blocks analysis of the current path if the
+// condition is false.
 #define DEFINE_CHECK_OP_IMPL(name, op)                                       \
   template <class t1, class t2>                                              \
   inline std::string* Check##name##Impl(const t1& v1, const t2& v2,          \
                                         const char* names) {                 \
-    if (v1 op v2)                                                            \
+    if (ANALYZER_ASSUME_TRUE(v1 op v2))                                      \
       return NULL;                                                           \
     else                                                                     \
       return ::logging::MakeCheckOpString(v1, v2, names);                    \
   }                                                                          \
   inline std::string* Check##name##Impl(int v1, int v2, const char* names) { \
-    if (v1 op v2)                                                            \
+    if (ANALYZER_ASSUME_TRUE(v1 op v2))                                      \
       return NULL;                                                           \
     else                                                                     \
       return ::logging::MakeCheckOpString(v1, v2, names);                    \
@@ -798,35 +842,15 @@ const LogSeverity LOG_DCHECK = LOG_INFO;
       LAZY_STREAM(PLOG_STREAM(DCHECK), false) \
           << "Check failed: " #condition ". "
 
-#elif defined(__clang_analyzer__)
-
-// Keeps the static analyzer from proceeding along the current codepath,
-// otherwise false positive errors may be generated  by null pointer checks.
-inline constexpr bool AnalyzerNoReturn() __attribute__((analyzer_noreturn)) {
-  return false;
-}
-
-#define DCHECK(condition)                                                     \
-  LAZY_STREAM(                                                                \
-      LOG_STREAM(DCHECK),                                                     \
-      DCHECK_IS_ON() ? (logging::AnalyzerNoReturn() || !(condition)) : false) \
-      << "Check failed: " #condition ". "
-
-#define DPCHECK(condition)                                                    \
-  LAZY_STREAM(                                                                \
-      PLOG_STREAM(DCHECK),                                                    \
-      DCHECK_IS_ON() ? (logging::AnalyzerNoReturn() || !(condition)) : false) \
-      << "Check failed: " #condition ". "
-
-#else
+#else  // !(defined(_PREFAST_) && defined(OS_WIN))
 
 #if DCHECK_IS_ON()
 
-#define DCHECK(condition)                       \
-  LAZY_STREAM(LOG_STREAM(DCHECK), !(condition)) \
+#define DCHECK(condition)                                           \
+  LAZY_STREAM(LOG_STREAM(DCHECK), !ANALYZER_ASSUME_TRUE(condition)) \
       << "Check failed: " #condition ". "
-#define DPCHECK(condition)                       \
-  LAZY_STREAM(PLOG_STREAM(DCHECK), !(condition)) \
+#define DPCHECK(condition)                                           \
+  LAZY_STREAM(PLOG_STREAM(DCHECK), !ANALYZER_ASSUME_TRUE(condition)) \
       << "Check failed: " #condition ". "
 
 #else  // DCHECK_IS_ON()
@@ -836,7 +860,7 @@ inline constexpr bool AnalyzerNoReturn() __attribute__((analyzer_noreturn)) {
 
 #endif  // DCHECK_IS_ON()
 
-#endif
+#endif  // defined(_PREFAST_) && defined(OS_WIN)
 
 // Helper macro for binary operators.
 // Don't use this macro directly in your code, use DCHECK_EQ et al below.

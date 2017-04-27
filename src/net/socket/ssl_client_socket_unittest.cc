@@ -2841,6 +2841,37 @@ TEST_F(SSLClientSocketTest, DeprecatedShardSessionCache) {
   EXPECT_EQ(SSLInfo::HANDSHAKE_FULL, ssl_info.handshake_type);
 }
 
+// Tests that the version_interference_probe option rejects successful
+// connections and passes errors through.
+TEST_F(SSLClientSocketTest, VersionInterferenceProbe) {
+  ASSERT_TRUE(StartTestServer(SpawnedTestServer::SSLOptions()));
+
+  SSLConfig ssl_config;
+  ssl_config.version_max = SSL_PROTOCOL_VERSION_TLS1_2;
+  ssl_config.version_interference_probe = true;
+
+  // Successful connections map to a dedicated error.
+  int rv;
+  ASSERT_TRUE(CreateAndConnectSSLClientSocket(ssl_config, &rv));
+  EXPECT_THAT(rv, IsError(ERR_SSL_VERSION_INTERFERENCE));
+
+  // Failed connections pass through.
+  TestCompletionCallback callback;
+  std::unique_ptr<StreamSocket> real_transport(
+      new TCPClientSocket(addr(), NULL, NULL, NetLogSource()));
+  std::unique_ptr<SynchronousErrorStreamSocket> transport(
+      new SynchronousErrorStreamSocket(std::move(real_transport)));
+  rv = callback.GetResult(transport->Connect(callback.callback()));
+  EXPECT_THAT(rv, IsOk());
+  SynchronousErrorStreamSocket* raw_transport = transport.get();
+  std::unique_ptr<SSLClientSocket> sock(CreateSSLClientSocket(
+      std::move(transport), spawned_test_server()->host_port_pair(),
+      ssl_config));
+  raw_transport->SetNextWriteError(ERR_CONNECTION_RESET);
+  rv = callback.GetResult(sock->Connect(callback.callback()));
+  EXPECT_THAT(rv, IsError(ERR_CONNECTION_RESET));
+}
+
 TEST_F(SSLClientSocketTest, RequireECDHE) {
   // Run test server without ECDHE.
   SpawnedTestServer::SSLOptions ssl_options;

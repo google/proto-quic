@@ -48,25 +48,24 @@ ScopedJava GetPKCS8PrivateKeyJava(android::PrivateKeyType key_type,
 }
 
 struct TestKey {
+  const char* name;
   const char* cert_file;
   const char* key_file;
   android::PrivateKeyType android_key_type;
-  SSLPrivateKey::Type key_type;
 };
 
 const TestKey kTestKeys[] = {
-    {"client_1.pem", "client_1.pk8", android::PRIVATE_KEY_TYPE_RSA,
-     SSLPrivateKey::Type::RSA},
-    {"client_4.pem", "client_4.pk8", android::PRIVATE_KEY_TYPE_ECDSA,
-     SSLPrivateKey::Type::ECDSA_P256},
-    {"client_5.pem", "client_5.pk8", android::PRIVATE_KEY_TYPE_ECDSA,
-     SSLPrivateKey::Type::ECDSA_P384},
-    {"client_6.pem", "client_6.pk8", android::PRIVATE_KEY_TYPE_ECDSA,
-     SSLPrivateKey::Type::ECDSA_P521},
+    {"RSA", "client_1.pem", "client_1.pk8", android::PRIVATE_KEY_TYPE_RSA},
+    {"ECDSA_P256", "client_4.pem", "client_4.pk8",
+     android::PRIVATE_KEY_TYPE_ECDSA},
+    {"ECDSA_P384", "client_5.pem", "client_5.pk8",
+     android::PRIVATE_KEY_TYPE_ECDSA},
+    {"ECDSA_P521", "client_6.pem", "client_6.pk8",
+     android::PRIVATE_KEY_TYPE_ECDSA},
 };
 
 std::string TestKeyToString(const testing::TestParamInfo<TestKey>& params) {
-  return SSLPrivateKeyTypeToString(params.param.key_type);
+  return params.param.name;
 }
 
 }  // namespace

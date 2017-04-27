@@ -31,7 +31,7 @@ namespace ct {
 // new types are planned.
 // * The timestamped_entry's |timestamp| and |extensions| fields are directly
 // accessible.
-// * The timestamped_entry's entry_type can be deduced from |log_entry|.type
+// * The timestamped_entry's entry_type can be deduced from |signed_entry|.type
 struct NET_EXPORT MerkleTreeLeaf {
   MerkleTreeLeaf();
   MerkleTreeLeaf(const MerkleTreeLeaf& other);
@@ -39,7 +39,7 @@ struct NET_EXPORT MerkleTreeLeaf {
   ~MerkleTreeLeaf();
 
   // Certificate / Precertificate and indication of entry type.
-  LogEntry log_entry;
+  SignedEntryData signed_entry;
 
   // Timestamp from the SCT.
   base::Time timestamp;

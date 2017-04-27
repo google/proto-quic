@@ -75,6 +75,12 @@ size_t SyncSocket::Peek() {
   return 0;
 }
 
+SyncSocket::Handle SyncSocket::Release() {
+  Handle r = handle_;
+  handle_ = kInvalidHandle;
+  return r;
+}
+
 CancelableSyncSocket::CancelableSyncSocket() {
 }
 

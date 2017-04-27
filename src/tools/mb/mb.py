@@ -853,11 +853,6 @@ class MetaBuildWrapper(object):
         runtime_deps_targets = [
             target + '.runtime_deps',
             'obj/%s.stamp.runtime_deps' % label.replace(':', '/')]
-      elif isolate_map[target]['type'] == 'gpu_browser_test':
-        if self.platform == 'win32':
-          runtime_deps_targets = ['browser_tests.exe.runtime_deps']
-        else:
-          runtime_deps_targets = ['browser_tests.runtime_deps']
       elif (isolate_map[target]['type'] == 'script' or
             isolate_map[target].get('label_type') == 'group'):
         # For script targets, the build target is usually a group,
@@ -1072,8 +1067,7 @@ class MetaBuildWrapper(object):
     # and both can run under Xvfb.
     # TODO(tonikitoo,msisov,fwang): Find a way to run tests for the Wayland
     # backend.
-    use_xvfb = (self.platform == 'linux2' and
-                       not android)
+    use_xvfb = self.platform == 'linux2' and not android
 
     asan = 'is_asan=true' in vals['gn_args']
     msan = 'is_msan=true' in vals['gn_args']
@@ -1124,19 +1118,6 @@ class MetaBuildWrapper(object):
           '--asan=%d' % asan,
           '--msan=%d' % msan,
           '--tsan=%d' % tsan,
-      ]
-    elif test_type == 'gpu_browser_test':
-      extra_files = [
-          '../../testing/test_env.py'
-      ]
-      gtest_filter = isolate_map[target]['gtest_filter']
-      cmdline = [
-          '../../testing/test_env.py',
-          './browser_tests' + executable_suffix,
-          '--test-launcher-bot-mode',
-          '--enable-gpu',
-          '--test-launcher-jobs=1',
-          '--gtest_filter=%s' % gtest_filter,
       ]
     elif test_type == 'script':
       extra_files = [

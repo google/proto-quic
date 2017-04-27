@@ -606,7 +606,8 @@ TEST_F(UDPSocketTest, ServerSetDoNotFragment) {
     UDPServerSocket server(nullptr, NetLogSource());
     int rv = server.Listen(bind_address);
     // May fail on IPv6 is IPv6 is not configure
-    if (bind_address.address().IsIPv6() && rv == ERR_ADDRESS_INVALID)
+    if (bind_address.address().IsIPv6() &&
+        (rv == ERR_ADDRESS_INVALID || rv == ERR_ADDRESS_UNREACHABLE))
       return;
     EXPECT_THAT(rv, IsOk());
 

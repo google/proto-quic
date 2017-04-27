@@ -70,6 +70,7 @@
 #include <string.h>
 
 #include <openssl/ec.h>
+#include <openssl/ecdsa.h>
 #include <openssl/engine.h>
 #include <openssl/err.h>
 #include <openssl/ex_data.h>
@@ -345,6 +346,40 @@ err:
   return ok;
 }
 
+int EC_KEY_check_fips(const EC_KEY *key) {
+  if (EC_KEY_is_opaque(key)) {
+    /* Opaque keys can't be checked. */
+    OPENSSL_PUT_ERROR(EC, EC_R_PUBLIC_KEY_VALIDATION_FAILED);
+    return 0;
+  }
+
+  if (!EC_KEY_check_key(key)) {
+    return 0;
+  }
+
+  if (!key->priv_key) {
+    return 1;
+  }
+
+  uint8_t data[16] = {0};
+  unsigned sig_len = ECDSA_size(key);
+  uint8_t *sig = OPENSSL_malloc(sig_len);
+  if (sig == NULL) {
+    OPENSSL_PUT_ERROR(EC, ERR_R_MALLOC_FAILURE);
+    return 0;
+  }
+
+  int ret = 1;
+  if (!ECDSA_sign(0, data, sizeof(data), sig, &sig_len, key) ||
+      !ECDSA_verify(0, data, sizeof(data), sig, sig_len, key)) {
+    OPENSSL_PUT_ERROR(EC, EC_R_PUBLIC_KEY_VALIDATION_FAILED);
+    ret = 0;
+  }
+
+  OPENSSL_free(sig);
+  return ret;
+}
+
 int EC_KEY_set_public_key_affine_coordinates(EC_KEY *key, BIGNUM *x,
                                              BIGNUM *y) {
   BN_CTX *ctx = NULL;
@@ -425,6 +460,15 @@ int EC_KEY_generate_key(EC_KEY *eckey) {
   }
 
   const BIGNUM *order = EC_GROUP_get0_order(eckey->group);
+
+  /* Check that the size of the group order is FIPS compliant (FIPS 186-4
+   * B.4.2). */
+  if (BN_num_bits(order) < 160) {
+    OPENSSL_PUT_ERROR(EC, EC_R_INVALID_GROUP_ORDER);
+    goto err;
+  }
+
+  /* Generate the private key by testing candidates (FIPS 186-4 B.4.2). */
   if (!BN_rand_range_ex(priv_key, 1, order)) {
     goto err;
   }

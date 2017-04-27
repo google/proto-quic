@@ -45,6 +45,7 @@ class HttpUserAgentSettings;
 class NetLog;
 class NetworkDelegate;
 class NetworkQualityEstimator;
+class ReportingService;
 class SdchManager;
 class ProxyService;
 class URLRequest;
@@ -220,9 +221,13 @@ class NET_EXPORT URLRequestContext
 
   // Gets the URLRequest objects that hold a reference to this
   // URLRequestContext.
-  std::set<const URLRequest*>* url_requests() const {
-    return url_requests_.get();
+  const std::set<const URLRequest*>& url_requests() const {
+    return url_requests_;
   }
+
+  void InsertURLRequest(const URLRequest* request) const;
+
+  void RemoveURLRequest(const URLRequest* request) const;
 
   // CHECKs that no URLRequests using this context remain. Subclasses should
   // additionally call AssertNoURLRequests() within their own destructor,
@@ -247,6 +252,11 @@ class NET_EXPORT URLRequestContext
   void set_network_quality_estimator(
       NetworkQualityEstimator* network_quality_estimator) {
     network_quality_estimator_ = network_quality_estimator;
+  }
+
+  ReportingService* reporting_service() const { return reporting_service_; }
+  void set_reporting_service(ReportingService* reporting_service) {
+    reporting_service_ = reporting_service;
   }
 
   void set_enable_brotli(bool enable_brotli) { enable_brotli_ = enable_brotli; }
@@ -299,13 +309,14 @@ class NET_EXPORT URLRequestContext
   URLRequestBackoffManager* backoff_manager_;
   SdchManager* sdch_manager_;
   NetworkQualityEstimator* network_quality_estimator_;
+  ReportingService* reporting_service_;
 
   // ---------------------------------------------------------------------------
   // Important: When adding any new members below, consider whether they need to
   // be added to CopyFrom.
   // ---------------------------------------------------------------------------
 
-  std::unique_ptr<std::set<const URLRequest*>> url_requests_;
+  mutable std::set<const URLRequest*> url_requests_;
 
   // Enables Brotli Content-Encoding support.
   bool enable_brotli_;
@@ -317,6 +328,10 @@ class NET_EXPORT URLRequestContext
   // Used in MemoryDumpProvier to annotate memory usage. The name does not need
   // to be unique.
   const char* name_;
+
+  // The largest number of outstanding URLRequests that have been created by
+  // |this| and are not yet destroyed. This doesn't need to be in CopyFrom.
+  mutable size_t largest_outstanding_requests_count_seen_;
 
   DISALLOW_COPY_AND_ASSIGN(URLRequestContext);
 };

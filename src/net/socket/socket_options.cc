@@ -17,14 +17,15 @@
 
 namespace net {
 
-bool SetTCPNoDelay(SocketDescriptor socket, bool no_delay) {
+int SetTCPNoDelay(SocketDescriptor fd, bool no_delay) {
 #if defined(OS_POSIX)
   int on = no_delay ? 1 : 0;
 #elif defined(OS_WIN)
   BOOL on = no_delay ? TRUE : FALSE;
 #endif
-  return setsockopt(socket, IPPROTO_TCP, TCP_NODELAY,
-                    reinterpret_cast<const char*>(&on), sizeof(on)) == 0;
+  int rv = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY,
+                      reinterpret_cast<const char*>(&on), sizeof(on));
+  return rv == -1 ? MapSystemError(errno) : OK;
 }
 
 int SetReuseAddr(SocketDescriptor fd, bool reuse) {

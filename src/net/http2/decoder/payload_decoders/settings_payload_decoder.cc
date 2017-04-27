@@ -21,7 +21,7 @@ DecodeStatus SettingsPayloadDecoder::StartDecodingPayload(
   DVLOG(2) << "SettingsPayloadDecoder::StartDecodingPayload: " << frame_header;
   DCHECK_EQ(Http2FrameType::SETTINGS, frame_header.type);
   DCHECK_LE(db->Remaining(), total_length);
-  DCHECK_EQ(0, frame_header.flags & ~(Http2FrameFlag::FLAG_ACK));
+  DCHECK_EQ(0, frame_header.flags & ~(Http2FrameFlag::ACK));
 
   if (frame_header.IsAck()) {
     if (total_length == 0) {

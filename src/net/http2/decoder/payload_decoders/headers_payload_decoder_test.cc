@@ -34,7 +34,7 @@ class HeadersPayloadDecoderPeer {
   // Returns the mask of flags that affect the decoding of the payload (i.e.
   // flags that that indicate the presence of certain fields or padding).
   static constexpr uint8_t FlagsAffectingPayloadDecoding() {
-    return Http2FrameFlag::FLAG_PADDED | Http2FrameFlag::FLAG_PRIORITY;
+    return Http2FrameFlag::PADDED | Http2FrameFlag::PRIORITY;
   }
 
   static void Randomize(HeadersPayloadDecoder* p, RandomBase* rng) {
@@ -121,7 +121,7 @@ TEST_P(HeadersPayloadDecoderTest, VariousHpackPayloadSizes) {
       ASSERT_EQ(IsPadded() ? 1u : 0u, frame_builder_.size());
       uint8_t flags = RandFlags();
       if (has_priority) {
-        flags |= Http2FrameFlag::FLAG_PRIORITY;
+        flags |= Http2FrameFlag::PRIORITY;
         frame_builder_.Append(priority);
       }
 
@@ -154,8 +154,7 @@ TEST_P(HeadersPayloadDecoderTest, Truncated) {
   fb.Append(Http2PriorityFields(RandStreamId(), 1 + Random().Rand8(),
                                 Random().OneIn(2)));
   EXPECT_TRUE(VerifyDetectsMultipleFrameSizeErrors(
-      Http2FrameFlag::FLAG_PRIORITY, fb.buffer(), approve_size,
-      total_pad_length_));
+      Http2FrameFlag::PRIORITY, fb.buffer(), approve_size, total_pad_length_));
 }
 
 // Confirm we get an error if the PADDED flag is set but the payload is not

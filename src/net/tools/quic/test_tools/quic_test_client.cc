@@ -9,10 +9,10 @@
 #include <vector>
 
 #include "net/quic/core/crypto/proof_verifier.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_stack_trace.h"
@@ -27,7 +27,6 @@
 #include "net/tools/quic/quic_packet_writer_wrapper.h"
 #include "net/tools/quic/quic_spdy_client_stream.h"
 #include "net/tools/quic/test_tools/quic_client_peer.h"
-#include "third_party/boringssl/src/include/openssl/x509.h"
 
 using std::string;
 using testing::_;

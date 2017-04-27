@@ -12,9 +12,9 @@
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/proto/cached_network_parameters.pb.h"
 #include "net/quic/core/quic_config.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_session.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/platform/api/quic_text_utils.h"
@@ -143,8 +143,7 @@ void QuicCryptoServerStream::OnHandshakeMessage(
   }
 
   if (validate_client_hello_cb_ != nullptr ||
-      (base::GetFlag(FLAGS_quic_reloadable_flag_fix_quic_callback_crash) &&
-       process_client_hello_cb_ != nullptr)) {
+      process_client_hello_cb_ != nullptr) {
     // Already processing some other handshake message.  The protocol
     // does not allow for clients to send multiple handshake messages
     // before the server has a chance to respond.

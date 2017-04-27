@@ -5,9 +5,9 @@
 #include "net/quic/test_tools/quic_connection_peer.h"
 
 #include "net/quic/core/congestion_control/send_algorithm_interface.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packet_writer.h"
 #include "net/quic/core/quic_received_packet_manager.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/test_tools/quic_framer_peer.h"
 #include "net/quic/test_tools/quic_packet_generator_peer.h"
 #include "net/quic/test_tools/quic_sent_packet_manager_peer.h"

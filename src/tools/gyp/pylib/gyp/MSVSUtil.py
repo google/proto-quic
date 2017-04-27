@@ -14,6 +14,7 @@ TARGET_TYPE_EXT = {
   'loadable_module': 'dll',
   'shared_library': 'dll',
   'static_library': 'lib',
+  'windows_driver': 'sys',
 }
 
 

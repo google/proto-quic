@@ -4,10 +4,14 @@
 
 #include "net/quic/platform/impl/quic_chromium_clock.h"
 
+#include "base/memory/singleton.h"
 #include "base/time/time.h"
 
 namespace net {
 
+QuicChromiumClock* QuicChromiumClock::GetInstance() {
+  return base::Singleton<QuicChromiumClock>::get();
+}
 QuicChromiumClock::QuicChromiumClock() {}
 
 QuicChromiumClock::~QuicChromiumClock() {}

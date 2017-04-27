@@ -37,7 +37,7 @@ class MockQuicSession : public QuicSession {
       QuicStreamId id,
       QuicIOVector iovector,
       QuicStreamOffset offset,
-      bool fin,
+      StreamSendingState fin,
       QuicReferenceCountedPointer<
           QuicAckListenerInterface> /*ack_notifier_delegate*/) override {
     if (!writable_) {
@@ -47,7 +47,7 @@ class MockQuicSession : public QuicSession {
     const char* data = reinterpret_cast<const char*>(iovector.iov->iov_base);
     size_t len = iovector.total_length;
     write_buffer_->append(data, len);
-    return QuicConsumedData(len, fin);
+    return QuicConsumedData(len, fin != NO_FIN);
   }
 
   QuartcStream* CreateIncomingDynamicStream(QuicStreamId id) override {
@@ -58,7 +58,8 @@ class MockQuicSession : public QuicSession {
     return nullptr;
   }
 
-  QuicCryptoStream* GetCryptoStream() override { return nullptr; }
+  const QuicCryptoStream* GetCryptoStream() const override { return nullptr; }
+  QuicCryptoStream* GetMutableCryptoStream() override { return nullptr; }
 
   // Called by QuicStream when they want to close stream.
   void SendRstStream(QuicStreamId id,

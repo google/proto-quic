@@ -65,6 +65,10 @@
 #include <stdio.h>
 #endif
 
+/* Include a BoringSSL-only header so consumers including this header without
+ * setting up include paths do not accidentally pick up the system
+ * opensslconf.h. */
+#include <openssl/is_boringssl.h>
 #include <openssl/opensslconf.h>
 
 #if defined(BORINGSSL_PREFIX)
@@ -223,7 +227,6 @@ typedef struct asn1_string_st ASN1_UTCTIME;
 typedef struct asn1_string_st ASN1_UTF8STRING;
 typedef struct asn1_string_st ASN1_VISIBLESTRING;
 typedef struct asn1_type_st ASN1_TYPE;
-
 typedef struct AUTHORITY_KEYID_st AUTHORITY_KEYID;
 typedef struct BASIC_CONSTRAINTS_st BASIC_CONSTRAINTS;
 typedef struct DIST_POINT_st DIST_POINT;

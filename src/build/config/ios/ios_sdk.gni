@@ -24,6 +24,7 @@ declare_args() {
   # ios_enable_code_signing_flag=<bool> flag to make the invocation clearer.
   ios_enable_code_signing = true
   ios_code_signing_identity = ""
+  ios_code_signing_identity_description = "iPhone Developer"
 
   # Prefix for CFBundleIdentifier property of iOS bundles (correspond to the
   # "Organization Identifier" in Xcode). Code signing will fail if no mobile
@@ -115,7 +116,10 @@ if (ios_sdk_path == "") {
 }
 
 if (ios_enable_code_signing && !use_ios_simulator) {
-  find_signing_identity_args = []
+  find_signing_identity_args = [
+    "--identity-description",
+    ios_code_signing_identity_description,
+  ]
   if (!use_system_xcode) {
     find_signing_identity_args += [
       "--developer_dir",
@@ -128,13 +132,33 @@ if (ios_enable_code_signing && !use_ios_simulator) {
     _ios_identities = exec_script("find_signing_identity.py",
                                   find_signing_identity_args,
                                   "list lines")
-    ios_code_signing_identity = _ios_identities[0]
-  }
+    if (_ios_identities == []) {
+      print("Tried to prepare a device build without specifying a code signing")
+      print("identity and could not detect one automatically either.")
+      print("TIP: Simulator builds don't require code signing...")
+      assert(false)
+    } else {
+      _ios_identities_len = 0
+      foreach(_, _ios_identities) {
+        _ios_identities_len += 1
+      }
 
-  if (ios_code_signing_identity == "") {
-    print("Tried to prepare a device build without specifying a code signing")
-    print("identity and could not detect one automatically either.")
-    print("TIP: Simulator builds don't require code signing...")
-    assert(false)
+      ios_code_signing_identity = _ios_identities[0]
+      if (_ios_identities_len != 1) {
+        print("Warning: Multiple codesigning identities match " +
+              "\"$ios_code_signing_identity_description\"")
+        foreach(_ios_identity, _ios_identities) {
+          _selected = ""
+          if (ios_code_signing_identity == _ios_identity) {
+            _selected = " (selected)"
+          }
+          print("Warning: - $_ios_identity$_selected")
+        }
+        print("Warning: Please use either ios_code_signing_identity or ")
+        print("Warning: ios_code_signing_identity_description variable to ")
+        print("Warning: control which identity is selected.")
+        print()
+      }
+    }
   }
 }

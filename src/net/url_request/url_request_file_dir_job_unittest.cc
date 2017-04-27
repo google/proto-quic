@@ -19,6 +19,7 @@
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
 #include "net/test/gtest_util.h"
+#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_test_util.h"
 #include "testing/gmock/include/gmock/gmock.h"
@@ -115,7 +116,7 @@ TEST_F(URLRequestFileDirTest, ListCompletionOnNoPending) {
   std::unique_ptr<URLRequest> request(context_.CreateRequest(
       FilePathToFileURL(
           directory.GetPath().AppendASCII("this_path_does_not_exist")),
-      DEFAULT_PRIORITY, &delegate_));
+      DEFAULT_PRIORITY, &delegate_, TRAFFIC_ANNOTATION_FOR_TESTS));
 
   request->Start();
   ASSERT_TRUE(directory.Delete());
@@ -144,8 +145,9 @@ TEST_F(URLRequestFileDirTest, DirectoryWithASingleFileSync) {
   TestJobFactory factory(directory.GetPath());
   context_.set_job_factory(&factory);
 
-  std::unique_ptr<URLRequest> request(context_.CreateRequest(
-      FilePathToFileURL(path), DEFAULT_PRIORITY, &delegate_));
+  std::unique_ptr<URLRequest> request(
+      context_.CreateRequest(FilePathToFileURL(path), DEFAULT_PRIORITY,
+                             &delegate_, TRAFFIC_ANNOTATION_FOR_TESTS));
   request->Start();
   EXPECT_TRUE(request->is_pending());
 
@@ -177,8 +179,9 @@ TEST_F(URLRequestFileDirTest, DirectoryWithASingleFileAsync) {
   context_.set_job_factory(&factory);
 
   TestDelegate delegate;
-  std::unique_ptr<URLRequest> request(context_.CreateRequest(
-      FilePathToFileURL(path), DEFAULT_PRIORITY, &delegate));
+  std::unique_ptr<URLRequest> request(
+      context_.CreateRequest(FilePathToFileURL(path), DEFAULT_PRIORITY,
+                             &delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
   request->Start();
   EXPECT_TRUE(request->is_pending());
 
@@ -209,8 +212,9 @@ TEST_F(URLRequestFileDirTest, DirectoryWithAFileAndSubdirectory) {
   context_.set_job_factory(&factory);
 
   TestDelegate delegate;
-  std::unique_ptr<URLRequest> request(context_.CreateRequest(
-      FilePathToFileURL(path), DEFAULT_PRIORITY, &delegate));
+  std::unique_ptr<URLRequest> request(
+      context_.CreateRequest(FilePathToFileURL(path), DEFAULT_PRIORITY,
+                             &delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
   request->Start();
   EXPECT_TRUE(request->is_pending());
 
@@ -236,7 +240,8 @@ TEST_F(URLRequestFileDirTest, EmptyDirectory) {
 
   TestDelegate delegate;
   std::unique_ptr<URLRequest> request(context_.CreateRequest(
-      FilePathToFileURL(directory.GetPath()), DEFAULT_PRIORITY, &delegate));
+      FilePathToFileURL(directory.GetPath()), DEFAULT_PRIORITY, &delegate,
+      TRAFFIC_ANNOTATION_FOR_TESTS));
   request->Start();
   EXPECT_TRUE(request->is_pending());
 

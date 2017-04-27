@@ -96,9 +96,6 @@ class NET_EXPORT URLRequestContextBuilder {
     bool enable_quic;
     std::string quic_user_agent_id;
     int quic_max_server_configs_stored_in_properties;
-    bool quic_delay_tcp_race;
-    std::unordered_set<std::string> quic_host_whitelist;
-    bool quic_prefer_aes;
     int quic_idle_connection_timeout_seconds;
     QuicTagVector quic_connection_options;
     bool quic_close_sessions_on_ip_change;
@@ -231,19 +228,10 @@ class NET_EXPORT URLRequestContextBuilder {
         quic_max_server_configs_stored_in_properties;
   }
 
-  void set_quic_delay_tcp_race(bool quic_delay_tcp_race) {
-    http_network_session_params_.quic_delay_tcp_race = quic_delay_tcp_race;
-  }
-
   void set_quic_idle_connection_timeout_seconds(
       int quic_idle_connection_timeout_seconds) {
     http_network_session_params_.quic_idle_connection_timeout_seconds =
         quic_idle_connection_timeout_seconds;
-  }
-
-  void set_quic_host_whitelist(
-      const std::unordered_set<std::string>& quic_host_whitelist) {
-    http_network_session_params_.quic_host_whitelist = quic_host_whitelist;
   }
 
   void set_quic_close_sessions_on_ip_change(
@@ -256,10 +244,6 @@ class NET_EXPORT URLRequestContextBuilder {
       bool quic_migrate_sessions_on_network_change) {
     http_network_session_params_.quic_migrate_sessions_on_network_change =
         quic_migrate_sessions_on_network_change;
-  }
-
-  void set_quic_prefer_aes(bool quic_prefer_aes) {
-    http_network_session_params_.quic_prefer_aes = quic_prefer_aes;
   }
 
   void set_quic_migrate_sessions_early(bool quic_migrate_sessions_early) {

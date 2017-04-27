@@ -18,6 +18,7 @@
 #include "base/strings/string_piece.h"
 #include "base/test/histogram_tester.h"
 #include "base/test/mock_entropy_provider.h"
+#include "base/test/scoped_feature_list.h"
 #include "base/values.h"
 #include "crypto/openssl_util.h"
 #include "crypto/sha2.h"
@@ -786,6 +787,11 @@ TEST_F(TransportSecurityStateTest, NewPinsOverride) {
 }
 
 TEST_F(TransportSecurityStateTest, DeleteAllDynamicDataSince) {
+  base::test::ScopedFeatureList feature_list;
+  feature_list.InitAndEnableFeature(
+      TransportSecurityState::kDynamicExpectCTFeature);
+  TransportSecurityState::ExpectCTState expect_ct_state;
+
   TransportSecurityState state;
   const base::Time current_time(base::Time::Now());
   const base::Time expiry = current_time + base::TimeDelta::FromSeconds(1000);
@@ -793,24 +799,32 @@ TEST_F(TransportSecurityStateTest, DeleteAllDynamicDataSince) {
 
   EXPECT_FALSE(state.ShouldUpgradeToSSL("example.com"));
   EXPECT_FALSE(state.HasPublicKeyPins("example.com"));
+  EXPECT_FALSE(state.GetDynamicExpectCTState("example.com", &expect_ct_state));
   bool include_subdomains = false;
   state.AddHSTS("example.com", expiry, include_subdomains);
   state.AddHPKP("example.com", expiry, include_subdomains,
                 GetSampleSPKIHashes(), GURL());
+  state.AddExpectCT("example.com", expiry, true, GURL());
 
   state.DeleteAllDynamicDataSince(expiry);
   EXPECT_TRUE(state.ShouldUpgradeToSSL("example.com"));
   EXPECT_TRUE(state.HasPublicKeyPins("example.com"));
+  EXPECT_TRUE(state.GetDynamicExpectCTState("example.com", &expect_ct_state));
   state.DeleteAllDynamicDataSince(older);
   EXPECT_FALSE(state.ShouldUpgradeToSSL("example.com"));
   EXPECT_FALSE(state.HasPublicKeyPins("example.com"));
+  EXPECT_FALSE(state.GetDynamicExpectCTState("example.com", &expect_ct_state));
 
-  // STS and PKP data in |state| should be empty now.
+  // Dynamic data in |state| should be empty now.
   EXPECT_FALSE(TransportSecurityState::STSStateIterator(state).HasNext());
   EXPECT_FALSE(TransportSecurityState::PKPStateIterator(state).HasNext());
+  EXPECT_FALSE(TransportSecurityState::ExpectCTStateIterator(state).HasNext());
 }
 
 TEST_F(TransportSecurityStateTest, DeleteDynamicDataForHost) {
+  base::test::ScopedFeatureList feature_list;
+  feature_list.InitAndEnableFeature(
+      TransportSecurityState::kDynamicExpectCTFeature);
   TransportSecurityState state;
   const base::Time current_time(base::Time::Now());
   const base::Time expiry = current_time + base::TimeDelta::FromSeconds(1000);
@@ -819,14 +833,22 @@ TEST_F(TransportSecurityStateTest, DeleteDynamicDataForHost) {
   state.AddHSTS("example1.test", expiry, include_subdomains);
   state.AddHPKP("example1.test", expiry, include_subdomains,
                 GetSampleSPKIHashes(), GURL());
+  state.AddExpectCT("example1.test", expiry, true, GURL());
 
   EXPECT_TRUE(state.ShouldUpgradeToSSL("example1.test"));
   EXPECT_FALSE(state.ShouldUpgradeToSSL("example2.test"));
   EXPECT_TRUE(state.HasPublicKeyPins("example1.test"));
   EXPECT_FALSE(state.HasPublicKeyPins("example2.test"));
+  TransportSecurityState::ExpectCTState expect_ct_state;
+  EXPECT_TRUE(state.GetDynamicExpectCTState("example1.test", &expect_ct_state));
+  EXPECT_FALSE(
+      state.GetDynamicExpectCTState("example2.test", &expect_ct_state));
+
   EXPECT_TRUE(state.DeleteDynamicDataForHost("example1.test"));
   EXPECT_FALSE(state.ShouldUpgradeToSSL("example1.test"));
   EXPECT_FALSE(state.HasPublicKeyPins("example1.test"));
+  EXPECT_FALSE(
+      state.GetDynamicExpectCTState("example1.test", &expect_ct_state));
 }
 
 TEST_F(TransportSecurityStateTest, EnableStaticPins) {
@@ -2598,6 +2620,188 @@ TEST_F(TransportSecurityStateTest, RequireCTForSymantec) {
       state.ShouldRequireCT("www.example.com", before_cert.get(), hashes));
   EXPECT_FALSE(
       state.ShouldRequireCT("www.example.com", after_cert.get(), hashes));
+}
+
+// Tests that dynamic Expect-CT state is cleared from ClearDynamicData().
+TEST_F(TransportSecurityStateTest, DynamicExpectCTStateCleared) {
+  base::test::ScopedFeatureList feature_list;
+  feature_list.InitAndEnableFeature(
+      TransportSecurityState::kDynamicExpectCTFeature);
+  const std::string host("example.test");
+  TransportSecurityState state;
+  TransportSecurityState::ExpectCTState expect_ct_state;
+  const base::Time current_time = base::Time::Now();
+  const base::Time expiry = current_time + base::TimeDelta::FromSeconds(1000);
+
+  state.AddExpectCT(host, expiry, true, GURL());
+  EXPECT_TRUE(state.GetDynamicExpectCTState(host, &expect_ct_state));
+  EXPECT_TRUE(expect_ct_state.enforce);
+  EXPECT_TRUE(expect_ct_state.report_uri.is_empty());
+  EXPECT_EQ(expiry, expect_ct_state.expiry);
+
+  state.ClearDynamicData();
+  EXPECT_FALSE(state.GetDynamicExpectCTState(host, &expect_ct_state));
+}
+
+// Tests that dynamic Expect-CT state can be added and retrieved.
+TEST_F(TransportSecurityStateTest, DynamicExpectCTState) {
+  base::test::ScopedFeatureList feature_list;
+  feature_list.InitAndEnableFeature(
+      TransportSecurityState::kDynamicExpectCTFeature);
+  const std::string host("example.test");
+  TransportSecurityState state;
+  TransportSecurityState::ExpectCTState expect_ct_state;
+  const base::Time current_time = base::Time::Now();
+  const base::Time expiry = current_time + base::TimeDelta::FromSeconds(1000);
+
+  // Test that Expect-CT state can be added and retrieved.
+  state.AddExpectCT(host, expiry, true, GURL());
+  EXPECT_TRUE(state.GetDynamicExpectCTState(host, &expect_ct_state));
+  EXPECT_TRUE(expect_ct_state.enforce);
+  EXPECT_TRUE(expect_ct_state.report_uri.is_empty());
+  EXPECT_EQ(expiry, expect_ct_state.expiry);
+
+  // Test that Expect-CT can be updated (e.g. by changing |enforce| to false and
+  // adding a report-uri).
+  const GURL report_uri("https://example-report.test");
+  state.AddExpectCT(host, expiry, false, report_uri);
+  EXPECT_TRUE(state.GetDynamicExpectCTState(host, &expect_ct_state));
+  EXPECT_FALSE(expect_ct_state.enforce);
+  EXPECT_EQ(report_uri, expect_ct_state.report_uri);
+  EXPECT_EQ(expiry, expect_ct_state.expiry);
+
+  // Test that Expect-CT state is discarded when expired.
+  state.AddExpectCT(host, current_time - base::TimeDelta::FromSeconds(1000),
+                    true, report_uri);
+  EXPECT_FALSE(state.GetDynamicExpectCTState(host, &expect_ct_state));
+}
+
+// Tests that dynamic Expect-CT state cannot be added when the feature is not
+// enabled.
+TEST_F(TransportSecurityStateTest, DynamicExpectCTStateDisabled) {
+  base::test::ScopedFeatureList feature_list;
+  feature_list.InitAndDisableFeature(
+      TransportSecurityState::kDynamicExpectCTFeature);
+  const std::string host("example.test");
+  TransportSecurityState state;
+  TransportSecurityState::ExpectCTState expect_ct_state;
+  const base::Time current_time = base::Time::Now();
+  const base::Time expiry = current_time + base::TimeDelta::FromSeconds(1000);
+
+  state.AddExpectCT(host, expiry, true, GURL());
+  EXPECT_FALSE(state.GetDynamicExpectCTState(host, &expect_ct_state));
+}
+
+// Tests that dynamic Expect-CT opt-ins are processed correctly (when the
+// feature is enabled).
+TEST_F(TransportSecurityStateTest, DynamicExpectCT) {
+  const char kHeader[] = "max-age=123,enforce,report-uri=\"http://foo.test\"";
+  SSLInfo ssl;
+  ssl.is_issued_by_known_root = true;
+  ssl.ct_compliance_details_available = true;
+  ssl.ct_cert_policy_compliance =
+      ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS;
+
+  // First test that the header is not processed when the feature is disabled.
+  {
+    base::test::ScopedFeatureList feature_list;
+    feature_list.InitAndDisableFeature(
+        TransportSecurityState::kDynamicExpectCTFeature);
+    TransportSecurityState state;
+    state.ProcessExpectCTHeader(kHeader, HostPortPair("example.test", 443),
+                                ssl);
+    TransportSecurityState::ExpectCTState expect_ct_state;
+    EXPECT_FALSE(
+        state.GetDynamicExpectCTState("example.test", &expect_ct_state));
+  }
+
+  // Now test that the header is processed when the feature is enabled.
+  {
+    base::test::ScopedFeatureList feature_list;
+    feature_list.InitAndEnableFeature(
+        TransportSecurityState::kDynamicExpectCTFeature);
+    base::Time now = base::Time::Now();
+    TransportSecurityState state;
+    MockExpectCTReporter reporter;
+    state.SetExpectCTReporter(&reporter);
+    state.ProcessExpectCTHeader(kHeader, HostPortPair("example.test", 443),
+                                ssl);
+    TransportSecurityState::ExpectCTState expect_ct_state;
+    EXPECT_TRUE(
+        state.GetDynamicExpectCTState("example.test", &expect_ct_state));
+    EXPECT_EQ(GURL("http://foo.test"), expect_ct_state.report_uri);
+    EXPECT_TRUE(expect_ct_state.enforce);
+    EXPECT_LT(now, expect_ct_state.expiry);
+    // No report should be sent when the header was processed over a connection
+    // that complied with CT policy.
+    EXPECT_EQ(0u, reporter.num_failures());
+  }
+}
+
+// Tests that dynamic Expect-CT is not processed for private roots.
+TEST_F(TransportSecurityStateTest, DynamicExpectCTPrivateRoot) {
+  const char kHeader[] = "max-age=123,enforce,report-uri=\"http://foo.test\"";
+  SSLInfo ssl;
+  ssl.is_issued_by_known_root = false;
+  ssl.ct_compliance_details_available = true;
+  ssl.ct_cert_policy_compliance =
+      ct::CertPolicyCompliance::CERT_POLICY_NOT_ENOUGH_SCTS;
+
+  base::test::ScopedFeatureList feature_list;
+  feature_list.InitAndEnableFeature(
+      TransportSecurityState::kDynamicExpectCTFeature);
+  TransportSecurityState state;
+  MockExpectCTReporter reporter;
+  state.SetExpectCTReporter(&reporter);
+  state.ProcessExpectCTHeader(kHeader, HostPortPair("example.test", 443), ssl);
+  TransportSecurityState::ExpectCTState expect_ct_state;
+  EXPECT_FALSE(state.GetDynamicExpectCTState("example.test", &expect_ct_state));
+  EXPECT_EQ(0u, reporter.num_failures());
+}
+
+// Tests that dynamic Expect-CT is not processed when CT compliance status
+// wasn't computed.
+TEST_F(TransportSecurityStateTest, DynamicExpectCTNoComplianceDetails) {
+  const char kHeader[] = "max-age=123,enforce,report-uri=\"http://foo.test\"";
+  SSLInfo ssl;
+  ssl.is_issued_by_known_root = true;
+  ssl.ct_compliance_details_available = false;
+  ssl.ct_cert_policy_compliance =
+      ct::CertPolicyCompliance::CERT_POLICY_NOT_ENOUGH_SCTS;
+
+  base::test::ScopedFeatureList feature_list;
+  feature_list.InitAndEnableFeature(
+      TransportSecurityState::kDynamicExpectCTFeature);
+  TransportSecurityState state;
+  MockExpectCTReporter reporter;
+  state.SetExpectCTReporter(&reporter);
+  state.ProcessExpectCTHeader(kHeader, HostPortPair("example.test", 443), ssl);
+  TransportSecurityState::ExpectCTState expect_ct_state;
+  EXPECT_FALSE(state.GetDynamicExpectCTState("example.test", &expect_ct_state));
+  EXPECT_EQ(0u, reporter.num_failures());
+}
+
+// Tests that Expect-CT reports are sent when an Expect-CT header is received
+// over a non-compliant connection.
+TEST_F(TransportSecurityStateTest, DynamicExpectCTNonCompliant) {
+  const char kHeader[] = "max-age=123,enforce,report-uri=\"http://foo.test\"";
+  SSLInfo ssl;
+  ssl.is_issued_by_known_root = true;
+  ssl.ct_compliance_details_available = true;
+  ssl.ct_cert_policy_compliance =
+      ct::CertPolicyCompliance::CERT_POLICY_NOT_ENOUGH_SCTS;
+
+  base::test::ScopedFeatureList feature_list;
+  feature_list.InitAndEnableFeature(
+      TransportSecurityState::kDynamicExpectCTFeature);
+  TransportSecurityState state;
+  MockExpectCTReporter reporter;
+  state.SetExpectCTReporter(&reporter);
+  state.ProcessExpectCTHeader(kHeader, HostPortPair("example.test", 443), ssl);
+  TransportSecurityState::ExpectCTState expect_ct_state;
+  EXPECT_FALSE(state.GetDynamicExpectCTState("example.test", &expect_ct_state));
+  EXPECT_EQ(1u, reporter.num_failures());
+  EXPECT_EQ("example.test", reporter.host_port_pair().host());
 }
 
 }  // namespace net

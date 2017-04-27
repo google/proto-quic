@@ -75,9 +75,9 @@ TEST_F(MerkleTreeLeafTest, CreatesForX509Cert) {
   MerkleTreeLeaf leaf;
   ASSERT_TRUE(GetMerkleTreeLeaf(test_cert_.get(), x509_sct_.get(), &leaf));
 
-  EXPECT_EQ(LogEntry::LOG_ENTRY_TYPE_X509, leaf.log_entry.type);
-  EXPECT_FALSE(leaf.log_entry.leaf_certificate.empty());
-  EXPECT_TRUE(leaf.log_entry.tbs_certificate.empty());
+  EXPECT_EQ(SignedEntryData::LOG_ENTRY_TYPE_X509, leaf.signed_entry.type);
+  EXPECT_FALSE(leaf.signed_entry.leaf_certificate.empty());
+  EXPECT_TRUE(leaf.signed_entry.tbs_certificate.empty());
 
   EXPECT_EQ(x509_sct_->timestamp, leaf.timestamp);
   EXPECT_EQ(x509_sct_->extensions, leaf.extensions);
@@ -88,9 +88,9 @@ TEST_F(MerkleTreeLeafTest, CreatesForPrecert) {
   ASSERT_TRUE(
       GetMerkleTreeLeaf(test_precert_.get(), precert_sct_.get(), &leaf));
 
-  EXPECT_EQ(LogEntry::LOG_ENTRY_TYPE_PRECERT, leaf.log_entry.type);
-  EXPECT_FALSE(leaf.log_entry.tbs_certificate.empty());
-  EXPECT_TRUE(leaf.log_entry.leaf_certificate.empty());
+  EXPECT_EQ(SignedEntryData::LOG_ENTRY_TYPE_PRECERT, leaf.signed_entry.type);
+  EXPECT_FALSE(leaf.signed_entry.tbs_certificate.empty());
+  EXPECT_TRUE(leaf.signed_entry.leaf_certificate.empty());
 
   EXPECT_EQ(precert_sct_->timestamp, leaf.timestamp);
   EXPECT_EQ(precert_sct_->extensions, leaf.extensions);

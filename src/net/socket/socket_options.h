@@ -41,9 +41,9 @@ namespace net {
 // See also:
 //    http://technet.microsoft.com/en-us/library/bb726981.aspx
 //
-// This function returns true if it succeeds to set the TCP_NODELAY option,
-// otherwise returns false.
-bool SetTCPNoDelay(SocketDescriptor socket, bool no_delay);
+// SetTCPNoDelay() sets the TCP_NODELAY option. Use |no_delay| to enable or
+// disable it. On error returns a net error code, on success returns OK.
+int SetTCPNoDelay(SocketDescriptor fd, bool no_delay);
 
 // SetReuseAddr() sets the SO_REUSEADDR socket option. Use |reuse| to enable or
 // disable it. On error returns a net error code, on success returns OK.

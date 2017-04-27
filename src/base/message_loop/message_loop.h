@@ -334,7 +334,8 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
  protected:
   std::unique_ptr<MessagePump> pump_;
 
-  using MessagePumpFactoryCallback = Callback<std::unique_ptr<MessagePump>()>;
+  using MessagePumpFactoryCallback =
+      OnceCallback<std::unique_ptr<MessagePump>()>;
 
   // Common protected constructor. Other constructors delegate the
   // initialization to this constructor.

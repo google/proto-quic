@@ -728,87 +728,9 @@ SECStatus OCSPTrySendAndReceive(SEC_HTTP_REQUEST_SESSION request,
     return SECFailure;
   }
 
-  const base::Time start_time = base::Time::Now();
-  bool request_ok = true;
   req->Start();
   if (!req->Wait() || req->http_response_code() == static_cast<PRUint16>(-1)) {
     // If the response code is -1, the request failed and there is no response.
-    request_ok = false;
-  }
-  const base::TimeDelta duration = base::Time::Now() - start_time;
-
-  // For metrics, we want to know if the request was 'successful' or not.
-  // |request_ok| determines if we'll pass the response back to NSS and |ok|
-  // keep track of if we think the response was good.
-  bool ok = true;
-  if (!request_ok ||
-      (req->http_response_code() >= 400 && req->http_response_code() < 600) ||
-      req->http_response_data().size() == 0 ||
-      // 0x30 is the ASN.1 DER encoding of a SEQUENCE. All valid OCSP/CRL/CRT
-      // responses must start with this. If we didn't check for this then a
-      // captive portal could provide an HTML reply that we would count as a
-      // 'success' (although it wouldn't count in NSS, of course).
-      req->http_response_data().data()[0] != 0x30) {
-    ok = false;
-  }
-
-  // We want to know if this was:
-  //   1) An OCSP request
-  //   2) A CRL request
-  //   3) A request for a missing intermediate certificate
-  // There's no sure way to do this, so we use heuristics like MIME type and
-  // URL.
-  const char* mime_type = "";
-  if (ok)
-    mime_type = req->http_response_content_type().c_str();
-  bool is_ocsp =
-      strcasecmp(mime_type, "application/ocsp-response") == 0;
-  bool is_crl = strcasecmp(mime_type, "application/x-pkcs7-crl") == 0 ||
-                strcasecmp(mime_type, "application/x-x509-crl") == 0 ||
-                strcasecmp(mime_type, "application/pkix-crl") == 0;
-  bool is_cert =
-      strcasecmp(mime_type, "application/x-x509-ca-cert") == 0 ||
-      strcasecmp(mime_type, "application/x-x509-server-cert") == 0 ||
-      strcasecmp(mime_type, "application/pkix-cert") == 0 ||
-      strcasecmp(mime_type, "application/pkcs7-mime") == 0;
-
-  if (!is_cert && !is_crl && !is_ocsp) {
-    // We didn't get a hint from the MIME type, so do the best that we can.
-    const std::string path = req->url().path();
-    const std::string host = req->url().host();
-    is_crl = strcasestr(path.c_str(), ".crl") != NULL;
-    is_cert = strcasestr(path.c_str(), ".crt") != NULL ||
-              strcasestr(path.c_str(), ".p7c") != NULL ||
-              strcasestr(path.c_str(), ".cer") != NULL;
-    is_ocsp = strcasestr(host.c_str(), "ocsp") != NULL ||
-              req->http_request_method() == "POST";
-  }
-
-  if (is_ocsp) {
-    if (ok) {
-      UMA_HISTOGRAM_TIMES("Net.OCSPRequestTimeMs", duration);
-      UMA_HISTOGRAM_BOOLEAN("Net.OCSPRequestSuccess", true);
-    } else {
-      UMA_HISTOGRAM_TIMES("Net.OCSPRequestFailedTimeMs", duration);
-      UMA_HISTOGRAM_BOOLEAN("Net.OCSPRequestSuccess", false);
-    }
-  } else if (is_crl) {
-    if (ok) {
-      UMA_HISTOGRAM_TIMES("Net.CRLRequestTimeMs", duration);
-      UMA_HISTOGRAM_BOOLEAN("Net.CRLRequestSuccess", true);
-    } else {
-      UMA_HISTOGRAM_TIMES("Net.CRLRequestFailedTimeMs", duration);
-      UMA_HISTOGRAM_BOOLEAN("Net.CRLRequestSuccess", false);
-    }
-  } else if (is_cert) {
-    if (ok)
-      UMA_HISTOGRAM_TIMES("Net.CRTRequestTimeMs", duration);
-  } else {
-    if (ok)
-      UMA_HISTOGRAM_TIMES("Net.UnknownTypeRequestTimeMs", duration);
-  }
-
-  if (!request_ok) {
     PORT_SetError(SEC_ERROR_BAD_HTTP_RESPONSE);  // Simple approximation.
     return SECFailure;
   }

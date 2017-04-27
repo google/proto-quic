@@ -23,9 +23,9 @@
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_string_piece.h"
-#include "net/spdy/spdy_frame_builder.h"
-#include "net/spdy/spdy_framer.h"
-#include "net/spdy/spdy_http_utils.h"
+#include "net/spdy/chromium/spdy_http_utils.h"
+#include "net/spdy/core/spdy_frame_builder.h"
+#include "net/spdy/core/spdy_framer.h"
 #include "net/ssl/ssl_info.h"
 
 namespace net {
@@ -141,8 +141,6 @@ HttpResponseInfo::ConnectionInfo QuicHttpStream::ConnectionInfoFromQuicVersion(
   switch (quic_version) {
     case QUIC_VERSION_UNSUPPORTED:
       return HttpResponseInfo::CONNECTION_INFO_QUIC_UNKNOWN_VERSION;
-    case QUIC_VERSION_34:
-      return HttpResponseInfo::CONNECTION_INFO_QUIC_34;
     case QUIC_VERSION_35:
       return HttpResponseInfo::CONNECTION_INFO_QUIC_35;
     case QUIC_VERSION_36:
@@ -151,6 +149,8 @@ HttpResponseInfo::ConnectionInfo QuicHttpStream::ConnectionInfoFromQuicVersion(
       return HttpResponseInfo::CONNECTION_INFO_QUIC_37;
     case QUIC_VERSION_38:
       return HttpResponseInfo::CONNECTION_INFO_QUIC_38;
+    case QUIC_VERSION_39:
+      return HttpResponseInfo::CONNECTION_INFO_QUIC_39;
   }
   NOTREACHED();
   return HttpResponseInfo::CONNECTION_INFO_QUIC_UNKNOWN_VERSION;
@@ -423,6 +423,14 @@ bool QuicHttpStream::GetLoadTimingInfo(LoadTimingInfo* load_timing_info) const {
   return true;
 }
 
+bool QuicHttpStream::GetAlternativeService(
+    AlternativeService* alternative_service) const {
+  alternative_service->protocol = kProtoQUIC;
+  alternative_service->host = server_id_.host();
+  alternative_service->port = server_id_.port();
+  return true;
+}
+
 void QuicHttpStream::PopulateNetErrorDetails(NetErrorDetails* details) {
   details->connection_info = ConnectionInfoFromQuicVersion(quic_version_);
   if (was_handshake_confirmed_)
@@ -621,8 +629,8 @@ int QuicHttpStream::DoLoop(int rv) {
 
 int QuicHttpStream::DoRequestStream() {
   next_state_ = STATE_REQUEST_STREAM_COMPLETE;
-  return stream_request_.StartRequest(
-      session_, &stream_,
+  stream_request_ = session_->CreateStreamRequest();
+  return stream_request_->StartRequest(
       base::Bind(&QuicHttpStream::OnIOComplete, weak_factory_.GetWeakPtr()));
 }
 
@@ -633,6 +641,8 @@ int QuicHttpStream::DoRequestStreamComplete(int rv) {
     return GetResponseStatus();
   }
 
+  stream_ = stream_request_->ReleaseStream();
+  stream_request_.reset();
   stream_->SetDelegate(this);
   if (request_info_->load_flags & LOAD_DISABLE_CONNECTION_MIGRATION) {
     stream_->DisableConnectionMigration();
@@ -882,15 +892,6 @@ int QuicHttpStream::ComputeResponseStatus() const {
   }
 
   DCHECK_NE(QUIC_HANDSHAKE_TIMEOUT, quic_connection_error_);
-
-  // If the headers have not been received and QUIC is now broken, return
-  // ERR_QUIC_BROKEN_ERROR to permit HttpNetworkTransaction to retry the request
-  // over TCP.
-  if (!response_headers_received_ &&
-      http_server_properties_->IsAlternativeServiceBroken(AlternativeService(
-          kProtoQUIC, server_id_.host(), server_id_.port()))) {
-    return ERR_QUIC_BROKEN_ERROR;
-  }
 
   return ERR_QUIC_PROTOCOL_ERROR;
 }

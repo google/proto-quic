@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include "base/memory/ptr_util.h"
 #include "net/base/elements_upload_data_stream.h"
 #include "net/base/load_flags.h"
 #include "net/base/request_priority.h"
@@ -55,8 +56,9 @@ void ReportSender::Send(const GURL& report_uri,
   DCHECK(!content_type.empty());
   std::unique_ptr<URLRequest> url_request =
       request_context_->CreateRequest(report_uri, DEFAULT_PRIORITY, this);
-  url_request->SetUserData(&kUserDataKey,
-                           new CallbackInfo(success_callback, error_callback));
+  url_request->SetUserData(
+      &kUserDataKey,
+      base::MakeUnique<CallbackInfo>(success_callback, error_callback));
 
   int load_flags =
       LOAD_BYPASS_CACHE | LOAD_DISABLE_CACHE | LOAD_DO_NOT_SEND_AUTH_DATA;

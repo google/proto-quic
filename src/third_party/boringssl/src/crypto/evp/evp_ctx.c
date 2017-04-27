@@ -58,6 +58,7 @@
 
 #include <string.h>
 
+#include <openssl/digest.h>
 #include <openssl/err.h>
 #include <openssl/mem.h>
 
@@ -68,6 +69,7 @@
 static const EVP_PKEY_METHOD *const evp_methods[] = {
   &rsa_pkey_meth,
   &ec_pkey_meth,
+  &ed25519_pkey_meth,
 };
 
 static const EVP_PKEY_METHOD *evp_pkey_meth_find(int type) {
@@ -211,7 +213,8 @@ int EVP_PKEY_CTX_ctrl(EVP_PKEY_CTX *ctx, int keytype, int optype, int cmd,
 }
 
 int EVP_PKEY_sign_init(EVP_PKEY_CTX *ctx) {
-  if (!ctx || !ctx->pmeth || !ctx->pmeth->sign) {
+  if (ctx == NULL || ctx->pmeth == NULL ||
+      (ctx->pmeth->sign == NULL && ctx->pmeth->sign_message == NULL)) {
     OPENSSL_PUT_ERROR(EVP, EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE);
     return 0;
   }
@@ -221,7 +224,7 @@ int EVP_PKEY_sign_init(EVP_PKEY_CTX *ctx) {
 }
 
 int EVP_PKEY_sign(EVP_PKEY_CTX *ctx, uint8_t *sig, size_t *sig_len,
-                  const uint8_t *data, size_t data_len) {
+                  const uint8_t *digest, size_t digest_len) {
   if (!ctx || !ctx->pmeth || !ctx->pmeth->sign) {
     OPENSSL_PUT_ERROR(EVP, EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE);
     return 0;
@@ -230,11 +233,56 @@ int EVP_PKEY_sign(EVP_PKEY_CTX *ctx, uint8_t *sig, size_t *sig_len,
     OPENSSL_PUT_ERROR(EVP, EVP_R_OPERATON_NOT_INITIALIZED);
     return 0;
   }
-  return ctx->pmeth->sign(ctx, sig, sig_len, data, data_len);
+  return ctx->pmeth->sign(ctx, sig, sig_len, digest, digest_len);
+}
+
+static const EVP_MD *get_signature_md(EVP_PKEY_CTX *ctx) {
+  const EVP_MD *md;
+  if (!EVP_PKEY_CTX_get_signature_md(ctx, &md)) {
+    return NULL;
+  }
+
+  if (md == NULL) {
+    OPENSSL_PUT_ERROR(EVP, EVP_R_NO_DEFAULT_DIGEST);
+    return NULL;
+  }
+
+  return md;
+}
+
+int EVP_PKEY_sign_message(EVP_PKEY_CTX *ctx, uint8_t *sig, size_t *sig_len,
+                          const uint8_t *data, size_t data_len) {
+  if (ctx == NULL || ctx->pmeth == NULL ||
+      (ctx->pmeth->sign == NULL && ctx->pmeth->sign_message == NULL)) {
+    OPENSSL_PUT_ERROR(EVP, EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE);
+    return 0;
+  }
+  if (ctx->operation != EVP_PKEY_OP_SIGN) {
+    OPENSSL_PUT_ERROR(EVP, EVP_R_OPERATON_NOT_INITIALIZED);
+    return 0;
+  }
+
+  if (ctx->pmeth->sign_message != NULL) {
+    return ctx->pmeth->sign_message(ctx, sig, sig_len, data, data_len);
+  }
+
+  /* Don't bother digesting if we are only sampling the length. */
+  if (sig == NULL) {
+    *sig_len = EVP_PKEY_size(EVP_PKEY_CTX_get0_pkey(ctx));
+    return 1;
+  }
+
+  uint8_t digest[EVP_MAX_MD_SIZE];
+  unsigned digest_len;
+  const EVP_MD *md = get_signature_md(ctx);
+  return md != NULL &&
+         EVP_Digest(data, data_len, digest, &digest_len, md, NULL) &&
+         EVP_PKEY_sign(ctx, sig, sig_len, digest, digest_len);
 }
 
 int EVP_PKEY_verify_init(EVP_PKEY_CTX *ctx) {
-  if (!ctx || !ctx->pmeth || !ctx->pmeth->verify) {
+  if (ctx == NULL || ctx->pmeth == NULL ||
+      (ctx->pmeth->verify == NULL && ctx->pmeth->verify_message == NULL)) {
     OPENSSL_PUT_ERROR(EVP, EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE);
     return 0;
   }
@@ -243,7 +291,7 @@ int EVP_PKEY_verify_init(EVP_PKEY_CTX *ctx) {
 }
 
 int EVP_PKEY_verify(EVP_PKEY_CTX *ctx, const uint8_t *sig, size_t sig_len,
-                    const uint8_t *data, size_t data_len) {
+                    const uint8_t *digest, size_t digest_len) {
   if (!ctx || !ctx->pmeth || !ctx->pmeth->verify) {
     OPENSSL_PUT_ERROR(EVP, EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE);
     return 0;
@@ -252,7 +300,32 @@ int EVP_PKEY_verify(EVP_PKEY_CTX *ctx, const uint8_t *sig, size_t sig_len,
     OPENSSL_PUT_ERROR(EVP, EVP_R_OPERATON_NOT_INITIALIZED);
     return 0;
   }
-  return ctx->pmeth->verify(ctx, sig, sig_len, data, data_len);
+  return ctx->pmeth->verify(ctx, sig, sig_len, digest, digest_len);
+}
+
+int EVP_PKEY_verify_message(EVP_PKEY_CTX *ctx, const uint8_t *sig,
+                            size_t sig_len, const uint8_t *data,
+                            size_t data_len) {
+  if (ctx == NULL || ctx->pmeth == NULL ||
+      (ctx->pmeth->verify == NULL && ctx->pmeth->verify_message == NULL)) {
+    OPENSSL_PUT_ERROR(EVP, EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE);
+    return 0;
+  }
+  if (ctx->operation != EVP_PKEY_OP_VERIFY) {
+    OPENSSL_PUT_ERROR(EVP, EVP_R_OPERATON_NOT_INITIALIZED);
+    return 0;
+  }
+
+  if (ctx->pmeth->verify_message != NULL) {
+    return ctx->pmeth->verify_message(ctx, sig, sig_len, data, data_len);
+  }
+
+  uint8_t digest[EVP_MAX_MD_SIZE];
+  unsigned digest_len;
+  const EVP_MD *md = get_signature_md(ctx);
+  return md != NULL &&
+         EVP_Digest(data, data_len, digest, &digest_len, md, NULL) &&
+         EVP_PKEY_verify(ctx, sig, sig_len, digest, digest_len);
 }
 
 int EVP_PKEY_encrypt_init(EVP_PKEY_CTX *ctx) {

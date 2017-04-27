@@ -26,20 +26,18 @@ class BASE_EXPORT MessageWindow : public base::NonThreadSafe {
   // Implement this callback to handle messages received by the message window.
   // If the callback returns |false|, the first four parameters are passed to
   // DefWindowProc(). Otherwise, |*result| is returned by the window procedure.
-  typedef base::Callback<bool(UINT message,
-                              WPARAM wparam,
-                              LPARAM lparam,
-                              LRESULT* result)> MessageCallback;
+  using MessageCallback = base::RepeatingCallback<
+      bool(UINT message, WPARAM wparam, LPARAM lparam, LRESULT* result)>;
 
   MessageWindow();
   ~MessageWindow();
 
   // Creates a message-only window. The incoming messages will be passed by
   // |message_callback|. |message_callback| must outlive |this|.
-  bool Create(const MessageCallback& message_callback);
+  bool Create(MessageCallback message_callback);
 
   // Same as Create() but assigns the name to the created window.
-  bool CreateNamed(const MessageCallback& message_callback,
+  bool CreateNamed(MessageCallback message_callback,
                    const string16& window_name);
 
   HWND hwnd() const { return window_; }
@@ -53,8 +51,7 @@ class BASE_EXPORT MessageWindow : public base::NonThreadSafe {
   friend class WindowClass;
 
   // Contains the actual window creation code.
-  bool DoCreate(const MessageCallback& message_callback,
-                const wchar_t* window_name);
+  bool DoCreate(MessageCallback message_callback, const wchar_t* window_name);
 
   // Invoked by the OS to process incoming window messages.
   static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,

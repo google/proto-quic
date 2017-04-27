@@ -32,9 +32,9 @@
 #include "net/quic/core/quic_client_promised_info.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/socket/datagram_client_socket.h"
-#include "net/spdy/spdy_http_utils.h"
-#include "net/spdy/spdy_log_util.h"
-#include "net/spdy/spdy_session.h"
+#include "net/spdy/chromium/spdy_http_utils.h"
+#include "net/spdy/chromium/spdy_log_util.h"
+#include "net/spdy/chromium/spdy_session.h"
 #include "net/ssl/channel_id_service.h"
 #include "net/ssl/ssl_connection_status_flags.h"
 #include "net/ssl/ssl_info.h"
@@ -186,37 +186,43 @@ class QuicServerPushHelper : public ServerPushDelegate::ServerPushHelper {
 
 }  // namespace
 
-QuicChromiumClientSession::StreamRequest::StreamRequest() : stream_(nullptr) {}
+QuicChromiumClientSession::StreamRequest::StreamRequest(
+    const base::WeakPtr<QuicChromiumClientSession>& session)
+    : session_(session), stream_(nullptr) {}
 
 QuicChromiumClientSession::StreamRequest::~StreamRequest() {
-  CancelRequest();
+  if (stream_)
+    stream_->Reset(QUIC_STREAM_CANCELLED);
+
+  if (session_)
+    session_->CancelRequest(this);
 }
 
 int QuicChromiumClientSession::StreamRequest::StartRequest(
-    const base::WeakPtr<QuicChromiumClientSession>& session,
-    QuicChromiumClientStream** stream,
     const CompletionCallback& callback) {
-  session_ = session;
-  stream_ = stream;
-  int rv = session_->TryCreateStream(this, stream_);
+  DCHECK(session_);
+  int rv = session_->TryCreateStream(this);
   if (rv == ERR_IO_PENDING) {
     callback_ = callback;
+  } else {
+    session_.reset();
   }
 
   return rv;
 }
 
-void QuicChromiumClientSession::StreamRequest::CancelRequest() {
-  if (session_)
-    session_->CancelRequest(this);
-  session_.reset();
-  callback_.Reset();
+QuicChromiumClientStream*
+QuicChromiumClientSession::StreamRequest::ReleaseStream() {
+  DCHECK(stream_);
+  QuicChromiumClientStream* stream = stream_;
+  stream_ = nullptr;
+  return stream;
 }
 
 void QuicChromiumClientSession::StreamRequest::OnRequestCompleteSuccess(
     QuicChromiumClientStream* stream) {
   session_.reset();
-  *stream_ = stream;
+  stream_ = stream;
   base::ResetAndReturn(&callback_).Run(OK);
 }
 
@@ -375,24 +381,8 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
           round_trip_handshakes, 1, 3, 4);
     }
   }
+
   const QuicConnectionStats stats = connection()->GetStats();
-  if (server_info_ && stats.min_rtt_us > 0) {
-    base::TimeTicks wait_for_data_start_time =
-        server_info_->wait_for_data_start_time();
-    base::TimeTicks wait_for_data_end_time =
-        server_info_->wait_for_data_end_time();
-    if (!wait_for_data_start_time.is_null() &&
-        !wait_for_data_end_time.is_null()) {
-      base::TimeDelta wait_time =
-          wait_for_data_end_time - wait_for_data_start_time;
-      const base::HistogramBase::Sample kMaxWaitToRtt = 1000;
-      base::HistogramBase::Sample wait_to_rtt =
-          static_cast<base::HistogramBase::Sample>(
-              100 * wait_time.InMicroseconds() / stats.min_rtt_us);
-      UMA_HISTOGRAM_CUSTOM_COUNTS("Net.QuicServerInfo.WaitForDataReadyToRtt",
-                                  wait_to_rtt, 1, kMaxWaitToRtt, 50);
-    }
-  }
 
   // The MTU used by QUIC is limited to a fairly small set of predefined values
   // (initial values and MTU discovery values), but does not fare well when
@@ -472,9 +462,15 @@ void QuicChromiumClientSession::RemoveObserver(Observer* observer) {
   observers_.erase(observer);
 }
 
-int QuicChromiumClientSession::TryCreateStream(
-    StreamRequest* request,
-    QuicChromiumClientStream** stream) {
+std::unique_ptr<QuicChromiumClientSession::StreamRequest>
+QuicChromiumClientSession::CreateStreamRequest() {
+  // base::MakeUnique does not work because the StreamRequest constructor
+  // is private.
+  return std::unique_ptr<StreamRequest>(
+      new StreamRequest(weak_factory_.GetWeakPtr()));
+}
+
+int QuicChromiumClientSession::TryCreateStream(StreamRequest* request) {
   if (goaway_received()) {
     DVLOG(1) << "Going away.";
     return ERR_CONNECTION_CLOSED;
@@ -491,7 +487,7 @@ int QuicChromiumClientSession::TryCreateStream(
   }
 
   if (GetNumOpenOutgoingStreams() < max_open_outgoing_streams()) {
-    *stream = CreateOutgoingReliableStreamImpl();
+    request->stream_ = CreateOutgoingReliableStreamImpl();
     return OK;
   }
 
@@ -561,7 +557,12 @@ QuicChromiumClientSession::CreateOutgoingReliableStreamImpl() {
   return stream;
 }
 
-QuicCryptoClientStream* QuicChromiumClientSession::GetCryptoStream() {
+QuicCryptoClientStream* QuicChromiumClientSession::GetMutableCryptoStream() {
+  return crypto_stream_.get();
+}
+
+const QuicCryptoClientStream* QuicChromiumClientSession::GetCryptoStream()
+    const {
   return crypto_stream_.get();
 }
 
@@ -857,21 +858,6 @@ void QuicChromiumClientSession::OnCryptoHandshakeEvent(
     UMA_HISTOGRAM_TIMES(
         "Net.QuicSession.HandshakeConfirmedTime",
         connect_timing_.connect_end - connect_timing_.connect_start);
-
-    if (server_info_) {
-      // TODO(rtenneti): Should we delete this histogram?
-      // Track how long it has taken to finish handshake once we start waiting
-      // for reading of QUIC server information from disk cache. We could use
-      // this data to compare total time taken if we were to cancel the disk
-      // cache read vs waiting for the read to complete.
-      base::TimeTicks wait_for_data_start_time =
-          server_info_->wait_for_data_start_time();
-      if (!wait_for_data_start_time.is_null()) {
-        UMA_HISTOGRAM_TIMES(
-            "Net.QuicServerInfo.WaitForDataReady.HandshakeConfirmedTime",
-            base::TimeTicks::Now() - wait_for_data_start_time);
-      }
-    }
     // Track how long it has taken to finish handshake after we have finished
     // DNS host resolution.
     if (!connect_timing_.dns_end.is_null()) {
@@ -886,8 +872,6 @@ void QuicChromiumClientSession::OnCryptoHandshakeEvent(
       ++it;
       observer->OnCryptoHandshakeConfirmed();
     }
-    if (server_info_)
-      server_info_->OnExternalCacheHit();
   }
   QuicSpdySession::OnCryptoHandshakeEvent(event);
 }
@@ -1243,13 +1227,6 @@ void QuicChromiumClientSession::CloseSessionOnError(int error,
                                                     QuicErrorCode quic_error) {
   RecordAndCloseSessionOnError(error, quic_error);
   NotifyFactoryOfSessionClosed();
-}
-
-void QuicChromiumClientSession::CloseSessionOnErrorAndNotifyFactoryLater(
-    int error,
-    QuicErrorCode quic_error) {
-  RecordAndCloseSessionOnError(error, quic_error);
-  NotifyFactoryOfSessionClosedLater();
 }
 
 void QuicChromiumClientSession::RecordAndCloseSessionOnError(

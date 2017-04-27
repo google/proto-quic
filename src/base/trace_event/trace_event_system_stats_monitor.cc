@@ -79,16 +79,14 @@ void TraceEventSystemStatsMonitor::OnTraceLogEnabled() {
   if (!enabled)
     return;
   task_runner_->PostTask(
-      FROM_HERE,
-      base::Bind(&TraceEventSystemStatsMonitor::StartProfiling,
-                 weak_factory_.GetWeakPtr()));
+      FROM_HERE, base::BindOnce(&TraceEventSystemStatsMonitor::StartProfiling,
+                                weak_factory_.GetWeakPtr()));
 }
 
 void TraceEventSystemStatsMonitor::OnTraceLogDisabled() {
   task_runner_->PostTask(
-      FROM_HERE,
-      base::Bind(&TraceEventSystemStatsMonitor::StopProfiling,
-                 weak_factory_.GetWeakPtr()));
+      FROM_HERE, base::BindOnce(&TraceEventSystemStatsMonitor::StopProfiling,
+                                weak_factory_.GetWeakPtr()));
 }
 
 void TraceEventSystemStatsMonitor::StartProfiling() {

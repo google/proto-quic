@@ -86,7 +86,8 @@ void HistogramSamples::Add(const HistogramSamples& other) {
   IncreaseSum(other.sum());
   subtle::NoBarrier_AtomicIncrement(&meta_->redundant_count,
                                     other.redundant_count());
-  bool success = AddSubtractImpl(other.Iterator().get(), ADD);
+  std::unique_ptr<SampleCountIterator> it = other.Iterator();
+  bool success = AddSubtractImpl(it.get(), ADD);
   DCHECK(success);
 }
 
@@ -109,7 +110,8 @@ void HistogramSamples::Subtract(const HistogramSamples& other) {
   IncreaseSum(-other.sum());
   subtle::NoBarrier_AtomicIncrement(&meta_->redundant_count,
                                     -other.redundant_count());
-  bool success = AddSubtractImpl(other.Iterator().get(), SUBTRACT);
+  std::unique_ptr<SampleCountIterator> it = other.Iterator();
+  bool success = AddSubtractImpl(it.get(), SUBTRACT);
   DCHECK(success);
 }
 

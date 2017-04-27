@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+set -e
 
 # Remove entries currently not used in Chromium/V8.
 function filter_locale_data {
@@ -184,6 +185,14 @@ function filter_unit_data {
          /^    \}$/ p
          d
        }' ${i}
+
+    # Delete empty units,units{Narrow|Short} block. Otherwise, locale fallback
+    # fails. See crbug.com/707515.
+    sed -r -i \
+      '/^    units(|Narrow|Short)\{$/ {
+         N
+         /^    units(|Narrow|Short)\{\n    \}/ d
+      }' ${i}
   done
 }
 

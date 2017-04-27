@@ -12,7 +12,12 @@
 namespace base {
 namespace test {
 
-ScopedTaskEnvironment::ScopedTaskEnvironment() {
+ScopedTaskEnvironment::ScopedTaskEnvironment(MainThreadType main_thread_type)
+    : message_loop_(main_thread_type == MainThreadType::DEFAULT
+                        ? MessageLoop::TYPE_DEFAULT
+                        : (main_thread_type == MainThreadType::UI
+                               ? MessageLoop::TYPE_UI
+                               : MessageLoop::TYPE_IO)) {
   DCHECK(!TaskScheduler::GetInstance());
 
   // Instantiate a TaskScheduler with 1 thread in each of its 4 pools. Threads
@@ -32,6 +37,9 @@ ScopedTaskEnvironment::~ScopedTaskEnvironment() {
   RunLoop().RunUntilIdle();
 
   DCHECK_EQ(TaskScheduler::GetInstance(), task_scheduler_);
+  // Without FlushForTesting(), DeleteSoon() and ReleaseSoon() tasks could be
+  // skipped, resulting in memory leaks.
+  TaskScheduler::GetInstance()->FlushForTesting();
   TaskScheduler::GetInstance()->Shutdown();
   TaskScheduler::GetInstance()->JoinForTesting();
   TaskScheduler::SetInstance(nullptr);

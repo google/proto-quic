@@ -135,7 +135,7 @@ void TestURLRequestContext::Init() {
         base::MakeUnique<HttpNetworkSession>(params));
     context_storage_.set_http_transaction_factory(base::MakeUnique<HttpCache>(
         context_storage_.http_network_session(),
-        HttpCache::DefaultBackend::InMemory(0), false));
+        HttpCache::DefaultBackend::InMemory(0), true /* is_main_cache */));
   }
   if (!http_user_agent_settings()) {
     context_storage_.set_http_user_agent_settings(

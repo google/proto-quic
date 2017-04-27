@@ -10,7 +10,7 @@
 #include "base/logging.h"
 #include "base/memory/weak_ptr.h"
 #include "net/socket/client_socket_handle.h"
-#include "net/spdy/spdy_session.h"
+#include "net/spdy/chromium/spdy_session.h"
 #include "net/websockets/websocket_basic_handshake_stream.h"
 
 namespace net {

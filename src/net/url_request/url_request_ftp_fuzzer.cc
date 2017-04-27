@@ -19,6 +19,7 @@
 #include "net/ftp/ftp_transaction_factory.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/fuzzed_socket_factory.h"
+#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/ftp_protocol_handler.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_context.h"
@@ -80,7 +81,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   std::unique_ptr<net::URLRequest> url_request(
       url_request_context.CreateRequest(
           GURL("ftp://foo/" + data_provider.ConsumeRandomLengthString(1000)),
-          net::DEFAULT_PRIORITY, &delegate));
+          net::DEFAULT_PRIORITY, &delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
   url_request->Start();
   // TestDelegate quits the message loop on completion.
   base::RunLoop().Run();

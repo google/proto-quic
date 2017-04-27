@@ -58,6 +58,9 @@
  * initialising it to zero, it becomes a "data symbol", which isn't so
  * affected. */
 uint32_t OPENSSL_ia32cap_P[4] = {0};
+#if !defined(BORINGSSL_FIPS)
+uint32_t *OPENSSL_ia32cap_addr = OPENSSL_ia32cap_P;
+#endif
 
 #elif defined(OPENSSL_PPC64LE)
 
@@ -93,6 +96,11 @@ uint32_t OPENSSL_armcap_P = 0;
 
 #endif
 
+#if defined(BORINGSSL_FIPS)
+/* In FIPS mode, the power-on self-test function calls |CRYPTO_library_init|
+ * because we have to ensure that CPUID detection occurs first. */
+#define BORINGSSL_NO_STATIC_INITIALIZER
+#endif
 
 #if defined(OPENSSL_WINDOWS) && !defined(BORINGSSL_NO_STATIC_INITIALIZER)
 #define OPENSSL_CDECL __cdecl
@@ -166,5 +174,3 @@ int ENGINE_register_all_complete(void) {
 }
 
 void OPENSSL_load_builtin_modules(void) {}
-
-int FIPS_mode(void) { return 0; }

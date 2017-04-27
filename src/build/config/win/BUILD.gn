@@ -86,13 +86,13 @@ config("compiler") {
   # information is used by the Syzygy optimization tool when decomposing the
   # release image. It is enabled for syzyasan builds and opportunistically for
   # other builds where it is not prohibited (not supported when incrementally
-  # linking, using /debug:fastlink, or building with clang).
+  # linking, or using /debug:fastlink).
   if (is_syzyasan) {
     assert(!is_win_fastlink)
     ldflags = [ "/PROFILE" ]
   } else {
     if (!is_debug && !is_component_build) {
-      if (is_win_fastlink || is_clang) {
+      if (is_win_fastlink) {
         # /PROFILE implies the following linker flags. Therefore if we are
         # skipping /PROFILE because it is incompatible with /DEBUG:FASTLINK
         # we should explicitly add these flags in order to avoid unintended
@@ -252,6 +252,15 @@ config("common_linker_setup") {
     ldflags += [ "/DYNAMICBASE" ]
   }
 
+  if (win_linker_timing) {
+    ldflags += [
+      "/time",
+      "/verbose:incr",
+    ]
+  }
+}
+
+config("cfi_linker") {
   # Control Flow Guard (CFG)
   # https://msdn.microsoft.com/en-us/library/windows/desktop/mt637065.aspx
   # /DYNAMICBASE (ASLR) is turned off in debug builds, therefore CFG can’t be
@@ -259,14 +268,7 @@ config("common_linker_setup") {
   # TODO(thakis): Turn this on with lld once supported, https://crbug.com/693709
   if (!is_debug && !use_lld) {
     # Turn on CFG in msvc linker, regardless of compiler used.
-    ldflags += [ "/guard:cf" ]
-  }
-
-  if (win_linker_timing) {
-    ldflags += [
-      "/time",
-      "/verbose:incr",
-    ]
+    ldflags = [ "/guard:cf" ]
   }
 }
 

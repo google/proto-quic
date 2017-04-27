@@ -94,7 +94,8 @@ class NET_EXPORT URLFetcher {
 
   // Used by SetURLRequestUserData.  The callback should make a fresh
   // base::SupportsUserData::Data object every time it's called.
-  typedef base::Callback<base::SupportsUserData::Data*()> CreateDataCallback;
+  typedef base::Callback<std::unique_ptr<base::SupportsUserData::Data>()>
+      CreateDataCallback;
 
   // Used by SetUploadStreamFactory. The callback should assign a fresh upload
   // data stream every time it's called.

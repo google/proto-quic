@@ -72,7 +72,9 @@ void DeferredSequencedTaskRunner::QueueDeferredTask(
     OnceClosure task,
     TimeDelta delay,
     bool is_non_nestable) {
-  DCHECK(task);
+  // Use CHECK instead of DCHECK to crash earlier. See http://crbug.com/711167
+  // for details.
+  CHECK(task);
 
   DeferredTask deferred_task;
   deferred_task.posted_from = from_here;

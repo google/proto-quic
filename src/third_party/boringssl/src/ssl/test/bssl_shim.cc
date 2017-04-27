@@ -46,7 +46,6 @@ OPENSSL_MSVC_PRAGMA(comment(lib, "Ws2_32.lib"))
 #include <openssl/bytestring.h>
 #include <openssl/cipher.h>
 #include <openssl/crypto.h>
-#include <openssl/dh.h>
 #include <openssl/digest.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
@@ -286,23 +285,6 @@ static bssl::UniquePtr<STACK_OF(X509_NAME)> DecodeHexX509Names(
   return ret;
 }
 
-static int AsyncPrivateKeyType(SSL *ssl) {
-  EVP_PKEY *key = GetTestState(ssl)->private_key.get();
-  switch (EVP_PKEY_id(key)) {
-    case EVP_PKEY_RSA:
-      return NID_rsaEncryption;
-    case EVP_PKEY_EC:
-      return EC_GROUP_get_curve_name(
-          EC_KEY_get0_group(EVP_PKEY_get0_EC_KEY(key)));
-    default:
-      return NID_undef;
-  }
-}
-
-static size_t AsyncPrivateKeyMaxSignatureLen(SSL *ssl) {
-  return EVP_PKEY_size(GetTestState(ssl)->private_key.get());
-}
-
 static ssl_private_key_result_t AsyncPrivateKeySign(
     SSL *ssl, uint8_t *out, size_t *out_len, size_t max_out,
     uint16_t signature_algorithm, const uint8_t *in, size_t in_len) {
@@ -310,6 +292,13 @@ static ssl_private_key_result_t AsyncPrivateKeySign(
   if (!test_state->private_key_result.empty()) {
     fprintf(stderr, "AsyncPrivateKeySign called with operation pending.\n");
     abort();
+  }
+
+  bssl::UniquePtr<EVP_PKEY_CTX> ctx(
+      EVP_PKEY_CTX_new(test_state->private_key.get(), nullptr));
+  if (!ctx ||
+      !EVP_PKEY_sign_init(ctx.get())) {
+    return ssl_private_key_failure;
   }
 
   // Determine the hash.
@@ -337,16 +326,17 @@ static ssl_private_key_result_t AsyncPrivateKeySign(
     case SSL_SIGN_RSA_PKCS1_MD5_SHA1:
       md = EVP_md5_sha1();
       break;
+    case SSL_SIGN_ED25519:
+      md = nullptr;
+      break;
     default:
       fprintf(stderr, "Unknown signature algorithm %04x.\n",
               signature_algorithm);
       return ssl_private_key_failure;
   }
 
-  bssl::ScopedEVP_MD_CTX ctx;
-  EVP_PKEY_CTX *pctx;
-  if (!EVP_DigestSignInit(ctx.get(), &pctx, md, nullptr,
-                          test_state->private_key.get())) {
+  if (md != nullptr &&
+      !EVP_PKEY_CTX_set_signature_md(ctx.get(), md)) {
     return ssl_private_key_failure;
   }
 
@@ -355,8 +345,8 @@ static ssl_private_key_result_t AsyncPrivateKeySign(
     case SSL_SIGN_RSA_PSS_SHA256:
     case SSL_SIGN_RSA_PSS_SHA384:
     case SSL_SIGN_RSA_PSS_SHA512:
-      if (!EVP_PKEY_CTX_set_rsa_padding(pctx, RSA_PKCS1_PSS_PADDING) ||
-          !EVP_PKEY_CTX_set_rsa_pss_saltlen(pctx,
+      if (!EVP_PKEY_CTX_set_rsa_padding(ctx.get(), RSA_PKCS1_PSS_PADDING) ||
+          !EVP_PKEY_CTX_set_rsa_pss_saltlen(ctx.get(),
                                             -1 /* salt len = hash len */)) {
         return ssl_private_key_failure;
       }
@@ -364,13 +354,12 @@ static ssl_private_key_result_t AsyncPrivateKeySign(
 
   // Write the signature into |test_state|.
   size_t len = 0;
-  if (!EVP_DigestSignUpdate(ctx.get(), in, in_len) ||
-      !EVP_DigestSignFinal(ctx.get(), nullptr, &len)) {
+  if (!EVP_PKEY_sign_message(ctx.get(), nullptr, &len, in, in_len)) {
     return ssl_private_key_failure;
   }
   test_state->private_key_result.resize(len);
-  if (!EVP_DigestSignFinal(ctx.get(), test_state->private_key_result.data(),
-                           &len)) {
+  if (!EVP_PKEY_sign_message(ctx.get(), test_state->private_key_result.data(),
+                             &len, in, in_len)) {
     return ssl_private_key_failure;
   }
   test_state->private_key_result.resize(len);
@@ -436,8 +425,8 @@ static ssl_private_key_result_t AsyncPrivateKeyComplete(
 }
 
 static const SSL_PRIVATE_KEY_METHOD g_async_private_key_method = {
-    AsyncPrivateKeyType,
-    AsyncPrivateKeyMaxSignatureLen,
+    nullptr /* type */,
+    nullptr /* max_signature_len */,
     AsyncPrivateKeySign,
     nullptr /* sign_digest */,
     AsyncPrivateKeyDecrypt,
@@ -1048,9 +1037,10 @@ static bssl::UniquePtr<SSL_CTX> SetupCtx(const TestConfig *config) {
 
   SSL_CTX_set0_buffer_pool(ssl_ctx.get(), g_pool);
 
-  // Enable TLS 1.3 for tests.
+  // Enable SSL 3.0 and TLS 1.3 for tests.
   if (!config->is_dtls &&
-      !SSL_CTX_set_max_proto_version(ssl_ctx.get(), TLS1_3_VERSION)) {
+      (!SSL_CTX_set_min_proto_version(ssl_ctx.get(), SSL3_VERSION) ||
+       !SSL_CTX_set_max_proto_version(ssl_ctx.get(), TLS1_3_VERSION))) {
     return nullptr;
   }
 
@@ -1060,34 +1050,6 @@ static bssl::UniquePtr<SSL_CTX> SetupCtx(const TestConfig *config) {
     SSL_CTX_set_options(ssl_ctx.get(), SSL_OP_CIPHER_SERVER_PREFERENCE);
   }
   if (!SSL_CTX_set_strict_cipher_list(ssl_ctx.get(), cipher_list.c_str())) {
-    return nullptr;
-  }
-
-  bssl::UniquePtr<DH> dh(DH_get_2048_256(NULL));
-  if (!dh) {
-    return nullptr;
-  }
-
-  if (config->use_sparse_dh_prime) {
-    // This prime number is 2^1024 + 643 – a value just above a power of two.
-    // Because of its form, values modulo it are essentially certain to be one
-    // byte shorter. This is used to test padding of these values.
-    if (BN_hex2bn(
-            &dh->p,
-            "1000000000000000000000000000000000000000000000000000000000000000"
-            "0000000000000000000000000000000000000000000000000000000000000000"
-            "0000000000000000000000000000000000000000000000000000000000000000"
-            "0000000000000000000000000000000000000000000000000000000000000028"
-            "3") == 0 ||
-        !BN_set_word(dh->g, 2)) {
-      return nullptr;
-    }
-    BN_free(dh->q);
-    dh->q = NULL;
-    dh->priv_length = 0;
-  }
-
-  if (!SSL_CTX_set_tmp_dh(ssl_ctx.get(), dh.get())) {
     return nullptr;
   }
 
@@ -1189,6 +1151,19 @@ static bssl::UniquePtr<SSL_CTX> SetupCtx(const TestConfig *config) {
 
   if (config->allow_unknown_alpn_protos) {
     SSL_CTX_set_allow_unknown_alpn_protos(ssl_ctx.get(), 1);
+  }
+
+  if (config->enable_ed25519) {
+    SSL_CTX_set_ed25519_enabled(ssl_ctx.get(), 1);
+  }
+
+  if (!config->verify_prefs.empty()) {
+    std::vector<uint16_t> u16s(config->verify_prefs.begin(),
+                               config->verify_prefs.end());
+    if (!SSL_CTX_set_verify_algorithm_prefs(ssl_ctx.get(), u16s.data(),
+                                            u16s.size())) {
+      return nullptr;
+    }
   }
 
   return ssl_ctx;
@@ -1311,7 +1286,8 @@ static int DoRead(SSL *ssl, uint8_t *out, size_t max_out) {
 
 // WriteAll writes |in_len| bytes from |in| to |ssl|, resolving any asynchronous
 // operations. It returns the result of the final |SSL_write| call.
-static int WriteAll(SSL *ssl, const uint8_t *in, size_t in_len) {
+static int WriteAll(SSL *ssl, const void *in_, size_t in_len) {
+  const uint8_t *in = reinterpret_cast<const uint8_t *>(in_);
   const TestConfig *config = GetTestConfig(ssl);
   int ret;
   do {
@@ -1975,22 +1951,23 @@ static bool DoExchange(bssl::UniquePtr<SSL_SESSION> *out_session,
       }
     }
   } else {
+    static const char kInitialWrite[] = "hello";
+    bool pending_initial_write = false;
     if (config->read_with_unfinished_write) {
       if (!config->async) {
         fprintf(stderr, "-read-with-unfinished-write requires -async.\n");
         return false;
       }
 
-      int write_ret = SSL_write(ssl.get(),
-                          reinterpret_cast<const uint8_t *>("unfinished"), 10);
+      int write_ret =
+          SSL_write(ssl.get(), kInitialWrite, strlen(kInitialWrite));
       if (SSL_get_error(ssl.get(), write_ret) != SSL_ERROR_WANT_WRITE) {
         fprintf(stderr, "Failed to leave unfinished write.\n");
         return false;
       }
-    }
-    if (config->shim_writes_first) {
-      if (WriteAll(ssl.get(), reinterpret_cast<const uint8_t *>("hello"),
-                   5) < 0) {
+      pending_initial_write = true;
+    } else if (config->shim_writes_first) {
+      if (WriteAll(ssl.get(), kInitialWrite, strlen(kInitialWrite)) < 0) {
         return false;
       }
     }
@@ -2033,6 +2010,14 @@ static bool DoExchange(bssl::UniquePtr<SSL_SESSION> *out_session,
             !SSL_early_data_accepted(ssl.get())) {
           fprintf(stderr, "handshake was not completed after SSL_read\n");
           return false;
+        }
+
+        // Clear the initial write, if unfinished.
+        if (pending_initial_write) {
+          if (WriteAll(ssl.get(), kInitialWrite, strlen(kInitialWrite)) < 0) {
+            return false;
+          }
+          pending_initial_write = false;
         }
 
         for (int i = 0; i < n; i++) {

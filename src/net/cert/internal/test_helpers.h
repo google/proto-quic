@@ -13,6 +13,7 @@
 
 #include "net/cert/internal/parsed_certificate.h"
 #include "net/cert/internal/trust_store.h"
+#include "net/cert/internal/verify_certificate_chain.h"
 #include "net/der/input.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -90,6 +91,9 @@ struct VerifyCertChainTest {
 
   // The time to use when verifying the chain.
   der::GeneralizedTime time;
+
+  // The Key Purpose to use when verifying the chain.
+  KeyPurpose key_purpose = KeyPurpose::ANY_EKU;
 
   // The expected result from verification.
   bool expected_result = false;

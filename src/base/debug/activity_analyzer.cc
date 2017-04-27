@@ -5,6 +5,7 @@
 #include "base/debug/activity_analyzer.h"
 
 #include <algorithm>
+#include <utility>
 
 #include "base/files/file.h"
 #include "base/files/file_path.h"
@@ -12,6 +13,7 @@
 #include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
+#include "base/metrics/histogram_macros.h"
 #include "base/stl_util.h"
 #include "base/strings/string_util.h"
 
@@ -21,6 +23,24 @@ namespace debug {
 namespace {
 // An empty snapshot that can be returned when there otherwise is none.
 LazyInstance<ActivityUserData::Snapshot>::Leaky g_empty_user_data_snapshot;
+
+#if !defined(OS_NACL)
+// DO NOT CHANGE VALUES. This is logged persistently in a histogram.
+enum AnalyzerCreationError {
+  kInvalidMemoryMappedFile,
+  kPmaBadFile,
+  kPmaUninitialized,
+  kPmaDeleted,
+  kPmaCorrupt,
+  kAnalyzerCreationErrorMax  // Keep this last.
+};
+
+void LogAnalyzerCreationError(AnalyzerCreationError error) {
+  UMA_HISTOGRAM_ENUMERATION("ActivityTracker.Collect.AnalyzerCreationError",
+                            error, kAnalyzerCreationErrorMax);
+}
+#endif  // !defined(OS_NACL)
+
 }  // namespace
 
 ThreadActivityAnalyzer::Snapshot::Snapshot() {}
@@ -63,7 +83,9 @@ void ThreadActivityAnalyzer::AddGlobalInformation(
 
 GlobalActivityAnalyzer::GlobalActivityAnalyzer(
     std::unique_ptr<PersistentMemoryAllocator> allocator)
-    : allocator_(std::move(allocator)), allocator_iterator_(allocator_.get()) {}
+    : allocator_(std::move(allocator)), allocator_iterator_(allocator_.get()) {
+  DCHECK(allocator_);
+}
 
 GlobalActivityAnalyzer::~GlobalActivityAnalyzer() {}
 
@@ -75,15 +97,35 @@ std::unique_ptr<GlobalActivityAnalyzer> GlobalActivityAnalyzer::CreateWithFile(
   // the analyzer and any trackers that my still be active.
   std::unique_ptr<MemoryMappedFile> mmfile(new MemoryMappedFile());
   mmfile->Initialize(file_path, MemoryMappedFile::READ_WRITE);
-  if (!mmfile->IsValid())
+  if (!mmfile->IsValid()) {
+    LogAnalyzerCreationError(kInvalidMemoryMappedFile);
     return nullptr;
+  }
 
-  if (!FilePersistentMemoryAllocator::IsFileAcceptable(*mmfile, true))
+  if (!FilePersistentMemoryAllocator::IsFileAcceptable(*mmfile, true)) {
+    LogAnalyzerCreationError(kPmaBadFile);
     return nullptr;
+  }
 
-  return WrapUnique(
-      new GlobalActivityAnalyzer(MakeUnique<FilePersistentMemoryAllocator>(
-          std::move(mmfile), 0, 0, base::StringPiece(), true)));
+  std::unique_ptr<FilePersistentMemoryAllocator> allocator(
+      new FilePersistentMemoryAllocator(std::move(mmfile), 0, 0,
+                                        base::StringPiece(), true));
+  if (allocator->GetMemoryState() ==
+      PersistentMemoryAllocator::MEMORY_UNINITIALIZED) {
+    LogAnalyzerCreationError(kPmaUninitialized);
+    return nullptr;
+  }
+  if (allocator->GetMemoryState() ==
+      PersistentMemoryAllocator::MEMORY_DELETED) {
+    LogAnalyzerCreationError(kPmaDeleted);
+    return nullptr;
+  }
+  if (allocator->IsCorrupt()) {
+    LogAnalyzerCreationError(kPmaCorrupt);
+    return nullptr;
+  }
+
+  return WrapUnique(new GlobalActivityAnalyzer(std::move(allocator)));
 }
 #endif  // !defined(OS_NACL)
 
@@ -172,25 +214,6 @@ GlobalActivityAnalyzer::GetProcessDataSnapshot(int64_t pid) {
   return iter->second.data;
 }
 
-const ActivityUserData::Snapshot&
-GlobalActivityAnalyzer::GetGlobalDataSnapshot() {
-  global_data_snapshot_.clear();
-
-  PersistentMemoryAllocator::Reference ref =
-      PersistentMemoryAllocator::Iterator(allocator_.get())
-          .GetNextOfType(GlobalActivityTracker::kTypeIdGlobalDataRecord);
-  void* memory = allocator_->GetAsArray<char>(
-      ref, GlobalActivityTracker::kTypeIdGlobalDataRecord,
-      PersistentMemoryAllocator::kSizeAny);
-  if (memory) {
-    size_t size = allocator_->GetAllocSize(ref);
-    const ActivityUserData global_data(memory, size);
-    global_data.CreateSnapshot(&global_data_snapshot_);
-  }
-
-  return global_data_snapshot_;
-}
-
 std::vector<std::string> GlobalActivityAnalyzer::GetLogMessages() {
   std::vector<std::string> messages;
   PersistentMemoryAllocator::Reference ref;
@@ -232,6 +255,11 @@ GlobalActivityAnalyzer::ProgramLocation
 GlobalActivityAnalyzer::GetProgramLocationFromAddress(uint64_t address) {
   // TODO(bcwhite): Implement this.
   return { 0, 0 };
+}
+
+bool GlobalActivityAnalyzer::IsDataComplete() const {
+  DCHECK(allocator_);
+  return !allocator_->IsFull();
 }
 
 GlobalActivityAnalyzer::UserDataSnapshot::UserDataSnapshot() {}

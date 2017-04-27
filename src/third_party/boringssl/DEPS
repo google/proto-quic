@@ -3,4 +3,8 @@ specific_include_rules = {
     "+base",
     "+testing",
   ],
+  "gtest_main_chromium\.cc": [
+    "+base",
+    "+testing",
+  ],
 }

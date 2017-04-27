@@ -314,6 +314,7 @@ TEST_F(ActivityAnalyzerTest, UserDataSnapshotTest) {
 }
 
 TEST_F(ActivityAnalyzerTest, GlobalUserDataTest) {
+  const int64_t pid = GetCurrentProcId();
   GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3, 0);
 
   const char string1[] = "foo";
@@ -324,18 +325,21 @@ TEST_F(ActivityAnalyzerTest, GlobalUserDataTest) {
   GlobalActivityAnalyzer global_analyzer(MakeUnique<PersistentMemoryAllocator>(
       const_cast<void*>(allocator->data()), allocator->size(), 0, 0, "", true));
 
-  ActivityUserData& global_data = GlobalActivityTracker::Get()->global_data();
-  global_data.Set("raw", "foo", 3);
-  global_data.SetString("string", "bar");
-  global_data.SetChar("char", '9');
-  global_data.SetInt("int", -9999);
-  global_data.SetUint("uint", 9999);
-  global_data.SetBool("bool", true);
-  global_data.SetReference("ref", string1, sizeof(string1));
-  global_data.SetStringReference("sref", string2);
+  ActivityUserData& process_data = GlobalActivityTracker::Get()->process_data();
+  ASSERT_NE(0U, process_data.id());
+  process_data.Set("raw", "foo", 3);
+  process_data.SetString("string", "bar");
+  process_data.SetChar("char", '9');
+  process_data.SetInt("int", -9999);
+  process_data.SetUint("uint", 9999);
+  process_data.SetBool("bool", true);
+  process_data.SetReference("ref", string1, sizeof(string1));
+  process_data.SetStringReference("sref", string2);
 
+  int64_t first_pid = global_analyzer.GetFirstProcess();
+  DCHECK_EQ(pid, first_pid);
   const ActivityUserData::Snapshot& snapshot =
-      global_analyzer.GetGlobalDataSnapshot();
+      global_analyzer.GetProcessDataSnapshot(pid);
   ASSERT_TRUE(ContainsKey(snapshot, "raw"));
   EXPECT_EQ("foo", snapshot.at("raw").Get().as_string());
   ASSERT_TRUE(ContainsKey(snapshot, "string"));

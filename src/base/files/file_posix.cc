@@ -44,7 +44,7 @@ int CallFstat(int fd, stat_wrapper_t *sb) {
 
 // NaCl doesn't provide the following system calls, so either simulate them or
 // wrap them in order to minimize the number of #ifdef's in this file.
-#if !defined(OS_NACL)
+#if !defined(OS_NACL) && !defined(OS_AIX)
 bool IsOpenAppend(PlatformFile file) {
   return (fcntl(file, F_GETFL) & O_APPEND) != 0;
 }
@@ -80,7 +80,7 @@ File::Error CallFcntlFlock(PlatformFile file, bool do_lock) {
     return File::OSErrorToFileError(errno);
   return File::FILE_OK;
 }
-#else  // defined(OS_NACL)
+#else   // defined(OS_NACL) && !defined(OS_AIX)
 
 bool IsOpenAppend(PlatformFile file) {
   // NaCl doesn't implement fcntl. Since NaCl's write conforms to the POSIX

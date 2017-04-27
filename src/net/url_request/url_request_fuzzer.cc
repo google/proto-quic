@@ -13,6 +13,7 @@
 #include "base/test/fuzzed_data_provider.h"
 #include "net/base/request_priority.h"
 #include "net/socket/fuzzed_socket_factory.h"
+#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_context.h"
 #include "net/url_request/url_request_test_util.h"
@@ -36,7 +37,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   std::unique_ptr<net::URLRequest> url_request(
       url_request_context.CreateRequest(GURL("http://foo/"),
-                                        net::DEFAULT_PRIORITY, &delegate));
+                                        net::DEFAULT_PRIORITY, &delegate,
+                                        TRAFFIC_ANNOTATION_FOR_TESTS));
   url_request->Start();
   // TestDelegate quits the message loop on completion.
   base::RunLoop().Run();

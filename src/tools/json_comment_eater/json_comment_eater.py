@@ -21,13 +21,12 @@ def _FindNextToken(string, tokens, start):
   '''Finds the next token in |tokens| that occurs in |string| from |start|.
   Returns a tuple (index, token key).
   '''
-  min_index, min_key = (-1, None)
-  for k in tokens:
-    index = string.find(k, start)
-    if index != -1 and (min_index == -1 or index < min_index):
-      min_index, min_key = (index, k)
-  return (min_index, min_key)
+  for index, item in enumerate(string, start):
+    for k in tokens:
+      if (string[index:index + len(k)] == k):
+        return (index, k)
 
+  return (-1, None)
 
 def _ReadString(input, start, output):
   output.append('"')

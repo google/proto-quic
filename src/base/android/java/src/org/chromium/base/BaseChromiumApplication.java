@@ -44,7 +44,9 @@ public class BaseChromiumApplication extends Application {
         super.attachBaseContext(base);
         assert getBaseContext() != null;
         checkAppBeingReplaced();
-        ChromiumMultiDexInstaller.install(this);
+        if (BuildConfig.isMultidexEnabled()) {
+            ChromiumMultiDexInstaller.install(this);
+        }
     }
 
     /**

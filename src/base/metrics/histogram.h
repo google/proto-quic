@@ -179,11 +179,12 @@ class BASE_EXPORT Histogram : public HistogramBase {
   const BucketRanges* bucket_ranges() const { return bucket_ranges_; }
 
   // This function validates histogram construction arguments. It returns false
-  // if some of the arguments are totally bad.
+  // if some of the arguments are bad but also corrects them so they should
+  // function on non-dcheck builds without crashing.
   // Note. Currently it allow some bad input, e.g. 0 as minimum, but silently
   // converts it to good input: 1.
-  // TODO(kaiwang): Be more restrict and return false for any bad input, and
-  // make this a readonly validating function.
+  // TODO(bcwhite): Use false returns to create "sink" histograms so that bad
+  // data doesn't create confusion on the servers.
   static bool InspectConstructionArguments(const std::string& name,
                                            Sample* minimum,
                                            Sample* maximum,

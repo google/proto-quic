@@ -130,9 +130,6 @@ config("feature_flags") {
   } else {
     defines += [ "CHROMIUM_BUILD" ]
   }
-  if (enable_media_router) {
-    defines += [ "ENABLE_MEDIA_ROUTER=1" ]
-  }
   if (is_syzyasan) {
     defines += [
       "SYZYASAN",
@@ -282,6 +279,9 @@ config("executable_config") {
 
   if (is_win) {
     configs += _windows_linker_configs
+
+    # Currently only turn on linker CFI for executables.
+    configs += [ "//build/config/win:cfi_linker" ]
   } else if (is_mac) {
     configs += [
       "//build/config/mac:mac_dynamic_flags",
@@ -359,20 +359,6 @@ config("precompiled_headers") {
 
       # Force include the header.
       cflags = [ "/FI$precompiled_header" ]
-
-      # Disable warning for "this file was empty after preprocessing". This
-      # error is generated only in C mode for ANSI compatibility. It conflicts
-      # with precompiled headers since the source file that's "compiled" for
-      # making the precompiled header is empty.
-      #
-      # This error doesn't happen every time. In VS2013, it seems if the .pch
-      # file doesn't exist, no error will be generated (probably MS tested this
-      # case but forgot the other one?). To reproduce this error, do a build,
-      # then delete the precompile.c.obj file, then build again.
-      #
-      # TODO(sof): determine VS2015 status and retire the setting from all
-      # precompiled configurations.
-      cflags_c = [ "/wd4206" ]
     } else if (is_mac) {
       precompiled_source = "//build/precompile.h"
     }

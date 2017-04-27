@@ -62,7 +62,7 @@ class QUIC_EXPORT_PRIVATE TcpCubicSenderBase : public SendAlgorithmInterface {
   void OnRetransmissionTimeout(bool packets_retransmitted) override;
   void OnConnectionMigration() override;
   QuicTime::Delta TimeUntilSend(QuicTime now,
-                                QuicByteCount bytes_in_flight) const override;
+                                QuicByteCount bytes_in_flight) override;
   QuicBandwidth PacingRate(QuicByteCount bytes_in_flight) const override;
   QuicBandwidth BandwidthEstimate() const override;
   bool InSlowStart() const override;

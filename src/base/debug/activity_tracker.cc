@@ -38,7 +38,6 @@ const int kMinStackDepth = 2;
 // pairs) globally or associated with ActivityData entries.
 const size_t kUserDataSize = 1 << 10;     // 1 KiB
 const size_t kProcessDataSize = 4 << 10;  // 4 KiB
-const size_t kGlobalDataSize = 16 << 10;  // 16 KiB
 const size_t kMaxUserDataNameLength =
     static_cast<size_t>(std::numeric_limits<uint8_t>::max());
 
@@ -1322,7 +1321,7 @@ GlobalActivityTracker::ReleaseForTesting() {
 
   subtle::Release_Store(&g_tracker_, 0);
   return WrapUnique(tracker);
-};
+}
 
 ThreadActivityTracker* GlobalActivityTracker::CreateTrackerForCurrentThread() {
   DCHECK(!this_thread_tracker_.Get());
@@ -1463,8 +1462,8 @@ void GlobalActivityTracker::RecordProcessExit(ProcessId process_id,
   if (task_runner && !task_runner->RunsTasksOnCurrentThread()) {
     task_runner->PostTask(
         FROM_HERE,
-        Bind(&GlobalActivityTracker::CleanupAfterProcess, Unretained(this), pid,
-             now_stamp, exit_code, Passed(&command_line)));
+        BindOnce(&GlobalActivityTracker::CleanupAfterProcess, Unretained(this),
+                 pid, now_stamp, exit_code, Passed(&command_line)));
     return;
   }
 
@@ -1599,7 +1598,11 @@ void GlobalActivityTracker::RecordModuleInfo(const ModuleInfo& info) {
 void GlobalActivityTracker::RecordFieldTrial(const std::string& trial_name,
                                              StringPiece group_name) {
   const std::string key = std::string("FieldTrial.") + trial_name;
-  global_data_.SetString(key, group_name);
+  process_data_.SetString(key, group_name);
+}
+
+void GlobalActivityTracker::MarkDeleted() {
+  allocator_->SetMemoryState(PersistentMemoryAllocator::MEMORY_DELETED);
 }
 
 GlobalActivityTracker::GlobalActivityTracker(
@@ -1631,14 +1634,7 @@ GlobalActivityTracker::GlobalActivityTracker(
                         kTypeIdProcessDataRecord,
                         kProcessDataSize),
                     kProcessDataSize,
-                    process_id_),
-      global_data_(
-          allocator_->GetAsArray<char>(
-              allocator_->Allocate(kGlobalDataSize, kTypeIdGlobalDataRecord),
-              kTypeIdGlobalDataRecord,
-              kGlobalDataSize),
-          kGlobalDataSize,
-          process_id_) {
+                    process_id_) {
   DCHECK_NE(0, process_id_);
 
   // Ensure that there is no other global object and then make this one such.
@@ -1648,8 +1644,6 @@ GlobalActivityTracker::GlobalActivityTracker(
   // The data records must be iterable in order to be found by an analyzer.
   allocator_->MakeIterable(allocator_->GetAsReference(
       process_data_.GetBaseAddress(), kTypeIdProcessDataRecord));
-  allocator_->MakeIterable(allocator_->GetAsReference(
-      global_data_.GetBaseAddress(), kTypeIdGlobalDataRecord));
 
   // Note that this process has launched.
   SetProcessPhase(PROCESS_LAUNCHED);

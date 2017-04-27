@@ -30,9 +30,6 @@
 #  "console_test_launcher"
 #  : the test is a gtest-based test that uses the "brave-new-test-launcher"
 #    from //base/test:test_support but does not need Xvfb.
-#  "gpu_browser_test"
-#  : the test is a subset of the browser_tests that will be run against
-#    a real GPU.
 #  "additional_compile_target"
 #  : this isn't actually a test, but we still need a mapping from the
 #    ninja target to the GN label in order to analyze it.
@@ -148,13 +145,6 @@
     "label": "//ash:ash_unittests",
     "type": "windowed_test_launcher",
   },
-  "ash_mus_unittests": {
-    "label": "//ash:ash_unittests",
-    "type": "windowed_test_launcher",
-    "args": [
-      "--mus",
-    ],
-  },
   "audio_unittests": {
     "label": "//media:audio_unittests",
     "type": "raw",
@@ -167,6 +157,15 @@
   "aura_unittests": {
     "label": "//ui/aura:aura_unittests",
     "type": "windowed_test_launcher",
+  },
+  "motopho_latency_test": {
+    "label": "//chrome/test/vr/perf:motopho_latency_test",
+    "type": "script",
+    "script": "//chrome/test/vr/perf/latency/run_latency_test.py",
+    "args": [
+      "--output-dir=${ISOLATED_OUTDIR}",
+      "-v",
+    ],
   },
   "base_junit_tests": {
     "label": "//base:base_junit_tests",
@@ -614,6 +613,10 @@
     "label": "//ui/keyboard:keyboard_unittests",
     "type": "console_test_launcher",
   },
+  "latency_unittests": {
+    "label": "//ui/latency:latency_unittests",
+    "type": "console_test_launcher",
+  },
   "leveldb_service_unittests": {
     "label": "//components/leveldb:leveldb_service_unittests",
     "type": "console_test_launcher",
@@ -621,6 +624,10 @@
   # See http://crbug.com/585151
   "libaddressinput_unittests": {
     "label": "//third_party/libaddressinput:libaddressinput_unittests",
+    "type": "console_test_launcher",
+  },
+  "libjingle_xmpp_unittests": {
+    "label": "//third_party/libjingle_xmpp:libjingle_xmpp_unittests",
     "type": "console_test_launcher",
   },
   # See http://crbug.com/585151
@@ -643,7 +650,6 @@
     "executable": "browser_tests",
     "args": [
       "--run-in-mash",
-      "--service-overrides=../../chrome/app/mash/mash_service_overrides.json",
     ],
   },
   "media_unittests": {
@@ -725,6 +731,16 @@
   "mojo_test_apk": {
     "label": "//mojo/android:mojo_test_apk",
     "type": "console_test_launcher",
+  },
+  "mus_browser_tests": {
+    "label": "//chrome/test:mus_browser_tests",
+    "label_type": "group",
+    "type": "windowed_test_launcher",
+    "executable": "browser_tests",
+    "args": [
+      "--run-in-mus",
+      "--service-overrides=../../chrome/app/mash/mash_service_overrides.json",
+    ],
   },
   "mus_clipboard_unittests": {
     "label": "//services/ui/clipboard:mus_clipboard_unittests",
@@ -858,7 +874,7 @@
     "type": "console_test_launcher",
   },
   "storage_unittests": {
-    "label": "//storage/browser:storage_unittests",
+    "label": "//storage:storage_unittests",
     "type": "console_test_launcher",
   },
   "swiftshader_unittests": {
@@ -873,11 +889,6 @@
   "system_webview_apk": {
     "label": "//android_webview:system_webview_apk",
     "type": "additional_compile_target",
-  },
-  "tab_capture_end2end_tests": {
-    "label": "//chrome/test:browser_tests",
-    "type": "gpu_browser_test",
-    "gtest_filter": "CastStreamingApiTestWithPixelOutput.EndToEnd*:TabCaptureApiPixelTest.EndToEnd*",
   },
   "telemetry_gpu_integration_test": {
     "label": "//chrome/test:telemetry_gpu_integration_test",

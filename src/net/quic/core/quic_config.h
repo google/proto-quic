@@ -344,13 +344,6 @@ class QUIC_EXPORT_PRIVATE QuicConfig {
 
   uint32_t ReceivedInitialSessionFlowControlWindowBytes() const;
 
-  // Sets socket receive buffer to transmit to the peer.
-  void SetSocketReceiveBufferToSend(uint32_t window_bytes);
-
-  bool HasReceivedSocketReceiveBuffer() const;
-
-  uint32_t ReceivedSocketReceiveBuffer() const;
-
   void SetDisableConnectionMigration();
 
   bool DisableConnectionMigration() const;
@@ -435,9 +428,6 @@ class QUIC_EXPORT_PRIVATE QuicConfig {
 
   // Whether support HTTP/2 SETTINGS_MAX_HEADER_LIST_SIZE SETTINGS frame.
   QuicFixedUint32 support_max_header_list_size_;
-
-  // Latched copy of FLAGS_quic_reloadable_flag_quic_no_socket_receive_buffer
-  bool latched_no_socket_receive_buffer_;
 };
 
 }  // namespace net

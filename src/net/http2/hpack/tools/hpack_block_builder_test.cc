@@ -4,7 +4,7 @@
 
 #include "net/http2/hpack/tools/hpack_block_builder.h"
 
-#include "net/spdy/spdy_test_utils.h"
+#include "net/spdy/core/spdy_test_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 using base::StringPiece;

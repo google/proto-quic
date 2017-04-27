@@ -54,6 +54,7 @@ class EnumDefinition(object):
     self._Validate()
     self._AssignEntryIndices()
     self._StripPrefix()
+    self._NormalizeNames()
 
   def _Validate(self):
     assert self.class_name
@@ -92,10 +93,10 @@ class EnumDefinition(object):
 
     def StripEntries(entries):
       ret = collections.OrderedDict()
-      for (k, v) in entries.iteritems():
+      for k, v in entries.iteritems():
         stripped_key = k.replace(prefix_to_strip, '', 1)
         if isinstance(v, basestring):
-          stripped_value = v.replace(prefix_to_strip, '', 1)
+          stripped_value = v.replace(prefix_to_strip, '')
         else:
           stripped_value = v
         ret[stripped_key] = stripped_value
@@ -104,6 +105,44 @@ class EnumDefinition(object):
 
     self.entries = StripEntries(self.entries)
     self.comments = StripEntries(self.comments)
+
+  def _NormalizeNames(self):
+    self.entries = _TransformKeys(self.entries, _KCamelToShouty)
+    self.comments = _TransformKeys(self.comments, _KCamelToShouty)
+
+
+def _TransformKeys(d, func):
+  """Normalize keys in |d| and update references to old keys in |d| values."""
+  normal_keys = {k: func(k) for k in d}
+  ret = collections.OrderedDict()
+  for k, v in d.iteritems():
+    # Need to transform values as well when the entry value was explicitly set
+    # (since it could contain references to other enum entry values).
+    if isinstance(v, basestring):
+      for normal_key in normal_keys:
+        v = v.replace(normal_key, normal_keys[normal_key])
+    ret[normal_keys[k]] = v
+  return ret
+
+
+def _KCamelToShouty(s):
+  """Convert |s| from kCamelCase or CamelCase to SHOUTY_CASE.
+
+  kFooBar -> FOO_BAR
+  FooBar -> FOO_BAR
+  FooBAR9 -> FOO_BAR9
+  FooBARBaz -> FOO_BAR_BAZ
+  """
+  if not re.match(r'^k?([A-Z][^A-Z]+|[A-Z0-9]+)+$', s):
+    return s
+  # Strip the leading k.
+  s = re.sub(r'^k', '', s)
+  # Add _ between title words and anything else.
+  s = re.sub(r'([^_])([A-Z][^A-Z_0-9]+)', r'\1_\2', s)
+  # Add _ between lower -> upper transitions.
+  s = re.sub(r'([^A-Z_0-9])([A-Z])', r'\1_\2', s)
+  return s.upper()
+
 
 class DirectiveSet(object):
   class_name_override_key = 'CLASS_NAME_OVERRIDE'
@@ -329,17 +368,16 @@ import android.support.annotation.IntDef;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
-public class ${CLASS_NAME} {
-  @IntDef({
+@IntDef({
 ${INT_DEF}
-  })
-  @Retention(RetentionPolicy.SOURCE)
-  public @interface ${ANNOTATION} {}
+})
+@Retention(RetentionPolicy.SOURCE)
+public @interface ${CLASS_NAME} {
 ${ENUM_ENTRIES}
 }
 """)
 
-  enum_template = Template('  public static final int ${NAME} = ${VALUE};')
+  enum_template = Template('  int ${NAME} = ${VALUE};')
   enum_entries_string = []
   enum_names = []
   for enum_name, enum_value in enum_definition.entries.iteritems():
@@ -359,25 +397,20 @@ ${ENUM_ENTRIES}
                 '\n'.join(comments_line_wrapper.wrap(enum_comments)))
         enum_entries_string.append('   */')
     enum_entries_string.append(enum_template.substitute(values))
-    enum_names.append(enum_name)
+    enum_names.append(enum_definition.class_name + '.' + enum_name)
   enum_entries_string = '\n'.join(enum_entries_string)
 
-  enum_names_indent = ' ' * 6
+  enum_names_indent = ' ' * 4
   wrapper = textwrap.TextWrapper(initial_indent = enum_names_indent,
                                  subsequent_indent = enum_names_indent,
                                  width = 100)
   enum_names_string = '\n'.join(wrapper.wrap(', '.join(enum_names)))
-
-  annotation_template = Template('${NAME}Enum')
-  annotation_values = { 'NAME': enum_definition.class_name, }
-  annotation_name = annotation_template.substitute(annotation_values)
 
   values = {
       'CLASS_NAME': enum_definition.class_name,
       'ENUM_ENTRIES': enum_entries_string,
       'PACKAGE': enum_definition.enum_package,
       'INT_DEF': enum_names_string,
-      'ANNOTATION': annotation_name,
       'SCRIPT_NAME': GetScriptName(),
       'SOURCE_PATH': source_path,
       'YEAR': str(date.today().year)

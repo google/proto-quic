@@ -5,8 +5,9 @@
 #include "net/quic/core/quic_stream_sequencer_buffer.h"
 
 #include "base/format_macros.h"
-#include "net/quic/core/quic_flags.h"
+#include "net/quic/core/quic_constants.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 

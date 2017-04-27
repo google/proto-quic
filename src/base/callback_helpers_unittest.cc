@@ -109,4 +109,19 @@ TEST(CallbackHelpersTest, TestScopedClosureRunnerMoveAssignment) {
   EXPECT_EQ(1, run_count_2);
 }
 
+TEST(CallbackHelpersTest, TestAdaptCallbackForRepeating) {
+  int count = 0;
+  base::OnceCallback<void(int*)> cb =
+      base::BindOnce([](int* count) { ++*count; });
+
+  base::RepeatingCallback<void(int*)> wrapped =
+      base::AdaptCallbackForRepeating(std::move(cb));
+
+  EXPECT_EQ(0, count);
+  wrapped.Run(&count);
+  EXPECT_EQ(1, count);
+  wrapped.Run(&count);
+  EXPECT_EQ(1, count);
+}
+
 }  // namespace

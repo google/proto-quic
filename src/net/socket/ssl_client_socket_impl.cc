@@ -39,7 +39,6 @@
 #include "net/cert/ct_verifier.h"
 #include "net/cert/x509_certificate_net_log_param.h"
 #include "net/cert/x509_util.h"
-#include "net/cert/x509_util_openssl.h"
 #include "net/http/transport_security_state.h"
 #include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
@@ -109,25 +108,8 @@ bool EVP_MDToPrivateKeyHash(const EVP_MD* md, SSLPrivateKey::Hash* hash) {
 }
 
 std::unique_ptr<base::Value> NetLogPrivateKeyOperationCallback(
-    SSLPrivateKey::Type type,
     SSLPrivateKey::Hash hash,
     NetLogCaptureMode mode) {
-  std::string type_str;
-  switch (type) {
-    case SSLPrivateKey::Type::RSA:
-      type_str = "RSA";
-      break;
-    case SSLPrivateKey::Type::ECDSA_P256:
-      type_str = "ECDSA_P256";
-      break;
-    case SSLPrivateKey::Type::ECDSA_P384:
-      type_str = "ECDSA_P384";
-      break;
-    case SSLPrivateKey::Type::ECDSA_P521:
-      type_str = "ECDSA_P521";
-      break;
-  }
-
   std::string hash_str;
   switch (hash) {
     case SSLPrivateKey::Hash::MD5_SHA1:
@@ -148,7 +130,6 @@ std::unique_ptr<base::Value> NetLogPrivateKeyOperationCallback(
   }
 
   std::unique_ptr<base::DictionaryValue> value(new base::DictionaryValue);
-  value->SetString("type", type_str);
   value->SetString("hash", hash_str);
   return std::move(value);
 }
@@ -225,6 +206,13 @@ scoped_refptr<X509Certificate> OSChainFromBuffers(STACK_OF(CRYPTO_BUFFER) *
     return nullptr;
   }
 
+#if BUILDFLAG(USE_BYTE_CERTS)
+  std::vector<CRYPTO_BUFFER*> intermediate_chain;
+  for (size_t i = 1; i < sk_CRYPTO_BUFFER_num(openssl_chain); ++i)
+    intermediate_chain.push_back(sk_CRYPTO_BUFFER_value(openssl_chain, i));
+  return X509Certificate::CreateFromHandle(
+      sk_CRYPTO_BUFFER_value(openssl_chain, 0), intermediate_chain);
+#else
   // Convert the certificate chains to a platform certificate handle.
   std::vector<base::StringPiece> der_chain;
   der_chain.reserve(sk_CRYPTO_BUFFER_num(openssl_chain));
@@ -236,9 +224,10 @@ scoped_refptr<X509Certificate> OSChainFromBuffers(STACK_OF(CRYPTO_BUFFER) *
         CRYPTO_BUFFER_len(cert)));
   }
   return X509Certificate::CreateFromDERCertChain(der_chain);
+#endif
 }
 
-#if !defined(OS_IOS)
+#if !defined(OS_IOS) && !BUILDFLAG(USE_BYTE_CERTS)
 bssl::UniquePtr<CRYPTO_BUFFER> OSCertHandleToBuffer(
     X509Certificate::OSCertHandle os_handle) {
   std::string der_encoded;
@@ -247,6 +236,43 @@ bssl::UniquePtr<CRYPTO_BUFFER> OSCertHandleToBuffer(
   return x509_util::CreateCryptoBuffer(der_encoded);
 }
 #endif
+
+std::unique_ptr<base::Value> NetLogSSLAlertCallback(
+    const void* bytes,
+    size_t len,
+    NetLogCaptureMode capture_mode) {
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  dict->SetString("hex_encoded_bytes", base::HexEncode(bytes, len));
+  return std::move(dict);
+}
+
+std::unique_ptr<base::Value> NetLogSSLMessageCallback(
+    bool is_write,
+    const void* bytes,
+    size_t len,
+    NetLogCaptureMode capture_mode) {
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  if (len == 0) {
+    NOTREACHED();
+    return std::move(dict);
+  }
+
+  // The handshake message type is the first byte. Include it so elided messages
+  // still report their type.
+  uint8_t type = reinterpret_cast<const uint8_t*>(bytes)[0];
+  dict->SetInteger("type", type);
+
+  // Elide client certificate messages unless logging socket bytes. The client
+  // certificate does not contain information needed to impersonate the user
+  // (that's the private key which isn't sent over the wire), but it may contain
+  // information on the user's identity.
+  if (!is_write || type != SSL3_MT_CERTIFICATE ||
+      capture_mode.include_socket_bytes()) {
+    dict->SetString("hex_encoded_bytes", base::HexEncode(bytes, len));
+  }
+
+  return std::move(dict);
+}
 
 }  // namespace
 
@@ -308,6 +334,8 @@ class SSLClientSocketImpl::SSLContext {
     // Deduplicate all certificates minted from the SSL_CTX in memory.
     SSL_CTX_set0_buffer_pool(ssl_ctx_.get(), x509_util::GetBufferPool());
 
+    SSL_CTX_set_msg_callback(ssl_ctx_.get(), MessageCallback);
+
     if (!SSL_CTX_add_client_custom_ext(ssl_ctx_.get(), kTbExtNum,
                                        &TokenBindingAddCallback,
                                        &TokenBindingFreeCallback, nullptr,
@@ -361,16 +389,6 @@ class SSLClientSocketImpl::SSLContext {
     return socket->NewSessionCallback(session);
   }
 
-  static int PrivateKeyTypeCallback(SSL* ssl) {
-    SSLClientSocketImpl* socket = GetInstance()->GetClientSocketFromSSL(ssl);
-    return socket->PrivateKeyTypeCallback();
-  }
-
-  static size_t PrivateKeyMaxSignatureLenCallback(SSL* ssl) {
-    SSLClientSocketImpl* socket = GetInstance()->GetClientSocketFromSSL(ssl);
-    return socket->PrivateKeyMaxSignatureLenCallback();
-  }
-
   static ssl_private_key_result_t PrivateKeySignDigestCallback(
       SSL* ssl,
       uint8_t* out,
@@ -398,6 +416,17 @@ class SSLClientSocketImpl::SSLContext {
   }
 #endif
 
+  static void MessageCallback(int is_write,
+                              int version,
+                              int content_type,
+                              const void* buf,
+                              size_t len,
+                              SSL* ssl,
+                              void* arg) {
+    SSLClientSocketImpl* socket = GetInstance()->GetClientSocketFromSSL(ssl);
+    return socket->MessageCallback(is_write, content_type, buf, len);
+  }
+
   // This is the index used with SSL_get_ex_data to retrieve the owner
   // SSLClientSocketImpl object from an SSL instance.
   int ssl_socket_data_index_;
@@ -419,8 +448,8 @@ class SSLClientSocketImpl::SSLContext {
 // TODO(davidben): Switch from sign_digest to sign.
 const SSL_PRIVATE_KEY_METHOD
     SSLClientSocketImpl::SSLContext::kPrivateKeyMethod = {
-        &SSLClientSocketImpl::SSLContext::PrivateKeyTypeCallback,
-        &SSLClientSocketImpl::SSLContext::PrivateKeyMaxSignatureLenCallback,
+        nullptr /* type (unused) */,
+        nullptr /* max_signature_len (unused) */,
         nullptr /* sign */,
         &SSLClientSocketImpl::SSLContext::PrivateKeySignDigestCallback,
         nullptr /* decrypt */,
@@ -1058,6 +1087,11 @@ int SSLClientSocketImpl::DoHandshakeComplete(int result) {
   if (result < 0)
     return result;
 
+  if (ssl_config_.version_interference_probe) {
+    DCHECK_LT(ssl_config_.version_max, TLS1_3_VERSION);
+    return ERR_SSL_VERSION_INTERFERENCE;
+  }
+
   SSLContext::GetInstance()->session_cache()->ResetLookupCount(
       GetSessionCacheKey());
   // Check that if token binding was negotiated, then extended master secret
@@ -1582,6 +1616,14 @@ int SSLClientSocketImpl::ClientCertRequestCallback(SSL* ssl) {
       return -1;
     }
 
+#if BUILDFLAG(USE_BYTE_CERTS)
+    std::vector<CRYPTO_BUFFER*> chain_raw;
+    chain_raw.push_back(ssl_config_.client_cert->os_cert_handle());
+    for (X509Certificate::OSCertHandle cert :
+         ssl_config_.client_cert->GetIntermediateCertificates()) {
+      chain_raw.push_back(cert);
+    }
+#else
     std::vector<bssl::UniquePtr<CRYPTO_BUFFER>> chain;
     std::vector<CRYPTO_BUFFER*> chain_raw;
     bssl::UniquePtr<CRYPTO_BUFFER> buf =
@@ -1605,6 +1647,7 @@ int SSLClientSocketImpl::ClientCertRequestCallback(SSL* ssl) {
       chain_raw.push_back(buf.get());
       chain.push_back(std::move(buf));
     }
+#endif
 
     if (!SSL_set_chain_and_key(ssl_.get(), chain_raw.data(), chain_raw.size(),
                                nullptr, &SSLContext::kPrivateKeyMethod)) {
@@ -1641,7 +1684,7 @@ int SSLClientSocketImpl::ClientCertRequestCallback(SSL* ssl) {
                                      digests.size());
 
     net_log_.AddEvent(NetLogEventType::SSL_CLIENT_CERT_PROVIDED,
-                      NetLog::IntCallback("cert_count", chain.size()));
+                      NetLog::IntCallback("cert_count", chain_raw.size()));
     return 1;
   }
 #endif  // defined(OS_IOS)
@@ -1677,17 +1720,13 @@ void SSLClientSocketImpl::AddCTInfoToSSLInfo(SSLInfo* ssl_info) const {
 
 std::string SSLClientSocketImpl::GetSessionCacheKey() const {
   std::string result = host_and_port_.ToString();
-  result.append("/");
+  result.push_back('/');
   result.append(ssl_session_cache_shard_);
 
-  result.append("/");
-  if (ssl_config_.deprecated_cipher_suites_enabled)
-    result.append("deprecated");
-
-  result.append("/");
-  if (ssl_config_.channel_id_enabled)
-    result.append("channelid");
-
+  result.push_back('/');
+  result.push_back(ssl_config_.deprecated_cipher_suites_enabled ? '1' : '0');
+  result.push_back(ssl_config_.channel_id_enabled ? '1' : '0');
+  result.push_back(ssl_config_.version_interference_probe ? '1' : '0');
   return result;
 }
 
@@ -1703,25 +1742,6 @@ bool SSLClientSocketImpl::IsRenegotiationAllowed() const {
       return true;
   }
   return false;
-}
-
-int SSLClientSocketImpl::PrivateKeyTypeCallback() {
-  switch (ssl_config_.client_private_key->GetType()) {
-    case SSLPrivateKey::Type::RSA:
-      return NID_rsaEncryption;
-    case SSLPrivateKey::Type::ECDSA_P256:
-      return NID_X9_62_prime256v1;
-    case SSLPrivateKey::Type::ECDSA_P384:
-      return NID_secp384r1;
-    case SSLPrivateKey::Type::ECDSA_P521:
-      return NID_secp521r1;
-  }
-  NOTREACHED();
-  return NID_undef;
-}
-
-size_t SSLClientSocketImpl::PrivateKeyMaxSignatureLenCallback() {
-  return ssl_config_.client_private_key->GetMaxSignatureLengthInBytes();
 }
 
 ssl_private_key_result_t SSLClientSocketImpl::PrivateKeySignDigestCallback(
@@ -1741,10 +1761,8 @@ ssl_private_key_result_t SSLClientSocketImpl::PrivateKeySignDigestCallback(
     return ssl_private_key_failure;
   }
 
-  net_log_.BeginEvent(
-      NetLogEventType::SSL_PRIVATE_KEY_OP,
-      base::Bind(&NetLogPrivateKeyOperationCallback,
-                 ssl_config_.client_private_key->GetType(), hash));
+  net_log_.BeginEvent(NetLogEventType::SSL_PRIVATE_KEY_OP,
+                      base::Bind(&NetLogPrivateKeyOperationCallback, hash));
 
   signature_result_ = ERR_IO_PENDING;
   ssl_config_.client_private_key->SignDigest(
@@ -1793,6 +1811,27 @@ void SSLClientSocketImpl::OnPrivateKeyComplete(
   // During a renegotiation, either Read or Write calls may be blocked on an
   // asynchronous private key operation.
   RetryAllOperations();
+}
+
+void SSLClientSocketImpl::MessageCallback(int is_write,
+                                          int content_type,
+                                          const void* buf,
+                                          size_t len) {
+  switch (content_type) {
+    case SSL3_RT_ALERT:
+      net_log_.AddEvent(is_write ? NetLogEventType::SSL_ALERT_SENT
+                                 : NetLogEventType::SSL_ALERT_RECEIVED,
+                        base::Bind(&NetLogSSLAlertCallback, buf, len));
+      break;
+    case SSL3_RT_HANDSHAKE:
+      net_log_.AddEvent(
+          is_write ? NetLogEventType::SSL_HANDSHAKE_MESSAGE_SENT
+                   : NetLogEventType::SSL_HANDSHAKE_MESSAGE_RECEIVED,
+          base::Bind(&NetLogSSLMessageCallback, !!is_write, buf, len));
+      break;
+    default:
+      return;
+  }
 }
 
 int SSLClientSocketImpl::TokenBindingAdd(const uint8_t** out,

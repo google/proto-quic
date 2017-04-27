@@ -52,6 +52,8 @@ class QUIC_EXPORT_PRIVATE QuicDataWriter {
   bool WriteRepeatedByte(uint8_t byte, size_t count);
   // Fills the remaining buffer with null characters.
   void WritePadding();
+  // Write padding of |count| bytes.
+  bool WritePaddingBytes(size_t count);
 
   // Write connection ID as a 64-bit unsigned integer to the payload.
   // TODO(fayang): Remove this method and use WriteUInt64() once deprecating

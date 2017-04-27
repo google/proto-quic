@@ -12,15 +12,11 @@
 namespace base {
 namespace internal {
 
-TaskTrackerPosix::TaskTrackerPosix(
-    MessageLoopForIO* watch_file_descriptor_message_loop)
-    : watch_file_descriptor_message_loop_(watch_file_descriptor_message_loop) {
-  DCHECK(watch_file_descriptor_message_loop_);
-}
-
+TaskTrackerPosix::TaskTrackerPosix() = default;
 TaskTrackerPosix::~TaskTrackerPosix() = default;
 
 void TaskTrackerPosix::PerformRunTask(std::unique_ptr<Task> task) {
+  DCHECK(watch_file_descriptor_message_loop_);
   FileDescriptorWatcher file_descriptor_watcher(
       watch_file_descriptor_message_loop_);
   TaskTracker::PerformRunTask(std::move(task));

@@ -61,6 +61,48 @@ void SysTimeToTimeStruct(SysTime t, struct tm* timestruct, bool is_local) {
     gmtime64_r(&t, timestruct);
 }
 
+#elif defined(OS_AIX)
+
+// The function timegm is not available on AIX.
+time_t aix_timegm(struct tm* tm) {
+  time_t ret;
+  char* tz;
+
+  tz = getenv("TZ");
+  if (tz) {
+    tz = strdup(tz);
+  }
+  setenv("TZ", "GMT0", 1);
+  tzset();
+  ret = mktime(tm);
+  if (tz) {
+    setenv("TZ", tz, 1);
+    free(tz);
+  } else {
+    unsetenv("TZ");
+  }
+  tzset();
+  return ret;
+}
+
+typedef time_t SysTime;
+
+SysTime SysTimeFromTimeStruct(struct tm* timestruct, bool is_local) {
+  base::AutoLock locked(*GetSysTimeToTimeStructLock());
+  if (is_local)
+    return mktime(timestruct);
+  else
+    return aix_timegm(timestruct);
+}
+
+void SysTimeToTimeStruct(SysTime t, struct tm* timestruct, bool is_local) {
+  base::AutoLock locked(*GetSysTimeToTimeStructLock());
+  if (is_local)
+    localtime_r(&t, timestruct);
+  else
+    gmtime_r(&t, timestruct);
+}
+
 #else  // OS_ANDROID && !__LP64__
 typedef time_t SysTime;
 
@@ -248,7 +290,7 @@ bool Time::FromExploded(bool is_local, const Exploded& exploded, Time* time) {
   timestruct.tm_wday = exploded.day_of_week;  // mktime/timegm ignore this
   timestruct.tm_yday = 0;                     // mktime/timegm ignore this
   timestruct.tm_isdst = -1;                   // attempt to figure it out
-#if !defined(OS_NACL) && !defined(OS_SOLARIS)
+#if !defined(OS_NACL) && !defined(OS_SOLARIS) && !defined(OS_AIX)
   timestruct.tm_gmtoff = 0;   // not a POSIX field, so mktime/timegm ignore
   timestruct.tm_zone = NULL;  // not a POSIX field, so mktime/timegm ignore
 #endif

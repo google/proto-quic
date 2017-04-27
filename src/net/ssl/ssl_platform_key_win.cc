@@ -25,7 +25,6 @@
 #include "third_party/boringssl/src/include/openssl/bn.h"
 #include "third_party/boringssl/src/include/openssl/ecdsa.h"
 #include "third_party/boringssl/src/include/openssl/evp.h"
-#include "third_party/boringssl/src/include/openssl/x509.h"
 
 namespace net {
 
@@ -34,12 +33,10 @@ namespace {
 class SSLPlatformKeyCAPI : public ThreadedSSLPrivateKey::Delegate {
  public:
   // Takes ownership of |provider|.
-  SSLPlatformKeyCAPI(HCRYPTPROV provider, DWORD key_spec, size_t max_length)
-      : provider_(provider), key_spec_(key_spec), max_length_(max_length) {}
+  SSLPlatformKeyCAPI(HCRYPTPROV provider, DWORD key_spec)
+      : provider_(provider), key_spec_(key_spec) {}
 
   ~SSLPlatformKeyCAPI() override {}
-
-  SSLPrivateKey::Type GetType() override { return SSLPrivateKey::Type::RSA; }
 
   std::vector<SSLPrivateKey::Hash> GetDigestPreferences() override {
     // If the key is in CAPI, assume conservatively that the CAPI service
@@ -50,8 +47,6 @@ class SSLPlatformKeyCAPI : public ThreadedSSLPrivateKey::Delegate {
     return std::vector<SSLPrivateKey::Hash>(kHashes,
                                             kHashes + arraysize(kHashes));
   }
-
-  size_t GetMaxSignatureLengthInBytes() override { return max_length_; }
 
   Error SignDigest(SSLPrivateKey::Hash hash,
                    const base::StringPiece& input,
@@ -119,7 +114,6 @@ class SSLPlatformKeyCAPI : public ThreadedSSLPrivateKey::Delegate {
  private:
   crypto::ScopedHCRYPTPROV provider_;
   DWORD key_spec_;
-  size_t max_length_;
 
   DISALLOW_COPY_AND_ASSIGN(SSLPlatformKeyCAPI);
 };
@@ -127,21 +121,17 @@ class SSLPlatformKeyCAPI : public ThreadedSSLPrivateKey::Delegate {
 class SSLPlatformKeyCNG : public ThreadedSSLPrivateKey::Delegate {
  public:
   // Takes ownership of |key|.
-  SSLPlatformKeyCNG(NCRYPT_KEY_HANDLE key,
-                    SSLPrivateKey::Type type,
-                    size_t max_length)
+  SSLPlatformKeyCNG(NCRYPT_KEY_HANDLE key, int type, size_t max_length)
       : key_(key), type_(type), max_length_(max_length) {}
 
   ~SSLPlatformKeyCNG() override { NCryptFreeObject(key_); }
-
-  SSLPrivateKey::Type GetType() override { return type_; }
 
   std::vector<SSLPrivateKey::Hash> GetDigestPreferences() override {
     // If this is an under 1024-bit RSA key, conservatively prefer to sign
     // SHA-1 hashes. Older Estonian ID cards can only sign SHA-1 hashes.
     // However, if the server doesn't advertise SHA-1, the remaining hashes
     // might still be supported.
-    if (type_ == SSLPrivateKey::Type::RSA && max_length_ <= 1024 / 8) {
+    if (type_ == EVP_PKEY_RSA && max_length_ <= 1024 / 8) {
       static const SSLPrivateKey::Hash kHashesSpecial[] = {
           SSLPrivateKey::Hash::SHA1, SSLPrivateKey::Hash::SHA512,
           SSLPrivateKey::Hash::SHA384, SSLPrivateKey::Hash::SHA256};
@@ -155,8 +145,6 @@ class SSLPlatformKeyCNG : public ThreadedSSLPrivateKey::Delegate {
                                             kHashes + arraysize(kHashes));
   }
 
-  size_t GetMaxSignatureLengthInBytes() override { return max_length_; }
-
   Error SignDigest(SSLPrivateKey::Hash hash,
                    const base::StringPiece& input,
                    std::vector<uint8_t>* signature) override {
@@ -165,7 +153,7 @@ class SSLPlatformKeyCNG : public ThreadedSSLPrivateKey::Delegate {
     BCRYPT_PKCS1_PADDING_INFO rsa_padding_info = {0};
     void* padding_info = nullptr;
     DWORD flags = 0;
-    if (type_ == SSLPrivateKey::Type::RSA) {
+    if (type_ == EVP_PKEY_RSA) {
       switch (hash) {
         case SSLPrivateKey::Hash::MD5_SHA1:
           rsa_padding_info.pszAlgId = nullptr;
@@ -209,7 +197,7 @@ class SSLPlatformKeyCNG : public ThreadedSSLPrivateKey::Delegate {
 
     // CNG emits raw ECDSA signatures, but BoringSSL expects a DER-encoded
     // ECDSA-Sig-Value.
-    if (SSLPrivateKey::IsECDSAType(type_)) {
+    if (type_ == EVP_PKEY_EC) {
       if (signature->size() % 2 != 0) {
         LOG(ERROR) << "Bad signature length";
         return ERR_SSL_CLIENT_AUTH_SIGNATURE_FAILED;
@@ -239,7 +227,7 @@ class SSLPlatformKeyCNG : public ThreadedSSLPrivateKey::Delegate {
 
  private:
   NCRYPT_KEY_HANDLE key_;
-  SSLPrivateKey::Type type_;
+  int type_;
   size_t max_length_;
 
   DISALLOW_COPY_AND_ASSIGN(SSLPlatformKeyCNG);
@@ -252,7 +240,7 @@ scoped_refptr<SSLPrivateKey> FetchClientCertPrivateKey(
   // Rather than query the private key for metadata, extract the public key from
   // the certificate without using Windows APIs. CAPI and CNG do not
   // consistently work depending on the system. See https://crbug.com/468345.
-  SSLPrivateKey::Type key_type;
+  int key_type;
   size_t max_length;
   if (!GetClientCertInfo(certificate, &key_type, &max_length))
     return nullptr;
@@ -278,8 +266,8 @@ scoped_refptr<SSLPrivateKey> FetchClientCertPrivateKey(
   if (key_spec == CERT_NCRYPT_KEY_SPEC) {
     delegate.reset(new SSLPlatformKeyCNG(prov_or_key, key_type, max_length));
   } else {
-    DCHECK(SSLPrivateKey::Type::RSA == key_type);
-    delegate.reset(new SSLPlatformKeyCAPI(prov_or_key, key_spec, max_length));
+    DCHECK_EQ(EVP_PKEY_RSA, key_type);
+    delegate.reset(new SSLPlatformKeyCAPI(prov_or_key, key_spec));
   }
   return make_scoped_refptr(new ThreadedSSLPrivateKey(
       std::move(delegate), GetSSLPlatformKeyTaskRunner()));

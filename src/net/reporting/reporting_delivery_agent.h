@@ -6,27 +6,17 @@
 #define NET_REPORTING_REPORTING_DELIVERY_AGENT_H_
 
 #include <memory>
-#include <set>
-#include <string>
-#include <utility>
 
 #include "base/macros.h"
-#include "base/memory/weak_ptr.h"
-#include "net/base/backoff_entry.h"
 #include "net/base/net_export.h"
-#include "net/reporting/reporting_context.h"
-#include "net/reporting/reporting_uploader.h"
-#include "url/gurl.h"
-#include "url/origin.h"
 
 namespace base {
-class TickClock;
+class Timer;
 }  // namespace base
 
 namespace net {
 
-class ReportingCache;
-class ReportingEndpointManager;
+class ReportingContext;
 
 // Takes reports from the ReportingCache, assembles reports into deliveries to
 // endpoints, and sends those deliveries using ReportingUploader.
@@ -59,39 +49,20 @@ class ReportingEndpointManager;
 // delivery attempt.
 class NET_EXPORT ReportingDeliveryAgent {
  public:
-  // |context| must outlive the ReportingDeliveryAgent.
-  ReportingDeliveryAgent(ReportingContext* context);
-  ~ReportingDeliveryAgent();
+  // Creates a ReportingDeliveryAgent. |context| must outlive the agent.
+  static std::unique_ptr<ReportingDeliveryAgent> Create(
+      ReportingContext* context);
 
-  // Tries to deliver all of the reports in the cache. Reports that are already
-  // being delivered will not be attempted a second time, and reports that do
-  // not have a viable endpoint will be neither attempted nor removed.
-  void SendReports();
+  virtual ~ReportingDeliveryAgent();
 
- private:
-  class Delivery;
+  // Initializes the DeliveryAgent, which schedules delivery (after the Policy's
+  // delivery_interval) for any previously-persisted reports that can still be
+  // delivered.
+  virtual void Initialize() = 0;
 
-  using OriginGroup = std::pair<url::Origin, std::string>;
-
-  void OnUploadComplete(const std::unique_ptr<Delivery>& delivery,
-                        ReportingUploader::Outcome outcome);
-
-  base::TickClock* tick_clock() { return context_->tick_clock(); }
-  ReportingCache* cache() { return context_->cache(); }
-  ReportingUploader* uploader() { return context_->uploader(); }
-  ReportingEndpointManager* endpoint_manager() {
-    return context_->endpoint_manager();
-  }
-
-  ReportingContext* context_;
-
-  // Tracks OriginGroup tuples for which there is a pending delivery running.
-  // (Would be an unordered_set, but there's no hash on pair.)
-  std::set<OriginGroup> pending_origin_groups_;
-
-  base::WeakPtrFactory<ReportingDeliveryAgent> weak_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(ReportingDeliveryAgent);
+  // Replaces the internal Timer used for scheduling report delivery attempts
+  // with a caller-specified one so that unittests can provide a MockTimer.
+  virtual void SetTimerForTesting(std::unique_ptr<base::Timer> timer) = 0;
 };
 
 }  // namespace net

@@ -38,8 +38,8 @@
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/core/quic_time.h"
 #include "net/socket/socket_performance_watcher.h"
-#include "net/spdy/multiplexed_session.h"
-#include "net/spdy/server_push_delegate.h"
+#include "net/spdy/chromium/multiplexed_session.h"
+#include "net/spdy/chromium/server_push_delegate.h"
 
 namespace net {
 
@@ -78,23 +78,23 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   // A helper class used to manage a request to create a stream.
   class NET_EXPORT_PRIVATE StreamRequest {
    public:
-    StreamRequest();
+    // Cancels any pending stream creation request and resets |stream_| if
+    // it has not yet been released.
     ~StreamRequest();
 
     // Starts a request to create a stream.  If OK is returned, then
-    // |stream| will be updated with the newly created stream.  If
+    // |stream_| will be updated with the newly created stream.  If
     // ERR_IO_PENDING is returned, then when the request is eventuallly
     // complete |callback| will be called.
-    int StartRequest(const base::WeakPtr<QuicChromiumClientSession>& session,
-                     QuicChromiumClientStream** stream,
-                     const CompletionCallback& callback);
+    int StartRequest(const CompletionCallback& callback);
 
-    // Cancels any pending stream creation request. May be called
-    // repeatedly.
-    void CancelRequest();
+    // Releases |stream_| to the caller
+    QuicChromiumClientStream* ReleaseStream();
 
    private:
     friend class QuicChromiumClientSession;
+
+    StreamRequest(const base::WeakPtr<QuicChromiumClientSession>& session);
 
     // Called by |session_| for an asynchronous request when the stream
     // request has finished successfully.
@@ -107,7 +107,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
 
     base::WeakPtr<QuicChromiumClientSession> session_;
     CompletionCallback callback_;
-    QuicChromiumClientStream** stream_;
+    QuicChromiumClientStream* stream_;
     // For tracking how much time pending stream requests wait.
     base::TimeTicks pending_start_time_;
 
@@ -147,6 +147,8 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   void AddObserver(Observer* observer);
   void RemoveObserver(Observer* observer);
 
+  std::unique_ptr<StreamRequest> CreateStreamRequest();
+
   // Attempts to create a new stream.  If the stream can be
   // created immediately, returns OK.  If the open stream limit
   // has been reached, returns ERR_IO_PENDING, and |request|
@@ -154,8 +156,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   // be completed asynchronously.
   // TODO(rch): remove |stream| from this and use setter on |request|
   // and fix in spdy too.
-  int TryCreateStream(StreamRequest* request,
-                      QuicChromiumClientStream** stream);
+  int TryCreateStream(StreamRequest* request);
 
   // Cancels the pending stream creation request.
   void CancelRequest(StreamRequest* request);
@@ -173,7 +174,8 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   void OnStreamFrame(const QuicStreamFrame& frame) override;
   QuicChromiumClientStream* CreateOutgoingDynamicStream(
       SpdyPriority priority) override;
-  QuicCryptoClientStream* GetCryptoStream() override;
+  const QuicCryptoClientStream* GetCryptoStream() const override;
+  QuicCryptoClientStream* GetMutableCryptoStream() override;
   void CloseStream(QuicStreamId stream_id) override;
   void SendRstStream(QuicStreamId id,
                      QuicRstStreamErrorCode error,
@@ -223,11 +225,6 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   // Close the session because of |error| and notifies the factory
   // that this session has been closed, which will delete the session.
   void CloseSessionOnError(int error, QuicErrorCode quic_error);
-
-  // Close the session because of |error| and notifies the factory later that
-  // this session has been closed, which will delete the session.
-  void CloseSessionOnErrorAndNotifyFactoryLater(int error,
-                                                QuicErrorCode quic_error);
 
   std::unique_ptr<base::Value> GetInfoAsValue(
       const std::set<HostPortPair>& aliases);

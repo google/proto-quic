@@ -24,7 +24,7 @@
 #include "net/socket/ssl_client_socket.h"
 #include "net/socket/ssl_client_socket_pool.h"
 #include "net/socket/transport_client_socket_pool.h"
-#include "net/spdy/spdy_session.h"
+#include "net/spdy/chromium/spdy_session.h"
 
 namespace net {
 
@@ -181,6 +181,7 @@ class HttpProxyClientSocketWrapper : public ProxyClientSocket {
   const HostPortPair endpoint_;
   SpdySessionPool* const spdy_session_pool_;
 
+  bool has_restarted_;
   const bool tunnel_;
   ProxyDelegate* const proxy_delegate_;
 

@@ -30,9 +30,6 @@ declare_args() {
   # Non-SFI is not yet supported on mipsel
   enable_nacl_nonsfi = current_cpu != "mipsel"
 
-  # Enables the Media Router.
-  enable_media_router = !is_ios && !is_chromecast
-
   # Enables proprietary codecs and demuxers; e.g. H264, AAC, MP3, and MP4.
   # We always build Google Chrome and Chromecast with proprietary codecs.
   #

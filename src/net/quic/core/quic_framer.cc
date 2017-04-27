@@ -17,12 +17,12 @@
 #include "net/quic/core/crypto/quic_encrypter.h"
 #include "net/quic/core/quic_data_reader.h"
 #include "net/quic/core/quic_data_writer.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_socket_address_coder.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_aligned.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_flag_utils.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_map_util.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
@@ -336,7 +336,11 @@ size_t QuicFramer::BuildDataPacket(const QuicPacketHeader& header,
 
     switch (frame.type) {
       case PADDING_FRAME:
-        writer.WritePadding();
+        if (!AppendPaddingFrame(frame.padding_frame, &writer)) {
+          QUIC_BUG << "AppendPaddingFrame of "
+                   << frame.padding_frame.num_padding_bytes << " failed";
+          return 0;
+        }
         break;
       case STREAM_FRAME:
         if (!AppendStreamFrame(*frame.stream_frame, no_stream_frame_length,
@@ -1013,12 +1017,14 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
 
     switch (frame_type) {
       case PADDING_FRAME: {
-        QuicPaddingFrame frame(reader->BytesRemaining());
+        QuicPaddingFrame frame;
+        ProcessPaddingFrame(reader, &frame);
         if (!visitor_->OnPaddingFrame(frame)) {
           QUIC_DVLOG(1) << "Visitor asked to stop further processing.";
+          // Returning true since there was no parsing error.
+          return true;
         }
-        // We're done with the packet.
-        return true;
+        continue;
       }
 
       case RST_STREAM_FRAME: {
@@ -1436,6 +1442,23 @@ bool QuicFramer::ProcessBlockedFrame(QuicDataReader* reader,
   }
 
   return true;
+}
+
+void QuicFramer::ProcessPaddingFrame(QuicDataReader* reader,
+                                     QuicPaddingFrame* frame) {
+  if (quic_version_ <= QUIC_VERSION_37) {
+    frame->num_padding_bytes = reader->BytesRemaining() + 1;
+    reader->ReadRemainingPayload();
+    return;
+  }
+  // Type byte has been read.
+  frame->num_padding_bytes = 1;
+  uint8_t next_byte;
+  while (!reader->IsDoneReading() && reader->PeekByte() == 0x00) {
+    reader->ReadBytes(&next_byte, 1);
+    DCHECK_EQ(0x00, next_byte);
+    ++frame->num_padding_bytes;
+  }
 }
 
 // static
@@ -2109,6 +2132,25 @@ bool QuicFramer::AppendBlockedFrame(const QuicBlockedFrame& frame,
     return false;
   }
   return true;
+}
+
+bool QuicFramer::AppendPaddingFrame(const QuicPaddingFrame& frame,
+                                    QuicDataWriter* writer) {
+  if (quic_version_ <= QUIC_VERSION_37) {
+    writer->WritePadding();
+    return true;
+  }
+
+  if (frame.num_padding_bytes == 0) {
+    return false;
+  }
+  if (frame.num_padding_bytes < 0) {
+    QUIC_BUG_IF(frame.num_padding_bytes != -1);
+    writer->WritePadding();
+    return true;
+  }
+  // Please note, num_padding_bytes includes type byte which has been written.
+  return writer->WritePaddingBytes(frame.num_padding_bytes - 1);
 }
 
 bool QuicFramer::RaiseError(QuicErrorCode error) {

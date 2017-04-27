@@ -14,8 +14,8 @@ region/reslocal.mk
 locales/reslocal.mk
 unit/reslocal.mk
 sprep/spreplocal.mk
-brkitr/khmerdict.txt
-brkitr/word_ja.txt
+brkitr/dictionaries/khmerdict.txt
+brkitr/rules/word_ja.txt
 locales/an.txt
 locales/ku.txt
 locales/tg.txt

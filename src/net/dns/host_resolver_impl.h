@@ -158,8 +158,8 @@ class NET_EXPORT HostResolverImpl
       const PersistCallback& persist_callback,
       std::unique_ptr<const base::Value> old_data) override;
 
-  void SetDefaultAddressFamily(AddressFamily address_family) override;
-  AddressFamily GetDefaultAddressFamily() const override;
+  void SetNoIPv6OnWifi(bool no_ipv6_on_wifi) override;
+  bool GetNoIPv6OnWifi() override;
 
   void set_proc_params_for_test(const ProcTaskParams& proc_params) {
     proc_params_ = proc_params;
@@ -256,7 +256,11 @@ class NET_EXPORT HostResolverImpl
   // Probes IPv6 support and returns true if IPv6 support is enabled.
   // Results are cached, i.e. when called repeatedly this method returns result
   // from the first probe for some time before probing again.
-  virtual bool IsIPv6Reachable(const NetLogWithSource& net_log);
+  bool IsIPv6Reachable(const NetLogWithSource& net_log);
+
+  // Attempts to connect a UDP socket to |dest|:53. Virtual for testing.
+  virtual bool IsGloballyReachable(const IPAddress& dest,
+                                   const NetLogWithSource& net_log);
 
   // Asynchronously checks if only loopback IPs are available.
   virtual void RunLoopbackProbeJob();
@@ -349,9 +353,9 @@ class NET_EXPORT HostResolverImpl
   // Number of consecutive failures of DnsTask, counted when fallback succeeds.
   unsigned num_dns_failures_;
 
-  // Address family to use when the request doesn't specify one. See
-  // http://crbug.com/696569 for why the option is needed.
-  AddressFamily default_address_family_;
+  // True if IPv6 should not be attempted when on a WiFi connection. See
+  // https://crbug.com/696569 for further context.
+  bool assume_ipv6_failure_on_wifi_;
 
   // True if DnsConfigService detected that system configuration depends on
   // local IPv6 connectivity. Disables probing.
@@ -359,10 +363,6 @@ class NET_EXPORT HostResolverImpl
 
   base::TimeTicks last_ipv6_probe_time_;
   bool last_ipv6_probe_result_;
-
-  // True iff ProcTask has successfully resolved a hostname known to have IPv6
-  // addresses using ADDRESS_FAMILY_UNSPECIFIED. Reset on IP address change.
-  bool resolved_known_ipv6_hostname_;
 
   // Any resolver flags that should be added to a request by default.
   HostResolverFlags additional_resolver_flags_;

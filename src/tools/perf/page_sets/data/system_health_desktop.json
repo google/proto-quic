@@ -39,6 +39,12 @@
         "browse:social:twitter": {
             "DEFAULT": "system_health_desktop_019.wpr"
         },
+        "browse:tools:earth": {
+            "DEFAULT": "system_health_desktop_050.wpr"
+        },
+        "browse:tools:maps": {
+            "DEFAULT": "system_health_desktop_052.wpr"
+        },
         "load:games:alphabetty": {
             "DEFAULT": "system_health_desktop_005.wpr"
         },

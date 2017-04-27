@@ -113,24 +113,6 @@
 
 #include "internal.h"
 
-/* number of Miller-Rabin iterations for an error rate  of less than 2^-80
- * for random 'b'-bit input, b >= 100 (taken from table 4.4 in the Handbook
- * of Applied Cryptography [Menezes, van Oorschot, Vanstone; CRC Press 1996];
- * original paper: Damgaard, Landrock, Pomerance: Average case error estimates
- * for the strong probable prime test. -- Math. Comp. 61 (1993) 177-194) */
-#define BN_prime_checks_for_size(b) ((b) >= 1300 ?  2 : \
-                                (b) >=  850 ?  3 : \
-                                (b) >=  650 ?  4 : \
-                                (b) >=  550 ?  5 : \
-                                (b) >=  450 ?  6 : \
-                                (b) >=  400 ?  7 : \
-                                (b) >=  350 ?  8 : \
-                                (b) >=  300 ?  9 : \
-                                (b) >=  250 ? 12 : \
-                                (b) >=  200 ? 15 : \
-                                (b) >=  150 ? 18 : \
-                                /* b >= 100 */ 27)
-
 /* The quick sieve algorithm approach to weeding out primes is Philip
  * Zimmermann's, as implemented in PGP.  I have had a read of his comments and
  * implemented my own version. */
@@ -329,8 +311,37 @@ static const uint16_t primes[NUMPRIMES] = {
     17851, 17863,
 };
 
-static int witness(BIGNUM *w, const BIGNUM *a, const BIGNUM *a1,
-                   const BIGNUM *a1_odd, int k, BN_CTX *ctx, BN_MONT_CTX *mont);
+/* BN_prime_checks_for_size returns the number of Miller-Rabin iterations
+ * necessary for a 'bits'-bit prime, in order to maintain an error rate greater
+ * than the security level for an RSA prime of that many bits (calculated using
+ * the FIPS SP 800-57 security level and 186-4 Section F.1; original paper:
+ * Damgaard, Landrock, Pomerance: Average case error estimates for the strong
+ * probable prime test. -- Math. Comp. 61 (1993) 177-194) */
+static int BN_prime_checks_for_size(int bits) {
+  if (bits >= 3747) {
+    return 3;
+  }
+  if (bits >= 1345) {
+    return 4;
+  }
+  if (bits >= 476) {
+    return 5;
+  }
+  if (bits >= 400) {
+    return 6;
+  }
+  if (bits >= 308) {
+    return 8;
+  }
+  if (bits >= 205) {
+    return 13;
+  }
+  if (bits >= 155) {
+    return 19;
+  }
+  return 28;
+}
+
 static int probable_prime(BIGNUM *rnd, int bits);
 static int probable_prime_dh(BIGNUM *rnd, int bits, const BIGNUM *add,
                              const BIGNUM *rem, BN_CTX *ctx);
@@ -471,21 +482,10 @@ int BN_is_prime_ex(const BIGNUM *candidate, int checks, BN_CTX *ctx, BN_GENCB *c
   return BN_is_prime_fasttest_ex(candidate, checks, ctx, 0, cb);
 }
 
-int BN_is_prime_fasttest_ex(const BIGNUM *a, int checks, BN_CTX *ctx_passed,
+int BN_is_prime_fasttest_ex(const BIGNUM *a, int checks, BN_CTX *ctx,
                             int do_trial_division, BN_GENCB *cb) {
-  int i, j, ret = -1;
-  int k;
-  BN_CTX *ctx = NULL;
-  BIGNUM *A1, *A1_odd, *check; /* taken from ctx */
-  BN_MONT_CTX *mont = NULL;
-  const BIGNUM *A = NULL;
-
   if (BN_cmp(a, BN_value_one()) <= 0) {
     return 0;
-  }
-
-  if (checks == BN_prime_checks) {
-    checks = BN_prime_checks_for_size(BN_num_bits(a));
   }
 
   /* first look for small factors */
@@ -494,153 +494,187 @@ int BN_is_prime_fasttest_ex(const BIGNUM *a, int checks, BN_CTX *ctx_passed,
     return BN_is_word(a, 2);
   }
 
+  /* Enhanced Miller-Rabin does not work for three. */
+  if (BN_is_word(a, 3)) {
+    return 1;
+  }
+
   if (do_trial_division) {
-    for (i = 1; i < NUMPRIMES; i++) {
+    for (int i = 1; i < NUMPRIMES; i++) {
       BN_ULONG mod = BN_mod_word(a, primes[i]);
       if (mod == (BN_ULONG)-1) {
-        goto err;
+        return -1;
       }
       if (mod == 0) {
-        return 0;
+        return BN_is_word(a, primes[i]);
       }
     }
 
     if (!BN_GENCB_call(cb, 1, -1)) {
-      goto err;
+      return -1;
     }
   }
 
-  if (ctx_passed != NULL) {
-    ctx = ctx_passed;
-  } else if ((ctx = BN_CTX_new()) == NULL) {
+  int ret = -1;
+  BN_CTX *ctx_allocated = NULL;
+  if (ctx == NULL) {
+    ctx_allocated = BN_CTX_new();
+    if (ctx_allocated == NULL) {
+      return -1;
+    }
+    ctx = ctx_allocated;
+  }
+
+  enum bn_primality_result_t result;
+  if (!BN_enhanced_miller_rabin_primality_test(&result, a, checks, ctx, cb)) {
     goto err;
   }
+
+  ret = (result == bn_probably_prime);
+
+err:
+  BN_CTX_free(ctx_allocated);
+  return ret;
+}
+
+int BN_enhanced_miller_rabin_primality_test(
+    enum bn_primality_result_t *out_result, const BIGNUM *w, int iterations,
+    BN_CTX *ctx, BN_GENCB *cb) {
+  /* Enhanced Miller-Rabin is only valid on odd integers greater than 3. */
+  if (!BN_is_odd(w) || BN_cmp_word(w, 3) <= 0) {
+    OPENSSL_PUT_ERROR(BN, BN_R_INVALID_INPUT);
+    return 0;
+  }
+
+  if (iterations == BN_prime_checks) {
+    iterations = BN_prime_checks_for_size(BN_num_bits(w));
+  }
+
+  int ret = 0;
+  BN_MONT_CTX *mont = NULL;
+
   BN_CTX_start(ctx);
 
-  /* A := abs(a) */
-  if (a->neg) {
-    BIGNUM *t = BN_CTX_get(ctx);
-    if (t == NULL || !BN_copy(t, a)) {
-      goto err;
-    }
-    t->neg = 0;
-    A = t;
-  } else {
-    A = a;
-  }
-
-  A1 = BN_CTX_get(ctx);
-  A1_odd = BN_CTX_get(ctx);
-  check = BN_CTX_get(ctx);
-  if (check == NULL) {
+  BIGNUM *w1 = BN_CTX_get(ctx);
+  if (w1 == NULL ||
+      !BN_copy(w1, w) ||
+      !BN_sub_word(w1, 1)) {
     goto err;
   }
 
-  /* compute A1 := A - 1 */
-  if (!BN_copy(A1, A)) {
-    goto err;
+  /* Write w1 as m*2^a (Steps 1 and 2). */
+  int a = 0;
+  while (!BN_is_bit_set(w1, a)) {
+    a++;
   }
-  if (!BN_sub_word(A1, 1)) {
-    goto err;
-  }
-  if (BN_is_zero(A1)) {
-    ret = 0;
+  BIGNUM *m = BN_CTX_get(ctx);
+  if (m == NULL ||
+      !BN_rshift(m, w1, a)) {
     goto err;
   }
 
-  /* write  A1  as  A1_odd * 2^k */
-  k = 1;
-  while (!BN_is_bit_set(A1, k)) {
-    k++;
-  }
-  if (!BN_rshift(A1_odd, A1, k)) {
+  BIGNUM *b = BN_CTX_get(ctx);
+  BIGNUM *g = BN_CTX_get(ctx);
+  BIGNUM *z = BN_CTX_get(ctx);
+  BIGNUM *x = BN_CTX_get(ctx);
+  BIGNUM *x1 = BN_CTX_get(ctx);
+  if (b == NULL ||
+      g == NULL ||
+      z == NULL ||
+      x == NULL ||
+      x1 == NULL) {
     goto err;
   }
 
   /* Montgomery setup for computations mod A */
   mont = BN_MONT_CTX_new();
-  if (mont == NULL) {
-    goto err;
-  }
-  if (!BN_MONT_CTX_set(mont, A, ctx)) {
+  if (mont == NULL ||
+      !BN_MONT_CTX_set(mont, w, ctx)) {
     goto err;
   }
 
-  for (i = 0; i < checks; i++) {
-    if (!BN_pseudo_rand_range(check, A1)) {
+  /* The following loop performs in inner iteration of the Enhanced Miller-Rabin
+   * Primality test (Step 4). */
+  for (int i = 1; i <= iterations; i++) {
+    /* Step 4.1-4.2 */
+    if (!BN_rand_range_ex(b, 2, w1)) {
       goto err;
     }
-    if (!BN_add_word(check, 1)) {
-      goto err;
-    }
-    /* now 1 <= check < A */
 
-    j = witness(check, A, A1, A1_odd, k, ctx, mont);
-    if (j == -1) {
+    /* Step 4.3-4.4 */
+    if (!BN_gcd(g, b, w, ctx)) {
       goto err;
     }
-    if (j) {
-      ret = 0;
+    if (BN_cmp_word(g, 1) > 0) {
+      *out_result = bn_composite;
+      ret = 1;
       goto err;
     }
+
+    /* Step 4.5 */
+    if (!BN_mod_exp_mont(z, b, m, w, ctx, mont)) {
+      goto err;
+    }
+
+    /* Step 4.6 */
+    if (BN_is_one(z) || BN_cmp(z, w1) == 0) {
+      goto loop;
+    }
+
+    /* Step 4.7 */
+    for (int j = 1; j < a; j++) {
+      if (!BN_copy(x, z) || !BN_mod_mul(z, x, x, w, ctx)) {
+        goto err;
+      }
+      if (BN_cmp(z, w1) == 0) {
+        goto loop;
+      }
+      if (BN_is_one(z)) {
+        goto composite;
+      }
+    }
+
+    /* Step 4.8-4.9 */
+    if (!BN_copy(x, z) || !BN_mod_mul(z, x, x, w, ctx)) {
+      goto err;
+    }
+
+    /* Step 4.10-4.11 */
+    if (!BN_is_one(z) && !BN_copy(x, z)) {
+      goto err;
+    }
+
+ composite:
+    /* Step 4.12-4.14 */
+    if (!BN_copy(x1, x) ||
+        !BN_sub_word(x1, 1) ||
+        !BN_gcd(g, x1, w, ctx)) {
+      goto err;
+    }
+    if (BN_cmp_word(g, 1) > 0) {
+      *out_result = bn_composite;
+    } else {
+      *out_result = bn_non_prime_power_composite;
+    }
+
+    ret = 1;
+    goto err;
+
+ loop:
+    /* Step 4.15 */
     if (!BN_GENCB_call(cb, 1, i)) {
       goto err;
     }
   }
+
+  *out_result = bn_probably_prime;
   ret = 1;
 
 err:
-  if (ctx != NULL) {
-    BN_CTX_end(ctx);
-    if (ctx_passed == NULL) {
-      BN_CTX_free(ctx);
-    }
-  }
-  if (mont != NULL) {
-    BN_MONT_CTX_free(mont);
-  }
+  BN_MONT_CTX_free(mont);
+  BN_CTX_end(ctx);
 
   return ret;
-}
-
-static int witness(BIGNUM *w, const BIGNUM *a, const BIGNUM *a1,
-                   const BIGNUM *a1_odd, int k, BN_CTX *ctx,
-                   BN_MONT_CTX *mont) {
-  if (!BN_mod_exp_mont(w, w, a1_odd, a, ctx, mont)) { /* w := w^a1_odd mod a */
-    return -1;
-  }
-  if (BN_is_one(w)) {
-    return 0; /* probably prime */
-  }
-  if (BN_cmp(w, a1) == 0) {
-    return 0; /* w == -1 (mod a),  'a' is probably prime */
-  }
-
-  while (--k) {
-    if (!BN_mod_mul(w, w, w, a, ctx)) { /* w := w^2 mod a */
-      return -1;
-    }
-
-    if (BN_is_one(w)) {
-      return 1; /* 'a' is composite, otherwise a previous 'w' would
-                 * have been == -1 (mod 'a') */
-    }
-
-    if (BN_cmp(w, a1) == 0) {
-      return 0; /* w == -1 (mod a), 'a' is probably prime */
-    }
-  }
-
-  /* If we get here, 'w' is the (a-1)/2-th power of the original 'w',
-   * and it is neither -1 nor +1 -- so 'a' cannot be prime */
-  return 1;
-}
-
-static BN_ULONG get_word(const BIGNUM *bn) {
-  if (bn->top == 1) {
-    return bn->d[0];
-  }
-  return 0;
 }
 
 static int probable_prime(BIGNUM *rnd, int bits) {
@@ -669,9 +703,9 @@ again:
     BN_ULONG size_limit;
     if (bits == BN_BITS2) {
       /* Avoid undefined behavior. */
-      size_limit = ~((BN_ULONG)0) - get_word(rnd);
+      size_limit = ~((BN_ULONG)0) - BN_get_word(rnd);
     } else {
-      size_limit = (((BN_ULONG)1) << bits) - get_word(rnd) - 1;
+      size_limit = (((BN_ULONG)1) << bits) - BN_get_word(rnd) - 1;
     }
     if (size_limit < maxdelta) {
       maxdelta = size_limit;
@@ -681,7 +715,7 @@ again:
 
 loop:
   if (is_single_word) {
-    BN_ULONG rnd_word = get_word(rnd);
+    BN_ULONG rnd_word = BN_get_word(rnd);
 
     /* In the case that the candidate prime is a single word then
      * we check that:

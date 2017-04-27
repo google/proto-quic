@@ -947,6 +947,7 @@ OPENSSL_EXPORT int SSL_set_ocsp_response(SSL *ssl,
 #define SSL_SIGN_RSA_PSS_SHA256 0x0804
 #define SSL_SIGN_RSA_PSS_SHA384 0x0805
 #define SSL_SIGN_RSA_PSS_SHA512 0x0806
+#define SSL_SIGN_ED25519 0x0807
 
 /* SSL_SIGN_RSA_PKCS1_MD5_SHA1 is an internal signature algorithm used to
  * specify raw RSASSA-PKCS1-v1_5 with an MD5/SHA-1 concatenation, as used in TLS
@@ -1069,15 +1070,16 @@ enum ssl_private_key_result_t {
 
 /* ssl_private_key_method_st (aka |SSL_PRIVATE_KEY_METHOD|) describes private
  * key hooks. This is used to off-load signing operations to a custom,
- * potentially asynchronous, backend. */
+ * potentially asynchronous, backend. Metadata about the key such as the type
+ * and size are parsed out of the certificate.
+ *
+ * TODO(davidben): This API has a number of legacy hooks. Remove the last
+ * consumer of |sign_digest| and trim it. */
 struct ssl_private_key_method_st {
-  /* type returns the type of the key used by |ssl|. For RSA keys, return
-   * |NID_rsaEncryption|. For ECDSA keys, return |NID_X9_62_prime256v1|,
-   * |NID_secp384r1|, or |NID_secp521r1|, depending on the curve. */
+  /* type is ignored and should be NULL. */
   int (*type)(SSL *ssl);
 
-  /* max_signature_len returns the maximum length of a signature signed by the
-   * key used by |ssl|. This must be a constant value for a given |ssl|. */
+  /* max_signature_len is ignored and should be NULL. */
   size_t (*max_signature_len)(SSL *ssl);
 
   /* sign signs the message |in| in using the specified signature algorithm. On
@@ -1219,9 +1221,6 @@ OPENSSL_EXPORT int SSL_CIPHER_is_block_cipher(const SSL_CIPHER *cipher);
 
 /* SSL_CIPHER_is_ECDSA returns one if |cipher| uses ECDSA. */
 OPENSSL_EXPORT int SSL_CIPHER_is_ECDSA(const SSL_CIPHER *cipher);
-
-/* SSL_CIPHER_is_DHE returns one if |cipher| uses DHE. */
-OPENSSL_EXPORT int SSL_CIPHER_is_DHE(const SSL_CIPHER *cipher);
 
 /* SSL_CIPHER_is_ECDHE returns one if |cipher| uses ECDHE. */
 OPENSSL_EXPORT int SSL_CIPHER_is_ECDHE(const SSL_CIPHER *cipher);
@@ -2123,44 +2122,6 @@ OPENSSL_EXPORT uint16_t SSL_get_curve_id(const SSL *ssl);
 OPENSSL_EXPORT const char *SSL_get_curve_name(uint16_t curve_id);
 
 
-/* Multiplicative Diffie-Hellman.
- *
- * Cipher suites using a DHE key exchange perform Diffie-Hellman over a
- * multiplicative group selected by the server. These ciphers are disabled for a
- * server unless a group is chosen with one of these functions. */
-
-/* SSL_CTX_set_tmp_dh configures |ctx| to use the group from |dh| as the group
- * for DHE. Only the group is used, so |dh| needn't have a keypair. It returns
- * one on success and zero on error. */
-OPENSSL_EXPORT int SSL_CTX_set_tmp_dh(SSL_CTX *ctx, const DH *dh);
-
-/* SSL_set_tmp_dh configures |ssl| to use the group from |dh| as the group for
- * DHE. Only the group is used, so |dh| needn't have a keypair. It returns one
- * on success and zero on error. */
-OPENSSL_EXPORT int SSL_set_tmp_dh(SSL *ssl, const DH *dh);
-
-/* SSL_CTX_set_tmp_dh_callback configures |ctx| to use |callback| to determine
- * the group for DHE ciphers. |callback| should ignore |is_export| and
- * |keylength| and return a |DH| of the selected group or NULL on error. Only
- * the parameters are used, so the |DH| needn't have a generated keypair.
- *
- * WARNING: The caller does not take ownership of the resulting |DH|, so
- * |callback| must save and release the object elsewhere. */
-OPENSSL_EXPORT void SSL_CTX_set_tmp_dh_callback(
-    SSL_CTX *ctx, DH *(*callback)(SSL *ssl, int is_export, int keylength));
-
-/* SSL_set_tmp_dh_callback configures |ssl| to use |callback| to determine the
- * group for DHE ciphers. |callback| should ignore |is_export| and |keylength|
- * and return a |DH| of the selected group or NULL on error. Only the
- * parameters are used, so the |DH| needn't have a generated keypair.
- *
- * WARNING: The caller does not take ownership of the resulting |DH|, so
- * |callback| must save and release the object elsewhere. */
-OPENSSL_EXPORT void SSL_set_tmp_dh_callback(SSL *ssl,
-                                            DH *(*dh)(SSL *ssl, int is_export,
-                                                      int keylength));
-
-
 /* Certificate verification.
  *
  * SSL may authenticate either endpoint with an X.509 certificate. Typically
@@ -2403,6 +2364,18 @@ OPENSSL_EXPORT int SSL_set0_verify_cert_store(SSL *ssl, X509_STORE *store);
  * exclusively for certificate verification and returns one. An additional
  * reference to |store| will be taken. */
 OPENSSL_EXPORT int SSL_set1_verify_cert_store(SSL *ssl, X509_STORE *store);
+
+/* SSL_CTX_set_ed25519_enabled configures whether |ctx| advertises support for
+ * the Ed25519 signature algorithm when using the default preference list. */
+OPENSSL_EXPORT void SSL_CTX_set_ed25519_enabled(SSL_CTX *ctx, int enabled);
+
+/* SSL_CTX_set_verify_algorithm_prefs confingures |ctx| to use |prefs| as the
+ * preference list when verifying signature's from the peer's long-term key. It
+ * returns one on zero on error. |prefs| should not include the internal-only
+ * value |SSL_SIGN_RSA_PKCS1_MD5_SHA1|. */
+OPENSSL_EXPORT int SSL_CTX_set_verify_algorithm_prefs(SSL_CTX *ctx,
+                                                      const uint16_t *prefs,
+                                                      size_t num_prefs);
 
 
 /* Client certificate CA list.
@@ -3396,12 +3369,14 @@ OPENSSL_EXPORT const SSL_METHOD *SSLv23_method(void);
  * |DTLS_method| except they also call |SSL_CTX_set_min_proto_version| and
  * |SSL_CTX_set_max_proto_version| to lock connections to that protocol
  * version. */
-OPENSSL_EXPORT const SSL_METHOD *SSLv3_method(void);
 OPENSSL_EXPORT const SSL_METHOD *TLSv1_method(void);
 OPENSSL_EXPORT const SSL_METHOD *TLSv1_1_method(void);
 OPENSSL_EXPORT const SSL_METHOD *TLSv1_2_method(void);
 OPENSSL_EXPORT const SSL_METHOD *DTLSv1_method(void);
 OPENSSL_EXPORT const SSL_METHOD *DTLSv1_2_method(void);
+
+/* SSLv3_method returns an |SSL_METHOD| with no versions enabled. */
+OPENSSL_EXPORT const SSL_METHOD *SSLv3_method(void);
 
 /* These client- and server-specific methods call their corresponding generic
  * methods. */
@@ -3573,6 +3548,22 @@ OPENSSL_EXPORT const COMP_METHOD *SSL_get_current_expansion(SSL *s);
 
 /* SSL_get_server_tmp_key returns zero. */
 OPENSSL_EXPORT int *SSL_get_server_tmp_key(SSL *ssl, EVP_PKEY **out_key);
+
+/* SSL_CTX_set_tmp_dh returns 1. */
+OPENSSL_EXPORT int SSL_CTX_set_tmp_dh(SSL_CTX *ctx, const DH *dh);
+
+/* SSL_set_tmp_dh returns 1. */
+OPENSSL_EXPORT int SSL_set_tmp_dh(SSL *ssl, const DH *dh);
+
+/* SSL_CTX_set_tmp_dh_callback does nothing. */
+OPENSSL_EXPORT void SSL_CTX_set_tmp_dh_callback(
+    SSL_CTX *ctx, DH *(*callback)(SSL *ssl, int is_export, int keylength));
+
+/* SSL_set_tmp_dh_callback does nothing. */
+OPENSSL_EXPORT void SSL_set_tmp_dh_callback(SSL *ssl,
+                                            DH *(*dh)(SSL *ssl, int is_export,
+                                                      int keylength));
+
 
 #define SSL_set_app_data(s, arg) (SSL_set_ex_data(s, 0, (char *)(arg)))
 #define SSL_get_app_data(s) (SSL_get_ex_data(s, 0))
@@ -4262,6 +4253,11 @@ struct ssl_ctx_st {
    * session tickets. */
   const SSL_TICKET_AEAD_METHOD *ticket_aead_method;
 
+  /* verify_sigalgs, if not empty, is the set of signature algorithms
+   * accepted from the peer in decreasing order of preference. */
+  uint16_t *verify_sigalgs;
+  size_t num_verify_sigalgs;
+
   /* quiet_shutdown is true if the connection should not send a close_notify on
    * shutdown. */
   unsigned quiet_shutdown:1;
@@ -4291,6 +4287,9 @@ struct ssl_ctx_st {
   /* allow_unknown_alpn_protos is one if the client allows unsolicited ALPN
    * protocols from the peer. */
   unsigned allow_unknown_alpn_protos:1;
+
+  /* ed25519_enabled is one if Ed25519 is advertised in the handshake. */
+  unsigned ed25519_enabled:1;
 };
 
 
@@ -4632,6 +4631,7 @@ BORINGSSL_MAKE_DELETER(SSL_SESSION, SSL_SESSION_free)
 #define SSL_R_ALPN_MISMATCH_ON_EARLY_DATA 277
 #define SSL_R_WRONG_VERSION_ON_EARLY_DATA 278
 #define SSL_R_CHANNEL_ID_ON_EARLY_DATA 279
+#define SSL_R_NO_SUPPORTED_VERSIONS_ENABLED 280
 #define SSL_R_SSLV3_ALERT_CLOSE_NOTIFY 1000
 #define SSL_R_SSLV3_ALERT_UNEXPECTED_MESSAGE 1010
 #define SSL_R_SSLV3_ALERT_BAD_RECORD_MAC 1020
@@ -4664,5 +4664,6 @@ BORINGSSL_MAKE_DELETER(SSL_SESSION, SSL_SESSION_free)
 #define SSL_R_TLSV1_BAD_CERTIFICATE_HASH_VALUE 1114
 #define SSL_R_TLSV1_UNKNOWN_PSK_IDENTITY 1115
 #define SSL_R_TLSV1_CERTIFICATE_REQUIRED 1116
+#define SSL_R_TOO_MUCH_READ_EARLY_DATA 1117
 
 #endif /* OPENSSL_HEADER_SSL_H */

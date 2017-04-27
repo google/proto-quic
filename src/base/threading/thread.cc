@@ -156,7 +156,7 @@ void Thread::FlushForTesting() {
   WaitableEvent done(WaitableEvent::ResetPolicy::AUTOMATIC,
                      WaitableEvent::InitialState::NOT_SIGNALED);
   task_runner()->PostTask(FROM_HERE,
-                          Bind(&WaitableEvent::Signal, Unretained(&done)));
+                          BindOnce(&WaitableEvent::Signal, Unretained(&done)));
   done.Wait();
 }
 
@@ -210,7 +210,7 @@ void Thread::StopSoon() {
   }
 
   task_runner()->PostTask(
-      FROM_HERE, base::Bind(&Thread::ThreadQuitHelper, Unretained(this)));
+      FROM_HERE, base::BindOnce(&Thread::ThreadQuitHelper, Unretained(this)));
 }
 
 void Thread::DetachFromSequence() {

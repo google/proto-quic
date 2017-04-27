@@ -179,43 +179,84 @@ class BASE_EXPORT StackSamplingProfiler {
     TimeDelta sampling_interval = TimeDelta::FromMilliseconds(100);
   };
 
+  // Testing support. These methods are static beause they interact with the
+  // sampling thread, a singleton used by all StackSamplingProfiler objects.
+  // These methods can only be called by the same thread that started the
+  // sampling.
+  class BASE_EXPORT TestAPI {
+   public:
+    // Resets the internal state to that of a fresh start. This is necessary
+    // so that tests don't inherit state from previous tests.
+    static void Reset();
+
+    // Resets internal annotations (like process phase) to initial values.
+    static void ResetAnnotations();
+
+    // Returns whether the sampling thread is currently running or not.
+    static bool IsSamplingThreadRunning();
+
+    // Disables inherent idle-shutdown behavior.
+    static void DisableIdleShutdown();
+
+    // Initiates an idle shutdown task, as though the idle timer had expired,
+    // causing the thread to exit. There is no "idle" check so this must be
+    // called only when all sampling tasks have completed. This blocks until
+    // the task has been executed, though the actual stopping of the thread
+    // still happens asynchronously. Watch IsSamplingThreadRunning() to know
+    // when the thread has exited. If |simulate_intervening_start| is true then
+    // this method will make it appear to the shutdown task that a new profiler
+    // was started between when the idle-shutdown was initiated and when it
+    // runs.
+    static void PerformSamplingThreadIdleShutdown(
+        bool simulate_intervening_start);
+  };
+
   // The callback type used to collect completed profiles. The passed |profiles|
-  // are move-only.
+  // are move-only. Other threads, including the UI thread, may block on
+  // callback completion so this should run as quickly as possible.
   //
-  // IMPORTANT NOTE: the callback is invoked on a thread the profiler
+  // IMPORTANT NOTE: The callback is invoked on a thread the profiler
   // constructs, rather than on the thread used to construct the profiler and
   // set the callback, and thus the callback must be callable on any thread. For
   // threads with message loops that create StackSamplingProfilers, posting a
-  // task to the message loop with a copy of the profiles is the recommended
+  // task to the message loop with the moved (i.e. std::move) profiles is the
   // thread-safe callback implementation.
   using CompletedCallback = Callback<void(CallStackProfiles)>;
 
-  // Creates a profiler that sends completed profiles to |callback|. The second
-  // constructor is for test purposes.
-  StackSamplingProfiler(PlatformThreadId thread_id,
-                        const SamplingParams& params,
-                        const CompletedCallback& callback);
-  StackSamplingProfiler(PlatformThreadId thread_id,
-                        const SamplingParams& params,
-                        const CompletedCallback& callback,
-                        NativeStackSamplerTestDelegate* test_delegate);
-  // Stops any profiling currently taking place before destroying the profiler.
-  ~StackSamplingProfiler();
+  // Creates a profiler for the CURRENT thread that sends completed profiles
+  // to |callback|. An optional |test_delegate| can be supplied by tests.
+  // The caller must ensure that this object gets destroyed before the current
+  // thread exits.
+  StackSamplingProfiler(
+      const SamplingParams& params,
+      const CompletedCallback& callback,
+      NativeStackSamplerTestDelegate* test_delegate = nullptr);
 
-  // The fire-and-forget interface: starts a profiler and allows it to complete
-  // without the caller needing to manage the profiler lifetime. May be invoked
-  // from any thread, but requires that the calling thread has a message loop.
-  static void StartAndRunAsync(PlatformThreadId thread_id,
-                               const SamplingParams& params,
-                               const CompletedCallback& callback);
+  // Creates a profiler for ANOTHER thread that sends completed profiles to
+  // |callback|. An optional |test_delegate| can be supplied by tests.
+  //
+  // IMPORTANT: The caller must ensure that the thread being sampled does not
+  // exit before this object gets destructed or Bad Things(tm) may occur.
+  StackSamplingProfiler(
+      PlatformThreadId thread_id,
+      const SamplingParams& params,
+      const CompletedCallback& callback,
+      NativeStackSamplerTestDelegate* test_delegate = nullptr);
+
+  // Stops any profiling currently taking place before destroying the profiler.
+  // This will block until the callback has been run if profiling has started
+  // but not already finished.
+  ~StackSamplingProfiler();
 
   // Initializes the profiler and starts sampling.
   void Start();
 
-  // Stops the profiler and any ongoing sampling. Calling this function is
-  // optional; if not invoked profiling terminates when all the profiling bursts
-  // specified in the SamplingParams are completed or the profiler is destroyed,
-  // whichever occurs first.
+  // Stops the profiler and any ongoing sampling. This method will return
+  // immediately with the callback being run asynchronously. At most one
+  // more stack sample will be taken after this method returns. Calling this
+  // function is optional; if not invoked profiling terminates when all the
+  // profiling bursts specified in the SamplingParams are completed or the
+  // profiler object is destroyed, whichever occurs first.
   void Stop();
 
   // Set the current system state that is recorded with each captured stack
@@ -225,49 +266,13 @@ class BASE_EXPORT StackSamplingProfiler {
   // |process_milestones|. The actual meanings of these bits are defined
   // (globally) by the caller(s).
   static void SetProcessMilestone(int milestone);
-  static void ResetAnnotationsForTesting();
 
  private:
+  friend class TestAPI;
+
   // SamplingThread is a separate thread used to suspend and sample stacks from
   // the target thread.
-  class SamplingThread : public PlatformThread::Delegate {
-   public:
-    // Samples stacks using |native_sampler|. When complete, invokes
-    // |completed_callback| with the collected call stack profiles.
-    // |completed_callback| must be callable on any thread.
-    SamplingThread(std::unique_ptr<NativeStackSampler> native_sampler,
-                   const SamplingParams& params,
-                   const CompletedCallback& completed_callback);
-    ~SamplingThread() override;
-
-    // PlatformThread::Delegate:
-    void ThreadMain() override;
-
-    void Stop();
-
-   private:
-    // Collects |profile| from a single burst. If the profiler was stopped
-    // during collection, sets |was_stopped| and provides the set of samples
-    // collected up to that point.
-    void CollectProfile(CallStackProfile* profile, TimeDelta* elapsed_time,
-                        bool* was_stopped);
-
-    // Collects call stack profiles from all bursts, or until the sampling is
-    // stopped. If stopped before complete, the last profile in
-    // |call_stack_profiles| may contain a partial burst.
-    void CollectProfiles(CallStackProfiles* profiles);
-
-    std::unique_ptr<NativeStackSampler> native_sampler_;
-    const SamplingParams params_;
-
-    // If Stop() is called, it signals this event to force the sampling to
-    // terminate before all the samples specified in |params_| are collected.
-    WaitableEvent stop_event_;
-
-    const CompletedCallback completed_callback_;
-
-    DISALLOW_COPY_AND_ASSIGN(SamplingThread);
-  };
+  class SamplingThread;
 
   // Adds annotations to a Sample.
   static void RecordAnnotations(Sample* sample);
@@ -284,10 +289,19 @@ class BASE_EXPORT StackSamplingProfiler {
 
   const SamplingParams params_;
 
-  std::unique_ptr<SamplingThread> sampling_thread_;
-  PlatformThreadHandle sampling_thread_handle_;
-
   const CompletedCallback completed_callback_;
+
+  // This starts "signaled", is reset when sampling begins, and is signaled
+  // when that sampling is complete and the callback done.
+  WaitableEvent profiling_inactive_;
+
+  // Object that does the native sampling. This is created during construction
+  // and later passed to the sampling thread when profiling is started.
+  std::unique_ptr<NativeStackSampler> native_sampler_;
+
+  // An ID uniquely identifying this collection to the sampling thread. This
+  // will be an internal "null" value when no collection has been started.
+  int collection_id_;
 
   // Stored until it can be passed to the NativeStackSampler created in Start().
   NativeStackSamplerTestDelegate* const test_delegate_;

@@ -13,18 +13,18 @@ import subprocess
 import sys
 
 from chrome_telemetry_build import chromium_config
+from core import path_util
+path_util.AddTelemetryToPath()
 
-
-sys.path.append(chromium_config.GetTelemetryDir())
 from telemetry.testing import unittest_runner
 
 
 def main():
   telemetry_test_config = os.path.join(
-      chromium_config.GetTelemetryDir(), 'telemetry',
+      path_util.GetTelemetryDir(), 'telemetry',
       'telemetry_unittest_deps.json')
   project_config = chromium_config.ChromiumConfig(
-      top_level_dir=chromium_config.GetTelemetryDir(),
+      top_level_dir=path_util.GetTelemetryDir(),
       client_configs=[chromium_config.CLIENT_CONFIG_PATH, telemetry_test_config]
   )
   return unittest_runner.Run(

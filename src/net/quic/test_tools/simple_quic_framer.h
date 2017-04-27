@@ -41,6 +41,7 @@ class SimpleQuicFramer {
   const std::vector<QuicGoAwayFrame>& goaway_frames() const;
   const std::vector<QuicRstStreamFrame>& rst_stream_frames() const;
   const std::vector<std::unique_ptr<QuicStreamFrame>>& stream_frames() const;
+  const std::vector<QuicPaddingFrame>& padding_frames() const;
   const QuicVersionNegotiationPacket* version_negotiation_packet() const;
 
   QuicFramer* framer();

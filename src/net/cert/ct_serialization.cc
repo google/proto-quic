@@ -28,7 +28,7 @@ const size_t kVersionLength = 1;
 
 // Common V1 struct members
 const size_t kTimestampLength = 8;
-const size_t kLogEntryTypeLength = 2;
+const size_t kSignedEntryTypeLength = 2;
 const size_t kAsn1CertificateLengthBytes = 3;
 const size_t kTbsCertificateLengthBytes = 3;
 const size_t kExtensionsLengthBytes = 2;
@@ -247,20 +247,22 @@ bool WriteVariableBytes(size_t prefix_length,
   return true;
 }
 
-// Writes a LogEntry of type X.509 cert to |output|.
-// |input| is the LogEntry containing the certificate.
-// Returns true if the leaf_certificate in the LogEntry does not exceed
+// Writes a SignedEntryData of type X.509 cert to |output|.
+// |input| is the SignedEntryData containing the certificate.
+// Returns true if the leaf_certificate in the SignedEntryData does not exceed
 // kMaxAsn1CertificateLength and so can be written to |output|.
-bool EncodeAsn1CertLogEntry(const LogEntry& input, std::string* output) {
+bool EncodeAsn1CertSignedEntry(const SignedEntryData& input,
+                               std::string* output) {
   return WriteVariableBytes(kAsn1CertificateLengthBytes,
                             input.leaf_certificate, output);
 }
 
-// Writes a LogEntry of type PreCertificate to |output|.
-// |input| is the LogEntry containing the TBSCertificate and issuer key hash.
-// Returns true if the TBSCertificate component in the LogEntry does not
-// exceed kMaxTbsCertificateLength and so can be written to |output|.
-bool EncodePrecertLogEntry(const LogEntry& input, std::string* output) {
+// Writes a SignedEntryData of type PreCertificate to |output|.
+// |input| is the SignedEntryData containing the TBSCertificate and issuer key
+// hash. Returns true if the TBSCertificate component in the SignedEntryData
+// does not exceed kMaxTbsCertificateLength and so can be written to |output|.
+bool EncodePrecertSignedEntry(const SignedEntryData& input,
+                              std::string* output) {
   WriteEncodedBytes(
       base::StringPiece(
           reinterpret_cast<const char*>(input.issuer_key_hash.data),
@@ -308,13 +310,13 @@ bool DecodeDigitallySigned(base::StringPiece* input,
   return true;
 }
 
-bool EncodeLogEntry(const LogEntry& input, std::string* output) {
-  WriteUint(kLogEntryTypeLength, input.type, output);
+bool EncodeSignedEntry(const SignedEntryData& input, std::string* output) {
+  WriteUint(kSignedEntryTypeLength, input.type, output);
   switch (input.type) {
-    case LogEntry::LOG_ENTRY_TYPE_X509:
-      return EncodeAsn1CertLogEntry(input, output);
-    case LogEntry::LOG_ENTRY_TYPE_PRECERT:
-      return EncodePrecertLogEntry(input, output);
+    case SignedEntryData::LOG_ENTRY_TYPE_X509:
+      return EncodeAsn1CertSignedEntry(input, output);
+    case SignedEntryData::LOG_ENTRY_TYPE_PRECERT:
+      return EncodePrecertSignedEntry(input, output);
   }
   return false;
 }
@@ -349,7 +351,7 @@ bool EncodeTreeLeaf(const MerkleTreeLeaf& leaf, std::string* output) {
   WriteUint(kVersionLength, 0, output);         // version: 1
   WriteUint(kMerkleLeafTypeLength, 0, output);  // type: timestamped entry
   WriteTimeSinceEpoch(leaf.timestamp, output);
-  if (!EncodeLogEntry(leaf.log_entry, output))
+  if (!EncodeSignedEntry(leaf.signed_entry, output))
     return false;
   if (!WriteVariableBytes(kExtensionsLengthBytes, leaf.extensions, output))
     return false;

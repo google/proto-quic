@@ -16,8 +16,8 @@
 #include "net/cert/internal/parse_name.h"
 #include "net/cert/internal/parsed_certificate.h"
 #include "net/cert/test_keychain_search_list_mac.h"
-#include "net/cert/x509_certificate.h"
 #include "net/cert/x509_util.h"
+#include "net/cert/x509_util_mac.h"
 
 namespace net {
 
@@ -146,7 +146,7 @@ TrustStatus IsTrustSettingsTrustedForPolicy(CFArrayRef trust_settings,
 // |policy_oid|.
 TrustStatus IsSecCertificateTrustedForPolicy(SecCertificateRef cert_handle,
                                              const CFStringRef policy_oid) {
-  const bool is_self_signed = X509Certificate::IsSelfSigned(cert_handle);
+  const bool is_self_signed = x509_util::IsSelfSigned(cert_handle);
   // Evaluate trust domains in user, admin, system order. Admin settings can
   // override system ones, and user settings can override both admin and system.
   for (const auto& trust_domain :
@@ -320,8 +320,8 @@ base::ScopedCFTypeRef<CFDataRef> TrustStoreMac::GetMacNormalizedIssuer(
   // There does not appear to be any public API to get the normalized version
   // of a Name without creating a SecCertificate.
   base::ScopedCFTypeRef<SecCertificateRef> cert_handle(
-      X509Certificate::CreateOSCertHandleFromBytes(
-          cert->der_cert().AsStringPiece().data(), cert->der_cert().Length()));
+      x509_util::CreateSecCertificateFromBytes(cert->der_cert().UnsafeData(),
+                                               cert->der_cert().Length()));
   if (!cert_handle) {
     LOG(ERROR) << "CreateOSCertHandleFromBytes";
     return name_data;

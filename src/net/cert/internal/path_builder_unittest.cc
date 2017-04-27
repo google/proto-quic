@@ -160,7 +160,7 @@ TEST_F(PathBuilderMultiRootTest, TargetHasNameAndSpkiOfTrustAnchor) {
 
   CertPathBuilder::Result result;
   CertPathBuilder path_builder(a_by_b_, &trust_store, &signature_policy_, time_,
-                               &result);
+                               KeyPurpose::ANY_EKU, &result);
 
   path_builder.Run();
 
@@ -180,7 +180,7 @@ TEST_F(PathBuilderMultiRootTest, TargetWithSameNameAsTrustAnchorFails) {
 
   CertPathBuilder::Result result;
   CertPathBuilder path_builder(a_by_b_, &trust_store, &signature_policy_, time_,
-                               &result);
+                               KeyPurpose::ANY_EKU, &result);
 
   path_builder.Run();
 
@@ -210,7 +210,7 @@ TEST_F(PathBuilderMultiRootTest, SelfSignedTrustAnchorSupplementalCert) {
 
   CertPathBuilder::Result result;
   CertPathBuilder path_builder(b_by_c_, &trust_store, &signature_policy_,
-                               expired_time, &result);
+                               expired_time, KeyPurpose::ANY_EKU, &result);
   path_builder.AddCertIssuerSource(&sync_certs);
 
   path_builder.Run();
@@ -243,7 +243,7 @@ TEST_F(PathBuilderMultiRootTest, TargetIsSelfSignedTrustAnchor) {
 
   CertPathBuilder::Result result;
   CertPathBuilder path_builder(e_by_e_, &trust_store, &signature_policy_, time_,
-                               &result);
+                               KeyPurpose::ANY_EKU, &result);
 
   path_builder.Run();
 
@@ -262,7 +262,7 @@ TEST_F(PathBuilderMultiRootTest, TargetDirectlySignedByTrustAnchor) {
 
   CertPathBuilder::Result result;
   CertPathBuilder path_builder(a_by_b_, &trust_store, &signature_policy_, time_,
-                               &result);
+                               KeyPurpose::ANY_EKU, &result);
 
   path_builder.Run();
 
@@ -289,7 +289,7 @@ TEST_F(PathBuilderMultiRootTest, TriesSyncFirst) {
 
   CertPathBuilder::Result result;
   CertPathBuilder path_builder(a_by_b_, &trust_store, &signature_policy_, time_,
-                               &result);
+                               KeyPurpose::ANY_EKU, &result);
   path_builder.AddCertIssuerSource(&async_certs);
   path_builder.AddCertIssuerSource(&sync_certs);
 
@@ -317,7 +317,7 @@ TEST_F(PathBuilderMultiRootTest, TestAsyncSimultaneous) {
 
   CertPathBuilder::Result result;
   CertPathBuilder path_builder(a_by_b_, &trust_store, &signature_policy_, time_,
-                               &result);
+                               KeyPurpose::ANY_EKU, &result);
   path_builder.AddCertIssuerSource(&async_certs1);
   path_builder.AddCertIssuerSource(&async_certs2);
   path_builder.AddCertIssuerSource(&sync_certs);
@@ -344,7 +344,7 @@ TEST_F(PathBuilderMultiRootTest, TestLongChain) {
 
   CertPathBuilder::Result result;
   CertPathBuilder path_builder(a_by_b_, &trust_store, &signature_policy_, time_,
-                               &result);
+                               KeyPurpose::ANY_EKU, &result);
   path_builder.AddCertIssuerSource(&sync_certs);
 
   path_builder.Run();
@@ -377,7 +377,7 @@ TEST_F(PathBuilderMultiRootTest, TestBacktracking) {
 
   CertPathBuilder::Result result;
   CertPathBuilder path_builder(a_by_b_, &trust_store, &signature_policy_, time_,
-                               &result);
+                               KeyPurpose::ANY_EKU, &result);
   path_builder.AddCertIssuerSource(&sync_certs);
   path_builder.AddCertIssuerSource(&async_certs);
 
@@ -416,7 +416,7 @@ TEST_F(PathBuilderMultiRootTest, TestCertIssuerOrdering) {
 
     CertPathBuilder::Result result;
     CertPathBuilder path_builder(a_by_b_, &trust_store, &signature_policy_,
-                                 time_, &result);
+                                 time_, KeyPurpose::ANY_EKU, &result);
     path_builder.AddCertIssuerSource(&sync_certs);
 
     path_builder.Run();
@@ -505,7 +505,7 @@ TEST_F(PathBuilderKeyRolloverTest, TestRolloverOnlyOldRootTrusted) {
 
   CertPathBuilder::Result result;
   CertPathBuilder path_builder(target_, &trust_store, &signature_policy_, time_,
-                               &result);
+                               KeyPurpose::ANY_EKU, &result);
   path_builder.AddCertIssuerSource(&sync_certs);
 
   path_builder.Run();
@@ -553,7 +553,7 @@ TEST_F(PathBuilderKeyRolloverTest, TestRolloverBothRootsTrusted) {
 
   CertPathBuilder::Result result;
   CertPathBuilder path_builder(target_, &trust_store, &signature_policy_, time_,
-                               &result);
+                               KeyPurpose::ANY_EKU, &result);
   path_builder.AddCertIssuerSource(&sync_certs);
 
   path_builder.Run();
@@ -589,7 +589,7 @@ TEST_F(PathBuilderKeyRolloverTest, TestAnchorsNoMatchAndNoIssuerSources) {
 
   CertPathBuilder::Result result;
   CertPathBuilder path_builder(target_, &trust_store, &signature_policy_, time_,
-                               &result);
+                               KeyPurpose::ANY_EKU, &result);
 
   path_builder.Run();
 
@@ -621,7 +621,8 @@ TEST_F(PathBuilderKeyRolloverTest, TestMultipleRootMatchesOnlyOneWorks) {
 
   CertPathBuilder::Result result;
   CertPathBuilder path_builder(target_, &trust_store_collection,
-                               &signature_policy_, time_, &result);
+                               &signature_policy_, time_, KeyPurpose::ANY_EKU,
+                               &result);
   path_builder.AddCertIssuerSource(&sync_certs);
 
   path_builder.Run();
@@ -671,7 +672,7 @@ TEST_F(PathBuilderKeyRolloverTest, TestRolloverLongChain) {
 
   CertPathBuilder::Result result;
   CertPathBuilder path_builder(target_, &trust_store, &signature_policy_, time_,
-                               &result);
+                               KeyPurpose::ANY_EKU, &result);
   path_builder.AddCertIssuerSource(&sync_certs);
   path_builder.AddCertIssuerSource(&async_certs);
 
@@ -728,7 +729,8 @@ TEST_F(PathBuilderKeyRolloverTest, TestEndEntityIsTrustRoot) {
   CertPathBuilder::Result result;
   // Newintermediate is also the target cert.
   CertPathBuilder path_builder(newintermediate_, &trust_store,
-                               &signature_policy_, time_, &result);
+                               &signature_policy_, time_, KeyPurpose::ANY_EKU,
+                               &result);
 
   path_builder.Run();
 
@@ -752,7 +754,7 @@ TEST_F(PathBuilderKeyRolloverTest,
   CertPathBuilder::Result result;
   // Newroot is the target cert.
   CertPathBuilder path_builder(newroot_, &trust_store, &signature_policy_,
-                               time_, &result);
+                               time_, KeyPurpose::ANY_EKU, &result);
   path_builder.AddCertIssuerSource(&sync_certs);
 
   path_builder.Run();
@@ -773,7 +775,7 @@ TEST_F(PathBuilderKeyRolloverTest,
   CertPathBuilder::Result result;
   // Newroot is the target cert.
   CertPathBuilder path_builder(newroot_, &trust_store, &signature_policy_,
-                               time_, &result);
+                               time_, KeyPurpose::ANY_EKU, &result);
 
   path_builder.Run();
 
@@ -821,7 +823,7 @@ TEST_F(PathBuilderKeyRolloverTest, TestDuplicateIntermediates) {
 
   CertPathBuilder::Result result;
   CertPathBuilder path_builder(target_, &trust_store, &signature_policy_, time_,
-                               &result);
+                               KeyPurpose::ANY_EKU, &result);
   path_builder.AddCertIssuerSource(&sync_certs1);
   path_builder.AddCertIssuerSource(&sync_certs2);
   path_builder.AddCertIssuerSource(&async_certs);
@@ -875,7 +877,7 @@ TEST_F(PathBuilderKeyRolloverTest, TestDuplicateIntermediateAndRoot) {
 
   CertPathBuilder::Result result;
   CertPathBuilder path_builder(target_, &trust_store, &signature_policy_, time_,
-                               &result);
+                               KeyPurpose::ANY_EKU, &result);
   path_builder.AddCertIssuerSource(&sync_certs);
 
   path_builder.Run();
@@ -950,7 +952,7 @@ TEST_F(PathBuilderKeyRolloverTest, TestMultipleAsyncIssuersFromSingleSource) {
 
   CertPathBuilder::Result result;
   CertPathBuilder path_builder(target_, &trust_store, &signature_policy_, time_,
-                               &result);
+                               KeyPurpose::ANY_EKU, &result);
   path_builder.AddCertIssuerSource(&cert_issuer_source);
 
   // Create the mock CertIssuerSource::Request...
@@ -1029,7 +1031,7 @@ TEST_F(PathBuilderKeyRolloverTest, TestDuplicateAsyncIntermediates) {
 
   CertPathBuilder::Result result;
   CertPathBuilder path_builder(target_, &trust_store, &signature_policy_, time_,
-                               &result);
+                               KeyPurpose::ANY_EKU, &result);
   path_builder.AddCertIssuerSource(&cert_issuer_source);
 
   // Create the mock CertIssuerSource::Request...

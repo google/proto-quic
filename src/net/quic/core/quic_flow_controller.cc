@@ -7,10 +7,10 @@
 #include <cstdint>
 
 #include "net/quic/core/quic_connection.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_flag_utils.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 
@@ -250,9 +250,12 @@ bool QuicFlowController::UpdateSendWindowOffset(
                 << " current offset: " << send_window_offset_
                 << " bytes_sent: " << bytes_sent_;
 
-  const bool blocked = IsBlocked();
+  // The flow is now unblocked but could have also been unblocked
+  // before.  Return true iff this update caused a change from blocked
+  // to unblocked.
+  const bool was_previously_blocked = IsBlocked();
   send_window_offset_ = new_send_window_offset;
-  return blocked;
+  return was_previously_blocked;
 }
 
 void QuicFlowController::EnsureWindowAtLeast(QuicByteCount window_size) {

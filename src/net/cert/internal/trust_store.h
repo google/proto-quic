@@ -75,7 +75,7 @@ class NET_EXPORT TrustAnchor : public base::RefCountedThreadSafe<TrustAnchor> {
   //  * Signature:             No
   //  * Validity (expiration): No
   //  * Key usage:             No
-  //  * Extended key usage:    No
+  //  * Extended key usage:    Yes (not part of RFC 5937)
   //  * Basic constraints:     Yes, but only the pathlen (CA=false is accepted)
   //  * Name constraints:      Yes
   //  * Certificate policies:  Not currently, TODO(crbug.com/634453)

@@ -181,8 +181,8 @@ QuicTime PacketDroppingTestWriter::ReleaseNextPacket() {
     delayed_packets_.begin()->send_time = iter->send_time;
   }
 
-  QUIC_DLOG(INFO) << "Releasing packet.  " << (delayed_packets_.size() - 1)
-                  << " remaining.";
+  QUIC_DVLOG(1) << "Releasing packet.  " << (delayed_packets_.size() - 1)
+                << " remaining.";
   // Grab the next one off the queue and send it.
   QuicPacketWriterWrapper::WritePacket(
       iter->buffer.data(), iter->buffer.length(), iter->self_address,

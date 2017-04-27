@@ -493,7 +493,7 @@ void HttpServerPropertiesManager::UpdateCacheFromPrefsOnPrefThread() {
   } else {
     for (base::ListValue::const_iterator it = servers_list->begin();
          it != servers_list->end(); ++it) {
-      if (!(*it)->GetAsDictionary(&servers_dict)) {
+      if (!it->GetAsDictionary(&servers_dict)) {
         DVLOG(1) << "Malformed http_server_properties for servers dictionary.";
         detected_corrupted_prefs = true;
         continue;
@@ -651,7 +651,7 @@ bool HttpServerPropertiesManager::AddToAlternativeServiceMap(
   AlternativeServiceInfoVector alternative_service_info_vector;
   for (const auto& alternative_service_list_item : *alternative_service_list) {
     const base::DictionaryValue* alternative_service_dict;
-    if (!alternative_service_list_item->GetAsDictionary(
+    if (!alternative_service_list_item.GetAsDictionary(
             &alternative_service_dict))
       return false;
     AlternativeServiceInfo alternative_service_info;

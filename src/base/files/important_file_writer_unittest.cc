@@ -201,8 +201,8 @@ TEST_F(ImportantFileWriterTest, CallbackRunsOnWriterThread) {
       base::WaitableEvent::ResetPolicy::MANUAL,
       base::WaitableEvent::InitialState::NOT_SIGNALED);
   file_writer_thread.task_runner()->PostTask(
-      FROM_HERE,
-      base::Bind(&base::WaitableEvent::Wait, base::Unretained(&wait_helper)));
+      FROM_HERE, base::BindOnce(&base::WaitableEvent::Wait,
+                                base::Unretained(&wait_helper)));
 
   write_callback_observer_.ObserveNextWriteCallbacks(&writer);
   writer.WriteNow(MakeUnique<std::string>("foo"));

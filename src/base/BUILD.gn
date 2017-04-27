@@ -741,6 +741,7 @@ component("base") {
     "strings/string_number_conversions.h",
     "strings/string_piece.cc",
     "strings/string_piece.h",
+    "strings/string_piece_forward.h",
     "strings/string_split.cc",
     "strings/string_split.h",
     "strings/string_tokenizer.h",
@@ -980,6 +981,8 @@ component("base") {
     "trace_event/memory_infra_background_whitelist.h",
     "trace_event/memory_peak_detector.cc",
     "trace_event/memory_peak_detector.h",
+    "trace_event/memory_tracing_observer.cc",
+    "trace_event/memory_tracing_observer.h",
     "trace_event/memory_usage_estimator.cc",
     "trace_event/memory_usage_estimator.h",
     "trace_event/process_memory_dump.cc",
@@ -2113,7 +2116,6 @@ test("base_unittests") {
     "task_scheduler/task_scheduler_impl_unittest.cc",
     "task_scheduler/task_tracker_posix_unittest.cc",
     "task_scheduler/task_tracker_unittest.cc",
-    "task_scheduler/task_traits_unittest.cc",
     "task_scheduler/task_unittest.cc",
     "task_scheduler/test_task_factory.cc",
     "task_scheduler/test_task_factory.h",
@@ -2550,6 +2552,7 @@ if (is_android) {
   android_aidl("base_java_aidl") {
     import_include = [ "android/java/src" ]
     sources = [
+      "android/java/src/org/chromium/base/process_launcher/ICallbackInt.aidl",
       "android/java/src/org/chromium/base/process_launcher/IChildProcessService.aidl",
     ]
   }
@@ -2582,6 +2585,7 @@ if (is_android) {
       "//testing/android/reporter:reporter_java",
       "//third_party/android_support_test_runner:exposed_instrumentation_api_publish_java",
       "//third_party/android_support_test_runner:runner_java",
+      "//third_party/android_tools:android_support_chromium_java",
       "//third_party/hamcrest:hamcrest_core_java",
       "//third_party/junit",
     ]
@@ -2591,8 +2595,12 @@ if (is_android) {
       "test/android/javatests/src/org/chromium/base/test/BaseInstrumentationTestRunner.java",
       "test/android/javatests/src/org/chromium/base/test/BaseJUnit4ClassRunner.java",
       "test/android/javatests/src/org/chromium/base/test/BaseChromiumAndroidJUnitRunner.java",
+      "test/android/javatests/src/org/chromium/base/test/BaseChromiumRunnerCommon.java",
       "test/android/javatests/src/org/chromium/base/test/BaseTestResult.java",
+      "test/android/javatests/src/org/chromium/base/test/SetUpTestRule.java",
+      "test/android/javatests/src/org/chromium/base/test/SetUpStatement.java",
       "test/android/javatests/src/org/chromium/base/test/util/AdvancedMockContext.java",
+      "test/android/javatests/src/org/chromium/base/test/util/AnnotationProcessor.java",
       "test/android/javatests/src/org/chromium/base/test/util/CallbackHelper.java",
       "test/android/javatests/src/org/chromium/base/test/util/CommandLineFlags.java",
       "test/android/javatests/src/org/chromium/base/test/util/DisableIf.java",
@@ -2633,6 +2641,7 @@ if (is_android) {
       "android/junit/src/org/chromium/base/LogTest.java",
       "android/junit/src/org/chromium/base/NonThreadSafeTest.java",
       "android/junit/src/org/chromium/base/PromiseTest.java",
+      "test/android/junit/src/org/chromium/base/test/SetUpStatementTest.java",
       "test/android/junit/src/org/chromium/base/test/util/DisableIfTest.java",
       "test/android/junit/src/org/chromium/base/test/util/MinAndroidSdkLevelSkipCheckTest.java",
       "test/android/junit/src/org/chromium/base/test/util/RestrictionSkipCheckTest.java",
@@ -2658,7 +2667,7 @@ if (is_android) {
     sources = [
       "android/java/templates/BuildConfig.template",
     ]
-    package_name = "org/chromium/base"
+    package_path = "org/chromium/base"
 
     defines = []
     if (is_java_debug || dcheck_always_on) {
@@ -2670,7 +2679,7 @@ if (is_android) {
     sources = [
       "android/java/templates/NativeLibraries.template",
     ]
-    package_name = "org/chromium/base/library_loader"
+    package_path = "org/chromium/base/library_loader"
   }
 
   android_library("base_java_unittest_support") {

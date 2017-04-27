@@ -7,20 +7,22 @@ import("//build/config/chromecast_build.gni")
 assert(is_chromecast)
 
 config("static_config") {
-  ldflags = [
-    # Don't allow visible symbols from libraries that contain
-    # assembly code with symbols that aren't hidden properly.
-    # http://b/26390825
-    "-Wl,--exclude-libs=libffmpeg.a",
-  ]
-
-  if (!is_android) {
-    ldflags += [
-      # We want to statically link libstdc++/libgcc on Linux.
-      # (On Android, libstdc++ and libgcc aren't used.)
-      "-static-libstdc++",
-      "-static-libgcc",
+  if (!is_clang) {
+    ldflags = [
+      # Don't allow visible symbols from libraries that contain
+      # assembly code with symbols that aren't hidden properly.
+      # http://b/26390825
+      "-Wl,--exclude-libs=libffmpeg.a",
     ]
+
+    if (!is_android) {
+      ldflags += [
+        # We want to statically link libstdc++/libgcc on Linux.
+        # (On Android, libstdc++ and libgcc aren't used.)
+        "-static-libstdc++",
+        "-static-libgcc",
+      ]
+    }
   }
 }
 
@@ -73,9 +75,11 @@ config("executable_config") {
   }
 }
 
+# Shared libaries should not have RPATH or RUNPATH set. This allows the
+# shared libs to inherit RPATH from the parent executable that is loading
+# the shared library. (See internal b/37514052 for more details.)
 config("shared_library_config") {
-  configs = [ ":ldconfig" ]
-  if (!is_clang && current_cpu == "arm") {
-    configs += [ ":static_config" ]
+  if (current_cpu == "arm") {
+    configs = [ ":static_config" ]
   }
 }

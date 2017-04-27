@@ -37,7 +37,8 @@ class QuicClientSession : public QuicClientSessionBase {
   // QuicSession methods:
   QuicSpdyClientStream* CreateOutgoingDynamicStream(
       SpdyPriority priority) override;
-  QuicCryptoClientStreamBase* GetCryptoStream() override;
+  QuicCryptoClientStreamBase* GetMutableCryptoStream() override;
+  const QuicCryptoClientStreamBase* GetCryptoStream() const override;
 
   bool IsAuthorized(const std::string& authority) override;
 

@@ -15,7 +15,7 @@
 #include "net/der/parse_values.h"
 #include "net/der/parser.h"
 #include "testing/gtest/include/gtest/gtest.h"
-#include "third_party/boringssl/src/include/openssl/obj.h"
+#include "third_party/boringssl/src/include/openssl/nid.h"
 
 namespace net {
 

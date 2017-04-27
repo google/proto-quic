@@ -4,7 +4,7 @@
 
 #include "net/quic/core/quic_header_list.h"
 
-#include "net/quic/core/quic_flags.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
 

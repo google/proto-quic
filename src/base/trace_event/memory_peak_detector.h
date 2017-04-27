@@ -23,6 +23,13 @@ namespace trace_event {
 
 struct MemoryDumpProviderInfo;
 
+// Detects temporally local memory peaks. Peak detection is based on
+// continuously querying memory usage using MemoryDumpprovider(s) that support
+// fast polling (e.g., ProcessMetricsDumpProvider which under the hoods reads
+// /proc/PID/statm on Linux) and using a cobination of:
+// - An static threshold (currently 1% of total system memory).
+// - Sliding window stddev analysis.
+// Design doc: https://goo.gl/0kOU4A .
 // This class is NOT thread-safe, the caller has to ensure linearization of
 // the calls to the public methods. In any case, the public methods do NOT have
 // to be called from the |task_runner| on which the polling tasks run.
@@ -37,6 +44,26 @@ class BASE_EXPORT MemoryPeakDetector {
     DISABLED,             // Before Start() or after Stop().
     ENABLED,              // After Start() but no dump_providers_ are available.
     RUNNING  // After Start(). The PollMemoryAndDetectPeak() task is scheduled.
+  };
+
+  // Peak detector configuration, passed to Start().
+  struct BASE_EXPORT Config {
+    Config();
+    Config(uint32_t polling_interval_ms,
+           uint32_t min_time_between_peaks_ms,
+           bool enable_verbose_poll_tracing);
+
+    // The rate at which memory will be polled. Polls will happen on the task
+    // runner passed to Setup().
+    uint32_t polling_interval_ms;
+
+    // Two consecutive peak detection callbacks will happen at least
+    // |min_time_between_peaks_ms| apart from each other.
+    uint32_t min_time_between_peaks_ms;
+
+    // When enabled causes a TRACE_COUNTER event to be injected in the trace
+    // for each poll (if tracing is enabled).
+    bool enable_verbose_poll_tracing;
   };
 
   static MemoryPeakDetector* GetInstance();
@@ -66,7 +93,7 @@ class BASE_EXPORT MemoryPeakDetector {
   // If not, the detector remains in the ENABLED state and will start polling
   // automatically (i.e. without requiring another call to Start()) on the
   // next call to NotifyMemoryDumpProvidersChanged().
-  void Start();
+  void Start(Config);
 
   // Stops the polling on the task runner (if was active at all). This doesn't
   // wait for the task runner to drain pending tasks, so it is possible that
@@ -75,24 +102,34 @@ class BASE_EXPORT MemoryPeakDetector {
   // with the task runner.
   void Stop();
 
+  // If Start()-ed, prevents that a peak callback is triggered before the next
+  // |min_time_between_peaks_ms|. No-op if the peak detector is not enabled.
+  void Throttle();
+
   // Used by MemoryDumpManager to notify that the list of polling-capable dump
   // providers has changed. The peak detector will reload the list on the next
   // polling task. This function can be called before Setup(), in which
   // case will be just a no-op.
   void NotifyMemoryDumpProvidersChanged();
 
+  void SetStaticThresholdForTesting(uint64_t static_threshold_bytes);
+
  private:
   friend class MemoryPeakDetectorTest;
+
+  static constexpr uint32_t kSlidingWindowNumSamples = 50;
 
   MemoryPeakDetector();
   ~MemoryPeakDetector();
 
   // All these methods are always called on the |task_runner_|.
-  void StartInternal();
+  void StartInternal(Config);
   void StopInternal();
   void TearDownInternal();
   void ReloadDumpProvidersAndStartPollingIfNeeded();
   void PollMemoryAndDetectPeak(uint32_t expected_generation);
+  bool DetectPeakUsingSlidingWindowStddev(uint64_t last_sample_bytes);
+  void ResetPollHistory(bool keep_last_sample = false);
 
   // It is safe to call these testing methods only on the |task_runner_|.
   State state_for_testing() const { return state_; }
@@ -127,7 +164,15 @@ class BASE_EXPORT MemoryPeakDetector {
   uint32_t generation_;
 
   State state_;
-  uint32_t polling_interval_ms_;
+
+  // Config passed to Start(), only valid when |state_| = {ENABLED, RUNNING}.
+  Config config_;
+
+  uint64_t static_threshold_bytes_;
+  uint32_t skip_polls_;
+  uint64_t last_dump_memory_total_;
+  uint64_t samples_bytes_[kSlidingWindowNumSamples];
+  uint32_t samples_index_;
   uint32_t poll_tasks_count_for_testing_;
 
   DISALLOW_COPY_AND_ASSIGN(MemoryPeakDetector);

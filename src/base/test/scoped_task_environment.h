@@ -32,7 +32,17 @@ namespace test {
 // https://docs.google.com/document/d/1QabRo8c7D9LsYY3cEcaPQbOCLo8Tu-6VLykYXyl3Pkk/edit
 class ScopedTaskEnvironment {
  public:
-  ScopedTaskEnvironment();
+  enum class MainThreadType {
+    // The main thread doesn't pump messages.
+    DEFAULT,
+    // The main thread pumps UI messages.
+    UI,
+    // The main thread pumps asynchronous IO messages.
+    IO,
+  };
+
+  ScopedTaskEnvironment(
+      MainThreadType main_thread_type = MainThreadType::DEFAULT);
 
   // Runs pending (Thread|Sequenced)TaskRunnerHandle tasks and pending
   // BLOCK_SHUTDOWN TaskScheduler tasks. Then, unregisters the TaskScheduler and

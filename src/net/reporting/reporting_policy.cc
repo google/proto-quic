@@ -4,9 +4,20 @@
 
 #include "net/reporting/reporting_policy.h"
 
+#include "base/time/time.h"
+
 namespace net {
 
-ReportingPolicy::ReportingPolicy() {
+ReportingPolicy::ReportingPolicy()
+    : delivery_interval(base::TimeDelta::FromMinutes(1)),
+      persistence_interval(base::TimeDelta::FromMinutes(1)),
+      persist_reports_across_restarts(false),
+      persist_clients_across_restarts(true),
+      garbage_collection_interval(base::TimeDelta::FromMinutes(5)),
+      max_report_age(base::TimeDelta::FromMinutes(15)),
+      max_report_attempts(5),
+      clear_reports_on_network_changes(true),
+      clear_clients_on_network_changes(false) {
   endpoint_backoff_policy.num_errors_to_ignore = 0;
   endpoint_backoff_policy.initial_delay_ms = 60 * 1000;  // 1 minute
   endpoint_backoff_policy.multiply_factor = 2.0;
@@ -17,7 +28,17 @@ ReportingPolicy::ReportingPolicy() {
 }
 
 ReportingPolicy::ReportingPolicy(const ReportingPolicy& other)
-    : endpoint_backoff_policy(other.endpoint_backoff_policy) {}
+    : delivery_interval(base::TimeDelta::FromMinutes(1)),
+      endpoint_backoff_policy(other.endpoint_backoff_policy),
+      persistence_interval(other.persistence_interval),
+      persist_reports_across_restarts(other.persist_reports_across_restarts),
+      persist_clients_across_restarts(other.persist_clients_across_restarts),
+      garbage_collection_interval(other.garbage_collection_interval),
+      max_report_age(other.max_report_age),
+      max_report_attempts(other.max_report_attempts),
+      clear_reports_on_network_changes(other.clear_reports_on_network_changes),
+      clear_clients_on_network_changes(other.clear_clients_on_network_changes) {
+}
 
 ReportingPolicy::~ReportingPolicy() {}
 

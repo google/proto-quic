@@ -189,7 +189,7 @@ def main(args):
 
   native_libs = sorted(options.native_libs)
 
-  input_paths = [options.resource_apk, __file__] + native_libs
+  input_paths = [options.resource_apk, __file__]
   # Include native libs in the depfile_deps since GN doesn't know about the
   # dependencies when is_component_build=true.
   depfile_deps = list(native_libs)
@@ -197,7 +197,6 @@ def main(args):
   secondary_native_libs = []
   if options.secondary_native_libs:
     secondary_native_libs = sorted(options.secondary_native_libs)
-    input_paths += secondary_native_libs
     depfile_deps += secondary_native_libs
 
   if options.dex_file:
@@ -211,13 +210,15 @@ def main(args):
     input_strings.append(options.secondary_android_abi)
 
   if options.java_resources:
-    input_paths.extend(options.java_resources)
+    # Included via .build_config, so need to write it to depfile.
+    depfile_deps.extend(options.java_resources)
 
   _assets = _ExpandPaths(options.assets)
   _uncompressed_assets = _ExpandPaths(options.uncompressed_assets)
 
   for src_path, dest_path in itertools.chain(_assets, _uncompressed_assets):
-    input_paths.append(src_path)
+    # Included via .build_config, so need to write it to depfile.
+    depfile_deps.append(src_path)
     input_strings.append(dest_path)
 
   def on_stale_md5():
@@ -309,7 +310,7 @@ def main(args):
   build_utils.CallAndWriteDepfileIfStale(
       on_stale_md5,
       options,
-      input_paths=input_paths,
+      input_paths=input_paths + depfile_deps,
       input_strings=input_strings,
       output_paths=[options.output_apk],
       depfile_deps=depfile_deps)

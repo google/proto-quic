@@ -102,7 +102,6 @@ const Flag<bool> kBoolFlags[] = {
   { "-renegotiate-ignore", &TestConfig::renegotiate_ignore },
   { "-p384-only", &TestConfig::p384_only },
   { "-enable-all-curves", &TestConfig::enable_all_curves },
-  { "-use-sparse-dh-prime", &TestConfig::use_sparse_dh_prime },
   { "-use-old-client-cert-callback",
     &TestConfig::use_old_client_cert_callback },
   { "-send-alert", &TestConfig::send_alert },
@@ -131,6 +130,7 @@ const Flag<bool> kBoolFlags[] = {
   { "-no-op-extra-handshake", &TestConfig::no_op_extra_handshake },
   { "-handshake-twice", &TestConfig::handshake_twice },
   { "-allow-unknown-alpn-protos", &TestConfig::allow_unknown_alpn_protos },
+  { "-enable-ed25519", &TestConfig::enable_ed25519 },
 };
 
 const Flag<std::string> kStringFlags[] = {
@@ -195,6 +195,7 @@ const Flag<int> kIntFlags[] = {
 
 const Flag<std::vector<int>> kIntVectorFlags[] = {
   { "-signing-prefs", &TestConfig::signing_prefs },
+  { "-verify-prefs", &TestConfig::verify_prefs },
 };
 
 }  // namespace

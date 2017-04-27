@@ -14,6 +14,7 @@ import android.os.Build;
 import android.text.TextUtils;
 import android.util.Log;
 
+import org.chromium.base.ContextUtils;
 import org.chromium.base.annotations.CalledByNative;
 import org.chromium.base.annotations.JNINamespace;
 import org.chromium.base.annotations.NativeClassQualifiedName;
@@ -31,7 +32,6 @@ public class ProxyChangeListener {
     private static boolean sEnabled = true;
 
     private long mNativePtr;
-    private Context mContext;
     private ProxyReceiver mProxyReceiver;
     private Delegate mDelegate;
 
@@ -55,9 +55,7 @@ public class ProxyChangeListener {
         public void proxySettingsChanged();
     }
 
-    private ProxyChangeListener(Context context) {
-        mContext = context;
-    }
+    private ProxyChangeListener() {}
 
     public static void setEnabled(boolean enabled) {
         sEnabled = enabled;
@@ -68,8 +66,8 @@ public class ProxyChangeListener {
     }
 
     @CalledByNative
-    public static ProxyChangeListener create(Context context) {
-        return new ProxyChangeListener(context);
+    public static ProxyChangeListener create() {
+        return new ProxyChangeListener();
     }
 
     @CalledByNative
@@ -202,14 +200,14 @@ public class ProxyChangeListener {
         IntentFilter filter = new IntentFilter();
         filter.addAction(Proxy.PROXY_CHANGE_ACTION);
         mProxyReceiver = new ProxyReceiver();
-        mContext.getApplicationContext().registerReceiver(mProxyReceiver, filter);
+        ContextUtils.getApplicationContext().registerReceiver(mProxyReceiver, filter);
     }
 
     private void unregisterReceiver() {
         if (mProxyReceiver == null) {
             return;
         }
-        mContext.unregisterReceiver(mProxyReceiver);
+        ContextUtils.getApplicationContext().unregisterReceiver(mProxyReceiver);
         mProxyReceiver = null;
     }
 

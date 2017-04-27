@@ -147,10 +147,10 @@ def _ApplyEdits(edits):
     error_count += tmp_error_count
     done_files += 1
     percentage = (float(done_files) / len(edits)) * 100
-    sys.stderr.write('Applied %d edits (%d errors) to %d files [%.2f%%]\r' %
+    sys.stdout.write('Applied %d edits (%d errors) to %d files [%.2f%%]\r' %
                      (edit_count, error_count, done_files, percentage))
 
-  sys.stderr.write('\n')
+  sys.stdout.write('\n')
   return -error_count
 
 

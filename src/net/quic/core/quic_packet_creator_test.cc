@@ -359,7 +359,7 @@ TEST_P(QuicPacketCreatorTest, ReserializeFramesWithFullPadding) {
   delete frame.stream_frame;
 }
 
-TEST_P(QuicPacketCreatorTest, ReserializeFramesWithSpecifiedPadding) {
+TEST_P(QuicPacketCreatorTest, DoNotRetransmitPendingPadding) {
   QuicFrame frame;
   QuicIOVector io_vector(MakeIOVectorFromStringPiece("fake message data"));
   QuicPacketCreatorPeer::CreateStreamFrame(&creator_, kCryptoStreamId,
@@ -381,6 +381,20 @@ TEST_P(QuicPacketCreatorTest, ReserializeFramesWithSpecifiedPadding) {
     packet_size = serialized_packet_.encrypted_length;
   }
 
+  {
+    InSequence s;
+    EXPECT_CALL(framer_visitor_, OnPacket());
+    EXPECT_CALL(framer_visitor_, OnUnauthenticatedPublicHeader(_));
+    EXPECT_CALL(framer_visitor_, OnUnauthenticatedHeader(_));
+    EXPECT_CALL(framer_visitor_, OnDecryptedPacket(_));
+    EXPECT_CALL(framer_visitor_, OnPacketHeader(_));
+    EXPECT_CALL(framer_visitor_, OnStreamFrame(_));
+    // Pending paddings are not retransmitted.
+    EXPECT_CALL(framer_visitor_, OnPaddingFrame(_)).Times(0);
+    EXPECT_CALL(framer_visitor_, OnPacketComplete());
+  }
+  ProcessPacket(serialized_packet_);
+
   const int kNumPaddingBytes2 = 44;
   QuicFrames frames;
   frames.push_back(frame);
@@ -393,8 +407,7 @@ TEST_P(QuicPacketCreatorTest, ReserializeFramesWithSpecifiedPadding) {
       .WillOnce(Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
   creator_.ReserializeAllFrames(retransmission, buffer, kMaxPacketSize);
 
-  EXPECT_EQ(packet_size + kNumPaddingBytes2 - kNumPaddingBytes1,
-            serialized_packet_.encrypted_length);
+  EXPECT_EQ(packet_size, serialized_packet_.encrypted_length);
   delete frame.stream_frame;
 }
 
@@ -851,6 +864,169 @@ TEST_P(QuicPacketCreatorTest, ChloTooLarge) {
   EXPECT_QUIC_BUG(creator_.ConsumeData(kCryptoStreamId, data_iovec, 0u, 0u,
                                        false, false, &frame),
                   "Client hello won't fit in a single packet.");
+}
+
+TEST_P(QuicPacketCreatorTest, PendingPadding) {
+  EXPECT_EQ(0u, creator_.pending_padding_bytes());
+  creator_.AddPendingPadding(kMaxNumRandomPaddingBytes * 10);
+  EXPECT_EQ(kMaxNumRandomPaddingBytes * 10, creator_.pending_padding_bytes());
+
+  EXPECT_CALL(delegate_, OnSerializedPacket(_))
+      .WillRepeatedly(
+          Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
+  // Flush all paddings.
+  while (creator_.pending_padding_bytes() > 0) {
+    creator_.Flush();
+    {
+      InSequence s;
+      EXPECT_CALL(framer_visitor_, OnPacket());
+      EXPECT_CALL(framer_visitor_, OnUnauthenticatedPublicHeader(_));
+      EXPECT_CALL(framer_visitor_, OnUnauthenticatedHeader(_));
+      EXPECT_CALL(framer_visitor_, OnDecryptedPacket(_));
+      EXPECT_CALL(framer_visitor_, OnPacketHeader(_));
+      EXPECT_CALL(framer_visitor_, OnPaddingFrame(_));
+      EXPECT_CALL(framer_visitor_, OnPacketComplete());
+    }
+    // Packet only contains padding.
+    ProcessPacket(serialized_packet_);
+  }
+  EXPECT_EQ(0u, creator_.pending_padding_bytes());
+}
+
+TEST_P(QuicPacketCreatorTest, FullPaddingDoesNotConsumePendingPadding) {
+  creator_.AddPendingPadding(kMaxNumRandomPaddingBytes);
+  QuicFrame frame;
+  QuicIOVector io_vector(MakeIOVectorFromStringPiece("test"));
+  ASSERT_TRUE(creator_.ConsumeData(kCryptoStreamId, io_vector, 0u, 0u, false,
+                                   /*needs_full_padding=*/true, &frame));
+  EXPECT_CALL(delegate_, OnSerializedPacket(_))
+      .WillOnce(Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
+  creator_.Flush();
+  EXPECT_EQ(kMaxNumRandomPaddingBytes, creator_.pending_padding_bytes());
+}
+
+TEST_P(QuicPacketCreatorTest, SendPendingPaddingInRetransmission) {
+  QuicStreamFrame* stream_frame = new QuicStreamFrame(
+      kCryptoStreamId, /*fin=*/false, 0u, QuicStringPiece());
+  QuicFrames frames;
+  frames.push_back(QuicFrame(stream_frame));
+  char buffer[kMaxPacketSize];
+  QuicPendingRetransmission retransmission(
+      CreateRetransmission(frames, true, /*num_padding_bytes=*/0,
+                           ENCRYPTION_NONE, PACKET_1BYTE_PACKET_NUMBER));
+  EXPECT_CALL(delegate_, OnSerializedPacket(_))
+      .WillOnce(Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
+  creator_.AddPendingPadding(kMaxNumRandomPaddingBytes);
+  creator_.ReserializeAllFrames(retransmission, buffer, kMaxPacketSize);
+  EXPECT_EQ(0u, creator_.pending_padding_bytes());
+  {
+    InSequence s;
+    EXPECT_CALL(framer_visitor_, OnPacket());
+    EXPECT_CALL(framer_visitor_, OnUnauthenticatedPublicHeader(_));
+    EXPECT_CALL(framer_visitor_, OnUnauthenticatedHeader(_));
+    EXPECT_CALL(framer_visitor_, OnDecryptedPacket(_));
+    EXPECT_CALL(framer_visitor_, OnPacketHeader(_));
+    EXPECT_CALL(framer_visitor_, OnStreamFrame(_));
+    EXPECT_CALL(framer_visitor_, OnPaddingFrame(_));
+    EXPECT_CALL(framer_visitor_, OnPacketComplete());
+  }
+  ProcessPacket(serialized_packet_);
+  delete stream_frame;
+}
+
+TEST_P(QuicPacketCreatorTest, SendPacketAfterFullPaddingRetransmission) {
+  // Making sure needs_full_padding gets reset after a full padding
+  // retransmission.
+  EXPECT_EQ(0u, creator_.pending_padding_bytes());
+  QuicFrame frame;
+  QuicIOVector io_vector(
+      MakeIOVectorFromStringPiece("fake handshake message data"));
+  QuicPacketCreatorPeer::CreateStreamFrame(&creator_, kCryptoStreamId,
+                                           io_vector, 0u, 0u, false, &frame);
+  QuicFrames frames;
+  frames.push_back(frame);
+  char buffer[kMaxPacketSize];
+  QuicPendingRetransmission retransmission(CreateRetransmission(
+      frames, true, /*num_padding_bytes=*/-1, ENCRYPTION_NONE,
+      QuicPacketCreatorPeer::GetPacketNumberLength(&creator_)));
+  EXPECT_CALL(delegate_, OnSerializedPacket(_))
+      .WillRepeatedly(
+          Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
+  creator_.ReserializeAllFrames(retransmission, buffer, kMaxPacketSize);
+  EXPECT_EQ(kDefaultMaxPacketSize, serialized_packet_.encrypted_length);
+  {
+    InSequence s;
+    EXPECT_CALL(framer_visitor_, OnPacket());
+    EXPECT_CALL(framer_visitor_, OnUnauthenticatedPublicHeader(_));
+    EXPECT_CALL(framer_visitor_, OnUnauthenticatedHeader(_));
+    EXPECT_CALL(framer_visitor_, OnDecryptedPacket(_));
+    EXPECT_CALL(framer_visitor_, OnPacketHeader(_));
+    EXPECT_CALL(framer_visitor_, OnStreamFrame(_));
+    // Full padding.
+    EXPECT_CALL(framer_visitor_, OnPaddingFrame(_));
+    EXPECT_CALL(framer_visitor_, OnPacketComplete());
+  }
+  ProcessPacket(serialized_packet_);
+  delete frame.stream_frame;
+
+  creator_.ConsumeData(kCryptoStreamId, io_vector, 0u, 0u, false, false,
+                       &frame);
+  creator_.Flush();
+  {
+    InSequence s;
+    EXPECT_CALL(framer_visitor_, OnPacket());
+    EXPECT_CALL(framer_visitor_, OnUnauthenticatedPublicHeader(_));
+    EXPECT_CALL(framer_visitor_, OnUnauthenticatedHeader(_));
+    EXPECT_CALL(framer_visitor_, OnDecryptedPacket(_));
+    EXPECT_CALL(framer_visitor_, OnPacketHeader(_));
+    EXPECT_CALL(framer_visitor_, OnStreamFrame(_));
+    // needs_full_padding gets reset.
+    EXPECT_CALL(framer_visitor_, OnPaddingFrame(_)).Times(0);
+    EXPECT_CALL(framer_visitor_, OnPacketComplete());
+  }
+  ProcessPacket(serialized_packet_);
+}
+
+TEST_P(QuicPacketCreatorTest, ConsumeDataAndRandomPadding) {
+  const QuicByteCount kStreamFramePayloadSize = 100u;
+  // Set the packet size be enough for one stream frame with 0 stream offset +
+  // 1.
+  size_t length = GetPacketHeaderOverhead(client_framer_.version()) +
+                  GetEncryptionOverhead() +
+                  QuicFramer::GetMinStreamFrameSize(
+                      kCryptoStreamId, 0, /*last_frame_in_packet=*/false) +
+                  kStreamFramePayloadSize + 1;
+  creator_.SetMaxPacketLength(length);
+  creator_.AddPendingPadding(kMaxNumRandomPaddingBytes);
+  QuicByteCount pending_padding_bytes = creator_.pending_padding_bytes();
+  QuicFrame frame;
+  char buf[kStreamFramePayloadSize + 1] = {};
+  EXPECT_CALL(delegate_, OnSerializedPacket(_))
+      .WillRepeatedly(
+          Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
+  // Send stream frame of size kStreamFramePayloadSize.
+  creator_.ConsumeData(kCryptoStreamId,
+                       MakeIOVectorFromStringPiece(
+                           QuicStringPiece(buf, kStreamFramePayloadSize)),
+                       0u, 0u, false, false, &frame);
+  creator_.Flush();
+  delete frame.stream_frame;
+  // 1 byte padding is sent.
+  EXPECT_EQ(pending_padding_bytes - 1, creator_.pending_padding_bytes());
+  // Send stream frame of size kStreamFramePayloadSize + 1.
+  creator_.ConsumeData(kCryptoStreamId,
+                       MakeIOVectorFromStringPiece(
+                           QuicStringPiece(buf, kStreamFramePayloadSize + 1)),
+                       0u, 0u, false, false, &frame);
+  // No padding is sent.
+  creator_.Flush();
+  delete frame.stream_frame;
+  EXPECT_EQ(pending_padding_bytes - 1, creator_.pending_padding_bytes());
+  // Flush all paddings.
+  while (creator_.pending_padding_bytes() > 0) {
+    creator_.Flush();
+  }
+  EXPECT_EQ(0u, creator_.pending_padding_bytes());
 }
 
 }  // namespace

@@ -9,12 +9,13 @@
 #include <set>
 
 #include "base/macros.h"
+#include "base/optional.h"
 #include "net/base/net_export.h"
 #include "net/http/http_stream_factory_impl.h"
 #include "net/log/net_log_with_source.h"
 #include "net/socket/connection_attempts.h"
 #include "net/socket/ssl_client_socket.h"
-#include "net/spdy/spdy_session_key.h"
+#include "net/spdy/chromium/spdy_session_key.h"
 #include "url/gurl.h"
 
 namespace net {
@@ -63,15 +64,22 @@ class HttpStreamFactoryImpl::Request : public HttpStreamRequest {
   // for the Request. Note that this does not mean that SPDY is necessarily
   // supported for this SpdySessionKey, since we may need to wait for NPN to
   // complete before knowing if SPDY is available.
-  void SetSpdySessionKey(const SpdySessionKey& spdy_session_key);
-  bool HasSpdySessionKey() const;
+  void SetSpdySessionKey(const SpdySessionKey& spdy_session_key) {
+    spdy_session_key_ = spdy_session_key;
+  }
+  bool HasSpdySessionKey() const { return spdy_session_key_.has_value(); }
+  const SpdySessionKey& GetSpdySessionKey() const {
+    DCHECK(HasSpdySessionKey());
+    return spdy_session_key_.value();
+  }
+  void ResetSpdySessionKey() { spdy_session_key_.reset(); }
+
+  HttpStreamRequest::StreamType stream_type() const { return stream_type_; }
 
   // Marks completion of the request. Must be called before OnStreamReady().
   void Complete(bool was_alpn_negotiated,
                 NextProto negotiated_protocol,
                 bool using_spdy);
-
-  void ResetSpdySessionKey();
 
   // Called by |helper_| to record connection attempts made by the socket
   // layer in an attached Job for this stream request.
@@ -84,7 +92,6 @@ class HttpStreamFactoryImpl::Request : public HttpStreamRequest {
 
   // HttpStreamRequest::Delegate methods which we implement. Note we don't
   // actually subclass HttpStreamRequest::Delegate.
-
   void OnStreamReady(const SSLConfig& used_ssl_config,
                      const ProxyInfo& used_proxy_info,
                      HttpStream* stream);
@@ -112,7 +119,6 @@ class HttpStreamFactoryImpl::Request : public HttpStreamRequest {
       HttpStream* stream);
 
   // HttpStreamRequest methods.
-
   int RestartTunnelWithProxyAuth() override;
   void SetPriority(RequestPriority priority) override;
   LoadState GetLoadState() const override;
@@ -120,10 +126,6 @@ class HttpStreamFactoryImpl::Request : public HttpStreamRequest {
   NextProto negotiated_protocol() const override;
   bool using_spdy() const override;
   const ConnectionAttempts& connection_attempts() const override;
-  HttpStreamRequest::StreamType stream_type() const { return stream_type_; }
-  const SpdySessionKey* spdy_session_key() const {
-    return spdy_session_key_.get();
-  }
 
  private:
   const GURL url_;
@@ -136,7 +138,7 @@ class HttpStreamFactoryImpl::Request : public HttpStreamRequest {
   HttpStreamRequest::Delegate* const delegate_;
   const NetLogWithSource net_log_;
 
-  std::unique_ptr<const SpdySessionKey> spdy_session_key_;
+  base::Optional<SpdySessionKey> spdy_session_key_;
 
   bool completed_;
   bool was_alpn_negotiated_;

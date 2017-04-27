@@ -39,10 +39,11 @@ bool PostTaskAndReplyWithResult(TaskRunner* task_runner,
   DCHECK(reply);
   TaskReturnType* result = new TaskReturnType();
   return task_runner->PostTaskAndReply(
-      from_here, base::Bind(&internal::ReturnAsParamAdapter<TaskReturnType>,
-                            std::move(task), result),
-      base::Bind(&internal::ReplyAdapter<TaskReturnType, ReplyArgType>,
-                 std::move(reply), base::Owned(result)));
+      from_here,
+      base::BindOnce(&internal::ReturnAsParamAdapter<TaskReturnType>,
+                     std::move(task), result),
+      base::BindOnce(&internal::ReplyAdapter<TaskReturnType, ReplyArgType>,
+                     std::move(reply), base::Owned(result)));
 }
 
 }  // namespace base

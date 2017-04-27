@@ -5,6 +5,8 @@
 
 """
 Uploads or downloads third party libraries to or from google cloud storage.
+
+This script will only work for Android checkouts.
 """
 
 import argparse

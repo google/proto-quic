@@ -109,9 +109,8 @@ bool PacingSender::OnPacketSent(
   return in_flight;
 }
 
-QuicTime::Delta PacingSender::TimeUntilSend(
-    QuicTime now,
-    QuicByteCount bytes_in_flight) const {
+QuicTime::Delta PacingSender::TimeUntilSend(QuicTime now,
+                                            QuicByteCount bytes_in_flight) {
   DCHECK(sender_ != nullptr);
   QuicTime::Delta time_until_send =
       sender_->TimeUntilSend(now, bytes_in_flight);

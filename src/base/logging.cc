@@ -7,12 +7,12 @@
 #include <limits.h>
 #include <stdint.h>
 
-#include "base/debug/activity_tracker.h"
 #include "base/macros.h"
 #include "build/build_config.h"
 
 #if defined(OS_WIN)
 #include <io.h>
+#include <windows.h>
 typedef HANDLE FileHandle;
 typedef HANDLE MutexHandle;
 // Windows warns on using write().  It prefers _write().
@@ -51,13 +51,18 @@ typedef pthread_mutex_t* MutexHandle;
 #include <ctime>
 #include <iomanip>
 #include <ostream>
+#include <stack>
 #include <string>
+#include <utility>
 
 #include "base/base_switches.h"
+#include "base/callback.h"
 #include "base/command_line.h"
+#include "base/debug/activity_tracker.h"
 #include "base/debug/alias.h"
 #include "base/debug/debugger.h"
 #include "base/debug/stack_trace.h"
+#include "base/lazy_instance.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/string_util.h"
@@ -121,8 +126,11 @@ bool g_log_tickcount = false;
 bool show_error_dialogs = false;
 
 // An assert handler override specified by the client to be called instead of
-// the debug message dialog and process termination.
-LogAssertHandlerFunction log_assert_handler = nullptr;
+// the debug message dialog and process termination. Assert handlers are stored
+// in stack to allow overriding and restoring.
+base::LazyInstance<std::stack<LogAssertHandlerFunction>>::Leaky
+    log_assert_handler_stack = LAZY_INSTANCE_INITIALIZER;
+
 // A log message handler that gets notified of every log message we process.
 LogMessageHandlerFunction log_message_handler = nullptr;
 
@@ -444,8 +452,13 @@ void SetShowErrorDialogs(bool enable_dialogs) {
   show_error_dialogs = enable_dialogs;
 }
 
-void SetLogAssertHandler(LogAssertHandlerFunction handler) {
-  log_assert_handler = handler;
+ScopedLogAssertHandler::ScopedLogAssertHandler(
+    LogAssertHandlerFunction handler) {
+  log_assert_handler_stack.Get().push(std::move(handler));
+}
+
+ScopedLogAssertHandler::~ScopedLogAssertHandler() {
+  log_assert_handler_stack.Get().pop();
 }
 
 void SetLogMessageHandler(LogMessageHandlerFunction handler) {
@@ -531,7 +544,9 @@ LogMessage::LogMessage(const char* file, int line, LogSeverity severity,
 }
 
 LogMessage::~LogMessage() {
-#if !defined(OFFICIAL_BUILD) && !defined(OS_NACL) && !defined(__UCLIBC__)
+  size_t stack_start = stream_.tellp();
+#if !defined(OFFICIAL_BUILD) && !defined(OS_NACL) && !defined(__UCLIBC__) && \
+    !defined(OS_AIX)
   if (severity_ == LOG_FATAL && !base::debug::BeingDebugged()) {
     // Include a stack trace on a fatal, unless a debugger is attached.
     base::debug::StackTrace trace;
@@ -739,9 +754,18 @@ LogMessage::~LogMessage() {
     str_newline.copy(str_stack, arraysize(str_stack));
     base::debug::Alias(str_stack);
 
-    if (log_assert_handler) {
-      // Make a copy of the string for the handler out of paranoia.
-      log_assert_handler(std::string(stream_.str()));
+    if (!(log_assert_handler_stack == nullptr) &&
+        !log_assert_handler_stack.Get().empty()) {
+      LogAssertHandlerFunction log_assert_handler =
+          log_assert_handler_stack.Get().top();
+
+      if (log_assert_handler) {
+        log_assert_handler.Run(
+            file_, line_,
+            base::StringPiece(str_newline.c_str() + message_start_,
+                              stack_start - message_start_),
+            base::StringPiece(str_newline.c_str() + stack_start));
+      }
     } else {
       // Don't use the string with the newline, get a fresh version to send to
       // the debug message process. We also don't display assertions to the

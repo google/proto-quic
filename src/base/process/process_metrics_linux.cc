@@ -92,7 +92,7 @@ size_t ReadProcStatusAndGetFieldAsSizeT(pid_t pid, const std::string& field) {
   return 0;
 }
 
-#if defined(OS_LINUX)
+#if defined(OS_LINUX) || defined(OS_AIX)
 // Read /proc/<pid>/sched and look for |field|. On succes, return true and
 // write the value for |field| into |result|.
 // Only works for fields in the form of "field    :     uint_value"
@@ -124,7 +124,7 @@ bool ReadProcSchedAndGetFieldAsUint64(pid_t pid,
   }
   return false;
 }
-#endif  // defined(OS_LINUX)
+#endif  // defined(OS_LINUX) || defined(OS_AIX)
 
 // Get the total CPU of a single process.  Return value is number of jiffies
 // on success or -1 on error.
@@ -293,7 +293,7 @@ bool ProcessMetrics::GetIOCounters(IoCounters* io_counters) const {
   return true;
 }
 
-#if defined(OS_LINUX)
+#if defined(OS_LINUX) || defined(OS_AIX)
 int ProcessMetrics::GetOpenFdCount() const {
   // Use /proc/<pid>/fd to count the number of entries there.
   FilePath fd_path = internal::GetProcPidDir(process_).Append("fd");
@@ -337,12 +337,12 @@ int ProcessMetrics::GetOpenFdSoftLimit() const {
   return -1;
 }
 
-#endif  // defined(OS_LINUX)
+#endif  // defined(OS_LINUX) || defined(OS_AIX)
 
 ProcessMetrics::ProcessMetrics(ProcessHandle process)
     : process_(process),
       last_system_time_(0),
-#if defined(OS_LINUX)
+#if defined(OS_LINUX) || defined(OS_AIX)
       last_absolute_idle_wakeups_(0),
 #endif
       last_cpu_(0) {
@@ -957,13 +957,13 @@ void GetSwapInfo(SwapInfo* swap_info) {
 }
 #endif  // defined(OS_CHROMEOS)
 
-#if defined(OS_LINUX)
+#if defined(OS_LINUX) || defined(OS_AIX)
 int ProcessMetrics::GetIdleWakeupsPerSecond() {
   uint64_t wake_ups;
   const char kWakeupStat[] = "se.statistics.nr_wakeups";
   return ReadProcSchedAndGetFieldAsUint64(process_, kWakeupStat, &wake_ups) ?
       CalculateIdleWakeupsPerSecond(wake_ups) : 0;
 }
-#endif  // defined(OS_LINUX)
+#endif  // defined(OS_LINUX) || defined(OS_AIX)
 
 }  // namespace base

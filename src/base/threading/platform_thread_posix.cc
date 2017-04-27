@@ -144,7 +144,9 @@ PlatformThreadId PlatformThread::CurrentId() {
 #elif defined(OS_NACL) && !defined(__GLIBC__)
   // Pointers are 32-bits in NaCl.
   return reinterpret_cast<int32_t>(pthread_self());
-#elif defined(OS_POSIX)
+#elif defined(OS_POSIX) && defined(OS_AIX)
+  return pthread_self();
+#elif defined(OS_POSIX) && !defined(OS_AIX)
   return reinterpret_cast<int64_t>(pthread_self());
 #endif
 }

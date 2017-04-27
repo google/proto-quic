@@ -446,7 +446,8 @@ int tls1_check_group_id(SSL *ssl, uint16_t group_id) {
  * BoringSSL. Once the change in Chrome has stuck and the values are finalized,
  * restore them. */
 static const uint16_t kVerifySignatureAlgorithms[] = {
-    /* Prefer SHA-256 algorithms. */
+    /* List our preferred algorithms first. */
+    SSL_SIGN_ED25519,
     SSL_SIGN_ECDSA_SECP256R1_SHA256,
 #if !defined(BORINGSSL_ANDROID_SYSTEM)
     SSL_SIGN_RSA_PSS_SHA256,
@@ -481,7 +482,8 @@ static const uint16_t kVerifySignatureAlgorithms[] = {
  * BoringSSL. Once the change in Chrome has stuck and the values are finalized,
  * restore them. */
 static const uint16_t kSignSignatureAlgorithms[] = {
-    /* Prefer SHA-256 algorithms. */
+    /* List our preferred algorithms first. */
+    SSL_SIGN_ED25519,
     SSL_SIGN_ECDSA_SECP256R1_SHA256,
 #if !defined(BORINGSSL_ANDROID_SYSTEM)
     SSL_SIGN_RSA_PSS_SHA256,
@@ -508,16 +510,47 @@ static const uint16_t kSignSignatureAlgorithms[] = {
     SSL_SIGN_RSA_PKCS1_SHA1,
 };
 
-size_t tls12_get_verify_sigalgs(const SSL *ssl, const uint16_t **out) {
-  *out = kVerifySignatureAlgorithms;
-  return OPENSSL_ARRAY_SIZE(kVerifySignatureAlgorithms);
+void SSL_CTX_set_ed25519_enabled(SSL_CTX *ctx, int enabled) {
+  ctx->ed25519_enabled = !!enabled;
+}
+
+int tls12_add_verify_sigalgs(const SSL *ssl, CBB *out) {
+  const uint16_t *sigalgs = kVerifySignatureAlgorithms;
+  size_t num_sigalgs = OPENSSL_ARRAY_SIZE(kVerifySignatureAlgorithms);
+  if (ssl->ctx->num_verify_sigalgs != 0) {
+    sigalgs = ssl->ctx->verify_sigalgs;
+    num_sigalgs = ssl->ctx->num_verify_sigalgs;
+  }
+
+  for (size_t i = 0; i < num_sigalgs; i++) {
+    if (sigalgs == kVerifySignatureAlgorithms &&
+        sigalgs[i] == SSL_SIGN_ED25519 &&
+        !ssl->ctx->ed25519_enabled) {
+      continue;
+    }
+    if (!CBB_add_u16(out, sigalgs[i])) {
+      return 0;
+    }
+  }
+
+  return 1;
 }
 
 int tls12_check_peer_sigalg(SSL *ssl, int *out_alert, uint16_t sigalg) {
-  const uint16_t *verify_sigalgs;
-  size_t num_verify_sigalgs = tls12_get_verify_sigalgs(ssl, &verify_sigalgs);
-  for (size_t i = 0; i < num_verify_sigalgs; i++) {
-    if (sigalg == verify_sigalgs[i]) {
+  const uint16_t *sigalgs = kVerifySignatureAlgorithms;
+  size_t num_sigalgs = OPENSSL_ARRAY_SIZE(kVerifySignatureAlgorithms);
+  if (ssl->ctx->num_verify_sigalgs != 0) {
+    sigalgs = ssl->ctx->verify_sigalgs;
+    num_sigalgs = ssl->ctx->num_verify_sigalgs;
+  }
+
+  for (size_t i = 0; i < num_sigalgs; i++) {
+    if (sigalgs == kVerifySignatureAlgorithms &&
+        sigalgs[i] == SSL_SIGN_ED25519 &&
+        !ssl->ctx->ed25519_enabled) {
+      continue;
+    }
+    if (sigalg == sigalgs[i]) {
       return 1;
     }
   }
@@ -1031,23 +1064,12 @@ static int ext_sigalgs_add_clienthello(SSL_HANDSHAKE *hs, CBB *out) {
     return 1;
   }
 
-  const uint16_t *sigalgs;
-  const size_t num_sigalgs = tls12_get_verify_sigalgs(ssl, &sigalgs);
-
   CBB contents, sigalgs_cbb;
   if (!CBB_add_u16(out, TLSEXT_TYPE_signature_algorithms) ||
       !CBB_add_u16_length_prefixed(out, &contents) ||
-      !CBB_add_u16_length_prefixed(&contents, &sigalgs_cbb)) {
-    return 0;
-  }
-
-  for (size_t i = 0; i < num_sigalgs; i++) {
-    if (!CBB_add_u16(&sigalgs_cbb, sigalgs[i])) {
-      return 0;
-    }
-  }
-
-  if (!CBB_flush(out)) {
+      !CBB_add_u16_length_prefixed(&contents, &sigalgs_cbb) ||
+      !tls12_add_verify_sigalgs(ssl, &sigalgs_cbb) ||
+      !CBB_flush(out)) {
     return 0;
   }
 
@@ -2336,7 +2358,8 @@ int ssl_ext_key_share_parse_clienthello(SSL_HANDSHAKE *hs, int *out_found,
       !SSL_ECDH_CTX_init(&group, group_id) ||
       !SSL_ECDH_CTX_accept(&group, &public_key, &secret, &secret_len, out_alert,
                            CBS_data(&peer_key), CBS_len(&peer_key)) ||
-      !CBB_finish(&public_key, &hs->public_key, &hs->public_key_len)) {
+      !CBB_finish(&public_key, &hs->ecdh_public_key,
+                  &hs->ecdh_public_key_len)) {
     OPENSSL_free(secret);
     SSL_ECDH_CTX_cleanup(&group);
     CBB_cleanup(&public_key);
@@ -2360,14 +2383,15 @@ int ssl_ext_key_share_add_serverhello(SSL_HANDSHAKE *hs, CBB *out) {
       !CBB_add_u16_length_prefixed(out, &kse_bytes) ||
       !CBB_add_u16(&kse_bytes, group_id) ||
       !CBB_add_u16_length_prefixed(&kse_bytes, &public_key) ||
-      !CBB_add_bytes(&public_key, hs->public_key, hs->public_key_len) ||
+      !CBB_add_bytes(&public_key, hs->ecdh_public_key,
+                     hs->ecdh_public_key_len) ||
       !CBB_flush(out)) {
     return 0;
   }
 
-  OPENSSL_free(hs->public_key);
-  hs->public_key = NULL;
-  hs->public_key_len = 0;
+  OPENSSL_free(hs->ecdh_public_key);
+  hs->ecdh_public_key = NULL;
+  hs->ecdh_public_key_len = 0;
 
   hs->new_session->group_id = group_id;
   return 1;
@@ -3304,24 +3328,31 @@ int tls1_parse_peer_sigalgs(SSL_HANDSHAKE *hs, const CBS *in_sigalgs) {
   return 1;
 }
 
+int tls1_get_legacy_signature_algorithm(uint16_t *out, const EVP_PKEY *pkey) {
+  switch (EVP_PKEY_id(pkey)) {
+    case EVP_PKEY_RSA:
+      *out = SSL_SIGN_RSA_PKCS1_MD5_SHA1;
+      return 1;
+    case EVP_PKEY_EC:
+      *out = SSL_SIGN_ECDSA_SHA1;
+      return 1;
+    default:
+      return 0;
+  }
+}
+
 int tls1_choose_signature_algorithm(SSL_HANDSHAKE *hs, uint16_t *out) {
   SSL *const ssl = hs->ssl;
   CERT *cert = ssl->cert;
 
   /* Before TLS 1.2, the signature algorithm isn't negotiated as part of the
-   * handshake. It is fixed at MD5-SHA1 for RSA and SHA1 for ECDSA. */
+   * handshake. */
   if (ssl3_protocol_version(ssl) < TLS1_2_VERSION) {
-    int type = ssl_private_key_type(ssl);
-    if (type == NID_rsaEncryption) {
-      *out = SSL_SIGN_RSA_PKCS1_MD5_SHA1;
-      return 1;
+    if (!tls1_get_legacy_signature_algorithm(out, hs->local_pubkey)) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_NO_COMMON_SIGNATURE_ALGORITHMS);
+      return 0;
     }
-    if (ssl_is_ecdsa_key_type(type)) {
-      *out = SSL_SIGN_ECDSA_SHA1;
-      return 1;
-    }
-    OPENSSL_PUT_ERROR(SSL, SSL_R_NO_COMMON_SIGNATURE_ALGORITHMS);
-    return 0;
+    return 1;
   }
 
   const uint16_t *sigalgs = cert->sigalgs;
@@ -3348,7 +3379,7 @@ int tls1_choose_signature_algorithm(SSL_HANDSHAKE *hs, uint16_t *out) {
     /* SSL_SIGN_RSA_PKCS1_MD5_SHA1 is an internal value and should never be
      * negotiated. */
     if (sigalg == SSL_SIGN_RSA_PKCS1_MD5_SHA1 ||
-        !ssl_private_key_supports_signature_algorithm(ssl, sigalgs[i])) {
+        !ssl_private_key_supports_signature_algorithm(hs, sigalgs[i])) {
       continue;
     }
 

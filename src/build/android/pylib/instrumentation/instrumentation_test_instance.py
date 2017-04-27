@@ -685,7 +685,7 @@ class InstrumentationTestInstance(test_instance.TestInstance):
     self._should_save_logcat = bool(args.json_results_file)
 
   def _initializeEditPrefsAttributes(self, args):
-    if not hasattr(args, 'shared_prefs_file'):
+    if not hasattr(args, 'shared_prefs_file') or not args.shared_prefs_file:
       return
     if not isinstance(args.shared_prefs_file, str):
       logging.warning("Given non-string for a filepath")

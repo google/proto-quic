@@ -44,7 +44,7 @@ TEST(ScopedTaskSchedulerTest, PostTask) {
   thread_checker.DetachFromThread();
 
   PostTask(FROM_HERE,
-           Bind(
+           BindOnce(
                [](SequenceCheckerImpl* sequence_checker,
                   ThreadCheckerImpl* thread_checker, bool* first_task_ran) {
                  EXPECT_FALSE(SequencedTaskRunnerHandle::IsSet());
@@ -57,7 +57,7 @@ TEST(ScopedTaskSchedulerTest, PostTask) {
                Unretained(&first_task_ran)));
 
   PostTask(FROM_HERE,
-           Bind(
+           BindOnce(
                [](SequenceCheckerImpl* sequence_checker,
                   ThreadCheckerImpl* thread_checker, bool* second_task_ran) {
                  EXPECT_FALSE(SequencedTaskRunnerHandle::IsSet());
@@ -94,7 +94,7 @@ TEST(ScopedTaskSchedulerTest, CreateTaskRunnerAndPostTask) {
 
   task_runner->PostTask(
       FROM_HERE,
-      Bind(
+      BindOnce(
           [](SequenceCheckerImpl* sequence_checker,
              ThreadCheckerImpl* thread_checker, bool* first_task_ran) {
             EXPECT_FALSE(SequencedTaskRunnerHandle::IsSet());
@@ -108,7 +108,7 @@ TEST(ScopedTaskSchedulerTest, CreateTaskRunnerAndPostTask) {
 
   task_runner->PostTask(
       FROM_HERE,
-      Bind(
+      BindOnce(
           [](SequenceCheckerImpl* sequence_checker,
              ThreadCheckerImpl* thread_checker, bool* second_task_ran) {
             EXPECT_FALSE(SequencedTaskRunnerHandle::IsSet());
@@ -145,7 +145,7 @@ TEST(ScopedTaskSchedulerTest, CreateSequencedTaskRunnerAndPostTask) {
 
   task_runner->PostTask(
       FROM_HERE,
-      Bind(
+      BindOnce(
           [](SequenceCheckerImpl* sequence_checker,
              ThreadCheckerImpl* thread_checker, bool* first_task_ran) {
             EXPECT_TRUE(SequencedTaskRunnerHandle::IsSet());
@@ -159,7 +159,7 @@ TEST(ScopedTaskSchedulerTest, CreateSequencedTaskRunnerAndPostTask) {
 
   task_runner->PostTask(
       FROM_HERE,
-      Bind(
+      BindOnce(
           [](SequenceCheckerImpl* sequence_checker,
              ThreadCheckerImpl* thread_checker, bool* second_task_ran) {
             EXPECT_TRUE(SequencedTaskRunnerHandle::IsSet());
@@ -196,7 +196,7 @@ TEST(ScopedTaskSchedulerTest, CreateSingleThreadTaskRunnerAndPostTask) {
 
   task_runner->PostTask(
       FROM_HERE,
-      Bind(
+      BindOnce(
           [](SequenceCheckerImpl* sequence_checker,
              ThreadCheckerImpl* thread_checker, bool* first_task_ran) {
             EXPECT_TRUE(SequencedTaskRunnerHandle::IsSet());
@@ -210,7 +210,7 @@ TEST(ScopedTaskSchedulerTest, CreateSingleThreadTaskRunnerAndPostTask) {
 
   task_runner->PostTask(
       FROM_HERE,
-      Bind(
+      BindOnce(
           [](SequenceCheckerImpl* sequence_checker,
              ThreadCheckerImpl* thread_checker, bool* second_task_ran) {
             EXPECT_TRUE(SequencedTaskRunnerHandle::IsSet());
@@ -257,16 +257,18 @@ TEST(ScopedTaskSchedulerTest, COMSTAAvailable) {
 TEST(ScopedTaskSchedulerTest, NonBlockShutdownTasksPostedAfterShutdownDontRun) {
   ScopedTaskScheduler scoped_task_scheduler;
   TaskScheduler::GetInstance()->Shutdown();
-  PostTaskWithTraits(FROM_HERE, TaskTraits().WithShutdownBehavior(
-                                    TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN),
-                     Bind([]() {
+  PostTaskWithTraits(FROM_HERE,
+                     TaskTraits().WithShutdownBehavior(
+                         TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN),
+                     BindOnce([]() {
                        ADD_FAILURE()
                            << "CONTINUE_ON_SHUTDOWN task should not run";
                      }));
   PostTaskWithTraits(
       FROM_HERE,
       TaskTraits().WithShutdownBehavior(TaskShutdownBehavior::SKIP_ON_SHUTDOWN),
-      Bind([]() { ADD_FAILURE() << "SKIP_ON_SHUTDOWN task should not run"; }));
+      BindOnce(
+          []() { ADD_FAILURE() << "SKIP_ON_SHUTDOWN task should not run"; }));
 
   // This should not run anything.
   RunLoop().RunUntilIdle();
@@ -276,25 +278,28 @@ TEST(ScopedTaskSchedulerTest, DestructorRunsBlockShutdownTasksOnly) {
   bool block_shutdown_task_ran = false;
   {
     ScopedTaskScheduler scoped_task_scheduler;
-    PostTaskWithTraits(
-        FROM_HERE, TaskTraits().WithShutdownBehavior(
-                       TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN),
-        Bind([]() {
-          ADD_FAILURE() << "CONTINUE_ON_SHUTDOWN task should not run";
-        }));
-    PostTaskWithTraits(FROM_HERE, TaskTraits().WithShutdownBehavior(
-                                      TaskShutdownBehavior::SKIP_ON_SHUTDOWN),
-                       Bind([]() {
+    PostTaskWithTraits(FROM_HERE,
+                       TaskTraits().WithShutdownBehavior(
+                           TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN),
+                       BindOnce([]() {
+                         ADD_FAILURE()
+                             << "CONTINUE_ON_SHUTDOWN task should not run";
+                       }));
+    PostTaskWithTraits(FROM_HERE,
+                       TaskTraits().WithShutdownBehavior(
+                           TaskShutdownBehavior::SKIP_ON_SHUTDOWN),
+                       BindOnce([]() {
                          ADD_FAILURE()
                              << "SKIP_ON_SHUTDOWN task should not run";
                        }));
-    PostTaskWithTraits(FROM_HERE, TaskTraits().WithShutdownBehavior(
-                                      TaskShutdownBehavior::BLOCK_SHUTDOWN),
-                       Bind(
-                           [](bool* block_shutdown_task_ran) {
-                             *block_shutdown_task_ran = true;
-                           },
-                           Unretained(&block_shutdown_task_ran)));
+    PostTaskWithTraits(
+        FROM_HERE,
+        TaskTraits().WithShutdownBehavior(TaskShutdownBehavior::BLOCK_SHUTDOWN),
+        BindOnce(
+            [](bool* block_shutdown_task_ran) {
+              *block_shutdown_task_ran = true;
+            },
+            Unretained(&block_shutdown_task_ran)));
   }
   EXPECT_TRUE(block_shutdown_task_ran);
 }
@@ -308,7 +313,8 @@ TEST(ScopedTaskSchedulerTest, ReassignCurrentTaskRunner) {
   ScopedTaskScheduler scoped_task_scheduler;
   {
     ScopedMockTimeMessageLoopTaskRunner mock_time_task_runner;
-    PostDelayedTask(FROM_HERE, Bind(TestTaskRan, Unretained(&first_task_ran)),
+    PostDelayedTask(FROM_HERE,
+                    BindOnce(TestTaskRan, Unretained(&first_task_ran)),
                     TimeDelta::FromSeconds(1));
 
     // The delayed task should be queued on |mock_time_task_runner|, not the
@@ -316,7 +322,8 @@ TEST(ScopedTaskSchedulerTest, ReassignCurrentTaskRunner) {
     EXPECT_TRUE(mock_time_task_runner.task_runner()->HasPendingTask());
   }
 
-  PostDelayedTask(FROM_HERE, Bind(TestTaskRan, Unretained(&second_task_ran)),
+  PostDelayedTask(FROM_HERE,
+                  BindOnce(TestTaskRan, Unretained(&second_task_ran)),
                   TimeDelta());
 
   RunLoop().RunUntilIdle();
@@ -331,14 +338,14 @@ TEST(ScopedTaskSchedulerTest, ReassignCurrentTaskRunner) {
 TEST(ScopedTaskSchedulerTest, ReentrantTaskRunner) {
   bool task_ran = false;
   ScopedTaskScheduler scoped_task_scheduler;
-  PostTask(FROM_HERE, Bind(
-                          [](bool* task_ran) {
-                            PostTask(
-                                FROM_HERE,
-                                Bind([](bool* task_ran) { *task_ran = true; },
-                                     Unretained(task_ran)));
-                          },
-                          Unretained(&task_ran)));
+  PostTask(FROM_HERE,
+           BindOnce(
+               [](bool* task_ran) {
+                 PostTask(FROM_HERE,
+                          BindOnce([](bool* task_ran) { *task_ran = true; },
+                                   Unretained(task_ran)));
+               },
+               Unretained(&task_ran)));
   RunLoop().RunUntilIdle();
   EXPECT_TRUE(task_ran);
 }

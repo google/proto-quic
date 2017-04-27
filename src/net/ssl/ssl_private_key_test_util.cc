@@ -66,27 +66,6 @@ const EVP_MD* HashToMD(SSLPrivateKey::Hash hash) {
   return nullptr;
 }
 
-SSLPrivateKey::Type TypeForOpenSSLKey(EVP_PKEY* pkey) {
-  switch (EVP_PKEY_id(pkey)) {
-    case EVP_PKEY_RSA:
-      return SSLPrivateKey::Type::RSA;
-    case EVP_PKEY_EC: {
-      switch (EC_GROUP_get_curve_name(
-          EC_KEY_get0_group(EVP_PKEY_get0_EC_KEY(pkey)))) {
-        case NID_X9_62_prime256v1:
-          return SSLPrivateKey::Type::ECDSA_P256;
-        case NID_secp384r1:
-          return SSLPrivateKey::Type::ECDSA_P384;
-        case NID_secp521r1:
-          return SSLPrivateKey::Type::ECDSA_P521;
-      }
-    }
-  }
-
-  NOTREACHED();
-  return SSLPrivateKey::Type::RSA;
-}
-
 // Resize a string to |size| bytes of data, then return its data buffer address
 // cast as an 'uint8_t*', as expected by OpenSSL functions.
 // |str| the target string.
@@ -157,22 +136,6 @@ Error DoKeySigningWithWrapper(SSLPrivateKey* key,
 
 }  // namespace
 
-const char* SSLPrivateKeyTypeToString(SSLPrivateKey::Type type) {
-  switch (type) {
-    case SSLPrivateKey::Type::RSA:
-      return "RSA";
-    case SSLPrivateKey::Type::ECDSA_P256:
-      return "ECDSA_P256";
-    case SSLPrivateKey::Type::ECDSA_P384:
-      return "ECDSA_P384";
-    case SSLPrivateKey::Type::ECDSA_P521:
-      return "ECDSA_P521";
-  }
-
-  NOTREACHED();
-  return "";
-}
-
 void TestSSLPrivateKeyMatches(SSLPrivateKey* key, const std::string& pkcs8) {
   crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
 
@@ -183,17 +146,12 @@ void TestSSLPrivateKeyMatches(SSLPrivateKey* key, const std::string& pkcs8) {
   ASSERT_TRUE(openssl_key);
   EXPECT_EQ(0u, CBS_len(&cbs));
 
-  // Check the length and type matches.
-  EXPECT_EQ(TypeForOpenSSLKey(openssl_key.get()), key->GetType());
-  EXPECT_EQ(static_cast<size_t>(EVP_PKEY_size(openssl_key.get())),
-            key->GetMaxSignatureLengthInBytes());
-
   // Test all supported hash algorithms.
   std::vector<SSLPrivateKey::Hash> hashes = key->GetDigestPreferences();
 
   // To support TLS 1.1 and earlier, RSA keys must implicitly support MD5-SHA1,
   // despite not being advertised.
-  if (key->GetType() == SSLPrivateKey::Type::RSA)
+  if (EVP_PKEY_id(openssl_key.get()) == EVP_PKEY_RSA)
     hashes.push_back(SSLPrivateKey::Hash::MD5_SHA1);
 
   for (SSLPrivateKey::Hash hash : hashes) {
@@ -209,7 +167,7 @@ void TestSSLPrivateKeyMatches(SSLPrivateKey* key, const std::string& pkcs8) {
     EXPECT_TRUE(VerifyWithOpenSSL(md, digest, openssl_key.get(), signature));
 
     // RSA signing is deterministic, so further check the signature matches.
-    if (key->GetType() == SSLPrivateKey::Type::RSA) {
+    if (EVP_PKEY_id(openssl_key.get()) == EVP_PKEY_RSA) {
       std::string openssl_signature;
       ASSERT_TRUE(
           SignWithOpenSSL(md, digest, openssl_key.get(), &openssl_signature));

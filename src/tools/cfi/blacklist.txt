@@ -1,8 +1,8 @@
 # e.g. RolloverProtectedTickClock
 fun:*MutableInstance*
 
-# WTF allocators.
-fun:*allocate*Backing*
+# WTF allocators. See https://crbug.com/713293.
+fun:*Allocate*Backing*
 
 # WTF::ThreadSpecific
 fun:*ThreadSpecific*

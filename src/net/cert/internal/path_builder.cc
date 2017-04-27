@@ -491,10 +491,12 @@ CertPathBuilder::CertPathBuilder(scoped_refptr<ParsedCertificate> cert,
                                  const TrustStore* trust_store,
                                  const SignaturePolicy* signature_policy,
                                  const der::GeneralizedTime& time,
+                                 KeyPurpose key_purpose,
                                  Result* result)
     : cert_path_iter_(new CertPathIter(std::move(cert), trust_store)),
       signature_policy_(signature_policy),
       time_(time),
+      key_purpose_(key_purpose),
       next_state_(STATE_NONE),
       out_result_(result) {}
 
@@ -541,9 +543,9 @@ void CertPathBuilder::DoGetNextPathComplete() {
 
   // Verify the entire certificate chain.
   auto result_path = base::MakeUnique<ResultPath>();
-  bool verify_result =
-      VerifyCertificateChain(next_path_.certs, next_path_.trust_anchor.get(),
-                             signature_policy_, time_, &result_path->errors);
+  bool verify_result = VerifyCertificateChain(
+      next_path_.certs, next_path_.trust_anchor.get(), signature_policy_, time_,
+      key_purpose_, &result_path->errors);
   DVLOG(1) << "CertPathBuilder VerifyCertificateChain result = "
            << verify_result;
   result_path->path = next_path_;

@@ -6,8 +6,8 @@
 
 #include <algorithm>
 
-#include "base/bind.h"
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/sys_info.h"
 #include "base/task_scheduler/scheduler_worker_pool_params.h"
 #include "base/task_scheduler/task_scheduler_impl.h"
@@ -39,7 +39,7 @@ TaskScheduler::InitParams::~InitParams() = default;
 
 #if !defined(OS_NACL)
 // static
-void TaskScheduler::CreateAndSetSimpleTaskScheduler(const std::string& name) {
+void TaskScheduler::CreateAndStartWithDefaultParams(StringPiece name) {
   using StandbyThreadPolicy = SchedulerWorkerPoolParams::StandbyThreadPolicy;
 
   // Values were chosen so that:
@@ -54,31 +54,28 @@ void TaskScheduler::CreateAndSetSimpleTaskScheduler(const std::string& name) {
 
   constexpr TimeDelta kSuggestedReclaimTime = TimeDelta::FromSeconds(30);
 
-  CreateAndSetDefaultTaskScheduler(
-      name, {{StandbyThreadPolicy::LAZY, kBackgroundMaxThreads,
-              kSuggestedReclaimTime},
-             {StandbyThreadPolicy::LAZY, kBackgroundBlockingMaxThreads,
-              kSuggestedReclaimTime},
-             {StandbyThreadPolicy::LAZY, kForegroundMaxThreads,
-              kSuggestedReclaimTime},
-             {StandbyThreadPolicy::LAZY, kForegroundBlockingMaxThreads,
-              kSuggestedReclaimTime}});
+  Create(name);
+  GetInstance()->Start(
+      {{StandbyThreadPolicy::LAZY, kBackgroundMaxThreads,
+        kSuggestedReclaimTime},
+       {StandbyThreadPolicy::LAZY, kBackgroundBlockingMaxThreads,
+        kSuggestedReclaimTime},
+       {StandbyThreadPolicy::LAZY, kForegroundMaxThreads,
+        kSuggestedReclaimTime},
+       {StandbyThreadPolicy::LAZY, kForegroundBlockingMaxThreads,
+        kSuggestedReclaimTime}});
 }
 #endif  // !defined(OS_NACL)
 
-// static
-void TaskScheduler::CreateAndSetDefaultTaskScheduler(
-    const std::vector<SchedulerWorkerPoolParams>& worker_pool_params_vector,
-    const WorkerPoolIndexForTraitsCallback&
-        worker_pool_index_for_traits_callback) {
-  SetInstance(internal::TaskSchedulerImpl::Create(
-      worker_pool_params_vector, worker_pool_index_for_traits_callback));
+void TaskScheduler::Create(StringPiece name) {
+  SetInstance(MakeUnique<internal::TaskSchedulerImpl>(name));
 }
 
 void TaskScheduler::CreateAndSetDefaultTaskScheduler(
-    const std::string& name,
+    StringPiece name,
     const InitParams& init_params) {
-  SetInstance(internal::TaskSchedulerImpl::Create(name, init_params));
+  Create(name);
+  GetInstance()->Start(init_params);
 }
 
 // static

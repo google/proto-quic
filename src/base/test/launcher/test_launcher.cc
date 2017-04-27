@@ -472,10 +472,10 @@ void DoLaunchChildTestProcess(
 
   // Run target callback on the thread it was originating from, not on
   // a worker pool thread.
-  task_runner->PostTask(
-      FROM_HERE,
-      Bind(&RunCallback, completed_callback, exit_code,
-           TimeTicks::Now() - start_time, was_timeout, output_file_contents));
+  task_runner->PostTask(FROM_HERE,
+                        BindOnce(&RunCallback, completed_callback, exit_code,
+                                 TimeTicks::Now() - start_time, was_timeout,
+                                 output_file_contents));
 }
 
 }  // namespace
@@ -544,7 +544,7 @@ bool TestLauncher::Run() {
   watchdog_timer_.Reset();
 
   ThreadTaskRunnerHandle::Get()->PostTask(
-      FROM_HERE, Bind(&TestLauncher::RunTestIteration, Unretained(this)));
+      FROM_HERE, BindOnce(&TestLauncher::RunTestIteration, Unretained(this)));
 
   RunLoop().Run();
 
@@ -576,11 +576,11 @@ void TestLauncher::LaunchChildGTestProcess(
 
   GetTaskRunner()->PostTask(
       FROM_HERE,
-      Bind(&DoLaunchChildTestProcess, new_command_line, timeout, options,
-           redirect_stdio, RetainedRef(ThreadTaskRunnerHandle::Get()),
-           Bind(&TestLauncher::OnLaunchTestProcessFinished, Unretained(this),
-                completed_callback),
-           launched_callback));
+      BindOnce(&DoLaunchChildTestProcess, new_command_line, timeout, options,
+               redirect_stdio, RetainedRef(ThreadTaskRunnerHandle::Get()),
+               Bind(&TestLauncher::OnLaunchTestProcessFinished,
+                    Unretained(this), completed_callback),
+               launched_callback));
 }
 
 void TestLauncher::OnTestFinished(const TestResult& original_result) {
@@ -1071,7 +1071,7 @@ void TestLauncher::RunTests() {
 
     // No tests have actually been started, so kick off the next iteration.
     ThreadTaskRunnerHandle::Get()->PostTask(
-        FROM_HERE, Bind(&TestLauncher::RunTestIteration, Unretained(this)));
+        FROM_HERE, BindOnce(&TestLauncher::RunTestIteration, Unretained(this)));
   }
 }
 
@@ -1097,7 +1097,7 @@ void TestLauncher::RunTestIteration() {
   results_tracker_.OnTestIterationStarting();
 
   ThreadTaskRunnerHandle::Get()->PostTask(
-      FROM_HERE, Bind(&TestLauncher::RunTests, Unretained(this)));
+      FROM_HERE, BindOnce(&TestLauncher::RunTests, Unretained(this)));
 }
 
 void TestLauncher::MaybeSaveSummaryAsJSON(
@@ -1152,7 +1152,7 @@ void TestLauncher::OnTestIterationFinished() {
 
   // Kick off the next iteration.
   ThreadTaskRunnerHandle::Get()->PostTask(
-      FROM_HERE, Bind(&TestLauncher::RunTestIteration, Unretained(this)));
+      FROM_HERE, BindOnce(&TestLauncher::RunTestIteration, Unretained(this)));
 }
 
 void TestLauncher::OnOutputTimeout() {

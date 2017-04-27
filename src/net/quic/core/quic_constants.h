@@ -180,6 +180,9 @@ const size_t kDiversificationNonceSize = 32;
 // This will likely have to be tuned.
 const QuicPacketNumber kMaxPacketGap = 5000;
 
+// The maximum number of random padding bytes to add.
+const QuicByteCount kMaxNumRandomPaddingBytes = 256;
+
 }  // namespace net
 
 #endif  // NET_QUIC_CORE_QUIC_CONSTANTS_H_

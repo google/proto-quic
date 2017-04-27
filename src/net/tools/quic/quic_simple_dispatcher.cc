@@ -26,6 +26,26 @@ QuicSimpleDispatcher::QuicSimpleDispatcher(
 
 QuicSimpleDispatcher::~QuicSimpleDispatcher() {}
 
+int QuicSimpleDispatcher::GetRstErrorCount(
+    QuicRstStreamErrorCode error_code) const {
+  auto it = rst_error_map_.find(error_code);
+  if (it == rst_error_map_.end()) {
+    return 0;
+  } else {
+    return it->second;
+  }
+}
+
+void QuicSimpleDispatcher::OnRstStreamReceived(
+    const QuicRstStreamFrame& frame) {
+  auto it = rst_error_map_.find(frame.error_code);
+  if (it == rst_error_map_.end()) {
+    rst_error_map_.insert(std::make_pair(frame.error_code, 1));
+  } else {
+    it->second++;
+  }
+}
+
 QuicServerSessionBase* QuicSimpleDispatcher::CreateQuicSession(
     QuicConnectionId connection_id,
     const QuicSocketAddress& client_address) {

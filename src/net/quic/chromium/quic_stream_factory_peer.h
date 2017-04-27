@@ -24,7 +24,6 @@ class QuicChromiumClientSession;
 class QuicClientPushPromiseIndex;
 class QuicConfig;
 class QuicCryptoClientConfig;
-class QuicHttpStream;
 class QuicStreamFactory;
 
 namespace test {
@@ -48,10 +47,6 @@ class QuicStreamFactoryPeer {
       QuicStreamFactory* factory,
       const QuicServerId& server_id);
 
-  static std::unique_ptr<QuicHttpStream> CreateFromSession(
-      QuicStreamFactory* factory,
-      QuicChromiumClientSession* session);
-
   static bool IsLiveSession(QuicStreamFactory* factory,
                             QuicChromiumClientSession* session);
 
@@ -59,10 +54,6 @@ class QuicStreamFactoryPeer {
                             base::TaskRunner* task_runner);
 
   static QuicTime::Delta GetPingTimeout(QuicStreamFactory* factory);
-
-  static bool GetDelayTcpRace(QuicStreamFactory* factory);
-
-  static void SetDelayTcpRace(QuicStreamFactory* factory, bool delay_tcp_race);
 
   static bool GetRaceCertVerification(QuicStreamFactory* factory);
 
@@ -82,13 +73,6 @@ class QuicStreamFactoryPeer {
 
   static size_t GetNumberOfActiveJobs(QuicStreamFactory* factory,
                                       const QuicServerId& server_id);
-
-  static void MaybeInitialize(QuicStreamFactory* factory);
-
-  static bool HasInitializedData(QuicStreamFactory* factory);
-
-  static bool SupportsQuicAtStartUp(QuicStreamFactory* factory,
-                                    HostPortPair host_port_pair);
 
   static bool CryptoConfigCacheIsEmpty(QuicStreamFactory* factory,
                                        const QuicServerId& quic_server_id);

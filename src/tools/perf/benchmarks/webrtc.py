@@ -51,6 +51,7 @@ class WebrtcDataChannel(_Webrtc):
     return 'webrtc.datachannel'
 
 
+@benchmark.Disabled('win')
 @benchmark.Owner(emails=['ehmaldonado@chromium.org', 'phoglund@chromium.org'])
 class WebrtcStressTest(perf_benchmark.PerfBenchmark):
   """Measures WebRtc CPU and GPU usage with multiple peer connections."""

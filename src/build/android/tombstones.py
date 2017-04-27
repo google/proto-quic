@@ -49,6 +49,8 @@ def _ListTombstones(device):
                datetime.datetime.fromtimestamp(entry['st_mtime']))
   except device_errors.CommandFailedError:
     logging.exception('Could not retrieve tombstones.')
+  except device_errors.DeviceUnreachableError:
+    logging.exception('Device unreachable retrieving tombstones.')
   except device_errors.CommandTimeoutError:
     logging.exception('Timed out retrieving tombstones.')
 

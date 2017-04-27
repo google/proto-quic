@@ -7,8 +7,9 @@
 #include <algorithm>
 #include <limits>
 
-#include "net/quic/core/quic_flags.h"
+#include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_endian.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 
 namespace net {
@@ -149,8 +150,12 @@ void QuicDataWriter::WritePadding() {
   length_ = capacity_;
 }
 
+bool QuicDataWriter::WritePaddingBytes(size_t count) {
+  return WriteRepeatedByte(0x00, count);
+}
+
 bool QuicDataWriter::WriteConnectionId(uint64_t connection_id) {
-  if (FLAGS_quic_restart_flag_quic_big_endian_connection_id) {
+  if (QuicUtils::IsConnectionIdWireFormatBigEndian(perspective_)) {
     connection_id = QuicEndian::HostToNet64(connection_id);
   }
 

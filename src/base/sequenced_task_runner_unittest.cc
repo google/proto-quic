@@ -47,16 +47,12 @@ TEST(SequencedTaskRunnerTest, OnTaskRunnerDeleter) {
                              OnTaskRunnerDeleter(current_thread));
   EXPECT_EQ(0, counter);
   foreign_thread->PostTask(
-      FROM_HERE,
-      Bind([](SequenceBoundUniquePtr) {},
-           Passed(&ptr)));
+      FROM_HERE, BindOnce([](SequenceBoundUniquePtr) {}, Passed(&ptr)));
 
   {
     RunLoop run_loop;
-    foreign_thread->PostTaskAndReply(
-        FROM_HERE,
-        Bind([]{}),
-        run_loop.QuitClosure());
+    foreign_thread->PostTaskAndReply(FROM_HERE, BindOnce([] {}),
+                                     run_loop.QuitClosure());
     run_loop.Run();
   }
   EXPECT_EQ(1, counter);

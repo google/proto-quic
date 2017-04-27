@@ -55,6 +55,7 @@
 #include "net/proxy/proxy_info.h"
 #include "net/proxy/proxy_retry_info.h"
 #include "net/proxy/proxy_service.h"
+#include "net/reporting/reporting_service.h"
 #include "net/ssl/channel_id_service.h"
 #include "net/ssl/ssl_cert_request_info.h"
 #include "net/ssl/ssl_config_service.h"
@@ -362,6 +363,7 @@ void URLRequestHttpJob::NotifyHeadersComplete() {
   ProcessStrictTransportSecurityHeader();
   ProcessPublicKeyPinsHeader();
   ProcessExpectCTHeader();
+  ProcessReportToHeader();
 
   // Handle the server notification of a new SDCH dictionary.
   SdchManager* sdch_manager(request()->context()->sdch_manager());
@@ -849,6 +851,28 @@ void URLRequestHttpJob::ProcessExpectCTHeader() {
     security_state->ProcessExpectCTHeader(
         value, HostPortPair::FromURL(request_info_.url), ssl_info);
   }
+}
+
+void URLRequestHttpJob::ProcessReportToHeader() {
+  DCHECK(response_info_);
+
+  ReportingService* service = request_->context()->reporting_service();
+  if (!service)
+    return;
+
+  // Only accept Report-To headers on HTTPS connections that have no
+  // certificate errors.
+  // TODO(juliatuttle): Do we need to check cert status?
+  const SSLInfo& ssl_info = response_info_->ssl_info;
+  if (!ssl_info.is_valid() || IsCertStatusError(ssl_info.cert_status))
+    return;
+
+  HttpResponseHeaders* headers = GetResponseHeaders();
+  std::string value;
+  if (!headers->GetNormalizedHeader("Report-To", &value))
+    return;
+
+  service->ProcessHeader(request_info_.url.GetOrigin(), value);
 }
 
 void URLRequestHttpJob::OnStartCompleted(int result) {

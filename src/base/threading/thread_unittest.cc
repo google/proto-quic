@@ -155,8 +155,9 @@ TEST_F(ThreadTest, StartWithOptions_StackSize) {
 
   base::WaitableEvent event(base::WaitableEvent::ResetPolicy::AUTOMATIC,
                             base::WaitableEvent::InitialState::NOT_SIGNALED);
-  a.task_runner()->PostTask(FROM_HERE, base::Bind(&base::WaitableEvent::Signal,
-                                                  base::Unretained(&event)));
+  a.task_runner()->PostTask(
+      FROM_HERE,
+      base::BindOnce(&base::WaitableEvent::Signal, base::Unretained(&event)));
   event.Wait();
 }
 
@@ -188,9 +189,9 @@ TEST_F(ThreadTest, StartWithOptions_NonJoinable) {
   base::WaitableEvent block_event(
       base::WaitableEvent::ResetPolicy::AUTOMATIC,
       base::WaitableEvent::InitialState::NOT_SIGNALED);
-  a->task_runner()->PostTask(
-      FROM_HERE,
-      base::Bind(&base::WaitableEvent::Wait, base::Unretained(&block_event)));
+  a->task_runner()->PostTask(FROM_HERE,
+                             base::BindOnce(&base::WaitableEvent::Wait,
+                                            base::Unretained(&block_event)));
 
   a->StopSoon();
   EXPECT_TRUE(a->IsRunning());
@@ -215,11 +216,11 @@ TEST_F(ThreadTest, TwoTasksOnJoinableThread) {
     // destroyed.  We do this by dispatching a sleep event before the
     // event that will toggle our sentinel value.
     a.task_runner()->PostTask(
-        FROM_HERE, base::Bind(static_cast<void (*)(base::TimeDelta)>(
-                                  &base::PlatformThread::Sleep),
-                              base::TimeDelta::FromMilliseconds(20)));
+        FROM_HERE, base::BindOnce(static_cast<void (*)(base::TimeDelta)>(
+                                      &base::PlatformThread::Sleep),
+                                  base::TimeDelta::FromMilliseconds(20)));
     a.task_runner()->PostTask(FROM_HERE,
-                              base::Bind(&ToggleValue, &was_invoked));
+                              base::BindOnce(&ToggleValue, &was_invoked));
   }
   EXPECT_TRUE(was_invoked);
 }
@@ -285,8 +286,8 @@ TEST_F(ThreadTest, DISABLED_StopOnNonOwningThreadIsDeath) {
   b.Start();
   EXPECT_DCHECK_DEATH({
     // Stopping |a| on |b| isn't allowed.
-    b.task_runner()->PostTask(FROM_HERE,
-                              base::Bind(&Thread::Stop, base::Unretained(&a)));
+    b.task_runner()->PostTask(
+        FROM_HERE, base::BindOnce(&Thread::Stop, base::Unretained(&a)));
     // Block here so the DCHECK on |b| always happens in this scope.
     base::PlatformThread::Sleep(base::TimeDelta::Max());
   });
@@ -307,7 +308,7 @@ TEST_F(ThreadTest, TransferOwnershipAndStop) {
   // a->DetachFromSequence() should allow |b| to use |a|'s Thread API.
   a->DetachFromSequence();
   b.task_runner()->PostTask(
-      FROM_HERE, base::Bind(
+      FROM_HERE, base::BindOnce(
                      [](std::unique_ptr<Thread> thread_to_stop,
                         base::WaitableEvent* event_to_signal) -> void {
                        thread_to_stop->Stop();
@@ -361,9 +362,9 @@ TEST_F(ThreadTest, StartTwiceNonJoinableNotAllowed) {
   base::WaitableEvent last_task_event(
       base::WaitableEvent::ResetPolicy::AUTOMATIC,
       base::WaitableEvent::InitialState::NOT_SIGNALED);
-  a->task_runner()->PostTask(FROM_HERE,
-                            base::Bind(&base::WaitableEvent::Signal,
-                                       base::Unretained(&last_task_event)));
+  a->task_runner()->PostTask(
+      FROM_HERE, base::BindOnce(&base::WaitableEvent::Signal,
+                                base::Unretained(&last_task_event)));
 
   // StopSoon() is non-blocking, Yield() to |a|, wait for last task to be
   // processed and a little more for QuitWhenIdle() to unwind before considering
@@ -399,7 +400,8 @@ TEST_F(ThreadTest, ThreadId) {
                             base::WaitableEvent::InitialState::NOT_SIGNALED);
   base::PlatformThreadId id_from_new_thread;
   a.task_runner()->PostTask(
-      FROM_HERE, base::Bind(ReturnThreadId, &a, &id_from_new_thread, &event));
+      FROM_HERE,
+      base::BindOnce(ReturnThreadId, &a, &id_from_new_thread, &event));
 
   // Call GetThreadId() on the current thread before calling event.Wait() so
   // that this test can find a race issue with TSAN.
@@ -458,8 +460,9 @@ TEST_F(ThreadTest, CleanUp) {
     // Register an observer that writes into |captured_events| once the
     // thread's message loop is destroyed.
     t.task_runner()->PostTask(
-        FROM_HERE, base::Bind(&RegisterDestructionObserver,
-                              base::Unretained(&loop_destruction_observer)));
+        FROM_HERE,
+        base::BindOnce(&RegisterDestructionObserver,
+                       base::Unretained(&loop_destruction_observer)));
 
     // Upon leaving this scope, the thread is deleted.
   }
@@ -503,7 +506,8 @@ TEST_F(ThreadTest, FlushForTesting) {
 
   for (size_t i = 0; i < kNumSleepTasks; ++i) {
     a.task_runner()->PostTask(
-        FROM_HERE, base::Bind(&base::PlatformThread::Sleep, kSleepPerTestTask));
+        FROM_HERE,
+        base::BindOnce(&base::PlatformThread::Sleep, kSleepPerTestTask));
   }
 
   // All tasks should have executed, as reflected by the elapsed time.
@@ -557,7 +561,7 @@ TEST_F(ThreadTest, ExternalMessageLoop) {
 
   bool ran = false;
   a.task_runner()->PostTask(
-      FROM_HERE, base::Bind([](bool* toggled) { *toggled = true; }, &ran));
+      FROM_HERE, base::BindOnce([](bool* toggled) { *toggled = true; }, &ran));
   base::RunLoop().RunUntilIdle();
   EXPECT_TRUE(ran);
 

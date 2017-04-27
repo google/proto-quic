@@ -24,7 +24,7 @@
 #include "net/log/net_log_source.h"
 #include "net/log/net_log_with_source.h"
 #include "net/proxy/proxy_server.h"
-#include "net/spdy/spdy_session.h"
+#include "net/spdy/chromium/spdy_session.h"
 #include "url/url_constants.h"
 
 namespace net {
@@ -136,13 +136,6 @@ void HttpStreamFactoryImpl::JobController::Preconnect(
       request_info, nullptr, HttpStreamRequest::HTTP_STREAM);
 
   if (alternative_service.protocol != kProtoUnknown) {
-    if (session_->params().quic_disable_preconnect_if_0rtt &&
-        alternative_service.protocol == kProtoQUIC &&
-        session_->quic_stream_factory()->ZeroRTTEnabledFor(QuicServerId(
-            alternative_service.host_port_pair(), request_info.privacy_mode))) {
-      MaybeNotifyFactoryOfCompletion();
-      return;
-    }
     destination = alternative_service.host_port_pair();
     ignore_result(ApplyHostMappingRules(request_info.url, &destination));
   }
@@ -539,10 +532,9 @@ void HttpStreamFactoryImpl::JobController::OnOrphanedJobComplete(
 void HttpStreamFactoryImpl::JobController::AddConnectionAttemptsToRequest(
     Job* job,
     const ConnectionAttempts& attempts) {
-  if (is_preconnect_ || (job_bound_ && bound_job_ != job))
+  if (is_preconnect_ || IsJobOrphaned(job))
     return;
 
-  DCHECK(request_);
   request_->AddConnectionAttempts(attempts);
 }
 
@@ -622,10 +614,9 @@ bool HttpStreamFactoryImpl::JobController::ShouldWait(Job* job) {
 void HttpStreamFactoryImpl::JobController::SetSpdySessionKey(
     Job* job,
     const SpdySessionKey& spdy_session_key) {
-  if (is_preconnect_ || (job_bound_ && bound_job_ != job))
+  if (is_preconnect_ || IsJobOrphaned(job))
     return;
 
-  DCHECK(request_);
   if (!request_->HasSpdySessionKey()) {
     RequestSet& request_set =
         factory_->spdy_session_request_map_[spdy_session_key];
@@ -637,25 +628,24 @@ void HttpStreamFactoryImpl::JobController::SetSpdySessionKey(
 
 void HttpStreamFactoryImpl::JobController::
     RemoveRequestFromSpdySessionRequestMapForJob(Job* job) {
-  if (is_preconnect_ || (job_bound_ && bound_job_ != job))
+  if (is_preconnect_ || IsJobOrphaned(job))
     return;
-  DCHECK(request_);
 
   RemoveRequestFromSpdySessionRequestMap();
 }
 
 void HttpStreamFactoryImpl::JobController::
     RemoveRequestFromSpdySessionRequestMap() {
-  const SpdySessionKey* spdy_session_key = request_->spdy_session_key();
-  if (spdy_session_key) {
+  if (request_->HasSpdySessionKey()) {
+    const SpdySessionKey& spdy_session_key = request_->GetSpdySessionKey();
     SpdySessionRequestMap& spdy_session_request_map =
         factory_->spdy_session_request_map_;
-    DCHECK(base::ContainsKey(spdy_session_request_map, *spdy_session_key));
-    RequestSet& request_set = spdy_session_request_map[*spdy_session_key];
+    DCHECK(base::ContainsKey(spdy_session_request_map, spdy_session_key));
+    RequestSet& request_set = spdy_session_request_map[spdy_session_key];
     DCHECK(base::ContainsKey(request_set, request_));
     request_set.erase(request_);
     if (request_set.empty())
-      spdy_session_request_map.erase(*spdy_session_key);
+      spdy_session_request_map.erase(spdy_session_key);
     request_->ResetSpdySessionKey();
   }
 }
@@ -679,6 +669,13 @@ bool HttpStreamFactoryImpl::JobController::HasPendingMainJob() const {
 
 bool HttpStreamFactoryImpl::JobController::HasPendingAltJob() const {
   return alternative_job_.get() != nullptr;
+}
+
+void HttpStreamFactoryImpl::JobController::LogHistograms() const {
+  if (main_job_)
+    main_job_->LogHistograms();
+  if (alternative_job_)
+    alternative_job_->LogHistograms();
 }
 
 size_t HttpStreamFactoryImpl::JobController::EstimateMemoryUsage() const {
@@ -908,20 +905,6 @@ GURL HttpStreamFactoryImpl::JobController::ApplyHostMappingRules(
   return url;
 }
 
-bool HttpStreamFactoryImpl::JobController::IsQuicWhitelistedForHost(
-    const std::string& host) {
-  bool whitelist_needed = false;
-  // The QUIC whitelist is not needed in QUIC versions after 30.
-  if (!whitelist_needed)
-    return true;
-
-  if (session_->params().transport_security_state->IsGooglePinnedHost(host))
-    return true;
-
-  return base::ContainsKey(session_->params().quic_host_whitelist,
-                           base::ToLowerASCII(host));
-}
-
 AlternativeService
 HttpStreamFactoryImpl::JobController::GetAlternativeServiceFor(
     const HttpRequestInfo& request_info,
@@ -988,7 +971,6 @@ HttpStreamFactoryImpl::JobController::GetAlternativeServiceForInternal(
       continue;
     }
 
-
     // Some shared unix systems may have user home directories (like
     // http://foo.com/~mike) which allow users to emit headers.  This is a bad
     // idea already, but with Alternate-Protocol, it provides the ability for a
@@ -1002,11 +984,8 @@ HttpStreamFactoryImpl::JobController::GetAlternativeServiceForInternal(
       continue;
 
     if (alternative_service.protocol == kProtoHTTP2) {
-      if (origin.host() != alternative_service.host &&
-          !session_->params()
-               .enable_http2_alternative_service_with_different_host) {
+      if (!session_->params().enable_http2_alternative_service)
         continue;
-      }
 
       // Cache this entry if we don't have a non-broken Alt-Svc yet.
       if (first_alternative_service.protocol == kProtoUnknown)
@@ -1015,17 +994,8 @@ HttpStreamFactoryImpl::JobController::GetAlternativeServiceForInternal(
     }
 
     DCHECK_EQ(kProtoQUIC, alternative_service.protocol);
-    if (origin.host() != alternative_service.host &&
-        !session_->params()
-             .enable_quic_alternative_service_with_different_host) {
-      continue;
-    }
-
     quic_all_broken = false;
     if (!session_->IsQuicEnabled())
-      continue;
-
-    if (!IsQuicWhitelistedForHost(origin.host()))
       continue;
 
     if (stream_type == HttpStreamRequest::BIDIRECTIONAL_STREAM &&

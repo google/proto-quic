@@ -24,12 +24,12 @@
 #include "net/quic/core/proto/cached_network_parameters.pb.h"
 #include "net/quic/core/quic_bandwidth.h"
 #include "net/quic/core/quic_config.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packet_generator.h"
 #include "net/quic/core/quic_pending_retransmission.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_flag_utils.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_map_util.h"
 #include "net/quic/platform/api/quic_str_cat.h"
@@ -240,6 +240,7 @@ QuicConnection::QuicConnection(QuicConnectionId connection_id,
       debug_visitor_(nullptr),
       packet_generator_(connection_id_,
                         &framer_,
+                        random_generator_,
                         helper->GetBufferAllocator(),
                         this),
       idle_network_timeout_(QuicTime::Delta::Infinite()),
@@ -346,6 +347,7 @@ void QuicConnection::SetFromConfig(const QuicConfig& config) {
     close_connection_after_five_rtos_ = true;
   }
   if (packet_generator_.latched_flag_no_stop_waiting_frames() &&
+      version() > QUIC_VERSION_37 &&
       config.HasClientSentConnectionOption(kNSTP, perspective_)) {
     QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_no_stop_waiting_frames, 2, 2);
     no_stop_waiting_frames_ = true;
@@ -1056,9 +1058,9 @@ QuicConsumedData QuicConnection::SendStreamData(
     QuicStreamId id,
     QuicIOVector iov,
     QuicStreamOffset offset,
-    bool fin,
+    StreamSendingState state,
     QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener) {
-  if (!fin && iov.total_length == 0) {
+  if (state == NO_FIN && iov.total_length == 0) {
     QUIC_BUG << "Attempt to send empty stream frame";
     return QuicConsumedData(0, false);
   }
@@ -1073,12 +1075,12 @@ QuicConsumedData QuicConnection::SendStreamData(
   // The optimized path may be used for data only packets which fit into a
   // standard buffer and don't need padding.
   if (id != kCryptoStreamId && !packet_generator_.HasQueuedFrames() &&
-      iov.total_length > kMaxPacketSize) {
+      iov.total_length > kMaxPacketSize && state != FIN_AND_PADDING) {
     // Use the fast path to send full data packets.
-    return packet_generator_.ConsumeDataFastPath(id, iov, offset, fin,
-                                                 std::move(ack_listener));
+    return packet_generator_.ConsumeDataFastPath(
+        id, iov, offset, state != NO_FIN, std::move(ack_listener));
   }
-  return packet_generator_.ConsumeData(id, iov, offset, fin,
+  return packet_generator_.ConsumeData(id, iov, offset, state,
                                        std::move(ack_listener));
 }
 

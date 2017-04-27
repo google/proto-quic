@@ -28,8 +28,8 @@
 #include "net/http/http_stream_factory.h"
 #include "net/quic/chromium/quic_stream_factory.h"
 #include "net/socket/next_proto.h"
-#include "net/spdy/spdy_protocol.h"
-#include "net/spdy/spdy_session_pool.h"
+#include "net/spdy/chromium/spdy_session_pool.h"
+#include "net/spdy/core/spdy_protocol.h"
 #include "net/ssl/ssl_client_auth_cache.h"
 
 namespace base {
@@ -85,6 +85,7 @@ class NET_EXPORT HttpNetworkSession
     ClientSocketFactory* client_socket_factory;
     HostResolver* host_resolver;
     CertVerifier* cert_verifier;
+    bool enable_server_push_cancellation;
     ChannelIDService* channel_id_service;
     TransportSecurityState* transport_security_state;
     CTVerifier* cert_transparency_verifier;
@@ -100,6 +101,7 @@ class NET_EXPORT HttpNetworkSession
     uint16_t testing_fixed_http_port;
     uint16_t testing_fixed_https_port;
     bool enable_tcp_fast_open_for_ssl;
+    bool enable_user_alternate_protocol_ports;
 
     // Use SPDY ping frames to test for connection health after idle.
     bool enable_spdy_ping_based_connection_checking;
@@ -110,61 +112,42 @@ class NET_EXPORT HttpNetworkSession
     SettingsMap http2_settings;
     // Source of time for SPDY connections.
     SpdySessionPool::TimeFunc time_func;
-    // Whether to enable HTTP/2 Alt-Svc entries with hostname different than
-    // that of the origin.
-    bool enable_http2_alternative_service_with_different_host;
-    // Whether to enable QUIC Alt-Svc entries with hostname different than that
-    // of the origin.
-    bool enable_quic_alternative_service_with_different_host;
+    // Whether to enable HTTP/2 Alt-Svc entries.
+    bool enable_http2_alternative_service;
 
     // Enables QUIC support.
     bool enable_quic;
-    // Marks a QUIC server broken when a connection blackholes after the
-    // handshake is confirmed.
-    bool mark_quic_broken_when_network_blackholes;
-    // Disables QUIC's 0-RTT behavior.
-    bool quic_always_require_handshake_confirmation;
-    // Disables QUIC connection pooling.
-    bool quic_disable_connection_pooling;
-    // If not zero, the task to load QUIC server configs from the disk cache
-    // will timeout after this value multiplied by the smoothed RTT for the
-    // server.
-    float quic_load_server_info_timeout_srtt_multiplier;
-    // Causes QUIC to race reading the server config from disk with
-    // sending an inchoate CHLO.
-    bool quic_enable_connection_racing;
-    // Use non-blocking IO for UDP sockets.
-    bool quic_enable_non_blocking_io;
-    // Disables using the disk cache to store QUIC server configs.
-    bool quic_disable_disk_cache;
-    // Prefer AES-GCM to ChaCha20 even if no hardware support is present.
-    bool quic_prefer_aes;
-    // Size in bytes of the QUIC DUP socket receive buffer.
-    int quic_socket_receive_buffer_size;
-    // Delay starting a TCP connection when QUIC believes it can speak
-    // 0-RTT to a server.
-    bool quic_delay_tcp_race;
-    // Maximum number of server configs that are to be stored in
-    // HttpServerProperties, instead of the disk cache.
-    size_t quic_max_server_configs_stored_in_properties;
-    // If not empty, QUIC will be used for all connections to the set of
-    // origins in |origins_to_force_quic_on|.
-    std::set<HostPortPair> origins_to_force_quic_on;
-    // Source of time for QUIC connections. Will be owned by QuicStreamFactory.
+
+    // QUIC runtime configuration options.
+
+    // Versions of QUIC which may be used.
+    QuicVersionVector quic_supported_versions;
+    // User agent description to send in the QUIC handshake.
+    std::string quic_user_agent_id;
+    // Limit on the size of QUIC packets.
+    size_t quic_max_packet_length;
+    // Source of time for QUIC connections.
     QuicClock* quic_clock;
     // Source of entropy for QUIC connections.
     QuicRandom* quic_random;
-    // Limit on the size of QUIC packets.
-    size_t quic_max_packet_length;
-    // User agent description to send in the QUIC handshake.
-    std::string quic_user_agent_id;
-    bool enable_user_alternate_protocol_ports;
     // Optional factory to use for creating QuicCryptoClientStreams.
     QuicCryptoClientStreamFactory* quic_crypto_client_stream_factory;
-    // Versions of QUIC which may be used.
-    QuicVersionVector quic_supported_versions;
+    // Maximum number of server configs that are to be stored in
+    // HttpServerProperties, instead of the disk cache.
+    size_t quic_max_server_configs_stored_in_properties;
+    // QUIC will be used for all connections in this set.
+    std::set<HostPortPair> origins_to_force_quic_on;
     // Set of QUIC tags to send in the handshake's connection options.
     QuicTagVector quic_connection_options;
+
+    // Active QUIC experiments
+
+    // Marks a QUIC server broken when a connection blackholes after the
+    // handshake is confirmed.
+    bool mark_quic_broken_when_network_blackholes;
+    // Retry requests which fail with QUIC_PROTOCOL_ERROR, and mark QUIC
+    // broken if the retry succeeds.
+    bool retry_without_alt_svc_on_quic_errors;
     // If true, all QUIC sessions are closed when any local IP address changes.
     bool quic_close_sessions_on_ip_change;
     // Specifies QUIC idle connection state lifetime.
@@ -175,10 +158,6 @@ class NET_EXPORT HttpNetworkSession
     // Specifies the maximum time duration that QUIC packet reader can perform
     // consecutive packets reading.
     int quic_packet_reader_yield_after_duration_milliseconds;
-    // If true, disable preconnections if QUIC can do 0RTT.
-    bool quic_disable_preconnect_if_0rtt;
-    // List of hosts for which QUIC is explicitly whitelisted.
-    std::unordered_set<std::string> quic_host_whitelist;
     // If true, active QUIC sessions may be migrated onto a new network when
     // the platform indicates that the default network is changing.
     bool quic_migrate_sessions_on_network_change;

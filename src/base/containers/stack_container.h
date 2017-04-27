@@ -7,12 +7,10 @@
 
 #include <stddef.h>
 
-#include <string>
 #include <vector>
 
 #include "base/macros.h"
 #include "base/memory/aligned_memory.h"
-#include "base/strings/string16.h"
 #include "build/build_config.h"
 
 namespace base {
@@ -133,6 +131,10 @@ class StackAllocator : public std::allocator<T> {
 // stack capacity will transparently overflow onto the heap. The container must
 // support reserve().
 //
+// This will not work with std::string since some implementations allocate
+// more bytes than requested in calls to reserve(), forcing the allocation onto
+// the heap.  http://crbug.com/709273
+//
 // WATCH OUT: the ContainerType MUST use the proper StackAllocator for this
 // type. This object is really intended to be used only internally. You'll want
 // to use the wrappers below for different types.
@@ -180,46 +182,6 @@ class StackContainer {
 
  private:
   DISALLOW_COPY_AND_ASSIGN(StackContainer);
-};
-
-// StackString -----------------------------------------------------------------
-
-template<size_t stack_capacity>
-class StackString : public StackContainer<
-    std::basic_string<char,
-                      std::char_traits<char>,
-                      StackAllocator<char, stack_capacity> >,
-    stack_capacity> {
- public:
-  StackString() : StackContainer<
-      std::basic_string<char,
-                        std::char_traits<char>,
-                        StackAllocator<char, stack_capacity> >,
-      stack_capacity>() {
-  }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(StackString);
-};
-
-// StackStrin16 ----------------------------------------------------------------
-
-template<size_t stack_capacity>
-class StackString16 : public StackContainer<
-    std::basic_string<char16,
-                      base::string16_char_traits,
-                      StackAllocator<char16, stack_capacity> >,
-    stack_capacity> {
- public:
-  StackString16() : StackContainer<
-      std::basic_string<char16,
-                        base::string16_char_traits,
-                        StackAllocator<char16, stack_capacity> >,
-      stack_capacity>() {
-  }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(StackString16);
 };
 
 // StackVector -----------------------------------------------------------------

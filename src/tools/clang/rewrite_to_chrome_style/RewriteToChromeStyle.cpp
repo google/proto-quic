@@ -54,6 +54,11 @@ const char kBlinkStaticMemberPrefix[] = "s_";
 const char kGMockMethodNamePrefix[] = "gmock_";
 const char kMethodBlocklistParamName[] = "method-blocklist";
 
+std::set<clang::SourceLocation>& GetRewrittenLocs() {
+  static auto& locations = *new std::set<clang::SourceLocation>();
+  return locations;
+}
+
 template <typename MatcherType, typename NodeType>
 bool IsMatching(const MatcherType& matcher,
                 const NodeType& node,
@@ -889,28 +894,8 @@ bool GetNameForDecl(const clang::VarDecl& decl,
   StringRef original_name = decl.getName();
 
   // Nothing to do for unnamed parameters.
-  if (clang::isa<clang::ParmVarDecl>(decl)) {
-    if (original_name.empty())
-      return false;
-
-    // Check if |decl| and |decl.getLocation| are in sync.  We need to skip
-    // out-of-sync ParmVarDecls to avoid renaming buggy ParmVarDecls that
-    // 1) have decl.getLocation() pointing at a parameter declaration without a
-    // name, but 2) have decl.getName() retained from a template specialization
-    // of a method.  See also: https://llvm.org/bugs/show_bug.cgi?id=29145
-    clang::SourceLocation loc =
-        context.getSourceManager().getSpellingLoc(decl.getLocation());
-    auto parents = context.getParents(decl);
-    bool is_child_location_within_parent_source_range = std::all_of(
-        parents.begin(), parents.end(),
-        [&loc](const clang::ast_type_traits::DynTypedNode& parent) {
-          clang::SourceLocation begin = parent.getSourceRange().getBegin();
-          clang::SourceLocation end = parent.getSourceRange().getEnd();
-          return (begin < loc) && (loc < end);
-        });
-    if (!is_child_location_within_parent_source_range)
-      return false;
-  }
+  if (clang::isa<clang::ParmVarDecl>(decl) && original_name.empty())
+    return false;
 
   // This is a type trait that appears in consumers of WTF as well as inside
   // WTF. We want it to be named in this_style_of_case accordingly.
@@ -1149,8 +1134,16 @@ class RewriterBase : public MatchFinder::MatchCallback {
     if (actual_old_text != expected_old_text)
       return false;
 
-    if (replacement)
+    if (replacement) {
+      // If there's already a replacement for this location, don't emit any
+      // other replacements to avoid potential naming conflicts. This is
+      // primarily to avoid problems when a function and a parameter are defined
+      // by the same macro argument.
+      if (!GetRewrittenLocs().emplace(spell).second)
+        return false;
+
       *replacement = Replacement(source_manager, range, new_text);
+    }
     return true;
   }
 

@@ -18,7 +18,7 @@
 #include "net/quic/platform/api/quic_mutex.h"
 #include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/platform/api/quic_url.h"
-#include "net/spdy/spdy_framer.h"
+#include "net/spdy/core/spdy_framer.h"
 
 namespace net {
 

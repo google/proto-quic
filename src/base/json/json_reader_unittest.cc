@@ -240,12 +240,12 @@ TEST(JSONReaderTest, Reading) {
   {
     // Test hex and unicode escapes including the null character.
     std::unique_ptr<Value> root =
-        JSONReader().ReadToValue("\"\\x41\\x00\\u1234\"");
+        JSONReader().ReadToValue("\"\\x41\\x00\\u1234\\u0000\"");
     ASSERT_TRUE(root);
     EXPECT_TRUE(root->IsType(Value::Type::STRING));
     std::string str_val;
     EXPECT_TRUE(root->GetAsString(&str_val));
-    EXPECT_EQ(std::wstring(L"A\0\x1234", 3), UTF8ToWide(str_val));
+    EXPECT_EQ(std::wstring(L"A\0\x1234\0", 4), UTF8ToWide(str_val));
   }
 
   {

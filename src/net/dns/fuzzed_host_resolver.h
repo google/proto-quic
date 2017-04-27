@@ -58,7 +58,8 @@ class FuzzedHostResolver : public HostResolverImpl {
 
  private:
   // HostResolverImpl implementation:
-  bool IsIPv6Reachable(const NetLogWithSource& net_log) override;
+  bool IsGloballyReachable(const IPAddress& dest,
+                           const NetLogWithSource& net_log) override;
   void RunLoopbackProbeJob() override;
 
   base::FuzzedDataProvider* data_provider_;

@@ -114,6 +114,36 @@ class BuildUnittest(unittest.TestCase):
             '-a', os.path.abspath(
                 os.path.join(output_dir, 'resource.h'))]))
 
+  def testAssertTemplateOutputs(self):
+    output_dir = tempfile.mkdtemp()
+    class DummyOpts(object):
+      def __init__(self):
+        self.input = util.PathFromRoot('grit/testdata/substitute_tmpl.grd')
+        self.verbose = False
+        self.extra_verbose = False
+
+    # Incomplete output file list should fail.
+    builder_fail = build.RcBuilder()
+    self.failUnlessEqual(2,
+        builder_fail.Run(DummyOpts(), [
+            '-o', output_dir,
+            '-E', 'name=foo',
+            '-a', os.path.abspath(
+                os.path.join(output_dir, 'en_foo_resources.rc'))]))
+
+    # Complete output file list should succeed.
+    builder_ok = build.RcBuilder()
+    self.failUnlessEqual(0,
+        builder_ok.Run(DummyOpts(), [
+            '-o', output_dir,
+            '-E', 'name=foo',
+            '-a', os.path.abspath(
+                os.path.join(output_dir, 'en_foo_resources.rc')),
+            '-a', os.path.abspath(
+                os.path.join(output_dir, 'sv_foo_resources.rc')),
+            '-a', os.path.abspath(
+                os.path.join(output_dir, 'resource.h'))]))
+
   def _verifyWhitelistedOutput(self,
                                filename,
                                whitelisted_ids,

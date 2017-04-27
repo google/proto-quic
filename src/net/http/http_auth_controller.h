@@ -73,6 +73,12 @@ class NET_EXPORT_PRIVATE HttpAuthController
   void DisableAuthScheme(HttpAuth::Scheme scheme);
   void DisableEmbeddedIdentity();
 
+  // Called when the connection has been closed, so the current handler (which
+  // contains state bound to the connection) should be dropped. If retrying on a
+  // new connection, the next call to MaybeGenerateAuthToken will retry the
+  // current auth scheme.
+  void OnConnectionClosed();
+
  private:
   // Actions for InvalidateCurrentHandler()
   enum InvalidateHandlerAction {

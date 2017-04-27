@@ -29,6 +29,9 @@ ScopedAsyncTaskScheduler::ScopedAsyncTaskScheduler() {
 
 ScopedAsyncTaskScheduler::~ScopedAsyncTaskScheduler() {
   DCHECK_EQ(TaskScheduler::GetInstance(), task_scheduler_);
+  // Without FlushForTesting(), DeleteSoon() and ReleaseSoon() tasks could be
+  // skipped, resulting in memory leaks.
+  TaskScheduler::GetInstance()->FlushForTesting();
   TaskScheduler::GetInstance()->Shutdown();
   TaskScheduler::GetInstance()->JoinForTesting();
   TaskScheduler::SetInstance(nullptr);

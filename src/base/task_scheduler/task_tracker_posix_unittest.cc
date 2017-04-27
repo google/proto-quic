@@ -31,7 +31,8 @@ TEST(TaskSchedulerTaskTrackerPosixTest, RunTask) {
       FROM_HERE,
       Bind([](bool* did_run) { *did_run = true; }, Unretained(&did_run)),
       TaskTraits(), TimeDelta());
-  TaskTrackerPosix tracker(&message_loop);
+  TaskTrackerPosix tracker;
+  tracker.set_watch_file_descriptor_message_loop(&message_loop);
 
   EXPECT_TRUE(tracker.WillPostTask(task.get()));
   EXPECT_TRUE(tracker.RunTask(std::move(task), SequenceToken::Create()));
@@ -48,7 +49,8 @@ TEST(TaskSchedulerTaskTrackerPosixTest, FileDescriptorWatcher) {
       FROM_HERE, Bind(IgnoreResult(&FileDescriptorWatcher::WatchReadable),
                       fds[0], Bind(&DoNothing)),
       TaskTraits(), TimeDelta());
-  TaskTrackerPosix tracker(&message_loop);
+  TaskTrackerPosix tracker;
+  tracker.set_watch_file_descriptor_message_loop(&message_loop);
 
   EXPECT_TRUE(tracker.WillPostTask(task.get()));
   EXPECT_TRUE(tracker.RunTask(std::move(task), SequenceToken::Create()));

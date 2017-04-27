@@ -10,10 +10,11 @@
 #include "base/macros.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/quic_data_writer.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_aligned.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_flag_utils.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_string_piece.h"
 
@@ -44,7 +45,9 @@ QuicPacketCreator::QuicPacketCreator(QuicConnectionId connection_id,
       connection_id_(connection_id),
       packet_(0, PACKET_1BYTE_PACKET_NUMBER, nullptr, 0, false, false),
       latched_flag_no_stop_waiting_frames_(
-          FLAGS_quic_reloadable_flag_quic_no_stop_waiting_frames) {
+          FLAGS_quic_reloadable_flag_quic_no_stop_waiting_frames),
+      pending_padding_bytes_(0),
+      needs_full_padding_(false) {
   SetMaxPacketLength(kDefaultMaxPacketSize);
 }
 
@@ -150,8 +153,9 @@ bool QuicPacketCreator::ConsumeData(QuicStreamId id,
     return false;
   }
   if (needs_full_padding) {
-    packet_.num_padding_bytes = -1;
+    needs_full_padding_ = true;
   }
+
   return true;
 }
 
@@ -279,7 +283,11 @@ void QuicPacketCreator::ReserializeAllFrames(
 
   // Temporarily set the packet number length and change the encryption level.
   packet_.packet_number_length = retransmission.packet_number_length;
-  packet_.num_padding_bytes = retransmission.num_padding_bytes;
+  if (retransmission.num_padding_bytes == -1) {
+    // Only retransmit padding when original packet needs full padding. Padding
+    // from pending_padding_bytes_ are not retransmitted.
+    needs_full_padding_ = true;
+  }
   // Only preserve the original encryption level if it's a handshake packet or
   // if we haven't gone forward secure.
   if (retransmission.has_crypto_handshake ||
@@ -307,7 +315,7 @@ void QuicPacketCreator::ReserializeAllFrames(
 }
 
 void QuicPacketCreator::Flush() {
-  if (!HasPendingFrames()) {
+  if (!HasPendingFrames() && pending_padding_bytes_ == 0) {
     return;
   }
 
@@ -342,6 +350,7 @@ void QuicPacketCreator::ClearPacket() {
   DCHECK(packet_.retransmittable_frames.empty());
   packet_.listeners.clear();
   packet_.largest_acked = 0;
+  needs_full_padding_ = false;
 }
 
 void QuicPacketCreator::CreateAndSerializeStreamFrame(
@@ -455,7 +464,7 @@ bool QuicPacketCreator::AddSavedFrame(const QuicFrame& frame) {
 
 bool QuicPacketCreator::AddPaddedSavedFrame(const QuicFrame& frame) {
   if (AddFrame(frame, /*save_retransmittable_frames=*/true)) {
-    packet_.num_padding_bytes = -1;
+    needs_full_padding_ = true;
     return true;
   }
   return false;
@@ -471,7 +480,8 @@ void QuicPacketCreator::AddAckListener(
 void QuicPacketCreator::SerializePacket(char* encrypted_buffer,
                                         size_t encrypted_buffer_len) {
   DCHECK_LT(0u, encrypted_buffer_len);
-  QUIC_BUG_IF(queued_frames_.empty()) << "Attempt to serialize empty packet";
+  QUIC_BUG_IF(queued_frames_.empty() && pending_padding_bytes_ == 0)
+      << "Attempt to serialize empty packet";
   QuicPacketHeader header;
   // FillPacketHeader increments packet_number_.
   FillPacketHeader(&header);
@@ -616,13 +626,27 @@ bool QuicPacketCreator::AddFrame(const QuicFrame& frame,
 }
 
 void QuicPacketCreator::MaybeAddPadding() {
-  if (packet_.num_padding_bytes == 0) {
-    return;
-  }
-
+  // The current packet should have no padding bytes because padding is only
+  // added when this method is called just before the packet is serialized.
+  DCHECK_EQ(0, packet_.num_padding_bytes);
   if (BytesFree() == 0) {
     // Don't pad full packets.
     return;
+  }
+
+  if (!needs_full_padding_ && pending_padding_bytes_ == 0) {
+    // Do not need padding.
+    return;
+  }
+
+  if (needs_full_padding_) {
+    // Full padding does not consume pending padding bytes.
+    packet_.num_padding_bytes = -1;
+  } else {
+    packet_.num_padding_bytes =
+        std::min<int16_t>(pending_padding_bytes_, BytesFree());
+    pending_padding_bytes_ -= packet_.num_padding_bytes;
+    QUIC_FLAG_COUNT(quic_reloadable_flag_quic_enable_random_padding);
   }
 
   bool success =
@@ -633,6 +657,10 @@ void QuicPacketCreator::MaybeAddPadding() {
 bool QuicPacketCreator::IncludeNonceInPublicHeader() {
   return have_diversification_nonce_ &&
          packet_.encryption_level == ENCRYPTION_INITIAL;
+}
+
+void QuicPacketCreator::AddPendingPadding(QuicByteCount size) {
+  pending_padding_bytes_ += size;
 }
 
 }  // namespace net

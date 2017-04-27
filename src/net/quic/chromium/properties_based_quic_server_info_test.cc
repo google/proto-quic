@@ -34,8 +34,6 @@ class PropertiesBasedQuicServerInfoTest : public ::testing::Test {
 
   // Initialize |server_info_| object and persist it.
   void InitializeAndPersist() {
-    server_info_.Start();
-    EXPECT_TRUE(server_info_.IsDataReady());
     QuicServerInfo::State* state = server_info_.mutable_state();
     EXPECT_TRUE(state->certs.empty());
 
@@ -45,11 +43,7 @@ class PropertiesBasedQuicServerInfoTest : public ::testing::Test {
     state->cert_sct = kCertSCTA;
     state->chlo_hash = kChloHashA;
     state->certs.push_back(kCertA);
-    EXPECT_TRUE(server_info_.IsReadyToPersist());
     server_info_.Persist();
-    EXPECT_TRUE(server_info_.IsReadyToPersist());
-    EXPECT_TRUE(server_info_.IsDataReady());
-    server_info_.OnExternalCacheHit();
   }
 
   // Verify the data that is persisted in InitializeAndPersist().
@@ -75,10 +69,7 @@ TEST_F(PropertiesBasedQuicServerInfoTest, Update) {
   // Read the persisted data and verify we have read the data correctly.
   PropertiesBasedQuicServerInfo server_info1(server_id_,
                                              &http_server_properties_);
-  server_info1.Start();
-  EXPECT_THAT(server_info1.WaitForDataReady(callback_),
-              IsOk());  // Read the data.
-  EXPECT_TRUE(server_info1.IsDataReady());
+  EXPECT_TRUE(server_info1.Load());
 
   // Verify the data.
   const QuicServerInfo::State& state1 = server_info1.state();
@@ -88,16 +79,12 @@ TEST_F(PropertiesBasedQuicServerInfoTest, Update) {
   // Update the data, by adding another cert.
   QuicServerInfo::State* state2 = server_info1.mutable_state();
   state2->certs.push_back(kCertB);
-  EXPECT_TRUE(server_info_.IsReadyToPersist());
   server_info1.Persist();
 
   // Read the persisted data and verify we have read the data correctly.
   PropertiesBasedQuicServerInfo server_info2(server_id_,
                                              &http_server_properties_);
-  server_info2.Start();
-  EXPECT_THAT(server_info2.WaitForDataReady(callback_),
-              IsOk());  // Read the data.
-  EXPECT_TRUE(server_info1.IsDataReady());
+  EXPECT_TRUE(server_info2.Load());
 
   // Verify updated data.
   const QuicServerInfo::State& state3 = server_info2.state();

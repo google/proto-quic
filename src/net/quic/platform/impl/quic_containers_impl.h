@@ -21,7 +21,7 @@ using QuicLinkedHashMapImpl = linked_hash_map<Key, Value>;
 // unique key-value-pair elements, and upgrades itself to unordered_map when
 // runs out of space.
 template <typename Key, typename Value, int Size>
-using QuicSmallMapImpl = base::SmallMap<std::unordered_map<Key, Value>, Size>;
+using QuicSmallMapImpl = base::small_map<std::unordered_map<Key, Value>, Size>;
 
 // A data structure used to represent a sorted set of non-empty, non-adjacent,
 // and mutually disjoint intervals.

@@ -154,9 +154,10 @@ class BaseTestServer {
     // server. Do not change them.
     enum TLSIntolerantLevel {
       TLS_INTOLERANT_NONE = 0,
-      TLS_INTOLERANT_ALL = 1,  // Intolerant of all TLS versions.
+      TLS_INTOLERANT_ALL = 1,     // Intolerant of all TLS versions.
       TLS_INTOLERANT_TLS1_1 = 2,  // Intolerant of TLS 1.1 or higher.
       TLS_INTOLERANT_TLS1_2 = 3,  // Intolerant of TLS 1.2 or higher.
+      TLS_INTOLERANT_TLS1_3 = 4,  // Intolerant of TLS 1.3 or higher.
     };
 
     // Values which control how the server reacts in response to a ClientHello

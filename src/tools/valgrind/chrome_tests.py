@@ -400,6 +400,9 @@ class ChromeTests:
   def TestKeyboard(self):
     return self.SimpleTest("keyboard", "keyboard_unittests")
 
+  def TestLatency(self):
+    return self.SimpleTest("latency", "latency_unittests")
+
   def TestMedia(self):
     return self.SimpleTest("chrome", "media_unittests")
 
@@ -686,6 +689,7 @@ class ChromeTests:
     "interactive_ui": TestInteractiveUI,
     "jingle": TestJingle,        "jingle_unittests": TestJingle,
     "keyboard": TestKeyboard,    "keyboard_unittests": TestKeyboard,
+    "latency": TestLatency,      "latency_unittests": TestLatency,
     "layout": TestLayout,        "layout_tests": TestLayout,
     "media": TestMedia,          "media_unittests": TestMedia,
     "message_center": TestMessageCenter,

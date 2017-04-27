@@ -85,7 +85,7 @@ MessageLoop::MessageLoop(Type type)
 }
 
 MessageLoop::MessageLoop(std::unique_ptr<MessagePump> pump)
-    : MessageLoop(TYPE_CUSTOM, Bind(&ReturnPump, Passed(&pump))) {
+    : MessageLoop(TYPE_CUSTOM, BindOnce(&ReturnPump, Passed(&pump))) {
   BindToCurrentThread();
 }
 
@@ -168,7 +168,7 @@ std::unique_ptr<MessagePump> MessageLoop::CreateMessagePumpForType(Type type) {
 
 #if defined(OS_IOS) || defined(OS_MACOSX)
 #define MESSAGE_PUMP_UI std::unique_ptr<MessagePump>(MessagePumpMac::Create())
-#elif defined(OS_NACL)
+#elif defined(OS_NACL) || defined(OS_AIX)
 // Currently NaCl doesn't have a UI MessageLoop.
 // TODO(abarth): Figure out if we need this.
 #define MESSAGE_PUMP_UI std::unique_ptr<MessagePump>()
@@ -309,7 +309,7 @@ bool MessageLoop::IsIdleForTesting() {
 std::unique_ptr<MessageLoop> MessageLoop::CreateUnbound(
     Type type,
     MessagePumpFactoryCallback pump_factory) {
-  return WrapUnique(new MessageLoop(type, pump_factory));
+  return WrapUnique(new MessageLoop(type, std::move(pump_factory)));
 }
 
 MessageLoop::MessageLoop(Type type, MessagePumpFactoryCallback pump_factory)
@@ -319,7 +319,7 @@ MessageLoop::MessageLoop(Type type, MessagePumpFactoryCallback pump_factory)
       in_high_res_mode_(false),
 #endif
       nestable_tasks_allowed_(true),
-      pump_factory_(pump_factory),
+      pump_factory_(std::move(pump_factory)),
       run_loop_(nullptr),
       current_pending_task_(nullptr),
       incoming_task_queue_(new internal::IncomingTaskQueue(this)),
@@ -334,7 +334,7 @@ MessageLoop::MessageLoop(Type type, MessagePumpFactoryCallback pump_factory)
 void MessageLoop::BindToCurrentThread() {
   DCHECK(!pump_);
   if (!pump_factory_.is_null())
-    pump_ = pump_factory_.Run();
+    pump_ = std::move(pump_factory_).Run();
   else
     pump_ = CreateMessagePumpForType(type_);
 
@@ -593,7 +593,7 @@ bool MessageLoop::DoIdleWork() {
 // MessageLoopForUI
 
 MessageLoopForUI::MessageLoopForUI(std::unique_ptr<MessagePump> pump)
-    : MessageLoop(TYPE_UI, Bind(&ReturnPump, Passed(&pump))) {}
+    : MessageLoop(TYPE_UI, BindOnce(&ReturnPump, std::move(pump))) {}
 
 #if defined(OS_ANDROID)
 void MessageLoopForUI::Start() {

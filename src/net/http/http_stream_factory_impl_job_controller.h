@@ -172,11 +172,18 @@ class HttpStreamFactoryImpl::JobController
 
   bool is_preconnect() const { return is_preconnect_; }
 
+  // Returns true if |this| has a pending request that is not completed.
+  bool HasPendingRequest() const { return request_ != nullptr; }
+
   // Returns true if |this| has a pending main job that is not completed.
   bool HasPendingMainJob() const;
 
   // Returns true if |this| has a pending alternative job that is not completed.
   bool HasPendingAltJob() const;
+
+  // TODO(xunjieli): Added to investigate crbug.com/711721. Remove when no
+  // longer needed.
+  void LogHistograms() const;
 
   // Returns the estimated memory usage in bytes.
   size_t EstimateMemoryUsage() const;
@@ -235,9 +242,6 @@ class HttpStreamFactoryImpl::JobController
 
   // Resumes the main job immediately.
   void ResumeMainJob();
-
-  // Returns true if QUIC is whitelisted for |host|.
-  bool IsQuicWhitelistedForHost(const std::string& host);
 
   AlternativeService GetAlternativeServiceFor(
       const HttpRequestInfo& request_info,

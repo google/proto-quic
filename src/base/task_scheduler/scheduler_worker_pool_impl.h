@@ -38,16 +38,19 @@ namespace internal {
 class DelayedTaskManager;
 class TaskTracker;
 
-// A pool of workers that run Tasks. This class is thread-safe.
+// A pool of workers that run Tasks.
+//
+// The pool doesn't create threads until Start() is called. Tasks can be posted
+// at any time but will not run until after Start() is called.
+//
+// This class is thread-safe.
 class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
  public:
   // Callback invoked when a Sequence isn't empty after a worker pops a Task
   // from it.
   using ReEnqueueSequenceCallback = Callback<void(scoped_refptr<Sequence>)>;
 
-  // Constructs a pool without workers. Tasks can be posted to the pool, but
-  // they won't run until workers are created. To create workers and start
-  // running tasks, call Start().
+  // Constructs a pool without workers.
   //
   // |name| is used to label the pool's threads ("TaskScheduler" + |name| +
   // index) and histograms ("TaskScheduler." + histogram name + "." + |name| +
@@ -147,12 +150,12 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
 
   // All workers owned by this worker pool. Initialized by Start() within the
   // scope of |idle_workers_stack_lock_|. Never modified afterwards (i.e. can be
-  // read without synchronization once |workers_created_.IsSignaled()|).
+  // read without synchronization once |workers_created_.IsSet()|).
   std::vector<scoped_refptr<SchedulerWorker>> workers_;
 
   // Suggested reclaim time for workers. Initialized by Start(). Never modified
   // afterwards (i.e. can be read without synchronization once
-  // |workers_created_.IsSignaled()|).
+  // |workers_created_.IsSet()|).
   TimeDelta suggested_reclaim_time_;
 
   // Synchronizes access to |idle_workers_stack_|,
@@ -172,7 +175,9 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   // Signaled when all workers become idle.
   std::unique_ptr<ConditionVariable> idle_workers_stack_cv_for_testing_;
 
-  // Number of wake ups that occurred before Start().
+  // Number of wake ups that occurred before Start(). Never modified after
+  // Start() (i.e. can be read without synchronization once
+  // |workers_created_.IsSet()|).
   int num_wake_ups_before_start_ = 0;
 
   // Signaled once JoinForTesting() has returned.
@@ -183,8 +188,8 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   AtomicFlag worker_detachment_disallowed_;
 
 #if DCHECK_IS_ON()
-  // Signaled when all workers have been created.
-  mutable WaitableEvent workers_created_;
+  // Set when all workers have been created.
+  AtomicFlag workers_created_;
 #endif
 
   // TaskScheduler.DetachDuration.[worker pool name] histogram. Intentionally

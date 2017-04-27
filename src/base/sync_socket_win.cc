@@ -293,6 +293,12 @@ size_t SyncSocket::Peek() {
   return available;
 }
 
+SyncSocket::Handle SyncSocket::Release() {
+  Handle r = handle_;
+  handle_ = kInvalidHandle;
+  return r;
+}
+
 CancelableSyncSocket::CancelableSyncSocket()
     : shutdown_event_(base::WaitableEvent::ResetPolicy::MANUAL,
                       base::WaitableEvent::InitialState::NOT_SIGNALED),

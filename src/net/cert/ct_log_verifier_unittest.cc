@@ -389,8 +389,8 @@ void CheckVerifyConsistencyProof(const CTLogVerifier& log,
 }
 
 TEST_F(CTLogVerifierTest, VerifiesCertSCT) {
-  ct::LogEntry cert_entry;
-  ct::GetX509CertLogEntry(&cert_entry);
+  ct::SignedEntryData cert_entry;
+  ct::GetX509CertSignedEntry(&cert_entry);
 
   scoped_refptr<ct::SignedCertificateTimestamp> cert_sct;
   ct::GetX509CertSCT(&cert_sct);
@@ -399,8 +399,8 @@ TEST_F(CTLogVerifierTest, VerifiesCertSCT) {
 }
 
 TEST_F(CTLogVerifierTest, VerifiesPrecertSCT) {
-  ct::LogEntry precert_entry;
-  ct::GetPrecertLogEntry(&precert_entry);
+  ct::SignedEntryData precert_entry;
+  ct::GetPrecertSignedEntry(&precert_entry);
 
   scoped_refptr<ct::SignedCertificateTimestamp> precert_sct;
   ct::GetPrecertSCT(&precert_sct);
@@ -409,8 +409,8 @@ TEST_F(CTLogVerifierTest, VerifiesPrecertSCT) {
 }
 
 TEST_F(CTLogVerifierTest, FailsInvalidTimestamp) {
-  ct::LogEntry cert_entry;
-  ct::GetX509CertLogEntry(&cert_entry);
+  ct::SignedEntryData cert_entry;
+  ct::GetX509CertSignedEntry(&cert_entry);
 
   scoped_refptr<ct::SignedCertificateTimestamp> cert_sct;
   ct::GetX509CertSCT(&cert_sct);
@@ -422,8 +422,8 @@ TEST_F(CTLogVerifierTest, FailsInvalidTimestamp) {
 }
 
 TEST_F(CTLogVerifierTest, FailsInvalidLogID) {
-  ct::LogEntry cert_entry;
-  ct::GetX509CertLogEntry(&cert_entry);
+  ct::SignedEntryData cert_entry;
+  ct::GetX509CertSignedEntry(&cert_entry);
 
   scoped_refptr<ct::SignedCertificateTimestamp> cert_sct;
   ct::GetX509CertSCT(&cert_sct);

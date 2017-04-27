@@ -58,6 +58,8 @@ BuildInfo::BuildInfo(JNIEnv* env)
       package_label_(StrDupJString(Java_BuildInfo_getPackageLabel(env))),
       package_name_(StrDupJString(Java_BuildInfo_getPackageName(env))),
       build_type_(StrDupJString(Java_BuildInfo_getBuildType(env))),
+      extracted_file_suffix_(
+          ConvertJavaStringToUTF8(Java_BuildInfo_getExtractedFileSuffix(env))),
       sdk_int_(Java_BuildInfo_getSdkInt(env)),
       java_exception_info_(NULL) {}
 

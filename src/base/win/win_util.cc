@@ -11,6 +11,7 @@
 #include <initguid.h>
 #include <inspectable.h>
 #include <mdmregistration.h>
+#include <objbase.h>
 #include <propkey.h>
 #include <propvarutil.h>
 #include <psapi.h>
@@ -129,9 +130,7 @@ bool IsWindows10TabletMode(HWND hwnd) {
   }
 
   base::win::ScopedComPtr<IUIViewSettingsInterop> view_settings_interop;
-  hr = get_factory(view_settings_guid,
-                   __uuidof(IUIViewSettingsInterop),
-                   view_settings_interop.ReceiveVoid());
+  hr = get_factory(view_settings_guid, IID_PPV_ARGS(&view_settings_interop));
   if (FAILED(hr))
     return false;
 

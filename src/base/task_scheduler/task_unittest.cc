@@ -17,7 +17,7 @@ namespace internal {
 // adjusted to SKIP_ON_SHUTDOWN. The shutown behavior of other delayed tasks
 // should not change.
 TEST(TaskSchedulerTaskTest, ShutdownBehaviorChangeWithDelay) {
-  Task continue_on_shutdown(FROM_HERE, Bind(&DoNothing),
+  Task continue_on_shutdown(FROM_HERE, BindOnce(&DoNothing),
                             TaskTraits().WithShutdownBehavior(
                                 TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN),
                             TimeDelta::FromSeconds(1));
@@ -25,14 +25,14 @@ TEST(TaskSchedulerTaskTest, ShutdownBehaviorChangeWithDelay) {
             continue_on_shutdown.traits.shutdown_behavior());
 
   Task skip_on_shutdown(
-      FROM_HERE, Bind(&DoNothing),
+      FROM_HERE, BindOnce(&DoNothing),
       TaskTraits().WithShutdownBehavior(TaskShutdownBehavior::SKIP_ON_SHUTDOWN),
       TimeDelta::FromSeconds(1));
   EXPECT_EQ(TaskShutdownBehavior::SKIP_ON_SHUTDOWN,
             skip_on_shutdown.traits.shutdown_behavior());
 
   Task block_shutdown(
-      FROM_HERE, Bind(&DoNothing),
+      FROM_HERE, BindOnce(&DoNothing),
       TaskTraits().WithShutdownBehavior(TaskShutdownBehavior::BLOCK_SHUTDOWN),
       TimeDelta::FromSeconds(1));
   EXPECT_EQ(TaskShutdownBehavior::SKIP_ON_SHUTDOWN,
@@ -41,7 +41,7 @@ TEST(TaskSchedulerTaskTest, ShutdownBehaviorChangeWithDelay) {
 
 // Verify that the shutdown behavior of undelayed tasks is not adjusted.
 TEST(TaskSchedulerTaskTest, NoShutdownBehaviorChangeNoDelay) {
-  Task continue_on_shutdown(FROM_HERE, Bind(&DoNothing),
+  Task continue_on_shutdown(FROM_HERE, BindOnce(&DoNothing),
                             TaskTraits().WithShutdownBehavior(
                                 TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN),
                             TimeDelta());
@@ -49,14 +49,14 @@ TEST(TaskSchedulerTaskTest, NoShutdownBehaviorChangeNoDelay) {
             continue_on_shutdown.traits.shutdown_behavior());
 
   Task skip_on_shutdown(
-      FROM_HERE, Bind(&DoNothing),
+      FROM_HERE, BindOnce(&DoNothing),
       TaskTraits().WithShutdownBehavior(TaskShutdownBehavior::SKIP_ON_SHUTDOWN),
       TimeDelta());
   EXPECT_EQ(TaskShutdownBehavior::SKIP_ON_SHUTDOWN,
             skip_on_shutdown.traits.shutdown_behavior());
 
   Task block_shutdown(
-      FROM_HERE, Bind(&DoNothing),
+      FROM_HERE, BindOnce(&DoNothing),
       TaskTraits().WithShutdownBehavior(TaskShutdownBehavior::BLOCK_SHUTDOWN),
       TimeDelta());
   EXPECT_EQ(TaskShutdownBehavior::BLOCK_SHUTDOWN,

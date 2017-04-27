@@ -124,8 +124,9 @@ class TraceEventTestFixture : public testing::Test {
     Thread flush_thread("flush");
     flush_thread.Start();
     flush_thread.task_runner()->PostTask(
-        FROM_HERE, base::Bind(&TraceEventTestFixture::EndTraceAndFlushAsync,
-                              base::Unretained(this), &flush_complete_event));
+        FROM_HERE,
+        base::BindOnce(&TraceEventTestFixture::EndTraceAndFlushAsync,
+                       base::Unretained(this), &flush_complete_event));
     flush_complete_event.Wait();
   }
 
@@ -1737,7 +1738,8 @@ TEST_F(TraceEventTestFixture, DataCapturedOnThread) {
   thread.Start();
 
   thread.task_runner()->PostTask(
-      FROM_HERE, base::Bind(&TraceWithAllMacroVariants, &task_complete_event));
+      FROM_HERE,
+      base::BindOnce(&TraceWithAllMacroVariants, &task_complete_event));
   task_complete_event.Wait();
   thread.Stop();
 
@@ -1760,8 +1762,8 @@ TEST_F(TraceEventTestFixture, DataCapturedManyThreads) {
                           WaitableEvent::InitialState::NOT_SIGNALED);
     threads[i]->Start();
     threads[i]->task_runner()->PostTask(
-        FROM_HERE, base::Bind(&TraceManyInstantEvents, i, num_events,
-                              task_complete_events[i]));
+        FROM_HERE, base::BindOnce(&TraceManyInstantEvents, i, num_events,
+                                  task_complete_events[i]));
   }
 
   for (int i = 0; i < num_threads; i++) {
@@ -1810,8 +1812,8 @@ TEST_F(TraceEventTestFixture, ThreadNames) {
     threads[i]->Start();
     thread_ids[i] = threads[i]->GetThreadId();
     threads[i]->task_runner()->PostTask(
-        FROM_HERE, base::Bind(&TraceManyInstantEvents, i, kNumEvents,
-                              task_complete_events[i]));
+        FROM_HERE, base::BindOnce(&TraceManyInstantEvents, i, kNumEvents,
+                                  task_complete_events[i]));
   }
   for (int i = 0; i < kNumThreads; i++) {
     task_complete_events[i]->Wait();
@@ -2720,11 +2722,11 @@ TEST_F(TraceEventTestFixture, SetCurrentThreadBlocksMessageLoopBeforeTracing) {
                                     WaitableEvent::InitialState::NOT_SIGNALED);
   thread.Start();
   thread.task_runner()->PostTask(
-      FROM_HERE, Bind(&TraceLog::SetCurrentThreadBlocksMessageLoop,
-                      Unretained(TraceLog::GetInstance())));
+      FROM_HERE, BindOnce(&TraceLog::SetCurrentThreadBlocksMessageLoop,
+                          Unretained(TraceLog::GetInstance())));
 
   thread.task_runner()->PostTask(
-      FROM_HERE, Bind(&TraceWithAllMacroVariants, &task_complete_event));
+      FROM_HERE, BindOnce(&TraceWithAllMacroVariants, &task_complete_event));
   task_complete_event.Wait();
 
   WaitableEvent task_start_event(WaitableEvent::ResetPolicy::AUTOMATIC,
@@ -2732,7 +2734,8 @@ TEST_F(TraceEventTestFixture, SetCurrentThreadBlocksMessageLoopBeforeTracing) {
   WaitableEvent task_stop_event(WaitableEvent::ResetPolicy::AUTOMATIC,
                                 WaitableEvent::InitialState::NOT_SIGNALED);
   thread.task_runner()->PostTask(
-      FROM_HERE, Bind(&BlockUntilStopped, &task_start_event, &task_stop_event));
+      FROM_HERE,
+      BindOnce(&BlockUntilStopped, &task_start_event, &task_stop_event));
   task_start_event.Wait();
 
   EndTraceAndFlush();
@@ -2776,16 +2779,16 @@ TEST_F(TraceEventTestFixture, SetCurrentThreadBlocksMessageLoopAfterTracing) {
   thread.Start();
 
   thread.task_runner()->PostTask(
-      FROM_HERE, Bind(&TraceWithAllMacroVariants, &task_complete_event));
+      FROM_HERE, BindOnce(&TraceWithAllMacroVariants, &task_complete_event));
   task_complete_event.Wait();
 
   WaitableEvent task_start_event(WaitableEvent::ResetPolicy::AUTOMATIC,
                                  WaitableEvent::InitialState::NOT_SIGNALED);
   WaitableEvent task_stop_event(WaitableEvent::ResetPolicy::AUTOMATIC,
                                 WaitableEvent::InitialState::NOT_SIGNALED);
-  thread.task_runner()->PostTask(
-      FROM_HERE, Bind(&SetBlockingFlagAndBlockUntilStopped, &task_start_event,
-                      &task_stop_event));
+  thread.task_runner()->PostTask(FROM_HERE,
+                                 BindOnce(&SetBlockingFlagAndBlockUntilStopped,
+                                          &task_start_event, &task_stop_event));
   task_start_event.Wait();
 
   EndTraceAndFlush();
@@ -2804,7 +2807,7 @@ TEST_F(TraceEventTestFixture, ThreadOnceBlocking) {
   thread.Start();
 
   thread.task_runner()->PostTask(
-      FROM_HERE, Bind(&TraceWithAllMacroVariants, &task_complete_event));
+      FROM_HERE, BindOnce(&TraceWithAllMacroVariants, &task_complete_event));
   task_complete_event.Wait();
   task_complete_event.Reset();
 
@@ -2813,7 +2816,8 @@ TEST_F(TraceEventTestFixture, ThreadOnceBlocking) {
   WaitableEvent task_stop_event(WaitableEvent::ResetPolicy::AUTOMATIC,
                                 WaitableEvent::InitialState::NOT_SIGNALED);
   thread.task_runner()->PostTask(
-      FROM_HERE, Bind(&BlockUntilStopped, &task_start_event, &task_stop_event));
+      FROM_HERE,
+      BindOnce(&BlockUntilStopped, &task_start_event, &task_stop_event));
   task_start_event.Wait();
 
   // The thread will timeout in this flush.
@@ -2828,7 +2832,8 @@ TEST_F(TraceEventTestFixture, ThreadOnceBlocking) {
   task_start_event.Reset();
   task_stop_event.Reset();
   thread.task_runner()->PostTask(
-      FROM_HERE, Bind(&BlockUntilStopped, &task_start_event, &task_stop_event));
+      FROM_HERE,
+      BindOnce(&BlockUntilStopped, &task_start_event, &task_stop_event));
   task_start_event.Wait();
   task_stop_event.Signal();
   Clear();
@@ -2837,7 +2842,7 @@ TEST_F(TraceEventTestFixture, ThreadOnceBlocking) {
   // local buffer for the thread without any error.
   BeginTrace();
   thread.task_runner()->PostTask(
-      FROM_HERE, Bind(&TraceWithAllMacroVariants, &task_complete_event));
+      FROM_HERE, BindOnce(&TraceWithAllMacroVariants, &task_complete_event));
   task_complete_event.Wait();
   task_complete_event.Reset();
   EndTraceAndFlushInThreadWithMessageLoop();

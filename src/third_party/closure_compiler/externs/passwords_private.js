@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2017 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -18,7 +18,17 @@ chrome.passwordsPrivate = {};
 
 /**
  * @typedef {{
- *   originUrl: string,
+ *   origin: string,
+ *   shown: string,
+ *   link: string
+ * }}
+ * @see https://developer.chrome.com/extensions/passwordsPrivate#type-UrlCollection
+ */
+chrome.passwordsPrivate.UrlCollection;
+
+/**
+ * @typedef {{
+ *   urls: !chrome.passwordsPrivate.UrlCollection,
  *   username: string
  * }}
  * @see https://developer.chrome.com/extensions/passwordsPrivate#type-LoginPair
@@ -28,7 +38,6 @@ chrome.passwordsPrivate.LoginPair;
 /**
  * @typedef {{
  *   loginPair: !chrome.passwordsPrivate.LoginPair,
- *   linkUrl: string,
  *   numCharactersInPassword: number,
  *   federationText: (string|undefined)
  * }}
@@ -38,21 +47,20 @@ chrome.passwordsPrivate.PasswordUiEntry;
 
 /**
  * @typedef {{
- *   exceptionUrl: string,
- *   linkUrl: string
- * }}
- * @see https://developer.chrome.com/extensions/passwordsPrivate#type-ExceptionPair
- */
-chrome.passwordsPrivate.ExceptionPair;
-
-/**
- * @typedef {{
  *   loginPair: !chrome.passwordsPrivate.LoginPair,
  *   plaintextPassword: string
  * }}
  * @see https://developer.chrome.com/extensions/passwordsPrivate#type-PlaintextPasswordEventParameters
  */
 chrome.passwordsPrivate.PlaintextPasswordEventParameters;
+
+/**
+ * @typedef {{
+ *   urls: !chrome.passwordsPrivate.UrlCollection
+ * }}
+ * @see https://developer.chrome.com/extensions/passwordsPrivate#type-ExceptionEntry
+ */
+chrome.passwordsPrivate.ExceptionEntry;
 
 /**
  * Removes the saved password corresponding to |loginPair|. If no saved password
@@ -94,7 +102,7 @@ chrome.passwordsPrivate.getSavedPasswordList = function(callback) {};
 
 /**
  * Returns the list of password exceptions.
- * @param {function(!Array<!chrome.passwordsPrivate.ExceptionPair>):void}
+ * @param {function(!Array<!chrome.passwordsPrivate.ExceptionEntry>):void}
  *     callback Called with the list of password exceptions.
  * @see https://developer.chrome.com/extensions/passwordsPrivate#method-getPasswordExceptionList
  */

@@ -312,6 +312,56 @@ class XcodeSettings(object):
       return self.GetBundleContentsFolderPath()
     return os.path.join(self.GetBundleContentsFolderPath(), 'Resources')
 
+  def GetBundleExecutableFolderPath(self):
+    """Returns the qualified path to the bundle's executables folder. E.g.
+    Chromium.app/Contents/MacOS. Only valid for bundles."""
+    assert self._IsBundle()
+    if self.spec['type'] in ('shared_library') or self.isIOS:
+      return self.GetBundleContentsFolderPath()
+    elif self.spec['type'] in ('executable', 'loadable_module'):
+      return os.path.join(self.GetBundleContentsFolderPath(), 'MacOS')
+
+  def GetBundleJavaFolderPath(self):
+    """Returns the qualified path to the bundle's Java resource folder.
+    E.g. Chromium.app/Contents/Resources/Java. Only valid for bundles."""
+    assert self._IsBundle()
+    return os.path.join(self.GetBundleResourceFolder(), 'Java')
+
+  def GetBundleFrameworksFolderPath(self):
+    """Returns the qualified path to the bundle's frameworks folder. E.g,
+    Chromium.app/Contents/Frameworks. Only valid for bundles."""
+    assert self._IsBundle()
+    return os.path.join(self.GetBundleContentsFolderPath(), 'Frameworks')
+
+  def GetBundleSharedFrameworksFolderPath(self):
+    """Returns the qualified path to the bundle's frameworks folder. E.g,
+    Chromium.app/Contents/SharedFrameworks. Only valid for bundles."""
+    assert self._IsBundle()
+    return os.path.join(self.GetBundleContentsFolderPath(),
+                        'SharedFrameworks')
+
+  def GetBundleSharedSupportFolderPath(self):
+    """Returns the qualified path to the bundle's shared support folder. E.g,
+    Chromium.app/Contents/SharedSupport. Only valid for bundles."""
+    assert self._IsBundle()
+    if self.spec['type'] == 'shared_library':
+      return self.GetBundleResourceFolder()
+    else:
+      return os.path.join(self.GetBundleContentsFolderPath(),
+                          'SharedSupport')
+
+  def GetBundlePlugInsFolderPath(self):
+    """Returns the qualified path to the bundle's plugins folder. E.g,
+    Chromium.app/Contents/PlugIns. Only valid for bundles."""
+    assert self._IsBundle()
+    return os.path.join(self.GetBundleContentsFolderPath(), 'PlugIns')
+
+  def GetBundleXPCServicesFolderPath(self):
+    """Returns the qualified path to the bundle's XPC services folder. E.g,
+    Chromium.app/Contents/XPCServices. Only valid for bundles."""
+    assert self._IsBundle()
+    return os.path.join(self.GetBundleContentsFolderPath(), 'XPCServices')
+
   def GetBundlePlistPath(self):
     """Returns the qualified path to the bundle's plist file. E.g.
     Chromium.app/Contents/Info.plist. Only valid for bundles."""
@@ -371,11 +421,8 @@ class XcodeSettings(object):
     """Returns the name of the bundle binary of by this target.
     E.g. Chromium.app/Contents/MacOS/Chromium. Only valid for bundles."""
     assert self._IsBundle()
-    if self.spec['type'] in ('shared_library') or self.isIOS:
-      path = self.GetBundleContentsFolderPath()
-    elif self.spec['type'] in ('executable', 'loadable_module'):
-      path = os.path.join(self.GetBundleContentsFolderPath(), 'MacOS')
-    return os.path.join(path, self.GetExecutableName())
+    return os.path.join(self.GetBundleExecutableFolderPath(), \
+                        self.GetExecutableName())
 
   def _GetStandaloneExecutableSuffix(self):
     if 'product_extension' in self.spec:
@@ -426,8 +473,8 @@ class XcodeSettings(object):
       return self._GetStandaloneBinaryPath()
 
   def GetExecutablePath(self):
-    """Returns the directory name of the bundle represented by this target. E.g.
-    Chromium.app/Contents/MacOS/Chromium."""
+    """Returns the qualified path to the primary executable of the bundle
+    represented by this target. E.g. Chromium.app/Contents/MacOS/Chromium."""
     if self._IsBundle():
       return self._GetBundleBinaryPath()
     else:
@@ -1541,13 +1588,14 @@ def _GetXcodeEnv(xcode_settings, built_products_dir, srcroot, configuration,
       additional_settings: An optional dict with more values to add to the
           result.
   """
+
   if not xcode_settings: return {}
 
   # This function is considered a friend of XcodeSettings, so let it reach into
   # its implementation details.
   spec = xcode_settings.spec
 
-  # These are filled in on a as-needed basis.
+  # These are filled in on an as-needed basis.
   env = {
     'BUILT_FRAMEWORKS_DIR' : built_products_dir,
     'BUILT_PRODUCTS_DIR' : built_products_dir,
@@ -1580,10 +1628,27 @@ def _GetXcodeEnv(xcode_settings, built_products_dir, srcroot, configuration,
       env['MACH_O_TYPE'] = mach_o_type
     env['PRODUCT_TYPE'] = xcode_settings.GetProductType()
   if xcode_settings._IsBundle():
+    # xcodeproj_file.py sets the same Xcode subfolder value for this as for
+    # FRAMEWORKS_FOLDER_PATH so Xcode builds will actually use FFP's value.
+    env['BUILT_FRAMEWORKS_DIR'] = \
+        os.path.join(built_products_dir + os.sep \
+                     + xcode_settings.GetBundleFrameworksFolderPath())
     env['CONTENTS_FOLDER_PATH'] = \
-      xcode_settings.GetBundleContentsFolderPath()
+        xcode_settings.GetBundleContentsFolderPath()
+    env['EXECUTABLE_FOLDER_PATH'] = \
+        xcode_settings.GetBundleExecutableFolderPath()
     env['UNLOCALIZED_RESOURCES_FOLDER_PATH'] = \
         xcode_settings.GetBundleResourceFolder()
+    env['JAVA_FOLDER_PATH'] = xcode_settings.GetBundleJavaFolderPath()
+    env['FRAMEWORKS_FOLDER_PATH'] = \
+        xcode_settings.GetBundleFrameworksFolderPath()
+    env['SHARED_FRAMEWORKS_FOLDER_PATH'] = \
+        xcode_settings.GetBundleSharedFrameworksFolderPath()
+    env['SHARED_SUPPORT_FOLDER_PATH'] = \
+        xcode_settings.GetBundleSharedSupportFolderPath()
+    env['PLUGINS_FOLDER_PATH'] = xcode_settings.GetBundlePlugInsFolderPath()
+    env['XPCSERVICES_FOLDER_PATH'] = \
+        xcode_settings.GetBundleXPCServicesFolderPath()
     env['INFOPLIST_PATH'] = xcode_settings.GetBundlePlistPath()
     env['WRAPPER_NAME'] = xcode_settings.GetWrapperName()
 

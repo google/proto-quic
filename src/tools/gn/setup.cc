@@ -698,6 +698,7 @@ bool Setup::RunConfigFile() {
 bool Setup::FillOtherConfig(const base::CommandLine& cmdline) {
   Err err;
   SourceDir current_dir("//");
+  Label root_target_label(current_dir, "");
 
   // Secondary source path, read from the config file if present.
   // Read from the config file if present.
@@ -720,8 +721,7 @@ bool Setup::FillOtherConfig(const base::CommandLine& cmdline) {
       return false;
     }
 
-    Label root_target_label =
-        Label::Resolve(current_dir, Label(), *root_value, &err);
+    root_target_label = Label::Resolve(current_dir, Label(), *root_value, &err);
     if (err.has_error()) {
       err.PrintToStdout();
       return false;
@@ -729,6 +729,7 @@ bool Setup::FillOtherConfig(const base::CommandLine& cmdline) {
 
     root_build_file_ = Loader::BuildFileForLabel(root_target_label);
   }
+  build_settings_.SetRootTargetLabel(root_target_label);
 
   // Build config file.
   const Value* build_config_value =

@@ -60,7 +60,7 @@ class RasterizeAndRecordMicroTop25(_RasterizeAndRecordMicro):
     return 'rasterize_and_record_micro.top_25'
 
 
-@benchmark.Disabled('mac', 'win', 'android')  # http://crbug.com/531597
+@benchmark.Disabled('all')  # http://crbug.com/531597
 class RasterizeAndRecordMicroKeyMobileSites(_RasterizeAndRecordMicro):
   """Measures rasterize and record performance on the key mobile sites.
 
@@ -87,7 +87,7 @@ class RasterizeAndRecordMicroKeySilkCases(_RasterizeAndRecordMicro):
     return page_sets.KeySilkCasesPageSet(run_no_page_interactions=True)
 
 
-@benchmark.Enabled('android')
+@benchmark.Disabled('all')  # http://crbug.com/709561
 class RasterizeAndRecordMicroPolymer(_RasterizeAndRecordMicro):
   """Measures rasterize and record performance on the Polymer cases.
 

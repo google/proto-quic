@@ -20,6 +20,9 @@ if (current_cpu == "mipsel" || current_cpu == "mips64el") {
 if (is_mac) {
   import("//build/config/mac/symbols.gni")
 }
+if (is_ios) {
+  import("//build/config/ios/ios_sdk.gni")
+}
 
 declare_args() {
   # Default to warnings as errors for default workflow, where we catch
@@ -91,7 +94,9 @@ declare_args() {
   # branches)
   optimize_for_fuzzing = false
 
-  # Optimize symbol files for maximizing goma cache hit rate.
+  # Optimize symbol files for maximizing goma cache hit rate. This isn't
+  # on by default when goma is enabled because setting this to true may make
+  # it harder to debug binaries.
   strip_absolute_paths_from_debug_symbols = false
 }
 
@@ -509,12 +514,22 @@ config("compiler") {
       ldflags += [ "-Wl,-all_load" ]
     }
 
-    # Allows the linker to apply ICF to the LTO object file. Also, when
-    # targeting ARM, without this flag, LTO produces a .text section that is
-    # larger than the maximum call displacement, preventing the linker from
-    # relocating calls (http://llvm.org/PR22999).
+    # Allows the linker to apply --gc-sections and ICF to the LTO object file.
+    # Also, when targeting ARM, without this flag, LTO produces a .text section
+    # that is larger than the maximum call displacement, preventing the linker
+    # from relocating calls (http://llvm.org/PR22999).
     if (is_linux) {
-      ldflags += [ "-Wl,-plugin-opt,-function-sections" ]
+      if (use_lld) {
+        ldflags += [
+          "-Wl,-mllvm,-function-sections",
+          "-Wl,-mllvm,-data-sections",
+        ]
+      } else {
+        ldflags += [
+          "-Wl,-plugin-opt,-function-sections",
+          "-Wl,-plugin-opt,-data-sections",
+        ]
+      }
     }
   }
 
@@ -1102,6 +1117,17 @@ config("default_warnings") {
         # TODO(thakis ): https://crbug.com/683349
         "-Wno-user-defined-warnings",
       ]
+    } else if (use_xcode_clang &&
+               (xcode_version == "0830" || xcode_version == "0831" ||
+                xcode_version == "0832")) {
+      # This is necessary to allow a progressive transition from using xcode 8 to 8.3. Remove when all bots are migrated to 8.3.
+      cflags += [
+        # TODO(thakis): https://crbug.com/604888
+        "-Wno-undefined-var-template",
+
+        # TODO(hans): https://crbug.com/637306
+        "-Wno-address-of-packed-member",
+      ]
     }
   }
 }
@@ -1382,7 +1408,7 @@ if (is_win) {
 
 config("default_stack_frames") {
   if (is_posix) {
-    if (enabled_frame_pointers) {
+    if (enable_frame_pointers) {
       cflags = [ "-fno-omit-frame-pointer" ]
     } else {
       cflags = [ "-fomit-frame-pointer" ]

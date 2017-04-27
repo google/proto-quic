@@ -15,7 +15,7 @@
 #include "net/http2/decoder/decode_status.h"
 #include "net/http2/tools/failure.h"
 #include "net/http2/tools/random_decoder_test.h"
-#include "net/spdy/spdy_test_utils.h"
+#include "net/spdy/core/spdy_test_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 using ::testing::AssertionResult;

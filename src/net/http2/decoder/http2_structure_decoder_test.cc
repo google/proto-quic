@@ -208,7 +208,7 @@ TEST_F(Http2FrameHeaderDecoderTest, DecodesLiteral) {
     ASSERT_TRUE(DecodeLeadingStructure(kData));
     EXPECT_EQ(5u, structure_.payload_length);
     EXPECT_EQ(Http2FrameType::HEADERS, structure_.type);
-    EXPECT_EQ(Http2FrameFlag::FLAG_PADDED, structure_.flags);
+    EXPECT_EQ(Http2FrameFlag::PADDED, structure_.flags);
     EXPECT_EQ(1u, structure_.stream_id);
   }
   {

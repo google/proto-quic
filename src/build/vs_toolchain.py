@@ -150,10 +150,12 @@ def DetectVisualStudioPath():
     # the registry. For details see:
     # https://blogs.msdn.microsoft.com/heaths/2016/09/15/changes-to-visual-studio-15-setup/
     # For now we use a hardcoded default with an environment variable override.
-    path = r'C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional'
-    path = os.environ.get('vs2017_install', path)
-    if os.path.exists(path):
-      return path
+    for path in (
+        os.environ.get('vs2017_install'),
+        r'C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional',
+        r'C:\Program Files (x86)\Microsoft Visual Studio\2017\Community'):
+      if path and os.path.exists(path):
+        return path
   else:
     keys = [r'HKLM\Software\Microsoft\VisualStudio\%s' % version,
             r'HKLM\Software\Wow6432Node\Microsoft\VisualStudio\%s' % version]
@@ -303,6 +305,28 @@ def CopyDlls(target_dir, configuration, target_cpu):
   _CopyRuntime(target_dir, runtime_dir, target_cpu, debug=False)
   if configuration == 'Debug':
     _CopyRuntime(target_dir, runtime_dir, target_cpu, debug=True)
+
+  _CopyDebugger(target_dir, target_cpu)
+
+
+def _CopyDebugger(target_dir, target_cpu):
+  """Copy dbghelp.dll into the requested directory as needed.
+
+  target_cpu is one of 'x86' or 'x64'.
+
+  dbghelp.dll is used when Chrome needs to symbolize stacks. Copying this file
+  from the SDK directory avoids using the system copy of dbghelp.dll which then
+  ensures compatibility with recent debug information formats, such as VS
+  2017 /debug:fastlink PDBs.
+  """
+  win_sdk_dir = SetEnvironmentAndGetSDKDir()
+  if not win_sdk_dir:
+    return
+
+  debug_file = 'dbghelp.dll'
+  full_path = os.path.join(win_sdk_dir, 'Debuggers', target_cpu, debug_file)
+  target_path = os.path.join(target_dir, debug_file)
+  _CopyRuntimeImpl(target_path, full_path)
 
 
 def _GetDesiredVsToolchainHashes():

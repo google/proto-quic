@@ -117,23 +117,6 @@ std::string GetCertSerialNumber(
       serial_number.field()->Length);
 }
 
-// Test that a given |cert_handle| is actually a valid X.509 certificate, and
-// return true if it is.
-//
-// On OS X, SecCertificateCreateFromData() does not return any errors if
-// called with invalid data, as long as data is present. The actual decoding
-// of the certificate does not happen until an API that requires a CSSM
-// handle is called. While SecCertificateGetCLHandle is the most likely
-// candidate, as it performs the parsing, it does not check whether the
-// parsing was actually successful. Instead, SecCertificateGetSubject is
-// used (supported since 10.3), as a means to check that the certificate
-// parsed as a valid X.509 certificate.
-bool IsValidOSCertHandle(SecCertificateRef cert_handle) {
-  const CSSM_X509_NAME* sanity_check = NULL;
-  OSStatus status = SecCertificateGetSubject(cert_handle, &sanity_check);
-  return status == noErr && sanity_check;
-}
-
 // Parses |data| of length |length|, attempting to decode it as the specified
 // |format|. If |data| is in the specified format, any certificates contained
 // within are stored into |output|.
@@ -182,7 +165,7 @@ void AddCertificatesFromBytes(const char* data, size_t length,
       // |input_format|, causing decode to succeed. On OS X 10.6, the data
       // is properly decoded as a PKCS#7, whether PEM or not, which avoids
       // the need to fallback to internal decoding.
-      if (IsValidOSCertHandle(cert)) {
+      if (x509_util::IsValidSecCertificate(cert)) {
         CFRetain(cert);
         output->push_back(cert);
       }
@@ -298,22 +281,9 @@ bool X509Certificate::IsSameOSCert(X509Certificate::OSCertHandle a,
 X509Certificate::OSCertHandle X509Certificate::CreateOSCertHandleFromBytes(
     const char* data,
     size_t length) {
-  CSSM_DATA cert_data;
-  cert_data.Data = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(data));
-  cert_data.Length = length;
-
-  OSCertHandle cert_handle = NULL;
-  OSStatus status = SecCertificateCreateFromData(&cert_data,
-                                                 CSSM_CERT_X_509v3,
-                                                 CSSM_CERT_ENCODING_DER,
-                                                 &cert_handle);
-  if (status != noErr)
-    return NULL;
-  if (!IsValidOSCertHandle(cert_handle)) {
-    CFRelease(cert_handle);
-    return NULL;
-  }
-  return cert_handle;
+  return x509_util::CreateSecCertificateFromBytes(
+             reinterpret_cast<const uint8_t*>(data), length)
+      .release();
 }
 
 // static
@@ -357,20 +327,7 @@ void X509Certificate::FreeOSCertHandle(OSCertHandle cert_handle) {
 
 // static
 SHA256HashValue X509Certificate::CalculateFingerprint256(OSCertHandle cert) {
-  SHA256HashValue sha256;
-  memset(sha256.data, 0, sizeof(sha256.data));
-
-  CSSM_DATA cert_data;
-  OSStatus status = SecCertificateGetData(cert, &cert_data);
-  if (status)
-    return sha256;
-
-  DCHECK(cert_data.Data);
-  DCHECK_NE(cert_data.Length, 0U);
-
-  CC_SHA256(cert_data.Data, cert_data.Length, sha256.data);
-
-  return sha256;
+  return x509_util::CalculateFingerprint256(cert);
 }
 
 // static
@@ -393,20 +350,6 @@ SHA256HashValue X509Certificate::CalculateCAFingerprint256(
   CC_SHA256_Final(sha256.data, &sha256_ctx);
 
   return sha256;
-}
-
-CFMutableArrayRef X509Certificate::CreateOSCertChainForCert() const {
-  CFMutableArrayRef cert_list =
-      CFArrayCreateMutable(kCFAllocatorDefault, 0,
-                           &kCFTypeArrayCallBacks);
-  if (!cert_list)
-    return NULL;
-
-  CFArrayAppendValue(cert_list, os_cert_handle());
-  for (size_t i = 0; i < intermediate_ca_certs_.size(); ++i)
-    CFArrayAppendValue(cert_list, intermediate_ca_certs_[i]);
-
-  return cert_list;
 }
 
 // static
@@ -481,39 +424,7 @@ void X509Certificate::GetPublicKeyInfo(OSCertHandle cert_handle,
 
 // static
 bool X509Certificate::IsSelfSigned(OSCertHandle cert_handle) {
-  x509_util::CSSMCachedCertificate cached_cert;
-  OSStatus status = cached_cert.Init(cert_handle);
-  if (status != noErr)
-    return false;
-
-  x509_util::CSSMFieldValue subject;
-  status = cached_cert.GetField(&CSSMOID_X509V1SubjectNameStd, &subject);
-  if (status != CSSM_OK || !subject.field())
-    return false;
-
-  x509_util::CSSMFieldValue issuer;
-  status = cached_cert.GetField(&CSSMOID_X509V1IssuerNameStd, &issuer);
-  if (status != CSSM_OK || !issuer.field())
-    return false;
-
-  if (subject.field()->Length != issuer.field()->Length ||
-      memcmp(subject.field()->Data, issuer.field()->Data,
-             issuer.field()->Length) != 0) {
-    return false;
-  }
-
-  CSSM_CL_HANDLE cl_handle = CSSM_INVALID_HANDLE;
-  status = SecCertificateGetCLHandle(cert_handle, &cl_handle);
-  if (status)
-    return false;
-  CSSM_DATA cert_data;
-  status = SecCertificateGetData(cert_handle, &cert_data);
-  if (status)
-    return false;
-
-  if (CSSM_CL_CertVerify(cl_handle, 0, &cert_data, &cert_data, NULL, 0))
-    return false;
-  return true;
+  return x509_util::IsSelfSigned(cert_handle);
 }
 
 #pragma clang diagnostic pop  // "-Wdeprecated-declarations"

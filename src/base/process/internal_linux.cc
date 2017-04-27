@@ -19,6 +19,11 @@
 #include "base/threading/thread_restrictions.h"
 #include "base/time/time.h"
 
+// Not defined on AIX by default.
+#if defined(OS_AIX)
+#define NAME_MAX 255
+#endif
+
 namespace base {
 namespace internal {
 

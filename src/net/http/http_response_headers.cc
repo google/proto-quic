@@ -580,9 +580,6 @@ bool HttpResponseHeaders::HasHeader(const base::StringPiece& name) const {
   return FindHeader(0, name) != std::string::npos;
 }
 
-HttpResponseHeaders::HttpResponseHeaders() : response_code_(-1) {
-}
-
 HttpResponseHeaders::~HttpResponseHeaders() {
 }
 
@@ -1305,7 +1302,7 @@ bool HttpResponseHeaders::FromNetLogParam(
        it != header_list->end();
        ++it) {
     std::string header_line;
-    if (!(*it)->GetAsString(&header_line))
+    if (!it->GetAsString(&header_line))
       return false;
 
     raw_headers.append(header_line);

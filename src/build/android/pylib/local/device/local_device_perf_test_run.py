@@ -245,7 +245,8 @@ class DeviceTestShard(TestShard):
           result_type = self._RunSingleTest(test)
         except device_errors.CommandTimeoutError:
           result_type = base_test_result.ResultType.TIMEOUT
-        except device_errors.CommandFailedError:
+        except (device_errors.CommandFailedError,
+                device_errors.DeviceUnreachableError):
           logging.exception('Exception when executing %s.', test)
           result_type = base_test_result.ResultType.FAIL
         finally:

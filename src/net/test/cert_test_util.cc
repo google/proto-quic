@@ -6,6 +6,7 @@
 
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
+#include "base/threading/thread_restrictions.h"
 #include "net/cert/ev_root_ca_metadata.h"
 #include "net/cert/x509_certificate.h"
 #include "net/test/test_data_directory.h"
@@ -63,6 +64,7 @@ scoped_refptr<X509Certificate> CreateCertificateChainFromFile(
 scoped_refptr<X509Certificate> ImportCertFromFile(
     const base::FilePath& certs_dir,
     const std::string& cert_file) {
+  base::ThreadRestrictions::ScopedAllowIO allow_io;
   base::FilePath cert_path = certs_dir.AppendASCII(cert_file);
   std::string cert_data;
   if (!base::ReadFileToString(cert_path, &cert_data))

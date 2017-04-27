@@ -216,8 +216,14 @@ bool FindBadConstructsConsumer::VisitVarDecl(clang::VarDecl* var_decl) {
   return true;
 }
 
-void FindBadConstructsConsumer::CheckChromeClass(SourceLocation record_location,
+void FindBadConstructsConsumer::CheckChromeClass(LocationType location_type,
+                                                 SourceLocation record_location,
                                                  CXXRecordDecl* record) {
+  // TODO(dcheng): After emitWarning() is removed, move warning filtering into
+  // ReportIfSpellingLocNotIgnored.
+  if (location_type == LocationType::kBlink)
+    return;
+
   bool implementation_file = InImplementationFile(record_location);
 
   if (!implementation_file) {
@@ -245,9 +251,13 @@ void FindBadConstructsConsumer::CheckChromeClass(SourceLocation record_location,
   CheckWeakPtrFactoryMembers(record_location, record);
 }
 
-void FindBadConstructsConsumer::CheckChromeEnum(SourceLocation enum_location,
+void FindBadConstructsConsumer::CheckChromeEnum(LocationType location_type,
+                                                SourceLocation enum_location,
                                                 EnumDecl* enum_decl) {
   if (!options_.check_enum_last_value)
+    return;
+
+  if (location_type == LocationType::kBlink)
     return;
 
   bool got_one = false;
@@ -450,10 +460,14 @@ bool FindBadConstructsConsumer::IsMethodInBannedOrTestingNamespace(
 SuppressibleDiagnosticBuilder
 FindBadConstructsConsumer::ReportIfSpellingLocNotIgnored(
     SourceLocation loc,
+    const Decl* record,
     unsigned diagnostic_id) {
-  return SuppressibleDiagnosticBuilder(
-      &diagnostic(), loc, diagnostic_id,
-      InBannedDirectory(instance().getSourceManager().getSpellingLoc(loc)));
+  LocationType type = ClassifyLocation(
+      instance().getSourceManager().getSpellingLoc(loc), record);
+  bool ignored =
+      type == LocationType::kThirdParty || type == LocationType::kBlink;
+  return SuppressibleDiagnosticBuilder(&diagnostic(), loc, diagnostic_id,
+                                       ignored);
 }
 
 // Checks that virtual methods are correctly annotated, and have no body in a
@@ -521,7 +535,7 @@ void FindBadConstructsConsumer::CheckVirtualSpecifiers(
     // Note this is just an educated guess: the assumption here is that any
     // macro for declaring methods will probably be at the start of the method's
     // source range.
-    ReportIfSpellingLocNotIgnored(method->getLocStart(),
+    ReportIfSpellingLocNotIgnored(method->getLocStart(), method,
                                   diag_redundant_virtual_specifier_)
         << "'virtual'"
         << (override_attr ? static_cast<Attr*>(override_attr) : final_attr)
@@ -572,23 +586,23 @@ void FindBadConstructsConsumer::CheckVirtualSpecifiers(
     // Again, only emit the warning if it doesn't originate from a macro in
     // a system header.
     if (loc.isValid()) {
-      ReportIfSpellingLocNotIgnored(loc, diag_method_requires_override_)
+      ReportIfSpellingLocNotIgnored(loc, method, diag_method_requires_override_)
           << FixItHint::CreateInsertion(loc, " override");
     } else {
-      ReportIfSpellingLocNotIgnored(range.getBegin(),
+      ReportIfSpellingLocNotIgnored(range.getBegin(), method,
                                     diag_method_requires_override_);
     }
   }
 
   if (final_attr && override_attr) {
-    ReportIfSpellingLocNotIgnored(override_attr->getLocation(),
+    ReportIfSpellingLocNotIgnored(override_attr->getLocation(), method,
                                   diag_redundant_virtual_specifier_)
         << override_attr << final_attr
         << FixItHint::CreateRemoval(override_attr->getRange());
   }
 
   if (final_attr && !is_override) {
-    ReportIfSpellingLocNotIgnored(method->getLocStart(),
+    ReportIfSpellingLocNotIgnored(method->getLocStart(), method,
                                   diag_base_method_virtual_and_final_)
         << FixItRemovalForVirtual(manager, lang_opts, method)
         << FixItHint::CreateRemoval(final_attr->getRange());
@@ -609,7 +623,9 @@ void FindBadConstructsConsumer::CheckVirtualBodies(
         bool emit = true;
         if (loc.isMacroID()) {
           SourceManager& manager = instance().getSourceManager();
-          if (InBannedDirectory(manager.getSpellingLoc(loc)))
+          LocationType type =
+              ClassifyLocation(manager.getSpellingLoc(loc), method);
+          if (type == LocationType::kThirdParty || type == LocationType::kBlink)
             emit = false;
           else {
             StringRef name = Lexer::getImmediateMacroName(
@@ -998,8 +1014,10 @@ void FindBadConstructsConsumer::CheckVarDecl(clang::VarDecl* var_decl) {
           // Check if we should even be considering this type (note that there
           // should be fewer auto types than banned namespace/directory types,
           // so check this last.
+          LocationType location_type =
+              ClassifyLocation(var_decl->getLocStart(), var_decl);
           if (!InBannedNamespace(var_decl) &&
-              !InBannedDirectory(var_decl->getLocStart())) {
+              location_type != LocationType::kThirdParty) {
             // The range starts from |var_decl|'s loc start, which is the
             // beginning of the full expression defining this |var_decl|. It
             // ends, however, where this |var_decl|'s type loc ends, since
@@ -1010,7 +1028,7 @@ void FindBadConstructsConsumer::CheckVarDecl(clang::VarDecl* var_decl) {
             clang::SourceRange range(
                 var_decl->getLocStart(),
                 var_decl->getTypeSourceInfo()->getTypeLoc().getLocEnd());
-            ReportIfSpellingLocNotIgnored(range.getBegin(),
+            ReportIfSpellingLocNotIgnored(range.getBegin(), var_decl,
                                           diag_auto_deduced_to_a_pointer_type_)
                 << FixItHint::CreateReplacement(
                        range,

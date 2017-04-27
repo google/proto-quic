@@ -13,10 +13,10 @@
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/crypto/null_encrypter.h"
 #include "net/quic/core/quic_crypto_stream.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_stream.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_map_util.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_str_cat.h"
@@ -29,7 +29,7 @@
 #include "net/quic/test_tools/quic_spdy_stream_peer.h"
 #include "net/quic/test_tools/quic_stream_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "net/spdy/spdy_framer.h"
+#include "net/spdy/core/spdy_framer.h"
 #include "net/test/gtest_util.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gmock_mutant.h"
@@ -125,7 +125,13 @@ class TestSession : public QuicSpdySession {
 
   ~TestSession() override { delete connection(); }
 
-  TestCryptoStream* GetCryptoStream() override { return &crypto_stream_; }
+  TestCryptoStream* GetMutableCryptoStream() override {
+    return &crypto_stream_;
+  }
+
+  const TestCryptoStream* GetCryptoStream() const override {
+    return &crypto_stream_;
+  }
 
   TestStream* CreateOutgoingDynamicStream(SpdyPriority priority) override {
     TestStream* stream = new TestStream(GetNextOutgoingStreamId(), this);
@@ -167,12 +173,13 @@ class TestSession : public QuicSpdySession {
       QuicStreamId id,
       QuicIOVector data,
       QuicStreamOffset offset,
-      bool fin,
+      StreamSendingState state,
       QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener)
       override {
+    bool fin = state != NO_FIN;
     QuicConsumedData consumed(data.total_length, fin);
     if (!writev_consumes_all_data_) {
-      consumed = QuicSession::WritevData(stream, id, data, offset, fin,
+      consumed = QuicSession::WritevData(stream, id, data, offset, state,
                                          std::move(ack_listener));
     }
     stream->set_stream_bytes_written(stream->stream_bytes_written() +
@@ -194,9 +201,8 @@ class TestSession : public QuicSpdySession {
     if (stream->id() != kCryptoStreamId) {
       this->connection()->SetDefaultEncryptionLevel(ENCRYPTION_FORWARD_SECURE);
     }
-    QuicConsumedData consumed =
-        WritevData(stream, stream->id(), MakeIOVector("not empty", &iov), 0,
-                   true, nullptr);
+    QuicConsumedData consumed = WritevData(
+        stream, stream->id(), MakeIOVector("not empty", &iov), 0, FIN, nullptr);
     return consumed;
   }
 
@@ -206,7 +212,7 @@ class TestSession : public QuicSpdySession {
     iov.iov_base = nullptr;  // should not be read.
     iov.iov_len = static_cast<size_t>(bytes);
     return WritevData(stream, stream->id(), QuicIOVector(&iov, 1, bytes), 0,
-                      true, nullptr);
+                      FIN, nullptr);
   }
 
   using QuicSession::PostProcessAfterData;
@@ -304,7 +310,7 @@ TEST_P(QuicSessionTestServer, PeerAddress) {
 TEST_P(QuicSessionTestServer, IsCryptoHandshakeConfirmed) {
   EXPECT_FALSE(session_.IsCryptoHandshakeConfirmed());
   CryptoHandshakeMessage message;
-  session_.GetCryptoStream()->OnHandshakeMessage(message);
+  session_.GetMutableCryptoStream()->OnHandshakeMessage(message);
   EXPECT_TRUE(session_.IsCryptoHandshakeConfirmed());
 }
 
@@ -525,7 +531,7 @@ TEST_P(QuicSessionTestServer, OnCanWriteBundlesStreams) {
     EXPECT_CALL(*writer, WritePacket(_, _, _, _, _))
         .WillOnce(Return(WriteResult(WRITE_STATUS_OK, 0)));
   }
-  session_.GetCryptoStream()->OnHandshakeMessage(msg);
+  session_.GetMutableCryptoStream()->OnHandshakeMessage(msg);
 
   // Drive congestion control manually.
   MockSendAlgorithm* send_algorithm = new StrictMock<MockSendAlgorithm>;
@@ -680,7 +686,7 @@ TEST_P(QuicSessionTestServer, BufferedHandshake) {
   // Due to prioritization, we *should* be asked to write the crypto stream
   // first.
   // Don't re-register the crypto stream (which signals complete writing).
-  TestCryptoStream* crypto_stream = session_.GetCryptoStream();
+  TestCryptoStream* crypto_stream = session_.GetMutableCryptoStream();
   EXPECT_CALL(*crypto_stream, OnCanWrite());
 
   EXPECT_CALL(*stream2, OnCanWrite())
@@ -754,7 +760,7 @@ TEST_P(QuicSessionTestServer, OnCanWriteLimitsNumWritesIfFlowControlBlocked) {
 
   // The crypto and headers streams should be called even though we are
   // connection flow control blocked.
-  TestCryptoStream* crypto_stream = session_.GetCryptoStream();
+  TestCryptoStream* crypto_stream = session_.GetMutableCryptoStream();
   EXPECT_CALL(*crypto_stream, OnCanWrite());
   TestHeadersStream* headers_stream = new TestHeadersStream(&session_);
   QuicSpdySessionPeer::SetHeadersStream(&session_, headers_stream);
@@ -789,7 +795,7 @@ TEST_P(QuicSessionTestServer, IncreasedTimeoutAfterCryptoHandshake) {
   EXPECT_EQ(kInitialIdleTimeoutSecs + 3,
             QuicConnectionPeer::GetNetworkTimeout(connection_).ToSeconds());
   CryptoHandshakeMessage msg;
-  session_.GetCryptoStream()->OnHandshakeMessage(msg);
+  session_.GetMutableCryptoStream()->OnHandshakeMessage(msg);
   EXPECT_EQ(kMaximumIdleTimeoutSecs + 3,
             QuicConnectionPeer::GetNetworkTimeout(connection_).ToSeconds());
 }
@@ -836,7 +842,7 @@ TEST_P(QuicSessionTestServer, HandshakeUnblocksFlowControlBlockedStream) {
   // Now complete the crypto handshake, resulting in an increased flow control
   // send window.
   CryptoHandshakeMessage msg;
-  session_.GetCryptoStream()->OnHandshakeMessage(msg);
+  session_.GetMutableCryptoStream()->OnHandshakeMessage(msg);
 
   // Stream is now unblocked.
   EXPECT_FALSE(stream2->flow_controller()->IsBlocked());
@@ -848,7 +854,7 @@ TEST_P(QuicSessionTestServer, HandshakeUnblocksFlowControlBlockedCryptoStream) {
   // Test that if the crypto stream is flow control blocked, then if the SHLO
   // contains a larger send window offset, the stream becomes unblocked.
   session_.set_writev_consumes_all_data(true);
-  TestCryptoStream* crypto_stream = session_.GetCryptoStream();
+  TestCryptoStream* crypto_stream = session_.GetMutableCryptoStream();
   EXPECT_FALSE(crypto_stream->flow_controller()->IsBlocked());
   EXPECT_FALSE(session_.IsConnectionFlowControlBlocked());
   EXPECT_FALSE(session_.IsStreamFlowControlBlocked());
@@ -881,7 +887,7 @@ TEST_P(QuicSessionTestServer, HandshakeUnblocksFlowControlBlockedCryptoStream) {
   // Now complete the crypto handshake, resulting in an increased flow control
   // send window.
   CryptoHandshakeMessage msg;
-  session_.GetCryptoStream()->OnHandshakeMessage(msg);
+  session_.GetMutableCryptoStream()->OnHandshakeMessage(msg);
 
   // Stream is now unblocked and will no longer have buffered data.
   EXPECT_FALSE(crypto_stream->flow_controller()->IsBlocked());
@@ -900,7 +906,7 @@ TEST_P(QuicSessionTestServer,
   // Test that if the header stream is flow control blocked, then if the SHLO
   // contains a larger send window offset, the stream becomes unblocked.
   session_.set_writev_consumes_all_data(true);
-  TestCryptoStream* crypto_stream = session_.GetCryptoStream();
+  TestCryptoStream* crypto_stream = session_.GetMutableCryptoStream();
   EXPECT_FALSE(crypto_stream->flow_controller()->IsBlocked());
   EXPECT_FALSE(session_.IsConnectionFlowControlBlocked());
   EXPECT_FALSE(session_.IsStreamFlowControlBlocked());
@@ -935,7 +941,7 @@ TEST_P(QuicSessionTestServer,
   // Now complete the crypto handshake, resulting in an increased flow control
   // send window.
   CryptoHandshakeMessage msg;
-  session_.GetCryptoStream()->OnHandshakeMessage(msg);
+  session_.GetMutableCryptoStream()->OnHandshakeMessage(msg);
 
   // Stream is now unblocked and will no longer have buffered data.
   EXPECT_FALSE(headers_stream->flow_controller()->IsBlocked());
@@ -1094,7 +1100,6 @@ TEST_P(QuicSessionTestServer, InvalidSessionFlowControlWindowInHandshake) {
 
 // Test negotiation of custom server initial flow control window.
 TEST_P(QuicSessionTestServer, CustomFlowControlWindow) {
-  FLAGS_quic_reloadable_flag_quic_large_ifw_options = true;
   QuicTagVector copt;
   copt.push_back(kIFW7);
   QuicConfigPeer::SetReceivedConnectionOptions(session_.config(), copt);

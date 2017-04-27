@@ -20,7 +20,7 @@ def SetChromeTimeoutScale(device, scale):
   path = '/data/local/tmp/chrome_timeout_scale'
   if not scale or scale == 1.0:
     # Delete if scale is None/0.0/1.0 since the default timeout scale is 1.0
-    device.RunShellCommand('rm %s' % path)
+    device.RemovePath(path, force=True, as_root=True)
   else:
     device.WriteFile(path, '%f' % scale, as_root=True)
 

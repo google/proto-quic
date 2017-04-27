@@ -59,6 +59,8 @@
 
 #include <openssl/base.h>
 
+#include <openssl/bn.h>
+
 
 #if defined(__cplusplus)
 extern "C" {
@@ -79,12 +81,7 @@ int rsa_default_decrypt(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out,
                         const uint8_t *in, size_t in_len, int padding);
 int rsa_default_private_transform(RSA *rsa, uint8_t *out, const uint8_t *in,
                                   size_t len);
-int rsa_default_multi_prime_keygen(RSA *rsa, int bits, int num_primes,
-                                   BIGNUM *e_value, BN_GENCB *cb);
 int rsa_default_keygen(RSA *rsa, int bits, BIGNUM *e_value, BN_GENCB *cb);
-
-
-#define RSA_PKCS1_PADDING_SIZE 11
 
 
 BN_BLINDING *BN_BLINDING_new(void);
@@ -120,24 +117,18 @@ int RSA_private_transform(RSA *rsa, uint8_t *out, const uint8_t *in,
                           size_t len);
 
 
-/* RSA_additional_prime contains information about the third, forth etc prime
- * in a multi-prime RSA key. */
-typedef struct RSA_additional_prime_st {
-  BIGNUM *prime;
-  /* exp is d^{prime-1} mod prime */
-  BIGNUM *exp;
-  /* coeff is such that r×coeff ≡ 1 mod prime. */
-  BIGNUM *coeff;
+/* The following utility functions are exported for test purposes. */
 
-  /* Values below here are not in the ASN.1 serialisation. */
+extern const BN_ULONG kBoringSSLRSASqrtTwo[];
+extern const size_t kBoringSSLRSASqrtTwoLen;
 
-  /* r is the product of all primes (including p and q) prior to this one. */
-  BIGNUM *r;
-  /* mont is a |BN_MONT_CTX| modulo |prime|. */
-  BN_MONT_CTX *mont;
-} RSA_additional_prime;
+/* rsa_less_than_words returns one if |a| < |b| and zero otherwise, where |a|
+ * and |b| both are |len| words long. It runs in constant time. */
+int rsa_less_than_words(const BN_ULONG *a, const BN_ULONG *b, size_t len);
 
-void RSA_additional_prime_free(RSA_additional_prime *ap);
+/* rsa_greater_than_pow2 returns one if |b| is greater than 2^|n| and zero
+ * otherwise. */
+int rsa_greater_than_pow2(const BIGNUM *b, int n);
 
 
 #if defined(__cplusplus)

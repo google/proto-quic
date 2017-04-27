@@ -52,7 +52,7 @@ void RunTest_BasicSignal(MessageLoop::Type message_loop_type) {
                       WaitableEvent::InitialState::NOT_SIGNALED);
 
   WaitableEventWatcher watcher;
-  watcher.StartWatching(&event, Bind(&QuitWhenSignaled));
+  watcher.StartWatching(&event, BindOnce(&QuitWhenSignaled));
 
   event.Signal();
 
@@ -68,7 +68,7 @@ void RunTest_BasicCancel(MessageLoop::Type message_loop_type) {
 
   WaitableEventWatcher watcher;
 
-  watcher.StartWatching(&event, Bind(&QuitWhenSignaled));
+  watcher.StartWatching(&event, BindOnce(&QuitWhenSignaled));
 
   watcher.StopWatching();
 }
@@ -84,10 +84,9 @@ void RunTest_CancelAfterSet(MessageLoop::Type message_loop_type) {
 
   int counter = 1;
   DecrementCountContainer delegate(&counter);
-  WaitableEventWatcher::EventCallback callback =
-      Bind(&DecrementCountContainer::OnWaitableEventSignaled,
-           Unretained(&delegate));
-  watcher.StartWatching(&event, callback);
+  WaitableEventWatcher::EventCallback callback = BindOnce(
+      &DecrementCountContainer::OnWaitableEventSignaled, Unretained(&delegate));
+  watcher.StartWatching(&event, std::move(callback));
 
   event.Signal();
 
@@ -113,7 +112,7 @@ void RunTest_OutlivesMessageLoop(MessageLoop::Type message_loop_type) {
     {
       MessageLoop message_loop(message_loop_type);
 
-      watcher.StartWatching(&event, Bind(&QuitWhenSignaled));
+      watcher.StartWatching(&event, BindOnce(&QuitWhenSignaled));
     }
   }
 }
@@ -131,7 +130,7 @@ void RunTest_DeleteUnder(MessageLoop::Type message_loop_type) {
         new WaitableEvent(WaitableEvent::ResetPolicy::AUTOMATIC,
                           WaitableEvent::InitialState::NOT_SIGNALED);
 
-    watcher.StartWatching(event, Bind(&QuitWhenSignaled));
+    watcher.StartWatching(event, BindOnce(&QuitWhenSignaled));
     delete event;
   }
 }

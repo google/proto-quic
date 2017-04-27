@@ -12,7 +12,7 @@
 #include "base/logging.h"
 #include "base/strings/string_piece.h"
 #include "net/http2/tools/failure.h"
-#include "net/spdy/spdy_test_utils.h"
+#include "net/spdy/core/spdy_test_utils.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 

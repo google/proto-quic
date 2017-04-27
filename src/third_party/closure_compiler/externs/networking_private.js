@@ -78,6 +78,7 @@ chrome.networkingPrivate.NetworkType = {
   ALL: 'All',
   CELLULAR: 'Cellular',
   ETHERNET: 'Ethernet',
+  TETHER: 'Tether',
   VPN: 'VPN',
   WIRELESS: 'Wireless',
   WI_FI: 'WiFi',
@@ -298,9 +299,10 @@ chrome.networkingPrivate.ManagedCertificatePattern;
  *   ClientCertType: (string|undefined),
  *   Identity: (string|undefined),
  *   Inner: (string|undefined),
- *   Outer: string,
+ *   Outer: (string|undefined),
  *   Password: (string|undefined),
  *   SaveCredentials: (boolean|undefined),
+ *   ServerCAPEMs: (!Array<string>|undefined),
  *   ServerCARefs: (!Array<string>|undefined),
  *   UseProactiveKeyCaching: (boolean|undefined),
  *   UseSystemCAs: (boolean|undefined)
@@ -317,9 +319,10 @@ chrome.networkingPrivate.EAPProperties;
  *   ClientCertType: (!chrome.networkingPrivate.ManagedDOMString|undefined),
  *   Identity: (!chrome.networkingPrivate.ManagedDOMString|undefined),
  *   Inner: (!chrome.networkingPrivate.ManagedDOMString|undefined),
- *   Outer: !chrome.networkingPrivate.ManagedDOMString,
+ *   Outer: (!chrome.networkingPrivate.ManagedDOMString|undefined),
  *   Password: (!chrome.networkingPrivate.ManagedDOMString|undefined),
  *   SaveCredentials: (!chrome.networkingPrivate.ManagedBoolean|undefined),
+ *   ServerCAPEMs: (!chrome.networkingPrivate.ManagedDOMStringList|undefined),
  *   ServerCARefs: (!chrome.networkingPrivate.ManagedDOMStringList|undefined),
  *   UseProactiveKeyCaching: (!chrome.networkingPrivate.ManagedBoolean|undefined),
  *   UseSystemCAs: (!chrome.networkingPrivate.ManagedBoolean|undefined)
@@ -762,6 +765,26 @@ chrome.networkingPrivate.EthernetStateProperties;
 
 /**
  * @typedef {{
+ *   BatteryPercentage: (number|undefined),
+ *   Carrier: (string|undefined),
+ *   SignalStrength: (number|undefined)
+ * }}
+ * @see https://developer.chrome.com/extensions/networkingPrivate#type-TetherProperties
+ */
+chrome.networkingPrivate.TetherProperties;
+
+/**
+ * @typedef {{
+ *   BatteryPercentage: (!chrome.networkingPrivate.ManagedLong|undefined),
+ *   Carrier: (!chrome.networkingPrivate.ManagedDOMString|undefined),
+ *   SignalStrength: (!chrome.networkingPrivate.ManagedLong|undefined)
+ * }}
+ * @see https://developer.chrome.com/extensions/networkingPrivate#type-ManagedTetherProperties
+ */
+chrome.networkingPrivate.ManagedTetherProperties;
+
+/**
+ * @typedef {{
  *   AutoConnect: (boolean|undefined),
  *   Host: (string|undefined),
  *   IPsec: (!chrome.networkingPrivate.IPSecProperties|undefined),
@@ -916,6 +939,7 @@ chrome.networkingPrivate.NetworkConfigProperties;
  *   StaticIPConfig: (!chrome.networkingPrivate.IPConfigProperties|undefined),
  *   SavedIPConfig: (!chrome.networkingPrivate.IPConfigProperties|undefined),
  *   Source: (string|undefined),
+ *   Tether: (!chrome.networkingPrivate.TetherProperties|undefined),
  *   Type: !chrome.networkingPrivate.NetworkType,
  *   VPN: (!chrome.networkingPrivate.VPNProperties|undefined),
  *   WiFi: (!chrome.networkingPrivate.WiFiProperties|undefined),
@@ -944,6 +968,7 @@ chrome.networkingPrivate.NetworkProperties;
  *   StaticIPConfig: (!chrome.networkingPrivate.ManagedIPConfigProperties|undefined),
  *   SavedIPConfig: (!chrome.networkingPrivate.IPConfigProperties|undefined),
  *   Source: (string|undefined),
+ *   Tether: (!chrome.networkingPrivate.ManagedTetherProperties|undefined),
  *   Type: !chrome.networkingPrivate.NetworkType,
  *   VPN: (!chrome.networkingPrivate.ManagedVPNProperties|undefined),
  *   WiFi: (!chrome.networkingPrivate.ManagedWiFiProperties|undefined),
@@ -964,6 +989,7 @@ chrome.networkingPrivate.ManagedProperties;
  *   Name: (string|undefined),
  *   Priority: (number|undefined),
  *   Source: (string|undefined),
+ *   Tether: (!chrome.networkingPrivate.TetherProperties|undefined),
  *   Type: !chrome.networkingPrivate.NetworkType,
  *   VPN: (!chrome.networkingPrivate.VPNStateProperties|undefined),
  *   WiFi: (!chrome.networkingPrivate.WiFiStateProperties|undefined),
@@ -1200,6 +1226,7 @@ chrome.networkingPrivate.startActivate = function(networkGuid, carrier, callback
  *     trusted device.
  * @param {function(boolean):void} callback A callback function that indicates
  *     whether or not the device     is a trusted device.
+ * @deprecated Use networking.castPrivate API.
  * @see https://developer.chrome.com/extensions/networkingPrivate#method-verifyDestination
  */
 chrome.networkingPrivate.verifyDestination = function(properties, callback) {};
@@ -1213,6 +1240,7 @@ chrome.networkingPrivate.verifyDestination = function(properties, callback) {};
  * @param {string} networkGuid The GUID of the Cellular network to activate.
  * @param {function(string):void} callback A callback function that receives
  *     base64-encoded encrypted     credential data to send to a trusted device.
+ * @deprecated Use networking.castPrivate API.
  * @see https://developer.chrome.com/extensions/networkingPrivate#method-verifyAndEncryptCredentials
  */
 chrome.networkingPrivate.verifyAndEncryptCredentials = function(properties, networkGuid, callback) {};
@@ -1226,6 +1254,7 @@ chrome.networkingPrivate.verifyAndEncryptCredentials = function(properties, netw
  * @param {string} data A string containing the base64-encoded data to encrypt.
  * @param {function(string):void} callback A callback function that receives
  *     base64-encoded encrypted     data to send to a trusted device.
+ * @deprecated Use networking.castPrivate API.
  * @see https://developer.chrome.com/extensions/networkingPrivate#method-verifyAndEncryptData
  */
 chrome.networkingPrivate.verifyAndEncryptData = function(properties, data, callback) {};
@@ -1241,6 +1270,7 @@ chrome.networkingPrivate.verifyAndEncryptData = function(properties, data, callb
  *     that the request failed     (e.g. MAC address lookup failed). 'Timeout'
  *     indicates that the lookup     timed out. Otherwise a valid status is
  *     returned (see     $(ref:getWifiTDLSStatus)).
+ * @deprecated Use networking.castPrivate API.
  * @see https://developer.chrome.com/extensions/networkingPrivate#method-setWifiTDLSEnabledState
  */
 chrome.networkingPrivate.setWifiTDLSEnabledState = function(ip_or_mac_address, enabled, callback) {};
@@ -1251,6 +1281,7 @@ chrome.networkingPrivate.setWifiTDLSEnabledState = function(ip_or_mac_address, e
  * @param {function(string):void} callback A callback function that receives a
  *     string with the current     TDLS status which can be 'Connected',
  *     'Disabled', 'Disconnected',     'Nonexistent', or 'Unknown'.
+ * @deprecated Use networking.castPrivate API.
  * @see https://developer.chrome.com/extensions/networkingPrivate#method-getWifiTDLSStatus
  */
 chrome.networkingPrivate.getWifiTDLSStatus = function(ip_or_mac_address, callback) {};

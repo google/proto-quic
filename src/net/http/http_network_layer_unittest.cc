@@ -18,7 +18,7 @@
 #include "net/log/net_log_with_source.h"
 #include "net/proxy/proxy_service.h"
 #include "net/socket/socket_test_util.h"
-#include "net/spdy/spdy_session_pool.h"
+#include "net/spdy/chromium/spdy_session_pool.h"
 #include "net/ssl/ssl_config_service_defaults.h"
 #include "net/test/gtest_util.h"
 #include "testing/gmock/include/gmock/gmock.h"

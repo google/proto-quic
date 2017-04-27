@@ -48,7 +48,18 @@ def run_executable(cmd, env):
 
   Returns the exit code of the specified commandline, or 1 on failure.
   """
-  if sys.platform == 'linux2':
+
+  # It might seem counterintuitive to support a --no-xvfb flag in a script
+  # whose only job is to start xvfb, but doing so allows us to consolidate
+  # the logic in the layers of buildbot scripts so that we *always* use
+  # xvfb by default and don't have to worry about the distinction, it
+  # can remain solely under the control of the test invocation itself.
+  use_xvfb = True
+  if '--no-xvfb' in cmd:
+    use_xvfb = False
+    cmd.remove('--no-xvfb')
+
+  if sys.platform == 'linux2' and use_xvfb:
     if env.get('_CHROMIUM_INSIDE_XVFB') == '1':
       openbox_proc = None
       xcompmgr_proc = None
@@ -81,7 +92,7 @@ def run_executable(cmd, env):
 
 
 def main():
-  USAGE = 'Usage: xvfb.py [command args...]'
+  USAGE = 'Usage: xvfb.py [command [--no-xvfb] args...]'
   if len(sys.argv) < 2:
     print >> sys.stderr, USAGE
     return 2

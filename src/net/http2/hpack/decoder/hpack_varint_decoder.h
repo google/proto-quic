@@ -95,13 +95,12 @@ class NET_EXPORT_PRIVATE HpackVarintDecoder {
         return DecodeStatus::kDecodeInProgress;
       }
       uint8_t byte = db->DecodeUInt8();
+      if (offset_ == MaxOffset() && byte != 0)
+        break;
       value_ += (byte & 0x7f) << offset_;
       if ((byte & 0x80) == 0) {
-        if (offset_ < MaxOffset() || byte == 0) {
-          MarkDone();
-          return DecodeStatus::kDecodeDone;
-        }
-        break;
+        MarkDone();
+        return DecodeStatus::kDecodeDone;
       }
       offset_ += 7;
     } while (offset_ <= MaxOffset());

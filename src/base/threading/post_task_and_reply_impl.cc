@@ -44,8 +44,8 @@ class PostTaskAndReplyRelay {
   void RunTaskAndPostReply() {
     std::move(task_).Run();
     origin_task_runner_->PostTask(
-        from_here_, Bind(&PostTaskAndReplyRelay::RunReplyAndSelfDestruct,
-                         base::Unretained(this)));
+        from_here_, BindOnce(&PostTaskAndReplyRelay::RunReplyAndSelfDestruct,
+                             base::Unretained(this)));
   }
 
  private:
@@ -88,8 +88,8 @@ bool PostTaskAndReplyImpl::PostTaskAndReply(
   // to avoid having to suppress every callsite which happens to flakily trigger
   // this race.
   ANNOTATE_LEAKING_OBJECT_PTR(relay);
-  if (!PostTask(from_here, Bind(&PostTaskAndReplyRelay::RunTaskAndPostReply,
-                                Unretained(relay)))) {
+  if (!PostTask(from_here, BindOnce(&PostTaskAndReplyRelay::RunTaskAndPostReply,
+                                    Unretained(relay)))) {
     delete relay;
     return false;
   }

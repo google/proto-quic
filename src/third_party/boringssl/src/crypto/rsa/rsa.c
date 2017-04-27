@@ -69,6 +69,7 @@
 
 #include "internal.h"
 #include "../internal.h"
+#include "../bn/internal.h"
 
 
 static CRYPTO_EX_DATA_CLASS g_ex_data_class = CRYPTO_EX_DATA_CLASS_INIT;
@@ -109,19 +110,6 @@ RSA *RSA_new_method(const ENGINE *engine) {
   return rsa;
 }
 
-void RSA_additional_prime_free(RSA_additional_prime *ap) {
-  if (ap == NULL) {
-    return;
-  }
-
-  BN_clear_free(ap->prime);
-  BN_clear_free(ap->exp);
-  BN_clear_free(ap->coeff);
-  BN_clear_free(ap->r);
-  BN_MONT_CTX_free(ap->mont);
-  OPENSSL_free(ap);
-}
-
 void RSA_free(RSA *rsa) {
   unsigned u;
 
@@ -156,10 +144,6 @@ void RSA_free(RSA *rsa) {
   }
   OPENSSL_free(rsa->blindings);
   OPENSSL_free(rsa->blindings_inuse);
-  if (rsa->additional_primes != NULL) {
-    sk_RSA_additional_prime_pop_free(rsa->additional_primes,
-                                     RSA_additional_prime_free);
-  }
   CRYPTO_MUTEX_cleanup(&rsa->lock);
   OPENSSL_free(rsa);
 }
@@ -211,15 +195,6 @@ int RSA_generate_key_ex(RSA *rsa, int bits, BIGNUM *e_value, BN_GENCB *cb) {
   }
 
   return rsa_default_keygen(rsa, bits, e_value, cb);
-}
-
-int RSA_generate_multi_prime_key(RSA *rsa, int bits, int num_primes,
-                                 BIGNUM *e_value, BN_GENCB *cb) {
-  if (rsa->meth->multi_prime_keygen) {
-    return rsa->meth->multi_prime_keygen(rsa, bits, num_primes, e_value, cb);
-  }
-
-  return rsa_default_multi_prime_keygen(rsa, bits, num_primes, e_value, cb);
 }
 
 int RSA_encrypt(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out,
@@ -467,23 +442,16 @@ int RSA_sign(int hash_nid, const uint8_t *in, unsigned in_len, uint8_t *out,
   }
 
   if (!RSA_add_pkcs1_prefix(&signed_msg, &signed_msg_len,
-                            &signed_msg_is_alloced, hash_nid, in, in_len)) {
-    return 0;
+                            &signed_msg_is_alloced, hash_nid, in, in_len) ||
+      !RSA_sign_raw(rsa, &size_t_out_len, out, rsa_size, signed_msg,
+                    signed_msg_len, RSA_PKCS1_PADDING)) {
+    goto err;
   }
 
-  if (rsa_size < RSA_PKCS1_PADDING_SIZE ||
-      signed_msg_len > rsa_size - RSA_PKCS1_PADDING_SIZE) {
-    OPENSSL_PUT_ERROR(RSA, RSA_R_DIGEST_TOO_BIG_FOR_RSA_KEY);
-    goto finish;
-  }
+  *out_len = size_t_out_len;
+  ret = 1;
 
-  if (RSA_sign_raw(rsa, &size_t_out_len, out, rsa_size, signed_msg,
-                   signed_msg_len, RSA_PKCS1_PADDING)) {
-    *out_len = size_t_out_len;
-    ret = 1;
-  }
-
-finish:
+err:
   if (signed_msg_is_alloced) {
     OPENSSL_free(signed_msg);
   }
@@ -525,6 +493,8 @@ int RSA_verify(int hash_nid, const uint8_t *msg, size_t msg_len,
     goto out;
   }
 
+  /* Check that no other information follows the hash value (FIPS 186-4 Section
+   * 5.5) and it matches the expected hash. */
   if (len != signed_msg_len || OPENSSL_memcmp(buf, signed_msg, len) != 0) {
     OPENSSL_PUT_ERROR(RSA, RSA_R_BAD_SIGNATURE);
     goto out;
@@ -597,23 +567,6 @@ int RSA_check_key(const RSA *key) {
     goto out;
   }
 
-  size_t num_additional_primes = 0;
-  if (key->additional_primes != NULL) {
-    num_additional_primes = sk_RSA_additional_prime_num(key->additional_primes);
-  }
-
-  for (size_t i = 0; i < num_additional_primes; i++) {
-    const RSA_additional_prime *ap =
-        sk_RSA_additional_prime_value(key->additional_primes, i);
-    if (!BN_mul(&n, &n, ap->prime, ctx) ||
-        !BN_sub(&pm1, ap->prime, BN_value_one()) ||
-        !BN_mul(&lcm, &lcm, &pm1, ctx) ||
-        !BN_gcd(&gcd, &gcd, &pm1, ctx)) {
-      OPENSSL_PUT_ERROR(RSA, ERR_LIB_BN);
-      goto out;
-    }
-  }
-
   if (!BN_div(&lcm, NULL, &lcm, &gcd, ctx) ||
       !BN_gcd(&gcd, &pm1, &qm1, ctx) ||
       /* de = d*e mod lcm(prime-1, for all primes). */
@@ -639,7 +592,7 @@ int RSA_check_key(const RSA *key) {
     goto out;
   }
 
-  if (has_crt_values && num_additional_primes == 0) {
+  if (has_crt_values) {
     if (/* dmp1 = d mod (p-1) */
         !BN_mod(&dmp1, key->d, &pm1, ctx) ||
         /* dmq1 = d mod (q-1) */
@@ -676,6 +629,90 @@ out:
   return ok;
 }
 
+
+/* This is the product of the 132 smallest odd primes, from 3 to 751. */
+static const BN_ULONG kSmallFactorsLimbs[] = {
+    TOBN(0xc4309333, 0x3ef4e3e1), TOBN(0x71161eb6, 0xcd2d655f),
+    TOBN(0x95e2238c, 0x0bf94862), TOBN(0x3eb233d3, 0x24f7912b),
+    TOBN(0x6b55514b, 0xbf26c483), TOBN(0x0a84d817, 0x5a144871),
+    TOBN(0x77d12fee, 0x9b82210a), TOBN(0xdb5b93c2, 0x97f050b3),
+    TOBN(0x4acad6b9, 0x4d6c026b), TOBN(0xeb7751f3, 0x54aec893),
+    TOBN(0xdba53368, 0x36bc85c4), TOBN(0xd85a1b28, 0x7f5ec78e),
+    TOBN(0x2eb072d8, 0x6b322244), TOBN(0xbba51112, 0x5e2b3aea),
+    TOBN(0x36ed1a6c, 0x0e2486bf), TOBN(0x5f270460, 0xec0c5727),
+    0x000017b1
+};
+static const BIGNUM kSmallFactors = STATIC_BIGNUM(kSmallFactorsLimbs);
+
+int RSA_check_fips(RSA *key) {
+  if (RSA_is_opaque(key)) {
+    /* Opaque keys can't be checked. */
+    OPENSSL_PUT_ERROR(RSA, RSA_R_PUBLIC_KEY_VALIDATION_FAILED);
+    return 0;
+  }
+
+  if (!RSA_check_key(key)) {
+    return 0;
+  }
+
+  BN_CTX *ctx = BN_CTX_new();
+  if (ctx == NULL) {
+    OPENSSL_PUT_ERROR(RSA, ERR_R_MALLOC_FAILURE);
+    return 0;
+  }
+
+  BIGNUM small_gcd;
+  BN_init(&small_gcd);
+
+  int ret = 1;
+
+  /* Perform partial public key validation of RSA keys (SP 800-89 5.3.3). */
+  enum bn_primality_result_t primality_result;
+  if (BN_num_bits(key->e) <= 16 ||
+      BN_num_bits(key->e) > 256 ||
+      !BN_is_odd(key->n) ||
+      !BN_is_odd(key->e) ||
+      !BN_gcd(&small_gcd, key->n, &kSmallFactors, ctx) ||
+      !BN_is_one(&small_gcd) ||
+      !BN_enhanced_miller_rabin_primality_test(&primality_result, key->n,
+                                               BN_prime_checks, ctx, NULL) ||
+      primality_result != bn_non_prime_power_composite) {
+    OPENSSL_PUT_ERROR(RSA, RSA_R_PUBLIC_KEY_VALIDATION_FAILED);
+    ret = 0;
+  }
+
+  BN_free(&small_gcd);
+  BN_CTX_free(ctx);
+
+  if (!ret || key->d == NULL || key->p == NULL) {
+    /* On a failure or on only a public key, there's nothing else can be
+     * checked. */
+    return ret;
+  }
+
+  /* FIPS pairwise consistency test (FIPS 140-2 4.9.2). Per FIPS 140-2 IG,
+   * section 9.9, it is not known whether |rsa| will be used for signing or
+   * encryption, so either pair-wise consistency self-test is acceptable. We
+   * perform a signing test. */
+  uint8_t data[32] = {0};
+  unsigned sig_len = RSA_size(key);
+  uint8_t *sig = OPENSSL_malloc(sig_len);
+  if (sig == NULL) {
+    OPENSSL_PUT_ERROR(RSA, ERR_R_MALLOC_FAILURE);
+    return 0;
+  }
+
+  if (!RSA_sign(NID_sha256, data, sizeof(data), sig, &sig_len, key) ||
+      !RSA_verify(NID_sha256, data, sizeof(data), sig, sig_len, key)) {
+    OPENSSL_PUT_ERROR(RSA, ERR_R_INTERNAL_ERROR);
+    ret = 0;
+  }
+
+  OPENSSL_free(sig);
+
+  return ret;
+}
+
 int RSA_recover_crt_params(RSA *rsa) {
   BN_CTX *ctx;
   BIGNUM *totient, *rem, *multiple, *p_plus_q, *p_minus_q;
@@ -688,11 +725,6 @@ int RSA_recover_crt_params(RSA *rsa) {
 
   if (rsa->p || rsa->q || rsa->dmp1 || rsa->dmq1 || rsa->iqmp) {
     OPENSSL_PUT_ERROR(RSA, RSA_R_CRT_PARAMS_ALREADY_GIVEN);
-    return 0;
-  }
-
-  if (rsa->additional_primes != NULL) {
-    OPENSSL_PUT_ERROR(RSA, RSA_R_CANNOT_RECOVER_MULTI_PRIME_KEY);
     return 0;
   }
 

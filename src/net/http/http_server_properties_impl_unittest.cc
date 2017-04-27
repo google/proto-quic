@@ -44,10 +44,6 @@ class HttpServerPropertiesImplPeer {
   }
 };
 
-void PrintTo(const AlternativeService& alternative_service, std::ostream* os) {
-  *os << alternative_service.ToString();
-}
-
 namespace {
 
 const int kMaxSupportsSpdyServerHosts = 500;

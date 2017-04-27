@@ -78,12 +78,12 @@ SignedCertificateTimestamp::CreateFromPickle(base::PickleIterator* iter) {
   return sct;
 }
 
-LogEntry::LogEntry() : type(LOG_ENTRY_TYPE_X509) {}
+SignedEntryData::SignedEntryData() : type(LOG_ENTRY_TYPE_X509) {}
 
-LogEntry::~LogEntry() {}
+SignedEntryData::~SignedEntryData() {}
 
-void LogEntry::Reset() {
-  type = LogEntry::LOG_ENTRY_TYPE_X509;
+void SignedEntryData::Reset() {
+  type = SignedEntryData::LOG_ENTRY_TYPE_X509;
   leaf_certificate.clear();
   tbs_certificate.clear();
 }

@@ -41,9 +41,8 @@ DecodeStatus DataPayloadDecoder::StartDecodingPayload(FrameDecoderState* state,
   DVLOG(2) << "DataPayloadDecoder::StartDecodingPayload: " << frame_header;
   DCHECK_EQ(Http2FrameType::DATA, frame_header.type);
   DCHECK_LE(db->Remaining(), total_length);
-  DCHECK_EQ(
-      0, frame_header.flags &
-             ~(Http2FrameFlag::FLAG_END_STREAM | Http2FrameFlag::FLAG_PADDED));
+  DCHECK_EQ(0, frame_header.flags &
+                   ~(Http2FrameFlag::END_STREAM | Http2FrameFlag::PADDED));
 
   // Special case for the hoped for common case: unpadded and fits fully into
   // the decode buffer. TO BE SEEN if that is true. It certainly requires that

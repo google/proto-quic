@@ -111,12 +111,6 @@ chrome.bookmarkManagerPrivate.getSubtree = function(id, foldersOnly, callback) {
 chrome.bookmarkManagerPrivate.canEdit = function(callback) {};
 
 /**
- * Whether bookmarks can be opened in new windows
- * @param {Function} callback
- */
-chrome.bookmarkManagerPrivate.canOpenNewWindows = function(callback) {};
-
-/**
  * Recursively removes list of bookmarks nodes.
  * @param {Array} idList An array of string-valued ids
  * @param {Function=} callback

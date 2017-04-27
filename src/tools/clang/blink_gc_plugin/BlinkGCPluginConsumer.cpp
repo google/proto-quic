@@ -75,9 +75,6 @@ BlinkGCPluginConsumer::BlinkGCPluginConsumer(
 
   // Ignore GC implementation files.
   options_.ignored_directories.push_back("/heap/");
-
-  if (!options_.use_chromium_style_naming)
-    Config::UseLegacyNames();
 }
 
 void BlinkGCPluginConsumer::HandleTranslationUnit(ASTContext& context) {

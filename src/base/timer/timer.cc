@@ -170,13 +170,16 @@ void Timer::PostNewScheduledTask(TimeDelta delay) {
   is_running_ = true;
   scheduled_task_ = new BaseTimerTaskInternal(this);
   if (delay > TimeDelta::FromMicroseconds(0)) {
-    GetTaskRunner()->PostDelayedTask(posted_from_,
-        base::Bind(&BaseTimerTaskInternal::Run, base::Owned(scheduled_task_)),
+    GetTaskRunner()->PostDelayedTask(
+        posted_from_,
+        base::BindOnce(&BaseTimerTaskInternal::Run,
+                       base::Owned(scheduled_task_)),
         delay);
     scheduled_run_time_ = desired_run_time_ = Now() + delay;
   } else {
     GetTaskRunner()->PostTask(posted_from_,
-        base::Bind(&BaseTimerTaskInternal::Run, base::Owned(scheduled_task_)));
+                              base::BindOnce(&BaseTimerTaskInternal::Run,
+                                             base::Owned(scheduled_task_)));
     scheduled_run_time_ = desired_run_time_ = TimeTicks();
   }
   // Remember the thread ID that posts the first task -- this will be verified

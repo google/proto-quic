@@ -6,7 +6,7 @@ import common
 import time
 from common import TestDriver
 from common import IntegrationTest
-from common import NotAndroid
+from decorators import NotAndroid
 
 
 class Smoke(IntegrationTest):
@@ -21,7 +21,7 @@ class Smoke(IntegrationTest):
       t.LoadURL('http://check.googlezip.net/test.html')
       for response in t.GetHTTPResponses():
         self.assertNotHasChromeProxyViaHeader(response)
-  
+
   # Ensure Chrome uses DataSaver in normal mode.
   def testCheckPageWithNormalMode(self):
     with TestDriver() as t:
@@ -85,7 +85,7 @@ class Smoke(IntegrationTest):
       responses = t.GetHTTPResponses()
       self.assertNotEqual(0, len(responses))
       for response in responses:
-        self.assertHasChromeProxyViaHeader(response)        
+        self.assertHasChromeProxyViaHeader(response)
 
 if __name__ == '__main__':
   IntegrationTest.RunAllTests()

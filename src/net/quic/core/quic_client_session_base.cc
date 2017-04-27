@@ -5,8 +5,8 @@
 #include "net/quic/core/quic_client_session_base.h"
 
 #include "net/quic/core/quic_client_promised_info.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 
 using std::string;

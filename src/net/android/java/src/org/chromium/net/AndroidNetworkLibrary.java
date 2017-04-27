@@ -22,6 +22,7 @@ import android.security.NetworkSecurityPolicy;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
+import org.chromium.base.ContextUtils;
 import org.chromium.base.annotations.CalledByNative;
 import org.chromium.base.annotations.CalledByNativeUnchecked;
 
@@ -44,7 +45,6 @@ class AndroidNetworkLibrary {
 
     /**
      * Stores the key pair through the CertInstaller activity.
-     * @param context current application context.
      * @param publicKey The public key bytes as DER-encoded SubjectPublicKeyInfo (X.509)
      * @param privateKey The private key as DER-encoded PrivateKeyInfo (PKCS#8).
      * @return: true on success, false on failure.
@@ -54,7 +54,7 @@ class AndroidNetworkLibrary {
      * by the CertInstaller UI itself.
      */
     @CalledByNative
-    public static boolean storeKeyPair(Context context, byte[] publicKey, byte[] privateKey) {
+    public static boolean storeKeyPair(byte[] publicKey, byte[] privateKey) {
         // TODO(digit): Use KeyChain official extra values to pass the public and private
         // keys when they're available. The "KEY" and "PKEY" hard-coded constants were taken
         // from the platform sources, since there are no official KeyChain.EXTRA_XXX definitions
@@ -64,7 +64,7 @@ class AndroidNetworkLibrary {
             intent.putExtra("PKEY", privateKey);
             intent.putExtra("KEY", publicKey);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(intent);
+            ContextUtils.getApplicationContext().startActivity(intent);
             return true;
         } catch (ActivityNotFoundException e) {
             Log.w(TAG, "could not store key pair: " + e);
@@ -156,9 +156,10 @@ class AndroidNetworkLibrary {
      * Returns the ISO country code equivalent of the current MCC.
      */
     @CalledByNative
-    private static String getNetworkCountryIso(Context context) {
+    private static String getNetworkCountryIso() {
         TelephonyManager telephonyManager =
-                (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+                (TelephonyManager) ContextUtils.getApplicationContext().getSystemService(
+                        Context.TELEPHONY_SERVICE);
         if (telephonyManager == null) return "";
         return telephonyManager.getNetworkCountryIso();
     }
@@ -168,9 +169,10 @@ class AndroidNetworkLibrary {
      * the numeric name of the current registered operator.
      */
     @CalledByNative
-    private static String getNetworkOperator(Context context) {
+    private static String getNetworkOperator() {
         TelephonyManager telephonyManager =
-                (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+                (TelephonyManager) ContextUtils.getApplicationContext().getSystemService(
+                        Context.TELEPHONY_SERVICE);
         if (telephonyManager == null) return "";
         return telephonyManager.getNetworkOperator();
     }
@@ -180,9 +182,10 @@ class AndroidNetworkLibrary {
      * the numeric name of the current SIM operator.
      */
     @CalledByNative
-    private static String getSimOperator(Context context) {
+    private static String getSimOperator() {
         TelephonyManager telephonyManager =
-                (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+                (TelephonyManager) ContextUtils.getApplicationContext().getSystemService(
+                        Context.TELEPHONY_SERVICE);
         if (telephonyManager == null) return "";
         return telephonyManager.getSimOperator();
     }
@@ -192,9 +195,10 @@ class AndroidNetworkLibrary {
      * suggests that use of data may incur extra costs.
      */
     @CalledByNative
-    private static boolean getIsRoaming(Context context) {
+    private static boolean getIsRoaming() {
         ConnectivityManager connectivityManager =
-                (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+                (ConnectivityManager) ContextUtils.getApplicationContext().getSystemService(
+                        Context.CONNECTIVITY_SERVICE);
         NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
         if (networkInfo == null) return false; // No active network.
         return networkInfo.isRoaming();
@@ -209,12 +213,13 @@ class AndroidNetworkLibrary {
      */
     @TargetApi(Build.VERSION_CODES.M)
     @CalledByNative
-    private static boolean getIsCaptivePortal(Context context) {
+    private static boolean getIsCaptivePortal() {
         // NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL is only available on Marshmallow and
         // later versions.
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return false;
         ConnectivityManager connectivityManager =
-                (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+                (ConnectivityManager) ContextUtils.getApplicationContext().getSystemService(
+                        Context.CONNECTIVITY_SERVICE);
         if (connectivityManager == null) return false;
 
         Network network = connectivityManager.getActiveNetwork();
@@ -230,11 +235,8 @@ class AndroidNetworkLibrary {
      * returns empty string.
      */
     @CalledByNative
-    public static String getWifiSSID(Context context) {
-        if (context == null) {
-            return "";
-        }
-        final Intent intent = context.registerReceiver(
+    public static String getWifiSSID() {
+        final Intent intent = ContextUtils.getApplicationContext().registerReceiver(
                 null, new IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION));
         if (intent != null) {
             final WifiInfo wifiInfo = intent.getParcelableExtra(WifiManager.EXTRA_WIFI_INFO);
@@ -267,9 +269,10 @@ class AndroidNetworkLibrary {
 
     @TargetApi(Build.VERSION_CODES.M)
     @CalledByNative
-    private static byte[][] getDnsServers(Context context) {
+    private static byte[][] getDnsServers() {
         ConnectivityManager connectivityManager =
-                (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+                (ConnectivityManager) ContextUtils.getApplicationContext().getSystemService(
+                        Context.CONNECTIVITY_SERVICE);
         if (connectivityManager == null) {
             return new byte[0][0];
         }

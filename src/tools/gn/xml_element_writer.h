@@ -120,4 +120,6 @@ std::unique_ptr<XmlElementWriter> XmlElementWriter::SubElement(
       out_, tag, attribute_name, attribute_value_writer, indent_ + 2));
 }
 
+std::string XmlEscape(const std::string& value);
+
 #endif  // TOOLS_GN_XML_ELEMENT_WRITER_H_

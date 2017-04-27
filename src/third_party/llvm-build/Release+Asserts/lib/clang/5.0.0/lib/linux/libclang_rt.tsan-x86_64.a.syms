@@ -388,6 +388,7 @@
   __interceptor_strspn;
   __interceptor_strstr;
   __interceptor_strtoimax;
+  __interceptor_strtok;
   __interceptor_strtoumax;
   __interceptor_sysinfo;
   __interceptor_tcgetattr;
@@ -478,10 +479,8 @@
   __res_iclose;
   __sanitizer_cov;
   __sanitizer_cov_dump;
-  __sanitizer_cov_indir_call16;
   __sanitizer_cov_init;
   __sanitizer_cov_module_init;
-  __sanitizer_cov_trace_basic_block;
   __sanitizer_cov_trace_cmp;
   __sanitizer_cov_trace_cmp1;
   __sanitizer_cov_trace_cmp2;
@@ -489,7 +488,6 @@
   __sanitizer_cov_trace_cmp8;
   __sanitizer_cov_trace_div4;
   __sanitizer_cov_trace_div8;
-  __sanitizer_cov_trace_func_enter;
   __sanitizer_cov_trace_gep;
   __sanitizer_cov_trace_pc_guard;
   __sanitizer_cov_trace_pc_guard_init;
@@ -500,15 +498,12 @@
   __sanitizer_dump_trace_pc_guard_coverage;
   __sanitizer_free_hook;
   __sanitizer_get_allocated_size;
-  __sanitizer_get_coverage_guards;
   __sanitizer_get_current_allocated_bytes;
   __sanitizer_get_estimated_allocated_size;
   __sanitizer_get_free_bytes;
   __sanitizer_get_heap_size;
   __sanitizer_get_module_and_offset_for_pc;
-  __sanitizer_get_number_of_counters;
   __sanitizer_get_ownership;
-  __sanitizer_get_total_unique_caller_callee_pairs;
   __sanitizer_get_total_unique_coverage;
   __sanitizer_get_unmapped_bytes;
   __sanitizer_install_malloc_and_free_hooks;
@@ -516,7 +511,6 @@
   __sanitizer_maybe_open_cov_file;
   __sanitizer_print_stack_trace;
   __sanitizer_report_error_summary;
-  __sanitizer_reset_coverage;
   __sanitizer_sandbox_on_notify;
   __sanitizer_set_death_callback;
   __sanitizer_set_report_fd;
@@ -1173,7 +1167,6 @@
   __sanitizer_unaligned_store16;
   __sanitizer_unaligned_store32;
   __sanitizer_unaligned_store64;
-  __sanitizer_update_counter_bitset_and_clear_counters;
   __sanitizer_weak_hook_memcmp;
   __sanitizer_weak_hook_memmem;
   __sanitizer_weak_hook_strcasecmp;
@@ -1190,6 +1183,16 @@
   __tsan_func*;
   __tsan_init;
   __tsan_java*;
+  __tsan_mutex_create;
+  __tsan_mutex_destroy;
+  __tsan_mutex_post_divert;
+  __tsan_mutex_post_lock;
+  __tsan_mutex_post_signal;
+  __tsan_mutex_post_unlock;
+  __tsan_mutex_pre_divert;
+  __tsan_mutex_pre_lock;
+  __tsan_mutex_pre_signal;
+  __tsan_mutex_pre_unlock;
   __tsan_read*;
   __tsan_release;
   __tsan_unaligned*;
@@ -1540,6 +1543,7 @@
   strspn;
   strstr;
   strtoimax;
+  strtok;
   strtoumax;
   sysinfo;
   tcgetattr;

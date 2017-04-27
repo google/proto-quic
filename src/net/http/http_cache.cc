@@ -37,7 +37,7 @@
 #include "net/base/net_errors.h"
 #include "net/base/upload_data_stream.h"
 #include "net/disk_cache/disk_cache.h"
-#include "net/http/disk_cache_based_quic_server_info.h"
+#include "net/http/http_cache_lookup_manager.h"
 #include "net/http/http_cache_transaction.h"
 #include "net/http/http_network_layer.h"
 #include "net/http/http_network_session.h"
@@ -302,24 +302,6 @@ void HttpCache::MetadataWriter::OnIOComplete(int result) {
 }
 
 //-----------------------------------------------------------------------------
-
-class HttpCache::QuicServerInfoFactoryAdaptor : public QuicServerInfoFactory {
- public:
-  explicit QuicServerInfoFactoryAdaptor(HttpCache* http_cache)
-      : http_cache_(http_cache) {
-  }
-
-  std::unique_ptr<QuicServerInfo> GetForServer(
-      const QuicServerId& server_id) override {
-    return base::MakeUnique<DiskCacheBasedQuicServerInfo>(server_id,
-                                                          http_cache_);
-  }
-
- private:
-  HttpCache* const http_cache_;
-};
-
-//-----------------------------------------------------------------------------
 HttpCache::HttpCache(HttpNetworkSession* session,
                      std::unique_ptr<BackendFactory> backend_factory,
                      bool is_main_cache)
@@ -343,15 +325,15 @@ HttpCache::HttpCache(std::unique_ptr<HttpTransactionFactory> network_layer,
   // Session may be NULL in unittests.
   // TODO(mmenke): Seems like tests could be changed to provide a session,
   // rather than having logic only used in unit tests here.
-  if (session) {
-    net_log_ = session->net_log();
-    if (is_main_cache &&
-        !session->quic_stream_factory()->has_quic_server_info_factory()) {
-      // QuicStreamFactory takes ownership of QuicServerInfoFactoryAdaptor.
-      session->quic_stream_factory()->set_quic_server_info_factory(
-          new QuicServerInfoFactoryAdaptor(this));
-    }
-  }
+  if (!session)
+    return;
+
+  net_log_ = session->net_log();
+  if (!is_main_cache)
+    return;
+
+  session->SetServerPushDelegate(
+      base::MakeUnique<HttpCacheLookupManager>(this));
 }
 
 HttpCache::~HttpCache() {

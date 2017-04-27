@@ -68,14 +68,14 @@ struct NET_EXPORT_PRIVATE Http2FrameHeader {
   bool IsEndStream() const {
     DCHECK(type == Http2FrameType::DATA || type == Http2FrameType::HEADERS)
         << ToString();
-    return (flags & Http2FrameFlag::FLAG_END_STREAM) != 0;
+    return (flags & Http2FrameFlag::END_STREAM) != 0;
   }
 
   // Is the ACK flag set?
   bool IsAck() const {
     DCHECK(type == Http2FrameType::SETTINGS || type == Http2FrameType::PING)
         << ToString();
-    return (flags & Http2FrameFlag::FLAG_ACK) != 0;
+    return (flags & Http2FrameFlag::ACK) != 0;
   }
 
   // Is the END_HEADERS flag set?
@@ -84,7 +84,7 @@ struct NET_EXPORT_PRIVATE Http2FrameHeader {
            type == Http2FrameType::PUSH_PROMISE ||
            type == Http2FrameType::CONTINUATION)
         << ToString();
-    return (flags & Http2FrameFlag::FLAG_END_HEADERS) != 0;
+    return (flags & Http2FrameFlag::END_HEADERS) != 0;
   }
 
   // Is the PADDED flag set?
@@ -92,13 +92,13 @@ struct NET_EXPORT_PRIVATE Http2FrameHeader {
     DCHECK(type == Http2FrameType::DATA || type == Http2FrameType::HEADERS ||
            type == Http2FrameType::PUSH_PROMISE)
         << ToString();
-    return (flags & Http2FrameFlag::FLAG_PADDED) != 0;
+    return (flags & Http2FrameFlag::PADDED) != 0;
   }
 
   // Is the PRIORITY flag set?
   bool HasPriority() const {
     DCHECK_EQ(type, Http2FrameType::HEADERS) << ToString();
-    return (flags & Http2FrameFlag::FLAG_PRIORITY) != 0;
+    return (flags & Http2FrameFlag::PRIORITY) != 0;
   }
 
   // Does the encoding of this header start with "HTTP/", indicating that it

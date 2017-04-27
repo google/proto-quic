@@ -62,6 +62,7 @@ executable("transport_security_state_generator") {
   deps = [
     ":transport_security_state_generator_sources",
     "//base",
+    "//build/config/sanitizers:deps",
     "//crypto",
     "//third_party/boringssl",
   ]

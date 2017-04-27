@@ -24,7 +24,7 @@ DecodeStatus ContinuationPayloadDecoder::StartDecodingPayload(
            << frame_header;
   DCHECK_EQ(Http2FrameType::CONTINUATION, frame_header.type);
   DCHECK_LE(db->Remaining(), total_length);
-  DCHECK_EQ(0, frame_header.flags & ~(Http2FrameFlag::FLAG_END_HEADERS));
+  DCHECK_EQ(0, frame_header.flags & ~(Http2FrameFlag::END_HEADERS));
 
   state->InitializeRemainders();
   state->listener()->OnContinuationStart(frame_header);

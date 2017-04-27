@@ -228,7 +228,9 @@ class NET_EXPORT_PRIVATE SimpleIndex
 
   // All nonstatic SimpleEntryImpl methods should always be called on the IO
   // thread, in all cases. |io_thread_checker_| documents and enforces this.
-  base::ThreadChecker io_thread_checker_;
+  // NOTE: Temporarily forced on to chase a crash, https://crbug.com/710994,
+  // turn off by 2017-04-21, also going back CHECK -> DCHECK in the impl.
+  base::ThreadCheckerImpl io_thread_checker_;
 
   // Timestamp of the last time we wrote the index to disk.
   // PostponeWritingToDisk() may give up postponing and allow the write if it

@@ -49,6 +49,9 @@
 #include "base/win/windows_version.h"
 #endif
 
+// TODO(crbug.com/649017): Add tests that only certificates with
+// serverAuth are accepted.
+
 using net::test::IsError;
 using net::test::IsOk;
 
@@ -1196,14 +1199,9 @@ TEST_P(CertVerifyProcInternalTest, PublicKeyHashes) {
 }
 
 // A regression test for http://crbug.com/70293.
-// The Key Usage extension in this RSA SSL server certificate does not have
-// the keyEncipherment bit.
-TEST_P(CertVerifyProcInternalTest, InvalidKeyUsage) {
-  if (verify_proc_type() == CERT_VERIFY_PROC_BUILTIN) {
-    LOG(INFO) << "TODO(crbug.com/649017): Skipping test as not yet implemented "
-                 "in builting verifier";
-    return;
-  }
+// The certificate in question has a key purpose of clientAuth, and also lacks
+// the required key usage for serverAuth.
+TEST_P(CertVerifyProcInternalTest, WrongKeyPurpose) {
   base::FilePath certs_dir = GetTestCertsDirectory();
 
   scoped_refptr<X509Certificate> server_cert =
@@ -1215,24 +1213,26 @@ TEST_P(CertVerifyProcInternalTest, InvalidKeyUsage) {
   int error = Verify(server_cert.get(), "jira.aquameta.com", flags, NULL,
                      CertificateList(), &verify_result);
 
-  // TODO(eroman): Change the test data so results are consistent across
-  //               verifiers.
-  if (verify_proc_type() == CERT_VERIFY_PROC_OPENSSL) {
-    // This certificate has two errors: "invalid key usage" and "untrusted CA".
-    // However, OpenSSL returns only one (the latter), and we can't detect
-    // the other errors.
-    EXPECT_THAT(error, IsError(ERR_CERT_AUTHORITY_INVALID));
-  } else {
-    EXPECT_THAT(error, IsError(ERR_CERT_INVALID));
+  EXPECT_TRUE(verify_result.cert_status & CERT_STATUS_COMMON_NAME_INVALID);
+
+  // TODO(crbug.com/649017): Don't special-case builtin verifier.
+  if (verify_proc_type() != CERT_VERIFY_PROC_BUILTIN)
     EXPECT_TRUE(verify_result.cert_status & CERT_STATUS_INVALID);
-  }
+
   // TODO(wtc): fix http://crbug.com/75520 to get all the certificate errors
   // from NSS.
   if (verify_proc_type() != CERT_VERIFY_PROC_NSS &&
-      verify_proc_type() != CERT_VERIFY_PROC_IOS &&
       verify_proc_type() != CERT_VERIFY_PROC_ANDROID) {
     // The certificate is issued by an unknown CA.
     EXPECT_TRUE(verify_result.cert_status & CERT_STATUS_AUTHORITY_INVALID);
+  }
+
+  // TODO(crbug.com/649017): Don't special-case builtin verifier.
+  if (verify_proc_type() == CERT_VERIFY_PROC_OPENSSL ||
+      verify_proc_type() == CERT_VERIFY_PROC_BUILTIN) {
+    EXPECT_THAT(error, IsError(ERR_CERT_AUTHORITY_INVALID));
+  } else {
+    EXPECT_THAT(error, IsError(ERR_CERT_INVALID));
   }
 }
 

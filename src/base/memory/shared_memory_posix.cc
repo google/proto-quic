@@ -157,9 +157,14 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
       //   the file is checked below.
       // - Attackers could plant a symbolic link so that an unexpected file
       //   is opened, so O_NOFOLLOW is passed to open().
+#if !defined(OS_AIX)
       fd = HANDLE_EINTR(
           open(path.value().c_str(), O_RDWR | O_APPEND | O_NOFOLLOW));
-
+#else
+      // AIX has no 64-bit support for open flags such as -
+      //  O_CLOEXEC, O_NOFOLLOW and O_TTY_INIT.
+      fd = HANDLE_EINTR(open(path.value().c_str(), O_RDWR | O_APPEND));
+#endif
       // Check that the current user owns the file.
       // If uid != euid, then a more complex permission model is used and this
       // API is not appropriate.

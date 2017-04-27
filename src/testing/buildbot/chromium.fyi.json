@@ -119,6 +119,12 @@
         "test": "ipc_tests"
       },
       {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "latency_unittests"
+      },
+      {
         "args": [
           "--tool=asan"
         ],
@@ -578,6 +584,12 @@
       },
       {
         "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "latency_unittests"
+      },
+      {
+        "swarming": {
           "can_use_on_swarming_builders": false
         },
         "test": "media_blink_unittests"
@@ -952,6 +964,12 @@
           "can_use_on_swarming_builders": false
         },
         "test": "jingle_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "latency_unittests"
       },
       {
         "swarming": {
@@ -2395,9 +2413,6 @@
       {
         "isolate_name": "telemetry_gpu_unittests",
         "name": "telemetry_gpu_unittests",
-        "override_compile_targets": [
-          "telemetry_gpu_unittests_run"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": false
         }
@@ -2405,9 +2420,6 @@
       {
         "isolate_name": "telemetry_perf_unittests",
         "name": "telemetry_perf_unittests",
-        "override_compile_targets": [
-          "telemetry_perf_unittests_run"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": false,
           "hard_timeout": 960,
@@ -2417,9 +2429,6 @@
       {
         "isolate_name": "telemetry_unittests",
         "name": "telemetry_unittests",
-        "override_compile_targets": [
-          "telemetry_unittests_run"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": false,
           "shards": 2
@@ -4882,9 +4891,6 @@
       {
         "isolate_name": "telemetry_gpu_unittests",
         "name": "telemetry_gpu_unittests",
-        "override_compile_targets": [
-          "telemetry_gpu_unittests_run"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         }
@@ -4892,9 +4898,6 @@
       {
         "isolate_name": "telemetry_perf_unittests",
         "name": "telemetry_perf_unittests",
-        "override_compile_targets": [
-          "telemetry_perf_unittests_run"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "hard_timeout": 960,
@@ -4904,9 +4907,6 @@
       {
         "isolate_name": "telemetry_unittests",
         "name": "telemetry_unittests",
-        "override_compile_targets": [
-          "telemetry_unittests_run"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "shards": 2
@@ -10965,9 +10965,6 @@
       {
         "isolate_name": "telemetry_gpu_unittests",
         "name": "telemetry_gpu_unittests",
-        "override_compile_targets": [
-          "telemetry_gpu_unittests_run"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         }
@@ -10978,9 +10975,6 @@
         ],
         "isolate_name": "telemetry_perf_unittests",
         "name": "telemetry_perf_unittests",
-        "override_compile_targets": [
-          "telemetry_perf_unittests_run"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "hard_timeout": 960,
@@ -10993,9 +10987,6 @@
         ],
         "isolate_name": "telemetry_unittests",
         "name": "telemetry_unittests",
-        "override_compile_targets": [
-          "telemetry_unittests_run"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "shards": 4
@@ -11175,9 +11166,6 @@
       {
         "isolate_name": "telemetry_gpu_unittests",
         "name": "telemetry_gpu_unittests",
-        "override_compile_targets": [
-          "telemetry_gpu_unittests_run"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         }
@@ -11188,9 +11176,6 @@
         ],
         "isolate_name": "telemetry_perf_unittests",
         "name": "telemetry_perf_unittests",
-        "override_compile_targets": [
-          "telemetry_perf_unittests_run"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "hard_timeout": 960,
@@ -11200,9 +11185,6 @@
       {
         "isolate_name": "telemetry_unittests",
         "name": "telemetry_unittests",
-        "override_compile_targets": [
-          "telemetry_unittests_run"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         }
@@ -11534,9 +11516,6 @@
       {
         "isolate_name": "telemetry_gpu_unittests",
         "name": "telemetry_gpu_unittests",
-        "override_compile_targets": [
-          "telemetry_gpu_unittests_run"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         }
@@ -11547,9 +11526,6 @@
         ],
         "isolate_name": "telemetry_perf_unittests",
         "name": "telemetry_perf_unittests",
-        "override_compile_targets": [
-          "telemetry_perf_unittests_run"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "hard_timeout": 960,
@@ -11562,9 +11538,6 @@
         ],
         "isolate_name": "telemetry_unittests",
         "name": "telemetry_unittests",
-        "override_compile_targets": [
-          "telemetry_unittests_run"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "shards": 4
@@ -11738,9 +11711,6 @@
       {
         "isolate_name": "telemetry_gpu_unittests",
         "name": "telemetry_gpu_unittests",
-        "override_compile_targets": [
-          "telemetry_gpu_unittests_run"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         }
@@ -11751,9 +11721,6 @@
         ],
         "isolate_name": "telemetry_perf_unittests",
         "name": "telemetry_perf_unittests",
-        "override_compile_targets": [
-          "telemetry_perf_unittests_run"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": true,
           "hard_timeout": 960,
@@ -11763,9 +11730,6 @@
       {
         "isolate_name": "telemetry_unittests",
         "name": "telemetry_unittests",
-        "override_compile_targets": [
-          "telemetry_unittests_run"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         }
@@ -11788,10 +11752,12 @@
           "--mus",
           "--test-launcher-filter-file=../../testing/buildbot/filters/ash_mus_unittests.filter"
         ],
+        "name": "ash_mus_unittests",
+        "override_isolate_target": "ash_unittests",
         "swarming": {
           "can_use_on_swarming_builders": true
         },
-        "test": "ash_mus_unittests"
+        "test": "ash_unittests"
       },
       {
         "args": [
@@ -11803,6 +11769,17 @@
           "can_use_on_swarming_builders": true
         },
         "test": "mash_browser_tests"
+      },
+      {
+        "args": [
+          "--override-use-software-gl-for-tests",
+          "--test-launcher-filter-file=../../testing/buildbot/filters/mojo.fyi.mus.browser_tests.filter"
+        ],
+        "hard_timeout": 60,
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "mus_browser_tests"
       }
     ]
   },
@@ -11832,6 +11809,9 @@
     ]
   },
   "Ozone Linux": {
+    "additional_compile_targets": [
+      "chrome"
+    ],
     "gtest_tests": [
       {
         "swarming": {
@@ -12929,7 +12909,8 @@
               "os": "Ubuntu-14.04"
             }
           ],
-          "shards": 6
+          "hard_timeout": 900,
+          "shards": 18
         }
       }
     ]

@@ -4,7 +4,6 @@
 
 #include "net/android/network_change_notifier_delegate_android.h"
 
-#include "base/android/context_utils.h"
 #include "base/android/jni_array.h"
 #include "base/logging.h"
 #include "jni/NetworkChangeNotifier_jni.h"
@@ -74,9 +73,7 @@ jdouble GetMaxBandwidthForConnectionSubtype(JNIEnv* env,
 NetworkChangeNotifierDelegateAndroid::NetworkChangeNotifierDelegateAndroid()
     : observers_(new base::ObserverListThreadSafe<Observer>()) {
   JNIEnv* env = base::android::AttachCurrentThread();
-  java_network_change_notifier_.Reset(
-      Java_NetworkChangeNotifier_init(
-          env, base::android::GetApplicationContext()));
+  java_network_change_notifier_.Reset(Java_NetworkChangeNotifier_init(env));
   Java_NetworkChangeNotifier_addNativeObserver(
       env, java_network_change_notifier_, reinterpret_cast<intptr_t>(this));
   SetCurrentConnectionType(

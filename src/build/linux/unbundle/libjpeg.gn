@@ -21,3 +21,6 @@ source_set("simd") {
 
 source_set("simd_asm") {
 }
+
+config("libjpeg_config") {
+}

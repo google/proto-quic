@@ -34,7 +34,6 @@ public class NetworkChangeNotifier {
         public void onConnectionTypeChanged(int connectionType);
     }
 
-    private final Context mContext;
     private final ArrayList<Long> mNativeChangeNotifiers;
     private final ObserverList<ConnectionTypeObserver> mConnectionTypeObservers;
     private NetworkChangeNotifierAutoDetect mAutoDetector;
@@ -45,19 +44,23 @@ public class NetworkChangeNotifier {
     private static NetworkChangeNotifier sInstance;
 
     @VisibleForTesting
-    protected NetworkChangeNotifier(Context context) {
-        mContext = context.getApplicationContext();
+    protected NetworkChangeNotifier() {
         mNativeChangeNotifiers = new ArrayList<Long>();
         mConnectionTypeObservers = new ObserverList<ConnectionTypeObserver>();
+    }
+
+    // TODO(wnwen): Remove after downstream no longer depends on this.
+    public static NetworkChangeNotifier init(Context context) {
+        return init();
     }
 
     /**
      * Initializes the singleton once.
      */
     @CalledByNative
-    public static NetworkChangeNotifier init(Context context) {
+    public static NetworkChangeNotifier init() {
         if (sInstance == null) {
-            sInstance = new NetworkChangeNotifier(context);
+            sInstance = new NetworkChangeNotifier();
         }
         return sInstance;
     }
@@ -214,7 +217,7 @@ public class NetworkChangeNotifier {
                                 notifyObserversToPurgeActiveNetworkList(activeNetIds);
                             }
                         },
-                        mContext, policy);
+                        policy);
                 final NetworkChangeNotifierAutoDetect.NetworkState networkState =
                         mAutoDetector.getCurrentNetworkState();
                 updateCurrentConnectionType(

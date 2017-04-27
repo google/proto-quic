@@ -114,6 +114,12 @@ struct NET_EXPORT SSLConfig {
   // it. https://crbug.com/684730.
   bool deprecated_cipher_suites_enabled;
 
+  // Enables the version interference probing mode. While TLS 1.3 has avoided
+  // most endpoint intolerance, middlebox interference with TLS 1.3 is
+  // rampant. This causes the connection to be discarded on success with
+  // ERR_SSL_VERSION_INTERFERENCE.
+  bool version_interference_probe;
+
   bool channel_id_enabled;   // True if TLS channel ID extension is enabled.
 
   // List of Token Binding key parameters supported by the client. If empty,

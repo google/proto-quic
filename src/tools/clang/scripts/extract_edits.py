@@ -45,6 +45,9 @@ import sys
 
 
 def main():
+  # TODO(dcheng): extract_edits.py should normalize paths. Doing this in
+  # apply_edits.py is too late, as a common use case is to apply edits from many
+  # different platforms.
   unique_lines = set()
   inside_marker_lines = False
   for line in sys.stdin:

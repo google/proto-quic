@@ -28,10 +28,16 @@ TEST(ValuesTest, TestNothrow) {
   static_assert(std::is_nothrow_constructible<Value, std::string&&>::value,
                 "IsNothrowMoveConstructibleFromString");
   static_assert(
-      std::is_nothrow_constructible<Value, std::vector<char>&&>::value,
+      std::is_nothrow_constructible<Value, Value::BlobStorage&&>::value,
       "IsNothrowMoveConstructibleFromBlob");
+  static_assert(
+      std::is_nothrow_constructible<Value, Value::ListStorage&&>::value,
+      "IsNothrowMoveConstructibleFromList");
   static_assert(std::is_nothrow_move_assignable<Value>::value,
                 "IsNothrowMoveAssignable");
+  static_assert(
+      std::is_nothrow_constructible<ListValue, Value::ListStorage&&>::value,
+      "ListIsNothrowMoveConstructibleFromList");
 }
 
 // Group of tests for the value constructors.
@@ -100,9 +106,10 @@ TEST(ValuesTest, ConstructStringFromStringPiece) {
 }
 
 TEST(ValuesTest, ConstructBinary) {
-  BinaryValue value(std::vector<char>({0xF, 0x0, 0x0, 0xB, 0xA, 0x2}));
+  Value value(Value::BlobStorage({0xF, 0x0, 0x0, 0xB, 0xA, 0x2}));
   EXPECT_EQ(Value::Type::BINARY, value.type());
-  EXPECT_EQ(std::vector<char>({0xF, 0x0, 0x0, 0xB, 0xA, 0x2}), value.GetBlob());
+  EXPECT_EQ(Value::BlobStorage({0xF, 0x0, 0x0, 0xB, 0xA, 0x2}),
+            value.GetBlob());
 }
 
 TEST(ValuesTest, ConstructDict) {
@@ -113,6 +120,28 @@ TEST(ValuesTest, ConstructDict) {
 TEST(ValuesTest, ConstructList) {
   ListValue value;
   EXPECT_EQ(Value::Type::LIST, value.type());
+}
+
+TEST(ValuesTest, ConstructListFromStorage) {
+  Value::ListStorage storage;
+  storage.emplace_back("foo");
+
+  {
+    ListValue value(storage);
+    EXPECT_EQ(Value::Type::LIST, value.type());
+    EXPECT_EQ(1u, value.GetList().size());
+    EXPECT_EQ(Value::Type::STRING, value.GetList()[0].type());
+    EXPECT_EQ("foo", value.GetList()[0].GetString());
+  }
+
+  storage.back() = base::Value("bar");
+  {
+    ListValue value(std::move(storage));
+    EXPECT_EQ(Value::Type::LIST, value.type());
+    EXPECT_EQ(1u, value.GetList().size());
+    EXPECT_EQ(Value::Type::STRING, value.GetList()[0].type());
+    EXPECT_EQ("bar", value.GetList()[0].GetString());
+  }
 }
 
 // Group of tests for the copy constructors and copy-assigmnent. For equality
@@ -180,8 +209,8 @@ TEST(ValuesTest, CopyString) {
 }
 
 TEST(ValuesTest, CopyBinary) {
-  BinaryValue value(std::vector<char>({0xF, 0x0, 0x0, 0xB, 0xA, 0x2}));
-  BinaryValue copied_value(value);
+  Value value(Value::BlobStorage({0xF, 0x0, 0x0, 0xB, 0xA, 0x2}));
+  Value copied_value(value);
   EXPECT_EQ(value.type(), copied_value.type());
   EXPECT_EQ(value.GetBlob(), copied_value.GetBlob());
 
@@ -205,6 +234,14 @@ TEST(ValuesTest, CopyDictionary) {
   EXPECT_EQ(value.type(), copied_value.type());
   EXPECT_EQ(123, copy);
 
+  copied_value.Clear();
+  copied_value = value;
+
+  copied_value.GetInteger("Int", &copy);
+
+  EXPECT_EQ(value.type(), copied_value.type());
+  EXPECT_EQ(123, copy);
+
   auto blank = MakeUnique<Value>();
 
   *blank = value;
@@ -215,25 +252,14 @@ TEST(ValuesTest, CopyDictionary) {
 }
 
 TEST(ValuesTest, CopyList) {
-  // TODO(crbug.com/646113): Clean this up once ListValue switched to
-  // value semantics.
-  int copy;
-  ListValue value;
-  value.AppendInteger(123);
+  Value value(Value::ListStorage{Value(123)});
 
-  ListValue copied_value(value);
-  copied_value.GetInteger(0, &copy);
+  Value copied_value(value);
+  EXPECT_EQ(value, copied_value);
 
-  EXPECT_EQ(value.type(), copied_value.type());
-  EXPECT_EQ(123, copy);
-
-  auto blank = MakeUnique<Value>();
-
-  *blank = value;
-  EXPECT_EQ(Value::Type::LIST, blank->type());
-
-  static_cast<ListValue*>(blank.get())->GetInteger(0, &copy);
-  EXPECT_EQ(123, copy);
+  Value blank;
+  blank = value;
+  EXPECT_EQ(value, blank);
 }
 
 // Group of tests for the move constructors and move-assigmnent.
@@ -299,15 +325,15 @@ TEST(ValuesTest, MoveString) {
 }
 
 TEST(ValuesTest, MoveBinary) {
-  const std::vector<char> buffer = {0xF, 0x0, 0x0, 0xB, 0xA, 0x2};
-  BinaryValue value(buffer);
-  BinaryValue moved_value(std::move(value));
+  const Value::BlobStorage buffer = {0xF, 0x0, 0x0, 0xB, 0xA, 0x2};
+  Value value(buffer);
+  Value moved_value(std::move(value));
   EXPECT_EQ(Value::Type::BINARY, moved_value.type());
   EXPECT_EQ(buffer, moved_value.GetBlob());
 
   Value blank;
 
-  blank = BinaryValue(buffer);
+  blank = Value(buffer);
   EXPECT_EQ(Value::Type::BINARY, blank.type());
   EXPECT_EQ(buffer, blank.GetBlob());
 }
@@ -332,22 +358,17 @@ TEST(ValuesTest, MoveDictionary) {
 }
 
 TEST(ValuesTest, MoveList) {
-  // TODO(crbug.com/646113): Clean this up once ListValue switched to
-  // value semantics.
-  int move;
-  ListValue value;
-  value.AppendInteger(123);
-
-  ListValue moved_value(std::move(value));
-  moved_value.GetInteger(0, &move);
-
+  const Value::ListStorage list = {Value(123)};
+  Value value(list);
+  Value moved_value(std::move(value));
   EXPECT_EQ(Value::Type::LIST, moved_value.type());
-  EXPECT_EQ(123, move);
+  EXPECT_EQ(123, moved_value.GetList().back().GetInt());
 
   Value blank;
 
-  blank = ListValue();
+  blank = Value(list);
   EXPECT_EQ(Value::Type::LIST, blank.type());
+  EXPECT_EQ(123, blank.GetList().back().GetInt());
 }
 
 TEST(ValuesTest, Basic) {
@@ -437,7 +458,7 @@ TEST(ValuesTest, List) {
   base::Value not_found_value(false);
 
   ASSERT_NE(mixed_list->end(), mixed_list->Find(sought_value));
-  ASSERT_TRUE((*mixed_list->Find(sought_value))->GetAsInteger(&int_value));
+  ASSERT_TRUE((*mixed_list->Find(sought_value)).GetAsInteger(&int_value));
   ASSERT_EQ(42, int_value);
   ASSERT_EQ(mixed_list->end(), mixed_list->Find(not_found_value));
 }
@@ -446,31 +467,26 @@ TEST(ValuesTest, BinaryValue) {
   // Default constructor creates a BinaryValue with a buffer of size 0.
   auto binary = MakeUnique<Value>(Value::Type::BINARY);
   ASSERT_TRUE(binary.get());
-  ASSERT_EQ(0U, binary->GetSize());
+  ASSERT_TRUE(binary->GetBlob().empty());
 
   // Test the common case of a non-empty buffer
-  std::vector<char> buffer(15);
+  Value::BlobStorage buffer(15);
   char* original_buffer = buffer.data();
-  binary.reset(new BinaryValue(std::move(buffer)));
+  binary.reset(new Value(std::move(buffer)));
   ASSERT_TRUE(binary.get());
-  ASSERT_TRUE(binary->GetBuffer());
-  ASSERT_EQ(original_buffer, binary->GetBuffer());
-  ASSERT_EQ(15U, binary->GetSize());
+  ASSERT_TRUE(binary->GetBlob().data());
+  ASSERT_EQ(original_buffer, binary->GetBlob().data());
+  ASSERT_EQ(15U, binary->GetBlob().size());
 
   char stack_buffer[42];
   memset(stack_buffer, '!', 42);
-  binary = BinaryValue::CreateWithCopiedBuffer(stack_buffer, 42);
+  binary = Value::CreateWithCopiedBuffer(stack_buffer, 42);
   ASSERT_TRUE(binary.get());
-  ASSERT_TRUE(binary->GetBuffer());
-  ASSERT_NE(stack_buffer, binary->GetBuffer());
-  ASSERT_EQ(42U, binary->GetSize());
-  ASSERT_EQ(0, memcmp(stack_buffer, binary->GetBuffer(), binary->GetSize()));
-
-  // Test overloaded GetAsBinary.
-  Value* narrow_value = binary.get();
-  const BinaryValue* narrow_binary = NULL;
-  ASSERT_TRUE(narrow_value->GetAsBinary(&narrow_binary));
-  EXPECT_EQ(binary.get(), narrow_binary);
+  ASSERT_TRUE(binary->GetBlob().data());
+  ASSERT_NE(stack_buffer, binary->GetBlob().data());
+  ASSERT_EQ(42U, binary->GetBlob().size());
+  ASSERT_EQ(0, memcmp(stack_buffer, binary->GetBlob().data(),
+                      binary->GetBlob().size()));
 }
 
 TEST(ValuesTest, StringValue) {
@@ -540,10 +556,10 @@ TEST(ValuesTest, ListRemoval) {
   {
     ListValue list;
     auto value = MakeUnique<Value>();
-    Value* original_value = value.get();
+    Value original_value = *value;
     list.Append(std::move(value));
     size_t index = 0;
-    list.Remove(*original_value, &index);
+    list.Remove(original_value, &index);
     EXPECT_EQ(0U, index);
     EXPECT_EQ(0U, list.GetSize());
   }
@@ -673,10 +689,9 @@ TEST(ValuesTest, DeepCopy) {
   Value* original_string16 = scoped_string16.get();
   original_dict.Set("string16", std::move(scoped_string16));
 
-  std::vector<char> original_buffer(42, '!');
-  std::unique_ptr<BinaryValue> scoped_binary(
-      new BinaryValue(std::move(original_buffer)));
-  BinaryValue* original_binary = scoped_binary.get();
+  Value::BlobStorage original_buffer(42, '!');
+  std::unique_ptr<Value> scoped_binary(new Value(std::move(original_buffer)));
+  Value* original_binary = scoped_binary.get();
   original_dict.Set("binary", std::move(scoped_binary));
 
   std::unique_ptr<ListValue> scoped_list(new ListValue());
@@ -759,10 +774,8 @@ TEST(ValuesTest, DeepCopy) {
   ASSERT_TRUE(copy_binary);
   ASSERT_NE(copy_binary, original_binary);
   ASSERT_TRUE(copy_binary->IsType(Value::Type::BINARY));
-  ASSERT_NE(original_binary->GetBuffer(), copy_binary->GetBuffer());
-  ASSERT_EQ(original_binary->GetSize(), copy_binary->GetSize());
-  ASSERT_EQ(0, memcmp(original_binary->GetBuffer(), copy_binary->GetBuffer(),
-                      original_binary->GetSize()));
+  ASSERT_NE(original_binary->GetBlob().data(), copy_binary->GetBlob().data());
+  ASSERT_EQ(original_binary->GetBlob(), copy_binary->GetBlob());
 
   Value* copy_value = NULL;
   ASSERT_TRUE(copy_dict->Get("list", &copy_value));
@@ -918,8 +931,8 @@ TEST(ValuesTest, Comparisons) {
   EXPECT_FALSE(string1 >= string2);
 
   // Test Binary Values.
-  Value binary1(std::vector<char>{0x01});
-  Value binary2(std::vector<char>{0x02});
+  Value binary1(Value::BlobStorage{0x01});
+  Value binary2(Value::BlobStorage{0x02});
   EXPECT_FALSE(binary1 == binary2);
   EXPECT_NE(binary1, binary2);
   EXPECT_LT(binary1, binary2);
@@ -1007,9 +1020,8 @@ TEST(ValuesTest, DeepCopyCovariantReturnTypes) {
   Value* original_string16 = scoped_string16.get();
   original_dict.Set("string16", std::move(scoped_string16));
 
-  std::vector<char> original_buffer(42, '!');
-  std::unique_ptr<BinaryValue> scoped_binary(
-      new BinaryValue(std::move(original_buffer)));
+  Value::BlobStorage original_buffer(42, '!');
+  std::unique_ptr<Value> scoped_binary(new Value(std::move(original_buffer)));
   Value* original_binary = scoped_binary.get();
   original_dict.Set("binary", std::move(scoped_binary));
 
@@ -1244,7 +1256,7 @@ TEST(ValuesTest, GetWithNullOutValue) {
   Value int_value(1234);
   Value double_value(12.34567);
   Value string_value("foo");
-  BinaryValue binary_value(Value::Type::BINARY);
+  Value binary_value(Value::Type::BINARY);
   DictionaryValue dict_value;
   ListValue list_value;
 
@@ -1521,8 +1533,7 @@ TEST(ValuesTest, GetWithNullOutValue) {
 
 TEST(ValuesTest, SelfSwap) {
   base::Value test(1);
-  using namespace std;
-  swap(test, test);
+  std::swap(test, test);
   EXPECT_TRUE(test.GetInt() == 1);
 }
 

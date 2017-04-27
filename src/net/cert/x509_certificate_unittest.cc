@@ -282,10 +282,10 @@ TEST(X509CertificateTest, SerialNumbers) {
   EXPECT_TRUE(memcmp(google_cert->serial_number().data(), google_serial,
                      sizeof(google_serial)) == 0);
 
-// TODO(mattm): Creating the X509Certificate fails on windows due to the null
-// in the subject. Generate a new test cert specifically for this case rather
-// than reusing paypal_null_cert.
-#if !defined(OS_WIN)
+// TODO(mattm): Creating the X509Certificate fails on some platforms due to the
+// null in the subject. Generate a new test cert specifically for this case
+// rather than reusing paypal_null_cert.
+#if !defined(OS_WIN) && !BUILDFLAG(USE_BYTE_CERTS)
   // Check a serial number where the first byte is >= 0x80, the DER returned by
   // serial() should contain the leading 0 padding byte.
   scoped_refptr<X509Certificate> paypal_null_cert(
@@ -1201,16 +1201,13 @@ const struct PublicKeyInfoTestData {
   size_t expected_bits;
   X509Certificate::PublicKeyType expected_type;
 } kPublicKeyInfoTestData[] = {
-    {"768-rsa-ee-by-768-rsa-intermediate.pem",
-     768,
+    {"768-rsa-ee-by-768-rsa-intermediate.pem", 768,
      X509Certificate::kPublicKeyTypeRSA},
-    {"1024-rsa-ee-by-768-rsa-intermediate.pem",
-     1024,
+    {"1024-rsa-ee-by-768-rsa-intermediate.pem", 1024,
      X509Certificate::kPublicKeyTypeRSA},
-    {"prime256v1-ecdsa-ee-by-1024-rsa-intermediate.pem",
-     256,
+    {"prime256v1-ecdsa-ee-by-1024-rsa-intermediate.pem", 256,
      X509Certificate::kPublicKeyTypeECDSA},
-#if defined(OS_MACOSX) && !defined(OS_IOS)
+#if defined(OS_MACOSX) && !defined(OS_IOS) && !BUILDFLAG(USE_BYTE_CERTS)
     // OS X has an key length limit of 4096 bits. This should manifest as an
     // unknown key. If a future version of OS X changes this, large_key.pem may
     // need to be renegerated with a larger key. See https://crbug.com/472291.

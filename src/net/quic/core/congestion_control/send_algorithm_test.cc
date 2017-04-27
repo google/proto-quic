@@ -217,7 +217,7 @@ class SendAlgorithmTest : public ::testing::TestWithParam<TestParams> {
                   "Receiver",
                   "QUIC sender",
                   Perspective::IS_SERVER,
-                  42) {
+                  net::test::GetPeerInMemoryConnectionId(42)) {
     rtt_stats_ = quic_sender_.connection()->sent_packet_manager().GetRttStats();
     sender_ = SendAlgorithmInterface::Create(
         simulator_.GetClock(), rtt_stats_,

@@ -1162,6 +1162,14 @@ should be able to be added at any place in this file.
   <description>User showed the history bottom sheet content.</description>
 </action>
 
+<action name="Android.ChromeHome.ShowIncognitoHome">
+  <owner>mdjones@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User showed the incognito bottom sheet content in the &quot;Home&quot; tab.
+  </description>
+</action>
+
 <action name="Android.ChromeHome.ShowSuggestions">
   <owner>mdjones@chromium.org</owner>
   <owner>twellington@chromium.org</owner>
@@ -3345,6 +3353,38 @@ should be able to be added at any place in this file.
 <action name="ConnectivityDiagnostics.UA.TestSuiteRun">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+</action>
+
+<action name="ContentSuggestions.NotificationsPreferenceOff">
+  <owner>dgn@chromium.org</owner>
+  <owner>finkm@chromium.org</owner>
+  <description>
+    The user turned off the content suggestions notifications in the settings.
+  </description>
+</action>
+
+<action name="ContentSuggestions.NotificationsPreferenceOn">
+  <owner>dgn@chromium.org</owner>
+  <owner>finkm@chromium.org</owner>
+  <description>
+    The user turned on the content suggestions notifications in the settings.
+  </description>
+</action>
+
+<action name="ContentSuggestions.RemoteSuggestionsPreferenceOff">
+  <owner>dgn@chromium.org</owner>
+  <owner>finkm@chromium.org</owner>
+  <description>
+    The user turned off remote content suggestions in the settings.
+  </description>
+</action>
+
+<action name="ContentSuggestions.RemoteSuggestionsPreferenceOn">
+  <owner>dgn@chromium.org</owner>
+  <owner>finkm@chromium.org</owner>
+  <description>
+    The user turned on remote content suggestions in the settings.
+  </description>
 </action>
 
 <action name="ContextualSearch.BackPressClose">
@@ -13834,6 +13874,15 @@ should be able to be added at any place in this file.
   <obsolete>Deprecated due to NPAPI removal.</obsolete>
 </action>
 
+<action name="Precache.Fetch.Begin" not_user_triggered="true">
+  <owner>twifkak@chromium.org</owner>
+  <owner>jamartin@chromium.org</owner>
+  <description>
+    A precache fetch was initiated, having met all the necessary preconditions.
+    This occurs when precache is in either Enabled or Control mode.
+  </description>
+</action>
+
 <action name="Precache.Fetch.IntentReceived" not_user_triggered="true">
   <owner>twifkak@chromium.org</owner>
   <owner>bengr@chromium.org</owner>
@@ -14511,9 +14560,28 @@ should be able to be added at any place in this file.
   <description>The user accepted the settings reset prompt.</description>
 </action>
 
+<action name="SettingsResetPrompt_Canceled">
+  <owner>alito@chromium.org</owner>
+  <description>
+    The user clicked the cancel button in the settings reset prompt dialog.
+  </description>
+</action>
+
 <action name="SettingsResetPrompt_Declined">
   <owner>alito@chromium.org</owner>
   <description>The user declined the settings reset prompt.</description>
+  <obsolete>
+    Deprecated in M59 in April 2017 and replaced by SettingsResetPrompt_Canceled
+    and SettingsResetPrompt_Dismissed.
+  </obsolete>
+</action>
+
+<action name="SettingsResetPrompt_Dismissed">
+  <owner>alito@chromium.org</owner>
+  <description>
+    The user dismissed the settings reset prompt, for example by clicking the x
+    in the top right corner or pressing the Escape key.
+  </description>
 </action>
 
 <action name="SettingsResetPrompt_Shown">
@@ -15738,6 +15806,65 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="Suggestions.ContextMenu.DownloadItem">
+  <owner>mvanouwerkerk@chromium.org</owner>
+  <owner>galinap@google.com</owner>
+  <description>
+    Android: User used the context menu to download a suggested item.
+  </description>
+</action>
+
+<action name="Suggestions.ContextMenu.OpenItemInIncognitoTab">
+  <owner>mvanouwerkerk@chromium.org</owner>
+  <owner>galinap@google.com</owner>
+  <description>
+    Android: User used the context menu to open a suggested item in an incognito
+    tab.
+  </description>
+</action>
+
+<action name="Suggestions.ContextMenu.OpenItemInNewTab">
+  <owner>mvanouwerkerk@chromium.org</owner>
+  <owner>galinap@google.com</owner>
+  <description>
+    Android: User used the context menu to open a suggested item in a new tab.
+  </description>
+</action>
+
+<action name="Suggestions.ContextMenu.OpenItemInNewWindow">
+  <owner>mvanouwerkerk@chromium.org</owner>
+  <owner>galinap@google.com</owner>
+  <description>
+    Android: User used the context menu to open a suggested item in a new
+    window.
+  </description>
+</action>
+
+<action name="Suggestions.ContextMenu.RemoveItem">
+  <owner>mvanouwerkerk@chromium.org</owner>
+  <owner>galinap@google.com</owner>
+  <description>
+    Android: User used the context menu to remove a suggested item.
+  </description>
+</action>
+
+<action name="Suggestions.ContextMenu.Shown">
+  <owner>mvanouwerkerk@chromium.org</owner>
+  <owner>galinap@google.com</owner>
+  <description>
+    Android: User opened the context menu on a suggested item.
+  </description>
+</action>
+
+<action name="Suggestions.Tile.RemovalUndone">
+  <owner>mvanouwerkerk@chromium.org</owner>
+  <owner>galinap@google.com</owner>
+  <description>
+    Android: User tapped the undo button in the snackbar after removing a
+    suggested item.
+  </description>
+</action>
+
 <action name="SuspiciousExtensionBubbleDismissed">
   <owner>finnur@chromium.org</owner>
   <description>Please enter the description of this user action.</description>
@@ -16003,6 +16130,54 @@ should be able to be added at any place in this file.
 <action name="ThirdPartyCookieBlockingEnabled" not_user_triggered="true">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+</action>
+
+<action name="TodayExtension.ExtensionDismissed">
+  <owner>olivierrobin@chromium.org</owner>
+  <description>Dismissed the Chrome Today extension.</description>
+</action>
+
+<action name="TodayExtension.ExtensionDisplayed">
+  <owner>olivierrobin@chromium.org</owner>
+  <description>
+    Displayed the notification center and display the Chrome Today extension.
+  </description>
+</action>
+
+<action name="TodayExtension.ExtensionInitialized">
+  <owner>olivierrobin@chromium.org</owner>
+  <description>
+    Displayed the notification center and initialize the Chrome Today extension.
+  </description>
+</action>
+
+<action name="TodayExtension.NewTabPressed">
+  <owner>olivierrobin@chromium.org</owner>
+  <description>
+    Tapped on the &quot;New Tab&quot; button in the Chrome Today extension.
+  </description>
+</action>
+
+<action name="TodayExtension.OpenClipboardPressed">
+  <owner>olivierrobin@chromium.org</owner>
+  <description>
+    Tapped on the &quot;Open Copied Link&quot; button in the Chrome Today
+    extension.
+  </description>
+</action>
+
+<action name="TodayExtension.PhysicalWebPressed">
+  <owner>olivierrobin@chromium.org</owner>
+  <description>
+    Tapped on physical web URL in the Chrome Today extension.
+  </description>
+</action>
+
+<action name="TodayExtension.VoiceSearchPressed">
+  <owner>olivierrobin@chromium.org</owner>
+  <description>
+    Tapped on the &quot;Voice Search&quot; button in the Chrome Today extension.
+  </description>
 </action>
 
 <action name="ToggleBold">

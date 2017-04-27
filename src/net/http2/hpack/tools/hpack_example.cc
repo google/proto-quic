@@ -7,7 +7,7 @@
 #include <ctype.h>
 
 #include "base/logging.h"
-#include "net/spdy/spdy_test_utils.h"
+#include "net/spdy/core/spdy_test_utils.h"
 
 using base::StringPiece;
 using std::string;

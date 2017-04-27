@@ -20,9 +20,9 @@ namespace net {
 namespace ct {
 
 struct DigitallySigned;
-struct LogEntry;
 struct MerkleTreeLeaf;
 struct SignedCertificateTimestamp;
+struct SignedEntryData;
 struct SignedTreeHead;
 
 // If |input.signature_data| is less than kMaxSignatureLength, encodes the
@@ -36,10 +36,10 @@ NET_EXPORT_PRIVATE bool EncodeDigitallySigned(const DigitallySigned& input,
 NET_EXPORT_PRIVATE bool DecodeDigitallySigned(base::StringPiece* input,
                                               DigitallySigned* output);
 
-// Encodes the |input| LogEntry to |output|. Returns true if the entry size
-// does not exceed allowed size in RFC6962, false otherwise.
-NET_EXPORT_PRIVATE bool EncodeLogEntry(const LogEntry& input,
-                                       std::string* output);
+// Encodes the |input| SignedEntryData to |output|. Returns true if the entry
+// size does not exceed allowed size in RFC6962, false otherwise.
+NET_EXPORT_PRIVATE bool EncodeSignedEntry(const SignedEntryData& input,
+                                          std::string* output);
 
 // Serialises the Merkle tree |leaf|, appending it to |output|.
 // These bytes can be hashed for use with audit proof fetching.

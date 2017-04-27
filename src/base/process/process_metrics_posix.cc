@@ -39,6 +39,8 @@ static const rlim_t kSystemDefaultMaxFds = 1024;
 static const rlim_t kSystemDefaultMaxFds = 256;
 #elif defined(OS_ANDROID)
 static const rlim_t kSystemDefaultMaxFds = 1024;
+#elif defined(OS_AIX)
+static const rlim_t kSystemDefaultMaxFds = 8192;
 #endif
 
 size_t GetMaxFds() {

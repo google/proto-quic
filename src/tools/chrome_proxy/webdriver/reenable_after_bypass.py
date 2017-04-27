@@ -7,7 +7,7 @@ import time
 import common
 from common import TestDriver
 from common import IntegrationTest
-
+from decorators import Slow
 
 class ReenableAfterBypass(IntegrationTest):
   """Tests for ensuring that DRPs are reenabled after bypasses expire.
@@ -20,6 +20,7 @@ class ReenableAfterBypass(IntegrationTest):
   # Verify that longer bypasses triggered by the Data Reduction Proxy only last
   # as long as they're supposed to, and that the proxy is used once again after
   # the bypass has ended.
+  @Slow
   def testReenableAfterSetBypass(self):
     with TestDriver() as test_driver:
       test_driver.AddChromeArg('--enable-spdy-proxy-auth')
@@ -49,6 +50,7 @@ class ReenableAfterBypass(IntegrationTest):
 
   # Verify that when the Data Reduction Proxy responds with the "block=0"
   # directive, Chrome bypasses all proxies for the next 1-5 minutes.
+  @Slow
   def testReenableAfterBypass(self):
     with TestDriver() as test_driver:
       test_driver.AddChromeArg('--enable-spdy-proxy-auth')

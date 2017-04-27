@@ -19,6 +19,7 @@
 #include "net/log/net_log_with_source.h"
 #include "net/log/test_net_log.h"
 #include "net/log/test_net_log_entry.h"
+#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request_test_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -70,7 +71,8 @@ TEST(NetLogUtil, CreateNetLogEntriesForActiveObjectsOneContext) {
     std::vector<std::unique_ptr<URLRequest>> requests;
     for (size_t i = 0; i < num_requests; ++i) {
       requests.push_back(context.CreateRequest(GURL("about:life"),
-                                               DEFAULT_PRIORITY, &delegate));
+                                               DEFAULT_PRIORITY, &delegate,
+                                               TRAFFIC_ANNOTATION_FOR_TESTS));
     }
     std::set<URLRequestContext*> contexts;
     contexts.insert(&context);

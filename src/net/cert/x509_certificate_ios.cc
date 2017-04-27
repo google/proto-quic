@@ -39,6 +39,15 @@ bool IsValidOSCertHandle(SecCertificateRef cert_handle) {
   return sanity_check != nullptr;
 }
 
+bssl::UniquePtr<X509> OSCertHandleToOpenSSL(
+    X509Certificate::OSCertHandle os_handle) {
+  std::string der_encoded;
+  if (!X509Certificate::GetDEREncoded(os_handle, &der_encoded))
+    return nullptr;
+  const uint8_t* bytes = reinterpret_cast<const uint8_t*>(der_encoded.data());
+  return bssl::UniquePtr<X509>(d2i_X509(nullptr, &bytes, der_encoded.size()));
+}
+
 void CreateOSCertHandlesFromPKCS7Bytes(
     const char* data,
     size_t length,

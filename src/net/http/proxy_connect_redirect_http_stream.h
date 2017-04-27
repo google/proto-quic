@@ -51,6 +51,8 @@ class ProxyConnectRedirectHttpStream : public HttpStream {
 
   int64_t GetTotalReceivedBytes() const override;
   int64_t GetTotalSentBytes() const override;
+  bool GetAlternativeService(
+      AlternativeService* alternative_service) const override;
 
   // This function may be called.
   bool GetLoadTimingInfo(LoadTimingInfo* load_timing_info) const override;

@@ -5,11 +5,11 @@
 import("//build/config/features.gni")
 
 group("freetype") {
-  if (is_chromecast || is_android || is_win) {
+  if (is_linux && !is_chromecast) {
+    public_configs = [ "//build/linux:freetype_from_pkgconfig" ]
+  } else {
     public_deps = [
       "//third_party/freetype",
     ]
-  } else if (is_linux) {
-    public_configs = [ "//build/linux:freetype_from_pkgconfig" ]
   }
 }

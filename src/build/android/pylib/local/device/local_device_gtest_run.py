@@ -172,6 +172,8 @@ class _ApkDelegate(object):
         logging.exception('gtest shard failed.')
       except device_errors.CommandTimeoutError:
         logging.exception('gtest shard timed out.')
+      except device_errors.DeviceUnreachableError:
+        logging.exception('gtest shard device unreachable.')
       except Exception:
         device.ForceStop(self._package)
         raise

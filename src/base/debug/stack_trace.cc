@@ -35,7 +35,7 @@ namespace debug {
 
 namespace {
 
-#if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS) && !defined(OS_WIN)
+#if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 
 #if defined(__arm__) && defined(__GNUC__) && !defined(__clang__)
 // GCC and LLVM generate slightly different frames on ARM, see
@@ -142,7 +142,7 @@ void* LinkStackFrames(void* fpp, void* parent_fp) {
   return prev_parent_fp;
 }
 
-#endif  // BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS) && !defined(OS_WIN)
+#endif  // BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 
 }  // namespace
 
@@ -214,7 +214,7 @@ const void *const *StackTrace::Addresses(size_t* count) const {
 
 std::string StackTrace::ToString() const {
   std::stringstream stream;
-#if !defined(__UCLIBC__)
+#if !defined(__UCLIBC__) && !defined(_AIX)
   OutputToStream(&stream);
 #endif
   return stream.str();
@@ -225,18 +225,6 @@ std::string StackTrace::ToString() const {
 size_t TraceStackFramePointers(const void** out_trace,
                                size_t max_depth,
                                size_t skip_initial) {
-// TODO(699863): Merge the frame-pointer based stack unwinder into the
-// base::debug::StackTrace platform-specific implementation files.
-#if defined(OS_WIN)
-  StackTrace stack(max_depth);
-  size_t count = 0;
-  const void* const* frames = stack.Addresses(&count);
-  if (count < skip_initial)
-    return 0u;
-  count -= skip_initial;
-  memcpy(out_trace, frames + skip_initial, count * sizeof(void*));
-  return count;
-#elif defined(OS_POSIX)
   // Usage of __builtin_frame_address() enables frame pointers in this
   // function even if they are not enabled globally. So 'fp' will always
   // be valid.
@@ -270,10 +258,8 @@ size_t TraceStackFramePointers(const void** out_trace,
   }
 
   return depth;
-#endif
 }
 
-#if !defined(OS_WIN)
 ScopedStackFrameLinker::ScopedStackFrameLinker(void* fp, void* parent_fp)
     : fp_(fp),
       parent_fp_(parent_fp),
@@ -284,7 +270,6 @@ ScopedStackFrameLinker::~ScopedStackFrameLinker() {
   CHECK_EQ(parent_fp_, previous_parent_fp)
       << "Stack frame's parent pointer has changed!";
 }
-#endif  // !defined(OS_WIN)
 
 #endif  // BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 

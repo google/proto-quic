@@ -41,7 +41,7 @@ ScopedMockTimeMessageLoopTaskRunner::~ScopedMockTimeMessageLoopTaskRunner() {
     // to OnceClosure.
     previous_task_runner_->PostDelayedTask(
         pending_task.location,
-        Bind(&RunOnceClosure, Passed(&pending_task.task)),
+        BindOnce(&RunOnceClosure, Passed(&pending_task.task)),
         pending_task.GetTimeToRun() - task_runner_->NowTicks());
   }
   MessageLoop::current()->SetTaskRunner(std::move(previous_task_runner_));

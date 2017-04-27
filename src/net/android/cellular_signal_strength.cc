@@ -4,7 +4,6 @@
 
 #include "net/android/cellular_signal_strength.h"
 
-#include "base/android/context_utils.h"
 #include "jni/AndroidCellularSignalStrength_jni.h"
 
 namespace net {
@@ -29,8 +28,7 @@ static_assert(
 bool GetSignalStrengthDbm(int32_t* signal_strength_dbm) {
   int32_t signal_strength_dbm_tmp =
       Java_AndroidCellularSignalStrength_getSignalStrengthDbm(
-          base::android::AttachCurrentThread(),
-          base::android::GetApplicationContext());
+          base::android::AttachCurrentThread());
   if (signal_strength_dbm_tmp == ERROR_NOT_SUPPORTED)
     return false;
 
@@ -41,8 +39,7 @@ bool GetSignalStrengthDbm(int32_t* signal_strength_dbm) {
 bool GetSignalStrengthLevel(int32_t* signal_strength_level) {
   int32_t signal_strength_level_tmp =
       Java_AndroidCellularSignalStrength_getSignalStrengthLevel(
-          base::android::AttachCurrentThread(),
-          base::android::GetApplicationContext());
+          base::android::AttachCurrentThread());
   if (signal_strength_level_tmp == ERROR_NOT_SUPPORTED)
     return false;
 

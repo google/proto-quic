@@ -22,6 +22,7 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_session.h"
 #include "net/quic/platform/api/quic_containers.h"
+#include "net/quic/platform/api/quic_flags.h"
 
 namespace net {
 

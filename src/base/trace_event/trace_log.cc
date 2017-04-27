@@ -647,8 +647,8 @@ void TraceLog::SetEnabled(const TraceConfig& trace_config,
     observer->OnTraceLogEnabled();
   for (const auto& it : observer_map) {
     it.second.task_runner->PostTask(
-        FROM_HERE, Bind(&AsyncEnabledStateObserver::OnTraceLogEnabled,
-                        it.second.observer));
+        FROM_HERE, BindOnce(&AsyncEnabledStateObserver::OnTraceLogEnabled,
+                            it.second.observer));
   }
 
   {
@@ -748,8 +748,8 @@ void TraceLog::SetDisabledWhileLocked(uint8_t modes_to_disable) {
       observer->OnTraceLogDisabled();
     for (const auto& it : observer_map) {
       it.second.task_runner->PostTask(
-          FROM_HERE, Bind(&AsyncEnabledStateObserver::OnTraceLogDisabled,
-                          it.second.observer));
+          FROM_HERE, BindOnce(&AsyncEnabledStateObserver::OnTraceLogDisabled,
+                              it.second.observer));
     }
   }
   dispatching_to_observer_list_ = false;
@@ -893,12 +893,13 @@ void TraceLog::FlushInternal(const TraceLog::OutputCallback& cb,
   if (!thread_message_loop_task_runners.empty()) {
     for (auto& task_runner : thread_message_loop_task_runners) {
       task_runner->PostTask(
-          FROM_HERE, Bind(&TraceLog::FlushCurrentThread, Unretained(this),
-                          gen, discard_events));
+          FROM_HERE, BindOnce(&TraceLog::FlushCurrentThread, Unretained(this),
+                              gen, discard_events));
     }
     flush_task_runner_->PostDelayedTask(
-        FROM_HERE, Bind(&TraceLog::OnFlushTimeout, Unretained(this), gen,
-                        discard_events),
+        FROM_HERE,
+        BindOnce(&TraceLog::OnFlushTimeout, Unretained(this), gen,
+                 discard_events),
         TimeDelta::FromMilliseconds(kThreadFlushTimeoutMs));
     return;
   }
@@ -969,14 +970,15 @@ void TraceLog::FinishFlush(int generation, bool discard_events) {
 
   if (use_worker_thread_) {
     base::PostTaskWithTraits(
-        FROM_HERE, base::TaskTraits()
-                       .MayBlock()
-                       .WithPriority(base::TaskPriority::BACKGROUND)
-                       .WithShutdownBehavior(
-                           base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN),
-        Bind(&TraceLog::ConvertTraceEventsToTraceFormat,
-             Passed(&previous_logged_events), flush_output_callback,
-             argument_filter_predicate));
+        FROM_HERE,
+        base::TaskTraits()
+            .MayBlock()
+            .WithPriority(base::TaskPriority::BACKGROUND)
+            .WithShutdownBehavior(
+                base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN),
+        BindOnce(&TraceLog::ConvertTraceEventsToTraceFormat,
+                 Passed(&previous_logged_events), flush_output_callback,
+                 argument_filter_predicate));
     return;
   }
 
@@ -1004,8 +1006,8 @@ void TraceLog::FlushCurrentThread(int generation, bool discard_events) {
     return;
 
   flush_task_runner_->PostTask(
-      FROM_HERE, Bind(&TraceLog::FinishFlush, Unretained(this), generation,
-                      discard_events));
+      FROM_HERE, BindOnce(&TraceLog::FinishFlush, Unretained(this), generation,
+                          discard_events));
 }
 
 void TraceLog::OnFlushTimeout(int generation, bool discard_events) {

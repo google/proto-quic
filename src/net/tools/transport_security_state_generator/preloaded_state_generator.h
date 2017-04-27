@@ -31,15 +31,9 @@ class PreloadedStateGenerator {
   // Returns the generated C++ code on success and the empty string on failure.
   std::string Generate(const std::string& preload_template,
                        const TransportSecurityStateEntries& entries,
-                       const DomainIDList& domain_ids,
                        const Pinsets& pinsets);
 
  private:
-  // TODO(Martijnc): Remove the domain IDs from the preload format.
-  // https://crbug.com/661206.
-  void ProcessDomainIds(const DomainIDList& domain_ids,
-                        NameIDMap* map,
-                        std::string* tpl);
   void ProcessSPKIHashes(const Pinsets& pinset, std::string* tpl);
   void ProcessExpectCTURIs(const TransportSecurityStateEntries& entries,
                            NameIDMap* expect_ct_report_uri_map,

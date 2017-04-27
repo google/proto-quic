@@ -40,7 +40,8 @@ class QUIC_EXPORT_PRIVATE QuartcSession
   ~QuartcSession() override;
 
   // QuicSession overrides.
-  QuicCryptoStream* GetCryptoStream() override;
+  const QuicCryptoStream* GetCryptoStream() const override;
+  QuicCryptoStream* GetMutableCryptoStream() override;
 
   QuartcStream* CreateOutgoingDynamicStream(SpdyPriority priority) override;
 

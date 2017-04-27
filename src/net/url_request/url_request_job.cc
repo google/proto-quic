@@ -200,7 +200,6 @@ void URLRequestJob::Kill() {
 // at URLRequestJobSourceStream::Read, which calls back into
 // URLRequestJob::ReadRawData.
 int URLRequestJob::Read(IOBuffer* buf, int buf_size) {
-  DCHECK_LT(buf_size, 1000000);  // Sanity check.
   DCHECK(buf);
 
   pending_read_buffer_ = buf;

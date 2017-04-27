@@ -90,7 +90,7 @@ int MessagePumpWin::GetCurrentDelay() const {
 
 MessagePumpForUI::MessagePumpForUI() {
   bool succeeded = message_window_.Create(
-      Bind(&MessagePumpForUI::MessageCallback, Unretained(this)));
+      BindRepeating(&MessagePumpForUI::MessageCallback, Unretained(this)));
   DCHECK(succeeded);
 }
 

@@ -28,6 +28,7 @@
 #include "base/time/time.h"
 #include "net/base/address_list.h"
 #include "net/base/ip_address.h"
+#include "net/base/mock_network_change_notifier.h"
 #include "net/base/net_errors.h"
 #include "net/dns/dns_client.h"
 #include "net/dns/dns_test_util.h"
@@ -462,7 +463,8 @@ class TestHostResolverImpl : public HostResolverImpl {
  private:
   const bool ipv6_reachable_;
 
-  bool IsIPv6Reachable(const NetLogWithSource& net_log) override {
+  bool IsGloballyReachable(const IPAddress& dest,
+                           const NetLogWithSource& net_log) override {
     return ipv6_reachable_;
   }
 };
@@ -2405,6 +2407,88 @@ TEST_F(HostResolverImplDnsTest, ManuallyDisableDnsClientWithPendingRequests) {
   EXPECT_TRUE(requests_[2]->HasOneAddress("192.168.0.3", 80));
 }
 
+TEST_F(HostResolverImplDnsTest, NoIPv6OnWifi) {
+  test::ScopedMockNetworkChangeNotifier notifier;
+  CreateSerialResolver();  // To guarantee order of resolutions.
+  resolver_->SetNoIPv6OnWifi(true);
+
+  notifier.mock_network_change_notifier()->SetConnectionType(
+      NetworkChangeNotifier::CONNECTION_WIFI);
+  // Needed so IPv6 availability check isn't skipped.
+  ChangeDnsConfig(CreateValidDnsConfig());
+
+  proc_->AddRule("h1", ADDRESS_FAMILY_UNSPECIFIED, "::3");
+  proc_->AddRule("h1", ADDRESS_FAMILY_IPV4, "1.0.0.1");
+  proc_->AddRule("h1", ADDRESS_FAMILY_IPV6, "::2");
+
+  CreateRequest("h1", 80, MEDIUM, ADDRESS_FAMILY_UNSPECIFIED);
+  CreateRequest("h1", 80, MEDIUM, ADDRESS_FAMILY_IPV4);
+  CreateRequest("h1", 80, MEDIUM, ADDRESS_FAMILY_IPV6);
+
+  // Start all of the requests.
+  for (size_t i = 0u; i < requests_.size(); ++i) {
+    EXPECT_THAT(requests_[i]->Resolve(), IsError(ERR_IO_PENDING)) << i;
+  }
+
+  proc_->SignalMultiple(requests_.size());
+
+  // Wait for all the requests to complete.
+  for (size_t i = 0u; i < requests_.size(); ++i) {
+    EXPECT_THAT(requests_[i]->WaitForResult(), IsOk()) << i;
+  }
+
+  // Since the requests all had the same priority and we limited the thread
+  // count to 1, they should have completed in the same order as they were
+  // requested.
+  MockHostResolverProc::CaptureList capture_list = proc_->GetCaptureList();
+  ASSERT_EQ(3u, capture_list.size());
+
+  EXPECT_EQ("h1", capture_list[0].hostname);
+  EXPECT_EQ(ADDRESS_FAMILY_IPV4, capture_list[0].address_family);
+
+  EXPECT_EQ("h1", capture_list[1].hostname);
+  EXPECT_EQ(ADDRESS_FAMILY_IPV4, capture_list[1].address_family);
+
+  EXPECT_EQ("h1", capture_list[2].hostname);
+  EXPECT_EQ(ADDRESS_FAMILY_IPV6, capture_list[2].address_family);
+
+  // Now check that the correct resolved IP addresses were returned.
+  EXPECT_TRUE(requests_[0]->HasOneAddress("1.0.0.1", 80));
+  EXPECT_TRUE(requests_[1]->HasOneAddress("1.0.0.1", 80));
+  EXPECT_TRUE(requests_[2]->HasOneAddress("::2", 80));
+
+  // Now repeat the test on non-wifi to check that IPv6 is used as normal
+  // after the network changes.
+  notifier.mock_network_change_notifier()->SetConnectionType(
+      NetworkChangeNotifier::CONNECTION_4G);
+  base::RunLoop().RunUntilIdle();  // Wait for NetworkChangeNotifier.
+
+  CreateRequest("h1", 80, MEDIUM, ADDRESS_FAMILY_UNSPECIFIED);
+  CreateRequest("h1", 80, MEDIUM, ADDRESS_FAMILY_IPV4);
+  CreateRequest("h1", 80, MEDIUM, ADDRESS_FAMILY_IPV6);
+
+  // The IPv4 and IPv6 requests are in cache, but the UNSPECIFIED one isn't.
+  EXPECT_THAT(requests_[3]->Resolve(), IsError(ERR_IO_PENDING));
+  EXPECT_THAT(requests_[4]->Resolve(), IsOk());
+  EXPECT_THAT(requests_[5]->Resolve(), IsOk());
+
+  proc_->SignalMultiple(1);
+
+  EXPECT_THAT(requests_[3]->WaitForResult(), IsOk());
+
+  // The MockHostResolverProc has only seen one new request.
+  capture_list = proc_->GetCaptureList();
+  ASSERT_EQ(4u, capture_list.size());
+
+  EXPECT_EQ("h1", capture_list[3].hostname);
+  EXPECT_EQ(ADDRESS_FAMILY_UNSPECIFIED, capture_list[3].address_family);
+
+  // Now check that the correct resolved IP addresses were returned.
+  EXPECT_TRUE(requests_[3]->HasOneAddress("::3", 80));
+  EXPECT_TRUE(requests_[4]->HasOneAddress("1.0.0.1", 80));
+  EXPECT_TRUE(requests_[5]->HasOneAddress("::2", 80));
+}
+
 TEST_F(HostResolverImplTest, ResolveLocalHostname) {
   AddressList addresses;
 
@@ -2520,100 +2604,6 @@ TEST_F(HostResolverImplTest, CacheHitCallback) {
   EXPECT_THAT(req->Resolve(), IsOk());
   EXPECT_EQ(2, count1);
   EXPECT_EQ(1, count2);
-}
-
-// Tests that after changing the default AddressFamily to IPV4, requests
-// with UNSPECIFIED address family map to IPV4.
-TEST_F(HostResolverImplTest, SetDefaultAddressFamily_IPv4) {
-  CreateSerialResolver();  // To guarantee order of resolutions.
-
-  proc_->AddRule("h1", ADDRESS_FAMILY_IPV4, "1.0.0.1");
-  proc_->AddRule("h1", ADDRESS_FAMILY_IPV6, "::2");
-
-  resolver_->SetDefaultAddressFamily(ADDRESS_FAMILY_IPV4);
-
-  CreateRequest("h1", 80, MEDIUM, ADDRESS_FAMILY_UNSPECIFIED);
-  CreateRequest("h1", 80, MEDIUM, ADDRESS_FAMILY_IPV4);
-  CreateRequest("h1", 80, MEDIUM, ADDRESS_FAMILY_IPV6);
-
-  // Start all of the requests.
-  for (size_t i = 0; i < requests_.size(); ++i) {
-    EXPECT_EQ(ERR_IO_PENDING, requests_[i]->Resolve()) << i;
-  }
-
-  proc_->SignalMultiple(requests_.size());
-
-  // Wait for all the requests to complete.
-  for (size_t i = 0u; i < requests_.size(); ++i) {
-    EXPECT_EQ(OK, requests_[i]->WaitForResult()) << i;
-  }
-
-  // Since the requests all had the same priority and we limited the thread
-  // count to 1, they should have completed in the same order as they were
-  // requested. Moreover, request0 and request1 will have been serviced by
-  // the same job.
-
-  MockHostResolverProc::CaptureList capture_list = proc_->GetCaptureList();
-  ASSERT_EQ(2u, capture_list.size());
-
-  EXPECT_EQ("h1", capture_list[0].hostname);
-  EXPECT_EQ(ADDRESS_FAMILY_IPV4, capture_list[0].address_family);
-
-  EXPECT_EQ("h1", capture_list[1].hostname);
-  EXPECT_EQ(ADDRESS_FAMILY_IPV6, capture_list[1].address_family);
-
-  // Now check that the correct resolved IP addresses were returned.
-  EXPECT_TRUE(requests_[0]->HasOneAddress("1.0.0.1", 80));
-  EXPECT_TRUE(requests_[1]->HasOneAddress("1.0.0.1", 80));
-  EXPECT_TRUE(requests_[2]->HasOneAddress("::2", 80));
-}
-
-// This is the exact same test as SetDefaultAddressFamily_IPv4, except the
-// default family is set to IPv6 and the family of requests is flipped where
-// specified.
-TEST_F(HostResolverImplTest, SetDefaultAddressFamily_IPv6) {
-  CreateSerialResolver();  // To guarantee order of resolutions.
-
-  // Don't use IPv6 replacements here since some systems don't support it.
-  proc_->AddRule("h1", ADDRESS_FAMILY_IPV4, "1.0.0.1");
-  proc_->AddRule("h1", ADDRESS_FAMILY_IPV6, "::2");
-
-  resolver_->SetDefaultAddressFamily(ADDRESS_FAMILY_IPV6);
-
-  CreateRequest("h1", 80, MEDIUM, ADDRESS_FAMILY_UNSPECIFIED);
-  CreateRequest("h1", 80, MEDIUM, ADDRESS_FAMILY_IPV6);
-  CreateRequest("h1", 80, MEDIUM, ADDRESS_FAMILY_IPV4);
-
-  // Start all of the requests.
-  for (size_t i = 0; i < requests_.size(); ++i) {
-    EXPECT_EQ(ERR_IO_PENDING, requests_[i]->Resolve()) << i;
-  }
-
-  proc_->SignalMultiple(requests_.size());
-
-  // Wait for all the requests to complete.
-  for (size_t i = 0u; i < requests_.size(); ++i) {
-    EXPECT_EQ(OK, requests_[i]->WaitForResult()) << i;
-  }
-
-  // Since the requests all had the same priority and we limited the thread
-  // count to 1, they should have completed in the same order as they were
-  // requested. Moreover, request0 and request1 will have been serviced by
-  // the same job.
-
-  MockHostResolverProc::CaptureList capture_list = proc_->GetCaptureList();
-  ASSERT_EQ(2u, capture_list.size());
-
-  EXPECT_EQ("h1", capture_list[0].hostname);
-  EXPECT_EQ(ADDRESS_FAMILY_IPV6, capture_list[0].address_family);
-
-  EXPECT_EQ("h1", capture_list[1].hostname);
-  EXPECT_EQ(ADDRESS_FAMILY_IPV4, capture_list[1].address_family);
-
-  // Now check that the correct resolved IP addresses were returned.
-  EXPECT_TRUE(requests_[0]->HasOneAddress("::2", 80));
-  EXPECT_TRUE(requests_[1]->HasOneAddress("::2", 80));
-  EXPECT_TRUE(requests_[2]->HasOneAddress("1.0.0.1", 80));
 }
 
 }  // namespace net

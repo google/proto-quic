@@ -20,15 +20,15 @@ namespace net {
 namespace ct {
 
 struct DigitallySigned;
-struct LogEntry;
 struct MerkleTreeLeaf;
+struct SignedEntryData;
 struct SignedTreeHead;
 
 // Note: unless specified otherwise, all test data is taken from Certificate
 // Transparency test data repository.
 
 // Fills |entry| with test data for an X.509 entry.
-void GetX509CertLogEntry(LogEntry* entry);
+void GetX509CertSignedEntry(SignedEntryData* entry);
 
 // Fills |tree_leaf| with test data for an X.509 Merkle tree leaf.
 void GetX509CertTreeLeaf(MerkleTreeLeaf* tree_leaf);
@@ -38,7 +38,7 @@ void GetX509CertTreeLeaf(MerkleTreeLeaf* tree_leaf);
 std::string GetDerEncodedX509Cert();
 
 // Fills |entry| with test data for a Precertificate entry.
-void GetPrecertLogEntry(LogEntry* entry);
+void GetPrecertSignedEntry(SignedEntryData* entry);
 
 // Fills |tree_leaf| with test data for a Precertificate Merkle tree leaf.
 void GetPrecertTreeLeaf(MerkleTreeLeaf* tree_leaf);

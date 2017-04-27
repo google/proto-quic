@@ -723,25 +723,46 @@ chrome.automation.AutomationNode.prototype.posInSet;
 chrome.automation.AutomationNode.prototype.setSize;
 
 /**
- * The number of rows in this table.
+ * The number of rows in this table as specified in the DOM.
  * @type {(number|undefined)}
  * @see https://developer.chrome.com/extensions/automation#type-tableRowCount
  */
 chrome.automation.AutomationNode.prototype.tableRowCount;
 
 /**
- * The number of columns in this table.
+ * The number of rows in this table as specified by the page author.
+ * @type {(number|undefined)}
+ * @see https://developer.chrome.com/extensions/automation#type-ariaRowCount
+ */
+chrome.automation.AutomationNode.prototype.ariaRowCount;
+
+/**
+ * The number of columns in this table as specified in the DOM.
  * @type {(number|undefined)}
  * @see https://developer.chrome.com/extensions/automation#type-tableColumnCount
  */
 chrome.automation.AutomationNode.prototype.tableColumnCount;
 
 /**
- * The zero-based index of the column that this cell is in.
+ * The number of columns in this table as specified by the page author.
+ * @type {(number|undefined)}
+ * @see https://developer.chrome.com/extensions/automation#type-ariaColumnCount
+ */
+chrome.automation.AutomationNode.prototype.ariaColumnCount;
+
+/**
+ * The zero-based index of the column that this cell is in as specified in the DOM.
  * @type {(number|undefined)}
  * @see https://developer.chrome.com/extensions/automation#type-tableCellColumnIndex
  */
 chrome.automation.AutomationNode.prototype.tableCellColumnIndex;
+
+/**
+ * The ARIA column index as specified by the page author.
+ * @type {(number|undefined)}
+ * @see https://developer.chrome.com/extensions/automation#type-ariaCellColumnIndex
+ */
+chrome.automation.AutomationNode.prototype.ariaCellColumnIndex;
 
 /**
  * The number of columns that this cell spans (default is 1).
@@ -751,11 +772,18 @@ chrome.automation.AutomationNode.prototype.tableCellColumnIndex;
 chrome.automation.AutomationNode.prototype.tableCellColumnSpan;
 
 /**
- * The zero-based index of the row that this cell is in.
+ * The zero-based index of the row that this cell is in as specified in the DOM.
  * @type {(number|undefined)}
  * @see https://developer.chrome.com/extensions/automation#type-tableCellRowIndex
  */
 chrome.automation.AutomationNode.prototype.tableCellRowIndex;
+
+/**
+ * The ARIA row index as specified by the page author.
+ * @type {(number|undefined)}
+ * @see https://developer.chrome.com/extensions/automation#type-ariaCellRowIndex
+ */
+chrome.automation.AutomationNode.prototype.ariaCellRowIndex;
 
 /**
  * The number of rows that this cell spans (default is 1).

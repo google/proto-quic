@@ -44,27 +44,18 @@ class MockSchedulerWorkerDelegate : public SchedulerWorker::Delegate {
 class TaskSchedulerWorkerStackTest : public testing::Test {
  protected:
   void SetUp() override {
-    worker_a_ = SchedulerWorker::Create(
-        ThreadPriority::NORMAL,
-        WrapUnique(new MockSchedulerWorkerDelegate), &task_tracker_,
-        SchedulerWorker::InitialState::ALIVE);
+    worker_a_ = make_scoped_refptr(new SchedulerWorker(
+        ThreadPriority::NORMAL, WrapUnique(new MockSchedulerWorkerDelegate),
+        &task_tracker_));
     ASSERT_TRUE(worker_a_);
-    worker_b_ = SchedulerWorker::Create(
-        ThreadPriority::NORMAL,
-        WrapUnique(new MockSchedulerWorkerDelegate), &task_tracker_,
-        SchedulerWorker::InitialState::ALIVE);
+    worker_b_ = make_scoped_refptr(new SchedulerWorker(
+        ThreadPriority::NORMAL, WrapUnique(new MockSchedulerWorkerDelegate),
+        &task_tracker_));
     ASSERT_TRUE(worker_b_);
-    worker_c_ = SchedulerWorker::Create(
-        ThreadPriority::NORMAL,
-        WrapUnique(new MockSchedulerWorkerDelegate), &task_tracker_,
-        SchedulerWorker::InitialState::ALIVE);
+    worker_c_ = make_scoped_refptr(new SchedulerWorker(
+        ThreadPriority::NORMAL, WrapUnique(new MockSchedulerWorkerDelegate),
+        &task_tracker_));
     ASSERT_TRUE(worker_c_);
-  }
-
-  void TearDown() override {
-    worker_a_->JoinForTesting();
-    worker_b_->JoinForTesting();
-    worker_c_->JoinForTesting();
   }
 
   scoped_refptr<SchedulerWorker> worker_a_;

@@ -46,12 +46,34 @@ function showTestsOfOneSuiteOnly(suite_name) {
       });
   showTestTable(true);
   showSuiteTable(false);
+  window.scrollTo(0, 0);
+}
+
+function showTestsOfOneSuiteOnlyWithNewState(suite_name) {
+  showTestsOfOneSuiteOnly(suite_name);
+  history.pushState({suite: suite_name}, suite_name, '');
 }
 
 function showSuiteTableOnly() {
   setTitle('Suites Summary')
   showTestTable(false);
   showSuiteTable(true);
+  window.scrollTo(0, 0);
+}
+
+function showSuiteTableOnlyWithReplaceState() {
+  showSuiteTableOnly();
+  history.replaceState({}, 'suite_table', '');
+}
+
+function setBrowserBackButtonLogic() {
+  window.onpopstate = function(event) {
+    if (!event.state || !event.state.suite) {
+      showSuiteTableOnly();
+    } else {
+      showTestsOfOneSuiteOnly(event.state.suite);
+    }
+  };
 }
 
 function setTitle(title) {
@@ -163,17 +185,6 @@ function sortByColumn(head) {
 
   for (var i = 0; i < rowBlocks.length; i++) {
     table.appendChild(rowBlocks[i]);
-  }
-}
-
-function loadPage() {
-  var args = getArguments();
-  if ('suite' in args) {
-    // The user wants to visit detailed 'subpage' of that suite.
-    showTestsOfOneSuiteOnly(args['suite']);
-  } else {
-    // The user wants to visit the summary of all suites.
-    showSuiteTableOnly();
   }
 }
 

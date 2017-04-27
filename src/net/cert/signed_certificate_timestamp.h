@@ -24,16 +24,29 @@ namespace net {
 // Structures related to Certificate Transparency (RFC6962).
 namespace ct {
 
-// LogEntry struct in RFC 6962, Section 3.1
-struct NET_EXPORT LogEntry {
+// Contains the data necessary to reconstruct the signed_entry of a
+// SignedCertificateTimestamp, from RFC 6962, Section 3.2.
+//
+// All the data necessary to validate a SignedCertificateTimestamp is present
+// within the SignedCertificateTimestamp, except for the signature_type,
+// entry_type, and the actual entry. The only supported signature_type at
+// present is certificate_timestamp.  The entry_type is implicit from the
+// context in which it is received (those in the X.509 extension are
+// precert_entry, all others are x509_entry). The signed_entry itself is
+// reconstructed from the certificate being verified, or from the corresponding
+// precertificate.
+//
+// The SignedEntryData contains this reconstructed data, and can be used to
+// either generate or verify the signature in SCTs.
+struct NET_EXPORT SignedEntryData {
   // LogEntryType enum in RFC 6962, Section 3.1
   enum Type {
     LOG_ENTRY_TYPE_X509 = 0,
     LOG_ENTRY_TYPE_PRECERT = 1
   };
 
-  LogEntry();
-  ~LogEntry();
+  SignedEntryData();
+  ~SignedEntryData();
   void Reset();
 
   Type type;

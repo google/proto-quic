@@ -24,6 +24,7 @@
 #include "third_party/boringssl/src/include/openssl/ec.h"
 #include "third_party/boringssl/src/include/openssl/ec_key.h"
 #include "third_party/boringssl/src/include/openssl/ecdsa.h"
+#include "third_party/boringssl/src/include/openssl/evp.h"
 #include "third_party/boringssl/src/include/openssl/mem.h"
 #include "third_party/boringssl/src/include/openssl/nid.h"
 #include "third_party/boringssl/src/include/openssl/rsa.h"
@@ -42,13 +43,9 @@ void LogPRError(const char* message) {
 
 class SSLPlatformKeyNSS : public ThreadedSSLPrivateKey::Delegate {
  public:
-  SSLPlatformKeyNSS(SSLPrivateKey::Type type,
-                    size_t max_length,
-                    crypto::ScopedSECKEYPrivateKey key)
-      : type_(type), max_length_(max_length), key_(std::move(key)) {}
+  SSLPlatformKeyNSS(int type, crypto::ScopedSECKEYPrivateKey key)
+      : type_(type), key_(std::move(key)) {}
   ~SSLPlatformKeyNSS() override {}
-
-  SSLPrivateKey::Type GetType() override { return type_; }
 
   std::vector<SSLPrivateKey::Hash> GetDigestPreferences() override {
     static const SSLPrivateKey::Hash kHashes[] = {
@@ -57,8 +54,6 @@ class SSLPlatformKeyNSS : public ThreadedSSLPrivateKey::Delegate {
     return std::vector<SSLPrivateKey::Hash>(kHashes,
                                             kHashes + arraysize(kHashes));
   }
-
-  size_t GetMaxSignatureLengthInBytes() override { return max_length_; }
 
   Error SignDigest(SSLPrivateKey::Hash hash,
                    const base::StringPiece& input,
@@ -69,7 +64,7 @@ class SSLPlatformKeyNSS : public ThreadedSSLPrivateKey::Delegate {
     digest_item.len = input.size();
 
     bssl::UniquePtr<uint8_t> free_digest_info;
-    if (type_ == SSLPrivateKey::Type::RSA) {
+    if (type_ == EVP_PKEY_RSA) {
       // PK11_Sign expects the caller to prepend the DigestInfo.
       int hash_nid = NID_undef;
       switch (hash) {
@@ -120,7 +115,7 @@ class SSLPlatformKeyNSS : public ThreadedSSLPrivateKey::Delegate {
 
     // NSS emits raw ECDSA signatures, but BoringSSL expects a DER-encoded
     // ECDSA-Sig-Value.
-    if (SSLPrivateKey::IsECDSAType(type_)) {
+    if (type_ == EVP_PKEY_EC) {
       if (signature->size() % 2 != 0) {
         LOG(ERROR) << "Bad signature length";
         return ERR_SSL_CLIENT_AUTH_SIGNATURE_FAILED;
@@ -149,8 +144,7 @@ class SSLPlatformKeyNSS : public ThreadedSSLPrivateKey::Delegate {
   }
 
  private:
-  SSLPrivateKey::Type type_;
-  size_t max_length_;
+  int type_;
   crypto::ScopedSECKEYPrivateKey key_;
 
   DISALLOW_COPY_AND_ASSIGN(SSLPlatformKeyNSS);
@@ -167,13 +161,13 @@ scoped_refptr<SSLPrivateKey> FetchClientCertPrivateKey(
         *certificate);
   }
 
-  SSLPrivateKey::Type type;
+  int type;
   size_t max_length;
   if (!GetClientCertInfo(certificate, &type, &max_length))
     return nullptr;
 
   return make_scoped_refptr(new ThreadedSSLPrivateKey(
-      base::MakeUnique<SSLPlatformKeyNSS>(type, max_length, std::move(key)),
+      base::MakeUnique<SSLPlatformKeyNSS>(type, std::move(key)),
       GetSSLPlatformKeyTaskRunner()));
 }
 

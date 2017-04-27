@@ -167,11 +167,10 @@ extern "C" {
 
 /* Bits for |algorithm_mkey| (key exchange algorithm). */
 #define SSL_kRSA 0x00000001L
-#define SSL_kDHE 0x00000002L
-#define SSL_kECDHE 0x00000004L
+#define SSL_kECDHE 0x00000002L
 /* SSL_kPSK is only set for plain PSK, not ECDHE_PSK. */
-#define SSL_kPSK 0x00000008L
-#define SSL_kGENERIC 0x00000010L
+#define SSL_kPSK 0x00000004L
+#define SSL_kGENERIC 0x00000008L
 
 /* Bits for |algorithm_auth| (server authentication). */
 #define SSL_aRSA 0x00000001L
@@ -238,9 +237,9 @@ int ssl_create_cipher_list(
 /* ssl_cipher_get_value returns the cipher suite id of |cipher|. */
 uint16_t ssl_cipher_get_value(const SSL_CIPHER *cipher);
 
-/* ssl_cipher_get_key_type returns the |EVP_PKEY_*| value corresponding to the
- * server key used in |cipher| or |EVP_PKEY_NONE| if there is none. */
-int ssl_cipher_get_key_type(const SSL_CIPHER *cipher);
+/* ssl_cipher_auth_mask_for_key returns the mask of cipher |algorithm_auth|
+ * values suitable for use with |key| in TLS 1.2 and below. */
+uint32_t ssl_cipher_auth_mask_for_key(const EVP_PKEY *key);
 
 /* ssl_cipher_uses_certificate_auth returns one if |cipher| authenticates the
  * server and, optionally, the client with a certificate. Otherwise it returns
@@ -542,21 +541,15 @@ enum ssl_open_record_t ssl_process_alert(SSL *ssl, uint8_t *out_alert,
 
 /* Private key operations. */
 
+typedef struct ssl_handshake_st SSL_HANDSHAKE;
+
 /* ssl_has_private_key returns one if |ssl| has a private key
  * configured and zero otherwise. */
 int ssl_has_private_key(const SSL *ssl);
 
-/* ssl_is_ecdsa_key_type returns one if |type| is an ECDSA key type and zero
- * otherwise. */
-int ssl_is_ecdsa_key_type(int type);
-
 /* ssl_private_key_* call the corresponding function on the
  * |SSL_PRIVATE_KEY_METHOD| for |ssl|, if configured. Otherwise, they implement
  * the operation with |EVP_PKEY|. */
-
-int ssl_private_key_type(SSL *ssl);
-
-size_t ssl_private_key_max_signature_len(SSL *ssl);
 
 enum ssl_private_key_result_t ssl_private_key_sign(
     SSL *ssl, uint8_t *out, size_t *out_len, size_t max_out,
@@ -570,10 +563,10 @@ enum ssl_private_key_result_t ssl_private_key_complete(SSL *ssl, uint8_t *out,
                                                        size_t *out_len,
                                                        size_t max_out);
 
-/* ssl_private_key_supports_signature_algorithm returns one if |ssl|'s private
- * key supports |signature_algorithm| and zero otherwise. */
-int ssl_private_key_supports_signature_algorithm(SSL *ssl,
-                                                 uint16_t signature_algorithm);
+/* ssl_private_key_supports_signature_algorithm returns one if |hs|'s private
+ * key supports |sigalg| and zero otherwise. */
+int ssl_private_key_supports_signature_algorithm(SSL_HANDSHAKE *hs,
+                                                 uint16_t sigalg);
 
 /* ssl_public_key_verify verifies that the |signature| is valid for the public
  * key |pkey| and input |in|, using the |signature_algorithm| specified. */
@@ -584,8 +577,6 @@ int ssl_public_key_verify(
 
 
 /* Custom extensions */
-
-typedef struct ssl_handshake_st SSL_HANDSHAKE;
 
 /* ssl_custom_extension (a.k.a. SSL_CUSTOM_EXTENSION) is a structure that
  * contains information about custom-extension callbacks. */
@@ -645,15 +636,6 @@ typedef struct ssl_ecdh_method_st {
   int (*finish)(SSL_ECDH_CTX *ctx, uint8_t **out_secret, size_t *out_secret_len,
                 uint8_t *out_alert, const uint8_t *peer_key,
                 size_t peer_key_len);
-
-  /* get_key initializes |out| with a length-prefixed key from |cbs|. It returns
-   * one on success and zero on error. */
-  int (*get_key)(CBS *cbs, CBS *out);
-
-  /* add_key initializes |out_contents| to receive a key. Typically it will then
-   * be passed to |offer| or |accept|. It returns one on success and zero on
-   * error. */
-  int (*add_key)(CBB *cbb, CBB *out_contents);
 } SSL_ECDH_METHOD;
 
 struct ssl_ecdh_ctx_st {
@@ -674,10 +656,6 @@ int ssl_name_to_group_id(uint16_t *out_group_id, const char *name, size_t len);
 /* SSL_ECDH_CTX_init sets up |ctx| for use with curve |group_id|. It returns one
  * on success and zero on error. */
 int SSL_ECDH_CTX_init(SSL_ECDH_CTX *ctx, uint16_t group_id);
-
-/* SSL_ECDH_CTX_init_for_dhe sets up |ctx| for use with legacy DHE-based ciphers
- * where the server specifies a group. It takes ownership of |params|. */
-void SSL_ECDH_CTX_init_for_dhe(SSL_ECDH_CTX *ctx, DH *params);
 
 /* SSL_ECDH_CTX_cleanup releases memory associated with |ctx|. It is legal to
  * call it in the zero state. */
@@ -857,6 +835,11 @@ int ssl_add_client_CA_list(SSL *ssl, CBB *cbb);
 int ssl_check_leaf_certificate(SSL_HANDSHAKE *hs, EVP_PKEY *pkey,
                                const CRYPTO_BUFFER *leaf);
 
+/* ssl_on_certificate_selected is called once the certificate has been selected.
+ * It finalizes the certificate and initializes |hs->local_pubkey|. It returns
+ * one on success and zero on error. */
+int ssl_on_certificate_selected(SSL_HANDSHAKE *hs);
+
 
 /* TLS 1.3 key derivation. */
 
@@ -1014,10 +997,10 @@ struct ssl_handshake_st {
   uint8_t *key_share_bytes;
   size_t key_share_bytes_len;
 
-  /* public_key, for servers, is the key share to be sent to the client in TLS
-   * 1.3. */
-  uint8_t *public_key;
-  size_t public_key_len;
+  /* ecdh_public_key, for servers, is the key share to be sent to the client in
+   * TLS 1.3. */
+  uint8_t *ecdh_public_key;
+  size_t ecdh_public_key_len;
 
   /* peer_sigalgs are the signature algorithms that the peer supports. These are
    * taken from the contents of the signature algorithms extension for a server
@@ -1060,6 +1043,9 @@ struct ssl_handshake_st {
 
   /* hostname, on the server, is the value of the SNI extension. */
   char *hostname;
+
+  /* local_pubkey is the public key we are authenticating as. */
+  EVP_PKEY *local_pubkey;
 
   /* peer_pubkey is the public key parsed from the peer's leaf certificate. */
   EVP_PKEY *peer_pubkey;
@@ -1135,6 +1121,10 @@ struct ssl_handshake_st {
 
   /* client_version is the value sent or received in the ClientHello version. */
   uint16_t client_version;
+
+  /* early_data_read is the amount of early data that has been read by the
+   * record layer. */
+  uint16_t early_data_read;
 } /* SSL_HANDSHAKE */;
 
 SSL_HANDSHAKE *ssl_handshake_new(SSL *ssl);
@@ -1282,14 +1272,19 @@ uint16_t ssl_get_grease_value(const SSL *ssl, enum ssl_grease_index_t index);
  * error. */
 int tls1_parse_peer_sigalgs(SSL_HANDSHAKE *hs, const CBS *sigalgs);
 
+/* tls1_get_legacy_signature_algorithm sets |*out| to the signature algorithm
+ * that should be used with |pkey| in TLS 1.1 and earlier. It returns one on
+ * success and zero if |pkey| may not be used at those versions. */
+int tls1_get_legacy_signature_algorithm(uint16_t *out, const EVP_PKEY *pkey);
+
 /* tls1_choose_signature_algorithm sets |*out| to a signature algorithm for use
  * with |hs|'s private key based on the peer's preferences and the algorithms
  * supported. It returns one on success and zero on error. */
 int tls1_choose_signature_algorithm(SSL_HANDSHAKE *hs, uint16_t *out);
 
-/* tls12_get_verify_sigalgs sets |*out| to the signature algorithms acceptable
- * for the peer signature and returns the length of the list. */
-size_t tls12_get_verify_sigalgs(const SSL *ssl, const uint16_t **out);
+/* tls12_add_verify_sigalgs adds the signature algorithms acceptable for the
+ * peer signature to |out|. It returns one on success and zero on error. */
+int tls12_add_verify_sigalgs(const SSL *ssl, CBB *out);
 
 /* tls12_check_peer_sigalg checks if |sigalg| is acceptable for the peer
  * signature. It returns one on success and zero on error, setting |*out_alert|
@@ -1339,9 +1334,6 @@ typedef struct cert_st {
   /* x509_method contains pointers to functions that might deal with |X509|
    * compatibility, or might be a no-op, depending on the application. */
   const SSL_X509_METHOD *x509_method;
-
-  DH *dh_tmp;
-  DH *(*dh_tmp_cb)(SSL *ssl, int is_export, int keysize);
 
   /* sigalgs, if non-NULL, is the set of signature algorithms supported by
    * |privatekey| in decreasing order of preference. */
@@ -1633,10 +1625,15 @@ typedef struct ssl3_state_st {
    * handshake. */
   unsigned tlsext_channel_id_valid:1;
 
+  /* key_update_pending is one if we have a KeyUpdate acknowledgment
+   * outstanding. */
+  unsigned key_update_pending:1;
+
   uint8_t send_alert[2];
 
   /* pending_flight is the pending outgoing flight. This is used to flush each
-   * handshake flight in a single write. */
+   * handshake flight in a single write. |write_buffer| must be written out
+   * before this data. */
   BUF_MEM *pending_flight;
 
   /* pending_flight_offset is the number of bytes of |pending_flight| which have
@@ -1975,6 +1972,11 @@ struct ssl_st {
  * KeyUpdate. */
 #define SSL_KEY_UPDATE_NOT_REQUESTED 0
 #define SSL_KEY_UPDATE_REQUESTED 1
+
+/* kMaxEarlyDataAccepted is the advertised number of plaintext bytes of early
+ * data that will be accepted. This value should be slightly below
+ * kMaxEarlyDataSkipped in tls_record.c, which is measured in ciphertext. */
+static const size_t kMaxEarlyDataAccepted = 14336;
 
 CERT *ssl_cert_new(const SSL_X509_METHOD *x509_method);
 CERT *ssl_cert_dup(CERT *cert);

@@ -40,6 +40,7 @@
 #include "net/nqe/observation_buffer.h"
 #include "net/socket/socket_performance_watcher.h"
 #include "net/socket/socket_performance_watcher_factory.h"
+#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_test_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -210,8 +211,9 @@ TEST(NetworkQualityEstimatorTest, TestKbpsRTTUpdates) {
   context.set_network_quality_estimator(&estimator);
   context.Init();
 
-  std::unique_ptr<URLRequest> request(context.CreateRequest(
-      estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+  std::unique_ptr<URLRequest> request(
+      context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
+                            &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
   request->SetLoadFlags(request->load_flags() | LOAD_MAIN_FRAME_DEPRECATED);
   request->Start();
   base::RunLoop().Run();
@@ -263,8 +265,9 @@ TEST(NetworkQualityEstimatorTest, TestKbpsRTTUpdates) {
   histogram_tester.ExpectBucketCount(
       "NQE.Kbps.ObservationSource", NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP, 1);
 
-  std::unique_ptr<URLRequest> request2(context.CreateRequest(
-      estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+  std::unique_ptr<URLRequest> request2(
+      context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
+                            &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
   request2->SetLoadFlags(request2->load_flags() | LOAD_MAIN_FRAME_DEPRECATED);
   request2->Start();
   base::RunLoop().Run();
@@ -324,8 +327,9 @@ TEST(NetworkQualityEstimatorTest, TestKbpsRTTUpdates) {
   EXPECT_FALSE(
       estimator.GetRecentDownlinkThroughputKbps(base::TimeTicks(), &kbps));
 
-  std::unique_ptr<URLRequest> request3(context.CreateRequest(
-      estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+  std::unique_ptr<URLRequest> request3(
+      context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
+                            &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
   request3->SetLoadFlags(request2->load_flags() | LOAD_MAIN_FRAME_DEPRECATED);
   request3->Start();
   base::RunLoop().Run();
@@ -380,8 +384,9 @@ TEST(NetworkQualityEstimatorTest, Caching) {
   // the beginning of the second request from the network traffic observed from
   // the first request.
   for (size_t i = 0; i < 2; ++i) {
-    std::unique_ptr<URLRequest> request(context.CreateRequest(
-        estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+    std::unique_ptr<URLRequest> request(
+        context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
+                              &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
     request->SetLoadFlags(request->load_flags() | LOAD_MAIN_FRAME_DEPRECATED);
     request->Start();
     base::RunLoop().Run();
@@ -485,8 +490,9 @@ TEST(NetworkQualityEstimatorTest, CachingDisabled) {
   // the beginning of the second request from the network traffic observed from
   // the first request.
   for (size_t i = 0; i < 2; ++i) {
-    std::unique_ptr<URLRequest> request(context.CreateRequest(
-        estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+    std::unique_ptr<URLRequest> request(
+        context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
+                              &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
     request->SetLoadFlags(request->load_flags() | LOAD_MAIN_FRAME_DEPRECATED);
     request->Start();
     base::RunLoop().Run();
@@ -554,8 +560,9 @@ TEST(NetworkQualityEstimatorTest, StoreObservations) {
 
   const size_t kMaxObservations = 10;
   for (size_t i = 0; i < kMaxObservations; ++i) {
-    std::unique_ptr<URLRequest> request(context.CreateRequest(
-        estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+    std::unique_ptr<URLRequest> request(
+        context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
+                              &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
     request->Start();
     base::RunLoop().Run();
     EXPECT_TRUE(estimator.GetRecentHttpRTT(base::TimeTicks(), &rtt));
@@ -597,8 +604,9 @@ TEST(NetworkQualityEstimatorTest, ComputedPercentiles) {
   context.Init();
 
   for (size_t i = 0; i < 10U; ++i) {
-    std::unique_ptr<URLRequest> request(context.CreateRequest(
-        estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+    std::unique_ptr<URLRequest> request(
+        context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
+                              &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
     request->Start();
     base::RunLoop().Run();
   }
@@ -1637,8 +1645,9 @@ TEST(NetworkQualityEstimatorTest, TestExternalEstimateProviderMergeEstimates) {
     // Start 2 requests to ensure that the RTT estimate computed by the network
     // quality estimator takes into account the RTT observations from the
     // external estimate provider as well as organic observations.
-    std::unique_ptr<URLRequest> request(context.CreateRequest(
-        estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+    std::unique_ptr<URLRequest> request(
+        context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
+                              &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
     request->Start();
     base::RunLoop().Run();
   }
@@ -1686,8 +1695,9 @@ TEST(NetworkQualityEstimatorTest, TestThroughputNoRequestOverlap) {
     context.set_network_quality_estimator(&estimator);
     context.Init();
 
-    std::unique_ptr<URLRequest> request(context.CreateRequest(
-        estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+    std::unique_ptr<URLRequest> request(
+        context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
+                              &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
     request->SetLoadFlags(request->load_flags() | LOAD_MAIN_FRAME_DEPRECATED);
     request->Start();
     base::RunLoop().Run();
@@ -1738,8 +1748,9 @@ TEST(NetworkQualityEstimatorTest, MAYBE_TestEffectiveConnectionTypeObserver) {
 
   tick_clock_ptr->Advance(base::TimeDelta::FromMinutes(60));
 
-  std::unique_ptr<URLRequest> request(context.CreateRequest(
-      estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+  std::unique_ptr<URLRequest> request(
+      context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
+                            &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
   request->SetLoadFlags(request->load_flags() | LOAD_MAIN_FRAME_DEPRECATED);
   request->Start();
   base::RunLoop().Run();
@@ -1769,8 +1780,9 @@ TEST(NetworkQualityEstimatorTest, MAYBE_TestEffectiveConnectionTypeObserver) {
 
   // Next request should not trigger recomputation of effective connection type
   // since there has been no change in the clock.
-  std::unique_ptr<URLRequest> request2(context.CreateRequest(
-      estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+  std::unique_ptr<URLRequest> request2(
+      context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
+                            &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
   request2->SetLoadFlags(request->load_flags() | LOAD_MAIN_FRAME_DEPRECATED);
   request2->Start();
   base::RunLoop().Run();
@@ -1841,8 +1853,9 @@ TEST(NetworkQualityEstimatorTest, TestRTTAndThroughputEstimatesObserver) {
       downstream_throughput_kbps);
   tick_clock_ptr->Advance(base::TimeDelta::FromMinutes(60));
 
-  std::unique_ptr<URLRequest> request(context.CreateRequest(
-      estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+  std::unique_ptr<URLRequest> request(
+      context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
+                            &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
   request->Start();
   base::RunLoop().Run();
   EXPECT_EQ(http_rtt, observer.http_rtt());
@@ -1853,8 +1866,9 @@ TEST(NetworkQualityEstimatorTest, TestRTTAndThroughputEstimatesObserver) {
 
   // The next request should not trigger recomputation of RTT or throughput
   // since there has been no change in the clock.
-  std::unique_ptr<URLRequest> request2(context.CreateRequest(
-      estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+  std::unique_ptr<URLRequest> request2(
+      context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
+                            &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
   request2->Start();
   base::RunLoop().Run();
   EXPECT_LE(1, observer.notifications_received() - notifications_received);
@@ -1979,8 +1993,9 @@ TEST(NetworkQualityEstimatorTest,
   estimator.set_recent_effective_connection_type(EFFECTIVE_CONNECTION_TYPE_2G);
   tick_clock_ptr->Advance(base::TimeDelta::FromMinutes(60));
 
-  std::unique_ptr<URLRequest> request(context.CreateRequest(
-      estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+  std::unique_ptr<URLRequest> request(
+      context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
+                            &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
   request->SetLoadFlags(request->load_flags() | LOAD_MAIN_FRAME_DEPRECATED);
   request->Start();
   base::RunLoop().Run();
@@ -2063,14 +2078,16 @@ TEST(NetworkQualityEstimatorTest, TestRttThroughputObservers) {
   EXPECT_EQ(0U, throughput_observer.observations().size());
   base::TimeTicks then = base::TimeTicks::Now();
 
-  std::unique_ptr<URLRequest> request(context.CreateRequest(
-      estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+  std::unique_ptr<URLRequest> request(
+      context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
+                            &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
   request->SetLoadFlags(request->load_flags() | LOAD_MAIN_FRAME_DEPRECATED);
   request->Start();
   base::RunLoop().Run();
 
-  std::unique_ptr<URLRequest> request2(context.CreateRequest(
-      estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+  std::unique_ptr<URLRequest> request2(
+      context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
+                            &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
   request2->SetLoadFlags(request->load_flags() | LOAD_MAIN_FRAME_DEPRECATED);
   request2->Start();
   base::RunLoop().Run();
@@ -2181,8 +2198,9 @@ TEST(NetworkQualityEstimatorTest, MAYBE_TestTCPSocketRTT) {
         ++before_count_tcp_rtt_observations;
     }
 
-    std::unique_ptr<URLRequest> request(context.CreateRequest(
-        estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+    std::unique_ptr<URLRequest> request(
+        context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
+                              &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
     request->SetLoadFlags(request->load_flags() | LOAD_MAIN_FRAME_DEPRECATED);
     request->Start();
     base::RunLoop().Run();
@@ -2341,8 +2359,9 @@ TEST(NetworkQualityEstimatorTest, MAYBE_RecordAccuracy) {
 
       // Start a main-frame request which should cause network quality estimator
       // to record accuracy UMA.
-      std::unique_ptr<URLRequest> request(context.CreateRequest(
-          estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+      std::unique_ptr<URLRequest> request(
+          context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
+                                &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
       request->SetLoadFlags(request->load_flags() | LOAD_MAIN_FRAME_DEPRECATED);
       request->Start();
       base::RunLoop().Run();
@@ -2609,8 +2628,9 @@ TEST(NetworkQualityEstimatorTest, CorrelationHistogram) {
 
     // Start a main-frame request that should cause network quality estimator to
     // record the network quality at the last main frame request.
-    std::unique_ptr<URLRequest> request_1(context.CreateRequest(
-        estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+    std::unique_ptr<URLRequest> request_1(
+        context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
+                              &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
     request_1->SetLoadFlags(request_1->load_flags() |
                             LOAD_MAIN_FRAME_DEPRECATED);
     request_1->Start();
@@ -2667,8 +2687,9 @@ TEST(NetworkQualityEstimatorTest, CorrelationHistogram) {
 
     // Start another main-frame request which is redirected to an HTTPS URL.
     // Redirection should not cause any crashes.
-    std::unique_ptr<URLRequest> request_3(context.CreateRequest(
-        estimator.GetRedirectURL(), DEFAULT_PRIORITY, &test_delegate));
+    std::unique_ptr<URLRequest> request_3(
+        context.CreateRequest(estimator.GetRedirectURL(), DEFAULT_PRIORITY,
+                              &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
     request_3->Start();
     base::RunLoop().Run();
     EXPECT_FALSE(request_3->original_url().SchemeIsCryptographic());
@@ -2783,8 +2804,9 @@ TEST(NetworkQualityEstimatorTest,
 
     EXPECT_EQ(0U, observer.effective_connection_types().size());
 
-    std::unique_ptr<URLRequest> request(context.CreateRequest(
-        estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+    std::unique_ptr<URLRequest> request(
+        context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
+                              &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
     request->SetLoadFlags(request->load_flags() | LOAD_MAIN_FRAME_DEPRECATED);
     request->Start();
     base::RunLoop().Run();
@@ -2903,8 +2925,9 @@ TEST(NetworkQualityEstimatorTest, TypicalNetworkQualities) {
 
       // Force recomputation of effective connection type by starting  a main
       // frame request.
-      std::unique_ptr<URLRequest> request(context.CreateRequest(
-          estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+      std::unique_ptr<URLRequest> request(
+          context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
+                                &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
       request->SetLoadFlags(request->load_flags() | LOAD_MAIN_FRAME_DEPRECATED);
       request->Start();
       base::RunLoop().Run();

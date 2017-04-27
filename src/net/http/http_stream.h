@@ -30,6 +30,7 @@ class ECPrivateKey;
 
 namespace net {
 
+struct AlternativeService;
 class HttpNetworkSession;
 class HttpRequestHeaders;
 struct HttpRequestInfo;
@@ -149,6 +150,11 @@ class NET_EXPORT_PRIVATE HttpStream {
   // only be called for streams over SSL sockets, otherwise the behavior is
   // undefined.
   virtual void GetSSLInfo(SSLInfo* ssl_info) = 0;
+
+  // Returns true and populates |alternative_service| if an alternative service
+  // was used to for this stream. Otherwise returns false.
+  virtual bool GetAlternativeService(
+      AlternativeService* alternative_service) const = 0;
 
   // Get the SSLCertRequestInfo associated with this stream's connection.
   // This should only be called for streams over SSL sockets, otherwise the

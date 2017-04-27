@@ -126,14 +126,17 @@ class Bypass(IntegrationTest):
         self.assertNotHasChromeProxyViaHeader(response)
         self.assertEqual(u'http/1.1', response.protocol)
 
-      # Check that the BlockTypePrimary histogram has a single entry in the
+      # Check that the BlockTypePrimary histogram has at least one entry in the
       # MissingViaHeader4xx category (which is enum value 4), to make sure that
       # the bypass was caused by the missing via header logic and not something
-      # else.
+      # else. The favicon for this URL may also be fetched, but will return a
+      # 404.
       histogram = test_driver.GetHistogram(
           "DataReductionProxy.BlockTypePrimary")
-      self.assertEqual(1, histogram['count'])
-      self.assertIn({'count': 1, 'high': 5, 'low': 4}, histogram['buckets'])
+      self.assertNotEqual(0, histogram['count'])
+      self.assertEqual(1, len(histogram['buckets']))
+      self.assertEqual(5, histogram['buckets'][0]['high'])
+      self.assertEqual(4, histogram['buckets'][0]['low'])
 
   # Verify that the Data Reduction Proxy understands the "exp" directive.
   def testExpDirectiveBypass(self):
@@ -172,6 +175,23 @@ class Bypass(IntegrationTest):
       for response in responses:
         self.assertHasChromeProxyViaHeader(response)
 
+  # Data Saver uses a HTTPS proxy by default, if that fails it will fall back to
+  # a HTTP proxy.
+  def testBadHTTPSFallback(self):
+    with TestDriver() as test_driver:
+      test_driver.AddChromeArg('--enable-spdy-proxy-auth')
+      # Set the primary (HTTPS) proxy to a bad one.  
+      # That will force Data Saver to the HTTP proxy for normal page requests.
+      test_driver.AddChromeArg('--spdy-proxy-auth-origin='
+                               'https://nonexistent.googlezip.net')          
+      test_driver.AddChromeArg('--data-reduction-proxy-http-proxies='
+                               'http://compress.googlezip.net')  
+          
+      test_driver.LoadURL('http://check.googlezip.net/fallback/')
+      responses = test_driver.GetHTTPResponses()      
+      self.assertNotEqual(0, len(responses))
+      for response in responses:        
+        self.assertEqual(80, response.port)        
 
 if __name__ == '__main__':
   IntegrationTest.RunAllTests()

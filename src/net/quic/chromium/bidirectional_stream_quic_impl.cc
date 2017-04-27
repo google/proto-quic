@@ -15,8 +15,8 @@
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/platform/api/quic_string_piece.h"
 #include "net/socket/next_proto.h"
-#include "net/spdy/spdy_header_block.h"
-#include "net/spdy/spdy_http_utils.h"
+#include "net/spdy/chromium/spdy_http_utils.h"
+#include "net/spdy/core/spdy_header_block.h"
 
 namespace net {
 
@@ -73,10 +73,9 @@ void BidirectionalStreamQuicImpl::Start(
   delegate_ = delegate;
   request_info_ = request_info;
 
-  int rv = stream_request_.StartRequest(
-      session_, &stream_,
-      base::Bind(&BidirectionalStreamQuicImpl::OnStreamReady,
-                 weak_factory_.GetWeakPtr()));
+  stream_request_ = session_->CreateStreamRequest();
+  int rv = stream_request_->StartRequest(base::Bind(
+      &BidirectionalStreamQuicImpl::OnStreamReady, weak_factory_.GetWeakPtr()));
   if (rv == OK) {
     OnStreamReady(rv);
   } else if (!was_handshake_confirmed_) {
@@ -306,6 +305,8 @@ void BidirectionalStreamQuicImpl::OnStreamReady(int rv) {
   DCHECK_NE(ERR_IO_PENDING, rv);
   DCHECK(rv == OK || !stream_);
   if (rv == OK) {
+    stream_ = stream_request_->ReleaseStream();
+    stream_request_.reset();
     stream_->SetDelegate(this);
     if (!was_handshake_confirmed_ && request_info_->method == "POST") {
       waiting_for_confirmation_ = true;

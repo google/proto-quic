@@ -93,9 +93,8 @@ class WebSocketStreamRequestImpl : public WebSocketStreamRequest {
         url_request_(
             context->CreateRequest(url, DEFAULT_PRIORITY, delegate_.get())),
         connect_delegate_(std::move(connect_delegate)),
-        handshake_stream_create_helper_(create_helper.release()),
         handshake_stream_(nullptr) {
-    handshake_stream_create_helper_->set_stream_request(this);
+    create_helper->set_stream_request(this);
     HttpRequestHeaders headers;
     headers.SetHeader(websockets::kUpgrade, websockets::kWebSocketLowercase);
     headers.SetHeader(HttpRequestHeaders::kConnection, websockets::kUpgrade);
@@ -109,11 +108,9 @@ class WebSocketStreamRequestImpl : public WebSocketStreamRequest {
     url_request_->set_initiator(origin);
     url_request_->set_first_party_for_cookies(first_party_for_cookies);
 
-    // This passes the ownership of |handshake_stream_create_helper_| to
-    // |url_request_|.
     url_request_->SetUserData(
         WebSocketHandshakeStreamBase::CreateHelper::DataKey(),
-        handshake_stream_create_helper_);
+        std::move(create_helper));
     url_request_->SetLoadFlags(LOAD_DISABLE_CACHE | LOAD_BYPASS_CACHE);
     connect_delegate_->OnCreateRequest(url_request_.get());
   }
@@ -221,9 +218,6 @@ class WebSocketStreamRequestImpl : public WebSocketStreamRequest {
   std::unique_ptr<URLRequest> url_request_;
 
   std::unique_ptr<WebSocketStream::ConnectDelegate> connect_delegate_;
-
-  // Owned by the URLRequest.
-  WebSocketHandshakeStreamCreateHelper* handshake_stream_create_helper_;
 
   // This is owned by the caller of CreateBaseStream() or
   // CreateSpdyStream() of WebsocketHandshakeStreamCreateHelper. Both the

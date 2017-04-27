@@ -33,7 +33,7 @@ void InitializeShortcutInterfaces(
   i_persist_file->Reset();
   if (FAILED(i_shell_link->CreateInstance(CLSID_ShellLink, NULL,
                                           CLSCTX_INPROC_SERVER)) ||
-      FAILED(i_persist_file->QueryFrom(i_shell_link->get())) ||
+      FAILED(i_persist_file->QueryFrom(i_shell_link->Get())) ||
       (shortcut && FAILED((*i_persist_file)->Load(shortcut, STGM_READWRITE)))) {
     i_shell_link->Reset();
     i_persist_file->Reset();
@@ -88,7 +88,7 @@ bool CreateOrUpdateShortcutLink(const FilePath& shortcut_path,
       // |old_i_persist_file| was successfully initialized in the call above. If
       // so, initialize the interfaces to begin writing a new shortcut (to
       // overwrite the current one if successful).
-      if (old_i_persist_file.get())
+      if (old_i_persist_file.Get())
         InitializeShortcutInterfaces(NULL, &i_shell_link, &i_persist_file);
       break;
     default:
@@ -96,7 +96,7 @@ bool CreateOrUpdateShortcutLink(const FilePath& shortcut_path,
   }
 
   // Return false immediately upon failure to initialize shortcut interfaces.
-  if (!i_persist_file.get())
+  if (!i_persist_file.Get())
     return false;
 
   if ((properties.options & ShortcutProperties::PROPERTIES_TARGET) &&
@@ -113,7 +113,7 @@ bool CreateOrUpdateShortcutLink(const FilePath& shortcut_path,
   if (properties.options & ShortcutProperties::PROPERTIES_ARGUMENTS) {
     if (FAILED(i_shell_link->SetArguments(properties.arguments.c_str())))
       return false;
-  } else if (old_i_persist_file.get()) {
+  } else if (old_i_persist_file.Get()) {
     wchar_t current_arguments[MAX_PATH] = {0};
     if (SUCCEEDED(old_i_shell_link->GetArguments(current_arguments,
                                                  MAX_PATH))) {
@@ -139,17 +139,17 @@ bool CreateOrUpdateShortcutLink(const FilePath& shortcut_path,
   if ((has_app_id || has_dual_mode) &&
       GetVersion() >= VERSION_WIN7) {
     ScopedComPtr<IPropertyStore> property_store;
-    if (FAILED(property_store.QueryFrom(i_shell_link.get())) ||
-        !property_store.get())
+    if (FAILED(property_store.QueryFrom(i_shell_link.Get())) ||
+        !property_store.Get())
       return false;
 
     if (has_app_id &&
-        !SetAppIdForPropertyStore(property_store.get(),
+        !SetAppIdForPropertyStore(property_store.Get(),
                                   properties.app_id.c_str())) {
       return false;
     }
     if (has_dual_mode &&
-        !SetBooleanValueForPropertyStore(property_store.get(),
+        !SetBooleanValueForPropertyStore(property_store.Get(),
                                          PKEY_AppUserModel_IsDualMode,
                                          properties.dual_mode)) {
       return false;
@@ -204,7 +204,7 @@ bool ResolveShortcutProperties(const FilePath& shortcut_path,
 
   ScopedComPtr<IPersistFile> persist;
   // Query IShellLink for the IPersistFile interface.
-  if (FAILED(persist.QueryFrom(i_shell_link.get())))
+  if (FAILED(persist.QueryFrom(i_shell_link.Get())))
     return false;
 
   // Load the shell link.
@@ -251,7 +251,7 @@ bool ResolveShortcutProperties(const FilePath& shortcut_path,
   if ((options & ShortcutProperties::PROPERTIES_WIN7) &&
       GetVersion() >= VERSION_WIN7) {
     ScopedComPtr<IPropertyStore> property_store;
-    if (FAILED(property_store.QueryFrom(i_shell_link.get())))
+    if (FAILED(property_store.QueryFrom(i_shell_link.Get())))
       return false;
 
     if (options & ShortcutProperties::PROPERTIES_APP_ID) {

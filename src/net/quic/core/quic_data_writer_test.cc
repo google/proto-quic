@@ -7,7 +7,8 @@
 #include <cstdint>
 
 #include "net/quic/core/quic_data_reader.h"
-#include "net/quic/core/quic_flags.h"
+#include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -215,8 +216,8 @@ TEST_P(QuicDataWriterTest, WriteConnectionId) {
   writer.WriteConnectionId(connection_id);
   test::CompareCharArraysWithHexError(
       "connection_id", buffer, kBufferLength,
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id ? big_endian
-                                                            : little_endian,
+      QuicUtils::IsConnectionIdWireFormatBigEndian(GetParam()) ? big_endian
+                                                               : little_endian,
       kBufferLength);
 
   uint64_t read_connection_id;

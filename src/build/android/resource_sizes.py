@@ -160,7 +160,7 @@ def _CreateSectionNameSizeMap(so_path, tools_prefix):
 
 def _ParseLibBuildId(so_path, tools_prefix):
   """Returns the Build ID of the given native library."""
-  stdout = _RunReadelf(so_path, ['n'], tools_prefix)
+  stdout = _RunReadelf(so_path, ['-n'], tools_prefix)
   match = re.search(r'Build ID: (\w+)', stdout)
   return match.group(1) if match else None
 
@@ -594,22 +594,26 @@ def _AnnotatePakResources():
 
 def _PrintStaticInitializersCountFromApk(apk_filename, tools_prefix,
                                          chartjson=None):
-  print 'Finding static initializers (can take a minute)'
   with zipfile.ZipFile(apk_filename) as z:
-    infolist = z.infolist()
+    so_files = [f for f in z.infolist()
+                if f.filename.endswith('.so') and f.file_size > 0]
+  # Skip checking static initializers for 32 bit .so files when 64 bit .so files
+  # are present since the 32 bit versions will be checked by bots that only
+  # build the 32 bit version. This avoids the complexity of finding 32 bit .so
+  # files in the output directory in 64 bit builds.
+  has_64 = any('64' in f.filename for f in so_files)
+  files_to_check = [f for f in so_files if not has_64 or '64' in f.filename]
   out_dir = constants.GetOutDirectory()
   si_count = 0
-  for zip_info in infolist:
-    # Check file size to account for placeholder libraries.
-    if zip_info.filename.endswith('.so') and zip_info.file_size > 0:
-      lib_name = os.path.basename(zip_info.filename).replace('crazy.', '')
-      unstripped_path = os.path.join(out_dir, 'lib.unstripped', lib_name)
-      if os.path.exists(unstripped_path):
-        si_count += _PrintStaticInitializersCount(
-            apk_filename, zip_info.filename, unstripped_path, tools_prefix)
-      else:
-        raise Exception('Unstripped .so not found. Looked here: %s',
-                        unstripped_path)
+  for so_info in files_to_check:
+    lib_name = os.path.basename(so_info.filename).replace('crazy.', '')
+    unstripped_path = os.path.join(out_dir, 'lib.unstripped', lib_name)
+    if os.path.exists(unstripped_path):
+      si_count += _PrintStaticInitializersCount(
+          apk_filename, so_info.filename, unstripped_path, tools_prefix)
+    else:
+      raise Exception('Unstripped .so not found. Looked here: %s',
+                      unstripped_path)
   ReportPerfResult(chartjson, 'StaticInitializersCount', 'count', si_count,
                    'count')
 
@@ -630,19 +634,15 @@ def _PrintStaticInitializersCount(apk_path, apk_so_name, so_with_symbols_path,
   """
   # GetStaticInitializers uses get-static-initializers.py to get a list of all
   # static initializers. This does not work on all archs (particularly arm).
-  # TODO(rnephew): Get rid of warning when crbug.com/585588 is fixed.
+  # This mostly copies infra/scripts/legacy/scripts/slave/chromium/sizes.py.
+  print 'Finding static initializers in %s (can take a minute)' % apk_so_name
   with Unzip(apk_path, filename=apk_so_name) as unzipped_so:
     _VerifyLibBuildIdsMatch(tools_prefix, unzipped_so, so_with_symbols_path)
     readelf_si_count = CountStaticInitializers(unzipped_so, tools_prefix)
-  sis, dump_si_count = GetStaticInitializers(
-      so_with_symbols_path, tools_prefix)
-  if readelf_si_count != dump_si_count:
-    print ('There are %d files with static initializers, but '
-           'dump-static-initializers found %d: files' %
-           (readelf_si_count, dump_si_count))
-  else:
-    print '%s - Found %d files with static initializers:' % (
-        os.path.basename(so_with_symbols_path), dump_si_count)
+  sis, dump_si_count = GetStaticInitializers(so_with_symbols_path, tools_prefix)
+  print ('Found %s files with static initializers using readelf\n'
+         'Found %s files with static initializers using '
+         'dump-static-initializers') % (readelf_si_count, dump_si_count)
   print '\n'.join(sis)
 
   return readelf_si_count

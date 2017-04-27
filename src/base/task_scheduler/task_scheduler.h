@@ -6,7 +6,6 @@
 #define BASE_TASK_SCHEDULER_TASK_SCHEDULER_H_
 
 #include <memory>
-#include <string>
 #include <vector>
 
 #include "base/base_export.h"
@@ -14,6 +13,7 @@
 #include "base/memory/ref_counted.h"
 #include "base/sequenced_task_runner.h"
 #include "base/single_thread_task_runner.h"
+#include "base/strings/string_piece.h"
 #include "base/task_runner.h"
 #include "base/task_scheduler/scheduler_worker_pool_params.h"
 #include "base/task_scheduler/task_traits.h"
@@ -33,9 +33,16 @@ namespace base {
 class HistogramBase;
 
 // Interface for a task scheduler and static methods to manage the instance used
-// by the post_task.h API. Note: all base/task_scheduler users should go through
-// post_task.h instead of TaskScheduler except for the one callsite per process
-// which manages the process' instance.
+// by the post_task.h API.
+//
+// The task scheduler doesn't create threads until Start() is called. Tasks can
+// be posted at any time but will not run until after Start() is called.
+//
+// The instance methods of this class are thread-safe.
+//
+// Note: All base/task_scheduler users should go through post_task.h instead of
+// TaskScheduler except for the one callsite per process which manages the
+// process's instance.
 class BASE_EXPORT TaskScheduler {
  public:
   struct BASE_EXPORT InitParams {
@@ -54,16 +61,14 @@ class BASE_EXPORT TaskScheduler {
     const SchedulerWorkerPoolParams foreground_blocking_worker_pool_params;
   };
 
-  // Returns the index of the worker pool in which a task with |traits| should
-  // run. This should be coded in a future-proof way: new traits should
-  // gracefully map to a default pool.
-  using WorkerPoolIndexForTraitsCallback =
-      Callback<size_t(const TaskTraits& traits)>;
-
   // Destroying a TaskScheduler is not allowed in production; it is always
   // leaked. In tests, it should only be destroyed after JoinForTesting() has
   // returned.
   virtual ~TaskScheduler() = default;
+
+  // Allows the task scheduler to create threads and run tasks following the
+  // |init_params| specification. CHECKs on failure.
+  virtual void Start(const InitParams& init_params) = 0;
 
   // Posts |task| with a |delay| and specific |traits|. |delay| can be zero.
   // For one off tasks that don't require a TaskRunner.
@@ -129,44 +134,42 @@ class BASE_EXPORT TaskScheduler {
   // after this call.
   virtual void JoinForTesting() = 0;
 
-  // CreateAndSetSimpleTaskScheduler(), CreateAndSetDefaultTaskScheduler(), and
-  // SetInstance() register a TaskScheduler to handle tasks posted through the
-  // post_task.h API for this process. The registered TaskScheduler will only be
-  // deleted when a new TaskScheduler is registered and is leaked on shutdown.
-  // The methods must not be called when TaskRunners created by the previous
-  // TaskScheduler are still alive. The methods are not thread-safe; proper
-  // synchronization is required to use the post_task.h API after registering a
-  // new TaskScheduler.
+// CreateAndStartWithDefaultParams(), Create(), and SetInstance() register a
+// TaskScheduler to handle tasks posted through the post_task.h API for this
+// process.
+//
+// Processes that need to initialize TaskScheduler with custom params or that
+// need to allow tasks to be posted before the TaskScheduler creates its
+// threads should use Create() followed by Start(). Other processes can use
+// CreateAndStartWithDefaultParams().
+//
+// A registered TaskScheduler is only deleted when a new TaskScheduler is
+// registered. The last registered TaskScheduler is leaked on shutdown. The
+// methods below must not be called when TaskRunners created by a previous
+// TaskScheduler are still alive. The methods are not thread-safe; proper
+// synchronization is required to use the post_task.h API after registering a
+// new TaskScheduler.
 
 #if !defined(OS_NACL)
-  // Creates and sets a task scheduler using default params. |name| is used to
+  // Creates and starts a task scheduler using default params. |name| is used to
   // label threads and histograms. It should identify the component that calls
-  // this. CHECKs on failure. For tests, prefer base::test::ScopedTaskScheduler
-  // (ensures isolation).
-  static void CreateAndSetSimpleTaskScheduler(const std::string& name);
+  // this. Start() is called by this method; it is invalid to call it again
+  // afterwards. CHECKs on failure. For tests, prefer
+  // base::test::ScopedTaskEnvironment (ensures isolation).
+  static void CreateAndStartWithDefaultParams(StringPiece name);
 #endif  // !defined(OS_NACL)
 
-  // Creates and sets a task scheduler with custom worker pools. CHECKs on
-  // failure. |worker_pool_params_vector| describes the worker pools to create.
-  // |worker_pool_index_for_traits_callback| returns the index in |worker_pools|
-  // of the worker pool in which a task with given traits should run. For tests,
-  // prefer base::test::ScopedTaskScheduler (ensures isolation).
-  //
-  // Deprecated. Use the overload below instead. https://crbug.com/690706
-  static void CreateAndSetDefaultTaskScheduler(
-      const std::vector<SchedulerWorkerPoolParams>& worker_pool_params_vector,
-      const WorkerPoolIndexForTraitsCallback&
-          worker_pool_index_for_traits_callback);
-
-  // Creates and sets a task scheduler using custom params. |name| is used to
-  // label threads and histograms. It should identify the component that creates
-  // the TaskScheduler. |init_params| is used to initialize the worker pools.
-  // CHECKs on failure. For tests, prefer base::test::ScopedTaskScheduler
+  // Creates a ready to start task scheduler. |name| is used to label threads
+  // and histograms. It should identify the component that creates the
+  // TaskScheduler. The task scheduler doesn't create threads until Start() is
+  // called. Tasks can be posted at any time but will not run until after
+  // Start() is called. For tests, prefer base::test::ScopedTaskEnvironment
   // (ensures isolation).
-  //
-  // Note: The names and priority hints in |init_params| are ignored (ref. TODO
-  // to remove them).
-  static void CreateAndSetDefaultTaskScheduler(const std::string& name,
+  static void Create(StringPiece name);
+
+  // Deprecated. Use Create() and Start() instead.
+  // TODO(fdoray): Redirect callers to Create() and Start().
+  static void CreateAndSetDefaultTaskScheduler(StringPiece name,
                                                const InitParams& init_params);
 
   // Registers |task_scheduler| to handle tasks posted through the post_task.h

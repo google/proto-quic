@@ -30,7 +30,8 @@ class PathBuilderDelegate {
     CertPathBuilder::Result result;
     // First cert in the |chain| is the target.
     CertPathBuilder path_builder(test.chain.front(), &trust_store,
-                                 &signature_policy, test.time, &result);
+                                 &signature_policy, test.time, test.key_purpose,
+                                 &result);
     path_builder.AddCertIssuerSource(&intermediate_cert_issuer_source);
 
     path_builder.Run();

@@ -35,20 +35,21 @@ namespace net {
 namespace {
 
 struct TestKey {
+  const char* name;
   const char* cert_file;
   const char* key_file;
-  SSLPrivateKey::Type key_type;
+  bool is_ecdsa;
 };
 
 const TestKey kTestKeys[] = {
-    {"client_1.pem", "client_1.pk8", SSLPrivateKey::Type::RSA},
-    {"client_4.pem", "client_4.pk8", SSLPrivateKey::Type::ECDSA_P256},
-    {"client_5.pem", "client_5.pk8", SSLPrivateKey::Type::ECDSA_P384},
-    {"client_6.pem", "client_6.pk8", SSLPrivateKey::Type::ECDSA_P521},
+    {"RSA", "client_1.pem", "client_1.pk8", false},
+    {"ECDSA_P256", "client_4.pem", "client_4.pk8", true},
+    {"ECDSA_P384", "client_5.pem", "client_5.pk8", true},
+    {"ECDSA_P521", "client_6.pem", "client_6.pk8", true},
 };
 
 std::string TestKeyToString(const testing::TestParamInfo<TestKey>& params) {
-  return SSLPrivateKeyTypeToString(params.param.key_type);
+  return params.param.name;
 }
 
 }  // namespace
@@ -66,7 +67,7 @@ TEST_P(SSLPlatformKeyNSSTest, KeyMatches) {
   // Import the key into a test NSS database.
   crypto::ScopedTestNSSDB test_db;
   scoped_refptr<X509Certificate> cert;
-  if (SSLPrivateKey::IsECDSAType(test_key.key_type)) {
+  if (test_key.is_ecdsa) {
     // NSS cannot import unencrypted ECDSA keys, so we encrypt it with an empty
     // password and import manually.
     std::vector<uint8_t> pkcs8_vector(pkcs8.begin(), pkcs8.end());

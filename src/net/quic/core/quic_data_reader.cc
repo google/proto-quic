@@ -5,9 +5,11 @@
 #include "net/quic/core/quic_data_reader.h"
 
 #include "net/base/int128.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_endian.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 
 namespace net {
@@ -99,7 +101,7 @@ bool QuicDataReader::ReadConnectionId(uint64_t* connection_id) {
     return false;
   }
 
-  if (FLAGS_quic_restart_flag_quic_big_endian_connection_id) {
+  if (QuicUtils::IsConnectionIdWireFormatBigEndian(perspective_)) {
     *connection_id = QuicEndian::NetToHost64(*connection_id);
   }
 
@@ -152,6 +154,15 @@ void QuicDataReader::OnFailure() {
   // Set our iterator to the end of the buffer so that further reads fail
   // immediately.
   pos_ = len_;
+}
+
+uint8_t QuicDataReader::PeekByte() const {
+  if (pos_ >= len_) {
+    QUIC_BUG << "Reading is done, cannot peek next byte. Tried to read pos = "
+             << pos_ << " buffer length = " << len_;
+    return 0;
+  }
+  return data_[pos_];
 }
 
 }  // namespace net

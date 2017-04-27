@@ -13,6 +13,23 @@ namespace url {
 
 namespace {
 
+// Certain characters should be percent-encoded when they appear in the path
+// component of a mailto URL, to improve compatibility and mitigate against
+// command-injection attacks on mailto handlers. See https://crbug.com/711020.
+template <typename UCHAR>
+bool ShouldEncodeMailboxCharacter(UCHAR uch) {
+  if (uch < 0x21 ||                              // space & control characters.
+      uch > 0x7e ||                              // high-ascii characters.
+      uch == 0x22 ||                             // quote.
+      uch == 0x3c || uch == 0x3e ||              // angle brackets.
+      uch == 0x60 ||                             // backtick.
+      uch == 0x7b || uch == 0x7c || uch == 0x7d  // braces and pipe.
+      ) {
+    return true;
+  }
+  return false;
+}
+
 template <typename CHAR, typename UCHAR>
 bool DoCanonicalizeMailtoURL(const URLComponentSource<CHAR>& source,
                              const Parsed& parsed,
@@ -38,12 +55,12 @@ bool DoCanonicalizeMailtoURL(const URLComponentSource<CHAR>& source,
     new_parsed->path.begin = output->length();
 
     // Copy the path using path URL's more lax escaping rules.
-    // We convert to UTF-8 and escape non-ASCII, but leave all
+    // We convert to UTF-8 and escape non-ASCII, but leave most
     // ASCII characters alone.
     int end = parsed.path.end();
     for (int i = parsed.path.begin; i < end; ++i) {
       UCHAR uch = static_cast<UCHAR>(source.path[i]);
-      if (uch < 0x20 || uch >= 0x80)
+      if (ShouldEncodeMailboxCharacter<UCHAR>(uch))
         success &= AppendUTF8EscapedChar(source.path, &i, end, output);
       else
         output->push_back(static_cast<char>(uch));

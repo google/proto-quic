@@ -12,6 +12,24 @@ testRunner.notifyDone = function() {
   this.isDone = true;
 };
 
+testRunner.supportTracing = true;
+
+// If this is true, blink_perf tests is put on paused waiting for tracing to
+// be started. |scheduleTestRun| should be invoked after tracing is started
+// to continue blink perf test.
+testRunner.isWaitingForTracingStart = false;
+
+testRunner.startTracing = function(tracingCategories, scheduleTestRun) {
+  this.tracingCategories = tracingCategories;
+  this.scheduleTestRun = scheduleTestRun;
+  this.isWaitingForTracingStart = true;
+}
+
+testRunner.stopTracingAndMeasure = function(traceEventsToMeasure, callback) {
+  testRunner.traceEventsToMeasure = traceEventsToMeasure;
+  callback();
+}
+
 window.GCController = {};
 
 GCController.collect = function() {

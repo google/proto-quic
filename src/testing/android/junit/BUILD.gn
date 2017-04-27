@@ -11,7 +11,6 @@ java_library("junit_test_support") {
   bypass_platform_checks = true
   testonly = true
   java_files = [
-    "java/src/org/chromium/testing/local/AnnotationProcessor.java",
     "java/src/org/chromium/testing/local/BackgroundShadowAsyncTask.java",
     "java/src/org/chromium/testing/local/CustomShadowAsyncTask.java",
     "java/src/org/chromium/testing/local/GtestComputer.java",
@@ -26,6 +25,7 @@ java_library("junit_test_support") {
     "java/src/org/chromium/testing/local/LocalRobolectricTestRunner.java",
     "java/src/org/chromium/testing/local/PackageFilter.java",
     "java/src/org/chromium/testing/local/RunnerFilter.java",
+    "java/src/org/chromium/testing/local/TestDir.java",
   ]
   deps = [
     "//third_party/junit",

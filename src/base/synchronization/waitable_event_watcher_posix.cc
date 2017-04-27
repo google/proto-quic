@@ -61,16 +61,16 @@ class Flag : public RefCountedThreadSafe<Flag> {
 class AsyncWaiter : public WaitableEvent::Waiter {
  public:
   AsyncWaiter(scoped_refptr<SequencedTaskRunner> task_runner,
-              const base::Closure& callback,
+              base::OnceClosure callback,
               Flag* flag)
       : task_runner_(std::move(task_runner)),
-        callback_(callback),
+        callback_(std::move(callback)),
         flag_(flag) {}
 
   bool Fire(WaitableEvent* event) override {
     // Post the callback if we haven't been cancelled.
     if (!flag_->value())
-      task_runner_->PostTask(FROM_HERE, callback_);
+      task_runner_->PostTask(FROM_HERE, std::move(callback_));
 
     // We are removed from the wait-list by the WaitableEvent itself. It only
     // remains to delete ourselves.
@@ -86,7 +86,7 @@ class AsyncWaiter : public WaitableEvent::Waiter {
 
  private:
   const scoped_refptr<SequencedTaskRunner> task_runner_;
-  const base::Closure callback_;
+  base::OnceClosure callback_;
   const scoped_refptr<Flag> flag_;
 };
 
@@ -96,13 +96,13 @@ class AsyncWaiter : public WaitableEvent::Waiter {
 // of when the event is canceled.
 // -----------------------------------------------------------------------------
 void AsyncCallbackHelper(Flag* flag,
-                         const WaitableEventWatcher::EventCallback& callback,
+                         WaitableEventWatcher::EventCallback callback,
                          WaitableEvent* event) {
   // Runs on the sequence that called StartWatching().
   if (!flag->value()) {
     // This is to let the WaitableEventWatcher know that the event has occured.
     flag->Set();
-    callback.Run(event);
+    std::move(callback).Run(event);
   }
 }
 
@@ -122,9 +122,8 @@ WaitableEventWatcher::~WaitableEventWatcher() {
 // The Handle is how the user cancels a wait. After deleting the Handle we
 // insure that the delegate cannot be called.
 // -----------------------------------------------------------------------------
-bool WaitableEventWatcher::StartWatching(
-    WaitableEvent* event,
-    const EventCallback& callback) {
+bool WaitableEventWatcher::StartWatching(WaitableEvent* event,
+                                         EventCallback callback) {
   DCHECK(sequence_checker_.CalledOnValidSequence());
   DCHECK(SequencedTaskRunnerHandle::Get());
 
@@ -137,8 +136,9 @@ bool WaitableEventWatcher::StartWatching(
   DCHECK(!cancel_flag_) << "StartWatching called while still watching";
 
   cancel_flag_ = new Flag;
-  const Closure internal_callback = base::Bind(
-      &AsyncCallbackHelper, base::RetainedRef(cancel_flag_), callback, event);
+  OnceClosure internal_callback =
+      base::BindOnce(&AsyncCallbackHelper, base::RetainedRef(cancel_flag_),
+                     std::move(callback), event);
   WaitableEvent::WaitableEventKernel* kernel = event->kernel_.get();
 
   AutoLock locked(kernel->lock_);
@@ -149,13 +149,14 @@ bool WaitableEventWatcher::StartWatching(
 
     // No hairpinning - we can't call the delegate directly here. We have to
     // post a task to the SequencedTaskRunnerHandle as usual.
-    SequencedTaskRunnerHandle::Get()->PostTask(FROM_HERE, internal_callback);
+    SequencedTaskRunnerHandle::Get()->PostTask(FROM_HERE,
+                                               std::move(internal_callback));
     return true;
   }
 
   kernel_ = kernel;
-  waiter_ = new AsyncWaiter(SequencedTaskRunnerHandle::Get(), internal_callback,
-                            cancel_flag_.get());
+  waiter_ = new AsyncWaiter(SequencedTaskRunnerHandle::Get(),
+                            std::move(internal_callback), cancel_flag_.get());
   event->Enqueue(waiter_);
 
   return true;

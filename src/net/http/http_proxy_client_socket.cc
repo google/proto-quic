@@ -255,8 +255,9 @@ int HttpProxyClientSocket::PrepareForAuthRestart() {
   if (!response_.headers.get())
     return ERR_CONNECTION_RESET;
 
-  // If the connection can't be reused, just return ERR_CONNECTION_CLOSED.
-  // The request should be retried at a higher layer.
+  // If the connection can't be reused, return
+  // ERR_UNABLE_TO_REUSE_CONNECTION_FOR_PROXY_AUTH.  The request will be retried
+  // at a higher layer.
   if (!response_.headers->IsKeepAlive() ||
       !http_stream_parser_->CanFindEndOfResponse() ||
       !transport_->socket()->IsConnected()) {

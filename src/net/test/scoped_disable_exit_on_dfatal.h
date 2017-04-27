@@ -23,12 +23,14 @@ class ScopedDisableExitOnDFatal {
   ~ScopedDisableExitOnDFatal();
 
  private:
-  // Currently active instance.
-  static ScopedDisableExitOnDFatal* g_instance_;
-
   // Static function which is set as the logging assert handler.
   // Called when there is a check failure.
-  static void LogAssertHandler(const std::string& msg);
+  static void LogAssertHandler(const char* file,
+                               int line,
+                               const base::StringPiece message,
+                               const base::StringPiece stack_trace);
+
+  logging::ScopedLogAssertHandler assert_handler_;
 
   DISALLOW_COPY_AND_ASSIGN(ScopedDisableExitOnDFatal);
 };

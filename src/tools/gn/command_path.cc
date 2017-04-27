@@ -403,10 +403,10 @@ int RunPath(const std::vector<std::string>& args) {
                              stats.total_paths(), path_annotation),
           DECORATION_YELLOW);
       if (!options.public_only) {
-        OutputString(base::StringPrintf(" %d of them are public.\n",
-                                        stats.public_paths));
+        OutputString(
+            base::StringPrintf(" %d of them are public.", stats.public_paths));
       }
-      OutputString("Use --all to print all paths.\n");
+      OutputString("\nUse --all to print all paths.\n");
     }
   }
   return 0;

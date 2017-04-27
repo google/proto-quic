@@ -59,9 +59,9 @@ bool FileUtilProxy::GetFileInfo(
   GetFileInfoHelper* helper = new GetFileInfoHelper;
   return task_runner->PostTaskAndReply(
       FROM_HERE,
-      Bind(&GetFileInfoHelper::RunWorkForFilePath,
-           Unretained(helper), file_path),
-      Bind(&GetFileInfoHelper::Reply, Owned(helper), callback));
+      BindOnce(&GetFileInfoHelper::RunWorkForFilePath, Unretained(helper),
+               file_path),
+      BindOnce(&GetFileInfoHelper::Reply, Owned(helper), callback));
 }
 
 // static

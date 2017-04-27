@@ -352,7 +352,7 @@ are exported to translation interchange files (e.g. XMB files), etc.
     else:
       for output in self.res.GetOutputFiles():
         output.output_filename = os.path.abspath(os.path.join(
-          self.output_directory, output.GetFilename()))
+          self.output_directory, output.GetOutputFilename()))
 
     # If there are whitelisted names, tag the tree once up front, this way
     # while looping through the actual output, it is just an attribute check.
@@ -360,7 +360,7 @@ are exported to translation interchange files (e.g. XMB files), etc.
       self.AddWhitelistTags(self.res, self.whitelist_names)
 
     for output in self.res.GetOutputFiles():
-      self.VerboseOut('Creating %s...' % output.GetFilename())
+      self.VerboseOut('Creating %s...' % output.GetOutputFilename())
 
       # Microsoft's RC compiler can only deal with single-byte or double-byte
       # files (no UTF-8), so we make all RC files UTF-16 to support all
@@ -451,7 +451,8 @@ are exported to translation interchange files (e.g. XMB files), etc.
     # Compare the absolute path names, sorted.
     asserted = sorted([os.path.abspath(i) for i in assert_output_files])
     actual = sorted([
-        os.path.abspath(os.path.join(self.output_directory, i.GetFilename()))
+        os.path.abspath(os.path.join(self.output_directory,
+                                     i.GetOutputFilename()))
         for i in self.res.GetOutputFiles()])
 
     if asserted != actual:
@@ -519,7 +520,7 @@ Extra output files:
       # Get the first output file relative to the depdir.
       outputs = self.res.GetOutputFiles()
       output_file = os.path.join(self.output_directory,
-                                 outputs[0].GetFilename())
+                                 outputs[0].GetOutputFilename())
 
     output_file = os.path.relpath(output_file, depdir)
     # The path prefix to prepend to dependencies in the depfile.

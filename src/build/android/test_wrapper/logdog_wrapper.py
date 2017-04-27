@@ -57,9 +57,8 @@ def main():
         '--logcat-output-file',
         (args.logcat_output_file if args.logcat_output_file
             else os.path.join(logcat_output_dir, 'logcats')),
-        '--upload-logcats-file',
         '--target-devices-file', args.target_devices_file,
-        '-v'] + extra_cmd_args
+        '-v']
 
     with tempfile_ext.NamedTemporaryDirectory(
         prefix='tmp_android_logdog_wrapper') as temp_directory:
@@ -68,6 +67,7 @@ def main():
             'Logdog binary %s unavailable. Unable to create logdog client',
             args.logdog_bin_cmd)
       else:
+        test_cmd += ['--upload-logcats-file']
         streamserver_uri = 'unix:%s' % os.path.join(temp_directory,
                                                     'butler.sock')
         prefix = os.path.join('android', 'swarming', 'logcats',
@@ -82,6 +82,7 @@ def main():
             '-coordinator-host', COORDINATOR_HOST,
             'run', '-streamserver-uri', streamserver_uri, '--'] + test_cmd
 
+      test_cmd += extra_cmd_args
       test_proc = subprocess.Popen(test_cmd)
       with signal_handler.SignalHandler(signal.SIGTERM,
                                         CreateStopTestsMethod(test_proc)):

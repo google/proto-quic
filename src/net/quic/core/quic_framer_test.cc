@@ -15,9 +15,9 @@
 #include "net/quic/core/crypto/null_encrypter.h"
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/crypto/quic_encrypter.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/test_tools/quic_framer_peer.h"
@@ -591,10 +591,11 @@ TEST_P(QuicFramerTest, LargePacket) {
   memset(packet + header_size, 0, kMaxPacketSize - header_size);
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -629,10 +630,11 @@ TEST_P(QuicFramerTest, PacketHeader) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -659,10 +661,11 @@ TEST_P(QuicFramerTest, PacketHeader) {
     } else {
       expected_error = "Unable to read packet number.";
     }
-    CheckProcessingFails(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                             ? packet_cid_be
-                             : packet,
-                         i, expected_error, QUIC_INVALID_PACKET_HEADER);
+    CheckProcessingFails(
+        QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+            ? packet_cid_be
+            : packet,
+        i, expected_error, QUIC_INVALID_PACKET_HEADER);
   }
 }
 
@@ -735,10 +738,11 @@ TEST_P(QuicFramerTest, PacketHeaderWithVersionFlag) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -768,10 +772,11 @@ TEST_P(QuicFramerTest, PacketHeaderWithVersionFlag) {
     } else {
       expected_error = "Unable to read packet number.";
     }
-    CheckProcessingFails(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                             ? packet_cid_be
-                             : packet,
-                         i, expected_error, QUIC_INVALID_PACKET_HEADER);
+    CheckProcessingFails(
+        QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+            ? packet_cid_be
+            : packet,
+        i, expected_error, QUIC_INVALID_PACKET_HEADER);
   }
 }
 
@@ -799,10 +804,11 @@ TEST_P(QuicFramerTest, PacketHeaderWith4BytePacketNumber) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -829,10 +835,11 @@ TEST_P(QuicFramerTest, PacketHeaderWith4BytePacketNumber) {
     } else {
       expected_error = "Unable to read packet number.";
     }
-    CheckProcessingFails(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                             ? packet_cid_be
-                             : packet,
-                         i, expected_error, QUIC_INVALID_PACKET_HEADER);
+    CheckProcessingFails(
+        QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+            ? packet_cid_be
+            : packet,
+        i, expected_error, QUIC_INVALID_PACKET_HEADER);
   }
 }
 
@@ -860,10 +867,11 @@ TEST_P(QuicFramerTest, PacketHeaderWith2BytePacketNumber) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -892,10 +900,11 @@ TEST_P(QuicFramerTest, PacketHeaderWith2BytePacketNumber) {
     } else {
       expected_error = "Unable to read packet number.";
     }
-    CheckProcessingFails(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                             ? packet_cid_be
-                             : packet,
-                         i, expected_error, QUIC_INVALID_PACKET_HEADER);
+    CheckProcessingFails(
+        QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+            ? packet_cid_be
+            : packet,
+        i, expected_error, QUIC_INVALID_PACKET_HEADER);
   }
 }
 
@@ -923,10 +932,11 @@ TEST_P(QuicFramerTest, PacketHeaderWith1BytePacketNumber) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -955,10 +965,11 @@ TEST_P(QuicFramerTest, PacketHeaderWith1BytePacketNumber) {
     } else {
       expected_error = "Unable to read packet number.";
     }
-    CheckProcessingFails(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                             ? packet_cid_be
-                             : packet,
-                         i, expected_error, QUIC_INVALID_PACKET_HEADER);
+    CheckProcessingFails(
+        QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+            ? packet_cid_be
+            : packet,
+        i, expected_error, QUIC_INVALID_PACKET_HEADER);
   }
 }
 
@@ -1062,10 +1073,11 @@ TEST_P(QuicFramerTest, PacketWithDiversificationNonce) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -1075,6 +1087,8 @@ TEST_P(QuicFramerTest, PacketWithDiversificationNonce) {
   for (char i = 0; i < 32; ++i) {
     EXPECT_EQ(i, (*visitor_.public_header_->nonce)[static_cast<size_t>(i)]);
   }
+  EXPECT_EQ(1u, visitor_.padding_frames_.size());
+  EXPECT_EQ(5, visitor_.padding_frames_[0]->num_padding_bytes);
 };
 
 TEST_P(QuicFramerTest, LargePublicFlagWithMismatchedVersions) {
@@ -1115,10 +1129,11 @@ TEST_P(QuicFramerTest, LargePublicFlagWithMismatchedVersions) {
   };
   // clang-format on
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -1127,6 +1142,8 @@ TEST_P(QuicFramerTest, LargePublicFlagWithMismatchedVersions) {
   ASSERT_TRUE(visitor_.header_.get());
   EXPECT_EQ(0, visitor_.frame_count_);
   EXPECT_EQ(1, visitor_.version_mismatch_);
+  EXPECT_EQ(1u, visitor_.padding_frames_.size());
+  EXPECT_EQ(5, visitor_.padding_frames_[0]->num_padding_bytes);
 };
 
 TEST_P(QuicFramerTest, PaddingFrame) {
@@ -1187,11 +1204,16 @@ TEST_P(QuicFramerTest, PaddingFrame) {
   };
   // clang-format on
 
+  if (framer_.version() > QUIC_VERSION_37) {
+    return;
+  }
+
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -1203,14 +1225,107 @@ TEST_P(QuicFramerTest, PaddingFrame) {
 
   ASSERT_EQ(0u, visitor_.stream_frames_.size());
   EXPECT_EQ(0u, visitor_.ack_frames_.size());
+  EXPECT_EQ(1u, visitor_.padding_frames_.size());
+  EXPECT_EQ(28, visitor_.padding_frames_[0]->num_padding_bytes);
   // A packet with no frames is not acceptable.
   CheckProcessingFails(
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id ? packet_cid_be
-                                                            : packet,
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+          ? packet_cid_be
+          : packet,
       GetPacketHeaderSize(framer_.version(), PACKET_8BYTE_CONNECTION_ID,
                           !kIncludeVersion, !kIncludeDiversificationNonce,
                           PACKET_6BYTE_PACKET_NUMBER),
       "Packet has no frames.", QUIC_MISSING_PAYLOAD);
+}
+
+TEST_P(QuicFramerTest, NewPaddingFrame) {
+  // clang-format off
+  unsigned char packet[] = {
+    // public flags (8 byte connection_id)
+    0x38,
+    // connection_id
+    0x10, 0x32, 0x54, 0x76,
+    0x98, 0xBA, 0xDC, 0xFE,
+    // packet number
+    0xBC, 0x9A, 0x78, 0x56,
+    0x34, 0x12,
+
+    // paddings
+    0x00, 0x00,
+    // frame type (stream frame with fin)
+    0xFF,
+    // stream id
+    0x04, 0x03, 0x02, 0x01,
+    // offset
+    0x54, 0x76, 0x10, 0x32,
+    0xDC, 0xFE, 0x98, 0xBA,
+    // data length
+    0x0c, 0x00,
+    // data
+    'h',  'e',  'l',  'l',
+    'o',  ' ',  'w',  'o',
+    'r',  'l',  'd',  '!',
+    // paddings
+    0x00, 0x00,
+  };
+
+  unsigned char packet_cid_be[] = {
+    // public flags (8 byte connection_id)
+    0x38,
+    // connection_id
+    0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
+    // packet number
+    0xBC, 0x9A, 0x78, 0x56,
+    0x34, 0x12,
+
+    // paddings
+    0x00, 0x00,
+    // frame type (stream frame with fin)
+    0xFF,
+    // stream id
+    0x04, 0x03, 0x02, 0x01,
+    // offset
+    0x54, 0x76, 0x10, 0x32,
+    0xDC, 0xFE, 0x98, 0xBA,
+    // data length
+    0x0c, 0x00,
+    // data
+    'h',  'e',  'l',  'l',
+    'o',  ' ',  'w',  'o',
+    'r',  'l',  'd',  '!',
+    // paddings
+    0x00, 0x00,
+  };
+  // clang-format on
+
+  if (framer_.version() <= QUIC_VERSION_37) {
+    return;
+  }
+
+  QuicEncryptedPacket encrypted(
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+          ? arraysize(packet_cid_be)
+          : arraysize(packet),
+      false);
+  EXPECT_TRUE(framer_.ProcessPacket(encrypted));
+  EXPECT_EQ(QUIC_NO_ERROR, framer_.error());
+  ASSERT_TRUE(visitor_.header_.get());
+  EXPECT_TRUE(CheckDecryption(encrypted, !kIncludeVersion,
+                              !kIncludeDiversificationNonce));
+
+  ASSERT_EQ(1u, visitor_.stream_frames_.size());
+  EXPECT_EQ(0u, visitor_.ack_frames_.size());
+  EXPECT_EQ(2u, visitor_.padding_frames_.size());
+  EXPECT_EQ(2, visitor_.padding_frames_[0]->num_padding_bytes);
+  EXPECT_EQ(2, visitor_.padding_frames_[1]->num_padding_bytes);
+  EXPECT_EQ(kStreamId, visitor_.stream_frames_[0]->stream_id);
+  EXPECT_TRUE(visitor_.stream_frames_[0]->fin);
+  EXPECT_EQ(kStreamOffset, visitor_.stream_frames_[0]->offset);
+  CheckStreamFrameData("hello world!", visitor_.stream_frames_[0].get());
 }
 
 TEST_P(QuicFramerTest, StreamFrame) {
@@ -1266,10 +1381,11 @@ TEST_P(QuicFramerTest, StreamFrame) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -1289,8 +1405,9 @@ TEST_P(QuicFramerTest, StreamFrame) {
 
   // Now test framing boundaries.
   CheckStreamFrameBoundaries(
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id ? packet_cid_be
-                                                            : packet,
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+          ? packet_cid_be
+          : packet,
       kQuicMaxStreamIdSize, !kIncludeVersion);
 }
 
@@ -1353,10 +1470,11 @@ TEST_P(QuicFramerTest, MissingDiversificationNonce) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -1417,10 +1535,11 @@ TEST_P(QuicFramerTest, StreamFrame3ByteStreamId) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -1442,8 +1561,9 @@ TEST_P(QuicFramerTest, StreamFrame3ByteStreamId) {
   // Now test framing boundaries.
   const size_t stream_id_size = 3;
   CheckStreamFrameBoundaries(
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id ? packet_cid_be
-                                                            : packet,
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+          ? packet_cid_be
+          : packet,
       stream_id_size, !kIncludeVersion);
 }
 
@@ -1500,10 +1620,11 @@ TEST_P(QuicFramerTest, StreamFrame2ByteStreamId) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -1525,8 +1646,9 @@ TEST_P(QuicFramerTest, StreamFrame2ByteStreamId) {
   // Now test framing boundaries.
   const size_t stream_id_size = 2;
   CheckStreamFrameBoundaries(
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id ? packet_cid_be
-                                                            : packet,
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+          ? packet_cid_be
+          : packet,
       stream_id_size, !kIncludeVersion);
 }
 
@@ -1583,10 +1705,11 @@ TEST_P(QuicFramerTest, StreamFrame1ByteStreamId) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -1608,8 +1731,9 @@ TEST_P(QuicFramerTest, StreamFrame1ByteStreamId) {
   // Now test framing boundaries.
   const size_t stream_id_size = 1;
   CheckStreamFrameBoundaries(
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id ? packet_cid_be
-                                                            : packet,
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+          ? packet_cid_be
+          : packet,
       stream_id_size, !kIncludeVersion);
 }
 
@@ -1670,10 +1794,11 @@ TEST_P(QuicFramerTest, StreamFrameWithVersion) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -1695,8 +1820,9 @@ TEST_P(QuicFramerTest, StreamFrameWithVersion) {
 
   // Now test framing boundaries.
   CheckStreamFrameBoundaries(
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id ? packet_cid_be
-                                                            : packet,
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+          ? packet_cid_be
+          : packet,
       kQuicMaxStreamIdSize, kIncludeVersion);
 }
 
@@ -1755,10 +1881,11 @@ TEST_P(QuicFramerTest, RejectPacket) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -1793,10 +1920,11 @@ TEST_P(QuicFramerTest, RejectPublicHeader) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -1853,10 +1981,11 @@ TEST_P(QuicFramerTest, AckFrameOneAckBlock) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -1895,8 +2024,9 @@ TEST_P(QuicFramerTest, AckFrameOneAckBlock) {
       expected_error = "Unable to read num received packets.";
     }
     CheckProcessingFails(
-        FLAGS_quic_restart_flag_quic_big_endian_connection_id ? packet_cid_be
-                                                              : packet,
+        QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+            ? packet_cid_be
+            : packet,
         i + GetPacketHeaderSize(framer_.version(), PACKET_8BYTE_CONNECTION_ID,
                                 !kIncludeVersion, !kIncludeDiversificationNonce,
                                 PACKET_6BYTE_PACKET_NUMBER),
@@ -2002,10 +2132,11 @@ TEST_P(QuicFramerTest, AckFrameTwoTimeStampsMultipleAckBlocks) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -2095,8 +2226,9 @@ TEST_P(QuicFramerTest, AckFrameTwoTimeStampsMultipleAckBlocks) {
     }
 
     CheckProcessingFails(
-        FLAGS_quic_restart_flag_quic_big_endian_connection_id ? packet_cid_be
-                                                              : packet,
+        QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+            ? packet_cid_be
+            : packet,
         i + GetPacketHeaderSize(framer_.version(), PACKET_8BYTE_CONNECTION_ID,
                                 !kIncludeVersion, !kIncludeDiversificationNonce,
                                 PACKET_6BYTE_PACKET_NUMBER),
@@ -2139,10 +2271,11 @@ TEST_P(QuicFramerTest, NewStopWaitingFrame) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -2163,8 +2296,9 @@ TEST_P(QuicFramerTest, NewStopWaitingFrame) {
     string expected_error;
     expected_error = "Unable to read least unacked delta.";
     CheckProcessingFails(
-        FLAGS_quic_restart_flag_quic_big_endian_connection_id ? packet_cid_be
-                                                              : packet,
+        QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+            ? packet_cid_be
+            : packet,
         i + GetPacketHeaderSize(framer_.version(), PACKET_8BYTE_CONNECTION_ID,
                                 !kIncludeVersion, !kIncludeDiversificationNonce,
                                 PACKET_6BYTE_PACKET_NUMBER),
@@ -2221,10 +2355,11 @@ TEST_P(QuicFramerTest, RstStreamFrameQuic) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -2253,8 +2388,9 @@ TEST_P(QuicFramerTest, RstStreamFrameQuic) {
       expected_error = "Unable to read rst stream error code.";
     }
     CheckProcessingFails(
-        FLAGS_quic_restart_flag_quic_big_endian_connection_id ? packet_cid_be
-                                                              : packet,
+        QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+            ? packet_cid_be
+            : packet,
         i + GetPacketHeaderSize(framer_.version(), PACKET_8BYTE_CONNECTION_ID,
                                 !kIncludeVersion, !kIncludeDiversificationNonce,
                                 PACKET_6BYTE_PACKET_NUMBER),
@@ -2313,10 +2449,11 @@ TEST_P(QuicFramerTest, ConnectionCloseFrame) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -2344,8 +2481,9 @@ TEST_P(QuicFramerTest, ConnectionCloseFrame) {
       expected_error = "Unable to read connection close error details.";
     }
     CheckProcessingFails(
-        FLAGS_quic_restart_flag_quic_big_endian_connection_id ? packet_cid_be
-                                                              : packet,
+        QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+            ? packet_cid_be
+            : packet,
         i + GetPacketHeaderSize(framer_.version(), PACKET_8BYTE_CONNECTION_ID,
                                 !kIncludeVersion, !kIncludeDiversificationNonce,
                                 PACKET_6BYTE_PACKET_NUMBER),
@@ -2406,10 +2544,11 @@ TEST_P(QuicFramerTest, GoAwayFrame) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -2438,8 +2577,9 @@ TEST_P(QuicFramerTest, GoAwayFrame) {
       expected_error = "Unable to read goaway reason.";
     }
     CheckProcessingFails(
-        FLAGS_quic_restart_flag_quic_big_endian_connection_id ? packet_cid_be
-                                                              : packet,
+        QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+            ? packet_cid_be
+            : packet,
         i + GetPacketHeaderSize(framer_.version(), PACKET_8BYTE_CONNECTION_ID,
                                 !kIncludeVersion, !kIncludeDiversificationNonce,
                                 PACKET_6BYTE_PACKET_NUMBER),
@@ -2488,10 +2628,11 @@ TEST_P(QuicFramerTest, WindowUpdateFrame) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -2515,8 +2656,9 @@ TEST_P(QuicFramerTest, WindowUpdateFrame) {
       expected_error = "Unable to read window byte_offset.";
     }
     CheckProcessingFails(
-        FLAGS_quic_restart_flag_quic_big_endian_connection_id ? packet_cid_be
-                                                              : packet,
+        QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+            ? packet_cid_be
+            : packet,
         i + GetPacketHeaderSize(framer_.version(), PACKET_8BYTE_CONNECTION_ID,
                                 !kIncludeVersion, !kIncludeDiversificationNonce,
                                 PACKET_6BYTE_PACKET_NUMBER),
@@ -2559,10 +2701,11 @@ TEST_P(QuicFramerTest, BlockedFrame) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -2580,8 +2723,9 @@ TEST_P(QuicFramerTest, BlockedFrame) {
        ++i) {
     string expected_error = "Unable to read stream_id.";
     CheckProcessingFails(
-        FLAGS_quic_restart_flag_quic_big_endian_connection_id ? packet_cid_be
-                                                              : packet,
+        QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+            ? packet_cid_be
+            : packet,
         i + GetPacketHeaderSize(framer_.version(), PACKET_8BYTE_CONNECTION_ID,
                                 !kIncludeVersion, !kIncludeDiversificationNonce,
                                 PACKET_6BYTE_PACKET_NUMBER),
@@ -2620,10 +2764,11 @@ TEST_P(QuicFramerTest, PingFrame) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -2694,10 +2839,11 @@ TEST_P(QuicFramerTest, PublicResetPacketV33) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -2715,7 +2861,7 @@ TEST_P(QuicFramerTest, PublicResetPacketV33) {
       visitor_.public_reset_packet_->client_address.host().address_family());
 
   // Now test framing boundaries.
-  if (!FLAGS_quic_restart_flag_quic_big_endian_connection_id) {
+  if (!QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())) {
     for (size_t i = 0; i < arraysize(packet); ++i) {
       string expected_error;
       QUIC_DLOG(INFO) << "iteration: " << i;
@@ -2812,10 +2958,11 @@ TEST_P(QuicFramerTest, PublicResetPacket) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -2833,7 +2980,7 @@ TEST_P(QuicFramerTest, PublicResetPacket) {
       visitor_.public_reset_packet_->client_address.host().address_family());
 
   // Now test framing boundaries.
-  if (!FLAGS_quic_restart_flag_quic_big_endian_connection_id) {
+  if (!QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())) {
     for (size_t i = 0; i < arraysize(packet); ++i) {
       string expected_error;
       QUIC_DLOG(INFO) << "iteration: " << i;
@@ -2932,13 +3079,14 @@ TEST_P(QuicFramerTest, PublicResetPacketWithTrailingJunk) {
   // clang-format on
 
   string expected_error = "Unable to read reset message.";
-  CheckProcessingFails(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                           ? packet_cid_be
-                           : packet,
-                       FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                           ? arraysize(packet_cid_be)
-                           : arraysize(packet),
-                       expected_error, QUIC_INVALID_PUBLIC_RST_PACKET);
+  CheckProcessingFails(
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+          ? packet_cid_be
+          : packet,
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+          ? arraysize(packet_cid_be)
+          : arraysize(packet),
+      expected_error, QUIC_INVALID_PUBLIC_RST_PACKET);
 }
 
 TEST_P(QuicFramerTest, PublicResetPacketWithClientAddress) {
@@ -3012,10 +3160,11 @@ TEST_P(QuicFramerTest, PublicResetPacketWithClientAddress) {
   // clang-format on
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -3033,7 +3182,7 @@ TEST_P(QuicFramerTest, PublicResetPacketWithClientAddress) {
   EXPECT_EQ(443, visitor_.public_reset_packet_->client_address.port());
 
   // Now test framing boundaries.
-  if (!FLAGS_quic_restart_flag_quic_big_endian_connection_id) {
+  if (!QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())) {
     for (size_t i = 0; i < arraysize(packet); ++i) {
       string expected_error;
       QUIC_DLOG(INFO) << "iteration: " << i;
@@ -3100,10 +3249,11 @@ TEST_P(QuicFramerTest, VersionNegotiationPacket) {
   QuicFramerPeer::SetPerspective(&framer_, Perspective::IS_CLIENT);
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -3124,10 +3274,11 @@ TEST_P(QuicFramerTest, VersionNegotiationPacket) {
       expected_error = "Unable to read supported version in negotiation.";
       error_code = QUIC_INVALID_VERSION_NEGOTIATION_PACKET;
     }
-    CheckProcessingFails(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                             ? packet_cid_be
-                             : packet,
-                         i, expected_error, error_code);
+    CheckProcessingFails(
+        QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+            ? packet_cid_be
+            : packet,
+        i, expected_error, error_code);
   }
 }
 
@@ -3158,10 +3309,11 @@ TEST_P(QuicFramerTest, OldVersionNegotiationPacket) {
   QuicFramerPeer::SetPerspective(&framer_, Perspective::IS_CLIENT);
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -3182,10 +3334,11 @@ TEST_P(QuicFramerTest, OldVersionNegotiationPacket) {
       expected_error = "Unable to read supported version in negotiation.";
       error_code = QUIC_INVALID_VERSION_NEGOTIATION_PACKET;
     }
-    CheckProcessingFails(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                             ? packet_cid_be
-                             : packet,
-                         i, expected_error, error_code);
+    CheckProcessingFails(
+        QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+            ? packet_cid_be
+            : packet,
+        i, expected_error, error_code);
   }
 }
 
@@ -3232,8 +3385,9 @@ TEST_P(QuicFramerTest, BuildPaddingFramePacket) {
   uint64_t header_size = GetPacketHeaderSize(
       framer_.version(), PACKET_8BYTE_CONNECTION_ID, !kIncludeVersion,
       !kIncludeDiversificationNonce, PACKET_6BYTE_PACKET_NUMBER);
-  memset((FLAGS_quic_restart_flag_quic_big_endian_connection_id ? packet_cid_be
-                                                                : packet) +
+  memset((QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet) +
              header_size + 1,
          0x00, kMaxPacketSize - header_size - 1);
 
@@ -3242,10 +3396,100 @@ TEST_P(QuicFramerTest, BuildPaddingFramePacket) {
 
   test::CompareCharArraysWithHexError(
       "constructed packet", data->data(), data->length(),
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+          ? arraysize(packet_cid_be)
+          : arraysize(packet));
+}
+
+TEST_P(QuicFramerTest, BuildStreamFramePacketWithNewPaddingFrame) {
+  if (framer_.version() <= QUIC_VERSION_37) {
+    return;
+  }
+  QuicPacketHeader header;
+  header.public_header.connection_id = kConnectionId;
+  header.public_header.reset_flag = false;
+  header.public_header.version_flag = false;
+  header.packet_number = kPacketNumber;
+
+  QuicStreamFrame stream_frame(kStreamId, true, kStreamOffset,
+                               QuicStringPiece("hello world!"));
+  QuicPaddingFrame padding_frame(2);
+  QuicFrames frames = {QuicFrame(padding_frame), QuicFrame(&stream_frame),
+                       QuicFrame(padding_frame)};
+
+  // clang-format off
+  unsigned char packet[] = {
+    // public flags (8 byte connection_id)
+    0x38,
+    // connection_id
+    0x10, 0x32, 0x54, 0x76,
+    0x98, 0xBA, 0xDC, 0xFE,
+    // packet number
+    0xBC, 0x9A, 0x78, 0x56,
+    0x34, 0x12,
+
+    // paddings
+    0x00, 0x00,
+    // frame type (stream frame with fin)
+    0xFF,
+    // stream id
+    0x04, 0x03, 0x02, 0x01,
+    // offset
+    0x54, 0x76, 0x10, 0x32,
+    0xDC, 0xFE, 0x98, 0xBA,
+    // data length
+    0x0c, 0x00,
+    // data
+    'h',  'e',  'l',  'l',
+    'o',  ' ',  'w',  'o',
+    'r',  'l',  'd',  '!',
+    // paddings
+    0x00, 0x00,
+  };
+
+  unsigned char packet_cid_be[] = {
+    // public flags (8 byte connection_id)
+    0x38,
+    // connection_id
+    0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
+    // packet number
+    0xBC, 0x9A, 0x78, 0x56,
+    0x34, 0x12,
+
+    // paddings
+    0x00, 0x00,
+    // frame type (stream frame with fin)
+    0xFF,
+    // stream id
+    0x04, 0x03, 0x02, 0x01,
+    // offset
+    0x54, 0x76, 0x10, 0x32,
+    0xDC, 0xFE, 0x98, 0xBA,
+    // data length
+    0x0c, 0x00,
+    // data
+    'h',  'e',  'l',  'l',
+    'o',  ' ',  'w',  'o',
+    'r',  'l',  'd',  '!',
+    // paddings
+    0x00, 0x00,
+  };
+  // clang-format on
+
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
+  ASSERT_TRUE(data != nullptr);
+
+  test::CompareCharArraysWithHexError(
+      "constructed packet", data->data(), data->length(),
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet));
 }
@@ -3292,8 +3536,9 @@ TEST_P(QuicFramerTest, Build4ByteSequenceNumberPaddingFramePacket) {
   uint64_t header_size = GetPacketHeaderSize(
       framer_.version(), PACKET_8BYTE_CONNECTION_ID, !kIncludeVersion,
       !kIncludeDiversificationNonce, PACKET_4BYTE_PACKET_NUMBER);
-  memset((FLAGS_quic_restart_flag_quic_big_endian_connection_id ? packet_cid_be
-                                                                : packet) +
+  memset((QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet) +
              header_size + 1,
          0x00, kMaxPacketSize - header_size - 1);
 
@@ -3302,10 +3547,11 @@ TEST_P(QuicFramerTest, Build4ByteSequenceNumberPaddingFramePacket) {
 
   test::CompareCharArraysWithHexError(
       "constructed packet", data->data(), data->length(),
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet));
 }
@@ -3352,8 +3598,9 @@ TEST_P(QuicFramerTest, Build2ByteSequenceNumberPaddingFramePacket) {
   uint64_t header_size = GetPacketHeaderSize(
       framer_.version(), PACKET_8BYTE_CONNECTION_ID, !kIncludeVersion,
       !kIncludeDiversificationNonce, PACKET_2BYTE_PACKET_NUMBER);
-  memset((FLAGS_quic_restart_flag_quic_big_endian_connection_id ? packet_cid_be
-                                                                : packet) +
+  memset((QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet) +
              header_size + 1,
          0x00, kMaxPacketSize - header_size - 1);
 
@@ -3362,10 +3609,11 @@ TEST_P(QuicFramerTest, Build2ByteSequenceNumberPaddingFramePacket) {
 
   test::CompareCharArraysWithHexError(
       "constructed packet", data->data(), data->length(),
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet));
 }
@@ -3412,8 +3660,9 @@ TEST_P(QuicFramerTest, Build1ByteSequenceNumberPaddingFramePacket) {
   uint64_t header_size = GetPacketHeaderSize(
       framer_.version(), PACKET_8BYTE_CONNECTION_ID, !kIncludeVersion,
       !kIncludeDiversificationNonce, PACKET_1BYTE_PACKET_NUMBER);
-  memset((FLAGS_quic_restart_flag_quic_big_endian_connection_id ? packet_cid_be
-                                                                : packet) +
+  memset((QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet) +
              header_size + 1,
          0x00, kMaxPacketSize - header_size - 1);
 
@@ -3422,10 +3671,11 @@ TEST_P(QuicFramerTest, Build1ByteSequenceNumberPaddingFramePacket) {
 
   test::CompareCharArraysWithHexError(
       "constructed packet", data->data(), data->length(),
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet));
 }
@@ -3494,10 +3744,11 @@ TEST_P(QuicFramerTest, BuildStreamFramePacket) {
 
   test::CompareCharArraysWithHexError(
       "constructed packet", data->data(), data->length(),
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet));
 }
@@ -3563,10 +3814,11 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithVersionFlag) {
 
   test::CompareCharArraysWithHexError(
       "constructed packet", data->data(), data->length(),
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet));
 }
@@ -3598,10 +3850,11 @@ TEST_P(QuicFramerTest, BuildVersionNegotiationPacket) {
                                             SupportedVersions(GetParam())));
   test::CompareCharArraysWithHexError(
       "constructed packet", data->data(), data->length(),
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet));
 }
@@ -3670,10 +3923,11 @@ TEST_P(QuicFramerTest, BuildAckFramePacketOneAckBlock) {
 
   test::CompareCharArraysWithHexError(
       "constructed packet", data->data(), data->length(),
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet));
 }
@@ -3781,10 +4035,11 @@ TEST_P(QuicFramerTest, BuildAckFramePacketMultipleAckBlocks) {
 
   test::CompareCharArraysWithHexError(
       "constructed packet", data->data(), data->length(),
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet));
 }
@@ -4001,10 +4256,11 @@ TEST_P(QuicFramerTest, BuildAckFramePacketMaxAckBlocks) {
 
   test::CompareCharArraysWithHexError(
       "constructed packet", data->data(), data->length(),
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet));
 }
@@ -4059,10 +4315,11 @@ TEST_P(QuicFramerTest, BuildNewStopWaitingPacket) {
 
   test::CompareCharArraysWithHexError(
       "constructed packet", data->data(), data->length(),
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet));
 }
@@ -4129,10 +4386,11 @@ TEST_P(QuicFramerTest, BuildRstFramePacketQuic) {
 
   test::CompareCharArraysWithHexError(
       "constructed packet", data->data(), data->length(),
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet));
 }
@@ -4202,10 +4460,11 @@ TEST_P(QuicFramerTest, BuildCloseFramePacket) {
 
   test::CompareCharArraysWithHexError(
       "constructed packet", data->data(), data->length(),
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet));
 }
@@ -4280,10 +4539,11 @@ TEST_P(QuicFramerTest, BuildGoAwayPacket) {
 
   test::CompareCharArraysWithHexError(
       "constructed packet", data->data(), data->length(),
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet));
 }
@@ -4345,10 +4605,11 @@ TEST_P(QuicFramerTest, BuildWindowUpdatePacket) {
 
   test::CompareCharArraysWithHexError(
       "constructed packet", data->data(), data->length(),
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet));
 }
@@ -4403,10 +4664,11 @@ TEST_P(QuicFramerTest, BuildBlockedPacket) {
 
   test::CompareCharArraysWithHexError(
       "constructed packet", data->data(), data->length(),
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet));
 }
@@ -4454,10 +4716,11 @@ TEST_P(QuicFramerTest, BuildPingPacket) {
 
   test::CompareCharArraysWithHexError(
       "constructed packet", data->data(), data->length(),
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet));
 }
@@ -4506,10 +4769,11 @@ TEST_P(QuicFramerTest, BuildMtuDiscoveryPacket) {
 
   test::CompareCharArraysWithHexError(
       "constructed packet", data->data(), data->length(),
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet));
 }
@@ -4619,19 +4883,21 @@ TEST_P(QuicFramerTest, BuildPublicResetPacketOld) {
   if (FLAGS_quic_reloadable_flag_quic_remove_packet_number_from_public_reset) {
     test::CompareCharArraysWithHexError(
         "constructed packet", data->data(), data->length(),
-        AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                    ? packet_no_rejected_packet_number_cid_be
-                    : packet_no_rejected_packet_number),
-        FLAGS_quic_restart_flag_quic_big_endian_connection_id
+        AsChars(
+            QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+                ? packet_no_rejected_packet_number_cid_be
+                : packet_no_rejected_packet_number),
+        QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
             ? arraysize(packet_no_rejected_packet_number_cid_be)
             : arraysize(packet_no_rejected_packet_number));
   } else {
     test::CompareCharArraysWithHexError(
         "constructed packet", data->data(), data->length(),
-        AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                    ? packet_cid_be
-                    : packet),
-        FLAGS_quic_restart_flag_quic_big_endian_connection_id
+        AsChars(
+            QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+                ? packet_cid_be
+                : packet),
+        QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
             ? arraysize(packet_cid_be)
             : arraysize(packet));
   }
@@ -4743,19 +5009,21 @@ TEST_P(QuicFramerTest, BuildPublicResetPacket) {
   if (FLAGS_quic_reloadable_flag_quic_remove_packet_number_from_public_reset) {
     test::CompareCharArraysWithHexError(
         "constructed packet", data->data(), data->length(),
-        AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                    ? packet_no_rejected_packet_number_cid_be
-                    : packet_no_rejected_packet_number),
-        FLAGS_quic_restart_flag_quic_big_endian_connection_id
+        AsChars(
+            QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+                ? packet_no_rejected_packet_number_cid_be
+                : packet_no_rejected_packet_number),
+        QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
             ? arraysize(packet_no_rejected_packet_number_cid_be)
             : arraysize(packet_no_rejected_packet_number));
   } else {
     test::CompareCharArraysWithHexError(
         "constructed packet", data->data(), data->length(),
-        AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                    ? packet_cid_be
-                    : packet),
-        FLAGS_quic_restart_flag_quic_big_endian_connection_id
+        AsChars(
+            QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+                ? packet_cid_be
+                : packet),
+        QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
             ? arraysize(packet_cid_be)
             : arraysize(packet));
   }
@@ -4901,21 +5169,23 @@ TEST_P(QuicFramerTest, BuildPublicResetPacketWithClientAddress) {
   if (FLAGS_quic_reloadable_flag_quic_remove_packet_number_from_public_reset) {
     test::CompareCharArraysWithHexError(
         "constructed packet", data->data(), data->length(),
-        AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                    ? packet_no_rejected_packet_number_cid_be
-                    : packet_no_rejected_packet_number),
+        AsChars(
+            QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+                ? packet_no_rejected_packet_number_cid_be
+                : packet_no_rejected_packet_number),
 
-        FLAGS_quic_restart_flag_quic_big_endian_connection_id
+        QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
             ? arraysize(packet_no_rejected_packet_number_cid_be)
             : arraysize(packet_no_rejected_packet_number));
   } else {
     test::CompareCharArraysWithHexError(
         "constructed packet", data->data(), data->length(),
-        AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                    ? packet_cid_be
-                    : packet),
+        AsChars(
+            QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+                ? packet_cid_be
+                : packet),
 
-        FLAGS_quic_restart_flag_quic_big_endian_connection_id
+        QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
             ? arraysize(packet_cid_be)
             : arraysize(packet));
   }
@@ -4959,10 +5229,11 @@ TEST_P(QuicFramerTest, EncryptPacket) {
   // clang-format on
 
   std::unique_ptr<QuicPacket> raw(new QuicPacket(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false, PACKET_8BYTE_CONNECTION_ID, !kIncludeVersion,
@@ -5017,10 +5288,11 @@ TEST_P(QuicFramerTest, EncryptPacketWithVersionFlag) {
   // clang-format on
 
   std::unique_ptr<QuicPacket> raw(new QuicPacket(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false, PACKET_8BYTE_CONNECTION_ID, kIncludeVersion,
@@ -5227,10 +5499,11 @@ TEST_P(QuicFramerTest, StopPacketProcessing) {
   EXPECT_CALL(visitor, OnDecryptedPacket(_));
 
   QuicEncryptedPacket encrypted(
-      AsChars(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                  ? packet_cid_be
-                  : packet),
-      FLAGS_quic_restart_flag_quic_big_endian_connection_id
+      AsChars(
+          QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+              ? packet_cid_be
+              : packet),
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
           ? arraysize(packet_cid_be)
           : arraysize(packet),
       false);
@@ -5404,12 +5677,13 @@ TEST_P(QuicFramerTest, FramerFuzzTest) {
   };
   // clang-format on
 
-  QuicFramerFuzzFunc(FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                         ? packet_cid_be
-                         : packet,
-                     FLAGS_quic_restart_flag_quic_big_endian_connection_id
-                         ? arraysize(packet_cid_be)
-                         : arraysize(packet));
+  QuicFramerFuzzFunc(
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+          ? packet_cid_be
+          : packet,
+      QuicUtils::IsConnectionIdWireFormatBigEndian(framer_.perspective())
+          ? arraysize(packet_cid_be)
+          : arraysize(packet));
 }
 
 }  // namespace test

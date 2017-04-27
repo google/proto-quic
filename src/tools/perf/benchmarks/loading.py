@@ -13,10 +13,8 @@ from telemetry.page import traffic_setting
 from telemetry.web_perf import timeline_based_measurement
 
 
-@benchmark.Enabled('android')
-@benchmark.Owner(emails=['kouhei@chromium.org', 'ksakamoto@chromium.org'])
-class LoadingMobile(perf_benchmark.PerfBenchmark):
-  """ A benchmark measuring loading performance of mobile sites. """
+class _LoadingBase(perf_benchmark.PerfBenchmark):
+  """ A base class for loading benchmarks. """
 
   options = {'pageset_repeat': 2}
 
@@ -24,6 +22,12 @@ class LoadingMobile(perf_benchmark.PerfBenchmark):
     tbm_options = timeline_based_measurement.Options()
     page_cycler_v2.AugmentOptionsForLoadingMetrics(tbm_options)
     return tbm_options
+
+
+@benchmark.Enabled('android')
+@benchmark.Owner(emails=['kouhei@chromium.org', 'ksakamoto@chromium.org'])
+class LoadingMobile(_LoadingBase):
+  """ A benchmark measuring loading performance of mobile sites. """
 
   @classmethod
   def ShouldDisable(cls, possible_browser):
@@ -52,16 +56,11 @@ class LoadingMobile(perf_benchmark.PerfBenchmark):
 # Disabled because we do not plan on running CT benchmarks on the perf
 # waterfall any time soon.
 @benchmark.Disabled('all')
-class LoadingClusterTelemetry(perf_benchmark.PerfBenchmark):
+class LoadingClusterTelemetry(_LoadingBase):
 
   options = {'upload_results': True}
 
   _ALL_NET_CONFIGS = traffic_setting.NETWORK_CONFIGS.keys()
-
-  def CreateTimelineBasedMeasurementOptions(self):
-    tbm_options = timeline_based_measurement.Options()
-    page_cycler_v2.AugmentOptionsForLoadingMetrics(tbm_options)
-    return tbm_options
 
   @classmethod
   def Name(cls):

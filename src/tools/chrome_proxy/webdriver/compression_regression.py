@@ -11,7 +11,8 @@ import time
 import common
 from common import TestDriver
 from common import IntegrationTest
-from common import NotAndroid
+from decorators import NotAndroid
+from decorators import Slow
 
 # The maximum number of data points that will be saved.
 MAX_DATA_POINTS = 365
@@ -81,6 +82,7 @@ class CompressionRegression(IntegrationTest):
   classified as a regression test.
   """
 
+  @Slow
   @NotAndroid
   def testCompression(self):
       """This function is the main test function for regression compression

@@ -23,16 +23,14 @@ class Pinsets;
 // net/http/transport_security_state_static.pins
 bool ParseCertificatesFile(base::StringPiece certs_input, Pinsets* pinsets);
 
-// Parses the |json| string and copies the items under the "entries" key to
-// |entries|, the pinsets under the "pinsets" key to |pinsets|, and the domain
-// IDs under the "domain_ids" key to |domain_ids|.
+// Parses the |json| string; copies the items under the "entries" key to
+// |entries| and the pinsets under the "pinsets" key to |pinsets|.
 //
 // More info on the format can be found in
 // net/http/transport_security_state_static.json
 bool ParseJSON(base::StringPiece json,
                TransportSecurityStateEntries* entries,
-               Pinsets* pinsets,
-               DomainIDList* domain_ids);
+               Pinsets* pinsets);
 
 }  // namespace transport_security_state
 

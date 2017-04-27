@@ -13,11 +13,11 @@
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/crypto/quic_encrypter.h"
 #include "net/quic/core/quic_data_reader.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_framer.h"
 #include "net/quic/core/quic_packet_writer.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/quic/test_tools/quic_time_wait_list_manager_peer.h"
 #include "net/tools/quic/quic_epoll_alarm_factory.h"
@@ -159,7 +159,8 @@ class ValidatePublicResetPacketPredicate
                                   std::tr1::get<1>(packet_buffer));
     framer.ProcessPacket(encrypted);
     QuicPublicResetPacket packet = visitor.public_reset_packet();
-    return connection_id_ == packet.public_header.connection_id &&
+    return connection_id_ == GetPeerInMemoryConnectionId(
+                                 packet.public_header.connection_id) &&
            packet.public_header.reset_flag &&
            !packet.public_header.version_flag &&
            packet_number_ == packet.rejected_packet_number &&

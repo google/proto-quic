@@ -12,12 +12,12 @@ Tag = collections.namedtuple('Tag', ['name', 'description'])
 # A story can have multiple tags. All the tags should be noun.
 
 AUDIO_PLAYBACK = Tag(
-    'audio-playback', 'Story has audio playing.')
+    'audio_playback', 'Story has audio playing.')
 CANVAS_ANIMATION = Tag(
-    'canvas-animation', 'Story has animations that are implemented using '
+    'canvas_animation', 'Story has animations that are implemented using '
     'html5 canvas.')
 CSS_ANIMATION = Tag(
-    'css-animation', 'Story has animations that are implemented using CSS.')
+    'css_animation', 'Story has animations that are implemented using CSS.')
 EXTENSION = Tag(
     'extension', 'Story has browser with extension installed.')
 IMAGES = Tag(
@@ -25,23 +25,26 @@ IMAGES = Tag(
 INTERNATIONAL = Tag(
     'international', 'Story has navigations to websites with content in non '
     'English languages.')
+EMERGING_MARKET = Tag(
+    'emerging_market', 'Story has significant usage in emerging markets with '
+    'low-end mobile devices and slow network connections.')
 JAVASCRIPT_HEAVY = Tag(
-    'javascript-heavy', 'Story has navigations to websites with heavy usages '
+    'javascript_heavy', 'Story has navigations to websites with heavy usages '
     'of JavaScript. The story uses 20Mb+ memory for javascript and local '
     'run with "v8" category enabled also shows the trace has js slices across '
     'the whole run.')
 SCROLL = Tag(
     'scroll', 'Story has scroll gestures & scroll animation.')
 PINCH_ZOOM = Tag(
-    'pinch-zoom', 'Story has pinch zoom gestures & pinch zoom animation.')
+    'pinch_zoom', 'Story has pinch zoom gestures & pinch zoom animation.')
 TABS_SWITCHING = Tag(
-    'tabs-switching', 'Story has multi tabs and tabs switching action.')
+    'tabs_switching', 'Story has multi tabs and tabs switching action.')
 VIDEO_PLAYBACK = Tag(
-    'video-playback', 'Story has video playing.')
+    'video_playback', 'Story has video playing.')
 WEBGL = Tag(
     'webgl', 'Story has sites with heavy uses of WebGL.')
 WEB_STORAGE = Tag(
-    'web-storage', 'Story has sites with heavy uses of Web storage.')
+    'web_storage', 'Story has sites with heavy uses of Web storage.')
 
 
 def _ExtractAllTags():

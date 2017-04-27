@@ -14,6 +14,9 @@ import os
 import sys
 
 
+_INCLUDE_GYPI = os.path.join(os.path.dirname(__file__), '..', 'include_js.gypi')
+
+
 _INCLUDE_TEMPLATE = """
 # Copyright %d The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -33,15 +36,15 @@ _INCLUDE_TEMPLATE = """
 _TARGET_TEMPLATE = """
     {
       'target_name': '%s',
-      'includes': ['../include_js.gypi'],
+      'includes': ['%s'],
     }"""
 
 
 def CreateIncludeGyp(directory):
-  include_dir = os.path.join(os.path.dirname(__file__), "..", directory)
-  include_files = [f for f in os.listdir(include_dir) if f.endswith('.js')]
-  include_files.sort()
-  targets = [_TARGET_TEMPLATE % f[:-3] for f in include_files]
+  include_path = os.path.normpath(os.path.relpath(_INCLUDE_GYPI, directory))
+  js_files = [f for f in os.listdir(directory) if f.endswith('.js')]
+  js_files.sort()
+  targets = [_TARGET_TEMPLATE % (f[:-3], include_path) for f in js_files]
   return _INCLUDE_TEMPLATE % (date.today().year, ",".join(targets).strip())
 
 

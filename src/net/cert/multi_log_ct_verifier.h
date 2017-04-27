@@ -18,7 +18,7 @@
 namespace net {
 
 namespace ct {
-struct LogEntry;
+struct SignedEntryData;
 }  // namespace ct
 
 class CTLogVerifier;
@@ -48,14 +48,14 @@ class NET_EXPORT MultiLogCTVerifier : public CTVerifier {
   // placing the verification results in |output_scts|. The SCTs in the list
   // come from |origin| (as will be indicated in the origin field of each SCT).
   void VerifySCTs(base::StringPiece encoded_sct_list,
-                  const ct::LogEntry& expected_entry,
+                  const ct::SignedEntryData& expected_entry,
                   ct::SignedCertificateTimestamp::Origin origin,
                   X509Certificate* cert,
                   SignedCertificateTimestampAndStatusList* output_scts);
 
   // Verifies a single, parsed SCT against all logs.
   bool VerifySingleSCT(scoped_refptr<ct::SignedCertificateTimestamp> sct,
-                       const ct::LogEntry& expected_entry,
+                       const ct::SignedEntryData& expected_entry,
                        X509Certificate* cert,
                        SignedCertificateTimestampAndStatusList* output_scts);
 

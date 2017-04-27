@@ -39,6 +39,8 @@ class _SystemHealthSharedState(shared_page_state.SharedPageState):
   """
 
   def CanRunStory(self, story):
+    if self._finder_options.run_disabled_tests:
+      return True
     return story.CanRun(self.possible_browser)
 
 

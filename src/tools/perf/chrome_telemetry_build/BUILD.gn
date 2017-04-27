@@ -20,6 +20,7 @@ group("telemetry_chrome_test") {
   }
 
   data = [
+    "//tools/perf/core/", # chrome_telemetry_build/ depends on core/
     "//tools/perf/chrome_telemetry_build/",
     "//third_party/catapult/",
     "//components/crash/content/tools/generate_breakpad_symbols.py",

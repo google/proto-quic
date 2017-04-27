@@ -113,7 +113,8 @@ def main():
         device.Install(apk, reinstall=args.keep_data,
                        allow_downgrade=args.downgrade,
                        timeout=args.timeout)
-    except device_errors.CommandFailedError:
+    except (device_errors.CommandFailedError,
+            device_errors.DeviceUnreachableError):
       logging.exception('Failed to install %s', args.apk_name)
       if blacklist:
         blacklist.Extend([str(device)], reason='install_failure')
@@ -129,4 +130,3 @@ def main():
 
 if __name__ == '__main__':
   sys.exit(main())
-

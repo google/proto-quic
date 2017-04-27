@@ -32,6 +32,9 @@ declare_args() {
   # the sysroot mechanism to find the right .pc files.
   pkg_config = ""
 
+  # A optional pkg-config wrapper to use for tools built on the host.
+  host_pkg_config = ""
+
   # CrOS systemroots place pkgconfig files at <systemroot>/usr/share/pkgconfig
   # and one of <systemroot>/usr/lib/pkgconfig or <systemroot>/usr/lib64/pkgconfig
   # depending on whether the systemroot is for a 32 or 64 bit architecture.
@@ -73,11 +76,24 @@ if (target_sysroot != "" && sysroot == target_sysroot) {
   ]
 }
 
+if (host_pkg_config != "") {
+  host_pkg_config_args = [
+    "-p",
+    host_pkg_config,
+  ]
+} else {
+  host_pkg_config_args = pkg_config_args
+}
+
 template("pkg_config") {
   assert(defined(invoker.packages),
          "Variable |packages| must be defined to be a list in pkg_config.")
   config(target_name) {
-    args = pkg_config_args + invoker.packages
+    if (host_toolchain == current_toolchain) {
+      args = host_pkg_config_args + invoker.packages
+    } else {
+      args = pkg_config_args + invoker.packages
+    }
     if (defined(invoker.extra_args)) {
       args += invoker.extra_args
     }

@@ -886,10 +886,7 @@ bool SimpleSynchronousEntry::OpenFiles(SimpleEntryStat* out_entry_stat) {
       continue;
     }
     out_entry_stat->set_last_used(file_info.last_accessed);
-    if (simple_util::GetMTime(path_, &file_last_modified))
-      out_entry_stat->set_last_modified(file_last_modified);
-    else
-      out_entry_stat->set_last_modified(file_info.last_modified);
+    out_entry_stat->set_last_modified(file_info.last_modified);
 
     base::TimeDelta stream_age =
         base::Time::Now() - out_entry_stat->last_modified();
@@ -1058,11 +1055,20 @@ int SimpleSynchronousEntry::InitializeForOpen(
     if (empty_file_omitted_[i])
       continue;
 
-    if (!key_.empty()) {
-      header_and_key_check_needed_[i] = true;
-    } else {
+    if (key_.empty()) {
+      // If |key_| is empty, we were opened via the iterator interface, without
+      // knowing what our key is. We must therefore read the header immediately
+      // to discover it, so SimpleEntryImpl can make it available to
+      // disk_cache::Entry::GetKey().
       if (!CheckHeaderAndKey(i))
         return net::ERR_FAILED;
+    } else {
+      // If we do know which key were are looking for, we still need to
+      // check that the file actually has it (rather than just being a hash
+      // collision or some sort of file system accident), but that can be put
+      // off until opportune time: either the read of the footer, or when we
+      // start reading in the data, depending on stream # and format revision.
+      header_and_key_check_needed_[i] = true;
     }
 
     if (i == 0) {
@@ -1228,6 +1234,8 @@ int SimpleSynchronousEntry::ReadAndValidateStream0(
       RecordKeySHA256Result(cache_type_, KeySHA256Result::NO_MATCH);
       return net::ERR_FAILED;
     }
+    // Elide header check if we verified sha256(key) via footer.
+    header_and_key_check_needed_[0] = false;
     RecordKeySHA256Result(cache_type_, KeySHA256Result::MATCHED);
   } else {
     RecordKeySHA256Result(cache_type_, KeySHA256Result::NOT_PRESENT);

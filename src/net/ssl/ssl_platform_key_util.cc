@@ -50,7 +50,7 @@ scoped_refptr<base::SingleThreadTaskRunner> GetSSLPlatformKeyTaskRunner() {
 }
 
 bool GetClientCertInfo(const X509Certificate* certificate,
-                       SSLPrivateKey::Type* out_type,
+                       int* out_type,
                        size_t* out_max_length) {
   crypto::OpenSSLErrStackTracer tracker(FROM_HERE);
 
@@ -71,37 +71,7 @@ bool GetClientCertInfo(const X509Certificate* certificate,
     return false;
   }
 
-  int key_type = EVP_PKEY_id(key.get());
-  switch (key_type) {
-    case EVP_PKEY_RSA:
-      *out_type = SSLPrivateKey::Type::RSA;
-      break;
-
-    case EVP_PKEY_EC: {
-      EC_KEY* ec_key = EVP_PKEY_get0_EC_KEY(key.get());
-      int curve = EC_GROUP_get_curve_name(EC_KEY_get0_group(ec_key));
-      switch (curve) {
-        case NID_X9_62_prime256v1:
-          *out_type = SSLPrivateKey::Type::ECDSA_P256;
-          break;
-        case NID_secp384r1:
-          *out_type = SSLPrivateKey::Type::ECDSA_P384;
-          break;
-        case NID_secp521r1:
-          *out_type = SSLPrivateKey::Type::ECDSA_P521;
-          break;
-        default:
-          LOG(ERROR) << "Unsupported curve type " << curve;
-          return false;
-      }
-      break;
-    }
-
-    default:
-      LOG(ERROR) << "Unsupported key type " << key_type;
-      return false;
-  }
-
+  *out_type = EVP_PKEY_id(key.get());
   *out_max_length = EVP_PKEY_size(key.get());
   return true;
 }

@@ -87,8 +87,7 @@ TEST_F(PingPayloadDecoderTest, Ping) {
     Http2FrameBuilder fb;
     fb.Append(fields);
     Http2FrameHeader header(fb.size(), Http2FrameType::PING,
-                            RandFlags() & ~Http2FrameFlag::FLAG_ACK,
-                            RandStreamId());
+                            RandFlags() & ~Http2FrameFlag::ACK, RandStreamId());
     set_frame_header(header);
     FrameParts expected(header);
     expected.opt_ping = fields;
@@ -103,8 +102,7 @@ TEST_F(PingPayloadDecoderTest, PingAck) {
     Http2FrameBuilder fb;
     fb.Append(fields);
     Http2FrameHeader header(fb.size(), Http2FrameType::PING,
-                            RandFlags() | Http2FrameFlag::FLAG_ACK,
-                            RandStreamId());
+                            RandFlags() | Http2FrameFlag::ACK, RandStreamId());
     set_frame_header(header);
     FrameParts expected(header);
     expected.opt_ping = fields;

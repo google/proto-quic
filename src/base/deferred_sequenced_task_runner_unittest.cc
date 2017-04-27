@@ -44,10 +44,9 @@ class DeferredSequencedTaskRunnerTest : public testing::Test,
   }
 
   void PostExecuteTask(int task_id) {
-    runner_->PostTask(FROM_HERE,
-                      base::Bind(&DeferredSequencedTaskRunnerTest::ExecuteTask,
-                                 base::Unretained(this),
-                                 task_id));
+    runner_->PostTask(
+        FROM_HERE, base::BindOnce(&DeferredSequencedTaskRunnerTest::ExecuteTask,
+                                  base::Unretained(this), task_id));
   }
 
   void StartRunner() {
@@ -126,16 +125,17 @@ TEST_F(DeferredSequencedTaskRunnerTest, DeferredStartWithMultipleThreads) {
     for (int i = 0; i < 5; ++i) {
       thread1.task_runner()->PostTask(
           FROM_HERE,
-          base::Bind(&DeferredSequencedTaskRunnerTest::PostExecuteTask,
-                     base::Unretained(this), 2 * i));
+          base::BindOnce(&DeferredSequencedTaskRunnerTest::PostExecuteTask,
+                         base::Unretained(this), 2 * i));
       thread2.task_runner()->PostTask(
           FROM_HERE,
-          base::Bind(&DeferredSequencedTaskRunnerTest::PostExecuteTask,
-                     base::Unretained(this), 2 * i + 1));
+          base::BindOnce(&DeferredSequencedTaskRunnerTest::PostExecuteTask,
+                         base::Unretained(this), 2 * i + 1));
       if (i == 2) {
         thread1.task_runner()->PostTask(
-            FROM_HERE, base::Bind(&DeferredSequencedTaskRunnerTest::StartRunner,
-                                  base::Unretained(this)));
+            FROM_HERE,
+            base::BindOnce(&DeferredSequencedTaskRunnerTest::StartRunner,
+                           base::Unretained(this)));
       }
     }
   }
@@ -157,9 +157,10 @@ TEST_F(DeferredSequencedTaskRunnerTest, ObjectDestructionOrder) {
         scoped_refptr<ExecuteTaskOnDestructor> short_lived_object =
             new ExecuteTaskOnDestructor(this, 2 * i);
         runner_->PostTask(
-            FROM_HERE, base::Bind(&DeferredSequencedTaskRunnerTest::DoNothing,
-                                  base::Unretained(this),
-                                  base::RetainedRef(short_lived_object)));
+            FROM_HERE,
+            base::BindOnce(&DeferredSequencedTaskRunnerTest::DoNothing,
+                           base::Unretained(this),
+                           base::RetainedRef(short_lived_object)));
       }
       // |short_lived_object| with id |2 * i| should be destroyed before the
       // task |2 * i + 1| is executed.

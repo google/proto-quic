@@ -103,11 +103,11 @@ bool URLSecurityManagerWin::CanUseDefaultCredentials(
 // TODO(cbentzel): Could CanDelegate use the security zone as well?
 
 bool URLSecurityManagerWin::EnsureSystemSecurityManager() {
-  if (!security_manager_.get()) {
+  if (!security_manager_.Get()) {
     HRESULT hr = CoInternetCreateSecurityManager(NULL,
                                                  security_manager_.Receive(),
                                                  NULL);
-    if (FAILED(hr) || !security_manager_.get()) {
+    if (FAILED(hr) || !security_manager_.Get()) {
       LOG(ERROR) << "Unable to create the Windows Security Manager instance";
       return false;
     }

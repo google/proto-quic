@@ -36,7 +36,7 @@ void RecordComputedAction(const std::string& action) {
 
   if (!g_task_runner.Get()->BelongsToCurrentThread()) {
     g_task_runner.Get()->PostTask(FROM_HERE,
-                                  Bind(&RecordComputedAction, action));
+                                  BindOnce(&RecordComputedAction, action));
     return;
   }
 

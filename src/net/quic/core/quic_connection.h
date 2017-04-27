@@ -345,7 +345,7 @@ class QUIC_EXPORT_PRIVATE QuicConnection
       QuicStreamId id,
       QuicIOVector iov,
       QuicStreamOffset offset,
-      bool fin,
+      StreamSendingState state,
       QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
 
   // Send a RST_STREAM frame to the peer.

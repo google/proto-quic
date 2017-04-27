@@ -33,6 +33,7 @@ linkable_types = [
   'shared_library',
   'loadable_module',
   'mac_kernel_extension',
+  'windows_driver',
 ]
 
 # A list of sections that contain links to other targets.
@@ -1734,12 +1735,13 @@ class DependencyGraphNode(object):
       dependencies.add(self.ref)
       return dependencies
 
-    # Executables, mac kernel extensions and loadable modules are already fully
-    # and finally linked. Nothing else can be a link dependency of them, there
-    # can only be dependencies in the sense that a dependent target might run
-    # an executable or load the loadable_module.
+    # Executables, mac kernel extensions, windows drivers and loadable modules
+    # are already fully and finally linked. Nothing else can be a link
+    # dependency of them, there can only be dependencies in the sense that a
+    # dependent target might run an executable or load the loadable_module.
     if not initial and target_type in ('executable', 'loadable_module',
-                                       'mac_kernel_extension'):
+                                       'mac_kernel_extension',
+                                       'windows_driver'):
       return dependencies
 
     # Shared libraries are already fully linked.  They should only be included
@@ -2490,7 +2492,7 @@ def ValidateTargetType(target, target_dict):
   """
   VALID_TARGET_TYPES = ('executable', 'loadable_module',
                         'static_library', 'shared_library',
-                        'mac_kernel_extension', 'none')
+                        'mac_kernel_extension', 'none', 'windows_driver')
   target_type = target_dict.get('type', None)
   if target_type not in VALID_TARGET_TYPES:
     raise GypError("Target %s has an invalid target type '%s'.  "

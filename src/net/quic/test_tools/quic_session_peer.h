@@ -30,7 +30,7 @@ class QuicSessionPeer {
                                         uint32_t max_streams);
   static void SetMaxOpenOutgoingStreams(QuicSession* session,
                                         uint32_t max_streams);
-  static QuicCryptoStream* GetCryptoStream(QuicSession* session);
+  static QuicCryptoStream* GetMutableCryptoStream(QuicSession* session);
   static QuicWriteBlockedList* GetWriteBlockedStreams(QuicSession* session);
   static QuicStream* GetOrCreateDynamicStream(QuicSession* session,
                                               QuicStreamId stream_id);

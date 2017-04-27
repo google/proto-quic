@@ -34,6 +34,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import org.chromium.base.ApplicationState;
+import org.chromium.base.ContextUtils;
 import org.chromium.base.ThreadUtils;
 import org.chromium.base.library_loader.LibraryLoader;
 import org.chromium.base.library_loader.LibraryProcessType;
@@ -84,10 +85,6 @@ public class NetworkChangeNotifierTest {
       * Listens for native notifications of max bandwidth change.
       */
     private static class TestNetworkChangeNotifier extends NetworkChangeNotifier {
-        private TestNetworkChangeNotifier(Context context) {
-            super(context);
-        }
-
         @Override
         void notifyObserversOfMaxBandwidthChange(double maxBandwidthMbps) {
             mReceivedMaxBandwidthNotification = true;
@@ -137,7 +134,7 @@ public class NetworkChangeNotifierTest {
             try {
                 return sNetworkConstructor.newInstance(netId);
             } catch (
-                    InstantiationException | InvocationTargetException | IllegalAccessException e) {
+            InstantiationException | InvocationTargetException | IllegalAccessException e) {
                 throw new IllegalStateException("Trying to create Network when not allowed");
             }
         }
@@ -408,8 +405,9 @@ public class NetworkChangeNotifierTest {
      *            it is in the foreground.
      */
     private void createTestNotifier(WatchForChanges watchForChanges) {
-        Context context = new ContextWrapper(
-                InstrumentationRegistry.getInstrumentation().getTargetContext()) {
+        Context context = new ContextWrapper(InstrumentationRegistry.getInstrumentation()
+                                                     .getTargetContext()
+                                                     .getApplicationContext()) {
             // Mock out to avoid unintended system interaction.
             @Override
             public Intent registerReceiver(BroadcastReceiver receiver, IntentFilter filter) {
@@ -425,7 +423,8 @@ public class NetworkChangeNotifierTest {
                 return this;
             }
         };
-        mNotifier = new TestNetworkChangeNotifier(context);
+        ContextUtils.initApplicationContextForTests(context);
+        mNotifier = new TestNetworkChangeNotifier();
         NetworkChangeNotifier.resetInstanceForTests(mNotifier);
         if (watchForChanges == WatchForChanges.ALWAYS) {
             NetworkChangeNotifier.registerToReceiveNotificationsAlways();
@@ -478,13 +477,11 @@ public class NetworkChangeNotifierTest {
     @MediumTest
     @Feature({"Android-AppBase"})
     public void testNetworkChangeNotifierRegistersWhenPolicyDictates() {
-        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
-
         NetworkChangeNotifierAutoDetect.Observer observer =
                 new TestNetworkChangeNotifierAutoDetectObserver();
 
         NetworkChangeNotifierAutoDetect receiver = new NetworkChangeNotifierAutoDetect(
-                observer, context, new RegistrationPolicyApplicationStatus() {
+                observer, new RegistrationPolicyApplicationStatus() {
                     @Override
                     int getApplicationState() {
                         return ApplicationState.HAS_RUNNING_ACTIVITIES;
@@ -494,7 +491,7 @@ public class NetworkChangeNotifierTest {
         Assert.assertTrue(receiver.isReceiverRegisteredForTesting());
 
         receiver = new NetworkChangeNotifierAutoDetect(
-                observer, context, new RegistrationPolicyApplicationStatus() {
+                observer, new RegistrationPolicyApplicationStatus() {
                     @Override
                     int getApplicationState() {
                         return ApplicationState.HAS_PAUSED_ACTIVITIES;
@@ -758,7 +755,6 @@ public class NetworkChangeNotifierTest {
         NetworkChangeNotifierAutoDetect.Observer observer =
                 new TestNetworkChangeNotifierAutoDetectObserver();
         NetworkChangeNotifierAutoDetect ncn = new NetworkChangeNotifierAutoDetect(observer,
-                InstrumentationRegistry.getInstrumentation().getTargetContext(),
                 new RegistrationPolicyAlwaysRegister());
         ncn.getNetworksAndTypes();
         ncn.getDefaultNetId();
@@ -773,13 +769,11 @@ public class NetworkChangeNotifierTest {
     @MediumTest
     @Feature({"Android-AppBase"})
     public void testQueryableAPIsReturnExpectedValuesFromMockDelegate() throws Exception {
-        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
-
         NetworkChangeNotifierAutoDetect.Observer observer =
                 new TestNetworkChangeNotifierAutoDetectObserver();
 
         NetworkChangeNotifierAutoDetect ncn = new NetworkChangeNotifierAutoDetect(
-                observer, context, new RegistrationPolicyApplicationStatus() {
+                observer, new RegistrationPolicyApplicationStatus() {
                     @Override
                     int getApplicationState() {
                         return ApplicationState.HAS_PAUSED_ACTIVITIES;
@@ -844,7 +838,6 @@ public class NetworkChangeNotifierTest {
             return;
         }
         // Setup NetworkChangeNotifierAutoDetect
-        final Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         final TestNetworkChangeNotifierAutoDetectObserver observer =
                 new TestNetworkChangeNotifierAutoDetectObserver();
         Callable<NetworkChangeNotifierAutoDetect> callable =
@@ -852,7 +845,7 @@ public class NetworkChangeNotifierTest {
                     @Override
                     public NetworkChangeNotifierAutoDetect call() {
                         return new NetworkChangeNotifierAutoDetect(
-                                observer, context, new RegistrationPolicyApplicationStatus() {
+                                observer, new RegistrationPolicyApplicationStatus() {
                                     // This override prevents NetworkChangeNotifierAutoDetect from
                                     // registering for events right off the bat. We'll delay this
                                     // until our MockConnectivityManagerDelegate is first installed

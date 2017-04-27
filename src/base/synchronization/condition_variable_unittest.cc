@@ -225,7 +225,7 @@ TEST_F(ConditionVariableTest, DISABLED_TimeoutAcrossSetTimeOfDay) {
 
   Thread thread("Helper");
   thread.Start();
-  thread.task_runner()->PostTask(FROM_HERE, base::Bind(&BackInTime, &lock));
+  thread.task_runner()->PostTask(FROM_HERE, base::BindOnce(&BackInTime, &lock));
 
   TimeTicks start = TimeTicks::Now();
   const TimeDelta kWaitTime = TimeDelta::FromMilliseconds(300);

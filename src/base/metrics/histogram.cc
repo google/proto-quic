@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <string>
+#include <utility>
 
 #include "base/compiler_specific.h"
 #include "base/debug/alias.h"
@@ -387,13 +388,31 @@ bool Histogram::InspectConstructionArguments(const std::string& name,
     *bucket_count = kBucketCount_MAX - 1;
   }
 
-  if (*minimum >= *maximum)
-    return false;
-  if (*bucket_count < 3)
-    return false;
-  if (*bucket_count > static_cast<uint32_t>(*maximum - *minimum + 2))
-    return false;
-  return true;
+  bool check_okay = true;
+
+  if (*minimum > *maximum) {
+    check_okay = false;
+    std::swap(*minimum, *maximum);
+  }
+  if (*maximum == *minimum) {
+    check_okay = false;
+    *maximum = *minimum + 1;
+  }
+  if (*bucket_count < 3) {
+    check_okay = false;
+    *bucket_count = 3;
+  }
+  if (*bucket_count > static_cast<uint32_t>(*maximum - *minimum + 2)) {
+    check_okay = false;
+    *bucket_count = static_cast<uint32_t>(*maximum - *minimum + 2);
+  }
+
+  if (!check_okay) {
+    UMA_HISTOGRAM_SPARSE_SLOWLY("Histogram.BadConstructionArguments",
+                                static_cast<Sample>(HashMetricName(name)));
+  }
+
+  return check_okay;
 }
 
 uint64_t Histogram::name_hash() const {
@@ -718,7 +737,7 @@ void Histogram::GetCountAndBucketData(Count* count,
       if (i != bucket_count() - 1)
         bucket_value->SetInteger("high", ranges(i + 1));
       bucket_value->SetInteger("count", count_at_index);
-      buckets->Set(index, bucket_value.release());
+      buckets->Set(index, std::move(bucket_value));
       ++index;
     }
   }

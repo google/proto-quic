@@ -16,7 +16,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(
 from libs.logdog import bootstrap # pylint: disable=import-error
 
 
-@decorators.NoRaiseException(default_return_value='')
+@decorators.NoRaiseException(default_return_value='',
+                             exception_message=('Ignore this exception. '
+                                                'crbug.com/675666'))
 def text(name, data):
   """Uploads text to logdog.
 
@@ -33,7 +35,9 @@ def text(name, data):
     return stream.get_viewer_url()
 
 
-@decorators.NoRaiseException(default_return_value=None)
+@decorators.NoRaiseException(default_return_value=None,
+                             exception_message=('Ignore this exception. '
+                                                'crbug.com/675666'))
 def open_text(name):
   """Returns a file like object which you can write to.
 
@@ -47,7 +51,9 @@ def open_text(name):
   return get_logdog_client().open_text(name)
 
 
-@decorators.NoRaiseException(default_return_value='')
+@decorators.NoRaiseException(default_return_value='',
+                             exception_message=('Ignore this exception. '
+                                                'crbug.com/675666'))
 def binary(name, binary_path):
   """Uploads binary to logdog.
 
@@ -65,7 +71,9 @@ def binary(name, binary_path):
       return stream.get_viewer_url()
 
 
-@decorators.NoRaiseException(default_return_value='')
+@decorators.NoRaiseException(default_return_value='',
+                             exception_message=('Ignore this exception. '
+                                                'crbug.com/675666'))
 def get_viewer_url(name):
   """Get Logdog viewer URL.
 

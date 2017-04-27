@@ -14,6 +14,7 @@
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
 #include "base/metrics/histogram_base.h"
+#include "base/threading/thread_checker.h"
 
 namespace base {
 
@@ -75,11 +76,6 @@ class BASE_EXPORT HistogramSnapshotManager {
   void PrepareSamples(const HistogramBase* histogram,
                       std::unique_ptr<HistogramSamples> samples);
 
-  // Try to detect and fix count inconsistency of logged samples.
-  void InspectLoggedSamplesInconsistency(
-      const HistogramSamples& new_snapshot,
-      HistogramSamples* logged_samples);
-
   // For histograms, track what has been previously seen, indexed
   // by the hash of the histogram name.
   std::map<uint64_t, SampleInfo> known_histograms_;
@@ -87,6 +83,8 @@ class BASE_EXPORT HistogramSnapshotManager {
   // |histogram_flattener_| handles the logistics of recording the histogram
   // deltas.
   HistogramFlattener* histogram_flattener_;  // Weak.
+
+  ThreadChecker thread_checker_;
 
   DISALLOW_COPY_AND_ASSIGN(HistogramSnapshotManager);
 };

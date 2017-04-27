@@ -107,6 +107,17 @@ class NET_EXPORT ReportingCache {
   // group. The returned pointers are only guaranteed to be valid if no calls
   // have been made to |SetClient| or |RemoveEndpoint| in between.
   //
+  // If no origin match is found, the cache will return clients from the most
+  // specific superdomain which contains any clients with includeSubdomains set.
+  // For example, given the origin https://foo.bar.baz.com/, the cache would
+  // prioritize returning each potential match below over the ones below it:
+  //
+  // 1. https://foo.bar.baz.com/ (exact origin match)
+  // 2. https://foo.bar.baz.com:444/ (technically, a superdomain)
+  // 3. https://bar.baz.com/, https://bar.baz.com:444/, etc. (superdomain)
+  // 4. https://baz.com/, https://baz.com:444/, etc. (superdomain)
+  // etc.
+  //
   // (Clears any existing data in |*clients_out|.)
   void GetClientsForOriginAndGroup(
       const url::Origin& origin,
@@ -148,6 +159,15 @@ class NET_EXPORT ReportingCache {
   }
 
  private:
+  void MaybeAddWildcardClient(const ReportingClient* client);
+
+  void MaybeRemoveWildcardClient(const ReportingClient* client);
+
+  void GetWildcardClientsForDomainAndGroup(
+      const std::string& domain,
+      const std::string& group,
+      std::vector<const ReportingClient*>* clients_out) const;
+
   ReportingContext* context_;
 
   // Owns all clients, keyed by origin, then endpoint URL.
@@ -155,6 +175,11 @@ class NET_EXPORT ReportingCache {
   // function implemented.)
   std::map<url::Origin, std::map<GURL, std::unique_ptr<ReportingClient>>>
       clients_;
+
+  // References but does not own all clients with includeSubdomains set, keyed
+  // by domain name.
+  std::unordered_map<std::string, std::unordered_set<const ReportingClient*>>
+      wildcard_clients_;
 
   // Owns all reports, keyed by const raw pointer for easier lookup.
   std::unordered_map<const ReportingReport*, std::unique_ptr<ReportingReport>>

@@ -140,6 +140,7 @@ class ClientHello(HandshakeMsg):
         self.tb_client_params = []
         self.support_signed_cert_timestamps = False
         self.status_request = False
+        self.has_supported_versions = False
         self.ri = False
 
     def create(self, version, random, session_id, cipher_suites,
@@ -251,6 +252,11 @@ class ClientHello(HandshakeMsg):
                         if extLength != 1 or p.getFixBytes(extLength)[0] != 0:
                             raise SyntaxError()
                         self.ri = True
+                    elif extType == ExtensionType.supported_versions:
+                        # Ignore the extension, but make a note of it for
+                        # intolerance simulation.
+                        self.has_supported_versions = True
+                        _ = p.getFixBytes(extLength)
                     else:
                         _ = p.getFixBytes(extLength)
                     index2 = p.index

@@ -111,7 +111,6 @@ class QuicEndToEndTest : public ::testing::TestWithParam<TestParams> {
     request_.load_flags = 0;
 
     params_.enable_quic = true;
-    params_.quic_clock = nullptr;
     params_.quic_random = nullptr;
     if (GetParam().use_stateless_rejects) {
       params_.quic_connection_options.push_back(kSREJ);

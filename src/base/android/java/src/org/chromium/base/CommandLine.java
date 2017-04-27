@@ -134,8 +134,8 @@ public abstract class CommandLine {
      * @param file The fully qualified command line file.
      */
     public static void initFromFile(String file) {
-        // Arbitrary clamp of 16k on the amount of file we read in.
-        char[] buffer = readUtf8FileFullyCrashIfTooBig(file, 16 * 1024);
+        // Just field trials can take upto 10K of command line.
+        char[] buffer = readUtf8FileFullyCrashIfTooBig(file, 64 * 1024);
         init(buffer == null ? null : tokenizeQuotedAruments(buffer));
     }
 

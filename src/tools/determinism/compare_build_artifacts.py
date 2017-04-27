@@ -131,7 +131,7 @@ def diff_binary(first_filepath, second_filepath, file_len):
   result = '%d out of %d bytes are different (%.2f%%)' % (
         diffs, file_len, 100.0 * diffs / file_len)
   if streams:
-    encode = lambda text: ''.join(i if 31 < ord(i) < 128 else '.' for i in text)
+    encode = lambda text: ''.join(i if 31 < ord(i) < 127 else '.' for i in text)
     for offset, lhs_data, rhs_data in streams:
       lhs_line = '%s \'%s\'' % (lhs_data.encode('hex'), encode(lhs_data))
       rhs_line = '%s \'%s\'' % (rhs_data.encode('hex'), encode(rhs_data))

@@ -29,6 +29,7 @@
 #include "net/test/embedded_test_server/embedded_test_server.h"
 #include "net/test/spawned_test_server/spawned_test_server.h"
 #include "net/test/test_data_directory.h"
+#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request_test_util.h"
 #include "net/websockets/websocket_channel.h"
 #include "net/websockets/websocket_event_interface.h"
@@ -391,8 +392,8 @@ TEST_F(WebSocketEndToEndTest, DISABLED_ON_ANDROID(HttpsProxyUsed)) {
   delegate.set_credentials(
       AuthCredentials(base::ASCIIToUTF16("foo"), base::ASCIIToUTF16("bar")));
   {
-    std::unique_ptr<URLRequest> request(
-        context_.CreateRequest(http_page, DEFAULT_PRIORITY, &delegate));
+    std::unique_ptr<URLRequest> request(context_.CreateRequest(
+        http_page, DEFAULT_PRIORITY, &delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
     request->Start();
     // TestDelegate exits the message loop when the request completes by
     // default.
@@ -439,8 +440,8 @@ TEST_F(WebSocketEndToEndTest, DISABLED_ON_ANDROID(HstsHttpsToWebSocket)) {
   // Set HSTS via https:
   TestDelegate delegate;
   GURL https_page = https_server.GetURL("/hsts-headers.html");
-  std::unique_ptr<URLRequest> request(
-      context_.CreateRequest(https_page, DEFAULT_PRIORITY, &delegate));
+  std::unique_ptr<URLRequest> request(context_.CreateRequest(
+      https_page, DEFAULT_PRIORITY, &delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
   request->Start();
   // TestDelegate exits the message loop when the request completes.
   base::RunLoop().Run();
@@ -473,8 +474,8 @@ TEST_F(WebSocketEndToEndTest, DISABLED_ON_ANDROID(HstsWebSocketToHttps)) {
   TestDelegate delegate;
   GURL http_page =
       ReplaceUrlScheme(https_server.GetURL("/simple.html"), "http");
-  std::unique_ptr<URLRequest> request(
-      context_.CreateRequest(http_page, DEFAULT_PRIORITY, &delegate));
+  std::unique_ptr<URLRequest> request(context_.CreateRequest(
+      http_page, DEFAULT_PRIORITY, &delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
   request->Start();
   // TestDelegate exits the message loop when the request completes.
   base::RunLoop().Run();

@@ -10,8 +10,6 @@
 
 #include "net/http/transport_security_state_source.h"
 
-enum SecondLevelDomainName [[DOMAIN_IDS]];
-
 [[SPKI_HASHES]]
 
 static const char* const kExpectCTReportURIs[] = [[EXPECT_CT_REPORT_URIS]];

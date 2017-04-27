@@ -7,7 +7,8 @@ import sys
 
 
 from chrome_telemetry_build import chromium_config
-sys.path.append(chromium_config.GetTelemetryDir())
+from core import path_util
+path_util.AddTelemetryToPath()
 
 from telemetry import record_wpr
 
@@ -33,4 +34,7 @@ def _WarnPythonVersion():
 if __name__ == '__main__':
   if sys.version_info < (2, 7, 9):
     _WarnPythonVersion()
-  sys.exit(record_wpr.Main(environment=chromium_config.ChromiumConfig()))
+  config = chromium_config.ChromiumConfig(
+      benchmark_dirs=[path_util.GetPerfBenchmarksDir()],
+      top_level_dir=path_util.GetPerfDir())
+  sys.exit(record_wpr.Main(environment=config))

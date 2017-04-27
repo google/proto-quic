@@ -7,7 +7,7 @@ import os
 import common
 from common import TestDriver
 from common import IntegrationTest
-from common import NotAndroid
+from decorators import NotAndroid
 
 
 class DataUseAscription(IntegrationTest):

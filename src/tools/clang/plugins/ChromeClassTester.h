@@ -32,15 +32,28 @@ class ChromeClassTester {
 
   // Emits a simple warning; this shouldn't be used if you require printf-style
   // printing.
+  // TODO(dcheng): This will be removed. Do not add new usage.
   void emitWarning(clang::SourceLocation loc, const char* error);
 
   // Utility method for subclasses to check if this class is in a banned
   // namespace.
   bool InBannedNamespace(const clang::Decl* record);
 
-  // Utility method for subclasses to check if the source location is in a
-  // directory the plugin should ignore.
-  bool InBannedDirectory(clang::SourceLocation loc);
+  // Utility method for subclasses to check how a certain SourceLocation should
+  // be handled. The main criteria for classification is the SourceLocation's
+  // path (e.g. whether it's in //third_party).
+  enum class LocationType {
+    // Enforce all default checks.
+    kChrome,
+    // Enforces a subset of checks for Blink code. This is hopefully a
+    // transitional stage, as more plugin checks are gradually enabled in Blink.
+    kBlink,
+    // Skip all checks. Typically, this is third-party or generated code where
+    // it doesn't make sense to enforce Chrome's custom diagnostics.
+    kThirdParty,
+  };
+  LocationType ClassifyLocation(clang::SourceLocation loc,
+                                const clang::Decl* record);
 
   // Utility method for subclasses to determine the namespace of the
   // specified record, if any. Unnamed namespaces will be identified as
@@ -63,14 +76,15 @@ class ChromeClassTester {
 
   // Filtered versions of tags that are only called with things defined in
   // chrome header files.
-  virtual void CheckChromeClass(clang::SourceLocation record_location,
+  virtual void CheckChromeClass(LocationType location_type,
+                                clang::SourceLocation record_location,
                                 clang::CXXRecordDecl* record) = 0;
 
   // Filtered versions of enum type that are only called with things defined
   // in chrome header files.
-  virtual void CheckChromeEnum(clang::SourceLocation enum_location,
-                               clang::EnumDecl* enum_decl) {
-  }
+  virtual void CheckChromeEnum(LocationType location_type,
+                               clang::SourceLocation enum_location,
+                               clang::EnumDecl* enum_decl) = 0;
 
   // Utility methods used for filtering out non-chrome classes (and ones we
   // deliberately ignore) in HandleTagDeclDefinition().
@@ -87,10 +101,6 @@ class ChromeClassTester {
 
   // List of banned namespaces.
   std::set<std::string> banned_namespaces_;
-
-  // List of directories allowed even though their parent directories are in
-  // |banned_directories_|, below.
-  std::set<std::string> allowed_directories_;
 
   // List of banned directories.
   std::set<std::string> banned_directories_;

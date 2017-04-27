@@ -36,6 +36,34 @@ namespace {
 const int kCurrentVersionNumber = 6;
 const int kCompatibleVersionNumber = 6;
 
+// Used in the DomainBoundCerts.DBLoadStatus histogram to record the status of
+// the Channel ID database when loading it from disk. It reports reasons why the
+// db could fail to load, or that it was loaded successfully.
+// Do not change or re-use values.
+enum DbLoadStatus {
+  // The path for the directory containing the db doesn't exist and couldn't be
+  // created.
+  PATH_DOES_NOT_EXIST = 0,
+  // Unable to open the database.
+  FAILED_TO_OPEN = 1,
+  // Failed to migrate the db to the current version.
+  MIGRATION_FAILED = 2,
+  // Unable to execute SELECT statement to load contents from db.
+  INVALID_SELECT_STATEMENT = 3,
+  // New database successfully created.
+  NEW_DB = 4,
+  // Database successfully loaded.
+  LOADED = 5,
+  // Database loaded, but one or more keys were skipped.
+  LOADED_WITH_ERRORS = 6,
+  DB_LOAD_STATUS_MAX
+};
+
+void RecordDbLoadStatus(DbLoadStatus status) {
+  UMA_HISTOGRAM_ENUMERATION("DomainBoundCerts.DBLoadStatus", status,
+                            DB_LOAD_STATUS_MAX);
+}
+
 }  // namespace
 
 namespace net {
@@ -176,8 +204,10 @@ void SQLiteChannelIDStore::Backend::LoadInBackground(
   // Ensure the parent directory for storing certs is created before reading
   // from it.
   const base::FilePath dir = path_.DirName();
-  if (!base::PathExists(dir) && !base::CreateDirectory(dir))
+  if (!base::PathExists(dir) && !base::CreateDirectory(dir)) {
+    RecordDbLoadStatus(PATH_DOES_NOT_EXIST);
     return;
+  }
 
   db_.reset(new sql::Connection);
   db_->set_histogram_tag("DomainBoundCerts");
@@ -187,11 +217,17 @@ void SQLiteChannelIDStore::Backend::LoadInBackground(
       base::Bind(&SQLiteChannelIDStore::Backend::DatabaseErrorCallback,
                  base::Unretained(this)));
 
+  DbLoadStatus load_result = LOADED;
+  if (!base::PathExists(path_)) {
+    load_result = NEW_DB;
+  }
+
   if (!db_->Open(path_)) {
     NOTREACHED() << "Unable to open cert DB.";
     if (corruption_detected_)
       KillDatabase();
     db_.reset();
+    RecordDbLoadStatus(FAILED_TO_OPEN);
     return;
   }
 
@@ -201,6 +237,7 @@ void SQLiteChannelIDStore::Backend::LoadInBackground(
       KillDatabase();
     meta_table_.Reset();
     db_.reset();
+    RecordDbLoadStatus(MIGRATION_FAILED);
     return;
   }
 
@@ -214,6 +251,7 @@ void SQLiteChannelIDStore::Backend::LoadInBackground(
       KillDatabase();
     meta_table_.Reset();
     db_.reset();
+    RecordDbLoadStatus(INVALID_SELECT_STATEMENT);
     return;
   }
 
@@ -222,8 +260,10 @@ void SQLiteChannelIDStore::Backend::LoadInBackground(
     smt.ColumnBlobAsVector(1, &private_key_from_db);
     std::unique_ptr<crypto::ECPrivateKey> key(
         crypto::ECPrivateKey::CreateFromPrivateKeyInfo(private_key_from_db));
-    if (!key)
+    if (!key) {
+      load_result = LOADED_WITH_ERRORS;
       continue;
+    }
     std::unique_ptr<DefaultChannelIDStore::ChannelID> channel_id(
         new DefaultChannelIDStore::ChannelID(
             smt.ColumnString(0),  // host
@@ -242,6 +282,7 @@ void SQLiteChannelIDStore::Backend::LoadInBackground(
                              50);
   DVLOG(1) << "loaded " << channel_ids->size() << " in "
            << load_time.InMilliseconds() << " ms";
+  RecordDbLoadStatus(load_result);
 }
 
 bool SQLiteChannelIDStore::Backend::EnsureDatabaseVersion() {
@@ -257,6 +298,8 @@ bool SQLiteChannelIDStore::Backend::EnsureDatabaseVersion() {
   }
 
   int cur_version = meta_table_.GetVersionNumber();
+  UMA_HISTOGRAM_EXACT_LINEAR("DomainBoundCerts.DBVersion", cur_version,
+                             kCurrentVersionNumber + 1);
 
   sql::Transaction transaction(db_.get());
   if (!transaction.Begin())

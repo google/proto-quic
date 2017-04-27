@@ -7,10 +7,10 @@
 #include <memory>
 
 #include "net/quic/core/quic_connection.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/core/quic_write_blocked_list.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/test_tools/quic_config_peer.h"
@@ -142,7 +142,7 @@ class QuicStreamTest : public ::testing::TestWithParam<bool> {
       QuicStreamId id,
       QuicIOVector /*iov*/,
       QuicStreamOffset /*offset*/,
-      bool /*fin*/,
+      StreamSendingState /*state*/,
       const QuicReferenceCountedPointer<
           QuicAckListenerInterface>& /*ack_listener*/) {
     session_->CloseStream(id);

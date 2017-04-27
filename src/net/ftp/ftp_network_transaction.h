@@ -248,7 +248,7 @@ class NET_EXPORT_PRIVATE FtpNetworkTransaction : public FtpTransaction {
 
   uint16_t data_connection_port_;
 
-  ClientSocketFactory* socket_factory_;
+  ClientSocketFactory* const socket_factory_;
 
   std::unique_ptr<StreamSocket> ctrl_socket_;
   std::unique_ptr<StreamSocket> data_socket_;

@@ -108,3 +108,4 @@ Modifications:
 - Update addr2line-pdb.c to fix format string errors and use relative addresses
   matching linux's behavior more closely.
 - Changed kint64min to not depend on undefined behavior.
+- Fix potential missing nul character in symbol names produced by addr2line-pdb.
