@@ -16,9 +16,10 @@
 #include "net/quic/core/crypto/proof_source.h"
 #include "net/quic/core/crypto/quic_crypto_server_config.h"
 #include "net/quic/core/crypto/quic_random.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_socket_address_coder.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_endian.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
@@ -363,6 +364,11 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
     } else {
       ASSERT_EQ(QUIC_NO_ERROR,
                 out_.GetUint64(kRCID, &server_designated_connection_id));
+      if (QuicUtils::IsConnectionIdWireFormatBigEndian(
+              Perspective::IS_SERVER)) {
+        server_designated_connection_id =
+            QuicEndian::NetToHost64(server_designated_connection_id);
+      }
       EXPECT_EQ(rand_for_id_generation_.RandUint64(),
                 server_designated_connection_id);
     }

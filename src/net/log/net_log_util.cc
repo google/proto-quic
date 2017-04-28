@@ -515,7 +515,7 @@ NET_EXPORT void CreateNetLogEntriesForActiveObjects(
     DCHECK(context->CalledOnValidThread());
     // Contexts should all be using the same NetLog.
     DCHECK_EQ((*contexts.begin())->net_log(), context->net_log());
-    for (auto* request : *context->url_requests()) {
+    for (auto* request : context->url_requests()) {
       requests.push_back(request);
     }
   }

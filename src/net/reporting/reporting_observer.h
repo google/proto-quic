@@ -12,6 +12,7 @@ namespace net {
 
 class NET_EXPORT ReportingObserver {
  public:
+  // Called whenever any change is made to the ReportingCache.
   virtual void OnCacheUpdated();
 
  protected:

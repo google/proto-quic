@@ -99,6 +99,7 @@ class SmoothnessToughPathRenderingCases(_Smoothness):
 
 
 @benchmark.Disabled('android')  # crbug.com/526901
+@benchmark.Disabled('linux')  # crbug.com/715607
 @benchmark.Owner(emails=['junov@chromium.org'])
 class SmoothnessToughCanvasCases(_Smoothness):
   """Measures frame rate and a variety of other statistics.
@@ -153,8 +154,7 @@ class SmoothnessKeyDesktopMoveCases(_Smoothness):
               possible_browser.platform.GetOSName() == 'win')
 
 
-@benchmark.Disabled('all') # crbug.com/702194
-#@benchmark.Enabled('android')
+@benchmark.Enabled('android')
 @benchmark.Owner(emails=['vmiura@chromium.org', 'tdresser@chromium.org'])
 class SmoothnessKeyMobileSites(_Smoothness):
   """Measures rendering statistics while scrolling down the key mobile sites.
@@ -277,8 +277,7 @@ class SmoothnessGpuRasterizationFiltersCases(_Smoothness):
             possible_browser.browser_type == 'reference')
 
 
-@benchmark.Disabled('all') # crbug.com/702194
-#@benchmark.Enabled('android')
+@benchmark.Enabled('android')
 @benchmark.Owner(emails=['tdresser@chromium.org', 'rbyers@chromium.org'])
 class SmoothnessSyncScrollKeyMobileSites(_Smoothness):
   """Measures rendering statistics for the key mobile sites with synchronous

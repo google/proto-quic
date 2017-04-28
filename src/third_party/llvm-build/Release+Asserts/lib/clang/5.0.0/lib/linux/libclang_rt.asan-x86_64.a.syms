@@ -91,6 +91,7 @@
   __interceptor_fopencookie;
   __interceptor_fork;
   __interceptor_fprintf;
+  __interceptor_fread;
   __interceptor_free;
   __interceptor_freopen;
   __interceptor_freopen64;
@@ -103,6 +104,7 @@
   __interceptor_fstatvfs;
   __interceptor_fstatvfs64;
   __interceptor_ftime;
+  __interceptor_fwrite;
   __interceptor_get_current_dir_name;
   __interceptor_getaddrinfo;
   __interceptor_getcwd;
@@ -326,6 +328,7 @@
   __interceptor_strspn;
   __interceptor_strstr;
   __interceptor_strtoimax;
+  __interceptor_strtok;
   __interceptor_strtol;
   __interceptor_strtoll;
   __interceptor_strtoumax;
@@ -418,10 +421,8 @@
   __sanitizer_contiguous_container_find_bad_address;
   __sanitizer_cov;
   __sanitizer_cov_dump;
-  __sanitizer_cov_indir_call16;
   __sanitizer_cov_init;
   __sanitizer_cov_module_init;
-  __sanitizer_cov_trace_basic_block;
   __sanitizer_cov_trace_cmp;
   __sanitizer_cov_trace_cmp1;
   __sanitizer_cov_trace_cmp2;
@@ -429,7 +430,6 @@
   __sanitizer_cov_trace_cmp8;
   __sanitizer_cov_trace_div4;
   __sanitizer_cov_trace_div8;
-  __sanitizer_cov_trace_func_enter;
   __sanitizer_cov_trace_gep;
   __sanitizer_cov_trace_pc_guard;
   __sanitizer_cov_trace_pc_guard_init;
@@ -440,15 +440,12 @@
   __sanitizer_dump_trace_pc_guard_coverage;
   __sanitizer_finish_switch_fiber;
   __sanitizer_get_allocated_size;
-  __sanitizer_get_coverage_guards;
   __sanitizer_get_current_allocated_bytes;
   __sanitizer_get_estimated_allocated_size;
   __sanitizer_get_free_bytes;
   __sanitizer_get_heap_size;
   __sanitizer_get_module_and_offset_for_pc;
-  __sanitizer_get_number_of_counters;
   __sanitizer_get_ownership;
-  __sanitizer_get_total_unique_caller_callee_pairs;
   __sanitizer_get_total_unique_coverage;
   __sanitizer_get_unmapped_bytes;
   __sanitizer_install_malloc_and_free_hooks;
@@ -458,7 +455,6 @@
   __sanitizer_ptr_cmp;
   __sanitizer_ptr_sub;
   __sanitizer_report_error_summary;
-  __sanitizer_reset_coverage;
   __sanitizer_sandbox_on_notify;
   __sanitizer_set_death_callback;
   __sanitizer_set_report_fd;
@@ -1116,7 +1112,6 @@
   __sanitizer_unaligned_store16;
   __sanitizer_unaligned_store32;
   __sanitizer_unaligned_store64;
-  __sanitizer_update_counter_bitset_and_clear_counters;
   __sanitizer_verify_contiguous_container;
   __sanitizer_weak_hook_memcmp;
   __sanitizer_weak_hook_memmem;
@@ -1194,6 +1189,7 @@
   fopencookie;
   fork;
   fprintf;
+  fread;
   free;
   freopen;
   freopen64;
@@ -1206,6 +1202,7 @@
   fstatvfs;
   fstatvfs64;
   ftime;
+  fwrite;
   get_current_dir_name;
   getaddrinfo;
   getcwd;
@@ -1425,6 +1422,7 @@
   strspn;
   strstr;
   strtoimax;
+  strtok;
   strtol;
   strtoll;
   strtoumax;

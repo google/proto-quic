@@ -5,7 +5,7 @@
 #include "net/quic/chromium/network_connection.h"
 
 #include "base/run_loop.h"
-#include "net/quic/chromium/mock_network_change_notifier.h"
+#include "net/base/mock_network_change_notifier.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

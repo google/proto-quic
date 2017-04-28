@@ -14,8 +14,7 @@ namespace trace_event {
 ProcessMemoryTotals::ProcessMemoryTotals()
     : resident_set_bytes_(0),
       peak_resident_set_bytes_(0),
-      is_peak_rss_resetable_(false) {
-}
+      is_peak_rss_resetable_(false) {}
 
 ProcessMemoryTotals::~ProcessMemoryTotals() {}
 
@@ -35,6 +34,7 @@ void ProcessMemoryTotals::AsValueInto(TracedValue* value) const {
 
 void ProcessMemoryTotals::Clear() {
   resident_set_bytes_ = 0;
+  platform_private_footprint_ = PlatformPrivateFootprint();
 }
 
 void ProcessMemoryTotals::SetExtraFieldInBytes(const char* name,

@@ -15,7 +15,7 @@ ScopedJavaLocalRef<jobject> GetClassLoader(JNIEnv* env) {
   return Java_JNIUtils_getClassLoader(env);
 }
 
-bool isSelectiveJniRegistrationEnabled(JNIEnv* env) {
+bool IsSelectiveJniRegistrationEnabled(JNIEnv* env) {
   return Java_JNIUtils_isSelectiveJniRegistrationEnabled(env);
 }
 

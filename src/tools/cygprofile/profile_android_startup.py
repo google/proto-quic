@@ -33,8 +33,8 @@ import devil_chromium
 from pylib import constants
 
 sys.path.append(os.path.join(sys.path[0], '..', '..', 'tools', 'perf'))
-from chrome_telemetry_build import chromium_config
-sys.path.append(chromium_config.GetTelemetryDir())
+from core import path_util
+sys.path.append(path_util.GetTelemetryDir())
 from telemetry.internal.util import wpr_server
 
 sys.path.append(os.path.join(sys.path[0], '..', '..',
@@ -230,7 +230,8 @@ class AndroidProfileTool(object):
     self._device.PushChangedFiles([(self._cygprofile_tests, device_path)])
     try:
       self._device.RunShellCommand(device_path, check_return=True)
-    except device_errors.CommandFailedError:
+    except (device_errors.CommandFailedError,
+            device_errors.DeviceUnreachableError):
       # TODO(jbudorick): Let the exception propagate up once clients can
       # handle it.
       logging.exception('Failure while running cygprofile_unittests:')

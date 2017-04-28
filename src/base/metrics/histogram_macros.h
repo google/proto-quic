@@ -247,7 +247,17 @@
 //
 // UMA_HISTOGRAM_SPARSE_SLOWLY is good for sparsely distributed and/or
 // infrequently recorded values since the implementation is slower
-// and takes more memory.
+// and takes more memory. For sparse data, sparse histograms have the advantage
+// of using less memory client-side, because they allocate buckets on demand
+// rather than preallocating. However, server-side, we still need to load all
+// buckets, across all users, at once.
+
+// Thus, please avoid exploding such histograms, i.e. uploading many many
+// distinct values to the server (across all users). Concretely, keep the number
+// of distinct values <= 100 at best, definitely <= 1000. If you have no
+// guarantees on the range of your data, use capping, e.g.:
+//   UMA_HISTOGRAM_SPARSE_SLOWLY("MyHistogram",
+//                               std::max(0, std::min(200, value)));
 //
 // For instance, Sqlite.Version.* are sparse because for any given database,
 // there's going to be exactly one version logged.

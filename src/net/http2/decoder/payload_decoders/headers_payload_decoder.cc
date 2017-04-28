@@ -47,11 +47,9 @@ DecodeStatus HeadersPayloadDecoder::StartDecodingPayload(
 
   DCHECK_EQ(Http2FrameType::HEADERS, frame_header.type);
   DCHECK_LE(db->Remaining(), total_length);
-  DCHECK_EQ(
-      0,
-      frame_header.flags &
-          ~(Http2FrameFlag::FLAG_END_STREAM | Http2FrameFlag::FLAG_END_HEADERS |
-            Http2FrameFlag::FLAG_PADDED | Http2FrameFlag::FLAG_PRIORITY));
+  DCHECK_EQ(0, frame_header.flags &
+                   ~(Http2FrameFlag::END_STREAM | Http2FrameFlag::END_HEADERS |
+                     Http2FrameFlag::PADDED | Http2FrameFlag::PRIORITY));
 
   // Special case for HEADERS frames that contain only the HPACK block
   // (fragment or whole) and that fit fully into the decode buffer.
@@ -66,8 +64,7 @@ DecodeStatus HeadersPayloadDecoder::StartDecodingPayload(
 
   // PADDED and PRIORITY both extra steps to decode, but if neither flag is
   // set then we can decode faster.
-  const auto payload_flags =
-      Http2FrameFlag::FLAG_PADDED | Http2FrameFlag::FLAG_PRIORITY;
+  const auto payload_flags = Http2FrameFlag::PADDED | Http2FrameFlag::PRIORITY;
   if (!frame_header.HasAnyFlags(payload_flags)) {
     DVLOG(2) << "StartDecodingPayload !IsPadded && !HasPriority";
     if (db->Remaining() == total_length) {

@@ -35,7 +35,7 @@ class ScopedComPtr {
       ptr_->AddRef();
   }
 
-  ScopedComPtr(const ScopedComPtr<Interface, interface_id>& p) : ptr_(p.get()) {
+  ScopedComPtr(const ScopedComPtr<Interface, interface_id>& p) : ptr_(p.Get()) {
     if (ptr_)
       ptr_->AddRef();
   }
@@ -49,7 +49,7 @@ class ScopedComPtr {
     Reset();
   }
 
-  Interface* get() const { return ptr_; }
+  Interface* Get() const { return ptr_; }
 
   explicit operator bool() const { return ptr_ != nullptr; }
 
@@ -183,12 +183,12 @@ class ScopedComPtr {
   }
 
   bool operator==(const ScopedComPtr<Interface, interface_id>& rhs) const {
-    return ptr_ == rhs.get();
+    return ptr_ == rhs.Get();
   }
 
   template <typename U>
   bool operator==(const ScopedComPtr<U>& rhs) const {
-    return ptr_ == rhs.get();
+    return ptr_ == rhs.Get();
   }
 
   template <typename U>
@@ -197,12 +197,12 @@ class ScopedComPtr {
   }
 
   bool operator!=(const ScopedComPtr<Interface, interface_id>& rhs) const {
-    return ptr_ != rhs.get();
+    return ptr_ != rhs.Get();
   }
 
   template <typename U>
   bool operator!=(const ScopedComPtr<U>& rhs) const {
-    return ptr_ != rhs.get();
+    return ptr_ != rhs.Get();
   }
 
   template <typename U>
@@ -222,7 +222,7 @@ class ScopedComPtr {
 
 template <typename T, typename U>
 bool operator==(const T* lhs, const ScopedComPtr<U>& rhs) {
-  return lhs == rhs.get();
+  return lhs == rhs.Get();
 }
 
 template <typename T>
@@ -252,7 +252,7 @@ bool operator!=(std::nullptr_t null, const ScopedComPtr<T>& rhs) {
 
 template <typename T>
 std::ostream& operator<<(std::ostream& out, const ScopedComPtr<T>& p) {
-  return out << p.get();
+  return out << p.Get();
 }
 
 // Helper to make IID_PPV_ARGS work with ScopedComPtr.

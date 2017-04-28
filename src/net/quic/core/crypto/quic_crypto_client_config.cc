@@ -22,6 +22,7 @@
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_endian.h"
 #include "net/quic/platform/api/quic_hostname_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_map_util.h"
@@ -192,6 +193,7 @@ void QuicCryptoClientConfig::CachedState::InvalidateServerConfig() {
   scfg_.reset();
   SetProofInvalid();
   std::queue<QuicConnectionId> empty_queue;
+  using std::swap;
   swap(server_designated_connection_ids_, empty_queue);
 }
 
@@ -236,6 +238,7 @@ void QuicCryptoClientConfig::CachedState::Clear() {
   scfg_.reset();
   ++generation_counter_;
   std::queue<QuicConnectionId> empty_queue;
+  using std::swap;
   swap(server_designated_connection_ids_, empty_queue);
 }
 
@@ -499,6 +502,9 @@ QuicErrorCode QuicCryptoClientConfig::FillClientHello(
     CryptoHandshakeMessage* out,
     string* error_details) const {
   DCHECK(error_details != nullptr);
+  if (QuicUtils::IsConnectionIdWireFormatBigEndian(Perspective::IS_CLIENT)) {
+    connection_id = QuicEndian::HostToNet64(connection_id);
+  }
 
   FillInchoateClientHello(server_id, preferred_version, cached, rand,
                           /* demand_x509_proof= */ true, out_params, out);
@@ -818,6 +824,9 @@ QuicErrorCode QuicCryptoClientConfig::ProcessRejection(
     if (rej.GetUint64(kRCID, &connection_id) != QUIC_NO_ERROR) {
       *error_details = "Missing kRCID";
       return QUIC_CRYPTO_MESSAGE_PARAMETER_NOT_FOUND;
+    }
+    if (QuicUtils::IsConnectionIdWireFormatBigEndian(Perspective::IS_CLIENT)) {
+      connection_id = QuicEndian::NetToHost64(connection_id);
     }
     cached->add_server_designated_connection_id(connection_id);
     if (!nonce.empty()) {

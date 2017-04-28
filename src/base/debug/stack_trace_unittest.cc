@@ -39,7 +39,7 @@ typedef testing::Test StackTraceTest;
 #else
 #define MAYBE_OutputToStream OutputToStream
 #endif
-#if !defined(__UCLIBC__)
+#if !defined(__UCLIBC__) && !defined(_AIX)
 TEST_F(StackTraceTest, MAYBE_OutputToStream) {
   StackTrace trace;
 
@@ -255,10 +255,7 @@ TEST_F(StackTraceTest, itoa_r) {
 }
 #endif  // defined(OS_POSIX) && !defined(OS_ANDROID)
 
-// Windows x64 binaries cannot be built with frame pointer, and MSVC doesn't
-// provide intrinsics to query the frame pointer even for the x86 build, nor
-// does it allow us to take the address of labels, so skip these under Windows.
-#if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS) && !defined(OS_WIN)
+#if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 
 template <size_t Depth>
 void NOINLINE ExpectStackFramePointers(const void** frames,
@@ -317,7 +314,7 @@ TEST_F(StackTraceTest, MAYBE_StackEnd) {
   EXPECT_NE(0u, GetStackEnd());
 }
 
-#endif  // BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS) && !defined(OS_WIN)
+#endif  // BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 
 }  // namespace debug
 }  // namespace base

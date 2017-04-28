@@ -2,10 +2,9 @@
 This tool is designed to test the usage of the SetThreadDescription WinAPI in
 Chrome. In Chrome, the SetThreadDescription API has been enabled to set thread
 names. However, since there is no tool support to retrieve thread names set by
-GetThreadDescription, we will still rely on SetNameInternal function in 
-platform_thread_win.cc to set thread names. Despite this, we need a tool to 
-demo the SetThreadDescription API works, even without the debugger to be 
-present.
+GetThreadDescription, we'll still rely on SetNameInternal function in 
+platform_thread_win.cc to set thread names. Despite this, we need a tool to demo
+the SetThreadDescription API works, even without the debugger to be present.
 
 The problem setting can be referred to 
 https://bugs.chromium.org/p/chromium/issues/detail?id=684203
@@ -22,11 +21,11 @@ later ones.
 
 [How to use it]
 Please download the three files (.cc, .sln, .vcxproj) and compile the code in 
-Visual Studio. Run "ShowThreadNames.exe" either from the build directory or 
-from Visual Studio. No parameters are needed. This tool allows interaction 
-with users. Once launched, it will show "Please enter the process Id, or 
-"quit" to end the program :" on the terminal. Simply type in the ID of any 
-Chrome process you are interested in, and you will get output like below:
+Visual Studio. Run "ShowThreadNames.exe" either from the build directory or from 
+Visual Studio. No parameters are needed. This tool allows interaction with the 
+user. Once launched, it will show "Please enter the process Id, or "quit" to 
+end the program :" on the terminal. Simply type in the ID of any Chrome process 
+you are interested in, and you will get output like below:
 
 thread_ID   thread_name
 12116
@@ -56,6 +55,6 @@ thread_ID   thread_name
 8216    TaskSchedulerServiceThread
 11088   VideoCaptureThread
 
-The threads have been sorted by their names. Note that some threads have
-no names in this example. If checking them using Visual Studio debugger, it 
-is found that they are ntdll.dll!WorkerThreads.
+The threads are sorted by their names. Note that some threads have no names in 
+this example. If checking them using Visual Studio debugger, it is found that 
+they are ntdll.dll!WorkerThreads.

@@ -18,16 +18,9 @@ class MockSSLPrivateKey : public SSLPrivateKey {
  public:
   MockSSLPrivateKey() {}
 
-  Type GetType() override { return Type::RSA; }
-
   std::vector<SSLPrivateKey::Hash> GetDigestPreferences() override {
     NOTIMPLEMENTED();
     return std::vector<SSLPrivateKey::Hash>();
-  }
-
-  size_t GetMaxSignatureLengthInBytes() override {
-    NOTIMPLEMENTED();
-    return 0;
   }
 
   void SignDigest(Hash hash,

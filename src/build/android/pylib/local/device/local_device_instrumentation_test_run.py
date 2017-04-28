@@ -75,30 +75,51 @@ class LocalDeviceInstrumentationTestRun(
         self._env.BlacklistDevice)
     @trace_event.traced
     def individual_device_set_up(dev, host_device_tuples):
-      def install_apk():
-        if self._test_instance.apk_under_test:
-          if self._test_instance.apk_under_test_incremental_install_script:
-            local_device_test_run.IncrementalInstall(
-                dev,
-                self._test_instance.apk_under_test,
-                self._test_instance.apk_under_test_incremental_install_script)
-          else:
-            permissions = self._test_instance.apk_under_test.GetPermissions()
-            dev.Install(self._test_instance.apk_under_test,
-                        permissions=permissions)
+      steps = []
 
-        if self._test_instance.test_apk_incremental_install_script:
+      def install_helper(apk, permissions):
+        @trace_event.traced("apk_path")
+        def install_helper_internal(apk_path=apk.path):
+          # pylint: disable=unused-argument
+          dev.Install(apk, permissions=permissions)
+        return install_helper_internal
+
+      def incremental_install_helper(dev, apk, script):
+        @trace_event.traced("apk_path")
+        def incremental_install_helper_internal(apk_path=apk.path):
+          # pylint: disable=unused-argument
           local_device_test_run.IncrementalInstall(
-              dev,
-              self._test_instance.test_apk,
-              self._test_instance.test_apk_incremental_install_script)
+              dev, apk, script)
+        return incremental_install_helper_internal
+
+      if self._test_instance.apk_under_test:
+        if self._test_instance.apk_under_test_incremental_install_script:
+          steps.append(incremental_install_helper(
+                           dev,
+                           self._test_instance.apk_under_test,
+                           self._test_instance.
+                               apk_under_test_incremental_install_script))
         else:
-          permissions = self._test_instance.test_apk.GetPermissions()
-          dev.Install(self._test_instance.test_apk, permissions=permissions)
+          permissions = self._test_instance.apk_under_test.GetPermissions()
+          steps.append(install_helper(self._test_instance.apk_under_test,
+                                      permissions))
 
-        for apk in self._test_instance.additional_apks:
-          dev.Install(apk)
+      if self._test_instance.test_apk_incremental_install_script:
+        steps.append(incremental_install_helper(
+                         dev,
+                         self._test_instance.test_apk,
+                         self._test_instance.
+                             test_apk_incremental_install_script))
+      else:
+        permissions = self._test_instance.test_apk.GetPermissions()
+        steps.append(install_helper(self._test_instance.test_apk,
+                                    permissions))
 
+      steps.extend(install_helper(apk, None)
+                   for apk in self._test_instance.additional_apks)
+
+      @trace_event.traced
+      def set_debug_app():
         # Set debug app in order to enable reading command line flags on user
         # builds
         if self._test_instance.flags:
@@ -110,7 +131,7 @@ class LocalDeviceInstrumentationTestRun(
             dev.RunShellCommand(['am', 'set-debug-app', '--persistent',
                                   self._test_instance.package_info.package],
                                 check_return=True)
-
+      @trace_event.traced
       def edit_shared_prefs():
         for pref in self._test_instance.edit_shared_prefs:
           prefs = shared_prefs.SharedPrefs(dev, pref['package'],
@@ -135,6 +156,7 @@ class LocalDeviceInstrumentationTestRun(
                   str(type(value)), key))
           prefs.Commit()
 
+      @trace_event.traced
       def push_test_data():
         device_root = posixpath.join(dev.GetExternalStoragePath(),
                                      'chromium_tests_root')
@@ -150,6 +172,7 @@ class LocalDeviceInstrumentationTestRun(
           dev.RunShellCommand(['rm', '-rf', device_root], check_return=True)
           dev.RunShellCommand(['mkdir', '-p', device_root], check_return=True)
 
+      @trace_event.traced
       def create_flag_changer():
         if self._test_instance.flags:
           if not self._test_instance.package_info:
@@ -165,8 +188,8 @@ class LocalDeviceInstrumentationTestRun(
         valgrind_tools.SetChromeTimeoutScale(
             dev, self._test_instance.timeout_scale)
 
-      steps = (install_apk, edit_shared_prefs, push_test_data,
-               create_flag_changer)
+      steps += [set_debug_app, edit_shared_prefs, push_test_data,
+                create_flag_changer]
       if self._env.concurrent_adb:
         reraiser_thread.RunAsync(steps)
       else:
@@ -399,7 +422,7 @@ class LocalDeviceInstrumentationTestRun(
                 time.strftime('%Y%m%dT%H%M%S', time.localtime()),
                 device.serial)
             tombstones_url = logdog_helper.text(
-                stream_name, resolved_tombstones)
+                stream_name, '\n'.join(resolved_tombstones))
           result.SetLink('tombstones', tombstones_url)
     return results, None
 

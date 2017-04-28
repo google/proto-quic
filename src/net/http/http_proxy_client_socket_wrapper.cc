@@ -20,10 +20,10 @@
 #include "net/log/net_log_source.h"
 #include "net/log/net_log_source_type.h"
 #include "net/socket/client_socket_handle.h"
-#include "net/spdy/spdy_proxy_client_socket.h"
-#include "net/spdy/spdy_session.h"
-#include "net/spdy/spdy_session_pool.h"
-#include "net/spdy/spdy_stream.h"
+#include "net/spdy/chromium/spdy_proxy_client_socket.h"
+#include "net/spdy/chromium/spdy_session.h"
+#include "net/spdy/chromium/spdy_session_pool.h"
+#include "net/spdy/chromium/spdy_stream.h"
 #include "net/ssl/ssl_cert_request_info.h"
 #include "url/gurl.h"
 
@@ -60,6 +60,7 @@ HttpProxyClientSocketWrapper::HttpProxyClientSocketWrapper(
       user_agent_(user_agent),
       endpoint_(endpoint),
       spdy_session_pool_(spdy_session_pool),
+      has_restarted_(false),
       tunnel_(tunnel),
       proxy_delegate_(proxy_delegate),
       using_spdy_(false),
@@ -595,13 +596,33 @@ int HttpProxyClientSocketWrapper::DoRestartWithAuth() {
 
 int HttpProxyClientSocketWrapper::DoRestartWithAuthComplete(int result) {
   DCHECK_NE(ERR_IO_PENDING, result);
+
   // If the connection could not be reused to attempt to send proxy auth
-  // credentials, try reconnecting. If auth credentials were sent, pass the
-  // error on to caller, even if the credentials may have passed a close message
-  // from the server in flight.
-  if (result == ERR_UNABLE_TO_REUSE_CONNECTION_FOR_PROXY_AUTH) {
-    // If can't reuse the connection, attempt to create a new one.
+  // credentials, try reconnecting. Do not reset the HttpAuthController in this
+  // case; the server may, for instance, send "Proxy-Connection: close" and
+  // expect that each leg of the authentication progress on separate
+  // connections.
+  bool reconnect = result == ERR_UNABLE_TO_REUSE_CONNECTION_FOR_PROXY_AUTH;
+
+  // If auth credentials were sent but the connection was closed, the server may
+  // have timed out while the user was selecting credentials. Retry once.
+  if (!has_restarted_ &&
+      (result == ERR_CONNECTION_CLOSED || result == ERR_CONNECTION_RESET ||
+       result == ERR_CONNECTION_ABORTED ||
+       result == ERR_SOCKET_NOT_CONNECTED)) {
+    reconnect = true;
+    has_restarted_ = true;
+
+    // Release any auth state bound to the connection. The new connection will
+    // start the current scheme from scratch.
+    if (http_auth_controller_)
+      http_auth_controller_->OnConnectionClosed();
+  }
+
+  if (reconnect) {
+    // Attempt to create a new one.
     transport_socket_.reset();
+
     // Reconnect with HIGHEST priority to get in front of other requests that
     // don't yet have the information |http_auth_controller_| does.
     // TODO(mmenke): This may still result in waiting in line, if there are

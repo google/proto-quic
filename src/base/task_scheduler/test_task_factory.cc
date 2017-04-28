@@ -37,8 +37,8 @@ bool TestTaskFactory::PostTask(PostNestedTask post_nested_task,
   AutoLock auto_lock(lock_);
   return task_runner_->PostTask(
       FROM_HERE,
-      Bind(&TestTaskFactory::RunTaskCallback, Unretained(this),
-           num_posted_tasks_++, post_nested_task, after_task_closure));
+      BindOnce(&TestTaskFactory::RunTaskCallback, Unretained(this),
+               num_posted_tasks_++, post_nested_task, after_task_closure));
 }
 
 void TestTaskFactory::WaitForAllTasksToRun() const {

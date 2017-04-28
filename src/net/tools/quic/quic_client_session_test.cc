@@ -7,8 +7,8 @@
 #include <vector>
 
 #include "net/quic/core/crypto/aes_128_gcm_12_encrypter.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/platform/api/quic_str_cat.h"
@@ -102,8 +102,8 @@ class QuicClientSessionTest : public ::testing::TestWithParam<QuicVersion> {
 
   void CompleteCryptoHandshake(uint32_t server_max_incoming_streams) {
     session_->CryptoConnect();
-    QuicCryptoClientStream* stream =
-        static_cast<QuicCryptoClientStream*>(session_->GetCryptoStream());
+    QuicCryptoClientStream* stream = static_cast<QuicCryptoClientStream*>(
+        session_->GetMutableCryptoStream());
     crypto_test_utils::FakeServerOptions options;
     QuicConfig config = DefaultQuicConfig();
     config.SetMaxIncomingDynamicStreamsToSend(server_max_incoming_streams);
@@ -153,7 +153,7 @@ TEST_P(QuicClientSessionTest, NoEncryptionAfterInitialEncryption) {
   CryptoHandshakeMessage rej;
   crypto_test_utils::FillInDummyReject(&rej, /* stateless */ false);
   EXPECT_TRUE(session_->IsEncryptionEstablished());
-  session_->GetCryptoStream()->OnHandshakeMessage(rej);
+  session_->GetMutableCryptoStream()->OnHandshakeMessage(rej);
   EXPECT_FALSE(session_->IsEncryptionEstablished());
   EXPECT_EQ(ENCRYPTION_NONE,
             QuicPacketCreatorPeer::GetEncryptionLevel(
@@ -166,7 +166,7 @@ TEST_P(QuicClientSessionTest, NoEncryptionAfterInitialEncryption) {
   struct iovec iov = {data, arraysize(data)};
   QuicIOVector iovector(&iov, 1, iov.iov_len);
   QuicConsumedData consumed =
-      session_->WritevData(stream, stream->id(), iovector, 0, false, nullptr);
+      session_->WritevData(stream, stream->id(), iovector, 0, NO_FIN, nullptr);
   EXPECT_FALSE(consumed.fin_consumed);
   EXPECT_EQ(0u, consumed.bytes_consumed);
 }
@@ -174,15 +174,8 @@ TEST_P(QuicClientSessionTest, NoEncryptionAfterInitialEncryption) {
 TEST_P(QuicClientSessionTest, MaxNumStreamsWithNoFinOrRst) {
   EXPECT_CALL(*connection_, SendRstStream(_, _, _)).Times(AnyNumber());
 
-  if (GetParam() <= QUIC_VERSION_34) {
-    session_->config()->SetMaxStreamsPerConnection(1, 1);
-
-    // Initialize crypto before the client session will create a stream.
-    CompleteCryptoHandshake();
-  } else {
-    const uint32_t kServerMaxIncomingStreams = 1;
-    CompleteCryptoHandshake(kServerMaxIncomingStreams);
-  }
+  const uint32_t kServerMaxIncomingStreams = 1;
+  CompleteCryptoHandshake(kServerMaxIncomingStreams);
 
   QuicSpdyClientStream* stream =
       session_->CreateOutgoingDynamicStream(kDefaultPriority);
@@ -201,15 +194,8 @@ TEST_P(QuicClientSessionTest, MaxNumStreamsWithNoFinOrRst) {
 TEST_P(QuicClientSessionTest, MaxNumStreamsWithRst) {
   EXPECT_CALL(*connection_, SendRstStream(_, _, _)).Times(AnyNumber());
 
-  if (GetParam() <= QUIC_VERSION_34) {
-    session_->config()->SetMaxStreamsPerConnection(1, 1);
-
-    // Initialize crypto before the client session will create a stream.
-    CompleteCryptoHandshake();
-  } else {
-    const uint32_t kServerMaxIncomingStreams = 1;
-    CompleteCryptoHandshake(kServerMaxIncomingStreams);
-  }
+  const uint32_t kServerMaxIncomingStreams = 1;
+  CompleteCryptoHandshake(kServerMaxIncomingStreams);
 
   QuicSpdyClientStream* stream =
       session_->CreateOutgoingDynamicStream(kDefaultPriority);
@@ -267,8 +253,9 @@ TEST_P(QuicClientSessionTest, InvalidPacketReceived) {
   // Verify that a non-decryptable packet doesn't close the connection.
   QuicConnectionId connection_id = session_->connection()->connection_id();
   std::unique_ptr<QuicEncryptedPacket> packet(ConstructEncryptedPacket(
-      connection_id, false, false, 100, "data", PACKET_8BYTE_CONNECTION_ID,
-      PACKET_6BYTE_PACKET_NUMBER, nullptr, Perspective::IS_SERVER));
+      GetPeerInMemoryConnectionId(connection_id), false, false, 100, "data",
+      PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER, nullptr,
+      Perspective::IS_SERVER));
   std::unique_ptr<QuicReceivedPacket> received(
       ConstructReceivedPacket(*packet, QuicTime::Zero()));
   // Change the last byte of the encrypted data.
@@ -292,8 +279,9 @@ TEST_P(QuicClientSessionTest, InvalidFramedPacketReceived) {
   QuicConnectionId connection_id = session_->connection()->connection_id();
   QuicVersionVector versions = {GetParam()};
   std::unique_ptr<QuicEncryptedPacket> packet(ConstructMisFramedEncryptedPacket(
-      connection_id, false, false, 100, "data", PACKET_8BYTE_CONNECTION_ID,
-      PACKET_6BYTE_PACKET_NUMBER, &versions, Perspective::IS_SERVER));
+      GetPeerInMemoryConnectionId(connection_id), false, false, 100, "data",
+      PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER, &versions,
+      Perspective::IS_SERVER));
   std::unique_ptr<QuicReceivedPacket> received(
       ConstructReceivedPacket(*packet, QuicTime::Zero()));
   EXPECT_CALL(*connection_, CloseConnection(_, _, _)).Times(1);

@@ -1847,20 +1847,51 @@ TEST(URLCanonTest, CanonicalizeMailtoURL) {
     Component expected_path;
     Component expected_query;
   } cases[] = {
-    {"mailto:addr1", "mailto:addr1", true, Component(7, 5), Component()},
-    {"mailto:addr1@foo.com", "mailto:addr1@foo.com", true, Component(7, 13), Component()},
+    // Null character should be escaped to %00.
+    // Keep this test first in the list as it is handled specially below.
+    {"mailto:addr1\0addr2?foo",
+     "mailto:addr1%00addr2?foo",
+     true, Component(7, 13), Component(21, 3)},
+    {"mailto:addr1",
+     "mailto:addr1",
+     true, Component(7, 5), Component()},
+    {"mailto:addr1@foo.com",
+     "mailto:addr1@foo.com",
+     true, Component(7, 13), Component()},
     // Trailing whitespace is stripped.
-    {"MaIlTo:addr1 \t ", "mailto:addr1", true, Component(7, 5), Component()},
-    {"MaIlTo:addr1?to=jon", "mailto:addr1?to=jon", true, Component(7, 5), Component(13,6)},
-    {"mailto:addr1,addr2", "mailto:addr1,addr2", true, Component(7, 11), Component()},
-    {"mailto:addr1, addr2", "mailto:addr1, addr2", true, Component(7, 12), Component()},
-    {"mailto:addr1%2caddr2", "mailto:addr1%2caddr2", true, Component(7, 13), Component()},
-    {"mailto:\xF0\x90\x8C\x80", "mailto:%F0%90%8C%80", true, Component(7, 12), Component()},
-    // Null character should be escaped to %00
-    {"mailto:addr1\0addr2?foo", "mailto:addr1%00addr2?foo", true, Component(7, 13), Component(21, 3)},
+    {"MaIlTo:addr1 \t ",
+     "mailto:addr1",
+     true, Component(7, 5), Component()},
+    {"MaIlTo:addr1?to=jon",
+     "mailto:addr1?to=jon",
+     true, Component(7, 5), Component(13,6)},
+    {"mailto:addr1,addr2",
+     "mailto:addr1,addr2",
+     true, Component(7, 11), Component()},
+    // Embedded spaces must be encoded.
+    {"mailto:addr1, addr2",
+     "mailto:addr1,%20addr2",
+     true, Component(7, 14), Component()},
+    {"mailto:addr1, addr2?subject=one two ",
+     "mailto:addr1,%20addr2?subject=one%20two",
+     true, Component(7, 14), Component(22, 17)},
+    {"mailto:addr1%2caddr2",
+     "mailto:addr1%2caddr2",
+     true, Component(7, 13), Component()},
+    {"mailto:\xF0\x90\x8C\x80",
+     "mailto:%F0%90%8C%80",
+     true, Component(7, 12), Component()},
     // Invalid -- UTF-8 encoded surrogate value.
-    {"mailto:\xed\xa0\x80", "mailto:%EF%BF%BD", false, Component(7, 9), Component()},
-    {"mailto:addr1?", "mailto:addr1?", true, Component(7, 5), Component(13, 0)},
+    {"mailto:\xed\xa0\x80",
+     "mailto:%EF%BF%BD",
+     false, Component(7, 9), Component()},
+    {"mailto:addr1?",
+     "mailto:addr1?",
+     true, Component(7, 5), Component(13, 0)},
+    // Certain characters have special meanings and must be encoded.
+    {"mailto:! \x22$&()+,-./09:;<=>@AZ[\\]&_`az{|}~\x7f?Query! \x22$&()+,-./09:;<=>@AZ[\\]&_`az{|}~",
+     "mailto:!%20%22$&()+,-./09:;%3C=%3E@AZ[\\]&_%60az%7B%7C%7D~%7F?Query!%20%22$&()+,-./09:;%3C=%3E@AZ[\\]&_`az{|}~",
+     true, Component(7, 53), Component(61, 47)},
   };
 
   // Define outside of loop to catch bugs where components aren't reset
@@ -1869,8 +1900,8 @@ TEST(URLCanonTest, CanonicalizeMailtoURL) {
 
   for (size_t i = 0; i < arraysize(cases); i++) {
     int url_len = static_cast<int>(strlen(cases[i].input));
-    if (i == 8) {
-      // The 9th test case purposely has a '\0' in it -- don't count it
+    if (i == 0) {
+      // The first test case purposely has a '\0' in it -- don't count it
       // as the string terminator.
       url_len = 22;
     }

@@ -28,9 +28,8 @@ class LocalMachineJunitTestRun(test_run.TestRun):
   #override
   def RunTests(self):
     with tempfile.NamedTemporaryFile() as json_file:
-      java_script = os.path.join(
-          constants.GetOutDirectory(), 'bin', 'helper',
-          self._test_instance.suite)
+      java_script = os.path.join(constants.GetOutDirectory(), 'bin', 'helper',
+                                 self._test_instance.suite)
       command = [java_script]
 
       # Add Jar arguments.
@@ -50,9 +49,11 @@ class LocalMachineJunitTestRun(test_run.TestRun):
       # TODO(mikecase): Add a --robolectric-dep-dir arg to test runner.
       # Have this arg set by GN in the generated test runner scripts.
       jvm_args += [
-          '-Drobolectric.dependency.dir=%s' %
-          os.path.join(constants.GetOutDirectory(),
-              'lib.java', 'third_party', 'robolectric')]
+          '-Drobolectric.dependency.dir=%s' % os.path.join(
+              constants.GetOutDirectory(), 'lib.java', 'third_party',
+              'robolectric'),
+          '-Ddir.source.root=%s' % constants.DIR_SOURCE_ROOT,
+      ]
       if self._test_instance.coverage_dir:
         if not os.path.exists(self._test_instance.coverage_dir):
           os.makedirs(self._test_instance.coverage_dir)

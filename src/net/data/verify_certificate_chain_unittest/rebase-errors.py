@@ -107,12 +107,12 @@ def fixup_py_file(path, actual_errors):
   contents = read_file_to_string(path)
 
   # This assumes that the errors variable uses triple quotes.
-  prog = re.compile(r'^errors = """(.*?)"""', re.MULTILINE | re.DOTALL)
+  prog = re.compile(r'^errors = (""".*?"""|None)', re.MULTILINE | re.DOTALL)
   result = prog.search(contents)
 
   # Replace the stuff in between the triple quotes with the actual errors.
   contents = replace_string(contents, result.start(1), result.end(1),
-                            actual_errors)
+                            '"""' + actual_errors + '"""')
 
   # Update the file.
   write_string_to_file(contents, path)

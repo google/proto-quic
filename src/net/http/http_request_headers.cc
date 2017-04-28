@@ -227,7 +227,7 @@ bool HttpRequestHeaders::FromNetLogParam(const base::Value* event_param,
        it != header_list->end();
        ++it) {
     std::string header_line;
-    if (!(*it)->GetAsString(&header_line)) {
+    if (!it->GetAsString(&header_line)) {
       headers->Clear();
       *request_line = "";
       return false;

@@ -22,7 +22,8 @@ class VerifyCertificateChainDelegate {
 
     CertPathErrors errors;
     bool result = VerifyCertificateChain(test.chain, test.trust_anchor.get(),
-                                         &signature_policy, test.time, &errors);
+                                         &signature_policy, test.time,
+                                         test.key_purpose, &errors);
     EXPECT_EQ(test.expected_result, result);
     EXPECT_EQ(test.expected_errors, errors.ToDebugString(test.chain))
         << "Test file: " << test_file_path;

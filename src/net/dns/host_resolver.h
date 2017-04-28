@@ -213,13 +213,10 @@ class NET_EXPORT HostResolver {
       const PersistCallback& persist_callback,
       std::unique_ptr<const base::Value> old_data);
 
-  // Sets the default AddressFamily to use when requests have left it
-  // unspecified. For example, this could be used to restrict resolution
-  // results to AF_INET by passing in ADDRESS_FAMILY_IPV4, or to
-  // AF_INET6 by passing in ADDRESS_FAMILY_IPV6. See http://crbug.com/696569 for
-  // why this option is necessary.
-  virtual void SetDefaultAddressFamily(AddressFamily address_family);
-  virtual AddressFamily GetDefaultAddressFamily() const;
+  // Sets the HostResolver to assume that IPv6 is unreachable when on a wifi
+  // connection. See https://crbug.com/696569 for further context.
+  virtual void SetNoIPv6OnWifi(bool no_ipv6_on_wifi);
+  virtual bool GetNoIPv6OnWifi();
 
   // Creates a HostResolver implementation that queries the underlying system.
   // (Except if a unit-test has changed the global HostResolverProc using

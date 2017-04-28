@@ -10,7 +10,6 @@
 #include "base/logging.h"
 #include "base/run_loop.h"
 #include "base/synchronization/waitable_event.h"
-#include "base/test/test_timeouts.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/thread.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -27,6 +26,13 @@ namespace base {
 namespace trace_event {
 
 namespace {
+
+const TimeDelta kMs = TimeDelta::FromMilliseconds(1);
+const MemoryPeakDetector::Config kConfigNoCallbacks(
+    1 /* polling_interval_ms */,
+    60000 /* min_time_between_peaks_ms */,
+    false /* enable_verbose_poll_tracing */
+    );
 
 class MockMemoryDumpProvider : public MemoryDumpProvider {
  public:
@@ -52,6 +58,8 @@ class MemoryPeakDetectorTest : public testing::Test {
   };
 
   MemoryPeakDetectorTest() : testing::Test() {}
+  static const uint64_t kSlidingWindowNumSamples =
+      MemoryPeakDetector::kSlidingWindowNumSamples;
 
   std::unique_ptr<MemoryPeakDetector, FriendDeleter> NewInstance() {
     return std::unique_ptr<MemoryPeakDetector, FriendDeleter>(
@@ -77,6 +85,7 @@ class MemoryPeakDetectorTest : public testing::Test {
     peak_detector_->TearDown();
     bg_thread_->FlushForTesting();
     EXPECT_EQ(MemoryPeakDetector::NOT_INITIALIZED, GetPeakDetectorState());
+    bg_thread_.reset();
     dump_providers_.clear();
   }
 
@@ -117,6 +126,41 @@ class MemoryPeakDetectorTest : public testing::Test {
     return res;
   }
 
+  // Runs the peak detector with a mock MDP with the given
+  // |config|. The mock MDP will invoke the |poll_function| on any call to
+  // PollFastMemoryTotal(), until |num_samples| have been polled.
+  // It returns the number of peaks detected.
+  uint32_t RunWithCustomPollFunction(
+      MemoryPeakDetector::Config config,
+      uint32_t num_samples,
+      RepeatingCallback<uint64_t(uint32_t)> poll_function) {
+    WaitableEvent evt(WaitableEvent::ResetPolicy::MANUAL,
+                      WaitableEvent::InitialState::NOT_SIGNALED);
+    scoped_refptr<MemoryDumpProviderInfo> mdp = CreateMockDumpProvider();
+    dump_providers_.push_back(mdp);
+    uint32_t cur_sample_idx = 0;
+    EXPECT_CALL(GetMockMDP(mdp), PollFastMemoryTotal(_))
+        .WillRepeatedly(Invoke(
+            [&cur_sample_idx, &evt, poll_function, num_samples](uint64_t* mem) {
+              if (cur_sample_idx >= num_samples) {
+                *mem = 1;
+                evt.Signal();
+              } else {
+                *mem = poll_function.Run(cur_sample_idx++);
+              }
+            }));
+
+    uint32_t num_peaks = 0;
+    EXPECT_CALL(on_peak_callback_, OnPeak())
+        .WillRepeatedly(Invoke([&num_peaks] { num_peaks++; }));
+    peak_detector_->Start(config);
+    evt.Wait();  // Wait for |num_samples| invocations of PollFastMemoryTotal().
+    peak_detector_->Stop();
+    EXPECT_EQ(num_samples, cur_sample_idx);
+    EXPECT_EQ(MemoryPeakDetector::DISABLED, GetPeakDetectorState());
+    return num_peaks;
+  }
+
   // Called on the |bg_thread_|.
   void MockGetDumpProviders(MemoryPeakDetector::DumpProvidersList* mdps) {
     get_mdp_call_count_++;
@@ -145,6 +189,27 @@ class MemoryPeakDetectorTest : public testing::Test {
     return *static_cast<MockMemoryDumpProvider*>(mdp_info->dump_provider);
   }
 
+  static uint64_t PollFunctionThatCausesPeakViaStdDev(uint32_t sample_idx) {
+    // Start with a baseline of 50 MB.
+    if (sample_idx < kSlidingWindowNumSamples)
+      return 50000 + (sample_idx % 3) * 100;
+
+    // Then 10 samples around 80 MB
+    if (sample_idx < 10 + kSlidingWindowNumSamples)
+      return 80000 + (sample_idx % 3) * 200;
+
+    // Than back to 60 MB.
+    if (sample_idx < 2 * kSlidingWindowNumSamples)
+      return 60000 + (sample_idx % 3) * 100;
+
+    // Then 20 samples around 120 MB.
+    if (sample_idx < 20 + 2 * kSlidingWindowNumSamples)
+      return 120000 + (sample_idx % 3) * 200;
+
+    // Then back to idle to around 50 MB until the end.
+    return 50000 + (sample_idx % 3) * 100;
+  }
+
  protected:
   MemoryPeakDetector::DumpProvidersList dump_providers_;
   uint32_t get_mdp_call_count_;
@@ -153,9 +218,11 @@ class MemoryPeakDetectorTest : public testing::Test {
   OnPeakDetectedWrapper on_peak_callback_;
 };
 
+const uint64_t MemoryPeakDetectorTest::kSlidingWindowNumSamples;
+
 TEST_F(MemoryPeakDetectorTest, GetDumpProvidersFunctionCalled) {
   EXPECT_EQ(MemoryPeakDetector::DISABLED, GetPeakDetectorState());
-  peak_detector_->Start();
+  peak_detector_->Start(kConfigNoCallbacks);
   EXPECT_EQ(1u, GetNumGetDumpProvidersCalls());
   EXPECT_EQ(MemoryPeakDetector::ENABLED, GetPeakDetectorState());
 
@@ -164,7 +231,7 @@ TEST_F(MemoryPeakDetectorTest, GetDumpProvidersFunctionCalled) {
   EXPECT_EQ(0u, GetNumPollingTasksRan());
 }
 
-TEST_F(MemoryPeakDetectorTest, NotifyBeforeInitialize) {
+TEST_F(MemoryPeakDetectorTest, ThrottleAndNotifyBeforeInitialize) {
   peak_detector_->TearDown();
 
   WaitableEvent evt(WaitableEvent::ResetPolicy::MANUAL,
@@ -173,11 +240,12 @@ TEST_F(MemoryPeakDetectorTest, NotifyBeforeInitialize) {
   EXPECT_CALL(GetMockMDP(mdp), PollFastMemoryTotal(_))
       .WillRepeatedly(Invoke([&evt](uint64_t*) { evt.Signal(); }));
   dump_providers_.push_back(mdp);
+  peak_detector_->Throttle();
   peak_detector_->NotifyMemoryDumpProvidersChanged();
   EXPECT_EQ(MemoryPeakDetector::NOT_INITIALIZED, GetPeakDetectorState());
   RestartThreadAndReinitializePeakDetector();
 
-  peak_detector_->Start();
+  peak_detector_->Start(kConfigNoCallbacks);
   EXPECT_EQ(MemoryPeakDetector::RUNNING, GetPeakDetectorState());
   evt.Wait();  // Wait for a PollFastMemoryTotal() call.
 
@@ -188,7 +256,7 @@ TEST_F(MemoryPeakDetectorTest, NotifyBeforeInitialize) {
 }
 
 TEST_F(MemoryPeakDetectorTest, DoubleStop) {
-  peak_detector_->Start();
+  peak_detector_->Start(kConfigNoCallbacks);
   EXPECT_EQ(MemoryPeakDetector::ENABLED, GetPeakDetectorState());
 
   peak_detector_->Stop();
@@ -209,7 +277,7 @@ TEST_F(MemoryPeakDetectorTest, OneDumpProviderRegisteredBeforeStart) {
       .WillRepeatedly(Invoke([&evt](uint64_t*) { evt.Signal(); }));
   dump_providers_.push_back(mdp);
 
-  peak_detector_->Start();
+  peak_detector_->Start(kConfigNoCallbacks);
   evt.Wait();  // Signaled when PollFastMemoryTotal() is called on the MockMDP.
   EXPECT_EQ(MemoryPeakDetector::RUNNING, GetPeakDetectorState());
 
@@ -229,7 +297,7 @@ TEST_F(MemoryPeakDetectorTest, ReInitializeAndRebindToNewThread) {
 
   for (int i = 0; i < 5; ++i) {
     evt.Reset();
-    peak_detector_->Start();
+    peak_detector_->Start(kConfigNoCallbacks);
     evt.Wait();  // Wait for a PollFastMemoryTotal() call.
     // Check that calling TearDown implicitly does a Stop().
     peak_detector_->TearDown();
@@ -240,16 +308,16 @@ TEST_F(MemoryPeakDetectorTest, ReInitializeAndRebindToNewThread) {
 }
 
 TEST_F(MemoryPeakDetectorTest, OneDumpProviderRegisteredOutOfBand) {
-  peak_detector_->Start();
+  peak_detector_->Start(kConfigNoCallbacks);
   EXPECT_EQ(MemoryPeakDetector::ENABLED, GetPeakDetectorState());
   EXPECT_EQ(1u, GetNumGetDumpProvidersCalls());
 
   // Check that no poll tasks are posted before any dump provider is registered.
-  PlatformThread::Sleep(TestTimeouts::tiny_timeout());
+  PlatformThread::Sleep(5 * kConfigNoCallbacks.polling_interval_ms * kMs);
   EXPECT_EQ(0u, GetNumPollingTasksRan());
 
   // Registed the MDP After Start() has been issued and expect that the
-  // PeakDetector transitions ENABLED -> RUNNING on the next
+  // PeakDetector transitions ENABLED -> RUNNING on the next
   // NotifyMemoryDumpProvidersChanged() call.
   WaitableEvent evt(WaitableEvent::ResetPolicy::MANUAL,
                     WaitableEvent::InitialState::NOT_SIGNALED);
@@ -273,7 +341,7 @@ TEST_F(MemoryPeakDetectorTest, OneDumpProviderRegisteredOutOfBand) {
   EXPECT_GT(num_poll_tasks, 0u);
 
   // At this point, no more polling tasks should be posted.
-  PlatformThread::Sleep(TestTimeouts::tiny_timeout());
+  PlatformThread::Sleep(5 * kConfigNoCallbacks.polling_interval_ms * kMs);
   peak_detector_->Stop();
   EXPECT_EQ(MemoryPeakDetector::DISABLED, GetPeakDetectorState());
   EXPECT_EQ(num_poll_tasks, GetNumPollingTasksRan());
@@ -296,17 +364,15 @@ TEST_F(MemoryPeakDetectorTest, StartStopQuickly) {
 
   const TimeTicks tstart = TimeTicks::Now();
   for (int i = 0; i < 5; i++) {
-    peak_detector_->Start();
+    peak_detector_->Start(kConfigNoCallbacks);
     peak_detector_->Stop();
   }
-  peak_detector_->Start();
+  peak_detector_->Start(kConfigNoCallbacks);
   EXPECT_EQ(MemoryPeakDetector::RUNNING, GetPeakDetectorState());
   evt.Wait();  // Wait for kNumPolls.
   const double time_ms = (TimeTicks::Now() - tstart).InMillisecondsF();
 
-  // TODO(primiano): this will become config.polling_interval_ms in the next CL.
-  const uint32_t polling_interval_ms = 1;
-  EXPECT_GE(time_ms, kNumPolls * polling_interval_ms);
+  EXPECT_GE(time_ms, kNumPolls * kConfigNoCallbacks.polling_interval_ms);
   peak_detector_->Stop();
 }
 
@@ -324,7 +390,7 @@ TEST_F(MemoryPeakDetectorTest, RegisterAndUnregisterTwoDumpProviders) {
 
   // Register only one MDP and start the detector.
   dump_providers_.push_back(mdp1);
-  peak_detector_->Start();
+  peak_detector_->Start(kConfigNoCallbacks);
   EXPECT_EQ(MemoryPeakDetector::RUNNING, GetPeakDetectorState());
 
   // Wait for one poll task and then register also the other one.
@@ -366,15 +432,126 @@ TEST_F(MemoryPeakDetectorTest, RegisterAndUnregisterTwoDumpProviders) {
   mdp2 = nullptr;
 
   num_poll_tasks = GetNumPollingTasksRan();
-  peak_detector_->Start();
+  peak_detector_->Start(kConfigNoCallbacks);
   EXPECT_EQ(MemoryPeakDetector::ENABLED, GetPeakDetectorState());
-  PlatformThread::Sleep(TestTimeouts::tiny_timeout());
+  PlatformThread::Sleep(5 * kConfigNoCallbacks.polling_interval_ms * kMs);
 
   peak_detector_->Stop();
   EXPECT_EQ(MemoryPeakDetector::DISABLED, GetPeakDetectorState());
   EXPECT_EQ(num_poll_tasks, GetNumPollingTasksRan());
 
   EXPECT_EQ(6u, GetNumGetDumpProvidersCalls());
+}
+
+// Tests the behavior of the static threshold detector, which is supposed to
+// detect a peak whenever an increase >= threshold is detected.
+TEST_F(MemoryPeakDetectorTest, StaticThreshold) {
+  const uint32_t kNumSamples = 2 * kSlidingWindowNumSamples;
+  constexpr uint32_t kNumSamplesPerStep = 10;
+  constexpr uint64_t kThreshold = 1000000;
+  peak_detector_->SetStaticThresholdForTesting(kThreshold);
+  const MemoryPeakDetector::Config kConfig(
+      1 /* polling_interval_ms */, 0 /* min_time_between_peaks_ms */,
+      false /* enable_verbose_poll_tracing */
+      );
+
+  // The mocked PollFastMemoryTotal() will return a step function,
+  // e.g. (1, 1, 1, 5, 5, 5, ...) where the steps are 2x threshold, in order to
+  // trigger only the static threshold logic.
+  auto poll_fn = Bind(
+      [](const uint32_t kNumSamplesPerStep, const uint64_t kThreshold,
+         uint32_t sample_idx) -> uint64_t {
+        return (1 + sample_idx / kNumSamplesPerStep) * 2 * kThreshold;
+      },
+      kNumSamplesPerStep, kThreshold);
+  uint32_t num_peaks = RunWithCustomPollFunction(kConfig, kNumSamples, poll_fn);
+  EXPECT_EQ(kNumSamples / kNumSamplesPerStep - 1, num_peaks);
+}
+
+// Checks the throttling logic of Config's |min_time_between_peaks_ms|.
+TEST_F(MemoryPeakDetectorTest, PeakCallbackThrottling) {
+  const size_t kNumSamples = 2 * kSlidingWindowNumSamples;
+  constexpr uint64_t kThreshold = 1000000;
+  peak_detector_->SetStaticThresholdForTesting(kThreshold);
+  const MemoryPeakDetector::Config kConfig(
+      1 /* polling_interval_ms */, 4 /* min_time_between_peaks_ms */,
+      false /* enable_verbose_poll_tracing */
+      );
+
+  // Each mock value returned is N * 2 * threshold, so all of them would be
+  // eligible to be a peak if throttling wasn't enabled.
+  auto poll_fn = Bind(
+      [](uint64_t kThreshold, uint32_t sample_idx) -> uint64_t {
+        return (sample_idx + 1) * 2 * kThreshold;
+      },
+      kThreshold);
+  uint32_t num_peaks = RunWithCustomPollFunction(kConfig, kNumSamples, poll_fn);
+  const uint32_t kExpectedThrottlingRate =
+      kConfig.min_time_between_peaks_ms / kConfig.polling_interval_ms;
+  EXPECT_LT(num_peaks, kNumSamples / kExpectedThrottlingRate);
+}
+
+TEST_F(MemoryPeakDetectorTest, StdDev) {
+  // Set the threshold to some arbitrarily high value, so that the static
+  // threshold logic is not hit in this test.
+  constexpr uint64_t kThreshold = 1024 * 1024 * 1024;
+  peak_detector_->SetStaticThresholdForTesting(kThreshold);
+  const size_t kNumSamples = 3 * kSlidingWindowNumSamples;
+  const MemoryPeakDetector::Config kConfig(
+      1 /* polling_interval_ms */, 0 /* min_time_between_peaks_ms */,
+      false /* enable_verbose_poll_tracing */
+      );
+
+  auto poll_fn = Bind(&PollFunctionThatCausesPeakViaStdDev);
+  uint32_t num_peaks = RunWithCustomPollFunction(kConfig, kNumSamples, poll_fn);
+  EXPECT_EQ(2u, num_peaks);  // 80 MB, 120 MB.
+}
+
+// Tests that Throttle() actually holds back peak notifications.
+TEST_F(MemoryPeakDetectorTest, Throttle) {
+  constexpr uint64_t kThreshold = 1024 * 1024 * 1024;
+  const uint32_t kNumSamples = 3 * kSlidingWindowNumSamples;
+  peak_detector_->SetStaticThresholdForTesting(kThreshold);
+  const MemoryPeakDetector::Config kConfig(
+      1 /* polling_interval_ms */, 0 /* min_time_between_peaks_ms */,
+      false /* enable_verbose_poll_tracing */
+      );
+
+  auto poll_fn = Bind(
+      [](MemoryPeakDetector* peak_detector, uint32_t sample_idx) -> uint64_t {
+        if (sample_idx % 20 == 20 - 1)
+          peak_detector->Throttle();
+        return PollFunctionThatCausesPeakViaStdDev(sample_idx);
+      },
+      Unretained(&*peak_detector_));
+  uint32_t num_peaks = RunWithCustomPollFunction(kConfig, kNumSamples, poll_fn);
+  EXPECT_EQ(0u, num_peaks);
+}
+
+// Tests that the windows stddev state is not carried over through
+// Stop() -> Start() sequences.
+TEST_F(MemoryPeakDetectorTest, RestartClearsState) {
+  constexpr uint64_t kThreshold = 1024 * 1024 * 1024;
+  peak_detector_->SetStaticThresholdForTesting(kThreshold);
+  const size_t kNumSamples = 3 * kSlidingWindowNumSamples;
+  const MemoryPeakDetector::Config kConfig(
+      1 /* polling_interval_ms */, 0 /* min_time_between_peaks_ms */,
+      false /* enable_verbose_poll_tracing */
+      );
+  auto poll_fn = Bind(
+      [](MemoryPeakDetector* peak_detector,
+         const uint32_t kSlidingWindowNumSamples,
+         MemoryPeakDetector::Config kConfig, uint32_t sample_idx) -> uint64_t {
+        if (sample_idx % kSlidingWindowNumSamples ==
+            kSlidingWindowNumSamples - 1) {
+          peak_detector->Stop();
+          peak_detector->Start(kConfig);
+        }
+        return PollFunctionThatCausesPeakViaStdDev(sample_idx);
+      },
+      Unretained(&*peak_detector_), kSlidingWindowNumSamples, kConfig);
+  uint32_t num_peaks = RunWithCustomPollFunction(kConfig, kNumSamples, poll_fn);
+  EXPECT_EQ(0u, num_peaks);
 }
 
 }  // namespace trace_event

@@ -1,0 +1,20 @@
+Common Metadata:
+Old Metadata:
+New Metadata:
+
+Section Sizes (Total=0 bytes):
+    .bss: 0 bytes (not included in totals)
+    .data: 0 bytes (0.0%)
+    .data.rel.ro: 0 bytes (0.0%)
+    .data.rel.ro.local: 0 bytes (0.0%)
+    .rodata: 0 bytes (0.0%)
+    .text: 0 bytes (0.0%)
+
+0 symbols added (+), 0 changed (~), 0 removed (-), 38 unchanged (not shown)
+0 object files added, 0 removed
+
+Showing 0 symbols with total size: 0 bytes
+.text=0 bytes    .rodata=0 bytes    other=0 bytes    total=0 bytes
+Number of object files: 0
+
+First columns are: running total, type, size

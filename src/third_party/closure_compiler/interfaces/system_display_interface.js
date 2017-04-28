@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2017 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -16,12 +16,23 @@ function SystemDisplay() {}
 
 SystemDisplay.prototype = {
   /**
-   * Get the information of all attached display devices.
+   * Requests the information for all attached display devices.
+   * @param {!chrome.system.display.GetInfoFlags} flags Options affecting how
+   *     the information is returned.
    * @param {function(!Array<!chrome.system.display.DisplayUnitInfo>):void}
-   *     callback
+   *     callback The callback to invoke with the results.
    * @see https://developer.chrome.com/extensions/system.display#method-getInfo
    */
   getInfo: assertNotReached,
+
+  /**
+   * Requests the layout info for all displays. NOTE: This is only available to
+   * Chrome OS Kiosk apps and Web UI.
+   * @param {function(!Array<!chrome.system.display.DisplayLayout>):void}
+   *     callback The callback to invoke with the results.
+   * @see https://developer.chrome.com/extensions/system.display#method-getDisplayLayout
+   */
+  getDisplayLayout: assertNotReached,
 
   /**
    * Updates the properties for the display specified by |id|, according to the
@@ -42,8 +53,13 @@ SystemDisplay.prototype = {
    * Set the layout for all displays. Any display not included will use the
    * default layout. If a layout would overlap or be otherwise invalid it will
    * be adjusted to a valid layout. After layout is resolved, an
-   * onDisplayChanged event will be triggered.
-   * @param {!Array<!chrome.system.display.DisplayLayout>} layouts
+   * onDisplayChanged event will be triggered. NOTE: This is only available to
+   * Chrome OS Kiosk apps and Web UI.
+   * @param {!Array<!chrome.system.display.DisplayLayout>} layouts The layout
+   *     information, required for all displays except     the primary display.
+   * @param {function():void=} callback Empty function called when the function
+   *     finishes. To find out     whether the function succeeded,
+   *     $(ref:runtime.lastError) should be     queried.
    * @see https://developer.chrome.com/extensions/system.display#method-setDisplayLayout
    */
   setDisplayLayout: assertNotReached,
@@ -96,10 +112,15 @@ SystemDisplay.prototype = {
   overscanCalibrationComplete: assertNotReached,
 
   /**
-   * Starts native touch calibration for a display. This will show an overlay on
-   * the screen and initialize the UX for touch calibration. If another native
-   * touch calibration is already in progress this will throw an error.
+   * Displays the native touch calibration UX for the display with |id| as
+   * display id. This will show an overlay on the screen with required
+   * instructions on how to proceed. The callback will be invoked in case of
+   * successful calibraion only. If the calibration fails, this will throw an
+   * error.
    * @param {string} id The display's unique identifier.
+   * @param {function(boolean):void=} callback Optional callback to inform the
+   *     caller that the touch      calibration has ended. The argument of the
+   *     callback informs if the      calibration was a success or not.
    * @see https://developer.chrome.com/extensions/system.display#method-showNativeTouchCalibration
    */
   showNativeTouchCalibration: assertNotReached,
@@ -129,8 +150,9 @@ SystemDisplay.prototype = {
   completeCustomTouchCalibration: assertNotReached,
 
   /**
-   * Resets the touch calibration for the display and removes the saved
-   * calibration data.
+   * Resets the touch calibration for the display and brings it back to its
+   * default state by clearing any touch calibration data associated with the
+   * display.
    * @param {string} id The display's unique identifier.
    * @see https://developer.chrome.com/extensions/system.display#method-clearTouchCalibration
    */

@@ -3,12 +3,15 @@
 # found in the LICENSE file.
 
 import contextlib
+from measurements import tab_switching
+import mock
+from page_sets.system_health import multi_tab_stories
+from telemetry import benchmark
+from telemetry import story as story_module
 from telemetry.internal.results import page_test_results
 from telemetry.testing import page_test_test_case
-
-from measurements import tab_switching
-
-import mock
+from telemetry.testing import options_for_unittests
+from telemetry.value import histogram
 
 
 class BrowserForTest(object):
@@ -30,6 +33,12 @@ class StorySetForTest(object):
     story.story_set = self
     self.stories.append(story)
 
+INTEGRATION_TEST_TAB_COUNT = 3
+
+class EmptyMultiTabStory(multi_tab_stories.MultiTabStory):
+  NAME = 'multitab:test:empty'
+  URL_LIST = ['about:blank'] * INTEGRATION_TEST_TAB_COUNT
+  URL = URL_LIST[0]
 
 class TabSwitchingUnittest(page_test_test_case.PageTestTestCase):
   @staticmethod
@@ -63,22 +72,9 @@ class TabSwitchingUnittest(page_test_test_case.PageTestTestCase):
 
     # Mock histogram result to test _IsDone really works.
     expected_histogram = [
-        # To get first_histogram for last tab (tab_1).
+        # DidNavigateToPage() calls GetHistogram() once
         '{"count": 0, "buckets": []}',
-        # First _IsDone check for tab_0. Retry.
-        '{"count": 0, "buckets": []}',
-        # Second _IsDone check for tab_0. Retry.
-        '{"count": 0, "buckets": []}',
-        # Third _IsDone check for tab_0. Pass.
-        '{"count": 1, "buckets": [{"low": 1, "high": 2, "count": 1}]}',
-        # To get prev_histogram. End of tab_0 loop.
-        '{"count": 1, "buckets": [{"low": 1, "high": 2, "count": 1}]}',
-        # First _IsDone check for tab_1. Retry.
-        '{"count": 1, "buckets": [{"low": 1, "high": 2, "count": 1}]}',
-        # Second _IsDone check for tab_1. Pass.
-        '{"count": 2, "buckets": [{"low": 1, "high": 2, "count": 1},'
-        '{"low": 2, "high": 3, "count": 1}]}',
-        # To get prev_histogram. End of tab_1 loop.
+        # ValidateAndMeasurePage() calls GetHistogram() once
         '{"count": 2, "buckets": [{"low": 1, "high": 2, "count": 1},'
         '{"low": 2, "high": 3, "count": 1}]}',
         ]
@@ -88,10 +84,34 @@ class TabSwitchingUnittest(page_test_test_case.PageTestTestCase):
         mock.patch('telemetry.value.histogram_util.GetHistogram',
                    mock_get_histogram),
         mock.patch('metrics.keychain_metric.KeychainMetric')):
+      measure.DidNavigateToPage(story_set.stories[0], browser.tabs[-1])
       measure.ValidateAndMeasurePage(story_set.stories[0], browser.tabs[-1],
                                      page_test_results.PageTestResults())
       self.assertEqual(len(expected_histogram),
                        len(mock_get_histogram.mock_calls))
+      # The last tab is passed to DidNavigateToPage() and
+      # ValidateAndMeasurePage()
       expected_calls = [mock.call(mock.ANY, mock.ANY, t) for t in
-                        [tab_1] + [tab_0] * 4 + [tab_1] * 3]
+                        [browser.tabs[-1]] * 2]
       self.assertEqual(expected_calls, mock_get_histogram.mock_calls)
+
+  @benchmark.Enabled('has tabs')
+  @benchmark.Disabled('mac')
+  @benchmark.Disabled('android')
+  def testTabSwitching(self):
+    """IT of TabSwitching measurement and multi-tab story"""
+    ps = story_module.StorySet()
+    ps.AddStory(EmptyMultiTabStory(ps, False))
+    measurement = tab_switching.TabSwitching()
+    options = options_for_unittests.GetCopy()
+    results = self.RunMeasurement(measurement, ps, options=options)
+    self.assertEquals(len(results.failures), 0)
+
+    self.assertEquals(len(results.all_summary_values), 1)
+    summary = results.all_summary_values[0]
+    self.assertIsInstance(summary, histogram.HistogramValue)
+    self.assertEquals(summary.name, 'MPArch_RWH_TabSwitchPaintDuration')
+    histogram_count = sum([b.count for b in summary.buckets])
+    self.assertEquals(histogram_count, INTEGRATION_TEST_TAB_COUNT)
+    histogram_mean = summary.GetRepresentativeNumber()
+    self.assertGreater(histogram_mean, 0)

@@ -41,6 +41,8 @@ _java_target_blacklist = [
   "*:*_unpack_aar",
 ]
 
+_default_proguard_jar_path = "//third_party/proguard/lib/proguard.jar"
+
 # Write the target's .build_config file. This is a json file that contains a
 # dictionary of information about how to build this target (things that
 # require knowledge about this target's dependencies and cannot be calculated
@@ -524,6 +526,7 @@ template("test_runner_script") {
       ]
     }
 
+    _device_test = true
     if (_test_type == "gtest") {
       assert(defined(invoker.test_suite))
       test_runner_args += [
@@ -568,6 +571,7 @@ template("test_runner_script") {
         "--test-suite",
         invoker.test_suite,
       ]
+      _device_test = false
     } else if (_test_type == "linker") {
       test_runner_args += [
         "--test-apk",
@@ -607,7 +611,7 @@ template("test_runner_script") {
       }
       test_runner_args += [ "--fast-local-dev" ]
     }
-    if (is_asan) {
+    if (_device_test && is_asan) {
       test_runner_args += [ "--tool=asan" ]
     }
 
@@ -762,7 +766,7 @@ if (enable_java_templates) {
       if (defined(invoker.proguard_jar_path)) {
         _proguard_jar_path = invoker.proguard_jar_path
       } else {
-        _proguard_jar_path = "//third_party/proguard/lib/proguard.jar"
+        _proguard_jar_path = _default_proguard_jar_path
       }
       _output_jar_path = invoker.output_jar_path
       inputs = [
@@ -938,10 +942,19 @@ if (enable_java_templates) {
 
         main_dex_rules = "//build/android/main_dex_classes.flags"
 
+        if (defined(invoker.proguard_jar_path)) {
+          _proguard_jar_path = invoker.proguard_jar_path
+        } else {
+          _proguard_jar_path = _default_proguard_jar_path
+        }
+
         if (!defined(inputs)) {
           inputs = []
         }
-        inputs += [ main_dex_rules ]
+        inputs += [
+          main_dex_rules,
+          _proguard_jar_path,
+        ]
 
         outputs = [
           _main_dex_list_path,
@@ -956,6 +969,8 @@ if (enable_java_templates) {
           rebase_path(_main_dex_list_path, root_build_dir),
           "--main-dex-rules-path",
           rebase_path(main_dex_rules, root_build_dir),
+          "--proguard-path",
+          rebase_path(_proguard_jar_path, root_build_dir),
         ]
 
         if (defined(invoker.extra_main_dex_proguard_config)) {

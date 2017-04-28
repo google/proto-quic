@@ -4,28 +4,24 @@
 
 #include "net/test/scoped_disable_exit_on_dfatal.h"
 
+#include "base/bind.h"
 #include "base/logging.h"
+#include "base/strings/string_piece.h"
 
 namespace net {
 namespace test {
 
-// static
-ScopedDisableExitOnDFatal* ScopedDisableExitOnDFatal::g_instance_ = NULL;
+ScopedDisableExitOnDFatal::ScopedDisableExitOnDFatal()
+    : assert_handler_(base::Bind(LogAssertHandler)) {}
 
-ScopedDisableExitOnDFatal::ScopedDisableExitOnDFatal() {
-  CHECK(!g_instance_);
-  g_instance_ = this;
-  logging::SetLogAssertHandler(LogAssertHandler);
-}
-
-ScopedDisableExitOnDFatal::~ScopedDisableExitOnDFatal() {
-  CHECK_EQ(g_instance_, this);
-  logging::SetLogAssertHandler(NULL);
-  g_instance_ = NULL;
-}
+ScopedDisableExitOnDFatal::~ScopedDisableExitOnDFatal() {}
 
 // static
-void ScopedDisableExitOnDFatal::LogAssertHandler(const std::string& str) {
+void ScopedDisableExitOnDFatal::LogAssertHandler(
+    const char* file,
+    int line,
+    const base::StringPiece message,
+    const base::StringPiece stack_trace) {
   // Simply swallow the assert.
 }
 

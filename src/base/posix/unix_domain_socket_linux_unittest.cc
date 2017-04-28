@@ -36,9 +36,9 @@ TEST(UnixDomainSocketTest, SendRecvMsgAbortOnReplyFDClose) {
   // Have the thread send a synchronous message via the socket.
   Pickle request;
   message_thread.task_runner()->PostTask(
-      FROM_HERE,
-      Bind(IgnoreResult(&UnixDomainSocket::SendRecvMsg), fds[1],
-           static_cast<uint8_t*>(NULL), 0U, static_cast<int*>(NULL), request));
+      FROM_HERE, BindOnce(IgnoreResult(&UnixDomainSocket::SendRecvMsg), fds[1],
+                          static_cast<uint8_t*>(NULL), 0U,
+                          static_cast<int*>(NULL), request));
 
   // Receive the message.
   std::vector<ScopedFD> message_fds;
@@ -55,7 +55,7 @@ TEST(UnixDomainSocketTest, SendRecvMsgAbortOnReplyFDClose) {
   WaitableEvent event(WaitableEvent::ResetPolicy::AUTOMATIC,
                       WaitableEvent::InitialState::NOT_SIGNALED);
   message_thread.task_runner()->PostTask(
-      FROM_HERE, Bind(&WaitableEvent::Signal, Unretained(&event)));
+      FROM_HERE, BindOnce(&WaitableEvent::Signal, Unretained(&event)));
   ASSERT_TRUE(event.TimedWait(TimeDelta::FromMilliseconds(5000)));
 }
 

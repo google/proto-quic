@@ -113,8 +113,7 @@ def _OnStaleMd5(lint_path, config_path, processed_config_path,
       else:
         # This is a zip file with generated resources (e. g. strings from GRD).
         # Extract it to temporary folder.
-        resource_dir = _NewTempSubdir(_RebasePath(resource_source),
-                                      append_digit=False)
+        resource_dir = _NewTempSubdir(resource_source, append_digit=False)
         resource_dirs.append(resource_dir)
         build_utils.ExtractAll(resource_source, path=resource_dir)
 

@@ -39,7 +39,7 @@
 #include "net/socket/client_socket_pool_manager_impl.h"
 #include "net/socket/next_proto.h"
 #include "net/socket/ssl_client_socket.h"
-#include "net/spdy/spdy_session_pool.h"
+#include "net/spdy/chromium/spdy_session_pool.h"
 
 namespace net {
 
@@ -69,11 +69,6 @@ ClientSocketPoolManager* CreateSocketPoolManager(
 // The maximum receive window sizes for HTTP/2 sessions and streams.
 const int32_t kSpdySessionMaxRecvWindowSize = 15 * 1024 * 1024;  // 15 MB
 const int32_t kSpdyStreamMaxRecvWindowSize = 6 * 1024 * 1024;    //  6 MB
-// QUIC's socket receive buffer size.
-// We should adaptively set this buffer size, but for now, we'll use a size
-// that seems large enough to receive data at line rate for most connections,
-// and does not consume "too much" memory.
-const int32_t kQuicSocketReceiveBufferSize = 1024 * 1024;  // 1MB
 
 namespace {
 
@@ -105,6 +100,7 @@ HttpNetworkSession::Params::Params()
     : client_socket_factory(nullptr),
       host_resolver(nullptr),
       cert_verifier(nullptr),
+      enable_server_push_cancellation(false),
       channel_id_service(nullptr),
       transport_security_state(nullptr),
       cert_transparency_verifier(nullptr),
@@ -119,36 +115,26 @@ HttpNetworkSession::Params::Params()
       testing_fixed_http_port(0),
       testing_fixed_https_port(0),
       enable_tcp_fast_open_for_ssl(false),
+      enable_user_alternate_protocol_ports(false),
       enable_spdy_ping_based_connection_checking(true),
       enable_http2(true),
       spdy_session_max_recv_window_size(kSpdySessionMaxRecvWindowSize),
       time_func(&base::TimeTicks::Now),
-      enable_http2_alternative_service_with_different_host(false),
-      enable_quic_alternative_service_with_different_host(true),
+      enable_http2_alternative_service(false),
       enable_quic(false),
-      mark_quic_broken_when_network_blackholes(false),
-      quic_always_require_handshake_confirmation(false),
-      quic_disable_connection_pooling(false),
-      quic_load_server_info_timeout_srtt_multiplier(0.25f),
-      quic_enable_connection_racing(false),
-      quic_enable_non_blocking_io(false),
-      quic_disable_disk_cache(false),
-      quic_prefer_aes(false),
-      quic_socket_receive_buffer_size(kQuicSocketReceiveBufferSize),
-      quic_delay_tcp_race(true),
-      quic_max_server_configs_stored_in_properties(0u),
+      quic_max_packet_length(kDefaultMaxPacketSize),
       quic_clock(nullptr),
       quic_random(nullptr),
-      quic_max_packet_length(kDefaultMaxPacketSize),
-      enable_user_alternate_protocol_ports(false),
       quic_crypto_client_stream_factory(
           QuicCryptoClientStreamFactory::GetDefaultFactory()),
+      quic_max_server_configs_stored_in_properties(0u),
+      mark_quic_broken_when_network_blackholes(false),
+      retry_without_alt_svc_on_quic_errors(false),
       quic_close_sessions_on_ip_change(false),
       quic_idle_connection_timeout_seconds(kIdleConnectionTimeoutSeconds),
       quic_reduced_ping_timeout_seconds(kPingTimeoutSecs),
       quic_packet_reader_yield_after_duration_milliseconds(
           kQuicYieldAfterDurationMilliseconds),
-      quic_disable_preconnect_if_0rtt(false),
       quic_migrate_sessions_on_network_change(false),
       quic_migrate_sessions_early(false),
       quic_allow_server_migration(false),
@@ -162,7 +148,7 @@ HttpNetworkSession::Params::Params()
       enable_token_binding(false),
       http_09_on_non_default_ports_enabled(false),
       restrict_to_one_preconnect_for_proxies(false) {
-  quic_supported_versions.push_back(QUIC_VERSION_35);
+  quic_supported_versions.push_back(QUIC_VERSION_37);
 }
 
 HttpNetworkSession::Params::Params(const Params& other) = default;
@@ -195,20 +181,12 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
           params.socket_performance_watcher_factory,
           params.quic_crypto_client_stream_factory,
           params.quic_random ? params.quic_random : QuicRandom::GetInstance(),
-          params.quic_clock ? params.quic_clock : new QuicChromiumClock(),
+          params.quic_clock ? params.quic_clock
+                            : QuicChromiumClock::GetInstance(),
           params.quic_max_packet_length,
           params.quic_user_agent_id,
           params.quic_supported_versions,
-          params.quic_always_require_handshake_confirmation,
-          params.quic_disable_connection_pooling,
-          params.quic_load_server_info_timeout_srtt_multiplier,
-          params.quic_enable_connection_racing,
-          params.quic_enable_non_blocking_io,
-          params.quic_disable_disk_cache,
-          params.quic_prefer_aes,
-          params.quic_socket_receive_buffer_size,
-          params.quic_delay_tcp_race,
-          params.quic_max_server_configs_stored_in_properties,
+          params.quic_max_server_configs_stored_in_properties > 0,
           params.quic_close_sessions_on_ip_change,
           params.mark_quic_broken_when_network_blackholes,
           params.quic_idle_connection_timeout_seconds,
@@ -325,28 +303,23 @@ std::unique_ptr<base::Value> HttpNetworkSession::QuicInfoToValue() const {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->Set("sessions", quic_stream_factory_.QuicStreamFactoryInfoToValue());
   dict->SetBoolean("quic_enabled", IsQuicEnabled());
-  std::unique_ptr<base::ListValue> connection_options(new base::ListValue);
-  for (QuicTagVector::const_iterator it =
-           params_.quic_connection_options.begin();
-       it != params_.quic_connection_options.end(); ++it) {
-    connection_options->AppendString("'" + QuicTagToString(*it) + "'");
-  }
+
+  auto connection_options(base::MakeUnique<base::ListValue>());
+  for (const auto& option : params_.quic_connection_options)
+    connection_options->AppendString(QuicTagToString(option));
   dict->Set("connection_options", std::move(connection_options));
 
-  std::unique_ptr<base::ListValue> origins_to_force_quic_on(
-      new base::ListValue);
-  for (const auto& origin : params_.origins_to_force_quic_on) {
-    origins_to_force_quic_on->AppendString("'" + origin.ToString() + "'");
-  }
+  auto supported_versions(base::MakeUnique<base::ListValue>());
+  for (const auto& version : params_.quic_supported_versions)
+    supported_versions->AppendString(QuicVersionToString(version));
+  dict->Set("supported_versions", std::move(supported_versions));
+
+  auto origins_to_force_quic_on(base::MakeUnique<base::ListValue>());
+  for (const auto& origin : params_.origins_to_force_quic_on)
+    origins_to_force_quic_on->AppendString(origin.ToString());
   dict->Set("origins_to_force_quic_on", std::move(origins_to_force_quic_on));
 
-  dict->SetDouble("load_server_info_timeout_srtt_multiplier",
-                  params_.quic_load_server_info_timeout_srtt_multiplier);
-  dict->SetBoolean("enable_connection_racing",
-                   params_.quic_enable_connection_racing);
-  dict->SetBoolean("disable_disk_cache", params_.quic_disable_disk_cache);
-  dict->SetBoolean("prefer_aes", params_.quic_prefer_aes);
-  dict->SetBoolean("delay_tcp_race", params_.quic_delay_tcp_race);
+  dict->SetInteger("max_packet_length", params_.quic_max_packet_length);
   dict->SetInteger("max_server_configs_stored_in_properties",
                    params_.quic_max_server_configs_stored_in_properties);
   dict->SetInteger("idle_connection_timeout_seconds",
@@ -356,11 +329,29 @@ std::unique_ptr<base::Value> HttpNetworkSession::QuicInfoToValue() const {
   dict->SetInteger(
       "packet_reader_yield_after_duration_milliseconds",
       params_.quic_packet_reader_yield_after_duration_milliseconds);
-  dict->SetBoolean("disable_preconnect_if_0rtt",
-                   params_.quic_disable_preconnect_if_0rtt);
-  dict->SetBoolean("force_hol_blocking", params_.quic_force_hol_blocking);
+
+  dict->SetBoolean("mark_quic_broken_when_network_blackholes",
+                   params_.mark_quic_broken_when_network_blackholes);
+  dict->SetBoolean("retry_without_alt_svc_on_quic_errors",
+                   params_.retry_without_alt_svc_on_quic_errors);
   dict->SetBoolean("race_cert_verification",
                    params_.quic_race_cert_verification);
+  dict->SetBoolean("disable_bidirectional_streams",
+                   params_.quic_disable_bidirectional_streams);
+  dict->SetBoolean("close_sessions_on_ip_change",
+                   params_.quic_close_sessions_on_ip_change);
+  dict->SetBoolean("migrate_sessions_on_network_change",
+                   params_.quic_migrate_sessions_on_network_change);
+  dict->SetBoolean("migrate_sessions_early",
+                   params_.quic_migrate_sessions_early);
+  dict->SetBoolean("allow_server_migration",
+                   params_.quic_allow_server_migration);
+  dict->SetBoolean("do_not_fragment", params_.quic_do_not_fragment);
+  dict->SetBoolean("do_not_mark_as_broken_on_network_change",
+                   params_.quic_do_not_mark_as_broken_on_network_change);
+  dict->SetBoolean("estimate_initial_rtt", params_.quic_estimate_initial_rtt);
+  dict->SetBoolean("force_hol_blocking", params_.quic_force_hol_blocking);
+
   return std::move(dict);
 }
 
@@ -395,7 +386,9 @@ bool HttpNetworkSession::IsProtocolEnabled(NextProto protocol) const {
 
 void HttpNetworkSession::SetServerPushDelegate(
     std::unique_ptr<ServerPushDelegate> push_delegate) {
-  DCHECK(!push_delegate_ && push_delegate);
+  DCHECK(push_delegate);
+  if (!params_.enable_server_push_cancellation || push_delegate_)
+    return;
 
   push_delegate_ = std::move(push_delegate);
   spdy_session_pool_.set_server_push_delegate(push_delegate_.get());

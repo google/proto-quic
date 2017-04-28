@@ -62,28 +62,28 @@ string Http2FrameFlagsToString(Http2FrameType type, uint8_t flags) {
   };
   if (flags & 0x01) {
     if (type == Http2FrameType::DATA || type == Http2FrameType::HEADERS) {
-      append_and_clear("END_STREAM", Http2FrameFlag::FLAG_END_STREAM);
+      append_and_clear("END_STREAM", Http2FrameFlag::END_STREAM);
     } else if (type == Http2FrameType::SETTINGS ||
                type == Http2FrameType::PING) {
-      append_and_clear("ACK", Http2FrameFlag::FLAG_ACK);
+      append_and_clear("ACK", Http2FrameFlag::ACK);
     }
   }
   if (flags & 0x04) {
     if (type == Http2FrameType::HEADERS ||
         type == Http2FrameType::PUSH_PROMISE ||
         type == Http2FrameType::CONTINUATION) {
-      append_and_clear("END_HEADERS", Http2FrameFlag::FLAG_END_HEADERS);
+      append_and_clear("END_HEADERS", Http2FrameFlag::END_HEADERS);
     }
   }
   if (flags & 0x08) {
     if (type == Http2FrameType::DATA || type == Http2FrameType::HEADERS ||
         type == Http2FrameType::PUSH_PROMISE) {
-      append_and_clear("PADDED", Http2FrameFlag::FLAG_PADDED);
+      append_and_clear("PADDED", Http2FrameFlag::PADDED);
     }
   }
   if (flags & 0x20) {
     if (type == Http2FrameType::HEADERS) {
-      append_and_clear("PRIORITY", Http2FrameFlag::FLAG_PRIORITY);
+      append_and_clear("PRIORITY", Http2FrameFlag::PRIORITY);
     }
   }
   if (flags != 0) {

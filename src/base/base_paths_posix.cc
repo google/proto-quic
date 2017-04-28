@@ -27,7 +27,7 @@
 #if defined(OS_FREEBSD)
 #include <sys/param.h>
 #include <sys/sysctl.h>
-#elif defined(OS_SOLARIS)
+#elif defined(OS_SOLARIS) || defined(OS_AIX)
 #include <stdlib.h>
 #endif
 
@@ -67,7 +67,7 @@ bool PathProviderPosix(int key, FilePath* result) {
       }
       *result = FilePath(bin_dir);
       return true;
-#elif defined(OS_OPENBSD)
+#elif defined(OS_OPENBSD) || defined(OS_AIX)
       // There is currently no way to get the executable path on OpenBSD
       char* cpath;
       if ((cpath = getenv("CHROME_EXE_PATH")) != NULL)

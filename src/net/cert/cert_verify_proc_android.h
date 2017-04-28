@@ -5,7 +5,6 @@
 #ifndef NET_CERT_CERT_VERIFY_PROC_ANDROID_H_
 #define NET_CERT_CERT_VERIFY_PROC_ANDROID_H_
 
-#include "base/feature_list.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "net/base/net_export.h"
@@ -20,10 +19,6 @@ class CertNetFetcher;
 class NET_EXPORT CertVerifyProcAndroid : public CertVerifyProc {
  public:
   CertVerifyProcAndroid();
-
-  // If enabled, when VerifyInternal() encounters an untrusted root error, it
-  // will attempt to fetch intermediates and retry verification.
-  static const base::Feature kAIAFetchingFeature;
 
   // Sets a global CertNetFetcher to be used for AIA fetches that are required
   // by VerifyInternal(). If not called, VerifyInternal() will not do its own

@@ -177,7 +177,7 @@ var SearchMetadataParams;
 
 /**
  * @typedef {{
- *   entry: Object,
+ *   entry: Entry,
  *   highlightedBaseName: string
  * }}
  */

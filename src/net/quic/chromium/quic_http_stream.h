@@ -24,7 +24,7 @@
 #include "net/quic/chromium/quic_chromium_client_stream.h"
 #include "net/quic/core/quic_client_push_promise_index.h"
 #include "net/quic/core/quic_packets.h"
-#include "net/spdy/multiplexed_http_stream.h"
+#include "net/spdy/chromium/multiplexed_http_stream.h"
 
 namespace net {
 
@@ -64,6 +64,8 @@ class NET_EXPORT_PRIVATE QuicHttpStream
   int64_t GetTotalReceivedBytes() const override;
   int64_t GetTotalSentBytes() const override;
   bool GetLoadTimingInfo(LoadTimingInfo* load_timing_info) const override;
+  bool GetAlternativeService(
+      AlternativeService* alternative_service) const override;
   void PopulateNetErrorDetails(NetErrorDetails* details) override;
   void SetPriority(RequestPriority priority) override;
 
@@ -157,7 +159,7 @@ class NET_EXPORT_PRIVATE QuicHttpStream
   QuicVersion quic_version_;
   int session_error_;             // Error code from the connection shutdown.
   bool was_handshake_confirmed_;  // True if the crypto handshake succeeded.
-  QuicChromiumClientSession::StreamRequest stream_request_;
+  std::unique_ptr<QuicChromiumClientSession::StreamRequest> stream_request_;
   QuicChromiumClientStream* stream_;  // Non-owning.
 
   // The following three fields are all owned by the caller and must

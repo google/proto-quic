@@ -16,6 +16,7 @@
 #include "base/files/scoped_temp_dir.h"
 #include "base/mac/scoped_cftyperef.h"
 #include "base/memory/ref_counted.h"
+#include "net/cert/x509_util_mac.h"
 #include "net/ssl/ssl_private_key.h"
 #include "net/ssl/ssl_private_key_test_util.h"
 #include "net/test/cert_test_util.h"
@@ -32,20 +33,20 @@ namespace net {
 namespace {
 
 struct TestKey {
+  const char* name;
   const char* cert_file;
   const char* key_file;
-  SSLPrivateKey::Type key_type;
 };
 
 const TestKey kTestKeys[] = {
-    {"client_1.pem", "client_1.pk8", SSLPrivateKey::Type::RSA},
-    {"client_4.pem", "client_4.pk8", SSLPrivateKey::Type::ECDSA_P256},
-    {"client_5.pem", "client_5.pk8", SSLPrivateKey::Type::ECDSA_P384},
-    {"client_6.pem", "client_6.pk8", SSLPrivateKey::Type::ECDSA_P521},
+    {"RSA", "client_1.pem", "client_1.pk8"},
+    {"ECDSA_P256", "client_4.pem", "client_4.pk8"},
+    {"ECDSA_P384", "client_5.pem", "client_5.pk8"},
+    {"ECDSA_P521", "client_6.pem", "client_6.pk8"},
 };
 
 std::string TestKeyToString(const testing::TestParamInfo<TestKey>& params) {
-  return SSLPrivateKeyTypeToString(params.param.key_type);
+  return params.param.name;
 }
 
 }  // namespace
@@ -76,8 +77,10 @@ TEST_P(SSLPlatformKeyMacTest, KeyMatches) {
                               nullptr, keychain.InitializeInto()));
 
   // Insert the certificate into the keychain.
-  ASSERT_EQ(noErr,
-            SecCertificateAddToKeychain(cert->os_cert_handle(), keychain));
+  base::ScopedCFTypeRef<SecCertificateRef> sec_cert(
+      x509_util::CreateSecCertificateFromX509Certificate(cert.get()));
+  ASSERT_TRUE(sec_cert);
+  ASSERT_EQ(noErr, SecCertificateAddToKeychain(sec_cert, keychain));
 
   // Import the key into the keychain. Apple doesn't accept unencrypted PKCS#8,
   // but it accepts the low-level RSAPrivateKey and ECPrivateKey types as

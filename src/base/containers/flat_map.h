@@ -14,7 +14,7 @@ namespace base {
 
 namespace internal {
 
-// An implementation of the flat_set GetKeyFromValue template parameter that
+// An implementation of the flat_tree GetKeyFromValue template parameter that
 // extracts the key as the first element of a pair.
 template <class Key, class Mapped>
 struct GetKeyFromValuePairFirst {
@@ -25,14 +25,30 @@ struct GetKeyFromValuePairFirst {
 
 }  // namespace internal
 
-// OVERVIEW
+// flat_map is a container with a std::map-like interface that stores its
+// contents in a sorted vector.
 //
-// This file implements flat_map container. It is an alternative to standard
-// sorted containers that stores its elements in contiguous memory (a vector).
+// Please see //base/containers/README.md for an overview of which container
+// to select.
 //
-// Additional documentation and usage advice is in flat_set.h.
+// PROS
 //
-// DOCUMENTATION
+//  - Good memory locality.
+//  - Low overhead, especially for smaller maps.
+//  - Performance is good for more workloads than you might expect (see
+//    overview link above).
+//
+// CONS
+//
+//  - Inserts and removals are O(n).
+//
+// IMPORTANT NOTES
+//
+//  - Iterators are invalidated across mutations.
+//  - If possible, construct a flat_map in one operation by inserting into
+//    a std::vector and moving that vector into the flat_map constructor.
+//
+// QUICK REFERENCE
 //
 // Most of the core functionality is inherited from flat_tree. Please see
 // flat_tree.h for more details for most of these functions. As a quick

@@ -26,6 +26,8 @@
               {% for link in cell.links %}
                 <a href="{{link.href}}" target="{{link.target}}">{{link.data}}</a>
               {% endfor %}
+            {%- elif cell.cell_type == 'action' -%}
+              <a onclick="{{cell.action}}">{{cell.data}}</a>
             {%- else -%}
               {{cell.data}}
             {%- endif %}
@@ -43,6 +45,8 @@
               {% for link in cell.links %}
                 <a href="{{link.href}}" target="{{link.target}}"><b>{{link.data}}</b></a>
               {% endfor %}
+            {%- elif cell.cell_type == 'action' -%}
+              <a onclick="{{cell.action}}">{{cell.data}}</a>
             {%- else -%}
               <b>{{cell.data}}</b>
             {%- endif %}

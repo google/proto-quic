@@ -75,7 +75,11 @@ std::unique_ptr<QuicSpdyClientStream> QuicClientSession::CreateClientStream() {
   return QuicMakeUnique<QuicSpdyClientStream>(GetNextOutgoingStreamId(), this);
 }
 
-QuicCryptoClientStreamBase* QuicClientSession::GetCryptoStream() {
+QuicCryptoClientStreamBase* QuicClientSession::GetMutableCryptoStream() {
+  return crypto_stream_.get();
+}
+
+const QuicCryptoClientStreamBase* QuicClientSession::GetCryptoStream() const {
   return crypto_stream_.get();
 }
 

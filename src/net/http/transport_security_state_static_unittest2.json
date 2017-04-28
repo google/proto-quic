@@ -53,9 +53,5 @@
       "expect_staple_report_uri": "https://report.example.com/staple-upload-alt",
       "include_subdomains_for_expect_staple": true
     }
-  ],
-  "domain_ids": [
-    "NOT_PINNED",
-    "EXAMPLE_COM"
   ]
 }

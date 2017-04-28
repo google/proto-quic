@@ -5,7 +5,7 @@
 action("webkit_version") {
   script = "version.py"
 
-  lastchange_file = "LASTCHANGE.blink"
+  lastchange_file = "LASTCHANGE"
 
   template_file = "webkit_version.h.in"
   inputs = [
@@ -19,6 +19,10 @@ action("webkit_version") {
   ]
 
   args = [
+    # LASTCHANGE contains "<build hash>-<ref>".  The user agent only wants the
+    # "<build hash>" bit, so chop off everything after it.
+    "-e",
+    "LASTCHANGE=LASTCHANGE[:LASTCHANGE.find('-')]",
     "-f",
     rebase_path(lastchange_file, root_build_dir),
     rebase_path(template_file, root_build_dir),

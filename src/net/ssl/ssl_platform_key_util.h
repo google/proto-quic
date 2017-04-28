@@ -10,7 +10,6 @@
 #include "base/memory/ref_counted.h"
 #include "base/single_thread_task_runner.h"
 #include "net/base/net_export.h"
-#include "net/ssl/ssl_private_key.h"
 
 namespace net {
 
@@ -23,9 +22,10 @@ class X509Certificate;
 scoped_refptr<base::SingleThreadTaskRunner> GetSSLPlatformKeyTaskRunner();
 
 // Determines the key type and maximum signature length of |certificate|'s
-// public key.
+// public key. |*out_type| will be set to one of the |EVP_PKEY_*| values from
+// BoringSSL.
 NET_EXPORT_PRIVATE bool GetClientCertInfo(const X509Certificate* certificate,
-                                          SSLPrivateKey::Type* out_type,
+                                          int* out_type,
                                           size_t* out_max_length);
 
 }  // namespace net

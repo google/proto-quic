@@ -19,7 +19,7 @@ namespace blink {
 struct Base {};
 struct Derived : public Base {};
 
-DEFINE_TYPE_CASTS(Derived, Base, object, true);
+DEFINE_TYPE_CASTS(Derived, Base, the_object, true);
 
 void F() {
   Base* base_ptr = new Derived;
@@ -76,7 +76,7 @@ class FieldsMacro {
                                   \
  public:                          \
   int name() { return m_##name; } \
-  void Set##Name(int value) { m_##name = value; }
+  void Set##Name(int name) { m_##name = name; }
 
   DECLARE_FIELD(FooBar, FooBar)
   DECLARE_FIELD(BarBaz, BarBaz)

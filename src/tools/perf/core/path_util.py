@@ -5,18 +5,15 @@
 import os
 import sys
 
-sys.path.insert(1, os.path.join(os.path.abspath(__file__), '..', '..'))
-
-from chrome_telemetry_build import chromium_config
-
 
 def GetChromiumSrcDir():
-  return chromium_config.GetChromiumSrcDir()
-
+  return os.path.abspath(os.path.join(
+      os.path.dirname(__file__), '..', '..', '..'))
 
 
 def GetTelemetryDir():
-  return chromium_config.GetTelemetryDir()
+  return os.path.join(
+      GetChromiumSrcDir(), 'third_party', 'catapult', 'telemetry')
 
 
 def GetPerfDir():
@@ -29,6 +26,10 @@ def GetPerfStorySetsDir():
 
 def GetPerfBenchmarksDir():
   return os.path.join(GetPerfDir(), 'benchmarks')
+
+
+def GetPerfContribDir():
+  return os.path.join(GetPerfDir(), 'contrib')
 
 
 def AddTelemetryToPath():

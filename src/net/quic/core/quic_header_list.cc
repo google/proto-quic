@@ -4,8 +4,8 @@
 
 #include "net/quic/core/quic_header_list.h"
 
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_flags.h"
 
 using std::string;
 

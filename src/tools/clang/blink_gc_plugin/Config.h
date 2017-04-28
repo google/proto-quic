@@ -18,17 +18,17 @@
 #include "clang/AST/Attr.h"
 
 extern const char kNewOperatorName[];
-extern const char* kCreateName;
-extern const char* kTraceName;
-extern const char* kFinalizeName;
-extern const char* kTraceAfterDispatchName;
-extern const char* kRegisterWeakMembersName;
+extern const char kCreateName[];
+extern const char kTraceName[];
+extern const char kFinalizeName[];
+extern const char kTraceAfterDispatchName[];
+extern const char kRegisterWeakMembersName[];
 extern const char kHeapAllocatorName[];
 extern const char kTraceIfNeededName[];
 extern const char kVisitorDispatcherName[];
 extern const char kVisitorVarName[];
-extern const char* kAdjustAndMarkName;
-extern const char* kIsHeapObjectAliveName;
+extern const char kAdjustAndMarkName[];
+extern const char kIsHeapObjectAliveName[];
 extern const char kIsEagerlyFinalizedName[];
 extern const char kConstIteratorName[];
 extern const char kIteratorName[];
@@ -37,8 +37,6 @@ extern const char kReverseIteratorName[];
 
 class Config {
  public:
-  static void UseLegacyNames();
-
   static bool IsMember(const std::string& name) {
     return name == "Member";
   }

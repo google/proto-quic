@@ -146,7 +146,6 @@
 
 #include <openssl/bytestring.h>
 #include <openssl/crypto.h>
-#include <openssl/dh.h>
 #include <openssl/err.h>
 #include <openssl/lhash.h>
 #include <openssl/mem.h>
@@ -296,9 +295,12 @@ SSL_CTX *SSL_CTX_new(const SSL_METHOD *method) {
   ret->mode = SSL_MODE_NO_AUTO_CHAIN;
 
   /* Lock the SSL_CTX to the specified version, for compatibility with legacy
-   * uses of SSL_METHOD. */
+   * uses of SSL_METHOD, but we do not set the minimum version for
+   * |SSLv3_method|. */
   if (!SSL_CTX_set_max_proto_version(ret, method->version) ||
-      !SSL_CTX_set_min_proto_version(ret, method->version)) {
+      !SSL_CTX_set_min_proto_version(ret, method->version == SSL3_VERSION
+                                              ? 0 /* default */
+                                              : method->version)) {
     OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
     goto err2;
   }
@@ -348,6 +350,7 @@ void SSL_CTX_free(SSL_CTX *ctx) {
   OPENSSL_free(ctx->supported_group_list);
   OPENSSL_free(ctx->alpn_client_proto_list);
   EVP_PKEY_free(ctx->tlsext_channel_id_private);
+  OPENSSL_free(ctx->verify_sigalgs);
 
   OPENSSL_free(ctx);
 }
@@ -945,6 +948,10 @@ static int set_min_version(const SSL_PROTOCOL_METHOD *method, uint16_t *out,
   /* Zero is interpreted as the default minimum version. */
   if (version == 0) {
     *out = method->min_version;
+    /* SSL 3.0 is disabled unless explicitly enabled. */
+    if (*out < TLS1_VERSION) {
+      *out = TLS1_VERSION;
+    }
     return 1;
   }
 
@@ -1459,22 +1466,10 @@ uint16_t SSL_get_curve_id(const SSL *ssl) {
 }
 
 int SSL_CTX_set_tmp_dh(SSL_CTX *ctx, const DH *dh) {
-  DH_free(ctx->cert->dh_tmp);
-  ctx->cert->dh_tmp = DHparams_dup(dh);
-  if (ctx->cert->dh_tmp == NULL) {
-    OPENSSL_PUT_ERROR(SSL, ERR_R_DH_LIB);
-    return 0;
-  }
   return 1;
 }
 
 int SSL_set_tmp_dh(SSL *ssl, const DH *dh) {
-  DH_free(ssl->cert->dh_tmp);
-  ssl->cert->dh_tmp = DHparams_dup(dh);
-  if (ssl->cert->dh_tmp == NULL) {
-    OPENSSL_PUT_ERROR(SSL, ERR_R_DH_LIB);
-    return 0;
-  }
   return 1;
 }
 
@@ -2103,12 +2098,10 @@ void SSL_set_tmp_rsa_callback(SSL *ssl, RSA *(*cb)(SSL *ssl, int is_export,
 void SSL_CTX_set_tmp_dh_callback(SSL_CTX *ctx,
                                  DH *(*callback)(SSL *ssl, int is_export,
                                                  int keylength)) {
-  ctx->cert->dh_tmp_cb = callback;
 }
 
 void SSL_set_tmp_dh_callback(SSL *ssl, DH *(*callback)(SSL *ssl, int is_export,
                                                        int keylength)) {
-  ssl->cert->dh_tmp_cb = callback;
 }
 
 int SSL_CTX_use_psk_identity_hint(SSL_CTX *ctx, const char *identity_hint) {
@@ -2398,7 +2391,7 @@ int ssl_get_version_range(const SSL *ssl, uint16_t *out_min_version,
   }
 
   if (!any_enabled) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_WRONG_SSL_VERSION);
+    OPENSSL_PUT_ERROR(SSL, SSL_R_NO_SUPPORTED_VERSIONS_ENABLED);
     return 0;
   }
 

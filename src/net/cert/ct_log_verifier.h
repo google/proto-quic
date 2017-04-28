@@ -60,7 +60,7 @@ class NET_EXPORT CTLogVerifier
   const std::string& dns_domain() const { return dns_domain_; }
 
   // Verifies that |sct| is valid for |entry| and was signed by this log.
-  bool Verify(const ct::LogEntry& entry,
+  bool Verify(const ct::SignedEntryData& entry,
               const ct::SignedCertificateTimestamp& sct) const;
 
   // Verifies that |signed_tree_head| is a valid Signed Tree Head (RFC 6962,

@@ -84,3 +84,10 @@ TEST(XmlElementWriter, StartContent) {
   }
   EXPECT_EQ("<foo bar=\"baz\">Hello world!</foo>\n", out.str());
 }
+
+TEST(XmlElementWriter, TestXmlEscape) {
+  std::string input = "\r \n \t & < > \"";
+  std::string output = XmlEscape(input);
+  std::string expected = "&#13; &#10; &#9; &amp; &lt; &gt; &quot;";
+  EXPECT_EQ(expected, output);
+}

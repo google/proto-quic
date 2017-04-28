@@ -11,6 +11,7 @@ from core import path_util
 from core import perf_benchmark
 
 from telemetry import benchmark as benchmark_module
+from telemetry import decorators
 from telemetry.core import discover
 from telemetry.internal.browser import browser_options
 from telemetry.testing import progress_reporter
@@ -44,6 +45,24 @@ class TestNoBenchmarkNamesDuplication(unittest.TestCase):
       self.assertEquals(1, len(names_to_benchmarks[n]),
                         'Multiple benchmarks with the same name %s are '
                         'found: %s' % (n, str(names_to_benchmarks[n])))
+
+class TestBenchmarkNamingMobile(unittest.TestCase):
+
+  def runTest(self):
+    all_benchmarks = _GetAllPerfBenchmarks()
+    names_to_benchmarks = defaultdict(list)
+    for b in all_benchmarks:
+      names_to_benchmarks[b.Name()] = b
+
+    for n, bench in names_to_benchmarks.items():
+      if 'mobile' in n:
+        enabled_tags = decorators.GetEnabledAttributes(bench)
+        disabled_tags = decorators.GetDisabledAttributes(bench)
+
+        self.assertTrue('all' in disabled_tags or 'android' in enabled_tags,
+                        ','.join([
+                            str(bench), bench.Name(),
+                            str(disabled_tags), str(enabled_tags)]))
 
 
 class TestNoOverrideCustomizeBrowserOptions(unittest.TestCase):

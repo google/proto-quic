@@ -57,18 +57,13 @@ TEST(InputFileParsersTest, ParseJSON) {
       "      \"expect_staple\": true,"
       "      \"include_subdomains_for_expect_staple\": false"
       "    }"
-      "  ],"
-      "  \"domain_ids\": ["
-      "    \"NOT_PINNED\","
-      "    \"EXAMPLE_COM\""
       "  ]"
       "}";
 
   TransportSecurityStateEntries entries;
   Pinsets pinsets;
-  DomainIDList domain_ids;
 
-  EXPECT_TRUE(ParseJSON(valid, &entries, &pinsets, &domain_ids));
+  EXPECT_TRUE(ParseJSON(valid, &entries, &pinsets));
 
   ASSERT_EQ(1U, pinsets.size());
   PinsetMap::const_iterator pinset = pinsets.pinsets().find("test");
@@ -167,41 +162,26 @@ TEST(InputFileParsersTest, ParseJSON) {
   EXPECT_TRUE(entry->expect_staple);
   EXPECT_FALSE(entry->expect_staple_include_subdomains);
   EXPECT_EQ("", entry->expect_staple_report_uri);
-
-  ASSERT_EQ(2U, domain_ids.size());
-  EXPECT_EQ("NOT_PINNED", domain_ids[0]);
-  EXPECT_EQ("EXAMPLE_COM", domain_ids[1]);
 }
 
 // Test that parsing valid JSON with missing keys fails.
 TEST(InputFileParsersTest, ParseJSONInvalid) {
   TransportSecurityStateEntries entries;
   Pinsets pinsets;
-  DomainIDList domain_ids;
 
   std::string no_pinsets =
       "{"
-      "  \"entries\": [],"
-      "  \"domain_ids\": []"
+      "  \"entries\": []"
       "}";
 
-  EXPECT_FALSE(ParseJSON(no_pinsets, &entries, &pinsets, &domain_ids));
+  EXPECT_FALSE(ParseJSON(no_pinsets, &entries, &pinsets));
 
   std::string no_entries =
       "{"
-      "  \"pinsets\": [],"
-      "  \"domain_ids\": []"
+      "  \"pinsets\": []"
       "}";
 
-  EXPECT_FALSE(ParseJSON(no_entries, &entries, &pinsets, &domain_ids));
-
-  std::string no_domain_ids =
-      "{"
-      "  \"pinsets\": [],"
-      "  \"entries\": []"
-      "}\n";
-
-  EXPECT_FALSE(ParseJSON(no_domain_ids, &entries, &pinsets, &domain_ids));
+  EXPECT_FALSE(ParseJSON(no_entries, &entries, &pinsets));
 
   std::string missing_hostname =
       "{"
@@ -210,18 +190,16 @@ TEST(InputFileParsersTest, ParseJSONInvalid) {
       "    {"
       "      \"mode\": \"force-https\""
       "    }"
-      "  ],"
-      "  \"domain_ids\": []"
+      "  ]"
       "}";
 
-  EXPECT_FALSE(ParseJSON(missing_hostname, &entries, &pinsets, &domain_ids));
+  EXPECT_FALSE(ParseJSON(missing_hostname, &entries, &pinsets));
 }
 
 // Test that parsing valid JSON with an invalid (HPKP) pinset fails.
 TEST(InputFileParsersTest, ParseJSONInvalidPinset) {
   TransportSecurityStateEntries entries;
   Pinsets pinsets;
-  DomainIDList domain_ids;
 
   std::string missing_pinset_name =
       "{"
@@ -230,11 +208,10 @@ TEST(InputFileParsersTest, ParseJSONInvalidPinset) {
       "      \"bad_static_spki_hashes\": [\"BadTestSPKI\"],"
       "      \"report_uri\": \"https://hpkp-log.example.com\""
       "  }],"
-      "  \"entries\": [],"
-      "  \"domain_ids\": []"
+      "  \"entries\": []"
       "}";
 
-  EXPECT_FALSE(ParseJSON(missing_pinset_name, &entries, &pinsets, &domain_ids));
+  EXPECT_FALSE(ParseJSON(missing_pinset_name, &entries, &pinsets));
 }
 
 // Test parsing of all 3 SPKI formats.

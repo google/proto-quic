@@ -7,19 +7,15 @@
 
 #include <memory>
 
-#include "media/formats/mp4/box_reader.h"
 #include "base/logging.h"
+#include "media/formats/mp4/box_reader.h"
 
 class NullMediaLog : public media::MediaLog {
  public:
   NullMediaLog() {}
-
-  void DoAddEventLogString(const std::string& event) {}
+  ~NullMediaLog() override {}
 
   void AddEvent(std::unique_ptr<media::MediaLogEvent> event) override {}
-
- protected:
-  virtual ~NullMediaLog() {}
 
  private:
   DISALLOW_COPY_AND_ASSIGN(NullMediaLog);
@@ -28,18 +24,9 @@ class NullMediaLog : public media::MediaLog {
 // Entry point for LibFuzzer.
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   bool err;
-  scoped_refptr<NullMediaLog> media_log(new NullMediaLog());
+  NullMediaLog media_log;
   std::unique_ptr<media::mp4::BoxReader> reader(
-      media::mp4::BoxReader::ReadTopLevelBox(data, static_cast<const int>(size),
-                                             media_log, &err));
-  if (err) {
-    return 0;
-  }
-  if (reader == NULL) {
-    return 0;
-  }
-  if (!reader->ScanChildren()) {
-    return 0;
-  }
-  return 0;
+      media::mp4::BoxReader::ReadTopLevelBox(data, static_cast<int>(size),
+                                             &media_log, &err));
+  return !err && reader && reader->ScanChildren() ? 0 : 0;
 }

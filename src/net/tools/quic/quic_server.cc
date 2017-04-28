@@ -18,6 +18,8 @@
 #include "net/quic/core/quic_crypto_stream.h"
 #include "net/quic/core/quic_data_reader.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_clock.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/tools/quic/platform/impl/quic_epoll_clock.h"
 #include "net/tools/quic/platform/impl/quic_socket_utils.h"

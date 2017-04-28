@@ -21,7 +21,7 @@ ThreadTestHelper::ThreadTestHelper(
 
 bool ThreadTestHelper::Run() {
   if (!target_thread_->PostTask(
-          FROM_HERE, base::Bind(&ThreadTestHelper::RunInThread, this))) {
+          FROM_HERE, base::BindOnce(&ThreadTestHelper::RunInThread, this))) {
     return false;
   }
   base::ThreadRestrictions::ScopedAllowWait allow_wait;

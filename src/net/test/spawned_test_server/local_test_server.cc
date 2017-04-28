@@ -213,7 +213,7 @@ bool LocalTestServer::AddCommandLineArguments(
         return false;
       for (base::ListValue::const_iterator list_it = list->begin();
            list_it != list->end(); ++list_it) {
-        if (!AppendArgumentFromJSONValue(key, *(*list_it), command_line))
+        if (!AppendArgumentFromJSONValue(key, *list_it, command_line))
           return false;
       }
     } else if (!AppendArgumentFromJSONValue(key, value, command_line)) {

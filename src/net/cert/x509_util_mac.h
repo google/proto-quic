@@ -10,18 +10,67 @@
 
 #include <string>
 
+#include "base/mac/scoped_cftyperef.h"
 #include "base/macros.h"
+#include "base/memory/ref_counted.h"
+#include "net/base/hash_value.h"
 #include "net/base/net_export.h"
 
 namespace net {
 
+class X509Certificate;
+
 namespace x509_util {
+
+// Tests that a given |cert_handle| is actually a valid X.509 certificate, and
+// returns true if it is.
+//
+// On OS X, SecCertificateCreateFromData() does not return any errors if
+// called with invalid data, as long as data is present. The actual decoding
+// of the certificate does not happen until an API that requires a CSSM
+// handle is called. While SecCertificateGetCLHandle is the most likely
+// candidate, as it performs the parsing, it does not check whether the
+// parsing was actually successful. Instead, SecCertificateGetSubject is
+// used (supported since 10.3), as a means to check that the certificate
+// parsed as a valid X.509 certificate.
+NET_EXPORT bool IsValidSecCertificate(SecCertificateRef cert_handle);
+
+// Creates a SecCertificate handle from the DER-encoded representation.
+// Returns NULL on failure.
+NET_EXPORT base::ScopedCFTypeRef<SecCertificateRef>
+CreateSecCertificateFromBytes(const uint8_t* data, size_t length);
+
+// Returns a SecCertificate representing |cert|, or NULL on failure.
+NET_EXPORT base::ScopedCFTypeRef<SecCertificateRef>
+CreateSecCertificateFromX509Certificate(const X509Certificate* cert);
+
+// Returns a new CFMutableArrayRef containing this certificate and its
+// intermediate certificates in the form expected by Security.framework
+// and Keychain Services, or NULL on failure.
+// The first item in the array will be this certificate, followed by its
+// intermediates, if any.
+NET_EXPORT base::ScopedCFTypeRef<CFMutableArrayRef>
+CreateSecCertificateArrayForX509Certificate(X509Certificate* cert);
+
+// Creates an X509Certificate representing |sec_cert| with intermediates
+// |sec_chain|.
+NET_EXPORT scoped_refptr<X509Certificate>
+CreateX509CertificateFromSecCertificate(
+    SecCertificateRef sec_cert,
+    const std::vector<SecCertificateRef>& sec_chain);
+
+// Returns true if the certificate is self-signed.
+NET_EXPORT bool IsSelfSigned(SecCertificateRef cert_handle);
+
+// Calculates the SHA-256 fingerprint of the certificate.  Returns an empty
+// (all zero) fingerprint on failure.
+NET_EXPORT SHA256HashValue CalculateFingerprint256(SecCertificateRef cert);
 
 // Creates a security policy for certificates used as client certificates
 // in SSL.
 // If a policy is successfully created, it will be stored in
 // |*policy| and ownership transferred to the caller.
-OSStatus NET_EXPORT CreateSSLClientPolicy(SecPolicyRef* policy);
+NET_EXPORT OSStatus CreateSSLClientPolicy(SecPolicyRef* policy);
 
 // Create an SSL server policy. While certificate name validation will be
 // performed by SecTrustEvaluate(), it has the following limitations:
@@ -32,13 +81,13 @@ OSStatus NET_EXPORT CreateSSLClientPolicy(SecPolicyRef* policy);
 // system trust preferences, such as those created by Safari. Preferences
 // created by Keychain Access do not share this requirement.
 // On success, stores the resultant policy in |*policy| and returns noErr.
-OSStatus NET_EXPORT CreateSSLServerPolicy(const std::string& hostname,
+NET_EXPORT OSStatus CreateSSLServerPolicy(const std::string& hostname,
                                           SecPolicyRef* policy);
 
 // Creates a security policy for basic X.509 validation. If the policy is
 // successfully created, it will be stored in |*policy| and ownership
 // transferred to the caller.
-OSStatus NET_EXPORT CreateBasicX509Policy(SecPolicyRef* policy);
+NET_EXPORT OSStatus CreateBasicX509Policy(SecPolicyRef* policy);
 
 // Creates security policies to control revocation checking (OCSP and CRL).
 // If |enable_revocation_checking| is true, revocation checking will be
@@ -47,7 +96,7 @@ OSStatus NET_EXPORT CreateBasicX509Policy(SecPolicyRef* policy);
 // the network or the local cache, if possible.
 // If the policies are successfully created, they will be appended to
 // |policies|.
-OSStatus NET_EXPORT CreateRevocationPolicies(bool enable_revocation_checking,
+NET_EXPORT OSStatus CreateRevocationPolicies(bool enable_revocation_checking,
                                              CFMutableArrayRef policies);
 
 // CSSM functions are deprecated as of OSX 10.7, but have no replacement.

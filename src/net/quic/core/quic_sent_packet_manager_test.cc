@@ -6,7 +6,8 @@
 
 #include <memory>
 
-#include "net/quic/core/quic_flags.h"
+#include "net/quic/core/quic_pending_retransmission.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/test_tools/quic_config_peer.h"

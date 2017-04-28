@@ -49,6 +49,10 @@ TEST(Escape, PosixCommand) {
 
   // Some more generic shell chars.
   EXPECT_EQ("a_\\;\\<\\*b", EscapeString("a_;<*b", opts, nullptr));
+
+  // Curly braces must be escaped to avoid brace expansion on systems using
+  // bash as default shell..
+  EXPECT_EQ("\\{a,b\\}\\{c,d\\}", EscapeString("{a,b}{c,d}", opts, nullptr));
 }
 
 TEST(Escape, NinjaPreformatted) {

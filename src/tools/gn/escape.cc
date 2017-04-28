@@ -6,7 +6,6 @@
 
 #include <stddef.h>
 
-#include "base/containers/stack_container.h"
 #include "base/logging.h"
 #include "build/build_config.h"
 
@@ -28,32 +27,29 @@ const char kShellValid[0x80] = {
 //  `  a  b  c  d  e  f  g  h  i  j  k  l  m  n  o
     0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 //  p  q  r  s  t  u  v  w  x  y  z  {  |  }  ~
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0 };
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0 };
 
 // Append one character to the given string, escaping it for Ninja.
 //
 // Ninja's escaping rules are very simple. We always escape colons even
 // though they're OK in many places, in case the resulting string is used on
 // the left-hand-side of a rule.
-template<typename DestString>
-inline void NinjaEscapeChar(char ch, DestString* dest) {
+inline void NinjaEscapeChar(char ch, std::string* dest) {
   if (ch == '$' || ch == ' ' || ch == ':')
     dest->push_back('$');
   dest->push_back(ch);
 }
 
-template<typename DestString>
 void EscapeStringToString_Ninja(const base::StringPiece& str,
                                 const EscapeOptions& options,
-                                DestString* dest,
+                                std::string* dest,
                                 bool* needed_quoting) {
   for (const auto& elem : str)
     NinjaEscapeChar(elem, dest);
 }
 
-template<typename DestString>
 void EscapeStringToString_NinjaPreformatted(const base::StringPiece& str,
-                                            DestString* dest) {
+                                            std::string* dest) {
   // Only Ninja-escape $.
   for (const auto& elem : str) {
     if (elem == '$')
@@ -70,10 +66,9 @@ void EscapeStringToString_NinjaPreformatted(const base::StringPiece& str,
 // See:
 //   http://blogs.msdn.com/b/twistylittlepassagesallalike/archive/2011/04/23/everyone-quotes-arguments-the-wrong-way.aspx
 //   http://blogs.msdn.com/b/oldnewthing/archive/2010/09/17/10063629.aspx
-template<typename DestString>
 void EscapeStringToString_WindowsNinjaFork(const base::StringPiece& str,
                                            const EscapeOptions& options,
-                                           DestString* dest,
+                                           std::string* dest,
                                            bool* needed_quoting) {
   // We assume we don't have any whitespace chars that aren't spaces.
   DCHECK(str.find_first_of("\r\n\v\t") == std::string::npos);
@@ -116,10 +111,9 @@ void EscapeStringToString_WindowsNinjaFork(const base::StringPiece& str,
   }
 }
 
-template<typename DestString>
 void EscapeStringToString_PosixNinjaFork(const base::StringPiece& str,
                                          const EscapeOptions& options,
-                                         DestString* dest,
+                                         std::string* dest,
                                          bool* needed_quoting) {
   for (const auto& elem : str) {
     if (elem == '$' || elem == ' ') {
@@ -145,10 +139,9 @@ void EscapeStringToString_PosixNinjaFork(const base::StringPiece& str,
   }
 }
 
-template<typename DestString>
 void EscapeStringToString(const base::StringPiece& str,
                           const EscapeOptions& options,
-                          DestString* dest,
+                          std::string* dest,
                           bool* needed_quoting) {
   switch (options.mode) {
     case ESCAPE_NONE:
@@ -202,8 +195,8 @@ std::string EscapeString(const base::StringPiece& str,
 void EscapeStringToStream(std::ostream& out,
                           const base::StringPiece& str,
                           const EscapeOptions& options) {
-  base::StackString<256> escaped;
-  EscapeStringToString(str, options, &escaped.container(), nullptr);
-  if (!escaped->empty())
-    out.write(escaped->data(), escaped->size());
+  std::string escaped;
+  EscapeStringToString(str, options, &escaped, nullptr);
+  if (!escaped.empty())
+    out.write(escaped.data(), escaped.size());
 }

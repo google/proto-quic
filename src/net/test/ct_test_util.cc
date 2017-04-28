@@ -173,21 +173,21 @@ size_t kSampleSTHTreeSize = 21u;
 
 }  // namespace
 
-void GetX509CertLogEntry(LogEntry* entry) {
-  entry->type = ct::LogEntry::LOG_ENTRY_TYPE_X509;
+void GetX509CertSignedEntry(SignedEntryData* entry) {
+  entry->type = ct::SignedEntryData::LOG_ENTRY_TYPE_X509;
   entry->leaf_certificate = HexToBytes(kDefaultDerCert);
 }
 
 void GetX509CertTreeLeaf(MerkleTreeLeaf* tree_leaf) {
   tree_leaf->timestamp = base::Time::FromJsTime(kTestTimestamp);
-  GetX509CertLogEntry(&tree_leaf->log_entry);
+  GetX509CertSignedEntry(&tree_leaf->signed_entry);
   tree_leaf->extensions = HexToBytes(kDefaultExtensions);
 }
 
 std::string GetDerEncodedX509Cert() { return HexToBytes(kDefaultDerCert); }
 
-void GetPrecertLogEntry(LogEntry* entry) {
-  entry->type = ct::LogEntry::LOG_ENTRY_TYPE_PRECERT;
+void GetPrecertSignedEntry(SignedEntryData* entry) {
+  entry->type = ct::SignedEntryData::LOG_ENTRY_TYPE_PRECERT;
   std::string issuer_hash(HexToBytes(kDefaultIssuerKeyHash));
   memcpy(entry->issuer_key_hash.data, issuer_hash.data(), issuer_hash.size());
   entry->tbs_certificate = HexToBytes(kDefaultDerTbsCert);
@@ -195,7 +195,7 @@ void GetPrecertLogEntry(LogEntry* entry) {
 
 void GetPrecertTreeLeaf(MerkleTreeLeaf* tree_leaf) {
   tree_leaf->timestamp = base::Time::FromJsTime(kTestTimestamp);
-  GetPrecertLogEntry(&tree_leaf->log_entry);
+  GetPrecertSignedEntry(&tree_leaf->signed_entry);
   tree_leaf->extensions = HexToBytes(kDefaultExtensions);
 }
 

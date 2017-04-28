@@ -41,41 +41,64 @@ class NET_EXPORT TCPSocketPosix {
       const NetLogSource& source);
   virtual ~TCPSocketPosix();
 
+  // Opens the socket.
+  // Returns a net error code.
   int Open(AddressFamily family);
+
   // Takes ownership of |socket_fd|.
   int AdoptConnectedSocket(int socket_fd, const IPEndPoint& peer_address);
 
+  // Binds this socket to |address|. This is generally only used on a server.
+  // Should be called after Open(). Returns a net error code.
   int Bind(const IPEndPoint& address);
 
+  // Put this socket on listen state with the given |backlog|.
+  // Returns a net error code.
   int Listen(int backlog);
+
+  // Accepts incoming connection.
+  // Returns a net error code.
   int Accept(std::unique_ptr<TCPSocketPosix>* socket,
              IPEndPoint* address,
              const CompletionCallback& callback);
 
+  // Connects this socket to the given |address|.
+  // Should be called after Open().
+  // Returns a net error code.
   int Connect(const IPEndPoint& address, const CompletionCallback& callback);
   bool IsConnected() const;
   bool IsConnectedAndIdle() const;
 
+  // IO:
   // Multiple outstanding requests are not supported.
   // Full duplex mode (reading and writing at the same time) is supported.
+
+  // Reads from the socket.
+  // Returns a net error code.
   int Read(IOBuffer* buf, int buf_len, const CompletionCallback& callback);
   int ReadIfReady(IOBuffer* buf,
                   int buf_len,
                   const CompletionCallback& callback);
+
+  // Writes to the socket.
+  // Returns a net error code.
   int Write(IOBuffer* buf, int buf_len, const CompletionCallback& callback);
 
+  // Copies the local tcp address into |address| and returns a net error code.
   int GetLocalAddress(IPEndPoint* address) const;
+
+  // Copies the remote tcp code into |address| and returns a net error code.
   int GetPeerAddress(IPEndPoint* address) const;
 
   // Sets various socket options.
   // The commonly used options for server listening sockets:
-  // - SetAddressReuse(true).
+  // - AllowAddressReuse().
   int SetDefaultOptionsForServer();
   // The commonly used options for client sockets and accepted sockets:
   // - SetNoDelay(true);
   // - SetKeepAlive(true, 45).
   void SetDefaultOptionsForClient();
-  int SetAddressReuse(bool allow);
+  int AllowAddressReuse();
   int SetReceiveBufferSize(int32_t size);
   int SetSendBufferSize(int32_t size);
   bool SetKeepAlive(bool enable, int delay);
@@ -86,6 +109,7 @@ class NET_EXPORT TCPSocketPosix {
   bool GetEstimatedRoundTripTime(base::TimeDelta* out_rtt) const
       WARN_UNUSED_RESULT;
 
+  // Closes the socket.
   void Close();
 
   void EnableTCPFastOpenIfSupported();

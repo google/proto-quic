@@ -25,7 +25,7 @@
 #include "net/proxy/proxy_service.h"
 #include "net/quic/chromium/quic_stream_factory_peer.h"
 #include "net/socket/socket_test_util.h"
-#include "net/spdy/spdy_test_util_common.h"
+#include "net/spdy/chromium/spdy_test_util_common.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gmock_mutant.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -929,7 +929,6 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, DelayedTCP) {
 
   // Enable delayed TCP and set time delay for waiting job.
   QuicStreamFactory* quic_stream_factory = session_->quic_stream_factory();
-  test::QuicStreamFactoryPeer::SetDelayTcpRace(quic_stream_factory, true);
   quic_stream_factory->set_require_confirmation(false);
   ServerNetworkStats stats1;
   stats1.srtt = base::TimeDelta::FromMicroseconds(10);
@@ -998,7 +997,6 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, DelayedTCPWithLargeSrtt) {
 
   // Enable delayed TCP and set a extremely large time delay for waiting job.
   QuicStreamFactory* quic_stream_factory = session_->quic_stream_factory();
-  test::QuicStreamFactoryPeer::SetDelayTcpRace(quic_stream_factory, true);
   quic_stream_factory->set_require_confirmation(false);
   ServerNetworkStats stats1;
   stats1.srtt = base::TimeDelta::FromSeconds(100);
@@ -1056,7 +1054,6 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
 
   // Enable delayed TCP and set time delay for waiting job.
   QuicStreamFactory* quic_stream_factory = session_->quic_stream_factory();
-  test::QuicStreamFactoryPeer::SetDelayTcpRace(quic_stream_factory, true);
   quic_stream_factory->set_require_confirmation(false);
   ServerNetworkStats stats1;
   stats1.srtt = base::TimeDelta::FromMicroseconds(10);
@@ -1181,7 +1178,6 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, DelayedTCPAlternativeProxy) {
 
   // Enable delayed TCP and set time delay for waiting job.
   QuicStreamFactory* quic_stream_factory = session_->quic_stream_factory();
-  test::QuicStreamFactoryPeer::SetDelayTcpRace(quic_stream_factory, true);
   quic_stream_factory->set_require_confirmation(false);
   ServerNetworkStats stats1;
   stats1.srtt = base::TimeDelta::FromMicroseconds(10);
@@ -1244,7 +1240,6 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, FailAlternativeProxy) {
 
   // Enable delayed TCP and set time delay for waiting job.
   QuicStreamFactory* quic_stream_factory = session_->quic_stream_factory();
-  test::QuicStreamFactoryPeer::SetDelayTcpRace(quic_stream_factory, true);
   quic_stream_factory->set_require_confirmation(false);
   ServerNetworkStats stats1;
   stats1.srtt = base::TimeDelta::FromMicroseconds(300 * 1000);

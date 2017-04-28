@@ -47,7 +47,6 @@ _BENCHMARKS_TO_RUN = {
   'media.tough_video_cases',
   'octane',
   'smoothness.top_25_smooth',
-  'speedometer',
   'storage.indexeddb_endure_tracing',
   'sunspider',
 }

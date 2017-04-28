@@ -20,6 +20,7 @@ NET_EXPORT der::Input TypeSerialNumberOid();
 NET_EXPORT der::Input TypeCountryNameOid();
 NET_EXPORT der::Input TypeLocalityNameOid();
 NET_EXPORT der::Input TypeStateOrProvinceNameOid();
+NET_EXPORT der::Input TypeStreetAddressOid();
 NET_EXPORT der::Input TypeOrganizationNameOid();
 NET_EXPORT der::Input TypeOrganizationUnitNameOid();
 NET_EXPORT der::Input TypeTitleOid();
@@ -27,6 +28,7 @@ NET_EXPORT der::Input TypeNameOid();
 NET_EXPORT der::Input TypeGivenNameOid();
 NET_EXPORT der::Input TypeInitialsOid();
 NET_EXPORT der::Input TypeGenerationQualifierOid();
+NET_EXPORT der::Input TypeDomainComponentOid();
 
 // X509NameAttribute contains a representation of a DER-encoded RFC 2253
 // "AttributeTypeAndValue".

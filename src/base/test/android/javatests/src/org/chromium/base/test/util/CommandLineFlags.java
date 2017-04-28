@@ -6,7 +6,7 @@ package org.chromium.base.test.util;
 
 import android.content.Context;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.chromium.base.BaseChromiumApplication;
 import org.chromium.base.CommandLine;

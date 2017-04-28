@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/compiler_specific.h"
 #include "base/logging.h"
+#include "base/bind.h"
+#include "base/callback.h"
+#include "base/compiler_specific.h"
 #include "base/macros.h"
+#include "base/strings/string_piece.h"
 
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -29,12 +32,16 @@ namespace logging {
 namespace {
 
 using ::testing::Return;
+using ::testing::_;
 
 // Needs to be global since log assert handlers can't maintain state.
 int log_sink_call_count = 0;
 
 #if !defined(OFFICIAL_BUILD) || defined(DCHECK_ALWAYS_ON) || !defined(NDEBUG)
-void LogSink(const std::string& str) {
+void LogSink(const char* file,
+             int line,
+             const base::StringPiece message,
+             const base::StringPiece stack_trace) {
   ++log_sink_call_count;
 }
 #endif
@@ -47,7 +54,6 @@ class LogStateSaver {
 
   ~LogStateSaver() {
     SetMinLogLevel(old_min_log_level_);
-    SetLogAssertHandler(NULL);
     log_sink_call_count = 0;
   }
 
@@ -65,6 +71,13 @@ class LoggingTest : public testing::Test {
 class MockLogSource {
  public:
   MOCK_METHOD0(Log, const char*());
+};
+
+class MockLogAssertHandler {
+ public:
+  MOCK_METHOD4(
+      HandleLogAssert,
+      void(const char*, int, const base::StringPiece, const base::StringPiece));
 };
 
 TEST_F(LoggingTest, BasicLogging) {
@@ -197,7 +210,7 @@ TEST_F(LoggingTest, MAYBE_CheckStreamsAreLazy) {
       WillRepeatedly(Return("check message"));
   EXPECT_CALL(uncalled_mock_log_source, Log()).Times(0);
 
-  SetLogAssertHandler(&LogSink);
+  ScopedLogAssertHandler scoped_assert_handler(base::Bind(LogSink));
 
   CHECK(mock_log_source.Log()) << uncalled_mock_log_source.Log();
   PCHECK(!mock_log_source.Log()) << mock_log_source.Log();
@@ -405,12 +418,12 @@ TEST_F(LoggingTest, MAYBE_Dcheck) {
   EXPECT_FALSE(DLOG_IS_ON(DCHECK));
 #elif defined(NDEBUG) && defined(DCHECK_ALWAYS_ON)
   // Release build with real DCHECKS.
-  SetLogAssertHandler(&LogSink);
+  ScopedLogAssertHandler scoped_assert_handler(base::Bind(LogSink));
   EXPECT_TRUE(DCHECK_IS_ON());
   EXPECT_TRUE(DLOG_IS_ON(DCHECK));
 #else
   // Debug build.
-  SetLogAssertHandler(&LogSink);
+  ScopedLogAssertHandler scoped_assert_handler(base::Bind(LogSink));
   EXPECT_TRUE(DCHECK_IS_ON());
   EXPECT_TRUE(DLOG_IS_ON(DCHECK));
 #endif
@@ -497,6 +510,43 @@ TEST_F(LoggingTest, CheckEqStatements) {
 
   if (false)
     CHECK_EQ(false, true);           // Unreached.
+}
+
+TEST_F(LoggingTest, NestedLogAssertHandlers) {
+  ::testing::InSequence dummy;
+  ::testing::StrictMock<MockLogAssertHandler> handler_a, handler_b;
+
+  EXPECT_CALL(
+      handler_a,
+      HandleLogAssert(
+          _, _, base::StringPiece("First assert must be caught by handler_a"),
+          _));
+  EXPECT_CALL(
+      handler_b,
+      HandleLogAssert(
+          _, _, base::StringPiece("Second assert must be caught by handler_b"),
+          _));
+  EXPECT_CALL(
+      handler_a,
+      HandleLogAssert(
+          _, _,
+          base::StringPiece("Last assert must be caught by handler_a again"),
+          _));
+
+  logging::ScopedLogAssertHandler scoped_handler_a(base::Bind(
+      &MockLogAssertHandler::HandleLogAssert, base::Unretained(&handler_a)));
+
+  // Using LOG(FATAL) rather than CHECK(false) here since log messages aren't
+  // preserved for CHECKs in official builds.
+  LOG(FATAL) << "First assert must be caught by handler_a";
+
+  {
+    logging::ScopedLogAssertHandler scoped_handler_b(base::Bind(
+        &MockLogAssertHandler::HandleLogAssert, base::Unretained(&handler_b)));
+    LOG(FATAL) << "Second assert must be caught by handler_b";
+  }
+
+  LOG(FATAL) << "Last assert must be caught by handler_a again";
 }
 
 // Test that defining an operator<< for a type in a namespace doesn't prevent

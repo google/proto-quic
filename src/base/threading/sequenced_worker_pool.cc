@@ -697,7 +697,9 @@ bool SequencedWorkerPool::Inner::PostTask(
     const tracked_objects::Location& from_here,
     OnceClosure task,
     TimeDelta delay) {
-  DCHECK(task);
+  // Use CHECK instead of DCHECK to crash earlier. See http://crbug.com/711167
+  // for details.
+  CHECK(task);
 
   // TODO(fdoray): Uncomment this DCHECK. It is initially commented to avoid a
   // revert of the CL that adds debug::DumpWithoutCrashing() if it fails on the

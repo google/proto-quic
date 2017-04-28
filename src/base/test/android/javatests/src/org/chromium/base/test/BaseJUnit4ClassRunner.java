@@ -13,6 +13,7 @@ import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
 
+import org.chromium.base.CollectionUtil;
 import org.chromium.base.test.BaseTestResult.PreTestHook;
 import org.chromium.base.test.util.DisableIfSkipCheck;
 import org.chromium.base.test.util.MinAndroidSdkLevelSkipCheck;
@@ -21,7 +22,6 @@ import org.chromium.base.test.util.SkipCheck;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -29,8 +29,8 @@ import java.util.List;
  *
  *  This ClassRunner imports from AndroidJUnit4ClassRunner which is a hidden but accessible
  *  class. The reason is that default JUnit4 runner for Android is a final class,
- *  {@link AndroidJUnit4}. We need to extends an inheritable class to change {@link runChild}
- *  and {@link isIgnored} to add SkipChecks and PreTesthook.
+ *  AndroidJUnit4. We need to extends an inheritable class to change {@link #runChild}
+ *  and {@link #isIgnored} to add SkipChecks and PreTesthook.
  */
 public class BaseJUnit4ClassRunner extends AndroidJUnit4ClassRunner {
     private final List<SkipCheck> mSkipChecks;
@@ -84,7 +84,7 @@ public class BaseJUnit4ClassRunner extends AndroidJUnit4ClassRunner {
                 new AndroidRunnerParams(InstrumentationRegistry.getInstrumentation(),
                         InstrumentationRegistry.getArguments(), false, 0L, false));
         mSkipChecks = mergeList(checks, defaultSkipChecks());
-        mPreTestHooks = defaultPreTestHooks();
+        mPreTestHooks = mergeList(hooks, defaultPreTestHooks());
     }
 
     /**
@@ -108,18 +108,16 @@ public class BaseJUnit4ClassRunner extends AndroidJUnit4ClassRunner {
      * Change this static function to add or take out default {@code SkipCheck}s.
      */
     private static List<SkipCheck> defaultSkipChecks() {
-        return Arrays.asList(new SkipCheck[]{
+        return CollectionUtil.newArrayList(
             new RestrictionSkipCheck(InstrumentationRegistry.getTargetContext()),
-            new MinAndroidSdkLevelSkipCheck(),
-            new DisableIfSkipCheck()
-        });
+            new MinAndroidSdkLevelSkipCheck(), new DisableIfSkipCheck());
     }
 
     /**
      * Change this static function to add or take out default {@code PreTestHook}s.
      */
     private static List<PreTestHook> defaultPreTestHooks() {
-        return new ArrayList<PreTestHook>();
+        return null;
     }
 
     /**

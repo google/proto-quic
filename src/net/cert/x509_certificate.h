@@ -19,8 +19,11 @@
 #include "net/base/net_export.h"
 #include "net/cert/cert_type.h"
 #include "net/cert/x509_cert_types.h"
+#include "net/net_features.h"
 
-#if defined(OS_WIN)
+#if BUILDFLAG(USE_BYTE_CERTS)
+#include "third_party/boringssl/src/include/openssl/base.h"
+#elif defined(OS_WIN)
 #include <windows.h>
 #include "crypto/wincrypt_shim.h"
 #elif defined(OS_MACOSX)
@@ -56,7 +59,11 @@ class NET_EXPORT X509Certificate
   // An OSCertHandle is a handle to a certificate object in the underlying
   // crypto library. We assume that OSCertHandle is a pointer type on all
   // platforms and that NULL represents an invalid OSCertHandle.
-#if defined(OS_WIN)
+#if BUILDFLAG(USE_BYTE_CERTS)
+  // TODO(mattm): Remove OSCertHandle type and clean up the interfaces once all
+  // platforms use the CRYPTO_BUFFER version.
+  typedef CRYPTO_BUFFER* OSCertHandle;
+#elif defined(OS_WIN)
   typedef PCCERT_CONTEXT OSCertHandle;
 #elif defined(OS_MACOSX)
   typedef SecCertificateRef OSCertHandle;
@@ -224,7 +231,7 @@ class NET_EXPORT X509Certificate
     return intermediate_ca_certs_;
   }
 
-#if defined(OS_MACOSX)
+#if defined(OS_IOS)
   // Returns a new CFMutableArrayRef containing this certificate and its
   // intermediate certificates in the form expected by Security.framework
   // and Keychain Services, or NULL on failure.

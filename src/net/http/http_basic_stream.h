@@ -72,6 +72,9 @@ class NET_EXPORT_PRIVATE HttpBasicStream : public HttpStream {
 
   bool GetLoadTimingInfo(LoadTimingInfo* load_timing_info) const override;
 
+  bool GetAlternativeService(
+      AlternativeService* alternative_service) const override;
+
   void GetSSLInfo(SSLInfo* ssl_info) override;
 
   void GetSSLCertRequestInfo(SSLCertRequestInfo* cert_request_info) override;

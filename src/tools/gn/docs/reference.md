@@ -5861,8 +5861,9 @@
   All generated targets (see "gn help execution") will be added to an implicit
   build rule called "all" so "ninja all" will always compile everything. The
   default rule will be used by Ninja if no specific target is specified (just
-  typing "ninja"). If there is a target named "//:default" it will be the
-  default build rule, otherwise the implicit "all" rule will be used.
+  typing "ninja"). If there is a target named "default" in the root build file,
+  it will be the default build rule, otherwise the implicit "all" rule will be
+  used.
 ```
 
 #### **Phony rules**

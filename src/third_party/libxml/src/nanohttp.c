@@ -1423,9 +1423,9 @@ retry:
     if (ctxt->port != 80) {
 	/* reserve space for ':xxxxx', incl. potential proxy */
 	if (proxy)
-	    blen += 12;
+	    blen += 17;
 	else
-	    blen += 6;
+	    blen += 11;
     }
     bp = (char*)xmlMallocAtomic(blen);
     if ( bp == NULL ) {

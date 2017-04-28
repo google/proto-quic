@@ -10,6 +10,7 @@
 #include "base/memory/ptr_util.h"
 #include "net/base/sdch_manager.h"
 #include "net/base/sdch_observer.h"
+#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request_http_job.h"
 #include "net/url_request/url_request_test_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -93,7 +94,8 @@ class SdchPolicyDelegateTest : public testing::Test {
         is_cached_content_(false),
         response_code_(200) {
     req_ = context_.CreateRequest(GURL("http://www.example.com"),
-                                  DEFAULT_PRIORITY, &request_delegate_);
+                                  DEFAULT_PRIORITY, &request_delegate_,
+                                  TRAFFIC_ANNOTATION_FOR_TESTS);
     job_.reset(new TestURLRequestHttpJob(req_.get()));
   }
 

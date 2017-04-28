@@ -250,8 +250,9 @@ TEST_F(SequenceCheckerTest,
 
   SequencedWorkerPoolOwner second_pool_owner(kNumWorkerThreads, "test2");
   second_pool_owner.pool()->PostNamedSequencedWorkerTask(
-      "A", FROM_HERE, base::Bind(&ExpectNotCalledOnValidSequence,
-                                 base::Unretained(&sequence_checker)));
+      "A", FROM_HERE,
+      base::BindOnce(&ExpectNotCalledOnValidSequence,
+                     base::Unretained(&sequence_checker)));
   second_pool_owner.pool()->FlushForTesting();
 }
 

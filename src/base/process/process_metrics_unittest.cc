@@ -377,9 +377,9 @@ TEST_F(SystemMetricsTest, TestNoNegativeCpuUsage) {
   std::vector<std::string> vec2;
   std::vector<std::string> vec3;
 
-  thread1.task_runner()->PostTask(FROM_HERE, Bind(&BusyWork, &vec1));
-  thread2.task_runner()->PostTask(FROM_HERE, Bind(&BusyWork, &vec2));
-  thread3.task_runner()->PostTask(FROM_HERE, Bind(&BusyWork, &vec3));
+  thread1.task_runner()->PostTask(FROM_HERE, BindOnce(&BusyWork, &vec1));
+  thread2.task_runner()->PostTask(FROM_HERE, BindOnce(&BusyWork, &vec2));
+  thread3.task_runner()->PostTask(FROM_HERE, BindOnce(&BusyWork, &vec3));
 
   EXPECT_GE(metrics->GetCPUUsage(), 0.0);
 
@@ -418,7 +418,8 @@ TEST(SystemMetrics2Test, GetSystemMemoryInfo) {
 #endif  // defined(OS_LINUX) || defined(OS_ANDROID)
 
   // All the values should be less than the total amount of memory.
-#if !defined(OS_WIN)
+#if !defined(OS_WIN) && !defined(OS_IOS)
+  // TODO(crbug.com/711450): re-enable the following assertion on iOS.
   EXPECT_LT(info.free, info.total);
 #endif
 #if defined(OS_LINUX) || defined(OS_ANDROID)

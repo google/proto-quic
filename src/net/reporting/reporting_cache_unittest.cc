@@ -296,5 +296,109 @@ TEST_F(ReportingCacheTest, RemoveAllClients) {
   EXPECT_TRUE(clients.empty());
 }
 
+TEST_F(ReportingCacheTest, ExcludeSubdomainsDifferentPort) {
+  const url::Origin kOrigin(GURL("https://example/"));
+  const url::Origin kDifferentPortOrigin(GURL("https://example:444/"));
+
+  cache()->SetClient(kDifferentPortOrigin, kEndpoint1_,
+                     ReportingClient::Subdomains::EXCLUDE, kGroup1_,
+                     kExpires1_);
+
+  std::vector<const ReportingClient*> clients;
+  cache()->GetClientsForOriginAndGroup(kOrigin, kGroup1_, &clients);
+  EXPECT_TRUE(clients.empty());
+}
+
+TEST_F(ReportingCacheTest, ExcludeSubdomainsSuperdomain) {
+  const url::Origin kOrigin(GURL("https://foo.example/"));
+  const url::Origin kSuperOrigin(GURL("https://example/"));
+
+  cache()->SetClient(kSuperOrigin, kEndpoint1_,
+                     ReportingClient::Subdomains::EXCLUDE, kGroup1_,
+                     kExpires1_);
+
+  std::vector<const ReportingClient*> clients;
+  cache()->GetClientsForOriginAndGroup(kOrigin, kGroup1_, &clients);
+  EXPECT_TRUE(clients.empty());
+}
+
+TEST_F(ReportingCacheTest, IncludeSubdomainsDifferentPort) {
+  const url::Origin kOrigin(GURL("https://example/"));
+  const url::Origin kDifferentPortOrigin(GURL("https://example:444/"));
+
+  cache()->SetClient(kDifferentPortOrigin, kEndpoint1_,
+                     ReportingClient::Subdomains::INCLUDE, kGroup1_,
+                     kExpires1_);
+
+  std::vector<const ReportingClient*> clients;
+  cache()->GetClientsForOriginAndGroup(kOrigin, kGroup1_, &clients);
+  ASSERT_EQ(1u, clients.size());
+  EXPECT_EQ(kDifferentPortOrigin, clients[0]->origin);
+}
+
+TEST_F(ReportingCacheTest, IncludeSubdomainsSuperdomain) {
+  const url::Origin kOrigin(GURL("https://foo.example/"));
+  const url::Origin kSuperOrigin(GURL("https://example/"));
+
+  cache()->SetClient(kSuperOrigin, kEndpoint1_,
+                     ReportingClient::Subdomains::INCLUDE, kGroup1_,
+                     kExpires1_);
+
+  std::vector<const ReportingClient*> clients;
+  cache()->GetClientsForOriginAndGroup(kOrigin, kGroup1_, &clients);
+  ASSERT_EQ(1u, clients.size());
+  EXPECT_EQ(kSuperOrigin, clients[0]->origin);
+}
+
+TEST_F(ReportingCacheTest, IncludeSubdomainsPreferOriginToDifferentPort) {
+  const url::Origin kOrigin(GURL("https://foo.example/"));
+  const url::Origin kDifferentPortOrigin(GURL("https://example:444/"));
+
+  cache()->SetClient(kOrigin, kEndpoint1_, ReportingClient::Subdomains::INCLUDE,
+                     kGroup1_, kExpires1_);
+  cache()->SetClient(kDifferentPortOrigin, kEndpoint1_,
+                     ReportingClient::Subdomains::INCLUDE, kGroup1_,
+                     kExpires1_);
+
+  std::vector<const ReportingClient*> clients;
+  cache()->GetClientsForOriginAndGroup(kOrigin, kGroup1_, &clients);
+  ASSERT_EQ(1u, clients.size());
+  EXPECT_EQ(kOrigin, clients[0]->origin);
+}
+
+TEST_F(ReportingCacheTest, IncludeSubdomainsPreferOriginToSuperdomain) {
+  const url::Origin kOrigin(GURL("https://foo.example/"));
+  const url::Origin kSuperOrigin(GURL("https://example/"));
+
+  cache()->SetClient(kOrigin, kEndpoint1_, ReportingClient::Subdomains::INCLUDE,
+                     kGroup1_, kExpires1_);
+  cache()->SetClient(kSuperOrigin, kEndpoint1_,
+                     ReportingClient::Subdomains::INCLUDE, kGroup1_,
+                     kExpires1_);
+
+  std::vector<const ReportingClient*> clients;
+  cache()->GetClientsForOriginAndGroup(kOrigin, kGroup1_, &clients);
+  ASSERT_EQ(1u, clients.size());
+  EXPECT_EQ(kOrigin, clients[0]->origin);
+}
+
+TEST_F(ReportingCacheTest, IncludeSubdomainsPreferMoreSpecificSuperdomain) {
+  const url::Origin kOrigin(GURL("https://foo.bar.example/"));
+  const url::Origin kSuperOrigin(GURL("https://bar.example/"));
+  const url::Origin kSuperSuperOrigin(GURL("https://example/"));
+
+  cache()->SetClient(kSuperOrigin, kEndpoint1_,
+                     ReportingClient::Subdomains::INCLUDE, kGroup1_,
+                     kExpires1_);
+  cache()->SetClient(kSuperSuperOrigin, kEndpoint1_,
+                     ReportingClient::Subdomains::INCLUDE, kGroup1_,
+                     kExpires1_);
+
+  std::vector<const ReportingClient*> clients;
+  cache()->GetClientsForOriginAndGroup(kOrigin, kGroup1_, &clients);
+  ASSERT_EQ(1u, clients.size());
+  EXPECT_EQ(kSuperOrigin, clients[0]->origin);
+}
+
 }  // namespace
 }  // namespace net

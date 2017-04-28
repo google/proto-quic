@@ -118,6 +118,12 @@ class QUIC_EXPORT_PRIVATE QuicDataReader {
   // Returns the number of bytes remaining to be read.
   size_t BytesRemaining() const;
 
+  // Returns the next byte that to be read. Must not be called when there are no
+  // bytes to be read.
+  //
+  // DOES NOT forward the internal iterator.
+  uint8_t PeekByte() const;
+
  private:
   // Returns true if the underlying buffer has enough room to read the given
   // amount of bytes.

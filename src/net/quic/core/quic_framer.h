@@ -386,6 +386,7 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
   bool ProcessWindowUpdateFrame(QuicDataReader* reader,
                                 QuicWindowUpdateFrame* frame);
   bool ProcessBlockedFrame(QuicDataReader* reader, QuicBlockedFrame* frame);
+  void ProcessPaddingFrame(QuicDataReader* reader, QuicPaddingFrame* frame);
 
   bool DecryptPayload(QuicDataReader* encrypted_reader,
                       const QuicPacketHeader& header,
@@ -459,6 +460,8 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
   bool AppendWindowUpdateFrame(const QuicWindowUpdateFrame& frame,
                                QuicDataWriter* writer);
   bool AppendBlockedFrame(const QuicBlockedFrame& frame,
+                          QuicDataWriter* writer);
+  bool AppendPaddingFrame(const QuicPaddingFrame& frame,
                           QuicDataWriter* writer);
 
   bool RaiseError(QuicErrorCode error);

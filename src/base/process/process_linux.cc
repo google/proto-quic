@@ -17,6 +17,11 @@
 #include "base/threading/thread_restrictions.h"
 #include "build/build_config.h"
 
+// Not defined on AIX by default.
+#if defined(OS_AIX)
+#define RLIMIT_NICE 20
+#endif
+
 namespace base {
 
 namespace {

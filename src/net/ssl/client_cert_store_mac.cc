@@ -91,9 +91,12 @@ bool IsIssuedByInKeychain(const std::vector<std::string>& valid_issuers,
   DCHECK(cert);
   DCHECK(cert->get());
 
-  X509Certificate::OSCertHandle cert_handle = (*cert)->os_cert_handle();
+  base::ScopedCFTypeRef<SecCertificateRef> os_cert(
+      x509_util::CreateSecCertificateFromX509Certificate(cert->get()));
+  if (!os_cert)
+    return false;
   CFArrayRef cert_chain = NULL;
-  OSStatus result = CopyCertChain(cert_handle, &cert_chain);
+  OSStatus result = CopyCertChain(os_cert.get(), &cert_chain);
   if (result) {
     OSSTATUS_LOG(ERROR, result) << "CopyCertChain error";
     return false;
@@ -102,7 +105,7 @@ bool IsIssuedByInKeychain(const std::vector<std::string>& valid_issuers,
   if (!cert_chain)
     return false;
 
-  X509Certificate::OSCertHandles intermediates;
+  std::vector<SecCertificateRef> intermediates;
   for (CFIndex i = 1, chain_count = CFArrayGetCount(cert_chain);
        i < chain_count; ++i) {
     SecCertificateRef cert = reinterpret_cast<SecCertificateRef>(
@@ -110,8 +113,9 @@ bool IsIssuedByInKeychain(const std::vector<std::string>& valid_issuers,
     intermediates.push_back(cert);
   }
 
-  scoped_refptr<X509Certificate> new_cert(X509Certificate::CreateFromHandle(
-      cert_handle, intermediates));
+  scoped_refptr<X509Certificate> new_cert(
+      x509_util::CreateX509CertificateFromSecCertificate(os_cert.get(),
+                                                         intermediates));
   CFRelease(cert_chain);  // Also frees |intermediates|.
 
   if (!new_cert || !new_cert->IsIssuedByEncoded(valid_issuers))
@@ -193,7 +197,7 @@ void GetClientCertsImpl(const scoped_refptr<X509Certificate>& preferred_cert,
   selected_certs->clear();
   for (size_t i = 0; i < preliminary_list.size(); ++i) {
     scoped_refptr<X509Certificate>& cert = preliminary_list[i];
-    if (cert->HasExpired() || !SupportsSSLClientAuth(cert->os_cert_handle()))
+    if (cert->HasExpired())
       continue;
 
     // Skip duplicates (a cert may be in multiple keychains).
@@ -287,9 +291,12 @@ void ClientCertStoreMac::GetClientCerts(const SSLCertRequestInfo& request,
       continue;
     ScopedCFTypeRef<SecCertificateRef> scoped_cert_handle(cert_handle);
 
+    if (!SupportsSSLClientAuth(cert_handle))
+      continue;
+
     scoped_refptr<X509Certificate> cert(
-        X509Certificate::CreateFromHandle(cert_handle,
-                                          X509Certificate::OSCertHandles()));
+        x509_util::CreateX509CertificateFromSecCertificate(
+            cert_handle, std::vector<SecCertificateRef>()));
     if (!cert)
       continue;
 

@@ -174,11 +174,11 @@ void ReadVerifyCertChainTestFromFile(const std::string& file_path_ascii,
       has_key_purpose = true;
 
       if (block_data == "anyExtendedKeyUsage") {
-        // TODO(eroman): test->key_purpose = ....
+        test->key_purpose = KeyPurpose::ANY_EKU;
       } else if (block_data == "serverAuth") {
-        // TODO(eroman): test->key_purpose = ....
+        test->key_purpose = KeyPurpose::SERVER_AUTH;
       } else if (block_data == "clientAuth") {
-        // TODO(eroman): test->key_purpose = ....
+        test->key_purpose = KeyPurpose::CLIENT_AUTH;
       } else {
         ADD_FAILURE() << "Unrecognized " << block_type << ": " << block_data;
       }

@@ -79,6 +79,11 @@ int64_t ProxyConnectRedirectHttpStream::GetTotalSentBytes() const {
   return 0;
 }
 
+bool ProxyConnectRedirectHttpStream::GetAlternativeService(
+    AlternativeService* alternative_service) const {
+  return false;
+}
+
 bool ProxyConnectRedirectHttpStream::GetLoadTimingInfo(
     LoadTimingInfo* load_timing_info) const {
   if (!has_load_timing_info_)

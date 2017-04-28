@@ -29,42 +29,51 @@ using Replacements = std::vector<clang::tooling::Replacement>;
 
 namespace {
 
-// Remove unneeded scoped_refptr<>::get on a receivers of method bind.
+// Replace base::Bind() to base::BindOnce() where resulting base::Callback is
+// implicitly converted into base::OnceCallback.
 // Example:
 //   // Before
-//   scoped_refptr<Foo> foo;
-//   base::Bind(&Foo::Bar, foo.get());
+//   base::PostTask(FROM_HERE, base::Bind(&Foo));
+//   base::OnceCallback<void()> cb = base::Bind(&Foo);
 //
 //   // After
-//   scoped_refptr<Foo> foo;
-//   base::Bind(&Foo::Bar, foo);
-//
-class ScopedRefptrGetRewriter : public MatchFinder::MatchCallback {
+//   base::PostTask(FROM_HERE, base::BindOnce(&Foo));
+//   base::OnceCallback<void()> cb = base::BindOnce(&Foo);
+class BindOnceRewriter : public MatchFinder::MatchCallback {
  public:
-  explicit ScopedRefptrGetRewriter(Replacements* replacements)
+  explicit BindOnceRewriter(Replacements* replacements)
       : replacements_(replacements) {}
 
   StatementMatcher GetMatcher() {
-    auto is_bind_call = callee(namedDecl(hasName("::base::Bind")));
-    auto is_method_bind = hasArgument(0, hasType(memberPointerType()));
-    auto is_raw_pointer_receiver = hasArgument(1, hasType(pointerType()));
-    auto is_scoped_refptr_get_call =
-        cxxMemberCallExpr(thisPointerType(namedDecl(hasName("scoped_refptr"))),
-                          callee(namedDecl(hasName("get"))));
-    return callExpr(is_bind_call, is_method_bind, is_raw_pointer_receiver,
-                    hasArgument(1, is_scoped_refptr_get_call),
-                    hasArgument(1, stmt().bind("target")));
+    auto is_once_callback = hasType(classTemplateSpecializationDecl(
+        hasName("::base::Callback"),
+        hasTemplateArgument(1, equalsIntegralValue("0")),
+        hasTemplateArgument(2, equalsIntegralValue("0"))));
+    auto is_repeating_callback = hasType(classTemplateSpecializationDecl(
+        hasName("::base::Callback"),
+        hasTemplateArgument(1, equalsIntegralValue("1")),
+        hasTemplateArgument(2, equalsIntegralValue("1"))));
+
+    auto bind_call =
+        callExpr(callee(namedDecl(hasName("::base::Bind")))).bind("target");
+    auto parameter_construction =
+        cxxConstructExpr(is_repeating_callback, argumentCountIs(1),
+                         hasArgument(0, ignoringImplicit(bind_call)));
+    auto constructor_conversion = cxxConstructExpr(
+        is_once_callback, argumentCountIs(1),
+        hasArgument(0, ignoringImplicit(parameter_construction)));
+    auto implicit_conversion = implicitCastExpr(
+        is_once_callback, hasSourceExpression(constructor_conversion));
+    return implicit_conversion;
   }
 
   void run(const MatchFinder::MatchResult& result) override {
-    auto* target = result.Nodes.getNodeAs<clang::CXXMemberCallExpr>("target");
-    auto* member = llvm::cast<clang::MemberExpr>(target->getCallee());
-    assert(target && member && "Unexpected match! No Expr captured!");
+    auto* target = result.Nodes.getNodeAs<clang::CallExpr>("target");
+    auto* callee = target->getCallee();
     auto range = clang::CharSourceRange::getTokenRange(
-        result.SourceManager->getSpellingLoc(member->getOperatorLoc()),
-        result.SourceManager->getSpellingLoc(target->getLocEnd()));
-
-    replacements_->emplace_back(*result.SourceManager, range, "");
+        result.SourceManager->getSpellingLoc(callee->getLocEnd()),
+        result.SourceManager->getSpellingLoc(callee->getLocEnd()));
+    replacements_->emplace_back(*result.SourceManager, range, "BindOnce");
   }
 
  private:
@@ -87,10 +96,8 @@ int main(int argc, const char* argv[]) {
   MatchFinder match_finder;
   std::vector<clang::tooling::Replacement> replacements;
 
-
-  ScopedRefptrGetRewriter scoped_refptr_rewriter(&replacements);
-  match_finder.addMatcher(scoped_refptr_rewriter.GetMatcher(),
-                          &scoped_refptr_rewriter);
+  BindOnceRewriter bind_once_rewriter(&replacements);
+  match_finder.addMatcher(bind_once_rewriter.GetMatcher(), &bind_once_rewriter);
 
   std::unique_ptr<clang::tooling::FrontendActionFactory> factory =
       clang::tooling::newFrontendActionFactory(&match_finder);

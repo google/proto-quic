@@ -12,6 +12,21 @@
 #define PNG_INTERNAL
 #include "third_party/libpng/png.h"
 
+void* limited_malloc(png_structp, png_alloc_size_t size) {
+  // libpng may allocate large amounts of memory that the fuzzer reports as
+  // an error. In order to silence these errors, make libpng fail when trying
+  // to allocate a large amount.
+  // This number is chosen to match the default png_user_chunk_malloc_max.
+  if (size > 8000000)
+    return nullptr;
+
+  return malloc(size);
+}
+
+void default_free(png_structp, png_voidp ptr) {
+  return free(ptr);
+}
+
 #ifndef PNG_FUZZ_PROGRESSIVE
 
 // Read sequentially, with png_read_row.
@@ -57,6 +72,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   // safe settings by https://github.com/glennrp/libpng/blob/libpng16/pngusr.dfa
   png_set_user_limits(png_ptr, 65535, 65535);
 #endif
+
+  // Not all potential OOM are due to images with large widths and heights.
+  // Use a custom allocator that fails for large allocations.
+  png_set_mem_fn(png_ptr, nullptr, limited_malloc, default_free);
 
   png_set_crc_action(png_ptr, PNG_CRC_QUIET_USE, PNG_CRC_QUIET_USE);
 

@@ -4,7 +4,8 @@
 
 package org.chromium.base.test;
 
-import android.os.Bundle;
+import android.app.Application;
+import android.content.Context;
 
 import org.chromium.base.multidex.ChromiumMultiDexInstaller;
 import org.chromium.base.test.util.CommandLineFlags;
@@ -16,9 +17,12 @@ import org.chromium.base.test.util.CommandLineFlags;
  */
 public class BaseChromiumInstrumentationTestRunner extends BaseInstrumentationTestRunner {
     @Override
-    public void onCreate(Bundle arguments) {
-        ChromiumMultiDexInstaller.install(getTargetContext());
-        super.onCreate(arguments);
+    public Application newApplication(ClassLoader cl, String className, Context context)
+            throws ClassNotFoundException, IllegalAccessException, InstantiationException {
+        ChromiumMultiDexInstaller.install(new BaseChromiumRunnerCommon.MultiDexContextWrapper(
+                getContext(), getTargetContext()));
+        BaseChromiumRunnerCommon.reorderDexPathElements(cl, getContext(), getTargetContext());
+        return super.newApplication(cl, className, context);
     }
 
     /**

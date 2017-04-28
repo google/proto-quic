@@ -84,9 +84,7 @@ void TraceEventMemoryOverhead::AddValue(const Value& value) {
     } break;
 
     case Value::Type::BINARY: {
-      const BinaryValue* binary_value = nullptr;
-      value.GetAsBinary(&binary_value);
-      Add("BinaryValue", sizeof(BinaryValue) + binary_value->GetSize());
+      Add("BinaryValue", sizeof(Value) + value.GetBlob().size());
     } break;
 
     case Value::Type::DICTIONARY: {
@@ -105,7 +103,7 @@ void TraceEventMemoryOverhead::AddValue(const Value& value) {
       value.GetAsList(&list_value);
       Add("ListValue", sizeof(ListValue));
       for (const auto& v : *list_value)
-        AddValue(*v);
+        AddValue(v);
     } break;
 
     default:
@@ -115,7 +113,7 @@ void TraceEventMemoryOverhead::AddValue(const Value& value) {
 
 void TraceEventMemoryOverhead::AddSelf() {
   size_t estimated_size = sizeof(*this);
-  // If the SmallMap did overflow its static capacity, its elements will be
+  // If the small_map did overflow its static capacity, its elements will be
   // allocated on the heap and have to be accounted separately.
   if (allocated_objects_.UsingFullMap())
     estimated_size += sizeof(map_type::value_type) * allocated_objects_.size();

@@ -31,32 +31,32 @@ std::vector<Http2FrameFlag> AllHttp2FrameFlagsForFrameType(
   switch (type) {
     case Http2FrameType::DATA:
       return {
-          Http2FrameFlag::FLAG_END_STREAM,
-          Http2FrameFlag::FLAG_PADDED,
+          Http2FrameFlag::END_STREAM,
+          Http2FrameFlag::PADDED,
       };
     case Http2FrameType::HEADERS:
       return {
-          Http2FrameFlag::FLAG_END_STREAM,
-          Http2FrameFlag::FLAG_END_HEADERS,
-          Http2FrameFlag::FLAG_PADDED,
-          Http2FrameFlag::FLAG_PRIORITY,
+          Http2FrameFlag::END_STREAM,
+          Http2FrameFlag::END_HEADERS,
+          Http2FrameFlag::PADDED,
+          Http2FrameFlag::PRIORITY,
       };
     case Http2FrameType::SETTINGS:
       return {
-          Http2FrameFlag::FLAG_ACK,
+          Http2FrameFlag::ACK,
       };
     case Http2FrameType::PUSH_PROMISE:
       return {
-          Http2FrameFlag::FLAG_END_HEADERS,
-          Http2FrameFlag::FLAG_PADDED,
+          Http2FrameFlag::END_HEADERS,
+          Http2FrameFlag::PADDED,
       };
     case Http2FrameType::PING:
       return {
-          Http2FrameFlag::FLAG_ACK,
+          Http2FrameFlag::ACK,
       };
     case Http2FrameType::CONTINUATION:
       return {
-          Http2FrameFlag::FLAG_END_HEADERS,
+          Http2FrameFlag::END_HEADERS,
       };
     default:
       return std::vector<Http2FrameFlag>{};
@@ -103,27 +103,26 @@ std::vector<Http2SettingsParameter> AllHttp2SettingsParameters() {
 uint8_t KnownFlagsMaskForFrameType(Http2FrameType type) {
   switch (type) {
     case Http2FrameType::DATA:
-      return Http2FrameFlag::FLAG_END_STREAM | Http2FrameFlag::FLAG_PADDED;
+      return Http2FrameFlag::END_STREAM | Http2FrameFlag::PADDED;
     case Http2FrameType::HEADERS:
-      return Http2FrameFlag::FLAG_END_STREAM |
-             Http2FrameFlag::FLAG_END_HEADERS | Http2FrameFlag::FLAG_PADDED |
-             Http2FrameFlag::FLAG_PRIORITY;
+      return Http2FrameFlag::END_STREAM | Http2FrameFlag::END_HEADERS |
+             Http2FrameFlag::PADDED | Http2FrameFlag::PRIORITY;
     case Http2FrameType::PRIORITY:
       return 0x00;
     case Http2FrameType::RST_STREAM:
       return 0x00;
     case Http2FrameType::SETTINGS:
-      return Http2FrameFlag::FLAG_ACK;
+      return Http2FrameFlag::ACK;
     case Http2FrameType::PUSH_PROMISE:
-      return Http2FrameFlag::FLAG_END_HEADERS | Http2FrameFlag::FLAG_PADDED;
+      return Http2FrameFlag::END_HEADERS | Http2FrameFlag::PADDED;
     case Http2FrameType::PING:
-      return Http2FrameFlag::FLAG_ACK;
+      return Http2FrameFlag::ACK;
     case Http2FrameType::GOAWAY:
       return 0x00;
     case Http2FrameType::WINDOW_UPDATE:
       return 0x00;
     case Http2FrameType::CONTINUATION:
-      return Http2FrameFlag::FLAG_END_HEADERS;
+      return Http2FrameFlag::END_HEADERS;
     case Http2FrameType::ALTSVC:
       return 0x00;
     default:

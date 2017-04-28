@@ -7,7 +7,6 @@
 #include <random>
 
 #include "base/logging.h"
-#include "base/strings/string_piece.h"
 #include "testing/libfuzzer/fuzzers/color_space_data.h"
 #include "third_party/skia/include/core/SkColorSpace.h"
 #include "third_party/skia/include/core/SkColorSpaceXform.h"
@@ -63,8 +62,10 @@ static sk_sp<SkColorSpace> SelectProfile(size_t hash) {
   return profiles[hash & 7];
 }
 
-inline size_t Hash(const char* data, size_t size) {
-  return base::StringPieceHash()(base::StringPiece(data, size));
+inline size_t Hash(const char* data, size_t size, size_t hash = ~0) {
+  for (size_t i = 0; i < size; ++i)
+    hash = hash * 131 + *data++;
+  return hash;
 }
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {

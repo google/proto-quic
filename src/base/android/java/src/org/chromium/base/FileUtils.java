@@ -5,6 +5,7 @@
 package org.chromium.base;
 
 import android.content.Context;
+import android.net.Uri;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -85,5 +86,28 @@ public class FileUtils {
             }
         }
         return false;
+    }
+
+    /**
+     * Returns a URI that points at the file.
+     * @param file File to get a URI for.
+     * @return URI that points at that file, either as a content:// URI or a file:// URI.
+     */
+    public static Uri getUriForFile(File file) {
+        // TODO(crbug/709584): Uncomment this when http://crbug.com/709584 has been fixed.
+        // assert !ThreadUtils.runningOnUiThread();
+        Uri uri = null;
+
+        try {
+            // Try to obtain a content:// URI, which is preferred to a file:// URI so that
+            // receiving apps don't attempt to determine the file's mime type (which often fails).
+            uri = ContentUriUtils.getContentUriFromFile(file);
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Could not create content uri: " + e);
+        }
+
+        if (uri == null) uri = Uri.fromFile(file);
+
+        return uri;
     }
 }

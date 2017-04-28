@@ -54,6 +54,7 @@ XML below will generate the following five histograms:
 
 """
 
+import bisect
 import copy
 import logging
 import xml.dom.minidom
@@ -200,7 +201,6 @@ def _ExtractEnumsFromXmlTree(tree):
       have_errors = True
       continue
 
-    last_int_value = None
     enum_dict = {}
     enum_dict['name'] = name
     enum_dict['values'] = {}
@@ -208,11 +208,6 @@ def _ExtractEnumsFromXmlTree(tree):
     for int_tag in enum.getElementsByTagName('int'):
       value_dict = {}
       int_value = int(int_tag.getAttribute('value'))
-      if last_int_value is not None and int_value < last_int_value:
-        logging.error('Enum %s int values %d and %d are not in numerical order',
-                      name, last_int_value, int_value)
-        have_errors = True
-      last_int_value = int_value
       if int_value in enum_dict['values']:
         logging.error('Duplicate enum value %d for enum %s', int_value, name)
         have_errors = True
@@ -220,6 +215,26 @@ def _ExtractEnumsFromXmlTree(tree):
       value_dict['label'] = int_tag.getAttribute('label')
       value_dict['summary'] = _JoinChildNodes(int_tag)
       enum_dict['values'][int_value] = value_dict
+
+    enum_int_values = sorted(enum_dict['values'].keys())
+
+    last_int_value = None
+    for int_tag in enum.getElementsByTagName('int'):
+      int_value = int(int_tag.getAttribute('value'))
+      if last_int_value is not None and int_value < last_int_value:
+        logging.error('Enum %s int values %d and %d are not in numerical order',
+                      name, last_int_value, int_value)
+        have_errors = True
+        left_item_index = bisect.bisect_left(enum_int_values, int_value)
+        if left_item_index == 0:
+          logging.warning('Insert value %d at the beginning', int_value)
+        else:
+          left_int_value = enum_int_values[left_item_index - 1]
+          left_label = enum_dict['values'][left_int_value]['label']
+          logging.warning('Insert value %d after %d ("%s")',
+                          int_value, left_int_value, left_label)
+      else:
+        last_int_value = int_value
 
     summary_nodes = enum.getElementsByTagName('summary')
     if summary_nodes:

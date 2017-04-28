@@ -419,5 +419,15 @@ TEST(Erase, UnorderedMultiset) {
   RunEraseIfTest<std::unordered_multiset<std::pair<int, int>, HashByFirst>>();
 }
 
+TEST(ContainsValue, OrdinaryArrays) {
+  const char allowed_chars[] = {'a', 'b', 'c', 'd'};
+  EXPECT_TRUE(ContainsValue(allowed_chars, 'a'));
+  EXPECT_FALSE(ContainsValue(allowed_chars, 'z'));
+  EXPECT_FALSE(ContainsValue(allowed_chars, 0));
+
+  const char allowed_chars_including_nul[] = "abcd";
+  EXPECT_TRUE(ContainsValue(allowed_chars_including_nul, 0));
+}
+
 }  // namespace
 }  // namespace base

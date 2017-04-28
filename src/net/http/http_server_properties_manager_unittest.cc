@@ -1398,7 +1398,7 @@ TEST_P(HttpServerPropertiesManagerTest,
   ASSERT_TRUE(pref_dict.GetListWithoutPathExpansion("servers", &servers_list));
   base::ListValue::const_iterator it = servers_list->begin();
   const base::DictionaryValue* server_pref_dict;
-  ASSERT_TRUE((*it)->GetAsDictionary(&server_pref_dict));
+  ASSERT_TRUE(it->GetAsDictionary(&server_pref_dict));
 
   const base::DictionaryValue* example_pref_dict;
 

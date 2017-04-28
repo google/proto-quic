@@ -11,7 +11,6 @@ import android.app.Application.ActivityLifecycleCallbacks;
 import android.os.Bundle;
 
 import org.chromium.base.ActivityState.ActivityStateEnum;
-import org.chromium.base.ApplicationState.ApplicationStateEnum;
 import org.chromium.base.annotations.CalledByNative;
 import org.chromium.base.annotations.JNINamespace;
 import org.chromium.base.annotations.MainDex;
@@ -58,7 +57,7 @@ public class ApplicationStatus {
     }
 
     private static Object sCachedApplicationStateLock = new Object();
-    @ApplicationStateEnum
+    @ApplicationState
     private static Integer sCachedApplicationState;
 
     /** Last activity that was shown (or null if none or it was destroyed). */
@@ -94,7 +93,7 @@ public class ApplicationStatus {
          * Called when the application's state changes.
          * @param newState The application state.
          */
-        public void onApplicationStateChange(@ApplicationStateEnum int newState);
+        public void onApplicationStateChange(@ApplicationState int newState);
     }
 
     /**
@@ -311,7 +310,7 @@ public class ApplicationStatus {
     /**
      * @return The state of the application (see {@link ApplicationState}).
      */
-    @ApplicationStateEnum
+    @ApplicationState
     @CalledByNative
     public static int getStateForApplication() {
         synchronized (sCachedApplicationStateLock) {
@@ -453,7 +452,7 @@ public class ApplicationStatus {
      *         HAS_STOPPED_ACTIVITIES if none are running/paused and one is stopped.
      *         HAS_DESTROYED_ACTIVITIES if none are running/paused/stopped.
      */
-    @ApplicationStateEnum
+    @ApplicationState
     private static int determineApplicationState() {
         boolean hasPausedActivity = false;
         boolean hasStoppedActivity = false;
@@ -478,5 +477,5 @@ public class ApplicationStatus {
 
     // Called to notify the native side of state changes.
     // IMPORTANT: This is always called on the main thread!
-    private static native void nativeOnApplicationStateChange(@ApplicationStateEnum int newState);
+    private static native void nativeOnApplicationStateChange(@ApplicationState int newState);
 }

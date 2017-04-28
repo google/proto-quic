@@ -12,9 +12,7 @@
 #include "base/time/clock.h"
 #include "base/time/default_clock.h"
 #include "base/trace_event/process_memory_dump.h"
-#include "net/cert/x509_util_openssl.h"
 #include "third_party/boringssl/src/include/openssl/ssl.h"
-#include "third_party/boringssl/src/include/openssl/x509.h"
 
 namespace net {
 

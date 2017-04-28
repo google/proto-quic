@@ -13,54 +13,9 @@ import os
 import subprocess
 import sys
 
-_GIT_SVN_ID_REGEX = re.compile(r'.*git-svn-id:\s*([^@]*)@([0-9]+)', re.DOTALL)
-
 class VersionInfo(object):
-  def __init__(self, url, revision):
-    self.url = url
+  def __init__(self, revision):
     self.revision = revision
-
-
-def FetchSVNRevision(directory, svn_url_regex):
-  """
-  Fetch the Subversion branch and revision for a given directory.
-
-  Errors are swallowed.
-
-  Returns:
-    A VersionInfo object or None on error.
-  """
-  try:
-    proc = subprocess.Popen(['svn', 'info'],
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            cwd=directory,
-                            shell=(sys.platform=='win32'))
-  except OSError:
-    # command is apparently either not installed or not executable.
-    return None
-  if not proc:
-    return None
-
-  attrs = {}
-  for line in proc.stdout:
-    line = line.strip()
-    if not line:
-      continue
-    key, val = line.split(': ', 1)
-    attrs[key] = val
-
-  try:
-    match = svn_url_regex.search(attrs['URL'])
-    if match:
-      url = match.group(2)
-    else:
-      url = ''
-    revision = attrs['Revision']
-  except KeyError:
-    return None
-
-  return VersionInfo(url, revision)
 
 
 def RunGitCommand(directory, command):
@@ -90,7 +45,7 @@ def RunGitCommand(directory, command):
     return None
 
 
-def FetchGitRevision(directory, hash_only):
+def FetchGitRevision(directory):
   """
   Fetch the Git hash for a given directory.
 
@@ -101,8 +56,6 @@ def FetchGitRevision(directory, hash_only):
   """
   hsh = ''
   git_args = ['log', '-1', '--format=%H']
-  if hash_only:
-    git_args.append('--grep=^Cr-Commit-Position:')
   proc = RunGitCommand(directory, git_args)
   if proc:
     output = proc.communicate()[0].strip()
@@ -119,74 +72,19 @@ def FetchGitRevision(directory, hash_only):
         if line.startswith('Cr-Commit-Position:'):
           pos = line.rsplit()[-1].strip()
           break
-  if hash_only or not pos:
-    return VersionInfo('git', hsh)
-  return VersionInfo('git', '%s-%s' % (hsh, pos))
+  return VersionInfo('%s-%s' % (hsh, pos))
 
 
-def FetchGitSVNURLAndRevision(directory, svn_url_regex, go_deeper):
-  """
-  Fetch the Subversion URL and revision through Git.
-
-  Errors are swallowed.
-
-  Returns:
-    A tuple containing the Subversion URL and revision.
-  """
-  git_args = ['log', '-1', '--format=%b']
-  if go_deeper:
-    git_args.append('--grep=git-svn-id')
-  proc = RunGitCommand(directory, git_args)
-  if proc:
-    output = proc.communicate()[0].strip()
-    if proc.returncode == 0 and output:
-      # Extract the latest SVN revision and the SVN URL.
-      # The target line is the last "git-svn-id: ..." line like this:
-      # git-svn-id: svn://svn.chromium.org/chrome/trunk/src@85528 0039d316....
-      match = _GIT_SVN_ID_REGEX.search(output)
-      if match:
-        revision = match.group(2)
-        url_match = svn_url_regex.search(match.group(1))
-        if url_match:
-          url = url_match.group(2)
-        else:
-          url = ''
-        return url, revision
-  return None, None
-
-
-def FetchGitSVNRevision(directory, svn_url_regex, go_deeper):
-  """
-  Fetch the Git-SVN identifier for the local tree.
-
-  Errors are swallowed.
-  """
-  url, revision = FetchGitSVNURLAndRevision(directory, svn_url_regex, go_deeper)
-  if url and revision:
-    return VersionInfo(url, revision)
-  return None
-
-
-def FetchVersionInfo(default_lastchange, directory=None,
-                     directory_regex_prior_to_src_url='chrome|blink|svn',
-                     go_deeper=False, hash_only=False):
+def FetchVersionInfo(directory=None):
   """
   Returns the last change (in the form of a branch, revision tuple),
   from some appropriate revision control system.
   """
-  svn_url_regex = re.compile(
-      r'.*/(' + directory_regex_prior_to_src_url + r')(/.*)')
-
-  version_info = (FetchSVNRevision(directory, svn_url_regex) or
-                  FetchGitSVNRevision(directory, svn_url_regex, go_deeper) or
-                  FetchGitRevision(directory, hash_only))
+  version_info = FetchGitRevision(directory)
   if not version_info:
-    if default_lastchange and os.path.exists(default_lastchange):
-      revision = open(default_lastchange, 'r').read().strip()
-      version_info = VersionInfo(None, revision)
-    else:
-      version_info = VersionInfo(None, None)
+    version_info = VersionInfo(None)
   return version_info
+
 
 def GetHeaderGuard(path):
   """
@@ -203,11 +101,11 @@ def GetHeaderGuard(path):
   guard = guard.upper()
   return guard.replace('/', '_').replace('.', '_').replace('\\', '_') + '_'
 
+
 def GetHeaderContents(path, define, version):
   """
   Returns what the contents of the header file should be that indicate the given
-  revision. Note that the #define is specified as a string, even though it's
-  currently always a SVN revision number, in case we need to move to git hashes.
+  revision.
   """
   header_guard = GetHeaderGuard(path)
 
@@ -224,6 +122,7 @@ def GetHeaderContents(path, define, version):
                                         'define': define,
                                         'version': version }
   return header_contents
+
 
 def WriteIfChanged(file_name, contents):
   """
@@ -246,8 +145,6 @@ def main(argv=None):
     argv = sys.argv
 
   parser = optparse.OptionParser(usage="lastchange.py [options]")
-  parser.add_option("-d", "--default-lastchange", metavar="FILE",
-                    help="Default last change input FILE.")
   parser.add_option("-m", "--version-macro",
                     help="Name of C #define when using --header. Defaults to " +
                     "LAST_CHANGE.",
@@ -259,16 +156,10 @@ def main(argv=None):
                     help="Write last change to FILE as a C/C++ header. " +
                     "Can be combined with --output to write both files.")
   parser.add_option("--revision-only", action='store_true',
-                    help="Just print the SVN revision number. Overrides any " +
+                    help="Just print the GIT hash. Overrides any " +
                     "file-output-related options.")
   parser.add_option("-s", "--source-dir", metavar="DIR",
                     help="Use repository in the given directory.")
-  parser.add_option("--git-svn-go-deeper", action='store_true',
-                    help="In a Git-SVN repo, dig down to the last committed " +
-                    "SVN change (historic behaviour).")
-  parser.add_option("--git-hash-only", action="store_true",
-                    help="In a Git repo with commit positions, report only " +
-                    "the hash of the latest commit with a position.")
   opts, args = parser.parse_args(argv[1:])
 
   out_file = opts.output
@@ -287,10 +178,7 @@ def main(argv=None):
   else:
     src_dir = os.path.dirname(os.path.abspath(__file__))
 
-  version_info = FetchVersionInfo(opts.default_lastchange,
-                                  directory=src_dir,
-                                  go_deeper=opts.git_svn_go_deeper,
-                                  hash_only=opts.git_hash_only)
+  version_info = FetchVersionInfo(directory=src_dir)
 
   if version_info.revision == None:
     version_info.revision = '0'

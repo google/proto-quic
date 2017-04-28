@@ -17,6 +17,7 @@ import android.telephony.CellInfoLte;
 import android.telephony.CellInfoWcdma;
 import android.telephony.TelephonyManager;
 
+import org.chromium.base.ContextUtils;
 import org.chromium.base.annotations.CalledByNative;
 import org.chromium.base.annotations.JNINamespace;
 
@@ -35,8 +36,8 @@ public class AndroidCellularSignalStrength {
      */
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
     @CalledByNative
-    public static int getSignalStrengthDbm(Context context) {
-        List<CellInfo> cellInfos = getRegisteredCellInfo(context);
+    public static int getSignalStrengthDbm() {
+        List<CellInfo> cellInfos = getRegisteredCellInfo();
         return cellInfos == null || cellInfos.size() != 1
                 ? CellularSignalStrengthError.ERROR_NOT_SUPPORTED
                 : getSignalStrengthDbm(cellInfos.get(0));
@@ -50,8 +51,8 @@ public class AndroidCellularSignalStrength {
      */
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
     @CalledByNative
-    public static int getSignalStrengthLevel(Context context) {
-        List<CellInfo> cellInfos = getRegisteredCellInfo(context);
+    public static int getSignalStrengthLevel() {
+        List<CellInfo> cellInfos = getRegisteredCellInfo();
         return cellInfos == null || cellInfos.size() != 1
                 ? CellularSignalStrengthError.ERROR_NOT_SUPPORTED
                 : getSignalStrengthLevel(cellInfos.get(0));
@@ -66,12 +67,13 @@ public class AndroidCellularSignalStrength {
      * TODO(tbansal): Consider using {@link TelephonyManager#getNeighboringCellInfo}
      * for earlier versions of Android.
     */
-    private static boolean isAPIAvailable(Context context) {
+    private static boolean isAPIAvailable() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR2) return false;
 
         try {
-            return context.checkPermission(Manifest.permission.ACCESS_COARSE_LOCATION,
-                           Process.myPid(), Process.myUid())
+            return ContextUtils.getApplicationContext().checkPermission(
+                           Manifest.permission.ACCESS_COARSE_LOCATION, Process.myPid(),
+                           Process.myUid())
                     == PackageManager.PERMISSION_GRANTED;
         } catch (Exception ignored) {
             // Work around certain platforms where this method sometimes throws a runtime exception.
@@ -86,13 +88,14 @@ public class AndroidCellularSignalStrength {
      * mobile network. May return {@code null}.
      */
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
-    private static List<CellInfo> getRegisteredCellInfo(Context context) {
-        if (!isAPIAvailable(context)) {
+    private static List<CellInfo> getRegisteredCellInfo() {
+        if (!isAPIAvailable()) {
             return null;
         }
 
         TelephonyManager telephonyManager =
-                (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+                (TelephonyManager) ContextUtils.getApplicationContext().getSystemService(
+                        Context.TELEPHONY_SERVICE);
         if (telephonyManager == null) {
             return null;
         }

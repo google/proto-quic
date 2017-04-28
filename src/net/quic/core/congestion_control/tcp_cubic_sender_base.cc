@@ -188,7 +188,7 @@ bool TcpCubicSenderBase::OnPacketSent(
 
 QuicTime::Delta TcpCubicSenderBase::TimeUntilSend(
     QuicTime /* now */,
-    QuicByteCount bytes_in_flight) const {
+    QuicByteCount bytes_in_flight) {
   if (!no_prr_ && InRecovery()) {
     // PRR is used when in recovery.
     return prr_.TimeUntilSend(GetCongestionWindow(), bytes_in_flight,

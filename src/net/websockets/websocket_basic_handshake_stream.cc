@@ -420,6 +420,11 @@ int64_t WebSocketBasicHandshakeStream::GetTotalSentBytes() const {
   return 0;
 }
 
+bool WebSocketBasicHandshakeStream::GetAlternativeService(
+    AlternativeService* alternative_service) const {
+  return false;
+}
+
 bool WebSocketBasicHandshakeStream::GetLoadTimingInfo(
     LoadTimingInfo* load_timing_info) const {
   return state_.connection()->GetLoadTimingInfo(IsConnectionReused(),

@@ -297,8 +297,7 @@ TEST_F(Http2FrameDecoderTest, SettingsAck) {
       0x01,                    //    Flags: ACK
       0x00, 0x00, 0x00, 0x00,  //   Stream: 0
   };
-  Http2FrameHeader header(0, Http2FrameType::SETTINGS, Http2FrameFlag::FLAG_ACK,
-                          0);
+  Http2FrameHeader header(0, Http2FrameType::SETTINGS, Http2FrameFlag::ACK, 0);
   FrameParts expected(header);
   EXPECT_TRUE(DecodePayloadAndValidateSeveralWays(kFrameData, expected));
 }
@@ -312,7 +311,7 @@ TEST_F(Http2FrameDecoderTest, PushPromiseMinimal) {
       0x00, 0x00, 0x00, 0x01,  // Promised: 1 (invalid but unchecked here)
   };
   Http2FrameHeader header(4, Http2FrameType::PUSH_PROMISE,
-                          Http2FrameFlag::FLAG_END_HEADERS, 2);
+                          Http2FrameFlag::END_HEADERS, 2);
   FrameParts expected(header, "");
   expected.opt_push_promise = Http2PushPromiseFields{1};
   EXPECT_TRUE(DecodePayloadAndValidateSeveralWays(kFrameData, expected));
@@ -342,7 +341,7 @@ TEST_F(Http2FrameDecoderTest, PingAck) {
       's',   'o',  'm',  'e',   // "some"
       'd',   'a',  't',  'a',   // "data"
   };
-  Http2FrameHeader header(8, Http2FrameType::PING, Http2FrameFlag::FLAG_ACK, 0);
+  Http2FrameHeader header(8, Http2FrameType::PING, Http2FrameFlag::ACK, 0);
   FrameParts expected(header);
   expected.opt_ping = Http2PingFields{{'s', 'o', 'm', 'e', 'd', 'a', 't', 'a'}};
   EXPECT_TRUE(DecodePayloadAndValidateSeveralWays(kFrameData, expected));
@@ -443,7 +442,7 @@ TEST_F(Http2FrameDecoderTest, HeadersPayload) {
   };
   Http2FrameHeader header(
       3, Http2FrameType::HEADERS,
-      Http2FrameFlag::FLAG_END_STREAM | Http2FrameFlag::FLAG_END_HEADERS, 2);
+      Http2FrameFlag::END_STREAM | Http2FrameFlag::END_HEADERS, 2);
   FrameParts expected(header, "abc");
   EXPECT_TRUE(DecodePayloadAndValidateSeveralWays(kFrameData, expected));
 }
@@ -457,8 +456,8 @@ TEST_F(Http2FrameDecoderTest, HeadersPriority) {
       0x00,  0x00, 0x00, 0x01,  // Parent: 1 (Not Exclusive)
       0xffu,                    // Weight: 256
   };
-  Http2FrameHeader header(5, Http2FrameType::HEADERS,
-                          Http2FrameFlag::FLAG_PRIORITY, 2);
+  Http2FrameHeader header(5, Http2FrameType::HEADERS, Http2FrameFlag::PRIORITY,
+                          2);
   FrameParts expected(header);
   expected.opt_priority = Http2PriorityFields(1, 256, false);
   EXPECT_TRUE(DecodePayloadAndValidateSeveralWays(kFrameData, expected));
@@ -494,7 +493,7 @@ TEST_F(Http2FrameDecoderTest, PushPromisePayload) {
       'a',  'b',  'c',          // HPACK fragment (doesn't have to be valid)
   };
   Http2FrameHeader header(7, Http2FrameType::PUSH_PROMISE,
-                          Http2FrameFlag::FLAG_END_HEADERS, 255);
+                          Http2FrameFlag::END_HEADERS, 255);
   FrameParts expected(header, "abc");
   expected.opt_push_promise = Http2PushPromiseFields{256};
   EXPECT_TRUE(DecodePayloadAndValidateSeveralWays(kFrameData, expected));
@@ -526,7 +525,7 @@ TEST_F(Http2FrameDecoderTest, ContinuationPayload) {
       'a',   'b',  'c',         // Data
   };
   Http2FrameHeader header(3, Http2FrameType::CONTINUATION,
-                          Http2FrameFlag::FLAG_END_HEADERS, 2);
+                          Http2FrameFlag::END_HEADERS, 2);
   FrameParts expected(header, "abc");
   EXPECT_TRUE(DecodePayloadAndValidateSeveralWays(kFrameData, expected));
 }
@@ -573,9 +572,9 @@ TEST_F(Http2FrameDecoderTest, DataPayloadAndPadding) {
       'a',  'b',  'c',         // Data
       0x00, 0x00, 0x00,        // Padding
   };
-  Http2FrameHeader header(
-      7, Http2FrameType::DATA,
-      Http2FrameFlag::FLAG_END_STREAM | Http2FrameFlag::FLAG_PADDED, 2);
+  Http2FrameHeader header(7, Http2FrameType::DATA,
+                          Http2FrameFlag::END_STREAM | Http2FrameFlag::PADDED,
+                          2);
   size_t total_pad_length = 4;  // Including the Pad Length field.
   FrameParts expected(header, "abc", total_pad_length);
   EXPECT_TRUE(DecodePayloadAndValidateSeveralWays(kFrameData, expected));
@@ -591,8 +590,8 @@ TEST_F(Http2FrameDecoderTest, HeadersPayloadAndPadding) {
       'a',  'b',  'c',         // HPACK fragment (doesn't have to be valid)
       0x00, 0x00, 0x00,        // Padding
   };
-  Http2FrameHeader header(7, Http2FrameType::HEADERS,
-                          Http2FrameFlag::FLAG_PADDED, 2);
+  Http2FrameHeader header(7, Http2FrameType::HEADERS, Http2FrameFlag::PADDED,
+                          2);
   size_t total_pad_length = 4;  // Including the Pad Length field.
   FrameParts expected(header, "abc", total_pad_length);
   EXPECT_TRUE(DecodePayloadAndValidateSeveralWays(kFrameData, expected));
@@ -610,11 +609,11 @@ TEST_F(Http2FrameDecoderTest, HeadersPayloadPriorityAndPadding) {
       'a',   'b',  'c',         // HPACK fragment (doesn't have to be valid)
       0x00,  0x00, 0x00,        // Padding
   };
-  Http2FrameHeader header(
-      12, Http2FrameType::HEADERS,
-      Http2FrameFlag::FLAG_END_STREAM | Http2FrameFlag::FLAG_END_HEADERS |
-          Http2FrameFlag::FLAG_PADDED | Http2FrameFlag::FLAG_PRIORITY,
-      2);
+  Http2FrameHeader header(12, Http2FrameType::HEADERS,
+                          Http2FrameFlag::END_STREAM |
+                              Http2FrameFlag::END_HEADERS |
+                              Http2FrameFlag::PADDED | Http2FrameFlag::PRIORITY,
+                          2);
   size_t total_pad_length = 4;  // Including the Pad Length field.
   FrameParts expected(header, "abc", total_pad_length);
   expected.opt_priority = Http2PriorityFields(1, 17, true);
@@ -632,9 +631,9 @@ TEST_F(Http2FrameDecoderTest, PushPromisePayloadAndPadding) {
       'a',   'b',  'c',         // HPACK fragment (doesn't have to be valid)
       0x00,  0x00, 0x00,        // Padding
   };
-  Http2FrameHeader header(
-      11, Http2FrameType::PUSH_PROMISE,
-      Http2FrameFlag::FLAG_END_HEADERS | Http2FrameFlag::FLAG_PADDED, 1);
+  Http2FrameHeader header(11, Http2FrameType::PUSH_PROMISE,
+                          Http2FrameFlag::END_HEADERS | Http2FrameFlag::PADDED,
+                          1);
   size_t total_pad_length = 4;  // Including the Pad Length field.
   FrameParts expected(header, "abc", total_pad_length);
   expected.opt_push_promise = Http2PushPromiseFields{2};
@@ -651,8 +650,7 @@ TEST_F(Http2FrameDecoderTest, DataMissingPadLengthField) {
       0x08,                    // Flags: PADDED
       0x00, 0x00, 0x00, 0x01,  // Stream ID: 1
   };
-  Http2FrameHeader header(0, Http2FrameType::DATA, Http2FrameFlag::FLAG_PADDED,
-                          1);
+  Http2FrameHeader header(0, Http2FrameType::DATA, Http2FrameFlag::PADDED, 1);
   FrameParts expected(header);
   expected.opt_missing_length = 1;
   EXPECT_TRUE(DecodePayloadExpectingError(kFrameData, expected));
@@ -667,8 +665,8 @@ TEST_F(Http2FrameDecoderTest, HeaderPaddingTooLong) {
       0xffu,                    // Pad Len: 255
       0x00,                     // Only one byte of padding
   };
-  Http2FrameHeader header(2, Http2FrameType::HEADERS,
-                          Http2FrameFlag::FLAG_PADDED, 65536);
+  Http2FrameHeader header(2, Http2FrameType::HEADERS, Http2FrameFlag::PADDED,
+                          65536);
   FrameParts expected(header);
   expected.opt_missing_length = 254;
   EXPECT_TRUE(DecodePayloadExpectingError(kFrameData, expected));
@@ -682,8 +680,8 @@ TEST_F(Http2FrameDecoderTest, HeaderMissingPriority) {
       0x00, 0x01, 0x00, 0x00,  // Stream ID: 65536
       0x00, 0x00, 0x00, 0x00,  // Priority (truncated)
   };
-  Http2FrameHeader header(4, Http2FrameType::HEADERS,
-                          Http2FrameFlag::FLAG_PRIORITY, 65536);
+  Http2FrameHeader header(4, Http2FrameType::HEADERS, Http2FrameFlag::PRIORITY,
+                          65536);
   EXPECT_TRUE(DecodePayloadExpectingFrameSizeError(kFrameData, header));
 }
 
@@ -753,7 +751,7 @@ TEST_F(Http2FrameDecoderTest, PushPromisePaddedTruncatedPromise) {
       0x00, 0x00, 0x00,        // Truncated promise id
   };
   Http2FrameHeader header(4, Http2FrameType::PUSH_PROMISE,
-                          Http2FrameFlag::FLAG_PADDED, 1);
+                          Http2FrameFlag::PADDED, 1);
   EXPECT_TRUE(DecodePayloadExpectingFrameSizeError(kFrameData, header));
 }
 
@@ -834,9 +832,9 @@ TEST_F(Http2FrameDecoderTest, BeyondMaximum) {
       'a',  'b',  'c',         // Data
       0x00, 0x00, 0x00,        // Padding
   };
-  Http2FrameHeader header(
-      7, Http2FrameType::DATA,
-      Http2FrameFlag::FLAG_END_STREAM | Http2FrameFlag::FLAG_PADDED, 2);
+  Http2FrameHeader header(7, Http2FrameType::DATA,
+                          Http2FrameFlag::END_STREAM | Http2FrameFlag::PADDED,
+                          2);
   FrameParts expected(header);
   expected.has_frame_size_error = true;
   auto validator = [&expected, this](const DecodeBuffer& input,
@@ -890,8 +888,7 @@ TEST_F(Http2FrameDecoderTest, SettingsAckTooLong) {
       0x00, 0x00,              //   Extra
       0x00, 0x00, 0x00, 0x00,  //   Extra
   };
-  Http2FrameHeader header(6, Http2FrameType::SETTINGS, Http2FrameFlag::FLAG_ACK,
-                          0);
+  Http2FrameHeader header(6, Http2FrameType::SETTINGS, Http2FrameFlag::ACK, 0);
   EXPECT_TRUE(DecodePayloadExpectingFrameSizeError(kFrameData, header));
 }
 
@@ -905,7 +902,7 @@ TEST_F(Http2FrameDecoderTest, PingAckTooLong) {
       'd',   'a',  't',  'a',   // "data"
       0x00,                     // Too much
   };
-  Http2FrameHeader header(9, Http2FrameType::PING, Http2FrameFlag::FLAG_ACK, 0);
+  Http2FrameHeader header(9, Http2FrameType::PING, Http2FrameFlag::ACK, 0);
   EXPECT_TRUE(DecodePayloadExpectingFrameSizeError(kFrameData, header));
 }
 

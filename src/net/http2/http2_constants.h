@@ -69,11 +69,11 @@ NET_EXPORT_PRIVATE inline std::ostream& operator<<(std::ostream& out,
 // TODO(bnc): Remove FLAG_ prefix once enum SpdyFrameType is removed
 // (both enums have a PRIORITY member).
 enum Http2FrameFlag {
-  FLAG_END_STREAM = 0x01,   // DATA, HEADERS
-  FLAG_ACK = 0x01,          // SETTINGS, PING
-  FLAG_END_HEADERS = 0x04,  // HEADERS, PUSH_PROMISE, CONTINUATION
-  FLAG_PADDED = 0x08,       // DATA, HEADERS, PUSH_PROMISE
-  FLAG_PRIORITY = 0x20,     // HEADERS
+  END_STREAM = 0x01,   // DATA, HEADERS
+  ACK = 0x01,          // SETTINGS, PING
+  END_HEADERS = 0x04,  // HEADERS, PUSH_PROMISE, CONTINUATION
+  PADDED = 0x08,       // DATA, HEADERS, PUSH_PROMISE
+  PRIORITY = 0x20,     // HEADERS
 };
 
 // Formats zero or more flags for the specified type of frame. Returns an

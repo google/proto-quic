@@ -146,6 +146,4 @@ string QuicServerInfo::SerializeInner() const {
   return string(reinterpret_cast<const char*>(p.data()), p.size());
 }
 
-QuicServerInfoFactory::~QuicServerInfoFactory() {}
-
 }  // namespace net

@@ -18,9 +18,9 @@
 #include "net/quic/core/crypto/quic_encrypter.h"
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_crypto_client_stream.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_session.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_socket_address.h"
@@ -106,11 +106,11 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
   }
 
   QuicCryptoServerStream* server_stream() {
-    return server_session_->GetCryptoStream();
+    return server_session_->GetMutableCryptoStream();
   }
 
   QuicCryptoClientStream* client_stream() {
-    return client_session_->GetCryptoStream();
+    return client_session_->GetMutableCryptoStream();
   }
 
   // Initializes a fake client, and all its associated state, for
@@ -257,7 +257,8 @@ TEST_P(QuicCryptoServerStreamTest, StatelessRejectAfterCHLO) {
       client_state->GetNextServerDesignatedConnectionId();
   const QuicConnectionId expected_id =
       server_connection_->random_generator()->RandUint64();
-  EXPECT_EQ(expected_id, server_designated_connection_id);
+  EXPECT_EQ(GetPeerInMemoryConnectionId(expected_id),
+            server_designated_connection_id);
   EXPECT_FALSE(client_state->has_server_designated_connection_id());
   ASSERT_TRUE(client_state->IsComplete(QuicWallTime::FromUNIXSeconds(0)));
 }
@@ -284,7 +285,8 @@ TEST_P(QuicCryptoServerStreamTest, ConnectedAfterStatelessHandshake) {
       client_state->GetNextServerDesignatedConnectionId();
   const QuicConnectionId expected_id =
       server_connection_->random_generator()->RandUint64();
-  EXPECT_EQ(expected_id, server_designated_connection_id);
+  EXPECT_EQ(GetPeerInMemoryConnectionId(expected_id),
+            server_designated_connection_id);
   EXPECT_FALSE(client_state->has_server_designated_connection_id());
   ASSERT_TRUE(client_state->IsComplete(QuicWallTime::FromUNIXSeconds(0)));
 
@@ -533,7 +535,6 @@ INSTANTIATE_TEST_CASE_P(YetMoreTests,
 TEST_P(QuicCryptoServerStreamTestWithFakeProofSource, MultipleChlo) {
   Initialize();
   GetFakeProofSource()->Activate();
-  base::SetFlag(&FLAGS_quic_reloadable_flag_fix_quic_callback_crash, true);
   EXPECT_CALL(*server_session_->helper(), CanAcceptClientHello(_, _, _))
       .WillOnce(testing::Return(true));
 

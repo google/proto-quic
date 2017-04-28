@@ -16,6 +16,7 @@
 #include "base/threading/thread_task_runner_handle.h"
 #include "net/base/filename_util.h"
 #include "net/base/net_errors.h"
+#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_test_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -294,8 +295,9 @@ void URLRequestFileJobEventsTest::RunRequestWithPath(
                          observed_content);
   context_.set_job_factory(&factory);
 
-  std::unique_ptr<URLRequest> request(context_.CreateRequest(
-      FilePathToFileURL(path), DEFAULT_PRIORITY, &delegate_));
+  std::unique_ptr<URLRequest> request(
+      context_.CreateRequest(FilePathToFileURL(path), DEFAULT_PRIORITY,
+                             &delegate_, TRAFFIC_ANNOTATION_FOR_TESTS));
   if (!range.empty()) {
     request->SetExtraRequestHeaderByName(HttpRequestHeaders::kRange, range,
                                          true /*overwrite*/);

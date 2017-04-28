@@ -8,6 +8,7 @@
 
 #include "base/macros.h"
 #include "net/base/request_priority.h"
+#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_context.h"
 #include "net/url_request/url_request_interceptor.h"
@@ -50,12 +51,12 @@ TEST(URLRequestFilter, BasicMatching) {
   URLRequestFilter* filter = URLRequestFilter::GetInstance();
 
   const GURL kUrl1("http://foo.com/");
-  std::unique_ptr<URLRequest> request1(
-      request_context.CreateRequest(kUrl1, DEFAULT_PRIORITY, &delegate));
+  std::unique_ptr<URLRequest> request1(request_context.CreateRequest(
+      kUrl1, DEFAULT_PRIORITY, &delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
 
   const GURL kUrl2("http://bar.com/");
-  std::unique_ptr<URLRequest> request2(
-      request_context.CreateRequest(kUrl2, DEFAULT_PRIORITY, &delegate));
+  std::unique_ptr<URLRequest> request2(request_context.CreateRequest(
+      kUrl2, DEFAULT_PRIORITY, &delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
 
   // Check AddUrlInterceptor checks for invalid URLs.
   EXPECT_FALSE(filter->AddUrlInterceptor(

@@ -30,35 +30,14 @@ class QUIC_EXPORT_PRIVATE PropertiesBasedQuicServerInfo
   ~PropertiesBasedQuicServerInfo() override;
 
   // QuicServerInfo implementation.
-  void Start() override;
-  int WaitForDataReady(const CompletionCallback& callback) override;
-  void ResetWaitForDataReadyCallback() override;
-  void CancelWaitForDataReadyCallback() override;
-  bool IsDataReady() override;
-  bool IsReadyToPersist() override;
+  bool Load() override;
   void Persist() override;
-  void OnExternalCacheHit() override;
+  size_t EstimateMemoryUsage() const override;
 
  private:
   HttpServerProperties* http_server_properties_;
 
   DISALLOW_COPY_AND_ASSIGN(PropertiesBasedQuicServerInfo);
-};
-
-class QUIC_EXPORT_PRIVATE PropertiesBasedQuicServerInfoFactory
-    : public QuicServerInfoFactory {
- public:
-  explicit PropertiesBasedQuicServerInfoFactory(
-      HttpServerProperties* http_server_properties);
-  ~PropertiesBasedQuicServerInfoFactory() override;
-
-  std::unique_ptr<QuicServerInfo> GetForServer(
-      const QuicServerId& server_id) override;
-
- private:
-  HttpServerProperties* http_server_properties_;
-
-  DISALLOW_COPY_AND_ASSIGN(PropertiesBasedQuicServerInfoFactory);
 };
 
 }  // namespace net

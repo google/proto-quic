@@ -17,59 +17,48 @@
 
 namespace base {
 
-// An STL-like associative container which starts out backed by a simple
-// array but switches to some other container type if it grows beyond a
-// fixed size.
+// small_map is a container with a std::map-like interface. It starts out
+// backed by a unsorted array but switches to some other container type if it
+// grows beyond this fixed size.
 //
-// WHAT TYPE OF MAP SHOULD YOU USE?
-// --------------------------------
+// Please see //base/containers/README.md for an overview of which container
+// to select.
 //
-//  - std::map should be the default if you're not sure, since it's the most
-//    difficult to mess up. Generally this is backed by a red-black tree. It
-//    will generate a lot of code (if you use a common key type like int or
-//    string the linker will probably emiminate the duplicates). It will
-//    do heap allocations for each element.
+// PROS
 //
-//  - If you only ever keep a couple of items and have very simple usage,
-//    consider whether a using a vector and brute-force searching it will be
-//    the most efficient. It's not a lot of generated code (less than a
-//    red-black tree if your key is "weird" and not eliminated as duplicate of
-//    something else) and will probably be faster and do fewer heap allocations
-//    than std::map if you have just a couple of items.
+//  - Good memory locality and low overhead for smaller maps.
+//  - Handles large maps without the degenerate performance of flat_map.
 //
-//  - base::hash_map should be used if you need O(1) lookups. It may waste
-//    space in the hash table, and it can be easy to write correct-looking
-//    code with the default hash function being wrong or poorly-behaving.
+// CONS
 //
-//  - SmallMap combines the performance benefits of the brute-force-searched
-//    vector for small cases (no extra heap allocations), but can efficiently
-//    fall back if you end up adding many items. It will generate more code
-//    than std::map (at least 160 bytes for operator[]) which is bad if you
-//    have a "weird" key where map functions can't be
-//    duplicate-code-eliminated. If you have a one-off key and aren't in
-//    performance-critical code, this bloat may negate some of the benefits and
-//    you should consider on of the other options.
+//  - Larger code size than the alternatives.
 //
-// SmallMap will pick up the comparator from the underlying map type. In
-// std::map (and in MSVC additionally hash_map) only a "less" operator is
-// defined, which requires us to do two comparisons per element when doing the
-// brute-force search in the simple array.
+// IMPORTANT NOTES
+//
+//  - Iterators are invalidated across mutations.
+//
+// DETAILS
+//
+// base::small_map will pick up the comparator from the underlying map type. In
+// std::map only a "less" operator is defined, which requires us to do two
+// comparisons per element when doing the brute-force search in the simple
+// array. std::unordered_map has a key_equal function which will be used.
 //
 // We define default overrides for the common map types to avoid this
 // double-compare, but you should be aware of this if you use your own
-// operator< for your map and supply yor own version of == to the SmallMap.
+// operator< for your map and supply yor own version of == to the small_map.
 // You can use regular operator== by just doing:
 //
-//   base::SmallMap<std::map<MyKey, MyValue>, 4, std::equal_to<KyKey> >
+//   base::small_map<std::map<MyKey, MyValue>, 4, std::equal_to<KyKey>>
 //
 //
 // USAGE
 // -----
 //
 // NormalMap:  The map type to fall back to.  This also defines the key
-//             and value types for the SmallMap.
+//             and value types for the small_map.
 // kArraySize:  The size of the initial array of results. This will be
-//              allocated with the SmallMap object rather than separately on
+//              allocated with the small_map object rather than separately on
 //              the heap. Once the map grows beyond this size, the map type
 //              will be used instead.
 // EqualKey:  A functor which tests two keys for equality.  If the wrapped
@@ -79,14 +68,14 @@ namespace base {
 //            implement equality by default.
 // MapInit: A functor that takes a ManualConstructor<NormalMap>* and uses it to
 //          initialize the map. This functor will be called at most once per
-//          SmallMap, when the map exceeds the threshold of kArraySize and we
+//          small_map, when the map exceeds the threshold of kArraySize and we
 //          are about to copy values from the array to the map. The functor
 //          *must* call one of the Init() methods provided by
 //          ManualConstructor, since after it runs we assume that the NormalMap
 //          has been initialized.
 //
 // example:
-//   base::SmallMap< std::map<string, int> > days;
+//   base::small_map<std::map<string, int>> days;
 //   days["sunday"   ] = 0;
 //   days["monday"   ] = 1;
 //   days["tuesday"  ] = 2;
@@ -94,14 +83,11 @@ namespace base {
 //   days["thursday" ] = 4;
 //   days["friday"   ] = 5;
 //   days["saturday" ] = 6;
-//
-// You should assume that SmallMap might invalidate all the iterators
-// on any call to erase(), insert() and operator[].
 
 namespace internal {
 
 template <typename NormalMap>
-class SmallMapDefaultInit {
+class small_map_default_init {
  public:
   void operator()(ManualConstructor<NormalMap>* map) const {
     map->Init();
@@ -151,7 +137,7 @@ struct select_equal_key {
 // If we switch to using std::unordered_map for base::hash_map, then the
 // hash_map specialization can be removed.
 template <typename KeyType, typename ValueType>
-struct select_equal_key< std::map<KeyType, ValueType>, false> {
+struct select_equal_key<std::map<KeyType, ValueType>, false> {
   struct equal_key {
     bool operator()(const KeyType& left, const KeyType& right) {
       return left == right;
@@ -159,7 +145,7 @@ struct select_equal_key< std::map<KeyType, ValueType>, false> {
   };
 };
 template <typename KeyType, typename ValueType>
-struct select_equal_key< base::hash_map<KeyType, ValueType>, false> {
+struct select_equal_key<base::hash_map<KeyType, ValueType>, false> {
   struct equal_key {
     bool operator()(const KeyType& left, const KeyType& right) {
       return left == right;
@@ -178,12 +164,11 @@ struct select_equal_key<M, true> {
 
 template <typename NormalMap,
           int kArraySize = 4,
-          typename EqualKey =
-              typename internal::select_equal_key<
-                  NormalMap,
-                  internal::has_key_equal<NormalMap>::value>::equal_key,
-          typename MapInit = internal::SmallMapDefaultInit<NormalMap> >
-class SmallMap {
+          typename EqualKey = typename internal::select_equal_key<
+              NormalMap,
+              internal::has_key_equal<NormalMap>::value>::equal_key,
+          typename MapInit = internal::small_map_default_init<NormalMap>>
+class small_map {
   // We cannot rely on the compiler to reject array of size 0.  In
   // particular, gcc 2.95.3 does it but later versions allow 0-length
   // arrays.  Therefore, we explicitly reject non-positive kArraySize
@@ -197,16 +182,16 @@ class SmallMap {
   typedef typename NormalMap::value_type value_type;
   typedef EqualKey key_equal;
 
-  SmallMap() : size_(0), functor_(MapInit()) {}
+  small_map() : size_(0), functor_(MapInit()) {}
 
-  explicit SmallMap(const MapInit& functor) : size_(0), functor_(functor) {}
+  explicit small_map(const MapInit& functor) : size_(0), functor_(functor) {}
 
   // Allow copy-constructor and assignment, since STL allows them too.
-  SmallMap(const SmallMap& src) {
+  small_map(const small_map& src) {
     // size_ and functor_ are initted in InitFrom()
     InitFrom(src);
   }
-  void operator=(const SmallMap& src) {
+  void operator=(const small_map& src) {
     if (&src == this) return;
 
     // This is not optimal. If src and dest are both using the small
@@ -216,9 +201,7 @@ class SmallMap {
     Destroy();
     InitFrom(src);
   }
-  ~SmallMap() {
-    Destroy();
-  }
+  ~small_map() { Destroy(); }
 
   class const_iterator;
 
@@ -290,7 +273,7 @@ class SmallMap {
     bool operator!=(const const_iterator& other) const;
 
    private:
-    friend class SmallMap;
+    friend class small_map;
     friend class const_iterator;
     inline explicit iterator(ManualConstructor<value_type>* init)
       : array_iter_(init) {}
@@ -372,7 +355,7 @@ class SmallMap {
     }
 
    private:
-    friend class SmallMap;
+    friend class small_map;
     inline explicit const_iterator(
         const ManualConstructor<value_type>* init)
       : array_iter_(init) {}
@@ -607,7 +590,7 @@ class SmallMap {
   }
 
   // Helpers for constructors and destructors.
-  void InitFrom(const SmallMap& src) {
+  void InitFrom(const small_map& src) {
     functor_ = src.functor_;
     size_ = src.size_;
     if (src.size_ >= 0) {
@@ -630,18 +613,20 @@ class SmallMap {
   }
 };
 
-template <typename NormalMap, int kArraySize, typename EqualKey,
+template <typename NormalMap,
+          int kArraySize,
+          typename EqualKey,
           typename Functor>
-inline bool SmallMap<NormalMap, kArraySize, EqualKey,
-                     Functor>::iterator::operator==(
-    const const_iterator& other) const {
+inline bool small_map<NormalMap, kArraySize, EqualKey, Functor>::iterator::
+operator==(const const_iterator& other) const {
   return other == *this;
 }
-template <typename NormalMap, int kArraySize, typename EqualKey,
+template <typename NormalMap,
+          int kArraySize,
+          typename EqualKey,
           typename Functor>
-inline bool SmallMap<NormalMap, kArraySize, EqualKey,
-                     Functor>::iterator::operator!=(
-    const const_iterator& other) const {
+inline bool small_map<NormalMap, kArraySize, EqualKey, Functor>::iterator::
+operator!=(const const_iterator& other) const {
   return other != *this;
 }
 

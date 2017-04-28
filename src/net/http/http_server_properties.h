@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include <map>
+#include <ostream>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -20,8 +21,8 @@
 #include "net/quic/core/quic_bandwidth.h"
 #include "net/quic/core/quic_server_id.h"
 #include "net/socket/next_proto.h"
-#include "net/spdy/spdy_framer.h"  // TODO(willchan): Reconsider this.
-#include "net/spdy/spdy_protocol.h"
+#include "net/spdy/core/spdy_framer.h"  // TODO(willchan): Reconsider this.
+#include "net/spdy/core/spdy_protocol.h"
 #include "url/scheme_host_port.h"
 
 namespace base {
@@ -108,6 +109,10 @@ struct NET_EXPORT AlternativeService {
   std::string host;
   uint16_t port;
 };
+
+NET_EXPORT_PRIVATE std::ostream& operator<<(
+    std::ostream& os,
+    const AlternativeService& alternative_service);
 
 struct NET_EXPORT AlternativeServiceInfo {
   AlternativeServiceInfo() : alternative_service() {}

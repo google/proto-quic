@@ -54,6 +54,8 @@ class NET_EXPORT HttpResponseHeaders
 
   static const char kContentRange[];
 
+  HttpResponseHeaders() = delete;
+
   // Parses the given raw_headers.  raw_headers should be formatted thus:
   // includes the http status response line, each line is \0-terminated, and
   // it's terminated by an empty line (ie, 2 \0s in a row).
@@ -302,7 +304,6 @@ class NET_EXPORT HttpResponseHeaders
   struct ParsedHeader;
   typedef std::vector<ParsedHeader> HeaderList;
 
-  HttpResponseHeaders();
   ~HttpResponseHeaders();
 
   // Initializes from the given raw headers.

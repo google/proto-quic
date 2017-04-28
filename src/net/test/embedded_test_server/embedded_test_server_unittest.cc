@@ -458,8 +458,9 @@ TEST_P(EmbeddedTestServerTest, CloseDuringWrite) {
       &HandlePrefixedRequest, "/infinite", base::Bind(&HandleInfiniteRequest)));
   ASSERT_TRUE(server_->Start());
 
-  std::unique_ptr<URLRequest> request = context.CreateRequest(
-      server_->GetURL("/infinite"), DEFAULT_PRIORITY, &cancel_delegate);
+  std::unique_ptr<URLRequest> request =
+      context.CreateRequest(server_->GetURL("/infinite"), DEFAULT_PRIORITY,
+                            &cancel_delegate, TRAFFIC_ANNOTATION_FOR_TESTS);
   request->Start();
   cancel_delegate.WaitUntilDone();
 }

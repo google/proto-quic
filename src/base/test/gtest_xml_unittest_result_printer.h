@@ -25,6 +25,12 @@ class XmlUnitTestResultPrinter : public testing::EmptyTestEventListener {
   // Must be called before adding as a listener. Returns true on success.
   bool Initialize(const FilePath& output_file_path) WARN_UNUSED_RESULT;
 
+  // CHECK/DCHECK failed. Print file/line and message to the xml.
+  void OnAssert(const char* file,
+                int line,
+                const std::string& summary,
+                const std::string& message);
+
  private:
   // testing::EmptyTestEventListener:
   void OnTestCaseStart(const testing::TestCase& test_case) override;
@@ -32,7 +38,11 @@ class XmlUnitTestResultPrinter : public testing::EmptyTestEventListener {
   void OnTestEnd(const testing::TestInfo& test_info) override;
   void OnTestCaseEnd(const testing::TestCase& test_case) override;
 
-  void WriteTestPartResult(const testing::TestPartResult& test_part_result);
+  void WriteTestPartResult(const char* file,
+                           int line,
+                           testing::TestPartResult::Type type,
+                           const std::string& summary,
+                           const std::string& message);
 
   FILE* output_file_;
 

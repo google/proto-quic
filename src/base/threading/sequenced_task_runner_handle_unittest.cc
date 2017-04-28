@@ -41,8 +41,8 @@ class SequencedTaskRunnerHandleTest : public ::testing::Test {
         new SequenceCheckerImpl);
     task_runner->PostTask(
         FROM_HERE,
-        base::Bind(&SequencedTaskRunnerHandleTest::CheckValidSequence,
-                   base::Passed(&sequence_checker), callback));
+        base::BindOnce(&SequencedTaskRunnerHandleTest::CheckValidSequence,
+                       base::Passed(&sequence_checker), callback));
   }
 
   // Verifies that there is no SequencedTaskRunnerHandle in the context it runs.
@@ -77,7 +77,7 @@ TEST_F(SequencedTaskRunnerHandleTest, FromSequencedWorkerPoolTask) {
                       WaitableEvent::InitialState::NOT_SIGNALED);
   owner.pool()->PostSequencedWorkerTask(
       owner.pool()->GetSequenceToken(), FROM_HERE,
-      base::Bind(
+      base::BindOnce(
           &SequencedTaskRunnerHandleTest::VerifyCurrentSequencedTaskRunner,
           base::Bind(&WaitableEvent::Signal, base::Unretained(&event))));
   event.Wait();
@@ -91,7 +91,7 @@ TEST_F(SequencedTaskRunnerHandleTest, NoHandleFromUnsequencedTask) {
                       WaitableEvent::InitialState::NOT_SIGNALED);
   owner.pool()->PostWorkerTask(
       FROM_HERE,
-      base::Bind(
+      base::BindOnce(
           &SequencedTaskRunnerHandleTest::VerifyNoSequencedTaskRunner,
           base::Bind(&WaitableEvent::Signal, base::Unretained(&event))));
   event.Wait();

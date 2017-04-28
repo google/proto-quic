@@ -9,14 +9,25 @@
 #include "base/logging.h"
 #include "net/cert/x509_certificate.h"
 
+#if defined(OS_IOS)
+#include "net/cert/x509_util_ios.h"
+#else
+#include "net/cert/x509_util_mac.h"
+#endif
+
 namespace net {
 
 bool TestRootCerts::Add(X509Certificate* certificate) {
+  base::ScopedCFTypeRef<SecCertificateRef> os_cert(
+      x509_util::CreateSecCertificateFromX509Certificate(certificate));
+  if (!os_cert)
+    return false;
+
   if (CFArrayContainsValue(temporary_roots_,
                            CFRangeMake(0, CFArrayGetCount(temporary_roots_)),
-                           certificate->os_cert_handle()))
+                           os_cert.get()))
     return true;
-  CFArrayAppendValue(temporary_roots_, certificate->os_cert_handle());
+  CFArrayAppendValue(temporary_roots_, os_cert.get());
   return true;
 }
 

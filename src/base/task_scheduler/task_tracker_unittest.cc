@@ -43,7 +43,7 @@ namespace internal {
 
 namespace {
 
-constexpr size_t kLoadTestNumIterations = 100;
+constexpr size_t kLoadTestNumIterations = 75;
 
 // Invokes a closure asynchronously.
 class CallbackThread : public SimpleThread {
@@ -428,7 +428,7 @@ TEST_P(TaskSchedulerTaskTrackerTest, SingletonAllowed) {
 
   TaskTracker tracker;
   std::unique_ptr<Task> task(
-      new Task(FROM_HERE, Bind(&ThreadRestrictions::AssertSingletonAllowed),
+      new Task(FROM_HERE, BindOnce(&ThreadRestrictions::AssertSingletonAllowed),
                TaskTraits().WithShutdownBehavior(GetParam()), TimeDelta()));
   EXPECT_TRUE(tracker.WillPostTask(task.get()));
 
@@ -502,7 +502,7 @@ TEST_P(TaskSchedulerTaskTrackerTest, TaskRunnerHandleIsNotSetOnParallel) {
   // Create a task that will verify that TaskRunnerHandles are not set in its
   // scope per no TaskRunner ref being set to it.
   std::unique_ptr<Task> verify_task(
-      new Task(FROM_HERE, Bind(&VerifyNoTaskRunnerHandle),
+      new Task(FROM_HERE, BindOnce(&VerifyNoTaskRunnerHandle),
                TaskTraits().WithShutdownBehavior(GetParam()), TimeDelta()));
 
   RunTaskRunnerHandleVerificationTask(&tracker_, std::move(verify_task));
@@ -523,8 +523,9 @@ TEST_P(TaskSchedulerTaskTrackerTest,
   // set to |test_task_runner| in its scope per |sequenced_task_runner_ref|
   // being set to it.
   std::unique_ptr<Task> verify_task(
-      new Task(FROM_HERE, Bind(&VerifySequencedTaskRunnerHandle,
-                               base::Unretained(test_task_runner.get())),
+      new Task(FROM_HERE,
+               BindOnce(&VerifySequencedTaskRunnerHandle,
+                        base::Unretained(test_task_runner.get())),
                TaskTraits().WithShutdownBehavior(GetParam()), TimeDelta()));
   verify_task->sequenced_task_runner_ref = test_task_runner;
 
@@ -548,8 +549,9 @@ TEST_P(TaskSchedulerTaskTrackerTest,
   // to |test_task_runner| in its scope per |single_thread_task_runner_ref|
   // being set on it.
   std::unique_ptr<Task> verify_task(
-      new Task(FROM_HERE, Bind(&VerifyThreadTaskRunnerHandle,
-                               base::Unretained(test_task_runner.get())),
+      new Task(FROM_HERE,
+               BindOnce(&VerifyThreadTaskRunnerHandle,
+                        base::Unretained(test_task_runner.get())),
                TaskTraits().WithShutdownBehavior(GetParam()), TimeDelta()));
   verify_task->single_thread_task_runner_ref = test_task_runner;
 
@@ -557,7 +559,7 @@ TEST_P(TaskSchedulerTaskTrackerTest,
 }
 
 TEST_P(TaskSchedulerTaskTrackerTest, FlushPendingDelayedTask) {
-  const Task delayed_task(FROM_HERE, Bind(&DoNothing),
+  const Task delayed_task(FROM_HERE, BindOnce(&DoNothing),
                           TaskTraits().WithShutdownBehavior(GetParam()),
                           TimeDelta::FromDays(1));
   tracker_.WillPostTask(&delayed_task);

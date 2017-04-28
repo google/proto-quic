@@ -20,7 +20,8 @@ from telemetry.testing import unittest_runner
 
 
 def main():
-  project_config = chromium_config.ChromiumConfig()
+  project_config = chromium_config.ChromiumConfig(
+      top_level_dir=path_util.GetPerfDir())
   return unittest_runner.Run(project_config)
 
 if __name__ == '__main__':

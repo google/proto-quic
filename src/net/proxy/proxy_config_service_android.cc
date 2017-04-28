@@ -6,7 +6,6 @@
 
 #include <sys/system_properties.h>
 
-#include "base/android/context_utils.h"
 #include "base/android/jni_array.h"
 #include "base/android/jni_string.h"
 #include "base/bind.h"
@@ -208,9 +207,7 @@ class ProxyConfigServiceAndroid::Delegate
     DCHECK(OnJNIThread());
     JNIEnv* env = AttachCurrentThread();
     if (java_proxy_change_listener_.is_null()) {
-      java_proxy_change_listener_.Reset(
-          Java_ProxyChangeListener_create(
-              env, base::android::GetApplicationContext()));
+      java_proxy_change_listener_.Reset(Java_ProxyChangeListener_create(env));
       CHECK(!java_proxy_change_listener_.is_null());
     }
     Java_ProxyChangeListener_start(env, java_proxy_change_listener_,

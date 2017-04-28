@@ -7,7 +7,8 @@ import time
 import common
 from common import TestDriver
 from common import IntegrationTest
-from common import NotAndroid
+from decorators import NotAndroid
+from decorators import Slow
 
 
 class Video(IntegrationTest):
@@ -47,6 +48,7 @@ class Video(IntegrationTest):
 
   # Check the compressed video has the same frame count, width, height, and
   # duration as uncompressed.
+  @Slow
   @NotAndroid
   def testVideoMetrics(self):
     expected = {
@@ -79,11 +81,13 @@ class Video(IntegrationTest):
 
   # Check the frames of a compressed video.
   @NotAndroid
+  @Slow
   def testVideoFrames(self):
     self.instrumentedVideoTest('http://check.googlezip.net/cacheable/video/buck_bunny_640x360_24fps_video.html')
 
   # Check the audio volume of a compressed video.
   @NotAndroid
+  @Slow
   def testVideoAudio(self):
     self.instrumentedVideoTest('http://check.googlezip.net/cacheable/video/buck_bunny_640x360_24fps_audio.html')
 

@@ -515,7 +515,7 @@ void FilterAndPrintTargets(bool indent, std::vector<const Target*>* targets) {
   FilterAndPrintTargets(targets, &tmp);
   for (const auto& value : tmp) {
     std::string string;
-    value->GetAsString(&string);
+    value.GetAsString(&string);
     if (indent)
       OutputString("  ");
     OutputString(string);

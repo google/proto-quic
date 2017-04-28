@@ -131,12 +131,8 @@ PreloadedStateGenerator::~PreloadedStateGenerator() {}
 std::string PreloadedStateGenerator::Generate(
     const std::string& preload_template,
     const TransportSecurityStateEntries& entries,
-    const DomainIDList& domain_ids,
     const Pinsets& pinsets) {
   std::string output = preload_template;
-
-  NameIDMap domain_ids_map;
-  ProcessDomainIds(domain_ids, &domain_ids_map, &output);
 
   ProcessSPKIHashes(pinsets, &output);
 
@@ -156,7 +152,7 @@ std::string PreloadedStateGenerator::Generate(
   // second run.
   HuffmanRepresentationTable table = ApproximateHuffman(entries);
   HuffmanBuilder huffman_builder;
-  TrieWriter writer(table, domain_ids_map, expect_ct_report_uri_map,
+  TrieWriter writer(table, expect_ct_report_uri_map,
                     expect_staple_report_uri_map, pinsets_map,
                     &huffman_builder);
   uint32_t root_position;
@@ -165,7 +161,7 @@ std::string PreloadedStateGenerator::Generate(
   }
 
   HuffmanRepresentationTable optimal_table = huffman_builder.ToTable();
-  TrieWriter new_writer(optimal_table, domain_ids_map, expect_ct_report_uri_map,
+  TrieWriter new_writer(optimal_table, expect_ct_report_uri_map,
                         expect_staple_report_uri_map, pinsets_map, nullptr);
 
   if (!new_writer.WriteEntries(entries, &root_position)) {
@@ -183,32 +179,6 @@ std::string PreloadedStateGenerator::Generate(
   ReplaceTag("HSTS_TRIE_ROOT", base::SizeTToString(root_position), &output);
 
   return output;
-}
-
-void PreloadedStateGenerator::ProcessDomainIds(const DomainIDList& domain_ids,
-                                               NameIDMap* map,
-                                               std::string* tpl) {
-  std::string output = "{";
-  output.append(kNewLine);
-
-  for (size_t i = 0; i < domain_ids.size(); ++i) {
-    const std::string& current = domain_ids.at(i);
-    output.append(kIndent);
-    output.append("DOMAIN_" + current + ",");
-    output.append(kNewLine);
-
-    map->insert(NameIDPair(current, static_cast<uint32_t>(i)));
-  }
-
-  output.append(kIndent);
-  output.append("// Boundary value for UMA_HISTOGRAM_ENUMERATION.");
-  output.append(kNewLine);
-  output.append(kIndent);
-  output.append("DOMAIN_NUM_EVENTS,");
-  output.append(kNewLine);
-  output.append("}");
-
-  ReplaceTag("DOMAIN_IDS", output, tpl);
 }
 
 void PreloadedStateGenerator::ProcessSPKIHashes(const Pinsets& pinset,

@@ -19,7 +19,7 @@ void TestTask(int* result) {
 
 TEST(TaskAnnotatorTest, QueueAndRunTask) {
   int result = 0;
-  PendingTask pending_task(FROM_HERE, Bind(&TestTask, &result));
+  PendingTask pending_task(FROM_HERE, BindOnce(&TestTask, &result));
 
   TaskAnnotator annotator;
   annotator.DidQueueTask("TaskAnnotatorTest::Queue", pending_task);

@@ -38,19 +38,9 @@ class MockSSLPrivateKey : public SSLPrivateKey {
 
   void set_on_destroyed(bool* on_destroyed) { on_destroyed_ = on_destroyed; }
 
-  Type GetType() override {
-    NOTREACHED();
-    return Type::RSA;
-  }
-
   std::vector<Hash> GetDigestPreferences() override {
     NOTREACHED();
     return {};
-  }
-
-  size_t GetMaxSignatureLengthInBytes() override {
-    NOTREACHED();
-    return 0;
   }
 
   void SignDigest(Hash hash,

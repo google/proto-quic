@@ -22,6 +22,7 @@
 #include "net/proxy/proxy_server.h"
 #include "net/socket/socket_test_util.h"
 #include "net/test/gtest_util.h"
+#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/ftp_protocol_handler.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_context.h"
@@ -166,7 +167,8 @@ class URLRequestFtpJobPriorityTest : public testing::Test {
                        NULL),
         req_(context_.CreateRequest(GURL("ftp://ftp.example.com"),
                                     DEFAULT_PRIORITY,
-                                    &delegate_)) {
+                                    &delegate_,
+                                    TRAFFIC_ANNOTATION_FOR_TESTS)) {
     context_.set_proxy_service(&proxy_service_);
     context_.set_http_transaction_factory(&network_layer_);
   }
@@ -302,7 +304,8 @@ TEST_F(URLRequestFtpJobTest, FtpProxyRequest) {
 
   TestDelegate request_delegate;
   std::unique_ptr<URLRequest> url_request(request_context()->CreateRequest(
-      GURL("ftp://ftp.example.com/"), DEFAULT_PRIORITY, &request_delegate));
+      GURL("ftp://ftp.example.com/"), DEFAULT_PRIORITY, &request_delegate,
+      TRAFFIC_ANNOTATION_FOR_TESTS));
   url_request->Start();
   ASSERT_TRUE(url_request->is_pending());
 
@@ -333,7 +336,8 @@ TEST_F(URLRequestFtpJobTest, FtpProxyRequestOrphanJob) {
 
   TestDelegate request_delegate;
   std::unique_ptr<URLRequest> url_request(request_context()->CreateRequest(
-      GURL("ftp://ftp.example.com/"), DEFAULT_PRIORITY, &request_delegate));
+      GURL("ftp://ftp.example.com/"), DEFAULT_PRIORITY, &request_delegate,
+      TRAFFIC_ANNOTATION_FOR_TESTS));
   url_request->Start();
 
   // Verify PAC request is in progress.
@@ -364,7 +368,8 @@ TEST_F(URLRequestFtpJobTest, FtpProxyRequestCancelRequest) {
 
   TestDelegate request_delegate;
   std::unique_ptr<URLRequest> url_request(request_context()->CreateRequest(
-      GURL("ftp://ftp.example.com/"), DEFAULT_PRIORITY, &request_delegate));
+      GURL("ftp://ftp.example.com/"), DEFAULT_PRIORITY, &request_delegate,
+      TRAFFIC_ANNOTATION_FOR_TESTS));
 
   // Verify PAC request is in progress.
   url_request->Start();
@@ -399,7 +404,8 @@ TEST_F(URLRequestFtpJobTest, FtpProxyRequestNeedProxyAuthNoCredentials) {
 
   TestDelegate request_delegate;
   std::unique_ptr<URLRequest> url_request(request_context()->CreateRequest(
-      GURL("ftp://ftp.example.com/"), DEFAULT_PRIORITY, &request_delegate));
+      GURL("ftp://ftp.example.com/"), DEFAULT_PRIORITY, &request_delegate,
+      TRAFFIC_ANNOTATION_FOR_TESTS));
   url_request->Start();
   ASSERT_TRUE(url_request->is_pending());
 
@@ -446,7 +452,8 @@ TEST_F(URLRequestFtpJobTest, FtpProxyRequestNeedProxyAuthWithCredentials) {
   request_delegate.set_credentials(
       AuthCredentials(ASCIIToUTF16("myuser"), ASCIIToUTF16("mypass")));
   std::unique_ptr<URLRequest> url_request(request_context()->CreateRequest(
-      GURL("ftp://ftp.example.com/"), DEFAULT_PRIORITY, &request_delegate));
+      GURL("ftp://ftp.example.com/"), DEFAULT_PRIORITY, &request_delegate,
+      TRAFFIC_ANNOTATION_FOR_TESTS));
   url_request->Start();
   ASSERT_TRUE(url_request->is_pending());
 
@@ -479,7 +486,8 @@ TEST_F(URLRequestFtpJobTest, FtpProxyRequestNeedServerAuthNoCredentials) {
 
   TestDelegate request_delegate;
   std::unique_ptr<URLRequest> url_request(request_context()->CreateRequest(
-      GURL("ftp://ftp.example.com/"), DEFAULT_PRIORITY, &request_delegate));
+      GURL("ftp://ftp.example.com/"), DEFAULT_PRIORITY, &request_delegate,
+      TRAFFIC_ANNOTATION_FOR_TESTS));
   url_request->Start();
   ASSERT_TRUE(url_request->is_pending());
 
@@ -523,7 +531,8 @@ TEST_F(URLRequestFtpJobTest, FtpProxyRequestNeedServerAuthWithCredentials) {
   request_delegate.set_credentials(
       AuthCredentials(ASCIIToUTF16("myuser"), ASCIIToUTF16("mypass")));
   std::unique_ptr<URLRequest> url_request(request_context()->CreateRequest(
-      GURL("ftp://ftp.example.com/"), DEFAULT_PRIORITY, &request_delegate));
+      GURL("ftp://ftp.example.com/"), DEFAULT_PRIORITY, &request_delegate,
+      TRAFFIC_ANNOTATION_FOR_TESTS));
   url_request->Start();
   ASSERT_TRUE(url_request->is_pending());
 
@@ -588,7 +597,7 @@ TEST_F(URLRequestFtpJobTest, FtpProxyRequestNeedProxyAndServerAuth) {
   TestDelegate request_delegate;
   request_delegate.set_quit_on_auth_required(true);
   std::unique_ptr<URLRequest> url_request(request_context()->CreateRequest(
-      url, DEFAULT_PRIORITY, &request_delegate));
+      url, DEFAULT_PRIORITY, &request_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
   url_request->Start();
   ASSERT_TRUE(url_request->is_pending());
 
@@ -636,7 +645,8 @@ TEST_F(URLRequestFtpJobTest, FtpProxyRequestDoNotSaveCookies) {
 
   TestDelegate request_delegate;
   std::unique_ptr<URLRequest> url_request(request_context()->CreateRequest(
-      GURL("ftp://ftp.example.com/"), DEFAULT_PRIORITY, &request_delegate));
+      GURL("ftp://ftp.example.com/"), DEFAULT_PRIORITY, &request_delegate,
+      TRAFFIC_ANNOTATION_FOR_TESTS));
   url_request->Start();
   ASSERT_TRUE(url_request->is_pending());
 
@@ -669,7 +679,8 @@ TEST_F(URLRequestFtpJobTest, FtpProxyRequestDoNotFollowRedirects) {
 
   TestDelegate request_delegate;
   std::unique_ptr<URLRequest> url_request(request_context()->CreateRequest(
-      GURL("ftp://ftp.example.com/"), DEFAULT_PRIORITY, &request_delegate));
+      GURL("ftp://ftp.example.com/"), DEFAULT_PRIORITY, &request_delegate,
+      TRAFFIC_ANNOTATION_FOR_TESTS));
   url_request->Start();
   EXPECT_TRUE(url_request->is_pending());
 
@@ -705,9 +716,9 @@ TEST_F(URLRequestFtpJobTest, FtpProxyRequestReuseSocket) {
 
   TestDelegate request_delegate1;
 
-  std::unique_ptr<URLRequest> url_request1(
-      request_context()->CreateRequest(GURL("ftp://ftp.example.com/first"),
-                                       DEFAULT_PRIORITY, &request_delegate1));
+  std::unique_ptr<URLRequest> url_request1(request_context()->CreateRequest(
+      GURL("ftp://ftp.example.com/first"), DEFAULT_PRIORITY, &request_delegate1,
+      TRAFFIC_ANNOTATION_FOR_TESTS));
   url_request1->Start();
   ASSERT_TRUE(url_request1->is_pending());
 
@@ -724,9 +735,9 @@ TEST_F(URLRequestFtpJobTest, FtpProxyRequestReuseSocket) {
   EXPECT_EQ("test1.html", request_delegate1.data_received());
 
   TestDelegate request_delegate2;
-  std::unique_ptr<URLRequest> url_request2(
-      request_context()->CreateRequest(GURL("ftp://ftp.example.com/second"),
-                                       DEFAULT_PRIORITY, &request_delegate2));
+  std::unique_ptr<URLRequest> url_request2(request_context()->CreateRequest(
+      GURL("ftp://ftp.example.com/second"), DEFAULT_PRIORITY,
+      &request_delegate2, TRAFFIC_ANNOTATION_FOR_TESTS));
   url_request2->Start();
   ASSERT_TRUE(url_request2->is_pending());
 
@@ -771,9 +782,9 @@ TEST_F(URLRequestFtpJobTest, FtpProxyRequestDoNotReuseSocket) {
   AddSocket(reads2, arraysize(reads2), writes2, arraysize(writes2));
 
   TestDelegate request_delegate1;
-  std::unique_ptr<URLRequest> url_request1(
-      request_context()->CreateRequest(GURL("ftp://ftp.example.com/first"),
-                                       DEFAULT_PRIORITY, &request_delegate1));
+  std::unique_ptr<URLRequest> url_request1(request_context()->CreateRequest(
+      GURL("ftp://ftp.example.com/first"), DEFAULT_PRIORITY, &request_delegate1,
+      TRAFFIC_ANNOTATION_FOR_TESTS));
   url_request1->Start();
   ASSERT_TRUE(url_request1->is_pending());
 
@@ -787,9 +798,9 @@ TEST_F(URLRequestFtpJobTest, FtpProxyRequestDoNotReuseSocket) {
   EXPECT_EQ("test1.html", request_delegate1.data_received());
 
   TestDelegate request_delegate2;
-  std::unique_ptr<URLRequest> url_request2(
-      request_context()->CreateRequest(GURL("http://ftp.example.com/second"),
-                                       DEFAULT_PRIORITY, &request_delegate2));
+  std::unique_ptr<URLRequest> url_request2(request_context()->CreateRequest(
+      GURL("http://ftp.example.com/second"), DEFAULT_PRIORITY,
+      &request_delegate2, TRAFFIC_ANNOTATION_FOR_TESTS));
   url_request2->Start();
   ASSERT_TRUE(url_request2->is_pending());
 

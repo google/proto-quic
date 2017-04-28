@@ -6,6 +6,8 @@ import unittest
 from core import perf_data_generator
 from core.perf_data_generator import BenchmarkMetadata
 
+from telemetry import benchmark
+
 
 class PerfDataGeneratorTest(unittest.TestCase):
   def setUp(self):
@@ -111,3 +113,30 @@ class PerfDataGeneratorTest(unittest.TestCase):
         'isolate_name': 'telemetry_perf_tests',
       }
     self.assertEquals(test, expected_generated_test)
+
+  def testGenerateTelemetryTestsBlacklistedReferenceBuildTest(self):
+    class BlacklistedBenchmark(benchmark.Benchmark):
+      @classmethod
+      def Name(cls):
+        return 'blacklisted'
+
+    class NotBlacklistedBenchmark(benchmark.Benchmark):
+      @classmethod
+      def Name(cls):
+        return 'not_blacklisted'
+
+    swarming_dimensions = [
+        {'os': 'SkyNet', 'id': 'T-850', 'pool': 'T-RIP', 'device_ids': ['a']}
+    ]
+    test_config = {
+        'platform': 'android',
+        'swarming_dimensions': swarming_dimensions,
+    }
+    benchmarks = [BlacklistedBenchmark, NotBlacklistedBenchmark]
+    tests = perf_data_generator.generate_telemetry_tests(
+        test_config, benchmarks, None, ['blacklisted'])
+
+    generated_test_names = set(t['name'] for t in tests)
+    self.assertEquals(
+        generated_test_names,
+        {'blacklisted', 'not_blacklisted', 'not_blacklisted.reference'})

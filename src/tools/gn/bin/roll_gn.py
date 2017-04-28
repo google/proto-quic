@@ -186,8 +186,7 @@ class GNRoller(object):
 
     print('Checking build')
     results = self.CheckBuild()
-    while (len(results) < 3 or
-           any(r['state'] in ('pending', 'started')
+    while (any(r['state'] in ('pending', 'started')
                for r in results.values())):
       print()
       print('Sleeping for 30 seconds')
@@ -228,16 +227,18 @@ class GNRoller(object):
     rpc_server = upload.GetRpcServer(CODE_REVIEW_SERVER, email)
     try:
       props = json.loads(rpc_server.Send('/api/%d' % issue))
-    except Exception as _e:
-      raise
+    except Exception as e:
+      print('Failed to load patch data: %s' % e)
+      return {}
 
     patchset = int(props['patchsets'][-1])
 
     try:
       try_job_results = json.loads(rpc_server.Send(
           '/api/%d/%d/try_job_results' % (issue, patchset)))
-    except Exception as _e:
-      raise
+    except Exception as e:
+      print('Failed to load try job results: %s' % e)
+      return {}
 
     if not try_job_results:
       print('No try jobs found on most recent patchset')
@@ -266,8 +267,15 @@ class GNRoller(object):
       results.setdefault(platform, {'build': -1, 'sha1': '', 'url': url_str})
 
       if state == 'success':
-        jsurl = url_str.replace('/builders/', '/json/builders/')
-        fp = urllib2.urlopen(jsurl)
+        jsurl = url_str.replace('http://build.chromium.org/',
+                                'http://chrome-build-extract.appspot.com/')
+        jsurl = jsurl + '?json=1'
+        try:
+          fp = urllib2.urlopen(jsurl)
+        except urllib2.HTTPError as e:
+          print('Failed to open %s: %s' % (jsurl, e))
+          return {}
+
         js = json.loads(fp.read())
         fp.close()
         sha1_step_name = 'gn sha1'
@@ -460,7 +468,7 @@ class GNRoller(object):
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True,
                             cwd=(cwd or self.chromium_src_dir))
     out, err = proc.communicate()
-    return proc.returncode, out, err
+    return proc.returncode, out or '', err or ''
 
 
 if __name__ == '__main__':

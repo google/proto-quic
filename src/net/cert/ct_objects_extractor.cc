@@ -13,8 +13,7 @@
 #include "net/cert/asn1_util.h"
 #include "net/cert/signed_certificate_timestamp.h"
 #include "third_party/boringssl/src/include/openssl/bytestring.h"
-#include "third_party/boringssl/src/include/openssl/obj.h"
-#include "third_party/boringssl/src/include/openssl/x509.h"
+#include "third_party/boringssl/src/include/openssl/mem.h"
 
 namespace net {
 
@@ -33,52 +32,141 @@ const uint8_t kEmbeddedSCTOid[] = {0x2B, 0x06, 0x01, 0x04, 0x01,
 const uint8_t kOCSPExtensionOid[] = {0x2B, 0x06, 0x01, 0x04, 0x01,
                                      0xD6, 0x79, 0x02, 0x04, 0x05};
 
+// The wire form of the OID 1.3.6.1.5.5.7.48.1.1. See RFC 6960.
+const uint8_t kOCSPBasicResponseOid[] = {0x2b, 0x06, 0x01, 0x05, 0x05,
+                                         0x07, 0x30, 0x01, 0x01};
+
+// The wire form of the OID 1.3.14.3.2.26.
+const uint8_t kSHA1Oid[] = {0x2b, 0x0e, 0x03, 0x02, 0x1a};
+
+// The wire form of the OID 2.16.840.1.101.3.4.2.1.
+const uint8_t kSHA256Oid[] = {0x60, 0x86, 0x48, 0x01, 0x65,
+                              0x03, 0x04, 0x02, 0x01};
+
 bool StringEqualToCBS(const std::string& value1, const CBS* value2) {
   if (CBS_len(value2) != value1.size())
     return false;
   return memcmp(value1.data(), CBS_data(value2), CBS_len(value2)) == 0;
 }
 
-bssl::UniquePtr<X509> OSCertHandleToOpenSSL(
-    X509Certificate::OSCertHandle os_handle) {
-#if defined(USE_OPENSSL_CERTS)
-  return bssl::UniquePtr<X509>(X509Certificate::DupOSCertHandle(os_handle));
-#else
-  std::string der_encoded;
-  if (!X509Certificate::GetDEREncoded(os_handle, &der_encoded))
-    return bssl::UniquePtr<X509>();
-  const uint8_t* bytes = reinterpret_cast<const uint8_t*>(der_encoded.data());
-  return bssl::UniquePtr<X509>(d2i_X509(NULL, &bytes, der_encoded.size()));
-#endif
+bool SkipElements(CBS* cbs, int count) {
+  for (int i = 0; i < count; i++) {
+    if (!CBS_get_any_asn1_element(cbs, nullptr, nullptr, nullptr))
+      return false;
+  }
+  return true;
+}
+
+bool SkipOptionalElement(CBS* cbs, unsigned tag) {
+  CBS unused;
+  return !CBS_peek_asn1_tag(cbs, tag) || CBS_get_asn1(cbs, &unused, tag);
+}
+
+// Copies all the bytes in |outer| which are before |inner| to |out|. |inner|
+// must be a subset of |outer|.
+bool CopyBefore(const CBS& outer, const CBS& inner, CBB* out) {
+  CHECK_LE(CBS_data(&outer), CBS_data(&inner));
+  CHECK_LE(CBS_data(&inner) + CBS_len(&inner),
+           CBS_data(&outer) + CBS_len(&outer));
+
+  return !!CBB_add_bytes(out, CBS_data(&outer),
+                         CBS_data(&inner) - CBS_data(&outer));
+}
+
+// Copies all the bytes in |outer| which are after |inner| to |out|. |inner|
+// must be a subset of |outer|.
+bool CopyAfter(const CBS& outer, const CBS& inner, CBB* out) {
+  CHECK_LE(CBS_data(&outer), CBS_data(&inner));
+  CHECK_LE(CBS_data(&inner) + CBS_len(&inner),
+           CBS_data(&outer) + CBS_len(&outer));
+
+  return !!CBB_add_bytes(
+      out, CBS_data(&inner) + CBS_len(&inner),
+      CBS_data(&outer) + CBS_len(&outer) - CBS_data(&inner) - CBS_len(&inner));
+}
+
+// Skips |tbs_cert|, which must be a TBSCertificate body, to just before the
+// extensions element.
+bool SkipTBSCertificateToExtensions(CBS* tbs_cert) {
+  constexpr unsigned kVersionTag =
+      CBS_ASN1_CONTEXT_SPECIFIC | CBS_ASN1_CONSTRUCTED | 0;
+  constexpr unsigned kIssuerUniqueIDTag =
+      CBS_ASN1_CONTEXT_SPECIFIC | CBS_ASN1_CONSTRUCTED | 1;
+  constexpr unsigned kSubjectUniqueIDTag =
+      CBS_ASN1_CONTEXT_SPECIFIC | CBS_ASN1_CONSTRUCTED | 2;
+  return SkipOptionalElement(tbs_cert, kVersionTag) &&
+         SkipElements(tbs_cert,
+                      6 /* serialNumber through subjectPublicKeyInfo */) &&
+         SkipOptionalElement(tbs_cert, kIssuerUniqueIDTag) &&
+         SkipOptionalElement(tbs_cert, kSubjectUniqueIDTag);
+}
+
+// Looks for the extension with the specified OID in |extensions|, which must
+// contain the contents of a SEQUENCE of X.509 extension structures. If found,
+// returns true and sets |*out| to the full extension element.
+bool FindExtensionElement(const CBS& extensions,
+                          const uint8_t* oid,
+                          size_t oid_len,
+                          CBS* out) {
+  CBS extensions_copy = extensions;
+  CBS result;
+  CBS_init(&result, nullptr, 0);
+  bool found = false;
+  while (CBS_len(&extensions_copy) > 0) {
+    CBS extension_element;
+    if (!CBS_get_asn1_element(&extensions_copy, &extension_element,
+                              CBS_ASN1_SEQUENCE)) {
+      return false;
+    }
+
+    CBS copy = extension_element;
+    CBS extension, extension_oid;
+    if (!CBS_get_asn1(&copy, &extension, CBS_ASN1_SEQUENCE) ||
+        !CBS_get_asn1(&extension, &extension_oid, CBS_ASN1_OBJECT)) {
+      return false;
+    }
+
+    if (CBS_mem_equal(&extension_oid, oid, oid_len)) {
+      if (found)
+        return false;
+      found = true;
+      result = extension_element;
+    }
+  }
+  if (!found)
+    return false;
+
+  *out = result;
+  return true;
 }
 
 // Finds the SignedCertificateTimestampList in an extension with OID |oid| in
 // |x509_exts|. If found, returns true and sets |*out_sct_list| to the encoded
-// SCT list. |out_sct_list| may be NULL.
-bool GetSCTListFromX509_EXTENSIONS(const X509_EXTENSIONS* x509_exts,
-                                   const uint8_t* oid,
-                                   size_t oid_len,
-                                   std::string* out_sct_list) {
-  for (size_t i = 0; i < sk_X509_EXTENSION_num(x509_exts); i++) {
-    X509_EXTENSION* x509_ext = sk_X509_EXTENSION_value(x509_exts, i);
-    if (static_cast<size_t>(x509_ext->object->length) == oid_len &&
-        memcmp(x509_ext->object->data, oid, oid_len) == 0) {
-      // The SCT list is an OCTET STRING inside the extension.
-      CBS ext_value, sct_list;
-      CBS_init(&ext_value, x509_ext->value->data, x509_ext->value->length);
-      if (!CBS_get_asn1(&ext_value, &sct_list, CBS_ASN1_OCTETSTRING) ||
-          CBS_len(&ext_value) != 0) {
-        return false;
-      }
-      if (out_sct_list) {
-        *out_sct_list =
-            std::string(reinterpret_cast<const char*>(CBS_data(&sct_list)),
-                        CBS_len(&sct_list));
-      }
-      return true;
-    }
+// SCT list.
+bool ParseSCTListFromExtensions(const CBS& extensions,
+                                const uint8_t* oid,
+                                size_t oid_len,
+                                std::string* out_sct_list) {
+  CBS extension_element, extension, extension_oid, value, sct_list;
+  if (!FindExtensionElement(extensions, oid, oid_len, &extension_element) ||
+      !CBS_get_asn1(&extension_element, &extension, CBS_ASN1_SEQUENCE) ||
+      !CBS_get_asn1(&extension, &extension_oid, CBS_ASN1_OBJECT) ||
+      // Skip the optional critical element.
+      !SkipOptionalElement(&extension, CBS_ASN1_BOOLEAN) ||
+      // The extension value is stored in an OCTET STRING.
+      !CBS_get_asn1(&extension, &value, CBS_ASN1_OCTETSTRING) ||
+      CBS_len(&extension) != 0 ||
+      // The extension value itself is an OCTET STRING containing the
+      // serialized SCT list.
+      !CBS_get_asn1(&value, &sct_list, CBS_ASN1_OCTETSTRING) ||
+      CBS_len(&value) != 0) {
+    return false;
   }
-  return false;
+
+  DCHECK(CBS_mem_equal(&extension_oid, oid, oid_len));
+  *out_sct_list = std::string(
+      reinterpret_cast<const char*>(CBS_data(&sct_list)), CBS_len(&sct_list));
+  return true;
 }
 
 // Finds the SingleResponse in |responses| which matches |issuer| and
@@ -102,9 +190,9 @@ bool FindMatchingSingleResponse(CBS* responses,
   if (!asn1::ExtractSubjectPublicKeyFromSPKI(issuer_spki, &issuer_spk))
     return false;
 
-  // ExtractSubjectPublicKey... does not remove the initial octet encoding the
-  // number of unused bits in the ASN.1 BIT STRING so we do it here. For public
-  // keys, the bitstring is in practice always byte-aligned.
+  // ExtractSubjectPublicKeyFromSPKI does not remove the initial octet encoding
+  // the number of unused bits in the ASN.1 BIT STRING so we do it here. For
+  // public keys, the bitstring is in practice always byte-aligned.
   if (issuer_spk.empty() || issuer_spk[0] != 0)
     return false;
   issuer_spk.remove_prefix(1);
@@ -139,19 +227,16 @@ bool FindMatchingSingleResponse(CBS* responses,
 
     // Check if the issuer_key_hash matches.
     // TODO(ekasper): also use the issuer name hash in matching.
-    switch (OBJ_cbs2nid(&hash)) {
-      case NID_sha1:
-        if (StringEqualToCBS(issuer_key_sha1_hash, &issuer_key_hash)) {
-          *out_single_response = single_response;
-          return true;
-        }
-        break;
-      case NID_sha256:
-        if (StringEqualToCBS(issuer_key_sha256_hash, &issuer_key_hash)) {
-          *out_single_response = single_response;
-          return true;
-        }
-        break;
+    if (CBS_mem_equal(&hash, kSHA1Oid, sizeof(kSHA1Oid))) {
+      if (StringEqualToCBS(issuer_key_sha1_hash, &issuer_key_hash)) {
+        *out_single_response = single_response;
+        return true;
+      }
+    } else if (CBS_mem_equal(&hash, kSHA256Oid, sizeof(kSHA256Oid))) {
+      if (StringEqualToCBS(issuer_key_sha256_hash, &issuer_key_hash)) {
+        *out_single_response = single_response;
+        return true;
+      }
     }
   }
 
@@ -162,82 +247,114 @@ bool FindMatchingSingleResponse(CBS* responses,
 
 bool ExtractEmbeddedSCTList(X509Certificate::OSCertHandle cert,
                             std::string* sct_list) {
-  bssl::UniquePtr<X509> x509(OSCertHandleToOpenSSL(cert));
-  if (!x509)
+  std::string der;
+  if (!X509Certificate::GetDEREncoded(cert, &der))
     return false;
-  X509_EXTENSIONS* x509_exts = x509->cert_info->extensions;
-  if (!x509_exts)
+  CBS cert_cbs;
+  CBS_init(&cert_cbs, reinterpret_cast<const uint8_t*>(der.data()), der.size());
+  CBS cert_body, tbs_cert, extensions_wrap, extensions;
+  if (!CBS_get_asn1(&cert_cbs, &cert_body, CBS_ASN1_SEQUENCE) ||
+      CBS_len(&cert_cbs) != 0 ||
+      !CBS_get_asn1(&cert_body, &tbs_cert, CBS_ASN1_SEQUENCE) ||
+      !SkipTBSCertificateToExtensions(&tbs_cert) ||
+      // Extract the extensions list.
+      !CBS_get_asn1(&tbs_cert, &extensions_wrap,
+                    CBS_ASN1_CONTEXT_SPECIFIC | CBS_ASN1_CONSTRUCTED | 3) ||
+      !CBS_get_asn1(&extensions_wrap, &extensions, CBS_ASN1_SEQUENCE) ||
+      CBS_len(&extensions_wrap) != 0 || CBS_len(&tbs_cert) != 0) {
     return false;
-  return GetSCTListFromX509_EXTENSIONS(x509->cert_info->extensions,
-                                       kEmbeddedSCTOid, sizeof(kEmbeddedSCTOid),
-                                       sct_list);
+  }
+
+  return ParseSCTListFromExtensions(extensions, kEmbeddedSCTOid,
+                                    sizeof(kEmbeddedSCTOid), sct_list);
 }
 
-bool GetPrecertLogEntry(X509Certificate::OSCertHandle leaf,
-                        X509Certificate::OSCertHandle issuer,
-                        LogEntry* result) {
+bool GetPrecertSignedEntry(X509Certificate::OSCertHandle leaf,
+                           X509Certificate::OSCertHandle issuer,
+                           SignedEntryData* result) {
   result->Reset();
 
-  bssl::UniquePtr<X509> leaf_x509(OSCertHandleToOpenSSL(leaf));
-  if (!leaf_x509)
+  std::string leaf_der;
+  if (!X509Certificate::GetDEREncoded(leaf, &leaf_der))
     return false;
 
-  // XXX(rsleevi): This check may be overkill, since we should be able to
-  // generate precerts for certs without the extension. For now, just a sanity
-  // check to match the reference implementation.
-  if (!leaf_x509->cert_info->extensions ||
-      !GetSCTListFromX509_EXTENSIONS(leaf_x509->cert_info->extensions,
-                                     kEmbeddedSCTOid, sizeof(kEmbeddedSCTOid),
-                                     NULL)) {
+  // Parse the TBSCertificate.
+  CBS cert_cbs;
+  CBS_init(&cert_cbs, reinterpret_cast<const uint8_t*>(leaf_der.data()),
+           leaf_der.size());
+  CBS cert_body, tbs_cert;
+  if (!CBS_get_asn1(&cert_cbs, &cert_body, CBS_ASN1_SEQUENCE) ||
+      CBS_len(&cert_cbs) != 0 ||
+      !CBS_get_asn1(&cert_body, &tbs_cert, CBS_ASN1_SEQUENCE)) {
     return false;
   }
 
-  // The Precertificate log entry is the final certificate's TBSCertificate
-  // without the SCT extension (RFC6962, section 3.2).
-  bssl::UniquePtr<X509> leaf_copy(X509_dup(leaf_x509.get()));
-  if (!leaf_copy || !leaf_copy->cert_info->extensions) {
-    NOTREACHED();
+  CBS tbs_cert_copy = tbs_cert;
+  if (!SkipTBSCertificateToExtensions(&tbs_cert))
     return false;
-  }
-  X509_EXTENSIONS* leaf_copy_exts = leaf_copy->cert_info->extensions;
-  for (size_t i = 0; i < sk_X509_EXTENSION_num(leaf_copy_exts); i++) {
-    X509_EXTENSION* ext = sk_X509_EXTENSION_value(leaf_copy_exts, i);
-    if (static_cast<size_t>(ext->object->length) == sizeof(kEmbeddedSCTOid) &&
-        memcmp(ext->object->data, kEmbeddedSCTOid, sizeof(kEmbeddedSCTOid)) ==
-            0) {
-      X509_EXTENSION_free(sk_X509_EXTENSION_delete(leaf_copy_exts, i));
-      X509_CINF_set_modified(leaf_copy->cert_info);
-      break;
-    }
+
+  // Start filling in a new TBSCertificate. Copy everything parsed or skipped
+  // so far to the |new_tbs_cert|.
+  bssl::ScopedCBB cbb;
+  CBB new_tbs_cert;
+  if (!CBB_init(cbb.get(), CBS_len(&tbs_cert_copy)) ||
+      !CBB_add_asn1(cbb.get(), &new_tbs_cert, CBS_ASN1_SEQUENCE) ||
+      !CopyBefore(tbs_cert_copy, tbs_cert, &new_tbs_cert)) {
+    return false;
   }
 
-  std::string to_be_signed;
-  int len = i2d_X509_CINF(leaf_copy->cert_info, NULL);
-  if (len < 0)
+  // Parse the extensions list and find the SCT extension.
+  //
+  // XXX(rsleevi): We could generate precerts for certs without the extension
+  // by leaving the TBSCertificate as-is. The reference implementation does not
+  // do this.
+  constexpr unsigned kExtensionsTag =
+      CBS_ASN1_CONTEXT_SPECIFIC | CBS_ASN1_CONSTRUCTED | 3;
+  CBS extensions_wrap, extensions, sct_extension;
+  if (!CBS_get_asn1(&tbs_cert, &extensions_wrap, kExtensionsTag) ||
+      !CBS_get_asn1(&extensions_wrap, &extensions, CBS_ASN1_SEQUENCE) ||
+      CBS_len(&extensions_wrap) != 0 || CBS_len(&tbs_cert) != 0 ||
+      !FindExtensionElement(extensions, kEmbeddedSCTOid,
+                            sizeof(kEmbeddedSCTOid), &sct_extension)) {
     return false;
-  uint8_t* ptr =
-      reinterpret_cast<uint8_t*>(base::WriteInto(&to_be_signed, len + 1));
-  if (i2d_X509_CINF(leaf_copy->cert_info, &ptr) < 0)
+  }
+
+  // Add extensions to the TBSCertificate. Copy all extensions except the
+  // embedded SCT extension.
+  CBB new_extensions_wrap, new_extensions;
+  if (!CBB_add_asn1(&new_tbs_cert, &new_extensions_wrap, kExtensionsTag) ||
+      !CBB_add_asn1(&new_extensions_wrap, &new_extensions, CBS_ASN1_SEQUENCE) ||
+      !CopyBefore(extensions, sct_extension, &new_extensions) ||
+      !CopyAfter(extensions, sct_extension, &new_extensions)) {
     return false;
+  }
+
+  uint8_t* new_tbs_cert_der;
+  size_t new_tbs_cert_len;
+  if (!CBB_finish(cbb.get(), &new_tbs_cert_der, &new_tbs_cert_len))
+    return false;
+  bssl::UniquePtr<uint8_t> scoped_new_tbs_cert_der(new_tbs_cert_der);
 
   // Extract the issuer's public key.
   std::string issuer_der;
-  if (!X509Certificate::GetDEREncoded(issuer, &issuer_der))
-    return false;
   base::StringPiece issuer_key;
-  if (!asn1::ExtractSPKIFromDERCert(issuer_der, &issuer_key))
+  if (!X509Certificate::GetDEREncoded(issuer, &issuer_der) ||
+      !asn1::ExtractSPKIFromDERCert(issuer_der, &issuer_key)) {
     return false;
+  }
 
-  // Fill in the LogEntry.
-  result->type = ct::LogEntry::LOG_ENTRY_TYPE_PRECERT;
-  result->tbs_certificate.swap(to_be_signed);
+  // Fill in the SignedEntryData.
+  result->type = ct::SignedEntryData::LOG_ENTRY_TYPE_PRECERT;
+  result->tbs_certificate.assign(
+      reinterpret_cast<const char*>(new_tbs_cert_der), new_tbs_cert_len);
   crypto::SHA256HashString(issuer_key, result->issuer_key_hash.data,
                            sizeof(result->issuer_key_hash.data));
 
   return true;
 }
 
-bool GetX509LogEntry(X509Certificate::OSCertHandle leaf, LogEntry* result) {
+bool GetX509SignedEntry(X509Certificate::OSCertHandle leaf,
+                        SignedEntryData* result) {
   DCHECK(leaf);
 
   std::string encoded;
@@ -245,7 +362,7 @@ bool GetX509LogEntry(X509Certificate::OSCertHandle leaf, LogEntry* result) {
     return false;
 
   result->Reset();
-  result->type = ct::LogEntry::LOG_ENTRY_TYPE_X509;
+  result->type = ct::SignedEntryData::LOG_ENTRY_TYPE_X509;
   result->leaf_certificate.swap(encoded);
   return true;
 }
@@ -263,10 +380,9 @@ bool ExtractSCTListFromOCSPResponse(X509Certificate::OSCertHandle issuer,
 
   // Parse down to the ResponseBytes. The ResponseBytes is optional, but if it's
   // missing, this can't include an SCT list.
-  CBS sequence, response_status, tagged_response_bytes, response_bytes;
-  CBS response_type, response;
+  CBS sequence, tagged_response_bytes, response_bytes, response_type, response;
   if (!CBS_get_asn1(&cbs, &sequence, CBS_ASN1_SEQUENCE) || CBS_len(&cbs) != 0 ||
-      !CBS_get_asn1(&sequence, &response_status, CBS_ASN1_ENUMERATED) ||
+      !SkipElements(&sequence, 1 /* responseStatus */) ||
       !CBS_get_asn1(&sequence, &tagged_response_bytes,
                     CBS_ASN1_CONTEXT_SPECIFIC | CBS_ASN1_CONSTRUCTED | 0) ||
       CBS_len(&sequence) != 0 ||
@@ -280,29 +396,24 @@ bool ExtractSCTListFromOCSPResponse(X509Certificate::OSCertHandle issuer,
   }
 
   // The only relevant ResponseType is id-pkix-ocsp-basic.
-  if (OBJ_cbs2nid(&response_type) != NID_id_pkix_OCSP_basic)
+  if (!CBS_mem_equal(&response_type, kOCSPBasicResponseOid,
+                     sizeof(kOCSPBasicResponseOid))) {
     return false;
+  }
 
   // Parse the ResponseData out of the BasicOCSPResponse. Ignore the rest.
+  constexpr unsigned kVersionTag =
+      CBS_ASN1_CONTEXT_SPECIFIC | CBS_ASN1_CONSTRUCTED | 0;
   CBS basic_response, response_data, responses;
   if (!CBS_get_asn1(&response, &basic_response, CBS_ASN1_SEQUENCE) ||
       CBS_len(&response) != 0 ||
       !CBS_get_asn1(&basic_response, &response_data, CBS_ASN1_SEQUENCE)) {
-  }
-
-  // Skip the optional version.
-  const int kVersionTag = CBS_ASN1_CONTEXT_SPECIFIC | CBS_ASN1_CONSTRUCTED | 0;
-  if (CBS_len(&response_data) > 0 &&
-      CBS_data(&response_data)[0] == kVersionTag &&
-      !CBS_get_asn1(&response_data, NULL /* version */, kVersionTag)) {
     return false;
   }
 
-  // Extract the list of SingleResponses.
-  if (!CBS_get_any_asn1_element(&response_data, NULL /* responderID */, NULL,
-                                NULL) ||
-      !CBS_get_any_asn1_element(&response_data, NULL /* producedAt */, NULL,
-                                NULL) ||
+  // Extract the list of SingleResponses from the ResponseData.
+  if (!SkipOptionalElement(&response_data, kVersionTag) ||
+      !SkipElements(&response_data, 2 /* responderID, producedAt */) ||
       !CBS_get_asn1(&response_data, &responses, CBS_ASN1_SEQUENCE)) {
     return false;
   }
@@ -313,37 +424,22 @@ bool ExtractSCTListFromOCSPResponse(X509Certificate::OSCertHandle issuer,
     return false;
   }
 
-  // Skip the certStatus and thisUpdate fields.
-  if (!CBS_get_any_asn1_element(&single_response, NULL /* certStatus */, NULL,
-                                NULL) ||
-      !CBS_get_any_asn1_element(&single_response, NULL /* thisUpdate */, NULL,
-                                NULL)) {
-    return false;
-  }
-
-  const int kNextUpdateTag =
+  // Parse the extensions out of the SingleResponse.
+  constexpr unsigned kNextUpdateTag =
       CBS_ASN1_CONTEXT_SPECIFIC | CBS_ASN1_CONSTRUCTED | 0;
-  const int kSingleExtensionsTag =
+  constexpr unsigned kSingleExtensionsTag =
       CBS_ASN1_CONTEXT_SPECIFIC | CBS_ASN1_CONSTRUCTED | 1;
-
-  // Skip the optional nextUpdate field.
-  if (CBS_len(&single_response) > 0 &&
-      CBS_data(&single_response)[0] == kNextUpdateTag &&
-      !CBS_get_asn1(&single_response, NULL /* nextUpdate */, kNextUpdateTag)) {
+  CBS extensions_wrap, extensions;
+  if (!SkipElements(&single_response, 2 /* certStatus, thisUpdate */) ||
+      !SkipOptionalElement(&single_response, kNextUpdateTag) ||
+      !CBS_get_asn1(&single_response, &extensions_wrap, kSingleExtensionsTag) ||
+      !CBS_get_asn1(&extensions_wrap, &extensions, CBS_ASN1_SEQUENCE) ||
+      CBS_len(&extensions_wrap) != 0) {
     return false;
   }
 
-  CBS extensions;
-  if (!CBS_get_asn1(&single_response, &extensions, kSingleExtensionsTag))
-    return false;
-  const uint8_t* ptr = CBS_data(&extensions);
-  bssl::UniquePtr<X509_EXTENSIONS> x509_exts(
-      d2i_X509_EXTENSIONS(NULL, &ptr, CBS_len(&extensions)));
-  if (!x509_exts || ptr != CBS_data(&extensions) + CBS_len(&extensions))
-    return false;
-
-  return GetSCTListFromX509_EXTENSIONS(x509_exts.get(), kOCSPExtensionOid,
-                                       sizeof(kOCSPExtensionOid), sct_list);
+  return ParseSCTListFromExtensions(extensions, kOCSPExtensionOid,
+                                    sizeof(kOCSPExtensionOid), sct_list);
 }
 
 }  // namespace ct

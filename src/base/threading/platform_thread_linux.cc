@@ -17,7 +17,7 @@
 #include "base/tracked_objects.h"
 #include "build/build_config.h"
 
-#if !defined(OS_NACL)
+#if !defined(OS_NACL) && !defined(OS_AIX)
 #include <pthread.h>
 #include <sys/prctl.h>
 #include <sys/resource.h>
@@ -130,7 +130,7 @@ void PlatformThread::SetName(const std::string& name) {
   ThreadIdNameManager::GetInstance()->SetName(CurrentId(), name);
   tracked_objects::ThreadData::InitializeThreadContext(name);
 
-#if !defined(OS_NACL)
+#if !defined(OS_NACL) && !defined(OS_AIX)
   // On linux we can get the thread names to show up in the debugger by setting
   // the process name for the LWP.  We don't want to do this for the main
   // thread because that would rename the process, causing tools like killall
@@ -147,10 +147,10 @@ void PlatformThread::SetName(const std::string& name) {
   // We expect EPERM failures in sandboxed processes, just ignore those.
   if (err < 0 && errno != EPERM)
     DPLOG(ERROR) << "prctl(PR_SET_NAME)";
-#endif  //  !defined(OS_NACL)
+#endif  //  !defined(OS_NACL) && !defined(OS_AIX)
 }
 
-#if !defined(OS_NACL)
+#if !defined(OS_NACL) && !defined(OS_AIX)
 // static
 void PlatformThread::SetThreadPriority(PlatformThreadId thread_id,
                                        ThreadPriority priority) {
@@ -167,7 +167,7 @@ void PlatformThread::SetThreadPriority(PlatformThreadId thread_id,
               << nice_setting;
   }
 }
-#endif  //  !defined(OS_NACL)
+#endif  //  !defined(OS_NACL) && !defined(OS_AIX)
 
 void InitThreading() {}
 

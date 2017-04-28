@@ -62,9 +62,6 @@ QUIC_FLAG(bool,
           FLAGS_quic_reloadable_flag_quic_respect_http2_settings_frame,
           true)
 
-// If true, re-enables QUIC_VERSION_36.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_version_36_v3, true)
-
 // If true, only open limited number of quic sessions per epoll event. Leave the
 // rest to next event.
 QUIC_FLAG(bool,
@@ -93,7 +90,7 @@ QUIC_FLAG(bool,
 QUIC_FLAG(
     bool,
     FLAGS_quic_reloadable_flag_quic_remove_packet_number_from_public_reset,
-    false)
+    true)
 
 // If true, v33 QUIC client uses 1 bit to specify 8-byte connection id in
 // public flag.
@@ -119,25 +116,8 @@ QUIC_FLAG(bool,
           FLAGS_quic_reloadable_flag_quic_fix_cubic_bytes_quantization,
           false)
 
-// If true, Makes GFE respect the connection options for initial flow control
-// window larger than 32 KB.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_large_ifw_options, true)
-
 // If true, fix Cubic\'s use of kBetaLastMax for n-connection emulation.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_fix_beta_last_max, false)
-
-// If true, enable QUIC v37.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_version_37, true)
-
-// If true, disables QUIC v34.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_disable_version_34, true)
-
-// If true, enable quic version 38
-QUIC_FLAG(bool, FLAGS_quic_enable_version_38, false)
-
-// When true, ensures the session's flow control window is always at least 1.5x
-// larger than the largest stream flow control window.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_flow_control_invariant, true)
 
 // If greater than zero, mean RTT variation is multiplied by the specified
 // factor and added to the congestion window limit.
@@ -149,11 +129,11 @@ QUIC_FLAG(double, FLAGS_quic_bbr_cwnd_gain, 2.0f)
 // If true, bidi streaming is always enabled in QUIC.
 QUIC_FLAG(bool,
           FLAGS_quic_reloadable_flag_quic_always_enable_bidi_streaming,
-          false)
+          true)
 
 // If true, allows the 1RTT and 2RTT connection options to reduce the time
 // in BBR STARTUP to 1 or 2 RTTs with no bandwidth increase from 3.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_allow_2_rtt_bbr_startup, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_allow_2_rtt_bbr_startup, true)
 
 // If true, do not send or process stop waiting frames in QUIC if the NSTP
 // connection option is provided.
@@ -162,9 +142,6 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_no_stop_waiting_frames, false)
 // Allows one self address change.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_allow_one_address_change, false)
 
-// If true, no longer send or process the SRBF value in QuicConfig.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_no_socket_receive_buffer, false)
-
 // If true, multipath bit is not used in public flag.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_remove_multipath_bit, false)
 
@@ -172,15 +149,7 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_remove_multipath_bit, false)
 // quickly for the first adjustment as in subsequent ones.
 QUIC_FLAG(bool,
           FLAGS_quic_reloadable_flag_quic_flow_control_faster_autotune,
-          false)
-
-// Only consider using the ack spacing in QUIC BBR if 2 packets are acked at
-// once.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_ack_spacing2, false)
-
-// If true, 8-byte connection ID in public header is read and written in big
-// endian.
-QUIC_FLAG(bool, FLAGS_quic_restart_flag_quic_big_endian_connection_id, false)
+          true)
 
 // If true, QUIC BBR stores a max filtered number of bytes delivered at a rate
 // faster than the sending rate.
@@ -200,6 +169,51 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_bandwidth_resumption, false)
 // Add the equivalent number of bytes as 3 TCP TSO segments to QUIC's BBR CWND.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_add_tso_cwnd, false)
 
-// Fix a crash that occurs when a client sends multiple CHLOs close together on
-// the same connection.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_fix_quic_callback_crash, true)
+// If true, enable version 38 which supports new PADDING frame and respects NSTP
+// connection option.
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_version_38, true)
+
+// If true, enable QUIC v39.
+QUIC_FLAG(bool, FLAGS_quic_enable_version_39, false)
+
+// If true, on client side, 8-byte connection ID in public header is read and
+// written in big endian.
+QUIC_FLAG(bool,
+          FLAGS_quic_restart_flag_quic_big_endian_connection_id_client,
+          false)
+
+// If true, on server side, 8-byte connection ID in public header is read and
+// written in big endian.
+QUIC_FLAG(bool,
+          FLAGS_quic_restart_flag_quic_big_endian_connection_id_server,
+          false)
+
+// Simplify QUIC\'s adaptive time loss detection to measure the necessary
+// reordering window for every spurious retransmit.
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_fix_adaptive_time_loss, false)
+
+// In QUIC BBR, keep sending at the max bandwidth observed in the previous 2
+// RTTs for another SRTT.
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_bbr_keep_sending_at_recent_rate,
+          false)
+
+// Base CWND on SRTT instead of min_rtt for QUIC BBR.
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_base_cwnd_on_srtt, false)
+
+// If true, enable random padding of size [1, 256] when response body is
+// compressed for QUIC version >= 38.
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_random_padding, false)
+
+// Use conservation in PROBE_BW ouside of super-unity gain and immediately
+// preceeding cycle.
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_extra_conservation, false)
+
+// Increase BBR's inflight limit if recent ack rate is low.
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_slow_recent_delivery, false)
+
+// Congestion window gain for QUIC BBR during slow delivery.
+QUIC_FLAG(double, FLAGS_quic_bbr_slow_delivery_cwnd_gain, 4.0f)
+
+// Threshold multiplier below which delivery is considered slow.
+QUIC_FLAG(double, FLAGS_quic_bbr_slow_delivery_threshold_multiplier, 0.5f)

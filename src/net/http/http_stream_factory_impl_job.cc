@@ -40,7 +40,6 @@
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_source.h"
 #include "net/log/net_log_source_type.h"
-#include "net/quic/chromium/quic_http_stream.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/client_socket_pool.h"
 #include "net/socket/client_socket_pool_manager.h"
@@ -48,11 +47,11 @@
 #include "net/socket/ssl_client_socket.h"
 #include "net/socket/ssl_client_socket_pool.h"
 #include "net/socket/stream_socket.h"
-#include "net/spdy/bidirectional_stream_spdy_impl.h"
-#include "net/spdy/spdy_http_stream.h"
-#include "net/spdy/spdy_protocol.h"
-#include "net/spdy/spdy_session.h"
-#include "net/spdy/spdy_session_pool.h"
+#include "net/spdy/chromium/bidirectional_stream_spdy_impl.h"
+#include "net/spdy/chromium/spdy_http_stream.h"
+#include "net/spdy/chromium/spdy_session.h"
+#include "net/spdy/chromium/spdy_session_pool.h"
+#include "net/spdy/core/spdy_protocol.h"
 #include "net/ssl/channel_id_service.h"
 #include "net/ssl/ssl_cert_request_info.h"
 #include "url/url_constants.h"
@@ -208,6 +207,7 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
       io_callback_(base::Bind(&Job::OnIOComplete, base::Unretained(this))),
       connection_(new ClientSocketHandle),
       session_(session),
+      state_(STATE_NONE),
       next_state_(STATE_NONE),
       pac_request_(NULL),
       destination_(destination),
@@ -311,7 +311,8 @@ int HttpStreamFactoryImpl::Job::RestartTunnelWithProxyAuth() {
   DCHECK(establishing_tunnel_);
   next_state_ = STATE_RESTART_TUNNEL_AUTH;
   stream_.reset();
-  return RunLoop(OK);
+  RunLoop(OK);
+  return ERR_IO_PENDING;
 }
 
 LoadState HttpStreamFactoryImpl::Job::GetLoadState() const {
@@ -381,6 +382,20 @@ const SSLConfig& HttpStreamFactoryImpl::Job::proxy_ssl_config() const {
 
 const ProxyInfo& HttpStreamFactoryImpl::Job::proxy_info() const {
   return proxy_info_;
+}
+
+void HttpStreamFactoryImpl::Job::LogHistograms() const {
+  if (job_type_ == MAIN) {
+    UMA_HISTOGRAM_ENUMERATION("Net.HttpStreamFactoryJob.Main.NextState",
+                              next_state_, STATE_MAX);
+    UMA_HISTOGRAM_ENUMERATION("Net.HttpStreamFactoryJob.Main.State", state_,
+                              STATE_MAX);
+  } else if (job_type_ == ALTERNATIVE) {
+    UMA_HISTOGRAM_ENUMERATION("Net.HttpStreamFactoryJob.Alt.NextState",
+                              next_state_, STATE_MAX);
+    UMA_HISTOGRAM_ENUMERATION("Net.HttpStreamFactoryJob.Alt.State", state_,
+                              STATE_MAX);
+  }
 }
 
 void HttpStreamFactoryImpl::Job::GetSSLInfo() {
@@ -544,19 +559,19 @@ void HttpStreamFactoryImpl::Job::OnIOComplete(int result) {
   RunLoop(result);
 }
 
-int HttpStreamFactoryImpl::Job::RunLoop(int result) {
+void HttpStreamFactoryImpl::Job::RunLoop(int result) {
   TRACE_EVENT0(kNetTracingCategory, "HttpStreamFactoryImpl::Job::RunLoop");
   result = DoLoop(result);
 
   if (result == ERR_IO_PENDING)
-    return result;
+    return;
 
   if (job_type_ == PRECONNECT) {
     base::ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE,
         base::Bind(&HttpStreamFactoryImpl::Job::OnPreconnectsComplete,
                    ptr_factory_.GetWeakPtr()));
-    return ERR_IO_PENDING;
+    return;
   }
 
   if (IsCertificateError(result)) {
@@ -568,15 +583,20 @@ int HttpStreamFactoryImpl::Job::RunLoop(int result) {
         FROM_HERE,
         base::Bind(&HttpStreamFactoryImpl::Job::OnCertificateErrorCallback,
                    ptr_factory_.GetWeakPtr(), result, ssl_info_));
-    return ERR_IO_PENDING;
+    return;
   }
 
   switch (result) {
     case ERR_PROXY_AUTH_REQUESTED: {
       UMA_HISTOGRAM_BOOLEAN("Net.ProxyAuthRequested.HasConnection",
                             connection_.get() != NULL);
-      if (!connection_.get())
-        return ERR_PROXY_AUTH_REQUESTED_WITH_NO_CONNECTION;
+      if (!connection_.get()) {
+        base::ThreadTaskRunnerHandle::Get()->PostTask(
+            FROM_HERE,
+            base::Bind(&Job::OnStreamFailedCallback, ptr_factory_.GetWeakPtr(),
+                       ERR_PROXY_AUTH_REQUESTED_WITH_NO_CONNECTION));
+        return;
+      }
       CHECK(connection_->socket());
       CHECK(establishing_tunnel_);
 
@@ -588,7 +608,7 @@ int HttpStreamFactoryImpl::Job::RunLoop(int result) {
           base::Bind(&Job::OnNeedsProxyAuthCallback, ptr_factory_.GetWeakPtr(),
                      *proxy_socket->GetConnectResponseInfo(),
                      base::RetainedRef(proxy_socket->GetAuthController())));
-      return ERR_IO_PENDING;
+      return;
     }
 
     case ERR_SSL_CLIENT_AUTH_CERT_NEEDED:
@@ -598,7 +618,7 @@ int HttpStreamFactoryImpl::Job::RunLoop(int result) {
               &Job::OnNeedsClientAuthCallback, ptr_factory_.GetWeakPtr(),
               base::RetainedRef(
                   connection_->ssl_error_response_info().cert_request_info)));
-      return ERR_IO_PENDING;
+      return;
 
     case ERR_HTTPS_PROXY_TUNNEL_RESPONSE: {
       DCHECK(connection_.get());
@@ -612,7 +632,7 @@ int HttpStreamFactoryImpl::Job::RunLoop(int result) {
                                 ptr_factory_.GetWeakPtr(),
                                 *proxy_socket->GetConnectResponseInfo(),
                                 proxy_socket->CreateConnectResponseStream()));
-      return ERR_IO_PENDING;
+      return;
     }
 
     case OK:
@@ -644,13 +664,13 @@ int HttpStreamFactoryImpl::Job::RunLoop(int result) {
             FROM_HERE,
             base::Bind(&Job::OnStreamReadyCallback, ptr_factory_.GetWeakPtr()));
       }
-      return ERR_IO_PENDING;
+      return;
 
     default:
       base::ThreadTaskRunnerHandle::Get()->PostTask(
           FROM_HERE, base::Bind(&Job::OnStreamFailedCallback,
                                 ptr_factory_.GetWeakPtr(), result));
-      return ERR_IO_PENDING;
+      return;
   }
 }
 
@@ -659,6 +679,8 @@ int HttpStreamFactoryImpl::Job::DoLoop(int result) {
   int rv = result;
   do {
     State state = next_state_;
+    // Added to investigate crbug.com/711721.
+    state_ = state;
     next_state_ = STATE_NONE;
     switch (state) {
       case STATE_START:
@@ -715,9 +737,8 @@ int HttpStreamFactoryImpl::Job::DoLoop(int result) {
 int HttpStreamFactoryImpl::Job::StartInternal() {
   CHECK_EQ(STATE_NONE, next_state_);
   next_state_ = STATE_START;
-  int rv = RunLoop(OK);
-  DCHECK_EQ(ERR_IO_PENDING, rv);
-  return rv;
+  RunLoop(OK);
+  return ERR_IO_PENDING;
 }
 
 int HttpStreamFactoryImpl::Job::DoStart() {

@@ -380,6 +380,10 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
   // Enable using alternative services for the request.
   bool enable_alternative_services_;
 
+  // When a request is retried because of errors with the alternative service,
+  // this will store the alternative service used.
+  AlternativeService retried_alternative_service_;
+
   // The helper object to use to create WebSocketHandshakeStreamBase
   // objects. Only relevant when establishing a WebSocket connection.
   WebSocketHandshakeStreamBase::CreateHelper*

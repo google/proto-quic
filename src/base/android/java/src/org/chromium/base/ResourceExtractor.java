@@ -4,9 +4,6 @@
 
 package org.chromium.base;
 
-import android.content.SharedPreferences;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Looper;
@@ -20,20 +17,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
 
 /**
  * Handles extracting the necessary resources bundled in an APK and moving them to a location on
  * the file system accessible from the native code.
  */
 public class ResourceExtractor {
-
-    private static final String TAG = "cr.base";
+    private static final String TAG = "base";
     private static final String ICU_DATA_FILENAME = "icudtl.dat";
     private static final String V8_NATIVES_DATA_FILENAME = "natives_blob.bin";
     private static final String V8_SNAPSHOT_DATA_FILENAME = "snapshot_blob.bin";
-    private static final String APP_VERSION_PREF = "org.chromium.base.ResourceExtractor.Version";
     private static final String FALLBACK_LOCALE = "en-US";
 
     private class ExtractTask extends AsyncTask<Void, Void, Void> {
@@ -44,8 +37,9 @@ public class ResourceExtractor {
         private void extractResourceHelper(InputStream is, File outFile, byte[] buffer)
                 throws IOException {
             OutputStream os = null;
+            File tmpOutputFile = new File(outFile.getPath() + ".tmp");
             try {
-                os = new FileOutputStream(outFile);
+                os = new FileOutputStream(tmpOutputFile);
                 Log.i(TAG, "Extracting resource %s", outFile);
 
                 int count = 0;
@@ -53,69 +47,52 @@ public class ResourceExtractor {
                     os.write(buffer, 0, count);
                 }
             } finally {
-                try {
-                    if (os != null) {
-                        os.close();
-                    }
-                } finally {
-                    if (is != null) {
-                        is.close();
-                    }
-                }
+                StreamUtil.closeQuietly(os);
+                StreamUtil.closeQuietly(is);
+            }
+            if (!tmpOutputFile.renameTo(outFile)) {
+                throw new IOException();
             }
         }
 
         private void doInBackgroundImpl() {
             final File outputDir = getOutputDir();
             if (!outputDir.exists() && !outputDir.mkdirs()) {
-                Log.e(TAG, "Unable to create pak resources directory!");
+                throw new RuntimeException();
+            }
+
+            // Use a suffix for extracted files in order to guarantee that the version of the file
+            // on disk matches up with the version of the APK.
+            String extractSuffix = BuildInfo.getExtractedFileSuffix();
+            String[] existingFileNames = outputDir.list();
+            boolean allFilesExist = existingFileNames != null;
+            if (allFilesExist) {
+                List<String> existingFiles = Arrays.asList(existingFileNames);
+                for (String assetName : mAssetsToExtract) {
+                    allFilesExist &= existingFiles.contains(assetName + extractSuffix);
+                }
+            }
+            // This is the normal case.
+            if (allFilesExist) {
                 return;
             }
+            // A missing file means Chrome has updated. Delete stale files first.
+            deleteFiles(existingFileNames);
 
-            TraceEvent.begin("checkPakTimeStamp");
-            long curAppVersion = getApkVersion();
-            SharedPreferences sharedPrefs = ContextUtils.getAppSharedPreferences();
-            long prevAppVersion = sharedPrefs.getLong(APP_VERSION_PREF, 0);
-            boolean versionChanged = curAppVersion != prevAppVersion;
-            TraceEvent.end("checkPakTimeStamp");
-
-            if (versionChanged) {
-                deleteFiles();
-                // Use the version only to see if files should be deleted, not to skip extraction.
-                // We've seen files be corrupted, so always attempt extraction.
-                // http://crbug.com/606413
-                sharedPrefs.edit().putLong(APP_VERSION_PREF, curAppVersion).apply();
-            }
-
-            TraceEvent.begin("WalkAssets");
             byte[] buffer = new byte[BUFFER_SIZE];
-            try {
-                for (String assetName : mAssetsToExtract) {
-                    File output = new File(outputDir, assetName);
-                    // TODO(agrieve): It would be better to check that .length == expectedLength.
-                    //     http://crbug.com/606413
-                    if (output.length() != 0) {
-                        continue;
-                    }
-                    TraceEvent.begin("ExtractResource");
+            for (String assetName : mAssetsToExtract) {
+                File output = new File(outputDir, assetName + extractSuffix);
+                TraceEvent.begin("ExtractResource");
+                try {
                     InputStream inputStream =
                             ContextUtils.getApplicationContext().getAssets().open(assetName);
-                    try {
-                        extractResourceHelper(inputStream, output, buffer);
-                    } finally {
-                        TraceEvent.end("ExtractResource");
-                    }
+                    extractResourceHelper(inputStream, output, buffer);
+                } catch (IOException e) {
+                    // The app would just crash later if files are missing.
+                    throw new RuntimeException(e);
+                } finally {
+                    TraceEvent.end("ExtractResource");
                 }
-            } catch (IOException e) {
-                // TODO(benm): See crbug/152413.
-                // Try to recover here, can we try again after deleting files instead of
-                // returning null? It might be useful to gather UMA here too to track if
-                // this happens with regularity.
-                Log.w(TAG, "Exception unpacking required pak asset: %s", e.getMessage());
-                deleteFiles();
-                return;
-            } finally {
-                TraceEvent.end("WalkAssets");
             }
         }
 
@@ -144,23 +121,6 @@ public class ResourceExtractor {
                 onPostExecuteImpl();
             } finally {
                 TraceEvent.end("ResourceExtractor.ExtractTask.onPostExecute");
-            }
-        }
-
-        /** Returns a number that is different each time the apk changes. */
-        private long getApkVersion() {
-            PackageManager pm = ContextUtils.getApplicationContext().getPackageManager();
-            try {
-                // Use lastUpdateTime since versionCode does not change when developing locally,
-                // but also use versionCode since it is possible for Chrome to be updated without
-                // the lastUpdateTime being changed (http://crbug.org/673458).
-                PackageInfo pi =
-                        pm.getPackageInfo(ContextUtils.getApplicationContext().getPackageName(), 0);
-                // Xor'ing versionCode into upper half of the long to ensure it doesn't somehow
-                // exactly offset an increase in time.
-                return pi.lastUpdateTime ^ (((long) pi.versionCode) << 32);
-            } catch (PackageManager.NameNotFoundException e) {
-                throw new RuntimeException(e);
             }
         }
     }
@@ -211,13 +171,8 @@ public class ResourceExtractor {
 
         try {
             mExtractTask.get();
-        } catch (CancellationException e) {
-            // Don't leave the files in an inconsistent state.
-            deleteFiles();
-        } catch (ExecutionException e2) {
-            deleteFiles();
-        } catch (InterruptedException e3) {
-            deleteFiles();
+        } catch (Exception e) {
+            assert false;
         }
     }
 
@@ -280,38 +235,20 @@ public class ResourceExtractor {
         return new File(getAppDataDir(), "paks");
     }
 
-    /**
-     * Pak files (UI strings and other resources) should be updated along with
-     * Chrome. A version mismatch can lead to a rather broken user experience.
-     * Failing to update the V8 snapshot files will lead to a version mismatch
-     * between V8 and the loaded snapshot which will cause V8 to crash, so this
-     * is treated as an error. The ICU data (icudtl.dat) is less
-     * version-sensitive, but still can lead to malfunction/UX misbehavior. So,
-     * we regard failing to update them as an error.
-     */
-    private void deleteFiles() {
-        File icudata = new File(getAppDataDir(), ICU_DATA_FILENAME);
-        if (icudata.exists() && !icudata.delete()) {
-            Log.e(TAG, "Unable to remove the icudata %s", icudata.getName());
+    private static void deleteFile(File file) {
+        if (file.exists() && !file.delete()) {
+            Log.w(TAG, "Unable to remove %s", file.getName());
         }
-        File v8_natives = new File(getAppDataDir(), V8_NATIVES_DATA_FILENAME);
-        if (v8_natives.exists() && !v8_natives.delete()) {
-            Log.e(TAG, "Unable to remove the v8 data %s", v8_natives.getName());
-        }
-        File v8_snapshot = new File(getAppDataDir(), V8_SNAPSHOT_DATA_FILENAME);
-        if (v8_snapshot.exists() && !v8_snapshot.delete()) {
-            Log.e(TAG, "Unable to remove the v8 data %s", v8_snapshot.getName());
-        }
-        File dir = getOutputDir();
-        if (dir.exists()) {
-            File[] files = dir.listFiles();
+    }
 
-            if (files != null) {
-                for (File file : files) {
-                    if (!file.delete()) {
-                        Log.e(TAG, "Unable to remove existing resource %s", file.getName());
-                    }
-                }
+    private void deleteFiles(String[] existingFileNames) {
+        // These used to be extracted, but no longer are, so just clean them up.
+        deleteFile(new File(getAppDataDir(), ICU_DATA_FILENAME));
+        deleteFile(new File(getAppDataDir(), V8_NATIVES_DATA_FILENAME));
+        deleteFile(new File(getAppDataDir(), V8_SNAPSHOT_DATA_FILENAME));
+        if (existingFileNames != null) {
+            for (String fileName : existingFileNames) {
+                deleteFile(new File(getOutputDir(), fileName));
             }
         }
     }

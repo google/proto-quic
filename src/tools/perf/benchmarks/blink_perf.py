@@ -12,8 +12,14 @@ from telemetry import page as page_module
 from telemetry.page import legacy_page_test
 from telemetry.page import shared_page_state
 from telemetry import story
+from telemetry.timeline import bounds
+from telemetry.timeline import model as model_module
+from telemetry.timeline import tracing_config
+
 from telemetry.value import list_of_scalar_values
 from telemetry.value import scalar
+from telemetry.value import trace
+
 
 from benchmarks import pywebsocket_server
 from measurements import timeline_controller
@@ -73,6 +79,56 @@ def CreateStorySetFromPath(path, skipped_file,
   return ps
 
 
+def _ComputeTraceEventsThreadTimeForBlinkPerf(
+    renderer_thread, trace_events_to_measure):
+  """ Compute the CPU duration for each of |trace_events_to_measure| during
+  blink_perf test.
+
+  Args:
+    renderer_thread: the renderer thread which run blink_perf test.
+    trace_events_to_measure: a list of string names of trace events to measure
+    CPU duration for.
+
+  Returns:
+    a dictionary in which each key is a trace event' name (from
+    |trace_events_to_measure| list), and value is a list of numbers that
+    represents to total cpu time of that trace events in each blink_perf test.
+  """
+  trace_cpu_time_metrics = {}
+
+  # Collect the bounds of "blink_perf.runTest" events.
+  test_runs_bounds = []
+  for event in renderer_thread.async_slices:
+    if event.name == "blink_perf.runTest":
+      test_runs_bounds.append(bounds.Bounds.CreateFromEvent(event))
+  test_runs_bounds.sort(key=lambda b: b.min)
+
+  for t in trace_events_to_measure:
+    trace_cpu_time_metrics[t] = [0.0] * len(test_runs_bounds)
+
+  for event_name in trace_events_to_measure:
+    curr_test_runs_bound_index = 0
+    for event in renderer_thread.IterAllSlicesOfName(event_name):
+      while (curr_test_runs_bound_index < len(test_runs_bounds) and
+             event.start > test_runs_bounds[curr_test_runs_bound_index].max):
+        curr_test_runs_bound_index += 1
+      if curr_test_runs_bound_index >= len(test_runs_bounds):
+        break
+      curr_test_bound = test_runs_bounds[curr_test_runs_bound_index]
+      intersect_wall_time = bounds.Bounds.GetOverlapBetweenBounds(
+          curr_test_bound, bounds.Bounds.CreateFromEvent(event))
+      if event.thread_duration and event.duration:
+        intersect_cpu_time = (
+            intersect_wall_time * event.thread_duration / event.duration)
+      else:
+        intersect_cpu_time = intersect_wall_time
+      trace_cpu_time_metrics[event_name][curr_test_runs_bound_index] += (
+          intersect_cpu_time)
+
+  return trace_cpu_time_metrics
+
+
+
 class _BlinkPerfMeasurement(legacy_page_test.LegacyPageTest):
   """Tuns a blink performance test and reports the results."""
 
@@ -98,8 +154,53 @@ class _BlinkPerfMeasurement(legacy_page_test.LegacyPageTest):
     if 'content-shell' in options.browser_type:
       options.AppendExtraBrowserArgs('--expose-internals-for-testing')
 
+  def _ContinueTestRunWithTracing(self, tab):
+    tracing_categories = tab.EvaluateJavaScript(
+        'testRunner.tracingCategories')
+    config = tracing_config.TracingConfig()
+    config.enable_chrome_trace = True
+    config.chrome_trace_config.category_filter.AddFilterString(
+        'blink.console')  # This is always required for js land trace event
+    config.chrome_trace_config.category_filter.AddFilterString(
+        tracing_categories)
+    tab.browser.platform.tracing_controller.StartTracing(config)
+    tab.EvaluateJavaScript('testRunner.scheduleTestRun()')
+    tab.WaitForJavaScriptCondition('testRunner.isDone')
+    return tab.browser.platform.tracing_controller.StopTracing()
+
+
+  def PrintAndCollectTraceEventMetrics(self, trace_cpu_time_metrics, results):
+    unit = 'ms'
+    print
+    for trace_event_name, cpu_times in trace_cpu_time_metrics.iteritems():
+      print 'CPU times of trace event "%s":' % trace_event_name
+      cpu_times_string = ', '.join(['{0:.10f}'.format(t) for t in cpu_times])
+      print 'values %s %s' % (cpu_times_string, unit)
+      avg = 0.0
+      if cpu_times:
+        avg = sum(cpu_times)/len(cpu_times)
+      print 'avg', '{0:.10f}'.format(avg), unit
+      results.AddValue(list_of_scalar_values.ListOfScalarValues(
+          results.current_page, name=trace_event_name, units=unit,
+          values=cpu_times))
+      print
+    print '\n'
+
   def ValidateAndMeasurePage(self, page, tab, results):
-    tab.WaitForJavaScriptCondition('testRunner.isDone', timeout=600)
+    tab.WaitForJavaScriptCondition(
+        'testRunner.isDone || testRunner.isWaitingForTracingStart', timeout=600)
+    trace_cpu_time_metrics = {}
+    if tab.EvaluateJavaScript('testRunner.isWaitingForTracingStart'):
+      trace_data = self._ContinueTestRunWithTracing(tab)
+      trace_value = trace.TraceValue(page, trace_data)
+      results.AddValue(trace_value)
+
+      trace_events_to_measure = tab.EvaluateJavaScript(
+          'window.testRunner.traceEventsToMeasure')
+      model = model_module.TimelineModel(trace_data)
+      renderer_thread = model.GetRendererThreadFromTabId(tab.id)
+      trace_cpu_time_metrics = _ComputeTraceEventsThreadTimeForBlinkPerf(
+          renderer_thread, trace_events_to_measure)
 
     log = tab.EvaluateJavaScript('document.getElementById("log").innerHTML')
 
@@ -119,6 +220,8 @@ class _BlinkPerfMeasurement(legacy_page_test.LegacyPageTest):
       break
 
     print log
+
+    self.PrintAndCollectTraceEventMetrics(trace_cpu_time_metrics, results)
 
 
 # TODO(wangxianzhu): Convert the paint benchmarks to use the new blink_perf
@@ -297,13 +400,6 @@ class BlinkPerfShadowDOM(_BlinkPerfBenchmark):
   def ShouldDisable(cls, possible_browser):  # http://crbug.com/702319
     return possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X'
 
-
-# This benchmark is for local testing, doesn't need to run on bots.
-@benchmark.Disabled('all')
-@benchmark.Owner(emails=['tyoshino@chromium.org', 'hiroshige@chromium.org'])
-class BlinkPerfXMLHttpRequest(_BlinkPerfBenchmark):
-  tag = 'xml_http_request'
-  subdir = 'XMLHttpRequest'
 
 
 # Disabled on Windows and ChromeOS due to https://crbug.com/521887

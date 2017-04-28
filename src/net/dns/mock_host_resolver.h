@@ -9,6 +9,7 @@
 
 #include <list>
 #include <map>
+#include <string>
 
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
@@ -212,6 +213,11 @@ class RuleBasedHostResolverProc : public HostResolverProc {
   // Deletes all the rules that have been added.
   void ClearRules();
 
+  // Causes method calls that add or delete rules to assert.
+  // TODO(jam): once this class isn't used by tests that use an out of process
+  // network service, remove this method and make Rule private.
+  void DisableModifications();
+
   // HostResolverProc methods:
   int Resolve(const std::string& host,
               AddressFamily address_family,
@@ -219,10 +225,36 @@ class RuleBasedHostResolverProc : public HostResolverProc {
               AddressList* addrlist,
               int* os_error) override;
 
- private:
-  struct Rule;
+  struct Rule {
+    enum ResolverType {
+      kResolverTypeFail,
+      kResolverTypeSystem,
+      kResolverTypeIPLiteral,
+    };
+
+    Rule(ResolverType resolver_type,
+         const std::string& host_pattern,
+         AddressFamily address_family,
+         HostResolverFlags host_resolver_flags,
+         const std::string& replacement,
+         const std::string& canonical_name,
+         int latency_ms);
+    Rule(const Rule& other);
+
+    ResolverType resolver_type;
+    std::string host_pattern;
+    AddressFamily address_family;
+    HostResolverFlags host_resolver_flags;
+    std::string replacement;
+    std::string canonical_name;
+    int latency_ms;  // In milliseconds.
+  };
+
   typedef std::list<Rule> RuleList;
 
+  RuleList GetRules();
+
+ private:
   ~RuleBasedHostResolverProc() override;
 
   void AddRuleInternal(const Rule& rule);
@@ -231,6 +263,9 @@ class RuleBasedHostResolverProc : public HostResolverProc {
 
   // Must be obtained before writing to or reading from |rules_|.
   base::Lock rule_lock_;
+
+  // Whether changes are allowed.
+  bool modifications_allowed_;
 };
 
 // Create rules that map all requests to localhost.

@@ -892,15 +892,14 @@ void SparseControl::DoUserCallback() {
 }
 
 void SparseControl::DoAbortCallbacks() {
-  for (size_t i = 0; i < abort_callbacks_.size(); i++) {
+  std::vector<CompletionCallback> abort_callbacks;
+  abort_callbacks.swap(abort_callbacks_);
+
+  for (CompletionCallback& callback : abort_callbacks) {
     // Releasing all references to entry_ may result in the destruction of this
     // object so we should not be touching it after the last Release().
-    CompletionCallback cb = abort_callbacks_[i];
-    if (i == abort_callbacks_.size() - 1)
-      abort_callbacks_.clear();
-
-    entry_->Release();  // Don't touch object after this line.
-    cb.Run(net::OK);
+    entry_->Release();
+    callback.Run(net::OK);
   }
 }
 

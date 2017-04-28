@@ -26,6 +26,7 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="src" path="base/android/java/src"/>
     <classpathentry kind="src" path="base/android/javatests/src"/>
     <classpathentry kind="src" path="base/test/android/javatests/src"/>
+    <classpathentry kind="src" path="base/test/android/junit/src"/>
     <classpathentry kind="src" path="chrome/android/java/src"/>
     <classpathentry kind="src" path="chrome/android/javatests/src"/>
     <classpathentry kind="src" path="chrome/android/sync_shell/javatests/src"/>
@@ -50,12 +51,15 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="src" path="components/cronet/android/test/javatests/src"/>
     <classpathentry kind="src" path="components/cronet/android/test/src"/>
     <classpathentry kind="src" path="components/gcm_driver/android/java/src"/>
+    <classpathentry kind="src" path="components/feature_engagement_tracker/public/android/java/src"/>
     <classpathentry kind="src" path="components/invalidation/impl/android/java/src"/>
     <classpathentry kind="src" path="components/invalidation/impl/android/javatests/src"/>
     <classpathentry kind="src" path="components/invalidation/impl/android/junit/src"/>
     <classpathentry kind="src" path="components/location/android/java/src"/>
     <classpathentry kind="src" path="components/navigation_interception/android/java/src"/>
     <classpathentry kind="src" path="components/ntp_tiles/android/java/src"/>
+    <classpathentry kind="src" path="components/offline_items_collection/core/android/java/src"/>
+    <classpathentry kind="src" path="components/payments/content/android/java/src"/>
     <classpathentry kind="src" path="components/policy/android/java/src"/>
     <classpathentry kind="src" path="components/precache/android/java/src"/>
     <classpathentry kind="src" path="components/precache/android/javatests/src"/>
@@ -121,6 +125,7 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="src" path="third_party/mockito/src/src/main/java"/>
     <classpathentry kind="src" path="third_party/robolectric/robolectric/robolectric-annotations/src/main/java"/>
     <classpathentry kind="src" path="third_party/robolectric/robolectric/robolectric-resources/src/main/java"/>
+    <classpathentry kind="src" path="third_party/robolectric/robolectric/robolectric-shadows/shadows-multidex/src/main/java"/>
     <classpathentry kind="src" path="tools/android/findbugs_plugin/src"/>
     <classpathentry kind="src" path="tools/android/findbugs_plugin/test/java/src"/>
     <classpathentry kind="src" path="tools/android/memconsumer/java/src"/>

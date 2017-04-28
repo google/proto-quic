@@ -15,6 +15,8 @@ namespace net {
 // EpollServer.
 class QUIC_EXPORT_PRIVATE QuicChromiumClock : public QuicClock {
  public:
+  static QuicChromiumClock* GetInstance();
+
   QuicChromiumClock();
   ~QuicChromiumClock() override;
 

@@ -51,9 +51,9 @@
 #include "net/socket/mock_client_socket_pool_manager.h"
 #include "net/socket/next_proto.h"
 #include "net/socket/socket_test_util.h"
-#include "net/spdy/spdy_session.h"
-#include "net/spdy/spdy_session_pool.h"
-#include "net/spdy/spdy_test_util_common.h"
+#include "net/spdy/chromium/spdy_session.h"
+#include "net/spdy/chromium/spdy_session_pool.h"
+#include "net/spdy/chromium/spdy_test_util_common.h"
 #include "net/ssl/ssl_config_service.h"
 #include "net/ssl/ssl_config_service_defaults.h"
 #include "net/test/cert_test_util.h"
@@ -125,6 +125,10 @@ class MockWebSocketHandshakeStream : public WebSocketHandshakeStreamBase {
   int64_t GetTotalReceivedBytes() const override { return 0; }
   int64_t GetTotalSentBytes() const override { return 0; }
   bool GetLoadTimingInfo(LoadTimingInfo* load_timing_info) const override {
+    return false;
+  }
+  bool GetAlternativeService(
+      AlternativeService* alternative_service) const override {
     return false;
   }
   void GetSSLInfo(SSLInfo* ssl_info) override {}
@@ -734,7 +738,6 @@ TEST_F(HttpStreamFactoryTest, QuicProxyMarkedAsBad) {
 
     HttpNetworkSession::Params params;
     params.enable_quic = true;
-    params.quic_disable_preconnect_if_0rtt = false;
     scoped_refptr<SSLConfigServiceDefaults> ssl_config_service(
         new SSLConfigServiceDefaults);
     HttpServerPropertiesImpl http_server_properties;
@@ -871,7 +874,6 @@ void SetupForQuicAlternativeProxyTest(
     TransportSecurityState* transport_security_state,
     bool set_alternative_proxy_server) {
   params->enable_quic = true;
-  params->quic_disable_preconnect_if_0rtt = false;
   params->client_socket_factory = socket_factory;
   params->host_resolver = host_resolver;
   params->transport_security_state = transport_security_state;
@@ -1138,7 +1140,6 @@ TEST_F(HttpStreamFactoryTest, UsePreConnectIfNoZeroRTT) {
     HttpNetworkSession::Params params =
         SpdySessionDependencies::CreateSessionParams(&session_deps);
     params.enable_quic = true;
-    params.quic_disable_preconnect_if_0rtt = true;
     params.http_server_properties = &http_server_properties;
 
     std::unique_ptr<HttpNetworkSession> session(new HttpNetworkSession(params));
@@ -1165,63 +1166,6 @@ TEST_F(HttpStreamFactoryTest, UsePreConnectIfNoZeroRTT) {
     peer.SetClientSocketPoolManager(std::move(mock_pool_manager));
     PreconnectHelperForURL(num_streams, url, session.get());
     EXPECT_EQ(num_streams, ssl_conn_pool->last_num_streams());
-  }
-}
-
-TEST_F(HttpStreamFactoryTest, QuicDisablePreConnectIfZeroRtt) {
-  for (int num_streams = 1; num_streams < 3; ++num_streams) {
-    GURL url = GURL("https://www.google.com");
-
-    // Set up QUIC as alternative_service.
-    HttpServerPropertiesImpl http_server_properties;
-    const AlternativeService alternative_service(kProtoQUIC, "www.google.com",
-                                                 443);
-    AlternativeServiceInfoVector alternative_service_info_vector;
-    base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
-    alternative_service_info_vector.push_back(
-        AlternativeServiceInfo(alternative_service, expiration));
-    HostPortPair host_port_pair(alternative_service.host_port_pair());
-    url::SchemeHostPort server("https", host_port_pair.host(),
-                               host_port_pair.port());
-    http_server_properties.SetAlternativeServices(
-        server, alternative_service_info_vector);
-
-    SpdySessionDependencies session_deps;
-
-    // Setup params to disable preconnect, but QUIC does 0RTT.
-    HttpNetworkSession::Params params =
-        SpdySessionDependencies::CreateSessionParams(&session_deps);
-    params.enable_quic = true;
-    params.quic_disable_preconnect_if_0rtt = true;
-    params.http_server_properties = &http_server_properties;
-
-    std::unique_ptr<HttpNetworkSession> session(new HttpNetworkSession(params));
-
-    // Setup 0RTT for QUIC.
-    QuicStreamFactory* factory = session->quic_stream_factory();
-    factory->set_require_confirmation(false);
-    test::QuicStreamFactoryPeer::CacheDummyServerConfig(
-        factory, QuicServerId(host_port_pair, PRIVACY_MODE_DISABLED));
-
-    HttpNetworkSessionPeer peer(session.get());
-    CapturePreconnectsTransportSocketPool* transport_conn_pool =
-        new CapturePreconnectsTransportSocketPool(
-            session_deps.host_resolver.get(), session_deps.cert_verifier.get(),
-            session_deps.transport_security_state.get(),
-            session_deps.cert_transparency_verifier.get(),
-            session_deps.ct_policy_enforcer.get());
-    std::unique_ptr<MockClientSocketPoolManager> mock_pool_manager(
-        new MockClientSocketPoolManager);
-    mock_pool_manager->SetTransportSocketPool(transport_conn_pool);
-    peer.SetClientSocketPoolManager(std::move(mock_pool_manager));
-
-    HttpRequestInfo request;
-    request.method = "GET";
-    request.url = url;
-    request.load_flags = 0;
-
-    session->http_stream_factory()->PreconnectStreams(num_streams, request);
-    EXPECT_EQ(-1, transport_conn_pool->last_num_streams());
   }
 }
 
@@ -2215,21 +2159,20 @@ class HttpStreamFactoryBidirectionalQuicTest
  protected:
   HttpStreamFactoryBidirectionalQuicTest()
       : default_url_(kDefaultUrl),
-        clock_(new MockClock),
         client_packet_maker_(GetParam(),
                              0,
-                             clock_,
+                             &clock_,
                              "www.example.org",
                              Perspective::IS_CLIENT),
         server_packet_maker_(GetParam(),
                              0,
-                             clock_,
+                             &clock_,
                              "www.example.org",
                              Perspective::IS_SERVER),
         random_generator_(0),
         proxy_service_(ProxyService::CreateDirect()),
         ssl_config_service_(new SSLConfigServiceDefaults) {
-    clock_->AdvanceTime(QuicTime::Delta::FromMilliseconds(20));
+    clock_.AdvanceTime(QuicTime::Delta::FromMilliseconds(20));
   }
 
   void TearDown() override { session_.reset(); }
@@ -2243,9 +2186,8 @@ class HttpStreamFactoryBidirectionalQuicTest
   void Initialize() {
     params_.enable_quic = true;
     params_.http_server_properties = &http_server_properties_;
-    params_.quic_host_whitelist.insert("www.example.org");
     params_.quic_random = &random_generator_;
-    params_.quic_clock = clock_;
+    params_.quic_clock = &clock_;
 
     // Load a certificate that is valid for *.example.org
     scoped_refptr<X509Certificate> test_cert(
@@ -2295,7 +2237,7 @@ class HttpStreamFactoryBidirectionalQuicTest
   const GURL default_url_;
 
  private:
-  MockClock* clock_;  // Owned by QuicStreamFactory
+  MockClock clock_;
   test::QuicTestPacketMaker client_packet_maker_;
   test::QuicTestPacketMaker server_packet_maker_;
   MockClientSocketFactory socket_factory_;
@@ -2325,9 +2267,8 @@ TEST_P(HttpStreamFactoryBidirectionalQuicTest,
       ConvertRequestPriorityToQuicPriority(DEFAULT_PRIORITY);
   size_t spdy_headers_frame_length;
   QuicStreamOffset header_stream_offset = 0;
-  mock_quic_data.AddWrite(client_packet_maker().MakeSettingsPacket(
-      1, SETTINGS_MAX_HEADER_LIST_SIZE, kDefaultMaxUncompressedHeaderSize, true,
-      &header_stream_offset));
+  mock_quic_data.AddWrite(client_packet_maker().MakeInitialSettingsPacket(
+      1, &header_stream_offset));
   mock_quic_data.AddWrite(client_packet_maker().MakeRequestHeadersPacket(
       2, test::kClientDataStreamId1, /*should_include_version=*/true,
       /*fin=*/true, priority,
@@ -2454,9 +2395,8 @@ TEST_P(HttpStreamFactoryBidirectionalQuicTest,
       ConvertRequestPriorityToQuicPriority(DEFAULT_PRIORITY);
   size_t spdy_headers_frame_length;
   QuicStreamOffset header_stream_offset = 0;
-  mock_quic_data.AddWrite(client_packet_maker().MakeSettingsPacket(
-      1, SETTINGS_MAX_HEADER_LIST_SIZE, kDefaultMaxUncompressedHeaderSize, true,
-      &header_stream_offset));
+  mock_quic_data.AddWrite(client_packet_maker().MakeInitialSettingsPacket(
+      1, &header_stream_offset));
   mock_quic_data.AddWrite(client_packet_maker().MakeRequestHeadersPacket(
       2, test::kClientDataStreamId1, /*should_include_version=*/true,
       /*fin=*/true, priority,

@@ -344,6 +344,11 @@ bool DiscardableSharedMemory::Purge(Time current_time) {
 // provide MADV_FREE which has the same result but memory is purged lazily.
 #if defined(OS_LINUX) || defined(OS_ANDROID)
 #define MADV_PURGE_ARGUMENT MADV_REMOVE
+#elif defined(OS_MACOSX)
+// MADV_FREE_REUSABLE is similar to MADV_FREE, but also marks the pages with the
+// reusable bit, which allows both Activity Monitor and memory-infra to
+// correctly track the pages.
+#define MADV_PURGE_ARGUMENT MADV_FREE_REUSABLE
 #else
 #define MADV_PURGE_ARGUMENT MADV_FREE
 #endif

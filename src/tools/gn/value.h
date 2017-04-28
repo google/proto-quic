@@ -120,7 +120,7 @@ class Value {
  private:
   // This are a lot of objects associated with every Value that need
   // initialization and tear down every time. It might be more efficient to
-  // create a union of ManualConstructor objects (see SmallMap) and only
+  // create a union of ManualConstructor objects (see small_map) and only
   // use the one we care about.
   Type type_;
   std::string string_value_;

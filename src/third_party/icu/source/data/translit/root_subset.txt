@@ -3,25 +3,14 @@
 // *  Corporation; Unicode, Inc.; and others.  All Rights Reserved.
 // *
 // ***************************************************************************
-// File: root.txt
-// Only include:
-// For Chinese script detection:
-//   Chinese Simplified-Traditional and Traditional-Simplified transform
-//   rules, and their aliases Hans-Hant and Hant-Hans, respectively.
+// This file specifies transliteration rulesets that are to be kept for Chromium
+// releases.
+//
+// Currently no rule sets in use.
+// Note that RuleBasedTransliteratorIDs block has to be present. Otherwise,
+// built-in transforms such as NFD/NFC would fail.
 
 root {
     RuleBasedTransliteratorIDs {
-        Hans-Hant {
-            file {
-                resource:process(transliterator) {"Hans_Hant.txt"}
-                direction {"FORWARD"}
-            }
-        }
-        Hant-Hans {
-            file {
-                resource:process(transliterator) {"Hans_Hant.txt"}
-                direction {"REVERSE"}
-            }
-        }
     }
 }

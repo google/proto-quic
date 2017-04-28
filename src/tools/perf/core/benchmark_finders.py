@@ -44,8 +44,16 @@ def GetBenchmarkNamesForFile(top_level_dir, benchmark_file_dir):
 
 
 def GetAllPerfBenchmarks():
-  benchmarks_dir = path_util.GetPerfBenchmarksDir()
-  top_level_dir = os.path.join(benchmarks_dir, '..')
   return discover.DiscoverClasses(
-      benchmarks_dir, top_level_dir, benchmark_module.Benchmark,
+      start_dir=path_util.GetPerfBenchmarksDir(),
+      top_level_dir=path_util.GetPerfDir(),
+      base_class=benchmark_module.Benchmark,
+      index_by_class_name=True).values()
+
+
+def GetAllContribBenchmarks():
+  return discover.DiscoverClasses(
+      start_dir=path_util.GetPerfContribDir(),
+      top_level_dir=path_util.GetPerfDir(),
+      base_class=benchmark_module.Benchmark,
       index_by_class_name=True).values()

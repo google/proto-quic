@@ -21,6 +21,7 @@
 #include "net/proxy/proxy_config_service.h"
 #include "net/proxy/proxy_info.h"
 #include "net/proxy/proxy_retry_info.h"
+#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_test_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -175,8 +176,8 @@ class TestLayeredNetworkDelegate : public LayeredNetworkDelegate {
 
   void CallAndVerify() {
     scoped_refptr<AuthChallengeInfo> auth_challenge(new AuthChallengeInfo());
-    std::unique_ptr<URLRequest> request =
-        context_.CreateRequest(GURL(), IDLE, &delegate_);
+    std::unique_ptr<URLRequest> request = context_.CreateRequest(
+        GURL(), IDLE, &delegate_, TRAFFIC_ANNOTATION_FOR_TESTS);
     std::unique_ptr<HttpRequestHeaders> request_headers(
         new HttpRequestHeaders());
     scoped_refptr<HttpResponseHeaders> response_headers(

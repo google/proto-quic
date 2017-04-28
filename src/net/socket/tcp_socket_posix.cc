@@ -370,7 +370,7 @@ int TCPSocketPosix::GetPeerAddress(IPEndPoint* address) const {
 
 int TCPSocketPosix::SetDefaultOptionsForServer() {
   DCHECK(socket_);
-  return SetAddressReuse(true);
+  return AllowAddressReuse();
 }
 
 void TCPSocketPosix::SetDefaultOptionsForClient() {
@@ -399,30 +399,34 @@ void TCPSocketPosix::SetDefaultOptionsForClient() {
 #endif
 }
 
-int TCPSocketPosix::SetAddressReuse(bool allow) {
+int TCPSocketPosix::AllowAddressReuse() {
   DCHECK(socket_);
 
-  return SetReuseAddr(socket_->socket_fd(), allow);
+  return SetReuseAddr(socket_->socket_fd(), true);
 }
 
 int TCPSocketPosix::SetReceiveBufferSize(int32_t size) {
   DCHECK(socket_);
+
   return SetSocketReceiveBufferSize(socket_->socket_fd(), size);
 }
 
 int TCPSocketPosix::SetSendBufferSize(int32_t size) {
   DCHECK(socket_);
+
   return SetSocketSendBufferSize(socket_->socket_fd(), size);
 }
 
 bool TCPSocketPosix::SetKeepAlive(bool enable, int delay) {
   DCHECK(socket_);
+
   return SetTCPKeepAlive(socket_->socket_fd(), enable, delay);
 }
 
 bool TCPSocketPosix::SetNoDelay(bool no_delay) {
   DCHECK(socket_);
-  return SetTCPNoDelay(socket_->socket_fd(), no_delay);
+
+  return SetTCPNoDelay(socket_->socket_fd(), no_delay) == OK;
 }
 
 void TCPSocketPosix::Close() {

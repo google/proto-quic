@@ -81,7 +81,8 @@ class VerifyCertificateChainPkitsTestDelegate {
 
     CertPathErrors path_errors;
     bool result = VerifyCertificateChain(input_chain, trust_anchor.get(),
-                                         &signature_policy, time, &path_errors);
+                                         &signature_policy, time,
+                                         KeyPurpose::ANY_EKU, &path_errors);
 
     //  TODO(crbug.com/634443): Test errors on failure?
     EXPECT_EQ(result, !path_errors.ContainsHighSeverityErrors());

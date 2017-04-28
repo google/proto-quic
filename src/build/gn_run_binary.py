@@ -8,8 +8,8 @@ Run with:
   python gn_run_binary.py <binary_name> [args ...]
 """
 
-import sys
 import subprocess
+import sys
 
 # This script is designed to run binaries produced by the current build. We
 # always prefix it with "./" to avoid picking up system versions that might
@@ -19,4 +19,7 @@ path = './' + sys.argv[1]
 # The rest of the arguements are passed directly to the executable.
 args = [path] + sys.argv[2:]
 
-sys.exit(subprocess.call(args))
+ret = subprocess.call(args)
+if ret != 0:
+  print '%s failed with exit code %d' % (sys.argv[1], ret)
+sys.exit(ret)

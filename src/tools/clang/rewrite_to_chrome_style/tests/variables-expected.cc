@@ -20,9 +20,9 @@ int Function(int interesting_number) {
   // Static locals.
   static int a_static_local_variable = 2;
   // Make sure references to variables are also rewritten.
-  return g_frame_count +
-         g_variable_mentioning_http_and_https * interesting_number /
-             a_local_variable % a_static_local_variable;
+  return g_frame_count + g_variable_mentioning_http_and_https *
+                             interesting_number / a_local_variable %
+                             a_static_local_variable;
 }
 
 }  // namespace blink

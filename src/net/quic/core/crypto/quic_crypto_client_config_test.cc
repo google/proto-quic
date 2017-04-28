@@ -6,6 +6,8 @@
 
 #include "net/quic/core/crypto/proof_verifier.h"
 #include "net/quic/core/quic_server_id.h"
+#include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_endian.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/mock_random.h"
 #include "net/quic/test_tools/quic_test_utils.h"
@@ -525,7 +527,10 @@ TEST(QuicCryptoClientConfigTest, ProcessStatelessReject) {
                                     AllSupportedVersions().front(), "", &cached,
                                     out_params, &error));
   EXPECT_TRUE(cached.has_server_designated_connection_id());
-  EXPECT_EQ(kConnectionId, cached.GetNextServerDesignatedConnectionId());
+  EXPECT_EQ(QuicUtils::IsConnectionIdWireFormatBigEndian(Perspective::IS_CLIENT)
+                ? QuicEndian::NetToHost64(kConnectionId)
+                : kConnectionId,
+            cached.GetNextServerDesignatedConnectionId());
   EXPECT_EQ(server_nonce, cached.GetNextServerNonce());
 }
 

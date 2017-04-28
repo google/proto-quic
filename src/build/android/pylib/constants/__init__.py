@@ -104,9 +104,6 @@ ANDROID_SDK_TOOLS = os.path.join(ANDROID_SDK_ROOT,
 ANDROID_NDK_ROOT = os.path.join(DIR_SOURCE_ROOT,
                                 'third_party', 'android_tools', 'ndk')
 
-PROGUARD_SCRIPT_PATH = os.path.join(
-    ANDROID_SDK_ROOT, 'tools', 'proguard', 'bin', 'proguard.sh')
-
 PROGUARD_ROOT = os.path.join(DIR_SOURCE_ROOT, 'third_party', 'proguard')
 
 BAD_DEVICES_JSON = os.path.join(DIR_SOURCE_ROOT,

@@ -193,6 +193,11 @@ android_aar_prebuilt("android_support_v17_preference_java") {
   aar_path = "$lib_path/$_lib_name/$lib_version/$_lib_name-$lib_version.aar"
 }
 
+android_library("android_support_chromium_java") {
+  testonly = true
+  java_files = [ "$android_sdk_root/extras/chromium/support/src/org/chromium/android/support/PackageManagerWrapper.java" ]
+}
+
 # TODO(dgn): Remove this once no other target has a dependency on it
 java_group("google_play_services_default_resources") {
   deps = []
@@ -209,6 +214,7 @@ java_group("google_play_services_default_java") {
     ":google_play_services_cast_java",
     ":google_play_services_gcm_java",
     ":google_play_services_iid_java",
+    ":google_play_services_location_java",
     ":google_play_services_nearby_java",
     ":google_play_services_vision_java",
   ]
@@ -296,6 +302,16 @@ android_aar_prebuilt("google_play_services_gcm_java") {
     ":google_play_services_iid_java",
   ]
   _lib_name = "play-services-gcm"
+  aar_path = "$gms_path/$_lib_name/$gms_version/$_lib_name-$gms_version.aar"
+  ignore_manifest = true
+}
+
+android_aar_prebuilt("google_play_services_location_java") {
+  deps = [
+    ":google_play_services_base_java",
+    ":google_play_services_basement_java",
+  ]
+  _lib_name = "play-services-location"
   aar_path = "$gms_path/$_lib_name/$gms_version/$_lib_name-$gms_version.aar"
   ignore_manifest = true
 }

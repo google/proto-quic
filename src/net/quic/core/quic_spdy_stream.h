@@ -17,14 +17,14 @@
 
 #include "base/macros.h"
 #include "net/base/iovec.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_header_list.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_stream.h"
 #include "net/quic/core/quic_stream_sequencer.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_socket_address.h"
-#include "net/spdy/spdy_framer.h"
+#include "net/spdy/core/spdy_framer.h"
 
 namespace net {
 

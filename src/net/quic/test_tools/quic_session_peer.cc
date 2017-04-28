@@ -35,8 +35,9 @@ void QuicSessionPeer::SetMaxOpenOutgoingStreams(QuicSession* session,
 }
 
 // static
-QuicCryptoStream* QuicSessionPeer::GetCryptoStream(QuicSession* session) {
-  return session->GetCryptoStream();
+QuicCryptoStream* QuicSessionPeer::GetMutableCryptoStream(
+    QuicSession* session) {
+  return session->GetMutableCryptoStream();
 }
 
 // static

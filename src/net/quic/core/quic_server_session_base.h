@@ -69,7 +69,9 @@ class QUIC_EXPORT_PRIVATE QuicServerSessionBase : public QuicSpdySession {
 
  protected:
   // QuicSession methods(override them with return type of QuicSpdyStream*):
-  QuicCryptoServerStreamBase* GetCryptoStream() override;
+  QuicCryptoServerStreamBase* GetMutableCryptoStream() override;
+
+  const QuicCryptoServerStreamBase* GetCryptoStream() const override;
 
   // If an outgoing stream can be created, return true.
   // Return false when connection is closed or forward secure encryption hasn't

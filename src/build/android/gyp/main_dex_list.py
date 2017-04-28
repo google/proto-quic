@@ -40,6 +40,9 @@ def main(args):
   parser.add_argument('--inputs',
                       help='JARs for which a main dex list should be '
                            'generated.')
+  parser.add_argument('--proguard-path', required=True,
+                      help='Path to the proguard executable.')
+
   parser.add_argument('paths', nargs='*', default=[],
                       help='JARs for which a main dex list should be '
                            'generated.')
@@ -64,7 +67,7 @@ def main(args):
       os.path.join(args.android_sdk_tools, 'mainDexClasses.rules'))
 
   proguard_cmd = [
-    constants.PROGUARD_SCRIPT_PATH,
+    'java', '-jar', args.proguard_path,
     '-forceprocessing',
     '-dontwarn', '-dontoptimize', '-dontobfuscate', '-dontpreverify',
     '-libraryjars', shrinked_android_jar,

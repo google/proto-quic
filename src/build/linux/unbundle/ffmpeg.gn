@@ -13,6 +13,10 @@ pkg_config("system_ffmpeg") {
   ]
 }
 
+config("using_system_ffmpeg") {
+  defines = [ "USE_SYSTEM_FFMPEG=1" ]
+}
+
 shim_headers("ffmpeg_shim") {
   root_path = "."
   headers = [
@@ -26,5 +30,8 @@ source_set("ffmpeg") {
   deps = [
     ":ffmpeg_shim",
   ]
-  public_configs = [ ":system_ffmpeg" ]
+  public_configs = [
+    ":system_ffmpeg",
+    ":using_system_ffmpeg",
+  ]
 }

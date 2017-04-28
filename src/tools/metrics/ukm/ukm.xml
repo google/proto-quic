@@ -11,6 +11,148 @@ along with a detailed description for each metric.
 
 <ukm-configuration>
 
+<event name="Autofill.CardUploadDecision">
+  <owner>sebsg@chromium.org</owner>
+  <metric name="UploadDecision">
+    <summary>
+      Whether the upload was proposed to the user or the reason why it was not.
+    </summary>
+  </metric>
+</event>
+
+<event name="Autofill.DeveloperEngagement">
+  <owner>csashi@google.com</owner>
+  <summary>
+    Recorded when we parse a form to log whether developer has used autocomplete
+    markup or UPI-VPA hints.
+  </summary>
+  <metric name="DeveloperEngagement"/>
+</event>
+
+<event name="Autofill.FormSubmitted">
+  <owner>csashi@google.com</owner>
+  <summary>
+    Recorded when user submits a form.
+  </summary>
+  <metric name="AutofillFormSubmittedState">
+    <summary>
+      Whether form's fields were all autofilled, some fields were autofilled, or
+      none of the field were autofilled. See |AutofillFormSubmittedState|.
+    </summary>
+  </metric>
+  <metric name="MillisecondsSinceFormLoaded">
+    <summary>
+      Time since form parse.
+    </summary>
+  </metric>
+</event>
+
+<event name="Autofill.InteractedWithForm">
+  <owner>csashi@google.com</owner>
+  <summary>
+    Recorded when we parse a form to log form metadata and autofill settings
+    that apply to all subsequent events for this form.
+  </summary>
+  <metric name="IsForCreditCard">
+    <summary>
+      True for credit card forms, false for address/profile forms.
+    </summary>
+  </metric>
+  <metric name="LocalRecordTypeCount">
+    <summary>
+      Number of local credit cards or local autofill profiles.
+    </summary>
+  </metric>
+  <metric name="ServerRecordTypeCount">
+    <summary>
+      Number of masked and full server credit cards or server autofill profiles.
+    </summary>
+  </metric>
+</event>
+
+<event name="Autofill.SuggestionsShown">
+  <owner>csashi@google.com</owner>
+  <metric name="MillisecondsSinceFormLoaded">
+    <summary>
+      Time since form parse.
+    </summary>
+  </metric>
+</event>
+
+<event name="Autofill.SelectedMaskedServerCard">
+  <owner>csashi@google.com</owner>
+  <metric name="MillisecondsSinceFormLoaded">
+    <summary>
+      Time since form parse.
+    </summary>
+  </metric>
+</event>
+
+<event name="Autofill.SuggestionFilled">
+  <owner>csashi@google.com</owner>
+  <summary>
+    Recorded when user selects a suggestion and we fill the form with that
+    suggestion.
+  </summary>
+  <metric name="MillisecondsSinceFormLoaded">
+    <summary>
+      Time since form parse.
+    </summary>
+  </metric>
+  <metric name="RecordType">
+    <summary>
+      Whether the suggestion was from a local card/autofill profile or from a
+      server card/autofill profile.
+    </summary>
+  </metric>
+</event>
+
+<event name="Autofill.TextFieldDidChange">
+  <owner>csashi@google.com</owner>
+  <summary>
+    Recorded when user edits a text field. The text field may have been
+    autofilled.
+  </summary>
+  <metric name="FieldTypeGroup">
+    <summary>
+      Field's |FieldTypeGroup|. See |AutofillType.group()|.
+    </summary>
+  </metric>
+  <metric name="HeuristicType">
+    <summary>
+      Field's |ServerFieldType| based on heuristics. See
+      |AutofillField.heuristic_type()|.
+    </summary>
+  </metric>
+  <metric name="HtmlFieldMode">
+    <summary>
+      Whether the field's autocomplete hint specified 'billing' or 'shipping'.
+      See |AutofillField.html_mode()|.
+    </summary>
+  </metric>
+  <metric name="HtmlFieldType">
+    <summary>
+      Field's autocomplete field type hint. See |AutofillField.html_type()|.
+    </summary>
+  </metric>
+  <metric name="IsAutofilled">
+    <summary>
+      True whether field was autofilled. See |AutofillField.is_autofilled|.
+    </summary>
+  </metric>
+  <metric name="MillisecondsSinceFormLoaded">
+    <summary>
+      Time since form parse.
+    </summary>
+  </metric>
+  <metric name="ServerType">
+    <summary>
+      Field's |ServerFieldType| returned by server. See
+      |AutofillField.server_type()|.
+    </summary>
+  </metric>
+</event>
+
 <event name="PageLoad">
   <owner>bmcquade@chromium.org</owner>
   <summary>
@@ -36,9 +178,38 @@ along with a detailed description for each metric.
   </metric>
 </event>
 
-<event name="Autofill.CardUploadDecision">
+<event name="PaymentRequest.CheckoutEvents">
   <owner>sebsg@chromium.org</owner>
-  <metric name="UploadDecision"/>
+  <metric name="CompletionsStatus">
+    <summary>
+      How the Payment Request ended. Values defined in the CompletionStatus enum
+      of components/payments/core/journey_logger.h.
+    </summary>
+  </metric>
+  <metric name="Events">
+    <summary>
+      Bitfield representing the events that occurred during the Payment Request.
+      Values defined in the Event enum of
+      components/payments/core/journey_logger.h.
+    </summary>
+  </metric>
+</event>
+
+<event name="Translate">
+  <owner>hamelphi@chromium.org</owner>
+  <summary>
+    Metrics related to a Translate event. These metrics are described in
+    TranslateEventProto.
+  </summary>
+  <metric name="AcceptCount"/>
+  <metric name="Country"/>
+  <metric name="DeclineCount"/>
+  <metric name="EventType"/>
+  <metric name="IgnoreCount"/>
+  <metric name="RankerResponse"/>
+  <metric name="RankerVersion"/>
+  <metric name="SourceLanguage"/>
+  <metric name="TargetLanguage"/>
 </event>
 
 </ukm-configuration>

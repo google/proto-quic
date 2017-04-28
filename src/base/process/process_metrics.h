@@ -25,6 +25,10 @@
 #if defined(OS_MACOSX)
 #include <mach/mach.h>
 #include "base/process/port_provider_mac.h"
+
+#if !defined(OS_IOS)
+#include <mach/mach_vm.h>
+#endif
 #endif
 
 #if defined(OS_WIN)
@@ -162,6 +166,22 @@ class BASE_EXPORT ProcessMetrics {
   // system call.
   bool GetCommittedAndWorkingSetKBytes(CommittedKBytes* usage,
                                        WorkingSetKBytes* ws_usage) const;
+
+  struct TaskVMInfo {
+    // Only available on macOS 10.12+.
+    // Anonymous, non-discardable memory, including non-volatile IOKit.
+    // Measured in bytes.
+    uint64_t phys_footprint = 0;
+
+    // Anonymous, non-discardable, non-compressed memory, excluding IOKit.
+    // Measured in bytes.
+    uint64_t internal = 0;
+
+    // Compressed memory measured in bytes.
+    uint64_t compressed = 0;
+  };
+  TaskVMInfo GetTaskVMInfo() const;
+
   // Returns private, shared, and total resident bytes. |locked_bytes| refers to
   // bytes that must stay resident. |locked_bytes| only counts bytes locked by
   // this task, not bytes locked by the kernel.
@@ -195,7 +215,7 @@ class BASE_EXPORT ProcessMetrics {
   // otherwise.
   bool GetIOCounters(IoCounters* io_counters) const;
 
-#if defined(OS_LINUX)
+#if defined(OS_LINUX) || defined(OS_AIX)
   // Returns the number of file descriptors currently open by the process, or
   // -1 on error.
   int GetOpenFdCount() const;
@@ -203,7 +223,7 @@ class BASE_EXPORT ProcessMetrics {
   // Returns the soft limit of file descriptors that can be opened by the
   // process, or -1 on error.
   int GetOpenFdSoftLimit() const;
-#endif  // defined(OS_LINUX)
+#endif  // defined(OS_LINUX) || defined(OS_AIX)
 
  private:
 #if !defined(OS_MACOSX) || defined(OS_IOS)
@@ -212,7 +232,7 @@ class BASE_EXPORT ProcessMetrics {
   ProcessMetrics(ProcessHandle process, PortProvider* port_provider);
 #endif  // !defined(OS_MACOSX) || defined(OS_IOS)
 
-#if defined(OS_LINUX) || defined(OS_ANDROID)
+#if defined(OS_LINUX) || defined(OS_ANDROID) | defined(OS_AIX)
   bool GetWorkingSetKBytesStatm(WorkingSetKBytes* ws_usage) const;
 #endif
 
@@ -220,7 +240,7 @@ class BASE_EXPORT ProcessMetrics {
   bool GetWorkingSetKBytesTotmaps(WorkingSetKBytes *ws_usage) const;
 #endif
 
-#if defined(OS_MACOSX) || defined(OS_LINUX)
+#if defined(OS_MACOSX) || defined(OS_LINUX) || defined(OS_AIX)
   int CalculateIdleWakeupsPerSecond(uint64_t absolute_idle_wakeups);
 #endif
 
@@ -237,7 +257,7 @@ class BASE_EXPORT ProcessMetrics {
   TimeTicks last_cpu_time_;
   int64_t last_system_time_;
 
-#if defined(OS_MACOSX) || defined(OS_LINUX)
+#if defined(OS_MACOSX) || defined(OS_LINUX) || defined(OS_AIX)
   // Same thing for idle wakeups.
   TimeTicks last_idle_wakeups_time_;
   uint64_t last_absolute_idle_wakeups_;
@@ -279,7 +299,7 @@ BASE_EXPORT void SetFdLimit(unsigned int max_descriptors);
 #endif  // defined(OS_POSIX)
 
 #if defined(OS_WIN) || defined(OS_MACOSX) || defined(OS_LINUX) || \
-    defined(OS_ANDROID)
+    defined(OS_ANDROID) || defined(OS_AIX)
 // Data about system-wide memory consumption. Values are in KB. Available on
 // Windows, Mac, Linux, Android and Chrome OS.
 //
@@ -312,7 +332,7 @@ struct BASE_EXPORT SystemMemoryInfoKB {
   int avail_phys = 0;
 #endif
 
-#if defined(OS_LINUX) || defined(OS_ANDROID)
+#if defined(OS_LINUX) || defined(OS_ANDROID) || defined(OS_AIX)
   // This provides an estimate of available memory as described here:
   // https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=34e431b0ae398fc54ea69ff85ec700722c9da773
   // NOTE: this is ONLY valid in kernels 3.14 and up.  Its value will always
@@ -326,7 +346,7 @@ struct BASE_EXPORT SystemMemoryInfoKB {
   int swap_free = 0;
 #endif
 
-#if defined(OS_ANDROID) || defined(OS_LINUX)
+#if defined(OS_ANDROID) || defined(OS_LINUX) || defined(OS_AIX)
   int buffers = 0;
   int cached = 0;
   int active_anon = 0;
@@ -340,7 +360,7 @@ struct BASE_EXPORT SystemMemoryInfoKB {
   unsigned long pswpin = 0;
   unsigned long pswpout = 0;
   unsigned long pgmajfault = 0;
-#endif  // defined(OS_ANDROID) || defined(OS_LINUX)
+#endif  // defined(OS_ANDROID) || defined(OS_LINUX) || defined(OS_AIX)
 
 #if defined(OS_CHROMEOS)
   int shmem = 0;
@@ -368,7 +388,7 @@ BASE_EXPORT bool GetSystemMemoryInfo(SystemMemoryInfoKB* meminfo);
 #endif  // defined(OS_WIN) || defined(OS_MACOSX) || defined(OS_LINUX) ||
         // defined(OS_ANDROID)
 
-#if defined(OS_LINUX) || defined(OS_ANDROID)
+#if defined(OS_LINUX) || defined(OS_ANDROID) || defined(OS_AIX)
 // Parse the data found in /proc/<pid>/stat and return the sum of the
 // CPU-related ticks.  Returns -1 on parse error.
 // Exposed for testing.
@@ -477,6 +497,42 @@ class SystemMetrics {
   SwapInfo swap_info_;
 #endif
 };
+
+#if defined(OS_MACOSX) && !defined(OS_IOS)
+enum class MachVMRegionResult {
+  // There were no more memory regions between |address| and the end of the
+  // virtual address space.
+  Finished,
+
+  // All output parameters are invalid.
+  Error,
+
+  // All output parameters are filled in.
+  Success
+};
+
+// Returns info on the first memory region at or after |address|, including
+// resident memory and share mode. On Success, |size| reflects the size of the
+// memory region.
+// |size| and |info| are output parameters, only valid on Success.
+// |address| is an in-out parameter, than represents both the address to start
+// looking, and the start address of the memory region.
+BASE_EXPORT MachVMRegionResult GetTopInfo(mach_port_t task,
+                                          mach_vm_size_t* size,
+                                          mach_vm_address_t* address,
+                                          vm_region_top_info_data_t* info);
+
+// Returns info on the first memory region at or after |address|, including
+// protection values. On Success, |size| reflects the size of the
+// memory region.
+// Returns info on the first memory region at or after |address|, including
+// resident memory and share mode.
+// |size| and |info| are output parameters, only valid on Success.
+BASE_EXPORT MachVMRegionResult GetBasicInfo(mach_port_t task,
+                                            mach_vm_size_t* size,
+                                            mach_vm_address_t* address,
+                                            vm_region_basic_info_64* info);
+#endif  // defined(OS_MACOSX) && !defined(OS_IOS)
 
 }  // namespace base
 

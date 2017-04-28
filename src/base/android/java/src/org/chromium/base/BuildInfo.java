@@ -109,6 +109,22 @@ public class BuildInfo {
         return msg;
     }
 
+    /** Returns a string that is different each time the apk changes. */
+    @CalledByNative
+    public static String getExtractedFileSuffix() {
+        PackageManager pm = ContextUtils.getApplicationContext().getPackageManager();
+        try {
+            PackageInfo pi =
+                    pm.getPackageInfo(ContextUtils.getApplicationContext().getPackageName(), 0);
+            // Use lastUpdateTime when developing locally, since versionCode does not normally
+            // change in this case.
+            long version = pi.versionCode > 10 ? pi.versionCode : pi.lastUpdateTime;
+            return "@" + Long.toHexString(version);
+        } catch (PackageManager.NameNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     @CalledByNative
     public static String getPackageLabel() {
         // Third-party code does disk read on the getApplicationInfo call. http://crbug.com/614343

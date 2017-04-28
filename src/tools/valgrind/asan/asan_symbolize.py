@@ -163,27 +163,6 @@ def chrome_dsym_hints(binary):
   return [result]
 
 
-# We want our output to match base::EscapeJSONString(), which produces
-# doubly-escaped strings. The first escaping pass is handled by this class. The
-# second pass happens when JSON data is dumped to file.
-class StringEncoder(json.JSONEncoder):
-  def __init__(self):
-    json.JSONEncoder.__init__(self)
-
-  def encode(self, s):
-    assert(isinstance(s, basestring))
-    # Don't die on invalid utf-8 sequences.
-    s = s.decode('utf-8', 'replace')
-    encoded = json.JSONEncoder.encode(self, s)
-    assert(len(encoded) >= 2)
-    assert(encoded[0] == '"')
-    assert(encoded[-1] == '"')
-    encoded = encoded[1:-1]
-    # Special case from base::EscapeJSONString().
-    encoded = encoded.replace('<', '\u003C')
-    return encoded
-
-
 class JSONTestRunSymbolizer(object):
   def __init__(self, symbolization_loop):
     self.symbolization_loop = symbolization_loop
@@ -205,15 +184,10 @@ class JSONTestRunSymbolizer(object):
     test_run['original_output_snippet_base64'] = \
         test_run['output_snippet_base64']
 
-    escaped_snippet = StringEncoder().encode(symbolized_snippet)
-    test_run['output_snippet'] = escaped_snippet
+    test_run['output_snippet'] = symbolized_snippet.decode('utf-8', 'replace')
     test_run['output_snippet_base64'] = \
         base64.b64encode(symbolized_snippet)
     test_run['snippet_processed_by'] = 'asan_symbolize.py'
-    # Originally, "lossless" refers to "no Unicode data lost while encoding the
-    # string". However, since we're applying another kind of transformation
-    # (symbolization), it doesn't seem right to consider the snippet lossless.
-    test_run['losless_snippet'] = False
 
 
 def symbolize_snippets_in_json(filename, symbolization_loop):

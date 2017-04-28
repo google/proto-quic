@@ -1,15 +1,3 @@
-diff --git a/source/data/brkitr/brklocal.mk b/source/data/brkitr/brklocal.mk
-index 204458c..b5eca75 100644
---- a/source/data/brkitr/brklocal.mk
-+++ b/source/data/brkitr/brklocal.mk
-@@ -41,6 +41,7 @@ BRK_DICT_SOURCE = burmesedict.txt cjdict.txt khmerdict.txt laodict.txt\
- # List of break iterator files (brk).
- BRK_SOURCE = char.txt line.txt\
-  line_normal.txt line_normal_cj.txt line_normal_fi.txt\
-+ line_loose_cj.txt\
-  sent.txt sent_el.txt title.txt word.txt
- 
- 
 diff --git a/source/data/brkitr/fi.txt b/source/data/brkitr/fi.txt
 index 3c07f15..72029ee 100644
 --- a/source/data/brkitr/fi.txt

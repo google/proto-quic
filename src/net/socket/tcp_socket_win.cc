@@ -645,7 +645,7 @@ bool TCPSocketWin::SetKeepAlive(bool enable, int delay) {
 }
 
 bool TCPSocketWin::SetNoDelay(bool no_delay) {
-  return SetTCPNoDelay(socket_, no_delay);
+  return SetTCPNoDelay(socket_, no_delay) == OK;
 }
 
 void TCPSocketWin::Close() {

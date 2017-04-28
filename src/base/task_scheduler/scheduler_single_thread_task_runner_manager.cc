@@ -313,18 +313,9 @@ class SchedulerSingleThreadTaskRunnerManager::SchedulerSingleThreadTaskRunner
 };
 
 SchedulerSingleThreadTaskRunnerManager::SchedulerSingleThreadTaskRunnerManager(
-    const std::vector<SchedulerWorkerPoolParams>& worker_pool_params_vector,
-    const TaskScheduler::WorkerPoolIndexForTraitsCallback&
-        worker_pool_index_for_traits_callback,
     TaskTracker* task_tracker,
     DelayedTaskManager* delayed_task_manager)
-    : worker_pool_params_vector_(worker_pool_params_vector),
-      worker_pool_index_for_traits_callback_(
-          worker_pool_index_for_traits_callback),
-      task_tracker_(task_tracker),
-      delayed_task_manager_(delayed_task_manager) {
-  DCHECK_GT(worker_pool_params_vector_.size(), 0U);
-  DCHECK(worker_pool_index_for_traits_callback_);
+    : task_tracker_(task_tracker), delayed_task_manager_(delayed_task_manager) {
   DCHECK(task_tracker_);
   DCHECK(delayed_task_manager_);
 }
@@ -340,26 +331,46 @@ SchedulerSingleThreadTaskRunnerManager::
 #endif
 }
 
+void SchedulerSingleThreadTaskRunnerManager::Start() {
+  decltype(workers_) workers_to_start;
+  {
+    AutoSchedulerLock auto_lock(lock_);
+    started_ = true;
+    workers_to_start = workers_;
+  }
+
+  // Start workers that were created before this method was called. Other
+  // workers are started as they are created.
+  for (scoped_refptr<SchedulerWorker> worker : workers_to_start) {
+    worker->Start();
+    worker->WakeUp();
+  }
+}
+
 scoped_refptr<SingleThreadTaskRunner>
 SchedulerSingleThreadTaskRunnerManager::CreateSingleThreadTaskRunnerWithTraits(
+    const std::string& name,
+    ThreadPriority priority_hint,
     const TaskTraits& traits) {
   return CreateSingleThreadTaskRunnerWithDelegate<SchedulerWorkerDelegate>(
-      traits);
+      name, priority_hint, traits);
 }
 
 #if defined(OS_WIN)
 scoped_refptr<SingleThreadTaskRunner>
 SchedulerSingleThreadTaskRunnerManager::CreateCOMSTATaskRunnerWithTraits(
+    const std::string& name,
+    ThreadPriority priority_hint,
     const TaskTraits& traits) {
   return CreateSingleThreadTaskRunnerWithDelegate<SchedulerWorkerCOMDelegate>(
-      traits);
+      name, priority_hint, traits);
 }
 #endif  // defined(OS_WIN)
 
 void SchedulerSingleThreadTaskRunnerManager::JoinForTesting() {
   decltype(workers_) local_workers;
   {
-    AutoSchedulerLock auto_lock(workers_lock_);
+    AutoSchedulerLock auto_lock(lock_);
     local_workers = std::move(workers_);
   }
 
@@ -367,7 +378,7 @@ void SchedulerSingleThreadTaskRunnerManager::JoinForTesting() {
     worker->JoinForTesting();
 
   {
-    AutoSchedulerLock auto_lock(workers_lock_);
+    AutoSchedulerLock auto_lock(lock_);
     DCHECK(workers_.empty())
         << "New worker(s) unexpectedly registered during join.";
     workers_ = std::move(local_workers);
@@ -376,32 +387,29 @@ void SchedulerSingleThreadTaskRunnerManager::JoinForTesting() {
 
 template <typename DelegateType>
 scoped_refptr<SingleThreadTaskRunner> SchedulerSingleThreadTaskRunnerManager::
-    CreateSingleThreadTaskRunnerWithDelegate(const TaskTraits& traits) {
-  size_t index = worker_pool_index_for_traits_callback_.Run(traits);
-  DCHECK_LT(index, worker_pool_params_vector_.size());
+    CreateSingleThreadTaskRunnerWithDelegate(const std::string& name,
+                                             ThreadPriority priority_hint,
+                                             const TaskTraits& traits) {
   return new SchedulerSingleThreadTaskRunner(
       this, traits,
-      CreateAndRegisterSchedulerWorker<DelegateType>(
-          worker_pool_params_vector_[index]));
+      CreateAndRegisterSchedulerWorker<DelegateType>(name, priority_hint));
 }
 
 template <>
 std::unique_ptr<SchedulerWorkerDelegate>
 SchedulerSingleThreadTaskRunnerManager::CreateSchedulerWorkerDelegate<
-    SchedulerWorkerDelegate>(const SchedulerWorkerPoolParams& params, int id) {
-  return MakeUnique<SchedulerWorkerDelegate>(StringPrintf(
-      "TaskSchedulerSingleThreadWorker%d%s", id, params.name().c_str()));
+    SchedulerWorkerDelegate>(const std::string& name, int id) {
+  return MakeUnique<SchedulerWorkerDelegate>(
+      StringPrintf("TaskSchedulerSingleThread%s%d", name.c_str(), id));
 }
 
 #if defined(OS_WIN)
 template <>
 std::unique_ptr<SchedulerWorkerDelegate>
 SchedulerSingleThreadTaskRunnerManager::CreateSchedulerWorkerDelegate<
-    SchedulerWorkerCOMDelegate>(const SchedulerWorkerPoolParams& params,
-                                int id) {
+    SchedulerWorkerCOMDelegate>(const std::string& name, int id) {
   return MakeUnique<SchedulerWorkerCOMDelegate>(
-      StringPrintf("TaskSchedulerSingleThreadWorker%d%sCOMSTA", id,
-                   params.name().c_str()),
+      StringPrintf("TaskSchedulerSingleThreadCOMSTA%s%d", name.c_str(), id),
       task_tracker_);
 }
 #endif  // defined(OS_WIN)
@@ -409,24 +417,34 @@ SchedulerSingleThreadTaskRunnerManager::CreateSchedulerWorkerDelegate<
 template <typename DelegateType>
 SchedulerWorker*
 SchedulerSingleThreadTaskRunnerManager::CreateAndRegisterSchedulerWorker(
-    const SchedulerWorkerPoolParams& params) {
-  AutoSchedulerLock auto_lock(workers_lock_);
-  int id = next_worker_id_++;
+    const std::string& name,
+    ThreadPriority priority_hint) {
+  SchedulerWorker* worker;
+  bool start_worker;
 
-  workers_.emplace_back(SchedulerWorker::Create(
-      params.priority_hint(),
-      CreateSchedulerWorkerDelegate<DelegateType>(params, id), task_tracker_,
-      SchedulerWorker::InitialState::DETACHED));
-  return workers_.back().get();
+  {
+    AutoSchedulerLock auto_lock(lock_);
+    int id = next_worker_id_++;
+    workers_.emplace_back(make_scoped_refptr(new SchedulerWorker(
+        priority_hint, CreateSchedulerWorkerDelegate<DelegateType>(name, id),
+        task_tracker_)));
+    worker = workers_.back().get();
+    start_worker = started_;
+  }
+
+  if (start_worker)
+    worker->Start();
+
+  return worker;
 }
 
 void SchedulerSingleThreadTaskRunnerManager::UnregisterSchedulerWorker(
     SchedulerWorker* worker) {
   // Cleanup uses a SchedulerLock, so call Cleanup() after releasing
-  // |workers_lock_|.
+  // |lock_|.
   scoped_refptr<SchedulerWorker> worker_to_destroy;
   {
-    AutoSchedulerLock auto_lock(workers_lock_);
+    AutoSchedulerLock auto_lock(lock_);
 
     // We might be joining, so record that a worker was unregistered for
     // verification at destruction.

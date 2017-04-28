@@ -302,6 +302,8 @@ void Args::SetSystemVarsLocked(Scope* dest) const {
   os = "android";
 #elif defined(OS_NETBSD)
   os = "netbsd";
+#elif defined(OS_AIX)
+  os = "aix";
 #else
   #error Unknown OS type.
 #endif
@@ -331,7 +333,10 @@ void Args::SetSystemVarsLocked(Scope* dest) const {
     arch = kMips;
   else if (os_arch == "s390x")
     arch = kS390X;
-  else if (os_arch == "mips")
+  else if (os_arch == "ppc64" || os_arch == "ppc64le")
+    // We handle the endianness inside //build/config/host_byteorder.gni.
+    // This allows us to use the same toolchain as ppc64 BE
+    // and specific flags are included using the host_byteorder logic.
     arch = kPPC64;
   else
     CHECK(false) << "OS architecture not handled. (" << os_arch << ")";

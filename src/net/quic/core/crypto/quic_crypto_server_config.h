@@ -349,10 +349,10 @@ class QUIC_EXPORT_PRIVATE QuicCryptoServerConfig {
       std::unique_ptr<BuildServerConfigUpdateMessageResultCallback> cb) const;
 
   // SetEphemeralKeySource installs an object that can cache ephemeral keys for
-  // a short period of time. This object takes ownership of
-  // |ephemeral_key_source|. If not set then ephemeral keys will be generated
+  // a short period of time. If not set, ephemeral keys will be generated
   // per-connection.
-  void SetEphemeralKeySource(EphemeralKeySource* ephemeral_key_source);
+  void SetEphemeralKeySource(
+      std::unique_ptr<EphemeralKeySource> ephemeral_key_source);
 
   // set_replay_protection controls whether replay protection is enabled. If
   // replay protection is disabled then no strike registers are needed and

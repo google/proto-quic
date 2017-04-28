@@ -23,6 +23,8 @@ source_set("browser_tests_filters") {
     "//testing/buildbot/filters/isolate-extensions.browser_tests.filter",
     "//testing/buildbot/filters/mash.browser_tests.filter",
     "//testing/buildbot/filters/mojo.fyi.browser_tests.filter",
+    "//testing/buildbot/filters/mojo.fyi.mus.browser_tests.filter",
+    "//testing/buildbot/filters/mus.browser_tests.filter",
     "//testing/buildbot/filters/site-per-process.browser_tests.filter",
   ]
 }
@@ -42,5 +44,13 @@ source_set("interactive_ui_tests_filters") {
 
   data = [
     "//testing/buildbot/filters/site-per-process.interactive_ui_tests.filter",
+  ]
+}
+
+source_set("ash_unittests_filters") {
+  testonly = true
+
+  data = [
+    "//testing/buildbot/filters/ash_mus_unittests.filter",
   ]
 }

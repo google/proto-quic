@@ -46,9 +46,8 @@ DecodeStatus PushPromisePayloadDecoder::StartDecodingPayload(
 
   DCHECK_EQ(Http2FrameType::PUSH_PROMISE, frame_header.type);
   DCHECK_LE(db->Remaining(), total_length);
-  DCHECK_EQ(
-      0, frame_header.flags &
-             ~(Http2FrameFlag::FLAG_END_HEADERS | Http2FrameFlag::FLAG_PADDED));
+  DCHECK_EQ(0, frame_header.flags &
+                   ~(Http2FrameFlag::END_HEADERS | Http2FrameFlag::PADDED));
 
   if (!frame_header.IsPadded()) {
     // If it turns out that PUSH_PROMISE frames without padding are sufficiently

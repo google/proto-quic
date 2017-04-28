@@ -39,7 +39,7 @@ uint32_t GetUniqueIdForProcess() {
   return g_unique_id;
 }
 
-#if defined(OS_LINUX)
+#if defined(OS_LINUX) || defined(OS_AIX)
 
 void InitUniqueIdForProcessInPidNamespace(ProcessId pid_outside_of_namespace) {
   g_unique_id = MangleProcessId(pid_outside_of_namespace);

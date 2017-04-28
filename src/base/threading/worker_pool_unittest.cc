@@ -34,10 +34,9 @@ class PostTaskAndReplyTester
   void RunTest() {
     ASSERT_TRUE(thread_checker_.CalledOnValidThread());
     WorkerPool::PostTaskAndReply(
-      FROM_HERE,
-      base::Bind(&PostTaskAndReplyTester::OnWorkerThread, this),
-      base::Bind(&PostTaskAndReplyTester::OnOriginalThread, this),
-      false);
+        FROM_HERE,
+        base::BindOnce(&PostTaskAndReplyTester::OnWorkerThread, this),
+        base::BindOnce(&PostTaskAndReplyTester::OnOriginalThread, this), false);
 
     test_event_.Wait();
   }
@@ -77,13 +76,13 @@ TEST_F(WorkerPoolTest, PostTask) {
   WaitableEvent long_test_event(WaitableEvent::ResetPolicy::AUTOMATIC,
                                 WaitableEvent::InitialState::NOT_SIGNALED);
 
+  WorkerPool::PostTask(
+      FROM_HERE,
+      base::BindOnce(&WaitableEvent::Signal, base::Unretained(&test_event)),
+      false);
   WorkerPool::PostTask(FROM_HERE,
-                       base::Bind(&WaitableEvent::Signal,
-                                  base::Unretained(&test_event)),
-                       false);
-  WorkerPool::PostTask(FROM_HERE,
-                       base::Bind(&WaitableEvent::Signal,
-                                  base::Unretained(&long_test_event)),
+                       base::BindOnce(&WaitableEvent::Signal,
+                                      base::Unretained(&long_test_event)),
                        true);
 
   test_event.Wait();

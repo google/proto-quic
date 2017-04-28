@@ -206,10 +206,6 @@ SchedulerWorkerPoolImpl::SchedulerWorkerPoolImpl(
           idle_workers_stack_lock_.CreateConditionVariable()),
       join_for_testing_returned_(WaitableEvent::ResetPolicy::MANUAL,
                                  WaitableEvent::InitialState::NOT_SIGNALED),
-#if DCHECK_IS_ON()
-      workers_created_(WaitableEvent::ResetPolicy::MANUAL,
-                       WaitableEvent::InitialState::NOT_SIGNALED),
-#endif
       // Mimics the UMA_HISTOGRAM_LONG_TIMES macro.
       detach_duration_histogram_(Histogram::FactoryTimeGet(
           kDetachDurationHistogramPrefix + name_ + kPoolNameSuffix,
@@ -245,13 +241,11 @@ SchedulerWorkerPoolImpl::SchedulerWorkerPoolImpl(
 void SchedulerWorkerPoolImpl::Start(const SchedulerWorkerPoolParams& params) {
   suggested_reclaim_time_ = params.suggested_reclaim_time();
 
-  std::vector<SchedulerWorker*> workers_to_wake_up;
-
   {
     AutoSchedulerLock auto_lock(idle_workers_stack_lock_);
 
 #if DCHECK_IS_ON()
-    DCHECK(!workers_created_.IsSignaled());
+    DCHECK(!workers_created_.IsSet());
 #endif
 
     DCHECK(workers_.empty());
@@ -270,34 +264,34 @@ void SchedulerWorkerPoolImpl::Start(const SchedulerWorkerPoolParams& params) {
     // Create workers in reverse order of index so that the worker with the
     // highest index is at the bottom of the idle stack.
     for (int index = params.max_threads() - 1; index >= 0; --index) {
-      const SchedulerWorker::InitialState initial_state =
-          index < num_alive_workers ? SchedulerWorker::InitialState::ALIVE
-                                    : SchedulerWorker::InitialState::DETACHED;
-      scoped_refptr<SchedulerWorker> worker = SchedulerWorker::Create(
-          params.priority_hint(),
+      workers_[index] = make_scoped_refptr(new SchedulerWorker(
+          priority_hint_,
           MakeUnique<SchedulerWorkerDelegateImpl>(
               this, re_enqueue_sequence_callback_, index),
-          task_tracker_, initial_state, params.backward_compatibility());
-      if (!worker)
-        break;
+          task_tracker_, params.backward_compatibility(),
+          index < num_alive_workers ? SchedulerWorker::InitialState::ALIVE
+                                    : SchedulerWorker::InitialState::DETACHED));
 
-      if (index < num_wake_ups_before_start_)
-        workers_to_wake_up.push_back(worker.get());
-      else
-        idle_workers_stack_.Push(worker.get());
-
-      workers_[index] = std::move(worker);
+      // Put workers that won't be woken up at the end of this method on the
+      // idle stack.
+      if (index >= num_wake_ups_before_start_)
+        idle_workers_stack_.Push(workers_[index].get());
     }
 
 #if DCHECK_IS_ON()
-    workers_created_.Signal();
+    workers_created_.Set();
 #endif
-
-    CHECK(!workers_.empty());
   }
 
-  for (SchedulerWorker* worker : workers_to_wake_up)
-    worker->WakeUp();
+  // Start all workers. CHECK that the first worker can be started (assume that
+  // failure means that threads can't be created on this machine). Wake up one
+  // worker for each wake up that occurred before Start().
+  for (size_t index = 0; index < workers_.size(); ++index) {
+    const bool start_success = workers_[index]->Start();
+    CHECK(start_success || index > 0);
+    if (static_cast<int>(index) < num_wake_ups_before_start_)
+      workers_[index]->WakeUp();
+  }
 }
 
 SchedulerWorkerPoolImpl::~SchedulerWorkerPoolImpl() {
@@ -347,7 +341,9 @@ bool SchedulerWorkerPoolImpl::PostTaskWithSequence(
   if (task->delayed_run_time.is_null()) {
     PostTaskWithSequenceNow(std::move(task), std::move(sequence));
   } else {
-    DCHECK(task->task);
+    // Use CHECK instead of DCHECK to crash earlier. See http://crbug.com/711167
+    // for details.
+    CHECK(task->task);
     delayed_task_manager_->AddDelayedTask(
         std::move(task),
         Bind(
@@ -396,14 +392,14 @@ void SchedulerWorkerPoolImpl::GetHistograms(
 
 int SchedulerWorkerPoolImpl::GetMaxConcurrentTasksDeprecated() const {
 #if DCHECK_IS_ON()
-  DCHECK(workers_created_.IsSignaled());
+  DCHECK(workers_created_.IsSet());
 #endif
   return workers_.size();
 }
 
 void SchedulerWorkerPoolImpl::WaitForAllWorkersIdleForTesting() {
 #if DCHECK_IS_ON()
-  DCHECK(workers_created_.IsSignaled());
+  DCHECK(workers_created_.IsSet());
 #endif
   AutoSchedulerLock auto_lock(idle_workers_stack_lock_);
   while (idle_workers_stack_.Size() < workers_.size())
@@ -412,7 +408,7 @@ void SchedulerWorkerPoolImpl::WaitForAllWorkersIdleForTesting() {
 
 void SchedulerWorkerPoolImpl::JoinForTesting() {
 #if DCHECK_IS_ON()
-  DCHECK(workers_created_.IsSignaled());
+  DCHECK(workers_created_.IsSet());
 #endif
   DCHECK(!CanWorkerDetachForTesting() || suggested_reclaim_time_.is_max())
       << "Workers can detach during join.";
@@ -451,12 +447,9 @@ SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::
 void SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::OnMainEntry(
     SchedulerWorker* worker) {
 #if DCHECK_IS_ON()
-  // Wait for |outer_->workers_created_| to avoid traversing
-  // |outer_->workers_| while it is being filled by Initialize().
-  outer_->workers_created_.Wait();
+  DCHECK(outer_->workers_created_.IsSet());
   DCHECK(ContainsWorker(outer_->workers_, worker));
 #endif
-
   DCHECK_EQ(num_tasks_since_last_wait_, 0U);
 
   if (!last_detach_time_.is_null()) {
@@ -575,7 +568,7 @@ void SchedulerWorkerPoolImpl::WakeUpOneWorker() {
     AutoSchedulerLock auto_lock(idle_workers_stack_lock_);
 
 #if DCHECK_IS_ON()
-    DCHECK_EQ(workers_.empty(), !workers_created_.IsSignaled());
+    DCHECK_EQ(workers_.empty(), !workers_created_.IsSet());
 #endif
 
     if (workers_.empty())

@@ -142,6 +142,9 @@ class BASE_EXPORT TaskTraits {
   // Returns true if tasks with these traits may use base/ sync primitives.
   bool with_base_sync_primitives() const { return with_base_sync_primitives_; }
 
+  // Returns true if the priority was set explicitly.
+  bool priority_set_explicitly() const { return priority_set_explicitly_; }
+
   // Returns the priority of tasks with these traits.
   TaskPriority priority() const { return priority_; }
 
@@ -149,10 +152,15 @@ class BASE_EXPORT TaskTraits {
   TaskShutdownBehavior shutdown_behavior() const { return shutdown_behavior_; }
 
  private:
-  bool may_block_;
-  bool with_base_sync_primitives_;
-  TaskPriority priority_;
-  TaskShutdownBehavior shutdown_behavior_;
+  // Do not rely on defaults hard-coded below beyond the guarantees described on
+  // the constructor; anything else is subject to change. Tasks should
+  // explicitly request defaults if the behavior is critical to the task.
+  bool may_block_ = false;
+  bool with_base_sync_primitives_ = false;
+  bool priority_set_explicitly_ = false;
+  TaskPriority priority_ = TaskPriority::USER_VISIBLE;
+  TaskShutdownBehavior shutdown_behavior_ =
+      TaskShutdownBehavior::SKIP_ON_SHUTDOWN;
 };
 
 // Returns string literals for the enums defined in this file. These methods

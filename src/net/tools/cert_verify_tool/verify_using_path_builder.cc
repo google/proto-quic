@@ -19,8 +19,7 @@
 #include "net/cert/internal/parsed_certificate.h"
 #include "net/cert/internal/path_builder.h"
 #include "net/cert/internal/signature_policy.h"
-#include "net/cert/internal/trust_store_collection.h"
-#include "net/cert/internal/trust_store_in_memory.h"
+#include "net/cert/internal/system_trust_store.h"
 #include "net/cert/x509_util.h"
 #include "net/cert_net/cert_net_fetcher_impl.h"
 #include "net/tools/cert_verify_tool/cert_verify_tool_util.h"
@@ -28,20 +27,9 @@
 #include "net/url_request/url_request_context_builder.h"
 #include "net/url_request/url_request_context_getter.h"
 
-#if defined(USE_NSS_CERTS)
-#include "base/threading/thread_task_runner_handle.h"
-#include "net/cert/internal/cert_issuer_source_nss.h"
-#include "net/cert/internal/trust_store_nss.h"
-#endif
-
 #if defined(OS_LINUX)
 #include "net/proxy/proxy_config.h"
 #include "net/proxy/proxy_config_service_fixed.h"
-#endif
-
-#if defined(OS_MACOSX) && !defined(OS_IOS)
-#include <Security/Security.h>
-#include "net/cert/internal/trust_store_mac.h"
 #endif
 
 namespace {
@@ -221,31 +209,21 @@ bool VerifyUsingPathBuilder(
   at_time.UTCExplode(&exploded_time);
   net::der::GeneralizedTime time = ConvertExplodedTime(exploded_time);
 
-  net::TrustStoreCollection trust_store;
+  std::unique_ptr<net::SystemTrustStore> ssl_trust_store =
+      net::CreateSslSystemTrustStore();
 
-  net::TrustStoreInMemory trust_store_in_memory;
-  trust_store.AddTrustStore(&trust_store_in_memory);
   for (const auto& der_cert : root_der_certs) {
     scoped_refptr<net::ParsedCertificate> cert = ParseCertificate(der_cert);
     if (cert) {
-      trust_store_in_memory.AddTrustAnchor(
+      ssl_trust_store->AddTrustAnchor(
           net::TrustAnchor::CreateFromCertificateNoConstraints(cert));
     }
   }
 
-#if defined(USE_NSS_CERTS)
-  net::TrustStoreNSS trust_store_nss(trustSSL);
-  trust_store.AddTrustStore(&trust_store_nss);
-#elif defined(OS_MACOSX) && !defined(OS_IOS)
-  net::TrustStoreMac trust_store_mac(kSecPolicyAppleSSL);
-  trust_store.AddTrustStore(&trust_store_mac);
-#else
-  if (root_der_certs.empty()) {
+  if (!ssl_trust_store->UsesSystemTrustStore() && root_der_certs.empty()) {
     std::cerr << "NOTE: CertPathBuilder does not currently use OS trust "
                  "settings (--roots must be specified).\n";
   }
-#endif
-
   net::CertIssuerSourceStatic intermediate_cert_issuer_source;
   for (const auto& der_cert : intermediate_der_certs) {
     scoped_refptr<net::ParsedCertificate> cert = ParseCertificate(der_cert);
@@ -261,13 +239,13 @@ bool VerifyUsingPathBuilder(
   // Verify the chain.
   net::SimpleSignaturePolicy signature_policy(2048);
   net::CertPathBuilder::Result result;
-  net::CertPathBuilder path_builder(target_cert, &trust_store,
-                                    &signature_policy, time, &result);
+  net::CertPathBuilder path_builder(
+      target_cert, ssl_trust_store->GetTrustStore(), &signature_policy, time,
+      net::KeyPurpose::SERVER_AUTH, &result);
   path_builder.AddCertIssuerSource(&intermediate_cert_issuer_source);
-#if defined(USE_NSS_CERTS)
-  net::CertIssuerSourceNSS cert_issuer_source_nss;
-  path_builder.AddCertIssuerSource(&cert_issuer_source_nss);
-#endif
+
+  if (ssl_trust_store->GetCertIssuerSource())
+    path_builder.AddCertIssuerSource(ssl_trust_store->GetCertIssuerSource());
 
   // Create a network thread to be used for AIA fetches, and wait for a
   // CertNetFetcher to be constructed on that thread.

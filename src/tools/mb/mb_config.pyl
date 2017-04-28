@@ -120,6 +120,7 @@
       'Chromium Mac 10.9 Goma Canary (clobber)': 'release_bot',
       'Chromium Mac 10.9 Goma Canary (dbg)': 'debug_bot',
       'Chromium Mac 10.9 Goma Canary (dbg)(clobber)': 'debug_bot',
+      'Chromium Mac Goma Canary LocalOutputCache': 'release_bot',
       'Chromium Win PGO Builder': {
         '1': 'official_optimize_chrome_pgo_phase_1_x86',
         '2': 'official_optimize_chrome_pgo_phase_2_x86',
@@ -143,6 +144,7 @@
       'CrWinClangGoma': 'clang_official_optimize_release_bot_minimal_symbols_x86',
       'CrWinGoma': 'release_bot_x86',
       'CrWinGoma(dll)': 'shared_release_bot_x86',
+      'CrWinGoma(loc)': 'shared_release_bot_x86',
       'ClangToTAndroidASan': 'android_clang_tot_asan',
       'ClangToTAndroid (dbg)': 'android_clang_tot_dbg',
       'ClangToTAndroid': 'android_clang_tot_release',
@@ -155,13 +157,13 @@
       'ClangToTLinuxLLD': 'clang_tot_lld_release_shared',
       'ClangToTLinuxUBSanVptr': 'clang_tot_edge_ubsan_no_recover_hack_static_release',
       'ClangToTMac': 'clang_tot_minimal_symbols_shared_release',
-      'ClangToTMac (dbg)': 'clang_tot_minimal_symbols_shared_debug',
+      'ClangToTMac (dbg)': 'clang_tot_shared_debug',
       'ClangToTMacASan': 'asan_disable_nacl_clang_tot_full_symbols_static_release',
       'ClangToTWin': 'clang_tot_official_minimal_symbols_static_release_x86',
-      'ClangToTWin(dbg)': 'clang_tot_minimal_symbols_shared_debug_x86',
+      'ClangToTWin(dbg)': 'clang_tot_shared_debug_x86',
       'ClangToTWin(dll)': 'clang_tot_minimal_symbols_shared_release_x86',
       'ClangToTWin64': 'clang_tot_official_minimal_symbols_static_release',
-      'ClangToTWin64(dbg)': 'clang_tot_minimal_symbols_shared_debug',
+      'ClangToTWin64(dbg)': 'clang_tot_shared_debug',
       'ClangToTWin64(dll)': 'clang_tot_shared_release',
       'ClangToTiOS': 'ios',
       'Closure Compilation Linux': 'closure_compilation',
@@ -306,19 +308,10 @@
     'chromium.memory': {
       'Linux ASan LSan Builder': 'asan_lsan_release_trybot',
       'Linux Chromium OS ASan LSan Builder': 'asan_lsan_chromeos_release_trybot',
+      'Linux ChromiumOS MSan Builder': 'chromeos_msan_release_bot',
+      'Linux MSan Builder': 'msan_release_bot',
       'Linux TSan Builder': 'tsan_disable_nacl_release_bot',
       'Mac ASan 64 Builder': 'asan_full_symbols_disable_nacl_release_bot_dcheck_always_on',
-    },
-
-    'chromium.memory.fyi': {
-      'Chromium Linux ChromeOS MSan Builder': 'chromeos_msan_release_bot',
-      'Chromium Linux MSan Builder': 'msan_release_bot',
-    },
-
-    'chromium.memory.full': {
-      'Chromium Linux ChromeOS MSan Builder': 'chromeos_msan_release_bot',
-      'Chromium Linux MSan Builder': 'msan_release_bot',
-      'Chromium Linux TSan Builder': 'tsan_disable_nacl_release_bot',
     },
 
     'chromium.perf': {
@@ -433,7 +426,7 @@
     'official.desktop': {
       'linux64': 'official',
       'mac64': 'official',
-      'precise64': 'official_six_concurrent_links',
+      'mac64-recipes': 'official',
 
       # Currently the official bots set mini_installer_official_deps=1
       # but it's not clear if that's actually used anywhere.
@@ -450,18 +443,19 @@
         '1': 'official_chrome_pgo_phase_1',
         '2': 'official_chrome_pgo_phase_2',
       },
-      # TODO(mmoss): Remove this once official recipes are working and this
-      # just becomes the regular "win64-pgo" builder.
-      'win64-pgo-recipes': {
-        '1': 'official_chrome_pgo_phase_1',
-        '2': 'official_chrome_pgo_phase_2',
-      },
+      # TODO(mmoss): Remove this once all official Windows recipes are working.
+      'win-recipes': 'official',
     },
 
     'official.desktop.continuous': {
       'mac beta': 'official',
       'mac stable': 'official',
       'mac trunk': 'official',
+      'linux64 beta': 'official_six_concurrent_links',
+      'linux64 stable': 'official_six_concurrent_links',
+      'linux64 trunk': 'official_six_concurrent_links',
+      # TODO(mmoss): These precise64 entries can go away once the newly renamed
+      # builders are fully deployed.
       'precise64 beta': 'official_six_concurrent_links',
       'precise64 stable': 'official_six_concurrent_links',
       'precise64 trunk': 'official_six_concurrent_links',
@@ -568,6 +562,7 @@
       'linux_chromium_headless_rel': 'headless_linux_release_trybot',
       'linux_chromium_ozone_compile_only_ng': 'ozone_linux_release_trybot',
       'linux_chromium_ozone_ng': 'ozone_linux_release_trybot',
+      'linux_layout_tests_slimming_paint_v2': 'release_trybot',
 
       # This is intentionally a release_bot and not a release_trybot;
       # enabling DCHECKs seems to cause flaky failures that don't show up
@@ -582,7 +577,6 @@
       # 'release_trybot' includes 'dcheck_always_on', which might cause
       # some layout test results to be different than for normal release
       # builds (and we only store baselines for release builds).
-      'linux_layout_tests_slimming_paint_v2': 'release_bot',
       'linux_layout_tests_layout_ng': 'release_bot',
 
       'linux_nacl_sdk_build': 'release_bot',
@@ -601,6 +595,7 @@
       'ios-simulator-xcode-clang': 'ios',
       'mac_chromium_10.10_rel_ng': 'gpu_tests_release_trybot',
       'mac_chromium_10.10_macviews': 'mac_views_browser_release_trybot',
+      'mac_chromium_10.12_rel_ng': 'gpu_tests_release_trybot',
       'mac_chromium_archive_rel_ng': 'release_bot_mac_strip',
       'mac_chromium_asan_rel_ng': 'asan_dcheck_disable_nacl_release_bot',
       'mac_chromium_compile_dbg_ng': 'debug_trybot',
@@ -1112,8 +1107,8 @@
       'clang_tot', 'full_symbols', 'shared', 'release',
     ],
 
-    'clang_tot_minimal_symbols_shared_debug': [
-      'clang_tot', 'minimal_symbols', 'shared', 'debug',
+    'clang_tot_shared_debug': [
+      'clang_tot', 'shared', 'debug',
     ],
 
     'clang_tot_full_symbols_shared_debug_use_lld': [
@@ -1124,8 +1119,8 @@
       'clang_tot', 'full_symbols', 'shared', 'debug', 'use_lld', 'x86',
     ],
 
-    'clang_tot_minimal_symbols_shared_debug_x86': [
-      'clang_tot', 'minimal_symbols', 'shared', 'debug', 'x86',
+    'clang_tot_shared_debug_x86': [
+      'clang_tot', 'shared', 'debug', 'x86',
     ],
 
     'clang_tot_shared_release_use_lld': [
@@ -1645,7 +1640,7 @@
     'cronet': {
       'gn_args': ('disable_file_support=true disable_ftp_support=true '
                   'enable_websockets=false use_platform_icu_alternatives=true '
-                  'disable_brotli_filter=true use_partition_alloc=false'),
+                  'use_partition_alloc=false'),
     },
 
     'cros_chrome_sdk': {
@@ -1734,7 +1729,10 @@
     'goma': {
       # The MB code will properly escape goma_dir if necessary in the GYP
       # code path; the GN code path needs no escaping.
-      'gn_args': 'use_goma=true',
+      # We also set strip_absolute_paths to ensure that we can get deterministic
+      # builds. This isn't just on by default when goma is on so that devs
+      # can do goma builds but still be able to debug by default.
+      'gn_args': 'use_goma=true strip_absolute_paths_from_debug_symbols=true',
     },
 
     'gpu_fyi_tests': {
@@ -1785,7 +1783,7 @@
     },
 
     'minimal_symbols': {
-      'gn_args': 'symbol_level=1 strip_absolute_paths_from_debug_symbols=true',
+      'gn_args': 'symbol_level=1',
     },
 
     'mipsel': {

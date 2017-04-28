@@ -13,13 +13,14 @@
 #include "net/test/test_data_directory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "third_party/boringssl/src/include/openssl/ecdsa.h"
+#include "third_party/boringssl/src/include/openssl/evp.h"
 
 namespace net {
 
 namespace {
 
 bool GetClientCertInfoFromFile(const char* filename,
-                               SSLPrivateKey::Type* out_type,
+                               int* out_type,
                                size_t* out_max_length) {
   scoped_refptr<X509Certificate> cert =
       ImportCertFromFile(GetTestCertsDirectory(), filename);
@@ -38,23 +39,23 @@ size_t BitsToBytes(size_t bits) {
 }  // namespace
 
 TEST(SSLPlatformKeyUtil, GetClientCertInfo) {
-  SSLPrivateKey::Type type;
+  int type;
   size_t max_length;
 
   ASSERT_TRUE(GetClientCertInfoFromFile("client_1.pem", &type, &max_length));
-  EXPECT_EQ(SSLPrivateKey::Type::RSA, type);
+  EXPECT_EQ(EVP_PKEY_RSA, type);
   EXPECT_EQ(2048u / 8u, max_length);
 
   ASSERT_TRUE(GetClientCertInfoFromFile("client_4.pem", &type, &max_length));
-  EXPECT_EQ(SSLPrivateKey::Type::ECDSA_P256, type);
+  EXPECT_EQ(EVP_PKEY_EC, type);
   EXPECT_EQ(ECDSA_SIG_max_len(BitsToBytes(256)), max_length);
 
   ASSERT_TRUE(GetClientCertInfoFromFile("client_5.pem", &type, &max_length));
-  EXPECT_EQ(SSLPrivateKey::Type::ECDSA_P384, type);
+  EXPECT_EQ(EVP_PKEY_EC, type);
   EXPECT_EQ(ECDSA_SIG_max_len(BitsToBytes(384)), max_length);
 
   ASSERT_TRUE(GetClientCertInfoFromFile("client_6.pem", &type, &max_length));
-  EXPECT_EQ(SSLPrivateKey::Type::ECDSA_P521, type);
+  EXPECT_EQ(EVP_PKEY_EC, type);
   EXPECT_EQ(ECDSA_SIG_max_len(BitsToBytes(521)), max_length);
 }
 

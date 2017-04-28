@@ -15,6 +15,7 @@
 #include "base/threading/thread_task_runner_handle.h"
 #include "net/base/request_priority.h"
 #include "net/test/gtest_util.h"
+#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_job.h"
 #include "net/url_request/url_request_test_util.h"
@@ -64,8 +65,9 @@ class DummyProtocolHandler : public URLRequestJobFactory::ProtocolHandler {
 TEST(URLRequestJobFactoryTest, NoProtocolHandler) {
   TestDelegate delegate;
   TestURLRequestContext request_context;
-  std::unique_ptr<URLRequest> request(request_context.CreateRequest(
-      GURL("foo://bar"), DEFAULT_PRIORITY, &delegate));
+  std::unique_ptr<URLRequest> request(
+      request_context.CreateRequest(GURL("foo://bar"), DEFAULT_PRIORITY,
+                                    &delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
   request->Start();
 
   base::RunLoop().Run();
@@ -79,8 +81,9 @@ TEST(URLRequestJobFactoryTest, BasicProtocolHandler) {
   request_context.set_job_factory(&job_factory);
   job_factory.SetProtocolHandler("foo",
                                  base::WrapUnique(new DummyProtocolHandler));
-  std::unique_ptr<URLRequest> request(request_context.CreateRequest(
-      GURL("foo://bar"), DEFAULT_PRIORITY, &delegate));
+  std::unique_ptr<URLRequest> request(
+      request_context.CreateRequest(GURL("foo://bar"), DEFAULT_PRIORITY,
+                                    &delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
   request->Start();
 
   base::RunLoop().Run();

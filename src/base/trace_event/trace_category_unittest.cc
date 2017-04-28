@@ -130,7 +130,7 @@ TEST_F(TraceCategoryTest, ThreadRaces) {
                            WaitableEvent::InitialState::NOT_SIGNALED);
   for (int i = 0; i < kNumThreads; i++) {
     threads[i]->task_runner()->PostTask(
-        FROM_HERE, Bind(&TestRaceThreadMain, Unretained(&sync_event)));
+        FROM_HERE, BindOnce(&TestRaceThreadMain, Unretained(&sync_event)));
   }
   sync_event.Signal();
   for (int i = 0; i < kNumThreads; i++)

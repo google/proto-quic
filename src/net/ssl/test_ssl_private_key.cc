@@ -24,12 +24,10 @@ namespace {
 
 class TestSSLPlatformKey : public ThreadedSSLPrivateKey::Delegate {
  public:
-  TestSSLPlatformKey(bssl::UniquePtr<EVP_PKEY> key, SSLPrivateKey::Type type)
-      : key_(std::move(key)), type_(type) {}
+  explicit TestSSLPlatformKey(bssl::UniquePtr<EVP_PKEY> key)
+      : key_(std::move(key)) {}
 
   ~TestSSLPlatformKey() override {}
-
-  SSLPrivateKey::Type GetType() override { return type_; }
 
   std::vector<SSLPrivateKey::Hash> GetDigestPreferences() override {
     static const SSLPrivateKey::Hash kHashes[] = {
@@ -37,10 +35,6 @@ class TestSSLPlatformKey : public ThreadedSSLPrivateKey::Delegate {
         SSLPrivateKey::Hash::SHA256, SSLPrivateKey::Hash::SHA1};
     return std::vector<SSLPrivateKey::Hash>(kHashes,
                                             kHashes + arraysize(kHashes));
-  }
-
-  size_t GetMaxSignatureLengthInBytes() override {
-    return EVP_PKEY_size(key_.get());
   }
 
   Error SignDigest(SSLPrivateKey::Hash hash,
@@ -52,7 +46,7 @@ class TestSSLPlatformKey : public ThreadedSSLPrivateKey::Delegate {
     if (!EVP_PKEY_sign_init(ctx.get()))
       return ERR_SSL_CLIENT_AUTH_SIGNATURE_FAILED;
 
-    if (type_ == SSLPrivateKey::Type::RSA) {
+    if (EVP_PKEY_id(key_.get()) == EVP_PKEY_RSA) {
       const EVP_MD* digest = nullptr;
       switch (hash) {
         case SSLPrivateKey::Hash::MD5_SHA1:
@@ -98,7 +92,6 @@ class TestSSLPlatformKey : public ThreadedSSLPrivateKey::Delegate {
 
  private:
   bssl::UniquePtr<EVP_PKEY> key_;
-  SSLPrivateKey::Type type_;
 
   DISALLOW_COPY_AND_ASSIGN(TestSSLPlatformKey);
 };
@@ -110,36 +103,8 @@ scoped_refptr<SSLPrivateKey> WrapOpenSSLPrivateKey(
   if (!key)
     return nullptr;
 
-  SSLPrivateKey::Type type;
-  switch (EVP_PKEY_id(key.get())) {
-    case EVP_PKEY_RSA:
-      type = SSLPrivateKey::Type::RSA;
-      break;
-    case EVP_PKEY_EC: {
-      EC_KEY* ec_key = EVP_PKEY_get0_EC_KEY(key.get());
-      int curve = EC_GROUP_get_curve_name(EC_KEY_get0_group(ec_key));
-      switch (curve) {
-        case NID_X9_62_prime256v1:
-          type = SSLPrivateKey::Type::ECDSA_P256;
-          break;
-        case NID_secp384r1:
-          type = SSLPrivateKey::Type::ECDSA_P384;
-          break;
-        case NID_secp521r1:
-          type = SSLPrivateKey::Type::ECDSA_P384;
-          break;
-        default:
-          LOG(ERROR) << "Unknown curve: " << curve;
-          return nullptr;
-      }
-      break;
-    }
-    default:
-      LOG(ERROR) << "Unknown key type: " << EVP_PKEY_id(key.get());
-      return nullptr;
-  }
   return make_scoped_refptr(new ThreadedSSLPrivateKey(
-      base::MakeUnique<TestSSLPlatformKey>(std::move(key), type),
+      base::MakeUnique<TestSSLPlatformKey>(std::move(key)),
       GetSSLPlatformKeyTaskRunner()));
 }
 

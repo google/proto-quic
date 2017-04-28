@@ -9,7 +9,7 @@
 <script>
 function addRow(name, url, isdir,
     size, size_string, date_modified, date_modified_string) {
-  if (name == ".")
+  if (name == "." || name == "..")
     return;
 
   var root = document.location.pathname;
@@ -23,27 +23,18 @@ function addRow(name, url, isdir,
 
   link.className = isdir ? "icon dir" : "icon file";
 
-  if (name == "..") {
-    link.href = root + "..";
-    link.innerText = document.getElementById("parentDirText").innerText;
-    link.className = "icon up";
+  if (isdir) {
+    name = name + "/";
+    url = url + "/";
     size = 0;
     size_string = "";
-    date_modified = 0;
-    date_modified_string = "";
   } else {
-    if (isdir) {
-      name = name + "/";
-      url = url + "/";
-      size = 0;
-      size_string = "";
-    } else {
-      link.draggable = "true";
-      link.addEventListener("dragstart", onDragStart, false);
-    }
-    link.innerText = name;
-    link.href = root + url;
+    link.draggable = "true";
+    link.addEventListener("dragstart", onDragStart, false);
   }
+  link.innerText = name;
+  link.href = root + url;
+
   file_cell.dataset.value = name;
   file_cell.appendChild(link);
 
@@ -77,6 +68,18 @@ function start(location) {
   document.getElementById("title").innerText = header.innerText;
 }
 
+function onHasParentDirectory() {
+  var box = document.getElementById("parentDirLinkBox");
+  box.style.display = "block";
+
+  var root = document.location.pathname;
+  if (!root.endsWith("/"))
+    root += "/";
+
+  var link = document.getElementById("parentDirLink");
+  link.href = root + "..";
+}
+
 function onListingParsingError() {
   var box = document.getElementById("listingParsingErrorBox");
   box.innerHTML = box.innerHTML.replace("LOCATION", encodeURI(document.location)
@@ -108,14 +111,11 @@ function sortTable(column) {
     }
 
     // Column 0 is text.
-    // Also the parent directory should always be sorted at one of the ends.
-    if (b == ".." | a > b) {
+    if (a > b)
       return newOrder;
-    } else if (a == ".." | a < b) {
+    if (a < b)
       return oldOrder;
-    } else {
-      return 0;
-    }
+    return 0;
   });
 
   // Appending an existing child again just moves it.
@@ -173,6 +173,11 @@ function sortTable(column) {
     background-position-x: right;
   }
 
+  #parentDirLinkBox {
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+  }
+
   #listingParsingErrorBox {
     border: 1px solid black;
     background: #fae691;
@@ -189,9 +194,13 @@ function sortTable(column) {
 
 <div id="listingParsingErrorBox" i18n-values=".innerHTML:listingParsingErrorBoxText"></div>
 
-<span id="parentDirText" style="display:none" i18n-content="parentDirText"></span>
-
 <h1 id="header" i18n-content="header"></h1>
+
+<div id="parentDirLinkBox" style="display:none">
+  <a id="parentDirLink" class="icon up">
+    <span id="parentDirText" i18n-content="parentDirText"></span>
+  </a>
+</div>
 
 <table>
   <thead>

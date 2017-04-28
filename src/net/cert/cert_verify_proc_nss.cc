@@ -29,6 +29,7 @@
 #include "net/cert/cert_verify_result.h"
 #include "net/cert/crl_set.h"
 #include "net/cert/ev_root_ca_metadata.h"
+#include "net/cert/known_roots_nss.h"
 #include "net/cert/x509_certificate.h"
 #include "net/cert/x509_util_nss.h"
 
@@ -202,18 +203,6 @@ void GetCertChainInfo(CERTCertList* cert_list,
     verify_result->verified_cert = std::move(verified_cert_with_chain);
   else
     verify_result->cert_status |= CERT_STATUS_INVALID;
-}
-
-// IsKnownRoot returns true if the given certificate is one that we believe
-// is a standard (as opposed to user-installed) root.
-bool IsKnownRoot(CERTCertificate* root) {
-  if (!root || !root->slot)
-    return false;
-
-  // This magic name is taken from
-  // http://bonsai.mozilla.org/cvsblame.cgi?file=mozilla/security/nss/lib/ckfw/builtins/constants.c&rev=1.13&mark=86,89#79
-  return 0 == strcmp(PK11_GetSlotName(root->slot),
-                     "NSS Builtin Objects");
 }
 
 // Returns true if the given certificate is one of the additional trust anchors.

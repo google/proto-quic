@@ -19,7 +19,9 @@
         <service android:name="org.chromium.net.test.EmbeddedTestServerService"
                 android:exported="true"
                 tools:ignore="ExportedService">
-            <intent-filter android:action="org.chromium.net.test.EMBEDDED_TEST_SERVER_SERVICE" />
+            <intent-filter>
+                <action android:name="org.chromium.net.test.EMBEDDED_TEST_SERVER_SERVICE" />
+            </intent-filter>
         </service>
 
     </application>

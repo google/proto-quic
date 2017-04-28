@@ -264,7 +264,7 @@ DecodeStatus Http2FrameDecoder::ResumeDecodingAltSvcPayload(DecodeBuffer* db) {
 
 DecodeStatus Http2FrameDecoder::StartDecodingContinuationPayload(
     DecodeBuffer* db) {
-  RetainFlags(Http2FrameFlag::FLAG_END_HEADERS);
+  RetainFlags(Http2FrameFlag::END_HEADERS);
   return continuation_payload_decoder_.StartDecodingPayload(
       &frame_decoder_state_, db);
 }
@@ -278,7 +278,7 @@ DecodeStatus Http2FrameDecoder::ResumeDecodingContinuationPayload(
 }
 
 DecodeStatus Http2FrameDecoder::StartDecodingDataPayload(DecodeBuffer* db) {
-  RetainFlags(Http2FrameFlag::FLAG_END_STREAM | Http2FrameFlag::FLAG_PADDED);
+  RetainFlags(Http2FrameFlag::END_STREAM | Http2FrameFlag::PADDED);
   return data_payload_decoder_.StartDecodingPayload(&frame_decoder_state_, db);
 }
 DecodeStatus Http2FrameDecoder::ResumeDecodingDataPayload(DecodeBuffer* db) {
@@ -299,9 +299,8 @@ DecodeStatus Http2FrameDecoder::ResumeDecodingGoAwayPayload(DecodeBuffer* db) {
 }
 
 DecodeStatus Http2FrameDecoder::StartDecodingHeadersPayload(DecodeBuffer* db) {
-  RetainFlags(Http2FrameFlag::FLAG_END_STREAM |
-              Http2FrameFlag::FLAG_END_HEADERS | Http2FrameFlag::FLAG_PADDED |
-              Http2FrameFlag::FLAG_PRIORITY);
+  RetainFlags(Http2FrameFlag::END_STREAM | Http2FrameFlag::END_HEADERS |
+              Http2FrameFlag::PADDED | Http2FrameFlag::PRIORITY);
   return headers_payload_decoder_.StartDecodingPayload(&frame_decoder_state_,
                                                        db);
 }
@@ -313,7 +312,7 @@ DecodeStatus Http2FrameDecoder::ResumeDecodingHeadersPayload(DecodeBuffer* db) {
 }
 
 DecodeStatus Http2FrameDecoder::StartDecodingPingPayload(DecodeBuffer* db) {
-  RetainFlags(Http2FrameFlag::FLAG_ACK);
+  RetainFlags(Http2FrameFlag::ACK);
   return ping_payload_decoder_.StartDecodingPayload(&frame_decoder_state_, db);
 }
 DecodeStatus Http2FrameDecoder::ResumeDecodingPingPayload(DecodeBuffer* db) {
@@ -339,7 +338,7 @@ DecodeStatus Http2FrameDecoder::ResumeDecodingPriorityPayload(
 
 DecodeStatus Http2FrameDecoder::StartDecodingPushPromisePayload(
     DecodeBuffer* db) {
-  RetainFlags(Http2FrameFlag::FLAG_END_HEADERS | Http2FrameFlag::FLAG_PADDED);
+  RetainFlags(Http2FrameFlag::END_HEADERS | Http2FrameFlag::PADDED);
   return push_promise_payload_decoder_.StartDecodingPayload(
       &frame_decoder_state_, db);
 }
@@ -367,7 +366,7 @@ DecodeStatus Http2FrameDecoder::ResumeDecodingRstStreamPayload(
 }
 
 DecodeStatus Http2FrameDecoder::StartDecodingSettingsPayload(DecodeBuffer* db) {
-  RetainFlags(Http2FrameFlag::FLAG_ACK);
+  RetainFlags(Http2FrameFlag::ACK);
   return settings_payload_decoder_.StartDecodingPayload(&frame_decoder_state_,
                                                         db);
 }

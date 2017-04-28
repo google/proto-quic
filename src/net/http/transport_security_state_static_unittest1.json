@@ -30,9 +30,5 @@
       "include_subdomains": true,
       "pins": "test1"
     }
-  ],
-  "domain_ids": [
-    "NOT_PINNED",
-    "EXAMPLE_COM"
   ]
 }

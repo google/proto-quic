@@ -5,28 +5,34 @@
 {% if variables is defined %}
         {{ prefix }} {
             manifest.srcFile "{{ variables.android_manifest }}"
+{% if variables.java_dirs is defined %}
             java.srcDirs = [
 {% for path in variables.java_dirs %}
                 "{{ path }}",
 {% endfor %}
             ]
-{% if variables.java_excludes %}
+{% endif %}
+{% if variables.java_excludes is defined %}
             java.filter.exclude(
 {% for path in variables.java_excludes %}
                 "{{ path }}",
 {% endfor %}
             )
 {% endif %}
+{% if variables.jniLibs is defined %}
             jniLibs.srcDirs = [
 {% for path in variables.jni_libs %}
                 "{{ path }}",
 {% endfor %}
             ]
+{% endif %}
+{% if variables.res_dirs is defined %}
             res.srcDirs = [
 {% for path in variables.res_dirs %}
                 "{{ path }}",
 {% endfor %}
             ]
+{% endif %}
         }
 {% endif %}
 {% endmacro %}
@@ -42,7 +48,7 @@ android {
     compileSdkVersion "{{ compile_sdk_version }}"
     buildToolsVersion "{{ build_tools_version }}"
     publishNonDefault true
-    // Multiple targets use the package name "dummy.package"
+    // Multiple targets use the package name "org.dummy"
     enforceUniquePackageName false
 
     compileOptions {

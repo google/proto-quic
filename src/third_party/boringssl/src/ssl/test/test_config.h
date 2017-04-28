@@ -27,6 +27,7 @@ struct TestConfig {
   bool fallback_scsv = false;
   std::string digest_prefs;
   std::vector<int> signing_prefs;
+  std::vector<int> verify_prefs;
   std::string key_file;
   std::string cert_file;
   std::string expected_server_name;
@@ -112,7 +113,6 @@ struct TestConfig {
   int expect_peer_signature_algorithm = 0;
   bool p384_only = false;
   bool enable_all_curves = false;
-  bool use_sparse_dh_prime = false;
   int expect_curve_id = 0;
   int expect_resume_curve_id = 0;
   bool use_old_client_cert_callback = false;
@@ -144,6 +144,7 @@ struct TestConfig {
   bool no_op_extra_handshake = false;
   bool handshake_twice = false;
   bool allow_unknown_alpn_protos = false;
+  bool enable_ed25519 = false;
 };
 
 bool ParseConfig(int argc, char **argv, TestConfig *out_config);

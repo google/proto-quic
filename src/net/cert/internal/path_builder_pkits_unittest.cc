@@ -92,7 +92,8 @@ class PathBuilderPkitsTestDelegate {
 
     CertPathBuilder::Result result;
     CertPathBuilder path_builder(std::move(target_cert), &trust_store,
-                                 &signature_policy, time, &result);
+                                 &signature_policy, time, KeyPurpose::ANY_EKU,
+                                 &result);
     path_builder.AddCertIssuerSource(&cert_issuer_source);
 
     path_builder.Run();

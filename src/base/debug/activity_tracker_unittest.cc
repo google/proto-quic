@@ -216,7 +216,7 @@ TEST_F(ActivityTrackerTest, ScopedTaskTest) {
   ASSERT_EQ(0U, snapshot.activity_stack.size());
 
   {
-    PendingTask task1(FROM_HERE, base::Bind(&DoNothing));
+    PendingTask task1(FROM_HERE, base::BindOnce(&DoNothing));
     ScopedTaskRunActivity activity1(task1);
     ActivityUserData& user_data1 = activity1.user_data();
     (void)user_data1;  // Tell compiler it's been used.
@@ -227,7 +227,7 @@ TEST_F(ActivityTrackerTest, ScopedTaskTest) {
     EXPECT_EQ(Activity::ACT_TASK, snapshot.activity_stack[0].activity_type);
 
     {
-      PendingTask task2(FROM_HERE, base::Bind(&DoNothing));
+      PendingTask task2(FROM_HERE, base::BindOnce(&DoNothing));
       ScopedTaskRunActivity activity2(task2);
       ActivityUserData& user_data2 = activity2.user_data();
       (void)user_data2;  // Tell compiler it's been used.
@@ -306,8 +306,6 @@ TEST_F(ActivityTrackerTest, BasicTest) {
 
   // Ensure the data repositories have backing store, indicated by non-zero ID.
   EXPECT_NE(0U, global->process_data().id());
-  EXPECT_NE(0U, global->global_data().id());
-  EXPECT_NE(global->process_data().id(), global->global_data().id());
 }
 
 class SimpleActivityThread : public SimpleThread {
@@ -413,7 +411,7 @@ TEST_F(ActivityTrackerTest, ProcessDeathTest) {
   global->RecordProcessLaunch(other_process_id, FILE_PATH_LITERAL("foo --bar"));
 
   // Do some activities.
-  PendingTask task(FROM_HERE, base::Bind(&DoNothing));
+  PendingTask task(FROM_HERE, base::BindOnce(&DoNothing));
   ScopedTaskRunActivity activity(task);
   ActivityUserData& user_data = activity.user_data();
   ASSERT_NE(0U, user_data.id());

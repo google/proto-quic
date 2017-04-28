@@ -7,11 +7,9 @@
 
 #include <string>
 
-#include "net/ssl/ssl_private_key.h"
-
 namespace net {
 
-const char* SSLPrivateKeyTypeToString(SSLPrivateKey::Type type);
+class SSLPrivateKey;
 
 // Tests that |key| matches the private key serialized in |pkcs8|. It checks the
 // reported type and key size are correct, and then it tests all advertised

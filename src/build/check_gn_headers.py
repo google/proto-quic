@@ -15,12 +15,27 @@ import os
 import re
 import subprocess
 import sys
+from multiprocessing import Process, Queue
 
 
-def GetHeadersFromNinja(out_dir):
+def GetHeadersFromNinja(out_dir, q):
   """Return all the header files from ninja_deps"""
-  ninja_out = subprocess.check_output(['ninja', '-C', out_dir, '-t', 'deps'])
-  return ParseNinjaDepsOutput(ninja_out)
+
+  def NinjaSource():
+    cmd = ['ninja', '-C', out_dir, '-t', 'deps']
+    # A negative bufsize means to use the system default, which usually
+    # means fully buffered.
+    popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=-1)
+    for line in iter(popen.stdout.readline, ''):
+      yield line.rstrip()
+
+    popen.stdout.close()
+    return_code = popen.wait()
+    if return_code:
+      raise subprocess.CalledProcessError(return_code, cmd)
+
+  ninja_out = NinjaSource()
+  q.put(ParseNinjaDepsOutput(ninja_out))
 
 
 def ParseNinjaDepsOutput(ninja_out):
@@ -30,7 +45,7 @@ def ParseNinjaDepsOutput(ninja_out):
   prefix = '..' + os.sep + '..' + os.sep
 
   is_valid = False
-  for line in ninja_out.split('\n'):
+  for line in ninja_out:
     if line.startswith('    '):
       if not is_valid:
         continue
@@ -49,11 +64,11 @@ def ParseNinjaDepsOutput(ninja_out):
   return all_headers
 
 
-def GetHeadersFromGN(out_dir):
+def GetHeadersFromGN(out_dir, q):
   """Return all the header files from GN"""
   subprocess.check_call(['gn', 'gen', out_dir, '--ide=json', '-q'])
   gn_json = json.load(open(os.path.join(out_dir, 'project.json')))
-  return ParseGNProjectJSON(gn_json)
+  q.put(ParseGNProjectJSON(gn_json))
 
 
 def ParseGNProjectJSON(gn):
@@ -70,7 +85,7 @@ def ParseGNProjectJSON(gn):
   return all_headers
 
 
-def GetDepsPrefixes():
+def GetDepsPrefixes(q):
   """Return all the folders controlled by DEPS file"""
   gclient_out = subprocess.check_output(
       ['gclient', 'recurse', '--no-progress', '-j1',
@@ -80,7 +95,7 @@ def GetDepsPrefixes():
     if i.startswith('src/'):
       i = i[4:]
       prefixes.add(i)
-  return prefixes
+  q.put(prefixes)
 
 
 def ParseWhiteList(whitelist):
@@ -101,12 +116,28 @@ def main():
 
   args, _extras = parser.parse_known_args()
 
-  d = GetHeadersFromNinja(args.out_dir)
-  gn = GetHeadersFromGN(args.out_dir)
+  d_q = Queue()
+  d_p = Process(target=GetHeadersFromNinja, args=(args.out_dir, d_q,))
+  d_p.start()
+
+  gn_q = Queue()
+  gn_p = Process(target=GetHeadersFromGN, args=(args.out_dir, gn_q,))
+  gn_p.start()
+
+  deps_q = Queue()
+  deps_p = Process(target=GetDepsPrefixes, args=(deps_q,))
+  deps_p.start()
+
+  d = d_q.get()
+  gn = gn_q.get()
   missing = d - gn
 
-  deps = GetDepsPrefixes()
+  deps = deps_q.get()
   missing = {m for m in missing if not any(m.startswith(d) for d in deps)}
+
+  d_p.join()
+  gn_p.join()
+  deps_p.join()
 
   if args.whitelist:
     whitelist = ParseWhiteList(open(args.whitelist).read())

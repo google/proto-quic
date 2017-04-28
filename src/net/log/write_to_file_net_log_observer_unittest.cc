@@ -19,6 +19,7 @@
 #include "net/log/net_log_source.h"
 #include "net/log/net_log_source_type.h"
 #include "net/log/net_log_util.h"
+#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_context.h"
 #include "net/url_request/url_request_test_util.h"
@@ -217,8 +218,8 @@ TEST_F(WriteToFileNetLogObserverTest,
   TestDelegate delegate;
 
   // URL doesn't matter.  Requests can't fail synchronously.
-  std::unique_ptr<URLRequest> request(
-      context.CreateRequest(GURL("blah:blah"), IDLE, &delegate));
+  std::unique_ptr<URLRequest> request(context.CreateRequest(
+      GURL("blah:blah"), IDLE, &delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
   request->Start();
 
   // Create and destroy a logger.

@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "base/memory/ptr_util.h"
-#include "base/test/scoped_feature_list.h"
 #include "net/cert/cert_net_fetcher.h"
 #include "net/cert/cert_verify_proc_android.h"
 #include "net/cert/cert_verify_result.h"
@@ -143,8 +142,6 @@ CreateMockRequestWithInvalidCertificate() {
 class CertVerifyProcAndroidTestWithAIAFetching : public testing::Test {
  public:
   void SetUp() override {
-    feature_list_.InitAndEnableFeature(
-        CertVerifyProcAndroid::kAIAFetchingFeature);
     fetcher_ = make_scoped_refptr(new MockCertNetFetcher());
     CertVerifyProcAndroid::SetCertNetFetcherForTesting(fetcher_);
   }
@@ -169,7 +166,6 @@ class CertVerifyProcAndroidTestWithAIAFetching : public testing::Test {
   const CertificateList empty_cert_list_;
 
  private:
-  base::test::ScopedFeatureList feature_list_;
   scoped_refptr<X509Certificate> root_;
   std::unique_ptr<ScopedTestRoot> scoped_test_root_;
 };

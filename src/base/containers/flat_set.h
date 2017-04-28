@@ -9,70 +9,31 @@
 
 namespace base {
 
-// Overview:
-// This file implements flat_set container. It is an alternative to standard
-// sorted containers that stores it's elements in contiguous memory using a
-// std::vector.
+// flat_set is a container with a std::set-like interface that stores its
+// contents in a sorted vector.
 //
-// Discussion that preceded introduction of this container can be found here:
-// https://groups.google.com/a/chromium.org/forum/#!searchin/chromium-dev/vector$20based/chromium-dev/4uQMma9vj9w/HaQ-WvMOAwAJ
+// Please see //base/containers/README.md for an overview of which container
+// to select.
 //
-// Motivation:
-// Contiguous memory is very beneficial to iteration and copy speed at the cost
-// of worse algorithmic complexity of insertion/erasure operations. They can
-// be very fast for set operations and for small number of elements.
+// PROS
 //
-// Usage guidance:
-// Prefer base::flat_set for:
-//  * Very small sets, something that is an easy fit for cache. Consider
-//    "very small" to be under 100 32bit integers.
-//  * Sets that are built once (using flat_set::flat_set(first, last)). Consider
-//    collecting all data in a vector and then building flat_set out of it.
-//    Using the constructor that takes a moved vector allows you to re-use
-//    storage.
-//  * Sets where mutating happens in big bulks: to erase multiple elements, use
-//    base::EraseIf() rather than repeated single-element removal. Insertion is
-//    harder - consider set operations or building a new vector. Set operations
-//    can be slow if one of the sets is considerably bigger. Also be aware that
-//    beating performance of sort + unique (implementation of flat_set's
-//    constructor) is hard, clever merge of many sets might not win. Generally
-//    avoid inserting into flat set without benchmarks.
-//  * Copying and iterating.
-//  * Set operations (union/intersect etc).
+//  - Good memory locality.
+//  - Low overhead, especially for smaller sets.
+//  - Performance is good for more workloads than you might expect (see
+//    overview link above).
 //
-// Prefer to build a new flat_set from a std::vector (or similar) instead of
-// calling insert() repeatedly, which would have O(size^2) complexity. The
-// constructor that can accept a moved vector (not required to be sorted) is
-// the most efficient.
+// CONS
 //
-// TODO(dyaroshev): develop standalone benchmarks to find performance boundaries
-// for different types of sets crbug.com/682215.
+//  - Inserts and removals are O(n).
 //
-// If you do write a benchmark that significantly depends on using sets please
-// share your results at:
-// https://groups.google.com/a/chromium.org/forum/#!searchin/chromium-dev/vector$20based/chromium-dev/4uQMma9vj9w/HaQ-WvMOAwAJ
+// IMPORTANT NOTES
 //
-// Important usability aspects:
-//   * flat_set implements std::set interface from C++11 where possible. It
-//     also has reserve(), capacity() and shrink_to_fit() from std::vector.
-//   * iteration invalidation rules differ:
-//     - all cases of std::vector::iterator invalidation also apply.
-//     - we ask (for now) to assume that move operations invalidate iterators.
-//       TODO(dyaroshev): Research the possibility of using a small buffer
-//       optimization crbug.com/682240.
-//   * allocator support is not implemented.
-//   * insert(first, last) and insert(std::initializer_list) are not
-//     implemented (see Notes section).
+//  - Iterators are invalidated across mutations.
+//  - If possible, construct a flat_set in one operation by inserting into
+//    a std::vector and moving that vector into the flat_set constructor.
+//  - For multiple removals use base::EraseIf() which is O(n) rather than
+//    O(n * removed_items).
 //
-// Notes:
-// Current implementation is based on boost::containers::flat_set,
-// eastl::vector_set and folly::sorted_vector. All of these implementations do
-// insert(first, last) as insertion one by one (some implementations with hints
-// and/or reserve). Boost documentation claims this algorithm to be O(n*log(n))
-// but it seems to be a quadratic algorithm. For now we do not implement this
-// method.
-// TODO(dyaroshev): research an algorithm for range insertion crbug.com/682249.
-
 // QUICK REFERENCE
 //
 // Most of the core functionality is inherited from flat_tree. Please see

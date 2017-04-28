@@ -272,8 +272,7 @@ bool ParseCertificatesFile(base::StringPiece certs_input, Pinsets* pinsets) {
 
 bool ParseJSON(base::StringPiece json,
                TransportSecurityStateEntries* entries,
-               Pinsets* pinsets,
-               DomainIDList* domain_ids) {
+               Pinsets* pinsets) {
   std::unique_ptr<base::Value> value = base::JSONReader::Read(json);
   base::DictionaryValue* dict_value = nullptr;
   if (!value.get() || !value->GetAsDictionary(&dict_value)) {
@@ -368,20 +367,6 @@ bool ParseJSON(base::StringPiece json,
     }
 
     pinsets->RegisterPinset(std::move(pinset));
-  }
-
-  // TODO(Martijnc): Remove the domain IDs from the preload format.
-  // https://crbug.com/661206.
-  const base::ListValue* domain_ids_list = nullptr;
-  if (!dict_value->GetList("domain_ids", &domain_ids_list)) {
-    LOG(ERROR) << "Could not parse the domain IDs in the input JSON";
-    return false;
-  }
-
-  for (size_t i = 0; i < domain_ids_list->GetSize(); ++i) {
-    std::string domain;
-    domain_ids_list->GetString(i, &domain);
-    domain_ids->push_back(domain);
   }
 
   return true;

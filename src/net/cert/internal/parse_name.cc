@@ -134,6 +134,12 @@ der::Input TypeStateOrProvinceNameOid() {
   return der::Input(oid);
 }
 
+der::Input TypeStreetAddressOid() {
+  // street (streetAddress): 2.5.4.9 (RFC 4519)
+  static const uint8_t oid[] = {0x55, 0x04, 0x09};
+  return der::Input(oid);
+}
+
 der::Input TypeOrganizationNameOid() {
   // id-at-organizationName: 2.5.4.10 (RFC 5280)
   static const uint8_t oid[] = {0x55, 0x04, 0x0a};
@@ -173,6 +179,13 @@ der::Input TypeInitialsOid() {
 der::Input TypeGenerationQualifierOid() {
   // id-at-generationQualifier: 2.5.4.44 (RFC 5280)
   static const uint8_t oid[] = {0x55, 0x04, 0x2c};
+  return der::Input(oid);
+}
+
+der::Input TypeDomainComponentOid() {
+  // dc (domainComponent): 0.9.2342.19200300.100.1.25 (RFC 4519)
+  static const uint8_t oid[] = {0x09, 0x92, 0x26, 0x89, 0x93,
+                                0xF2, 0x2C, 0x64, 0x01, 0x19};
   return der::Input(oid);
 }
 
@@ -234,6 +247,7 @@ bool X509NameAttribute::ValueAsStringUnsafe(std::string* out) const {
 bool X509NameAttribute::AsRFC2253String(std::string* out) const {
   std::string type_string;
   std::string value_string;
+  // TODO(mattm): Add streetAddress and domainComponent here?
   if (type == TypeCommonNameOid()) {
     type_string = "CN";
   } else if (type == TypeSurnameOid()) {

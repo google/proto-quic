@@ -9,9 +9,9 @@
 #include <string>
 #include <utility>
 
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_headers_stream.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 
@@ -609,10 +609,8 @@ void QuicSpdySession::OnConfigNegotiated() {
         kStreamReceiveWindowLimit);
   }
 
-  if (version > QUIC_VERSION_34) {
-    server_push_enabled_ =
-        FLAGS_quic_reloadable_flag_quic_enable_server_push_by_default;
-  }
+  server_push_enabled_ =
+      FLAGS_quic_reloadable_flag_quic_enable_server_push_by_default;
 }
 
 void QuicSpdySession::OnStreamFrameData(QuicStreamId stream_id,

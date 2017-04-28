@@ -480,7 +480,6 @@ EVENT_TYPE(SSL_CLIENT_CERT_REQUESTED)
 // The SSL stack blocked on a private key operation. The following parameters
 // are attached to the event.
 //   {
-//     "type": <type of the key>,
 //     "hash": <hash function used>,
 //   }
 EVENT_TYPE(SSL_PRIVATE_KEY_OP)
@@ -563,6 +562,15 @@ EVENT_TYPE(SSL_VERSION_FALLBACK)
 //   }
 EVENT_TYPE(SSL_CIPHER_FALLBACK)
 
+// An SSL connection needs to be retried with a lower protocol version to detect
+// if the error was due to a middlebox interfering with the protocol version we
+// offered.
+// The following parameters are attached to the event:
+//   {
+//     "net_error": <Net integer error code which triggered the probe>,
+//   }
+EVENT_TYPE(SSL_VERSION_INTERFERENCE_PROBE)
+
 // We found that our prediction of the server's certificates was correct and
 // we merged the verification with the SSLHostInfo. (Note: now obsolete.)
 EVENT_TYPE(SSL_VERIFICATION_MERGED)
@@ -576,6 +584,24 @@ EVENT_TYPE(SSL_VERIFICATION_MERGED)
 //     "ssl_lib_error": <NSS library's integer code for the specific error type>
 //   }
 EVENT_TYPE(SSL_NSS_ERROR)
+
+// An SSL connection sent or received an alert.
+// The following parameters are attached:
+//   {
+//     "hex_encoded_bytes": <The exact bytes sent, as a hexadecimal string>
+//   }
+EVENT_TYPE(SSL_ALERT_RECEIVED)
+EVENT_TYPE(SSL_ALERT_SENT)
+
+// An SSL connection sent or received a handshake message.
+// The following parameters are attached:
+//   {
+//     "type": <The type of the handshake message, as an integer>
+//     "hex_encoded_bytes": <The exact bytes sent, as a hexadecimal string. May
+//                           be elided in some cases>
+//   }
+EVENT_TYPE(SSL_HANDSHAKE_MESSAGE_RECEIVED)
+EVENT_TYPE(SSL_HANDSHAKE_MESSAGE_SENT)
 
 // The specified number of bytes were sent on the socket.  Depending on the
 // source of the event, may be logged either once the data is sent, or when it
@@ -1661,9 +1687,6 @@ EVENT_TYPE(QUIC_STREAM_FACTORY_JOB)
 //  }
 EVENT_TYPE(QUIC_STREAM_FACTORY_JOB_BOUND_TO_HTTP_STREAM_JOB)
 
-// Measures the time taken to load server information.
-EVENT_TYPE(QUIC_STREAM_FACTORY_JOB_LOAD_SERVER_INFO)
-
 // Measures the time taken to establish a QUIC connection.
 // The event parameters are:
 //  {
@@ -2222,6 +2245,9 @@ EVENT_TYPE(SERVICE_WORKER_FETCH_EVENT)
 //   "error": The error reason as a string.
 // }
 EVENT_TYPE(SERVICE_WORKER_SCRIPT_LOAD_UNHANDLED_REQUEST_ERROR)
+
+// This event is emitted when a navigation preload request is created.
+EVENT_TYPE(SERVICE_WORKER_NAVIGATION_PRELOAD_REQUEST)
 
 // ------------------------------------------------------------------------
 // Global events

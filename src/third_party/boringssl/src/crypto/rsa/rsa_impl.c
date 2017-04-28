@@ -57,12 +57,14 @@
 #include <openssl/rsa.h>
 
 #include <assert.h>
+#include <limits.h>
 #include <string.h>
 
 #include <openssl/bn.h>
 #include <openssl/err.h>
 #include <openssl/mem.h>
 #include <openssl/thread.h>
+#include <openssl/type_check.h>
 
 #include "internal.h"
 #include "../bn/internal.h"
@@ -649,11 +651,6 @@ static int mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa, BN_CTX *ctx) {
 
   BIGNUM *r1, *m1, *vrfy;
   int ret = 0;
-  size_t i, num_additional_primes = 0;
-
-  if (rsa->additional_primes != NULL) {
-    num_additional_primes = sk_RSA_additional_prime_num(rsa->additional_primes);
-  }
 
   BN_CTX_start(ctx);
   r1 = BN_CTX_get(ctx);
@@ -731,31 +728,6 @@ static int mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa, BN_CTX *ctx) {
     goto err;
   }
 
-  for (i = 0; i < num_additional_primes; i++) {
-    /* multi-prime RSA. */
-    RSA_additional_prime *ap =
-        sk_RSA_additional_prime_value(rsa->additional_primes, i);
-
-    /* c will already point to a BIGNUM with the correct flags. */
-    if (!BN_mod(r1, I, ap->prime, ctx)) {
-      goto err;
-    }
-
-    if (!BN_MONT_CTX_set_locked(&ap->mont, &rsa->lock, ap->prime, ctx) ||
-        !BN_mod_exp_mont_consttime(m1, r1, ap->exp, ap->prime, ctx, ap->mont)) {
-      goto err;
-    }
-
-    if (!BN_sub(m1, m1, r0) ||
-        !BN_mul(m1, m1, ap->coeff, ctx) ||
-        !BN_mod(m1, m1, ap->prime, ctx) ||
-        (BN_is_negative(m1) && !BN_add(m1, m1, ap->prime)) ||
-        !BN_mul(m1, m1, ap->r, ctx) ||
-        !BN_add(r0, r0, m1)) {
-      goto err;
-    }
-  }
-
   ret = 1;
 
 err:
@@ -763,248 +735,260 @@ err:
   return ret;
 }
 
-int rsa_default_multi_prime_keygen(RSA *rsa, int bits, int num_primes,
-                                   BIGNUM *e_value, BN_GENCB *cb) {
-  BIGNUM *r0 = NULL, *r1 = NULL, *r2 = NULL, *r3 = NULL, *tmp;
-  int prime_bits, ok = -1, n = 0, i, j;
-  BN_CTX *ctx = NULL;
-  STACK_OF(RSA_additional_prime) *additional_primes = NULL;
+static int ensure_bignum(BIGNUM **out) {
+  if (*out == NULL) {
+    *out = BN_new();
+  }
+  return *out != NULL;
+}
 
-  if (num_primes < 2) {
-    ok = 0; /* we set our own err */
-    OPENSSL_PUT_ERROR(RSA, RSA_R_MUST_HAVE_AT_LEAST_TWO_PRIMES);
+/* kBoringSSLRSASqrtTwo is the BIGNUM representation of ⌊2¹⁵³⁵×√2⌋. This is
+ * chosen to give enough precision for 3072-bit RSA, the largest key size FIPS
+ * specifies. Key sizes beyond this will round up.
+ *
+ * To verify this number, check that n² < 2³⁰⁷¹ < (n+1)², where n is value
+ * represented here. Note the components are listed in little-endian order. Here
+ * is some sample Python code to check:
+ *
+ *   >>> TOBN = lambda a, b: a << 32 | b
+ *   >>> l = [ <paste the contents of kSqrtTwo> ]
+ *   >>> n = sum(a * 2**(64*i) for i, a in enumerate(l))
+ *   >>> n**2 < 2**3071 < (n+1)**2
+ *   True
+ */
+const BN_ULONG kBoringSSLRSASqrtTwo[] = {
+    TOBN(0xdea06241, 0xf7aa81c2), TOBN(0xf6a1be3f, 0xca221307),
+    TOBN(0x332a5e9f, 0x7bda1ebf), TOBN(0x0104dc01, 0xfe32352f),
+    TOBN(0xb8cf341b, 0x6f8236c7), TOBN(0x4264dabc, 0xd528b651),
+    TOBN(0xf4d3a02c, 0xebc93e0c), TOBN(0x81394ab6, 0xd8fd0efd),
+    TOBN(0xeaa4a089, 0x9040ca4a), TOBN(0xf52f120f, 0x836e582e),
+    TOBN(0xcb2a6343, 0x31f3c84d), TOBN(0xc6d5a8a3, 0x8bb7e9dc),
+    TOBN(0x460abc72, 0x2f7c4e33), TOBN(0xcab1bc91, 0x1688458a),
+    TOBN(0x53059c60, 0x11bc337b), TOBN(0xd2202e87, 0x42af1f4e),
+    TOBN(0x78048736, 0x3dfa2768), TOBN(0x0f74a85e, 0x439c7b4a),
+    TOBN(0xa8b1fe6f, 0xdc83db39), TOBN(0x4afc8304, 0x3ab8a2c3),
+    TOBN(0xed17ac85, 0x83339915), TOBN(0x1d6f60ba, 0x893ba84c),
+    TOBN(0x597d89b3, 0x754abe9f), TOBN(0xb504f333, 0xf9de6484),
+};
+const size_t kBoringSSLRSASqrtTwoLen = OPENSSL_ARRAY_SIZE(kBoringSSLRSASqrtTwo);
+
+int rsa_less_than_words(const BN_ULONG *a, const BN_ULONG *b, size_t len) {
+  OPENSSL_COMPILE_ASSERT(sizeof(BN_ULONG) <= sizeof(crypto_word_t),
+                         crypto_word_t_too_small);
+  int ret = 0;
+  /* Process the words in little-endian order. */
+  for (size_t i = 0; i < len; i++) {
+    crypto_word_t eq = constant_time_eq_w(a[i], b[i]);
+    crypto_word_t lt = constant_time_lt_w(a[i], b[i]);
+    ret = constant_time_select_int(eq, ret, constant_time_select_int(lt, 1, 0));
+  }
+  return ret;
+}
+
+int rsa_greater_than_pow2(const BIGNUM *b, int n) {
+  if (BN_is_negative(b) || n == INT_MAX) {
+    return 0;
+  }
+
+  int b_bits = BN_num_bits(b);
+  return b_bits > n + 1 || (b_bits == n + 1 && !BN_is_pow2(b));
+}
+
+/* generate_prime sets |out| to a prime with length |bits| such that |out|-1 is
+ * relatively prime to |e|. If |p| is non-NULL, |out| will also not be close to
+ * |p|. */
+static int generate_prime(BIGNUM *out, int bits, const BIGNUM *e,
+                          const BIGNUM *p, BN_CTX *ctx, BN_GENCB *cb) {
+  if (bits < 128 || (bits % BN_BITS2) != 0) {
+    OPENSSL_PUT_ERROR(RSA, ERR_R_INTERNAL_ERROR);
+    return 0;
+  }
+
+  /* Ensure the bound on |tries| does not overflow. */
+  if (bits >= INT_MAX/5) {
+    OPENSSL_PUT_ERROR(RSA, RSA_R_MODULUS_TOO_LARGE);
+    return 0;
+  }
+
+  int ret = 0, tries = 0, rand_tries = 0;
+  BN_CTX_start(ctx);
+  BIGNUM *tmp = BN_CTX_get(ctx);
+  if (tmp == NULL) {
     goto err;
   }
 
-  ctx = BN_CTX_new();
+  /* See FIPS 186-4 appendix B.3.3, steps 4 and 5. Note |bits| here is
+   * nlen/2. */
+  for (;;) {
+    /* Generate a random number of length |bits| where the bottom bit is set
+     * (steps 4.2, 4.3, 5.2 and 5.3) and the top bit is set (implied by the
+     * bound checked below in steps 4.4 and 5.5). */
+    if (!BN_rand(out, bits, BN_RAND_TOP_ONE, BN_RAND_BOTTOM_ODD) ||
+        !BN_GENCB_call(cb, BN_GENCB_GENERATED, rand_tries++)) {
+      goto err;
+    }
+
+    if (p != NULL) {
+      /* If |p| and |out| are too close, try again (step 5.4). */
+      if (!BN_sub(tmp, out, p)) {
+        goto err;
+      }
+      BN_set_negative(tmp, 0);
+      if (!rsa_greater_than_pow2(tmp, bits - 100)) {
+        continue;
+      }
+    }
+
+    /* If out < 2^(bits-1)×√2, try again (steps 4.4 and 5.5).
+     *
+     * We check the most significant words, so we retry if ⌊out/2^k⌋ <= ⌊b/2^k⌋,
+     * where b = 2^(bits-1)×√2 and k = max(0, bits - 1536). For key sizes up to
+     * 3072 (bits = 1536), k = 0, so we are testing that ⌊out⌋ <= ⌊b⌋. out is an
+     * integer and b is not, so this is equivalent to out < b. That is, the
+     * comparison is exact for FIPS key sizes.
+     *
+     * For larger keys, the comparison is approximate, leaning towards
+     * retrying. That is, we reject a negligible fraction of primes that are
+     * within the FIPS bound, but we will never accept a prime outside the
+     * bound, ensuring the resulting RSA key is the right size. Specifically, if
+     * the FIPS bound holds, we have ⌊out/2^k⌋ < out/2^k < b/2^k. This implies
+     * ⌊out/2^k⌋ <= ⌊b/2^k⌋. That is, the FIPS bound implies our bound and so we
+     * are slightly tighter. */
+    size_t out_len = (size_t)out->top;
+    assert(out_len == (size_t)bits / BN_BITS2);
+    size_t to_check = kBoringSSLRSASqrtTwoLen;
+    if (to_check > out_len) {
+      to_check = out_len;
+    }
+    if (!rsa_less_than_words(
+            kBoringSSLRSASqrtTwo + kBoringSSLRSASqrtTwoLen - to_check,
+            out->d + out_len - to_check, to_check)) {
+      continue;
+    }
+
+    /* Check gcd(out-1, e) is one (steps 4.5 and 5.6). */
+    if (!BN_sub(tmp, out, BN_value_one()) ||
+        !BN_gcd(tmp, tmp, e, ctx)) {
+      goto err;
+    }
+    if (BN_is_one(tmp)) {
+      /* Test |out| for primality (steps 4.5.1 and 5.6.1).
+       * TODO(davidben): Align the primality test with FIPS 186-4. */
+      int is_probable_prime;
+      if (!BN_primality_test(&is_probable_prime, out, BN_prime_checks, ctx, 1,
+                             cb)) {
+        goto err;
+      }
+      if (is_probable_prime) {
+        ret = 1;
+        goto err;
+      }
+    }
+
+    /* If we've tried too many times to find a prime, abort (steps 4.7 and
+     * 5.8). */
+    tries++;
+    if (tries >= bits * 5) {
+      OPENSSL_PUT_ERROR(RSA, RSA_R_TOO_MANY_ITERATIONS);
+      goto err;
+    }
+    if (!BN_GENCB_call(cb, 2, tries)) {
+      goto err;
+    }
+  }
+
+err:
+  BN_CTX_end(ctx);
+  return ret;
+}
+
+int rsa_default_keygen(RSA *rsa, int bits, BIGNUM *e_value, BN_GENCB *cb) {
+  /* See FIPS 186-4 appendix B.3. This function implements a generalized version
+   * of the FIPS algorithm. For FIPS compliance, the caller is responsible for
+   * passing in 2048 or 3072 to |bits| and 65537 for |e_value|. */
+
+  /* Always generate RSA keys which are a multiple of 128 bits. Round |bits|
+   * down as needed. */
+  bits &= ~127;
+
+  /* Reject excessively small keys. */
+  if (bits < 256) {
+    OPENSSL_PUT_ERROR(RSA, RSA_R_KEY_SIZE_TOO_SMALL);
+    return 0;
+  }
+
+  int ret = 0;
+  BN_CTX *ctx = BN_CTX_new();
   if (ctx == NULL) {
-    goto err;
+    goto bn_err;
   }
   BN_CTX_start(ctx);
-  r0 = BN_CTX_get(ctx);
-  r1 = BN_CTX_get(ctx);
-  r2 = BN_CTX_get(ctx);
-  r3 = BN_CTX_get(ctx);
+  BIGNUM *r0 = BN_CTX_get(ctx);
+  BIGNUM *r1 = BN_CTX_get(ctx);
+  BIGNUM *r2 = BN_CTX_get(ctx);
+  BIGNUM *r3 = BN_CTX_get(ctx);
   if (r0 == NULL || r1 == NULL || r2 == NULL || r3 == NULL) {
-    goto err;
+    goto bn_err;
   }
 
-  if (num_primes > 2) {
-    additional_primes = sk_RSA_additional_prime_new_null();
-    if (additional_primes == NULL) {
-      goto err;
-    }
-  }
-
-  for (i = 2; i < num_primes; i++) {
-    RSA_additional_prime *ap = OPENSSL_malloc(sizeof(RSA_additional_prime));
-    if (ap == NULL) {
-      goto err;
-    }
-    OPENSSL_memset(ap, 0, sizeof(RSA_additional_prime));
-    ap->prime = BN_new();
-    ap->exp = BN_new();
-    ap->coeff = BN_new();
-    ap->r = BN_new();
-    if (ap->prime == NULL ||
-        ap->exp == NULL ||
-        ap->coeff == NULL ||
-        ap->r == NULL ||
-        !sk_RSA_additional_prime_push(additional_primes, ap)) {
-      RSA_additional_prime_free(ap);
-      goto err;
-    }
-  }
-
-  /* We need the RSA components non-NULL */
-  if (!rsa->n && ((rsa->n = BN_new()) == NULL)) {
-    goto err;
-  }
-  if (!rsa->d && ((rsa->d = BN_new()) == NULL)) {
-    goto err;
-  }
-  if (!rsa->e && ((rsa->e = BN_new()) == NULL)) {
-    goto err;
-  }
-  if (!rsa->p && ((rsa->p = BN_new()) == NULL)) {
-    goto err;
-  }
-  if (!rsa->q && ((rsa->q = BN_new()) == NULL)) {
-    goto err;
-  }
-  if (!rsa->dmp1 && ((rsa->dmp1 = BN_new()) == NULL)) {
-    goto err;
-  }
-  if (!rsa->dmq1 && ((rsa->dmq1 = BN_new()) == NULL)) {
-    goto err;
-  }
-  if (!rsa->iqmp && ((rsa->iqmp = BN_new()) == NULL)) {
-    goto err;
+  /* We need the RSA components non-NULL. */
+  if (!ensure_bignum(&rsa->n) ||
+      !ensure_bignum(&rsa->d) ||
+      !ensure_bignum(&rsa->e) ||
+      !ensure_bignum(&rsa->p) ||
+      !ensure_bignum(&rsa->q) ||
+      !ensure_bignum(&rsa->dmp1) ||
+      !ensure_bignum(&rsa->dmq1) ||
+      !ensure_bignum(&rsa->iqmp)) {
+    goto bn_err;
   }
 
   if (!BN_copy(rsa->e, e_value)) {
-    goto err;
+    goto bn_err;
   }
 
-  /* generate p and q */
-  prime_bits = (bits + (num_primes - 1)) / num_primes;
-  for (;;) {
-    if (!BN_generate_prime_ex(rsa->p, prime_bits, 0, NULL, NULL, cb) ||
-        !BN_sub(r2, rsa->p, BN_value_one()) ||
-        !BN_gcd(r1, r2, rsa->e, ctx)) {
-      goto err;
-    }
-    if (BN_is_one(r1)) {
-      break;
-    }
-    if (!BN_GENCB_call(cb, 2, n++)) {
-      goto err;
-    }
-  }
-  if (!BN_GENCB_call(cb, 3, 0)) {
-    goto err;
-  }
-  prime_bits = ((bits - prime_bits) + (num_primes - 2)) / (num_primes - 1);
-  for (;;) {
-    /* When generating ridiculously small keys, we can get stuck
-     * continually regenerating the same prime values. Check for
-     * this and bail if it happens 3 times. */
-    unsigned int degenerate = 0;
-    do {
-      if (!BN_generate_prime_ex(rsa->q, prime_bits, 0, NULL, NULL, cb)) {
-        goto err;
-      }
-    } while ((BN_cmp(rsa->p, rsa->q) == 0) && (++degenerate < 3));
-    if (degenerate == 3) {
-      ok = 0; /* we set our own err */
-      OPENSSL_PUT_ERROR(RSA, RSA_R_KEY_SIZE_TOO_SMALL);
-      goto err;
-    }
-    if (!BN_sub(r2, rsa->q, BN_value_one()) ||
-        !BN_gcd(r1, r2, rsa->e, ctx)) {
-      goto err;
-    }
-    if (BN_is_one(r1)) {
-      break;
-    }
-    if (!BN_GENCB_call(cb, 2, n++)) {
-      goto err;
-    }
-  }
-
-  if (!BN_GENCB_call(cb, 3, 1) ||
-      !BN_mul(rsa->n, rsa->p, rsa->q, ctx)) {
-    goto err;
-  }
-
-  for (i = 2; i < num_primes; i++) {
-    RSA_additional_prime *ap =
-        sk_RSA_additional_prime_value(additional_primes, i - 2);
-    prime_bits = ((bits - BN_num_bits(rsa->n)) + (num_primes - (i + 1))) /
-                 (num_primes - i);
-
-    for (;;) {
-      if (!BN_generate_prime_ex(ap->prime, prime_bits, 0, NULL, NULL, cb)) {
-        goto err;
-      }
-      if (BN_cmp(rsa->p, ap->prime) == 0 ||
-          BN_cmp(rsa->q, ap->prime) == 0) {
-        continue;
-      }
-
-      for (j = 0; j < i - 2; j++) {
-        if (BN_cmp(sk_RSA_additional_prime_value(additional_primes, j)->prime,
-                   ap->prime) == 0) {
-          break;
-        }
-      }
-      if (j != i - 2) {
-        continue;
-      }
-
-      if (!BN_sub(r2, ap->prime, BN_value_one()) ||
-          !BN_gcd(r1, r2, rsa->e, ctx)) {
-        goto err;
-      }
-
-      if (!BN_is_one(r1)) {
-        continue;
-      }
-      if (i != num_primes - 1) {
-        break;
-      }
-
-      /* For the last prime we'll check that it makes n large enough. In the
-       * two prime case this isn't a problem because we generate primes with
-       * the top two bits set and so the product is always of the expected
-       * size. In the multi prime case, this doesn't follow. */
-      if (!BN_mul(r1, rsa->n, ap->prime, ctx)) {
-        goto err;
-      }
-      if (BN_num_bits(r1) == (unsigned) bits) {
-        break;
-      }
-
-      if (!BN_GENCB_call(cb, 2, n++)) {
-        goto err;
-      }
+  int prime_bits = bits / 2;
+  do {
+    /* Generate p and q, each of size |prime_bits|, using the steps outlined in
+     * appendix FIPS 186-4 appendix B.3.3. */
+    if (!generate_prime(rsa->p, prime_bits, rsa->e, NULL, ctx, cb) ||
+        !BN_GENCB_call(cb, 3, 0) ||
+        !generate_prime(rsa->q, prime_bits, rsa->e, rsa->p, ctx, cb) ||
+        !BN_GENCB_call(cb, 3, 1)) {
+      goto bn_err;
     }
 
-    /* ap->r is is the product of all the primes prior to the current one
-     * (including p and q). */
-    if (!BN_copy(ap->r, rsa->n)) {
-      goto err;
-    }
-    if (i == num_primes - 1) {
-      /* In the case of the last prime, we calculated n as |r1| in the loop
-       * above. */
-      if (!BN_copy(rsa->n, r1)) {
-        goto err;
-      }
-    } else if (!BN_mul(rsa->n, rsa->n, ap->prime, ctx)) {
-      goto err;
+    if (BN_cmp(rsa->p, rsa->q) < 0) {
+      BIGNUM *tmp = rsa->p;
+      rsa->p = rsa->q;
+      rsa->q = tmp;
     }
 
-    if (!BN_GENCB_call(cb, 3, 1)) {
-      goto err;
+    /* Calculate d. */
+    if (!BN_sub(r1 /* p-1 */, rsa->p, BN_value_one()) ||
+        !BN_sub(r2 /* q-1 */, rsa->q, BN_value_one()) ||
+        !BN_mul(r0 /* (p-1)(q-1) */, r1, r2, ctx) ||
+        !BN_mod_inverse(rsa->d, rsa->e, r0, ctx)) {
+      goto bn_err;
     }
+
+    /* Check that |rsa->d| > 2^|prime_bits| and try again if it fails. See
+     * appendix B.3.1's guidance on values for d. */
+  } while (!rsa_greater_than_pow2(rsa->d, prime_bits));
+
+  if (/* Calculate n. */
+      !BN_mul(rsa->n, rsa->p, rsa->q, ctx) ||
+      /* Calculate d mod (p-1). */
+      !BN_mod(rsa->dmp1, rsa->d, r1, ctx) ||
+      /* Calculate d mod (q-1) */
+      !BN_mod(rsa->dmq1, rsa->d, r2, ctx)) {
+    goto bn_err;
   }
 
-  if (BN_cmp(rsa->p, rsa->q) < 0) {
-    tmp = rsa->p;
-    rsa->p = rsa->q;
-    rsa->q = tmp;
-  }
-
-  /* calculate d */
-  if (!BN_sub(r1, rsa->p, BN_value_one())) {
-    goto err; /* p-1 */
-  }
-  if (!BN_sub(r2, rsa->q, BN_value_one())) {
-    goto err; /* q-1 */
-  }
-  if (!BN_mul(r0, r1, r2, ctx)) {
-    goto err; /* (p-1)(q-1) */
-  }
-  for (i = 2; i < num_primes; i++) {
-    RSA_additional_prime *ap =
-        sk_RSA_additional_prime_value(additional_primes, i - 2);
-    if (!BN_sub(r3, ap->prime, BN_value_one()) ||
-        !BN_mul(r0, r0, r3, ctx)) {
-      goto err;
-    }
-  }
-  if (!BN_mod_inverse(rsa->d, rsa->e, r0, ctx)) {
-    goto err; /* d */
-  }
-
-  /* calculate d mod (p-1) */
-  if (!BN_mod(rsa->dmp1, rsa->d, r1, ctx)) {
-    goto err;
-  }
-
-  /* calculate d mod (q-1) */
-  if (!BN_mod(rsa->dmq1, rsa->d, r2, ctx)) {
+  /* Sanity-check that |rsa->n| has the specified size. This is implied by
+   * |generate_prime|'s bounds. */
+  if (BN_num_bits(rsa->n) != (unsigned)bits) {
+    OPENSSL_PUT_ERROR(RSA, ERR_R_INTERNAL_ERROR);
     goto err;
   }
 
@@ -1015,49 +999,29 @@ int rsa_default_multi_prime_keygen(RSA *rsa, int bits, int num_primes,
   if (!BN_MONT_CTX_set_locked(&rsa->mont_p, &rsa->lock, rsa->p, ctx) ||
       !bn_mod_inverse_secret_prime(rsa->iqmp, rsa->q, rsa->p, ctx,
                                    rsa->mont_p)) {
-    goto err;
+    goto bn_err;
   }
-
-  for (i = 2; i < num_primes; i++) {
-    RSA_additional_prime *ap =
-        sk_RSA_additional_prime_value(additional_primes, i - 2);
-    if (!BN_sub(ap->exp, ap->prime, BN_value_one()) ||
-        !BN_mod(ap->exp, rsa->d, ap->exp, ctx) ||
-        !BN_MONT_CTX_set_locked(&ap->mont, &rsa->lock, ap->prime, ctx) ||
-        !bn_mod_inverse_secret_prime(ap->coeff, ap->r, ap->prime, ctx,
-                                     ap->mont)) {
-      goto err;
-    }
-  }
-
-  rsa->additional_primes = additional_primes;
-  additional_primes = NULL;
 
   /* The key generation process is complex and thus error-prone. It could be
    * disastrous to generate and then use a bad key so double-check that the key
    * makes sense. */
-  ok = RSA_check_key(rsa);
-  if (!ok) {
+  if (!RSA_check_key(rsa)) {
     OPENSSL_PUT_ERROR(RSA, RSA_R_INTERNAL_ERROR);
+    goto err;
   }
 
-err:
-  if (ok == -1) {
+  ret = 1;
+
+bn_err:
+  if (!ret) {
     OPENSSL_PUT_ERROR(RSA, ERR_LIB_BN);
-    ok = 0;
   }
+err:
   if (ctx != NULL) {
     BN_CTX_end(ctx);
     BN_CTX_free(ctx);
   }
-  sk_RSA_additional_prime_pop_free(additional_primes,
-                                   RSA_additional_prime_free);
-  return ok;
-}
-
-int rsa_default_keygen(RSA *rsa, int bits, BIGNUM *e_value, BN_GENCB *cb) {
-  return rsa_default_multi_prime_keygen(rsa, bits, 2 /* num primes */, e_value,
-                                        cb);
+  return ret;
 }
 
 /* All of the methods are NULL to make it easier for the compiler/linker to drop
@@ -1091,7 +1055,7 @@ const RSA_METHOD RSA_default_method = {
   RSA_FLAG_CACHE_PUBLIC | RSA_FLAG_CACHE_PRIVATE,
 
   NULL /* keygen (defaults to rsa_default_keygen) */,
-  NULL /* multi_prime_keygen (defaults to rsa_default_multi_prime_keygen) */,
+  NULL /* multi_prime_keygen (ignored) */,
 
   NULL /* supports_digest */,
 };

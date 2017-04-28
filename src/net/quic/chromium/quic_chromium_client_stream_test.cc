@@ -66,7 +66,13 @@ class MockQuicClientSessionBase : public QuicClientSessionBase {
                                      QuicClientPushPromiseIndex* index);
   ~MockQuicClientSessionBase() override;
 
-  QuicCryptoStream* GetCryptoStream() override { return crypto_stream_.get(); }
+  const QuicCryptoStream* GetCryptoStream() const override {
+    return crypto_stream_.get();
+  }
+
+  QuicCryptoStream* GetMutableCryptoStream() override {
+    return crypto_stream_.get();
+  }
 
   // From QuicSession.
   MOCK_METHOD3(OnConnectionClosed,
@@ -82,7 +88,7 @@ class MockQuicClientSessionBase : public QuicClientSessionBase {
                        QuicStreamId id,
                        QuicIOVector data,
                        QuicStreamOffset offset,
-                       bool fin,
+                       StreamSendingState fin,
                        QuicReferenceCountedPointer<QuicAckListenerInterface>));
   MOCK_METHOD3(SendRstStream,
                void(QuicStreamId stream_id,
@@ -101,7 +107,7 @@ class MockQuicClientSessionBase : public QuicClientSessionBase {
                void(QuicStreamId stream_id,
                     QuicStreamId promised_stream_id,
                     size_t frame_len));
-  MOCK_METHOD0(IsCryptoHandshakeConfirmed, bool());
+  MOCK_CONST_METHOD0(IsCryptoHandshakeConfirmed, bool());
   // Methods taking non-copyable types like SpdyHeaderBlock by value cannot be
   // mocked directly.
   size_t WriteHeaders(QuicStreamId id,

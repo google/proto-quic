@@ -15,6 +15,12 @@
         "background:tools:gmail": {
             "DEFAULT": "system_health_mobile_043.wpr"
         },
+        "browse:chrome:newtab": {
+            "DEFAULT": "system_health_mobile_056.wpr"
+        },
+        "browse:chrome:omnibox": {
+            "DEFAULT": "system_health_mobile_056.wpr"
+        },
         "browse:media:facebook_photos": {
             "DEFAULT": "system_health_mobile_040.wpr"
         },
@@ -27,8 +33,14 @@
         "browse:news:cnn": {
             "DEFAULT": "system_health_mobile_014.wpr"
         },
+        "browse:news:cricbuzz": {
+            "DEFAULT": "system_health_mobile_055.wpr"
+        },
         "browse:news:flipboard": {
             "DEFAULT": "system_health_mobile_025.wpr"
+        },
+        "browse:news:globo": {
+            "DEFAULT": "system_health_mobile_055.wpr"
         },
         "browse:news:hackernews": {
             "DEFAULT": "system_health_mobile_016.wpr"
@@ -42,14 +54,35 @@
         "browse:news:reddit": {
             "DEFAULT": "system_health_mobile_027.wpr"
         },
+        "browse:news:toi": {
+            "DEFAULT": "system_health_mobile_055.wpr"
+        },
         "browse:news:washingtonpost": {
             "DEFAULT": "system_health_mobile_021.wpr"
+        },
+        "browse:shopping:amazon": {
+            "DEFAULT": "system_health_mobile_053.wpr"
+        },
+        "browse:shopping:avito": {
+            "DEFAULT": "system_health_mobile_053.wpr"
+        },
+        "browse:shopping:flipkart": {
+            "DEFAULT": "system_health_mobile_061.wpr"
+        },
+        "browse:shopping:lazada": {
+            "DEFAULT": "system_health_mobile_053.wpr"
         },
         "browse:social:facebook": {
             "DEFAULT": "system_health_mobile_028.wpr"
         },
+        "browse:social:instagram": {
+            "DEFAULT": "system_health_mobile_060.wpr"
+        },
         "browse:social:twitter": {
             "DEFAULT": "system_health_mobile_023.wpr"
+        },
+        "browse:tools:maps": {
+            "DEFAULT": "system_health_mobile_059.wpr"
         },
         "load:games:bubbles": {
             "DEFAULT": "system_health_mobile_005.wpr"
@@ -95,6 +128,9 @@
         },
         "load:news:hackernews": {
             "DEFAULT": "system_health_mobile_008.wpr"
+        },
+        "load:news:irctc": {
+            "DEFAULT": "system_health_mobile_058.wpr"
         },
         "load:news:nytimes": {
             "DEFAULT": "system_health_mobile_009.wpr"

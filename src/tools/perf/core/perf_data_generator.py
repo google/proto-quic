@@ -16,9 +16,9 @@ import re
 import sys
 import sets
 
-from chrome_telemetry_build import chromium_config
+from core import path_util
+path_util.AddTelemetryToPath()
 
-sys.path.append(chromium_config.GetTelemetryDir())
 from telemetry import benchmark as benchmark_module
 from telemetry import decorators
 from telemetry.core import discover
@@ -122,15 +122,13 @@ def add_builder(waterfall, name, additional_compile_targets=None):
   return waterfall
 
 def add_tester(waterfall, name, perf_id, platform, target_bits=64,
-              num_host_shards=1, num_device_shards=1, swarming=None,
-              use_whitelist=False):
+              num_host_shards=1, num_device_shards=1, swarming=None):
   del perf_id # this will be needed
   waterfall['testers'][name] = {
     'platform': platform,
     'num_device_shards': num_device_shards,
     'num_host_shards': num_host_shards,
     'target_bits': target_bits,
-    'use_whitelist': use_whitelist
   }
 
   if swarming:
@@ -149,6 +147,7 @@ def get_fyi_waterfall_config():
       {
        'gpu': '1002:9874',
        'os': 'Windows-10-10586',
+       'pool': 'Chrome-perf-fyi',
        'device_ids': [
            'build171-b4', 'build186-b4', 'build202-b4', 'build203-b4',
            'build204-b4', 'build205-b4', 'build206-b4', 'build207-b4',
@@ -165,6 +164,7 @@ def get_fyi_waterfall_config():
       {
        'gpu': '8086:22b1',
        'os': 'Windows-10-10586',
+       'pool': 'Chrome-perf-fyi',
        'device_ids': [
            'build136-b1', 'build137-b1', 'build138-b1', 'build139-b1',
            'build140-b1', 'build141-b1', 'build142-b1', 'build143-b1',
@@ -188,6 +188,7 @@ def get_fyi_waterfall_config():
       {
        'os': 'Android',
        'android_devices': '1',
+       'pool': 'Chrome-perf-fyi',
        'device_ids': [
            'build245-m4--device1', 'build245-m4--device2',
            'build245-m4--device3', 'build245-m4--device4',
@@ -243,6 +244,7 @@ def get_waterfall_config():
       {
        'gpu': '8086:161e',
        'os': 'Windows-10-10240',
+       'pool': 'Chrome-perf',
        'device_ids': [
            'build30-b1', 'build31-b1',
            'build32-b1', 'build33-b1', 'build34-b1'
@@ -255,6 +257,7 @@ def get_waterfall_config():
       {
        'gpu': '8086:1616',
        'os': 'Windows-10-10240',
+       'pool': 'Chrome-perf',
        'device_ids': [
            'build117-b1', 'build118-b1',
            'build119-b1', 'build120-b1',
@@ -268,6 +271,7 @@ def get_waterfall_config():
       {
        'gpu': '102b:0534',
        'os': 'Windows-10-10240',
+       'pool': 'Chrome-perf',
        'device_ids': [
            'build132-m1', 'build133-m1',
            'build134-m1', 'build135-m1', 'build136-m1'
@@ -282,6 +286,7 @@ def get_waterfall_config():
       {
        'gpu': '102b:0532',
        'os': 'Windows-2012ServerR2-SP0',
+       'pool': 'Chrome-perf',
        'device_ids': [
            'build143-m1', 'build144-m1',
            'build145-m1', 'build146-m1', 'build147-m1'
@@ -299,6 +304,7 @@ def get_waterfall_config():
       {
        'gpu': '102b:0532',
        'os': 'Windows-2008ServerR2-SP1',
+       'pool': 'Chrome-perf',
        'device_ids': [
            'build185-m1', 'build186-m1',
            'build187-m1', 'build188-m1', 'build189-m1'
@@ -316,6 +322,7 @@ def get_waterfall_config():
       {
        'gpu': '102b:0532',
        'os': 'Windows-2008ServerR2-SP1',
+       'pool': 'Chrome-perf',
        'device_ids': [
            'build138-m1', 'build139-m1',
            'build140-m1', 'build141-m1', 'build142-m1'
@@ -332,6 +339,7 @@ def get_waterfall_config():
       {
        'gpu': '1002:6613',
        'os': 'Windows-2008ServerR2-SP1',
+       'pool': 'Chrome-perf',
        'device_ids': [
            'build101-m1', 'build102-m1',
            'build103-m1', 'build104-m1', 'build105-m1'
@@ -350,6 +358,7 @@ def get_waterfall_config():
       {
        'gpu': '8086:041a',
        'os': 'Windows-2008ServerR2-SP1',
+       'pool': 'Chrome-perf',
        'device_ids': [
            'build164-m1', 'build165-m1',
            'build166-m1', 'build167-m1', 'build168-m1'
@@ -367,6 +376,7 @@ def get_waterfall_config():
       {
        'gpu': '10de:104a',
        'os': 'Windows-2008ServerR2-SP1',
+       'pool': 'Chrome-perf',
        'device_ids': [
            'build92-m1', 'build93-m1',
            'build94-m1', 'build95-m1', 'build96-m1'
@@ -386,6 +396,7 @@ def get_waterfall_config():
       {
        'gpu': '8086:0166',
        'os': 'Mac-10.11',
+       'pool': 'Chrome-perf',
        'device_ids': [
            'build102-b1', 'build103-b1',
            'build104-b1', 'build105-b1', 'build106-b1'
@@ -401,6 +412,7 @@ def get_waterfall_config():
       {
        'os': 'Mac-10.12',
        'gpu': '8086:0a2e',
+       'pool': 'Chrome-perf',
        'device_ids': [
            'build158-m1', 'build159-m1', 'build160-m1',
            'build161-m1', 'build162-m1']
@@ -413,6 +425,7 @@ def get_waterfall_config():
       {
        'gpu': '8086:0d26',
        'os': 'Mac-10.11',
+       'pool': 'Chrome-perf',
        'device_ids': [
            'build4-b1', 'build5-b1', 'build6-b1', 'build7-b1', 'build8-b1'
           ]
@@ -425,6 +438,7 @@ def get_waterfall_config():
       {
        'gpu': '1002:6821',
        'os': 'Mac-10.11',
+       'pool': 'Chrome-perf',
        'device_ids': [
            'build128-b1', 'build129-b1',
            'build130-b1', 'build131-b1', 'build132-b1'
@@ -438,6 +452,7 @@ def get_waterfall_config():
       {
        'gpu': '8086:1626',
        'os': 'Mac-10.11',
+       'pool': 'Chrome-perf',
        'device_ids': [
            'build123-b1', 'build124-b1',
            'build125-b1', 'build126-b1', 'build127-b1'
@@ -451,6 +466,7 @@ def get_waterfall_config():
       {
        'gpu': '8086:0a26',
        'os': 'Mac-10.12',
+       'pool': 'Chrome-perf',
        'device_ids': [
            'build24-b1', 'build25-b1',
            'build26-b1', 'build27-b1', 'build28-b1'
@@ -464,6 +480,7 @@ def get_waterfall_config():
       {
        'gpu': '102b:0534',
        'os': 'Ubuntu-14.04',
+       'pool': 'Chrome-perf',
        'device_ids': [
            'build148-m1', 'build149-m1',
            'build150-m1', 'build151-m1', 'build152-m1'
@@ -471,7 +488,8 @@ def get_waterfall_config():
        'perf_tests': [
          # crbug.com/698831
          # ('cc_perftests', 2),
-         ('load_library_perf_tests', 2),
+         # crbug.com/709274
+         # ('load_library_perf_tests', 2),
          ('tracing_perftests', 2),
          ('media_perftests', 3)]
       }
@@ -562,7 +580,7 @@ def get_swarming_dimension(dimension, device_affinity):
   complete_dimension = {
     'id': dimension['device_ids'][device_affinity],
     'os': dimension['os'],
-    'pool': 'Chrome-perf',
+    'pool': dimension['pool'],
   }
   if 'gpu' in dimension:
     complete_dimension['gpu'] = dimension['gpu']
@@ -580,8 +598,8 @@ def generate_cplusplus_isolate_script_test(dimension):
   ]
 
 
-def generate_telemetry_tests(
-  tester_config, benchmarks, benchmark_sharding_map, use_whitelist):
+def generate_telemetry_tests(tester_config, benchmarks, benchmark_sharding_map,
+                             benchmark_ref_build_blacklist):
   isolated_scripts = []
   # First determine the browser that you need based on the tester
   browser_name = ''
@@ -603,12 +621,9 @@ def generate_telemetry_tests(
       device_affinity = None
       if benchmark_sharding_map:
         sharding_map = benchmark_sharding_map.get(str(num_shards), None)
-        if not sharding_map and not use_whitelist:
+        if not sharding_map:
           raise Exception('Invalid number of shards, generate new sharding map')
-        if use_whitelist:
-          device_affinity = current_shard
-        else:
-          device_affinity = sharding_map.get(benchmark.Name(), None)
+        device_affinity = sharding_map.get(benchmark.Name(), None)
       else:
         # No sharding map was provided, default to legacy device
         # affinity algorithm
@@ -624,24 +639,18 @@ def generate_telemetry_tests(
       swarming_dimensions, benchmark.Name(), browser_name)
     isolated_scripts.append(test)
     # Now create another executable for this benchmark on the reference browser
-    reference_test = generate_telemetry_test(
-      swarming_dimensions, benchmark.Name(),'reference')
-    isolated_scripts.append(reference_test)
-    if current_shard == (num_shards - 1):
-      current_shard = 0
-    else:
-      current_shard += 1
+    # if it is not blacklisted from running on the reference browser.
+    if benchmark.Name() not in benchmark_ref_build_blacklist:
+      reference_test = generate_telemetry_test(
+        swarming_dimensions, benchmark.Name(),'reference')
+      isolated_scripts.append(reference_test)
+      if current_shard == (num_shards - 1):
+        current_shard = 0
+      else:
+        current_shard += 1
 
   return isolated_scripts
 
-
-BENCHMARK_NAME_WHITELIST = set([
-    u'smoothness.top_25_smooth',
-    u'sunspider',
-    u'system_health.webview_startup',
-    u'page_cycler_v2.intl_hi_ru',
-    u'dromaeo.cssqueryjquery',
-])
 
 # List of benchmarks that are to never be run on a waterfall.
 BENCHMARK_NAME_BLACKLIST = [
@@ -655,20 +664,22 @@ BENCHMARK_NAME_BLACKLIST = [
     'skpicture_printer_ct',
 ]
 
+
 # Overrides the default 2 hour timeout for swarming tasks.
 BENCHMARK_SWARMING_TIMEOUTS = {
-    'loading.mobile': 14400,
+    'loading.mobile': 14400, # 4 hours
+    'system_health.memory_mobile': 10800, # 4 hours
 }
 
-# Certain swarming bots are not sharding correctly with the new device affinity
-# algorithm.  Reverting to legacy algorithm to try and get them to complete.
-# See crbug.com/670284
-LEGACY_DEVICE_AFFIINITY_ALGORITHM = [
-  'Win Zenbook Perf',
-  'Win 10 High-DPI Perf',
+
+# List of benchmarks that are to never be run with reference builds.
+BENCHMARK_REF_BUILD_BLACKLIST = [
+  'power.idle_platform',
 ]
 
-def current_benchmarks(use_whitelist):
+
+
+def current_benchmarks():
   benchmarks_dir = os.path.join(src_dir(), 'tools', 'perf', 'benchmarks')
   top_level_dir = os.path.dirname(benchmarks_dir)
 
@@ -682,10 +693,6 @@ def current_benchmarks(use_whitelist):
         all_benchmarks.remove(benchmark)
         break
 
-  if use_whitelist:
-    all_benchmarks = (
-        bench for bench in all_benchmarks
-        if bench.Name() in BENCHMARK_NAME_WHITELIST)
   return sorted(all_benchmarks, key=lambda b: b.Name())
 
 
@@ -743,8 +750,7 @@ def shard_benchmarks(num_shards, all_benchmarks):
 def generate_all_tests(waterfall):
   tests = {}
 
-  all_benchmarks = current_benchmarks(False)
-  whitelist_benchmarks = current_benchmarks(True)
+  all_benchmarks = current_benchmarks()
   # Get benchmark sharding according to common sharding configurations
   # Currently we only have bots sharded 5 directions and 1 direction
   benchmark_sharding_map = {}
@@ -754,10 +760,7 @@ def generate_all_tests(waterfall):
   benchmark_sharding_map['21'] = shard_benchmarks(21, all_benchmarks)
 
   for name, config in waterfall['testers'].iteritems():
-    use_whitelist = config['use_whitelist']
     benchmark_list = all_benchmarks
-    if use_whitelist:
-      benchmark_list = whitelist_benchmarks
     if config.get('swarming', False):
       # Our current configuration only ever has one set of swarming dimensions
       # Make sure this still holds true
@@ -765,10 +768,9 @@ def generate_all_tests(waterfall):
         raise Exception('Invalid assumption on number of swarming dimensions')
       # Generate benchmarks
       sharding_map = benchmark_sharding_map
-      if name in LEGACY_DEVICE_AFFIINITY_ALGORITHM:
-        sharding_map = None
       isolated_scripts = generate_telemetry_tests(
-          config, benchmark_list, sharding_map, use_whitelist)
+          config, benchmark_list, sharding_map,
+          BENCHMARK_REF_BUILD_BLACKLIST)
       # Generate swarmed non-telemetry tests if present
       if config['swarming_dimensions'][0].get('perf_tests', False):
         isolated_scripts += generate_cplusplus_isolate_script_test(
@@ -872,7 +874,7 @@ def get_all_waterfall_benchmarks_metadata():
 
 
 def get_all_benchmarks_metadata(metadata):
-  benchmark_list = current_benchmarks(False)
+  benchmark_list = current_benchmarks()
 
   for benchmark in benchmark_list:
     emails = decorators.GetEmails(benchmark)

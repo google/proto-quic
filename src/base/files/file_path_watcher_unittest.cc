@@ -56,8 +56,8 @@ class NotificationCollector
   // Called from the file thread by the delegates.
   void OnChange(TestDelegate* delegate) {
     task_runner_->PostTask(
-        FROM_HERE, base::Bind(&NotificationCollector::RecordChange, this,
-                              base::Unretained(delegate)));
+        FROM_HERE, base::BindOnce(&NotificationCollector::RecordChange, this,
+                                  base::Unretained(delegate)));
   }
 
   void Register(TestDelegate* delegate) {

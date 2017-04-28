@@ -204,18 +204,21 @@ bool AllocationContextTracker::GetContextSnapshot(AllocationContext* ctx) {
         // from main() and up. Stack unwinding produces top frames, i.e.
         // from this point and up until main(). We request many frames to
         // make sure we reach main(), and then copy bottom portion of them.
+#if !defined(OS_NACL)  // We don't build base/debug/stack_trace.cc for NaCl.
+#if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
         const void* frames[128];
         static_assert(arraysize(frames) >= Backtrace::kMaxFrameCount,
                       "not requesting enough frames to fill Backtrace");
-#if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS) && !defined(OS_NACL)
         size_t frame_count = debug::TraceStackFramePointers(
-            frames,
-            arraysize(frames),
-            1 /* exclude this function from the trace */ );
-#else
-        size_t frame_count = 0;
-        NOTREACHED();
-#endif
+            frames, arraysize(frames),
+            1 /* exclude this function from the trace */);
+#else   // BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
+        // Fall-back to capturing the stack with base::debug::StackTrace,
+        // which is likely slower, but more reliable.
+        base::debug::StackTrace stack_trace(Backtrace::kMaxFrameCount);
+        size_t frame_count = 0u;
+        const void* const* frames = stack_trace.Addresses(&frame_count);
+#endif  // BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 
         // Copy frames backwards
         size_t backtrace_capacity = backtrace_end - backtrace;
@@ -226,6 +229,7 @@ bool AllocationContextTracker::GetContextSnapshot(AllocationContext* ctx) {
           const void* frame = frames[i];
           *backtrace++ = StackFrame::FromProgramCounter(frame);
         }
+#endif  // !defined(OS_NACL)
         break;
       }
   }

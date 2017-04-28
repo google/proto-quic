@@ -1063,4 +1063,110 @@ void FilePersistentMemoryAllocator::FlushPartial(size_t length, bool sync) {
 }
 #endif  // !defined(OS_NACL)
 
+//----- DelayedPersistentAllocation --------------------------------------------
+
+// Forwarding constructors.
+DelayedPersistentAllocation::DelayedPersistentAllocation(
+    PersistentMemoryAllocator* allocator,
+    subtle::Atomic32* ref,
+    uint32_t type,
+    size_t size,
+    bool make_iterable)
+    : DelayedPersistentAllocation(
+          allocator,
+          reinterpret_cast<std::atomic<Reference>*>(ref),
+          type,
+          size,
+          0,
+          make_iterable) {}
+
+DelayedPersistentAllocation::DelayedPersistentAllocation(
+    PersistentMemoryAllocator* allocator,
+    subtle::Atomic32* ref,
+    uint32_t type,
+    size_t size,
+    size_t offset,
+    bool make_iterable)
+    : DelayedPersistentAllocation(
+          allocator,
+          reinterpret_cast<std::atomic<Reference>*>(ref),
+          type,
+          size,
+          offset,
+          make_iterable) {}
+
+DelayedPersistentAllocation::DelayedPersistentAllocation(
+    PersistentMemoryAllocator* allocator,
+    std::atomic<Reference>* ref,
+    uint32_t type,
+    size_t size,
+    bool make_iterable)
+    : DelayedPersistentAllocation(allocator,
+                                  ref,
+                                  type,
+                                  size,
+                                  0,
+                                  make_iterable) {}
+
+// Real constructor.
+DelayedPersistentAllocation::DelayedPersistentAllocation(
+    PersistentMemoryAllocator* allocator,
+    std::atomic<Reference>* ref,
+    uint32_t type,
+    size_t size,
+    size_t offset,
+    bool make_iterable)
+    : allocator_(allocator),
+      type_(type),
+      size_(size),
+      offset_(offset),
+      make_iterable_(make_iterable),
+      reference_(ref) {
+  DCHECK(allocator_);
+  DCHECK_NE(0U, type_);
+  DCHECK_LT(0U, size_);
+  DCHECK(reference_);
+}
+
+DelayedPersistentAllocation::~DelayedPersistentAllocation() {}
+
+void* DelayedPersistentAllocation::Get() const {
+  // Relaxed operations are acceptable here because it's not protecting the
+  // contents of the allocation in any way.
+  Reference ref = reference_->load(std::memory_order_relaxed);
+  if (!ref) {
+    ref = allocator_->Allocate(size_, type_);
+    if (!ref)
+      return nullptr;
+
+    // Store the new reference in its proper location using compare-and-swap.
+    // Use a "strong" exchange to ensure no false-negatives since the operation
+    // cannot be retried.
+    Reference existing = 0;  // Must be mutable; receives actual value.
+    if (reference_->compare_exchange_strong(existing, ref,
+                                            std::memory_order_relaxed,
+                                            std::memory_order_relaxed)) {
+      if (make_iterable_)
+        allocator_->MakeIterable(ref);
+    } else {
+      // Failure indicates that something else has raced ahead, performed the
+      // allocation, and stored its reference. Purge the allocation that was
+      // just done and use the other one instead.
+      DCHECK_EQ(type_, allocator_->GetType(existing));
+      DCHECK_LE(size_, allocator_->GetAllocSize(existing));
+      allocator_->ChangeType(ref, 0, type_, /*clear=*/false);
+      ref = existing;
+    }
+  }
+
+  char* mem = allocator_->GetAsArray<char>(ref, type_, size_);
+  if (!mem) {
+    // This should never happen but be tolerant if it does as corruption from
+    // the outside is something to guard against.
+    NOTREACHED();
+    return nullptr;
+  }
+  return mem + offset_;
+}
+
 }  // namespace base

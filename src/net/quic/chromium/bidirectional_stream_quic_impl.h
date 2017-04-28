@@ -17,7 +17,7 @@
 #include "net/http/bidirectional_stream_impl.h"
 #include "net/quic/chromium/quic_chromium_client_session.h"
 #include "net/quic/chromium/quic_chromium_client_stream.h"
-#include "net/spdy/spdy_header_block.h"
+#include "net/spdy/core/spdy_header_block.h"
 
 namespace base {
 class Timer;
@@ -84,7 +84,7 @@ class NET_EXPORT_PRIVATE BidirectionalStreamQuicImpl
 
   base::WeakPtr<QuicChromiumClientSession> session_;
   bool was_handshake_confirmed_;  // True if the crypto handshake succeeded.
-  QuicChromiumClientSession::StreamRequest stream_request_;
+  std::unique_ptr<QuicChromiumClientSession::StreamRequest> stream_request_;
   QuicChromiumClientStream* stream_;  // Non-owning.
 
   const BidirectionalStreamRequestInfo* request_info_;

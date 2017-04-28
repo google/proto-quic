@@ -4,21 +4,24 @@
 latest builds are m59, we want to compare to the commit before the m58 branch
 point).
 
-2. Download and unzip build artifacts from the relevant perf builder. You can
-use this link:
-[https<nolink>://storage.cloud.google.com/chrome-perf/**Android%20Builder**/full-build-linux_**3a87aecc31cd1ffe751dd72c04e5a96a1fc8108a**.zip](https://storage.cloud.google.com/chrome-perf/Android%20Builder/full-build-linux_3a87aecc31cd1ffe751dd72c04e5a96a1fc8108a.zip)
-, replacing the bolded parts with your info OR from the
-"gsutil upload_build_product" step on the bot page (both are Googlers only).
+2. Download and unzip build artifacts from the relevant perf builder.
 
-3. Upload the apk: _upload_to_google_storage.py --bucket
-'chromium-android-tools/apks/**Android_Builder**/**58**'
-**path/to/ApkTarget.apk**_ replacing the bolded parts again.
-  * Note that we use **Android_Builder** instead of **Android Builder** (replace
-spaces with underscores)
+    gsutil.py cp 'gs://chrome-perf/Android Builder/full-build-linux_COMMITHASH.zip' /dest/dir
 
-4. Move the generated .sha1 file to the corresponding place in
-//build/android/binary_size/apks/. In this case, the path would be
-//build/android/binary_size/apks/Android_Builder/58
+3. Unzip. Steps 4, 5, and 6 must be done for MonochromePublic.apk for
+`gs://chrome-perf/Android Builder` and ChromeModernPublic.apk for
+`gs://chrome-perf/Android arm64 Builder` (and can be done for additional APKS,
+but these are the ones used by `build/android/resource_sizes.py`)
 
-5. Commit the added .sha1 files and (optionally) update the `CURRENT_MILESTONE`
+4. Upload the apk (replacing the bolded parts again - note that we use
+**Android_Builder** instead of **Android Builder** (replace spaces with
+underscores):
+
+    upload_to_google_storage.py --bucket 'chromium-android-tools/apks/Android_Builder/58' dest/dir/MonochromePublic.apk
+
+5. Move the generated .sha1 file to the corresponding place in
+`//build/android/binary_size/apks/`. In this case, the path would be
+`//build/android/binary_size/apks/Android_Builder/58`
+
+6. Commit the added .sha1 files and (optionally) update the `CURRENT_MILESTONE`
 in apk_downloader.py

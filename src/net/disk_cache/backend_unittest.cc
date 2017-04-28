@@ -4037,3 +4037,57 @@ TEST_F(DiskCacheBackendTest, SimpleCacheLateDoom) {
   EXPECT_EQ(disk_cache::SimpleIndex::INITIALIZE_METHOD_LOADED,
             simple_cache_impl_->index()->init_method());
 }
+
+TEST_F(DiskCacheBackendTest, SimpleLastModified) {
+  // Simple cache used to incorrectly set LastModified on entries based on
+  // timestamp of the cache directory, and not the entries' file
+  // (https://crbug.com/714143). So this test arranges for a situation
+  // where this would occur by doing:
+  // 1) Write entry 1
+  // 2) Delay
+  // 3) Write entry 2. This sets directory time stamp to be different from
+  //    timestamp of entry 1 (due to the delay)
+  // It then checks whether the entry 1 got the proper timestamp or not.
+
+  SetSimpleCacheMode();
+  InitCache();
+  std::string key1 = GenerateKey(true);
+  std::string key2 = GenerateKey(true);
+
+  disk_cache::Entry* entry1;
+  ASSERT_THAT(CreateEntry(key1, &entry1), IsOk());
+
+  // Make the Create complete --- SimpleCache can handle it optimistically,
+  // and if we let it go fully async then trying to flush the Close might just
+  // flush the Create.
+  disk_cache::SimpleBackendImpl::FlushWorkerPoolForTesting();
+  base::RunLoop().RunUntilIdle();
+
+  entry1->Close();
+
+  // Make the ::Close actually complete, since it is asynchronous.
+  disk_cache::SimpleBackendImpl::FlushWorkerPoolForTesting();
+  base::RunLoop().RunUntilIdle();
+
+  Time entry1_timestamp = Time::NowFromSystemTime();
+
+  // Don't want AddDelay since it sleep 1s(!) for SimpleCache, and we don't
+  // care about reduced precision in index here.
+  while (base::Time::NowFromSystemTime() <=
+         (entry1_timestamp + base::TimeDelta::FromMilliseconds(10))) {
+    base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(1));
+  }
+
+  disk_cache::Entry* entry2;
+  ASSERT_THAT(CreateEntry(key2, &entry2), IsOk());
+  entry2->Close();
+  disk_cache::SimpleBackendImpl::FlushWorkerPoolForTesting();
+  base::RunLoop().RunUntilIdle();
+
+  disk_cache::Entry* reopen_entry1;
+  ASSERT_THAT(OpenEntry(key1, &reopen_entry1), IsOk());
+
+  // This shouldn't pick up entry2's write time incorrectly.
+  EXPECT_LE(reopen_entry1->GetLastModified(), entry1_timestamp);
+  reopen_entry1->Close();
+}

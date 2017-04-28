@@ -97,8 +97,8 @@ class MRUCacheBase {
       ShrinkToSize(max_size_ - 1);
     }
 
-    ordering_.push_front(value_type(key, std::forward<Payload>(payload)));
-    index_.insert(std::make_pair(key, ordering_.begin()));
+    ordering_.emplace_front(key, std::forward<Payload>(payload));
+    index_.emplace(key, ordering_.begin());
     return ordering_.begin();
   }
 

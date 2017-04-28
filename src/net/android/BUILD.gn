@@ -132,7 +132,7 @@ android_library("net_javatests") {
 }
 
 java_cpp_template("net_errors_java") {
-  package_name = "org/chromium/net"
+  package_path = "org/chromium/net"
   sources = [
     "java/NetError.template",
   ]

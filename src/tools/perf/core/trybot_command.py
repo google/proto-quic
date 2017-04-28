@@ -16,11 +16,11 @@ import urllib
 import urllib2
 
 
+from core import benchmark_finders
 from core import path_util
 
 from telemetry import benchmark
 from telemetry import decorators
-from telemetry.core import discover
 from telemetry.util import command_line
 from telemetry.util import matching
 
@@ -271,10 +271,8 @@ class Trybot(command_line.ArgParseCommand):
     for arg in extra_args:
       if arg == '--browser' or arg.startswith('--browser='):
         parser.error('--browser=... is not allowed when running trybot.')
-    all_benchmarks = discover.DiscoverClasses(
-        start_dir=path_util.GetPerfBenchmarksDir(),
-        top_level_dir=path_util.GetPerfDir(),
-        base_class=benchmark.Benchmark).values()
+    all_benchmarks = benchmark_finders.GetAllPerfBenchmarks()
+    all_benchmarks.extend(benchmark_finders.GetAllContribBenchmarks())
     all_benchmark_names = [b.Name() for b in all_benchmarks]
     all_benchmarks_by_names = {b.Name(): b for b in all_benchmarks}
     benchmark_class = all_benchmarks_by_names.get(options.benchmark_name, None)

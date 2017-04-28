@@ -56,6 +56,12 @@
 #include <grp.h>
 #endif
 
+// We need to do this on AIX due to some inconsistencies in how AIX
+// handles XOPEN_SOURCE and ALL_SOURCE.
+#if defined(OS_AIX)
+extern "C" char* mkdtemp(char* path);
+#endif
+
 namespace base {
 
 namespace {
@@ -156,7 +162,7 @@ int CreateAndOpenFdForTemporaryFile(FilePath directory, FilePath* path) {
   return HANDLE_EINTR(mkstemp(buffer));
 }
 
-#if defined(OS_LINUX)
+#if defined(OS_LINUX) || defined(OS_AIX)
 // Determine if /dev/shm files can be mapped and then mprotect'd PROT_EXEC.
 // This depends on the mount options used for /dev/shm, which vary among
 // different Linux distributions and possibly local configuration.  It also
@@ -922,7 +928,7 @@ int GetMaximumPathComponentLength(const FilePath& path) {
 #if !defined(OS_ANDROID)
 // This is implemented in file_util_android.cc for that platform.
 bool GetShmemTempDir(bool executable, FilePath* path) {
-#if defined(OS_LINUX)
+#if defined(OS_LINUX) || defined(OS_AIX)
   bool use_dev_shm = true;
   if (executable) {
     static const bool s_dev_shm_executable = DetermineDevShmExecutable();

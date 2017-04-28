@@ -32,12 +32,17 @@ struct FuzzerFixedParams {
   uint32_t seed_;
 };
 
+base::AtExitManager at_exit_manager;  // used by ICU integration
+
+extern "C" int LLVMFuzzerInitialize(int argc, char*** argv) {
+  CHECK(base::i18n::InitializeICU());
+  return 0;
+}
+
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   if (size < sizeof(FuzzerFixedParams)) {
     return 0;
   }
-  base::AtExitManager at_exit_manager;  // used by ICU integration.
-  base::i18n::InitializeICU();
   const FuzzerFixedParams* params =
       reinterpret_cast<const FuzzerFixedParams*>(data);
   size -= sizeof(FuzzerFixedParams);

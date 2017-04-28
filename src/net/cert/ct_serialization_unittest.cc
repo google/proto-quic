@@ -79,13 +79,12 @@ TEST_F(CtSerializationTest, EncodesDigitallySigned) {
   EXPECT_EQ(test_digitally_signed_, encoded);
 }
 
-
-TEST_F(CtSerializationTest, EncodesLogEntryForX509Cert) {
-  ct::LogEntry entry;
-  ct::GetX509CertLogEntry(&entry);
+TEST_F(CtSerializationTest, EncodesSignedEntryForX509Cert) {
+  ct::SignedEntryData entry;
+  ct::GetX509CertSignedEntry(&entry);
 
   std::string encoded;
-  ASSERT_TRUE(ct::EncodeLogEntry(entry, &encoded));
+  ASSERT_TRUE(ct::EncodeSignedEntry(entry, &encoded));
   EXPECT_EQ((718U + 5U), encoded.size());
   // First two bytes are log entry type. Next, length:
   // Length is 718 which is 512 + 206, which is 0x2ce
@@ -95,12 +94,12 @@ TEST_F(CtSerializationTest, EncodesLogEntryForX509Cert) {
   EXPECT_EQ(expected_prefix, encoded.substr(0, 5));
 }
 
-TEST_F(CtSerializationTest, EncodesLogEntryForPrecert) {
-  ct::LogEntry entry;
-  ct::GetPrecertLogEntry(&entry);
+TEST_F(CtSerializationTest, EncodesSignedEntryForPrecert) {
+  ct::SignedEntryData entry;
+  ct::GetPrecertSignedEntry(&entry);
 
   std::string encoded;
-  ASSERT_TRUE(ct::EncodeLogEntry(entry, &encoded));
+  ASSERT_TRUE(ct::EncodeSignedEntry(entry, &encoded));
   EXPECT_EQ(604u, encoded.size());
   // First two bytes are the log entry type.
   EXPECT_EQ(std::string("\x00\x01", 2), encoded.substr(0, 2));
@@ -203,8 +202,8 @@ TEST_F(CtSerializationTest, EncodesMerkleTreeLeafForX509Cert) {
       "Log entry type encoded incorrectly";
   EXPECT_EQ(std::string("\x00\x02\xce", 3), encoded.substr(12, 3)) <<
       "Certificate length encoded incorrectly";
-  EXPECT_EQ(tree_leaf.log_entry.leaf_certificate, encoded.substr(15, 718)) <<
-      "Certificate encoded incorrectly";
+  EXPECT_EQ(tree_leaf.signed_entry.leaf_certificate, encoded.substr(15, 718))
+      << "Certificate encoded incorrectly";
   EXPECT_EQ(std::string("\x00\x06", 2), encoded.substr(733, 2)) <<
       "CT extensions length encoded incorrectly";
   EXPECT_EQ(tree_leaf.extensions, encoded.substr(735, 6)) <<
@@ -228,12 +227,12 @@ TEST_F(CtSerializationTest, EncodesMerkleTreeLeafForPrecert) {
   EXPECT_EQ(std::string("\x00\x01", 2), encoded.substr(10, 2)) <<
       "Log entry type encoded incorrectly";
   EXPECT_THAT(encoded.substr(12, 32),
-              ElementsAreArray(tree_leaf.log_entry.issuer_key_hash.data)) <<
-      "Issuer key hash encoded incorrectly";
+              ElementsAreArray(tree_leaf.signed_entry.issuer_key_hash.data))
+      << "Issuer key hash encoded incorrectly";
   EXPECT_EQ(std::string("\x00\x02\x37", 3), encoded.substr(44, 3)) <<
       "TBS certificate length encoded incorrectly";
-  EXPECT_EQ(tree_leaf.log_entry.tbs_certificate, encoded.substr(47, 567)) <<
-      "TBS certificate encoded incorrectly";
+  EXPECT_EQ(tree_leaf.signed_entry.tbs_certificate, encoded.substr(47, 567))
+      << "TBS certificate encoded incorrectly";
   EXPECT_EQ(std::string("\x00\x06", 2), encoded.substr(614, 2)) <<
       "CT extensions length encoded incorrectly";
   EXPECT_EQ(tree_leaf.extensions, encoded.substr(616, 6)) <<

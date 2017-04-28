@@ -128,7 +128,7 @@ bool JSONWriter::BuildJSONString(const Value& node, size_t depth) {
       bool result = node.GetAsList(&list);
       DCHECK(result);
       for (const auto& value : *list) {
-        if (omit_binary_values_ && value->GetType() == Value::Type::BINARY)
+        if (omit_binary_values_ && value.GetType() == Value::Type::BINARY)
           continue;
 
         if (first_value_has_been_output) {
@@ -137,7 +137,7 @@ bool JSONWriter::BuildJSONString(const Value& node, size_t depth) {
             json_string_->push_back(' ');
         }
 
-        if (!BuildJSONString(*value, depth))
+        if (!BuildJSONString(value, depth))
           result = false;
 
         first_value_has_been_output = true;

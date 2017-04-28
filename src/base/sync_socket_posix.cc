@@ -207,6 +207,12 @@ size_t SyncSocket::Peek() {
   return number_chars;
 }
 
+SyncSocket::Handle SyncSocket::Release() {
+  Handle r = handle_;
+  handle_ = kInvalidHandle;
+  return r;
+}
+
 CancelableSyncSocket::CancelableSyncSocket() {}
 CancelableSyncSocket::CancelableSyncSocket(Handle handle)
     : SyncSocket(handle) {

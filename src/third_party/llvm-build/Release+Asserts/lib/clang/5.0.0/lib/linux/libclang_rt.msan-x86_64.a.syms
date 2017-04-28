@@ -147,6 +147,7 @@
   __interceptor_fstatvfs;
   __interceptor_fstatvfs64;
   __interceptor_ftime;
+  __interceptor_fwrite;
   __interceptor_gcvt;
   __interceptor_get_current_dir_name;
   __interceptor_getaddrinfo;
@@ -399,6 +400,7 @@
   __interceptor_strtof;
   __interceptor_strtof_l;
   __interceptor_strtoimax;
+  __interceptor_strtok;
   __interceptor_strtol;
   __interceptor_strtol_l;
   __interceptor_strtold;
@@ -526,10 +528,8 @@
   __overflow;
   __sanitizer_cov;
   __sanitizer_cov_dump;
-  __sanitizer_cov_indir_call16;
   __sanitizer_cov_init;
   __sanitizer_cov_module_init;
-  __sanitizer_cov_trace_basic_block;
   __sanitizer_cov_trace_cmp;
   __sanitizer_cov_trace_cmp1;
   __sanitizer_cov_trace_cmp2;
@@ -537,7 +537,6 @@
   __sanitizer_cov_trace_cmp8;
   __sanitizer_cov_trace_div4;
   __sanitizer_cov_trace_div8;
-  __sanitizer_cov_trace_func_enter;
   __sanitizer_cov_trace_gep;
   __sanitizer_cov_trace_pc_guard;
   __sanitizer_cov_trace_pc_guard_init;
@@ -548,22 +547,18 @@
   __sanitizer_dump_coverage;
   __sanitizer_dump_trace_pc_guard_coverage;
   __sanitizer_get_allocated_size;
-  __sanitizer_get_coverage_guards;
   __sanitizer_get_current_allocated_bytes;
   __sanitizer_get_estimated_allocated_size;
   __sanitizer_get_free_bytes;
   __sanitizer_get_heap_size;
   __sanitizer_get_module_and_offset_for_pc;
-  __sanitizer_get_number_of_counters;
   __sanitizer_get_ownership;
-  __sanitizer_get_total_unique_caller_callee_pairs;
   __sanitizer_get_total_unique_coverage;
   __sanitizer_get_unmapped_bytes;
   __sanitizer_install_malloc_and_free_hooks;
   __sanitizer_maybe_open_cov_file;
   __sanitizer_print_stack_trace;
   __sanitizer_report_error_summary;
-  __sanitizer_reset_coverage;
   __sanitizer_sandbox_on_notify;
   __sanitizer_set_death_callback;
   __sanitizer_set_report_fd;
@@ -1220,7 +1215,6 @@
   __sanitizer_unaligned_store16;
   __sanitizer_unaligned_store32;
   __sanitizer_unaligned_store64;
-  __sanitizer_update_counter_bitset_and_clear_counters;
   __sanitizer_weak_hook_memcmp;
   __sanitizer_weak_hook_memmem;
   __sanitizer_weak_hook_strcasecmp;
@@ -1348,6 +1342,7 @@
   fstatvfs;
   fstatvfs64;
   ftime;
+  fwrite;
   gcvt;
   get_current_dir_name;
   getaddrinfo;
@@ -1596,6 +1591,7 @@
   strtof;
   strtof_l;
   strtoimax;
+  strtok;
   strtol;
   strtol_l;
   strtold;

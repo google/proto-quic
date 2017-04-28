@@ -18,6 +18,7 @@
 #include "net/log/net_log_with_source.h"
 #include "net/ssl/ssl_info.h"
 #include "net/test/embedded_test_server/embedded_test_server.h"
+#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_test_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -83,7 +84,8 @@ TEST_F(URLRequestContextBuilderTest, DefaultSettings) {
   std::unique_ptr<URLRequestContext> context(builder_.Build());
   TestDelegate delegate;
   std::unique_ptr<URLRequest> request(context->CreateRequest(
-      test_server_.GetURL("/echoheader?Foo"), DEFAULT_PRIORITY, &delegate));
+      test_server_.GetURL("/echoheader?Foo"), DEFAULT_PRIORITY, &delegate,
+      TRAFFIC_ANNOTATION_FOR_TESTS));
   request->set_method("GET");
   request->SetExtraRequestHeaderByName("Foo", "Bar", false);
   request->Start();
@@ -97,9 +99,9 @@ TEST_F(URLRequestContextBuilderTest, UserAgent) {
   builder_.set_user_agent("Bar");
   std::unique_ptr<URLRequestContext> context(builder_.Build());
   TestDelegate delegate;
-  std::unique_ptr<URLRequest> request(
-      context->CreateRequest(test_server_.GetURL("/echoheader?User-Agent"),
-                             DEFAULT_PRIORITY, &delegate));
+  std::unique_ptr<URLRequest> request(context->CreateRequest(
+      test_server_.GetURL("/echoheader?User-Agent"), DEFAULT_PRIORITY,
+      &delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
   request->set_method("GET");
   request->Start();
   base::RunLoop().Run();

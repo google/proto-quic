@@ -23,7 +23,6 @@
 using net::transport_security_state::TransportSecurityStateEntries;
 using net::transport_security_state::Pinsets;
 using net::transport_security_state::PreloadedStateGenerator;
-using net::transport_security_state::DomainIDList;
 
 namespace {
 
@@ -208,10 +207,9 @@ int main(int argc, char* argv[]) {
 
   TransportSecurityStateEntries entries;
   Pinsets pinsets;
-  DomainIDList domain_ids;
 
   if (!ParseCertificatesFile(certs_input, &pinsets) ||
-      !ParseJSON(json_input, &entries, &pinsets, &domain_ids)) {
+      !ParseJSON(json_input, &entries, &pinsets)) {
     LOG(ERROR) << "Error while parsing the input files.";
     return 1;
   }
@@ -238,7 +236,7 @@ int main(int argc, char* argv[]) {
 
   std::string output;
   PreloadedStateGenerator generator;
-  output = generator.Generate(preload_template, entries, domain_ids, pinsets);
+  output = generator.Generate(preload_template, entries, pinsets);
   if (output.empty()) {
     LOG(ERROR) << "Trie generation failed.";
     return 1;
@@ -254,8 +252,7 @@ int main(int argc, char* argv[]) {
   }
 
   VLOG(1) << "Wrote trie containing " << entries.size()
-          << " entries, referencing " << pinsets.size() << " pinsets and "
-          << domain_ids.size() << " domain IDs to "
+          << " entries, referencing " << pinsets.size() << " pinsets to "
           << output_path.AsUTF8Unsafe() << std::endl;
 
   return 0;

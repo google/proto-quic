@@ -55,16 +55,8 @@ ThreadedSSLPrivateKey::ThreadedSSLPrivateKey(
       task_runner_(std::move(task_runner)),
       weak_factory_(this) {}
 
-SSLPrivateKey::Type ThreadedSSLPrivateKey::GetType() {
-  return core_->delegate()->GetType();
-}
-
 std::vector<SSLPrivateKey::Hash> ThreadedSSLPrivateKey::GetDigestPreferences() {
   return core_->delegate()->GetDigestPreferences();
-}
-
-size_t ThreadedSSLPrivateKey::GetMaxSignatureLengthInBytes() {
-  return core_->delegate()->GetMaxSignatureLengthInBytes();
 }
 
 void ThreadedSSLPrivateKey::SignDigest(

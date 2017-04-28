@@ -29,7 +29,6 @@ class LogStateSaver {
 
   ~LogStateSaver() {
     logging::SetMinLogLevel(old_min_log_level_);
-    logging::SetLogAssertHandler(nullptr);
   }
 
  private:

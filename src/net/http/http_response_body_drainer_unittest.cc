@@ -108,6 +108,10 @@ class MockHttpStream : public HttpStream {
   bool CanReuseConnection() const override { return can_reuse_connection_; }
   int64_t GetTotalReceivedBytes() const override { return 0; }
   int64_t GetTotalSentBytes() const override { return 0; }
+  bool GetAlternativeService(
+      AlternativeService* alternative_service) const override {
+    return false;
+  }
   void GetSSLInfo(SSLInfo* ssl_info) override {}
   void GetSSLCertRequestInfo(SSLCertRequestInfo* cert_request_info) override {}
   bool GetRemoteEndpoint(IPEndPoint* endpoint) override { return false; }

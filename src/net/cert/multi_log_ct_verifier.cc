@@ -97,11 +97,11 @@ void MultiLogCTVerifier::Verify(
       ct::ExtractEmbeddedSCTList(
           cert->os_cert_handle(),
           &embedded_scts)) {
-    ct::LogEntry precert_entry;
+    ct::SignedEntryData precert_entry;
 
-    if (ct::GetPrecertLogEntry(cert->os_cert_handle(),
-                               cert->GetIntermediateCertificates().front(),
-                               &precert_entry)) {
+    if (ct::GetPrecertSignedEntry(cert->os_cert_handle(),
+                                  cert->GetIntermediateCertificates().front(),
+                                  &precert_entry)) {
       VerifySCTs(embedded_scts, precert_entry,
                  ct::SignedCertificateTimestamp::SCT_EMBEDDED, cert,
                  output_scts);
@@ -125,8 +125,8 @@ void MultiLogCTVerifier::Verify(
   net_log.AddEvent(NetLogEventType::SIGNED_CERTIFICATE_TIMESTAMPS_RECEIVED,
                    net_log_callback);
 
-  ct::LogEntry x509_entry;
-  if (ct::GetX509LogEntry(cert->os_cert_handle(), &x509_entry)) {
+  ct::SignedEntryData x509_entry;
+  if (ct::GetX509SignedEntry(cert->os_cert_handle(), &x509_entry)) {
     VerifySCTs(sct_list_from_ocsp, x509_entry,
                ct::SignedCertificateTimestamp::SCT_FROM_OCSP_RESPONSE, cert,
                output_scts);
@@ -147,7 +147,7 @@ void MultiLogCTVerifier::Verify(
 
 void MultiLogCTVerifier::VerifySCTs(
     base::StringPiece encoded_sct_list,
-    const ct::LogEntry& expected_entry,
+    const ct::SignedEntryData& expected_entry,
     ct::SignedCertificateTimestamp::Origin origin,
     X509Certificate* cert,
     SignedCertificateTimestampAndStatusList* output_scts) {
@@ -177,7 +177,7 @@ void MultiLogCTVerifier::VerifySCTs(
 
 bool MultiLogCTVerifier::VerifySingleSCT(
     scoped_refptr<ct::SignedCertificateTimestamp> sct,
-    const ct::LogEntry& expected_entry,
+    const ct::SignedEntryData& expected_entry,
     X509Certificate* cert,
     SignedCertificateTimestampAndStatusList* output_scts) {
   // Assume this SCT is untrusted until proven otherwise.

@@ -31,7 +31,6 @@ class TrieWriter {
   enum : uint8_t { kTerminalValue = 0, kEndOfTableValue = 127 };
 
   TrieWriter(const HuffmanRepresentationTable& huffman_table,
-             const NameIDMap& domain_ids_map,
              const NameIDMap& expect_ct_report_uri_map,
              const NameIDMap& expect_staple_report_uri_map,
              const NameIDMap& pinsets_map,
@@ -82,7 +81,6 @@ class TrieWriter {
 
   BitWriter buffer_;
   const HuffmanRepresentationTable& huffman_table_;
-  const NameIDMap& domain_ids_map_;
   const NameIDMap& expect_ct_report_uri_map_;
   const NameIDMap& expect_staple_report_uri_map_;
   const NameIDMap& pinsets_map_;

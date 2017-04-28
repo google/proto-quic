@@ -35,11 +35,11 @@ void RunNestedLoopTask(int* counter) {
 
   // This task should quit |nested_run_loop| but not the main RunLoop.
   ThreadTaskRunnerHandle::Get()->PostTask(
-      FROM_HERE, Bind(&QuitWhenIdleTask, Unretained(&nested_run_loop),
-                      Unretained(counter)));
+      FROM_HERE, BindOnce(&QuitWhenIdleTask, Unretained(&nested_run_loop),
+                          Unretained(counter)));
 
   ThreadTaskRunnerHandle::Get()->PostDelayedTask(
-      FROM_HERE, Bind(&ShouldNotRunTask), TimeDelta::FromDays(1));
+      FROM_HERE, BindOnce(&ShouldNotRunTask), TimeDelta::FromDays(1));
 
   MessageLoop::ScopedNestableTaskAllower allower(MessageLoop::current());
   nested_run_loop.Run();
@@ -63,12 +63,12 @@ class RunLoopTest : public testing::Test {
 
 TEST_F(RunLoopTest, QuitWhenIdle) {
   message_loop_.task_runner()->PostTask(
-      FROM_HERE,
-      Bind(&QuitWhenIdleTask, Unretained(&run_loop_), Unretained(&counter_)));
+      FROM_HERE, BindOnce(&QuitWhenIdleTask, Unretained(&run_loop_),
+                          Unretained(&counter_)));
   message_loop_.task_runner()->PostTask(
-      FROM_HERE, Bind(&ShouldRunTask, Unretained(&counter_)));
+      FROM_HERE, BindOnce(&ShouldRunTask, Unretained(&counter_)));
   message_loop_.task_runner()->PostDelayedTask(
-      FROM_HERE, Bind(&ShouldNotRunTask), TimeDelta::FromDays(1));
+      FROM_HERE, BindOnce(&ShouldNotRunTask), TimeDelta::FromDays(1));
 
   run_loop_.Run();
   EXPECT_EQ(2, counter_);
@@ -76,14 +76,14 @@ TEST_F(RunLoopTest, QuitWhenIdle) {
 
 TEST_F(RunLoopTest, QuitWhenIdleNestedLoop) {
   message_loop_.task_runner()->PostTask(
-      FROM_HERE, Bind(&RunNestedLoopTask, Unretained(&counter_)));
+      FROM_HERE, BindOnce(&RunNestedLoopTask, Unretained(&counter_)));
   message_loop_.task_runner()->PostTask(
-      FROM_HERE,
-      Bind(&QuitWhenIdleTask, Unretained(&run_loop_), Unretained(&counter_)));
+      FROM_HERE, BindOnce(&QuitWhenIdleTask, Unretained(&run_loop_),
+                          Unretained(&counter_)));
   message_loop_.task_runner()->PostTask(
-      FROM_HERE, Bind(&ShouldRunTask, Unretained(&counter_)));
+      FROM_HERE, BindOnce(&ShouldRunTask, Unretained(&counter_)));
   message_loop_.task_runner()->PostDelayedTask(
-      FROM_HERE, Bind(&ShouldNotRunTask), TimeDelta::FromDays(1));
+      FROM_HERE, BindOnce(&ShouldNotRunTask), TimeDelta::FromDays(1));
 
   run_loop_.Run();
   EXPECT_EQ(4, counter_);
@@ -93,9 +93,9 @@ TEST_F(RunLoopTest, QuitWhenIdleClosure) {
   message_loop_.task_runner()->PostTask(FROM_HERE,
                                         run_loop_.QuitWhenIdleClosure());
   message_loop_.task_runner()->PostTask(
-      FROM_HERE, Bind(&ShouldRunTask, Unretained(&counter_)));
+      FROM_HERE, BindOnce(&ShouldRunTask, Unretained(&counter_)));
   message_loop_.task_runner()->PostDelayedTask(
-      FROM_HERE, Bind(&ShouldNotRunTask), TimeDelta::FromDays(1));
+      FROM_HERE, BindOnce(&ShouldNotRunTask), TimeDelta::FromDays(1));
 
   run_loop_.Run();
   EXPECT_EQ(1, counter_);

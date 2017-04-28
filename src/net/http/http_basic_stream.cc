@@ -99,6 +99,11 @@ bool HttpBasicStream::GetLoadTimingInfo(
                                                 load_timing_info);
 }
 
+bool HttpBasicStream::GetAlternativeService(
+    AlternativeService* alternative_service) const {
+  return false;
+}
+
 void HttpBasicStream::GetSSLInfo(SSLInfo* ssl_info) {
   parser()->GetSSLInfo(ssl_info);
 }

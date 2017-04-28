@@ -63,9 +63,6 @@
 #       If set, used to store the depfile and corresponding stamp file.
 #       Defaults to output_dir
 #
-#   use_qualified_include (optional)
-#       If set to false, output_dir is added to include_dirs.
-#
 #   configs (optional)
 #       List of additional configs to be applied to the generated target.
 #   deps  (optional)
@@ -234,13 +231,6 @@ if (current_toolchain != host_toolchain) {
   }
 }
 
-if (enable_media_router) {
-  grit_defines += [
-    "-D",
-    "enable_media_router",
-  ]
-}
-
 # TODO(aberent): Enable for other platforms once the build machines have
 #                Java on them (and hence can run the closure compiler).
 _strip_resource_files = is_android
@@ -345,17 +335,9 @@ template("grit") {
   # overwritten inside the inner classes so we need to compute it here.
   target_visibility = [ ":$target_name" ]
 
-  # The current grit setup makes an file in $output_dir/grit/foo.h that
-  # the source code expects to include via "grit/foo.h". It would be nice to
-  # change this to including absolute paths relative to the root gen directory
-  # (like "mycomponent/foo.h"). This config sets up the include path.
+  # This config sets up flags needed for enable_resource_whitelist_generation.
   grit_config = target_name + "_grit_config"
   config(grit_config) {
-    if (defined(invoker.use_qualified_include) &&
-        !invoker.use_qualified_include) {
-      include_dirs = [ output_dir ]
-    }
-
     if ((is_linux || is_android) && enable_resource_whitelist_generation) {
       cflags = [
         "-Wunknown-pragmas",

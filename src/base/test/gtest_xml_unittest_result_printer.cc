@@ -35,6 +35,14 @@ bool XmlUnitTestResultPrinter::Initialize(const FilePath& output_file_path) {
   return true;
 }
 
+void XmlUnitTestResultPrinter::OnAssert(const char* file,
+                                        int line,
+                                        const std::string& summary,
+                                        const std::string& message) {
+  WriteTestPartResult(file, line, testing::TestPartResult::kFatalFailure,
+                      summary, message);
+}
+
 void XmlUnitTestResultPrinter::OnTestCaseStart(
     const testing::TestCase& test_case) {
   fprintf(output_file_, "  <testsuite>\n");
@@ -66,7 +74,10 @@ void XmlUnitTestResultPrinter::OnTestEnd(const testing::TestInfo& test_info) {
             "      <failure message=\"\" type=\"\"></failure>\n");
   }
   for (int i = 0; i < test_info.result()->total_part_count(); ++i) {
-    WriteTestPartResult(test_info.result()->GetTestPartResult(i));
+    const auto& test_part_result = test_info.result()->GetTestPartResult(i);
+    WriteTestPartResult(test_part_result.file_name(),
+                        test_part_result.line_number(), test_part_result.type(),
+                        test_part_result.summary(), test_part_result.message());
   }
   fprintf(output_file_, "    </testcase>\n");
   fflush(output_file_);
@@ -79,9 +90,13 @@ void XmlUnitTestResultPrinter::OnTestCaseEnd(
 }
 
 void XmlUnitTestResultPrinter::WriteTestPartResult(
-    const testing::TestPartResult& test_part_result) {
+    const char* file,
+    int line,
+    testing::TestPartResult::Type result_type,
+    const std::string& summary,
+    const std::string& message) {
   const char* type = "unknown";
-  switch (test_part_result.type()) {
+  switch (result_type) {
     case testing::TestPartResult::kSuccess:
       type = "success";
       break;
@@ -92,10 +107,8 @@ void XmlUnitTestResultPrinter::WriteTestPartResult(
       type = "fatal_failure";
       break;
   }
-  std::string summary = test_part_result.summary();
   std::string summary_encoded;
   Base64Encode(summary, &summary_encoded);
-  std::string message = test_part_result.message();
   std::string message_encoded;
   Base64Encode(message, &message_encoded);
   fprintf(output_file_,
@@ -103,8 +116,7 @@ void XmlUnitTestResultPrinter::WriteTestPartResult(
           "        <summary>%s</summary>\n"
           "        <message>%s</message>\n"
           "      </x-test-result-part>\n",
-          type, test_part_result.file_name(), test_part_result.line_number(),
-          summary_encoded.c_str(), message_encoded.c_str());
+          type, file, line, summary_encoded.c_str(), message_encoded.c_str());
   fflush(output_file_);
 }
 

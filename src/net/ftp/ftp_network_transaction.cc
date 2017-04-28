@@ -218,7 +218,7 @@ FtpNetworkTransaction::FtpNetworkTransaction(
     : command_sent_(COMMAND_NONE),
       io_callback_(base::Bind(&FtpNetworkTransaction::OnIOComplete,
                               base::Unretained(this))),
-      request_(NULL),
+      request_(nullptr),
       resolver_(resolver),
       read_ctrl_buf_(new IOBuffer(kCtrlBufLen)),
       read_data_buf_len_(0),
@@ -232,15 +232,23 @@ FtpNetworkTransaction::FtpNetworkTransaction(
       data_connection_port_(0),
       socket_factory_(socket_factory),
       next_state_(STATE_NONE),
-      state_after_data_connect_complete_(STATE_NONE) {
-}
+      state_after_data_connect_complete_(STATE_NONE) {}
 
 FtpNetworkTransaction::~FtpNetworkTransaction() {
 }
 
 int FtpNetworkTransaction::Stop(int error) {
-  if (command_sent_ == COMMAND_QUIT)
-    return error;
+  if (command_sent_ == COMMAND_QUIT) {
+    if (error != ERR_EMPTY_RESPONSE)
+      return error;
+
+    // For empty responses, if this is propagating an error, then it will return
+    // the error. If the error occurred during a QUIT command, then this will
+    // return OK since there was no previous error. Some FTP servers are lazy
+    // and do not bother responding to QUIT commands.
+    // See https://crbug.com/633841
+    return last_error_;
+  }
 
   next_state_ = STATE_CTRL_WRITE_QUIT;
   last_error_ = error;
@@ -253,7 +261,7 @@ int FtpNetworkTransaction::Start(const FtpRequestInfo* request_info,
   net_log_ = net_log;
   request_ = request_info;
 
-  ctrl_response_buffer_.reset(new FtpCtrlResponseBuffer(net_log_));
+  ctrl_response_buffer_ = base::MakeUnique<FtpCtrlResponseBuffer>(net_log_);
 
   if (request_->url.has_username()) {
     base::string16 username;
@@ -339,8 +347,8 @@ void FtpNetworkTransaction::ResetStateForRestart() {
   user_callback_.Reset();
   response_ = FtpResponseInfo();
   read_ctrl_buf_ = new IOBuffer(kCtrlBufLen);
-  ctrl_response_buffer_.reset(new FtpCtrlResponseBuffer(net_log_));
-  read_data_buf_ = NULL;
+  ctrl_response_buffer_ = base::MakeUnique<FtpCtrlResponseBuffer>(net_log_);
+  read_data_buf_ = nullptr;
   read_data_buf_len_ = 0;
   if (write_buf_.get())
     write_buf_->SetOffset(0);
@@ -667,7 +675,7 @@ int FtpNetworkTransaction::DoCtrlResolveHostComplete(int result) {
 int FtpNetworkTransaction::DoCtrlConnect() {
   next_state_ = STATE_CTRL_CONNECT_COMPLETE;
   ctrl_socket_ = socket_factory_->CreateTransportClientSocket(
-      addresses_, NULL, net_log_.net_log(), net_log_.source());
+      addresses_, nullptr, net_log_.net_log(), net_log_.source());
   net_log_.AddEvent(
       NetLogEventType::FTP_CONTROL_CONNECTION,
       ctrl_socket_->NetLog().source().ToEventParametersCallback());
@@ -740,8 +748,8 @@ int FtpNetworkTransaction::DoCtrlWriteComplete(int result) {
   write_buf_->DidConsume(result);
   if (write_buf_->BytesRemaining() == 0) {
     // Clear the write buffer.
-    write_buf_ = NULL;
-    write_command_buf_ = NULL;
+    write_buf_ = nullptr;
+    write_command_buf_ = nullptr;
 
     next_state_ = STATE_CTRL_READ;
   } else {
@@ -1220,7 +1228,7 @@ int FtpNetworkTransaction::DoDataConnect() {
   data_address = AddressList::CreateFromIPAddress(
       ip_endpoint.address(), data_connection_port_);
   data_socket_ = socket_factory_->CreateTransportClientSocket(
-      data_address, NULL, net_log_.net_log(), net_log_.source());
+      data_address, nullptr, net_log_.net_log(), net_log_.source());
   net_log_.AddEvent(
       NetLogEventType::FTP_DATA_CONNECTION,
       data_socket_->NetLog().source().ToEventParametersCallback());
@@ -1253,7 +1261,7 @@ int FtpNetworkTransaction::DoDataRead() {
   DCHECK(read_data_buf_.get());
   DCHECK_GT(read_data_buf_len_, 0);
 
-  if (data_socket_ == NULL || !data_socket_->IsConnected()) {
+  if (!data_socket_ || !data_socket_->IsConnected()) {
     // If we don't destroy the data socket completely, some servers will wait
     // for us (http://crbug.com/21127). The half-closed TCP connection needs
     // to be closed on our side too.

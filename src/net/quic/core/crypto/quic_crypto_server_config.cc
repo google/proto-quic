@@ -29,12 +29,13 @@
 #include "net/quic/core/crypto/quic_encrypter.h"
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/proto/source_address_token.pb.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_socket_address_coder.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_clock.h"
+#include "net/quic/platform/api/quic_endian.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_hostname_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_reference_counted.h"
@@ -745,6 +746,10 @@ void QuicCryptoServerConfig::ProcessClientHelloAfterGetProof(
     const QuicReferenceCountedPointer<Config>& requested_config,
     const QuicReferenceCountedPointer<Config>& primary_config,
     std::unique_ptr<ProcessClientHelloResultCallback> done_cb) const {
+  if (QuicUtils::IsConnectionIdWireFormatBigEndian(Perspective::IS_SERVER)) {
+    connection_id = QuicEndian::HostToNet64(connection_id);
+  }
+
   ProcessClientHelloHelper helper(&done_cb);
 
   if (found_error) {
@@ -1479,6 +1484,10 @@ void QuicCryptoServerConfig::BuildRejection(
                   << "with server-designated connection ID "
                   << server_designated_connection_id;
     out->set_tag(kSREJ);
+    if (QuicUtils::IsConnectionIdWireFormatBigEndian(Perspective::IS_SERVER)) {
+      server_designated_connection_id =
+          QuicEndian::HostToNet64(server_designated_connection_id);
+    }
     out->SetValue(kRCID, server_designated_connection_id);
   } else {
     out->set_tag(kREJ);
@@ -1742,8 +1751,8 @@ QuicCryptoServerConfig::ParseConfigProtobuf(
 }
 
 void QuicCryptoServerConfig::SetEphemeralKeySource(
-    EphemeralKeySource* ephemeral_key_source) {
-  ephemeral_key_source_.reset(ephemeral_key_source);
+    std::unique_ptr<EphemeralKeySource> ephemeral_key_source) {
+  ephemeral_key_source_ = std::move(ephemeral_key_source);
 }
 
 void QuicCryptoServerConfig::set_replay_protection(bool on) {

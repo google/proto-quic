@@ -2193,6 +2193,7 @@ class ServerRunner(testserver_base.TestServerRunner):
                                   'fallback. 1 means all TLS versions will be '
                                   'aborted. 2 means TLS 1.1 or higher will be '
                                   'aborted. 3 means TLS 1.2 or higher will be '
+                                  'aborted. 4 means TLS 1.3 or higher will be '
                                   'aborted.')
     self.option_parser.add_option('--tls-intolerance-type',
                                   dest='tls_intolerance_type',

@@ -28,6 +28,7 @@ class NetLog;
 class NetworkDelegate;
 class ProxyDelegate;
 class ProxyService;
+class ReportingService;
 class SdchManager;
 class SSLConfigService;
 class TransportSecurityState;
@@ -78,6 +79,8 @@ class NET_EXPORT URLRequestContextStorage {
   void set_http_user_agent_settings(
       std::unique_ptr<HttpUserAgentSettings> http_user_agent_settings);
   void set_sdch_manager(std::unique_ptr<SdchManager> sdch_manager);
+  void set_reporting_service(
+      std::unique_ptr<ReportingService> reporting_service);
 
   // Everything else can be access through the URLRequestContext, but this
   // cannot.  Having an accessor for it makes usage a little cleaner.
@@ -116,6 +119,7 @@ class NET_EXPORT URLRequestContextStorage {
   std::unique_ptr<URLRequestJobFactory> job_factory_;
   std::unique_ptr<URLRequestThrottlerManager> throttler_manager_;
   std::unique_ptr<SdchManager> sdch_manager_;
+  std::unique_ptr<ReportingService> reporting_service_;
 
   DISALLOW_COPY_AND_ASSIGN(URLRequestContextStorage);
 };

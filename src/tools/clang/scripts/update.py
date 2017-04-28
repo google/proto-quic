@@ -27,7 +27,7 @@ import zipfile
 # Do NOT CHANGE this if you don't know what you're doing -- see
 # https://chromium.googlesource.com/chromium/src/+/master/docs/updating_clang.md
 # Reverting problematic clang rolls is safe, though.
-CLANG_REVISION = '298539'
+CLANG_REVISION = '300839'
 
 use_head_revision = 'LLVM_FORCE_HEAD_REVISION' in os.environ
 if use_head_revision:
@@ -87,6 +87,7 @@ if 'LLVM_REPO_URL' in os.environ:
 DIA_DLL = {
   '2013': 'msdia120.dll',
   '2015': 'msdia140.dll',
+  '2017': 'msdia140.dll',
 }
 
 

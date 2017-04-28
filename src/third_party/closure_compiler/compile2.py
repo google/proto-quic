@@ -75,7 +75,7 @@ class Checker(object):
     """
     print >> sys.stderr, "(ERROR) %s" % msg
 
-  def _run_jar(self, jar, args):
+  def run_jar(self, jar, args):
     """Runs a .jar from the command line with arguments.
 
     Args:
@@ -264,7 +264,7 @@ class Checker(object):
 
     self._log_debug("Args: %s" % " ".join(args))
 
-    _, stderr = self._run_jar(self._compiler_jar, args)
+    _, stderr = self.run_jar(self._compiler_jar, args)
 
     errors = stderr.strip().split("\n\n")
     maybe_summary = errors.pop()

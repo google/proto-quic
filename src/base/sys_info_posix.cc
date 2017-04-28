@@ -219,6 +219,8 @@ std::string SysInfo::OperatingSystemArchitecture() {
     arch = "x86";
   } else if (arch == "amd64") {
     arch = "x86_64";
+  } else if (std::string(info.sysname) == "AIX") {
+    arch = "ppc64";
   }
   return arch;
 }

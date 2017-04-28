@@ -289,7 +289,7 @@ void TracedValue::SetBaseValueWithCopiedName(base::StringPiece name,
       value.GetAsList(&list_value);
       BeginArrayWithCopiedName(name);
       for (const auto& base_value : *list_value)
-        AppendBaseValue(*base_value);
+        AppendBaseValue(base_value);
       EndArray();
     } break;
   }
@@ -343,7 +343,7 @@ void TracedValue::AppendBaseValue(const base::Value& value) {
       value.GetAsList(&list_value);
       BeginArray();
       for (const auto& base_value : *list_value)
-        AppendBaseValue(*base_value);
+        AppendBaseValue(base_value);
       EndArray();
     } break;
   }
@@ -369,9 +369,11 @@ std::unique_ptr<base::Value> TracedValue::ToBaseValue() const {
           cur_dict = new_dict;
         } else {
           cur_list->Append(WrapUnique(new_dict));
+          // |new_dict| is invalidated at this point, so |cur_dict| needs to be
+          // reset.
+          cur_list->GetDictionary(cur_list->GetSize() - 1, &cur_dict);
           stack.push_back(cur_list);
           cur_list = nullptr;
-          cur_dict = new_dict;
         }
       } break;
 
@@ -396,7 +398,8 @@ std::unique_ptr<base::Value> TracedValue::ToBaseValue() const {
         } else {
           cur_list->Append(WrapUnique(new_list));
           stack.push_back(cur_list);
-          cur_list = new_list;
+          // |cur_list| is invalidated at this point, so it needs to be reset.
+          cur_list->GetList(cur_list->GetSize() - 1, &cur_list);
         }
       } break;
 

@@ -8149,12 +8149,13 @@ xmlParsePEReference(xmlParserCtxtPtr ctxt)
 	} else {
 	    if ((entity->etype == XML_EXTERNAL_PARAMETER_ENTITY) &&
 	        ((ctxt->options & XML_PARSE_NOENT) == 0) &&
-	        ((ctxt->options & XML_PARSE_DTDVALID) == 0) &&
-	        ((ctxt->options & XML_PARSE_DTDLOAD) == 0) &&
-	        ((ctxt->options & XML_PARSE_DTDATTR) == 0) &&
-	        (ctxt->replaceEntities == 0) &&
-	        (ctxt->validate == 0))
-	        return;
+		((ctxt->options & XML_PARSE_DTDVALID) == 0) &&
+		((ctxt->options & XML_PARSE_DTDLOAD) == 0) &&
+		((ctxt->options & XML_PARSE_DTDATTR) == 0) &&
+		(ctxt->replaceEntities == 0) &&
+		(ctxt->validate == 0))
+		return;
+
 	    /*
 	     * TODO !!!
 	     * handle the extra spaces added before and after
@@ -15381,6 +15382,10 @@ xmlCtxtUseOptionsInternal(xmlParserCtxtPtr ctxt, int options, const char *encodi
     if (options & XML_PARSE_NONET) {
 	ctxt->options |= XML_PARSE_NONET;
         options -= XML_PARSE_NONET;
+    }
+    if (options & XML_PARSE_NOXXE) {
+	ctxt->options |= XML_PARSE_NOXXE;
+        options -= XML_PARSE_NOXXE;
     }
     if (options & XML_PARSE_COMPACT) {
 	ctxt->options |= XML_PARSE_COMPACT;

@@ -20,6 +20,28 @@
 
 namespace net {
 
+namespace {
+
+// Returns the superdomain of a given domain, or the empty string if the given
+// domain is just a single label. Note that this does not take into account
+// anything like the Public Suffix List, so the superdomain may end up being a
+// bare TLD.
+//
+// Examples:
+//
+// GetSuperdomain("assets.example.com") -> "example.com"
+// GetSuperdomain("example.net") -> "net"
+// GetSuperdomain("littlebox") -> ""
+std::string GetSuperdomain(const std::string& domain) {
+  size_t dot_pos = domain.find('.');
+  if (dot_pos == std::string::npos)
+    return "";
+
+  return domain.substr(dot_pos + 1);
+}
+
+}  // namespace
+
 ReportingCache::ReportingCache(ReportingContext* context) : context_(context) {
   DCHECK(context_);
 }
@@ -88,12 +110,12 @@ void ReportingCache::IncrementReportsAttempts(
 void ReportingCache::RemoveReports(
     const std::vector<const ReportingReport*>& reports) {
   for (const ReportingReport* report : reports) {
-    DCHECK(base::ContainsKey(reports_, report));
-    if (base::ContainsKey(pending_reports_, report))
+    if (base::ContainsKey(pending_reports_, report)) {
       doomed_reports_.insert(report);
-    else {
+    } else {
       DCHECK(!base::ContainsKey(doomed_reports_, report));
-      reports_.erase(report);
+      size_t erased = reports_.erase(report);
+      DCHECK_EQ(1u, erased);
     }
   }
 
@@ -133,12 +155,20 @@ void ReportingCache::GetClientsForOriginAndGroup(
   clients_out->clear();
 
   const auto it = clients_.find(origin);
-  if (it == clients_.end())
-    return;
+  if (it != clients_.end()) {
+    for (const auto& endpoint_and_client : it->second) {
+      if (endpoint_and_client.second->group == group)
+        clients_out->push_back(endpoint_and_client.second.get());
+    }
+  }
 
-  for (const auto& endpoint_and_client : it->second) {
-    if (endpoint_and_client.second->group == group)
-      clients_out->push_back(endpoint_and_client.second.get());
+  // If no clients were found, try successive superdomain suffixes until a
+  // client with includeSubdomains is found or there are no more domain
+  // components left.
+  std::string domain = origin.host();
+  while (clients_out->empty() && !domain.empty()) {
+    GetWildcardClientsForDomainAndGroup(domain, group, clients_out);
+    domain = GetSuperdomain(domain);
   }
 }
 
@@ -149,8 +179,18 @@ void ReportingCache::SetClient(const url::Origin& origin,
                                base::TimeTicks expires) {
   DCHECK(endpoint.SchemeIsCryptographic());
 
+  // Since |subdomains| may differ from a previous call to SetClient for this
+  // origin and endpoint, the cache needs to remove and re-add the client to the
+  // index of wildcard clients, if applicable.
+  if (base::ContainsKey(clients_, origin) &&
+      base::ContainsKey(clients_[origin], endpoint)) {
+    MaybeRemoveWildcardClient(clients_[origin][endpoint].get());
+  }
+
   clients_[origin][endpoint] = base::MakeUnique<ReportingClient>(
       origin, endpoint, subdomains, group, expires);
+
+  MaybeAddWildcardClient(clients_[origin][endpoint].get());
 
   context_->NotifyCacheUpdated();
 }
@@ -158,9 +198,9 @@ void ReportingCache::SetClient(const url::Origin& origin,
 void ReportingCache::RemoveClients(
     const std::vector<const ReportingClient*>& clients_to_remove) {
   for (const ReportingClient* client : clients_to_remove) {
-    DCHECK(base::ContainsKey(clients_[client->origin], client->endpoint));
-    DCHECK(clients_[client->origin][client->endpoint].get() == client);
-    clients_[client->origin].erase(client->endpoint);
+    MaybeRemoveWildcardClient(client);
+    size_t erased = clients_[client->origin].erase(client->endpoint);
+    DCHECK_EQ(1u, erased);
   }
 
   context_->NotifyCacheUpdated();
@@ -168,24 +208,64 @@ void ReportingCache::RemoveClients(
 
 void ReportingCache::RemoveClientForOriginAndEndpoint(const url::Origin& origin,
                                                       const GURL& endpoint) {
-  DCHECK(base::ContainsKey(clients_, origin));
-  DCHECK(base::ContainsKey(clients_[origin], endpoint));
-  clients_[origin].erase(endpoint);
+  MaybeRemoveWildcardClient(clients_[origin][endpoint].get());
+  size_t erased = clients_[origin].erase(endpoint);
+  DCHECK_EQ(1u, erased);
 
   context_->NotifyCacheUpdated();
 }
 
 void ReportingCache::RemoveClientsForEndpoint(const GURL& endpoint) {
-  for (auto& it : clients_)
-    it.second.erase(endpoint);
+  for (auto& origin_and_endpoints : clients_) {
+    if (base::ContainsKey(origin_and_endpoints.second, endpoint)) {
+      MaybeRemoveWildcardClient(origin_and_endpoints.second[endpoint].get());
+      origin_and_endpoints.second.erase(endpoint);
+    }
+  }
 
   context_->NotifyCacheUpdated();
 }
 
 void ReportingCache::RemoveAllClients() {
   clients_.clear();
+  wildcard_clients_.clear();
 
   context_->NotifyCacheUpdated();
+}
+
+void ReportingCache::MaybeAddWildcardClient(const ReportingClient* client) {
+  if (client->subdomains != ReportingClient::Subdomains::INCLUDE)
+    return;
+
+  const std::string& domain = client->origin.host();
+  auto inserted = wildcard_clients_[domain].insert(client);
+  DCHECK(inserted.second);
+}
+
+void ReportingCache::MaybeRemoveWildcardClient(const ReportingClient* client) {
+  if (client->subdomains != ReportingClient::Subdomains::INCLUDE)
+    return;
+
+  const std::string& domain = client->origin.host();
+  size_t erased = wildcard_clients_[domain].erase(client);
+  DCHECK_EQ(1u, erased);
+}
+
+void ReportingCache::GetWildcardClientsForDomainAndGroup(
+    const std::string& domain,
+    const std::string& group,
+    std::vector<const ReportingClient*>* clients_out) const {
+  clients_out->clear();
+
+  auto it = wildcard_clients_.find(domain);
+  if (it == wildcard_clients_.end())
+    return;
+
+  for (const ReportingClient* client : it->second) {
+    DCHECK_EQ(ReportingClient::Subdomains::INCLUDE, client->subdomains);
+    if (client->group == group)
+      clients_out->push_back(client);
+  }
 }
 
 }  // namespace net

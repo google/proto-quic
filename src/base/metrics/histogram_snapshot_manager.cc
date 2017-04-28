@@ -35,6 +35,7 @@ void HistogramSnapshotManager::PrepareFinalDelta(
 void HistogramSnapshotManager::PrepareSamples(
     const HistogramBase* histogram,
     std::unique_ptr<HistogramSamples> samples) {
+  DCHECK(thread_checker_.CalledOnValidThread());
   DCHECK(histogram_flattener_);
 
   // Get information known about this histogram. If it did not previously
@@ -91,22 +92,6 @@ void HistogramSnapshotManager::PrepareSamples(
 
   if (samples->TotalCount() > 0)
     histogram_flattener_->RecordDelta(*histogram, *samples);
-}
-
-void HistogramSnapshotManager::InspectLoggedSamplesInconsistency(
-      const HistogramSamples& new_snapshot,
-      HistogramSamples* logged_samples) {
-  HistogramBase::Count discrepancy =
-      logged_samples->TotalCount() - logged_samples->redundant_count();
-  if (!discrepancy)
-    return;
-
-  histogram_flattener_->InconsistencyDetectedInLoggedCount(discrepancy);
-  if (discrepancy > Histogram::kCommonRaceBasedCountMismatch) {
-    // Fix logged_samples.
-    logged_samples->Subtract(*logged_samples);
-    logged_samples->Add(new_snapshot);
-  }
 }
 
 }  // namespace base

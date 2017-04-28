@@ -283,24 +283,6 @@ template("test") {
         "//build/win:default_exe_manifest",
       ]
     }
-
-    # TODO(GYP_GONE): Delete this after we've converted everything to GN.
-    # The _run targets exist only for compatibility with GYP.
-    group("${target_name}_run") {
-      testonly = true
-      deps = [
-        ":${invoker.target_name}",
-      ]
-    }
-
-    if (defined(invoker.output_name) && target_name != invoker.output_name) {
-      group("${invoker.output_name}_run") {
-        testonly = true
-        deps = [
-          ":${invoker.target_name}",
-        ]
-      }
-    }
   }
 }
 

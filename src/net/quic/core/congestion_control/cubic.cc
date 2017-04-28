@@ -8,8 +8,8 @@
 #include <cmath>
 #include <cstdint>
 
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 
 namespace net {

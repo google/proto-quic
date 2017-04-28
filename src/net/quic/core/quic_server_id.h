@@ -44,6 +44,8 @@ class QUIC_EXPORT_PRIVATE QuicServerId {
 
   PrivacyMode privacy_mode() const { return privacy_mode_; }
 
+  size_t EstimateMemoryUsage() const;
+
  private:
   HostPortPair host_port_pair_;
   PrivacyMode privacy_mode_;

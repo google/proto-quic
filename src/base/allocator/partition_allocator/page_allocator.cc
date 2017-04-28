@@ -216,7 +216,14 @@ bool SetSystemPagesAccessible(void* address, size_t length) {
 void DecommitSystemPages(void* address, size_t length) {
   DCHECK(!(length & kSystemPageOffsetMask));
 #if defined(OS_POSIX)
+#if defined(OS_MACOSX)
+  // On macOS, MADV_FREE_REUSABLE has comparable behavior to MADV_FREE, but also
+  // marks the pages with the reusable bit, which allows both Activity Monitor
+  // and memory-infra to correctly track the pages.
+  int ret = madvise(address, length, MADV_FREE_REUSABLE);
+#else
   int ret = madvise(address, length, MADV_FREE);
+#endif
   if (ret != 0 && errno == EINVAL) {
     // MADV_FREE only works on Linux 4.5+ . If request failed,
     // retry with older MADV_DONTNEED . Note that MADV_FREE

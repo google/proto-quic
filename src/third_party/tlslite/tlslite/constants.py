@@ -58,6 +58,7 @@ class ExtensionType:    # RFC 6066 / 4366
     signed_cert_timestamps = 18  # RFC 6962
     extended_master_secret = 23  # RFC 7627
     token_binding = 24           # draft-ietf-tokbind-negotiation
+    supported_versions = 43      # draft-ietf-tls-tls13-18
     tack = 0xF300
     supports_npn = 13172
     channel_id = 30032

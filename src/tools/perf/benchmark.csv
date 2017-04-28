@@ -16,7 +16,6 @@ blink_perf.parser,"yukishiino@chromium.org, bashi@chromium.org, haraken@chromium
 blink_perf.pywebsocket,"tyoshino@chromium.org, yhirano@chromium.org",
 blink_perf.shadow_dom,hayato@chromium.org,
 blink_perf.svg,"kouhei@chromium.org, fs@opera.com",
-blink_perf.xml_http_request,"tyoshino@chromium.org, hiroshige@chromium.org",
 blink_style.key_mobile_sites,,
 blink_style.polymer,,
 blink_style.top_25,,
@@ -51,14 +50,14 @@ kraken,"bmeurer@chromium.org, mvstanton@chromium.org",
 load_library_perf_tests,,
 loading.cluster_telemetry,,
 loading.mobile,"kouhei@chromium.org, ksakamoto@chromium.org",
-media.android.tough_video_cases,,
+media.android.tough_video_cases,"crouleau@chromium.org, videostack-eng@google.com",Internals>Media
 media.android.tough_video_cases_tbmv2,"johnchen@chromium.org, crouleau@chromium.org",Internals>Media
-media.chromeOS.tough_video_cases,,
-media.chromeOS4kOnly.tough_video_cases,,
-media.media_cns_cases,"crouleau@chromium.org, videostack-eng@google.com",
-media.mse_cases,"crouleau@chromium.org, videostack-eng@google.com",
-media.tough_video_cases,,
-media.tough_video_cases_extra,"crouleau@chromium.org, videostack-eng@google.com",
+media.chromeOS.tough_video_cases,crouleau@chromium.org,Internals>Media
+media.chromeOS4kOnly.tough_video_cases,crouleau@chromium.org,Internals>Media
+media.media_cns_cases,"crouleau@chromium.org, videostack-eng@google.com",Internals>Media
+media.mse_cases,"crouleau@chromium.org, videostack-eng@google.com",Internals>Media>Source
+media.tough_video_cases,crouleau@chromium.org,Internals>Media
+media.tough_video_cases_extra,"crouleau@chromium.org, videostack-eng@google.com",Internals>Media
 media.tough_video_cases_tbmv2,"johnchen@chromium.org, crouleau@chromium.org",Internals>Media
 media_perftests,crouleau@chromium.org,
 memory.blink_memory_mobile,bashi@chromium.org,
@@ -88,6 +87,7 @@ page_cycler_v2.typical_25,"kouhei@chromium.org, ksakamoto@chromium.org",
 page_cycler_v2_site_isolation.basic_oopif,nasko@chromium.org,
 performance_browser_tests,"hubbe@chromium.org, justinlin@chromium.org, miu@chromium.org",
 power.android_acceptance,perezju@chromium.org,
+power.idle_platform,,
 power.steady_state,,
 power.top_10,,
 power.top_25,,
@@ -161,7 +161,7 @@ system_health.memory_desktop,perezju@chromium.org,
 system_health.memory_mobile,perezju@chromium.org,
 system_health.webview_startup,"perezju@chromium.org, torne@chromium.org",
 system_health.webview_startup_multiprocess,,
-tab_switching.typical_25,,
+tab_switching.typical_25,vovoy@chromium.org,OS>Performance
 text_selection.character,mfomitchev@chromium.org,
 text_selection.direction,mfomitchev@chromium.org,
 thread_times.key_hit_test_cases,,
@@ -198,9 +198,6 @@ v8.runtimestats.browsing_desktop_turbo,mythria@chromium.org,
 v8.runtimestats.browsing_mobile,mythria@chromium.org,
 v8.runtimestats.browsing_mobile_classic,hablich@chromium.org,
 v8.runtimestats.browsing_mobile_turbo,mythria@chromium.org,
-v8.todomvc,jochen@chromium.org,
-v8.todomvc-classic,hablich@chromium.org,
-v8.todomvc-turbo,mvstaton@chromium.org,
 v8.top_25_smooth,"hpayer@chromium.org, rmcilroy@chromium.org",
 webrtc.datachannel,phoglund@chromium.org,
 webrtc.getusermedia,,

@@ -253,10 +253,14 @@ class NET_EXPORT_PRIVATE SimpleEntryImpl : public Entry,
                              std::unique_ptr<int> result);
 
   // Called after an asynchronous write completes.
+  // |buf| parameter brings back a reference to net::IOBuffer to the original
+  // thread, so that we can reduce cross thread malloc/free pair.
+  // See http://crbug.com/708644 for details.
   void WriteOperationComplete(int stream_index,
                               const CompletionCallback& completion_callback,
                               std::unique_ptr<SimpleEntryStat> entry_stat,
-                              std::unique_ptr<int> result);
+                              std::unique_ptr<int> result,
+                              net::IOBuffer* buf);
 
   void ReadSparseOperationComplete(
       const CompletionCallback& completion_callback,
@@ -280,8 +284,8 @@ class NET_EXPORT_PRIVATE SimpleEntryImpl : public Entry,
   // Called after validating the checksums on an entry. Passes through the
   // original result if successful, propagates the error if the checksum does
   // not validate.
-  void ChecksumOperationComplete(int stream_index,
-                                 int orig_result,
+  void ChecksumOperationComplete(int original_result,
+                                 int stream_index,
                                  const CompletionCallback& completion_callback,
                                  std::unique_ptr<int> result);
 

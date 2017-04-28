@@ -6,6 +6,7 @@
 
 #include <cstdint>
 
+#include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_logging.h"
@@ -14,13 +15,15 @@ namespace net {
 
 QuicPacketGenerator::QuicPacketGenerator(QuicConnectionId connection_id,
                                          QuicFramer* framer,
+                                         QuicRandom* random_generator,
                                          QuicBufferAllocator* buffer_allocator,
                                          DelegateInterface* delegate)
     : delegate_(delegate),
       packet_creator_(connection_id, framer, buffer_allocator, delegate),
       batch_mode_(false),
       should_send_ack_(false),
-      should_send_stop_waiting_(false) {}
+      should_send_stop_waiting_(false),
+      random_generator_(random_generator) {}
 
 QuicPacketGenerator::~QuicPacketGenerator() {
   DeleteFrames(&queued_control_frames_);
@@ -51,9 +54,10 @@ QuicConsumedData QuicPacketGenerator::ConsumeData(
     QuicStreamId id,
     QuicIOVector iov,
     QuicStreamOffset offset,
-    bool fin,
+    StreamSendingState state,
     QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener) {
   bool has_handshake = (id == kCryptoStreamId);
+  bool fin = state != NO_FIN;
   QUIC_BUG_IF(has_handshake && fin)
       << "Handshake packets should never send a fin";
   // To make reasoning about crypto frames easier, we don't combine them with
@@ -93,6 +97,9 @@ QuicConsumedData QuicPacketGenerator::ConsumeData(
     }
     total_bytes_consumed += bytes_consumed;
     fin_consumed = fin && total_bytes_consumed == iov.total_length;
+    if (fin_consumed && state == FIN_AND_PADDING) {
+      AddRandomPadding();
+    }
     DCHECK(total_bytes_consumed == iov.total_length ||
            (bytes_consumed > 0 && packet_creator_.HasPendingFrames()));
 
@@ -174,9 +181,10 @@ void QuicPacketGenerator::GenerateMtuDiscoveryPacket(
 }
 
 bool QuicPacketGenerator::CanSendWithNextPendingFrameAddition() const {
-  DCHECK(HasPendingFrames());
+  DCHECK(HasPendingFrames() || packet_creator_.pending_padding_bytes() > 0);
   HasRetransmittableData retransmittable =
-      (should_send_ack_ || should_send_stop_waiting_)
+      (should_send_ack_ || should_send_stop_waiting_ ||
+       packet_creator_.pending_padding_bytes() > 0)
           ? NO_RETRANSMITTABLE_DATA
           : HAS_RETRANSMITTABLE_DATA;
   if (retransmittable == HAS_RETRANSMITTABLE_DATA) {
@@ -222,6 +230,7 @@ void QuicPacketGenerator::StartBatchOperations() {
 void QuicPacketGenerator::FinishBatchOperations() {
   batch_mode_ = false;
   SendQueuedFrames(/*flush=*/false);
+  SendRemainingPendingPadding();
 }
 
 void QuicPacketGenerator::FlushAllQueuedFrames() {
@@ -325,6 +334,18 @@ void QuicPacketGenerator::set_encryption_level(EncryptionLevel level) {
 void QuicPacketGenerator::SetEncrypter(EncryptionLevel level,
                                        QuicEncrypter* encrypter) {
   packet_creator_.SetEncrypter(level, encrypter);
+}
+
+void QuicPacketGenerator::AddRandomPadding() {
+  packet_creator_.AddPendingPadding(
+      random_generator_->RandUint64() % kMaxNumRandomPaddingBytes + 1);
+}
+
+void QuicPacketGenerator::SendRemainingPendingPadding() {
+  while (packet_creator_.pending_padding_bytes() > 0 && !HasQueuedFrames() &&
+         CanSendWithNextPendingFrameAddition()) {
+    packet_creator_.Flush();
+  }
 }
 
 }  // namespace net

@@ -6,95 +6,195 @@
 
 #include <memory>
 
+#include "base/bind.h"
 #include "base/single_thread_task_runner.h"
+#include "base/synchronization/waitable_event.h"
+#include "base/threading/thread.h"
+#include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
+
+using ::testing::Invoke;
+using ::testing::_;
 
 namespace base {
 namespace trace_event {
 
-class MemoryDumpSchedulerPollingTest : public testing::Test {
- public:
-  static const uint32_t kMinPollsToDump = 5;
+namespace {
 
-  MemoryDumpSchedulerPollingTest()
-      : testing::Test(),
-        num_samples_tracked_(
-            MemoryDumpScheduler::PollingTriggerState::kMaxNumMemorySamples) {}
+// Wrapper to use gmock on a callback.
+struct CallbackWrapper {
+  MOCK_METHOD1(OnTick, void(MemoryDumpLevelOfDetail));
+};
+
+}  // namespace
+
+class MemoryDumpSchedulerTest : public testing::Test {
+ public:
+  struct FriendDeleter {
+    void operator()(MemoryDumpScheduler* inst) { delete inst; }
+  };
+
+  MemoryDumpSchedulerTest() : testing::Test() {}
 
   void SetUp() override {
-    MemoryDumpScheduler::SetPollingIntervalForTesting(1);
-    uint32_t kMinPollsToDump = 5;
-    mds_ = MemoryDumpScheduler::GetInstance();
-    mds_->Setup(nullptr, nullptr);
-    mds_->AddTrigger(MemoryDumpType::PEAK_MEMORY_USAGE,
-                     MemoryDumpLevelOfDetail::LIGHT, kMinPollsToDump);
-    mds_->polling_state_->ResetTotals();
-    mds_->polling_state_->current_state =
-        MemoryDumpScheduler::PollingTriggerState::ENABLED;
+    bg_thread_.reset(new Thread("MemoryDumpSchedulerTest Thread"));
+    bg_thread_->Start();
+    scheduler_.reset(new MemoryDumpScheduler());
   }
 
   void TearDown() override {
-    mds_->polling_state_->current_state =
-        MemoryDumpScheduler::PollingTriggerState::DISABLED;
+    bg_thread_.reset();
+    scheduler_.reset();
   }
 
  protected:
-  bool ShouldTriggerDump(uint64_t total) {
-    return mds_->ShouldTriggerDump(total);
-  }
-
-  uint32_t num_samples_tracked_;
-  MemoryDumpScheduler* mds_;
+  std::unique_ptr<MemoryDumpScheduler, FriendDeleter> scheduler_;
+  std::unique_ptr<Thread> bg_thread_;
+  CallbackWrapper on_tick_;
 };
 
-TEST_F(MemoryDumpSchedulerPollingTest, PeakDetection) {
-  for (uint32_t i = 0; i < num_samples_tracked_ * 6; ++i) {
-    // Memory is increased in steps and dumps must be triggered at every step.
-    uint64_t total = (2 + (i / (2 * num_samples_tracked_))) * 1024 * 1204;
-    bool did_trigger = ShouldTriggerDump(total);
-    // Dumps must be triggered only at specific iterations.
-    bool should_have_triggered = i == 0;
-    should_have_triggered |=
-        (i > num_samples_tracked_) && (i % (2 * num_samples_tracked_) == 1);
-    if (should_have_triggered) {
-      ASSERT_TRUE(did_trigger) << "Dump wasn't triggered at " << i;
-    } else {
-      ASSERT_FALSE(did_trigger) << "Unexpected dump at " << i;
-    }
-  }
+TEST_F(MemoryDumpSchedulerTest, SingleTrigger) {
+  const uint32_t kPeriodMs = 1;
+  const auto kLevelOfDetail = MemoryDumpLevelOfDetail::DETAILED;
+  const uint32_t kTicks = 5;
+  WaitableEvent evt(WaitableEvent::ResetPolicy::MANUAL,
+                    WaitableEvent::InitialState::NOT_SIGNALED);
+  MemoryDumpScheduler::Config config;
+  config.triggers.push_back({kLevelOfDetail, kPeriodMs});
+  config.callback = Bind(&CallbackWrapper::OnTick, Unretained(&on_tick_));
+
+  testing::InSequence sequence;
+  EXPECT_CALL(on_tick_, OnTick(_)).Times(kTicks - 1);
+  EXPECT_CALL(on_tick_, OnTick(_))
+      .WillRepeatedly(Invoke(
+          [&evt, kLevelOfDetail](MemoryDumpLevelOfDetail level_of_detail) {
+            EXPECT_EQ(kLevelOfDetail, level_of_detail);
+            evt.Signal();
+          }));
+
+  // Check that Stop() before Start() doesn't cause any error.
+  scheduler_->Stop();
+
+  const TimeTicks tstart = TimeTicks::Now();
+  scheduler_->Start(config, bg_thread_->task_runner());
+  evt.Wait();
+  const double time_ms = (TimeTicks::Now() - tstart).InMillisecondsF();
+
+  // It takes N-1 ms to perform N ticks of 1ms each.
+  EXPECT_GE(time_ms, kPeriodMs * (kTicks - 1));
+
+  // Check that stopping twice doesn't cause any problems.
+  scheduler_->Stop();
+  scheduler_->Stop();
 }
 
-TEST_F(MemoryDumpSchedulerPollingTest, SlowGrowthDetection) {
-  for (uint32_t i = 0; i < 15; ++i) {
-    // Record 1GiB of increase in each call. Dumps are triggered with 1% w.r.t
-    // system's total memory.
-    uint64_t total = static_cast<uint64_t>(i + 1) * 1024 * 1024 * 1024;
-    bool did_trigger = ShouldTriggerDump(total);
-    bool should_have_triggered = i % kMinPollsToDump == 0;
-    if (should_have_triggered) {
-      ASSERT_TRUE(did_trigger) << "Dump wasn't triggered at " << i;
-    } else {
-      ASSERT_FALSE(did_trigger) << "Unexpected dump at " << i;
-    }
-  }
+TEST_F(MemoryDumpSchedulerTest, MultipleTriggers) {
+  const uint32_t kPeriodLightMs = 3;
+  const uint32_t kPeriodDetailedMs = 9;
+  WaitableEvent evt(WaitableEvent::ResetPolicy::MANUAL,
+                    WaitableEvent::InitialState::NOT_SIGNALED);
+  MemoryDumpScheduler::Config config;
+  const MemoryDumpLevelOfDetail kLight = MemoryDumpLevelOfDetail::LIGHT;
+  const MemoryDumpLevelOfDetail kDetailed = MemoryDumpLevelOfDetail::DETAILED;
+  config.triggers.push_back({kLight, kPeriodLightMs});
+  config.triggers.push_back({kDetailed, kPeriodDetailedMs});
+  config.callback = Bind(&CallbackWrapper::OnTick, Unretained(&on_tick_));
+
+  TimeTicks t1, t2, t3;
+
+  testing::InSequence sequence;
+  EXPECT_CALL(on_tick_, OnTick(kDetailed))
+      .WillOnce(
+          Invoke([&t1](MemoryDumpLevelOfDetail) { t1 = TimeTicks::Now(); }));
+  EXPECT_CALL(on_tick_, OnTick(kLight)).Times(1);
+  EXPECT_CALL(on_tick_, OnTick(kLight)).Times(1);
+  EXPECT_CALL(on_tick_, OnTick(kDetailed))
+      .WillOnce(
+          Invoke([&t2](MemoryDumpLevelOfDetail) { t2 = TimeTicks::Now(); }));
+  EXPECT_CALL(on_tick_, OnTick(kLight))
+      .WillOnce(
+          Invoke([&t3](MemoryDumpLevelOfDetail) { t3 = TimeTicks::Now(); }));
+
+  // Rationale for WillRepeatedly and not just WillOnce: Extra ticks might
+  // happen if the Stop() takes time. Not an interesting case, but we need to
+  // avoid gmock to shout in that case.
+  EXPECT_CALL(on_tick_, OnTick(_))
+      .WillRepeatedly(
+          Invoke([&evt](MemoryDumpLevelOfDetail) { evt.Signal(); }));
+
+  scheduler_->Start(config, bg_thread_->task_runner());
+  evt.Wait();
+  scheduler_->Stop();
+  EXPECT_GE((t2 - t1).InMillisecondsF(), kPeriodDetailedMs);
+  EXPECT_GE((t3 - t2).InMillisecondsF(), kPeriodLightMs);
 }
 
-TEST_F(MemoryDumpSchedulerPollingTest, NotifyDumpTriggered) {
-  for (uint32_t i = 0; i < num_samples_tracked_ * 6; ++i) {
-    uint64_t total = (2 + (i / (2 * num_samples_tracked_))) * 1024 * 1204;
-    if (i % num_samples_tracked_ == 0)
-      mds_->NotifyDumpTriggered();
-    bool did_trigger = ShouldTriggerDump(total);
-    // Dumps should never be triggered since NotifyDumpTriggered() is called
-    // frequently.
-    EXPECT_NE(0u, mds_->polling_state_->last_dump_memory_total);
-    EXPECT_GT(num_samples_tracked_ - 1,
-              mds_->polling_state_->last_memory_totals_kb_index);
-    EXPECT_LT(static_cast<int64_t>(
-                  total - mds_->polling_state_->last_dump_memory_total),
-              mds_->polling_state_->memory_increase_threshold);
-    ASSERT_FALSE(did_trigger && i) << "Unexpected dump at " << i;
+TEST_F(MemoryDumpSchedulerTest, StartStopQuickly) {
+  const uint32_t kPeriodMs = 1;
+  const uint32_t kTicks = 10;
+  WaitableEvent evt(WaitableEvent::ResetPolicy::MANUAL,
+                    WaitableEvent::InitialState::NOT_SIGNALED);
+  MemoryDumpScheduler::Config config;
+  config.triggers.push_back({MemoryDumpLevelOfDetail::DETAILED, kPeriodMs});
+  config.callback = Bind(&CallbackWrapper::OnTick, Unretained(&on_tick_));
+
+  testing::InSequence sequence;
+  EXPECT_CALL(on_tick_, OnTick(_)).Times(kTicks - 1);
+  EXPECT_CALL(on_tick_, OnTick(_))
+      .WillRepeatedly(
+          Invoke([&evt](MemoryDumpLevelOfDetail) { evt.Signal(); }));
+
+  const TimeTicks tstart = TimeTicks::Now();
+  for (int i = 0; i < 5; i++) {
+    scheduler_->Stop();
+    scheduler_->Start(config, bg_thread_->task_runner());
   }
+  evt.Wait();
+  const double time_ms = (TimeTicks::Now() - tstart).InMillisecondsF();
+  scheduler_->Stop();
+
+  // It takes N-1 ms to perform N ticks of 1ms each.
+  EXPECT_GE(time_ms, kPeriodMs * (kTicks - 1));
+}
+
+TEST_F(MemoryDumpSchedulerTest, StopAndStartOnAnotherThread) {
+  const uint32_t kPeriodMs = 1;
+  const uint32_t kTicks = 3;
+  WaitableEvent evt(WaitableEvent::ResetPolicy::MANUAL,
+                    WaitableEvent::InitialState::NOT_SIGNALED);
+  MemoryDumpScheduler::Config config;
+  config.triggers.push_back({MemoryDumpLevelOfDetail::DETAILED, kPeriodMs});
+  config.callback = Bind(&CallbackWrapper::OnTick, Unretained(&on_tick_));
+
+  scoped_refptr<TaskRunner> expected_task_runner = bg_thread_->task_runner();
+  testing::InSequence sequence;
+  EXPECT_CALL(on_tick_, OnTick(_)).Times(kTicks - 1);
+  EXPECT_CALL(on_tick_, OnTick(_))
+      .WillRepeatedly(
+          Invoke([&evt, expected_task_runner](MemoryDumpLevelOfDetail) {
+            EXPECT_TRUE(expected_task_runner->RunsTasksOnCurrentThread());
+            evt.Signal();
+          }));
+
+  scheduler_->Start(config, bg_thread_->task_runner());
+  evt.Wait();
+  scheduler_->Stop();
+  bg_thread_->Stop();
+
+  bg_thread_.reset(new Thread("MemoryDumpSchedulerTest Thread 2"));
+  bg_thread_->Start();
+  evt.Reset();
+  expected_task_runner = bg_thread_->task_runner();
+  scheduler_->Start(config, bg_thread_->task_runner());
+  EXPECT_CALL(on_tick_, OnTick(_)).Times(kTicks - 1);
+  EXPECT_CALL(on_tick_, OnTick(_))
+      .WillRepeatedly(
+          Invoke([&evt, expected_task_runner](MemoryDumpLevelOfDetail) {
+            EXPECT_TRUE(expected_task_runner->RunsTasksOnCurrentThread());
+            evt.Signal();
+          }));
+  evt.Wait();
+  scheduler_->Stop();
 }
 
 }  // namespace trace_event

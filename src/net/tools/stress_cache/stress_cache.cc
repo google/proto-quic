@@ -379,7 +379,10 @@ bool StartCrashThread() {
   return true;
 }
 
-void CrashHandler(const std::string& str) {
+void CrashHandler(const char* file,
+                  int line,
+                  const base::StringPiece str,
+                  const base::StringPiece stack_trace) {
   g_crashing = true;
   base::debug::BreakDebugger();
 }
@@ -414,7 +417,8 @@ int main(int argc, const char* argv[]) {
   if (argc < 2)
     return MasterCode();
 
-  logging::SetLogAssertHandler(CrashHandler);
+  logging::ScopedLogAssertHandler scoped_assert_handler(
+      base::Bind(CrashHandler));
   logging::SetLogMessageHandler(MessageHandler);
 
 #if defined(OS_WIN)

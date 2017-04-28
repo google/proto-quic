@@ -21,7 +21,7 @@ bool SequencedTaskRunner::DeleteOrReleaseSoonInternal(
     const tracked_objects::Location& from_here,
     void (*deleter)(const void*),
     const void* object) {
-  return PostNonNestableTask(from_here, Bind(deleter, object));
+  return PostNonNestableTask(from_here, BindOnce(deleter, object));
 }
 
 OnTaskRunnerDeleter::OnTaskRunnerDeleter(

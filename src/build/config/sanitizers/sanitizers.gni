@@ -97,6 +97,12 @@ declare_args() {
   # Default value when unset and use_sanitizer_coverage=true:
   #     edge,indirect-calls,8bit-counters
   sanitizer_coverage_flags = ""
+
+  # Keep symbol level when building with sanitizers. When sanitizers are
+  # enabled, the default is to compile with the minimum debug info level
+  # necessary, overriding any other symbol level arguments that may be set.
+  # Setting this to true prevents this.
+  sanitizer_keep_symbols = false
 }
 
 # Disable sanitizers for non-default toolchains.

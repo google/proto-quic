@@ -92,6 +92,12 @@ std::string AlternativeServiceInfo::ToString() const {
       exploded.day_of_month, exploded.hour, exploded.minute, exploded.second);
 }
 
+std::ostream& operator<<(std::ostream& os,
+                         const AlternativeService& alternative_service) {
+  os << alternative_service.ToString();
+  return os;
+}
+
 // static
 void HttpServerProperties::ForceHTTP11(SSLConfig* ssl_config) {
   ssl_config->alpn_protos.clear();

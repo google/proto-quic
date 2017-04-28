@@ -13,6 +13,7 @@
 #include "net/cert/internal/cert_errors.h"
 #include "net/cert/internal/parsed_certificate.h"
 #include "net/cert/internal/trust_store.h"
+#include "net/cert/internal/verify_certificate_chain.h"
 #include "net/der/input.h"
 #include "net/der/parse_values.h"
 
@@ -118,6 +119,7 @@ class NET_EXPORT CertPathBuilder {
                   const TrustStore* trust_store,
                   const SignaturePolicy* signature_policy,
                   const der::GeneralizedTime& time,
+                  KeyPurpose key_purpose,
                   Result* result);
   ~CertPathBuilder();
 
@@ -152,6 +154,7 @@ class NET_EXPORT CertPathBuilder {
   std::unique_ptr<CertPathIter> cert_path_iter_;
   const SignaturePolicy* signature_policy_;
   const der::GeneralizedTime time_;
+  const KeyPurpose key_purpose_;
 
   // Stores the next complete path to attempt verification on. This is filled in
   // by |cert_path_iter_| during the STATE_GET_NEXT_PATH step, and thus should

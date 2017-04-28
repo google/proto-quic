@@ -4,7 +4,7 @@
 
 #include "base/strings/string16.h"
 
-#if defined(WCHAR_T_IS_UTF16)
+#if defined(WCHAR_T_IS_UTF16) && !defined(_AIX)
 
 #error This file should not be used on 2-byte wchar_t systems
 // If this winds up being needed on 2-byte wchar_t systems, either the

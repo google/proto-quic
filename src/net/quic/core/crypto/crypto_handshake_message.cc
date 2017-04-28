@@ -11,6 +11,7 @@
 #include "net/quic/core/crypto/crypto_utils.h"
 #include "net/quic/core/quic_socket_address_coder.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_endian.h"
 #include "net/quic/platform/api/quic_map_util.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/platform/api/quic_text_utils.h"
@@ -246,6 +247,9 @@ string CryptoHandshakeMessage::DebugStringInternal(
         if (it->second.size() == 8) {
           uint64_t value;
           memcpy(&value, it->second.data(), sizeof(value));
+          if (QuicUtils::IsConnectionIdWireFormatBigEndian(perspective)) {
+            value = QuicEndian::NetToHost64(value);
+          }
           ret += QuicTextUtils::Uint64ToString(value);
           done = true;
         }

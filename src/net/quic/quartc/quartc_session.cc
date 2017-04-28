@@ -132,7 +132,11 @@ QuartcSession::QuartcSession(std::unique_ptr<QuicConnection> connection,
 
 QuartcSession::~QuartcSession() {}
 
-QuicCryptoStream* QuartcSession::GetCryptoStream() {
+const QuicCryptoStream* QuartcSession::GetCryptoStream() const {
+  return crypto_stream_.get();
+}
+
+QuicCryptoStream* QuartcSession::GetMutableCryptoStream() {
   return crypto_stream_.get();
 }
 

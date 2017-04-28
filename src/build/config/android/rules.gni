@@ -354,7 +354,7 @@ if (enable_java_templates) {
   #     FooBar.java.
   #   inputs: additional compile-time dependencies. Any files
   #     `#include`-ed in the templates should be listed here.
-  #   package_name: this will be the subdirectory for each .java file in the
+  #   package_path: this will be the subdirectory for each .java file in the
   #     .srcjar.
   #
   # Example
@@ -366,7 +366,7 @@ if (enable_java_templates) {
   #       "android/java/templates/native_foo_header.h",
   #     ]
   #
-  #     package_name = "org/chromium/base/library_loader"
+  #     package_path = "org/chromium/base/library_loader"
   #     include_path = "android/java/templates"
   #   }
   template("java_cpp_template") {
@@ -380,6 +380,15 @@ if (enable_java_templates) {
 
     _apply_gcc_target_name = "${target_name}__apply_gcc"
     _base_gen_dir = "${target_gen_dir}/${target_name}/java_cpp_template"
+
+    if (defined(invoker.package_path)) {
+      package_path = invoker.package_path
+    } else {
+      # TODO(jbudorick): Back this out once all clients have been switched to
+      # package_path.
+      assert(defined(invoker.package_name))
+      package_path = invoker.package_name
+    }
 
     action_foreach(_apply_gcc_target_name) {
       forward_variables_from(invoker,
@@ -398,7 +407,7 @@ if (enable_java_templates) {
       sources = invoker.sources
 
       outputs = [
-        "$_base_gen_dir/${invoker.package_name}/{{source_name_part}}.java",
+        "$_base_gen_dir/${package_path}/{{source_name_part}}.java",
       ]
 
       args = [
@@ -1810,7 +1819,7 @@ if (enable_java_templates) {
       }
 
       java_cpp_template("${_template_name}__native_libraries_java") {
-        package_name = "org/chromium/base/library_loader"
+        package_path = "org/chromium/base/library_loader"
         sources = [
           "//base/android/java/templates/NativeLibraries.template",
         ]
@@ -1844,7 +1853,7 @@ if (enable_java_templates) {
 
     if (_generate_buildconfig_java) {
       java_cpp_template("${_template_name}__build_config_java") {
-        package_name = "org/chromium/base"
+        package_path = "org/chromium/base"
         sources = [
           "//base/android/java/templates/BuildConfig.template",
         ]
@@ -1925,6 +1934,9 @@ if (enable_java_templates) {
       _proguard_configs = [ _generated_proguard_config ]
       if (defined(invoker.proguard_configs)) {
         _proguard_configs += invoker.proguard_configs
+      }
+      if (enable_multidex) {
+        _proguard_configs += [ "//build/android/multidex.flags" ]
       }
       assert(_proguard_configs != [])  # Mark as used.
       _proguard_target = "${_template_name}__proguard"

@@ -6,6 +6,7 @@
 
 #include <tuple>
 
+#include "net/quic/platform/api/quic_estimate_memory_usage.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 
 using std::string;
@@ -41,6 +42,10 @@ bool QuicServerId::operator==(const QuicServerId& other) const {
 string QuicServerId::ToString() const {
   return QuicStrCat("https://", host_port_pair_.ToString(),
                     (privacy_mode_ == PRIVACY_MODE_ENABLED ? "/private" : ""));
+}
+
+size_t QuicServerId::EstimateMemoryUsage() const {
+  return QuicEstimateMemoryUsage(host_port_pair_);
 }
 
 }  // namespace net

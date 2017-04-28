@@ -6,9 +6,9 @@
 
 #include "net/quic/core/proto/cached_network_parameters.pb.h"
 #include "net/quic/core/quic_connection.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_stream.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_string_piece.h"
 
@@ -227,7 +227,12 @@ bool QuicServerSessionBase::ShouldCreateOutgoingDynamicStream() {
   return true;
 }
 
-QuicCryptoServerStreamBase* QuicServerSessionBase::GetCryptoStream() {
+QuicCryptoServerStreamBase* QuicServerSessionBase::GetMutableCryptoStream() {
+  return crypto_stream_.get();
+}
+
+const QuicCryptoServerStreamBase* QuicServerSessionBase::GetCryptoStream()
+    const {
   return crypto_stream_.get();
 }
 

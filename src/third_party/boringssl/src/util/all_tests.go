@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -37,7 +38,7 @@ var (
 	useGDB          = flag.Bool("gdb", false, "If true, run BoringSSL code under gdb")
 	useSDE          = flag.Bool("sde", false, "If true, run BoringSSL code under Intel's SDE for each supported chip")
 	buildDir        = flag.String("build-dir", "build", "The build directory to run the tests from.")
-	numWorkers      = flag.Int("num-workers", 1, "Runs the given number of workers when testing.")
+	numWorkers      = flag.Int("num-workers", runtime.NumCPU(), "Runs the given number of workers when testing.")
 	jsonOutput      = flag.String("json-output", "", "The file to output JSON results to.")
 	mallocTest      = flag.Int64("malloc-test", -1, "If non-negative, run each test with each malloc in turn failing from the given number onwards.")
 	mallocTestDebug = flag.Bool("malloc-test-debug", false, "If true, ask each test to abort rather than fail a malloc. This can be used with a specific value for --malloc-test to identity the malloc failing that is causing problems.")
@@ -245,13 +246,13 @@ func runTest(test test) (bool, error) {
 	}
 }
 
-// shortTestName returns the short name of a test. Except for evp_test, it
-// assumes that any argument which ends in .txt is a path to a data file and not
-// relevant to the test's uniqueness.
+// shortTestName returns the short name of a test. Except for evp_test and
+// cipher_test, it assumes that any argument which ends in .txt is a path to a
+// data file and not relevant to the test's uniqueness.
 func shortTestName(test test) string {
 	var args []string
 	for _, arg := range test.args {
-		if test.args[0] == "crypto/evp/evp_test" || !strings.HasSuffix(arg, ".txt") {
+		if test.args[0] == "crypto/evp/evp_test" || test.args[0] == "crypto/cipher/cipher_test" || test.args[0] == "crypto/cipher/aead_test" || !strings.HasSuffix(arg, ".txt") {
 			args = append(args, arg)
 		}
 	}

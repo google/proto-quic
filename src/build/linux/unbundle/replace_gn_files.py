@@ -29,6 +29,7 @@ REPLACEMENTS = {
   'libwebp': 'third_party/libwebp/BUILD.gn',
   'libxml': 'third_party/libxml/BUILD.gn',
   'libxslt': 'third_party/libxslt/BUILD.gn',
+  'opus': 'third_party/opus/BUILD.gn',
   're2': 'third_party/re2/BUILD.gn',
   'snappy': 'third_party/snappy/BUILD.gn',
   'yasm': 'third_party/yasm/yasm_assemble.gni',

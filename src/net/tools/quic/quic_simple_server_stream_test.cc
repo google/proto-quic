@@ -108,7 +108,7 @@ class MockQuicSimpleServerSession : public QuicSimpleServerSession {
                        QuicStreamId id,
                        QuicIOVector data,
                        QuicStreamOffset offset,
-                       bool fin,
+                       StreamSendingState state,
                        QuicReferenceCountedPointer<QuicAckListenerInterface>));
   MOCK_METHOD4(OnStreamHeaderList,
                void(QuicStreamId stream_id,

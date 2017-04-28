@@ -18,6 +18,7 @@
 #include "net/cert/test_keychain_search_list_mac.h"
 #include "net/cert/x509_certificate.h"
 #include "net/cert/x509_util.h"
+#include "net/cert/x509_util_mac.h"
 #include "net/test/test_data_directory.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -263,9 +264,8 @@ TEST(TrustStoreMacTest, SystemCerts) {
     }
 
     base::ScopedCFTypeRef<SecCertificateRef> cert_handle(
-        X509Certificate::CreateOSCertHandleFromBytes(
-            cert->der_cert().AsStringPiece().data(),
-            cert->der_cert().Length()));
+        x509_util::CreateSecCertificateFromBytes(cert->der_cert().UnsafeData(),
+                                                 cert->der_cert().Length()));
     if (!cert_handle) {
       ADD_FAILURE() << "CreateOSCertHandleFromBytes " << hash_text;
       continue;

@@ -4,8 +4,8 @@
 
 #include "net/quic/core/quic_headers_stream.h"
 
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_spdy_session.h"
+#include "net/quic/platform/api/quic_flags.h"
 
 namespace net {
 

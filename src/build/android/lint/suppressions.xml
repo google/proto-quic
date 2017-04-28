@@ -183,6 +183,12 @@ Still reading?
   <issue id="NewApi">
     <ignore regexp="Attribute `paddingStart` referenced here can result in a crash on some specific devices older than API 17"/>
     <ignore regexp="chrome/android/java/res/drawable/downloads_big.xml"/>
+    <ignore regexp="chrome/android/java/res/drawable/ic_bluetooth_connected.xml"/>
+    <ignore regexp="chrome/android/java/res/drawable/ic_signal_cellular_0_bar.xml" />
+    <ignore regexp="chrome/android/java/res/drawable/ic_signal_cellular_1_bar.xml" />
+    <ignore regexp="chrome/android/java/res/drawable/ic_signal_cellular_2_bar.xml" />
+    <ignore regexp="chrome/android/java/res/drawable/ic_signal_cellular_3_bar.xml" />
+    <ignore regexp="chrome/android/java/res/drawable/ic_signal_cellular_4_bar.xml" />
     <ignore regexp="chrome/android/java/res/values-v17/styles.xml"/>
     <ignore regexp="chromecast/internal"/>
     <ignore regexp="com/android/tv"/>
@@ -309,7 +315,6 @@ Still reading?
     <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_protected_media_identifier.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_restore.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_screen_share.png"/>
-    <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_subresource_filtering.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/mir_card.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/pageinfo_bad.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/pageinfo_good.png"/>
@@ -426,7 +431,7 @@ Still reading?
   </issue>
   <issue id="UselessParent">
     <ignore regexp="android_webview/tools/system_webview_shell/apk/res/layout/activity_webview_browser.xml"/>
-    <ignore regexp="chrome/android/java/res/layout/data_reduction_promo_screen.xml"/>
+    <ignore regexp="chrome/android/java/res/layout/data_usage_breakdown.xml"/>
     <ignore regexp="chromecast/internal"/>
     <ignore regexp="tools/android/kerberos/SpnegoAuthenticator/res/layout/activity_account_authenticator.xml"/>
   </issue>
@@ -446,6 +451,5 @@ Still reading?
     <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/SSLClientCertificateRequest.java"/>
     <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/payments/ui/EditorView.java"/>
     <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/signin/SigninAndSyncView.java"/>
-    <ignore regexp="content/public/android/java/src/org/chromium/content/browser/ChildProcessConnectionImpl.java"/>
   </issue>
 </lint>

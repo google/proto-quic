@@ -83,10 +83,10 @@
 #include "net/socket/next_proto.h"
 #include "net/socket/socket_test_util.h"
 #include "net/socket/ssl_client_socket.h"
-#include "net/spdy/spdy_framer.h"
-#include "net/spdy/spdy_session.h"
-#include "net/spdy/spdy_session_pool.h"
-#include "net/spdy/spdy_test_util_common.h"
+#include "net/spdy/chromium/spdy_session.h"
+#include "net/spdy/chromium/spdy_session_pool.h"
+#include "net/spdy/chromium/spdy_test_util_common.h"
+#include "net/spdy/core/spdy_framer.h"
 #include "net/ssl/default_channel_id_store.h"
 #include "net/ssl/ssl_cert_request_info.h"
 #include "net/ssl/ssl_config_service.h"
@@ -398,7 +398,7 @@ class HttpNetworkTransactionTest : public PlatformTest {
             HttpNetworkSession::NORMAL_SOCKET_POOL)),
         old_max_pool_sockets_(ClientSocketPoolManager::max_sockets_per_pool(
             HttpNetworkSession::NORMAL_SOCKET_POOL)) {
-    session_deps_.enable_http2_alternative_service_with_different_host = true;
+    session_deps_.enable_http2_alternative_service = true;
   }
 
   struct SimpleGetHelperResult {
@@ -9813,8 +9813,9 @@ TEST_F(HttpNetworkTransactionTest, UploadUnreadableFile) {
   base::FilePath temp_file;
   ASSERT_TRUE(base::CreateTemporaryFile(&temp_file));
   std::string temp_file_content("Unreadable file.");
-  ASSERT_TRUE(base::WriteFile(temp_file, temp_file_content.c_str(),
-                                   temp_file_content.length()));
+  ASSERT_EQ(static_cast<int>(temp_file_content.length()),
+            base::WriteFile(temp_file, temp_file_content.c_str(),
+                            temp_file_content.length()));
   ASSERT_TRUE(base::MakeFileUnreadable(temp_file));
 
   std::vector<std::unique_ptr<UploadElementReader>> element_readers;
@@ -10161,12 +10162,11 @@ TEST_F(HttpNetworkTransactionTest,
   EXPECT_TRUE(alternative_service_vector.empty());
 }
 
-// HTTP/2 Alternative Services should be disabled if alternative service
-// hostname is different from that of origin.
+// HTTP/2 Alternative Services should be disabled by default.
 // TODO(bnc): Remove when https://crbug.com/615413 is fixed.
 TEST_F(HttpNetworkTransactionTest,
        DisableHTTP2AlternativeServicesWithDifferentHost) {
-  session_deps_.enable_http2_alternative_service_with_different_host = false;
+  session_deps_.enable_http2_alternative_service = false;
 
   HttpRequestInfo request;
   request.method = "GET";
@@ -12294,6 +12294,7 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
     std::vector<std::vector<MockRead>> mock_reads(1);
     std::vector<std::vector<MockWrite>> mock_writes(1);
     for (int round = 0; round < test_config.num_auth_rounds; ++round) {
+      SCOPED_TRACE(round);
       const TestRound& read_write_round = test_config.rounds[round];
 
       // Set up expected reads and writes.
@@ -12334,6 +12335,7 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
     HttpNetworkTransaction trans(DEFAULT_PRIORITY, session.get());
 
     for (int round = 0; round < test_config.num_auth_rounds; ++round) {
+      SCOPED_TRACE(round);
       const TestRound& read_write_round = test_config.rounds[round];
       // Start or restart the transaction.
       TestCompletionCallback callback;
@@ -14969,6 +14971,12 @@ class FakeStream : public HttpStream,
     return false;
   }
 
+  bool GetAlternativeService(
+      AlternativeService* alternative_service) const override {
+    ADD_FAILURE();
+    return false;
+  }
+
   void GetSSLInfo(SSLInfo* ssl_info) override { ADD_FAILURE(); }
 
   void GetSSLCertRequestInfo(SSLCertRequestInfo* cert_request_info) override {
@@ -15212,6 +15220,12 @@ class FakeWebSocketBasicHandshakeStream : public WebSocketHandshakeStreamBase {
 
   bool GetLoadTimingInfo(LoadTimingInfo* load_timing_info) const override {
     NOTREACHED();
+    return false;
+  }
+
+  bool GetAlternativeService(
+      AlternativeService* alternative_service) const override {
+    ADD_FAILURE();
     return false;
   }
 

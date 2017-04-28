@@ -8,7 +8,6 @@
 #include "crypto/nss_util.h"
 #include "net/socket/client_socket_pool_base.h"
 #include "net/socket/ssl_server_socket.h"
-#include "net/spdy/spdy_session.h"
 #include "net/test/net_test_suite.h"
 #include "url/url_features.h"
 
@@ -24,7 +23,6 @@
 #endif
 
 using net::internal::ClientSocketPoolBaseHelper;
-using net::SpdySession;
 
 int main(int argc, char** argv) {
   // Record histograms, so we can get histograms data in tests.

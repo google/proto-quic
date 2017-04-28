@@ -93,6 +93,9 @@ class BASE_EXPORT SyncSocket {
   // processes.
   Handle handle() const { return handle_; }
 
+  // Extracts and takes ownership of the contained handle.
+  Handle Release();
+
  protected:
   Handle handle_;
 

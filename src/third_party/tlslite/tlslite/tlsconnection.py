@@ -1457,6 +1457,15 @@ class TLSConnection(TLSRecordLayer):
         self._handshakeDone(resumed=False)
 
 
+    def _isIntolerant(self, settings, clientHello):
+        if settings.tlsIntolerant is None:
+            return False
+        clientVersion = clientHello.client_version
+        if clientHello.has_supported_versions:
+            clientVersion = (3, 4)
+        return clientVersion >= settings.tlsIntolerant
+
+
     def _serverGetClientHello(self, settings, certChain, verifierDB,
                                 sessionCache, anon, fallbackSCSV):
         #Tentatively set version to most-desirable version, so if an error
@@ -1480,8 +1489,7 @@ class TLSConnection(TLSRecordLayer):
                 yield result
 
         #If simulating TLS intolerance, reject certain TLS versions.
-        elif (settings.tlsIntolerant is not None and
-              clientHello.client_version >= settings.tlsIntolerant):
+        elif self._isIntolerant(settings, clientHello):
             if settings.tlsIntoleranceType == "alert":
                 for result in self._sendError(\
                     AlertDescription.handshake_failure):

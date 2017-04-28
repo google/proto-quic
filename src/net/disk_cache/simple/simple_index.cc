@@ -139,7 +139,7 @@ SimpleIndex::SimpleIndex(
       app_on_background_(false) {}
 
 SimpleIndex::~SimpleIndex() {
-  DCHECK(io_thread_checker_.CalledOnValidThread());
+  CHECK(io_thread_checker_.CalledOnValidThread());
 
   // Fail all callbacks waiting for the index to come up.
   for (CallbackList::iterator it = to_run_when_initialized_.begin(),
@@ -149,7 +149,7 @@ SimpleIndex::~SimpleIndex() {
 }
 
 void SimpleIndex::Initialize(base::Time cache_mtime) {
-  DCHECK(io_thread_checker_.CalledOnValidThread());
+  CHECK(io_thread_checker_.CalledOnValidThread());
 
 #if defined(OS_ANDROID)
   if (base::android::IsVMInitialized()) {
@@ -177,7 +177,7 @@ void SimpleIndex::SetMaxSize(uint64_t max_bytes) {
 }
 
 int SimpleIndex::ExecuteWhenReady(const net::CompletionCallback& task) {
-  DCHECK(io_thread_checker_.CalledOnValidThread());
+  CHECK(io_thread_checker_.CalledOnValidThread());
   if (initialized_)
     io_thread_->PostTask(FROM_HERE, base::Bind(task, net::OK));
   else
@@ -250,7 +250,7 @@ size_t SimpleIndex::EstimateMemoryUsage() const {
 }
 
 void SimpleIndex::Insert(uint64_t entry_hash) {
-  DCHECK(io_thread_checker_.CalledOnValidThread());
+  CHECK(io_thread_checker_.CalledOnValidThread());
   // Upon insert we don't know yet the size of the entry.
   // It will be updated later when the SimpleEntryImpl finishes opening or
   // creating the new entry, and then UpdateEntrySize will be called.
@@ -262,7 +262,7 @@ void SimpleIndex::Insert(uint64_t entry_hash) {
 }
 
 void SimpleIndex::Remove(uint64_t entry_hash) {
-  DCHECK(io_thread_checker_.CalledOnValidThread());
+  CHECK(io_thread_checker_.CalledOnValidThread());
   EntrySet::iterator it = entries_set_.find(entry_hash);
   if (it != entries_set_.end()) {
     UpdateEntryIteratorSize(&it, 0u);
@@ -281,7 +281,7 @@ bool SimpleIndex::Has(uint64_t hash) const {
 }
 
 bool SimpleIndex::UseIfExists(uint64_t entry_hash) {
-  DCHECK(io_thread_checker_.CalledOnValidThread());
+  CHECK(io_thread_checker_.CalledOnValidThread());
   // Always update the last used time, even if it is during initialization.
   // It will be merged later.
   EntrySet::iterator it = entries_set_.find(entry_hash);
@@ -294,7 +294,7 @@ bool SimpleIndex::UseIfExists(uint64_t entry_hash) {
 }
 
 void SimpleIndex::StartEvictionIfNeeded() {
-  DCHECK(io_thread_checker_.CalledOnValidThread());
+  CHECK(io_thread_checker_.CalledOnValidThread());
   if (eviction_in_progress_ || cache_size_ <= high_watermark_)
     return;
   // Take all live key hashes from the index and sort them by time.
@@ -351,7 +351,7 @@ void SimpleIndex::StartEvictionIfNeeded() {
 
 bool SimpleIndex::UpdateEntrySize(uint64_t entry_hash,
                                   base::StrictNumeric<uint32_t> entry_size) {
-  DCHECK(io_thread_checker_.CalledOnValidThread());
+  CHECK(io_thread_checker_.CalledOnValidThread());
   EntrySet::iterator it = entries_set_.find(entry_hash);
   if (it == entries_set_.end())
     return false;
@@ -363,7 +363,7 @@ bool SimpleIndex::UpdateEntrySize(uint64_t entry_hash,
 }
 
 void SimpleIndex::EvictionDone(int result) {
-  DCHECK(io_thread_checker_.CalledOnValidThread());
+  CHECK(io_thread_checker_.CalledOnValidThread());
 
   // Ignore the result of eviction. We did our best.
   eviction_in_progress_ = false;
@@ -415,7 +415,7 @@ void SimpleIndex::UpdateEntryIteratorSize(
 
 void SimpleIndex::MergeInitializingSet(
     std::unique_ptr<SimpleIndexLoadResult> load_result) {
-  DCHECK(io_thread_checker_.CalledOnValidThread());
+  CHECK(io_thread_checker_.CalledOnValidThread());
   DCHECK(load_result->did_load);
 
   EntrySet* index_file_entries = &load_result->entries;
@@ -481,7 +481,7 @@ void SimpleIndex::MergeInitializingSet(
 #if defined(OS_ANDROID)
 void SimpleIndex::OnApplicationStateChange(
     base::android::ApplicationState state) {
-  DCHECK(io_thread_checker_.CalledOnValidThread());
+  CHECK(io_thread_checker_.CalledOnValidThread());
   // For more info about android activities, see:
   // developer.android.com/training/basics/activity-lifecycle/pausing.html
   if (state == base::android::APPLICATION_STATE_HAS_RUNNING_ACTIVITIES) {
@@ -495,7 +495,7 @@ void SimpleIndex::OnApplicationStateChange(
 #endif
 
 void SimpleIndex::WriteToDisk(IndexWriteToDiskReason reason) {
-  DCHECK(io_thread_checker_.CalledOnValidThread());
+  CHECK(io_thread_checker_.CalledOnValidThread());
   if (!initialized_)
     return;
   SIMPLE_CACHE_UMA(CUSTOM_COUNTS,

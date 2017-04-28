@@ -8,7 +8,7 @@
 #include "net/base/net_export.h"
 #include "net/http/http_cache.h"
 #include "net/http/http_cache_transaction.h"
-#include "net/spdy/server_push_delegate.h"
+#include "net/spdy/chromium/server_push_delegate.h"
 
 namespace net {
 

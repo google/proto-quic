@@ -23,9 +23,17 @@ namespace {
 // we can use LazyInstance to handle opening it on the first access.
 class URandomFd {
  public:
+#if defined(OS_AIX)
+  // AIX has no 64-bit support for open falgs such as -
+  //  O_CLOEXEC, O_NOFOLLOW and O_TTY_INIT
+  URandomFd() : fd_(HANDLE_EINTR(open("/dev/urandom", O_RDONLY))) {
+    DCHECK_GE(fd_, 0) << "Cannot open /dev/urandom: " << errno;
+  }
+#else
   URandomFd() : fd_(HANDLE_EINTR(open("/dev/urandom", O_RDONLY | O_CLOEXEC))) {
     DCHECK_GE(fd_, 0) << "Cannot open /dev/urandom: " << errno;
   }
+#endif
 
   ~URandomFd() { close(fd_); }
 

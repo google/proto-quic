@@ -201,25 +201,39 @@ void SchedulerWorker::Delegate::WaitForWork(WaitableEvent* wake_up_event) {
   wake_up_event->Reset();
 }
 
-scoped_refptr<SchedulerWorker> SchedulerWorker::Create(
+SchedulerWorker::SchedulerWorker(
     ThreadPriority priority_hint,
     std::unique_ptr<Delegate> delegate,
     TaskTracker* task_tracker,
-    InitialState initial_state,
-    SchedulerBackwardCompatibility backward_compatibility) {
-  scoped_refptr<SchedulerWorker> worker(
-      new SchedulerWorker(priority_hint, std::move(delegate), task_tracker,
-                          backward_compatibility));
-  // Creation happens before any other thread can reference this one, so no
-  // synchronization is necessary.
-  if (initial_state == SchedulerWorker::InitialState::ALIVE) {
-    worker->CreateThread();
-    if (!worker->thread_) {
-      return nullptr;
-    }
+    SchedulerBackwardCompatibility backward_compatibility,
+    InitialState initial_state)
+    : priority_hint_(priority_hint),
+      delegate_(std::move(delegate)),
+      task_tracker_(task_tracker),
+#if defined(OS_WIN)
+      backward_compatibility_(backward_compatibility),
+#endif
+      initial_state_(initial_state) {
+  DCHECK(delegate_);
+  DCHECK(task_tracker_);
+}
+
+bool SchedulerWorker::Start() {
+  AutoSchedulerLock auto_lock(thread_lock_);
+  DCHECK(!started_);
+  DCHECK(!thread_);
+
+  if (should_exit_.IsSet())
+    return true;
+
+  started_ = true;
+
+  if (initial_state_ == InitialState::ALIVE) {
+    CreateThread();
+    return !!thread_;
   }
 
-  return worker;
+  return true;
 }
 
 void SchedulerWorker::WakeUp() {
@@ -228,13 +242,14 @@ void SchedulerWorker::WakeUp() {
   DCHECK(!join_called_for_testing_.IsSet());
 
   if (!thread_)
-    CreateThreadAssertSynchronized();
+    CreateThread();
 
   if (thread_)
     thread_->WakeUp();
 }
 
 void SchedulerWorker::JoinForTesting() {
+  DCHECK(started_);
   DCHECK(!join_called_for_testing_.IsSet());
   join_called_for_testing_.Set();
 
@@ -266,27 +281,9 @@ void SchedulerWorker::Cleanup() {
   // away |thread_| for destruction.
   AutoSchedulerLock auto_lock(thread_lock_);
   DCHECK(!should_exit_.IsSet());
-  if (thread_) {
-    should_exit_.Set();
+  should_exit_.Set();
+  if (thread_)
     thread_->WakeUp();
-  }
-}
-
-SchedulerWorker::SchedulerWorker(
-    ThreadPriority priority_hint,
-    std::unique_ptr<Delegate> delegate,
-    TaskTracker* task_tracker,
-    SchedulerBackwardCompatibility backward_compatibility)
-    : priority_hint_(priority_hint),
-      delegate_(std::move(delegate)),
-      task_tracker_(task_tracker)
-#if defined(OS_WIN)
-      ,
-      backward_compatibility_(backward_compatibility)
-#endif
-{
-  DCHECK(delegate_);
-  DCHECK(task_tracker_);
 }
 
 SchedulerWorker::~SchedulerWorker() {
@@ -322,12 +319,9 @@ std::unique_ptr<SchedulerWorker::Thread> SchedulerWorker::DetachThreadObject(
 }
 
 void SchedulerWorker::CreateThread() {
-  thread_ = Thread::Create(make_scoped_refptr(this));
-}
-
-void SchedulerWorker::CreateThreadAssertSynchronized() {
   thread_lock_.AssertAcquired();
-  CreateThread();
+  if (started_)
+    thread_ = Thread::Create(make_scoped_refptr(this));
 }
 
 bool SchedulerWorker::ShouldExit() {

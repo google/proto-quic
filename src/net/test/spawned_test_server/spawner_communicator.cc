@@ -11,6 +11,7 @@
 #include "base/location.h"
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/stringprintf.h"
 #include "base/supports_user_data.h"
@@ -186,11 +187,9 @@ void SpawnerCommunicator::SendCommandAndWaitForResultOnIOThread(
       GenerateSpawnerCommandURL(command, port_), DEFAULT_PRIORITY, this);
   DCHECK(cur_request_);
   int current_request_id = ++next_id_;
-  SpawnerRequestData* data = new SpawnerRequestData(current_request_id,
-                                                    result_code,
-                                                    data_received);
-  DCHECK(data);
-  cur_request_->SetUserData(this, data);
+  cur_request_->SetUserData(
+      this, base::MakeUnique<SpawnerRequestData>(current_request_id,
+                                                 result_code, data_received));
 
   if (post_data.empty()) {
     cur_request_->set_method("GET");

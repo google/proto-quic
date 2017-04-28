@@ -40,12 +40,12 @@ class CTObjectsExtractorTest : public ::testing::Test {
   void ExtractEmbeddedSCT(scoped_refptr<X509Certificate> cert,
                           scoped_refptr<SignedCertificateTimestamp>* sct) {
     std::string sct_list;
-    EXPECT_TRUE(ExtractEmbeddedSCTList(cert->os_cert_handle(), &sct_list));
+    ASSERT_TRUE(ExtractEmbeddedSCTList(cert->os_cert_handle(), &sct_list));
 
     std::vector<base::StringPiece> parsed_scts;
-    base::StringPiece sct_list_sp(sct_list);
     // Make sure the SCT list can be decoded properly
-    EXPECT_TRUE(DecodeSCTList(sct_list_sp, &parsed_scts));
+    ASSERT_TRUE(DecodeSCTList(sct_list, &parsed_scts));
+    ASSERT_EQ(1u, parsed_scts.size());
     EXPECT_TRUE(DecodeSignedCertificateTimestamp(&parsed_scts[0], sct));
   }
 
@@ -72,12 +72,12 @@ TEST_F(CTObjectsExtractorTest, ExtractEmbeddedSCT) {
 }
 
 TEST_F(CTObjectsExtractorTest, ExtractPrecert) {
-  LogEntry entry;
-  ASSERT_TRUE(GetPrecertLogEntry(precert_chain_[0]->os_cert_handle(),
-                                 precert_chain_[1]->os_cert_handle(),
-                                 &entry));
+  SignedEntryData entry;
+  ASSERT_TRUE(GetPrecertSignedEntry(precert_chain_[0]->os_cert_handle(),
+                                    precert_chain_[1]->os_cert_handle(),
+                                    &entry));
 
-  ASSERT_EQ(ct::LogEntry::LOG_ENTRY_TYPE_PRECERT, entry.type);
+  ASSERT_EQ(ct::SignedEntryData::LOG_ENTRY_TYPE_PRECERT, entry.type);
   // Should have empty leaf cert for this log entry type.
   ASSERT_TRUE(entry.leaf_certificate.empty());
   // Compare hash values of issuer spki.
@@ -87,10 +87,10 @@ TEST_F(CTObjectsExtractorTest, ExtractPrecert) {
 }
 
 TEST_F(CTObjectsExtractorTest, ExtractOrdinaryX509Cert) {
-  LogEntry entry;
-  ASSERT_TRUE(GetX509LogEntry(test_cert_->os_cert_handle(), &entry));
+  SignedEntryData entry;
+  ASSERT_TRUE(GetX509SignedEntry(test_cert_->os_cert_handle(), &entry));
 
-  ASSERT_EQ(ct::LogEntry::LOG_ENTRY_TYPE_X509, entry.type);
+  ASSERT_EQ(ct::SignedEntryData::LOG_ENTRY_TYPE_X509, entry.type);
   // Should have empty tbs_certificate for this log entry type.
   ASSERT_TRUE(entry.tbs_certificate.empty());
   // Length of leaf_certificate should be 718, see the CT Serialization tests.
@@ -103,23 +103,23 @@ TEST_F(CTObjectsExtractorTest, ExtractedSCTVerifies) {
       new ct::SignedCertificateTimestamp());
   ExtractEmbeddedSCT(precert_chain_[0], &sct);
 
-  LogEntry entry;
-  ASSERT_TRUE(GetPrecertLogEntry(precert_chain_[0]->os_cert_handle(),
-                                 precert_chain_[1]->os_cert_handle(),
-                                 &entry));
+  SignedEntryData entry;
+  ASSERT_TRUE(GetPrecertSignedEntry(precert_chain_[0]->os_cert_handle(),
+                                    precert_chain_[1]->os_cert_handle(),
+                                    &entry));
 
   EXPECT_TRUE(log_->Verify(entry, *sct.get()));
 }
 
-// Test that an externally-provided SCT verifies over the LogEntry
+// Test that an externally-provided SCT verifies over the SignedEntryData
 // of a regular X.509 Certificate
 TEST_F(CTObjectsExtractorTest, ComplementarySCTVerifies) {
   scoped_refptr<ct::SignedCertificateTimestamp> sct(
       new ct::SignedCertificateTimestamp());
   GetX509CertSCT(&sct);
 
-  LogEntry entry;
-  ASSERT_TRUE(GetX509LogEntry(test_cert_->os_cert_handle(), &entry));
+  SignedEntryData entry;
+  ASSERT_TRUE(GetX509SignedEntry(test_cert_->os_cert_handle(), &entry));
 
   EXPECT_TRUE(log_->Verify(entry, *sct.get()));
 }

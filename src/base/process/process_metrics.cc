@@ -67,7 +67,7 @@ double ProcessMetrics::GetPlatformIndependentCPUUsage() {
 #endif
 }
 
-#if defined(OS_MACOSX) || defined(OS_LINUX)
+#if defined(OS_MACOSX) || defined(OS_LINUX) || defined(OS_AIX)
 int ProcessMetrics::CalculateIdleWakeupsPerSecond(
     uint64_t absolute_idle_wakeups) {
   TimeTicks time = TimeTicks::Now();

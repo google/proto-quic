@@ -321,9 +321,9 @@ class SequencedWorkerPoolTest
     // workers to be created.
     ThreadBlocker blocker;
     for (size_t i = 0; i < kNumWorkerThreads; i++) {
-      pool()->PostWorkerTask(FROM_HERE,
-                             base::Bind(&TestTracker::BlockTask,
-                                        tracker(), -1, &blocker));
+      pool()->PostWorkerTask(
+          FROM_HERE,
+          base::BindOnce(&TestTracker::BlockTask, tracker(), -1, &blocker));
     }
     tracker()->WaitUntilTasksBlocked(kNumWorkerThreads);
 
@@ -383,7 +383,7 @@ void ShouldNotRun(const scoped_refptr<DeletionHelper>& helper) {
 TEST_P(SequencedWorkerPoolTest, DelayedTaskDuringShutdown) {
   // Post something to verify the pool is started up.
   EXPECT_TRUE(pool()->PostTask(
-      FROM_HERE, base::Bind(&TestTracker::FastTask, tracker(), 1)));
+      FROM_HERE, base::BindOnce(&TestTracker::FastTask, tracker(), 1)));
 
   scoped_refptr<base::RefCountedData<bool> > deleted_flag(
       new base::RefCountedData<bool>(false));
@@ -392,8 +392,8 @@ TEST_P(SequencedWorkerPoolTest, DelayedTaskDuringShutdown) {
   // Post something that shouldn't run.
   EXPECT_TRUE(pool()->PostDelayedTask(
       FROM_HERE,
-      base::Bind(&ShouldNotRun,
-                 make_scoped_refptr(new DeletionHelper(deleted_flag))),
+      base::BindOnce(&ShouldNotRun,
+                     make_scoped_refptr(new DeletionHelper(deleted_flag))),
       TestTimeouts::action_timeout()));
 
   std::vector<int> completion_sequence = tracker()->WaitUntilTasksComplete(1);
@@ -453,12 +453,12 @@ TEST_P(SequencedWorkerPoolTest, NamedTokens) {
 // threads) runs them all.
 TEST_P(SequencedWorkerPoolTest, LotsOfTasks) {
   pool()->PostWorkerTask(FROM_HERE,
-                         base::Bind(&TestTracker::SlowTask, tracker(), 0));
+                         base::BindOnce(&TestTracker::SlowTask, tracker(), 0));
 
   const size_t kNumTasks = 20;
   for (size_t i = 1; i < kNumTasks; i++) {
-    pool()->PostWorkerTask(FROM_HERE,
-                           base::Bind(&TestTracker::FastTask, tracker(), i));
+    pool()->PostWorkerTask(
+        FROM_HERE, base::BindOnce(&TestTracker::FastTask, tracker(), i));
   }
 
   std::vector<int> result = tracker()->WaitUntilTasksComplete(kNumTasks);
@@ -498,8 +498,8 @@ TEST_P(SequencedWorkerPoolTest, Sequence) {
   ThreadBlocker background_blocker;
   for (size_t i = 0; i < kNumBackgroundTasks; i++) {
     pool()->PostWorkerTask(FROM_HERE,
-                           base::Bind(&TestTracker::BlockTask,
-                                      tracker(), i, &background_blocker));
+                           base::BindOnce(&TestTracker::BlockTask, tracker(), i,
+                                          &background_blocker));
   }
   tracker()->WaitUntilTasksBlocked(kNumBackgroundTasks);
 
@@ -511,10 +511,10 @@ TEST_P(SequencedWorkerPoolTest, Sequence) {
   SequencedWorkerPool::SequenceToken token1 = pool()->GetSequenceToken();
   pool()->PostSequencedWorkerTask(
       token1, FROM_HERE,
-      base::Bind(&TestTracker::BlockTask, tracker(), 100, &blocker));
+      base::BindOnce(&TestTracker::BlockTask, tracker(), 100, &blocker));
   pool()->PostSequencedWorkerTask(
       token1, FROM_HERE,
-      base::Bind(&TestTracker::FastTask, tracker(), 101));
+      base::BindOnce(&TestTracker::FastTask, tracker(), 101));
   EXPECT_EQ(0u, tracker()->WaitUntilTasksComplete(0).size());
 
   // Create another two tasks as above with a different token. These will be
@@ -522,10 +522,10 @@ TEST_P(SequencedWorkerPoolTest, Sequence) {
   SequencedWorkerPool::SequenceToken token2 = pool()->GetSequenceToken();
   pool()->PostSequencedWorkerTask(
       token2, FROM_HERE,
-      base::Bind(&TestTracker::FastTask, tracker(), 200));
+      base::BindOnce(&TestTracker::FastTask, tracker(), 200));
   pool()->PostSequencedWorkerTask(
       token2, FROM_HERE,
-      base::Bind(&TestTracker::FastTask, tracker(), 201));
+      base::BindOnce(&TestTracker::FastTask, tracker(), 201));
   EXPECT_EQ(0u, tracker()->WaitUntilTasksComplete(0).size());
 
   // Let one background task complete. This should then let both tasks of
@@ -558,9 +558,8 @@ TEST_P(SequencedWorkerPoolTest, DISABLED_IgnoresAfterShutdown) {
   EnsureAllWorkersCreated();
   ThreadBlocker blocker;
   for (size_t i = 0; i < kNumWorkerThreads; i++) {
-    pool()->PostWorkerTask(FROM_HERE,
-                           base::Bind(&TestTracker::BlockTask,
-                                      tracker(), i, &blocker));
+    pool()->PostWorkerTask(FROM_HERE, base::BindOnce(&TestTracker::BlockTask,
+                                                     tracker(), i, &blocker));
   }
   tracker()->WaitUntilTasksBlocked(kNumWorkerThreads);
 
@@ -585,16 +584,13 @@ TEST_P(SequencedWorkerPoolTest, DISABLED_IgnoresAfterShutdown) {
 
   // No further tasks, regardless of shutdown mode, should be allowed.
   EXPECT_FALSE(pool()->PostWorkerTaskWithShutdownBehavior(
-      FROM_HERE,
-      base::Bind(&TestTracker::FastTask, tracker(), 100),
+      FROM_HERE, base::BindOnce(&TestTracker::FastTask, tracker(), 100),
       SequencedWorkerPool::CONTINUE_ON_SHUTDOWN));
   EXPECT_FALSE(pool()->PostWorkerTaskWithShutdownBehavior(
-      FROM_HERE,
-      base::Bind(&TestTracker::FastTask, tracker(), 101),
+      FROM_HERE, base::BindOnce(&TestTracker::FastTask, tracker(), 101),
       SequencedWorkerPool::SKIP_ON_SHUTDOWN));
   EXPECT_FALSE(pool()->PostWorkerTaskWithShutdownBehavior(
-      FROM_HERE,
-      base::Bind(&TestTracker::FastTask, tracker(), 102),
+      FROM_HERE, base::BindOnce(&TestTracker::FastTask, tracker(), 102),
       SequencedWorkerPool::BLOCK_SHUTDOWN));
 
   ASSERT_EQ(old_has_work_call_count, has_work_call_count());
@@ -611,7 +607,7 @@ TEST_P(SequencedWorkerPoolTest, AllowsAfterShutdown) {
   for (int i = 0; i < kNumBlockTasks; ++i) {
     EXPECT_TRUE(pool()->PostWorkerTask(
         FROM_HERE,
-        base::Bind(&TestTracker::BlockTask, tracker(), i, &blocker)));
+        base::BindOnce(&TestTracker::BlockTask, tracker(), i, &blocker)));
   }
   tracker()->WaitUntilTasksBlocked(kNumWorkerThreads);
 
@@ -621,8 +617,9 @@ TEST_P(SequencedWorkerPoolTest, AllowsAfterShutdown) {
   const int kNumQueuedTasks = static_cast<int>(kNumWorkerThreads);
   for (int i = 0; i < kNumQueuedTasks; ++i) {
     EXPECT_TRUE(pool()->PostWorkerTaskWithShutdownBehavior(
-        FROM_HERE, base::Bind(&TestTracker::PostAdditionalTasks, tracker(), i,
-                              base::RetainedRef(pool()), false),
+        FROM_HERE,
+        base::BindOnce(&TestTracker::PostAdditionalTasks, tracker(), i,
+                       base::RetainedRef(pool()), false),
         SequencedWorkerPool::BLOCK_SHUTDOWN));
   }
 
@@ -674,7 +671,7 @@ TEST_P(SequencedWorkerPoolTest,
   for (int i = 0; i < kNumBlockTasks; ++i) {
     EXPECT_TRUE(pool()->PostWorkerTask(
         FROM_HERE,
-        base::Bind(&TestTracker::BlockTask, tracker(), i, &blocker)));
+        base::BindOnce(&TestTracker::BlockTask, tracker(), i, &blocker)));
   }
   tracker()->WaitUntilTasksBlocked(kNumWorkerThreads);
 
@@ -728,24 +725,20 @@ TEST_P(SequencedWorkerPoolTest, DiscardOnShutdown) {
   EnsureAllWorkersCreated();
   ThreadBlocker blocker;
   for (size_t i = 0; i < kNumWorkerThreads; i++) {
-    pool()->PostWorkerTask(FROM_HERE,
-                           base::Bind(&TestTracker::BlockTask,
-                                      tracker(), i, &blocker));
+    pool()->PostWorkerTask(FROM_HERE, base::BindOnce(&TestTracker::BlockTask,
+                                                     tracker(), i, &blocker));
   }
   tracker()->WaitUntilTasksBlocked(kNumWorkerThreads);
 
   // Create some tasks with different shutdown modes.
   pool()->PostWorkerTaskWithShutdownBehavior(
-      FROM_HERE,
-      base::Bind(&TestTracker::FastTask, tracker(), 100),
+      FROM_HERE, base::BindOnce(&TestTracker::FastTask, tracker(), 100),
       SequencedWorkerPool::CONTINUE_ON_SHUTDOWN);
   pool()->PostWorkerTaskWithShutdownBehavior(
-      FROM_HERE,
-      base::Bind(&TestTracker::FastTask, tracker(), 101),
+      FROM_HERE, base::BindOnce(&TestTracker::FastTask, tracker(), 101),
       SequencedWorkerPool::SKIP_ON_SHUTDOWN);
   pool()->PostWorkerTaskWithShutdownBehavior(
-      FROM_HERE,
-      base::Bind(&TestTracker::FastTask, tracker(), 102),
+      FROM_HERE, base::BindOnce(&TestTracker::FastTask, tracker(), 102),
       SequencedWorkerPool::BLOCK_SHUTDOWN);
 
   // Shutdown the worker pool. This should discard all non-blocking tasks.
@@ -778,17 +771,12 @@ TEST_P(SequencedWorkerPoolTest, ContinueOnShutdown) {
   ThreadBlocker blocker;
   pool()->PostWorkerTaskWithShutdownBehavior(
       FROM_HERE,
-      base::Bind(&TestTracker::BlockTask,
-                 tracker(), 0, &blocker),
+      base::BindOnce(&TestTracker::BlockTask, tracker(), 0, &blocker),
       SequencedWorkerPool::CONTINUE_ON_SHUTDOWN);
-  runner->PostTask(
-      FROM_HERE,
-      base::Bind(&TestTracker::BlockTask,
-                 tracker(), 1, &blocker));
-  sequenced_runner->PostTask(
-      FROM_HERE,
-      base::Bind(&TestTracker::BlockTask,
-                 tracker(), 2, &blocker));
+  runner->PostTask(FROM_HERE, base::BindOnce(&TestTracker::BlockTask, tracker(),
+                                             1, &blocker));
+  sequenced_runner->PostTask(FROM_HERE, base::BindOnce(&TestTracker::BlockTask,
+                                                       tracker(), 2, &blocker));
 
   tracker()->WaitUntilTasksBlocked(3);
 
@@ -802,12 +790,12 @@ TEST_P(SequencedWorkerPoolTest, ContinueOnShutdown) {
 
   // Posting more tasks should fail.
   EXPECT_FALSE(pool()->PostWorkerTaskWithShutdownBehavior(
-      FROM_HERE, base::Bind(&TestTracker::FastTask, tracker(), 0),
+      FROM_HERE, base::BindOnce(&TestTracker::FastTask, tracker(), 0),
       SequencedWorkerPool::CONTINUE_ON_SHUTDOWN));
   EXPECT_FALSE(runner->PostTask(
-      FROM_HERE, base::Bind(&TestTracker::FastTask, tracker(), 0)));
+      FROM_HERE, base::BindOnce(&TestTracker::FastTask, tracker(), 0)));
   EXPECT_FALSE(sequenced_runner->PostTask(
-      FROM_HERE, base::Bind(&TestTracker::FastTask, tracker(), 0)));
+      FROM_HERE, base::BindOnce(&TestTracker::FastTask, tracker(), 0)));
 
   // Continue the background thread and make sure the tasks can complete.
   blocker.Unblock(3);
@@ -836,7 +824,7 @@ TEST_P(SequencedWorkerPoolTest, SkipOnShutdown) {
   for (size_t i = 0; i < kNumWorkerThreads; i++) {
     pool()->PostWorkerTaskWithShutdownBehavior(
         FROM_HERE,
-        base::Bind(&TestTracker::BlockTask, tracker(), i, &blocker),
+        base::BindOnce(&TestTracker::BlockTask, tracker(), i, &blocker),
         SequencedWorkerPool::SKIP_ON_SHUTDOWN);
   }
   tracker()->WaitUntilTasksBlocked(kNumWorkerThreads);
@@ -845,8 +833,7 @@ TEST_P(SequencedWorkerPoolTest, SkipOnShutdown) {
   // executed once Shutdown() has been called.
   pool()->PostWorkerTaskWithShutdownBehavior(
       FROM_HERE,
-      base::Bind(&TestTracker::BlockTask,
-                 tracker(), 0, &blocker),
+      base::BindOnce(&TestTracker::BlockTask, tracker(), 0, &blocker),
       SequencedWorkerPool::SKIP_ON_SHUTDOWN);
 
   // This callback will only be invoked if SKIP_ON_SHUTDOWN tasks that have
@@ -934,10 +921,10 @@ TEST_P(SequencedWorkerPoolTest, RunsTasksOnCurrentThread) {
   // - unused_pool_owner.pool()->RunsTasksOnCurrentThread() returns false.
   sequenced_task_runner_1->PostTask(
       FROM_HERE,
-      base::Bind(&VerifyRunsTasksOnCurrentThread, RedirectedToTaskScheduler(),
-                 sequenced_task_runner_1, sequenced_task_runner_2,
-                 base::RetainedRef(pool()),
-                 base::RetainedRef(unused_pool_owner.pool())));
+      base::BindOnce(&VerifyRunsTasksOnCurrentThread,
+                     RedirectedToTaskScheduler(), sequenced_task_runner_1,
+                     sequenced_task_runner_2, base::RetainedRef(pool()),
+                     base::RetainedRef(unused_pool_owner.pool())));
   // From a task posted to |unsequenced_task_runner|:
   // - unsequenced_task_runner->RunsTasksOnCurrentThread() returns true.
   // - sequenced_task_runner_1->RunsTasksOnCurrentThread() returns false.
@@ -945,10 +932,10 @@ TEST_P(SequencedWorkerPoolTest, RunsTasksOnCurrentThread) {
   // - unused_pool_owner.pool()->RunsTasksOnCurrentThread() returns false.
   unsequenced_task_runner->PostTask(
       FROM_HERE,
-      base::Bind(&VerifyRunsTasksOnCurrentThread, RedirectedToTaskScheduler(),
-                 unsequenced_task_runner, sequenced_task_runner_1,
-                 base::RetainedRef(pool()),
-                 base::RetainedRef(unused_pool_owner.pool())));
+      base::BindOnce(&VerifyRunsTasksOnCurrentThread,
+                     RedirectedToTaskScheduler(), unsequenced_task_runner,
+                     sequenced_task_runner_1, base::RetainedRef(pool()),
+                     base::RetainedRef(unused_pool_owner.pool())));
 }
 
 // Checks that tasks are destroyed in the right context during shutdown. If a
@@ -1004,19 +991,18 @@ TEST_P(SequencedWorkerPoolTest, FlushForTesting) {
   // Queue up a bunch of work, including  a long delayed task and
   // a task that produces additional tasks as an artifact.
   pool()->PostDelayedWorkerTask(
-      FROM_HERE,
-      base::Bind(&TestTracker::FastTask, tracker(), 0),
+      FROM_HERE, base::BindOnce(&TestTracker::FastTask, tracker(), 0),
       TimeDelta::FromMinutes(5));
   pool()->PostWorkerTask(FROM_HERE,
-                         base::Bind(&TestTracker::SlowTask, tracker(), 0));
+                         base::BindOnce(&TestTracker::SlowTask, tracker(), 0));
   const size_t kNumFastTasks = 20;
   for (size_t i = 0; i < kNumFastTasks; i++) {
-    pool()->PostWorkerTask(FROM_HERE,
-                           base::Bind(&TestTracker::FastTask, tracker(), 0));
+    pool()->PostWorkerTask(
+        FROM_HERE, base::BindOnce(&TestTracker::FastTask, tracker(), 0));
   }
   pool()->PostWorkerTask(
-      FROM_HERE, base::Bind(&TestTracker::PostAdditionalTasks, tracker(), 0,
-                            base::RetainedRef(pool()), true));
+      FROM_HERE, base::BindOnce(&TestTracker::PostAdditionalTasks, tracker(), 0,
+                                base::RetainedRef(pool()), true));
 
   // We expect all except the delayed task to have been run. We verify all
   // closures have been deleted by looking at the refcount of the
@@ -1086,14 +1072,14 @@ TEST_P(SequencedWorkerPoolTest, GetWorkerPoolAndSequenceTokenForCurrentThread) {
   SequencedWorkerPool::SequenceToken token2 = pool()->GetSequenceToken();
   pool()->PostSequencedWorkerTask(
       token1, FROM_HERE,
-      base::Bind(&CheckWorkerPoolAndSequenceToken, pool(), token1));
+      base::BindOnce(&CheckWorkerPoolAndSequenceToken, pool(), token1));
   pool()->PostSequencedWorkerTask(
       token2, FROM_HERE,
-      base::Bind(&CheckWorkerPoolAndSequenceToken, pool(), token2));
+      base::BindOnce(&CheckWorkerPoolAndSequenceToken, pool(), token2));
 
-  pool()->PostWorkerTask(FROM_HERE,
-                         base::Bind(&CheckWorkerPoolAndSequenceToken, pool(),
-                                    SequencedWorkerPool::SequenceToken()));
+  pool()->PostWorkerTask(
+      FROM_HERE, base::BindOnce(&CheckWorkerPoolAndSequenceToken, pool(),
+                                SequencedWorkerPool::SequenceToken()));
 
   pool()->FlushForTesting();
 }

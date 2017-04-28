@@ -13,15 +13,48 @@
 
 #include "base/containers/hash_tables.h"
 #include "base/logging.h"
+#include "base/mac/mac_util.h"
 #include "base/mac/mach_logging.h"
 #include "base/mac/scoped_mach_port.h"
 #include "base/memory/ptr_util.h"
 #include "base/numerics/safe_conversions.h"
+#include "base/numerics/safe_math.h"
 #include "base/sys_info.h"
 
 namespace base {
 
 namespace {
+
+#if !defined(MAC_OS_X_VERSION_10_11) || \
+    MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_11
+// The |phys_footprint| field was introduced in 10.11.
+struct ChromeTaskVMInfo {
+  mach_vm_size_t virtual_size;
+  integer_t region_count;
+  integer_t page_size;
+  mach_vm_size_t resident_size;
+  mach_vm_size_t resident_size_peak;
+  mach_vm_size_t device;
+  mach_vm_size_t device_peak;
+  mach_vm_size_t internal;
+  mach_vm_size_t internal_peak;
+  mach_vm_size_t external;
+  mach_vm_size_t external_peak;
+  mach_vm_size_t reusable;
+  mach_vm_size_t reusable_peak;
+  mach_vm_size_t purgeable_volatile_pmap;
+  mach_vm_size_t purgeable_volatile_resident;
+  mach_vm_size_t purgeable_volatile_virtual;
+  mach_vm_size_t compressed;
+  mach_vm_size_t compressed_peak;
+  mach_vm_size_t compressed_lifetime;
+  mach_vm_size_t phys_footprint;
+};
+#else
+using ChromeTaskVMInfo = task_vm_info;
+#endif  // MAC_OS_X_VERSION_10_11
+mach_msg_type_number_t ChromeTaskVMInfoCount =
+    sizeof(ChromeTaskVMInfo) / sizeof(natural_t);
 
 bool GetTaskInfo(mach_port_t task, task_basic_info_64* task_info_data) {
   if (task == MACH_PORT_NULL)
@@ -62,54 +95,14 @@ bool IsAddressInSharedRegion(mach_vm_address_t addr, cpu_type_t type) {
   }
 }
 
-enum MachVMRegionResult { Finished, Error, Success };
-
-// Both |size| and |address| are in-out parameters.
-// |info| is an output parameter, only valid on Success.
-MachVMRegionResult GetTopInfo(mach_port_t task,
-                              mach_vm_size_t* size,
-                              mach_vm_address_t* address,
-                              vm_region_top_info_data_t* info) {
-  mach_msg_type_number_t info_count = VM_REGION_TOP_INFO_COUNT;
-  mach_port_t object_name;
-  kern_return_t kr = mach_vm_region(task, address, size, VM_REGION_TOP_INFO,
-                                    reinterpret_cast<vm_region_info_t>(info),
-                                    &info_count, &object_name);
-  // We're at the end of the address space.
-  if (kr == KERN_INVALID_ADDRESS)
-    return Finished;
-
-  if (kr != KERN_SUCCESS)
-    return Error;
-
-  // The kernel always returns a null object for VM_REGION_TOP_INFO, but
-  // balance it with a deallocate in case this ever changes. See 10.9.2
-  // xnu-2422.90.20/osfmk/vm/vm_map.c vm_map_region.
-  mach_port_deallocate(task, object_name);
-  return Success;
-}
-
-MachVMRegionResult GetBasicInfo(mach_port_t task,
-                                mach_vm_size_t* size,
-                                mach_vm_address_t* address,
-                                vm_region_basic_info_64* info) {
-  mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
-  mach_port_t object_name;
-  kern_return_t kr = mach_vm_region(
-      task, address, size, VM_REGION_BASIC_INFO_64,
-      reinterpret_cast<vm_region_info_t>(info), &info_count, &object_name);
+MachVMRegionResult ParseOutputFromMachVMRegion(kern_return_t kr) {
   if (kr == KERN_INVALID_ADDRESS) {
     // We're at the end of the address space.
-    return Finished;
+    return MachVMRegionResult::Finished;
   } else if (kr != KERN_SUCCESS) {
-    return Error;
+    return MachVMRegionResult::Error;
   }
-
-  // The kernel always returns a null object for VM_REGION_BASIC_INFO_64, but
-  // balance it with a deallocate in case this ever changes. See 10.9.2
-  // xnu-2422.90.20/osfmk/vm/vm_map.c vm_map_region.
-  mach_port_deallocate(task, object_name);
-  return Success;
+  return MachVMRegionResult::Success;
 }
 
 }  // namespace
@@ -191,26 +184,30 @@ bool ProcessMetrics::GetMemoryBytes(size_t* private_bytes,
   // See libtop_update_vm_regions in
   // http://www.opensource.apple.com/source/top/top-67/libtop.c
   mach_vm_size_t size = 0;
-  for (mach_vm_address_t address = MACH_VM_MIN_ADDRESS;; address += size) {
-    mach_vm_size_t size_copy = size;
-    mach_vm_address_t address_copy = address;
+  mach_vm_address_t address = MACH_VM_MIN_ADDRESS;
+  while (true) {
+    base::CheckedNumeric<mach_vm_address_t> next_address(address);
+    next_address += size;
+    if (!next_address.IsValid())
+      return false;
+    address = next_address.ValueOrDie();
 
+    mach_vm_address_t address_copy = address;
     vm_region_top_info_data_t info;
     MachVMRegionResult result = GetTopInfo(task, &size, &address, &info);
-    if (result == Error)
+    if (result == MachVMRegionResult::Error)
       return false;
-    if (result == Finished)
+    if (result == MachVMRegionResult::Finished)
       break;
 
     vm_region_basic_info_64 basic_info;
-    result = GetBasicInfo(task, &size_copy, &address_copy, &basic_info);
-    switch (result) {
-      case Finished:
-      case Error:
-        return false;
-      case Success:
-        break;
-    }
+    mach_vm_size_t dummy_size = 0;
+    result = GetBasicInfo(task, &dummy_size, &address_copy, &basic_info);
+    if (result == MachVMRegionResult::Error)
+      return false;
+    if (result == MachVMRegionResult::Finished)
+      break;
+
     bool is_wired = basic_info.user_wired_count > 0;
 
     if (IsAddressInSharedRegion(address, cpu_type) &&
@@ -288,6 +285,23 @@ bool ProcessMetrics::GetCommittedAndWorkingSetKBytes(
   ws_usage->shared = 0;
 
   return true;
+}
+
+ProcessMetrics::TaskVMInfo ProcessMetrics::GetTaskVMInfo() const {
+  TaskVMInfo info;
+  ChromeTaskVMInfo task_vm_info;
+  mach_msg_type_number_t count = ChromeTaskVMInfoCount;
+  kern_return_t result =
+      task_info(TaskForPid(process_), TASK_VM_INFO,
+                reinterpret_cast<task_info_t>(&task_vm_info), &count);
+  if (result != KERN_SUCCESS)
+    return info;
+
+  info.internal = task_vm_info.internal;
+  info.compressed = task_vm_info.compressed;
+  if (count == ChromeTaskVMInfoCount)
+    info.phys_footprint = task_vm_info.phys_footprint;
+  return info;
 }
 
 #define TIME_VALUE_TO_TIMEVAL(a, r) do {  \
@@ -454,6 +468,40 @@ bool GetSystemMemoryInfo(SystemMemoryInfoKB* meminfo) {
       saturated_cast<int>(PAGE_SIZE / 1024 * vm_info.purgeable_count);
 
   return true;
+}
+
+// Both |size| and |address| are in-out parameters.
+// |info| is an output parameter, only valid on Success.
+MachVMRegionResult GetTopInfo(mach_port_t task,
+                              mach_vm_size_t* size,
+                              mach_vm_address_t* address,
+                              vm_region_top_info_data_t* info) {
+  mach_msg_type_number_t info_count = VM_REGION_TOP_INFO_COUNT;
+  mach_port_t object_name;
+  kern_return_t kr = mach_vm_region(task, address, size, VM_REGION_TOP_INFO,
+                                    reinterpret_cast<vm_region_info_t>(info),
+                                    &info_count, &object_name);
+  // The kernel always returns a null object for VM_REGION_TOP_INFO, but
+  // balance it with a deallocate in case this ever changes. See 10.9.2
+  // xnu-2422.90.20/osfmk/vm/vm_map.c vm_map_region.
+  mach_port_deallocate(task, object_name);
+  return ParseOutputFromMachVMRegion(kr);
+}
+
+MachVMRegionResult GetBasicInfo(mach_port_t task,
+                                mach_vm_size_t* size,
+                                mach_vm_address_t* address,
+                                vm_region_basic_info_64* info) {
+  mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
+  mach_port_t object_name;
+  kern_return_t kr = mach_vm_region(
+      task, address, size, VM_REGION_BASIC_INFO_64,
+      reinterpret_cast<vm_region_info_t>(info), &info_count, &object_name);
+  // The kernel always returns a null object for VM_REGION_BASIC_INFO_64, but
+  // balance it with a deallocate in case this ever changes. See 10.9.2
+  // xnu-2422.90.20/osfmk/vm/vm_map.c vm_map_region.
+  mach_port_deallocate(task, object_name);
+  return ParseOutputFromMachVMRegion(kr);
 }
 
 }  // namespace base

@@ -37,10 +37,6 @@ struct TransportSecurityStateEntry {
 using TransportSecurityStateEntries =
     std::vector<std::unique_ptr<TransportSecurityStateEntry>>;
 
-// TODO(Martijnc): Remove the domain IDs from the preload format.
-// https://crbug.com/661206.
-using DomainIDList = std::vector<std::string>;
-
 // ReversedEntry points to a TransportSecurityStateEntry and contains the
 // reversed hostname for that entry. This is used to construct the trie.
 struct ReversedEntry {

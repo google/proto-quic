@@ -102,7 +102,7 @@ bool PopulateArrayFromList(const base::ListValue& list, std::vector<T>* out) {
   out->clear();
   T item;
   for (const auto& value : list) {
-    if (!PopulateItem(*value, &item))
+    if (!PopulateItem(value, &item))
       return false;
     // T might not be movable, but in that case it should be copyable, and this
     // will still work.
@@ -121,7 +121,7 @@ bool PopulateArrayFromList(const base::ListValue& list,
   out->clear();
   T item;
   for (const auto& value : list) {
-    if (!PopulateItem(*value, &item, error))
+    if (!PopulateItem(value, &item, error))
       return false;
     out->push_back(std::move(item));
   }

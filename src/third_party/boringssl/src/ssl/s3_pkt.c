@@ -260,14 +260,6 @@ static int do_ssl3_write(SSL *ssl, int type, const uint8_t *buf, unsigned len) {
     return ssl3_write_pending(ssl, type, buf, len);
   }
 
-  /* The handshake flight buffer is mutually exclusive with application data.
-   *
-   * TODO(davidben): This will not be true when closure alerts use this. */
-  if (ssl->s3->pending_flight != NULL) {
-    OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
-    return -1;
-  }
-
   if (len > SSL3_RT_MAX_PLAIN_LENGTH) {
     OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
     return -1;
@@ -277,18 +269,47 @@ static int do_ssl3_write(SSL *ssl, int type, const uint8_t *buf, unsigned len) {
     return 0;
   }
 
+  size_t flight_len = 0;
+  if (ssl->s3->pending_flight != NULL) {
+    flight_len =
+        ssl->s3->pending_flight->length - ssl->s3->pending_flight_offset;
+  }
+
   size_t max_out = len + SSL_max_seal_overhead(ssl);
-  if (max_out < len) {
+  if (max_out < len || max_out + flight_len < max_out) {
     OPENSSL_PUT_ERROR(SSL, ERR_R_OVERFLOW);
     return -1;
   }
+  max_out += flight_len;
+
   uint8_t *out;
   size_t ciphertext_len;
-  if (!ssl_write_buffer_init(ssl, &out, max_out) ||
-      !tls_seal_record(ssl, out, &ciphertext_len, max_out, type, buf, len)) {
+  if (!ssl_write_buffer_init(ssl, &out, max_out)) {
     return -1;
   }
-  ssl_write_buffer_set_len(ssl, ciphertext_len);
+
+  /* Add any unflushed handshake data as a prefix. This may be a KeyUpdate
+   * acknowledgment or 0-RTT key change messages. |pending_flight| must be clear
+   * when data is added to |write_buffer| or it will be written in the wrong
+   * order. */
+  if (ssl->s3->pending_flight != NULL) {
+    OPENSSL_memcpy(
+        out, ssl->s3->pending_flight->data + ssl->s3->pending_flight_offset,
+        flight_len);
+    BUF_MEM_free(ssl->s3->pending_flight);
+    ssl->s3->pending_flight = NULL;
+    ssl->s3->pending_flight_offset = 0;
+  }
+
+  if (!tls_seal_record(ssl, out + flight_len, &ciphertext_len,
+                       max_out - flight_len, type, buf, len)) {
+    return -1;
+  }
+  ssl_write_buffer_set_len(ssl, flight_len + ciphertext_len);
+
+  /* Now that we've made progress on the connection, uncork KeyUpdate
+   * acknowledgments. */
+  ssl->s3->key_update_pending = 0;
 
   /* memorize arguments so that ssl3_write_pending can detect bad write retries
    * later */
@@ -374,15 +395,17 @@ int ssl3_read_app_data(SSL *ssl, int *out_got_handshake, uint8_t *buf, int len,
       return -1;
     }
 
+    const int is_early_data_read = ssl->server &&
+                                   ssl->s3->hs != NULL &&
+                                   ssl->s3->hs->can_early_read &&
+                                   ssl3_protocol_version(ssl) >= TLS1_3_VERSION;
+
     /* Handle the end_of_early_data alert. */
     if (rr->type == SSL3_RT_ALERT &&
         rr->length == 2 &&
         rr->data[0] == SSL3_AL_WARNING &&
         rr->data[1] == TLS1_AD_END_OF_EARLY_DATA &&
-        ssl->server &&
-        ssl->s3->hs != NULL &&
-        ssl->s3->hs->can_early_read &&
-        ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
+        is_early_data_read) {
       /* Consume the record. */
       rr->length = 0;
       ssl_read_buffer_discard(ssl);
@@ -396,6 +419,16 @@ int ssl3_read_app_data(SSL *ssl, int *out_got_handshake, uint8_t *buf, int len,
       OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_RECORD);
       ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_UNEXPECTED_MESSAGE);
       return -1;
+    }
+
+    if (is_early_data_read) {
+      if (rr->length > kMaxEarlyDataAccepted - ssl->s3->hs->early_data_read) {
+        OPENSSL_PUT_ERROR(SSL, SSL_R_TOO_MUCH_READ_EARLY_DATA);
+        ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL3_AD_UNEXPECTED_MESSAGE);
+        return -1;
+      }
+
+      ssl->s3->hs->early_data_read += rr->length;
     }
 
     if (rr->length != 0) {

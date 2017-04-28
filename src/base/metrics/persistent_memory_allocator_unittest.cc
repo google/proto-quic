@@ -472,6 +472,47 @@ TEST_F(PersistentMemoryAllocatorTest, IteratorParallelismTest) {
 #endif
 }
 
+TEST_F(PersistentMemoryAllocatorTest, DelayedAllocationTest) {
+  std::atomic<Reference> ref1, ref2;
+  ref1.store(0, std::memory_order_relaxed);
+  ref2.store(0, std::memory_order_relaxed);
+  DelayedPersistentAllocation da1(allocator_.get(), &ref1, 1001, 100, true);
+  DelayedPersistentAllocation da2a(allocator_.get(), &ref2, 2002, 200, 0, true);
+  DelayedPersistentAllocation da2b(allocator_.get(), &ref2, 2002, 200, 5, true);
+
+  // Nothing should yet have been allocated.
+  uint32_t type;
+  PersistentMemoryAllocator::Iterator iter(allocator_.get());
+  EXPECT_EQ(0U, iter.GetNext(&type));
+
+  // Do first delayed allocation and check that a new persistent object exists.
+  EXPECT_EQ(0U, da1.reference());
+  void* mem1 = da1.Get();
+  ASSERT_TRUE(mem1);
+  EXPECT_NE(0U, da1.reference());
+  EXPECT_EQ(allocator_->GetAsReference(mem1, 1001),
+            ref1.load(std::memory_order_relaxed));
+  EXPECT_NE(0U, iter.GetNext(&type));
+  EXPECT_EQ(1001U, type);
+  EXPECT_EQ(0U, iter.GetNext(&type));
+
+  // Do second delayed allocation and check.
+  void* mem2a = da2a.Get();
+  ASSERT_TRUE(mem2a);
+  EXPECT_EQ(allocator_->GetAsReference(mem2a, 2002),
+            ref2.load(std::memory_order_relaxed));
+  EXPECT_NE(0U, iter.GetNext(&type));
+  EXPECT_EQ(2002U, type);
+  EXPECT_EQ(0U, iter.GetNext(&type));
+
+  // Third allocation should just return offset into second allocation.
+  void* mem2b = da2b.Get();
+  ASSERT_TRUE(mem2b);
+  EXPECT_EQ(0U, iter.GetNext(&type));
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(mem2a) + 5,
+            reinterpret_cast<uintptr_t>(mem2b));
+}
+
 // This test doesn't verify anything other than it doesn't crash. Its goal
 // is to find coding errors that aren't otherwise tested for, much like a
 // "fuzzer" would.

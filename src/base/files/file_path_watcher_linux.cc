@@ -255,8 +255,7 @@ InotifyReader::InotifyReader()
 
   if (inotify_fd_ >= 0 && thread_.Start()) {
     thread_.task_runner()->PostTask(
-        FROM_HERE,
-        Bind(&InotifyReaderCallback, this, inotify_fd_));
+        FROM_HERE, BindOnce(&InotifyReaderCallback, this, inotify_fd_));
     valid_ = true;
   }
 }
@@ -331,9 +330,10 @@ void FilePathWatcherImpl::OnFilePathChanged(InotifyReader::Watch fired_watch,
   // access |watches_| safely. Use a WeakPtr to prevent the callback from
   // running after |this| is destroyed (i.e. after the watch is cancelled).
   task_runner()->PostTask(
-      FROM_HERE, Bind(&FilePathWatcherImpl::OnFilePathChangedOnOriginSequence,
-                      weak_factory_.GetWeakPtr(), fired_watch, child, created,
-                      deleted, is_dir));
+      FROM_HERE,
+      BindOnce(&FilePathWatcherImpl::OnFilePathChangedOnOriginSequence,
+               weak_factory_.GetWeakPtr(), fired_watch, child, created, deleted,
+               is_dir));
 }
 
 void FilePathWatcherImpl::OnFilePathChangedOnOriginSequence(

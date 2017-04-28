@@ -202,6 +202,10 @@ class QUIC_EXPORT_PRIVATE QuicPacketCreator {
   // Sets the maximum packet length.
   void SetMaxPacketLength(QuicByteCount length);
 
+  // Increases pending_padding_bytes by |size|. Pending padding will be sent by
+  // MaybeAddPadding().
+  void AddPendingPadding(QuicByteCount size);
+
   void set_debug_delegate(DebugDelegate* debug_delegate) {
     debug_delegate_ = debug_delegate;
   }
@@ -209,6 +213,8 @@ class QUIC_EXPORT_PRIVATE QuicPacketCreator {
   bool latched_flag_no_stop_waiting_frames() const {
     return latched_flag_no_stop_waiting_frames_;
   }
+
+  QuicByteCount pending_padding_bytes() const { return pending_padding_bytes_; }
 
  private:
   friend class test::QuicPacketCreatorPeer;
@@ -242,9 +248,8 @@ class QUIC_EXPORT_PRIVATE QuicPacketCreator {
   // saves the |frame| in the next SerializedPacket.
   bool AddFrame(const QuicFrame& frame, bool save_retransmittable_frames);
 
-  // Adds a padding frame to the current packet only if the current packet
-  // contains a handshake message, and there is sufficient room to fit a
-  // padding frame.
+  // Adds a padding frame to the current packet (if there is space) when (1)
+  // current packet needs full padding or (2) there are pending paddings.
   void MaybeAddPadding();
 
   // Serializes all frames which have been added and adds any which should be
@@ -302,6 +307,16 @@ class QUIC_EXPORT_PRIVATE QuicPacketCreator {
 
   // The latched value of FLAGS_quic_reloadable_flag_quic_no_stop_waiting_frames
   bool latched_flag_no_stop_waiting_frames_;
+
+  // Pending padding bytes to send. Pending padding bytes will be sent in next
+  // packet(s) (after all other frames) if current constructed packet does not
+  // have room to send all of them.
+  QuicByteCount pending_padding_bytes_;
+
+  // Indicates whether current constructed packet needs full padding to max
+  // packet size. Please note, full padding does not consume pending padding
+  // bytes.
+  bool needs_full_padding_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicPacketCreator);
 };

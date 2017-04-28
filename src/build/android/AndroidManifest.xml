@@ -13,7 +13,7 @@
      be kept up to date.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="dummy.package">
+    package="org.dummy">
 
     <uses-sdk android:minSdkVersion="16" android:targetSdkVersion="24" />
 

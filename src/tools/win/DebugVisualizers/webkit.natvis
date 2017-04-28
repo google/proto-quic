@@ -1,111 +1,118 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <AutoVisualizer
     xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
-  <Type Name="blink::Member&lt;*&gt;">
-    <DisplayString Condition="m_raw == 0">null</DisplayString>
-    <DisplayString>{*m_raw}</DisplayString>
+  <Type Name="blink::MemberBase&lt;*&gt;">
+    <DisplayString Condition="raw_ == 0">null</DisplayString>
+    <DisplayString>{*raw_}</DisplayString>
     <Expand>
-      <Item Name="m_raw">m_raw</Item>
+      <Item Name="Raw">raw_</Item>
+    </Expand>
+  </Type>
+  <Type Name="blink::PersistentBase&lt;*&gt;">
+    <DisplayString Condition="raw_ == 0">null</DisplayString>
+    <DisplayString>{*raw_}</DisplayString>
+    <Expand>
+      <Item Name="Raw">raw_</Item>
     </Expand>
   </Type>
   <Type Name="WTF::String">
-    <DisplayString Condition="m_impl.m_ptr == 0">(null)</DisplayString>
-    <DisplayString IncludeView="bare">{*m_impl.m_ptr,view(bare)}</DisplayString>
-    <DisplayString>{*m_impl.m_ptr}</DisplayString>
+    <DisplayString Condition="impl_.ptr_ == 0">(null)</DisplayString>
+    <DisplayString IncludeView="bare">{*impl_.ptr_,view(bare)}</DisplayString>
+    <DisplayString>{*impl_.ptr_}</DisplayString>
     <Expand>
-      <Item Name="Impl">m_impl.m_ptr</Item>
+      <Item Name="Impl">impl_.ptr_</Item>
     </Expand>
   </Type>
   <Type Name="WTF::StringImpl">
     <DisplayString IncludeView="bare"
-        Condition="m_is8Bit">{(this+1),[m_length]sb}</DisplayString>
+        Condition="is8_bit_">{(this+1),[length_]sb}</DisplayString>
     <DisplayString
-        Condition="m_is8Bit">[{m_length}] {(this+1),[m_length]s}</DisplayString>
-    <DisplayString IncludeView="bare">{(this+1),[m_length]sub}</DisplayString>
-    <DisplayString>[{m_length}] {(this+1),[m_length]su}</DisplayString>
+        Condition="is8_bit_">[{length_}] {(this+1),[length_]s}</DisplayString>
+    <DisplayString IncludeView="bare">{(this+1),[length_]sub}</DisplayString>
+    <DisplayString>[{length_}] {(this+1),[length_]su}</DisplayString>
     <Expand>
-      <Item Name="Length">m_length</Item>
-      <Item Name="Hash">m_hash</Item>
-      <Item Name="AsciiText" Condition="m_is8Bit">(this+1),[m_length]s</Item>
-      <Item Name="UnicodeText" Condition="!m_is8Bit">(this+1),[m_length]su</Item>
+      <Item Name="Length">length_</Item>
+      <Item Name="Hash">hash_</Item>
+      <Item Name="AsciiText" Condition="is8_bit_">(this+1),[length_]s</Item>
+      <Item Name="UnicodeText" Condition="!is8_bit_">(this+1),[length_]su</Item>
     </Expand>
   </Type>
   <Type Name="WTF::AtomicString">
-    <DisplayString IncludeView="bare">{m_string,view(bare)}</DisplayString>
-    <DisplayString>{m_string}</DisplayString>
+    <DisplayString IncludeView="bare">{string_,view(bare)}</DisplayString>
+    <DisplayString>{string_}</DisplayString>
   </Type>
   <Type Name="WTF::Vector&lt;*&gt;">
-    <DisplayString Condition="m_size==0">(empty)</DisplayString>
-    <DisplayString Condition="m_size==1">[{m_size}] {m_buffer,1}</DisplayString>
-    <DisplayString Condition="m_size==2">[{m_size}] {m_buffer,2}</DisplayString>
-    <DisplayString Condition="m_size==3">[{m_size}] {m_buffer,3}</DisplayString>
-    <DisplayString Condition="m_size==4">[{m_size}] {m_buffer,4}</DisplayString>
+    <DisplayString Condition="size_==0">(empty)</DisplayString>
+    <DisplayString Condition="size_==1">[{size_}] {buffer_,1}</DisplayString>
+    <DisplayString Condition="size_==2">[{size_}] {buffer_,2}</DisplayString>
+    <DisplayString Condition="size_==3">[{size_}] {buffer_,3}</DisplayString>
+    <DisplayString Condition="size_==4">[{size_}] {buffer_,4}</DisplayString>
     <DisplayString
-        Condition="m_size>=5">[{m_size}] {m_buffer,4}...</DisplayString>
+        Condition="size_>=5">[{size_}] {buffer_,4}...</DisplayString>
     <Expand>
-      <Item Name="Buffer">m_buffer</Item>
-      <Item Name="Size">m_size</Item>
-      <Item Name="Capacity">m_capacity</Item>
-      <ArrayItems Condition="m_size>0">
-        <Size>m_size</Size>
-        <ValuePointer>m_buffer</ValuePointer>
+      <Item Name="Buffer">buffer_</Item>
+      <Item Name="Size">size_</Item>
+      <Item Name="Capacity">capacity_</Item>
+      <ArrayItems Condition="size_>0">
+        <Size>size_</Size>
+        <ValuePointer>buffer_</ValuePointer>
       </ArrayItems>
     </Expand>
   </Type>
   <Type Name="WTF::HashTable&lt;*&gt;">
-    <DisplayString>keyCount={m_keyCount}, tableSize={m_tableSize}</DisplayString>
+    <DisplayString>keyCount={key_count_}, tableSize={table_size_}</DisplayString>
     <Expand>
-      <ArrayItems Condition="m_tableSize>0">
-        <Size>m_tableSize</Size>
-        <ValuePointer>m_table</ValuePointer>
+      <ArrayItems Condition="table_size_>0">
+        <Size>table_size_</Size>
+        <ValuePointer>table_</ValuePointer>
       </ArrayItems>
     </Expand>
   </Type>
   <Type Name="WTF::RefPtr&lt;*&gt;">
     <AlternativeType Name="WTF::PassRefPtr&lt;*&gt;"/>
-    <DisplayString Condition="m_ptr == 0">null</DisplayString>
-    <DisplayString>{*m_ptr}</DisplayString>
+    <DisplayString Condition="ptr_ == 0">null</DisplayString>
+    <DisplayString>{*ptr_}</DisplayString>
     <Expand>
-      <Item Name="Ptr">m_ptr</Item>
+      <Item Name="Ptr">ptr_</Item>
     </Expand>
   </Type>
   <Type Name="blink::LayoutUnit">
-    <DisplayString>{(float)m_value / kFixedPointDenominator}</DisplayString>
+    <DisplayString>{(float)value_ / 64}</DisplayString>
     <Expand>
-      <Item Name="FloatVal">(float)m_value / kFixedPointDenominator</Item>
-      <Item Name="RawVal">m_value</Item>
+      <Item Name="FloatVal">(float)value_ / 64</Item>
+      <Item Name="RawVal">value_</Item>
     </Expand>
   </Type>
   <Type Name="blink::LayoutSize">
     <AlternativeType Name="blink::IntSize"/>
     <AlternativeType Name="blink::FloatSize"/>
-    <DisplayString>({m_width}, {m_height})</DisplayString>
+    <DisplayString>({width_}, {height_})</DisplayString>
     <Expand>
-      <Item Name="Width">m_width</Item>
-      <Item Name="Height">m_height</Item>
+      <Item Name="Width">width_</Item>
+      <Item Name="Height">height_</Item>
     </Expand>
   </Type>
   <Type Name="blink::LayoutPoint">
     <AlternativeType Name="blink::IntPoint"/>
     <AlternativeType Name="blink::FloatPoint"/>
-    <DisplayString>({m_x}, {m_y})</DisplayString>
+    <DisplayString>({x_}, {y_})</DisplayString>
     <Expand>
-      <Item Name="X">m_x</Item>
-      <Item Name="Y">m_y</Item>
+      <Item Name="X">x_</Item>
+      <Item Name="Y">y_</Item>
     </Expand>
   </Type>
   <Type Name="blink::LayoutRect">
     <AlternativeType Name="blink::IntRect"/>
     <AlternativeType Name="blink::FloatRect"/>
-    <DisplayString>({m_location.m_x}, {m_location.m_y}) x ({m_size.m_width}, {m_size.m_height})</DisplayString>
+    <DisplayString>({location_.x_}, {location_.y_}) x ({size_.width_}, {size_.height_})</DisplayString>
     <Expand>
-      <Item Name="Location">m_location</Item>
-      <Item Name="Size">m_size</Item>
+      <Item Name="Location">location_</Item>
+      <Item Name="Size">size_</Item>
     </Expand>
   </Type>
   <Type Name="blink::Length">
-    <DisplayString Condition="m_isFloat">{(blink::LengthType)m_type} {m_floatValue}</DisplayString>
-    <DisplayString>{(blink::LengthType)m_type} {m_intValue}</DisplayString>
+    <DisplayString Condition="is_float_">{(blink::LengthType)type_} {float_value_}</DisplayString>
+    <DisplayString>{(blink::LengthType)type_} {int_value_}</DisplayString>
   </Type>
   <Type Name="blink::WebRect">
     <AlternativeType Name="blink::WebFloatRect"/>
@@ -133,59 +140,59 @@
   </Type>
   <!-- Component build version -->
   <Type Name="blink::WebString">
-    <DisplayString>{(blink_platform.dll!WTF::StringImpl*)(m_private.m_storage)}</DisplayString>
+    <DisplayString>{(blink_platform.dll!WTF::StringImpl*)(private_.storage_)}</DisplayString>
   </Type>
   <!-- Non-component build version -->
-  <Type Name="blink::WebString">
-    <DisplayString>{(WTF::StringImpl*)(m_private.m_storage)}</DisplayString>
+  <Type Name="blink::WebString" Priority="Low">
+    <DisplayString>{(WTF::StringImpl*)(private_.storage_)}</DisplayString>
   </Type>
   <!-- DOM -->
   <Type Name="blink::QualifiedName">
-    <DisplayString Condition="m_impl.m_ptr == 0">(null)</DisplayString>
-    <DisplayString>{*m_impl.m_ptr}</DisplayString>
+    <DisplayString Condition="impl_.ptr_ == 0">(null)</DisplayString>
+    <DisplayString>{*impl_.ptr_}</DisplayString>
   </Type>
   <Type Name="blink::QualifiedName::QualifiedNameImpl">
-    <DisplayString>{m_localName,view(bare)}</DisplayString>
+    <DisplayString>{local_name_,view(bare)}</DisplayString>
   </Type>
   <Type Name="blink::CharacterData">
-    <DisplayString>{m_data,view(bare)}</DisplayString>
+    <DisplayString>{data_,view(bare)}</DisplayString>
   </Type>
   <Type Name="blink::ContainerNode">
     <Expand>
       <LinkedListItems>
-        <HeadPointer>m_firstChild.m_raw</HeadPointer>
-        <NextPointer>m_next.m_raw</NextPointer>
+        <HeadPointer>first_child_.raw_</HeadPointer>
+        <NextPointer>next_.raw_</NextPointer>
         <ValueNode>this</ValueNode>
       </LinkedListItems>
     </Expand>
   </Type>
   <Type Name="blink::Element">
-    <DisplayString Condition="m_firstChild.m_raw != 0">&lt;{m_tagName}>{m_firstChild}</DisplayString>
-    <DisplayString>&lt;{m_tagName}></DisplayString>
+    <DisplayString Condition="first_child_.raw_ != 0">&lt;{tag_name_}>{first_child_}</DisplayString>
+    <DisplayString>&lt;{tag_name_}></DisplayString>
   </Type>
   <!-- Layout: LayoutObject -->
   <Type Name="blink::LayoutObject">
-    <DisplayString Condition="m_bitfields.m_isAnonymous">Anonymous</DisplayString>
-    <DisplayString>{m_node}</DisplayString>
+    <DisplayString Condition="bitfields_.m_IsAnonymous">Anonymous</DisplayString>
+    <DisplayString>{node_}</DisplayString>
   </Type>
   <Type Name="blink::LayoutObjectChildList">
     <Expand>
       <LinkedListItems>
-        <HeadPointer>m_firstChild</HeadPointer>
-        <NextPointer>m_next</NextPointer>
+        <HeadPointer>first_child_</HeadPointer>
+        <NextPointer>next_</NextPointer>
         <ValueNode>this</ValueNode>
       </LinkedListItems>
     </Expand>
   </Type>
   <!-- Layout: InlineBox -->
   <Type Name="blink::InlineBox">
-    <DisplayString>{m_layoutObject}</DisplayString>
+    <DisplayString>{line_layout_item_}</DisplayString>
   </Type>
   <Type Name="blink::InlineFlowBox">
     <Expand>
       <LinkedListItems>
-        <HeadPointer>m_firstChild</HeadPointer>
-        <NextPointer>m_next</NextPointer>
+        <HeadPointer>first_child_</HeadPointer>
+        <NextPointer>next_</NextPointer>
         <ValueNode>this</ValueNode>
       </LinkedListItems>
     </Expand>
@@ -193,49 +200,71 @@
   <Type Name="blink::LineBoxList">
     <Expand>
       <LinkedListItems>
-        <HeadPointer>m_firstLineBox</HeadPointer>
-        <NextPointer>m_nextLineBox</NextPointer>
+        <HeadPointer>first_line_box_</HeadPointer>
+        <NextPointer>next_line_box_</NextPointer>
         <ValueNode>this</ValueNode>
       </LinkedListItems>
     </Expand>
   </Type>
   <Type Name="blink::LineLayoutItem">
-    <DisplayString>{m_layoutObject}</DisplayString>
+    <DisplayString>{layout_object_}</DisplayString>
+  </Type>
+  <!-- Layout: LayoutNG -->
+  <Type Name="blink::NGBlockNode">
+    <DisplayString>{layout_box_}</DisplayString>
+  </Type>
+  <Type Name="blink::NGFragment">
+    <DisplayString>{physical_fragment_}</DisplayString>
+  </Type>
+  <Type Name="blink::NGPhysicalFragment">
+    <DisplayString>{(blink::NGPhysicalFragment::NGFragmentType)type_} {layout_object_} {size_} {offset_}</DisplayString>
+  </Type>
+  <Type Name="blink::NGLogicalOffset">
+    <DisplayString>({inline_offset}, {block_offset})</DisplayString>
+  </Type>
+  <Type Name="blink::NGLogicalSize">
+    <DisplayString>({inline_size} x {block_size})</DisplayString>
+  </Type>
+  <Type Name="blink::NGPhysicalOffset">
+    <DisplayString>({left}, {top})</DisplayString>
+  </Type>
+  <Type Name="blink::NGPhysicalSize">
+    <DisplayString>({width} x {height})</DisplayString>
   </Type>
   <!-- Layout: TextRun -->
   <Type Name="blink::TextRun">
-    <DisplayString Condition="m_is8Bit">{m_data.characters8,[m_len]s}</DisplayString>
-    <DisplayString>{(m_data.characters16),[m_len]su}</DisplayString>
+    <DisplayString Condition="is8_bit_">{data_.characters8,[len_]s}</DisplayString>
+    <DisplayString>{(data_.characters16),[len_]su}</DisplayString>
   </Type>
   <Type Name="blink::BidiRun">
-    <DisplayString>{*m_object} {m_start}-{m_stop}</DisplayString>
+    <DisplayString>{*box_} {start_}-{stop_}</DisplayString>
   </Type>
   <!-- Fonts -->
   <Type Name="blink::Font">
-    <DisplayString>{m_fontDescription}</DisplayString>
+    <DisplayString>{font_description_}</DisplayString>
   </Type>
   <Type Name="blink::FontDescription">
-    <DisplayString>{m_computedSize}px {m_familyList}</DisplayString>
+    <DisplayString>{computed_size_}px {family_list_}</DisplayString>
   </Type>
   <Type Name="blink::FontFamily">
-    <DisplayString Condition="m_next.m_ptr == 0">{m_family,view(bare)}</DisplayString>
-    <DisplayString>{m_family,view(bare)}, {m_next}</DisplayString>
+    <DisplayString Condition="next_.ptr_ == 0">{family_,view(bare)}</DisplayString>
+    <DisplayString>{family_,view(bare)}, {next_}</DisplayString>
   </Type>
   <Type Name="blink::SharedFontFamily">
-    <DisplayString Condition="m_next.m_ptr == 0">{m_family,view(bare)}</DisplayString>
-    <DisplayString>{m_family,view(bare)}, {m_next}</DisplayString>
+    <DisplayString Condition="next_.ptr_ == 0">{family_,view(bare)}</DisplayString>
+    <DisplayString>{family_,view(bare)}, {next_}</DisplayString>
     <Expand>
       <LinkedListItems>
         <HeadPointer>this</HeadPointer>
-        <NextPointer>m_next.m_ptr</NextPointer>
+        <NextPointer>next_.ptr_</NextPointer>
         <ValueNode>this</ValueNode>
       </LinkedListItems>
     </Expand>
   </Type>
   <Type Name="blink::SimpleFontData">
-    <DisplayString>{m_platformData}</DisplayString>
+    <DisplayString>{platform_data_}</DisplayString>
   </Type>
   <Type Name="blink::FontPlatformData">
-    <DisplayString>{*m_typeface.m_ptr}, {m_textSize}px</DisplayString>
+    <DisplayString>{*typeface_.ptr_}, {text_size_}px</DisplayString>
   </Type>
 </AutoVisualizer>

@@ -48,8 +48,7 @@ class OilpanGCTimesKeySilkCases(perf_benchmark.PerfBenchmark):
     return 'oilpan_gc_times.key_silk_cases'
 
 
-@benchmark.Disabled('all') # crbug.com/702194
-#@benchmark.Enabled('android')
+@benchmark.Enabled('android')
 class OilpanGCTimesSyncScrollKeyMobileSites(perf_benchmark.PerfBenchmark):
   tag = 'sync_scroll'
   test = oilpan_gc_times.OilpanGCTimesForSmoothness

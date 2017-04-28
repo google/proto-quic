@@ -7,6 +7,8 @@ from core import perf_benchmark
 from measurements import power
 import page_sets
 from telemetry import benchmark
+from telemetry.timeline import chrome_trace_category_filter
+from telemetry.web_perf import timeline_based_measurement
 
 
 @benchmark.Enabled('android')
@@ -147,6 +149,7 @@ class PowerScrollingTrivialPage(perf_benchmark.PerfBenchmark):
   def Name(cls):
     return 'power.trivial_pages'
 
+
 @benchmark.Enabled('mac')
 class PowerSteadyStatePages(perf_benchmark.PerfBenchmark):
   """Measure power consumption for real web sites in steady state (no user
@@ -157,3 +160,42 @@ class PowerSteadyStatePages(perf_benchmark.PerfBenchmark):
   @classmethod
   def Name(cls):
     return 'power.steady_state'
+
+
+class IdlePlatformBenchmark(perf_benchmark.PerfBenchmark):
+  """Idle platform benchmark.
+
+  This benchmark just starts up tracing agents and lets the platform sit idle.
+  Our power benchmarks are prone to noise caused by other things running on the
+  system. This benchmark is intended to help find the sources of noise.
+  """
+  def CreateTimelineBasedMeasurementOptions(self):
+    options = timeline_based_measurement.Options(
+        chrome_trace_category_filter.ChromeTraceCategoryFilter())
+    # Enable CPU tracing when the bug is resolved.
+    # https://github.com/catapult-project/catapult/issues/3463
+    options.config.enable_battor_trace = True
+    # Atrace tracing agent autodetects if its android and only runs if it is.
+    options.config.enable_atrace_trace = True
+    options.config.enable_chrome_trace = False
+    options.SetTimelineBasedMetrics([
+        'clockSyncLatencyMetric',
+        'powerMetric',
+        'tracingMetric'
+    ])
+    return options
+
+  @classmethod
+  def ShouldDisable(cls, possible_browser):
+    return not possible_browser.platform.HasBattOrConnected()
+
+  def CreateStorySet(self, options):
+    return page_sets.IdleStorySet()
+
+  @classmethod
+  def ShouldTearDownStateAfterEachStoryRun(cls):
+    return True
+
+  @classmethod
+  def Name(cls):
+    return 'power.idle_platform'

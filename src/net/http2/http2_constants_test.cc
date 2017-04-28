@@ -57,31 +57,29 @@ TEST(Http2ConstantsTest, Http2FrameTypeToString) {
 }
 
 TEST(Http2ConstantsTest, Http2FrameFlag) {
-  EXPECT_EQ(Http2FrameFlag::FLAG_END_STREAM, static_cast<Http2FrameFlag>(0x01));
-  EXPECT_EQ(Http2FrameFlag::FLAG_ACK, static_cast<Http2FrameFlag>(0x01));
-  EXPECT_EQ(Http2FrameFlag::FLAG_END_HEADERS,
-            static_cast<Http2FrameFlag>(0x04));
-  EXPECT_EQ(Http2FrameFlag::FLAG_PADDED, static_cast<Http2FrameFlag>(0x08));
-  EXPECT_EQ(Http2FrameFlag::FLAG_PRIORITY, static_cast<Http2FrameFlag>(0x20));
+  EXPECT_EQ(Http2FrameFlag::END_STREAM, static_cast<Http2FrameFlag>(0x01));
+  EXPECT_EQ(Http2FrameFlag::ACK, static_cast<Http2FrameFlag>(0x01));
+  EXPECT_EQ(Http2FrameFlag::END_HEADERS, static_cast<Http2FrameFlag>(0x04));
+  EXPECT_EQ(Http2FrameFlag::PADDED, static_cast<Http2FrameFlag>(0x08));
+  EXPECT_EQ(Http2FrameFlag::PRIORITY, static_cast<Http2FrameFlag>(0x20));
 
-  EXPECT_EQ(Http2FrameFlag::FLAG_END_STREAM, 0x01);
-  EXPECT_EQ(Http2FrameFlag::FLAG_ACK, 0x01);
-  EXPECT_EQ(Http2FrameFlag::FLAG_END_HEADERS, 0x04);
-  EXPECT_EQ(Http2FrameFlag::FLAG_PADDED, 0x08);
-  EXPECT_EQ(Http2FrameFlag::FLAG_PRIORITY, 0x20);
+  EXPECT_EQ(Http2FrameFlag::END_STREAM, 0x01);
+  EXPECT_EQ(Http2FrameFlag::ACK, 0x01);
+  EXPECT_EQ(Http2FrameFlag::END_HEADERS, 0x04);
+  EXPECT_EQ(Http2FrameFlag::PADDED, 0x08);
+  EXPECT_EQ(Http2FrameFlag::PRIORITY, 0x20);
 }
 
 TEST(Http2ConstantsTest, Http2FrameFlagsToString) {
   // Single flags...
 
   // 0b00000001
-  EXPECT_EQ("END_STREAM",
-            Http2FrameFlagsToString(Http2FrameType::DATA,
-                                    Http2FrameFlag::FLAG_END_STREAM));
+  EXPECT_EQ("END_STREAM", Http2FrameFlagsToString(Http2FrameType::DATA,
+                                                  Http2FrameFlag::END_STREAM));
   EXPECT_EQ("END_STREAM",
             Http2FrameFlagsToString(Http2FrameType::HEADERS, 0x01));
   EXPECT_EQ("ACK", Http2FrameFlagsToString(Http2FrameType::SETTINGS,
-                                           Http2FrameFlag::FLAG_ACK));
+                                           Http2FrameFlag::ACK));
   EXPECT_EQ("ACK", Http2FrameFlagsToString(Http2FrameType::PING, 0x01));
 
   // 0b00000010
@@ -90,7 +88,7 @@ TEST(Http2ConstantsTest, Http2FrameFlagsToString) {
   // 0b00000100
   EXPECT_EQ("END_HEADERS",
             Http2FrameFlagsToString(Http2FrameType::HEADERS,
-                                    Http2FrameFlag::FLAG_END_HEADERS));
+                                    Http2FrameFlag::END_HEADERS));
   EXPECT_EQ("END_HEADERS",
             Http2FrameFlagsToString(Http2FrameType::PUSH_PROMISE, 0x04));
   EXPECT_EQ("END_HEADERS", Http2FrameFlagsToString(0x09, 0x04));
@@ -98,10 +96,10 @@ TEST(Http2ConstantsTest, Http2FrameFlagsToString) {
 
   // 0b00001000
   EXPECT_EQ("PADDED", Http2FrameFlagsToString(Http2FrameType::DATA,
-                                              Http2FrameFlag::FLAG_PADDED));
+                                              Http2FrameFlag::PADDED));
   EXPECT_EQ("PADDED", Http2FrameFlagsToString(Http2FrameType::HEADERS, 0x08));
   EXPECT_EQ("PADDED", Http2FrameFlagsToString(0x05, 0x08));
-  EXPECT_EQ("0x08", Http2FrameFlagsToString(0xff, Http2FrameFlag::FLAG_PADDED));
+  EXPECT_EQ("0x08", Http2FrameFlagsToString(0xff, Http2FrameFlag::PADDED));
 
   // 0b00010000
   EXPECT_EQ("0x10", Http2FrameFlagsToString(Http2FrameType::SETTINGS, 0x10));

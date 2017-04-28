@@ -8,10 +8,10 @@
 
 #include "base/macros.h"
 #include "net/quic/core/crypto/quic_random.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_flag_utils.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_stack_trace.h"
@@ -211,7 +211,8 @@ QuicDispatcher::QuicDispatcher(
               /*unused*/ QuicTime::Zero(),
               Perspective::IS_SERVER),
       last_error_(QUIC_NO_ERROR),
-      new_sessions_allowed_per_event_loop_(0u) {
+      new_sessions_allowed_per_event_loop_(0u),
+      accept_new_connections_(true) {
   framer_.set_visitor(this);
 }
 
@@ -363,7 +364,7 @@ void QuicDispatcher::ProcessUnauthenticatedHeaderFate(
     QuicPacketNumber packet_number) {
   switch (fate) {
     case kFateProcess: {
-      ProcessChlo();
+      ProcessChlo(packet_number);
       break;
     }
     case kFateTimeWait:
@@ -449,6 +450,10 @@ void QuicDispatcher::CleanUpSession(SessionMap::iterator it,
   session_map_.erase(it);
 }
 
+void QuicDispatcher::StopAcceptingNewConnections() {
+  accept_new_connections_ = false;
+}
+
 void QuicDispatcher::DeleteSessions() {
   closed_session_list_.clear();
 }
@@ -523,6 +528,8 @@ void QuicDispatcher::OnWriteBlocked(
   }
   write_blocked_list_.insert(std::make_pair(blocked_writer, true));
 }
+
+void QuicDispatcher::OnRstStreamReceived(const QuicRstStreamFrame& frame) {}
 
 void QuicDispatcher::OnConnectionAddedToTimeWaitList(
     QuicConnectionId connection_id) {
@@ -710,7 +717,19 @@ void QuicDispatcher::BufferEarlyPacket(QuicConnectionId connection_id) {
   }
 }
 
-void QuicDispatcher::ProcessChlo() {
+void QuicDispatcher::ProcessChlo(QuicPacketNumber packet_number) {
+  if (!accept_new_connections_) {
+    // Don't any create new connection.
+    time_wait_list_manager()->AddConnectionIdToTimeWait(
+        current_connection_id(), framer()->version(),
+        /*connection_rejected_statelessly=*/false,
+        /*termination_packets=*/nullptr);
+    // This will trigger sending Public Reset packet.
+    time_wait_list_manager()->ProcessPacket(
+        current_server_address(), current_client_address(),
+        current_connection_id(), packet_number, current_packet());
+    return;
+  }
   if (FLAGS_quic_reloadable_flag_quic_create_session_after_insertion &&
       !buffered_packets_.HasBufferedPackets(current_connection_id_) &&
       !ShouldCreateOrBufferPacketForConnection(current_connection_id_)) {
