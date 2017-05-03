@@ -167,11 +167,6 @@ class BASE_EXPORT TaskScheduler {
   // (ensures isolation).
   static void Create(StringPiece name);
 
-  // Deprecated. Use Create() and Start() instead.
-  // TODO(fdoray): Redirect callers to Create() and Start().
-  static void CreateAndSetDefaultTaskScheduler(StringPiece name,
-                                               const InitParams& init_params);
-
   // Registers |task_scheduler| to handle tasks posted through the post_task.h
   // API for this process. For tests, prefer base::test::ScopedTaskScheduler
   // (ensures isolation).

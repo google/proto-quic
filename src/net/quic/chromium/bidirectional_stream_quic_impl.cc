@@ -38,7 +38,6 @@ BidirectionalStreamQuicImpl::BidirectionalStreamQuicImpl(
       has_sent_headers_(false),
       has_received_headers_(false),
       send_request_headers_automatically_(true),
-      waiting_for_confirmation_(false),
       weak_factory_(this) {
   DCHECK(session_);
   session_->AddObserver(this);
@@ -73,9 +72,13 @@ void BidirectionalStreamQuicImpl::Start(
   delegate_ = delegate;
   request_info_ = request_info;
 
-  stream_request_ = session_->CreateStreamRequest();
+  stream_request_ =
+      session_->CreateStreamRequest(request_info_->method == "POST");
   int rv = stream_request_->StartRequest(base::Bind(
       &BidirectionalStreamQuicImpl::OnStreamReady, weak_factory_.GetWeakPtr()));
+  if (rv == ERR_IO_PENDING)
+    return;
+
   if (rv == OK) {
     OnStreamReady(rv);
   } else if (!was_handshake_confirmed_) {
@@ -265,15 +268,26 @@ void BidirectionalStreamQuicImpl::OnDataAvailable() {
 }
 
 void BidirectionalStreamQuicImpl::OnClose() {
+  DCHECK(session_);
   DCHECK(stream_);
 
-  if (stream_->connection_error() == QUIC_NO_ERROR &&
-      stream_->stream_error() == QUIC_STREAM_NO_ERROR) {
-    ResetStream();
+  if (stream_->connection_error() != QUIC_NO_ERROR ||
+      stream_->stream_error() != QUIC_STREAM_NO_ERROR) {
+    NotifyError(was_handshake_confirmed_ ? ERR_QUIC_PROTOCOL_ERROR
+                                         : ERR_QUIC_HANDSHAKE_FAILED);
     return;
   }
-  NotifyError(was_handshake_confirmed_ ? ERR_QUIC_PROTOCOL_ERROR
-                                       : ERR_QUIC_HANDSHAKE_FAILED);
+
+  if (!stream_->fin_sent() || !stream_->fin_received()) {
+    // The connection must have been closed by the peer with QUIC_NO_ERROR,
+    // which is improper.
+    NotifyError(ERR_UNEXPECTED);
+    return;
+  }
+
+  // The connection was closed normally so there is no need to notify
+  // the delegate.
+  ResetStream();
 }
 
 void BidirectionalStreamQuicImpl::OnError(int error) {
@@ -286,8 +300,6 @@ bool BidirectionalStreamQuicImpl::HasSendHeadersComplete() {
 
 void BidirectionalStreamQuicImpl::OnCryptoHandshakeConfirmed() {
   was_handshake_confirmed_ = true;
-  if (waiting_for_confirmation_)
-    NotifyStreamReady();
 }
 
 void BidirectionalStreamQuicImpl::OnSuccessfulVersionNegotiation(
@@ -308,10 +320,6 @@ void BidirectionalStreamQuicImpl::OnStreamReady(int rv) {
     stream_ = stream_request_->ReleaseStream();
     stream_request_.reset();
     stream_->SetDelegate(this);
-    if (!was_handshake_confirmed_ && request_info_->method == "POST") {
-      waiting_for_confirmation_ = true;
-      return;
-    }
     NotifyStreamReady();
   } else {
     NotifyError(rv);
@@ -353,6 +361,11 @@ void BidirectionalStreamQuicImpl::NotifyStreamReady() {
 }
 
 void BidirectionalStreamQuicImpl::ResetStream() {
+  if (session_) {
+    session_->RemoveObserver(this);
+    session_ = nullptr;
+  }
+
   if (!stream_)
     return;
   closed_stream_received_bytes_ = stream_->stream_bytes_read();

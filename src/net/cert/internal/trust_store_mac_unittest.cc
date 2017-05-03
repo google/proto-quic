@@ -127,23 +127,24 @@ TEST(TrustStoreMacTest, MultiRootNotTrusted) {
   ASSERT_TRUE(ReadTestCert("multi-root-E-by-E.pem", &e_by_e));
 
   base::ScopedCFTypeRef<CFDataRef> normalized_name_b =
-      TrustStoreMac::GetMacNormalizedIssuer(a_by_b);
+      TrustStoreMac::GetMacNormalizedIssuer(a_by_b.get());
   ASSERT_TRUE(normalized_name_b);
   base::ScopedCFTypeRef<CFDataRef> normalized_name_c =
-      TrustStoreMac::GetMacNormalizedIssuer(b_by_c);
+      TrustStoreMac::GetMacNormalizedIssuer(b_by_c.get());
   ASSERT_TRUE(normalized_name_c);
   base::ScopedCFTypeRef<CFDataRef> normalized_name_f =
-      TrustStoreMac::GetMacNormalizedIssuer(b_by_f);
+      TrustStoreMac::GetMacNormalizedIssuer(b_by_f.get());
   ASSERT_TRUE(normalized_name_f);
   base::ScopedCFTypeRef<CFDataRef> normalized_name_d =
-      TrustStoreMac::GetMacNormalizedIssuer(c_by_d);
+      TrustStoreMac::GetMacNormalizedIssuer(c_by_d.get());
   ASSERT_TRUE(normalized_name_d);
   base::ScopedCFTypeRef<CFDataRef> normalized_name_e =
-      TrustStoreMac::GetMacNormalizedIssuer(f_by_e);
+      TrustStoreMac::GetMacNormalizedIssuer(f_by_e.get());
   ASSERT_TRUE(normalized_name_e);
 
   // Test that the matching keychain items are found, even though they aren't
   // trusted.
+  // TODO(eroman): These tests could be using TrustStore::SyncGetIssuersOf().
   {
     base::ScopedCFTypeRef<CFArrayRef> scoped_matching_items =
         TrustStoreMac::FindMatchingCertificatesForMacNormalizedSubject(
@@ -190,14 +191,14 @@ TEST(TrustStoreMacTest, MultiRootNotTrusted) {
         UnorderedElementsAreArray(ParsedCertificateListAsDER({e_by_e})));
   }
 
-  // None of the certs should return any matching TrustAnchors, since the test
-  // certs in the keychain aren't trusted (unless someone manually added and
-  // trusted the test certs on the machine the test is being run on).
+  // Verify that none of the added certificates are considered trusted (since
+  // the test certs in the keychain aren't trusted, unless someone manually
+  // added and trusted the test certs on the machine the test is being run on).
   for (const auto& cert :
        {a_by_b, b_by_c, b_by_f, c_by_d, c_by_e, f_by_e, d_by_d, e_by_e}) {
-    TrustAnchors matching_anchors;
-    trust_store.FindTrustAnchorsForCert(cert, &matching_anchors);
-    EXPECT_EQ(0u, matching_anchors.size());
+    CertificateTrust trust = CertificateTrust::ForTrustAnchor();
+    trust_store.GetTrust(cert.get(), &trust);
+    EXPECT_EQ(CertificateTrustType::UNSPECIFIED, trust.type);
   }
 }
 
@@ -262,7 +263,12 @@ TEST(TrustStoreMacTest, SystemCerts) {
                    << errors.ToDebugString();
       continue;
     }
+    // Check if this cert is considered a trust anchor by TrustStoreMac.
+    CertificateTrust cert_trust;
+    trust_store.GetTrust(cert, &cert_trust);
+    bool is_trust_anchor = cert_trust.IsTrustAnchor();
 
+    // Check if this cert is considered a trust anchor by the OS.
     base::ScopedCFTypeRef<SecCertificateRef> cert_handle(
         x509_util::CreateSecCertificateFromBytes(cert->der_cert().UnsafeData(),
                                                  cert->der_cert().Length()));
@@ -270,30 +276,6 @@ TEST(TrustStoreMacTest, SystemCerts) {
       ADD_FAILURE() << "CreateOSCertHandleFromBytes " << hash_text;
       continue;
     }
-    base::ScopedCFTypeRef<CFDataRef> mac_normalized_subject;
-    {
-      base::AutoLock lock(crypto::GetMacSecurityServicesLock());
-      mac_normalized_subject.reset(
-          SecCertificateCopyNormalizedSubjectContent(cert_handle, nullptr));
-    }
-    if (!mac_normalized_subject) {
-      ADD_FAILURE() << "SecCertificateCopyNormalizedSubjectContent "
-                    << hash_text;
-      continue;
-    }
-
-    // Check if this cert is considered a trust anchor by TrustStoreMac.
-    TrustAnchors trust_anchors;
-    trust_store.FindTrustAnchorsByMacNormalizedSubject(mac_normalized_subject,
-                                                       &trust_anchors);
-    bool is_trust_anchor = false;
-    for (const auto& anchor : trust_anchors) {
-      ASSERT_TRUE(anchor->cert());
-      if (anchor->cert()->der_cert() == cert->der_cert())
-        is_trust_anchor = true;
-    }
-
-    // Check if this cert is considered a trust anchor by the OS.
     base::ScopedCFTypeRef<SecTrustRef> trust;
     {
       base::AutoLock lock(crypto::GetMacSecurityServicesLock());

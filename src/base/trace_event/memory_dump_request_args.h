@@ -16,6 +16,7 @@
 #include "base/callback.h"
 #include "base/optional.h"
 #include "base/process/process_handle.h"
+#include "base/trace_event/process_memory_totals.h"
 
 namespace base {
 namespace trace_event {
@@ -83,6 +84,7 @@ struct MemoryDumpArgs {
 struct BASE_EXPORT MemoryDumpCallbackResult {
   struct OSMemDump {
     uint32_t resident_set_kb = 0;
+    ProcessMemoryTotals::PlatformPrivateFootprint platform_private_footprint;
   };
   struct ChromeMemDump {
     uint32_t malloc_total_kb = 0;

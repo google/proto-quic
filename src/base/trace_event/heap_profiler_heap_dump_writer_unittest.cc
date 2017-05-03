@@ -179,7 +179,7 @@ TEST(HeapDumpWriterTest, SizeAndCountAreHexadecimal) {
 }
 
 TEST(HeapDumpWriterTest, BacktraceTypeNameTable) {
-  hash_map<AllocationContext, AllocationMetrics> metrics_by_context;
+  std::unordered_map<AllocationContext, AllocationMetrics> metrics_by_context;
 
   AllocationContext ctx;
   ctx.backtrace.frames[0] = kBrowserMain;
@@ -274,7 +274,7 @@ TEST(HeapDumpWriterTest, BacktraceTypeNameTable) {
 }
 
 TEST(HeapDumpWriterTest, InsignificantValuesNotDumped) {
-  hash_map<AllocationContext, AllocationMetrics> metrics_by_context;
+  std::unordered_map<AllocationContext, AllocationMetrics> metrics_by_context;
 
   AllocationContext ctx;
   ctx.backtrace.frames[0] = kBrowserMain;

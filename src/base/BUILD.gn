@@ -855,6 +855,7 @@ component("base") {
     "task_scheduler/task_tracker_posix.h",
     "task_scheduler/task_traits.cc",
     "task_scheduler/task_traits.h",
+    "task_scheduler/task_traits_details.h",
     "template_util.h",
     "test/malloc_wrapper.h",
     "third_party/dmg_fp/dmg_fp.h",
@@ -1106,6 +1107,10 @@ component("base") {
     }
   }
 
+  if (!is_mac && is_posix) {
+    sources += [ "memory/shared_memory_handle_posix.cc" ]
+  }
+
   all_dependent_configs = []
   defines = []
   data = []
@@ -1130,8 +1135,11 @@ component("base") {
     ":debugging_flags",
   ]
 
-  # Needed for <atomic> if using newer C++ library than sysroot
-  if (!use_sysroot && (is_android || (is_linux && !is_chromecast))) {
+  # Needed for <atomic> if using newer C++ library than sysroot, except if
+  # building inside the cros_sdk environment - use host_toolchain as a
+  # more robust check for this.
+  if (!use_sysroot && (is_android || (is_linux && !is_chromecast)) &&
+      host_toolchain != "//build/toolchain/cros:host") {
     libs = [ "atomic" ]
   }
 
@@ -2116,6 +2124,7 @@ test("base_unittests") {
     "task_scheduler/task_scheduler_impl_unittest.cc",
     "task_scheduler/task_tracker_posix_unittest.cc",
     "task_scheduler/task_tracker_unittest.cc",
+    "task_scheduler/task_traits_unittest.cc",
     "task_scheduler/task_unittest.cc",
     "task_scheduler/test_task_factory.cc",
     "task_scheduler/test_task_factory.h",
@@ -2394,6 +2403,7 @@ if (enable_nocompile_tests) {
       "memory/ref_counted_unittest.nc",
       "memory/weak_ptr_unittest.nc",
       "metrics/histogram_unittest.nc",
+      "task_scheduler/task_traits_unittest.nc",
     ]
 
     deps = [
@@ -2586,6 +2596,7 @@ if (is_android) {
       "//third_party/android_support_test_runner:exposed_instrumentation_api_publish_java",
       "//third_party/android_support_test_runner:runner_java",
       "//third_party/android_tools:android_support_chromium_java",
+      "//third_party/android_tools:android_support_compat_java",
       "//third_party/hamcrest:hamcrest_core_java",
       "//third_party/junit",
     ]

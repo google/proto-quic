@@ -19,7 +19,9 @@ inline void hash_combine(uint64_t* seed, const uint64_t& val) {
 }  // namespace
 
 QuicCompressedCertsCache::UncompressedCerts::UncompressedCerts()
-    : chain(nullptr) {}
+    : chain(nullptr),
+      client_common_set_hashes(nullptr),
+      client_cached_cert_hashes(nullptr) {}
 
 QuicCompressedCertsCache::UncompressedCerts::UncompressedCerts(
     const QuicReferenceCountedPointer<ProofSource::Chain>& chain,

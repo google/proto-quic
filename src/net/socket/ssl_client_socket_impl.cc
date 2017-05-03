@@ -944,10 +944,10 @@ int SSLClientSocketImpl::Init() {
   // (note that SHA256 and SHA384 only select legacy CBC ciphers).
   // Additionally disable HMAC-SHA1 ciphers in ECDSA. These are the remaining
   // CBC-mode ECDSA ciphers.
-  std::string command("ALL:!SHA256:!SHA384:!kDHE:!aPSK:!RC4:!ECDSA+SHA1");
+  std::string command("ALL:!SHA256:!SHA384:!aPSK:!ECDSA+SHA1");
 
   if (ssl_config_.require_ecdhe)
-    command.append(":!kRSA:!kDHE");
+    command.append(":!kRSA");
 
   // Remove any disabled ciphers.
   for (uint16_t id : ssl_config_.disabled_cipher_suites) {
@@ -958,13 +958,10 @@ int SSLClientSocketImpl::Init() {
     }
   }
 
-  int rv = SSL_set_cipher_list(ssl_.get(), command.c_str());
-  // If this fails (rv = 0) it means there are no ciphers enabled on this SSL.
-  // This will almost certainly result in the socket failing to complete the
-  // handshake at which point the appropriate error is bubbled up to the client.
-  LOG_IF(WARNING, rv != 1) << "SSL_set_cipher_list('" << command << "') "
-                                                                    "returned "
-                           << rv;
+  if (!SSL_set_strict_cipher_list(ssl_.get(), command.c_str())) {
+    LOG(ERROR) << "SSL_set_cipher_list('" << command << "') failed";
+    return ERR_UNEXPECTED;
+  }
 
   // TLS channel ids.
   if (IsChannelIDEnabled()) {

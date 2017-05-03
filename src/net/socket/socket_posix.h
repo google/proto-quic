@@ -31,9 +31,17 @@ class NET_EXPORT_PRIVATE SocketPosix : public base::MessageLoopForIO::Watcher {
   // Opens a socket and returns net::OK if |address_family| is AF_INET, AF_INET6
   // or AF_UNIX. Otherwise, it does DCHECK() and returns a net error.
   int Open(int address_family);
-  // Takes ownership of |socket|.
+
+  // Takes ownership of |socket|, which is known to already be connected to the
+  // given peer address.
   int AdoptConnectedSocket(SocketDescriptor socket,
                            const SockaddrStorage& peer_address);
+  // Takes ownership of |socket|, which may or may not be open, bound, or
+  // listening. The caller must determine the state of the socket based on its
+  // provenance and act accordingly. The socket may have connections waiting
+  // to be accepted, but must not be actually connected.
+  int AdoptUnconnectedSocket(SocketDescriptor socket);
+
   // Releases ownership of |socket_fd_| to caller.
   SocketDescriptor ReleaseConnectedSocket();
 

@@ -8,16 +8,10 @@
 #include <string>
 #include <unordered_set>
 
-// TODO(eroman): Remove unneeeded headers.
-#include "base/files/file_path.h"
-#include "base/format_macros.h"
-#include "base/scoped_native_library.h"
-#include "base/strings/string_number_conversions.h"
-#include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
-#include "base/sys_byteorder.h"
-#include "base/time/time.h"
+#include "build/build_config.h"
 #include "net/base/ip_endpoint.h"
+#include "testing/gtest/include/gtest/gtest.h"
 
 #if !defined(OS_NACL) && !defined(OS_WIN)
 #include <net/if.h>
@@ -29,8 +23,6 @@
 #endif  // !OS_IOS
 #endif  // OS_MACOSX
 #endif  // !OS_NACL && !OS_WIN
-#include "testing/gtest/include/gtest/gtest.h"
-#include "url/gurl.h"
 
 #if defined(OS_WIN)
 #include <iphlpapi.h>

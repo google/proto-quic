@@ -6,11 +6,11 @@
 
 #include "base/allocator/partition_allocator/page_allocator.h"
 #include "base/allocator/partition_allocator/spin_lock.h"
-#include "base/win/windows_version.h"
 #include "build/build_config.h"
 
 #if defined(OS_WIN)
 #include <windows.h>
+#include "base/win/windows_version.h"
 #else
 #include <sys/time.h>
 #include <unistd.h>

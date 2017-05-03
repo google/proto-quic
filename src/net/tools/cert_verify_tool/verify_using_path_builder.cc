@@ -74,12 +74,6 @@ bool DumpParsedCertificateChain(const base::FilePath& file_path,
       return false;
   }
 
-  if (chain.trust_anchor && chain.trust_anchor->cert()) {
-    if (!AddPemEncodedCert(chain.trust_anchor->cert().get(),
-                           &pem_encoded_chain))
-      return false;
-  }
-
   return WriteToFile(file_path, base::JoinString(pem_encoded_chain, ""));
 }
 
@@ -104,19 +98,6 @@ std::string SubjectFromParsedCertificate(const net::ParsedCertificate* cert) {
   return SubjectToString(parsed_subject);
 }
 
-// Returns a textual representation of the Subject of |trust_anchor|.
-std::string SubjectFromTrustAnchor(const net::TrustAnchor* trust_anchor) {
-  // If the cert is present, display the original subject from that rather than
-  // the normalized subject.
-  if (trust_anchor->cert())
-    return SubjectFromParsedCertificate(trust_anchor->cert().get());
-
-  net::RDNSequence parsed_subject;
-  if (!net::ParseNameValue(trust_anchor->normalized_subject(), &parsed_subject))
-    return std::string();
-  return SubjectToString(parsed_subject);
-}
-
 // Dumps a ResultPath to std::cout.
 void PrintResultPath(const net::CertPathBuilder::ResultPath* result_path,
                      size_t index,
@@ -129,18 +110,6 @@ void PrintResultPath(const net::CertPathBuilder::ResultPath* result_path,
   for (const auto& cert : result_path->path.certs) {
     std::cout << " " << FingerPrintParsedCertificate(cert.get()) << " "
               << SubjectFromParsedCertificate(cert.get()) << "\n";
-  }
-
-  // Print the trust anchor (if there was one).
-  const auto& trust_anchor = result_path->path.trust_anchor;
-  if (trust_anchor) {
-    std::string trust_anchor_cert_fingerprint = "<no cert>";
-    if (trust_anchor->cert()) {
-      trust_anchor_cert_fingerprint =
-          FingerPrintParsedCertificate(trust_anchor->cert().get());
-    }
-    std::cout << " " << trust_anchor_cert_fingerprint << " "
-              << SubjectFromTrustAnchor(trust_anchor.get()) << "\n";
   }
 
   // Print the errors/warnings if there were any.
@@ -215,8 +184,7 @@ bool VerifyUsingPathBuilder(
   for (const auto& der_cert : root_der_certs) {
     scoped_refptr<net::ParsedCertificate> cert = ParseCertificate(der_cert);
     if (cert) {
-      ssl_trust_store->AddTrustAnchor(
-          net::TrustAnchor::CreateFromCertificateNoConstraints(cert));
+      ssl_trust_store->AddTrustAnchor(cert);
     }
   }
 
@@ -243,9 +211,6 @@ bool VerifyUsingPathBuilder(
       target_cert, ssl_trust_store->GetTrustStore(), &signature_policy, time,
       net::KeyPurpose::SERVER_AUTH, &result);
   path_builder.AddCertIssuerSource(&intermediate_cert_issuer_source);
-
-  if (ssl_trust_store->GetCertIssuerSource())
-    path_builder.AddCertIssuerSource(ssl_trust_store->GetCertIssuerSource());
 
   // Create a network thread to be used for AIA fetches, and wait for a
   // CertNetFetcher to be constructed on that thread.

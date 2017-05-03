@@ -15,8 +15,6 @@
 
 namespace net {
 
-class X509Certificate;
-
 // The SSLCertRequestInfo class represents server criteria regarding client
 // certificate required for a secure connection.
 //
@@ -53,10 +51,6 @@ class NET_EXPORT SSLCertRequestInfo
   std::vector<std::string> cert_authorities;
 
   std::vector<SSLClientCertType> cert_key_types;
-
-  // Client certificates matching the server criteria. This should be removed
-  // soon as being tracked in http://crbug.com/166642.
-  std::vector<scoped_refptr<X509Certificate> > client_certs;
 
  private:
   friend class base::RefCountedThreadSafe<SSLCertRequestInfo>;

@@ -15,7 +15,8 @@ along with a detailed description for each metric.
   <owner>sebsg@chromium.org</owner>
   <metric name="UploadDecision">
     <summary>
-      Whether the upload was proposed to the user or the reason why it was not.
+      Whether the upload was proposed to the user or the reasons why it was not.
+      The value is a bitmask of |CardUploadDecisionMetric|.
     </summary>
   </metric>
 </event>
@@ -24,7 +25,8 @@ along with a detailed description for each metric.
   <owner>csashi@google.com</owner>
   <summary>
     Recorded when we parse a form to log whether developer has used autocomplete
-    markup or UPI-VPA hints.
+    markup or UPI-VPA hints. The value is a bitmask of
+    |DeveloperEngagementMetric|.
   </summary>
   <metric name="DeveloperEngagement"/>
 </event>
@@ -193,6 +195,13 @@ along with a detailed description for each metric.
       components/payments/core/journey_logger.h.
     </summary>
   </metric>
+</event>
+
+<event name="Plugins.FlashInstance">
+  <owner>tommycli@chromium.org</owner>
+  <summary>
+    Recorded when a Flash object instance is created.
+  </summary>
 </event>
 
 <event name="Translate">

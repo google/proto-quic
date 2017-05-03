@@ -123,16 +123,6 @@ class BASE_EXPORT DiscardableSharedMemory {
   // It is safe to call Close repeatedly.
   void Close();
 
-  // Shares the discardable memory segment to another process. Attempts to
-  // create a platform-specific |new_handle| which can be used in a remote
-  // process to access the discardable memory segment. |new_handle| is an
-  // output parameter to receive the handle for use in the remote process.
-  // Returns true on success, false otherwise.
-  bool ShareToProcess(ProcessHandle process_handle,
-                      SharedMemoryHandle* new_handle) {
-    return shared_memory_.ShareToProcess(process_handle, new_handle);
-  }
-
  private:
   // Virtual for tests.
   virtual Time Now() const;

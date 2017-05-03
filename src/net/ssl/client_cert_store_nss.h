@@ -33,8 +33,7 @@ class NET_EXPORT ClientCertStoreNSS : public ClientCertStore {
 
   // ClientCertStore:
   void GetClientCerts(const SSLCertRequestInfo& cert_request_info,
-                      CertificateList* selected_certs,
-                      const base::Closure& callback) override;
+                      const ClientCertListCallback& callback) override;
 
   // Examines the certificates in |certs| to find all certificates that match
   // the client certificate request in |request|, storing the matching
@@ -54,11 +53,10 @@ class NET_EXPORT ClientCertStoreNSS : public ClientCertStore {
       net::CertificateList* certs);
 
  private:
-  void GetAndFilterCertsOnWorkerThread(
+  CertificateList GetAndFilterCertsOnWorkerThread(
       std::unique_ptr<crypto::CryptoModuleBlockingPasswordDelegate>
           password_delegate,
-      const SSLCertRequestInfo* request,
-      CertificateList* selected_certs);
+      const SSLCertRequestInfo* request);
 
   // The factory for creating the delegate for requesting a password to a
   // PKCS#11 token. May be null.

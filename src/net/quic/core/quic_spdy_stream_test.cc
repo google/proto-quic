@@ -13,13 +13,12 @@
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_string_piece.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/quic_flow_controller_peer.h"
 #include "net/quic/test_tools/quic_session_peer.h"
 #include "net/quic/test_tools/quic_stream_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "testing/gmock/include/gmock/gmock.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
 using testing::AnyNumber;
@@ -64,7 +63,7 @@ class TestStream : public QuicSpdyStream {
   string data_;
 };
 
-class QuicSpdyStreamTest : public ::testing::TestWithParam<QuicVersion> {
+class QuicSpdyStreamTest : public QuicTestWithParam<QuicVersion> {
  public:
   QuicSpdyStreamTest() {
     headers_[":host"] = "www.google.com";
@@ -116,7 +115,6 @@ class QuicSpdyStreamTest : public ::testing::TestWithParam<QuicVersion> {
   }
 
  protected:
-  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
   MockQuicConnection* connection_;

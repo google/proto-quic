@@ -21,6 +21,7 @@
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/platform/api/quic_string_piece.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/quic_config_peer.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_flow_controller_peer.h"
@@ -31,9 +32,7 @@
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/spdy/core/spdy_framer.h"
 #include "net/test/gtest_util.h"
-#include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gmock_mutant.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
 using testing::CreateFunctor;
@@ -223,7 +222,7 @@ class TestSession : public QuicSpdySession {
   bool writev_consumes_all_data_;
 };
 
-class QuicSessionTestBase : public ::testing::TestWithParam<QuicVersion> {
+class QuicSessionTestBase : public QuicTestWithParam<QuicVersion> {
  protected:
   explicit QuicSessionTestBase(Perspective perspective)
       : connection_(
@@ -284,7 +283,6 @@ class QuicSessionTestBase : public ::testing::TestWithParam<QuicVersion> {
 
   QuicVersion version() const { return connection_->version(); }
 
-  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
   StrictMock<MockQuicConnection>* connection_;

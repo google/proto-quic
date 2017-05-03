@@ -4941,7 +4941,7 @@
   via the "check" command (see "gn help check").
 
   If no public files are declared, other targets (assuming they have visibility
-  to depend on this target can include any file in the sources list. If this
+  to depend on this target) can include any file in the sources list. If this
   variable is defined on a target, dependent targets may only include files on
   this whitelist.
 

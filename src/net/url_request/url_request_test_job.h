@@ -138,7 +138,6 @@ class NET_EXPORT_PRIVATE URLRequestTestJob : public URLRequestJob {
   bool GetMimeType(std::string* mime_type) const override;
   void GetResponseInfo(HttpResponseInfo* info) override;
   void GetLoadTimingInfo(LoadTimingInfo* load_timing_info) const override;
-  int GetResponseCode() const override;
   int64_t GetTotalReceivedBytes() const override;
   bool IsRedirectResponse(GURL* location, int* http_status_code) override;
 

@@ -10,6 +10,7 @@
 #include <string>
 
 #include "base/rand_util.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
@@ -31,7 +32,9 @@ void SetNonce(uint8_t nonce[32], unsigned time, const uint8_t orbit[8]) {
   memset(nonce + 12, 0, 20);
 }
 
-TEST(StrikeRegisterTest, SimpleHorizon) {
+class StrikeRegisterTest : public QuicTest {};
+
+TEST_F(StrikeRegisterTest, SimpleHorizon) {
   // The set must reject values created on or before its own creation time.
   StrikeRegister set(10 /* max size */, 1000 /* current time */,
                      100 /* window secs */, kOrbit,
@@ -50,7 +53,7 @@ TEST(StrikeRegisterTest, SimpleHorizon) {
   EXPECT_EQ(101u, set.GetCurrentValidWindowSecs(1300 /* current time */));
 }
 
-TEST(StrikeRegisterTest, NoStartupMode) {
+TEST_F(StrikeRegisterTest, NoStartupMode) {
   // Check that a strike register works immediately if NO_STARTUP_PERIOD_NEEDED
   // is specified.
   StrikeRegister set(10 /* max size */, 1000 /* current time */,
@@ -68,7 +71,7 @@ TEST(StrikeRegisterTest, NoStartupMode) {
   EXPECT_EQ(101u, set.GetCurrentValidWindowSecs(1300 /* current time */));
 }
 
-TEST(StrikeRegisterTest, WindowFuture) {
+TEST_F(StrikeRegisterTest, WindowFuture) {
   // The set must reject values outside the window.
   StrikeRegister set(10 /* max size */, 1000 /* current time */,
                      100 /* window secs */, kOrbit,
@@ -80,7 +83,7 @@ TEST(StrikeRegisterTest, WindowFuture) {
   EXPECT_EQ(NONCE_INVALID_TIME_FAILURE, set.Insert(nonce, 1100));
 }
 
-TEST(StrikeRegisterTest, BadOrbit) {
+TEST_F(StrikeRegisterTest, BadOrbit) {
   // The set must reject values with the wrong orbit
   StrikeRegister set(10 /* max size */, 1000 /* current time */,
                      100 /* window secs */, kOrbit,
@@ -91,7 +94,7 @@ TEST(StrikeRegisterTest, BadOrbit) {
   EXPECT_EQ(NONCE_INVALID_ORBIT_FAILURE, set.Insert(nonce, 1100));
 }
 
-TEST(StrikeRegisterTest, OneValue) {
+TEST_F(StrikeRegisterTest, OneValue) {
   StrikeRegister set(10 /* max size */, 1000 /* current time */,
                      100 /* window secs */, kOrbit,
                      StrikeRegister::DENY_REQUESTS_AT_STARTUP);
@@ -100,7 +103,7 @@ TEST(StrikeRegisterTest, OneValue) {
   EXPECT_EQ(NONCE_OK, set.Insert(nonce, 1101));
 }
 
-TEST(StrikeRegisterTest, RejectDuplicate) {
+TEST_F(StrikeRegisterTest, RejectDuplicate) {
   // The set must reject values with the wrong orbit
   StrikeRegister set(10 /* max size */, 1000 /* current time */,
                      100 /* window secs */, kOrbit,
@@ -111,7 +114,7 @@ TEST(StrikeRegisterTest, RejectDuplicate) {
   EXPECT_EQ(NONCE_NOT_UNIQUE_FAILURE, set.Insert(nonce, 1101));
 }
 
-TEST(StrikeRegisterTest, HorizonUpdating) {
+TEST_F(StrikeRegisterTest, HorizonUpdating) {
   StrikeRegister::StartupType startup_types[] = {
       StrikeRegister::DENY_REQUESTS_AT_STARTUP,
       StrikeRegister::NO_STARTUP_PERIOD_NEEDED};
@@ -163,7 +166,7 @@ TEST(StrikeRegisterTest, HorizonUpdating) {
   }
 }
 
-TEST(StrikeRegisterTest, InsertMany) {
+TEST_F(StrikeRegisterTest, InsertMany) {
   StrikeRegister set(5000 /* max size */, 1000 /* current time */,
                      500 /* window secs */, kOrbit,
                      StrikeRegister::DENY_REQUESTS_AT_STARTUP);
@@ -283,7 +286,7 @@ class SlowStrikeRegister {
   std::set<std::pair<uint32_t, string>> nonces_;
 };
 
-class StrikeRegisterStressTest : public ::testing::Test {};
+class StrikeRegisterStressTest : public QuicTest {};
 
 TEST_F(StrikeRegisterStressTest, InOrderInsertion) {
   // Fixed seed gives reproducibility for this test.

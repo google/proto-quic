@@ -45,7 +45,7 @@ def _SaveSizeInfoToFile(size_info, file_obj):
   # Store a single copy of all paths and have them referenced by index.
   # Using an OrderedDict makes the indices more repetitive (better compression).
   path_tuples = collections.OrderedDict.fromkeys(
-      (s.object_path, s.source_path) for s in size_info.raw_symbols)
+      (s.object_path, s.source_path) for s in size_info.symbols)
   for i, key in enumerate(path_tuples):
     path_tuples[key] = i
   file_obj.write('%d\n' % len(path_tuples))
@@ -53,7 +53,7 @@ def _SaveSizeInfoToFile(size_info, file_obj):
   _LogSize(file_obj, 'paths')  # For libchrome, adds 200kb.
 
   # Symbol counts by section.
-  by_section = models.SymbolGroup(size_info.raw_symbols)
+  by_section = models.SymbolGroup(size_info.symbols)
   by_section = by_section.GroupBySectionName().SortedByName()
   file_obj.write('%s\n' % '\t'.join(g.name for g in by_section))
   file_obj.write('%s\n' % '\t'.join(str(len(g)) for g in by_section))
@@ -80,10 +80,14 @@ def _SaveSizeInfoToFile(size_info, file_obj):
                 delta=True)
   _LogSize(file_obj, 'path indices')  # For libchrome: adds 125kb.
 
+  prev_aliases = None
   for group in by_section:
     for symbol in group:
       # Do not write name when full_name exists. It will be derived on load.
       file_obj.write(symbol.full_name or symbol.name)
+      if symbol.aliases and symbol.aliases is not prev_aliases:
+        file_obj.write('\t0%x' % symbol.num_aliases)
+      prev_aliases = symbol.aliases
       if symbol.flags:
         file_obj.write('\t%x' % symbol.flags)
       file_obj.write('\n')
@@ -132,14 +136,24 @@ def _LoadSizeInfoFromFile(file_obj):
   raw_symbols = [None] * sum(section_counts)
   symbol_idx = 0
   for section_index, cur_section_name in enumerate(section_names):
+    alias_counter = 0
     for i in xrange(section_counts[section_index]):
-      line = next(lines)[:-1]
-      name = line
-      flags = 0
-      last_tab_idx = line.find('\t', -3)  # Allows for two digits of flags.
-      if last_tab_idx != -1:
-        flags = int(line[last_tab_idx + 1:], 16)
-        name = line[:last_tab_idx]
+      parts = next(lines)[:-1].split('\t')
+      flags_part = None
+      aliases_part = None
+
+      if len(parts) == 3:
+        aliases_part = parts[1]
+        flags_part = parts[2]
+      elif len(parts) == 2:
+        if parts[1][0] == '0':
+          aliases_part = parts[1]
+        else:
+          flags_part = parts[1]
+
+      name = parts[0]
+      flags = int(flags_part, 16) if flags_part else 0
+      num_aliases = int(aliases_part, 16) if aliases_part else 0
 
       new_sym = models.Symbol.__new__(models.Symbol)
       new_sym.section_name = cur_section_name
@@ -152,15 +166,28 @@ def _LoadSizeInfoFromFile(file_obj):
       new_sym.flags = flags
       new_sym.padding = 0  # Derived
       new_sym.full_name = None  # Derived
+
+      if num_aliases:
+        assert alias_counter == 0
+        new_sym.aliases = [new_sym]
+        alias_counter = num_aliases - 1
+      elif alias_counter > 0:
+        new_sym.aliases = raw_symbols[symbol_idx - 1].aliases
+        new_sym.aliases.append(new_sym)
+        alias_counter -= 1
+      else:
+        new_sym.aliases = None
+
       raw_symbols[symbol_idx] = new_sym
       symbol_idx += 1
 
-  return models.SizeInfo(section_sizes, raw_symbols, metadata=metadata)
+  return models.SizeInfo(section_sizes, models.SymbolGroup(raw_symbols),
+                         metadata=metadata)
 
 
 def SaveSizeInfo(size_info, path):
   """Saves |size_info| to |path}."""
-  if os.environ.get('MEASURE_GZIP') == '1':
+  if os.environ.get('SUPERSIZE_MEASURE_GZIP') == '1':
     with gzip.open(path, 'wb') as f:
       _SaveSizeInfoToFile(size_info, f)
   else:

@@ -13,7 +13,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "net/base/net_export.h"
+#include "net/spdy/platform/api/spdy_export.h"
 #include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
@@ -23,11 +23,11 @@ namespace test {
 class SpdyAltSvcWireFormatPeer;
 }  // namespace test
 
-class NET_EXPORT_PRIVATE SpdyAltSvcWireFormat {
+class SPDY_EXPORT_PRIVATE SpdyAltSvcWireFormat {
  public:
   using VersionVector = std::vector<uint16_t>;
 
-  struct NET_EXPORT_PRIVATE AlternativeService {
+  struct SPDY_EXPORT_PRIVATE AlternativeService {
     SpdyString protocol_id;
     SpdyString host;
 

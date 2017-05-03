@@ -123,7 +123,7 @@ void StackFrameDeduplicator::EstimateTraceMemoryOverhead(
     TraceEventMemoryOverhead* overhead) {
   size_t memory_usage =
       EstimateMemoryUsage(frames_) + EstimateMemoryUsage(roots_);
-  overhead->Add("StackFrameDeduplicator",
+  overhead->Add(TraceEventMemoryOverhead::kHeapProfilerStackFrameDeduplicator,
                 sizeof(StackFrameDeduplicator) + memory_usage);
 }
 

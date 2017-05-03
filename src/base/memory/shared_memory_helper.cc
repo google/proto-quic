@@ -48,7 +48,7 @@ bool CreateAnonymousSharedMemory(const SharedMemoryCreateOptions& options,
   path_unlinker.reset(path);
 
   if (options.share_read_only) {
-    // Also open as readonly so that we can ShareReadOnlyToProcess.
+    // Also open as readonly so that we can GetReadOnlyHandle.
     readonly_fd->reset(HANDLE_EINTR(open(path->value().c_str(), O_RDONLY)));
     if (!readonly_fd->is_valid()) {
       DPLOG(ERROR) << "open(\"" << path->value() << "\", O_RDONLY) failed";

@@ -43,7 +43,8 @@ def _FindParameterListParen(name):
           start_idx = idx + 21
           continue
         # Special case: skip "decltype (...)"
-        if name[idx - 1] != ' ':
+        # Special case: skip "{lambda(PaintOp*)#63}"
+        if name[idx - 1] != ' ' and name[idx - 7:idx] != '{lambda':
           return idx
       start_idx = idx + 1
       paren_balance_count += 1
@@ -85,6 +86,14 @@ def _FindReturnValueSpace(name, paren_idx):
   return space_idx
 
 
+def _NormalizeTopLevelLambda(name, space_idx, left_paren_idx):
+  # cc::{lambda(PaintOp*)#63}::_FUN() -> cc:{lambda#63}()
+  paren_idx = name.index('(', space_idx + 1)
+  hash_idx = name.rindex('#', paren_idx)
+  return (name[:paren_idx] + name[hash_idx:left_paren_idx - 6] +
+          name[left_paren_idx:])
+
+
 def Parse(name):
   """Extracts a function name from a function signature.
 
@@ -95,10 +104,20 @@ def Parse(name):
   """
   left_paren_idx = _FindParameterListParen(name)
 
+  full_name = name
   if left_paren_idx > 0:
     right_paren_idx = name.rindex(')')
     assert right_paren_idx > left_paren_idx
     space_idx = _FindReturnValueSpace(name, left_paren_idx)
-    return (name[space_idx + 1:],
-            name[space_idx + 1:left_paren_idx] + name[right_paren_idx + 1:])
-  return name, name
+    name_without_attrib = name[space_idx + 1:left_paren_idx]
+    # Special case for top-level lamdas.
+    if name_without_attrib.endswith('}::_FUN'):
+      # Don't use name_without_attrib in here since prior _idx will be off if
+      # there was a return value.
+      name = _NormalizeTopLevelLambda(name, space_idx, left_paren_idx)
+      return Parse(name)
+
+    full_name = name[space_idx + 1:]
+    name = name_without_attrib + name[right_paren_idx + 1:]
+
+  return full_name, name

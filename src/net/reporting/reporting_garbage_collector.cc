@@ -24,39 +24,31 @@ class ReportingGarbageCollectorImpl : public ReportingGarbageCollector,
                                       public ReportingObserver {
  public:
   ReportingGarbageCollectorImpl(ReportingContext* context)
-      : context_(context), timer_(base::MakeUnique<base::OneShotTimer>()) {}
+      : context_(context), timer_(base::MakeUnique<base::OneShotTimer>()) {
+    context_->AddObserver(this);
+  }
 
   // ReportingGarbageCollector implementation:
 
   ~ReportingGarbageCollectorImpl() override {
-    DCHECK(context_->initialized());
     context_->RemoveObserver(this);
   }
 
-  void Initialize() override {
-    context_->AddObserver(this);
-    CollectGarbage();
-  }
-
   void SetTimerForTesting(std::unique_ptr<base::Timer> timer) override {
-    DCHECK(!context_->initialized());
     timer_ = std::move(timer);
   }
 
   // ReportingObserver implementation:
   void OnCacheUpdated() override {
-    DCHECK(context_->initialized());
-    if (!timer_->IsRunning())
-      StartTimer();
-  }
+    if (timer_->IsRunning())
+      return;
 
- private:
-  void StartTimer() {
     timer_->Start(FROM_HERE, context_->policy().garbage_collection_interval,
                   base::Bind(&ReportingGarbageCollectorImpl::CollectGarbage,
                              base::Unretained(this)));
   }
 
+ private:
   void CollectGarbage() {
     base::TimeTicks now = context_->tick_clock()->NowTicks();
     const ReportingPolicy& policy = context_->policy();

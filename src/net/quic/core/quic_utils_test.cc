@@ -5,7 +5,7 @@
 #include "net/quic/core/quic_utils.h"
 
 #include "net/quic/core/crypto/crypto_protocol.h"
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 using std::string;
 
@@ -13,7 +13,9 @@ namespace net {
 namespace test {
 namespace {
 
-TEST(QuicUtilsTest, DetermineAddressChangeType) {
+class QuicUtilsTest : public QuicTest {};
+
+TEST_F(QuicUtilsTest, DetermineAddressChangeType) {
   const string kIPv4String1 = "1.2.3.4";
   const string kIPv4String2 = "1.2.3.5";
   const string kIPv4String3 = "1.1.3.5";
@@ -88,7 +90,7 @@ uint128 IncrementalHashReference(const void* data, size_t len) {
   return hash;
 }
 
-TEST(QuicUtilsHashTest, ReferenceTest) {
+TEST_F(QuicUtilsTest, ReferenceTest) {
   std::vector<uint8_t> data(32);
   for (size_t i = 0; i < data.size(); ++i) {
     data[i] = i % 255;

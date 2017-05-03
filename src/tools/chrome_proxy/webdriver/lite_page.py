@@ -6,6 +6,7 @@ import common
 from common import TestDriver
 from common import IntegrationTest
 
+import time
 
 class LitePage(IntegrationTest):
 
@@ -38,6 +39,54 @@ class LitePage(IntegrationTest):
 
       # Verify that a Lite Page response for the main frame was seen.
       self.assertEqual(1, lite_page_responses)
+
+  # Checks that a Lite Page does not have an error when scrolling to the bottom
+  # of the page and is able to load all resources.
+  def testLitePageBTF(self):
+    # If it was attempted to run with another experiment, skip this test.
+    if common.ParseFlags().browser_args and ('--data-reduction-proxy-experiment'
+        in common.ParseFlags().browser_args):
+      self.skipTest('This test cannot be run with other experiments.')
+    with TestDriver() as test_driver:
+      test_driver.AddChromeArg('--enable-spdy-proxy-auth')
+      test_driver.AddChromeArg('--data-reduction-proxy-lo-fi=always-on')
+      test_driver.AddChromeArg('--enable-data-reduction-proxy-lite-page')
+
+      # This page is long and has many media resources.
+      test_driver.LoadURL('http://check.googlezip.net/metrics/index.html')
+
+      # Verify that a Lite Page response for the main frame was seen.
+      lite_page_responses = 0
+      for response in test_driver.GetHTTPResponses():
+        # Skip CSI requests when validating Lite Page headers. CSI requests
+        # aren't expected to have LoFi headers.
+        if '/csi?' in response.url:
+          continue
+        if response.url.startswith('data:'):
+          continue
+        self.assertIn('exp=ignore_preview_blacklist',
+          response.request_headers['chrome-proxy'])
+        if (self.checkLitePageResponse(response)):
+          lite_page_responses = lite_page_responses + 1
+      self.assertEqual(1, lite_page_responses)
+
+      # Scroll to the bottom of the window and ensure scrollHeight increases.
+      original_scroll_height = test_driver.ExecuteJavascriptStatement(
+        'document.body.scrollHeight')
+      test_driver.ExecuteJavascriptStatement(
+        'window.scrollTo(0,Math.max(document.body.scrollHeight));')
+      # Give some time for loading after scrolling.
+      time.sleep(2)
+      new_scroll_height = test_driver.ExecuteJavascriptStatement(
+        'document.body.scrollHeight')
+      self.assertGreater(new_scroll_height, original_scroll_height)
+
+      # Make sure there were more requests that were proxied.
+      responses = test_driver.GetHTTPResponses(override_has_logs=True)
+      self.assertNotEqual(0, len(responses))
+      for response in responses:
+        self.assertHasChromeProxyViaHeader(response)
+        self.assertIn(response.status, [200, 204])
 
   # Checks that Lo-Fi images are used when the user is in the
   # DataCompressionProxyLitePageFallback field trial and a Lite Page is not

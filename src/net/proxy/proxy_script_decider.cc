@@ -92,14 +92,7 @@ ProxyScriptDecider::ProxyScriptDecider(
       net_log_(NetLogWithSource::Make(net_log,
                                       NetLogSourceType::PROXY_SCRIPT_DECIDER)),
       fetch_pac_bytes_(false),
-      quick_check_enabled_(true),
-      host_resolver_(nullptr) {
-  if (proxy_script_fetcher &&
-      proxy_script_fetcher->GetRequestContext() &&
-      proxy_script_fetcher->GetRequestContext()->host_resolver()) {
-    host_resolver_ = proxy_script_fetcher->GetRequestContext()->host_resolver();
-  }
-}
+      quick_check_enabled_(true) {}
 
 ProxyScriptDecider::~ProxyScriptDecider() {
   if (next_state_ != STATE_NONE)
@@ -137,6 +130,20 @@ int ProxyScriptDecider::Start(
     DidComplete();
 
   return rv;
+}
+
+void ProxyScriptDecider::OnShutdown() {
+  // Don't do anything if idle.
+  if (next_state_ == STATE_NONE)
+    return;
+
+  CompletionCallback callback = std::move(callback_);
+
+  // Just cancel any pending work.
+  Cancel();
+
+  if (callback)
+    callback.Run(ERR_CONTEXT_SHUT_DOWN);
 }
 
 const ProxyConfig& ProxyScriptDecider::effective_config() const {
@@ -255,7 +262,8 @@ int ProxyScriptDecider::DoWaitComplete(int result) {
 
 int ProxyScriptDecider::DoQuickCheck() {
   DCHECK(quick_check_enabled_);
-  if (host_resolver_ == nullptr) {
+  if (!proxy_script_fetcher_ || !proxy_script_fetcher_->GetRequestContext() ||
+      !proxy_script_fetcher_->GetRequestContext()->host_resolver()) {
     // If we have no resolver, skip QuickCheck altogether.
     next_state_ = GetStartState();
     return OK;
@@ -275,9 +283,12 @@ int ProxyScriptDecider::DoQuickCheck() {
                               kQuickCheckDelayMs),
                            base::Bind(callback, ERR_NAME_NOT_RESOLVED));
 
+  HostResolver* host_resolver =
+      proxy_script_fetcher_->GetRequestContext()->host_resolver();
+
   // We use HIGHEST here because proxy decision blocks doing any other requests.
-  return host_resolver_->Resolve(reqinfo, HIGHEST, &wpad_addresses_, callback,
-                                 &request_, net_log_);
+  return host_resolver->Resolve(reqinfo, HIGHEST, &wpad_addresses_, callback,
+                                &request_, net_log_);
 }
 
 int ProxyScriptDecider::DoQuickCheckComplete(int result) {
@@ -465,6 +476,9 @@ void ProxyScriptDecider::Cancel() {
   net_log_.AddEvent(NetLogEventType::CANCELLED);
 
   switch (next_state_) {
+    case STATE_QUICK_CHECK_COMPLETE:
+      request_.reset();
+      break;
     case STATE_WAIT_COMPLETE:
       wait_timer_.Stop();
       break;
@@ -475,9 +489,13 @@ void ProxyScriptDecider::Cancel() {
       break;
   }
 
+  next_state_ = STATE_NONE;
+
   // This is safe to call in any state.
   if (dhcp_proxy_script_fetcher_)
     dhcp_proxy_script_fetcher_->Cancel();
+
+  DCHECK(!request_);
 
   DidComplete();
 }

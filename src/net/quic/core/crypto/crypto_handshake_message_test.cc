@@ -6,14 +6,13 @@
 
 #include "net/quic/core/crypto/crypto_handshake.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 namespace net {
 namespace test {
 namespace {
 
-class CryptoHandshakeMessageTest
-    : public ::testing::TestWithParam<Perspective> {};
+class CryptoHandshakeMessageTest : public QuicTestWithParam<Perspective> {};
 
 TEST_P(CryptoHandshakeMessageTest, DebugString) {
   const char* str = "SHLO<\n>";

@@ -638,6 +638,61 @@ template("test_runner_script") {
   }
 }
 
+template("stack_script") {
+  forward_variables_from(invoker, [ "testonly" ])
+
+  _stack_target_name = invoker.stack_target_name
+
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "deps",
+                           ])
+    if (!defined(deps)) {
+      deps = []
+    }
+    if (!defined(data_deps)) {
+      data_deps = []
+    }
+
+    data_deps +=
+        [ "//third_party/android_platform/development/scripts:stack_py" ]
+
+    script = "//build/android/gyp/create_stack_script.py"
+    depfile = "$target_gen_dir/$target_name.d"
+
+    _stack_script = "//third_party/android_platform/development/scripts/stack"
+
+    _generated_script = "$root_build_dir/bin/stack_${_stack_target_name}"
+
+    outputs = [
+      _generated_script,
+    ]
+    data = [
+      _generated_script,
+    ]
+
+    args = [
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+      "--output-directory",
+      rebase_path(root_build_dir, root_build_dir),
+      "--script-path",
+      rebase_path(_stack_script, root_build_dir),
+      "--script-output-path",
+      rebase_path(_generated_script, root_build_dir),
+      "--arch=$target_cpu",
+    ]
+    if (defined(invoker.packed_libraries)) {
+      args += [
+        "--packed-libs",
+        invoker.packed_libraries,
+      ]
+    }
+  }
+}
+
 if (enable_java_templates) {
   import("//build/config/zip.gni")
   import("//third_party/ijar/ijar.gni")
@@ -696,7 +751,7 @@ if (enable_java_templates) {
       ]
 
       args = [
-        "--lint-path=$_rebased_lint_android_sdk_root/tools/lint",
+        "--lint-path=$_rebased_lint_android_sdk_root/tools-lint/bin/lint",
         "--cache-dir",
         rebase_path(_cache_dir, root_build_dir),
         "--platform-xml-path",

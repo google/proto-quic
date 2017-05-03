@@ -71,8 +71,6 @@ class NET_EXPORT ProxyService : public NetworkChangeNotifier::IPAddressObserver,
     SAFE,
   };
 
-  static const size_t kDefaultNumPacThreads = 4;
-
   // This interface defines the set of policies for when to poll the PAC
   // script for changes.
   //
@@ -225,6 +223,11 @@ class NET_EXPORT ProxyService : public NetworkChangeNotifier::IPAddressObserver,
       std::unique_ptr<DhcpProxyScriptFetcher> dhcp_proxy_script_fetcher);
   ProxyScriptFetcher* GetProxyScriptFetcher() const;
 
+  // Cancels all network requests, and prevents the service from creating new
+  // ones.  Must be called before the URLRequestContext the ProxyService was
+  // created with is torn down, if it's torn down before th ProxyService itself.
+  void OnShutdown();
+
   // Tells this ProxyService to start using a new ProxyConfigService to
   // retrieve its ProxyConfig from. The new ProxyConfigService will immediately
   // be queried for new config info which will be used for all subsequent
@@ -262,7 +265,6 @@ class NET_EXPORT ProxyService : public NetworkChangeNotifier::IPAddressObserver,
   // proxy autoconfig.
   static std::unique_ptr<ProxyService> CreateUsingSystemProxyResolver(
       std::unique_ptr<ProxyConfigService> proxy_config_service,
-      size_t num_pac_threads,
       NetLog* net_log);
 
   // Creates a ProxyService without support for proxy autoconfig.

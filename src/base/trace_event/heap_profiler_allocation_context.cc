@@ -48,10 +48,12 @@ bool operator==(const AllocationContext& lhs, const AllocationContext& rhs) {
 bool operator!=(const AllocationContext& lhs, const AllocationContext& rhs) {
   return !(lhs == rhs);
 }
+
 }  // namespace trace_event
 }  // namespace base
 
-namespace BASE_HASH_NAMESPACE {
+namespace std {
+
 using base::trace_event::AllocationContext;
 using base::trace_event::Backtrace;
 using base::trace_event::StackFrame;
@@ -85,4 +87,4 @@ size_t hash<AllocationContext>::operator()(const AllocationContext& ctx) const {
   return (backtrace_hash * 3) + type_hash;
 }
 
-}  // BASE_HASH_NAMESPACE
+}  // namespace std

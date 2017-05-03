@@ -25,6 +25,13 @@ Print(print_syms - print_syms.WherePathMatches(r"^components/"))
 Print(Diff(size_info1, size_info2), to_file="output.txt")
 
 Metadata:
+    elf_arch=ARM
+    elf_build_id=WhatAnAmazingBuildId
+    elf_file_name=elf
+    elf_mtime={redacted}
+    git_revision=abc123
+    gn_args=var1=true var2="foo"
+    map_file_name=../test.map
 
 Section Sizes (Total=43,785,380 bytes):
     .bss: 1,300,456 bytes (not included in totals)
@@ -34,83 +41,103 @@ Section Sizes (Total=43,785,380 bytes):
     .rodata: 5,927,652 bytes (13.5%)
     .text: 35,900,712 bytes (82.0%)
 
-Showing 38 symbols with total size: 2652506 bytes
-.text=10.3kb     .rodata=2.52mb     other=388 bytes  total=2.53mb
+Showing 48 symbols (45 unique) with total pss: 44309900 bytes
+.text=34.2mb     .rodata=5.65mb     other=2.37mb     total=42.3mb
 Number of object files: 10
 
-First columns are: running total, type, size
- 2641394 r@Group      2641394 {no path}
-             ** merge strings (count=2)
- 2651152 t@Group      9758    {no path}
-             ** symbol gaps (count=2)
- 2651600 t@0x28f000   448     third_party/icu/ucnv_ext.c
-             ucnv_extMatchFromU
- 2651752 d@0x2de7008  152     third_party/container.c
-             base::android::kBaseRegisteredMethods
- 2651846 t@0x2a1000   94      third_party/container.c
-             blink::PaintChunker::releasePaintChunks [clone .part.1]
- 2651902 d@0x2c176f0  56      third_party/icu/ucnv_ext.c
-             ChromeMainDelegate [vtable]
- 2651958 d@0x2cd8500  56      third_party/paint.cc
-             ChromeMainDelegateAndroid [vtable]
- 2652014 t@0x28d910   56      base/page_allocator.cc
-             _GLOBAL__sub_I_bbr_sender.cc
- 2652069 r@0x28f3450  55      third_party/paint.cc
-             kAnimationFrameTimeHistogramClassPath
- 2652113 r@0x284e370  44      base/page_allocator.cc
-             Name
- 2652151 t@0x28d964   38      base/page_allocator.cc
-             extFromUUseMapping
- 2652183 r@0x284e398  32      third_party/container.c
-             chrome::mojom::FilePatcher::Name_
- 2652215 t@0x28d98a   32      base/page_allocator.cc
-             extFromUUseMapping
- 2652243 t@0x28f1c8   28      third_party/icu/ucnv_ext.c
-             _GLOBAL__sub_I_SkDeviceProfile.cpp
- 2652271 t@0x28d948   28      base/page_allocator.cc
-             _GLOBAL__sub_I_pacing_sender.cc
- 2652299 t@0x2a0020   28      third_party/container.c
-             blink::ContiguousContainerBase::ContiguousContainerBase
- 2652323 d@0x2c17740  24      third_party/container.c
+First columns are: running total, address, pss
+35821002 t@0x24ca628  35821002 {no path}
+             ** symbol gap 2 (end of section)
+39107114 r@0x2c158e4  3286112 {no path}
+             ** symbol gap 3 (end of section)
+41072523 r@0x266e600  1965409 {no path}
+             ** merge strings
+42137655 d@0x2ddc608  1065132 {no path}
+             ** symbol gap 3 (end of section)
+42927559 d@0x2c17740  789904  third_party/container.c
              chrome::mojom::FieldTrialRecorderProxy [vtable]
- 2652347 d@0x2c17728  24      third_party/icu/ucnv_ext.c
-             chrome::mojom::FieldTrialRecorderRequestValidator [vtable]
- 2652371 t@0x28f1e0   24      third_party/icu/ucnv_ext.c
+43603544 r@0x284e518  675985  {no path}
+             ** merge strings
+43705144 d@0x2dffd88  101600  {no path}
+             ** symbol gap 3 (end of section)
+43774268 t@0x28f1e0   69124   third_party/icu/ucnv_ext.c
              foo_bar
- 2652395 d@0x2cd8538  24      base/page_allocator.cc
-             mojo::MessageReceiver [vtable]
- 2652411 d@0x2cd84e0  16      third_party/gvr-android-sdk/libgvr_shim_static_arm.a/libcontroller_api_impl.a_controller_api_impl.o
-             .Lswitch.table.45
- 2652427 t@0x28d900   16      base/page_allocator.cc
-             _GLOBAL__sub_I_page_allocator.cc
- 2652443 t@0x2a0000   16      third_party/paint.cc
+43779986 t@0x28f000   5718    third_party/icu/ucnv_ext.c
+             ** symbol gap 0
+43784026 t@0x2a1000   4040    third_party/container.c
+             ** symbol gap 1
+43784474 t@0x28f000   448     third_party/icu/ucnv_ext.c
+             ucnv_extMatchFromU
+43784626 d@0x2de7008  152     third_party/container.c
+             base::android::kBaseRegisteredMethods
+43784720 t@0x2a1000   94      third_party/container.c
+             blink::PaintChunker::releasePaintChunks [clone .part.1]
+43784776 d@0x2c176f0  56      third_party/icu/ucnv_ext.c
+             ChromeMainDelegate [vtable]
+43784832 d@0x2cd8500  56      third_party/paint.cc
+             ChromeMainDelegateAndroid [vtable]
+43784888 t@0x28d910   56      base/page_allocator.cc
+             _GLOBAL__sub_I_bbr_sender.cc
+43784943 r@0x28f3450  55      third_party/paint.cc
+             kAnimationFrameTimeHistogramClassPath
+43784967 t@0x2a0000   24      third_party/icu/ucnv_ext.c
+             BazAlias
+43784991 t@0x2a0000   24      {no path}
              blink::ContiguousContainerBase::shrinkToFit
- 2652455 t@0x2a0010   12      third_party/paint.cc
+43785035 r@0x284e370  44      base/page_allocator.cc
+             Name
+43785073 t@0x28d964   38      base/page_allocator.cc
+             extFromUUseMapping
+43785105 d@0x2cd84e0  32      third_party/gvr-android-sdk/libgvr_shim_static_arm.a/libcontroller_api_impl.a_controller_api_impl.o
+             .Lswitch.table.45
+43785137 r@0x284e398  32      third_party/container.c
+             chrome::mojom::FilePatcher::Name_
+43785169 t@0x28d98a   32      base/page_allocator.cc
+             extFromUUseMapping
+43785197 t@0x28f1c8   28      third_party/icu/ucnv_ext.c
+             _GLOBAL__sub_I_SkDeviceProfile.cpp
+43785225 t@0x28d948   28      base/page_allocator.cc
+             _GLOBAL__sub_I_pacing_sender.cc
+43785253 t@0x2a0020   28      third_party/container.c
+             blink::ContiguousContainerBase::ContiguousContainerBase
+43785277 d@0x2c17728  24      third_party/icu/ucnv_ext.c
+             chrome::mojom::FieldTrialRecorder [vtable]
+43785301 d@0x2cd8538  24      base/page_allocator.cc
+             mojo::MessageReceiver [vtable]
+43785317 t@0x28d900   16      base/page_allocator.cc
+             _GLOBAL__sub_I_page_allocator.cc
+43785321 t@0x2a0010   4       third_party/fft_float.cc
+             BarAlias
+43785325 t@0x2a0010   4       third_party/fft_float.cc
+             FooAlias
+43785329 t@0x2a0010   4       third_party/{shared}/2
              blink::ContiguousContainerBase::shrinkToFit [clone .part.1234] [clone .isra.2]
- 2652467 d@0x2cd8550  12      base/page_allocator.cc
+43785341 d@0x2cd8550  12      base/page_allocator.cc
              kMethodsAnimationFrameTimeHistogram
- 2652478 r@0x284e364  11      base/page_allocator.cc
- 2652486 d@0x2cd84f0  8       third_party/gvr-android-sdk/libgvr_shim_static_arm.a/libport_android_jni.a_jni_utils.o
+43785349 r@0x284e364  8       base/page_allocator.cc
+43785357 d@0x2cd84f0  8       third_party/gvr-android-sdk/libgvr_shim_static_arm.a/libport_android_jni.a_jni_utils.o
              kSystemClassPrefixes
- 2652490 d@0x2de70a4  4       third_party/container.c
+43785361 d@0x2de70a4  4       third_party/container.c
              base::android::g_library_version_number
- 2652494 d@0x2de70a0  4       third_party/container.c
+43785365 d@0x2de70a0  4       third_party/container.c
              base::android::g_renderer_histogram_code
- 2652498 r@0x28f3480  4       third_party/paint.cc
+43785369 r@0x28f3480  4       third_party/paint.cc
              blink::CSSValueKeywordsHash::findValueImpl::value_word_list
- 2652502 d@0x2de7000  4       base/page_allocator.cc
+43785373 d@0x2de7000  4       base/page_allocator.cc
              google::protobuf::internal::pLinuxKernelCmpxchg
- 2652506 d@0x2de7004  4       third_party/container.c
+43785377 d@0x2de7004  4       third_party/container.c
              google::protobuf::internal::pLinuxKernelMemoryBarrier
- 2652506 b@0x0        262144  third_party/fft_float.cc
+43785380 r@0x284e364  3       base/page_allocator.cc
+             ** symbol gap 2
+43785380 b@0x0        262144  third_party/fft_float.cc
              ff_cos_131072
- 2652506 b@0x0        131072  third_party/fft_fixed.cc
+43785380 b@0x0        131072  third_party/fft_fixed.cc
              ff_cos_131072_fixed
- 2652506 b@0x0        131072  third_party/fft_float.cc
+43785380 b@0x0        131072  third_party/fft_float.cc
              ff_cos_65536
- 2652506 b@0x2dffe80  200     third_party/icu/ucnv_ext.c
+43785380 b@0x2dffe80  200     third_party/icu/ucnv_ext.c
              SaveHistogram::atomic_histogram_pointer
- 2652506 b@0x2dffda0  28      third_party/icu/ucnv_ext.c
+43785380 b@0x2dffda0  28      third_party/icu/ucnv_ext.c
              g_chrome_content_browser_client
- 2652506 b@0x2dffe84  4       third_party/icu/ucnv_ext.c
+43785380 b@0x2dffe84  4       third_party/icu/ucnv_ext.c
              g_AnimationFrameTimeHistogram_clazz

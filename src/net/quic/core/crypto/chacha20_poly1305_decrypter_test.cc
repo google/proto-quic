@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 
@@ -133,7 +134,9 @@ QuicData* DecryptWithNonce(ChaCha20Poly1305Decrypter* decrypter,
   return new QuicData(output.release(), output_length, true);
 }
 
-TEST(ChaCha20Poly1305DecrypterTest, Decrypt) {
+class ChaCha20Poly1305DecrypterTest : public QuicTest {};
+
+TEST_F(ChaCha20Poly1305DecrypterTest, Decrypt) {
   for (size_t i = 0; test_vectors[i].key != nullptr; i++) {
     // If not present then decryption is expected to fail.
     bool has_pt = test_vectors[i].pt;

@@ -7,14 +7,14 @@
 
 #include <stddef.h>
 
-#include "net/base/net_export.h"
+#include "net/spdy/platform/api/spdy_export.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
 namespace net {
 
 // This interface defines how an object that accepts header data should behave.
 // It is used by both SpdyHeadersBlockParser and HpackDecoder.
-class NET_EXPORT_PRIVATE SpdyHeadersHandlerInterface {
+class SPDY_EXPORT_PRIVATE SpdyHeadersHandlerInterface {
  public:
   virtual ~SpdyHeadersHandlerInterface() {}
 

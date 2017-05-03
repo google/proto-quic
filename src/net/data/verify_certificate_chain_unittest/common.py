@@ -52,16 +52,11 @@ DEFAULT_KEY_PURPOSE = KEY_PURPOSE_SERVER_AUTH
 g_cur_path_id = {}
 
 # Output paths used:
-#   - g_out_dir: where any temporary files (cert req, signing db etc) are
+#   - g_tmp_dir: where any temporary files (cert req, signing db etc) are
 #                saved to.
-#   - g_script_name: the name of the invoking script. For instance if this is
-#                    being run by generate-foo.py then g_script_name will be
-#                    'foo'
-#
-# See init() for how these are assigned, based on the name of the calling
-# script.
-g_out_dir = None
-g_script_name = None
+
+# See init() for how these are assigned.
+g_tmp_dir = None
 
 # The default validity range of generated certificates. Can be modified with
 # set_default_validity_range().
@@ -95,8 +90,8 @@ def get_unique_path_id(name):
   return '%s_%d' % (name, path_id)
 
 
-def get_path_in_output_dir(name, suffix):
-  return os.path.join(g_out_dir, '%s%s' % (name, suffix))
+def get_path_in_tmp_dir(name, suffix):
+  return os.path.join(g_tmp_dir, '%s%s' % (name, suffix))
 
 
 class Key(object):
@@ -159,12 +154,8 @@ def create_key_path(base_name):
   "keys/" directory. If create_key_path(xxx) is called more than once during
   the script run, a suffix will be added."""
 
-  # Save keys to CWD/keys/<generate-script-name>/*.key
-  # Hack: if the script name was generate-certs.py, then just save to
-  # 'keys/*.key' (used by external consumers of common.py)
+  # Save keys to CWD/keys/*.key
   keys_dir = 'keys'
-  if g_script_name != 'certs':
-    keys_dir = os.path.join(keys_dir, g_script_name)
 
   # Create the keys directory if it doesn't exist
   if not os.path.exists(keys_dir):
@@ -259,14 +250,14 @@ class Certificate(object):
   def get_path(self, suffix):
     """Forms a path to an output file for this certificate, containing the
     indicated suffix. The certificate's name will be used as its basis."""
-    return os.path.join(g_out_dir, '%s%s' % (self.path_id, suffix))
+    return os.path.join(g_tmp_dir, '%s%s' % (self.path_id, suffix))
 
 
   def get_name_path(self, suffix):
     """Forms a path to an output file for this CA, containing the indicated
     suffix. If multiple certificates have the same name, they will use the same
     path."""
-    return get_path_in_output_dir(self.name, suffix)
+    return get_path_in_tmp_dir(self.name, suffix)
 
 
   def set_key(self, key):
@@ -414,7 +405,7 @@ class Certificate(object):
 
     section = self.config.get_section('root_ca')
     section.set_property('certificate', self.get_cert_path())
-    section.set_property('new_certs_dir', g_out_dir)
+    section.set_property('new_certs_dir', g_tmp_dir)
     section.set_property('serial', self.get_serial_path())
     section.set_property('database', self.get_database_path())
     section.set_property('unique_subject', 'no')
@@ -466,30 +457,8 @@ def text_data_to_pem(block_header, text_data):
           block_header, base64.b64encode(text_data), block_header)
 
 
-class TrustAnchor(object):
-  """Structure that represents a trust anchor."""
-
-  def __init__(self, cert, constrained=False):
-    self.cert = cert
-    self.constrained = constrained
-
-
-  def get_pem(self):
-    """Returns a PEM block string describing this trust anchor."""
-
-    cert_data = self.cert.get_cert_pem()
-    block_name = 'TRUST_ANCHOR_UNCONSTRAINED'
-    if self.constrained:
-      block_name = 'TRUST_ANCHOR_CONSTRAINED'
-
-    # Use a different block name in the .pem file, depending on the anchor type.
-    return cert_data.replace('CERTIFICATE', block_name)
-
-
-def write_test_file(description, chain, trust_anchor, utc_time, key_purpose,
-                    verify_result, errors, out_pem=None):
-  """Writes a test file that contains all the inputs necessary to run a
-  verification on a certificate chain."""
+def write_chain(description, chain, out_pem):
+  """Writes the chain to a .pem file as a series of CERTIFICATE blocks"""
 
   # Prepend the script name that generated the file to the description.
   test_data = '[Created by: %s]\n\n%s\n' % (sys.argv[0], description)
@@ -498,19 +467,6 @@ def write_test_file(description, chain, trust_anchor, utc_time, key_purpose,
   for cert in chain:
     test_data += '\n' + cert.get_cert_pem()
 
-  test_data += '\n' + trust_anchor.get_pem()
-  test_data += '\n' + text_data_to_pem('TIME', utc_time)
-
-  verify_result_string = 'SUCCESS' if verify_result else 'FAIL'
-  test_data += '\n' + text_data_to_pem('VERIFY_RESULT', verify_result_string)
-
-  test_data += '\n' + text_data_to_pem('KEY_PURPOSE', key_purpose)
-
-  if errors is not None:
-    test_data += '\n' + text_data_to_pem('ERRORS', errors)
-
-  if not out_pem:
-    out_pem = g_script_name + '.pem'
   write_string_to_file(test_data, out_pem)
 
 
@@ -530,8 +486,7 @@ def init(invoking_script_path):
   are all based off of the name of the calling script.
   """
 
-  global g_out_dir
-  global g_script_name
+  global g_tmp_dir
 
   # The scripts assume to be run from within their containing directory (paths
   # to things like "keys/" are written relative).
@@ -544,22 +499,13 @@ def init(invoking_script_path):
         % (expected_cwd))
     sys.exit(1)
 
-  # Base the output name off of the invoking script's name.
-  out_name = os.path.splitext(os.path.basename(invoking_script_path))[0]
-
-  # Strip the leading 'generate-'
-  if out_name.startswith('generate-'):
-    out_name = out_name[9:]
-
   # Use an output directory with the same name as the invoking script.
-  g_out_dir = os.path.join('out', out_name)
+  g_tmp_dir = 'out'
 
   # Ensure the output directory exists and is empty.
-  sys.stdout.write('Creating output directory: %s\n' % (g_out_dir))
-  shutil.rmtree(g_out_dir, True)
-  os.makedirs(g_out_dir)
-
-  g_script_name = out_name
+  sys.stdout.write('Creating output directory: %s\n' % (g_tmp_dir))
+  shutil.rmtree(g_tmp_dir, True)
+  os.makedirs(g_tmp_dir)
 
 
 def create_self_signed_root_certificate(name):

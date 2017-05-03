@@ -2722,29 +2722,13 @@
       }
     ]
   },
-  "GPU Linux Builder": {
-    "additional_compile_targets": [
-      "browser_tests"
-    ]
-  },
+  "GPU Linux Builder": {},
   "GPU Linux Builder (dbg)": {},
-  "GPU Mac Builder": {
-    "additional_compile_targets": [
-      "browser_tests"
-    ]
-  },
+  "GPU Mac Builder": {},
   "GPU Mac Builder (dbg)": {},
-  "GPU Win Builder": {
-    "additional_compile_targets": [
-      "browser_tests"
-    ]
-  },
+  "GPU Win Builder": {},
   "GPU Win Builder (dbg)": {},
-  "GPU Win x64 Builder": {
-    "additional_compile_targets": [
-      "browser_tests"
-    ]
-  },
+  "GPU Win x64 Builder": {},
   "GPU Win x64 Builder (dbg)": {},
   "Linux ChromiumOS Builder": {
     "additional_compile_targets": [
@@ -6245,6 +6229,432 @@
             {
               "gpu": "8086:0a2e",
               "os": "Mac-10.12"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "Mac Experimental Release (Intel)": {
+    "gtest_tests": [
+      {
+        "args": [
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false,
+          "dimension_sets": [
+            {
+              "gpu": "8086:0a2e",
+              "os": "Mac"
+            }
+          ]
+        },
+        "test": "angle_end2end_tests",
+        "use_xvfb": false
+      },
+      {
+        "args": [
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false,
+          "dimension_sets": [
+            {
+              "gpu": "8086:0a2e",
+              "os": "Mac"
+            }
+          ]
+        },
+        "test": "angle_unittests",
+        "use_xvfb": false
+      },
+      {
+        "args": [
+          "--use-gpu-in-tests"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false,
+          "dimension_sets": [
+            {
+              "gpu": "8086:0a2e",
+              "os": "Mac"
+            }
+          ]
+        },
+        "test": "audio_unittests",
+        "use_xvfb": false
+      },
+      {
+        "args": [
+          "--enable-gpu",
+          "--no-xvfb",
+          "--test-launcher-jobs=1",
+          "--gtest_filter=CastStreamingApiTestWithPixelOutput.EndToEnd*:TabCaptureApiPixelTest.EndToEnd*"
+        ],
+        "name": "tab_capture_end2end_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "browser_tests",
+        "use_xvfb": false
+      },
+      {
+        "args": [
+          "--use-gpu-in-tests"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false,
+          "dimension_sets": [
+            {
+              "gpu": "8086:0a2e",
+              "os": "Mac"
+            }
+          ]
+        },
+        "test": "gl_tests",
+        "use_xvfb": false
+      },
+      {
+        "args": [
+          "--use-gpu-in-tests"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false,
+          "dimension_sets": [
+            {
+              "gpu": "8086:0a2e",
+              "os": "Mac"
+            }
+          ]
+        },
+        "test": "gl_unittests",
+        "use_xvfb": false
+      },
+      {
+        "args": [
+          "--use-gpu-in-tests"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false,
+          "dimension_sets": [
+            {
+              "gpu": "8086:0a2e",
+              "os": "Mac"
+            }
+          ]
+        },
+        "test": "gles2_conform_test",
+        "use_xvfb": false
+      },
+      {
+        "args": [
+          "--gtest_filter=*Detection*",
+          "--use-gpu-in-tests"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false,
+          "dimension_sets": [
+            {
+              "gpu": "8086:0a2e",
+              "os": "Mac"
+            }
+          ]
+        },
+        "test": "service_unittests",
+        "use_xvfb": false
+      }
+    ],
+    "isolated_scripts": [
+      {
+        "args": [
+          "context_lost",
+          "--show-stdout",
+          "--browser=release",
+          "--passthrough",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "context_lost_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false,
+          "dimension_sets": [
+            {
+              "gpu": "8086:0a2e",
+              "os": "Mac"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "depth_capture",
+          "--show-stdout",
+          "--browser=release",
+          "--passthrough",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "depth_capture_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false,
+          "dimension_sets": [
+            {
+              "gpu": "8086:0a2e",
+              "os": "Mac"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "gpu_process",
+          "--show-stdout",
+          "--browser=release",
+          "--passthrough",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "gpu_process_launch_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false,
+          "dimension_sets": [
+            {
+              "gpu": "8086:0a2e",
+              "os": "Mac"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "hardware_accelerated_feature",
+          "--show-stdout",
+          "--browser=release",
+          "--passthrough",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "hardware_accelerated_feature_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false,
+          "dimension_sets": [
+            {
+              "gpu": "8086:0a2e",
+              "os": "Mac"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "info_collection",
+          "--show-stdout",
+          "--browser=release",
+          "--passthrough",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc",
+          "--expected-vendor-id",
+          "8086",
+          "--expected-device-id",
+          "0a2e"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "info_collection_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false,
+          "dimension_sets": [
+            {
+              "gpu": "8086:0a2e",
+              "os": "Mac"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "maps",
+          "--show-stdout",
+          "--browser=release",
+          "--passthrough",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc",
+          "--os-type",
+          "mac",
+          "--build-revision",
+          "${got_revision}",
+          "--test-machine-name",
+          "${buildername}"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "maps_pixel_test",
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false,
+          "dimension_sets": [
+            {
+              "gpu": "8086:0a2e",
+              "os": "Mac"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "pixel",
+          "--show-stdout",
+          "--browser=release",
+          "--passthrough",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc",
+          "--refimg-cloud-storage-bucket",
+          "chromium-gpu-archive/reference-images",
+          "--os-type",
+          "mac",
+          "--build-revision",
+          "${got_revision}",
+          "--test-machine-name",
+          "${buildername}"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "pixel_test",
+        "non_precommit_args": [
+          "--upload-refimg-to-cloud-storage"
+        ],
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test"
+        ],
+        "precommit_args": [
+          "--download-refimg-from-cloud-storage"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false,
+          "dimension_sets": [
+            {
+              "gpu": "8086:0a2e",
+              "os": "Mac"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "screenshot_sync",
+          "--show-stdout",
+          "--browser=release",
+          "--passthrough",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "screenshot_sync_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false,
+          "dimension_sets": [
+            {
+              "gpu": "8086:0a2e",
+              "os": "Mac"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "trace_test",
+          "--show-stdout",
+          "--browser=release",
+          "--passthrough",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "trace_test",
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false,
+          "dimension_sets": [
+            {
+              "gpu": "8086:0a2e",
+              "os": "Mac"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "webgl_conformance",
+          "--show-stdout",
+          "--browser=release",
+          "--passthrough",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc",
+          "--webgl-conformance-version=2.0.1",
+          "--read-abbreviated-json-results-from=../../content/test/data/gpu/webgl2_conformance_tests_output.json"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "webgl2_conformance_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false,
+          "dimension_sets": [
+            {
+              "gpu": "8086:0a2e",
+              "os": "Mac"
+            }
+          ],
+          "shards": 15
+        }
+      },
+      {
+        "args": [
+          "webgl_conformance",
+          "--show-stdout",
+          "--browser=release",
+          "--passthrough",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "webgl_conformance_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false,
+          "dimension_sets": [
+            {
+              "gpu": "8086:0a2e",
+              "os": "Mac"
             }
           ]
         }

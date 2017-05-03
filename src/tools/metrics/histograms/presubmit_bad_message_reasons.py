@@ -26,13 +26,13 @@ def PrecheckBadMessage(input_api, output_api, histogram_name):
 
   START_MARKER='^enum (class )?BadMessageReason {'
   END_MARKER='^BAD_MESSAGE_MAX'
-  if update_histogram_enum.HistogramNeedsUpdate(
+  presubmit_error = update_histogram_enum.CheckPresubmitErrors(
       histogram_enum_name=histogram_name,
+      update_script_name='update_bad_message_reasons.py',
       source_enum_path=source_path,
       start_marker=START_MARKER,
-      end_marker=END_MARKER):
-    return [output_api.PresubmitPromptWarning(
-        'bad_messages.h has been updated but histogram.xml does not '
-        'appear to be updated.\nPlease run:\n'
-        '  python tools/metrics/histograms/update_bad_message_reasons.py\n')]
+      end_marker=END_MARKER)
+  if presubmit_error:
+    return [output_api.PresubmitPromptWarning(presubmit_error,
+                                              items=[source_path])]
   return []

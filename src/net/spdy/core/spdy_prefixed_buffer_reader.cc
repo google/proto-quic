@@ -4,6 +4,8 @@
 
 #include "net/spdy/core/spdy_prefixed_buffer_reader.h"
 
+#include <new>
+
 #include "base/logging.h"
 
 namespace net {

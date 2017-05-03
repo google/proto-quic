@@ -21,6 +21,7 @@
 #include "net/base/net_errors.h"
 #include "net/base/upload_data_stream.h"
 #include "net/http/http_response_headers.h"
+#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_fetcher_delegate.h"
 #include "net/url_request/url_fetcher_impl.h"
 #include "net/url_request/url_fetcher_response_writer.h"
@@ -485,7 +486,8 @@ std::unique_ptr<URLFetcher> URLFetcherImplFactory::CreateURLFetcher(
     const GURL& url,
     URLFetcher::RequestType request_type,
     URLFetcherDelegate* d) {
-  return std::unique_ptr<URLFetcher>(new URLFetcherImpl(url, request_type, d));
+  return std::unique_ptr<URLFetcher>(
+      new URLFetcherImpl(url, request_type, d, TRAFFIC_ANNOTATION_FOR_TESTS));
 }
 
 }  // namespace net

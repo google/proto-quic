@@ -4,7 +4,7 @@
 
 #include "net/quic/platform/api/quic_hostname_utils.h"
 
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 using std::string;
 
@@ -12,7 +12,9 @@ namespace net {
 namespace test {
 namespace {
 
-TEST(QuicHostnameUtilsTest, IsValidSNI) {
+class QuicHostnameUtilsTest : public QuicTest {};
+
+TEST_F(QuicHostnameUtilsTest, IsValidSNI) {
   // IP as SNI.
   EXPECT_FALSE(QuicHostnameUtils::IsValidSNI("192.168.0.1"));
   // SNI without any dot.
@@ -27,7 +29,7 @@ TEST(QuicHostnameUtilsTest, IsValidSNI) {
   EXPECT_TRUE(QuicHostnameUtils::IsValidSNI("test.google.com"));
 }
 
-TEST(QuicHostnameUtilsTest, NormalizeHostname) {
+TEST_F(QuicHostnameUtilsTest, NormalizeHostname) {
   struct {
     const char *input, *expected;
   } tests[] = {

@@ -7,8 +7,8 @@
 
 #include <stddef.h>
 
-#include "net/base/net_export.h"
 #include "net/spdy/core/hpack/hpack_header_table.h"
+#include "net/spdy/platform/api/spdy_export.h"
 
 namespace net {
 
@@ -18,7 +18,7 @@ struct HpackStaticEntry;
 // encoding and decoding contexts.  Once initialized, an instance is read only
 // and may be accessed only through its const interface.  Such an instance may
 // be shared accross multiple HPACK contexts.
-class NET_EXPORT_PRIVATE HpackStaticTable {
+class SPDY_EXPORT_PRIVATE HpackStaticTable {
  public:
   HpackStaticTable();
   ~HpackStaticTable();

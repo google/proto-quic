@@ -386,46 +386,6 @@ class Page36(ToughVideoCasesPage):
     self.SeekBeforeAndAfterPlayhead(action_runner,
                                     action_timeout_in_seconds=120)
 
-class Page37(ToughVideoCasesPage):
-
-  def __init__(self, page_set):
-    super(Page37, self).__init__(
-      url=('file://tough_video_cases/video.html?src=crowd1080_vp9.webm&canvas='
-           'true'),
-      page_set=page_set,
-      tags=['vp9', 'video_only'])
-
-    self.add_browser_metrics = True
-
-  def RunPageInteractions(self, action_runner):
-    self.PlayAction(action_runner)
-
-class Page38(ToughVideoCasesPage):
-
-  def __init__(self, page_set):
-    super(Page38, self).__init__(
-      url='file://tough_video_cases/video.html?src=tulip2.mp4&canvas=true',
-      page_set=page_set,
-      tags=['h264', 'aac', 'audio_video'])
-
-    self.add_browser_metrics = True
-
-  def RunPageInteractions(self, action_runner):
-    self.SeekBeforeAndAfterPlayhead(action_runner)
-
-class Page39(ToughVideoCasesPage):
-
-  def __init__(self, page_set):
-    super(Page39, self).__init__(
-      url=('file://tough_video_cases/video.html?src=garden2_10s.webm&canvas='
-           'true'),
-      page_set=page_set,
-      tags=['is_4k', 'vp8', 'vorbis', 'audio_video'])
-
-    self.add_browser_metrics = True
-
-  def RunPageInteractions(self, action_runner):
-    self.PlayAction(action_runner)
 
 class ToughVideoCasesPageSet(story.StorySet):
   """
@@ -435,8 +395,8 @@ class ToughVideoCasesPageSet(story.StorySet):
   def __init__(self):
     super(ToughVideoCasesPageSet, self).__init__(
             cloud_storage_bucket=story.PARTNER_BUCKET)
-    # TODO(crouleau): Pages 36 and 38 are in ToughVideoCasesPageSet even though
-    # they both report seek time instead of time_to_play.
+    # TODO(crouleau): Page 36 is in ToughVideoCasesPageSet even though
+    # it both reports seek time instead of time_to_play.
     # This may be a non-issue because we plan to merge these two page sets back
     # together and use tags to allow teams to filter which pages they want.
 
@@ -455,9 +415,6 @@ class ToughVideoCasesPageSet(story.StorySet):
     self.AddStory(Page32(self))
     self.AddStory(Page34(self))
     self.AddStory(Page36(self))
-    self.AddStory(Page37(self))
-    self.AddStory(Page38(self))
-    self.AddStory(Page39(self))
 
 
 class ToughVideoCasesExtraPageSet(story.StorySet):

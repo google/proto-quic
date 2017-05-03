@@ -3,25 +3,27 @@
 // found in the LICENSE file.
 
 #include "net/quic/core/quic_time.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/mock_clock.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
 namespace test {
 
-TEST(QuicTimeDeltaTest, Zero) {
+class QuicTimeDeltaTest : public QuicTest {};
+
+TEST_F(QuicTimeDeltaTest, Zero) {
   EXPECT_TRUE(QuicTime::Delta::Zero().IsZero());
   EXPECT_FALSE(QuicTime::Delta::Zero().IsInfinite());
   EXPECT_FALSE(QuicTime::Delta::FromMilliseconds(1).IsZero());
 }
 
-TEST(QuicTimeDeltaTest, Infinite) {
+TEST_F(QuicTimeDeltaTest, Infinite) {
   EXPECT_TRUE(QuicTime::Delta::Infinite().IsInfinite());
   EXPECT_FALSE(QuicTime::Delta::Zero().IsInfinite());
   EXPECT_FALSE(QuicTime::Delta::FromMilliseconds(1).IsInfinite());
 }
 
-TEST(QuicTimeDeltaTest, FromTo) {
+TEST_F(QuicTimeDeltaTest, FromTo) {
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(1),
             QuicTime::Delta::FromMicroseconds(1000));
   EXPECT_EQ(QuicTime::Delta::FromSeconds(1),
@@ -37,18 +39,18 @@ TEST(QuicTimeDeltaTest, FromTo) {
             QuicTime::Delta::FromSeconds(2).ToMicroseconds());
 }
 
-TEST(QuicTimeDeltaTest, Add) {
+TEST_F(QuicTimeDeltaTest, Add) {
   EXPECT_EQ(QuicTime::Delta::FromMicroseconds(2000),
             QuicTime::Delta::Zero() + QuicTime::Delta::FromMilliseconds(2));
 }
 
-TEST(QuicTimeDeltaTest, Subtract) {
+TEST_F(QuicTimeDeltaTest, Subtract) {
   EXPECT_EQ(QuicTime::Delta::FromMicroseconds(1000),
             QuicTime::Delta::FromMilliseconds(2) -
                 QuicTime::Delta::FromMilliseconds(1));
 }
 
-TEST(QuicTimeDeltaTest, Multiply) {
+TEST_F(QuicTimeDeltaTest, Multiply) {
   int i = 2;
   EXPECT_EQ(QuicTime::Delta::FromMicroseconds(4000),
             QuicTime::Delta::FromMilliseconds(2) * i);
@@ -67,20 +69,20 @@ TEST(QuicTimeDeltaTest, Multiply) {
             QuicTime::Delta::FromMicroseconds(12) * 0.2);
 }
 
-TEST(QuicTimeDeltaTest, Max) {
+TEST_F(QuicTimeDeltaTest, Max) {
   EXPECT_EQ(QuicTime::Delta::FromMicroseconds(2000),
             std::max(QuicTime::Delta::FromMicroseconds(1000),
                      QuicTime::Delta::FromMicroseconds(2000)));
 }
 
-TEST(QuicTimeDeltaTest, NotEqual) {
+TEST_F(QuicTimeDeltaTest, NotEqual) {
   EXPECT_TRUE(QuicTime::Delta::FromSeconds(0) !=
               QuicTime::Delta::FromSeconds(1));
   EXPECT_FALSE(QuicTime::Delta::FromSeconds(0) !=
                QuicTime::Delta::FromSeconds(0));
 }
 
-TEST(QuicTimeDeltaTest, DebugValue) {
+TEST_F(QuicTimeDeltaTest, DebugValue) {
   const QuicTime::Delta one_us = QuicTime::Delta::FromMicroseconds(1);
   const QuicTime::Delta one_ms = QuicTime::Delta::FromMilliseconds(1);
   const QuicTime::Delta one_s = QuicTime::Delta::FromSeconds(1);
@@ -94,7 +96,7 @@ TEST(QuicTimeDeltaTest, DebugValue) {
   EXPECT_EQ("3000001us", (3 * one_s + one_us).ToDebugValue());
 }
 
-class QuicTimeTest : public ::testing::Test {
+class QuicTimeTest : public QuicTest {
  protected:
   MockClock clock_;
 };

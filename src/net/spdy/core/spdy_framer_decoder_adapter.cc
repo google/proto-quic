@@ -10,6 +10,7 @@
 #include "base/format_macros.h"
 #include "base/logging.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
+#include "net/spdy/platform/api/spdy_ptr_util.h"
 #include "net/spdy/platform/api/spdy_string_utils.h"
 
 #if defined(COMPILER_GCC)
@@ -166,86 +167,6 @@ void SpdyFramerVisitorAdapter::OnAltSvc(
 bool SpdyFramerVisitorAdapter::OnUnknownFrame(SpdyStreamId stream_id,
                                               uint8_t frame_type) {
   return visitor_->OnUnknownFrame(stream_id, frame_type);
-}
-
-class NestedSpdyFramerDecoder : public SpdyFramerDecoderAdapter {
-  typedef SpdyFramer::SpdyState SpdyState;
-  typedef SpdyFramer::SpdyFramerError SpdyFramerError;
-
- public:
-  explicit NestedSpdyFramerDecoder(SpdyFramer* outer)
-      : framer_(nullptr,
-                outer->compression_enabled() ? SpdyFramer::ENABLE_COMPRESSION
-                                             : SpdyFramer::DISABLE_COMPRESSION),
-        outer_(outer) {
-    DVLOG(1) << PRETTY_THIS;
-  }
-  ~NestedSpdyFramerDecoder() override { DVLOG(1) << PRETTY_THIS; }
-
-  // Wrap the visitor in a SpdyFramerVisitorAdapter so that the correct
-  // SpdyFramer instance is passed to OnError. Passes the call on to the
-  // base adapter class and wrapped SpdyFramer.
-  void set_visitor(SpdyFramerVisitorInterface* visitor) override {
-    visitor_adapter_.reset(new SpdyFramerVisitorAdapter(visitor, outer_));
-    SpdyFramerDecoderAdapter::set_visitor(visitor_adapter_.get());
-    framer_.set_visitor(visitor_adapter_.get());
-  }
-
-  void set_extension_visitor(ExtensionVisitorInterface* visitor) override {
-    framer_.set_extension_visitor(visitor);
-  }
-
-  // Passes the call on to the base adapter class and wrapped SpdyFramer.
-  void set_debug_visitor(
-      SpdyFramerDebugVisitorInterface* debug_visitor) override {
-    SpdyFramerDecoderAdapter::set_debug_visitor(debug_visitor);
-    framer_.set_debug_visitor(debug_visitor);
-  }
-
-  // Passes the call on to the wrapped SpdyFramer.
-  void SetDecoderHeaderTableDebugVisitor(
-      std::unique_ptr<HpackHeaderTable::DebugVisitorInterface> visitor)
-      override {
-        framer_.SetDecoderHeaderTableDebugVisitor(std::move(visitor));
-  }
-
-  // Passes the call on to the base adapter class and wrapped SpdyFramer.
-  void set_process_single_input_frame(bool v) override {
-    SpdyFramerDecoderAdapter::set_process_single_input_frame(v);
-    framer_.set_process_single_input_frame(v);
-  }
-
-  size_t ProcessInput(const char* data, size_t len) override {
-    DVLOG(2) << "ProcessInput(data, " << len << ")";
-    size_t result = framer_.ProcessInput(data, len);
-    DVLOG(2) << "ProcessInput(data, " << len << ")  returning " << result;
-    return result;
-  }
-
-  void Reset() override { framer_.Reset(); }
-
-  SpdyFramer::SpdyFramerError spdy_framer_error() const override {
-    return framer_.spdy_framer_error();
-  }
-  SpdyFramer::SpdyState state() const override { return framer_.state(); }
-  bool probable_http_response() const override {
-    return framer_.probable_http_response();
-  }
-  size_t EstimateMemoryUsage() const override {
-    // Skip |visitor_adapter_| because it doesn't allocate.
-    return SpdyEstimateMemoryUsage(framer_);
-  }
-
- private:
-  SpdyFramer framer_;
-  SpdyFramer* const outer_;
-  std::unique_ptr<SpdyFramerVisitorAdapter> visitor_adapter_;
-};
-
-std::unique_ptr<SpdyFramerDecoderAdapter> CreateNestedSpdyFramerDecoder(
-    SpdyFramer* outer) {
-  return std::unique_ptr<SpdyFramerDecoderAdapter>(
-      new NestedSpdyFramerDecoder(outer));
 }
 
 }  // namespace net

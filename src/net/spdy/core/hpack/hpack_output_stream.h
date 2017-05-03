@@ -11,8 +11,8 @@
 #include <map>
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/spdy/core/hpack/hpack_constants.h"
+#include "net/spdy/platform/api/spdy_export.h"
 #include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
@@ -23,7 +23,7 @@ namespace net {
 
 // An HpackOutputStream handles all the low-level details of encoding
 // header fields.
-class NET_EXPORT_PRIVATE HpackOutputStream {
+class SPDY_EXPORT_PRIVATE HpackOutputStream {
  public:
   HpackOutputStream();
   ~HpackOutputStream();

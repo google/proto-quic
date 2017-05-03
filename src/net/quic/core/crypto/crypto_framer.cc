@@ -108,7 +108,7 @@ QuicData* CryptoFramer::ConstructHandshakeMessage(
   }
 
   std::unique_ptr<char[]> buffer(new char[len]);
-  QuicDataWriter writer(len, buffer.get(), perspective);
+  QuicDataWriter writer(len, buffer.get(), perspective, HOST_BYTE_ORDER);
   if (!writer.WriteTag(message.tag())) {
     DCHECK(false) << "Failed to write message tag.";
     return nullptr;
@@ -197,7 +197,8 @@ QuicErrorCode CryptoFramer::Process(QuicStringPiece input,
                                     Perspective perspective) {
   // Add this data to the buffer.
   buffer_.append(input.data(), input.length());
-  QuicDataReader reader(buffer_.data(), buffer_.length(), perspective);
+  QuicDataReader reader(buffer_.data(), buffer_.length(), perspective,
+                        HOST_BYTE_ORDER);
 
   switch (state_) {
     case STATE_READING_TAG:

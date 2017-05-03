@@ -13,11 +13,20 @@
 namespace base {
 namespace win {
 
+namespace details {
+
+template <typename T>
+class ScopedComPtrRef;
+
+}  // details
+
 // DEPRECATED: Use Microsoft::WRL::ComPtr instead.
 // A fairly minimalistic smart class for COM interface pointers.
 template <class Interface, const IID* interface_id = &__uuidof(Interface)>
 class ScopedComPtr {
  public:
+  using InterfaceType = Interface;
+
   // Utility template to prevent users of ScopedComPtr from calling AddRef
   // and/or Release() without going through the ScopedComPtr class.
   class BlockIUnknownMethods : public Interface {
@@ -88,11 +97,6 @@ class ScopedComPtr {
   Interface** Receive() {
     DCHECK(!ptr_) << "Object leak. Pointer must be NULL";
     return &ptr_;
-  }
-
-  // A convenience for whenever a void pointer is needed as an out argument.
-  void** ReceiveVoid() {
-    return reinterpret_cast<void**>(Receive());
   }
 
   template <class Query>
@@ -210,6 +214,11 @@ class ScopedComPtr {
     return ptr_ != rhs;
   }
 
+  details::ScopedComPtrRef<ScopedComPtr<Interface, interface_id>> operator&() {
+    return details::ScopedComPtrRef<ScopedComPtr<Interface, interface_id>>(
+        this);
+  }
+
   void swap(ScopedComPtr<Interface, interface_id>& r) {
     Interface* tmp = ptr_;
     ptr_ = r.ptr_;
@@ -219,6 +228,33 @@ class ScopedComPtr {
  private:
   Interface* ptr_ = nullptr;
 };
+
+namespace details {
+
+// ComPtrRef equivalent transitional reference type to handle ComPtr equivalent
+// void** implicit casting. T should be a ScopedComPtr.
+template <typename T>
+class ScopedComPtrRef {
+ public:
+  explicit ScopedComPtrRef(T* scoped_com_ptr)
+      : scoped_com_ptr_(scoped_com_ptr) {}
+
+  // ComPtr equivalent conversion operators.
+  operator void**() const {
+    return reinterpret_cast<void**>(scoped_com_ptr_->Receive());
+  }
+
+  // Allows ScopedComPtr to be passed to functions as a pointer.
+  operator T*() { return scoped_com_ptr_; }
+
+  // Allows IID_PPV_ARGS to perform __uuidof(**(ppType)).
+  typename T::InterfaceType* operator*() { return scoped_com_ptr_->Get(); }
+
+ private:
+  T* const scoped_com_ptr_;
+};
+
+}  // details
 
 template <typename T, typename U>
 bool operator==(const T* lhs, const ScopedComPtr<U>& rhs) {
@@ -257,8 +293,8 @@ std::ostream& operator<<(std::ostream& out, const ScopedComPtr<T>& p) {
 
 // Helper to make IID_PPV_ARGS work with ScopedComPtr.
 template <typename T>
-void** IID_PPV_ARGS_Helper(base::win::ScopedComPtr<T>* pp) throw() {
-  return pp->ReceiveVoid();
+void** IID_PPV_ARGS_Helper(base::win::details::ScopedComPtrRef<T> pp) throw() {
+  return pp;
 }
 
 }  // namespace win

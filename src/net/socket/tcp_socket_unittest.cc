@@ -226,12 +226,51 @@ TEST_F(TCPSocketTest, AcceptAsync) {
   TestAcceptAsync();
 }
 
-#if defined(OS_WIN)
-// Test Accept() for AdoptListenSocket.
-TEST_F(TCPSocketTest, AcceptForAdoptedListenSocket) {
-  // Create a socket to be used with AdoptListenSocket.
-  SOCKET existing_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  ASSERT_THAT(socket_.AdoptListenSocket(existing_socket), IsOk());
+// Test AdoptConnectedSocket()
+TEST_F(TCPSocketTest, AdoptConnectedSocket) {
+  TCPSocket accepting_socket(NULL, NULL, NetLogSource());
+  ASSERT_THAT(accepting_socket.Open(ADDRESS_FAMILY_IPV4), IsOk());
+  ASSERT_THAT(accepting_socket.Bind(IPEndPoint(IPAddress::IPv4Localhost(), 0)),
+              IsOk());
+  ASSERT_THAT(accepting_socket.GetLocalAddress(&local_address_), IsOk());
+  ASSERT_THAT(accepting_socket.Listen(kListenBacklog), IsOk());
+
+  TestCompletionCallback connect_callback;
+  // TODO(yzshen): Switch to use TCPSocket when it supports client socket
+  // operations.
+  TCPClientSocket connecting_socket(local_address_list(), NULL, NULL,
+                                    NetLogSource());
+  connecting_socket.Connect(connect_callback.callback());
+
+  TestCompletionCallback accept_callback;
+  std::unique_ptr<TCPSocket> accepted_socket;
+  IPEndPoint accepted_address;
+  int result = accepting_socket.Accept(&accepted_socket, &accepted_address,
+                                       accept_callback.callback());
+  if (result == ERR_IO_PENDING)
+    result = accept_callback.WaitForResult();
+  ASSERT_THAT(result, IsOk());
+
+  SocketDescriptor accepted_descriptor =
+      accepted_socket->ReleaseSocketDescriptorForTesting();
+
+  ASSERT_THAT(
+      socket_.AdoptConnectedSocket(accepted_descriptor, accepted_address),
+      IsOk());
+
+  // socket_ should now have the local address.
+  IPEndPoint adopted_address;
+  ASSERT_THAT(socket_.GetLocalAddress(&adopted_address), IsOk());
+  EXPECT_EQ(local_address_.address(), adopted_address.address());
+
+  EXPECT_THAT(connect_callback.WaitForResult(), IsOk());
+}
+
+// Test Accept() for AdoptUnconnectedSocket.
+TEST_F(TCPSocketTest, AcceptForAdoptedUnconnectedSocket) {
+  SocketDescriptor existing_socket =
+      CreatePlatformSocket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  ASSERT_THAT(socket_.AdoptUnconnectedSocket(existing_socket), IsOk());
 
   IPEndPoint address(IPAddress::IPv4Localhost(), 0);
   SockaddrStorage storage;
@@ -243,7 +282,6 @@ TEST_F(TCPSocketTest, AcceptForAdoptedListenSocket) {
 
   TestAcceptAsync();
 }
-#endif
 
 // Accept two connections simultaneously.
 TEST_F(TCPSocketTest, Accept2Connections) {

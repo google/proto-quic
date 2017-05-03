@@ -6,9 +6,7 @@
       "content_browsertests",
       "content_unittests",
       "frame_analyzer",
-      "gpu_ipc_service_unittests",
-      "media_unittests",
-      "midi_unittests",
+      "jingle_unittests",
       "remoting_unittests"
     ]
   },
@@ -19,9 +17,7 @@
       "content_browsertests",
       "content_unittests",
       "frame_analyzer",
-      "gpu_ipc_service_unittests",
-      "media_unittests",
-      "midi_unittests",
+      "jingle_unittests",
       "remoting_unittests"
     ]
   },
@@ -32,9 +28,7 @@
       "content_browsertests",
       "content_unittests",
       "frame_analyzer",
-      "gpu_ipc_service_unittests",
-      "media_unittests",
-      "midi_unittests",
+      "jingle_unittests",
       "remoting_unittests"
     ]
   }

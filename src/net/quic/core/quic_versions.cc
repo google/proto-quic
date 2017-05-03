@@ -31,7 +31,7 @@ QuicVersionVector FilterSupportedVersions(QuicVersionVector versions) {
   filtered_versions.clear();  // Guaranteed by spec not to change capacity.
   for (QuicVersion version : versions) {
     if (version == QUIC_VERSION_39) {
-      if (FLAGS_quic_enable_version_39 &&
+      if (FLAGS_quic_reloadable_flag_quic_enable_version_39 &&
           FLAGS_quic_reloadable_flag_quic_enable_version_38) {
         filtered_versions.push_back(version);
       }

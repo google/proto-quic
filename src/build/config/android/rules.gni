@@ -2100,6 +2100,17 @@ if (enable_java_templates) {
         _extra_native_libs_deps +=
             [ "//base/android/linker:chromium_android_linker" ]
       }
+
+      _create_stack_script_rule_name = "${_template_name}__stack_script"
+      _final_deps += [ ":${_create_stack_script_rule_name}" ]
+      stack_script(_create_stack_script_rule_name) {
+        stack_target_name = invoker.target_name
+        deps = _native_libs_deps
+        if (_native_libs_deps != [] && _enable_relocation_packing) {
+          packed_libraries = _native_libs_file_arg
+          deps += [ _native_libs_file_arg_dep ]
+        }
+      }
     }
     if (defined(invoker.loadable_modules) && invoker.loadable_modules != []) {
       _extra_native_libs_even_when_incremental += invoker.loadable_modules

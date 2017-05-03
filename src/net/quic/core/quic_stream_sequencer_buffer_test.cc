@@ -13,13 +13,12 @@
 #include "base/macros.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_str_cat.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/quic_stream_sequencer_buffer_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/test/gtest_util.h"
-#include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gmock_mutant.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
 
@@ -81,7 +80,6 @@ class QuicStreamSequencerBufferTest : public testing::Test {
   MockClock clock_;
   std::unique_ptr<QuicStreamSequencerBuffer> buffer_;
   std::unique_ptr<QuicStreamSequencerBufferPeer> helper_;
-  QuicFlagSaver flag_saver_;
   string error_details_;
 };
 

@@ -171,15 +171,16 @@ ClientCertStoreWin::ClientCertStoreWin(HCERTSTORE cert_store) {
 
 ClientCertStoreWin::~ClientCertStoreWin() {}
 
-void ClientCertStoreWin::GetClientCerts(const SSLCertRequestInfo& request,
-                                        CertificateList* selected_certs,
-                                        const base::Closure& callback) {
+void ClientCertStoreWin::GetClientCerts(
+    const SSLCertRequestInfo& request,
+    const ClientCertListCallback& callback) {
+  CertificateList selected_certs;
   if (cert_store_) {
     // Use the existing client cert store. Note: Under some situations,
     // it's possible for this to return certificates that aren't usable
     // (see below).
-    GetClientCertsImpl(cert_store_, request, selected_certs);
-    callback.Run();
+    GetClientCertsImpl(cert_store_, request, &selected_certs);
+    callback.Run(std::move(selected_certs));
     return;
   }
 
@@ -190,14 +191,12 @@ void ClientCertStoreWin::GetClientCerts(const SSLCertRequestInfo& request,
   ScopedHCERTSTORE my_cert_store(CertOpenSystemStore(NULL, L"MY"));
   if (!my_cert_store) {
     PLOG(ERROR) << "Could not open the \"MY\" system certificate store: ";
-    selected_certs->clear();
-    callback.Run();
+    callback.Run(CertificateList());
     return;
   }
 
-  GetClientCertsImpl(my_cert_store, request, selected_certs);
-
-  callback.Run();
+  GetClientCertsImpl(my_cert_store, request, &selected_certs);
+  callback.Run(std::move(selected_certs));
 }
 
 bool ClientCertStoreWin::SelectClientCertsForTesting(

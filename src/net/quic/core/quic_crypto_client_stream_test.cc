@@ -13,13 +13,12 @@
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_flags.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_stream_peer.h"
 #include "net/quic/test_tools/quic_stream_sequencer_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/quic/test_tools/simple_quic_framer.h"
-#include "testing/gmock/include/gmock/gmock.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
 
@@ -32,7 +31,7 @@ namespace {
 const char kServerHostname[] = "test.example.com";
 const uint16_t kServerPort = 443;
 
-class QuicCryptoClientStreamTest : public ::testing::Test {
+class QuicCryptoClientStreamTest : public QuicTest {
  public:
   QuicCryptoClientStreamTest()
       : server_id_(kServerHostname, kServerPort, PRIVACY_MODE_DISABLED),
@@ -352,7 +351,7 @@ TEST_F(QuicCryptoClientStreamTest, NoTokenBindingInPrivacyMode) {
   EXPECT_EQ(0u, stream()->crypto_negotiated_params().token_binding_key_param);
 }
 
-class QuicCryptoClientStreamStatelessTest : public ::testing::Test {
+class QuicCryptoClientStreamStatelessTest : public QuicTest {
  public:
   QuicCryptoClientStreamStatelessTest()
       : client_crypto_config_(crypto_test_utils::ProofVerifierForTesting()),
@@ -400,8 +399,6 @@ class QuicCryptoClientStreamStatelessTest : public ::testing::Test {
         &server_crypto_config_, options);
     FLAGS_quic_reloadable_flag_enable_quic_stateless_reject_support = true;
   }
-
-  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
 
   MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;

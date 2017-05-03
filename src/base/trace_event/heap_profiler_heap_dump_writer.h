@@ -9,9 +9,9 @@
 
 #include <memory>
 #include <set>
+#include <unordered_map>
 
 #include "base/base_export.h"
-#include "base/containers/hash_tables.h"
 #include "base/macros.h"
 #include "base/trace_event/heap_profiler_allocation_context.h"
 
@@ -28,7 +28,8 @@ class TypeNameDeduplicator;
 // trace log, following the format described in https://goo.gl/KY7zVE. The
 // number of entries is kept reasonable because long tails are not included.
 BASE_EXPORT std::unique_ptr<TracedValue> ExportHeapDump(
-    const hash_map<AllocationContext, AllocationMetrics>& metrics_by_context,
+    const std::unordered_map<AllocationContext, AllocationMetrics>&
+        metrics_by_context,
     const MemoryDumpSessionState& session_state);
 
 namespace internal {
@@ -77,7 +78,8 @@ class BASE_EXPORT HeapDumpWriter {
   // in the "entries" array. The number of entries is kept reasonable because
   // long tails are not included. Use |Serialize| to convert to a traced value.
   const std::set<Entry>& Summarize(
-      const hash_map<AllocationContext, AllocationMetrics>& metrics_by_context);
+      const std::unordered_map<AllocationContext, AllocationMetrics>&
+          metrics_by_context);
 
  private:
   // Inserts an |Entry| for |Bucket| into |entries_|. Returns false if the

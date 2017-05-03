@@ -11,6 +11,7 @@
 #include "base/memory/singleton.h"
 #include "net/spdy/core/hpack/hpack_huffman_table.h"
 #include "net/spdy/core/hpack/hpack_static_table.h"
+#include "net/spdy/platform/api/spdy_ptr_util.h"
 
 namespace net {
 
@@ -22,7 +23,7 @@ struct SharedHpackHuffmanTable {
  public:
   SharedHpackHuffmanTable() {
     std::vector<HpackHuffmanSymbol> code = HpackHuffmanCode();
-    std::unique_ptr<HpackHuffmanTable> mutable_table(new HpackHuffmanTable());
+    auto mutable_table = SpdyMakeUnique<HpackHuffmanTable>();
     CHECK(mutable_table->Initialize(&code[0], code.size()));
     CHECK(mutable_table->IsInitialized());
     table = std::move(mutable_table);
@@ -41,7 +42,7 @@ struct SharedHpackStaticTable {
  public:
   SharedHpackStaticTable() {
     std::vector<HpackStaticEntry> static_table = HpackStaticTableVector();
-    std::unique_ptr<HpackStaticTable> mutable_table(new HpackStaticTable());
+    auto mutable_table = SpdyMakeUnique<HpackStaticTable>();
     mutable_table->Initialize(&static_table[0], static_table.size());
     CHECK(mutable_table->IsInitialized());
     table = std::move(mutable_table);

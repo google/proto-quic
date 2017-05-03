@@ -10,8 +10,8 @@
 #include <cstddef>
 #include <vector>
 
-#include "net/base/net_export.h"
 #include "net/spdy/core/hpack/hpack_constants.h"
+#include "net/spdy/platform/api/spdy_export.h"
 #include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
@@ -27,7 +27,7 @@ class HpackOutputStream;
 // HpackHuffmanTable encodes and decodes string literals using a constructed
 // canonical Huffman code. Once initialized, an instance is read only and
 // may be accessed only through its const interface.
-class NET_EXPORT_PRIVATE HpackHuffmanTable {
+class SPDY_EXPORT_PRIVATE HpackHuffmanTable {
  public:
   friend class test::HpackHuffmanTablePeer;
 
@@ -37,7 +37,7 @@ class NET_EXPORT_PRIVATE HpackHuffmanTable {
   // a portion of the prefix mapped to DecodeEntry, which in turn either
   // captures a terminal symbol, or points to the next DecodeTable to consult
   // with successive portions of the prefix.
-  struct NET_EXPORT_PRIVATE DecodeEntry {
+  struct SPDY_EXPORT_PRIVATE DecodeEntry {
     DecodeEntry();
     DecodeEntry(uint8_t next_table_index, uint8_t length, uint16_t symbol_id);
 
@@ -50,7 +50,7 @@ class NET_EXPORT_PRIVATE HpackHuffmanTable {
     // Set only for terminal entries.
     uint16_t symbol_id;
   };
-  struct NET_EXPORT_PRIVATE DecodeTable {
+  struct SPDY_EXPORT_PRIVATE DecodeTable {
     // Number of bits indexed by the chain leading to this table.
     uint8_t prefix_length;
     // Number of additional prefix bits this table indexes.

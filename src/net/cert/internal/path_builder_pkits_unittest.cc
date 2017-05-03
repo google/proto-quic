@@ -74,9 +74,7 @@ class PathBuilderPkitsTestDelegate {
     // TODO(mattm): test with all possible trust anchors in the trust store?
     TrustStoreInMemory trust_store;
 
-    scoped_refptr<TrustAnchor> trust_anchor =
-        TrustAnchor::CreateFromCertificateNoConstraints(certs[0]);
-    trust_store.AddTrustAnchor(std::move(trust_anchor));
+    trust_store.AddTrustAnchor(certs[0]);
 
     // TODO(mattm): test with other irrelevant certs in cert_issuer_sources?
     CertIssuerSourceStatic cert_issuer_source;

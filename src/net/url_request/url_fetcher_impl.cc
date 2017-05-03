@@ -17,11 +17,13 @@ namespace net {
 
 static URLFetcherFactory* g_factory = NULL;
 
-URLFetcherImpl::URLFetcherImpl(const GURL& url,
-                               RequestType request_type,
-                               URLFetcherDelegate* d)
-    : core_(new URLFetcherCore(this, url, request_type, d)) {
-}
+URLFetcherImpl::URLFetcherImpl(
+    const GURL& url,
+    RequestType request_type,
+    URLFetcherDelegate* d,
+    net::NetworkTrafficAnnotationTag traffic_annotation)
+    : core_(
+          new URLFetcherCore(this, url, request_type, d, traffic_annotation)) {}
 
 URLFetcherImpl::~URLFetcherImpl() {
   core_->Stop();

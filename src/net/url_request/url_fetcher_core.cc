@@ -71,10 +71,12 @@ void URLFetcherCore::Registry::CancelAll() {
 base::LazyInstance<URLFetcherCore::Registry>::DestructorAtExit
     URLFetcherCore::g_registry = LAZY_INSTANCE_INITIALIZER;
 
-URLFetcherCore::URLFetcherCore(URLFetcher* fetcher,
-                               const GURL& original_url,
-                               URLFetcher::RequestType request_type,
-                               URLFetcherDelegate* d)
+URLFetcherCore::URLFetcherCore(
+    URLFetcher* fetcher,
+    const GURL& original_url,
+    URLFetcher::RequestType request_type,
+    URLFetcherDelegate* d,
+    net::NetworkTrafficAnnotationTag traffic_annotation)
     : fetcher_(fetcher),
       original_url_(original_url),
       request_type_(request_type),
@@ -103,7 +105,8 @@ URLFetcherCore::URLFetcherCore(URLFetcher* fetcher,
       max_retries_on_network_changes_(0),
       current_upload_bytes_(-1),
       current_response_bytes_(0),
-      total_response_bytes_(-1) {
+      total_response_bytes_(-1),
+      traffic_annotation_(traffic_annotation) {
   CHECK(original_url_.is_valid());
 }
 
@@ -552,7 +555,7 @@ void URLFetcherCore::StartURLRequest() {
   current_response_bytes_ = 0;
   request_context_getter_->AddObserver(this);
   request_ = request_context_getter_->GetURLRequestContext()->CreateRequest(
-      original_url_, DEFAULT_PRIORITY, this);
+      original_url_, DEFAULT_PRIORITY, this, traffic_annotation_);
   int flags = request_->load_flags() | load_flags_;
 
   // TODO(mmenke): This should really be with the other code to set the upload

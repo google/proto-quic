@@ -32,7 +32,7 @@
 //    // Create your visitor, a subclass of SpdyDeframerVisitorInterface.
 //    // For example, using DeframerCallbackCollector to collect frames:
 //    std::vector<CollectedFrame> collected_frames;
-//    auto your_visitor = gtl::MakeUnique<DeframerCallbackCollector>(
+//    auto your_visitor = SpdyMakeUnique<DeframerCallbackCollector>(
 //        &collected_frames);
 //
 //    // Transfer ownership of your visitor to the converter, which ensures that

@@ -66,6 +66,11 @@ class AnalyzeTest(unittest.TestCase):
           ' const')
     # Make sure []s are not removed from the name part.
     check('', 'Foo', '()', ' [virtual thunk]')
+    # Template function that accepts an anonymous lambda.
+    check('',
+          'blink::FrameView::ForAllNonThrottledFrameViews<blink::FrameView::Pre'
+          'Paint()::{lambda(FrameView&)#2}>',
+          '(blink::FrameView::PrePaint()::{lambda(FrameView&)#2} const&)', '')
 
     # SkArithmeticImageFilter.cpp has class within function body. e.g.:
     #   ArithmeticFP::onCreateGLSLInstance() looks like:
@@ -81,6 +86,13 @@ class AnalyzeTest(unittest.TestCase):
     got_full, got_name = function_signature.Parse(SIG)
     self.assertEqual('(anonymous namespace)::Foo::Baz', got_name)
     self.assertEqual(SIG, got_full)
+
+    # Top-level lambda.
+    # Note: Inline lambdas do not seem to be broken into their own symbols.
+    SIG = 'cc::{lambda(cc::PaintOp*)#63}::_FUN(cc::PaintOp*)'
+    got_full, got_name = function_signature.Parse(SIG)
+    self.assertEqual('cc::{lambda#63}', got_name)
+    self.assertEqual('cc::{lambda#63}(cc::PaintOp*)', got_full)
 
 
 if __name__ == '__main__':

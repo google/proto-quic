@@ -146,8 +146,7 @@ HttpNetworkSession::Params::Params()
       quic_estimate_initial_rtt(false),
       proxy_delegate(nullptr),
       enable_token_binding(false),
-      http_09_on_non_default_ports_enabled(false),
-      restrict_to_one_preconnect_for_proxies(false) {
+      http_09_on_non_default_ports_enabled(false) {
   quic_supported_versions.push_back(QUIC_VERSION_37);
 }
 

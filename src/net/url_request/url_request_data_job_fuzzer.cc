@@ -13,6 +13,7 @@
 #include "base/test/scoped_task_scheduler.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "net/http/http_request_headers.h"
+#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/data_protocol_handler.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_job_factory_impl.h"
@@ -80,8 +81,8 @@ class URLRequestDataJobFuzzerHarness : public net::URLRequest::Delegate {
 
     // Create a URLRequest with the given data URL and start reading
     // from it.
-    std::unique_ptr<net::URLRequest> request =
-        context_.CreateRequest(data_url, net::DEFAULT_PRIORITY, this);
+    std::unique_ptr<net::URLRequest> request = context_.CreateRequest(
+        data_url, net::DEFAULT_PRIORITY, this, TRAFFIC_ANNOTATION_FOR_TESTS);
     if (use_range) {
       if (!net::HttpUtil::IsValidHeaderValue(range))
         range = "bytes=3-";

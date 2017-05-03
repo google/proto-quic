@@ -152,7 +152,10 @@ if (use_locally_built_instrumented_libraries) {
       ":zlib1g",
     ]
     if (is_msan) {
-      deps += [ ":libcups2" ]
+      deps += [
+        ":libcups2",
+        ":libgnutls26",
+      ]
     }
     if (!is_tsan) {
       deps += [ ":libpng12-0" ]
@@ -543,6 +546,18 @@ if (use_locally_built_instrumented_libraries) {
       "--disable-introspection",
     ]
     package_ldflags = [ "-Wl,--as-needed" ]
+  }
+
+  instrumented_library("libgnutls26") {
+    extra_configure_flags = [
+      # from debian/rules.
+      "--enable-ld-version-script",
+      "--enable-cxx",
+      "--without-lzo",
+      "--disable-guile",
+      "--with-libgcrypt",
+      "--with-packager=Debian",
+    ]
   }
 
   instrumented_library("libgpg-error0") {

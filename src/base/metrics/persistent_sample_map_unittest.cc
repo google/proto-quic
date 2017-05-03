@@ -164,7 +164,7 @@ TEST(PersistentSampleMapIteratorTest, IterateTest) {
   std::unique_ptr<SampleCountIterator> it = samples.Iterator();
 
   HistogramBase::Sample min;
-  HistogramBase::Sample max;
+  int64_t max;
   HistogramBase::Count count;
 
   it->Get(&min, &max, &count);
@@ -214,7 +214,7 @@ TEST(PersistentSampleMapIteratorTest, SkipEmptyRanges) {
   EXPECT_FALSE(it->Done());
 
   HistogramBase::Sample min;
-  HistogramBase::Sample max;
+  int64_t max;
   HistogramBase::Count count;
 
   it->Get(&min, &max, &count);
@@ -245,7 +245,7 @@ TEST(PersistentSampleMapIteratorDeathTest, IterateDoneTest) {
   EXPECT_TRUE(it->Done());
 
   HistogramBase::Sample min;
-  HistogramBase::Sample max;
+  int64_t max;
   HistogramBase::Count count;
   EXPECT_DCHECK_DEATH(it->Get(&min, &max, &count));
 

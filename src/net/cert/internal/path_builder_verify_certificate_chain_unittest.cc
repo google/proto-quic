@@ -21,7 +21,21 @@ class PathBuilderDelegate {
     ASSERT_FALSE(test.chain.empty());
 
     TrustStoreInMemory trust_store;
-    trust_store.AddTrustAnchor(test.trust_anchor);
+
+    switch (test.last_cert_trust.type) {
+      case CertificateTrustType::TRUSTED_ANCHOR:
+        trust_store.AddTrustAnchor(test.chain.back());
+        break;
+      case CertificateTrustType::TRUSTED_ANCHOR_WITH_CONSTRAINTS:
+        trust_store.AddTrustAnchorWithConstraints(test.chain.back());
+        break;
+      case CertificateTrustType::UNSPECIFIED:
+        LOG(ERROR) << "Unexpected CertificateTrustType";
+        break;
+      case CertificateTrustType::DISTRUSTED:
+        trust_store.AddDistrustedCertificateForTest(test.chain.back());
+        break;
+    }
 
     CertIssuerSourceStatic intermediate_cert_issuer_source;
     for (size_t i = 1; i < test.chain.size(); ++i)
@@ -35,7 +49,7 @@ class PathBuilderDelegate {
     path_builder.AddCertIssuerSource(&intermediate_cert_issuer_source);
 
     path_builder.Run();
-    EXPECT_EQ(test.expected_result, result.HasValidPath());
+    EXPECT_EQ(!test.HasHighSeverityErrors(), result.HasValidPath());
   }
 };
 

@@ -1187,13 +1187,11 @@ TEST_F(HttpStreamFactoryTest, OnlyOnePreconnectToProxyServer) {
       }
 
       SpdySessionDependencies session_deps;
-      session_deps.restrict_to_one_preconnect_for_proxies = true;
       HttpNetworkSession::Params params =
           SpdySessionDependencies::CreateSessionParams(&session_deps);
       params.enable_quic = true;
       params.proxy_service = proxy_service.get();
       params.http_server_properties = &http_server_properties;
-      ASSERT_TRUE(params.restrict_to_one_preconnect_for_proxies);
 
       std::unique_ptr<HttpNetworkSession> session(
           new HttpNetworkSession(params));
@@ -1278,13 +1276,11 @@ TEST_F(HttpStreamFactoryTest, ProxyServerPreconnectDifferentPrivacyModes) {
   http_server_properties.SetSupportsSpdy(spdy_server, true);
 
   SpdySessionDependencies session_deps;
-  session_deps.restrict_to_one_preconnect_for_proxies = true;
   HttpNetworkSession::Params params =
       SpdySessionDependencies::CreateSessionParams(&session_deps);
   params.enable_quic = true;
   params.proxy_service = proxy_service.get();
   params.http_server_properties = &http_server_properties;
-  ASSERT_TRUE(params.restrict_to_one_preconnect_for_proxies);
 
   std::unique_ptr<HttpNetworkSession> session(new HttpNetworkSession(params));
 
@@ -1700,7 +1696,6 @@ TEST_F(HttpStreamFactoryTest, RequestHttpStreamOverProxy) {
 TEST_F(HttpStreamFactoryTest, RequestHttpStreamOverProxyWithPreconnects) {
   SpdySessionDependencies session_deps(
       ProxyService::CreateFixed("https://myproxy.org:443"));
-  session_deps.restrict_to_one_preconnect_for_proxies = true;
 
   // Set up the proxy server as a server that supports request priorities.
   std::unique_ptr<HttpServerPropertiesImpl> http_server_properties(

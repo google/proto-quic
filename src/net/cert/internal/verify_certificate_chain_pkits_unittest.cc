@@ -70,23 +70,18 @@ class VerifyCertificateChainPkitsTestDelegate {
       }
     }
 
-    scoped_refptr<TrustAnchor> trust_anchor =
-        TrustAnchor::CreateFromCertificateNoConstraints(input_chain.back());
-    input_chain.pop_back();
-
     SimpleSignaturePolicy signature_policy(1024);
 
     // Run all tests at the time the PKITS was published.
     der::GeneralizedTime time = {2011, 4, 15, 0, 0, 0};
 
     CertPathErrors path_errors;
-    bool result = VerifyCertificateChain(input_chain, trust_anchor.get(),
-                                         &signature_policy, time,
-                                         KeyPurpose::ANY_EKU, &path_errors);
+    VerifyCertificateChain(input_chain, CertificateTrust::ForTrustAnchor(),
+                           &signature_policy, time, KeyPurpose::ANY_EKU,
+                           &path_errors);
 
     //  TODO(crbug.com/634443): Test errors on failure?
-    EXPECT_EQ(result, !path_errors.ContainsHighSeverityErrors());
-    return result;
+    return !path_errors.ContainsHighSeverityErrors();
   }
 };
 

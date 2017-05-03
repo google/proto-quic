@@ -8,6 +8,7 @@ namespace net {
 
 ScopedEVPAEADCtx::ScopedEVPAEADCtx() {
   ctx_.aead = nullptr;
+  ctx_.aead_state = nullptr;
 }
 
 ScopedEVPAEADCtx::~ScopedEVPAEADCtx() {

@@ -28,10 +28,6 @@ class NET_EXPORT ReportingGarbageCollector {
 
   virtual ~ReportingGarbageCollector();
 
-  // Initializes the GarbageCollector, which performs an initial garbage
-  // collection pass over any data already in the Cache.
-  virtual void Initialize() = 0;
-
   // Replaces the internal Timer used for scheduling garbage collection passes
   // with a caller-specified one so that unittests can provide a MockTimer.
   virtual void SetTimerForTesting(std::unique_ptr<base::Timer> timer) = 0;

@@ -1,0 +1,3 @@
+Placeholder for an ELF file.
+Its mtime is queried, and its output-relative path is used.
+But what you read here is completely superfluous.

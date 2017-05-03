@@ -8,6 +8,7 @@
 
 #include "net/quic/core/crypto/chacha20_poly1305_decrypter.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 
@@ -83,7 +84,9 @@ QuicData* EncryptWithNonce(ChaCha20Poly1305Encrypter* encrypter,
   return new QuicData(ciphertext.release(), ciphertext_size, true);
 }
 
-TEST(ChaCha20Poly1305EncrypterTest, EncryptThenDecrypt) {
+class ChaCha20Poly1305EncrypterTest : public QuicTest {};
+
+TEST_F(ChaCha20Poly1305EncrypterTest, EncryptThenDecrypt) {
   ChaCha20Poly1305Encrypter encrypter;
   ChaCha20Poly1305Decrypter decrypter;
 
@@ -108,7 +111,7 @@ TEST(ChaCha20Poly1305EncrypterTest, EncryptThenDecrypt) {
                                       &len, arraysize(decrypted)));
 }
 
-TEST(ChaCha20Poly1305EncrypterTest, Encrypt) {
+TEST_F(ChaCha20Poly1305EncrypterTest, Encrypt) {
   for (size_t i = 0; test_vectors[i].key != nullptr; i++) {
     // Decode the test vector.
     string key = QuicTextUtils::HexDecode(test_vectors[i].key);
@@ -136,14 +139,14 @@ TEST(ChaCha20Poly1305EncrypterTest, Encrypt) {
   }
 }
 
-TEST(ChaCha20Poly1305EncrypterTest, GetMaxPlaintextSize) {
+TEST_F(ChaCha20Poly1305EncrypterTest, GetMaxPlaintextSize) {
   ChaCha20Poly1305Encrypter encrypter;
   EXPECT_EQ(1000u, encrypter.GetMaxPlaintextSize(1012));
   EXPECT_EQ(100u, encrypter.GetMaxPlaintextSize(112));
   EXPECT_EQ(10u, encrypter.GetMaxPlaintextSize(22));
 }
 
-TEST(ChaCha20Poly1305EncrypterTest, GetCiphertextSize) {
+TEST_F(ChaCha20Poly1305EncrypterTest, GetCiphertextSize) {
   ChaCha20Poly1305Encrypter encrypter;
   EXPECT_EQ(1012u, encrypter.GetCiphertextSize(1000));
   EXPECT_EQ(112u, encrypter.GetCiphertextSize(100));

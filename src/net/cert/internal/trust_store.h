@@ -9,119 +9,59 @@
 
 #include "base/memory/ref_counted.h"
 #include "net/base/net_export.h"
+#include "net/cert/internal/cert_issuer_source.h"
 #include "net/cert/internal/parsed_certificate.h"
 
 namespace net {
 
-namespace der {
-class Input;
-}
+enum class CertificateTrustType {
+  // This certificate is explicitly blacklisted (distrusted).
+  DISTRUSTED,
 
-// A TrustAnchor represents a trust anchor used during RFC 5280 path validation.
-//
-// At its core, each trust anchor has two parts:
-//  * Name
-//  * Public Key
-//
-// Optionally a trust anchor may contain:
-//  * An associated certificate (used when pretty-printing)
-//  * Mandatory trust anchor constraints
-//
-// Relationship between ParsedCertificate and TrustAnchor:
-//
-// For convenience trust anchors are often described using a
-// (self-signed) certificate. TrustAnchor facilitates this by allowing
-// construction of a TrustAnchor given a ParsedCertificate.
-//
-// When constructing a TrustAnchor from a certificate there are different
-// interpretations for the meaning of properties other than the Subject and
-// SPKI in the certificate.
-//
-// * CreateFromCertificateNoConstraints() -- Extracts the Subject and SPKI from
-// the source certificate. ALL other information in the certificate is
-// considered irrelevant during path validation.
-//
-// * CreateFromCertificateWithConstraints() -- Extracts the Subject and SPKI
-// from the source certificate, and additionally interprets some properties of
-// the source certificate as mandatory anchor constraints.
-//
-// Trust anchor constraints are described in more detail by RFC 5937. This
-// implementation follows that description, and fixes
-// "enforceTrustAnchorConstraints" to true.
-class NET_EXPORT TrustAnchor : public base::RefCountedThreadSafe<TrustAnchor> {
- public:
-  // Creates a TrustAnchor given a certificate. The ONLY parts of the
-  // certificate that are relevant to the resulting trust anchor are:
-  //
-  //  * Subject
-  //  * SPKI
-  //
-  // Everything else, including the source certiticate's expiration, basic
-  // constraints, policy constraints, etc is not used.
-  //
-  // This is the common interpretation for a trust anchor when given as a
-  // certificate.
-  static scoped_refptr<TrustAnchor> CreateFromCertificateNoConstraints(
-      scoped_refptr<ParsedCertificate> cert);
+  // The trustedness of this certificate is unknown (inherits trust from
+  // its issuer).
+  UNSPECIFIED,
 
-  // Creates a TrustAnchor given a certificate. The resulting trust anchor is
-  // initialized using the source certificate's subject and SPKI as usual,
-  // however other parts of the certificate are applied as anchor constraints.
-  //
-  // The implementation matches the properties identified by RFC 5937,
-  // resulting in the following hodgepodge of enforcement on the source
-  // certificate:
-  //
-  //  * Signature:             No
-  //  * Validity (expiration): No
-  //  * Key usage:             No
-  //  * Extended key usage:    Yes (not part of RFC 5937)
-  //  * Basic constraints:     Yes, but only the pathlen (CA=false is accepted)
-  //  * Name constraints:      Yes
-  //  * Certificate policies:  Not currently, TODO(crbug.com/634453)
-  //  * inhibitAnyPolicy:      Not currently, TODO(crbug.com/634453)
-  //  * PolicyConstraints:     Not currently, TODO(crbug.com/634452)
-  //
-  // The presence of any other unrecognized extension marked as critical fails
-  // validation.
-  static scoped_refptr<TrustAnchor> CreateFromCertificateWithConstraints(
-      scoped_refptr<ParsedCertificate> cert);
+  // This certificate is a trust anchor (as defined by RFC 5280). The only
+  // fields in the certificate that are meaningful are its name and SPKI.
+  TRUSTED_ANCHOR,
 
-  der::Input spki() const;
-  der::Input normalized_subject() const;
-
-  // Returns the optional certificate representing this trust anchor.
-  // In the current implementation it will never return nullptr...
-  // however clients should be prepared to handle this case.
-  const scoped_refptr<ParsedCertificate>& cert() const;
-
-  // Returns true if the trust anchor has attached (mandatory) trust anchor
-  // constraints. This returns true when the anchor was constructed using
-  // CreateFromCertificateWithConstraints.
-  bool enforces_constraints() const { return enforces_constraints_; }
-
- private:
-  friend class base::RefCountedThreadSafe<TrustAnchor>;
-  TrustAnchor(scoped_refptr<ParsedCertificate>, bool enforces_constraints);
-  ~TrustAnchor();
-
-  scoped_refptr<ParsedCertificate> cert_;
-  bool enforces_constraints_ = false;
+  // This certificate is a trust anchor, and additionally some of the fields in
+  // the certificate (other than name and SPKI) should be used during the
+  // verification process. See VerifyCertificateChain() for details on how
+  // constraints are applied.
+  TRUSTED_ANCHOR_WITH_CONSTRAINTS,
 };
 
-using TrustAnchors = std::vector<scoped_refptr<TrustAnchor>>;
+// Describes the level of trust in a certificate. See CertificateTrustType for
+// details.
+//
+// TODO(eroman): Right now this is just a glorified wrapper around an enum...
+struct NET_EXPORT CertificateTrust {
+  static CertificateTrust ForTrustAnchor();
+  static CertificateTrust ForTrustAnchorEnforcingConstraints();
+  static CertificateTrust ForUnspecified();
+  static CertificateTrust ForDistrusted();
 
-// Interface for finding trust anchors.
-class NET_EXPORT TrustStore {
+  bool IsTrustAnchor() const;
+  bool IsDistrusted() const;
+  bool HasUnspecifiedTrust() const;
+
+  CertificateTrustType type = CertificateTrustType::UNSPECIFIED;
+};
+
+// Interface for finding intermediates / trust anchors, and testing the
+// trustedness of certificates.
+class NET_EXPORT TrustStore : public CertIssuerSource {
  public:
   TrustStore();
-  virtual ~TrustStore();
 
-  // Appends the trust anchors that match |cert|'s issuer name to |*matches|.
-  // |cert| and |matches| must not be null.
-  virtual void FindTrustAnchorsForCert(
-      const scoped_refptr<ParsedCertificate>& cert,
-      TrustAnchors* matches) const = 0;
+  virtual void GetTrust(const scoped_refptr<ParsedCertificate>& cert,
+                        CertificateTrust* trust) const = 0;
+
+  // Disable async issuers for TrustStore, as it isn't needed.
+  void AsyncGetIssuersOf(const ParsedCertificate* cert,
+                         std::unique_ptr<Request>* out_req) final;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(TrustStore);

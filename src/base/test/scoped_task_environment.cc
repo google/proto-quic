@@ -27,10 +27,10 @@ ScopedTaskEnvironment::ScopedTaskEnvironment(MainThreadType main_thread_type)
   const SchedulerWorkerPoolParams worker_pool_params(
       SchedulerWorkerPoolParams::StandbyThreadPolicy::ONE, kMaxThreads,
       kSuggestedReclaimTime);
-  TaskScheduler::CreateAndSetDefaultTaskScheduler(
-      "ScopedTaskEnvironment", {worker_pool_params, worker_pool_params,
-                                worker_pool_params, worker_pool_params});
+  TaskScheduler::Create("ScopedTaskEnvironment");
   task_scheduler_ = TaskScheduler::GetInstance();
+  TaskScheduler::GetInstance()->Start({worker_pool_params, worker_pool_params,
+                                       worker_pool_params, worker_pool_params});
 }
 
 ScopedTaskEnvironment::~ScopedTaskEnvironment() {

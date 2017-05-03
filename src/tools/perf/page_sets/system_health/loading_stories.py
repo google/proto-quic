@@ -356,7 +356,6 @@ class LoadWeatherStory(_LoadingStory):
   TAGS = [story_tags.JAVASCRIPT_HEAVY]
 
 
-@decorators.Disabled('all')  # crbug.com/715936
 class LoadDriveStory(_LoadingStory):
   NAME = 'load:tools:drive'
   URL = 'https://drive.google.com/drive/my-drive'

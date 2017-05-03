@@ -484,16 +484,6 @@ EVENT_TYPE(SSL_CLIENT_CERT_REQUESTED)
 //   }
 EVENT_TYPE(SSL_PRIVATE_KEY_OP)
 
-// The start/end of getting a domain-bound certificate and private key.
-//
-// The END event will contain the following parameters on failure:
-//
-//   {
-//     "net_error": <Net integer error code>,
-//   }
-// TODO(nharper): remove this event.
-EVENT_TYPE(SSL_GET_DOMAIN_BOUND_CERT)
-
 // The start/end of getting a Channel ID key.
 //
 // The START event contains these parameters:
@@ -509,14 +499,6 @@ EVENT_TYPE(SSL_GET_DOMAIN_BOUND_CERT)
 //     "key": <Hex-encoded EC point of public key (uncompressed point format)>,
 //   }
 EVENT_TYPE(SSL_GET_CHANNEL_ID)
-
-// The SSL server requested a channel id.
-// TODO(nharper): Remove this event.
-EVENT_TYPE(SSL_CHANNEL_ID_REQUESTED)
-
-// A channel ID was provided to the SSL library to be sent to the SSL server.
-// TODO(nharper): Remove this event.
-EVENT_TYPE(SSL_CHANNEL_ID_PROVIDED)
 
 // A client certificate (or none) was provided to the SSL library to be sent
 // to the SSL server.
@@ -539,20 +521,6 @@ EVENT_TYPE(SSL_HANDSHAKE_ERROR)
 EVENT_TYPE(SSL_READ_ERROR)
 EVENT_TYPE(SSL_WRITE_ERROR)
 
-// An SSL connection needs to be retried with a lower protocol version because
-// the server may be intolerant of the protocol version we offered.
-// The following parameters are attached to the event:
-//   {
-//     "host_and_port": <String encoding the host and port>,
-//     "net_error": <Net integer error code>,
-//     "version_before": <SSL version before the fallback>,
-//     "version_after": <SSL version after the fallback>,
-//   }
-//
-// TODO(davidben): Remove this event and the corresponding log_view_painter.js
-// logic in M56.
-EVENT_TYPE(SSL_VERSION_FALLBACK)
-
 // An SSL connection needs to be retried with more cipher suites because the
 // server may require a deprecated cipher suite. The following parameters are
 // attached to the event:
@@ -574,16 +542,6 @@ EVENT_TYPE(SSL_VERSION_INTERFERENCE_PROBE)
 // We found that our prediction of the server's certificates was correct and
 // we merged the verification with the SSLHostInfo. (Note: now obsolete.)
 EVENT_TYPE(SSL_VERIFICATION_MERGED)
-
-// An SSL error occurred while calling an NSS function not directly related to
-// one of the above activities.  Can also be used when more information than
-// is provided by just an error code is needed:
-//   {
-//     "function": <Name of the NSS function, as a string>,
-//     "param": <Most relevant parameter, if any>,
-//     "ssl_lib_error": <NSS library's integer code for the specific error type>
-//   }
-EVENT_TYPE(SSL_NSS_ERROR)
 
 // An SSL connection sent or received an alert.
 // The following parameters are attached:

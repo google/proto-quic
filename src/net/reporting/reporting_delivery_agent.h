@@ -55,11 +55,6 @@ class NET_EXPORT ReportingDeliveryAgent {
 
   virtual ~ReportingDeliveryAgent();
 
-  // Initializes the DeliveryAgent, which schedules delivery (after the Policy's
-  // delivery_interval) for any previously-persisted reports that can still be
-  // delivered.
-  virtual void Initialize() = 0;
-
   // Replaces the internal Timer used for scheduling report delivery attempts
   // with a caller-specified one so that unittests can provide a MockTimer.
   virtual void SetTimerForTesting(std::unique_ptr<base::Timer> timer) = 0;

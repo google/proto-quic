@@ -11,6 +11,7 @@
 #include <set>
 #include <stack>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -27,7 +28,6 @@
 #include "base/process/process_handle.h"
 #include "base/profiler/tracked_time.h"
 #include "base/synchronization/lock.h"
-#include "base/threading/thread_checker.h"
 #include "base/threading/thread_local_storage.h"
 
 namespace base {
@@ -279,9 +279,9 @@ struct BASE_EXPORT DeathDataSnapshot {
                     int32_t queue_duration_sample,
                     int32_t alloc_ops,
                     int32_t free_ops,
-                    int32_t allocated_bytes,
-                    int32_t freed_bytes,
-                    int32_t alloc_overhead_bytes,
+                    int64_t allocated_bytes,
+                    int64_t freed_bytes,
+                    int64_t alloc_overhead_bytes,
                     int32_t max_allocated_bytes);
   DeathDataSnapshot(const DeathData& death_data);
   DeathDataSnapshot(const DeathDataSnapshot& other);
@@ -301,9 +301,9 @@ struct BASE_EXPORT DeathDataSnapshot {
 
   int32_t alloc_ops;
   int32_t free_ops;
-  int32_t allocated_bytes;
-  int32_t freed_bytes;
-  int32_t alloc_overhead_bytes;
+  int64_t allocated_bytes;
+  int64_t freed_bytes;
+  int64_t alloc_overhead_bytes;
   int32_t max_allocated_bytes;
 };
 
@@ -392,16 +392,16 @@ class BASE_EXPORT DeathData {
     return base::subtle::NoBarrier_Load(&alloc_ops_);
   }
   int32_t free_ops() const { return base::subtle::NoBarrier_Load(&free_ops_); }
-  int32_t allocated_bytes() const {
-    return base::subtle::NoBarrier_Load(&allocated_bytes_);
+  int64_t allocated_bytes() const {
+    return ConsistentCumulativeByteCountRead(&allocated_bytes_);
   }
-  int32_t freed_bytes() const {
-    return base::subtle::NoBarrier_Load(&freed_bytes_);
+  int64_t freed_bytes() const {
+    return ConsistentCumulativeByteCountRead(&freed_bytes_);
   }
-  int32_t alloc_overhead_bytes() const {
-    return base::subtle::NoBarrier_Load(&alloc_overhead_bytes_);
+  int64_t alloc_overhead_bytes() const {
+    return ConsistentCumulativeByteCountRead(&alloc_overhead_bytes_);
   }
-  int32_t max_allocated_bytes() const {
+  int64_t max_allocated_bytes() const {
     return base::subtle::NoBarrier_Load(&max_allocated_bytes_);
   }
   const DeathDataPhaseSnapshot* last_phase_snapshot() const {
@@ -414,11 +414,35 @@ class BASE_EXPORT DeathData {
   void OnProfilingPhaseCompleted(int profiling_phase);
 
  private:
+#if defined(ARCH_CPU_64_BITS)
+  using CumulativeByteCount = base::subtle::Atomic64;
+#else
+  struct CumulativeByteCount {
+    base::subtle::Atomic32 hi_word;
+    base::subtle::Atomic32 lo_word;
+  };
+#endif
+
+  // Reads a cumulative byte counter consistently.
+  int64_t ConsistentCumulativeByteCountRead(
+      const CumulativeByteCount* count) const;
+
+  // Reads the value of a cumulative byte count, only returns consistent
+  // results on the owning thread.
+  static int64_t UnsafeCumulativeByteCountRead(
+      const CumulativeByteCount* count);
+
   // A saturating addition operation for member variables. This elides the
   // use of atomic-primitive reads for members that are only written on the
   // owning thread.
   static void SaturatingMemberAdd(const uint32_t addend,
                                   base::subtle::Atomic32* sum);
+
+  // A saturating addition operation for byte count variables.
+  // On 32 bit machines, this may only be called while |byte_update_counter_|
+  // is odd - e.g. locked.
+  void SaturatingByteCountMemberAdd(const uint32_t addend,
+                                    CumulativeByteCount* sum);
 
   // Members are ordered from most regularly read and updated, to least
   // frequently used.  This might help a bit with cache lines.
@@ -447,15 +471,23 @@ class BASE_EXPORT DeathData {
   base::subtle::Atomic32 alloc_ops_;
   base::subtle::Atomic32 free_ops_;
 
+#if !defined(ARCH_CPU_64_BITS)
+  // On 32 bit systems this is used to achieve consistent reads for cumulative
+  // byte counts. This is odd while updates are in progress, and even while
+  // quiescent. If this has the same value before and after reading the
+  // cumulative counts, the read is consistent.
+  base::subtle::Atomic32 byte_update_counter_;
+#endif
+
   // The number of bytes allocated by the task.
-  base::subtle::Atomic32 allocated_bytes_;
+  CumulativeByteCount allocated_bytes_;
 
   // The number of bytes freed by the task.
-  base::subtle::Atomic32 freed_bytes_;
+  CumulativeByteCount freed_bytes_;
 
   // The cumulative number of overhead bytes. Where available this yields an
   // estimate of the heap overhead for allocations.
-  base::subtle::Atomic32 alloc_overhead_bytes_;
+  CumulativeByteCount alloc_overhead_bytes_;
 
   // The high-watermark for the number of outstanding heap allocated bytes.
   base::subtle::Atomic32 max_allocated_bytes_;
@@ -522,7 +554,7 @@ class BASE_EXPORT ThreadData {
     STATUS_LAST = PROFILING_ACTIVE
   };
 
-  typedef base::hash_map<Location, Births*, Location::Hash> BirthMap;
+  typedef std::unordered_map<Location, Births*, Location::Hash> BirthMap;
   typedef std::map<const Births*, DeathData> DeathMap;
 
   // Initialize the current thread context with a new instance of ThreadData.

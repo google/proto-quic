@@ -134,7 +134,7 @@ def _MakeCompactTree(symbols, include_symbols):
       symbol_type = _NODE_SYMBOL_TYPE_VTABLE
     elif symbol.name.endswith(']'):
       symbol_type = _NODE_SYMBOL_TYPE_GENERATED
-    _AddSymbolIntoFileNode(node, symbol_type, symbol.name, symbol.size,
+    _AddSymbolIntoFileNode(node, symbol_type, symbol.name, symbol.pss,
                            include_symbols)
     depth += 2
     result[_NODE_MAX_DEPTH_KEY] = max(result[_NODE_MAX_DEPTH_KEY], depth)

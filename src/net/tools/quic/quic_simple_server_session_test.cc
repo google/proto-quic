@@ -17,6 +17,7 @@
 #include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/platform/api/quic_string_piece.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_config_peer.h"
@@ -31,8 +32,6 @@
 #include "net/test/gtest_util.h"
 #include "net/tools/quic/quic_simple_server_stream.h"
 #include "net/tools/quic/test_tools/mock_quic_session_visitor.h"
-#include "testing/gmock/include/gmock/gmock.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
 using testing::_;
@@ -175,8 +174,7 @@ class MockQuicSimpleServerSession : public QuicSimpleServerSession {
                  ack_listener));
 };
 
-class QuicSimpleServerSessionTest
-    : public ::testing::TestWithParam<QuicVersion> {
+class QuicSimpleServerSessionTest : public QuicTestWithParam<QuicVersion> {
  protected:
   QuicSimpleServerSessionTest()
       : crypto_config_(QuicCryptoServerConfig::TESTING,

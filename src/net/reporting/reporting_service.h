@@ -21,7 +21,6 @@ class Value;
 namespace net {
 
 class ReportingContext;
-class ReportingDelegate;
 struct ReportingPolicy;
 class URLRequestContext;
 
@@ -32,12 +31,10 @@ class NET_EXPORT ReportingService {
   virtual ~ReportingService();
 
   // Creates a ReportingService. |policy| will be copied. |request_context| must
-  // outlive the ReportingService. The ReportingService will take ownership of
-  // |delegate| and destroy it when the service is destroyed.
+  // outlive the ReportingService.
   static std::unique_ptr<ReportingService> Create(
       const ReportingPolicy& policy,
-      URLRequestContext* request_context,
-      std::unique_ptr<ReportingDelegate> delegate);
+      URLRequestContext* request_context);
 
   // Creates a ReportingService for testing purposes using an
   // already-constructed ReportingContext. The ReportingService will take

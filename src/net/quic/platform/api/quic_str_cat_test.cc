@@ -5,7 +5,7 @@
 #include "net/quic/platform/api/quic_str_cat.h"
 
 #include "net/quic/platform/api/quic_string_piece.h"
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 using std::string;
 
@@ -13,7 +13,9 @@ namespace net {
 namespace test {
 namespace {
 
-TEST(QuicStrCatTest, Ints) {
+class QuicStrCatTest : public QuicTest {};
+
+TEST_F(QuicStrCatTest, Ints) {
   const int16_t s = -1;
   const uint16_t us = 2;
   const int i = -3;
@@ -39,7 +41,7 @@ TEST(QuicStrCatTest, Ints) {
   EXPECT_EQ(answer, "100");
 }
 
-TEST(QuicStrCatTest, Basics) {
+TEST_F(QuicStrCatTest, Basics) {
   string result;
 
   string strs[] = {"Hello", "Cruel", "World"};
@@ -103,7 +105,7 @@ TEST(QuicStrCatTest, Basics) {
   EXPECT_EQ(result, "122333444455555666666777777788888888999999999");
 }
 
-TEST(QuicStrCatTest, MaxArgs) {
+TEST_F(QuicStrCatTest, MaxArgs) {
   string result;
   // Test 10 up to 26 arguments, the current maximum
   result = QuicStrCat(1, 2, 3, 4, 5, 6, 7, 8, 9, "a");

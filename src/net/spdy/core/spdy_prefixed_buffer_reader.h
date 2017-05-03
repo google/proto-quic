@@ -7,14 +7,14 @@
 
 #include <stddef.h>
 
-#include "net/base/net_export.h"
 #include "net/spdy/core/spdy_pinnable_buffer_piece.h"
+#include "net/spdy/platform/api/spdy_export.h"
 
 namespace net {
 
 // Reader class which simplifies reading contiguously from
 // from a disjoint buffer prefix & suffix.
-class NET_EXPORT_PRIVATE SpdyPrefixedBufferReader {
+class SPDY_EXPORT_PRIVATE SpdyPrefixedBufferReader {
  public:
   SpdyPrefixedBufferReader(const char* prefix, size_t prefix_length,
                            const char* suffix, size_t suffix_length);

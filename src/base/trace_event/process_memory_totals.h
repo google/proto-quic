@@ -52,6 +52,9 @@ class BASE_EXPORT ProcessMemoryTotals {
     // On iOS,
     //   TBD: https://crbug.com/714961
   };
+  const PlatformPrivateFootprint& GetPlatformPrivateFootprint() const {
+    return platform_private_footprint_;
+  }
   PlatformPrivateFootprint& GetPlatformPrivateFootprint() {
     return platform_private_footprint_;
   }

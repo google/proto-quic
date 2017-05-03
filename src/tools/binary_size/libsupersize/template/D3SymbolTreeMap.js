@@ -34,6 +34,7 @@ function D3SymbolTreeMap(mapWidth, mapHeight, levelsToShow) {
  * Make a number pretty, with comma separators.
  */
 D3SymbolTreeMap._pretty = function(num) {
+  num = Math.round(num)
   var asString = String(num);
   var result = '';
   var counter = 0;

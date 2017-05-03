@@ -106,7 +106,7 @@ TEST(IDMapTest, IteratorRemainsValidWhenRemovingOtherElements) {
   for (int i = 0; i < kCount; i++)
     map.Add(&obj[i]);
 
-  // IDMap uses a hash_map, which has no predictable iteration order.
+  // IDMap has no predictable iteration order.
   int32_t ids_in_iteration_order[kCount];
   const TestObject* objs_in_iteration_order[kCount];
   int counter = 0;
@@ -216,7 +216,7 @@ TEST(IDMapTest, IteratorRemainsValidWhenClearing) {
   for (int i = 0; i < kCount; i++)
     map.Add(&obj[i]);
 
-  // IDMap uses a hash_map, which has no predictable iteration order.
+  // IDMap has no predictable iteration order.
   int32_t ids_in_iteration_order[kCount];
   const TestObject* objs_in_iteration_order[kCount];
   int counter = 0;

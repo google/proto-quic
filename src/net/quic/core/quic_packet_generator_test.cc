@@ -17,13 +17,12 @@
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/platform/api/quic_string_piece.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/mock_random.h"
 #include "net/quic/test_tools/quic_packet_creator_peer.h"
 #include "net/quic/test_tools/quic_packet_generator_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/quic/test_tools/simple_quic_framer.h"
-#include "testing/gmock/include/gmock/gmock.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
 using testing::InSequence;
@@ -102,7 +101,7 @@ struct PacketContents {
 
 }  // namespace
 
-class QuicPacketGeneratorTest : public ::testing::Test {
+class QuicPacketGeneratorTest : public QuicTest {
  public:
   QuicPacketGeneratorTest()
       : framer_(AllSupportedVersions(),
@@ -241,6 +240,7 @@ TEST_F(QuicPacketGeneratorTest, ShouldSendAck_NotWritable) {
 
   generator_.SetShouldSendAck(false);
   EXPECT_TRUE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 }
 
 TEST_F(QuicPacketGeneratorTest, ShouldSendAck_WritableAndShouldNotFlush) {
@@ -256,6 +256,7 @@ TEST_F(QuicPacketGeneratorTest, ShouldSendAck_WritableAndShouldNotFlush) {
 
   generator_.SetShouldSendAck(false);
   EXPECT_TRUE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 }
 
 TEST_F(QuicPacketGeneratorTest, ShouldSendAck_WritableAndShouldFlush) {
@@ -268,6 +269,7 @@ TEST_F(QuicPacketGeneratorTest, ShouldSendAck_WritableAndShouldFlush) {
 
   generator_.SetShouldSendAck(false);
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 
   PacketContents contents;
   contents.num_ack_frames = 1;
@@ -299,6 +301,7 @@ TEST_F(QuicPacketGeneratorTest, AddControlFrame_NotWritable) {
 
   generator_.AddControlFrame(QuicFrame(CreateRstStreamFrame()));
   EXPECT_TRUE(generator_.HasQueuedFrames());
+  EXPECT_TRUE(generator_.HasRetransmittableFrames());
 }
 
 TEST_F(QuicPacketGeneratorTest, AddControlFrame_OnlyAckWritable) {
@@ -306,6 +309,7 @@ TEST_F(QuicPacketGeneratorTest, AddControlFrame_OnlyAckWritable) {
 
   generator_.AddControlFrame(QuicFrame(CreateRstStreamFrame()));
   EXPECT_TRUE(generator_.HasQueuedFrames());
+  EXPECT_TRUE(generator_.HasRetransmittableFrames());
 }
 
 TEST_F(QuicPacketGeneratorTest, AddControlFrame_WritableAndShouldNotFlush) {
@@ -314,6 +318,7 @@ TEST_F(QuicPacketGeneratorTest, AddControlFrame_WritableAndShouldNotFlush) {
 
   generator_.AddControlFrame(QuicFrame(CreateRstStreamFrame()));
   EXPECT_TRUE(generator_.HasQueuedFrames());
+  EXPECT_TRUE(generator_.HasRetransmittableFrames());
 }
 
 TEST_F(QuicPacketGeneratorTest, AddControlFrame_NotWritableBatchThenFlush) {
@@ -322,13 +327,16 @@ TEST_F(QuicPacketGeneratorTest, AddControlFrame_NotWritableBatchThenFlush) {
 
   generator_.AddControlFrame(QuicFrame(CreateRstStreamFrame()));
   EXPECT_TRUE(generator_.HasQueuedFrames());
+  EXPECT_TRUE(generator_.HasRetransmittableFrames());
   generator_.FinishBatchOperations();
   EXPECT_TRUE(generator_.HasQueuedFrames());
+  EXPECT_TRUE(generator_.HasRetransmittableFrames());
 
   EXPECT_CALL(delegate_, OnSerializedPacket(_))
       .WillOnce(Invoke(this, &QuicPacketGeneratorTest::SavePacket));
   generator_.FlushAllQueuedFrames();
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 
   PacketContents contents;
   contents.num_rst_stream_frames = 1;
@@ -343,6 +351,7 @@ TEST_F(QuicPacketGeneratorTest, AddControlFrame_WritableAndShouldFlush) {
 
   generator_.AddControlFrame(QuicFrame(CreateRstStreamFrame()));
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 
   PacketContents contents;
   contents.num_rst_stream_frames = 1;
@@ -357,6 +366,7 @@ TEST_F(QuicPacketGeneratorTest, ConsumeData_NotWritable) {
   EXPECT_EQ(0u, consumed.bytes_consumed);
   EXPECT_FALSE(consumed.fin_consumed);
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 }
 
 TEST_F(QuicPacketGeneratorTest, ConsumeData_WritableAndShouldNotFlush) {
@@ -368,6 +378,7 @@ TEST_F(QuicPacketGeneratorTest, ConsumeData_WritableAndShouldNotFlush) {
   EXPECT_EQ(3u, consumed.bytes_consumed);
   EXPECT_TRUE(consumed.fin_consumed);
   EXPECT_TRUE(generator_.HasQueuedFrames());
+  EXPECT_TRUE(generator_.HasRetransmittableFrames());
 }
 
 TEST_F(QuicPacketGeneratorTest, ConsumeData_WritableAndShouldFlush) {
@@ -380,6 +391,7 @@ TEST_F(QuicPacketGeneratorTest, ConsumeData_WritableAndShouldFlush) {
   EXPECT_EQ(3u, consumed.bytes_consumed);
   EXPECT_TRUE(consumed.fin_consumed);
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 
   PacketContents contents;
   contents.num_stream_frames = 1;
@@ -399,6 +411,7 @@ TEST_F(QuicPacketGeneratorTest, ConsumeData_Handshake) {
       kCryptoStreamId, MakeIOVectorFromStringPiece("foo"), 0, NO_FIN, nullptr);
   EXPECT_EQ(3u, consumed.bytes_consumed);
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 
   PacketContents contents;
   contents.num_stream_frames = 1;
@@ -429,6 +442,7 @@ TEST_F(QuicPacketGeneratorTest,
   EXPECT_EQ(4u, consumed.bytes_consumed);
   EXPECT_FALSE(consumed.fin_consumed);
   EXPECT_TRUE(generator_.HasQueuedFrames());
+  EXPECT_TRUE(generator_.HasRetransmittableFrames());
 }
 
 TEST_F(QuicPacketGeneratorTest, ConsumeData_BatchOperations) {
@@ -442,12 +456,14 @@ TEST_F(QuicPacketGeneratorTest, ConsumeData_BatchOperations) {
   EXPECT_EQ(4u, consumed.bytes_consumed);
   EXPECT_FALSE(consumed.fin_consumed);
   EXPECT_TRUE(generator_.HasQueuedFrames());
+  EXPECT_TRUE(generator_.HasRetransmittableFrames());
 
   // Now both frames will be flushed out.
   EXPECT_CALL(delegate_, OnSerializedPacket(_))
       .WillOnce(Invoke(this, &QuicPacketGeneratorTest::SavePacket));
   generator_.FinishBatchOperations();
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 
   PacketContents contents;
   contents.num_stream_frames = 2;
@@ -484,6 +500,7 @@ TEST_F(QuicPacketGeneratorTest, ConsumeData_FramesPreviouslyQueued) {
   EXPECT_EQ(3u, consumed.bytes_consumed);
   EXPECT_FALSE(consumed.fin_consumed);
   EXPECT_TRUE(generator_.HasQueuedFrames());
+  EXPECT_TRUE(generator_.HasRetransmittableFrames());
 
   // This frame will not fit with the existing frame, causing the queued frame
   // to be serialized, and it will be added to a new open packet.
@@ -492,9 +509,11 @@ TEST_F(QuicPacketGeneratorTest, ConsumeData_FramesPreviouslyQueued) {
   EXPECT_EQ(3u, consumed.bytes_consumed);
   EXPECT_TRUE(consumed.fin_consumed);
   EXPECT_TRUE(generator_.HasQueuedFrames());
+  EXPECT_TRUE(generator_.HasRetransmittableFrames());
 
   creator_->Flush();
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 
   PacketContents contents;
   contents.num_stream_frames = 1;
@@ -514,6 +533,7 @@ TEST_F(QuicPacketGeneratorTest, ConsumeDataFastPath) {
   EXPECT_EQ(10000u, consumed.bytes_consumed);
   EXPECT_TRUE(consumed.fin_consumed);
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 
   PacketContents contents;
   contents.num_stream_frames = 1;
@@ -526,6 +546,7 @@ TEST_F(QuicPacketGeneratorTest, NotWritableThenBatchOperations) {
   generator_.SetShouldSendAck(false);
   generator_.AddControlFrame(QuicFrame(CreateRstStreamFrame()));
   EXPECT_TRUE(generator_.HasQueuedFrames());
+  EXPECT_TRUE(generator_.HasRetransmittableFrames());
 
   delegate_.SetCanWriteAnything();
 
@@ -545,6 +566,7 @@ TEST_F(QuicPacketGeneratorTest, NotWritableThenBatchOperations) {
       .WillOnce(Invoke(this, &QuicPacketGeneratorTest::SavePacket));
   generator_.FinishBatchOperations();
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 
   PacketContents contents;
   contents.num_ack_frames = 1;
@@ -560,6 +582,7 @@ TEST_F(QuicPacketGeneratorTest, NotWritableThenBatchOperations2) {
   generator_.SetShouldSendAck(false);
   generator_.AddControlFrame(QuicFrame(CreateRstStreamFrame()));
   EXPECT_TRUE(generator_.HasQueuedFrames());
+  EXPECT_TRUE(generator_.HasRetransmittableFrames());
 
   delegate_.SetCanWriteAnything();
 
@@ -588,6 +611,7 @@ TEST_F(QuicPacketGeneratorTest, NotWritableThenBatchOperations2) {
 
   generator_.FinishBatchOperations();
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 
   // The first packet should have the queued data and part of the stream data.
   PacketContents contents;
@@ -634,6 +658,7 @@ TEST_F(QuicPacketGeneratorTest, SetMaxPacketLength_Initial) {
   EXPECT_EQ(data_len, consumed.bytes_consumed);
   EXPECT_TRUE(consumed.fin_consumed);
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 
   // We expect three packets, and first two of them have to be of packet_len
   // size.  We check multiple packets (instead of just one) because we want to
@@ -668,6 +693,7 @@ TEST_F(QuicPacketGeneratorTest, SetMaxPacketLength_Middle) {
   EXPECT_EQ(data_len, consumed.bytes_consumed);
   EXPECT_FALSE(consumed.fin_consumed);
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 
   // Make sure we already have two packets.
   ASSERT_EQ(2u, packets_.size());
@@ -682,6 +708,7 @@ TEST_F(QuicPacketGeneratorTest, SetMaxPacketLength_Middle) {
   EXPECT_EQ(data_len, consumed.bytes_consumed);
   EXPECT_TRUE(consumed.fin_consumed);
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 
   // We expect first data chunk to get fragmented, but the second one to fit
   // into a single packet.
@@ -710,6 +737,7 @@ TEST_F(QuicPacketGeneratorTest, SetMaxPacketLength_MidpacketFlush) {
   EXPECT_EQ(first_write_len, consumed.bytes_consumed);
   EXPECT_FALSE(consumed.fin_consumed);
   EXPECT_TRUE(generator_.HasQueuedFrames());
+  EXPECT_TRUE(generator_.HasRetransmittableFrames());
 
   // Make sure we have no packets so far.
   ASSERT_EQ(0u, packets_.size());
@@ -724,6 +752,7 @@ TEST_F(QuicPacketGeneratorTest, SetMaxPacketLength_MidpacketFlush) {
   generator_.SetMaxPacketLength(packet_len);
   EXPECT_EQ(packet_len, generator_.GetCurrentMaxPacketLength());
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 
   // We expect to see exactly one packet serialized after that, because we send
   // a value somewhat exceeding new max packet size, and the tail data does not
@@ -739,6 +768,7 @@ TEST_F(QuicPacketGeneratorTest, SetMaxPacketLength_MidpacketFlush) {
   EXPECT_EQ(second_write_len, consumed.bytes_consumed);
   EXPECT_TRUE(consumed.fin_consumed);
   EXPECT_TRUE(generator_.HasQueuedFrames());
+  EXPECT_TRUE(generator_.HasRetransmittableFrames());
 
   // We expect the first packet to be underfilled, and the second packet be up
   // to the new max packet size.
@@ -763,6 +793,7 @@ TEST_F(QuicPacketGeneratorTest, GenerateMtuDiscoveryPacket_Simple) {
   generator_.GenerateMtuDiscoveryPacket(target_mtu, nullptr);
 
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
   ASSERT_EQ(1u, packets_.size());
   EXPECT_EQ(target_mtu, packets_[0].encrypted_length);
 
@@ -797,10 +828,12 @@ TEST_F(QuicPacketGeneratorTest, GenerateMtuDiscoveryPacket_SurroundedByData) {
   EXPECT_EQ(data_len, consumed.bytes_consumed);
   EXPECT_FALSE(consumed.fin_consumed);
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 
   // Send the MTU probe.
   generator_.GenerateMtuDiscoveryPacket(target_mtu, nullptr);
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 
   // Send data after the MTU probe.
   consumed = generator_.ConsumeData(kHeadersStreamId, CreateData(data_len),
@@ -808,6 +841,7 @@ TEST_F(QuicPacketGeneratorTest, GenerateMtuDiscoveryPacket_SurroundedByData) {
   EXPECT_EQ(data_len, consumed.bytes_consumed);
   EXPECT_TRUE(consumed.fin_consumed);
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 
   ASSERT_EQ(5u, packets_.size());
   EXPECT_EQ(kDefaultMaxPacketSize, packets_[0].encrypted_length);
@@ -843,6 +877,7 @@ TEST_F(QuicPacketGeneratorTest, DontCrashOnInvalidStopWaiting) {
   EXPECT_CALL(delegate_, PopulateStopWaitingFrame(_));
   // Generator should have queued control frames, and creator should be empty.
   EXPECT_TRUE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
   EXPECT_FALSE(creator_->HasPendingFrames());
 
   // This will not serialize any packets, because of the invalid frame.
@@ -867,6 +902,7 @@ TEST_F(QuicPacketGeneratorTest, ConnectionCloseFrameLargerThanPacketSize) {
                                    "Single frame cannot fit into a packet", _));
   EXPECT_QUIC_BUG(generator_.AddControlFrame(QuicFrame(frame)), "");
   EXPECT_TRUE(generator_.HasQueuedFrames());
+  EXPECT_TRUE(generator_.HasRetransmittableFrames());
 }
 
 TEST_F(QuicPacketGeneratorTest, RandomPaddingAfterFinSingleStreamSinglePacket) {
@@ -896,6 +932,7 @@ TEST_F(QuicPacketGeneratorTest, RandomPaddingAfterFinSingleStreamSinglePacket) {
   generator_.FinishBatchOperations();
   EXPECT_EQ(kStreamFramePayloadSize, consumed.bytes_consumed);
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 
   EXPECT_EQ(1u, packets_.size());
   PacketContents contents;
@@ -933,6 +970,7 @@ TEST_F(QuicPacketGeneratorTest,
   generator_.FinishBatchOperations();
   EXPECT_EQ(kStreamFramePayloadSize, consumed.bytes_consumed);
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 
   EXPECT_LE(1u, packets_.size());
   PacketContents contents;
@@ -986,6 +1024,7 @@ TEST_F(QuicPacketGeneratorTest,
   EXPECT_EQ(kStreamFramePayloadSize, consumed.bytes_consumed);
   generator_.FinishBatchOperations();
   EXPECT_FALSE(generator_.HasQueuedFrames());
+  EXPECT_FALSE(generator_.HasRetransmittableFrames());
 
   EXPECT_LE(2u, packets_.size());
   PacketContents contents;

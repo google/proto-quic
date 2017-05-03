@@ -7,9 +7,8 @@
 #include <cstdint>
 
 #include "net/quic/platform/api/quic_containers.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "testing/gmock/include/gmock/gmock.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
 namespace {
@@ -20,13 +19,15 @@ struct TestObject {
   uint32_t value;
 };
 
-TEST(QuicOneBlockArenaTest, AllocateSuccess) {
+class QuicOneBlockArenaTest : public QuicTest {};
+
+TEST_F(QuicOneBlockArenaTest, AllocateSuccess) {
   QuicOneBlockArena<1024> arena;
   QuicArenaScopedPtr<TestObject> ptr = arena.New<TestObject>();
   EXPECT_TRUE(ptr.is_from_arena());
 }
 
-TEST(QuicOneBlockArenaTest, Exhaust) {
+TEST_F(QuicOneBlockArenaTest, Exhaust) {
   QuicOneBlockArena<1024> arena;
   for (size_t i = 0; i < 1024 / kMaxAlign; ++i) {
     QuicArenaScopedPtr<TestObject> ptr = arena.New<TestObject>();
@@ -38,7 +39,7 @@ TEST(QuicOneBlockArenaTest, Exhaust) {
   EXPECT_FALSE(ptr.is_from_arena());
 }
 
-TEST(QuicOneBlockArenaTest, NoOverlaps) {
+TEST_F(QuicOneBlockArenaTest, NoOverlaps) {
   QuicOneBlockArena<1024> arena;
   std::vector<QuicArenaScopedPtr<TestObject>> objects;
   QuicIntervalSet<uintptr_t> used;

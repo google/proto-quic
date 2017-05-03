@@ -221,10 +221,8 @@ HANDLE CreateReadOnlyHandle(FieldTrialList::FieldTrialAllocator* allocator) {
 
 #if defined(OS_POSIX) && !defined(OS_NACL)
 int CreateReadOnlyHandle(FieldTrialList::FieldTrialAllocator* allocator) {
-  SharedMemoryHandle new_handle;
-  allocator->shared_memory()->ShareReadOnlyToProcess(GetCurrentProcessHandle(),
-                                                     &new_handle);
-  return SharedMemory::GetFdFromSharedMemoryHandle(new_handle);
+  SharedMemoryHandle handle = allocator->shared_memory()->GetReadOnlyHandle();
+  return SharedMemory::GetFdFromSharedMemoryHandle(handle);
 }
 #endif
 
@@ -414,7 +412,8 @@ FieldTrial::FieldTrial(const std::string& trial_name,
       ref_(FieldTrialList::FieldTrialAllocator::kReferenceNull) {
   DCHECK_GT(total_probability, 0);
   DCHECK(!trial_name_.empty());
-  DCHECK(!default_group_name_.empty());
+  DCHECK(!default_group_name_.empty())
+      << "Trial " << trial_name << " is missing a default group name.";
 }
 
 FieldTrial::~FieldTrial() {}
@@ -1138,7 +1137,7 @@ bool FieldTrialList::CreateTrialsFromHandleSwitch(
     const std::string& handle_switch) {
   int field_trial_handle = std::stoi(handle_switch);
   HANDLE handle = reinterpret_cast<HANDLE>(field_trial_handle);
-  SharedMemoryHandle shm_handle(handle, GetCurrentProcId());
+  SharedMemoryHandle shm_handle(handle);
   return FieldTrialList::CreateTrialsFromSharedMemoryHandle(shm_handle);
 }
 #endif
@@ -1156,11 +1155,7 @@ bool FieldTrialList::CreateTrialsFromDescriptor(int fd_key) {
   if (fd == -1)
     return false;
 
-#if defined(OS_MACOSX) && !defined(OS_IOS)
   SharedMemoryHandle shm_handle(FileDescriptor(fd, true));
-#else
-  SharedMemoryHandle shm_handle(fd, true);
-#endif
 
   bool result = FieldTrialList::CreateTrialsFromSharedMemoryHandle(shm_handle);
   DCHECK(result);

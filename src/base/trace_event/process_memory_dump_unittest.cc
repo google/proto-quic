@@ -90,7 +90,7 @@ TEST(ProcessMemoryDumpTest, Clear) {
 
 TEST(ProcessMemoryDumpTest, TakeAllDumpsFrom) {
   std::unique_ptr<TracedValue> traced_value(new TracedValue);
-  hash_map<AllocationContext, AllocationMetrics> metrics_by_context;
+  std::unordered_map<AllocationContext, AllocationMetrics> metrics_by_context;
   metrics_by_context[AllocationContext()] = { 1, 1 };
   TraceEventMemoryOverhead overhead;
 

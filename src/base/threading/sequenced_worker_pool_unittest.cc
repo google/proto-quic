@@ -247,9 +247,10 @@ class SequencedWorkerPoolTest
       const SchedulerWorkerPoolParams worker_pool_params(
           SchedulerWorkerPoolParams::StandbyThreadPolicy::LAZY,
           static_cast<int>(kNumWorkerThreads), TimeDelta::Max());
-      TaskScheduler::CreateAndSetDefaultTaskScheduler(
-          "SequencedWorkerPoolTest", {worker_pool_params, worker_pool_params,
-                                      worker_pool_params, worker_pool_params});
+      TaskScheduler::Create("SequencedWorkerPoolTest");
+      TaskScheduler::GetInstance()->Start(
+          {worker_pool_params, worker_pool_params, worker_pool_params,
+           worker_pool_params});
 
       // Unit tests run in an environment where SequencedWorkerPool is enabled
       // without redirection to TaskScheduler. For the current unit test,

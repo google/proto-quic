@@ -12,6 +12,7 @@
 #include "base/macros.h"
 #include "net/base/int128.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_endian.h"
 #include "net/quic/platform/api/quic_export.h"
 #include "net/quic/platform/api/quic_string_piece.h"
 
@@ -25,7 +26,10 @@ namespace net {
 class QUIC_EXPORT_PRIVATE QuicDataWriter {
  public:
   // Creates a QuicDataWriter where |buffer| is not owned.
-  QuicDataWriter(size_t size, char* buffer, Perspective perspective);
+  QuicDataWriter(size_t size,
+                 char* buffer,
+                 Perspective perspective,
+                 Endianness endianness);
 
   ~QuicDataWriter();
 
@@ -36,13 +40,18 @@ class QUIC_EXPORT_PRIVATE QuicDataWriter {
   char* data();
 
   // Methods for adding to the payload.  These values are appended to the end
-  // of the QuicDataWriter payload. Note - binary integers are written in
-  // host byte order (little endian) not network byte order (big endian).
+  // of the QuicDataWriter payload.
+
+  // Writes 8/16/32/64-bit unsigned integers.
   bool WriteUInt8(uint8_t value);
   bool WriteUInt16(uint16_t value);
   bool WriteUInt32(uint32_t value);
-  bool WriteUInt48(uint64_t value);
   bool WriteUInt64(uint64_t value);
+
+  // Writes least significant |num_bytes| of a 64-bit unsigned integer in the
+  // correct byte order.
+  bool WriteBytesToUInt64(size_t num_bytes, uint64_t value);
+
   // Write unsigned floating point corresponding to the value. Large values are
   // clamped to the maximum representable (kUFloat16MaxValue). Values that can
   // not be represented directly are rounded down.
@@ -83,6 +92,9 @@ class QUIC_EXPORT_PRIVATE QuicDataWriter {
   // may have different in-memory representation of the same field, the on wire
   // representation must be consistent.
   Perspective perspective_;
+
+  // The endianness to write integers and floating numbers.
+  Endianness endianness_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicDataWriter);
 };

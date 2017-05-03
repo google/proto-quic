@@ -198,7 +198,7 @@ void TraceEvent::UpdateDuration(const TimeTicks& now,
 
 void TraceEvent::EstimateTraceMemoryOverhead(
     TraceEventMemoryOverhead* overhead) {
-  overhead->Add("TraceEvent", sizeof(*this));
+  overhead->Add(TraceEventMemoryOverhead::kTraceEvent, sizeof(*this));
 
   if (parameter_copy_storage_)
     overhead->AddString(*parameter_copy_storage_);

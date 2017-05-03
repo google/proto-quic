@@ -14,7 +14,6 @@
 #include <memory>
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/http2/hpack/decoder/hpack_decoder_listener.h"
 #include "net/http2/hpack/decoder/http2_hpack_decoder.h"
 #include "net/http2/hpack/hpack_string.h"
@@ -23,6 +22,7 @@
 #include "net/spdy/core/hpack/hpack_header_table.h"
 #include "net/spdy/core/spdy_header_block.h"
 #include "net/spdy/core/spdy_headers_handler_interface.h"
+#include "net/spdy/platform/api/spdy_export.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
 namespace net {
@@ -30,7 +30,7 @@ namespace test {
 class HpackDecoder3Peer;
 }  // namespace test
 
-class NET_EXPORT_PRIVATE HpackDecoder3 : public HpackDecoderInterface {
+class SPDY_EXPORT_PRIVATE HpackDecoder3 : public HpackDecoderInterface {
  public:
   friend test::HpackDecoder3Peer;
   HpackDecoder3();
@@ -53,7 +53,7 @@ class NET_EXPORT_PRIVATE HpackDecoder3 : public HpackDecoderInterface {
   size_t EstimateMemoryUsage() const override;
 
  private:
-  class NET_EXPORT_PRIVATE ListenerAdapter
+  class SPDY_EXPORT_PRIVATE ListenerAdapter
       : public HpackDecoderListener,
         public HpackDecoderTablesDebugListener {
    public:

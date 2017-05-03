@@ -10,6 +10,7 @@
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_socket_address.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_client_promised_info_peer.h"
 #include "net/test/gtest_util.h"
@@ -50,7 +51,7 @@ class MockQuicClientSession : public QuicClientSession {
   DISALLOW_COPY_AND_ASSIGN(MockQuicClientSession);
 };
 
-class QuicClientPromisedInfoTest : public ::testing::Test {
+class QuicClientPromisedInfoTest : public QuicTest {
  public:
   class StreamVisitor;
 

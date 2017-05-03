@@ -12,6 +12,7 @@
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_socket_address.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_stream_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
@@ -164,8 +165,7 @@ class MockQuicSimpleServerSession : public QuicSimpleServerSession {
   DISALLOW_COPY_AND_ASSIGN(MockQuicSimpleServerSession);
 };
 
-class QuicSimpleServerStreamTest
-    : public ::testing::TestWithParam<QuicVersion> {
+class QuicSimpleServerStreamTest : public QuicTestWithParam<QuicVersion> {
  public:
   QuicSimpleServerStreamTest()
       : connection_(

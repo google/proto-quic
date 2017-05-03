@@ -19,6 +19,7 @@
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
 #include "net/log/net_log_with_source.h"
+#include "net/socket/socket_descriptor.h"
 #include "net/socket/socket_performance_watcher.h"
 
 namespace net {
@@ -40,12 +41,16 @@ class NET_EXPORT TCPSocketWin : NON_EXPORTED_BASE(public base::NonThreadSafe),
 
   int Open(AddressFamily family);
 
-  // Both AdoptConnectedSocket and AdoptListenSocket take ownership of an
-  // existing socket. AdoptConnectedSocket takes an already connected
-  // socket. AdoptListenSocket takes a socket that is intended to accept
-  // connection. In some sense, AdoptListenSocket is more similar to Open.
-  int AdoptConnectedSocket(SOCKET socket, const IPEndPoint& peer_address);
-  int AdoptListenSocket(SOCKET socket);
+  // Takes ownership of |socket|, which is known to already be connected to the
+  // given peer address. However, peer address may be the empty address, for
+  // compatibility. The given peer address will be returned by GetPeerAddress.
+  int AdoptConnectedSocket(SocketDescriptor socket,
+                           const IPEndPoint& peer_address);
+  // Takes ownership of |socket|, which may or may not be open, bound, or
+  // listening. The caller must determine the state of the socket based on its
+  // provenance and act accordingly. The socket may have connections waiting
+  // to be accepted, but must not be actually connected.
+  int AdoptUnconnectedSocket(SocketDescriptor socket);
 
   int Bind(const IPEndPoint& address);
 
@@ -114,6 +119,11 @@ class NET_EXPORT TCPSocketWin : NON_EXPORTED_BASE(public base::NonThreadSafe),
   void EndLoggingMultipleConnectAttempts(int net_error);
 
   const NetLogWithSource& net_log() const { return net_log_; }
+
+  // Return the underlying SocketDescriptor and clean up this object, which may
+  // no longer be used. This method should be used only for testing. No read,
+  // write, or accept operations should be pending.
+  SocketDescriptor ReleaseSocketDescriptorForTesting();
 
  private:
   class Core;

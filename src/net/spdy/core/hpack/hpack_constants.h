@@ -10,7 +10,7 @@
 
 #include <vector>
 
-#include "net/base/net_export.h"
+#include "net/spdy/platform/api/spdy_export.h"
 
 // All section references below are to
 // http://tools.ietf.org/html/draft-ietf-httpbis-header-compression-08
@@ -70,20 +70,20 @@ const HpackPrefix kLiteralNeverIndexOpcode = {0x1, 4};
 const HpackPrefix kHeaderTableSizeUpdateOpcode = {0x1, 3};
 
 // Returns symbol code table from "Appendix C. Huffman Code".
-NET_EXPORT_PRIVATE std::vector<HpackHuffmanSymbol> HpackHuffmanCode();
+SPDY_EXPORT_PRIVATE std::vector<HpackHuffmanSymbol> HpackHuffmanCode();
 
 // Returns static table from "Appendix B. Static Table Definition".
-NET_EXPORT_PRIVATE std::vector<HpackStaticEntry> HpackStaticTableVector();
+SPDY_EXPORT_PRIVATE std::vector<HpackStaticEntry> HpackStaticTableVector();
 
 // Returns a HpackHuffmanTable instance initialized with |kHpackHuffmanCode|.
 // The instance is read-only, has static lifetime, and is safe to share amoung
 // threads. This function is thread-safe.
-NET_EXPORT_PRIVATE const HpackHuffmanTable& ObtainHpackHuffmanTable();
+SPDY_EXPORT_PRIVATE const HpackHuffmanTable& ObtainHpackHuffmanTable();
 
 // Returns a HpackStaticTable instance initialized with |kHpackStaticTable|.
 // The instance is read-only, has static lifetime, and is safe to share amoung
 // threads. This function is thread-safe.
-NET_EXPORT_PRIVATE const HpackStaticTable& ObtainHpackStaticTable();
+SPDY_EXPORT_PRIVATE const HpackStaticTable& ObtainHpackStaticTable();
 
 // Pseudo-headers start with a colon.  (HTTP2 8.1.2.1., HPACK 3.1.)
 const char kPseudoHeaderPrefix = ':';

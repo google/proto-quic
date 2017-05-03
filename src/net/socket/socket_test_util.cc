@@ -1264,7 +1264,11 @@ void MockSSLClientSocket::GetSSLCertRequestInfo(
   if (data_->cert_request_info) {
     cert_request_info->host_and_port =
         data_->cert_request_info->host_and_port;
-    cert_request_info->client_certs = data_->cert_request_info->client_certs;
+    cert_request_info->is_proxy = data_->cert_request_info->is_proxy;
+    cert_request_info->cert_authorities =
+        data_->cert_request_info->cert_authorities;
+    cert_request_info->cert_key_types =
+        data_->cert_request_info->cert_key_types;
   } else {
     cert_request_info->Reset();
   }

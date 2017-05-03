@@ -112,6 +112,24 @@
             ]
         }
     ],
+    "AutoDismissingDialogs": [
+        {
+            "platforms": [
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "AutoDismissingDialogs"
+                    ]
+                }
+            ]
+        }
+    ],
     "AutodetectEncoding": [
         {
             "platforms": [
@@ -363,7 +381,11 @@
             ],
             "experiments": [
                 {
-                    "name": "Default",
+                    "//1": "Enable on-by-default redirections with default",
+                    "//2": "client-side init params (ref.",
+                    "//3": "GetDefaultTaskSchedulerInitParams() in",
+                    "//4": "browser_main_loop.cc).",
+                    "name": "RedirectWithDefaultInitParams",
                     "params": {
                         "RedirectSequencedWorkerPools": "true"
                     }
@@ -775,24 +797,6 @@
                     },
                     "disable_features": [
                         "DocumentWriteEvaluator"
-                    ]
-                }
-            ]
-        }
-    ],
-    "DownloadAttributionPerformanceTest": [
-        {
-            "platforms": [
-                "chromeos",
-                "linux",
-                "mac",
-                "win"
-            ],
-            "experiments": [
-                {
-                    "name": "DownloadAttributionEnabled",
-                    "enable_features": [
-                        "DownloadAttribution"
                     ]
                 }
             ]
@@ -1273,21 +1277,6 @@
             ]
         }
     ],
-    "LowPriorityIFrames": [
-        {
-            "platforms": [
-                "android"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled",
-                    "params": {
-                        "lowPriorityIframes": "true"
-                    }
-                }
-            ]
-        }
-    ],
     "MacAllowBackgroundingProcesses": [
         {
             "platforms": [
@@ -1584,26 +1573,6 @@
                     "enable_features": [
                         "PrioritySupportedRequestsDelayable"
                     ]
-                }
-            ]
-        }
-    ],
-    "NetProxyPreconnects": [
-        {
-            "platforms": [
-                "android",
-                "chromeos",
-                "ios",
-                "linux",
-                "mac",
-                "win"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled",
-                    "params": {
-                        "restrict_to_one_preconnect_for_proxies": "true"
-                    }
                 }
             ]
         }
@@ -2789,21 +2758,6 @@
             "experiments": [
                 {
                     "name": "ExperimentYes"
-                }
-            ]
-        }
-    ],
-    "SiteIsolationExtensions": [
-        {
-            "platforms": [
-                "chromeos",
-                "linux",
-                "mac",
-                "win"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled"
                 }
             ]
         }

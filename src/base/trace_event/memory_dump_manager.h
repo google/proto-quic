@@ -34,6 +34,7 @@ class ProcessLocalDumpManagerImplTest;
 
 namespace base {
 
+class SequencedTaskRunner;
 class SingleThreadTaskRunner;
 class Thread;
 
@@ -198,7 +199,7 @@ class BASE_EXPORT MemoryDumpManager {
         const MemoryDumpProviderInfo::OrderedSet& dump_providers,
         scoped_refptr<MemoryDumpSessionState> session_state,
         ProcessMemoryDumpCallback callback,
-        scoped_refptr<SingleThreadTaskRunner> dump_thread_task_runner);
+        scoped_refptr<SequencedTaskRunner> dump_thread_task_runner);
     ~ProcessMemoryDumpAsyncState();
 
     // Gets or creates the memory dump container for the given target process.
@@ -239,7 +240,7 @@ class BASE_EXPORT MemoryDumpManager {
     // as a separate variable as it needs to be accessed by arbitrary dumpers'
     // threads outside of the lock_ to avoid races when disabling tracing.
     // It is immutable for all the duration of a tracing session.
-    const scoped_refptr<SingleThreadTaskRunner> dump_thread_task_runner;
+    const scoped_refptr<SequencedTaskRunner> dump_thread_task_runner;
 
    private:
     DISALLOW_COPY_AND_ASSIGN(ProcessMemoryDumpAsyncState);
@@ -256,6 +257,9 @@ class BASE_EXPORT MemoryDumpManager {
 
   void FinalizeDumpAndAddToTrace(
       std::unique_ptr<ProcessMemoryDumpAsyncState> pmd_async_state);
+
+  // Lazily initializes dump_thread_ and returns its TaskRunner.
+  scoped_refptr<base::SequencedTaskRunner> GetOrCreateBgTaskRunnerLocked();
 
   // Calls InvokeOnMemoryDump() for the next MDP on the task runner specified by
   // the MDP while registration. On failure to do so, skips and continues to
@@ -291,11 +295,6 @@ class BASE_EXPORT MemoryDumpManager {
   // Shared among all the PMDs to keep state scoped to the tracing session.
   scoped_refptr<MemoryDumpSessionState> session_state_;
 
-  // The list of names of dump providers that are blacklisted from strict thread
-  // affinity check on unregistration.
-  std::unordered_set<StringPiece, StringPieceHash>
-      strict_thread_check_blacklist_;
-
   std::unique_ptr<MemoryTracingObserver> tracing_observer_;
 
   // Function provided by the embedder to handle global dump requests.
@@ -310,7 +309,7 @@ class BASE_EXPORT MemoryDumpManager {
 
   // Optimization to avoid attempting any memory dump (i.e. to not walk an empty
   // dump_providers_enabled_ list) when tracing is not enabled.
-  subtle::AtomicWord memory_tracing_enabled_;
+  subtle::AtomicWord is_enabled_;
 
   // Thread used for MemoryDumpProviders which don't specify a task runner
   // affinity.

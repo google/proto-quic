@@ -7,12 +7,12 @@
 #include "net/quic/core/congestion_control/rtt_stats.h"
 #include "net/quic/core/quic_bandwidth.h"
 #include "net/quic/core/quic_packets.h"
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 namespace net {
 namespace test {
 
-class WindowedFilterTest : public ::testing::Test {
+class WindowedFilterTest : public QuicTest {
  public:
   // Set the window to 99ms, so 25ms is more than a quarter rtt.
   WindowedFilterTest()

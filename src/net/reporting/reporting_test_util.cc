@@ -17,7 +17,6 @@
 #include "net/reporting/reporting_cache.h"
 #include "net/reporting/reporting_client.h"
 #include "net/reporting/reporting_context.h"
-#include "net/reporting/reporting_delegate.h"
 #include "net/reporting/reporting_delivery_agent.h"
 #include "net/reporting/reporting_garbage_collector.h"
 #include "net/reporting/reporting_persister.h"
@@ -91,20 +90,6 @@ const ReportingClient* FindClientInCache(const ReportingCache* cache,
   return nullptr;
 }
 
-TestReportingDelegate::TestReportingDelegate() {}
-TestReportingDelegate::~TestReportingDelegate() {}
-
-void TestReportingDelegate::PersistData(
-    std::unique_ptr<const base::Value> persisted_data) {
-  persisted_data_ = std::move(persisted_data);
-}
-
-std::unique_ptr<const base::Value> TestReportingDelegate::GetPersistedData() {
-  if (!persisted_data_)
-    return std::unique_ptr<const base::Value>();
-  return persisted_data_->CreateDeepCopy();
-}
-
 TestReportingUploader::PendingUpload::~PendingUpload() {}
 TestReportingUploader::PendingUpload::PendingUpload() {}
 
@@ -120,18 +105,14 @@ void TestReportingUploader::StartUpload(const GURL& url,
 
 TestReportingContext::TestReportingContext(const ReportingPolicy& policy)
     : ReportingContext(policy,
-                       base::MakeUnique<TestReportingDelegate>(),
                        base::MakeUnique<base::SimpleTestClock>(),
                        base::MakeUnique<base::SimpleTestTickClock>(),
                        base::MakeUnique<TestReportingUploader>()),
       delivery_timer_(new base::MockTimer(/* retain_user_task= */ false,
                                           /* is_repeating= */ false)),
-      persistence_timer_(new base::MockTimer(/* retain_user_task= */ false,
-                                             /* is_repeating= */ false)),
       garbage_collection_timer_(
           new base::MockTimer(/* retain_user_task= */ false,
                               /* is_repeating= */ false)) {
-  persister()->SetTimerForTesting(base::WrapUnique(persistence_timer_));
   garbage_collector()->SetTimerForTesting(
       base::WrapUnique(garbage_collection_timer_));
   delivery_agent()->SetTimerForTesting(base::WrapUnique(delivery_timer_));
@@ -139,7 +120,6 @@ TestReportingContext::TestReportingContext(const ReportingPolicy& policy)
 
 TestReportingContext::~TestReportingContext() {
   delivery_timer_ = nullptr;
-  persistence_timer_ = nullptr;
   garbage_collection_timer_ = nullptr;
 }
 
@@ -148,34 +128,27 @@ ReportingTestBase::ReportingTestBase() {
   ReportingPolicy policy;
   policy.endpoint_backoff_policy.jitter_factor = 0.0;
 
-  CreateAndInitializeContext(policy, std::unique_ptr<const base::Value>(),
-                             base::Time::Now(), base::TimeTicks::Now());
+  CreateContext(policy, base::Time::Now(), base::TimeTicks::Now());
 }
 
 ReportingTestBase::~ReportingTestBase() {}
 
 void ReportingTestBase::UsePolicy(const ReportingPolicy& new_policy) {
-  CreateAndInitializeContext(new_policy, delegate()->GetPersistedData(),
-                             clock()->Now(), tick_clock()->NowTicks());
+  CreateContext(new_policy, clock()->Now(), tick_clock()->NowTicks());
 }
 
 void ReportingTestBase::SimulateRestart(base::TimeDelta delta,
                                         base::TimeDelta delta_ticks) {
-  CreateAndInitializeContext(policy(), delegate()->GetPersistedData(),
-                             clock()->Now() + delta,
-                             tick_clock()->NowTicks() + delta_ticks);
+  CreateContext(policy(), clock()->Now() + delta,
+                tick_clock()->NowTicks() + delta_ticks);
 }
 
-void ReportingTestBase::CreateAndInitializeContext(
-    const ReportingPolicy& policy,
-    std::unique_ptr<const base::Value> persisted_data,
-    base::Time now,
-    base::TimeTicks now_ticks) {
+void ReportingTestBase::CreateContext(const ReportingPolicy& policy,
+                                      base::Time now,
+                                      base::TimeTicks now_ticks) {
   context_ = base::MakeUnique<TestReportingContext>(policy);
-  delegate()->PersistData(std::move(persisted_data));
   clock()->SetNow(now);
   tick_clock()->SetNowTicks(now_ticks);
-  context_->Initialize();
 }
 
 base::TimeTicks ReportingTestBase::yesterday() {

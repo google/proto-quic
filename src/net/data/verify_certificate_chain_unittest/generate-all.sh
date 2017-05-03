@@ -5,12 +5,17 @@
 # found in the LICENSE file.
 
 set -e
-set -x
 
-for script in generate-*.py ; do
-  python "$script"
+for dir in */ ; do
+  cd "$dir"
+
+  if [ -f generate-chains.py ]; then
+    python generate-chains.py
+
+    # Cleanup temporary files.
+    rm -rf */*.pyc
+    rm -rf out/
+  fi
+
+  cd ..
 done
-
-# Cleanup temporary files.
-rm -rf *.pyc
-rm -rf out/

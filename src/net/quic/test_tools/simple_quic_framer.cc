@@ -126,6 +126,9 @@ class SimpleFramerVisitor : public QuicFramerVisitorInterface {
     return stop_waiting_frames_;
   }
   const std::vector<QuicPingFrame>& ping_frames() const { return ping_frames_; }
+  const std::vector<QuicWindowUpdateFrame>& window_update_frames() const {
+    return window_update_frames_;
+  }
   const std::vector<QuicPaddingFrame>& padding_frames() const {
     return padding_frames_;
   }
@@ -209,6 +212,11 @@ const std::vector<QuicStopWaitingFrame>& SimpleQuicFramer::stop_waiting_frames()
 
 const std::vector<QuicPingFrame>& SimpleQuicFramer::ping_frames() const {
   return visitor_->ping_frames();
+}
+
+const std::vector<QuicWindowUpdateFrame>&
+SimpleQuicFramer::window_update_frames() const {
+  return visitor_->window_update_frames();
 }
 
 const std::vector<std::unique_ptr<QuicStreamFrame>>&

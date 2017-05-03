@@ -86,10 +86,9 @@ void QuicDispatcherPeer::SendPublicReset(
     QuicDispatcher* dispatcher,
     const QuicSocketAddress& server_address,
     const QuicSocketAddress& client_address,
-    QuicConnectionId connection_id,
-    QuicPacketNumber rejected_packet_number) {
+    QuicConnectionId connection_id) {
   dispatcher->time_wait_list_manager()->SendPublicReset(
-      server_address, client_address, connection_id, rejected_packet_number);
+      server_address, client_address, connection_id);
 }
 
 }  // namespace test

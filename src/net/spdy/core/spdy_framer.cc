@@ -32,6 +32,7 @@
 #include "net/spdy/core/spdy_frame_reader.h"
 #include "net/spdy/core/spdy_framer_decoder_adapter.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
+#include "net/spdy/platform/api/spdy_ptr_util.h"
 #include "net/spdy/platform/api/spdy_string_utils.h"
 
 using std::vector;
@@ -65,20 +66,6 @@ void UnpackStreamDependencyValues(uint32_t packed,
 // used. This code is isolated to hopefully make merging into Chromium easier.
 std::unique_ptr<SpdyFramerDecoderAdapter> DecoderAdapterFactory(
     SpdyFramer* outer) {
-  if (FLAGS_use_nested_spdy_framer_decoder) {
-    // Since chromium_reloadable_flag_spdy_use_http2_frame_decoder_adapter can
-    // be flipped on in any test when all the feature flags are on,
-    // it can unintentionally override use_nested_spdy_framer_decoder which is
-    // used to validate that the adapter technique is working. Therefore, we
-    // give precedence to use_nested_spdy_framer_decoder.
-    if (FLAGS_chromium_http2_flag_spdy_use_http2_frame_decoder_adapter) {
-      VLOG(1) << "Both NestedSpdyFramerDecoder and Http2FrameDecoderAdapter "
-              << "are enabled. NestedSpdyFramerDecoder selected.";
-    }
-    DVLOG(1) << "Creating NestedSpdyFramerDecoder.";
-    return CreateNestedSpdyFramerDecoder(outer);
-  }
-
   if (FLAGS_chromium_http2_flag_spdy_use_http2_frame_decoder_adapter) {
     DVLOG(1) << "Creating Http2FrameDecoderAdapter.";
     return CreateHttp2FrameDecoderAdapter(outer);
@@ -1450,7 +1437,7 @@ size_t SpdyFramer::ProcessAltSvcFramePayload(const char* data, size_t len) {
 
   if (altsvc_scratch_ == nullptr) {
     size_t capacity = current_frame_length_ - GetFrameHeaderSize();
-    altsvc_scratch_.reset(new CharBuffer(capacity));
+    altsvc_scratch_ = SpdyMakeUnique<CharBuffer>(capacity);
   }
   altsvc_scratch_->CopyFrom(data, len);
   remaining_data_length_ -= len;
@@ -1673,7 +1660,7 @@ SpdyFramer::SpdyFrameIterator::SpdyFrameIterator(SpdyFramer* framer)
 
 SpdyFramer::SpdyFrameIterator::~SpdyFrameIterator() {}
 
-bool SpdyFramer::SpdyFrameIterator::NextFrame(ZeroCopyOutputBuffer* output) {
+size_t SpdyFramer::SpdyFrameIterator::NextFrame(ZeroCopyOutputBuffer* output) {
   SpdyFrameWithHeaderBlockIR* frame_ir = GetIR();
   if (frame_ir == nullptr) {
     LOG(WARNING) << "frame_ir doesn't exist.";
@@ -1688,7 +1675,7 @@ bool SpdyFramer::SpdyFrameIterator::NextFrame(ZeroCopyOutputBuffer* output) {
   size_t size_without_block = is_first_frame_
                                   ? GetFrameSizeSansBlock()
                                   : framer_->GetContinuationMinimumSize();
-  auto encoding = base::MakeUnique<SpdyString>();
+  auto encoding = SpdyMakeUnique<SpdyString>();
   encoder_->Next(kMaxControlFrameSize - size_without_block, encoding.get());
   has_next_frame_ = encoder_->HasNext();
 
@@ -1711,7 +1698,9 @@ bool SpdyFramer::SpdyFrameIterator::NextFrame(ZeroCopyOutputBuffer* output) {
   if (is_first_frame_) {
     is_first_frame_ = false;
     frame_ir->set_end_headers(!has_next_frame_);
-    return SerializeGivenEncoding(*encoding, output);
+    size_t free_bytes_before = output->BytesFree();
+    bool ok = SerializeGivenEncoding(*encoding, output);
+    return ok ? free_bytes_before - output->BytesFree() : 0;
   } else {
     SpdyContinuationIR continuation_ir(frame_ir->stream_id());
     continuation_ir.set_end_headers(!has_next_frame_);
@@ -1771,6 +1760,55 @@ bool SpdyFramer::SpdyPushPromiseFrameIterator::SerializeGivenEncoding(
     ZeroCopyOutputBuffer* output) const {
   return GetFramer()->SerializePushPromiseGivenEncoding(*push_promise_ir_,
                                                         encoding, output);
+}
+
+SpdyFramer::SpdyControlFrameIterator::SpdyControlFrameIterator(
+    SpdyFramer* framer,
+    std::unique_ptr<SpdyFrameIR> frame_ir)
+    : framer_(framer), frame_ir_(std::move(frame_ir)) {}
+
+SpdyFramer::SpdyControlFrameIterator::~SpdyControlFrameIterator() {}
+
+size_t SpdyFramer::SpdyControlFrameIterator::NextFrame(
+    ZeroCopyOutputBuffer* output) {
+  size_t size_written = framer_->SerializeFrame(*frame_ir_, output);
+  frame_ir_.reset();
+  return size_written;
+}
+
+bool SpdyFramer::SpdyControlFrameIterator::HasNextFrame() const {
+  return frame_ir_ != nullptr;
+}
+
+// TODO(yasong): remove all the down_casts.
+std::unique_ptr<SpdyFrameSequence> SpdyFramer::CreateIterator(
+    SpdyFramer* framer,
+    std::unique_ptr<SpdyFrameIR> frame_ir) {
+  std::unique_ptr<SpdyFrameSequence> result = nullptr;
+  switch (frame_ir->frame_type()) {
+    case SpdyFrameType::DATA: {
+      DLOG(ERROR) << "Data should use a different path to write";
+      result = nullptr;
+      break;
+    }
+    case SpdyFrameType::HEADERS: {
+      result = base::MakeUnique<SpdyHeaderFrameIterator>(
+          framer,
+          base::WrapUnique(static_cast<SpdyHeadersIR*>(frame_ir.get())));
+      break;
+    }
+    case SpdyFrameType::PUSH_PROMISE: {
+      result = base::MakeUnique<SpdyPushPromiseFrameIterator>(
+          framer,
+          base::WrapUnique(static_cast<SpdyPushPromiseIR*>(frame_ir.get())));
+      break;
+    }
+    default: {
+      result = base::MakeUnique<SpdyControlFrameIterator>(framer,
+                                                          std::move(frame_ir));
+    }
+  }
+  return result;
 }
 
 void SpdyFramer::SerializeDataBuilderHelper(const SpdyDataIR& data_ir,
@@ -2705,7 +2743,7 @@ class FrameSerializationVisitorWithOutput : public SpdyFrameVisitor {
       : framer_(framer), output_(output), result_(false) {}
   ~FrameSerializationVisitorWithOutput() override {}
 
-  bool Result() { return result_; }
+  size_t Result() { return result_; }
 
   void VisitData(const SpdyDataIR& data) override {
     result_ = framer_->SerializeData(data, output_);
@@ -2749,11 +2787,12 @@ class FrameSerializationVisitorWithOutput : public SpdyFrameVisitor {
 
 }  // namespace
 
-bool SpdyFramer::SerializeFrame(const SpdyFrameIR& frame,
-                                ZeroCopyOutputBuffer* output) {
+size_t SpdyFramer::SerializeFrame(const SpdyFrameIR& frame,
+                                  ZeroCopyOutputBuffer* output) {
   FrameSerializationVisitorWithOutput visitor(this, output);
+  size_t free_bytes_before = output->BytesFree();
   frame.Visit(&visitor);
-  return visitor.Result();
+  return visitor.Result() ? free_bytes_before - output->BytesFree() : 0;
 }
 
 size_t SpdyFramer::GetNumberRequiredContinuationFrames(size_t size) {
@@ -2884,7 +2923,7 @@ bool SpdyFramer::WritePayloadWithContinuation(SpdyFrameBuilder* builder,
 
 HpackEncoder* SpdyFramer::GetHpackEncoder() {
   if (hpack_encoder_.get() == nullptr) {
-    hpack_encoder_.reset(new HpackEncoder(ObtainHpackHuffmanTable()));
+    hpack_encoder_ = SpdyMakeUnique<HpackEncoder>(ObtainHpackHuffmanTable());
     if (!compression_enabled()) {
       hpack_encoder_->DisableCompression();
     }
@@ -2895,9 +2934,9 @@ HpackEncoder* SpdyFramer::GetHpackEncoder() {
 HpackDecoderInterface* SpdyFramer::GetHpackDecoder() {
   if (hpack_decoder_.get() == nullptr) {
     if (FLAGS_chromium_http2_flag_spdy_use_hpack_decoder3) {
-      hpack_decoder_.reset(new HpackDecoder3());
+      hpack_decoder_ = SpdyMakeUnique<HpackDecoder3>();
     } else {
-      hpack_decoder_.reset(new HpackDecoder());
+      hpack_decoder_ = SpdyMakeUnique<HpackDecoder>();
     }
   }
   return hpack_decoder_.get();

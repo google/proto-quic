@@ -8,6 +8,8 @@
 #include <limits.h>
 #include <stdlib.h>
 
+#include <limits>
+
 #include "base/atomicops.h"
 #include "base/base_switches.h"
 #include "base/command_line.h"
@@ -19,6 +21,7 @@
 #include "base/numerics/safe_math.h"
 #include "base/process/process_handle.h"
 #include "base/third_party/valgrind/memcheck.h"
+#include "base/threading/platform_thread.h"
 #include "base/threading/worker_pool.h"
 #include "base/tracking_info.h"
 #include "build/build_config.h"
@@ -110,13 +113,17 @@ DeathData::DeathData()
       queue_duration_max_(0),
       alloc_ops_(0),
       free_ops_(0),
-      allocated_bytes_(0),
-      freed_bytes_(0),
-      alloc_overhead_bytes_(0),
+#if !defined(ARCH_CPU_64_BITS)
+      byte_update_counter_(0),
+#endif
+      allocated_bytes_(),
+      freed_bytes_(),
+      alloc_overhead_bytes_(),
       max_allocated_bytes_(0),
       run_duration_sample_(0),
       queue_duration_sample_(0),
-      last_phase_snapshot_(nullptr) {}
+      last_phase_snapshot_(nullptr) {
+}
 
 DeathData::DeathData(const DeathData& other)
     : count_(other.count_),
@@ -127,6 +134,9 @@ DeathData::DeathData(const DeathData& other)
       queue_duration_max_(other.queue_duration_max_),
       alloc_ops_(other.alloc_ops_),
       free_ops_(other.free_ops_),
+#if !defined(ARCH_CPU_64_BITS)
+      byte_update_counter_(0),
+#endif
       allocated_bytes_(other.allocated_bytes_),
       freed_bytes_(other.freed_bytes_),
       alloc_overhead_bytes_(other.alloc_overhead_bytes_),
@@ -203,16 +213,32 @@ void DeathData::RecordAllocations(const uint32_t alloc_ops,
                                   const uint32_t freed_bytes,
                                   const uint32_t alloc_overhead_bytes,
                                   const uint32_t max_allocated_bytes) {
+#if !defined(ARCH_CPU_64_BITS)
+  // On 32 bit systems, we use an even/odd locking scheme to make possible to
+  // read 64 bit sums consistently. Note that since writes are bound to the
+  // thread owning this DeathData, there's no race on these writes.
+  int32_t counter_val =
+      base::subtle::Barrier_AtomicIncrement(&byte_update_counter_, 1);
+  // The counter must be odd.
+  DCHECK_EQ(1, counter_val & 1);
+#endif
+
   // Use saturating arithmetic.
   SaturatingMemberAdd(alloc_ops, &alloc_ops_);
   SaturatingMemberAdd(free_ops, &free_ops_);
-  SaturatingMemberAdd(allocated_bytes, &allocated_bytes_);
-  SaturatingMemberAdd(freed_bytes, &freed_bytes_);
-  SaturatingMemberAdd(alloc_overhead_bytes, &alloc_overhead_bytes_);
+  SaturatingByteCountMemberAdd(allocated_bytes, &allocated_bytes_);
+  SaturatingByteCountMemberAdd(freed_bytes, &freed_bytes_);
+  SaturatingByteCountMemberAdd(alloc_overhead_bytes, &alloc_overhead_bytes_);
 
   int32_t max = base::saturated_cast<int32_t>(max_allocated_bytes);
   if (max > max_allocated_bytes_)
     base::subtle::NoBarrier_Store(&max_allocated_bytes_, max);
+
+#if !defined(ARCH_CPU_64_BITS)
+  // Now release the value while rolling to even.
+  counter_val = base::subtle::Barrier_AtomicIncrement(&byte_update_counter_, 1);
+  DCHECK_EQ(0, counter_val & 1);
+#endif
 }
 
 void DeathData::OnProfilingPhaseCompleted(int profiling_phase) {
@@ -250,15 +276,102 @@ void DeathData::OnProfilingPhaseCompleted(int profiling_phase) {
   base::subtle::NoBarrier_Store(&queue_duration_max_, 0);
 }
 
+// static
+int64_t DeathData::UnsafeCumulativeByteCountRead(
+    const CumulativeByteCount* count) {
+#if defined(ARCH_CPU_64_BITS)
+  return base::subtle::NoBarrier_Load(count);
+#else
+  return static_cast<int64_t>(base::subtle::NoBarrier_Load(&count->hi_word))
+             << 32 |
+         static_cast<uint32_t>(base::subtle::NoBarrier_Load(&count->lo_word));
+#endif
+}
+
+int64_t DeathData::ConsistentCumulativeByteCountRead(
+    const CumulativeByteCount* count) const {
+#if defined(ARCH_CPU_64_BITS)
+  return base::subtle::NoBarrier_Load(count);
+#else
+  // We're on a 32 bit system, this is going to be complicated.
+  while (true) {
+    int32_t update_counter = 0;
+    // Acquire the starting count, spin until it's even.
+
+    // The value of |kYieldProcessorTries| is cargo culted from the page
+    // allocator, TCMalloc, Window critical section defaults, and various other
+    // recommendations.
+    // This is not performance critical here, as the reads are vanishingly rare
+    // and only happen under the --enable-heap-profiling=task-profiler flag.
+    constexpr size_t kYieldProcessorTries = 1000;
+    size_t lock_attempts = 0;
+    do {
+      ++lock_attempts;
+      if (lock_attempts == kYieldProcessorTries) {
+        // Yield the current thread periodically to avoid writer starvation.
+        base::PlatformThread::YieldCurrentThread();
+        lock_attempts = 0;
+      }
+
+      update_counter = base::subtle::NoBarrier_Load(&byte_update_counter_);
+    } while (update_counter & 1);
+
+    // Make sure the reads below see all changes before the update counter.
+    base::subtle::MemoryBarrier();
+
+    DCHECK_EQ(update_counter & 1, 0);
+
+    int64_t value =
+        static_cast<int64_t>(base::subtle::NoBarrier_Load(&count->hi_word))
+            << 32 |
+        static_cast<uint32_t>(base::subtle::NoBarrier_Load(&count->lo_word));
+
+    // Release_Load() semantics here ensure that the |byte_update_counter_|
+    // value seen is at least as old as the |hi_word|/|lo_word| values seen
+    // above, which means that if it's still equal to |update_counter|, the read
+    // is consistent, since the above MemoryBarrier() ensures they're at least
+    // as new as the afore-obtained |update_counter|'s value.
+    if (update_counter == base::subtle::Release_Load(&byte_update_counter_))
+      return value;
+  }
+#endif
+}
+
+// static
 void DeathData::SaturatingMemberAdd(const uint32_t addend,
                                     base::subtle::Atomic32* sum) {
+  constexpr int32_t kInt32Max = std::numeric_limits<int32_t>::max();
   // Bail quick if no work or already saturated.
-  if (addend == 0U || *sum == INT_MAX)
+  if (addend == 0U || *sum == kInt32Max)
     return;
 
   base::CheckedNumeric<int32_t> new_sum = *sum;
   new_sum += addend;
-  base::subtle::NoBarrier_Store(sum, new_sum.ValueOrDefault(INT_MAX));
+  base::subtle::NoBarrier_Store(sum, new_sum.ValueOrDefault(kInt32Max));
+}
+
+void DeathData::SaturatingByteCountMemberAdd(const uint32_t addend,
+                                             CumulativeByteCount* sum) {
+  constexpr int64_t kInt64Max = std::numeric_limits<int64_t>::max();
+  // Bail quick if no work or already saturated.
+  if (addend == 0U || UnsafeCumulativeByteCountRead(sum) == kInt64Max)
+    return;
+
+  base::CheckedNumeric<int64_t> new_sum = UnsafeCumulativeByteCountRead(sum);
+  new_sum += addend;
+  int64_t new_value = new_sum.ValueOrDefault(kInt64Max);
+// Update our value.
+#if defined(ARCH_CPU_64_BITS)
+  base::subtle::NoBarrier_Store(sum, new_value);
+#else
+  // This must only be called while the update counter is "locked" (i.e. odd).
+  DCHECK_EQ(base::subtle::NoBarrier_Load(&byte_update_counter_) & 1, 1);
+
+  base::subtle::NoBarrier_Store(&sum->hi_word,
+                                static_cast<int32_t>(new_value >> 32));
+  base::subtle::NoBarrier_Store(&sum->lo_word,
+                                static_cast<int32_t>(new_value & 0xFFFFFFFF));
+#endif
 }
 
 //------------------------------------------------------------------------------
@@ -286,9 +399,9 @@ DeathDataSnapshot::DeathDataSnapshot(int count,
                                      int32_t queue_duration_sample,
                                      int32_t alloc_ops,
                                      int32_t free_ops,
-                                     int32_t allocated_bytes,
-                                     int32_t freed_bytes,
-                                     int32_t alloc_overhead_bytes,
+                                     int64_t allocated_bytes,
+                                     int64_t freed_bytes,
+                                     int64_t alloc_overhead_bytes,
                                      int32_t max_allocated_bytes)
     : count(count),
       run_duration_sum(run_duration_sum),

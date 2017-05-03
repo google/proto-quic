@@ -100,6 +100,8 @@ class QUIC_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   // Deletes streams that are safe to be deleted now that it's safe to do so (no
   // other operations are being done on the streams at this time).
   void PostProcessAfterData() override;
+  // Adds a connection level WINDOW_UPDATE frame.
+  void OnAckNeedsRetransmittableFrame() override;
   bool WillingAndAbleToWrite() const override;
   bool HasPendingHandshake() const override;
   bool HasOpenDynamicStreams() const override;
@@ -292,11 +294,11 @@ class QUIC_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
 
   // When a stream is closed locally, it may not yet know how many bytes the
   // peer sent on that stream.
-  // When this data arrives (via stream frame w. FIN, or RST) this method
-  // is called, and correctly updates the connection level flow controller.
-  void UpdateFlowControlOnFinalReceivedByteOffset(
-      QuicStreamId id,
-      QuicStreamOffset final_byte_offset);
+  // When this data arrives (via stream frame w. FIN, trailing headers, or RST)
+  // this method is called, and correctly updates the connection level flow
+  // controller.
+  virtual void OnFinalByteOffsetReceived(QuicStreamId id,
+                                         QuicStreamOffset final_byte_offset);
 
   // Return true if given stream is peer initiated.
   bool IsIncomingStream(QuicStreamId id) const;

@@ -94,7 +94,25 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
    private:
     friend class QuicChromiumClientSession;
 
-    StreamRequest(const base::WeakPtr<QuicChromiumClientSession>& session);
+    enum State {
+      STATE_NONE,
+      STATE_WAIT_FOR_CONFIRMATION,
+      STATE_WAIT_FOR_CONFIRMATION_COMPLETE,
+      STATE_REQUEST_STREAM,
+      STATE_REQUEST_STREAM_COMPLETE,
+    };
+
+    StreamRequest(const base::WeakPtr<QuicChromiumClientSession>& session,
+                  bool requires_confirmation);
+
+    void OnIOComplete(int rv);
+    void DoCallback(int rv);
+
+    int DoLoop(int rv);
+    int DoWaitForConfirmation();
+    int DoWaitForConfirmationComplete(int rv);
+    int DoRequestStream();
+    int DoRequestStreamComplete(int rv);
 
     // Called by |session_| for an asynchronous request when the stream
     // request has finished successfully.
@@ -106,10 +124,14 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
     void OnRequestCompleteFailure(int rv);
 
     base::WeakPtr<QuicChromiumClientSession> session_;
+    const bool requires_confirmation_;
     CompletionCallback callback_;
     QuicChromiumClientStream* stream_;
     // For tracking how much time pending stream requests wait.
     base::TimeTicks pending_start_time_;
+    State next_state_;
+
+    base::WeakPtrFactory<StreamRequest> weak_factory_;
 
     DISALLOW_COPY_AND_ASSIGN(StreamRequest);
   };
@@ -147,7 +169,18 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   void AddObserver(Observer* observer);
   void RemoveObserver(Observer* observer);
 
-  std::unique_ptr<StreamRequest> CreateStreamRequest();
+  // Waits for the handshake to be confirmed and invokes |callback| when
+  // that happens. If the handshake has already been confirmed, returns OK.
+  // If the connection has already been closed, returns a net error. If the
+  // connection closes before the handshake is confirmed, |callback| will
+  // be invoked with an error.
+  int WaitForHandshakeConfirmation(const CompletionCallback& callback);
+
+  // Returns a new stream request which can be used to create a new
+  // QUIC stream. If |requires_confirmation| is true, then the requested
+  // stream will not be created until the handshake as been confirmed.
+  std::unique_ptr<StreamRequest> CreateStreamRequest(
+      bool requires_confirmation);
 
   // Attempts to create a new stream.  If the stream can be
   // created immediately, returns OK.  If the open stream limit
@@ -222,9 +255,9 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   // and passing the data along to the QuicConnection.
   void StartReading();
 
-  // Close the session because of |error| and notifies the factory
+  // Close the session because of |net_error| and notifies the factory
   // that this session has been closed, which will delete the session.
-  void CloseSessionOnError(int error, QuicErrorCode quic_error);
+  void CloseSessionOnError(int net_error, QuicErrorCode quic_error);
 
   std::unique_ptr<base::Value> GetInfoAsValue(
       const std::set<HostPortPair>& aliases);
@@ -337,20 +370,10 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
 
   void OnClosedStream();
 
-  // Close the session because of |error| and records it in UMA histogram.
-  void RecordAndCloseSessionOnError(int error, QuicErrorCode quic_error);
-
-  // A Session may be closed via any of three methods:
-  // OnConnectionClosed - called by the connection when the connection has been
-  //     closed, perhaps due to a timeout or a protocol error.
-  // CloseSessionOnError - called from the owner of the session,
-  //     the QuicStreamFactory, when there is an error.
-  // OnReadComplete - when there is a read error.
-  // This method closes all stream and performs any necessary cleanup.
-  void CloseSessionOnErrorInner(int net_error, QuicErrorCode quic_error);
-
   void CloseAllStreams(int net_error);
   void CloseAllObservers(int net_error);
+  void CancelAllRequests(int net_error);
+  void NotifyRequestsOfConfirmation(int net_error);
 
   // Notifies the factory that this session is going away and no more streams
   // should be created from it.  This needs to be called before closing any
@@ -377,6 +400,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   bool pkp_bypassed_;
   ObserverSet observers_;
   StreamRequestQueue stream_requests_;
+  std::vector<CompletionCallback> waiting_for_confirmation_callbacks_;
   CompletionCallback callback_;
   size_t num_total_streams_;
   base::TaskRunner* task_runner_;

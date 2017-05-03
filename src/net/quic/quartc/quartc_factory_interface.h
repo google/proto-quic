@@ -1,4 +1,4 @@
-// Copyright (c) 2016 The Chromium Authors. All rights reserved.
+// Copyright (c) 2017 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -10,14 +10,14 @@
 
 #include <memory>
 
-#include "net/quic/platform/api/quic_export.h"
+#include "net/quic/quartc/quartc_clock_interface.h"
 #include "net/quic/quartc/quartc_session_interface.h"
 #include "net/quic/quartc/quartc_task_runner_interface.h"
 
 namespace net {
 
 // Used to create instances for Quartc objects such as QuartcSession.
-class QUIC_EXPORT_PRIVATE QuartcFactoryInterface {
+class QuartcFactoryInterface {
  public:
   virtual ~QuartcFactoryInterface() {}
 
@@ -46,8 +46,12 @@ class QUIC_EXPORT_PRIVATE QuartcFactoryInterface {
 struct QuartcFactoryConfig {
   // The task runner used by the QuartcAlarm. Implemented by the Quartc user
   // with different mechanism. For example in WebRTC, it is implemented with
-  // rtc::Thread.
+  // rtc::Thread. Owned by the user, and needs to stay alive for as long
+  // as the QuartcFactory exists.
   QuartcTaskRunnerInterface* task_runner = nullptr;
+  // The clock used by QuartcAlarms. Implemented by the Quartc user. Owned by
+  // the user, and needs to stay alive for as long as the QuartcFactory exists.
+  QuartcClockInterface* clock = nullptr;
   // If create_at_exit_manager = true, an AtExitManager will be created and
   // owned by the QuartcFactory. In some scenarios, such as unit tests, this
   // value could be false and no AtExitManager will be created.
@@ -55,7 +59,7 @@ struct QuartcFactoryConfig {
 };
 
 // Creates a new instance of QuartcFactoryInterface.
-QUIC_EXPORT_PRIVATE std::unique_ptr<QuartcFactoryInterface> CreateQuartcFactory(
+std::unique_ptr<QuartcFactoryInterface> CreateQuartcFactory(
     const QuartcFactoryConfig& factory_config);
 
 }  // namespace net

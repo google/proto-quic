@@ -33,7 +33,7 @@ namespace test {
 class ScopedTaskEnvironment {
  public:
   enum class MainThreadType {
-    // The main thread doesn't pump messages.
+    // The main thread doesn't pump system messages.
     DEFAULT,
     // The main thread pumps UI messages.
     UI,

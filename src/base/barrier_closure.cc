@@ -4,50 +4,48 @@
 
 #include "base/barrier_closure.h"
 
+#include <utility>
+
 #include "base/atomic_ref_count.h"
 #include "base/bind.h"
+#include "base/memory/ptr_util.h"
 
+namespace base {
 namespace {
 
 // Maintains state for a BarrierClosure.
 class BarrierInfo {
  public:
-  BarrierInfo(int num_callbacks_left, const base::Closure& done_closure);
+  BarrierInfo(int num_callbacks_left, OnceClosure done_closure);
   void Run();
 
  private:
-  base::AtomicRefCount num_callbacks_left_;
-  base::Closure done_closure_;
+  AtomicRefCount num_callbacks_left_;
+  OnceClosure done_closure_;
 };
 
-BarrierInfo::BarrierInfo(int num_callbacks, const base::Closure& done_closure)
+BarrierInfo::BarrierInfo(int num_callbacks, OnceClosure done_closure)
     : num_callbacks_left_(num_callbacks),
-      done_closure_(done_closure) {
-}
+      done_closure_(std::move(done_closure)) {}
 
 void BarrierInfo::Run() {
-  DCHECK(!base::AtomicRefCountIsZero(&num_callbacks_left_));
-  if (!base::AtomicRefCountDec(&num_callbacks_left_)) {
-    base::Closure done_closure = done_closure_;
-    done_closure_.Reset();
-    done_closure.Run();
-  }
+  DCHECK(!AtomicRefCountIsZero(&num_callbacks_left_));
+  if (!AtomicRefCountDec(&num_callbacks_left_))
+    std::move(done_closure_).Run();
 }
 
 }  // namespace
 
-namespace base {
-
-base::Closure BarrierClosure(int num_callbacks_left,
-                             const base::Closure& done_closure) {
+RepeatingClosure BarrierClosure(int num_callbacks_left,
+                                OnceClosure done_closure) {
   DCHECK_GE(num_callbacks_left, 0);
 
   if (num_callbacks_left == 0)
-    done_closure.Run();
+    std::move(done_closure).Run();
 
-  return base::Bind(&BarrierInfo::Run,
-                    base::Owned(
-                        new BarrierInfo(num_callbacks_left, done_closure)));
+  return BindRepeating(
+      &BarrierInfo::Run,
+      Owned(new BarrierInfo(num_callbacks_left, std::move(done_closure))));
 }
 
 }  // namespace base

@@ -8,8 +8,8 @@
 
 #include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_str_cat.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/mock_clock.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
 
@@ -83,7 +83,7 @@ std::vector<TestParams> GetTestParams() {
 
 // TODO(jokulik): Once we've rolled out the cubic convex fix, we will
 // no longer need a parameterized test.
-class CubicTest : public ::testing::TestWithParam<TestParams> {
+class CubicTest : public QuicTestWithParam<TestParams> {
  protected:
   CubicTest()
       : one_ms_(QuicTime::Delta::FromMilliseconds(1)),

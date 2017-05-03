@@ -21,7 +21,7 @@ struct GeneralizedTime;
 }
 
 class SignaturePolicy;
-class TrustAnchor;
+struct CertificateTrust;
 
 // The key purpose (extended key usage) to check for during verification.
 enum class KeyPurpose {
@@ -58,15 +58,19 @@ enum class KeyPurpose {
 //
 //   cert_chain:
 //     A non-empty chain of N DER-encoded certificates, listed in the
-//     "forward" direction.
+//     "forward" direction. The first certificate is the target certificate to
+//     verify, and the last certificate has trustedness given by
+//     |last_cert_trust|.
 //
 //      * cert_chain[0] is the target certificate to verify.
 //      * cert_chain[i+1] holds the certificate that issued cert_chain[i].
-//      * cert_chain[N-1] must be issued by the trust anchor.
+//      * cert_chain[N-1] the root certificate
 //
-//   trust_anchor:
-//     Contains the trust anchor (root) used to verify the chain. Must be
-//     non-null.
+//   last_cert_trust:
+//     Trustedness of certs.back(). The trustedness of certs.back() MUST BE
+//     decided by the caller -- this function takes it purely as an input.
+//     Moreover, the CertificateTrust can be used to specify trust anchor
+//     constraints [1]
 //
 //   signature_policy:
 //     The policy to use when verifying signatures (what hash algorithms are
@@ -81,17 +85,32 @@ enum class KeyPurpose {
 // ---------
 // Outputs
 // ---------
-//
-//   Returns true if the target certificate can be verified.
-//   TODO(eroman): This return value is redundant with the |errors| parameter.
-//
 //   errors:
 //     Must be non-null. The set of errors/warnings encountered while
 //     validating the path are appended to this structure. If verification
-//     failed, then there is guaranteed to be at least 1 error written to
-//     |errors|.
-NET_EXPORT bool VerifyCertificateChain(const ParsedCertificateList& certs,
-                                       const TrustAnchor* trust_anchor,
+//     failed, then there is guaranteed to be at least 1 high severity error
+//     written to |errors|.
+//
+// [1] Conceptually VerifyCertificateChain() sets RFC 5937's
+// "enforceTrustAnchorConstraints" to true. And one specifies whether to
+// interpret a root certificate as having trust anchor constraints through the
+// |last_cert_trust| parameter. The constraints are just a subset of the
+// extensions present in the certificate:
+//
+//  * Signature:             No
+//  * Validity (expiration): No
+//  * Key usage:             No
+//  * Extended key usage:    Yes (not part of RFC 5937)
+//  * Basic constraints:     Yes, but only the pathlen (CA=false is accepted)
+//  * Name constraints:      Yes
+//  * Certificate policies:  Not currently, TODO(crbug.com/634453)
+//  * inhibitAnyPolicy:      Not currently, TODO(crbug.com/634453)
+//  * PolicyConstraints:     Not currently, TODO(crbug.com/634452)
+//
+// The presence of any other unrecognized extension marked as critical fails
+// validation.
+NET_EXPORT void VerifyCertificateChain(const ParsedCertificateList& certs,
+                                       const CertificateTrust& last_cert_trust,
                                        const SignaturePolicy* signature_policy,
                                        const der::GeneralizedTime& time,
                                        KeyPurpose required_key_purpose,

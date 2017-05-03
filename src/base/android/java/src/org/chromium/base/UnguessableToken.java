@@ -33,12 +33,12 @@ public class UnguessableToken implements Parcelable {
     }
 
     @CalledByNative
-    private long getHighForSerialization() {
+    public long getHighForSerialization() {
         return mHigh;
     }
 
     @CalledByNative
-    private long getLowForSerialization() {
+    public long getLowForSerialization() {
         return mLow;
     }
 

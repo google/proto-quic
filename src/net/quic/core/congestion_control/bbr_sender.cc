@@ -553,6 +553,13 @@ void BbrSender::UpdateRecoveryState(QuicPacketNumber last_acked_packet,
       // Enter conservation on the first loss.
       if (has_losses) {
         recovery_state_ = CONSERVATION;
+        if (FLAGS_quic_reloadable_flag_quic_bbr_fix_conservation) {
+          // This will cause the |recovery_window_| to be set to the correct
+          // value in CalculateRecoveryWindow().
+          recovery_window_ = 0;
+          QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_fix_conservation, 1,
+                            3);
+        }
         // Since the conservation phase is meant to be lasting for a whole
         // round, extend the current round as if it were started right now.
         current_round_trip_end_ = last_sent_packet_;
@@ -712,10 +719,25 @@ void BbrSender::CalculateCongestionWindow(QuicByteCount bytes_acked) {
 void BbrSender::CalculateRecoveryWindow(QuicByteCount bytes_acked) {
   switch (recovery_state_) {
     case CONSERVATION:
-      recovery_window_ = unacked_packets_->bytes_in_flight() + bytes_acked;
+      if (FLAGS_quic_reloadable_flag_quic_bbr_fix_conservation) {
+        QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_fix_conservation, 2, 3);
+        recovery_window_ =
+            std::max(unacked_packets_->bytes_in_flight() + bytes_acked,
+                     recovery_window_);
+      } else {
+        recovery_window_ = unacked_packets_->bytes_in_flight() + bytes_acked;
+      }
       break;
     case GROWTH:
-      recovery_window_ = unacked_packets_->bytes_in_flight() + 2 * bytes_acked;
+      if (FLAGS_quic_reloadable_flag_quic_bbr_fix_conservation) {
+        QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_fix_conservation, 3, 3);
+        recovery_window_ =
+            std::max(unacked_packets_->bytes_in_flight() + 2 * bytes_acked,
+                     recovery_window_ + bytes_acked);
+      } else {
+        recovery_window_ =
+            unacked_packets_->bytes_in_flight() + 2 * bytes_acked;
+      }
       break;
     default:
       break;

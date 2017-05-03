@@ -188,10 +188,6 @@ class NET_EXPORT HttpNetworkSession
     // Enable HTTP/0.9 for HTTP/HTTPS on ports other than the default one for
     // each protocol.
     bool http_09_on_non_default_ports_enabled;
-
-    // If true, only one pending preconnect is allowed to proxies that support
-    // request priorities.
-    bool restrict_to_one_preconnect_for_proxies;
   };
 
   enum SocketPoolType {

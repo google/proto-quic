@@ -38,7 +38,8 @@ def _ComputePythonDependencies():
     if not path.startswith(_SRC_ROOT):
       continue
 
-    if path.endswith('.pyc'):
+    if (path.endswith('.pyc')
+        or (path.endswith('c') and not os.path.splitext(path)[1])):
       path = path[:-1]
     src_paths.add(path)
 

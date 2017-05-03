@@ -717,7 +717,7 @@ void SimpleEntryImpl::OpenEntryInternal(bool have_index,
           last_used_, last_modified_, data_size_, sparse_data_size_)));
   Closure task =
       base::Bind(&SimpleSynchronousEntry::OpenEntry, cache_type_, path_, key_,
-                 entry_hash_, have_index, results.get());
+                 entry_hash_, have_index, start_time, results.get());
   Closure reply =
       base::Bind(&SimpleEntryImpl::CreationOperationComplete, this, callback,
                  start_time, base::Passed(&results), out_entry,
@@ -757,13 +757,9 @@ void SimpleEntryImpl::CreateEntryInternal(bool have_index,
   std::unique_ptr<SimpleEntryCreationResults> results(
       new SimpleEntryCreationResults(SimpleEntryStat(
           last_used_, last_modified_, data_size_, sparse_data_size_)));
-  Closure task = base::Bind(&SimpleSynchronousEntry::CreateEntry,
-                            cache_type_,
-                            path_,
-                            key_,
-                            entry_hash_,
-                            have_index,
-                            results.get());
+  Closure task =
+      base::Bind(&SimpleSynchronousEntry::CreateEntry, cache_type_, path_, key_,
+                 entry_hash_, have_index, start_time, results.get());
   Closure reply =
       base::Bind(&SimpleEntryImpl::CreationOperationComplete, this, callback,
                  start_time, base::Passed(&results), out_entry,

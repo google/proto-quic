@@ -26,8 +26,10 @@ class NET_EXPORT TrustStoreCollection : public TrustStore {
   void AddTrustStore(TrustStore* store);
 
   // TrustStore implementation:
-  void FindTrustAnchorsForCert(const scoped_refptr<ParsedCertificate>& cert,
-                               TrustAnchors* matches) const override;
+  void SyncGetIssuersOf(const ParsedCertificate* cert,
+                        ParsedCertificateList* issuers) override;
+  void GetTrust(const scoped_refptr<ParsedCertificate>& cert,
+                CertificateTrust* trust) const override;
 
  private:
   std::vector<TrustStore*> stores_;

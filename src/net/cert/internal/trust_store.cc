@@ -6,37 +6,77 @@
 
 namespace net {
 
-scoped_refptr<TrustAnchor> TrustAnchor::CreateFromCertificateNoConstraints(
-    scoped_refptr<ParsedCertificate> cert) {
-  return scoped_refptr<TrustAnchor>(new TrustAnchor(std::move(cert), false));
+CertificateTrust CertificateTrust::ForTrustAnchor() {
+  CertificateTrust result;
+  result.type = CertificateTrustType::TRUSTED_ANCHOR;
+  return result;
 }
 
-scoped_refptr<TrustAnchor> TrustAnchor::CreateFromCertificateWithConstraints(
-    scoped_refptr<ParsedCertificate> cert) {
-  return scoped_refptr<TrustAnchor>(new TrustAnchor(std::move(cert), true));
+CertificateTrust CertificateTrust::ForTrustAnchorEnforcingConstraints() {
+  CertificateTrust result;
+  result.type = CertificateTrustType::TRUSTED_ANCHOR_WITH_CONSTRAINTS;
+  return result;
 }
 
-der::Input TrustAnchor::spki() const {
-  return cert_->tbs().spki_tlv;
+CertificateTrust CertificateTrust::ForUnspecified() {
+  CertificateTrust result;
+  result.type = CertificateTrustType::UNSPECIFIED;
+  return result;
 }
 
-der::Input TrustAnchor::normalized_subject() const {
-  return cert_->normalized_subject();
+CertificateTrust CertificateTrust::ForDistrusted() {
+  CertificateTrust result;
+  result.type = CertificateTrustType::DISTRUSTED;
+  return result;
 }
 
-const scoped_refptr<ParsedCertificate>& TrustAnchor::cert() const {
-  return cert_;
+bool CertificateTrust::IsTrustAnchor() const {
+  switch (type) {
+    case CertificateTrustType::DISTRUSTED:
+    case CertificateTrustType::UNSPECIFIED:
+      return false;
+    case CertificateTrustType::TRUSTED_ANCHOR:
+    case CertificateTrustType::TRUSTED_ANCHOR_WITH_CONSTRAINTS:
+      return true;
+  }
+
+  NOTREACHED();
+  return false;
 }
 
-TrustAnchor::TrustAnchor(scoped_refptr<ParsedCertificate> cert,
-                         bool enforces_constraints)
-    : cert_(std::move(cert)), enforces_constraints_(enforces_constraints) {
-  DCHECK(cert_);
+bool CertificateTrust::IsDistrusted() const {
+  switch (type) {
+    case CertificateTrustType::DISTRUSTED:
+      return true;
+    case CertificateTrustType::UNSPECIFIED:
+    case CertificateTrustType::TRUSTED_ANCHOR:
+    case CertificateTrustType::TRUSTED_ANCHOR_WITH_CONSTRAINTS:
+      return false;
+  }
+
+  NOTREACHED();
+  return false;
 }
 
-TrustAnchor::~TrustAnchor() = default;
+bool CertificateTrust::HasUnspecifiedTrust() const {
+  switch (type) {
+    case CertificateTrustType::UNSPECIFIED:
+      return true;
+    case CertificateTrustType::DISTRUSTED:
+    case CertificateTrustType::TRUSTED_ANCHOR:
+    case CertificateTrustType::TRUSTED_ANCHOR_WITH_CONSTRAINTS:
+      return false;
+  }
+
+  NOTREACHED();
+  return true;
+}
 
 TrustStore::TrustStore() = default;
-TrustStore::~TrustStore() = default;
+
+void TrustStore::AsyncGetIssuersOf(const ParsedCertificate* cert,
+                                   std::unique_ptr<Request>* out_req) {
+  out_req->reset();
+}
 
 }  // namespace net

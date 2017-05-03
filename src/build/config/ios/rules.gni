@@ -102,25 +102,11 @@ template("lipo_binary") {
     }
 
     if (enable_stripping) {
-      # Check whether //build/config/mac:strip_all has been removed from the
-      # configs variables (as this is how stripping is disabled for a single
-      # target).
-      _strip_all_in_config = false
-      if (defined(invoker.configs)) {
-        foreach(_config, invoker.configs) {
-          if (_config == "//build/config/mac:strip_all") {
-            _strip_all_in_config = true
-          }
-        }
-      }
-
-      if (_strip_all_in_config) {
-        args += [ "-Wcrl,strip,-x,-S" ]
-        if (save_unstripped_output) {
-          outputs += [ "$root_out_dir/$_output_name.unstripped" ]
-          args += [ "-Wcrl,unstripped," +
-                    rebase_path("$root_out_dir/.", root_build_dir) ]
-        }
+      args += [ "-Wcrl,strip,-x,-S" ]
+      if (save_unstripped_output) {
+        outputs += [ "$root_out_dir/$_output_name.unstripped" ]
+        args += [ "-Wcrl,unstripped," +
+                  rebase_path("$root_out_dir/.", root_build_dir) ]
       }
     }
   }

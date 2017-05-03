@@ -6,12 +6,12 @@
 
 #include <memory>
 
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 namespace net {
 namespace test {
 
-class HybridSlowStartTest : public ::testing::Test {
+class HybridSlowStartTest : public QuicTest {
  protected:
   HybridSlowStartTest()
       : one_ms_(QuicTime::Delta::FromMilliseconds(1)),

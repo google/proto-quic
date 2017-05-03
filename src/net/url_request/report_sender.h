@@ -31,17 +31,13 @@ class NET_EXPORT ReportSender
       public TransportSecurityState::ReportSenderInterface {
  public:
   using SuccessCallback = base::Callback<void()>;
-  using ErrorCallback = base::Callback<void(const GURL&, int)>;
-
-  // Represents whether or not to send cookies along with reports.
-  enum CookiesPreference { SEND_COOKIES, DO_NOT_SEND_COOKIES };
+  using ErrorCallback = base::Callback<
+      void(const GURL&, int /* net_error */, int /* http_response_code */)>;
 
   // Constructs a ReportSender that sends reports with the
-  // given |request_context| and includes or excludes cookies based on
-  // |cookies_preference|. |request_context| must outlive the
-  // ReportSender.
-  ReportSender(URLRequestContext* request_context,
-               CookiesPreference cookies_preference);
+  // given |request_context|, always excluding cookies. |request_context| must
+  // outlive the ReportSender.
+  explicit ReportSender(URLRequestContext* request_context);
 
   ~ReportSender() override;
 
@@ -58,9 +54,6 @@ class NET_EXPORT ReportSender
 
  private:
   net::URLRequestContext* const request_context_;
-
-  CookiesPreference cookies_preference_;
-
   std::map<URLRequest*, std::unique_ptr<URLRequest>> inflight_requests_;
 
   DISALLOW_COPY_AND_ASSIGN(ReportSender);

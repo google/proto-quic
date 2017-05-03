@@ -3,6 +3,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# pylint: disable=too-many-lines
+
 """Script to generate chromium.perf.json and chromium.perf.fyi.json in
 the src/testing/buildbot directory and benchmark.csv in the src/tools/perf
 directory. Maintaining these files by hand is too unwieldy.
@@ -20,9 +22,9 @@ from core import path_util
 path_util.AddTelemetryToPath()
 
 from telemetry import benchmark as benchmark_module
-from telemetry import decorators
 from telemetry.core import discover
 from telemetry.util import bot_utils
+from telemetry import decorators
 
 
 SCRIPT_TESTS = [
@@ -598,6 +600,24 @@ def generate_cplusplus_isolate_script_test(dimension):
   ]
 
 
+def ShouldBenchmarkBeScheduled(benchmark, platform):
+  disabled_tags = decorators.GetDisabledAttributes(benchmark)
+  enabled_tags = decorators.GetEnabledAttributes(benchmark)
+
+  # Don't run benchmarks which are disabled on all platforms.
+  if 'all' in disabled_tags:
+    return False
+
+  # If we're not on android, don't run mobile benchmarks.
+  if platform != 'android' and 'android' in enabled_tags:
+    return False
+
+  # If we're on android, don't run benchmarks disabled on mobile
+  if platform == 'android' and 'android' in disabled_tags:
+    return False
+
+  return True
+
 def generate_telemetry_tests(tester_config, benchmarks, benchmark_sharding_map,
                              benchmark_ref_build_blacklist):
   isolated_scripts = []
@@ -614,21 +634,17 @@ def generate_telemetry_tests(tester_config, benchmarks, benchmark_sharding_map,
   num_shards = len(tester_config['swarming_dimensions'][0]['device_ids'])
   current_shard = 0
   for benchmark in benchmarks:
+    if not ShouldBenchmarkBeScheduled(benchmark, tester_config['platform']):
+      continue
+
     # First figure out swarming dimensions this test needs to be triggered on.
     # For each set of dimensions it is only triggered on one of the devices
     swarming_dimensions = []
     for dimension in tester_config['swarming_dimensions']:
-      device_affinity = None
-      if benchmark_sharding_map:
-        sharding_map = benchmark_sharding_map.get(str(num_shards), None)
-        if not sharding_map:
-          raise Exception('Invalid number of shards, generate new sharding map')
-        device_affinity = sharding_map.get(benchmark.Name(), None)
-      else:
-        # No sharding map was provided, default to legacy device
-        # affinity algorithm
-        device_affinity = bot_utils.GetDeviceAffinity(
-          num_shards, benchmark.Name())
+      sharding_map = benchmark_sharding_map.get(str(num_shards), None)
+      if not sharding_map:
+        raise Exception('Invalid number of shards, generate new sharding map')
+      device_affinity = sharding_map.get(benchmark.Name(), None)
       if device_affinity is None:
         raise Exception('Device affinity for benchmark %s not found'
           % benchmark.Name())
@@ -841,29 +857,33 @@ def src_dir():
       os.path.dirname(os.path.dirname(file_path))))
 
 
+# not_scheduled means this test is not scheduled on any of the chromium.perf
+# waterfalls. Right now, all the below benchmarks are scheduled, but some other
+# benchmarks are not scheduled, because they're disabled on all platforms.
 BenchmarkMetadata = collections.namedtuple(
-    'BenchmarkMetadata', 'emails component')
+    'BenchmarkMetadata', 'emails component not_scheduled')
 NON_TELEMETRY_BENCHMARKS = {
-    'angle_perftests': BenchmarkMetadata('jmadill@chromium.org', None),
-    'cc_perftests': BenchmarkMetadata('enne@chromium.org', None),
-    'gpu_perftests': BenchmarkMetadata('reveman@chromium.org', None),
+    'angle_perftests': BenchmarkMetadata('jmadill@chromium.org', None, False),
+    'cc_perftests': BenchmarkMetadata('enne@chromium.org', None, False),
+    'gpu_perftests': BenchmarkMetadata('reveman@chromium.org', None, False),
     'tracing_perftests': BenchmarkMetadata(
-        'kkraynov@chromium.org, primiano@chromium.org', None),
-    'load_library_perf_tests': BenchmarkMetadata(None, None),
-    'media_perftests': BenchmarkMetadata('crouleau@chromium.org', None),
+        'kkraynov@chromium.org, primiano@chromium.org', None, False),
+    'load_library_perf_tests': BenchmarkMetadata(None, None, False),
+    'media_perftests': BenchmarkMetadata('crouleau@chromium.org', None, False),
     'performance_browser_tests': BenchmarkMetadata(
-        'hubbe@chromium.org, justinlin@chromium.org, miu@chromium.org', None)
+        'hubbe@chromium.org, justinlin@chromium.org, miu@chromium.org', None,
+        False)
 }
 
 
 # If you change this dictionary, run tools/perf/generate_perf_data
 NON_WATERFALL_BENCHMARKS = {
-    'sizes (mac)': BenchmarkMetadata('tapted@chromium.org', None),
-    'sizes (win)': BenchmarkMetadata('grt@chromium.org', None),
-    'sizes (linux)': BenchmarkMetadata('thestig@chromium.org', None),
+    'sizes (mac)': BenchmarkMetadata('tapted@chromium.org', None, False),
+    'sizes (win)': BenchmarkMetadata('grt@chromium.org', None, False),
+    'sizes (linux)': BenchmarkMetadata('thestig@chromium.org', None, False),
     'resource_sizes': BenchmarkMetadata(
         'agrieve@chromium.org, rnephew@chromium.org, perezju@chromium.org',
-        None)
+        None, False)
 }
 
 
@@ -877,11 +897,13 @@ def get_all_benchmarks_metadata(metadata):
   benchmark_list = current_benchmarks()
 
   for benchmark in benchmark_list:
+    disabled = 'all' in decorators.GetDisabledAttributes(benchmark)
+
     emails = decorators.GetEmails(benchmark)
     if emails:
       emails = ', '.join(emails)
     metadata[benchmark.Name()] = BenchmarkMetadata(
-        emails, decorators.GetComponent(benchmark))
+        emails, decorators.GetComponent(benchmark), disabled)
   return metadata
 
 
@@ -901,6 +923,11 @@ def verify_all_tests_in_benchmark_csv(tests, benchmark_metadata):
     for s in scripts:
       name = s['name']
       name = re.sub('\\.reference$', '', name)
+      test_names.add(name)
+
+  # Disabled tests are filtered out of the waterfall json. Add them back here.
+  for name, data in benchmark_metadata.items():
+    if data.not_scheduled:
       test_names.add(name)
 
   error_messages = []

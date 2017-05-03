@@ -107,7 +107,7 @@ void TypeNameDeduplicator::AppendAsTraceFormat(std::string* out) const {
 void TypeNameDeduplicator::EstimateTraceMemoryOverhead(
     TraceEventMemoryOverhead* overhead) {
   size_t memory_usage = EstimateMemoryUsage(type_ids_);
-  overhead->Add("TypeNameDeduplicator",
+  overhead->Add(TraceEventMemoryOverhead::kHeapProfilerTypeNameDeduplicator,
                 sizeof(TypeNameDeduplicator) + memory_usage);
 }
 

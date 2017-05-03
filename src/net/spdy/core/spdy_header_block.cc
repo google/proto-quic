@@ -16,6 +16,7 @@
 #include "net/http/http_log_util.h"
 #include "net/log/net_log_capture_mode.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
+#include "net/spdy/platform/api/spdy_ptr_util.h"
 #include "net/spdy/platform/api/spdy_string_utils.h"
 
 namespace net {
@@ -321,8 +322,8 @@ void SpdyHeaderBlock::AppendHeader(const SpdyStringPiece key,
 }
 
 SpdyHeaderBlock::Storage* SpdyHeaderBlock::GetStorage() {
-  if (!storage_) {
-    storage_.reset(new Storage);
+  if (storage_ == nullptr) {
+    storage_ = SpdyMakeUnique<Storage>();
   }
   return storage_.get();
 }

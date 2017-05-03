@@ -171,11 +171,8 @@ std::string CertPathErrors::ToDebugString(
     if (cert_errors_string.empty())
       continue;
 
-    // Add a header for the CertErrors that describes which certificate they
-    // apply to.
-    //
-    // TODO(eroman): Show the subject for trust anchor (which currently uses the
-    // bucket cert_errors_[certs.size()]).
+    // Add a header that identifies which certificate this CertErrors pertains
+    // to.
     std::string cert_name_debug_str;
     if (i < certs.size() && certs[i]) {
       RDNSequence subject;

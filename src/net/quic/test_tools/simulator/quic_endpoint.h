@@ -89,6 +89,7 @@ class QuicEndpoint : public Endpoint,
   void OnConnectionMigration(PeerAddressChangeType type) override {}
   void OnPathDegrading() override {}
   void PostProcessAfterData() override {}
+  void OnAckNeedsRetransmittableFrame() override {}
   // End QuicConnectionVisitorInterface implementation.
 
  private:

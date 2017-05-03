@@ -32,6 +32,7 @@
 #include "net/cert/test_root_certs.h"
 #include "net/cert/x509_cert_types.h"
 #include "net/cert/x509_certificate.h"
+#include "net/http/http_status_code.h"
 #include "net/http/http_util.h"
 #include "net/ssl/ssl_info.h"
 #include "net/test/cert_test_util.h"
@@ -100,12 +101,12 @@ class MockCertificateReportSender
   MockCertificateReportSender() {}
   ~MockCertificateReportSender() override {}
 
-  void Send(
-      const GURL& report_uri,
-      base::StringPiece content_type,
-      base::StringPiece report,
-      const base::Callback<void()>& success_callback,
-      const base::Callback<void(const GURL&, int)>& error_callback) override {
+  void Send(const GURL& report_uri,
+            base::StringPiece content_type,
+            base::StringPiece report,
+            const base::Callback<void()>& success_callback,
+            const base::Callback<void(const GURL&, int, int)>& error_callback)
+      override {
     latest_report_uri_ = report_uri;
     report.CopyToString(&latest_report_);
     content_type.CopyToString(&latest_content_type_);
@@ -137,14 +138,14 @@ class MockFailingCertificateReportSender
   int net_error() { return net_error_; }
 
   // TransportSecurityState::ReportSenderInterface:
-  void Send(
-      const GURL& report_uri,
-      base::StringPiece content_type,
-      base::StringPiece report,
-      const base::Callback<void()>& success_callback,
-      const base::Callback<void(const GURL&, int)>& error_callback) override {
+  void Send(const GURL& report_uri,
+            base::StringPiece content_type,
+            base::StringPiece report,
+            const base::Callback<void()>& success_callback,
+            const base::Callback<void(const GURL&, int, int)>& error_callback)
+      override {
     ASSERT_FALSE(error_callback.is_null());
-    error_callback.Run(report_uri, net_error_);
+    error_callback.Run(report_uri, net_error_, 0);
   }
 
  private:

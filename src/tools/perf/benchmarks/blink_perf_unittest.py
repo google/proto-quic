@@ -4,7 +4,6 @@
 import os
 import unittest
 
-from telemetry import decorators
 from telemetry import story
 from telemetry.page import page as page_module
 from telemetry.testing import options_for_unittests
@@ -39,7 +38,6 @@ class BlinkPerfTest(page_test_test_case.PageTestTestCase):
     story_set.AddStory(page)
     return story_set
 
-  @decorators.Disabled('win')  # crbug.com/715822
   def testBlinkPerfTracingMetricsForMeasureTime(self):
     results = self.RunMeasurement(measurement=self._measurement,
         ps=self._CreateStorySetForTestFile('append-child-measure-time.html'),
@@ -57,7 +55,6 @@ class BlinkPerfTest(page_test_test_case.PageTestTestCase):
     self.assertEquals(len(update_layout_trees), 1)
     self.assertGreater(update_layout_trees[0].GetRepresentativeNumber, 0.1)
 
-  @decorators.Disabled('android')  # crbug.com/715685
   def testBlinkPerfTracingMetricsForMeasureFrameTime(self):
     results = self.RunMeasurement(measurement=self._measurement,
         ps=self._CreateStorySetForTestFile(

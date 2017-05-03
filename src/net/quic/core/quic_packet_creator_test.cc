@@ -18,11 +18,10 @@
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/platform/api/quic_string_piece.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/quic_framer_peer.h"
 #include "net/quic/test_tools/quic_packet_creator_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "testing/gmock/include/gmock/gmock.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
 using testing::DoAll;
@@ -87,7 +86,7 @@ class MockDelegate : public QuicPacketCreator::DelegateInterface {
   DISALLOW_COPY_AND_ASSIGN(MockDelegate);
 };
 
-class QuicPacketCreatorTest : public ::testing::TestWithParam<TestParams> {
+class QuicPacketCreatorTest : public QuicTestWithParam<TestParams> {
  public:
   void ClearSerializedPacketForTests(SerializedPacket* serialized_packet) {
     if (serialized_packet == nullptr) {
@@ -210,7 +209,6 @@ class QuicPacketCreatorTest : public ::testing::TestWithParam<TestParams> {
 
   static const QuicStreamOffset kOffset = 1u;
 
-  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   char buffer_[kMaxPacketSize];
   QuicFrames frames_;
   QuicFramer server_framer_;

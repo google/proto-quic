@@ -20,8 +20,7 @@ class NET_EXPORT ClientCertStoreMac : public ClientCertStore {
 
   // ClientCertStore:
   void GetClientCerts(const SSLCertRequestInfo& cert_request_info,
-                      CertificateList* selected_certs,
-                      const base::Closure& callback) override;
+                      const ClientCertListCallback& callback) override;
 
  private:
   friend class ClientCertStoreMacTest;

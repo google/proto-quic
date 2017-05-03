@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <limits>
 #include <memory>
 
 #include "base/atomicops.h"
@@ -24,8 +25,64 @@ class SampleCountIterator;
 // elements must be of a fixed width to ensure 32/64-bit interoperability.
 // If this structure changes, bump the version number for kTypeIdHistogram
 // in persistent_histogram_allocator.cc.
+//
+// Note that though these samples are individually consistent (through the use
+// of atomic operations on the counts), there is only "eventual consistency"
+// overall when multiple threads are accessing this data. That means that the
+// sum, redundant-count, etc. could be momentarily out-of-sync with the stored
+// counts but will settle to a consistent "steady state" once all threads have
+// exited this code.
 class BASE_EXPORT HistogramSamples {
  public:
+  // A single bucket and count. To fit within a single atomic on 32-bit build
+  // architectures, both |bucket| and |count| are limited in size to 16 bits.
+  // This limits the functionality somewhat but if an entry can't fit then
+  // the full array of samples can be allocated and used.
+  struct SingleSample {
+    uint16_t bucket;
+    uint16_t count;
+  };
+
+  // A structure for managing an atomic single sample. Because this is generally
+  // used in association with other atomic values, the defined methods use
+  // acquire/release operations to guarantee ordering with outside values.
+  union AtomicSingleSample {
+    AtomicSingleSample() : as_atomic(0) {}
+    AtomicSingleSample(subtle::Atomic32 rhs) : as_atomic(rhs) {}
+
+    // Returns the single sample in an atomic manner. This in an "acquire"
+    // load. The returned sample isn't shared and thus its fields can be safely
+    // accessed.
+    SingleSample Load() const;
+
+    // Extracts the single sample in an atomic manner. If |disable| is true
+    // then this object will be set so it will never accumulate another value.
+    // This is "no barrier" so doesn't enforce ordering with other atomic ops.
+    SingleSample Extract(bool disable);
+
+    // Adds a given count to the held bucket. If not possible, it returns false
+    // and leaves the parts unchanged. Once extracted/disabled, this always
+    // returns false. This in an "acquire/release" operation.
+    bool Accumulate(size_t bucket, HistogramBase::Count count);
+
+    // Returns if the sample has been "disabled" (via Extract) and thus not
+    // allowed to accept further accumulation.
+    bool IsDisabled() const;
+
+   private:
+    // union field: The actual sample bucket and count.
+    SingleSample as_parts;
+
+    // union field: The sample as an atomic value. Atomic64 would provide
+    // more flexibility but isn't available on all builds. This can hold a
+    // special, internal "disabled" value indicating that it must not accept
+    // further accumulation.
+    subtle::Atomic32 as_atomic;
+  };
+
+  // A structure of information about the data, common to all sample containers.
+  // Because of how this is used in persistent memory, it must be a POD object
+  // that makes sense when initialized to all zeros.
   struct Metadata {
     // Expected size for 32/64-bit check.
     static constexpr size_t kExpectedInstanceSize = 24;
@@ -58,21 +115,17 @@ class BASE_EXPORT HistogramSamples {
     // might mismatch even when no memory corruption has happened.
     HistogramBase::AtomicCount redundant_count;
 
-    // 4 bytes of padding to explicitly extend this structure to a multiple of
-    // 64-bits. This is required to ensure the structure is the same size on
-    // both 32-bit and 64-bit builds.
-    char padding[4];
+    // A single histogram value and associated count. This allows histograms
+    // that typically report only a single value to not require full storage
+    // to be allocated.
+    AtomicSingleSample single_sample;  // 32 bits
   };
 
-  // Because sturctures held in persistent memory must be POD, there can be no
+  // Because structures held in persistent memory must be POD, there can be no
   // default constructor to clear the fields. This derived class exists just
   // to clear them when being allocated on the heap.
-  struct LocalMetadata : Metadata {
-    LocalMetadata() {
-      id = 0;
-      sum = 0;
-      redundant_count = 0;
-    }
+  struct BASE_EXPORT LocalMetadata : Metadata {
+    LocalMetadata();
   };
 
   explicit HistogramSamples(uint64_t id);
@@ -112,8 +165,20 @@ class BASE_EXPORT HistogramSamples {
   enum Operator { ADD, SUBTRACT };
   virtual bool AddSubtractImpl(SampleCountIterator* iter, Operator op) = 0;
 
-  void IncreaseSum(int64_t diff);
-  void IncreaseRedundantCount(HistogramBase::Count diff);
+  // Accumulates to the embedded single-sample field if possible. Returns true
+  // on success, false otherwise. Sum and redundant-count are also updated in
+  // the success case.
+  bool AccumulateSingleSample(HistogramBase::Sample value,
+                              HistogramBase::Count count,
+                              size_t bucket);
+
+  // Atomically adjust the sum and redundant-count.
+  void IncreaseSumAndCount(int64_t sum, HistogramBase::Count count);
+
+  AtomicSingleSample& single_sample() { return meta_->single_sample; }
+  const AtomicSingleSample& single_sample() const {
+    return meta_->single_sample;
+  }
 
  private:
   // In order to support histograms shared through an external memory segment,
@@ -134,15 +199,50 @@ class BASE_EXPORT SampleCountIterator {
 
   // Get the sample and count at current position.
   // |min| |max| and |count| can be NULL if the value is not of interest.
+  // Note: |max| is int64_t because histograms support logged values in the
+  // full int32_t range and bucket max is exclusive, so it needs to support
+  // values up to MAXINT32+1.
   // Requires: !Done();
   virtual void Get(HistogramBase::Sample* min,
-                   HistogramBase::Sample* max,
+                   int64_t* max,
                    HistogramBase::Count* count) const = 0;
+  static_assert(std::numeric_limits<HistogramBase::Sample>::max() <
+                    std::numeric_limits<int64_t>::max(),
+                "Get() |max| must be able to hold Histogram::Sample max + 1");
 
   // Get the index of current histogram bucket.
   // For histograms that don't use predefined buckets, it returns false.
   // Requires: !Done();
   virtual bool GetBucketIndex(size_t* index) const;
+};
+
+class BASE_EXPORT SingleSampleIterator : public SampleCountIterator {
+ public:
+  SingleSampleIterator(HistogramBase::Sample min,
+                       int64_t max,
+                       HistogramBase::Count count);
+  SingleSampleIterator(HistogramBase::Sample min,
+                       int64_t max,
+                       HistogramBase::Count count,
+                       size_t bucket_index);
+  ~SingleSampleIterator() override;
+
+  // SampleCountIterator:
+  bool Done() const override;
+  void Next() override;
+  void Get(HistogramBase::Sample* min,
+           int64_t* max,
+           HistogramBase::Count* count) const override;
+
+  // SampleVector uses predefined buckets so iterator can return bucket index.
+  bool GetBucketIndex(size_t* index) const override;
+
+ private:
+  // Information about the single value to return.
+  const HistogramBase::Sample min_;
+  const int64_t max_;
+  const size_t bucket_index_;
+  HistogramBase::Count count_;
 };
 
 }  // namespace base

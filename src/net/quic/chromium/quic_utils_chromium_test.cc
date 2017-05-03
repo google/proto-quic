@@ -13,7 +13,7 @@ namespace net {
 namespace test {
 namespace {
 
-TEST(QuicUtilsTest, ParseQuicConnectionOptions) {
+TEST(QuicUtilsChromiumTest, ParseQuicConnectionOptions) {
   QuicTagVector empty_options = ParseQuicConnectionOptions("");
   EXPECT_TRUE(empty_options.empty());
 

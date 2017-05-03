@@ -12,7 +12,6 @@
 #include "base/values.h"
 #include "net/reporting/reporting_cache.h"
 #include "net/reporting/reporting_context.h"
-#include "net/reporting/reporting_delegate.h"
 #include "net/reporting/reporting_policy.h"
 #include "net/reporting/reporting_report.h"
 #include "net/reporting/reporting_service.h"

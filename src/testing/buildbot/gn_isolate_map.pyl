@@ -712,10 +712,6 @@
     "label": "//mojo/edk/js/tests:mojo_js_unittests",
     "type": "console_test_launcher",
   },
-  "mojo_public_application_unittests": {
-    "label": "//services/service_manager/public/cpp/tests:mojo_public_application_unittests",
-    "type": "windowed_test_launcher",
-  },
   "mojo_public_bindings_unittests": {
     "label": "//mojo/edk/test:mojo_public_bindings_unittests",
     "type": "console_test_launcher",

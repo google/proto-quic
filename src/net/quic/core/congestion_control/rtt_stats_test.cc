@@ -7,8 +7,8 @@
 #include <cmath>
 
 #include "base/test/mock_log.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/rtt_stats_peer.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using logging::LOG_WARNING;
 using testing::HasSubstr;
@@ -18,7 +18,7 @@ using testing::_;
 namespace net {
 namespace test {
 
-class RttStatsTest : public ::testing::Test {
+class RttStatsTest : public QuicTest {
  protected:
   RttStats rtt_stats_;
 };

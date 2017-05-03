@@ -115,7 +115,7 @@ void QuicPacketCreator::UpdatePacketNumberLength(
       packet_.packet_number + 1 - least_packet_awaited_by_peer;
   const uint64_t delta = std::max(current_delta, max_packets_in_flight);
   packet_.packet_number_length =
-      QuicFramer::GetMinSequenceNumberLength(delta * 4);
+      QuicFramer::GetMinPacketNumberLength(delta * 4);
 }
 
 bool QuicPacketCreator::ConsumeData(QuicStreamId id,
@@ -367,7 +367,7 @@ void QuicPacketCreator::CreateAndSerializeStreamFrame(
   FillPacketHeader(&header);
   QUIC_CACHELINE_ALIGNED char encrypted_buffer[kMaxPacketSize];
   QuicDataWriter writer(arraysize(encrypted_buffer), encrypted_buffer,
-                        framer_->perspective());
+                        framer_->perspective(), framer_->endianness());
   if (!framer_->AppendPacketHeader(header, &writer)) {
     QUIC_BUG << "AppendPacketHeader failed";
     return;

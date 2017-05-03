@@ -18,15 +18,13 @@ The script works by scanning the stdout looking for gtest failures when
 comparing "errors.ToDebugString(chain)". The C++ test side should have been
 instrumented to dump out the test file's path on mismatch.
 
-This script will then update the corresponding file(s) -- a .pem file, and
-possibly an accompanying .py file.
+This script will then update the corresponding .test file that contains the
+error expectation.
 """
 
-import common
 import os
 import sys
 import re
-
 
 # Regular expression to find the failed errors in test stdout.
 #  * Group 1 of the match is the actual error text (backslash-escaped)
@@ -36,23 +34,8 @@ failed_test_regex = re.compile(r"""
 Value of: errors.ToDebugString\((?:test.chain)?\)
   Actual: "(.*)"
 (?:.|\n)+?
-Test file: (.*)
+Test file: (.*[.]test)
 """, re.MULTILINE)
-
-
-# Regular expression to find the ERRORS block (and any text above it) in a PEM
-# file. The assumption is that ERRORS is not the very first block in the file
-# (since it looks for an -----END to precede it).
-#  * Group 1 of the match is the ERRORS block content and any comments
-#    immediately above it.
-errors_block_regex = re.compile(r""".*
------END .*?-----
-
-(.*?
------BEGIN ERRORS-----
-.*?
------END ERRORS-----
-)""", re.MULTILINE | re.DOTALL)
 
 
 def read_file_to_string(path):
@@ -66,56 +49,6 @@ def write_string_to_file(data, path):
   print "Writing file %s ..." % (path)
   with open(path, "w") as f:
     f.write(data)
-
-
-def get_py_path(pem_path):
-  """Returns the .py filepath used to generate the given .pem path, which may
-  or may not exist.
-
-  Some test files (notably those in verify_certificate_chain_unittest/ have a
-  "generate-XXX.py" script that builds the "XXX.pem" file. Build the path to
-  the corresponding "generate-XXX.py" (which may or may not exist)."""
-  file_name = os.path.basename(pem_path)
-  file_name_no_extension = os.path.splitext(file_name)[0]
-  py_file_name = 'generate-' + file_name_no_extension + '.py'
-  return os.path.join(os.path.dirname(pem_path), py_file_name)
-
-
-def replace_string(original, start, end, replacement):
-  """Replaces the specified range of |original| with |replacement|"""
-  return original[0:start] + replacement + original[end:]
-
-
-def fixup_pem_file(path, actual_errors):
-  """Updates the ERRORS block in the test .pem file"""
-  contents = read_file_to_string(path)
-
-  m = errors_block_regex.search(contents)
-
-  if not m:
-    contents += '\n' + common.text_data_to_pem('ERRORS', actual_errors)
-  else:
-    contents = replace_string(contents, m.start(1), m.end(1),
-                              common.text_data_to_pem('ERRORS', actual_errors))
-
-  # Update the file.
-  write_string_to_file(contents, path)
-
-
-def fixup_py_file(path, actual_errors):
-  """Replaces the 'errors = XXX' section of the test's python script"""
-  contents = read_file_to_string(path)
-
-  # This assumes that the errors variable uses triple quotes.
-  prog = re.compile(r'^errors = (""".*?"""|None)', re.MULTILINE | re.DOTALL)
-  result = prog.search(contents)
-
-  # Replace the stuff in between the triple quotes with the actual errors.
-  contents = replace_string(contents, result.start(1), result.end(1),
-                            '"""' + actual_errors + '"""')
-
-  # Update the file.
-  write_string_to_file(contents, path)
 
 
 def get_src_root():
@@ -141,16 +74,20 @@ def get_abs_path(rel_path):
   return os.path.join(get_src_root(), rel_path)
 
 
-def fixup_errors_for_file(actual_errors, pem_path):
-  """Updates the errors in |test_file_path| (.pem file) to match
-  |actual_errors|"""
+def fixup_errors_for_file(actual_errors, test_file_path):
+  """Updates the errors in |test_file_path| to match |actual_errors|"""
+  contents = read_file_to_string(test_file_path)
 
-  fixup_pem_file(pem_path, actual_errors)
+  header = "\nexpected_errors:\n"
+  index = contents.find(header)
+  if index < 0:
+    print "Couldn't find expected_errors"
+    sys.exit(1)
 
-  # If the test has a generator script update it too.
-  py_path = get_py_path(pem_path)
-  if os.path.isfile(py_path):
-    fixup_py_file(py_path, actual_errors)
+  # The rest of the file contains the errors (overwrite).
+  contents = contents[0:index] + header + actual_errors
+
+  write_string_to_file(contents, test_file_path)
 
 
 def main():

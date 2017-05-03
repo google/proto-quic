@@ -16,18 +16,13 @@ class VerifyCertificateChainDelegate {
  public:
   static void Verify(const VerifyCertChainTest& test,
                      const std::string& test_file_path) {
-    ASSERT_TRUE(test.trust_anchor);
-
     SimpleSignaturePolicy signature_policy(1024);
 
     CertPathErrors errors;
-    bool result = VerifyCertificateChain(test.chain, test.trust_anchor.get(),
-                                         &signature_policy, test.time,
-                                         test.key_purpose, &errors);
-    EXPECT_EQ(test.expected_result, result);
+    VerifyCertificateChain(test.chain, test.last_cert_trust, &signature_policy,
+                           test.time, test.key_purpose, &errors);
     EXPECT_EQ(test.expected_errors, errors.ToDebugString(test.chain))
         << "Test file: " << test_file_path;
-    EXPECT_EQ(result, !errors.ContainsHighSeverityErrors());
   }
 };
 

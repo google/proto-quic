@@ -6,6 +6,7 @@
 
 #include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/test/gtest_util.h"
 
 typedef net::QuicStreamSequencerBuffer::BufferBlock BufferBlock;

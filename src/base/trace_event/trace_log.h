@@ -10,10 +10,10 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "base/atomicops.h"
-#include "base/containers/hash_tables.h"
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
 #include "base/memory/scoped_vector.h"
@@ -452,14 +452,14 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
       async_observers_;
 
   std::string process_name_;
-  base::hash_map<int, std::string> process_labels_;
+  std::unordered_map<int, std::string> process_labels_;
   int process_sort_index_;
-  base::hash_map<int, int> thread_sort_indices_;
-  base::hash_map<int, std::string> thread_names_;
+  std::unordered_map<int, int> thread_sort_indices_;
+  std::unordered_map<int, std::string> thread_names_;
 
   // The following two maps are used only when ECHO_TO_CONSOLE.
-  base::hash_map<int, std::stack<TimeTicks>> thread_event_start_times_;
-  base::hash_map<std::string, int> thread_colors_;
+  std::unordered_map<int, std::stack<TimeTicks>> thread_event_start_times_;
+  std::unordered_map<std::string, int> thread_colors_;
 
   TimeTicks buffer_limit_reached_timestamp_;
 

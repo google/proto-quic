@@ -243,7 +243,7 @@ void SparseHistogram::WriteAsciiImpl(bool graph_it,
   std::unique_ptr<SampleCountIterator> it = snapshot->Iterator();
   while (!it->Done()) {
     Sample min;
-    Sample max;
+    int64_t max;
     Count count;
     it->Get(&min, &max, &count);
     if (min > largest_sample)
@@ -258,7 +258,7 @@ void SparseHistogram::WriteAsciiImpl(bool graph_it,
   it = snapshot->Iterator();
   while (!it->Done()) {
     Sample min;
-    Sample max;
+    int64_t max;
     Count count;
     it->Get(&min, &max, &count);
 

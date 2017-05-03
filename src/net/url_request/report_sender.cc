@@ -11,6 +11,7 @@
 #include "net/base/load_flags.h"
 #include "net/base/request_priority.h"
 #include "net/base/upload_bytes_element_reader.h"
+#include "net/http/http_status_code.h"
 #include "net/url_request/url_request_context.h"
 #include "net/url_request/url_request_status.h"
 
@@ -40,10 +41,8 @@ class CallbackInfo : public base::SupportsUserData::Data {
 
 namespace net {
 
-ReportSender::ReportSender(URLRequestContext* request_context,
-                           CookiesPreference cookies_preference)
-    : request_context_(request_context),
-      cookies_preference_(cookies_preference) {}
+ReportSender::ReportSender(URLRequestContext* request_context)
+    : request_context_(request_context) {}
 
 ReportSender::~ReportSender() {
 }
@@ -60,12 +59,9 @@ void ReportSender::Send(const GURL& report_uri,
       &kUserDataKey,
       base::MakeUnique<CallbackInfo>(success_callback, error_callback));
 
-  int load_flags =
-      LOAD_BYPASS_CACHE | LOAD_DISABLE_CACHE | LOAD_DO_NOT_SEND_AUTH_DATA;
-  if (cookies_preference_ != SEND_COOKIES) {
-    load_flags |= LOAD_DO_NOT_SEND_COOKIES | LOAD_DO_NOT_SAVE_COOKIES;
-  }
-  url_request->SetLoadFlags(load_flags);
+  url_request->SetLoadFlags(
+      LOAD_BYPASS_CACHE | LOAD_DISABLE_CACHE | LOAD_DO_NOT_SEND_AUTH_DATA |
+      LOAD_DO_NOT_SEND_COOKIES | LOAD_DO_NOT_SAVE_COOKIES);
 
   HttpRequestHeaders extra_headers;
   extra_headers.SetHeader(HttpRequestHeaders::kContentType, content_type);
@@ -93,11 +89,15 @@ void ReportSender::OnResponseStarted(URLRequest* request, int net_error) {
   if (net_error != OK) {
     DVLOG(1) << "Failed to send report for " << request->url().host();
     if (!callback_info->error_callback().is_null())
-      callback_info->error_callback().Run(request->url(), net_error);
-  } else if (!callback_info->success_callback().is_null()) {
-    callback_info->success_callback().Run();
+      callback_info->error_callback().Run(request->url(), net_error, -1);
+  } else if (request->GetResponseCode() != net::HTTP_OK) {
+    if (!callback_info->error_callback().is_null())
+      callback_info->error_callback().Run(request->url(), OK,
+                                          request->GetResponseCode());
+  } else {
+    if (!callback_info->success_callback().is_null())
+      callback_info->success_callback().Run();
   }
-
   CHECK_GT(inflight_requests_.erase(request), 0u);
 }
 

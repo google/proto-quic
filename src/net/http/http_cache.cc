@@ -25,7 +25,6 @@
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/threading/thread_task_runner_handle.h"
-#include "base/threading/worker_pool.h"
 #include "base/time/default_clock.h"
 #include "base/time/time.h"
 #include "base/trace_event/memory_allocator_dump.h"

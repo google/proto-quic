@@ -14,6 +14,7 @@
 #include "net/spdy/core/hpack/hpack_huffman_table.h"
 #include "net/spdy/core/hpack/hpack_output_stream.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
+#include "net/spdy/platform/api/spdy_ptr_util.h"
 
 namespace net {
 
@@ -327,8 +328,8 @@ HpackEncoder::Encoderator::Encoderator(const SpdyHeaderBlock& header_set,
                       : GatherRepresentation(header, &regular_headers_);
     }
   }
-  header_it_ = base::MakeUnique<RepresentationIterator>(pseudo_headers_,
-                                                        regular_headers_);
+  header_it_ =
+      SpdyMakeUnique<RepresentationIterator>(pseudo_headers_, regular_headers_);
 
   encoder_->MaybeEmitTableSize();
 }
@@ -365,7 +366,7 @@ void HpackEncoder::Encoderator::Next(size_t max_encoded_bytes,
 
 std::unique_ptr<HpackEncoder::ProgressiveEncoder> HpackEncoder::EncodeHeaderSet(
     const SpdyHeaderBlock& header_set) {
-  return base::MakeUnique<Encoderator>(header_set, this);
+  return SpdyMakeUnique<Encoderator>(header_set, this);
 }
 
 }  // namespace net

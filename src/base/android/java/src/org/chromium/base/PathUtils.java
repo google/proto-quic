@@ -68,8 +68,7 @@ public abstract class PathUtils {
             // already finished.
             if (sDirPathFetchTask.cancel(false)) {
                 // Allow disk access here because we have no other choice.
-                StrictMode.ThreadPolicy oldPolicy = StrictMode.allowThreadDiskReads();
-                StrictMode.allowThreadDiskWrites();
+                StrictMode.ThreadPolicy oldPolicy = StrictMode.allowThreadDiskWrites();
                 try {
                     // sDirPathFetchTask did not complete. We have to run the code it was supposed
                     // to be responsible for synchronously on the UI thread.

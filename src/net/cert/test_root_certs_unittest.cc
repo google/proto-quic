@@ -129,8 +129,7 @@ TEST(TestRootCertsTest, OverrideTrust) {
   EXPECT_EQ(bad_verify_result.cert_status, restored_verify_result.cert_status);
 }
 
-#if defined(USE_NSS_CERTS) || \
-    (defined(USE_OPENSSL_CERTS) && !defined(OS_ANDROID))
+#if defined(USE_NSS_CERTS)
 TEST(TestRootCertsTest, Contains) {
   // Another test root certificate.
   const char kRootCertificateFile2[] = "2048-rsa-root.pem";

@@ -10,10 +10,11 @@
 namespace switches {
 
 BASE_I18N_EXPORT extern const char kForceUIDirection[];
+BASE_I18N_EXPORT extern const char kForceTextDirection[];
 
-// kForceUIDirection choices.
-BASE_I18N_EXPORT extern const char kForceUIDirectionLTR[];
-BASE_I18N_EXPORT extern const char kForceUIDirectionRTL[];
+// kForce*Direction choices for the switches above.
+BASE_I18N_EXPORT extern const char kForceDirectionLTR[];
+BASE_I18N_EXPORT extern const char kForceDirectionRTL[];
 
 }  // namespace switches
 

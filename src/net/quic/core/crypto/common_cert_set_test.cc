@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 namespace net {
 namespace test {
@@ -189,7 +189,9 @@ static const unsigned char kGIACertificate3[] = {
     0xc1, 0x21, 0xc6, 0x16,
 };
 
-TEST(CommonCertSets, FindGIA_2) {
+class CommonCertSetsTest : public QuicTest {};
+
+TEST_F(CommonCertSetsTest, FindGIA_2) {
   QuicStringPiece gia(reinterpret_cast<const char*>(kGIACertificate2),
                       sizeof(kGIACertificate2));
 
@@ -210,7 +212,7 @@ TEST(CommonCertSets, FindGIA_2) {
   EXPECT_EQ(0, memcmp(gia.data(), gia_copy.data(), gia.size()));
 }
 
-TEST(CommonCertSets, FindGIA_3) {
+TEST_F(CommonCertSetsTest, FindGIA_3) {
   QuicStringPiece gia(reinterpret_cast<const char*>(kGIACertificate3),
                       sizeof(kGIACertificate3));
 
@@ -231,7 +233,7 @@ TEST(CommonCertSets, FindGIA_3) {
   EXPECT_EQ(0, memcmp(gia.data(), gia_copy.data(), gia.size()));
 }
 
-TEST(CommonCertSets, NonMatch) {
+TEST_F(CommonCertSetsTest, NonMatch) {
   const CommonCertSets* sets(CommonCertSets::GetInstanceQUIC());
   QuicStringPiece not_a_cert("hello");
   const uint64_t in_hash = UINT64_C(0xc9fef74053f99f39);

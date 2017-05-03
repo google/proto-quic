@@ -61,6 +61,7 @@ public class ApplicationStatus {
     private static Integer sCachedApplicationState;
 
     /** Last activity that was shown (or null if none or it was destroyed). */
+    @SuppressLint("StaticFieldLeak")
     private static Activity sActivity;
 
     /** A lazily initialized listener that forwards application state changes to native. */

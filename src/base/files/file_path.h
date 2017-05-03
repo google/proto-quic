@@ -110,7 +110,6 @@
 
 #include "base/base_export.h"
 #include "base/compiler_specific.h"
-#include "base/containers/hash_tables.h"
 #include "base/macros.h"
 #include "base/strings/string16.h"
 #include "base/strings/string_piece.h"
@@ -470,17 +469,17 @@ void PrintTo(const FilePath& path, std::ostream* out);
 #define PRFilePath "ls"
 #endif  // OS_WIN
 
-// Provide a hash function so that hash_sets and maps can contain FilePath
-// objects.
-namespace BASE_HASH_NAMESPACE {
+namespace std {
 
-template<>
+template <>
 struct hash<base::FilePath> {
-  size_t operator()(const base::FilePath& f) const {
+  typedef base::FilePath argument_type;
+  typedef std::size_t result_type;
+  result_type operator()(argument_type const& f) const {
     return hash<base::FilePath::StringType>()(f.value());
   }
 };
 
-}  // namespace BASE_HASH_NAMESPACE
+}  // namespace std
 
 #endif  // BASE_FILES_FILE_PATH_H_

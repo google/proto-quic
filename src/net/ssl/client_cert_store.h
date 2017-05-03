@@ -22,14 +22,16 @@ class NET_EXPORT ClientCertStore {
  public:
   virtual ~ClientCertStore() {}
 
+  using ClientCertListCallback = base::Callback<void(CertificateList)>;
+
   // Get client certs matching the |cert_request_info|. On completion, the
   // results will be stored in |selected_certs| and the |callback| will be run.
   // The |callback| may be called sychronously. The caller must ensure the
-  // ClientCertStore, |cert_request_info|, and |selected_certs| remain alive
-  // until the callback has been run.
+  // ClientCertStore and |cert_request_info| remain alive until the callback
+  // has been run.
   virtual void GetClientCerts(const SSLCertRequestInfo& cert_request_info,
-                              CertificateList* selected_certs,
-                              const base::Closure& callback) = 0;
+                              const ClientCertListCallback& callback) = 0;
+
  protected:
   ClientCertStore() {}
 

@@ -11,12 +11,11 @@
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_socket_address.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/tools/quic/quic_client_session.h"
-#include "testing/gmock/include/gmock/gmock.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using base::IntToString;
 using std::string;
@@ -49,7 +48,7 @@ class MockQuicClientSession : public QuicClientSession {
   DISALLOW_COPY_AND_ASSIGN(MockQuicClientSession);
 };
 
-class QuicSpdyClientStreamTest : public ::testing::Test {
+class QuicSpdyClientStreamTest : public QuicTest {
  public:
   class StreamVisitor;
 

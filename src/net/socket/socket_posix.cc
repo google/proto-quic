@@ -98,6 +98,15 @@ int SocketPosix::Open(int address_family) {
 
 int SocketPosix::AdoptConnectedSocket(SocketDescriptor socket,
                                       const SockaddrStorage& address) {
+  int rv = AdoptUnconnectedSocket(socket);
+  if (rv != OK)
+    return rv;
+
+  SetPeerAddress(address);
+  return OK;
+}
+
+int SocketPosix::AdoptUnconnectedSocket(SocketDescriptor socket) {
   DCHECK(thread_checker_.CalledOnValidThread());
   DCHECK_EQ(kInvalidSocket, socket_fd_);
 
@@ -109,7 +118,6 @@ int SocketPosix::AdoptConnectedSocket(SocketDescriptor socket,
     return rv;
   }
 
-  SetPeerAddress(address);
   return OK;
 }
 

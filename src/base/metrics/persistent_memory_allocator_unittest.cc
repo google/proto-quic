@@ -620,10 +620,10 @@ TEST(SharedPersistentMemoryAllocatorTest, CreationTest) {
     EXPECT_FALSE(local.IsFull());
     EXPECT_FALSE(local.IsCorrupt());
 
-    ASSERT_TRUE(local.shared_memory()->ShareToProcess(GetCurrentProcessHandle(),
-                                                      &shared_handle_1));
-    ASSERT_TRUE(local.shared_memory()->ShareToProcess(GetCurrentProcessHandle(),
-                                                      &shared_handle_2));
+    shared_handle_1 = local.shared_memory()->handle().Duplicate();
+    ASSERT_TRUE(shared_handle_1.IsValid());
+    shared_handle_2 = local.shared_memory()->handle().Duplicate();
+    ASSERT_TRUE(shared_handle_2.IsValid());
   }
 
   // Read-only test.

@@ -82,21 +82,6 @@ QuicPacket* BuildUnsizedDataPacket(QuicFramer* framer,
                         header.public_header.packet_number_length);
 }
 
-QuicFlagSaver::QuicFlagSaver() {
-#define QUIC_FLAG(type, flag, value)                                 \
-  CHECK_EQ(value, GetQuicFlag(flag))                                 \
-      << "Flag set to an unexpected value.  A prior test is likely " \
-      << "setting a flag without using a QuicFlagSaver";
-#include "net/quic/core/quic_flags_list.h"
-#undef QUIC_FLAG
-}
-
-QuicFlagSaver::~QuicFlagSaver() {
-#define QUIC_FLAG(type, flag, value) SetQuicFlag(&flag, value);
-#include "net/quic/core/quic_flags_list.h"
-#undef QUIC_FLAG
-}
-
 string Sha1Hash(QuicStringPiece data) {
   char buffer[SHA_DIGEST_LENGTH];
   SHA1(reinterpret_cast<const uint8_t*>(data.data()), data.size(),

@@ -11,6 +11,7 @@
 #include "base/macros.h"
 #include "net/base/int128.h"
 #include "net/quic/core/quic_types.h"
+#include "net/quic/platform/api/quic_endian.h"
 #include "net/quic/platform/api/quic_export.h"
 #include "net/quic/platform/api/quic_string_piece.h"
 
@@ -33,25 +34,25 @@ namespace net {
 class QUIC_EXPORT_PRIVATE QuicDataReader {
  public:
   // Caller must provide an underlying buffer to work on.
-  QuicDataReader(const char* data, const size_t len, Perspective perspective);
+  QuicDataReader(const char* data,
+                 const size_t len,
+                 Perspective perspective,
+                 Endianness endianness);
 
   // Empty destructor.
   ~QuicDataReader() {}
 
-  // Reads a 16-bit unsigned integer into the given output parameter.
-  // Forwards the internal iterator on success.
-  // Returns true on success, false otherwise.
+  // Reads an 8/16/32/64-bit unsigned integer into the given output
+  // parameter. Forwards the internal iterator on success. Returns true on
+  // success, false otherwise.
+  bool ReadUInt8(uint8_t* result);
   bool ReadUInt16(uint16_t* result);
-
-  // Reads a 32-bit unsigned integer into the given output parameter.
-  // Forwards the internal iterator on success.
-  // Returns true on success, false otherwise.
   bool ReadUInt32(uint32_t* result);
-
-  // Reads a 64-bit unsigned integer into the given output parameter.
-  // Forwards the internal iterator on success.
-  // Returns true on success, false otherwise.
   bool ReadUInt64(uint64_t* result);
+
+  // Reads |num_bytes| bytes in the correct byte order into least significant
+  // bytes of |result|.
+  bool ReadBytesToUInt64(size_t num_bytes, uint64_t* result);
 
   // Reads a 16-bit unsigned float into the given output parameter.
   // Forwards the internal iterator on success.
@@ -124,6 +125,8 @@ class QUIC_EXPORT_PRIVATE QuicDataReader {
   // DOES NOT forward the internal iterator.
   uint8_t PeekByte() const;
 
+  void set_endianness(Endianness endianness) { endianness_ = endianness; }
+
  private:
   // Returns true if the underlying buffer has enough room to read the given
   // amount of bytes.
@@ -145,6 +148,9 @@ class QUIC_EXPORT_PRIVATE QuicDataReader {
   // may have different in-memory representation of the same field, the on wire
   // representation must be consistent.
   Perspective perspective_;
+
+  // The endianness to read integers and floating numbers.
+  Endianness endianness_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicDataReader);
 };

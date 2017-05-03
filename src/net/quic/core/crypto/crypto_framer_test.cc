@@ -12,6 +12,7 @@
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 
@@ -25,7 +26,7 @@ char* AsChars(unsigned char* data) {
   return reinterpret_cast<char*>(data);
 }
 
-class CryptoFramerTest : public ::testing::TestWithParam<Perspective> {};
+class CryptoFramerTest : public QuicTestWithParam<Perspective> {};
 
 class TestCryptoVisitor : public CryptoFramerVisitorInterface {
  public:

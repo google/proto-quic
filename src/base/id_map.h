@@ -7,12 +7,14 @@
 
 #include <stddef.h>
 #include <stdint.h>
+
 #include <memory>
 #include <set>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 
-#include "base/containers/hash_tables.h"
+#include "base/containers/flat_set.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/sequence_checker.h"
@@ -35,7 +37,8 @@ class IDMap final {
 
  private:
   using T = typename std::remove_reference<decltype(*V())>::type;
-  using HashTable = base::hash_map<KeyType, V>;
+
+  using HashTable = std::unordered_map<KeyType, V>;
 
  public:
   IDMap() : iteration_depth_(0), next_id_(1), check_on_null_data_(false) {
@@ -236,7 +239,7 @@ class IDMap final {
   // Keep set of IDs that should be removed after the outermost iteration has
   // finished. This way we manage to not invalidate the iterator when an element
   // is removed.
-  std::set<KeyType> removed_ids_;
+  base::flat_set<KeyType> removed_ids_;
 
   // The next ID that we will return from Add()
   KeyType next_id_;

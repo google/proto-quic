@@ -49,6 +49,9 @@ For each alert that fires, determine if it's a real alert and file a bug if so.
 
 ## Investigating component=Internals>Network bugs
 
+* Note that you may want to investigate Needs-Feedback bugs first, as
+  that may result in some bugs being added to this list.  
+
 * It's recommended that while on triage duty, you subscribe to the
   Internals>Network component (but not its subcomponents). To do this, go
   to the issue tracker and then click "Saved Queries".
@@ -176,6 +179,20 @@ For each alert that fires, determine if it's a real alert and file a bug if so.
             5. Choose some subset of that list, or all of it, to include in the
                bug.  Make sure to indicate if there is a defined point in the
                past before which the signature is not present.
+
+As an alternative to the above, you can use [Eric Roman's new crash
+tool](https://ericroman.users.x20web.corp.google.com/www/net-crash-triage/index.html)
+(internal link).  Note that it isn't a perfect fit with the triage
+responsibilities, specifically:
+  
+* It's only showing Windows releases; Android, iOS, and WebView are
+  usually different, and Mac is sometimes different.
+* The instructions are to look at the latest canary which has a days
+  worth of data.  If canaries are being pushed fast, that may be more
+  than one canary into the past, and hence not visible on the tool.
+* Eric's tool filters based on files in "src/net" rather than looking
+  for magic signature's including the string "net::" ("src/net" is
+  probably the better filter).    
 
 ## Investigating crashers
 

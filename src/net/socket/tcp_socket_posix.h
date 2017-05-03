@@ -16,6 +16,7 @@
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
 #include "net/log/net_log_with_source.h"
+#include "net/socket/socket_descriptor.h"
 #include "net/socket/socket_performance_watcher.h"
 
 namespace base {
@@ -45,8 +46,16 @@ class NET_EXPORT TCPSocketPosix {
   // Returns a net error code.
   int Open(AddressFamily family);
 
-  // Takes ownership of |socket_fd|.
-  int AdoptConnectedSocket(int socket_fd, const IPEndPoint& peer_address);
+  // Takes ownership of |socket|, which is known to already be connected to the
+  // given peer address. However, peer address may be the empty address, for
+  // compatibility. The given peer address will be returned by GetPeerAddress.
+  int AdoptConnectedSocket(SocketDescriptor socket,
+                           const IPEndPoint& peer_address);
+  // Takes ownership of |socket|, which may or may not be open, bound, or
+  // listening. The caller must determine the state of the socket based on its
+  // provenance and act accordingly. The socket may have connections waiting
+  // to be accepted, but must not be actually connected.
+  int AdoptUnconnectedSocket(SocketDescriptor socket);
 
   // Binds this socket to |address|. This is generally only used on a server.
   // Should be called after Open(). Returns a net error code.
@@ -135,6 +144,11 @@ class NET_EXPORT TCPSocketPosix {
   void EndLoggingMultipleConnectAttempts(int net_error);
 
   const NetLogWithSource& net_log() const { return net_log_; }
+
+  // Return the underlying SocketDescriptor and clean up this object, which may
+  // no longer be used. This method should be used only for testing. No read,
+  // write, or accept operations should be pending.
+  SocketDescriptor ReleaseSocketDescriptorForTesting();
 
  private:
   // States that using a socket with TCP FastOpen can lead to.

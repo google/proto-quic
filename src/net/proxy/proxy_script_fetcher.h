@@ -54,6 +54,12 @@ class NET_EXPORT_PRIVATE ProxyScriptFetcher {
   // Returns the request context that this fetcher uses to issue downloads,
   // or NULL.
   virtual URLRequestContext* GetRequestContext() const = 0;
+
+  // Fails the in-progress fetch (if any) and future requests will fail
+  // immediately. GetRequestContext() will always return nullptr after this is
+  // called.  Must be called before the URLRequestContext the fetcher was
+  // created with is torn down.
+  virtual void OnShutdown() = 0;
 };
 
 }  // namespace net

@@ -82,6 +82,9 @@ int DhcpProxyScriptFetcherWin::Fetch(base::string16* utf16_text,
     return ERR_UNEXPECTED;
   }
 
+  if (!url_request_context_)
+    return ERR_CONTEXT_SHUT_DOWN;
+
   state_ = STATE_WAIT_ADAPTERS;
   callback_ = callback;
   destination_string_ = utf16_text;
@@ -108,6 +111,23 @@ void DhcpProxyScriptFetcherWin::Cancel() {
   DCHECK(CalledOnValidThread());
 
   CancelImpl();
+}
+
+void DhcpProxyScriptFetcherWin::OnShutdown() {
+  DCHECK(CalledOnValidThread());
+
+  // Back up callback, if there is one, as CancelImpl() will destroy it.
+  net::CompletionCallback callback = std::move(callback_);
+
+  // Cancel current request, if there is one.
+  CancelImpl();
+
+  // Prevent future network requests.
+  url_request_context_ = nullptr;
+
+  // Invoke callback with error, if present.
+  if (callback)
+    callback.Run(ERR_CONTEXT_SHUT_DOWN);
 }
 
 void DhcpProxyScriptFetcherWin::CancelImpl() {

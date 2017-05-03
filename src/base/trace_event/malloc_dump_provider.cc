@@ -6,6 +6,8 @@
 
 #include <stddef.h>
 
+#include <unordered_map>
+
 #include "base/allocator/allocator_extension.h"
 #include "base/allocator/allocator_shim.h"
 #include "base/allocator/features.h"
@@ -296,7 +298,7 @@ bool MallocDumpProvider::OnMemoryDump(const MemoryDumpArgs& args,
   // profiler does not see unabalanced malloc/free calls from these containers.
   {
     TraceEventMemoryOverhead overhead;
-    hash_map<AllocationContext, AllocationMetrics> metrics_by_context;
+    std::unordered_map<AllocationContext, AllocationMetrics> metrics_by_context;
     {
       AutoLock lock(allocation_register_lock_);
       if (allocation_register_) {

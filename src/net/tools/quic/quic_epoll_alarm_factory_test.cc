@@ -4,9 +4,9 @@
 
 #include "net/tools/quic/quic_epoll_alarm_factory.h"
 
+#include "net/quic/platform/api/quic_test.h"
 #include "net/tools/quic/platform/impl/quic_epoll_clock.h"
 #include "net/tools/quic/test_tools/mock_epoll_server.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
 namespace test {
@@ -25,7 +25,7 @@ class TestDelegate : public QuicAlarm::Delegate {
 };
 
 // The boolean parameter denotes whether or not to use an arena.
-class QuicEpollAlarmFactoryTest : public ::testing::TestWithParam<bool> {
+class QuicEpollAlarmFactoryTest : public QuicTestWithParam<bool> {
  protected:
   QuicEpollAlarmFactoryTest()
       : clock_(&epoll_server_), alarm_factory_(&epoll_server_) {}

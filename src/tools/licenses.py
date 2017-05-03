@@ -605,7 +605,8 @@ def GenerateCredits(
     # Sort by size in order to improve gzip compression ratio (puts similar
     # licenses near each other). The licenses are re-sorted by the JavaScript
     # when loaded.
-    entries.sort(key=lambda entry: len(entry['content']))
+    entries.sort(key=lambda entry: (len(entry['content']),
+                                    entry['name'], entry['content']))
 
     entries_contents = '\n'.join([entry['content'] for entry in entries])
     file_template = open(file_template_file).read()

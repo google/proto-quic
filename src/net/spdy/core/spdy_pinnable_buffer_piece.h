@@ -9,7 +9,7 @@
 
 #include <memory>
 
-#include "net/base/net_export.h"
+#include "net/spdy/platform/api/spdy_export.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
 namespace net {
@@ -20,7 +20,7 @@ class SpdyPrefixedBufferReader;
 // Represents a piece of consumed buffer which may (or may not) own its
 // underlying storage. Users may "pin" the buffer at a later time to ensure
 // a SpdyPinnableBufferPiece owns and retains storage of the buffer.
-struct NET_EXPORT_PRIVATE SpdyPinnableBufferPiece {
+struct SPDY_EXPORT_PRIVATE SpdyPinnableBufferPiece {
  public:
   SpdyPinnableBufferPiece();
   ~SpdyPinnableBufferPiece();

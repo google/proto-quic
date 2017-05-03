@@ -9,6 +9,7 @@ import android.content.ContextWrapper;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.support.v4.content.ContextCompat;
 
 import org.chromium.android.support.PackageManagerWrapper;
 import org.chromium.base.Log;
@@ -59,9 +60,8 @@ class BaseChromiumRunnerCommon {
                     try {
                         ApplicationInfo ai = super.getApplicationInfo(packageName, flags);
                         if (packageName.equals(getPackageName())) {
-                            ApplicationInfo appAi =
-                                    super.getApplicationInfo(mAppContext.getPackageName(), flags);
-                            File dataDir = new File(appAi.dataDir, "test-multidex");
+                            File dataDir = new File(
+                                    ContextCompat.getCodeCacheDir(mAppContext), "test-multidex");
                             if (!dataDir.exists() && !dataDir.mkdirs()) {
                                 throw new IOException(String.format(
                                         "Unable to create test multidex directory \"%s\"",

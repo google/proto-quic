@@ -204,7 +204,7 @@ class QuicDispatcher : public QuicTimeWaitListManager::Visitor,
 
   // Called when |current_packet_| is a CHLO packet. Creates a new connection
   // and delivers any buffered packets for that connection id.
-  void ProcessChlo(QuicPacketNumber packet_number);
+  void ProcessChlo();
 
   QuicTimeWaitListManager* time_wait_list_manager() {
     return time_wait_list_manager_.get();
@@ -296,7 +296,7 @@ class QuicDispatcher : public QuicTimeWaitListManager::Visitor,
   // fate which describes what subsequent processing should be performed on the
   // packets, like ValidityChecks, and invokes ProcessUnauthenticatedHeaderFate.
   void MaybeRejectStatelessly(QuicConnectionId connection_id,
-                              const QuicPacketHeader& header);
+                              QuicVersion version);
 
   // Deliver |packets| to |session| for further processing.
   void DeliverPacketsToSession(
@@ -306,8 +306,7 @@ class QuicDispatcher : public QuicTimeWaitListManager::Visitor,
   // Perform the appropriate actions on the current packet based on |fate| -
   // either process, buffer, or drop it.
   void ProcessUnauthenticatedHeaderFate(QuicPacketFate fate,
-                                        QuicConnectionId connection_id,
-                                        QuicPacketNumber packet_number);
+                                        QuicConnectionId connection_id);
 
   // Invoked when StatelessRejector::Process completes.
   void OnStatelessRejectorProcessDone(
@@ -315,14 +314,12 @@ class QuicDispatcher : public QuicTimeWaitListManager::Visitor,
       const QuicSocketAddress& current_client_address,
       const QuicSocketAddress& current_server_address,
       std::unique_ptr<QuicReceivedPacket> current_packet,
-      QuicPacketNumber packet_number,
       QuicVersion first_version);
 
   // Examine the state of the rejector and decide what to do with the current
   // packet.
   void ProcessStatelessRejectorState(
       std::unique_ptr<StatelessRejector> rejector,
-      QuicPacketNumber packet_number,
       QuicVersion first_version);
 
   void set_new_sessions_allowed_per_event_loop(

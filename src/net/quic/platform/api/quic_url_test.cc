@@ -4,7 +4,7 @@
 
 #include "net/quic/platform/api/quic_url.h"
 
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 using std::string;
 
@@ -12,7 +12,9 @@ namespace net {
 namespace test {
 namespace {
 
-TEST(QuicUrlTest, Basic) {
+class QuicUrlTest : public QuicTest {};
+
+TEST_F(QuicUrlTest, Basic) {
   // No scheme specified.
   string url_str = "www.example.com";
   QuicUrl url(url_str);
@@ -50,7 +52,7 @@ TEST(QuicUrlTest, Basic) {
   EXPECT_EQ(21u, url.port());
 }
 
-TEST(QuicUrlTest, DefaultScheme) {
+TEST_F(QuicUrlTest, DefaultScheme) {
   // Default scheme to HTTP.
   string url_str = "www.example.com";
   QuicUrl url(url_str, "http");
@@ -70,7 +72,7 @@ TEST(QuicUrlTest, DefaultScheme) {
   EXPECT_EQ("ftp", url.scheme());
 }
 
-TEST(QuicUrlTest, IsValid) {
+TEST_F(QuicUrlTest, IsValid) {
   string url_str =
       "ftp://www.example.com:12345/path/to/resource?a=1&campaign=2";
   EXPECT_TRUE(QuicUrl(url_str).IsValid());
@@ -93,7 +95,7 @@ TEST(QuicUrlTest, IsValid) {
   EXPECT_FALSE(QuicUrl(url_str).IsValid());
 }
 
-TEST(QuicUrlTest, HostPort) {
+TEST_F(QuicUrlTest, HostPort) {
   string url_str = "http://www.example.com/";
   QuicUrl url(url_str);
   EXPECT_EQ("www.example.com", url.HostPort());
@@ -131,7 +133,7 @@ TEST(QuicUrlTest, HostPort) {
   EXPECT_EQ(81u, url.port());
 }
 
-TEST(QuicUrlTest, PathParamsQuery) {
+TEST_F(QuicUrlTest, PathParamsQuery) {
   string url_str =
       "https://www.example.com:12345/path/to/resource?a=1&campaign=2";
   QuicUrl url(url_str);

@@ -15,6 +15,7 @@ extern const char kDisableBreakpad[];
 extern const char kDisableLowEndDeviceMode[];
 extern const char kEnableCrashReporter[];
 extern const char kEnableHeapProfiling[];
+extern const char kEnableHeapProfilingModePseudo[];
 extern const char kEnableHeapProfilingModeNative[];
 extern const char kEnableHeapProfilingTaskProfiler[];
 extern const char kEnableLowEndDeviceMode[];

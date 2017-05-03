@@ -1,4 +1,4 @@
-// Copyright (c) 2016 The Chromium Authors. All rights reserved.
+// Copyright (c) 2017 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -8,15 +8,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "net/quic/platform/api/quic_export.h"
-
 namespace net {
 
 // Sends and receives data with a particular QUIC stream ID, reliably and
 // in-order. To send/receive data out of order, use separate streams. To
 // send/receive unreliably, close a stream after reliability is no longer
 // needed.
-class QUIC_EXPORT_PRIVATE QuartcStreamInterface {
+class QuartcStreamInterface {
  public:
   virtual ~QuartcStreamInterface() {}
 

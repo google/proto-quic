@@ -3135,19 +3135,6 @@
         "test": "mojo_common_unittests"
       },
       {
-        "override_isolate_target": "mojo_public_application_unittests",
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "device_type": "coho"
-            }
-          ]
-        },
-        "test": "mojo_public_application_unittests"
-      },
-      {
         "override_isolate_target": "mojo_public_bindings_unittests",
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -11783,6 +11770,21 @@
       }
     ]
   },
+  "Mojo Linux": {
+    "gtest_tests": [
+      {
+        "args": [
+          "--enable-network-service",
+          "--test-launcher-filter-file=../../testing/buildbot/filters/mojo.fyi.network_content_browsertests.filter"
+        ],
+        "name": "network_service_content_browsertests",
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "content_browsertests"
+      }
+    ]
+  },
   "Mojo Windows": {
     "additional_compile_targets": [
       "mash:all"
@@ -12922,6 +12924,11 @@
         "name": "webkit_layout_tests",
         "swarming": {
           "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "os": "Mac-10.12"
+            }
+          ],
           "shards": 1
         }
       }
@@ -12934,6 +12941,11 @@
         "name": "webkit_layout_tests",
         "swarming": {
           "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "os": "Windows-10-10240"
+            }
+          ],
           "shards": 1
         }
       }
