@@ -117,9 +117,9 @@ class BASE_EXPORT TaskTracker {
   const std::unique_ptr<State> state_;
 
   // Number of undelayed tasks that haven't completed their execution. Is
-  // incremented and decremented without a barrier. When it reaches zero,
-  // |flush_lock_| is acquired (forcing memory synchronization) and |flush_cv_|
-  // is signaled.
+  // decremented with a memory barrier after a task runs. Is accessed with an
+  // acquire memory barrier in Flush(). The memory barriers ensure that the
+  // memory written by flushed tasks is visible when Flush() returns.
   subtle::Atomic32 num_pending_undelayed_tasks_ = 0;
 
   // Lock associated with |flush_cv_|. Partially synchronizes access to

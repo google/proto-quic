@@ -31,8 +31,10 @@ class NET_EXPORT TrustStoreMac : public TrustStore {
   ~TrustStoreMac() override;
 
   // TrustStore implementation:
-  void FindTrustAnchorsForCert(const scoped_refptr<ParsedCertificate>& cert,
-                               TrustAnchors* matches) const override;
+  void SyncGetIssuersOf(const ParsedCertificate* cert,
+                        ParsedCertificateList* issuers) override;
+  void GetTrust(const scoped_refptr<ParsedCertificate>& cert,
+                CertificateTrust* trust) const override;
 
  private:
   FRIEND_TEST_ALL_PREFIXES(TrustStoreMacTest, MultiRootNotTrusted);
@@ -48,12 +50,7 @@ class NET_EXPORT TrustStoreMac : public TrustStore {
   // comparing, roughly similar to RFC3280's normalization scheme. The
   // normalized form is used for any database lookups and comparisons.
   static base::ScopedCFTypeRef<CFDataRef> GetMacNormalizedIssuer(
-      const scoped_refptr<ParsedCertificate>& cert);
-
-  // Finds trust anchors with the Subject |name_data|, which should be
-  // normalized as by the OS.
-  void FindTrustAnchorsByMacNormalizedSubject(CFDataRef name_data,
-                                              TrustAnchors* matches) const;
+      const ParsedCertificate* cert);
 
   const CFStringRef policy_oid_;
 

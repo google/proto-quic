@@ -96,9 +96,6 @@ struct QUIC_EXPORT_PRIVATE QuicPublicResetPacket {
 
   QuicPacketPublicHeader public_header;
   QuicPublicResetNonceProof nonce_proof;
-  // TODO(fayang): remove rejected_packet_number when deprecating
-  // FLAGS_quic_reloadable_flag_quic_remove_packet_number_from_public_reset.
-  QuicPacketNumber rejected_packet_number;
   QuicSocketAddress client_address;
 };
 

@@ -21,25 +21,28 @@ namespace internal {
 // selects only the last of consecutive values instead of the first.
 template <class Iterator, class BinaryPredicate>
 Iterator LastUnique(Iterator first, Iterator last, BinaryPredicate compare) {
-  if (first == last)
+  Iterator replacable = std::adjacent_find(first, last, compare);
+
+  // No duplicate elements found.
+  if (replacable == last)
     return last;
 
-  Iterator dest = first;
-  Iterator cur = first;
-  Iterator prev = cur;
-  while (++cur != last) {
-    if (!compare(*prev, *cur)) {
-      // Non-identical one.
-      if (dest != prev)
-        *dest = std::move(*prev);
-      ++dest;
-    }
-    prev = cur;
+  first = std::next(replacable);
+
+  // Last element is a duplicate but all others are unique.
+  if (first == last)
+    return replacable;
+
+  // This loop is based on std::adjacent_find but std::adjacent_find doesn't
+  // quite cut it.
+  for (Iterator next = std::next(first); next != last; ++next, ++first) {
+    if (!compare(*first, *next))
+      *replacable++ = std::move(*first);
   }
 
-  if (dest != prev)
-    *dest = std::move(*prev);
-  return ++dest;
+  // Last element should be copied unconditionally.
+  *replacable++ = std::move(*first);
+  return replacable;
 }
 
 // Implementation of a sorted vector for backing flat_set and flat_map. Do not

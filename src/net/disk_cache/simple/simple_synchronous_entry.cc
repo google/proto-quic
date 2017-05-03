@@ -258,8 +258,12 @@ void SimpleSynchronousEntry::OpenEntry(
     const std::string& key,
     const uint64_t entry_hash,
     const bool had_index,
+    const base::TimeTicks& time_enqueued,
     SimpleEntryCreationResults* out_results) {
-  base::ElapsedTimer open_time;
+  base::TimeTicks start_sync_open_entry = base::TimeTicks::Now();
+  SIMPLE_CACHE_UMA(TIMES, "QueueLatency.OpenEntry", cache_type,
+                   (start_sync_open_entry - time_enqueued));
+
   SimpleSynchronousEntry* sync_entry =
       new SimpleSynchronousEntry(cache_type, path, key, entry_hash, had_index);
   out_results->result = sync_entry->InitializeForOpen(
@@ -272,7 +276,8 @@ void SimpleSynchronousEntry::OpenEntry(
     out_results->stream_0_data = NULL;
     return;
   }
-  UMA_HISTOGRAM_TIMES("SimpleCache.DiskOpenLatency", open_time.Elapsed());
+  SIMPLE_CACHE_UMA(TIMES, "DiskOpenLatency", cache_type,
+                   base::TimeTicks::Now() - start_sync_open_entry);
   out_results->sync_entry = sync_entry;
 }
 
@@ -283,8 +288,13 @@ void SimpleSynchronousEntry::CreateEntry(
     const std::string& key,
     const uint64_t entry_hash,
     const bool had_index,
+    const base::TimeTicks& time_enqueued,
     SimpleEntryCreationResults* out_results) {
   DCHECK_EQ(entry_hash, GetEntryHashKey(key));
+  base::TimeTicks start_sync_create_entry = base::TimeTicks::Now();
+  SIMPLE_CACHE_UMA(TIMES, "QueueLatency.CreateEntry", cache_type,
+                   (start_sync_create_entry - time_enqueued));
+
   SimpleSynchronousEntry* sync_entry =
       new SimpleSynchronousEntry(cache_type, path, key, entry_hash, had_index);
   out_results->result =
@@ -297,6 +307,8 @@ void SimpleSynchronousEntry::CreateEntry(
     return;
   }
   out_results->sync_entry = sync_entry;
+  SIMPLE_CACHE_UMA(TIMES, "DiskCreateLatency", cache_type,
+                   base::TimeTicks::Now() - start_sync_create_entry);
 }
 
 // static
@@ -365,6 +377,7 @@ void SimpleSynchronousEntry::WriteData(const EntryOperationData& in_entry_op,
                                        net::IOBuffer* in_buf,
                                        SimpleEntryStat* out_entry_stat,
                                        int* out_result) {
+  base::ElapsedTimer write_time;
   DCHECK(initialized_);
   DCHECK_NE(0, in_entry_op.index);
   int index = in_entry_op.index;
@@ -445,6 +458,8 @@ void SimpleSynchronousEntry::WriteData(const EntryOperationData& in_entry_op,
     }
   }
 
+  SIMPLE_CACHE_UMA(TIMES, "DiskWriteLatency", cache_type_,
+                   write_time.Elapsed());
   RecordWriteResult(cache_type_, WRITE_RESULT_SUCCESS);
   base::Time modification_time = Time::Now();
   out_entry_stat->set_last_used(modification_time);
@@ -686,6 +701,7 @@ void SimpleSynchronousEntry::Close(
     const SimpleEntryStat& entry_stat,
     std::unique_ptr<std::vector<CRCRecord>> crc32s_to_write,
     net::GrowableIOBuffer* stream_0_data) {
+  base::ElapsedTimer close_time;
   DCHECK(stream_0_data);
 
   for (std::vector<CRCRecord>::const_iterator it = crc32s_to_write->begin();
@@ -772,6 +788,8 @@ void SimpleSynchronousEntry::Close(
     SIMPLE_CACHE_UMA(BOOLEAN, "EntryCreatedAndStream2Omitted", cache_type_,
                      empty_file_omitted_[stream2_file_index]);
   }
+  SIMPLE_CACHE_UMA(TIMES, "DiskCloseLatency", cache_type_,
+                   close_time.Elapsed());
   RecordCloseResult(cache_type_, CLOSE_RESULT_SUCCESS);
   have_open_files_ = false;
   delete this;

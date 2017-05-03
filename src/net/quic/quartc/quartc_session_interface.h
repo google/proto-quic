@@ -1,4 +1,4 @@
-// Copyright (c) 2016 The Chromium Authors. All rights reserved.
+// Copyright (c) 2017 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -9,7 +9,6 @@
 #include <stdint.h>
 #include <string>
 
-#include "net/quic/platform/api/quic_export.h"
 #include "net/quic/quartc/quartc_stream_interface.h"
 
 namespace net {
@@ -17,7 +16,7 @@ namespace net {
 // Given a PacketTransport, provides a way to send and receive separate streams
 // of reliable, in-order, encrypted data. For example, this can build on top of
 // a WebRTC IceTransport for sending and receiving data over QUIC.
-class QUIC_EXPORT_PRIVATE QuartcSessionInterface {
+class QuartcSessionInterface {
  public:
   virtual ~QuartcSessionInterface() {}
 

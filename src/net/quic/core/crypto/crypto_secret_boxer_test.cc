@@ -5,14 +5,16 @@
 #include "net/quic/core/crypto/crypto_secret_boxer.h"
 
 #include "net/quic/core/crypto/quic_random.h"
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 using std::string;
 
 namespace net {
 namespace test {
 
-TEST(CryptoSecretBoxerTest, BoxAndUnbox) {
+class CryptoSecretBoxerTest : public QuicTest {};
+
+TEST_F(CryptoSecretBoxerTest, BoxAndUnbox) {
   QuicStringPiece message("hello world");
 
   CryptoSecretBoxer boxer;
@@ -47,7 +49,7 @@ static bool CanDecode(const CryptoSecretBoxer& decoder,
   return ok;
 }
 
-TEST(CryptoSecretBoxerTest, MultipleKeys) {
+TEST_F(CryptoSecretBoxerTest, MultipleKeys) {
   string key_11(CryptoSecretBoxer::GetKeySize(), 0x11);
   string key_12(CryptoSecretBoxer::GetKeySize(), 0x12);
 

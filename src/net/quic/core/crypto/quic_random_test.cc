@@ -4,12 +4,14 @@
 
 #include "net/quic/core/crypto/quic_random.h"
 
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 namespace net {
 namespace test {
 
-TEST(QuicRandomTest, RandBytes) {
+class QuicRandomTest : public QuicTest {};
+
+TEST_F(QuicRandomTest, RandBytes) {
   unsigned char buf1[16];
   unsigned char buf2[16];
   memset(buf1, 0xaf, sizeof(buf1));
@@ -21,14 +23,14 @@ TEST(QuicRandomTest, RandBytes) {
   EXPECT_NE(0, memcmp(buf1, buf2, sizeof(buf1)));
 }
 
-TEST(QuicRandomTest, RandUint64) {
+TEST_F(QuicRandomTest, RandUint64) {
   QuicRandom* rng = QuicRandom::GetInstance();
   uint64_t value1 = rng->RandUint64();
   uint64_t value2 = rng->RandUint64();
   EXPECT_NE(value1, value2);
 }
 
-TEST(QuicRandomTest, Reseed) {
+TEST_F(QuicRandomTest, Reseed) {
   char buf[1024];
   memset(buf, 0xaf, sizeof(buf));
 

@@ -10,12 +10,12 @@ namespace net {
 
 template <typename T, typename... Args>
 std::unique_ptr<T> QuicMakeUniqueImpl(Args&&... args) {
-  return std::move(base::MakeUnique<T>(std::forward<Args>(args)...));
+  return base::MakeUnique<T>(std::forward<Args>(args)...);
 }
 
 template <typename T>
 std::unique_ptr<T> QuicWrapUniqueImpl(T* ptr) {
-  return std::move(base::WrapUnique<T>(ptr));
+  return base::WrapUnique<T>(ptr);
 }
 
 }  // namespace net

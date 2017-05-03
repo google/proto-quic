@@ -14,13 +14,12 @@
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_string_piece.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/quic_stream_sequencer_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/test/gtest_util.h"
-#include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gmock_mutant.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
 using testing::_;
@@ -59,7 +58,7 @@ namespace {
 static const char kPayload[] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-class QuicStreamSequencerTest : public ::testing::Test {
+class QuicStreamSequencerTest : public QuicTest {
  public:
   void ConsumeData(size_t num_bytes) {
     char buffer[1024];

@@ -10,6 +10,14 @@ ElapsedTimer::ElapsedTimer() {
   begin_ = TimeTicks::Now();
 }
 
+ElapsedTimer::ElapsedTimer(ElapsedTimer&& other) {
+  begin_ = other.begin_;
+}
+
+void ElapsedTimer::operator=(ElapsedTimer&& other) {
+  begin_ = other.begin_;
+}
+
 TimeDelta ElapsedTimer::Elapsed() const {
   return TimeTicks::Now() - begin_;
 }

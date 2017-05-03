@@ -156,8 +156,7 @@ class MediaAndroidToughVideoCasesTBMv2(_MediaTBMv2Benchmark):
     # By default, Chrome on Android does not allow autoplay
     # of media: it requires a user gesture event to start a video.
     # The following option works around that.
-    options.AppendExtraBrowserArgs(
-        ['--disable-gesture-requirement-for-media-playback'])
+    options.AppendExtraBrowserArgs(['--ignore-autoplay-restrictions'])
 
 
 # This isn't running anywhere. See crbug/709161.
@@ -218,4 +217,4 @@ class MediaSourceExtensions(perf_benchmark.PerfBenchmark):
     # Needed to allow XHR requests to return stream objects.
     options.AppendExtraBrowserArgs(
         ['--enable-experimental-web-platform-features',
-         '--disable-gesture-requirement-for-media-playback'])
+         '--ignore-autoplay-restrictions'])

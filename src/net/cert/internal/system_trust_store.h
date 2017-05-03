@@ -14,8 +14,6 @@
 namespace net {
 
 class TrustStore;
-class CertIssuerSource;
-class TrustAnchor;
 
 // The SystemTrustStore interface is used to encapsulate a TrustStore for the
 // current platform, with some extra bells and whistles.
@@ -46,34 +44,18 @@ class SystemTrustStore {
   // trust anchors (via AddTrustAnchor()).
   virtual bool UsesSystemTrustStore() const = 0;
 
-  // TODO(eroman): Expose this through the TrustStore interface instead?
-  //
-  // Returns a CertIssuerSource that finds any intermediates that are present in
-  // the system trust store. These intermediates are not necessarily trusted,
-  // however may be used during path building as another means of finding
-  // certificates. If the implementation of SystemTrustStore doesn't support
-  // this feature may return nullptr.
-  virtual CertIssuerSource* GetCertIssuerSource() = 0;
-
-  // IsKnownRoot() returns true if the given trust anchor originated from the
+  // IsKnownRoot() returns true if the given certificate originated from the
   // system trust store and is a "standard" one. The meaning of "standard" is
   // that it is one of default trust anchors for the system, as opposed to a
-  // user-installed one. IsKnownRoot() is only guaranteed to work for
-  // TrustAnchors returned by GetTrustStore().
-  virtual bool IsKnownRoot(
-      const scoped_refptr<TrustAnchor>& trust_anchor) const = 0;
+  // user-installed one.
+  virtual bool IsKnownRoot(const ParsedCertificate* cert) const = 0;
 
-  // Adds a trust anchor to this particular instance of SystemTrustStore, and
-  // not globally for the system.
-  virtual void AddTrustAnchor(
-      const scoped_refptr<TrustAnchor>& trust_anchor) = 0;
+  // Adds a trust anchor to this particular instance of SystemTrustStore,
+  // and not globally for the system.
+  virtual void AddTrustAnchor(const scoped_refptr<ParsedCertificate>& cert) = 0;
 
-  // Returns true if |trust_anchor| was one added via |AddTrustAnchor()|. This
-  // is only guaranteed to work if |trust_anchor| was one returned by
-  // GetTrustStore(), as it may be implemented by pointer comparison rather than
-  // SPKI comparison.
-  virtual bool IsAdditionalTrustAnchor(
-      const scoped_refptr<TrustAnchor>& trust_anchor) const = 0;
+  // Returns true if |trust_anchor| was one added via |AddTrustAnchor()|.
+  virtual bool IsAdditionalTrustAnchor(const ParsedCertificate* cert) const = 0;
 };
 
 // Creates an instance of SystemTrustStore that wraps the current platform's SSL

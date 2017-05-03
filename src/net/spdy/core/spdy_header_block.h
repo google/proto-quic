@@ -15,8 +15,8 @@
 
 #include "base/macros.h"
 #include "net/base/linked_hash_map.h"
-#include "net/base/net_export.h"
 #include "net/log/net_log.h"
+#include "net/spdy/platform/api/spdy_export.h"
 #include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
@@ -44,13 +44,13 @@ class ValueProxyPeer;
 //
 // This implementation does not make much of an effort to minimize wasted space.
 // It's expected that keys are rarely deleted from a SpdyHeaderBlock.
-class NET_EXPORT SpdyHeaderBlock {
+class SPDY_EXPORT_PRIVATE SpdyHeaderBlock {
  private:
   class Storage;
 
   // Stores a list of value fragments that can be joined later with a
   // key-dependent separator.
-  class NET_EXPORT HeaderValue {
+  class SPDY_EXPORT_PRIVATE HeaderValue {
    public:
     HeaderValue(Storage* storage,
                 SpdyStringPiece key,
@@ -93,7 +93,7 @@ class NET_EXPORT SpdyHeaderBlock {
   // SpdyStringPiece>, even though the underlying MapType::value_type is
   // different. Dereferencing the iterator will result in memory allocation for
   // multi-value headers.
-  class NET_EXPORT iterator {
+  class SPDY_EXPORT_PRIVATE iterator {
    public:
     // The following type definitions fulfill the requirements for iterator
     // implementations.
@@ -187,7 +187,7 @@ class NET_EXPORT SpdyHeaderBlock {
   // This object provides automatic conversions that allow SpdyHeaderBlock to be
   // nearly a drop-in replacement for linked_hash_map<SpdyString, SpdyString>.
   // It reads data from or writes data to a SpdyHeaderBlock::Storage.
-  class NET_EXPORT ValueProxy {
+  class SPDY_EXPORT_PRIVATE ValueProxy {
    public:
     ~ValueProxy();
 
@@ -238,12 +238,12 @@ class NET_EXPORT SpdyHeaderBlock {
 
 // Writes |fragments| to |dst|, joined by |separator|. |dst| must be large
 // enough to hold the result. Returns the number of bytes written.
-NET_EXPORT size_t Join(char* dst,
-                       const std::vector<SpdyStringPiece>& fragments,
-                       SpdyStringPiece separator);
+SPDY_EXPORT_PRIVATE size_t Join(char* dst,
+                                const std::vector<SpdyStringPiece>& fragments,
+                                SpdyStringPiece separator);
 
 // Converts a SpdyHeaderBlock into NetLog event parameters.
-NET_EXPORT std::unique_ptr<base::Value> SpdyHeaderBlockNetLogCallback(
+SPDY_EXPORT_PRIVATE std::unique_ptr<base::Value> SpdyHeaderBlockNetLogCallback(
     const SpdyHeaderBlock* headers,
     NetLogCaptureMode capture_mode);
 
@@ -251,7 +251,7 @@ NET_EXPORT std::unique_ptr<base::Value> SpdyHeaderBlockNetLogCallback(
 // to |headers|.  |event_param| must have been created by
 // SpdyHeaderBlockNetLogCallback.  On failure, returns false and clears
 // |headers|.
-NET_EXPORT bool SpdyHeaderBlockFromNetLogParam(
+SPDY_EXPORT_PRIVATE bool SpdyHeaderBlockFromNetLogParam(
     const base::Value* event_param,
     SpdyHeaderBlock* headers);
 

@@ -4,6 +4,7 @@
 
 package org.chromium.net;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 
 import org.chromium.base.ObserverList;
@@ -41,6 +42,7 @@ public class NetworkChangeNotifier {
     private double mCurrentMaxBandwidth = Double.POSITIVE_INFINITY;
     private int mMaxBandwidthConnectionType = mCurrentConnectionType;
 
+    @SuppressLint("StaticFieldLeak")
     private static NetworkChangeNotifier sInstance;
 
     @VisibleForTesting

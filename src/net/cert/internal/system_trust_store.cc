@@ -17,7 +17,6 @@
 
 #if defined(USE_NSS_CERTS)
 #include "crypto/nss_util.h"
-#include "net/cert/internal/cert_issuer_source_nss.h"
 #include "net/cert/internal/trust_store_nss.h"
 #include "net/cert/known_roots_nss.h"
 #include "net/cert/scoped_nss_types.h"
@@ -39,17 +38,16 @@ class BaseSystemTrustStore : public SystemTrustStore {
     trust_store_.AddTrustStore(&additional_trust_store_);
   }
 
-  void AddTrustAnchor(const scoped_refptr<TrustAnchor>& trust_anchor) override {
+  void AddTrustAnchor(
+      const scoped_refptr<ParsedCertificate>& trust_anchor) override {
     additional_trust_store_.AddTrustAnchor(trust_anchor);
   }
 
   TrustStore* GetTrustStore() override { return &trust_store_; }
 
-  CertIssuerSource* GetCertIssuerSource() override { return nullptr; }
-
   bool IsAdditionalTrustAnchor(
-      const scoped_refptr<TrustAnchor>& trust_anchor) const override {
-    return additional_trust_store_.Contains(trust_anchor.get());
+      const ParsedCertificate* trust_anchor) const override {
+    return additional_trust_store_.Contains(trust_anchor);
   }
 
  protected:
@@ -68,40 +66,32 @@ class SystemTrustStoreNSS : public BaseSystemTrustStore {
     trust_store_.AddTrustStore(&trust_store_nss_);
   }
 
-  CertIssuerSource* GetCertIssuerSource() override {
-    return &cert_issuer_source_nss_;
-  }
-
   bool UsesSystemTrustStore() const override { return true; }
 
   // IsKnownRoot returns true if the given trust anchor is a standard one (as
   // opposed to a user-installed root)
-  bool IsKnownRoot(
-      const scoped_refptr<TrustAnchor>& trust_anchor) const override {
-    // TODO(eroman): Based on how the TrustAnchors are created by this
-    // integration, there will always be an associated certificate. However this
-    // contradicts the API for TrustAnchor that states it is optional.
-    DCHECK(trust_anchor->cert());
-
+  bool IsKnownRoot(const ParsedCertificate* trust_anchor) const override {
     // TODO(eroman): The overall approach of IsKnownRoot() is inefficient -- it
     // requires searching for the trust anchor by DER in NSS, however path
     // building already had a handle to it.
     SECItem der_cert;
-    der_cert.data =
-        const_cast<uint8_t*>(trust_anchor->cert()->der_cert().UnsafeData());
-    der_cert.len = trust_anchor->cert()->der_cert().Length();
+    der_cert.data = const_cast<uint8_t*>(trust_anchor->der_cert().UnsafeData());
+    der_cert.len = trust_anchor->der_cert().Length();
     der_cert.type = siDERCertBuffer;
     ScopedCERTCertificate nss_cert(
         CERT_FindCertByDERCert(CERT_GetDefaultCertDB(), &der_cert));
     if (!nss_cert)
       return false;
 
-    return net::IsKnownRoot(nss_cert.get());
+    if (!net::IsKnownRoot(nss_cert.get()))
+      return false;
+
+    return trust_anchor->der_cert() ==
+           der::Input(nss_cert->derCert.data, nss_cert->derCert.len);
   }
 
  private:
   TrustStoreNSS trust_store_nss_;
-  CertIssuerSourceNSS cert_issuer_source_nss_;
 };
 
 }  // namespace
@@ -120,21 +110,12 @@ class SystemTrustStoreMac : public BaseSystemTrustStore {
     trust_store_.AddTrustStore(&trust_store_mac_);
   }
 
-  CertIssuerSource* GetCertIssuerSource() override {
-    // TODO(eroman): Implement.
-    return nullptr;
-  }
-
   bool UsesSystemTrustStore() const override { return true; }
 
   // IsKnownRoot returns true if the given trust anchor is a standard one (as
   // opposed to a user-installed root)
-  bool IsKnownRoot(
-      const scoped_refptr<TrustAnchor>& trust_anchor) const override {
-    if (!trust_anchor->cert())
-      return false;
-
-    der::Input bytes = trust_anchor->cert()->der_cert();
+  bool IsKnownRoot(const ParsedCertificate* trust_anchor) const override {
+    der::Input bytes = trust_anchor->der_cert();
     base::ScopedCFTypeRef<SecCertificateRef> cert_ref =
         x509_util::CreateSecCertificateFromBytes(bytes.UnsafeData(),
                                                  bytes.Length());
@@ -157,8 +138,7 @@ class DummySystemTrustStore : public BaseSystemTrustStore {
  public:
   bool UsesSystemTrustStore() const override { return false; }
 
-  bool IsKnownRoot(
-      const scoped_refptr<TrustAnchor>& trust_anchor) const override {
+  bool IsKnownRoot(const ParsedCertificate* trust_anchor) const override {
     return false;
   }
 };

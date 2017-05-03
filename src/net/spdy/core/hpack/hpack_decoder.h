@@ -13,12 +13,12 @@
 #include <vector>
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/spdy/core/hpack/hpack_decoder_interface.h"
 #include "net/spdy/core/hpack/hpack_header_table.h"
 #include "net/spdy/core/hpack/hpack_input_stream.h"
 #include "net/spdy/core/spdy_headers_handler_interface.h"
 #include "net/spdy/core/spdy_protocol.h"
+#include "net/spdy/platform/api/spdy_export.h"
 #include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
@@ -31,7 +31,7 @@ namespace test {
 class HpackDecoderPeer;
 }  // namespace test
 
-class NET_EXPORT_PRIVATE HpackDecoder : public HpackDecoderInterface {
+class SPDY_EXPORT_PRIVATE HpackDecoder : public HpackDecoderInterface {
  public:
   friend class test::HpackDecoderPeer;
 

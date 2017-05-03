@@ -15,6 +15,9 @@ namespace base {
 class BASE_EXPORT ElapsedTimer {
  public:
   ElapsedTimer();
+  ElapsedTimer(ElapsedTimer&& other);
+
+  void operator=(ElapsedTimer&& other);
 
   // Returns the time elapsed since object construction.
   TimeDelta Elapsed() const;

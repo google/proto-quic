@@ -244,8 +244,9 @@ MemoryAllocatorDump* ProcessMemoryDump::GetSharedGlobalAllocatorDump(
 }
 
 void ProcessMemoryDump::DumpHeapUsage(
-    const base::hash_map<base::trace_event::AllocationContext,
-        base::trace_event::AllocationMetrics>& metrics_by_context,
+    const std::unordered_map<base::trace_event::AllocationContext,
+                             base::trace_event::AllocationMetrics>&
+        metrics_by_context,
     base::trace_event::TraceEventMemoryOverhead& overhead,
     const char* allocator_name) {
   if (!metrics_by_context.empty()) {

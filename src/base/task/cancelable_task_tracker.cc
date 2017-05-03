@@ -134,7 +134,7 @@ CancelableTaskTracker::TaskId CancelableTaskTracker::NewTrackedTaskId(
 void CancelableTaskTracker::TryCancel(TaskId id) {
   DCHECK(sequence_checker_.CalledOnValidSequence());
 
-  hash_map<TaskId, CancellationFlag*>::const_iterator it = task_flags_.find(id);
+  const auto it = task_flags_.find(id);
   if (it == task_flags_.end()) {
     // Two possibilities:
     //
@@ -149,13 +149,8 @@ void CancelableTaskTracker::TryCancel(TaskId id) {
 
 void CancelableTaskTracker::TryCancelAll() {
   DCHECK(sequence_checker_.CalledOnValidSequence());
-
-  for (hash_map<TaskId, CancellationFlag*>::const_iterator it =
-           task_flags_.begin();
-       it != task_flags_.end();
-       ++it) {
-    it->second->Set();
-  }
+  for (const auto& it : task_flags_)
+    it.second->Set();
 }
 
 bool CancelableTaskTracker::HasTrackedTasks() const {
@@ -165,7 +160,6 @@ bool CancelableTaskTracker::HasTrackedTasks() const {
 
 void CancelableTaskTracker::Track(TaskId id, CancellationFlag* flag) {
   DCHECK(sequence_checker_.CalledOnValidSequence());
-
   bool success = task_flags_.insert(std::make_pair(id, flag)).second;
   DCHECK(success);
 }

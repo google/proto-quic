@@ -350,6 +350,7 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
 
         // Lazily determine if app has ACCESS_WIFI_STATE permission.
         @GuardedBy("mLock")
+        @SuppressLint("WifiManagerPotentialLeak")
         private boolean hasPermissionLocked() {
             if (mHasWifiPermissionComputed) {
                 return mHasWifiPermission;
@@ -357,6 +358,7 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
             mHasWifiPermission = mContext.getPackageManager().checkPermission(
                                          permission.ACCESS_WIFI_STATE, mContext.getPackageName())
                     == PackageManager.PERMISSION_GRANTED;
+            // TODO(crbug.com/635567): Fix lint properly.
             mWifiManager = mHasWifiPermission
                     ? (WifiManager) mContext.getSystemService(Context.WIFI_SERVICE)
                     : null;

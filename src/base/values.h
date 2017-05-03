@@ -238,32 +238,41 @@ class BASE_EXPORT DictionaryValue : public Value {
   // If the key at any step of the way doesn't exist, or exists but isn't
   // a DictionaryValue, a new DictionaryValue will be created and attached
   // to the path in that location. |in_value| must be non-null.
-  void Set(StringPiece path, std::unique_ptr<Value> in_value);
+  // Returns a pointer to the inserted value.
+  Value* Set(StringPiece path, std::unique_ptr<Value> in_value);
   // Deprecated version of the above. TODO(estade): remove.
-  void Set(StringPiece path, Value* in_value);
+  Value* Set(StringPiece path, Value* in_value);
 
   // Convenience forms of Set().  These methods will replace any existing
   // value at that path, even if it has a different type.
-  void SetBoolean(StringPiece path, bool in_value);
-  void SetInteger(StringPiece path, int in_value);
-  void SetDouble(StringPiece path, double in_value);
-  void SetString(StringPiece path, StringPiece in_value);
-  void SetString(StringPiece path, const string16& in_value);
+  Value* SetBoolean(StringPiece path, bool in_value);
+  Value* SetInteger(StringPiece path, int in_value);
+  Value* SetDouble(StringPiece path, double in_value);
+  Value* SetString(StringPiece path, StringPiece in_value);
+  Value* SetString(StringPiece path, const string16& in_value);
+  DictionaryValue* SetDictionary(StringPiece path,
+                                 std::unique_ptr<DictionaryValue> in_value);
+  ListValue* SetList(StringPiece path, std::unique_ptr<ListValue> in_value);
 
   // Like Set(), but without special treatment of '.'.  This allows e.g. URLs to
   // be used as paths.
-  void SetWithoutPathExpansion(StringPiece key,
-                               std::unique_ptr<Value> in_value);
+  Value* SetWithoutPathExpansion(StringPiece key,
+                                 std::unique_ptr<Value> in_value);
   // Deprecated version of the above. TODO(estade): remove.
-  void SetWithoutPathExpansion(StringPiece key, Value* in_value);
+  Value* SetWithoutPathExpansion(StringPiece key, Value* in_value);
 
   // Convenience forms of SetWithoutPathExpansion().
-  void SetBooleanWithoutPathExpansion(StringPiece path, bool in_value);
-  void SetIntegerWithoutPathExpansion(StringPiece path, int in_value);
-  void SetDoubleWithoutPathExpansion(StringPiece path, double in_value);
-  void SetStringWithoutPathExpansion(StringPiece path, StringPiece in_value);
-  void SetStringWithoutPathExpansion(StringPiece path,
-                                     const string16& in_value);
+  Value* SetBooleanWithoutPathExpansion(StringPiece path, bool in_value);
+  Value* SetIntegerWithoutPathExpansion(StringPiece path, int in_value);
+  Value* SetDoubleWithoutPathExpansion(StringPiece path, double in_value);
+  Value* SetStringWithoutPathExpansion(StringPiece path, StringPiece in_value);
+  Value* SetStringWithoutPathExpansion(StringPiece path,
+                                       const string16& in_value);
+  DictionaryValue* SetDictionaryWithoutPathExpansion(
+      StringPiece path,
+      std::unique_ptr<DictionaryValue> in_value);
+  ListValue* SetListWithoutPathExpansion(StringPiece path,
+                                         std::unique_ptr<ListValue> in_value);
 
   // Gets the Value associated with the given path starting from this object.
   // A path has the form "<key>" or "<key>.<key>.[...]", where "." indexes

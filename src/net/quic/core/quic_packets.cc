@@ -70,12 +70,11 @@ QuicPacketHeader::QuicPacketHeader(const QuicPacketPublicHeader& header)
 
 QuicPacketHeader::QuicPacketHeader(const QuicPacketHeader& other) = default;
 
-QuicPublicResetPacket::QuicPublicResetPacket()
-    : nonce_proof(0), rejected_packet_number(0) {}
+QuicPublicResetPacket::QuicPublicResetPacket() : nonce_proof(0) {}
 
 QuicPublicResetPacket::QuicPublicResetPacket(
     const QuicPacketPublicHeader& header)
-    : public_header(header), nonce_proof(0), rejected_packet_number(0) {}
+    : public_header(header), nonce_proof(0) {}
 
 std::ostream& operator<<(std::ostream& os, const QuicPacketHeader& header) {
   os << "{ connection_id: " << header.public_header.connection_id

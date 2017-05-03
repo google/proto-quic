@@ -52,8 +52,7 @@ class QuicDispatcherPeer {
   static void SendPublicReset(QuicDispatcher* dispatcher,
                               const QuicSocketAddress& server_address,
                               const QuicSocketAddress& client_address,
-                              QuicConnectionId connection_id,
-                              QuicPacketNumber rejected_packet_number);
+                              QuicConnectionId connection_id);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicDispatcherPeer);

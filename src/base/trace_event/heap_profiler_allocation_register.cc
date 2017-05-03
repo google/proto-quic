@@ -158,7 +158,8 @@ void AllocationRegister::EstimateTraceMemoryOverhead(
   size_t resident = sizeof(AllocationRegister) +
                     allocations_.EstimateUsedMemory() +
                     backtraces_.EstimateUsedMemory();
-  overhead->Add("AllocationRegister", allocated, resident);
+  overhead->Add(TraceEventMemoryOverhead::kHeapProfilerAllocationRegister,
+                allocated, resident);
 }
 
 AllocationRegister::BacktraceMap::KVIndex AllocationRegister::InsertBacktrace(

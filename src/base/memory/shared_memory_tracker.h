@@ -5,6 +5,8 @@
 #ifndef BASE_MEMORY_SHARED_MEMORY_TRACKER_H_
 #define BASE_MEMORY_SHARED_MEMORY_TRACKER_H_
 
+#include <unordered_map>
+
 #include "base/memory/shared_memory.h"
 #include "base/synchronization/lock.h"
 #include "base/trace_event/memory_dump_provider.h"

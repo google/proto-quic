@@ -123,9 +123,6 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="src" path="third_party/leakcanary/src/leakcanary-android/src/main/java"/>
     <classpathentry kind="src" path="third_party/leakcanary/src/leakcanary-watcher/src/main/java"/>
     <classpathentry kind="src" path="third_party/mockito/src/src/main/java"/>
-    <classpathentry kind="src" path="third_party/robolectric/robolectric/robolectric-annotations/src/main/java"/>
-    <classpathentry kind="src" path="third_party/robolectric/robolectric/robolectric-resources/src/main/java"/>
-    <classpathentry kind="src" path="third_party/robolectric/robolectric/robolectric-shadows/shadows-multidex/src/main/java"/>
     <classpathentry kind="src" path="tools/android/findbugs_plugin/src"/>
     <classpathentry kind="src" path="tools/android/findbugs_plugin/test/java/src"/>
     <classpathentry kind="src" path="tools/android/memconsumer/java/src"/>
@@ -233,8 +230,6 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="lib" path="third_party/android_tools/sdk/extras/android/support/v7/recyclerview/libs/android-support-v7-recyclerview.jar" sourcepath="third_party/android_tools/sdk/sources"/>
     <classpathentry kind="lib" path="third_party/android_tools/sdk/extras/android/support/v13/android-support-v13.jar" sourcepath="third_party/android_tools/sdk/sources"/>
     <classpathentry kind="lib" path="third_party/android_tools/sdk/extras/android/support/v7/appcompat/libs/android-support-v7-appcompat.jar" sourcepath="third_party/android_tools/sdk/sources"/>
-    <classpathentry kind="lib" path="third_party/android_support_test_runner/lib/runner-0.5-release-no-dep.jar"/>
-    <classpathentry kind="lib" path="third_party/android_support_test_runner/lib/rules-0.5.jar"/>
     <classpathentry kind="lib" path="third_party/bouncycastle/lib/bcprov-jdk16-1.46.jar"/>
     <classpathentry kind="lib" path="third_party/byte_buddy/lib/byte-buddy-1.4.17.jar"/>
     <classpathentry kind="lib" path="third_party/findbugs/lib/findbugs.jar"/>
@@ -297,10 +292,15 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="lib" path="out/Debug/lib.java/third_party/cacheinvalidation/cacheinvalidation_proto_java.jar"/>
     <classpathentry kind="lib" path="out/Debug/lib.java/third_party/cardboard-java/cardboard-java.jar"/>
     <classpathentry kind="lib" path="out/Debug/lib.java/third_party/gif_player/gif_player_java.jar"/>
+    <classpathentry kind="lib" path="out/Debug/lib.java/third_party/guava/guava-20.0.jar"/>
+    <classpathentry kind="lib" path="out/Debug/lib.java/third_party/robolectric/robolectric_annotations_java.jar" sourcepath="third_party/robolectric/robolectric/robolectric-annotations/src/main/java"/>
     <classpathentry kind="lib" path="out/Debug/lib.java/third_party/robolectric/robolectric_java.jar" sourcepath="third_party/robolectric/robolectric/robolectric/src/main/java"/>
+    <classpathentry kind="lib" path="out/Debug/lib.java/third_party/robolectric/robolectric_resources_java.jar" sourcepath="third_party/robolectric/robolectric/robolectric-resources/src/main/java"/>
     <classpathentry kind="lib" path="out/Debug/lib.java/third_party/robolectric/robolectric_utils_java.jar" sourcepath="third_party/robolectric/robolectric/robolectric-utils/src/main/java"/>
-    <classpathentry kind="lib" path="out/Debug/lib.java/third_party/robolectric/shadows-core-3.0-21.jar" sourcepath="third_party/robolectric/robolectric/robolectric-shadows/shadows-core/src/main/java"/>
+    <classpathentry kind="lib" path="out/Debug/lib.java/third_party/robolectric/shadows-core-3.2.jar" sourcepath="third_party/robolectric/robolectric/robolectric-shadows/shadows-core/src/main/java"/>
     <classpathentry kind="lib" path="out/Debug/lib.java/third_party/robolectric/shadows-multidex-3.0.jar" sourcepath="third_party/robolectric/robolectric/robolectric-shadows/shadows-multidex/src/main/java"/>
+    <classpathentry kind="lib" path="out/Debug/lib.java/third_party/android_support_test_runner/runner-0.5-release-no-dep.jar"/>
+    <classpathentry kind="lib" path="out/Debug/lib.java/third_party/android_support_test_runner/rules_java.jar"/>
     <classpathentry kind="lib" path="out/Debug/lib.java/third_party/WebKit/public/blink_headers_java.jar"/>
     <classpathentry kind="lib" path="out/Debug/lib.java/ui/accessibility/ui_accessibility_java.jar"/>
     <classpathentry kind="lib" path="out/Debug/lib.java/ui/android/ui_java.jar"/>

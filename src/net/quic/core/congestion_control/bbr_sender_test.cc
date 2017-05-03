@@ -12,6 +12,7 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/quic_config_peer.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
@@ -20,7 +21,6 @@
 #include "net/quic/test_tools/simulator/quic_endpoint.h"
 #include "net/quic/test_tools/simulator/simulator.h"
 #include "net/quic/test_tools/simulator/switch.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
 namespace test {
@@ -64,7 +64,7 @@ const QuicTime::Delta kTestRtt =
     (kTestPropagationDelay + kLocalPropagationDelay + kTestTransferTime) * 2;
 const QuicByteCount kTestBdp = kTestRtt * kTestLinkBandwidth;
 
-class BbrSenderTest : public ::testing::Test {
+class BbrSenderTest : public QuicTest {
  protected:
   BbrSenderTest()
       : simulator_(),
@@ -90,9 +90,14 @@ class BbrSenderTest : public ::testing::Test {
                             /*connection_id=*/GetPeerInMemoryConnectionId(43)),
         receiver_multiplexer_("Receiver multiplexer",
                               {&receiver_, &competing_receiver_}) {
+    // These will be changed by the appropriate tests as necessary.
+    FLAGS_quic_reloadable_flag_quic_bbr_keep_sending_at_recent_rate = false;
+    FLAGS_quic_reloadable_flag_quic_bbr_slow_recent_delivery = false;
+    FLAGS_quic_reloadable_flag_quic_bbr_add_tso_cwnd = false;
     // TODO(ianswett): Determine why tests become flaky with CWND based on SRTT.
     FLAGS_quic_reloadable_flag_quic_bbr_base_cwnd_on_srtt = false;
     FLAGS_quic_reloadable_flag_quic_bbr_extra_conservation = true;
+    FLAGS_quic_reloadable_flag_quic_bbr_fix_conservation = true;
     rtt_stats_ = bbr_sender_.connection()->sent_packet_manager().GetRttStats();
     sender_ = SetupBbrSender(&bbr_sender_);
 
@@ -121,7 +126,6 @@ class BbrSenderTest : public ::testing::Test {
   const QuicClock* clock_;
   const RttStats* rtt_stats_;
   BbrSender* sender_;
-  QuicFlagSaver flags_;
 
   // Enables BBR on |endpoint| and returns the associated BBR congestion
   // controller.
@@ -315,7 +319,7 @@ TEST_F(BbrSenderTest, SimpleTransfer2RTTAggregationBytes) {
   // The margin here is high, because the aggregation greatly increases
   // smoothed rtt.
   EXPECT_GE(kTestRtt * 4, rtt_stats_->smoothed_rtt());
-  ExpectApproxEq(kTestRtt, rtt_stats_->min_rtt(), 0.1f);
+  ExpectApproxEq(kTestRtt, rtt_stats_->min_rtt(), 0.12f);
 }
 
 TEST_F(BbrSenderTest, SimpleTransfer2RTTAggregationKeepSending) {
@@ -447,8 +451,8 @@ TEST_F(BbrSenderTest,
   EXPECT_FALSE(sender_->ExportDebugState().last_sample_is_app_limited);
   // The margin here is high, because the aggregation greatly increases
   // smoothed rtt.
-  EXPECT_GE(kTestRtt * 4, rtt_stats_->smoothed_rtt());
-  ExpectApproxEq(kTestRtt, rtt_stats_->min_rtt(), 0.1f);
+  EXPECT_GE(kTestRtt * 5, rtt_stats_->smoothed_rtt());
+  ExpectApproxEq(kTestRtt, rtt_stats_->min_rtt(), 0.25f);
 }
 
 // Test the number of losses incurred by the startup phase in a situation when
@@ -460,7 +464,7 @@ TEST_F(BbrSenderTest, PacketLossOnSmallBufferStartup) {
   float loss_rate =
       static_cast<float>(bbr_sender_.connection()->GetStats().packets_lost) /
       bbr_sender_.connection()->GetStats().packets_sent;
-  EXPECT_LE(loss_rate, 0.27);
+  EXPECT_LE(loss_rate, 0.31);
 }
 
 // Ensures the code transitions loss recovery states correctly (NOT_IN_RECOVERY
@@ -490,12 +494,18 @@ TEST_F(BbrSenderTest, RecoveryStates) {
   ASSERT_EQ(BbrSender::CONSERVATION,
             sender_->ExportDebugState().recovery_state);
 
+  const QuicByteCount cwnd_at_recovery_start = sender_->GetCongestionWindow();
   simulator_result = simulator_.RunUntilOrTimeout(
-      [this]() {
+      [this, cwnd_at_recovery_start]() {
+        // Ensure that the CWND never drops due to conservation.
+        if (sender_->GetCongestionWindow() < cwnd_at_recovery_start) {
+          return true;
+        }
         return sender_->ExportDebugState().recovery_state !=
                BbrSender::CONSERVATION;
       },
       timeout);
+  ASSERT_GE(sender_->GetCongestionWindow(), cwnd_at_recovery_start);
   ASSERT_TRUE(simulator_result);
   ASSERT_EQ(BbrSender::GROWTH, sender_->ExportDebugState().recovery_state);
 

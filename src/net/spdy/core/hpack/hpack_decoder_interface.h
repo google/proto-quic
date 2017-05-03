@@ -12,14 +12,14 @@
 
 #include <memory>
 
-#include "net/base/net_export.h"
 #include "net/spdy/core/hpack/hpack_header_table.h"
 #include "net/spdy/core/spdy_header_block.h"
 #include "net/spdy/core/spdy_headers_handler_interface.h"
+#include "net/spdy/platform/api/spdy_export.h"
 
 namespace net {
 
-class NET_EXPORT_PRIVATE HpackDecoderInterface {
+class SPDY_EXPORT_PRIVATE HpackDecoderInterface {
  public:
   virtual ~HpackDecoderInterface() {}
 

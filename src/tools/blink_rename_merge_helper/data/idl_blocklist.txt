@@ -990,7 +990,6 @@ DetectedText:::rawValue:::0
 DeviceAcceleration:::x:::1
 DeviceAcceleration:::y:::1
 DeviceAcceleration:::z:::1
-DeviceLightEvent:::value:::0
 DeviceMotionEvent:::acceleration:::0
 DeviceMotionEvent:::accelerationIncludingGravity:::0
 DeviceMotionEvent:::interval:::0
@@ -1590,8 +1589,6 @@ DOMWindowCSS:::supports:::1
 DOMWindowCSS:::supports:::2
 DOMWindow:::customElements:::1
 DOMWindow:::defaultStatus:::0
-DOMWindowDeviceLight:::ondevicelight:::1
-DOMWindowDeviceLight:::setOndevicelight:::2
 DOMWindowDeviceMotion:::ondevicemotion:::1
 DOMWindowDeviceMotion:::setOndevicemotion:::2
 DOMWindowDeviceOrientation:::ondeviceorientation:::1
@@ -3422,7 +3419,6 @@ LocalDOMWindow:::offscreenBuffering:::0
 LocalDOMWindow:::onanimationend:::0
 LocalDOMWindow:::onanimationiteration:::0
 LocalDOMWindow:::onanimationstart:::0
-LocalDOMWindow:::ondevicelight:::1
 LocalDOMWindow:::ondevicemotion:::1
 LocalDOMWindow:::ondeviceorientation:::1
 LocalDOMWindow:::ondeviceorientationabsolute:::1
@@ -3486,7 +3482,6 @@ LocalDOMWindow:::setName:::1
 LocalDOMWindow:::setOnanimationend:::1
 LocalDOMWindow:::setOnanimationiteration:::1
 LocalDOMWindow:::setOnanimationstart:::1
-LocalDOMWindow:::setOndevicelight:::2
 LocalDOMWindow:::setOndevicemotion:::2
 LocalDOMWindow:::setOndeviceorientation:::2
 LocalDOMWindow:::setOndeviceorientationabsolute:::2

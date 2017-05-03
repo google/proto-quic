@@ -559,6 +559,7 @@ class BrowseTOIMobileStory(_ArticleBrowsingStory):
   ITEM_SELECTOR = '.dummy-img'
 
 
+@decorators.Disabled('android')  # crbug.com/714650
 class BrowseGloboMobileStory(_ArticleBrowsingStory):
   NAME = 'browse:news:globo'
   URL = 'http://www.globo.com'

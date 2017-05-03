@@ -240,7 +240,7 @@ struct PersistentHistogramAllocator::PersistentHistogramData {
   uint32_t bucket_count;
   PersistentMemoryAllocator::Reference ranges_ref;
   uint32_t ranges_checksum;
-  PersistentMemoryAllocator::Reference counts_ref;
+  subtle::Atomic32 counts_ref;  // PersistentMemoryAllocator::Reference
   HistogramSamples::Metadata samples_metadata;
   HistogramSamples::Metadata logged_metadata;
 
@@ -375,14 +375,12 @@ std::unique_ptr<HistogramBase> PersistentHistogramAllocator::AllocateHistogram(
       DCHECK_EQ(kTypeIdRangesArray, memory_allocator_->GetType(ranges_ref));
     }
 
-    PersistentMemoryAllocator::Reference counts_ref =
-        memory_allocator_->Allocate(counts_bytes, kTypeIdCountsArray);
 
     // Only continue here if all allocations were successful. If they weren't,
     // there is no way to free the space but that's not really a problem since
     // the allocations only fail because the space is full or corrupt and so
     // any future attempts will also fail.
-    if (counts_ref && ranges_ref && histogram_data) {
+    if (ranges_ref && histogram_data) {
       histogram_data->minimum = minimum;
       histogram_data->maximum = maximum;
       // |bucket_count| must fit within 32-bits or the allocation of the counts
@@ -391,7 +389,6 @@ std::unique_ptr<HistogramBase> PersistentHistogramAllocator::AllocateHistogram(
       histogram_data->bucket_count = static_cast<uint32_t>(bucket_count);
       histogram_data->ranges_ref = ranges_ref;
       histogram_data->ranges_checksum = bucket_ranges->checksum();
-      histogram_data->counts_ref = counts_ref;
     } else {
       histogram_data = nullptr;  // Clear this for proper handling below.
     }
@@ -606,42 +603,52 @@ std::unique_ptr<HistogramBase> PersistentHistogramAllocator::CreateHistogram(
       StatisticsRecorder::RegisterOrDeleteDuplicateRanges(
           created_ranges.release());
 
-  HistogramBase::AtomicCount* counts_data =
-      memory_allocator_->GetAsArray<HistogramBase::AtomicCount>(
-          histogram_data.counts_ref, kTypeIdCountsArray,
-          PersistentMemoryAllocator::kSizeAny);
   size_t counts_bytes =
       CalculateRequiredCountsBytes(histogram_data.bucket_count);
-  if (!counts_data || counts_bytes == 0 ||
-      memory_allocator_->GetAllocSize(histogram_data.counts_ref) <
-          counts_bytes) {
+  PersistentMemoryAllocator::Reference counts_ref =
+      subtle::NoBarrier_Load(&histogram_data.counts_ref);
+  if (counts_bytes == 0 ||
+      (counts_ref != 0 &&
+       memory_allocator_->GetAllocSize(counts_ref) < counts_bytes)) {
     RecordCreateHistogramResult(CREATE_HISTOGRAM_INVALID_COUNTS_ARRAY);
     NOTREACHED();
     return nullptr;
   }
 
-  // After the main "counts" array is a second array using for storing what
-  // was previously logged. This is used to calculate the "delta" during
-  // snapshot operations.
-  HistogramBase::AtomicCount* logged_data =
-      counts_data + histogram_data.bucket_count;
+  // The "counts" data (including both samples and logged samples) is a delayed
+  // persistent allocation meaning that though its size and storage for a
+  // reference is defined, no space is reserved until actually needed. When
+  // it is needed, memory will be allocated from the persistent segment and
+  // a reference to it stored at the passed address. Other threads can then
+  // notice the valid reference and access the same data.
+  DelayedPersistentAllocation counts_data(memory_allocator_.get(),
+                                          &histogram_data_ptr->counts_ref,
+                                          kTypeIdCountsArray, counts_bytes, 0);
 
+  // A second delayed allocations is defined using the same reference storage
+  // location as the first so the allocation of one will automatically be found
+  // by the other. Within the block, the first half of the space is for "counts"
+  // and the second half is for "logged counts".
+  DelayedPersistentAllocation logged_data(
+      memory_allocator_.get(), &histogram_data_ptr->counts_ref,
+      kTypeIdCountsArray, counts_bytes, counts_bytes / 2,
+      /*make_iterable=*/false);
+
+  // Create the right type of histogram.
   std::string name(histogram_data_ptr->name);
   std::unique_ptr<HistogramBase> histogram;
   switch (histogram_data.histogram_type) {
     case HISTOGRAM:
       histogram = Histogram::PersistentCreate(
           name, histogram_data.minimum, histogram_data.maximum, ranges,
-          counts_data, logged_data, histogram_data.bucket_count,
-          &histogram_data_ptr->samples_metadata,
+          counts_data, logged_data, &histogram_data_ptr->samples_metadata,
           &histogram_data_ptr->logged_metadata);
       DCHECK(histogram);
       break;
     case LINEAR_HISTOGRAM:
       histogram = LinearHistogram::PersistentCreate(
           name, histogram_data.minimum, histogram_data.maximum, ranges,
-          counts_data, logged_data, histogram_data.bucket_count,
-          &histogram_data_ptr->samples_metadata,
+          counts_data, logged_data, &histogram_data_ptr->samples_metadata,
           &histogram_data_ptr->logged_metadata);
       DCHECK(histogram);
       break;
@@ -654,7 +661,7 @@ std::unique_ptr<HistogramBase> PersistentHistogramAllocator::CreateHistogram(
       break;
     case CUSTOM_HISTOGRAM:
       histogram = CustomHistogram::PersistentCreate(
-          name, ranges, counts_data, logged_data, histogram_data.bucket_count,
+          name, ranges, counts_data, logged_data,
           &histogram_data_ptr->samples_metadata,
           &histogram_data_ptr->logged_metadata);
       DCHECK(histogram);

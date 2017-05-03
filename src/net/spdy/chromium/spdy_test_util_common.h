@@ -216,7 +216,6 @@ struct SpdySessionDependencies {
   bool enable_http2_alternative_service;
   NetLog* net_log;
   bool http_09_on_non_default_ports_enabled;
-  bool restrict_to_one_preconnect_for_proxies;
   bool quic_do_not_mark_as_broken_on_network_change;
 };
 

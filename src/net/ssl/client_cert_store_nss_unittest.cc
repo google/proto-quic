@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>
 
+#include "base/bind.h"
 #include "base/memory/ref_counted.h"
 #include "base/run_loop.h"
 #include "crypto/scoped_test_nss_db.h"
@@ -21,6 +22,17 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
+
+namespace {
+
+void SaveCertsAndQuitCallback(CertificateList* out_certs,
+                              base::Closure quit_closure,
+                              CertificateList in_certs) {
+  *out_certs = std::move(in_certs);
+  quit_closure.Run();
+}
+
+}  // namespace
 
 class ClientCertStoreNSSTestDelegate {
  public:
@@ -68,7 +80,9 @@ TEST(ClientCertStoreNSSTest, BuildsCertificateChain) {
 
     CertificateList selected_certs;
     base::RunLoop loop;
-    store->GetClientCerts(*request.get(), &selected_certs, loop.QuitClosure());
+    store->GetClientCerts(*request.get(),
+                          base::Bind(SaveCertsAndQuitCallback, &selected_certs,
+                                     loop.QuitClosure()));
     loop.Run();
 
     // The result be |client_1| with no intermediates.
@@ -88,7 +102,9 @@ TEST(ClientCertStoreNSSTest, BuildsCertificateChain) {
 
     CertificateList selected_certs;
     base::RunLoop loop;
-    store->GetClientCerts(*request.get(), &selected_certs, loop.QuitClosure());
+    store->GetClientCerts(*request.get(),
+                          base::Bind(SaveCertsAndQuitCallback, &selected_certs,
+                                     loop.QuitClosure()));
     loop.Run();
 
     // The result be |client_1| with |client_1_ca| as an intermediate.

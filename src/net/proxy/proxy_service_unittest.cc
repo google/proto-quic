@@ -3685,4 +3685,65 @@ TEST_F(ProxyServiceTest, SanitizeUrlForPacScriptCryptographic) {
   }
 }
 
+TEST_F(ProxyServiceTest, OnShutdownWithLiveRequest) {
+  MockProxyConfigService* config_service =
+      new MockProxyConfigService("http://foopy/proxy.pac");
+
+  MockAsyncProxyResolver resolver;
+  MockAsyncProxyResolverFactory* factory =
+      new MockAsyncProxyResolverFactory(true);
+
+  ProxyService service(base::WrapUnique(config_service),
+                       base::WrapUnique(factory), nullptr);
+
+  MockProxyScriptFetcher* fetcher = new MockProxyScriptFetcher;
+  service.SetProxyScriptFetchers(
+      fetcher, base::WrapUnique(new DoNothingDhcpProxyScriptFetcher()));
+
+  ProxyInfo info;
+  TestCompletionCallback callback;
+  ProxyService::PacRequest* request;
+  int rv = service.ResolveProxy(GURL("http://request/"), std::string(), &info,
+                                callback.callback(), &request, nullptr,
+                                NetLogWithSource());
+  EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
+
+  // The first request should have triggered download of PAC script.
+  EXPECT_TRUE(fetcher->has_pending_request());
+  EXPECT_EQ(GURL("http://foopy/proxy.pac"), fetcher->pending_request_url());
+
+  service.OnShutdown();
+  EXPECT_THAT(callback.WaitForResult(), IsOk());
+  EXPECT_FALSE(fetcher->has_pending_request());
+  EXPECT_TRUE(info.is_direct());
+}
+
+TEST_F(ProxyServiceTest, OnShutdownFollowedByRequest) {
+  MockProxyConfigService* config_service =
+      new MockProxyConfigService("http://foopy/proxy.pac");
+
+  MockAsyncProxyResolver resolver;
+  MockAsyncProxyResolverFactory* factory =
+      new MockAsyncProxyResolverFactory(true);
+
+  ProxyService service(base::WrapUnique(config_service),
+                       base::WrapUnique(factory), nullptr);
+
+  MockProxyScriptFetcher* fetcher = new MockProxyScriptFetcher;
+  service.SetProxyScriptFetchers(
+      fetcher, base::WrapUnique(new DoNothingDhcpProxyScriptFetcher()));
+
+  service.OnShutdown();
+
+  ProxyInfo info;
+  TestCompletionCallback callback;
+  ProxyService::PacRequest* request;
+  int rv = service.ResolveProxy(GURL("http://request/"), std::string(), &info,
+                                callback.callback(), &request, nullptr,
+                                NetLogWithSource());
+  EXPECT_THAT(rv, IsOk());
+  EXPECT_FALSE(fetcher->has_pending_request());
+  EXPECT_TRUE(info.is_direct());
+}
+
 }  // namespace net

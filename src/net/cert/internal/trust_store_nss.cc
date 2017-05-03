@@ -11,6 +11,7 @@
 #include "crypto/nss_util.h"
 #include "net/cert/internal/cert_errors.h"
 #include "net/cert/internal/parsed_certificate.h"
+#include "net/cert/scoped_nss_types.h"
 #include "net/cert/x509_util.h"
 
 // TODO(mattm): structure so that supporting ChromeOS multi-profile stuff is
@@ -24,9 +25,8 @@ TrustStoreNSS::TrustStoreNSS(SECTrustType trust_type)
 
 TrustStoreNSS::~TrustStoreNSS() = default;
 
-void TrustStoreNSS::FindTrustAnchorsForCert(
-    const scoped_refptr<ParsedCertificate>& cert,
-    TrustAnchors* out_anchors) const {
+void TrustStoreNSS::SyncGetIssuersOf(const ParsedCertificate* cert,
+                                     ParsedCertificateList* issuers) {
   crypto::EnsureNSSInit();
 
   SECItem name;
@@ -46,31 +46,71 @@ void TrustStoreNSS::FindTrustAnchorsForCert(
 
   for (CERTCertListNode* node = CERT_LIST_HEAD(found_certs);
        !CERT_LIST_END(node, found_certs); node = CERT_LIST_NEXT(node)) {
-    CERTCertTrust trust;
-    if (CERT_GetCertTrust(node->cert, &trust) != SECSuccess)
-      continue;
-
-    // TODO(mattm): handle explicit distrust (blacklisting)?
-    const int ca_trust = CERTDB_TRUSTED_CA;
-    if ((SEC_GET_TRUST_FLAGS(&trust, trust_type_) & ca_trust) != ca_trust)
-      continue;
-
-    CertErrors errors;
-    scoped_refptr<ParsedCertificate> anchor_cert = ParsedCertificate::Create(
+    CertErrors parse_errors;
+    scoped_refptr<ParsedCertificate> cur_cert = ParsedCertificate::Create(
         x509_util::CreateCryptoBuffer(node->cert->derCert.data,
                                       node->cert->derCert.len),
-        {}, &errors);
-    if (!anchor_cert) {
+        {}, &parse_errors);
+
+    if (!cur_cert) {
       // TODO(crbug.com/634443): return errors better.
       LOG(ERROR) << "Error parsing issuer certificate:\n"
-                 << errors.ToDebugString();
+                 << parse_errors.ToDebugString();
       continue;
     }
 
-    out_anchors->push_back(TrustAnchor::CreateFromCertificateNoConstraints(
-        std::move(anchor_cert)));
+    issuers->push_back(std::move(cur_cert));
   }
   CERT_DestroyCertList(found_certs);
+}
+
+void TrustStoreNSS::GetTrust(const scoped_refptr<ParsedCertificate>& cert,
+                             CertificateTrust* out_trust) const {
+  // TODO(eroman): Inefficient -- path building will convert between
+  // CERTCertificate and ParsedCertificate representations multiple times
+  // (when getting the issuers, and again here).
+
+  // Lookup the certificate by Issuer + Serial number. Note that
+  // CERT_FindCertByDERCert() doesn't check for equal DER, just matching issuer
+  // + serial number.
+  SECItem der_cert;
+  der_cert.data = const_cast<uint8_t*>(cert->der_cert().UnsafeData());
+  der_cert.len = cert->der_cert().Length();
+  der_cert.type = siDERCertBuffer;
+  ScopedCERTCertificate nss_matched_cert(
+      CERT_FindCertByDERCert(CERT_GetDefaultCertDB(), &der_cert));
+  if (!nss_matched_cert) {
+    *out_trust = CertificateTrust::ForUnspecified();
+    return;
+  }
+
+  // Determine the trustedness of the matched certificate.
+  CERTCertTrust trust;
+  if (CERT_GetCertTrust(nss_matched_cert.get(), &trust) != SECSuccess) {
+    *out_trust = CertificateTrust::ForUnspecified();
+    return;
+  }
+
+  // TODO(eroman): Determine if |nss_matched_cert| is distrusted.
+
+  // Determine if the certificate is a trust anchor.
+  const int ca_trust = CERTDB_TRUSTED_CA;
+  bool is_trusted =
+      (SEC_GET_TRUST_FLAGS(&trust, trust_type_) & ca_trust) == ca_trust;
+
+  // To consider |cert| trusted, need to additionally check that
+  // |cert| is the same as |nss_matched_cert|. This is because the lookup in NSS
+  // was only by issuer + serial number, so could be for a different
+  // SPKI.
+  if (is_trusted &&
+      (cert->der_cert() == der::Input(nss_matched_cert->derCert.data,
+                                      nss_matched_cert->derCert.len))) {
+    *out_trust = CertificateTrust::ForTrustAnchor();
+    return;
+  }
+
+  *out_trust = CertificateTrust::ForUnspecified();
+  return;
 }
 
 }  // namespace net

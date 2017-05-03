@@ -48,7 +48,6 @@ ChromeServiceWorkerTest.CanShutDownWithRegisteredServiceWorker
 ChromeServiceWorkerTest.FailRegisterServiceWorkerWhenJSDisabled
 ChromeServiceWorkerTest.FallbackMainResourceRequestWhenJSDisabled
 ConstrainedWebDialogBrowserTest.ReleaseWebContents
-ContentVerifierPolicyTest.FailedUpdateRetries
 ContentVerifierPolicyTest.PRE_PolicyCorruptedOnStartup
 ContentVerifierPolicyTest.PolicyCorruptedOnStartup
 CreateNewFolder/FileManagerBrowserTest.Test/0
@@ -58,7 +57,6 @@ CreateNewFolder/FileManagerBrowserTest.Test/3
 DefaultTaskDialog/FileManagerBrowserTest.Test/0
 DefaultTaskDialog/FileManagerBrowserTest.Test/1
 DefaultTaskDialog/FileManagerBrowserTest.Test/2
-Delete/FileManagerBrowserTest.Test/0
 Delete/FileManagerBrowserTest.Test/1
 DeviceStatusCollectorNetworkInterfacesTest.NetworkInterfaces
 DeviceStatusCollectorNetworkInterfacesTest.ReportIfPublicSession
@@ -104,7 +102,6 @@ DirectoryTreeContextMenu/FileManagerBrowserTest.Test/2
 DirectoryTreeContextMenu/FileManagerBrowserTest.Test/20
 DirectoryTreeContextMenu/FileManagerBrowserTest.Test/21
 DirectoryTreeContextMenu/FileManagerBrowserTest.Test/22
-DirectoryTreeContextMenu/FileManagerBrowserTest.Test/23
 DirectoryTreeContextMenu/FileManagerBrowserTest.Test/24
 DirectoryTreeContextMenu/FileManagerBrowserTest.Test/3
 DirectoryTreeContextMenu/FileManagerBrowserTest.Test/4
@@ -169,13 +166,8 @@ OpenAudioFiles/FileManagerBrowserTest.Test/3
 OpenAudioFiles/FileManagerBrowserTest.Test/4
 OpenAudioFiles/FileManagerBrowserTest.Test/5
 OpenAudioFiles/FileManagerBrowserTest.Test/6
-OpenAudioFiles/FileManagerBrowserTest.Test/7
-OpenAudioFiles/FileManagerBrowserTest.Test/8
 OpenFileDialog/FileManagerBrowserTest.Test/0
-OpenFileDialog/FileManagerBrowserTest.Test/1
 OpenFileDialog/FileManagerBrowserTest.Test/2
-OpenFileDialog/FileManagerBrowserTest.Test/3
-OpenFileDialog/FileManagerBrowserTest.Test/4
 OpenFileDialog/FileManagerBrowserTest.Test/5
 PageClickTrackerTest.PageClickTrackerClickDisabledInputDoesNotResetClickCounter
 PageClickTrackerTest.PageClickTrackerDisabledInputClickedNoEvent
@@ -226,8 +218,6 @@ PnaclHeaderTest.TestHasPnaclHeader
 PolicyCertVerifierTest.VerifyTrustedCert
 PolicyCertVerifierTest.VerifyUntrustedCert
 PolicyCertVerifierTest.VerifyUsingAdditionalTrustAnchor
-PrerenderBrowserTestWithNaCl.PrerenderNaClPluginEnabled
-PrintPreviewDestinationSearchTest.Select
 Providers/FileManagerBrowserTest.Test/0
 Providers/FileManagerBrowserTest.Test/1
 Providers/FileManagerBrowserTest.Test/2

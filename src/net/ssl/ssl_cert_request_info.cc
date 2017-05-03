@@ -16,7 +16,6 @@ void SSLCertRequestInfo::Reset() {
   is_proxy = false;
   cert_authorities.clear();
   cert_key_types.clear();
-  client_certs.clear();
 }
 
 SSLCertRequestInfo::~SSLCertRequestInfo() {

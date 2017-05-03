@@ -6,6 +6,7 @@
 
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/quic/test_tools/simulator/alarm_factory.h"
 #include "net/quic/test_tools/simulator/link.h"
@@ -13,8 +14,6 @@
 #include "net/quic/test_tools/simulator/queue.h"
 #include "net/quic/test_tools/simulator/switch.h"
 #include "net/quic/test_tools/simulator/traffic_policer.h"
-#include "testing/gmock/include/gmock/gmock.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
 using testing::_;
@@ -47,8 +46,10 @@ class Counter : public Actor {
   QuicTime::Delta period_;
 };
 
+class SimulatorTest : public QuicTest {};
+
 // Test that the basic event handling works.
-TEST(SimulatorTest, Counters) {
+TEST_F(SimulatorTest, Counters) {
   Simulator simulator;
   Counter fast_counter(&simulator, "fast_counter",
                        QuicTime::Delta::FromSeconds(3));
@@ -162,7 +163,7 @@ class LinkSaturator : public Endpoint {
 
 // Saturate a symmetric link and verify that the number of packets sent and
 // received is correct.
-TEST(SimulatorTest, DirectLinkSaturation) {
+TEST_F(SimulatorTest, DirectLinkSaturation) {
   Simulator simulator;
   LinkSaturator saturator_a(&simulator, "Saturator A", 1000, "Saturator B");
   LinkSaturator saturator_b(&simulator, "Saturator B", 100, "Saturator A");
@@ -240,7 +241,7 @@ class PacketAcceptor : public ConstrainedPortInterface {
 };
 
 // Ensure the queue behaves correctly with accepting packets.
-TEST(SimulatorTest, Queue) {
+TEST_F(SimulatorTest, Queue) {
   Simulator simulator;
   Queue queue(&simulator, "Queue", 1000);
   PacketAcceptor acceptor;
@@ -283,7 +284,7 @@ TEST(SimulatorTest, Queue) {
 
 // Simulate a situation where the bottleneck link is 10 times slower than the
 // uplink, and they are separated by a queue.
-TEST(SimulatorTest, QueueBottleneck) {
+TEST_F(SimulatorTest, QueueBottleneck) {
   const QuicBandwidth local_bandwidth =
       QuicBandwidth::FromKBytesPerSecond(1000);
   const QuicBandwidth bottleneck_bandwidth = 0.1f * local_bandwidth;
@@ -320,7 +321,7 @@ TEST(SimulatorTest, QueueBottleneck) {
 
 // Verify that the queue of exactly one packet allows the transmission to
 // actually go through.
-TEST(SimulatorTest, OnePacketQueue) {
+TEST_F(SimulatorTest, OnePacketQueue) {
   const QuicBandwidth local_bandwidth =
       QuicBandwidth::FromKBytesPerSecond(1000);
   const QuicBandwidth bottleneck_bandwidth = 0.1f * local_bandwidth;
@@ -356,7 +357,7 @@ TEST(SimulatorTest, OnePacketQueue) {
 
 // Simulate a network where three endpoints are connected to a switch and they
 // are sending traffic in circle (1 -> 2, 2 -> 3, 3 -> 1).
-TEST(SimulatorTest, SwitchedNetwork) {
+TEST_F(SimulatorTest, SwitchedNetwork) {
   const QuicBandwidth bandwidth = QuicBandwidth::FromBytesPerSecond(10000);
   const QuicTime::Delta base_propagation_delay =
       QuicTime::Delta::FromMilliseconds(50);
@@ -481,7 +482,7 @@ class CounterDelegate : public QuicAlarm::Delegate {
 
 // Verifies that the alarms work correctly, even when they are repeatedly
 // toggled.
-TEST(SimulatorTest, Alarms) {
+TEST_F(SimulatorTest, Alarms) {
   Simulator simulator;
   QuicAlarmFactory* alarm_factory = simulator.GetAlarmFactory();
 
@@ -511,7 +512,7 @@ TEST(SimulatorTest, Alarms) {
 }
 
 // Verifies that a cancelled alarm is never fired.
-TEST(SimulatorTest, AlarmCancelling) {
+TEST_F(SimulatorTest, AlarmCancelling) {
   Simulator simulator;
   QuicAlarmFactory* alarm_factory = simulator.GetAlarmFactory();
 
@@ -536,7 +537,7 @@ TEST(SimulatorTest, AlarmCancelling) {
 }
 
 // Tests Simulator::RunUntilOrTimeout() interface.
-TEST(SimulatorTest, RunUntilOrTimeout) {
+TEST_F(SimulatorTest, RunUntilOrTimeout) {
   Simulator simulator;
   bool simulation_result;
 
@@ -558,7 +559,7 @@ TEST(SimulatorTest, RunUntilOrTimeout) {
 }
 
 // Tests Simulator::RunFor() interface.
-TEST(SimulatorTest, RunFor) {
+TEST_F(SimulatorTest, RunFor) {
   Simulator simulator;
 
   Counter counter(&simulator, "counter", QuicTime::Delta::FromSeconds(3));
@@ -577,7 +578,7 @@ class MockPacketFilter : public PacketFilter {
 
 // Set up two trivial packet filters, one allowing any packets, and one dropping
 // all of them.
-TEST(SimulatorTest, PacketFilter) {
+TEST_F(SimulatorTest, PacketFilter) {
   const QuicBandwidth bandwidth =
       QuicBandwidth::FromBytesPerSecond(1024 * 1024);
   const QuicTime::Delta base_propagation_delay =
@@ -616,7 +617,7 @@ TEST(SimulatorTest, PacketFilter) {
 
 // Set up a traffic policer in one direction that throttles at 25% of link
 // bandwidth, and put two link saturators at each endpoint.
-TEST(SimulatorTest, TrafficPolicer) {
+TEST_F(SimulatorTest, TrafficPolicer) {
   const QuicBandwidth bandwidth =
       QuicBandwidth::FromBytesPerSecond(1024 * 1024);
   const QuicTime::Delta base_propagation_delay =
@@ -674,7 +675,7 @@ TEST(SimulatorTest, TrafficPolicer) {
 
 // Ensure that a larger burst is allowed when the policed saturator exits
 // quiescence.
-TEST(SimulatorTest, TrafficPolicerBurst) {
+TEST_F(SimulatorTest, TrafficPolicerBurst) {
   const QuicBandwidth bandwidth =
       QuicBandwidth::FromBytesPerSecond(1024 * 1024);
   const QuicTime::Delta base_propagation_delay =
@@ -729,7 +730,7 @@ TEST(SimulatorTest, TrafficPolicerBurst) {
 }
 
 // Test that the packet aggregation support in queues work.
-TEST(SimulatorTest, PacketAggregation) {
+TEST_F(SimulatorTest, PacketAggregation) {
   // Model network where the delays are dominated by transfer delay.
   const QuicBandwidth bandwidth = QuicBandwidth::FromBytesPerSecond(1000);
   const QuicTime::Delta base_propagation_delay =

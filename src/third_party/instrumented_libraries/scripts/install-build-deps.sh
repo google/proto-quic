@@ -83,9 +83,9 @@ fi
 # for reasons which are not entirely clear. 
 sudo apt-get install libltdl3-dev libjson0-dev \
          libsndfile1-dev libspeexdsp-dev libjack0 \
-         chrpath -y  # Chrpath is required by fix_rpaths.sh.
+         chrpath -y --force-yes  # Chrpath is required by fix_rpaths.sh.
 
-sudo apt-get build-dep -y $packages
+sudo apt-get build-dep -y --force-yes $packages
 
 if test "$ubuntu_release" = "trusty" ; then
   # On Trusty, build deps for some of the instrumented packages above conflict

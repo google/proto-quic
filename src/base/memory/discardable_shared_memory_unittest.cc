@@ -44,10 +44,8 @@ TEST(DiscardableSharedMemoryTest, CreateFromHandle) {
   bool rv = memory1.CreateAndMap(kDataSize);
   ASSERT_TRUE(rv);
 
-  SharedMemoryHandle shared_handle;
-  ASSERT_TRUE(
-      memory1.ShareToProcess(GetCurrentProcessHandle(), &shared_handle));
-  ASSERT_TRUE(SharedMemory::IsHandleValid(shared_handle));
+  SharedMemoryHandle shared_handle = memory1.handle().Duplicate();
+  ASSERT_TRUE(shared_handle.IsValid());
 
   TestDiscardableSharedMemory memory2(shared_handle);
   rv = memory2.Map(kDataSize);
@@ -78,10 +76,8 @@ TEST(DiscardableSharedMemoryTest, LockAndUnlock) {
   EXPECT_EQ(DiscardableSharedMemory::SUCCESS, lock_rv);
   EXPECT_TRUE(memory1.IsMemoryLocked());
 
-  SharedMemoryHandle shared_handle;
-  ASSERT_TRUE(
-      memory1.ShareToProcess(GetCurrentProcessHandle(), &shared_handle));
-  ASSERT_TRUE(SharedMemory::IsHandleValid(shared_handle));
+  SharedMemoryHandle shared_handle = memory1.handle().Duplicate();
+  ASSERT_TRUE(shared_handle.IsValid());
 
   TestDiscardableSharedMemory memory2(shared_handle);
   rv = memory2.Map(kDataSize);
@@ -116,10 +112,8 @@ TEST(DiscardableSharedMemoryTest, Purge) {
   bool rv = memory1.CreateAndMap(kDataSize);
   ASSERT_TRUE(rv);
 
-  SharedMemoryHandle shared_handle;
-  ASSERT_TRUE(
-      memory1.ShareToProcess(GetCurrentProcessHandle(), &shared_handle));
-  ASSERT_TRUE(SharedMemory::IsHandleValid(shared_handle));
+  SharedMemoryHandle shared_handle = memory1.handle().Duplicate();
+  ASSERT_TRUE(shared_handle.IsValid());
 
   TestDiscardableSharedMemory memory2(shared_handle);
   rv = memory2.Map(kDataSize);
@@ -158,10 +152,8 @@ TEST(DiscardableSharedMemoryTest, LastUsed) {
   bool rv = memory1.CreateAndMap(kDataSize);
   ASSERT_TRUE(rv);
 
-  SharedMemoryHandle shared_handle;
-  ASSERT_TRUE(
-      memory1.ShareToProcess(GetCurrentProcessHandle(), &shared_handle));
-  ASSERT_TRUE(SharedMemory::IsHandleValid(shared_handle));
+  SharedMemoryHandle shared_handle = memory1.handle().Duplicate();
+  ASSERT_TRUE(shared_handle.IsValid());
 
   TestDiscardableSharedMemory memory2(shared_handle);
   rv = memory2.Map(kDataSize);
@@ -226,10 +218,8 @@ TEST(DiscardableSharedMemoryTest, LockShouldAlwaysFailAfterSuccessfulPurge) {
   bool rv = memory1.CreateAndMap(kDataSize);
   ASSERT_TRUE(rv);
 
-  SharedMemoryHandle shared_handle;
-  ASSERT_TRUE(
-      memory1.ShareToProcess(GetCurrentProcessHandle(), &shared_handle));
-  ASSERT_TRUE(SharedMemory::IsHandleValid(shared_handle));
+  SharedMemoryHandle shared_handle = memory1.handle().Duplicate();
+  ASSERT_TRUE(shared_handle.IsValid());
 
   TestDiscardableSharedMemory memory2(shared_handle);
   rv = memory2.Map(kDataSize);
@@ -255,10 +245,8 @@ TEST(DiscardableSharedMemoryTest, LockAndUnlockRange) {
   bool rv = memory1.CreateAndMap(data_size_in_bytes);
   ASSERT_TRUE(rv);
 
-  SharedMemoryHandle shared_handle;
-  ASSERT_TRUE(
-      memory1.ShareToProcess(GetCurrentProcessHandle(), &shared_handle));
-  ASSERT_TRUE(SharedMemory::IsHandleValid(shared_handle));
+  SharedMemoryHandle shared_handle = memory1.handle().Duplicate();
+  ASSERT_TRUE(shared_handle.IsValid());
 
   TestDiscardableSharedMemory memory2(shared_handle);
   rv = memory2.Map(data_size_in_bytes);
@@ -374,10 +362,8 @@ TEST(DiscardableSharedMemoryTest, ZeroFilledPagesAfterPurge) {
   bool rv = memory1.CreateAndMap(kDataSize);
   ASSERT_TRUE(rv);
 
-  SharedMemoryHandle shared_handle;
-  ASSERT_TRUE(
-      memory1.ShareToProcess(GetCurrentProcessHandle(), &shared_handle));
-  ASSERT_TRUE(SharedMemory::IsHandleValid(shared_handle));
+  SharedMemoryHandle shared_handle = memory1.handle().Duplicate();
+  ASSERT_TRUE(shared_handle.IsValid());
 
   TestDiscardableSharedMemory memory2(shared_handle);
   rv = memory2.Map(kDataSize);

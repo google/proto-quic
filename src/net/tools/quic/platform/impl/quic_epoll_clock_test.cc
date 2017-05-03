@@ -4,13 +4,15 @@
 
 #include "net/tools/quic/platform/impl/quic_epoll_clock.h"
 
+#include "net/quic/platform/api/quic_test.h"
 #include "net/tools/quic/test_tools/mock_epoll_server.h"
-#include "testing/gmock/include/gmock/gmock.h"
 
 namespace net {
 namespace test {
 
-TEST(QuicEpollClockTest, ApproximateNowInUsec) {
+class QuicEpollClockTest : public QuicTest {};
+
+TEST_F(QuicEpollClockTest, ApproximateNowInUsec) {
   MockEpollServer epoll_server;
   QuicEpollClock clock(&epoll_server);
 
@@ -31,7 +33,7 @@ TEST(QuicEpollClockTest, ApproximateNowInUsec) {
   EXPECT_EQ(11000005u, clock.WallNow().ToUNIXMicroseconds());
 }
 
-TEST(QuicEpollClockTest, NowInUsec) {
+TEST_F(QuicEpollClockTest, NowInUsec) {
   MockEpollServer epoll_server;
   QuicEpollClock clock(&epoll_server);
 

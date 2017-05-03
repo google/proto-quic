@@ -53,6 +53,7 @@ class NET_EXPORT ProxyScriptFetcherImpl : public ProxyScriptFetcher,
             const CompletionCallback& callback) override;
   void Cancel() override;
   URLRequestContext* GetRequestContext() const override;
+  void OnShutdown() override;
 
   // URLRequest::Delegate methods:
   void OnAuthRequired(URLRequest* request,
@@ -83,8 +84,9 @@ class NET_EXPORT ProxyScriptFetcherImpl : public ProxyScriptFetcher,
   // Callback for time-out task of request with id |id|.
   void OnTimeout(int id);
 
-  // The context used for making network requests.
-  URLRequestContext* const url_request_context_;
+  // The context used for making network requests.  Set to nullptr by
+  // OnShutdown.
+  URLRequestContext* url_request_context_;
 
   // Buffer that URLRequest writes into.
   scoped_refptr<IOBuffer> buf_;

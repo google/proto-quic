@@ -6,14 +6,16 @@
 
 #include <string>
 
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 using std::string;
 
 namespace net {
 namespace test {
 
-TEST(QuicTextUtilsText, StartsWith) {
+class QuicTextUtilsText : public QuicTest {};
+
+TEST_F(QuicTextUtilsText, StartsWith) {
   EXPECT_TRUE(QuicTextUtils::StartsWith("hello world", "hello"));
   EXPECT_TRUE(QuicTextUtils::StartsWith("hello world", "hello world"));
   EXPECT_TRUE(QuicTextUtils::StartsWith("hello world", ""));
@@ -22,7 +24,7 @@ TEST(QuicTextUtilsText, StartsWith) {
   EXPECT_FALSE(QuicTextUtils::StartsWith("hello world", "bar"));
 }
 
-TEST(QuicTextUtilsText, EndsWithIgnoreCase) {
+TEST_F(QuicTextUtilsText, EndsWithIgnoreCase) {
   EXPECT_TRUE(QuicTextUtils::EndsWithIgnoreCase("hello world", "world"));
   EXPECT_TRUE(QuicTextUtils::EndsWithIgnoreCase("hello world", "hello world"));
   EXPECT_TRUE(QuicTextUtils::EndsWithIgnoreCase("hello world", ""));
@@ -30,7 +32,7 @@ TEST(QuicTextUtilsText, EndsWithIgnoreCase) {
   EXPECT_FALSE(QuicTextUtils::EndsWithIgnoreCase("hello world", "hello"));
 }
 
-TEST(QuicTextUtilsText, ToLower) {
+TEST_F(QuicTextUtilsText, ToLower) {
   EXPECT_EQ("lower", QuicTextUtils::ToLower("LOWER"));
   EXPECT_EQ("lower", QuicTextUtils::ToLower("lower"));
   EXPECT_EQ("lower", QuicTextUtils::ToLower("lOwEr"));
@@ -38,7 +40,7 @@ TEST(QuicTextUtilsText, ToLower) {
   EXPECT_EQ("", QuicTextUtils::ToLower(""));
 }
 
-TEST(QuicTextUtilsText, RemoveLeadingAndTrailingWhitespace) {
+TEST_F(QuicTextUtilsText, RemoveLeadingAndTrailingWhitespace) {
   string input;
 
   for (auto* input : {"text", " text", "  text", "text ", "text  ", " text ",
@@ -49,7 +51,7 @@ TEST(QuicTextUtilsText, RemoveLeadingAndTrailingWhitespace) {
   }
 }
 
-TEST(QuicTextUtilsText, StringToNumbers) {
+TEST_F(QuicTextUtilsText, StringToNumbers) {
   const string kMaxInt32Plus1 = "2147483648";
   const string kMinInt32Minus1 = "-2147483649";
   const string kMaxUint32Plus1 = "4294967296";
@@ -122,25 +124,25 @@ TEST(QuicTextUtilsText, StringToNumbers) {
   }
 }
 
-TEST(QuicTextUtilsText, Uint64ToString) {
+TEST_F(QuicTextUtilsText, Uint64ToString) {
   EXPECT_EQ("123", QuicTextUtils::Uint64ToString(123));
   EXPECT_EQ("1234", QuicTextUtils::Uint64ToString(1234));
 }
 
-TEST(QuicTextUtilsText, HexEncode) {
+TEST_F(QuicTextUtilsText, HexEncode) {
   EXPECT_EQ("48656c6c6f", QuicTextUtils::HexEncode("Hello", 5));
   EXPECT_EQ("48656c6c6f", QuicTextUtils::HexEncode("Hello World", 5));
   EXPECT_EQ("48656c6c6f", QuicTextUtils::HexEncode("Hello"));
   EXPECT_EQ("0102779cfa", QuicTextUtils::HexEncode("\x01\x02\x77\x9c\xfa"));
 }
 
-TEST(QuicTextUtilsText, HexDecode) {
+TEST_F(QuicTextUtilsText, HexDecode) {
   EXPECT_EQ("Hello", QuicTextUtils::HexDecode("48656c6c6f"));
   EXPECT_EQ("", QuicTextUtils::HexDecode(""));
   EXPECT_EQ("\x01\x02\x77\x9c\xfa", QuicTextUtils::HexDecode("0102779cfa"));
 }
 
-TEST(QuicTextUtilsText, HexDump) {
+TEST_F(QuicTextUtilsText, HexDump) {
   // Verify output of the HexDump method is as expected.
   char packet[] = {
       0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2c, 0x20, 0x51, 0x55, 0x49, 0x43, 0x21,
@@ -161,7 +163,7 @@ TEST(QuicTextUtilsText, HexDump) {
       "0x0050:  0102 03                                  ...\n");
 }
 
-TEST(QuicTextUtilsText, Base64Encode) {
+TEST_F(QuicTextUtilsText, Base64Encode) {
   string output;
   string input = "Hello";
   QuicTextUtils::Base64Encode(reinterpret_cast<const uint8_t*>(input.data()),
@@ -179,7 +181,7 @@ TEST(QuicTextUtilsText, Base64Encode) {
       output);
 }
 
-TEST(QuicTextUtilsText, ContainsUpperCase) {
+TEST_F(QuicTextUtilsText, ContainsUpperCase) {
   EXPECT_FALSE(QuicTextUtils::ContainsUpperCase("abc"));
   EXPECT_FALSE(QuicTextUtils::ContainsUpperCase(""));
   EXPECT_FALSE(QuicTextUtils::ContainsUpperCase("123"));
@@ -187,7 +189,7 @@ TEST(QuicTextUtilsText, ContainsUpperCase) {
   EXPECT_TRUE(QuicTextUtils::ContainsUpperCase("aBc"));
 }
 
-TEST(QuicTextUtilsText, Split) {
+TEST_F(QuicTextUtilsText, Split) {
   EXPECT_EQ(std::vector<QuicStringPiece>({"a", "b", "c"}),
             QuicTextUtils::Split("a,b,c", ','));
   EXPECT_EQ(std::vector<QuicStringPiece>({"a", "b", "c"}),

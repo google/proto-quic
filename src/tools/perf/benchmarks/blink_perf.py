@@ -21,7 +21,6 @@ from telemetry.value import scalar
 from telemetry.value import trace
 
 
-from benchmarks import pywebsocket_server
 from measurements import timeline_controller
 from page_sets import webgl_supported_shared_state
 
@@ -146,7 +145,7 @@ class _BlinkPerfMeasurement(legacy_page_test.LegacyPageTest):
     options.AppendExtraBrowserArgs([
         '--js-flags=--expose_gc',
         '--enable-experimental-web-platform-features',
-        '--disable-gesture-requirement-for-media-playback',
+        '--ignore-autoplay-restrictions',
         '--enable-experimental-canvas-features',
         # TODO(qinmin): After fixing crbug.com/592017, remove this command line.
         '--reduce-security-for-testing'
@@ -278,15 +277,6 @@ class _BlinkPerfBenchmark(perf_benchmark.PerfBenchmark):
     return CreateStorySetFromPath(path, SKIPPED_FILE)
 
 
-class _SharedPywebsocketPageState(shared_page_state.SharedPageState):
-  """Runs a pywebsocket server."""
-
-  def __init__(self, test, finder_options, user_story_set):
-    super(_SharedPywebsocketPageState, self).__init__(
-        test, finder_options, user_story_set)
-    self.platform.StartLocalServer(pywebsocket_server.PywebsocketServer())
-
-
 @benchmark.Owner(emails=['yukishiino@chromium.org',
                          'bashi@chromium.org',
                          'haraken@chromium.org'])
@@ -339,6 +329,10 @@ class BlinkPerfCanvas(_BlinkPerfBenchmark):
       page.skipped_gpus = []
     return story_set
 
+  def SetExtraBrowserOptions(self, options):
+    options.AppendExtraBrowserArgs([
+        '--enable-color-correct-rendering',
+    ])
 
 @benchmark.Owner(emails=['yukishiino@chromium.org',
                          'bashi@chromium.org',
@@ -400,28 +394,3 @@ class BlinkPerfShadowDOM(_BlinkPerfBenchmark):
   def ShouldDisable(cls, possible_browser):  # http://crbug.com/702319
     return possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X'
 
-
-
-# Disabled on Windows and ChromeOS due to https://crbug.com/521887
-#@benchmark.Disabled('win', 'chromeos')
-# Disabling on remaining platforms due to heavy flake https://crbug.com/646938
-@benchmark.Disabled('all')
-@benchmark.Owner(emails=['tyoshino@chromium.org', 'yhirano@chromium.org'])
-class BlinkPerfPywebsocket(_BlinkPerfBenchmark):
-  """The blink_perf.pywebsocket tests measure turn-around-time of 10MB
-  send/receive for XHR, Fetch API and WebSocket. We might ignore < 10%
-  regressions, because the tests are noisy and such regressions are
-  often unreproducible (https://crbug.com/549017).
-  """
-  tag = 'pywebsocket'
-  subdir = 'Pywebsocket'
-
-  def CreateStorySet(self, options):
-    path = os.path.join(BLINK_PERF_BASE_DIR, self.subdir)
-    return CreateStorySetFromPath(
-        path, SKIPPED_FILE,
-        shared_page_state_class=_SharedPywebsocketPageState)
-
-  @classmethod
-  def ShouldDisable(cls, possible_browser):
-    return cls.IsSvelte(possible_browser)  # http://crbug.com/551950

@@ -18,14 +18,13 @@ def PrecheckShouldAllowOpenURLEnums(input_api, output_api):
   if source_file not in affected_files:
     return []
 
-  if update_histogram_enum.HistogramNeedsUpdate(
+  presubmit_error = update_histogram_enum.CheckPresubmitErrors(
       histogram_enum_name='ShouldAllowOpenURLFailureScheme',
+      update_script_name='update_should_allow_open_url_histograms.py',
       source_enum_path=source_file,
       start_marker='^enum ShouldAllowOpenURLFailureScheme {',
-      end_marker='^SCHEME_LAST'):
-    return [output_api.PresubmitPromptWarning(
-        'ShouldAllowOpenURLFailureScheme has been updated but histogram.xml '
-        'does not appear to be updated.\nPlease run:\n'
-        '  python tools/metrics/histograms/'
-        'update_should_allow_open_url_histograms.py\n')]
+      end_marker='^SCHEME_LAST')
+  if presubmit_error:
+    return [output_api.PresubmitPromptWarning(presubmit_error,
+                                              items=[source_file])]
   return []

@@ -10,6 +10,7 @@
 #include "base/rand_util.h"
 #include "base/sys_byteorder.h"
 #include "net/spdy/core/hpack/hpack_constants.h"
+#include "net/spdy/platform/api/spdy_ptr_util.h"
 
 namespace net {
 
@@ -138,9 +139,10 @@ SpdyString HpackFuzzUtil::HeaderBlockPrefix(size_t block_size) {
 
 // static
 void HpackFuzzUtil::InitializeFuzzerContext(FuzzerContext* context) {
-  context->first_stage.reset(new HpackDecoder());
-  context->second_stage.reset(new HpackEncoder(ObtainHpackHuffmanTable()));
-  context->third_stage.reset(new HpackDecoder());
+  context->first_stage = SpdyMakeUnique<HpackDecoder>();
+  context->second_stage =
+      SpdyMakeUnique<HpackEncoder>(ObtainHpackHuffmanTable());
+  context->third_stage = SpdyMakeUnique<HpackDecoder>();
 }
 
 // static

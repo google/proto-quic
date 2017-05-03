@@ -7,6 +7,7 @@
 #include <string>
 
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/mock_quic_client_promised_info.h"
 #include "net/quic/test_tools/quic_test_utils.h"
@@ -42,7 +43,7 @@ class MockQuicClientSession : public QuicClientSession {
   DISALLOW_COPY_AND_ASSIGN(MockQuicClientSession);
 };
 
-class QuicClientPushPromiseIndexTest : public ::testing::Test {
+class QuicClientPushPromiseIndexTest : public QuicTest {
  public:
   QuicClientPushPromiseIndexTest()
       : connection_(new StrictMock<MockQuicConnection>(&helper_,

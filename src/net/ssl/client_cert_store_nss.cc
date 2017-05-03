@@ -17,6 +17,7 @@
 #include "base/location.h"
 #include "base/logging.h"
 #include "base/strings/string_piece.h"
+#include "base/task_runner_util.h"
 #include "base/threading/worker_pool.h"
 #include "crypto/nss_crypto_module_delegate.h"
 #include "net/cert/scoped_nss_types.h"
@@ -32,29 +33,28 @@ ClientCertStoreNSS::ClientCertStoreNSS(
 
 ClientCertStoreNSS::~ClientCertStoreNSS() {}
 
-void ClientCertStoreNSS::GetClientCerts(const SSLCertRequestInfo& request,
-                                         CertificateList* selected_certs,
-                                         const base::Closure& callback) {
+void ClientCertStoreNSS::GetClientCerts(
+    const SSLCertRequestInfo& request,
+    const ClientCertListCallback& callback) {
   std::unique_ptr<crypto::CryptoModuleBlockingPasswordDelegate>
       password_delegate;
   if (!password_delegate_factory_.is_null()) {
     password_delegate.reset(
         password_delegate_factory_.Run(request.host_and_port));
   }
-  if (base::WorkerPool::PostTaskAndReply(
+  if (base::PostTaskAndReplyWithResult(
+          base::WorkerPool::GetTaskRunner(true /* task_is_slow */).get(),
           FROM_HERE,
           base::Bind(&ClientCertStoreNSS::GetAndFilterCertsOnWorkerThread,
                      // Caller is responsible for keeping the ClientCertStore
                      // alive until the callback is run.
                      base::Unretained(this), base::Passed(&password_delegate),
-                     &request, selected_certs),
-          callback, true)) {
+                     &request),
+          callback)) {
     return;
   }
-  // If the task could not be posted, behave as if there were no certificates
-  // which requires to clear |selected_certs|.
-  selected_certs->clear();
-  callback.Run();
+  // If the task could not be posted, behave as if there were no certificates.
+  callback.Run(CertificateList());
 }
 
 // static
@@ -109,14 +109,15 @@ void ClientCertStoreNSS::FilterCertsOnWorkerThread(
             x509_util::ClientCertSorter());
 }
 
-void ClientCertStoreNSS::GetAndFilterCertsOnWorkerThread(
+CertificateList ClientCertStoreNSS::GetAndFilterCertsOnWorkerThread(
     std::unique_ptr<crypto::CryptoModuleBlockingPasswordDelegate>
         password_delegate,
-    const SSLCertRequestInfo* request,
-    CertificateList* selected_certs) {
+    const SSLCertRequestInfo* request) {
   CertificateList platform_certs;
   GetPlatformCertsOnWorkerThread(std::move(password_delegate), &platform_certs);
-  FilterCertsOnWorkerThread(platform_certs, *request, selected_certs);
+  CertificateList selected_certs;
+  FilterCertsOnWorkerThread(platform_certs, *request, &selected_certs);
+  return selected_certs;
 }
 
 // static

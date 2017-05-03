@@ -392,6 +392,15 @@ class FetcherClient {
     ASSERT_THAT(result, IsError(ERR_IO_PENDING));
   }
 
+  int RunTestThatMayFailSync() {
+    int result = fetcher_.Fetch(
+        &pac_text_,
+        base::Bind(&FetcherClient::OnCompletion, base::Unretained(this)));
+    if (result != ERR_IO_PENDING)
+      result_ = result;
+    return result;
+  }
+
   void RunMessageLoopUntilComplete() {
     while (!finished_) {
       base::RunLoop().RunUntilIdle();
@@ -648,6 +657,24 @@ TEST(DhcpProxyScriptFetcherWin, ReuseFetcher) {
   // Re-do the first test to make sure the last test that was run did
   // not leave things in a bad state.
   (*test_functions.begin())(&client);
+}
+
+TEST(DhcpProxyScriptFetcherWin, OnShutdown) {
+  FetcherClient client;
+  TestURLRequestContext context;
+  std::unique_ptr<DummyDhcpProxyScriptAdapterFetcher> adapter_fetcher(
+      new DummyDhcpProxyScriptAdapterFetcher(&context, client.GetTaskRunner()));
+  adapter_fetcher->Configure(true, OK, L"bingo", 1);
+  client.fetcher_.PushBackAdapter("a", adapter_fetcher.release());
+  client.RunTest();
+
+  client.fetcher_.OnShutdown();
+  EXPECT_TRUE(client.finished_);
+  EXPECT_THAT(client.result_, IsError(ERR_CONTEXT_SHUT_DOWN));
+
+  client.ResetTestState();
+  EXPECT_THAT(client.RunTestThatMayFailSync(), IsError(ERR_CONTEXT_SHUT_DOWN));
+  EXPECT_EQ(0u, context.url_requests().size());
 }
 
 }  // namespace

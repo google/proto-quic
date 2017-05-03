@@ -22,7 +22,7 @@ inline std::string QuicStrCatImpl(const Args&... args) {
 
 template <typename... Args>
 inline std::string QuicStringPrintfImpl(const Args&... args) {
-  return std::move(base::StringPrintf(std::forward<const Args&>(args)...));
+  return base::StringPrintf(std::forward<const Args&>(args)...);
 }
 
 }  // namespace net

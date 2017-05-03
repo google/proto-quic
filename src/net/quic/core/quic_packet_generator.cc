@@ -348,4 +348,9 @@ void QuicPacketGenerator::SendRemainingPendingPadding() {
   }
 }
 
+bool QuicPacketGenerator::HasRetransmittableFrames() const {
+  return !queued_control_frames_.empty() ||
+         packet_creator_.HasPendingRetransmittableFrames();
+}
+
 }  // namespace net

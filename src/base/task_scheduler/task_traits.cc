@@ -12,9 +12,6 @@
 
 namespace base {
 
-TaskTraits::TaskTraits() = default;
-TaskTraits::~TaskTraits() = default;
-
 TaskTraits& TaskTraits::MayBlock() {
   may_block_ = true;
   return *this;

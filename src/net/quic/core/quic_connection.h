@@ -141,6 +141,12 @@ class QUIC_EXPORT_PRIVATE QuicConnectionVisitorInterface {
   // been done.
   virtual void PostProcessAfterData() = 0;
 
+  // Called when the connection sends ack after
+  // kMaxConsecutiveNonRetransmittablePackets consecutive not retransmittable
+  // packets sent. To instigate an ack from peer, a retransmittable frame needs
+  // to be added.
+  virtual void OnAckNeedsRetransmittableFrame() = 0;
+
   // Called to ask if the visitor wants to schedule write resumption as it both
   // has pending data to write, and is able to write (e.g. based on flow control
   // limits).
@@ -1081,6 +1087,9 @@ class QUIC_EXPORT_PRIVATE QuicConnection
 
   // Indicates not to send or process stop waiting frames.
   bool no_stop_waiting_frames_;
+
+  // Consecutive number of sent packets which have no retransmittable frames.
+  size_t consecutive_num_packets_with_no_retransmittable_frames_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicConnection);
 };

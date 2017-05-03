@@ -243,7 +243,6 @@ QuicTestClient::~QuicTestClient() {
   for (std::pair<QuicStreamId, QuicSpdyClientStream*> stream : open_streams_) {
     stream.second->set_visitor(nullptr);
   }
-  client_->Disconnect();
 }
 
 void QuicTestClient::Initialize() {

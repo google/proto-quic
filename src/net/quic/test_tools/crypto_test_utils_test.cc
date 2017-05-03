@@ -6,11 +6,10 @@
 
 #include "net/quic/core/crypto/crypto_server_config_protobuf.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/test/gtest_util.h"
-#include "testing/gmock/include/gmock/gmock.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
 
@@ -108,6 +107,8 @@ class ShloVerifier {
   QuicReferenceCountedPointer<ValidateClientHelloResultCallback::Result>
       result_;
 };
+
+class CryptoTestUtilsTest : public QuicTest {};
 
 TEST(CryptoTestUtilsTest, TestGenerateFullCHLO) {
   MockClock clock;

@@ -1,4 +1,4 @@
-// Copyright (c) 2016 The Chromium Authors. All rights reserved.
+// Copyright (c) 2017 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -9,8 +9,7 @@
 #include "net/quic/core/quic_crypto_server_stream.h"
 #include "net/quic/core/quic_crypto_stream.h"
 #include "net/quic/core/quic_session.h"
-#include "net/quic/platform/api/quic_export.h"
-#include "net/quic/platform/impl/quic_chromium_clock.h"
+#include "net/quic/quartc/quartc_clock_interface.h"
 #include "net/quic/quartc/quartc_session_interface.h"
 #include "net/quic/quartc/quartc_stream.h"
 
@@ -27,21 +26,22 @@ class QuartcCryptoServerStreamHelper : public QuicCryptoServerStream::Helper {
                             std::string* error_details) const override;
 };
 
-class QUIC_EXPORT_PRIVATE QuartcSession
-    : public QuicSession,
-      public QuartcSessionInterface,
-      public QuicCryptoClientStream::ProofHandler {
+class QuartcSession : public QuicSession,
+                      public QuartcSessionInterface,
+                      public QuicCryptoClientStream::ProofHandler {
  public:
   QuartcSession(std::unique_ptr<QuicConnection> connection,
                 const QuicConfig& config,
                 const std::string& unique_remote_server_id,
                 Perspective perspective,
-                QuicConnectionHelperInterface* helper);
+                QuicConnectionHelperInterface* helper,
+                QuicClock* clock);
   ~QuartcSession() override;
 
   // QuicSession overrides.
-  const QuicCryptoStream* GetCryptoStream() const override;
   QuicCryptoStream* GetMutableCryptoStream() override;
+
+  const QuicCryptoStream* GetCryptoStream() const override;
 
   QuartcStream* CreateOutgoingDynamicStream(SpdyPriority priority) override;
 
@@ -98,14 +98,14 @@ class QUIC_EXPORT_PRIVATE QuartcSession
  private:
   // For crypto handshake.
   std::unique_ptr<QuicCryptoStream> crypto_stream_;
-  // For recording packet receipt time
-  QuicChromiumClock clock_;
   const std::string unique_remote_server_id_;
   Perspective perspective_;
   // Take the ownership of the QuicConnection.
   std::unique_ptr<QuicConnection> connection_;
   // Not owned by QuartcSession. From the QuartcFactory.
   QuicConnectionHelperInterface* helper_;
+  // For recording packet receipt time
+  QuicClock* clock_;
   // Not owned by QuartcSession.
   QuartcSessionInterface::Delegate* session_delegate_ = nullptr;
   // Used by QUIC crypto server stream to track most recently compressed certs.

@@ -199,6 +199,9 @@ class _ProjectEntry(object):
     """Returns the target type from its .build_config."""
     return self.DepsInfo()['type']
 
+  def IsValid(self):
+    return self.GetType() in ('android_apk', 'java_library', 'java_binary')
+
   def ResZips(self):
     return self.DepsInfo().get('owned_resources_zips', [])
 
@@ -545,6 +548,13 @@ def _GenerateGradleFile(entry, generator, build_vars, source_properties,
       _TemplatePath(target_type.split('_')[0]), variables)
 
 
+def _IsTestDir(path):
+  return ('javatests/' in path or
+          'junit/' in path or
+          'test/' in path or
+          'testing/' in path)
+
+
 def _GenerateModuleAll(gradle_output_dir, generator, build_vars,
     source_properties, jinja_processor):
   """Returns the data for a pseudo build.gradle of all dirs.
@@ -558,10 +568,16 @@ def _GenerateModuleAll(gradle_output_dir, generator, build_vars,
   prebuilts = sorted(generator.processed_prebuilts)
   def Relativize(paths):
     return _RebasePath(paths, os.path.join(gradle_output_dir, _MODULE_ALL))
+  main_java_dirs = [d for d in java_dirs if not _IsTestDir(d)]
+  test_java_dirs = [d for d in java_dirs if _IsTestDir(d)]
   variables['main'] = {
       'android_manifest': Relativize(_DEFAULT_ANDROID_MANIFEST_PATH),
-      'java_dirs': Relativize(java_dirs),
+      'java_dirs': Relativize(main_java_dirs),
       'prebuilts': Relativize(prebuilts),
+      'java_excludes': ['**/*.java'],
+  }
+  variables['android_test'] = {
+      'java_dirs': Relativize(test_java_dirs),
       'java_excludes': ['**/*.java'],
   }
   data = jinja_processor.Render(
@@ -575,7 +591,7 @@ def _GenerateRootGradle(jinja_processor):
   return jinja_processor.Render(_TemplatePath('root'))
 
 
-def _GenerateSettingsGradle(project_entries):
+def _GenerateSettingsGradle(project_entries, add_all_module):
   """Returns the data for settings.gradle."""
   project_name = os.path.basename(os.path.dirname(host_paths.DIR_SOURCE_ROOT))
   lines = []
@@ -584,10 +600,11 @@ def _GenerateSettingsGradle(project_entries):
   lines.append('rootProject.projectDir = settingsDir')
   lines.append('')
 
-  lines.append('include ":{0}"'.format(_MODULE_ALL))
-  lines.append(
-      'project(":{0}").projectDir = new File(settingsDir, "{0}")'.format(
-          _MODULE_ALL))
+  if add_all_module:
+    lines.append('include ":{0}"'.format(_MODULE_ALL))
+    lines.append(
+        'project(":{0}").projectDir = new File(settingsDir, "{0}")'.format(
+            _MODULE_ALL))
   for entry in project_entries:
     # Example target: android_webview:android_webview_java__build_config
     lines.append('include ":%s"' % entry.ProjectName())
@@ -697,7 +714,6 @@ def main():
   devil_chromium.Initialize(output_directory=output_dir)
   run_tests_helper.SetLogLevel(args.verbose_count)
 
-  # TODO(wnwen): Fix packaging so that gradle resources work in this case.
   if args.split_projects:
     assert not args.use_gradle_process_resources, (
         'Gradle resources does not work without --split-projects.')
@@ -743,21 +759,22 @@ def main():
   if args.split_projects:
     main_entries = _FindAllProjectEntries(main_entries)
     logging.info('Found %d dependent build_config targets.', len(main_entries))
-  entries = _CombineTestEntries(main_entries)
+
+  entries = [e for e in _CombineTestEntries(main_entries) if e.IsValid()]
   logging.info('Creating %d projects for targets.', len(entries))
+
+  # When only one entry will be generated we want it to have a valid
+  # build.gradle file with its own AndroidManifest.
+  add_all_module = not args.split_projects and len(entries) > 1
 
   logging.warning('Writing .gradle files...')
   project_entries = []
   zip_tuples = []
   generated_inputs = []
   for entry in entries:
-    if entry.GetType() not in ('android_apk', 'java_library', 'java_binary'):
-      continue
-
     data = _GenerateGradleFile(entry, generator, build_vars, source_properties,
         jinja_processor)
     if data:
-      project_entries.append(entry)
       # Build all paths references by .gradle that exist within output_dir.
       generated_inputs.extend(generator.GeneratedInputs(entry))
       zip_tuples.extend(
@@ -766,18 +783,21 @@ def main():
       zip_tuples.extend(
           (s, os.path.join(generator.EntryOutputDir(entry), _RES_SUBDIR))
           for s in generator.AllResZips(entry))
-      _WriteFile(
-          os.path.join(generator.EntryOutputDir(entry), _GRADLE_BUILD_FILE),
-          data)
+      if not add_all_module:
+        project_entries.append(entry)
+        _WriteFile(
+            os.path.join(generator.EntryOutputDir(entry), _GRADLE_BUILD_FILE),
+            data)
 
-  _GenerateModuleAll(_gradle_output_dir, generator, build_vars,
-      source_properties, jinja_processor)
+  if add_all_module:
+    _GenerateModuleAll(_gradle_output_dir, generator, build_vars,
+        source_properties, jinja_processor)
 
   _WriteFile(os.path.join(generator.project_dir, _GRADLE_BUILD_FILE),
              _GenerateRootGradle(jinja_processor))
 
   _WriteFile(os.path.join(generator.project_dir, 'settings.gradle'),
-             _GenerateSettingsGradle(project_entries))
+             _GenerateSettingsGradle(project_entries, add_all_module))
 
   sdk_path = _RebasePath(build_vars['android_sdk_root'])
   _WriteFile(os.path.join(generator.project_dir, 'local.properties'),
@@ -791,7 +811,7 @@ def main():
   if zip_tuples:
     _ExtractZips(generator.project_dir, zip_tuples)
 
-  logging.warning('Project created! (%d subprojects)', len(project_entries))
+  logging.warning('Project created!')
   logging.warning('Generated projects work with Android Studio 2.3')
   logging.warning('For more tips: https://chromium.googlesource.com/chromium'
                   '/src.git/+/master/docs/android_studio.md')

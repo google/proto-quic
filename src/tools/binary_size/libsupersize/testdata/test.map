@@ -88,7 +88,7 @@ Memory map
  .text.startup._GLOBAL__sub_I_SkDeviceProfile.cpp
                 0x0028f1c8       0x14 obj/third_party/icu/icuuc/ucnv_ext.o
  .text.unlikely.foo_bar
-                0x0028f1e0       0x14 obj/third_party/icu/icuuc/ucnv_ext.o
+                0x0028f1e0       0x10e00 obj/third_party/icu/icuuc/ucnv_ext.o
  .text._ZN5blink23ContiguousContainerBase11shrinkToFitEv
                 0x002a0000       0x10 obj/third_party/WebKit.a(PaintChunker.o)
                 0x002a0001                blink::ContiguousContainerBase::shrinkToFit()
@@ -136,9 +136,9 @@ Memory map
                 0x02c176f0                vtable for ChromeMainDelegate
  .data.rel.ro.local._ZTVN6chrome5mojom34FieldTrialRecorderRequestValidatorE
                 0x02c17728       0x18 obj/third_party/icu/icuuc/ucnv_ext.o
-                0x02c17728                vtable for chrome::mojom::FieldTrialRecorderRequestValidator
+                0x02c17728                vtable for chrome::mojom::FieldTrialRecorder
  .data.rel.ro.local._ZTVN6chrome5mojom23FieldTrialRecorderProxyE
-                0x02c17740       0x18 obj/third_party/WebKit.a(ContiguousContainer.o)
+                0x02c17740       0xc0d90 obj/third_party/WebKit.a(ContiguousContainer.o)
                 0x02c17740                vtable for chrome::mojom::FieldTrialRecorderProxy
  .data.rel.ro.local..Lswitch.table.45
                 0x02cd84e0       0x10 ../../third_party/gvr-android-sdk/libgvr_shim_static_arm.a(libcontroller_api_impl.a_controller_api_impl.o)
@@ -195,46 +195,6 @@ Memory map
  .bss._ZN12_GLOBAL__N_135g_AnimationFrameTimeHistogram_clazzE
                 0x02dffe84        0x4 obj/third_party/icu/icuuc/ucnv_ext.o
  ** common      0x02e2fca0   0x10d8e8
-
-.debug_info     0x00000000  0x81aee3a
- .debug_info    0x00000000       0x41 obj/chrome/android/chrome/chrome_main_delegate_android_initializer.o
-
-.debug_abbrev   0x00000000   0xa79307
- .debug_abbrev  0x00000000       0x2f obj/chrome/android/chrome/chrome_main_delegate_android_initializer.o
-
-.debug_aranges  0x00000000   0x4a2a18
- .debug_aranges
-                0x00000000       0x20 obj/chrome/android/chrome/chrome_main_delegate_android_initializer.o
-
-.debug_ranges   0x00000000  0x1dd3880
- .debug_ranges  0x00000000       0x10 obj/chrome/android/chrome/chrome_main_delegate_android_initializer.o
-
-.debug_line     0x00000000  0x37976e9
- .debug_line    0x00000000       0x7b obj/chrome/android/chrome/chrome_main_delegate_android_initializer.o
-
-.debug_str      0x00000000  0xf73136b
- ** merge strings
-                0x00000000  0xf73136b
-
-.debug_frame    0x00000000   0xfa0610
- .debug_frame   0x00000000       0x28 obj/chrome/android/chrome/chrome_main_delegate_android_initializer.o
-
-.comment        0x00000000       0x7f
- ** merge strings
-                0x00000000       0x7f
-
-.debug_loc      0x00000000    0x4fdb6
- .debug_loc     0x00000000       0x85 ../../third_party/android_tools/ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/libc++_static.a(chrono.o)
-
-.debug_pubnames
-                0x00000000    0x4165f
- .debug_pubnames
-                0x00000000      0xc42 ../../third_party/android_tools/ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/libc++_static.a(chrono.o)
-
-.debug_pubtypes
-                0x00000000    0x184f4
- .debug_pubtypes
-                0x00000000      0xc74 ../../third_party/android_tools/ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/libc++_static.a(chrono.o)
 
 .note.gnu.gold-version
                 0x00000000       0x1c

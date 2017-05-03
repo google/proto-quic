@@ -12,6 +12,7 @@
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_str_cat.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/quic_config_peer.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
@@ -20,7 +21,6 @@
 #include "net/quic/test_tools/simulator/quic_endpoint.h"
 #include "net/quic/test_tools/simulator/simulator.h"
 #include "net/quic/test_tools/simulator/switch.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
 
@@ -204,7 +204,7 @@ std::vector<TestParams> GetTestParams() {
 
 }  // namespace
 
-class SendAlgorithmTest : public ::testing::TestWithParam<TestParams> {
+class SendAlgorithmTest : public QuicTestWithParam<TestParams> {
  protected:
   SendAlgorithmTest()
       : simulator_(),

@@ -12,6 +12,15 @@ config("includes") {
   include_dirs = [ "include" ]
 }
 
+source_set("headers") {
+  sources = [
+    "include/brotli/decode.h",
+    "include/brotli/encode.h",
+    "include/brotli/port.h",
+    "include/brotli/types.h",
+  ]
+}
+
 static_library("common") {
   sources = [
     "common/constants.h",
@@ -20,6 +29,9 @@ static_library("common") {
     "common/version.h",
   ]
   public_configs = [ ":includes" ]
+  deps = [
+    ":headers",
+  ]
 }
 
 static_library("dec") {
@@ -37,6 +49,10 @@ static_library("dec") {
     "dec/transform.h",
   ]
   public_configs = [ ":includes" ]
+
+  public_deps = [
+    ":headers",
+  ]
 
   deps = [
     ":common",
@@ -113,6 +129,7 @@ if (current_toolchain == host_toolchain) {
     deps = [
       ":common",
       ":dec",
+      ":headers",
       "//build/config/sanitizers:deps",
       "//build/win:default_exe_manifest",
     ]

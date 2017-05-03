@@ -284,7 +284,7 @@ int TCPSocketWin::Open(AddressFamily family) {
   return OK;
 }
 
-int TCPSocketWin::AdoptConnectedSocket(SOCKET socket,
+int TCPSocketWin::AdoptConnectedSocket(SocketDescriptor socket,
                                        const IPEndPoint& peer_address) {
   DCHECK(CalledOnValidThread());
   DCHECK_EQ(socket_, INVALID_SOCKET);
@@ -305,7 +305,7 @@ int TCPSocketWin::AdoptConnectedSocket(SOCKET socket,
   return OK;
 }
 
-int TCPSocketWin::AdoptListenSocket(SOCKET socket) {
+int TCPSocketWin::AdoptUnconnectedSocket(SocketDescriptor socket) {
   DCHECK(CalledOnValidThread());
   DCHECK_EQ(socket_, INVALID_SOCKET);
 
@@ -727,6 +727,13 @@ void TCPSocketWin::EndLoggingMultipleConnectAttempts(int net_error) {
   } else {
     NOTREACHED();
   }
+}
+
+SocketDescriptor TCPSocketWin::ReleaseSocketDescriptorForTesting() {
+  SocketDescriptor socket_descriptor = socket_;
+  socket_ = INVALID_SOCKET;
+  Close();
+  return socket_descriptor;
 }
 
 int TCPSocketWin::AcceptInternal(std::unique_ptr<TCPSocketWin>* socket,

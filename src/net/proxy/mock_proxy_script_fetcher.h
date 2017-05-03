@@ -27,6 +27,7 @@ class MockProxyScriptFetcher : public ProxyScriptFetcher {
             base::string16* text,
             const CompletionCallback& callback) override;
   void Cancel() override;
+  void OnShutdown() override;
   URLRequestContext* GetRequestContext() const override;
 
   void NotifyFetchCompletion(int result, const std::string& ascii_text);
@@ -41,6 +42,7 @@ class MockProxyScriptFetcher : public ProxyScriptFetcher {
   CompletionCallback pending_request_callback_;
   base::string16* pending_request_text_;
   bool waiting_for_fetch_;
+  bool is_shutdown_;
 };
 
 }  // namespace net

@@ -71,13 +71,6 @@ void TaskScheduler::Create(StringPiece name) {
   SetInstance(MakeUnique<internal::TaskSchedulerImpl>(name));
 }
 
-void TaskScheduler::CreateAndSetDefaultTaskScheduler(
-    StringPiece name,
-    const InitParams& init_params) {
-  Create(name);
-  GetInstance()->Start(init_params);
-}
-
 // static
 void TaskScheduler::SetInstance(std::unique_ptr<TaskScheduler> task_scheduler) {
   delete g_task_scheduler;

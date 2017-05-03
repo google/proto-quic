@@ -4,7 +4,7 @@
 
 #include "net/quic/platform/api/quic_lru_cache.h"
 
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 namespace net {
 namespace test {
@@ -16,7 +16,9 @@ struct CachedItem {
   uint32_t value;
 };
 
-TEST(QuicLRUCacheTest, InsertAndLookup) {
+class QuicLRUCacheTest : public QuicTest {};
+
+TEST_F(QuicLRUCacheTest, InsertAndLookup) {
   QuicLRUCache<int, CachedItem> cache(5);
   EXPECT_EQ(nullptr, cache.Lookup(1));
   EXPECT_EQ(0u, cache.Size());
@@ -44,7 +46,7 @@ TEST(QuicLRUCacheTest, InsertAndLookup) {
   EXPECT_EQ(0u, cache.Size());
 }
 
-TEST(QuicLRUCacheTest, Eviction) {
+TEST_F(QuicLRUCacheTest, Eviction) {
   QuicLRUCache<int, CachedItem> cache(3);
 
   for (size_t i = 1; i <= 4; ++i) {

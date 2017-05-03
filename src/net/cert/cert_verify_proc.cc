@@ -33,8 +33,6 @@
 
 #if defined(USE_NSS_CERTS)
 #include "net/cert/cert_verify_proc_nss.h"
-#elif defined(USE_OPENSSL_CERTS) && !defined(OS_ANDROID)
-#include "net/cert/cert_verify_proc_openssl.h"
 #elif defined(OS_ANDROID)
 #include "net/cert/cert_verify_proc_android.h"
 #elif defined(OS_IOS)
@@ -504,8 +502,6 @@ WARN_UNUSED_RESULT bool InspectSignatureAlgorithmsInChain(
 CertVerifyProc* CertVerifyProc::CreateDefault() {
 #if defined(USE_NSS_CERTS)
   return new CertVerifyProcNSS();
-#elif defined(USE_OPENSSL_CERTS) && !defined(OS_ANDROID)
-  return new CertVerifyProcOpenSSL();
 #elif defined(OS_ANDROID)
   return new CertVerifyProcAndroid();
 #elif defined(OS_IOS)
@@ -515,7 +511,7 @@ CertVerifyProc* CertVerifyProc::CreateDefault() {
 #elif defined(OS_WIN)
   return new CertVerifyProcWin();
 #else
-  return NULL;
+#error Unsupported platform
 #endif
 }
 

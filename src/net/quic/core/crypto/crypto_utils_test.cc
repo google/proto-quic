@@ -5,9 +5,9 @@
 #include "net/quic/core/crypto/crypto_utils.h"
 
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
 
@@ -15,7 +15,9 @@ namespace net {
 namespace test {
 namespace {
 
-TEST(CryptoUtilsTest, TestExportKeyingMaterial) {
+class CryptoUtilsTest : public QuicTest {};
+
+TEST_F(CryptoUtilsTest, TestExportKeyingMaterial) {
   const struct TestVector {
     // Input (strings of hexadecimal digits):
     const char* subkey_secret;
@@ -72,7 +74,7 @@ TEST(CryptoUtilsTest, TestExportKeyingMaterial) {
   }
 }
 
-TEST(CryptoUtilsTest, HandshakeFailureReasonToString) {
+TEST_F(CryptoUtilsTest, HandshakeFailureReasonToString) {
   EXPECT_STREQ("HANDSHAKE_OK",
                CryptoUtils::HandshakeFailureReasonToString(HANDSHAKE_OK));
   EXPECT_STREQ("CLIENT_NONCE_UNKNOWN_FAILURE",

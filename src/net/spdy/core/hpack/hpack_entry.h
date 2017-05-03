@@ -8,7 +8,7 @@
 #include <stddef.h>
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
+#include "net/spdy/platform/api/spdy_export.h"
 #include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
@@ -19,7 +19,7 @@ namespace net {
 
 // A structure for an entry in the static table (3.3.1)
 // and the header table (3.3.2).
-class NET_EXPORT_PRIVATE HpackEntry {
+class SPDY_EXPORT_PRIVATE HpackEntry {
  public:
   // The constant amount added to name().size() and value().size() to
   // get the size of an HpackEntry as defined in 5.1.

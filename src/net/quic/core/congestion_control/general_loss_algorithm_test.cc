@@ -11,9 +11,9 @@
 #include "net/quic/core/congestion_control/rtt_stats.h"
 #include "net/quic/core/quic_unacked_packet_map.h"
 #include "net/quic/platform/api/quic_flags.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
 namespace test {
@@ -22,7 +22,7 @@ namespace {
 // Default packet length.
 const uint32_t kDefaultLength = 1000;
 
-class GeneralLossAlgorithmTest : public ::testing::Test {
+class GeneralLossAlgorithmTest : public QuicTest {
  protected:
   GeneralLossAlgorithmTest() {
     rtt_stats_.UpdateRtt(QuicTime::Delta::FromMilliseconds(100),
@@ -63,7 +63,6 @@ class GeneralLossAlgorithmTest : public ::testing::Test {
     }
   }
 
-  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   QuicUnackedPacketMap unacked_packets_;
   GeneralLossAlgorithm loss_algorithm_;
   RttStats rtt_stats_;

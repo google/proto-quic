@@ -62,6 +62,8 @@ namespace net {
 
 namespace {
 
+const size_t kDefaultNumPacThreads = 4;
+
 // When the IP address changes we don't immediately re-run proxy auto-config.
 // Instead, we  wait for |kDelayAfterNetworkChangesMs| before
 // attempting to re-valuate proxy auto-config.
@@ -454,6 +456,12 @@ class ProxyService::InitProxyResolver {
       return LOAD_STATE_DOWNLOADING_PROXY_SCRIPT;
     }
     return LOAD_STATE_RESOLVING_PROXY_FOR_URL;
+  }
+
+  // This must be called before the HostResolver is torn down.
+  void OnShutdown() {
+    if (decider_)
+      decider_->OnShutdown();
   }
 
   void set_quick_check_enabled(bool enabled) { quick_check_enabled_ = enabled; }
@@ -950,7 +958,6 @@ ProxyService::ProxyService(
 // static
 std::unique_ptr<ProxyService> ProxyService::CreateUsingSystemProxyResolver(
     std::unique_ptr<ProxyConfigService> proxy_config_service,
-    size_t num_pac_threads,
     NetLog* net_log) {
   DCHECK(proxy_config_service);
 
@@ -959,12 +966,9 @@ std::unique_ptr<ProxyService> ProxyService::CreateUsingSystemProxyResolver(
     return CreateWithoutProxyResolver(std::move(proxy_config_service), net_log);
   }
 
-  if (num_pac_threads == 0)
-    num_pac_threads = kDefaultNumPacThreads;
-
   return base::WrapUnique(new ProxyService(
       std::move(proxy_config_service),
-      base::MakeUnique<ProxyResolverFactoryForSystem>(num_pac_threads),
+      base::MakeUnique<ProxyResolverFactoryForSystem>(kDefaultNumPacThreads),
       net_log));
 }
 
@@ -982,7 +986,7 @@ std::unique_ptr<ProxyService> ProxyService::CreateFixed(const ProxyConfig& pc) {
   // TODO(eroman): This isn't quite right, won't work if |pc| specifies
   //               a PAC script.
   return CreateUsingSystemProxyResolver(
-      base::MakeUnique<ProxyConfigServiceFixed>(pc), 0, NULL);
+      base::MakeUnique<ProxyConfigServiceFixed>(pc), NULL);
 }
 
 // static
@@ -1456,6 +1460,17 @@ void ProxyService::SetProxyScriptFetchers(
   dhcp_proxy_script_fetcher_ = std::move(dhcp_proxy_script_fetcher);
   if (previous_state != STATE_NONE)
     ApplyProxyConfigIfAvailable();
+}
+
+void ProxyService::OnShutdown() {
+  // Order here does not matter for correctness. |init_proxy_resolver_| is first
+  // because shutting it down also cancels its requests using the fetcher.
+  if (init_proxy_resolver_)
+    init_proxy_resolver_->OnShutdown();
+  if (proxy_script_fetcher_)
+    proxy_script_fetcher_->OnShutdown();
+  if (dhcp_proxy_script_fetcher_)
+    dhcp_proxy_script_fetcher_->OnShutdown();
 }
 
 ProxyScriptFetcher* ProxyService::GetProxyScriptFetcher() const {

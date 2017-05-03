@@ -118,11 +118,14 @@ class SimpleSynchronousEntry {
   // Opens a disk cache entry on disk. The |key| parameter is optional, if empty
   // the operation may be slower. The |entry_hash| parameter is required.
   // |had_index| is provided only for histograms.
+  // |time_enqueued| is when this operation was added to the I/O thread pool,
+  //  and is provided only for histograms.
   static void OpenEntry(net::CacheType cache_type,
                         const base::FilePath& path,
                         const std::string& key,
                         uint64_t entry_hash,
                         bool had_index,
+                        const base::TimeTicks& time_enqueued,
                         SimpleEntryCreationResults* out_results);
 
   static void CreateEntry(net::CacheType cache_type,
@@ -130,6 +133,7 @@ class SimpleSynchronousEntry {
                           const std::string& key,
                           uint64_t entry_hash,
                           bool had_index,
+                          const base::TimeTicks& time_enqueued,
                           SimpleEntryCreationResults* out_results);
 
   // Deletes an entry from the file system without affecting the state of the

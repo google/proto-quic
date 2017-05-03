@@ -10,60 +10,85 @@
 #include "base/memory/ref_counted_memory.h"
 #include "base/strings/stringprintf.h"
 #include "base/trace_event/memory_allocator_dump.h"
+#include "base/trace_event/memory_usage_estimator.h"
 #include "base/trace_event/process_memory_dump.h"
 #include "base/values.h"
 
 namespace base {
 namespace trace_event {
 
-TraceEventMemoryOverhead::TraceEventMemoryOverhead() {
-}
+namespace {
 
-TraceEventMemoryOverhead::~TraceEventMemoryOverhead() {
-}
-
-void TraceEventMemoryOverhead::AddOrCreateInternal(
-    const char* object_type,
-    size_t count,
-    size_t allocated_size_in_bytes,
-    size_t resident_size_in_bytes) {
-  auto it = allocated_objects_.find(object_type);
-  if (it == allocated_objects_.end()) {
-    allocated_objects_.insert(std::make_pair(
-        object_type,
-        ObjectCountAndSize(
-            {count, allocated_size_in_bytes, resident_size_in_bytes})));
-    return;
+const char* ObjectTypeToString(TraceEventMemoryOverhead::ObjectType type) {
+  switch (type) {
+    case TraceEventMemoryOverhead::kOther:
+      return "(Other)";
+    case TraceEventMemoryOverhead::kTraceBuffer:
+      return "TraceBuffer";
+    case TraceEventMemoryOverhead::kTraceBufferChunk:
+      return "TraceBufferChunk";
+    case TraceEventMemoryOverhead::kTraceEvent:
+      return "TraceEvent";
+    case TraceEventMemoryOverhead::kUnusedTraceEvent:
+      return "TraceEvent(Unused)";
+    case TraceEventMemoryOverhead::kTracedValue:
+      return "TracedValue";
+    case TraceEventMemoryOverhead::kConvertableToTraceFormat:
+      return "ConvertableToTraceFormat";
+    case TraceEventMemoryOverhead::kHeapProfilerAllocationRegister:
+      return "AllocationRegister";
+    case TraceEventMemoryOverhead::kHeapProfilerTypeNameDeduplicator:
+      return "TypeNameDeduplicator";
+    case TraceEventMemoryOverhead::kHeapProfilerStackFrameDeduplicator:
+      return "StackFrameDeduplicator";
+    case TraceEventMemoryOverhead::kStdString:
+      return "std::string";
+    case TraceEventMemoryOverhead::kBaseValue:
+      return "base::Value";
+    case TraceEventMemoryOverhead::kTraceEventMemoryOverhead:
+      return "TraceEventMemoryOverhead";
+    case TraceEventMemoryOverhead::kLast:
+      NOTREACHED();
   }
-  it->second.count += count;
-  it->second.allocated_size_in_bytes += allocated_size_in_bytes;
-  it->second.resident_size_in_bytes += resident_size_in_bytes;
+  NOTREACHED();
+  return "BUG";
 }
 
-void TraceEventMemoryOverhead::Add(const char* object_type,
+}  // namespace
+
+TraceEventMemoryOverhead::TraceEventMemoryOverhead() : allocated_objects_() {}
+
+TraceEventMemoryOverhead::~TraceEventMemoryOverhead() {}
+
+void TraceEventMemoryOverhead::AddInternal(ObjectType object_type,
+                                           size_t count,
+                                           size_t allocated_size_in_bytes,
+                                           size_t resident_size_in_bytes) {
+  ObjectCountAndSize& count_and_size =
+      allocated_objects_[static_cast<uint32_t>(object_type)];
+  count_and_size.count += count;
+  count_and_size.allocated_size_in_bytes += allocated_size_in_bytes;
+  count_and_size.resident_size_in_bytes += resident_size_in_bytes;
+}
+
+void TraceEventMemoryOverhead::Add(ObjectType object_type,
                                    size_t allocated_size_in_bytes) {
   Add(object_type, allocated_size_in_bytes, allocated_size_in_bytes);
 }
 
-void TraceEventMemoryOverhead::Add(const char* object_type,
+void TraceEventMemoryOverhead::Add(ObjectType object_type,
                                    size_t allocated_size_in_bytes,
                                    size_t resident_size_in_bytes) {
-  AddOrCreateInternal(object_type, 1, allocated_size_in_bytes,
-                      resident_size_in_bytes);
+  AddInternal(object_type, 1, allocated_size_in_bytes, resident_size_in_bytes);
 }
 
 void TraceEventMemoryOverhead::AddString(const std::string& str) {
-  // The number below are empirical and mainly based on profiling of real-world
-  // std::string implementations:
-  //  - even short string end up malloc()-inc at least 32 bytes.
-  //  - longer strings seem to malloc() multiples of 16 bytes.
-  const size_t capacity = bits::Align(str.capacity(), 16);
-  Add("std::string", sizeof(std::string) + std::max<size_t>(capacity, 32u));
+  Add(kStdString, EstimateMemoryUsage(str));
 }
 
 void TraceEventMemoryOverhead::AddRefCountedString(
     const RefCountedString& str) {
-  Add("RefCountedString", sizeof(RefCountedString));
+  Add(kOther, sizeof(RefCountedString));
   AddString(str.data());
 }
 
@@ -73,24 +98,24 @@ void TraceEventMemoryOverhead::AddValue(const Value& value) {
     case Value::Type::BOOLEAN:
     case Value::Type::INTEGER:
     case Value::Type::DOUBLE:
-      Add("FundamentalValue", sizeof(Value));
+      Add(kBaseValue, sizeof(Value));
       break;
 
     case Value::Type::STRING: {
       const Value* string_value = nullptr;
       value.GetAsString(&string_value);
-      Add("StringValue", sizeof(Value));
+      Add(kBaseValue, sizeof(Value));
       AddString(string_value->GetString());
     } break;
 
     case Value::Type::BINARY: {
-      Add("BinaryValue", sizeof(Value) + value.GetBlob().size());
+      Add(kBaseValue, sizeof(Value) + value.GetBlob().size());
     } break;
 
     case Value::Type::DICTIONARY: {
       const DictionaryValue* dictionary_value = nullptr;
       value.GetAsDictionary(&dictionary_value);
-      Add("DictionaryValue", sizeof(DictionaryValue));
+      Add(kBaseValue, sizeof(DictionaryValue));
       for (DictionaryValue::Iterator it(*dictionary_value); !it.IsAtEnd();
            it.Advance()) {
         AddString(it.key());
@@ -101,7 +126,7 @@ void TraceEventMemoryOverhead::AddValue(const Value& value) {
     case Value::Type::LIST: {
       const ListValue* list_value = nullptr;
       value.GetAsList(&list_value);
-      Add("ListValue", sizeof(ListValue));
+      Add(kBaseValue, sizeof(ListValue));
       for (const auto& v : *list_value)
         AddValue(v);
     } break;
@@ -112,41 +137,39 @@ void TraceEventMemoryOverhead::AddValue(const Value& value) {
 }
 
 void TraceEventMemoryOverhead::AddSelf() {
-  size_t estimated_size = sizeof(*this);
-  // If the small_map did overflow its static capacity, its elements will be
-  // allocated on the heap and have to be accounted separately.
-  if (allocated_objects_.UsingFullMap())
-    estimated_size += sizeof(map_type::value_type) * allocated_objects_.size();
-  Add("TraceEventMemoryOverhead", estimated_size);
+  Add(kTraceEventMemoryOverhead, sizeof(*this));
 }
 
-size_t TraceEventMemoryOverhead::GetCount(const char* object_type) const {
-  const auto& it = allocated_objects_.find(object_type);
-  if (it == allocated_objects_.end())
-    return 0u;
-  return it->second.count;
+size_t TraceEventMemoryOverhead::GetCount(ObjectType object_type) const {
+  CHECK(object_type < kLast);
+  return allocated_objects_[static_cast<uint32_t>(object_type)].count;
 }
 
 void TraceEventMemoryOverhead::Update(const TraceEventMemoryOverhead& other) {
-  for (const auto& it : other.allocated_objects_) {
-    AddOrCreateInternal(it.first, it.second.count,
-                        it.second.allocated_size_in_bytes,
-                        it.second.resident_size_in_bytes);
+  for (uint32_t i = 0; i < kLast; i++) {
+    const ObjectCountAndSize& other_entry = other.allocated_objects_[i];
+    AddInternal(static_cast<ObjectType>(i), other_entry.count,
+                other_entry.allocated_size_in_bytes,
+                other_entry.resident_size_in_bytes);
   }
 }
 
 void TraceEventMemoryOverhead::DumpInto(const char* base_name,
                                         ProcessMemoryDump* pmd) const {
-  for (const auto& it : allocated_objects_) {
-    std::string dump_name = StringPrintf("%s/%s", base_name, it.first);
+  for (uint32_t i = 0; i < kLast; i++) {
+    const ObjectCountAndSize& count_and_size = allocated_objects_[i];
+    if (count_and_size.allocated_size_in_bytes == 0)
+      continue;
+    std::string dump_name = StringPrintf(
+        "%s/%s", base_name, ObjectTypeToString(static_cast<ObjectType>(i)));
     MemoryAllocatorDump* mad = pmd->CreateAllocatorDump(dump_name);
     mad->AddScalar(MemoryAllocatorDump::kNameSize,
                    MemoryAllocatorDump::kUnitsBytes,
-                   it.second.allocated_size_in_bytes);
+                   count_and_size.allocated_size_in_bytes);
     mad->AddScalar("resident_size", MemoryAllocatorDump::kUnitsBytes,
-                   it.second.resident_size_in_bytes);
+                   count_and_size.resident_size_in_bytes);
     mad->AddScalar(MemoryAllocatorDump::kNameObjectCount,
-                   MemoryAllocatorDump::kUnitsObjects, it.second.count);
+                   MemoryAllocatorDump::kUnitsObjects, count_and_size.count);
   }
 }
 

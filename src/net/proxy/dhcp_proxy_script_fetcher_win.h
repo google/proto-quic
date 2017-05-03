@@ -44,6 +44,7 @@ class NET_EXPORT_PRIVATE DhcpProxyScriptFetcherWin
   int Fetch(base::string16* utf16_text,
             const CompletionCallback& callback) override;
   void Cancel() override;
+  void OnShutdown() override;
   const GURL& GetPacURL() const override;
   std::string GetFetcherName() const override;
 
@@ -165,7 +166,8 @@ class NET_EXPORT_PRIVATE DhcpProxyScriptFetcherWin
 
   base::OneShotTimer wait_timer_;
 
-  URLRequestContext* const url_request_context_;
+  // Set to nullptr on cancellation.
+  URLRequestContext* url_request_context_;
 
   // NULL or the AdapterQuery currently in flight.
   scoped_refptr<AdapterQuery> last_query_;

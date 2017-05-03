@@ -11,19 +11,19 @@
 #include <memory>
 #include <vector>
 
-#include "net/base/net_export.h"
 #include "net/spdy/core/hpack/hpack_decoder.h"
 #include "net/spdy/core/hpack/hpack_encoder.h"
+#include "net/spdy/platform/api/spdy_export.h"
 #include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
 namespace net {
 
-class NET_EXPORT_PRIVATE HpackFuzzUtil {
+class SPDY_EXPORT_PRIVATE HpackFuzzUtil {
  public:
   // A GeneratorContext holds ordered header names & values which are
   // initially seeded and then expanded with dynamically generated data.
-  struct NET_EXPORT_PRIVATE GeneratorContext {
+  struct SPDY_EXPORT_PRIVATE GeneratorContext {
     GeneratorContext();
     ~GeneratorContext();
     std::vector<SpdyString> names;
@@ -41,7 +41,7 @@ class NET_EXPORT_PRIVATE HpackFuzzUtil {
   static size_t SampleExponential(size_t mean, size_t sanity_bound);
 
   // Holds an input SpdyString, and manages an offset into that SpdyString.
-  struct NET_EXPORT_PRIVATE Input {
+  struct SPDY_EXPORT_PRIVATE Input {
     Input();  // Initializes |offset| to zero.
     ~Input();
 
@@ -66,7 +66,7 @@ class NET_EXPORT_PRIVATE HpackFuzzUtil {
 
   // A FuzzerContext holds fuzzer input, as well as each of the decoder and
   // encoder stages which fuzzed header blocks are processed through.
-  struct NET_EXPORT_PRIVATE FuzzerContext {
+  struct SPDY_EXPORT_PRIVATE FuzzerContext {
     FuzzerContext();
     ~FuzzerContext();
     std::unique_ptr<HpackDecoder> first_stage;

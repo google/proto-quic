@@ -70,6 +70,7 @@ class SearchOmniboxStory(system_health_story.SystemHealthStory):
     action_runner.ScrollPage(use_touch=True, distance=500)
 
 
+@decorators.Disabled('android-webview')  # Webview does not have new tab page.
 class MobileNewTabPageStory(system_health_story.SystemHealthStory):
   """Story that loads new tab page and performs searches.
 

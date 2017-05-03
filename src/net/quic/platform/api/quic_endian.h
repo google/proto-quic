@@ -9,6 +9,11 @@
 
 namespace net {
 
+enum Endianness {
+  NETWORK_BYTE_ORDER,  // big endian
+  HOST_BYTE_ORDER      // little endian
+};
+
 // Provide utility functions that convert from/to network order (big endian)
 // to/from host order (can be either little or big endian depending on the
 // platform).

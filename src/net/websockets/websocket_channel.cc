@@ -477,7 +477,8 @@ ChannelState WebSocketChannel::SendFlowControl(int64_t quota) {
 
     pending_received_frames_.pop();
   }
-  if (pending_received_frames_.empty() && has_received_close_frame_) {
+  if (!InClosingState() && pending_received_frames_.empty() &&
+      has_received_close_frame_) {
     // We've been waiting for the client to consume the frames before
     // responding to the closing handshake initiated by the server.
     return RespondToClosingHandshake();

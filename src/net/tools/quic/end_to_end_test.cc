@@ -34,6 +34,7 @@
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/platform/api/quic_string_piece.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_config_peer.h"
@@ -293,7 +294,7 @@ class ClientDelegate : public PacketDroppingTestWriter::Delegate {
   QuicClient* client_;
 };
 
-class EndToEndTest : public ::testing::TestWithParam<TestParams> {
+class EndToEndTest : public QuicTestWithParam<TestParams> {
  protected:
   EndToEndTest()
       : initialized_(false),
@@ -602,7 +603,6 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
     stream_factory_ = factory;
   }
 
-  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   bool initialized_;
   QuicSocketAddress server_address_;
   string server_hostname_;
@@ -2003,7 +2003,6 @@ TEST_P(EndToEndTest, ServerSendPublicReset) {
       GetPeerInMemoryConnectionId(connection_id);
   header.public_header.reset_flag = true;
   header.public_header.version_flag = false;
-  header.rejected_packet_number = 10101;
   QuicFramer framer(server_supported_versions_, QuicTime::Zero(),
                     Perspective::IS_SERVER);
   std::unique_ptr<QuicEncryptedPacket> packet(
@@ -2037,7 +2036,6 @@ TEST_P(EndToEndTest, ServerSendPublicResetWithDifferentConnectionId) {
       GetPeerInMemoryConnectionId(incorrect_connection_id);
   header.public_header.reset_flag = true;
   header.public_header.version_flag = false;
-  header.rejected_packet_number = 10101;
   QuicFramer framer(server_supported_versions_, QuicTime::Zero(),
                     Perspective::IS_SERVER);
   std::unique_ptr<QuicEncryptedPacket> packet(
@@ -2073,7 +2071,6 @@ TEST_P(EndToEndTest, ClientSendPublicResetWithDifferentConnectionId) {
   header.public_header.connection_id = incorrect_connection_id;
   header.public_header.reset_flag = true;
   header.public_header.version_flag = false;
-  header.rejected_packet_number = 10101;
   QuicFramer framer(server_supported_versions_, QuicTime::Zero(),
                     Perspective::IS_CLIENT);
   std::unique_ptr<QuicEncryptedPacket> packet(
@@ -3021,6 +3018,48 @@ TEST_P(EndToEndTest, WayTooLongRequestHeaders) {
   client_->WaitForResponse();
   EXPECT_EQ(QUIC_HEADERS_STREAM_DATA_DECOMPRESS_FAILURE,
             client_->connection_error());
+}
+
+class WindowUpdateObserver : public QuicConnectionDebugVisitor {
+ public:
+  WindowUpdateObserver() : num_window_update_frames_(0) {}
+
+  size_t num_window_update_frames() const { return num_window_update_frames_; }
+
+  void OnWindowUpdateFrame(const QuicWindowUpdateFrame& frame) override {
+    ++num_window_update_frames_;
+  }
+
+ private:
+  size_t num_window_update_frames_;
+};
+
+TEST_P(EndToEndTest, WindowUpdateInAck) {
+  FLAGS_quic_reloadable_flag_quic_enable_version_38 = true;
+  FLAGS_quic_reloadable_flag_quic_enable_version_39 = true;
+  ASSERT_TRUE(Initialize());
+  EXPECT_TRUE(client_->client()->WaitForCryptoHandshakeConfirmed());
+  WindowUpdateObserver observer;
+  QuicConnection* client_connection =
+      client_->client()->session()->connection();
+  client_connection->set_debug_visitor(&observer);
+  QuicVersion version = client_connection->version();
+  // 100KB body.
+  string body(100 * 1024, 'a');
+  SpdyHeaderBlock headers;
+  headers[":method"] = "POST";
+  headers[":path"] = "/foo";
+  headers[":scheme"] = "https";
+  headers[":authority"] = server_hostname_;
+
+  EXPECT_EQ(kFooResponseBody,
+            client_->SendCustomSynchronousRequest(headers, body));
+  client_->Disconnect();
+  if (version > QUIC_VERSION_38) {
+    EXPECT_LT(0u, observer.num_window_update_frames());
+  } else {
+    EXPECT_EQ(0u, observer.num_window_update_frames());
+  }
 }
 
 class EndToEndBufferedPacketsTest : public EndToEndTest {

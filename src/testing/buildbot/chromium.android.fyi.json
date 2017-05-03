@@ -761,7 +761,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -777,7 +777,8 @@
               ],
               "name": "shard #${SHARD_INDEX} logcats"
             }
-          ]
+          ],
+          "shards": 2
         },
         "test": "android_webview_test_apk"
       },
@@ -794,7 +795,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -827,7 +828,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -863,7 +864,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -896,7 +897,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -929,7 +930,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -965,7 +966,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -981,7 +982,8 @@
               ],
               "name": "shard #${SHARD_INDEX} logcats"
             }
-          ]
+          ],
+          "shards": 6
         },
         "test": "chrome_public_test_apk"
       },
@@ -1001,7 +1003,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1034,7 +1036,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1067,7 +1069,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1100,7 +1102,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1116,7 +1118,8 @@
               ],
               "name": "shard #${SHARD_INDEX} logcats"
             }
-          ]
+          ],
+          "shards": 4
         },
         "test": "content_browsertests"
       },
@@ -1136,7 +1139,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1169,7 +1172,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1202,7 +1205,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1235,7 +1238,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1268,7 +1271,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1301,7 +1304,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1334,7 +1337,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1367,7 +1370,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1400,7 +1403,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1433,7 +1436,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1466,7 +1469,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1499,7 +1502,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1535,7 +1538,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1568,7 +1571,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1601,7 +1604,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1634,7 +1637,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1667,7 +1670,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1700,7 +1703,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1733,7 +1736,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -1766,7 +1769,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "NRD91N",
               "device_type": "bullhead"
             }
@@ -2607,19 +2610,6 @@
         "test": "mojo_common_unittests"
       },
       {
-        "override_isolate_target": "mojo_public_application_unittests",
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "device_type": "coho"
-            }
-          ]
-        },
-        "test": "mojo_public_application_unittests"
-      },
-      {
         "override_isolate_target": "mojo_public_bindings_unittests",
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -3149,20 +3139,6 @@
           "hard_timeout": 60
         },
         "test": "mojo_common_unittests"
-      },
-      {
-        "override_isolate_target": "mojo_public_application_unittests",
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "4",
-              "device_type": "gce_x86"
-            }
-          ],
-          "hard_timeout": 60
-        },
-        "test": "mojo_public_application_unittests"
       },
       {
         "override_isolate_target": "mojo_public_bindings_unittests",

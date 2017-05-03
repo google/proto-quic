@@ -4,6 +4,8 @@
 
 #include "net/spdy/core/spdy_pinnable_buffer_piece.h"
 
+#include <new>
+
 namespace net {
 
 SpdyPinnableBufferPiece::SpdyPinnableBufferPiece()

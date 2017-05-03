@@ -8,8 +8,8 @@
 #include <tuple>
 #include <vector>
 
-#include "net/base/net_export.h"
 #include "net/spdy/core/spdy_protocol.h"
+#include "net/spdy/platform/api/spdy_export.h"
 
 namespace net {
 
@@ -38,7 +38,7 @@ namespace net {
 // returned by PopNextReadyStream(); when returned by that method, the stream's
 // state changes to not ready.
 template <typename StreamIdType>
-class NET_EXPORT_PRIVATE WriteScheduler {
+class SPDY_EXPORT_PRIVATE WriteScheduler {
  public:
   typedef StreamPrecedence<StreamIdType> StreamPrecedenceType;
 

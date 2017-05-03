@@ -16,11 +16,11 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "base/bind.h"
-#include "base/containers/hash_tables.h"
 #include "base/files/file_enumerator.h"
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
@@ -73,7 +73,7 @@ class InotifyReader {
   // issues with GCC 6 (http://crbug.com/636346).
 
   // We keep track of which delegates want to be notified on which watches.
-  hash_map<Watch, WatcherSet> watchers_;
+  std::unordered_map<Watch, WatcherSet> watchers_;
 
   // Lock to protect watchers_.
   Lock lock_;
@@ -184,7 +184,7 @@ class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate {
   // |target_| and always stores an empty next component name in |subdir|.
   WatchVector watches_;
 
-  hash_map<InotifyReader::Watch, FilePath> recursive_paths_by_watch_;
+  std::unordered_map<InotifyReader::Watch, FilePath> recursive_paths_by_watch_;
   std::map<FilePath, InotifyReader::Watch> recursive_watches_by_path_;
 
   WeakPtrFactory<FilePathWatcherImpl> weak_factory_;
@@ -596,12 +596,9 @@ void FilePathWatcherImpl::RemoveRecursiveWatches() {
   if (!recursive_)
     return;
 
-  for (hash_map<InotifyReader::Watch, FilePath>::const_iterator it =
-           recursive_paths_by_watch_.begin();
-       it != recursive_paths_by_watch_.end();
-       ++it) {
-    g_inotify_reader.Get().RemoveWatch(it->first, this);
-  }
+  for (const auto& it : recursive_paths_by_watch_)
+    g_inotify_reader.Get().RemoveWatch(it.first, this);
+
   recursive_paths_by_watch_.clear();
   recursive_watches_by_path_.clear();
 }

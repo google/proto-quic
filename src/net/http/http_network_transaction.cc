@@ -1801,6 +1801,7 @@ bool HttpNetworkTransaction::ContentEncodingsValid() const {
   if (allowed_encodings.find("*") != allowed_encodings.end())
     return true;
 
+  bool result = true;
   for (auto const& encoding : used_encodings) {
     SourceStream::SourceType source_type =
         FilterSourceStream::ParseEncodingType(encoding);
@@ -1808,11 +1809,21 @@ bool HttpNetworkTransaction::ContentEncodingsValid() const {
     if (source_type == SourceStream::TYPE_UNKNOWN)
       continue;
     if (allowed_encodings.find(encoding) == allowed_encodings.end()) {
-      FilterSourceStream::ReportContentDecodingFailed(source_type);
-      return false;
+      FilterSourceStream::ReportContentDecodingFailed(
+          SourceStream::TYPE_REJECTED);
+      result = false;
+      break;
     }
   }
-  return true;
+
+  // Temporary workaround for http://crbug.com/714514
+  if (headers->IsRedirect(nullptr)) {
+    UMA_HISTOGRAM_BOOLEAN("Net.RedirectWithUnadvertisedContentEncoding",
+                          !result);
+    return true;
+  }
+
+  return result;
 }
 
 }  // namespace net

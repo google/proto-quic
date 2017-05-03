@@ -6,13 +6,15 @@
 
 #include "net/quic/core/quic_bandwidth.h"
 #include "net/quic/core/quic_time.h"
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 namespace net {
 namespace test {
 namespace {
 
-TEST(QuicSustainedBandwidthRecorderTest, BandwidthEstimates) {
+class QuicSustainedBandwidthRecorderTest : public QuicTest {};
+
+TEST_F(QuicSustainedBandwidthRecorderTest, BandwidthEstimates) {
   QuicSustainedBandwidthRecorder recorder;
   EXPECT_FALSE(recorder.HasEstimate());
 
@@ -91,7 +93,7 @@ TEST(QuicSustainedBandwidthRecorderTest, BandwidthEstimates) {
   EXPECT_EQ(recorder.MaxBandwidthTimestamp(), kSeconds);
 }
 
-TEST(QuicSustainedBandwidthRecorderTest, SlowStart) {
+TEST_F(QuicSustainedBandwidthRecorderTest, SlowStart) {
   // Verify that slow start status is correctly recorded.
   QuicSustainedBandwidthRecorder recorder;
   EXPECT_FALSE(recorder.HasEstimate());

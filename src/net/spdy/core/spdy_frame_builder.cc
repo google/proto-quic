@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <limits>
+#include <new>
 
 #include "base/logging.h"
 #include "net/spdy/core/spdy_bug_tracker.h"

@@ -187,8 +187,13 @@ class QuicServerPushHelper : public ServerPushDelegate::ServerPushHelper {
 }  // namespace
 
 QuicChromiumClientSession::StreamRequest::StreamRequest(
-    const base::WeakPtr<QuicChromiumClientSession>& session)
-    : session_(session), stream_(nullptr) {}
+    const base::WeakPtr<QuicChromiumClientSession>& session,
+    bool requires_confirmation)
+    : session_(session),
+      requires_confirmation_(requires_confirmation),
+      stream_(nullptr),
+      next_state_(STATE_NONE),
+      weak_factory_(this) {}
 
 QuicChromiumClientSession::StreamRequest::~StreamRequest() {
   if (stream_)
@@ -201,12 +206,11 @@ QuicChromiumClientSession::StreamRequest::~StreamRequest() {
 int QuicChromiumClientSession::StreamRequest::StartRequest(
     const CompletionCallback& callback) {
   DCHECK(session_);
-  int rv = session_->TryCreateStream(this);
-  if (rv == ERR_IO_PENDING) {
+
+  next_state_ = STATE_WAIT_FOR_CONFIRMATION;
+  int rv = DoLoop(OK);
+  if (rv == ERR_IO_PENDING)
     callback_ = callback;
-  } else {
-    session_.reset();
-  }
 
   return rv;
 }
@@ -221,15 +225,100 @@ QuicChromiumClientSession::StreamRequest::ReleaseStream() {
 
 void QuicChromiumClientSession::StreamRequest::OnRequestCompleteSuccess(
     QuicChromiumClientStream* stream) {
+  DCHECK_EQ(STATE_REQUEST_STREAM_COMPLETE, next_state_);
   session_.reset();
   stream_ = stream;
-  base::ResetAndReturn(&callback_).Run(OK);
+  // This method is called even when the request completes synchronously.
+  if (callback_)
+    DoCallback(OK);
 }
 
 void QuicChromiumClientSession::StreamRequest::OnRequestCompleteFailure(
     int rv) {
+  DCHECK_EQ(STATE_REQUEST_STREAM_COMPLETE, next_state_);
   session_.reset();
+  // This method is called even when the request completes synchronously.
+  if (callback_)
+    DoCallback(rv);
+}
+
+void QuicChromiumClientSession::StreamRequest::OnIOComplete(int rv) {
+  rv = DoLoop(rv);
+
+  if (rv != ERR_IO_PENDING && !callback_.is_null()) {
+    DoCallback(rv);
+  }
+}
+
+void QuicChromiumClientSession::StreamRequest::DoCallback(int rv) {
+  CHECK_NE(rv, ERR_IO_PENDING);
+  CHECK(!callback_.is_null());
+
+  // The client callback can do anything, including destroying this class,
+  // so any pending callback must be issued after everything else is done.
   base::ResetAndReturn(&callback_).Run(rv);
+}
+
+int QuicChromiumClientSession::StreamRequest::DoLoop(int rv) {
+  do {
+    State state = next_state_;
+    next_state_ = STATE_NONE;
+    switch (state) {
+      case STATE_WAIT_FOR_CONFIRMATION:
+        CHECK_EQ(OK, rv);
+        rv = DoWaitForConfirmation();
+        break;
+      case STATE_WAIT_FOR_CONFIRMATION_COMPLETE:
+        rv = DoWaitForConfirmationComplete(rv);
+        break;
+      case STATE_REQUEST_STREAM:
+        CHECK_EQ(OK, rv);
+        rv = DoRequestStream();
+        break;
+      case STATE_REQUEST_STREAM_COMPLETE:
+        rv = DoRequestStreamComplete(rv);
+        break;
+      default:
+        NOTREACHED() << "next_state_: " << next_state_;
+        break;
+    }
+  } while (next_state_ != STATE_NONE && next_state_ && rv != ERR_IO_PENDING);
+
+  return rv;
+}
+
+int QuicChromiumClientSession::StreamRequest::DoWaitForConfirmation() {
+  next_state_ = STATE_WAIT_FOR_CONFIRMATION_COMPLETE;
+  if (requires_confirmation_) {
+    return session_->WaitForHandshakeConfirmation(
+        base::Bind(&QuicChromiumClientSession::StreamRequest::OnIOComplete,
+                   weak_factory_.GetWeakPtr()));
+  }
+
+  return OK;
+}
+
+int QuicChromiumClientSession::StreamRequest::DoWaitForConfirmationComplete(
+    int rv) {
+  DCHECK_NE(ERR_IO_PENDING, rv);
+  if (rv < 0)
+    return rv;
+
+  next_state_ = STATE_REQUEST_STREAM;
+  return OK;
+}
+
+int QuicChromiumClientSession::StreamRequest::DoRequestStream() {
+  next_state_ = STATE_REQUEST_STREAM_COMPLETE;
+
+  return session_->TryCreateStream(this);
+}
+
+int QuicChromiumClientSession::StreamRequest::DoRequestStreamComplete(int rv) {
+  DCHECK(rv == OK || !stream_);
+  session_.reset();
+
+  return rv;
 }
 
 QuicChromiumClientSession::QuicChromiumClientSession(
@@ -307,6 +396,7 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
   DCHECK(callback_.is_null());
 
   net_log_.EndEvent(NetLogEventType::QUIC_SESSION);
+  DCHECK(waiting_for_confirmation_callbacks_.empty());
   if (!dynamic_streams().empty())
     RecordUnexpectedOpenStreams(DESTRUCTOR);
   if (!observers_.empty())
@@ -321,17 +411,9 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
     CloseAllStreams(ERR_UNEXPECTED);
     DCHECK(observers_.empty());
     CloseAllObservers(ERR_UNEXPECTED);
+    CancelAllRequests(ERR_UNEXPECTED);
 
     connection()->set_debug_visitor(nullptr);
-
-    UMA_HISTOGRAM_COUNTS_1000("Net.QuicSession.AbortedPendingStreamRequests",
-                              stream_requests_.size());
-
-    while (!stream_requests_.empty()) {
-      StreamRequest* request = stream_requests_.front();
-      stream_requests_.pop_front();
-      request->OnRequestCompleteFailure(ERR_ABORTED);
-    }
   }
 
   if (connection()->connected()) {
@@ -463,11 +545,23 @@ void QuicChromiumClientSession::RemoveObserver(Observer* observer) {
 }
 
 std::unique_ptr<QuicChromiumClientSession::StreamRequest>
-QuicChromiumClientSession::CreateStreamRequest() {
+QuicChromiumClientSession::CreateStreamRequest(bool requires_confirmation) {
   // base::MakeUnique does not work because the StreamRequest constructor
   // is private.
   return std::unique_ptr<StreamRequest>(
-      new StreamRequest(weak_factory_.GetWeakPtr()));
+      new StreamRequest(weak_factory_.GetWeakPtr(), requires_confirmation));
+}
+
+int QuicChromiumClientSession::WaitForHandshakeConfirmation(
+    const CompletionCallback& callback) {
+  if (!connection()->connected())
+    return ERR_CONNECTION_CLOSED;
+
+  if (IsCryptoHandshakeConfirmed())
+    return OK;
+
+  waiting_for_confirmation_callbacks_.push_back(callback);
+  return ERR_IO_PENDING;
 }
 
 int QuicChromiumClientSession::TryCreateStream(StreamRequest* request) {
@@ -872,6 +966,8 @@ void QuicChromiumClientSession::OnCryptoHandshakeEvent(
       ++it;
       observer->OnCryptoHandshakeConfirmed();
     }
+
+    NotifyRequestsOfConfirmation(OK);
   }
   QuicSpdySession::OnCryptoHandshakeEvent(event);
 }
@@ -1013,6 +1109,8 @@ void QuicChromiumClientSession::OnConnectionClosed(
   DCHECK(dynamic_streams().empty());
   CloseAllStreams(ERR_UNEXPECTED);
   CloseAllObservers(ERR_UNEXPECTED);
+  CancelAllRequests(ERR_CONNECTION_CLOSED);
+  NotifyRequestsOfConfirmation(ERR_CONNECTION_CLOSED);
   NotifyFactoryOfSessionClosedLater();
 }
 
@@ -1223,22 +1321,11 @@ void QuicChromiumClientSession::StartReading() {
   }
 }
 
-void QuicChromiumClientSession::CloseSessionOnError(int error,
+void QuicChromiumClientSession::CloseSessionOnError(int net_error,
                                                     QuicErrorCode quic_error) {
-  RecordAndCloseSessionOnError(error, quic_error);
-  NotifyFactoryOfSessionClosed();
-}
+  UMA_HISTOGRAM_SPARSE_SLOWLY("Net.QuicSession.CloseSessionOnError",
+                              -net_error);
 
-void QuicChromiumClientSession::RecordAndCloseSessionOnError(
-    int error,
-    QuicErrorCode quic_error) {
-  UMA_HISTOGRAM_SPARSE_SLOWLY("Net.QuicSession.CloseSessionOnError", -error);
-  CloseSessionOnErrorInner(error, quic_error);
-}
-
-void QuicChromiumClientSession::CloseSessionOnErrorInner(
-    int net_error,
-    QuicErrorCode quic_error) {
   if (!callback_.is_null()) {
     base::ResetAndReturn(&callback_).Run(net_error);
   }
@@ -1251,6 +1338,8 @@ void QuicChromiumClientSession::CloseSessionOnErrorInner(
     connection()->CloseConnection(quic_error, "net error",
                                   ConnectionCloseBehavior::SILENT_CLOSE);
   DCHECK(!connection()->connected());
+
+  NotifyFactoryOfSessionClosed();
 }
 
 void QuicChromiumClientSession::CloseAllStreams(int net_error) {
@@ -1268,6 +1357,25 @@ void QuicChromiumClientSession::CloseAllObservers(int net_error) {
     observers_.erase(observer);
     observer->OnSessionClosed(net_error, port_migration_detected_);
   }
+}
+
+void QuicChromiumClientSession::CancelAllRequests(int net_error) {
+  UMA_HISTOGRAM_COUNTS_1000("Net.QuicSession.AbortedPendingStreamRequests",
+                            stream_requests_.size());
+
+  while (!stream_requests_.empty()) {
+    StreamRequest* request = stream_requests_.front();
+    stream_requests_.pop_front();
+    request->OnRequestCompleteFailure(net_error);
+  }
+}
+
+void QuicChromiumClientSession::NotifyRequestsOfConfirmation(int net_error) {
+  // Post tasks to avoid reentrancy.
+  for (auto callback : waiting_for_confirmation_callbacks_)
+    task_runner_->PostTask(FROM_HERE, base::Bind(callback, net_error));
+
+  waiting_for_confirmation_callbacks_.clear();
 }
 
 std::unique_ptr<base::Value> QuicChromiumClientSession::GetInfoAsValue(

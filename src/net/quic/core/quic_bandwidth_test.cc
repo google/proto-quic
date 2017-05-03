@@ -4,12 +4,12 @@
 
 #include "net/quic/core/quic_bandwidth.h"
 #include "net/quic/core/quic_time.h"
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 namespace net {
 namespace test {
 
-class QuicBandwidthTest : public ::testing::Test {};
+class QuicBandwidthTest : public QuicTest {};
 
 TEST_F(QuicBandwidthTest, FromTo) {
   EXPECT_EQ(QuicBandwidth::FromKBitsPerSecond(1),

@@ -11,9 +11,11 @@
 
 #include "net/quic/core/quic_headers_stream.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_flag_utils.h"
 #include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_str_cat.h"
+#include "net/quic/platform/api/quic_text_utils.h"
 
 using std::string;
 
@@ -393,7 +395,35 @@ void QuicSpdySession::OnStreamHeaderList(QuicStreamId stream_id,
                                          size_t frame_len,
                                          const QuicHeaderList& header_list) {
   QuicSpdyStream* stream = GetSpdyDataStream(stream_id);
-  if (!stream) {
+  if (stream == nullptr) {
+    QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_final_offset_from_trailers, 1,
+                      3);
+    if (FLAGS_quic_reloadable_flag_quic_final_offset_from_trailers) {
+      QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_final_offset_from_trailers, 2,
+                        3);
+      // The stream no longer exists, but trailing headers may contain the final
+      // byte offset necessary for flow control and open stream accounting.
+      size_t final_byte_offset = 0;
+      for (const auto& header : header_list) {
+        const string& header_key = header.first;
+        const string& header_value = header.second;
+        if (header_key == kFinalOffsetHeaderKey) {
+          if (!QuicTextUtils::StringToSizeT(header_value, &final_byte_offset)) {
+            connection()->CloseConnection(
+                QUIC_INVALID_HEADERS_STREAM_DATA,
+                "Trailers are malformed (no final offset)",
+                ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
+            return;
+          }
+          DVLOG(1) << "Received final byte offset in trailers for stream "
+                   << stream_id << ", which no longer exists.";
+          OnFinalByteOffsetReceived(stream_id, final_byte_offset);
+          QUIC_FLAG_COUNT_N(
+              quic_reloadable_flag_quic_final_offset_from_trailers, 3, 3);
+        }
+      }
+    }
+
     // It's quite possible to receive headers after a stream has been reset.
     return;
   }

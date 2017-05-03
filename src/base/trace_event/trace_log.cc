@@ -398,7 +398,7 @@ bool TraceLog::OnMemoryDump(const MemoryDumpArgs& args,
   // TODO(ssid): Use MemoryDumpArgs to create light dumps when requested
   // (crbug.com/499731).
   TraceEventMemoryOverhead overhead;
-  overhead.Add("TraceLog", sizeof(*this));
+  overhead.Add(TraceEventMemoryOverhead::kOther, sizeof(*this));
   {
     AutoLock lock(lock_);
     if (logged_events_)
@@ -1229,8 +1229,7 @@ TraceEventHandle TraceLog::AddTraceEventWithThreadIdAndTimestamp(
 
       AutoLock thread_info_lock(thread_info_lock_);
 
-      hash_map<int, std::string>::iterator existing_name =
-          thread_names_.find(thread_id);
+      auto existing_name = thread_names_.find(thread_id);
       if (existing_name == thread_names_.end()) {
         // This is a new thread id, and a new name.
         thread_names_[thread_id] = new_name;
@@ -1679,7 +1678,8 @@ void TraceLog::UpdateETWCategoryGroupEnabledFlags() {
 
 void ConvertableToTraceFormat::EstimateTraceMemoryOverhead(
     TraceEventMemoryOverhead* overhead) {
-  overhead->Add("ConvertableToTraceFormat(Unknown)", sizeof(*this));
+  overhead->Add(TraceEventMemoryOverhead::kConvertableToTraceFormat,
+                sizeof(*this));
 }
 
 void TraceLog::AddAsyncEnabledStateObserver(

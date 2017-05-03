@@ -27,6 +27,8 @@ int DoNothingDhcpProxyScriptFetcher::Fetch(
 
 void DoNothingDhcpProxyScriptFetcher::Cancel() {}
 
+void DoNothingDhcpProxyScriptFetcher::OnShutdown() {}
+
 const GURL& DoNothingDhcpProxyScriptFetcher::GetPacURL() const {
   return gurl_;
 }

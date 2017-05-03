@@ -725,12 +725,12 @@ class MockCertificateReportSender
   MockCertificateReportSender() {}
   ~MockCertificateReportSender() override {}
 
-  void Send(
-      const GURL& report_uri,
-      base::StringPiece content_type,
-      base::StringPiece report,
-      const base::Callback<void()>& success_callback,
-      const base::Callback<void(const GURL&, int)>& error_callback) override {
+  void Send(const GURL& report_uri,
+            base::StringPiece content_type,
+            base::StringPiece report,
+            const base::Callback<void()>& success_callback,
+            const base::Callback<void(const GURL&, int, int)>& error_callback)
+      override {
     latest_report_uri_ = report_uri;
     report.CopyToString(&latest_report_);
     content_type.CopyToString(&latest_content_type_);
@@ -6639,9 +6639,11 @@ class TestReportingService : public ReportingService {
     std::string header_value;
   };
 
-  ~TestReportingService() override {}
-
   const std::vector<Header>& headers() { return headers_; }
+
+  // ReportingService implementation:
+
+  ~TestReportingService() override {}
 
   void QueueReport(const GURL& url,
                    const std::string& group,
@@ -9720,10 +9722,7 @@ static bool SystemSupportsHardFailRevocationChecking() {
 // several tests are effected because our testing EV certificate won't be
 // recognised as EV.
 static bool SystemUsesChromiumEVMetadata() {
-#if defined(USE_OPENSSL_CERTS) && !defined(OS_ANDROID)
-  // http://crbug.com/117478 - OpenSSL does not support EV validation.
-  return false;
-#elif defined(OS_ANDROID)
+#if defined(OS_ANDROID)
   // On Android, we use the system to tell us whether a certificate is EV or not
   // and the system won't recognise our testing root.
   return false;

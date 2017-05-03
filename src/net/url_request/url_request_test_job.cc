@@ -296,12 +296,6 @@ void URLRequestTestJob::GetLoadTimingInfo(
   load_timing_info->request_start_time = request_start_time;
 }
 
-int URLRequestTestJob::GetResponseCode() const {
-  if (response_headers_.get())
-    return response_headers_->response_code();
-  return -1;
-}
-
 int64_t URLRequestTestJob::GetTotalReceivedBytes() const {
   return response_headers_length_ + offset_;
 }

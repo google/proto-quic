@@ -5,27 +5,28 @@
 #include "net/quic/core/quic_simple_buffer_allocator.h"
 
 #include "net/quic/core/quic_packets.h"
-#include "testing/gmock/include/gmock/gmock.h"
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 using ::testing::Eq;
 
 namespace net {
 namespace {
 
-TEST(SimpleBufferAllocatorTest, NewDelete) {
+class SimpleBufferAllocatorTest : public QuicTest {};
+
+TEST_F(SimpleBufferAllocatorTest, NewDelete) {
   SimpleBufferAllocator alloc;
   char* buf = alloc.New(4);
   EXPECT_NE(nullptr, buf);
   alloc.Delete(buf);
 }
 
-TEST(SimpleBufferAllocatorTest, DeleteNull) {
+TEST_F(SimpleBufferAllocatorTest, DeleteNull) {
   SimpleBufferAllocator alloc;
   alloc.Delete(nullptr);
 }
 
-TEST(SimpleBufferAllocatorTest, StoreInUniqueStreamBuffer) {
+TEST_F(SimpleBufferAllocatorTest, StoreInUniqueStreamBuffer) {
   SimpleBufferAllocator alloc;
   UniqueStreamBuffer buf = NewStreamBuffer(&alloc, 4);
   buf.reset();

@@ -103,15 +103,12 @@ void AppendPublicKeyHashes(const der::Input& spki_bytes,
   hashes->push_back(sha256);
 }
 
-// Appends the SubjectPublicKeyInfo hashes for all certificates (and trust
-// anchor) in |partial_path| to |*hashes|.
+// Appends the SubjectPublicKeyInfo hashes for all certificates in
+// |partial_path| to |*hashes|.
 void AppendPublicKeyHashes(const CertPathBuilder::ResultPath& partial_path,
                            HashValueVector* hashes) {
   for (const scoped_refptr<ParsedCertificate>& cert : partial_path.path.certs)
     AppendPublicKeyHashes(cert->tbs().spki_tlv, hashes);
-
-  if (partial_path.path.trust_anchor)
-    AppendPublicKeyHashes(partial_path.path.trust_anchor->spki(), hashes);
 }
 
 // Sets the bits on |cert_status| for all the errors present in |errors| (the
@@ -159,12 +156,6 @@ scoped_refptr<X509Certificate> CreateVerifiedCertChain(
   for (size_t i = 1; i < path.path.certs.size(); ++i)
     intermediates.push_back(CreateOSCertHandle(path.path.certs[i]));
 
-  if (path.path.trust_anchor) {
-    // TODO(eroman): This assumes that TrustAnchor::cert() cannot be null,
-    //               which disagrees with the documentation.
-    intermediates.push_back(CreateOSCertHandle(path.path.trust_anchor->cert()));
-  }
-
   scoped_refptr<X509Certificate> result = X509Certificate::CreateFromHandle(
       target_cert->os_cert_handle(), intermediates);
   // |target_cert| was already successfully parsed, so this should never fail.
@@ -205,10 +196,8 @@ void DoVerify(X509Certificate* input_cert,
   for (const auto& x509_cert : additional_trust_anchors) {
     scoped_refptr<ParsedCertificate> cert = ParseCertificateFromOSHandle(
         x509_cert->os_cert_handle(), &parsing_errors);
-    if (cert) {
-      ssl_trust_store->AddTrustAnchor(
-          TrustAnchor::CreateFromCertificateNoConstraints(std::move(cert)));
-    }
+    if (cert)
+      ssl_trust_store->AddTrustAnchor(cert);
     // TODO(eroman): Surface parsing errors of additional trust anchor.
   }
 
@@ -236,10 +225,6 @@ void DoVerify(X509Certificate* input_cert,
                                &signature_policy, verification_time,
                                KeyPurpose::SERVER_AUTH, &result);
 
-  // Allow the path builder to discover intermediates from the trust store.
-  if (ssl_trust_store->GetCertIssuerSource())
-    path_builder.AddCertIssuerSource(ssl_trust_store->GetCertIssuerSource());
-
   // Allow the path builder to discover the explicitly provided intermediates in
   // |input_cert|.
   CertIssuerSourceStatic intermediates;
@@ -264,17 +249,13 @@ void DoVerify(X509Certificate* input_cert,
   const CertPathBuilder::ResultPath& partial_path =
       *result.paths[result.best_result_index].get();
 
-  if (partial_path.path.trust_anchor) {
+  const ParsedCertificate* trusted_cert = partial_path.path.GetTrustedCert();
+  if (trusted_cert) {
     verify_result->is_issued_by_known_root =
-        ssl_trust_store->IsKnownRoot(partial_path.path.trust_anchor);
+        ssl_trust_store->IsKnownRoot(trusted_cert);
 
     verify_result->is_issued_by_additional_trust_anchor =
-        ssl_trust_store->IsAdditionalTrustAnchor(
-            partial_path.path.trust_anchor);
-  } else {
-    // TODO(eroman): This shouldn't be necessary -- partial_path.errors should
-    // contain an error if it didn't chain to trust anchor.
-    verify_result->cert_status |= CERT_STATUS_AUTHORITY_INVALID;
+        ssl_trust_store->IsAdditionalTrustAnchor(trusted_cert);
   }
 
   verify_result->verified_cert =

@@ -247,6 +247,11 @@ BASE_EXPORT extern NSString* const CIDetectorTypeText;
                                     action:(SEL)action;
 @end
 
+@interface NSTextField (SierraPointOneSDK)
++ (instancetype)labelWithAttributedString:
+    (NSAttributedString*)attributedStringValue;
+@end
+
 @interface NSApplication (SierraPointOneSDK)
 @property BOOL automaticCustomizeTouchBarMenuItemEnabled;
 @end

@@ -4,8 +4,8 @@
 
 #include "net/quic/core/quic_unacked_packet_map.h"
 
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
 namespace test {
@@ -14,7 +14,7 @@ namespace {
 // Default packet length.
 const uint32_t kDefaultLength = 1000;
 
-class QuicUnackedPacketMapTest : public ::testing::Test {
+class QuicUnackedPacketMapTest : public QuicTest {
  protected:
   QuicUnackedPacketMapTest()
       : unacked_packets_(),

@@ -21,6 +21,7 @@
 #include "net/quic/platform/api/quic_endian.h"
 #include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_string_piece.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/delayed_verify_strike_register_client.h"
@@ -29,7 +30,6 @@
 #include "net/quic/test_tools/mock_random.h"
 #include "net/quic/test_tools/quic_crypto_server_config_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "testing/gtest/include/gtest/gtest.h"
 #include "third_party/boringssl/src/include/openssl/sha.h"
 
 using std::string;
@@ -101,7 +101,7 @@ std::vector<TestParams> GetTestParams() {
   return params;
 }
 
-class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
+class CryptoServerTest : public QuicTestWithParam<TestParams> {
  public:
   CryptoServerTest()
       : rand_(QuicRandom::GetInstance()),
@@ -395,7 +395,6 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
   }
 
  protected:
-  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   QuicRandom* const rand_;
   MockRandom rand_for_id_generation_;
   MockClock clock_;
@@ -948,7 +947,9 @@ TEST_P(CryptoServerTest, ProofSourceFailure) {
   ShouldFailMentioning("", msg);
 }
 
-TEST(CryptoServerConfigGenerationTest, Determinism) {
+class CryptoServerConfigGenerationTest : public QuicTest {};
+
+TEST_F(CryptoServerConfigGenerationTest, Determinism) {
   // Test that using a deterministic PRNG causes the server-config to be
   // deterministic.
 
@@ -969,7 +970,7 @@ TEST(CryptoServerConfigGenerationTest, Determinism) {
             scfg_b->DebugString(Perspective::IS_SERVER));
 }
 
-TEST(CryptoServerConfigGenerationTest, SCIDVaries) {
+TEST_F(CryptoServerConfigGenerationTest, SCIDVaries) {
   // This test ensures that the server config ID varies for different server
   // configs.
 
@@ -994,7 +995,7 @@ TEST(CryptoServerConfigGenerationTest, SCIDVaries) {
   EXPECT_NE(scid_a, scid_b);
 }
 
-TEST(CryptoServerConfigGenerationTest, SCIDIsHashOfServerConfig) {
+TEST_F(CryptoServerConfigGenerationTest, SCIDIsHashOfServerConfig) {
   MockRandom rand_a;
   const QuicCryptoServerConfig::ConfigOptions options;
   MockClock clock;

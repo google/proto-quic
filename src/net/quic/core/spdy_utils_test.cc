@@ -5,9 +5,9 @@
 
 #include "base/macros.h"
 #include "net/quic/platform/api/quic_string_piece.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/test/gtest_util.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
 using testing::UnorderedElementsAre;
@@ -16,134 +16,6 @@ using testing::Pair;
 namespace net {
 namespace test {
 
-TEST(SpdyUtilsTest, SerializeAndParseHeaders) {
-  // Creates a SpdyHeaderBlock with some key->value pairs, serializes it, then
-  // parses the serialized output and verifies that the end result is the same
-  // as the headers that the test started with.
-
-  SpdyHeaderBlock input_headers;
-  input_headers[":pseudo1"] = "pseudo value1";
-  input_headers[":pseudo2"] = "pseudo value2";
-  input_headers["key1"] = "value1";
-  const int64_t kContentLength = 1234;
-  input_headers["content-length"] =
-      QuicTextUtils::Uint64ToString(kContentLength);
-  input_headers["key2"] = "value2";
-
-  // Serialize the header block.
-  string serialized_headers =
-      SpdyUtils::SerializeUncompressedHeaders(input_headers);
-
-  // Take the serialized header block, and parse back into SpdyHeaderBlock.
-  SpdyHeaderBlock output_headers;
-  int64_t content_length = -1;
-  ASSERT_TRUE(SpdyUtils::ParseHeaders(serialized_headers.data(),
-                                      serialized_headers.size(),
-                                      &content_length, &output_headers));
-
-  // Should be back to the original headers.
-  EXPECT_EQ(content_length, kContentLength);
-  EXPECT_EQ(output_headers, input_headers);
-}
-
-TEST(SpdyUtilsTest, SerializeAndParseHeadersLargeContentLength) {
-  // Creates a SpdyHeaderBlock with some key->value pairs, serializes it, then
-  // parses the serialized output and verifies that the end result is the same
-  // as the headers that the test started with.
-
-  SpdyHeaderBlock input_headers;
-  input_headers[":pseudo1"] = "pseudo value1";
-  input_headers[":pseudo2"] = "pseudo value2";
-  input_headers["key1"] = "value1";
-  const int64_t kContentLength = 12345678900;
-  input_headers["content-length"] =
-      QuicTextUtils::Uint64ToString(kContentLength);
-  input_headers["key2"] = "value2";
-
-  // Serialize the header block.
-  string serialized_headers =
-      SpdyUtils::SerializeUncompressedHeaders(input_headers);
-
-  // Take the serialized header block, and parse back into SpdyHeaderBlock.
-  SpdyHeaderBlock output_headers;
-  int64_t content_length = -1;
-  ASSERT_TRUE(SpdyUtils::ParseHeaders(serialized_headers.data(),
-                                      serialized_headers.size(),
-                                      &content_length, &output_headers));
-
-  // Should be back to the original headers.
-  EXPECT_EQ(content_length, kContentLength);
-  EXPECT_EQ(output_headers, input_headers);
-}
-
-TEST(SpdyUtilsTest, SerializeAndParseValidTrailers) {
-  // Creates a SpdyHeaderBlock with some valid Trailers key->value pairs,
-  // serializes it, then parses the serialized output and verifies that the end
-  // result is the same as the trailers that the test started with.
-  SpdyHeaderBlock input_trailers;
-  const size_t kFinalOffset = 5678;
-  input_trailers[kFinalOffsetHeaderKey] =
-      QuicTextUtils::Uint64ToString(kFinalOffset);
-  input_trailers["key1"] = "value1";
-  input_trailers["key2"] = "value2";
-
-  // Serialize the trailers.
-  string serialized_trailers =
-      SpdyUtils::SerializeUncompressedHeaders(input_trailers);
-
-  // Take the serialized trailers, and parse back into a SpdyHeaderBlock.
-  SpdyHeaderBlock output_trailers;
-  size_t final_byte_offset = 0;
-  EXPECT_TRUE(SpdyUtils::ParseTrailers(serialized_trailers.data(),
-                                       serialized_trailers.size(),
-                                       &final_byte_offset, &output_trailers));
-
-  // Should be back to the original trailers, without the final offset header.
-  EXPECT_EQ(final_byte_offset, kFinalOffset);
-  input_trailers.erase(kFinalOffsetHeaderKey);
-  EXPECT_EQ(output_trailers, input_trailers);
-}
-
-TEST(SpdyUtilsTest, SerializeAndParseTrailersWithoutFinalOffset) {
-  // Verifies that parsing fails if Trailers are missing a final offset header.
-
-  SpdyHeaderBlock input_trailers;
-  input_trailers["key1"] = "value1";
-  input_trailers["key2"] = "value2";
-
-  // Serialize the trailers.
-  string serialized_trailers =
-      SpdyUtils::SerializeUncompressedHeaders(input_trailers);
-
-  // Parsing the serialized trailers fails because of the missing final offset.
-  SpdyHeaderBlock output_trailers;
-  size_t final_byte_offset = 0;
-  EXPECT_FALSE(SpdyUtils::ParseTrailers(serialized_trailers.data(),
-                                        serialized_trailers.size(),
-                                        &final_byte_offset, &output_trailers));
-  EXPECT_EQ(final_byte_offset, 0u);
-}
-
-TEST(SpdyUtilsTest, SerializeAndParseTrailersWithPseudoHeaders) {
-  // Verifies that parsing fails if Trailers include pseudo-headers.
-
-  SpdyHeaderBlock input_trailers;
-  input_trailers[kFinalOffsetHeaderKey] = "12345";
-  input_trailers[":disallowed-pseudo-header"] = "pseudo value";
-  input_trailers["key1"] = "value1";
-  input_trailers["key2"] = "value2";
-
-  // Serialize the trailers.
-  string serialized_trailers =
-      SpdyUtils::SerializeUncompressedHeaders(input_trailers);
-
-  // Parsing the serialized trailers fails because of the extra pseudo header.
-  SpdyHeaderBlock output_trailers;
-  size_t final_byte_offset = 0;
-  EXPECT_FALSE(SpdyUtils::ParseTrailers(serialized_trailers.data(),
-                                        serialized_trailers.size(),
-                                        &final_byte_offset, &output_trailers));
-}
 static std::unique_ptr<QuicHeaderList> FromList(
     const QuicHeaderList::ListType& src) {
   std::unique_ptr<QuicHeaderList> headers(new QuicHeaderList);
@@ -155,7 +27,9 @@ static std::unique_ptr<QuicHeaderList> FromList(
   return headers;
 }
 
-TEST(SpdyUtilsTest, CopyAndValidateHeaders) {
+class SpdyUtilsTest : public QuicTest {};
+
+TEST_F(SpdyUtilsTest, CopyAndValidateHeaders) {
   auto headers = FromList({// All cookie crumbs are joined.
                            {"cookie", " part 1"},
                            {"cookie", "part 2 "},
@@ -194,7 +68,7 @@ TEST(SpdyUtilsTest, CopyAndValidateHeaders) {
   EXPECT_EQ(-1, content_length);
 }
 
-TEST(SpdyUtilsTest, CopyAndValidateHeadersEmptyName) {
+TEST_F(SpdyUtilsTest, CopyAndValidateHeadersEmptyName) {
   auto headers = FromList({{"foo", "foovalue"}, {"", "barvalue"}, {"baz", ""}});
   int64_t content_length = -1;
   SpdyHeaderBlock block;
@@ -202,7 +76,7 @@ TEST(SpdyUtilsTest, CopyAndValidateHeadersEmptyName) {
       SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
 }
 
-TEST(SpdyUtilsTest, CopyAndValidateHeadersUpperCaseName) {
+TEST_F(SpdyUtilsTest, CopyAndValidateHeadersUpperCaseName) {
   auto headers =
       FromList({{"foo", "foovalue"}, {"bar", "barvalue"}, {"bAz", ""}});
   int64_t content_length = -1;
@@ -211,7 +85,7 @@ TEST(SpdyUtilsTest, CopyAndValidateHeadersUpperCaseName) {
       SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
 }
 
-TEST(SpdyUtilsTest, CopyAndValidateHeadersMultipleContentLengths) {
+TEST_F(SpdyUtilsTest, CopyAndValidateHeadersMultipleContentLengths) {
   auto headers = FromList({{"content-length", "9"},
                            {"foo", "foovalue"},
                            {"content-length", "9"},
@@ -231,7 +105,7 @@ TEST(SpdyUtilsTest, CopyAndValidateHeadersMultipleContentLengths) {
   EXPECT_EQ(9, content_length);
 }
 
-TEST(SpdyUtilsTest, CopyAndValidateHeadersInconsistentContentLengths) {
+TEST_F(SpdyUtilsTest, CopyAndValidateHeadersInconsistentContentLengths) {
   auto headers = FromList({{"content-length", "9"},
                            {"foo", "foovalue"},
                            {"content-length", "8"},
@@ -243,7 +117,7 @@ TEST(SpdyUtilsTest, CopyAndValidateHeadersInconsistentContentLengths) {
       SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
 }
 
-TEST(SpdyUtilsTest, CopyAndValidateHeadersLargeContentLength) {
+TEST_F(SpdyUtilsTest, CopyAndValidateHeadersLargeContentLength) {
   auto headers = FromList({{"content-length", "9000000000"},
                            {"foo", "foovalue"},
                            {"bar", "barvalue"},
@@ -259,7 +133,7 @@ TEST(SpdyUtilsTest, CopyAndValidateHeadersLargeContentLength) {
   EXPECT_EQ(9000000000, content_length);
 }
 
-TEST(SpdyUtilsTest, CopyAndValidateHeadersMultipleValues) {
+TEST_F(SpdyUtilsTest, CopyAndValidateHeadersMultipleValues) {
   auto headers = FromList({{"foo", "foovalue"},
                            {"bar", "barvalue"},
                            {"baz", ""},
@@ -276,7 +150,7 @@ TEST(SpdyUtilsTest, CopyAndValidateHeadersMultipleValues) {
   EXPECT_EQ(-1, content_length);
 }
 
-TEST(SpdyUtilsTest, CopyAndValidateHeadersMoreThanTwoValues) {
+TEST_F(SpdyUtilsTest, CopyAndValidateHeadersMoreThanTwoValues) {
   auto headers = FromList({{"set-cookie", "value1"},
                            {"set-cookie", "value2"},
                            {"set-cookie", "value3"}});
@@ -290,7 +164,7 @@ TEST(SpdyUtilsTest, CopyAndValidateHeadersMoreThanTwoValues) {
   EXPECT_EQ(-1, content_length);
 }
 
-TEST(SpdyUtilsTest, CopyAndValidateHeadersCookie) {
+TEST_F(SpdyUtilsTest, CopyAndValidateHeadersCookie) {
   auto headers = FromList({{"foo", "foovalue"},
                            {"bar", "barvalue"},
                            {"cookie", "value1"},
@@ -305,7 +179,7 @@ TEST(SpdyUtilsTest, CopyAndValidateHeadersCookie) {
   EXPECT_EQ(-1, content_length);
 }
 
-TEST(SpdyUtilsTest, CopyAndValidateHeadersMultipleCookies) {
+TEST_F(SpdyUtilsTest, CopyAndValidateHeadersMultipleCookies) {
   auto headers = FromList({{"foo", "foovalue"},
                            {"bar", "barvalue"},
                            {"cookie", "value1"},
@@ -321,7 +195,7 @@ TEST(SpdyUtilsTest, CopyAndValidateHeadersMultipleCookies) {
   EXPECT_EQ(-1, content_length);
 }
 
-TEST(SpdyUtilsTest, GetUrlFromHeaderBlock) {
+TEST_F(SpdyUtilsTest, GetUrlFromHeaderBlock) {
   SpdyHeaderBlock headers;
   EXPECT_EQ(SpdyUtils::GetUrlFromHeaderBlock(headers), "");
   headers[":scheme"] = "https";
@@ -337,7 +211,7 @@ TEST(SpdyUtilsTest, GetUrlFromHeaderBlock) {
             "https://www.google.com/index.html");
 }
 
-TEST(SpdyUtilsTest, GetHostNameFromHeaderBlock) {
+TEST_F(SpdyUtilsTest, GetHostNameFromHeaderBlock) {
   SpdyHeaderBlock headers;
   EXPECT_EQ(SpdyUtils::GetHostNameFromHeaderBlock(headers), "");
   headers[":scheme"] = "https";
@@ -357,7 +231,7 @@ TEST(SpdyUtilsTest, GetHostNameFromHeaderBlock) {
   EXPECT_EQ(SpdyUtils::GetHostNameFromHeaderBlock(headers), "192.168.1.1");
 }
 
-TEST(SpdyUtilsTest, PopulateHeaderBlockFromUrl) {
+TEST_F(SpdyUtilsTest, PopulateHeaderBlockFromUrl) {
   string url = "https://www.google.com/index.html";
   SpdyHeaderBlock headers;
   EXPECT_TRUE(SpdyUtils::PopulateHeaderBlockFromUrl(url, &headers));
@@ -366,7 +240,7 @@ TEST(SpdyUtilsTest, PopulateHeaderBlockFromUrl) {
   EXPECT_EQ("/index.html", headers[":path"].as_string());
 }
 
-TEST(SpdyUtilsTest, PopulateHeaderBlockFromUrlWithNoPath) {
+TEST_F(SpdyUtilsTest, PopulateHeaderBlockFromUrlWithNoPath) {
   string url = "https://www.google.com";
   SpdyHeaderBlock headers;
   EXPECT_TRUE(SpdyUtils::PopulateHeaderBlockFromUrl(url, &headers));
@@ -375,7 +249,7 @@ TEST(SpdyUtilsTest, PopulateHeaderBlockFromUrlWithNoPath) {
   EXPECT_EQ("/", headers[":path"].as_string());
 }
 
-TEST(SpdyUtilsTest, PopulateHeaderBlockFromUrlFails) {
+TEST_F(SpdyUtilsTest, PopulateHeaderBlockFromUrlFails) {
   SpdyHeaderBlock headers;
   EXPECT_FALSE(SpdyUtils::PopulateHeaderBlockFromUrl("/", &headers));
   EXPECT_FALSE(SpdyUtils::PopulateHeaderBlockFromUrl("/index.html", &headers));

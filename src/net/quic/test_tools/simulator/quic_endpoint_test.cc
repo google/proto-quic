@@ -5,13 +5,12 @@
 #include "net/quic/test_tools/simulator/quic_endpoint.h"
 
 #include "net/quic/platform/api/quic_ptr_util.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/quic/test_tools/simulator/simulator.h"
 #include "net/quic/test_tools/simulator/switch.h"
 
-#include "testing/gmock/include/gmock/gmock.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using ::testing::_;
 using ::testing::NiceMock;
@@ -29,7 +28,7 @@ const QuicByteCount kDefaultBdp = kDefaultBandwidth * kDefaultPropagationDelay;
 
 // A simple test harness where all hosts are connected to a switch with
 // identical links.
-class QuicEndpointTest : public ::testing::Test {
+class QuicEndpointTest : public QuicTest {
  public:
   QuicEndpointTest()
       : simulator_(), switch_(&simulator_, "Switch", 8, kDefaultBdp * 2) {}

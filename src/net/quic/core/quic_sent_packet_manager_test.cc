@@ -10,11 +10,10 @@
 #include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_string_piece.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/quic_config_peer.h"
 #include "net/quic/test_tools/quic_sent_packet_manager_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "testing/gmock/include/gmock/gmock.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using testing::AnyNumber;
 using testing::ElementsAre;
@@ -56,7 +55,7 @@ class MockDebugDelegate : public QuicSentPacketManager::DebugDelegate {
                     QuicTime detection_time));
 };
 
-class QuicSentPacketManagerTest : public ::testing::Test {
+class QuicSentPacketManagerTest : public QuicTest {
  protected:
   QuicSentPacketManagerTest()
       : manager_(Perspective::IS_SERVER, &clock_, &stats_, kCubicBytes, kNack),
@@ -270,7 +269,6 @@ class QuicSentPacketManagerTest : public ::testing::Test {
     frame->packets.Remove(lower, higher);
   }
 
-  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   QuicSentPacketManager manager_;
   MockClock clock_;
   QuicConnectionStats stats_;

@@ -12,10 +12,10 @@
 
 #include "base/gtest_prod_util.h"
 #include "base/sys_byteorder.h"
-#include "net/base/net_export.h"
 #include "net/spdy/core/spdy_bug_tracker.h"
 #include "net/spdy/core/spdy_protocol.h"
 #include "net/spdy/core/zero_copy_output_buffer.h"
+#include "net/spdy/platform/api/spdy_export.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
 namespace net {
@@ -29,7 +29,7 @@ class SpdyFramer;
 // to a frame instance.  The SpdyFrameBuilder grows its internal memory buffer
 // dynamically to hold the sequence of primitive values.   The internal memory
 // buffer is exposed as the "data" of the SpdyFrameBuilder.
-class NET_EXPORT_PRIVATE SpdyFrameBuilder {
+class SPDY_EXPORT_PRIVATE SpdyFrameBuilder {
  public:
   // Initializes a SpdyFrameBuilder with a buffer of given size
   explicit SpdyFrameBuilder(size_t size);

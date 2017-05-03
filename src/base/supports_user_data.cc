@@ -4,8 +4,6 @@
 
 #include "base/supports_user_data.h"
 
-#include "base/memory/ptr_util.h"
-
 namespace base {
 
 SupportsUserData::SupportsUserData() {
@@ -19,11 +17,7 @@ SupportsUserData::Data* SupportsUserData::GetUserData(const void* key) const {
   DataMap::const_iterator found = user_data_.find(key);
   if (found != user_data_.end())
     return found->second.get();
-  return NULL;
-}
-
-void SupportsUserData::SetUserData(const void* key, Data* data) {
-  SetUserData(key, WrapUnique(data));
+  return nullptr;
 }
 
 void SupportsUserData::SetUserData(const void* key,

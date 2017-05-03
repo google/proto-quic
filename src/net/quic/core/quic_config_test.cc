@@ -9,10 +9,10 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/quic_config_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/test/gtest_util.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
 
@@ -20,7 +20,7 @@ namespace net {
 namespace test {
 namespace {
 
-class QuicConfigTest : public ::testing::Test {
+class QuicConfigTest : public QuicTest {
  protected:
   QuicConfig config_;
 };

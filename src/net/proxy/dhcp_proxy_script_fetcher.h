@@ -62,6 +62,11 @@ class NET_EXPORT_PRIVATE DhcpProxyScriptFetcher {
   // Aborts the in-progress fetch (if any).
   virtual void Cancel() = 0;
 
+  // Fails the in-progress fetch (if any) and future requests will fail
+  // immediately. Must be called before the URLRequestContext the fetcher was
+  // created with is torn down.
+  virtual void OnShutdown() = 0;
+
   // After successful completion of |Fetch()|, this will return the URL
   // retrieved from DHCP.  It is reset if/when |Fetch()| is called again.
   virtual const GURL& GetPacURL() const = 0;
@@ -88,6 +93,7 @@ class NET_EXPORT_PRIVATE DoNothingDhcpProxyScriptFetcher
   int Fetch(base::string16* utf16_text,
             const CompletionCallback& callback) override;
   void Cancel() override;
+  void OnShutdown() override;
   const GURL& GetPacURL() const override;
 
  private:

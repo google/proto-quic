@@ -8,6 +8,7 @@
 #include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/metrics/persistent_histogram_allocator.h"
+#include "base/numerics/safe_conversions.h"
 #include "base/stl_util.h"
 
 namespace base {
@@ -41,7 +42,7 @@ class PersistentSampleMapIterator : public SampleCountIterator {
   bool Done() const override;
   void Next() override;
   void Get(HistogramBase::Sample* min,
-           HistogramBase::Sample* max,
+           int64_t* max,
            HistogramBase::Count* count) const override;
 
  private:
@@ -71,13 +72,13 @@ void PersistentSampleMapIterator::Next() {
 }
 
 void PersistentSampleMapIterator::Get(Sample* min,
-                                      Sample* max,
+                                      int64_t* max,
                                       Count* count) const {
   DCHECK(!Done());
   if (min)
     *min = iter_->first;
   if (max)
-    *max = iter_->first + 1;
+    *max = strict_cast<int64_t>(iter_->first) + 1;
   if (count)
     *count = *iter_->second;
 }
@@ -118,8 +119,7 @@ PersistentSampleMap::~PersistentSampleMap() {
 
 void PersistentSampleMap::Accumulate(Sample value, Count count) {
   *GetOrCreateSampleCountStorage(value) += count;
-  IncreaseSum(static_cast<int64_t>(count) * value);
-  IncreaseRedundantCount(count);
+  IncreaseSumAndCount(strict_cast<int64_t>(count) * value, count);
 }
 
 Count PersistentSampleMap::GetCount(Sample value) const {
@@ -187,13 +187,13 @@ PersistentSampleMap::CreatePersistentRecord(
 bool PersistentSampleMap::AddSubtractImpl(SampleCountIterator* iter,
                                           Operator op) {
   Sample min;
-  Sample max;
+  int64_t max;
   Count count;
   for (; !iter->Done(); iter->Next()) {
     iter->Get(&min, &max, &count);
     if (count == 0)
       continue;
-    if (min + 1 != max)
+    if (strict_cast<int64_t>(min) + 1 != max)
       return false;  // SparseHistogram only supports bucket with size 1.
 
 #if 0  // TODO(bcwhite) Re-enable efficient version after crbug.com/682680.

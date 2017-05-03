@@ -8,11 +8,10 @@
 #include <string>
 
 #include "net/quic/platform/api/quic_flags.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/quic_buffered_packet_store_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "testing/gmock/include/gmock/gmock.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
 
@@ -47,7 +46,7 @@ class QuicBufferedPacketStoreVisitor
   BufferedPacketList last_expired_packet_queue_;
 };
 
-class QuicBufferedPacketStoreTest : public ::testing::Test {
+class QuicBufferedPacketStoreTest : public QuicTest {
  public:
   QuicBufferedPacketStoreTest()
       : store_(&visitor_, &clock_, &alarm_factory_),
@@ -58,7 +57,6 @@ class QuicBufferedPacketStoreTest : public ::testing::Test {
         packet_(packet_content_.data(), packet_content_.size(), packet_time_) {}
 
  protected:
-  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   QuicBufferedPacketStoreVisitor visitor_;
   MockClock clock_;
   MockAlarmFactory alarm_factory_;

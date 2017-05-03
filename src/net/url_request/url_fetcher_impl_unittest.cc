@@ -42,6 +42,7 @@
 #include "net/http/http_response_headers.h"
 #include "net/test/embedded_test_server/embedded_test_server.h"
 #include "net/test/gtest_util.h"
+#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_fetcher_delegate.h"
 #include "net/url_request/url_request_context_getter.h"
 #include "net/url_request/url_request_test_util.h"
@@ -95,7 +96,8 @@ class WaitingURLFetcherDelegate : public URLFetcherDelegate {
       const GURL& url,
       URLFetcher::RequestType request_type,
       scoped_refptr<net::URLRequestContextGetter> context_getter) {
-    fetcher_.reset(new URLFetcherImpl(url, request_type, this));
+    fetcher_.reset(new URLFetcherImpl(url, request_type, this,
+                                      TRAFFIC_ANNOTATION_FOR_TESTS));
     fetcher_->SetRequestContext(context_getter.get());
   }
 

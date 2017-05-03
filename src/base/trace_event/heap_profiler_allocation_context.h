@@ -8,8 +8,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <functional>
+
 #include "base/base_export.h"
-#include "base/containers/hash_tables.h"
 
 namespace base {
 namespace trace_event {
@@ -109,7 +110,7 @@ struct AllocationMetrics {
 }  // namespace trace_event
 }  // namespace base
 
-namespace BASE_HASH_NAMESPACE {
+namespace std {
 
 template <>
 struct BASE_EXPORT hash<base::trace_event::StackFrame> {
@@ -126,6 +127,6 @@ struct BASE_EXPORT hash<base::trace_event::AllocationContext> {
   size_t operator()(const base::trace_event::AllocationContext& context) const;
 };
 
-}  // BASE_HASH_NAMESPACE
+}  // namespace std
 
 #endif  // BASE_TRACE_EVENT_HEAP_PROFILER_ALLOCATION_CONTEXT_H_

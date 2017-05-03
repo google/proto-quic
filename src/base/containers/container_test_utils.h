@@ -22,8 +22,28 @@ class MoveOnlyInt {
     return *this;
   }
 
+  friend bool operator==(const MoveOnlyInt& lhs, const MoveOnlyInt& rhs) {
+    return lhs.data_ == rhs.data_;
+  }
+
+  friend bool operator!=(const MoveOnlyInt& lhs, const MoveOnlyInt& rhs) {
+    return !operator==(lhs, rhs);
+  }
+
   friend bool operator<(const MoveOnlyInt& lhs, const MoveOnlyInt& rhs) {
     return lhs.data_ < rhs.data_;
+  }
+
+  friend bool operator>(const MoveOnlyInt& lhs, const MoveOnlyInt& rhs) {
+    return rhs < lhs;
+  }
+
+  friend bool operator<=(const MoveOnlyInt& lhs, const MoveOnlyInt& rhs) {
+    return !(rhs < lhs);
+  }
+
+  friend bool operator>=(const MoveOnlyInt& lhs, const MoveOnlyInt& rhs) {
+    return !(lhs < rhs);
   }
 
   int data() const { return data_; }

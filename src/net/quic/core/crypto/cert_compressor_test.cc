@@ -7,16 +7,18 @@
 #include <memory>
 
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
 
 namespace net {
 namespace test {
 
-TEST(CertCompressor, EmptyChain) {
+class CertCompressorTest : public QuicTest {};
+
+TEST_F(CertCompressorTest, EmptyChain) {
   std::vector<string> chain;
   const string compressed = CertCompressor::CompressChain(
       chain, QuicStringPiece(), QuicStringPiece(), nullptr);
@@ -28,7 +30,7 @@ TEST(CertCompressor, EmptyChain) {
   EXPECT_EQ(chain.size(), chain2.size());
 }
 
-TEST(CertCompressor, Compressed) {
+TEST_F(CertCompressorTest, Compressed) {
   std::vector<string> chain;
   chain.push_back("testcert");
   const string compressed = CertCompressor::CompressChain(
@@ -43,7 +45,7 @@ TEST(CertCompressor, Compressed) {
   EXPECT_EQ(chain[0], chain2[0]);
 }
 
-TEST(CertCompressor, Common) {
+TEST_F(CertCompressorTest, Common) {
   std::vector<string> chain;
   chain.push_back("testcert");
   static const uint64_t set_hash = 42;
@@ -68,7 +70,7 @@ TEST(CertCompressor, Common) {
   EXPECT_EQ(chain[0], chain2[0]);
 }
 
-TEST(CertCompressor, Cached) {
+TEST_F(CertCompressorTest, Cached) {
   std::vector<string> chain;
   chain.push_back("testcert");
   uint64_t hash = QuicUtils::FNV1a_64_Hash(chain[0]);
@@ -88,7 +90,7 @@ TEST(CertCompressor, Cached) {
   EXPECT_EQ(chain[0], chain2[0]);
 }
 
-TEST(CertCompressor, BadInputs) {
+TEST_F(CertCompressorTest, BadInputs) {
   std::vector<string> cached_certs, chain;
 
   EXPECT_FALSE(CertCompressor::DecompressChain(

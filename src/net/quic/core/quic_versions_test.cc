@@ -5,15 +5,16 @@
 #include "net/quic/core/quic_versions.h"
 
 #include "net/quic/platform/api/quic_flags.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "testing/gmock/include/gmock/gmock.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
 namespace test {
 namespace {
 
-TEST(QuicVersionsTest, QuicVersionToQuicTag) {
+class QuicVersionsTest : public QuicTest {};
+
+TEST_F(QuicVersionsTest, QuicVersionToQuicTag) {
 // If you add a new version to the QuicVersion enum you will need to add a new
 // case to QuicVersionToQuicTag, otherwise this test will fail.
 
@@ -38,7 +39,7 @@ TEST(QuicVersionsTest, QuicVersionToQuicTag) {
   }
 }
 
-TEST(QuicVersionsTest, QuicVersionToQuicTagUnsupported) {
+TEST_F(QuicVersionsTest, QuicVersionToQuicTagUnsupported) {
 // TODO(rtenneti): Enable checking of Log(ERROR) messages.
 #if 0
   // TODO(rjshade): Change to DFATAL once we actually support multiple versions,
@@ -53,7 +54,7 @@ TEST(QuicVersionsTest, QuicVersionToQuicTagUnsupported) {
   EXPECT_EQ(0u, QuicVersionToQuicTag(QUIC_VERSION_UNSUPPORTED));
 }
 
-TEST(QuicVersionsTest, QuicTagToQuicVersion) {
+TEST_F(QuicVersionsTest, QuicTagToQuicVersion) {
 // If you add a new version to the QuicVersion enum you will need to add a new
 // case to QuicTagToQuicVersion, otherwise this test will fail.
 
@@ -83,7 +84,7 @@ TEST(QuicVersionsTest, QuicTagToQuicVersion) {
   }
 }
 
-TEST(QuicVersionsTest, QuicTagToQuicVersionUnsupported) {
+TEST_F(QuicVersionsTest, QuicTagToQuicVersionUnsupported) {
 // TODO(rtenneti): Enable checking of Log(ERROR) messages.
 #if 0
   ScopedMockLog log(kDoNotCaptureLogsYet);
@@ -99,7 +100,7 @@ TEST(QuicVersionsTest, QuicTagToQuicVersionUnsupported) {
             QuicTagToQuicVersion(MakeQuicTag('F', 'A', 'K', 'E')));
 }
 
-TEST(QuicVersionsTest, QuicVersionToString) {
+TEST_F(QuicVersionsTest, QuicVersionToString) {
   EXPECT_EQ("QUIC_VERSION_35", QuicVersionToString(QUIC_VERSION_35));
   EXPECT_EQ("QUIC_VERSION_UNSUPPORTED",
             QuicVersionToString(QUIC_VERSION_UNSUPPORTED));
@@ -126,8 +127,7 @@ TEST(QuicVersionsTest, QuicVersionToString) {
   }
 }
 
-TEST(QuicVersionsTest, FilterSupportedVersionsNo38) {
-  QuicFlagSaver flags;
+TEST_F(QuicVersionsTest, FilterSupportedVersionsNo38) {
   QuicVersionVector all_versions = {QUIC_VERSION_35, QUIC_VERSION_36,
                                     QUIC_VERSION_37, QUIC_VERSION_38,
                                     QUIC_VERSION_39};
@@ -141,13 +141,13 @@ TEST(QuicVersionsTest, FilterSupportedVersionsNo38) {
   EXPECT_EQ(QUIC_VERSION_37, filtered_versions[2]);
 }
 
-TEST(QuicVersionsTest, FilterSupportedVersionsNo39) {
+TEST_F(QuicVersionsTest, FilterSupportedVersionsNo39) {
   QuicVersionVector all_versions = {QUIC_VERSION_35, QUIC_VERSION_36,
                                     QUIC_VERSION_37, QUIC_VERSION_38,
                                     QUIC_VERSION_39};
 
   FLAGS_quic_reloadable_flag_quic_enable_version_38 = true;
-  FLAGS_quic_enable_version_39 = false;
+  FLAGS_quic_reloadable_flag_quic_enable_version_39 = false;
 
   QuicVersionVector filtered_versions = FilterSupportedVersions(all_versions);
   ASSERT_EQ(4u, filtered_versions.size());
@@ -157,20 +157,19 @@ TEST(QuicVersionsTest, FilterSupportedVersionsNo39) {
   EXPECT_EQ(QUIC_VERSION_38, filtered_versions[3]);
 }
 
-TEST(QuicVersionsTest, FilterSupportedVersionsAllVersions) {
-  QuicFlagSaver flags;
+TEST_F(QuicVersionsTest, FilterSupportedVersionsAllVersions) {
   QuicVersionVector all_versions = {QUIC_VERSION_35, QUIC_VERSION_36,
                                     QUIC_VERSION_37, QUIC_VERSION_38,
                                     QUIC_VERSION_39};
 
   FLAGS_quic_reloadable_flag_quic_enable_version_38 = true;
-  FLAGS_quic_enable_version_39 = true;
+  FLAGS_quic_reloadable_flag_quic_enable_version_39 = true;
 
   QuicVersionVector filtered_versions = FilterSupportedVersions(all_versions);
   ASSERT_EQ(all_versions, filtered_versions);
 }
 
-TEST(QuicVersionsTest, LookUpVersionByIndex) {
+TEST_F(QuicVersionsTest, LookUpVersionByIndex) {
   QuicVersionVector all_versions = {QUIC_VERSION_35, QUIC_VERSION_36,
                                     QUIC_VERSION_37, QUIC_VERSION_38,
                                     QUIC_VERSION_39};

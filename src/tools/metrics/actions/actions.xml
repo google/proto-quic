@@ -1085,12 +1085,12 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
-<action name="ActiveBrowserChanged">
+<action name="ActiveBrowserChanged" not_user_triggered="true">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
 </action>
 
-<action name="ActiveTabChanged">
+<action name="ActiveTabChanged" not_user_triggered="true">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
 </action>
@@ -8783,7 +8783,7 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
-<action name="Launcher_ButtonPressed_Mouse">
+<action name="Launcher_ButtonPressed_Mouse" not_user_triggered="true">
   <owner>bruthig@google.com</owner>
   <owner>tdanderson@google.com</owner>
   <description>
@@ -8791,7 +8791,7 @@ should be able to be added at any place in this file.
   </description>
 </action>
 
-<action name="Launcher_ButtonPressed_Touch">
+<action name="Launcher_ButtonPressed_Touch" not_user_triggered="true">
   <owner>bruthig@google.com</owner>
   <owner>tdanderson@google.com</owner>
   <description>
@@ -8807,6 +8807,11 @@ should be able to be added at any place in this file.
 <action name="Launcher_ClickOnApplistButton">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+</action>
+
+<action name="Launcher_Dismiss">
+  <owner>vadimt@chromium.org</owner>
+  <description>Launcher got dismissed.</description>
 </action>
 
 <action name="Launcher_LaunchTask">
@@ -14356,6 +14361,21 @@ should be able to be added at any place in this file.
   </description>
 </action>
 
+<action name="SearchAnswer_OpenedUrl">
+  <owner>vadimt@chromium.org</owner>
+  <description>User opens URL from an answer card.</description>
+</action>
+
+<action name="SearchAnswer_StoppedLoading">
+  <owner>vadimt@chromium.org</owner>
+  <description>Answer card successfully loads.</description>
+</action>
+
+<action name="SearchAnswer_UserInteraction">
+  <owner>vadimt@chromium.org</owner>
+  <description>User interacts with an answer card.</description>
+</action>
+
 <action name="SearchEngine_ManualChange">
   <owner>ianwen@chromium.org</owner>
   <description>
@@ -16243,7 +16263,7 @@ should be able to be added at any place in this file.
   <description>Logged on an ET_SCROLL_FLING_START gesture event.</description>
 </action>
 
-<action name="Touchscreen_Down">
+<action name="Touchscreen_Down" not_user_triggered="true">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
 </action>

@@ -300,10 +300,8 @@ bool HttpStreamFactoryImpl::OnInitConnection(const JobController& controller,
     return false;
   }
 
-  if (!session_->params().restrict_to_one_preconnect_for_proxies ||
-      !ProxyServerSupportsPriorities(proxy_info)) {
+  if (!ProxyServerSupportsPriorities(proxy_info))
     return false;
-  }
 
   PreconnectingProxyServer preconnecting_proxy_server(proxy_info.proxy_server(),
                                                       privacy_mode);
@@ -312,7 +310,7 @@ bool HttpStreamFactoryImpl::OnInitConnection(const JobController& controller,
                         preconnecting_proxy_server)) {
     UMA_HISTOGRAM_EXACT_LINEAR("Net.PreconnectSkippedToProxyServers", 1, 2);
     // Skip preconnect to the proxy server since we are already preconnecting
-    // (probably via some other job).
+    // (probably via some other job). See crbug.com/682041 for details.
     return true;
   }
 

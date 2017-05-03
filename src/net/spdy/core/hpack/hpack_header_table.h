@@ -12,8 +12,8 @@
 #include <unordered_set>
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/spdy/core/hpack/hpack_entry.h"
+#include "net/spdy/platform/api/spdy_export.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
 // All section references below are to http://tools.ietf.org/html/rfc7541.
@@ -25,7 +25,7 @@ class HpackHeaderTablePeer;
 }  // namespace test
 
 // A data structure for the static table (2.3.1) and the dynamic table (2.3.2).
-class NET_EXPORT_PRIVATE HpackHeaderTable {
+class SPDY_EXPORT_PRIVATE HpackHeaderTable {
  public:
   friend class test::HpackHeaderTablePeer;
 
@@ -58,10 +58,10 @@ class NET_EXPORT_PRIVATE HpackHeaderTable {
   // extended to map to list iterators.
   typedef std::deque<HpackEntry> EntryTable;
 
-  struct NET_EXPORT_PRIVATE EntryHasher {
+  struct SPDY_EXPORT_PRIVATE EntryHasher {
     size_t operator()(const HpackEntry* entry) const;
   };
-  struct NET_EXPORT_PRIVATE EntriesEq {
+  struct SPDY_EXPORT_PRIVATE EntriesEq {
     bool operator()(const HpackEntry* lhs, const HpackEntry* rhs) const;
   };
 

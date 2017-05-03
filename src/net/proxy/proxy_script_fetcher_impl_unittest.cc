@@ -4,14 +4,19 @@
 
 #include "net/proxy/proxy_script_fetcher_impl.h"
 
+#include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "base/compiler_specific.h"
 #include "base/files/file_path.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
+#include "base/memory/ref_counted.h"
 #include "base/path_service.h"
+#include "base/run_loop.h"
+#include "base/sequenced_task_runner.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -27,10 +32,14 @@
 #include "net/http/http_cache.h"
 #include "net/http/http_network_session.h"
 #include "net/http/http_server_properties_impl.h"
+#include "net/http/http_transaction_factory.h"
 #include "net/http/transport_security_state.h"
 #include "net/net_features.h"
+#include "net/socket/client_socket_pool_manager.h"
+#include "net/socket/transport_client_socket_pool.h"
 #include "net/ssl/ssl_config_service_defaults.h"
 #include "net/test/embedded_test_server/embedded_test_server.h"
+#include "net/test/embedded_test_server/embedded_test_server_connection_listener.h"
 #include "net/test/gtest_util.h"
 #include "net/url_request/url_request_context_storage.h"
 #include "net/url_request/url_request_file_job.h"
@@ -63,6 +72,36 @@ const base::FilePath::CharType kDocRoot[] =
 struct FetchResult {
   int code;
   base::string16 text;
+};
+
+// Waits for the specified number of connection attempts to be seen.
+class WaitForConnectionsListener
+    : public test_server::EmbeddedTestServerConnectionListener {
+ public:
+  explicit WaitForConnectionsListener(int expected_num_connections)
+      : expected_num_connections_(expected_num_connections),
+        task_runner_(base::SequencedTaskRunnerHandle::Get()) {}
+
+  void AcceptedSocket(const StreamSocket& socket) override {
+    ++seen_connections_;
+    EXPECT_LE(seen_connections_, expected_num_connections_);
+    if (expected_num_connections_ == seen_connections_)
+      task_runner_->PostTask(FROM_HERE, run_loop_.QuitClosure());
+  }
+
+  void ReadFromSocket(const StreamSocket& socket, int rv) override {}
+
+  void Wait() { run_loop_.Run(); }
+
+ private:
+  int seen_connections_ = 0;
+  int expected_num_connections_;
+
+  scoped_refptr<base::SequencedTaskRunner> task_runner_;
+
+  base::RunLoop run_loop_;
+
+  DISALLOW_COPY_AND_ASSIGN(WaitForConnectionsListener);
 };
 
 // A non-mock URL request which can access http:// and file:// urls, in the case
@@ -494,6 +533,81 @@ TEST_F(ProxyScriptFetcherImplTest, DataURLs) {
     int result = pac_fetcher.Fetch(url, &text, callback.callback());
     EXPECT_THAT(result, IsError(ERR_FAILED));
   }
+}
+
+// Makes sure that a request gets through when the socket pool is full, so
+// ProxyScriptFetcherImpl can use the same URLRequestContext as everything else.
+TEST_F(ProxyScriptFetcherImplTest, Priority) {
+  // Enough requests to exceed the per-pool limit, which is also enough to
+  // exceed the per-group limit.
+  int num_requests = 10 + ClientSocketPoolManager::max_sockets_per_pool(
+                              HttpNetworkSession::NORMAL_SOCKET_POOL);
+
+  WaitForConnectionsListener connection_listener(num_requests);
+  test_server_.SetConnectionListener(&connection_listener);
+  ASSERT_TRUE(test_server_.Start());
+
+  std::vector<std::unique_ptr<ProxyScriptFetcherImpl>> pac_fetchers;
+
+  TestCompletionCallback callback;
+  base::string16 text;
+  for (int i = 0; i < num_requests; i++) {
+    std::unique_ptr<ProxyScriptFetcherImpl> pac_fetcher =
+        base::MakeUnique<ProxyScriptFetcherImpl>(&context_);
+    GURL url(test_server_.GetURL("/hung"));
+    // Fine to use the same string and callback for all of these, as they should
+    // all hang.
+    int result = pac_fetcher->Fetch(url, &text, callback.callback());
+    EXPECT_THAT(result, IsError(ERR_IO_PENDING));
+    pac_fetchers.push_back(std::move(pac_fetcher));
+  }
+
+  connection_listener.Wait();
+  // None of the callbacks should have been invoked - all jobs should still be
+  // hung.
+  EXPECT_FALSE(callback.have_result());
+
+  // Need to shut down the server before |connection_listener| is destroyed.
+  EXPECT_TRUE(test_server_.ShutdownAndWaitUntilComplete());
+}
+
+TEST_F(ProxyScriptFetcherImplTest, OnShutdown) {
+  ASSERT_TRUE(test_server_.Start());
+
+  ProxyScriptFetcherImpl pac_fetcher(&context_);
+  base::string16 text;
+  TestCompletionCallback callback;
+  int result = pac_fetcher.Fetch(test_server_.GetURL("/hung"), &text,
+                                 callback.callback());
+  EXPECT_THAT(result, IsError(ERR_IO_PENDING));
+  EXPECT_EQ(1u, context_.url_requests().size());
+
+  pac_fetcher.OnShutdown();
+  EXPECT_EQ(0u, context_.url_requests().size());
+  EXPECT_THAT(callback.WaitForResult(), IsError(ERR_CONTEXT_SHUT_DOWN));
+
+  // Make sure there's no asynchronous completion notification.
+  base::RunLoop().RunUntilIdle();
+  EXPECT_EQ(0u, context_.url_requests().size());
+  EXPECT_FALSE(callback.have_result());
+
+  result = pac_fetcher.Fetch(test_server_.GetURL("/hung"), &text,
+                             callback.callback());
+  EXPECT_THAT(result, IsError(ERR_CONTEXT_SHUT_DOWN));
+}
+
+TEST_F(ProxyScriptFetcherImplTest, OnShutdownWithNoLiveRequest) {
+  ASSERT_TRUE(test_server_.Start());
+
+  ProxyScriptFetcherImpl pac_fetcher(&context_);
+  pac_fetcher.OnShutdown();
+
+  base::string16 text;
+  TestCompletionCallback callback;
+  int result = pac_fetcher.Fetch(test_server_.GetURL("/hung"), &text,
+                                 callback.callback());
+  EXPECT_THAT(result, IsError(ERR_CONTEXT_SHUT_DOWN));
+  EXPECT_EQ(0u, context_.url_requests().size());
 }
 
 }  // namespace

@@ -178,19 +178,29 @@ TrustStatus IsSecCertificateTrustedForPolicy(SecCertificateRef cert_handle,
   return TrustStatus::UNSPECIFIED;
 }
 
-// Filters an array of SecCertificateRef by trust for |policy_oid|, returning
-// the results as TrustAnchors in |out_anchors|.
-void FilterTrustedCertificates(CFArrayRef matching_items,
-                               const CFStringRef policy_oid,
-                               TrustAnchors* out_anchors) {
+}  // namespace
+
+TrustStoreMac::TrustStoreMac(CFTypeRef policy_oid)
+    : policy_oid_(base::mac::CFCastStrict<CFStringRef>(policy_oid)) {
+  DCHECK(policy_oid_);
+}
+
+TrustStoreMac::~TrustStoreMac() = default;
+
+void TrustStoreMac::SyncGetIssuersOf(const ParsedCertificate* cert,
+                                     ParsedCertificateList* issuers) {
+  base::ScopedCFTypeRef<CFDataRef> name_data = GetMacNormalizedIssuer(cert);
+
+  base::ScopedCFTypeRef<CFArrayRef> matching_items =
+      FindMatchingCertificatesForMacNormalizedSubject(name_data);
+  if (!matching_items)
+    return;
+
+  // Convert to ParsedCertificate.
   for (CFIndex i = 0, item_count = CFArrayGetCount(matching_items);
        i < item_count; ++i) {
     SecCertificateRef match_cert_handle = reinterpret_cast<SecCertificateRef>(
         const_cast<void*>(CFArrayGetValueAtIndex(matching_items, i)));
-
-    if (IsSecCertificateTrustedForPolicy(match_cert_handle, policy_oid) !=
-        TrustStatus::TRUSTED)
-      continue;
 
     base::ScopedCFTypeRef<CFDataRef> der_data(
         SecCertificateCopyData(match_cert_handle));
@@ -213,26 +223,35 @@ void FilterTrustedCertificates(CFArrayRef matching_items,
       continue;
     }
 
-    out_anchors->push_back(TrustAnchor::CreateFromCertificateNoConstraints(
-        std::move(anchor_cert)));
+    issuers->push_back(std::move(anchor_cert));
   }
 }
 
-}  // namespace
+void TrustStoreMac::GetTrust(const scoped_refptr<ParsedCertificate>& cert,
+                             CertificateTrust* trust) const {
+  // TODO(eroman): Inefficient -- path building will convert between
+  // SecCertificateRef and ParsedCertificate representations multiple times
+  // (when getting the issuers, and again here).
+  base::ScopedCFTypeRef<SecCertificateRef> cert_handle =
+      x509_util::CreateSecCertificateFromBytes(cert->der_cert().UnsafeData(),
+                                               cert->der_cert().Length());
 
-TrustStoreMac::TrustStoreMac(CFTypeRef policy_oid)
-    : policy_oid_(base::mac::CFCastStrict<CFStringRef>(policy_oid)) {
-  DCHECK(policy_oid_);
-}
+  TrustStatus trust_status =
+      IsSecCertificateTrustedForPolicy(cert_handle, policy_oid_);
+  switch (trust_status) {
+    case TrustStatus::TRUSTED:
+      *trust = CertificateTrust::ForTrustAnchor();
+      return;
+    case TrustStatus::DISTRUSTED:
+      *trust = CertificateTrust::ForDistrusted();
+      return;
+    case TrustStatus::UNSPECIFIED:
+      *trust = CertificateTrust::ForUnspecified();
+      return;
+  }
 
-TrustStoreMac::~TrustStoreMac() = default;
-
-void TrustStoreMac::FindTrustAnchorsForCert(
-    const scoped_refptr<ParsedCertificate>& cert,
-    TrustAnchors* out_anchors) const {
-  base::ScopedCFTypeRef<CFDataRef> name_data = GetMacNormalizedIssuer(cert);
-
-  FindTrustAnchorsByMacNormalizedSubject(name_data, out_anchors);
+  *trust = CertificateTrust::ForUnspecified();
+  return;
 }
 
 // static
@@ -315,7 +334,7 @@ TrustStoreMac::FindMatchingCertificatesForMacNormalizedSubject(
 
 // static
 base::ScopedCFTypeRef<CFDataRef> TrustStoreMac::GetMacNormalizedIssuer(
-    const scoped_refptr<ParsedCertificate>& cert) {
+    const ParsedCertificate* cert) {
   base::ScopedCFTypeRef<CFDataRef> name_data;
   // There does not appear to be any public API to get the normalized version
   // of a Name without creating a SecCertificate.
@@ -334,18 +353,6 @@ base::ScopedCFTypeRef<CFDataRef> TrustStoreMac::GetMacNormalizedIssuer(
   if (!name_data)
     LOG(ERROR) << "SecCertificateCopyNormalizedIssuerContent";
   return name_data;
-}
-
-void TrustStoreMac::FindTrustAnchorsByMacNormalizedSubject(
-    CFDataRef name_data,
-    TrustAnchors* out_anchors) const {
-  base::ScopedCFTypeRef<CFArrayRef> scoped_matching_items =
-      FindMatchingCertificatesForMacNormalizedSubject(name_data);
-  if (!scoped_matching_items)
-    return;
-
-  FilterTrustedCertificates(scoped_matching_items.get(), policy_oid_,
-                            out_anchors);
 }
 
 }  // namespace net

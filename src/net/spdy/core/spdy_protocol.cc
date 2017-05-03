@@ -230,7 +230,7 @@ SpdyDataIR::SpdyDataIR(SpdyStreamId stream_id, const char* data)
 
 SpdyDataIR::SpdyDataIR(SpdyStreamId stream_id, SpdyString data)
     : SpdyFrameWithFinIR(stream_id),
-      data_store_(base::MakeUnique<SpdyString>(std::move(data))),
+      data_store_(SpdyMakeUnique<SpdyString>(std::move(data))),
       data_(data_store_->data()),
       data_len_(data_store_->size()),
       padded_(false),
@@ -255,7 +255,7 @@ SpdyFrameType SpdyDataIR::frame_type() const {
 
 SpdyRstStreamIR::SpdyRstStreamIR(SpdyStreamId stream_id,
                                  SpdyErrorCode error_code)
-    : SpdyFrameWithStreamIdIR(stream_id) {
+    : SpdyFrameIR(stream_id) {
   set_error_code(error_code);
 }
 
@@ -324,8 +324,8 @@ SpdyFrameType SpdyGoAwayIR::frame_type() const {
 }
 
 SpdyContinuationIR::SpdyContinuationIR(SpdyStreamId stream_id)
-    : SpdyFrameWithStreamIdIR(stream_id), end_headers_(false) {
-  encoding_ = base::MakeUnique<SpdyString>();
+    : SpdyFrameIR(stream_id), end_headers_(false) {
+  encoding_ = SpdyMakeUnique<SpdyString>();
 }
 
 SpdyContinuationIR::~SpdyContinuationIR() {}
@@ -362,9 +362,7 @@ SpdyFrameType SpdyPushPromiseIR::frame_type() const {
   return SpdyFrameType::PUSH_PROMISE;
 }
 
-SpdyAltSvcIR::SpdyAltSvcIR(SpdyStreamId stream_id)
-    : SpdyFrameWithStreamIdIR(stream_id) {
-}
+SpdyAltSvcIR::SpdyAltSvcIR(SpdyStreamId stream_id) : SpdyFrameIR(stream_id) {}
 
 SpdyAltSvcIR::~SpdyAltSvcIR() {
 }

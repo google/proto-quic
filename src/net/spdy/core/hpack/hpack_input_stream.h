@@ -11,9 +11,9 @@
 #include <utility>
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/spdy/core/hpack/hpack_constants.h"
 #include "net/spdy/core/hpack/hpack_huffman_table.h"
+#include "net/spdy/platform/api/spdy_export.h"
 #include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
@@ -30,7 +30,7 @@ typedef std::pair<size_t, uint32_t> InitialPeekResult;
 
 // An HpackInputStream handles all the low-level details of decoding
 // header fields.
-class NET_EXPORT_PRIVATE HpackInputStream {
+class SPDY_EXPORT_PRIVATE HpackInputStream {
  public:
   friend class test::HpackInputStreamPeer;
 

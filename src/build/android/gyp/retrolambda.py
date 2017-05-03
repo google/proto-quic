@@ -16,7 +16,7 @@ from util import build_utils
 _SRC_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                          '..', '..', '..'))
 _RETROLAMBDA_JAR_PATH = os.path.normpath(os.path.join(
-    _SRC_ROOT, 'third_party', 'retrolambda', 'retrolambda-2.3.0.jar'))
+    _SRC_ROOT, 'third_party', 'retrolambda', 'retrolambda-2.5.1.jar'))
 
 
 def _OnStaleMd5(input_jar, output_jar, classpath, android_sdk_jar):

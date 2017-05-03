@@ -202,10 +202,11 @@ void QuicFlowController::MaybeSendWindowUpdate() {
   }
 
   MaybeIncreaseMaxWindowSize();
-  SendWindowUpdate(available_window);
+  UpdateReceiveWindowOffsetAndSendWindowUpdate(available_window);
 }
 
-void QuicFlowController::SendWindowUpdate(QuicStreamOffset available_window) {
+void QuicFlowController::UpdateReceiveWindowOffsetAndSendWindowUpdate(
+    QuicStreamOffset available_window) {
   // Update our receive window.
   receive_window_offset_ += (receive_window_size_ - available_window);
 
@@ -216,8 +217,7 @@ void QuicFlowController::SendWindowUpdate(QuicStreamOffset available_window) {
                 << ", and receive window size: " << receive_window_size_
                 << ". New receive window offset is: " << receive_window_offset_;
 
-  // Inform the peer of our new receive window.
-  connection_->SendWindowUpdate(id_, receive_window_offset_);
+  SendWindowUpdate();
 }
 
 void QuicFlowController::MaybeSendBlocked() {
@@ -265,7 +265,7 @@ void QuicFlowController::EnsureWindowAtLeast(QuicByteCount window_size) {
 
   QuicStreamOffset available_window = receive_window_offset_ - bytes_consumed_;
   IncreaseWindowSize();
-  SendWindowUpdate(available_window);
+  UpdateReceiveWindowOffsetAndSendWindowUpdate(available_window);
 }
 
 bool QuicFlowController::IsBlocked() const {
@@ -290,6 +290,10 @@ void QuicFlowController::UpdateReceiveWindowSize(QuicStreamOffset size) {
   }
   receive_window_size_ = size;
   receive_window_offset_ = size;
+}
+
+void QuicFlowController::SendWindowUpdate() {
+  connection_->SendWindowUpdate(id_, receive_window_offset_);
 }
 
 }  // namespace net

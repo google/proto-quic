@@ -7,16 +7,18 @@
 #include <memory>
 
 #include "net/quic/core/crypto/quic_random.h"
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 using std::string;
 
 namespace net {
 namespace test {
 
+class Curve25519KeyExchangeTest : public QuicTest {};
+
 // SharedKey just tests that the basic key exchange identity holds: that both
 // parties end up with the same key.
-TEST(Curve25519KeyExchange, SharedKey) {
+TEST_F(Curve25519KeyExchangeTest, SharedKey) {
   QuicRandom* const rand = QuicRandom::GetInstance();
 
   for (int i = 0; i < 5; i++) {

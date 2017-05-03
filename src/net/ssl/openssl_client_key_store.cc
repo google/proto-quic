@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "base/memory/singleton.h"
+#include "net/cert/asn1_util.h"
 #include "net/cert/x509_certificate.h"
 #include "net/ssl/ssl_private_key.h"
 #include "third_party/boringssl/src/include/openssl/evp.h"
@@ -19,6 +20,16 @@ namespace {
 
 // Serializes the SubjectPublicKeyInfo for |cert|.
 bool GetCertificateSPKI(const X509Certificate* cert, std::string* spki) {
+#if BUILDFLAG(USE_BYTE_CERTS)
+  base::StringPiece cert_der(
+      reinterpret_cast<const char*>(CRYPTO_BUFFER_data(cert->os_cert_handle())),
+      CRYPTO_BUFFER_len(cert->os_cert_handle()));
+  base::StringPiece spki_tmp;
+  if (!asn1::ExtractSPKIFromDERCert(cert_der, &spki_tmp))
+    return false;
+  spki_tmp.CopyToString(spki);
+  return true;
+#else
   bssl::UniquePtr<EVP_PKEY> pkey(X509_get_pubkey(cert->os_cert_handle()));
   if (!pkey) {
     LOG(ERROR) << "Can't extract private key from certificate!";
@@ -38,6 +49,7 @@ bool GetCertificateSPKI(const X509Certificate* cert, std::string* spki) {
                reinterpret_cast<char*>(der) + der_len);
   OPENSSL_free(der);
   return true;
+#endif
 }
 
 }  // namespace

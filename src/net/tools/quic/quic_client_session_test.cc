@@ -12,6 +12,7 @@
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/platform/api/quic_str_cat.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/mock_quic_spdy_client_stream.h"
 #include "net/quic/test_tools/quic_config_peer.h"
@@ -20,7 +21,6 @@
 #include "net/quic/test_tools/quic_spdy_session_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/tools/quic/quic_spdy_client_stream.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using google::protobuf::implicit_cast;
 using std::string;
@@ -62,7 +62,7 @@ class TestQuicClientSession : public QuicClientSession {
   }
 };
 
-class QuicClientSessionTest : public ::testing::TestWithParam<QuicVersion> {
+class QuicClientSessionTest : public QuicTestWithParam<QuicVersion> {
  protected:
   QuicClientSessionTest()
       : crypto_config_(crypto_test_utils::ProofVerifierForTesting()),
@@ -199,8 +199,8 @@ TEST_P(QuicClientSessionTest, MaxNumStreamsWithRst) {
 
   QuicSpdyClientStream* stream =
       session_->CreateOutgoingDynamicStream(kDefaultPriority);
-  ASSERT_TRUE(stream);
-  EXPECT_FALSE(session_->CreateOutgoingDynamicStream(kDefaultPriority));
+  ASSERT_NE(nullptr, stream);
+  EXPECT_EQ(nullptr, session_->CreateOutgoingDynamicStream(kDefaultPriority));
 
   // Close the stream and receive an RST frame to remove the unfinished stream
   session_->CloseStream(stream->id());
@@ -209,7 +209,81 @@ TEST_P(QuicClientSessionTest, MaxNumStreamsWithRst) {
   // Check that a new one can be created.
   EXPECT_EQ(0u, session_->GetNumOpenOutgoingStreams());
   stream = session_->CreateOutgoingDynamicStream(kDefaultPriority);
-  EXPECT_TRUE(stream);
+  EXPECT_NE(nullptr, stream);
+}
+
+TEST_P(QuicClientSessionTest, ResetAndTrailers) {
+  // Tests the situation in which the client sends a RST at the same time that
+  // the server sends trailing headers (trailers). Receipt of the trailers by
+  // the client should result in all outstanding stream state being tidied up
+  // (including flow control, and number of available outgoing streams).
+  const uint32_t kServerMaxIncomingStreams = 1;
+  CompleteCryptoHandshake(kServerMaxIncomingStreams);
+
+  QuicSpdyClientStream* stream =
+      session_->CreateOutgoingDynamicStream(kDefaultPriority);
+  ASSERT_NE(nullptr, stream);
+  EXPECT_FALSE(session_->CreateOutgoingDynamicStream(kDefaultPriority));
+
+  QuicStreamId stream_id = stream->id();
+  EXPECT_CALL(*connection_, SendRstStream(_, _, _)).Times(1);
+  session_->SendRstStream(stream_id, QUIC_STREAM_PEER_GOING_AWAY, 0);
+
+  // A new stream cannot be created as the reset stream still counts as an open
+  // outgoing stream until closed by the server.
+  EXPECT_EQ(1u, session_->GetNumOpenOutgoingStreams());
+  stream = session_->CreateOutgoingDynamicStream(kDefaultPriority);
+  EXPECT_EQ(nullptr, stream);
+
+  // The stream receives trailers with final byte offset: this is one of three
+  // ways that a peer can signal the end of a stream (the others being RST,
+  // stream data + FIN).
+  QuicHeaderList trailers;
+  trailers.OnHeaderBlockStart();
+  trailers.OnHeader(kFinalOffsetHeaderKey, "0");
+  trailers.OnHeaderBlockEnd(0);
+  session_->OnStreamHeaderList(stream_id, /*fin=*/false, 0, trailers);
+
+  if (FLAGS_quic_reloadable_flag_quic_final_offset_from_trailers) {
+    // The stream is now complete from the client's perspective, and it should
+    // be able to create a new outgoing stream.
+    EXPECT_EQ(0u, session_->GetNumOpenOutgoingStreams());
+    stream = session_->CreateOutgoingDynamicStream(kDefaultPriority);
+    EXPECT_NE(nullptr, stream);
+  } else {
+    // The old behavior: receiving trailers with final offset does not trigger
+    // cleanup of local stream state. New streams cannot be created.
+    EXPECT_EQ(1u, session_->GetNumOpenOutgoingStreams());
+    stream = session_->CreateOutgoingDynamicStream(kDefaultPriority);
+    EXPECT_EQ(nullptr, stream);
+  }
+}
+
+TEST_P(QuicClientSessionTest, ReceivedMalformedTrailersAfterSendingRst) {
+  // Tests the situation where the client has sent a RST to the server, and has
+  // received trailing headers with a malformed final byte offset value.
+  FLAGS_quic_reloadable_flag_quic_final_offset_from_trailers = true;
+  CompleteCryptoHandshake();
+
+  QuicSpdyClientStream* stream =
+      session_->CreateOutgoingDynamicStream(kDefaultPriority);
+  ASSERT_NE(nullptr, stream);
+
+  // Send the RST, which results in the stream being closed locally (but some
+  // state remains while the client waits for a response from the server).
+  QuicStreamId stream_id = stream->id();
+  EXPECT_CALL(*connection_, SendRstStream(_, _, _)).Times(1);
+  session_->SendRstStream(stream_id, QUIC_STREAM_PEER_GOING_AWAY, 0);
+
+  // The stream receives trailers with final byte offset, but the header value
+  // is non-numeric and should be treated as malformed.
+  QuicHeaderList trailers;
+  trailers.OnHeaderBlockStart();
+  trailers.OnHeader(kFinalOffsetHeaderKey, "invalid non-numeric value");
+  trailers.OnHeaderBlockEnd(0);
+
+  EXPECT_CALL(*connection_, CloseConnection(_, _, _)).Times(1);
+  session_->OnStreamHeaderList(stream_id, /*fin=*/false, 0, trailers);
 }
 
 TEST_P(QuicClientSessionTest, GoAwayReceived) {

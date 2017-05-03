@@ -15,5 +15,10 @@
 
 # Required when code coverage is enabled.
 -keep class com.vladium.** {
-    *;
+  *;
+}
+
+# Used by tests for secondary dex extraction.
+-keep class android.support.v4.content.ContextCompat {
+  *;
 }

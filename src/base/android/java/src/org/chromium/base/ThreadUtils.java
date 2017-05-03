@@ -191,10 +191,21 @@ public class ThreadUtils {
     }
 
     /**
-     * Asserts that the current thread is running on the main thread.
+     * Throw an exception (when DCHECKs are enabled) if currently not running on the UI thread.
      */
     public static void assertOnUiThread() {
         if (BuildConfig.DCHECK_IS_ON && !runningOnUiThread()) {
+            throw new IllegalStateException("Must be called on the Ui thread.");
+        }
+    }
+
+    /**
+     * Throw an exception (regardless of build) if currently not running on the UI thread.
+     *
+     * @see #assertOnUiThread()
+     */
+    public static void checkUiThread() {
+        if (!runningOnUiThread()) {
             throw new IllegalStateException("Must be called on the Ui thread.");
         }
     }

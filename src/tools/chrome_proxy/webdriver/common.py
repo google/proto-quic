@@ -166,7 +166,8 @@ class TestDriver:
       # Override flags given in code with any command line arguments.
       for override_arg in shlex.split(self._flags.browser_args):
         arg_key = GetDictKey(override_arg)
-        if arg_key in original_args:
+        if (arg_key in original_args
+            and original_args[arg_key] in self._chrome_args):
           self._chrome_args.remove(original_args[arg_key])
           self._logger.info('Removed Chrome flag. %s', original_args[arg_key])
         self._chrome_args.add(override_arg)
@@ -414,7 +415,8 @@ class TestDriver:
 
     return bool(histogram)
 
-  def GetHTTPResponses(self, include_favicon=False, skip_domainless_pages=True):
+  def GetHTTPResponses(self, include_favicon=False, skip_domainless_pages=True,
+      override_has_logs=False):
     """Parses the Performance Logs and returns a list of HTTPResponse objects.
 
     Use caution when calling this function  multiple times. Only responses
@@ -426,10 +428,14 @@ class TestDriver:
       include_favicon: A bool that if True will include responses for favicons.
       skip_domainless_pages: If True, only responses with a net_loc as in RFC
         1808 will be included. Pages such as about:blank will be skipped.
+      override_has_logs: Allows the _has_logs property to be set if there was
+        not a page load but an XHR was expected instead.
     Returns:
       A list of HTTPResponse objects, each representing a single completed HTTP
       transaction by Chrome.
     """
+    if override_has_logs:
+      self._has_logs = True
     def MakeHTTPResponse(log_dict):
       params = log_dict['params']
       response_dict = params['response']
@@ -586,10 +592,11 @@ class IntegrationTest(unittest.TestCase):
 
   def checkLoFiResponse(self, http_response, expected_lo_fi):
     """Asserts that if expected the response headers contain the Lo-Fi directive
-    then the request headers do too. Also checks that the content size is less
-    than 100 if |expected_lo_fi|. Otherwise, checks that the response and
-    request headers don't contain the Lo-Fi directive and the content size is
-    greater than 100.
+    then the request headers do too. If the CPAT header contains if-heavy, the
+    request should not be LoFi. If-heavy will be deprecated in the future. Also
+    checks that the content size is less than 100 if |expected_lo_fi|.
+    Otherwise, checks that the response and request headers don't contain the
+    Lo-Fi directive and the content size is greater than 100.
 
     Args:
       http_response: The HTTPResponse object to check.
@@ -612,8 +619,11 @@ class IntegrationTest(unittest.TestCase):
         return True;
       return False;
     else:
-      self.assertNotIn('chrome-proxy-accept-transform',
-        http_response.request_headers)
+      if ('chrome-proxy-accept-transform' in http_response.request_headers):
+        cpat_request = http_response.request_headers[
+                       'chrome-proxy-accept-transform']
+        if ('empty-image' in cpat_request):
+          self.assertIn('if-heavy', cpat_request)
       self.assertNotIn('chrome-proxy-content-transform',
         http_response.response_headers)
       content_length = http_response.response_headers['content-length']

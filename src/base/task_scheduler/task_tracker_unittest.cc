@@ -913,29 +913,33 @@ TEST(TaskSchedulerTaskTrackerHistogramTest, TaskLatency) {
     const char* const expected_histogram;
   } tests[] = {
       {TaskTraits().WithPriority(TaskPriority::BACKGROUND),
-       "TaskScheduler.TaskLatency.BackgroundTaskPriority"},
+       "TaskScheduler.TaskLatencyMicroseconds.BackgroundTaskPriority"},
       {TaskTraits().WithPriority(TaskPriority::BACKGROUND).MayBlock(),
-       "TaskScheduler.TaskLatency.BackgroundTaskPriority.MayBlock"},
+       "TaskScheduler.TaskLatencyMicroseconds.BackgroundTaskPriority.MayBlock"},
       {TaskTraits()
            .WithPriority(TaskPriority::BACKGROUND)
            .WithBaseSyncPrimitives(),
-       "TaskScheduler.TaskLatency.BackgroundTaskPriority.MayBlock"},
+       "TaskScheduler.TaskLatencyMicroseconds.BackgroundTaskPriority.MayBlock"},
       {TaskTraits().WithPriority(TaskPriority::USER_VISIBLE),
-       "TaskScheduler.TaskLatency.UserVisibleTaskPriority"},
+       "TaskScheduler.TaskLatencyMicroseconds.UserVisibleTaskPriority"},
       {TaskTraits().WithPriority(TaskPriority::USER_VISIBLE).MayBlock(),
-       "TaskScheduler.TaskLatency.UserVisibleTaskPriority.MayBlock"},
+       "TaskScheduler.TaskLatencyMicroseconds.UserVisibleTaskPriority."
+       "MayBlock"},
       {TaskTraits()
            .WithPriority(TaskPriority::USER_VISIBLE)
            .WithBaseSyncPrimitives(),
-       "TaskScheduler.TaskLatency.UserVisibleTaskPriority.MayBlock"},
+       "TaskScheduler.TaskLatencyMicroseconds.UserVisibleTaskPriority."
+       "MayBlock"},
       {TaskTraits().WithPriority(TaskPriority::USER_BLOCKING),
-       "TaskScheduler.TaskLatency.UserBlockingTaskPriority"},
+       "TaskScheduler.TaskLatencyMicroseconds.UserBlockingTaskPriority"},
       {TaskTraits().WithPriority(TaskPriority::USER_BLOCKING).MayBlock(),
-       "TaskScheduler.TaskLatency.UserBlockingTaskPriority.MayBlock"},
+       "TaskScheduler.TaskLatencyMicroseconds.UserBlockingTaskPriority."
+       "MayBlock"},
       {TaskTraits()
            .WithPriority(TaskPriority::USER_BLOCKING)
            .WithBaseSyncPrimitives(),
-       "TaskScheduler.TaskLatency.UserBlockingTaskPriority.MayBlock"}};
+       "TaskScheduler.TaskLatencyMicroseconds.UserBlockingTaskPriority."
+       "MayBlock"}};
 
   for (const auto& test : tests) {
     auto task =

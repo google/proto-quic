@@ -34,6 +34,74 @@ class LoFi(IntegrationTest):
       # Verify that Lo-Fi responses were seen.
       self.assertNotEqual(0, lofi_responses)
 
+  # Checks that LoFi images are served when LoFi slow connections are used and
+  # the network quality estimator returns Slow2G.
+  def testLoFiSlowConnection(self):
+    with TestDriver() as test_driver:
+      test_driver.AddChromeArg('--enable-spdy-proxy-auth')
+      test_driver.AddChromeArg('--data-reduction-proxy-lo-fi=slow-connections-'
+                               'only')
+      # Disable server experiments such as tamper detection.
+      test_driver.AddChromeArg('--data-reduction-proxy-server-experiments-'
+                               'disabled')
+
+      test_driver.AddChromeArg('--force-fieldtrial-params='
+                               'NetworkQualityEstimator.Enabled:'
+                               'force_effective_connection_type/Slow2G')
+      test_driver.AddChromeArg('--force-fieldtrials=NetworkQualityEstimator/'
+                               'Enabled')
+
+      test_driver.LoadURL('http://check.googlezip.net/static/index.html')
+
+      lofi_responses = 0
+      for response in test_driver.GetHTTPResponses():
+        if not response.url.endswith('png'):
+          continue
+        if not response.request_headers:
+          continue
+        if (self.checkLoFiResponse(response, True)):
+          lofi_responses = lofi_responses + 1
+
+      # Verify that Lo-Fi responses were seen.
+      self.assertNotEqual(0, lofi_responses)
+
+  # Checks that LoFi images are not served, but the if-heavy CPAT header is
+  # added when LoFi slow connections are used and the network quality estimator
+  # returns 4G.
+  def testLoFiIfHeavyFastConnection(self):
+    with TestDriver() as test_driver:
+      test_driver.AddChromeArg('--enable-spdy-proxy-auth')
+      test_driver.AddChromeArg('--data-reduction-proxy-lo-fi=slow-connections-'
+                               'only')
+      # Disable server experiments.
+      test_driver.AddChromeArg('--data-reduction-proxy-server-experiments-'
+                               'disabled')
+
+      test_driver.AddChromeArg('--force-fieldtrial-params='
+                               'NetworkQualityEstimator.Enabled:'
+                               'force_effective_connection_type/4G')
+      test_driver.AddChromeArg('--force-fieldtrials=NetworkQualityEstimator/'
+                               'Enabled')
+
+      test_driver.LoadURL('http://check.googlezip.net/static/index.html')
+
+      non_lofi_responses = 0
+      for response in test_driver.GetHTTPResponses():
+        if not response.url.endswith('png'):
+          continue
+        if not response.request_headers:
+          continue
+        self.assertIn('chrome-proxy-accept-transform', response.request_headers)
+        actual_cpat_headers = \
+          response.request_headers['chrome-proxy-accept-transform'].split(';')
+        self.assertIn('empty-image', actual_cpat_headers)
+        self.assertIn('if-heavy', actual_cpat_headers)
+        if (not self.checkLoFiResponse(response, False)):
+          non_lofi_responses = non_lofi_responses + 1
+
+      # Verify that non Lo-Fi image responses were seen.
+      self.assertNotEqual(0, non_lofi_responses)
+
   # Checks that Lo-Fi placeholder images are not loaded from cache on page
   # reloads when Lo-Fi mode is disabled or data reduction proxy is disabled.
   # First a test page is opened with Lo-Fi and chrome proxy enabled. This allows

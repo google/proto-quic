@@ -27,6 +27,9 @@ Still reading?
   </issue>
   <!-- We use asserts in Chromium. See https://chromium.googlesource.com/chromium/src/+/master/styleguide/java/java.md#Asserts -->
   <issue id="Assert" severity="ignore"/>
+  <issue id="AuthLeak" severity="Error">
+    <ignore regexp="chrome/android/javatests"/>
+  </issue>
   <issue id="BadHostnameVerifier" severity="Error">
     <!-- Safe, used in test only. -->
     <ignore regexp="net/test/android/javatests/src/org/chromium/net/test/util/TestWebServer.java"/>
@@ -36,6 +39,10 @@ Still reading?
   </issue>
   <issue id="ButtonStyle" severity="Error">
     <ignore regexp="remoting/android/host/res/layout/main.xml"/>
+  </issue>
+  <!-- Found in generated android_chrome_strings.xml. -->
+  <issue id="ByteOrderMark" severity="Error">
+    <ignore regexp="values-pt-rBR/android_chrome_strings.xml"/>
   </issue>
   <issue id="CommitPrefEdits">
     <ignore regexp="third_party/cacheinvalidation/src/java/com/google/ipc/invalidation/ticl/android2/channel/AndroidChannelPreferences.java"/>
@@ -53,7 +60,9 @@ Still reading?
   </issue>
   <!-- TODO(crbug.com/635567): Fix this properly. -->
   <issue id="Deprecated" severity="Error">
+    <ignore regexp="android:singleLine"/>
     <ignore regexp="AndroidManifest.xml"/>
+    <ignore regexp="/test/"/>
   </issue>
   <issue id="DrawAllocation">
     <ignore regexp="content/public/android/java/src/org/chromium/content/browser/ContentViewRenderView.java"/>
@@ -122,8 +131,6 @@ Still reading?
     <ignore regexp="chromecast/internal"/>
     <!-- It is OK for content_shell_apk to have missing assets. -->
     <ignore regexp="content/shell/android/java/res/"/>
-    <!-- TODO(lambroslambrou) remove this once crbug.com/502030 is fixed. -->
-    <ignore regexp="remoting/android/java/res"/>
     <!-- Suppression for chrome/test/chromedriver/test/webview_shell/java/res/drawable/icon.png -->
     <ignore regexp="res/drawable/icon.png"/>
   </issue>
@@ -209,6 +216,8 @@ Still reading?
     <ignore regexp="org/chromium/memconsumer/MemConsumer.*.class"/>
     <ignore regexp="org/chromium/memconsumer/ResidentService.class"/>
     <ignore regexp="org/chromium/mojo/bindings/ValidationTest.class"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="sdk/extras/chromium/support/src/org/chromium/android/support/PackageManagerWrapper.java"/>
   </issue>
   <issue id="OldTargetApi">
     <ignore path="AndroidManifest.xml"/>
@@ -237,6 +246,9 @@ Still reading?
   </issue>
   <issue id="Recycle" severity="ignore"/>
   <issue id="Registered" severity="ignore"/>
+  <issue id="ResourceType" severity="Error">
+    <ignore regexp="/javatests/"/>
+  </issue>
   <issue id="RtlCompat" severity="ignore"/>
   <issue id="RtlEnabled" severity="ignore"/>
   <issue id="RtlSymmetry" severity="ignore"/>
@@ -446,6 +458,10 @@ Still reading?
     <ignore regexp="media/capture/content/android/java/src/org/chromium/media/ScreenCapture.java"/>
   </issue>
   <issue id="ViewConstructor" severity="ignore"/>
+  <issue id="VisibleForTests" severity="Error">
+    <ignore regexp="chrome/android/javatests"/>
+    <ignore regexp="/test/"/>
+  </issue>
   <issue id="WrongCall" severity="ignore"/>
   <issue id="WrongConstant">
     <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/SSLClientCertificateRequest.java"/>

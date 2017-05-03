@@ -24,13 +24,12 @@
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_socket_address.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/failing_proof_source.h"
 #include "net/quic/test_tools/fake_proof_source.h"
 #include "net/quic/test_tools/quic_crypto_server_config_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "testing/gmock/include/gmock/gmock.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
 class QuicConnection;
@@ -57,7 +56,7 @@ namespace {
 const char kServerHostname[] = "test.example.com";
 const uint16_t kServerPort = 443;
 
-class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
+class QuicCryptoServerStreamTest : public QuicTestWithParam<bool> {
  public:
   QuicCryptoServerStreamTest()
       : QuicCryptoServerStreamTest(crypto_test_utils::ProofSourceForTesting()) {
@@ -155,8 +154,6 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
   }
 
  protected:
-  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
-
   // Every connection gets its own MockQuicConnectionHelper and
   // MockAlarmFactory, tracked separately from the server and client state so
   // their lifetimes persist through the whole test.

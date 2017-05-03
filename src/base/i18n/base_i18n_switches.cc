@@ -8,9 +8,14 @@ namespace switches {
 
 // Force the UI to a specific direction. Valid values are "ltr" (left-to-right)
 // and "rtl" (right-to-left).
-const char kForceUIDirection[]              = "force-ui-direction";
+const char kForceUIDirection[]   = "force-ui-direction";
 
-const char kForceUIDirectionLTR[]           = "ltr";
-const char kForceUIDirectionRTL[]           = "rtl";
+// Force the text rendering to a specific direction. Valid values are "ltr"
+// (left-to-right) and "rtl" (right-to-left). Only tested meaningfully with
+// RTL.
+const char kForceTextDirection[] = "force-text-direction";
+
+const char kForceDirectionLTR[]  = "ltr";
+const char kForceDirectionRTL[]  = "rtl";
 
 }  // namespace switches

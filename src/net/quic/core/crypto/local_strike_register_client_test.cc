@@ -11,7 +11,7 @@
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/platform/api/quic_str_cat.h"
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 using std::string;
 
@@ -54,7 +54,7 @@ const uint32_t kCurrentTimeExternalSecs = 12345678;
 size_t kMaxEntries = 100;
 uint32_t kWindowSecs = 60;
 
-class LocalStrikeRegisterClientTest : public ::testing::Test {
+class LocalStrikeRegisterClientTest : public QuicTest {
  protected:
   LocalStrikeRegisterClientTest() {}
 

@@ -304,6 +304,7 @@ chrome.networkingPrivate.ManagedCertificatePattern;
  *   SaveCredentials: (boolean|undefined),
  *   ServerCAPEMs: (!Array<string>|undefined),
  *   ServerCARefs: (!Array<string>|undefined),
+ *   SubjectMatch: (string|undefined),
  *   UseProactiveKeyCaching: (boolean|undefined),
  *   UseSystemCAs: (boolean|undefined)
  * }}
@@ -324,6 +325,7 @@ chrome.networkingPrivate.EAPProperties;
  *   SaveCredentials: (!chrome.networkingPrivate.ManagedBoolean|undefined),
  *   ServerCAPEMs: (!chrome.networkingPrivate.ManagedDOMStringList|undefined),
  *   ServerCARefs: (!chrome.networkingPrivate.ManagedDOMStringList|undefined),
+ *   SubjectMatch: (!chrome.networkingPrivate.ManagedDOMString|undefined),
  *   UseProactiveKeyCaching: (!chrome.networkingPrivate.ManagedBoolean|undefined),
  *   UseSystemCAs: (!chrome.networkingPrivate.ManagedBoolean|undefined)
  * }}
@@ -767,21 +769,12 @@ chrome.networkingPrivate.EthernetStateProperties;
  * @typedef {{
  *   BatteryPercentage: (number|undefined),
  *   Carrier: (string|undefined),
+ *   HasConnectedToHost: boolean,
  *   SignalStrength: (number|undefined)
  * }}
  * @see https://developer.chrome.com/extensions/networkingPrivate#type-TetherProperties
  */
 chrome.networkingPrivate.TetherProperties;
-
-/**
- * @typedef {{
- *   BatteryPercentage: (!chrome.networkingPrivate.ManagedLong|undefined),
- *   Carrier: (!chrome.networkingPrivate.ManagedDOMString|undefined),
- *   SignalStrength: (!chrome.networkingPrivate.ManagedLong|undefined)
- * }}
- * @see https://developer.chrome.com/extensions/networkingPrivate#type-ManagedTetherProperties
- */
-chrome.networkingPrivate.ManagedTetherProperties;
 
 /**
  * @typedef {{
@@ -968,7 +961,7 @@ chrome.networkingPrivate.NetworkProperties;
  *   StaticIPConfig: (!chrome.networkingPrivate.ManagedIPConfigProperties|undefined),
  *   SavedIPConfig: (!chrome.networkingPrivate.IPConfigProperties|undefined),
  *   Source: (string|undefined),
- *   Tether: (!chrome.networkingPrivate.ManagedTetherProperties|undefined),
+ *   Tether: (!chrome.networkingPrivate.TetherProperties|undefined),
  *   Type: !chrome.networkingPrivate.NetworkType,
  *   VPN: (!chrome.networkingPrivate.ManagedVPNProperties|undefined),
  *   WiFi: (!chrome.networkingPrivate.ManagedWiFiProperties|undefined),

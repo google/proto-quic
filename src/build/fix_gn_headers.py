@@ -132,12 +132,73 @@ def AddHeadersToSources(headers, skip_ambiguous=True):
     open(gnfile, 'w').write('\n'.join(lines) + '\n')
 
 
+def RemoveHeader(headers, skip_ambiguous=True):
+  """Remove non-existing headers in GN files.
+
+  When skip_ambiguous is True, skip if multiple matches are found.
+  """
+  edits = {}
+  unhandled = []
+  for filename in headers:
+    filename = filename.strip()
+    if not (filename.endswith('.h') or filename.endswith('.hh')):
+      continue
+    basename = os.path.basename(filename)
+    print filename
+    out, returncode = GitGrep('(/|")' + basename + '"')
+    if returncode != 0 or not out:
+      unhandled.append(filename)
+      print '  Not found'
+      continue
+
+    grep_lines = out.splitlines()
+    matches = []
+    for line in grep_lines:
+      gnfile, linenr, contents = line.split(':')
+      print '    ', gnfile, linenr, contents
+      linenr = int(linenr)
+      lines = open(gnfile).read().splitlines()
+      assert contents in lines[linenr - 1]
+      matches.append((gnfile, linenr, contents))
+
+    if len(matches) == 0:
+      continue
+    if len(matches) > 1:
+      print '\n[WARNING] Ambiguous matching for', filename
+      for i in enumerate(matches, 1):
+        print '%d: %s' % (i[0], i[1])
+      print
+      if skip_ambiguous:
+        continue
+
+      picked = raw_input('Pick the matches ("2,3" for multiple): ')
+      try:
+        matches = [matches[int(i) - 1] for i in picked.split(',')]
+      except (ValueError, IndexError):
+        continue
+
+    for match in matches:
+      gnfile, linenr, contents = match
+      print '  ', gnfile, linenr, contents
+      edits.setdefault(gnfile, set()).add(linenr)
+
+  for gnfile in edits:
+    lines = open(gnfile).read().splitlines()
+    for l in sorted(edits[gnfile], reverse=True):
+      lines.pop(l - 1)
+    open(gnfile, 'w').write('\n'.join(lines) + '\n')
+
+  return unhandled
+
+
 def main():
   parser = argparse.ArgumentParser()
-  parser.add_argument('input_file',
-                      help="missing headers, output of check_gn_headers.py")
+  parser.add_argument('input_file', help="missing or non-existing headers, "
+                      "output of check_gn_headers.py")
   parser.add_argument('--prefix',
                       help="only handle path name with this prefix")
+  parser.add_argument('--remove', action='store_true',
+                      help="treat input_file as non-existing headers")
 
   args, _extras = parser.parse_known_args()
 
@@ -146,8 +207,11 @@ def main():
   if args.prefix:
     headers = [i for i in headers if i.startswith(args.prefix)]
 
-  unhandled = AddHeadersNextToCC(headers)
-  AddHeadersToSources(unhandled)
+  if args.remove:
+    RemoveHeader(headers, False)
+  else:
+    unhandled = AddHeadersNextToCC(headers)
+    AddHeadersToSources(unhandled)
 
 
 if __name__ == '__main__':

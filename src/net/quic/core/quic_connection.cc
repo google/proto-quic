@@ -49,7 +49,11 @@ namespace {
 const QuicPacketNumber kMaxPacketGap = 5000;
 
 // Maximum number of acks received before sending an ack in response.
+// TODO(fayang): Remove this constant when deprecating QUIC_VERSION_38.
 const QuicPacketCount kMaxPacketsReceivedBeforeAckSend = 20;
+
+// Maximum number of consecutive sent nonretransmittable packets.
+const QuicPacketCount kMaxConsecutiveNonRetransmittablePackets = 19;
 
 // Maximum number of retransmittable packets received before sending an ack.
 const QuicPacketCount kDefaultRetransmittablePacketsBeforeAck = 2;
@@ -261,7 +265,8 @@ QuicConnection::QuicConnection(QuicConnectionId connection_id,
       goaway_sent_(false),
       goaway_received_(false),
       write_error_occured_(false),
-      no_stop_waiting_frames_(false) {
+      no_stop_waiting_frames_(false),
+      consecutive_num_packets_with_no_retransmittable_frames_(0) {
   QUIC_DLOG(INFO) << ENDPOINT
                   << "Created connection with connection_id: " << connection_id;
   framer_.set_visitor(this);
@@ -933,8 +938,9 @@ void QuicConnection::MaybeQueueAck(bool was_missing) {
   ++num_packets_received_since_last_ack_sent_;
   // Always send an ack every 20 packets in order to allow the peer to discard
   // information from the SentPacketManager and provide an RTT measurement.
-  if (num_packets_received_since_last_ack_sent_ >=
-      kMaxPacketsReceivedBeforeAckSend) {
+  if (version() <= QUIC_VERSION_38 &&
+      num_packets_received_since_last_ack_sent_ >=
+          kMaxPacketsReceivedBeforeAckSend) {
     ack_queued_ = true;
   }
 
@@ -1660,6 +1666,17 @@ void QuicConnection::OnSerializedPacket(SerializedPacket* serialized_packet) {
         ConnectionCloseSource::FROM_SELF);
     return;
   }
+
+  if (version() > QUIC_VERSION_38) {
+    if (serialized_packet->retransmittable_frames.empty() &&
+        serialized_packet->original_packet_number == 0) {
+      // Increment consecutive_num_packets_with_no_retransmittable_frames_ if
+      // this packet is a new transmission with no retransmittable frames.
+      ++consecutive_num_packets_with_no_retransmittable_frames_;
+    } else {
+      consecutive_num_packets_with_no_retransmittable_frames_ = 0;
+    }
+  }
   SendOrQueuePacket(serialized_packet);
 }
 
@@ -1749,6 +1766,21 @@ void QuicConnection::SendAck() {
   num_packets_received_since_last_ack_sent_ = 0;
 
   packet_generator_.SetShouldSendAck(!no_stop_waiting_frames_);
+  if (consecutive_num_packets_with_no_retransmittable_frames_ <
+      kMaxConsecutiveNonRetransmittablePackets) {
+    return;
+  }
+  consecutive_num_packets_with_no_retransmittable_frames_ = 0;
+  if (packet_generator_.HasRetransmittableFrames()) {
+    // There is pending retransmittable frames.
+    return;
+  }
+
+  visitor_->OnAckNeedsRetransmittableFrame();
+  if (!packet_generator_.HasRetransmittableFrames()) {
+    // Visitor did not add a retransmittable frame, add a ping frame.
+    packet_generator_.AddControlFrame(QuicFrame(QuicPingFrame()));
+  }
 }
 
 void QuicConnection::OnRetransmissionTimeout() {

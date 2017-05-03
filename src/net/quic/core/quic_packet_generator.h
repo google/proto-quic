@@ -162,6 +162,10 @@ class QUIC_EXPORT_PRIVATE QuicPacketGenerator {
   // Sets the encrypter to use for the encryption level.
   void SetEncrypter(EncryptionLevel level, QuicEncrypter* encrypter);
 
+  // Returns true if there are control frames or current constructed packet has
+  // pending retransmittable frames.
+  bool HasRetransmittableFrames() const;
+
   // Sets the encryption level that will be applied to new packets.
   void set_encryption_level(EncryptionLevel level);
 

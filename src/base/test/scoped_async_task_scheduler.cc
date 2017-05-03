@@ -21,10 +21,10 @@ ScopedAsyncTaskScheduler::ScopedAsyncTaskScheduler() {
   const SchedulerWorkerPoolParams worker_pool_params(
       SchedulerWorkerPoolParams::StandbyThreadPolicy::ONE, kMaxThreads,
       kSuggestedReclaimTime);
-  TaskScheduler::CreateAndSetDefaultTaskScheduler(
-      "ScopedAsync", {worker_pool_params, worker_pool_params,
-                      worker_pool_params, worker_pool_params});
+  TaskScheduler::Create("ScopedAsync");
   task_scheduler_ = TaskScheduler::GetInstance();
+  TaskScheduler::GetInstance()->Start({worker_pool_params, worker_pool_params,
+                                       worker_pool_params, worker_pool_params});
 }
 
 ScopedAsyncTaskScheduler::~ScopedAsyncTaskScheduler() {

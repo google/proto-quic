@@ -43,7 +43,7 @@
 #include "base/base_export.h"
 #include "base/bind.h"
 #include "base/callback.h"
-#include "base/containers/hash_tables.h"
+#include "base/containers/small_map.h"
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
 #include "base/post_task_and_reply_with_result_internal.h"
@@ -142,7 +142,11 @@ class BASE_EXPORT CancelableTaskTracker {
   void Track(TaskId id, CancellationFlag* flag);
   void Untrack(TaskId id);
 
-  hash_map<TaskId, CancellationFlag*> task_flags_;
+  // Typically the number of tasks are 0-2 and occationally 3-4. But since
+  // this is a general API that could be used in unexpected ways, use a
+  // small_map instead of a flat_map to avoid falling over if there are many
+  // tasks.
+  small_map<std::map<TaskId, CancellationFlag*>, 4> task_flags_;
 
   TaskId next_id_;
   SequenceChecker sequence_checker_;

@@ -45,11 +45,6 @@
       return mediaSRC;
     }
 
-    function canvas2dAnimation() {
-      canvasContext.drawImage(testElement, 0, 0, canvasElement.width, canvasElement.height);
-      window.requestAnimationFrame(canvas2dAnimation);
-    }
-
     qsParams = getQueryStrings();
     var type = qsParams['type'] || 'video';
     var testElement = document.createElement(type);
@@ -60,14 +55,6 @@
     if (qsParams['id'])
       testElement.id = qsParams['id'];
     testElement.src = getMediaSRC();
-    if (qsParams['canvas'] && type == 'video') {
-      canvasElement = document.createElement('canvas');
-      canvasElement.width = 800;
-      canvasElement.height = 450;
-      document.body.appendChild(canvasElement);
-      canvasContext = canvasElement.getContext('2d');
-      window.requestAnimationFrame(canvas2dAnimation);
-    }
     document.body.appendChild(testElement);
   </script>
 </html>

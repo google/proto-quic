@@ -112,7 +112,6 @@ int MockCertVerifyProc::VerifyInternal(
 // needs to be known for some of the test expectations.
 enum CertVerifyProcType {
   CERT_VERIFY_PROC_NSS,
-  CERT_VERIFY_PROC_OPENSSL,
   CERT_VERIFY_PROC_ANDROID,
   CERT_VERIFY_PROC_IOS,
   CERT_VERIFY_PROC_MAC,
@@ -126,8 +125,6 @@ enum CertVerifyProcType {
 CertVerifyProcType GetDefaultCertVerifyProcType() {
 #if defined(USE_NSS_CERTS)
   return CERT_VERIFY_PROC_NSS;
-#elif defined(USE_OPENSSL_CERTS) && !defined(OS_ANDROID)
-  return CERT_VERIFY_PROC_OPENSSL;
 #elif defined(OS_ANDROID)
   return CERT_VERIFY_PROC_ANDROID;
 #elif defined(OS_IOS)
@@ -157,8 +154,6 @@ std::string VerifyProcTypeToName(
   switch (params.param) {
     case CERT_VERIFY_PROC_NSS:
       return "CertVerifyProcNSS";
-    case CERT_VERIFY_PROC_OPENSSL:
-      return "CertVerifyProcOpenSSL";
     case CERT_VERIFY_PROC_ANDROID:
       return "CertVerifyProcAndroid";
     case CERT_VERIFY_PROC_IOS:
@@ -1228,8 +1223,7 @@ TEST_P(CertVerifyProcInternalTest, WrongKeyPurpose) {
   }
 
   // TODO(crbug.com/649017): Don't special-case builtin verifier.
-  if (verify_proc_type() == CERT_VERIFY_PROC_OPENSSL ||
-      verify_proc_type() == CERT_VERIFY_PROC_BUILTIN) {
+  if (verify_proc_type() == CERT_VERIFY_PROC_BUILTIN) {
     EXPECT_THAT(error, IsError(ERR_CERT_AUTHORITY_INVALID));
   } else {
     EXPECT_THAT(error, IsError(ERR_CERT_INVALID));

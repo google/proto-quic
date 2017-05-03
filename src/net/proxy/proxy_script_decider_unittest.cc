@@ -128,6 +128,8 @@ class RuleBasedProxyScriptFetcher : public ProxyScriptFetcher {
 
   void Cancel() override {}
 
+  void OnShutdown() override { request_context_ = nullptr; }
+
   URLRequestContext* GetRequestContext() const override {
     return request_context_;
   }
@@ -146,6 +148,7 @@ class MockDhcpProxyScriptFetcher : public DhcpProxyScriptFetcher {
   int Fetch(base::string16* utf16_text,
             const CompletionCallback& callback) override;
   void Cancel() override;
+  void OnShutdown() override;
   const GURL& GetPacURL() const override;
 
   virtual void SetPacURL(const GURL& url);
@@ -171,6 +174,8 @@ int MockDhcpProxyScriptFetcher::Fetch(base::string16* utf16_text,
 }
 
 void MockDhcpProxyScriptFetcher::Cancel() { }
+
+void MockDhcpProxyScriptFetcher::OnShutdown() {}
 
 const GURL& MockDhcpProxyScriptFetcher::GetPacURL() const {
   return gurl_;
@@ -333,7 +338,6 @@ class ProxyScriptDeciderQuickCheckTest : public ::testing::Test {
   }
 
  protected:
-  std::unique_ptr<ProxyScriptDecider> decider_;
   MockHostResolver resolver_;
   Rules rules_;
   Rules::Rule rule_;
@@ -341,6 +345,7 @@ class ProxyScriptDeciderQuickCheckTest : public ::testing::Test {
   RuleBasedProxyScriptFetcher fetcher_;
   ProxyConfig config_;
   DoNothingDhcpProxyScriptFetcher dhcp_fetcher_;
+  std::unique_ptr<ProxyScriptDecider> decider_;
 
  private:
   URLRequestContext request_context_;
@@ -436,6 +441,17 @@ TEST_F(ProxyScriptDeciderQuickCheckTest, ExplicitPacUrl) {
   callback_.WaitForResult();
   EXPECT_TRUE(decider_->effective_config().has_pac_url());
   EXPECT_EQ(rule.url, decider_->effective_config().pac_url());
+}
+
+TEST_F(ProxyScriptDeciderQuickCheckTest, ShutdownDuringResolve) {
+  resolver_.set_ondemand_mode(true);
+
+  EXPECT_THAT(StartDecider(), IsError(ERR_IO_PENDING));
+  EXPECT_TRUE(resolver_.has_pending_requests());
+
+  decider_->OnShutdown();
+  EXPECT_FALSE(resolver_.has_pending_requests());
+  EXPECT_EQ(ERR_CONTEXT_SHUT_DOWN, callback_.WaitForResult());
 }
 
 // Regression test for http://crbug.com/409698.
@@ -670,6 +686,8 @@ class SynchronousSuccessDhcpFetcher : public DhcpProxyScriptFetcher {
 
   void Cancel() override {}
 
+  void OnShutdown() override {}
+
   const GURL& GetPacURL() const override { return gurl_; }
 
   const base::string16& expected_text() const {
@@ -751,6 +769,8 @@ class AsyncFailDhcpFetcher
   }
 
   void Cancel() override { callback_.Reset(); }
+
+  void OnShutdown() override {}
 
   const GURL& GetPacURL() const override { return dummy_gurl_; }
 

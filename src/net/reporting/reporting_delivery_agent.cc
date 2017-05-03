@@ -62,11 +62,6 @@ class ReportingDeliveryAgentImpl : public ReportingDeliveryAgent,
 
   ~ReportingDeliveryAgentImpl() override { context_->RemoveObserver(this); }
 
-  void Initialize() override {
-    if (CacheHasReports())
-      StartTimer();
-  }
-
   void SetTimerForTesting(std::unique_ptr<base::Timer> timer) override {
     DCHECK(!timer_->IsRunning());
     timer_ = std::move(timer);

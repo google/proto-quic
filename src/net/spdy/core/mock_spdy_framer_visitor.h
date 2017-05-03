@@ -13,6 +13,7 @@
 
 #include "net/spdy/core/spdy_framer.h"
 #include "net/spdy/core/spdy_test_utils.h"
+#include "net/spdy/platform/api/spdy_ptr_util.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 #include "testing/gmock/include/gmock/gmock.h"
 
@@ -83,7 +84,7 @@ class MockSpdyFramerVisitor : public SpdyFramerVisitorInterface {
   SpdyHeadersHandlerInterface* ReturnTestHeadersHandler(
       SpdyStreamId /* stream_id */) {
     if (headers_handler_ == nullptr) {
-      headers_handler_.reset(new TestHeadersHandler);
+      headers_handler_ = SpdyMakeUnique<TestHeadersHandler>();
     }
     return headers_handler_.get();
   }

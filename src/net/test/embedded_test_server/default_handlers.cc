@@ -599,6 +599,24 @@ std::unique_ptr<HttpResponse> HandleSlowServer(const HttpRequest& request) {
   return std::move(http_response);
 }
 
+// Never returns a response.
+class HungHttpResponse : public BasicHttpResponse {
+ public:
+  HungHttpResponse() {}
+
+  void SendResponse(const SendBytesCallback& send,
+                    const SendCompleteCallback& done) override {}
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(HungHttpResponse);
+};
+
+// /hung
+// Never returns a response.
+std::unique_ptr<HttpResponse> HandleHungResponse(const HttpRequest& request) {
+  return base::MakeUnique<HungHttpResponse>();
+}
+
 }  // namespace anonymous
 
 #define PREFIXED_HANDLER(prefix, handler) \
@@ -642,6 +660,8 @@ void RegisterDefaultHandlers(EmbeddedTestServer* server) {
   server->RegisterDefaultHandler(
       PREFIXED_HANDLER("/defaultresponse", &HandleDefaultResponse));
   server->RegisterDefaultHandler(PREFIXED_HANDLER("/slow", &HandleSlowServer));
+  server->RegisterDefaultHandler(
+      PREFIXED_HANDLER("/hung", &HandleHungResponse));
 
   // TODO(svaldez): HandleDownload
   // TODO(svaldez): HandleDownloadFinish

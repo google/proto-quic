@@ -7,11 +7,11 @@
 #include <memory>
 
 #include "net/quic/platform/api/quic_str_cat.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_flow_controller_peer.h"
 #include "net/quic/test_tools/quic_sent_packet_manager_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using testing::_;
 
@@ -32,7 +32,7 @@ class MockFlowController : public QuicFlowControllerInterface {
   DISALLOW_COPY_AND_ASSIGN(MockFlowController);
 };
 
-class QuicFlowControllerTest : public ::testing::Test {
+class QuicFlowControllerTest : public QuicTest {
  public:
   QuicFlowControllerTest()
       : stream_id_(1234),
@@ -57,7 +57,6 @@ class QuicFlowControllerTest : public ::testing::Test {
   MockAlarmFactory alarm_factory_;
   MockQuicConnection connection_;
   MockFlowController session_flow_controller_;
-  QuicFlagSaver flag_saver_;
 };
 
 TEST_F(QuicFlowControllerTest, SendingBytes) {

@@ -4,19 +4,20 @@
 
 #include "net/quic/core/quic_error_codes.h"
 
-#include "testing/gmock/include/gmock/gmock.h"
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 namespace net {
 namespace test {
 namespace {
 
-TEST(QuicUtilsTest, QuicRstStreamErrorCodeToString) {
+class QuicErrorCodesTest : public QuicTest {};
+
+TEST_F(QuicErrorCodesTest, QuicRstStreamErrorCodeToString) {
   EXPECT_STREQ("QUIC_BAD_APPLICATION_PAYLOAD",
                QuicRstStreamErrorCodeToString(QUIC_BAD_APPLICATION_PAYLOAD));
 }
 
-TEST(QuicUtilsTest, QuicErrorCodeToString) {
+TEST_F(QuicErrorCodesTest, QuicErrorCodeToString) {
   EXPECT_STREQ("QUIC_NO_ERROR", QuicErrorCodeToString(QUIC_NO_ERROR));
 }
 

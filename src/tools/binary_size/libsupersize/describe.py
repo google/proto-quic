@@ -75,9 +75,9 @@ class Describer(object):
       address = hex(sym.address)
     if self.verbose:
       count_part = '  count=%d' % len(sym) if sym.IsGroup() else ''
-      yield '{}@{:<9s}  size={}  padding={}  size_without_padding={}{}'.format(
-          sym.section, address, sym.size, sym.padding, sym.size_without_padding,
-          count_part)
+      yield '{}@{:<9s}  pss={}  padding={}  size_without_padding={}{}'.format(
+          sym.section, address, int(sym.pss), sym.padding,
+          sym.size_without_padding, count_part)
       yield '    source_path={} \tobject_path={}'.format(
           sym.source_path, sym.object_path)
       if sym.name:
@@ -89,7 +89,7 @@ class Describer(object):
             sym.FlagsString(), sym.full_name)
     else:
       yield '{}@{:<9s}  {:<7} {}'.format(
-          sym.section, address, sym.size,
+          sym.section, address, int(sym.pss),
           sym.source_path or sym.object_path or '{no path}')
       if sym.name:
         count_part = ' (count=%d)' % len(sym) if sym.IsGroup() else ''
@@ -104,7 +104,7 @@ class Describer(object):
     diff_prefix = ''
     for s in sorted_syms:
       if group.IsBss() or not s.IsBss():
-        running_total += s.size
+        running_total += s.pss
       for l in self._DescribeSymbol(s):
         if l[:4].isspace():
           indent_size = 8 + len(indent_prefix) + len(diff_prefix)
@@ -113,28 +113,28 @@ class Describer(object):
           if is_diff:
             diff_prefix = _DiffPrefix(group, s)
           yield '{}{}{:8} {}'.format(indent_prefix, diff_prefix,
-                                     running_total, l)
+                                     int(running_total), l)
 
       if self.recursive and s.IsGroup():
         for l in self._DescribeSymbolGroupChildren(s, indent=indent + 1):
           yield l
 
   def _DescribeSymbolGroup(self, group):
-    total_size = group.size
+    total_size = group.pss
     code_syms = group.WhereInSection('t')
-    code_size = code_syms.size
-    ro_size = code_syms.Inverted().WhereInSection('r').size
+    code_size = code_syms.pss
+    ro_size = code_syms.Inverted().WhereInSection('r').pss
     unique_paths = set(s.object_path for s in group)
     header_desc = [
-        'Showing {:,} symbols with total size: {} bytes'.format(
-            len(group), total_size),
+        'Showing {:,} symbols ({:,} unique) with total pss: {} bytes'.format(
+            len(group), group.CountUniqueSymbols(), int(total_size)),
         '.text={:<10} .rodata={:<10} other={:<10} total={}'.format(
-            _PrettySize(code_size), _PrettySize(ro_size),
-            _PrettySize(total_size - code_size - ro_size),
-            _PrettySize(total_size)),
+            _PrettySize(int(code_size)), _PrettySize(int(ro_size)),
+            _PrettySize(int(total_size - code_size - ro_size)),
+            _PrettySize(int(total_size))),
         'Number of object files: {}'.format(len(unique_paths)),
         '',
-        'First columns are: running total, type, size',
+        'First columns are: running total, address, pss',
     ]
     children_desc = self._DescribeSymbolGroupChildren(group)
     return itertools.chain(header_desc, children_desc)
@@ -220,7 +220,6 @@ class Describer(object):
 
 def DescribeSizeInfoCoverage(size_info):
   """Yields lines describing how accurate |size_info| is."""
-  symbols = models.SymbolGroup(size_info.raw_symbols)
   for section in models.SECTION_TO_SECTION_NAME:
     if section == 'd':
       expected_size = sum(v for k, v in size_info.section_sizes.iteritems()
@@ -229,29 +228,45 @@ def DescribeSizeInfoCoverage(size_info):
       expected_size = size_info.section_sizes[
           models.SECTION_TO_SECTION_NAME[section]]
 
-    def one_stat(group):
-      template = ('Section %s has %.1f%% of %d bytes accounted for from '
-                  '%d symbols. %d bytes are unaccounted for. Padding '
-                  'accounts for %d bytes')
-      actual_size = group.size
-      count = len(group)
-      padding = group.padding
-      size_percent = 100.0 * actual_size / expected_size
-      return (template % (section, size_percent, actual_size, count,
-                          expected_size - actual_size, padding))
 
-    in_section = symbols.WhereInSection(section)
-    yield one_stat(in_section)
-
+    in_section = size_info.symbols.WhereInSection(section)
+    actual_size = in_section.size
+    size_percent = float(actual_size) / expected_size
+    yield ('Section {}: has {:.1%} of {} bytes accounted for from '
+           '{} symbols. {} bytes are unaccounted for.').format(
+               section, size_percent, actual_size, len(in_section),
+               expected_size - actual_size)
     star_syms = in_section.WhereNameMatches(r'^\*')
-    attributed_syms = star_syms.Inverted().WhereHasAnyAttribution()
-    anonymous_syms = attributed_syms.Inverted()
-    if star_syms or anonymous_syms:
-      missing_size = star_syms.size + anonymous_syms.size
-      yield ('+ Without %d merge sections and %d anonymous entries ('
-                  'accounting for %d bytes):') % (
-          len(star_syms),  len(anonymous_syms), missing_size)
-      yield '+ ' + one_stat(attributed_syms)
+    padding = in_section.padding - star_syms.padding
+    anonymous_syms = star_syms.Inverted().WhereHasAnyAttribution().Inverted()
+    yield '* Padding accounts for {} bytes ({:.1%})'.format(
+        padding, float(padding) / in_section.size)
+    if len(star_syms):
+      yield ('* {} placeholders (symbols that start with **) account for '
+             '{} bytes ({:.1%})').format(
+                 len(star_syms), star_syms.pss, star_syms.pss / in_section.size)
+    if anonymous_syms:
+      yield '* {} anonymous symbols account for {} bytes ({:.1%})'.format(
+          len(anonymous_syms), int(anonymous_syms.pss),
+          star_syms.pss / in_section.size)
+
+    aliased_symbols = in_section.Filter(lambda s: s.aliases)
+    if section == 't':
+      if len(aliased_symbols):
+        uniques = sum(1 for s in aliased_symbols.IterUniqueSymbols())
+        yield ('* Contains {} aliases, mapped to {} unique addresses '
+               '({} bytes)').format(
+                   len(aliased_symbols), uniques, aliased_symbols.size)
+      else:
+        yield '* Contains 0 aliases'
+
+    inlined_symbols = in_section.WhereObjectPathMatches('{shared}')
+    if len(inlined_symbols):
+      yield '* {} symbols have shared ownership ({} bytes)'.format(
+          len(inlined_symbols), inlined_symbols.size)
+    else:
+      yield '* 0 symbols have shared ownership'
+
 
 
 def _UtcToLocal(utc):
@@ -270,7 +285,7 @@ def DescribeMetadata(metadata):
         _UtcToLocal(timestamp_obj).strftime('%Y-%m-%d %H:%M:%S'))
   gn_args = display_dict.get(models.METADATA_GN_ARGS)
   if gn_args:
-    display_dict[models.METADATA_GN_ARGS] = '; '.join(gn_args)
+    display_dict[models.METADATA_GN_ARGS] = ' '.join(gn_args)
   return sorted('%s=%s' % t for t in display_dict.iteritems())
 
 

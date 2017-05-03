@@ -15,7 +15,7 @@
 namespace net {
 
 // A very simple implementation of a TrustStore, which contains a set of
-// trust anchors.
+// certificates and their trustedness.
 class NET_EXPORT TrustStoreInMemory : public TrustStore {
  public:
   TrustStoreInMemory();
@@ -24,23 +24,47 @@ class NET_EXPORT TrustStoreInMemory : public TrustStore {
   // Empties the trust store, resetting it to original state.
   void Clear();
 
-  void AddTrustAnchor(scoped_refptr<TrustAnchor> anchor);
+  // Adds a certificate as a trust anchor (only the SPKI and subject will be
+  // used during verification).
+  void AddTrustAnchor(scoped_refptr<ParsedCertificate> cert);
+
+  // Adds a certificate as a trust achor and extracts anchor constraints from
+  // the certificate. See VerifyCertificateChain for details.
+  void AddTrustAnchorWithConstraints(scoped_refptr<ParsedCertificate> cert);
+
+  // TODO(eroman): This is marked "ForTest" as the current implementation
+  // requires an exact match on the certificate DER (a wider match by say
+  // issuer/serial is probably what we would want for a real implementation).
+  void AddDistrustedCertificateForTest(scoped_refptr<ParsedCertificate> cert);
 
   // TrustStore implementation:
-  void FindTrustAnchorsForCert(const scoped_refptr<ParsedCertificate>& cert,
-                               TrustAnchors* matches) const override;
+  void SyncGetIssuersOf(const ParsedCertificate* cert,
+                        ParsedCertificateList* issuers) override;
+  void GetTrust(const scoped_refptr<ParsedCertificate>& cert,
+                CertificateTrust* trust) const override;
 
-  // Returns true if the trust store contains the given TrustAnchor instance.
-  // Note that this considers only pointer equality and not a more
-  // broad notion of equivalence based on the object's content.
-  bool Contains(const TrustAnchor* anchor) const;
+  // Returns true if the trust store contains the given ParsedCertificate
+  // (matches by DER).
+  bool Contains(const ParsedCertificate* cert) const;
 
  private:
-  // Multimap from normalized subject -> TrustAnchor.
-  std::unordered_multimap<base::StringPiece,
-                          scoped_refptr<TrustAnchor>,
-                          base::StringPieceHash>
-      anchors_;
+  struct Entry {
+    Entry();
+    Entry(const Entry& other);
+    ~Entry();
+
+    scoped_refptr<ParsedCertificate> cert;
+    CertificateTrust trust;
+  };
+
+  // Multimap from normalized subject -> Entry.
+  std::unordered_multimap<base::StringPiece, Entry, base::StringPieceHash>
+      entries_;
+
+  // Adds a certificate with the specified trust settings. Both trusted and
+  // distrusted certificates require a full DER match.
+  void AddCertificate(scoped_refptr<ParsedCertificate> cert,
+                      const CertificateTrust& trust);
 
   DISALLOW_COPY_AND_ASSIGN(TrustStoreInMemory);
 };

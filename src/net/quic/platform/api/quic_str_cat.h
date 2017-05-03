@@ -5,18 +5,21 @@
 #ifndef NET_QUIC_PLATFORM_API_QUIC_STR_CAT_H_
 #define NET_QUIC_PLATFORM_API_QUIC_STR_CAT_H_
 
+#include <string>
+#include <utility>
+
 #include "net/quic/platform/impl/quic_str_cat_impl.h"
 
 namespace net {
 
 template <typename... Args>
 inline std::string QuicStrCat(const Args&... args) {
-  return std::move(QuicStrCatImpl(std::forward<const Args&>(args)...));
+  return QuicStrCatImpl(std::forward<const Args&>(args)...);
 }
 
 template <typename... Args>
 inline std::string QuicStringPrintf(const Args&... args) {
-  return std::move(QuicStringPrintfImpl(std::forward<const Args&>(args)...));
+  return QuicStringPrintfImpl(std::forward<const Args&>(args)...);
 }
 
 }  // namespace net

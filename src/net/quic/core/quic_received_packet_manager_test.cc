@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "net/quic/core/quic_connection_stats.h"
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 namespace net {
 namespace test {
@@ -35,8 +35,7 @@ std::vector<TestParams> GetTestParams() {
   return params;
 }
 
-class QuicReceivedPacketManagerTest
-    : public ::testing::TestWithParam<TestParams> {
+class QuicReceivedPacketManagerTest : public QuicTestWithParam<TestParams> {
  protected:
   QuicReceivedPacketManagerTest() : received_manager_(&stats_) {}
 

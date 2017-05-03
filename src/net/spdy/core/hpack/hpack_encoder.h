@@ -14,10 +14,10 @@
 #include <vector>
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/spdy/core/hpack/hpack_header_table.h"
 #include "net/spdy/core/hpack/hpack_output_stream.h"
 #include "net/spdy/core/spdy_protocol.h"
+#include "net/spdy/platform/api/spdy_export.h"
 #include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
@@ -32,7 +32,7 @@ namespace test {
 class HpackEncoderPeer;
 }  // namespace test
 
-class NET_EXPORT_PRIVATE HpackEncoder {
+class SPDY_EXPORT_PRIVATE HpackEncoder {
  public:
   using Representation = std::pair<SpdyStringPiece, SpdyStringPiece>;
   using Representations = std::vector<Representation>;
@@ -58,7 +58,7 @@ class NET_EXPORT_PRIVATE HpackEncoder {
   // whether or not the encoding was successful.
   bool EncodeHeaderSet(const SpdyHeaderBlock& header_set, SpdyString* output);
 
-  class NET_EXPORT_PRIVATE ProgressiveEncoder {
+  class SPDY_EXPORT_PRIVATE ProgressiveEncoder {
    public:
     virtual ~ProgressiveEncoder() {}
 

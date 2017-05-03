@@ -11,6 +11,8 @@ symbol information parsed from a linker .map file.
 
 ### Example Usage:
 
+Note: Supersize on Linux has known deficiencies (crbug/717550).
+
     # Android:
     # Googlers:
     gn gen out/Release --args='is_official_build=true symbol_level=1 is_chrome_branded=true target_os="android"'
@@ -58,23 +60,24 @@ A convenience command equivalent to: `console before.size after.size --query='Pr
 
     tools/binary_size/supersize diff before.size after.size --all
 
-# diagnose_apk_bloat.py
+# diagnose_bloat.py
 
-Determine the cause of binary size bloat for a patch.
+Determine the cause of binary size bloat between two commits. Works for Android
+and partially works for Linux (crbug/717550).
 
 ## Example Usage:
 
     # Build and diff HEAD^ and HEAD.
-    tools/binary_size/diagnose_apk_bloat.py HEAD
+    tools/binary_size/diagnose_bloat.py HEAD
 
     # Diff OTHERREV and REV using downloaded build artifacts.
-    tools/binary_size/diagnose_apk_bloat.py REV --reference-rev OTHERREV --cloud
+    tools/binary_size/diagnose_bloat.py REV --reference-rev OTHERREV --cloud
 
-    # Build and diff contiguous revs in range OTHERREV..REV for src/v8.
-    tools/binary_size/diagnose_apk_bloat.py REV --reference-rev OTHERREV --subrepo v8 --all
+    # Build and diff all contiguous revs in range OTHERREV..REV for src/v8.
+    tools/binary_size/diagnose_bloat.py REV --reference-rev OTHERREV --subrepo v8 --all
 
     # Display detailed usage info (there are many options).
-    tools/binary_size/diagnose_apk_bloat.py -h
+    tools/binary_size/diagnose_bloat.py -h
 
 # Roadmap for Super Size:
 
@@ -107,8 +110,7 @@ Tracked in https://crbug.com/681694
 1. Speed up some steps (like normalizing names) via multiprocessing.
 1. Add dependency graph info, perhaps just on a per-file basis.
 
-# Roadmap for diagnose_apk_bloat.py:
-1. More `diagnose_apk_bloat.py` features:
+# Roadmap for diagnose_bloat.py:
+1. More `diagnose_bloat.py` features:
 
-  * Add more diff types (pak files, Java symbols, native symbols).
-  * Support local builds for revs before supersize existed.
+  * Add more diff types (pak files, Java symbols).

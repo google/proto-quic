@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 
@@ -171,7 +172,9 @@ QuicData* EncryptWithNonce(Aes128Gcm12Encrypter* encrypter,
   return new QuicData(ciphertext.release(), ciphertext_size, true);
 }
 
-TEST(Aes128Gcm12EncrypterTest, Encrypt) {
+class Aes128Gcm12EncrypterTest : public QuicTest {};
+
+TEST_F(Aes128Gcm12EncrypterTest, Encrypt) {
   for (size_t i = 0; i < arraysize(test_group_array); i++) {
     SCOPED_TRACE(i);
     const TestVector* test_vectors = test_group_array[i];
@@ -220,14 +223,14 @@ TEST(Aes128Gcm12EncrypterTest, Encrypt) {
   }
 }
 
-TEST(Aes128Gcm12EncrypterTest, GetMaxPlaintextSize) {
+TEST_F(Aes128Gcm12EncrypterTest, GetMaxPlaintextSize) {
   Aes128Gcm12Encrypter encrypter;
   EXPECT_EQ(1000u, encrypter.GetMaxPlaintextSize(1012));
   EXPECT_EQ(100u, encrypter.GetMaxPlaintextSize(112));
   EXPECT_EQ(10u, encrypter.GetMaxPlaintextSize(22));
 }
 
-TEST(Aes128Gcm12EncrypterTest, GetCiphertextSize) {
+TEST_F(Aes128Gcm12EncrypterTest, GetCiphertextSize) {
   Aes128Gcm12Encrypter encrypter;
   EXPECT_EQ(1012u, encrypter.GetCiphertextSize(1000));
   EXPECT_EQ(112u, encrypter.GetCiphertextSize(100));

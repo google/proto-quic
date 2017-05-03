@@ -76,7 +76,9 @@ struct SHA256ToHashValueComparator {
   }
 };
 
-void RecordUMAForHPKPReportFailure(const GURL& report_uri, int net_error) {
+void RecordUMAForHPKPReportFailure(const GURL& report_uri,
+                                   int net_error,
+                                   int http_response_code) {
   UMA_HISTOGRAM_SPARSE_SLOWLY("Net.PublicKeyPinReportSendingFailure2",
                               -net_error);
 }
@@ -839,7 +841,7 @@ void TransportSecurityState::CheckExpectStaple(
   }
   report_sender_->Send(expect_staple_state.report_uri,
                        "application/json; charset=utf-8", serialized_report,
-                       base::Closure(),
+                       base::Callback<void()>(),
                        base::Bind(RecordUMAForHPKPReportFailure));
 }
 
@@ -1141,7 +1143,7 @@ TransportSecurityState::CheckPinsAndMaybeSendReport(
           base::TimeDelta::FromMinutes(kTimeToRememberHPKPReportsMins));
 
   report_sender_->Send(pkp_state.report_uri, "application/json; charset=utf-8",
-                       serialized_report, base::Closure(),
+                       serialized_report, base::Callback<void()>(),
                        base::Bind(RecordUMAForHPKPReportFailure));
   return PKPStatus::VIOLATED;
 }

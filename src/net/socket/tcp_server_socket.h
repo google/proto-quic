@@ -11,6 +11,7 @@
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_export.h"
 #include "net/socket/server_socket.h"
+#include "net/socket/socket_descriptor.h"
 #include "net/socket/tcp_socket.h"
 
 namespace net {
@@ -23,6 +24,12 @@ class NET_EXPORT TCPServerSocket : public ServerSocket {
  public:
   TCPServerSocket(NetLog* net_log, const NetLogSource& source);
   ~TCPServerSocket() override;
+
+  // Takes ownership of |socket|, which has been opened, but may or may not be
+  // bound or listening. The caller must determine this based on the provenance
+  // of the socket and act accordingly. The socket may have connections waiting
+  // to be accepted, but must not be actually connected.
+  int AdoptSocket(SocketDescriptor socket);
 
   // net::ServerSocket implementation.
   int Listen(const IPEndPoint& address, int backlog) override;

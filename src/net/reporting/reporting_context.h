@@ -21,7 +21,6 @@ class TickClock;
 namespace net {
 
 class ReportingCache;
-class ReportingDelegate;
 class ReportingDeliveryAgent;
 class ReportingEndpointManager;
 class ReportingGarbageCollector;
@@ -37,23 +36,11 @@ class NET_EXPORT ReportingContext {
  public:
   static std::unique_ptr<ReportingContext> Create(
       const ReportingPolicy& policy,
-      std::unique_ptr<ReportingDelegate> delegate,
       URLRequestContext* request_context);
 
   ~ReportingContext();
 
-  // Initializes the ReportingContext. This may take a while (e.g. it may
-  // involve reloading state persisted to disk). Should be called only once.
-  //
-  // Components of the ReportingContext won't reference their dependencies (e.g.
-  // the Clock/TickClock or Timers inside the individual components) until
-  // during/after the call to Init.
-  void Initialize();
-
-  bool initialized() const { return initialized_; }
-
   const ReportingPolicy& policy() { return policy_; }
-  ReportingDelegate* delegate() { return delegate_.get(); }
 
   base::Clock* clock() { return clock_.get(); }
   base::TickClock* tick_clock() { return tick_clock_.get(); }
@@ -77,21 +64,18 @@ class NET_EXPORT ReportingContext {
 
  protected:
   ReportingContext(const ReportingPolicy& policy,
-                   std::unique_ptr<ReportingDelegate> delegate,
                    std::unique_ptr<base::Clock> clock,
                    std::unique_ptr<base::TickClock> tick_clock,
                    std::unique_ptr<ReportingUploader> uploader);
 
  private:
   ReportingPolicy policy_;
-  std::unique_ptr<ReportingDelegate> delegate_;
 
   std::unique_ptr<base::Clock> clock_;
   std::unique_ptr<base::TickClock> tick_clock_;
   std::unique_ptr<ReportingUploader> uploader_;
 
   base::ObserverList<ReportingObserver, /* check_empty= */ true> observers_;
-  bool initialized_;
 
   std::unique_ptr<ReportingCache> cache_;
 
@@ -102,8 +86,7 @@ class NET_EXPORT ReportingContext {
   // and |endpoint_manager_|.
   std::unique_ptr<ReportingDeliveryAgent> delivery_agent_;
 
-  // |persister_| must come after |delegate_|, |clock_|, |tick_clock_|, and
-  // |cache_|.
+  // |persister_| must come after |clock_|, |tick_clock_|, and |cache_|.
   std::unique_ptr<ReportingPersister> persister_;
 
   // |garbage_collector_| must come after |tick_clock_| and |cache_|.

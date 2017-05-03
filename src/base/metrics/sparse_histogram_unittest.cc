@@ -327,4 +327,41 @@ TEST_P(SparseHistogramTest, FactoryTime) {
           << "ns each.";
 }
 
+TEST_P(SparseHistogramTest, ExtremeValues) {
+  static const struct {
+    Histogram::Sample sample;
+    int64_t expected_max;
+  } cases[] = {
+      // Note: We use -2147483647 - 1 rather than -2147483648 because the later
+      // is interpreted as - operator applied to 2147483648 and the latter can't
+      // be represented as an int32 and causes a warning.
+      {-2147483647 - 1, -2147483647LL},
+      {0, 1},
+      {2147483647, 2147483648LL},
+  };
+
+  for (size_t i = 0; i < arraysize(cases); ++i) {
+    HistogramBase* histogram =
+        SparseHistogram::FactoryGet(StringPrintf("ExtremeValues_%zu", i),
+                                    HistogramBase::kUmaTargetedHistogramFlag);
+    histogram->Add(cases[i].sample);
+
+    std::unique_ptr<HistogramSamples> snapshot = histogram->SnapshotSamples();
+    std::unique_ptr<SampleCountIterator> it = snapshot->Iterator();
+    ASSERT_FALSE(it->Done());
+
+    base::Histogram::Sample min;
+    int64_t max;
+    base::Histogram::Count count;
+    it->Get(&min, &max, &count);
+
+    EXPECT_EQ(1, count);
+    EXPECT_EQ(cases[i].sample, min);
+    EXPECT_EQ(cases[i].expected_max, max);
+
+    it->Next();
+    EXPECT_TRUE(it->Done());
+  }
+}
+
 }  // namespace base

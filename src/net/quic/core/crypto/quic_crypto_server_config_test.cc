@@ -16,17 +16,19 @@
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/platform/api/quic_socket_address.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/quic_crypto_server_config_peer.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
 
 namespace net {
 namespace test {
 
-TEST(QuicCryptoServerConfigTest, ServerConfig) {
+class QuicCryptoServerConfigTest : public QuicTest {};
+
+TEST_F(QuicCryptoServerConfigTest, ServerConfig) {
   QuicRandom* rand = QuicRandom::GetInstance();
   QuicCryptoServerConfig server(QuicCryptoServerConfig::TESTING, rand,
                                 crypto_test_utils::ProofSourceForTesting());
@@ -45,7 +47,7 @@ TEST(QuicCryptoServerConfigTest, ServerConfig) {
   EXPECT_LE(1u, aead.size());
 }
 
-TEST(QuicCryptoServerConfigTest, CompressCerts) {
+TEST_F(QuicCryptoServerConfigTest, CompressCerts) {
   QuicCompressedCertsCache compressed_certs_cache(
       QuicCompressedCertsCache::kQuicCompressedCertsCacheSize);
 
@@ -64,7 +66,7 @@ TEST(QuicCryptoServerConfigTest, CompressCerts) {
   EXPECT_EQ(compressed_certs_cache.Size(), 1u);
 }
 
-TEST(QuicCryptoServerConfigTest, CompressSameCertsTwice) {
+TEST_F(QuicCryptoServerConfigTest, CompressSameCertsTwice) {
   QuicCompressedCertsCache compressed_certs_cache(
       QuicCompressedCertsCache::kQuicCompressedCertsCacheSize);
 
@@ -91,7 +93,7 @@ TEST(QuicCryptoServerConfigTest, CompressSameCertsTwice) {
   EXPECT_EQ(compressed_certs_cache.Size(), 1u);
 }
 
-TEST(QuicCryptoServerConfigTest, CompressDifferentCerts) {
+TEST_F(QuicCryptoServerConfigTest, CompressDifferentCerts) {
   // This test compresses a set of similar but not identical certs. Cache if
   // used should return cache miss and add all the compressed certs.
   QuicCompressedCertsCache compressed_certs_cache(
@@ -132,7 +134,7 @@ TEST(QuicCryptoServerConfigTest, CompressDifferentCerts) {
   EXPECT_EQ(compressed_certs_cache.Size(), 3u);
 }
 
-class SourceAddressTokenTest : public ::testing::Test {
+class SourceAddressTokenTest : public QuicTest {
  public:
   SourceAddressTokenTest()
       : ip4_(QuicIpAddress::Loopback4()),
@@ -274,7 +276,7 @@ TEST_F(SourceAddressTokenTest, SourceAddressTokenMultipleAddresses) {
             ValidateSourceAddressTokens(kPrimary, token4or6, ip6_));
 }
 
-class CryptoServerConfigsTest : public ::testing::Test {
+class CryptoServerConfigsTest : public QuicTest {
  public:
   CryptoServerConfigsTest()
       : rand_(QuicRandom::GetInstance()),

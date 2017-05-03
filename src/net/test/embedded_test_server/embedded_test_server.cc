@@ -78,7 +78,7 @@ EmbeddedTestServer::~EmbeddedTestServer() {
 
 void EmbeddedTestServer::SetConnectionListener(
     EmbeddedTestServerConnectionListener* listener) {
-  DCHECK(!Started());
+  DCHECK(!io_thread_.get());
   connection_listener_ = listener;
 }
 

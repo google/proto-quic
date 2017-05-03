@@ -4,6 +4,7 @@
 
 #include "net/proxy/mock_proxy_script_fetcher.h"
 
+#include "base/callback_helpers.h"
 #include "base/logging.h"
 #include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
@@ -15,8 +16,8 @@ namespace net {
 
 MockProxyScriptFetcher::MockProxyScriptFetcher()
     : pending_request_text_(NULL),
-      waiting_for_fetch_(false) {
-}
+      waiting_for_fetch_(false),
+      is_shutdown_(false) {}
 
 MockProxyScriptFetcher::~MockProxyScriptFetcher() {}
 
@@ -25,13 +26,16 @@ int MockProxyScriptFetcher::Fetch(const GURL& url, base::string16* text,
                                   const CompletionCallback& callback) {
   DCHECK(!has_pending_request());
 
+  if (waiting_for_fetch_)
+    base::MessageLoop::current()->QuitWhenIdle();
+
+  if (is_shutdown_)
+    return ERR_CONTEXT_SHUT_DOWN;
+
   // Save the caller's information, and have them wait.
   pending_request_url_ = url;
   pending_request_callback_ = callback;
   pending_request_text_ = text;
-
-  if (waiting_for_fetch_)
-    base::MessageLoop::current()->QuitWhenIdle();
 
   return ERR_IO_PENDING;
 }
@@ -46,6 +50,14 @@ void MockProxyScriptFetcher::NotifyFetchCompletion(
 }
 
 void MockProxyScriptFetcher::Cancel() {
+  pending_request_callback_.Reset();
+}
+
+void MockProxyScriptFetcher::OnShutdown() {
+  is_shutdown_ = true;
+  if (pending_request_callback_) {
+    base::ResetAndReturn(&pending_request_callback_).Run(ERR_CONTEXT_SHUT_DOWN);
+  }
 }
 
 URLRequestContext* MockProxyScriptFetcher::GetRequestContext() const {

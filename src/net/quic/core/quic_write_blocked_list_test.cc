@@ -4,8 +4,8 @@
 //
 #include "net/quic/core/quic_write_blocked_list.h"
 
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 using net::kV3LowestPriority;
 using net::kV3HighestPriority;
@@ -14,7 +14,9 @@ namespace net {
 namespace test {
 namespace {
 
-TEST(QuicWriteBlockedListTest, PriorityOrder) {
+class QuicWriteBlockedListTest : public QuicTest {};
+
+TEST_F(QuicWriteBlockedListTest, PriorityOrder) {
   QuicWriteBlockedList write_blocked_list;
 
   // Mark streams blocked in roughly reverse priority order, and
@@ -49,7 +51,7 @@ TEST(QuicWriteBlockedListTest, PriorityOrder) {
   EXPECT_FALSE(write_blocked_list.HasWriteBlockedDataStreams());
 }
 
-TEST(QuicWriteBlockedListTest, CryptoStream) {
+TEST_F(QuicWriteBlockedListTest, CryptoStream) {
   QuicWriteBlockedList write_blocked_list;
   write_blocked_list.RegisterStream(kCryptoStreamId, kV3HighestPriority);
   write_blocked_list.AddStream(kCryptoStreamId);
@@ -61,7 +63,7 @@ TEST(QuicWriteBlockedListTest, CryptoStream) {
   EXPECT_FALSE(write_blocked_list.HasWriteBlockedCryptoOrHeadersStream());
 }
 
-TEST(QuicWriteBlockedListTest, HeadersStream) {
+TEST_F(QuicWriteBlockedListTest, HeadersStream) {
   QuicWriteBlockedList write_blocked_list;
   write_blocked_list.RegisterStream(kHeadersStreamId, kV3HighestPriority);
   write_blocked_list.AddStream(kHeadersStreamId);
@@ -73,7 +75,7 @@ TEST(QuicWriteBlockedListTest, HeadersStream) {
   EXPECT_FALSE(write_blocked_list.HasWriteBlockedCryptoOrHeadersStream());
 }
 
-TEST(QuicWriteBlockedListTest, VerifyHeadersStream) {
+TEST_F(QuicWriteBlockedListTest, VerifyHeadersStream) {
   QuicWriteBlockedList write_blocked_list;
   write_blocked_list.RegisterStream(5, kV3HighestPriority);
   write_blocked_list.RegisterStream(kHeadersStreamId, kV3HighestPriority);
@@ -92,7 +94,7 @@ TEST(QuicWriteBlockedListTest, VerifyHeadersStream) {
   EXPECT_FALSE(write_blocked_list.HasWriteBlockedDataStreams());
 }
 
-TEST(QuicWriteBlockedListTest, NoDuplicateEntries) {
+TEST_F(QuicWriteBlockedListTest, NoDuplicateEntries) {
   // Test that QuicWriteBlockedList doesn't allow duplicate entries.
   QuicWriteBlockedList write_blocked_list;
 
@@ -114,7 +116,7 @@ TEST(QuicWriteBlockedListTest, NoDuplicateEntries) {
   EXPECT_FALSE(write_blocked_list.HasWriteBlockedDataStreams());
 }
 
-TEST(QuicWriteBlockedListTest, BatchingWrites) {
+TEST_F(QuicWriteBlockedListTest, BatchingWrites) {
   QuicWriteBlockedList write_blocked_list;
 
   const QuicStreamId id1 = kClientDataStreamId1;
@@ -167,7 +169,7 @@ TEST(QuicWriteBlockedListTest, BatchingWrites) {
   EXPECT_EQ(id1, write_blocked_list.PopFront());
 }
 
-TEST(QuicWriteBlockedListTest, Ceding) {
+TEST_F(QuicWriteBlockedListTest, Ceding) {
   QuicWriteBlockedList write_blocked_list;
 
   write_blocked_list.RegisterStream(15, kV3HighestPriority);

@@ -38,7 +38,13 @@ gn_input = json.loads(r'''
       "//:All": {
       },
       "//:base": {
+         "public": [ "//base/p.h" ],
          "sources": [ "//base/a.cc", "//base/a.h", "//base/b.hh" ],
+         "visibility": [ "*" ]
+      },
+      "//:star_public": {
+         "public": "*",
+         "sources": [ "//base/c.h" ],
          "visibility": [ "*" ]
       }
     }
@@ -88,6 +94,8 @@ class CheckGnHeadersTest(unittest.TestCase):
     expected = set([
         'base/a.h',
         'base/b.hh',
+        'base/c.h',
+        'base/p.h',
     ])
     self.assertEquals(headers, expected)
 

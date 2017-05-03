@@ -4,7 +4,7 @@
 
 #include "net/quic/core/quic_server_id.h"
 
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 using std::string;
 
@@ -12,7 +12,9 @@ namespace net {
 
 namespace {
 
-TEST(QuicServerIdTest, ToString) {
+class QuicServerIdTest : public QuicTest {};
+
+TEST_F(QuicServerIdTest, ToString) {
   HostPortPair google_host_port_pair("google.com", 10);
 
   QuicServerId google_server_id(google_host_port_pair, PRIVACY_MODE_DISABLED);
@@ -24,7 +26,7 @@ TEST(QuicServerIdTest, ToString) {
   EXPECT_EQ("https://google.com:10/private", private_server_id_str);
 }
 
-TEST(QuicServerIdTest, LessThan) {
+TEST_F(QuicServerIdTest, LessThan) {
   QuicServerId a_10_https(HostPortPair("a.com", 10), PRIVACY_MODE_DISABLED);
   QuicServerId a_11_https(HostPortPair("a.com", 11), PRIVACY_MODE_DISABLED);
   QuicServerId b_10_https(HostPortPair("b.com", 10), PRIVACY_MODE_DISABLED);
@@ -86,7 +88,7 @@ TEST(QuicServerIdTest, LessThan) {
   }
 }
 
-TEST(QuicServerIdTest, Equals) {
+TEST_F(QuicServerIdTest, Equals) {
   PrivacyMode left_privacy;
   PrivacyMode right_privacy;
   for (int i = 0; i < 2; i++) {

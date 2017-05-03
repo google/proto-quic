@@ -16,41 +16,36 @@ class TrustStoreCollectionTest : public testing::Test {
  public:
   void SetUp() override {
     ParsedCertificateList chain;
+    ASSERT_TRUE(ReadCertChainFromFile(
+        "net/data/verify_certificate_chain_unittest/key-rollover/oldchain.pem",
+        &chain));
 
-    VerifyCertChainTest test;
-    ReadVerifyCertChainTestFromFile(
-        "net/data/verify_certificate_chain_unittest/key-rollover-oldchain.pem",
-        &test);
-    chain = test.chain;
-    oldroot_ = test.trust_anchor;
-
-    ASSERT_EQ(2U, chain.size());
+    ASSERT_EQ(3U, chain.size());
     target_ = chain[0];
     oldintermediate_ = chain[1];
+    oldroot_ = chain[2];
     ASSERT_TRUE(target_);
     ASSERT_TRUE(oldintermediate_);
     ASSERT_TRUE(oldroot_);
 
-    ReadVerifyCertChainTestFromFile(
-        "net/data/verify_certificate_chain_unittest/"
-        "key-rollover-longrolloverchain.pem",
-        &test);
-    chain = test.chain;
+    ASSERT_TRUE(
+        ReadCertChainFromFile("net/data/verify_certificate_chain_unittest/"
+                              "key-rollover/longrolloverchain.pem",
+                              &chain));
 
-    ASSERT_EQ(4U, chain.size());
+    ASSERT_EQ(5U, chain.size());
     newintermediate_ = chain[1];
-    newroot_ = TrustAnchor::CreateFromCertificateNoConstraints(chain[2]);
-    newrootrollover_ =
-        TrustAnchor::CreateFromCertificateNoConstraints(chain[3]);
+    newroot_ = chain[2];
+    newrootrollover_ = chain[3];
     ASSERT_TRUE(newintermediate_);
     ASSERT_TRUE(newroot_);
     ASSERT_TRUE(newrootrollover_);
   }
 
  protected:
-  scoped_refptr<TrustAnchor> oldroot_;
-  scoped_refptr<TrustAnchor> newroot_;
-  scoped_refptr<TrustAnchor> newrootrollover_;
+  scoped_refptr<ParsedCertificate> oldroot_;
+  scoped_refptr<ParsedCertificate> newroot_;
+  scoped_refptr<ParsedCertificate> newrootrollover_;
 
   scoped_refptr<ParsedCertificate> target_;
   scoped_refptr<ParsedCertificate> oldintermediate_;
@@ -59,31 +54,67 @@ class TrustStoreCollectionTest : public testing::Test {
 
 // Collection contains no stores, should return no results.
 TEST_F(TrustStoreCollectionTest, NoStores) {
-  TrustAnchors matches;
+  ParsedCertificateList issuers;
 
   TrustStoreCollection collection;
-  collection.FindTrustAnchorsForCert(target_, &matches);
+  collection.SyncGetIssuersOf(target_.get(), &issuers);
 
-  EXPECT_TRUE(matches.empty());
+  EXPECT_TRUE(issuers.empty());
 }
 
 // Collection contains only one store.
 TEST_F(TrustStoreCollectionTest, OneStore) {
-  TrustAnchors matches;
+  ParsedCertificateList issuers;
 
   TrustStoreCollection collection;
   TrustStoreInMemory in_memory;
   in_memory.AddTrustAnchor(newroot_);
   collection.AddTrustStore(&in_memory);
-  collection.FindTrustAnchorsForCert(newintermediate_, &matches);
+  collection.SyncGetIssuersOf(newintermediate_.get(), &issuers);
 
-  ASSERT_EQ(1U, matches.size());
-  EXPECT_EQ(newroot_, matches[0]);
+  ASSERT_EQ(1U, issuers.size());
+  EXPECT_EQ(newroot_.get(), issuers[0].get());
+
+  // newroot_ is trusted.
+  CertificateTrust trust;
+  collection.GetTrust(newroot_, &trust);
+  EXPECT_EQ(CertificateTrustType::TRUSTED_ANCHOR, trust.type);
+
+  // oldroot_ is not.
+  collection.GetTrust(oldroot_, &trust);
+  EXPECT_EQ(CertificateTrustType::UNSPECIFIED, trust.type);
+}
+
+// SyncGetIssuersOf() should append to its output parameters rather than assign
+// them.
+TEST_F(TrustStoreCollectionTest, OutputVectorsAppendedTo) {
+  ParsedCertificateList issuers;
+
+  // Populate the out-parameter with some values.
+  issuers.resize(3);
+
+  TrustStoreCollection collection;
+  TrustStoreInMemory in_memory;
+  in_memory.AddTrustAnchor(newroot_);
+  collection.AddTrustStore(&in_memory);
+  collection.SyncGetIssuersOf(newintermediate_.get(), &issuers);
+
+  ASSERT_EQ(4U, issuers.size());
+  EXPECT_EQ(newroot_.get(), issuers[3].get());
+
+  // newroot_ is trusted.
+  CertificateTrust trust;
+  collection.GetTrust(newroot_, &trust);
+  EXPECT_EQ(CertificateTrustType::TRUSTED_ANCHOR, trust.type);
+
+  // newrootrollover_ is not.
+  collection.GetTrust(newrootrollover_, &trust);
+  EXPECT_EQ(CertificateTrustType::UNSPECIFIED, trust.type);
 }
 
 // Collection contains two stores.
 TEST_F(TrustStoreCollectionTest, TwoStores) {
-  TrustAnchors matches;
+  ParsedCertificateList issuers;
 
   TrustStoreCollection collection;
   TrustStoreInMemory in_memory1;
@@ -92,11 +123,58 @@ TEST_F(TrustStoreCollectionTest, TwoStores) {
   in_memory2.AddTrustAnchor(oldroot_);
   collection.AddTrustStore(&in_memory1);
   collection.AddTrustStore(&in_memory2);
-  collection.FindTrustAnchorsForCert(newintermediate_, &matches);
+  collection.SyncGetIssuersOf(newintermediate_.get(), &issuers);
 
-  ASSERT_EQ(2U, matches.size());
-  EXPECT_EQ(newroot_, matches[0]);
-  EXPECT_EQ(oldroot_, matches[1]);
+  ASSERT_EQ(2U, issuers.size());
+  EXPECT_EQ(newroot_.get(), issuers[0].get());
+  EXPECT_EQ(oldroot_.get(), issuers[1].get());
+
+  // newroot_ is trusted.
+  CertificateTrust trust;
+  collection.GetTrust(newroot_, &trust);
+  EXPECT_EQ(CertificateTrustType::TRUSTED_ANCHOR, trust.type);
+
+  // oldroot_ is trusted.
+  collection.GetTrust(oldroot_, &trust);
+  EXPECT_EQ(CertificateTrustType::TRUSTED_ANCHOR, trust.type);
+
+  // newrootrollover_ is not.
+  collection.GetTrust(newrootrollover_, &trust);
+  EXPECT_EQ(CertificateTrustType::UNSPECIFIED, trust.type);
+}
+
+// Collection contains two stores. The certificate is marked as trusted in one,
+// but distrusted in the other.
+TEST_F(TrustStoreCollectionTest, DistrustTakesPriority) {
+  ParsedCertificateList issuers;
+
+  TrustStoreCollection collection;
+  TrustStoreInMemory in_memory1;
+  TrustStoreInMemory in_memory2;
+
+  // newroot_ is trusted in store1, distrusted in store2.
+  in_memory1.AddTrustAnchor(newroot_);
+  in_memory2.AddDistrustedCertificateForTest(newroot_);
+
+  // oldintermediate is distrusted in store1, trusted in store2.
+  in_memory1.AddDistrustedCertificateForTest(oldintermediate_);
+  in_memory2.AddTrustAnchor(oldintermediate_);
+
+  collection.AddTrustStore(&in_memory1);
+  collection.AddTrustStore(&in_memory2);
+
+  // newroot_ is distrusted..
+  CertificateTrust trust;
+  collection.GetTrust(newroot_, &trust);
+  EXPECT_EQ(CertificateTrustType::DISTRUSTED, trust.type);
+
+  // oldintermediate_ is distrusted.
+  collection.GetTrust(oldintermediate_, &trust);
+  EXPECT_EQ(CertificateTrustType::DISTRUSTED, trust.type);
+
+  // newrootrollover_ is unspecified.
+  collection.GetTrust(newrootrollover_, &trust);
+  EXPECT_EQ(CertificateTrustType::UNSPECIFIED, trust.type);
 }
 
 }  // namespace

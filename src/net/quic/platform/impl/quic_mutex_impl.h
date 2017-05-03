@@ -5,6 +5,7 @@
 #ifndef NET_QUIC_PLATFORM_IMPL_QUIC_MUTEX_IMPL_H_
 #define NET_QUIC_PLATFORM_IMPL_QUIC_MUTEX_IMPL_H_
 
+#include "base/macros.h"
 #include "base/synchronization/lock.h"
 #include "net/quic/platform/api/quic_export.h"
 

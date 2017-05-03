@@ -1,4 +1,4 @@
-// Copyright (c) 2016 The Chromium Authors. All rights reserved.
+// Copyright (c) 2017 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -7,14 +7,12 @@
 
 #include "net/quic/core/quic_session.h"
 #include "net/quic/core/quic_stream.h"
-#include "net/quic/platform/api/quic_export.h"
 #include "net/quic/quartc/quartc_stream_interface.h"
 
 namespace net {
 
 // Implements a QuartcStreamInterface using a QuicStream.
-class QUIC_EXPORT_PRIVATE QuartcStream : public QuicStream,
-                                         public QuartcStreamInterface {
+class QuartcStream : public QuicStream, public QuartcStreamInterface {
  public:
   QuartcStream(QuicStreamId id, QuicSession* session);
 

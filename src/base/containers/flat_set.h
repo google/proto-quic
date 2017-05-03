@@ -5,6 +5,8 @@
 #ifndef BASE_CONTAINERS_FLAT_SET_H_
 #define BASE_CONTAINERS_FLAT_SET_H_
 
+#include <functional>
+
 #include "base/containers/flat_tree.h"
 
 namespace base {

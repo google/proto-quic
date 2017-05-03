@@ -86,12 +86,6 @@ QUIC_FLAG(bool,
           FLAGS_quic_reloadable_flag_quic_create_session_after_insertion,
           false)
 
-// If true, rejected packet number is removed from public reset packet.
-QUIC_FLAG(
-    bool,
-    FLAGS_quic_reloadable_flag_quic_remove_packet_number_from_public_reset,
-    true)
-
 // If true, v33 QUIC client uses 1 bit to specify 8-byte connection id in
 // public flag.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_remove_v33_hacks2, false)
@@ -143,7 +137,7 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_no_stop_waiting_frames, false)
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_allow_one_address_change, false)
 
 // If true, multipath bit is not used in public flag.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_remove_multipath_bit, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_remove_multipath_bit, true)
 
 // Allow QUIC's flow control autotuning to increase the window as
 // quickly for the first adjustment as in subsequent ones.
@@ -174,7 +168,7 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_add_tso_cwnd, false)
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_version_38, true)
 
 // If true, enable QUIC v39.
-QUIC_FLAG(bool, FLAGS_quic_enable_version_39, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_version_39, false)
 
 // If true, on client side, 8-byte connection ID in public header is read and
 // written in big endian.
@@ -217,3 +211,12 @@ QUIC_FLAG(double, FLAGS_quic_bbr_slow_delivery_cwnd_gain, 4.0f)
 
 // Threshold multiplier below which delivery is considered slow.
 QUIC_FLAG(double, FLAGS_quic_bbr_slow_delivery_threshold_multiplier, 0.5f)
+
+// If true, update state if trailing headers with a :final-offset key are
+// received for a previously closed QUIC stream.
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_final_offset_from_trailers,
+          false)
+
+// Fix the algorithm used by packet conservation.
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_fix_conservation, false)

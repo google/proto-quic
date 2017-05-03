@@ -215,7 +215,7 @@ TEST(SampleVectorIteratorTest, IterateTest) {
   size_t index;
 
   HistogramBase::Sample min;
-  HistogramBase::Sample max;
+  int64_t max;
   HistogramBase::Count count;
   it.Get(&min, &max, &count);
   EXPECT_EQ(0, min);
@@ -271,7 +271,7 @@ TEST(SampleVectorIteratorDeathTest, IterateDoneTest) {
   EXPECT_TRUE(it->Done());
 
   HistogramBase::Sample min;
-  HistogramBase::Sample max;
+  int64_t max;
   HistogramBase::Count count;
   EXPECT_DCHECK_DEATH(it->Get(&min, &max, &count));
 

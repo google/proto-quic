@@ -4,8 +4,7 @@
 
 #include "net/quic/core/quic_alarm.h"
 
-#include "testing/gmock/include/gmock/gmock.h"
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 using testing::Return;
 using testing::Invoke;
@@ -74,7 +73,7 @@ class DestructiveAlarm : public QuicAlarm {
   void CancelImpl() override {}
 };
 
-class QuicAlarmTest : public ::testing::Test {
+class QuicAlarmTest : public QuicTest {
  public:
   QuicAlarmTest()
       : delegate_(new MockDelegate()),

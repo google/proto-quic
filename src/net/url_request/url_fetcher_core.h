@@ -20,6 +20,7 @@
 #include "net/base/chunked_upload_data_stream.h"
 #include "net/base/host_port_pair.h"
 #include "net/http/http_request_headers.h"
+#include "net/traffic_annotation/network_traffic_annotation.h"
 #include "net/url_request/url_fetcher.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_context_getter_observer.h"
@@ -47,7 +48,8 @@ class URLFetcherCore : public base::RefCountedThreadSafe<URLFetcherCore>,
   URLFetcherCore(URLFetcher* fetcher,
                  const GURL& original_url,
                  URLFetcher::RequestType request_type,
-                 URLFetcherDelegate* d);
+                 URLFetcherDelegate* d,
+                 net::NetworkTrafficAnnotationTag traffic_annotation);
 
   // Starts the load. It's important that this not happen in the constructor
   // because it causes the IO thread to begin AddRef()ing and Release()ing
@@ -345,6 +347,8 @@ class URLFetcherCore : public base::RefCountedThreadSafe<URLFetcherCore>,
   int64_t current_response_bytes_;
   // Total expected bytes to receive (-1 if it cannot be determined).
   int64_t total_response_bytes_;
+
+  const net::NetworkTrafficAnnotationTag traffic_annotation_;
 
   static base::LazyInstance<Registry>::DestructorAtExit g_registry;
 

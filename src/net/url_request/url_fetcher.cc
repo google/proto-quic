@@ -25,10 +25,7 @@ std::unique_ptr<URLFetcher> URLFetcher::Create(
     const GURL& url,
     URLFetcher::RequestType request_type,
     URLFetcherDelegate* d) {
-  URLFetcherFactory* factory = URLFetcherImpl::factory();
-  return factory ? factory->CreateURLFetcher(id, url, request_type, d)
-                 : std::unique_ptr<URLFetcher>(
-                       new URLFetcherImpl(url, request_type, d));
+  return Create(id, url, request_type, d, NO_TRAFFIC_ANNOTATION_YET);
 }
 
 // static
@@ -47,9 +44,10 @@ std::unique_ptr<URLFetcher> URLFetcher::Create(
     URLFetcher::RequestType request_type,
     URLFetcherDelegate* d,
     NetworkTrafficAnnotationTag traffic_annotation) {
-  // traffic_annotation is just a tag that is extracted during static
-  // code analysis and can be ignored here.
-  return Create(id, url, request_type, d);
+  URLFetcherFactory* factory = URLFetcherImpl::factory();
+  return factory ? factory->CreateURLFetcher(id, url, request_type, d)
+                 : std::unique_ptr<URLFetcher>(new URLFetcherImpl(
+                       url, request_type, d, traffic_annotation));
 }
 
 // static

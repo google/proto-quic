@@ -10,7 +10,7 @@
 
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_socket_address.h"
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 namespace net {
 namespace test {
@@ -19,7 +19,7 @@ namespace {
 // A test fixture is used to ensure that all sockets are closed down gracefully
 // upon test completion.  Also provides a convenient API to Bind not presently
 // available in QuicSocketUtils.
-class QuicSocketUtilsTest : public ::testing::Test {
+class QuicSocketUtilsTest : public QuicTest {
  protected:
   ~QuicSocketUtilsTest() override {
     for (int fd : open_sockets_) {

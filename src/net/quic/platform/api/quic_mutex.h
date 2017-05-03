@@ -5,6 +5,7 @@
 #ifndef NET_QUIC_PLATFORM_API_QUIC_MUTEX_H_
 #define NET_QUIC_PLATFORM_API_QUIC_MUTEX_H_
 
+#include "base/macros.h"
 #include "net/quic/platform/impl/quic_mutex_impl.h"
 
 namespace net {

@@ -6,7 +6,6 @@ import("//build/config/android/config.gni")
 import("//build/config/chrome_build.gni")
 import("//build/config/chromecast_build.gni")
 import("//build/config/compiler/compiler.gni")
-import("//build/config/nacl/config.gni")
 import("//build/toolchain/cc_wrapper.gni")
 import("//build/toolchain/toolchain.gni")
 import("//build_overrides/build.gni")
@@ -22,6 +21,12 @@ if (is_mac) {
 }
 if (is_ios) {
   import("//build/config/ios/ios_sdk.gni")
+}
+if (is_nacl) {
+  # To keep NaCl variables out of builds that don't include NaCl, all
+  # variables defined in nacl/config.gni referenced here should be protected by
+  # is_nacl conditions.
+  import("//build/config/nacl/config.gni")
 }
 
 declare_args() {
@@ -94,9 +99,7 @@ declare_args() {
   # branches)
   optimize_for_fuzzing = false
 
-  # Optimize symbol files for maximizing goma cache hit rate. This isn't
-  # on by default when goma is enabled because setting this to true may make
-  # it harder to debug binaries.
+  # Optimize symbol files for maximizing goma cache hit rate.
   strip_absolute_paths_from_debug_symbols = false
 }
 
@@ -165,8 +168,10 @@ config("compiler") {
     configs += [ "//build/config/linux:compiler" ]
   } else if (is_nacl) {
     configs += [ "//build/config/nacl:compiler" ]
-  } else if (is_ios || is_mac) {
+  } else if (is_mac) {
     configs += [ "//build/config/mac:compiler" ]
+  } else if (is_ios) {
+    configs += [ "//build/config/ios:compiler" ]
   }
 
   # See the definitions below.
@@ -1492,7 +1497,7 @@ config("no_optimize") {
 # optimization and link-time code generation which is very expensive and should
 # be used sparingly.
 config("optimize_max") {
-  if (is_nacl_irt) {
+  if (is_nacl && is_nacl_irt) {
     # The NaCl IRT is a special case and always wants its own config.
     # Various components do:
     #   if (!is_debug) {
@@ -1539,7 +1544,7 @@ config("optimize_max") {
 # TODO(crbug.com/621335) - rework how all of these configs are related
 # so that we don't need this disclaimer.
 config("optimize_speed") {
-  if (is_nacl_irt) {
+  if (is_nacl && is_nacl_irt) {
     # The NaCl IRT is a special case and always wants its own config.
     # Various components do:
     #   if (!is_debug) {
@@ -1585,7 +1590,7 @@ config("optimize_fuzzing") {
 # The default optimization applied to all targets. This will be equivalent to
 # either "optimize" or "no_optimize", depending on the build flags.
 config("default_optimization") {
-  if (is_nacl_irt) {
+  if (is_nacl && is_nacl_irt) {
     # The NaCl IRT is a special case and always wants its own config.
     # It gets optimized the same way regardless of the type of build.
     configs = [ "//build/config/nacl:irt_optimize" ]

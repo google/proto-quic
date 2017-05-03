@@ -5,14 +5,15 @@
 #include "net/quic/core/quic_tag.h"
 
 #include "net/quic/core/crypto/crypto_protocol.h"
-#include "testing/gmock/include/gmock/gmock.h"
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 namespace net {
 namespace test {
 namespace {
 
-TEST(QuicTagTest, TagToString) {
+class QuicTagTest : public QuicTest {};
+
+TEST_F(QuicTagTest, TagToString) {
   EXPECT_EQ("SCFG", QuicTagToString(kSCFG));
   EXPECT_EQ("SNO ", QuicTagToString(kServerNonceTag));
   EXPECT_EQ("CRT ", QuicTagToString(kCertificateTag));
@@ -22,7 +23,7 @@ TEST(QuicTagTest, TagToString) {
   EXPECT_EQ("525092931", QuicTagToString(MakeQuicTag('C', 'H', 'L', '\x1f')));
 }
 
-TEST(QuicTagTest, MakeQuicTag) {
+TEST_F(QuicTagTest, MakeQuicTag) {
   QuicTag tag = MakeQuicTag('A', 'B', 'C', 'D');
   char bytes[4];
   memcpy(bytes, &tag, 4);

@@ -35,6 +35,7 @@ source_set("content_browsertests_filters") {
   data = [
     "//testing/buildbot/filters/cast-linux.content_browsertests.filter",
     "//testing/buildbot/filters/isolate-extensions.content_browsertests.filter",
+    "//testing/buildbot/filters/mojo.fyi.network_content_browsertests.filter",
     "//testing/buildbot/filters/site-per-process.content_browsertests.filter",
   ]
 }

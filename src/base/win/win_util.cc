@@ -139,10 +139,7 @@ bool IsWindows10TabletMode(HWND hwnd) {
   // TODO(ananta)
   // Avoid using GetForegroundWindow here and pass in the HWND of the window
   // intiating the request to display the keyboard.
-  hr = view_settings_interop->GetForWindow(
-      hwnd,
-      __uuidof(ABI::Windows::UI::ViewManagement::IUIViewSettings),
-      view_settings.ReceiveVoid());
+  hr = view_settings_interop->GetForWindow(hwnd, IID_PPV_ARGS(&view_settings));
   if (FAILED(hr))
     return false;
 

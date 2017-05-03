@@ -8,8 +8,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "net/base/net_export.h"
 #include "net/spdy/core/hpack/hpack_input_stream.h"
+#include "net/spdy/platform/api/spdy_export.h"
 #include "net/spdy/platform/api/spdy_string.h"
 
 namespace net {
@@ -19,7 +19,7 @@ class HpackHuffmanDecoderPeer;
 
 // Declared as a class to simplify testing.
 // No instances are actually allocated.
-class NET_EXPORT_PRIVATE HpackHuffmanDecoder {
+class SPDY_EXPORT_PRIVATE HpackHuffmanDecoder {
  public:
   typedef uint32_t HuffmanWord;
   typedef size_t HuffmanCodeLength;

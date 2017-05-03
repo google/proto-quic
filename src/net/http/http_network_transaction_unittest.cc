@@ -16679,6 +16679,7 @@ TEST_F(HttpNetworkTransactionTest, TokenBindingSpdy) {
 void CheckContentEncodingMatching(SpdySessionDependencies* session_deps,
                                   const std::string& accept_encoding,
                                   const std::string& content_encoding,
+                                  const std::string& location,
                                   bool should_match) {
   HttpRequestInfo request;
   request.method = "GET";
@@ -16697,9 +16698,19 @@ void CheckContentEncodingMatching(SpdySessionDependencies* session_deps,
       MockWrite(accept_encoding.data()), MockWrite("\r\n\r\n"),
   };
 
+  std::string response_code = "200 OK";
+  std::string extra;
+  if (!location.empty()) {
+    response_code = "301 Redirect\r\nLocation: ";
+    response_code.append(location);
+  }
+
   MockRead data_reads[] = {
-      MockRead("HTTP/1.0 200 OK\r\n"),   MockRead("Content-Encoding: "),
-      MockRead(content_encoding.data()), MockRead("\r\n\r\n"),
+      MockRead("HTTP/1.0 "),
+      MockRead(response_code.data()),
+      MockRead("\r\nContent-Encoding: "),
+      MockRead(content_encoding.data()),
+      MockRead("\r\n\r\n"),
       MockRead(SYNCHRONOUS, OK),
   };
   StaticSocketDataProvider data(data_reads, arraysize(data_reads), data_writes,
@@ -16720,16 +16731,22 @@ void CheckContentEncodingMatching(SpdySessionDependencies* session_deps,
 }
 
 TEST_F(HttpNetworkTransactionTest, MatchContentEncoding1) {
-  CheckContentEncodingMatching(&session_deps_, "gzip,sdch", "br", false);
+  CheckContentEncodingMatching(&session_deps_, "gzip,sdch", "br", "", false);
 }
 
 TEST_F(HttpNetworkTransactionTest, MatchContentEncoding2) {
-  CheckContentEncodingMatching(&session_deps_, "identity;q=1, *;q=0", "", true);
+  CheckContentEncodingMatching(&session_deps_, "identity;q=1, *;q=0", "", "",
+                               true);
 }
 
 TEST_F(HttpNetworkTransactionTest, MatchContentEncoding3) {
   CheckContentEncodingMatching(&session_deps_, "identity;q=1, *;q=0", "gzip",
-                               false);
+                               "", false);
+}
+
+TEST_F(HttpNetworkTransactionTest, MatchContentEncoding4) {
+  CheckContentEncodingMatching(&session_deps_, "identity;q=1, *;q=0", "gzip",
+                               "www.foo.com/other", true);
 }
 
 }  // namespace net

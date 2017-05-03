@@ -129,10 +129,6 @@ class NET_EXPORT_PRIVATE BidirectionalStreamQuicImpl
   // frame with data frame in the same packet if possible.
   bool send_request_headers_automatically_;
 
-  // True of this stream is waiting for the QUIC handshake to be confirmed
-  // before sending headers.
-  bool waiting_for_confirmation_;
-
   base::WeakPtrFactory<BidirectionalStreamQuicImpl> weak_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(BidirectionalStreamQuicImpl);

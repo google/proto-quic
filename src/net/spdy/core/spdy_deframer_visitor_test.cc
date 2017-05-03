@@ -19,8 +19,7 @@
 #include "net/spdy/core/spdy_protocol.h"
 #include "net/spdy/core/spdy_protocol_test_utils.h"
 #include "net/spdy/core/spdy_test_utils.h"
-
-using ::base::MakeUnique;
+#include "net/spdy/platform/api/spdy_ptr_util.h"
 
 namespace net {
 namespace test {
@@ -32,7 +31,8 @@ class SpdyDeframerVisitorTest : public ::testing::Test {
       : encoder_(SpdyFramer::ENABLE_COMPRESSION),
         decoder_(SpdyFramer::ENABLE_COMPRESSION) {
     decoder_.set_process_single_input_frame(true);
-    auto collector = MakeUnique<DeframerCallbackCollector>(&collected_frames_);
+    auto collector =
+        SpdyMakeUnique<DeframerCallbackCollector>(&collected_frames_);
     auto log_and_collect =
         SpdyDeframerVisitorInterface::LogBeforeVisiting(std::move(collector));
     deframer_ = SpdyTestDeframer::CreateConverter(std::move(log_and_collect));

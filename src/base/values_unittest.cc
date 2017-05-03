@@ -574,6 +574,113 @@ TEST(ValuesTest, DictionaryDeletion) {
   EXPECT_TRUE(dict.empty());
 }
 
+TEST(ValuesTest, DictionarySetReturnsPointer) {
+  {
+    DictionaryValue dict;
+    Value* blank_ptr = dict.Set("foo.bar", base::MakeUnique<base::Value>());
+    EXPECT_EQ(Value::Type::NONE, blank_ptr->type());
+  }
+
+  {
+    DictionaryValue dict;
+    Value* blank_ptr = dict.SetWithoutPathExpansion(
+        "foo.bar", base::MakeUnique<base::Value>());
+    EXPECT_EQ(Value::Type::NONE, blank_ptr->type());
+  }
+
+  {
+    DictionaryValue dict;
+    Value* bool_ptr = dict.SetBooleanWithoutPathExpansion("foo.bar", false);
+    EXPECT_EQ(Value::Type::BOOLEAN, bool_ptr->type());
+    EXPECT_FALSE(bool_ptr->GetBool());
+  }
+
+  {
+    DictionaryValue dict;
+    Value* int_ptr = dict.SetInteger("foo.bar", 42);
+    EXPECT_EQ(Value::Type::INTEGER, int_ptr->type());
+    EXPECT_EQ(42, int_ptr->GetInt());
+  }
+
+  {
+    DictionaryValue dict;
+    Value* int_ptr = dict.SetIntegerWithoutPathExpansion("foo.bar", 123);
+    EXPECT_EQ(Value::Type::INTEGER, int_ptr->type());
+    EXPECT_EQ(123, int_ptr->GetInt());
+  }
+
+  {
+    DictionaryValue dict;
+    Value* double_ptr = dict.SetDouble("foo.bar", 3.142);
+    EXPECT_EQ(Value::Type::DOUBLE, double_ptr->type());
+    EXPECT_EQ(3.142, double_ptr->GetDouble());
+  }
+
+  {
+    DictionaryValue dict;
+    Value* double_ptr = dict.SetDoubleWithoutPathExpansion("foo.bar", 2.718);
+    EXPECT_EQ(Value::Type::DOUBLE, double_ptr->type());
+    EXPECT_EQ(2.718, double_ptr->GetDouble());
+  }
+
+  {
+    DictionaryValue dict;
+    Value* string_ptr = dict.SetString("foo.bar", "foo");
+    EXPECT_EQ(Value::Type::STRING, string_ptr->type());
+    EXPECT_EQ("foo", string_ptr->GetString());
+  }
+
+  {
+    DictionaryValue dict;
+    Value* string_ptr = dict.SetStringWithoutPathExpansion("foo.bar", "bar");
+    EXPECT_EQ(Value::Type::STRING, string_ptr->type());
+    EXPECT_EQ("bar", string_ptr->GetString());
+  }
+
+  {
+    DictionaryValue dict;
+    Value* string16_ptr = dict.SetString("foo.bar", ASCIIToUTF16("baz"));
+    EXPECT_EQ(Value::Type::STRING, string16_ptr->type());
+    EXPECT_EQ("baz", string16_ptr->GetString());
+  }
+
+  {
+    DictionaryValue dict;
+    Value* string16_ptr =
+        dict.SetStringWithoutPathExpansion("foo.bar", ASCIIToUTF16("qux"));
+    EXPECT_EQ(Value::Type::STRING, string16_ptr->type());
+    EXPECT_EQ("qux", string16_ptr->GetString());
+  }
+
+  {
+    DictionaryValue dict;
+    DictionaryValue* dict_ptr = dict.SetDictionary(
+        "foo.bar", base::MakeUnique<base::DictionaryValue>());
+    EXPECT_EQ(Value::Type::DICTIONARY, dict_ptr->type());
+  }
+
+  {
+    DictionaryValue dict;
+    DictionaryValue* dict_ptr = dict.SetDictionaryWithoutPathExpansion(
+        "foo.bar", base::MakeUnique<base::DictionaryValue>());
+    EXPECT_EQ(Value::Type::DICTIONARY, dict_ptr->type());
+  }
+
+  {
+    DictionaryValue dict;
+    ListValue* list_ptr =
+        dict.SetList("foo.bar", base::MakeUnique<base::ListValue>());
+    EXPECT_EQ(Value::Type::LIST, list_ptr->type());
+  }
+
+  {
+    DictionaryValue dict;
+    ListValue* list_ptr = dict.SetListWithoutPathExpansion(
+        "foo.bar", base::MakeUnique<base::ListValue>());
+    EXPECT_EQ(Value::Type::LIST, list_ptr->type());
+  }
+}
+
 TEST(ValuesTest, DictionaryRemoval) {
   std::string key = "test";
   std::unique_ptr<Value> removed_item;

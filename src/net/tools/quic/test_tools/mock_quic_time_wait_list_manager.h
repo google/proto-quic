@@ -36,12 +36,10 @@ class MockTimeWaitListManager : public QuicTimeWaitListManager {
         termination_packets);
   }
 
-  MOCK_METHOD5(ProcessPacket,
+  MOCK_METHOD3(ProcessPacket,
                void(const QuicSocketAddress& server_address,
                     const QuicSocketAddress& client_address,
-                    QuicConnectionId connection_id,
-                    QuicPacketNumber packet_number,
-                    const QuicEncryptedPacket& packet));
+                    QuicConnectionId connection_id));
 
   MOCK_METHOD4(SendVersionNegotiationPacket,
                void(QuicConnectionId connection_id,

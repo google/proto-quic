@@ -117,6 +117,8 @@ def code_search(test, cs_base_url):
 
 def status_class(status):
   """Returns HTML class for test status."""
+  if not status:
+    return 'failure unknwon'
   status = status.lower()
   if status not in ('success', 'skipped'):
     return 'failure %s' % status
@@ -151,7 +153,8 @@ def create_test_table(results_dict, cs_base_url):
         test_run = []
 
       test_run.extend([
-          cell(data=result['status'],             # status
+          cell(data=result['status'] or 'UNKNOWN',
+                                                  # status
                html_class=('center %s' %
                   status_class(result['status']))),
           cell(data=result['elapsed_time_ms']),   # elapsed_time_ms
@@ -306,6 +309,7 @@ def upload_to_google_bucket(html, test_name, builder_name, build_number,
 
   return '%s/%s/%s' % (server_url, bucket, dest)
 
+
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('--json-file', help='Path of json file.')
@@ -347,16 +351,21 @@ def main():
   if ((args.build_properties is None) ==
          (args.build_number is None or args.builder_name is None)):
     raise parser.error('Exactly one of build_perperties or '
-                    '(build_number or builder_names) should be given.')
+                       '(build_number or builder_name) should be given.')
 
   if (args.build_number is None) != (args.builder_name is None):
     raise parser.error('args.build_number and args.builder_name '
-                    'has to be be given together'
-                    'or not given at all.')
+                       'has to be be given together'
+                       'or not given at all.')
 
-  if (len(args.positional) == 0) == (args.json_file is None):
+  if len(args.positional) == 0 and args.json_file is None:
+    if args.output_json:
+        with open(args.output_json, 'w') as f:
+          json.dump({}, f)
+    return
+  elif len(args.positional) != 0 and args.json_file:
     raise parser.error('Exactly one of args.positional and '
-                    'args.json_file should be given.')
+                       'args.json_file should be given.')
 
   if args.build_properties:
     build_properties = json.loads(args.build_properties)

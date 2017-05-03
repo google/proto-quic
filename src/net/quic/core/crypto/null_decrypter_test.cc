@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 #include "net/quic/core/crypto/null_decrypter.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 
 namespace net {
 namespace test {
 
-class NullDecrypterTest : public ::testing::TestWithParam<bool> {};
+class NullDecrypterTest : public QuicTestWithParam<bool> {};
 
 TEST_F(NullDecrypterTest, DecryptClient) {
   unsigned char expected[] = {

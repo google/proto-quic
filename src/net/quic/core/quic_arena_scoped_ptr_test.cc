@@ -5,8 +5,7 @@
 #include "net/quic/core/quic_arena_scoped_ptr.h"
 
 #include "net/quic/core/quic_one_block_arena.h"
-#include "testing/gmock/include/gmock/gmock.h"
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 namespace net {
 namespace {
@@ -22,7 +21,7 @@ struct TestObject {
   std::vector<char> buffer;
 };
 
-class QuicArenaScopedPtrParamTest : public ::testing::TestWithParam<TestParam> {
+class QuicArenaScopedPtrParamTest : public QuicTestWithParam<TestParam> {
  protected:
   QuicArenaScopedPtr<TestObject> CreateObject(uintptr_t value) {
     QuicArenaScopedPtr<TestObject> ptr;
@@ -48,7 +47,7 @@ INSTANTIATE_TEST_CASE_P(QuicArenaScopedPtrParamTest,
                         testing::Values(TestParam::kFromHeap,
                                         TestParam::kFromArena));
 
-TEST(QuicArenaScopedPtrTest, NullObjects) {
+TEST_P(QuicArenaScopedPtrParamTest, NullObjects) {
   QuicArenaScopedPtr<TestObject> def;
   QuicArenaScopedPtr<TestObject> null(nullptr);
   EXPECT_EQ(def, null);
@@ -56,7 +55,7 @@ TEST(QuicArenaScopedPtrTest, NullObjects) {
   EXPECT_EQ(null, nullptr);
 }
 
-TEST(QuicArenaScopedPtrTest, FromArena) {
+TEST_P(QuicArenaScopedPtrParamTest, FromArena) {
   QuicOneBlockArena<1024> arena_;
   EXPECT_TRUE(arena_.New<TestObject>(0).is_from_arena());
   EXPECT_FALSE(

@@ -9,15 +9,15 @@
 #include <algorithm>
 #include <functional>
 #include <map>
+#include <unordered_map>
 
-#include "base/containers/hash_tables.h"
 #include "base/logging.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
 
 TEST(SmallMap, General) {
-  small_map<hash_map<int, int>> m;
+  small_map<std::unordered_map<int, int>> m;
 
   EXPECT_TRUE(m.empty());
 
@@ -35,7 +35,7 @@ TEST(SmallMap, General) {
   EXPECT_EQ(m[0], 5);
   EXPECT_FALSE(m.UsingFullMap());
 
-  small_map<hash_map<int, int>>::iterator iter(m.begin());
+  small_map<std::unordered_map<int, int>>::iterator iter(m.begin());
   ASSERT_TRUE(iter != m.end());
   EXPECT_EQ(iter->first, 0);
   EXPECT_EQ(iter->second, 5);
@@ -66,26 +66,26 @@ TEST(SmallMap, General) {
   }
   EXPECT_TRUE(iter == m.end());
 
-  const small_map<hash_map<int, int>>& ref = m;
+  const small_map<std::unordered_map<int, int>>& ref = m;
   EXPECT_TRUE(ref.find(1234) != m.end());
   EXPECT_TRUE(ref.find(5678) == m.end());
 }
 
 TEST(SmallMap, PostFixIteratorIncrement) {
-  small_map<hash_map<int, int>> m;
+  small_map<std::unordered_map<int, int>> m;
   m[0] = 5;
   m[2] = 3;
 
   {
-    small_map<hash_map<int, int>>::iterator iter(m.begin());
-    small_map<hash_map<int, int>>::iterator last(iter++);
+    small_map<std::unordered_map<int, int>>::iterator iter(m.begin());
+    small_map<std::unordered_map<int, int>>::iterator last(iter++);
     ++last;
     EXPECT_TRUE(last == iter);
   }
 
   {
-    small_map<hash_map<int, int>>::const_iterator iter(m.begin());
-    small_map<hash_map<int, int>>::const_iterator last(iter++);
+    small_map<std::unordered_map<int, int>>::const_iterator iter(m.begin());
+    small_map<std::unordered_map<int, int>>::const_iterator last(iter++);
     ++last;
     EXPECT_TRUE(last == iter);
   }
@@ -93,17 +93,17 @@ TEST(SmallMap, PostFixIteratorIncrement) {
 
 // Based on the General testcase.
 TEST(SmallMap, CopyConstructor) {
-  small_map<hash_map<int, int>> src;
+  small_map<std::unordered_map<int, int>> src;
 
   {
-    small_map<hash_map<int, int>> m(src);
+    small_map<std::unordered_map<int, int>> m(src);
     EXPECT_TRUE(m.empty());
   }
 
   src[0] = 5;
 
   {
-    small_map<hash_map<int, int>> m(src);
+    small_map<std::unordered_map<int, int>> m(src);
     EXPECT_FALSE(m.empty());
     EXPECT_EQ(m.size(), 1u);
   }
@@ -111,7 +111,7 @@ TEST(SmallMap, CopyConstructor) {
   src[9] = 2;
 
   {
-    small_map<hash_map<int, int>> m(src);
+    small_map<std::unordered_map<int, int>> m(src);
     EXPECT_FALSE(m.empty());
     EXPECT_EQ(m.size(), 2u);
 
@@ -125,7 +125,7 @@ TEST(SmallMap, CopyConstructor) {
   src[-5] = 6;
 
   {
-    small_map<hash_map<int, int>> m(src);
+    small_map<std::unordered_map<int, int>> m(src);
     EXPECT_EQ(m[   9],  2);
     EXPECT_EQ(m[   0],  5);
     EXPECT_EQ(m[1234], 90);
@@ -156,8 +156,8 @@ static bool SmallMapEqual(small_map<inner> const& a,
 }
 
 TEST(SmallMap, AssignmentOperator) {
-  small_map<hash_map<int, int>> src_small;
-  small_map<hash_map<int, int>> src_large;
+  small_map<std::unordered_map<int, int>> src_small;
+  small_map<std::unordered_map<int, int>> src_large;
 
   src_small[1] = 20;
   src_small[2] = 21;
@@ -173,13 +173,13 @@ TEST(SmallMap, AssignmentOperator) {
   EXPECT_TRUE(src_large.UsingFullMap());
 
   // Assignments to empty.
-  small_map<hash_map<int, int>> dest_small;
+  small_map<std::unordered_map<int, int>> dest_small;
   dest_small = src_small;
   EXPECT_TRUE(SmallMapEqual(dest_small, src_small));
   EXPECT_EQ(dest_small.UsingFullMap(),
             src_small.UsingFullMap());
 
-  small_map<hash_map<int, int>> dest_large;
+  small_map<std::unordered_map<int, int>> dest_large;
   dest_large = src_large;
   EXPECT_TRUE(SmallMapEqual(dest_large, src_large));
   EXPECT_EQ(dest_large.UsingFullMap(),
@@ -202,13 +202,13 @@ TEST(SmallMap, AssignmentOperator) {
 }
 
 TEST(SmallMap, Insert) {
-  small_map<hash_map<int, int>> sm;
+  small_map<std::unordered_map<int, int>> sm;
 
   // loop through the transition from small map to map.
   for (int i = 1; i <= 10; ++i) {
     VLOG(1) << "Iteration " << i;
     // insert an element
-    std::pair<small_map<hash_map<int, int>>::iterator, bool> ret;
+    std::pair<small_map<std::unordered_map<int, int>>::iterator, bool> ret;
     ret = sm.insert(std::make_pair(i, 100*i));
     EXPECT_TRUE(ret.second);
     EXPECT_TRUE(ret.first == sm.find(i));
@@ -225,7 +225,7 @@ TEST(SmallMap, Insert) {
 
     // check the state of the map.
     for (int j = 1; j <= i; ++j) {
-      small_map<hash_map<int, int>>::iterator it = sm.find(j);
+      small_map<std::unordered_map<int, int>>::iterator it = sm.find(j);
       EXPECT_TRUE(it != sm.end());
       EXPECT_EQ(it->first, j);
       EXPECT_EQ(it->second, j * 100);
@@ -239,12 +239,12 @@ TEST(SmallMap, InsertRange) {
   // loop through the transition from small map to map.
   for (int elements = 0; elements <= 10; ++elements) {
     VLOG(1) << "Elements " << elements;
-    hash_map<int, int> normal_map;
+    std::unordered_map<int, int> normal_map;
     for (int i = 1; i <= elements; ++i) {
       normal_map.insert(std::make_pair(i, 100*i));
     }
 
-    small_map<hash_map<int, int>> sm;
+    small_map<std::unordered_map<int, int>> sm;
     sm.insert(normal_map.begin(), normal_map.end());
     EXPECT_EQ(normal_map.size(), sm.size());
     for (int i = 1; i <= elements; ++i) {
@@ -257,8 +257,8 @@ TEST(SmallMap, InsertRange) {
 }
 
 TEST(SmallMap, Erase) {
-  small_map<hash_map<std::string, int>> m;
-  small_map<hash_map<std::string, int>>::iterator iter;
+  small_map<std::unordered_map<std::string, int>> m;
+  small_map<std::unordered_map<std::string, int>>::iterator iter;
 
   m["monday"] = 1;
   m["tuesday"] = 2;
@@ -331,8 +331,8 @@ TEST(SmallMap, Erase) {
 }
 
 TEST(SmallMap, EraseReturnsIteratorFollowingRemovedElement) {
-  small_map<hash_map<std::string, int>> m;
-  small_map<hash_map<std::string, int>>::iterator iter;
+  small_map<std::unordered_map<std::string, int>> m;
+  small_map<std::unordered_map<std::string, int>>::iterator iter;
 
   m["a"] = 0;
   m["b"] = 1;
@@ -433,7 +433,7 @@ TEST(SmallMap, NonHashMap) {
 TEST(SmallMap, DefaultEqualKeyWorks) {
   // If these tests compile, they pass. The EXPECT calls are only there to avoid
   // unused variable warnings.
-  small_map<hash_map<int, int>> hm;
+  small_map<std::unordered_map<int, int>> hm;
   EXPECT_EQ(0u, hm.size());
   small_map<std::map<int, int>> m;
   EXPECT_EQ(0u, m.size());
@@ -441,25 +441,24 @@ TEST(SmallMap, DefaultEqualKeyWorks) {
 
 namespace {
 
-class hash_map_add_item : public hash_map<int, int> {
+class unordered_map_add_item : public std::unordered_map<int, int> {
  public:
-  hash_map_add_item() {}
-  explicit hash_map_add_item(const std::pair<int, int>& item) {
+  unordered_map_add_item() {}
+  explicit unordered_map_add_item(const std::pair<int, int>& item) {
     insert(item);
   }
 };
 
-void InitMap(ManualConstructor<hash_map_add_item>* map_ctor) {
+void InitMap(ManualConstructor<unordered_map_add_item>* map_ctor) {
   map_ctor->Init(std::make_pair(0, 0));
 }
 
-class hash_map_add_item_initializer {
+class unordered_map_add_item_initializer {
  public:
-  explicit hash_map_add_item_initializer(int item_to_add)
+  explicit unordered_map_add_item_initializer(int item_to_add)
       : item_(item_to_add) {}
-  hash_map_add_item_initializer()
-      : item_(0) {}
-  void operator()(ManualConstructor<hash_map_add_item>* map_ctor) const {
+  unordered_map_add_item_initializer() : item_(0) {}
+  void operator()(ManualConstructor<unordered_map_add_item>* map_ctor) const {
     map_ctor->Init(std::make_pair(item_, item_));
   }
 
@@ -469,8 +468,8 @@ class hash_map_add_item_initializer {
 }  // anonymous namespace
 
 TEST(SmallMap, SubclassInitializationWithFunctionPointer) {
-  small_map<hash_map_add_item, 4, std::equal_to<int>,
-            void (&)(ManualConstructor<hash_map_add_item>*)>
+  small_map<unordered_map_add_item, 4, std::equal_to<int>,
+            void (&)(ManualConstructor<unordered_map_add_item>*)>
       m(InitMap);
 
   EXPECT_TRUE(m.empty());
@@ -490,9 +489,9 @@ TEST(SmallMap, SubclassInitializationWithFunctionPointer) {
 }
 
 TEST(SmallMap, SubclassInitializationWithFunctionObject) {
-  small_map<hash_map_add_item, 4, std::equal_to<int>,
-            hash_map_add_item_initializer>
-      m(hash_map_add_item_initializer(-1));
+  small_map<unordered_map_add_item, 4, std::equal_to<int>,
+            unordered_map_add_item_initializer>
+      m(unordered_map_add_item_initializer(-1));
 
   EXPECT_TRUE(m.empty());
 

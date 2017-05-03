@@ -4,7 +4,7 @@
 
 #include "net/quic/platform/api/quic_endian.h"
 
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 namespace net {
 namespace test {
@@ -17,7 +17,9 @@ const uint32_t k32BitSwappedTestData = 0xddccbbaa;
 const uint64_t k64BitTestData = 0xaabbccdd44332211;
 const uint64_t k64BitSwappedTestData = 0x11223344ddccbbaa;
 
-TEST(QuicEndianTest, HostToNet) {
+class QuicEndianTest : public QuicTest {};
+
+TEST_F(QuicEndianTest, HostToNet) {
   if (QuicEndian::HostIsLittleEndian()) {
     EXPECT_EQ(k16BitSwappedTestData, QuicEndian::HostToNet16(k16BitTestData));
     EXPECT_EQ(k32BitSwappedTestData, QuicEndian::HostToNet32(k32BitTestData));
@@ -29,7 +31,7 @@ TEST(QuicEndianTest, HostToNet) {
   }
 }
 
-TEST(QuicEndianTest, NetToHost) {
+TEST_F(QuicEndianTest, NetToHost) {
   if (QuicEndian::HostIsLittleEndian()) {
     EXPECT_EQ(k16BitTestData, QuicEndian::NetToHost16(k16BitSwappedTestData));
     EXPECT_EQ(k32BitTestData, QuicEndian::NetToHost32(k32BitSwappedTestData));

@@ -11,7 +11,8 @@ import re
 # E.g.:
 # build obj/.../foo.o: cxx gen/.../foo.cc || obj/.../foo.inputdeps.stamp
 # build obj/.../libfoo.a: alink obj/.../a.o obj/.../b.o |
-_REGEX = re.compile(r'build ([^:]+?\.[ao]): \w+ (.*?)(?: \||\n|$)')
+# build ./libchrome.so ./lib.unstripped/libchrome.so: solink a.o b.o ...
+_REGEX = re.compile(r'build ([^:]+): \w+ (.*?)(?: \||\n|$)')
 
 
 class _SourceMapper(object):
@@ -55,37 +56,62 @@ class _SourceMapper(object):
     return len(self._unmatched_paths)
 
 
-def _ParseOneFile(lines, dep_map):
+def _ParseNinjaPathList(path_list):
+  ret = path_list.replace('\\ ', '\b')
+  return [s.replace('\b', ' ') for s in ret.split(' ')]
+
+
+def _ParseOneFile(lines, dep_map, elf_path):
   sub_ninjas = []
+  elf_inputs = None
   for line in lines:
     if line.startswith('subninja '):
       sub_ninjas.append(line[9:-1])
       continue
     m = _REGEX.match(line)
     if m:
-      output, srcs = m.groups()
-      output = output.replace('\\ ', ' ')
-      assert output not in dep_map, 'Duplicate output: ' + output
-      if output[-1] == 'o':
-        dep_map[output] = srcs.replace('\\ ', ' ')
-      else:
-        srcs = srcs.replace('\\ ', '\b')
-        obj_paths = (s.replace('\b', ' ') for s in srcs.split(' '))
-        dep_map[output] = {os.path.basename(p): p for p in obj_paths}
-  return sub_ninjas
+      outputs, srcs = m.groups()
+      if len(outputs) > 2 and outputs[-2] == '.' and outputs[-1] in 'ao':
+        output = outputs.replace('\\ ', ' ')
+        assert output not in dep_map, 'Duplicate output: ' + output
+        if output[-1] == 'o':
+          dep_map[output] = srcs.replace('\\ ', ' ')
+        else:
+          obj_paths = _ParseNinjaPathList(srcs)
+          dep_map[output] = {os.path.basename(p): p for p in obj_paths}
+      elif elf_path and elf_path in outputs:
+        properly_parsed = [
+            os.path.normpath(p) for p in _ParseNinjaPathList(outputs)]
+        if elf_path in properly_parsed:
+          elf_inputs = _ParseNinjaPathList(srcs)
+  return sub_ninjas, elf_inputs
 
 
-def Parse(output_directory):
+def Parse(output_directory, elf_path):
+  """Parses build.ninja and subninjas.
+
+  Args:
+    output_directory: Where to find the root build.ninja.
+    elf_path: Path to elf file to find inputs for.
+
+  Returns: A tuple of (source_mapper, elf_inputs).
+  """
+  if elf_path:
+    elf_path = os.path.relpath(elf_path, output_directory)
   to_parse = ['build.ninja']
   seen_paths = set(to_parse)
   dep_map = {}
+  elf_inputs = None
   while to_parse:
     path = os.path.join(output_directory, to_parse.pop())
     with open(path) as obj:
-      sub_ninjas = _ParseOneFile(obj, dep_map)
+      sub_ninjas, found_elf_inputs = _ParseOneFile(obj, dep_map, elf_path)
+      if found_elf_inputs:
+        assert not elf_inputs, 'Found multiple inputs for elf_path ' + elf_path
+        elf_inputs = found_elf_inputs
     for subpath in sub_ninjas:
       assert subpath not in seen_paths, 'Double include of ' + subpath
       seen_paths.add(subpath)
     to_parse.extend(sub_ninjas)
 
-  return _SourceMapper(dep_map, len(seen_paths))
+  return _SourceMapper(dep_map, len(seen_paths)), elf_inputs

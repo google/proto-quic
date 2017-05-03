@@ -14,8 +14,7 @@
 #include "net/quic/core/frames/quic_stop_waiting_frame.h"
 #include "net/quic/core/frames/quic_stream_frame.h"
 #include "net/quic/core/frames/quic_window_update_frame.h"
-#include "testing/gmock/include/gmock/gmock.h"
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/quic/platform/api/quic_test.h"
 
 namespace net {
 namespace test {
@@ -23,7 +22,9 @@ namespace {
 
 using testing::_;
 
-TEST(QuicFramesTest, AckFrameToString) {
+class QuicFramesTest : public QuicTest {};
+
+TEST_F(QuicFramesTest, AckFrameToString) {
   QuicAckFrame frame;
   frame.largest_observed = 2;
   frame.ack_delay_time = QuicTime::Delta::FromMicroseconds(3);
@@ -39,7 +40,7 @@ TEST(QuicFramesTest, AckFrameToString) {
       stream.str());
 }
 
-TEST(QuicFramesTest, PaddingFrameToString) {
+TEST_F(QuicFramesTest, PaddingFrameToString) {
   QuicPaddingFrame frame;
   frame.num_padding_bytes = 1;
   std::ostringstream stream;
@@ -47,7 +48,7 @@ TEST(QuicFramesTest, PaddingFrameToString) {
   EXPECT_EQ("{ num_padding_bytes: 1 }\n", stream.str());
 }
 
-TEST(QuicFramesTest, RstStreamFrameToString) {
+TEST_F(QuicFramesTest, RstStreamFrameToString) {
   QuicRstStreamFrame frame;
   frame.stream_id = 1;
   frame.error_code = QUIC_STREAM_CANCELLED;
@@ -56,7 +57,7 @@ TEST(QuicFramesTest, RstStreamFrameToString) {
   EXPECT_EQ("{ stream_id: 1, error_code: 6 }\n", stream.str());
 }
 
-TEST(QuicFramesTest, ConnectionCloseFrameToString) {
+TEST_F(QuicFramesTest, ConnectionCloseFrameToString) {
   QuicConnectionCloseFrame frame;
   frame.error_code = QUIC_NETWORK_IDLE_TIMEOUT;
   frame.error_details = "No recent network activity.";
@@ -67,7 +68,7 @@ TEST(QuicFramesTest, ConnectionCloseFrameToString) {
       stream.str());
 }
 
-TEST(QuicFramesTest, GoAwayFrameToString) {
+TEST_F(QuicFramesTest, GoAwayFrameToString) {
   QuicGoAwayFrame frame;
   frame.error_code = QUIC_NETWORK_IDLE_TIMEOUT;
   frame.last_good_stream_id = 2;
@@ -79,7 +80,7 @@ TEST(QuicFramesTest, GoAwayFrameToString) {
       stream.str());
 }
 
-TEST(QuicFramesTest, WindowUpdateFrameToString) {
+TEST_F(QuicFramesTest, WindowUpdateFrameToString) {
   QuicWindowUpdateFrame frame;
   std::ostringstream stream;
   frame.stream_id = 1;
@@ -88,7 +89,7 @@ TEST(QuicFramesTest, WindowUpdateFrameToString) {
   EXPECT_EQ("{ stream_id: 1, byte_offset: 2 }\n", stream.str());
 }
 
-TEST(QuicFramesTest, BlockedFrameToString) {
+TEST_F(QuicFramesTest, BlockedFrameToString) {
   QuicBlockedFrame frame;
   frame.stream_id = 1;
   std::ostringstream stream;
@@ -96,7 +97,7 @@ TEST(QuicFramesTest, BlockedFrameToString) {
   EXPECT_EQ("{ stream_id: 1 }\n", stream.str());
 }
 
-TEST(QuicFramesTest, StreamFrameToString) {
+TEST_F(QuicFramesTest, StreamFrameToString) {
   QuicStreamFrame frame;
   frame.stream_id = 1;
   frame.fin = false;
@@ -107,7 +108,7 @@ TEST(QuicFramesTest, StreamFrameToString) {
   EXPECT_EQ("{ stream_id: 1, fin: 0, offset: 2, length: 3 }\n", stream.str());
 }
 
-TEST(QuicFramesTest, StopWaitingFrameToString) {
+TEST_F(QuicFramesTest, StopWaitingFrameToString) {
   QuicStopWaitingFrame frame;
   frame.least_unacked = 2;
   std::ostringstream stream;
@@ -115,7 +116,7 @@ TEST(QuicFramesTest, StopWaitingFrameToString) {
   EXPECT_EQ("{ least_unacked: 2 }\n", stream.str());
 }
 
-TEST(QuicFramesTest, IsAwaitingPacket) {
+TEST_F(QuicFramesTest, IsAwaitingPacket) {
   QuicAckFrame ack_frame1;
   ack_frame1.largest_observed = 10u;
   ack_frame1.packets.Add(1, 11);
@@ -136,7 +137,7 @@ TEST(QuicFramesTest, IsAwaitingPacket) {
   EXPECT_TRUE(IsAwaitingPacket(ack_frame2, 50u, 20u));
 }
 
-TEST(QuicFramesTest, RemoveSmallestInterval) {
+TEST_F(QuicFramesTest, RemoveSmallestInterval) {
   QuicAckFrame ack_frame1;
   ack_frame1.largest_observed = 100u;
   ack_frame1.packets.Add(51, 60);
@@ -153,8 +154,10 @@ TEST(QuicFramesTest, RemoveSmallestInterval) {
   EXPECT_EQ(99u, ack_frame1.packets.Max());
 }
 
+class PacketNumberQueueTest : public QuicTest {};
+
 // Tests that a queue contains the expected data after calls to Add().
-TEST(PacketNumberQueueTest, AddRange) {
+TEST_F(PacketNumberQueueTest, AddRange) {
   PacketNumberQueue queue;
   queue.Add(1, 51);
   queue.Add(53);
@@ -176,7 +179,7 @@ TEST(PacketNumberQueueTest, AddRange) {
 }
 
 // Tests that a queue contains the expected data after calls to Remove().
-TEST(PacketNumberQueueTest, Removal) {
+TEST_F(PacketNumberQueueTest, Removal) {
   PacketNumberQueue queue;
   queue.Add(0, 100);
 
@@ -203,7 +206,7 @@ TEST(PacketNumberQueueTest, Removal) {
 }
 
 // Tests that a queue is empty when all of its elements are removed.
-TEST(PacketNumberQueueTest, Empty) {
+TEST_F(PacketNumberQueueTest, Empty) {
   PacketNumberQueue queue;
   EXPECT_TRUE(queue.Empty());
   EXPECT_EQ(0u, queue.NumPacketsSlow());
@@ -215,7 +218,7 @@ TEST(PacketNumberQueueTest, Empty) {
 }
 
 // Tests that logging the state of a PacketNumberQueue does not crash.
-TEST(PacketNumberQueueTest, LogDoesNotCrash) {
+TEST_F(PacketNumberQueueTest, LogDoesNotCrash) {
   std::ostringstream oss;
   PacketNumberQueue queue;
   oss << queue;
@@ -226,7 +229,7 @@ TEST(PacketNumberQueueTest, LogDoesNotCrash) {
 }
 
 // Tests that the iterators returned from a packet queue iterate over the queue.
-TEST(PacketNumberQueueTest, Iterators) {
+TEST_F(PacketNumberQueueTest, Iterators) {
   PacketNumberQueue queue;
   queue.Add(1, 100);
 
@@ -239,7 +242,7 @@ TEST(PacketNumberQueueTest, Iterators) {
   EXPECT_EQ(expected_intervals, actual_intervals);
 }
 
-TEST(PacketNumberQueueTest, LowerBoundEquals) {
+TEST_F(PacketNumberQueueTest, LowerBoundEquals) {
   PacketNumberQueue queue;
   queue.Add(1, 100);
 
@@ -251,7 +254,7 @@ TEST(PacketNumberQueueTest, LowerBoundEquals) {
   EXPECT_TRUE(queue.end() == it);
 }
 
-TEST(PacketNumberQueueTest, LowerBoundGreater) {
+TEST_F(PacketNumberQueueTest, LowerBoundGreater) {
   PacketNumberQueue queue;
   queue.Add(15, 25);
   queue.Add(50, 100);
@@ -262,7 +265,7 @@ TEST(PacketNumberQueueTest, LowerBoundGreater) {
   EXPECT_EQ(25u, it->max());
 }
 
-TEST(PacketNumberQueueTest, IntervalLengthAndRemoveInterval) {
+TEST_F(PacketNumberQueueTest, IntervalLengthAndRemoveInterval) {
   PacketNumberQueue queue;
   queue.Add(1, 10);
   queue.Add(20, 30);
@@ -275,7 +278,7 @@ TEST(PacketNumberQueueTest, IntervalLengthAndRemoveInterval) {
   EXPECT_FALSE(queue.Contains(20));
 }
 
-TEST(PacketNumberQueueTest, Complement) {
+TEST_F(PacketNumberQueueTest, Complement) {
   PacketNumberQueue queue;
   queue.Add(1, 10);
   queue.Add(12, 20);

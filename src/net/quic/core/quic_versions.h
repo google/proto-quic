@@ -29,8 +29,10 @@ enum QuicVersion {
   QUIC_VERSION_37 = 37,  // Add perspective into null encryption.
   QUIC_VERSION_38 = 38,  // PADDING frame is a 1-byte frame with type 0x00.
                          // Respect NSTP connection option.
-  QUIC_VERSION_39 = 39,  // Experimental support for HTTP stream pairs
-                         // and HPACK HoL avoidance.
+  QUIC_VERSION_39 = 39,  // Integers and floating numbers are written in big
+                         // endian. Dot not ack acks. Send a connection level
+                         // WINDOW_UPDATE every 20 sent packets which do not
+                         // contain retransmittable frames.
 
   // IMPORTANT: if you are adding to this list, follow the instructions at
   // http://sites/quic/adding-and-removing-versions

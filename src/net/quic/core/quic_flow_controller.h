@@ -83,6 +83,9 @@ class QUIC_EXPORT_PRIVATE QuicFlowController
   // Returns true if flow control receive limits have been violated by the peer.
   bool FlowControlViolation();
 
+  // Inform the peer of new receive window.
+  void SendWindowUpdate();
+
   QuicByteCount bytes_consumed() const { return bytes_consumed_; }
 
   QuicStreamOffset highest_received_byte_offset() const {
@@ -113,7 +116,8 @@ class QUIC_EXPORT_PRIVATE QuicFlowController
   void MaybeIncreaseMaxWindowSize();
 
   // Updates the current offset and sends a window update frame.
-  void SendWindowUpdate(QuicStreamOffset available_window);
+  void UpdateReceiveWindowOffsetAndSendWindowUpdate(
+      QuicStreamOffset available_window);
 
   // Double the window size as long as we haven't hit the max window size.
   void IncreaseWindowSize();

@@ -6,7 +6,7 @@
 #define BASE_BARRIER_CLOSURE_H_
 
 #include "base/base_export.h"
-#include "base/callback_forward.h"
+#include "base/callback.h"
 
 namespace base {
 
@@ -19,11 +19,9 @@ namespace base {
 // maintained as a base::AtomicRefCount. |done_closure| will be run on
 // the thread that calls the final Run() on the returned closures.
 //
-// |done_closure| is also Reset() on the final calling thread but due to the
-// refcounted nature of callbacks, it is hard to know what thread resources
-// will be released on.
-BASE_EXPORT base::Closure BarrierClosure(int num_closures,
-                                         const base::Closure& done_closure);
+// |done_closure| is also cleared on the final calling thread.
+BASE_EXPORT RepeatingClosure BarrierClosure(int num_closures,
+                                            OnceClosure done_closure);
 
 }  // namespace base
 

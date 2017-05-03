@@ -17,6 +17,7 @@ import sys
 
 import archive
 import describe
+import diff
 import file_format
 import match_util
 import models
@@ -67,7 +68,7 @@ class _Session(object):
   def __init__(self, size_infos, lazy_paths):
     self._variables = {
         'Print': self._PrintFunc,
-        'Diff': models.Diff,
+        'Diff': diff.Diff,
         'Disassemble': self._DisassembleFunc,
         'ExpandRegex': match_util.ExpandRegexIdentifierPlaceholder,
         'ShowExamples': self._ShowExamplesFunc,

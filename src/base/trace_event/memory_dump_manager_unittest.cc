@@ -116,10 +116,8 @@ void PostTaskAndWait(const tracked_objects::Location& from_here,
   event.Wait();
 }
 
-// Adapts a ProcessMemoryDumpCallback into a GlobalMemoryDumpCallback by
-// trimming off the result argument and calling the global callback.
-// TODO (fmeawad): we should keep the results for verification, but currently
-// all results are empty.
+// Adapts a ProcessMemoryDumpCallback into a GlobalMemoryDumpCallback
+// and keeps around the process-local result.
 void ProcessDumpCallbackAdapter(
     GlobalMemoryDumpCallback callback,
     uint64_t dump_guid,
@@ -248,6 +246,7 @@ class MemoryDumpManagerTest : public testing::Test {
     last_callback_success_ = false;
     message_loop_.reset(new MessageLoop());
     mdm_.reset(new MemoryDumpManager());
+    results_.clear();
     MemoryDumpManager::SetInstanceForTesting(mdm_.get());
     ASSERT_EQ(mdm_.get(), MemoryDumpManager::GetInstance());
   }
@@ -310,13 +309,31 @@ class MemoryDumpManagerTest : public testing::Test {
     return MemoryDumpManager::kMaxConsecutiveFailuresCount;
   }
 
+  const std::vector<MemoryDumpCallbackResult>* GetResults() const {
+    return &results_;
+  }
+
   const MemoryDumpProvider::Options kDefaultOptions;
   std::unique_ptr<MemoryDumpManager> mdm_;
   GlobalMemoryDumpHandler global_dump_handler_;
   bool last_callback_success_;
 
+  // Adapts a ProcessMemoryDumpCallback into a GlobalMemoryDumpCallback by
+  // trimming off the result argument and calling the global callback.
+  void ProcessDumpRecordingCallbackAdapter(
+      GlobalMemoryDumpCallback callback,
+      uint64_t dump_guid,
+      bool success,
+      const base::Optional<MemoryDumpCallbackResult>& result) {
+    if (result.has_value()) {
+      results_.push_back(result.value());
+    }
+    callback.Run(dump_guid, success);
+  }
+
  private:
   std::unique_ptr<MessageLoop> message_loop_;
+  std::vector<MemoryDumpCallbackResult> results_;
 
   // We want our singleton torn down after each test.
   ShadowingAtExitManager at_exit_manager_;
@@ -1270,23 +1287,6 @@ TEST_F(MemoryDumpManagerTest, TestBackgroundTracingSetup) {
   DisableTracing();
 }
 
-TEST_F(MemoryDumpManagerTest, TestBlacklistedUnsafeUnregistration) {
-  InitializeMemoryDumpManager(false /* is_coordinator */);
-  MockMemoryDumpProvider mdp1;
-  RegisterDumpProvider(&mdp1, nullptr, kDefaultOptions,
-                       "BlacklistTestDumpProvider");
-  // Not calling UnregisterAndDeleteDumpProviderSoon() should not crash.
-  mdm_->UnregisterDumpProvider(&mdp1);
-
-  Thread thread("test thread");
-  thread.Start();
-  RegisterDumpProvider(&mdp1, thread.task_runner(), kDefaultOptions,
-                       "BlacklistTestDumpProvider");
-  // Unregistering on wrong thread should not crash.
-  mdm_->UnregisterDumpProvider(&mdp1);
-  thread.Stop();
-}
-
 // Tests that we can manually take a dump without enabling tracing.
 TEST_F(MemoryDumpManagerTest, DumpWithTracingDisabled) {
   InitializeMemoryDumpManager(false /* is_coordinator */);
@@ -1317,6 +1317,85 @@ TEST_F(MemoryDumpManagerTest, DumpWithTracingDisabled) {
 
   mdm_->UnregisterDumpProvider(&mdp);
 }
+
+TEST_F(MemoryDumpManagerTest, TestSummaryComputation) {
+  InitializeMemoryDumpManager(false /* is_coordinator */);
+  MockMemoryDumpProvider mdp;
+  RegisterDumpProvider(&mdp, ThreadTaskRunnerHandle::Get());
+
+  const MemoryDumpSessionState* session_state =
+      mdm_->session_state_for_testing().get();
+
+  EXPECT_CALL(global_dump_handler_, RequestGlobalMemoryDump(_, _))
+      .WillOnce(Invoke([this](const MemoryDumpRequestArgs& args,
+                              const GlobalMemoryDumpCallback& callback) {
+        ProcessMemoryDumpCallback process_callback =
+            Bind(&MemoryDumpManagerTest_TestSummaryComputation_Test::
+                     ProcessDumpRecordingCallbackAdapter,
+                 Unretained(this), callback);
+        mdm_->CreateProcessDump(args, process_callback);
+      }));
+
+  EXPECT_CALL(mdp, OnMemoryDump(_, _))
+      .Times(1)
+      .WillRepeatedly(Invoke([session_state](const MemoryDumpArgs&,
+                                             ProcessMemoryDump* pmd) -> bool {
+        auto* size = MemoryAllocatorDump::kNameSize;
+        auto* bytes = MemoryAllocatorDump::kUnitsBytes;
+        const uint32_t kB = 1024;
+
+        pmd->CreateAllocatorDump("malloc")->AddScalar(size, bytes, 1 * kB);
+        pmd->CreateAllocatorDump("malloc/ignored")
+            ->AddScalar(size, bytes, 99 * kB);
+
+        pmd->CreateAllocatorDump("blink_gc")->AddScalar(size, bytes, 2 * kB);
+        pmd->CreateAllocatorDump("blink_gc/ignored")
+            ->AddScalar(size, bytes, 99 * kB);
+
+        pmd->CreateAllocatorDump("v8/foo")->AddScalar(size, bytes, 1 * kB);
+        pmd->CreateAllocatorDump("v8/bar")->AddScalar(size, bytes, 2 * kB);
+        pmd->CreateAllocatorDump("v8")->AddScalar(size, bytes, 99 * kB);
+
+        pmd->CreateAllocatorDump("partition_alloc")
+            ->AddScalar(size, bytes, 99 * kB);
+        pmd->CreateAllocatorDump("partition_alloc/allocated_objects")
+            ->AddScalar(size, bytes, 99 * kB);
+        pmd->CreateAllocatorDump("partition_alloc/allocated_objects/ignored")
+            ->AddScalar(size, bytes, 99 * kB);
+        pmd->CreateAllocatorDump("partition_alloc/partitions")
+            ->AddScalar(size, bytes, 99 * kB);
+        pmd->CreateAllocatorDump("partition_alloc/partitions/foo")
+            ->AddScalar(size, bytes, 2 * kB);
+        pmd->CreateAllocatorDump("partition_alloc/partitions/bar")
+            ->AddScalar(size, bytes, 2 * kB);
+        pmd->process_totals()->set_resident_set_bytes(5 * kB);
+        pmd->set_has_process_totals();
+        return true;
+      }));
+
+  last_callback_success_ = false;
+
+  EnableTracingWithLegacyCategories(MemoryDumpManager::kTraceCategory);
+  RequestGlobalDumpAndWait(MemoryDumpType::EXPLICITLY_TRIGGERED,
+                           MemoryDumpLevelOfDetail::LIGHT);
+  DisableTracing();
+
+  // We shouldn't see any of the 99 values from above.
+  EXPECT_TRUE(last_callback_success_);
+  ASSERT_EQ(1u, GetResults()->size());
+  MemoryDumpCallbackResult result = GetResults()->front();
+  // For malloc we only count the root "malloc" not children "malloc/*".
+  EXPECT_EQ(1u, result.chrome_dump.malloc_total_kb);
+  // For blink_gc we only count the root "blink_gc" not children "blink_gc/*".
+  EXPECT_EQ(2u, result.chrome_dump.blink_gc_total_kb);
+  // For v8 we count the children ("v8/*") as the root total is not given.
+  EXPECT_EQ(3u, result.chrome_dump.v8_total_kb);
+  // partition_alloc has partition_alloc/allocated_objects/* which is a subset
+  // of partition_alloc/partitions/* so we only count the latter.
+  EXPECT_EQ(4u, result.chrome_dump.partition_alloc_total_kb);
+  // resident_set_kb should read from process_totals.
+  EXPECT_EQ(5u, result.os_dump.resident_set_kb);
+};
 
 }  // namespace trace_event
 }  // namespace base

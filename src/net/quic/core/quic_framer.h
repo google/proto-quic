@@ -12,6 +12,7 @@
 
 #include "base/macros.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_endian.h"
 #include "net/quic/platform/api/quic_export.h"
 #include "net/quic/platform/api/quic_string_piece.h"
 
@@ -312,13 +313,16 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
   const std::string& detailed_error() { return detailed_error_; }
 
   // The minimum packet number length required to represent |packet_number|.
-  static QuicPacketNumberLength GetMinSequenceNumberLength(
+  static QuicPacketNumberLength GetMinPacketNumberLength(
       QuicPacketNumber packet_number);
 
   void SetSupportedVersions(const QuicVersionVector& versions) {
     supported_versions_ = versions;
     quic_version_ = versions[0];
   }
+
+  // Returns byte order to read/write integers and floating numbers.
+  Endianness endianness() const;
 
   void set_validate_flags(bool value) { validate_flags_ = value; }
 
@@ -364,10 +368,14 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
   bool ProcessUnauthenticatedHeader(QuicDataReader* encrypted_reader,
                                     QuicPacketHeader* header);
 
-  bool ProcessPacketSequenceNumber(QuicDataReader* reader,
-                                   QuicPacketNumberLength packet_number_length,
-                                   QuicPacketNumber base_packet_number,
-                                   QuicPacketNumber* packet_number);
+  // First processes possibly truncated packet number. Calculates the full
+  // packet number from the truncated one and the last seen packet number, and
+  // stores it to |packet_number|.
+  bool ProcessAndCalculatePacketNumber(
+      QuicDataReader* reader,
+      QuicPacketNumberLength packet_number_length,
+      QuicPacketNumber base_packet_number,
+      QuicPacketNumber* packet_number);
   bool ProcessFrameData(QuicDataReader* reader, const QuicPacketHeader& header);
   bool ProcessStreamFrame(QuicDataReader* reader,
                           uint8_t frame_type,
@@ -425,10 +433,15 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
                             bool last_frame_in_packet,
                             QuicPacketNumberLength packet_number_length);
 
-  static bool AppendPacketSequenceNumber(
-      QuicPacketNumberLength packet_number_length,
-      QuicPacketNumber packet_number,
-      QuicDataWriter* writer);
+  static bool AppendPacketNumber(QuicPacketNumberLength packet_number_length,
+                                 QuicPacketNumber packet_number,
+                                 QuicDataWriter* writer);
+  static bool AppendStreamId(size_t stream_id_length,
+                             QuicStreamId stream_id,
+                             QuicDataWriter* writer);
+  static bool AppendStreamOffset(size_t offset_length,
+                                 QuicStreamOffset offset,
+                                 QuicDataWriter* writer);
 
   // Appends a single ACK block to |writer| and returns true if the block was
   // successfully appended.
@@ -437,7 +450,7 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
                              QuicPacketNumber length,
                              QuicDataWriter* writer);
 
-  static uint8_t GetSequenceNumberFlags(
+  static uint8_t GetPacketNumberFlags(
       QuicPacketNumberLength packet_number_length);
 
   static AckFrameInfo GetAckFrameInfo(const QuicAckFrame& frame);

@@ -77,7 +77,7 @@ void QuicSession::OnStreamFrame(const QuicStreamFrame& frame) {
     // us this offset.
     if (frame.fin) {
       QuicStreamOffset final_byte_offset = frame.offset + frame.data_length;
-      UpdateFlowControlOnFinalReceivedByteOffset(stream_id, final_byte_offset);
+      OnFinalByteOffsetReceived(stream_id, final_byte_offset);
     }
     return;
   }
@@ -394,7 +394,7 @@ void QuicSession::CloseStreamInner(QuicStreamId stream_id, bool locally_reset) {
   connection_->SetNumOpenStreams(dynamic_stream_map_.size());
 }
 
-void QuicSession::UpdateFlowControlOnFinalReceivedByteOffset(
+void QuicSession::OnFinalByteOffsetReceived(
     QuicStreamId stream_id,
     QuicStreamOffset final_byte_offset) {
   std::map<QuicStreamId, QuicStreamOffset>::iterator it =
@@ -533,8 +533,7 @@ void QuicSession::HandleRstOnValidNonexistentStream(
   if (IsClosedStream(frame.stream_id)) {
     // The RST frame contains the final byte offset for the stream: we can now
     // update the connection level flow controller if needed.
-    UpdateFlowControlOnFinalReceivedByteOffset(frame.stream_id,
-                                               frame.byte_offset);
+    OnFinalByteOffsetReceived(frame.stream_id, frame.byte_offset);
   }
 }
 
@@ -818,6 +817,10 @@ bool QuicSession::HasDataToWrite() const {
 
 void QuicSession::PostProcessAfterData() {
   closed_streams_.clear();
+}
+
+void QuicSession::OnAckNeedsRetransmittableFrame() {
+  flow_controller_.SendWindowUpdate();
 }
 
 size_t QuicSession::GetNumDynamicOutgoingStreams() const {

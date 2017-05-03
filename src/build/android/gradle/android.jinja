@@ -4,7 +4,9 @@
 {% macro expand_sourceset(variables, prefix) %}
 {% if variables is defined %}
         {{ prefix }} {
+{% if variables.android_manifest is defined %}
             manifest.srcFile "{{ variables.android_manifest }}"
+{% endif %}
 {% if variables.java_dirs is defined %}
             java.srcDirs = [
 {% for path in variables.java_dirs %}

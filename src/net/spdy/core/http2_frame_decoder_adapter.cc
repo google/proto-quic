@@ -33,6 +33,7 @@
 #include "net/spdy/core/spdy_headers_handler_interface.h"
 #include "net/spdy/core/spdy_protocol.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
+#include "net/spdy/platform/api/spdy_ptr_util.h"
 #include "net/spdy/platform/api/spdy_string.h"
 
 namespace net {
@@ -994,8 +995,7 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
 
 std::unique_ptr<SpdyFramerDecoderAdapter> CreateHttp2FrameDecoderAdapter(
     SpdyFramer* outer_framer) {
-  return std::unique_ptr<SpdyFramerDecoderAdapter>(
-      new Http2DecoderAdapter(outer_framer));
+  return SpdyMakeUnique<Http2DecoderAdapter>(outer_framer);
 }
 
 }  // namespace net

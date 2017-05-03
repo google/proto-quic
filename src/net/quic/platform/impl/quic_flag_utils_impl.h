@@ -5,7 +5,8 @@
 #ifndef NET_QUIC_PLATFORM_IMPL_QUIC_FLAG_UTILS_IMPL_H_
 #define NET_QUIC_PLATFORM_IMPL_QUIC_FLAG_UTILS_IMPL_H_
 
-#define QUIC_FLAG_COUNT_IMPL(flag) DVLOG(1) << "FLAG_##flag: " << FLAGS_##flag
+#define QUIC_FLAG_COUNT_IMPL(flag) \
+  DVLOG(1) << "FLAG_" #flag ": " << FLAGS_##flag
 #define QUIC_FLAG_COUNT_N_IMPL(flag, instance, total) QUIC_FLAG_COUNT_IMPL(flag)
 
 #endif  // NET_QUIC_PLATFORM_IMPL_QUIC_FLAG_UTILS_IMPL_H_

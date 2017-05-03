@@ -350,7 +350,6 @@ SpdySessionDependencies::SpdySessionDependencies(
       enable_http2_alternative_service(false),
       net_log(nullptr),
       http_09_on_non_default_ports_enabled(false),
-      restrict_to_one_preconnect_for_proxies(false),
       quic_do_not_mark_as_broken_on_network_change(false) {
   // Note: The CancelledTransaction test does cleanup by running all
   // tasks in the message loop (RunAllPending).  Unfortunately, that
@@ -418,8 +417,6 @@ HttpNetworkSession::Params SpdySessionDependencies::CreateSessionParams(
   params.net_log = session_deps->net_log;
   params.http_09_on_non_default_ports_enabled =
       session_deps->http_09_on_non_default_ports_enabled;
-  params.restrict_to_one_preconnect_for_proxies =
-      session_deps->restrict_to_one_preconnect_for_proxies;
   params.quic_do_not_mark_as_broken_on_network_change =
       session_deps->quic_do_not_mark_as_broken_on_network_change;
   return params;

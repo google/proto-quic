@@ -147,9 +147,7 @@ void QuicTimeWaitListManager::OnCanWrite() {
 void QuicTimeWaitListManager::ProcessPacket(
     const QuicSocketAddress& server_address,
     const QuicSocketAddress& client_address,
-    QuicConnectionId connection_id,
-    QuicPacketNumber packet_number,
-    const QuicEncryptedPacket& /*packet*/) {
+    QuicConnectionId connection_id) {
   DCHECK(IsConnectionIdInTimeWait(connection_id));
   QUIC_DLOG(INFO) << "Processing " << connection_id << " in time wait state.";
   // TODO(satyamshekhar): Think about handling packets from different client
@@ -177,7 +175,7 @@ void QuicTimeWaitListManager::ProcessPacket(
     return;
   }
 
-  SendPublicReset(server_address, client_address, connection_id, packet_number);
+  SendPublicReset(server_address, client_address, connection_id);
 }
 
 void QuicTimeWaitListManager::SendVersionNegotiationPacket(
@@ -200,13 +198,11 @@ bool QuicTimeWaitListManager::ShouldSendResponse(int received_packet_count) {
 void QuicTimeWaitListManager::SendPublicReset(
     const QuicSocketAddress& server_address,
     const QuicSocketAddress& client_address,
-    QuicConnectionId connection_id,
-    QuicPacketNumber rejected_packet_number) {
+    QuicConnectionId connection_id) {
   QuicPublicResetPacket packet;
   packet.public_header.connection_id = connection_id;
   packet.public_header.reset_flag = true;
   packet.public_header.version_flag = false;
-  packet.rejected_packet_number = rejected_packet_number;
   // TODO(satyamshekhar): generate a valid nonce for this connection_id.
   packet.nonce_proof = 1010101;
   packet.client_address = client_address;

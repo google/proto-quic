@@ -5,14 +5,14 @@
 #include "net/tools/quic/quic_epoll_connection_helper.h"
 
 #include "net/quic/core/crypto/quic_random.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/tools/quic/test_tools/mock_epoll_server.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
 namespace test {
 namespace {
 
-class QuicEpollConnectionHelperTest : public ::testing::Test {
+class QuicEpollConnectionHelperTest : public QuicTest {
  protected:
   QuicEpollConnectionHelperTest()
       : helper_(&epoll_server_, QuicAllocator::BUFFER_POOL) {}

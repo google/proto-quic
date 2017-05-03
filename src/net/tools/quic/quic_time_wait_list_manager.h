@@ -85,9 +85,7 @@ class QuicTimeWaitListManager : public QuicBlockedWriterInterface {
   // state. virtual to override in tests.
   virtual void ProcessPacket(const QuicSocketAddress& server_address,
                              const QuicSocketAddress& client_address,
-                             QuicConnectionId connection_id,
-                             QuicPacketNumber packet_number,
-                             const QuicEncryptedPacket& packet);
+                             QuicConnectionId connection_id);
 
   // Called by the dispatcher when the underlying socket becomes writable again,
   // since we might need to send pending public reset packets which we didn't
@@ -124,8 +122,7 @@ class QuicTimeWaitListManager : public QuicBlockedWriterInterface {
   // Creates a public reset packet and sends it or queues it to be sent later.
   virtual void SendPublicReset(const QuicSocketAddress& server_address,
                                const QuicSocketAddress& client_address,
-                               QuicConnectionId connection_id,
-                               QuicPacketNumber rejected_packet_number);
+                               QuicConnectionId connection_id);
 
  private:
   friend class test::QuicDispatcherPeer;

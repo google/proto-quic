@@ -200,6 +200,7 @@
       'Mac deterministic': 'release_bot_mac_strip',
       'Mac deterministic (dbg)': 'debug_bot',
       'Mojo ChromiumOS': 'chromeos_with_codecs_ozone_release_trybot',
+      'Mojo Linux': 'release_bot',
       'Mojo Windows': 'release_bot_x86',
       'Ozone Linux': 'release_bot_ozone_linux',
       'Site Isolation Android': 'android_release_bot_minimal_symbols_arm64',
@@ -423,30 +424,8 @@
       'Windows Dev': 'debug_bot',
     },
 
-    'official.desktop': {
-      'linux64': 'official',
-      'mac64': 'official',
-      'mac64-recipes': 'official',
-
-      # Currently the official bots set mini_installer_official_deps=1
-      # but it's not clear if that's actually used anywhere.
-      'win': 'official_x86',
-      'win-asan': 'official_syzyasan_x86',
-      'win-clang': 'official_clang_x86',
-      'win-pgo': {
-        '1': 'official_chrome_pgo_phase_1_x86',
-        '2': 'official_chrome_pgo_phase_2_x86',
-      },
-      'win64': 'official',
-      'win64-clang': 'official_clang',
-      'win64-pgo': {
-        '1': 'official_chrome_pgo_phase_1',
-        '2': 'official_chrome_pgo_phase_2',
-      },
-      # TODO(mmoss): Remove this once all official Windows recipes are working.
-      'win-recipes': 'official',
-    },
-
+    # TODO(mmoss): Move these to mb_configs_official.pyl in the release repo
+    # once the continuous builders are migrated to use recipes from that repo.
     'official.desktop.continuous': {
       'mac beta': 'official',
       'mac stable': 'official',
@@ -579,6 +558,8 @@
       # builds (and we only store baselines for release builds).
       'linux_layout_tests_layout_ng': 'release_bot',
 
+      'linux_mojo': 'release_trybot',
+      'linux_mojo_chromeos': 'release_trybot',
       'linux_nacl_sdk_build': 'release_bot',
       'linux_nacl_sdk': 'release_bot',
       'linux_optional_gpu_tests_rel': 'gpu_fyi_tests_release_trybot',
@@ -625,6 +606,7 @@
       'linux_perf_bisect': 'official_goma',
       'linux_perf_bisect_builder': 'official_goma',
       'linux_perf_cq': 'official_goma',
+      'Mac Builder': 'official_goma',
       'mac_10_10_perf_bisect': 'official_goma',
       'mac_10_11_perf_bisect': 'official_goma',
       'mac_fyi_perf_bisect': 'official_goma',
@@ -663,6 +645,7 @@
       'win_clang_rel': 'clang_official_release_trybot_x86',
       'win_clang_x64_dbg': 'win_clang_debug_bot',
       'win_clang_x64_rel': 'clang_official_release_trybot',
+      'win_mojo': 'release_trybot_x86',
       'win_nacl_sdk': 'release_bot_x86',
       'win_nacl_sdk_build': 'release_bot_x86',
       'win_optional_gpu_tests_rel': 'gpu_tests_deqp_gles_release_trybot_x86',
@@ -722,7 +705,7 @@
     ],
 
     'android_cronet_data_reduction_proxy_release_bot_minimal_symbols_arm_no_neon': [
-      'android', 'cronet', 'data_reduction_proxy', 'release_bot', 'minimal_symbols', 'arm_no_neon',
+      'android', 'cronet', 'release_bot', 'minimal_symbols', 'arm_no_neon',
     ],
 
     'android_cronet_debug_static_bot_arm64': [
@@ -738,7 +721,7 @@
     ],
 
     'android_cronet_data_reduction_proxy_release_bot_minimal_symbols_arm_no_neon': [
-      'android', 'cronet', 'data_reduction_proxy', 'release_bot', 'minimal_symbols', 'arm_no_neon',
+      'android', 'cronet', 'release_bot', 'minimal_symbols', 'arm_no_neon',
     ],
 
     'android_cronet_debug_static_bot_arm64': [
@@ -1314,32 +1297,8 @@
       'official',
     ],
 
-    'official_chrome_pgo_phase_1': [
-      'official', 'chrome_pgo_phase_1',
-    ],
-
-    'official_chrome_pgo_phase_1_x86': [
-      'official', 'chrome_pgo_phase_1', 'x86',
-    ],
-
-    'official_chrome_pgo_phase_2': [
-      'official', 'chrome_pgo_phase_2',
-    ],
-
-    'official_chrome_pgo_phase_2_x86': [
-      'official', 'chrome_pgo_phase_2', 'x86',
-    ],
-
-    'official_clang': [
-      'clang', 'official',
-    ],
-
     'official_goma_minimal_symbols_clang': [
       'official', 'goma', 'minimal_symbols', 'clang',
-    ],
-
-    'official_clang_x86': [
-      'clang', 'official', 'x86',
     ],
 
     'official_goma': [
@@ -1384,14 +1343,6 @@
 
     'official_six_concurrent_links': [
       'official', 'six_concurrent_links',
-    ],
-
-    'official_syzyasan_x86': [
-      'official', 'syzyasan', 'x86',
-    ],
-
-    'official_x86': [
-      'official', 'x86',
     ],
 
     'release_bot_ozone_linux': [
@@ -1654,10 +1605,6 @@
       'cros_passthrough': True,
     },
 
-    'data_reduction_proxy': {
-      'gn_args': 'cronet_enable_data_reduction_proxy_support=true',
-    },
-
     'dcheck_always_on': {
       'gn_args': 'dcheck_always_on=true',
     },
@@ -1687,7 +1634,7 @@
     },
 
     'edge': {
-      'gn_args': 'sanitizer_coverage_flags="edge"',
+      'gn_args': 'sanitizer_coverage_flags="trace-pc-guard"',
     },
 
     # This mixin is used to force configs that use it to fail. It
@@ -1729,10 +1676,7 @@
     'goma': {
       # The MB code will properly escape goma_dir if necessary in the GYP
       # code path; the GN code path needs no escaping.
-      # We also set strip_absolute_paths to ensure that we can get deterministic
-      # builds. This isn't just on by default when goma is on so that devs
-      # can do goma builds but still be able to debug by default.
-      'gn_args': 'use_goma=true strip_absolute_paths_from_debug_symbols=true',
+      'gn_args': 'use_goma=true',
     },
 
     'gpu_fyi_tests': {
@@ -1783,7 +1727,7 @@
     },
 
     'minimal_symbols': {
-      'gn_args': 'symbol_level=1',
+      'gn_args': 'symbol_level=1 strip_absolute_paths_from_debug_symbols=true',
     },
 
     'mipsel': {

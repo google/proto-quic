@@ -179,14 +179,6 @@ QuicPacket* BuildUnsizedDataPacket(QuicFramer* framer,
                                    const QuicFrames& frames,
                                    size_t packet_size);
 
-// When constructed, checks that all QUIC flags have their correct default
-// values and when destructed, restores those values.
-class QuicFlagSaver {
- public:
-  QuicFlagSaver();
-  ~QuicFlagSaver();
-};
-
 // Compute SHA-1 hash of the supplied std::string.
 std::string Sha1Hash(QuicStringPiece data);
 
@@ -310,6 +302,7 @@ class MockQuicConnectionVisitor : public QuicConnectionVisitorInterface {
                void(const QuicVersion& version));
   MOCK_METHOD0(OnConfigNegotiated, void());
   MOCK_METHOD0(PostProcessAfterData, void());
+  MOCK_METHOD0(OnAckNeedsRetransmittableFrame, void());
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockQuicConnectionVisitor);

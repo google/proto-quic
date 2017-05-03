@@ -334,7 +334,6 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
 #endif  // !defined(OS_LINUX) && !defined(OS_ANDROID)
     proxy_service_ = ProxyService::CreateUsingSystemProxyResolver(
         std::move(proxy_config_service_),
-        0,  // This results in using the default value.
         context->net_log());
   }
   storage->set_proxy_service(std::move(proxy_service_));

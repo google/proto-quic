@@ -16,17 +16,19 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <new>
 #include <utility>
 
 #include "base/compiler_specific.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/sys_byteorder.h"
-#include "net/base/net_export.h"
 #include "net/spdy/core/spdy_alt_svc_wire_format.h"
 #include "net/spdy/core/spdy_bitmasks.h"
 #include "net/spdy/core/spdy_bug_tracker.h"
 #include "net/spdy/core/spdy_header_block.h"
+#include "net/spdy/platform/api/spdy_export.h"
+#include "net/spdy/platform/api/spdy_ptr_util.h"
 #include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
@@ -65,7 +67,7 @@ const int32_t kPaddingSizePerFrame = 256;
 // defined as a string literal with a null terminator, the actual connection
 // preface is only the first |kHttp2ConnectionHeaderPrefixSize| bytes, which
 // excludes the null terminator.
-NET_EXPORT_PRIVATE extern const char* const kHttp2ConnectionHeaderPrefix;
+SPDY_EXPORT_PRIVATE extern const char* const kHttp2ConnectionHeaderPrefix;
 const int kHttp2ConnectionHeaderPrefixSize = 24;
 
 // Wire values for HTTP2 frame types.
@@ -148,13 +150,13 @@ enum SpdySettingsIds : uint16_t {
 
 // This explicit operator is needed, otherwise compiler finds
 // overloaded operator to be ambiguous.
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
-                                            SpdySettingsIds id);
+SPDY_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
+                                             SpdySettingsIds id);
 
 // This operator is needed, because SpdyFrameType is an enum class,
 // therefore implicit conversion to underlying integer type is not allowed.
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
-                                            SpdyFrameType frame_type);
+SPDY_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
+                                             SpdyFrameType frame_type);
 
 using SettingsMap = std::map<SpdySettingsIds, uint32_t>;
 
@@ -187,7 +189,7 @@ const SpdyPriority kV3HighestPriority = 0;
 const SpdyPriority kV3LowestPriority = 7;
 
 // Returns SPDY 3.x priority value clamped to the valid range of [0, 7].
-NET_EXPORT_PRIVATE SpdyPriority ClampSpdy3Priority(SpdyPriority priority);
+SPDY_EXPORT_PRIVATE SpdyPriority ClampSpdy3Priority(SpdyPriority priority);
 
 // HTTP/2 stream weights are integers in range [1, 256], as specified in RFC
 // 7540 section 5.3.2. Default stream weight is defined in section 5.3.5.
@@ -196,19 +198,19 @@ const int kHttp2MaxStreamWeight = 256;
 const int kHttp2DefaultStreamWeight = 16;
 
 // Returns HTTP/2 weight clamped to the valid range of [1, 256].
-NET_EXPORT_PRIVATE int ClampHttp2Weight(int weight);
+SPDY_EXPORT_PRIVATE int ClampHttp2Weight(int weight);
 
 // Maps SPDY 3.x priority value in range [0, 7] to HTTP/2 weight value in range
 // [1, 256], where priority 0 (i.e. highest precedence) corresponds to maximum
 // weight 256 and priority 7 (lowest precedence) corresponds to minimum weight
 // 1.
-NET_EXPORT_PRIVATE int Spdy3PriorityToHttp2Weight(SpdyPriority priority);
+SPDY_EXPORT_PRIVATE int Spdy3PriorityToHttp2Weight(SpdyPriority priority);
 
 // Maps HTTP/2 weight value in range [1, 256] to SPDY 3.x priority value in
 // range [0, 7], where minimum weight 1 corresponds to priority 7 (lowest
 // precedence) and maximum weight 256 corresponds to priority 0 (highest
 // precedence).
-NET_EXPORT_PRIVATE SpdyPriority Http2WeightToSpdy3Priority(int weight);
+SPDY_EXPORT_PRIVATE SpdyPriority Http2WeightToSpdy3Priority(int weight);
 
 // Reserved ID for root stream of HTTP/2 stream dependency tree, as specified
 // in RFC 7540 section 5.3.1.
@@ -218,20 +220,20 @@ typedef uint64_t SpdyPingId;
 
 // Returns true if a given on-the-wire enumeration of a frame type is defined
 // in a standardized HTTP/2 specification, false otherwise.
-NET_EXPORT_PRIVATE bool IsDefinedFrameType(uint8_t frame_type_field);
+SPDY_EXPORT_PRIVATE bool IsDefinedFrameType(uint8_t frame_type_field);
 
 // Parses a frame type from an on-the-wire enumeration.
 // Behavior is undefined for invalid frame type fields; consumers should first
 // use IsValidFrameType() to verify validity of frame type fields.
-NET_EXPORT_PRIVATE SpdyFrameType ParseFrameType(uint8_t frame_type_field);
+SPDY_EXPORT_PRIVATE SpdyFrameType ParseFrameType(uint8_t frame_type_field);
 
 // Serializes a frame type to the on-the-wire value.
-NET_EXPORT_PRIVATE uint8_t SerializeFrameType(SpdyFrameType frame_type);
+SPDY_EXPORT_PRIVATE uint8_t SerializeFrameType(SpdyFrameType frame_type);
 
 // (HTTP/2) All standard frame types except WINDOW_UPDATE are
 // (stream-specific xor connection-level). Returns false iff we know
 // the given frame type does not align with the given streamID.
-NET_EXPORT_PRIVATE bool IsValidHTTP2FrameStreamId(
+SPDY_EXPORT_PRIVATE bool IsValidHTTP2FrameStreamId(
     SpdyStreamId current_frame_stream_id,
     SpdyFrameType frame_type_field);
 
@@ -240,18 +242,18 @@ const char* FrameTypeToString(SpdyFrameType frame_type);
 
 // If |wire_setting_id| is the on-the-wire representation of a defined SETTINGS
 // parameter, parse it to |*setting_id| and return true.
-NET_EXPORT_PRIVATE bool ParseSettingsId(uint16_t wire_setting_id,
-                                        SpdySettingsIds* setting_id);
+SPDY_EXPORT_PRIVATE bool ParseSettingsId(uint16_t wire_setting_id,
+                                         SpdySettingsIds* setting_id);
 
 // Return if |id| corresponds to a defined setting;
 // stringify |id| to |*settings_id_string| regardless.
-NET_EXPORT_PRIVATE bool SettingsIdToString(SpdySettingsIds id,
-                                           const char** settings_id_string);
+SPDY_EXPORT_PRIVATE bool SettingsIdToString(SpdySettingsIds id,
+                                            const char** settings_id_string);
 
 // Parse |wire_error_code| to a SpdyErrorCode.
 // Treat unrecognized error codes as INTERNAL_ERROR
 // as recommended by the HTTP/2 specification.
-NET_EXPORT_PRIVATE SpdyErrorCode ParseErrorCode(uint32_t wire_error_code);
+SPDY_EXPORT_PRIVATE SpdyErrorCode ParseErrorCode(uint32_t wire_error_code);
 
 // Serialize RST_STREAM or GOAWAY frame error code to string
 // for logging/debugging.
@@ -373,45 +375,27 @@ typedef StreamPrecedence<SpdyStreamId> SpdyStreamPrecedence;
 class SpdyFrameVisitor;
 
 // Intermediate representation for HTTP2 frames.
-class NET_EXPORT_PRIVATE SpdyFrameIR {
+class SPDY_EXPORT_PRIVATE SpdyFrameIR {
  public:
   virtual ~SpdyFrameIR() {}
 
   virtual void Visit(SpdyFrameVisitor* visitor) const = 0;
   virtual SpdyFrameType frame_type() const = 0;
-
- protected:
-  SpdyFrameIR() {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SpdyFrameIR);
-};
-
-// Abstract class intended to be inherited by IRs that have a stream associated
-// to them.
-class NET_EXPORT_PRIVATE SpdyFrameWithStreamIdIR : public SpdyFrameIR {
- public:
-  ~SpdyFrameWithStreamIdIR() override {}
   SpdyStreamId stream_id() const { return stream_id_; }
-  void set_stream_id(SpdyStreamId stream_id) {
-    DCHECK_EQ(0u, stream_id & ~kStreamIdMask);
-    stream_id_ = stream_id;
-  }
 
  protected:
-  explicit SpdyFrameWithStreamIdIR(SpdyStreamId stream_id) {
-    set_stream_id(stream_id);
-  }
+  SpdyFrameIR() : stream_id_(0) {}
+  explicit SpdyFrameIR(SpdyStreamId stream_id) : stream_id_(stream_id) {}
 
  private:
   SpdyStreamId stream_id_;
 
-  DISALLOW_COPY_AND_ASSIGN(SpdyFrameWithStreamIdIR);
+  DISALLOW_COPY_AND_ASSIGN(SpdyFrameIR);
 };
 
 // Abstract class intended to be inherited by IRs that have the option of a FIN
-// flag. Implies SpdyFrameWithStreamIdIR.
-class NET_EXPORT_PRIVATE SpdyFrameWithFinIR : public SpdyFrameWithStreamIdIR {
+// flag.
+class SPDY_EXPORT_PRIVATE SpdyFrameWithFinIR : public SpdyFrameIR {
  public:
   ~SpdyFrameWithFinIR() override {}
   bool fin() const { return fin_; }
@@ -419,8 +403,7 @@ class NET_EXPORT_PRIVATE SpdyFrameWithFinIR : public SpdyFrameWithStreamIdIR {
 
  protected:
   explicit SpdyFrameWithFinIR(SpdyStreamId stream_id)
-      : SpdyFrameWithStreamIdIR(stream_id),
-        fin_(false) {}
+      : SpdyFrameIR(stream_id), fin_(false) {}
 
  private:
   bool fin_;
@@ -430,7 +413,7 @@ class NET_EXPORT_PRIVATE SpdyFrameWithFinIR : public SpdyFrameWithStreamIdIR {
 
 // Abstract class intended to be inherited by IRs that contain a header
 // block. Implies SpdyFrameWithFinIR.
-class NET_EXPORT_PRIVATE SpdyFrameWithHeaderBlockIR
+class SPDY_EXPORT_PRIVATE SpdyFrameWithHeaderBlockIR
     : public NON_EXPORTED_BASE(SpdyFrameWithFinIR) {
  public:
   ~SpdyFrameWithHeaderBlockIR() override;
@@ -457,7 +440,7 @@ class NET_EXPORT_PRIVATE SpdyFrameWithHeaderBlockIR
   DISALLOW_COPY_AND_ASSIGN(SpdyFrameWithHeaderBlockIR);
 };
 
-class NET_EXPORT_PRIVATE SpdyDataIR
+class SPDY_EXPORT_PRIVATE SpdyDataIR
     : public NON_EXPORTED_BASE(SpdyFrameWithFinIR) {
  public:
   // Performs a deep copy on data.
@@ -491,7 +474,7 @@ class NET_EXPORT_PRIVATE SpdyDataIR
 
   // Deep-copy of data (keep private copy).
   void SetDataDeep(SpdyStringPiece data) {
-    data_store_.reset(new SpdyString(data.data(), data.size()));
+    data_store_ = SpdyMakeUnique<SpdyString>(data.data(), data.size());
     data_ = data_store_->data();
     data_len_ = data.size();
   }
@@ -528,7 +511,7 @@ class NET_EXPORT_PRIVATE SpdyDataIR
   DISALLOW_COPY_AND_ASSIGN(SpdyDataIR);
 };
 
-class NET_EXPORT_PRIVATE SpdyRstStreamIR : public SpdyFrameWithStreamIdIR {
+class SPDY_EXPORT_PRIVATE SpdyRstStreamIR : public SpdyFrameIR {
  public:
   SpdyRstStreamIR(SpdyStreamId stream_id, SpdyErrorCode error_code);
 
@@ -547,7 +530,7 @@ class NET_EXPORT_PRIVATE SpdyRstStreamIR : public SpdyFrameWithStreamIdIR {
   DISALLOW_COPY_AND_ASSIGN(SpdyRstStreamIR);
 };
 
-class NET_EXPORT_PRIVATE SpdySettingsIR : public SpdyFrameIR {
+class SPDY_EXPORT_PRIVATE SpdySettingsIR : public SpdyFrameIR {
  public:
   SpdySettingsIR();
   ~SpdySettingsIR() override;
@@ -572,7 +555,7 @@ class NET_EXPORT_PRIVATE SpdySettingsIR : public SpdyFrameIR {
   DISALLOW_COPY_AND_ASSIGN(SpdySettingsIR);
 };
 
-class NET_EXPORT_PRIVATE SpdyPingIR : public SpdyFrameIR {
+class SPDY_EXPORT_PRIVATE SpdyPingIR : public SpdyFrameIR {
  public:
   explicit SpdyPingIR(SpdyPingId id) : id_(id), is_ack_(false) {}
   SpdyPingId id() const { return id_; }
@@ -591,7 +574,7 @@ class NET_EXPORT_PRIVATE SpdyPingIR : public SpdyFrameIR {
   DISALLOW_COPY_AND_ASSIGN(SpdyPingIR);
 };
 
-class NET_EXPORT_PRIVATE SpdyGoAwayIR : public SpdyFrameIR {
+class SPDY_EXPORT_PRIVATE SpdyGoAwayIR : public SpdyFrameIR {
  public:
   // References description, doesn't copy it, so description must outlast
   // this SpdyGoAwayIR.
@@ -638,7 +621,7 @@ class NET_EXPORT_PRIVATE SpdyGoAwayIR : public SpdyFrameIR {
   DISALLOW_COPY_AND_ASSIGN(SpdyGoAwayIR);
 };
 
-class NET_EXPORT_PRIVATE SpdyHeadersIR : public SpdyFrameWithHeaderBlockIR {
+class SPDY_EXPORT_PRIVATE SpdyHeadersIR : public SpdyFrameWithHeaderBlockIR {
  public:
   explicit SpdyHeadersIR(SpdyStreamId stream_id)
       : SpdyHeadersIR(stream_id, SpdyHeaderBlock()) {}
@@ -678,10 +661,10 @@ class NET_EXPORT_PRIVATE SpdyHeadersIR : public SpdyFrameWithHeaderBlockIR {
   DISALLOW_COPY_AND_ASSIGN(SpdyHeadersIR);
 };
 
-class NET_EXPORT_PRIVATE SpdyWindowUpdateIR : public SpdyFrameWithStreamIdIR {
+class SPDY_EXPORT_PRIVATE SpdyWindowUpdateIR : public SpdyFrameIR {
  public:
   SpdyWindowUpdateIR(SpdyStreamId stream_id, int32_t delta)
-      : SpdyFrameWithStreamIdIR(stream_id) {
+      : SpdyFrameIR(stream_id) {
     set_delta(delta);
   }
   int32_t delta() const { return delta_; }
@@ -701,7 +684,8 @@ class NET_EXPORT_PRIVATE SpdyWindowUpdateIR : public SpdyFrameWithStreamIdIR {
   DISALLOW_COPY_AND_ASSIGN(SpdyWindowUpdateIR);
 };
 
-class NET_EXPORT_PRIVATE SpdyPushPromiseIR : public SpdyFrameWithHeaderBlockIR {
+class SPDY_EXPORT_PRIVATE SpdyPushPromiseIR
+    : public SpdyFrameWithHeaderBlockIR {
  public:
   SpdyPushPromiseIR(SpdyStreamId stream_id, SpdyStreamId promised_stream_id)
       : SpdyPushPromiseIR(stream_id, promised_stream_id, SpdyHeaderBlock()) {}
@@ -737,7 +721,7 @@ class NET_EXPORT_PRIVATE SpdyPushPromiseIR : public SpdyFrameWithHeaderBlockIR {
   DISALLOW_COPY_AND_ASSIGN(SpdyPushPromiseIR);
 };
 
-class NET_EXPORT_PRIVATE SpdyContinuationIR : public SpdyFrameWithStreamIdIR {
+class SPDY_EXPORT_PRIVATE SpdyContinuationIR : public SpdyFrameIR {
  public:
   explicit SpdyContinuationIR(SpdyStreamId stream_id);
   ~SpdyContinuationIR() override;
@@ -759,7 +743,7 @@ class NET_EXPORT_PRIVATE SpdyContinuationIR : public SpdyFrameWithStreamIdIR {
   DISALLOW_COPY_AND_ASSIGN(SpdyContinuationIR);
 };
 
-class NET_EXPORT_PRIVATE SpdyAltSvcIR : public SpdyFrameWithStreamIdIR {
+class SPDY_EXPORT_PRIVATE SpdyAltSvcIR : public SpdyFrameIR {
  public:
   explicit SpdyAltSvcIR(SpdyStreamId stream_id);
   ~SpdyAltSvcIR() override;
@@ -784,13 +768,13 @@ class NET_EXPORT_PRIVATE SpdyAltSvcIR : public SpdyFrameWithStreamIdIR {
   DISALLOW_COPY_AND_ASSIGN(SpdyAltSvcIR);
 };
 
-class NET_EXPORT_PRIVATE SpdyPriorityIR : public SpdyFrameWithStreamIdIR {
+class SPDY_EXPORT_PRIVATE SpdyPriorityIR : public SpdyFrameIR {
  public:
   SpdyPriorityIR(SpdyStreamId stream_id,
                  SpdyStreamId parent_stream_id,
                  int weight,
                  bool exclusive)
-      : SpdyFrameWithStreamIdIR(stream_id),
+      : SpdyFrameIR(stream_id),
         parent_stream_id_(parent_stream_id),
         weight_(weight),
         exclusive_(exclusive) {}

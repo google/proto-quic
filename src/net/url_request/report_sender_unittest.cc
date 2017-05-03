@@ -14,8 +14,11 @@
 #include "net/base/upload_bytes_element_reader.h"
 #include "net/base/upload_data_stream.h"
 #include "net/base/upload_element_reader.h"
+#include "net/http/http_response_headers.h"
+#include "net/http/http_status_code.h"
 #include "net/test/url_request/url_request_failed_job.h"
 #include "net/test/url_request/url_request_mock_data_job.h"
+#include "net/test/url_request/url_request_mock_http_job.h"
 #include "net/url_request/url_request_filter.h"
 #include "net/url_request/url_request_test_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -25,6 +28,7 @@ namespace {
 
 const char kDummyReport[] = "foo.test";
 const char kSecondDummyReport[] = "foo2.test";
+const char kServerErrorHostname[] = "mock.server.error";
 
 void MarkURLRequestDestroyed(bool* url_request_destroyed) {
   *url_request_destroyed = true;
@@ -47,16 +51,65 @@ void CheckUploadData(const URLRequest& request,
   EXPECT_EQ(1u, expect_reports->erase(upload_data));
 }
 
-// Provides an error callback for report sending that sets |called| to
-// true.
-void ErrorCallback(bool* called, const GURL& report_uri, int net_error) {
+// Error callback for a report with a net error.
+void ErrorCallback(bool* called,
+                   const GURL& report_uri,
+                   int net_error,
+                   int http_response_code) {
   EXPECT_NE(OK, net_error);
+  EXPECT_EQ(-1, http_response_code);
+  *called = true;
+}
+
+// Error callback for a report with a non-200 HTTP response code and no net
+// errors.
+void ServerErrorResponseCallback(bool* called,
+                                 const GURL& report_uri,
+                                 int net_error,
+                                 int http_response_code) {
+  EXPECT_EQ(OK, net_error);
+  EXPECT_EQ(HTTP_INTERNAL_SERVER_ERROR, http_response_code);
   *called = true;
 }
 
 void SuccessCallback(bool* called) {
   *called = true;
 }
+
+// URLRequestJob that returns an HTTP 500 response.
+class MockServerErrorJob : public URLRequestJob {
+ public:
+  MockServerErrorJob(URLRequest* request, NetworkDelegate* network_delegate)
+      : URLRequestJob(request, network_delegate) {}
+  ~MockServerErrorJob() override {}
+
+ protected:
+  void GetResponseInfo(HttpResponseInfo* info) override {
+    info->headers = new HttpResponseHeaders(
+        "HTTP/1.1 500 Internal Server Error\n"
+        "Content-type: text/plain\n"
+        "Content-Length: 0\n");
+  }
+  void Start() override { NotifyHeadersComplete(); }
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(MockServerErrorJob);
+};
+
+class MockServerErrorJobInterceptor : public URLRequestInterceptor {
+ public:
+  MockServerErrorJobInterceptor() {}
+  ~MockServerErrorJobInterceptor() override {}
+
+  URLRequestJob* MaybeInterceptRequest(
+      URLRequest* request,
+      NetworkDelegate* network_delegate) const override {
+    return new MockServerErrorJob(request, network_delegate);
+  }
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(MockServerErrorJobInterceptor);
+};
 
 // A network delegate that lets tests check that a report
 // was sent. It counts the number of requests and lets tests register a
@@ -67,8 +120,7 @@ class TestReportSenderNetworkDelegate : public NetworkDelegateImpl {
   TestReportSenderNetworkDelegate()
       : url_request_destroyed_callback_(base::Bind(&base::DoNothing)),
         all_url_requests_destroyed_callback_(base::Bind(&base::DoNothing)),
-        num_requests_(0),
-        expect_cookies_(false) {}
+        num_requests_(0) {}
 
   void ExpectReport(const std::string& report) {
     expect_reports_.insert(report);
@@ -86,11 +138,6 @@ class TestReportSenderNetworkDelegate : public NetworkDelegateImpl {
 
   size_t num_requests() const { return num_requests_; }
 
-  // Sets whether cookies are expected to be sent on requests.
-  void set_expect_cookies(bool expect_cookies) {
-    expect_cookies_ = expect_cookies;
-  }
-
   void set_expected_content_type(const std::string& content_type) {
     expected_content_type_ = content_type;
   }
@@ -102,14 +149,8 @@ class TestReportSenderNetworkDelegate : public NetworkDelegateImpl {
     num_requests_++;
     EXPECT_EQ(expect_url_, request->url());
     EXPECT_STRCASEEQ("POST", request->method().data());
-
-    if (expect_cookies_) {
-      EXPECT_FALSE(request->load_flags() & LOAD_DO_NOT_SEND_COOKIES);
-      EXPECT_FALSE(request->load_flags() & LOAD_DO_NOT_SAVE_COOKIES);
-    } else {
-      EXPECT_TRUE(request->load_flags() & LOAD_DO_NOT_SEND_COOKIES);
-      EXPECT_TRUE(request->load_flags() & LOAD_DO_NOT_SAVE_COOKIES);
-    }
+    EXPECT_TRUE(request->load_flags() & LOAD_DO_NOT_SEND_COOKIES);
+    EXPECT_TRUE(request->load_flags() & LOAD_DO_NOT_SAVE_COOKIES);
 
     const HttpRequestHeaders& extra_headers = request->extra_request_headers();
     std::string content_type;
@@ -136,7 +177,6 @@ class TestReportSenderNetworkDelegate : public NetworkDelegateImpl {
   size_t num_requests_;
   GURL expect_url_;
   std::set<std::string> expect_reports_;
-  bool expect_cookies_;
   std::string expected_content_type_;
 
   DISALLOW_COPY_AND_ASSIGN(TestReportSenderNetworkDelegate);
@@ -152,6 +192,10 @@ class ReportSenderTest : public ::testing::Test {
   void SetUp() override {
     URLRequestFailedJob::AddUrlHandler();
     URLRequestMockDataJob::AddUrlHandler();
+    URLRequestFilter::GetInstance()->AddHostnameInterceptor(
+        "http", kServerErrorHostname,
+        std::unique_ptr<URLRequestInterceptor>(
+            new MockServerErrorJobInterceptor()));
   }
 
   void TearDown() override { URLRequestFilter::GetInstance()->ClearHandlers(); }
@@ -165,7 +209,7 @@ class ReportSenderTest : public ::testing::Test {
       const GURL& url,
       size_t request_sequence_number,
       const base::Callback<void()>& success_callback,
-      const base::Callback<void(const GURL&, int)>& error_callback) {
+      const base::Callback<void(const GURL&, int, int)>& error_callback) {
     base::RunLoop run_loop;
     network_delegate_.set_url_request_destroyed_callback(
         run_loop.QuitClosure());
@@ -191,8 +235,9 @@ class ReportSenderTest : public ::testing::Test {
                   const std::string& report,
                   const GURL& url,
                   size_t request_sequence_number) {
-    SendReport(reporter, report, url, request_sequence_number, base::Closure(),
-               base::Callback<void(const GURL&, int)>());
+    SendReport(reporter, report, url, request_sequence_number,
+               base::Callback<void()>(),
+               base::Callback<void(const GURL&, int, int)>());
   }
 
   TestReportSenderNetworkDelegate network_delegate_;
@@ -205,13 +250,13 @@ class ReportSenderTest : public ::testing::Test {
 // endpoint and sends the expected data.
 TEST_F(ReportSenderTest, SendsRequest) {
   GURL url = URLRequestMockDataJob::GetMockHttpsUrl("dummy data", 1);
-  ReportSender reporter(context(), ReportSender::DO_NOT_SEND_COOKIES);
+  ReportSender reporter(context());
   SendReport(&reporter, kDummyReport, url, 0);
 }
 
 TEST_F(ReportSenderTest, SendMultipleReportsSequentially) {
   GURL url = URLRequestMockDataJob::GetMockHttpsUrl("dummy data", 1);
-  ReportSender reporter(context(), ReportSender::DO_NOT_SEND_COOKIES);
+  ReportSender reporter(context());
   SendReport(&reporter, kDummyReport, url, 0);
   SendReport(&reporter, kDummyReport, url, 1);
 }
@@ -227,14 +272,16 @@ TEST_F(ReportSenderTest, SendMultipleReportsSimultaneously) {
   network_delegate_.ExpectReport(kSecondDummyReport);
   network_delegate_.set_expected_content_type("application/foobar");
 
-  ReportSender reporter(context(), ReportSender::DO_NOT_SEND_COOKIES);
+  ReportSender reporter(context());
 
   EXPECT_EQ(0u, network_delegate_.num_requests());
 
-  reporter.Send(url, "application/foobar", kDummyReport, base::Closure(),
-                base::Callback<void(const GURL&, int)>());
-  reporter.Send(url, "application/foobar", kSecondDummyReport, base::Closure(),
-                base::Callback<void(const GURL&, int)>());
+  reporter.Send(url, "application/foobar", kDummyReport,
+                base::Callback<void()>(),
+                base::Callback<void(const GURL&, int, int)>());
+  reporter.Send(url, "application/foobar", kSecondDummyReport,
+                base::Callback<void()>(),
+                base::Callback<void(const GURL&, int, int)>());
 
   run_loop.Run();
 
@@ -256,10 +303,10 @@ TEST_F(ReportSenderTest, PendingRequestGetsDeleted) {
 
   EXPECT_EQ(0u, network_delegate_.num_requests());
 
-  std::unique_ptr<ReportSender> reporter(
-      new ReportSender(context(), ReportSender::DO_NOT_SEND_COOKIES));
-  reporter->Send(url, "application/foobar", kDummyReport, base::Closure(),
-                 base::Callback<void(const GURL&, int)>());
+  std::unique_ptr<ReportSender> reporter(new ReportSender(context()));
+  reporter->Send(url, "application/foobar", kDummyReport,
+                 base::Callback<void()>(),
+                 base::Callback<void(const GURL&, int, int)>());
   reporter.reset();
 
   EXPECT_EQ(1u, network_delegate_.num_requests());
@@ -269,7 +316,7 @@ TEST_F(ReportSenderTest, PendingRequestGetsDeleted) {
 // Test that a request that returns an error gets cleaned up.
 TEST_F(ReportSenderTest, ErroredRequestGetsDeleted) {
   GURL url = URLRequestFailedJob::GetMockHttpsUrl(ERR_FAILED);
-  ReportSender reporter(context(), ReportSender::DO_NOT_SEND_COOKIES);
+  ReportSender reporter(context());
   // SendReport will block until the URLRequest is destroyed.
   SendReport(&reporter, kDummyReport, url, 0);
 }
@@ -279,12 +326,28 @@ TEST_F(ReportSenderTest, ErroredRequestGetsDeleted) {
 TEST_F(ReportSenderTest, ErroredRequestCallsErrorCallback) {
   bool error_callback_called = false;
   bool success_callback_called = false;
-  GURL url = URLRequestFailedJob::GetMockHttpsUrl(ERR_FAILED);
-  ReportSender reporter(context(), ReportSender::DO_NOT_SEND_COOKIES);
+  const GURL url = URLRequestFailedJob::GetMockHttpsUrl(ERR_FAILED);
+  ReportSender reporter(context());
   // SendReport will block until the URLRequest is destroyed.
   SendReport(&reporter, kDummyReport, url, 0,
              base::Bind(SuccessCallback, &success_callback_called),
              base::Bind(ErrorCallback, &error_callback_called));
+  EXPECT_TRUE(error_callback_called);
+  EXPECT_FALSE(success_callback_called);
+}
+
+// Test that the error callback, if provided, gets called when a request
+// finishes successfully but results in a server error, and the success callback
+// doesn't get called.
+TEST_F(ReportSenderTest, BadResponseCodeCallsErrorCallback) {
+  bool error_callback_called = false;
+  bool success_callback_called = false;
+  const GURL url(std::string("http://") + kServerErrorHostname);
+  ReportSender reporter(context());
+  // SendReport will block until the URLRequest is destroyed.
+  SendReport(&reporter, kDummyReport, url, 0,
+             base::Bind(SuccessCallback, &success_callback_called),
+             base::Bind(ServerErrorResponseCallback, &error_callback_called));
   EXPECT_TRUE(error_callback_called);
   EXPECT_FALSE(success_callback_called);
 }
@@ -294,32 +357,13 @@ TEST_F(ReportSenderTest, ErroredRequestCallsErrorCallback) {
 TEST_F(ReportSenderTest, SuccessfulRequestCallsSuccessCallback) {
   bool error_callback_called = false;
   bool success_callback_called = false;
-  GURL url = URLRequestMockDataJob::GetMockHttpsUrl("dummy data", 1);
-  ReportSender reporter(context(), ReportSender::DO_NOT_SEND_COOKIES);
+  const GURL url = URLRequestMockDataJob::GetMockHttpsUrl("dummy data", 1);
+  ReportSender reporter(context());
   SendReport(&reporter, kDummyReport, url, 0,
              base::Bind(SuccessCallback, &success_callback_called),
              base::Bind(ErrorCallback, &error_callback_called));
   EXPECT_FALSE(error_callback_called);
   EXPECT_TRUE(success_callback_called);
-}
-
-// Test that cookies are sent or not sent according to the error
-// reporter's cookies preference.
-
-TEST_F(ReportSenderTest, SendCookiesPreference) {
-  GURL url = URLRequestMockDataJob::GetMockHttpsUrl("dummy data", 1);
-  ReportSender reporter(context(), ReportSender::SEND_COOKIES);
-
-  network_delegate_.set_expect_cookies(true);
-  SendReport(&reporter, kDummyReport, url, 0);
-}
-
-TEST_F(ReportSenderTest, DoNotSendCookiesPreference) {
-  GURL url = URLRequestMockDataJob::GetMockHttpsUrl("dummy data", 1);
-  ReportSender reporter(context(), ReportSender::DO_NOT_SEND_COOKIES);
-
-  network_delegate_.set_expect_cookies(false);
-  SendReport(&reporter, kDummyReport, url, 0);
 }
 
 }  // namespace

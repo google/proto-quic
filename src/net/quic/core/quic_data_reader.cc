@@ -8,32 +8,69 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
-#include "net/quic/platform/api/quic_endian.h"
 #include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 
 namespace net {
 
-#define ENDPOINT \
-  (perspective_ == Perspective::IS_SERVER ? "Server: " : "Client: ")
-
 QuicDataReader::QuicDataReader(const char* data,
                                const size_t len,
-                               Perspective perspective)
-    : data_(data), len_(len), pos_(0), perspective_(perspective) {
-  QUIC_DVLOG(1) << ENDPOINT << "QuicDataReader";
+                               Perspective perspective,
+                               Endianness endianness)
+    : data_(data),
+      len_(len),
+      pos_(0),
+      perspective_(perspective),
+      endianness_(endianness) {}
+
+bool QuicDataReader::ReadUInt8(uint8_t* result) {
+  return ReadBytes(result, sizeof(*result));
 }
 
 bool QuicDataReader::ReadUInt16(uint16_t* result) {
-  return ReadBytes(result, sizeof(*result));
+  if (!ReadBytes(result, sizeof(*result))) {
+    return false;
+  }
+  if (endianness_ == NETWORK_BYTE_ORDER) {
+    *result = QuicEndian::NetToHost16(*result);
+  }
+  return true;
 }
 
 bool QuicDataReader::ReadUInt32(uint32_t* result) {
-  return ReadBytes(result, sizeof(*result));
+  if (!ReadBytes(result, sizeof(*result))) {
+    return false;
+  }
+  if (endianness_ == NETWORK_BYTE_ORDER) {
+    *result = QuicEndian::NetToHost32(*result);
+  }
+  return true;
 }
 
 bool QuicDataReader::ReadUInt64(uint64_t* result) {
-  return ReadBytes(result, sizeof(*result));
+  if (!ReadBytes(result, sizeof(*result))) {
+    return false;
+  }
+  if (endianness_ == NETWORK_BYTE_ORDER) {
+    *result = QuicEndian::NetToHost64(*result);
+  }
+  return true;
+}
+
+bool QuicDataReader::ReadBytesToUInt64(size_t num_bytes, uint64_t* result) {
+  if (num_bytes > sizeof(*result)) {
+    return false;
+  }
+  if (endianness_ == HOST_BYTE_ORDER) {
+    return ReadBytes(result, num_bytes);
+  }
+
+  if (!ReadBytes(reinterpret_cast<char*>(result) + sizeof(*result) - num_bytes,
+                 num_bytes)) {
+    return false;
+  }
+  *result = QuicEndian::NetToHost64(*result);
+  return true;
 }
 
 bool QuicDataReader::ReadUFloat16(uint64_t* result) {
@@ -97,7 +134,7 @@ bool QuicDataReader::ReadStringPiece(QuicStringPiece* result, size_t size) {
 }
 
 bool QuicDataReader::ReadConnectionId(uint64_t* connection_id) {
-  if (!ReadUInt64(connection_id)) {
+  if (!ReadBytes(connection_id, sizeof(*connection_id))) {
     return false;
   }
 

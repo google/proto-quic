@@ -22,9 +22,13 @@ class NET_EXPORT TrustStoreNSS : public TrustStore {
   explicit TrustStoreNSS(SECTrustType trust_type);
   ~TrustStoreNSS() override;
 
+  // CertIssuerSource implementation:
+  void SyncGetIssuersOf(const ParsedCertificate* cert,
+                        ParsedCertificateList* issuers) override;
+
   // TrustStore implementation:
-  void FindTrustAnchorsForCert(const scoped_refptr<ParsedCertificate>& cert,
-                               TrustAnchors* matches) const override;
+  void GetTrust(const scoped_refptr<ParsedCertificate>& cert,
+                CertificateTrust* trust) const override;
 
  private:
   SECTrustType trust_type_;

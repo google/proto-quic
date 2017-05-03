@@ -4,13 +4,15 @@
 
 #include "net/quic/test_tools/quic_test_utils.h"
 
+#include "net/quic/platform/api/quic_test.h"
 #include "testing/gtest/include/gtest/gtest-spi.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
 namespace test {
 
-TEST(QuicTestUtilsTest, BasicApproxEq) {
+class QuicTestUtilsTest : public QuicTest {};
+
+TEST_F(QuicTestUtilsTest, BasicApproxEq) {
   ExpectApproxEq(10, 10, 1e-6f);
   ExpectApproxEq(1000, 1001, 0.01f);
   EXPECT_NONFATAL_FAILURE(ExpectApproxEq(1000, 1100, 0.01f), "");
@@ -19,7 +21,7 @@ TEST(QuicTestUtilsTest, BasicApproxEq) {
   EXPECT_NONFATAL_FAILURE(ExpectApproxEq(31, 64, 0.55f), "");
 }
 
-TEST(QuicTestUtilsTest, QuicTimeDelta) {
+TEST_F(QuicTestUtilsTest, QuicTimeDelta) {
   ExpectApproxEq(QuicTime::Delta::FromMicroseconds(1000),
                  QuicTime::Delta::FromMicroseconds(1003), 0.01f);
   EXPECT_NONFATAL_FAILURE(
@@ -28,7 +30,7 @@ TEST(QuicTestUtilsTest, QuicTimeDelta) {
       "");
 }
 
-TEST(QuicTestUtilsTest, QuicBandwidth) {
+TEST_F(QuicTestUtilsTest, QuicBandwidth) {
   ExpectApproxEq(QuicBandwidth::FromBytesPerSecond(1000),
                  QuicBandwidth::FromBitsPerSecond(8005), 0.01f);
   EXPECT_NONFATAL_FAILURE(
@@ -38,7 +40,7 @@ TEST(QuicTestUtilsTest, QuicBandwidth) {
 }
 
 // Ensure that SimpleRandom does not change its output for a fixed seed.
-TEST(QuicTestUtilsTest, SimpleRandomStability) {
+TEST_F(QuicTestUtilsTest, SimpleRandomStability) {
   SimpleRandom rng;
   rng.set_seed(UINT64_C(0x1234567800010001));
   EXPECT_EQ(UINT64_C(14865409841904857791), rng.RandUint64());

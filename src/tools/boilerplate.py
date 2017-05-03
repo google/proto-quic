@@ -39,7 +39,7 @@ def _GetHeader(filename):
 
 def _CppHeader(filename):
   guard = filename.upper() + '_'
-  for char in '/.+':
+  for char in '/\\.+':
     guard = guard.replace(char, '_')
   return '\n'.join([
     '',
@@ -69,8 +69,13 @@ def _IsIOSFile(filename):
   return False
 
 
+def _FilePathSlashesToCpp(filename):
+  return filename.replace('\\', '/')
+
+
 def _CppImplementation(filename):
-  return '\n#include "' + _RemoveTestSuffix(filename) + '.h"\n'
+  return '\n#include "' + _FilePathSlashesToCpp(_RemoveTestSuffix(filename)) \
+    + '.h"\n'
 
 
 def _ObjCppImplementation(filename):
@@ -94,7 +99,7 @@ def _CreateFile(filename):
   elif filename.endswith('.mm'):
     contents += _ObjCppImplementation(filename)
 
-  fd = open(filename, 'w')
+  fd = open(filename, 'wb')
   fd.write(contents)
   fd.close()
 
