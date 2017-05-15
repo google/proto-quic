@@ -1,97 +1,98 @@
 # PartitionAlloc Design
 
-This document explains a high-level design of PartitionAlloc.
-If you're interested in its in-depth implementation, see comments
-in partition_alloc.h.
+This document describes PartitionAlloc at a high level. For documentation about
+its implementation, see the comments in `partition_alloc.h`.
 
 [TOC]
 
 ## Overview
 
-PartitionAlloc is a memory allocator optimized for performance and security
-in Blink. All objects in Blink are expected to be allocated with
-PartitionAlloc or Oilpan (but not yet done).
+PartitionAlloc is a memory allocator optimized for security, low allocation
+latency (when called appropriately), and good space efficiency (when called
+appropriately). This document aims to help you understand how PartitionAlloc
+works so that you can use it effectively.
 
-## Partitions and buckets
+## Partitions And Buckets
 
-PartitionAlloc has three partitions. A partition is a heap that contains
-certain types of objects. Specifically, PartitionAlloc allocates objects
-on either of the following three partitions depending on their types:
+A *partition* is a heap that contains certain object types, objects of certain
+sizes, or objects of a certain lifetime (as the caller prefers). Callers can
+create as many partitions as they need. Each partition is separate and protected
+from any other partitions.
 
-* LayoutObject partition: A partition to allocate LayoutObjects.
+Each partition holds multiple buckets. A *bucket* is a region in a partition
+that contains similar-sized objects.
 
-* Buffer partition: A partition to allocate objects that have a strong risk
-that the length and/or the contents are exploited by user scripts.
-Specifically, Vectors, HashTables, ArrayBufferContents and Strings are
-allocated on the Buffer partition.
+PartitionAlloc aligns each object allocation with the closest bucket size. For
+example, if a partition has 3 buckets for 64 bytes, 256 bytes, and 1024 bytes,
+then PartitionAlloc will satisfy an allocation request for 128 bytes by rounding
+it up to 256 bytes and allocating from the second bucket.
 
-* FastMalloc partition: A partition to allocate all other objects.
-Objects marked with USING_FAST_MALLOC are allocated on the FastMalloc partition.
-
-Each partition holds multiple buckets. A bucket is a region in a partition
-that contains similar-sized objects. Each object allocation must be aligned
-with the closest bucket size. For example, if a partition has three buckets
-for 64 bytes, 256 bytes and 1024 bytes, then an object of 128 bytes is
-rounded up to 256 bytes and allocated on the second bucket.
-
-The LayoutObject partition has buckets for all N * sizeof(void*) (N = 1, 2, ..., N_max).
-This means that no extra padding is needed to allocate a LayoutObject object.
-Different sizes of LayoutObjects are allocated in different buckets.
-
-The Buffer partition and the FastMalloc partition have many buckets.
-They support any arbitrary size of allocations but padding may be added
-to align the allocation with the closest bucket size. The bucket sizes are
-chosen to keep the worst-case memory overhead less than 10%.
-
-Large allocations (> 1 MB) are realized by direct memory mmapping.
+The special allocator class `template <size_t N> class
+SizeSpecificPartitionAllocator` will satisfy allocations only of size
+`kMaxAllocation = N - kAllocationGranularity` or less, and contains buckets for
+all `n * kAllocationGranularity` (n = 1, 2, ..., `kMaxAllocation`). Attempts to
+allocate more than `kMaxAllocation` will fail.
 
 ## Performance
 
-PartitionAlloc doesn't acquire a lock when allocating on the LayoutObject
-partition, because it's guaranteed that LayoutObjects are allocated
-only by the main thread.
+The current implementation is optimized for the main thread use-case. For
+example, PartitionAlloc doesn't have threaded caches.
 
-PartitionAlloc acquires a lock when allocating on the Buffer partition and
-the FastMalloc partition. PartitionAlloc uses a spin lock because thread contention
-would be rare in Blink.
+PartitionAlloc is designed to be extremely fast in its fast paths. The fast
+paths of allocation and deallocation require just 2 (reasonably predictable)
+branches. The number of operations in the fast paths is minimal, leading to the
+possibility of inlining.
 
-PartitionAlloc is designed to be extremely fast in fast paths. Just two
-(reasonably predictable) branches are required for the fast paths of an
-allocation and deallocation. The number of operations in the fast paths
-is minimized, leading to the possibility of inlining.
+For an example of how to use partitions to get good performance and good safety,
+see Blink's usage, as described in `wtf/allocator/Allocator.md`.
 
-Having a dedicated partition for LayoutObjects is helpful to improve cache
-locality and thus help improve performance.
+Large allocations (> 1 MB) are realized by direct memory mmapping.
+
+`PartitionAllocGeneric` acquires a lock for thread safety. (The current
+implementation uses a spin lock on the assumption that thread contention will be
+rare in its callers. The original caller was Blink, where this is generally
+true. Spin locks also have the benefit of simplicity.)
+
+Callers can get thread-unsafe performance using a
+`SizeSpecificPartitionAllocator` or otherwise using `PartitionAlloc` (instead of
+`PartitionAllocGeneric`). Callers can also arrange for low contention, such as
+by using a dedicated partition for single-threaded, latency-critical
+allocations.
+
+Because PartitionAlloc guarantees that address space regions used for one
+partition are never reused for other partitions, partitions can eat a large
+amount of virtual address space (even if not of actual memory).
+
+Mixing various random objects in the same partition will generally lead to lower
+efficiency. For good performance, group similar objects into the same partition.
 
 ## Security
 
 Security is one of the most important goals of PartitionAlloc.
 
-Different partitions are guaranteed to exist in separate address spaces.
-When objects contained in a page in a partition are all freed,
-the physical memory is returned to the system but the address space
-remains reserved. The address space may be reused later only for the partition.
-Remember that PartitionAlloc puts LayoutObjects into a dedicated partition.
-This is because LayoutObjects are likely to be a source of use-after-free.
-Similarly, PartitionAlloc puts Strings, Vectors etc into the Buffer partition
-because the length and/or contents may be exploited by user scripts.
-This means that PartitionAlloc greedily uses virtual address spaces in favor of
-security hardening.
+PartitionAlloc guarantees that different partitions exist in different regions
+of the process' address space. When the caller has freed all objects contained
+in a page in a partition, PartitionAlloc returns the physical memory to the
+operating system, but continues to reserve the region of address space.
+PartitionAlloc will only reuse an address space region for the same partition.
 
-Also the following security properties are provided:
+PartitionAlloc also guarantees that:
 
-* Linear overflows cannot corrupt into the partition.
+* Linear overflows cannot corrupt into the partition. (There is a guard page at
+the beginning of each partition.)
 
-* Linear overflows cannot corrupt out of the partition.
+* Linear overflows cannot corrupt out of the partition. (There is a guard page
+at the end of each partition.)
 
-* Metadata is recorded in a dedicated region (not next to each object).
-Linear overflow or underflow cannot corrupt the metadata.
+* Linear overflow or underflow cannot corrupt the allocation metadata.
+PartitionAlloc records metadata in a dedicated region out-of-line (not adjacent
+to objects).
 
-* Buckets are helpful to allocate different-sized objects on different addresses.
-One page can contain only similar-sized objects.
+* Objects of different sizes will likely be allocated in different buckets, and
+hence at different addresses. One page can contain only similar-sized objects.
 
 * Dereference of a freelist pointer should fault.
 
 * Partial pointer overwrite of freelist pointer should fault.
 
-* Large allocations are guard-paged at the beginning and end.
+* Large allocations have guard pages at the beginning and end.

@@ -25,7 +25,8 @@ using ScopedPathUnlinker =
 bool CreateAnonymousSharedMemory(const SharedMemoryCreateOptions& options,
                                  ScopedFILE* fp,
                                  ScopedFD* readonly_fd,
-                                 FilePath* path) {
+                                 FilePath* path,
+                                 SharedMemoryError* error) {
 #if !(defined(OS_MACOSX) && !defined(OS_IOS))
   // It doesn't make sense to have a open-existing private piece of shmem
   DCHECK(!options.open_existing_deprecated);
@@ -34,13 +35,16 @@ bool CreateAnonymousSharedMemory(const SharedMemoryCreateOptions& options,
   // A: Because they're limited to 4mb on OS X.  FFFFFFFUUUUUUUUUUU
   FilePath directory;
   ScopedPathUnlinker path_unlinker;
-  if (!GetShmemTempDir(options.executable, &directory))
+  if (!GetShmemTempDir(options.executable, &directory)) {
+    *error = SharedMemoryError::NO_TEMP_DIR;
     return false;
+  }
 
   fp->reset(base::CreateAndOpenTemporaryFileInDir(directory, path));
-
-  if (!*fp)
+  if (!*fp) {
+    *error = SharedMemoryError::NO_FILE;
     return false;
+  }
 
   // Deleting the file prevents anyone else from mapping it in (making it
   // private), and prevents the need for cleanup (once the last fd is
@@ -53,18 +57,24 @@ bool CreateAnonymousSharedMemory(const SharedMemoryCreateOptions& options,
     if (!readonly_fd->is_valid()) {
       DPLOG(ERROR) << "open(\"" << path->value() << "\", O_RDONLY) failed";
       fp->reset();
+      *error = SharedMemoryError::MAKE_READONLY_FAILED;
       return false;
     }
   }
   return true;
 }
 
-bool PrepareMapFile(ScopedFILE fp, ScopedFD readonly_fd, int* mapped_file,
-                    int* readonly_mapped_file) {
+bool PrepareMapFile(ScopedFILE fp,
+                    ScopedFD readonly_fd,
+                    int* mapped_file,
+                    int* readonly_mapped_file,
+                    SharedMemoryError* error) {
   DCHECK_EQ(-1, *mapped_file);
   DCHECK_EQ(-1, *readonly_mapped_file);
-  if (fp == NULL)
+  if (!fp) {
+    *error = SharedMemoryError::NO_FILE;
     return false;
+  }
 
   // This function theoretically can block on the disk, but realistically
   // the temporary files we create will just go into the buffer cache
@@ -81,6 +91,7 @@ bool PrepareMapFile(ScopedFILE fp, ScopedFD readonly_fd, int* mapped_file,
       NOTREACHED();
     if (st.st_dev != readonly_st.st_dev || st.st_ino != readonly_st.st_ino) {
       LOG(ERROR) << "writable and read-only inodes don't match; bailing";
+      *error = SharedMemoryError::INODE_MISMATCH;
       return false;
     }
   }

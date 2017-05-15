@@ -29,7 +29,7 @@ def main():
   try:
     tempdir = tempfile.mkdtemp(prefix=u'hello_world')
     try:
-      _, hashval = common.isolate(
+      isolated_hash = common.isolate(
           tempdir, options.isolate_server, options.swarming_os, options.verbose)
 
       json_file = os.path.join(tempdir, 'task.json')
@@ -43,7 +43,7 @@ def main():
         '--dimension', 'pool', 'default',
         '--task-name', options.task_name,
         '--dump-json', json_file,
-        '--isolated', hashval,
+        '--isolated', isolated_hash,
         '--shards', '2',
       ]
       if options.idempotent:

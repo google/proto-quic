@@ -26,10 +26,6 @@ class QuicSpdyClientStream : public QuicSpdyStream {
   QuicSpdyClientStream(QuicStreamId id, QuicClientSession* session);
   ~QuicSpdyClientStream() override;
 
-  // Override the base class to close the write side as soon as we get a
-  // response (if bidirectional streaming is not enabled).
-  void OnStreamFrame(const QuicStreamFrame& frame) override;
-
   // Override the base class to parse and store headers.
   void OnInitialHeadersComplete(bool fin,
                                 size_t frame_len,

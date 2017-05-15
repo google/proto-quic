@@ -23,11 +23,10 @@
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/memory/weak_ptr.h"
-#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
-#include "base/test/scoped_task_scheduler.h"
+#include "base/test/scoped_task_environment.h"
 #include "base/test/test_file_util.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "net/base/auth.h"
@@ -95,6 +94,7 @@
 #include "net/ssl/ssl_private_key.h"
 #include "net/test/cert_test_util.h"
 #include "net/test/gtest_util.h"
+#include "net/test/net_test_suite.h"
 #include "net/test/test_data_directory.h"
 #include "net/websockets/websocket_handshake_stream_base.h"
 #include "testing/gmock/include/gmock/gmock.h"
@@ -13720,11 +13720,136 @@ TEST_F(HttpNetworkTransactionTest, RetryWithoutConnectionPooling) {
 
   TestNetLogEntry::List entries;
   log.GetEntries(&entries);
-  size_t pos = ExpectLogContainsSomewhere(
-      entries, 0, NetLogEventType::HTTP_TRANSACTION_RESTART_AFTER_ERROR,
+  ExpectLogContainsSomewhere(
+      entries, 0, NetLogEventType::HTTP_TRANSACTION_RESTART_MISDIRECTED_REQUEST,
       NetLogEventPhase::NONE);
-  EXPECT_TRUE(entries[pos].GetIntegerValue("net_error", &rv));
-  EXPECT_THAT(rv, IsError(ERR_MISDIRECTED_REQUEST));
+}
+
+// Test that HTTP 421 responses are properly returned to the caller if received
+// on the retry as well. HttpNetworkTransaction should not infinite loop or lose
+// portions of the response.
+TEST_F(HttpNetworkTransactionTest, ReturnHTTP421OnRetry) {
+  // Two hosts resolve to the same IP address.
+  const std::string ip_addr = "1.2.3.4";
+  IPAddress ip;
+  ASSERT_TRUE(ip.AssignFromIPLiteral(ip_addr));
+  IPEndPoint peer_addr = IPEndPoint(ip, 443);
+
+  session_deps_.host_resolver.reset(new MockCachingHostResolver());
+  session_deps_.host_resolver->rules()->AddRule("www.example.org", ip_addr);
+  session_deps_.host_resolver->rules()->AddRule("mail.example.org", ip_addr);
+
+  std::unique_ptr<HttpNetworkSession> session(CreateSession(&session_deps_));
+
+  // Two requests on the first connection.
+  SpdySerializedFrame req1(
+      spdy_util_.ConstructSpdyGet("https://www.example.org", 1, LOWEST));
+  spdy_util_.UpdateWithStreamDestruction(1);
+  SpdySerializedFrame req2(
+      spdy_util_.ConstructSpdyGet("https://mail.example.org", 3, LOWEST));
+  SpdySerializedFrame rst(
+      spdy_util_.ConstructSpdyRstStream(3, ERROR_CODE_CANCEL));
+  MockWrite writes1[] = {
+      CreateMockWrite(req1, 0), CreateMockWrite(req2, 3),
+      CreateMockWrite(rst, 6),
+  };
+
+  // The first one succeeds, the second gets error 421 Misdirected Request.
+  SpdySerializedFrame resp1(spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
+  SpdySerializedFrame body1(spdy_util_.ConstructSpdyDataFrame(1, true));
+  SpdyHeaderBlock response_headers;
+  response_headers[SpdyTestUtil::GetStatusKey()] = "421";
+  SpdySerializedFrame resp2(
+      spdy_util_.ConstructSpdyReply(3, response_headers.Clone()));
+  MockRead reads1[] = {CreateMockRead(resp1, 1), CreateMockRead(body1, 2),
+                       CreateMockRead(resp2, 4), MockRead(ASYNC, 0, 5)};
+
+  MockConnect connect1(ASYNC, OK, peer_addr);
+  SequencedSocketData data1(connect1, reads1, arraysize(reads1), writes1,
+                            arraysize(writes1));
+  session_deps_.socket_factory->AddSocketDataProvider(&data1);
+
+  AddSSLSocketData();
+
+  // Retry the second request on a second connection. It returns 421 Misdirected
+  // Retry again.
+  SpdyTestUtil spdy_util2;
+  SpdySerializedFrame req3(
+      spdy_util2.ConstructSpdyGet("https://mail.example.org", 1, LOWEST));
+  MockWrite writes2[] = {
+      CreateMockWrite(req3, 0),
+  };
+
+  SpdySerializedFrame resp3(
+      spdy_util2.ConstructSpdyReply(1, std::move(response_headers)));
+  SpdySerializedFrame body3(spdy_util2.ConstructSpdyDataFrame(1, true));
+  MockRead reads2[] = {CreateMockRead(resp3, 1), CreateMockRead(body3, 2),
+                       MockRead(ASYNC, 0, 3)};
+
+  MockConnect connect2(ASYNC, OK, peer_addr);
+  SequencedSocketData data2(connect2, reads2, arraysize(reads2), writes2,
+                            arraysize(writes2));
+  session_deps_.socket_factory->AddSocketDataProvider(&data2);
+
+  AddSSLSocketData();
+
+  // Preload mail.example.org into HostCache.
+  HostPortPair host_port("mail.example.org", 443);
+  HostResolver::RequestInfo resolve_info(host_port);
+  AddressList ignored;
+  std::unique_ptr<HostResolver::Request> request;
+  TestCompletionCallback callback;
+  int rv = session_deps_.host_resolver->Resolve(resolve_info, DEFAULT_PRIORITY,
+                                                &ignored, callback.callback(),
+                                                &request, NetLogWithSource());
+  EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
+  rv = callback.WaitForResult();
+  EXPECT_THAT(rv, IsOk());
+
+  HttpRequestInfo request1;
+  request1.method = "GET";
+  request1.url = GURL("https://www.example.org/");
+  request1.load_flags = 0;
+  HttpNetworkTransaction trans1(DEFAULT_PRIORITY, session.get());
+
+  rv = trans1.Start(&request1, callback.callback(), NetLogWithSource());
+  EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
+  rv = callback.WaitForResult();
+  EXPECT_THAT(rv, IsOk());
+
+  const HttpResponseInfo* response = trans1.GetResponseInfo();
+  ASSERT_TRUE(response);
+  ASSERT_TRUE(response->headers);
+  EXPECT_EQ("HTTP/1.1 200", response->headers->GetStatusLine());
+  EXPECT_TRUE(response->was_fetched_via_spdy);
+  EXPECT_TRUE(response->was_alpn_negotiated);
+  std::string response_data;
+  ASSERT_THAT(ReadTransaction(&trans1, &response_data), IsOk());
+  EXPECT_EQ("hello!", response_data);
+
+  HttpRequestInfo request2;
+  request2.method = "GET";
+  request2.url = GURL("https://mail.example.org/");
+  request2.load_flags = 0;
+  HttpNetworkTransaction trans2(DEFAULT_PRIORITY, session.get());
+
+  BoundTestNetLog log;
+  rv = trans2.Start(&request2, callback.callback(), log.bound());
+  EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
+  rv = callback.WaitForResult();
+  EXPECT_THAT(rv, IsOk());
+
+  // After a retry, the 421 Misdirected Request is reported back up to the
+  // caller.
+  response = trans2.GetResponseInfo();
+  ASSERT_TRUE(response);
+  ASSERT_TRUE(response->headers);
+  EXPECT_EQ("HTTP/1.1 421", response->headers->GetStatusLine());
+  EXPECT_TRUE(response->was_fetched_via_spdy);
+  EXPECT_TRUE(response->was_alpn_negotiated);
+  EXPECT_TRUE(response->ssl_info.cert);
+  ASSERT_THAT(ReadTransaction(&trans2, &response_data), IsOk());
+  EXPECT_EQ("hello!", response_data);
 }
 
 class OneTimeCachingHostResolver : public HostResolver {
@@ -16638,10 +16763,6 @@ TEST_F(HttpNetworkTransactionTest, ThrottlingPrioritySetDestroy) {
 
 #if !defined(OS_IOS)
 TEST_F(HttpNetworkTransactionTest, TokenBindingSpdy) {
-  // Required by ChannelIDService.
-  base::test::ScopedTaskScheduler scoped_task_scheduler(
-      base::MessageLoop::current());
-
   const std::string https_url = "https://www.example.com";
   HttpRequestInfo request;
   request.url = GURL(https_url);
@@ -16667,7 +16788,8 @@ TEST_F(HttpNetworkTransactionTest, TokenBindingSpdy) {
   TestCompletionCallback callback;
   EXPECT_EQ(ERR_IO_PENDING,
             trans.Start(&request, callback.callback(), NetLogWithSource()));
-  base::RunLoop().RunUntilIdle();
+
+  NetTestSuite::GetScopedTaskEnvironment()->RunUntilIdle();
 
   EXPECT_TRUE(trans.GetResponseInfo()->was_fetched_via_spdy);
   HttpRequestHeaders headers;

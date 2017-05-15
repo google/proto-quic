@@ -15,12 +15,19 @@ HttpAuthPreferences::HttpAuthPreferences(
     ,
     const std::string& gssapi_library_name
 #endif
+#if defined(OS_CHROMEOS)
+    ,
+    bool allow_gssapi_library_load
+#endif
     )
     : auth_schemes_(auth_schemes.begin(), auth_schemes.end()),
       negotiate_disable_cname_lookup_(false),
       negotiate_enable_port_(false),
 #if defined(OS_POSIX) && !defined(OS_ANDROID)
       gssapi_library_name_(gssapi_library_name),
+#endif
+#if defined(OS_CHROMEOS)
+      allow_gssapi_library_load_(allow_gssapi_library_load),
 #endif
       security_manager_(URLSecurityManager::Create()) {
 }
@@ -47,6 +54,11 @@ std::string HttpAuthPreferences::AuthAndroidNegotiateAccountType() const {
 #if defined(OS_POSIX) && !defined(OS_ANDROID)
 std::string HttpAuthPreferences::GssapiLibraryName() const {
   return gssapi_library_name_;
+}
+#endif
+#if defined(OS_CHROMEOS)
+bool HttpAuthPreferences::AllowGssapiLibraryLoad() const {
+  return allow_gssapi_library_load_;
 }
 #endif
 

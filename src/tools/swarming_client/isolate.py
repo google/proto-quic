@@ -479,7 +479,7 @@ class CompleteState(object):
 
   def load_isolate(
       self, cwd, isolate_file, path_variables, config_variables,
-      extra_variables, blacklist, ignore_broken_items):
+      extra_variables, blacklist, ignore_broken_items, collapse_symlinks):
     """Updates self.isolated and self.saved_state with information loaded from a
     .isolate file.
 
@@ -489,9 +489,9 @@ class CompleteState(object):
     assert os.path.isabs(isolate_file), isolate_file
     isolate_file = file_path.get_native_path_case(isolate_file)
     logging.info(
-        'CompleteState.load_isolate(%s, %s, %s, %s, %s, %s)',
+        'CompleteState.load_isolate(%s, %s, %s, %s, %s, %s, %s)',
         cwd, isolate_file, path_variables, config_variables, extra_variables,
-        ignore_broken_items)
+        ignore_broken_items, collapse_symlinks)
 
     # Config variables are not affected by the paths and must be used to
     # retrieve the paths, so update them first.
@@ -550,7 +550,9 @@ class CompleteState(object):
           self.saved_state.root_dir)
       for f in infiles
     ]
-    follow_symlinks = sys.platform != 'win32'
+    follow_symlinks = False
+    if not collapse_symlinks:
+      follow_symlinks = sys.platform != 'win32'
     # Expand the directories by listing each file inside. Up to now, trailing
     # os.path.sep must be kept.
     infiles = isolated_format.expand_directories_and_symlinks(
@@ -565,7 +567,7 @@ class CompleteState(object):
     self.saved_state.update_isolated(command, infiles, read_only, relative_cwd)
     logging.debug(self)
 
-  def files_to_metadata(self, subdir):
+  def files_to_metadata(self, subdir, collapse_symlinks):
     """Updates self.saved_state.files with the files' mode and hash.
 
     If |subdir| is specified, filters to a subdirectory. The resulting .isolated
@@ -582,7 +584,8 @@ class CompleteState(object):
             filepath,
             self.saved_state.files[infile],
             self.saved_state.read_only,
-            self.saved_state.algo)
+            self.saved_state.algo,
+            collapse_symlinks)
 
   def save_files(self):
     """Saves self.saved_state and creates a .isolated file."""
@@ -674,7 +677,8 @@ def load_complete_state(options, cwd, subdir, skip_update):
     # Then load the .isolate and expands directories.
     complete_state.load_isolate(
         cwd, isolate, options.path_variables, options.config_variables,
-        options.extra_variables, options.blacklist, options.ignore_broken_items)
+        options.extra_variables, options.blacklist, options.ignore_broken_items,
+        options.collapse_symlinks)
 
   # Regenerate complete_state.saved_state.files.
   if subdir:
@@ -691,7 +695,7 @@ def load_complete_state(options, cwd, subdir, skip_update):
     subdir = subdir.replace('/', os.path.sep)
 
   if not skip_update:
-    complete_state.files_to_metadata(subdir)
+    complete_state.files_to_metadata(subdir, options.collapse_symlinks)
   return complete_state
 
 
@@ -1122,6 +1126,9 @@ def add_isolate_options(parser):
       help='Indicates that invalid entries in the isolated file to be '
            'only be logged and not stop processing. Defaults to True if '
            'env var ISOLATE_IGNORE_BROKEN_ITEMS is set')
+  group.add_option(
+      '-L', '--collapse_symlinks', action='store_true',
+      help='Treat any symlinks as if they were the normal underlying file')
   parser.add_option_group(group)
 
 

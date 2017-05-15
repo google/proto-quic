@@ -89,7 +89,7 @@ zu{
         CW{"i-Curaçao"}
         CX{"i-Christmas Island"}
         CY{"i-Cyprus"}
-        CZ{"i-Czech Republic"}
+        CZ{"i-Czechia"}
         DE{"i-Germany"}
         DG{"i-Diego Garcia"}
         DJ{"i-Djibouti"}
@@ -108,7 +108,7 @@ zu{
         EU{"i-European Union"}
         FI{"i-Finland"}
         FJ{"i-Fiji"}
-        FK{"i-Falkland Islands"}
+        FK{"i-Falkland Islands (Islas Malvinas)"}
         FM{"i-Micronesia"}
         FO{"i-Faroe Islands"}
         FR{"i-France"}
@@ -181,7 +181,7 @@ zu{
         MF{"i-Saint Martin"}
         MG{"i-Madagascar"}
         MH{"i-Marshall Islands"}
-        MK{"i-Macedonia"}
+        MK{"i-Macedonia (FYROM)"}
         ML{"iMali"}
         MM{"i-Myanmar (Burma)"}
         MN{"i-Mongolia"}
@@ -302,10 +302,8 @@ zu{
         CD{"i-Congo (DRC)"}
         CG{"i-Congo (Republic)"}
         CI{"i-Ivory Coast"}
-        CZ{"i-Czechia"}
-        FK{"i-Falkland Islands (Islas Malvinas)"}
-        MK{"i-Macedonia (FYROM)"}
+        CZ{"i-Czech Republic"}
         TL{"i-East Timor"}
     }
-    Version{"2.1.29.22"}
+    Version{"2.1.31.74"}
 }

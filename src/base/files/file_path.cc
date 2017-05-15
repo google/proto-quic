@@ -209,6 +209,10 @@ bool FilePath::operator!=(const FilePath& that) const {
 #endif  // defined(FILE_PATH_USES_DRIVE_LETTERS)
 }
 
+std::ostream& operator<<(std::ostream& out, const FilePath& file_path) {
+  return out << file_path.value();
+}
+
 // static
 bool FilePath::IsSeparator(CharType character) {
   for (size_t i = 0; i < kSeparatorsLength - 1; ++i) {

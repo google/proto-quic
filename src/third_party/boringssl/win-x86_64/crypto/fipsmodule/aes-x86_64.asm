@@ -1337,7 +1337,7 @@ $L$SEH_end_asm_AES_set_decrypt_key:
 ALIGN	16
 global	asm_AES_cbc_encrypt
 
-EXTERN	OPENSSL_ia32cap_addr
+EXTERN	OPENSSL_ia32cap_P
 
 asm_AES_cbc_encrypt:
 	mov	QWORD[8+rsp],rdi	;WIN64 prologue
@@ -1371,7 +1371,7 @@ $L$cbc_prologue:
 	cmp	r9,0
 	cmove	r14,r10
 
-	mov	r10,QWORD[OPENSSL_ia32cap_addr]
+	lea	r10,[OPENSSL_ia32cap_P]
 	mov	r10d,DWORD[r10]
 	cmp	rdx,512
 	jb	NEAR $L$cbc_slow_prologue

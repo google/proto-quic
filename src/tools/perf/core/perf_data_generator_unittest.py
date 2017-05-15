@@ -10,6 +10,8 @@ from core.perf_data_generator import BenchmarkMetadata
 from telemetry import benchmark
 from telemetry import decorators
 
+import mock
+
 
 class PerfDataGeneratorTest(unittest.TestCase):
   def setUp(self):
@@ -34,12 +36,15 @@ class PerfDataGeneratorTest(unittest.TestCase):
         }
     }
     benchmarks = {
-        'benchmark_name_1': BenchmarkMetadata(None, None, False),
+        'benchmark_name_1': BenchmarkMetadata('foo@bar.com', None, False),
         'benchmark_name_2': BenchmarkMetadata(None, None, False),
-        'benchmark_name_3': BenchmarkMetadata(None, None, False)
+        'benchmark_name_3': BenchmarkMetadata('neo@matrix.org', None, False)
     }
 
-    perf_data_generator.verify_all_tests_in_benchmark_csv(tests, benchmarks)
+    # Mock out content of unowned_benchmarks.txt
+    with mock.patch('__builtin__.open',
+                    mock.mock_open(read_data="benchmark_name_2")):
+      perf_data_generator.verify_all_tests_in_benchmark_csv(tests, benchmarks)
 
 
   def testVerifyAllTestsInBenchmarkCsvCatchesMismatchedTests(self):
@@ -84,7 +89,7 @@ class PerfDataGeneratorTest(unittest.TestCase):
         'swarming': {
           'ignore_task_failure': False,
           'dimension_sets': [{'os': 'SkyNet', 'id': 'T-850', 'pool': 'T-RIP'}],
-          'hard_timeout': 7200,
+          'hard_timeout': 9000,
           'can_use_on_swarming_builders': True,
           'expiration': 36000,
           'io_timeout': 3600,
@@ -106,7 +111,7 @@ class PerfDataGeneratorTest(unittest.TestCase):
         'swarming': {
           'ignore_task_failure': True,
           'dimension_sets': [{'os': 'SkyNet', 'id': 'T-850', 'pool': 'T-RIP'}],
-          'hard_timeout': 7200,
+          'hard_timeout': 9000,
           'can_use_on_swarming_builders': True,
           'expiration': 36000,
           'io_timeout': 3600,
@@ -134,10 +139,10 @@ class PerfDataGeneratorTest(unittest.TestCase):
         'platform': 'android',
         'swarming_dimensions': swarming_dimensions,
     }
-    sharding_map = {'1': {'blacklisted': 0, 'not_blacklisted': 0}}
+    sharding_map = {'fake': {'blacklisted': 'a', 'not_blacklisted': 'a'}}
     benchmarks = [BlacklistedBenchmark, NotBlacklistedBenchmark]
     tests = perf_data_generator.generate_telemetry_tests(
-        test_config, benchmarks, sharding_map, ['blacklisted'])
+        'fake', test_config, benchmarks, sharding_map, ['blacklisted'])
 
     generated_test_names = set(t['name'] for t in tests)
     self.assertEquals(

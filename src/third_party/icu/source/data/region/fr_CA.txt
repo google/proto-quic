@@ -11,7 +11,7 @@ fr_CA{
         CC{"îles Cocos (Keeling)"}
         CK{"îles Cook"}
         CX{"île Christmas"}
-        FK{"îles Malouines"}
+        FK{"îles Falkland (Malouines)"}
         FM{"Micronésie"}
         FO{"îles Féroé"}
         HM{"îles Heard et McDonald"}
@@ -35,8 +35,7 @@ fr_CA{
     }
     Countries%variant{
         CI{"Côte d’Ivoire"}
-        FK{"îles Falkland (Malouines)"}
         TL{"Timor oriental"}
     }
-    Version{"2.1.27.99"}
+    Version{"2.1.31.33"}
 }

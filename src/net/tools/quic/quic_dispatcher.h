@@ -206,6 +206,10 @@ class QuicDispatcher : public QuicTimeWaitListManager::Visitor,
   // and delivers any buffered packets for that connection id.
   void ProcessChlo();
 
+  // Returns client address used for stateless rejector to generate and validate
+  // source address token.
+  virtual const QuicSocketAddress GetClientAddress() const;
+
   QuicTimeWaitListManager* time_wait_list_manager() {
     return time_wait_list_manager_.get();
   }

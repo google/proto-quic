@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_SPDY_MULTIPLEXED_HTTP_STREAM_H_
-#define NET_SPDY_MULTIPLEXED_HTTP_STREAM_H_
+#ifndef NET_SPDY_CHROMIUM_MULTIPLEXED_HTTP_STREAM_H_
+#define NET_SPDY_CHROMIUM_MULTIPLEXED_HTTP_STREAM_H_
+
+#include <memory>
+#include <vector>
 
 #include "net/http/http_stream.h"
 #include "net/spdy/chromium/multiplexed_session.h"
@@ -13,7 +16,8 @@ namespace net {
 // Base class for SPDY and QUIC HttpStream subclasses.
 class NET_EXPORT_PRIVATE MultiplexedHttpStream : public HttpStream {
  public:
-  explicit MultiplexedHttpStream(MultiplexedSessionHandle session);
+  explicit MultiplexedHttpStream(
+      std::unique_ptr<MultiplexedSessionHandle> session);
   ~MultiplexedHttpStream() override;
 
   bool GetRemoteEndpoint(IPEndPoint* endpoint) override;
@@ -30,10 +34,14 @@ class NET_EXPORT_PRIVATE MultiplexedHttpStream : public HttpStream {
   // Caches SSL info from the underlying session.
   void SaveSSLInfo();
 
+ protected:
+  MultiplexedSessionHandle* session() { return session_.get(); }
+  const MultiplexedSessionHandle* session() const { return session_.get(); }
+
  private:
-  MultiplexedSessionHandle session_;
+  const std::unique_ptr<MultiplexedSessionHandle> session_;
 };
 
 }  // namespace net
 
-#endif  // NET_SPDY_MULTIPLEXED_HTTP_STREAM_H_
+#endif  // NET_SPDY_CHROMIUM_MULTIPLEXED_HTTP_STREAM_H_

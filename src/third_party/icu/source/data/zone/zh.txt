@@ -1,7 +1,7 @@
 ﻿// © 2016 and later: Unicode, Inc. and others.
 // License & terms of use: http://www.unicode.org/copyright.html#License
 zh{
-    Version{"2.1.29.84"}
+    Version{"2.1.33.94"}
     zoneStrings{
         "Africa:Abidjan"{
             ec{"阿比让"}
@@ -833,12 +833,6 @@ zh{
         }
         "Asia:Taipei"{
             ec{"台北"}
-            ld{"台北夏令时间"}
-            lg{"台北时间"}
-            ls{"台北标准时间"}
-            sd{"台北"}
-            sg{"台北"}
-            ss{"台北"}
         }
         "Asia:Tashkent"{
             ec{"塔什干"}
@@ -947,6 +941,9 @@ zh{
         }
         "Australia:Sydney"{
             ec{"悉尼"}
+        }
+        "Etc:UTC"{
+            ls{"协调世界时"}
         }
         "Etc:Unknown"{
             ec{"未知城市"}

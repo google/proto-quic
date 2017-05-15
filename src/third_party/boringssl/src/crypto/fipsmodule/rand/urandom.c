@@ -12,10 +12,14 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
 
+#if !defined(_GNU_SOURCE)
+#define _GNU_SOURCE  /* needed for syscall() on Linux. */
+#endif
+
 #include <openssl/rand.h>
 
 #if !defined(OPENSSL_WINDOWS) && !defined(OPENSSL_FUCHSIA) && \
-    !defined(BORINGSSL_UNSAFE_DETERMINISTIC_MODE)
+    !defined(BORINGSSL_UNSAFE_DETERMINISTIC_MODE) && !defined(OPENSSL_TRUSTY)
 
 #include <assert.h>
 #include <errno.h>
@@ -166,7 +170,6 @@ static void init_once(void) {
    * continuing. This is automatically handled by getrandom, which requires
    * that the entropy pool has been initialised, but for urandom we have to
    * poll. */
-  int first_iteration = 1;
   for (;;) {
     int entropy_bits;
     if (ioctl(fd, RNDGETENTCNT, &entropy_bits)) {
@@ -180,14 +183,6 @@ static void init_once(void) {
     if (entropy_bits >= kBitsNeeded) {
       break;
     }
-
-    if (first_iteration) {
-      message(
-          "The kernel entropy pool contains too few bits. This process is "
-          "built in FIPS mode and will block until sufficient entropy is "
-          "available.\n");
-    }
-    first_iteration = 0;
 
     usleep(250000);
   }
@@ -300,4 +295,4 @@ void CRYPTO_sysrand(uint8_t *out, size_t requested) {
 }
 
 #endif /* !OPENSSL_WINDOWS && !defined(OPENSSL_FUCHSIA) && \
-          !BORINGSSL_UNSAFE_DETERMINISTIC_MODE */
+          !BORINGSSL_UNSAFE_DETERMINISTIC_MODE && !OPENSSL_TRUSTY */

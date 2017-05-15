@@ -7,10 +7,9 @@
 
 namespace coverage_util {
 
-// Flushes .gcda coverage files if ENABLE_TEST_CODE_COVERAGE is defined. iOS 7
-// does not call any code at the "end" of an app so flushing should be
-// performed manually.
-void FlushCoverageDataIfNecessary();
+// In debug builds, if IOS_ENABLE_COVERAGE is defined, sets the filename of the
+// coverage file. Otherwise, it does nothing.
+void ConfigureCoverageReportPath();
 
 }  // namespace coverage_util
 

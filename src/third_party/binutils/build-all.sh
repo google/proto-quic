@@ -56,6 +56,11 @@ tar jxf binutils-$VERSION.tar.bz2
   patch -p1 < ../icf-rel.patch
   echo "----------------------------------"
   echo
+  echo "icf-align.patch"
+  echo "=================================="
+  patch -p1 < ../icf-align.patch
+  echo "----------------------------------"
+  echo
 )
 
 for ARCH in i386 amd64; do

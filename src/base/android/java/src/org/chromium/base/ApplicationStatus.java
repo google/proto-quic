@@ -10,7 +10,6 @@ import android.app.Application;
 import android.app.Application.ActivityLifecycleCallbacks;
 import android.os.Bundle;
 
-import org.chromium.base.ActivityState.ActivityStateEnum;
 import org.chromium.base.annotations.CalledByNative;
 import org.chromium.base.annotations.JNINamespace;
 import org.chromium.base.annotations.MainDex;
@@ -30,13 +29,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ApplicationStatus {
     private static class ActivityInfo {
         private int mStatus = ActivityState.DESTROYED;
-        private ObserverList<ActivityStateListener> mListeners =
-                new ObserverList<ActivityStateListener>();
+        private ObserverList<ActivityStateListener> mListeners = new ObserverList<>();
 
         /**
          * @return The current {@link ActivityState} of the activity.
          */
-        @ActivityStateEnum
+        @ActivityState
         public int getStatus() {
             return mStatus;
         }
@@ -44,7 +42,7 @@ public class ApplicationStatus {
         /**
          * @param status The new {@link ActivityState} of the activity.
          */
-        public void setStatus(@ActivityStateEnum int status) {
+        public void setStatus(@ActivityState int status) {
             mStatus = status;
         }
 
@@ -56,7 +54,7 @@ public class ApplicationStatus {
         }
     }
 
-    private static Object sCachedApplicationStateLock = new Object();
+    private static final Object sCachedApplicationStateLock = new Object();
     @ApplicationState
     private static Integer sCachedApplicationState;
 
@@ -70,21 +68,20 @@ public class ApplicationStatus {
     /**
      * A map of which observers listen to state changes from which {@link Activity}.
      */
-    private static final Map<Activity, ActivityInfo> sActivityInfo =
-            new ConcurrentHashMap<Activity, ActivityInfo>();
+    private static final Map<Activity, ActivityInfo> sActivityInfo = new ConcurrentHashMap<>();
 
     /**
      * A list of observers to be notified when any {@link Activity} has a state change.
      */
     private static final ObserverList<ActivityStateListener> sGeneralActivityStateListeners =
-            new ObserverList<ActivityStateListener>();
+            new ObserverList<>();
 
     /**
      * A list of observers to be notified when the visibility state of this {@link Application}
      * changes.  See {@link #getStateForApplication()}.
      */
     private static final ObserverList<ApplicationStateListener> sApplicationStateListeners =
-            new ObserverList<ApplicationStateListener>();
+            new ObserverList<>();
 
     /**
      * Interface to be implemented by listeners.
@@ -94,7 +91,7 @@ public class ApplicationStatus {
          * Called when the application's state changes.
          * @param newState The application state.
          */
-        public void onApplicationStateChange(@ApplicationState int newState);
+        void onApplicationStateChange(@ApplicationState int newState);
     }
 
     /**
@@ -106,7 +103,7 @@ public class ApplicationStatus {
          * @param activity The activity that had a state change.
          * @param newState New activity state.
          */
-        public void onActivityStateChange(Activity activity, @ActivityStateEnum int newState);
+        void onActivityStateChange(Activity activity, @ActivityState int newState);
     }
 
     private ApplicationStatus() {}
@@ -175,7 +172,7 @@ public class ApplicationStatus {
      * @param activity Current activity.
      * @param newState New state value.
      */
-    private static void onStateChange(Activity activity, @ActivityStateEnum int newState) {
+    private static void onStateChange(Activity activity, @ActivityState int newState) {
         if (activity == null) throw new IllegalArgumentException("null activity is not supported");
 
         if (sActivity == null
@@ -252,9 +249,9 @@ public class ApplicationStatus {
      * @return A {@link List} of all non-destroyed {@link Activity}s.
      */
     public static List<WeakReference<Activity>> getRunningActivities() {
-        List<WeakReference<Activity>> activities = new ArrayList<WeakReference<Activity>>();
+        List<WeakReference<Activity>> activities = new ArrayList<>();
         for (Activity activity : sActivityInfo.keySet()) {
-            activities.add(new WeakReference<Activity>(activity));
+            activities.add(new WeakReference<>(activity));
         }
         return activities;
     }
@@ -302,7 +299,7 @@ public class ApplicationStatus {
      * @param activity The activity whose state is to be returned.
      * @return The state of the specified activity (see {@link ActivityState}).
      */
-    @ActivityStateEnum
+    @ActivityState
     public static int getStateForActivity(Activity activity) {
         ActivityInfo info = sActivityInfo.get(activity);
         return info != null ? info.getStatus() : ActivityState.DESTROYED;
@@ -318,7 +315,7 @@ public class ApplicationStatus {
             if (sCachedApplicationState == null) {
                 sCachedApplicationState = determineApplicationState();
             }
-            return sCachedApplicationState.intValue();
+            return sCachedApplicationState;
         }
     }
 

@@ -106,7 +106,7 @@ mt{
         EU{"Unjoni Ewropea"}
         FI{"il-Finlandja"}
         FJ{"Fiġi"}
-        FK{"il-Gżejjer Falkland"}
+        FK{"Il-Gżejjer Falkland (il-Gżejjer Malvinas)"}
         FM{"Mikroneżja"}
         FO{"il-Gżejjer Faeroe"}
         FR{"Franza"}
@@ -296,8 +296,7 @@ mt{
     Countries%variant{
         CD{"Kongo (RDK)"}
         CG{"ir-Repubblika tal-Kongo"}
-        FK{"Il-Gżejjer Falkland (il-Gżejjer Malvinas)"}
         TL{"Timor tal-Lvant"}
     }
-    Version{"2.1.28.76"}
+    Version{"2.1.32.59"}
 }

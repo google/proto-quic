@@ -22,8 +22,9 @@ _PROBABLY_CLANG_RE = re.compile(r'clang(?:\+\+)?$')
 def ParseArgs():
   parser = argparse.ArgumentParser(
       description='Utility to build one Chromium file for debugging clang')
-  parser.add_argument('-p', default='.', help='path to the compile database')
+  parser.add_argument('-p', required=True, help='path to the compile database')
   parser.add_argument('--generate-compdb',
+                      action='store_true',
                       help='regenerate the compile database')
   parser.add_argument('--prefix',
                       help='optional prefix to prepend, e.g. --prefix=lldb')
@@ -73,7 +74,8 @@ def main():
   args = ParseArgs()
   os.chdir(args.p)
   if args.generate_compdb:
-    compile_db.GenerateWithNinja('.')
+    with open('compile_commands.json', 'w') as f:
+      f.write(compile_db.GenerateWithNinja('.'))
   db = compile_db.Read('.')
   for record in db:
     if os.path.normpath(os.path.join(args.p, record[

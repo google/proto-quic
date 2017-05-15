@@ -185,23 +185,6 @@ class PageCyclerV2Top10Mobile(_PageCyclerV2):
             cache_temperature.PCV1_COLD, cache_temperature.PCV1_WARM])
 
 
-@benchmark.Owner(emails=['kouhei@chromium.org', 'ksakamoto@chromium.org'])
-class PageCyclerV2ToughLayoutCases(_PageCyclerV2):
-  """Page loading for the slowest layouts observed in the Alexa top 1 million.
-
-  Recorded in July 2013.
-  """
-  page_set = page_sets.ToughLayoutCasesPageSet
-
-  @classmethod
-  def Name(cls):
-    return 'page_cycler_v2.tough_layout_cases'
-
-  def CreateStorySet(self, options):
-    return page_sets.ToughLayoutCasesPageSet(cache_temperatures=[
-          cache_temperature.PCV1_COLD, cache_temperature.PCV1_WARM])
-
-
 @benchmark.Disabled('reference', 'android')
 @benchmark.Owner(emails=['nasko@chromium.org'])
 class PageCyclerV2BasicOopifIsolated(_PageCyclerV2):

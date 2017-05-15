@@ -4,8 +4,6 @@
 
 #include "net/quic/quartc/quartc_packet_writer.h"
 
-#include <errno.h>
-
 namespace net {
 
 QuartcPacketWriter::QuartcPacketWriter(

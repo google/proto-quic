@@ -89,7 +89,7 @@ et{
         CW{"Curaçao"}
         CX{"Jõulusaar"}
         CY{"Küpros"}
-        CZ{"Tšehhi"}
+        CZ{"Tšehhia"}
         DE{"Saksamaa"}
         DG{"Diego Garcia"}
         DJ{"Djibouti"}
@@ -108,7 +108,7 @@ et{
         EU{"Euroopa Liit"}
         FI{"Soome"}
         FJ{"Fidži"}
-        FK{"Falklandi saared"}
+        FK{"Malviini saared"}
         FM{"Mikroneesia"}
         FO{"Fääri saared"}
         FR{"Prantsusmaa"}
@@ -181,7 +181,7 @@ et{
         MF{"Saint-Martin"}
         MG{"Madagaskar"}
         MH{"Marshalli Saared"}
-        MK{"Makedoonia"}
+        MK{"Makedoonia Vabariik"}
         ML{"Mali"}
         MM{"Myanmar (Birma)"}
         MN{"Mongoolia"}
@@ -302,10 +302,8 @@ et{
         CD{"Kongo-Kinshasa"}
         CG{"Kongo-Brazzaville"}
         CI{"Elevandiluurannik"}
-        CZ{"Tšehhia"}
-        FK{"Malviini saared"}
-        MK{"Makedoonia Vabariik"}
+        CZ{"Tšehhi"}
         TL{"Timor-Leste"}
     }
-    Version{"2.1.28.79"}
+    Version{"2.1.32.59"}
 }

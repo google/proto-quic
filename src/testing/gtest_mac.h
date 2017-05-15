@@ -5,8 +5,8 @@
 #ifndef TESTING_GTEST_MAC_H_
 #define TESTING_GTEST_MAC_H_
 
-#include <gtest/internal/gtest-port.h>
-#include <gtest/gtest.h>
+#include "testing/gtest/include/gtest/gtest.h"
+#include "third_party/googletest/src/googletest/include/gtest/internal/gtest-port.h"
 
 #ifdef GTEST_OS_MAC
 

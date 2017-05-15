@@ -41,6 +41,18 @@ class QuicSpdySessionPeer {
       bool fin,
       SpdyPriority priority,
       QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
+  // Helper functions for stream ids, to allow test logic to abstract
+  // over the HTTP stream numbering scheme (i.e. whether one or
+  // two QUIC streams are used per HTTP transaction).
+  static QuicStreamId NextStreamId(const QuicSpdySession& session);
+  // n should start at 0.
+  static QuicStreamId GetNthClientInitiatedStreamId(
+      const QuicSpdySession& session,
+      int n);
+  // n should start at 0.
+  static QuicStreamId GetNthServerInitiatedStreamId(
+      const QuicSpdySession& session,
+      int n);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicSpdySessionPeer);

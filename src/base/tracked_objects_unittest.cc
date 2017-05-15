@@ -346,9 +346,23 @@ TEST_F(TrackedObjectsTest, DeathDataTestRecordAllocations) {
   EXPECT_EQ(data->alloc_overhead_bytes(), 3 * kAllocOverheadBytes);
   EXPECT_EQ(data->max_allocated_bytes(), kLargerMaxAllocatedBytes);
 
-  // Saturate everything but aggregate byte counts. The byte counts will be
-  // pushed past the 32 bit value range.
+  // Saturate everything but aggregate byte counts.
+  // In the 32 bit implementation, this tests the case where the low-order
+  // word goes negative.
   data->RecordAllocations(INT_MAX, INT_MAX, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
+  EXPECT_EQ(data->alloc_ops(), INT_MAX);
+  EXPECT_EQ(data->free_ops(), INT_MAX);
+  // The cumulative byte counts are 64 bit wide, and won't saturate easily.
+  EXPECT_EQ(data->allocated_bytes(),
+            static_cast<int64_t>(INT_MAX) +
+                static_cast<int64_t>(3 * kAllocatedBytes));
+  EXPECT_EQ(data->freed_bytes(),
+            static_cast<int64_t>(INT_MAX) + 3 * kFreedBytes);
+  EXPECT_EQ(data->alloc_overhead_bytes(),
+            static_cast<int64_t>(INT_MAX) + 3 * kAllocOverheadBytes);
+  EXPECT_EQ(data->max_allocated_bytes(), INT_MAX);
+
+  // The byte counts will be pushed past the 32 bit value range.
   data->RecordAllocations(INT_MAX, INT_MAX, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
   EXPECT_EQ(data->alloc_ops(), INT_MAX);
   EXPECT_EQ(data->free_ops(), INT_MAX);

@@ -284,9 +284,10 @@ bool QuicCryptoClientConfig::CachedState::Initialize(
     return false;
   }
 
-  chlo_hash.CopyToString(&chlo_hash_);
-  signature.CopyToString(&server_config_sig_);
-  source_address_token.CopyToString(&source_address_token_);
+  chlo_hash_.assign(chlo_hash.data(), chlo_hash.size());
+  server_config_sig_.assign(signature.data(), signature.size());
+  source_address_token_.assign(source_address_token.data(),
+                               source_address_token.size());
   certs_ = certs;
   cert_sct_ = cert_sct;
   return true;

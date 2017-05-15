@@ -35,6 +35,8 @@ namespace net {
 namespace test {
 namespace {
 
+const QuicStreamId kGetNthClientInitiatedStreamId1 = kHeadersStreamId + 2;
+
 // Run tests with combinations of {QuicVersion, ToggleVersionSerialization}.
 struct TestParams {
   TestParams(QuicVersion version,
@@ -188,8 +190,8 @@ class QuicPacketCreatorTest : public QuicTestWithParam<TestParams> {
   // Returns the number of bytes consumed by the non-data fields of a stream
   // frame, assuming it is the last frame in the packet
   size_t GetStreamFrameOverhead() {
-    return QuicFramer::GetMinStreamFrameSize(kClientDataStreamId1, kOffset,
-                                             true);
+    return QuicFramer::GetMinStreamFrameSize(kGetNthClientInitiatedStreamId1,
+                                             kOffset, true);
   }
 
   QuicIOVector MakeIOVectorFromStringPiece(QuicStringPiece s) {
@@ -514,16 +516,17 @@ TEST_P(QuicPacketCreatorTest, CreateAllFreeBytesForStreamFrames) {
   for (size_t i = overhead; i < overhead + 100; ++i) {
     creator_.SetMaxPacketLength(i);
     const bool should_have_room = i > overhead + GetStreamFrameOverhead();
-    ASSERT_EQ(should_have_room,
-              creator_.HasRoomForStreamFrame(kClientDataStreamId1, kOffset));
+    ASSERT_EQ(should_have_room, creator_.HasRoomForStreamFrame(
+                                    kGetNthClientInitiatedStreamId1, kOffset));
     if (should_have_room) {
       QuicFrame frame;
       QuicIOVector io_vector(MakeIOVectorFromStringPiece("testdata"));
       EXPECT_CALL(delegate_, OnSerializedPacket(_))
           .WillRepeatedly(Invoke(
               this, &QuicPacketCreatorTest::ClearSerializedPacketForTests));
-      ASSERT_TRUE(creator_.ConsumeData(kClientDataStreamId1, io_vector, 0u,
-                                       kOffset, false, false, &frame));
+      ASSERT_TRUE(creator_.ConsumeData(kGetNthClientInitiatedStreamId1,
+                                       io_vector, 0u, kOffset, false, false,
+                                       &frame));
       ASSERT_TRUE(frame.stream_frame);
       size_t bytes_consumed = frame.stream_frame->data_length;
       EXPECT_LT(0u, bytes_consumed);
@@ -544,8 +547,8 @@ TEST_P(QuicPacketCreatorTest, StreamFrameConsumption) {
     size_t bytes_free = delta > 0 ? 0 : 0 - delta;
     QuicFrame frame;
     QuicIOVector io_vector(MakeIOVectorFromStringPiece(data));
-    ASSERT_TRUE(creator_.ConsumeData(kClientDataStreamId1, io_vector, 0u,
-                                     kOffset, false, false, &frame));
+    ASSERT_TRUE(creator_.ConsumeData(kGetNthClientInitiatedStreamId1, io_vector,
+                                     0u, kOffset, false, false, &frame));
     ASSERT_TRUE(frame.stream_frame);
 
     // BytesFree() returns bytes available for the next frame, which will
@@ -613,8 +616,8 @@ TEST_P(QuicPacketCreatorTest, NonCryptoStreamFramePacketNonPadding) {
     QuicIOVector io_vector(MakeIOVectorFromStringPiece(data));
     EXPECT_CALL(delegate_, OnSerializedPacket(_))
         .WillOnce(Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
-    ASSERT_TRUE(creator_.ConsumeData(kClientDataStreamId1, io_vector, 0u,
-                                     kOffset, false, false, &frame));
+    ASSERT_TRUE(creator_.ConsumeData(kGetNthClientInitiatedStreamId1, io_vector,
+                                     0u, kOffset, false, false, &frame));
     ASSERT_TRUE(frame.stream_frame);
     size_t bytes_consumed = frame.stream_frame->data_length;
     EXPECT_LT(0u, bytes_consumed);

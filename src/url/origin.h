@@ -89,9 +89,9 @@ class URL_EXPORT Origin {
   // 3. 'file' URLs all parse as ("file", "", 0).
   explicit Origin(const GURL& url);
 
-  // Creates an Origin from a |scheme|, |host|, and |port|. All the parameters
-  // must be valid and canonicalized. Do not use this method to create unique
-  // origins. Use Origin() for that.
+  // Creates an Origin from a |scheme|, |host|, |port| and |suborigin|. All the
+  // parameters must be valid and canonicalized. Do not use this method to
+  // create unique origins. Use Origin() for that.
   //
   // This constructor should be used in order to pass 'Origin' objects back and
   // forth over IPC (as transitioning through GURL would risk potentially
@@ -100,7 +100,8 @@ class URL_EXPORT Origin {
   static Origin UnsafelyCreateOriginWithoutNormalization(
       base::StringPiece scheme,
       base::StringPiece host,
-      uint16_t port);
+      uint16_t port,
+      base::StringPiece suborigin);
 
   // Creates an origin without sanity checking that the host is canonicalized.
   // This should only be used when converting between already normalized types,

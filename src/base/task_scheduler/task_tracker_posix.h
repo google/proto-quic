@@ -8,8 +8,10 @@
 #include <memory>
 
 #include "base/base_export.h"
+#include "base/logging.h"
 #include "base/macros.h"
 #include "base/task_scheduler/task_tracker.h"
+#include "base/threading/platform_thread.h"
 
 namespace base {
 
@@ -37,11 +39,30 @@ class BASE_EXPORT TaskTrackerPosix : public TaskTracker {
     watch_file_descriptor_message_loop_ = watch_file_descriptor_message_loop;
   }
 
+#if DCHECK_IS_ON()
+  // TODO(robliao): http://crbug.com/698140. This addresses service thread tasks
+  // that could run after the task scheduler has shut down. Anything from the
+  // service thread is exempted from the task scheduler shutdown DCHECKs.
+  void set_service_thread_handle(
+      const PlatformThreadHandle& service_thread_handle) {
+    DCHECK(!service_thread_handle.is_null());
+    service_thread_handle_ = service_thread_handle;
+  }
+#endif
+
  private:
   // TaskTracker:
   void PerformRunTask(std::unique_ptr<Task> task) override;
 
+#if DCHECK_IS_ON()
+  bool IsPostingBlockShutdownTaskAfterShutdownAllowed() override;
+#endif
+
   MessageLoopForIO* watch_file_descriptor_message_loop_ = nullptr;
+
+#if DCHECK_IS_ON()
+  PlatformThreadHandle service_thread_handle_;
+#endif
 
   DISALLOW_COPY_AND_ASSIGN(TaskTrackerPosix);
 };

@@ -28,7 +28,6 @@
 #include "crypto/openssl_util.h"
 #include "net/base/ip_address.h"
 #include "net/base/net_errors.h"
-#include "net/base/proxy_delegate.h"
 #include "net/base/trace_constants.h"
 #include "net/cert/cert_verifier.h"
 #include "net/cert/ct_verifier.h"
@@ -607,9 +606,9 @@ int QuicStreamRequest::Request(const HostPortPair& destination,
   return rv;
 }
 
-void QuicStreamRequest::SetSession(QuicChromiumClientSession* session) {
-  DCHECK(session);
-  session_ = session->GetWeakPtr();
+void QuicStreamRequest::SetSession(
+    std::unique_ptr<QuicChromiumClientSession::Handle> session) {
+  session_ = move(session);
 }
 
 void QuicStreamRequest::OnRequestComplete(int rv) {
@@ -624,16 +623,19 @@ base::TimeDelta QuicStreamRequest::GetTimeDelayForWaitingJob() const {
 }
 
 std::unique_ptr<HttpStream> QuicStreamRequest::CreateStream() {
-  if (!session_)
+  if (!session_ || !session_->IsConnected())
     return nullptr;
-  return base::MakeUnique<QuicHttpStream>(session_, http_server_properties_);
+
+  return base::MakeUnique<QuicHttpStream>(std::move(session_),
+                                          http_server_properties_);
 }
 
 std::unique_ptr<BidirectionalStreamImpl>
 QuicStreamRequest::CreateBidirectionalStreamImpl() {
-  if (!session_)
+  if (!session_ || !session_->IsConnected())
     return nullptr;
-  return base::MakeUnique<BidirectionalStreamQuicImpl>(session_);
+
+  return base::MakeUnique<BidirectionalStreamQuicImpl>(std::move(session_));
 }
 
 QuicStreamFactory::QuicStreamFactory(
@@ -642,7 +644,6 @@ QuicStreamFactory::QuicStreamFactory(
     SSLConfigService* ssl_config_service,
     ClientSocketFactory* client_socket_factory,
     HttpServerProperties* http_server_properties,
-    ProxyDelegate* proxy_delegate,
     CertVerifier* cert_verifier,
     CTPolicyEnforcer* ct_policy_enforcer,
     ChannelIDService* channel_id_service,
@@ -676,7 +677,6 @@ QuicStreamFactory::QuicStreamFactory(
       client_socket_factory_(client_socket_factory),
       http_server_properties_(http_server_properties),
       push_delegate_(nullptr),
-      proxy_delegate_(proxy_delegate),
       transport_security_state_(transport_security_state),
       cert_transparency_verifier_(cert_transparency_verifier),
       quic_crypto_client_stream_factory_(quic_crypto_client_stream_factory),
@@ -874,7 +874,7 @@ int QuicStreamFactory::Create(const QuicServerId& server_id,
         static_cast<QuicChromiumClientSession*>(promised->session());
     DCHECK(session);
     if (session->server_id().privacy_mode() == server_id.privacy_mode()) {
-      request->SetSession(session);
+      request->SetSession(session->CreateHandle());
       ++num_push_streams_created_;
       return OK;
     }
@@ -890,7 +890,7 @@ int QuicStreamFactory::Create(const QuicServerId& server_id,
     SessionMap::iterator it = active_sessions_.find(server_id);
     if (it != active_sessions_.end()) {
       QuicChromiumClientSession* session = it->second;
-      request->SetSession(session);
+      request->SetSession(session->CreateHandle());
       return OK;
     }
   }
@@ -915,7 +915,7 @@ int QuicStreamFactory::Create(const QuicServerId& server_id,
       QuicChromiumClientSession* session = key_value.second;
       if (destination.Equals(all_sessions_[session].destination()) &&
           session->CanPool(server_id.host(), server_id.privacy_mode())) {
-        request->SetSession(session);
+        request->SetSession(session->CreateHandle());
         return OK;
       }
     }
@@ -949,7 +949,7 @@ int QuicStreamFactory::Create(const QuicServerId& server_id,
     if (it == active_sessions_.end())
       return ERR_QUIC_PROTOCOL_ERROR;
     QuicChromiumClientSession* session = it->second;
-    request->SetSession(session);
+    request->SetSession(session->CreateHandle());
   }
   return rv;
 }
@@ -1014,7 +1014,7 @@ void QuicStreamFactory::OnJobComplete(Job* job, int rv) {
       for (QuicStreamRequest* request : requests_iter->second) {
         DCHECK(request->server_id() == server_id);
         // Do not notify |request| yet.
-        request->SetSession(session);
+        request->SetSession(session->CreateHandle());
       }
     }
   }

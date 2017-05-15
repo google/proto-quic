@@ -78,7 +78,6 @@ class IDLLexer(object):
     'interface' : 'INTERFACE',
     'iterable': 'ITERABLE',
     'legacycaller' : 'LEGACYCALLER',
-    'legacyiterable' : 'LEGACYITERABLE',
     'long' : 'LONG',
     'maplike': 'MAPLIKE',
     'Nan' : 'NAN',

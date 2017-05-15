@@ -338,9 +338,9 @@ int SimpleSynchronousEntry::DoomEntrySet(
 }
 
 void SimpleSynchronousEntry::ReadData(const EntryOperationData& in_entry_op,
-                                      net::IOBuffer* out_buf,
-                                      uint32_t* out_crc32,
+                                      CRCRequest* crc_request,
                                       SimpleEntryStat* entry_stat,
+                                      net::IOBuffer* out_buf,
                                       int* out_result) {
   DCHECK(initialized_);
   DCHECK_NE(0, in_entry_op.index);
@@ -361,9 +361,26 @@ void SimpleSynchronousEntry::ReadData(const EntryOperationData& in_entry_op,
                                            in_entry_op.buf_len);
   if (bytes_read > 0) {
     entry_stat->set_last_used(Time::Now());
-    *out_crc32 = crc32(crc32(0L, Z_NULL, 0),
-                       reinterpret_cast<const Bytef*>(out_buf->data()),
-                       bytes_read);
+    if (crc_request != nullptr) {
+      crc_request->data_crc32 =
+          crc32(crc_request->data_crc32,
+                reinterpret_cast<const Bytef*>(out_buf->data()), bytes_read);
+      // Verify checksum after last read, if we've been asked to.
+      if (crc_request->request_verify &&
+          in_entry_op.offset + bytes_read ==
+              entry_stat->data_size(in_entry_op.index)) {
+        crc_request->performed_verify = true;
+        int checksum_result = CheckEOFRecord(in_entry_op.index, *entry_stat,
+                                             crc_request->data_crc32);
+        if (checksum_result < 0) {
+          crc_request->verify_ok = false;
+          *out_result = checksum_result;
+          return;
+        } else {
+          crc_request->verify_ok = true;
+        }
+      }
+    }
   }
   if (bytes_read >= 0) {
     *out_result = bytes_read;
@@ -672,29 +689,28 @@ void SimpleSynchronousEntry::GetAvailableRange(
   *out_result = static_cast<int>(std::min(avail_so_far, len_from_start));
 }
 
-void SimpleSynchronousEntry::CheckEOFRecord(int index,
-                                            const SimpleEntryStat& entry_stat,
-                                            uint32_t expected_crc32,
-                                            int* out_result) const {
+int SimpleSynchronousEntry::CheckEOFRecord(int index,
+                                           const SimpleEntryStat& entry_stat,
+                                           uint32_t expected_crc32) const {
   DCHECK(initialized_);
   uint32_t crc32;
   bool has_crc32;
   bool has_key_sha256;
   int32_t stream_size;
-  *out_result = GetEOFRecordData(index, entry_stat, &has_crc32, &has_key_sha256,
-                                 &crc32, &stream_size);
-  if (*out_result != net::OK) {
+  int rv = GetEOFRecordData(index, entry_stat, &has_crc32, &has_key_sha256,
+                            &crc32, &stream_size);
+  if (rv != net::OK) {
     Doom();
-    return;
+    return rv;
   }
   if (has_crc32 && crc32 != expected_crc32) {
     DVLOG(1) << "EOF record had bad crc.";
-    *out_result = net::ERR_CACHE_CHECKSUM_MISMATCH;
     RecordCheckEOFResult(cache_type_, CHECK_EOF_RESULT_CRC_MISMATCH);
     Doom();
-    return;
+    return net::ERR_CACHE_CHECKSUM_MISMATCH;
   }
   RecordCheckEOFResult(cache_type_, CHECK_EOF_RESULT_SUCCESS);
+  return net::OK;
 }
 
 void SimpleSynchronousEntry::Close(

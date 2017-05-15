@@ -131,8 +131,13 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 
 def start_server():
   """Starts an HTTPS web server and returns the port bound."""
-  # A premade passwordless self-signed certificate. It works because urllib
-  # doesn't verify the certificate validity.
+  # A premade passwordless self-signed certificate. It works because older
+  # urllib doesn't verify the certificate validity. Disable SSL certificate
+  # verification for more recent version.
+  create_unverified_https_context = getattr(
+      ssl, '_create_unverified_context', None)
+  if create_unverified_https_context:
+    ssl._create_default_https_context = create_unverified_https_context
   httpd = HttpsServer(('127.0.0.1', 0), Handler, 'localhost', pem=PEM)
   httpd.start()
   return httpd

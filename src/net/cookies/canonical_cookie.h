@@ -40,22 +40,8 @@ class NET_EXPORT CanonicalCookie {
       const CookieOptions& options);
 
   // Creates a canonical cookie from unparsed attribute values.
-  // Canonicalizes and validates inputs.  May return NULL if an attribute
-  // value is invalid.
-  static std::unique_ptr<CanonicalCookie> Create(const GURL& url,
-                                                 const std::string& name,
-                                                 const std::string& value,
-                                                 const std::string& domain,
-                                                 const std::string& path,
-                                                 const base::Time& creation,
-                                                 const base::Time& expiration,
-                                                 bool secure,
-                                                 bool http_only,
-                                                 CookieSameSite same_site,
-                                                 CookiePriority priority);
-
-  // Creates a canonical cookie from unparsed attribute values.
-  // It does not do any validation.
+  // It does not do any canonicalization.
+  // |name| and |path| must not be empty.
   static std::unique_ptr<CanonicalCookie> Create(const std::string& name,
                                                  const std::string& value,
                                                  const std::string& domain,
@@ -137,7 +123,8 @@ class NET_EXPORT CanonicalCookie {
 
   std::string DebugString() const;
 
-  static std::string CanonPath(const GURL& url, const ParsedCookie& pc);
+  static std::string CanonPathWithString(const GURL& url,
+                                         const std::string& path_string);
 
   // Returns a "null" time if expiration was unspecified or invalid.
   static base::Time CanonExpiration(const ParsedCookie& pc,

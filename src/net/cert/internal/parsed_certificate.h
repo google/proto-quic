@@ -11,6 +11,7 @@
 
 #include "base/memory/ref_counted.h"
 #include "net/base/net_export.h"
+#include "net/cert/internal/certificate_policies.h"
 #include "net/cert/internal/parse_certificate.h"
 #include "net/der/input.h"
 #include "third_party/boringssl/src/include/openssl/base.h"
@@ -96,14 +97,7 @@ class NET_EXPORT ParsedCertificate
   // Accessor for struct containing raw fields of the TbsCertificate.
   const ParsedTbsCertificate& tbs() const { return tbs_; }
 
-  // Returns true if the signatureAlgorithm of the Certificate is supported and
-  // valid.
-  bool has_valid_supported_signature_algorithm() const {
-    return signature_algorithm_ != nullptr;
-  }
-
   // Returns the signatureAlgorithm of the Certificate (not the tbsCertificate).
-  // Must not be called if has_valid_supported_signature_algorithm() is false.
   const SignatureAlgorithm& signature_algorithm() const {
     DCHECK(signature_algorithm_);
     return *signature_algorithm_;
@@ -204,6 +198,16 @@ class NET_EXPORT ParsedCertificate
     return policy_oids_;
   }
 
+  // Returns true if the certificate has a PolicyConstraints extension.
+  bool has_policy_constraints() const { return has_policy_constraints_; }
+
+  // Returns the ParsedPolicyConstraints struct. Caller must check
+  // has_policy_constraints() before accessing this.
+  const ParsedPolicyConstraints& policy_constraints() const {
+    DCHECK(has_policy_constraints_);
+    return policy_constraints_;
+  }
+
   // Returns a map of all the extensions in the certificate.
   const ExtensionsMap& extensions() const { return extensions_; }
 
@@ -279,6 +283,10 @@ class NET_EXPORT ParsedCertificate
   // Policies extension.
   bool has_policy_oids_ = false;
   std::vector<der::Input> policy_oids_;
+
+  // Policy constraints extension.
+  bool has_policy_constraints_ = false;
+  ParsedPolicyConstraints policy_constraints_;
 
   // All of the extensions.
   ExtensionsMap extensions_;

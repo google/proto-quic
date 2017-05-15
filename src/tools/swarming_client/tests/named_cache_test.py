@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.join(ROOT_DIR, 'third_party'))
 
 from depot_tools import fix_encoding
 from utils import file_path
+from utils import fs
 import named_cache
 
 
@@ -91,6 +92,15 @@ class CacheManagerTest(unittest.TestCase):
           set(map(str, xrange(10, 10 + named_cache.MAX_CACHE_SIZE))),
           set(os.listdir(os.path.join(self.tempdir, 'named'))),
       )
+
+  def test_corrupted(self):
+    with open(os.path.join(self.tempdir, u'state.json'), 'w') as f:
+      f.write('}}}}')
+    fs.makedirs(os.path.join(self.tempdir, 'a'), 0777)
+    with self.manager.open():
+      self.assertFalse(os.path.isdir(self.tempdir))
+      self.manager.request('a')
+    self.assertTrue(fs.islink(os.path.join(self.tempdir, 'named', 'a')))
 
 
 if __name__ == '__main__':

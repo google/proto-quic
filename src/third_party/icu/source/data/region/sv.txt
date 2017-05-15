@@ -181,7 +181,7 @@ sv{
         MF{"Saint-Martin"}
         MG{"Madagaskar"}
         MH{"Marshallöarna"}
-        MK{"Makedonien"}
+        MK{"f.d. jugoslaviska republiken Makedonien"}
         ML{"Mali"}
         MM{"Myanmar (Burma)"}
         MN{"Mongoliet"}
@@ -301,7 +301,6 @@ sv{
     Countries%variant{
         CD{"Demokratiska republiken Kongo"}
         CG{"Republiken Kongo"}
-        MK{"f.d. jugoslaviska republiken Makedonien"}
     }
-    Version{"2.1.30.7"}
+    Version{"2.1.32.59"}
 }

@@ -250,6 +250,11 @@ class StackSamplingProfiler::SamplingThread : public Thread {
   // Thread:
   void CleanUp() override;
 
+  // A stack-buffer used by the native sampler for its work. This buffer can
+  // be re-used for multiple native sampler objects so long as the API calls
+  // that take it are not called concurrently.
+  std::unique_ptr<NativeStackSampler::StackBuffer> stack_buffer_;
+
   // A map of IDs to collection contexts. Because this class is a singleton
   // that is never destroyed, context objects will never be destructed except
   // by explicit action. Thus, it's acceptable to pass unretained pointers
@@ -421,6 +426,9 @@ StackSamplingProfiler::SamplingThread::GetOrCreateTaskRunnerForAdd() {
     Stop();
   }
 
+  DCHECK(!stack_buffer_);
+  stack_buffer_ = NativeStackSampler::CreateStackBuffer();
+
   // The thread is not running. Start it and get associated runner. The task-
   // runner has to be saved for future use because though it can be used from
   // any thread, it can be acquired via task_runner() only on the created
@@ -517,12 +525,13 @@ void StackSamplingProfiler::SamplingThread::RecordSample(
 
   // Record a single sample.
   profile.samples.push_back(Sample());
-  collection->native_sampler->RecordStackSample(&profile.samples.back());
+  collection->native_sampler->RecordStackSample(stack_buffer_.get(),
+                                                &profile.samples.back());
 
   // If this is the last sample of a burst, record the total time.
   if (collection->sample == collection->params.samples_per_burst - 1) {
     profile.profile_duration = Time::Now() - collection->profile_start_time;
-    collection->native_sampler->ProfileRecordingStopped();
+    collection->native_sampler->ProfileRecordingStopped(stack_buffer_.get());
   }
 }
 
@@ -647,6 +656,7 @@ void StackSamplingProfiler::SamplingThread::ShutdownTask(int add_events) {
   // confusion.
   thread_execution_state_ = EXITING;
   thread_execution_state_task_runner_ = nullptr;
+  stack_buffer_.reset();
 }
 
 bool StackSamplingProfiler::SamplingThread::UpdateNextSampleTime(

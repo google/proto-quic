@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <link rel="stylesheet" href="{{server_url}}/{{bucket}}/css/default.css" type="text/css">
+    <link rel="stylesheet" href="https://storage.googleapis.com/chromium-result-details/css/default.css" type="text/css">
     <style>
       table, th, td {
         border: 1px solid black;
@@ -49,9 +49,10 @@
       {% endfor %}
     </div>
   </br>
-    <a onclick="reportIssues();"><b>Feedback</b></a>
+    <a href="{{feedback_url}}" target="_blank"><b>Feedback</b></a>
   </body>
   <script>
+    sortSuiteTableByFailedTestCases();
     showSuiteTableOnlyWithReplaceState();
     // Enable sorting for each column of tables.
     Array.prototype.slice.call(document.getElementsByTagName('th'))

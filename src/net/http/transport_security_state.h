@@ -20,10 +20,15 @@
 #include "net/base/expiring_cache.h"
 #include "net/base/hash_value.h"
 #include "net/base/net_export.h"
+#include "net/cert/signed_certificate_timestamp_and_status.h"
 #include "net/http/transport_security_state_source.h"
 #include "url/gurl.h"
 
 namespace net {
+
+namespace ct {
+enum class CertPolicyCompliance;
+};
 
 class HostPortPair;
 class SSLInfo;
@@ -310,9 +315,13 @@ class NET_EXPORT TransportSecurityState
     // Called when the host in |host_port_pair| has opted in to have
     // reports about Expect CT policy violations sent to |report_uri|,
     // and such a violation has occurred.
-    virtual void OnExpectCTFailed(const net::HostPortPair& host_port_pair,
-                                  const GURL& report_uri,
-                                  const net::SSLInfo& ssl_info) = 0;
+    virtual void OnExpectCTFailed(
+        const net::HostPortPair& host_port_pair,
+        const GURL& report_uri,
+        const X509Certificate* validated_certificate_chain,
+        const X509Certificate* served_certificate_chain,
+        const SignedCertificateTimestampAndStatusList&
+            signed_certificate_timestamps) = 0;
 
    protected:
     virtual ~ExpectCTReporter() {}
@@ -321,6 +330,22 @@ class NET_EXPORT TransportSecurityState
   // Indicates whether or not a public key pin check should send a
   // report if a violation is detected.
   enum PublicKeyPinReportStatus { ENABLE_PIN_REPORTS, DISABLE_PIN_REPORTS };
+
+  // Indicates whether or not an Expect-CT check should send a report if a
+  // violation is detected.
+  enum ExpectCTReportStatus {
+    ENABLE_EXPECT_CT_REPORTS,
+    DISABLE_EXPECT_CT_REPORTS
+  };
+
+  // Indicates whether a connection met CT requirements.
+  enum CTRequirementsStatus {
+    // CT was not required for the connection, or CT was required for the
+    // connection and valid Certificate Transparency information was provided.
+    CT_REQUIREMENTS_MET,
+    // CT was required for the connection but valid CT info was not provided.
+    CT_REQUIREMENTS_NOT_MET,
+  };
 
   // Feature that controls whether Expect-CT HTTP headers are parsed, processed,
   // and stored.
@@ -361,16 +386,30 @@ class NET_EXPORT TransportSecurityState
                          const SSLInfo& ssl_info,
                          base::StringPiece ocsp_response);
 
-  // Returns true if connections to |host|, using the validated certificate
-  // |validated_certificate_chain|, are expected to be accompanied with
-  // valid Certificate Transparency information that complies with the
-  // connection's CTPolicyEnforcer.
+  // Returns CT_REQUIREMENTS_NOT_MET if a connection violates CT policy
+  // requirements: that is, if a connection to |host|, using the validated
+  // certificate |validated_certificate_chain|, is expected to be accompanied
+  // with valid Certificate Transparency information that complies with the
+  // connection's CTPolicyEnforcer and |cert_policy_compliance| indicates that
+  // the connection does not comply.
   //
   // The behavior may be further be altered by setting a RequireCTDelegate
   // via |SetRequireCTDelegate()|.
-  bool ShouldRequireCT(const std::string& host,
-                       const X509Certificate* validated_certificate_chain,
-                       const HashValueVector& hashes);
+  //
+  // This method checks Expect-CT state for |host| if |issued_by_known_root| is
+  // true. If Expect-CT is configured for |host| and the connection is not
+  // compliant and |report_status| is ENABLE_EXPECT_CT_REPORTS, then a report
+  // will be sent.
+  CTRequirementsStatus CheckCTRequirements(
+      const net::HostPortPair& host_port_pair,
+      bool is_issued_by_known_root,
+      const HashValueVector& public_key_hashes,
+      const X509Certificate* validated_certificate_chain,
+      const X509Certificate* served_certificate_chain,
+      const SignedCertificateTimestampAndStatusList&
+          signed_certificate_timestamps,
+      const ExpectCTReportStatus report_status,
+      ct::CertPolicyCompliance cert_policy_compliance);
 
   // Assign a |Delegate| for persisting the transport security state. If
   // |NULL|, state will not be persisted. The caller retains
@@ -527,9 +566,10 @@ class NET_EXPORT TransportSecurityState
                              const HostPortPair& host_port_pair,
                              const SSLInfo& ssl_info);
 
-  // For unit tests only; causes ShouldRequireCT() to return |*required|
-  // by default (that is, unless a RequireCTDelegate overrides). Set to
-  // nullptr to reset.
+  // For unit tests only. Causes CheckCTRequirements() to return
+  // CT_REQUIREMENTS_NOT_MET (if |*required| is true) or CT_REQUIREMENTS_MET (if
+  // |*required| is false) for non-compliant connections by default (that is,
+  // unless a RequireCTDelegate overrides). Set to nullptr to reset.
   static void SetShouldRequireCTForTesting(bool* required);
 
  private:

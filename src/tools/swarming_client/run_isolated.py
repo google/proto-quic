@@ -27,7 +27,7 @@ state of the host to tasks. It is written to by the swarming bot's
 on_before_task() hook in the swarming server's custom bot_config.py.
 """
 
-__version__ = '0.9'
+__version__ = '0.9.1'
 
 import argparse
 import base64
@@ -213,7 +213,15 @@ def get_command_env(tmp_dir, cipd_info):
 
   env = os.environ.copy()
 
-  key = {'darwin': 'TMPDIR', 'win32': 'TEMP'}.get(sys.platform, 'TMP')
+  # TMPDIR is specified as the POSIX standard envvar for the temp directory.
+  #   * mktemp on linux respects $TMPDIR, not $TMP
+  #   * mktemp on OS X SOMETIMES respects $TMPDIR
+  #   * chromium's base utils respects $TMPDIR on linux, $TEMP on windows.
+  #     Unfortunately at the time of writing it completely ignores all envvars
+  #     on OS X.
+  #   * python respects TMPDIR, TEMP, and TMP (regardless of platform)
+  #   * golang respects TMPDIR on linux+mac, TEMP on windows.
+  key = {'win32': 'TEMP'}.get(sys.platform, 'TMPDIR')
   env[key] = to_fs_enc(tmp_dir)
 
   if cipd_info:
@@ -394,16 +402,16 @@ def delete_and_upload(storage, out_dir, leak_temp_dir):
 
 def map_and_run(
     command, isolated_hash, storage, isolate_cache, outputs, init_named_caches,
-    leak_temp_dir, root_dir, hard_timeout, grace_period, bot_file, extra_args,
-    install_packages_fn, use_symlinks):
+    leak_temp_dir, root_dir, hard_timeout, grace_period, bot_file,
+    install_packages_fn, use_symlinks, constant_run_path):
   """Runs a command with optional isolated input/output.
 
   See run_tha_test for argument documentation.
 
   Returns metadata about the result.
   """
+  assert isinstance(command, list), command
   assert root_dir or root_dir is None
-  assert bool(command) ^ bool(isolated_hash)
   result = {
     'duration': None,
     'exit_code': None,
@@ -445,7 +453,14 @@ def map_and_run(
   elif isolate_cache.cache_dir:
     root_dir = os.path.dirname(isolate_cache.cache_dir)
   # See comment for these constants.
-  run_dir = make_temp_dir(ISOLATED_RUN_DIR, root_dir)
+  # If root_dir is not specified, it is not constant.
+  # TODO(maruel): This is not obvious. Change this to become an error once we
+  # make the constant_run_path an exposed flag.
+  if constant_run_path and root_dir:
+    run_dir = os.path.join(root_dir, ISOLATED_RUN_DIR)
+    os.mkdir(run_dir)
+  else:
+    run_dir = make_temp_dir(ISOLATED_RUN_DIR, root_dir)
   # storage should be normally set but don't crash if it is not. This can happen
   # as Swarming task can run without an isolate server.
   out_dir = make_temp_dir(ISOLATED_OUT_DIR, root_dir) if storage else None
@@ -466,20 +481,19 @@ def map_and_run(
             cache=isolate_cache,
             outdir=run_dir,
             use_symlinks=use_symlinks)
-        if not bundle.command:
-          # Handle this as a task failure, not an internal failure.
-          sys.stderr.write(
-              '<The .isolated doesn\'t declare any command to run!>\n'
-              '<Check your .isolate for missing \'command\' variable>\n')
-          if os.environ.get('SWARMING_TASK_ID'):
-            # Give an additional hint when running as a swarming task.
-            sys.stderr.write('<This occurs at the \'isolate\' step>\n')
-          result['exit_code'] = 1
-          return result
-
         change_tree_read_only(run_dir, bundle.read_only)
         cwd = os.path.normpath(os.path.join(cwd, bundle.relative_cwd))
-        command = bundle.command + extra_args
+        # Inject the command
+        if bundle.command:
+          command = bundle.command + command
+
+      if not command:
+        # Handle this as a task failure, not an internal failure.
+        sys.stderr.write(
+            '<No command was specified!>\n'
+            '<Please secify a command when triggering your Swarming task>\n')
+        result['exit_code'] = 1
+        return result
 
       # If we have an explicit list of files to return, make sure their
       # directories exist now.
@@ -532,10 +546,10 @@ def map_and_run(
             success = False
           if not success:
             print >> sys.stderr, (
-                'Failed to delete the run directory, forcibly failing\n'
-                'the task because of it. No zombie process can outlive a\n'
-                'successful task run and still be marked as successful.\n'
-                'Fix your stuff.')
+                'Failed to delete the run directory, thus failing the task.\n'
+                'This may be due to a subprocess outliving the main task\n'
+                'process, holding on to resources. Please fix the task so\n'
+                'that it releases resources and cleans up subprocesses.')
             if result['exit_code'] == 0:
               result['exit_code'] = 1
         if fs.isdir(tmp_dir):
@@ -546,10 +560,10 @@ def map_and_run(
             success = False
           if not success:
             print >> sys.stderr, (
-                'Failed to delete the temporary directory, forcibly failing\n'
-                'the task because of it. No zombie process can outlive a\n'
-                'successful task run and still be marked as successful.\n'
-                'Fix your stuff.')
+                'Failed to delete the temp directory, thus failing the task.\n'
+                'This may be due to a subprocess outliving the main task\n'
+                'process, holding on to resources. Please fix the task so\n'
+                'that it releases resources and cleans up subprocesses.')
             if result['exit_code'] == 0:
               result['exit_code'] = 1
 
@@ -571,7 +585,7 @@ def map_and_run(
 def run_tha_test(
     command, isolated_hash, storage, isolate_cache, outputs, init_named_caches,
     leak_temp_dir, result_json, root_dir, hard_timeout, grace_period, bot_file,
-    extra_args, install_packages_fn, use_symlinks):
+    install_packages_fn, use_symlinks):
   """Runs an executable and records execution metadata.
 
   Either command or isolated_hash must be specified.
@@ -585,8 +599,9 @@ def run_tha_test(
   file.
 
   Arguments:
-    command: the command to run, a list of strings. Mutually exclusive with
-             isolated_hash.
+    command: a list of string; the command to run OR optional arguments to add
+             to the command stated in the .isolated file if a command was
+             specified.
     isolated_hash: the SHA-1 of the .isolated file that must be retrieved to
                    recreate the tree of files to run the target executable.
                    The command specified in the .isolated is executed.
@@ -608,20 +623,13 @@ def run_tha_test(
     hard_timeout: kills the process if it lasts more than this amount of
                   seconds.
     grace_period: number of seconds to wait between SIGTERM and SIGKILL.
-    extra_args: optional arguments to add to the command stated in the .isolate
-                file. Ignored if isolate_hash is empty.
-    install_packages_fn: context manager dir => CipdInfo, see install_packages.
+    install_packages_fn: context manager dir => CipdInfo, see
+      install_client_and_packages.
     use_symlinks: create tree with symlinks instead of hardlinks.
 
   Returns:
     Process exit code that should be used.
   """
-  assert bool(command) ^ bool(isolated_hash)
-  extra_args = extra_args or []
-
-  if any(ISOLATED_OUTDIR_PARAMETER in a for a in (command or extra_args)):
-    assert storage is not None, 'storage is None although outdir is specified'
-
   if result_json:
     # Write a json output file right away in case we get killed.
     result = {
@@ -637,7 +645,7 @@ def run_tha_test(
   result = map_and_run(
       command, isolated_hash, storage, isolate_cache, outputs,
       init_named_caches, leak_temp_dir, root_dir, hard_timeout, grace_period,
-      bot_file, extra_args, install_packages_fn, use_symlinks)
+      bot_file, install_packages_fn, use_symlinks, True)
   logging.info('Result:\n%s', tools.format_json(result, dense=True))
 
   if result_json:
@@ -663,7 +671,7 @@ def run_tha_test(
   return result['exit_code'] or int(bool(result['internal_failure']))
 
 
-# Yielded by 'install_packages'.
+# Yielded by 'install_client_and_packages'.
 CipdInfo = collections.namedtuple('CipdInfo', [
   'client',     # cipd.CipdClient object
   'cache_dir',  # absolute path to bot-global cipd tag and instance cache
@@ -674,12 +682,67 @@ CipdInfo = collections.namedtuple('CipdInfo', [
 
 @contextlib.contextmanager
 def noop_install_packages(_run_dir):
-  """Placeholder for 'install_packages' if cipd is disabled."""
+  """Placeholder for 'install_client_and_packages' if cipd is disabled."""
   yield None
 
 
+def _install_packages(run_dir, cipd_cache_dir, client, packages, timeout):
+  """Calls 'cipd ensure' for packages.
+
+  Args:
+    run_dir (str): root of installation.
+    cipd_cache_dir (str): the directory to use for the cipd package cache.
+    client (CipdClient): the cipd client to use
+    packages: packages to install, list [(path, package_name, version), ...].
+    timeout: max duration in seconds that this function can take.
+
+  Returns: list of pinned packages.  Looks like [
+    {
+      'path': 'subdirectory',
+      'package_name': 'resolved/package/name',
+      'version': 'deadbeef...',
+    },
+    ...
+  ]
+  """
+  package_pins = [None]*len(packages)
+  def insert_pin(path, name, version, idx):
+    package_pins[idx] = {
+      'package_name': name,
+      # swarming deals with 'root' as '.'
+      'path': path or '.',
+      'version': version,
+    }
+
+  by_path = collections.defaultdict(list)
+  for i, (path, name, version) in enumerate(packages):
+    # cipd deals with 'root' as ''
+    if path == '.':
+      path = ''
+    by_path[path].append((name, version, i))
+
+  pins = client.ensure(
+    run_dir,
+    {
+      subdir: [(name, vers) for name, vers, _ in pkgs]
+      for subdir, pkgs in by_path.iteritems()
+    },
+    cache_dir=cipd_cache_dir,
+    timeout=timeout,
+  )
+
+  for subdir, pin_list in sorted(pins.iteritems()):
+    this_subdir = by_path[subdir]
+    for i, (name, version) in enumerate(pin_list):
+      insert_pin(subdir, name, version, this_subdir[i][2])
+
+  assert None not in package_pins
+
+  return package_pins
+
+
 @contextlib.contextmanager
-def install_packages(
+def install_client_and_packages(
     run_dir, packages, service_url, client_package_name,
     client_version, cache_dir, timeout=None):
   """Bootstraps CIPD client and installs CIPD packages.
@@ -725,52 +788,24 @@ def install_packages(
   run_dir = os.path.abspath(run_dir)
   packages = packages or []
 
-  package_pins = [None]*len(packages)
-  def insert_pin(path, name, version, idx):
-    path = path.replace(os.path.sep, '/')
-    package_pins[idx] = {
-      'package_name': name,
-      'path': path,
-      'version': version,
-    }
-
   get_client_start = time.time()
   client_manager = cipd.get_client(
       service_url, client_package_name, client_version, cache_dir,
       timeout=timeoutfn())
 
-  by_path = collections.defaultdict(list)
-  for i, (path, name, version) in enumerate(packages):
-    path = path.replace('/', os.path.sep)
-    by_path[path].append((name, version, i))
-
   with client_manager as client:
-    client_package = {
-      'package_name': client.package_name,
-      'version': client.instance_id,
-    }
     get_client_duration = time.time() - get_client_start
-    for path, pkgs in sorted(by_path.iteritems()):
-      site_root = os.path.abspath(os.path.join(run_dir, path))
-      if not site_root.startswith(run_dir):
-        raise cipd.Error('Invalid CIPD package path "%s"' % path)
 
-      # Do not clean site_root before installation because it may contain other
-      # site roots.
-      file_path.ensure_tree(site_root, 0770)
-      pins = client.ensure(
-          site_root, [(name, vers) for name, vers, _ in pkgs],
-          cache_dir=cipd_cache_dir,
-          timeout=timeoutfn())
-      for i, pin in enumerate(pins[""]):
-        insert_pin(path, pin[0], pin[1], pkgs[i][2])
-      file_path.make_tree_files_read_only(site_root)
+    package_pins = []
+    if packages:
+      package_pins = _install_packages(
+        run_dir, cipd_cache_dir, client, packages, timeoutfn())
+
+    file_path.make_tree_files_read_only(run_dir)
 
     total_duration = time.time() - start
     logging.info(
         'Installing CIPD client and packages took %d seconds', total_duration)
-
-    assert None not in package_pins
 
     yield CipdInfo(
       client=client,
@@ -780,14 +815,22 @@ def install_packages(
         'get_client_duration': get_client_duration,
       },
       pins={
-        'client_package': client_package,
+        'client_package': {
+          'package_name': client.package_name,
+          'version': client.instance_id,
+        },
         'packages': package_pins,
       })
 
 
 def clean_caches(options, isolate_cache, named_cache_manager):
-  """Trims isolated and named caches."""
-  # Which cache to trim first? Which of caches was used least recently?
+  """Trims isolated and named caches.
+
+  The goal here is to coherently trim both caches, deleting older items
+  independent of which container they belong to.
+  """
+  # TODO(maruel): Trim CIPD cache the same way.
+  total = 0
   with named_cache_manager.open():
     oldest_isolated = isolate_cache.get_oldest()
     oldest_named = named_cache_manager.get_oldest()
@@ -802,9 +845,13 @@ def clean_caches(options, isolate_cache, named_cache_manager):
       ),
     ]
     trimmers.sort(key=lambda (_, ts): ts)
+    # TODO(maruel): This is incorrect, we want to trim 'items' that are strictly
+    # the oldest independent of in which cache they live in. Right now, the
+    # cache with the oldest item pays the price.
     for trim, _ in trimmers:
-      trim()
+      total += trim()
   isolate_cache.cleanup()
+  return total
 
 
 def create_option_parser():
@@ -955,7 +1002,7 @@ def main(args):
 
   install_packages_fn = noop_install_packages
   if options.cipd_enabled:
-    install_packages_fn = lambda run_dir: install_packages(
+    install_packages_fn = lambda run_dir: install_client_and_packages(
         run_dir, cipd.parse_package_args(options.cipd_packages),
         options.cipd_server, options.cipd_client_package,
         options.cipd_client_version, cache_dir=options.cipd_cache)
@@ -973,7 +1020,6 @@ def main(args):
         named_cache_manager.delete_symlinks(run_dir, options.named_caches)
 
   try:
-    command = [] if options.isolated else args
     if options.isolate_server:
       storage = isolateserver.get_storage(
           options.isolate_server, options.namespace)
@@ -981,7 +1027,7 @@ def main(args):
         # Hashing schemes used by |storage| and |isolate_cache| MUST match.
         assert storage.hash_algo == isolate_cache.hash_algo
         return run_tha_test(
-            command,
+            args,
             options.isolated,
             storage,
             isolate_cache,
@@ -991,11 +1037,11 @@ def main(args):
             options.json, options.root_dir,
             options.hard_timeout,
             options.grace_period,
-            options.bot_file, args,
+            options.bot_file,
             install_packages_fn,
             options.use_symlinks)
     return run_tha_test(
-        command,
+        args,
         options.isolated,
         None,
         isolate_cache,
@@ -1006,7 +1052,7 @@ def main(args):
         options.root_dir,
         options.hard_timeout,
         options.grace_period,
-        options.bot_file, args,
+        options.bot_file,
         install_packages_fn,
         options.use_symlinks)
   except (cipd.Error, named_cache.Error) as ex:

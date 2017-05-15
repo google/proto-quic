@@ -27,6 +27,7 @@ namespace net {
 class NET_EXPORT_PRIVATE NetworkChangeNotifierDelegateAndroid {
  public:
   typedef NetworkChangeNotifier::ConnectionType ConnectionType;
+  typedef NetworkChangeNotifier::ConnectionSubtype ConnectionSubtype;
   typedef NetworkChangeNotifier::NetworkHandle NetworkHandle;
   typedef NetworkChangeNotifier::NetworkList NetworkList;
 
@@ -66,7 +67,7 @@ class NET_EXPORT_PRIVATE NetworkChangeNotifierDelegateAndroid {
   void NotifyMaxBandwidthChanged(
       JNIEnv* env,
       const base::android::JavaParamRef<jobject>& obj,
-      jdouble new_max_bandwidth);
+      jint subtype);
 
   // Called from NetworkChangeNotifier.java on the JNI thread to push
   // down notifications of network connectivity events. These functions in
@@ -141,7 +142,7 @@ class NET_EXPORT_PRIVATE NetworkChangeNotifierDelegateAndroid {
   void FakeNetworkDisconnected(NetworkHandle network);
   void FakePurgeActiveNetworkList(NetworkList networks);
   void FakeDefaultNetwork(NetworkHandle network, ConnectionType type);
-  void FakeMaxBandwidthChanged(double max_bandwidth_mbps);
+  void FakeConnectionSubtypeChanged(ConnectionSubtype subtype);
 
   base::ThreadChecker thread_checker_;
   scoped_refptr<base::ObserverListThreadSafe<Observer>> observers_;

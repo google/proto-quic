@@ -803,4 +803,20 @@ void QuicSpdySession::CloseConnectionWithDetails(QuicErrorCode error,
       error, details, ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
 }
 
+QuicSpdyStream* QuicSpdySession::MaybeCreateIncomingDynamicStream(
+    QuicStreamId id) {
+  return static_cast<QuicSpdyStream*>(
+      QuicSession::MaybeCreateIncomingDynamicStream(id));
+}
+
+QuicSpdyStream* QuicSpdySession::MaybeCreateOutgoingDynamicStream(
+    SpdyPriority priority) {
+  auto* stream = static_cast<QuicSpdyStream*>(
+      QuicSession::MaybeCreateOutgoingDynamicStream(priority));
+  if (stream) {
+    stream->SetPriority(priority);
+  }
+  return stream;
+}
+
 }  // namespace net

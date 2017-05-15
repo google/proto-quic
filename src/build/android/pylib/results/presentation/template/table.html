@@ -2,7 +2,7 @@
   <thead class="heads">
     <tr>
       {% for cell in tb_value.table_headers -%}
-        <th class="{{cell.class}}" data-asc-sorted=0>
+        <th class="{{cell.class}}" id="{{cell.data}}" data-asc-sorted=0>
           {{cell.data}}
           <span class="up" style="display:none;"> &#8593</span>
           <span class="down" style="display:none;"> &#8595</span>
@@ -25,6 +25,9 @@
             {%- elif cell.cell_type == 'links' -%}
               {% for link in cell.links %}
                 <a href="{{link.href}}" target="{{link.target}}">{{link.data}}</a>
+                {% if not loop.last -%}
+                  <br />
+                {%- endif %}
               {% endfor %}
             {%- elif cell.cell_type == 'action' -%}
               <a onclick="{{cell.action}}">{{cell.data}}</a>

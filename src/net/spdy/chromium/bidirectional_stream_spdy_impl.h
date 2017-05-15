@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_SPDY_BIDIRECTIONAL_STREAM_SPDY_IMPL_H_
-#define NET_SPDY_BIDIRECTIONAL_STREAM_SPDY_IMPL_H_
+#ifndef NET_SPDY_CHROMIUM_BIDIRECTIONAL_STREAM_SPDY_IMPL_H_
+#define NET_SPDY_CHROMIUM_BIDIRECTIONAL_STREAM_SPDY_IMPL_H_
 
 #include <stdint.h>
 
@@ -133,4 +133,4 @@ class NET_EXPORT_PRIVATE BidirectionalStreamSpdyImpl
 
 }  // namespace net
 
-#endif  // NET_SPDY_BIDIRECTIONAL_STREAM_SPDY_IMPL_H_
+#endif  // NET_SPDY_CHROMIUM_BIDIRECTIONAL_STREAM_SPDY_IMPL_H_

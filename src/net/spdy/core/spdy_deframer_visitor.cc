@@ -182,7 +182,6 @@ class SpdyTestDeframerImpl : public SpdyTestDeframer,
 
   void OnHeaderBlockStart() override;
   void OnHeader(SpdyStringPiece key, SpdyStringPiece value) override;
-  void OnHeaderBlockEnd(size_t header_bytes_parsed) override;
   void OnHeaderBlockEnd(size_t header_bytes_parsed,
                         size_t compressed_header_bytes_parsed) override;
 
@@ -748,16 +747,6 @@ void SpdyTestDeframerImpl::OnHeader(SpdyStringPiece key,
   headers_->emplace_back(SpdyString(key), SpdyString(value));
   CHECK(headers_handler_);
   headers_handler_->OnHeader(key, value);
-}
-
-void SpdyTestDeframerImpl::OnHeaderBlockEnd(size_t header_bytes_parsed) {
-  CHECK(headers_);
-  CHECK(frame_type_ == HEADERS || frame_type_ == CONTINUATION ||
-        frame_type_ == PUSH_PROMISE)
-      << "   frame_type_=" << Http2FrameTypeToString(frame_type_);
-  CHECK(end_);
-  CHECK(!got_hpack_end_);
-  got_hpack_end_ = true;
 }
 
 void SpdyTestDeframerImpl::OnHeaderBlockEnd(

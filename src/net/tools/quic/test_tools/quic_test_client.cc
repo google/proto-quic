@@ -215,8 +215,7 @@ QuicTestClient::QuicTestClient(QuicSocketAddress server_address,
                                                   PRIVACY_MODE_DISABLED),
                                      config,
                                      supported_versions,
-                                     &epoll_server_)),
-      allow_bidirectional_data_(false) {
+                                     &epoll_server_)) {
   Initialize();
 }
 
@@ -232,12 +231,11 @@ QuicTestClient::QuicTestClient(QuicSocketAddress server_address,
                                      config,
                                      supported_versions,
                                      &epoll_server_,
-                                     std::move(proof_verifier))),
-      allow_bidirectional_data_(false) {
+                                     std::move(proof_verifier))) {
   Initialize();
 }
 
-QuicTestClient::QuicTestClient() : allow_bidirectional_data_(false) {}
+QuicTestClient::QuicTestClient() {}
 
 QuicTestClient::~QuicTestClient() {
   for (std::pair<QuicStreamId, QuicSpdyClientStream*> stream : open_streams_) {
@@ -440,8 +438,6 @@ QuicSpdyClientStream* QuicTestClient::GetOrCreateStream() {
     SetLatestCreatedStream(client_->CreateClientStream());
     if (latest_created_stream_) {
       latest_created_stream_->SetPriority(priority_);
-      latest_created_stream_->set_allow_bidirectional_data(
-          allow_bidirectional_data_);
     }
   }
 

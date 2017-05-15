@@ -117,8 +117,18 @@ void QuicSentPacketManager::SetFromConfig(const QuicConfig& config) {
     }
   } else if (config.HasClientRequestedIndependentOption(kBYTE, perspective_)) {
     SetSendAlgorithm(kCubic);
+  } else if (FLAGS_quic_reloadable_flag_quic_enable_pcc &&
+             config.HasClientRequestedIndependentOption(kTPCC, perspective_)) {
+    SetSendAlgorithm(kPCC);
   }
-  using_pacing_ = !FLAGS_quic_disable_pacing_for_perf_tests;
+
+  // The PCCSender implements its own version of pacing through the
+  // SendAlgorithm::TimeUntilSend() function.  Do not wrap a
+  // PacingSender around it, since wrapping a PacingSender around an
+  // already paced SendAlgorithm produces a DCHECK.  TODO(fayang):
+  // Change this if/when the PCCSender uses the PacingSender.
+  using_pacing_ = !FLAGS_quic_disable_pacing_for_perf_tests &&
+                  send_algorithm_->GetCongestionControlType() != kPCC;
 
   if (config.HasClientSentConnectionOption(k1CON, perspective_)) {
     send_algorithm_->SetNumEmulatedConnections(1);
@@ -796,9 +806,8 @@ const QuicTime::Delta QuicSentPacketManager::GetTailLossProbeDelay() const {
                  static_cast<int64_t>(0.5 * srtt.ToMilliseconds())));
   }
   if (!unacked_packets_.HasMultipleInFlightPackets()) {
-    return std::max(2 * srtt,
-                    1.5 * srtt + QuicTime::Delta::FromMilliseconds(
-                                     kMinRetransmissionTimeMs / 2));
+    return std::max(2 * srtt, 1.5 * srtt + QuicTime::Delta::FromMilliseconds(
+                                               kMinRetransmissionTimeMs / 2));
   }
   return QuicTime::Delta::FromMilliseconds(
       std::max(kMinTailLossProbeTimeoutMs,

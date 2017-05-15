@@ -82,8 +82,6 @@ class TaskSchedulerWorkerPoolImplTest
     delayed_task_manager_.Start(service_thread_.task_runner());
     worker_pool_ = MakeUnique<SchedulerWorkerPoolImpl>(
         "TestWorkerPool", ThreadPriority::NORMAL,
-        Bind(&TaskSchedulerWorkerPoolImplTest::ReEnqueueSequenceCallback,
-             Unretained(this)),
         &task_tracker_, &delayed_task_manager_);
     ASSERT_TRUE(worker_pool_);
   }
@@ -106,14 +104,6 @@ class TaskSchedulerWorkerPoolImplTest
   Thread service_thread_;
 
  private:
-  void ReEnqueueSequenceCallback(scoped_refptr<Sequence> sequence) {
-    // In production code, this callback would be implemented by the
-    // TaskScheduler which would first determine which PriorityQueue the
-    // sequence must be re-enqueued.
-    const SequenceSortKey sort_key(sequence->GetSortKey());
-    worker_pool_->ReEnqueueSequence(std::move(sequence), sort_key);
-  }
-
   DelayedTaskManager delayed_task_manager_;
 
   DISALLOW_COPY_AND_ASSIGN(TaskSchedulerWorkerPoolImplTest);
@@ -123,7 +113,7 @@ scoped_refptr<TaskRunner> CreateTaskRunnerWithExecutionMode(
     SchedulerWorkerPoolImpl* worker_pool,
     test::ExecutionMode execution_mode) {
   // Allow tasks posted to the returned TaskRunner to wait on a WaitableEvent.
-  const TaskTraits traits = TaskTraits().WithBaseSyncPrimitives();
+  const TaskTraits traits = {WithBaseSyncPrimitives()};
   switch (execution_mode) {
     case test::ExecutionMode::PARALLEL:
       return worker_pool->CreateTaskRunnerWithTraits(traits);
@@ -423,13 +413,11 @@ TEST_F(TaskSchedulerWorkerPoolImplPostTaskBeforeStartTest,
   WaitableEvent barrier(WaitableEvent::ResetPolicy::MANUAL,
                         WaitableEvent::InitialState::NOT_SIGNALED);
 
-  worker_pool_
-      ->CreateTaskRunnerWithTraits(TaskTraits().WithBaseSyncPrimitives())
+  worker_pool_->CreateTaskRunnerWithTraits({WithBaseSyncPrimitives()})
       ->PostTask(FROM_HERE,
                  Bind(&TaskPostedBeforeStart, Unretained(&task_1_thread_ref),
                       Unretained(&task_1_scheduled), Unretained(&barrier)));
-  worker_pool_
-      ->CreateTaskRunnerWithTraits(TaskTraits().WithBaseSyncPrimitives())
+  worker_pool_->CreateTaskRunnerWithTraits({WithBaseSyncPrimitives()})
       ->PostTask(FROM_HERE,
                  Bind(&TaskPostedBeforeStart, Unretained(&task_2_thread_ref),
                       Unretained(&task_2_scheduled), Unretained(&barrier)));
@@ -501,8 +489,7 @@ TEST_F(TaskSchedulerWorkerPoolCheckTlsReuse, CheckDetachedThreads) {
   std::vector<std::unique_ptr<test::TestTaskFactory>> factories;
   for (size_t i = 0; i < kNumWorkersInWorkerPool; ++i) {
     factories.push_back(MakeUnique<test::TestTaskFactory>(
-        worker_pool_->CreateTaskRunnerWithTraits(
-            TaskTraits().WithBaseSyncPrimitives()),
+        worker_pool_->CreateTaskRunnerWithTraits({WithBaseSyncPrimitives()}),
         test::ExecutionMode::PARALLEL));
     ASSERT_TRUE(factories.back()->PostTask(
         PostNestedTask::NO,
@@ -574,7 +561,7 @@ TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBetweenWaits) {
                       WaitableEvent::InitialState::NOT_SIGNALED);
   CreateAndStartWorkerPool(TimeDelta::Max(), kNumWorkersInWorkerPool);
   auto task_runner = worker_pool_->CreateSequencedTaskRunnerWithTraits(
-      TaskTraits().WithBaseSyncPrimitives());
+      {WithBaseSyncPrimitives()});
 
   // Post a task.
   task_runner->PostTask(FROM_HERE,
@@ -617,8 +604,8 @@ TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBetweenWaitsWithDetach) {
   WaitableEvent tasks_can_exit_event(WaitableEvent::ResetPolicy::MANUAL,
                                      WaitableEvent::InitialState::NOT_SIGNALED);
   CreateAndStartWorkerPool(kReclaimTimeForDetachTests, kNumWorkersInWorkerPool);
-  auto task_runner = worker_pool_->CreateTaskRunnerWithTraits(
-      TaskTraits().WithBaseSyncPrimitives());
+  auto task_runner =
+      worker_pool_->CreateTaskRunnerWithTraits({WithBaseSyncPrimitives()});
 
   // Post tasks to saturate the pool.
   std::vector<std::unique_ptr<WaitableEvent>> task_started_events;
@@ -682,7 +669,7 @@ TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBeforeDetach) {
 
   auto histogrammed_thread_task_runner =
       worker_pool_->CreateSequencedTaskRunnerWithTraits(
-          TaskTraits().WithBaseSyncPrimitives());
+          {WithBaseSyncPrimitives()});
 
   // Post 3 tasks and hold the thread for idle thread stack ordering.
   // This test assumes |histogrammed_thread_task_runner| gets assigned the same
@@ -740,7 +727,7 @@ TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBeforeDetach) {
       WaitableEvent::InitialState::NOT_SIGNALED);
   auto task_runner_for_top_idle =
       worker_pool_->CreateSequencedTaskRunnerWithTraits(
-          TaskTraits().WithBaseSyncPrimitives());
+          {WithBaseSyncPrimitives()});
   task_runner_for_top_idle->PostTask(
       FROM_HERE, BindOnce(
                      [](PlatformThreadRef thread_ref,
@@ -780,22 +767,12 @@ TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBeforeDetach) {
   EXPECT_EQ(0, histogram->SnapshotSamples()->GetCount(10));
 }
 
-namespace {
-
-void NotReachedReEnqueueSequenceCallback(scoped_refptr<Sequence> sequence) {
-  ADD_FAILURE()
-      << "Unexpected invocation of NotReachedReEnqueueSequenceCallback.";
-}
-
-}  // namespace
-
 TEST(TaskSchedulerWorkerPoolStandbyPolicyTest, InitLazy) {
   TaskTracker task_tracker;
   DelayedTaskManager delayed_task_manager;
   delayed_task_manager.Start(make_scoped_refptr(new TestSimpleTaskRunner));
   auto worker_pool = MakeUnique<SchedulerWorkerPoolImpl>(
-      "LazyPolicyWorkerPool", ThreadPriority::NORMAL,
-      Bind(&NotReachedReEnqueueSequenceCallback), &task_tracker,
+      "LazyPolicyWorkerPool", ThreadPriority::NORMAL, &task_tracker,
       &delayed_task_manager);
   worker_pool->Start(SchedulerWorkerPoolParams(StandbyThreadPolicy::LAZY, 8U,
                                                TimeDelta::Max()));
@@ -809,8 +786,7 @@ TEST(TaskSchedulerWorkerPoolStandbyPolicyTest, InitOne) {
   DelayedTaskManager delayed_task_manager;
   delayed_task_manager.Start(make_scoped_refptr(new TestSimpleTaskRunner));
   auto worker_pool = MakeUnique<SchedulerWorkerPoolImpl>(
-      "OnePolicyWorkerPool", ThreadPriority::NORMAL,
-      Bind(&NotReachedReEnqueueSequenceCallback), &task_tracker,
+      "OnePolicyWorkerPool", ThreadPriority::NORMAL, &task_tracker,
       &delayed_task_manager);
   worker_pool->Start(SchedulerWorkerPoolParams(StandbyThreadPolicy::ONE, 8U,
                                                TimeDelta::Max()));

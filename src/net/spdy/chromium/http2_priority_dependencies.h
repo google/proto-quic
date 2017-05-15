@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_SPDY_HTTP2_PRIORITY_DEPENDENCIES_H_
-#define NET_SPDY_HTTP2_PRIORITY_DEPENDENCIES_H_
+#ifndef NET_SPDY_CHROMIUM_HTTP2_PRIORITY_DEPENDENCIES_H_
+#define NET_SPDY_CHROMIUM_HTTP2_PRIORITY_DEPENDENCIES_H_
 
 #include <list>
 #include <map>
+#include <utility>
+#include <vector>
 
 #include "net/base/net_export.h"
 #include "net/spdy/core/spdy_protocol.h"
@@ -87,4 +89,4 @@ class NET_EXPORT_PRIVATE Http2PriorityDependencies {
 
 }  // namespace net
 
-#endif  // NET_SPDY_HTTP2_PRIORITY_DEPENDENCIES_H_
+#endif  // NET_SPDY_CHROMIUM_HTTP2_PRIORITY_DEPENDENCIES_H_

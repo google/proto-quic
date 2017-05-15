@@ -114,6 +114,8 @@ const char* CongestionControlTypeToString(CongestionControlType cc_type) {
       return "RENO_BYTES";
     case kBBR:
       return "BBR";
+    case kPCC:
+      return "PCC";
     default:
       QUIC_DLOG(FATAL) << "Unexpected CongestionControlType";
       return nullptr;
@@ -163,7 +165,7 @@ string TestParamToString(const testing::TestParamInfo<TestParams>& params) {
 std::vector<TestParams> GetTestParams() {
   std::vector<TestParams> params;
   for (const CongestionControlType congestion_control_type :
-       {kBBR, kCubic, kCubicBytes, kReno, kRenoBytes}) {
+       {kBBR, kCubic, kCubicBytes, kReno, kRenoBytes, kPCC}) {
     if (congestion_control_type != kCubic &&
         congestion_control_type != kCubicBytes) {
       params.push_back(

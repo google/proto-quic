@@ -48,8 +48,8 @@ bool DeferredSequencedTaskRunner::PostDelayedTask(
   return true;
 }
 
-bool DeferredSequencedTaskRunner::RunsTasksOnCurrentThread() const {
-  return target_task_runner_->RunsTasksOnCurrentThread();
+bool DeferredSequencedTaskRunner::RunsTasksInCurrentSequence() const {
+  return target_task_runner_->RunsTasksInCurrentSequence();
 }
 
 bool DeferredSequencedTaskRunner::PostNonNestableDelayedTask(

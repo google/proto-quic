@@ -33,8 +33,12 @@ class BASE_EXPORT MemoryTracingObserver
                                const ProcessMemoryDump*);
 
  private:
+  // Returns true if the dump mode is allowed for current tracing session.
+  bool IsDumpModeAllowed(MemoryDumpLevelOfDetail) const;
+
   MemoryDumpManager* const memory_dump_manager_;
   TraceLog* const trace_log_;
+  std::unique_ptr<TraceConfig::MemoryDumpConfig> memory_dump_config_;
 
   DISALLOW_COPY_AND_ASSIGN(MemoryTracingObserver);
 };

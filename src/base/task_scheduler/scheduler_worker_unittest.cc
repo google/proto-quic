@@ -450,8 +450,7 @@ class ControllableDetachDelegate : public SchedulerWorkerDefaultDelegate {
             },
             Unretained(&controls_->work_processed_),
             Unretained(&controls_->work_running_)),
-        TaskTraits().WithBaseSyncPrimitives().WithShutdownBehavior(
-            TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN),
+        {WithBaseSyncPrimitives(), TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN},
         TimeDelta()));
     EXPECT_TRUE(task_tracker_->WillPostTask(task.get()));
     sequence->PushTask(std::move(task));

@@ -89,7 +89,7 @@ bs{
         CW{"Kurasao"}
         CX{"Božićna Ostrva"}
         CY{"Kipar"}
-        CZ{"Češka Republika"}
+        CZ{"Češka"}
         DE{"Njemačka"}
         DG{"Dijego Garsija"}
         DJ{"Džibuti"}
@@ -108,7 +108,7 @@ bs{
         EU{"Evropska unija"}
         FI{"Finska"}
         FJ{"Fidži"}
-        FK{"Folklandska Ostrva"}
+        FK{"Folklandska Ostrva (Malvinska Ostrva)"}
         FM{"Mikronezija"}
         FO{"Farska Ostrva"}
         FR{"Francuska"}
@@ -181,7 +181,7 @@ bs{
         MF{"Sv. Martin"}
         MG{"Madagaskar"}
         MH{"Maršalova Ostrva"}
-        MK{"Makedonija"}
+        MK{"Makedonija (BJR)"}
         ML{"Mali"}
         MM{"Mijanmar"}
         MN{"Mongolija"}
@@ -302,9 +302,7 @@ bs{
         CD{"Kongo (DRC)"}
         CG{"Republika Kongo"}
         CI{"Obala Bjelokosti"}
-        CZ{"Češka"}
-        FK{"Folklandska Ostrva (Malvinska Ostrva)"}
-        MK{"Makedonija (BJR)"}
+        CZ{"Češka Republika"}
     }
-    Version{"2.1.28.79"}
+    Version{"2.1.31.86"}
 }

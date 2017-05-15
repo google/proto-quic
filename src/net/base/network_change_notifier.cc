@@ -797,6 +797,15 @@ bool NetworkChangeNotifier::IsConnectionCellular(ConnectionType type) {
 
 // static
 NetworkChangeNotifier::ConnectionType
+NetworkChangeNotifier::ConnectionTypeFromInterfaces() {
+  NetworkInterfaceList interfaces;
+  if (!GetNetworkList(&interfaces, EXCLUDE_HOST_SCOPE_VIRTUAL_INTERFACES))
+    return CONNECTION_UNKNOWN;
+  return ConnectionTypeFromInterfaceList(interfaces);
+}
+
+// static
+NetworkChangeNotifier::ConnectionType
 NetworkChangeNotifier::ConnectionTypeFromInterfaceList(
     const NetworkInterfaceList& interfaces) {
   bool first = true;

@@ -49,9 +49,10 @@ group("fontconfig") {
 }
 
 if (!is_chromecast) {
+  # Only provided for distributions which prefer to keep linking to FreeType on
+  # the system, use with caution,for details see build/config/freetype/BUILD.gn.
   pkg_config("freetype_from_pkgconfig") {
     visibility = [ ":freetype2" ]
     packages = [ "freetype2" ]
   }
 }
-

@@ -9,10 +9,8 @@
 
 #include "base/compiler_specific.h"
 #include "base/memory/ptr_util.h"
-#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/strings/string_number_conversions.h"
-#include "base/test/scoped_task_scheduler.h"
 #include "net/base/elements_upload_data_stream.h"
 #include "net/base/ip_address.h"
 #include "net/base/test_completion_callback.h"
@@ -276,10 +274,6 @@ TEST_P(QuicEndToEndTest, LargeGetWithNoPacketLoss) {
 }
 
 TEST_P(QuicEndToEndTest, TokenBinding) {
-  // Required by ChannelIDService.
-  base::test::ScopedTaskScheduler scoped_task_scheduler(
-      base::MessageLoop::current());
-
   // Enable token binding and re-initialize the TestTransactionFactory.
   params_.enable_token_binding = true;
   transaction_factory_.reset(new TestTransactionFactory(params_));

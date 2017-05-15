@@ -22,6 +22,9 @@ _PAGE_TAGS_LIST = [
     # Other filter tags:
     'is_50fps',
     'is_4k',
+    # Play action
+    'seek',
+    'normal_play',
 ]
 
 
@@ -75,7 +78,7 @@ class Page4(ToughVideoCasesPage):
     super(Page4, self).__init__(
       url='file://tough_video_cases/video.html?src=crowd1080.webm',
       page_set=page_set,
-      tags=['is_50fps', 'vp8', 'vorbis', 'audio_video'])
+      tags=['is_50fps', 'vp8', 'vorbis', 'audio_video', 'normal_play'])
 
     self.add_browser_metrics = True
 
@@ -89,7 +92,7 @@ class Page7(ToughVideoCasesPage):
     super(Page7, self).__init__(
       url='file://tough_video_cases/video.html?src=tulip2.ogg&type=audio',
       page_set=page_set,
-      tags=['vorbis', 'audio_only'])
+      tags=['vorbis', 'audio_only', 'normal_play'])
 
     self.add_browser_metrics = True
 
@@ -103,7 +106,7 @@ class Page8(ToughVideoCasesPage):
     super(Page8, self).__init__(
       url='file://tough_video_cases/video.html?src=tulip2.wav&type=audio',
       page_set=page_set,
-      tags=['pcm', 'audio_only'])
+      tags=['pcm', 'audio_only', 'normal_play'])
 
     self.add_browser_metrics = True
 
@@ -117,7 +120,7 @@ class Page11(ToughVideoCasesPage):
     super(Page11, self).__init__(
       url='file://tough_video_cases/video.html?src=crowd1080.mp4',
       page_set=page_set,
-      tags=['is_50fps', 'h264', 'aac', 'audio_video'])
+      tags=['is_50fps', 'h264', 'aac', 'audio_video', 'normal_play'])
 
     self.add_browser_metrics = True
 
@@ -131,7 +134,7 @@ class Page12(ToughVideoCasesPage):
     super(Page12, self).__init__(
       url='file://tough_video_cases/video.html?src=crowd2160.mp4',
       page_set=page_set,
-      tags=['is_4k', 'is_50fps', 'h264', 'aac', 'audio_video'])
+      tags=['is_4k', 'is_50fps', 'h264', 'aac', 'audio_video', 'normal_play'])
 
     self.add_browser_metrics = True
 
@@ -145,7 +148,7 @@ class Page13(ToughVideoCasesPage):
     super(Page13, self).__init__(
       url='file://tough_video_cases/video.html?src=tulip2.mp3&type=audio',
       page_set=page_set,
-      tags=['mp3', 'audio_only'])
+      tags=['mp3', 'audio_only', 'normal_play'])
 
     self.add_browser_metrics = True
 
@@ -159,7 +162,7 @@ class Page14(ToughVideoCasesPage):
     super(Page14, self).__init__(
       url='file://tough_video_cases/video.html?src=tulip2.mp4',
       page_set=page_set,
-      tags=['h264', 'aac', 'audio_video'])
+      tags=['h264', 'aac', 'audio_video', 'normal_play'])
 
     self.add_browser_metrics = True
 
@@ -173,7 +176,7 @@ class Page15(ToughVideoCasesPage):
     super(Page15, self).__init__(
       url='file://tough_video_cases/video.html?src=tulip2.m4a&type=audio',
       page_set=page_set,
-      tags=['aac', 'audio_only'])
+      tags=['aac', 'audio_only', 'normal_play'])
 
     self.add_browser_metrics = True
 
@@ -187,7 +190,7 @@ class Page16(ToughVideoCasesPage):
     super(Page16, self).__init__(
       url='file://tough_video_cases/video.html?src=garden2_10s.webm',
       page_set=page_set,
-      tags=['is_4k', 'vp8', 'vorbis', 'audio_video'])
+      tags=['is_4k', 'vp8', 'vorbis', 'audio_video', 'normal_play'])
 
     self.add_browser_metrics = True
 
@@ -201,7 +204,7 @@ class Page17(ToughVideoCasesPage):
     super(Page17, self).__init__(
       url='file://tough_video_cases/video.html?src=garden2_10s.mp4',
       page_set=page_set,
-      tags=['is_4k', 'h264', 'aac', 'audio_video'])
+      tags=['is_4k', 'h264', 'aac', 'audio_video', 'normal_play'])
 
     self.add_browser_metrics = True
 
@@ -213,9 +216,9 @@ class Page19(ToughVideoCasesPage):
 
   def __init__(self, page_set):
     super(Page19, self).__init__(
-      url='file://tough_video_cases/video.html?src=tulip2.ogg&type=audio',
+      url='file://tough_video_cases/video.html?src=tulip2.ogg&type=audio&seek',
       page_set=page_set,
-      tags=['vorbis', 'audio_only'])
+      tags=['vorbis', 'audio_only', 'seek'])
 
     self.skip_basic_metrics = True
 
@@ -227,9 +230,9 @@ class Page20(ToughVideoCasesPage):
 
   def __init__(self, page_set):
     super(Page20, self).__init__(
-      url='file://tough_video_cases/video.html?src=tulip2.wav&type=audio',
+      url='file://tough_video_cases/video.html?src=tulip2.wav&type=audio&seek',
       page_set=page_set,
-      tags=['pcm', 'audio_only'])
+      tags=['pcm', 'audio_only', 'seek'])
 
     self.skip_basic_metrics = True
 
@@ -241,9 +244,9 @@ class Page23(ToughVideoCasesPage):
 
   def __init__(self, page_set):
     super(Page23, self).__init__(
-      url='file://tough_video_cases/video.html?src=tulip2.mp3&type=audio',
+      url='file://tough_video_cases/video.html?src=tulip2.mp3&type=audio&seek',
       page_set=page_set,
-      tags=['mp3', 'audio_only'])
+      tags=['mp3', 'audio_only', 'seek'])
 
     self.skip_basic_metrics = True
 
@@ -255,9 +258,9 @@ class Page24(ToughVideoCasesPage):
 
   def __init__(self, page_set):
     super(Page24, self).__init__(
-      url='file://tough_video_cases/video.html?src=tulip2.mp4',
+      url='file://tough_video_cases/video.html?src=tulip2.mp4&seek',
       page_set=page_set,
-      tags=['h264', 'aac', 'audio_video'])
+      tags=['h264', 'aac', 'audio_video', 'seek'])
 
     self.skip_basic_metrics = True
 
@@ -269,9 +272,9 @@ class Page25(ToughVideoCasesPage):
 
   def __init__(self, page_set):
     super(Page25, self).__init__(
-      url='file://tough_video_cases/video.html?src=garden2_10s.webm',
+      url='file://tough_video_cases/video.html?src=garden2_10s.webm&seek',
       page_set=page_set,
-      tags=['is_4k', 'vp8', 'vorbis', 'audio_video'])
+      tags=['is_4k', 'vp8', 'vorbis', 'audio_video', 'seek'])
 
     self.skip_basic_metrics = True
 
@@ -283,9 +286,9 @@ class Page26(ToughVideoCasesPage):
 
   def __init__(self, page_set):
     super(Page26, self).__init__(
-      url='file://tough_video_cases/video.html?src=garden2_10s.mp4',
+      url='file://tough_video_cases/video.html?src=garden2_10s.mp4&seek',
       page_set=page_set,
-      tags=['is_4k', 'h264', 'aac', 'audio_video'])
+      tags=['is_4k', 'h264', 'aac', 'audio_video', 'seek'])
 
     self.skip_basic_metrics = True
 
@@ -299,25 +302,27 @@ class Page30(ToughVideoCasesPage):
     super(Page30, self).__init__(
       url='file://tough_video_cases/video.html?src=tulip2.vp9.webm',
       page_set=page_set,
-      tags=['vp9', 'opus', 'audio_video'])
+      tags=['vp9', 'opus', 'audio_video', 'normal_play'])
 
     self.add_browser_metrics = True
 
   def RunPageInteractions(self, action_runner):
     self.PlayAction(action_runner)
 
+
 class Page31(ToughVideoCasesPage):
 
   def __init__(self, page_set):
     super(Page31, self).__init__(
-      url='file://tough_video_cases/video.html?src=tulip2.vp9.webm',
+      url='file://tough_video_cases/video.html?src=tulip2.vp9.webm&seek',
       page_set=page_set,
-      tags=['vp9', 'opus', 'audio_video'])
+      tags=['vp9', 'opus', 'audio_video', 'seek'])
 
     self.skip_basic_metrics = True
 
   def RunPageInteractions(self, action_runner):
     self.SeekBeforeAndAfterPlayhead(action_runner)
+
 
 class Page32(ToughVideoCasesPage):
 
@@ -325,25 +330,27 @@ class Page32(ToughVideoCasesPage):
     super(Page32, self).__init__(
       url='file://tough_video_cases/video.html?src=crowd1080_vp9.webm',
       page_set=page_set,
-      tags=['vp9', 'video_only'])
+      tags=['vp9', 'video_only', 'normal_play'])
 
     self.add_browser_metrics = True
 
   def RunPageInteractions(self, action_runner):
     self.PlayAction(action_runner)
 
+
 class Page33(ToughVideoCasesPage):
 
   def __init__(self, page_set):
     super(Page33, self).__init__(
-      url='file://tough_video_cases/video.html?src=crowd1080_vp9.webm',
+      url='file://tough_video_cases/video.html?src=crowd1080_vp9.webm&seek',
       page_set=page_set,
-      tags=['vp9', 'video_only'])
+      tags=['vp9', 'video_only', 'seek'])
 
     self.skip_basic_metrics = True
 
   def RunPageInteractions(self, action_runner):
     self.SeekBeforeAndAfterPlayhead(action_runner)
+
 
 class Page34(ToughVideoCasesPage):
 
@@ -351,34 +358,36 @@ class Page34(ToughVideoCasesPage):
     super(Page34, self).__init__(
       url='file://tough_video_cases/video.html?src=crowd720_vp9.webm',
       page_set=page_set,
-      tags=['vp9', 'video_only'])
+      tags=['vp9', 'video_only', 'normal_play'])
 
     self.add_browser_metrics = True
 
   def RunPageInteractions(self, action_runner):
     self.PlayAction(action_runner)
 
+
 class Page35(ToughVideoCasesPage):
 
   def __init__(self, page_set):
     super(Page35, self).__init__(
-      url='file://tough_video_cases/video.html?src=crowd720_vp9.webm',
+      url='file://tough_video_cases/video.html?src=crowd720_vp9.webm&seek',
       page_set=page_set,
-      tags=['vp9', 'video_only'])
+      tags=['vp9', 'video_only', 'seek'])
 
     self.skip_basic_metrics = True
 
   def RunPageInteractions(self, action_runner):
     self.SeekBeforeAndAfterPlayhead(action_runner)
 
+
 class Page36(ToughVideoCasesPage):
 
   def __init__(self, page_set):
     super(Page36, self).__init__(
       url=('file://tough_video_cases/video.html?src='
-           'smpte_3840x2160_60fps_vp9.webm'),
+           'smpte_3840x2160_60fps_vp9.webm&seek'),
       page_set=page_set,
-      tags=['is_4k', 'vp9', 'video_only'])
+      tags=['is_4k', 'vp9', 'video_only', 'seek'])
 
     self.add_browser_metrics = True
 
@@ -389,17 +398,14 @@ class Page36(ToughVideoCasesPage):
 
 class ToughVideoCasesPageSet(story.StorySet):
   """
-  Description: Video Stack Perf pages that report time_to_play and many other
-  media-specific and generic metrics.
+  Description: Video Stack Perf pages that report time_to_play, seek time and
+  many other media-specific and generic metrics.
   """
   def __init__(self):
     super(ToughVideoCasesPageSet, self).__init__(
             cloud_storage_bucket=story.PARTNER_BUCKET)
-    # TODO(crouleau): Page 36 is in ToughVideoCasesPageSet even though
-    # it both reports seek time instead of time_to_play.
-    # This may be a non-issue because we plan to merge these two page sets back
-    # together and use tags to allow teams to filter which pages they want.
 
+    # Normal play tests:
     self.AddStory(Page2(self))
     self.AddStory(Page4(self))
     self.AddStory(Page7(self))
@@ -414,17 +420,8 @@ class ToughVideoCasesPageSet(story.StorySet):
     self.AddStory(Page30(self))
     self.AddStory(Page32(self))
     self.AddStory(Page34(self))
-    self.AddStory(Page36(self))
 
-
-class ToughVideoCasesExtraPageSet(story.StorySet):
-  """
-  Description: Video Stack Perf pages that only report seek time.
-  """
-  def __init__(self):
-    super(ToughVideoCasesExtraPageSet, self).__init__(
-            cloud_storage_bucket=story.PARTNER_BUCKET)
-
+    # Seek tests:
     self.AddStory(Page19(self))
     self.AddStory(Page20(self))
     self.AddStory(Page23(self))
@@ -434,3 +431,4 @@ class ToughVideoCasesExtraPageSet(story.StorySet):
     self.AddStory(Page31(self))
     self.AddStory(Page33(self))
     self.AddStory(Page35(self))
+    self.AddStory(Page36(self))

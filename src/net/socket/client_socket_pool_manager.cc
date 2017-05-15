@@ -114,12 +114,7 @@ int InitSocketPoolHelper(ClientSocketPoolManager::SocketGroupType group_type,
     connection_group = "ftp/" + connection_group;
   }
   if (using_ssl) {
-    std::string prefix = "ssl/";
-    // Place sockets with and without deprecated ciphers into separate
-    // connection groups.
-    if (ssl_config_for_origin.deprecated_cipher_suites_enabled)
-      prefix += "deprecatedciphers/";
-    connection_group = prefix + connection_group;
+    connection_group = "ssl/" + connection_group;
   }
 
   ClientSocketPool::RespectLimits respect_limits =

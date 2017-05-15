@@ -560,8 +560,8 @@ PBXFileReference* PBXGroup::AddSourceFile(const std::string& navigator_path,
   }
 
   if (!group) {
-    children_.push_back(base::WrapUnique(
-        new PBXGroup(component.as_string(), component.as_string())));
+    children_.push_back(base::MakeUnique<PBXGroup>(component.as_string(),
+                                                   component.as_string()));
     group = static_cast<PBXGroup*>(children_.back().get());
   }
 
@@ -617,11 +617,11 @@ PBXNativeTarget::PBXNativeTarget(const std::string& name,
       product_type_(product_type),
       product_name_(product_name) {
   DCHECK(product_reference_);
-  build_phases_.push_back(base::WrapUnique(new PBXSourcesBuildPhase));
+  build_phases_.push_back(base::MakeUnique<PBXSourcesBuildPhase>());
   source_build_phase_ =
       static_cast<PBXSourcesBuildPhase*>(build_phases_.back().get());
 
-  build_phases_.push_back(base::WrapUnique(new PBXFrameworksBuildPhase));
+  build_phases_.push_back(base::MakeUnique<PBXFrameworksBuildPhase>());
 }
 
 PBXNativeTarget::~PBXNativeTarget() {}

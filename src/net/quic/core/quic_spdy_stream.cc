@@ -27,7 +27,6 @@ QuicSpdyStream::QuicSpdyStream(QuicStreamId id, QuicSpdySession* spdy_session)
     : QuicStream(id, spdy_session),
       spdy_session_(spdy_session),
       visitor_(nullptr),
-      allow_bidirectional_data_(false),
       headers_decompressed_(false),
       priority_(kDefaultPriority),
       trailers_decompressed_(false),

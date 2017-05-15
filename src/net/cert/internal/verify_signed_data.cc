@@ -184,42 +184,48 @@ WARN_UNUSED_RESULT bool DoVerify(const SignatureAlgorithm& algorithm,
                                  const der::Input& signed_data,
                                  const der::BitString& signature_value,
                                  EVP_PKEY* public_key) {
-  DCHECK(algorithm.algorithm() == SignatureAlgorithmId::RsaPkcs1 ||
-         algorithm.algorithm() == SignatureAlgorithmId::RsaPss ||
-         algorithm.algorithm() == SignatureAlgorithmId::Ecdsa);
+  switch (algorithm.algorithm()) {
+    case SignatureAlgorithmId::Dsa:
+      return false;
+    case SignatureAlgorithmId::RsaPkcs1:
+    case SignatureAlgorithmId::RsaPss:
+    case SignatureAlgorithmId::Ecdsa: {
+      // For the supported algorithms the signature value must be a whole
+      // number of bytes.
+      if (signature_value.unused_bits() != 0)
+        return false;
+      const der::Input& signature_value_bytes = signature_value.bytes();
 
-  // For the supported algorithms the signature value must be a whole
-  // number of bytes.
-  if (signature_value.unused_bits() != 0)
-    return false;
-  const der::Input& signature_value_bytes = signature_value.bytes();
+      crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
 
-  crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
+      bssl::ScopedEVP_MD_CTX ctx;
+      EVP_PKEY_CTX* pctx = nullptr;  // Owned by |ctx|.
 
-  bssl::ScopedEVP_MD_CTX ctx;
-  EVP_PKEY_CTX* pctx = nullptr;  // Owned by |ctx|.
+      const EVP_MD* digest;
+      if (!GetDigest(algorithm.digest(), &digest))
+        return false;
 
-  const EVP_MD* digest;
-  if (!GetDigest(algorithm.digest(), &digest))
-    return false;
+      if (!EVP_DigestVerifyInit(ctx.get(), &pctx, digest, nullptr, public_key))
+        return false;
 
-  if (!EVP_DigestVerifyInit(ctx.get(), &pctx, digest, nullptr, public_key))
-    return false;
+      // Set the RSASSA-PSS specific options.
+      if (algorithm.algorithm() == SignatureAlgorithmId::RsaPss &&
+          !ApplyRsaPssOptions(algorithm.ParamsForRsaPss(), pctx)) {
+        return false;
+      }
 
-  // Set the RSASSA-PSS specific options.
-  if (algorithm.algorithm() == SignatureAlgorithmId::RsaPss &&
-      !ApplyRsaPssOptions(algorithm.ParamsForRsaPss(), pctx)) {
-    return false;
+      if (!EVP_DigestVerifyUpdate(ctx.get(), signed_data.UnsafeData(),
+                                  signed_data.Length())) {
+        return false;
+      }
+
+      return 1 == EVP_DigestVerifyFinal(ctx.get(),
+                                        signature_value_bytes.UnsafeData(),
+                                        signature_value_bytes.Length());
+    }
   }
 
-  if (!EVP_DigestVerifyUpdate(ctx.get(), signed_data.UnsafeData(),
-                              signed_data.Length())) {
-    return false;
-  }
-
-  return 1 == EVP_DigestVerifyFinal(ctx.get(),
-                                    signature_value_bytes.UnsafeData(),
-                                    signature_value_bytes.Length());
+  return false;
 }
 
 // Parses an EC public key from SPKI to an EVP_PKEY.
@@ -306,6 +312,8 @@ bool VerifySignedData(const SignatureAlgorithm& signature_algorithm,
 
   // Parse the SPKI to an EVP_PKEY appropriate for the signature algorithm.
   switch (signature_algorithm.algorithm()) {
+    case SignatureAlgorithmId::Dsa:
+      return false;
     case SignatureAlgorithmId::RsaPkcs1:
     case SignatureAlgorithmId::RsaPss:
       if (!ParseRsaKeyFromSpki(public_key_spki, &public_key, policy, errors))

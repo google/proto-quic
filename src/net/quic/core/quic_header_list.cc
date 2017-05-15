@@ -39,10 +39,6 @@ void QuicHeaderList::OnHeader(QuicStringPiece name, QuicStringPiece value) {
   }
 }
 
-void QuicHeaderList::OnHeaderBlockEnd(size_t uncompressed_header_bytes) {
-  OnHeaderBlockEnd(uncompressed_header_bytes, uncompressed_header_bytes);
-}
-
 void QuicHeaderList::OnHeaderBlockEnd(size_t uncompressed_header_bytes,
                                       size_t compressed_header_bytes) {
   uncompressed_header_bytes_ = uncompressed_header_bytes;

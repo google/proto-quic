@@ -60,6 +60,7 @@ def main(args):
                            "the action's first output.")
   parser.add_argument('--test-runner-path',
                       help='Path to test_runner.py (optional).')
+
   # We need to intercept any test runner path arguments and make all
   # of the paths relative to the output script directory.
   group = parser.add_argument_group('Test runner path arguments.')
@@ -78,6 +79,9 @@ def main(args):
   group.add_argument('--test-jar')
   group.add_argument('--test-apk-incremental-install-script')
   group.add_argument('--coverage-dir')
+  group.add_argument('--android-manifest-path')
+  group.add_argument('--resource-zips')
+  group.add_argument('--robolectric-runtime-deps-dir')
   args, test_runner_args = parser.parse_known_args(
       build_utils.ExpandFileArgs(args))
 
@@ -136,6 +140,18 @@ def main(args):
   if args.coverage_dir:
     test_runner_path_args.append(
         ('--coverage-dir', RelativizePathToScript(args.coverage_dir)))
+  if args.android_manifest_path:
+    test_runner_path_args.append(
+        ('--android-manifest-path',
+         RelativizePathToScript(args.android_manifest_path)))
+  if args.resource_zips:
+    test_runner_path_args.extend(
+        ('--resource-zip', RelativizePathToScript(r))
+        for r in build_utils.ParseGnList(args.resource_zips))
+  if args.robolectric_runtime_deps_dir:
+    test_runner_path_args.append(
+        ('--robolectric-runtime-deps-dir',
+         RelativizePathToScript(args.robolectric_runtime_deps_dir)))
 
   with open(args.script_output_path, 'w') as script:
     script.write(SCRIPT_TEMPLATE.format(

@@ -17,10 +17,16 @@ class Quic(IntegrationTest):
   def testCheckPageWithQuicProxy(self):
     with TestDriver() as t:
       t.AddChromeArg('--enable-spdy-proxy-auth')
+
+      # Enable QUIC (including for non-core HTTPS proxies).
       t.AddChromeArg('--enable-quic')
-      # Enable QUIC for non-core HTTPS proxies.
-      t.AddChromeArg('--data-reduction-proxy-enable-quic-on-non-core-proxies')
       t.AddChromeArg('--force-fieldtrials=DataReductionProxyUseQuic/Enabled')
+      t.AddChromeArg('--force-fieldtrial-params='
+        'DataReductionProxyUseQuic.Enabled:enable_quic_non_core_proxies/true')
+      # Enable usage of QUIC for non-core proxies via switch for older versions
+      # of Chrome (M-59 and prior).
+      t.AddChromeArg('--data-reduction-proxy-enable-quic-on-non-core-proxies')
+
       t.LoadURL('http://check.googlezip.net/test.html')
       responses = t.GetHTTPResponses()
       self.assertEqual(2, len(responses))
@@ -32,10 +38,16 @@ class Quic(IntegrationTest):
   def testCheckPageWithQuicProxyTransaction(self):
     with TestDriver() as t:
       t.AddChromeArg('--enable-spdy-proxy-auth')
+
+      # Enable QUIC (including for non-core HTTPS proxies).
       t.AddChromeArg('--enable-quic')
-      # Enable QUIC for non-core HTTPS proxies.
-      t.AddChromeArg('--data-reduction-proxy-enable-quic-on-non-core-proxies')
       t.AddChromeArg('--force-fieldtrials=DataReductionProxyUseQuic/Enabled')
+      t.AddChromeArg('--force-fieldtrial-params='
+        'DataReductionProxyUseQuic.Enabled:enable_quic_non_core_proxies/true')
+      # Enable usage of QUIC for non-core proxies via switch for older versions
+      # of Chrome (M-59 and prior).
+      t.AddChromeArg('--data-reduction-proxy-enable-quic-on-non-core-proxies')
+
       t.LoadURL('http://check.googlezip.net/test.html')
       responses = t.GetHTTPResponses()
       self.assertEqual(2, len(responses))

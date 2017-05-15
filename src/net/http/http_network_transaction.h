@@ -269,9 +269,6 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
   // and resets the stream.
   void CacheNetErrorDetailsAndResetStream();
 
-  // Records metrics relating to SSL fallbacks.
-  void RecordSSLFallbackMetrics(int result);
-
   // Returns true if we should try to add a Proxy-Authorization header
   bool ShouldApplyProxyAuth() const;
 

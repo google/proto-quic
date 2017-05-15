@@ -82,10 +82,6 @@
     "type": "raw",
     "args": [],
   },
-  "android_webview_test_apk": {
-    "label": "//android_webview/test:android_webview_test_apk",
-    "type": "console_test_launcher",
-  },
   "android_webview_unittests": {
     "label": "//android_webview/test:android_webview_unittests",
     "type": "console_test_launcher",
@@ -190,6 +186,14 @@
   "blink_tests": {
     "label": "//:blink_tests",
     "type": "additional_compile_target",
+  },
+  "boringssl_crypto_tests": {
+    "label": "//third_party/boringssl:boringssl_crypto_tests",
+    "type": "console_test_launcher",
+  },
+  "boringssl_ssl_tests": {
+    "label": "//third_party/boringssl:boringssl_ssl_tests",
+    "type": "console_test_launcher",
   },
   "breakpad_unittests": {
     "label": "//breakpad:breakpad_unittests",
@@ -398,6 +402,10 @@
   "dbus_unittests": {
     "label": "//dbus:dbus_unittests",
     "type": "windowed_test_launcher",
+  },
+  "device_junit_tests": {
+    "label": "//device:device_junit_tests",
+    "type": "junit_test",
   },
   "device_unittests": {
     "label": "//device:device_unittests",
@@ -849,6 +857,10 @@
     "label": "//services/service_manager/tests:service_manager_unittests",
     "type": "console_test_launcher",
   },
+  "service_junit_tests": {
+    "label": "//services:service_junit_tests",
+    "type": "junit_test",
+  },
   "service_unittests": {
     "label": "//services:service_unittests",
     "type": "console_test_launcher",
@@ -941,6 +953,8 @@
     "script": "//testing/scripts/run_gtest_perf_test.py",
     "args": [
       "cc_perftests",
+      "--adb-path",
+      "src/third_party/android_tools/sdk/platform-tools/adb"
     ],
   },
   "media_perftests": {
@@ -966,7 +980,9 @@
     "script": "//testing/scripts/run_gtest_perf_test.py",
     "args": [
       "tracing_perftests",
-      "--test-launcher-print-test-stdio=always"
+      "--test-launcher-print-test-stdio=always",
+      "--adb-path",
+      "src/third_party/android_tools/sdk/platform-tools/adb",
     ],
   },
   "gpu_perftests": {
@@ -976,7 +992,7 @@
     "args": [
       "gpu_perftests",
       "--adb-path",
-      "src/third_party/catapult/devil/bin/deps/linux2/x86_64/bin/adb"
+      "src/third_party/android_tools/sdk/platform-tools/adb",
     ],
   },
   "angle_perftests": {
@@ -1107,6 +1123,10 @@
   },
   "webkit_unit_tests": {
     "label": "//third_party/WebKit/Source/web:webkit_unit_tests",
+    "type": "console_test_launcher",
+  },
+  "webview_instrumentation_test_apk": {
+    "label": "//android_webview/test:webview_instrumentation_test_apk",
     "type": "console_test_launcher",
   },
   "wm_unittests": {

@@ -507,6 +507,7 @@ component("base") {
     "memory/scoped_vector.h",
     "memory/shared_memory.h",
     "memory/shared_memory_android.cc",
+    "memory/shared_memory_handle.cc",
     "memory/shared_memory_handle.h",
     "memory/shared_memory_handle_mac.cc",
     "memory/shared_memory_handle_win.cc",
@@ -579,6 +580,8 @@ component("base") {
     "metrics/sample_map.h",
     "metrics/sample_vector.cc",
     "metrics/sample_vector.h",
+    "metrics/single_sample_metrics.cc",
+    "metrics/single_sample_metrics.h",
     "metrics/sparse_histogram.cc",
     "metrics/sparse_histogram.h",
     "metrics/statistics_recorder.cc",
@@ -693,6 +696,7 @@ component("base") {
     "process/process_win.cc",
     "profiler/native_stack_sampler.cc",
     "profiler/native_stack_sampler.h",
+    "profiler/native_stack_sampler_mac.cc",
     "profiler/native_stack_sampler_posix.cc",
     "profiler/native_stack_sampler_win.cc",
     "profiler/scoped_profile.cc",
@@ -843,6 +847,7 @@ component("base") {
     "task_scheduler/sequence.h",
     "task_scheduler/sequence_sort_key.cc",
     "task_scheduler/sequence_sort_key.h",
+    "task_scheduler/single_thread_task_runner_thread_mode.h",
     "task_scheduler/task.cc",
     "task_scheduler/task.h",
     "task_scheduler/task_scheduler.cc",
@@ -955,6 +960,8 @@ component("base") {
     "trace_event/heap_profiler_event_filter.h",
     "trace_event/heap_profiler_heap_dump_writer.cc",
     "trace_event/heap_profiler_heap_dump_writer.h",
+    "trace_event/heap_profiler_serialization_state.cc",
+    "trace_event/heap_profiler_serialization_state.h",
     "trace_event/heap_profiler_stack_frame_deduplicator.cc",
     "trace_event/heap_profiler_stack_frame_deduplicator.h",
     "trace_event/heap_profiler_type_name_deduplicator.cc",
@@ -976,8 +983,6 @@ component("base") {
     "trace_event/memory_dump_request_args.h",
     "trace_event/memory_dump_scheduler.cc",
     "trace_event/memory_dump_scheduler.h",
-    "trace_event/memory_dump_session_state.cc",
-    "trace_event/memory_dump_session_state.h",
     "trace_event/memory_infra_background_whitelist.cc",
     "trace_event/memory_infra_background_whitelist.h",
     "trace_event/memory_peak_detector.cc",
@@ -1469,6 +1474,10 @@ component("base") {
       "strings/sys_string_conversions_posix.cc",
       "threading/platform_thread_internal_posix.cc",
     ]
+
+    if (is_mac) {
+      sources -= [ "profiler/native_stack_sampler_posix.cc" ]
+    }
   } else {
     # Non-Mac/ios.
     sources -= [
@@ -1840,7 +1849,9 @@ if (is_win) {
       "//base/win:base_win_features",
     ]
   }
+}
 
+if (is_win || is_mac) {
   if (current_cpu == "x64") {
     # Must be a shared library so that it can be unloaded during testing.
     shared_library("base_profiler_test_support_library") {
@@ -2048,6 +2059,7 @@ test("base_unittests") {
     "metrics/persistent_sample_map_unittest.cc",
     "metrics/sample_map_unittest.cc",
     "metrics/sample_vector_unittest.cc",
+    "metrics/single_sample_metrics_unittest.cc",
     "metrics/sparse_histogram_unittest.cc",
     "metrics/statistics_recorder_unittest.cc",
     "native_library_unittest.cc",
@@ -2133,6 +2145,7 @@ test("base_unittests") {
     "test/histogram_tester_unittest.cc",
     "test/mock_callback_unittest.cc",
     "test/scoped_mock_time_message_loop_task_runner_unittest.cc",
+    "test/scoped_task_environment_unittest.cc",
     "test/scoped_task_scheduler_unittest.cc",
     "test/test_pending_task_unittest.cc",
     "test/test_reg_util_win_unittest.cc",
@@ -2304,6 +2317,9 @@ test("base_unittests") {
       "CoreFoundation.framework",
       "Foundation.framework",
     ]
+    if (current_cpu == "x64") {
+      data_deps += [ ":base_profiler_test_support_library" ]
+    }
   }
 
   if (is_linux) {
@@ -2342,7 +2358,7 @@ test("base_unittests") {
     deps += [ "//base:scoped_handle_test_dll" ]
     if (current_cpu == "x64") {
       sources += [ "profiler/win32_stack_frame_unwinder_unittest.cc" ]
-      deps += [ ":base_profiler_test_support_library" ]
+      data_deps += [ ":base_profiler_test_support_library" ]
     }
   }
 
@@ -2493,6 +2509,7 @@ if (is_android) {
       "android/java/src/org/chromium/base/ContentUriUtils.java",
       "android/java/src/org/chromium/base/ContextUtils.java",
       "android/java/src/org/chromium/base/CpuFeatures.java",
+      "android/java/src/org/chromium/base/DiscardableReferencePool.java",
       "android/java/src/org/chromium/base/EarlyTraceEvent.java",
       "android/java/src/org/chromium/base/EventLog.java",
       "android/java/src/org/chromium/base/FieldTrialList.java",
@@ -2599,6 +2616,7 @@ if (is_android) {
       "//third_party/android_tools:android_support_compat_java",
       "//third_party/hamcrest:hamcrest_core_java",
       "//third_party/junit",
+      "//third_party/ub-uiautomator:ub_uiautomator_java",
     ]
     java_files = [
       "test/android/javatests/src/org/chromium/base/test/BaseActivityInstrumentationTestCase.java",
@@ -2608,6 +2626,7 @@ if (is_android) {
       "test/android/javatests/src/org/chromium/base/test/BaseChromiumAndroidJUnitRunner.java",
       "test/android/javatests/src/org/chromium/base/test/BaseChromiumRunnerCommon.java",
       "test/android/javatests/src/org/chromium/base/test/BaseTestResult.java",
+      "test/android/javatests/src/org/chromium/base/test/ScreenshotOnFailureStatement.java",
       "test/android/javatests/src/org/chromium/base/test/SetUpTestRule.java",
       "test/android/javatests/src/org/chromium/base/test/SetUpStatement.java",
       "test/android/javatests/src/org/chromium/base/test/util/AdvancedMockContext.java",
@@ -2649,6 +2668,7 @@ if (is_android) {
   junit_binary("base_junit_tests") {
     java_files = [
       "android/junit/src/org/chromium/base/BaseChromiumApplicationTest.java",
+      "android/junit/src/org/chromium/base/DiscardableReferencePoolTest.java",
       "android/junit/src/org/chromium/base/LogTest.java",
       "android/junit/src/org/chromium/base/NonThreadSafeTest.java",
       "android/junit/src/org/chromium/base/PromiseTest.java",

@@ -8,5 +8,6 @@ struct Origin {
   string scheme;
   string host;
   uint16 port;
+  string suborigin;
   bool unique;
 };

@@ -25,6 +25,7 @@
 #include "base/scoped_generic.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/threading/thread_restrictions.h"
+#include "base/unguessable_token.h"
 #include "build/build_config.h"
 
 #if defined(OS_MACOSX)
@@ -74,27 +75,18 @@ bool MakeMachSharedMemoryHandleReadOnly(SharedMemoryHandle* new_handle,
   if (kr != KERN_SUCCESS)
     return false;
 
-  *new_handle = SharedMemoryHandle(named_right, size);
+  *new_handle = SharedMemoryHandle(named_right, size, handle.GetGUID());
   return true;
 }
 
-
 }  // namespace
 
-SharedMemory::SharedMemory()
-    : mapped_memory_mechanism_(SharedMemoryHandle::MACH),
-      mapped_size_(0),
-      memory_(NULL),
-      read_only_(false),
-      requested_size_(0) {}
+SharedMemory::SharedMemory() {}
 
 SharedMemory::SharedMemory(const SharedMemoryHandle& handle, bool read_only)
-    : shm_(handle),
-      mapped_memory_mechanism_(SharedMemoryHandle::POSIX),
-      mapped_size_(0),
-      memory_(NULL),
-      read_only_(read_only),
-      requested_size_(0) {}
+    : mapped_memory_mechanism_(SharedMemoryHandle::POSIX),
+      shm_(handle),
+      read_only_(read_only) {}
 
 SharedMemory::~SharedMemory() {
   Unmap();
@@ -143,13 +135,18 @@ bool SharedMemory::GetSizeFromSharedMemoryHandle(
 // "name == L"". The exception is in the StatsTable.
 bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
   DCHECK(!shm_.IsValid());
-  if (options.size == 0) return false;
-
-  if (options.size > static_cast<size_t>(std::numeric_limits<int>::max()))
+  if (options.size == 0) {
+    last_error_ = SharedMemoryError::BAD_PARAMS;
     return false;
+  }
+
+  if (options.size > static_cast<size_t>(std::numeric_limits<int>::max())) {
+    last_error_ = SharedMemoryError::BAD_PARAMS;
+    return false;
+  }
 
   if (options.type == SharedMemoryHandle::MACH) {
-    shm_ = SharedMemoryHandle(options.size);
+    shm_ = SharedMemoryHandle(options.size, UnguessableToken::Create());
     requested_size_ = options.size;
     return shm_.IsValid();
   }
@@ -163,43 +160,51 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
   ScopedFD readonly_fd;
 
   FilePath path;
-  bool result = CreateAnonymousSharedMemory(options, &fp, &readonly_fd, &path);
+  bool result = CreateAnonymousSharedMemory(options, &fp, &readonly_fd, &path,
+                                            &last_error_);
   if (!result)
     return false;
-
-  if (!fp) {
-    PLOG(ERROR) << "Creating shared memory in " << path.value() << " failed";
-    return false;
-  }
+  DCHECK(fp);  // Should be guaranteed by CreateAnonymousSharedMemory().
 
   // Get current size.
   struct stat stat;
-  if (fstat(fileno(fp.get()), &stat) != 0)
+  if (fstat(fileno(fp.get()), &stat) != 0) {
+    last_error_ = SharedMemoryError::STAT_FAILED;
     return false;
+  }
   const size_t current_size = stat.st_size;
   if (current_size != options.size) {
-    if (HANDLE_EINTR(ftruncate(fileno(fp.get()), options.size)) != 0)
+    if (HANDLE_EINTR(ftruncate(fileno(fp.get()), options.size)) != 0) {
+      last_error_ = SharedMemoryError::TRUNCATE_FAILED;
       return false;
+    }
   }
   requested_size_ = options.size;
 
   int mapped_file = -1;
   int readonly_mapped_file = -1;
   result = PrepareMapFile(std::move(fp), std::move(readonly_fd), &mapped_file,
-                          &readonly_mapped_file);
-  shm_ = SharedMemoryHandle(FileDescriptor(mapped_file, false));
-  readonly_shm_ =
-      SharedMemoryHandle(FileDescriptor(readonly_mapped_file, false));
+                          &readonly_mapped_file, &last_error_);
+  shm_ = SharedMemoryHandle(FileDescriptor(mapped_file, false),
+                            UnguessableToken::Create());
+  readonly_shm_ = SharedMemoryHandle(
+      FileDescriptor(readonly_mapped_file, false), shm_.GetGUID());
   return result;
 }
 
 bool SharedMemory::MapAt(off_t offset, size_t bytes) {
-  if (!shm_.IsValid())
+  if (!shm_.IsValid()) {
+    last_error_ = SharedMemoryError::BAD_PARAMS;
     return false;
-  if (bytes > static_cast<size_t>(std::numeric_limits<int>::max()))
+  }
+  if (bytes > static_cast<size_t>(std::numeric_limits<int>::max())) {
+    last_error_ = SharedMemoryError::BAD_PARAMS;
     return false;
-  if (memory_)
+  }
+  if (memory_) {
+    last_error_ = SharedMemoryError::BAD_PARAMS;
     return false;
+  }
 
   bool success = shm_.MapAt(offset, bytes, &memory_, read_only_);
   if (success) {
@@ -208,6 +213,7 @@ bool SharedMemory::MapAt(off_t offset, size_t bytes) {
                       (SharedMemory::MAP_MINIMUM_ALIGNMENT - 1));
     mapped_memory_mechanism_ = shm_.type_;
   } else {
+    last_error_ = SharedMemoryError::MMAP_FAILED;
     memory_ = NULL;
   }
 
@@ -237,8 +243,8 @@ bool SharedMemory::Unmap() {
 SharedMemoryHandle SharedMemory::handle() const {
   switch (shm_.type_) {
     case SharedMemoryHandle::POSIX:
-      return SharedMemoryHandle(
-          FileDescriptor(shm_.file_descriptor_.fd, false));
+      return SharedMemoryHandle(FileDescriptor(shm_.file_descriptor_.fd, false),
+                                shm_.GetGUID());
     case SharedMemoryHandle::MACH:
       return shm_;
   }

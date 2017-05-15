@@ -433,9 +433,9 @@ class PathBuilderKeyRolloverTest : public ::testing::Test {
     ParsedCertificateList path;
 
     VerifyCertChainTest test;
-    ReadVerifyCertChainTestFromFile(
+    ASSERT_TRUE(ReadVerifyCertChainTestFromFile(
         "net/data/verify_certificate_chain_unittest/key-rollover/oldchain.test",
-        &test);
+        &test));
     path = test.chain;
     ASSERT_EQ(3U, path.size());
     target_ = path[0];
@@ -446,10 +446,10 @@ class PathBuilderKeyRolloverTest : public ::testing::Test {
     ASSERT_TRUE(target_);
     ASSERT_TRUE(oldintermediate_);
 
-    ReadVerifyCertChainTestFromFile(
+    ASSERT_TRUE(ReadVerifyCertChainTestFromFile(
         "net/data/verify_certificate_chain_unittest/"
         "key-rollover/longrolloverchain.test",
-        &test);
+        &test));
     path = test.chain;
 
     ASSERT_EQ(5U, path.size());
@@ -1095,6 +1095,119 @@ TEST_F(PathBuilderKeyRolloverTest, TestDuplicateAsyncIntermediates) {
   EXPECT_EQ(target_, path1.certs[0]);
   EXPECT_EQ(newintermediate_, path1.certs[1]);
   EXPECT_EQ(newroot_, path1.certs[2]);
+}
+
+// Test fixture for running the path builder over a simple chain, while varying
+// the trustedness of certain certificates.
+class PathBuilderDistrustTest : public ::testing::Test {
+ public:
+  PathBuilderDistrustTest() {}
+
+ protected:
+  void SetUp() override {
+    // Read a simple test chain comprised of a target, intermediate, and root.
+    ASSERT_TRUE(ReadVerifyCertChainTestFromFile(
+        "net/data/verify_certificate_chain_unittest/target-and-intermediate/"
+        "main.test",
+        &test_));
+    ASSERT_EQ(3u, test_.chain.size());
+  }
+
+  // Runs the path builder for the target certificate while |distrusted_cert| is
+  // blacklisted.
+  void RunPathBuilderWithDistrustedCert(
+      const scoped_refptr<ParsedCertificate>& distrusted_cert,
+      CertPathBuilder::Result* result) {
+    ASSERT_EQ(3u, test_.chain.size());
+
+    // Set up the trust store such that |distrusted_cert| is blacklisted, and
+    // the root is trusted (except if it was |distrusted_cert|).
+    TrustStoreInMemory trust_store;
+    if (distrusted_cert != test_.chain.back())
+      trust_store.AddTrustAnchor(test_.chain.back());
+    if (distrusted_cert)
+      trust_store.AddDistrustedCertificateForTest(distrusted_cert);
+
+    // Add the single intermediate.
+    CertIssuerSourceStatic intermediates;
+    intermediates.AddCert(test_.chain[1]);
+
+    SimpleSignaturePolicy signature_policy(1024);
+
+    CertPathBuilder path_builder(test_.chain.front(), &trust_store,
+                                 &signature_policy, test_.time,
+                                 KeyPurpose::ANY_EKU, result);
+    path_builder.AddCertIssuerSource(&intermediates);
+    path_builder.Run();
+  }
+
+ protected:
+  VerifyCertChainTest test_;
+};
+
+// Tests that path building fails when the target, intermediate, or root are
+// distrusted (but the path is otherwise valid).
+TEST_F(PathBuilderDistrustTest, TargetIntermediateRoot) {
+  CertPathBuilder::Result result;
+  // First do a control test -- path building without any blacklisted
+  // certificates should work.
+  RunPathBuilderWithDistrustedCert(nullptr, &result);
+  {
+    EXPECT_TRUE(result.HasValidPath());
+    // The built path should be identical the the one read from disk.
+    const auto& path = result.GetBestValidPath()->path;
+    ASSERT_EQ(test_.chain.size(), path.certs.size());
+    for (size_t i = 0; i < test_.chain.size(); ++i)
+      EXPECT_EQ(test_.chain[i], path.certs[i]);
+  }
+
+  // Try path building when only the target is blacklisted - should fail.
+  RunPathBuilderWithDistrustedCert(test_.chain[0], &result);
+  {
+    EXPECT_FALSE(result.HasValidPath());
+    ASSERT_LT(result.best_result_index, result.paths.size());
+    const auto& best_path = result.paths[result.best_result_index];
+
+    // The built chain has length 1 since path building stopped once
+    // it encountered the blacklisted certificate (target).
+    ASSERT_EQ(1u, best_path->path.certs.size());
+    EXPECT_EQ(best_path->path.certs[0], test_.chain[0]);
+    EXPECT_TRUE(best_path->errors.ContainsHighSeverityErrors());
+    best_path->errors.ContainsError(kCertIsDistrusted);
+  }
+
+  // Try path building when only the intermediate is blacklisted - should fail.
+  RunPathBuilderWithDistrustedCert(test_.chain[1], &result);
+  {
+    EXPECT_FALSE(result.HasValidPath());
+    ASSERT_LT(result.best_result_index, result.paths.size());
+    const auto& best_path = result.paths[result.best_result_index];
+
+    // The built chain has length 2 since path building stopped once
+    // it encountered the blacklisted certificate (intermediate).
+    ASSERT_EQ(2u, best_path->path.certs.size());
+    EXPECT_EQ(best_path->path.certs[0], test_.chain[0]);
+    EXPECT_EQ(best_path->path.certs[1], test_.chain[1]);
+    EXPECT_TRUE(best_path->errors.ContainsHighSeverityErrors());
+    best_path->errors.ContainsError(kCertIsDistrusted);
+  }
+
+  // Try path building when only the root is blacklisted - should fail.
+  RunPathBuilderWithDistrustedCert(test_.chain[2], &result);
+  {
+    EXPECT_FALSE(result.HasValidPath());
+    ASSERT_LT(result.best_result_index, result.paths.size());
+    const auto& best_path = result.paths[result.best_result_index];
+
+    // The built chain has length 3 since path building stopped once
+    // it encountered the blacklisted certificate (root).
+    ASSERT_EQ(3u, best_path->path.certs.size());
+    EXPECT_EQ(best_path->path.certs[0], test_.chain[0]);
+    EXPECT_EQ(best_path->path.certs[1], test_.chain[1]);
+    EXPECT_EQ(best_path->path.certs[2], test_.chain[2]);
+    EXPECT_TRUE(best_path->errors.ContainsHighSeverityErrors());
+    best_path->errors.ContainsError(kCertIsDistrusted);
+  }
 }
 
 }  // namespace

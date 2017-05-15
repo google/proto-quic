@@ -15,6 +15,7 @@
 #include "base/run_loop.h"
 #include "base/strings/string_util.h"
 #include "base/test/perf_time_logger.h"
+#include "base/test/scoped_task_environment.h"
 #include "base/test/test_file_util.h"
 #include "base/threading/thread.h"
 #include "net/base/cache_type.h"
@@ -91,6 +92,7 @@ class DiskCachePerfTest : public DiskCacheTestWithCache {
 
  private:
   const size_t saved_fd_limit_;
+  base::test::ScopedTaskEnvironment scoped_task_environment_;
 };
 
 // Creates num_entries on the cache, and writes kHeaderSize bytes of metadata

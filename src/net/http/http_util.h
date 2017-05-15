@@ -75,6 +75,14 @@ class NET_EXPORT HttpUtil {
                                     base::Time now,
                                     base::TimeDelta* retry_after);
 
+  // Returns true if the request method is "safe" (per section 4.2.1 of
+  // RFC 7231).
+  static bool IsMethodSafe(const std::string& method);
+
+  // Returns true if the request method is idempotent (per section 4.2.2 of
+  // RFC 7231).
+  static bool IsMethodIdempotent(const std::string& method);
+
   // Returns true if it is safe to allow users and scripts to specify the header
   // named |name|.
   static bool IsSafeHeader(const std::string& name);

@@ -714,8 +714,8 @@ def main():
   devil_chromium.Initialize(output_directory=output_dir)
   run_tests_helper.SetLogLevel(args.verbose_count)
 
-  if args.split_projects:
-    assert not args.use_gradle_process_resources, (
+  if args.use_gradle_process_resources:
+    assert args.split_projects, (
         'Gradle resources does not work without --split-projects.')
 
   _gradle_output_dir = os.path.abspath(

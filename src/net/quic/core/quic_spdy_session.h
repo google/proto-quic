@@ -163,6 +163,9 @@ class QUIC_EXPORT_PRIVATE QuicSpdySession : public QuicSession {
       size_t set_max_uncompressed_header_bytes);
 
  protected:
+  // TODO(ckrasic) - remove these two when
+  // FLAGS_quic_reloadable_flag_quic_refactor_stream_creation is
+  // deprecated.
   // Override CreateIncomingDynamicStream() and CreateOutgoingDynamicStream()
   // with QuicSpdyStream return type to make sure that all data streams are
   // QuicSpdyStreams.
@@ -170,7 +173,15 @@ class QUIC_EXPORT_PRIVATE QuicSpdySession : public QuicSession {
   QuicSpdyStream* CreateOutgoingDynamicStream(SpdyPriority priority) override =
       0;
 
+  QuicSpdyStream* MaybeCreateIncomingDynamicStream(QuicStreamId id) override;
+  QuicSpdyStream* MaybeCreateOutgoingDynamicStream(
+      SpdyPriority priority) override;
+
   QuicSpdyStream* GetSpdyDataStream(const QuicStreamId stream_id);
+
+  // TODO(ckrasic) - remove these two when
+  // FLAGS_quic_reloadable_flag_quic_refactor_stream_creation is
+  // depreacted.
 
   // If an incoming stream can be created, return true.
   virtual bool ShouldCreateIncomingDynamicStream(QuicStreamId id) = 0;

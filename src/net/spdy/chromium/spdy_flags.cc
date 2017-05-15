@@ -9,9 +9,6 @@ namespace net {
 // Log compressed size of HTTP/2 requests.
 bool FLAGS_chromium_http2_flag_log_compressed_size = true;
 
-// If true, remove use of SpdyFrameBuilder::OverwriteLength().
-bool FLAGS_chromium_http2_flag_remove_rewritelength = true;
-
 // Use //net/http2/hpack/decoder as complete HPACK decoder.
 bool FLAGS_chromium_http2_flag_spdy_use_hpack_decoder3 = true;
 

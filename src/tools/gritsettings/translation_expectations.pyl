@@ -38,6 +38,7 @@
       "ios/chrome/app/strings/ios_chromium_strings.grd",
       "ios/chrome/app/strings/ios_google_chrome_strings.grd",
       "ios/chrome/app/strings/ios_strings.grd",
+      "ios/chrome/search_widget_extension/strings/ios_search_widget_extension_strings.grd",
       "ios/chrome/share_extension/strings/ios_share_extension_strings.grd",
       "ios/chrome/today_extension/strings/ios_today_extension_strings.grd",
       "remoting/resources/remoting_strings.grd",
@@ -56,6 +57,7 @@
     "files": [
       "android_webview/java/strings/android_webview_strings.grd",
       "chrome/android/java/strings/android_chrome_strings.grd",
+      "chrome/android/webapk/strings/android_webapk_strings.grd",
       "content/public/android/java/strings/android_content_strings.grd",
       "ui/android/java/strings/android_ui_strings.grd",
     ],

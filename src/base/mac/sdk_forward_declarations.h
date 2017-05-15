@@ -252,10 +252,6 @@ BASE_EXPORT extern NSString* const CIDetectorTypeText;
     (NSAttributedString*)attributedStringValue;
 @end
 
-@interface NSApplication (SierraPointOneSDK)
-@property BOOL automaticCustomizeTouchBarMenuItemEnabled;
-@end
-
 #endif  // MAC_OS_X_VERSION_10_12_1
 
 // ----------------------------------------------------------------------------

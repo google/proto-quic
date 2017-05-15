@@ -23,6 +23,7 @@
 #include "base/strings/utf_string_conversions.h"
 #include "base/threading/thread_restrictions.h"
 #include "base/trace_event/trace_event.h"
+#include "base/unguessable_token.h"
 #include "build/build_config.h"
 
 #if defined(OS_ANDROID)
@@ -32,16 +33,10 @@
 
 namespace base {
 
-SharedMemory::SharedMemory()
-    : mapped_size_(0), memory_(NULL), read_only_(false), requested_size_(0) {}
+SharedMemory::SharedMemory() {}
 
 SharedMemory::SharedMemory(const SharedMemoryHandle& handle, bool read_only)
-    : shm_(handle),
-
-      mapped_size_(0),
-      memory_(NULL),
-      read_only_(read_only),
-      requested_size_(0) {}
+    : shm_(handle), read_only_(read_only) {}
 
 SharedMemory::~SharedMemory() {
   Unmap();
@@ -118,8 +113,8 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
 
   FilePath path;
   if (options.name_deprecated == NULL || options.name_deprecated->empty()) {
-    bool result =
-        CreateAnonymousSharedMemory(options, &fp, &readonly_fd, &path);
+    bool result = CreateAnonymousSharedMemory(options, &fp, &readonly_fd, &path,
+                                              &last_error_);
     if (!result)
       return false;
   } else {
@@ -210,10 +205,13 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
 
   int mapped_file = -1;
   int readonly_mapped_file = -1;
-  bool result = PrepareMapFile(std::move(fp), std::move(readonly_fd),
-                               &mapped_file, &readonly_mapped_file);
-  shm_ = SharedMemoryHandle::ImportHandle(mapped_file);
-  readonly_shm_ = SharedMemoryHandle::ImportHandle(readonly_mapped_file);
+  bool result =
+      PrepareMapFile(std::move(fp), std::move(readonly_fd), &mapped_file,
+                     &readonly_mapped_file, &last_error_);
+  shm_ = SharedMemoryHandle(base::FileDescriptor(mapped_file, false),
+                            UnguessableToken::Create());
+  readonly_shm_ = SharedMemoryHandle(
+      base::FileDescriptor(readonly_mapped_file, false), shm_.GetGUID());
   return result;
 }
 
@@ -248,10 +246,21 @@ bool SharedMemory::Open(const std::string& name, bool read_only) {
   }
   int mapped_file = -1;
   int readonly_mapped_file = -1;
-  bool result = PrepareMapFile(std::move(fp), std::move(readonly_fd),
-                               &mapped_file, &readonly_mapped_file);
-  shm_ = SharedMemoryHandle::ImportHandle(mapped_file);
-  readonly_shm_ = SharedMemoryHandle::ImportHandle(readonly_mapped_file);
+  bool result =
+      PrepareMapFile(std::move(fp), std::move(readonly_fd), &mapped_file,
+                     &readonly_mapped_file, &last_error_);
+  // This form of sharing shared memory is deprecated. https://crbug.com/345734.
+  // However, we can't get rid of it without a significant refactor because its
+  // used to communicate between two versions of the same service process, very
+  // early in the life cycle.
+  // Technically, we should also pass the GUID from the original shared memory
+  // region. We don't do that - this means that we will overcount this memory,
+  // which thankfully isn't relevant since Chrome only communicates with a
+  // single version of the service process.
+  shm_ = SharedMemoryHandle(base::FileDescriptor(mapped_file, false),
+                            UnguessableToken::Create());
+  readonly_shm_ = SharedMemoryHandle(
+      base::FileDescriptor(readonly_mapped_file, false), shm_.GetGUID());
   return result;
 }
 #endif  // !defined(OS_ANDROID)

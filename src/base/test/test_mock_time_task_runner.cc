@@ -234,7 +234,7 @@ TimeDelta TestMockTimeTaskRunner::NextPendingTaskDelay() const {
 // TODO(gab): Combine |thread_checker_| with a SequenceToken to differentiate
 // between tasks running in the scope of this TestMockTimeTaskRunner and other
 // task runners sharing this thread. http://crbug.com/631186
-bool TestMockTimeTaskRunner::RunsTasksOnCurrentThread() const {
+bool TestMockTimeTaskRunner::RunsTasksInCurrentSequence() const {
   return thread_checker_.CalledOnValidThread();
 }
 

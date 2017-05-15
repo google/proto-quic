@@ -12,6 +12,7 @@ build_dotfile_settings = {
     "//build/config/android/rules.gni",
     "//build/config/compiler/BUILD.gn",
     "//build/config/gcc/gcc_version.gni",
+    "//build/config/host_byteorder.gni",
     "//build/config/ios/ios_sdk.gni",
     "//build/config/linux/BUILD.gn",
     "//build/config/linux/pkg_config.gni",

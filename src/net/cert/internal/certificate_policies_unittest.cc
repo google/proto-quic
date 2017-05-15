@@ -147,4 +147,7 @@ TEST(ParseCertificatePoliciesTest, TwoPoliciesWithQualifiers) {
   EXPECT_EQ(der::Input(policy_1_2_4_der), policies[1]);
 }
 
+// NOTE: The tests for ParseCertificatePolicies() are part of
+// parsed_certificate_unittest.cc
+
 }  // namespace net

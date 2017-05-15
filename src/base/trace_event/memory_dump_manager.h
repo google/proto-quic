@@ -42,7 +42,7 @@ namespace trace_event {
 
 class MemoryTracingObserver;
 class MemoryDumpProvider;
-class MemoryDumpSessionState;
+class HeapProfilerSerializationState;
 
 // This is the interface exposed to the rest of the codebase to deal with
 // memory tracing. The main entry point for clients is represented by
@@ -114,6 +114,8 @@ class BASE_EXPORT MemoryDumpManager {
 
   // Requests a memory dump. The dump might happen or not depending on the
   // filters and categories specified when enabling tracing.
+  // A SUMMARY_ONLY dump can be requested at any time after initialization and
+  // other type of dumps can be requested only when MDM is enabled.
   // The optional |callback| is executed asynchronously, on an arbitrary thread,
   // to notify about the completion of the global dump (i.e. after all the
   // processes have dumped) and its success (true iff all the dumps were
@@ -126,15 +128,15 @@ class BASE_EXPORT MemoryDumpManager {
   void RequestGlobalDump(MemoryDumpType dump_type,
                          MemoryDumpLevelOfDetail level_of_detail);
 
-  // Prepare MemoryDumpManager for RequestGlobalMemoryDump calls.
-  // Starts the MemoryDumpManager thread.
-  // Also uses the given config to initialize the peak detector,
-  // scheduler and heap profiler.
-  void Enable(const TraceConfig::MemoryDumpConfig&);
+  // Prepare MemoryDumpManager for RequestGlobalMemoryDump calls for tracing
+  // related modes (non-SUMMARY_ONLY).
+  // Initializes the peak detector, scheduler and heap profiler with the given
+  // config.
+  void SetupForTracing(const TraceConfig::MemoryDumpConfig&);
 
-  // Tearsdown the MemoryDumpManager thread and various other state set up by
-  // Enable.
-  void Disable();
+  // Tear-down tracing related state.
+  // Non-tracing modes (e.g. SUMMARY_ONLY) will continue to work.
+  void TeardownForTracing();
 
   // NOTE: Use RequestGlobalDump() to create memory dumps. Creates a memory dump
   // for the current process and appends it to the trace. |callback| will be
@@ -147,18 +149,12 @@ class BASE_EXPORT MemoryDumpManager {
   // Enable heap profiling if kEnableHeapProfiling is specified.
   void EnableHeapProfilingIfNeeded();
 
-  // Returns true if the dump mode is allowed for current tracing session.
-  bool IsDumpModeAllowed(MemoryDumpLevelOfDetail dump_mode);
-
   // Lets tests see if a dump provider is registered.
   bool IsDumpProviderRegisteredForTesting(MemoryDumpProvider*);
 
-  // Returns the MemoryDumpSessionState object, which is shared by all the
-  // ProcessMemoryDump and MemoryAllocatorDump instances through all the tracing
-  // session lifetime.
-  const scoped_refptr<MemoryDumpSessionState>& session_state_for_testing()
-      const {
-    return session_state_;
+  const scoped_refptr<HeapProfilerSerializationState>&
+  heap_profiler_serialization_state_for_testing() const {
+    return heap_profiler_serialization_state_;
   }
 
   // Returns a unique id for identifying the processes. The id can be
@@ -197,7 +193,8 @@ class BASE_EXPORT MemoryDumpManager {
     ProcessMemoryDumpAsyncState(
         MemoryDumpRequestArgs req_args,
         const MemoryDumpProviderInfo::OrderedSet& dump_providers,
-        scoped_refptr<MemoryDumpSessionState> session_state,
+        scoped_refptr<HeapProfilerSerializationState>
+            heap_profiler_serialization_state,
         ProcessMemoryDumpCallback callback,
         scoped_refptr<SequencedTaskRunner> dump_thread_task_runner);
     ~ProcessMemoryDumpAsyncState();
@@ -221,8 +218,11 @@ class BASE_EXPORT MemoryDumpManager {
     // and becomes empty at the end, when all dump providers have been invoked.
     std::vector<scoped_refptr<MemoryDumpProviderInfo>> pending_dump_providers;
 
-    // The trace-global session state.
-    scoped_refptr<MemoryDumpSessionState> session_state;
+    // The HeapProfilerSerializationState object, which is shared by all
+    // the ProcessMemoryDump and MemoryAllocatorDump instances through all the
+    // tracing session lifetime.
+    scoped_refptr<HeapProfilerSerializationState>
+        heap_profiler_serialization_state;
 
     // Callback passed to the initial call to CreateProcessDump().
     ProcessMemoryDumpCallback callback;
@@ -293,7 +293,8 @@ class BASE_EXPORT MemoryDumpManager {
   MemoryDumpProviderInfo::OrderedSet dump_providers_;
 
   // Shared among all the PMDs to keep state scoped to the tracing session.
-  scoped_refptr<MemoryDumpSessionState> session_state_;
+  scoped_refptr<HeapProfilerSerializationState>
+      heap_profiler_serialization_state_;
 
   std::unique_ptr<MemoryTracingObserver> tracing_observer_;
 
@@ -306,10 +307,6 @@ class BASE_EXPORT MemoryDumpManager {
   // Protects from concurrent accesses to the local state, eg: to guard against
   // disabling logging while dumping on another thread.
   Lock lock_;
-
-  // Optimization to avoid attempting any memory dump (i.e. to not walk an empty
-  // dump_providers_enabled_ list) when tracing is not enabled.
-  subtle::AtomicWord is_enabled_;
 
   // Thread used for MemoryDumpProviders which don't specify a task runner
   // affinity.

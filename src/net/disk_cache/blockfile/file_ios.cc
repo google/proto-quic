@@ -122,10 +122,8 @@ void FileInFlightIO::PostRead(disk_cache::File *file, void* buf, size_t buf_len,
   file->AddRef();  // Balanced on OnOperationComplete()
 
   base::PostTaskWithTraits(
-      FROM_HERE, base::TaskTraits()
-                     .WithShutdownBehavior(
-                         base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN)
-                     .MayBlock(),
+      FROM_HERE,
+      {base::MayBlock(), base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN},
       base::Bind(&FileBackgroundIO::Read, operation.get()));
   OnOperationPosted(operation.get());
 }
@@ -138,10 +136,8 @@ void FileInFlightIO::PostWrite(disk_cache::File* file, const void* buf,
   file->AddRef();  // Balanced on OnOperationComplete()
 
   base::PostTaskWithTraits(
-      FROM_HERE, base::TaskTraits()
-                     .WithShutdownBehavior(
-                         base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN)
-                     .MayBlock(),
+      FROM_HERE,
+      {base::MayBlock(), base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN},
       base::Bind(&FileBackgroundIO::Write, operation.get()));
   OnOperationPosted(operation.get());
 }

@@ -12,13 +12,13 @@
 #include "base/files/scoped_temp_dir.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
-#include "base/test/scoped_task_scheduler.h"
+#include "base/test/scoped_task_environment.h"
 #include "net/base/filename_util.h"
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
 #include "net/test/gtest_util.h"
+#include "net/test/net_test_suite.h"
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_test_util.h"
@@ -95,12 +95,9 @@ class TestDirectoryURLRequestDelegate : public TestDelegate {
 
 class URLRequestFileDirTest : public testing::Test {
  public:
-  URLRequestFileDirTest()
-      : scoped_task_scheduler_(base::MessageLoop::current()),
-        buffer_(new IOBuffer(kBufferSize)) {}
+  URLRequestFileDirTest() : buffer_(new IOBuffer(kBufferSize)) {}
 
  protected:
-  base::test::ScopedTaskScheduler scoped_task_scheduler_;
   TestURLRequestContext context_;
   TestDirectoryURLRequestDelegate delegate_;
   scoped_refptr<IOBuffer> buffer_;
@@ -124,7 +121,7 @@ TEST_F(URLRequestFileDirTest, ListCompletionOnNoPending) {
   // Since the DirectoryLister is running on the network thread, this
   // will spin the message loop until the read error is returned to the
   // URLRequestFileDirJob.
-  base::RunLoop().RunUntilIdle();
+  NetTestSuite::GetScopedTaskEnvironment()->RunUntilIdle();
   ASSERT_TRUE(delegate_.got_response_started());
 
   int bytes_read = request->Read(buffer_.get(), kBufferSize);
@@ -154,7 +151,7 @@ TEST_F(URLRequestFileDirTest, DirectoryWithASingleFileSync) {
   // Since the DirectoryLister is running on the network thread, this will spin
   // the message loop until the URLRequetsFileDirJob has received the
   // entire directory listing and cached it.
-  base::RunLoop().RunUntilIdle();
+  NetTestSuite::GetScopedTaskEnvironment()->RunUntilIdle();
 
   // This will complete synchronously, since the URLRequetsFileDirJob had
   // directory listing cached in memory.

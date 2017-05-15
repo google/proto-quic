@@ -66,7 +66,7 @@ class SchedulerParallelTaskRunner : public TaskRunner {
         make_scoped_refptr(new Sequence));
   }
 
-  bool RunsTasksOnCurrentThread() const override {
+  bool RunsTasksInCurrentSequence() const override {
     return tls_current_worker_pool.Get().Get() == worker_pool_;
   }
 
@@ -110,9 +110,7 @@ class SchedulerSequencedTaskRunner : public SequencedTaskRunner {
     return PostDelayedTask(from_here, std::move(closure), delay);
   }
 
-  bool RunsTasksOnCurrentThread() const override {
-    // TODO(fdoray): Rename TaskRunner::RunsTaskOnCurrentThread() to something
-    // that reflects this behavior more accurately. crbug.com/646905
+  bool RunsTasksInCurrentSequence() const override {
     return sequence_->token() == SequenceToken::GetForCurrentThread();
   }
 
@@ -143,13 +141,10 @@ bool ContainsWorker(const std::vector<scoped_refptr<SchedulerWorker>>& workers,
 class SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl
     : public SchedulerWorker::Delegate {
  public:
-  // |outer| owns the worker for which this delegate is constructed.
-  // |re_enqueue_sequence_callback| is invoked when ReEnqueueSequence() is
-  // called. |index| will be appended to the pool name to label the underlying
-  // worker threads.
+  // |outer| owns the worker for which this delegate is constructed. |index|
+  // will be appended to the pool name to label the underlying worker threads.
   SchedulerWorkerDelegateImpl(
       SchedulerWorkerPoolImpl* outer,
-      const ReEnqueueSequenceCallback& re_enqueue_sequence_callback,
       int index);
   ~SchedulerWorkerDelegateImpl() override;
 
@@ -164,7 +159,6 @@ class SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl
 
  private:
   SchedulerWorkerPoolImpl* outer_;
-  const ReEnqueueSequenceCallback re_enqueue_sequence_callback_;
 
   // Time of the last detach.
   TimeTicks last_detach_time_;
@@ -195,12 +189,10 @@ class SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl
 SchedulerWorkerPoolImpl::SchedulerWorkerPoolImpl(
     const std::string& name,
     ThreadPriority priority_hint,
-    ReEnqueueSequenceCallback re_enqueue_sequence_callback,
     TaskTracker* task_tracker,
     DelayedTaskManager* delayed_task_manager)
     : name_(name),
       priority_hint_(priority_hint),
-      re_enqueue_sequence_callback_(std::move(re_enqueue_sequence_callback)),
       idle_workers_stack_lock_(shared_priority_queue_.container_lock()),
       idle_workers_stack_cv_for_testing_(
           idle_workers_stack_lock_.CreateConditionVariable()),
@@ -265,9 +257,7 @@ void SchedulerWorkerPoolImpl::Start(const SchedulerWorkerPoolParams& params) {
     // highest index is at the bottom of the idle stack.
     for (int index = params.max_threads() - 1; index >= 0; --index) {
       workers_[index] = make_scoped_refptr(new SchedulerWorker(
-          priority_hint_,
-          MakeUnique<SchedulerWorkerDelegateImpl>(
-              this, re_enqueue_sequence_callback_, index),
+          priority_hint_, MakeUnique<SchedulerWorkerDelegateImpl>(this, index),
           task_tracker_, params.backward_compatibility(),
           index < num_alive_workers ? SchedulerWorker::InitialState::ALIVE
                                     : SchedulerWorker::InitialState::DETACHED));
@@ -309,24 +299,6 @@ scoped_refptr<SequencedTaskRunner>
 SchedulerWorkerPoolImpl::CreateSequencedTaskRunnerWithTraits(
     const TaskTraits& traits) {
   return make_scoped_refptr(new SchedulerSequencedTaskRunner(traits, this));
-}
-
-void SchedulerWorkerPoolImpl::ReEnqueueSequence(
-    scoped_refptr<Sequence> sequence,
-    const SequenceSortKey& sequence_sort_key) {
-  shared_priority_queue_.BeginTransaction()->Push(std::move(sequence),
-                                                  sequence_sort_key);
-
-  // The thread calling this method just ran a Task from |sequence| and will
-  // soon try to get another Sequence from which to run a Task. If the thread
-  // belongs to this pool, it will get that Sequence from
-  // |shared_priority_queue_|. When that's the case, there is no need to wake up
-  // another worker after |sequence| is inserted in |shared_priority_queue_|. If
-  // we did wake up another worker, we would waste resources by having more
-  // workers trying to get a Sequence from |shared_priority_queue_| than the
-  // number of Sequences in it.
-  if (tls_current_worker_pool.Get().Get() != this)
-    WakeUpOneWorker();
 }
 
 bool SchedulerWorkerPoolImpl::PostTaskWithSequence(
@@ -435,10 +407,8 @@ size_t SchedulerWorkerPoolImpl::NumberOfAliveWorkersForTesting() {
 SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::
     SchedulerWorkerDelegateImpl(
         SchedulerWorkerPoolImpl* outer,
-        const ReEnqueueSequenceCallback& re_enqueue_sequence_callback,
         int index)
     : outer_(outer),
-      re_enqueue_sequence_callback_(re_enqueue_sequence_callback),
       index_(index) {}
 
 SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::
@@ -534,9 +504,12 @@ void SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::DidRunTask() {
 
 void SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::
     ReEnqueueSequence(scoped_refptr<Sequence> sequence) {
-  // |re_enqueue_sequence_callback_| will determine in which PriorityQueue
-  // |sequence| must be enqueued.
-  re_enqueue_sequence_callback_.Run(std::move(sequence));
+  const SequenceSortKey sequence_sort_key = sequence->GetSortKey();
+  outer_->shared_priority_queue_.BeginTransaction()->Push(std::move(sequence),
+                                                          sequence_sort_key);
+  // The thread calling this method will soon call GetWork(). Therefore, there
+  // is no need to wake up a worker to run the sequence that was just inserted
+  // into |outer_->shared_priority_queue_|.
 }
 
 TimeDelta SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::

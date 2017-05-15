@@ -52,6 +52,7 @@ class CTVerifier;
 class HostMappingRules;
 class HttpAuthHandlerFactory;
 class HttpServerProperties;
+class NetworkQualityEstimator;
 class ProxyConfigService;
 class SocketPerformanceWatcherFactory;
 class URLRequestContext;
@@ -87,18 +88,23 @@ class NET_EXPORT URLRequestContextBuilder {
     HttpNetworkSessionParams();
     ~HttpNetworkSessionParams();
 
+    // Configutes |params| to match the settings in |this|.
+    // TODO(mmenke):  Temporary utility function. Once everything is using a
+    // URLRequestContextBuilder, can make this no longer publicly accessible.
+    void ConfigureSessionParams(HttpNetworkSession::Params* params) const;
+
     // These fields mirror those in HttpNetworkSession::Params;
-    bool ignore_certificate_errors;
     HostMappingRules* host_mapping_rules;
+    bool ignore_certificate_errors;
     uint16_t testing_fixed_http_port;
     uint16_t testing_fixed_https_port;
     bool enable_http2;
     bool enable_quic;
     std::string quic_user_agent_id;
     int quic_max_server_configs_stored_in_properties;
-    int quic_idle_connection_timeout_seconds;
     QuicTagVector quic_connection_options;
     bool quic_close_sessions_on_ip_change;
+    int quic_idle_connection_timeout_seconds;
     bool quic_migrate_sessions_on_network_change;
     bool quic_migrate_sessions_early;
     bool quic_disable_bidirectional_streams;
@@ -107,6 +113,21 @@ class NET_EXPORT URLRequestContextBuilder {
 
   URLRequestContextBuilder();
   ~URLRequestContextBuilder();
+
+  // Sets a name for this URLRequestContext. Currently the name is used in
+  // MemoryDumpProvier to annotate memory usage. The name does not need to be
+  // unique.
+  void set_name(const char* name) { name_ = name; }
+
+  // Sets whether Brotli compression is enabled.  Disabled by default;
+  void set_enable_brotli(bool enable_brotli) { enable_brotli_ = enable_brotli; }
+
+  // Unlike most other setters, the builder does not take ownership of the
+  // NetworkQualityEstimator.
+  void set_network_quality_estimator(
+      NetworkQualityEstimator* network_quality_estimator) {
+    network_quality_estimator_ = network_quality_estimator;
+  }
 
   // Extracts the component pointers required to construct an HttpNetworkSession
   // and copies them into the Params used to create the session. This function
@@ -311,6 +332,10 @@ class NET_EXPORT URLRequestContextBuilder {
   std::unique_ptr<URLRequestContext> Build();
 
  private:
+  const char* name_;
+  bool enable_brotli_;
+  NetworkQualityEstimator* network_quality_estimator_;
+
   std::string accept_language_;
   std::string user_agent_;
   // Include support for data:// requests.

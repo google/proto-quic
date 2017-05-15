@@ -22,7 +22,6 @@ INHERIT inherit
 INTERFACE interface
 ITERABLE iterable
 LEGACYCALLER legacycaller
-LEGACYITERABLE legacyiterable
 LONG long
 MAPLIKE maplike
 NAN Nan

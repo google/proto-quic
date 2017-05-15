@@ -259,6 +259,16 @@ int TestNetworkQualityEstimator::GetNetLogLastIntegerValue(
   return return_value;
 }
 
+void TestNetworkQualityEstimator::
+    NotifyObserversOfRTTOrThroughputEstimatesComputed(
+        const net::nqe::internal::NetworkQuality& network_quality) {
+  for (auto& observer : rtt_and_throughput_estimates_observer_list_) {
+    observer.OnRTTOrThroughputEstimatesComputed(
+        network_quality.http_rtt(), network_quality.transport_rtt(),
+        network_quality.downstream_throughput_kbps());
+  }
+}
+
 nqe::internal::NetworkID TestNetworkQualityEstimator::GetCurrentNetworkID()
     const {
   return nqe::internal::NetworkID(current_network_type_, current_network_id_);

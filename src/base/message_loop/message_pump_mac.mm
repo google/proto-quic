@@ -25,38 +25,57 @@ namespace base {
 
 namespace {
 
+// AppKit RunLoop modes observed to potentially run tasks posted to Chrome's
+// main thread task runner. Some are internal to AppKit but must be observed to
+// keep Chrome's UI responsive. Others that may be interesting, but are not
+// watched:
+//  - com.apple.hitoolbox.windows.transitionmode
+//  - com.apple.hitoolbox.windows.flushmode
+const CFStringRef kAllModes[] = {
+    kCFRunLoopCommonModes,
+
+    // Mode that only sees Chrome work sources.
+    kMessageLoopExclusiveRunLoopMode,
+
+    // Process work when NSMenus are fading out.
+    CFSTR("com.apple.hitoolbox.windows.windowfadingmode"),
+
+    // Process work when AppKit is highlighting an item on the main menubar.
+    CFSTR("NSUnhighlightMenuRunLoopMode"),
+};
+
 void CFRunLoopAddSourceToAllModes(CFRunLoopRef rl, CFRunLoopSourceRef source) {
-  CFRunLoopAddSource(rl, source, kCFRunLoopCommonModes);
-  CFRunLoopAddSource(rl, source, kMessageLoopExclusiveRunLoopMode);
+  for (const CFStringRef& mode : kAllModes)
+    CFRunLoopAddSource(rl, source, mode);
 }
 
 void CFRunLoopRemoveSourceFromAllModes(CFRunLoopRef rl,
                                        CFRunLoopSourceRef source) {
-  CFRunLoopRemoveSource(rl, source, kCFRunLoopCommonModes);
-  CFRunLoopRemoveSource(rl, source, kMessageLoopExclusiveRunLoopMode);
+  for (const CFStringRef& mode : kAllModes)
+    CFRunLoopRemoveSource(rl, source, mode);
 }
 
 void CFRunLoopAddTimerToAllModes(CFRunLoopRef rl, CFRunLoopTimerRef timer) {
-  CFRunLoopAddTimer(rl, timer, kCFRunLoopCommonModes);
-  CFRunLoopAddTimer(rl, timer, kMessageLoopExclusiveRunLoopMode);
+  for (const CFStringRef& mode : kAllModes)
+    CFRunLoopAddTimer(rl, timer, mode);
 }
 
 void CFRunLoopRemoveTimerFromAllModes(CFRunLoopRef rl,
                                       CFRunLoopTimerRef timer) {
-  CFRunLoopRemoveTimer(rl, timer, kCFRunLoopCommonModes);
-  CFRunLoopRemoveTimer(rl, timer, kMessageLoopExclusiveRunLoopMode);
+  for (const CFStringRef& mode : kAllModes)
+    CFRunLoopRemoveTimer(rl, timer, mode);
 }
 
 void CFRunLoopAddObserverToAllModes(CFRunLoopRef rl,
                                     CFRunLoopObserverRef observer) {
-  CFRunLoopAddObserver(rl, observer, kCFRunLoopCommonModes);
-  CFRunLoopAddObserver(rl, observer, kMessageLoopExclusiveRunLoopMode);
+  for (const CFStringRef& mode : kAllModes)
+    CFRunLoopAddObserver(rl, observer, mode);
 }
 
 void CFRunLoopRemoveObserverFromAllModes(CFRunLoopRef rl,
                                          CFRunLoopObserverRef observer) {
-  CFRunLoopRemoveObserver(rl, observer, kCFRunLoopCommonModes);
-  CFRunLoopRemoveObserver(rl, observer, kMessageLoopExclusiveRunLoopMode);
+  for (const CFStringRef& mode : kAllModes)
+    CFRunLoopRemoveObserver(rl, observer, mode);
 }
 
 void NoOp(void* info) {

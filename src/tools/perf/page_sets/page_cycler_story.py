@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+from telemetry.core import util
 from telemetry.page import page
 from telemetry.page import cache_temperature as cache_temperature_module
 from telemetry.page import shared_page_state
@@ -14,11 +15,11 @@ class PageCyclerStory(page.Page):
 
   def __init__(self, url, page_set,
       shared_page_state_class=shared_page_state.SharedDesktopPageState,
-      cache_temperature=cache_temperature_module.ANY, **kwargs):
+      cache_temperature=cache_temperature_module.ANY, name='', **kwargs):
     super(PageCyclerStory, self).__init__(
         url=url, page_set=page_set,
         shared_page_state_class=shared_page_state_class,
-        cache_temperature=cache_temperature,
+        cache_temperature=cache_temperature, name=name,
         **kwargs)
 
   def RunNavigateSteps(self, action_runner):
@@ -28,5 +29,5 @@ class PageCyclerStory(page.Page):
                            timeout_in_seconds=_NAVIGATION_TIMEOUT)
 
   def RunPageInteractions(self, action_runner):
-    action_runner.tab.WaitForDocumentReadyStateToBeComplete(
+    util.WaitFor(action_runner.tab.HasReachedQuiescence,
         _WEB_CONTENTS_TIMEOUT)

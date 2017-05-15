@@ -41,6 +41,7 @@ full_copy_directories =[
                  'third_party/ced',
                  'third_party/closure_compiler',
                  'third_party/drmemory',
+                 'third_party/googletest',
                  'third_party/icu',
                  'third_party/instrumented_libraries',
                  'third_party/libxml/',

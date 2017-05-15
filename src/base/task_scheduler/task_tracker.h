@@ -10,6 +10,7 @@
 #include "base/atomicops.h"
 #include "base/base_export.h"
 #include "base/callback_forward.h"
+#include "base/logging.h"
 #include "base/macros.h"
 #include "base/metrics/histogram_base.h"
 #include "base/synchronization/waitable_event.h"
@@ -79,6 +80,13 @@ class BASE_EXPORT TaskTracker {
   // Runs |task|. An override is expected to call its parent's implementation
   // but is free to perform extra work before and after doing so.
   virtual void PerformRunTask(std::unique_ptr<Task> task);
+
+#if DCHECK_IS_ON()
+  // Returns true if this context should be exempt from blocking shutdown
+  // DCHECKs.
+  // TODO(robliao): Remove when http://crbug.com/698140 is fixed.
+  virtual bool IsPostingBlockShutdownTaskAfterShutdownAllowed();
+#endif
 
  private:
   class State;

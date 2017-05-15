@@ -2,13 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-copy("histograms_xml") {
+action("histograms_xml") {
+  script = "histograms/merge_xml.py"
   sources = [
+    "histograms/enums.xml",
     "histograms/histograms.xml",
   ]
+  output = "$root_out_dir/histograms.xml"
   outputs = [
-    "$root_out_dir/histograms.xml",
+    output,
   ]
+  args = rebase_path(sources, root_build_dir) + [
+           "--output",
+           rebase_path(output, root_build_dir),
+         ]
 }
 
 copy("actions_xml") {

@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "base/logging.h"
+#include "net/log/net_log_with_source.h"
 #include "net/spdy/chromium/spdy_test_util_common.h"
 #include "testing/platform_test.h"
 
@@ -18,7 +19,7 @@ namespace {
 class TestBufferedSpdyVisitor : public BufferedSpdyFramerVisitorInterface {
  public:
   TestBufferedSpdyVisitor()
-      : buffered_spdy_framer_(),
+      : buffered_spdy_framer_(NetLogWithSource()),
         error_count_(0),
         setting_count_(0),
         headers_frame_count_(0),
@@ -198,7 +199,8 @@ TEST_F(BufferedSpdyFramerTest, HeaderListTooLarge) {
   headers["foo"] = long_header_value;
   SpdyHeadersIR headers_ir(/*stream_id=*/1, std::move(headers));
 
-  BufferedSpdyFramer framer;
+  NetLogWithSource net_log;
+  BufferedSpdyFramer framer(net_log);
   SpdySerializedFrame control_frame = framer.SerializeFrame(headers_ir);
 
   TestBufferedSpdyVisitor visitor;
@@ -239,7 +241,8 @@ TEST_F(BufferedSpdyFramerTest, ReadHeadersHeaderBlock) {
   headers["gamma"] = "delta";
   SpdyHeadersIR headers_ir(/*stream_id=*/1, headers.Clone());
 
-  BufferedSpdyFramer framer;
+  NetLogWithSource net_log;
+  BufferedSpdyFramer framer(net_log);
   SpdySerializedFrame control_frame = framer.SerializeFrame(headers_ir);
 
   TestBufferedSpdyVisitor visitor;
@@ -254,7 +257,8 @@ TEST_F(BufferedSpdyFramerTest, ReadPushPromiseHeaderBlock) {
   SpdyHeaderBlock headers;
   headers["alpha"] = "beta";
   headers["gamma"] = "delta";
-  BufferedSpdyFramer framer;
+  NetLogWithSource net_log;
+  BufferedSpdyFramer framer(net_log);
   SpdyPushPromiseIR push_promise_ir(/*stream_id=*/1, /*promised_stream_id=*/2,
                                     headers.Clone());
   SpdySerializedFrame control_frame = framer.SerializeFrame(push_promise_ir);
@@ -272,7 +276,8 @@ TEST_F(BufferedSpdyFramerTest, ReadPushPromiseHeaderBlock) {
 TEST_F(BufferedSpdyFramerTest, GoAwayDebugData) {
   SpdyGoAwayIR go_ir(/*last_accepted_stream_id=*/2, ERROR_CODE_FRAME_SIZE_ERROR,
                      "foo");
-  BufferedSpdyFramer framer;
+  NetLogWithSource net_log;
+  BufferedSpdyFramer framer(net_log);
   SpdySerializedFrame goaway_frame = framer.SerializeFrame(go_ir);
 
   TestBufferedSpdyVisitor visitor;
@@ -294,7 +299,8 @@ TEST_F(BufferedSpdyFramerTest, OnAltSvcOnStreamZero) {
   altsvc_ir.add_altsvc(alternative_service);
   const char altsvc_origin[] = "https://www.example.org";
   altsvc_ir.set_origin(altsvc_origin);
-  BufferedSpdyFramer framer;
+  NetLogWithSource net_log;
+  BufferedSpdyFramer framer(net_log);
   SpdySerializedFrame altsvc_frame(framer.SerializeFrame(altsvc_ir));
 
   TestBufferedSpdyVisitor visitor;
@@ -315,7 +321,8 @@ TEST_F(BufferedSpdyFramerTest, OnAltSvcOnNonzeroStream) {
       "quic", "alternative.example.org", 443, 86400,
       SpdyAltSvcWireFormat::VersionVector());
   altsvc_ir.add_altsvc(alternative_service);
-  BufferedSpdyFramer framer;
+  NetLogWithSource net_log;
+  BufferedSpdyFramer framer(net_log);
   SpdySerializedFrame altsvc_frame(framer.SerializeFrame(altsvc_ir));
 
   TestBufferedSpdyVisitor visitor;

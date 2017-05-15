@@ -638,6 +638,7 @@ bool ParseBasicConstraints(const der::Input& basic_constraints_tlv,
     return false;
   }
   if (out->has_path_len) {
+    // TODO(eroman): Surface reason for failure if length was longer than uint8.
     if (!der::ParseUint8(encoded_path_len, &out->path_len))
       return false;
   } else {

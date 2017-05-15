@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import base64
 import collections
 import copy
 import json
@@ -17,6 +18,7 @@ import oauth2client.client
 
 from googleapiclient import errors
 from infra_libs.ts_mon.common import http_metrics
+from oauth2client import util
 
 DEFAULT_SCOPES = ['email']
 
@@ -162,6 +164,85 @@ def get_authenticated_http(credentials_filename,
     http = httplib2.Http(timeout=timeout)
   return creds.authorize(http)
 
+
+class DelegateServiceAccountCredentials(
+    oauth2client.client.AssertionCredentials):
+  """Authorizes an HTTP client with a service account for which we are an actor.
+
+  This class uses the IAM API to sign a JWT with the private key of another
+  service account for which we have the "Service Account Actor" role.
+  """
+
+  MAX_TOKEN_LIFETIME_SECS = 3600 # 1 hour in seconds
+  _SIGN_BLOB_URL = 'https://iam.googleapis.com/v1/%s:signBlob'
+
+  def __init__(self, http, service_account_email, scopes, project='-'):
+    """
+    Args:
+      http: An httplib2.Http object that is authorized by another
+        oauth2client.client.OAuth2Credentials with credentials that have the
+        service account actor role on the service_account_email.
+      service_account_email: The email address of the service account for which
+        to obtain an access token.
+      scopes: The desired scopes for the token.
+      project: The cloud project to which service_account_email belongs.  The
+        default of '-' makes the IAM API figure it out for us.
+    """
+
+    super(DelegateServiceAccountCredentials, self).__init__(None)
+    self._service_account_email = service_account_email
+    self._scopes = util.scopes_to_string(scopes)
+    self._http = http
+    self._name = 'projects/%s/serviceAccounts/%s' % (
+        project, service_account_email)
+
+  def sign_blob(self, blob):
+    response, content = self._http.request(
+        self._SIGN_BLOB_URL % self._name,
+        method='POST',
+        body=json.dumps({'bytesToSign': base64.b64encode(blob)}),
+        headers={'Content-Type': 'application/json'})
+    if response.status != 200:
+      raise AuthError('Failed to sign blob as %s: %d %s' % (
+          self._service_account_email, response.status, response.reason))
+
+    data = json.loads(content)
+    return data['keyId'], data['signature']
+
+  def _generate_assertion(self):
+    # This is copied with small modifications from
+    # oauth2client.service_account._ServiceAccountCredentials.
+
+    header = {
+        'alg': 'RS256',
+        'typ': 'JWT',
+    }
+
+    now = int(time.time())
+    payload = {
+        'aud': self.token_uri,
+        'scope': self._scopes,
+        'iat': now,
+        'exp': now + self.MAX_TOKEN_LIFETIME_SECS,
+        'iss': self._service_account_email,
+    }
+
+    assertion_input = (
+        self._urlsafe_b64encode(header) + b'.' +
+        self._urlsafe_b64encode(payload))
+
+    # Sign the assertion.
+    _, rsa_bytes = self.sign_blob(assertion_input)
+    signature = rsa_bytes.rstrip(b'=')
+
+    return assertion_input + b'.' + signature
+
+  def _urlsafe_b64encode(self, data):
+    # Copied verbatim from oauth2client.service_account.
+    return base64.urlsafe_b64encode(
+        json.dumps(data, separators=(',', ':')).encode('UTF-8')).rstrip(b'=')
+
+
 class RetriableHttp(object):
   """A httplib2.Http object that retries on failure."""
 
@@ -215,6 +296,7 @@ class RetriableHttp(object):
       self.__dict__[name] = value
     else:
       setattr(self._http, name, value)
+
 
 class InstrumentedHttp(httplib2.Http):
   """A httplib2.Http object that reports ts_mon metrics about its requests."""

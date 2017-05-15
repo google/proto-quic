@@ -110,15 +110,18 @@ if ! which lsb_release > /dev/null; then
   exit 1;
 fi
 
-lsb_release=$(lsb_release --codename --short)
-supported_releases="(trusty|xenial|yakkety|jessie)"
+distro_codename=$(lsb_release --codename --short)
+distro_id=$(lsb_release --id --short)
+supported_codenames="(trusty|xenial|yakkety)"
+supported_ids="(Debian)"
 if [ 0 -eq "${do_unsupported-0}" ] && [ 0 -eq "${do_quick_check-0}" ] ; then
-  if [[ ! $lsb_release =~ $supported_releases ]]; then
+  if [[ ! $distro_codename =~ $supported_codenames &&
+        ! $distro_id =~ $supported_ids ]]; then
     echo -e "ERROR: The only supported distros are\n" \
       "\tUbuntu 14.04 (trusty)\n" \
       "\tUbuntu 16.04 (xenial)\n" \
       "\tUbuntu 16.10 (yakkety)\n" \
-      "\tDebian 8 (jessie)" >&2
+      "\tDebian 8 (jessie) or later" >&2
     exit 1
   fi
 
@@ -292,12 +295,12 @@ dbg_list="\
   zlib1g-dbg
 "
 
-if [[ ! $lsb_release =~ "yakkety" ]]; then
+if [[ ! $distro_codename =~ "yakkety" ]]; then
   dbg_list="${dbg_list} libxfixes3-dbg"
 fi
 
 # Find the proper version of libstdc++6-4.x-dbg.
-if [ "x$lsb_release" = "xtrusty" ]; then
+if [ "x$distro_codename" = "xtrusty" ]; then
   dbg_list="${dbg_list} libstdc++6-4.8-dbg"
 else
   dbg_list="${dbg_list} libstdc++6-4.9-dbg"
@@ -316,7 +319,7 @@ EOF
 )
 EM_ARCHIVE_KEY_FINGER="084C6C6F39159EDB67969AA87DE089671804772E"
 GPP_ARM_PACKAGE="g++-arm-linux-gnueabihf"
-case $lsb_release in
+case $distro_codename in
   jessie)
     eval $(apt-config shell APT_SOURCESDIR 'Dir::Etc::sourceparts/d')
     CROSSTOOLS_LIST="${APT_SOURCESDIR}/crosstools.list"
@@ -340,6 +343,8 @@ case $lsb_release in
       fi
     fi
     ;;
+  # All necessary ARM packages are available on the default repos on
+  # Debian 9 and later.
   *)
     arm_list="binutils-aarch64-linux-gnu
               libc6-dev-armhf-cross
@@ -349,7 +354,7 @@ case $lsb_release in
 esac
 
 # Work around for dependency issue Ubuntu/Trusty: http://crbug.com/435056
-case $lsb_release in
+case $distro_codename in
   trusty)
     arm_list+=" g++-4.8-multilib-arm-linux-gnueabihf
                 gcc-4.8-multilib-arm-linux-gnueabihf"
@@ -379,7 +384,7 @@ nacl_list="\
   lib32ncurses5-dev
   libnss3:i386
   libpango1.0-0:i386
-  libssl1.0.0:i386
+  libssl-dev:i386
   libtinfo-dev
   libtinfo-dev:i386
   libtool
@@ -394,6 +399,12 @@ nacl_list="\
   xvfb
   ${naclports_list}
 "
+
+if package_exists libssl1.0.0; then
+  nacl_list="${nacl_list} libssl1.0.0:i386"
+else
+  nacl_list="${nacl_list} libssl1.0.2:i386"
+fi
 
 # Find the proper version of packages that depend on mesa. Only one -lts variant
 # of mesa can be installed and everything that depends on it must match.
@@ -517,6 +528,15 @@ then
 fi
 if test "$do_inst_syms" = "1"; then
   echo "Including debugging symbols."
+  # Many debug packages are not available in Debian stretch,
+  # so exclude the ones that are missing.
+  available_dbg_packages=""
+  for package in ${dbg_list}; do
+    if package_exists ${package}; then
+      available_dbg_packages="${available_dbg_packages} ${package}"
+    fi
+  done
+  dbg_list="${available_dbg_packages}"
 else
   echo "Skipping debugging symbols."
   dbg_list=
@@ -581,8 +601,8 @@ fi
 
 if test "$do_inst_lib32" = "1" || test "$do_inst_nacl" = "1"; then
   sudo dpkg --add-architecture i386
-  if [[ $lsb_release = "jessie" ]]; then
-    sudo dpkg --add-architecture armhf
+  if [[ $distro_id == "Debian" ]]; then
+      sudo dpkg --add-architecture armhf
   fi
 fi
 sudo apt-get update
@@ -647,36 +667,6 @@ if test "$do_inst_chromeos_fonts" != "0"; then
   fi
 else
   echo "Skipping installation of Chrome OS fonts."
-fi
-
-# $1 - target name
-# $2 - link name
-create_library_symlink() {
-  target=$1
-  linkname=$2
-  if [ -L $linkname ]; then
-    if [ "$(basename $(readlink $linkname))" != "$(basename $target)" ]; then
-      sudo rm $linkname
-    fi
-  fi
-  if [ ! -r $linkname ]; then
-    echo "Creating link: $linkname"
-    sudo ln -fs $target $linkname
-  fi
-}
-
-if test "$do_inst_nacl" = "1"; then
-  echo "Installing symbolic links for NaCl."
-  # naclports needs to cross build python for i386, but libssl1.0.0:i386
-  # only contains libcrypto.so.1.0.0 and not the symlink needed for
-  # linking (libcrypto.so).
-  create_library_symlink /lib/i386-linux-gnu/libcrypto.so.1.0.0 \
-      /usr/lib/i386-linux-gnu/libcrypto.so
-
-  create_library_symlink /lib/i386-linux-gnu/libssl.so.1.0.0 \
-      /usr/lib/i386-linux-gnu/libssl.so
-else
-  echo "Skipping symbolic links for NaCl."
 fi
 
 echo "Installing locales."

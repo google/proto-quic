@@ -89,7 +89,7 @@ vi{
         CW{"Curaçao"}
         CX{"Đảo Giáng Sinh"}
         CY{"Síp"}
-        CZ{"Cộng hòa Séc"}
+        CZ{"Czechia"}
         DE{"Đức"}
         DG{"Diego Garcia"}
         DJ{"Djibouti"}
@@ -108,7 +108,7 @@ vi{
         EU{"Liên Minh Châu Âu"}
         FI{"Phần Lan"}
         FJ{"Fiji"}
-        FK{"Quần đảo Falkland"}
+        FK{"Quần đảo Falkland (Islas Malvinas)"}
         FM{"Micronesia"}
         FO{"Quần đảo Faroe"}
         FR{"Pháp"}
@@ -181,7 +181,7 @@ vi{
         MF{"St. Martin"}
         MG{"Madagascar"}
         MH{"Quần đảo Marshall"}
-        MK{"Macedonia"}
+        MK{"Macedonia (FYROM)"}
         ML{"Mali"}
         MM{"Myanmar (Miến Điện)"}
         MN{"Mông Cổ"}
@@ -302,10 +302,8 @@ vi{
         CD{"Cộng hòa Dân chủ Congo"}
         CG{"Cộng hòa Congo"}
         CI{"Bờ Biển Ngà"}
-        CZ{"Czechia"}
-        FK{"Quần đảo Falkland (Islas Malvinas)"}
-        MK{"Macedonia (FYROM)"}
+        CZ{"Cộng hòa Séc"}
         TL{"Đông Timor"}
     }
-    Version{"2.1.28.79"}
+    Version{"2.1.32.59"}
 }

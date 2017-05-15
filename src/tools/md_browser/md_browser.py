@@ -36,10 +36,10 @@ def main(argv):
   args = parser.parse_args(argv)
 
   top_level = os.path.realpath(args.directory)
+  server_address = ('localhost', args.port)
+  s = Server(server_address, top_level)
 
-  s = Server(args.port, top_level)
-
-  print('Listening on http://localhost:%s/' % args.port)
+  print('Listening on http://%s:%s/' % server_address)
   thread = None
   if args.file:
     path = os.path.realpath(args.file)
@@ -106,11 +106,9 @@ def _gitiles_slugify(value, _separator):
 
 
 class Server(SocketServer.TCPServer):
-  def __init__(self, port, top_level):
-    SocketServer.TCPServer.__init__(self, ('0.0.0.0', port), Handler)
-    self.port = port
+  def __init__(self, server_address, top_level):
+    SocketServer.TCPServer.__init__(self, server_address, Handler)
     self.top_level = top_level
-    self.retcode = None
 
   def server_bind(self):
     self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

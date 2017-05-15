@@ -112,6 +112,10 @@ config("runtime_library") {
     cflags_cc = common_cc_flags
     cflags_objcc = common_cc_flags
   }
+
+  if (ios_enable_coverage) {
+    configs = [ ":enable_coverage" ]
+  }
 }
 
 config("ios_executable_flags") {
@@ -134,6 +138,16 @@ config("xctest_config") {
     "Foundation.framework",
     "XCTest.framework",
   ]
+}
+
+# This enables support for LLVM code coverage. See
+# http://llvm.org/docs/CoverageMappingFormat.html.
+config("enable_coverage") {
+  cflags = [
+    "-fprofile-instr-generate",
+    "-fcoverage-mapping",
+  ]
+  ldflags = [ "-fprofile-instr-generate" ]
 }
 
 group("xctest") {

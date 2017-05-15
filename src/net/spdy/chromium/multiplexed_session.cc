@@ -12,12 +12,6 @@ MultiplexedSessionHandle::MultiplexedSessionHandle(
   SaveSSLInfo();
 }
 
-MultiplexedSessionHandle::MultiplexedSessionHandle(
-    const MultiplexedSessionHandle& other) = default;
-
-MultiplexedSessionHandle::MultiplexedSessionHandle(
-    MultiplexedSessionHandle&& other) = default;
-
 MultiplexedSessionHandle::~MultiplexedSessionHandle() {}
 
 bool MultiplexedSessionHandle::GetRemoteEndpoint(IPEndPoint* endpoint) {

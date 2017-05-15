@@ -114,6 +114,7 @@ group("test_runner_py") {
   data = sources + [
            "devil_chromium.json",
            "pylib/gtest/filter/",
+           "pylib/instrumentation/render_test.html.jinja",
            "test_wrapper/logdog_wrapper.py",
            "${android_sdk_build_tools}/aapt",
            "${android_sdk_build_tools}/dexdump",

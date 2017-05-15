@@ -8,6 +8,7 @@ sr_Latn_XK{
         CZ{"Češka Republika"}
         HK{"SAR Hongkong"}
         KN{"Sveti Kits i Nevis"}
+        MK{"BJR Makedonija"}
         MO{"SAR Makao"}
         PM{"Sveti Pjer i Mikelon"}
         RE{"Reunion"}
@@ -15,8 +16,5 @@ sr_Latn_XK{
         UM{"Manja udaljena ostrva SAD"}
         VC{"Sveti Vinsent i Grenadini"}
     }
-    Countries%variant{
-        MK{"BJR Makedonija"}
-    }
-    Version{"2.1.29.33"}
+    Version{"2.1.31.33"}
 }

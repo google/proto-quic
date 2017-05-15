@@ -137,7 +137,7 @@ bool CryptoUtils::DeriveKeys(QuicStringPiece premaster_secret,
   }
 
   if (subkey_secret != nullptr) {
-    hkdf.subkey_secret().CopyToString(subkey_secret);
+    *subkey_secret = string(hkdf.subkey_secret());
   }
 
   return true;
@@ -168,7 +168,7 @@ bool CryptoUtils::ExportKeyingMaterial(QuicStringPiece subkey_secret,
 
   crypto::HKDF hkdf(subkey_secret, QuicStringPiece() /* no salt */, info,
                     result_len, 0 /* no fixed IV */, 0 /* no subkey secret */);
-  hkdf.client_write_key().CopyToString(result);
+  *result = string(hkdf.client_write_key());
   return true;
 }
 

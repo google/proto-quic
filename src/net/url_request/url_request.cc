@@ -801,7 +801,6 @@ void URLRequest::NotifyReceivedRedirect(const RedirectInfo& redirect_info,
                                         bool* defer_redirect) {
   is_redirecting_ = true;
 
-  // TODO(davidben): Pass the full RedirectInfo down to MaybeInterceptRedirect?
   URLRequestJob* job =
       URLRequestJobManager::GetInstance()->MaybeInterceptRedirect(
           this, network_delegate_, redirect_info.new_url);
@@ -925,7 +924,6 @@ int URLRequest::Redirect(const RedirectInfo& redirect_info) {
                                &redirect_info.new_url.possibly_invalid_spec()));
   }
 
-  // TODO(davidben): Pass the full RedirectInfo to the NetworkDelegate.
   if (network_delegate_)
     network_delegate_->NotifyBeforeRedirect(this, redirect_info.new_url);
 

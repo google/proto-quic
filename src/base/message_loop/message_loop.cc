@@ -75,8 +75,6 @@ MessageLoop::TaskObserver::~TaskObserver() {
 MessageLoop::DestructionObserver::~DestructionObserver() {
 }
 
-MessageLoop::NestingObserver::~NestingObserver() {}
-
 //------------------------------------------------------------------------------
 
 MessageLoop::MessageLoop(Type type)
@@ -138,6 +136,8 @@ MessageLoop::~MessageLoop() {
   // OK, now make it so that no one can find us.
   if (current() == this)
     GetTLSMessageLoop()->Set(nullptr);
+
+  RunLoop::ResetTLSState();
 }
 
 // static
@@ -214,18 +214,6 @@ void MessageLoop::RemoveDestructionObserver(
   destruction_observers_.RemoveObserver(destruction_observer);
 }
 
-void MessageLoop::AddNestingObserver(NestingObserver* observer) {
-  DCHECK_EQ(this, current());
-  CHECK(allow_nesting_);
-  nesting_observers_.AddObserver(observer);
-}
-
-void MessageLoop::RemoveNestingObserver(NestingObserver* observer) {
-  DCHECK_EQ(this, current());
-  CHECK(allow_nesting_);
-  nesting_observers_.RemoveObserver(observer);
-}
-
 void MessageLoop::QuitWhenIdle() {
   DCHECK_EQ(this, current());
   if (run_loop_) {
@@ -259,7 +247,7 @@ Closure MessageLoop::QuitWhenIdleClosure() {
 
 void MessageLoop::SetNestableTasksAllowed(bool allowed) {
   if (allowed) {
-    CHECK(allow_nesting_);
+    CHECK(base::RunLoop::IsNestingAllowedOnCurrentThread());
 
     // Kick the native pump just in case we enter a OS-driven nested message
     // loop.
@@ -272,10 +260,9 @@ bool MessageLoop::NestableTasksAllowed() const {
   return nestable_tasks_allowed_;
 }
 
-bool MessageLoop::IsNested() {
-  return run_loop_->run_depth_ > 1;
-}
-
+// TODO(gab): Migrate TaskObservers to RunLoop as part of separating concerns
+// between MessageLoop and RunLoop and making MessageLoop a swappable
+// implementation detail. http://crbug.com/703346
 void MessageLoop::AddTaskObserver(TaskObserver* task_observer) {
   DCHECK_EQ(this, current());
   CHECK(allow_task_observers_);
@@ -286,11 +273,6 @@ void MessageLoop::RemoveTaskObserver(TaskObserver* task_observer) {
   DCHECK_EQ(this, current());
   CHECK(allow_task_observers_);
   task_observers_.RemoveObserver(task_observer);
-}
-
-bool MessageLoop::is_running() const {
-  DCHECK_EQ(this, current());
-  return run_loop_ != NULL;
 }
 
 bool MessageLoop::HasHighResolutionTasks() {
@@ -383,12 +365,11 @@ void MessageLoop::SetThreadTaskRunnerHandle() {
 void MessageLoop::RunHandler() {
   DCHECK_EQ(this, current());
   DCHECK(run_loop_);
-  CHECK(allow_nesting_ || run_loop_->run_depth_ == 1);
   pump_->Run(this);
 }
 
 bool MessageLoop::ProcessNextDelayedNonNestableTask() {
-  if (run_loop_->run_depth_ != 1)
+  if (is_nested_)
     return false;
 
   if (deferred_non_nestable_work_queue_.empty())
@@ -430,14 +411,14 @@ void MessageLoop::RunTask(PendingTask* pending_task) {
 }
 
 bool MessageLoop::DeferOrRunPendingTask(PendingTask pending_task) {
-  if (pending_task.nestable || run_loop_->run_depth_ == 1) {
+  if (pending_task.nestable || !is_nested_) {
     RunTask(&pending_task);
     // Show that we ran a task (Note: a new one might arrive as a
     // consequence!).
     return true;
   }
 
-  // We couldn't run the task now because we're in a nested message loop
+  // We couldn't run the task now because we're in a nested run loop
   // and the task isn't nestable.
   deferred_non_nestable_work_queue_.push(std::move(pending_task));
   return false;
@@ -494,11 +475,6 @@ void MessageLoop::ReloadWorkQueue() {
 
 void MessageLoop::ScheduleWork() {
   pump_->ScheduleWork();
-}
-
-void MessageLoop::NotifyBeginNestedLoop() {
-  for (auto& observer : nesting_observers_)
-    observer.OnBeginNestedMessageLoop();
 }
 
 bool MessageLoop::DoWork() {

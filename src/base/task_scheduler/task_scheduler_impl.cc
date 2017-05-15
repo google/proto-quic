@@ -6,11 +6,10 @@
 
 #include <utility>
 
-#include "base/bind.h"
-#include "base/bind_helpers.h"
 #include "base/memory/ptr_util.h"
 #include "base/task_scheduler/delayed_task_manager.h"
 #include "base/task_scheduler/scheduler_worker_pool_params.h"
+#include "base/task_scheduler/sequence.h"
 #include "base/task_scheduler/sequence_sort_key.h"
 #include "base/task_scheduler/task.h"
 #include "base/task_scheduler/task_tracker.h"
@@ -65,17 +64,12 @@ TaskSchedulerImpl::TaskSchedulerImpl(StringPiece name)
       arraysize(kEnvironmentParams) == ENVIRONMENT_COUNT,
       "The size of |kEnvironmentParams| must match ENVIRONMENT_COUNT.");
 
-  // Callback invoked by workers to re-enqueue a sequence in the appropriate
-  // PriorityQueue.
-  const auto reenqueue_sequence_callback = BindRepeating(
-      &TaskSchedulerImpl::ReEnqueueSequenceCallback, Unretained(this));
-
   for (int environment_type = 0; environment_type < ENVIRONMENT_COUNT;
        ++environment_type) {
     worker_pools_[environment_type] = MakeUnique<SchedulerWorkerPoolImpl>(
         name_ + kEnvironmentParams[environment_type].name_suffix,
-        kEnvironmentParams[environment_type].priority_hint,
-        reenqueue_sequence_callback, &task_tracker_, &delayed_task_manager_);
+        kEnvironmentParams[environment_type].priority_hint, &task_tracker_,
+        &delayed_task_manager_);
   }
 }
 
@@ -104,7 +98,11 @@ void TaskSchedulerImpl::Start(const TaskScheduler::InitParams& init_params) {
   // message_loop().
   task_tracker_.set_watch_file_descriptor_message_loop(
       static_cast<MessageLoopForIO*>(service_thread_.message_loop()));
-#endif
+
+#if DCHECK_IS_ON()
+  task_tracker_.set_service_thread_handle(service_thread_.GetThreadHandle());
+#endif  // DCHECK_IS_ON()
+#endif  // defined(OS_POSIX) && !defined(OS_NACL_SFI)
 
   // Needs to happen after starting the service thread to get its task_runner().
   delayed_task_manager_.Start(service_thread_.task_runner());
@@ -144,7 +142,8 @@ TaskSchedulerImpl::CreateSequencedTaskRunnerWithTraits(
 
 scoped_refptr<SingleThreadTaskRunner>
 TaskSchedulerImpl::CreateSingleThreadTaskRunnerWithTraits(
-    const TaskTraits& traits) {
+    const TaskTraits& traits,
+    SingleThreadTaskRunnerThreadMode thread_mode) {
   const auto& environment_params =
       kEnvironmentParams[GetEnvironmentIndexForTraits(traits)];
   return single_thread_task_runner_manager_
@@ -155,7 +154,9 @@ TaskSchedulerImpl::CreateSingleThreadTaskRunnerWithTraits(
 
 #if defined(OS_WIN)
 scoped_refptr<SingleThreadTaskRunner>
-TaskSchedulerImpl::CreateCOMSTATaskRunnerWithTraits(const TaskTraits& traits) {
+TaskSchedulerImpl::CreateCOMSTATaskRunnerWithTraits(
+    const TaskTraits& traits,
+    SingleThreadTaskRunnerThreadMode thread_mode) {
   const auto& environment_params =
       kEnvironmentParams[GetEnvironmentIndexForTraits(traits)];
   return single_thread_task_runner_manager_.CreateCOMSTATaskRunnerWithTraits(
@@ -203,22 +204,6 @@ void TaskSchedulerImpl::JoinForTesting() {
 SchedulerWorkerPoolImpl* TaskSchedulerImpl::GetWorkerPoolForTraits(
     const TaskTraits& traits) const {
   return worker_pools_[GetEnvironmentIndexForTraits(traits)].get();
-}
-
-void TaskSchedulerImpl::ReEnqueueSequenceCallback(
-    scoped_refptr<Sequence> sequence) {
-  DCHECK(sequence);
-
-  const SequenceSortKey sort_key = sequence->GetSortKey();
-
-  // The next task in |sequence| should run in a worker pool suited for its
-  // traits, except for the priority which is adjusted to the highest priority
-  // in |sequence|.
-  const TaskTraits traits =
-      sequence->PeekTaskTraits().WithPriority(sort_key.priority());
-
-  GetWorkerPoolForTraits(traits)->ReEnqueueSequence(std::move(sequence),
-                                                    sort_key);
 }
 
 }  // namespace internal

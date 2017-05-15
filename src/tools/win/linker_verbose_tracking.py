@@ -50,6 +50,7 @@ stream_encoder.obj pulled in for symbol "_FLAC__stream_encoder_new" by
         Command-line obj file: audio_encoder.obj
 """
 
+import io
 import pdb
 import re
 import sys
@@ -67,44 +68,55 @@ def ParseVerbose(input_file):
   cross_refed_symbols = {}
 
   references = None
-  for line in open(input_file):
-    if line.startswith(found_prefix):
-      references = []
-      # Grab the symbol name
-      symbol = line[len(found_prefix):].strip()
-      if symbol[0] == '"':
-        # Strip off leading and trailing quotes if present.
-        symbol = symbol[1:-1]
-      continue
-    if type(references) == type([]):
-      sub_line = line.strip()
-      match = obj_match.match(sub_line)
-      # See if the line is part of the list of places where this symbol was
-      # referenced
-      if sub_line.count('Referenced ') > 0:
-        if match:
-          # This indicates a match that is xxx.lib(yyy.obj), so a referencing
-          # .obj file that was itself inside of a library. We discard the
-          # library name.
-          reference = match.groups()[0]
-        else:
-          # This indicates a match that is just a pure .obj file name
-          # I think this means that the .obj file was specified on the linker
-          # command line.
-          reference = ('Command-line obj file: ' +
-                       sub_line[len('Referenced in '): -len('.obj')])
-        references.append(reference)
-      elif sub_line.count('Loaded ') > 0:
-        if match:
-          loaded = match.groups()[0]
-          cross_refs[loaded] = references
-          cross_refed_symbols[loaded] = symbol
-        references = None
-    if line.startswith('Finished pass 1'):
-      # Stop now because the remaining 90% of the verbose output is
-      # not of interest. Could probably use /VERBOSE:REF to trim out
-      # boring information.
-      break
+  # When you redirect the linker output to a file from a command prompt the
+  # result will be a utf-8 (or ASCII?) output file. However if you do the same
+  # thing from PowerShell you get a utf-16 file. So, we need to handle both
+  # options. Only the first BOM option (\xff\xfe) has been tested, but it seems
+  # appropriate to handle the other as well.
+  file_encoding = 'utf-8'
+  with open(input_file) as file_handle:
+    header = file_handle.read(2)
+    if header == '\xff\xfe' or header == '\xfe\xff':
+      file_encoding = 'utf-16'
+  with io.open(input_file, encoding=file_encoding) as file_handle:
+    for line in file_handle:
+      if line.startswith(found_prefix):
+        references = []
+        # Grab the symbol name
+        symbol = line[len(found_prefix):].strip()
+        if symbol[0] == '"':
+          # Strip off leading and trailing quotes if present.
+          symbol = symbol[1:-1]
+        continue
+      if type(references) == type([]):
+        sub_line = line.strip()
+        match = obj_match.match(sub_line)
+        # See if the line is part of the list of places where this symbol was
+        # referenced
+        if sub_line.count('Referenced ') > 0:
+          if match:
+            # This indicates a match that is xxx.lib(yyy.obj), so a referencing
+            # .obj file that was itself inside of a library. We discard the
+            # library name.
+            reference = match.groups()[0]
+          else:
+            # This indicates a match that is just a pure .obj file name
+            # I think this means that the .obj file was specified on the linker
+            # command line.
+            reference = ('Command-line obj file: ' +
+                         sub_line[len('Referenced in '): -len('.obj')])
+          references.append(reference)
+        elif sub_line.count('Loaded ') > 0:
+          if match:
+            loaded = match.groups()[0]
+            cross_refs[loaded] = references
+            cross_refed_symbols[loaded] = symbol
+          references = None
+      if line.startswith('Finished pass 1'):
+        # Stop now because the remaining 90% of the verbose output is
+        # not of interest. Could probably use /VERBOSE:REF to trim out
+        # boring information.
+        break
   return cross_refs, cross_refed_symbols
 
 
@@ -135,7 +147,8 @@ def TrackObj(cross_refs, cross_refed_symbols, obj_name):
     print
     targets = new_targets.keys()
   if not printed:
-    print 'No references to %s.obj found.' % obj_name
+    print ('No references to %s.obj found. Directly specified in sources or a '
+          'source_set?' % obj_name)
 
 
 def main():
@@ -145,6 +158,9 @@ def main():
     return 0
   cross_refs, cross_refed_symbols = ParseVerbose(sys.argv[1])
   print 'Database loaded - %d xrefs found' % len(cross_refs)
+  if not len(cross_refs):
+    print 'No data found to analyze. Exiting'
+    return 0
   TrackObj(cross_refs, cross_refed_symbols, sys.argv[2])
 
 if __name__ == '__main__':

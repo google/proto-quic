@@ -565,35 +565,40 @@ std::unique_ptr<HistogramBase> PersistentHistogramAllocator::CreateHistogram(
     return histogram;
   }
 
-  // Copy the histogram_data to local storage because anything in persistent
-  // memory cannot be trusted as it could be changed at any moment by a
-  // malicious actor that shares access. The contents of histogram_data are
-  // validated below; the local copy is to ensure that the contents cannot
-  // be externally changed between validation and use.
-  PersistentHistogramData histogram_data = *histogram_data_ptr;
+  // Copy the configuration fields from histogram_data_ptr to local storage
+  // because anything in persistent memory cannot be trusted as it could be
+  // changed at any moment by a malicious actor that shares access. The local
+  // values are validated below and then used to create the histogram, knowing
+  // they haven't changed between validation and use.
+  int32_t histogram_type = histogram_data_ptr->histogram_type;
+  int32_t histogram_flags = histogram_data_ptr->flags;
+  int32_t histogram_minimum = histogram_data_ptr->minimum;
+  int32_t histogram_maximum = histogram_data_ptr->maximum;
+  uint32_t histogram_bucket_count = histogram_data_ptr->bucket_count;
+  uint32_t histogram_ranges_ref = histogram_data_ptr->ranges_ref;
+  uint32_t histogram_ranges_checksum = histogram_data_ptr->ranges_checksum;
 
   HistogramBase::Sample* ranges_data =
       memory_allocator_->GetAsArray<HistogramBase::Sample>(
-          histogram_data.ranges_ref, kTypeIdRangesArray,
+          histogram_ranges_ref, kTypeIdRangesArray,
           PersistentMemoryAllocator::kSizeAny);
 
   const uint32_t max_buckets =
       std::numeric_limits<uint32_t>::max() / sizeof(HistogramBase::Sample);
   size_t required_bytes =
-      (histogram_data.bucket_count + 1) * sizeof(HistogramBase::Sample);
+      (histogram_bucket_count + 1) * sizeof(HistogramBase::Sample);
   size_t allocated_bytes =
-      memory_allocator_->GetAllocSize(histogram_data.ranges_ref);
-  if (!ranges_data || histogram_data.bucket_count < 2 ||
-      histogram_data.bucket_count >= max_buckets ||
+      memory_allocator_->GetAllocSize(histogram_ranges_ref);
+  if (!ranges_data || histogram_bucket_count < 2 ||
+      histogram_bucket_count >= max_buckets ||
       allocated_bytes < required_bytes) {
     RecordCreateHistogramResult(CREATE_HISTOGRAM_INVALID_RANGES_ARRAY);
     NOTREACHED();
     return nullptr;
   }
 
-  std::unique_ptr<const BucketRanges> created_ranges =
-      CreateRangesFromData(ranges_data, histogram_data.ranges_checksum,
-                           histogram_data.bucket_count + 1);
+  std::unique_ptr<const BucketRanges> created_ranges = CreateRangesFromData(
+      ranges_data, histogram_ranges_checksum, histogram_bucket_count + 1);
   if (!created_ranges) {
     RecordCreateHistogramResult(CREATE_HISTOGRAM_INVALID_RANGES_ARRAY);
     NOTREACHED();
@@ -603,10 +608,9 @@ std::unique_ptr<HistogramBase> PersistentHistogramAllocator::CreateHistogram(
       StatisticsRecorder::RegisterOrDeleteDuplicateRanges(
           created_ranges.release());
 
-  size_t counts_bytes =
-      CalculateRequiredCountsBytes(histogram_data.bucket_count);
+  size_t counts_bytes = CalculateRequiredCountsBytes(histogram_bucket_count);
   PersistentMemoryAllocator::Reference counts_ref =
-      subtle::NoBarrier_Load(&histogram_data.counts_ref);
+      subtle::NoBarrier_Load(&histogram_data_ptr->counts_ref);
   if (counts_bytes == 0 ||
       (counts_ref != 0 &&
        memory_allocator_->GetAllocSize(counts_ref) < counts_bytes)) {
@@ -637,18 +641,18 @@ std::unique_ptr<HistogramBase> PersistentHistogramAllocator::CreateHistogram(
   // Create the right type of histogram.
   std::string name(histogram_data_ptr->name);
   std::unique_ptr<HistogramBase> histogram;
-  switch (histogram_data.histogram_type) {
+  switch (histogram_type) {
     case HISTOGRAM:
       histogram = Histogram::PersistentCreate(
-          name, histogram_data.minimum, histogram_data.maximum, ranges,
-          counts_data, logged_data, &histogram_data_ptr->samples_metadata,
+          name, histogram_minimum, histogram_maximum, ranges, counts_data,
+          logged_data, &histogram_data_ptr->samples_metadata,
           &histogram_data_ptr->logged_metadata);
       DCHECK(histogram);
       break;
     case LINEAR_HISTOGRAM:
       histogram = LinearHistogram::PersistentCreate(
-          name, histogram_data.minimum, histogram_data.maximum, ranges,
-          counts_data, logged_data, &histogram_data_ptr->samples_metadata,
+          name, histogram_minimum, histogram_maximum, ranges, counts_data,
+          logged_data, &histogram_data_ptr->samples_metadata,
           &histogram_data_ptr->logged_metadata);
       DCHECK(histogram);
       break;
@@ -671,8 +675,8 @@ std::unique_ptr<HistogramBase> PersistentHistogramAllocator::CreateHistogram(
   }
 
   if (histogram) {
-    DCHECK_EQ(histogram_data.histogram_type, histogram->GetHistogramType());
-    histogram->SetFlags(histogram_data.flags);
+    DCHECK_EQ(histogram_type, histogram->GetHistogramType());
+    histogram->SetFlags(histogram_flags);
     RecordCreateHistogramResult(CREATE_HISTOGRAM_SUCCESS);
   } else {
     RecordCreateHistogramResult(CREATE_HISTOGRAM_UNKNOWN_TYPE);

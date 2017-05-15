@@ -34,21 +34,6 @@
             ]
         }
     ],
-    "AndroidHistoryManager": [
-        {
-            "platforms": [
-                "android"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled",
-                    "enable_features": [
-                        "AndroidHistoryManager"
-                    ]
-                }
-            ]
-        }
-    ],
     "AndroidSpellChecker": [
         {
             "platforms": [
@@ -108,24 +93,6 @@
                 },
                 {
                     "name": "AsyncDnsNoFallbackA"
-                }
-            ]
-        }
-    ],
-    "AutoDismissingDialogs": [
-        {
-            "platforms": [
-                "chromeos",
-                "linux",
-                "mac",
-                "win"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled",
-                    "enable_features": [
-                        "AutoDismissingDialogs"
-                    ]
                 }
             ]
         }
@@ -387,6 +354,7 @@
                     "//4": "browser_main_loop.cc).",
                     "name": "RedirectWithDefaultInitParams",
                     "params": {
+                        "RedirectNonUINonIOBrowserThreads": "true",
                         "RedirectSequencedWorkerPools": "true"
                     }
                 },
@@ -484,21 +452,6 @@
             "experiments": [
                 {
                     "name": "Enabled"
-                }
-            ]
-        }
-    ],
-    "ContextualSearch": [
-        {
-            "platforms": [
-                "android"
-            ],
-            "experiments": [
-                {
-                    "name": "Expected",
-                    "enable_features": [
-                        "ContextualSearchUrlActions"
-                    ]
                 }
             ]
         }
@@ -712,6 +665,71 @@
                     },
                     "enable_features": [
                         "DelayNavigation"
+                    ]
+                }
+            ]
+        }
+    ],
+    "DesktopIOSPromotion": [
+        {
+            "platforms": [
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "SavePasswordsBubblePromotionV1",
+                    "params": {
+                        "body_text_id": "0",
+                        "entry_point": "SavePasswordsBubblePromotion",
+                        "max_views": "3",
+                        "promo_variation_id": "1",
+                        "sms_id": "19001508",
+                        "title_text_id": "0"
+                    },
+                    "enable_features": [
+                        "DesktopIOSPromotion"
+                    ]
+                },
+                {
+                    "name": "SavePasswordsBubblePromotionV2",
+                    "params": {
+                        "body_text_id": "0",
+                        "entry_point": "SavePasswordsBubblePromotion",
+                        "max_views": "3",
+                        "promo_variation_id": "2",
+                        "sms_id": "19001509",
+                        "title_text_id": "1"
+                    },
+                    "enable_features": [
+                        "DesktopIOSPromotion"
+                    ]
+                },
+                {
+                    "name": "SavePasswordsBubblePromotionV3",
+                    "params": {
+                        "body_text_id": "0",
+                        "entry_point": "SavePasswordsBubblePromotion",
+                        "max_views": "3",
+                        "promo_variation_id": "3",
+                        "sms_id": "19001510",
+                        "title_text_id": "2"
+                    },
+                    "enable_features": [
+                        "DesktopIOSPromotion"
+                    ]
+                },
+                {
+                    "name": "SavePasswordsBubblePromotion50Beta",
+                    "params": {
+                        "body_text_id": "0",
+                        "entry_point": "SavePasswordsBubblePromotion",
+                        "max_views": "3",
+                        "promo_variation_id": "1",
+                        "sms_id": "19001507",
+                        "title_text_id": "0"
+                    },
+                    "enable_features": [
+                        "DesktopIOSPromotion"
                     ]
                 }
             ]
@@ -1097,7 +1115,7 @@
                 {
                     "name": "Enabled",
                     "params": {
-                        "engagement_threshold_for_flash": "16"
+                        "engagement_threshold_for_flash": "32"
                     },
                     "enable_features": [
                         "PreferHtmlOverPlugins"
@@ -1277,6 +1295,40 @@
             ]
         }
     ],
+    "LoadingWithMojo": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "LoadingWithMojo"
+                    ]
+                }
+            ]
+        }
+    ],
+    "LsdPermissionPrompt": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "LsdPermissionPrompt"
+                    ]
+                }
+            ]
+        }
+    ],
     "MacAllowBackgroundingProcesses": [
         {
             "platforms": [
@@ -1368,6 +1420,24 @@
             ]
         }
     ],
+    "MetricsServiceUrl": [
+        {
+            "platforms": [
+                "chromeos",
+                "mac",
+                "win",
+                "linux"
+            ],
+            "experiments": [
+                {
+                    "name": "NewURL",
+                    "enable_features": [
+                        "NewMetricsUrl"
+                    ]
+                }
+            ]
+        }
+    ],
     "MidiManagerAndroid": [
         {
             "platforms": [
@@ -1425,11 +1495,10 @@
             ],
             "experiments": [
                 {
-                    "name": "EnabledSoftFetchesChromeReader_Rest",
+                    "name": "Enabled-ChromeReader",
                     "params": {
                         "soft_fetching_interval_hours-fallback-active_ntp_user": "10",
-                        "soft_fetching_interval_hours-fallback-active_suggestions_consumer": "1",
-                        "soft_fetching_interval_hours-fallback-rare_ntp_user": "4",
+                        "soft_fetching_interval_hours-wifi-active_ntp_user": "6",
                         "user_classifier_active_consumer_clicks_at_least_once_per_hours": "96",
                         "user_classifier_rare_user_opens_ntp_at_most_once_per_hours": "66"
                     },
@@ -1688,7 +1757,7 @@
             ],
             "experiments": [
                 {
-                    "name": "PrerenderDisabled",
+                    "name": "PrerenderDisabled_R2",
                     "params": {
                         "instant_mode": "simple_load",
                         "mode": "simple_load",
@@ -1940,6 +2009,52 @@
             ]
         }
     ],
+    "PasswordProtectionPasswordFieldOnFocusPing": [
+        {
+            "platforms": [
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "SBEROnlyNoIncognito",
+                    "params": {
+                        "extended_reporting": "true",
+                        "history_sync": "false",
+                        "incognito": "false"
+                    },
+                    "enable_features": [
+                        "PasswordFieldOnFocusPinging"
+                    ]
+                }
+            ]
+        }
+    ],
+    "PasswordProtectionProtectedPasswordEntryPing": [
+        {
+            "platforms": [
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "SBEROnlyNoIncognito",
+                    "params": {
+                        "extended_reporting": "true",
+                        "history_sync": "false",
+                        "incognito": "false"
+                    },
+                    "enable_features": [
+                        "ProtectedPasswordEntryPinging"
+                    ]
+                }
+            ]
+        }
+    ],
     "PasswordSeparatedSigninFlow": [
         {
             "platforms": [
@@ -1982,46 +2097,40 @@
             ],
             "experiments": [
                 {
-                    "name": "ModalGestureEnabled",
-                    "params": {
-                        "require_gesture": "true"
-                    },
+                    "name": "BlockPromptsEnabled",
                     "enable_features": [
-                        "ModalPermissionPrompts"
-                    ],
-                    "disable_features": [
-                        "DisplayPersistenceToggleInPermissionPrompts"
+                        "BlockPromptsIfDismissedOften"
                     ]
-                },
+                }
+            ]
+        }
+    ],
+    "PermissionPromptUIAndroidModal": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
                 {
-                    "name": "ModalNoGestureEnabled",
-                    "params": {
-                        "require_gesture": "false"
-                    },
-                    "enable_features": [
-                        "ModalPermissionPrompts"
-                    ],
-                    "disable_features": [
-                        "DisplayPersistenceToggleInPermissionPrompts"
-                    ]
-                },
-                {
-                    "name": "ModalAndToggleEnabled",
-                    "params": {
-                        "require_gesture": "false"
-                    },
+                    "name": "ModalToggleEnabled",
                     "enable_features": [
                         "DisplayPersistenceToggleInPermissionPrompts",
                         "ModalPermissionPrompts"
                     ]
-                },
+                }
+            ]
+        }
+    ],
+    "PermissionPromptUICocoa": [
+        {
+            "platforms": [
+                "mac"
+            ],
+            "experiments": [
                 {
-                    "name": "ToggleEnabled",
+                    "name": "BlockPromptsEnabled",
                     "enable_features": [
-                        "DisplayPersistenceToggleInPermissionPrompts"
-                    ],
-                    "disable_features": [
-                        "ModalPermissionPrompts"
+                        "BlockPromptsIfDismissedOften"
                     ]
                 }
             ]
@@ -2036,9 +2145,9 @@
             ],
             "experiments": [
                 {
-                    "name": "ToggleEnabled",
+                    "name": "BlockPromptsEnabled",
                     "enable_features": [
-                        "DisplayPersistenceToggleInPermissionPrompts"
+                        "BlockPromptsIfDismissedOften"
                     ]
                 }
             ]
@@ -2813,9 +2922,7 @@
                 {
                     "name": "EnabledForPhishingSites",
                     "params": {
-                        "activation_lists": "phishing_interstitial",
-                        "activation_scope": "activation_list",
-                        "activation_state": "enabled"
+                        "enable_presets": "liverun_on_phishing_sites"
                     },
                     "enable_features": [
                         "SubresourceFilter"
@@ -2911,26 +3018,6 @@
                     "name": "TokenBinding",
                     "enable_features": [
                         "token-binding"
-                    ]
-                }
-            ]
-        }
-    ],
-    "TranslateRankerLogging": [
-        {
-            "platforms": [
-                "android",
-                "chromeos",
-                "ios",
-                "linux",
-                "mac",
-                "win"
-            ],
-            "experiments": [
-                {
-                    "name": "TranslateRankerLogging",
-                    "enable_features": [
-                        "TranslateRankerLogging"
                     ]
                 }
             ]
@@ -3051,25 +3138,6 @@
                     "enable_features": [
                         "Ukm"
                     ]
-                }
-            ]
-        }
-    ],
-    "UMA_EnableCellularLogUpload": [
-        {
-            "platforms": [
-                "android"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled_wo_sampling",
-                    "params": {
-                        "Enabled": "true",
-                        "Optimize": "true",
-                        "Sample_Probability": "100",
-                        "Uma_Quota": "204800",
-                        "Uma_Ratio": "0.05"
-                    }
                 }
             ]
         }

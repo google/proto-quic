@@ -16,9 +16,7 @@
 # 2. Build everything and capture the output:
 #      ninja -C <build_directory> &> generated-fixits
 # 3. Apply the fixits with this script:
-#      python apply_fixits.py[ <build_directory>] < generated-fixits
-#    <build_directory> is optional and only required if your build directory is
-#    a non-standard location.
+#      python apply_fixits.py -p <build_directory> < generated-fixits
 
 import argparse
 import collections
@@ -41,9 +39,8 @@ FixIt = collections.namedtuple(
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument(
-      'build_directory',
-      nargs='?',
-      default='out/Debug',
+      '-p',
+      required=True,
       help='path to the build directory to complete relative paths in fixits')
   args = parser.parse_args()
 
@@ -63,7 +60,7 @@ def main():
             'end_line')), -int(m.group('end_col')), m.group('text')))
   for k, v in fixits.iteritems():
     v.sort()
-    with open(os.path.join(args.build_directory, k), 'rb+') as f:
+    with open(os.path.join(args.p, k), 'rb+') as f:
       lines = f.readlines()
       last_fixit = None
       for fixit in v:

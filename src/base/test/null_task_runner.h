@@ -26,7 +26,7 @@ class NullTaskRunner : public base::SingleThreadTaskRunner {
                                   base::OnceClosure task,
                                   base::TimeDelta delay) override;
   // Always returns true to avoid triggering DCHECKs.
-  bool RunsTasksOnCurrentThread() const override;
+  bool RunsTasksInCurrentSequence() const override;
 
  protected:
   ~NullTaskRunner() override;

@@ -74,8 +74,6 @@ class TestHeadersHandler : public SpdyHeadersHandlerInterface {
 
   void OnHeader(SpdyStringPiece name, SpdyStringPiece value) override;
 
-  void OnHeaderBlockEnd(size_t header_bytes_parsed) override;
-
   void OnHeaderBlockEnd(size_t header_bytes_parsed,
                         size_t compressed_header_bytes_parsed) override;
 

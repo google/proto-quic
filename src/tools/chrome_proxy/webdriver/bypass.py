@@ -193,5 +193,34 @@ class Bypass(IntegrationTest):
       for response in responses:        
         self.assertEqual(80, response.port)        
 
+  # Get the client type with the first request, then check bypass on the 
+  # appropriate test page
+  def testClientTypeBypass(self):    
+    clientType = ''
+    with TestDriver() as test_driver:
+      test_driver.AddChromeArg('--enable-spdy-proxy-auth')
+      # Page that should not bypass.  
+      test_driver.LoadURL('http://check.googlezip.net/test.html')
+      responses = test_driver.GetHTTPResponses()
+      self.assertNotEqual(0, len(responses))
+      for response in responses:
+        self.assertHasChromeProxyViaHeader(response)
+        chrome_proxy_header = response.request_headers['chrome-proxy']
+        chrome_proxy_directives = chrome_proxy_header.split(',')
+        for directive in chrome_proxy_directives:
+            if 'c=' in directive:
+                clientType = directive[3:]
+      
+    clients = ['android', 'webview', 'ios', 'linux', 'win', 'chromeos']
+    for client in clients:  
+      with TestDriver() as test_driver:                      
+        test_driver.LoadURL('http://check.googlezip.net/chrome-proxy-header/'
+                          'c_%s/' %client)
+        responses = test_driver.GetHTTPResponses()
+        self.assertEqual(2, len(responses))      
+        for response in responses:
+          if client in clientType:
+            self.assertNotHasChromeProxyViaHeader(response)
+
 if __name__ == '__main__':
   IntegrationTest.RunAllTests()

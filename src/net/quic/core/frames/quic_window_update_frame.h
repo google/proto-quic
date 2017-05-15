@@ -12,7 +12,7 @@
 
 namespace net {
 
-// Flow control updates per-stream and at the connection levoel.
+// Flow control updates per-stream and at the connection level.
 // Based on SPDY's WINDOW_UPDATE frame, but uses an absolute byte offset rather
 // than a window delta.
 // TODO(rjshade): A possible future optimization is to make stream_id and

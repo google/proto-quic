@@ -15,11 +15,12 @@ declare_args() {
   # The absolute path to directory containing linux sysroot images
   target_sysroot_dir = "//build/linux"
 
-  use_sysroot = true
+  use_sysroot = current_cpu != "s390x" && current_cpu != "s390" &&
+                current_cpu != "ppc64" && current_cpu != "ppc"
 }
 
 if (current_os == target_os && current_cpu == target_cpu &&
-           target_sysroot != "") {
+    target_sysroot != "") {
   sysroot = target_sysroot
 } else if (is_android) {
   import("//build/config/android/config.gni")
@@ -74,6 +75,17 @@ if (current_os == target_os && current_cpu == target_cpu &&
 } else if (is_ios) {
   import("//build/config/ios/ios_sdk.gni")
   sysroot = ios_sdk_path
+} else if (is_fuchsia) {
+  import("//build/config/fuchsia/config.gni")
+  if (current_cpu == "arm64") {
+    sysroot = fuchsia_sdk + "/sysroot/aarch64-fuchsia"
+  } else if (current_cpu == "x64") {
+    sysroot = fuchsia_sdk + "/sysroot/x86_64-fuchsia"
+  } else {
+    sysroot = ""
+  }
+  sysroot_stamp = rebase_path("$sysroot/.stamp")
+  sysroot_version = read_file(sysroot_stamp, "trim string")
 } else {
   sysroot = ""
 }

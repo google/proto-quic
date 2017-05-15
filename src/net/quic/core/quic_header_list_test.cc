@@ -29,7 +29,8 @@ TEST_F(QuicHeaderListTest, TooLarge) {
   string key = "key";
   string value(1 << 18, '1');
   headers.OnHeader(key, value);
-  headers.OnHeaderBlockEnd(key.size() + value.size());
+  size_t total_bytes = key.size() + value.size();
+  headers.OnHeaderBlockEnd(total_bytes, total_bytes);
   EXPECT_TRUE(headers.empty());
 
   EXPECT_EQ("{ }", headers.DebugString());
@@ -41,7 +42,8 @@ TEST_F(QuicHeaderListTest, NotTooLarge) {
   string key = "key";
   string value(1 << 18, '1');
   headers.OnHeader(key, value);
-  headers.OnHeaderBlockEnd(key.size() + value.size());
+  size_t total_bytes = key.size() + value.size();
+  headers.OnHeaderBlockEnd(total_bytes, total_bytes);
   EXPECT_FALSE(headers.empty());
 }
 

@@ -26,6 +26,10 @@ namespace win {
 // UnregisterWaitEx is automatically called, and any in-flight notification is
 // suppressed.
 //
+// The waiting handle MUST NOT be closed while watching is in progress. If this
+// handle is closed while the wait is still pending, the behavior is undefined
+// (see MSDN:RegisterWaitForSingleObject).
+//
 // Typical usage:
 //
 //   class MyClass : public base::win::ObjectWatcher::Delegate {

@@ -108,7 +108,7 @@ lt{
         EU{"Europos Sąjunga"}
         FI{"Suomija"}
         FJ{"Fidžis"}
-        FK{"Folklando Salos"}
+        FK{"Folklando (Malvinų) Salos"}
         FM{"Mikronezija"}
         FO{"Farerų Salos"}
         FR{"Prancūzija"}
@@ -181,7 +181,7 @@ lt{
         MF{"Sen Martenas"}
         MG{"Madagaskaras"}
         MH{"Maršalo Salos"}
-        MK{"Makedonija"}
+        MK{"Makedonijos Respublika"}
         ML{"Malis"}
         MM{"Mianmaras (Birma)"}
         MN{"Mongolija"}
@@ -302,8 +302,6 @@ lt{
         CD{"Kongo Demokratinė Respublika"}
         CG{"Kongo Respublika"}
         CI{"Dramblio Kaulo Kranto Respublika"}
-        FK{"Folklando (Malvinų) Salos"}
-        MK{"Makedonijos Respublika"}
     }
-    Version{"2.1.28.79"}
+    Version{"2.1.32.59"}
 }

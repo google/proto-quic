@@ -1294,8 +1294,8 @@ asm_AES_set_decrypt_key:
 .globl	asm_AES_cbc_encrypt
 .hidden asm_AES_cbc_encrypt
 .type	asm_AES_cbc_encrypt,@function
-.extern	OPENSSL_ia32cap_addr
-.hidden OPENSSL_ia32cap_addr
+.extern	OPENSSL_ia32cap_P
+.hidden OPENSSL_ia32cap_P
 .hidden	asm_AES_cbc_encrypt
 asm_AES_cbc_encrypt:
 	cmpq	$0,%rdx
@@ -1317,7 +1317,7 @@ asm_AES_cbc_encrypt:
 	cmpq	$0,%r9
 	cmoveq	%r10,%r14
 
-	movq	OPENSSL_ia32cap_addr(%rip),%r10
+	leaq	OPENSSL_ia32cap_P(%rip),%r10
 	movl	(%r10),%r10d
 	cmpq	$512,%rdx
 	jb	.Lcbc_slow_prologue

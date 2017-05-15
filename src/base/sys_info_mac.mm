@@ -24,6 +24,23 @@
 
 namespace base {
 
+namespace {
+
+// Queries sysctlbyname() for the given key and returns the value from the
+// system or the empty string on failure.
+std::string GetSysctlValue(const char* key_name) {
+  char value[256];
+  size_t len = arraysize(value);
+  if (sysctlbyname(key_name, &value, &len, nullptr, 0) == 0) {
+    DCHECK_GE(len, 1u);
+    DCHECK_EQ('\0', value[len - 1]);
+    return std::string(value, len - 1);
+  }
+  return std::string();
+}
+
+}  // namespace
+
 // static
 std::string SysInfo::OperatingSystemName() {
   return "Mac OS X";
@@ -94,19 +111,12 @@ int64_t SysInfo::AmountOfAvailablePhysicalMemory() {
 
 // static
 std::string SysInfo::CPUModelName() {
-  char name[256];
-  size_t len = arraysize(name);
-  if (sysctlbyname("machdep.cpu.brand_string", &name, &len, NULL, 0) == 0)
-    return name;
-  return std::string();
+  return GetSysctlValue("machdep.cpu.brand_string");
 }
 
+// static
 std::string SysInfo::HardwareModelName() {
-  char model[256];
-  size_t len = sizeof(model);
-  if (sysctlbyname("hw.model", model, &len, NULL, 0) == 0)
-    return std::string(model, 0, len);
-  return std::string();
+  return GetSysctlValue("hw.model");
 }
 
 }  // namespace base

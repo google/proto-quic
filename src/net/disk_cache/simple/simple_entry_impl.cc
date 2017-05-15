@@ -42,18 +42,6 @@ namespace {
 const int64_t kMaxSparseDataSizeDivisor = 10;
 
 // Used in histograms, please only add entries at the end.
-enum ReadResult {
-  READ_RESULT_SUCCESS = 0,
-  READ_RESULT_INVALID_ARGUMENT = 1,
-  READ_RESULT_NONBLOCK_EMPTY_RETURN = 2,
-  READ_RESULT_BAD_STATE = 3,
-  READ_RESULT_FAST_EMPTY_RETURN = 4,
-  READ_RESULT_SYNC_READ_FAILURE = 5,
-  READ_RESULT_SYNC_CHECKSUM_FAILURE = 6,
-  READ_RESULT_MAX = 7,
-};
-
-// Used in histograms, please only add entries at the end.
 enum WriteResult {
   WRITE_RESULT_SUCCESS = 0,
   WRITE_RESULT_INVALID_ARGUMENT = 1,
@@ -74,7 +62,7 @@ enum HeaderSizeChange {
   HEADER_SIZE_CHANGE_MAX
 };
 
-void RecordReadResult(net::CacheType cache_type, ReadResult result) {
+void RecordReadResult(net::CacheType cache_type, SimpleReadResult result) {
   SIMPLE_CACHE_UMA(ENUMERATION,
                    "ReadResult", cache_type, result, READ_RESULT_MAX);
 }
@@ -870,22 +858,33 @@ void SimpleEntryImpl::ReadDataInternal(int stream_index,
   if (!doomed_ && backend_.get())
     backend_->index()->UseIfExists(entry_hash_);
 
-  std::unique_ptr<uint32_t> read_crc32(new uint32_t());
+  // Figure out if we should be computing the checksum for this read,
+  // and whether we should be verifying it, too.
+  std::unique_ptr<SimpleSynchronousEntry::CRCRequest> crc_request;
+  if (crc32s_end_offset_[stream_index] == offset) {
+    crc_request.reset(new SimpleSynchronousEntry::CRCRequest());
+
+    crc_request->data_crc32 =
+        offset == 0 ? crc32(0, Z_NULL, 0) : crc32s_[stream_index];
+
+    // We can't verify the checksum if we already overwrote part of the file.
+    // (It may still make sense to compute it if the overwritten area and the
+    //  about-to-read-in area are adjoint).
+    crc_request->request_verify = !have_written_[stream_index];
+  }
+
   std::unique_ptr<int> result(new int());
   std::unique_ptr<SimpleEntryStat> entry_stat(new SimpleEntryStat(
       last_used_, last_modified_, data_size_, sparse_data_size_));
   Closure task = base::Bind(
       &SimpleSynchronousEntry::ReadData, base::Unretained(synchronous_entry_),
       SimpleSynchronousEntry::EntryOperationData(stream_index, offset, buf_len),
-      base::RetainedRef(buf), read_crc32.get(), entry_stat.get(), result.get());
-  Closure reply = base::Bind(&SimpleEntryImpl::ReadOperationComplete,
-                             this,
-                             stream_index,
-                             offset,
-                             callback,
-                             base::Passed(&read_crc32),
-                             base::Passed(&entry_stat),
-                             base::Passed(&result));
+      crc_request.get(), entry_stat.get(), base::RetainedRef(buf),
+      result.get());
+  Closure reply =
+      base::Bind(&SimpleEntryImpl::ReadOperationComplete, this, stream_index,
+                 offset, callback, base::Passed(&crc_request),
+                 base::Passed(&entry_stat), base::Passed(&result));
   worker_pool_->PostTaskAndReply(FROM_HERE, task, reply);
 }
 
@@ -1197,13 +1196,12 @@ void SimpleEntryImpl::ReadOperationComplete(
     int stream_index,
     int offset,
     const CompletionCallback& completion_callback,
-    std::unique_ptr<uint32_t> read_crc32,
+    std::unique_ptr<SimpleSynchronousEntry::CRCRequest> crc_request,
     std::unique_ptr<SimpleEntryStat> entry_stat,
     std::unique_ptr<int> result) {
   DCHECK(io_thread_checker_.CalledOnValidThread());
   DCHECK(synchronous_entry_);
   DCHECK_EQ(STATE_IO_PENDING, state_);
-  DCHECK(read_crc32);
   DCHECK(result);
 
   if (*result > 0 &&
@@ -1211,51 +1209,26 @@ void SimpleEntryImpl::ReadOperationComplete(
     crc_check_state_[stream_index] = CRC_CHECK_NEVER_READ_TO_END;
   }
 
-  if (*result > 0 && crc32s_end_offset_[stream_index] == offset) {
-    uint32_t current_crc =
-        offset == 0 ? crc32(0, Z_NULL, 0) : crc32s_[stream_index];
-    crc32s_[stream_index] = crc32_combine(current_crc, *read_crc32, *result);
-    crc32s_end_offset_[stream_index] += *result;
-    if (!have_written_[stream_index] &&
-        GetDataSize(stream_index) == crc32s_end_offset_[stream_index]) {
-      // We have just read a file from start to finish, and so we have
-      // computed a crc of the entire file. We can check it now. If a cache
-      // entry has a single reader, the normal pattern is to read from start
-      // to finish.
-
-      net_log_.AddEvent(
-          net::NetLogEventType::SIMPLE_CACHE_ENTRY_CHECKSUM_BEGIN);
-
-      std::unique_ptr<int> new_result(new int());
-      Closure task = base::Bind(&SimpleSynchronousEntry::CheckEOFRecord,
-                                base::Unretained(synchronous_entry_),
-                                stream_index,
-                                *entry_stat,
-                                crc32s_[stream_index],
-                                new_result.get());
-      Closure reply = base::Bind(&SimpleEntryImpl::ChecksumOperationComplete,
-                                 this, *result, stream_index,
-                                 completion_callback,
-                                 base::Passed(&new_result));
-      worker_pool_->PostTaskAndReply(FROM_HERE, task, reply);
-      crc_check_state_[stream_index] = CRC_CHECK_DONE;
-      return;
+  if (crc_request != nullptr) {
+    if (*result > 0) {
+      DCHECK_EQ(crc32s_end_offset_[stream_index], offset);
+      crc32s_end_offset_[stream_index] += *result;
+      crc32s_[stream_index] = crc_request->data_crc32;
     }
+
+    if (crc_request->performed_verify)
+      crc_check_state_[stream_index] = CRC_CHECK_DONE;
   }
 
   if (*result < 0) {
     crc32s_end_offset_[stream_index] = 0;
-  }
-
-  if (*result < 0) {
-    RecordReadResult(cache_type_, READ_RESULT_SYNC_READ_FAILURE);
   } else {
-    RecordReadResult(cache_type_, READ_RESULT_SUCCESS);
     if (crc_check_state_[stream_index] == CRC_CHECK_NEVER_READ_TO_END &&
         offset + *result == GetDataSize(stream_index)) {
       crc_check_state_[stream_index] = CRC_CHECK_NOT_DONE;
     }
   }
+  RecordReadResultConsideringChecksum(*result, std::move(crc_request));
   if (net_log_.IsCapturing()) {
     net_log_.AddEvent(net::NetLogEventType::SIMPLE_CACHE_ENTRY_READ_END,
                       CreateNetLogReadWriteCompleteCallback(*result));
@@ -1344,38 +1317,21 @@ void SimpleEntryImpl::DoomOperationComplete(
     backend_->OnDoomComplete(entry_hash_);
 }
 
-void SimpleEntryImpl::ChecksumOperationComplete(
-    int original_result,
-    int stream_index,
-    const CompletionCallback& completion_callback,
-    std::unique_ptr<int> result) {
+void SimpleEntryImpl::RecordReadResultConsideringChecksum(
+    int result,
+    std::unique_ptr<SimpleSynchronousEntry::CRCRequest> crc_result) const {
   DCHECK(io_thread_checker_.CalledOnValidThread());
   DCHECK(synchronous_entry_);
   DCHECK_EQ(STATE_IO_PENDING, state_);
-  DCHECK(result);
 
-  if (net_log_.IsCapturing()) {
-    net_log_.AddEventWithNetErrorCode(
-        net::NetLogEventType::SIMPLE_CACHE_ENTRY_CHECKSUM_END, *result);
-  }
-
-  if (*result == net::OK) {
-    *result = original_result;
-    if (original_result >= 0)
-      RecordReadResult(cache_type_, READ_RESULT_SUCCESS);
+  if (result >= 0) {
+    RecordReadResult(cache_type_, READ_RESULT_SUCCESS);
+  } else {
+    if (crc_result && crc_result->performed_verify && !crc_result->verify_ok)
+      RecordReadResult(cache_type_, READ_RESULT_SYNC_CHECKSUM_FAILURE);
     else
       RecordReadResult(cache_type_, READ_RESULT_SYNC_READ_FAILURE);
-  } else {
-    RecordReadResult(cache_type_, READ_RESULT_SYNC_CHECKSUM_FAILURE);
   }
-  if (net_log_.IsCapturing()) {
-    net_log_.AddEvent(net::NetLogEventType::SIMPLE_CACHE_ENTRY_READ_END,
-                      CreateNetLogReadWriteCompleteCallback(*result));
-  }
-
-  SimpleEntryStat entry_stat(last_used_, last_modified_, data_size_,
-                             sparse_data_size_);
-  EntryOperationComplete(completion_callback, entry_stat, std::move(result));
 }
 
 void SimpleEntryImpl::CloseOperationComplete() {

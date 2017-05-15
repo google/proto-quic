@@ -116,8 +116,8 @@ std::unique_ptr<XmlElementWriter> XmlElementWriter::SubElement(
     const std::string& attribute_name,
     const Writer& attribute_value_writer) {
   StartContent(true);
-  return base::WrapUnique(new XmlElementWriter(
-      out_, tag, attribute_name, attribute_value_writer, indent_ + 2));
+  return base::MakeUnique<XmlElementWriter>(
+      out_, tag, attribute_name, attribute_value_writer, indent_ + 2);
 }
 
 std::string XmlEscape(const std::string& value);

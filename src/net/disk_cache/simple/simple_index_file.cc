@@ -12,6 +12,7 @@
 #include "base/files/memory_mapped_file.h"
 #include "base/hash.h"
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/numerics/safe_conversions.h"
 #include "base/pickle.h"
 #include "base/single_thread_task_runner.h"
@@ -33,7 +34,13 @@ namespace {
 const int kEntryFilesHashLength = 16;
 const int kEntryFilesSuffixLength = 2;
 
-const uint64_t kMaxEntriesInIndex = 100000000;
+// Limit on how big a file we are willing to work with, to avoid crashes
+// when its corrupt.
+const int kMaxEntriesInIndex = 1000000;
+
+// Here 8 comes from the key size.
+const int64_t kMaxIndexFileSizeBytes =
+    kMaxEntriesInIndex * (8 + EntryMetadata::kOnDiskSizeBytes);
 
 uint32_t CalculatePickleCRC(const base::Pickle& pickle) {
   return crc32(crc32(0, Z_NULL, 0),
@@ -427,22 +434,32 @@ void SimpleIndexFile::SyncLoadFromDisk(const base::FilePath& index_filename,
                                        SimpleIndexLoadResult* out_result) {
   out_result->Reset();
 
-  File file(index_filename,
-            File::FLAG_OPEN | File::FLAG_READ | File::FLAG_SHARE_DELETE);
+  File file(index_filename, File::FLAG_OPEN | File::FLAG_READ |
+                                File::FLAG_SHARE_DELETE |
+                                File::FLAG_SEQUENTIAL_SCAN);
   if (!file.IsValid())
     return;
 
-  base::MemoryMappedFile index_file_map;
-  if (!index_file_map.Initialize(std::move(file))) {
+  // Sanity-check the length. We don't want to crash trying to read some corrupt
+  // 10GiB file or such.
+  int64_t file_length = file.GetLength();
+  if (file_length < 0 || file_length > kMaxIndexFileSizeBytes) {
     simple_util::SimpleCacheDeleteFile(index_filename);
     return;
   }
 
-  SimpleIndexFile::Deserialize(
-      reinterpret_cast<const char*>(index_file_map.data()),
-      index_file_map.length(),
-      out_last_cache_seen_by_index,
-      out_result);
+  // Make sure to preallocate in one chunk, so we don't induce fragmentation
+  // reallocating a growing buffer.
+  auto buffer = base::MakeUnique<char[]>(file_length);
+
+  int read = file.Read(0, buffer.get(), file_length);
+  if (read < file_length) {
+    simple_util::SimpleCacheDeleteFile(index_filename);
+    return;
+  }
+
+  SimpleIndexFile::Deserialize(buffer.get(), read, out_last_cache_seen_by_index,
+                               out_result);
 
   if (!out_result->did_load)
     simple_util::SimpleCacheDeleteFile(index_filename);

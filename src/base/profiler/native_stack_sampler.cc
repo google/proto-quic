@@ -4,11 +4,28 @@
 
 #include "base/profiler/native_stack_sampler.h"
 
+#include "base/memory/ptr_util.h"
+
 namespace base {
+
+NativeStackSampler::StackBuffer::StackBuffer(size_t buffer_size)
+    : buffer_(new uintptr_t[(buffer_size + sizeof(uintptr_t) - 1) /
+                            sizeof(uintptr_t)]),
+      size_(buffer_size) {}
+
+NativeStackSampler::StackBuffer::~StackBuffer() {}
 
 NativeStackSampler::NativeStackSampler() {}
 
 NativeStackSampler::~NativeStackSampler() {}
+
+std::unique_ptr<NativeStackSampler::StackBuffer>
+NativeStackSampler::CreateStackBuffer() {
+  size_t size = GetStackBufferSize();
+  if (size == 0)
+    return nullptr;
+  return MakeUnique<StackBuffer>(size);
+}
 
 NativeStackSamplerTestDelegate::~NativeStackSamplerTestDelegate() {}
 

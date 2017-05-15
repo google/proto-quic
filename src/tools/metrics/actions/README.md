@@ -56,7 +56,7 @@ attention-grabbing (as in the first example), is often not useful for analyzing
 sequences of user actions.  For example, don't emit
 "ShowedSecureIconNextToOmnibox".
 
-### Testing
+## Testing
 
 Test your user actions using *chrome://user-actions*.  Make sure they're being
 emitted when you expect and not emitted at other times.
@@ -70,11 +70,15 @@ Also, check that your new user action is not mostly redundant with other user
 actions (see [advice above](#Do-Not-Emit-Redundantly)) and not emitted
 excessively (see [advice above](#Do-Not-Emit-Excessively)).
 
-### Revising User Actions
+In addition to testing interactively, you can have unit tests check the number
+of times a user action was emitted.  See [user_action_tester.h](https://cs.chromium.org/chromium/src/base/test/user_action_tester.h)
+for details.
 
-If you're changing the semantics of a user action (when it's emitted), make it
-into a new user action with a new name.  Otherwise the dashboard will be mixing
-two different interpretations of the data and make no sense.
+## Revising User Actions
+
+When changing the semantics of a user action (when it's emitted), make it into
+a new user action with a new name.  Otherwise the dashboard will be mixing two
+different interpretations of the data and make no sense.
 
 ## Documenting User Actions
 

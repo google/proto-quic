@@ -18,6 +18,7 @@
 #include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/profiler/win32_stack_frame_unwinder.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
@@ -394,19 +395,11 @@ class NativeStackSamplerWin : public NativeStackSampler {
   // StackSamplingProfiler::NativeStackSampler:
   void ProfileRecordingStarting(
       std::vector<StackSamplingProfiler::Module>* modules) override;
-  void RecordStackSample(StackSamplingProfiler::Sample* sample) override;
-  void ProfileRecordingStopped() override;
+  void RecordStackSample(StackBuffer* stack_buffer,
+                         StackSamplingProfiler::Sample* sample) override;
+  void ProfileRecordingStopped(StackBuffer* stack_buffer) override;
 
  private:
-  enum {
-    // Intended to hold the largest stack used by Chrome. The default Win32
-    // reserved stack size is 1 MB and Chrome Windows threads currently always
-    // use the default, but this allows for expansion if it occurs. The size
-    // beyond the actual stack size consists of unallocated virtual memory pages
-    // so carries little cost (just a bit of wasted address space).
-    kStackCopyBufferSize = 2 * 1024 * 1024
-  };
-
   // Attempts to query the module filename, base address, and id for
   // |module_handle|, and store them in |module|. Returns true if it succeeded.
   static bool GetModuleForHandle(HMODULE module_handle,
@@ -433,10 +426,6 @@ class NativeStackSamplerWin : public NativeStackSampler {
   // The stack base address corresponding to |thread_handle_|.
   const void* const thread_stack_base_address_;
 
-  // Buffer to use for copies of the stack. We use the same buffer for all the
-  // samples to avoid the overhead of multiple allocations and frees.
-  const std::unique_ptr<unsigned char[]> stack_copy_buffer_;
-
   // Weak. Points to the modules associated with the profile being recorded
   // between ProfileRecordingStarting() and ProfileRecordingStopped().
   std::vector<StackSamplingProfiler::Module>* current_modules_;
@@ -456,8 +445,7 @@ NativeStackSamplerWin::NativeStackSamplerWin(
       annotator_(annotator),
       test_delegate_(test_delegate),
       thread_stack_base_address_(
-          GetThreadEnvironmentBlock(thread_handle_.Get())->Tib.StackBase),
-      stack_copy_buffer_(new unsigned char[kStackCopyBufferSize]) {
+          GetThreadEnvironmentBlock(thread_handle_.Get())->Tib.StackBase) {
   DCHECK(annotator_);
 }
 
@@ -471,20 +459,19 @@ void NativeStackSamplerWin::ProfileRecordingStarting(
 }
 
 void NativeStackSamplerWin::RecordStackSample(
+    StackBuffer* stack_buffer,
     StackSamplingProfiler::Sample* sample) {
+  DCHECK(stack_buffer);
   DCHECK(current_modules_);
-
-  if (!stack_copy_buffer_)
-    return;
 
   std::vector<RecordedFrame> stack;
   SuspendThreadAndRecordStack(thread_handle_.Get(), thread_stack_base_address_,
-                              stack_copy_buffer_.get(), kStackCopyBufferSize,
+                              stack_buffer->buffer(), stack_buffer->size(),
                               &stack, annotator_, sample, test_delegate_);
   CopyToSample(stack, sample, current_modules_);
 }
 
-void NativeStackSamplerWin::ProfileRecordingStopped() {
+void NativeStackSamplerWin::ProfileRecordingStopped(StackBuffer* stack_buffer) {
   current_modules_ = nullptr;
 }
 
@@ -561,6 +548,15 @@ std::unique_ptr<NativeStackSampler> NativeStackSampler::Create(
   }
 #endif
   return std::unique_ptr<NativeStackSampler>();
+}
+
+size_t NativeStackSampler::GetStackBufferSize() {
+  // The default Win32 reserved stack size is 1 MB and Chrome Windows threads
+  // currently always use the default, but this allows for expansion if it
+  // occurs. The size beyond the actual stack size consists of unallocated
+  // virtual memory pages so carries little cost (just a bit of wasted address
+  // space).
+  return 2 << 20;  // 2 MiB
 }
 
 }  // namespace base

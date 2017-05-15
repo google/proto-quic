@@ -57,6 +57,7 @@ class V8KeyMobileSites(perf_benchmark.PerfBenchmark):
     return 'v8.key_mobile_sites_smooth'
 
 
+@benchmark.Owner(emails=['ulan@chromium.org'])
 class V8DetachedContextAgeInGC(perf_benchmark.PerfBenchmark):
   """Measures the number of GCs needed to collect a detached context.
 

@@ -4,6 +4,12 @@
 
 #include "net/quic/platform/impl/quic_chromium_clock.h"
 
+#if defined(OS_IOS)
+#include <time.h>
+
+#include "base/ios/ios_util.h"
+#endif
+
 #include "base/memory/singleton.h"
 #include "base/time/time.h"
 
@@ -23,7 +29,16 @@ QuicTime QuicChromiumClock::ApproximateNow() const {
 }
 
 QuicTime QuicChromiumClock::Now() const {
-  return QuicTime(base::TimeTicks::Now());
+#if defined(OS_IOS)
+  if (base::ios::IsRunningOnIOS10OrLater()) {
+    struct timespec tp;
+    if (clock_gettime(CLOCK_MONOTONIC, &tp) == 0) {
+      return CreateTimeFromMicroseconds(tp.tv_sec * 1000000 +
+                                        tp.tv_nsec / 1000);
+    }
+  }
+#endif
+  return CreateTimeFromMicroseconds(base::TimeTicks::Now().ToInternalValue());
 }
 
 QuicWallTime QuicChromiumClock::WallNow() const {

@@ -29,6 +29,20 @@ import isolateserver
 EXECUTABLE_SUFFIX = '.exe' if sys.platform == 'win32' else ''
 
 
+if sys.platform == 'win32':
+  def _ensure_batfile(client_path):
+    base, _ = os.path.splitext(client_path)
+    with open(base+".bat", 'w') as f:
+      f.write('\n'.join([  # python turns \n into CRLF
+        '@set CIPD="%~dp0cipd.exe"',
+        '@shift',
+        '@%CIPD% %*'
+      ]))
+else:
+  def _ensure_batfile(_client_path):
+    pass
+
+
 class Error(Exception):
   """Raised on CIPD errors."""
 
@@ -134,15 +148,15 @@ class CipdClient(object):
 
     Args:
       site_root (str): where to install packages.
-      packages: list of (package_template, version) tuples.
+      packages: dict of subdir -> list of (package_template, version) tuples.
       cache_dir (str): if set, cache dir for cipd binary own cache.
         Typically contains packages and tags.
       tmp_dir (str): if not None, dir for temp files.
       timeout (int): if not None, timeout in seconds for this function to run.
 
     Returns:
-      Pinned packages in the form of [(package_name, package_id)], which
-      correspond 1:1 with the input packages argument.
+      Pinned packages in the form of {subdir: [(package_name, package_id)]},
+      which correspond 1:1 with the input packages argument.
 
     Raises:
       Error if could not install packages or timed out.
@@ -150,24 +164,29 @@ class CipdClient(object):
     timeoutfn = tools.sliding_timeout(timeout)
     logging.info('Installing packages %r into %s', packages, site_root)
 
-    list_file_handle, list_file_path = tempfile.mkstemp(
-        dir=tmp_dir, prefix=u'cipd-ensure-list-', suffix='.txt')
+    ensure_file_handle, ensure_file_path = tempfile.mkstemp(
+        dir=tmp_dir, prefix=u'cipd-ensure-file-', suffix='.txt')
     json_out_file_handle, json_file_path = tempfile.mkstemp(
       dir=tmp_dir, prefix=u'cipd-ensure-result-', suffix='.json')
     os.close(json_out_file_handle)
 
     try:
       try:
-        for pkg, version in packages:
-          pkg = render_package_name_template(pkg)
-          os.write(list_file_handle, '%s %s\n' % (pkg, version))
+        for subdir, pkgs in sorted(packages.iteritems()):
+          if '\n' in subdir:
+            raise Error(
+              'Could not install packages; subdir %r contains newline' % subdir)
+          os.write(ensure_file_handle, '@Subdir %s\n' % (subdir,))
+          for pkg, version in pkgs:
+            pkg = render_package_name_template(pkg)
+            os.write(ensure_file_handle, '%s %s\n' % (pkg, version))
       finally:
-        os.close(list_file_handle)
+        os.close(ensure_file_handle)
 
       cmd = [
         self.binary_path, 'ensure',
         '-root', site_root,
-        '-list', list_file_path,
+        '-ensure-file', ensure_file_path,
         '-verbose',  # this is safe because cipd-ensure does not print a lot
         '-json-output', json_file_path,
       ]
@@ -202,25 +221,12 @@ class CipdClient(object):
             exit_code, '\n'.join(output)))
       with open(json_file_path) as jfile:
         result_json = json.load(jfile)
-      # TEMPORARY(iannucci): this code handles cipd <1.4 and cipd >=1.5
-      # formatted ensure result formats. Cipd 1.5 added support for subdirs, and
-      # as part of the transition, the result of the ensure command needed to
-      # change. To ease the transition, we always return data as-if we're using
-      # the new format. Once cipd 1.5+ is deployed everywhere, this type switch
-      # can be removed.
-      if isinstance(result_json['result'], dict):
-        # cipd 1.5
-        return {
-          subdir: [(x['package'], x['instance_id']) for x in pins]
-          for subdir, pins in result_json['result'].iteritems()
-        }
-      else:
-        # cipd 1.4
-        return {
-          "": [(x['package'], x['instance_id']) for x in result_json['result']],
-        }
+      return {
+        subdir: [(x['package'], x['instance_id']) for x in pins]
+        for subdir, pins in result_json['result'].iteritems()
+      }
     finally:
-      fs.remove(list_file_path)
+      fs.remove(ensure_file_path)
       fs.remove(json_file_path)
 
 
@@ -403,7 +409,8 @@ def get_client(service_url, package_name, version, cache_dir, timeout=None):
     version_cache = isolateserver.DiskCache(
         unicode(os.path.join(cache_dir, 'versions')),
         isolateserver.CachePolicies(0, 0, 300),
-        hashlib.sha1)
+        hashlib.sha1,
+        trim=True)
     with version_cache:
       version_cache.cleanup()
       # Convert |version| to a string that may be used as a filename in disk
@@ -425,7 +432,8 @@ def get_client(service_url, package_name, version, cache_dir, timeout=None):
   instance_cache = isolateserver.DiskCache(
       unicode(os.path.join(cache_dir, 'clients')),
       isolateserver.CachePolicies(0, 0, 5),
-      hashlib.sha1)
+      hashlib.sha1,
+      trim=True)
   with instance_cache:
     instance_cache.cleanup()
     if instance_id not in instance_cache:
@@ -446,6 +454,8 @@ def get_client(service_url, package_name, version, cache_dir, timeout=None):
 
     with instance_cache.getfileobj(instance_id) as f:
       isolateserver.putfile(f, binary_path, 0511)  # -r-x--x--x
+
+    _ensure_batfile(binary_path)
 
     yield CipdClient(
         binary_path,

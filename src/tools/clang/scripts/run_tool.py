@@ -188,7 +188,7 @@ class _CompilerDispatcher(object):
 
 def main():
   parser = argparse.ArgumentParser()
-  parser.add_argument('tool', help='clang tool to run')
+  parser.add_argument('--tool', required=True, help='clang tool to run')
   parser.add_argument('--all', action='store_true')
   parser.add_argument(
       '--generate-compdb',
@@ -198,7 +198,8 @@ def main():
       '--shard',
       metavar='<n>-of-<count>')
   parser.add_argument(
-      'compile_database',
+      '-p',
+      required=True,
       help='path to the directory that contains the compile database')
   parser.add_argument(
       'path_filter',
@@ -217,10 +218,11 @@ def main():
       os.environ['PATH'])
 
   if args.generate_compdb:
-    compile_db.GenerateWithNinja(args.compile_database)
+    with open(os.path.join(args.p, 'compile_commands.json'), 'w') as f:
+      f.write(compile_db.GenerateWithNinja(args.p))
 
   if args.all:
-    source_filenames = set(_GetFilesFromCompileDB(args.compile_database))
+    source_filenames = set(_GetFilesFromCompileDB(args.p))
   else:
     git_filenames = set(_GetFilesFromGit(args.path_filter))
     # Filter out files that aren't C/C++/Obj-C/Obj-C++.
@@ -243,7 +245,7 @@ def main():
         shard_number, shard_count, len(source_filenames), total_length)
 
   dispatcher = _CompilerDispatcher(args.tool, args.tool_args,
-                                   args.compile_database,
+                                   args.p,
                                    source_filenames)
   dispatcher.Run()
   return -dispatcher.failed_count

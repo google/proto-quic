@@ -3,11 +3,11 @@
 # found in the LICENSE file.
 #
 # This script should not be run directly but sourced by the other
-# scripts (e.g. sysroot-creator-trusty.sh).  Its up to the parent scripts
+# scripts (e.g. sysroot-creator-jessie.sh).  Its up to the parent scripts
 # to define certain environment variables: e.g.
 #  DISTRO=ubuntu
-#  DIST=trusty
-#  DIST_UPDATES=trusty-updates  # optional
+#  DIST=jessie
+#  DIST_UPDATES=jessie-updates  # optional
 #  REPO_EXTRA="universe restricted multiverse"  # optional
 #  APT_REPO=http://archive.ubuntu.com/ubuntu
 #  KEYRING_FILE=/usr/share/keyrings/ubuntu-archive-keyring.gpg
@@ -293,11 +293,6 @@ HacksAndPatchesAmd64() {
   mkdir -p ${INSTALL_ROOT}/usr/lib/pkgconfig
   mv ${INSTALL_ROOT}/usr/lib/x86_64-linux-gnu/pkgconfig/* \
       ${INSTALL_ROOT}/usr/lib/pkgconfig
-
-  SubBanner "Adding an additional ld.conf include"
-  LD_SO_HACK_CONF="${INSTALL_ROOT}/etc/ld.so.conf.d/zz_hack.conf"
-  echo /usr/lib/gcc/x86_64-linux-gnu/4.6 > "$LD_SO_HACK_CONF"
-  echo /usr/lib >> "$LD_SO_HACK_CONF"
 }
 
 
@@ -318,11 +313,6 @@ HacksAndPatchesI386() {
   mkdir -p ${INSTALL_ROOT}/usr/lib/pkgconfig
   mv ${INSTALL_ROOT}/usr/lib/i386-linux-gnu/pkgconfig/* \
     ${INSTALL_ROOT}/usr/lib/pkgconfig
-
-  SubBanner "Adding an additional ld.conf include"
-  LD_SO_HACK_CONF="${INSTALL_ROOT}/etc/ld.so.conf.d/zz_hack.conf"
-  echo /usr/lib/gcc/i486-linux-gnu/4.6 > "$LD_SO_HACK_CONF"
-  echo /usr/lib >> "$LD_SO_HACK_CONF"
 }
 
 
@@ -860,7 +850,7 @@ PrintDistro() {
 #@
 #@ DumpRelease
 #@
-#@    Prints disto release.  eg: trusty
+#@    Prints disto release.  eg: jessie
 PrintRelease() {
   echo ${DIST}
 }

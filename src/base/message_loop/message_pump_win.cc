@@ -106,7 +106,7 @@ void MessagePumpForUI::ScheduleWork() {
     return;  // There was room in the Window Message queue.
 
   // We have failed to insert a have-work message, so there is a chance that we
-  // will starve tasks/timers while sitting in a nested message loop.  Nested
+  // will starve tasks/timers while sitting in a nested run loop.  Nested
   // loops only look at Windows Message queues, and don't look at *our* task
   // queues, etc., so we might not get a time slice in such. :-(
   // We could abort here, but the fear is that this failure mode is plausibly

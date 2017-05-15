@@ -1040,13 +1040,13 @@ TEST_F(DeferredCookieTaskTest, DeferredSetAllCookies) {
   MockSetCookiesCallback set_cookies_callback;
   CookieList list;
   list.push_back(*CanonicalCookie::Create(
-      http_www_google_.url(), "A", "B", http_www_google_.domain(), "/",
-      base::Time::Now(), base::Time(), false, true,
-      CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
+      "A", "B", "." + http_www_google_.domain(), "/", base::Time::Now(),
+      base::Time(), base::Time(), false, true, CookieSameSite::DEFAULT_MODE,
+      COOKIE_PRIORITY_DEFAULT));
   list.push_back(*CanonicalCookie::Create(
-      http_www_google_.url(), "C", "D", http_www_google_.domain(), "/",
-      base::Time::Now(), base::Time(), false, true,
-      CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
+      "C", "D", "." + http_www_google_.domain(), "/", base::Time::Now(),
+      base::Time(), base::Time(), false, true, CookieSameSite::DEFAULT_MODE,
+      COOKIE_PRIORITY_DEFAULT));
 
   BeginWith(
       SetAllCookiesAction(&cookie_monster(), list, &set_cookies_callback));
@@ -2534,17 +2534,17 @@ TEST_F(CookieMonsterTest, SetAllCookies) {
 
   CookieList list;
   list.push_back(*CanonicalCookie::Create(
-      http_www_google_.url(), "A", "B", http_www_google_.url().host(), "/",
-      base::Time::Now(), base::Time(), false, false,
-      CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
+      "A", "B", "." + http_www_google_.url().host(), "/", base::Time::Now(),
+      base::Time(), base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
+      COOKIE_PRIORITY_DEFAULT));
   list.push_back(*CanonicalCookie::Create(
-      http_www_google_.url(), "W", "X", http_www_google_.url().host(), "/bar",
-      base::Time::Now(), base::Time(), false, false,
-      CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
+      "W", "X", "." + http_www_google_.url().host(), "/bar", base::Time::Now(),
+      base::Time(), base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
+      COOKIE_PRIORITY_DEFAULT));
   list.push_back(*CanonicalCookie::Create(
-      http_www_google_.url(), "Y", "Z", http_www_google_.url().host(), "/",
-      base::Time::Now(), base::Time(), false, false,
-      CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
+      "Y", "Z", "." + http_www_google_.url().host(), "/", base::Time::Now(),
+      base::Time(), base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
+      COOKIE_PRIORITY_DEFAULT));
 
   // SetAllCookies must not flush.
   ASSERT_EQ(0, store->flush_count());
@@ -2577,53 +2577,53 @@ TEST_F(CookieMonsterTest, ComputeCookieDiff) {
   base::Time creation_time = now - base::TimeDelta::FromSeconds(1);
 
   std::unique_ptr<CanonicalCookie> cookie1(CanonicalCookie::Create(
-      http_www_google_.url(), "A", "B", http_www_google_.url().host(), "/",
-      creation_time, base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
+      "A", "B", "." + http_www_google_.url().host(), "/", creation_time,
+      base::Time(), base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
       COOKIE_PRIORITY_DEFAULT));
   std::unique_ptr<CanonicalCookie> cookie2(CanonicalCookie::Create(
-      http_www_google_.url(), "C", "D", http_www_google_.url().host(), "/",
-      creation_time, base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
+      "C", "D", "." + http_www_google_.url().host(), "/", creation_time,
+      base::Time(), base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
       COOKIE_PRIORITY_DEFAULT));
   std::unique_ptr<CanonicalCookie> cookie3(CanonicalCookie::Create(
-      http_www_google_.url(), "E", "F", http_www_google_.url().host(), "/",
-      creation_time, base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
+      "E", "F", "." + http_www_google_.url().host(), "/", creation_time,
+      base::Time(), base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
       COOKIE_PRIORITY_DEFAULT));
   std::unique_ptr<CanonicalCookie> cookie4(CanonicalCookie::Create(
-      http_www_google_.url(), "G", "H", http_www_google_.url().host(), "/",
-      creation_time, base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
+      "G", "H", "." + http_www_google_.url().host(), "/", creation_time,
+      base::Time(), base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
       COOKIE_PRIORITY_DEFAULT));
   std::unique_ptr<CanonicalCookie> cookie4_with_new_value(
       CanonicalCookie::Create(
-          http_www_google_.url(), "G", "iamnew", http_www_google_.url().host(),
-          "/", creation_time, base::Time(), false, false,
+          "G", "iamnew", "." + http_www_google_.url().host(), "/",
+          creation_time, base::Time(), base::Time(), false, false,
           CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
   std::unique_ptr<CanonicalCookie> cookie5(CanonicalCookie::Create(
-      http_www_google_.url(), "I", "J", http_www_google_.url().host(), "/",
-      creation_time, base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
+      "I", "J", "." + http_www_google_.url().host(), "/", creation_time,
+      base::Time(), base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
       COOKIE_PRIORITY_DEFAULT));
   std::unique_ptr<CanonicalCookie> cookie5_with_new_creation_time(
-      CanonicalCookie::Create(
-          http_www_google_.url(), "I", "J", http_www_google_.url().host(), "/",
-          now, base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
-          COOKIE_PRIORITY_DEFAULT));
+      CanonicalCookie::Create("I", "J", "." + http_www_google_.url().host(),
+                              "/", now, base::Time(), base::Time(), false,
+                              false, CookieSameSite::DEFAULT_MODE,
+                              COOKIE_PRIORITY_DEFAULT));
   std::unique_ptr<CanonicalCookie> cookie6(CanonicalCookie::Create(
-      http_www_google_.url(), "K", "L", http_www_google_.url().host(), "/foo",
-      creation_time, base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
+      "K", "L", "." + http_www_google_.url().host(), "/foo", creation_time,
+      base::Time(), base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
       COOKIE_PRIORITY_DEFAULT));
   std::unique_ptr<CanonicalCookie> cookie6_with_new_path(
-      CanonicalCookie::Create(
-          http_www_google_.url(), "K", "L", http_www_google_.url().host(),
-          "/bar", creation_time, base::Time(), false, false,
-          CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
+      CanonicalCookie::Create("K", "L", "." + http_www_google_.url().host(),
+                              "/bar", creation_time, base::Time(), base::Time(),
+                              false, false, CookieSameSite::DEFAULT_MODE,
+                              COOKIE_PRIORITY_DEFAULT));
   std::unique_ptr<CanonicalCookie> cookie7(CanonicalCookie::Create(
-      http_www_google_.url(), "M", "N", http_www_google_.url().host(), "/foo",
-      creation_time, base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
+      "M", "N", "." + http_www_google_.url().host(), "/foo", creation_time,
+      base::Time(), base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
       COOKIE_PRIORITY_DEFAULT));
   std::unique_ptr<CanonicalCookie> cookie7_with_new_path(
-      CanonicalCookie::Create(
-          http_www_google_.url(), "M", "N", http_www_google_.url().host(),
-          "/bar", creation_time, base::Time(), false, false,
-          CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
+      CanonicalCookie::Create("M", "N", "." + http_www_google_.url().host(),
+                              "/bar", creation_time, base::Time(), base::Time(),
+                              false, false, CookieSameSite::DEFAULT_MODE,
+                              COOKIE_PRIORITY_DEFAULT));
 
   CookieList old_cookies;
   old_cookies.push_back(*cookie1);
@@ -2836,11 +2836,11 @@ TEST_F(CookieMonsterTest, ControlCharacterPurge) {
   // We have to manually build this cookie because it contains a control
   // character, and our cookie line parser rejects control characters.
   std::unique_ptr<CanonicalCookie> cc = CanonicalCookie::Create(
-      url, "baz",
+      "baz",
       "\x05"
       "boo",
-      domain, path, now2, later, false, false, CookieSameSite::DEFAULT_MODE,
-      COOKIE_PRIORITY_DEFAULT);
+      "." + domain, path, now2, later, base::Time(), false, false,
+      CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT);
   initial_cookies.push_back(std::move(cc));
 
   AddCookieToList(url, "hello=world; path=" + path, now3, &initial_cookies);

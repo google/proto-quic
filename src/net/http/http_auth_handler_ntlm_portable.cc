@@ -72,15 +72,15 @@ namespace net {
 
 #if defined(ARCH_CPU_LITTLE_ENDIAN)
 #define IS_LITTLE_ENDIAN 1
-#undef  IS_BIG_ENDIAN
+#undef IS_BIG_ENDIAN
 #elif defined(ARCH_CPU_BIG_ENDIAN)
 #define IS_BIG_ENDIAN 1
-#undef  IS_LITTLE_ENDIAN
+#undef IS_LITTLE_ENDIAN
 #else
 #error "Unknown endianness"
 #endif
 
-#define NTLM_LOG(x) ((void) 0)
+#define NTLM_LOG(x) ((void)0)
 
 //-----------------------------------------------------------------------------
 // This file contains a cross-platform NTLM authentication implementation. It
@@ -88,54 +88,53 @@ namespace net {
 //-----------------------------------------------------------------------------
 
 enum {
-  NTLM_NegotiateUnicode             = 0x00000001,
-  NTLM_NegotiateOEM                 = 0x00000002,
-  NTLM_RequestTarget                = 0x00000004,
-  NTLM_Unknown1                     = 0x00000008,
-  NTLM_NegotiateSign                = 0x00000010,
-  NTLM_NegotiateSeal                = 0x00000020,
-  NTLM_NegotiateDatagramStyle       = 0x00000040,
-  NTLM_NegotiateLanManagerKey       = 0x00000080,
-  NTLM_NegotiateNetware             = 0x00000100,
-  NTLM_NegotiateNTLMKey             = 0x00000200,
-  NTLM_Unknown2                     = 0x00000400,
-  NTLM_Unknown3                     = 0x00000800,
-  NTLM_NegotiateDomainSupplied      = 0x00001000,
+  NTLM_NegotiateUnicode = 0x00000001,
+  NTLM_NegotiateOEM = 0x00000002,
+  NTLM_RequestTarget = 0x00000004,
+  NTLM_Unknown1 = 0x00000008,
+  NTLM_NegotiateSign = 0x00000010,
+  NTLM_NegotiateSeal = 0x00000020,
+  NTLM_NegotiateDatagramStyle = 0x00000040,
+  NTLM_NegotiateLanManagerKey = 0x00000080,
+  NTLM_NegotiateNetware = 0x00000100,
+  NTLM_NegotiateNTLMKey = 0x00000200,
+  NTLM_Unknown2 = 0x00000400,
+  NTLM_Unknown3 = 0x00000800,
+  NTLM_NegotiateDomainSupplied = 0x00001000,
   NTLM_NegotiateWorkstationSupplied = 0x00002000,
-  NTLM_NegotiateLocalCall           = 0x00004000,
-  NTLM_NegotiateAlwaysSign          = 0x00008000,
-  NTLM_TargetTypeDomain             = 0x00010000,
-  NTLM_TargetTypeServer             = 0x00020000,
-  NTLM_TargetTypeShare              = 0x00040000,
-  NTLM_NegotiateNTLM2Key            = 0x00080000,
-  NTLM_RequestInitResponse          = 0x00100000,
-  NTLM_RequestAcceptResponse        = 0x00200000,
-  NTLM_RequestNonNTSessionKey       = 0x00400000,
-  NTLM_NegotiateTargetInfo          = 0x00800000,
-  NTLM_Unknown4                     = 0x01000000,
-  NTLM_Unknown5                     = 0x02000000,
-  NTLM_Unknown6                     = 0x04000000,
-  NTLM_Unknown7                     = 0x08000000,
-  NTLM_Unknown8                     = 0x10000000,
-  NTLM_Negotiate128                 = 0x20000000,
-  NTLM_NegotiateKeyExchange         = 0x40000000,
-  NTLM_Negotiate56                  = 0x80000000
+  NTLM_NegotiateLocalCall = 0x00004000,
+  NTLM_NegotiateAlwaysSign = 0x00008000,
+  NTLM_TargetTypeDomain = 0x00010000,
+  NTLM_TargetTypeServer = 0x00020000,
+  NTLM_TargetTypeShare = 0x00040000,
+  NTLM_NegotiateNTLM2Key = 0x00080000,
+  NTLM_RequestInitResponse = 0x00100000,
+  NTLM_RequestAcceptResponse = 0x00200000,
+  NTLM_RequestNonNTSessionKey = 0x00400000,
+  NTLM_NegotiateTargetInfo = 0x00800000,
+  NTLM_Unknown4 = 0x01000000,
+  NTLM_Unknown5 = 0x02000000,
+  NTLM_Unknown6 = 0x04000000,
+  NTLM_Unknown7 = 0x08000000,
+  NTLM_Unknown8 = 0x10000000,
+  NTLM_Negotiate128 = 0x20000000,
+  NTLM_NegotiateKeyExchange = 0x40000000,
+  NTLM_Negotiate56 = 0x80000000
 };
 
 // We send these flags with our type 1 message.
 enum {
-  NTLM_TYPE1_FLAGS = (NTLM_NegotiateUnicode |
-                      NTLM_NegotiateOEM |
-                      NTLM_RequestTarget |
-                      NTLM_NegotiateNTLMKey |
-                      NTLM_NegotiateAlwaysSign |
-                      NTLM_NegotiateNTLM2Key)
+  NTLM_TYPE1_FLAGS =
+      (NTLM_NegotiateUnicode | NTLM_NegotiateOEM | NTLM_RequestTarget |
+       NTLM_NegotiateNTLMKey |
+       NTLM_NegotiateAlwaysSign |
+       NTLM_NegotiateNTLM2Key)
 };
 
 static const char NTLM_SIGNATURE[] = "NTLMSSP";
-static const char NTLM_TYPE1_MARKER[] = { 0x01, 0x00, 0x00, 0x00 };
-static const char NTLM_TYPE2_MARKER[] = { 0x02, 0x00, 0x00, 0x00 };
-static const char NTLM_TYPE3_MARKER[] = { 0x03, 0x00, 0x00, 0x00 };
+static const char NTLM_TYPE1_MARKER[] = {0x01, 0x00, 0x00, 0x00};
+static const char NTLM_TYPE2_MARKER[] = {0x02, 0x00, 0x00, 0x00};
+static const char NTLM_TYPE3_MARKER[] = {0x03, 0x00, 0x00, 0x00};
 
 enum {
   NTLM_TYPE1_HEADER_LEN = 32,
@@ -167,15 +166,15 @@ static bool SendLM() {
 
 //-----------------------------------------------------------------------------
 
-#define LogFlags(x) ((void) 0)
-#define LogBuf(a, b, c) ((void) 0)
-#define LogToken(a, b, c) ((void) 0)
+#define LogFlags(x) ((void)0)
+#define LogBuf(a, b, c) ((void)0)
+#define LogToken(a, b, c) ((void)0)
 
 //-----------------------------------------------------------------------------
 
 // Byte order swapping.
-#define SWAP16(x) ((((x) & 0xff) << 8) | (((x) >> 8) & 0xff))
-#define SWAP32(x) ((SWAP16((x) & 0xffff) << 16) | (SWAP16((x) >> 16)))
+#define SWAP16(x) ((((x)&0xff) << 8) | (((x) >> 8) & 0xff))
+#define SWAP32(x) ((SWAP16((x)&0xffff) << 16) | (SWAP16((x) >> 16)))
 
 static void* WriteBytes(void* buf, const void* data, uint32_t data_len) {
   memcpy(buf, data, data_len);
@@ -317,8 +316,8 @@ static void LM_Response(const uint8_t* hash,
   memcpy(keybytes, hash, 16);
   ZapBuf(keybytes + 16, 5);
 
-  DESMakeKey(keybytes     , k1);
-  DESMakeKey(keybytes +  7, k2);
+  DESMakeKey(keybytes, k1);
+  DESMakeKey(keybytes + 7, k2);
   DESMakeKey(keybytes + 14, k3);
 
   DESEncrypt(k1, challenge, response);
@@ -370,10 +369,10 @@ static int GenerateType1Msg(void** out_buf, uint32_t* out_len) {
 }
 
 struct Type2Msg {
-  uint32_t flags;            // NTLM_Xxx bitwise combination
-  uint8_t challenge[8];      // 8 byte challenge
-  const void* target;        // target string (type depends on flags)
-  uint32_t target_len;       // target length in bytes
+  uint32_t flags;        // NTLM_Xxx bitwise combination
+  uint8_t challenge[8];  // 8 byte challenge
+  const void* target;    // target string (type depends on flags)
+  uint32_t target_len;   // target length in bytes
 };
 
 // Returns OK or a network error code.
@@ -406,7 +405,7 @@ static int ParseType2Msg(const void* in_buf, uint32_t in_len, Type2Msg* msg) {
 
   // read target name security buffer
   uint32_t target_len = ReadUint16(cursor);
-  ReadUint16(cursor);  // discard next 16-bit value
+  ReadUint16(cursor);                    // discard next 16-bit value
   uint32_t offset = ReadUint32(cursor);  // get offset from in_buf
   msg->target_len = 0;
   msg->target = NULL;
@@ -462,7 +461,7 @@ static int GenerateType3Msg(const base::string16& domain,
 
   bool unicode = (msg.flags & NTLM_NegotiateUnicode) != 0;
 
-  // Temporary buffers for unicode strings
+// Temporary buffers for unicode strings
 #ifdef IS_BIG_ENDIAN
   base::string16 ucs_domain_buf, ucs_user_buf;
 #endif
@@ -485,8 +484,7 @@ static int GenerateType3Msg(const base::string16& domain,
     domain_ptr = ucs_domain_buf.data();
     domain_len = ucs_domain_buf.length() * 2;
     WriteUnicodeLE(const_cast<void*>(domain_ptr),
-                   (const base::char16*) domain_ptr,
-                   ucs_domain_buf.length());
+                   (const base::char16*)domain_ptr, ucs_domain_buf.length());
 #else
     domain_ptr = domain.data();
     domain_len = domain.length() * 2;
@@ -505,7 +503,7 @@ static int GenerateType3Msg(const base::string16& domain,
     ucs_user_buf = username;
     user_ptr = ucs_user_buf.data();
     user_len = ucs_user_buf.length() * 2;
-    WriteUnicodeLE(const_cast<void*>(user_ptr), (const base::char16*) user_ptr,
+    WriteUnicodeLE(const_cast<void*>(user_ptr), (const base::char16*)user_ptr,
                    ucs_user_buf.length());
 #else
     user_ptr = username.data();
@@ -526,7 +524,7 @@ static int GenerateType3Msg(const base::string16& domain,
     host_ptr = ucs_host_buf.data();
     host_len = ucs_host_buf.length() * 2;
 #ifdef IS_BIG_ENDIAN
-    WriteUnicodeLE(const_cast<void*>(host_ptr), (const base::char16*) host_ptr,
+    WriteUnicodeLE(const_cast<void*>(host_ptr), (const base::char16*)host_ptr,
                    ucs_host_buf.length());
 #endif
   } else {
@@ -630,14 +628,13 @@ static int GenerateType3Msg(const base::string16& domain,
 
 // static
 HttpAuthHandlerNTLM::GenerateRandomProc
-HttpAuthHandlerNTLM::generate_random_proc_ = GenerateRandom;
+    HttpAuthHandlerNTLM::generate_random_proc_ = GenerateRandom;
 
 // static
-HttpAuthHandlerNTLM::HostNameProc
-HttpAuthHandlerNTLM::get_host_name_proc_ = GetHostName;
+HttpAuthHandlerNTLM::HostNameProc HttpAuthHandlerNTLM::get_host_name_proc_ =
+    GetHostName;
 
-HttpAuthHandlerNTLM::HttpAuthHandlerNTLM() {
-}
+HttpAuthHandlerNTLM::HttpAuthHandlerNTLM() {}
 
 bool HttpAuthHandlerNTLM::NeedsIdentity() {
   // This gets called for each round-trip.  Only require identity on
@@ -662,8 +659,7 @@ HttpAuthHandlerNTLM::~HttpAuthHandlerNTLM() {
 
 // static
 HttpAuthHandlerNTLM::GenerateRandomProc
-HttpAuthHandlerNTLM::SetGenerateRandomProc(
-    GenerateRandomProc proc) {
+HttpAuthHandlerNTLM::SetGenerateRandomProc(GenerateRandomProc proc) {
   GenerateRandomProc old_proc = generate_random_proc_;
   generate_random_proc_ = proc;
   return old_proc;
@@ -677,11 +673,9 @@ HttpAuthHandlerNTLM::HostNameProc HttpAuthHandlerNTLM::SetHostNameProc(
   return old_proc;
 }
 
-HttpAuthHandlerNTLM::Factory::Factory() {
-}
+HttpAuthHandlerNTLM::Factory::Factory() {}
 
-HttpAuthHandlerNTLM::Factory::~Factory() {
-}
+HttpAuthHandlerNTLM::Factory::~Factory() {}
 
 int HttpAuthHandlerNTLM::GetNextToken(const void* in_token,
                                       uint32_t in_token_len,
@@ -697,10 +691,9 @@ int HttpAuthHandlerNTLM::GetNextToken(const void* in_token,
       return ERR_UNEXPECTED;
     uint8_t rand_buf[8];
     generate_random_proc_(rand_buf, 8);
-    rv = GenerateType3Msg(domain_,
-                          credentials_.username(), credentials_.password(),
-                          hostname, rand_buf,
-                          in_token, in_token_len, out_token, out_token_len);
+    rv = GenerateType3Msg(domain_, credentials_.username(),
+                          credentials_.password(), hostname, rand_buf, in_token,
+                          in_token_len, out_token, out_token_len);
   } else {
     rv = GenerateType1Msg(out_token, out_token_len);
   }

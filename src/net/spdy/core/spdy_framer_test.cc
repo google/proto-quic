@@ -8,11 +8,8 @@
 #include <string.h>
 
 #include <algorithm>
-#include <cstdint>
 #include <limits>
-#include <memory>
 #include <tuple>
-#include <utility>
 #include <vector>
 
 #include "base/compiler_specific.h"
@@ -410,8 +407,9 @@ class TestSpdyVisitor : public SpdyFramerVisitorInterface,
         data_frame_count_(0),
         last_payload_len_(0),
         last_frame_len_(0),
-        header_buffer_(kDefaultHeaderBufferSize),
+        header_buffer_(new char[kDefaultHeaderBufferSize]),
         header_buffer_length_(0),
+        header_buffer_size_(kDefaultHeaderBufferSize),
         header_stream_id_(static_cast<SpdyStreamId>(-1)),
         header_control_type_(SpdyFrameType::DATA),
         header_buffer_valid_(false) {}
@@ -617,7 +615,7 @@ class TestSpdyVisitor : public SpdyFramerVisitorInterface,
       DLOG(FATAL) << "Attempted to init header streaming with "
                   << "invalid control frame type: " << header_control_type;
     }
-    std::fill(header_buffer_.begin(), header_buffer_.end(), 0);
+    memset(header_buffer_.get(), 0, header_buffer_size_);
     header_buffer_length_ = 0;
     header_stream_id_ = stream_id;
     header_control_type_ = header_control_type;
@@ -631,7 +629,8 @@ class TestSpdyVisitor : public SpdyFramerVisitorInterface,
 
   // Override the default buffer size (16K). Call before using the framer!
   void set_header_buffer_size(size_t header_buffer_size) {
-    header_buffer_.resize(header_buffer_size);
+    header_buffer_size_ = header_buffer_size;
+    header_buffer_.reset(new char[header_buffer_size]);
   }
 
   // Largest control frame that the SPDY implementation sends, including the
@@ -681,8 +680,9 @@ class TestSpdyVisitor : public SpdyFramerVisitorInterface,
   size_t last_frame_len_;
 
   // Header block streaming state:
-  std::vector<char> header_buffer_;
+  std::unique_ptr<char[]> header_buffer_;
   size_t header_buffer_length_;
+  size_t header_buffer_size_;
   size_t header_bytes_received_;
   SpdyStreamId header_stream_id_;
   SpdyFrameType header_control_type_;
@@ -854,41 +854,6 @@ TEST_P(SpdyFramerTest, UndersizedHeaderBlockInBuffer) {
 
   EXPECT_EQ(0, visitor.zero_length_control_frame_header_data_count_);
   EXPECT_EQ(0u, visitor.headers_.size());
-}
-
-// Test that we treat incoming upper-case or mixed-case header values as
-// malformed.
-TEST_P(SpdyFramerTest, RejectUpperCaseHeaderBlockValue) {
-  SpdyFramer framer(SpdyFramer::DISABLE_COMPRESSION);
-
-  SpdyFrameBuilder frame(1024);
-  frame.BeginNewFrame(framer, SpdyFrameType::HEADERS, 0, 1);
-  frame.WriteUInt32(1);
-  frame.WriteStringPiece32("Name1");
-  frame.WriteStringPiece32("value1");
-  frame.OverwriteLength(framer, frame.length() - framer.GetFrameHeaderSize());
-
-  SpdyFrameBuilder frame2(1024);
-  frame2.BeginNewFrame(framer, SpdyFrameType::HEADERS, 0, 1);
-  frame2.WriteUInt32(2);
-  frame2.WriteStringPiece32("name1");
-  frame2.WriteStringPiece32("value1");
-  frame2.WriteStringPiece32("nAmE2");
-  frame2.WriteStringPiece32("value2");
-  frame.OverwriteLength(framer, frame2.length() - framer.GetFrameHeaderSize());
-
-  SpdySerializedFrame control_frame(frame.take());
-  SpdyStringPiece serialized_headers =
-      GetSerializedHeaders(control_frame, framer);
-  SpdySerializedFrame control_frame2(frame2.take());
-  SpdyStringPiece serialized_headers2 =
-      GetSerializedHeaders(control_frame2, framer);
-
-  SpdyHeaderBlock new_headers;
-  EXPECT_FALSE(framer.ParseHeaderBlockInBuffer(
-      serialized_headers.data(), serialized_headers.size(), &new_headers));
-  EXPECT_FALSE(framer.ParseHeaderBlockInBuffer(
-      serialized_headers2.data(), serialized_headers2.size(), &new_headers));
 }
 
 // Test that we can encode and decode stream dependency values in a header
@@ -1301,38 +1266,8 @@ TEST_P(SpdyFramerTest, PushPromiseWithPromisedStreamIdZero) {
       << SpdyFramer::SpdyFramerErrorToString(framer.spdy_framer_error());
 }
 
-TEST_P(SpdyFramerTest, DuplicateHeader) {
-  SpdyFramer framer(SpdyFramer::DISABLE_COMPRESSION);
-  // Frame builder with plentiful buffer size.
-  SpdyFrameBuilder frame(1024);
-  frame.BeginNewFrame(framer, SpdyFrameType::HEADERS, 0, 3);
-
-  frame.WriteUInt32(2);  // Number of headers.
-  frame.WriteStringPiece32("name");
-  frame.WriteStringPiece32("value1");
-  frame.WriteStringPiece32("name");
-  frame.WriteStringPiece32("value2");
-  // write the length
-  frame.OverwriteLength(framer, frame.length() - framer.GetFrameHeaderSize());
-
-  SpdyHeaderBlock new_headers;
-  SpdySerializedFrame control_frame(frame.take());
-  SpdyStringPiece serialized_headers =
-      GetSerializedHeaders(control_frame, framer);
-  // This should fail because duplicate headers are verboten by the spec.
-  EXPECT_FALSE(framer.ParseHeaderBlockInBuffer(
-      serialized_headers.data(), serialized_headers.size(), &new_headers));
-}
-
 TEST_P(SpdyFramerTest, MultiValueHeader) {
   SpdyFramer framer(SpdyFramer::DISABLE_COMPRESSION);
-  // Frame builder with plentiful buffer size.
-  SpdyFrameBuilder frame(1024);
-  frame.BeginNewFrame(framer, SpdyFrameType::HEADERS,
-                      HEADERS_FLAG_PRIORITY | HEADERS_FLAG_END_HEADERS, 3);
-  frame.WriteUInt32(0);   // Priority exclusivity and dependent stream.
-  frame.WriteUInt8(255);  // Priority weight.
-
   SpdyString value("value1\0value2", 13);
   // TODO(jgraettinger): If this pattern appears again, move to test class.
   SpdyHeaderBlock header_set;
@@ -1341,9 +1276,14 @@ TEST_P(SpdyFramerTest, MultiValueHeader) {
   HpackEncoder encoder(ObtainHpackHuffmanTable());
   encoder.DisableCompression();
   encoder.EncodeHeaderSet(header_set, &buffer);
+  // Frame builder with plentiful buffer size.
+  SpdyFrameBuilder frame(1024);
+  frame.BeginNewFrame(framer, SpdyFrameType::HEADERS,
+                      HEADERS_FLAG_PRIORITY | HEADERS_FLAG_END_HEADERS, 3,
+                      buffer.size() + 5 /* priority */);
+  frame.WriteUInt32(0);   // Priority exclusivity and dependent stream.
+  frame.WriteUInt8(255);  // Priority weight.
   frame.WriteBytes(&buffer[0], buffer.size());
-  // write the length
-  frame.OverwriteLength(framer, frame.length() - framer.GetFrameHeaderSize());
 
   SpdySerializedFrame control_frame(frame.take());
 
@@ -3033,7 +2973,7 @@ TEST_P(SpdyFramerTest, ControlFrameMuchTooLarge) {
       control_frame.size());
   // It's up to the visitor to ignore extraneous header data; the framer
   // won't throw an error.
-  EXPECT_GT(visitor.header_bytes_received_, visitor.header_buffer_.size());
+  EXPECT_GT(visitor.header_bytes_received_, visitor.header_buffer_size_);
   EXPECT_EQ(1, visitor.end_of_stream_count_);
 }
 

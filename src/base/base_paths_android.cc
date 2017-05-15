@@ -21,14 +21,12 @@ namespace base {
 bool PathProviderAndroid(int key, FilePath* result) {
   switch (key) {
     case base::FILE_EXE: {
-      char bin_dir[PATH_MAX + 1];
-      int bin_dir_size = readlink(kProcSelfExe, bin_dir, PATH_MAX);
-      if (bin_dir_size < 0 || bin_dir_size > PATH_MAX) {
+      FilePath bin_dir;
+      if (!ReadSymbolicLink(FilePath(kProcSelfExe), &bin_dir)) {
         NOTREACHED() << "Unable to resolve " << kProcSelfExe << ".";
         return false;
       }
-      bin_dir[bin_dir_size] = 0;
-      *result = FilePath(bin_dir);
+      *result = bin_dir;
       return true;
     }
     case base::FILE_MODULE:

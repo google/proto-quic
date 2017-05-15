@@ -8,6 +8,7 @@
 #ifndef NET_URL_REQUEST_URL_REQUEST_CONTEXT_H_
 #define NET_URL_REQUEST_URL_REQUEST_CONTEXT_H_
 
+#include <map>
 #include <memory>
 #include <set>
 #include <string>
@@ -225,6 +226,15 @@ class NET_EXPORT URLRequestContext
     return url_requests_;
   }
 
+  // TODO(xunjieli): Temporary to investigate crbug.com/711721.
+
+  // Adds |address| to |address_map_|. Return false if the same address has been
+  // added for more than 1000 times but is not yet removed from the map.
+  bool AddToAddressMap(const void* const address);
+
+  // Removes |address| from |address_map_|.
+  void RemoveFromAddressMap(const void* const address) const;
+
   void InsertURLRequest(const URLRequest* request) const;
 
   void RemoveURLRequest(const URLRequest* request) const;
@@ -332,6 +342,16 @@ class NET_EXPORT URLRequestContext
   // The largest number of outstanding URLRequests that have been created by
   // |this| and are not yet destroyed. This doesn't need to be in CopyFrom.
   mutable size_t largest_outstanding_requests_count_seen_;
+
+  // TODO(xunjieli): Remove after crbug.com/711721 is fixed.
+
+  // A map of frame address to the number of outstanding requests that are
+  // associated with that address.
+  mutable std::map<const void* const, int> address_map_;
+
+  // Whether AddToAddressMap() has reported false. This is to avoid gathering
+  // too many crash dumps when users run into this scenario.
+  bool has_reported_too_many_outstanding_requests_;
 
   DISALLOW_COPY_AND_ASSIGN(URLRequestContext);
 };

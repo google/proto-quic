@@ -10,6 +10,7 @@
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 
 #include "base/macros.h"
 #include "net/spdy/core/hpack/hpack_entry.h"

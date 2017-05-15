@@ -779,6 +779,10 @@ void QuicDispatcher::ProcessChlo() {
   }
 }
 
+const QuicSocketAddress QuicDispatcher::GetClientAddress() const {
+  return current_client_address_;
+}
+
 bool QuicDispatcher::HandlePacketForTimeWait(
     const QuicPacketPublicHeader& header) {
   if (header.reset_flag) {
@@ -857,8 +861,7 @@ void QuicDispatcher::MaybeRejectStatelessly(QuicConnectionId connection_id,
   std::unique_ptr<StatelessRejector> rejector(new StatelessRejector(
       version, GetSupportedVersions(), crypto_config_, &compressed_certs_cache_,
       helper()->GetClock(), helper()->GetRandomGenerator(),
-      current_packet_->length(), current_client_address_,
-      current_server_address_));
+      current_packet_->length(), GetClientAddress(), current_server_address_));
   ChloValidator validator(session_helper_.get(), current_server_address_,
                           rejector.get());
   if (!ChloExtractor::Extract(*current_packet_, GetSupportedVersions(),

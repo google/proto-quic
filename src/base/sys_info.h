@@ -69,8 +69,9 @@ class BASE_EXPORT SysInfo {
 
   // Returns a descriptive string for the current machine model or an empty
   // string if the machine model is unknown or an error occured.
-  // e.g. "MacPro1,1" on Mac, or "Nexus 5" on Android. Only implemented on OS X,
-  // Android, and Chrome OS. This returns an empty string on other platforms.
+  // e.g. "MacPro1,1" on Mac, "iPhone9,3" on iOS or "Nexus 5" on Android. Only
+  // implemented on OS X, iOS, Android, and Chrome OS. This returns an empty
+  // string on other platforms.
   static std::string HardwareModelName();
 
   // Returns the name of the host operating system.

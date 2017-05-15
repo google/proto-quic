@@ -736,13 +736,9 @@ class IDLParser(object):
 
   # [59]
   def p_Iterable(self, p):
-    """Iterable : ITERABLE '<' Type OptionalType '>' ';'
-                | LEGACYITERABLE '<' Type '>' ';'"""
-    if len(p) > 6:
-      childlist = ListFromConcat(p[3], p[4])
-      p[0] = self.BuildProduction('Iterable', p, 2, childlist)
-    else:
-      p[0] = self.BuildProduction('LegacyIterable', p, 2, p[3])
+    """Iterable : ITERABLE '<' Type OptionalType '>' ';'"""
+    childlist = ListFromConcat(p[3], p[4])
+    p[0] = self.BuildProduction('Iterable', p, 2, childlist)
 
   # [60]
   def p_OptionalType(self, p):

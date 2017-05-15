@@ -11,6 +11,7 @@
 #include "base/location.h"
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/message_loop/message_loop.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/single_thread_task_runner.h"
 #include "base/threading/thread.h"
@@ -200,8 +201,8 @@ NetworkChangeNotifierWin::RecomputeCurrentConnectionType() const {
       << "WSALookupServiceEnd() failed with: " << result;
 
   // TODO(droger): Return something more detailed than CONNECTION_UNKNOWN.
-  return found_connection ? NetworkChangeNotifier::CONNECTION_UNKNOWN :
-                            NetworkChangeNotifier::CONNECTION_NONE;
+  return found_connection ? ConnectionTypeFromInterfaces()
+                          : NetworkChangeNotifier::CONNECTION_NONE;
 }
 
 NetworkChangeNotifier::ConnectionType

@@ -96,6 +96,9 @@ class NET_EXPORT CertPathBuilder {
     // was none.
     const ResultPath* GetBestValidPath() const;
 
+    // Resets to the initial value.
+    void Clear();
+
     // List of paths that were attempted and the result for each.
     std::vector<std::unique_ptr<ResultPath>> paths;
 
@@ -110,9 +113,6 @@ class NET_EXPORT CertPathBuilder {
 
   // TODO(mattm): allow caller specified hook/callback to extend path
   // verification.
-  //
-  // TODO(eroman): The assumption is that |result| is default initialized. Can
-  // probably just internalize |result| into CertPathBuilder.
   //
   // Creates a CertPathBuilder that attempts to find a path from |cert| to a
   // trust anchor in |trust_store|, which satisfies |signature_policy| and is

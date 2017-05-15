@@ -20,6 +20,23 @@
 
 namespace base {
 
+namespace {
+
+// Queries sysctlbyname() for the given key and returns the value from the
+// system or the empty string on failure.
+std::string GetSysctlValue(const char* key_name) {
+  char value[256];
+  size_t len = arraysize(value);
+  if (sysctlbyname(key_name, &value, &len, nullptr, 0) == 0) {
+    DCHECK_GE(len, 1u);
+    DCHECK_EQ('\0', value[len - 1]);
+    return std::string(value, len - 1);
+  }
+  return std::string();
+}
+
+}  // namespace
+
 // static
 std::string SysInfo::OperatingSystemName() {
   static dispatch_once_t get_system_name_once;
@@ -94,11 +111,20 @@ int64_t SysInfo::AmountOfAvailablePhysicalMemory() {
 
 // static
 std::string SysInfo::CPUModelName() {
-  char name[256];
-  size_t len = arraysize(name);
-  if (sysctlbyname("machdep.cpu.brand_string", &name, &len, NULL, 0) == 0)
-    return name;
-  return std::string();
+  return GetSysctlValue("machdep.cpu.brand_string");
+}
+
+// static
+std::string SysInfo::HardwareModelName() {
+#if TARGET_OS_SIMULATOR
+  // On the simulator, "hw.machine" returns "i386" or "x86_64" which doesn't
+  // match the expected format, so supply a fake string here.
+  return "Simulator1,1";
+#else
+  // Note: This uses "hw.machine" instead of "hw.model" like the Mac code,
+  // because "hw.model" doesn't always return the right string on some devices.
+  return GetSysctlValue("hw.machine");
+#endif
 }
 
 }  // namespace base

@@ -72,9 +72,9 @@ en{
         BZ{"Belize"}
         CA{"Canada"}
         CC{"Cocos (Keeling) Islands"}
-        CD{"Congo (DRC)"}
+        CD{"Congo - Kinshasa"}
         CF{"Central African Republic"}
-        CG{"Congo (Republic)"}
+        CG{"Congo - Brazzaville"}
         CH{"Switzerland"}
         CI{"Côte d’Ivoire"}
         CK{"Cook Islands"}
@@ -89,7 +89,7 @@ en{
         CW{"Curaçao"}
         CX{"Christmas Island"}
         CY{"Cyprus"}
-        CZ{"Czech Republic"}
+        CZ{"Czechia"}
         DE{"Germany"}
         DG{"Diego Garcia"}
         DJ{"Djibouti"}
@@ -305,10 +305,8 @@ en{
         CD{"Congo (DRC)"}
         CG{"Congo (Republic)"}
         CI{"Ivory Coast"}
-        CZ{"Czechia"}
-        FK{"Falkland Islands (Islas Malvinas)"}
-        MK{"Macedonia (FYROM)"}
+        CZ{"Czech Republic"}
         TL{"East Timor"}
     }
-    Version{"2.1.30.50"}
+    Version{"2.1.32.59"}
 }

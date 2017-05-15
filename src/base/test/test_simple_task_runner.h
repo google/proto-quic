@@ -50,7 +50,7 @@ class TestSimpleTaskRunner : public SingleThreadTaskRunner {
                                   OnceClosure task,
                                   TimeDelta delay) override;
 
-  bool RunsTasksOnCurrentThread() const override;
+  bool RunsTasksInCurrentSequence() const override;
 
   std::deque<TestPendingTask> TakePendingTasks();
   size_t NumPendingTasks() const;

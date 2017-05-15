@@ -7,6 +7,8 @@
 #include "base/environment.h"
 #include "base/files/file_util.h"
 #include "base/process/process_metrics.h"
+#include "base/strings/string_number_conversions.h"
+#include "base/strings/string_split.h"
 #include "base/sys_info.h"
 #include "base/threading/platform_thread.h"
 #include "base/time/time.h"
@@ -95,10 +97,17 @@ TEST_F(SysInfoTest, Uptime) {
   EXPECT_GT(up_time_2.InMicroseconds(), up_time_1.InMicroseconds());
 }
 
-#if defined(OS_MACOSX) && !defined(OS_IOS)
-TEST_F(SysInfoTest, HardwareModelName) {
+#if defined(OS_MACOSX)
+TEST_F(SysInfoTest, HardwareModelNameFormatMacAndiOS) {
   std::string hardware_model = SysInfo::HardwareModelName();
-  EXPECT_FALSE(hardware_model.empty());
+  ASSERT_FALSE(hardware_model.empty());
+  // Check that the model is of the expected format "Foo,Bar" where "Bar" is
+  // a number.
+  std::vector<StringPiece> pieces =
+      SplitStringPiece(hardware_model, ",", KEEP_WHITESPACE, SPLIT_WANT_ALL);
+  ASSERT_EQ(2u, pieces.size()) << hardware_model;
+  int value;
+  EXPECT_TRUE(StringToInt(pieces[1], &value)) << hardware_model;
 }
 #endif
 

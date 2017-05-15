@@ -12,6 +12,7 @@
 #include "base/compiler_specific.h"
 #include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
+#include "jni/AndroidProxyConfigServiceTestUtil_jni.h"
 #include "net/proxy/proxy_config.h"
 #include "net/proxy/proxy_info.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -43,6 +44,15 @@ class TestObserver : public ProxyConfigService::Observer {
  private:
   ProxyConfig config_;
   ProxyConfigService::ConfigAvailability availability_;
+};
+
+// Helper class that simply prepares Java's Looper on construction.
+class JavaLooperPreparer {
+ public:
+  JavaLooperPreparer() {
+    Java_AndroidProxyConfigServiceTestUtil_prepareLooper(
+        base::android::AttachCurrentThread());
+  }
 };
 
 }  // namespace
@@ -104,6 +114,10 @@ class ProxyConfigServiceAndroidTestBase : public testing::Test {
   StringMap configuration_;
   TestObserver observer_;
   base::MessageLoop* const message_loop_;
+  // |java_looper_preparer_| appears before |service_| so that Java's Looper is
+  // prepared before constructing |service_| as it creates a ProxyChangeListener
+  // which requires a Looper.
+  JavaLooperPreparer java_looper_preparer_;
   ProxyConfigServiceAndroid service_;
 };
 

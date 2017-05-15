@@ -108,7 +108,7 @@ ga{
         EU{"An tAontas Eorpach"}
         FI{"An Fhionlainn"}
         FJ{"Fidsí"}
-        FK{"Oileáin Fháclainne"}
+        FK{"Oileáin Fháclainne (Islas Malvinas)"}
         FM{"An Mhicrinéis"}
         FO{"Oileáin Fharó"}
         FR{"An Fhrainc"}
@@ -181,7 +181,7 @@ ga{
         MF{"Saint-Martin"}
         MG{"Madagascar"}
         MH{"Oileáin Marshall"}
-        MK{"An Mhacadóin"}
+        MK{"An Mhacadóin (PIIM)"}
         ML{"Mailí"}
         MM{"Maenmar (Burma)"}
         MN{"An Mhongóil"}
@@ -301,8 +301,6 @@ ga{
     Countries%variant{
         CD{"An Congó (PDC)"}
         CG{"An Congó (Poblacht)"}
-        FK{"Oileáin Fháclainne (Islas Malvinas)"}
-        MK{"An Mhacadóin (PIIM)"}
     }
-    Version{"2.1.28.79"}
+    Version{"2.1.31.86"}
 }

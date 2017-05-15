@@ -12,6 +12,7 @@
 #include "base/time/tick_clock.h"
 #include "base/time/time.h"
 #include "base/values.h"
+#include "net/reporting/reporting_browsing_data_remover.h"
 #include "net/reporting/reporting_cache.h"
 #include "net/reporting/reporting_context.h"
 #include "net/reporting/reporting_header_parser.h"
@@ -40,6 +41,13 @@ class ReportingServiceImpl : public ReportingService {
   void ProcessHeader(const GURL& url,
                      const std::string& header_value) override {
     ReportingHeaderParser::ParseHeader(context_.get(), url, header_value);
+  }
+
+  void RemoveBrowsingData(
+      int data_type_mask,
+      base::Callback<bool(const GURL&)> origin_filter) override {
+    context_->browsing_data_remover()->RemoveBrowsingData(data_type_mask,
+                                                          origin_filter);
   }
 
  private:

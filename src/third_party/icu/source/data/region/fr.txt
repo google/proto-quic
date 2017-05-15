@@ -89,7 +89,7 @@ fr{
         CW{"Curaçao"}
         CX{"Île Christmas"}
         CY{"Chypre"}
-        CZ{"République tchèque"}
+        CZ{"Tchéquie"}
         DE{"Allemagne"}
         DG{"Diego Garcia"}
         DJ{"Djibouti"}
@@ -108,7 +108,7 @@ fr{
         EU{"Union européenne"}
         FI{"Finlande"}
         FJ{"Fidji"}
-        FK{"Îles Malouines"}
+        FK{"Îles Falkland"}
         FM{"États fédérés de Micronésie"}
         FO{"Îles Féroé"}
         FR{"France"}
@@ -181,7 +181,7 @@ fr{
         MF{"Saint-Martin"}
         MG{"Madagascar"}
         MH{"Îles Marshall"}
-        MK{"Macédoine"}
+        MK{"Macédoine (ARYM)"}
         ML{"Mali"}
         MM{"Myanmar (Birmanie)"}
         MN{"Mongolie"}
@@ -301,10 +301,8 @@ fr{
     Countries%variant{
         CD{"Congo (RDC)"}
         CG{"République du Congo"}
-        CZ{"Tchéquie"}
-        FK{"Îles Falkland"}
-        MK{"Macédoine (ARYM)"}
+        CZ{"République tchèque"}
         TL{"Timor-Oriental"}
     }
-    Version{"2.1.28.79"}
+    Version{"2.1.32.59"}
 }

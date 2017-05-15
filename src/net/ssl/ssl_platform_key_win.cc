@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "net/ssl/ssl_platform_key.h"
-
-#include <windows.h>
-#include <NCrypt.h>
+#include "net/ssl/ssl_platform_key_win.h"
 
 #include <algorithm>
 #include <string>
@@ -14,11 +11,12 @@
 
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "crypto/openssl_util.h"
 #include "crypto/scoped_capi_types.h"
-#include "crypto/wincrypt_shim.h"
 #include "net/base/net_errors.h"
 #include "net/cert/x509_certificate.h"
+#include "net/ssl/ssl_platform_key.h"
 #include "net/ssl/ssl_platform_key_util.h"
 #include "net/ssl/ssl_private_key.h"
 #include "net/ssl/threaded_ssl_private_key.h"
@@ -235,16 +233,35 @@ class SSLPlatformKeyCNG : public ThreadedSSLPrivateKey::Delegate {
 
 }  // namespace
 
-scoped_refptr<SSLPrivateKey> FetchClientCertPrivateKey(
-    const X509Certificate* certificate) {
+scoped_refptr<SSLPrivateKey> WrapCAPIPrivateKey(
+    const X509Certificate* certificate,
+    HCRYPTPROV prov,
+    DWORD key_spec) {
+  return make_scoped_refptr(new ThreadedSSLPrivateKey(
+      base::MakeUnique<SSLPlatformKeyCAPI>(prov, key_spec),
+      GetSSLPlatformKeyTaskRunner()));
+}
+
+scoped_refptr<SSLPrivateKey> WrapCNGPrivateKey(
+    const X509Certificate* certificate,
+    NCRYPT_KEY_HANDLE key) {
   // Rather than query the private key for metadata, extract the public key from
-  // the certificate without using Windows APIs. CAPI and CNG do not
-  // consistently work depending on the system. See https://crbug.com/468345.
+  // the certificate without using Windows APIs. CNG does not consistently work
+  // depending on the system. See https://crbug.com/468345.
   int key_type;
   size_t max_length;
-  if (!GetClientCertInfo(certificate, &key_type, &max_length))
+  if (!GetClientCertInfo(certificate, &key_type, &max_length)) {
+    NCryptFreeObject(key);
     return nullptr;
+  }
 
+  return make_scoped_refptr(new ThreadedSSLPrivateKey(
+      base::MakeUnique<SSLPlatformKeyCNG>(key, key_type, max_length),
+      GetSSLPlatformKeyTaskRunner()));
+}
+
+scoped_refptr<SSLPrivateKey> FetchClientCertPrivateKey(
+    const X509Certificate* certificate) {
   PCCERT_CONTEXT cert_context = certificate->os_cert_handle();
 
   HCRYPTPROV_OR_NCRYPT_KEY_HANDLE prov_or_key = 0;
@@ -262,15 +279,11 @@ scoped_refptr<SSLPrivateKey> FetchClientCertPrivateKey(
   // transferred.
   CHECK_EQ(must_free, TRUE);
 
-  std::unique_ptr<ThreadedSSLPrivateKey::Delegate> delegate;
   if (key_spec == CERT_NCRYPT_KEY_SPEC) {
-    delegate.reset(new SSLPlatformKeyCNG(prov_or_key, key_type, max_length));
+    return WrapCNGPrivateKey(certificate, prov_or_key);
   } else {
-    DCHECK_EQ(EVP_PKEY_RSA, key_type);
-    delegate.reset(new SSLPlatformKeyCAPI(prov_or_key, key_spec));
+    return WrapCAPIPrivateKey(certificate, prov_or_key, key_spec);
   }
-  return make_scoped_refptr(new ThreadedSSLPrivateKey(
-      std::move(delegate), GetSSLPlatformKeyTaskRunner()));
 }
 
 }  // namespace net

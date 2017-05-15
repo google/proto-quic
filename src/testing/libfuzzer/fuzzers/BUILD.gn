@@ -235,6 +235,7 @@ fuzzer_test("v8_script_parser_fuzzer") {
   ]
   dict = "dicts/generated/v8_script_parser_fuzzer.dict"
   seed_corpus = "//v8/test/mjsunit/regress/"
+  libfuzzer_options = [ "only_ascii=1" ]
 }
 
 fuzzer_test("v8_json_parser_fuzzer") {
@@ -285,7 +286,7 @@ fuzzer_test("v8_wasm_fuzzer") {
     "//v8:wasm_fuzzer",
   ]
   dict = "dicts/v8_wasm.dict"
-  seed_corpus = "//v8/test/fuzzer/wasm/"
+  seed_corpus = "//v8/test/fuzzer/wasm_corpus/"
   libfuzzer_options = [ "max_len=500" ]
 }
 
@@ -295,7 +296,7 @@ fuzzer_test("v8_wasm_asmjs_fuzzer") {
     "//v8:wasm_asmjs_fuzzer",
   ]
   dict = "dicts/v8_wasm.dict"
-  seed_corpus = "//v8/test/fuzzer/wasm_asmjs/"
+  seed_corpus = "//v8/test/fuzzer/wasm_asmjs_corpus/"
   libfuzzer_options = [ "max_len=500" ]
 }
 

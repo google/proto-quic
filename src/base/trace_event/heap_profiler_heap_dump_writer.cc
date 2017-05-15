@@ -16,9 +16,9 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/strings/stringprintf.h"
+#include "base/trace_event/heap_profiler_serialization_state.h"
 #include "base/trace_event/heap_profiler_stack_frame_deduplicator.h"
 #include "base/trace_event/heap_profiler_type_name_deduplicator.h"
-#include "base/trace_event/memory_dump_session_state.h"
 #include "base/trace_event/trace_config.h"
 #include "base/trace_event/trace_event_argument.h"
 #include "base/trace_event/trace_log.h"
@@ -311,11 +311,12 @@ std::unique_ptr<TracedValue> Serialize(const std::set<Entry>& entries) {
 std::unique_ptr<TracedValue> ExportHeapDump(
     const std::unordered_map<AllocationContext, AllocationMetrics>&
         metrics_by_context,
-    const MemoryDumpSessionState& session_state) {
+    const HeapProfilerSerializationState& heap_profiler_serialization_state) {
   internal::HeapDumpWriter writer(
-      session_state.stack_frame_deduplicator(),
-      session_state.type_name_deduplicator(),
-      session_state.heap_profiler_breakdown_threshold_bytes());
+      heap_profiler_serialization_state.stack_frame_deduplicator(),
+      heap_profiler_serialization_state.type_name_deduplicator(),
+      heap_profiler_serialization_state
+          .heap_profiler_breakdown_threshold_bytes());
   return Serialize(writer.Summarize(metrics_by_context));
 }
 

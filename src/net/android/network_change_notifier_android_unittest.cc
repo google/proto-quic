@@ -181,6 +181,7 @@ class TestNetworkObserver : public NetworkChangeNotifier::NetworkObserver {
 class BaseNetworkChangeNotifierAndroidTest : public testing::Test {
  protected:
   typedef NetworkChangeNotifier::ConnectionType ConnectionType;
+  typedef NetworkChangeNotifier::ConnectionSubtype ConnectionSubtype;
 
   ~BaseNetworkChangeNotifierAndroidTest() override {}
 
@@ -224,8 +225,8 @@ class BaseNetworkChangeNotifierAndroidTest : public testing::Test {
     base::RunLoop().RunUntilIdle();
   }
 
-  void FakeMaxBandwidthChange(double max_bandwidth_mbps) {
-    delegate_.FakeMaxBandwidthChanged(max_bandwidth_mbps);
+  void FakeConnectionSubtypeChange(ConnectionSubtype subtype) {
+    delegate_.FakeConnectionSubtypeChanged(subtype);
     base::RunLoop().RunUntilIdle();
   }
 
@@ -396,15 +397,15 @@ TEST_F(NetworkChangeNotifierAndroidTest, MaxBandwidth) {
 TEST_F(NetworkChangeNotifierDelegateAndroidTest, MaxBandwidthCallbackNotifier) {
   // The bandwidth notification should always be forwarded, even if the value
   // doesn't change (because the type might have changed).
-  FakeMaxBandwidthChange(100.0);
+  FakeConnectionSubtypeChange(ConnectionSubtype::SUBTYPE_CDMA);
   EXPECT_EQ(1, delegate_observer_.bandwidth_notifications_count());
   EXPECT_EQ(1, max_bandwidth_observer_.notifications_count());
 
-  FakeMaxBandwidthChange(100.0);
+  FakeConnectionSubtypeChange(ConnectionSubtype::SUBTYPE_CDMA);
   EXPECT_EQ(2, delegate_observer_.bandwidth_notifications_count());
   EXPECT_EQ(2, max_bandwidth_observer_.notifications_count());
 
-  FakeMaxBandwidthChange(101.0);
+  FakeConnectionSubtypeChange(ConnectionSubtype::SUBTYPE_LTE);
   EXPECT_EQ(3, delegate_observer_.bandwidth_notifications_count());
   EXPECT_EQ(3, max_bandwidth_observer_.notifications_count());
 }

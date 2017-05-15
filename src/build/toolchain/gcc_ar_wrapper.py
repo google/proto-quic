@@ -40,12 +40,24 @@ def main():
                       help='Input files')
   args = parser.parse_args()
 
-  if args.resource_whitelist:
-    whitelist_candidates = wrapper_utils.ResolveRspLinks(args.inputs)
-    wrapper_utils.CombineResourceWhitelists(
-        whitelist_candidates, args.resource_whitelist)
+  # Specifies the type of object file ar should examine.
+  # The ar on linux ignores this option.
+  object_mode = []
+  if sys.platform.startswith('aix'):
+    # The @file feature is not avaliable on ar for AIX.
+    # For linux (and other posix like systems), the @file_name
+    # option reads the contents of file_name as command line arguments.
+    # For AIX we must parse these (rsp files) manually.
+    # Read rspfile.
+    args.inputs  = wrapper_utils.ResolveRspLinks(args.inputs)
+    object_mode = ['-X64']
+  else:
+    if args.resource_whitelist:
+      whitelist_candidates = wrapper_utils.ResolveRspLinks(args.inputs)
+      wrapper_utils.CombineResourceWhitelists(
+          whitelist_candidates, args.resource_whitelist)
 
-  command = [args.ar, args.operation]
+  command = [args.ar] + object_mode + [args.operation]
   if args.plugin is not None:
     command += ['--plugin', args.plugin]
   command.append(args.output)

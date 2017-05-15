@@ -50,7 +50,7 @@ const size_t kReportCacheKeyLength = 16;
 // Points to the active transport security state source.
 const TransportSecurityStateSource* g_hsts_source = &kHSTSSource;
 
-// Override for ShouldRequireCT() for unit tests. Possible values:
+// Override for CheckCTRequirements() for unit tests. Possible values:
 //  -1: Unless a delegate says otherwise, do not require CT.
 //   0: Use the default implementation (e.g. production)
 //   1: Unless a delegate says otherwise, require CT.
@@ -860,26 +860,61 @@ bool TransportSecurityState::HasPublicKeyPins(const std::string& host) {
   return false;
 }
 
-bool TransportSecurityState::ShouldRequireCT(
-    const std::string& hostname,
+TransportSecurityState::CTRequirementsStatus
+TransportSecurityState::CheckCTRequirements(
+    const net::HostPortPair& host_port_pair,
+    bool is_issued_by_known_root,
+    const HashValueVector& public_key_hashes,
     const X509Certificate* validated_certificate_chain,
-    const HashValueVector& public_key_hashes) {
+    const X509Certificate* served_certificate_chain,
+    const SignedCertificateTimestampAndStatusList&
+        signed_certificate_timestamps,
+    const ExpectCTReportStatus report_status,
+    ct::CertPolicyCompliance cert_policy_compliance) {
   using CTRequirementLevel = RequireCTDelegate::CTRequirementLevel;
+  std::string hostname = host_port_pair.host();
+
+  // If the connection complies with CT policy, then no further checks are
+  // necessary.
+  if (cert_policy_compliance ==
+          ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS ||
+      cert_policy_compliance ==
+          ct::CertPolicyCompliance::CERT_POLICY_BUILD_NOT_TIMELY) {
+    return CT_REQUIREMENTS_MET;
+  }
+
+  // Check Expect-CT first so that other CT requirements do not prevent
+  // Expect-CT reports from being sent.
+  ExpectCTState state;
+  if (is_issued_by_known_root && IsDynamicExpectCTEnabled() &&
+      GetDynamicExpectCTState(hostname, &state)) {
+    if (expect_ct_reporter_ && !state.report_uri.is_empty() &&
+        report_status == ENABLE_EXPECT_CT_REPORTS) {
+      expect_ct_reporter_->OnExpectCTFailed(
+          host_port_pair, state.report_uri, validated_certificate_chain,
+          served_certificate_chain, signed_certificate_timestamps);
+    }
+    if (state.enforce)
+      return CT_REQUIREMENTS_NOT_MET;
+  }
 
   CTRequirementLevel ct_required = CTRequirementLevel::DEFAULT;
   if (require_ct_delegate_)
     ct_required = require_ct_delegate_->IsCTRequiredForHost(hostname);
   if (ct_required != CTRequirementLevel::DEFAULT)
-    return ct_required == CTRequirementLevel::REQUIRED;
+    return (ct_required == CTRequirementLevel::REQUIRED
+                ? CT_REQUIREMENTS_NOT_MET
+                : CT_REQUIREMENTS_MET);
 
   // Allow unittests to override the default result.
   if (g_ct_required_for_testing)
-    return g_ct_required_for_testing == 1;
+    return (g_ct_required_for_testing == 1 ? CT_REQUIREMENTS_NOT_MET
+                                           : CT_REQUIREMENTS_MET);
 
   // Until CT is required for all secure hosts on the Internet, this should
-  // remain false. It is provided to simplify the various short-circuit
-  // returns below.
-  bool default_response = false;
+  // remain CT_REQUIREMENTS_MET. It is provided to simplify the various
+  // short-circuit returns below.
+  const CTRequirementsStatus default_response = CT_REQUIREMENTS_MET;
 
 // FieldTrials are not supported in Native Client apps.
 #if !defined(OS_NACL)
@@ -930,7 +965,7 @@ bool TransportSecurityState::ShouldRequireCT(
       }
 
       // No exception found. This certificate must conform to the CT policy.
-      return true;
+      return CT_REQUIREMENTS_NOT_MET;
     }
   }
 
@@ -1413,8 +1448,10 @@ void TransportSecurityState::ProcessExpectCTHeader(
       return;
     ExpectCTState state;
     if (GetStaticExpectCTState(host_port_pair.host(), &state)) {
-      expect_ct_reporter_->OnExpectCTFailed(host_port_pair, state.report_uri,
-                                            ssl_info);
+      expect_ct_reporter_->OnExpectCTFailed(
+          host_port_pair, state.report_uri, ssl_info.cert.get(),
+          ssl_info.unverified_cert.get(),
+          ssl_info.signed_certificate_timestamps);
     }
     return;
   }
@@ -1447,8 +1484,10 @@ void TransportSecurityState::ProcessExpectCTHeader(
     // processing the header.
     if (expect_ct_reporter_ && !report_uri.is_empty() &&
         !GetDynamicExpectCTState(host_port_pair.host(), &state)) {
-      expect_ct_reporter_->OnExpectCTFailed(host_port_pair, report_uri,
-                                            ssl_info);
+      expect_ct_reporter_->OnExpectCTFailed(
+          host_port_pair, report_uri, ssl_info.cert.get(),
+          ssl_info.unverified_cert.get(),
+          ssl_info.signed_certificate_timestamps);
     }
     return;
   }

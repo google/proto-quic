@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_SPDY_SPDY_SESSION_POOL_H_
-#define NET_SPDY_SPDY_SESSION_POOL_H_
+#ifndef NET_SPDY_CHROMIUM_SPDY_SESSION_POOL_H_
+#define NET_SPDY_CHROMIUM_SPDY_SESSION_POOL_H_
 
 #include <stddef.h>
 
@@ -258,4 +258,4 @@ class NET_EXPORT SpdySessionPool
 
 }  // namespace net
 
-#endif  // NET_SPDY_SPDY_SESSION_POOL_H_
+#endif  // NET_SPDY_CHROMIUM_SPDY_SESSION_POOL_H_

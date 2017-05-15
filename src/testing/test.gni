@@ -190,22 +190,35 @@ template("test") {
       }
     }
 
-    group(target_name) {
-      testonly = true
-      if (_incremental_apk_only) {
-        deps = [
-          ":${target_name}_incremental",
-        ]
-      } else {
-        deps = [
+    test_runner_script(target_name) {
+      forward_variables_from(invoker,
+                             _wrapper_script_vars + [
+                                   "data",
+                                   "data_deps",
+                                   "deps",
+                                   "public_deps",
+                                 ])
+
+      if (_use_raw_android_executable) {
+        executable_dist_dir = "$root_out_dir/$_dist_target"
+        deps += [
+          ":$_dist_target",
           ":$_test_runner_target",
         ]
-        if (_use_raw_android_executable) {
-          deps += [ ":$_dist_target" ]
+      } else {
+        apk_target = ":$_apk_target"
+        deps += [ ":$_apk_target" ]
+        if (_incremental_apk_only) {
+          deps += [ ":${target_name}_incremental" ]
         } else {
-          deps += [ ":$_apk_target" ]
+          deps += [ ":$_test_runner_target" ]
         }
       }
+      generated_script = "$root_build_dir/$_output_name"
+      incremental_install = _incremental_apk_only
+      test_name = _output_name
+      test_suite = _output_name
+      test_type = "gtest"
     }
 
     # TODO(GYP_GONE): Delete this after we've converted everything to GN.

@@ -66,6 +66,8 @@ bool SignaturePolicy::IsAcceptableSignatureAlgorithm(
   //    SHA384
   //    SHA512
   switch (algorithm.algorithm()) {
+    case SignatureAlgorithmId::Dsa:
+      return false;
     case SignatureAlgorithmId::Ecdsa:
     case SignatureAlgorithmId::RsaPkcs1:
       return IsAcceptableDigest(algorithm.digest());

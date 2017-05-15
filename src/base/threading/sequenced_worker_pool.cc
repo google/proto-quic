@@ -145,7 +145,7 @@ class SequencedWorkerPoolTaskRunner : public TaskRunner {
   bool PostDelayedTask(const tracked_objects::Location& from_here,
                        OnceClosure task,
                        TimeDelta delay) override;
-  bool RunsTasksOnCurrentThread() const override;
+  bool RunsTasksInCurrentSequence() const override;
 
  private:
   ~SequencedWorkerPoolTaskRunner() override;
@@ -176,8 +176,8 @@ bool SequencedWorkerPoolTaskRunner::PostDelayedTask(
   return pool_->PostDelayedWorkerTask(from_here, std::move(task), delay);
 }
 
-bool SequencedWorkerPoolTaskRunner::RunsTasksOnCurrentThread() const {
-  return pool_->RunsTasksOnCurrentThread();
+bool SequencedWorkerPoolTaskRunner::RunsTasksInCurrentSequence() const {
+  return pool_->RunsTasksInCurrentSequence();
 }
 
 }  // namespace
@@ -199,7 +199,8 @@ class SequencedWorkerPool::PoolSequencedTaskRunner
   bool PostDelayedTask(const tracked_objects::Location& from_here,
                        OnceClosure task,
                        TimeDelta delay) override;
-  bool RunsTasksOnCurrentThread() const override;
+  bool RunsTasksInCurrentSequence() const override;
+
 
   // SequencedTaskRunner implementation
   bool PostNonNestableDelayedTask(const tracked_objects::Location& from_here,
@@ -243,7 +244,7 @@ bool SequencedWorkerPool::PoolSequencedTaskRunner::PostDelayedTask(
 }
 
 bool SequencedWorkerPool::PoolSequencedTaskRunner::
-    RunsTasksOnCurrentThread() const {
+    RunsTasksInCurrentSequence() const {
   return pool_->IsRunningSequenceOnCurrentThread(token_);
 }
 
@@ -826,11 +827,8 @@ bool SequencedWorkerPool::Inner::PostTaskToTaskScheduler(
 
   const TaskShutdownBehavior task_shutdown_behavior =
       static_cast<TaskShutdownBehavior>(sequenced.shutdown_behavior);
-  const TaskTraits traits = TaskTraits()
-                                .MayBlock()
-                                .WithBaseSyncPrimitives()
-                                .WithPriority(task_priority_)
-                                .WithShutdownBehavior(task_shutdown_behavior);
+  const TaskTraits traits = {MayBlock(), WithBaseSyncPrimitives(),
+                             task_priority_, task_shutdown_behavior};
   return GetTaskSchedulerTaskRunner(sequenced.sequence_token_id, traits)
       ->PostDelayedTask(sequenced.posted_from, std::move(sequenced.task),
                         delay);
@@ -880,8 +878,7 @@ bool SequencedWorkerPool::Inner::RunsTasksOnCurrentThread() const {
   if (g_all_pools_state == AllPoolsState::REDIRECTED_TO_TASK_SCHEDULER) {
     if (!runs_tasks_on_verifier_) {
       runs_tasks_on_verifier_ = CreateTaskRunnerWithTraits(
-          TaskTraits().MayBlock().WithBaseSyncPrimitives().WithPriority(
-              task_priority_));
+          {MayBlock(), WithBaseSyncPrimitives(), task_priority_});
     }
     return runs_tasks_on_verifier_->RunsTasksOnCurrentThread();
   } else {
@@ -1617,7 +1614,7 @@ bool SequencedWorkerPool::PostDelayedTask(
   return PostDelayedWorkerTask(from_here, std::move(task), delay);
 }
 
-bool SequencedWorkerPool::RunsTasksOnCurrentThread() const {
+bool SequencedWorkerPool::RunsTasksInCurrentSequence() const {
   return inner_->RunsTasksOnCurrentThread();
 }
 

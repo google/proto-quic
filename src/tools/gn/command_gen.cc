@@ -274,7 +274,7 @@ const char kGen_HelpShort[] = "gen: Generate ninja files.";
 const char kGen_Help[] =
     R"(gn gen: Generate ninja files.
 
-  gn gen [<ide options>] <out_dir>
+  gn gen [--check] [<ide options>] <out_dir>
 
   Generates ninja files from the current tree and puts them in the given output
   directory.
@@ -283,6 +283,9 @@ const char kGen_Help[] =
       //out/foo
   Or it can be a directory relative to the current directory such as:
       out/foo
+
+  "gn gen --check" is the same as running "gn check". See "gn help check"
+  for documentation on that mode.
 
   See "gn help switches" for the common command-line switches.
 
@@ -353,9 +356,10 @@ Eclipse IDE Support
 
 Generic JSON Output
 
-  Dumps target information to JSON file and optionally invokes python script on
-  generated file. See comments at the beginning of json_project_writer.cc and
-  desc_builder.cc for overview of JSON file format.
+  Dumps target information to a JSON file and optionally invokes a
+  python script on the generated file. See the comments at the beginning
+  of json_project_writer.cc and desc_builder.cc for an overview of the JSON
+  file format.
 
   --json-file-name=<json_file_name>
       Overrides default file name (project.json) of generated JSON file.

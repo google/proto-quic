@@ -42,7 +42,7 @@ bool MessageLoopTaskRunner::PostNonNestableDelayedTask(
                                              false);
 }
 
-bool MessageLoopTaskRunner::RunsTasksOnCurrentThread() const {
+bool MessageLoopTaskRunner::RunsTasksInCurrentSequence() const {
   AutoLock lock(valid_thread_id_lock_);
   return valid_thread_id_ == PlatformThread::CurrentId();
 }

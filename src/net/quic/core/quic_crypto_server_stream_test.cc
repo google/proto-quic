@@ -333,6 +333,7 @@ TEST_P(QuicCryptoServerStreamTest, ZeroRTT) {
   // Do a first handshake in order to prime the client config with the server's
   // information.
   AdvanceHandshakeWithFakeClient();
+  EXPECT_FALSE(server_stream()->ZeroRttAttempted());
 
   // Now do another handshake, hopefully in 0-RTT.
   QUIC_LOG(INFO) << "Resetting for 0-RTT handshake attempt";
@@ -345,6 +346,7 @@ TEST_P(QuicCryptoServerStreamTest, ZeroRTT) {
       client_connection_, client_stream(), server_connection_, server_stream());
 
   EXPECT_EQ(1, client_stream()->num_sent_client_hellos());
+  EXPECT_TRUE(server_stream()->ZeroRttAttempted());
 }
 
 TEST_P(QuicCryptoServerStreamTest, FailByPolicy) {

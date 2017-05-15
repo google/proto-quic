@@ -476,135 +476,223 @@ BlobStatus = _reflection.GeneratedProtocolMessageType('BlobStatus', (_message.Me
 _sym_db.RegisterMessage(BlobStatus)
 
 
-import grpc
-from grpc.beta import implementations as beta_implementations
-from grpc.beta import interfaces as beta_interfaces
-from grpc.framework.common import cardinality
-from grpc.framework.interfaces.face import utilities as face_utilities
+try:
+  # THESE ELEMENTS WILL BE DEPRECATED.
+  # Please use the generated *_pb2_grpc.py files instead.
+  import grpc
+  from grpc.framework.common import cardinality
+  from grpc.framework.interfaces.face import utilities as face_utilities
+  from grpc.beta import implementations as beta_implementations
+  from grpc.beta import interfaces as beta_interfaces
 
 
-class FileServiceStub(object):
-
-  def __init__(self, channel):
-    """Constructor.
-
-    Args:
-      channel: A grpc.Channel.
+  class FileServiceStub(object):
+    """FileService exposes the main operations of an Isolate server
+    to upload and download blobs.
     """
-    self.Contains = channel.unary_unary(
-        '/luci.swarming.bot.FileService/Contains',
-        request_serializer=ContainsRequest.SerializeToString,
-        response_deserializer=ContainsReply.FromString,
-        )
-    self.PushBlobs = channel.stream_unary(
-        '/luci.swarming.bot.FileService/PushBlobs',
-        request_serializer=PushBlobsRequest.SerializeToString,
-        response_deserializer=PushBlobsReply.FromString,
-        )
-    self.FetchBlobs = channel.unary_stream(
-        '/luci.swarming.bot.FileService/FetchBlobs',
-        request_serializer=FetchBlobsRequest.SerializeToString,
-        response_deserializer=FetchBlobsReply.FromString,
-        )
+
+    def __init__(self, channel):
+      """Constructor.
+
+      Args:
+        channel: A grpc.Channel.
+      """
+      self.Contains = channel.unary_unary(
+          '/luci.swarming.bot.FileService/Contains',
+          request_serializer=ContainsRequest.SerializeToString,
+          response_deserializer=ContainsReply.FromString,
+          )
+      self.PushBlobs = channel.stream_unary(
+          '/luci.swarming.bot.FileService/PushBlobs',
+          request_serializer=PushBlobsRequest.SerializeToString,
+          response_deserializer=PushBlobsReply.FromString,
+          )
+      self.FetchBlobs = channel.unary_stream(
+          '/luci.swarming.bot.FileService/FetchBlobs',
+          request_serializer=FetchBlobsRequest.SerializeToString,
+          response_deserializer=FetchBlobsReply.FromString,
+          )
 
 
-class FileServiceServicer(object):
+  class FileServiceServicer(object):
+    """FileService exposes the main operations of an Isolate server
+    to upload and download blobs.
+    """
 
-  def Contains(self, request, context):
-    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-    context.set_details('Method not implemented!')
-    raise NotImplementedError('Method not implemented!')
+    def Contains(self, request, context):
+      """Unlike in the native Isolate API, it is not *necessary* to
+      call Contains prior to pushing a blob, as Contains does not
+      return "upload tickets." The BlobStatus returned by Contains
+      will have succeeded = True if all digests were found, and
+      false for any other reason (missing blobs, network error,
+      etc.)
+      """
+      context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+      context.set_details('Method not implemented!')
+      raise NotImplementedError('Method not implemented!')
 
-  def PushBlobs(self, request_iterator, context):
-    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-    context.set_details('Method not implemented!')
-    raise NotImplementedError('Method not implemented!')
+    def PushBlobs(self, request_iterator, context):
+      """PushBlobs can push one or more blobs at a time (serially),
+      with each blob transmitted as one or more chunks. At the
+      beginning of a new blob, the chunk offset should be zero
+      and the digest must be provided. The function returns true
+      only if all blobs are successfully received, and returns
+      as soon as an error occurs.
+      """
+      context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+      context.set_details('Method not implemented!')
+      raise NotImplementedError('Method not implemented!')
 
-  def FetchBlobs(self, request, context):
-    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-    context.set_details('Method not implemented!')
-    raise NotImplementedError('Method not implemented!')
-
-
-def add_FileServiceServicer_to_server(servicer, server):
-  rpc_method_handlers = {
-      'Contains': grpc.unary_unary_rpc_method_handler(
-          servicer.Contains,
-          request_deserializer=ContainsRequest.FromString,
-          response_serializer=ContainsReply.SerializeToString,
-      ),
-      'PushBlobs': grpc.stream_unary_rpc_method_handler(
-          servicer.PushBlobs,
-          request_deserializer=PushBlobsRequest.FromString,
-          response_serializer=PushBlobsReply.SerializeToString,
-      ),
-      'FetchBlobs': grpc.unary_stream_rpc_method_handler(
-          servicer.FetchBlobs,
-          request_deserializer=FetchBlobsRequest.FromString,
-          response_serializer=FetchBlobsReply.SerializeToString,
-      ),
-  }
-  generic_handler = grpc.method_handlers_generic_handler(
-      'luci.swarming.bot.FileService', rpc_method_handlers)
-  server.add_generic_rpc_handlers((generic_handler,))
+    def FetchBlobs(self, request, context):
+      """FetchBlobs takes a list of digests and returns them all as
+      a stream of BlobChunks.
+      """
+      context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+      context.set_details('Method not implemented!')
+      raise NotImplementedError('Method not implemented!')
 
 
-class BetaFileServiceServicer(object):
-  def Contains(self, request, context):
-    context.code(beta_interfaces.StatusCode.UNIMPLEMENTED)
-  def PushBlobs(self, request_iterator, context):
-    context.code(beta_interfaces.StatusCode.UNIMPLEMENTED)
-  def FetchBlobs(self, request, context):
-    context.code(beta_interfaces.StatusCode.UNIMPLEMENTED)
+  def add_FileServiceServicer_to_server(servicer, server):
+    rpc_method_handlers = {
+        'Contains': grpc.unary_unary_rpc_method_handler(
+            servicer.Contains,
+            request_deserializer=ContainsRequest.FromString,
+            response_serializer=ContainsReply.SerializeToString,
+        ),
+        'PushBlobs': grpc.stream_unary_rpc_method_handler(
+            servicer.PushBlobs,
+            request_deserializer=PushBlobsRequest.FromString,
+            response_serializer=PushBlobsReply.SerializeToString,
+        ),
+        'FetchBlobs': grpc.unary_stream_rpc_method_handler(
+            servicer.FetchBlobs,
+            request_deserializer=FetchBlobsRequest.FromString,
+            response_serializer=FetchBlobsReply.SerializeToString,
+        ),
+    }
+    generic_handler = grpc.method_handlers_generic_handler(
+        'luci.swarming.bot.FileService', rpc_method_handlers)
+    server.add_generic_rpc_handlers((generic_handler,))
 
 
-class BetaFileServiceStub(object):
-  def Contains(self, request, timeout, metadata=None, with_call=False, protocol_options=None):
-    raise NotImplementedError()
-  Contains.future = None
-  def PushBlobs(self, request_iterator, timeout, metadata=None, with_call=False, protocol_options=None):
-    raise NotImplementedError()
-  PushBlobs.future = None
-  def FetchBlobs(self, request, timeout, metadata=None, with_call=False, protocol_options=None):
-    raise NotImplementedError()
+  class BetaFileServiceServicer(object):
+    """The Beta API is deprecated for 0.15.0 and later.
+
+    It is recommended to use the GA API (classes and functions in this
+    file not marked beta) for all further purposes. This class was generated
+    only to ease transition from grpcio<0.15.0 to grpcio>=0.15.0."""
+    """FileService exposes the main operations of an Isolate server
+    to upload and download blobs.
+    """
+    def Contains(self, request, context):
+      """Unlike in the native Isolate API, it is not *necessary* to
+      call Contains prior to pushing a blob, as Contains does not
+      return "upload tickets." The BlobStatus returned by Contains
+      will have succeeded = True if all digests were found, and
+      false for any other reason (missing blobs, network error,
+      etc.)
+      """
+      context.code(beta_interfaces.StatusCode.UNIMPLEMENTED)
+    def PushBlobs(self, request_iterator, context):
+      """PushBlobs can push one or more blobs at a time (serially),
+      with each blob transmitted as one or more chunks. At the
+      beginning of a new blob, the chunk offset should be zero
+      and the digest must be provided. The function returns true
+      only if all blobs are successfully received, and returns
+      as soon as an error occurs.
+      """
+      context.code(beta_interfaces.StatusCode.UNIMPLEMENTED)
+    def FetchBlobs(self, request, context):
+      """FetchBlobs takes a list of digests and returns them all as
+      a stream of BlobChunks.
+      """
+      context.code(beta_interfaces.StatusCode.UNIMPLEMENTED)
 
 
-def beta_create_FileService_server(servicer, pool=None, pool_size=None, default_timeout=None, maximum_timeout=None):
-  request_deserializers = {
-    ('luci.swarming.bot.FileService', 'Contains'): ContainsRequest.FromString,
-    ('luci.swarming.bot.FileService', 'FetchBlobs'): FetchBlobsRequest.FromString,
-    ('luci.swarming.bot.FileService', 'PushBlobs'): PushBlobsRequest.FromString,
-  }
-  response_serializers = {
-    ('luci.swarming.bot.FileService', 'Contains'): ContainsReply.SerializeToString,
-    ('luci.swarming.bot.FileService', 'FetchBlobs'): FetchBlobsReply.SerializeToString,
-    ('luci.swarming.bot.FileService', 'PushBlobs'): PushBlobsReply.SerializeToString,
-  }
-  method_implementations = {
-    ('luci.swarming.bot.FileService', 'Contains'): face_utilities.unary_unary_inline(servicer.Contains),
-    ('luci.swarming.bot.FileService', 'FetchBlobs'): face_utilities.unary_stream_inline(servicer.FetchBlobs),
-    ('luci.swarming.bot.FileService', 'PushBlobs'): face_utilities.stream_unary_inline(servicer.PushBlobs),
-  }
-  server_options = beta_implementations.server_options(request_deserializers=request_deserializers, response_serializers=response_serializers, thread_pool=pool, thread_pool_size=pool_size, default_timeout=default_timeout, maximum_timeout=maximum_timeout)
-  return beta_implementations.server(method_implementations, options=server_options)
+  class BetaFileServiceStub(object):
+    """The Beta API is deprecated for 0.15.0 and later.
+
+    It is recommended to use the GA API (classes and functions in this
+    file not marked beta) for all further purposes. This class was generated
+    only to ease transition from grpcio<0.15.0 to grpcio>=0.15.0."""
+    """FileService exposes the main operations of an Isolate server
+    to upload and download blobs.
+    """
+    def Contains(self, request, timeout, metadata=None, with_call=False, protocol_options=None):
+      """Unlike in the native Isolate API, it is not *necessary* to
+      call Contains prior to pushing a blob, as Contains does not
+      return "upload tickets." The BlobStatus returned by Contains
+      will have succeeded = True if all digests were found, and
+      false for any other reason (missing blobs, network error,
+      etc.)
+      """
+      raise NotImplementedError()
+    Contains.future = None
+    def PushBlobs(self, request_iterator, timeout, metadata=None, with_call=False, protocol_options=None):
+      """PushBlobs can push one or more blobs at a time (serially),
+      with each blob transmitted as one or more chunks. At the
+      beginning of a new blob, the chunk offset should be zero
+      and the digest must be provided. The function returns true
+      only if all blobs are successfully received, and returns
+      as soon as an error occurs.
+      """
+      raise NotImplementedError()
+    PushBlobs.future = None
+    def FetchBlobs(self, request, timeout, metadata=None, with_call=False, protocol_options=None):
+      """FetchBlobs takes a list of digests and returns them all as
+      a stream of BlobChunks.
+      """
+      raise NotImplementedError()
 
 
-def beta_create_FileService_stub(channel, host=None, metadata_transformer=None, pool=None, pool_size=None):
-  request_serializers = {
-    ('luci.swarming.bot.FileService', 'Contains'): ContainsRequest.SerializeToString,
-    ('luci.swarming.bot.FileService', 'FetchBlobs'): FetchBlobsRequest.SerializeToString,
-    ('luci.swarming.bot.FileService', 'PushBlobs'): PushBlobsRequest.SerializeToString,
-  }
-  response_deserializers = {
-    ('luci.swarming.bot.FileService', 'Contains'): ContainsReply.FromString,
-    ('luci.swarming.bot.FileService', 'FetchBlobs'): FetchBlobsReply.FromString,
-    ('luci.swarming.bot.FileService', 'PushBlobs'): PushBlobsReply.FromString,
-  }
-  cardinalities = {
-    'Contains': cardinality.Cardinality.UNARY_UNARY,
-    'FetchBlobs': cardinality.Cardinality.UNARY_STREAM,
-    'PushBlobs': cardinality.Cardinality.STREAM_UNARY,
-  }
-  stub_options = beta_implementations.stub_options(host=host, metadata_transformer=metadata_transformer, request_serializers=request_serializers, response_deserializers=response_deserializers, thread_pool=pool, thread_pool_size=pool_size)
-  return beta_implementations.dynamic_stub(channel, 'luci.swarming.bot.FileService', cardinalities, options=stub_options)
+  def beta_create_FileService_server(servicer, pool=None, pool_size=None, default_timeout=None, maximum_timeout=None):
+    """The Beta API is deprecated for 0.15.0 and later.
+
+    It is recommended to use the GA API (classes and functions in this
+    file not marked beta) for all further purposes. This function was
+    generated only to ease transition from grpcio<0.15.0 to grpcio>=0.15.0"""
+    request_deserializers = {
+      ('luci.swarming.bot.FileService', 'Contains'): ContainsRequest.FromString,
+      ('luci.swarming.bot.FileService', 'FetchBlobs'): FetchBlobsRequest.FromString,
+      ('luci.swarming.bot.FileService', 'PushBlobs'): PushBlobsRequest.FromString,
+    }
+    response_serializers = {
+      ('luci.swarming.bot.FileService', 'Contains'): ContainsReply.SerializeToString,
+      ('luci.swarming.bot.FileService', 'FetchBlobs'): FetchBlobsReply.SerializeToString,
+      ('luci.swarming.bot.FileService', 'PushBlobs'): PushBlobsReply.SerializeToString,
+    }
+    method_implementations = {
+      ('luci.swarming.bot.FileService', 'Contains'): face_utilities.unary_unary_inline(servicer.Contains),
+      ('luci.swarming.bot.FileService', 'FetchBlobs'): face_utilities.unary_stream_inline(servicer.FetchBlobs),
+      ('luci.swarming.bot.FileService', 'PushBlobs'): face_utilities.stream_unary_inline(servicer.PushBlobs),
+    }
+    server_options = beta_implementations.server_options(request_deserializers=request_deserializers, response_serializers=response_serializers, thread_pool=pool, thread_pool_size=pool_size, default_timeout=default_timeout, maximum_timeout=maximum_timeout)
+    return beta_implementations.server(method_implementations, options=server_options)
+
+
+  def beta_create_FileService_stub(channel, host=None, metadata_transformer=None, pool=None, pool_size=None):
+    """The Beta API is deprecated for 0.15.0 and later.
+
+    It is recommended to use the GA API (classes and functions in this
+    file not marked beta) for all further purposes. This function was
+    generated only to ease transition from grpcio<0.15.0 to grpcio>=0.15.0"""
+    request_serializers = {
+      ('luci.swarming.bot.FileService', 'Contains'): ContainsRequest.SerializeToString,
+      ('luci.swarming.bot.FileService', 'FetchBlobs'): FetchBlobsRequest.SerializeToString,
+      ('luci.swarming.bot.FileService', 'PushBlobs'): PushBlobsRequest.SerializeToString,
+    }
+    response_deserializers = {
+      ('luci.swarming.bot.FileService', 'Contains'): ContainsReply.FromString,
+      ('luci.swarming.bot.FileService', 'FetchBlobs'): FetchBlobsReply.FromString,
+      ('luci.swarming.bot.FileService', 'PushBlobs'): PushBlobsReply.FromString,
+    }
+    cardinalities = {
+      'Contains': cardinality.Cardinality.UNARY_UNARY,
+      'FetchBlobs': cardinality.Cardinality.UNARY_STREAM,
+      'PushBlobs': cardinality.Cardinality.STREAM_UNARY,
+    }
+    stub_options = beta_implementations.stub_options(host=host, metadata_transformer=metadata_transformer, request_serializers=request_serializers, response_deserializers=response_deserializers, thread_pool=pool, thread_pool_size=pool_size)
+    return beta_implementations.dynamic_stub(channel, 'luci.swarming.bot.FileService', cardinalities, options=stub_options)
+except ImportError:
+  pass
 # @@protoc_insertion_point(module_scope)

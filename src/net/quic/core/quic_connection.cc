@@ -207,6 +207,7 @@ QuicConnection::QuicConnection(QuicConnectionId connection_id,
       idle_timeout_connection_close_behavior_(
           ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET),
       close_connection_after_five_rtos_(false),
+      close_connection_after_three_rtos_(false),
       received_packet_manager_(&stats_),
       ack_queued_(false),
       num_retransmittable_packets_received_since_last_ack_sent_(0),
@@ -350,6 +351,11 @@ void QuicConnection::SetFromConfig(const QuicConfig& config) {
   }
   if (config.HasClientSentConnectionOption(k5RTO, perspective_)) {
     close_connection_after_five_rtos_ = true;
+  }
+  if (FLAGS_quic_reloadable_flag_quic_enable_3rtos &&
+      config.HasClientSentConnectionOption(k3RTO, perspective_)) {
+    QUIC_FLAG_COUNT(quic_reloadable_flag_quic_enable_3rtos);
+    close_connection_after_three_rtos_ = true;
   }
   if (packet_generator_.latched_flag_no_stop_waiting_frames() &&
       version() > QUIC_VERSION_37 &&
@@ -1123,6 +1129,8 @@ void QuicConnection::SendRstStream(QuicStreamId id,
     ClearSerializedPacket(&(*packet_iterator));
     packet_iterator = queued_packets_.erase(packet_iterator);
   }
+  // TODO(ianswett): Consider checking for 3 RTOs when the last stream is
+  // cancelled as well.
 }
 
 void QuicConnection::SendWindowUpdate(QuicStreamId id,
@@ -1786,6 +1794,14 @@ void QuicConnection::SendAck() {
 void QuicConnection::OnRetransmissionTimeout() {
   DCHECK(sent_packet_manager_.HasUnackedPackets());
 
+  if (close_connection_after_three_rtos_ &&
+      sent_packet_manager_.GetConsecutiveRtoCount() >= 2 &&
+      !visitor_->HasOpenDynamicStreams()) {
+    // Close on the 3rd consecutive RTO, so after 2 previous RTOs have occurred.
+    CloseConnection(QUIC_TOO_MANY_RTOS, "3 consecutive retransmission timeouts",
+                    ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
+    return;
+  }
   if (close_connection_after_five_rtos_ &&
       sent_packet_manager_.GetConsecutiveRtoCount() >= 4) {
     // Close on the 5th consecutive RTO, so after 4 previous RTOs have occurred.

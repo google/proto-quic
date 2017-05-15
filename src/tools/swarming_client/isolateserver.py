@@ -980,6 +980,14 @@ class LocalCache(object):
     """
     raise NotImplementedError()
 
+  def trim(self):
+    """Enforces cache policies.
+
+    Returns:
+      Number of items evicted.
+    """
+    raise NotImplementedError()
+
 
 class MemoryCache(LocalCache):
   """LocalCache implementation that stores everything in memory."""
@@ -1031,6 +1039,10 @@ class MemoryCache(LocalCache):
       self._added.append(len(data))
     return digest
 
+  def trim(self):
+    """Trimming is not implemented for MemoryCache."""
+    return 0
+
 
 class CachePolicies(object):
   def __init__(self, max_cache_size, min_free_space, max_items):
@@ -1055,7 +1067,7 @@ class DiskCache(LocalCache):
   """
   STATE_FILE = u'state.json'
 
-  def __init__(self, cache_dir, policies, hash_algo, trim=True):
+  def __init__(self, cache_dir, policies, hash_algo, trim, time_fn=None):
     """
     Arguments:
       cache_dir: directory where to place the cache.
@@ -1085,7 +1097,7 @@ class DiskCache(LocalCache):
     self._operations = []
     with tools.Profiler('Setup'):
       with self._lock:
-        self._load(trim=trim)
+        self._load(trim, time_fn)
 
   def __contains__(self, digest):
     with self._lock:
@@ -1157,6 +1169,7 @@ class DiskCache(LocalCache):
       logging.warning('Removed %d lost files', len(previous))
       for filename in previous:
         self._lru.pop(filename)
+      self._save()
 
     # What remains to be done is to hash every single item to
     # detect corruption, then save to ensure state.json is up to date.
@@ -1255,9 +1268,9 @@ class DiskCache(LocalCache):
   def trim(self):
     """Forces retention policies."""
     with self._lock:
-      self._trim()
+      return self._trim()
 
-  def _load(self, trim):
+  def _load(self, trim, time_fn):
     """Loads state of the cache from json file.
 
     If cache_dir does not exist on disk, it is created.
@@ -1275,6 +1288,8 @@ class DiskCache(LocalCache):
         logging.error('Failed to load cache state: %s' % (err,))
         # Don't want to keep broken state file.
         file_path.try_remove(self.state_file)
+    if time_fn:
+      self._lru.time_fn = time_fn
     if trim:
       self._trim()
     # We want the initial cache size after trimming, i.e. what is readily
@@ -1338,6 +1353,7 @@ class DiskCache(LocalCache):
           usage_percent,
           self.policies.max_cache_size / 1024.)
     self._save()
+    return trimmed_due_to_space
 
   def _path(self, digest):
     """Returns the path to one item."""
@@ -1349,7 +1365,9 @@ class DiskCache(LocalCache):
     try:
       digest, (size, _) = self._lru.get_oldest()
       if not allow_protected and digest == self._protected:
-        raise Error('Not enough space to fetch the whole isolated tree')
+        raise Error(
+            'Not enough space to fetch the whole isolated tree; %sb free, min '
+            'is %sb' % (self._free_disk, self.policies.min_free_space))
     except KeyError:
       raise Error('Nothing to remove')
     digest, (size, _) = self._lru.pop_oldest()
@@ -1708,7 +1726,7 @@ def directory_to_metadata(root, algo, blacklist):
       root, '.' + os.path.sep, blacklist, sys.platform != 'win32')
   metadata = {
     relpath: isolated_format.file_to_metadata(
-        os.path.join(root, relpath), {}, 0, algo)
+        os.path.join(root, relpath), {}, 0, algo, False)
     for relpath in paths
   }
   for v in metadata.itervalues():
@@ -1992,7 +2010,7 @@ def add_cache_options(parser):
   parser.add_option_group(cache_group)
 
 
-def process_cache_options(options, trim=True):
+def process_cache_options(options, **kwargs):
   if options.cache:
     policies = CachePolicies(
         options.max_cache_size, options.min_free_space, options.max_items)
@@ -2002,7 +2020,7 @@ def process_cache_options(options, trim=True):
         unicode(os.path.abspath(options.cache)),
         policies,
         isolated_format.get_hash_algo(options.namespace),
-        trim=trim)
+        **kwargs)
   else:
     return MemoryCache()
 

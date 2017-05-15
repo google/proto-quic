@@ -29,15 +29,6 @@ QuicSpdyClientStream::QuicSpdyClientStream(QuicStreamId id,
 
 QuicSpdyClientStream::~QuicSpdyClientStream() {}
 
-void QuicSpdyClientStream::OnStreamFrame(const QuicStreamFrame& frame) {
-  if (!allow_bidirectional_data() && !write_side_closed()) {
-    QUIC_DLOG(INFO) << "Got a response before the request was complete.  "
-                    << "Aborting request.";
-    CloseWriteSide();
-  }
-  QuicSpdyStream::OnStreamFrame(frame);
-}
-
 void QuicSpdyClientStream::OnInitialHeadersComplete(
     bool fin,
     size_t frame_len,

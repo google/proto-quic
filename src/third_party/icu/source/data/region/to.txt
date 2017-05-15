@@ -89,7 +89,7 @@ to{
         CW{"Kulasao"}
         CX{"Motu Kilisimasi"}
         CY{"Saipalesi"}
-        CZ{"Lipapilika Seki"}
+        CZ{"Sēkia"}
         DE{"Siamane"}
         DG{"Tieko Kāsia"}
         DJ{"Siputi"}
@@ -181,7 +181,7 @@ to{
         MF{"Sā Mātini (fakafalanisē)"}
         MG{"Matakasika"}
         MH{"ʻOtumotu Māsolo"}
-        MK{"Masetōnia"}
+        MK{"Masetōnia (FYROM)"}
         ML{"Māli"}
         MM{"Pema"}
         MN{"Mongokōlia"}
@@ -299,8 +299,7 @@ to{
     Countries%variant{
         CD{"Kongo (LTK)"}
         CG{"Kongo (Lipapilika)"}
-        CZ{"Sēkia"}
-        MK{"Masetōnia (FYROM)"}
+        CZ{"Lipapilika Seki"}
     }
-    Version{"2.1.27.98"}
+    Version{"2.1.31.74"}
 }

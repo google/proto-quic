@@ -238,6 +238,16 @@ void PlatformThread::Join(PlatformThreadHandle thread_handle) {
   base::ThreadRestrictions::AssertIOAllowed();
 #endif
 
+  DWORD thread_id = 0;
+  thread_id = ::GetThreadId(thread_handle.platform_handle());
+  DWORD last_error = 0;
+  if (!thread_id)
+    last_error = ::GetLastError();
+
+  // Record information about the exiting thread in case joining hangs.
+  base::debug::Alias(&thread_id);
+  base::debug::Alias(&last_error);
+
   // Wait for the thread to exit.  It should already have terminated but make
   // sure this assumption is valid.
   CHECK_EQ(WAIT_OBJECT_0,

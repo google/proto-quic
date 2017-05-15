@@ -8,21 +8,22 @@
 
 namespace net {
 
-MultiplexedHttpStream::MultiplexedHttpStream(MultiplexedSessionHandle session)
-    : session_(session) {}
+MultiplexedHttpStream::MultiplexedHttpStream(
+    std::unique_ptr<MultiplexedSessionHandle> session)
+    : session_(std::move(session)) {}
 
 MultiplexedHttpStream::~MultiplexedHttpStream() {}
 
 bool MultiplexedHttpStream::GetRemoteEndpoint(IPEndPoint* endpoint) {
-  return session_.GetRemoteEndpoint(endpoint);
+  return session_->GetRemoteEndpoint(endpoint);
 }
 
 void MultiplexedHttpStream::GetSSLInfo(SSLInfo* ssl_info) {
-  session_.GetSSLInfo(ssl_info);
+  session_->GetSSLInfo(ssl_info);
 }
 
 void MultiplexedHttpStream::SaveSSLInfo() {
-  session_.SaveSSLInfo();
+  session_->SaveSSLInfo();
 }
 
 void MultiplexedHttpStream::GetSSLCertRequestInfo(
@@ -36,7 +37,7 @@ Error MultiplexedHttpStream::GetTokenBindingSignature(
     crypto::ECPrivateKey* key,
     TokenBindingType tb_type,
     std::vector<uint8_t>* out) {
-  return session_.GetTokenBindingSignature(key, tb_type, out);
+  return session_->GetTokenBindingSignature(key, tb_type, out);
 }
 
 void MultiplexedHttpStream::Drain(HttpNetworkSession* session) {

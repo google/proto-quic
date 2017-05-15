@@ -1,15 +1,14 @@
 #if defined(__x86_64__) && !defined(OPENSSL_NO_ASM)
 .text	
-.extern	OPENSSL_ia32cap_addr
-.hidden OPENSSL_ia32cap_addr
+.extern	OPENSSL_ia32cap_P
+.hidden OPENSSL_ia32cap_P
 
 .globl	sha1_block_data_order
 .hidden sha1_block_data_order
 .type	sha1_block_data_order,@function
 .align	16
 sha1_block_data_order:
-	leaq	OPENSSL_ia32cap_addr(%rip),%r10
-	movq	(%r10),%r10
+	leaq	OPENSSL_ia32cap_P(%rip),%r10
 	movl	0(%r10),%r9d
 	movl	4(%r10),%r8d
 	movl	8(%r10),%r10d

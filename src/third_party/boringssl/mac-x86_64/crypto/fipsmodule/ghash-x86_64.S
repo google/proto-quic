@@ -889,7 +889,7 @@ L$_ghash_clmul:
 	jz	L$odd_tail
 
 	movdqu	16(%rsi),%xmm6
-	movq	_OPENSSL_ia32cap_addr(%rip),%rax
+	leaq	_OPENSSL_ia32cap_P(%rip),%rax
 	movl	4(%rax),%eax
 	cmpq	$0x30,%rcx
 	jb	L$skip4x

@@ -1471,10 +1471,8 @@
     { "name": "fleximus.org", "include_subdomains": true, "mode": "force-https" },
 
     // Facebook would like to have pinning enforced on (*.)facebook.com and
-    // HSTS enforced on specific names. We have the
-    // "include_subdomains_for_pinning" flag that can do that, but it triggered a
-    // wave of pinning failures and so isn't used until that can be investigated.
-    { "name": "facebook.com", "mode": "force-https", "pins": "facebook" },
+    // HSTS enforced on specific names.
+    { "name": "facebook.com", "mode": "force-https", "include_subdomains_for_pinning": true, "pins": "facebook" },
     { "name": "www.facebook.com", "include_subdomains": true, "mode": "force-https", "pins": "facebook" },
     { "name": "m.facebook.com", "include_subdomains": true, "mode": "force-https", "pins": "facebook" },
     { "name": "tablet.facebook.com", "include_subdomains": true, "mode": "force-https", "pins": "facebook" },
@@ -1490,6 +1488,8 @@
     { "name": "mtouch.facebook.com", "include_subdomains": true, "mode": "force-https", "pins": "facebook" },
     { "name": "business.facebook.com", "include_subdomains": true, "mode": "force-https", "pins": "facebook" },
     { "name": "research.facebook.com", "include_subdomains": true, "mode": "force-https", "pins": "facebook" },
+    { "name": "messenger.com", "include_subdomains_for_pinning": true, "mode": "force-https", "pins": "facebook" },
+    { "name": "www.messenger.com", "include_subdomains": true, "mode": "force-https", "pins": "facebook" },
 
     { "name": "0x0a.net", "include_subdomains": true, "mode": "force-https" },
     { "name": "animurecs.com", "include_subdomains": true, "mode": "force-https" },

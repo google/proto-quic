@@ -7,10 +7,12 @@
 #include "base/bind.h"
 #include "base/callback.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/threading/platform_thread.h"
+#include "base/threading/sequenced_task_runner_handle.h"
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -38,6 +40,7 @@ class DecrementCountContainer {
   explicit DecrementCountContainer(int* counter) : counter_(counter) {
   }
   void OnWaitableEventSignaled(WaitableEvent* object) {
+    // NOTE: |object| may be already deleted.
     --(*counter_);
   }
  private:
@@ -117,7 +120,8 @@ void RunTest_OutlivesMessageLoop(MessageLoop::Type message_loop_type) {
   }
 }
 
-void RunTest_DeleteUnder(MessageLoop::Type message_loop_type) {
+void RunTest_DeleteUnder(MessageLoop::Type message_loop_type,
+                         bool delay_after_delete) {
   // Delete the WaitableEvent out from under the Watcher. This is explictly
   // allowed by the interface.
 
@@ -126,12 +130,52 @@ void RunTest_DeleteUnder(MessageLoop::Type message_loop_type) {
   {
     WaitableEventWatcher watcher;
 
-    WaitableEvent* event =
-        new WaitableEvent(WaitableEvent::ResetPolicy::AUTOMATIC,
-                          WaitableEvent::InitialState::NOT_SIGNALED);
+    auto* event = new WaitableEvent(WaitableEvent::ResetPolicy::AUTOMATIC,
+                                    WaitableEvent::InitialState::NOT_SIGNALED);
 
     watcher.StartWatching(event, BindOnce(&QuitWhenSignaled));
+
+    if (delay_after_delete) {
+      // On Windows that sleep() improves the chance to catch some problems.
+      // It postpones the dtor |watcher| (which immediately cancel the waiting)
+      // and gives some time to run to a created background thread.
+      // Unfortunately, that thread is under OS control and we can't
+      // manipulate it directly.
+      base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(30));
+    }
+
     delete event;
+  }
+}
+
+void RunTest_SignalAndDelete(MessageLoop::Type message_loop_type,
+                             bool delay_after_delete) {
+  // Signal and immediately delete the WaitableEvent out from under the Watcher.
+
+  MessageLoop message_loop(message_loop_type);
+
+  {
+    WaitableEventWatcher watcher;
+
+    auto event = base::MakeUnique<WaitableEvent>(
+        WaitableEvent::ResetPolicy::AUTOMATIC,
+        WaitableEvent::InitialState::NOT_SIGNALED);
+
+    watcher.StartWatching(event.get(), BindOnce(&QuitWhenSignaled));
+    event->Signal();
+    event.reset();
+
+    if (delay_after_delete) {
+      // On Windows that sleep() improves the chance to catch some problems.
+      // It postpones the dtor |watcher| (which immediately cancel the waiting)
+      // and gives some time to run to a created background thread.
+      // Unfortunately, that thread is under OS control and we can't
+      // manipulate it directly.
+      base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(30));
+    }
+
+    // Wait for the watcher callback.
+    RunLoop().Run();
   }
 }
 
@@ -165,7 +209,15 @@ TEST(WaitableEventWatcherTest, OutlivesMessageLoop) {
 
 TEST(WaitableEventWatcherTest, DeleteUnder) {
   for (int i = 0; i < kNumTestingMessageLoops; i++) {
-    RunTest_DeleteUnder(testing_message_loops[i]);
+    RunTest_DeleteUnder(testing_message_loops[i], false);
+    RunTest_DeleteUnder(testing_message_loops[i], true);
+  }
+}
+
+TEST(WaitableEventWatcherTest, SignalAndDelete) {
+  for (int i = 0; i < kNumTestingMessageLoops; i++) {
+    RunTest_SignalAndDelete(testing_message_loops[i], false);
+    RunTest_SignalAndDelete(testing_message_loops[i], true);
   }
 }
 

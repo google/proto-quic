@@ -6,6 +6,7 @@
 
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_test.h"
+#include "net/quic/test_tools/quic_spdy_session_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 
 using testing::_;
@@ -28,7 +29,9 @@ class QuicSpdyServerStreamBaseTest : public QuicTest {
       : session_(new MockQuicConnection(&helper_,
                                         &alarm_factory_,
                                         Perspective::IS_SERVER)) {
-    stream_ = new TestQuicSpdyServerStream(kClientDataStreamId1, &session_);
+    stream_ = new TestQuicSpdyServerStream(
+        QuicSpdySessionPeer::GetNthClientInitiatedStreamId(session_, 0),
+        &session_);
     session_.ActivateStream(QuicWrapUnique(stream_));
   }
 

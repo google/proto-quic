@@ -29,6 +29,7 @@ class Origin;
 
 namespace net {
 
+class ReportingBrowsingDataRemover;
 class ReportingCache;
 struct ReportingClient;
 class ReportingGarbageCollector;
@@ -144,6 +145,9 @@ class ReportingTestBase : public ::testing::Test {
   }
   ReportingGarbageCollector* garbage_collector() {
     return context_->garbage_collector();
+  }
+  ReportingBrowsingDataRemover* browsing_data_remover() {
+    return context_->browsing_data_remover();
   }
 
   ReportingPersister* persister() { return context_->persister(); }

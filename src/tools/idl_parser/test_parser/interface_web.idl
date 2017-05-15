@@ -327,14 +327,10 @@ interface MyIfacePromise {
  *      PrimitiveType(double)
  *    Type()
  *      StringType(DOMString)
- *  LegacyIterable()
- *    Type()
- *      PrimitiveType(boolean)
  */
 interface MyIfaceIterable {
   iterable<long>;
   iterable<double, DOMString>;
-  legacyiterable<boolean>;
 };
 
 /* TREE

@@ -108,7 +108,7 @@ br{
         EU{"Unaniezh Europa"}
         FI{"Finland"}
         FJ{"Fidji"}
-        FK{"Inizi Falkland"}
+        FK{"Inizi Falkland (Inizi Maloù)"}
         FM{"Mikronezia"}
         FO{"Inizi Faero"}
         FR{"Frañs"}
@@ -181,7 +181,7 @@ br{
         MF{"Saint Martin"}
         MG{"Madagaskar"}
         MH{"Inizi Marshall"}
-        MK{"Makedonia"}
+        MK{"Makedonia (RYKM)"}
         ML{"Mali"}
         MM{"Myanmar (Birmania)"}
         MN{"Mongolia"}
@@ -300,9 +300,7 @@ br{
         CD{"Kongo (RDK)"}
         CG{"Kongo (Republik)"}
         CI{"Aod Olifant"}
-        FK{"Inizi Falkland (Inizi Maloù)"}
-        MK{"Makedonia (RYKM)"}
         TL{"Timor ar Reter"}
     }
-    Version{"2.1.28.76"}
+    Version{"2.1.31.86"}
 }

@@ -10,7 +10,8 @@
 namespace net {
 
 QuicVersionManager::QuicVersionManager(QuicVersionVector supported_versions)
-    : enable_version_39_(FLAGS_quic_reloadable_flag_quic_enable_version_39),
+    : enable_version_40_(GetQuicFlag(FLAGS_quic_enable_version_40)),
+      enable_version_39_(FLAGS_quic_reloadable_flag_quic_enable_version_39),
       enable_version_38_(FLAGS_quic_reloadable_flag_quic_enable_version_38),
       allowed_supported_versions_(supported_versions),
       filtered_supported_versions_(
@@ -24,8 +25,10 @@ const QuicVersionVector& QuicVersionManager::GetSupportedVersions() {
 }
 
 void QuicVersionManager::MaybeRefilterSupportedVersions() {
-  if (enable_version_39_ != FLAGS_quic_reloadable_flag_quic_enable_version_39 ||
+  if (enable_version_40_ != GetQuicFlag(FLAGS_quic_enable_version_40) ||
+      enable_version_39_ != FLAGS_quic_reloadable_flag_quic_enable_version_39 ||
       enable_version_38_ != FLAGS_quic_reloadable_flag_quic_enable_version_38) {
+    enable_version_40_ = GetQuicFlag(FLAGS_quic_enable_version_40);
     enable_version_39_ = FLAGS_quic_reloadable_flag_quic_enable_version_39;
     enable_version_38_ = FLAGS_quic_reloadable_flag_quic_enable_version_38;
     RefilterSupportedVersions();

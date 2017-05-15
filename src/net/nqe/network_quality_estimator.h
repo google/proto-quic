@@ -111,9 +111,10 @@ class NET_EXPORT NetworkQualityEstimator
         base::TimeDelta transport_rtt,
         int32_t downstream_throughput_kbps) = 0;
 
+    virtual ~RTTAndThroughputEstimatesObserver() {}
+
    protected:
     RTTAndThroughputEstimatesObserver() {}
-    virtual ~RTTAndThroughputEstimatesObserver() {}
 
    private:
     DISALLOW_COPY_AND_ASSIGN(RTTAndThroughputEstimatesObserver);
@@ -446,6 +447,10 @@ class NET_EXPORT NetworkQualityEstimator
       const base::TimeTicks& start_time,
       int percentile) const;
 
+  // Observer list for RTT or throughput estimates. Protected for testing.
+  base::ObserverList<RTTAndThroughputEstimatesObserver>
+      rtt_and_throughput_estimates_observer_list_;
+
  private:
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest,
                            AdaptiveRecomputationEffectiveConnectionType);
@@ -455,7 +460,6 @@ class NET_EXPORT NetworkQualityEstimator
                            DefaultObservationsOverridden);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest,
                            ObtainAlgorithmToUseFromParams);
-  FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest, HalfLifeParam);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest, ComputedPercentiles);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest, TestGetMetricsSince);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest,
@@ -669,14 +673,6 @@ class NET_EXPORT NetworkQualityEstimator
   // If true, default values provided by the platform are used for estimation.
   const bool add_default_platform_observations_;
 
-  // The factor by which the weight of an observation reduces every second.
-  const double weight_multiplier_per_second_;
-
-  // The factor by which the weight of an observation reduces for every dBm
-  // difference between the current signal strength (in dBm), and the signal
-  // strength at the time when the observation was taken.
-  const double weight_multiplier_per_dbm_;
-
   // Algorithm to use for computing effective connection type. The value is
   // obtained from field trial parameters. If the value from field trial
   // parameters is unavailable, it is set to
@@ -752,10 +748,6 @@ class NET_EXPORT NetworkQualityEstimator
   base::ObserverList<EffectiveConnectionTypeObserver>
       effective_connection_type_observer_list_;
 
-  // Observer list for RTT or throughput estimates.
-  base::ObserverList<RTTAndThroughputEstimatesObserver>
-      rtt_and_throughput_estimates_observer_list_;
-
   // Observer lists for round trip times and throughput measurements.
   base::ObserverList<RTTObserver> rtt_observer_list_;
   base::ObserverList<ThroughputObserver> throughput_observer_list_;
@@ -799,24 +791,8 @@ class NET_EXPORT NetworkQualityEstimator
   int32_t min_signal_strength_since_connection_change_;
   int32_t max_signal_strength_since_connection_change_;
 
-  // It is costlier to add values to a sparse histogram. So, the correlation UMA
-  // is recorded with |correlation_uma_logging_probability_| since recording it
-  // in a sparse histogram for each request is unnecessary and cost-prohibitive.
-  // e.g., if it is 0.0, then the UMA will never be recorded. On the other hand,
-  // if it is 1.0, then it will be recorded for all valid HTTP requests.
-  const double correlation_uma_logging_probability_;
-
   // Stores the qualities of different networks.
   std::unique_ptr<nqe::internal::NetworkQualityStore> network_quality_store_;
-
-  // True if effective connection type value has been forced via variation
-  // parameters. If set to true, GetEffectiveConnectionType() will always return
-  // |forced_effective_connection_type_|.
-  const bool forced_effective_connection_type_set_;
-  const EffectiveConnectionType forced_effective_connection_type_;
-
-  // Set to true if reading of the network quality prefs is enabled.
-  const bool persistent_cache_reading_enabled_;
 
   base::ThreadChecker thread_checker_;
 

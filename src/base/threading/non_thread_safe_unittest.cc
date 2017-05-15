@@ -113,6 +113,7 @@ void NonThreadSafeClass::MethodOnDifferentThreadImpl() {
 
 #if DCHECK_IS_ON()
 TEST(NonThreadSafeDeathTest, MethodNotAllowedOnDifferentThreadInDebug) {
+  ::testing::FLAGS_gtest_death_test_style = "threadsafe";
   ASSERT_DCHECK_DEATH({ NonThreadSafeClass::MethodOnDifferentThreadImpl(); });
 }
 #else
@@ -136,6 +137,7 @@ void NonThreadSafeClass::DestructorOnDifferentThreadImpl() {
 
 #if DCHECK_IS_ON()
 TEST(NonThreadSafeDeathTest, DestructorNotAllowedOnDifferentThreadInDebug) {
+  ::testing::FLAGS_gtest_death_test_style = "threadsafe";
   ASSERT_DCHECK_DEATH(
       { NonThreadSafeClass::DestructorOnDifferentThreadImpl(); });
 }

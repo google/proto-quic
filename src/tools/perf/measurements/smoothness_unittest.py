@@ -110,8 +110,8 @@ class SmoothnessUnitTest(page_test_test_case.PageTestTestCase):
                        repr(actual_synthetic_delay))
     self.assertEquals(expected_synthetic_delay, actual_synthetic_delay)
 
-  # crbug.com/483212 and crbug.com/713260
-  @decorators.Disabled('chromeos', 'linux')
+  # crbug.com/483212
+  @decorators.Disabled('chromeos')
   def testSmoothness(self):
     ps = self.CreateStorySetFromFileInUnittestDataDir('scrollable_page.html')
     measurement = smoothness.Smoothness()

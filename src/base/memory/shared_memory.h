@@ -14,6 +14,7 @@
 #include "base/macros.h"
 #include "base/memory/shared_memory_handle.h"
 #include "base/process/process_handle.h"
+#include "base/strings/string16.h"
 #include "build/build_config.h"
 
 #if defined(OS_POSIX)
@@ -63,8 +64,26 @@ struct BASE_EXPORT SharedMemoryCreateOptions {
   bool share_read_only = false;
 };
 
-// Platform abstraction for shared memory.  Provides a C++ wrapper
-// around the OS primitive for a memory mapped file.
+// Enumeration of different shared memory error types. Note: Currently only
+// errors from Mac POSIX shared memory implementation are fully instrumented.
+// TODO(asvitkine): Evaluate whether we want to keep this ability after
+// crbug.com/703649 is fixed and expand to all platforms or remove.
+enum class SharedMemoryError {
+  NO_ERRORS,
+  NO_FILE,
+  BAD_PARAMS,
+  STAT_FAILED,
+  TRUNCATE_FAILED,
+  NO_TEMP_DIR,
+  MAKE_READONLY_FAILED,
+  INODE_MISMATCH,
+  MMAP_FAILED,
+};
+
+// Platform abstraction for shared memory.
+// SharedMemory consumes a SharedMemoryHandle [potentially one that it created]
+// to map a shared memory OS resource into the virtual address space of the
+// current process.
 class BASE_EXPORT SharedMemory {
  public:
   SharedMemory();
@@ -73,7 +92,7 @@ class BASE_EXPORT SharedMemory {
   // Similar to the default constructor, except that this allows for
   // calling LockDeprecated() to acquire the named mutex before either Create or
   // Open are called on Windows.
-  explicit SharedMemory(const std::wstring& name);
+  explicit SharedMemory(const string16& name);
 #endif
 
   // Create a new SharedMemory object from an existing, open
@@ -230,6 +249,13 @@ class BASE_EXPORT SharedMemory {
   bool GetUniqueId(UniqueId* id) const;
 #endif
 
+  // Returns the last error encountered as a result of a call to Create() or
+  // Map(). Note: Currently only errors from Mac POSIX shared memory
+  // implementation are fully instrumented.
+  // TODO(asvitkine): Evaluate whether we want to keep this ability after
+  // crbug.com/703649 is fixed and expand to all platforms or remove.
+  SharedMemoryError get_last_error() const { return last_error_; }
+
  private:
 #if defined(OS_POSIX) && !defined(OS_NACL) && !defined(OS_ANDROID) && \
     (!defined(OS_MACOSX) || defined(OS_IOS))
@@ -239,13 +265,9 @@ class BASE_EXPORT SharedMemory {
 #if defined(OS_WIN)
   // If true indicates this came from an external source so needs extra checks
   // before being mapped.
-  bool external_section_;
-  std::wstring       name_;
-  win::ScopedHandle  mapped_file_;
+  bool external_section_ = false;
+  string16 name_;
 #else
-  // The OS primitive that backs the shared memory region.
-  SharedMemoryHandle shm_;
-
   // If valid, points to the same memory region as shm_, but with readonly
   // permissions.
   SharedMemoryHandle readonly_shm_;
@@ -254,13 +276,17 @@ class BASE_EXPORT SharedMemory {
 #if defined(OS_MACOSX) && !defined(OS_IOS)
   // The mechanism by which the memory is mapped. Only valid if |memory_| is not
   // |nullptr|.
-  SharedMemoryHandle::Type mapped_memory_mechanism_;
+  SharedMemoryHandle::Type mapped_memory_mechanism_ = SharedMemoryHandle::MACH;
 #endif
 
-  size_t             mapped_size_;
-  void*              memory_;
-  bool               read_only_;
-  size_t             requested_size_;
+  // The OS primitive that backs the shared memory region.
+  SharedMemoryHandle shm_;
+
+  size_t mapped_size_ = 0;
+  void* memory_ = nullptr;
+  bool read_only_ = false;
+  size_t requested_size_ = 0;
+  SharedMemoryError last_error_ = SharedMemoryError::NO_ERRORS;
 
   DISALLOW_COPY_AND_ASSIGN(SharedMemory);
 };

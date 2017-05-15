@@ -9,6 +9,8 @@
 
 #include "base/memory/ptr_util.h"
 #include "base/numerics/safe_math.h"
+#include "net/cert/internal/cert_error_params.h"
+#include "net/cert/internal/cert_errors.h"
 #include "net/der/input.h"
 #include "net/der/parse_values.h"
 #include "net/der/parser.h"
@@ -131,6 +133,24 @@ const uint8_t kOidEcdsaWithSha512[] =
 // In dotted notation: 1.2.840.113549.1.1.10
 const uint8_t kOidRsaSsaPss[] = {0x2a, 0x86, 0x48, 0x86, 0xf7,
                                  0x0d, 0x01, 0x01, 0x0a};
+
+// From RFC 5912:
+//
+//     dsa-with-sha1 OBJECT IDENTIFIER ::=  {
+//      iso(1) member-body(2) us(840) x9-57(10040) x9algorithm(4) 3 }
+//
+// In dotted notation: 1.2.840.10040.4.3
+const uint8_t kOidDsaWithSha1[] = {0x2a, 0x86, 0x48, 0xce, 0x38, 0x04, 0x03};
+
+// From RFC 5912:
+//
+//     dsa-with-sha256 OBJECT IDENTIFIER  ::=  {
+//      joint-iso-ccitt(2) country(16) us(840) organization(1) gov(101)
+//      csor(3) algorithms(4) id-dsa-with-sha2(3) 2 }
+//
+// In dotted notation: 2.16.840.1.101.3.4.3.2
+const uint8_t kOidDsaWithSha256[] = {0x60, 0x86, 0x48, 0x01, 0x65,
+                                     0x03, 0x04, 0x03, 0x02};
 
 // From RFC 5912:
 //
@@ -284,6 +304,22 @@ std::unique_ptr<SignatureAlgorithm> ParseRsaPkcs1(DigestAlgorithm digest,
     return nullptr;
 
   return SignatureAlgorithm::CreateRsaPkcs1(digest);
+}
+
+// Parses a DSA signature algorithm given the DER-encoded
+// "parameters" from the parsed AlgorithmIdentifier, and the hash algorithm
+// that was implied by the AlgorithmIdentifier's OID.
+//
+// Returns a nullptr on failure.
+//
+// RFC 5912 requires that the parameters for DSA algorithms be absent.
+std::unique_ptr<SignatureAlgorithm> ParseDsa(DigestAlgorithm digest,
+                                             const der::Input& params) {
+  // TODO(svaldez): Add warning about non-strict parsing.
+  if (!IsNull(params) && !IsEmpty(params))
+    return nullptr;
+
+  return SignatureAlgorithm::CreateDsa(digest);
 }
 
 // Parses an ECDSA signature algorithm given the DER-encoded "parameters" from
@@ -511,6 +547,9 @@ std::unique_ptr<SignatureAlgorithm> ParseRsaPss(const der::Input& params) {
   return SignatureAlgorithm::CreateRsaPss(hash, mgf1_hash, salt_length);
 }
 
+DEFINE_CERT_ERROR_ID(kUnknownAlgorithmIdentifierOid,
+                     "Unknown AlgorithmIdentifier OID");
+
 }  // namespace
 
 WARN_UNUSED_RESULT bool ParseHashAlgorithm(const der::Input& input,
@@ -605,16 +644,30 @@ std::unique_ptr<SignatureAlgorithm> SignatureAlgorithm::Create(
   if (oid == der::Input(kOidMd5WithRsaEncryption))
     return ParseRsaPkcs1(DigestAlgorithm::Md5, params);
 
-  // TODO(crbug.com/634443): Add an error indicating what the OID
-  // was.
+  if (oid == der::Input(kOidDsaWithSha1))
+    return ParseDsa(DigestAlgorithm::Sha1, params);
 
-  return nullptr;  // Unsupported OID.
+  if (oid == der::Input(kOidDsaWithSha256))
+    return ParseDsa(DigestAlgorithm::Sha256, params);
+
+  // Unknown OID.
+  if (errors) {
+    errors->AddError(kUnknownAlgorithmIdentifierOid,
+                     CreateCertErrorParams2Der("oid", oid, "params", params));
+  }
+  return nullptr;
 }
 
 std::unique_ptr<SignatureAlgorithm> SignatureAlgorithm::CreateRsaPkcs1(
     DigestAlgorithm digest) {
   return base::WrapUnique(
       new SignatureAlgorithm(SignatureAlgorithmId::RsaPkcs1, digest, nullptr));
+}
+
+std::unique_ptr<SignatureAlgorithm> SignatureAlgorithm::CreateDsa(
+    DigestAlgorithm digest) {
+  return base::WrapUnique(
+      new SignatureAlgorithm(SignatureAlgorithmId::Dsa, digest, nullptr));
 }
 
 std::unique_ptr<SignatureAlgorithm> SignatureAlgorithm::CreateEcdsa(
@@ -656,6 +709,7 @@ bool SignatureAlgorithm::IsEquivalent(const der::Input& alg1_tlv,
   switch (alg1->algorithm()) {
     case SignatureAlgorithmId::RsaPkcs1:
     case SignatureAlgorithmId::Ecdsa:
+    case SignatureAlgorithmId::Dsa:
       DCHECK(!alg1->has_params());
       DCHECK(!alg2->has_params());
       return true;

@@ -32,14 +32,20 @@ class QuicClientSessionBase;
 // are owned by the QuicClientSession which created them.
 class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
  public:
+  // TODO(rch): Remove this class completely in favor of async methods
+  // on the Handle.
   // Delegate handles protocol specific behavior of a quic stream.
   class NET_EXPORT_PRIVATE Delegate {
    public:
     Delegate() {}
 
-    // Called when headers are available.
-    virtual void OnHeadersAvailable(const SpdyHeaderBlock& headers,
-                                    size_t frame_len) = 0;
+    // Called when initial headers are available.
+    virtual void OnInitialHeadersAvailable(const SpdyHeaderBlock& headers,
+                                           size_t frame_len) = 0;
+
+    // Called when trailing headers are available.
+    virtual void OnTrailingHeadersAvailable(const SpdyHeaderBlock& headers,
+                                            size_t frame_len) = 0;
 
     // Called when data is available to be read.
     virtual void OnDataAvailable() = 0;
@@ -50,14 +56,119 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
     // Called when the stream is closed because of an error.
     virtual void OnError(int error) = 0;
 
-    // Returns true if sending of headers has completed.
-    virtual bool HasSendHeadersComplete() = 0;
-
    protected:
     virtual ~Delegate() {}
 
    private:
     DISALLOW_COPY_AND_ASSIGN(Delegate);
+  };
+
+  // Wrapper for interacting with the session in a restricted fashion.
+  class NET_EXPORT_PRIVATE Handle {
+   public:
+    ~Handle();
+
+    // Returns true if the stream is still connected.
+    bool IsOpen() { return stream_ != nullptr; }
+
+    // Writes |header_block| to the peer. Closes the write side if |fin| is
+    // true. If non-null, |ack_notifier_delegate| will be notified when the
+    // headers are ACK'd by the peer.
+    size_t WriteHeaders(SpdyHeaderBlock header_block,
+                        bool fin,
+                        QuicReferenceCountedPointer<QuicAckListenerInterface>
+                            ack_notifier_delegate);
+
+    // Writes |data| to the peer. Closes the write side if |fin| is true.
+    // If the data could not be written immediately, returns ERR_IO_PENDING
+    // and invokes |callback| asynchronously when the write completes.
+    int WriteStreamData(base::StringPiece data,
+                        bool fin,
+                        const CompletionCallback& callback);
+
+    // Same as WriteStreamData except it writes data from a vector of IOBuffers,
+    // with the length of each buffer at the corresponding index in |lengths|.
+    int WritevStreamData(const std::vector<scoped_refptr<IOBuffer>>& buffers,
+                         const std::vector<int>& lengths,
+                         bool fin,
+                         const CompletionCallback& callback);
+
+    // Reads at most |buf_len| bytes into |buf|. Returns the number of bytes
+    // read.
+    int Read(IOBuffer* buf, int buf_len);
+
+    // Called to notify the stream when the final incoming data is read.
+    void OnFinRead();
+
+    // Prevents the connection from migrating to a new network while this
+    // stream is open.
+    void DisableConnectionMigration();
+
+    // Sets the priority of the stream to |priority|.
+    void SetPriority(SpdyPriority priority);
+
+    // Sends a RST_STREAM frame to the peer and closes the streams.
+    void Reset(QuicRstStreamErrorCode error_code);
+
+    // Clears |delegate_| from this Handle, but does not disconnect the Handle
+    // from |stream_|.
+    void ClearDelegate();
+
+    QuicStreamId id() const;
+    QuicErrorCode connection_error() const;
+    QuicRstStreamErrorCode stream_error() const;
+    bool fin_sent() const;
+    bool fin_received() const;
+    uint64_t stream_bytes_read() const;
+    uint64_t stream_bytes_written() const;
+    size_t NumBytesConsumed() const;
+    bool IsDoneReading() const;
+    bool IsFirstStream() const;
+
+    // TODO(rch): Move these test-only methods to a peer, or else remove.
+    void OnPromiseHeaderList(QuicStreamId promised_id,
+                             size_t frame_len,
+                             const QuicHeaderList& header_list);
+    SpdyPriority priority() const;
+    bool can_migrate();
+
+    Delegate* GetDelegate();
+
+   private:
+    friend class QuicChromiumClientStream;
+
+    // Constucts a new Handle for |stream| with |delegate| set to receive
+    // up calls on various events.
+    Handle(QuicChromiumClientStream* stream, Delegate* delegate);
+
+    // Methods invoked by the stream.
+    void OnInitialHeadersAvailable(const SpdyHeaderBlock& headers,
+                                   size_t frame_len);
+    void OnTrailingHeadersAvailable(const SpdyHeaderBlock& headers,
+                                    size_t frame_len);
+    void OnDataAvailable();
+    void OnClose();
+    void OnError(int error);
+
+    // Saves various fields from the stream before the stream goes away.
+    void SaveState();
+
+    QuicChromiumClientStream* stream_;  // Unowned.
+    Delegate* delegate_;                // Owns this.
+
+    QuicStreamId id_;
+    QuicErrorCode connection_error_;
+    QuicRstStreamErrorCode stream_error_;
+    bool fin_sent_;
+    bool fin_received_;
+    uint64_t stream_bytes_read_;
+    uint64_t stream_bytes_written_;
+    bool is_done_reading_;
+    bool is_first_stream_;
+    size_t num_bytes_consumed_;
+    SpdyPriority priority_;
+
+    DISALLOW_COPY_AND_ASSIGN(Handle);
   };
 
   QuicChromiumClientStream(QuicStreamId id,
@@ -98,11 +209,15 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
                        const std::vector<int>& lengths,
                        bool fin,
                        const CompletionCallback& callback);
-  // Set new |delegate|. |delegate| must not be NULL.
-  // If this stream has already received data, OnDataReceived() will be
-  // called on the delegate.
-  void SetDelegate(Delegate* delegate);
-  Delegate* GetDelegate() { return delegate_; }
+
+  // Creates a new Handle for this stream and sets |delegate| on the handle.
+  // Must only be called once.
+  std::unique_ptr<QuicChromiumClientStream::Handle> CreateHandle(
+      QuicChromiumClientStream::Delegate* delegate);
+
+  // Clears |handle_| from this stream.
+  void ClearHandle();
+
   void OnError(int error);
 
   // Reads at most |buf_len| bytes into |buf|. Returns the number of bytes read.
@@ -123,18 +238,24 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
   using QuicStream::sequencer;
 
  private:
-  void NotifyDelegateOfHeadersCompleteLater(SpdyHeaderBlock headers,
-                                            size_t frame_len);
-  void NotifyDelegateOfHeadersComplete(SpdyHeaderBlock headers,
-                                       size_t frame_len);
-  void NotifyDelegateOfDataAvailableLater();
-  void NotifyDelegateOfDataAvailable();
-  void RunOrBuffer(base::Closure closure);
+  void NotifyHandleOfInitialHeadersAvailableLater(SpdyHeaderBlock headers,
+                                                  size_t frame_len);
+  void NotifyHandleOfInitialHeadersAvailable(SpdyHeaderBlock headers,
+                                             size_t frame_len);
+  void NotifyHandleOfTrailingHeadersAvailableLater(SpdyHeaderBlock headers,
+                                                   size_t frame_len);
+  void NotifyHandleOfTrailingHeadersAvailable(SpdyHeaderBlock headers,
+                                              size_t frame_len);
+  void NotifyHandleOfDataAvailableLater();
+  void NotifyHandleOfDataAvailable();
 
   NetLogWithSource net_log_;
-  Delegate* delegate_;
+  Handle* handle_;
 
   bool headers_delivered_;
+
+  // True when initial headers have been sent.
+  bool initial_headers_sent_;
 
   // Callback to be invoked when WriteStreamData or WritevStreamData completes
   // asynchronously.
@@ -145,8 +266,10 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
   // Set to false if this stream to not be migrated during connection migration.
   bool can_migrate_;
 
-  // Holds notifications generated before delegate_ is set.
-  std::deque<base::Closure> delegate_tasks_;
+  // Stores the initial header if they arrive before the delegate.
+  SpdyHeaderBlock initial_headers_;
+  // Length of the HEADERS frame containing initial headers.
+  size_t initial_headers_frame_len_;
 
   base::WeakPtrFactory<QuicChromiumClientStream> weak_factory_;
 

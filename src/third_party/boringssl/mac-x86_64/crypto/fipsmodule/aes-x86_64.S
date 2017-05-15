@@ -1316,7 +1316,7 @@ L$cbc_prologue:
 	cmpq	$0,%r9
 	cmoveq	%r10,%r14
 
-	movq	_OPENSSL_ia32cap_addr(%rip),%r10
+	leaq	_OPENSSL_ia32cap_P(%rip),%r10
 	movl	(%r10),%r10d
 	cmpq	$512,%rdx
 	jb	L$cbc_slow_prologue

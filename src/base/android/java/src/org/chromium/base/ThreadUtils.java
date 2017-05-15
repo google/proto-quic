@@ -25,6 +25,8 @@ public class ThreadUtils {
 
     private static Handler sUiThreadHandler;
 
+    private static boolean sThreadAssertsDisabled;
+
     public static void setWillOverrideUiThread() {
         synchronized (sLock) {
             sWillOverride = true;
@@ -192,22 +194,48 @@ public class ThreadUtils {
 
     /**
      * Throw an exception (when DCHECKs are enabled) if currently not running on the UI thread.
+     *
+     * Can be disabled by setThreadAssertsDisabledForTesting(true).
      */
     public static void assertOnUiThread() {
-        if (BuildConfig.DCHECK_IS_ON && !runningOnUiThread()) {
-            throw new IllegalStateException("Must be called on the Ui thread.");
-        }
+        if (sThreadAssertsDisabled) return;
+
+        assert runningOnUiThread() : "Must be called on the UI thread.";
     }
 
     /**
      * Throw an exception (regardless of build) if currently not running on the UI thread.
      *
+     * Can be disabled by setThreadAssertsEnabledForTesting(false).
+     *
      * @see #assertOnUiThread()
      */
     public static void checkUiThread() {
-        if (!runningOnUiThread()) {
-            throw new IllegalStateException("Must be called on the Ui thread.");
+        if (!sThreadAssertsDisabled && !runningOnUiThread()) {
+            throw new IllegalStateException("Must be called on the UI thread.");
         }
+    }
+
+    /**
+     * Throw an exception (when DCHECKs are enabled) if currently running on the UI thread.
+     *
+     * Can be disabled by setThreadAssertsDisabledForTesting(true).
+     */
+    public static void assertOnBackgroundThread() {
+        if (sThreadAssertsDisabled) return;
+
+        assert !runningOnUiThread() : "Must be called on a thread other than UI.";
+    }
+
+    /**
+     * Disables thread asserts.
+     *
+     * Can be used by tests where code that normally runs multi-threaded is going to run
+     * single-threaded for the test (otherwise asserts that are valid in production would fail in
+     * those tests).
+     */
+    public static void setThreadAssertsDisabledForTesting(boolean disabled) {
+        sThreadAssertsDisabled = disabled;
     }
 
     /**

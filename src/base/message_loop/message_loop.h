@@ -162,19 +162,6 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   // DestructionObserver is receiving a notification callback.
   void RemoveDestructionObserver(DestructionObserver* destruction_observer);
 
-  // A NestingObserver is notified when a nested message loop begins. The
-  // observers are notified before the first task is processed.
-  class BASE_EXPORT NestingObserver {
-   public:
-    virtual void OnBeginNestedMessageLoop() = 0;
-
-   protected:
-    virtual ~NestingObserver();
-  };
-
-  void AddNestingObserver(NestingObserver* observer);
-  void RemoveNestingObserver(NestingObserver* observer);
-
   // Deprecated: use RunLoop instead.
   //
   // Signals the Run method to return when it becomes idle. It will continue to
@@ -277,9 +264,6 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
     bool old_state_;
   };
 
-  // Returns true if we are currently running a nested message loop.
-  bool IsNested();
-
   // A TaskObserver is an object that receives task notifications from the
   // MessageLoop.
   //
@@ -303,9 +287,6 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   void AddTaskObserver(TaskObserver* task_observer);
   void RemoveTaskObserver(TaskObserver* task_observer);
 
-  // Can only be called from the thread that owns the MessageLoop.
-  bool is_running() const;
-
   // Returns true if the message loop has high resolution timers enabled.
   // Provided for testing.
   bool HasHighResolutionTasks();
@@ -319,12 +300,6 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
 
   // Runs the specified PendingTask.
   void RunTask(PendingTask* pending_task);
-
-  bool nesting_allowed() const { return allow_nesting_; }
-
-  // Disallow nesting. After this is called, running a nested RunLoop or calling
-  // Add/RemoveNestingObserver() on this MessageLoop will crash.
-  void DisallowNesting() { allow_nesting_ = false; }
 
   // Disallow task observers. After this is called, calling
   // Add/RemoveTaskObserver() on this MessageLoop will crash.
@@ -402,9 +377,6 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   // responsible for synchronizing ScheduleWork() calls.
   void ScheduleWork();
 
-  // Notify observers that a nested message loop is starting.
-  void NotifyBeginNestedLoop();
-
   // MessagePump::Delegate methods:
   bool DoWork() override;
   bool DoDelayedWork(TimeTicks* next_delayed_work_time) override;
@@ -433,13 +405,11 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   TimeTicks recent_time_;
 
   // A queue of non-nestable tasks that we had to defer because when it came
-  // time to execute them we were in a nested message loop.  They will execute
-  // once we're out of nested message loops.
+  // time to execute them we were in a nested run loop.  They will execute
+  // once we're out of nested run loops.
   TaskQueue deferred_non_nestable_work_queue_;
 
   ObserverList<DestructionObserver> destruction_observers_;
-
-  ObserverList<NestingObserver> nesting_observers_;
 
   // A recursion block that prevents accidentally running additional tasks when
   // insider a (accidentally induced?) nested message pump.
@@ -475,8 +445,8 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   // MessageLoop is bound to its thread and constant forever after.
   PlatformThreadId thread_id_;
 
-  // Whether nesting is allowed.
-  bool allow_nesting_ = true;
+  // Whether this MessageLoop is currently running in nested RunLoops.
+  bool is_nested_ = false;
 
   // Whether task observers are allowed.
   bool allow_task_observers_ = true;

@@ -12,7 +12,6 @@
 #include <vector>
 
 #include "base/base_export.h"
-#include "base/callback.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
@@ -46,23 +45,17 @@ class TaskTracker;
 // This class is thread-safe.
 class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
  public:
-  // Callback invoked when a Sequence isn't empty after a worker pops a Task
-  // from it.
-  using ReEnqueueSequenceCallback = Callback<void(scoped_refptr<Sequence>)>;
-
   // Constructs a pool without workers.
   //
   // |name| is used to label the pool's threads ("TaskScheduler" + |name| +
   // index) and histograms ("TaskScheduler." + histogram name + "." + |name| +
   // extra suffixes). |priority_hint| is the preferred thread priority; the
   // actual thread priority depends on shutdown state and platform capabilities.
-  // |re_enqueue_sequence_callback| is invoked when a Sequence isn't empty after
-  // a worker pops a Task from it. |task_tracker| keeps track of tasks.
-  // |delayed_task_manager| handles tasks posted with a delay.
+  // |task_tracker| keeps track of tasks. |delayed_task_manager| handles tasks
+  // posted with a delay.
   SchedulerWorkerPoolImpl(
       const std::string& name,
       ThreadPriority priority_hint,
-      ReEnqueueSequenceCallback re_enqueue_sequence_callback,
       TaskTracker* task_tracker,
       DelayedTaskManager* delayed_task_manager);
 
@@ -80,8 +73,6 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
       const TaskTraits& traits) override;
   scoped_refptr<SequencedTaskRunner> CreateSequencedTaskRunnerWithTraits(
       const TaskTraits& traits) override;
-  void ReEnqueueSequence(scoped_refptr<Sequence> sequence,
-                         const SequenceSortKey& sequence_sort_key) override;
   bool PostTaskWithSequence(std::unique_ptr<Task> task,
                             scoped_refptr<Sequence> sequence) override;
   void PostTaskWithSequenceNow(std::unique_ptr<Task> task,
@@ -143,7 +134,6 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
 
   const std::string name_;
   const ThreadPriority priority_hint_;
-  const ReEnqueueSequenceCallback re_enqueue_sequence_callback_;
 
   // PriorityQueue from which all threads of this worker pool get work.
   PriorityQueue shared_priority_queue_;

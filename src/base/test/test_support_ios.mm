@@ -152,6 +152,8 @@ static char** g_argv;
 }
 
 - (void)runTests {
+  coverage_util::ConfigureCoverageReportPath();
+
   int exitStatus = g_test_suite->Run();
 
   if ([self shouldRedirectOutputToFile])
@@ -168,8 +170,6 @@ static char** g_argv;
   // things can think the app crashed even on a zero exit status).
   UIApplication* application = [UIApplication sharedApplication];
   [application _terminateWithStatus:exitStatus];
-
-  coverage_util::FlushCoverageDataIfNecessary();
 
   exit(exitStatus);
 }

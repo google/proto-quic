@@ -1,5 +1,5 @@
 /********************************************************************
- *   Copyright (C) 2016 and later: Unicode, Inc. and others.
+ *   © 2016 and later: Unicode, Inc. and others.
  *   License & terms of use: http://www.unicode.org/copyright.html#License
  *************************************************************************
  *************************************************************************
@@ -10,6 +10,10 @@
 
 #include "unicode/unistr.h"
 #include "unicode/fmtable.h"
+
+#ifndef UPRV_LENGTHOF 
+#define UPRV_LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0])) 
+#endif 
 
 // Verify that a UErrorCode is successful; exit(1) if not
 void check(UErrorCode& status, const char* msg);

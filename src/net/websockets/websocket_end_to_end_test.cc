@@ -245,9 +245,6 @@ class TestProxyDelegateWithProxyInfo : public ProxyDelegate {
       ProxyServer* alternative_proxy_server) const override {}
   void OnAlternativeProxyBroken(
       const ProxyServer& alternative_proxy_server) override {}
-  ProxyServer GetDefaultAlternativeProxy() const override {
-    return ProxyServer();
-  }
 
  private:
   ResolvedProxyInfo resolved_proxy_info_;

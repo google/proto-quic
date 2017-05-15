@@ -18,7 +18,6 @@
 #include "net/http2/hpack/decoder/hpack_decoder_tables.h"
 #include "net/http2/hpack/tools/hpack_block_builder.h"
 #include "net/http2/tools/http2_random.h"
-#include "net/spdy/chromium/spdy_flags.h"
 #include "net/spdy/core/hpack/hpack_constants.h"
 #include "net/spdy/core/hpack/hpack_encoder.h"
 #include "net/spdy/core/hpack/hpack_huffman_table.h"
@@ -92,23 +91,12 @@ const bool kNoCheckDecodedSize = false;
 enum StartChoice { START_WITH_HANDLER, START_WITHOUT_HANDLER, NO_START };
 
 class HpackDecoder3Test
-    : public ::testing::TestWithParam<std::tuple<StartChoice, bool, bool>> {
+    : public ::testing::TestWithParam<std::tuple<StartChoice, bool>> {
  protected:
   HpackDecoder3Test() : decoder_(), decoder_peer_(&decoder_) {}
 
   void SetUp() override {
-    std::tie(start_choice_, randomly_split_input_buffer_,
-             expect_total_hpack_bytes_) = GetParam();
-    if (start_choice_ != START_WITH_HANDLER) {
-      EXPECT_FALSE(expect_total_hpack_bytes_) << start_choice_;
-    }
-    // Set the flag true for when it is expected, and sometimes when it is not
-    // needed, as a way to test that it doesn't matter which value it has.
-    if (expect_total_hpack_bytes_ || start_choice_ != NO_START) {
-      FLAGS_chromium_http2_flag_log_compressed_size = true;
-    } else {
-      FLAGS_chromium_http2_flag_log_compressed_size = false;
-    }
+    std::tie(start_choice_, randomly_split_input_buffer_) = GetParam();
   }
 
   void HandleControlFrameHeadersStart() {
@@ -165,7 +153,7 @@ class HpackDecoder3Test
     // Want to get out the number of compressed bytes that were decoded,
     // so pass in a pointer if no handler.
     size_t total_hpack_bytes = 0;
-    if (start_choice_ == START_WITH_HANDLER && expect_total_hpack_bytes_) {
+    if (start_choice_ == START_WITH_HANDLER) {
       if (!HandleControlFrameHeadersComplete(nullptr)) {
         decode_has_failed_ = true;
         return false;
@@ -240,7 +228,6 @@ class HpackDecoder3Test
   TestHeadersHandler handler_;
   StartChoice start_choice_;
   bool randomly_split_input_buffer_;
-  bool expect_total_hpack_bytes_;
   bool decode_has_failed_ = false;
   size_t bytes_passed_in_;
 };
@@ -249,14 +236,12 @@ INSTANTIATE_TEST_CASE_P(
     NoHandler,
     HpackDecoder3Test,
     ::testing::Combine(::testing::Values(START_WITHOUT_HANDLER, NO_START),
-                       ::testing::Bool(),
-                       ::testing::Values(false)));
+                       ::testing::Bool()));
 
 INSTANTIATE_TEST_CASE_P(
     WithHandler,
     HpackDecoder3Test,
     ::testing::Combine(::testing::Values(START_WITH_HANDLER),
-                       ::testing::Bool(),
                        ::testing::Bool()));
 
 TEST_P(HpackDecoder3Test, AddHeaderDataWithHandleControlFrameHeadersData) {

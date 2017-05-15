@@ -4,7 +4,6 @@
   "Android Release (NVIDIA Shield TV)": {
     "gtest_tests": [
       {
-        "override_isolate_target": "angle_end2end_tests",
         "swarming": {
           "can_use_on_swarming_builders": false,
           "cipd_packages": [
@@ -35,7 +34,6 @@
         "use_xvfb": false
       },
       {
-        "override_isolate_target": "angle_unittests",
         "swarming": {
           "can_use_on_swarming_builders": false,
           "cipd_packages": [
@@ -66,7 +64,6 @@
         "use_xvfb": false
       },
       {
-        "override_isolate_target": "gl_tests",
         "swarming": {
           "can_use_on_swarming_builders": false,
           "cipd_packages": [
@@ -97,7 +94,6 @@
         "use_xvfb": false
       },
       {
-        "override_isolate_target": "gl_unittests",
         "swarming": {
           "can_use_on_swarming_builders": false,
           "cipd_packages": [
@@ -398,7 +394,6 @@
   "Android Release (Nexus 5)": {
     "gtest_tests": [
       {
-        "override_isolate_target": "angle_unittests",
         "swarming": {
           "can_use_on_swarming_builders": false,
           "cipd_packages": [
@@ -429,7 +424,6 @@
         "use_xvfb": false
       },
       {
-        "override_isolate_target": "gl_tests",
         "swarming": {
           "can_use_on_swarming_builders": false,
           "cipd_packages": [
@@ -460,7 +454,6 @@
         "use_xvfb": false
       },
       {
-        "override_isolate_target": "gl_unittests",
         "swarming": {
           "can_use_on_swarming_builders": false,
           "cipd_packages": [
@@ -765,7 +758,6 @@
           "--enable-xml-result-parsing"
         ],
         "name": "angle_deqp_gles2_gles_tests",
-        "override_isolate_target": "angle_deqp_gles2_tests",
         "swarming": {
           "can_use_on_swarming_builders": true,
           "cipd_packages": [
@@ -802,7 +794,6 @@
           "--shard-timeout=300"
         ],
         "name": "angle_deqp_gles3_gles_tests",
-        "override_isolate_target": "angle_deqp_gles3_tests",
         "swarming": {
           "can_use_on_swarming_builders": true,
           "cipd_packages": [
@@ -834,7 +825,6 @@
         "use_xvfb": false
       },
       {
-        "override_isolate_target": "angle_end2end_tests",
         "swarming": {
           "can_use_on_swarming_builders": true,
           "cipd_packages": [
@@ -866,7 +856,6 @@
         "use_xvfb": false
       },
       {
-        "override_isolate_target": "angle_unittests",
         "swarming": {
           "can_use_on_swarming_builders": true,
           "cipd_packages": [
@@ -898,7 +887,6 @@
         "use_xvfb": false
       },
       {
-        "override_isolate_target": "gl_tests",
         "swarming": {
           "can_use_on_swarming_builders": true,
           "cipd_packages": [
@@ -930,7 +918,6 @@
         "use_xvfb": false
       },
       {
-        "override_isolate_target": "gl_unittests",
         "swarming": {
           "can_use_on_swarming_builders": true,
           "cipd_packages": [
@@ -1242,7 +1229,6 @@
   "Android Release (Nexus 6)": {
     "gtest_tests": [
       {
-        "override_isolate_target": "angle_unittests",
         "swarming": {
           "can_use_on_swarming_builders": false,
           "cipd_packages": [
@@ -1273,7 +1259,6 @@
         "use_xvfb": false
       },
       {
-        "override_isolate_target": "gl_tests",
         "swarming": {
           "can_use_on_swarming_builders": false,
           "cipd_packages": [
@@ -1304,7 +1289,6 @@
         "use_xvfb": false
       },
       {
-        "override_isolate_target": "gl_unittests",
         "swarming": {
           "can_use_on_swarming_builders": false,
           "cipd_packages": [
@@ -1605,7 +1589,6 @@
   "Android Release (Nexus 6P)": {
     "gtest_tests": [
       {
-        "override_isolate_target": "angle_end2end_tests",
         "swarming": {
           "can_use_on_swarming_builders": false,
           "cipd_packages": [
@@ -1636,7 +1619,6 @@
         "use_xvfb": false
       },
       {
-        "override_isolate_target": "angle_unittests",
         "swarming": {
           "can_use_on_swarming_builders": false,
           "cipd_packages": [
@@ -1667,7 +1649,6 @@
         "use_xvfb": false
       },
       {
-        "override_isolate_target": "gl_tests",
         "swarming": {
           "can_use_on_swarming_builders": false,
           "cipd_packages": [
@@ -1698,7 +1679,6 @@
         "use_xvfb": false
       },
       {
-        "override_isolate_target": "gl_unittests",
         "swarming": {
           "can_use_on_swarming_builders": false,
           "cipd_packages": [
@@ -1999,7 +1979,6 @@
   "Android Release (Nexus 9)": {
     "gtest_tests": [
       {
-        "override_isolate_target": "angle_unittests",
         "swarming": {
           "can_use_on_swarming_builders": false,
           "cipd_packages": [
@@ -2030,7 +2009,6 @@
         "use_xvfb": false
       },
       {
-        "override_isolate_target": "gl_tests",
         "swarming": {
           "can_use_on_swarming_builders": false,
           "cipd_packages": [
@@ -2061,7 +2039,6 @@
         "use_xvfb": false
       },
       {
-        "override_isolate_target": "gl_unittests",
         "swarming": {
           "can_use_on_swarming_builders": false,
           "cipd_packages": [
@@ -2362,7 +2339,6 @@
   "Android Release (Pixel C)": {
     "gtest_tests": [
       {
-        "override_isolate_target": "angle_end2end_tests",
         "swarming": {
           "can_use_on_swarming_builders": false,
           "cipd_packages": [
@@ -2393,7 +2369,6 @@
         "use_xvfb": false
       },
       {
-        "override_isolate_target": "angle_unittests",
         "swarming": {
           "can_use_on_swarming_builders": false,
           "cipd_packages": [
@@ -2424,7 +2399,6 @@
         "use_xvfb": false
       },
       {
-        "override_isolate_target": "gl_unittests",
         "swarming": {
           "can_use_on_swarming_builders": false,
           "cipd_packages": [

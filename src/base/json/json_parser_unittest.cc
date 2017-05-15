@@ -28,6 +28,17 @@ class JSONParserTest : public testing::Test {
     return parser;
   }
 
+  // MSan will do a better job detecting over-read errors if the input is
+  // not nul-terminated on the heap. This will copy |input| to a new buffer
+  // owned by |owner|, returning a StringPiece to |owner|.
+  StringPiece MakeNotNullTerminatedInput(const char* input,
+                                         std::unique_ptr<char[]>* owner) {
+    size_t str_len = strlen(input);
+    owner->reset(new char[str_len]);
+    memcpy(owner->get(), input, str_len);
+    return StringPiece(owner->get(), str_len);
+  }
+
   void TestLastThree(JSONParser* parser) {
     EXPECT_EQ(',', *parser->NextChar());
     EXPECT_EQ('|', *parser->NextChar());
@@ -367,14 +378,11 @@ TEST_F(JSONParserTest, ParseNumberErrors) {
     auto test_case = kCases[i];
     SCOPED_TRACE(StringPrintf("case %u: \"%s\"", i, test_case.input));
 
-    // MSan will do a better job detecting over-read errors if the input is
-    // not nul-terminated on the heap.
-    size_t str_len = strlen(test_case.input);
-    auto non_nul_termianted = MakeUnique<char[]>(str_len);
-    memcpy(non_nul_termianted.get(), test_case.input, str_len);
+    std::unique_ptr<char[]> input_owner;
+    StringPiece input =
+        MakeNotNullTerminatedInput(test_case.input, &input_owner);
 
-    StringPiece string_piece(non_nul_termianted.get(), str_len);
-    std::unique_ptr<Value> result = JSONReader::Read(string_piece);
+    std::unique_ptr<Value> result = JSONReader::Read(input);
     if (test_case.parse_success) {
       EXPECT_TRUE(result);
     } else {
@@ -387,6 +395,35 @@ TEST_F(JSONParserTest, ParseNumberErrors) {
     double double_value = 0;
     EXPECT_TRUE(result->GetAsDouble(&double_value));
     EXPECT_EQ(test_case.value, double_value);
+  }
+}
+
+TEST_F(JSONParserTest, UnterminatedInputs) {
+  const char* kCases[] = {
+      // clang-format off
+      "/",
+      "//",
+      "/*",
+      "\"xxxxxx",
+      "\"",
+      "{   ",
+      "[\t",
+      "tru",
+      "fals",
+      "nul",
+      "\"\\x2",
+      "\"\\u123",
+      // clang-format on
+  };
+
+  for (unsigned int i = 0; i < arraysize(kCases); ++i) {
+    auto* test_case = kCases[i];
+    SCOPED_TRACE(StringPrintf("case %u: \"%s\"", i, test_case));
+
+    std::unique_ptr<char[]> input_owner;
+    StringPiece input = MakeNotNullTerminatedInput(test_case, &input_owner);
+
+    EXPECT_FALSE(JSONReader::Read(input));
   }
 }
 

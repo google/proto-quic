@@ -4,6 +4,14 @@
 
 import("//build/config/android/rules.gni")
 
+if (!defined(default_android_support_library_version)) {
+  default_android_support_library_version = "25.0.1"
+}
+
+declare_args() {
+  android_support_library_version = default_android_support_library_version
+}
+
 config("cpu_features_include") {
   include_dirs = [ "$android_ndk_root/sources/android/cpufeatures" ]
 }
@@ -30,7 +38,7 @@ source_set("cpu_features") {
   ]
 }
 
-lib_version = "25.0.1"
+lib_version = android_support_library_version
 lib_path = "$android_sdk_root/extras/android/m2repository/com/android/support"
 
 android_java_prebuilt("android_gcm_java") {

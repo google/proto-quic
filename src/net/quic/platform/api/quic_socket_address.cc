@@ -20,11 +20,11 @@ QuicSocketAddress::QuicSocketAddress(const struct sockaddr& saddr)
 QuicSocketAddress::QuicSocketAddress(const QuicSocketAddressImpl& impl)
     : impl_(impl) {}
 
-bool operator==(QuicSocketAddress lhs, QuicSocketAddress rhs) {
+bool operator==(const QuicSocketAddress& lhs, const QuicSocketAddress& rhs) {
   return lhs.impl_ == rhs.impl_;
 }
 
-bool operator!=(QuicSocketAddress lhs, QuicSocketAddress rhs) {
+bool operator!=(const QuicSocketAddress& lhs, const QuicSocketAddress& rhs) {
   return lhs.impl_ != rhs.impl_;
 }
 

@@ -52,39 +52,8 @@ _BENCHMARKS_TO_RUN = {
 }
 
 
-def FindPgosweep(target_cpu):
-  """Find the directory containing pgosweep.exe.
-
-  Note: |target_cpu| should be x86 or x64.
-  """
-  if target_cpu not in ('x86', 'x64'):
-    raise Exception('target_cpu should be x86 or x64.')
-  win_toolchain_json_file = os.path.join(_CHROME_BUILD_DIR,
-                                         'win_toolchain.json')
-  if not os.path.exists(win_toolchain_json_file):
-    raise Exception('The toolchain JSON file (%s) is missing.' %
-                    win_toolchain_json_file)
-  with open(win_toolchain_json_file) as temp_f:
-    toolchain_data = json.load(temp_f)
-  if not os.path.isdir(toolchain_data['path']):
-    raise Exception('The toolchain JSON file\'s "path" entry (%s) does not '
-                    'refer to a path.' % win_toolchain_json_file)
-
-  pgo_sweep_dir = os.path.join(toolchain_data['path'], 'VC', 'bin')
-  if target_cpu == 'x64':
-    pgo_sweep_dir = os.path.join(pgo_sweep_dir, 'amd64')
-
-  if not os.path.exists(os.path.join(pgo_sweep_dir, 'pgosweep.exe')):
-    raise Exception('pgosweep.exe is missing from %s.' % pgo_sweep_dir)
-
-  return pgo_sweep_dir
-
-
 def RunBenchmarks(options):
   """Run the benchmarks."""
-  # Starts by finding the directory containing pgosweep.exe
-  pgo_sweep_dir = FindPgosweep(options.target_cpu)
-
   # Find the run_benchmark script.
   chrome_run_benchmark_script = os.path.join(_CHROME_SRC_DIR, 'tools',
                                              'perf', 'run_benchmark')
@@ -95,8 +64,7 @@ def RunBenchmarks(options):
   # Augment the PATH to make sure that the benchmarking script can find
   # pgosweep.exe and its runtime libraries.
   env = os.environ.copy()
-  env['PATH'] = str(os.pathsep.join([pgo_sweep_dir, options.build_dir,
-                                     os.environ['PATH']]))
+  env['PATH'] = str(os.pathsep.join([options.build_dir, os.environ['PATH']]))
   env['PogoSafeMode'] = '1'
   # Apply a scaling factor of 0.5 to the PGO profiling buffers for the 32-bit
   # builds, without this the buffers will be too large and the process will

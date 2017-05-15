@@ -428,6 +428,7 @@ WARN_UNUSED_RESULT bool InspectSignatureAlgorithmForCert(
 
   // Check algorithm-specific parameters.
   switch (algorithm->algorithm()) {
+    case SignatureAlgorithmId::Dsa:
     case SignatureAlgorithmId::RsaPkcs1:
     case SignatureAlgorithmId::Ecdsa:
       DCHECK(!algorithm->has_params());

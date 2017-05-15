@@ -231,10 +231,6 @@ void QuicSimpleServerStream::SendHeadersAndBodyAndTrailers(
     SpdyHeaderBlock response_headers,
     QuicStringPiece body,
     SpdyHeaderBlock response_trailers) {
-  if (!allow_bidirectional_data() && !reading_stopped()) {
-    StopReading();
-  }
-
   // Send the headers, with a FIN if there's nothing else to send.
   bool send_fin = (body.empty() && response_trailers.empty());
   QUIC_DLOG(INFO) << "Stream " << id() << " writing headers (fin = " << send_fin

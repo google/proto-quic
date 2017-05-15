@@ -115,8 +115,10 @@ android_library("net_javatests") {
   java_files = [
     "javatests/src/org/chromium/net/AndroidKeyStoreTestUtil.java",
     "javatests/src/org/chromium/net/AndroidNetworkLibraryTestUtil.java",
+    "javatests/src/org/chromium/net/AndroidProxyConfigServiceTestUtil.java",
     "javatests/src/org/chromium/net/AndroidProxySelectorTest.java",
     "javatests/src/org/chromium/net/NetErrorsTest.java",
+    "javatests/src/org/chromium/net/NetworkChangeNotifierNoNativeTest.java",
     "javatests/src/org/chromium/net/NetworkChangeNotifierTest.java",
     "javatests/src/org/chromium/net/X509UtilTest.java",
   ]

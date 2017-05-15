@@ -79,7 +79,7 @@ class MapFileParser(object):
       if not parts:
         break
       name, size_str, path = parts
-      sym = models.Symbol('.bss',  int(size_str[2:], 16), name=name,
+      sym = models.Symbol('.bss',  int(size_str[2:], 16), full_name=name,
                           object_path=path)
       ret.append(sym)
     return ret
@@ -159,7 +159,7 @@ class MapFileParser(object):
               size = int(size_str[2:], 16)
               path = None
               sym = models.Symbol(section_name, size, address=address,
-                                  name=name, object_path=path)
+                                  full_name=name, object_path=path)
               syms.append(sym)
             else:
               # A normal symbol entry.
@@ -218,13 +218,13 @@ class MapFileParser(object):
                     sym = models.Symbol(
                         section_name, 0,
                         address=address,
-                        name='** symbol gap %d' % symbol_gap_count,
-                        object_path=path)
+                        full_name='** symbol gap %d' % symbol_gap_count)
                     symbol_gap_count += 1
                     syms.append(sym)
 
               sym = models.Symbol(section_name, size, address=address,
-                                  name=name or mangled_name, object_path=path)
+                                  full_name=name or mangled_name,
+                                  object_path=path)
               syms.append(sym)
           section_end_address = section_address + section_size
           if section_name != '.bss' and (
@@ -233,7 +233,8 @@ class MapFileParser(object):
             sym = models.Symbol(
                 section_name, 0,
                 address=section_end_address,
-                name='** symbol gap %d (end of section)' % symbol_gap_count)
+                full_name=(
+                    '** symbol gap %d (end of section)' % symbol_gap_count))
             syms.append(sym)
           logging.debug('Symbol count for %s: %d', section_name,
                         len(syms) - sym_count_at_start)

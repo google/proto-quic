@@ -265,21 +265,6 @@ base::FilePath FindWindowsPython() {
 }
 #endif
 
-// Expands all ./, ../, and symbolic links in the given path.
-bool GetRealPath(const base::FilePath& path, base::FilePath* out) {
-#if defined(OS_POSIX)
-  char buf[PATH_MAX];
-  if (!realpath(path.value().c_str(), buf)) {
-    return false;
-  }
-  *out = base::FilePath(buf);
-#else
-  // Do nothing on a non-POSIX system.
-  *out = path;
-#endif
-  return true;
-}
-
 }  // namespace
 
 const char Setup::kBuildArgFileName[] = "args.gn";
@@ -578,8 +563,8 @@ bool Setup::FillSourceDir(const base::CommandLine& cmdline) {
     root_path = dotfile_name_.DirName();
   }
 
-  base::FilePath root_realpath;
-  if (!GetRealPath(root_path, &root_realpath)) {
+  base::FilePath root_realpath = base::MakeAbsoluteFilePath(root_path);
+  if (root_realpath.empty()) {
     Err(Location(), "Can't get the real root path.",
         "I could not get the real path of \"" + FilePathToUTF8(root_path) +
         "\".").PrintToStdout();
@@ -610,8 +595,9 @@ bool Setup::FillBuildDir(const std::string& build_dir, bool require_exists) {
         "\".").PrintToStdout();
     return false;
   }
-  base::FilePath build_dir_realpath;
-  if (!GetRealPath(build_dir_path, &build_dir_realpath)) {
+  base::FilePath build_dir_realpath =
+      base::MakeAbsoluteFilePath(build_dir_path);
+  if (build_dir_realpath.empty()) {
     Err(Location(), "Can't get the real build dir path.",
         "I could not get the real path of \"" + FilePathToUTF8(build_dir_path) +
         "\".").PrintToStdout();

@@ -363,7 +363,7 @@ TEST(OriginTest, UnsafelyCreate) {
     SCOPED_TRACE(testing::Message() << test.scheme << "://" << test.host << ":"
                                     << test.port);
     url::Origin origin = url::Origin::UnsafelyCreateOriginWithoutNormalization(
-        test.scheme, test.host, test.port);
+        test.scheme, test.host, test.port, "");
     EXPECT_EQ(test.scheme, origin.scheme());
     EXPECT_EQ(test.host, origin.host());
     EXPECT_EQ(test.port, origin.port());
@@ -400,7 +400,7 @@ TEST(OriginTest, UnsafelyCreateUniqueOnInvalidInput) {
     SCOPED_TRACE(testing::Message() << test.scheme << "://" << test.host << ":"
                                     << test.port);
     url::Origin origin = url::Origin::UnsafelyCreateOriginWithoutNormalization(
-        test.scheme, test.host, test.port);
+        test.scheme, test.host, test.port, "");
     EXPECT_EQ("", origin.scheme());
     EXPECT_EQ("", origin.host());
     EXPECT_EQ(0, origin.port());
@@ -430,7 +430,7 @@ TEST(OriginTest, UnsafelyCreateUniqueViaEmbeddedNulls) {
                                     << test.port);
     url::Origin origin = url::Origin::UnsafelyCreateOriginWithoutNormalization(
         std::string(test.scheme, test.scheme_length),
-        std::string(test.host, test.host_length), test.port);
+        std::string(test.host, test.host_length), test.port, "");
     EXPECT_EQ("", origin.scheme());
     EXPECT_EQ("", origin.host());
     EXPECT_EQ(0, origin.port());

@@ -15,8 +15,8 @@ import path_utils
 
 import diff_util
 
-def DoPresubmitMain(argv, original_filename, backup_filename, script_name,
-                    prettyFn):
+def DoPresubmit(argv, original_filename, backup_filename, script_name,
+                prettyFn):
   """Execute presubmit/pretty printing for the target file.
 
   Args:
@@ -59,34 +59,34 @@ def DoPresubmitMain(argv, original_filename, backup_filename, script_name,
   if '\r' in original_xml:
     logging.error('DOS-style line endings (CR characters) detected - these are '
                   'not allowed. Please run dos2unix %s', original_filename)
-    sys.exit(1)
+    return 1
 
   try:
     pretty = prettyFn(original_xml)
   except Exception as e:
     logging.exception('Aborting parsing due to fatal errors:')
-    sys.exit(1)
+    return 1
 
   if original_xml == pretty:
     logging.info('%s is correctly pretty-printed.', original_filename)
-    sys.exit(0)
+    return 0
 
   if presubmit:
     logging.error('%s is not formatted correctly; run %s to fix.',
                   original_filename, script_name)
-    sys.exit(1)
+    return 1
 
   # Prompt user to consent on the change.
   if interactive and not diff_util.PromptUserToAcceptDiff(
       original_xml, pretty, 'Is the new version acceptable?'):
     logging.error('Diff not accepted. Aborting.')
-    sys.exit(1)
+    return 1
 
   if diff:
     for line in difflib.unified_diff(original_xml.splitlines(),
                                      pretty.splitlines()):
       print line
-    sys.exit(0)
+    return 0
 
   logging.info('Creating backup file: %s', backup_filename)
   shutil.move(xml_path, os.path.join(xml_dir, backup_filename))
@@ -95,4 +95,8 @@ def DoPresubmitMain(argv, original_filename, backup_filename, script_name,
     f.write(pretty)
   logging.info('Updated %s. Don\'t forget to add it to your changelist',
                xml_path)
-  sys.exit(0)
+  return 0
+
+
+def DoPresubmitMain(*args, **kwargs):
+  sys.exit(DoPresubmit(*args, **kwargs))

@@ -21,10 +21,11 @@ size_t kGoAwayDebugDataMaxSize = 1024;
 
 }  // namespace
 
-BufferedSpdyFramer::BufferedSpdyFramer()
+BufferedSpdyFramer::BufferedSpdyFramer(const NetLogWithSource& net_log)
     : spdy_framer_(SpdyFramer::ENABLE_COMPRESSION),
       visitor_(NULL),
-      frames_received_(0) {}
+      frames_received_(0),
+      net_log_(net_log) {}
 
 BufferedSpdyFramer::~BufferedSpdyFramer() {
 }
@@ -91,7 +92,7 @@ void BufferedSpdyFramer::OnStreamPadding(SpdyStreamId stream_id, size_t len) {
 
 SpdyHeadersHandlerInterface* BufferedSpdyFramer::OnHeaderFrameStart(
     SpdyStreamId stream_id) {
-  coalescer_.reset(new HeaderCoalescer());
+  coalescer_.reset(new HeaderCoalescer(net_log_));
   return coalescer_.get();
 }
 

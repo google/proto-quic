@@ -89,7 +89,7 @@ class SymlinkTest(unittest.TestCase):
       linkdir = os.path.join(self.cwd, 'linkdir')
       os.symlink('subDir', linkdir)
       actual = isolated_format.file_to_metadata(
-          unicode(linkdir.upper()), {}, True, ALGO)
+          unicode(linkdir.upper()), {}, True, ALGO, False)
       expected = {'l': u'subdir', 't': int(os.stat(linkdir).st_mtime)}
       self.assertEqual(expected, actual)
 
@@ -109,14 +109,14 @@ class SymlinkTest(unittest.TestCase):
       os.symlink('linkedDir1', subsymlinkdir)
 
       actual = isolated_format.file_to_metadata(
-          unicode(subsymlinkdir.upper()), {}, True, ALGO)
+          unicode(subsymlinkdir.upper()), {}, True, ALGO, False)
       expected = {
         'l': u'linkeddir1', 't': int(os.stat(subsymlinkdir).st_mtime),
       }
       self.assertEqual(expected, actual)
 
       actual = isolated_format.file_to_metadata(
-          unicode(linkeddir1.upper()), {}, True, ALGO)
+          unicode(linkeddir1.upper()), {}, True, ALGO, False)
       expected = {
         'l': u'../linkeddir2', 't': int(os.stat(linkeddir1).st_mtime),
       }
@@ -143,6 +143,31 @@ class SymlinkTest(unittest.TestCase):
       open(os.path.join(tmp_foo, 'bar.txt'), 'w').close()
       actual = isolated_format.expand_symlinks(src, u'out/foo/bar.txt')
       self.assertEqual((u'out/foo/bar.txt', []), actual)
+
+    def test_file_to_metadata_path_case_collapse(self):
+      # Ensure setting the collapse_symlink option doesn't include the symlinks
+      basedir = os.path.join(self.cwd, 'basedir')
+      os.mkdir(basedir)
+      subdir = os.path.join(basedir, 'subdir')
+      os.mkdir(subdir)
+      linkdir = os.path.join(basedir, 'linkdir')
+      os.mkdir(linkdir)
+
+      foo_file = os.path.join(subdir, 'Foo.txt')
+      open(foo_file, 'w').close()
+      sym_file = os.path.join(basedir, 'linkdir', 'Sym.txt')
+      os.symlink('../subdir/Foo.txt', sym_file)
+
+      actual = isolated_format.file_to_metadata(sym_file, {}, True, ALGO, True)
+
+      expected = {
+        # SHA-1 of empty string
+        'h': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+        'm': 288,
+        's': 0,
+        't': int(round(os.stat(foo_file).st_mtime)),
+      }
+      self.assertEqual(expected, actual)
 
 
 class TestIsolated(auto_stub.TestCase):

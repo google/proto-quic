@@ -50,8 +50,8 @@ class QuicSimpleClient : public QuicClientBase,
   // QuicChromiumPacketReader::Visitor
   void OnReadError(int result, const DatagramClientSocket* socket) override;
   bool OnPacket(const QuicReceivedPacket& packet,
-                IPEndPoint local_address,
-                IPEndPoint peer_address) override;
+                const QuicSocketAddress& local_address,
+                const QuicSocketAddress& peer_address) override;
 
   // From QuicClientBase
   QuicSocketAddress GetLatestClientAddress() const override;

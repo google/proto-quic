@@ -43,6 +43,7 @@ SEQUENCE {
       UTCTime { "140423205040Z" }
       UTCTime { "170422205040Z" }
     }
+#-----BEGIN SUBJECT-----
     SEQUENCE {
       SET {
         SEQUENCE {
@@ -66,6 +67,7 @@ SEQUENCE {
         }
       }
     }
+#-----END SUBJECT-----
     SEQUENCE {
       SEQUENCE {
         # rsaEncryption

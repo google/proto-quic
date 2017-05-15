@@ -457,6 +457,8 @@ class BASE_EXPORT FilePath {
 // This should not be used in production code - call ToString() instead.
 void PrintTo(const FilePath& path, std::ostream* out);
 
+std::ostream& operator<<(std::ostream& out, const FilePath& file_path);
+
 }  // namespace base
 
 // Macros for string literal initialization of FilePath::CharType[], and for

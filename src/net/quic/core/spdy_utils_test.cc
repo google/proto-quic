@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 #include "net/quic/core/spdy_utils.h"
 
+#include <memory>
+
 #include "base/macros.h"
 #include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/platform/api/quic_test.h"
@@ -23,7 +25,7 @@ static std::unique_ptr<QuicHeaderList> FromList(
   for (const auto& p : src) {
     headers->OnHeader(p.first, p.second);
   }
-  headers->OnHeaderBlockEnd(0);
+  headers->OnHeaderBlockEnd(0, 0);
   return headers;
 }
 

@@ -89,7 +89,7 @@ sq{
         CW{"Kuraçao"}
         CX{"Ishulli i Krishtlindjes"}
         CY{"Qipro"}
-        CZ{"Republika Çeke"}
+        CZ{"Çeki"}
         DE{"Gjermani"}
         DG{"Diego-Garsia"}
         DJ{"Xhibuti"}
@@ -108,7 +108,7 @@ sq{
         EU{"Bashkimi Europian"}
         FI{"Finlandë"}
         FJ{"Fixhi"}
-        FK{"Ishujt Falkland"}
+        FK{"Ishujt Falkland (Malvine)"}
         FM{"Mikronezi"}
         FO{"Ishujt Faroe"}
         FR{"Francë"}
@@ -181,7 +181,7 @@ sq{
         MF{"Shën-Martin"}
         MG{"Madagaskar"}
         MH{"Ishujt Marshall"}
-        MK{"Maqedoni"}
+        MK{"Maqedoni (IRJM)"}
         ML{"Mali"}
         MM{"Mianmar (Burma)"}
         MN{"Mongoli"}
@@ -302,10 +302,8 @@ sq{
         CD{"Kongo (RDK)"}
         CG{"Kongo (Republika)"}
         CI{"Bregu i Fildishtë"}
-        CZ{"Çeki"}
-        FK{"Ishujt Falkland (Malvine)"}
-        MK{"Maqedoni (IRJM)"}
+        CZ{"Republika Çeke"}
         TL{"Timori Lindor"}
     }
-    Version{"2.1.28.79"}
+    Version{"2.1.32.59"}
 }

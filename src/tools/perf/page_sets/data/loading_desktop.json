@@ -1,0 +1,183 @@
+{
+    "archives": {
+        "24h": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "2ch": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "AirBnB": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Aljayyash": {
+            "DEFAULT": "loading_desktop_000.wpr"
+        },
+        "AllRecipes": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "ArsTechnica": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Baidu": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Bhaskar": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Chosun": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Colorado.edu": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Danawa": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Daum": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Donga": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Economist": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Elmundo": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "FC2Blog": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "FDA": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "FIFA": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "FarsNews": {
+            "DEFAULT": "loading_desktop_000.wpr"
+        },
+        "Flickr": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "FlipKart": {
+            "DEFAULT": "loading_desktop_005.wpr"
+        },
+        "Free.fr": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "HTML5Rocks": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Haraj": {
+            "DEFAULT": "loading_desktop_000.wpr"
+        },
+        "HatenaBookmark": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "IGN": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "IMDB": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "IndiaTimes": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Kakaku": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Kenh14": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Leboncoin": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "MLB": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Mercadolivre": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "NatGeo": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Naver": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Orange": {
+            "DEFAULT": "loading_desktop_002.wpr"
+        },
+        "Pantip": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "PremierLeague": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "QQ": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "REI": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Rambler": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Ruten": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Sina": {
+            "DEFAULT": "loading_desktop_003.wpr"
+        },
+        "Taobao": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "TheOnion": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "TheVerge": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "TicketMaster": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Vietnamnet": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Vnexpress": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Walgreens": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Yandex": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "Ynet": {
+            "DEFAULT": "loading_desktop_000.wpr"
+        },
+        "amazon.co.jp": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "goo.ne.jp": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "ja.wikipedia": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "money.cnn": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "ru.wikipedia": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "uol.com.br": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        },
+        "yahoo.co.jp": {
+            "DEFAULT": "loading_desktop_001.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
+}

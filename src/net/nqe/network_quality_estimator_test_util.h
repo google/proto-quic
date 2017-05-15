@@ -203,6 +203,11 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
   int GetNetLogLastIntegerValue(NetLogEventType type,
                                 const std::string& key) const;
 
+  // Notifies the registered observers that the network quality estimate has
+  // changed to |network_quality|.
+  void NotifyObserversOfRTTOrThroughputEstimatesComputed(
+      const net::nqe::internal::NetworkQuality& network_quality);
+
   using NetworkQualityEstimator::SetTickClockForTesting;
   using NetworkQualityEstimator::OnConnectionTypeChanged;
   using NetworkQualityEstimator::OnUpdatedRTTAvailable;

@@ -15,6 +15,11 @@ class TaskScheduler;
 
 namespace test {
 
+// DEPRECATED. Use ScopedTaskEnvironment instead.
+//
+// TODO(fdoray): Replace ScopedTaskScheduler instances by ScopedTaskEnvironment.
+// https://crbug.com/708584
+//
 // Allows usage of the base/task_scheduler/post_task.h API within its scope.
 //
 // To run pending tasks synchronously, call RunLoop::Run/RunUntilIdle() on the
@@ -41,8 +46,7 @@ namespace test {
 // base::PostTask(FROM_HERE, base::Bind(&RunLoop::Quit, &run_loop));
 // base::PostTask(FROM_HERE, base::Bind(&C));
 // base::PostTaskWithTraits(
-//     base::TaskTraits().WithShutdownBehavior(
-//         base::TaskShutdownBehavior::BLOCK_SHUTDOWN),
+//     {base::TaskShutdownBehavior::BLOCK_SHUTDOWN},
 //     base::Bind(&D));
 // run_loop.Run();  // Returns after running B and RunLoop::Quit.
 //

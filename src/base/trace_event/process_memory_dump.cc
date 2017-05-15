@@ -12,6 +12,7 @@
 #include "base/process/process_metrics.h"
 #include "base/strings/stringprintf.h"
 #include "base/trace_event/heap_profiler_heap_dump_writer.h"
+#include "base/trace_event/heap_profiler_serialization_state.h"
 #include "base/trace_event/memory_infra_background_whitelist.h"
 #include "base/trace_event/process_memory_totals.h"
 #include "base/trace_event/trace_event_argument.h"
@@ -151,11 +152,13 @@ size_t ProcessMemoryDump::CountResidentBytes(void* start_address,
 #endif  // defined(COUNT_RESIDENT_BYTES_SUPPORTED)
 
 ProcessMemoryDump::ProcessMemoryDump(
-    scoped_refptr<MemoryDumpSessionState> session_state,
+    scoped_refptr<HeapProfilerSerializationState>
+        heap_profiler_serialization_state,
     const MemoryDumpArgs& dump_args)
     : has_process_totals_(false),
       has_process_mmaps_(false),
-      session_state_(std::move(session_state)),
+      heap_profiler_serialization_state_(
+          std::move(heap_profiler_serialization_state)),
       dump_args_(dump_args) {}
 
 ProcessMemoryDump::~ProcessMemoryDump() {}
@@ -250,9 +253,16 @@ void ProcessMemoryDump::DumpHeapUsage(
     base::trace_event::TraceEventMemoryOverhead& overhead,
     const char* allocator_name) {
   if (!metrics_by_context.empty()) {
+    // We shouldn't end up here unless we're doing a detailed dump with
+    // heap profiling enabled and if that is the case tracing should be
+    // enabled which sets up the heap profiler serialization state.
+    if (!heap_profiler_serialization_state()) {
+      NOTREACHED();
+      return;
+    }
     DCHECK_EQ(0ul, heap_dumps_.count(allocator_name));
     std::unique_ptr<TracedValue> heap_dump = ExportHeapDump(
-        metrics_by_context, *session_state());
+        metrics_by_context, *heap_profiler_serialization_state());
     heap_dumps_[allocator_name] = std::move(heap_dump);
   }
 

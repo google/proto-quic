@@ -31,6 +31,7 @@
 #include "net/quic/chromium/quic_stream_factory.h"
 #include "net/quic/core/quic_client_promised_info.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/socket/datagram_client_socket.h"
 #include "net/spdy/chromium/spdy_http_utils.h"
 #include "net/spdy/chromium/spdy_log_util.h"
@@ -186,26 +187,187 @@ class QuicServerPushHelper : public ServerPushDelegate::ServerPushHelper {
 
 }  // namespace
 
+QuicChromiumClientSession::Handle::Handle(
+    const base::WeakPtr<QuicChromiumClientSession>& session)
+    : MultiplexedSessionHandle(session),
+      session_(session),
+      net_log_(session_->net_log()),
+      was_handshake_confirmed_(session->IsCryptoHandshakeConfirmed()),
+      error_(OK),
+      port_migration_detected_(false),
+      server_id_(session_->server_id()),
+      quic_version_(session->connection()->version()) {
+  DCHECK(session_);
+  session_->AddHandle(this);
+}
+
+QuicChromiumClientSession::Handle::~Handle() {
+  if (session_)
+    session_->RemoveHandle(this);
+}
+
+void QuicChromiumClientSession::Handle::OnCryptoHandshakeConfirmed() {
+  was_handshake_confirmed_ = true;
+}
+
+void QuicChromiumClientSession::Handle::OnSessionClosed(
+    QuicVersion quic_version,
+    int error,
+    bool port_migration_detected,
+    LoadTimingInfo::ConnectTiming connect_timing) {
+  session_ = nullptr;
+  port_migration_detected_ = port_migration_detected;
+  error_ = error;
+  quic_version_ = quic_version;
+  connect_timing_ = connect_timing;
+}
+
+bool QuicChromiumClientSession::Handle::IsConnected() const {
+  return session_ != nullptr;
+}
+
+bool QuicChromiumClientSession::Handle::IsCryptoHandshakeConfirmed() const {
+  return was_handshake_confirmed_;
+}
+
+const LoadTimingInfo::ConnectTiming&
+QuicChromiumClientSession::Handle::GetConnectTiming() {
+  if (!session_)
+    return connect_timing_;
+
+  return session_->GetConnectTiming();
+}
+
+Error QuicChromiumClientSession::Handle::GetTokenBindingSignature(
+    crypto::ECPrivateKey* key,
+    TokenBindingType tb_type,
+    std::vector<uint8_t>* out) {
+  if (!session_)
+    return ERR_CONNECTION_CLOSED;
+
+  return session_->GetTokenBindingSignature(key, tb_type, out);
+}
+
+void QuicChromiumClientSession::Handle::PopulateNetErrorDetails(
+    NetErrorDetails* details) const {
+  if (session_) {
+    session_->PopulateNetErrorDetails(details);
+  } else {
+    details->quic_port_migration_detected = port_migration_detected_;
+  }
+}
+
+QuicVersion QuicChromiumClientSession::Handle::GetQuicVersion() const {
+  if (!session_)
+    return quic_version_;
+
+  return session_->connection()->version();
+}
+
+void QuicChromiumClientSession::Handle::ResetPromised(
+    QuicStreamId id,
+    QuicRstStreamErrorCode error_code) {
+  if (session_)
+    session_->ResetPromised(id, error_code);
+}
+
+std::unique_ptr<QuicConnection::ScopedPacketBundler>
+QuicChromiumClientSession::Handle::CreatePacketBundler(
+    QuicConnection::AckBundling bundling_mode) {
+  if (!session_)
+    return nullptr;
+
+  return base::MakeUnique<QuicConnection::ScopedPacketBundler>(
+      session_->connection(), bundling_mode);
+}
+
+bool QuicChromiumClientSession::Handle::SharesSameSession(
+    const Handle& other) const {
+  return session_.get() == other.session_.get();
+}
+
+int QuicChromiumClientSession::Handle::RequestStream(
+    bool requires_confirmation,
+    const CompletionCallback& callback) {
+  DCHECK(!stream_request_);
+
+  if (!session_)
+    return ERR_CONNECTION_CLOSED;
+
+  // base::MakeUnique does not work because the StreamRequest constructor
+  // is private.
+  stream_request_ = std::unique_ptr<StreamRequest>(
+      new StreamRequest(this, requires_confirmation));
+  return stream_request_->StartRequest(callback);
+}
+
+std::unique_ptr<QuicChromiumClientStream::Handle>
+QuicChromiumClientSession::Handle::ReleaseStream(
+    QuicChromiumClientStream::Delegate* delegate) {
+  DCHECK(stream_request_);
+
+  auto handle = stream_request_->ReleaseStream(delegate);
+  stream_request_.reset();
+  return handle;
+}
+
+int QuicChromiumClientSession::Handle::WaitForHandshakeConfirmation(
+    const CompletionCallback& callback) {
+  if (!session_)
+    return ERR_CONNECTION_CLOSED;
+
+  return session_->WaitForHandshakeConfirmation(callback);
+}
+
+void QuicChromiumClientSession::Handle::CancelRequest(StreamRequest* request) {
+  if (session_)
+    session_->CancelRequest(request);
+}
+
+int QuicChromiumClientSession::Handle::TryCreateStream(StreamRequest* request) {
+  if (!session_)
+    return ERR_CONNECTION_CLOSED;
+
+  return session_->TryCreateStream(request);
+}
+
+QuicClientPushPromiseIndex*
+QuicChromiumClientSession::Handle::GetPushPromiseIndex() {
+  if (!session_)
+    return push_promise_index_;
+
+  return session_->push_promise_index();
+}
+
+int QuicChromiumClientSession::Handle::GetPeerAddress(
+    IPEndPoint* address) const {
+  if (!session_)
+    return ERR_CONNECTION_CLOSED;
+
+  *address = session_->peer_address().impl().socket_address();
+  return OK;
+}
+
 QuicChromiumClientSession::StreamRequest::StreamRequest(
-    const base::WeakPtr<QuicChromiumClientSession>& session,
+    QuicChromiumClientSession::Handle* session,
     bool requires_confirmation)
-    : session_(session),
+    : session_(std::move(session)),
       requires_confirmation_(requires_confirmation),
       stream_(nullptr),
-      next_state_(STATE_NONE),
       weak_factory_(this) {}
 
 QuicChromiumClientSession::StreamRequest::~StreamRequest() {
   if (stream_)
     stream_->Reset(QUIC_STREAM_CANCELLED);
 
-  if (session_)
+  if (session_->IsConnected())
     session_->CancelRequest(this);
 }
 
 int QuicChromiumClientSession::StreamRequest::StartRequest(
     const CompletionCallback& callback) {
-  DCHECK(session_);
+  if (!session_->IsConnected())
+    return ERR_CONNECTION_CLOSED;
 
   next_state_ = STATE_WAIT_FOR_CONFIRMATION;
   int rv = DoLoop(OK);
@@ -215,18 +377,19 @@ int QuicChromiumClientSession::StreamRequest::StartRequest(
   return rv;
 }
 
-QuicChromiumClientStream*
-QuicChromiumClientSession::StreamRequest::ReleaseStream() {
+std::unique_ptr<QuicChromiumClientStream::Handle>
+QuicChromiumClientSession::StreamRequest::ReleaseStream(
+    QuicChromiumClientStream::Delegate* delegate) {
   DCHECK(stream_);
   QuicChromiumClientStream* stream = stream_;
   stream_ = nullptr;
-  return stream;
+  return stream->CreateHandle(delegate);
 }
 
 void QuicChromiumClientSession::StreamRequest::OnRequestCompleteSuccess(
     QuicChromiumClientStream* stream) {
   DCHECK_EQ(STATE_REQUEST_STREAM_COMPLETE, next_state_);
-  session_.reset();
+
   stream_ = stream;
   // This method is called even when the request completes synchronously.
   if (callback_)
@@ -236,7 +399,6 @@ void QuicChromiumClientSession::StreamRequest::OnRequestCompleteSuccess(
 void QuicChromiumClientSession::StreamRequest::OnRequestCompleteFailure(
     int rv) {
   DCHECK_EQ(STATE_REQUEST_STREAM_COMPLETE, next_state_);
-  session_.reset();
   // This method is called even when the request completes synchronously.
   if (callback_)
     DoCallback(rv);
@@ -316,7 +478,6 @@ int QuicChromiumClientSession::StreamRequest::DoRequestStream() {
 
 int QuicChromiumClientSession::StreamRequest::DoRequestStreamComplete(int rv) {
   DCHECK(rv == OK || !stream_);
-  session_.reset();
 
   return rv;
 }
@@ -399,18 +560,18 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
   DCHECK(waiting_for_confirmation_callbacks_.empty());
   if (!dynamic_streams().empty())
     RecordUnexpectedOpenStreams(DESTRUCTOR);
-  if (!observers_.empty())
+  if (!handles_.empty())
     RecordUnexpectedObservers(DESTRUCTOR);
   if (!going_away_)
     RecordUnexpectedNotGoingAway(DESTRUCTOR);
 
-  while (!dynamic_streams().empty() || !observers_.empty() ||
+  while (!dynamic_streams().empty() || !handles_.empty() ||
          !stream_requests_.empty()) {
     // The session must be closed before it is destroyed.
     DCHECK(dynamic_streams().empty());
     CloseAllStreams(ERR_UNEXPECTED);
-    DCHECK(observers_.empty());
-    CloseAllObservers(ERR_UNEXPECTED);
+    DCHECK(handles_.empty());
+    CloseAllHandles(ERR_UNEXPECTED);
     CancelAllRequests(ERR_UNEXPECTED);
 
     connection()->set_debug_visitor(nullptr);
@@ -503,6 +664,11 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
       static_cast<base::HistogramBase::Sample>(stats.max_sequence_reordering));
 }
 
+std::unique_ptr<QuicStream> QuicChromiumClientSession::CreateStream(
+    QuicStreamId id) {
+  return QuicMakeUnique<QuicChromiumClientStream>(id, this, net_log_);
+}
+
 void QuicChromiumClientSession::Initialize() {
   QuicClientSessionBase::Initialize();
   SetHpackEncoderDebugVisitor(
@@ -528,28 +694,23 @@ void QuicChromiumClientSession::OnStreamFrame(const QuicStreamFrame& frame) {
   return QuicSpdySession::OnStreamFrame(frame);
 }
 
-void QuicChromiumClientSession::AddObserver(Observer* observer) {
+void QuicChromiumClientSession::AddHandle(Handle* handle) {
   if (going_away_) {
     RecordUnexpectedObservers(ADD_OBSERVER);
-    observer->OnSessionClosed(ERR_UNEXPECTED, port_migration_detected_);
+    handle->OnSessionClosed(connection()->version(), ERR_UNEXPECTED,
+                            port_migration_detected_,
+
+                            GetConnectTiming());
     return;
   }
 
-  DCHECK(!base::ContainsKey(observers_, observer));
-  observers_.insert(observer);
+  DCHECK(!base::ContainsKey(handles_, handle));
+  handles_.insert(handle);
 }
 
-void QuicChromiumClientSession::RemoveObserver(Observer* observer) {
-  DCHECK(base::ContainsKey(observers_, observer));
-  observers_.erase(observer);
-}
-
-std::unique_ptr<QuicChromiumClientSession::StreamRequest>
-QuicChromiumClientSession::CreateStreamRequest(bool requires_confirmation) {
-  // base::MakeUnique does not work because the StreamRequest constructor
-  // is private.
-  return std::unique_ptr<StreamRequest>(
-      new StreamRequest(weak_factory_.GetWeakPtr(), requires_confirmation));
+void QuicChromiumClientSession::RemoveHandle(Handle* handle) {
+  DCHECK(base::ContainsKey(handles_, handle));
+  handles_.erase(handle);
 }
 
 int QuicChromiumClientSession::WaitForHandshakeConfirmation(
@@ -960,11 +1121,11 @@ void QuicChromiumClientSession::OnCryptoHandshakeEvent(
           base::TimeTicks::Now() - connect_timing_.dns_end);
     }
 
-    ObserverSet::iterator it = observers_.begin();
-    while (it != observers_.end()) {
-      Observer* observer = *it;
+    HandleSet::iterator it = handles_.begin();
+    while (it != handles_.end()) {
+      Handle* handle = *it;
       ++it;
-      observer->OnCryptoHandshakeConfirmed();
+      handle->OnCryptoHandshakeConfirmed();
     }
 
     NotifyRequestsOfConfirmation(OK);
@@ -1108,7 +1269,7 @@ void QuicChromiumClientSession::OnConnectionClosed(
   }
   DCHECK(dynamic_streams().empty());
   CloseAllStreams(ERR_UNEXPECTED);
-  CloseAllObservers(ERR_UNEXPECTED);
+  CloseAllHandles(ERR_UNEXPECTED);
   CancelAllRequests(ERR_CONNECTION_CLOSED);
   NotifyRequestsOfConfirmation(ERR_CONNECTION_CLOSED);
   NotifyFactoryOfSessionClosedLater();
@@ -1118,13 +1279,6 @@ void QuicChromiumClientSession::OnSuccessfulVersionNegotiation(
     const QuicVersion& version) {
   logger_->OnSuccessfulVersionNegotiation(version);
   QuicSpdySession::OnSuccessfulVersionNegotiation(version);
-
-  ObserverSet::iterator it = observers_.begin();
-  while (it != observers_.end()) {
-    Observer* observer = *it;
-    ++it;
-    observer->OnSuccessfulVersionNegotiation(version);
-  }
 }
 
 int QuicChromiumClientSession::HandleWriteError(
@@ -1330,7 +1484,7 @@ void QuicChromiumClientSession::CloseSessionOnError(int net_error,
     base::ResetAndReturn(&callback_).Run(net_error);
   }
   CloseAllStreams(net_error);
-  CloseAllObservers(net_error);
+  CloseAllHandles(net_error);
   net_log_.AddEvent(NetLogEventType::QUIC_SESSION_CLOSE_ON_ERROR,
                     NetLog::IntCallback("net_error", net_error));
 
@@ -1351,11 +1505,12 @@ void QuicChromiumClientSession::CloseAllStreams(int net_error) {
   }
 }
 
-void QuicChromiumClientSession::CloseAllObservers(int net_error) {
-  while (!observers_.empty()) {
-    Observer* observer = *observers_.begin();
-    observers_.erase(observer);
-    observer->OnSessionClosed(net_error, port_migration_detected_);
+void QuicChromiumClientSession::CloseAllHandles(int net_error) {
+  while (!handles_.empty()) {
+    Handle* handle = *handles_.begin();
+    handles_.erase(handle);
+    handle->OnSessionClosed(connection()->version(), net_error,
+                            port_migration_detected_, GetConnectTiming());
   }
 }
 
@@ -1410,9 +1565,10 @@ std::unique_ptr<base::Value> QuicChromiumClientSession::GetInfoAsValue(
   return std::move(dict);
 }
 
-base::WeakPtr<QuicChromiumClientSession>
-QuicChromiumClientSession::GetWeakPtr() {
-  return weak_factory_.GetWeakPtr();
+std::unique_ptr<QuicChromiumClientSession::Handle>
+QuicChromiumClientSession::CreateHandle() {
+  return base::MakeUnique<QuicChromiumClientSession::Handle>(
+      weak_factory_.GetWeakPtr());
 }
 
 void QuicChromiumClientSession::OnReadError(
@@ -1430,12 +1586,11 @@ void QuicChromiumClientSession::OnReadError(
                                 ConnectionCloseBehavior::SILENT_CLOSE);
 }
 
-bool QuicChromiumClientSession::OnPacket(const QuicReceivedPacket& packet,
-                                         IPEndPoint local_address,
-                                         IPEndPoint peer_address) {
-  ProcessUdpPacket(QuicSocketAddress(QuicSocketAddressImpl(local_address)),
-                   QuicSocketAddress(QuicSocketAddressImpl(peer_address)),
-                   packet);
+bool QuicChromiumClientSession::OnPacket(
+    const QuicReceivedPacket& packet,
+    const QuicSocketAddress& local_address,
+    const QuicSocketAddress& peer_address) {
+  ProcessUdpPacket(local_address, peer_address, packet);
   if (!connection()->connected()) {
     NotifyFactoryOfSessionClosedLater();
     return false;
@@ -1508,7 +1663,7 @@ bool QuicChromiumClientSession::MigrateToSocket(
 }
 
 void QuicChromiumClientSession::PopulateNetErrorDetails(
-    NetErrorDetails* details) {
+    NetErrorDetails* details) const {
   details->quic_port_migration_detected = port_migration_detected_;
 }
 

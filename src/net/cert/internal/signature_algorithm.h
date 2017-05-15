@@ -38,6 +38,7 @@ enum class SignatureAlgorithmId {
   RsaPkcs1,  // RSA PKCS#1 v1.5
   RsaPss,    // RSASSA-PSS
   Ecdsa,     // ECDSA
+  Dsa,       // DSA
 };
 
 // Parses a HashAlgorithm as defined by RFC 5912:
@@ -102,6 +103,7 @@ class NET_EXPORT SignatureAlgorithm {
   // Guaranteed to return non-null result.
   static std::unique_ptr<SignatureAlgorithm> CreateRsaPkcs1(
       DigestAlgorithm digest);
+  static std::unique_ptr<SignatureAlgorithm> CreateDsa(DigestAlgorithm digest);
   static std::unique_ptr<SignatureAlgorithm> CreateEcdsa(
       DigestAlgorithm digest);
   static std::unique_ptr<SignatureAlgorithm> CreateRsaPss(

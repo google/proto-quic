@@ -30,7 +30,7 @@ namespace base {
 // To post a high priority one-off task to respond to a user interaction:
 //     PostTaskWithTraits(
 //         FROM_HERE,
-//         TaskTraits().WithPriority(TaskPriority::USER_BLOCKING),
+//         {TaskPriority::USER_BLOCKING},
 //         Bind(...));
 //
 // To post tasks that must run in sequence with default traits:
@@ -43,8 +43,7 @@ namespace base {
 // shutdown:
 //     scoped_refptr<SequencedTaskRunner> task_runner =
 //         CreateSequencedTaskRunnerWithTraits(
-//             TaskTraits().MayBlock().WithShutdownBehavior(
-//                 TaskShutdownBehavior::SKIP_ON_SHUTDOWN));
+//             {MayBlock(), TaskShutdownBehavior::SKIP_ON_SHUTDOWN});
 //     task_runner.PostTask(FROM_HERE, Bind(...));
 //     task_runner.PostTask(FROM_HERE, Bind(...));
 //

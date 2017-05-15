@@ -7,8 +7,7 @@
 
 .p2align	4
 _sha256_block_data_order:
-	leaq	_OPENSSL_ia32cap_addr(%rip),%r11
-	movq	(%r11),%r11
+	leaq	_OPENSSL_ia32cap_P(%rip),%r11
 	movl	0(%r11),%r9d
 	movl	4(%r11),%r10d
 	movl	8(%r11),%r11d

@@ -414,7 +414,7 @@ bool Histogram::InspectConstructionArguments(const std::string& name,
 }
 
 uint64_t Histogram::name_hash() const {
-  return samples_->id();
+  return unlogged_samples_->id();
 }
 
 HistogramType Histogram::GetHistogramType() const {
@@ -445,29 +445,33 @@ void Histogram::AddCount(int value, int count) {
     NOTREACHED();
     return;
   }
-  samples_->Accumulate(value, count);
+  unlogged_samples_->Accumulate(value, count);
 
   FindAndRunCallback(value);
 }
 
 std::unique_ptr<HistogramSamples> Histogram::SnapshotSamples() const {
-  return SnapshotSampleVector();
+  return SnapshotAllSamples();
 }
 
 std::unique_ptr<HistogramSamples> Histogram::SnapshotDelta() {
   DCHECK(!final_delta_created_);
+  // The code below has subtle thread-safety guarantees! All changes to
+  // the underlying SampleVectors use atomic integer operations, which guarantee
+  // eventual consistency, but do not guarantee full synchronization between
+  // different entries in the SampleVector. In particular, this means that
+  // concurrent updates to the histogram might result in the reported sum not
+  // matching the individual bucket counts; or there being some buckets that are
+  // logically updated "together", but end up being only partially updated when
+  // a snapshot is captured. Note that this is why it's important to subtract
+  // exactly the snapshotted unlogged samples, rather than simply resetting the
+  // vector: this way, the next snapshot will include any concurrent updates
+  // missed by the current snapshot.
 
-  std::unique_ptr<HistogramSamples> snapshot = SnapshotSampleVector();
-  if (!logged_samples_) {
-    // If nothing has been previously logged, save this one as
-    // |logged_samples_| and gather another snapshot to return.
-    logged_samples_.swap(snapshot);
-    return SnapshotSampleVector();
-  }
-
-  // Subtract what was previously logged and update that information.
-  snapshot->Subtract(*logged_samples_);
+  std::unique_ptr<HistogramSamples> snapshot = SnapshotUnloggedSamples();
+  unlogged_samples_->Subtract(*snapshot);
   logged_samples_->Add(*snapshot);
+
   return snapshot;
 }
 
@@ -475,20 +479,15 @@ std::unique_ptr<HistogramSamples> Histogram::SnapshotFinalDelta() const {
   DCHECK(!final_delta_created_);
   final_delta_created_ = true;
 
-  std::unique_ptr<HistogramSamples> snapshot = SnapshotSampleVector();
-
-  // Subtract what was previously logged and then return.
-  if (logged_samples_)
-    snapshot->Subtract(*logged_samples_);
-  return snapshot;
+  return SnapshotUnloggedSamples();
 }
 
 void Histogram::AddSamples(const HistogramSamples& samples) {
-  samples_->Add(samples);
+  unlogged_samples_->Add(samples);
 }
 
 bool Histogram::AddSamplesFromPickle(PickleIterator* iter) {
-  return samples_->AddFromPickle(iter);
+  return unlogged_samples_->AddFromPickle(iter);
 }
 
 // The following methods provide a graphical histogram display.
@@ -521,8 +520,10 @@ Histogram::Histogram(const std::string& name,
     bucket_ranges_(ranges),
     declared_min_(minimum),
     declared_max_(maximum) {
-  if (ranges)
-    samples_.reset(new SampleVector(HashMetricName(name), ranges));
+  if (ranges) {
+    unlogged_samples_.reset(new SampleVector(HashMetricName(name), ranges));
+    logged_samples_.reset(new SampleVector(unlogged_samples_->id(), ranges));
+  }
 }
 
 Histogram::Histogram(const std::string& name,
@@ -538,10 +539,10 @@ Histogram::Histogram(const std::string& name,
       declared_min_(minimum),
       declared_max_(maximum) {
   if (ranges) {
-    samples_.reset(
+    unlogged_samples_.reset(
         new PersistentSampleVector(HashMetricName(name), ranges, meta, counts));
     logged_samples_.reset(new PersistentSampleVector(
-        samples_->id(), ranges, logged_meta, logged_counts));
+        unlogged_samples_->id(), ranges, logged_meta, logged_counts));
   }
 }
 
@@ -598,10 +599,16 @@ HistogramBase* Histogram::DeserializeInfoImpl(PickleIterator* iter) {
   return histogram;
 }
 
-std::unique_ptr<SampleVector> Histogram::SnapshotSampleVector() const {
+std::unique_ptr<SampleVector> Histogram::SnapshotAllSamples() const {
+  std::unique_ptr<SampleVector> samples = SnapshotUnloggedSamples();
+  samples->Add(*logged_samples_);
+  return samples;
+}
+
+std::unique_ptr<SampleVector> Histogram::SnapshotUnloggedSamples() const {
   std::unique_ptr<SampleVector> samples(
-      new SampleVector(samples_->id(), bucket_ranges()));
-  samples->Add(*samples_);
+      new SampleVector(unlogged_samples_->id(), bucket_ranges()));
+  samples->Add(*unlogged_samples_);
   return samples;
 }
 
@@ -610,7 +617,7 @@ void Histogram::WriteAsciiImpl(bool graph_it,
                                std::string* output) const {
   // Get local (stack) copies of all effectively volatile class data so that we
   // are consistent across our output activities.
-  std::unique_ptr<SampleVector> snapshot = SnapshotSampleVector();
+  std::unique_ptr<SampleVector> snapshot = SnapshotAllSamples();
   Count sample_count = snapshot->TotalCount();
 
   WriteAsciiHeader(*snapshot, sample_count, output);
@@ -722,7 +729,7 @@ void Histogram::GetParameters(DictionaryValue* params) const {
 void Histogram::GetCountAndBucketData(Count* count,
                                       int64_t* sum,
                                       ListValue* buckets) const {
-  std::unique_ptr<SampleVector> snapshot = SnapshotSampleVector();
+  std::unique_ptr<SampleVector> snapshot = SnapshotAllSamples();
   *count = snapshot->TotalCount();
   *sum = snapshot->sum();
   uint32_t index = 0;

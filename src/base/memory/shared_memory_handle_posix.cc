@@ -8,24 +8,23 @@
 
 #include "base/logging.h"
 #include "base/posix/eintr_wrapper.h"
+#include "base/unguessable_token.h"
 
 namespace base {
 
 SharedMemoryHandle::SharedMemoryHandle() = default;
-SharedMemoryHandle::SharedMemoryHandle(const SharedMemoryHandle& handle) =
-    default;
-SharedMemoryHandle& SharedMemoryHandle::operator=(
-    const SharedMemoryHandle& handle) = default;
 
 SharedMemoryHandle::SharedMemoryHandle(
-    const base::FileDescriptor& file_descriptor)
-    : file_descriptor_(file_descriptor) {}
+    const base::FileDescriptor& file_descriptor,
+    const base::UnguessableToken& guid)
+    : file_descriptor_(file_descriptor), guid_(guid) {}
 
 // static
 SharedMemoryHandle SharedMemoryHandle::ImportHandle(int fd) {
   SharedMemoryHandle handle;
   handle.file_descriptor_.fd = fd;
   handle.file_descriptor_.auto_close = false;
+  handle.guid_ = UnguessableToken::Create();
   return handle;
 }
 
@@ -59,7 +58,7 @@ SharedMemoryHandle SharedMemoryHandle::Duplicate() const {
   int duped_handle = HANDLE_EINTR(dup(file_descriptor_.fd));
   if (duped_handle < 0)
     return SharedMemoryHandle();
-  return SharedMemoryHandle(FileDescriptor(duped_handle, true));
+  return SharedMemoryHandle(FileDescriptor(duped_handle, true), GetGUID());
 }
 
 void SharedMemoryHandle::SetOwnershipPassesToIPC(bool ownership_passes) {

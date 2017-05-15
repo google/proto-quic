@@ -106,7 +106,7 @@ wae{
         EU{"Europäiši Unio"}
         FI{"Finnland"}
         FJ{"Fidši"}
-        FK{"Falklandinslä"}
+        FK{"Falklandinslä (Malwine)"}
         FM{"Mikronesie"}
         FO{"Färöe"}
         FR{"Frankrič"}
@@ -179,7 +179,7 @@ wae{
         MF{"St. Martin"}
         MG{"Madagaskar"}
         MH{"Maršalinslä"}
-        MK{"Mazedonie"}
+        MK{"Mazedonie (EJR)"}
         ML{"Mali"}
         MM{"Burma"}
         MN{"Mongolei"}
@@ -291,9 +291,7 @@ wae{
         CD{"Kongo (Demokratiši Rebublik)"}
         CG{"Kongo (Rebublik)"}
         CI{"Côte d’Ivoire"}
-        FK{"Falklandinslä (Malwine)"}
-        MK{"Mazedonie (EJR)"}
         TL{"Wešttimor"}
     }
-    Version{"2.1.27.40"}
+    Version{"2.1.31.33"}
 }

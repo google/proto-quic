@@ -4,6 +4,8 @@
 
 #include "net/spdy/core/hpack/hpack_decoder3.h"
 
+#include <utility>
+
 #include "base/logging.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
@@ -153,11 +155,7 @@ void HpackDecoder3::ListenerAdapter::OnHeaderListEnd() {
   // We don't clear the SpdyHeaderBlock here to allow access to it until the
   // next HPACK block is decoded.
   if (handler_ != nullptr) {
-    if (FLAGS_chromium_http2_flag_log_compressed_size) {
-      handler_->OnHeaderBlockEnd(total_uncompressed_bytes_, total_hpack_bytes_);
-    } else {
-      handler_->OnHeaderBlockEnd(total_uncompressed_bytes_);
-    }
+    handler_->OnHeaderBlockEnd(total_uncompressed_bytes_, total_hpack_bytes_);
     handler_ = nullptr;
   }
 }

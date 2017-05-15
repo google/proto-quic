@@ -82,10 +82,6 @@ class NET_EXPORT ProxyDelegate {
   virtual void OnAlternativeProxyBroken(
       const ProxyServer& alternative_proxy_server) = 0;
 
-  // Returns the default alternative proxy server. May return an invalid proxy
-  // server if no valid proxy server is available.
-  virtual ProxyServer GetDefaultAlternativeProxy() const = 0;
-
  private:
   DISALLOW_COPY_AND_ASSIGN(ProxyDelegate);
 };

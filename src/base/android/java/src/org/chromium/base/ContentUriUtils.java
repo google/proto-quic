@@ -158,10 +158,9 @@ public abstract class ContentUriUtils {
             Log.w(TAG, "Cannot find content uri: " + uriString, e);
         } catch (SecurityException e) {
             Log.w(TAG, "Cannot open content uri: " + uriString, e);
-        } catch (IllegalArgumentException | IllegalStateException e) {
+        } catch (Exception e) {
             Log.w(TAG, "Unknown content uri: " + uriString, e);
         }
-
         return null;
     }
 

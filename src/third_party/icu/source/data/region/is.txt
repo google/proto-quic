@@ -108,7 +108,7 @@ is{
         EU{"Evrópusambandið"}
         FI{"Finnland"}
         FJ{"Fídjíeyjar"}
-        FK{"Falklandseyjar"}
+        FK{"Falklandseyjar (Malvinas)"}
         FM{"Míkrónesía"}
         FO{"Færeyjar"}
         FR{"Frakkland"}
@@ -181,7 +181,7 @@ is{
         MF{"St. Martin"}
         MG{"Madagaskar"}
         MH{"Marshalleyjar"}
-        MK{"Makedónía"}
+        MK{"Makedónía (Fyrrverandi lýðveldi Júgóslavíu)"}
         ML{"Malí"}
         MM{"Mjanmar (Búrma)"}
         MN{"Mongólía"}
@@ -301,9 +301,7 @@ is{
     Countries%variant{
         CD{"Kongó (Lýðstjórnarlýðveldið)"}
         CG{"Kongó (Lýðveldið)"}
-        FK{"Falklandseyjar (Malvinas)"}
-        MK{"Makedónía (Fyrrverandi lýðveldi Júgóslavíu)"}
         TL{"Austur-Tímor"}
     }
-    Version{"2.1.29.65"}
+    Version{"2.1.32.59"}
 }

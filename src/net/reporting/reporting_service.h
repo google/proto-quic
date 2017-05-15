@@ -59,6 +59,12 @@ class NET_EXPORT ReportingService {
   virtual void ProcessHeader(const GURL& url,
                              const std::string& header_value) = 0;
 
+  // Removes browsing data from the Reporting system. See
+  // ReportingBrowsingDataRemover for more details.
+  virtual void RemoveBrowsingData(
+      int data_type_mask,
+      base::Callback<bool(const GURL&)> origin_filter) = 0;
+
  protected:
   ReportingService() {}
 

@@ -89,7 +89,7 @@ template("write_build_config") {
            type == "android_resources" || type == "deps_dex" ||
            type == "dist_jar" || type == "android_assets" ||
            type == "resource_rewriter" || type == "java_binary" ||
-           type == "group" || type == "java_prebuilt")
+           type == "group" || type == "java_prebuilt" || type == "junit_binary")
 
     forward_variables_from(invoker,
                            [
@@ -567,11 +567,40 @@ template("test_runner_script") {
       }
     } else if (_test_type == "junit") {
       assert(defined(invoker.test_suite))
+      _device_test = false
       test_runner_args += [
         "--test-suite",
         invoker.test_suite,
       ]
-      _device_test = false
+      if (defined(invoker.android_manifest_path)) {
+        test_runner_args += [
+          "--android-manifest-path",
+          rebase_path(invoker.android_manifest_path, root_build_dir),
+        ]
+      }
+
+      if (defined(invoker.package_name)) {
+        test_runner_args += [
+          "--package-name",
+          invoker.package_name,
+        ]
+
+        deps += [ ":${invoker.test_suite}__build_config" ]
+        _junit_binary_build_config =
+            "${target_gen_dir}/${invoker.test_suite}.build_config"
+        _rebased_build_config =
+            rebase_path("$_junit_binary_build_config", root_build_dir)
+        test_runner_args += [
+          "--resource-zips",
+          "@FileArg($_rebased_build_config:resources:dependency_zips)",
+        ]
+      }
+
+      test_runner_args += [
+        "--robolectric-runtime-deps-dir",
+        rebase_path("$root_build_dir/lib.java/third_party/robolectric",
+                    root_build_dir),
+      ]
     } else if (_test_type == "linker") {
       test_runner_args += [
         "--test-apk",
@@ -615,7 +644,12 @@ template("test_runner_script") {
       test_runner_args += [ "--tool=asan" ]
     }
 
-    generated_script = "$root_build_dir/bin/run_${_test_name}"
+    if (defined(invoker.generated_script)) {
+      assert(_test_name != "" || true)  # Mark _test_name as used.
+      generated_script = invoker.generated_script
+    } else {
+      generated_script = "$root_build_dir/bin/run_${_test_name}"
+    }
     outputs = [
       generated_script,
     ]
@@ -2264,6 +2298,7 @@ if (enable_java_templates) {
       forward_variables_from(invoker, [ "visibility" ])
       public_deps = [
         ":$_ijar_target_name",
+        ":$_javac_target_name",
       ]
       if (_emma_instrument) {
         public_deps += [ ":$_emma_instr_target_name" ]
@@ -2500,7 +2535,10 @@ if (enable_java_templates) {
         android_lint("${_template_name}__lint") {
           android_manifest = _android_manifest
           build_config = _build_config
-          jar_path = _jar_path
+
+          # Run lint on javac output.
+          jar_path = "$target_gen_dir/$_compile_java_target.javac.jar"
+
           java_files = _java_files
           if (_java_files != []) {
             java_sources_file = _java_sources_file

@@ -14,6 +14,7 @@
 #include "base/compiler_specific.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
+#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/test/histogram_tester.h"
 #include "net/base/port_util.h"
@@ -2231,6 +2232,10 @@ class HttpStreamFactoryBidirectionalQuicTest
 
   const GURL default_url_;
 
+  QuicStreamId GetNthClientInitiatedStreamId(int n) {
+    return test::GetNthClientInitiatedStreamId(GetParam(), n);
+  }
+
  private:
   MockClock clock_;
   test::QuicTestPacketMaker client_packet_maker_;
@@ -2265,13 +2270,13 @@ TEST_P(HttpStreamFactoryBidirectionalQuicTest,
   mock_quic_data.AddWrite(client_packet_maker().MakeInitialSettingsPacket(
       1, &header_stream_offset));
   mock_quic_data.AddWrite(client_packet_maker().MakeRequestHeadersPacket(
-      2, test::kClientDataStreamId1, /*should_include_version=*/true,
+      2, GetNthClientInitiatedStreamId(0), /*should_include_version=*/true,
       /*fin=*/true, priority,
       client_packet_maker().GetRequestHeaders("GET", "https", "/"),
       &spdy_headers_frame_length, &header_stream_offset));
   size_t spdy_response_headers_frame_length;
   mock_quic_data.AddRead(server_packet_maker().MakeResponseHeadersPacket(
-      1, test::kClientDataStreamId1, /*should_include_version=*/false,
+      1, GetNthClientInitiatedStreamId(0), /*should_include_version=*/false,
       /*fin=*/true, server_packet_maker().GetResponseHeaders("200"),
       &spdy_response_headers_frame_length));
   mock_quic_data.AddRead(SYNCHRONOUS, ERR_IO_PENDING);  // No more read data.
@@ -2393,13 +2398,13 @@ TEST_P(HttpStreamFactoryBidirectionalQuicTest,
   mock_quic_data.AddWrite(client_packet_maker().MakeInitialSettingsPacket(
       1, &header_stream_offset));
   mock_quic_data.AddWrite(client_packet_maker().MakeRequestHeadersPacket(
-      2, test::kClientDataStreamId1, /*should_include_version=*/true,
+      2, GetNthClientInitiatedStreamId(0), /*should_include_version=*/true,
       /*fin=*/true, priority,
       client_packet_maker().GetRequestHeaders("GET", "https", "/"),
       &spdy_headers_frame_length, &header_stream_offset));
   size_t spdy_response_headers_frame_length;
   mock_quic_data.AddRead(server_packet_maker().MakeResponseHeadersPacket(
-      1, test::kClientDataStreamId1, /*should_include_version=*/false,
+      1, GetNthClientInitiatedStreamId(0), /*should_include_version=*/false,
       /*fin=*/true, server_packet_maker().GetResponseHeaders("200"),
       &spdy_response_headers_frame_length));
   mock_quic_data.AddRead(SYNCHRONOUS, ERR_IO_PENDING);  // No more read data.

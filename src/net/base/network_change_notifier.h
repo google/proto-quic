@@ -538,6 +538,10 @@ class NET_EXPORT NetworkChangeNotifier {
   // observers.
   static void SetInitialDnsConfig(const DnsConfig& config);
 
+  // Infer connection type from |GetNetworkList|. If all network interfaces
+  // have the same type, return it, otherwise return CONNECTION_UNKNOWN.
+  static ConnectionType ConnectionTypeFromInterfaces();
+
  private:
   friend class HostResolverImplDnsTest;
   friend class NetworkChangeNotifierAndroidTest;

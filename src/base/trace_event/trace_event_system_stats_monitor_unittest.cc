@@ -8,6 +8,7 @@
 #include <string>
 
 #include "base/macros.h"
+#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/trace_event/trace_event_impl.h"
 #include "build/build_config.h"

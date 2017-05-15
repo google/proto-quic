@@ -488,18 +488,17 @@ def _UpdateHistogramsWithSuffixes(tree, histograms):
   return have_errors
 
 
-def ExtractHistogramsFromFile(file_handle):
+def ExtractHistogramsFromDom(tree):
   """Compute the histogram names and descriptions from the XML representation.
 
   Args:
-    file_handle: A file or file-like with XML content.
+    tree: A DOM tree of XML content.
 
   Returns:
     a tuple of (histograms, status) where histograms is a dictionary mapping
     histogram names to dictionaries containing histogram descriptions and status
     is a boolean indicating if errros were encoutered in processing.
   """
-  tree = xml.dom.minidom.parse(file_handle)
   _NormalizeAllAttributeValues(tree)
 
   enums, enum_errors = _ExtractEnumsFromXmlTree(tree)
@@ -522,7 +521,8 @@ def ExtractHistograms(filename):
     Error: if the file is not well-formatted.
   """
   with open(filename, 'r') as f:
-    histograms, had_errors = ExtractHistogramsFromFile(f)
+    tree = xml.dom.minidom.parse(f)
+    histograms, had_errors = ExtractHistogramsFromDom(tree)
     if had_errors:
       logging.error('Error parsing %s', filename)
       raise Error()

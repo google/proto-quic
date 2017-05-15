@@ -349,8 +349,6 @@ class GtestTestInstance(test_instance.TestInstance):
         self._flags.extend(flag for flag in stripped_lines if flag)
     if args.run_disabled:
       self._flags.append('--gtest_also_run_disabled_tests')
-    if args.test_arguments:
-      self._flags.extend(args.test_arguments.split())
 
   @property
   def activity(self):

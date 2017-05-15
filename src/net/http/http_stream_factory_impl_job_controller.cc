@@ -862,9 +862,8 @@ void HttpStreamFactoryImpl::JobController::ReportBrokenAlternativeService() {
   UMA_HISTOGRAM_SPARSE_SLOWLY("Net.AlternateServiceFailed",
                               -alternative_job_net_error_);
 
-  if (session_->params().quic_do_not_mark_as_broken_on_network_change &&
-      (alternative_job_net_error_ == ERR_NETWORK_CHANGED ||
-       alternative_job_net_error_ == ERR_INTERNET_DISCONNECTED)) {
+  if (alternative_job_net_error_ == ERR_NETWORK_CHANGED ||
+      alternative_job_net_error_ == ERR_INTERNET_DISCONNECTED) {
     // No need to mark alternative service or proxy as broken.
     return;
   }

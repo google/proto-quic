@@ -108,7 +108,7 @@ hu{
         EU{"Európai Unió"}
         FI{"Finnország"}
         FJ{"Fidzsi"}
-        FK{"Falkland-szigetek"}
+        FK{"Falkland-szigetek (Malvin-szigetek)"}
         FM{"Mikronézia"}
         FO{"Feröer-szigetek"}
         FR{"Franciaország"}
@@ -181,7 +181,7 @@ hu{
         MF{"Saint Martin"}
         MG{"Madagaszkár"}
         MH{"Marshall-szigetek"}
-        MK{"Macedónia"}
+        MK{"Macedónia (MVJK)"}
         ML{"Mali"}
         MM{"Mianmar (Burma)"}
         MN{"Mongólia"}
@@ -301,8 +301,6 @@ hu{
     Countries%variant{
         CD{"Kongó (KDK)"}
         CG{"Kongó (Köztársaság)"}
-        FK{"Falkland-szigetek (Malvin-szigetek)"}
-        MK{"Macedónia (MVJK)"}
     }
-    Version{"2.1.28.79"}
+    Version{"2.1.32.59"}
 }

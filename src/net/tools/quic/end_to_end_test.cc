@@ -166,7 +166,8 @@ std::vector<TestParams> GetTestParams() {
   std::vector<TestParams> params;
   for (bool server_uses_stateless_rejects_if_peer_supported : {true, false}) {
     for (bool client_supports_stateless_rejects : {true, false}) {
-      for (const QuicTag congestion_control_tag : {kRENO, kTBBR, kQBIC}) {
+      for (const QuicTag congestion_control_tag :
+           {kRENO, kTBBR, kQBIC, kTPCC}) {
         for (bool disable_hpack_dynamic_table : {false}) {
           for (bool force_hol_blocking : {true, false}) {
             for (bool use_cheap_stateless_reject : {true, false}) {
@@ -425,6 +426,10 @@ class EndToEndTest : public QuicTestWithParam<TestParams> {
         FLAGS_quic_reloadable_flag_quic_enable_cubic_per_ack_updates) {
       copt.push_back(kCPAU);
     }
+    if (GetParam().congestion_control_tag == kTPCC &&
+        FLAGS_quic_reloadable_flag_quic_enable_pcc) {
+      copt.push_back(kTPCC);
+    }
 
     if (support_server_push_) {
       copt.push_back(kSPSH);
@@ -601,6 +606,16 @@ class EndToEndTest : public QuicTestWithParam<TestParams> {
   // Must be called before Initialize to have effect.
   void SetSpdyStreamFactory(QuicTestServer::StreamFactory* factory) {
     stream_factory_ = factory;
+  }
+
+  QuicStreamId GetNthClientInitiatedId(int n) {
+    return QuicSpdySessionPeer::GetNthClientInitiatedStreamId(
+        *client_->client()->session(), n);
+  }
+
+  QuicStreamId GetNthServerInitiatedId(int n) {
+    return QuicSpdySessionPeer::GetNthServerInitiatedStreamId(
+        *client_->client()->session(), n);
   }
 
   bool initialized_;
@@ -1197,7 +1212,8 @@ TEST_P(EndToEndTest, InvalidStream) {
 
   // Force the client to write with a stream ID belonging to a nonexistent
   // server-side stream.
-  QuicSessionPeer::SetNextOutgoingStreamId(client_->client()->session(), 2);
+  QuicSpdySession* session = client_->client()->session();
+  QuicSessionPeer::SetNextOutgoingStreamId(session, GetNthServerInitiatedId(0));
 
   client_->SendCustomSynchronousRequest(headers, body);
   EXPECT_EQ(QUIC_STREAM_CONNECTION_ERROR, client_->stream_error());
@@ -1288,8 +1304,7 @@ TEST_P(EndToEndTest, MaxIncomingDynamicStreamsLimitRespected) {
   EXPECT_TRUE(client_->client()->WaitForCryptoHandshakeConfirmed());
 
   // Make the client misbehave after negotiation.
-  const int kServerMaxStreams =
-      kMaxStreamsMinimumIncrement + kServerMaxIncomingDynamicStreams;
+  const int kServerMaxStreams = kMaxStreamsMinimumIncrement + 1;
   QuicSessionPeer::SetMaxOpenOutgoingStreams(client_->client()->session(),
                                              kServerMaxStreams + 1);
 
@@ -1338,6 +1353,13 @@ TEST_P(EndToEndTest, SetIndependentMaxIncomingDynamicStreamsLimits) {
 TEST_P(EndToEndTest, NegotiateCongestionControl) {
   FLAGS_quic_reloadable_flag_quic_allow_new_bbr = true;
   ASSERT_TRUE(Initialize());
+
+  // For PCC, the underlying implementation may be a stub with a
+  // different name-tag.  Skip the rest of this test.
+  if (GetParam().congestion_control_tag == kTPCC) {
+    return;
+  }
+
   EXPECT_TRUE(client_->client()->WaitForCryptoHandshakeConfirmed());
 
   CongestionControlType expected_congestion_control_type = kReno;
@@ -1543,7 +1565,7 @@ TEST_P(EndToEndTest, StreamCancelErrorTest) {
   client_->client()->WaitForEvents();
   // Transmit the cancel, and ensure the connection is torn down properly.
   SetPacketLossPercentage(0);
-  QuicStreamId stream_id = kClientDataStreamId1;
+  QuicStreamId stream_id = GetNthClientInitiatedId(0);
   session->SendRstStream(stream_id, QUIC_STREAM_CANCELLED, 0);
 
   // WaitForEvents waits 50ms and returns true if there are outstanding
@@ -2417,6 +2439,9 @@ class ClientSessionThatDropsBody : public QuicClientSession {
     return QuicMakeUnique<ClientStreamThatDropsBody>(GetNextOutgoingStreamId(),
                                                      this);
   }
+  std::unique_ptr<QuicStream> CreateStream(QuicStreamId id) override {
+    return QuicMakeUnique<ClientStreamThatDropsBody>(id, this);
+  }
 };
 
 class MockableQuicClientThatDropsBody : public MockableQuicClient {
@@ -2454,8 +2479,9 @@ class QuicTestClientThatDropsBody : public QuicTestClient {
                        config,
                        supported_versions) {
     set_client(new MockableQuicClientThatDropsBody(
-        server_address, QuicServerId(server_hostname, server_address.port(),
-                                     PRIVACY_MODE_DISABLED),
+        server_address,
+        QuicServerId(server_hostname, server_address.port(),
+                     PRIVACY_MODE_DISABLED),
         config, supported_versions, epoll_server()));
   }
   ~QuicTestClientThatDropsBody() override {}
@@ -2527,49 +2553,6 @@ TEST_P(EndToEndTest, EarlyResponseFinRecording) {
               .size());
 
   server_thread_->Resume();
-}
-
-TEST_P(EndToEndTest, LargePostEarlyResponse) {
-  const uint32_t kWindowSize = 65536;
-  set_client_initial_stream_flow_control_receive_window(kWindowSize);
-  set_client_initial_session_flow_control_receive_window(kWindowSize);
-  set_server_initial_stream_flow_control_receive_window(kWindowSize);
-  set_server_initial_session_flow_control_receive_window(kWindowSize);
-
-  ASSERT_TRUE(Initialize());
-  if (FLAGS_quic_reloadable_flag_quic_always_enable_bidi_streaming) {
-    // This test is testing the same behavior as
-    // EarlyResponseWithQuicStreamNoError, except for the additional final check
-    // that the stream is reset on early response. Once this flag is deprecated
-    // the tests will be the same and this one can be removed.
-    return;
-  }
-
-  EXPECT_TRUE(client_->client()->WaitForCryptoHandshakeConfirmed());
-
-  // POST to a URL that gets an early error response, after the headers are
-  // received and before the body is received.
-  SpdyHeaderBlock headers;
-  headers[":method"] = "POST";
-  headers[":path"] = "/foo";
-  headers[":scheme"] = "https";
-  headers[":authority"] = server_hostname_;
-  headers["content-length"] = "-1";
-
-  // Tell the client to not close the stream if it receives an early response.
-  client_->set_allow_bidirectional_data(true);
-  // Send the headers.
-  client_->SendMessage(headers, "", /*fin=*/false);
-
-  // Receive the response and let the server close writing.
-  client_->WaitForInitialResponse();
-  EXPECT_EQ("500", client_->response_headers()->find(":status")->second);
-
-  // Receive the reset stream from server on early response.
-  QuicStream* stream =
-      client_->client()->session()->GetOrCreateStream(kClientDataStreamId1);
-  // The stream is reset by server's reset stream.
-  EXPECT_EQ(stream, nullptr);
 }
 
 TEST_P(EndToEndTest, Trailers) {

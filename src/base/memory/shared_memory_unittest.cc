@@ -19,6 +19,7 @@
 #include "base/test/multiprocess_test.h"
 #include "base/threading/platform_thread.h"
 #include "base/time/time.h"
+#include "base/unguessable_token.h"
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "testing/multiprocess_func_list.h"
@@ -333,6 +334,7 @@ TEST(SharedMemoryTest, GetReadOnlyHandle) {
   EXPECT_TRUE(writable_shmem.Unmap());
 
   SharedMemoryHandle readonly_handle = writable_shmem.GetReadOnlyHandle();
+  EXPECT_EQ(writable_shmem.handle().GetGUID(), readonly_handle.GetGUID());
   ASSERT_TRUE(readonly_handle.IsValid());
   SharedMemory readonly_shmem(readonly_handle, /*readonly=*/true);
 
@@ -605,7 +607,8 @@ TEST(SharedMemoryTest, UnsafeImageSection) {
   EXPECT_EQ(nullptr, shared_memory_open.memory());
 
   SharedMemory shared_memory_handle_local(
-      SharedMemoryHandle(section_handle.Take()), true);
+      SharedMemoryHandle(section_handle.Take(), UnguessableToken::Create()),
+      true);
   EXPECT_FALSE(shared_memory_handle_local.Map(1));
   EXPECT_EQ(nullptr, shared_memory_handle_local.memory());
 
@@ -620,7 +623,7 @@ TEST(SharedMemoryTest, UnsafeImageSection) {
       ::GetCurrentProcess(), shared_memory_handle_dummy.handle().GetHandle(),
       ::GetCurrentProcess(), &handle_no_query, FILE_MAP_READ, FALSE, 0));
   SharedMemory shared_memory_handle_no_query(
-      SharedMemoryHandle(handle_no_query), true);
+      SharedMemoryHandle(handle_no_query, UnguessableToken::Create()), true);
   EXPECT_FALSE(shared_memory_handle_no_query.Map(1));
   EXPECT_EQ(nullptr, shared_memory_handle_no_query.memory());
 }

@@ -24,6 +24,7 @@
 #include "net/quic/core/quic_sent_packet_manager.h"
 #include "net/quic/core/quic_server_session_base.h"
 #include "net/quic/core/quic_simple_buffer_allocator.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/mock_random.h"
@@ -48,11 +49,6 @@ static const uint32_t kInitialStreamFlowControlWindowForTest =
     1024 * 1024;  // 1 MB
 static const uint32_t kInitialSessionFlowControlWindowForTest =
     1536 * 1024;  // 1.5 MB
-// Data stream IDs start at 5: the crypto stream is 1, headers stream is 3.
-static const QuicStreamId kClientDataStreamId1 = 5;
-static const QuicStreamId kClientDataStreamId2 = 7;
-static const QuicStreamId kClientDataStreamId3 = 9;
-static const QuicStreamId kServerDataStreamId1 = 4;
 
 // Returns the test peer IP address.
 QuicIpAddress TestPeerIPAddress();
@@ -483,6 +479,9 @@ class MockQuicSession : public QuicSession {
                     ConnectionCloseSource source));
   MOCK_METHOD1(CreateIncomingDynamicStream, QuicStream*(QuicStreamId id));
   MOCK_METHOD1(CreateOutgoingDynamicStream, QuicStream*(SpdyPriority priority));
+  MOCK_METHOD1(MaybeCreateIncomingDynamicStream, QuicStream*(QuicStreamId id));
+  MOCK_METHOD1(MaybeCreateOutgoingDynamicStream,
+               QuicStream*(SpdyPriority priority));
   MOCK_METHOD1(ShouldCreateIncomingDynamicStream, bool(QuicStreamId id));
   MOCK_METHOD0(ShouldCreateOutgoingDynamicStream, bool());
   MOCK_METHOD6(
@@ -506,6 +505,7 @@ class MockQuicSession : public QuicSession {
   MOCK_METHOD3(OnStreamHeadersComplete,
                void(QuicStreamId stream_id, bool fin, size_t frame_len));
   MOCK_CONST_METHOD0(IsCryptoHandshakeConfirmed, bool());
+  MOCK_METHOD1(CreateStream, std::unique_ptr<QuicStream>(QuicStreamId id));
 
   using QuicSession::ActivateStream;
 
@@ -550,6 +550,7 @@ class MockQuicSpdySession : public QuicSpdySession {
                QuicSpdyStream*(SpdyPriority priority));
   MOCK_METHOD1(ShouldCreateIncomingDynamicStream, bool(QuicStreamId id));
   MOCK_METHOD0(ShouldCreateOutgoingDynamicStream, bool());
+  MOCK_METHOD1(CreateStream, std::unique_ptr<QuicStream>(QuicStreamId id));
   MOCK_METHOD6(
       WritevData,
       QuicConsumedData(
@@ -612,6 +613,24 @@ class MockQuicSpdySession : public QuicSpdySession {
       OnStreamFrameData,
       void(QuicStreamId stream_id, const char* data, size_t len, bool fin));
 
+  QuicSpdyStream* QuicSpdySessionMaybeCreateIncomingDynamicStream(
+      QuicStreamId id) {
+    return QuicSpdySession::MaybeCreateIncomingDynamicStream(id);
+  }
+
+  bool QuicSpdySessionShouldCreateIncomingDynamicStream2(QuicStreamId id) {
+    return QuicSpdySession::ShouldCreateIncomingDynamicStream2(id);
+  }
+
+  QuicSpdyStream* QuicSpdySessionMaybeCreateOutgoingDynamicStream(
+      SpdyPriority priority) {
+    return QuicSpdySession::MaybeCreateOutgoingDynamicStream(priority);
+  }
+
+  bool QuicSpdySessionShouldCreateOutgoingDynamicStream2() {
+    return QuicSpdySession::ShouldCreateOutgoingDynamicStream2();
+  }
+
   using QuicSession::ActivateStream;
 
  private:
@@ -633,6 +652,7 @@ class TestQuicSpdyServerSession : public QuicServerSessionBase {
   MOCK_METHOD1(CreateIncomingDynamicStream, QuicSpdyStream*(QuicStreamId id));
   MOCK_METHOD1(CreateOutgoingDynamicStream,
                QuicSpdyStream*(SpdyPriority priority));
+  MOCK_METHOD1(CreateStream, std::unique_ptr<QuicStream>(QuicStreamId id));
   QuicCryptoServerStreamBase* CreateQuicCryptoServerStream(
       const QuicCryptoServerConfig* crypto_config,
       QuicCompressedCertsCache* compressed_certs_cache) override;
@@ -694,6 +714,8 @@ class TestQuicSpdyClientSession : public QuicClientSessionBase {
                QuicSpdyStream*(SpdyPriority priority));
   MOCK_METHOD1(ShouldCreateIncomingDynamicStream, bool(QuicStreamId id));
   MOCK_METHOD0(ShouldCreateOutgoingDynamicStream, bool());
+
+  MOCK_METHOD1(CreateStream, std::unique_ptr<QuicStream>(QuicStreamId id));
 
   QuicCryptoClientStream* GetMutableCryptoStream() override;
   const QuicCryptoClientStream* GetCryptoStream() const override;
@@ -948,10 +970,6 @@ void CreateServerSessionForTest(
     PacketSavingConnection** server_connection,
     TestQuicSpdyServerSession** server_session);
 
-// Helper to generate client side stream ids, generalizes
-// kClientDataStreamId1 etc. above.
-QuicStreamId QuicClientDataStreamId(int i);
-
 // Verifies that the relative error of |actual| with respect to |expected| is
 // no more than |margin|.
 
@@ -977,7 +995,7 @@ QuicHeaderList AsHeaderList(const T& container) {
     total_size += p.first.size() + p.second.size();
     l.OnHeader(p.first, p.second);
   }
-  l.OnHeaderBlockEnd(total_size);
+  l.OnHeaderBlockEnd(total_size, total_size);
   return l;
 }
 
@@ -989,6 +1007,12 @@ inline QuicIOVector MakeIOVector(QuicStringPiece str, struct iovec* iov) {
   QuicIOVector quic_iov(iov, 1, str.size());
   return quic_iov;
 }
+
+// Utilities that will adapt stream ids when http stream pairs are
+// enabled.
+QuicStreamId NextStreamId(QuicVersion version);
+QuicStreamId GetNthClientInitiatedStreamId(QuicVersion version, int n);
+QuicStreamId GetNthServerInitiatedStreamId(QuicVersion version, int n);
 
 }  // namespace test
 }  // namespace net

@@ -339,7 +339,7 @@ bool Scope::NonRecursiveMergeTo(Scope* dest,
     }
 
     std::unique_ptr<Scope>& dest_scope = dest->target_defaults_[current_name];
-    dest_scope = base::WrapUnique(new Scope(settings_));
+    dest_scope = base::MakeUnique<Scope>(settings_);
     pair.second->NonRecursiveMergeTo(dest_scope.get(), options, node_for_err,
                                      "<SHOULDN'T HAPPEN>", err);
   }
@@ -430,7 +430,7 @@ std::unique_ptr<Scope> Scope::MakeClosure() const {
 
 Scope* Scope::MakeTargetDefaults(const std::string& target_type) {
   std::unique_ptr<Scope>& dest = target_defaults_[target_type];
-  dest = base::WrapUnique(new Scope(settings_));
+  dest = base::MakeUnique<Scope>(settings_);
   return dest.get();
 }
 

@@ -23,7 +23,7 @@ bool NullTaskRunner::PostNonNestableDelayedTask(
   return false;
 }
 
-bool NullTaskRunner::RunsTasksOnCurrentThread() const {
+bool NullTaskRunner::RunsTasksInCurrentSequence() const {
   return true;
 }
 

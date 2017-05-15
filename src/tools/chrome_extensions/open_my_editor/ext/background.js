@@ -18,7 +18,11 @@ function openByLink(info, tabId) {
   let pageHostname = new URL(info.pageUrl).hostname;
   let linkUrl = new URL(info.linkUrl);
 
-  if (pageHostname == 'cs.chromium.org') {
+  if (pageHostname == 'chromium-review.googlesource.com') {
+    chrome.tabs.sendMessage(tabId, 'getFile', (res) => {
+      return res && res.file && openFile(res.file);
+    });
+  } else if (pageHostname == 'cs.chromium.org') {
     let match = linkUrl.pathname.match(/^\/chromium\/src\/(.*)/);
     let line = linkUrl.searchParams.get('l');
     if (match)
@@ -57,7 +61,7 @@ function csOpenCurrentFile(tabId, pageUrl) {
 
 function crOpenAllInPatchset(tabId) {
   chrome.tabs.sendMessage(tabId, 'getFiles', (res) => {
-    openFiles(res.files);
+    return res && res.files && openFiles(res.files);
   });
 }
 
@@ -72,6 +76,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       csOpenCurrentFile(tab.id, pageUrl);
     } else if (pageUrl.hostname == 'codereview.chromium.org') {
       crOpenAllInPatchset(tab.id);
+    } else if (pageUrl.hostname == 'chromium-review.googlesource.com') {
+      crOpenAllInPatchset(tab.id);
     }
   }
 });
@@ -83,15 +89,19 @@ chrome.runtime.onInstalled.addListener(() => {
     'contexts': ['page'],
     'documentUrlPatterns': [
       'https://cs.chromium.org/chromium/src/*',
-      'https://codereview.chromium.org/*'
+      'https://codereview.chromium.org/*',
+      'https://chromium-review.googlesource.com/*'
     ]
   });
   chrome.contextMenus.create({
     'title': 'Open My Editor by Link',
     'id': 'ome-link',
     'contexts': ['link'],
-    'documentUrlPatterns':
-        ['https://cs.chromium.org/*', 'https://codereview.chromium.org/*']
+    'documentUrlPatterns': [
+      'https://cs.chromium.org/*',
+      'https://codereview.chromium.org/*',
+      'https://chromium-review.googlesource.com/*'
+    ]
   });
   chrome.contextMenus.create({
     'title': 'Open My Editor for "%s"',

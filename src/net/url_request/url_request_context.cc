@@ -5,6 +5,7 @@
 #include "net/url_request/url_request_context.h"
 
 #include <inttypes.h>
+#include <utility>
 
 #include "base/compiler_specific.h"
 #include "base/debug/alias.h"
@@ -52,7 +53,8 @@ URLRequestContext::URLRequestContext()
       enable_brotli_(false),
       check_cleartext_permitted_(false),
       name_(nullptr),
-      largest_outstanding_requests_count_seen_(0) {
+      largest_outstanding_requests_count_seen_(0),
+      has_reported_too_many_outstanding_requests_(false) {
   base::trace_event::MemoryDumpManager::GetInstance()->RegisterDumpProvider(
       this, "URLRequestContext", base::ThreadTaskRunnerHandle::Get());
 }
@@ -123,6 +125,23 @@ void URLRequestContext::set_cookie_store(CookieStore* cookie_store) {
   cookie_store_ = cookie_store;
 }
 
+bool URLRequestContext::AddToAddressMap(const void* const address) {
+  int count = ++address_map_[address];
+  if (!has_reported_too_many_outstanding_requests_ && count > 1000) {
+    has_reported_too_many_outstanding_requests_ = true;
+    return false;
+  }
+  return true;
+}
+
+void URLRequestContext::RemoveFromAddressMap(const void* const address) const {
+  auto iter = address_map_.find(address);
+  DCHECK(address_map_.end() != iter);
+  iter->second -= 1;
+  if (iter->second == 0)
+    address_map_.erase(iter);
+}
+
 void URLRequestContext::InsertURLRequest(const URLRequest* request) const {
   url_requests_.insert(request);
   if (url_requests_.size() > largest_outstanding_requests_count_seen_) {
@@ -152,6 +171,7 @@ void URLRequestContext::AssertNoURLRequests() const {
     CHECK(false) << "Leaked " << num_requests << " URLRequest(s). First URL: "
                  << request->url().spec().c_str() << ".";
   }
+  DCHECK(address_map_.empty());
 }
 
 bool URLRequestContext::OnMemoryDump(

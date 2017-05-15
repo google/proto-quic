@@ -257,7 +257,8 @@ class IsolateTest(IsolateBase):
     }
     complete_state = isolate.CompleteState(None, isolate.SavedState(self.cwd))
     complete_state.load_isolate(
-        unicode(self.cwd), unicode(isolate_file), {}, {}, {}, None, False)
+        unicode(self.cwd), unicode(isolate_file), {}, {}, {}, None, False,
+        False)
     self.assertEqual(expected, complete_state.saved_state.to_isolated())
 
 
@@ -289,6 +290,7 @@ class IsolateLoad(IsolateBase):
       }
       extra_variables = {'foo': 'bar'}
       ignore_broken_items = False
+      collapse_symlinks = False
     return Options()
 
   def _cleanup_isolated(self, expected_isolated):
@@ -976,7 +978,7 @@ class IsolateLoad(IsolateBase):
         'OS': config_os,
       }
       c.load_isolate(
-          unicode(self.cwd), root_isolate, {}, config, {}, None, False)
+          unicode(self.cwd), root_isolate, {}, config, {}, None, False, False)
       # Note that load_isolate() doesn't retrieve the meta data about each file.
       expected = {
         'algo': 'sha-1',
@@ -1171,7 +1173,7 @@ class IsolateLoad(IsolateBase):
         'EXTRA': 'indeed',
       }
       c.load_isolate(
-          unicode(cwd), root_isolate, paths, config, extra, None, False)
+          unicode(cwd), root_isolate, paths, config, extra, None, False, False)
       # Note that load_isolate() doesn't retrieve the meta data about each file.
       expected = {
         'algo': 'sha-1',

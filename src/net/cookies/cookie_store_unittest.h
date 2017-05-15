@@ -465,6 +465,34 @@ TYPED_TEST_P(CookieStoreTest, SetCookieWithDetailsAsync) {
   EXPECT_TRUE(++it == cookies.end());
 }
 
+// Test enforcement around setting secure cookies.
+TYPED_TEST_P(CookieStoreTest, SetCookieWithDetailsSecureEnforcement) {
+  CookieStore* cs = this->GetCookieStore();
+  GURL http_url(this->http_www_google_.url());
+  std::string http_domain(http_url.host());
+  GURL https_url(this->https_www_google_.url());
+  std::string https_domain(https_url.host());
+
+  // Confirm that setting the secure attribute on an HTTP URL fails, but
+  // the other combinations work.
+  EXPECT_TRUE(this->SetCookieWithDetails(
+      cs, http_url, "A", "B", http_domain, "/", base::Time::Now(), base::Time(),
+      base::Time(), false, false, CookieSameSite::NO_RESTRICTION,
+      COOKIE_PRIORITY_DEFAULT));
+  EXPECT_FALSE(this->SetCookieWithDetails(
+      cs, http_url, "A", "B", http_domain, "/", base::Time::Now(), base::Time(),
+      base::Time(), true, false, CookieSameSite::NO_RESTRICTION,
+      COOKIE_PRIORITY_DEFAULT));
+  EXPECT_TRUE(this->SetCookieWithDetails(
+      cs, https_url, "A", "B", https_domain, "/", base::Time::Now(),
+      base::Time(), base::Time(), false, false, CookieSameSite::NO_RESTRICTION,
+      COOKIE_PRIORITY_DEFAULT));
+  EXPECT_TRUE(this->SetCookieWithDetails(
+      cs, https_url, "A", "B", https_domain, "/", base::Time::Now(),
+      base::Time(), base::Time(), true, false, CookieSameSite::NO_RESTRICTION,
+      COOKIE_PRIORITY_DEFAULT));
+}
+
 // The iOS networking stack uses the iOS cookie parser, which we do not
 // control. While it is spec-compliant, that does not match the practical
 // behavior of most UAs in some cases, which we try to replicate. See
@@ -1423,6 +1451,7 @@ TYPED_TEST_P(CookieStoreTest, DeleteSessionCookie) {
 
 REGISTER_TYPED_TEST_CASE_P(CookieStoreTest,
                            SetCookieWithDetailsAsync,
+                           SetCookieWithDetailsSecureEnforcement,
                            EmptyKeyTest,
                            DomainTest,
                            DomainWithTrailingDotTest,

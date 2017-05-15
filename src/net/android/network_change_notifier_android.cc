@@ -63,6 +63,7 @@
 
 #include "base/android/build_info.h"
 #include "base/macros.h"
+#include "base/message_loop/message_loop.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/threading/thread.h"
 #include "net/base/address_tracker_linux.h"
