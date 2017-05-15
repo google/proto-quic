@@ -375,67 +375,6 @@ void RunTest_Nesting(MessagePumpFactory factory) {
   EXPECT_EQ(depth, 0);
 }
 
-// A NestingObserver that tracks the number of nested message loop starts it
-// has seen.
-class TestNestingObserver : public MessageLoop::NestingObserver {
- public:
-  TestNestingObserver() {}
-  ~TestNestingObserver() override {}
-
-  int begin_nested_loop_count() const { return begin_nested_loop_count_; }
-
-  // MessageLoop::NestingObserver:
-  void OnBeginNestedMessageLoop() override { begin_nested_loop_count_++; }
-
- private:
-  int begin_nested_loop_count_ = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(TestNestingObserver);
-};
-
-void ExpectOneBeginNestedLoop(TestNestingObserver* observer) {
-  EXPECT_EQ(1, observer->begin_nested_loop_count());
-}
-
-// Starts a nested message loop.
-void RunNestedLoop(TestNestingObserver* observer,
-                   const Closure& quit_outer_loop) {
-  // The nested loop hasn't started yet.
-  EXPECT_EQ(0, observer->begin_nested_loop_count());
-
-  MessageLoop::ScopedNestableTaskAllower allow(MessageLoop::current());
-  RunLoop nested_loop;
-  // Verify that by the time the first task is run the observer has seen the
-  // message loop begin.
-  ThreadTaskRunnerHandle::Get()->PostTask(
-      FROM_HERE, BindOnce(&ExpectOneBeginNestedLoop, observer));
-  ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, nested_loop.QuitClosure());
-  nested_loop.Run();
-
-  // Quitting message loops doesn't change the begin count.
-  EXPECT_EQ(1, observer->begin_nested_loop_count());
-
-  quit_outer_loop.Run();
-}
-
-// Tests that a NestingObserver is notified when a nested message loop begins.
-void RunTest_NestingObserver(MessagePumpFactory factory) {
-  std::unique_ptr<MessagePump> pump(factory());
-  MessageLoop outer_loop(std::move(pump));
-
-  // Observe the outer loop for nested message loops beginning.
-  TestNestingObserver nesting_observer;
-  outer_loop.AddNestingObserver(&nesting_observer);
-
-  // Post a task that runs a nested message loop.
-  outer_loop.task_runner()->PostTask(
-      FROM_HERE, BindOnce(&RunNestedLoop, &nesting_observer,
-                          outer_loop.QuitWhenIdleClosure()));
-  RunLoop().Run();
-
-  outer_loop.RemoveNestingObserver(&nesting_observer);
-}
-
 enum TaskType {
   MESSAGEBOX,
   ENDDIALOG,

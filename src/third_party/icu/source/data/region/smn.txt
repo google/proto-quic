@@ -73,7 +73,7 @@ smn{
         ET{"Etiopia"}
         FI{"Suomâ"}
         FJ{"Fidži"}
-        FK{"Falklandsuolluuh"}
+        FK{"Falklandsuolluuh (Malvinassuolluuh)"}
         FM{"Mikronesia littoväldi"}
         FO{"Färsuolluuh"}
         FR{"Ranska"}
@@ -146,6 +146,7 @@ smn{
         MF{"St. Martin"}
         MG{"Madagaskar"}
         MH{"Marshallsuolluuh"}
+        MK{"OJT Makedonia"}
         ML{"Mali"}
         MM{"Myanmar (Burma)"}
         MN{"Mongolia"}
@@ -260,8 +261,6 @@ smn{
     Countries%variant{
         CD{"Kongo demokraattisâš täsiväldi"}
         CG{"Kongo täsiväldi"}
-        FK{"Falklandsuolluuh (Malvinassuolluuh)"}
-        MK{"OJT Makedonia"}
     }
-    Version{"2.1.27.40"}
+    Version{"2.1.31.33"}
 }

@@ -12,6 +12,7 @@
 
 #include "base/bind.h"
 #include "base/compiler_specific.h"
+#include "base/files/file_util.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/native_library.h"
@@ -39,8 +40,8 @@
 #endif
 
 // STACK_SAMPLING_PROFILER_SUPPORTED is used to conditionally enable the tests
-// below for supported platforms (currently Win x64).
-#if defined(_WIN64)
+// below for supported platforms (currently Win x64 and Mac x64).
+#if defined(_WIN64) || (defined(OS_MACOSX) && !defined(OS_IOS))
 #define STACK_SAMPLING_PROFILER_SUPPORTED 1
 #endif
 
@@ -307,6 +308,8 @@ void SynchronousUnloadNativeLibrary(NativeLibrary library) {
          ::GetLastError() != ERROR_MOD_NOT_FOUND) {
     PlatformThread::Sleep(TimeDelta::FromMilliseconds(1));
   }
+#elif defined(OS_MACOSX)
+// Unloading a library on the Mac is synchronous.
 #else
   NOTIMPLEMENTED();
 #endif
@@ -589,7 +592,7 @@ void TestLibraryUnload(bool wait_until_unloaded) {
         << "Stack:\n"
         << FormatSampleForDiagnosticOutput(sample, profile.modules);
   } else {
-    // We didn't wait for the asynchonous unloading to complete, so the results
+    // We didn't wait for the asynchronous unloading to complete, so the results
     // are non-deterministic: if the library finished unloading we should have
     // the same stack as |wait_until_unloaded|, if not we should have the full
     // stack. The important thing is that we should not crash.
@@ -647,7 +650,9 @@ class StackSamplingProfilerTest : public testing::Test {
 
 // Checks that the basic expected information is present in a sampled call stack
 // profile.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
+// macOS ASAN is not yet supported - crbug.com/718628.
+#if defined(STACK_SAMPLING_PROFILER_SUPPORTED) && \
+    !(defined(ADDRESS_SANITIZER) && defined(OS_MACOSX))
 #define MAYBE_Basic Basic
 #else
 #define MAYBE_Basic DISABLED_Basic
@@ -686,7 +691,8 @@ TEST_F(StackSamplingProfilerTest, MAYBE_Basic) {
       << FormatSampleForDiagnosticOutput(sample, profile.modules);
   FilePath executable_path;
   EXPECT_TRUE(PathService::Get(FILE_EXE, &executable_path));
-  EXPECT_EQ(executable_path, profile.modules[loc->module_index].filename);
+  EXPECT_EQ(executable_path,
+            MakeAbsoluteFilePath(profile.modules[loc->module_index].filename));
 }
 
 // Checks that annotations are recorded in samples.
@@ -724,7 +730,9 @@ TEST_F(StackSamplingProfilerTest, MAYBE_Annotations) {
 
 // Checks that the profiler handles stacks containing dynamically-allocated
 // stack memory.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
+// macOS ASAN is not yet supported - crbug.com/718628.
+#if defined(STACK_SAMPLING_PROFILER_SUPPORTED) && \
+    !(defined(ADDRESS_SANITIZER) && defined(OS_MACOSX))
 #define MAYBE_Alloca Alloca
 #else
 #define MAYBE_Alloca DISABLED_Alloca
@@ -1355,7 +1363,9 @@ TEST_F(StackSamplingProfilerTest, MAYBE_ConcurrentProfiling_Mixed) {
 
 // Checks that a stack that runs through another library produces a stack with
 // the expected functions.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
+// macOS ASAN is not yet supported - crbug.com/718628.
+#if defined(STACK_SAMPLING_PROFILER_SUPPORTED) && \
+    !(defined(ADDRESS_SANITIZER) && defined(OS_MACOSX))
 #define MAYBE_OtherLibrary OtherLibrary
 #else
 #define MAYBE_OtherLibrary DISABLED_OtherLibrary
@@ -1426,7 +1436,8 @@ TEST_F(StackSamplingProfilerTest, MAYBE_OtherLibrary) {
 
 // Checks that a stack that runs through a library that is unloading produces a
 // stack, and doesn't crash.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
+// Unloading is synchronous on the Mac, so this test is inapplicable.
+#if defined(STACK_SAMPLING_PROFILER_SUPPORTED) && !defined(OS_MACOSX)
 #define MAYBE_UnloadingLibrary UnloadingLibrary
 #else
 #define MAYBE_UnloadingLibrary DISABLED_UnloadingLibrary
@@ -1437,7 +1448,9 @@ TEST_F(StackSamplingProfilerTest, MAYBE_UnloadingLibrary) {
 
 // Checks that a stack that runs through a library that has been unloaded
 // produces a stack, and doesn't crash.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
+// macOS ASAN is not yet supported - crbug.com/718628.
+#if defined(STACK_SAMPLING_PROFILER_SUPPORTED) && \
+    !(defined(ADDRESS_SANITIZER) && defined(OS_MACOSX))
 #define MAYBE_UnloadedLibrary UnloadedLibrary
 #else
 #define MAYBE_UnloadedLibrary DISABLED_UnloadedLibrary

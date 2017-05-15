@@ -6,4 +6,11 @@ import("//build/config/linux/pkg_config.gni")
 
 pkg_config("pangocairo") {
   packages = [ "pangocairo" ]
+
+  # We don't want pkgconfig for pangocairo to explicitly request FreeType to get
+  # linked, because we control which FreeType to link to.
+  extra_args = [
+    "-v",
+    "freetype",
+  ]
 }

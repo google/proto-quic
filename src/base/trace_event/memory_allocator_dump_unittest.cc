@@ -8,9 +8,9 @@
 
 #include "base/format_macros.h"
 #include "base/strings/stringprintf.h"
+#include "base/trace_event/heap_profiler_serialization_state.h"
 #include "base/trace_event/memory_allocator_dump_guid.h"
 #include "base/trace_event/memory_dump_provider.h"
-#include "base/trace_event/memory_dump_session_state.h"
 #include "base/trace_event/process_memory_dump.h"
 #include "base/trace_event/trace_event_argument.h"
 #include "base/values.h"
@@ -130,7 +130,7 @@ TEST(MemoryAllocatorDumpTest, GuidGeneration) {
 TEST(MemoryAllocatorDumpTest, DumpIntoProcessMemoryDump) {
   FakeMemoryAllocatorDumpProvider fmadp;
   MemoryDumpArgs dump_args = {MemoryDumpLevelOfDetail::DETAILED};
-  ProcessMemoryDump pmd(new MemoryDumpSessionState, dump_args);
+  ProcessMemoryDump pmd(new HeapProfilerSerializationState, dump_args);
 
   fmadp.OnMemoryDump(dump_args, &pmd);
 
@@ -174,7 +174,7 @@ TEST(MemoryAllocatorDumpTest, DumpIntoProcessMemoryDump) {
 
 TEST(MemoryAllocatorDumpTest, GetSize) {
   MemoryDumpArgs dump_args = {MemoryDumpLevelOfDetail::DETAILED};
-  ProcessMemoryDump pmd(new MemoryDumpSessionState, dump_args);
+  ProcessMemoryDump pmd(new HeapProfilerSerializationState, dump_args);
   MemoryAllocatorDump* dump = pmd.CreateAllocatorDump("allocator_for_size");
   dump->AddScalar(MemoryAllocatorDump::kNameSize,
                   MemoryAllocatorDump::kUnitsBytes, 1);
@@ -187,7 +187,7 @@ TEST(MemoryAllocatorDumpTest, GetSize) {
 TEST(MemoryAllocatorDumpTest, ForbidDuplicatesDeathTest) {
   FakeMemoryAllocatorDumpProvider fmadp;
   MemoryDumpArgs dump_args = {MemoryDumpLevelOfDetail::DETAILED};
-  ProcessMemoryDump pmd(new MemoryDumpSessionState, dump_args);
+  ProcessMemoryDump pmd(new HeapProfilerSerializationState, dump_args);
   pmd.CreateAllocatorDump("foo_allocator");
   pmd.CreateAllocatorDump("bar_allocator/heap");
   ASSERT_DEATH(pmd.CreateAllocatorDump("foo_allocator"), "");

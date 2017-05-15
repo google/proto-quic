@@ -8,6 +8,7 @@
 #include <resolv.h>
 
 #include "base/macros.h"
+#include "base/message_loop/message_loop.h"
 #include "base/threading/thread.h"
 #include "base/threading/thread_restrictions.h"
 #include "net/dns/dns_config_service.h"

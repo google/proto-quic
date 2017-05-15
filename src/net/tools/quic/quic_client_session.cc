@@ -8,6 +8,7 @@
 #include "net/quic/chromium/crypto/proof_verifier_chromium.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/quic_server_id.h"
+#include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
@@ -25,8 +26,7 @@ QuicClientSession::QuicClientSession(
     QuicClientPushPromiseIndex* push_promise_index)
     : QuicClientSessionBase(connection, push_promise_index, config),
       server_id_(server_id),
-      crypto_config_(crypto_config),
-      respect_goaway_(true) {}
+      crypto_config_(crypto_config) {}
 
 QuicClientSession::~QuicClientSession() {}
 
@@ -42,6 +42,7 @@ void QuicClientSession::OnProofVerifyDetailsAvailable(
     const ProofVerifyDetails& /*verify_details*/) {}
 
 bool QuicClientSession::ShouldCreateOutgoingDynamicStream() {
+  DCHECK(!FLAGS_quic_reloadable_flag_quic_refactor_stream_creation);
   if (!crypto_stream_->encryption_established()) {
     QUIC_DLOG(INFO) << "Encryption not active so no outgoing stream created.";
     return false;
@@ -51,7 +52,7 @@ bool QuicClientSession::ShouldCreateOutgoingDynamicStream() {
                     << "Already " << GetNumOpenOutgoingStreams() << " open.";
     return false;
   }
-  if (goaway_received() && respect_goaway_) {
+  if (goaway_received() && respect_goaway()) {
     QUIC_DLOG(INFO) << "Failed to create a new outgoing stream. "
                     << "Already received goaway.";
     return false;
@@ -97,11 +98,12 @@ int QuicClientSession::GetNumReceivedServerConfigUpdates() const {
 }
 
 bool QuicClientSession::ShouldCreateIncomingDynamicStream(QuicStreamId id) {
+  DCHECK(!FLAGS_quic_reloadable_flag_quic_refactor_stream_creation);
   if (!connection()->connected()) {
     QUIC_BUG << "ShouldCreateIncomingDynamicStream called when disconnected";
     return false;
   }
-  if (goaway_received() && respect_goaway_) {
+  if (goaway_received() && respect_goaway()) {
     QUIC_DLOG(INFO) << "Failed to create a new outgoing stream. "
                     << "Already received goaway.";
     return false;
@@ -136,6 +138,27 @@ QuicClientSession::CreateQuicCryptoStream() {
 
 bool QuicClientSession::IsAuthorized(const string& authority) {
   return true;
+}
+
+QuicSpdyClientStream* QuicClientSession::MaybeCreateOutgoingDynamicStream(
+    SpdyPriority priority) {
+  return static_cast<QuicSpdyClientStream*>(
+      QuicSpdySession::MaybeCreateOutgoingDynamicStream(priority));
+}
+
+QuicSpdyStream* QuicClientSession::MaybeCreateIncomingDynamicStream(
+    QuicStreamId id) {
+  QuicSpdyStream* stream =
+      QuicSpdySession::MaybeCreateIncomingDynamicStream(id);
+  if (stream) {
+    // Push streams start half-closed.
+    stream->CloseWriteSide();
+  }
+  return stream;
+}
+
+std::unique_ptr<QuicStream> QuicClientSession::CreateStream(QuicStreamId id) {
+  return QuicMakeUnique<QuicSpdyClientStream>(id, this);
 }
 
 }  // namespace net

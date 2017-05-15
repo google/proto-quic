@@ -309,7 +309,7 @@ def expand_directories_and_symlinks(
 
 
 @tools.profile
-def file_to_metadata(filepath, prevdict, read_only, algo):
+def file_to_metadata(filepath, prevdict, read_only, algo, collapse_symlinks):
   """Processes an input file, a dependency, and return meta data about it.
 
   Behaviors:
@@ -326,6 +326,8 @@ def file_to_metadata(filepath, prevdict, read_only, algo):
                windows, mode is not set since all files are 'executable' by
                default.
     algo:      Hashing algorithm used.
+    collapse_symlinks: True if symlinked files should be treated like they were
+                       the normal underlying file.
 
   Returns:
     The necessary dict to create a entry in the 'files' section of an .isolated
@@ -340,7 +342,12 @@ def file_to_metadata(filepath, prevdict, read_only, algo):
   # There is the risk of the file's timestamp being reset to its last value
   # manually while its content changed. We don't protect against that use case.
   try:
-    filestats = os.lstat(filepath)
+    if collapse_symlinks:
+      # os.stat follows symbolic links
+      filestats = os.stat(filepath)
+    else:
+      # os.lstat does not follow symbolic links, and thus preserves them.
+      filestats = os.lstat(filepath)
   except OSError:
     # The file is not present.
     raise MappingError('%s is missing' % filepath)

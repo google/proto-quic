@@ -108,7 +108,7 @@ sl{
         EU{"Evropska unija"}
         FI{"Finska"}
         FJ{"Fidži"}
-        FK{"Falklandski otoki"}
+        FK{"Falklandski otoki (Malvini)"}
         FM{"Mikronezija"}
         FO{"Ferski otoki"}
         FR{"Francija"}
@@ -181,7 +181,7 @@ sl{
         MF{"Saint Martin"}
         MG{"Madagaskar"}
         MH{"Marshallovi otoki"}
-        MK{"Makedonija"}
+        MK{"Makedonija (FYROM)"}
         ML{"Mali"}
         MM{"Mjanmar (Burma)"}
         MN{"Mongolija"}
@@ -302,9 +302,7 @@ sl{
         CD{"Kongo (Demokratična republika Kongo)"}
         CG{"Kongo (Republika)"}
         CI{"Côte d’Ivoire"}
-        FK{"Falklandski otoki (Malvini)"}
-        MK{"Makedonija (FYROM)"}
         TL{"Vzhodni Timor"}
     }
-    Version{"2.1.28.79"}
+    Version{"2.1.32.59"}
 }

@@ -110,13 +110,6 @@ class SPDY_EXPORT_PRIVATE SpdyFrameBuilder {
   bool WriteStringPiece32(const SpdyStringPiece& value);
   bool WriteBytes(const void* data, uint32_t data_len);
 
-  // Update (in-place) the length field in the frame being built to reflect the
-  // given length.
-  // The framer parameter is used to determine version-specific location and
-  // size information of the length field to be written, and must be initialized
-  // with the correct version for the frame being written.
-  bool OverwriteLength(const SpdyFramer& framer, size_t length);
-
  private:
   FRIEND_TEST_ALL_PREFIXES(SpdyFrameBuilderTest, GetWritableBuffer);
   FRIEND_TEST_ALL_PREFIXES(SpdyFrameBuilderTest, GetWritableOutput);
@@ -153,14 +146,6 @@ class SPDY_EXPORT_PRIVATE SpdyFrameBuilder {
   size_t capacity_;  // Allocation size of payload, set by constructor.
   size_t length_;    // Length of the latest frame in the buffer.
   size_t offset_;    // Position at which the latest frame begins.
-
-  // Remove all four below after
-  // FLAGS_chromium_http2_flag_remove_rewritelength deprecates.
-  const size_t kLengthFieldLength = 3;
-  char* start_of_current_frame_ = nullptr;
-  size_t bytes_of_length_written_in_first_block_ = kLengthFieldLength;
-  // In case length of a new frame is cross blocks.
-  char* start_of_current_frame_in_next_block_ = nullptr;
 };
 
 }  // namespace net

@@ -20,12 +20,12 @@
 #include "base/bind.h"
 #include "base/compiler_specific.h"
 #include "base/debug/leak_annotations.h"
+#include "base/files/file_descriptor_watcher_posix.h"
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
 #include "base/files/scoped_file.h"
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/message_loop/message_loop.h"
 #include "base/nix/xdg_util.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_number_conversions.h"
@@ -858,12 +858,10 @@ bool SettingGetterImplGSettings::LoadAndCheckVersion(
 // This is the KDE version that reads kioslaverc and simulates gconf.
 // Doing this allows the main Delegate code, as well as the unit tests
 // for it, to stay the same - and the settings map fairly well besides.
-class SettingGetterImplKDE : public ProxyConfigServiceLinux::SettingGetter,
-                             public base::MessagePumpLibevent::Watcher {
+class SettingGetterImplKDE : public ProxyConfigServiceLinux::SettingGetter {
  public:
   explicit SettingGetterImplKDE(base::Environment* env_var_getter)
       : inotify_fd_(-1),
-        inotify_watcher_(FROM_HERE),
         notify_delegate_(nullptr),
         debounce_timer_(new base::OneShotTimer()),
         indirect_manual_(false),
@@ -971,7 +969,7 @@ class SettingGetterImplKDE : public ProxyConfigServiceLinux::SettingGetter,
   void ShutDown() override {
     if (inotify_fd_ >= 0) {
       ResetCachedSettings();
-      inotify_watcher_.StopWatchingFileDescriptor();
+      inotify_watcher_.reset();
       close(inotify_fd_);
       inotify_fd_ = -1;
     }
@@ -992,11 +990,9 @@ class SettingGetterImplKDE : public ProxyConfigServiceLinux::SettingGetter,
       return false;
     }
     notify_delegate_ = delegate;
-    if (!base::MessageLoopForIO::current()->WatchFileDescriptor(
-            inotify_fd_, true, base::MessageLoopForIO::WATCH_READ,
-            &inotify_watcher_, this)) {
-      return false;
-    }
+    inotify_watcher_ = base::FileDescriptorWatcher::WatchReadable(
+        inotify_fd_, base::Bind(&SettingGetterImplKDE::OnChangeNotification,
+                                base::Unretained(this)));
     // Simulate a change to avoid possibly losing updates before this point.
     OnChangeNotification();
     return true;
@@ -1006,14 +1002,6 @@ class SettingGetterImplKDE : public ProxyConfigServiceLinux::SettingGetter,
       override {
     return file_task_runner_;
   }
-
-  // Implement base::MessagePumpLibevent::Watcher.
-  void OnFileCanReadWithoutBlocking(int fd) override {
-    DCHECK_EQ(fd, inotify_fd_);
-    DCHECK(file_task_runner_->BelongsToCurrentThread());
-    OnChangeNotification();
-  }
-  void OnFileCanWriteWithoutBlocking(int fd) override { NOTREACHED(); }
 
   ProxyConfigSource GetConfigSource() override {
     return PROXY_CONFIG_SOURCE_KDE;
@@ -1317,7 +1305,7 @@ class SettingGetterImplKDE : public ProxyConfigServiceLinux::SettingGetter,
         // large), but if it does we'd warn continuously since |inotify_fd_|
         // would be forever ready to read. Close it and stop watching instead.
         LOG(ERROR) << "inotify failure; no longer watching kioslaverc!";
-        inotify_watcher_.StopWatchingFileDescriptor();
+        inotify_watcher_.reset();
         close(inotify_fd_);
         inotify_fd_ = -1;
       }
@@ -1337,7 +1325,7 @@ class SettingGetterImplKDE : public ProxyConfigServiceLinux::SettingGetter,
                    std::vector<std::string> > strings_map_type;
 
   int inotify_fd_;
-  base::MessagePumpLibevent::FileDescriptorWatcher inotify_watcher_;
+  std::unique_ptr<base::FileDescriptorWatcher::Controller> inotify_watcher_;
   ProxyConfigServiceLinux::Delegate* notify_delegate_;
   std::unique_ptr<base::OneShotTimer> debounce_timer_;
   base::FilePath kde_config_dir_;

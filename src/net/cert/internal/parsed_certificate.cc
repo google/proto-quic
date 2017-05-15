@@ -101,12 +101,10 @@ scoped_refptr<ParsedCertificate> ParsedCertificate::CreateInternal(
   }
 
   // Attempt to parse the signature algorithm contained in the Certificate.
-  // Do not give up on failure here, since SignatureAlgorithm::Create
-  // will fail on valid but unsupported signature algorithms.
-  // TODO(mattm): should distinguish between unsupported algorithms and parsing
-  // errors.
   result->signature_algorithm_ =
       SignatureAlgorithm::Create(result->signature_algorithm_tlv_, errors);
+  if (!result->signature_algorithm_)
+    return nullptr;
 
   der::Input subject_value;
   if (!GetSequenceValue(result->tbs_.subject_tlv, &subject_value) ||
@@ -193,6 +191,15 @@ scoped_refptr<ParsedCertificate> ParsedCertificate::CreateInternal(
       result->has_policy_oids_ = true;
       if (!ParseCertificatePoliciesExtension(extension.value,
                                              &result->policy_oids_)) {
+        return nullptr;
+      }
+    }
+
+    // Policy constraints.
+    if (result->GetExtension(PolicyConstraintsOid(), &extension)) {
+      result->has_policy_constraints_ = true;
+      if (!ParsePolicyConstraints(extension.value,
+                                  &result->policy_constraints_)) {
         return nullptr;
       }
     }

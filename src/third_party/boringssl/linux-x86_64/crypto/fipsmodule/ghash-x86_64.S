@@ -1,7 +1,7 @@
 #if defined(__x86_64__) && !defined(OPENSSL_NO_ASM)
 .text	
-.extern	OPENSSL_ia32cap_addr
-.hidden OPENSSL_ia32cap_addr
+.extern	OPENSSL_ia32cap_P
+.hidden OPENSSL_ia32cap_P
 
 .globl	gcm_gmult_4bit
 .hidden gcm_gmult_4bit
@@ -890,7 +890,7 @@ gcm_ghash_clmul:
 	jz	.Lodd_tail
 
 	movdqu	16(%rsi),%xmm6
-	movq	OPENSSL_ia32cap_addr(%rip),%rax
+	leaq	OPENSSL_ia32cap_P(%rip),%rax
 	movl	4(%rax),%eax
 	cmpq	$0x30,%rcx
 	jb	.Lskip4x

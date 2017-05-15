@@ -89,7 +89,7 @@ eu{
         CW{"Curaçao"}
         CX{"Christmas uhartea"}
         CY{"Zipre"}
-        CZ{"Txekiar Errepublika"}
+        CZ{"Txekia"}
         DE{"Alemania"}
         DG{"Diego Garcia"}
         DJ{"Djibuti"}
@@ -108,7 +108,7 @@ eu{
         EU{"Europar Batasuna"}
         FI{"Finlandia"}
         FJ{"Fiji"}
-        FK{"Malvinak"}
+        FK{"Falkland uharteak (Malvina uharteak)"}
         FM{"Mikronesia"}
         FO{"Faroe uharteak"}
         FR{"Frantzia"}
@@ -181,7 +181,7 @@ eu{
         MF{"San Martin"}
         MG{"Madagaskar"}
         MH{"Marshall uharteak"}
-        MK{"Mazedonia"}
+        MK{"Mazedonia (Mazedoniako Yugoslaviar Errepublika ohia)"}
         ML{"Mali"}
         MM{"Myanmar (Birmania)"}
         MN{"Mongolia"}
@@ -299,10 +299,8 @@ eu{
     Countries%variant{
         CD{"Kongo (KED)"}
         CG{"Kongo (errepublika)"}
-        CZ{"Txekia"}
-        FK{"Falkland uharteak (Malvina uharteak)"}
-        MK{"Mazedonia (Mazedoniako Yugoslaviar Errepublika ohia)"}
+        CZ{"Txekiar Errepublika"}
         TL{"Timor ekialdea"}
     }
-    Version{"2.1.29.20"}
+    Version{"2.1.32.59"}
 }

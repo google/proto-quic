@@ -498,6 +498,7 @@ class InstrumentationTestInstance(test_instance.TestInstance):
     self._store_tombstones = False
     self._initializeTombstonesAttributes(args)
 
+    self._gs_results_bucket = None
     self._should_save_logcat = None
     self._initializeLogAttributes(args)
 
@@ -653,13 +654,6 @@ class InstrumentationTestInstance(test_instance.TestInstance):
     if args.regenerate_goldens:
       self._flags.append('--regenerate-goldens')
 
-    if args.test_arguments:
-      # --test-arguments is deprecated for gtests and is in the process of
-      # being removed.
-      raise Exception(
-          '--test-arguments is not supported for instrumentation '
-          'tests. Pass command-line flags directly instead.')
-
   def _initializeDriverAttributes(self):
     self._driver_apk = os.path.join(
         constants.GetOutDirectory(), constants.SDK_BUILD_APKS_DIR,
@@ -682,6 +676,7 @@ class InstrumentationTestInstance(test_instance.TestInstance):
     self._store_tombstones = args.store_tombstones
 
   def _initializeLogAttributes(self, args):
+    self._gs_results_bucket = args.gs_results_bucket
     self._should_save_logcat = bool(args.json_results_file)
 
   def _initializeEditPrefsAttributes(self, args):
@@ -745,6 +740,10 @@ class InstrumentationTestInstance(test_instance.TestInstance):
   @property
   def flags(self):
     return self._flags
+
+  @property
+  def gs_results_bucket(self):
+    return self._gs_results_bucket
 
   @property
   def should_save_logcat(self):

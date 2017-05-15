@@ -3,9 +3,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Tool for finding the cause of APK bloat.
+"""Tool for finding the cause of binary size bloat.
 
-Run diagnose_apk_bloat.py -h for detailed usage help.
+See //tools/binary_size/README.md for example usage.
+
+Note: this tool will perform gclient sync/git checkout on your local repo if
+you don't use the --cloud option.
 """
 
 import atexit
@@ -27,8 +30,6 @@ import zipfile
 _COMMIT_COUNT_WARN_THRESHOLD = 15
 _ALLOWED_CONSECUTIVE_FAILURES = 2
 _DIFF_DETAILS_LINES_THRESHOLD = 100
-_BUILDER_URL = \
-    'https://build.chromium.org/p/chromium.perf/builders/Android%20Builder'
 _SRC_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
 _DEFAULT_ARCHIVE_DIR = os.path.join(_SRC_ROOT, 'binary-size-bloat')
@@ -214,6 +215,11 @@ class _BuildHelper(object):
     return os.path.join(self.output_directory, self.main_lib_path)
 
   @property
+  def builder_url(self):
+    url = 'https://build.chromium.org/p/chromium.perf/builders/%s%%20Builder'
+    return url % self.target_os.title()
+
+  @property
   def download_bucket(self):
     return 'gs://chrome-perf/%s Builder/' % self.target_os.title()
 
@@ -248,8 +254,9 @@ class _BuildHelper(object):
     gn_args = 'is_official_build=true symbol_level=1'
     gn_args += ' use_goma=%s' % str(self.use_goma).lower()
     gn_args += ' target_os="%s"' % self.target_os
-    gn_args += (' enable_chrome_android_internal=%s' %
-                str(self.enable_chrome_android_internal).lower())
+    if self.IsAndroid():
+      gn_args += (' enable_chrome_android_internal=%s' %
+                  str(self.enable_chrome_android_internal).lower())
     gn_args += self.extra_gn_args_str
     return ['gn', 'gen', self.output_directory, '--args=%s' % gn_args]
 
@@ -262,7 +269,7 @@ class _BuildHelper(object):
 
   def Run(self):
     """Run GN gen/ninja build and return the process returncode."""
-    logging.info('Building: %s.', self.target)
+    logging.info('Building: %s (this might take a while).', self.target)
     retcode = _RunCmd(
         self._GenGnCmd(), verbose=True, exit_on_failure=False)[1]
     if retcode:
@@ -296,20 +303,10 @@ class _BuildArchive(object):
     """Save build artifacts necessary for diffing."""
     logging.info('Saving build results to: %s', self.dir)
     _EnsureDirsExist(self.dir)
-    build = self.build
-    self._ArchiveFile(build.abs_main_lib_path)
-    tool_prefix = _FindToolPrefix(build.output_directory)
-    size_path = os.path.join(self.dir, build.size_name)
-    supersize_cmd = [supersize_path, 'archive', size_path, '--elf-file',
-                     build.abs_main_lib_path, '--tool-prefix', tool_prefix,
-                     '--output-directory', build.output_directory,
-                     '--no-source-paths']
-    if build.IsAndroid():
-      supersize_cmd += ['--apk-file', build.abs_apk_path]
-      self._ArchiveFile(build.abs_apk_path)
-
-    logging.info('Creating .size file')
-    _RunCmd(supersize_cmd)
+    self._ArchiveFile(self.build.abs_main_lib_path)
+    if self.build.IsAndroid():
+      self._ArchiveFile(self.build.abs_apk_path)
+    self._ArchiveSizeFile(supersize_path)
     self.metadata.Write()
 
   def Exists(self):
@@ -319,6 +316,24 @@ class _BuildArchive(object):
     if not os.path.exists(filename):
       _Die('missing expected file: %s', filename)
     shutil.copy(filename, self.dir)
+
+  def _ArchiveSizeFile(self, supersize_path):
+    existing_size_file = self.build.abs_apk_path + '.size'
+    if os.path.exists(existing_size_file):
+      logging.info('Found existing .size file')
+      os.rename(
+          existing_size_file, os.path.join(self.dir, self.build.size_name))
+    else:
+      tool_prefix = _FindToolPrefix(self.build.output_directory)
+      size_path = os.path.join(self.dir, self.build.size_name)
+      supersize_cmd = [supersize_path, 'archive', size_path, '--elf-file',
+                       self.build.abs_main_lib_path, '--tool-prefix',
+                       tool_prefix, '--output-directory',
+                       self.build.output_directory, '--no-source-paths']
+      if self.build.IsAndroid():
+        supersize_cmd += ['--apk-file', self.build.abs_apk_path]
+      logging.info('Creating .size file')
+      _RunCmd(supersize_cmd)
 
 
 class _DiffArchiveManager(object):
@@ -504,15 +519,16 @@ def _FindToolPrefix(output_directory):
 def _SyncAndBuild(archive, build, subrepo):
   """Sync, build and return non 0 if any commands failed."""
   # Simply do a checkout if subrepo is used.
+  retcode = 0
   if subrepo != _SRC_ROOT:
     _GitCmd(['checkout',  archive.rev], subrepo)
-    return 0
   else:
     # Move to a detached state since gclient sync doesn't work with local
     # commits on a branch.
     _GitCmd(['checkout', '--detach'], subrepo)
     logging.info('Syncing to %s', archive.rev)
-    return _GclientSyncCmd(archive.rev, subrepo) or build.Run()
+    retcode = _GclientSyncCmd(archive.rev, subrepo)
+  return retcode or build.Run()
 
 
 def _GenerateRevList(rev, reference_rev, all_in_range, subrepo):
@@ -530,7 +546,7 @@ def _GenerateRevList(rev, reference_rev, all_in_range, subrepo):
     revs = [all_revs[0], all_revs[-1]]
   if len(revs) >= _COMMIT_COUNT_WARN_THRESHOLD:
     _VerifyUserAccepts(
-        'You\'ve provided a commit range that contains %d commits' % len(revs))
+        'You\'ve provided a commit range that contains %d commits.' % len(revs))
   return revs
 
 
@@ -554,7 +570,7 @@ def _ValidateRevs(rev, reference_rev, subrepo):
 
 
 def _VerifyUserAccepts(message):
-  print message + 'Do you want to proceed? [y/n]'
+  print message + ' Do you want to proceed? [y/n]'
   if raw_input('> ').lower() != 'y':
     sys.exit()
 
@@ -604,12 +620,12 @@ def _DownloadAndArchive(gsutil_path, archive, dl_dir, build, supersize_path):
       _Die('unexpected error while downloading %s. It may no longer exist on '
            'the server or it may not have been uploaded yet (check %s). '
            'Otherwise, you may not have the correct access permissions.',
-           build.DownloadUrl(archive.rev), _BUILDER_URL)
+           build.DownloadUrl(archive.rev), build.builder_url)
 
   # Files needed for supersize and resource_sizes. Paths relative to out dir.
   to_extract = [build.main_lib_path, build.map_file_path, 'args.gn']
   if build.IsAndroid():
-    to_extract += ['build_vars.txt', build.apk_path]
+    to_extract += ['build_vars.txt', build.apk_path, build.apk_path + '.size']
   extract_dir = dl_dst + '_' + 'unzipped'
   # Storage bucket stores entire output directory including out/Release prefix.
   logging.info('Extracting build artifacts')
@@ -622,12 +638,14 @@ def _DownloadAndArchive(gsutil_path, archive, dl_dir, build, supersize_path):
 
 
 def _ExtractFiles(to_extract, prefix, dst, z):
-  zip_infos = z.infolist()
-  assert all(info.filename.startswith(prefix) for info in zip_infos), (
+  """Extract prefixed files in |to_extract| from |z| if they exist."""
+  zipped_names = z.namelist()
+  assert all(name.startswith(prefix) for name in zipped_names), (
       'Storage bucket folder structure doesn\'t start with %s' % prefix)
   to_extract = [os.path.join(prefix, f) for f in to_extract]
   for f in to_extract:
-    z.extract(f, path=dst)
+    if f in zipped_names:
+      z.extract(f, path=dst)
 
 
 def _PrintAndWriteToFile(logfile, s, *args, **kwargs):
@@ -665,7 +683,7 @@ def _SetRestoreFunc(subrepo):
 
 def main():
   parser = argparse.ArgumentParser(
-      description='Find the cause of APK size bloat.')
+      description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
   parser.add_argument('--archive-directory',
                       default=_DEFAULT_ARCHIVE_DIR,
                       help='Where results are stored.')
@@ -673,33 +691,35 @@ def main():
                       help='Find binary size bloat for this commit.')
   parser.add_argument('--reference-rev',
                       help='Older rev to diff against. If not supplied, '
-                      'the previous commit to rev will be used.')
+                           'the previous commit to rev will be used.')
   parser.add_argument('--all',
                       action='store_true',
                       help='Build/download all revs from --reference-rev to '
-                      'rev and diff the contiguous revisions.')
+                           'rev and diff the contiguous revisions.')
   parser.add_argument('--include-slow-options',
                       action='store_true',
                       help='Run some extra steps that take longer to complete. '
-                      'This includes apk-patch-size estimation and '
-                      'static-initializer counting.')
+                           'This includes apk-patch-size estimation and '
+                           'static-initializer counting.')
   parser.add_argument('--cloud',
                       action='store_true',
                       help='Download build artifacts from perf builders '
-                      '(Android only, Googlers only).')
+                      '(Googlers only).')
   parser.add_argument('--depot-tools-path',
                       help='Custom path to depot tools. Needed for --cloud if '
-                      'depot tools isn\'t in your PATH.')
+                           'depot tools isn\'t in your PATH.')
   parser.add_argument('--subrepo',
                       help='Specify a subrepo directory to use. Gclient sync '
-                      'will be skipped if this option is used and all git '
-                      'commands will be executed from the subrepo directory. '
-                      'This option doesn\'t work with --cloud.')
-  parser.add_argument('--silent',
+                           'will be skipped if this option is used and all git '
+                           'commands will be executed from the subrepo '
+                           'directory. This option doesn\'t work with --cloud.')
+  parser.add_argument('-v',
+                      '--verbose',
                       action='store_true',
-                      help='Less logging, no Ninja/GN output.')
+                      help='Show  commands executed, extra debugging output'
+                           ', and Ninja/GN output')
 
-  build_group = parser.add_argument_group('ninja', 'Args to use with ninja/gn')
+  build_group = parser.add_argument_group('ninja arguments')
   build_group.add_argument('-j',
                            dest='max_jobs',
                            help='Run N jobs in parallel.')
@@ -719,19 +739,19 @@ def main():
   build_group.add_argument('--output-directory',
                            default=_DEFAULT_OUT_DIR,
                            help='ninja output directory. '
-                           'Default: %s.' % _DEFAULT_OUT_DIR)
+                                'Default: %s.' % _DEFAULT_OUT_DIR)
   build_group.add_argument('--enable-chrome-android-internal',
                            action='store_true',
                            help='Allow downstream targets to be built.')
   build_group.add_argument('--target',
                            default=_DEFAULT_ANDROID_TARGET,
                            help='GN APK target to build. Ignored for Linux. '
-                           'Default %s.' % _DEFAULT_ANDROID_TARGET)
+                                'Default %s.' % _DEFAULT_ANDROID_TARGET)
   if len(sys.argv) == 1:
     parser.print_help()
     sys.exit()
   args = parser.parse_args()
-  log_level = logging.INFO if args.silent else logging.DEBUG
+  log_level = logging.DEBUG if args.verbose else logging.INFO
   logging.basicConfig(level=log_level,
                       format='%(levelname).1s %(relativeCreated)6d %(message)s')
   build = _BuildHelper(args)

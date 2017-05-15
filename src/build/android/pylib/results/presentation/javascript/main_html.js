@@ -88,7 +88,7 @@ function sortByColumn(head) {
   // Determine whether to asc or desc and set arrows.
   var headers = head.parentNode.getElementsByTagName('th');
   var headIndex = Array.prototype.slice.call(headers).indexOf(head);
-  var asc = 1;
+  var asc = -1;
   for (var i = 0; i < headers.length; i++) {
     if (headers[i].dataset.ascSorted != 0) {
       if (headers[i].dataset.ascSorted == 1) {
@@ -188,11 +188,6 @@ function sortByColumn(head) {
   }
 }
 
-function reportIssues() {
-  var url = 'https://bugs.chromium.org/p/chromium/issues/entry?' +
-            'labels=Pri-2,Type-Bug,Restrict-View-Google&' +
-            'summary=Result Details Feedback:&' +
-            'comment=Please check out: ' + window.location;
-  var newWindow = window.open(url, '_blank');
-  newWindow.focus();
+function sortSuiteTableByFailedTestCases() {
+  sortByColumn(document.getElementById('number_fail_tests'));
 }

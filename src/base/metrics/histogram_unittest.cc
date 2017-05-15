@@ -401,6 +401,26 @@ TEST_P(HistogramTest, AddCount_LargeValuesDontOverflow) {
   EXPECT_EQ(19400000000LL, samples2->sum());
 }
 
+// Some metrics are designed so that they are guaranteed not to overflow between
+// snapshots, but could overflow over a long-running session.
+// Make sure that counts returned by Histogram::SnapshotDelta do not overflow
+// even when a total count (returned by Histogram::SnapshotSample) does.
+TEST_P(HistogramTest, AddCount_LargeCountsDontOverflow) {
+  const size_t kBucketCount = 10;
+  Histogram* histogram = static_cast<Histogram*>(Histogram::FactoryGet(
+      "AddCountHistogram", 10, 50, kBucketCount, HistogramBase::kNoFlags));
+
+  const int count = (1 << 30) - 1;
+
+  // Repeat N times to make sure that there is no internal value overflow.
+  for (int i = 0; i < 10; ++i) {
+    histogram->AddCount(42, count);
+    std::unique_ptr<HistogramSamples> samples = histogram->SnapshotDelta();
+    EXPECT_EQ(count, samples->TotalCount());
+    EXPECT_EQ(count, samples->GetCount(42));
+  }
+}
+
 // Make sure histogram handles out-of-bounds data gracefully.
 TEST_P(HistogramTest, BoundsTest) {
   const size_t kBucketCount = 50;
@@ -416,7 +436,7 @@ TEST_P(HistogramTest, BoundsTest) {
   histogram->Add(10000);
 
   // Verify they landed in the underflow, and overflow buckets.
-  std::unique_ptr<SampleVector> samples = histogram->SnapshotSampleVector();
+  std::unique_ptr<SampleVector> samples = histogram->SnapshotAllSamples();
   EXPECT_EQ(2, samples->GetCountAtIndex(0));
   EXPECT_EQ(0, samples->GetCountAtIndex(1));
   size_t array_size = histogram->bucket_count();
@@ -441,7 +461,7 @@ TEST_P(HistogramTest, BoundsTest) {
 
   // Verify they landed in the underflow, and overflow buckets.
   std::unique_ptr<SampleVector> custom_samples =
-      test_custom_histogram->SnapshotSampleVector();
+      test_custom_histogram->SnapshotAllSamples();
   EXPECT_EQ(2, custom_samples->GetCountAtIndex(0));
   EXPECT_EQ(0, custom_samples->GetCountAtIndex(1));
   size_t bucket_count = test_custom_histogram->bucket_count();
@@ -464,7 +484,7 @@ TEST_P(HistogramTest, BucketPlacementTest) {
   }
 
   // Check to see that the bucket counts reflect our additions.
-  std::unique_ptr<SampleVector> samples = histogram->SnapshotSampleVector();
+  std::unique_ptr<SampleVector> samples = histogram->SnapshotAllSamples();
   for (int i = 0; i < 8; i++)
     EXPECT_EQ(i + 1, samples->GetCountAtIndex(i));
 }
@@ -484,7 +504,7 @@ TEST_P(HistogramTest, CorruptSampleCounts) {
   histogram->Add(20);
   histogram->Add(40);
 
-  std::unique_ptr<SampleVector> snapshot = histogram->SnapshotSampleVector();
+  std::unique_ptr<SampleVector> snapshot = histogram->SnapshotAllSamples();
   EXPECT_EQ(HistogramBase::NO_INCONSISTENCIES,
             histogram->FindCorruption(*snapshot));
   EXPECT_EQ(2, snapshot->redundant_count());

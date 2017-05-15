@@ -33,6 +33,12 @@ class QUIC_EXPORT_PRIVATE QuicClock {
   // Converts |walltime| to a QuicTime relative to this clock's epoch.
   virtual QuicTime ConvertWallTimeToQuicTime(
       const QuicWallTime& walltime) const;
+
+ protected:
+  // Creates a new QuicTime using |time_us| as the internal value.
+  QuicTime CreateTimeFromMicroseconds(uint64_t time_us) const {
+    return QuicTime(time_us);
+  }
 };
 
 }  // namespace net

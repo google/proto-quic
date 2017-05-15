@@ -72,13 +72,29 @@ class BASE_EXPORT TaskRunner
                                OnceClosure task,
                                base::TimeDelta delay) = 0;
 
-  // Returns true if the current thread is a thread on which a task
-  // may be run, and false if no task will be run on the current
-  // thread.
+  // Drepecated: favor RunsTasksInCurrentSequence().
+  // TODO(http://crbug.com/665062): mass redirect callers and remove this.
+  bool RunsTasksOnCurrentThread() const {
+    return RunsTasksInCurrentSequence();
+  }
+
+  // Returns true iff tasks posted to this TaskRunner are sequenced
+  // with this call.
   //
-  // It is valid for an implementation to always return true, or in
-  // general to use 'true' as a default value.
-  virtual bool RunsTasksOnCurrentThread() const = 0;
+  // In particular:
+  // - Returns true if this is a SequencedTaskRunner to which the
+  //   current task was posted.
+  // - Returns true if this is a SequencedTaskRunner bound to the
+  //   same sequence as the SequencedTaskRunner to which the current
+  //   task was posted.
+  // - Returns true if this is a SingleThreadTaskRunner bound to
+  //   the current thread.
+  // TODO(http://crbug.com/665062):
+  //   This API doesn't make sense for parallel TaskRunners.
+  //   Introduce alternate static APIs for documentation purposes of "this runs
+  //   in pool X", have RunsTasksInCurrentSequence() return false for parallel
+  //   TaskRunners, and ultimately move this method down to SequencedTaskRunner.
+  virtual bool RunsTasksInCurrentSequence() const = 0;
 
   // Posts |task| on the current TaskRunner.  On completion, |reply|
   // is posted to the thread that called PostTaskAndReply().  Both

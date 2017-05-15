@@ -177,6 +177,7 @@
       'CrWinClngLLD64dbg': 'clang_tot_full_symbols_shared_debug_use_lld',
       'CrWinClngLLDdbg': 'clang_tot_full_symbols_shared_debug_use_lld_x86',
       'EarlGreyiOS': 'ios',
+      'Fuchsia': 'release_bot_fuchsia',
       'GomaCanaryiOS': 'ios',
       'ios-simulator': 'ios',
       'Headless Linux (dbg)': 'headless_linux_debug_bot',
@@ -254,6 +255,19 @@
       'Linux ChromiumOS Ozone Builder': 'gpu_fyi_tests_chromeos_ozone_release_trybot',
       'Linux GPU TSAN Release': 'gpu_fyi_tests_release_trybot_tsan',
       'Mac GPU ASAN Release': 'gpu_fyi_tests_release_trybot_asan',
+    },
+
+    'chromium.infra.codesearch': {
+      'codesearch-gen-chromium-android': {
+        'android': 'codesearch_gen_chromium_android_bot',
+      },
+      'codesearch-gen-chromium-chromiumos': {
+        'chromeos': 'codesearch_gen_chromium_chromiumos_bot',
+        'linux': 'codesearch_gen_chromium_linux_bot',
+      },
+      'codesearch-gen-chromium-linux': {
+        'linux': 'codesearch_gen_chromium_linux_bot',
+      },
     },
 
     'chromium.linux': {
@@ -653,6 +667,10 @@
         '1': 'official_optimize_chrome_pgo_phase_1_x86',
         '2': 'official_optimize_chrome_pgo_phase_2_x86',
       },
+      'win_pgo_x64': {
+        '1': 'official_optimize_chrome_pgo_phase_1',
+        '2': 'official_optimize_chrome_pgo_phase_2',
+      },
       'win_upload_clang': 'release_bot',
       'win_chrome_official': 'official_goma_x86',
     },
@@ -933,7 +951,7 @@
     ],
 
     'asan_lsan_chromeos_release_trybot': [
-      'asan', 'lsan', 'chromeos', 'release_trybot',
+      'asan', 'lsan', 'chromeos', 'x11_cros', 'release_trybot',
     ],
 
     'asan_lsan_edge_debug_bot': [
@@ -1005,19 +1023,19 @@
     ],
 
     'chromeos_asan_lsan_edge_fuzzer_v8_heap_release_bot': [
-      'chromeos', 'asan', 'lsan', 'edge', 'fuzzer', 'v8_heap', 'release_bot',
+      'chromeos', 'x11_cros', 'asan', 'lsan', 'edge', 'fuzzer', 'v8_heap', 'release_bot',
     ],
 
     'chromeos_msan_release_bot': [
-      'chromeos', 'msan', 'release_bot',
+      'chromeos', 'x11_cros', 'msan', 'release_bot',
     ],
 
     'chromeos_with_codecs_debug_bot': [
-      'chromeos_with_codecs', 'debug_bot',
+      'chromeos_with_codecs', 'x11_cros', 'debug_bot',
     ],
 
     'chromeos_with_codecs_debug_trybot': [
-      'chromeos_with_codecs', 'debug_trybot',
+      'chromeos_with_codecs', 'x11_cros', 'debug_trybot',
     ],
 
     'chromeos_with_codecs_ozone_release_bot': [
@@ -1029,11 +1047,11 @@
     ],
 
     'chromeos_with_codecs_release_bot': [
-      'chromeos_with_codecs', 'release_bot',
+      'chromeos_with_codecs', 'x11_cros', 'release_bot',
     ],
 
     'chromeos_with_codecs_release_trybot': [
-      'chromeos_with_codecs', 'release_trybot',
+      'chromeos_with_codecs', 'x11_cros', 'release_trybot',
     ],
 
     'clang_debug_trybot_x86': [
@@ -1155,6 +1173,18 @@
       'error',
     ],
 
+    'codesearch_gen_chromium_android_bot': [
+      'goma', 'clang', 'shared', 'debug', 'minimal_symbols', 'arm', 'android_without_codecs',
+    ],
+
+    'codesearch_gen_chromium_chromiumos_bot': [
+      'goma', 'clang', 'shared', 'debug', 'minimal_symbols', 'x64', 'chromeos', 'ozone',
+    ],
+
+    'codesearch_gen_chromium_linux_bot': [
+      'goma', 'clang', 'shared', 'debug', 'minimal_symbols', 'x64',
+    ],
+
     # The 'cros_chrome_sdk_* configs are placeholders that indicate
     # that the GN args are set by the `cros chrome-sdk`
     # wrapper and need to be looked at specially.
@@ -1187,7 +1217,7 @@
     ],
 
     'gpu_fyi_tests_chromeos_release_trybot': [
-      'gpu_fyi_tests', 'release_trybot', 'chromeos',
+      'gpu_fyi_tests', 'release_trybot', 'chromeos', 'x11_cros',
     ],
 
     'gpu_fyi_tests_debug_trybot': [
@@ -1306,7 +1336,7 @@
     ],
 
     'official_goma_chromeos': [
-      'official', 'goma', 'chromeos',
+      'official', 'goma', 'chromeos', 'x11_cros',
     ],
 
     'official_goma_thin_lto_use_lld': [
@@ -1347,6 +1377,10 @@
 
     'release_bot_ozone_linux': [
       'release_bot', 'ozone', 'ozone_linux',
+    ],
+
+    'release_bot_fuchsia': [
+      'release_bot', 'fuchsia',
     ],
 
     'ozone_linux_release_trybot': [
@@ -1756,6 +1790,11 @@
       'gn_args': 'symbol_level=0',
     },
 
+    'x11_cros': {
+      # When use_ozone=false then use_x11=true.
+      'gn_args': 'use_ozone=false',
+    },
+
     'official': {
       'mixins': ['official_optimize'],
       'gn_args': 'is_chrome_branded=true',
@@ -1779,6 +1818,10 @@
                   'ozone_platform_x11=true ozone_platform_gbm=true '
                   'enable_package_mash_services=true use_ash=false '
                   'use_xkbcommon=true'),
+    },
+
+    'fuchsia': {
+      'gn_args': 'target_os="fuchsia"',
     },
 
     'pdf_xfa': {

@@ -136,13 +136,10 @@ bool DelayedCacheCleanup(const base::FilePath& full_path) {
     return false;
   }
 
-  base::PostTaskWithTraits(
-      FROM_HERE, base::TaskTraits()
-                     .MayBlock()
-                     .WithPriority(base::TaskPriority::BACKGROUND)
-                     .WithShutdownBehavior(
-                         base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN),
-      base::Bind(&CleanupCallback, path, name_str));
+  base::PostTaskWithTraits(FROM_HERE,
+                           {base::MayBlock(), base::TaskPriority::BACKGROUND,
+                            base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN},
+                           base::Bind(&CleanupCallback, path, name_str));
   return true;
 }
 

@@ -15,11 +15,9 @@
 #include "base/location.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
 #include "base/test/scoped_feature_list.h"
-#include "base/test/scoped_task_scheduler.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
 #include "base/values.h"
@@ -805,6 +803,50 @@ class AsyncFailingChannelIDStore : public ChannelIDStore {
   bool IsEphemeral() override { return true; }
 };
 
+// A mock ExpectCTReporter that remembers the latest violation that was
+// reported and the number of violations reported.
+class MockExpectCTReporter : public TransportSecurityState::ExpectCTReporter {
+ public:
+  MockExpectCTReporter() : num_failures_(0) {}
+  ~MockExpectCTReporter() override {}
+
+  void OnExpectCTFailed(const HostPortPair& host_port_pair,
+                        const GURL& report_uri,
+                        const X509Certificate* validated_certificate_chain,
+                        const X509Certificate* served_certificate_chain,
+                        const SignedCertificateTimestampAndStatusList&
+                            signed_certificate_timestamps) override {
+    num_failures_++;
+    host_port_pair_ = host_port_pair;
+    report_uri_ = report_uri;
+    served_certificate_chain_ = served_certificate_chain;
+    validated_certificate_chain_ = validated_certificate_chain;
+    signed_certificate_timestamps_ = signed_certificate_timestamps;
+  }
+
+  const HostPortPair& host_port_pair() { return host_port_pair_; }
+  const GURL& report_uri() { return report_uri_; }
+  uint32_t num_failures() { return num_failures_; }
+  const X509Certificate* served_certificate_chain() {
+    return served_certificate_chain_;
+  }
+  const X509Certificate* validated_certificate_chain() {
+    return validated_certificate_chain_;
+  }
+  const SignedCertificateTimestampAndStatusList&
+  signed_certificate_timestamps() {
+    return signed_certificate_timestamps_;
+  }
+
+ private:
+  HostPortPair host_port_pair_;
+  GURL report_uri_;
+  uint32_t num_failures_;
+  const X509Certificate* served_certificate_chain_;
+  const X509Certificate* validated_certificate_chain_;
+  SignedCertificateTimestampAndStatusList signed_certificate_timestamps_;
+};
+
 // A mock CTVerifier that records every call to Verify but doesn't verify
 // anything.
 class MockCTVerifier : public CTVerifier {
@@ -1175,8 +1217,7 @@ class SSLClientSocketFalseStartTest : public SSLClientSocketTest {
 
 class SSLClientSocketChannelIDTest : public SSLClientSocketTest {
  protected:
-  SSLClientSocketChannelIDTest()
-      : scoped_task_scheduler_(base::MessageLoop::current()) {}
+  SSLClientSocketChannelIDTest() = default;
 
   void EnableChannelID() {
     channel_id_service_.reset(
@@ -1197,7 +1238,6 @@ class SSLClientSocketChannelIDTest : public SSLClientSocketTest {
   }
 
  private:
-  base::test::ScopedTaskScheduler scoped_task_scheduler_;
   std::unique_ptr<ChannelIDService> channel_id_service_;
 };
 
@@ -2790,57 +2830,6 @@ TEST_F(SSLClientSocketTest, NoDHE) {
   EXPECT_THAT(rv, IsError(ERR_SSL_VERSION_OR_CIPHER_MISMATCH));
 }
 
-// Tests that enabling deprecated ciphers shards the session cache.
-TEST_F(SSLClientSocketTest, DeprecatedShardSessionCache) {
-  ASSERT_TRUE(StartTestServer(SpawnedTestServer::SSLOptions()));
-
-  // Prepare a normal and deprecated SSL config.
-  SSLConfig ssl_config;
-  SSLConfig deprecated_ssl_config;
-  deprecated_ssl_config.deprecated_cipher_suites_enabled = true;
-
-  // Connect with deprecated ciphers enabled to warm the session cache cache.
-  int rv;
-  ASSERT_TRUE(CreateAndConnectSSLClientSocket(deprecated_ssl_config, &rv));
-  EXPECT_THAT(rv, IsOk());
-  SSLInfo ssl_info;
-  EXPECT_TRUE(sock_->GetSSLInfo(&ssl_info));
-  EXPECT_EQ(SSLInfo::HANDSHAKE_FULL, ssl_info.handshake_type);
-
-  // Test that re-connecting with deprecated ciphers enabled still resumes.
-  ASSERT_TRUE(CreateAndConnectSSLClientSocket(deprecated_ssl_config, &rv));
-  EXPECT_THAT(rv, IsOk());
-  EXPECT_TRUE(sock_->GetSSLInfo(&ssl_info));
-  EXPECT_EQ(SSLInfo::HANDSHAKE_RESUME, ssl_info.handshake_type);
-
-  // However, a normal connection needs a full handshake.
-  ASSERT_TRUE(CreateAndConnectSSLClientSocket(ssl_config, &rv));
-  EXPECT_THAT(rv, IsOk());
-  EXPECT_TRUE(sock_->GetSSLInfo(&ssl_info));
-  EXPECT_EQ(SSLInfo::HANDSHAKE_FULL, ssl_info.handshake_type);
-
-  // Clear the session cache for the inverse test.
-  SSLClientSocket::ClearSessionCache();
-
-  // Now make a normal connection to prime the session cache.
-  ASSERT_TRUE(CreateAndConnectSSLClientSocket(ssl_config, &rv));
-  EXPECT_THAT(rv, IsOk());
-  EXPECT_TRUE(sock_->GetSSLInfo(&ssl_info));
-  EXPECT_EQ(SSLInfo::HANDSHAKE_FULL, ssl_info.handshake_type);
-
-  // A normal connection should be able to resume.
-  ASSERT_TRUE(CreateAndConnectSSLClientSocket(ssl_config, &rv));
-  EXPECT_THAT(rv, IsOk());
-  EXPECT_TRUE(sock_->GetSSLInfo(&ssl_info));
-  EXPECT_EQ(SSLInfo::HANDSHAKE_RESUME, ssl_info.handshake_type);
-
-  // However, enabling deprecated ciphers connects fresh.
-  ASSERT_TRUE(CreateAndConnectSSLClientSocket(deprecated_ssl_config, &rv));
-  EXPECT_THAT(rv, IsOk());
-  EXPECT_TRUE(sock_->GetSSLInfo(&ssl_info));
-  EXPECT_EQ(SSLInfo::HANDSHAKE_FULL, ssl_info.handshake_type);
-}
-
 // Tests that the version_interference_probe option rejects successful
 // connections and passes errors through.
 TEST_F(SSLClientSocketTest, VersionInterferenceProbe) {
@@ -3476,6 +3465,105 @@ TEST_F(SSLClientSocketTest, CTIsRequired) {
   EXPECT_TRUE(ssl_info.cert_status &
               CERT_STATUS_CERTIFICATE_TRANSPARENCY_REQUIRED);
   EXPECT_TRUE(sock_->IsConnected());
+}
+
+// Test that when CT is required (in this case, by an Expect-CT opt-in), the
+// absence of CT information is a socket error.
+TEST_F(SSLClientSocketTest, CTIsRequiredByExpectCT) {
+  base::test::ScopedFeatureList feature_list;
+  feature_list.InitAndEnableFeature(
+      TransportSecurityState::kDynamicExpectCTFeature);
+
+  SpawnedTestServer::SSLOptions ssl_options;
+  ASSERT_TRUE(StartTestServer(ssl_options));
+  scoped_refptr<X509Certificate> server_cert =
+      spawned_test_server()->GetCertificate();
+
+  // Certificate is trusted and chains to a public root.
+  CertVerifyResult verify_result;
+  verify_result.is_issued_by_known_root = true;
+  verify_result.verified_cert = server_cert;
+  verify_result.public_key_hashes = MakeHashValueVector(0);
+  cert_verifier_->AddResultForCert(server_cert.get(), verify_result, OK);
+
+  // Set up the Expect-CT opt-in.
+  const base::Time current_time(base::Time::Now());
+  const base::Time expiry = current_time + base::TimeDelta::FromSeconds(1000);
+  transport_security_state_->AddExpectCT(
+      spawned_test_server()->host_port_pair().host(), expiry,
+      true /* enforce */, GURL("https://example-report.test"));
+  MockExpectCTReporter reporter;
+  transport_security_state_->SetExpectCTReporter(&reporter);
+
+  EXPECT_CALL(*ct_policy_enforcer_,
+              DoesConformToCertPolicy(server_cert.get(), _, _))
+      .WillRepeatedly(
+          Return(ct::CertPolicyCompliance::CERT_POLICY_NOT_ENOUGH_SCTS));
+
+  SSLConfig ssl_config;
+  int rv;
+  ASSERT_TRUE(CreateAndConnectSSLClientSocket(ssl_config, &rv));
+  SSLInfo ssl_info;
+  ASSERT_TRUE(sock_->GetSSLInfo(&ssl_info));
+
+  EXPECT_THAT(rv, IsError(ERR_CERTIFICATE_TRANSPARENCY_REQUIRED));
+  EXPECT_TRUE(ssl_info.cert_status &
+              CERT_STATUS_CERTIFICATE_TRANSPARENCY_REQUIRED);
+  EXPECT_TRUE(sock_->IsConnected());
+
+  EXPECT_EQ(1u, reporter.num_failures());
+  EXPECT_EQ(GURL("https://example-report.test"), reporter.report_uri());
+  EXPECT_EQ(ssl_info.unverified_cert.get(),
+            reporter.served_certificate_chain());
+  EXPECT_EQ(ssl_info.cert.get(), reporter.validated_certificate_chain());
+  EXPECT_EQ(0u, reporter.signed_certificate_timestamps().size());
+
+  EXPECT_CALL(*ct_policy_enforcer_,
+              DoesConformToCertPolicy(server_cert.get(), _, _))
+      .WillRepeatedly(
+          Return(ct::CertPolicyCompliance::CERT_POLICY_NOT_DIVERSE_SCTS));
+  ASSERT_TRUE(CreateAndConnectSSLClientSocket(ssl_config, &rv));
+  ASSERT_TRUE(sock_->GetSSLInfo(&ssl_info));
+
+  EXPECT_THAT(rv, IsError(ERR_CERTIFICATE_TRANSPARENCY_REQUIRED));
+  EXPECT_TRUE(ssl_info.cert_status &
+              CERT_STATUS_CERTIFICATE_TRANSPARENCY_REQUIRED);
+  EXPECT_TRUE(sock_->IsConnected());
+
+  EXPECT_EQ(2u, reporter.num_failures());
+  EXPECT_EQ(GURL("https://example-report.test"), reporter.report_uri());
+  EXPECT_EQ(ssl_info.unverified_cert.get(),
+            reporter.served_certificate_chain());
+  EXPECT_EQ(ssl_info.cert.get(), reporter.validated_certificate_chain());
+  EXPECT_EQ(0u, reporter.signed_certificate_timestamps().size());
+
+  // If the connection is CT compliant, then there should be no socket error nor
+  // a report.
+  EXPECT_CALL(*ct_policy_enforcer_,
+              DoesConformToCertPolicy(server_cert.get(), _, _))
+      .WillRepeatedly(
+          Return(ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS));
+  ASSERT_TRUE(CreateAndConnectSSLClientSocket(ssl_config, &rv));
+  ASSERT_TRUE(sock_->GetSSLInfo(&ssl_info));
+
+  EXPECT_EQ(net::OK, rv);
+  EXPECT_FALSE(ssl_info.cert_status &
+               CERT_STATUS_CERTIFICATE_TRANSPARENCY_REQUIRED);
+  EXPECT_TRUE(sock_->IsConnected());
+  EXPECT_EQ(2u, reporter.num_failures());
+
+  EXPECT_CALL(*ct_policy_enforcer_,
+              DoesConformToCertPolicy(server_cert.get(), _, _))
+      .WillRepeatedly(
+          Return(ct::CertPolicyCompliance::CERT_POLICY_BUILD_NOT_TIMELY));
+  ASSERT_TRUE(CreateAndConnectSSLClientSocket(ssl_config, &rv));
+  ASSERT_TRUE(sock_->GetSSLInfo(&ssl_info));
+
+  EXPECT_EQ(net::OK, rv);
+  EXPECT_FALSE(ssl_info.cert_status &
+               CERT_STATUS_CERTIFICATE_TRANSPARENCY_REQUIRED);
+  EXPECT_TRUE(sock_->IsConnected());
+  EXPECT_EQ(2u, reporter.num_failures());
 }
 
 // When both HPKP and CT are required for a host, and both fail, the more

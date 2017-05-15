@@ -16,6 +16,7 @@
 #include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/mock_clock.h"
+#include "net/quic/test_tools/quic_spdy_session_peer.h"
 #include "net/quic/test_tools/quic_stream_sequencer_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/test/gtest_util.h"
@@ -569,13 +570,13 @@ TEST_F(QuicStreamSequencerTest, MarkConsumedWithMissingPacket) {
 TEST_F(QuicStreamSequencerTest, DontAcceptOverlappingFrames) {
   // The peer should never send us non-identical stream frames which contain
   // overlapping byte ranges - if they do, we close the connection.
+  QuicStreamId id =
+      QuicSpdySessionPeer::GetNthClientInitiatedStreamId(session_, 0);
 
-  QuicStreamFrame frame1(kClientDataStreamId1, false, 1,
-                         QuicStringPiece("hello"));
+  QuicStreamFrame frame1(id, false, 1, QuicStringPiece("hello"));
   sequencer_->OnStreamFrame(frame1);
 
-  QuicStreamFrame frame2(kClientDataStreamId1, false, 2,
-                         QuicStringPiece("hello"));
+  QuicStreamFrame frame2(id, false, 2, QuicStringPiece("hello"));
   EXPECT_CALL(stream_,
               CloseConnectionWithDetails(QUIC_OVERLAPPING_STREAM_DATA, _))
       .Times(1);
@@ -669,7 +670,9 @@ TEST_F(QuicStreamSequencerTest, OnStreamFrameWithNullSource) {
   // connection with error.
   QuicStringPiece source;
   source.set(nullptr, 5u);
-  QuicStreamFrame frame(kClientDataStreamId1, false, 1, source);
+  QuicStreamFrame frame(
+      QuicSpdySessionPeer::GetNthClientInitiatedStreamId(session_, 0), false, 1,
+      source);
   EXPECT_CALL(stream_, CloseConnectionWithDetails(
                            QUIC_STREAM_SEQUENCER_INVALID_STATE, _));
   sequencer_->OnStreamFrame(frame);

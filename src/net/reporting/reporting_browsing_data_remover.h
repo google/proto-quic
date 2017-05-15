@@ -5,6 +5,8 @@
 #ifndef NET_REPORTING_REPORTING_BROWSING_DATA_REMOVER_H_
 #define NET_REPORTING_REPORTING_BROWSING_DATA_REMOVER_H_
 
+#include <memory>
+
 #include "base/callback.h"
 #include "base/macros.h"
 #include "net/base/net_export.h"
@@ -22,13 +24,24 @@ class NET_EXPORT ReportingBrowsingDataRemover {
     DATA_TYPE_CLIENTS = 0x2,
   };
 
-  static void RemoveBrowsingData(
-      ReportingContext* context,
-      int data_type_mask,
-      base::Callback<bool(const GURL&)> origin_filter);
+  // Creates a ReportingBrowsingDataRemover. |context| must outlive the
+  // browsing data remover.
+  static std::unique_ptr<ReportingBrowsingDataRemover> Create(
+      ReportingContext* context);
 
- private:
-  DISALLOW_IMPLICIT_CONSTRUCTORS(ReportingBrowsingDataRemover);
+  virtual ~ReportingBrowsingDataRemover();
+
+  // Removes browsing data from the Reporting system. |data_type_mask| specifies
+  // which types of data to remove: reports queued by browser features and/or
+  // clients (endpoints configured by origins). |origin_filter|, if not null,
+  // specifies which origins' data to remove.
+  //
+  // Note: Currently this does not clear the endpoint backoff data in
+  // ReportingEndpointManager because that's not persisted to disk. If it's ever
+  // persisted, it will need to be cleared as well.
+  virtual void RemoveBrowsingData(
+      int data_type_mask,
+      base::Callback<bool(const GURL&)> origin_filter) = 0;
 };
 
 }  // namespace net

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_SPDY_MULTIPLEXED_SESSION_H_
-#define NET_SPDY_MULTIPLEXED_SESSION_H_
+#ifndef NET_SPDY_CHROMIUM_MULTIPLEXED_SESSION_H_
+#define NET_SPDY_CHROMIUM_MULTIPLEXED_SESSION_H_
 
 #include <vector>
 
@@ -45,9 +45,7 @@ class NET_EXPORT_PRIVATE MultiplexedSession {
 class NET_EXPORT_PRIVATE MultiplexedSessionHandle {
  public:
   explicit MultiplexedSessionHandle(base::WeakPtr<MultiplexedSession> session);
-  MultiplexedSessionHandle(const MultiplexedSessionHandle& other);
-  MultiplexedSessionHandle(MultiplexedSessionHandle&& other);
-  ~MultiplexedSessionHandle();
+  virtual ~MultiplexedSessionHandle();
 
   // Gets the remote endpoint of the socket that the HTTP stream is using, if
   // any. Returns true and fills in |endpoint| if it is available; returns false
@@ -75,4 +73,4 @@ class NET_EXPORT_PRIVATE MultiplexedSessionHandle {
 
 }  // namespace net
 
-#endif  // NET_SPDY_MULTIPLEXED_SESSION_H_
+#endif  // NET_SPDY_CHROMIUM_MULTIPLEXED_SESSION_H_

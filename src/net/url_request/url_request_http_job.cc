@@ -77,12 +77,6 @@ static const char kAvailDictionaryHeader[] = "Avail-Dictionary";
 
 namespace {
 
-// True if the request method is "safe" (per section 4.2.1 of RFC 7231).
-bool IsMethodSafe(const std::string& method) {
-  return method == "GET" || method == "HEAD" || method == "OPTIONS" ||
-         method == "TRACE";
-}
-
 // Logs whether the CookieStore used for this request matches the
 // ChannelIDService used when establishing the connection that this request is
 // sent over. This logging is only done for requests to accounts.google.com, and
@@ -704,7 +698,7 @@ void URLRequestHttpJob::AddCookieHeaderAndStart() {
               registry_controlled_domains::INCLUDE_PRIVATE_REGISTRIES)) {
         options.set_same_site_cookie_mode(
             CookieOptions::SameSiteCookieMode::INCLUDE_STRICT_AND_LAX);
-      } else if (IsMethodSafe(request_->method())) {
+      } else if (HttpUtil::IsMethodSafe(request_->method())) {
         options.set_same_site_cookie_mode(
             CookieOptions::SameSiteCookieMode::INCLUDE_LAX);
       }

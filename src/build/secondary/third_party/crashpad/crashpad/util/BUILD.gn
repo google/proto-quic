@@ -255,8 +255,11 @@ static_library("util") {
 
   deps = [
     "//base",
-    "//third_party/crashpad/crashpad/compat",
     "//third_party/crashpad/crashpad/third_party/zlib",
+  ]
+
+  public_deps = [
+    "//third_party/crashpad/crashpad/compat",
   ]
 
   if (is_win) {

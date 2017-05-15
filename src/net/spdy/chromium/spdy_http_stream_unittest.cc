@@ -6,8 +6,6 @@
 
 #include <stdint.h>
 
-#include <memory>
-
 #include "base/run_loop.h"
 #include "base/stl_util.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -26,7 +24,6 @@
 #include "net/log/test_net_log.h"
 #include "net/socket/socket_test_util.h"
 #include "net/spdy/chromium/spdy_http_utils.h"
-#include "net/spdy/chromium/spdy_session.h"
 #include "net/spdy/chromium/spdy_test_util_common.h"
 #include "net/spdy/platform/api/spdy_string.h"
 #include "net/ssl/default_channel_id_store.h"

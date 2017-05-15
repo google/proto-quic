@@ -37,6 +37,10 @@ declare_args() {
   # to avoid running out of certificates if using a free account.
   ios_automatically_manage_certs = true
 
+  # Enabling this option makes clang compile for profiling to gather code
+  # coverage metrics.
+  ios_enable_coverage = false
+
   # If non-empty, this list must contain valid cpu architecture, and the final
   # build will be a multi-architecture build (aka fat build) supporting the
   # main $target_cpu architecture and all of $additional_target_cpus.

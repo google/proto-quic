@@ -241,7 +241,7 @@ def tree_modes(root):
   """
   out = {}
   offset = len(root.rstrip('/\\')) + 1
-  out['.'] = oct(os.stat(root).st_mode)
+  out[u'.'] = oct(os.stat(root).st_mode)
   for dirpath, dirnames, filenames in os.walk(root):
     for filename in filenames:
       p = os.path.join(dirpath, filename)
@@ -370,8 +370,8 @@ class RunIsolatedTest(unittest.TestCase):
     out, err, returncode = self._run(self._cmd_args(isolated_hash))
     self.assertEqual('', out)
     self.assertIn(
-        '<The .isolated doesn\'t declare any command to run!>\n'
-        '<Check your .isolate for missing \'command\' variable>\n',
+        '<No command was specified!>\n'
+				'<Please secify a command when triggering your Swarming task>\n',
         err)
     self.assertEqual(1, returncode)
     actual = list_files_tree(self.cache)
@@ -443,13 +443,13 @@ class RunIsolatedTest(unittest.TestCase):
     _out, _err, returncode = self._run(self._cmd_args(isolated_hash))
     self.assertEqual(0, returncode)
     expected = {
-      '.': (040700, 040700, 040777),
-      'state.json': (0100600, 0100600, 0100666),
+      u'.': (040700, 040700, 040777),
+      u'state.json': (0100600, 0100600, 0100666),
       # The reason for 0100666 on Windows is that the file node had to be
       # modified to delete the hardlinked node. The read only bit is reset on
       # load.
-      file1_hash: (0100400, 0100400, 0100666),
-      isolated_hash: (0100400, 0100400, 0100444),
+      unicode(file1_hash): (0100400, 0100400, 0100666),
+      unicode(isolated_hash): (0100400, 0100400, 0100444),
     }
     self.assertTreeModes(self.cache, expected)
 
@@ -467,7 +467,7 @@ class RunIsolatedTest(unittest.TestCase):
     out, err, returncode = self._run(self._cmd_args(isolated_hash))
     self.assertEqual(0, returncode, (out, err, returncode))
     expected = {
-      '.': (040700, 040700, 040777),
+      u'.': (040700, 040700, 040777),
       u'state.json': (0100600, 0100600, 0100666),
       unicode(file1_hash): (0100400, 0100400, 0100666),
       unicode(isolated_hash): (0100400, 0100400, 0100444),

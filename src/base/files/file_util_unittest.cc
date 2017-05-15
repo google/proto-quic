@@ -2267,6 +2267,18 @@ TEST_F(FileUtilTest, SetNonBlocking) {
   EXPECT_TRUE(SetNonBlocking(fd.get()));
 }
 
+TEST_F(FileUtilTest, SetCloseOnExec) {
+  const int kInvalidFd = 99999;
+  EXPECT_FALSE(SetCloseOnExec(kInvalidFd));
+
+  base::FilePath path;
+  ASSERT_TRUE(PathService::Get(base::DIR_TEST_DATA, &path));
+  path = path.Append(FPL("file_util")).Append(FPL("original.txt"));
+  ScopedFD fd(open(path.value().c_str(), O_RDONLY));
+  ASSERT_GE(fd.get(), 0);
+  EXPECT_TRUE(SetCloseOnExec(fd.get()));
+}
+
 // Testing VerifyPathControlledByAdmin() is hard, because there is no
 // way a test can make a file owned by root, or change file paths
 // at the root of the file system.  VerifyPathControlledByAdmin()

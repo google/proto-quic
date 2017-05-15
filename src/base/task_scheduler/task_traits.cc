@@ -12,28 +12,6 @@
 
 namespace base {
 
-TaskTraits& TaskTraits::MayBlock() {
-  may_block_ = true;
-  return *this;
-}
-
-TaskTraits& TaskTraits::WithBaseSyncPrimitives() {
-  with_base_sync_primitives_ = true;
-  return *this;
-}
-
-TaskTraits& TaskTraits::WithPriority(TaskPriority priority) {
-  priority_set_explicitly_ = true;
-  priority_ = priority;
-  return *this;
-}
-
-TaskTraits& TaskTraits::WithShutdownBehavior(
-    TaskShutdownBehavior shutdown_behavior) {
-  shutdown_behavior_ = shutdown_behavior;
-  return *this;
-}
-
 const char* TaskPriorityToString(TaskPriority task_priority) {
   switch (task_priority) {
     case TaskPriority::BACKGROUND:

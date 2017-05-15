@@ -6,22 +6,37 @@ import logging
 import os
 import posixpath
 import re
+import sys
+import tempfile
 import time
 
 from devil.android import device_errors
+from devil.android import device_temp_file
 from devil.android import flag_changer
 from devil.android.sdk import shared_prefs
 from devil.utils import reraiser_thread
 from pylib import valgrind_tools
 from pylib.android import logdog_logcat_monitor
 from pylib.base import base_test_result
+from pylib.constants import host_paths
 from pylib.instrumentation import instrumentation_test_instance
 from pylib.local.device import local_device_environment
 from pylib.local.device import local_device_test_run
+from pylib.utils import google_storage_helper
 from pylib.utils import logdog_helper
 from py_trace_event import trace_event
 from py_utils import contextlib_ext
+from py_utils import tempfile_ext
 import tombstones
+
+sys.path.append(os.path.join(host_paths.DIR_SOURCE_ROOT, 'third_party'))
+import jinja2  # pylint: disable=import-error
+import markupsafe  # pylint: disable=import-error,unused-import
+
+
+_JINJA_TEMPLATE_DIR = os.path.join(
+    host_paths.DIR_SOURCE_ROOT, 'build', 'android', 'pylib', 'instrumentation')
+_JINJA_TEMPLATE_FILENAME = 'render_test.html.jinja'
 
 _TAG = 'test_runner_py'
 
@@ -36,6 +51,19 @@ TIMEOUT_ANNOTATIONS = [
 ]
 
 LOGCAT_FILTERS = ['*:e', 'chromium:v', 'cr_*:v']
+
+EXTRA_SCREENSHOT_FILE = (
+    'org.chromium.base.test.ScreenshotOnFailureStatement.ScreenshotFile')
+
+FEATURE_ANNOTATION = 'Feature'
+RENDER_TEST_FEATURE_ANNOTATION = 'RenderTest'
+
+# This needs to be kept in sync with formatting in |RenderUtils.imageName|
+RE_RENDER_IMAGE_NAME = re.compile(
+      r'(?P<test_class>\w+)\.'
+      r'(?P<description>\w+)\.'
+      r'(?P<device_model>\w+)\.'
+      r'(?P<orientation>port|land)\.png')
 
 # TODO(jbudorick): Make this private once the instrumentation test_runner is
 # deprecated.
@@ -129,7 +157,7 @@ class LocalDeviceInstrumentationTestRun(
             logging.error("Couldn't set debug app: no package defined")
           else:
             dev.RunShellCommand(['am', 'set-debug-app', '--persistent',
-                                  self._test_instance.package_info.package],
+                                 self._test_instance.package_info.package],
                                 check_return=True)
       @trace_event.traced
       def edit_shared_prefs():
@@ -243,7 +271,8 @@ class LocalDeviceInstrumentationTestRun(
   def _RunTest(self, device, test):
     extras = {}
 
-    flags = None
+    flags_to_add = []
+    flags_to_remove = []
     test_timeout_scale = None
     if self._test_instance.coverage_directory:
       coverage_basename = '%s.ec' % ('%s_group' % test[0]['method']
@@ -254,6 +283,14 @@ class LocalDeviceInstrumentationTestRun(
       coverage_device_file = os.path.join(
           coverage_directory, coverage_basename)
       extras['coverageFile'] = coverage_device_file
+    # Save screenshot if screenshot dir is specified (save locally) or if
+    # a GS bucket is passed (save in cloud).
+    screenshot_device_file = None
+    if (self._test_instance.screenshot_dir or
+        self._test_instance.gs_results_bucket):
+      screenshot_device_file = device_temp_file.DeviceTempFile(
+          device.adb, suffix='.png', dir=device.GetExternalStoragePath())
+      extras[EXTRA_SCREENSHOT_FILE] = screenshot_device_file.name
 
     if isinstance(test, list):
       if not self._test_instance.driver_apk:
@@ -290,7 +327,8 @@ class LocalDeviceInstrumentationTestRun(
             self._test_instance.test_package, self._test_instance.test_runner)
       extras['class'] = test_name
       if 'flags' in test:
-        flags = test['flags']
+        flags_to_add.extend(test['flags'].add)
+        flags_to_remove.extend(test['flags'].remove)
       timeout = self._GetTimeoutFromAnnotations(
         test['annotations'], test_display_name)
 
@@ -302,10 +340,19 @@ class LocalDeviceInstrumentationTestRun(
 
     logging.info('preparing to run %s: %s', test_display_name, test)
 
-    if flags:
+    render_tests_device_output_dir = None
+    if _IsRenderTest(test):
+      # TODO(mikecase): Add DeviceTempDirectory class and use that instead.
+      render_tests_device_output_dir = posixpath.join(
+          device.GetExternalStoragePath(),
+          'render_test_output_dir')
+      flags_to_add.append('--render-test-output-dir=%s' %
+                          render_tests_device_output_dir)
+
+    if flags_to_add or flags_to_remove:
       self._CreateFlagChangerIfNeeded(device)
       self._flag_changers[str(device)].PushFlags(
-        add=flags.add, remove=flags.remove)
+        add=flags_to_add, remove=flags_to_remove)
 
     try:
       device.RunShellCommand(
@@ -316,7 +363,7 @@ class LocalDeviceInstrumentationTestRun(
 
       stream_name = 'logcat_%s_%s_%s' % (
           test_name.replace('#', '.'),
-          time.strftime('%Y%m%dT%H%M%S', time.localtime()),
+          time.strftime('%Y%m%dT%H%M%S-UTC', time.gmtime()),
           device.serial)
       logmon = logdog_logcat_monitor.LogdogLogcatMonitor(
           device.adb, stream_name, filter_specs=LOGCAT_FILTERS)
@@ -334,7 +381,7 @@ class LocalDeviceInstrumentationTestRun(
           ['log', '-p', 'i', '-t', _TAG, 'END %s' % test_name],
           check_return=True)
       duration_ms = time_ms() - start_ms
-      if flags:
+      if flags_to_add or flags_to_remove:
         self._flag_changers[str(device)].Restore()
       if test_timeout_scale:
         valgrind_tools.SetChromeTimeoutScale(
@@ -350,8 +397,19 @@ class LocalDeviceInstrumentationTestRun(
       if logcat_url:
         result.SetLink('logcat', logcat_url)
 
+    if _IsRenderTest(test):
+      # Render tests do not cause test failure by default. So we have to check
+      # to see if any failure images were generated even if the test does not
+      # fail.
+      try:
+        self._ProcessRenderTestResults(
+            device, render_tests_device_output_dir, results)
+      finally:
+        device.RemovePath(render_tests_device_output_dir,
+                          recursive=True, force=True)
+
     # Update the result name if the test used flags.
-    if flags:
+    if flags_to_add or flags_to_remove:
       for r in results:
         if r.GetName() == test_name:
           r.SetName(test_display_name)
@@ -377,15 +435,16 @@ class LocalDeviceInstrumentationTestRun(
     if any(r.GetType() not in (base_test_result.ResultType.PASS,
                                base_test_result.ResultType.SKIP)
            for r in results):
-      if self._test_instance.screenshot_dir:
-        file_name = '%s-%s.png' % (
-            test_display_name,
-            time.strftime('%Y%m%dT%H%M%S', time.localtime()))
-        saved_dir = device.TakeScreenshot(
-            os.path.join(self._test_instance.screenshot_dir, file_name))
-        logging.info(
-            'Saved screenshot for %s to %s.',
-            test_display_name, saved_dir)
+      with contextlib_ext.Optional(
+          tempfile_ext.NamedTemporaryDirectory(),
+          self._test_instance.screenshot_dir is None and
+              self._test_instance.gs_results_bucket) as screenshot_host_dir:
+        screenshot_host_dir = (
+            self._test_instance.screenshot_dir or screenshot_host_dir)
+        self._SaveScreenshot(device, screenshot_host_dir,
+                             screenshot_device_file, test_display_name,
+                             results)
+
       logging.info('detected failure in %s. raw output:', test_display_name)
       for l in output:
         logging.info('  %s', l)
@@ -397,7 +456,6 @@ class LocalDeviceInstrumentationTestRun(
             else None)
         device.ClearApplicationState(self._test_instance.package_info.package,
                                      permissions=permissions)
-
     else:
       logging.debug('raw output from %s:', test_display_name)
       for l in output:
@@ -419,12 +477,119 @@ class LocalDeviceInstrumentationTestRun(
                 include_stack_symbols=False,
                 wipe_tombstones=True)
             stream_name = 'tombstones_%s_%s' % (
-                time.strftime('%Y%m%dT%H%M%S', time.localtime()),
+                time.strftime('%Y%m%dT%H%M%S-UTC', time.gmtime()),
                 device.serial)
             tombstones_url = logdog_helper.text(
                 stream_name, '\n'.join(resolved_tombstones))
           result.SetLink('tombstones', tombstones_url)
     return results, None
+
+  def _SaveScreenshot(self, device, screenshot_host_dir, screenshot_device_file,
+                      test_name, results):
+    if screenshot_host_dir:
+      screenshot_host_file = os.path.join(
+          screenshot_host_dir,
+          '%s-%s.png' % (
+              test_name,
+              time.strftime('%Y%m%dT%H%M%S-UTC', time.gmtime())))
+      if device.FileExists(screenshot_device_file.name):
+        try:
+          device.PullFile(screenshot_device_file.name, screenshot_host_file)
+        finally:
+          screenshot_device_file.close()
+
+        logging.info(
+            'Saved screenshot for %s to %s.',
+            test_name, screenshot_host_file)
+        if self._test_instance.gs_results_bucket:
+          link = google_storage_helper.upload(
+              google_storage_helper.unique_name(
+                  'screenshot', device=device),
+              screenshot_host_file,
+              bucket=('%s/screenshots' %
+                      self._test_instance.gs_results_bucket))
+          for result in results:
+            result.SetLink('post_test_screenshot', link)
+
+  def _ProcessRenderTestResults(
+      self, device, render_tests_device_output_dir, results):
+    # Will archive test images if we are given a GS bucket to store the results
+    # in and are given a results file to output the links to.
+    if not bool(self._test_instance.gs_results_bucket):
+      return
+
+    failure_images_device_dir = posixpath.join(
+        render_tests_device_output_dir, 'failures')
+
+    if not device.FileExists(failure_images_device_dir):
+      return
+
+    render_tests_bucket = (
+        self._test_instance.gs_results_bucket + '/render_tests')
+
+    diff_images_device_dir = posixpath.join(
+        render_tests_device_output_dir, 'diffs')
+
+    golden_images_device_dir = posixpath.join(
+        render_tests_device_output_dir, 'goldens')
+
+    with tempfile_ext.NamedTemporaryDirectory() as temp_dir:
+      device.PullFile(failure_images_device_dir, temp_dir)
+
+      if device.FileExists(diff_images_device_dir):
+        device.PullFile(diff_images_device_dir, temp_dir)
+      else:
+        logging.error('Diff images not found on device.')
+
+      if device.FileExists(golden_images_device_dir):
+        device.PullFile(golden_images_device_dir, temp_dir)
+      else:
+        logging.error('Golden images not found on device.')
+
+      for failure_filename in os.listdir(os.path.join(temp_dir, 'failures')):
+        m = RE_RENDER_IMAGE_NAME.match(failure_filename)
+        if not m:
+          logging.warning('Unexpected file in render test failures: %s',
+                          failure_filename)
+          continue
+
+        failure_filepath = os.path.join(temp_dir, 'failures', failure_filename)
+        failure_link = google_storage_helper.upload_content_addressed(
+            failure_filepath, bucket=render_tests_bucket)
+
+        golden_filepath = os.path.join(temp_dir, 'goldens', failure_filename)
+        if os.path.exists(golden_filepath):
+          golden_link = google_storage_helper.upload_content_addressed(
+              golden_filepath, bucket=render_tests_bucket)
+        else:
+          golden_link = ''
+
+        diff_filepath = os.path.join(temp_dir, 'diffs', failure_filename)
+        if os.path.exists(diff_filepath):
+          diff_link = google_storage_helper.upload_content_addressed(
+              diff_filepath, bucket=render_tests_bucket)
+        else:
+          diff_link = ''
+
+        with tempfile.NamedTemporaryFile(suffix='.html') as temp_html:
+          jinja2_env = jinja2.Environment(
+              loader=jinja2.FileSystemLoader(_JINJA_TEMPLATE_DIR),
+              trim_blocks=True)
+          template = jinja2_env.get_template(_JINJA_TEMPLATE_FILENAME)
+          # pylint: disable=no-member
+          processed_template_output = template.render(
+              failure_link=failure_link,
+              golden_link=golden_link,
+              diff_link=diff_link)
+
+          temp_html.write(processed_template_output)
+          temp_html.flush()
+          html_results_link = google_storage_helper.upload_content_addressed(
+              temp_html.name,
+              bucket=render_tests_bucket,
+              content_type='text/html')
+          for result in results:
+            result.SetLink(failure_filename, html_results_link)
 
   #override
   def _ShouldRetry(self, test):
@@ -461,3 +626,10 @@ class LocalDeviceInstrumentationTestRun(
     timeout *= cls._GetTimeoutScaleFromAnnotations(annotations)
 
     return timeout
+
+def _IsRenderTest(test):
+  """Determines if a test or list of tests has a RenderTest amongst them."""
+  if not isinstance(test, list):
+    test = [test]
+  return any([RENDER_TEST_FEATURE_ANNOTATION in t['annotations'].get(
+              FEATURE_ANNOTATION, {}).get('value', ()) for t in test])

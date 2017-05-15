@@ -56,7 +56,7 @@ class _JetstreamMeasurement(legacy_page_test.LegacyPageTest):
           }
           return null;
         })();
-        """, timeout=60*12)
+        """, timeout=60*20)
     result = json.loads(result.partition(': ')[2])
 
     all_score_lists = []

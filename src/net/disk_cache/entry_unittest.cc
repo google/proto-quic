@@ -12,6 +12,7 @@
 #include "base/run_loop.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
+#include "base/test/histogram_tester.h"
 #include "base/threading/platform_thread.h"
 #include "net/base/completion_callback.h"
 #include "net/base/io_buffer.h"
@@ -2663,6 +2664,7 @@ bool DiskCacheEntryTest::SimpleCacheMakeBadChecksumEntry(const std::string& key,
 
 // Tests that the simple cache can detect entries that have bad data.
 TEST_F(DiskCacheEntryTest, SimpleCacheBadChecksum) {
+  base::HistogramTester histogram_tester;
   SetSimpleCacheMode();
   InitCache();
 
@@ -2681,10 +2683,14 @@ TEST_F(DiskCacheEntryTest, SimpleCacheBadChecksum) {
   scoped_refptr<net::IOBuffer> read_buffer(new net::IOBuffer(kReadBufferSize));
   EXPECT_EQ(net::ERR_CACHE_CHECKSUM_MISMATCH,
             ReadData(entry, 1, 0, read_buffer.get(), kReadBufferSize));
+  histogram_tester.ExpectUniqueSample(
+      "SimpleCache.Http.ReadResult",
+      disk_cache::READ_RESULT_SYNC_CHECKSUM_FAILURE, 1);
 }
 
 // Tests that an entry that has had an IO error occur can still be Doomed().
 TEST_F(DiskCacheEntryTest, SimpleCacheErrorThenDoom) {
+  base::HistogramTester histogram_tester;
   SetSimpleCacheMode();
   InitCache();
 
@@ -2703,7 +2709,9 @@ TEST_F(DiskCacheEntryTest, SimpleCacheErrorThenDoom) {
   scoped_refptr<net::IOBuffer> read_buffer(new net::IOBuffer(kReadBufferSize));
   EXPECT_EQ(net::ERR_CACHE_CHECKSUM_MISMATCH,
             ReadData(entry, 1, 0, read_buffer.get(), kReadBufferSize));
-
+  histogram_tester.ExpectUniqueSample(
+      "SimpleCache.Http.ReadResult",
+      disk_cache::READ_RESULT_SYNC_CHECKSUM_FAILURE, 1);
   entry->Doom();  // Should not crash.
 }
 

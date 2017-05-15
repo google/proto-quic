@@ -129,4 +129,4 @@ def isolate(tempdir, isolate_server, swarming_os, verbose):
       ], verbose)
   with open(isolated, 'rb') as f:
     hashval = hashlib.sha1(f.read()).hexdigest()
-  return isolated, hashval
+  return hashval

@@ -92,6 +92,7 @@ class QuartcSession : public QuicSession,
  protected:
   // QuicSession override.
   QuicStream* CreateIncomingDynamicStream(QuicStreamId id) override;
+  std::unique_ptr<QuicStream> CreateStream(QuicStreamId id) override;
 
   QuartcStream* CreateDataStream(QuicStreamId id, SpdyPriority priority);
 

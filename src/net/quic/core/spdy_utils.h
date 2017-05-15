@@ -54,6 +54,8 @@ class QUIC_EXPORT_PRIVATE SpdyUtils {
   static bool PopulateHeaderBlockFromUrl(const std::string url,
                                          SpdyHeaderBlock* headers);
 
+  static bool IsServerPushStream(QuicStreamId id) { return id % 2 == 0; }
+
  private:
   DISALLOW_COPY_AND_ASSIGN(SpdyUtils);
 };

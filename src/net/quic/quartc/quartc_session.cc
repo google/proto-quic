@@ -4,6 +4,8 @@
 
 #include "net/quic/quartc/quartc_session.h"
 
+#include "net/quic/platform/api/quic_ptr_util.h"
+
 using std::string;
 
 namespace net {
@@ -271,6 +273,11 @@ QuicStream* QuartcSession::CreateIncomingDynamicStream(QuicStreamId id) {
     session_delegate_->OnIncomingStream(stream);
   }
   return stream;
+}
+
+std::unique_ptr<QuicStream> QuartcSession::CreateStream(QuicStreamId id) {
+  QuartcStream* stream = CreateDataStream(id, kDefaultPriority);
+  return QuicWrapUnique(stream);
 }
 
 QuartcStream* QuartcSession::CreateDataStream(QuicStreamId id,

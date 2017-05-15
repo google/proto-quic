@@ -104,9 +104,8 @@ bool URLSecurityManagerWin::CanUseDefaultCredentials(
 
 bool URLSecurityManagerWin::EnsureSystemSecurityManager() {
   if (!security_manager_.Get()) {
-    HRESULT hr = CoInternetCreateSecurityManager(NULL,
-                                                 security_manager_.Receive(),
-                                                 NULL);
+    HRESULT hr = CoInternetCreateSecurityManager(
+        NULL, security_manager_.GetAddressOf(), NULL);
     if (FAILED(hr) || !security_manager_.Get()) {
       LOG(ERROR) << "Unable to create the Windows Security Manager instance";
       return false;

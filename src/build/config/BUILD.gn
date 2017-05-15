@@ -292,7 +292,7 @@ config("executable_config") {
       "//build/config/ios:ios_dynamic_flags",
       "//build/config/ios:ios_executable_flags",
     ]
-  } else if (is_linux || is_android) {
+  } else if (is_linux || is_android || current_os == "aix") {
     configs += [ "//build/config/gcc:executable_ldconfig" ]
     if (is_android) {
       configs += [ "//build/config/android:executable_config" ]

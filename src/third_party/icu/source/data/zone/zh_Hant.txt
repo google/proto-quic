@@ -2,7 +2,7 @@
 // License & terms of use: http://www.unicode.org/copyright.html#License
 zh_Hant{
     %%Parent{"root"}
-    Version{"2.1.28.79"}
+    Version{"2.1.33.94"}
     zoneStrings{
         "Africa:Abidjan"{
             ec{"阿比讓"}
@@ -834,12 +834,6 @@ zh_Hant{
         }
         "Asia:Taipei"{
             ec{"台北"}
-            ld{"台北夏令時間"}
-            lg{"台北時間"}
-            ls{"台北標準時間"}
-            sd{"台北"}
-            sg{"台北"}
-            ss{"台北"}
         }
         "Asia:Tashkent"{
             ec{"塔什干"}
@@ -948,6 +942,9 @@ zh_Hant{
         }
         "Australia:Sydney"{
             ec{"雪梨"}
+        }
+        "Etc:UTC"{
+            ls{"世界標準時間"}
         }
         "Etc:Unknown"{
             ec{"未知城市"}

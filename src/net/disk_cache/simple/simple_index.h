@@ -69,6 +69,8 @@ class NET_EXPORT_PRIVATE EntryMetadata {
     return base::TimeDelta();
   }
 
+  static const int kOnDiskSizeBytes = 16;
+
  private:
   friend class SimpleIndexFileTest;
 

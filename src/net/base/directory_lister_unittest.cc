@@ -11,10 +11,8 @@
 #include "base/files/file_util.h"
 #include "base/files/scoped_temp_dir.h"
 #include "base/i18n/file_util_icu.h"
-#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/strings/stringprintf.h"
-#include "base/test/scoped_task_scheduler.h"
 #include "net/base/directory_lister.h"
 #include "net/base/net_errors.h"
 #include "net/test/gtest_util.h"
@@ -135,8 +133,7 @@ class ListerDelegate : public DirectoryLister::DirectoryListerDelegate {
 class DirectoryListerTest : public PlatformTest {
  public:
   DirectoryListerTest()
-      : scoped_task_scheduler_(base::MessageLoop::current()),
-        total_created_file_system_objects_in_temp_root_dir_(0),
+      : total_created_file_system_objects_in_temp_root_dir_(0),
         created_file_system_objects_in_temp_root_dir_(0) {}
 
   void SetUp() override {
@@ -187,8 +184,6 @@ class DirectoryListerTest : public PlatformTest {
   }
 
  private:
-  base::test::ScopedTaskScheduler scoped_task_scheduler_;
-
   // Number of files and directories created in SetUp, excluding
   // |temp_root_dir_| itself.  Includes all nested directories and their files.
   int total_created_file_system_objects_in_temp_root_dir_;

@@ -170,3 +170,35 @@ gcc_toolchain("mipsel") {
     use_goma = false
   }
 }
+
+gcc_toolchain("s390x") {
+  cc = "gcc"
+  cxx = "g++"
+
+  readelf = "readelf"
+  nm = "nm"
+  ar = "ar"
+  ld = cxx
+
+  toolchain_args = {
+    current_cpu = "s390x"
+    current_os = "linux"
+    is_clang = false
+  }
+}
+
+gcc_toolchain("ppc64") {
+  cc = "gcc"
+  cxx = "g++"
+
+  readelf = "readelf"
+  nm = "nm"
+  ar = "ar"
+  ld = cxx
+
+  toolchain_args = {
+    current_cpu = "ppc64"
+    current_os = "linux"
+    is_clang = false
+  }
+}

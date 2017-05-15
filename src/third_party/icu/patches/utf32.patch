@@ -39,10 +39,10 @@ index 078f293..a8c41cc 100644
  #if !UCONFIG_ONLY_HTML_CONVERSION
    { "utf7", UCNV_UTF7 },
  #endif
-diff --git a/source/common/ucnv_u32.c b/source/common/ucnv_u32.c
+diff --git a/source/common/ucnv_u32.cpp b/source/common/ucnv_u32.cpp
 index b0a0fe2..5a4d6fc 100644
---- a/source/common/ucnv_u32.c
-+++ b/source/common/ucnv_u32.c
+--- a/source/common/ucnv_u32.cpp
++++ b/source/common/ucnv_u32.cpp
 @@ -18,7 +18,7 @@
  
  #include "unicode/utypes.h"

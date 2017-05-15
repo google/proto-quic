@@ -1,27 +1,29 @@
 Common Metadata:
-    elf_arch=ARM
+    elf_arch=arm
     elf_build_id=WhatAnAmazingBuildId
     elf_file_name=elf
     elf_mtime={redacted}
     git_revision=abc123
     gn_args=var1=true var2="foo"
     map_file_name=../test.map
+    tool_prefix=tools/binary_size/libsupersize/testdata/mock_toolchain/
 Old Metadata:
 New Metadata:
 
-Section Sizes (Total=0 bytes):
-    .bss: 0 bytes (not included in totals)
-    .data: 0 bytes (0.0%)
-    .data.rel.ro: 0 bytes (0.0%)
-    .data.rel.ro.local: 0 bytes (0.0%)
-    .rodata: 0 bytes (0.0%)
-    .text: 0 bytes (0.0%)
+Section Sizes (Total=0 bytes (0 bytes)):
+    .bss: 0 bytes (0 bytes) (not included in totals)
+    .data: 0 bytes (0 bytes) (0.0%)
+    .data.rel.ro: 0 bytes (0 bytes) (0.0%)
+    .data.rel.ro.local: 0 bytes (0 bytes) (0.0%)
+    .rodata: 0 bytes (0 bytes) (0.0%)
+    .text: 0 bytes (0 bytes) (0.0%)
 
-0 symbols added (+), 0 changed (~), 0 removed (-), 44 unchanged (not shown)
+0 symbols added (+), 0 changed (~), 0 removed (-), 43 unchanged (not shown)
 0 object files added, 0 removed
 
 Showing 0 symbols (0 unique) with total pss: 0 bytes
-.text=0 bytes    .rodata=0 bytes    other=0 bytes    total=0 bytes
+.text=0 bytes    .rodata=0 bytes    .data*=0 bytes    .bss=0 bytes    total=0 bytes
 Number of object files: 0
 
-First columns are: running total, address, pss
+Index, Running Total, Section@Address, PSS
+------------------------------------------------------------

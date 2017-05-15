@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import logging
+import re
 import unittest
 
 import function_signature
@@ -12,16 +13,24 @@ import function_signature
 class AnalyzeTest(unittest.TestCase):
 
   def testParseFunctionSignature(self):
-    def check(ret_part, name_part, params_part, after_part=''):
+    def check(ret_part, name_part, params_part, after_part='',
+              name_without_templates=None):
+      if name_without_templates is None:
+        name_without_templates = re.sub(r'<.*?>', '', name_part) + after_part
+
       signature = ''.join((name_part, params_part, after_part))
-      got_full, got_name = function_signature.Parse(signature)
-      self.assertEqual(name_part + after_part, got_name)
-      self.assertEqual(name_part + params_part + after_part, got_full)
+      got_full_name, got_template_name, got_name = (
+          function_signature.Parse(signature))
+      self.assertEqual(name_without_templates, got_name)
+      self.assertEqual(name_part + after_part, got_template_name)
+      self.assertEqual(name_part + params_part + after_part, got_full_name)
       if ret_part:
         signature = ''.join((ret_part, name_part, params_part, after_part))
-        got_full, got_name = function_signature.Parse(signature)
-        self.assertEqual(name_part + after_part, got_name)
-        self.assertEqual(name_part + params_part + after_part, got_full)
+        got_full_name, got_template_name, got_name = (
+            function_signature.Parse(signature))
+        self.assertEqual(name_without_templates, got_name)
+        self.assertEqual(name_part + after_part, got_template_name)
+        self.assertEqual(name_part + params_part + after_part, got_full_name)
 
     check('bool ',
           'foo::Bar<unsigned int, int>::Do<unsigned int>',
@@ -50,7 +59,8 @@ class AnalyzeTest(unittest.TestCase):
           '(std::__ndk1::<int> volatile*, std::__ndk1::memory_order)')
     check('std::basic_ostream<char, std::char_traits<char> >& ',
           'std::operator<< <std::char_traits<char> >',
-          '(std::basic_ostream<char, std::char_traits<char> >&, char)')
+          '(std::basic_ostream<char, std::char_traits<char> >&, char)',
+          name_without_templates='std::operator<<')
     check('v8::internal::SlotCallbackResult ',
           'v8::internal::UpdateTypedSlotHelper::UpdateCodeTarget'
           '<v8::PointerUpdateJobTraits<(v8::Direction)1>::Foo(v8::Heap*, '
@@ -59,7 +69,9 @@ class AnalyzeTest(unittest.TestCase):
           'const::{lambda(v8::Object**)#1}>',
           '(v8::RelocInfo, v8::Foo<(v8::PointerDirection)1>::Bar(v8::Heap*)::'
           '{lambda(v8::SlotType)#2}::operator()(v8::SlotType) const::'
-          '{lambda(v8::Object**)#1})')
+          '{lambda(v8::Object**)#1})',
+          name_without_templates=(
+              'v8::internal::UpdateTypedSlotHelper::UpdateCodeTarget'))
     check('',
           'WTF::StringAppend<WTF::String, WTF::String>::operator WTF::String',
           '()',
@@ -72,6 +84,10 @@ class AnalyzeTest(unittest.TestCase):
           'Paint()::{lambda(FrameView&)#2}>',
           '(blink::FrameView::PrePaint()::{lambda(FrameView&)#2} const&)', '')
 
+    # Test with multiple template args.
+    check('int ', 'Foo<int()>::bar<a<b> >', '()',
+          name_without_templates='Foo::bar')
+
     # SkArithmeticImageFilter.cpp has class within function body. e.g.:
     #   ArithmeticFP::onCreateGLSLInstance() looks like:
     # class ArithmeticFP {
@@ -83,17 +99,26 @@ class AnalyzeTest(unittest.TestCase):
     #   }
     # };
     SIG = '(anonymous namespace)::Foo::Baz() const::GLSLFP::onData(Foo, Bar)'
-    got_full, got_name = function_signature.Parse(SIG)
+    got_full_name, got_template_name, got_name = (
+        function_signature.Parse(SIG))
     self.assertEqual('(anonymous namespace)::Foo::Baz', got_name)
-    self.assertEqual(SIG, got_full)
+    self.assertEqual('(anonymous namespace)::Foo::Baz', got_template_name)
+    self.assertEqual(SIG, got_full_name)
 
     # Top-level lambda.
     # Note: Inline lambdas do not seem to be broken into their own symbols.
     SIG = 'cc::{lambda(cc::PaintOp*)#63}::_FUN(cc::PaintOp*)'
-    got_full, got_name = function_signature.Parse(SIG)
+    got_full_name, got_template_name, got_name = (
+        function_signature.Parse(SIG))
     self.assertEqual('cc::{lambda#63}', got_name)
-    self.assertEqual('cc::{lambda#63}(cc::PaintOp*)', got_full)
+    self.assertEqual('cc::{lambda#63}', got_template_name)
+    self.assertEqual('cc::{lambda#63}(cc::PaintOp*)', got_full_name)
 
+    # Data members
+    check('', 'blink::CSSValueKeywordsHash::findValueImpl', '(char const*)',
+          '::value_word_list')
+    check('', 'foo::Bar<Z<Y> >::foo<bar>', '(abc)', '::var<baz>',
+          name_without_templates='foo::Bar::foo::var')
 
 if __name__ == '__main__':
   logging.basicConfig(level=logging.DEBUG,

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_SPDY_SPDY_TEST_UTIL_COMMON_H_
-#define NET_SPDY_SPDY_TEST_UTIL_COMMON_H_
+#ifndef NET_SPDY_CHROMIUM_SPDY_TEST_UTIL_COMMON_H_
+#define NET_SPDY_CHROMIUM_SPDY_TEST_UTIL_COMMON_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -216,7 +216,6 @@ struct SpdySessionDependencies {
   bool enable_http2_alternative_service;
   NetLog* net_log;
   bool http_09_on_non_default_ports_enabled;
-  bool quic_do_not_mark_as_broken_on_network_change;
 };
 
 class SpdyURLRequestContext : public URLRequestContext {
@@ -543,4 +542,4 @@ class SpdyTestUtil {
 
 }  // namespace net
 
-#endif  // NET_SPDY_SPDY_TEST_UTIL_COMMON_H_
+#endif  // NET_SPDY_CHROMIUM_SPDY_TEST_UTIL_COMMON_H_

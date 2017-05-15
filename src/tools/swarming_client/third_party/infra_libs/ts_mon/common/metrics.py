@@ -5,6 +5,7 @@
 """Classes representing individual metrics that can be sent."""
 
 import copy
+import re
 
 from infra_libs.ts_mon.protos.current import metrics_pb2
 from infra_libs.ts_mon.protos.new import metrics_pb2 as new_metrics_pb2
@@ -15,6 +16,59 @@ from infra_libs.ts_mon.common import interface
 
 
 MICROSECONDS_PER_SECOND = 1000000
+
+
+class Field(object):
+  FIELD_NAME_PATTERN = re.compile(r'[A-Za-z_][A-Za-z0-9_]*')
+
+  allowed_python_types = None
+  v1_type = None
+  v2_type = None
+  v1_field = None
+  v2_field = None
+
+  def __init__(self, name):
+    if not self.FIELD_NAME_PATTERN.match(name):
+      raise errors.MetricDefinitionError(
+          'Invalid metric field name "%s" - must match the regex "%s"' % (
+                name, self.FIELD_NAME_PATTERN.pattern))
+
+    self.name = name
+
+  def validate_value(self, metric_name, value):
+    if not isinstance(value, self.allowed_python_types):
+      raise errors.MonitoringInvalidFieldTypeError(
+          metric_name, self.name, value)
+
+  def populate_proto_v1(self, proto, value):
+    setattr(proto, self.v1_field, value)
+
+  def populate_proto_v2(self, proto, value):
+    setattr(proto, self.v2_field, value)
+
+
+class StringField(Field):
+  allowed_python_types = basestring
+  v1_type = metrics_pb2.MetricsField.STRING
+  v2_type = new_metrics_pb2.MetricsDataSet.MetricFieldDescriptor.STRING
+  v1_field = 'string_value'
+  v2_field = 'string_value'
+
+
+class IntegerField(Field):
+  allowed_python_types = (int, long)
+  v1_type = metrics_pb2.MetricsField.INT
+  v2_type = new_metrics_pb2.MetricsDataSet.MetricFieldDescriptor.INT64
+  v1_field = 'int_value'
+  v2_field = 'int64_value'
+
+
+class BooleanField(Field):
+  allowed_python_types = bool
+  v1_type = metrics_pb2.MetricsField.BOOL
+  v2_type = new_metrics_pb2.MetricsDataSet.MetricFieldDescriptor.BOOL
+  v1_field = 'bool_value'
+  v2_field = 'bool_value'
 
 
 class Metric(object):
@@ -51,25 +105,38 @@ class Metric(object):
   See http://go/inframon-doc for help designing and using your metrics.
   """
 
-  def __init__(self, name, fields=None, description=None, units=None):
+  def __init__(self, name, description, field_spec, units=None):
     """Create an instance of a Metric.
 
     Args:
       name (str): the file-like name of this metric
-      fields (dict): a set of key-value pairs to be set as default metric fields
       description (string): help string for the metric. Should be enough to
                             know what the metric is about.
+      field_spec (list): a list of Field subclasses to define the fields that
+                         are allowed on this metric.  Pass a list of either
+                         StringField, IntegerField or BooleanField here.
       units (int): the unit used to measure data for given
                    metric. Please use the attributes of MetricDataUnit to find
                    valid integer values for this argument.
     """
+    field_spec = field_spec or []
+
     self._name = name.lstrip('/')
+
+    if not isinstance(description, basestring):
+      raise errors.MetricDefinitionError('Metric description must be a string')
+    if not description:
+      raise errors.MetricDefinitionError('Metric must have a description')
+    if (not isinstance(field_spec, (list, tuple)) or
+        any(not isinstance(x, Field) for x in field_spec)):
+      raise errors.MetricDefinitionError(
+          'Metric constructor takes a list of Fields, or None')
+    if len(field_spec) > 7:
+      raise errors.MonitoringTooManyFieldsError(self._name, field_spec)
+
     self._start_time = None
-    fields = fields or {}
-    if len(fields) > 7:
-      raise errors.MonitoringTooManyFieldsError(self._name, fields)
-    self._fields = fields
-    self._normalized_fields = self._normalize_fields(self._fields)
+    self._field_spec = field_spec
+    self._sorted_field_names = sorted(x.name for x in field_spec)
     self._description = description
     self._units = units
 
@@ -86,11 +153,6 @@ class Metric(object):
   def is_cumulative(self):
     raise NotImplementedError()
 
-  def __eq__(self, other):
-    return (self.name == other.name and
-            self._fields == other._fields and
-            type(self) == type(other))
-
   def unregister(self):
     interface.unregister(self)
 
@@ -104,7 +166,7 @@ class Metric(object):
     else:
       return '{unknown}'
 
-  def _populate_data_set(self, data_set, fields):
+  def _populate_data_set(self, data_set):
     """Populate MetricsDataSet."""
     data_set.metric_name = '%s%s' % (interface.state.metric_name_prefix,
                                      self._name)
@@ -117,7 +179,7 @@ class Metric(object):
       data_set.stream_kind = new_metrics_pb2.GAUGE
 
     self._populate_value_type(data_set)
-    self._populate_field_descriptors(data_set, fields)
+    self._populate_field_descriptors(data_set)
 
   def _populate_data(self, data, start_time, end_time, fields, value):
     """Populate a new metrics_pb2.MetricsData.
@@ -145,8 +207,7 @@ class Metric(object):
 
     metric_pb.metric_name_prefix = interface.state.metric_name_prefix
     metric_pb.name = self._name
-    if self._description is not None:
-      metric_pb.description = self._description
+    metric_pb.description = self._description
     if self._units is not None:
       metric_pb.units = self._units
 
@@ -155,100 +216,71 @@ class Metric(object):
 
     target._populate_target_pb(metric_pb)
 
-  def _populate_field_descriptors(self, data_set, fields):
+  def _populate_field_descriptors(self, data_set):
     """Populate `field_descriptor` in MetricsDataSet.
 
     Args:
-      data_set (new_metrics_pb2.MetricsDataSet): a data set protobuf to
-          populate
-      fields (list of (key, value) tuples): normalized metric fields
-
-    Raises:
-      MonitoringInvalidFieldTypeError: if a field has a value of unknown type
+      data_set (new_metrics_pb2.MetricsDataSet): a data set protobuf to populate
     """
-    field_type = new_metrics_pb2.MetricsDataSet.MetricFieldDescriptor
-    for key, value in fields:
+    for spec in self._field_spec:
       descriptor = data_set.field_descriptor.add()
-      descriptor.name = key
-      if isinstance(value, basestring):
-        descriptor.field_type = field_type.STRING
-      elif isinstance(value, bool):
-        descriptor.field_type = field_type.BOOL
-      elif isinstance(value, int):
-        descriptor.field_type = field_type.INT64
-      else:
-        raise errors.MonitoringInvalidFieldTypeError(self._name, key, value)
+      descriptor.name = spec.name
+      descriptor.field_type = spec.v2_type
 
-  def _populate_fields_new(self, data, fields):
+  def _populate_fields_new(self, data, field_values):
     """Fill in the fields attribute of a metric protocol buffer.
 
     Args:
       metric (metrics_pb2.MetricsData): a metrics protobuf to populate
-      fields (list of (key, value) tuples): normalized metric fields
-
-    Raises:
-      MonitoringInvalidFieldTypeError: if a field has a value of unknown type
+      field_values (tuple): field values
     """
-    for key, value in fields:
+    for spec, value in zip(self._field_spec, field_values):
       field = data.field.add()
-      field.name = key
-      if isinstance(value, basestring):
-        field.string_value = value
-      elif isinstance(value, bool):
-        field.bool_value = value
-      elif isinstance(value, int):
-        field.int64_value = value
-      else:
-        raise errors.MonitoringInvalidFieldTypeError(self._name, key, value)
+      field.name = spec.name
+      spec.populate_proto_v2(field, value)
 
-  def _populate_fields(self, metric, fields):
+  def _populate_fields(self, metric, field_values):
     """Fill in the fields attribute of a metric protocol buffer.
 
     Args:
       metric (metrics_pb2.MetricsData): a metrics protobuf to populate
-      fields (list of (key, value) tuples): normalized metric fields
-
-    Raises:
-      MonitoringInvalidFieldTypeError: if a field has a value of unknown type
+      field_values (tuple): field values
     """
-    for key, value in fields:
+    for spec, value in zip(self._field_spec, field_values):
       field = metric.fields.add()
-      field.name = key
-      if isinstance(value, basestring):
-        field.type = metrics_pb2.MetricsField.STRING
-        field.string_value = value
-      elif isinstance(value, bool):
-        field.type = metrics_pb2.MetricsField.BOOL
-        field.bool_value = value
-      elif isinstance(value, int):
-        field.type = metrics_pb2.MetricsField.INT
-        field.int_value = value
-      else:
-        raise errors.MonitoringInvalidFieldTypeError(self._name, key, value)
+      field.name = spec.name
+      field.type = spec.v1_type
+      spec.populate_proto_v1(field, value)
 
-  def _normalize_fields(self, fields):
-    """Merges the fields with the default fields and returns something hashable.
+  def _validate_fields(self, fields):
+    """Checks the correct number and types of field values were provided.
 
     Args:
-      fields (dict): A dict of fields passed by the user, or None.
+      fields (dict): A dict of field values given by the user, or None.
 
     Returns:
-      A tuple of (key, value) tuples, ordered by key.  This whole tuple is used
-      as the key in the self._values dict to identify the cell for a value.
+      fields' values as a tuple, in the same order as the field_spec.
 
     Raises:
-      MonitoringTooManyFieldsError: if there are more than seven metric fields
+      WrongFieldsError: if you provide a different number of fields to those
+        the metric was defined with.
+      MonitoringInvalidFieldTypeError: if the field value was the wrong type for
+        the field spec.
     """
-    if fields is None:
-      return self._normalized_fields
+    fields = fields or {}
 
-    all_fields = copy.copy(self._fields)
-    all_fields.update(fields)
+    if not isinstance(fields, dict):
+      raise ValueError('fields should be a dict, got %r (%s)' % (
+          fields, type(fields)))
 
-    if len(all_fields) > 7:
-      raise errors.MonitoringTooManyFieldsError(self._name, all_fields)
+    if sorted(fields) != self._sorted_field_names:
+      raise errors.WrongFieldsError(
+          self.name, fields.keys(), self._sorted_field_names)
 
-    return tuple(sorted(all_fields.iteritems()))
+    for spec in self._field_spec:
+      spec.validate_value(self.name, fields[spec.name])
+
+    return tuple(fields[spec.name] for spec in self._field_spec)
 
   def _populate_value(self, metric, value, start_time):
     """Fill in the the data values of a metric protocol buffer.
@@ -286,7 +318,7 @@ class Metric(object):
 
     Args:
       value (see concrete class): the value of the metric to be set
-      fields (dict): additional metric fields to complement those on self
+      fields (dict): metric field values
       target_fields (dict): overwrite some of the default target fields
     """
     raise NotImplementedError()
@@ -298,7 +330,7 @@ class Metric(object):
     Instead use _incr with a modify_fn.
     """
     return interface.state.store.get(
-        self.name, self._normalize_fields(fields), target_fields)
+        self.name, self._validate_fields(fields), target_fields)
 
   def get_all(self):
     return interface.state.store.iter_field_values(self.name)
@@ -313,12 +345,14 @@ class Metric(object):
     interface.state.store.reset_for_unittest(self.name)
 
   def _set(self, fields, target_fields, value, enforce_ge=False):
-    interface.state.store.set(self.name, self._normalize_fields(fields),
-                              target_fields, value, enforce_ge=enforce_ge)
+    interface.state.store.set(
+        self.name, self._validate_fields(fields), target_fields,
+        value, enforce_ge=enforce_ge)
 
   def _incr(self, fields, target_fields, delta, modify_fn=None):
-    interface.state.store.incr(self.name, self._normalize_fields(fields),
-                               target_fields, delta, modify_fn=modify_fn)
+    interface.state.store.incr(
+        self.name, self._validate_fields(fields), target_fields,
+        delta, modify_fn=modify_fn)
 
 
 class StringMetric(Metric):
@@ -365,7 +399,6 @@ class BooleanMetric(Metric):
 
 class NumericMetric(Metric):  # pylint: disable=abstract-method
   """Abstract base class for numeric (int or float) metrics."""
-  # TODO(agable): Figure out if there's a way to send units with these metrics.
 
   def increment(self, fields=None, target_fields=None):
     self._incr(fields, target_fields, 1)
@@ -377,10 +410,10 @@ class NumericMetric(Metric):  # pylint: disable=abstract-method
 class CounterMetric(NumericMetric):
   """A metric whose value type is a monotonically increasing integer."""
 
-  def __init__(self, name, fields=None, start_time=None, description=None,
+  def __init__(self, name, description, field_spec=None, start_time=None,
                units=None):
     super(CounterMetric, self).__init__(
-        name, fields=fields, description=description, units=units)
+        name, description, field_spec, units=units)
     self._start_time = start_time
 
   def _populate_value(self, metric, value, start_time):
@@ -431,10 +464,10 @@ class GaugeMetric(NumericMetric):
 class CumulativeMetric(NumericMetric):
   """A metric whose value type is a monotonically increasing float."""
 
-  def __init__(self, name, fields=None, start_time=None, description=None,
+  def __init__(self, name, description, field_spec=None, start_time=None,
                units=None):
     super(CumulativeMetric, self).__init__(
-        name, fields=fields, description=description, units=units)
+        name, description, field_spec, units=units)
     self._start_time = start_time
 
   def _populate_value(self, metric, value, start_time):
@@ -477,7 +510,7 @@ class FloatMetric(NumericMetric):
     return False
 
 
-class DistributionMetric(Metric):
+class _DistributionMetricBase(Metric):
   """A metric that holds a distribution of values.
 
   By default buckets are chosen from a geometric progression, each bucket being
@@ -491,10 +524,10 @@ class DistributionMetric(Metric):
       10: metrics_pb2.PrecomputedDistribution.CANONICAL_POWERS_OF_10,
   }
 
-  def __init__(self, name, is_cumulative=True, bucketer=None, fields=None,
-               start_time=None, description=None, units=None):
-    super(DistributionMetric, self).__init__(
-        name, fields=fields, description=description, units=units)
+  def __init__(self, name, description, field_spec=None, is_cumulative=True,
+               bucketer=None, start_time=None, units=None):
+    super(_DistributionMetricBase, self).__init__(
+        name, description, field_spec, units=units)
     self._start_time = start_time
 
     if bucketer is None:
@@ -607,41 +640,31 @@ class DistributionMetric(Metric):
     self._set(fields, target_fields, value)
 
   def is_cumulative(self):
-    raise NotImplementedError()  # Keep this class abstract.
+    return self._is_cumulative
 
 
-class CumulativeDistributionMetric(DistributionMetric):
+class CumulativeDistributionMetric(_DistributionMetricBase):
   """A DistributionMetric with is_cumulative set to True."""
 
-  def __init__(self, name, bucketer=None, fields=None,
-               description=None, units=None):
+  def __init__(self, name, description, field_spec=None, bucketer=None,
+               units=None):
     super(CumulativeDistributionMetric, self).__init__(
-        name,
+        name, description, field_spec,
         is_cumulative=True,
         bucketer=bucketer,
-        fields=fields,
-        description=description,
         units=units)
 
-  def is_cumulative(self):
-    return True
 
-
-class NonCumulativeDistributionMetric(DistributionMetric):
+class NonCumulativeDistributionMetric(_DistributionMetricBase):
   """A DistributionMetric with is_cumulative set to False."""
 
-  def __init__(self, name, bucketer=None, fields=None,
-               description=None, units=None):
+  def __init__(self, name, description, field_spec=None, bucketer=None,
+               units=None):
     super(NonCumulativeDistributionMetric, self).__init__(
-        name,
+        name, description, field_spec,
         is_cumulative=False,
         bucketer=bucketer,
-        fields=fields,
-        description=description,
         units=units)
-
-  def is_cumulative(self):
-    return False
 
 
 class MetaMetricsDataUnits(type):

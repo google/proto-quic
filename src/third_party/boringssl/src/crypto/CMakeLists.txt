@@ -80,7 +80,6 @@ add_subdirectory(bytestring)
 add_subdirectory(pool)
 
 # Level 0.2 - depends on nothing but itself
-add_subdirectory(des)
 add_subdirectory(rc4)
 add_subdirectory(conf)
 add_subdirectory(chacha)
@@ -89,10 +88,10 @@ add_subdirectory(curve25519)
 
 # Level 1, depends only on 0.*
 add_subdirectory(digest_extra)
-add_subdirectory(cipher)
+add_subdirectory(cipher_extra)
 add_subdirectory(rand_extra)
 add_subdirectory(bio)
-add_subdirectory(bn)
+add_subdirectory(bn_extra)
 add_subdirectory(obj)
 add_subdirectory(asn1)
 
@@ -100,10 +99,10 @@ add_subdirectory(asn1)
 add_subdirectory(engine)
 add_subdirectory(dh)
 add_subdirectory(dsa)
-add_subdirectory(rsa)
-add_subdirectory(ec)
+add_subdirectory(rsa_extra)
+add_subdirectory(ec_extra)
 add_subdirectory(ecdh)
-add_subdirectory(ecdsa)
+add_subdirectory(ecdsa_extra)
 add_subdirectory(hmac_extra)
 
 # Level 3
@@ -167,15 +166,14 @@ add_library(
   $<TARGET_OBJECTS:pool>
   $<TARGET_OBJECTS:fipsmodule>
   $<TARGET_OBJECTS:digest_extra>
-  $<TARGET_OBJECTS:cipher>
-  $<TARGET_OBJECTS:des>
+  $<TARGET_OBJECTS:cipher_extra>
   $<TARGET_OBJECTS:rc4>
   $<TARGET_OBJECTS:conf>
   $<TARGET_OBJECTS:chacha>
   $<TARGET_OBJECTS:poly1305>
   $<TARGET_OBJECTS:curve25519>
   $<TARGET_OBJECTS:buf>
-  $<TARGET_OBJECTS:bn>
+  $<TARGET_OBJECTS:bn_extra>
   $<TARGET_OBJECTS:bio>
   $<TARGET_OBJECTS:rand_extra>
   $<TARGET_OBJECTS:obj>
@@ -183,10 +181,10 @@ add_library(
   $<TARGET_OBJECTS:engine>
   $<TARGET_OBJECTS:dh>
   $<TARGET_OBJECTS:dsa>
-  $<TARGET_OBJECTS:rsa>
-  $<TARGET_OBJECTS:ec>
+  $<TARGET_OBJECTS:rsa_extra>
+  $<TARGET_OBJECTS:ec_extra>
   $<TARGET_OBJECTS:ecdh>
-  $<TARGET_OBJECTS:ecdsa>
+  $<TARGET_OBJECTS:ecdsa_extra>
   $<TARGET_OBJECTS:cmac>
   $<TARGET_OBJECTS:evp>
   $<TARGET_OBJECTS:hkdf>
@@ -245,11 +243,11 @@ add_executable(
   curve25519/x25519_test.cc
   dh/dh_test.cc
   dsa/dsa_test.cc
-  ec/ec_test.cc
   err/err_test.cc
   evp/evp_extra_test.cc
+  fipsmodule/ec/ec_test.cc
   fipsmodule/rand/ctrdrbg_test.cc
-  rsa/rsa_test.cc
+  rsa_extra/rsa_test.cc
 
   $<TARGET_OBJECTS:gtest_main>
   $<TARGET_OBJECTS:test_support>

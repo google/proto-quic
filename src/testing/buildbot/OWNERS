@@ -3,6 +3,7 @@
 
 dpranke@chromium.org
 jam@chromium.org
+jbudorick@chromium.org
 jochen@chromium.org
 kbr@chromium.org
 machenbach@chromium.org
@@ -13,7 +14,6 @@ tansell@chromium.org
 thakis@chromium.org
 
 per-file chromium.android*.json=bpastene@chromium.org
-per-file chromium.android*.json=jbudorick@chromium.org
 
 # For Site Isolation FYI tests:
 per-file chromium.fyi.json=creis@chromium.org

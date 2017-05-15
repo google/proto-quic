@@ -250,6 +250,10 @@ class QUIC_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   // Returns true if this stream should yield writes to another blocked stream.
   bool ShouldYield(QuicStreamId stream_id);
 
+  void set_respect_goaway(bool respect_goaway) {
+    respect_goaway_ = respect_goaway;
+  }
+
  protected:
   using StaticStreamMap = QuicSmallMap<QuicStreamId, QuicStream*, 2>;
 
@@ -257,6 +261,28 @@ class QUIC_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
       QuicSmallMap<QuicStreamId, std::unique_ptr<QuicStream>, 10>;
 
   using ClosedStreams = std::vector<std::unique_ptr<QuicStream>>;
+
+  // TODO(ckrasic) - For all *DynamicStream2 below, rename after
+  // quic_reloadable_flag_quic_refactor_stream_creation is deprecated.
+
+  // Returns true if an incoming stream can be created.
+  virtual bool ShouldCreateIncomingDynamicStream2(QuicStreamId id);
+
+  // Returns true if an outgoing stream can be created.
+  virtual bool ShouldCreateOutgoingDynamicStream2();
+
+  // Creates a new stream to handle a peer-initiated stream.
+  // Caller does not own the returned stream.
+  // Returns nullptr and does error handling if the stream can not be created.
+  virtual QuicStream* MaybeCreateIncomingDynamicStream(QuicStreamId id);
+
+  // Create a new stream to handle a locally-initiated stream.
+  // Caller does not own the returned stream.
+  // Returns nullptr if max streams have already been opened.
+  virtual QuicStream* MaybeCreateOutgoingDynamicStream(SpdyPriority priority);
+
+  // TODO(ckrasic) - For all Create*DynamicStream below, remove when
+  // quic_reloadable_flag_quic_refactor_stream_creation is deprecated.
 
   // Creates a new stream to handle a peer-initiated stream.
   // Caller does not own the returned stream.
@@ -302,6 +328,14 @@ class QUIC_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
 
   // Return true if given stream is peer initiated.
   bool IsIncomingStream(QuicStreamId id) const;
+
+  // Unconditionally creates a stream.  Subclasses should use this to
+  // provide streams appropriately subclassed from |QuicStream|,
+  // e.g. |QuicSpdySession::CreateStream()| creates a |QuicSpdyStream|.
+  virtual std::unique_ptr<QuicStream> CreateStream(QuicStreamId id) = 0;
+
+  // Creates a stream and activates it, owned by the session.
+  QuicStream* CreateAndActivateStream(QuicStreamId id);
 
   StaticStreamMap& static_streams() { return static_stream_map_; }
   const StaticStreamMap& static_streams() const { return static_stream_map_; }
@@ -358,6 +392,8 @@ class QUIC_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   // derived class's own implementation.
   virtual void HandleRstOnValidNonexistentStream(
       const QuicRstStreamFrame& frame);
+
+  bool respect_goaway() const { return respect_goaway_; }
 
  private:
   friend class test::QuicSessionPeer;
@@ -443,6 +479,11 @@ class QUIC_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   // The stream id which was last popped in OnCanWrite, or 0, if not under the
   // call stack of OnCanWrite.
   QuicStreamId currently_writing_stream_id_;
+
+  // If this is set to false, the session will ignore peer GOAWAYs and
+  // allow the creation of outgoing streams regardless of the high
+  // chance they will fail.
+  bool respect_goaway_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicSession);
 };

@@ -259,7 +259,7 @@ def get_main_script_path():
 
 def _write_temp_data(name, data, temp_dir):
   """Writes content-addressed file in `temp_dir` if relevant."""
-  filename = '%s-%s' % (hashlib.sha1(data).hexdigest(), name)
+  filename = '%s-%s' % (hashlib.sha256(data).hexdigest(), name)
   filepath = os.path.join(temp_dir, filename)
   if os.path.isfile(filepath):
     with open(filepath, 'rb') as f:
@@ -343,14 +343,14 @@ def cleanup_extracted_resources():
 
 
 def generate_version():
-  """Generates the sha-1 based on the content of this zip.
+  """Generates the SHA256 based on the content of this zip.
 
   It is hashing the content of the zip, not the compressed bits. The compression
   has other side effects that kicks in, like zlib's library version, compression
   level, order in which the files were specified, etc.
   """
   assert is_zipped_module(sys.modules['__main__'])
-  h = hashlib.sha1()
+  h = hashlib.sha256()
   with zipfile.ZipFile(get_main_script_path(), 'r') as z:
     for name in sorted(z.namelist()):
       with z.open(name) as f:

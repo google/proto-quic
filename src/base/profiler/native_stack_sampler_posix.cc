@@ -13,4 +13,8 @@ std::unique_ptr<NativeStackSampler> NativeStackSampler::Create(
   return std::unique_ptr<NativeStackSampler>();
 }
 
+size_t NativeStackSampler::GetStackBufferSize() {
+  return 0;
+}
+
 }  // namespace base

@@ -344,6 +344,7 @@ def main(argv):
       'dist_jar': ['build_config'],
       'resource_rewriter': ['build_config'],
       'group': ['build_config'],
+      'junit_binary': ['build_config'],
   }
   required_options = required_options_map.get(options.type)
   if not required_options:
@@ -540,7 +541,8 @@ def main(argv):
     deps_info['owned_resources_dirs'] = list(owned_resource_dirs)
     deps_info['owned_resources_zips'] = list(owned_resource_zips)
 
-  if options.type in ('android_resources','android_apk', 'resource_rewriter'):
+  if options.type in (
+      'android_resources', 'android_apk', 'junit_binary', 'resource_rewriter'):
     config['resources'] = {}
     config['resources']['dependency_zips'] = [
         c['resources_zip'] for c in all_resources_deps]

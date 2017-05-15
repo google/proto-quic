@@ -11,7 +11,7 @@ using std::string;
 
 namespace net {
 
-QuicSocketAddressImpl::QuicSocketAddressImpl(IPEndPoint address)
+QuicSocketAddressImpl::QuicSocketAddressImpl(const IPEndPoint& address)
     : socket_address_(address) {}
 
 QuicSocketAddressImpl::QuicSocketAddressImpl(QuicIpAddressImpl address,
@@ -35,11 +35,13 @@ QuicSocketAddressImpl::QuicSocketAddressImpl(const struct sockaddr& saddr) {
               "implemented.";
 }
 
-bool operator==(QuicSocketAddressImpl lhs, QuicSocketAddressImpl rhs) {
+bool operator==(const QuicSocketAddressImpl& lhs,
+                const QuicSocketAddressImpl& rhs) {
   return lhs.socket_address_ == rhs.socket_address_;
 }
 
-bool operator!=(QuicSocketAddressImpl lhs, QuicSocketAddressImpl rhs) {
+bool operator!=(const QuicSocketAddressImpl& lhs,
+                const QuicSocketAddressImpl& rhs) {
   return lhs.socket_address_.address() != rhs.socket_address_.address() ||
          lhs.socket_address_.port() != rhs.socket_address_.port();
 }

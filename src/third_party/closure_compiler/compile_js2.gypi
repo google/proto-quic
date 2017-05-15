@@ -11,6 +11,7 @@
 
     'default_source_file': '<(_target_name).js',
     'source_files%': ['<(default_source_file)'],
+    'extra_inputs%': [],
 
     'includes': ['closure_args.gypi'],
   },
@@ -54,6 +55,9 @@
         '<(CLOSURE_DIR)/include_js.gypi',
         '<(CLOSURE_DIR)/processor.py',
         '>@(_sources)',
+        # When converting to GN, write the paths to additional inputs in a GN
+        # depfile file instead.
+        '<@(extra_inputs)',
       ],
 
       'outputs': ['<(out_file)'],

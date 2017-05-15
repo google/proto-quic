@@ -108,7 +108,7 @@ hsb{
         EU{"Europska unija"}
         FI{"Finska"}
         FJ{"Fidźi"}
-        FK{"Falklandske kupy"}
+        FK{"Falklandske kupy (Malwiny)"}
         FM{"Mikroneziska"}
         FO{"Färöske kupy"}
         FR{"Francoska"}
@@ -181,7 +181,7 @@ hsb{
         MF{"St. Martin"}
         MG{"Madagaskar"}
         MH{"Marshallowe kupy"}
-        MK{"Makedonska"}
+        MK{"Makedonska (FYROM)"}
         ML{"Mali"}
         MM{"Myanmar"}
         MN{"Mongolska"}
@@ -300,9 +300,7 @@ hsb{
         CD{"Kongo (Demokratiska republika)"}
         CG{"Kongo (Republika)"}
         CI{"Słonowinowy pobrjóh"}
-        FK{"Falklandske kupy (Malwiny)"}
-        MK{"Makedonska (FYROM)"}
         TL{"Wuchodny Timor"}
     }
-    Version{"2.1.28.76"}
+    Version{"2.1.31.86"}
 }

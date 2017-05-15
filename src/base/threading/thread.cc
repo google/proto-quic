@@ -225,6 +225,11 @@ PlatformThreadId Thread::GetThreadId() const {
   return id_;
 }
 
+PlatformThreadHandle Thread::GetThreadHandle() const {
+  AutoLock lock(thread_lock_);
+  return thread_;
+}
+
 bool Thread::IsRunning() const {
   // TODO(gab): Fix improper usage of this API (http://crbug.com/629139) and
   // enable this check.

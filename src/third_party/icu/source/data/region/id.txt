@@ -89,7 +89,7 @@ id{
         CW{"Curaçao"}
         CX{"Pulau Christmas"}
         CY{"Siprus"}
-        CZ{"Republik Cheska"}
+        CZ{"Cheska"}
         DE{"Jerman"}
         DG{"Diego Garcia"}
         DJ{"Jibuti"}
@@ -108,7 +108,7 @@ id{
         EU{"Uni Eropa"}
         FI{"Finlandia"}
         FJ{"Fiji"}
-        FK{"Kepulauan Malvinas"}
+        FK{"Kepulauan Malvinas (Falkland)"}
         FM{"Mikronesia"}
         FO{"Kepulauan Faroe"}
         FR{"Prancis"}
@@ -181,7 +181,7 @@ id{
         MF{"Saint Martin"}
         MG{"Madagaskar"}
         MH{"Kepulauan Marshall"}
-        MK{"Makedonia"}
+        MK{"Makedonia (BRY)"}
         ML{"Mali"}
         MM{"Myanmar (Burma)"}
         MN{"Mongolia"}
@@ -302,10 +302,8 @@ id{
         CD{"Kongo (RDK)"}
         CG{"Kongo (Republik)"}
         CI{"Ivory Coast"}
-        CZ{"Cheska"}
-        FK{"Kepulauan Malvinas (Falkland)"}
-        MK{"Makedonia (BRY)"}
+        CZ{"Republik Cheska"}
         TL{"Timor Timur"}
     }
-    Version{"2.1.28.79"}
+    Version{"2.1.32.59"}
 }

@@ -43,7 +43,6 @@ class BASE_EXPORT ProcessMemoryTotals {
     uint64_t compressed_bytes = 0;
 
     // Linux, Android, ChromeOS
-    // TODO(hjd): https://crbug.com/707019
     uint64_t rss_anon_bytes = 0;
     uint64_t vm_swap_bytes = 0;
 

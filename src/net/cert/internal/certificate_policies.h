@@ -5,8 +5,11 @@
 #ifndef NET_CERT_INTERNAL_CERTIFICATE_POLICIES_H_
 #define NET_CERT_INTERNAL_CERTIFICATE_POLICIES_H_
 
+#include <stdint.h>
+
 #include <vector>
 
+#include "base/compiler_specific.h"
 #include "net/base/net_export.h"
 
 namespace net {
@@ -30,6 +33,20 @@ NET_EXPORT const der::Input AnyPolicy();
 NET_EXPORT bool ParseCertificatePoliciesExtension(
     const der::Input& extension_value,
     std::vector<der::Input>* policies);
+
+struct ParsedPolicyConstraints {
+  bool has_require_explicit_policy = false;
+  uint8_t require_explicit_policy = 0;
+
+  bool has_inhibit_policy_mapping = false;
+  uint8_t inhibit_policy_mapping = 0;
+};
+
+// Parses a PolicyConstraints SEQUENCE as defined by RFC 5280. Returns true on
+// success, and sets |out|.
+NET_EXPORT bool ParsePolicyConstraints(const der::Input& policy_constraints_tlv,
+                                       ParsedPolicyConstraints* out)
+    WARN_UNUSED_RESULT;
 
 }  // namespace net
 

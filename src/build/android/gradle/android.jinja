@@ -21,7 +21,7 @@
 {% endfor %}
             )
 {% endif %}
-{% if variables.jniLibs is defined %}
+{% if variables.jni_libs is defined %}
             jniLibs.srcDirs = [
 {% for path in variables.jni_libs %}
                 "{{ path }}",

@@ -26,11 +26,19 @@ namespace {
 // "disabled-by-default" prefix if present.
 StringPiece ExtractCategoryFromTypeName(const char* type_name) {
   StringPiece result(type_name);
-  size_t last_seperator = result.find_last_of("\\/");
+  size_t last_separator = result.find_last_of("\\/");
 
-  // If |type_name| was a not a file path, the seperator will not be found, so
+  // If |type_name| was a not a file path, the separator will not be found, so
   // the whole type name is returned.
-  if (last_seperator == StringPiece::npos) {
+  if (last_separator == StringPiece::npos) {
+    // |type_name| is C++ typename if its reporting allocator is
+    // partition_alloc or blink_gc. In this case, we should not split
+    // |type_name| by ',', because of function types and template types.
+    // e.g. WTF::HashMap<WTF::AtomicString, WTF::AtomicString>,
+    // void (*)(void*, void*), and so on. So if |type_name| contains
+    if (result.find_last_of(")>") != StringPiece::npos)
+      return result;
+
     // Use the first the category name if it has ",".
     size_t first_comma_position = result.find(',');
     if (first_comma_position != StringPiece::npos)
@@ -41,7 +49,7 @@ StringPiece ExtractCategoryFromTypeName(const char* type_name) {
   }
 
   // Remove the file name from the path.
-  result.remove_suffix(result.length() - last_seperator);
+  result.remove_suffix(result.length() - last_separator);
 
   // Remove the parent directory references.
   const char kParentDirectory[] = "..";

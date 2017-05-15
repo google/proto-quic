@@ -47,7 +47,7 @@ class WorkerPoolTaskRunner : public TaskRunner {
   bool PostDelayedTask(const tracked_objects::Location& from_here,
                        OnceClosure task,
                        TimeDelta delay) override;
-  bool RunsTasksOnCurrentThread() const override;
+  bool RunsTasksInCurrentSequence() const override;
 
  private:
   ~WorkerPoolTaskRunner() override;
@@ -78,7 +78,7 @@ bool WorkerPoolTaskRunner::PostDelayedTask(
   return PostDelayedTaskAssertZeroDelay(from_here, std::move(task), delay);
 }
 
-bool WorkerPoolTaskRunner::RunsTasksOnCurrentThread() const {
+bool WorkerPoolTaskRunner::RunsTasksInCurrentSequence() const {
   return WorkerPool::RunsTasksOnCurrentThread();
 }
 

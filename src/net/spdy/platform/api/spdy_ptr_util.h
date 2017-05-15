@@ -5,6 +5,9 @@
 #ifndef NET_SPDY_PLATFORM_API_SPDY_PTR_UTIL_H_
 #define NET_SPDY_PLATFORM_API_SPDY_PTR_UTIL_H_
 
+#include <memory>
+#include <utility>
+
 #include "net/spdy/platform/impl/spdy_ptr_util_impl.h"
 
 namespace net {

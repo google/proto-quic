@@ -366,7 +366,6 @@ int SSLConnectJob::DoSSLConnectComplete(int result) {
   // errors to ERR_SSL_VERSION_INTERFERENCE, which signals a probable
   // version-interfering middlebox.
   if (params_->ssl_config().version_max == SSL_PROTOCOL_VERSION_TLS1_3 &&
-      !params_->ssl_config().deprecated_cipher_suites_enabled &&
       !version_interference_probe_) {
     if (result == ERR_CONNECTION_CLOSED || result == ERR_SSL_PROTOCOL_ERROR ||
         result == ERR_SSL_VERSION_OR_CIPHER_MISMATCH ||

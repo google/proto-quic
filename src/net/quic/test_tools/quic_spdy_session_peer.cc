@@ -64,5 +64,24 @@ size_t QuicSpdySessionPeer::WriteHeadersImpl(
                                    std::move(ack_listener));
 }
 
+//  static
+QuicStreamId QuicSpdySessionPeer::NextStreamId(const QuicSpdySession& session) {
+  return 2;
+}
+
+//  static
+QuicStreamId QuicSpdySessionPeer::GetNthClientInitiatedStreamId(
+    const QuicSpdySession& session,
+    int n) {
+  return 5 + QuicSpdySessionPeer::NextStreamId(session) * n;
+}
+
+//  static
+QuicStreamId QuicSpdySessionPeer::GetNthServerInitiatedStreamId(
+    const QuicSpdySession& session,
+    int n) {
+  return 2 + QuicSpdySessionPeer::NextStreamId(session) * n;
+}
+
 }  // namespace test
 }  // namespace net

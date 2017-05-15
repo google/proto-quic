@@ -86,6 +86,22 @@ def _FindReturnValueSpace(name, paren_idx):
   return space_idx
 
 
+def _StripTemplateArgs(name):
+  last_right_idx = None
+  while True:
+    last_right_idx = name.rfind('>', 0, last_right_idx)
+    if last_right_idx == -1:
+      return name
+    left_idx = _FindLastCharOutsideOfBrackets(name, '<', last_right_idx + 1)
+    if left_idx == -1:
+      return name
+    # Special case: std::operator<< <
+    if left_idx > 0 and name[left_idx - 1] == ' ':
+      left_idx -= 1
+    name = name[:left_idx] + name[last_right_idx + 1:]
+    last_right_idx = left_idx
+
+
 def _NormalizeTopLevelLambda(name, space_idx, left_paren_idx):
   # cc::{lambda(PaintOp*)#63}::_FUN() -> cc:{lambda#63}()
   paren_idx = name.index('(', space_idx + 1)
@@ -95,12 +111,15 @@ def _NormalizeTopLevelLambda(name, space_idx, left_paren_idx):
 
 
 def Parse(name):
-  """Extracts a function name from a function signature.
+  """Strips return type and breaks function signature into parts.
 
   See unit tests for example signatures.
 
   Returns:
-    A tuple of (name_without_return_type, name_without_return_type_and_params).
+    A tuple of:
+    * name without return type (symbol.full_name),
+    * full_name without params (symbol.template_name),
+    * full_name without params and template args (symbol.name)
   """
   left_paren_idx = _FindParameterListParen(name)
 
@@ -109,15 +128,28 @@ def Parse(name):
     right_paren_idx = name.rindex(')')
     assert right_paren_idx > left_paren_idx
     space_idx = _FindReturnValueSpace(name, left_paren_idx)
-    name_without_attrib = name[space_idx + 1:left_paren_idx]
+    name_no_params = name[space_idx + 1:left_paren_idx]
     # Special case for top-level lamdas.
-    if name_without_attrib.endswith('}::_FUN'):
-      # Don't use name_without_attrib in here since prior _idx will be off if
+    if name_no_params.endswith('}::_FUN'):
+      # Don't use name_no_params in here since prior _idx will be off if
       # there was a return value.
       name = _NormalizeTopLevelLambda(name, space_idx, left_paren_idx)
       return Parse(name)
 
     full_name = name[space_idx + 1:]
-    name = name_without_attrib + name[right_paren_idx + 1:]
+    name = name_no_params + name[right_paren_idx + 1:]
 
-  return full_name, name
+  template_name = name
+  name = _StripTemplateArgs(name)
+  return full_name, template_name, name
+
+
+# An odd place for this, but pylint doesn't want it as a static in models
+# (circular dependency), nor as an method on BaseSymbol
+# (attribute-defined-outside-init).
+def InternSameNames(symbol):
+  """Allow using "is" to compare names (and should help with RAM)."""
+  if symbol.template_name == symbol.full_name:
+    symbol.template_name = symbol.full_name
+  if symbol.name == symbol.template_name:
+    symbol.name = symbol.template_name

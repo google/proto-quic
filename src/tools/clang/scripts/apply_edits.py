@@ -202,7 +202,8 @@ def _ExtendDeletionIfElementIsInList(contents, offset):
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument(
-      'build_directory',
+      '-p',
+      required=True,
       help='path to the build dir (dir that edit paths are relative to)')
   parser.add_argument(
       'path_filter',
@@ -211,7 +212,7 @@ def main():
   args = parser.parse_args()
 
   filenames = set(_GetFilesFromGit(args.path_filter))
-  edits = _ParseEditsFromStdin(args.build_directory)
+  edits = _ParseEditsFromStdin(args.p)
   return _ApplyEdits(
       {k: v for k, v in edits.iteritems()
             if os.path.realpath(k) in filenames})

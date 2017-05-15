@@ -18,7 +18,9 @@
 #include "content/public/common/mojo_channel_switches.h"
 #include "ipc/ipc_channel_mojo.h"
 #include "ipc/ipc_descriptors.h"
+#include "mojo/edk/embedder/configuration.h"
 #include "mojo/edk/embedder/embedder.h"
+#include "mojo/edk/embedder/incoming_broker_client_invitation.h"
 #include "mojo/edk/embedder/platform_channel_pair.h"
 #include "mojo/edk/embedder/scoped_ipc_support.h"
 
@@ -30,11 +32,13 @@
 namespace ipc_fuzzer {
 
 void InitializeMojo() {
-  mojo::edk::SetMaxMessageSize(64 * 1024 * 1024);
-  mojo::edk::Init();
+  mojo::edk::Configuration config;
+  config.max_message_num_bytes = 64 * 1024 * 1024;
+  mojo::edk::Init(config);
 }
 
-void InitializeMojoIPCChannel() {
+std::unique_ptr<mojo::edk::IncomingBrokerClientInvitation>
+InitializeMojoIPCChannel() {
   mojo::edk::ScopedPlatformHandle platform_channel;
 #if defined(OS_WIN)
   platform_channel =
@@ -45,7 +49,9 @@ void InitializeMojoIPCChannel() {
       base::GlobalDescriptors::GetInstance()->Get(kMojoIPCChannel)));
 #endif
   CHECK(platform_channel.is_valid());
-  mojo::edk::SetParentPipeHandle(std::move(platform_channel));
+  return mojo::edk::IncomingBrokerClientInvitation::Accept(
+      mojo::edk::ConnectionParams(mojo::edk::TransportProtocol::kLegacy,
+                                  std::move(platform_channel)));
 }
 
 ReplayProcess::ReplayProcess()
@@ -95,15 +101,16 @@ bool ReplayProcess::Initialize(int argc, const char** argv) {
   mojo_ipc_support_.reset(new mojo::edk::ScopedIPCSupport(
       io_thread_.task_runner(),
       mojo::edk::ScopedIPCSupport::ShutdownPolicy::FAST));
-  InitializeMojoIPCChannel();
+  broker_client_invitation_ = InitializeMojoIPCChannel();
 
   return true;
 }
 
 void ReplayProcess::OpenChannel() {
+  DCHECK(broker_client_invitation_);
   channel_ = IPC::ChannelProxy::Create(
       IPC::ChannelMojo::CreateClientFactory(
-          mojo::edk::CreateChildMessagePipe(
+          broker_client_invitation_->ExtractMessagePipe(
               base::CommandLine::ForCurrentProcess()->GetSwitchValueASCII(
                   switches::kMojoChannelToken)),
           io_thread_.task_runner()),

@@ -1,8 +1,8 @@
 diff --git a/source/data/makedata.mak b/source/data/makedata.mak
-index 1f454c8..44adaff 100644
+index 65c2e76c..246229ce 100644
 --- a/source/data/makedata.mak
 +++ b/source/data/makedata.mak
-@@ -502,7 +502,7 @@ COMMON_ICUDATA_ARGUMENTS=-f -e $(U_ICUDATA_NAME) -v $(ICU_PACKAGE_MODE) -c -p $(
+@@ -529,7 +529,7 @@ COMMON_ICUDATA_ARGUMENTS=$(COMMON_ICUDATA_ARGUMENTS) -a
  #				Building the common dll in $(ICUBLD_PKG) unconditionally copies it to $(DLL_OUTPUT) too.
  #
  #############################################################################
@@ -10,8 +10,8 @@ index 1f454c8..44adaff 100644
 +ALL : GODATA "$(ICU_LIB_TARGET)"
  	@echo All targets are up to date
  
- # The core Unicode properties files (uprops.icu, ucase.icu, ubidi.icu)
-@@ -621,6 +621,7 @@ icu4j-data-install :
+ !IF "$(UWP)" == "UWP"
+@@ -653,6 +653,7 @@ icu4j-data-install :
  	cd "$(ICUBLD_PKG)"
  	"$(ICUPBIN)\icupkg" -x * --list "$(ICUDATA_SOURCE_ARCHIVE)" > "$(ICUTMP)\icudata.lst"
  	"$(ICUPBIN)\pkgdata" $(COMMON_ICUDATA_ARGUMENTS) "$(ICUTMP)\icudata.lst"

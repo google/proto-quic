@@ -100,7 +100,7 @@ TEST_F(QuicWriteBlockedListTest, NoDuplicateEntries) {
 
   // Try to add a stream to the write blocked list multiple times at the same
   // priority.
-  const QuicStreamId kBlockedId = kClientDataStreamId1;
+  const QuicStreamId kBlockedId = kHeadersStreamId + 2;
   write_blocked_list.RegisterStream(kBlockedId, kV3HighestPriority);
   write_blocked_list.AddStream(kBlockedId);
   write_blocked_list.AddStream(kBlockedId);
@@ -119,9 +119,9 @@ TEST_F(QuicWriteBlockedListTest, NoDuplicateEntries) {
 TEST_F(QuicWriteBlockedListTest, BatchingWrites) {
   QuicWriteBlockedList write_blocked_list;
 
-  const QuicStreamId id1 = kClientDataStreamId1;
-  const QuicStreamId id2 = kClientDataStreamId2;
-  const QuicStreamId id3 = kClientDataStreamId2 + 2;
+  const QuicStreamId id1 = kHeadersStreamId + 2;
+  const QuicStreamId id2 = id1 + 2;
+  const QuicStreamId id3 = id2 + 2;
   write_blocked_list.RegisterStream(id1, kV3LowestPriority);
   write_blocked_list.RegisterStream(id2, kV3LowestPriority);
   write_blocked_list.RegisterStream(id3, kV3HighestPriority);

@@ -5,28 +5,16 @@
 #include "base/memory/shared_memory_handle.h"
 
 #include "base/logging.h"
+#include "base/unguessable_token.h"
 
 namespace base {
 
 SharedMemoryHandle::SharedMemoryHandle()
     : handle_(nullptr), ownership_passes_to_ipc_(false) {}
 
-SharedMemoryHandle::SharedMemoryHandle(HANDLE h)
-    : handle_(h), ownership_passes_to_ipc_(false) {}
-
-SharedMemoryHandle::SharedMemoryHandle(const SharedMemoryHandle& handle)
-    : handle_(handle.handle_),
-      ownership_passes_to_ipc_(handle.ownership_passes_to_ipc_) {}
-
-SharedMemoryHandle& SharedMemoryHandle::operator=(
-    const SharedMemoryHandle& handle) {
-  if (this == &handle)
-    return *this;
-
-  handle_ = handle.handle_;
-  ownership_passes_to_ipc_ = handle.ownership_passes_to_ipc_;
-  return *this;
-}
+SharedMemoryHandle::SharedMemoryHandle(HANDLE h,
+                                       const base::UnguessableToken& guid)
+    : handle_(h), ownership_passes_to_ipc_(false), guid_(guid) {}
 
 void SharedMemoryHandle::Close() const {
   DCHECK(handle_ != nullptr);
@@ -45,7 +33,7 @@ SharedMemoryHandle SharedMemoryHandle::Duplicate() const {
   if (!success)
     return SharedMemoryHandle();
 
-  base::SharedMemoryHandle handle(duped_handle);
+  base::SharedMemoryHandle handle(duped_handle, GetGUID());
   handle.SetOwnershipPassesToIPC(true);
   return handle;
 }

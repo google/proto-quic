@@ -121,12 +121,14 @@ declare_args() {
 
 declare_args() {
   # Whether to use the gold linker from binutils instead of lld or bfd.
-  use_gold = !use_lld && !(is_chromecast && is_linux &&
-                           (current_cpu == "arm" || current_cpu == "mipsel")) &&
-             ((is_linux && (current_cpu == "x64" || current_cpu == "x86" ||
-                            current_cpu == "arm" || current_cpu == "mipsel")) ||
-              (is_android && (current_cpu == "x86" || current_cpu == "x64" ||
-                              current_cpu == "arm" || current_cpu == "arm64")))
+  use_gold =
+      !use_lld && !(is_chromecast && is_linux &&
+                    (current_cpu == "arm" || current_cpu == "mipsel")) &&
+      ((is_linux && (current_cpu == "x64" || current_cpu == "x86" ||
+                     current_cpu == "arm" || current_cpu == "mipsel")) ||
+       (is_android && (current_cpu == "x86" || current_cpu == "x64" ||
+                       current_cpu == "arm" || current_cpu == "arm64")) ||
+       is_fuchsia)
 }
 
 # If it wasn't manually set, set to an appropriate default.

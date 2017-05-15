@@ -28,7 +28,7 @@ _METRIC_TYPE =  models.ObjectNodeType(
 _EVENT_TYPE =  models.ObjectNodeType(
     'event',
     alphabetization=('metric', _LOWERCASE_NAME_FN),
-    attributes=[('name', unicode)],
+    attributes=[('name', unicode), ('singular', bool)],
     extra_newlines=(1, 1, 1),
     children=[
         models.ChildType('obsolete', _OBSOLETE_TYPE, False),

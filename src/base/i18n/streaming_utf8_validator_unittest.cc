@@ -31,9 +31,9 @@
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversion_utils.h"
-#include "base/synchronization/condition_variable.h"
 #include "base/synchronization/lock.h"
-#include "base/threading/sequenced_worker_pool.h"
+#include "base/task_scheduler/post_task.h"
+#include "base/task_scheduler/task_scheduler.h"
 #include "third_party/icu/source/common/unicode/utf8.h"
 
 #endif  // BASE_I18N_UTF8_VALIDATOR_THOROUGH_TEST
@@ -55,7 +55,7 @@ const uint32_t kThoroughTestChunkSize = 1 << 24;
 class StreamingUtf8ValidatorThoroughTest : public ::testing::Test {
  protected:
   StreamingUtf8ValidatorThoroughTest()
-      : all_done_(&lock_), tasks_dispatched_(0), tasks_finished_(0) {}
+      : tasks_dispatched_(0), tasks_finished_(0) {}
 
   // This uses the same logic as base::IsStringUTF8 except it considers
   // non-characters valid (and doesn't require a string as input).
@@ -101,35 +101,33 @@ class StreamingUtf8ValidatorThoroughTest : public ::testing::Test {
     ++tasks_finished_;
     LOG(INFO) << tasks_finished_ << " / " << tasks_dispatched_
               << " tasks done\n";
-    if (tasks_finished_ >= tasks_dispatched_) {
-      all_done_.Signal();
-    }
   }
 
  protected:
   base::Lock lock_;
-  base::ConditionVariable all_done_;
   int tasks_dispatched_;
   int tasks_finished_;
 };
 
 TEST_F(StreamingUtf8ValidatorThoroughTest, TestEverything) {
-  scoped_refptr<base::SequencedWorkerPool> pool =
-      new base::SequencedWorkerPool(32, "TestEverything");
-  base::AutoLock al(lock_);
-  uint32_t begin = 0;
-  do {
-    pool->PostWorkerTask(
-        FROM_HERE,
-        base::Bind(&StreamingUtf8ValidatorThoroughTest::TestRange,
-                   base::Unretained(this),
-                   begin,
-                   kThoroughTestChunkSize));
-    ++tasks_dispatched_;
-    begin += kThoroughTestChunkSize;
-  } while (begin != 0);
-  while (tasks_finished_ < tasks_dispatched_)
-    all_done_.Wait();
+  base::TaskScheduler::CreateAndStartWithDefaultParams(
+      "StreamingUtf8ValidatorThoroughTest");
+  {
+    base::AutoLock al(lock_);
+    uint32_t begin = 0;
+    do {
+      base::PostTaskWithTraits(
+          FROM_HERE, {base::TaskShutdownBehavior::BLOCK_SHUTDOWN},
+          base::BindOnce(&StreamingUtf8ValidatorThoroughTest::TestRange,
+                         base::Unretained(this), begin,
+                         kThoroughTestChunkSize));
+      ++tasks_dispatched_;
+      begin += kThoroughTestChunkSize;
+    } while (begin != 0);
+  }
+  base::TaskScheduler::GetInstance()->Shutdown();
+  base::TaskScheduler::GetInstance()->JoinForTesting();
+  base::TaskScheduler::SetInstance(nullptr);
 }
 
 #endif  // BASE_I18N_UTF8_VALIDATOR_THOROUGH_TEST

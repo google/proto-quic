@@ -12,9 +12,9 @@ namespace test {
 TEST(QuicChromiumClockTest, Now) {
   QuicChromiumClock clock;
 
-  QuicTime start(base::TimeTicks::Now());
+  QuicTime start = clock.Now();
   QuicTime now = clock.ApproximateNow();
-  QuicTime end(base::TimeTicks::Now());
+  QuicTime end = clock.Now();
 
   EXPECT_LE(start, now);
   EXPECT_LE(now, end);

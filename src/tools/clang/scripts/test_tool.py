@@ -58,28 +58,30 @@ def _RunToolAndApplyEdits(tools_clang_scripts_directory,
     args = ['python',
             os.path.join(tools_clang_scripts_directory, 'run_tool.py')]
     extra_run_tool_args_path = os.path.join(test_directory_for_tool,
-                                            "run_tool.args")
+                                            'run_tool.args')
     if os.path.exists(extra_run_tool_args_path):
-        with open(extra_run_tool_args_path, 'r') as extra_run_tool_args_file:
-            extra_run_tool_args = extra_run_tool_args_file.readlines()
-            args.extend([arg.strip() for arg in extra_run_tool_args])
-    args.extend([
-            tool_to_test,
-            test_directory_for_tool])
+      with open(extra_run_tool_args_path, 'r') as extra_run_tool_args_file:
+        extra_run_tool_args = extra_run_tool_args_file.readlines()
+        args.extend([arg.strip() for arg in extra_run_tool_args])
+    args.extend(['--tool', tool_to_test, '-p', test_directory_for_tool])
 
     args.extend(actual_files)
     run_tool = subprocess.Popen(args, stdout=subprocess.PIPE)
 
-    args = ['python',
-            os.path.join(tools_clang_scripts_directory, 'extract_edits.py')]
-    extract_edits = subprocess.Popen(args, stdin=run_tool.stdout,
-                                     stdout=subprocess.PIPE)
+    args = [
+        'python',
+        os.path.join(tools_clang_scripts_directory, 'extract_edits.py')
+    ]
+    extract_edits = subprocess.Popen(
+        args, stdin=run_tool.stdout, stdout=subprocess.PIPE)
 
-    args = ['python',
-            os.path.join(tools_clang_scripts_directory, 'apply_edits.py'),
-            test_directory_for_tool]
-    apply_edits = subprocess.Popen(args, stdin=extract_edits.stdout,
-                                   stdout=subprocess.PIPE)
+    args = [
+        'python',
+        os.path.join(tools_clang_scripts_directory, 'apply_edits.py'), '-p',
+        test_directory_for_tool
+    ]
+    apply_edits = subprocess.Popen(
+        args, stdin=extract_edits.stdout, stdout=subprocess.PIPE)
 
     # Wait for the pipeline to finish running + check exit codes.
     stdout, _ = apply_edits.communicate()

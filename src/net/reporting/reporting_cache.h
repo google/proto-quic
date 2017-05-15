@@ -22,6 +22,10 @@
 #include "url/gurl.h"
 #include "url/origin.h"
 
+namespace base {
+class TickClock;
+}  // namespace base
+
 namespace net {
 
 class ReportingContext;
@@ -98,6 +102,8 @@ class NET_EXPORT ReportingCache {
                  const std::string& group,
                  base::TimeTicks expires);
 
+  void MarkClientUsed(const url::Origin& origin, const GURL& endpoint);
+
   // Gets all of the clients in the cache, regardless of origin or group.
   //
   // (Clears any existing data in |*clients_out|.)
@@ -159,27 +165,27 @@ class NET_EXPORT ReportingCache {
   }
 
  private:
-  void MaybeAddWildcardClient(const ReportingClient* client);
+  const ReportingReport* FindReportToEvict() const;
 
-  void MaybeRemoveWildcardClient(const ReportingClient* client);
+  void AddClient(std::unique_ptr<ReportingClient> client,
+                 base::TimeTicks last_used);
+
+  void RemoveClient(const ReportingClient* client);
+
+  const ReportingClient* GetClientByOriginAndEndpoint(
+      const url::Origin& origin,
+      const GURL& endpoint) const;
 
   void GetWildcardClientsForDomainAndGroup(
       const std::string& domain,
       const std::string& group,
       std::vector<const ReportingClient*>* clients_out) const;
 
+  const ReportingClient* FindClientToEvict(base::TimeTicks now) const;
+
+  base::TickClock* tick_clock();
+
   ReportingContext* context_;
-
-  // Owns all clients, keyed by origin, then endpoint URL.
-  // (These would be unordered_map, but neither url::Origin nor GURL has a hash
-  // function implemented.)
-  std::map<url::Origin, std::map<GURL, std::unique_ptr<ReportingClient>>>
-      clients_;
-
-  // References but does not own all clients with includeSubdomains set, keyed
-  // by domain name.
-  std::unordered_map<std::string, std::unordered_set<const ReportingClient*>>
-      wildcard_clients_;
 
   // Owns all reports, keyed by const raw pointer for easier lookup.
   std::unordered_map<const ReportingReport*, std::unique_ptr<ReportingReport>>
@@ -192,6 +198,20 @@ class NET_EXPORT ReportingCache {
   // Reports that have been marked doomed (would have been deleted, but were
   // pending when the deletion was requested).
   std::unordered_set<const ReportingReport*> doomed_reports_;
+
+  // Owns all clients, keyed by origin, then endpoint URL.
+  // (These would be unordered_map, but neither url::Origin nor GURL has a hash
+  // function implemented.)
+  std::map<url::Origin, std::map<GURL, std::unique_ptr<ReportingClient>>>
+      clients_;
+
+  // References but does not own all clients with includeSubdomains set, keyed
+  // by domain name.
+  std::unordered_map<std::string, std::unordered_set<const ReportingClient*>>
+      wildcard_clients_;
+
+  // The time that each client has last been used.
+  std::unordered_map<const ReportingClient*, base::TimeTicks> client_last_used_;
 
   DISALLOW_COPY_AND_ASSIGN(ReportingCache);
 };

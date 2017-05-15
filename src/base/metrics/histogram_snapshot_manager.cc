@@ -14,10 +14,31 @@
 
 namespace base {
 
+namespace {
+
+// A simple object to set an "active" flag and clear it upon destruction. It is
+// an error if the flag is already set.
+class MakeActive {
+ public:
+  MakeActive(std::atomic<bool>* is_active) : is_active_(is_active) {
+    bool was_active = is_active_->exchange(true, std::memory_order_relaxed);
+    CHECK(!was_active);
+  }
+  ~MakeActive() { is_active_->store(false, std::memory_order_relaxed); }
+
+ private:
+  std::atomic<bool>* is_active_;
+
+  DISALLOW_COPY_AND_ASSIGN(MakeActive);
+};
+
+}  // namespace
+
 HistogramSnapshotManager::HistogramSnapshotManager(
     HistogramFlattener* histogram_flattener)
     : histogram_flattener_(histogram_flattener) {
   DCHECK(histogram_flattener_);
+  is_active_.store(false, std::memory_order_relaxed);
 }
 
 HistogramSnapshotManager::~HistogramSnapshotManager() {
@@ -35,8 +56,12 @@ void HistogramSnapshotManager::PrepareFinalDelta(
 void HistogramSnapshotManager::PrepareSamples(
     const HistogramBase* histogram,
     std::unique_ptr<HistogramSamples> samples) {
-  DCHECK(thread_checker_.CalledOnValidThread());
   DCHECK(histogram_flattener_);
+
+  // Ensure that there is no concurrent access going on while accessing the
+  // set of known histograms. The flag will be reset when this object goes
+  // out of scope.
+  MakeActive make_active(&is_active_);
 
   // Get information known about this histogram. If it did not previously
   // exist, one will be created and initialized.

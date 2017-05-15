@@ -4,7 +4,7 @@ default	rel
 %define ZMMWORD
 section	.text code align=64
 
-EXTERN	OPENSSL_ia32cap_addr
+EXTERN	OPENSSL_ia32cap_P
 global	aesni_encrypt
 
 ALIGN	16
@@ -1195,7 +1195,7 @@ DB	102,15,58,34,232,3
 	lea	r9,[7+r8]
 	mov	DWORD[((96+12))+rsp],r10d
 	bswap	r9d
-	mov	r10,QWORD[OPENSSL_ia32cap_addr]
+	lea	r10,[OPENSSL_ia32cap_P]
 	mov	r10d,DWORD[4+r10]
 	xor	r9d,ebp
 	and	r10d,71303168
@@ -3756,7 +3756,7 @@ $L$cbc_decrypt_body:
 	movdqa	xmm14,xmm5
 	movdqu	xmm7,XMMWORD[80+rdi]
 	movdqa	xmm15,xmm6
-	mov	r9,QWORD[OPENSSL_ia32cap_addr]
+	lea	r9,[OPENSSL_ia32cap_P]
 	mov	r9d,DWORD[4+r9]
 	cmp	rdx,0x70
 	jbe	NEAR $L$cbc_dec_six_or_seven
@@ -4296,7 +4296,7 @@ DB	0x48,0x83,0xEC,0x08
 
 	movups	xmm0,XMMWORD[rcx]
 	xorps	xmm4,xmm4
-	mov	r10,QWORD[OPENSSL_ia32cap_addr]
+	lea	r10,[OPENSSL_ia32cap_P]
 	mov	r10d,DWORD[4+r10]
 	and	r10d,268437504
 	lea	rax,[16+r8]

@@ -18,8 +18,6 @@
 namespace base {
 namespace internal {
 
-class SequenceSortKey;
-
 // Interface for a worker pool.
 class BASE_EXPORT SchedulerWorkerPool {
  public:
@@ -36,14 +34,6 @@ class BASE_EXPORT SchedulerWorkerPool {
   // at a time in posting order.
   virtual scoped_refptr<SequencedTaskRunner>
   CreateSequencedTaskRunnerWithTraits(const TaskTraits& traits) = 0;
-
-  // Inserts |sequence| with |sequence_sort_key| into a queue of Sequences that
-  // can be processed by any worker owned by this SchedulerWorkerPool. Must only
-  // be used to put |sequence| back into a queue after running a Task from it.
-  // The thread that calls this doesn't have to belong to this
-  // SchedulerWorkerPool.
-  virtual void ReEnqueueSequence(scoped_refptr<Sequence> sequence,
-                                 const SequenceSortKey& sequence_sort_key) = 0;
 
   // Posts |task| to be executed by this SchedulerWorkerPool as part of
   // |sequence|. |task| won't be executed before its delayed run time, if any.

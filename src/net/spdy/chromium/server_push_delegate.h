@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_SPDY_SERVER_PUSH_DELEGATE_H_
-#define NET_SPDY_SERVER_PUSH_DELEGATE_H_
+#ifndef NET_SPDY_CHROMIUM_SERVER_PUSH_DELEGATE_H_
+#define NET_SPDY_CHROMIUM_SERVER_PUSH_DELEGATE_H_
+
+#include <memory>
 
 #include "net/base/net_export.h"
 #include "net/log/net_log_with_source.h"
@@ -36,4 +38,4 @@ class NET_EXPORT_PRIVATE ServerPushDelegate {
 
 }  // namespace net
 
-#endif  // NET_SPDY_SERVER_PUSH_DELEGATE_H_
+#endif  // NET_SPDY_CHROMIUM_SERVER_PUSH_DELEGATE_H_

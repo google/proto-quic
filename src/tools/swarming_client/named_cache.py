@@ -63,12 +63,17 @@ class CacheManager(object):
 
     Returns a context manager that must be closed as soon as possible.
     """
-    state_path = os.path.join(self.root_dir, u'state.json')
     with self._lock:
+      state_path = os.path.join(self.root_dir, u'state.json')
+      assert self._lru is None, 'acquired lock, but self._lru is not None'
       if os.path.isfile(state_path):
-        self._lru = lru.LRUDict.load(state_path)
-      else:
-        self._lru = lru.LRUDict()
+        try:
+          self._lru = lru.LRUDict.load(state_path)
+        except ValueError:
+          logging.exception('failed to load named cache state file')
+          logging.warning('deleting named caches')
+          file_path.rmtree(self.root_dir)
+      self._lru = self._lru or lru.LRUDict()
       if time_fn:
         self._lru.time_fn = time_fn
       try:
@@ -191,11 +196,15 @@ class CacheManager(object):
     If min_free_space is None, disk free space is not checked.
 
     Requires NamedCache to be open.
+
+    Returns:
+      Number of caches deleted.
     """
     self._lock.assert_locked()
     if not os.path.isdir(self.root_dir):
-      return
+      return 0
 
+    total = 0
     free_space = 0
     if min_free_space:
       free_space = file_path.get_free_space(self.root_dir)
@@ -207,7 +216,7 @@ class CacheManager(object):
       try:
         name, (path, _) = self._lru.get_oldest()
       except KeyError:
-        return
+        return total
       named_dir = self._get_named_path(name)
       if fs.islink(named_dir):
         fs.unlink(named_dir)
@@ -218,6 +227,8 @@ class CacheManager(object):
       if min_free_space:
         free_space = file_path.get_free_space(self.root_dir)
       self._lru.pop(name)
+      total += 1
+    return total
 
   _DIR_ALPHABET = string.ascii_letters + string.digits
 

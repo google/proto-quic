@@ -22,6 +22,7 @@
 #include "net/test/test_certificate_data.h"
 #include "net/test/test_data_directory.h"
 #include "testing/gtest/include/gtest/gtest.h"
+#include "url/url_features.h"
 
 #if defined(USE_NSS_CERTS)
 #include <cert.h>
@@ -265,6 +266,86 @@ TEST(X509CertificateTest, UnescapedSpecialCharacters) {
   EXPECT_EQ("net_unittests", subject.organization_unit_names[0]);
   EXPECT_EQ("Chromium", subject.organization_unit_names[1]);
   EXPECT_EQ(0U, subject.domain_components.size());
+}
+
+TEST(X509CertificateTest, TeletexStringIsLatin1) {
+  base::FilePath certs_dir =
+      GetTestNetDataDirectory().AppendASCII("parse_certificate_unittest");
+
+  scoped_refptr<X509Certificate> cert =
+      ImportCertFromFile(certs_dir, "subject_t61string.pem");
+  ASSERT_TRUE(cert);
+
+  const CertPrincipal& subject = cert->subject();
+  EXPECT_EQ(
+      " !\"#$%&'()*+,-./"
+      "0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`"
+      "abcdefghijklmnopqrstuvwxyz{|}~"
+      " ¡¢£¤¥¦§¨©ª«¬­®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæç"
+      "èéêëìíîïðñòóôõö÷øùúûüýþÿ",
+      subject.organization_names[0]);
+}
+
+TEST(X509CertificateTest, TeletexStringControlChars) {
+  base::FilePath certs_dir =
+      GetTestNetDataDirectory().AppendASCII("parse_certificate_unittest");
+
+  scoped_refptr<X509Certificate> cert =
+      ImportCertFromFile(certs_dir, "subject_t61string_1-32.pem");
+  ASSERT_TRUE(cert);
+
+  const CertPrincipal& subject = cert->subject();
+  EXPECT_EQ(
+      "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12"
+      "\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f\x20",
+      subject.organization_names[0]);
+}
+
+TEST(X509CertificateTest, TeletexStringIsLatin1OrCp1252) {
+  base::FilePath certs_dir =
+      GetTestNetDataDirectory().AppendASCII("parse_certificate_unittest");
+
+  scoped_refptr<X509Certificate> cert =
+      ImportCertFromFile(certs_dir, "subject_t61string_126-160.pem");
+  ASSERT_TRUE(cert);
+
+  const CertPrincipal& subject = cert->subject();
+#if (defined(OS_MACOSX) && !defined(OS_IOS)) || \
+    (BUILDFLAG(USE_BYTE_CERTS) && !BUILDFLAG(USE_PLATFORM_ICU_ALTERNATIVES))
+  // Mac: TeletexString is decoded as CP1252.
+  // use_byte_certs: ICU ISO-8859-1 seems to be CP1252 actually.
+  //   (but with use_platform_icu_alternatives it's not.)
+  EXPECT_EQ(
+      "~\x7F\xE2\x82\xAC\xC2\x81\xE2\x80\x9A\xC6\x92\xE2\x80\x9E\xE2\x80\xA6"
+      "\xE2\x80\xA0\xE2\x80\xA1\xCB\x86\xE2\x80\xB0\xC5\xA0\xE2\x80\xB9\xC5\x92"
+      "\xC2\x8D\xC5\xBD\xC2\x8F\xC2\x90\xE2\x80\x98\xE2\x80\x99\xE2\x80\x9C\xE2"
+      "\x80\x9D\xE2\x80\xA2\xE2\x80\x93\xE2\x80\x94\xCB\x9C\xE2\x84\xA2\xC5\xA1"
+      "\xE2\x80\xBA\xC5\x93\xC2\x9D\xC5\xBE\xC5\xB8\xC2\xA0",
+      subject.organization_names[0]);
+#else
+  // NSS, Win, Android, iOS: TeletexString is decoded as latin1, so 127-160 get
+  // decoded to equivalent unicode control chars.
+  EXPECT_EQ(
+      "~\x7F\xC2\x80\xC2\x81\xC2\x82\xC2\x83\xC2\x84\xC2\x85\xC2\x86\xC2\x87"
+      "\xC2\x88\xC2\x89\xC2\x8A\xC2\x8B\xC2\x8C\xC2\x8D\xC2\x8E\xC2\x8F\xC2\x90"
+      "\xC2\x91\xC2\x92\xC2\x93\xC2\x94\xC2\x95\xC2\x96\xC2\x97\xC2\x98\xC2\x99"
+      "\xC2\x9A\xC2\x9B\xC2\x9C\xC2\x9D\xC2\x9E\xC2\x9F\xC2\xA0",
+      subject.organization_names[0]);
+#endif
+}
+
+TEST(X509CertificateTest, TeletexStringIsNotARealT61String) {
+  base::FilePath certs_dir =
+      GetTestNetDataDirectory().AppendASCII("parse_certificate_unittest");
+
+  scoped_refptr<X509Certificate> cert =
+      ImportCertFromFile(certs_dir, "subject_t61string_actual.pem");
+  ASSERT_TRUE(cert);
+
+  const CertPrincipal& subject = cert->subject();
+  // If TeletexStrings were actually parsed according to T.61, this would be
+  // "あ". (Probably. Not verified against a real implementation.)
+  EXPECT_EQ("\x1B$@$\"", subject.organization_names[0]);
 }
 
 TEST(X509CertificateTest, SerialNumbers) {

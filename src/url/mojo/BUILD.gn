@@ -29,4 +29,7 @@ mojom("test_url_mojom_gurl") {
     ":url_mojom_gurl",
     ":url_mojom_origin",
   ]
+
+  # TODO(crbug.com/714018): Convert the implementation to use OnceCallback.
+  use_once_callback = false
 }

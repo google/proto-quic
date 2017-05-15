@@ -143,11 +143,11 @@ Still reading?
     <ignore regexp="tools/android/push_apps_to_background/res"/>
   </issue>
   <issue id="ImpliedQuantity" severity="Error">
-    <ignore regexp="gen/chrome/android/chrome_strings_grd"/>
+    <ignore regexp="chrome/android/chrome_strings_grd"/>
   </issue>
   <issue id="InconsistentArrays" severity="Error">
-    <ignore regexp="gen/android_webview/locale_paks.resources.zip/values/locale-paks.xml"/>
-    <ignore regexp="gen/chrome/android/chrome_locale_paks.resources.zip/values/locale-paks.xml"/>
+    <ignore regexp="android_webview/locale_paks.resources.zip/values/locale-paks.xml"/>
+    <ignore regexp="chrome/android/chrome_locale_paks.resources.zip/values/locale-paks.xml"/>
   </issue>
   <issue id="InconsistentLayout" severity="ignore"/>
   <issue id="InefficientWeight" severity="Error">
@@ -241,8 +241,8 @@ Still reading?
     <ignore regexp="chrome/android/webapk/libs/client/src/org/chromium/webapk/lib/client/WebApkValidator.java"/>
   </issue>
   <issue id="PluralsCandidate" severity="Error">
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-en-rGB/android_chrome_strings.xml"/>
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values/android_chrome_strings.xml"/>
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-en-rGB/android_chrome_strings.xml"/>
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values/android_chrome_strings.xml"/>
   </issue>
   <issue id="Recycle" severity="ignore"/>
   <issue id="Registered" severity="ignore"/>
@@ -261,17 +261,17 @@ Still reading?
     <ignore regexp="chromecast/internal"/>
   </issue>
   <issue id="StringFormatCount" severity="Error">
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-cs/android_chrome_strings.xml"/>
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-pl/android_chrome_strings.xml"/>
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values/android_chrome_strings.xml"/>
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-cs/android_chrome_strings.xml"/>
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-pl/android_chrome_strings.xml"/>
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values/android_chrome_strings.xml"/>
   </issue>
   <issue id="StringFormatInvalid" severity="Error">
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-cs/android_chrome_strings.xml"/>
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-da/android_chrome_strings.xml"/>
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-pl/android_chrome_strings.xml"/>
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-pt-rBR/android_chrome_strings.xml"/>
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-sv/android_chrome_strings.xml"/>
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-tl/android_chrome_strings.xml"/>
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-cs/android_chrome_strings.xml"/>
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-da/android_chrome_strings.xml"/>
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-pl/android_chrome_strings.xml"/>
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-pt-rBR/android_chrome_strings.xml"/>
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-sv/android_chrome_strings.xml"/>
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-tl/android_chrome_strings.xml"/>
   </issue>
   <issue id="TextFields" severity="Error">
     <ignore regexp="chromecast/internal"/>
@@ -284,16 +284,16 @@ Still reading?
   <issue id="UnusedAttribute" severity="ignore"/>
   <issue id="UnusedIds" severity="ignore"/>
   <issue id="UnusedQuantity" severity="Error">
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-cs/android_chrome_strings.xml"/>
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-in/android_chrome_strings.xml"/>
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-ja/android_chrome_strings.xml"/>
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-ko/android_chrome_strings.xml"/>
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-lt/android_chrome_strings.xml"/>
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-sk/android_chrome_strings.xml"/>
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-th/android_chrome_strings.xml"/>
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-vi/android_chrome_strings.xml"/>
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-zh-rCN/android_chrome_strings.xml"/>
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-zh-rTW/android_chrome_strings.xml"/>
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-cs/android_chrome_strings.xml"/>
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-in/android_chrome_strings.xml"/>
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-ja/android_chrome_strings.xml"/>
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-ko/android_chrome_strings.xml"/>
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-lt/android_chrome_strings.xml"/>
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-sk/android_chrome_strings.xml"/>
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-th/android_chrome_strings.xml"/>
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-vi/android_chrome_strings.xml"/>
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-zh-rCN/android_chrome_strings.xml"/>
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-zh-rTW/android_chrome_strings.xml"/>
   </issue>
   <!-- TODO(crbug.com/635567): Fix this properly. -->
   <issue id="UnusedResources" severity="ignore"/>
@@ -343,10 +343,10 @@ Still reading?
     <ignore regexp="chromecast/internal"/>
     <ignore regexp="clank"/>
     <ignore regexp="content/shell/android/java/res/mipmap-hdpi/app_icon.png"/>
-    <ignore regexp="gen/android_webview/locale_paks.resources.zip/*"/>
-    <ignore regexp="gen/android_webview/strings_grd.resources.zip/values/android_webview_strings.xml"/>
-    <ignore regexp="gen/components/strings/components_strings_grd.resources.zip/values.*/components_strings.xml"/>
-    <ignore regexp="gen/remoting/resources/strings_java.resources.zip/values/remoting_strings.xml"/>
+    <ignore regexp="android_webview/locale_paks.resources.zip/*"/>
+    <ignore regexp="android_webview/strings_grd.resources.zip/values/android_webview_strings.xml"/>
+    <ignore regexp="components/strings/components_strings_grd.resources.zip/values.*/components_strings.xml"/>
+    <ignore regexp="remoting/resources/strings_java.resources.zip/values/remoting_strings.xml"/>
     <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_backspace.png"/>
     <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_cardboard.png"/>
     <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_voice_input.png"/>
@@ -437,9 +437,9 @@ Still reading?
     <!-- TODO(crbug.com/635567): Fix this properly. -->
     <ignore regexp="content/shell/android/shell_apk/res/values/strings.xml"/>
   </issue>
-  <!-- TODO(crbug.com/669629): Remove this when the Chromecast dependency on old layout code is removed. -->
   <issue id="UseCompoundDrawables">
-    <ignore regexp="chromecast/internal/android/prebuilt/settings/res/layout-v17/setup_activity_progress.xml"/>
+    <!-- Upscaling 24dp to 48dp doesn't work as expected with a TextView compound drawable. -->
+    <ignore regexp="chrome/android/java/res/layout/photo_picker_bitmap_view.xml"/>
   </issue>
   <issue id="UselessParent">
     <ignore regexp="android_webview/tools/system_webview_shell/apk/res/layout/activity_webview_browser.xml"/>

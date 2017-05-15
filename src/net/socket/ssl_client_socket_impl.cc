@@ -1568,13 +1568,14 @@ int SSLClientSocketImpl::VerifyCT() {
           server_cert_verify_result_.verified_cert.get(), verified_scts,
           net_log_);
 
-  if (ct_verify_result_.cert_policy_compliance !=
-          ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS &&
-      ct_verify_result_.cert_policy_compliance !=
-          ct::CertPolicyCompliance::CERT_POLICY_BUILD_NOT_TIMELY &&
-      transport_security_state_->ShouldRequireCT(
-          host_and_port_.host(), server_cert_verify_result_.verified_cert.get(),
-          server_cert_verify_result_.public_key_hashes)) {
+  if (transport_security_state_->CheckCTRequirements(
+          host_and_port_, server_cert_verify_result_.is_issued_by_known_root,
+          server_cert_verify_result_.public_key_hashes,
+          server_cert_verify_result_.verified_cert.get(), server_cert_.get(),
+          ct_verify_result_.scts,
+          TransportSecurityState::ENABLE_EXPECT_CT_REPORTS,
+          ct_verify_result_.cert_policy_compliance) !=
+      TransportSecurityState::CT_REQUIREMENTS_MET) {
     server_cert_verify_result_.cert_status |=
         CERT_STATUS_CERTIFICATE_TRANSPARENCY_REQUIRED;
     return ERR_CERTIFICATE_TRANSPARENCY_REQUIRED;
@@ -1721,7 +1722,6 @@ std::string SSLClientSocketImpl::GetSessionCacheKey() const {
   result.append(ssl_session_cache_shard_);
 
   result.push_back('/');
-  result.push_back(ssl_config_.deprecated_cipher_suites_enabled ? '1' : '0');
   result.push_back(ssl_config_.channel_id_enabled ? '1' : '0');
   result.push_back(ssl_config_.version_interference_probe ? '1' : '0');
   return result;

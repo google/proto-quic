@@ -13,7 +13,7 @@ from google.protobuf import descriptor_pb2
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='goma_stats.proto',
   package='devtools_goma',
-  serialized_pb='\n\x10goma_stats.proto\x12\rdevtools_goma\"\xd3\x02\n\x0cRequestStats\x12\r\n\x05total\x18\x01 \x01(\x03\x12\x0f\n\x07success\x18\x02 \x01(\x03\x12\x0f\n\x07\x66\x61ilure\x18\x03 \x01(\x03\x12\x39\n\x0e\x63ompiler_proxy\x18\x04 \x01(\x0b\x32!.devtools_goma.CompilerProxyStats\x12\x37\n\rcompiler_info\x18\x05 \x01(\x0b\x32 .devtools_goma.CompilerInfoStats\x12-\n\x04goma\x18\x06 \x01(\x0b\x32\x1f.devtools_goma.GomaCompileStats\x12/\n\x05local\x18\x07 \x01(\x0b\x32 .devtools_goma.LocalCompileStats\x12>\n\x11\x66\x61llback_in_setup\x18\x08 \x01(\x0b\x32#.devtools_goma.FallbackInSetupStats\"\"\n\x12\x43ompilerProxyStats\x12\x0c\n\x04\x66\x61il\x18\x01 \x01(\x03\"n\n\x11\x43ompilerInfoStats\x12\x0e\n\x06stores\x18\x01 \x01(\x03\x12\x12\n\nstore_dups\x18\x02 \x01(\x03\x12\x0c\n\x04miss\x18\x03 \x01(\x03\x12\x0c\n\x04\x66\x61il\x18\x04 \x01(\x03\x12\x19\n\x11loaded_size_bytes\x18\x05 \x01(\x03\"e\n\x10GomaCompileStats\x12\x10\n\x08\x66inished\x18\x01 \x01(\x03\x12\x11\n\tcache_hit\x18\x02 \x01(\x03\x12\x0f\n\x07\x61\x62orted\x18\x03 \x01(\x03\x12\r\n\x05retry\x18\x04 \x01(\x03\x12\x0c\n\x04\x66\x61il\x18\x05 \x01(\x03\"B\n\x11LocalCompileStats\x12\x0b\n\x03run\x18\x01 \x01(\x03\x12\x0e\n\x06killed\x18\x02 \x01(\x03\x12\x10\n\x08\x66inished\x18\x03 \x01(\x03\"\xca\x01\n\x14\x46\x61llbackInSetupStats\x12\x1d\n\x15\x66\x61iled_to_parse_flags\x18\x01 \x01(\x03\x12#\n\x1bno_remote_compile_supported\x18\x02 \x01(\x03\x12\x15\n\rhttp_disabled\x18\x03 \x01(\x03\x12!\n\x19\x66\x61il_to_get_compiler_info\x18\x04 \x01(\x03\x12\x19\n\x11\x63ompiler_disabled\x18\x05 \x01(\x03\x12\x19\n\x11requested_by_user\x18\x06 \x01(\x03\"@\n\tFileStats\x12\x11\n\trequested\x18\x01 \x01(\x03\x12\x10\n\x08uploaded\x18\x02 \x01(\x03\x12\x0e\n\x06missed\x18\x03 \x01(\x03\"K\n\x0bOutputStats\x12\r\n\x05\x66iles\x18\x01 \x01(\x03\x12\x0e\n\x06rename\x18\x02 \x01(\x03\x12\x0b\n\x03\x62uf\x18\x03 \x01(\x03\x12\x10\n\x08peak_req\x18\x04 \x01(\x03\" \n\x0bMemoryStats\x12\x11\n\tconsuming\x18\x01 \x01(\x03\"\x1b\n\tTimeStats\x12\x0e\n\x06uptime\x18\x01 \x01(\x03\"h\n\x15IncludeProcessorStats\x12\r\n\x05total\x18\x01 \x01(\x03\x12\x0f\n\x07skipped\x18\x02 \x01(\x03\x12\x17\n\x0ftotal_wait_time\x18\x03 \x01(\x03\x12\x16\n\x0etotal_run_time\x18\x04 \x01(\x03\"\xf3\x01\n\x11IncludeCacheStats\x12\x15\n\rtotal_entries\x18\x01 \x01(\x03\x12\x18\n\x10total_cache_size\x18\x02 \x01(\x03\x12\x0b\n\x03hit\x18\x03 \x01(\x03\x12\x0e\n\x06missed\x18\x04 \x01(\x03\x12\x0f\n\x07updated\x18\x05 \x01(\x03\x12\x0f\n\x07\x65victed\x18\x06 \x01(\x03\x12\x1b\n\x13original_total_size\x18\x07 \x01(\x03\x12\x19\n\x11original_max_size\x18\x08 \x01(\x03\x12\x1b\n\x13\x66iltered_total_size\x18\t \x01(\x03\x12\x19\n\x11\x66iltered_max_size\x18\n \x01(\x03\"\x99\x01\n\x0e\x44\x65psCacheStats\x12\x17\n\x0f\x64\x65ps_table_size\x18\x01 \x01(\x03\x12\x13\n\x0bmax_entries\x18\x02 \x01(\x03\x12\x15\n\rtotal_entries\x18\x03 \x01(\x03\x12\x14\n\x0cidtable_size\x18\x04 \x01(\x03\x12\x0b\n\x03hit\x18\x05 \x01(\x03\x12\x0f\n\x07updated\x18\x06 \x01(\x03\x12\x0e\n\x06missed\x18\x07 \x01(\x03\"Z\n\x14IncludeDirCacheStats\x12\x11\n\tinstances\x18\x01 \x01(\x03\x12\x0e\n\x06memory\x18\x02 \x01(\x03\x12\x0f\n\x07\x63reated\x18\x03 \x01(\x03\x12\x0e\n\x06reused\x18\x04 \x01(\x03\"\xb8\x02\n\x0cHttpRPCStats\x12\x18\n\x10ping_status_code\x18\x01 \x01(\x05\x12\x1f\n\x17ping_round_trip_time_ms\x18\n \x01(\x05\x12\r\n\x05query\x18\x02 \x01(\x03\x12\x0e\n\x06\x61\x63tive\x18\x03 \x01(\x03\x12\r\n\x05retry\x18\x04 \x01(\x03\x12\x0f\n\x07timeout\x18\x05 \x01(\x03\x12\r\n\x05\x65rror\x18\x06 \x01(\x03\x12\x15\n\rnetwork_error\x18\x07 \x01(\x03\x12\x19\n\x11network_recovered\x18\x08 \x01(\x03\x12;\n\x0bstatus_code\x18\t \x03(\x0b\x32&.devtools_goma.HttpRPCStats.HttpStatus\x1a\x30\n\nHttpStatus\x12\x13\n\x0bstatus_code\x18\x01 \x01(\x05\x12\r\n\x05\x63ount\x18\x02 \x01(\x03\"q\n\x0eGomaErrorStats\x12\x12\n\nuser_error\x18\x01 \x01(\x03\x12#\n\x17\x44\x45PRECATED_user_warning\x18\x02 \x01(\x03\x42\x02\x18\x01\x12\x11\n\tlog_error\x18\x03 \x01(\x03\x12\x13\n\x0blog_warning\x18\x04 \x01(\x03\"p\n\x11GomaMismatchStats\x12 \n\x18\x63ommand_version_mismatch\x18\x01 \x01(\x03\x12\x1c\n\x14\x62inary_hash_mismatch\x18\x02 \x01(\x03\x12\x1b\n\x13subprogram_mismatch\x18\x03 \x01(\x03\"\x88\x01\n\x11\x44istributionProto\x12\r\n\x05\x63ount\x18\x01 \x02(\x03\x12\x0b\n\x03sum\x18\x02 \x02(\x03\x12\x16\n\x0esum_of_squares\x18\x03 \x02(\x01\x12\x0b\n\x03min\x18\x04 \x01(\x03\x12\x0b\n\x03max\x18\x05 \x01(\x03\x12\x0f\n\x07logbase\x18\x06 \x01(\x01\x12\x14\n\x0c\x62ucket_value\x18\x07 \x03(\x03\"\x86\x01\n\x0eGomaHistograms\x12\x37\n\rrpc_call_time\x18\x01 \x01(\x0b\x32 .devtools_goma.DistributionProto\x12;\n\x11\x65xecutor_run_time\x18\x02 \x01(\x0b\x32 .devtools_goma.DistributionProto\"\xd2\x01\n\x0bMachineInfo\x12\x15\n\rgoma_revision\x18\x01 \x01(\t\x12-\n\x02os\x18\x02 \x01(\x0e\x32!.devtools_goma.MachineInfo.OSType\x12\r\n\x05ncpus\x18\x03 \x01(\x05\x12\x13\n\x0bmemory_size\x18\x04 \x01(\x03\x12%\n\x19\x44\x45PRECATED_cpu_capability\x18\x05 \x03(\rB\x02\x18\x01\"2\n\x06OSType\x12\x0b\n\x07UNKNOWN\x10\x00\x12\t\n\x05LINUX\x10\x01\x12\x07\n\x03MAC\x10\x02\x12\x07\n\x03WIN\x10\x03\"\x83\x06\n\tGomaStats\x12\x32\n\rrequest_stats\x18\x01 \x01(\x0b\x32\x1b.devtools_goma.RequestStats\x12,\n\nfile_stats\x18\x02 \x01(\x0b\x32\x18.devtools_goma.FileStats\x12\x30\n\x0coutput_stats\x18\x03 \x01(\x0b\x32\x1a.devtools_goma.OutputStats\x12\x30\n\x0cmemory_stats\x18\x04 \x01(\x0b\x32\x1a.devtools_goma.MemoryStats\x12,\n\ntime_stats\x18\x05 \x01(\x0b\x32\x18.devtools_goma.TimeStats\x12\x45\n\x17include_processor_stats\x18\x06 \x01(\x0b\x32$.devtools_goma.IncludeProcessorStats\x12\x36\n\x0f\x64\x65pscache_stats\x18\x07 \x01(\x0b\x32\x1d.devtools_goma.DepsCacheStats\x12>\n\x11incdircache_stats\x18\x08 \x01(\x0b\x32#.devtools_goma.IncludeDirCacheStats\x12\x33\n\x0ehttp_rpc_stats\x18\t \x01(\x0b\x32\x1b.devtools_goma.HttpRPCStats\x12\x32\n\x0b\x65rror_stats\x18\x0c \x01(\x0b\x32\x1d.devtools_goma.GomaErrorStats\x12\x38\n\x0emismatch_stats\x18\r \x01(\x0b\x32 .devtools_goma.GomaMismatchStats\x12<\n\x12includecache_stats\x18\x0e \x01(\x0b\x32 .devtools_goma.IncludeCacheStats\x12\x30\n\thistogram\x18\n \x01(\x0b\x32\x1d.devtools_goma.GomaHistograms\x12\x30\n\x0cmachine_info\x18\x0b \x01(\x0b\x32\x1a.devtools_goma.MachineInfo')
+  serialized_pb='\n\x10goma_stats.proto\x12\rdevtools_goma\"\xd3\x02\n\x0cRequestStats\x12\r\n\x05total\x18\x01 \x01(\x03\x12\x0f\n\x07success\x18\x02 \x01(\x03\x12\x0f\n\x07\x66\x61ilure\x18\x03 \x01(\x03\x12\x39\n\x0e\x63ompiler_proxy\x18\x04 \x01(\x0b\x32!.devtools_goma.CompilerProxyStats\x12\x37\n\rcompiler_info\x18\x05 \x01(\x0b\x32 .devtools_goma.CompilerInfoStats\x12-\n\x04goma\x18\x06 \x01(\x0b\x32\x1f.devtools_goma.GomaCompileStats\x12/\n\x05local\x18\x07 \x01(\x0b\x32 .devtools_goma.LocalCompileStats\x12>\n\x11\x66\x61llback_in_setup\x18\x08 \x01(\x0b\x32#.devtools_goma.FallbackInSetupStats\"\"\n\x12\x43ompilerProxyStats\x12\x0c\n\x04\x66\x61il\x18\x01 \x01(\x03\"n\n\x11\x43ompilerInfoStats\x12\x0e\n\x06stores\x18\x01 \x01(\x03\x12\x12\n\nstore_dups\x18\x02 \x01(\x03\x12\x0c\n\x04miss\x18\x03 \x01(\x03\x12\x0c\n\x04\x66\x61il\x18\x04 \x01(\x03\x12\x19\n\x11loaded_size_bytes\x18\x05 \x01(\x03\"~\n\x10GomaCompileStats\x12\x10\n\x08\x66inished\x18\x01 \x01(\x03\x12\x11\n\tcache_hit\x18\x02 \x01(\x03\x12\x17\n\x0flocal_cache_hit\x18\x06 \x01(\x03\x12\x0f\n\x07\x61\x62orted\x18\x03 \x01(\x03\x12\r\n\x05retry\x18\x04 \x01(\x03\x12\x0c\n\x04\x66\x61il\x18\x05 \x01(\x03\"B\n\x11LocalCompileStats\x12\x0b\n\x03run\x18\x01 \x01(\x03\x12\x0e\n\x06killed\x18\x02 \x01(\x03\x12\x10\n\x08\x66inished\x18\x03 \x01(\x03\"\xca\x01\n\x14\x46\x61llbackInSetupStats\x12\x1d\n\x15\x66\x61iled_to_parse_flags\x18\x01 \x01(\x03\x12#\n\x1bno_remote_compile_supported\x18\x02 \x01(\x03\x12\x15\n\rhttp_disabled\x18\x03 \x01(\x03\x12!\n\x19\x66\x61il_to_get_compiler_info\x18\x04 \x01(\x03\x12\x19\n\x11\x63ompiler_disabled\x18\x05 \x01(\x03\x12\x19\n\x11requested_by_user\x18\x06 \x01(\x03\"@\n\tFileStats\x12\x11\n\trequested\x18\x01 \x01(\x03\x12\x10\n\x08uploaded\x18\x02 \x01(\x03\x12\x0e\n\x06missed\x18\x03 \x01(\x03\"K\n\x0bOutputStats\x12\r\n\x05\x66iles\x18\x01 \x01(\x03\x12\x0e\n\x06rename\x18\x02 \x01(\x03\x12\x0b\n\x03\x62uf\x18\x03 \x01(\x03\x12\x10\n\x08peak_req\x18\x04 \x01(\x03\" \n\x0bMemoryStats\x12\x11\n\tconsuming\x18\x01 \x01(\x03\"\x1b\n\tTimeStats\x12\x0e\n\x06uptime\x18\x01 \x01(\x03\"h\n\x15IncludeProcessorStats\x12\r\n\x05total\x18\x01 \x01(\x03\x12\x0f\n\x07skipped\x18\x02 \x01(\x03\x12\x17\n\x0ftotal_wait_time\x18\x03 \x01(\x03\x12\x16\n\x0etotal_run_time\x18\x04 \x01(\x03\"\xf3\x01\n\x11IncludeCacheStats\x12\x15\n\rtotal_entries\x18\x01 \x01(\x03\x12\x18\n\x10total_cache_size\x18\x02 \x01(\x03\x12\x0b\n\x03hit\x18\x03 \x01(\x03\x12\x0e\n\x06missed\x18\x04 \x01(\x03\x12\x0f\n\x07updated\x18\x05 \x01(\x03\x12\x0f\n\x07\x65victed\x18\x06 \x01(\x03\x12\x1b\n\x13original_total_size\x18\x07 \x01(\x03\x12\x19\n\x11original_max_size\x18\x08 \x01(\x03\x12\x1b\n\x13\x66iltered_total_size\x18\t \x01(\x03\x12\x19\n\x11\x66iltered_max_size\x18\n \x01(\x03\"\x99\x01\n\x0e\x44\x65psCacheStats\x12\x17\n\x0f\x64\x65ps_table_size\x18\x01 \x01(\x03\x12\x13\n\x0bmax_entries\x18\x02 \x01(\x03\x12\x15\n\rtotal_entries\x18\x03 \x01(\x03\x12\x14\n\x0cidtable_size\x18\x04 \x01(\x03\x12\x0b\n\x03hit\x18\x05 \x01(\x03\x12\x0f\n\x07updated\x18\x06 \x01(\x03\x12\x0e\n\x06missed\x18\x07 \x01(\x03\"Z\n\x14IncludeDirCacheStats\x12\x11\n\tinstances\x18\x01 \x01(\x03\x12\x0e\n\x06memory\x18\x02 \x01(\x03\x12\x0f\n\x07\x63reated\x18\x03 \x01(\x03\x12\x0e\n\x06reused\x18\x04 \x01(\x03\"\x96\x02\n\x15LocalOutputCacheStats\x12\x14\n\x0csave_success\x18\x01 \x01(\x03\x12\x1c\n\x14save_success_time_ms\x18\x02 \x01(\x03\x12\x14\n\x0csave_failure\x18\x03 \x01(\x03\x12\x16\n\x0elookup_success\x18\x04 \x01(\x03\x12\x1e\n\x16lookup_success_time_ms\x18\x05 \x01(\x03\x12\x13\n\x0blookup_miss\x18\x06 \x01(\x03\x12\x16\n\x0elookup_failure\x18\x07 \x01(\x03\x12\x16\n\x0e\x63ommit_success\x18\x08 \x01(\x03\x12\x1e\n\x16\x63ommit_success_time_ms\x18\t \x01(\x03\x12\x16\n\x0e\x63ommit_failure\x18\n \x01(\x03\"\xb8\x02\n\x0cHttpRPCStats\x12\x18\n\x10ping_status_code\x18\x01 \x01(\x05\x12\x1f\n\x17ping_round_trip_time_ms\x18\n \x01(\x05\x12\r\n\x05query\x18\x02 \x01(\x03\x12\x0e\n\x06\x61\x63tive\x18\x03 \x01(\x03\x12\r\n\x05retry\x18\x04 \x01(\x03\x12\x0f\n\x07timeout\x18\x05 \x01(\x03\x12\r\n\x05\x65rror\x18\x06 \x01(\x03\x12\x15\n\rnetwork_error\x18\x07 \x01(\x03\x12\x19\n\x11network_recovered\x18\x08 \x01(\x03\x12;\n\x0bstatus_code\x18\t \x03(\x0b\x32&.devtools_goma.HttpRPCStats.HttpStatus\x1a\x30\n\nHttpStatus\x12\x13\n\x0bstatus_code\x18\x01 \x01(\x05\x12\r\n\x05\x63ount\x18\x02 \x01(\x03\"q\n\x0eGomaErrorStats\x12\x12\n\nuser_error\x18\x01 \x01(\x03\x12#\n\x17\x44\x45PRECATED_user_warning\x18\x02 \x01(\x03\x42\x02\x18\x01\x12\x11\n\tlog_error\x18\x03 \x01(\x03\x12\x13\n\x0blog_warning\x18\x04 \x01(\x03\"p\n\x11GomaMismatchStats\x12 \n\x18\x63ommand_version_mismatch\x18\x01 \x01(\x03\x12\x1c\n\x14\x62inary_hash_mismatch\x18\x02 \x01(\x03\x12\x1b\n\x13subprogram_mismatch\x18\x03 \x01(\x03\"\x88\x01\n\x11\x44istributionProto\x12\r\n\x05\x63ount\x18\x01 \x02(\x03\x12\x0b\n\x03sum\x18\x02 \x02(\x03\x12\x16\n\x0esum_of_squares\x18\x03 \x02(\x01\x12\x0b\n\x03min\x18\x04 \x01(\x03\x12\x0b\n\x03max\x18\x05 \x01(\x03\x12\x0f\n\x07logbase\x18\x06 \x01(\x01\x12\x14\n\x0c\x62ucket_value\x18\x07 \x03(\x03\"\x86\x01\n\x0eGomaHistograms\x12\x37\n\rrpc_call_time\x18\x01 \x01(\x0b\x32 .devtools_goma.DistributionProto\x12;\n\x11\x65xecutor_run_time\x18\x02 \x01(\x0b\x32 .devtools_goma.DistributionProto\"\xd2\x01\n\x0bMachineInfo\x12\x15\n\rgoma_revision\x18\x01 \x01(\t\x12-\n\x02os\x18\x02 \x01(\x0e\x32!.devtools_goma.MachineInfo.OSType\x12\r\n\x05ncpus\x18\x03 \x01(\x05\x12\x13\n\x0bmemory_size\x18\x04 \x01(\x03\x12%\n\x19\x44\x45PRECATED_cpu_capability\x18\x05 \x03(\rB\x02\x18\x01\"2\n\x06OSType\x12\x0b\n\x07UNKNOWN\x10\x00\x12\t\n\x05LINUX\x10\x01\x12\x07\n\x03MAC\x10\x02\x12\x07\n\x03WIN\x10\x03\"\xcb\x06\n\tGomaStats\x12\x32\n\rrequest_stats\x18\x01 \x01(\x0b\x32\x1b.devtools_goma.RequestStats\x12,\n\nfile_stats\x18\x02 \x01(\x0b\x32\x18.devtools_goma.FileStats\x12\x30\n\x0coutput_stats\x18\x03 \x01(\x0b\x32\x1a.devtools_goma.OutputStats\x12\x30\n\x0cmemory_stats\x18\x04 \x01(\x0b\x32\x1a.devtools_goma.MemoryStats\x12,\n\ntime_stats\x18\x05 \x01(\x0b\x32\x18.devtools_goma.TimeStats\x12\x45\n\x17include_processor_stats\x18\x06 \x01(\x0b\x32$.devtools_goma.IncludeProcessorStats\x12\x36\n\x0f\x64\x65pscache_stats\x18\x07 \x01(\x0b\x32\x1d.devtools_goma.DepsCacheStats\x12>\n\x11incdircache_stats\x18\x08 \x01(\x0b\x32#.devtools_goma.IncludeDirCacheStats\x12\x33\n\x0ehttp_rpc_stats\x18\t \x01(\x0b\x32\x1b.devtools_goma.HttpRPCStats\x12\x32\n\x0b\x65rror_stats\x18\x0c \x01(\x0b\x32\x1d.devtools_goma.GomaErrorStats\x12\x38\n\x0emismatch_stats\x18\r \x01(\x0b\x32 .devtools_goma.GomaMismatchStats\x12<\n\x12includecache_stats\x18\x0e \x01(\x0b\x32 .devtools_goma.IncludeCacheStats\x12\x46\n\x18local_output_cache_stats\x18\x0f \x01(\x0b\x32$.devtools_goma.LocalOutputCacheStats\x12\x30\n\thistogram\x18\n \x01(\x0b\x32\x1d.devtools_goma.GomaHistograms\x12\x30\n\x0cmachine_info\x18\x0b \x01(\x0b\x32\x1a.devtools_goma.MachineInfo')
 
 
 
@@ -42,8 +42,8 @@ _MACHINEINFO_OSTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=2688,
-  serialized_end=2738,
+  serialized_start=2994,
+  serialized_end=3044,
 )
 
 
@@ -230,21 +230,28 @@ _GOMACOMPILESTATS = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='aborted', full_name='devtools_goma.GomaCompileStats.aborted', index=2,
+      name='local_cache_hit', full_name='devtools_goma.GomaCompileStats.local_cache_hit', index=2,
+      number=6, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='aborted', full_name='devtools_goma.GomaCompileStats.aborted', index=3,
       number=3, type=3, cpp_type=2, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='retry', full_name='devtools_goma.GomaCompileStats.retry', index=3,
+      name='retry', full_name='devtools_goma.GomaCompileStats.retry', index=4,
       number=4, type=3, cpp_type=2, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='fail', full_name='devtools_goma.GomaCompileStats.fail', index=4,
+      name='fail', full_name='devtools_goma.GomaCompileStats.fail', index=5,
       number=5, type=3, cpp_type=2, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
@@ -260,7 +267,7 @@ _GOMACOMPILESTATS = _descriptor.Descriptor(
   is_extendable=False,
   extension_ranges=[],
   serialized_start=525,
-  serialized_end=626,
+  serialized_end=651,
 )
 
 
@@ -301,8 +308,8 @@ _LOCALCOMPILESTATS = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=628,
-  serialized_end=694,
+  serialized_start=653,
+  serialized_end=719,
 )
 
 
@@ -364,8 +371,8 @@ _FALLBACKINSETUPSTATS = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=697,
-  serialized_end=899,
+  serialized_start=722,
+  serialized_end=924,
 )
 
 
@@ -406,8 +413,8 @@ _FILESTATS = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=901,
-  serialized_end=965,
+  serialized_start=926,
+  serialized_end=990,
 )
 
 
@@ -455,8 +462,8 @@ _OUTPUTSTATS = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=967,
-  serialized_end=1042,
+  serialized_start=992,
+  serialized_end=1067,
 )
 
 
@@ -483,8 +490,8 @@ _MEMORYSTATS = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=1044,
-  serialized_end=1076,
+  serialized_start=1069,
+  serialized_end=1101,
 )
 
 
@@ -511,8 +518,8 @@ _TIMESTATS = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=1078,
-  serialized_end=1105,
+  serialized_start=1103,
+  serialized_end=1130,
 )
 
 
@@ -560,8 +567,8 @@ _INCLUDEPROCESSORSTATS = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=1107,
-  serialized_end=1211,
+  serialized_start=1132,
+  serialized_end=1236,
 )
 
 
@@ -651,8 +658,8 @@ _INCLUDECACHESTATS = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=1214,
-  serialized_end=1457,
+  serialized_start=1239,
+  serialized_end=1482,
 )
 
 
@@ -721,8 +728,8 @@ _DEPSCACHESTATS = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=1460,
-  serialized_end=1613,
+  serialized_start=1485,
+  serialized_end=1638,
 )
 
 
@@ -770,8 +777,99 @@ _INCLUDEDIRCACHESTATS = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=1615,
-  serialized_end=1705,
+  serialized_start=1640,
+  serialized_end=1730,
+)
+
+
+_LOCALOUTPUTCACHESTATS = _descriptor.Descriptor(
+  name='LocalOutputCacheStats',
+  full_name='devtools_goma.LocalOutputCacheStats',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='save_success', full_name='devtools_goma.LocalOutputCacheStats.save_success', index=0,
+      number=1, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='save_success_time_ms', full_name='devtools_goma.LocalOutputCacheStats.save_success_time_ms', index=1,
+      number=2, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='save_failure', full_name='devtools_goma.LocalOutputCacheStats.save_failure', index=2,
+      number=3, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='lookup_success', full_name='devtools_goma.LocalOutputCacheStats.lookup_success', index=3,
+      number=4, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='lookup_success_time_ms', full_name='devtools_goma.LocalOutputCacheStats.lookup_success_time_ms', index=4,
+      number=5, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='lookup_miss', full_name='devtools_goma.LocalOutputCacheStats.lookup_miss', index=5,
+      number=6, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='lookup_failure', full_name='devtools_goma.LocalOutputCacheStats.lookup_failure', index=6,
+      number=7, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='commit_success', full_name='devtools_goma.LocalOutputCacheStats.commit_success', index=7,
+      number=8, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='commit_success_time_ms', full_name='devtools_goma.LocalOutputCacheStats.commit_success_time_ms', index=8,
+      number=9, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='commit_failure', full_name='devtools_goma.LocalOutputCacheStats.commit_failure', index=9,
+      number=10, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  serialized_start=1733,
+  serialized_end=2011,
 )
 
 
@@ -805,8 +903,8 @@ _HTTPRPCSTATS_HTTPSTATUS = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=1972,
-  serialized_end=2020,
+  serialized_start=2278,
+  serialized_end=2326,
 )
 
 _HTTPRPCSTATS = _descriptor.Descriptor(
@@ -895,8 +993,8 @@ _HTTPRPCSTATS = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=1708,
-  serialized_end=2020,
+  serialized_start=2014,
+  serialized_end=2326,
 )
 
 
@@ -944,8 +1042,8 @@ _GOMAERRORSTATS = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=2022,
-  serialized_end=2135,
+  serialized_start=2328,
+  serialized_end=2441,
 )
 
 
@@ -986,8 +1084,8 @@ _GOMAMISMATCHSTATS = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=2137,
-  serialized_end=2249,
+  serialized_start=2443,
+  serialized_end=2555,
 )
 
 
@@ -1056,8 +1154,8 @@ _DISTRIBUTIONPROTO = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=2252,
-  serialized_end=2388,
+  serialized_start=2558,
+  serialized_end=2694,
 )
 
 
@@ -1091,8 +1189,8 @@ _GOMAHISTOGRAMS = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=2391,
-  serialized_end=2525,
+  serialized_start=2697,
+  serialized_end=2831,
 )
 
 
@@ -1148,8 +1246,8 @@ _MACHINEINFO = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=2528,
-  serialized_end=2738,
+  serialized_start=2834,
+  serialized_end=3044,
 )
 
 
@@ -1245,14 +1343,21 @@ _GOMASTATS = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='histogram', full_name='devtools_goma.GomaStats.histogram', index=12,
+      name='local_output_cache_stats', full_name='devtools_goma.GomaStats.local_output_cache_stats', index=12,
+      number=15, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='histogram', full_name='devtools_goma.GomaStats.histogram', index=13,
       number=10, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='machine_info', full_name='devtools_goma.GomaStats.machine_info', index=13,
+      name='machine_info', full_name='devtools_goma.GomaStats.machine_info', index=14,
       number=11, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
@@ -1267,8 +1372,8 @@ _GOMASTATS = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=2741,
-  serialized_end=3512,
+  serialized_start=3047,
+  serialized_end=3890,
 )
 
 _REQUESTSTATS.fields_by_name['compiler_proxy'].message_type = _COMPILERPROXYSTATS
@@ -1294,6 +1399,7 @@ _GOMASTATS.fields_by_name['http_rpc_stats'].message_type = _HTTPRPCSTATS
 _GOMASTATS.fields_by_name['error_stats'].message_type = _GOMAERRORSTATS
 _GOMASTATS.fields_by_name['mismatch_stats'].message_type = _GOMAMISMATCHSTATS
 _GOMASTATS.fields_by_name['includecache_stats'].message_type = _INCLUDECACHESTATS
+_GOMASTATS.fields_by_name['local_output_cache_stats'].message_type = _LOCALOUTPUTCACHESTATS
 _GOMASTATS.fields_by_name['histogram'].message_type = _GOMAHISTOGRAMS
 _GOMASTATS.fields_by_name['machine_info'].message_type = _MACHINEINFO
 DESCRIPTOR.message_types_by_name['RequestStats'] = _REQUESTSTATS
@@ -1310,6 +1416,7 @@ DESCRIPTOR.message_types_by_name['IncludeProcessorStats'] = _INCLUDEPROCESSORSTA
 DESCRIPTOR.message_types_by_name['IncludeCacheStats'] = _INCLUDECACHESTATS
 DESCRIPTOR.message_types_by_name['DepsCacheStats'] = _DEPSCACHESTATS
 DESCRIPTOR.message_types_by_name['IncludeDirCacheStats'] = _INCLUDEDIRCACHESTATS
+DESCRIPTOR.message_types_by_name['LocalOutputCacheStats'] = _LOCALOUTPUTCACHESTATS
 DESCRIPTOR.message_types_by_name['HttpRPCStats'] = _HTTPRPCSTATS
 DESCRIPTOR.message_types_by_name['GomaErrorStats'] = _GOMAERRORSTATS
 DESCRIPTOR.message_types_by_name['GomaMismatchStats'] = _GOMAMISMATCHSTATS
@@ -1401,6 +1508,12 @@ class IncludeDirCacheStats(_message.Message):
   DESCRIPTOR = _INCLUDEDIRCACHESTATS
 
   # @@protoc_insertion_point(class_scope:devtools_goma.IncludeDirCacheStats)
+
+class LocalOutputCacheStats(_message.Message):
+  __metaclass__ = _reflection.GeneratedProtocolMessageType
+  DESCRIPTOR = _LOCALOUTPUTCACHESTATS
+
+  # @@protoc_insertion_point(class_scope:devtools_goma.LocalOutputCacheStats)
 
 class HttpRPCStats(_message.Message):
   __metaclass__ = _reflection.GeneratedProtocolMessageType

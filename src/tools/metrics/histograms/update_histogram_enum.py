@@ -19,9 +19,10 @@ import diff_util
 import path_util
 
 import print_style
+import histogram_paths
 
 
-HISTOGRAMS_PATH = path_util.GetHistogramsFile()
+ENUMS_PATH = histogram_paths.ENUMS_XML
 
 
 class UserError(Exception):
@@ -33,13 +34,24 @@ class UserError(Exception):
     return self.args[0]
 
 
+class DuplicatedValue(Exception):
+  """Exception raised for duplicated enum values.
+
+  Attributes:
+      first_label: First enum label that shares the duplicated enum value.
+      second_label: Second enum label that shares the duplicated enum value.
+  """
+  def __init__(self, first_label, second_label):
+    self.first_label = first_label
+    self.second_label = second_label
+
+
 def Log(message):
   logging.info(message)
 
 
 def ReadHistogramValues(filename, start_marker, end_marker, strip_k_prefix):
-  """Returns a dictionary of enum values and a pair of labels that have the same
-     enum values, read from a C++ file.
+  """Creates a dictionary of enum values, read from a C++ file.
 
   Args:
       filename: The unix-style path (relative to src/) of the file to open.
@@ -47,6 +59,12 @@ def ReadHistogramValues(filename, start_marker, end_marker, strip_k_prefix):
       end_marker: A regex that signifies the end of the enum values.
       strip_k_prefix: Set to True if enum values are declared as kFoo and the
           'k' should be stripped.
+
+  Returns:
+      A boolean indicating wheather the histograms.xml file would be changed.
+
+  Raises:
+      DuplicatedValue: An error when two enum labels share the same value.
   """
   # Read the file as a list of lines
   with open(path_util.GetInputFile(filename)) as f:
@@ -92,10 +110,10 @@ def ReadHistogramValues(filename, start_marker, end_marker, strip_k_prefix):
       label = label[1:]
     # If two enum labels have the same value
     if enum_value in result:
-      return result, (result[enum_value], label)
+      raise DuplicatedValue(result[enum_value], label)
     result[enum_value] = label
     enum_value += 1
-  return result, None
+  return result
 
 
 def CreateEnumItemNode(document, value, label):
@@ -162,12 +180,12 @@ def UpdateHistogramDefinitions(histogram_enum_name, source_enum_values,
 
 def _GetOldAndUpdatedXml(histogram_enum_name, source_enum_values,
                          source_enum_path):
-  """Reads old histogram from |histogram_enum_name| from |HISTOGRAMS_PATH|, and
+  """Reads old histogram from |histogram_enum_name| from |ENUMS_PATH|, and
   calculates new histogram from |source_enum_values| from |source_enum_path|,
   and returns both in XML format.
   """
-  Log('Reading existing histograms from "{0}".'.format(HISTOGRAMS_PATH))
-  with open(HISTOGRAMS_PATH, 'rb') as f:
+  Log('Reading existing histograms from "{0}".'.format(ENUMS_PATH))
+  with open(ENUMS_PATH, 'rb') as f:
     histograms_doc = minidom.parse(f)
     f.seek(0)
     xml = f.read()
@@ -202,14 +220,14 @@ def CheckPresubmitErrors(histogram_enum_name, update_script_name,
       A string with presubmit failure description, or None (if no failures).
   """
   Log('Reading histogram enum definition from "{0}".'.format(source_enum_path))
-  source_enum_values, duplicated_values = ReadHistogramValues(
-      source_enum_path, start_marker, end_marker, strip_k_prefix)
-
-  if duplicated_values:
+  try:
+    source_enum_values = ReadHistogramValues(
+        source_enum_path, start_marker, end_marker, strip_k_prefix)
+  except DuplicatedValue as duplicated_values:
     return ('%s enum has been updated and there exist '
-            'duplicated values between (%s) and (%s)' % (histogram_enum_name,
-                                                         duplicated_values[0],
-                                                         duplicated_values[1]))
+            'duplicated values between (%s) and (%s)' %
+            (histogram_enum_name, duplicated_values.first_label,
+             duplicated_values.second_label))
 
   (xml, new_xml) = _GetOldAndUpdatedXml(histogram_enum_name, source_enum_values,
                                         source_enum_path)
@@ -235,7 +253,7 @@ def UpdateHistogramFromDict(histogram_enum_name, source_enum_values,
     Log('Cancelled.')
     return
 
-  with open(HISTOGRAMS_PATH, 'wb') as f:
+  with open(ENUMS_PATH, 'wb') as f:
     f.write(new_xml)
 
   Log('Done.')
@@ -256,7 +274,7 @@ def UpdateHistogramEnum(histogram_enum_name, source_enum_path,
   """
 
   Log('Reading histogram enum definition from "{0}".'.format(source_enum_path))
-  source_enum_values, ignored = ReadHistogramValues(source_enum_path,
+  source_enum_values = ReadHistogramValues(source_enum_path,
       start_marker, end_marker, strip_k_prefix)
 
   UpdateHistogramFromDict(histogram_enum_name, source_enum_values,

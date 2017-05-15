@@ -88,7 +88,8 @@ class LitePage(IntegrationTest):
         self.assertHasChromeProxyViaHeader(response)
         self.assertIn(response.status, [200, 204])
 
-  # Checks that Lo-Fi images are used when the user is in the
+  # Lo-Fi fallback is not currently supported via the client. Check that
+  # no Lo-Fi response is received if the user is in the
   # DataCompressionProxyLitePageFallback field trial and a Lite Page is not
   # served.
   def testLitePageFallback(self):
@@ -110,44 +111,6 @@ class LitePage(IntegrationTest):
         if not response.request_headers:
           continue
 
-        cpat_request = response.request_headers['chrome-proxy-accept-transform']
-        if ('lite-page' in cpat_request):
-          lite_page_requests = lite_page_requests + 1
-          self.assertFalse(self.checkLitePageResponse(response))
-
-        if not response.url.endswith('png'):
-          continue
-
-        if (self.checkLoFiResponse(response, True)):
-          lo_fi_responses = lo_fi_responses + 1
-
-      # Verify that a Lite Page was requested and that the page fell back to
-      # Lo-Fi images.
-      self.assertEqual(1, lite_page_requests)
-      self.assertEqual(1, lo_fi_responses)
-
-  # Checks that Lo-Fi images are not used when the user is not in the
-  # DataCompressionProxyLitePageFallback field trial and a Lite Page is not
-  # served.
-  def testLitePageNoFallback(self):
-    with TestDriver() as test_driver:
-      test_driver.AddChromeArg('--enable-spdy-proxy-auth')
-      # Lite Pages must be enabled via the field trial because the Lite Page
-      # flag always falls back to Lo-Fi.
-      test_driver.AddChromeArg('--force-fieldtrials='
-                               'DataCompressionProxyLoFi/Enabled_Preview')
-      test_driver.AddChromeArg('--force-fieldtrial-params='
-                               'DataCompressionProxyLoFi.Enabled_Preview:'
-                               'effective_connection_type/4G')
-      test_driver.AddChromeArg('--force-net-effective-connection-type=2g')
-
-      test_driver.LoadURL('http://check.googlezip.net/lite-page-fallback')
-
-      lite_page_requests = 0
-      for response in test_driver.GetHTTPResponses():
-        if not response.request_headers:
-          continue
-
         if ('chrome-proxy-accept-transform' in response.request_headers):
           cpat_request = response.request_headers[
                            'chrome-proxy-accept-transform']
@@ -158,10 +121,11 @@ class LitePage(IntegrationTest):
         if not response.url.endswith('png'):
           continue
 
+        # Lo-Fi fallback is not currently supported via the client. Check that
+        # no Lo-Fi response is received.
         self.checkLoFiResponse(response, False)
 
-      # Verify that a Lite Page was requested and that the page fell back to
-      # Lo-Fi images.
+      # Verify that a Lite Page was requested.
       self.assertEqual(1, lite_page_requests)
 
 if __name__ == '__main__':

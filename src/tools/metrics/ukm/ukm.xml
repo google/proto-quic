@@ -7,6 +7,10 @@ found in the LICENSE file.
 <!--
 This file is used to generate a comprehensive list of Chrome UKM metrics
 along with a detailed description for each metric.
+
+Events may be marked with the attribute singular="True" to indicate that
+the event will only occur once per source, and multiple entries will just
+be describing additional metrics about the same event.
 -->
 
 <ukm-configuration>
@@ -155,7 +159,7 @@ along with a detailed description for each metric.
   </metric>
 </event>
 
-<event name="PageLoad">
+<event name="PageLoad" singular="True">
   <owner>bmcquade@chromium.org</owner>
   <summary>
     Recorded when Pageload observer events fire.

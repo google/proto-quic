@@ -89,7 +89,7 @@ cy{
         CW{"Curaçao"}
         CX{"Ynys y Nadolig"}
         CY{"Cyprus"}
-        CZ{"Gweriniaeth Tsiec"}
+        CZ{"Tsiecia"}
         DE{"Yr Almaen"}
         DG{"Diego Garcia"}
         DJ{"Djibouti"}
@@ -108,7 +108,7 @@ cy{
         EU{"Yr Undeb Ewropeaidd"}
         FI{"Y Ffindir"}
         FJ{"Fiji"}
-        FK{"Ynysoedd y Falkland/Malvinas"}
+        FK{"Ynysoedd y Falkland (Ynysoedd y Malfinas)"}
         FM{"Micronesia"}
         FO{"Ynysoedd Ffaro"}
         FR{"Ffrainc"}
@@ -181,7 +181,7 @@ cy{
         MF{"Saint Martin"}
         MG{"Madagascar"}
         MH{"Ynysoedd Marshall"}
-        MK{"Macedonia"}
+        MK{"Macedonia (CWIM)"}
         ML{"Mali"}
         MM{"Myanmar (Burma)"}
         MN{"Mongolia"}
@@ -302,10 +302,8 @@ cy{
         CD{"Y Congo (G.Dd.C.)"}
         CG{"Y Congo (Gweriniaeth)"}
         CI{"Arfordir Ifori"}
-        CZ{"Tsiecia"}
-        FK{"Ynysoedd y Falkland (Ynysoedd y Malfinas)"}
-        MK{"Macedonia (CWIM)"}
+        CZ{"Gweriniaeth Tsiec"}
         TL{"Dwyrain Timor"}
     }
-    Version{"2.1.30.6"}
+    Version{"2.1.31.86"}
 }

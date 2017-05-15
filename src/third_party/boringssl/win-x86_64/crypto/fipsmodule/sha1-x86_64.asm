@@ -4,7 +4,7 @@ default	rel
 %define ZMMWORD
 section	.text code align=64
 
-EXTERN	OPENSSL_ia32cap_addr
+EXTERN	OPENSSL_ia32cap_P
 
 global	sha1_block_data_order
 
@@ -19,8 +19,7 @@ $L$SEH_begin_sha1_block_data_order:
 	mov	rdx,r8
 
 
-	lea	r10,[OPENSSL_ia32cap_addr]
-	mov	r10,QWORD[r10]
+	lea	r10,[OPENSSL_ia32cap_P]
 	mov	r9d,DWORD[r10]
 	mov	r8d,DWORD[4+r10]
 	mov	r10d,DWORD[8+r10]

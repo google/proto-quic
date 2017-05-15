@@ -98,6 +98,8 @@ void EntryMetadata::SetEntrySize(base::StrictNumeric<uint32_t> entry_size) {
 void EntryMetadata::Serialize(base::Pickle* pickle) const {
   DCHECK(pickle);
   int64_t internal_last_used_time = GetLastUsedTime().ToInternalValue();
+  // If you modify the size of the size of the pickle, be sure to update
+  // kOnDiskSizeBytes.
   pickle->WriteInt64(internal_last_used_time);
   pickle->WriteUInt64(entry_size_);
 }

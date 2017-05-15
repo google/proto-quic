@@ -6,6 +6,7 @@
 
 #include <vector>
 
+#include "net/log/net_log_with_source.h"
 #include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_utils.h"
 #include "testing/gmock/include/gmock/gmock.h"
@@ -19,6 +20,8 @@ namespace test {
 
 class HeaderCoalescerTest : public ::testing::Test {
  public:
+  HeaderCoalescerTest() : header_coalescer_(NetLogWithSource()) {}
+
  protected:
   HeaderCoalescer header_coalescer_;
 };

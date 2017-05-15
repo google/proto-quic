@@ -34,6 +34,7 @@ class _OortOnlineMeasurement(legacy_page_test.LegacyPageTest):
 
 
 @benchmark.Disabled('android')
+@benchmark.Owner(emails=['ulan@chromium.org'])
 class OortOnline(perf_benchmark.PerfBenchmark):
   """OortOnline benchmark that measures WebGL and V8 performance.
   URL: http://oortonline.gl/#run
@@ -50,6 +51,7 @@ class OortOnline(perf_benchmark.PerfBenchmark):
 
 
 @benchmark.Disabled('win')
+@benchmark.Owner(emails=['ulan@chromium.org'])
 class OortOnlineTBMv2(perf_benchmark.PerfBenchmark):
   """OortOnline benchmark that measures WebGL and V8 performance.
   URL: http://oortonline.gl/#run

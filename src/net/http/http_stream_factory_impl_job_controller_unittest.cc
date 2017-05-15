@@ -641,7 +641,6 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   session_deps_.proxy_service.reset(
       new ProxyService(base::MakeUnique<ProxyConfigServiceFixed>(proxy_config),
                        base::WrapUnique(proxy_resolver_factory), nullptr));
-  session_deps_.quic_do_not_mark_as_broken_on_network_change = true;
 
   HttpRequestInfo request_info;
   request_info.method = "GET";

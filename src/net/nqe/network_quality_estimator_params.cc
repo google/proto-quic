@@ -62,9 +62,69 @@ std::string GetStringValueForVariationParamWithDefaultValue(
   return it->second;
 }
 
+double GetWeightMultiplierPerSecond(
+    const std::map<std::string, std::string>& params) {
+  // Default value of the half life (in seconds) for computing time weighted
+  // percentiles. Every half life, the weight of all observations reduces by
+  // half. Lowering the half life would reduce the weight of older values
+  // faster.
+  int half_life_seconds = 60;
+  int32_t variations_value = 0;
+  auto it = params.find("HalfLifeSeconds");
+  if (it != params.end() && base::StringToInt(it->second, &variations_value) &&
+      variations_value >= 1) {
+    half_life_seconds = variations_value;
+  }
+  DCHECK_GT(half_life_seconds, 0);
+  return pow(0.5, 1.0 / half_life_seconds);
+}
+
+bool GetPersistentCacheReadingEnabled(
+    const std::map<std::string, std::string>& params) {
+  if (GetStringValueForVariationParamWithDefaultValue(
+          params, "persistent_cache_reading_enabled", "false") != "true") {
+    return false;
+  }
+  return true;
+}
+
+base::TimeDelta GetMinSocketWatcherNotificationInterval(
+    const std::map<std::string, std::string>& params) {
+  // Use 1000 milliseconds as the default value.
+  return base::TimeDelta::FromMilliseconds(GetValueForVariationParam(
+      params, "min_socket_watcher_notification_interval_msec", 1000));
+}
+
 }  // namespace
 
 namespace net {
+
+const char kForceEffectiveConnectionType[] = "force_effective_connection_type";
+
+namespace {
+
+base::Optional<EffectiveConnectionType> GetForcedEffectiveConnectionType(
+    const std::map<std::string, std::string>& params) {
+  std::string forced_value = GetStringValueForVariationParamWithDefaultValue(
+      params, kForceEffectiveConnectionType, "");
+  if (forced_value.empty())
+    return base::Optional<EffectiveConnectionType>();
+
+  EffectiveConnectionType forced_effective_connection_type =
+      EFFECTIVE_CONNECTION_TYPE_UNKNOWN;
+
+  bool effective_connection_type_available = GetEffectiveConnectionTypeForName(
+      forced_value, &forced_effective_connection_type);
+
+  DCHECK(effective_connection_type_available);
+
+  // Silence unused variable warning in release builds.
+  (void)effective_connection_type_available;
+
+  return forced_effective_connection_type;
+}
+
+}  // namespace
 
 namespace nqe {
 
@@ -72,7 +132,26 @@ namespace internal {
 
 NetworkQualityEstimatorParams::NetworkQualityEstimatorParams(
     const std::map<std::string, std::string>& params)
-    : params_(params) {}
+    : params_(params),
+      weight_multiplier_per_second_(GetWeightMultiplierPerSecond(params_)),
+      weight_multiplier_per_dbm_(
+          GetDoubleValueForVariationParamWithDefaultValue(params_,
+                                                          "rssi_weight_per_dbm",
+                                                          1.0)),
+      correlation_uma_logging_probability_(
+          GetDoubleValueForVariationParamWithDefaultValue(
+              params_,
+              "correlation_logging_probability",
+              0.01)),
+      forced_effective_connection_type_(
+          GetForcedEffectiveConnectionType(params_)),
+      persistent_cache_reading_enabled_(
+          GetPersistentCacheReadingEnabled(params_)),
+      min_socket_watcher_notification_interval_(
+          GetMinSocketWatcherNotificationInterval(params_)) {
+  DCHECK_LE(0.0, correlation_uma_logging_probability_);
+  DCHECK_GE(1.0, correlation_uma_logging_probability_);
+}
 
 NetworkQualityEstimatorParams::~NetworkQualityEstimatorParams() {
   DCHECK(thread_checker_.CalledOnValidThread());
@@ -86,33 +165,6 @@ std::string NetworkQualityEstimatorParams::GetEffectiveConnectionTypeAlgorithm()
   if (it == params_.end())
     return std::string();
   return it->second;
-}
-
-double NetworkQualityEstimatorParams::GetWeightMultiplierPerSecond() const {
-  DCHECK(thread_checker_.CalledOnValidThread());
-
-  // Default value of the half life (in seconds) for computing time weighted
-  // percentiles. Every half life, the weight of all observations reduces by
-  // half. Lowering the half life would reduce the weight of older values
-  // faster.
-  int half_life_seconds = 60;
-  int32_t variations_value = 0;
-  auto it = params_.find("HalfLifeSeconds");
-  if (it != params_.end() && base::StringToInt(it->second, &variations_value) &&
-      variations_value >= 1) {
-    half_life_seconds = variations_value;
-  }
-  DCHECK_GT(half_life_seconds, 0);
-  return pow(0.5, 1.0 / half_life_seconds);
-}
-
-double NetworkQualityEstimatorParams::GetWeightMultiplierPerDbm() const {
-  DCHECK(thread_checker_.CalledOnValidThread());
-
-  // The default weight is set to 1.0, so by default, RSSI has no effect on the
-  // observation's weight.
-  return GetDoubleValueForVariationParamWithDefaultValue(
-      params_, "rssi_weight_per_dbm", 1.0);
 }
 
 // static
@@ -346,62 +398,6 @@ void NetworkQualityEstimatorParams::ObtainEffectiveConnectionTypeModelParams(
     DCHECK(i == 0 ||
            connection_thresholds[i].IsFaster(connection_thresholds[i - 1]));
   }
-}
-
-double NetworkQualityEstimatorParams::correlation_uma_logging_probability()
-    const {
-  DCHECK(thread_checker_.CalledOnValidThread());
-
-  double correlation_uma_logging_probability =
-      GetDoubleValueForVariationParamWithDefaultValue(
-          params_, "correlation_logging_probability", 0.01);
-  DCHECK_LE(0.0, correlation_uma_logging_probability);
-  DCHECK_GE(1.0, correlation_uma_logging_probability);
-  return correlation_uma_logging_probability;
-}
-
-bool NetworkQualityEstimatorParams::forced_effective_connection_type_set()
-    const {
-  return !GetStringValueForVariationParamWithDefaultValue(
-              params_, "force_effective_connection_type", "")
-              .empty();
-}
-
-EffectiveConnectionType
-NetworkQualityEstimatorParams::forced_effective_connection_type() const {
-  EffectiveConnectionType forced_effective_connection_type =
-      EFFECTIVE_CONNECTION_TYPE_UNKNOWN;
-  std::string forced_value = GetStringValueForVariationParamWithDefaultValue(
-      params_, "force_effective_connection_type",
-      GetNameForEffectiveConnectionType(EFFECTIVE_CONNECTION_TYPE_UNKNOWN));
-  DCHECK(!forced_value.empty());
-  bool effective_connection_type_available = GetEffectiveConnectionTypeForName(
-      forced_value, &forced_effective_connection_type);
-  DCHECK(effective_connection_type_available);
-
-  // Silence unused variable warning in release builds.
-  (void)effective_connection_type_available;
-
-  return forced_effective_connection_type;
-}
-
-bool NetworkQualityEstimatorParams::persistent_cache_reading_enabled() const {
-  DCHECK(thread_checker_.CalledOnValidThread());
-
-  if (GetStringValueForVariationParamWithDefaultValue(
-          params_, "persistent_cache_reading_enabled", "false") != "true") {
-    return false;
-  }
-  return true;
-}
-
-base::TimeDelta
-NetworkQualityEstimatorParams::GetMinSocketWatcherNotificationInterval() const {
-  DCHECK(thread_checker_.CalledOnValidThread());
-
-  // Use 1000 milliseconds as the default value.
-  return base::TimeDelta::FromMilliseconds(GetValueForVariationParam(
-      params_, "min_socket_watcher_notification_interval_msec", 1000));
 }
 
 }  // namespace internal

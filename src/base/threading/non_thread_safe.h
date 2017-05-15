@@ -30,27 +30,10 @@ class NonThreadSafeDoNothing {
   void DetachFromThread() {}
 };
 
-// NonThreadSafe is a helper class used to help verify that methods of a
-// class are called from the same thread.  One can inherit from this class
-// and use CalledOnValidThread() to verify.
-//
-// This is intended to be used with classes that appear to be thread safe, but
-// aren't.  For example, a service or a singleton like the preferences system.
-//
-// Example:
-// class MyClass : public base::NonThreadSafe {
-//  public:
-//   void Foo() {
-//     DCHECK(CalledOnValidThread());
-//     ... (do stuff) ...
-//   }
-// }
-//
-// Note that base::ThreadChecker offers identical functionality to
-// NonThreadSafe, but does not require inheritance. In general, it is preferable
-// to have a base::ThreadChecker as a member, rather than inherit from
-// NonThreadSafe. For more details about when to choose one over the other, see
-// the documentation for base::ThreadChecker.
+// DEPRECATED! Use base::SequenceChecker (for thread-safety) or
+// base::ThreadChecker (for thread-affinity) -- see their documentation for
+// details. Use a checker as a protected member instead of inheriting from
+// NonThreadSafe if you need subclasses to have access.
 #if DCHECK_IS_ON()
 typedef NonThreadSafeImpl NonThreadSafe;
 #else

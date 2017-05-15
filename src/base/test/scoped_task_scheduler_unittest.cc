@@ -257,18 +257,15 @@ TEST(ScopedTaskSchedulerTest, COMSTAAvailable) {
 TEST(ScopedTaskSchedulerTest, NonBlockShutdownTasksPostedAfterShutdownDontRun) {
   ScopedTaskScheduler scoped_task_scheduler;
   TaskScheduler::GetInstance()->Shutdown();
-  PostTaskWithTraits(FROM_HERE,
-                     TaskTraits().WithShutdownBehavior(
-                         TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN),
+  PostTaskWithTraits(FROM_HERE, {TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN},
                      BindOnce([]() {
                        ADD_FAILURE()
                            << "CONTINUE_ON_SHUTDOWN task should not run";
                      }));
-  PostTaskWithTraits(
-      FROM_HERE,
-      TaskTraits().WithShutdownBehavior(TaskShutdownBehavior::SKIP_ON_SHUTDOWN),
-      BindOnce(
-          []() { ADD_FAILURE() << "SKIP_ON_SHUTDOWN task should not run"; }));
+  PostTaskWithTraits(FROM_HERE, {TaskShutdownBehavior::SKIP_ON_SHUTDOWN},
+                     BindOnce([]() {
+                       ADD_FAILURE() << "SKIP_ON_SHUTDOWN task should not run";
+                     }));
 
   // This should not run anything.
   RunLoop().RunUntilIdle();
@@ -278,28 +275,22 @@ TEST(ScopedTaskSchedulerTest, DestructorRunsBlockShutdownTasksOnly) {
   bool block_shutdown_task_ran = false;
   {
     ScopedTaskScheduler scoped_task_scheduler;
-    PostTaskWithTraits(FROM_HERE,
-                       TaskTraits().WithShutdownBehavior(
-                           TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN),
+    PostTaskWithTraits(FROM_HERE, {TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN},
                        BindOnce([]() {
                          ADD_FAILURE()
                              << "CONTINUE_ON_SHUTDOWN task should not run";
                        }));
-    PostTaskWithTraits(FROM_HERE,
-                       TaskTraits().WithShutdownBehavior(
-                           TaskShutdownBehavior::SKIP_ON_SHUTDOWN),
+    PostTaskWithTraits(FROM_HERE, {TaskShutdownBehavior::SKIP_ON_SHUTDOWN},
                        BindOnce([]() {
                          ADD_FAILURE()
                              << "SKIP_ON_SHUTDOWN task should not run";
                        }));
-    PostTaskWithTraits(
-        FROM_HERE,
-        TaskTraits().WithShutdownBehavior(TaskShutdownBehavior::BLOCK_SHUTDOWN),
-        BindOnce(
-            [](bool* block_shutdown_task_ran) {
-              *block_shutdown_task_ran = true;
-            },
-            Unretained(&block_shutdown_task_ran)));
+    PostTaskWithTraits(FROM_HERE, {TaskShutdownBehavior::BLOCK_SHUTDOWN},
+                       BindOnce(
+                           [](bool* block_shutdown_task_ran) {
+                             *block_shutdown_task_ran = true;
+                           },
+                           Unretained(&block_shutdown_task_ran)));
   }
   EXPECT_TRUE(block_shutdown_task_ran);
 }

@@ -16,7 +16,6 @@
 #include "base/trace_event/heap_profiler_allocation_context.h"
 #include "base/trace_event/heap_profiler_stack_frame_deduplicator.h"
 #include "base/trace_event/heap_profiler_type_name_deduplicator.h"
-#include "base/trace_event/memory_dump_session_state.h"
 #include "base/trace_event/trace_event_argument.h"
 #include "base/values.h"
 #include "testing/gtest/include/gtest/gtest.h"

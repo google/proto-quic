@@ -109,3 +109,4 @@ Modifications:
   matching linux's behavior more closely.
 - Changed kint64min to not depend on undefined behavior.
 - Fix potential missing nul character in symbol names produced by addr2line-pdb.
+- Remove superfluous size_t value >= 0 check.

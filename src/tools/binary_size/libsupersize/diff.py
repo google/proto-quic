@@ -24,7 +24,7 @@ def _SymbolKey(symbol):
     "._468", "._467"
     ".L__unnamed_1193", ".L__unnamed_712"
   """
-  name = symbol.full_name or symbol.name
+  name = symbol.full_name
   clone_idx = name.find(' [clone ')
   if clone_idx != -1:
     name = name[:clone_idx]
@@ -45,9 +45,9 @@ def _CloneSymbol(sym, size):
   Padding and aliases are not copied.
   """
   return models.Symbol(
-      sym.section_name, size, address=sym.address, name=sym.name,
-      source_path=sym.source_path, object_path=sym.object_path,
-      full_name=sym.full_name, flags=sym.flags)
+      sym.section_name, size, address=sym.address, full_name=sym.full_name,
+      template_name=sym.template_name, name=sym.name,
+      source_path=sym.source_path, object_path=sym.object_path, flags=sym.flags)
 
 
 def _CloneAlias(sym, diffed_alias):
@@ -175,24 +175,15 @@ def _DiffSymbolGroups(before, after):
       similar.append(models.Symbol(
           section_name, padding,
           name="** aggregate padding of diff'ed symbols"))
-  return models.SymbolDiff(
-      added, removed, similar, name=after.name, full_name=after.full_name,
-      section_name=after.section_name)
+  return models.SymbolDiff(added, removed, similar)
 
 
-def Diff(before, after, cluster=True):
-  """Diffs two SizeInfo objects. Returns a SizeInfoDiff.
-
-  Args:
-    cluster: When True, calls SymbolGroup.Cluster() after diffing. This
-        generally reduces noise.
-  """
+def Diff(before, after):
+  """Diffs two SizeInfo objects. Returns a SizeInfoDiff."""
   assert isinstance(before, models.SizeInfo)
   assert isinstance(after, models.SizeInfo)
   section_sizes = {k: after.section_sizes[k] - v
                    for k, v in before.section_sizes.iteritems()}
   symbol_diff = _DiffSymbolGroups(before.symbols, after.symbols)
-  if cluster:
-    symbol_diff = symbol_diff.Cluster()
   return models.SizeInfoDiff(section_sizes, symbol_diff, before.metadata,
                              after.metadata)

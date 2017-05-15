@@ -1336,7 +1336,8 @@ class DiskCacheTest(TestCase):
     #cache.touch()
 
   def get_cache(self):
-    return isolateserver.DiskCache(self.tempdir, self._policies, self._algo)
+    return isolateserver.DiskCache(
+        self.tempdir, self._policies, self._algo, trim=True)
 
   def to_hash(self, content):
     return self._algo(content).hexdigest(), content

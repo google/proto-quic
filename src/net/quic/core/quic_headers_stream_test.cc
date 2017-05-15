@@ -224,6 +224,17 @@ class QuicHeadersStreamTest : public QuicTestWithParam<TestParamsTuple> {
     EXPECT_EQ(version(), session_.connection()->version());
     EXPECT_TRUE(headers_stream_ != nullptr);
     connection_->AdvanceTime(QuicTime::Delta::FromMilliseconds(1));
+    client_id_1_ =
+        QuicSpdySessionPeer::GetNthClientInitiatedStreamId(session_, 0);
+    client_id_2_ =
+        QuicSpdySessionPeer::GetNthClientInitiatedStreamId(session_, 1);
+    client_id_3_ =
+        QuicSpdySessionPeer::GetNthClientInitiatedStreamId(session_, 2);
+    next_stream_id_ = QuicSpdySessionPeer::NextStreamId(session_);
+  }
+
+  QuicStreamId GetNthClientInitiatedId(int n) {
+    return QuicSpdySessionPeer::GetNthClientInitiatedStreamId(session_, n);
   }
 
   QuicConsumedData SaveIov(const QuicIOVector& data) {
@@ -289,7 +300,7 @@ class QuicHeadersStreamTest : public QuicTestWithParam<TestParamsTuple> {
     for (const auto& p : header_list) {
       headers_handler_->OnHeader(p.first, p.second);
     }
-    headers_handler_->OnHeaderBlockEnd(size);
+    headers_handler_->OnHeaderBlockEnd(size, size);
   }
 
   void WriteAndExpectRequestHeaders(QuicStreamId stream_id,
@@ -361,7 +372,9 @@ class QuicHeadersStreamTest : public QuicTestWithParam<TestParamsTuple> {
     QuicConnectionPeer::TearDownLocalConnectionState(connection_);
   }
 
-  QuicStreamId NextPromisedStreamId() { return next_promised_stream_id_ += 2; }
+  QuicStreamId NextPromisedStreamId() {
+    return next_promised_stream_id_ += next_stream_id_;
+  }
 
   static const bool kFrameComplete = true;
   static const bool kHasPriority = true;
@@ -382,6 +395,10 @@ class QuicHeadersStreamTest : public QuicTestWithParam<TestParamsTuple> {
   StrictMock<MockVisitor> visitor_;
   QuicStreamFrame stream_frame_;
   QuicStreamId next_promised_stream_id_;
+  QuicStreamId client_id_1_;
+  QuicStreamId client_id_2_;
+  QuicStreamId client_id_3_;
+  QuicStreamId next_stream_id_;
 };
 
 // Run all tests with each version, perspective (client or server),
@@ -401,8 +418,8 @@ TEST_P(QuicHeadersStreamTest, StreamId) {
 }
 
 TEST_P(QuicHeadersStreamTest, WriteHeaders) {
-  for (QuicStreamId stream_id = kClientDataStreamId1;
-       stream_id < kClientDataStreamId3; stream_id += 2) {
+  for (QuicStreamId stream_id = client_id_1_; stream_id < client_id_3_;
+       stream_id += next_stream_id_) {
     for (bool fin : kFins) {
       if (perspective() == Perspective::IS_SERVER) {
         WriteAndExpectResponseHeaders(stream_id, fin);
@@ -417,8 +434,8 @@ TEST_P(QuicHeadersStreamTest, WriteHeaders) {
 }
 
 TEST_P(QuicHeadersStreamTest, WritePushPromises) {
-  for (QuicStreamId stream_id = kClientDataStreamId1;
-       stream_id < kClientDataStreamId3; stream_id += 2) {
+  for (QuicStreamId stream_id = client_id_1_; stream_id < client_id_3_;
+       stream_id += next_stream_id_) {
     QuicStreamId promised_stream_id = NextPromisedStreamId();
     if (perspective() == Perspective::IS_SERVER) {
       // Write the headers and capture the outgoing data
@@ -449,8 +466,8 @@ TEST_P(QuicHeadersStreamTest, WritePushPromises) {
 }
 
 TEST_P(QuicHeadersStreamTest, ProcessRawData) {
-  for (QuicStreamId stream_id = kClientDataStreamId1;
-       stream_id < kClientDataStreamId3; stream_id += 2) {
+  for (QuicStreamId stream_id = client_id_1_; stream_id < client_id_3_;
+       stream_id += next_stream_id_) {
     for (bool fin : {false, true}) {
       for (SpdyPriority priority = 0; priority < 7; ++priority) {
         // Replace with "WriteHeadersAndSaveData"
@@ -483,8 +500,8 @@ TEST_P(QuicHeadersStreamTest, ProcessRawData) {
 TEST_P(QuicHeadersStreamTest, ProcessPushPromise) {
   if (perspective() == Perspective::IS_SERVER)
     return;
-  for (QuicStreamId stream_id = kClientDataStreamId1;
-       stream_id < kClientDataStreamId3; stream_id += 2) {
+  for (QuicStreamId stream_id = client_id_1_; stream_id < client_id_3_;
+       stream_id += next_stream_id_) {
     QuicStreamId promised_stream_id = NextPromisedStreamId();
     SpdyPushPromiseIR push_promise(stream_id, promised_stream_id,
                                    headers_.Clone());
@@ -537,7 +554,7 @@ TEST_P(QuicHeadersStreamTest, EmptyHeaderHOLBlockedTime) {
   InSequence seq;
   bool fin = true;
   for (int stream_num = 0; stream_num < 10; stream_num++) {
-    QuicStreamId stream_id = QuicClientDataStreamId(stream_num);
+    QuicStreamId stream_id = GetNthClientInitiatedId(stream_num);
     // Replace with "WriteHeadersAndSaveData"
     SpdySerializedFrame frame;
     if (perspective() == Perspective::IS_SERVER) {
@@ -571,7 +588,7 @@ TEST_P(QuicHeadersStreamTest, NonEmptyHeaderHOLBlockedTime) {
   {
     InSequence seq;
     for (int stream_num = 0; stream_num < 10; ++stream_num) {
-      stream_id = QuicClientDataStreamId(stream_num);
+      stream_id = GetNthClientInitiatedId(stream_num);
       if (perspective() == Perspective::IS_SERVER) {
         SpdyHeadersIR headers_frame(stream_id, headers_.Clone());
         headers_frame.set_fin(fin);
@@ -614,8 +631,8 @@ TEST_P(QuicHeadersStreamTest, ProcessLargeRawData) {
   headers_["key0"] = string(1 << 13, '.');
   headers_["key1"] = string(1 << 13, '.');
   headers_["key2"] = string(1 << 13, '.');
-  for (QuicStreamId stream_id = kClientDataStreamId1;
-       stream_id < kClientDataStreamId3; stream_id += 2) {
+  for (QuicStreamId stream_id = client_id_1_; stream_id < client_id_3_;
+       stream_id += next_stream_id_) {
     for (bool fin : {false, true}) {
       for (SpdyPriority priority = 0; priority < 7; ++priority) {
         // Replace with "WriteHeadersAndSaveData"
@@ -845,8 +862,8 @@ TEST_P(QuicHeadersStreamTest, HpackDecoderDebugVisitor) {
   headers_["key0"] = string(1 << 1, '.');
   headers_["key1"] = string(1 << 2, '.');
   headers_["key2"] = string(1 << 3, '.');
-  for (QuicStreamId stream_id = kClientDataStreamId1;
-       stream_id < kClientDataStreamId3; stream_id += 2) {
+  for (QuicStreamId stream_id = client_id_1_; stream_id < client_id_3_;
+       stream_id += next_stream_id_) {
     for (bool fin : {false, true}) {
       for (SpdyPriority priority = 0; priority < 7; ++priority) {
         // Replace with "WriteHeadersAndSaveData"
@@ -896,8 +913,8 @@ TEST_P(QuicHeadersStreamTest, HpackEncoderDebugVisitor) {
   QuicSpdySessionPeer::SetHpackEncoderDebugVisitor(
       &session_, std::move(hpack_encoder_visitor));
 
-  for (QuicStreamId stream_id = kClientDataStreamId1;
-       stream_id < kClientDataStreamId3; stream_id += 2) {
+  for (QuicStreamId stream_id = client_id_1_; stream_id < client_id_3_;
+       stream_id += next_stream_id_) {
     for (bool fin : {false, true}) {
       if (perspective() == Perspective::IS_SERVER) {
         WriteAndExpectResponseHeaders(stream_id, fin);
@@ -914,7 +931,7 @@ TEST_P(QuicHeadersStreamTest, HpackEncoderDebugVisitor) {
 }
 
 TEST_P(QuicHeadersStreamTest, WritevStreamData) {
-  QuicStreamId id = kClientDataStreamId1;
+  QuicStreamId id = client_id_1_;
   QuicStreamOffset offset = 0;
   struct iovec iov;
 
@@ -976,14 +993,14 @@ TEST_P(QuicHeadersStreamTest, WritevStreamDataFinOnly) {
           Invoke(this, &QuicHeadersStreamTest::SaveIovAndNotifyAckListener)));
 
   QuicConsumedData consumed_data = session_.WritevStreamData(
-      kClientDataStreamId1, MakeIOVector(data, &iov), 0, true, nullptr);
+      client_id_1_, MakeIOVector(data, &iov), 0, true, nullptr);
 
   EXPECT_EQ(consumed_data.bytes_consumed, 0u);
   EXPECT_EQ(consumed_data.fin_consumed, true);
 }
 
 TEST_P(QuicHeadersStreamTest, WritevStreamDataSendBlocked) {
-  QuicStreamId id = kClientDataStreamId1;
+  QuicStreamId id = client_id_1_;
   QuicStreamOffset offset = 0;
   struct iovec iov;
 

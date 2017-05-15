@@ -7,9 +7,7 @@
 #include <memory>
 
 #include "base/memory/ptr_util.h"
-#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
-#include "base/test/scoped_task_scheduler.h"
 #include "build/build_config.h"
 #include "net/base/request_priority.h"
 #include "net/http/http_auth_challenge_tokenizer.h"
@@ -61,8 +59,7 @@ class MockHttpAuthHandlerFactory : public HttpAuthHandlerFactory {
 
 class URLRequestContextBuilderTest : public PlatformTest {
  protected:
-  URLRequestContextBuilderTest()
-      : scoped_task_scheduler_(base::MessageLoop::current()) {
+  URLRequestContextBuilderTest() {
     test_server_.AddDefaultHandlers(
         base::FilePath(FILE_PATH_LITERAL("net/data/url_request_unittest")));
 #if defined(OS_LINUX) || defined(OS_ANDROID)
@@ -73,9 +70,6 @@ class URLRequestContextBuilderTest : public PlatformTest {
 
   EmbeddedTestServer test_server_;
   URLRequestContextBuilder builder_;
-
- private:
-  base::test::ScopedTaskScheduler scoped_task_scheduler_;
 };
 
 TEST_F(URLRequestContextBuilderTest, DefaultSettings) {

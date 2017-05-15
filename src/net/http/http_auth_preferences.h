@@ -27,6 +27,10 @@ class NET_EXPORT HttpAuthPreferences {
                       ,
                       const std::string& gssapi_library_name
 #endif
+#if defined(OS_CHROMEOS)
+                      ,
+                      bool allow_gssapi_library_load
+#endif
                       );
   virtual ~HttpAuthPreferences();
 
@@ -38,6 +42,9 @@ class NET_EXPORT HttpAuthPreferences {
 #endif
 #if defined(OS_POSIX) && !defined(OS_ANDROID)
   virtual std::string GssapiLibraryName() const;
+#endif
+#if defined(OS_CHROMEOS)
+  virtual bool AllowGssapiLibraryLoad() const;
 #endif
   virtual bool CanUseDefaultCredentials(const GURL& auth_origin) const;
   virtual bool CanDelegate(const GURL& auth_origin) const;
@@ -76,6 +83,9 @@ class NET_EXPORT HttpAuthPreferences {
   // requires unloading the existing GSSAPI library, which could cause all
   // sorts of problems for, for example, active Negotiate transactions.
   const std::string gssapi_library_name_;
+#endif
+#if defined(OS_CHROMEOS)
+  bool allow_gssapi_library_load_;
 #endif
   std::unique_ptr<URLSecurityManager> security_manager_;
   DISALLOW_COPY_AND_ASSIGN(HttpAuthPreferences);

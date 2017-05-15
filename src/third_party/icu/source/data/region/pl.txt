@@ -108,7 +108,7 @@ pl{
         EU{"Unia Europejska"}
         FI{"Finlandia"}
         FJ{"Fidżi"}
-        FK{"Falklandy"}
+        FK{"Falklandy (Malwiny)"}
         FM{"Mikronezja"}
         FO{"Wyspy Owcze"}
         FR{"Francja"}
@@ -181,7 +181,7 @@ pl{
         MF{"Saint-Martin"}
         MG{"Madagaskar"}
         MH{"Wyspy Marshalla"}
-        MK{"Macedonia"}
+        MK{"Była Jugosłowiańska Republika Macedonii"}
         ML{"Mali"}
         MM{"Mjanma (Birma)"}
         MN{"Mongolia"}
@@ -302,9 +302,7 @@ pl{
         CG{"Republika Konga"}
         CI{"Wybrzeże Kości Słoniowej"}
         CZ{"Republika Czeska"}
-        FK{"Falklandy (Malwiny)"}
-        MK{"Była Jugosłowiańska Republika Macedonii"}
         TL{"Timor-Leste"}
     }
-    Version{"2.1.28.79"}
+    Version{"2.1.32.59"}
 }

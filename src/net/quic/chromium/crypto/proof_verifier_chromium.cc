@@ -420,13 +420,15 @@ int ProofVerifierChromium::Job::DoVerifyCertComplete(int result) {
             cert_verify_result.verified_cert.get(), verified_scts, net_log_);
 
     int ct_result = OK;
-    if (verify_details_->ct_verify_result.cert_policy_compliance !=
-            ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS &&
-        verify_details_->ct_verify_result.cert_policy_compliance !=
-            ct::CertPolicyCompliance::CERT_POLICY_BUILD_NOT_TIMELY &&
-        transport_security_state_->ShouldRequireCT(
-            hostname_, cert_verify_result.verified_cert.get(),
-            cert_verify_result.public_key_hashes)) {
+    if (transport_security_state_->CheckCTRequirements(
+            HostPortPair(hostname_, port_),
+            cert_verify_result.is_issued_by_known_root,
+            cert_verify_result.public_key_hashes,
+            cert_verify_result.verified_cert.get(), cert_.get(),
+            verify_details_->ct_verify_result.scts,
+            TransportSecurityState::ENABLE_EXPECT_CT_REPORTS,
+            verify_details_->ct_verify_result.cert_policy_compliance) !=
+        TransportSecurityState::CT_REQUIREMENTS_MET) {
       verify_details_->cert_verify_result.cert_status |=
           CERT_STATUS_CERTIFICATE_TRANSPARENCY_REQUIRED;
       ct_result = ERR_CERTIFICATE_TRANSPARENCY_REQUIRED;

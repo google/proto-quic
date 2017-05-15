@@ -11,6 +11,9 @@ import os
 _STATUS_DETECTED = 1
 _STATUS_VERIFIED = 2
 
+SRC_ROOT = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
 
 class LazyPaths(object):
   def __init__(self, tool_prefix=None, output_directory=None,
@@ -18,8 +21,10 @@ class LazyPaths(object):
     self._tool_prefix = tool_prefix
     self._output_directory = output_directory
     self._any_path_within_output_directory = any_path_within_output_directory
-    self._output_directory_status = _STATUS_DETECTED if output_directory else 0
-    self._tool_prefix_status = _STATUS_DETECTED if tool_prefix else 0
+    self._output_directory_status = (
+        _STATUS_DETECTED if output_directory is not None else 0)
+    self._tool_prefix_status = (
+        _STATUS_DETECTED if tool_prefix is not None else 0)
 
   @property
   def tool_prefix(self):
@@ -85,6 +90,29 @@ class LazyPaths(object):
       if os.path.exists(build_vars_path):
         with open(build_vars_path) as f:
           build_vars = dict(l.rstrip().split('=', 1) for l in f if '=' in l)
-        return os.path.normpath(
-            os.path.join(output_directory, build_vars['android_tool_prefix']))
+        tool_prefix = build_vars['android_tool_prefix']
+        ret = os.path.normpath(os.path.join(output_directory, tool_prefix))
+        # Need to maintain a trailing /.
+        if tool_prefix.endswith(os.path.sep):
+          ret += os.path.sep
+        return ret
+    from_path = distutils.spawn.find_executable('c++filt')
+    if from_path:
+      return from_path[:-7]
     return None
+
+
+def FromSrcRootRelative(path):
+  ret = os.path.relpath(os.path.join(SRC_ROOT, path))
+  # Need to maintain a trailing /.
+  if path.endswith(os.path.sep):
+    ret += os.path.sep
+  return ret
+
+
+def ToSrcRootRelative(path):
+  ret = os.path.relpath(path, SRC_ROOT)
+  # Need to maintain a trailing /.
+  if path.endswith(os.path.sep):
+    ret += os.path.sep
+  return ret

@@ -10,14 +10,14 @@
 #include "base/bind_helpers.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
-#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/sequenced_task_runner.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/stringprintf.h"
-#include "base/test/scoped_task_scheduler.h"
+#include "base/test/scoped_task_environment.h"
 #include "net/base/request_priority.h"
 #include "net/test/gtest_util.h"
+#include "net/test/net_test_suite.h"
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request_job.h"
 #include "net/url_request/url_request_job_factory.h"
@@ -112,8 +112,7 @@ class SimpleJobProtocolHandler :
 
 class URLRequestSimpleJobTest : public ::testing::Test {
  public:
-  URLRequestSimpleJobTest()
-      : context_(true), scoped_task_scheduler_(base::MessageLoop::current()) {
+  URLRequestSimpleJobTest() : context_(true) {
     job_factory_.SetProtocolHandler(
         "data", base::MakeUnique<SimpleJobProtocolHandler>());
     context_.set_job_factory(&job_factory_);
@@ -140,8 +139,6 @@ class URLRequestSimpleJobTest : public ::testing::Test {
   std::unique_ptr<URLRequest> request_;
 
  private:
-  base::test::ScopedTaskScheduler scoped_task_scheduler_;
-
   DISALLOW_COPY_AND_ASSIGN(URLRequestSimpleJobTest);
 };
 
@@ -223,8 +220,8 @@ TEST_F(URLRequestSimpleJobTest, CancelAfterFirstReadStarted) {
   request_->Start();
   cancel_delegate.WaitUntilHeadersReceived();
 
-  // Run ScopedTaskScheduler tasks.
-  base::RunLoop().RunUntilIdle();
+  // Run TaskScheduler tasks and their reply on the main thread.
+  NetTestSuite::GetScopedTaskEnvironment()->RunUntilIdle();
 
   EXPECT_THAT(cancel_delegate.request_status(), IsError(ERR_ABORTED));
   EXPECT_EQ(1, cancel_delegate.response_started_count());

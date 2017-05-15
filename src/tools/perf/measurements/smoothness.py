@@ -65,18 +65,3 @@ class Smoothness(legacy_page_test.LegacyPageTest):
   def DidRunPage(self, platform):
     if self._tbm:
       self._tbm.DidRunStory(platform, self._results)
-
-
-class Repaint(Smoothness):
-
-  def CustomizeBrowserOptions(self, options):
-    options.AppendExtraBrowserArgs([
-        '--enable-gpu-benchmarking'
-    ])
-
-
-class SmoothnessWithRestart(Smoothness):
-
-  def __init__(self):
-    super(SmoothnessWithRestart, self).__init__(
-        needs_browser_restart_after_each_page=True)

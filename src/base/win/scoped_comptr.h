@@ -93,14 +93,14 @@ class ScopedComPtr {
   // Retrieves the pointer address.
   // Used to receive object pointers as out arguments (and take ownership).
   // The function DCHECKs on the current value being NULL.
-  // Usage: Foo(p.Receive());
-  Interface** Receive() {
+  // Usage: Foo(p.GetAddressOf());
+  Interface** GetAddressOf() {
     DCHECK(!ptr_) << "Object leak. Pointer must be NULL";
     return &ptr_;
   }
 
   template <class Query>
-  HRESULT QueryInterface(Query** p) {
+  HRESULT CopyTo(Query** p) {
     DCHECK(p);
     DCHECK(ptr_);
     // IUnknown already has a template version of QueryInterface
@@ -110,7 +110,7 @@ class ScopedComPtr {
   }
 
   // QI for times when the IID is not associated with the type.
-  HRESULT QueryInterface(const IID& iid, void** obj) {
+  HRESULT CopyTo(const IID& iid, void** obj) {
     DCHECK(obj);
     DCHECK(ptr_);
     return ptr_->QueryInterface(iid, obj);
@@ -120,7 +120,7 @@ class ScopedComPtr {
   // error code from the other->QueryInterface operation.
   HRESULT QueryFrom(IUnknown* object) {
     DCHECK(object);
-    return object->QueryInterface(IID_PPV_ARGS(Receive()));
+    return object->QueryInterface(IID_PPV_ARGS(GetAddressOf()));
   }
 
   // Convenience wrapper around CoCreateInstance
@@ -131,23 +131,6 @@ class ScopedComPtr {
     HRESULT hr = ::CoCreateInstance(clsid, outer, context, *interface_id,
                                     reinterpret_cast<void**>(&ptr_));
     return hr;
-  }
-
-  // Checks if the identity of |other| and this object is the same.
-  bool IsSameObject(IUnknown* other) {
-    if (!other && !ptr_)
-      return true;
-
-    if (!other || !ptr_)
-      return false;
-
-    ScopedComPtr<IUnknown> my_identity;
-    QueryInterface(IID_PPV_ARGS(my_identity.Receive()));
-
-    ScopedComPtr<IUnknown> other_identity;
-    other->QueryInterface(IID_PPV_ARGS(other_identity.Receive()));
-
-    return my_identity == other_identity;
   }
 
   // Provides direct access to the interface.
@@ -241,7 +224,7 @@ class ScopedComPtrRef {
 
   // ComPtr equivalent conversion operators.
   operator void**() const {
-    return reinterpret_cast<void**>(scoped_com_ptr_->Receive());
+    return reinterpret_cast<void**>(scoped_com_ptr_->GetAddressOf());
   }
 
   // Allows ScopedComPtr to be passed to functions as a pointer.

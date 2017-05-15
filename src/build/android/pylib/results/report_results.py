@@ -47,8 +47,8 @@ def _LogToFlakinessDashboard(results, test_type, test_package,
         assert test_package in ['ContentShellTest',
                                 'ChromePublicTest',
                                 'ChromeSyncShellTest',
-                                'AndroidWebViewTest',
-                                'SystemWebViewShellLayoutTest']
+                                'SystemWebViewShellLayoutTest',
+                                'WebViewInstrumentationTest']
         dashboard_test_type = ('%s_instrumentation_tests' %
                                test_package.lower().rstrip('test'))
       # Downstream server.

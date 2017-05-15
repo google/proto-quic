@@ -4,8 +4,19 @@
 
 import("//build/config/features.gni")
 
+declare_args() {
+  # Blink needs a recent and properly build-configured FreeType version to
+  # support OpenType variations, color emoji and avoid security bugs. By default
+  # we ship and link such a version as part of Chrome. For distributions that
+  # prefer to keep linking to the version the system, FreeType must be newer
+  # than version 2.7.1 and have color bitmap support compiled in. WARNING:
+  # System FreeType configurations other than as described WILL INTRODUCE TEXT
+  # RENDERING AND SECURITY REGRESSIONS.
+  use_system_freetype = false
+}
+
 group("freetype") {
-  if (is_linux && !is_chromecast) {
+  if (use_system_freetype) {
     public_configs = [ "//build/linux:freetype_from_pkgconfig" ]
   } else {
     public_deps = [

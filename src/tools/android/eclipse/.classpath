@@ -25,6 +25,7 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="src" path="android_webview/tools/system_webview_shell/layout_tests/src"/>
     <classpathentry kind="src" path="base/android/java/src"/>
     <classpathentry kind="src" path="base/android/javatests/src"/>
+    <classpathentry kind="src" path="base/android/junit/src"/>
     <classpathentry kind="src" path="base/test/android/javatests/src"/>
     <classpathentry kind="src" path="base/test/android/junit/src"/>
     <classpathentry kind="src" path="chrome/android/java/src"/>
@@ -128,7 +129,6 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="src" path="tools/android/memconsumer/java/src"/>
     <classpathentry kind="src" path="ui/android/java/src"/>
     <classpathentry kind="src" path="ui/android/javatests/src"/>
-    <classpathentry kind="src" path="out/Debug/android_webview_test_apk/gen"/>
     <classpathentry kind="src" path="out/Debug/chrome_public_apk/gen"/>
     <classpathentry kind="src" path="out/Debug/content_shell_apk/gen"/>
     <classpathentry kind="src" path="out/Debug/gen/enums/accessibility_java"/>
@@ -215,8 +215,10 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="src" path="out/Debug/java_mojo/mojo_public_test_interfaces_mojom/src"/>
     <classpathentry kind="src" path="out/Debug/java_proto/cacheinvalidation_proto_java/src"/>
     <classpathentry kind="src" path="out/Debug/java_proto/document_tab_model_info_proto_java/src"/>
+    <classpathentry kind="src" path="out/Debug/java_proto/partner_location_descriptor_proto_java/src"/>
     <classpathentry kind="src" path="out/Debug/java_proto/test_support_proto_java/src"/>
     <classpathentry kind="src" path="out/Debug/remoting_apk/gen"/>
+    <classpathentry kind="src" path="out/Debug/webview_instrumentation_test_apk/gen"/>
     <classpathentry kind="lib" path="third_party/android_tools/sdk/extras/google/gcm/gcm-client/dist/gcm.jar" sourcepath="third_party/android_tools/sdk/extras/google/gcm/gcm-client/src"/>
     <classpathentry kind="lib" path="third_party/android_tools/sdk/platforms/android-25/android.jar" sourcepath="third_party/android_tools/sdk/sources/">
         <attributes>

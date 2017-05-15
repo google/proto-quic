@@ -1127,6 +1127,65 @@ TEST(SignatureAlgorithmTest, ParseDerMd2WithRsaEncryptionNullParams) {
   EXPECT_EQ(DigestAlgorithm::Md2, algorithm->digest());
 }
 
+// Parses a dsaWithSha1 which contains no parameters field.
+//
+//   SEQUENCE (1 elem)
+//       OBJECT IDENTIFIER  1.2.840.10040.4.3
+TEST(SignatureAlgorithmTest, ParseDerDsaWithSha1NoParams) {
+  // clang-format off
+  const uint8_t kData[] = {
+      0x30, 0x09,  // SEQUENCE (9 bytes)
+      0x06, 0x07,  // OBJECT IDENTIFIER (7 bytes)
+      0x2a, 0x86, 0x48, 0xce, 0x38, 0x04, 0x03,
+  };
+  // clang-format on
+  std::unique_ptr<SignatureAlgorithm> algorithm;
+  ASSERT_TRUE(ParseDer(kData, &algorithm));
+
+  EXPECT_EQ(SignatureAlgorithmId::Dsa, algorithm->algorithm());
+  EXPECT_EQ(DigestAlgorithm::Sha1, algorithm->digest());
+}
+
+// Parses a dsaWithSha1 which contains a NULL parameters field.
+//
+//   SEQUENCE (2 elem)
+//       OBJECT IDENTIFIER  1.2.840.10040.4.3
+//       NULL
+TEST(SignatureAlgorithmTest, ParseDerDsaWithSha1NullParams) {
+  // clang-format off
+  const uint8_t kData[] = {
+      0x30, 0x0B,  // SEQUENCE (9 bytes)
+      0x06, 0x07,  // OBJECT IDENTIFIER (7 bytes)
+      0x2a, 0x86, 0x48, 0xce, 0x38, 0x04, 0x03,
+      0x05, 0x00,  // NULL (0 bytes)
+  };
+  // clang-format on
+  std::unique_ptr<SignatureAlgorithm> algorithm;
+  ASSERT_TRUE(ParseDer(kData, &algorithm));
+
+  EXPECT_EQ(SignatureAlgorithmId::Dsa, algorithm->algorithm());
+  EXPECT_EQ(DigestAlgorithm::Sha1, algorithm->digest());
+}
+
+// Parses a dsaWithSha256 which contains no parameters field.
+//
+//   SEQUENCE (1 elem)
+//       OBJECT IDENTIFIER  2.16.840.1.101.3.4.3.2
+TEST(SignatureAlgorithmTest, ParseDerDsaWithSha256NoParams) {
+  // clang-format off
+  const uint8_t kData[] = {
+      0x30, 0x0B,  // SEQUENCE (11 bytes)
+      0x06, 0x09,  // OBJECT IDENTIFIER (9 bytes)
+      0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x03, 0x02
+  };
+  // clang-format on
+  std::unique_ptr<SignatureAlgorithm> algorithm;
+  ASSERT_TRUE(ParseDer(kData, &algorithm));
+
+  EXPECT_EQ(SignatureAlgorithmId::Dsa, algorithm->algorithm());
+  EXPECT_EQ(DigestAlgorithm::Sha256, algorithm->digest());
+}
+
 }  // namespace
 
 }  // namespace net

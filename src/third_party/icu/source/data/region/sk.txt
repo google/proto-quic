@@ -89,7 +89,7 @@ sk{
         CW{"Curaçao"}
         CX{"Vianočný ostrov"}
         CY{"Cyprus"}
-        CZ{"Česká republika"}
+        CZ{"Česko"}
         DE{"Nemecko"}
         DG{"Diego Garcia"}
         DJ{"Džibutsko"}
@@ -181,7 +181,7 @@ sk{
         MF{"Svätý Martin (fr.)"}
         MG{"Madagaskar"}
         MH{"Marshallove ostrovy"}
-        MK{"Macedónsko"}
+        MK{"Macedónsko (BJRM)"}
         ML{"Mali"}
         MM{"Mjanmarsko"}
         MN{"Mongolsko"}
@@ -299,8 +299,7 @@ sk{
         US{"USA"}
     }
     Countries%variant{
-        CZ{"Česko"}
-        MK{"Macedónsko (BJRM)"}
+        CZ{"Česká republika"}
     }
-    Version{"2.1.28.79"}
+    Version{"2.1.32.59"}
 }

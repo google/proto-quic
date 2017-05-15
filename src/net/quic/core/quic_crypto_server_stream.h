@@ -57,6 +57,7 @@ class QUIC_EXPORT_PRIVATE QuicCryptoServerStreamBase : public QuicCryptoStream {
   virtual uint8_t NumHandshakeMessagesWithServerNonces() const = 0;
   virtual bool UseStatelessRejectsIfPeerSupported() const = 0;
   virtual bool PeerSupportsStatelessRejects() const = 0;
+  virtual bool ZeroRttAttempted() const = 0;
   virtual void SetPeerSupportsStatelessRejects(bool set) = 0;
   virtual const CachedNetworkParameters* PreviousCachedNetworkParams()
       const = 0;
@@ -112,6 +113,7 @@ class QUIC_EXPORT_PRIVATE QuicCryptoServerStream
   const CachedNetworkParameters* PreviousCachedNetworkParams() const override;
   bool UseStatelessRejectsIfPeerSupported() const override;
   bool PeerSupportsStatelessRejects() const override;
+  bool ZeroRttAttempted() const override;
   void SetPeerSupportsStatelessRejects(
       bool peer_supports_stateless_rejects) override;
   void SetPreviousCachedNetworkParams(
@@ -136,6 +138,9 @@ class QUIC_EXPORT_PRIVATE QuicCryptoServerStream
   // Hook that allows the server to set QuicConfig defaults just
   // before going through the parameter negotiation step.
   virtual void OverrideQuicConfigDefaults(QuicConfig* config);
+
+  // Returns client address used to generate and validate source address token.
+  virtual const QuicSocketAddress GetClientAddress();
 
  private:
   friend class test::QuicCryptoServerStreamPeer;
@@ -259,6 +264,11 @@ class QUIC_EXPORT_PRIVATE QuicCryptoServerStream
   //  TODO(jokulik): Remove once client stateless reject support
   // becomes the default.
   bool peer_supports_stateless_rejects_;
+
+  // True if client attempts 0-rtt handshake (which can succeed or fail). If
+  // stateless rejects are used, this variable will be false for the stateless
+  // rejected connection and true for subsequent connections.
+  bool zero_rtt_attempted_;
 
   // Size of the packet containing the most recently received CHLO.
   QuicByteCount chlo_packet_size_;

@@ -30,7 +30,7 @@ def main():
   try:
     common.note(
         'Archiving directory \'payload\' to %s' % options.isolate_server)
-    payload_isolated_sha1 = common.capture(
+    payload_isolated_hash = common.capture(
         [
           'isolateserver.py',
           'archive',
@@ -47,12 +47,12 @@ def main():
       data = {
         'algo': 'sha-1',
         'command': ['python', 'hello_world.py', 'Custom'],
-        'includes': [payload_isolated_sha1],
+        'includes': [payload_isolated_hash],
         'version': '1.0',
       }
       with open(isolated, 'wb') as f:
         json.dump(data, f, sort_keys=True, separators=(',',':'))
-      isolated_sha1 = common.capture(
+      isolated_hash = common.capture(
           [
             'isolateserver.py',
             'archive',
@@ -66,7 +66,7 @@ def main():
     # Now trigger as usual. You could look at run_exmaple_swarming_involved for
     # the involved way but use the short way here.
 
-    common.note('Running %s on %s' % (isolated_sha1, options.swarming))
+    common.note('Running %s on %s' % (isolated_hash, options.swarming))
     cmd = [
       'swarming.py',
       'run',
@@ -75,7 +75,7 @@ def main():
       '--dimension', 'os', options.swarming_os,
       '--dimension', 'pool', 'default',
       '--task-name', options.task_name,
-      isolated_sha1,
+      isolated_hash,
     ]
     if options.idempotent:
       cmd.append('--idempotent')

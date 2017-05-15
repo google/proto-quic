@@ -7,6 +7,8 @@ import os
 from core import path_util
 from core import perf_benchmark
 
+from page_sets import webgl_supported_shared_state
+
 from telemetry import benchmark
 from telemetry import page as page_module
 from telemetry.page import legacy_page_test
@@ -17,12 +19,7 @@ from telemetry.timeline import model as model_module
 from telemetry.timeline import tracing_config
 
 from telemetry.value import list_of_scalar_values
-from telemetry.value import scalar
 from telemetry.value import trace
-
-
-from measurements import timeline_controller
-from page_sets import webgl_supported_shared_state
 
 
 BLINK_PERF_BASE_DIR = os.path.join(path_util.GetChromiumSrcDir(),
@@ -79,7 +76,7 @@ def CreateStorySetFromPath(path, skipped_file,
 
 
 def _ComputeTraceEventsThreadTimeForBlinkPerf(
-    renderer_thread, trace_events_to_measure):
+    model, renderer_thread, trace_events_to_measure):
   """ Compute the CPU duration for each of |trace_events_to_measure| during
   blink_perf test.
 
@@ -107,7 +104,17 @@ def _ComputeTraceEventsThreadTimeForBlinkPerf(
 
   for event_name in trace_events_to_measure:
     curr_test_runs_bound_index = 0
-    for event in renderer_thread.IterAllSlicesOfName(event_name):
+    seen_uuids = set()
+    for event in model.IterAllEventsOfName(event_name):
+      # Trace events can be duplicated in some cases. Filter out trace events
+      # that have duplicated uuid.
+      event_uuid = None
+      if event.args:
+        event_uuid = event.args.get('uuid')
+      if event_uuid and event_uuid in seen_uuids:
+        continue
+      elif event_uuid:
+        seen_uuids.add(event_uuid)
       while (curr_test_runs_bound_index < len(test_runs_bounds) and
              event.start > test_runs_bounds[curr_test_runs_bound_index].max):
         curr_test_runs_bound_index += 1
@@ -123,9 +130,7 @@ def _ComputeTraceEventsThreadTimeForBlinkPerf(
         intersect_cpu_time = intersect_wall_time
       trace_cpu_time_metrics[event_name][curr_test_runs_bound_index] += (
           intersect_cpu_time)
-
   return trace_cpu_time_metrics
-
 
 
 class _BlinkPerfMeasurement(legacy_page_test.LegacyPageTest):
@@ -145,12 +150,23 @@ class _BlinkPerfMeasurement(legacy_page_test.LegacyPageTest):
     options.AppendExtraBrowserArgs([
         '--js-flags=--expose_gc',
         '--enable-experimental-web-platform-features',
+        # Note that both this flag:
         '--ignore-autoplay-restrictions',
+        # and this flag:
+        '--disable-gesture-requirement-for-media-playback',
+        # should be used until every build from
+        # ToT to Stable switches over to one flag or another. This is to support
+        # reference builds.
+        # --disable-gesture-requirement-for-media-playback is the old one and
+        # can be removed after M60 goes to stable.
         '--enable-experimental-canvas-features',
         # TODO(qinmin): After fixing crbug.com/592017, remove this command line.
         '--reduce-security-for-testing'
     ])
-    if 'content-shell' in options.browser_type:
+
+  def SetOptions(self, options):
+    super(_BlinkPerfMeasurement, self).SetOptions(options)
+    if 'content-shell' in options.browser_options.browser_type:
       options.AppendExtraBrowserArgs('--expose-internals-for-testing')
 
   def _ContinueTestRunWithTracing(self, tab):
@@ -199,7 +215,7 @@ class _BlinkPerfMeasurement(legacy_page_test.LegacyPageTest):
       model = model_module.TimelineModel(trace_data)
       renderer_thread = model.GetRendererThreadFromTabId(tab.id)
       trace_cpu_time_metrics = _ComputeTraceEventsThreadTimeForBlinkPerf(
-          renderer_thread, trace_events_to_measure)
+          model, renderer_thread, trace_events_to_measure)
 
     log = tab.EvaluateJavaScript('document.getElementById("log").innerHTML')
 
@@ -223,49 +239,8 @@ class _BlinkPerfMeasurement(legacy_page_test.LegacyPageTest):
     self.PrintAndCollectTraceEventMetrics(trace_cpu_time_metrics, results)
 
 
-# TODO(wangxianzhu): Convert the paint benchmarks to use the new blink_perf
-# tracing once it's ready.
-class _BlinkPerfPaintMeasurement(_BlinkPerfMeasurement):
-  """Also collects prePaint and paint timing from traces."""
-
-  def __init__(self):
-    super(_BlinkPerfPaintMeasurement, self).__init__()
-    self._controller = None
-
-  def WillNavigateToPage(self, page, tab):
-    super(_BlinkPerfPaintMeasurement, self).WillNavigateToPage(page, tab)
-    self._controller = timeline_controller.TimelineController()
-    self._controller.trace_categories = 'blink,blink.console'
-    self._controller.SetUp(page, tab)
-    self._controller.Start(tab)
-
-  def DidRunPage(self, platform):
-    if self._controller:
-      self._controller.CleanUp(platform)
-
-  def ValidateAndMeasurePage(self, page, tab, results):
-    super(_BlinkPerfPaintMeasurement, self).ValidateAndMeasurePage(
-        page, tab, results)
-    self._controller.Stop(tab, results)
-    renderer = self._controller.model.GetRendererThreadFromTabId(tab.id)
-    # The marker marks the beginning and ending of the measured runs.
-    marker = next(event for event in renderer.async_slices
-                  if event.name == 'blink_perf'
-                  and event.category == 'blink.console')
-    assert marker
-
-    for event in renderer.all_slices:
-      if event.start < marker.start or event.end > marker.end:
-        continue
-      if event.name == 'FrameView::prePaint':
-        results.AddValue(
-            scalar.ScalarValue(page, 'prePaint', 'ms', event.duration))
-      if event.name == 'FrameView::paintTree':
-        results.AddValue(
-            scalar.ScalarValue(page, 'paint', 'ms', event.duration))
-
-
 class _BlinkPerfBenchmark(perf_benchmark.PerfBenchmark):
+
   test = _BlinkPerfMeasurement
 
   @classmethod
@@ -287,10 +262,7 @@ class BlinkPerfBindings(_BlinkPerfBenchmark):
   @classmethod
   def ShouldDisable(cls, possible_browser):
     # http://crbug.com/563979
-    return (cls.IsSvelte(possible_browser)
-      # http://crbug.com/653970
-      or (possible_browser.browser_type == 'reference' and
-        possible_browser.platform.GetOSName() == 'android'))
+    return cls.IsSvelte(possible_browser)
 
 
 @benchmark.Enabled('content-shell')
@@ -306,8 +278,7 @@ class BlinkPerfCSS(_BlinkPerfBenchmark):
 
 
 @benchmark.Disabled('android', # http://crbug.com/685320
-                    'android-webview', # http://crbug.com/593200
-                    'reference')  # http://crbug.com/576779
+                    'android-webview') # http://crbug.com/593200
 @benchmark.Owner(emails=['junov@chromium.org'])
 class BlinkPerfCanvas(_BlinkPerfBenchmark):
   tag = 'canvas'
@@ -361,7 +332,6 @@ class BlinkPerfLayout(_BlinkPerfBenchmark):
 
 @benchmark.Owner(emails=['wangxianzhu@chromium.org'])
 class BlinkPerfPaint(_BlinkPerfBenchmark):
-  test = _BlinkPerfPaintMeasurement
   tag = 'paint'
   subdir = 'Paint'
 
@@ -393,4 +363,3 @@ class BlinkPerfShadowDOM(_BlinkPerfBenchmark):
   @classmethod
   def ShouldDisable(cls, possible_browser):  # http://crbug.com/702319
     return possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X'
-

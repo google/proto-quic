@@ -72,6 +72,10 @@ class NET_EXPORT ReportingEndpointManager {
   ReportingContext* context_;
 
   std::set<GURL> pending_endpoints_;
+
+  // Note: Currently the ReportingBrowsingDataRemover does not clear this data
+  // because it's not persisted to disk. If it's ever persisted, it will need
+  // to be cleared as well.
   std::map<GURL, std::unique_ptr<net::BackoffEntry>> endpoint_backoff_;
 
   DISALLOW_COPY_AND_ASSIGN(ReportingEndpointManager);

@@ -9,17 +9,18 @@ Description of common properties:
   * address: The start address of the symbol.
         May be 0 (e.g. for .bss or for SymbolGroups).
   * size: The number of bytes this symbol takes up, including padding that comes
-       before |address|.
+        before |address|.
   * num_aliases: The number of symbols with the same address (including self).
   * pss: size / num_aliases.
   * padding: The number of bytes of padding before |address| due to this symbol.
-  * name: Symbol names with parameter list removed.
+  * name: Names with templates and parameter list removed.
         Never None, but will be '' for anonymous symbols.
-  * full_name: Symbols names with parameter list left in.
-       Never None, but will be '' for anonymous symbols, and for symbols that do
-       not contain a parameter list.
+  * template_name: Name with parameter list removed (but templates left in).
+        Never None, but will be '' for anonymous symbols.
+  * full_name: Name with template and parameter list left in.
+        Never None, but will be '' for anonymous symbols.
   * is_anonymous: True when the symbol exists in an anonymous namespace (which
-       are removed from both full_name and name during normalization).
+        are removed from both full_name and name during normalization).
   * section_name: E.g. ".text", ".rodata", ".data.rel.local"
   * section: The second character of |section_name|. E.g. "t", "r", "d".
 """
@@ -41,6 +42,7 @@ METADATA_ELF_FILENAME = 'elf_file_name'  # Path relative to output_directory.
 METADATA_ELF_MTIME = 'elf_mtime'  # int timestamp in utc.
 METADATA_ELF_BUILD_ID = 'elf_build_id'
 METADATA_GN_ARGS = 'gn_args'
+METADATA_TOOL_PREFIX = 'tool_prefix'  # Path relative to SRC_ROOT.
 
 
 SECTION_TO_SECTION_NAME = {
@@ -55,6 +57,7 @@ FLAG_STARTUP = 2
 FLAG_UNLIKELY = 4
 FLAG_REL = 8
 FLAG_REL_LOCAL = 16
+FLAG_GENERATED_SOURCE = 32
 
 
 class SizeInfo(object):
@@ -62,27 +65,34 @@ class SizeInfo(object):
 
   Fields:
     section_sizes: A dict of section_name -> size.
-    symbols: A SymbolGroup containing all symbols, sorted by address.
+    raw_symbols: A list of all symbols, sorted by address.
+    symbols: A SymbolGroup containing all symbols. By default, these are the
+        same as raw_symbols, but may contain custom groupings when it is
+        desirable to convey the result of a query along with section_sizes and
+        metadata.
     metadata: A dict.
   """
   __slots__ = (
       'section_sizes',
+      'raw_symbols',
       'symbols',
       'metadata',
   )
 
   """Root size information."""
-  def __init__(self, section_sizes, symbols, metadata=None):
+  def __init__(self, section_sizes, raw_symbols, metadata=None, symbols=None):
     self.section_sizes = section_sizes  # E.g. {'.text': 0}
-    self.symbols = symbols
+    self.raw_symbols = raw_symbols
+    self.symbols = symbols or SymbolGroup(raw_symbols)
     self.metadata = metadata or {}
 
-  def Cluster(self):
+  def Clustered(self):
     """Returns a new SizeInfo with some symbols moved into subgroups.
 
-    See SymbolGroup.Cluster() for more details.
+    See SymbolGroup.Clustered() for more details.
     """
-    return SizeInfo(self.section_sizes, self.symbols.Cluster(), self.metadata)
+    return SizeInfo(self.section_sizes, self.raw_symbols, self.metadata,
+                    symbols=self.symbols.Clustered())
 
 
 class SizeInfoDiff(object):
@@ -136,6 +146,17 @@ class BaseSymbol(object):
     return bool(self.flags & FLAG_ANONYMOUS)
 
   @property
+  def generated_source(self):
+    return bool(self.flags & FLAG_GENERATED_SOURCE)
+
+  @generated_source.setter
+  def generated_source(self, value):
+    if value:
+      self.flags |= FLAG_GENERATED_SOURCE
+    else:
+      self.flags &= ~FLAG_GENERATED_SOURCE
+
+  @property
   def num_aliases(self):
     return len(self.aliases) if self.aliases else 1
 
@@ -155,6 +176,8 @@ class BaseSymbol(object):
       parts.append('rel')
     if flags & FLAG_REL_LOCAL:
       parts.append('rel.loc')
+    if flags & FLAG_GENERATED_SOURCE:
+      parts.append('gen')
     # Not actually a part of flags, but useful to show it here.
     if self.aliases:
       parts.append('{} aliases'.format(self.num_aliases))
@@ -166,10 +189,9 @@ class BaseSymbol(object):
   def IsGroup(self):
     return False
 
-  def IsGenerated(self):
-    # TODO(agrieve): Also match generated functions such as:
-    #     startup._GLOBAL__sub_I_page_allocator.cc
-    return self.name.endswith(']') and not self.name.endswith('[]')
+  def IsGeneratedByToolchain(self):
+    return '.' in self.name or (
+        self.name.endswith(']') and not self.name.endswith('[]'))
 
 
 class Symbol(BaseSymbol):
@@ -181,9 +203,10 @@ class Symbol(BaseSymbol):
   __slots__ = (
       'address',
       'full_name',
+      'template_name',
+      'name',
       'flags',
       'object_path',
-      'name',
       'aliases',
       'padding',
       'section_name',
@@ -192,12 +215,13 @@ class Symbol(BaseSymbol):
   )
 
   def __init__(self, section_name, size_without_padding, address=None,
-               name=None, source_path=None, object_path=None, full_name=None,
-               flags=0, aliases=None):
+               full_name=None, template_name=None, name=None, source_path=None,
+               object_path=None, flags=0, aliases=None):
     self.section_name = section_name
     self.address = address or 0
-    self.name = name or ''
     self.full_name = full_name or ''
+    self.template_name = template_name or ''
+    self.name = name or ''
     self.source_path = source_path or ''
     self.object_path = object_path or ''
     self.size = size_without_padding
@@ -244,20 +268,23 @@ class SymbolGroup(BaseSymbol):
       '_symbols',
       '_filtered_symbols',
       'full_name',
+      'template_name',
       'name',
       'section_name',
       'is_sorted',
   )
 
-  def __init__(self, symbols, filtered_symbols=None, name=None,
-               full_name=None, section_name=None, is_sorted=False):
+  # template_name and full_name are useful when clustering symbol clones.
+  def __init__(self, symbols, filtered_symbols=None, full_name=None,
+               template_name=None, name='', section_name=None, is_sorted=False):
     self._padding = None
     self._size = None
     self._pss = None
     self._symbols = symbols
     self._filtered_symbols = filtered_symbols or []
+    self.full_name = full_name if full_name is not None else name
+    self.template_name = template_name if template_name is not None else name
     self.name = name or ''
-    self.full_name = full_name
     self.section_name = section_name or '.*'
     self.is_sorted = is_sorted
 
@@ -302,35 +329,23 @@ class SymbolGroup(BaseSymbol):
 
   @property
   def address(self):
-    first = self._symbols[0].address
+    first = self._symbols[0].address if self else 0
     return first if all(s.address == first for s in self._symbols) else 0
 
   @property
   def flags(self):
-    first = self._symbols[0].flags
+    first = self._symbols[0].flags if self else 0
     return first if all(s.flags == first for s in self._symbols) else 0
 
   @property
   def object_path(self):
-    first = self._symbols[0].object_path
+    first = self._symbols[0].object_path if self else ''
     return first if all(s.object_path == first for s in self._symbols) else ''
 
   @property
   def source_path(self):
-    first = self._symbols[0].source_path
+    first = self._symbols[0].source_path if self else ''
     return first if all(s.source_path == first for s in self._symbols) else ''
-
-  def IterUniqueSymbols(self):
-    seen_aliases_lists = set()
-    for s in self:
-      if not s.aliases:
-        yield s
-      elif id(s.aliases) not in seen_aliases_lists:
-        seen_aliases_lists.add(id(s.aliases))
-        yield s
-
-  def CountUniqueSymbols(self):
-    return sum(1 for s in self.IterUniqueSymbols())
 
   @property
   def size(self):
@@ -345,9 +360,9 @@ class SymbolGroup(BaseSymbol):
   def pss(self):
     if self._pss is None:
       if self.IsBss():
-        self._pss = float(self.size)
-      else:
         self._pss = sum(s.pss for s in self)
+      else:
+        self._pss = sum(s.pss for s in self if not s.IsBss())
     return self._pss
 
   @property
@@ -363,15 +378,39 @@ class SymbolGroup(BaseSymbol):
   def IsGroup(self):
     return True
 
-  def _CreateTransformed(self, symbols, filtered_symbols=None, name=None,
-                         full_name=None, section_name=None, is_sorted=None):
+  def IterUniqueSymbols(self):
+    """Yields all symbols, but only one from each alias group."""
+    seen_aliases_lists = set()
+    for s in self:
+      if not s.aliases:
+        yield s
+      elif id(s.aliases) not in seen_aliases_lists:
+        seen_aliases_lists.add(id(s.aliases))
+        yield s
+
+  def IterLeafSymbols(self):
+    """Yields all symbols, recursing into subgroups."""
+    for s in self:
+      if s.IsGroup():
+        for x in s.IterLeafSymbols():
+          yield x
+      else:
+        yield s
+
+  def CountUniqueSymbols(self):
+    return sum(1 for s in self.IterUniqueSymbols())
+
+  def _CreateTransformed(self, symbols, filtered_symbols=None, full_name=None,
+                         template_name=None, name=None, section_name=None,
+                         is_sorted=None):
     if is_sorted is None:
       is_sorted = self.is_sorted
-    return SymbolGroup(symbols, filtered_symbols=filtered_symbols, name=name,
-                       full_name=full_name, section_name=section_name,
+    return SymbolGroup(symbols, filtered_symbols=filtered_symbols,
+                       full_name=full_name, template_name=template_name,
+                       name=name, section_name=section_name,
                        is_sorted=is_sorted)
 
-  def Cluster(self):
+  def Clustered(self):
     """Returns a new SymbolGroup with some symbols moved into subgroups.
 
     Subgroups include:
@@ -384,10 +423,9 @@ class SymbolGroup(BaseSymbol):
     return self._CreateTransformed(cluster_symbols.ClusterSymbols(self))
 
   def Sorted(self, cmp_func=None, key=None, reverse=False):
-    # Default to sorting by abs(size) then name.
     if cmp_func is None and key is None:
-      cmp_func = lambda a, b: cmp((a.IsBss(), abs(b.size), a.name),
-                                  (b.IsBss(), abs(a.size), b.name))
+      cmp_func = lambda a, b: cmp((a.IsBss(), abs(b.pss), a.name),
+                                  (b.IsBss(), abs(a.pss), b.name))
 
     after_symbols = sorted(self._symbols, cmp_func, key, reverse)
     return self._CreateTransformed(
@@ -398,7 +436,8 @@ class SymbolGroup(BaseSymbol):
     return self.Sorted(key=(lambda s:s.name), reverse=reverse)
 
   def SortedByAddress(self, reverse=False):
-    return self.Sorted(key=(lambda s:s.address), reverse=reverse)
+    return self.Sorted(key=(lambda s:(s.address, s.object_path, s.name)),
+                       reverse=reverse)
 
   def SortedByCount(self, reverse=False):
     return self.Sorted(key=(lambda s:len(s) if s.IsGroup() else 1),
@@ -418,8 +457,11 @@ class SymbolGroup(BaseSymbol):
                                    filtered_symbols=filtered_and_kept[0],
                                    section_name=self.section_name)
 
-  def WhereBiggerThan(self, min_size):
+  def WhereSizeBiggerThan(self, min_size):
     return self.Filter(lambda s: s.size >= min_size)
+
+  def WherePssBiggerThan(self, min_pss):
+    return self.Filter(lambda s: s.pss >= min_pss)
 
   def WhereInSection(self, section):
     if len(section) == 1:
@@ -430,8 +472,22 @@ class SymbolGroup(BaseSymbol):
       ret.section_name = section
     return ret
 
-  def WhereIsGenerated(self):
-    return self.Filter(lambda s: s.IsGenerated())
+  def WhereIsTemplate(self):
+    return self.Filter(lambda s: s.template_name is not s.name)
+
+  def WhereSourceIsGenerated(self):
+    return self.Filter(lambda s: s.generated_source)
+
+  def WhereGeneratedByToolchain(self):
+    return self.Filter(lambda s: s.IsGeneratedByToolchain())
+
+  def WhereFullNameMatches(self, pattern):
+    regex = re.compile(match_util.ExpandRegexIdentifierPlaceholder(pattern))
+    return self.Filter(lambda s: regex.search(s.full_name))
+
+  def WhereTemplateNameMatches(self, pattern):
+    regex = re.compile(match_util.ExpandRegexIdentifierPlaceholder(pattern))
+    return self.Filter(lambda s: regex.search(s.template_name))
 
   def WhereNameMatches(self, pattern):
     regex = re.compile(match_util.ExpandRegexIdentifierPlaceholder(pattern))
@@ -453,10 +509,12 @@ class SymbolGroup(BaseSymbol):
   def WhereMatches(self, pattern):
     """Looks for |pattern| within all paths & names."""
     regex = re.compile(match_util.ExpandRegexIdentifierPlaceholder(pattern))
-    return self.Filter(lambda s: (regex.search(s.source_path) or
-                                  regex.search(s.object_path) or
-                                  regex.search(s.full_name or '') or
-                                  regex.search(s.name)))
+    return self.Filter(lambda s: (
+        regex.search(s.source_path) or
+        regex.search(s.object_path) or
+        regex.search(s.full_name) or
+        s.full_name is not s.template_name and regex.search(s.template_name) or
+        s.full_name is not s.name and regex.search(s.name)))
 
   def WhereAddressInRange(self, start, end=None):
     """Searches for addesses within [start, end).
@@ -469,8 +527,11 @@ class SymbolGroup(BaseSymbol):
       end = start + 1
     return self.Filter(lambda s: s.address >= start and s.address < end)
 
+  def WhereHasPath(self):
+    return self.Filter(lambda s: s.source_path or s.object_path)
+
   def WhereHasAnyAttribution(self):
-    return self.Filter(lambda s: s.name or s.source_path or s.object_path)
+    return self.Filter(lambda s: s.full_name or s.source_path or s.object_path)
 
   def Inverted(self):
     """Returns the symbols that were filtered out by the previous filter.
@@ -486,8 +547,10 @@ class SymbolGroup(BaseSymbol):
     return self._CreateTransformed(
         self._filtered_symbols, filtered_symbols=self._symbols, is_sorted=False)
 
-  def GroupBy(self, func, min_count=0):
+  def GroupedBy(self, func, min_count=0):
     """Returns a SymbolGroup of SymbolGroups, indexed by |func|.
+
+    Symbols within each subgroup maintain their relative ordering.
 
     Args:
       func: Grouping function. Passed a symbol and returns a string for the
@@ -519,45 +582,41 @@ class SymbolGroup(BaseSymbol):
         after_syms.extend(symbols)
       else:
         filtered_symbols.extend(symbols)
-    return self._CreateTransformed(
+    grouped = self._CreateTransformed(
         after_syms, filtered_symbols=filtered_symbols,
         section_name=self.section_name, is_sorted=False)
+    return grouped
 
-  def GroupBySectionName(self):
-    return self.GroupBy(lambda s: s.section_name)
+  def GroupedBySectionName(self):
+    return self.GroupedBy(lambda s: s.section_name)
 
-  def GroupByNamespace(self, depth=0, fallback='{global}', min_count=0):
-    """Groups by symbol namespace (as denoted by ::s).
+  def GroupedByName(self, depth=0, min_count=0):
+    """Groups by symbol name, where |depth| controls how many ::s to include.
 
-    Does not differentiate between C++ namespaces and C++ classes.
+    Does not differentiate between namespaces/classes/functions.
 
     Args:
-      depth: When 0 (default), groups by entire namespace. When 1, groups by
-             top-level name, when 2, groups by top 2 names, etc.
-      fallback: Use this value when no namespace exists.
+      depth: 0 (default): Groups by entire name. Useful for grouping templates.
+             >0: Groups by this many name parts.
+                 Example: 1 -> std::, 2 -> std::map
+             <0: Groups by entire name minus this many name parts
+                 Example: -1 -> std::map, -2 -> std::
       min_count: Miniumum number of symbols for a group. If fewer than this many
                  symbols end up in a group, they will not be put within a group.
                  Use a negative value to omit symbols entirely rather than
                  include them outside of a group.
     """
-    def extract_namespace(symbol):
-      # Remove template params.
-      name = symbol.name
-      template_idx = name.find('<')
-      if template_idx:
-        name = name[:template_idx]
+    if depth >= 0:
+      extract_namespace = (
+          lambda s: _ExtractPrefixBeforeSeparator(s.name, '::', depth))
+    else:
+      depth = -depth
+      extract_namespace = (
+          lambda s: _ExtractSuffixAfterSeparator(s.name, '::', depth))
+    return self.GroupedBy(extract_namespace, min_count=min_count)
 
-      # Remove after the final :: (not part of the namespace).
-      colon_idx = name.rfind('::')
-      if colon_idx == -1:
-        return fallback
-      name = name[:colon_idx]
-
-      return _ExtractPrefixBeforeSeparator(name, '::', depth)
-    return self.GroupBy(extract_namespace, min_count=min_count)
-
-  def GroupBySourcePath(self, depth=0, fallback='{no path}',
-                        fallback_to_object_path=True, min_count=0):
+  def GroupedByPath(self, depth=0, fallback='{no path}',
+                  fallback_to_object_path=True, min_count=0):
     """Groups by source_path.
 
     Args:
@@ -577,24 +636,7 @@ class SymbolGroup(BaseSymbol):
         path = symbol.object_path
       path = path or fallback
       return _ExtractPrefixBeforeSeparator(path, os.path.sep, depth)
-    return self.GroupBy(extract_path, min_count=min_count)
-
-  def GroupByObjectPath(self, depth=0, fallback='{no path}', min_count=0):
-    """Groups by object_path.
-
-    Args:
-      depth: When 0 (default), groups by entire path. When 1, groups by
-             top-level directory, when 2, groups by top 2 directories, etc.
-      fallback: Use this value when no namespace exists.
-      min_count: Miniumum number of symbols for a group. If fewer than this many
-                 symbols end up in a group, they will not be put within a group.
-                 Use a negative value to omit symbols entirely rather than
-                 include them outside of a group.
-    """
-    def extract_path(symbol):
-      path = symbol.object_path or fallback
-      return _ExtractPrefixBeforeSeparator(path, os.path.sep, depth)
-    return self.GroupBy(extract_path, min_count=min_count)
+    return self.GroupedBy(extract_path, min_count=min_count)
 
 
 class SymbolDiff(SymbolGroup):
@@ -609,24 +651,23 @@ class SymbolDiff(SymbolGroup):
       '_removed_ids',
   )
 
-  def __init__(self, added, removed, similar, name=None, full_name=None,
-               section_name=None):
+  def __init__(self, added, removed, similar):
     self._added_ids = set(id(s) for s in added)
     self._removed_ids = set(id(s) for s in removed)
     symbols = []
     symbols.extend(added)
     symbols.extend(removed)
     symbols.extend(similar)
-    super(SymbolDiff, self).__init__(symbols, name=name, full_name=full_name,
-                                     section_name=section_name)
+    super(SymbolDiff, self).__init__(symbols)
 
   def __repr__(self):
     return '%s(%d added, %d removed, %d changed, %d unchanged, size=%d)' % (
         'SymbolGroup', self.added_count, self.removed_count, self.changed_count,
         self.unchanged_count, self.size)
 
-  def _CreateTransformed(self, symbols, filtered_symbols=None, name=None,
-                         full_name=None, section_name=None, is_sorted=None):
+  def _CreateTransformed(self, symbols, filtered_symbols=None, full_name=None,
+                         template_name=None, name=None, section_name=None,
+                         is_sorted=None):
     # Printing sorts, so short-circuit the same symbols case.
     if len(symbols) == len(self._symbols):
       new_added_ids = self._added_ids
@@ -660,8 +701,9 @@ class SymbolDiff(SymbolGroup):
     ret._added_ids = new_added_ids
     ret._removed_ids = new_removed_ids
     super(SymbolDiff, ret).__init__(
-        symbols, filtered_symbols=filtered_symbols, name=name,
-        full_name=full_name, section_name=section_name, is_sorted=is_sorted)
+        symbols, filtered_symbols=filtered_symbols, full_name=full_name,
+        template_name=template_name, name=name, section_name=section_name,
+        is_sorted=is_sorted)
     return ret
 
   @property
@@ -695,11 +737,21 @@ class SymbolDiff(SymbolGroup):
     return self.Filter(lambda s: not self.IsSimilar(s) or s.size)
 
 
-def _ExtractPrefixBeforeSeparator(string, separator, count=1):
+def _ExtractPrefixBeforeSeparator(string, separator, count):
   idx = -len(separator)
   prev_idx = None
   for _ in xrange(count):
     idx = string.find(separator, idx + len(separator))
+    if idx < 0:
+      break
+    prev_idx = idx
+  return string[:prev_idx]
+
+
+def _ExtractSuffixAfterSeparator(string, separator, count):
+  prev_idx = len(string) + 1
+  for _ in xrange(count):
+    idx = string.rfind(separator, 0, prev_idx - 1)
     if idx < 0:
       break
     prev_idx = idx

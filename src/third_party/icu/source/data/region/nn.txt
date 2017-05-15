@@ -107,7 +107,7 @@ nn{
         EU{"Den europeiske unionen"}
         FI{"Finland"}
         FJ{"Fiji"}
-        FK{"Falklandsøyane"}
+        FK{"Falklandsøyane (Islas Malvinas)"}
         FM{"Mikronesiaføderasjonen"}
         FO{"Færøyane"}
         FR{"Frankrike"}
@@ -180,7 +180,7 @@ nn{
         MF{"Saint Martin"}
         MG{"Madagaskar"}
         MH{"Marshalløyane"}
-        MK{"Makedonia"}
+        MK{"Den tidlegare jugoslaviske republikken Makedonia"}
         ML{"Mali"}
         MM{"Myanmar (Burma)"}
         MN{"Mongolia"}
@@ -298,8 +298,6 @@ nn{
     Countries%variant{
         CD{"Den demokratiske republikken Kongo"}
         CG{"Republikken Kongo"}
-        FK{"Falklandsøyane (Islas Malvinas)"}
-        MK{"Den tidlegare jugoslaviske republikken Makedonia"}
     }
-    Version{"2.1.28.76"}
+    Version{"2.1.31.86"}
 }

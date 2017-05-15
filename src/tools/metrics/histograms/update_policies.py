@@ -21,8 +21,9 @@ from diff_util import PromptUserToAcceptDiff
 import path_util
 
 import print_style
+import histogram_paths
 
-HISTOGRAMS_PATH = path_util.GetHistogramsFile()
+ENUMS_PATH = histogram_paths.ENUMS_XML
 POLICY_TEMPLATES_PATH = 'components/policy/resources/policy_templates.json'
 ENUM_NAME = 'EnterprisePolicies'
 
@@ -97,7 +98,7 @@ def main():
 
   with open(path_util.GetInputFile(POLICY_TEMPLATES_PATH), 'rb') as f:
     policy_templates = literal_eval(f.read())
-  with open(HISTOGRAMS_PATH, 'rb') as f:
+  with open(ENUMS_PATH, 'rb') as f:
     histograms_doc = minidom.parse(f)
     f.seek(0)
     xml = f.read()
@@ -105,7 +106,7 @@ def main():
   UpdateHistogramDefinitions(policy_templates, histograms_doc)
   new_xml = print_style.GetPrintStyle().PrettyPrintNode(histograms_doc)
   if PromptUserToAcceptDiff(xml, new_xml, 'Is the updated version acceptable?'):
-    with open(HISTOGRAMS_PATH, 'wb') as f:
+    with open(ENUMS_PATH, 'wb') as f:
       f.write(new_xml)
 
 

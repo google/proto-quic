@@ -20,6 +20,7 @@
 #include "base/sequenced_task_runner.h"
 #include "base/single_thread_task_runner.h"
 #include "base/task_runner.h"
+#include "base/task_scheduler/single_thread_task_runner_thread_mode.h"
 #include "base/task_scheduler/task.h"
 #include "base/task_scheduler/task_scheduler.h"
 #include "base/task_scheduler/task_tracker.h"
@@ -60,10 +61,12 @@ class TestTaskScheduler : public TaskScheduler {
   scoped_refptr<SequencedTaskRunner> CreateSequencedTaskRunnerWithTraits(
       const TaskTraits& traits) override;
   scoped_refptr<SingleThreadTaskRunner> CreateSingleThreadTaskRunnerWithTraits(
-      const TaskTraits& traits) override;
+      const TaskTraits& traits,
+      SingleThreadTaskRunnerThreadMode thread_mode) override;
 #if defined(OS_WIN)
   scoped_refptr<SingleThreadTaskRunner> CreateCOMSTATaskRunnerWithTraits(
-      const TaskTraits& traits) override;
+      const TaskTraits& traits,
+      SingleThreadTaskRunnerThreadMode thread_mode) override;
 #endif  // defined(OS_WIN)
   std::vector<const HistogramBase*> GetHistograms() const override;
   int GetMaxConcurrentTasksWithTraitsDeprecated(
@@ -82,7 +85,7 @@ class TestTaskScheduler : public TaskScheduler {
                const SequenceToken& sequence_token);
 
   // Returns true if this TaskScheduler runs its tasks on the current thread.
-  bool RunsTasksOnCurrentThread() const;
+  bool RunsTasksInCurrentSequence() const;
 
  private:
   // Returns the TaskRunner to which this TaskScheduler forwards tasks. It may
@@ -143,7 +146,7 @@ class TestTaskSchedulerTaskRunner : public SingleThreadTaskRunner {
   bool PostNonNestableDelayedTask(const tracked_objects::Location& from_here,
                                   OnceClosure closure,
                                   TimeDelta delay) override;
-  bool RunsTasksOnCurrentThread() const override;
+  bool RunsTasksInCurrentSequence() const override;
 
  private:
   ~TestTaskSchedulerTaskRunner() override;
@@ -196,14 +199,17 @@ TestTaskScheduler::CreateSequencedTaskRunnerWithTraits(
 
 scoped_refptr<SingleThreadTaskRunner>
 TestTaskScheduler::CreateSingleThreadTaskRunnerWithTraits(
-    const TaskTraits& traits) {
+    const TaskTraits& traits,
+    SingleThreadTaskRunnerThreadMode thread_mode) {
   return make_scoped_refptr(new TestTaskSchedulerTaskRunner(
       this, ExecutionMode::SINGLE_THREADED, traits));
 }
 
 #if defined(OS_WIN)
 scoped_refptr<SingleThreadTaskRunner>
-TestTaskScheduler::CreateCOMSTATaskRunnerWithTraits(const TaskTraits& traits) {
+TestTaskScheduler::CreateCOMSTATaskRunnerWithTraits(
+    const TaskTraits& traits,
+    SingleThreadTaskRunnerThreadMode thread_mode) {
   EnsureCOMSTA();
   return make_scoped_refptr(new TestTaskSchedulerTaskRunner(
       this, ExecutionMode::SINGLE_THREADED, traits));
@@ -272,8 +278,8 @@ void TestTaskScheduler::RunTask(std::unique_ptr<internal::Task> task,
   saved_task_runner_ = nullptr;
 }
 
-bool TestTaskScheduler::RunsTasksOnCurrentThread() const {
-  return MessageLoopTaskRunner()->RunsTasksOnCurrentThread();
+bool TestTaskScheduler::RunsTasksInCurrentSequence() const {
+  return MessageLoopTaskRunner()->RunsTasksInCurrentSequence();
 }
 
 TestTaskSchedulerTaskRunner::TestTaskSchedulerTaskRunner(
@@ -308,9 +314,9 @@ bool TestTaskSchedulerTaskRunner::PostNonNestableDelayedTask(
   return PostDelayedTask(from_here, std::move(closure), delay);
 }
 
-bool TestTaskSchedulerTaskRunner::RunsTasksOnCurrentThread() const {
+bool TestTaskSchedulerTaskRunner::RunsTasksInCurrentSequence() const {
   if (execution_mode_ == ExecutionMode::PARALLEL)
-    return task_scheduler_->RunsTasksOnCurrentThread();
+    return task_scheduler_->RunsTasksInCurrentSequence();
   return sequence_token_ == SequenceToken::GetForCurrentThread();
 }
 

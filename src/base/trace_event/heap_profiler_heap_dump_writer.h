@@ -18,7 +18,7 @@
 namespace base {
 namespace trace_event {
 
-class MemoryDumpSessionState;
+class HeapProfilerSerializationState;
 class StackFrameDeduplicator;
 class TracedValue;
 class TypeNameDeduplicator;
@@ -30,7 +30,7 @@ class TypeNameDeduplicator;
 BASE_EXPORT std::unique_ptr<TracedValue> ExportHeapDump(
     const std::unordered_map<AllocationContext, AllocationMetrics>&
         metrics_by_context,
-    const MemoryDumpSessionState& session_state);
+    const HeapProfilerSerializationState& heap_profiler_serialization_state);
 
 namespace internal {
 

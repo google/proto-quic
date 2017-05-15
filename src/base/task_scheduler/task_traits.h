@@ -111,19 +111,15 @@ struct MayBlock {};
 // In doubt, consult with //base/task_scheduler/OWNERS.
 struct WithBaseSyncPrimitives {};
 
-// Describes metadata for a single task or a group of tasks.
+// Describes immutable metadata for a single task or a group of tasks.
 class BASE_EXPORT TaskTraits {
  private:
   // ValidTrait ensures TaskTraits' constructor only accepts appropriate types.
-  //
-  // TODO(fdoray): Remove base:: prefixes once the TaskTraits::MayBlock() and
-  // TaskTraits::WithBaseSyncPrimitives() methods are gone.
-  // https://crbug.com/713683
   struct ValidTrait {
     ValidTrait(TaskPriority) {}
     ValidTrait(TaskShutdownBehavior) {}
-    ValidTrait(base::MayBlock) {}
-    ValidTrait(base::WithBaseSyncPrimitives) {}
+    ValidTrait(MayBlock) {}
+    ValidTrait(WithBaseSyncPrimitives) {}
   };
 
  public:
@@ -152,33 +148,33 @@ class BASE_EXPORT TaskTraits {
                 decltype(ValidTrait(std::declval<ArgTypes>()))...>>
   constexpr TaskTraits(ArgTypes... args)
       : priority_set_explicitly_(
-            internal::HasArgOfType<base::TaskPriority, ArgTypes...>::value),
+            internal::HasArgOfType<TaskPriority, ArgTypes...>::value),
         priority_(internal::GetValueFromArgList(
-            internal::EnumArgGetter<base::TaskPriority,
-                                    base::TaskPriority::USER_VISIBLE>(),
+            internal::EnumArgGetter<TaskPriority, TaskPriority::USER_VISIBLE>(),
             args...)),
+        shutdown_behavior_set_explicitly_(
+            internal::HasArgOfType<TaskShutdownBehavior, ArgTypes...>::value),
         shutdown_behavior_(internal::GetValueFromArgList(
-            internal::EnumArgGetter<
-                base::TaskShutdownBehavior,
-                base::TaskShutdownBehavior::SKIP_ON_SHUTDOWN>(),
+            internal::EnumArgGetter<TaskShutdownBehavior,
+                                    TaskShutdownBehavior::SKIP_ON_SHUTDOWN>(),
             args...)),
         may_block_(internal::GetValueFromArgList(
-            internal::BooleanArgGetter<base::MayBlock>(),
+            internal::BooleanArgGetter<MayBlock>(),
             args...)),
         with_base_sync_primitives_(internal::GetValueFromArgList(
-            internal::BooleanArgGetter<base::WithBaseSyncPrimitives>(),
+            internal::BooleanArgGetter<WithBaseSyncPrimitives>(),
             args...)) {}
 
   constexpr TaskTraits(const TaskTraits& other) = default;
   TaskTraits& operator=(const TaskTraits& other) = default;
 
-  // Deprecated.  Prefer constexpr construction to builder paradigm as
-  // documented above.
-  // TODO(fdoray): Remove these methods. https://crbug.com/713683
-  TaskTraits& WithPriority(TaskPriority priority);
-  TaskTraits& WithShutdownBehavior(TaskShutdownBehavior shutdown_behavior);
-  TaskTraits& MayBlock();
-  TaskTraits& WithBaseSyncPrimitives();
+  // Returns TaskTraits constructed by combining |left| and |right|. If a trait
+  // is specified in both |left| and |right|, the returned TaskTraits will have
+  // the value from |right|.
+  static constexpr TaskTraits Override(const TaskTraits& left,
+                                       const TaskTraits& right) {
+    return TaskTraits(left, right);
+  }
 
   // Returns true if the priority was set explicitly.
   constexpr bool priority_set_explicitly() const {
@@ -187,6 +183,11 @@ class BASE_EXPORT TaskTraits {
 
   // Returns the priority of tasks with these traits.
   constexpr TaskPriority priority() const { return priority_; }
+
+  // Returns true if the shutdown behavior was set explicitly.
+  constexpr bool shutdown_behavior_set_explicitly() const {
+    return shutdown_behavior_set_explicitly_;
+  }
 
   // Returns the shutdown behavior of tasks with these traits.
   constexpr TaskShutdownBehavior shutdown_behavior() const {
@@ -202,10 +203,24 @@ class BASE_EXPORT TaskTraits {
   }
 
  private:
-  // TODO(fdoray): Make these const after refactoring away deprecated builder
-  // pattern.
+  constexpr TaskTraits(const TaskTraits& left, const TaskTraits& right)
+      : priority_set_explicitly_(left.priority_set_explicitly_ ||
+                                 right.priority_set_explicitly_),
+        priority_(right.priority_set_explicitly_ ? right.priority_
+                                                 : left.priority_),
+        shutdown_behavior_set_explicitly_(
+            left.shutdown_behavior_set_explicitly_ ||
+            right.shutdown_behavior_set_explicitly_),
+        shutdown_behavior_(right.shutdown_behavior_set_explicitly_
+                               ? right.shutdown_behavior_
+                               : left.shutdown_behavior_),
+        may_block_(left.may_block_ || right.may_block_),
+        with_base_sync_primitives_(left.with_base_sync_primitives_ ||
+                                   right.with_base_sync_primitives_) {}
+
   bool priority_set_explicitly_;
   TaskPriority priority_;
+  bool shutdown_behavior_set_explicitly_;
   TaskShutdownBehavior shutdown_behavior_;
   bool may_block_;
   bool with_base_sync_primitives_;

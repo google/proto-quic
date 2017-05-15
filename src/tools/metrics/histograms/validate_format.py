@@ -12,12 +12,13 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'common'))
 import path_util
 
 import extract_histograms
+import histogram_paths
+import merge_xml
 
 def main():
-  # This will raise an exception if the file is not well-formatted.
-  xml_file = path_util.GetHistogramsFile()
-  histograms = extract_histograms.ExtractHistograms(xml_file)
-
+  doc = merge_xml.MergeFiles(histogram_paths.ALL_XMLS)
+  _, errors = extract_histograms.ExtractHistogramsFromDom(doc)
+  sys.exit(errors)
 
 if __name__ == '__main__':
   main()

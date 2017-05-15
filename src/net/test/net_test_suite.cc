@@ -4,7 +4,9 @@
 
 #include "net/test/net_test_suite.h"
 
-#include "base/message_loop/message_loop.h"
+#include "base/logging.h"
+#include "base/memory/ptr_util.h"
+#include "base/test/scoped_task_environment.h"
 #include "net/base/network_change_notifier.h"
 #include "net/http/http_stream_factory.h"
 #include "net/spdy/chromium/spdy_session.h"
@@ -14,11 +16,20 @@
 #include "net/cert_net/nss_ocsp.h"
 #endif
 
+namespace {
+NetTestSuite* g_current_net_test_suite = nullptr;
+}  // namespace
+
 NetTestSuite::NetTestSuite(int argc, char** argv)
     : TestSuite(argc, argv) {
+  DCHECK(!g_current_net_test_suite);
+  g_current_net_test_suite = this;
 }
 
-NetTestSuite::~NetTestSuite() {}
+NetTestSuite::~NetTestSuite() {
+  DCHECK_EQ(g_current_net_test_suite, this);
+  g_current_net_test_suite = nullptr;
+}
 
 void NetTestSuite::Initialize() {
   TestSuite::Initialize();
@@ -32,9 +43,14 @@ void NetTestSuite::Shutdown() {
 
   // We want to destroy this here before the TestSuite continues to tear down
   // the environment.
-  message_loop_.reset();
+  scoped_task_environment_.reset();
 
   TestSuite::Shutdown();
+}
+
+base::test::ScopedTaskEnvironment* NetTestSuite::GetScopedTaskEnvironment() {
+  DCHECK(g_current_net_test_suite);
+  return g_current_net_test_suite->scoped_task_environment_.get();
 }
 
 void NetTestSuite::InitializeTestThread() {
@@ -51,5 +67,7 @@ void NetTestSuite::InitializeTestThreadNoNetworkChangeNotifier() {
   // the process of running these unit tests.
   host_resolver_proc_->AddRule("*", "127.0.0.1");
 
-  message_loop_.reset(new base::MessageLoopForIO());
+  scoped_task_environment_ =
+      base::MakeUnique<base::test::ScopedTaskEnvironment>(
+          base::test::ScopedTaskEnvironment::MainThreadType::IO);
 }

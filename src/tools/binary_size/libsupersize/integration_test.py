@@ -86,6 +86,7 @@ def _RunApp(name, args, debug_measures=False):
 
 
 class IntegrationTest(unittest.TestCase):
+  maxDiff = None  # Don't trucate diffs in errors.
   cached_size_info = [None, None, None]
 
   def _CloneSizeInfo(self, use_output_directory=True, use_elf=True):
@@ -121,8 +122,8 @@ class IntegrationTest(unittest.TestCase):
     expected_size_info = self._CloneSizeInfo(
         use_output_directory=use_output_directory, use_elf=use_elf)
     self.assertEquals(expected_size_info.metadata, size_info.metadata)
-    expected = list(describe.GenerateLines(expected_size_info.Cluster()))
-    actual = list(describe.GenerateLines(size_info.Cluster()))
+    expected = list(describe.GenerateLines(expected_size_info.Clustered()))
+    actual = list(describe.GenerateLines(size_info.Clustered()))
     self.assertEquals(expected, actual)
 
     sym_strs = (repr(sym) for sym in size_info.symbols)
@@ -157,6 +158,9 @@ class IntegrationTest(unittest.TestCase):
       query = [
           'ShowExamples()',
           'ExpandRegex("_foo_")',
+          'canned_queries.CategorizeGenerated()',
+          'canned_queries.CategorizeByChromeComponent()',
+          'canned_queries.TemplatesByName()',
           'Print(size_info, to_file=%r)' % output_file.name,
       ]
       ret = _RunApp('console', [size_file.name, '--query', '; '.join(query)])
@@ -180,6 +184,7 @@ class IntegrationTest(unittest.TestCase):
     size_info2.symbols -= size_info2.symbols[-3:]
     size_info1.symbols[1].size -= 10
     d = diff.Diff(size_info1, size_info2)
+    d.symbols = d.symbols.Clustered().Sorted()
     return describe.GenerateLines(d, verbose=True)
 
   def test_Diff_Aliases1(self):
@@ -255,13 +260,14 @@ class IntegrationTest(unittest.TestCase):
         models.Symbol(S, 55, name='.L__bar_295', object_path='b'), # 5
     ]
     d = diff.Diff(size_info1, size_info2)
+    d.symbols = d.symbols.Clustered().Sorted()
     self.assertEquals(d.symbols.added_count, 0)
     self.assertEquals(d.symbols.size, 0)
 
 
   @_CompareWithGolden()
   def test_FullDescription(self):
-    return describe.GenerateLines(self._CloneSizeInfo().Cluster(),
+    return describe.GenerateLines(self._CloneSizeInfo().Clustered(),
                                   recursive=True, verbose=True)
 
   @_CompareWithGolden()
@@ -274,17 +280,16 @@ class IntegrationTest(unittest.TestCase):
     # Tests Sorted() and __add__().
     self.assertEqual(all_syms.Sorted(),
                      (global_syms + non_global_syms).Sorted())
-    # Tests GroupByNamespace() and __len__().
+    # Tests GroupedByName() and __len__().
     return itertools.chain(
-        ['GroupByNamespace()'],
-        describe.GenerateLines(all_syms.GroupByNamespace()),
-        ['GroupByNamespace(depth=1)'],
-        describe.GenerateLines(all_syms.GroupByNamespace(depth=1)),
-        ['GroupByNamespace(depth=1, fallback=None)'],
-        describe.GenerateLines(all_syms.GroupByNamespace(depth=1,
-                                                         fallback=None)),
-        ['GroupByNamespace(depth=1, min_count=2)'],
-        describe.GenerateLines(all_syms.GroupByNamespace(depth=1, min_count=2)),
+        ['GroupedByName()'],
+        describe.GenerateLines(all_syms.GroupedByName()),
+        ['GroupedByName(depth=1)'],
+        describe.GenerateLines(all_syms.GroupedByName(depth=1)),
+        ['GroupedByName(depth=-1)'],
+        describe.GenerateLines(all_syms.GroupedByName(depth=-1)),
+        ['GroupedByName(depth=1, min_count=2)'],
+        describe.GenerateLines(all_syms.GroupedByName(depth=1, min_count=2)),
     )
 
 

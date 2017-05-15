@@ -14,7 +14,7 @@ namespace net {
 class QUIC_EXPORT_PRIVATE QuicSocketAddressImpl {
  public:
   QuicSocketAddressImpl() = default;
-  explicit QuicSocketAddressImpl(IPEndPoint addr);
+  explicit QuicSocketAddressImpl(const IPEndPoint& addr);
   QuicSocketAddressImpl(QuicIpAddressImpl address, uint16_t port);
   explicit QuicSocketAddressImpl(const struct sockaddr_storage& saddr);
   explicit QuicSocketAddressImpl(const struct sockaddr& saddr);
@@ -22,8 +22,10 @@ class QUIC_EXPORT_PRIVATE QuicSocketAddressImpl {
   QuicSocketAddressImpl& operator=(const QuicSocketAddressImpl& other) =
       default;
   QuicSocketAddressImpl& operator=(QuicSocketAddressImpl&& other) = default;
-  friend bool operator==(QuicSocketAddressImpl lhs, QuicSocketAddressImpl rhs);
-  friend bool operator!=(QuicSocketAddressImpl lhs, QuicSocketAddressImpl rhs);
+  friend bool operator==(const QuicSocketAddressImpl& lhs,
+                         const QuicSocketAddressImpl& rhs);
+  friend bool operator!=(const QuicSocketAddressImpl& lhs,
+                         const QuicSocketAddressImpl& rhs);
 
   bool IsInitialized() const;
   std::string ToString() const;

@@ -264,8 +264,13 @@ class BASE_EXPORT Histogram : public HistogramBase {
       base::PickleIterator* iter);
   static HistogramBase* DeserializeInfoImpl(base::PickleIterator* iter);
 
-  // Implementation of SnapshotSamples function.
-  std::unique_ptr<SampleVector> SnapshotSampleVector() const;
+  // Create a snapshot containing all samples (both logged and unlogged).
+  // Implementation of SnapshotSamples method with a more specific type for
+  // internal use.
+  std::unique_ptr<SampleVector> SnapshotAllSamples() const;
+
+  // Create a copy of unlogged samples.
+  std::unique_ptr<SampleVector> SnapshotUnloggedSamples() const;
 
   //----------------------------------------------------------------------------
   // Helpers for emitting Ascii graphic.  Each method appends data to output.
@@ -303,11 +308,10 @@ class BASE_EXPORT Histogram : public HistogramBase {
   Sample declared_min_;  // Less than this goes into the first bucket.
   Sample declared_max_;  // Over this goes into the last bucket.
 
-  // Finally, provide the state that changes with the addition of each new
-  // sample.
-  std::unique_ptr<SampleVectorBase> samples_;
+  // Samples that have not yet been logged with SnapshotDelta().
+  std::unique_ptr<HistogramSamples> unlogged_samples_;
 
-  // Also keep a previous uploaded state for calculating deltas.
+  // Accumulation of all samples that have been logged with SnapshotDelta().
   std::unique_ptr<HistogramSamples> logged_samples_;
 
   // Flag to indicate if PrepareFinalDelta has been previously called. It is

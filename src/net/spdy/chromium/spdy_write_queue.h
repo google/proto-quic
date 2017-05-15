@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_SPDY_SPDY_WRITE_QUEUE_H_
-#define NET_SPDY_SPDY_WRITE_QUEUE_H_
+#ifndef NET_SPDY_CHROMIUM_SPDY_WRITE_QUEUE_H_
+#define NET_SPDY_CHROMIUM_SPDY_WRITE_QUEUE_H_
 
 #include <deque>
 #include <memory>
@@ -81,6 +81,7 @@ class NET_EXPORT_PRIVATE SpdyWriteQueue {
 
     size_t EstimateMemoryUsage() const;
 
+   private:
     DISALLOW_COPY_AND_ASSIGN(PendingWrite);
   };
 
@@ -94,4 +95,4 @@ class NET_EXPORT_PRIVATE SpdyWriteQueue {
 
 }  // namespace net
 
-#endif  // NET_SPDY_SPDY_WRITE_QUEUE_H_
+#endif  // NET_SPDY_CHROMIUM_SPDY_WRITE_QUEUE_H_

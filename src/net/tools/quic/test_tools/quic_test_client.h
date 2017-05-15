@@ -245,10 +245,6 @@ class QuicTestClient : public QuicSpdyStream::Visitor,
 
   EpollServer* epoll_server() { return &epoll_server_; }
 
-  void set_allow_bidirectional_data(bool value) {
-    allow_bidirectional_data_ = value;
-  }
-
   size_t num_requests() const { return num_requests_; }
 
   size_t num_responses() const { return num_responses_; }
@@ -373,9 +369,6 @@ class QuicTestClient : public QuicSpdyStream::Visitor,
   bool auto_reconnect_;
   // Should we buffer the response body? Defaults to true.
   bool buffer_body_;
-  // When true allows the sending of a request to continue while the response is
-  // arriving.
-  bool allow_bidirectional_data_;
   // For async push promise rendezvous, validation may fail in which
   // case the request should be retried.
   std::unique_ptr<TestClientDataToResend> push_promise_data_to_resend_;

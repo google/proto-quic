@@ -135,6 +135,8 @@ class ReportingDeliveryAgentImpl : public ReportingDeliveryAgent,
         continue;
       }
 
+      cache()->MarkClientUsed(origin_group.first, endpoint_url);
+
       endpoint_reports[endpoint_url].insert(
           endpoint_reports[endpoint_url].end(), it.second.begin(),
           it.second.end());

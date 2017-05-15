@@ -32,60 +32,70 @@ namespace base {
 namespace {
 
 void TrimKeyValuePairs(StringPairs* pairs) {
-  DCHECK(pairs);
-  StringPairs& p_ref = *pairs;
-  for (size_t i = 0; i < p_ref.size(); ++i) {
-    TrimWhitespaceASCII(p_ref[i].first, TRIM_ALL, &p_ref[i].first);
-    TrimWhitespaceASCII(p_ref[i].second, TRIM_ALL, &p_ref[i].second);
+  for (auto& pair : *pairs) {
+    TrimWhitespaceASCII(pair.first, TRIM_ALL, &pair.first);
+    TrimWhitespaceASCII(pair.second, TRIM_ALL, &pair.second);
   }
 }
 
 #if defined(OS_CHROMEOS)
 // Read a file with a single number string and return the number as a uint64_t.
-static uint64_t ReadFileToUint64(const FilePath file) {
-  std::string file_as_string;
-  if (!ReadFileToString(file, &file_as_string))
+uint64_t ReadFileToUint64(const FilePath& file) {
+  std::string file_contents;
+  if (!ReadFileToString(file, &file_contents))
     return 0;
-  TrimWhitespaceASCII(file_as_string, TRIM_ALL, &file_as_string);
-  uint64_t file_as_uint64 = 0;
-  if (!StringToUint64(file_as_string, &file_as_uint64))
+  TrimWhitespaceASCII(file_contents, TRIM_ALL, &file_contents);
+  uint64_t file_contents_uint64 = 0;
+  if (!StringToUint64(file_contents, &file_contents_uint64))
     return 0;
-  return file_as_uint64;
+  return file_contents_uint64;
 }
 #endif
 
-// Read /proc/<pid>/status and return the value for |field|, or 0 on failure.
-// Only works for fields in the form of "Field: value kB".
-size_t ReadProcStatusAndGetFieldAsSizeT(pid_t pid, const std::string& field) {
-  std::string status;
+// Read |filename| in /proc/<pid>/, split the entries into key/value pairs, and
+// trim the key and value. On success, return true and write the trimmed
+// key/value pairs into |key_value_pairs|.
+bool ReadProcFileToTrimmedStringPairs(pid_t pid,
+                                      StringPiece filename,
+                                      StringPairs* key_value_pairs) {
+  std::string status_data;
   {
     // Synchronously reading files in /proc does not hit the disk.
     ThreadRestrictions::ScopedAllowIO allow_io;
-    FilePath stat_file = internal::GetProcPidDir(pid).Append("status");
-    if (!ReadFileToString(stat_file, &status))
-      return 0;
+    FilePath status_file = internal::GetProcPidDir(pid).Append(filename);
+    if (!ReadFileToString(status_file, &status_data))
+      return false;
   }
+  SplitStringIntoKeyValuePairs(status_data, ':', '\n', key_value_pairs);
+  TrimKeyValuePairs(key_value_pairs);
+  return true;
+}
 
+// Read /proc/<pid>/status and return the value for |field|, or 0 on failure.
+// Only works for fields in the form of "Field: value kB".
+size_t ReadProcStatusAndGetFieldAsSizeT(pid_t pid, StringPiece field) {
   StringPairs pairs;
-  SplitStringIntoKeyValuePairs(status, ':', '\n', &pairs);
-  TrimKeyValuePairs(&pairs);
-  for (size_t i = 0; i < pairs.size(); ++i) {
-    const std::string& key = pairs[i].first;
-    const std::string& value_str = pairs[i].second;
-    if (key == field) {
-      std::vector<StringPiece> split_value_str =
-          SplitStringPiece(value_str, " ", TRIM_WHITESPACE, SPLIT_WANT_ALL);
-      if (split_value_str.size() != 2 || split_value_str[1] != "kB") {
-        NOTREACHED();
-        return 0;
-      }
-      size_t value;
-      if (!StringToSizeT(split_value_str[0], &value)) {
-        NOTREACHED();
-        return 0;
-      }
-      return value;
+  if (!ReadProcFileToTrimmedStringPairs(pid, "status", &pairs))
+    return 0;
+
+  for (const auto& pair : pairs) {
+    const std::string& key = pair.first;
+    const std::string& value_str = pair.second;
+    if (key != field)
+      continue;
+
+    std::vector<StringPiece> split_value_str =
+        SplitStringPiece(value_str, " ", TRIM_WHITESPACE, SPLIT_WANT_ALL);
+    if (split_value_str.size() != 2 || split_value_str[1] != "kB") {
+      NOTREACHED();
+      return 0;
     }
+    size_t value;
+    if (!StringToSizeT(split_value_str[0], &value)) {
+      NOTREACHED();
+      return 0;
+    }
+    return value;
   }
   // This can be reached if the process dies when proc is read -- in that case,
   // the kernel can return missing fields.
@@ -93,34 +103,27 @@ size_t ReadProcStatusAndGetFieldAsSizeT(pid_t pid, const std::string& field) {
 }
 
 #if defined(OS_LINUX) || defined(OS_AIX)
-// Read /proc/<pid>/sched and look for |field|. On succes, return true and
+// Read /proc/<pid>/status and look for |field|. On success, return true and
 // write the value for |field| into |result|.
 // Only works for fields in the form of "field    :     uint_value"
-bool ReadProcSchedAndGetFieldAsUint64(pid_t pid,
-                                      const std::string& field,
-                                      uint64_t* result) {
-  std::string sched_data;
-  {
-    // Synchronously reading files in /proc does not hit the disk.
-    ThreadRestrictions::ScopedAllowIO allow_io;
-    FilePath sched_file = internal::GetProcPidDir(pid).Append("sched");
-    if (!ReadFileToString(sched_file, &sched_data))
-      return false;
-  }
-
+bool ReadProcStatusAndGetFieldAsUint64(pid_t pid,
+                                       StringPiece field,
+                                       uint64_t* result) {
   StringPairs pairs;
-  SplitStringIntoKeyValuePairs(sched_data, ':', '\n', &pairs);
-  TrimKeyValuePairs(&pairs);
-  for (size_t i = 0; i < pairs.size(); ++i) {
-    const std::string& key = pairs[i].first;
-    const std::string& value_str = pairs[i].second;
-    if (key == field) {
-      uint64_t value;
-      if (!StringToUint64(value_str, &value))
-        return false;
-      *result = value;
-      return true;
-    }
+  if (!ReadProcFileToTrimmedStringPairs(pid, "status", &pairs))
+    return false;
+
+  for (const auto& pair : pairs) {
+    const std::string& key = pair.first;
+    const std::string& value_str = pair.second;
+    if (key != field)
+      continue;
+
+    uint64_t value;
+    if (!StringToUint64(value_str, &value))
+      return false;
+    *result = value;
+    return true;
   }
   return false;
 }
@@ -169,24 +172,24 @@ std::unique_ptr<ProcessMetrics> ProcessMetrics::CreateProcessMetrics(
   return WrapUnique(new ProcessMetrics(process));
 }
 
-// On linux, we return vsize.
+// On Linux, return vsize.
 size_t ProcessMetrics::GetPagefileUsage() const {
   return internal::ReadProcStatsAndGetFieldAsSizeT(process_,
                                                    internal::VM_VSIZE);
 }
 
-// On linux, we return the high water mark of vsize.
+// On Linux, return the high water mark of vsize.
 size_t ProcessMetrics::GetPeakPagefileUsage() const {
   return ReadProcStatusAndGetFieldAsSizeT(process_, "VmPeak") * 1024;
 }
 
-// On linux, we return RSS.
+// On Linux, return RSS.
 size_t ProcessMetrics::GetWorkingSetSize() const {
   return internal::ReadProcStatsAndGetFieldAsSizeT(process_, internal::VM_RSS) *
       getpagesize();
 }
 
-// On linux, we return the high water mark of RSS.
+// On Linux, return the high water mark of RSS.
 size_t ProcessMetrics::GetPeakWorkingSetSize() const {
   return ReadProcStatusAndGetFieldAsSizeT(process_, "VmHWM") * 1024;
 }
@@ -232,8 +235,8 @@ double ProcessMetrics::GetCPUUsage() {
 
   int cpu = GetProcessCPU(process_);
 
-  // We have the number of jiffies in the time period.  Convert to percentage.
-  // Note this means we will go *over* 100 in the case where multiple threads
+  // The number of jiffies in the time period.  Convert to percentage.
+  // Note: this means this will go *over* 100 in the case where multiple threads
   // are together adding to more than one CPU's worth.
   TimeDelta cpu_time = internal::ClockTicksToTimeDelta(cpu);
   TimeDelta last_cpu_time = internal::ClockTicksToTimeDelta(last_cpu_);
@@ -241,7 +244,7 @@ double ProcessMetrics::GetCPUUsage() {
   // If the number of threads running in the process has decreased since the
   // last time this function was called, |last_cpu_time| will be greater than
   // |cpu_time| which will result in a negative value in the below percentage
-  // calculation. We prevent this by clamping to 0. crbug.com/546565.
+  // calculation. Prevent this by clamping to 0. https://crbug.com/546565.
   // This computation is known to be shaky when threads are destroyed between
   // "last" and "now", but for our current purposes, it's all right.
   double percentage = 0.0;
@@ -256,27 +259,20 @@ double ProcessMetrics::GetCPUUsage() {
   return percentage;
 }
 
-// To have /proc/self/io file you must enable CONFIG_TASK_IO_ACCOUNTING
-// in your kernel configuration.
+// For the /proc/self/io file to exist, the Linux kernel must have
+// CONFIG_TASK_IO_ACCOUNTING enabled.
 bool ProcessMetrics::GetIOCounters(IoCounters* io_counters) const {
-  // Synchronously reading files in /proc does not hit the disk.
-  ThreadRestrictions::ScopedAllowIO allow_io;
-
-  std::string proc_io_contents;
-  FilePath io_file = internal::GetProcPidDir(process_).Append("io");
-  if (!ReadFileToString(io_file, &proc_io_contents))
+  StringPairs pairs;
+  if (!ReadProcFileToTrimmedStringPairs(process_, "io", &pairs))
     return false;
 
   io_counters->OtherOperationCount = 0;
   io_counters->OtherTransferCount = 0;
 
-  StringPairs pairs;
-  SplitStringIntoKeyValuePairs(proc_io_contents, ':', '\n', &pairs);
-  TrimKeyValuePairs(&pairs);
-  for (size_t i = 0; i < pairs.size(); ++i) {
-    const std::string& key = pairs[i].first;
-    const std::string& value_str = pairs[i].second;
-    uint64_t* target_counter = NULL;
+  for (const auto& pair : pairs) {
+    const std::string& key = pair.first;
+    const std::string& value_str = pair.second;
+    uint64_t* target_counter = nullptr;
     if (key == "syscr")
       target_counter = &io_counters->ReadOperationCount;
     else if (key == "syscw")
@@ -320,23 +316,22 @@ int ProcessMetrics::GetOpenFdSoftLimit() const {
   if (!ReadFileToString(fd_path, &limits_contents))
     return -1;
 
-  for (const auto& line :
-       base::SplitStringPiece(limits_contents, "\n", base::KEEP_WHITESPACE,
-                              base::SPLIT_WANT_NONEMPTY)) {
-    if (line.starts_with("Max open files")) {
-      auto tokens = base::SplitStringPiece(line, " ", base::TRIM_WHITESPACE,
-                                           base::SPLIT_WANT_NONEMPTY);
-      if (tokens.size() > 3) {
-        int limit = -1;
-        if (StringToInt(tokens[3], &limit))
-          return limit;
+  for (const auto& line : SplitStringPiece(
+           limits_contents, "\n", KEEP_WHITESPACE, SPLIT_WANT_NONEMPTY)) {
+    if (!line.starts_with("Max open files"))
+      continue;
+
+    auto tokens =
+        SplitStringPiece(line, " ", TRIM_WHITESPACE, SPLIT_WANT_NONEMPTY);
+    if (tokens.size() > 3) {
+      int limit = -1;
+      if (!StringToInt(tokens[3], &limit))
         return -1;
-      }
+      return limit;
     }
   }
   return -1;
 }
-
 #endif  // defined(OS_LINUX) || defined(OS_AIX)
 
 ProcessMetrics::ProcessMetrics(ProcessHandle process)
@@ -399,7 +394,7 @@ bool ProcessMetrics::GetWorkingSetKBytesTotmaps(WorkingSetKBytes *ws_usage)
   ret &= StringToInt(totmaps_fields[kPrivate_DirtyIndex], &private_dirty);
   ret &= StringToInt(totmaps_fields[kSwapIndex], &swap);
 
-  // On ChromeOS swap is to zram. We count this as private / shared, as
+  // On ChromeOS, swap goes to zram. Count this as private / shared, as
   // increased swap decreases available RAM to user processes, which would
   // otherwise create surprising results.
   ws_usage->priv = private_clean + private_dirty + swap;
@@ -417,7 +412,7 @@ bool ProcessMetrics::GetWorkingSetKBytesStatm(WorkingSetKBytes* ws_usage)
   // a) Large and slow to parse.
   // b) Unavailable in the SUID sandbox.
 
-  // First we need to get the page size, since everything is measured in pages.
+  // First get the page size, since everything is measured in pages.
   // For details, see: man 5 proc.
   const int page_size_kb = getpagesize() / 1024;
   if (page_size_kb <= 0)
@@ -436,9 +431,10 @@ bool ProcessMetrics::GetWorkingSetKBytesStatm(WorkingSetKBytes* ws_usage)
   std::vector<StringPiece> statm_vec =
       SplitStringPiece(statm, " ", TRIM_WHITESPACE, SPLIT_WANT_ALL);
   if (statm_vec.size() != 7)
-    return false;  // Not the format we expect.
+    return false;  // Not the expected format.
 
-  int statm_rss, statm_shared;
+  int statm_rss;
+  int statm_shared;
   bool ret = true;
   ret &= StringToInt(statm_vec[1], &statm_rss);
   ret &= StringToInt(statm_vec[2], &statm_shared);
@@ -464,7 +460,7 @@ size_t GetSystemCommitCharge() {
   return meminfo.total - meminfo.free - meminfo.buffers - meminfo.cached;
 }
 
-int ParseProcStatCPU(const std::string& input) {
+int ParseProcStatCPU(StringPiece input) {
   // |input| may be empty if the process disappeared somehow.
   // e.g. http://crbug.com/145811.
   if (input.empty())
@@ -496,12 +492,12 @@ int ParseProcStatCPU(const std::string& input) {
   return -1;
 }
 
-const char kProcSelfExe[] = "/proc/self/exe";
-
 int GetNumberOfThreads(ProcessHandle process) {
   return internal::ReadProcStatsAndGetFieldAsInt64(process,
                                                    internal::VM_NUMTHREADS);
 }
+
+const char kProcSelfExe[] = "/proc/self/exe";
 
 namespace {
 
@@ -559,8 +555,7 @@ const size_t kDiskWeightedIOTime = 13;
 }  // namespace
 
 std::unique_ptr<Value> SystemMemoryInfoKB::ToValue() const {
-  std::unique_ptr<DictionaryValue> res(new DictionaryValue());
-
+  auto res = base::MakeUnique<DictionaryValue>();
   res->SetInteger("total", total);
   res->SetInteger("free", free);
   res->SetInteger("available", available);
@@ -588,9 +583,7 @@ std::unique_ptr<Value> SystemMemoryInfoKB::ToValue() const {
   return std::move(res);
 }
 
-// exposed for testing
-bool ParseProcMeminfo(const std::string& meminfo_data,
-                      SystemMemoryInfoKB* meminfo) {
+bool ParseProcMeminfo(StringPiece meminfo_data, SystemMemoryInfoKB* meminfo) {
   // The format of /proc/meminfo is:
   //
   // MemTotal:      8235324 kB
@@ -601,23 +594,23 @@ bool ParseProcMeminfo(const std::string& meminfo_data,
   // There is no guarantee on the ordering or position
   // though it doesn't appear to change very often
 
-  // As a basic sanity check, let's make sure we at least get non-zero
-  // MemTotal value
+  // As a basic sanity check at the end, make sure the MemTotal value will be at
+  // least non-zero. So start off with a zero total.
   meminfo->total = 0;
 
   for (const StringPiece& line : SplitStringPiece(
            meminfo_data, "\n", KEEP_WHITESPACE, SPLIT_WANT_NONEMPTY)) {
     std::vector<StringPiece> tokens = SplitStringPiece(
         line, kWhitespaceASCII, TRIM_WHITESPACE, SPLIT_WANT_NONEMPTY);
-    // HugePages_* only has a number and no suffix so we can't rely on
-    // there being exactly 3 tokens.
+    // HugePages_* only has a number and no suffix so there may not be exactly 3
+    // tokens.
     if (tokens.size() <= 1) {
       DLOG(WARNING) << "meminfo: tokens: " << tokens.size()
                     << " malformed line: " << line.as_string();
       continue;
     }
 
-    int* target = NULL;
+    int* target = nullptr;
     if (tokens[0] == "MemTotal:")
       target = &meminfo->total;
     else if (tokens[0] == "MemFree:")
@@ -645,7 +638,7 @@ bool ParseProcMeminfo(const std::string& meminfo_data,
     else if (tokens[0] == "SReclaimable:")
       target = &meminfo->reclaimable;
 #if defined(OS_CHROMEOS)
-    // Chrome OS has a tweaked kernel that allows us to query Shmem, which is
+    // Chrome OS has a tweaked kernel that allows querying Shmem, which is
     // usually video memory otherwise invisible to the OS.
     else if (tokens[0] == "Shmem:")
       target = &meminfo->shmem;
@@ -656,13 +649,11 @@ bool ParseProcMeminfo(const std::string& meminfo_data,
       StringToInt(tokens[1], target);
   }
 
-  // Make sure we got a valid MemTotal.
+  // Make sure the MemTotal is valid.
   return meminfo->total > 0;
 }
 
-// exposed for testing
-bool ParseProcVmstat(const std::string& vmstat_data,
-                     SystemMemoryInfoKB* meminfo) {
+bool ParseProcVmstat(StringPiece vmstat_data, SystemMemoryInfoKB* meminfo) {
   // The format of /proc/vmstat is:
   //
   // nr_free_pages 299878
@@ -671,9 +662,8 @@ bool ParseProcVmstat(const std::string& vmstat_data,
   // nr_inactive_file 2015629
   // ...
   //
-  // We iterate through the whole file because the position of the
+  // Iterate through the whole file because the position of the
   // fields are dependent on the kernel version and configuration.
-
   for (const StringPiece& line : SplitStringPiece(
            vmstat_data, "\n", KEEP_WHITESPACE, SPLIT_WANT_NONEMPTY)) {
     std::vector<StringPiece> tokens = SplitStringPiece(
@@ -782,7 +772,7 @@ SystemDiskInfo::SystemDiskInfo() {
 SystemDiskInfo::SystemDiskInfo(const SystemDiskInfo& other) = default;
 
 std::unique_ptr<Value> SystemDiskInfo::ToValue() const {
-  std::unique_ptr<DictionaryValue> res(new DictionaryValue());
+  auto res = base::MakeUnique<DictionaryValue>();
 
   // Write out uint64_t variables as doubles.
   // Note: this may discard some precision, but for JS there's no other option.
@@ -801,9 +791,10 @@ std::unique_ptr<Value> SystemDiskInfo::ToValue() const {
   return std::move(res);
 }
 
-bool IsValidDiskName(const std::string& candidate) {
+bool IsValidDiskName(StringPiece candidate) {
   if (candidate.length() < 3)
     return false;
+
   if (candidate[1] == 'd' &&
       (candidate[0] == 'h' || candidate[0] == 's' || candidate[0] == 'v')) {
     // [hsv]d[a-z]+ case
@@ -815,14 +806,11 @@ bool IsValidDiskName(const std::string& candidate) {
   }
 
   const char kMMCName[] = "mmcblk";
-  const size_t kMMCNameLen = strlen(kMMCName);
-  if (candidate.length() < kMMCNameLen + 1)
-    return false;
-  if (candidate.compare(0, kMMCNameLen, kMMCName) != 0)
+  if (!candidate.starts_with(kMMCName))
     return false;
 
   // mmcblk[0-9]+ case
-  for (size_t i = kMMCNameLen; i < candidate.length(); ++i) {
+  for (size_t i = strlen(kMMCName); i < candidate.length(); ++i) {
     if (!isdigit(candidate[i]))
       return false;
   }
@@ -842,7 +830,7 @@ bool GetSystemDiskInfo(SystemDiskInfo* diskinfo) {
 
   std::vector<StringPiece> diskinfo_lines = SplitStringPiece(
       diskinfo_data, "\n", KEEP_WHITESPACE, SPLIT_WANT_NONEMPTY);
-  if (diskinfo_lines.size() == 0) {
+  if (diskinfo_lines.empty()) {
     DLOG(WARNING) << "No lines found";
     return false;
   }
@@ -876,31 +864,32 @@ bool GetSystemDiskInfo(SystemDiskInfo* diskinfo) {
         line, kWhitespaceASCII, TRIM_WHITESPACE, SPLIT_WANT_NONEMPTY);
 
     // Fields may have overflowed and reset to zero.
-    if (IsValidDiskName(disk_fields[kDiskDriveName].as_string())) {
-      StringToUint64(disk_fields[kDiskReads], &reads);
-      StringToUint64(disk_fields[kDiskReadsMerged], &reads_merged);
-      StringToUint64(disk_fields[kDiskSectorsRead], &sectors_read);
-      StringToUint64(disk_fields[kDiskReadTime], &read_time);
-      StringToUint64(disk_fields[kDiskWrites], &writes);
-      StringToUint64(disk_fields[kDiskWritesMerged], &writes_merged);
-      StringToUint64(disk_fields[kDiskSectorsWritten], &sectors_written);
-      StringToUint64(disk_fields[kDiskWriteTime], &write_time);
-      StringToUint64(disk_fields[kDiskIO], &io);
-      StringToUint64(disk_fields[kDiskIOTime], &io_time);
-      StringToUint64(disk_fields[kDiskWeightedIOTime], &weighted_io_time);
+    if (!IsValidDiskName(disk_fields[kDiskDriveName].as_string()))
+      continue;
 
-      diskinfo->reads += reads;
-      diskinfo->reads_merged += reads_merged;
-      diskinfo->sectors_read += sectors_read;
-      diskinfo->read_time += read_time;
-      diskinfo->writes += writes;
-      diskinfo->writes_merged += writes_merged;
-      diskinfo->sectors_written += sectors_written;
-      diskinfo->write_time += write_time;
-      diskinfo->io += io;
-      diskinfo->io_time += io_time;
-      diskinfo->weighted_io_time += weighted_io_time;
-    }
+    StringToUint64(disk_fields[kDiskReads], &reads);
+    StringToUint64(disk_fields[kDiskReadsMerged], &reads_merged);
+    StringToUint64(disk_fields[kDiskSectorsRead], &sectors_read);
+    StringToUint64(disk_fields[kDiskReadTime], &read_time);
+    StringToUint64(disk_fields[kDiskWrites], &writes);
+    StringToUint64(disk_fields[kDiskWritesMerged], &writes_merged);
+    StringToUint64(disk_fields[kDiskSectorsWritten], &sectors_written);
+    StringToUint64(disk_fields[kDiskWriteTime], &write_time);
+    StringToUint64(disk_fields[kDiskIO], &io);
+    StringToUint64(disk_fields[kDiskIOTime], &io_time);
+    StringToUint64(disk_fields[kDiskWeightedIOTime], &weighted_io_time);
+
+    diskinfo->reads += reads;
+    diskinfo->reads_merged += reads_merged;
+    diskinfo->sectors_read += sectors_read;
+    diskinfo->read_time += read_time;
+    diskinfo->writes += writes;
+    diskinfo->writes_merged += writes_merged;
+    diskinfo->sectors_written += sectors_written;
+    diskinfo->write_time += write_time;
+    diskinfo->io += io;
+    diskinfo->io_time += io_time;
+    diskinfo->weighted_io_time += weighted_io_time;
   }
 
   return true;
@@ -912,7 +901,7 @@ TimeDelta GetUserCpuTimeSinceBoot() {
 
 #if defined(OS_CHROMEOS)
 std::unique_ptr<Value> SwapInfo::ToValue() const {
-  std::unique_ptr<DictionaryValue> res(new DictionaryValue());
+  auto res = base::MakeUnique<DictionaryValue>();
 
   // Write out uint64_t variables as doubles.
   // Note: this may discard some precision, but for JS there's no other option.
@@ -921,11 +910,10 @@ std::unique_ptr<Value> SwapInfo::ToValue() const {
   res->SetDouble("orig_data_size", static_cast<double>(orig_data_size));
   res->SetDouble("compr_data_size", static_cast<double>(compr_data_size));
   res->SetDouble("mem_used_total", static_cast<double>(mem_used_total));
-  if (compr_data_size > 0)
-    res->SetDouble("compression_ratio", static_cast<double>(orig_data_size) /
-                                        static_cast<double>(compr_data_size));
-  else
-    res->SetDouble("compression_ratio", 0);
+  double ratio = compr_data_size ? static_cast<double>(orig_data_size) /
+                                       static_cast<double>(compr_data_size)
+                                 : 0;
+  res->SetDouble("compression_ratio", ratio);
 
   return std::move(res);
 }
@@ -939,7 +927,7 @@ void GetSwapInfo(SwapInfo* swap_info) {
       ReadFileToUint64(zram_path.Append("orig_data_size"));
   if (orig_data_size <= 4096) {
     // A single page is compressed at startup, and has a high compression
-    // ratio. We ignore this as it doesn't indicate any real swapping.
+    // ratio. Ignore this as it doesn't indicate any real swapping.
     swap_info->orig_data_size = 0;
     swap_info->num_reads = 0;
     swap_info->num_writes = 0;
@@ -959,10 +947,11 @@ void GetSwapInfo(SwapInfo* swap_info) {
 
 #if defined(OS_LINUX) || defined(OS_AIX)
 int ProcessMetrics::GetIdleWakeupsPerSecond() {
-  uint64_t wake_ups;
-  const char kWakeupStat[] = "se.statistics.nr_wakeups";
-  return ReadProcSchedAndGetFieldAsUint64(process_, kWakeupStat, &wake_ups) ?
-      CalculateIdleWakeupsPerSecond(wake_ups) : 0;
+  uint64_t num_switches;
+  static const char kSwitchStat[] = "voluntary_ctxt_switches";
+  return ReadProcStatusAndGetFieldAsUint64(process_, kSwitchStat, &num_switches)
+             ? CalculateIdleWakeupsPerSecond(num_switches)
+             : 0;
 }
 #endif  // defined(OS_LINUX) || defined(OS_AIX)
 

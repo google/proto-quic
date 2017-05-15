@@ -144,9 +144,7 @@ void EnsureProcessTerminated(Process process) {
 
   PostDelayedTaskWithTraits(
       FROM_HERE,
-      TaskTraits()
-          .WithPriority(TaskPriority::BACKGROUND)
-          .WithShutdownBehavior(TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN),
+      {TaskPriority::BACKGROUND, TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN},
       Bind(
           [](Process process) {
             if (WaitForSingleObject(process.Handle(), 0) == WAIT_OBJECT_0)

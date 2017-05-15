@@ -24,6 +24,7 @@ namespace net {
 
 DEFINE_CERT_ERROR_ID(kValidityFailedNotAfter, "Time is after notAfter");
 DEFINE_CERT_ERROR_ID(kValidityFailedNotBefore, "Time is before notBefore");
+DEFINE_CERT_ERROR_ID(kCertIsDistrusted, "Certificate is distrusted");
 
 namespace {
 
@@ -34,8 +35,6 @@ namespace {
 DEFINE_CERT_ERROR_ID(
     kSignatureAlgorithmMismatch,
     "Certificate.signatureAlgorithm != TBSCertificate.signature");
-DEFINE_CERT_ERROR_ID(kInvalidOrUnsupportedSignatureAlgorithm,
-                     "Invalid or unsupported signature algorithm");
 DEFINE_CERT_ERROR_ID(kChainIsEmpty, "Chain is empty");
 DEFINE_CERT_ERROR_ID(kChainIsLength1,
                      "TODO: Cannot verify a chain of length 1");
@@ -62,7 +61,6 @@ DEFINE_CERT_ERROR_ID(kEkuLacksServerAuth,
                      "The extended key usage does not include server auth");
 DEFINE_CERT_ERROR_ID(kEkuLacksClientAuth,
                      "The extended key usage does not include client auth");
-DEFINE_CERT_ERROR_ID(kCertIsDistrusted, "Certificate is distrusted");
 DEFINE_CERT_ERROR_ID(kCertIsNotTrustAnchor,
                      "Certificate is not a trust anchor");
 
@@ -236,16 +234,10 @@ void BasicCertificateProcessing(
 
   // Verify the digital signature using the previous certificate's key (RFC
   // 5280 section 6.1.3 step a.1).
-  if (!cert.has_valid_supported_signature_algorithm()) {
-    errors->AddError(
-        kInvalidOrUnsupportedSignatureAlgorithm,
-        CreateCertErrorParams1Der("algorithm", cert.signature_algorithm_tlv()));
-  } else {
-    if (!VerifySignedData(cert.signature_algorithm(),
-                          cert.tbs_certificate_tlv(), cert.signature_value(),
-                          working_spki, signature_policy, errors)) {
-      errors->AddError(kVerifySignedDataFailed);
-    }
+  if (!VerifySignedData(cert.signature_algorithm(), cert.tbs_certificate_tlv(),
+                        cert.signature_value(), working_spki, signature_policy,
+                        errors)) {
+    errors->AddError(kVerifySignedDataFailed);
   }
 
   // Check the time range for the certificate's validity, ensuring it is valid
@@ -519,9 +511,6 @@ void ProcessRootCertificate(
       break;
     case CertificateTrustType::DISTRUSTED:
       // Chains to an actively distrusted certificate.
-      //
-      // TODO(eroman): There are not currently any verification or path building
-      //               tests for the distrusted case.
       errors->AddError(kCertIsDistrusted);
       break;
     case CertificateTrustType::TRUSTED_ANCHOR:

@@ -10,6 +10,13 @@
 
 namespace net {
 
+NET_EXPORT extern const char kEffectiveConnectionTypeUnknown[];
+NET_EXPORT extern const char kEffectiveConnectionTypeOffline[];
+NET_EXPORT extern const char kEffectiveConnectionTypeSlow2G[];
+NET_EXPORT extern const char kEffectiveConnectionType2G[];
+NET_EXPORT extern const char kEffectiveConnectionType3G[];
+NET_EXPORT extern const char kEffectiveConnectionType4G[];
+
 // EffectiveConnectionType is the connection type whose typical performance is
 // most similar to the measured performance of the network in use. In many
 // cases, the "effective" connection type and the actual type of connection in

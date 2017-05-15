@@ -874,9 +874,6 @@ ALWAYS_INLINE size_t PartitionAllocGetSize(void* ptr) {
   return PartitionCookieSizeAdjustSubtract(size);
 }
 
-// N (or more accurately, N - sizeof(void*)) represents the largest size in
-// bytes that will be handled by a SizeSpecificPartitionAllocator.
-// Attempts to partitionAlloc() more than this amount will fail.
 template <size_t N>
 class SizeSpecificPartitionAllocator {
  public:

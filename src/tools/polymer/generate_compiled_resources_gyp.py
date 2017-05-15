@@ -32,9 +32,17 @@ _COMPILED_RESOURCES_TEMPLATE = """
 def main(created_by, html_files):
   targets = ""
 
+  def _html_to_extracted(html_file):
+    assert html_file.endswith(".html")
+    return html_file[:-len(".html")] + "-extracted"
+
   def _target_name(target_file):
-    assert target_file.endswith(".html")
-    return path.basename(target_file)[:-len(".html")] + "-extracted"
+    return _html_to_extracted(path.basename(target_file))
+
+  def _has_extracted_js(html_file):
+    return path.isfile(_html_to_extracted(html_file) + ".js")
+
+  html_files = filter(_has_extracted_js, html_files)
 
   for html_file in sorted(html_files, key=_target_name):
     html_base = path.basename(html_file)
@@ -56,9 +64,11 @@ def main(created_by, html_files):
         dependencies.append(_WEB_ANIMATIONS_TARGET)
         continue
 
-      target = _target_name(import_base)
-      if not path.isfile(path.join(html_dir, import_dir, target + ".js")):
+      # Only exclude these after appending web animations externs.
+      if not _has_extracted_js(path.join(html_dir, html_import)):
         continue
+
+      target = _target_name(import_base)
 
       if import_dir:
         target = "compiled_resources2.gyp:" + target

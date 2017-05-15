@@ -239,7 +239,8 @@ class PriorityGetter : public BufferedSpdyFramerVisitorInterface {
 }  // namespace
 
 bool GetSpdyPriority(const SpdySerializedFrame& frame, SpdyPriority* priority) {
-  BufferedSpdyFramer framer;
+  NetLogWithSource net_log;
+  BufferedSpdyFramer framer(net_log);
   PriorityGetter priority_getter;
   framer.set_visitor(&priority_getter);
   size_t frame_size = frame.size();
@@ -349,8 +350,7 @@ SpdySessionDependencies::SpdySessionDependencies(
       time_func(&base::TimeTicks::Now),
       enable_http2_alternative_service(false),
       net_log(nullptr),
-      http_09_on_non_default_ports_enabled(false),
-      quic_do_not_mark_as_broken_on_network_change(false) {
+      http_09_on_non_default_ports_enabled(false) {
   // Note: The CancelledTransaction test does cleanup by running all
   // tasks in the message loop (RunAllPending).  Unfortunately, that
   // doesn't clean up tasks on the host resolver thread; and
@@ -417,8 +417,6 @@ HttpNetworkSession::Params SpdySessionDependencies::CreateSessionParams(
   params.net_log = session_deps->net_log;
   params.http_09_on_non_default_ports_enabled =
       session_deps->http_09_on_non_default_ports_enabled;
-  params.quic_do_not_mark_as_broken_on_network_change =
-      session_deps->quic_do_not_mark_as_broken_on_network_change;
   return params;
 }
 

@@ -181,7 +181,7 @@ fo{
         MF{"St-Martin"}
         MG{"Madagaskar"}
         MH{"Marshalloyggjar"}
-        MK{"Makedónia"}
+        MK{"Makedónia (FJM)"}
         ML{"Mali"}
         MM{"Myanmar (Burma)"}
         MN{"Mongolia"}
@@ -296,8 +296,5 @@ fo{
         GB{"UK"}
         US{"USA"}
     }
-    Countries%variant{
-        MK{"Makedónia (FJM)"}
-    }
-    Version{"2.1.28.76"}
+    Version{"2.1.31.86"}
 }

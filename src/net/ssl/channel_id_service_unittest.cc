@@ -11,13 +11,12 @@
 #include "base/bind.h"
 #include "base/location.h"
 #include "base/macros.h"
-#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/task_runner.h"
-#include "base/task_scheduler/task_scheduler.h"
-#include "base/test/scoped_task_scheduler.h"
+#include "base/test/null_task_runner.h"
+#include "base/test/scoped_task_environment.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "crypto/ec_private_key.h"
 #include "net/base/net_errors.h"
@@ -27,6 +26,7 @@
 #include "net/ssl/default_channel_id_store.h"
 #include "net/test/channel_id_test_util.h"
 #include "net/test/gtest_util.h"
+#include "net/test/net_test_suite.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -92,11 +92,9 @@ void MockChannelIDStoreWithAsyncGet::CallGetChannelIDCallbackWithResult(
 class ChannelIDServiceTest : public testing::Test {
  public:
   ChannelIDServiceTest()
-      : scoped_task_scheduler_(base::MessageLoop::current()),
-        service_(new ChannelIDService(new DefaultChannelIDStore(NULL))) {}
+      : service_(new ChannelIDService(new DefaultChannelIDStore(NULL))) {}
 
  protected:
-  base::test::ScopedTaskScheduler scoped_task_scheduler_;
   std::unique_ptr<ChannelIDService> service_;
 };
 
@@ -303,7 +301,7 @@ TEST_F(ChannelIDServiceTest, CancelRequest) {
 
   // Wait for reply from ChannelIDServiceWorker to be posted back to the
   // ChannelIDService.
-  base::RunLoop().RunUntilIdle();
+  NetTestSuite::GetScopedTaskEnvironment()->RunUntilIdle();
 
   // Even though the original request was cancelled, the service will still
   // store the result, it just doesn't call the callback.
@@ -328,7 +326,7 @@ TEST_F(ChannelIDServiceTest, CancelRequestByHandleDestruction) {
 
   // Wait for reply from ChannelIDServiceWorker to be posted back to the
   // ChannelIDService.
-  base::RunLoop().RunUntilIdle();
+  NetTestSuite::GetScopedTaskEnvironment()->RunUntilIdle();
 
   // Even though the original request was cancelled, the service will still
   // store the result, it just doesn't call the callback.
@@ -358,12 +356,11 @@ TEST_F(ChannelIDServiceTest, DestructionWithPendingRequest) {
   // If we got here without crashing or a valgrind error, it worked.
 }
 
-// Tests that shutting down the TaskScheduler and then making new requests
-// gracefully fails.
-// This is a regression test for http://crbug.com/236387
+// Tests that making new requests when the ChannelIDService can no longer post
+// tasks gracefully fails. This is a regression test for http://crbug.com/236387
 TEST_F(ChannelIDServiceTest, RequestAfterPoolShutdown) {
-  // Drop all tasks posted to TaskScheduler from now on.
-  base::TaskScheduler::GetInstance()->Shutdown();
+  service_->set_task_runner_for_testing(
+      make_scoped_refptr(new base::NullTaskRunner()));
 
   // Make a request that will force synchronous completion.
   std::string host("encrypted.google.com");

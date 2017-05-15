@@ -149,7 +149,7 @@ class TaskSchedulerTaskTrackerTest
     return MakeUnique<Task>(
         FROM_HERE,
         Bind(&TaskSchedulerTaskTrackerTest::RunTaskCallback, Unretained(this)),
-        TaskTraits().WithShutdownBehavior(shutdown_behavior), TimeDelta());
+        TaskTraits(shutdown_behavior), TimeDelta());
   }
 
   // Calls tracker_->Shutdown() on a new thread. When this returns, Shutdown()
@@ -269,16 +269,15 @@ TEST_P(TaskSchedulerTaskTrackerTest, WillPostAndRunLongTaskBeforeShutdown) {
                              WaitableEvent::InitialState::NOT_SIGNALED);
   WaitableEvent task_barrier(WaitableEvent::ResetPolicy::AUTOMATIC,
                              WaitableEvent::InitialState::NOT_SIGNALED);
-  auto blocked_task = base::MakeUnique<Task>(
+  auto blocked_task = MakeUnique<Task>(
       FROM_HERE,
       Bind(
           [](WaitableEvent* task_running, WaitableEvent* task_barrier) {
             task_running->Signal();
             task_barrier->Wait();
           },
-          Unretained(&task_running), base::Unretained(&task_barrier)),
-      TaskTraits().WithBaseSyncPrimitives().WithShutdownBehavior(GetParam()),
-      TimeDelta());
+          Unretained(&task_running), Unretained(&task_barrier)),
+      TaskTraits(WithBaseSyncPrimitives(), GetParam()), TimeDelta());
 
   // Inform |task_tracker_| that |blocked_task| will be posted.
   EXPECT_TRUE(tracker_.WillPostTask(blocked_task.get()));
@@ -429,7 +428,7 @@ TEST_P(TaskSchedulerTaskTrackerTest, SingletonAllowed) {
   TaskTracker tracker;
   std::unique_ptr<Task> task(
       new Task(FROM_HERE, BindOnce(&ThreadRestrictions::AssertSingletonAllowed),
-               TaskTraits().WithShutdownBehavior(GetParam()), TimeDelta()));
+               TaskTraits(GetParam()), TimeDelta()));
   EXPECT_TRUE(tracker.WillPostTask(task.get()));
 
   // Set the singleton allowed bit to the opposite of what it is expected to be
@@ -453,12 +452,12 @@ TEST_P(TaskSchedulerTaskTrackerTest, IOAllowed) {
   // Unset the IO allowed bit. Expect TaskTracker to set it before running a
   // task with the MayBlock() trait.
   ThreadRestrictions::SetIOAllowed(false);
-  auto task_with_may_block = MakeUnique<Task>(
-      FROM_HERE, Bind([]() {
-        // Shouldn't fail.
-        ThreadRestrictions::AssertIOAllowed();
-      }),
-      TaskTraits().MayBlock().WithShutdownBehavior(GetParam()), TimeDelta());
+  auto task_with_may_block =
+      MakeUnique<Task>(FROM_HERE, Bind([]() {
+                         // Shouldn't fail.
+                         ThreadRestrictions::AssertIOAllowed();
+                       }),
+                       TaskTraits(MayBlock(), GetParam()), TimeDelta());
   EXPECT_TRUE(tracker.WillPostTask(task_with_may_block.get()));
   tracker.RunTask(std::move(task_with_may_block), SequenceToken::Create());
 
@@ -469,7 +468,7 @@ TEST_P(TaskSchedulerTaskTrackerTest, IOAllowed) {
       FROM_HERE, Bind([]() {
         EXPECT_DCHECK_DEATH({ ThreadRestrictions::AssertIOAllowed(); });
       }),
-      TaskTraits().WithShutdownBehavior(GetParam()), TimeDelta());
+      TaskTraits(GetParam()), TimeDelta());
   EXPECT_TRUE(tracker.WillPostTask(task_without_may_block.get()));
   tracker.RunTask(std::move(task_without_may_block), SequenceToken::Create());
 }
@@ -503,7 +502,7 @@ TEST_P(TaskSchedulerTaskTrackerTest, TaskRunnerHandleIsNotSetOnParallel) {
   // scope per no TaskRunner ref being set to it.
   std::unique_ptr<Task> verify_task(
       new Task(FROM_HERE, BindOnce(&VerifyNoTaskRunnerHandle),
-               TaskTraits().WithShutdownBehavior(GetParam()), TimeDelta()));
+               TaskTraits(GetParam()), TimeDelta()));
 
   RunTaskRunnerHandleVerificationTask(&tracker_, std::move(verify_task));
 }
@@ -525,8 +524,8 @@ TEST_P(TaskSchedulerTaskTrackerTest,
   std::unique_ptr<Task> verify_task(
       new Task(FROM_HERE,
                BindOnce(&VerifySequencedTaskRunnerHandle,
-                        base::Unretained(test_task_runner.get())),
-               TaskTraits().WithShutdownBehavior(GetParam()), TimeDelta()));
+                        Unretained(test_task_runner.get())),
+               TaskTraits(GetParam()), TimeDelta()));
   verify_task->sequenced_task_runner_ref = test_task_runner;
 
   RunTaskRunnerHandleVerificationTask(&tracker_, std::move(verify_task));
@@ -551,8 +550,8 @@ TEST_P(TaskSchedulerTaskTrackerTest,
   std::unique_ptr<Task> verify_task(
       new Task(FROM_HERE,
                BindOnce(&VerifyThreadTaskRunnerHandle,
-                        base::Unretained(test_task_runner.get())),
-               TaskTraits().WithShutdownBehavior(GetParam()), TimeDelta()));
+                        Unretained(test_task_runner.get())),
+               TaskTraits(GetParam()), TimeDelta()));
   verify_task->single_thread_task_runner_ref = test_task_runner;
 
   RunTaskRunnerHandleVerificationTask(&tracker_, std::move(verify_task));
@@ -560,17 +559,15 @@ TEST_P(TaskSchedulerTaskTrackerTest,
 
 TEST_P(TaskSchedulerTaskTrackerTest, FlushPendingDelayedTask) {
   const Task delayed_task(FROM_HERE, BindOnce(&DoNothing),
-                          TaskTraits().WithShutdownBehavior(GetParam()),
-                          TimeDelta::FromDays(1));
+                          TaskTraits(GetParam()), TimeDelta::FromDays(1));
   tracker_.WillPostTask(&delayed_task);
   // Flush() should return even if the delayed task didn't run.
   tracker_.Flush();
 }
 
 TEST_P(TaskSchedulerTaskTrackerTest, FlushPendingUndelayedTask) {
-  auto undelayed_task = base::MakeUnique<Task>(
-      FROM_HERE, Bind(&DoNothing),
-      TaskTraits().WithShutdownBehavior(GetParam()), TimeDelta());
+  auto undelayed_task = MakeUnique<Task>(FROM_HERE, Bind(&DoNothing),
+                                         TaskTraits(GetParam()), TimeDelta());
   tracker_.WillPostTask(undelayed_task.get());
 
   // Flush() shouldn't return before the undelayed task runs.
@@ -584,9 +581,8 @@ TEST_P(TaskSchedulerTaskTrackerTest, FlushPendingUndelayedTask) {
 }
 
 TEST_P(TaskSchedulerTaskTrackerTest, PostTaskDuringFlush) {
-  auto undelayed_task = base::MakeUnique<Task>(
-      FROM_HERE, Bind(&DoNothing),
-      TaskTraits().WithShutdownBehavior(GetParam()), TimeDelta());
+  auto undelayed_task = MakeUnique<Task>(FROM_HERE, Bind(&DoNothing),
+                                         TaskTraits(GetParam()), TimeDelta());
   tracker_.WillPostTask(undelayed_task.get());
 
   // Flush() shouldn't return before the undelayed task runs.
@@ -595,9 +591,8 @@ TEST_P(TaskSchedulerTaskTrackerTest, PostTaskDuringFlush) {
   VERIFY_ASYNC_FLUSH_IN_PROGRESS();
 
   // Simulate posting another undelayed task.
-  auto other_undelayed_task = base::MakeUnique<Task>(
-      FROM_HERE, Bind(&DoNothing),
-      TaskTraits().WithShutdownBehavior(GetParam()), TimeDelta());
+  auto other_undelayed_task = MakeUnique<Task>(
+      FROM_HERE, Bind(&DoNothing), TaskTraits(GetParam()), TimeDelta());
   tracker_.WillPostTask(other_undelayed_task.get());
 
   // Run the first undelayed task.
@@ -614,13 +609,12 @@ TEST_P(TaskSchedulerTaskTrackerTest, PostTaskDuringFlush) {
 
 TEST_P(TaskSchedulerTaskTrackerTest, RunDelayedTaskDuringFlush) {
   // Simulate posting a delayed and an undelayed task.
-  auto delayed_task = base::MakeUnique<Task>(
-      FROM_HERE, Bind(&DoNothing),
-      TaskTraits().WithShutdownBehavior(GetParam()), TimeDelta::FromDays(1));
+  auto delayed_task =
+      MakeUnique<Task>(FROM_HERE, Bind(&DoNothing), TaskTraits(GetParam()),
+                       TimeDelta::FromDays(1));
   tracker_.WillPostTask(delayed_task.get());
-  auto undelayed_task = base::MakeUnique<Task>(
-      FROM_HERE, Bind(&DoNothing),
-      TaskTraits().WithShutdownBehavior(GetParam()), TimeDelta());
+  auto undelayed_task = MakeUnique<Task>(FROM_HERE, Bind(&DoNothing),
+                                         TaskTraits(GetParam()), TimeDelta());
   tracker_.WillPostTask(undelayed_task.get());
 
   // Flush() shouldn't return before the undelayed task runs.
@@ -648,9 +642,8 @@ TEST_P(TaskSchedulerTaskTrackerTest, FlushAfterShutdown) {
     return;
 
   // Simulate posting a task.
-  auto undelayed_task = base::MakeUnique<Task>(
-      FROM_HERE, Bind(&DoNothing),
-      TaskTraits().WithShutdownBehavior(GetParam()), TimeDelta());
+  auto undelayed_task = MakeUnique<Task>(FROM_HERE, Bind(&DoNothing),
+                                         TaskTraits(GetParam()), TimeDelta());
   tracker_.WillPostTask(undelayed_task.get());
 
   // Shutdown() should return immediately since there are no pending
@@ -667,9 +660,8 @@ TEST_P(TaskSchedulerTaskTrackerTest, ShutdownDuringFlush) {
     return;
 
   // Simulate posting a task.
-  auto undelayed_task = base::MakeUnique<Task>(
-      FROM_HERE, Bind(&DoNothing),
-      TaskTraits().WithShutdownBehavior(GetParam()), TimeDelta());
+  auto undelayed_task = MakeUnique<Task>(FROM_HERE, Bind(&DoNothing),
+                                         TaskTraits(GetParam()), TimeDelta());
   tracker_.WillPostTask(undelayed_task.get());
 
   // Flush() shouldn't return before the undelayed task runs or
@@ -711,9 +703,9 @@ void ExpectSequenceToken(SequenceToken sequence_token) {
 // when a Task runs.
 TEST_F(TaskSchedulerTaskTrackerTest, CurrentSequenceToken) {
   const SequenceToken sequence_token(SequenceToken::Create());
-  auto task = base::MakeUnique<Task>(FROM_HERE,
-                                     Bind(&ExpectSequenceToken, sequence_token),
-                                     TaskTraits(), TimeDelta());
+  auto task =
+      MakeUnique<Task>(FROM_HERE, Bind(&ExpectSequenceToken, sequence_token),
+                       TaskTraits(), TimeDelta());
   tracker_.WillPostTask(task.get());
 
   EXPECT_FALSE(SequenceToken::GetForCurrentThread().IsValid());
@@ -879,7 +871,7 @@ class WaitAllowedTestThread : public SimpleThread {
                            // Shouldn't fail.
                            ThreadRestrictions::AssertWaitAllowed();
                          }),
-                         TaskTraits().WithBaseSyncPrimitives(), TimeDelta());
+                         TaskTraits(WithBaseSyncPrimitives()), TimeDelta());
     EXPECT_TRUE(tracker.WillPostTask(task_with_sync_primitives.get()));
     tracker.RunTask(std::move(task_with_sync_primitives),
                     SequenceToken::Create());
@@ -912,32 +904,26 @@ TEST(TaskSchedulerTaskTrackerHistogramTest, TaskLatency) {
     const TaskTraits traits;
     const char* const expected_histogram;
   } tests[] = {
-      {TaskTraits().WithPriority(TaskPriority::BACKGROUND),
+      {{TaskPriority::BACKGROUND},
        "TaskScheduler.TaskLatencyMicroseconds.BackgroundTaskPriority"},
-      {TaskTraits().WithPriority(TaskPriority::BACKGROUND).MayBlock(),
+      {{MayBlock(), TaskPriority::BACKGROUND},
        "TaskScheduler.TaskLatencyMicroseconds.BackgroundTaskPriority.MayBlock"},
-      {TaskTraits()
-           .WithPriority(TaskPriority::BACKGROUND)
-           .WithBaseSyncPrimitives(),
+      {{WithBaseSyncPrimitives(), TaskPriority::BACKGROUND},
        "TaskScheduler.TaskLatencyMicroseconds.BackgroundTaskPriority.MayBlock"},
-      {TaskTraits().WithPriority(TaskPriority::USER_VISIBLE),
+      {{TaskPriority::USER_VISIBLE},
        "TaskScheduler.TaskLatencyMicroseconds.UserVisibleTaskPriority"},
-      {TaskTraits().WithPriority(TaskPriority::USER_VISIBLE).MayBlock(),
+      {{MayBlock(), TaskPriority::USER_VISIBLE},
        "TaskScheduler.TaskLatencyMicroseconds.UserVisibleTaskPriority."
        "MayBlock"},
-      {TaskTraits()
-           .WithPriority(TaskPriority::USER_VISIBLE)
-           .WithBaseSyncPrimitives(),
+      {{WithBaseSyncPrimitives(), TaskPriority::USER_VISIBLE},
        "TaskScheduler.TaskLatencyMicroseconds.UserVisibleTaskPriority."
        "MayBlock"},
-      {TaskTraits().WithPriority(TaskPriority::USER_BLOCKING),
+      {{TaskPriority::USER_BLOCKING},
        "TaskScheduler.TaskLatencyMicroseconds.UserBlockingTaskPriority"},
-      {TaskTraits().WithPriority(TaskPriority::USER_BLOCKING).MayBlock(),
+      {{MayBlock(), TaskPriority::USER_BLOCKING},
        "TaskScheduler.TaskLatencyMicroseconds.UserBlockingTaskPriority."
        "MayBlock"},
-      {TaskTraits()
-           .WithPriority(TaskPriority::USER_BLOCKING)
-           .WithBaseSyncPrimitives(),
+      {{WithBaseSyncPrimitives(), TaskPriority::USER_BLOCKING},
        "TaskScheduler.TaskLatencyMicroseconds.UserBlockingTaskPriority."
        "MayBlock"}};
 

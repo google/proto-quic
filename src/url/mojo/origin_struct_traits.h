@@ -18,6 +18,9 @@ struct StructTraits<url::mojom::OriginDataView, url::Origin> {
   static uint16_t port(const url::Origin& r) {
     return r.port();
   }
+  static const std::string& suborigin(const url::Origin& r) {
+    return r.suborigin();
+  }
   static bool unique(const url::Origin& r) {
     return r.unique();
   }
@@ -25,12 +28,13 @@ struct StructTraits<url::mojom::OriginDataView, url::Origin> {
     if (data.unique()) {
       *out = url::Origin();
     } else {
-      base::StringPiece scheme, host;
-      if (!data.ReadScheme(&scheme) || !data.ReadHost(&host))
+      base::StringPiece scheme, host, suborigin;
+      if (!data.ReadScheme(&scheme) || !data.ReadHost(&host) ||
+          !data.ReadSuborigin(&suborigin))
         return false;
 
-      *out = url::Origin::UnsafelyCreateOriginWithoutNormalization(scheme, host,
-                                                                   data.port());
+      *out = url::Origin::UnsafelyCreateOriginWithoutNormalization(
+          scheme, host, data.port(), suborigin);
     }
 
     // If a unique origin was created, but the unique flag wasn't set, then

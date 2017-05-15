@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html i18n-values="dir:textdirection;lang:language">
+<html dir="$i18n{textdirection}" lang="$i18n{language}">
 
 <head>
 <meta charset="utf-8">
@@ -192,22 +192,26 @@ function sortTable(column) {
 
 <body>
 
-<div id="listingParsingErrorBox" i18n-values=".innerHTML:listingParsingErrorBoxText"></div>
+<div id="listingParsingErrorBox">$i18nRaw{listingParsingErrorBoxText}</div>
 
-<h1 id="header" i18n-content="header"></h1>
+<h1 id="header">$i18n{header}</h1>
 
 <div id="parentDirLinkBox" style="display:none">
   <a id="parentDirLink" class="icon up">
-    <span id="parentDirText" i18n-content="parentDirText"></span>
+    <span id="parentDirText">$i18n{parentDirText}</span>
   </a>
 </div>
 
 <table>
   <thead>
     <tr class="header" id="theader">
-      <th i18n-content="headerName" onclick="javascript:sortTable(0);"></th>
-      <th class="detailsColumn" i18n-content="headerSize" onclick="javascript:sortTable(1);"></th>
-      <th class="detailsColumn" i18n-content="headerDateModified" onclick="javascript:sortTable(2);"></th>
+      <th onclick="javascript:sortTable(0);">$i18n{headerName}</th>
+      <th class="detailsColumn" onclick="javascript:sortTable(1);">
+        $i18n{headerSize}
+      </th>
+      <th class="detailsColumn" onclick="javascript:sortTable(2);">
+        $i18n{headerDateModified}
+      </th>
     </tr>
   </thead>
   <tbody id="tbody">

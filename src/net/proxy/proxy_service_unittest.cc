@@ -231,9 +231,6 @@ class TestResolveProxyDelegate : public ProxyDelegate {
       ProxyServer* alternative_proxy_server) const override {}
   void OnAlternativeProxyBroken(
       const ProxyServer& alternative_proxy_server) override {}
-  ProxyServer GetDefaultAlternativeProxy() const override {
-    return ProxyServer();
-  }
 
  private:
   bool on_resolve_proxy_called_;
@@ -277,9 +274,6 @@ class TestProxyFallbackProxyDelegate : public ProxyDelegate {
       ProxyServer* alternative_proxy_server) const override {}
   void OnAlternativeProxyBroken(
       const ProxyServer& alternative_proxy_server) override {}
-  ProxyServer GetDefaultAlternativeProxy() const override {
-    return ProxyServer();
-  }
 
   bool on_proxy_fallback_called() const {
     return on_proxy_fallback_called_;

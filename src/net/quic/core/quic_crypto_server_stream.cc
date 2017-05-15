@@ -97,6 +97,7 @@ QuicCryptoServerStream::QuicCryptoServerStream(
       use_stateless_rejects_if_peer_supported_(
           use_stateless_rejects_if_peer_supported),
       peer_supports_stateless_rejects_(false),
+      zero_rtt_attempted_(false),
       chlo_packet_size_(0),
       validate_client_hello_cb_(nullptr),
       process_client_hello_cb_(nullptr) {
@@ -161,7 +162,7 @@ void QuicCryptoServerStream::OnHandshakeMessage(
   DCHECK(process_client_hello_cb_ == nullptr);
   validate_client_hello_cb_ = cb.get();
   crypto_config_->ValidateClientHello(
-      message, session()->connection()->peer_address().host(),
+      message, GetClientAddress().host(),
       session()->connection()->self_address(), version(),
       session()->connection()->clock(), signed_config_, std::move(cb));
 }
@@ -300,8 +301,7 @@ void QuicCryptoServerStream::SendServerConfigUpdate(
   crypto_config_->BuildServerConfigUpdateMessage(
       session()->connection()->version(), chlo_hash_,
       previous_source_address_tokens_, session()->connection()->self_address(),
-      session()->connection()->peer_address().host(),
-      session()->connection()->clock(),
+      GetClientAddress().host(), session()->connection()->clock(),
       session()->connection()->random_generator(), compressed_certs_cache_,
       *crypto_negotiated_params_, cached_network_params,
       (session()->config()->HasReceivedConnectionOptions()
@@ -374,6 +374,10 @@ bool QuicCryptoServerStream::PeerSupportsStatelessRejects() const {
   return peer_supports_stateless_rejects_;
 }
 
+bool QuicCryptoServerStream::ZeroRttAttempted() const {
+  return zero_rtt_attempted_;
+}
+
 void QuicCryptoServerStream::SetPeerSupportsStatelessRejects(
     bool peer_supports_stateless_rejects) {
   peer_supports_stateless_rejects_ = peer_supports_stateless_rejects;
@@ -414,10 +418,16 @@ void QuicCryptoServerStream::ProcessClientHello(
                  nullptr);
     return;
   }
-
   if (!result->info.server_nonce.empty()) {
     ++num_handshake_messages_with_server_nonces_;
   }
+
+  if (num_handshake_messages_ == 1) {
+    // Client attempts zero RTT handshake by sending a non-inchoate CHLO.
+    QuicStringPiece public_value;
+    zero_rtt_attempted_ = message.GetStringPiece(kPUBS, &public_value);
+  }
+
   // Store the bandwidth estimate from the client.
   if (result->cached_network_params.bandwidth_estimate_bytes_per_second() > 0) {
     previous_cached_network_params_.reset(
@@ -433,7 +443,7 @@ void QuicCryptoServerStream::ProcessClientHello(
       GenerateConnectionIdForReject(use_stateless_rejects_in_crypto_config);
   crypto_config_->ProcessClientHello(
       result, /*reject_only=*/false, connection->connection_id(),
-      connection->self_address(), connection->peer_address(), version(),
+      connection->self_address(), GetClientAddress(), version(),
       connection->supported_versions(), use_stateless_rejects_in_crypto_config,
       server_designated_connection_id, connection->clock(),
       connection->random_generator(), compressed_certs_cache_,
@@ -468,6 +478,10 @@ QuicConnectionId QuicCryptoServerStream::GenerateConnectionIdForReject(
   }
   return helper_->GenerateConnectionIdForReject(
       session()->connection()->connection_id());
+}
+
+const QuicSocketAddress QuicCryptoServerStream::GetClientAddress() {
+  return session()->connection()->peer_address();
 }
 
 }  // namespace net

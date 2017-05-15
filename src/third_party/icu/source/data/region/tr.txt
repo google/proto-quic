@@ -89,7 +89,7 @@ tr{
         CW{"Curaçao"}
         CX{"Christmas Adası"}
         CY{"Kıbrıs"}
-        CZ{"Çek Cumhuriyeti"}
+        CZ{"Çekya"}
         DE{"Almanya"}
         DG{"Diego Garcia"}
         DJ{"Cibuti"}
@@ -108,7 +108,7 @@ tr{
         EU{"Avrupa Birliği"}
         FI{"Finlandiya"}
         FJ{"Fiji"}
-        FK{"Falkland Adaları"}
+        FK{"Falkland Adaları (Malvinas Adaları)"}
         FM{"Mikronezya"}
         FO{"Faroe Adaları"}
         FR{"Fransa"}
@@ -301,9 +301,8 @@ tr{
     Countries%variant{
         CD{"Kongo Demokratik Cumhuriyeti"}
         CG{"Kongo Cumhuriyeti"}
-        CZ{"Çekya"}
-        FK{"Falkland Adaları (Malvinas Adaları)"}
+        CZ{"Çek Cumhuriyeti"}
         TL{"Doğu Timor"}
     }
-    Version{"2.1.28.79"}
+    Version{"2.1.32.59"}
 }

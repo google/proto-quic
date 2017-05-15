@@ -53,8 +53,8 @@ def _SaveSizeInfoToFile(size_info, file_obj):
   _LogSize(file_obj, 'paths')  # For libchrome, adds 200kb.
 
   # Symbol counts by section.
-  by_section = models.SymbolGroup(size_info.symbols)
-  by_section = by_section.GroupBySectionName().SortedByName()
+  by_section = size_info.symbols.GroupedBySectionName().Sorted(
+      key=lambda s:(s[0].IsBss(), s[0].address, s.full_name))
   file_obj.write('%s\n' % '\t'.join(g.name for g in by_section))
   file_obj.write('%s\n' % '\t'.join(str(len(g)) for g in by_section))
 
@@ -83,8 +83,7 @@ def _SaveSizeInfoToFile(size_info, file_obj):
   prev_aliases = None
   for group in by_section:
     for symbol in group:
-      # Do not write name when full_name exists. It will be derived on load.
-      file_obj.write(symbol.full_name or symbol.name)
+      file_obj.write(symbol.full_name)
       if symbol.aliases and symbol.aliases is not prev_aliases:
         file_obj.write('\t0%x' % symbol.num_aliases)
       prev_aliases = symbol.aliases
@@ -151,7 +150,7 @@ def _LoadSizeInfoFromFile(file_obj):
         else:
           flags_part = parts[1]
 
-      name = parts[0]
+      full_name = parts[0]
       flags = int(flags_part, 16) if flags_part else 0
       num_aliases = int(aliases_part, 16) if aliases_part else 0
 
@@ -159,13 +158,14 @@ def _LoadSizeInfoFromFile(file_obj):
       new_sym.section_name = cur_section_name
       new_sym.address = addresses[section_index][i]
       new_sym.size = sizes[section_index][i]
-      new_sym.name = name
+      new_sym.full_name = full_name
       paths = path_tuples[path_indices[section_index][i]]
       new_sym.object_path = paths[0]
       new_sym.source_path = paths[1]
       new_sym.flags = flags
       new_sym.padding = 0  # Derived
-      new_sym.full_name = None  # Derived
+      new_sym.template_name = ''  # Derived
+      new_sym.name = ''  # Derived
 
       if num_aliases:
         assert alias_counter == 0
@@ -181,8 +181,7 @@ def _LoadSizeInfoFromFile(file_obj):
       raw_symbols[symbol_idx] = new_sym
       symbol_idx += 1
 
-  return models.SizeInfo(section_sizes, models.SymbolGroup(raw_symbols),
-                         metadata=metadata)
+  return models.SizeInfo(section_sizes, raw_symbols, metadata=metadata)
 
 
 def SaveSizeInfo(size_info, path):

@@ -48,8 +48,7 @@ class _DiffAction(object):
     args.output_directory = None
     args.tool_prefix = None
     args.inputs = [args.before, args.after]
-    args.query = ('Print(Diff(size_info1, size_info2), verbose=%s)' %
-                  bool(args.all))
+    args.query = ('Print(Diff(), verbose=%s)' % bool(args.all))
     console.Run(args, parser)
 
 
@@ -65,7 +64,7 @@ def main():
       'Starts an interactive Python console for analyzing .size files.')
   actions['diff'] = (
       _DiffAction(),
-      'Shorthand for console --query "Print(Diff(size_info1, size_info2))"')
+      'Shorthand for console --query "Print(Diff())"')
 
   for name, tup in actions.iteritems():
     sub_parser = sub_parsers.add_parser(name, help=tup[1])

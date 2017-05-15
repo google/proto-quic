@@ -146,7 +146,11 @@ HttpAuthHandlerFactory::CreateDefault(HostResolver* host_resolver) {
                             ,
                             std::string()
 #endif
-                                );
+#if defined(OS_CHROMEOS)
+                                ,
+                            true
+#endif
+                            );
   return CreateAuthHandlerRegistryFactory(prefs, host_resolver);
 }
 

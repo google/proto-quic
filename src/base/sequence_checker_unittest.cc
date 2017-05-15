@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "base/sequence_checker.h"
+
 #include <stddef.h>
 
 #include <memory>
@@ -12,9 +14,9 @@
 #include "base/callback_forward.h"
 #include "base/macros.h"
 #include "base/message_loop/message_loop.h"
-#include "base/sequence_checker_impl.h"
 #include "base/sequence_token.h"
 #include "base/single_thread_task_runner.h"
+#include "base/test/gtest_util.h"
 #include "base/test/sequenced_worker_pool_owner.h"
 #include "base/threading/simple_thread.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -254,6 +256,56 @@ TEST_F(SequenceCheckerTest,
       base::BindOnce(&ExpectNotCalledOnValidSequence,
                      base::Unretained(&sequence_checker)));
   second_pool_owner.pool()->FlushForTesting();
+}
+
+namespace {
+
+// This fixture is a helper for unit testing the sequence checker macros as it
+// is not possible to inline ExpectDeathOnOtherSequence() and
+// ExpectNoDeathOnOtherSequenceAfterDetach() as lambdas since binding
+// |Unretained(&my_sequence_checker)| wouldn't compile on non-dcheck builds
+// where it won't be defined.
+class SequenceCheckerMacroTest : public SequenceCheckerTest {
+ public:
+  SequenceCheckerMacroTest() = default;
+
+  void ExpectDeathOnOtherSequence() {
+#if DCHECK_IS_ON()
+    EXPECT_DCHECK_DEATH(
+        { DCHECK_CALLED_ON_VALID_SEQUENCE(my_sequence_checker_); });
+#else
+    // Happily no-ops on non-dcheck builds.
+    DCHECK_CALLED_ON_VALID_SEQUENCE(my_sequence_checker_);
+#endif
+  }
+
+  void ExpectNoDeathOnOtherSequenceAfterDetach() {
+    DCHECK_CALLED_ON_VALID_SEQUENCE(my_sequence_checker_);
+  }
+
+ protected:
+  SEQUENCE_CHECKER(my_sequence_checker_);
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(SequenceCheckerMacroTest);
+};
+
+}  // namespace
+
+TEST_F(SequenceCheckerMacroTest, Macros) {
+  PostToSequencedWorkerPool(
+      Bind(&SequenceCheckerMacroTest::ExpectDeathOnOtherSequence,
+           Unretained(this)),
+      "A");
+  FlushSequencedWorkerPoolForTesting();
+
+  DETACH_FROM_SEQUENCE(my_sequence_checker_);
+
+  PostToSequencedWorkerPool(
+      Bind(&SequenceCheckerMacroTest::ExpectNoDeathOnOtherSequenceAfterDetach,
+           Unretained(this)),
+      "A");
+  FlushSequencedWorkerPoolForTesting();
 }
 
 }  // namespace base

@@ -10,8 +10,12 @@ class JunitTestInstance(test_instance.TestInstance):
   def __init__(self, args, _):
     super(JunitTestInstance, self).__init__()
 
+    self._android_manifest_path = args.android_manifest_path
     self._coverage_dir = args.coverage_dir
     self._package_filter = args.package_filter
+    self._package_name = args.package_name
+    self._resource_zips = args.resource_zips
+    self._robolectric_runtime_deps_dir = args.robolectric_runtime_deps_dir
     self._runner_filter = args.runner_filter
     self._test_filter = args.test_filter
     self._test_suite = args.test_suite
@@ -29,12 +33,28 @@ class JunitTestInstance(test_instance.TestInstance):
     pass
 
   @property
+  def android_manifest_path(self):
+    return self._android_manifest_path
+
+  @property
   def coverage_dir(self):
     return self._coverage_dir
 
   @property
   def package_filter(self):
     return self._package_filter
+
+  @property
+  def package_name(self):
+    return self._package_name
+
+  @property
+  def resource_zips(self):
+    return self._resource_zips
+
+  @property
+  def robolectric_runtime_deps_dir(self):
+    return self._robolectric_runtime_deps_dir
 
   @property
   def runner_filter(self):

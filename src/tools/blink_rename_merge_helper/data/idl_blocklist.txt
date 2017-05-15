@@ -4867,8 +4867,6 @@ SharedWorkerGlobalScope:::onconnect:::0
 SharedWorkerGlobalScope:::setOnconnect:::1
 SharedWorkerPerformance:::workerStart:::2
 SharedWorker:::port:::0
-SiteBoundCredential:::iconURL:::0
-SiteBoundCredential:::name:::0
 SourceBuffer:::abort:::1
 SourceBuffer:::appendBuffer:::2
 SourceBuffer:::appendWindowEnd:::0

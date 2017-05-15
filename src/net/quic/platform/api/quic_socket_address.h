@@ -24,10 +24,10 @@ class QUIC_EXPORT_PRIVATE QuicSocketAddress {
   QuicSocketAddress(const QuicSocketAddress& other) = default;
   QuicSocketAddress& operator=(const QuicSocketAddress& other) = default;
   QuicSocketAddress& operator=(QuicSocketAddress&& other) = default;
-  QUIC_EXPORT_PRIVATE friend bool operator==(QuicSocketAddress lhs,
-                                             QuicSocketAddress rhs);
-  QUIC_EXPORT_PRIVATE friend bool operator!=(QuicSocketAddress lhs,
-                                             QuicSocketAddress rhs);
+  QUIC_EXPORT_PRIVATE friend bool operator==(const QuicSocketAddress& lhs,
+                                             const QuicSocketAddress& rhs);
+  QUIC_EXPORT_PRIVATE friend bool operator!=(const QuicSocketAddress& lhs,
+                                             const QuicSocketAddress& rhs);
 
   bool IsInitialized() const;
   std::string ToString() const;

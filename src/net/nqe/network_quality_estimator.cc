@@ -253,8 +253,6 @@ NetworkQualityEstimator::NetworkQualityEstimator(
       use_small_responses_(use_smaller_responses_for_tests),
       disable_offline_check_(false),
       add_default_platform_observations_(add_default_platform_observations),
-      weight_multiplier_per_second_(params_.GetWeightMultiplierPerSecond()),
-      weight_multiplier_per_dbm_(params_.GetWeightMultiplierPerDbm()),
       effective_connection_type_algorithm_(
           algorithm_name_to_enum_.find(
               params_.GetEffectiveConnectionTypeAlgorithm()) ==
@@ -268,10 +266,11 @@ NetworkQualityEstimator::NetworkQualityEstimator(
       current_network_id_(nqe::internal::NetworkID(
           NetworkChangeNotifier::ConnectionType::CONNECTION_UNKNOWN,
           std::string())),
-      downstream_throughput_kbps_observations_(weight_multiplier_per_second_,
-                                               weight_multiplier_per_dbm_),
-      rtt_observations_(weight_multiplier_per_second_,
-                        weight_multiplier_per_dbm_),
+      downstream_throughput_kbps_observations_(
+          params_.weight_multiplier_per_second(),
+          params_.weight_multiplier_per_dbm()),
+      rtt_observations_(params_.weight_multiplier_per_second(),
+                        params_.weight_multiplier_per_dbm()),
       effective_connection_type_at_last_main_frame_(
           EFFECTIVE_CONNECTION_TYPE_UNKNOWN),
       external_estimate_provider_(std::move(external_estimates_provider)),
@@ -283,14 +282,6 @@ NetworkQualityEstimator::NetworkQualityEstimator(
       signal_strength_dbm_(INT32_MIN),
       min_signal_strength_since_connection_change_(INT32_MAX),
       max_signal_strength_since_connection_change_(INT32_MIN),
-      correlation_uma_logging_probability_(
-          params_.correlation_uma_logging_probability()),
-      forced_effective_connection_type_set_(
-          params_.forced_effective_connection_type_set()),
-      forced_effective_connection_type_(
-          params_.forced_effective_connection_type()),
-      persistent_cache_reading_enabled_(
-          params_.persistent_cache_reading_enabled()),
       event_creator_(net_log),
       disallowed_observation_sources_for_http_(
           {NETWORK_QUALITY_OBSERVATION_SOURCE_TCP,
@@ -336,7 +327,7 @@ NetworkQualityEstimator::NetworkQualityEstimator(
 
   watcher_factory_.reset(new nqe::internal::SocketWatcherFactory(
       base::ThreadTaskRunnerHandle::Get(),
-      params_.GetMinSocketWatcherNotificationInterval(),
+      params_.min_socket_watcher_notification_interval(),
       base::Bind(&NetworkQualityEstimator::OnUpdatedRTTAvailable,
                  base::Unretained(this)),
       tick_clock_.get()));
@@ -628,11 +619,10 @@ void NetworkQualityEstimator::RecordCorrelationMetric(const URLRequest& request,
                                                       int net_error) const {
   DCHECK(thread_checker_.CalledOnValidThread());
 
-  // The histogram is recorded with probability
-  // |correlation_uma_logging_probability_| to reduce overhead involved with
-  // sparse histograms. Also, recording the correlation on each request is
+  // The histogram is recorded randomly to reduce overhead involved with sparse
+  // histograms. Furthermore, recording the correlation on each request is
   // unnecessary.
-  if (RandDouble() >= correlation_uma_logging_probability_)
+  if (RandDouble() >= params_.correlation_uma_logging_probability())
     return;
 
   if (request.response_info().was_cached ||
@@ -851,7 +841,7 @@ void NetworkQualityEstimator::OnConnectionTypeChanged(
   rtt_observations_.Clear();
 
 #if defined(OS_ANDROID)
-  if (weight_multiplier_per_dbm_ < 1.0 &&
+  if (params_.weight_multiplier_per_dbm() < 1.0 &&
       NetworkChangeNotifier::IsConnectionCellular(current_network_id_.type)) {
     UMA_HISTOGRAM_BOOLEAN(
         "NQE.CellularSignalStrengthAvailable",
@@ -913,7 +903,7 @@ void NetworkQualityEstimator::MaybeQueryExternalEstimateProvider() const {
 
 void NetworkQualityEstimator::UpdateSignalStrength() {
 #if defined(OS_ANDROID)
-  if (weight_multiplier_per_dbm_ >= 1.0 ||
+  if (params_.weight_multiplier_per_dbm() >= 1.0 ||
       !NetworkChangeNotifier::IsConnectionCellular(current_network_id_.type) ||
       !android::cellular_signal_strength::GetSignalStrengthDbm(
           &signal_strength_dbm_)) {
@@ -1209,8 +1199,8 @@ NetworkQualityEstimator::GetRecentEffectiveConnectionTypeUsingMetrics(
   *transport_rtt = nqe::internal::InvalidRTT();
   *downstream_throughput_kbps = nqe::internal::kInvalidThroughput;
 
-  if (forced_effective_connection_type_set_)
-    return forced_effective_connection_type_;
+  if (params_.forced_effective_connection_type())
+    return params_.forced_effective_connection_type().value();
 
   // If the device is currently offline, then return
   // EFFECTIVE_CONNECTION_TYPE_OFFLINE.
@@ -1472,7 +1462,7 @@ nqe::internal::NetworkID NetworkQualityEstimator::GetCurrentNetworkID() const {
 bool NetworkQualityEstimator::ReadCachedNetworkQualityEstimate() {
   DCHECK(thread_checker_.CalledOnValidThread());
 
-  if (!persistent_cache_reading_enabled_)
+  if (!params_.persistent_cache_reading_enabled())
     return false;
 
   nqe::internal::CachedNetworkQuality cached_network_quality;
@@ -1779,7 +1769,7 @@ void NetworkQualityEstimator::MaybeUpdateNetworkQualityFromCache(
     const nqe::internal::CachedNetworkQuality& cached_network_quality) {
   DCHECK(thread_checker_.CalledOnValidThread());
 
-  if (!persistent_cache_reading_enabled_)
+  if (!params_.persistent_cache_reading_enabled())
     return;
   if (network_id != current_network_id_)
     return;

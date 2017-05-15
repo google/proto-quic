@@ -1,8 +1,8 @@
 diff --git a/source/data/brkitr/rules/word.txt b/source/data/brkitr/rules/word.txt
-index aa7c47c..9c93dd5 100644
+index 742d8f8f..83dd490e 100644
 --- a/source/data/brkitr/rules/word.txt
 +++ b/source/data/brkitr/rules/word.txt
-@@ -39,10 +39,16 @@ $Hebrew_Letter      = [\p{Word_Break = Hebrew_Letter}];
+@@ -40,10 +40,16 @@ $Hebrew_Letter      = [\p{Word_Break = Hebrew_Letter}];
  $ALetter            = [\p{Word_Break = ALetter}];
  $Single_Quote       = [\p{Word_Break = Single_Quote}];
  $Double_Quote       = [\p{Word_Break = Double_Quote}];
@@ -20,5 +20,5 @@ index aa7c47c..9c93dd5 100644
 +$MidNum       = [\p{Word_Break = MidNum}[\u002E \uFF0E]];
 +$Numeric      = [\p{Word_Break = Numeric}[\uff10-\uff19]]; #includes fullwidth digits
  $ExtendNumLet       = [\p{Word_Break = ExtendNumLet}];
- $E_Base             = [\p{Word_Break = EB}\U0001F3C2\U0001F3C7\U0001F3CC\U0001F46A-\U0001F46D\U0001F46F\U0001F574\U0001F6CC];
+ $E_Base             = [\p{Word_Break = EB}];
  $E_Modifier         = [\p{Word_Break = EM}];

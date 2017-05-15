@@ -21,6 +21,7 @@
 
 namespace mojo {
 namespace edk {
+class IncomingBrokerClientInvitation;
 class ScopedIPCSupport;
 }  // namespace edk
 }  // namespace mojo
@@ -54,6 +55,8 @@ class ReplayProcess : public IPC::Listener {
   void SendNextMessage();
 
   std::unique_ptr<mojo::edk::ScopedIPCSupport> mojo_ipc_support_;
+  std::unique_ptr<mojo::edk::IncomingBrokerClientInvitation>
+      broker_client_invitation_;
   std::unique_ptr<IPC::ChannelProxy> channel_;
   base::MessageLoop main_loop_;
   base::Thread io_thread_;

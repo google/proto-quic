@@ -6,6 +6,8 @@ package org.chromium.base.test.util;
 
 import static org.chromium.base.test.util.ScalableTimeout.scaleTimeout;
 
+import org.junit.Assert;
+
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -128,6 +130,7 @@ public class CallbackHelper {
 
     private final Object mLock = new Object();
     private int mCallCount;
+    private String mFailureString;
 
     /**
      * Gets the number of times the callback has been called.
@@ -179,6 +182,11 @@ public class CallbackHelper {
             while (callCountWhenDoneWaiting > mCallCount) {
                 int callCountBeforeWait = mCallCount;
                 mLock.wait(unit.toMillis(timeout));
+                if (mFailureString != null) {
+                    String s = mFailureString;
+                    mFailureString = null;
+                    Assert.fail(s);
+                }
                 if (callCountBeforeWait == mCallCount) {
                     throw new TimeoutException(msg == null ? "waitForCallback timed out!" : msg);
                 }
@@ -225,6 +233,19 @@ public class CallbackHelper {
     public void notifyCalled() {
         synchronized (mLock) {
             mCallCount++;
+            mLock.notifyAll();
+        }
+    }
+
+    /**
+     * Should be called when the callback associated with this helper object wants to
+     * indicate a failure.
+     *
+     * @param s The failure message.
+     */
+    public void notifyFailed(String s) {
+        synchronized (mLock) {
+            mFailureString = s;
             mLock.notifyAll();
         }
     }

@@ -1,7 +1,7 @@
 ﻿// © 2016 and later: Unicode, Inc. and others.
 // License & terms of use: http://www.unicode.org/copyright.html#License
 bg{
-    Version{"2.1.30.6"}
+    Version{"2.1.33.75"}
     zoneStrings{
         "Africa:Abidjan"{
             ec{"Абиджан"}
@@ -941,6 +941,9 @@ bg{
         }
         "Australia:Sydney"{
             ec{"Сидни"}
+        }
+        "Etc:UTC"{
+            ls{"Координирано универсално време"}
         }
         "Etc:Unknown"{
             ec{"неизвестен"}

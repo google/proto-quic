@@ -20,8 +20,10 @@ from diff_util import PromptUserToAcceptDiff
 import path_util
 
 import print_style
+import histogram_paths
 
-HISTOGRAMS_PATH = path_util.GetHistogramsFile()
+
+ENUMS_PATH = histogram_paths.ENUMS_XML
 ENUM_NAME = 'MappedEditingCommands'
 
 EDITOR_COMMAND_CPP = 'third_party/WebKit/Source/core/editing/EditorCommand.cpp'
@@ -119,8 +121,8 @@ def main():
   Log('Reading histogram enum definition from "%s".' % EDITOR_COMMAND_CPP)
   histogram_values = ReadHistogramValues(EDITOR_COMMAND_CPP)
 
-  Log('Reading existing histograms from "%s".' % (HISTOGRAMS_PATH))
-  with open(HISTOGRAMS_PATH, 'rb') as f:
+  Log('Reading existing histograms from "%s".' % (ENUMS_PATH))
+  with open(ENUMS_PATH, 'rb') as f:
     histograms_doc = minidom.parse(f)
     f.seek(0)
     xml = f.read()
@@ -131,7 +133,7 @@ def main():
   Log('Writing out new histograms file.')
   new_xml = print_style.GetPrintStyle().PrettyPrintNode(histograms_doc)
   if PromptUserToAcceptDiff(xml, new_xml, 'Is the updated version acceptable?'):
-    with open(HISTOGRAMS_PATH, 'wb') as f:
+    with open(ENUMS_PATH, 'wb') as f:
       f.write(new_xml)
 
   Log('Done.')

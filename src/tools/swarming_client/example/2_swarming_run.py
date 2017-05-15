@@ -26,7 +26,7 @@ def main():
   options = common.parse_args(use_isolate_server=True, use_swarming=True)
   tempdir = tempfile.mkdtemp(prefix=u'hello_world')
   try:
-    isolated, _ = common.isolate(
+    isolated_hash = common.isolate(
         tempdir, options.isolate_server, options.swarming_os, options.verbose)
     common.note(
         'Running the job remotely. This:\n'
@@ -43,7 +43,7 @@ def main():
       '--task-name', options.task_name,
       '--task-summary-json', 'example_result.json',
       '--decorate',
-      isolated,
+      '--isolated', isolated_hash,
     ]
     if options.idempotent:
       cmd.append('--idempotent')

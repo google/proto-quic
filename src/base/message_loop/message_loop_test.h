@@ -28,7 +28,6 @@ void RunTest_PostDelayedTask_SharedTimer(MessagePumpFactory factory);
 void RunTest_EnsureDeletion(MessagePumpFactory factory);
 void RunTest_EnsureDeletion_Chain(MessagePumpFactory factory);
 void RunTest_Nesting(MessagePumpFactory factory);
-void RunTest_NestingObserver(MessagePumpFactory factory);
 void RunTest_RecursiveDenial1(MessagePumpFactory factory);
 void RunTest_RecursiveDenial3(MessagePumpFactory factory);
 void RunTest_RecursiveSupport1(MessagePumpFactory factory);

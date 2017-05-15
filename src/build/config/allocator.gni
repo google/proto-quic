@@ -6,7 +6,7 @@ import("//build/config/sanitizers/sanitizers.gni")
 
 # Temporarily disable tcmalloc on arm64 linux to get rid of compilation errors.
 if (is_android || current_cpu == "mipsel" || is_mac || is_ios || is_asan ||
-    is_lsan || is_tsan || is_msan || is_win || is_syzyasan ||
+    is_lsan || is_tsan || is_msan || is_win || is_syzyasan || is_fuchsia ||
     (is_linux && target_cpu == "arm64")) {
   _default_allocator = "none"
 } else {

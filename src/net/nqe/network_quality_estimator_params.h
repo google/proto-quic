@@ -9,12 +9,18 @@
 #include <string>
 
 #include "base/macros.h"
+#include "base/optional.h"
 #include "base/threading/thread_checker.h"
+#include "net/base/net_export.h"
 #include "net/base/network_change_notifier.h"
 #include "net/nqe/effective_connection_type.h"
 #include "net/nqe/network_quality.h"
 
 namespace net {
+
+// Forces NQE to return a specific effective connection type. Set using the
+// |params| provided to the NetworkQualityEstimatorParams constructor.
+NET_EXPORT extern const char kForceEffectiveConnectionType[];
 
 namespace nqe {
 
@@ -22,7 +28,7 @@ namespace internal {
 
 // NetworkQualityEstimatorParams computes the configuration parameters for
 // the network quality estimator.
-class NetworkQualityEstimatorParams {
+class NET_EXPORT_PRIVATE NetworkQualityEstimatorParams {
  public:
   // |params| is the map containing all field trial parameters related to
   // NetworkQualityEstimator field trial.
@@ -35,15 +41,6 @@ class NetworkQualityEstimatorParams {
   // connection type. Returns an empty string if a valid algorithm paramter is
   // not specified.
   std::string GetEffectiveConnectionTypeAlgorithm() const;
-
-  // Computes and returns the weight multiplier per second, which represents the
-  // factor by which the weight of an observation reduces every second.
-  double GetWeightMultiplierPerSecond() const;
-
-  // Returns the factor by which the weight of an observation reduces for every
-  // dBm difference between the current signal strength (in dBm), and the signal
-  // strength at the time when the observation was taken.
-  double GetWeightMultiplierPerDbm() const;
 
   // Returns a descriptive name corresponding to |connection_type|.
   static const char* GetNameForConnectionType(
@@ -67,29 +64,56 @@ class NetworkQualityEstimatorParams {
   void ObtainEffectiveConnectionTypeModelParams(
       nqe::internal::NetworkQuality connection_thresholds[]) const;
 
+  // Returns the weight multiplier per second, which represents the factor by
+  // which the weight of an observation reduces every second.
+  double weight_multiplier_per_second() const {
+    return weight_multiplier_per_second_;
+  }
+
+  // Returns the factor by which the weight of an observation reduces for every
+  // dBm difference between the current signal strength (in dBm), and the signal
+  // strength at the time when the observation was taken.
+  double weight_multiplier_per_dbm() const {
+    return weight_multiplier_per_dbm_;
+  }
+
   // Returns the fraction of URL requests that should record the correlation
   // UMA.
-  double correlation_uma_logging_probability() const;
+  double correlation_uma_logging_probability() const {
+    return correlation_uma_logging_probability_;
+  }
 
-  // Returns true if the effective connection type has been forced via field
-  // trial parameters.
-  bool forced_effective_connection_type_set() const;
-
-  // Returns the effective connection type if it has been forced via field trial
-  // parameters.
-  EffectiveConnectionType forced_effective_connection_type() const;
+  // Returns an unset value if the effective connection type has not been forced
+  // via the |params| provided to this class. Otherwise, returns a value set to
+  // the effective connection type that has been forced.
+  base::Optional<EffectiveConnectionType> forced_effective_connection_type()
+      const {
+    return forced_effective_connection_type_;
+  }
 
   // Returns true if reading from the persistent cache is enabled.
-  bool persistent_cache_reading_enabled() const;
+  bool persistent_cache_reading_enabled() const {
+    return persistent_cache_reading_enabled_;
+  }
 
   // Returns the the minimum interval betweeen consecutive notifications to a
   // single socket watcher.
-  base::TimeDelta GetMinSocketWatcherNotificationInterval() const;
+  base::TimeDelta min_socket_watcher_notification_interval() const {
+    return min_socket_watcher_notification_interval_;
+  }
 
  private:
   // Map containing all field trial parameters related to
   // NetworkQualityEstimator field trial.
   const std::map<std::string, std::string> params_;
+
+  const double weight_multiplier_per_second_;
+  const double weight_multiplier_per_dbm_;
+  const double correlation_uma_logging_probability_;
+  const base::Optional<EffectiveConnectionType>
+      forced_effective_connection_type_;
+  const bool persistent_cache_reading_enabled_;
+  const base::TimeDelta min_socket_watcher_notification_interval_;
 
   base::ThreadChecker thread_checker_;
 

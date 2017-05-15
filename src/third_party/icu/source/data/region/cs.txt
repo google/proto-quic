@@ -89,7 +89,7 @@ cs{
         CW{"Curaçao"}
         CX{"Vánoční ostrov"}
         CY{"Kypr"}
-        CZ{"Česká republika"}
+        CZ{"Česko"}
         DE{"Německo"}
         DG{"Diego García"}
         DJ{"Džibutsko"}
@@ -108,7 +108,7 @@ cs{
         EU{"Evropská unie"}
         FI{"Finsko"}
         FJ{"Fidži"}
-        FK{"Falklandské ostrovy"}
+        FK{"Falklandské ostrovy (Malvíny)"}
         FM{"Mikronésie"}
         FO{"Faerské ostrovy"}
         FR{"Francie"}
@@ -181,7 +181,7 @@ cs{
         MF{"Svatý Martin (Francie)"}
         MG{"Madagaskar"}
         MH{"Marshallovy ostrovy"}
-        MK{"Makedonie"}
+        MK{"Makedonie (FYROM)"}
         ML{"Mali"}
         MM{"Myanmar (Barma)"}
         MN{"Mongolsko"}
@@ -302,9 +302,7 @@ cs{
         CD{"Kongo (DRK)"}
         CG{"Kongo (republika)"}
         CI{"Côte d’Ivoire"}
-        CZ{"Česko"}
-        FK{"Falklandské ostrovy (Malvíny)"}
-        MK{"Makedonie (FYROM)"}
+        CZ{"Česká republika"}
     }
-    Version{"2.1.28.79"}
+    Version{"2.1.32.59"}
 }

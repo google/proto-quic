@@ -114,17 +114,6 @@ int GzipUncompressHelper(Bytef* dest,
   return err;
 }
 
-// Returns the uncompressed size from GZIP-compressed |compressed_data|.
-uint32_t GetUncompressedSize(const std::string& compressed_data) {
-  // The uncompressed size is stored in the last 4 bytes of |input| in LE.
-  uint32_t size;
-  if (compressed_data.length() < sizeof(size))
-    return 0;
-  memcpy(&size, &compressed_data[compressed_data.length() - sizeof(size)],
-         sizeof(size));
-  return base::ByteSwapToLE32(size);
-}
-
 }  // namespace
 
 namespace compression {
@@ -160,6 +149,27 @@ bool GzipUncompress(const std::string& input, std::string* output) {
     return true;
   }
   return false;
+}
+
+bool GzipUncompress(base::StringPiece input, base::StringPiece output) {
+  uLongf uncompressed_size = GetUncompressedSize(input);
+  if (uncompressed_size > output.size())
+    return false;
+  return GzipUncompressHelper(bit_cast<Bytef*>(output.data()),
+                              &uncompressed_size,
+                              bit_cast<const Bytef*>(input.data()),
+                              static_cast<uLongf>(input.length())) == Z_OK;
+}
+
+uint32_t GetUncompressedSize(base::StringPiece compressed_data) {
+  // The uncompressed size is stored in the last 4 bytes of |input| in LE.
+  uint32_t size;
+  if (compressed_data.length() < sizeof(size))
+    return 0;
+  memcpy(&size,
+         &compressed_data.data()[compressed_data.length() - sizeof(size)],
+         sizeof(size));
+  return base::ByteSwapToLE32(size);
 }
 
 }  // namespace compression

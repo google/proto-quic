@@ -12,6 +12,7 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
+#include "base/message_loop/message_loop.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_util.h"
 #include "base/threading/thread.h"
@@ -181,15 +182,15 @@ URLRequestContextBuilder::HttpCacheParams::HttpCacheParams()
 URLRequestContextBuilder::HttpCacheParams::~HttpCacheParams() {}
 
 URLRequestContextBuilder::HttpNetworkSessionParams::HttpNetworkSessionParams()
-    : ignore_certificate_errors(false),
-      host_mapping_rules(NULL),
+    : host_mapping_rules(nullptr),
+      ignore_certificate_errors(false),
       testing_fixed_http_port(0),
       testing_fixed_https_port(0),
       enable_http2(true),
       enable_quic(false),
       quic_max_server_configs_stored_in_properties(0),
-      quic_idle_connection_timeout_seconds(kIdleConnectionTimeoutSeconds),
       quic_close_sessions_on_ip_change(false),
+      quic_idle_connection_timeout_seconds(kIdleConnectionTimeoutSeconds),
       quic_migrate_sessions_on_network_change(false),
       quic_migrate_sessions_early(false),
       quic_disable_bidirectional_streams(false),
@@ -198,8 +199,39 @@ URLRequestContextBuilder::HttpNetworkSessionParams::HttpNetworkSessionParams()
 URLRequestContextBuilder::HttpNetworkSessionParams::~HttpNetworkSessionParams()
 {}
 
+void URLRequestContextBuilder::HttpNetworkSessionParams::ConfigureSessionParams(
+    HttpNetworkSession::Params* network_session_params) const {
+  network_session_params->host_mapping_rules = host_mapping_rules;
+  network_session_params->ignore_certificate_errors = ignore_certificate_errors;
+  network_session_params->testing_fixed_http_port = testing_fixed_http_port;
+  network_session_params->testing_fixed_https_port = testing_fixed_https_port;
+
+  network_session_params->enable_http2 = enable_http2;
+
+  network_session_params->enable_quic = enable_quic;
+  network_session_params->quic_user_agent_id = quic_user_agent_id;
+  network_session_params->quic_max_server_configs_stored_in_properties =
+      quic_max_server_configs_stored_in_properties;
+  network_session_params->quic_connection_options = quic_connection_options;
+  network_session_params->quic_close_sessions_on_ip_change =
+      quic_close_sessions_on_ip_change;
+  network_session_params->quic_idle_connection_timeout_seconds =
+      quic_idle_connection_timeout_seconds;
+  network_session_params->quic_migrate_sessions_on_network_change =
+      quic_migrate_sessions_on_network_change;
+  network_session_params->quic_migrate_sessions_early =
+      quic_migrate_sessions_early;
+  network_session_params->quic_disable_bidirectional_streams =
+      quic_disable_bidirectional_streams;
+  network_session_params->quic_race_cert_verification =
+      quic_race_cert_verification;
+}
+
 URLRequestContextBuilder::URLRequestContextBuilder()
-    : data_enabled_(false),
+    : name_(nullptr),
+      enable_brotli_(false),
+      network_quality_estimator_(nullptr),
+      data_enabled_(false),
 #if !BUILDFLAG(DISABLE_FILE_SUPPORT)
       file_enabled_(false),
 #endif
@@ -300,6 +332,10 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
   std::unique_ptr<ContainerURLRequestContext> context(
       new ContainerURLRequestContext(file_task_runner_));
   URLRequestContextStorage* storage = context->storage();
+
+  context->set_name(name_);
+  context->set_enable_brotli(enable_brotli_);
+  context->set_network_quality_estimator(network_quality_estimator_);
 
   storage->set_http_user_agent_settings(
       base::MakeUnique<StaticHttpUserAgentSettings>(accept_language_,
@@ -406,36 +442,8 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
 
   HttpNetworkSession::Params network_session_params;
   SetHttpNetworkSessionComponents(context.get(), &network_session_params);
+  http_network_session_params_.ConfigureSessionParams(&network_session_params);
 
-  network_session_params.ignore_certificate_errors =
-      http_network_session_params_.ignore_certificate_errors;
-  network_session_params.host_mapping_rules =
-      http_network_session_params_.host_mapping_rules;
-  network_session_params.testing_fixed_http_port =
-      http_network_session_params_.testing_fixed_http_port;
-  network_session_params.testing_fixed_https_port =
-      http_network_session_params_.testing_fixed_https_port;
-  network_session_params.enable_http2 =
-      http_network_session_params_.enable_http2;
-  network_session_params.enable_quic = http_network_session_params_.enable_quic;
-  network_session_params.quic_max_server_configs_stored_in_properties =
-      http_network_session_params_.quic_max_server_configs_stored_in_properties;
-  network_session_params.quic_idle_connection_timeout_seconds =
-      http_network_session_params_.quic_idle_connection_timeout_seconds;
-  network_session_params.quic_connection_options =
-      http_network_session_params_.quic_connection_options;
-  network_session_params.quic_close_sessions_on_ip_change =
-      http_network_session_params_.quic_close_sessions_on_ip_change;
-  network_session_params.quic_migrate_sessions_on_network_change =
-      http_network_session_params_.quic_migrate_sessions_on_network_change;
-  network_session_params.quic_user_agent_id =
-      http_network_session_params_.quic_user_agent_id;
-  network_session_params.quic_migrate_sessions_early =
-      http_network_session_params_.quic_migrate_sessions_early;
-  network_session_params.quic_disable_bidirectional_streams =
-      http_network_session_params_.quic_disable_bidirectional_streams;
-  network_session_params.quic_race_cert_verification =
-      http_network_session_params_.quic_race_cert_verification;
   if (proxy_delegate_) {
     network_session_params.proxy_delegate = proxy_delegate_.get();
     storage->set_proxy_delegate(std::move(proxy_delegate_));

@@ -43,7 +43,11 @@ class BASE_EXPORT RunLoop {
   // when repeating tasks such as animated web pages have been shut down.
   void RunUntilIdle();
 
-  bool running() const { return running_; }
+  bool running() const {
+    // TODO(gab): Fix bad usage and enable this check, http://crbug.com/715235.
+    // DCHECK(thread_checker_.CalledOnValidThread());
+    return running_;
+  }
 
   // Quit() quits an earlier call to Run() immediately. QuitWhenIdle() quits an
   // earlier call to Run() when there aren't any tasks or messages in the queue.
@@ -56,7 +60,7 @@ class BASE_EXPORT RunLoop {
   // effect.
   //
   // WARNING: You must NEVER assume that a call to Quit() or QuitWhenIdle() will
-  // terminate the targetted message loop. If a nested message loop continues
+  // terminate the targetted message loop. If a nested run loop continues
   // running, the target may NEVER terminate. It is very easy to livelock (run
   // forever) in such a case.
   void Quit();
@@ -71,6 +75,39 @@ class BASE_EXPORT RunLoop {
   //   run_loop.Run();
   base::Closure QuitClosure();
   base::Closure QuitWhenIdleClosure();
+
+  // Cleans pre-existing TLS state.
+  // TODO(gab): Remove this in favor of managing TLS through RunLoop::Delegate
+  // as part of the RunLoop<=>MessageLoop split in http://crbug.com/703346.
+  static void ResetTLSState();
+
+  // Returns true if there is an active RunLoop on this thread.
+  static bool IsRunningOnCurrentThread();
+
+  // Returns true if there is an active RunLoop on this thread and it's nested
+  // within another active RunLoop.
+  static bool IsNestedOnCurrentThread();
+
+  // A NestingObserver is notified when a nested run loop begins. The observers
+  // are notified before the current thread's RunLoop::Delegate::Run() is
+  // invoked and nested work begins.
+  class BASE_EXPORT NestingObserver {
+   public:
+    virtual void OnBeginNestedRunLoop() = 0;
+
+   protected:
+    virtual ~NestingObserver() = default;
+  };
+
+  static void AddNestingObserverOnCurrentThread(NestingObserver* observer);
+  static void RemoveNestingObserverOnCurrentThread(NestingObserver* observer);
+
+  // Returns true if nesting is allowed on this thread.
+  static bool IsNestingAllowedOnCurrentThread();
+
+  // Disallow nesting. After this is called, running a nested RunLoop or calling
+  // Add/RemoveNestingObserverOnCurrentThread() on this thread will crash.
+  static void DisallowNestingOnCurrentThread();
 
  private:
   friend class MessageLoop;
@@ -92,20 +129,16 @@ class BASE_EXPORT RunLoop {
 
   MessageLoop* loop_;
 
-  // Parent RunLoop or NULL if this is the top-most RunLoop.
-  RunLoop* previous_run_loop_;
-
-  // Used to count how many nested Run() invocations are on the stack.
-  int run_depth_;
-
-  bool run_called_;
-  bool quit_called_;
-  bool running_;
+  bool run_called_ = false;
+  bool quit_called_ = false;
+  bool running_ = false;
 
   // Used to record that QuitWhenIdle() was called on the MessageLoop, meaning
   // that we should quit Run once it becomes idle.
-  bool quit_when_idle_received_;
+  bool quit_when_idle_received_ = false;
 
+  // RunLoop's non-static methods are affine to the thread it's running on per
+  // this class' underlying use of thread-local-storage.
   base::ThreadChecker thread_checker_;
 
   // WeakPtrFactory for QuitClosure safety.

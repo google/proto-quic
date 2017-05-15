@@ -189,6 +189,7 @@ class Project(object):
     self.root_path = build_settings['root_path']
     self.build_path = posixpath.join(self.root_path,
                                      build_settings['build_dir'][2:])
+    self.object_source_deps = {}
 
   def GetAbsolutePath(self, path):
     if path.startswith("//"):
@@ -198,13 +199,19 @@ class Project(object):
 
   def GetObjectSourceDependencies(self, gn_target_name, object_dependencies):
     """All OBJECT libraries whose sources have not been absorbed."""
+    if gn_target_name in self.object_source_deps:
+      object_dependencies.update(self.object_source_deps[gn_target_name])
+      return
+    target_deps = set()
     dependencies = self.targets[gn_target_name].get('deps', [])
     for dependency in dependencies:
       dependency_type = self.targets[dependency].get('type', None)
       if dependency_type == 'source_set':
-        object_dependencies.add(dependency)
+        target_deps.add(dependency)
       if dependency_type not in gn_target_types_that_absorb_objects:
-        self.GetObjectSourceDependencies(dependency, object_dependencies)
+        self.GetObjectSourceDependencies(dependency, target_deps)
+    self.object_source_deps[gn_target_name] = target_deps
+    object_dependencies.update(target_deps)
 
   def GetObjectLibraryDependencies(self, gn_target_name, object_dependencies):
     """All OBJECT libraries whose libraries have not been absorbed."""

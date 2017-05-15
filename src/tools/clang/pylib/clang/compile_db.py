@@ -76,6 +76,9 @@ def GenerateWithNinja(path):
 
   Args:
     path: The build directory to generate a compile database for.
+
+  Returns:
+    A string containing the contents of the compile database.
   """
   # TODO(dcheng): Ensure that clang is enabled somehow.
 
@@ -90,8 +93,7 @@ def GenerateWithNinja(path):
   if sys.platform == 'win32':
     compile_db = _ProcessCompileDatabaseForWindows(compile_db)
 
-  with open(os.path.join(path, 'compile_commands.json'), 'w') as f:
-    f.write(json.dumps(compile_db, indent=2))
+  return json.dumps(compile_db, indent=2)
 
 
 def Read(path):

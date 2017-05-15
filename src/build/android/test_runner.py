@@ -84,12 +84,6 @@ def AddCommandLineOptions(parser):
       type=os.path.realpath,
       help='The relative filepath to a file containing '
            'command-line flags to set on the device')
-  # TODO(jbudorick): This is deprecated. Remove once clients have switched
-  # to passing command-line flags directly.
-  parser.add_argument(
-      '-a', '--test-arguments',
-      dest='test_arguments', default='',
-      help=argparse.SUPPRESS)
   parser.set_defaults(allow_unknown=True)
   parser.set_defaults(command_line_flags=None)
 
@@ -163,6 +157,10 @@ def AddCommonOptions(parser):
       '--flakiness-dashboard-server',
       dest='flakiness_dashboard_server',
       help=argparse.SUPPRESS)
+  parser.add_argument(
+      '--gs-results-bucket',
+      help='Google Storage bucket to upload results to.')
+
 
   parser.add_argument(
       '--output-directory',
@@ -427,10 +425,6 @@ def AddInstrumentationTestOptions(parser):
       '--timeout-scale',
       type=float,
       help='Factor by which timeouts should be scaled.')
-  parser.add_argument(
-      '-w', '--wait_debugger',
-      action='store_true', dest='wait_for_debugger',
-      help='Wait for debugger.')
 
   # These arguments are suppressed from the help text because they should
   # only ever be specified by an intermediate script.
@@ -468,6 +462,21 @@ def AddJUnitTestOptions(parser):
       '-s', '--test-suite',
       dest='test_suite', required=True,
       help='JUnit test suite to run.')
+
+  # These arguments are for Android Robolectric tests.
+  parser.add_argument(
+      '--android-manifest-path',
+      help='Path to Android Manifest to configure Robolectric.')
+  parser.add_argument(
+      '--package-name',
+      help='Default app package name for Robolectric tests.')
+  parser.add_argument(
+      '--resource-zip',
+      action='append', dest='resource_zips', default=[],
+      help='Path to resource zips to configure Robolectric.')
+  parser.add_argument(
+      '--robolectric-runtime-deps-dir',
+      help='Path to runtime deps for Robolectric.')
 
 
 def AddLinkerTestOptions(parser):

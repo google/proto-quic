@@ -12,7 +12,11 @@ MockAllowHttpAuthPreferences::MockAllowHttpAuthPreferences()
                               ,
                           std::string()
 #endif
-                              ) {
+#if defined(OS_CHROMEOS)
+                              ,
+                          true
+#endif
+                          ) {
 }
 
 MockAllowHttpAuthPreferences::~MockAllowHttpAuthPreferences() {}

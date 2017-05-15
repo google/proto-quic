@@ -30,11 +30,10 @@ class IOBuffer;
 
 class NET_EXPORT_PRIVATE BidirectionalStreamQuicImpl
     : public BidirectionalStreamImpl,
-      public QuicChromiumClientStream::Delegate,
-      public QuicChromiumClientSession::Observer {
+      public QuicChromiumClientStream::Delegate {
  public:
   explicit BidirectionalStreamQuicImpl(
-      const base::WeakPtr<QuicChromiumClientSession>& session);
+      std::unique_ptr<QuicChromiumClientSession::Handle> session);
 
   ~BidirectionalStreamQuicImpl() override;
 
@@ -59,17 +58,13 @@ class NET_EXPORT_PRIVATE BidirectionalStreamQuicImpl
 
  private:
   // QuicChromiumClientStream::Delegate implementation:
-  void OnHeadersAvailable(const SpdyHeaderBlock& headers,
-                          size_t frame_len) override;
+  void OnInitialHeadersAvailable(const SpdyHeaderBlock& headers,
+                                 size_t frame_len) override;
   void OnDataAvailable() override;
+  void OnTrailingHeadersAvailable(const SpdyHeaderBlock& headers,
+                                  size_t frame_len) override;
   void OnClose() override;
   void OnError(int error) override;
-  bool HasSendHeadersComplete() override;
-
-  // QuicChromiumClientSession::Observer implementation:
-  void OnCryptoHandshakeConfirmed() override;
-  void OnSuccessfulVersionNegotiation(const QuicVersion& version) override;
-  void OnSessionClosed(int error, bool port_migration_detected) override;
 
   void OnStreamReady(int rv);
   void OnSendDataComplete(int rv);
@@ -82,10 +77,8 @@ class NET_EXPORT_PRIVATE BidirectionalStreamQuicImpl
   // Resets the stream and ensures that |delegate_| won't be called back.
   void ResetStream();
 
-  base::WeakPtr<QuicChromiumClientSession> session_;
-  bool was_handshake_confirmed_;  // True if the crypto handshake succeeded.
-  std::unique_ptr<QuicChromiumClientSession::StreamRequest> stream_request_;
-  QuicChromiumClientStream* stream_;  // Non-owning.
+  const std::unique_ptr<QuicChromiumClientSession::Handle> session_;
+  std::unique_ptr<QuicChromiumClientStream::Handle> stream_;
 
   const BidirectionalStreamRequestInfo* request_info_;
   BidirectionalStreamImpl::Delegate* delegate_;
@@ -120,8 +113,6 @@ class NET_EXPORT_PRIVATE BidirectionalStreamQuicImpl
   bool closed_is_first_stream_;
   // Indicates whether initial headers have been sent.
   bool has_sent_headers_;
-  // Indicates whether initial headers have been received.
-  bool has_received_headers_;
 
   // Whether to automatically send request headers when stream is negotiated.
   // If false, headers will not be sent until SendRequestHeaders() is called or

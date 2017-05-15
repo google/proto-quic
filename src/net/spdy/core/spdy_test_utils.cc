@@ -152,10 +152,6 @@ void TestHeadersHandler::OnHeader(SpdyStringPiece name, SpdyStringPiece value) {
   block_.AppendValueOrAddHeader(name, value);
 }
 
-void TestHeadersHandler::OnHeaderBlockEnd(size_t header_bytes_parsed) {
-  OnHeaderBlockEnd(header_bytes_parsed, 0);
-}
-
 void TestHeadersHandler::OnHeaderBlockEnd(
     size_t header_bytes_parsed,
     size_t compressed_header_bytes_parsed) {

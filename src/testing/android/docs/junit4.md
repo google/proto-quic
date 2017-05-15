@@ -146,24 +146,28 @@ public class MyRule implements TestRule {
 ```
 
 
-## Caveats
+## Common Errors
 
 1.  Instrumentation tests that rely on test thread to have message handler
     will not work. For example error message:
 
         java.lang.RuntimeException: Can't create handler inside thread that has not called Looper.prepare()
 
-    Please utilize `@UiThreadTest` or
-    `ActivityTestRule.runOnUiThread(Runnable r)` to refactor these tests.
-    For more, check this [GitHub issue][6]
+    or
 
-1.  Use `@UiThreadTest` with caution. Currently,
-    **@UiThreadTest is only effective when UiThreadTestRule or
-    ActivityTestRule is declared** in the test class. Please use
-    `android.support.test.annotation.UiThreadTest`, not
-    `android.test.UiThreadTest`. When using @UiThreadTest, **it would cause
-    `setUp` and `tearDown` to run in Ui Thread** as well. Avoid that by simply
-    calling [`runOnUiThread`][9] or [`runOnMainSync`][10] with a Runnable.
+        java.lang.IllegalStateException: The current thread must have a looper!
+
+    Please utilize `ActivityTestRule.runOnUiThread(Runnable r)` to refactor
+    these tests. For more, check this [GitHub issue][6]
+
+1.  Use `@UiThreadTest` with caution!!
+    -   Currently, **@UiThreadTest is only effective when UiThreadTestRule or
+        ActivityTestRule is declared** in the test class.
+    -   Please use **`android.support.test.annotation.UiThreadTest`, NOT
+        `android.test.UiThreadTest`**.
+    -   When using @UiThreadTest, **it would cause `setUp` and `tearDown` to
+        run in Ui Thread** as well. Avoid that by calling [`runOnUiThread`][9]
+        or [`runOnMainSync`][10] with a Runnable.
     
     ```java
     // Wrong test
@@ -211,12 +215,19 @@ public class MyRule implements TestRule {
     }
     ```
 
-
 1.  `assertEquals(float a, float b)` and `assertEquals(double a, double b)` are
     deprecated in JUnit4's Assert class. **Despite only generating a warning at
     build time, they fail at runtime.** Please use
     `Assert.assertEquals(float a, float b, float delta)`
 
+1.  Errorprone expects all public methods starting with `test...` to be
+    annotated with `@Test`. Failure to meet that expectation will cause
+    errorprone to fail with something like this: 
+
+        [JUnit4TestNotRun] Test method will not be run; please add @Test annotation
+
+    In particular, you may see this when attempting to disable tests. In that
+    case, the test should be annotated with both @DisabledTest and @Test.
 
 ## Common questions
 

@@ -91,8 +91,8 @@ class PollingProxyConfigService::Core
     poll_task_outstanding_ = true;
     poll_task_queued_ = false;
     base::PostTaskWithTraits(
-        FROM_HERE, base::TaskTraits().MayBlock().WithShutdownBehavior(
-                       base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN),
+        FROM_HERE,
+        {base::MayBlock(), base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN},
         base::Bind(&Core::PollAsync, this, get_config_func_));
   }
 

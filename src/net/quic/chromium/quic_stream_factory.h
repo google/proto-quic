@@ -59,7 +59,6 @@ class CTVerifier;
 class HostResolver;
 class HttpServerProperties;
 class NetLog;
-class ProxyDelegate;
 class QuicClock;
 class QuicAlarmFactory;
 class QuicChromiumConnectionHelper;
@@ -135,7 +134,7 @@ class NET_EXPORT_PRIVATE QuicStreamRequest {
   std::unique_ptr<BidirectionalStreamImpl> CreateBidirectionalStreamImpl();
 
   // Sets |session_|.
-  void SetSession(QuicChromiumClientSession* session);
+  void SetSession(std::unique_ptr<QuicChromiumClientSession::Handle> session);
 
   const QuicServerId& server_id() const { return server_id_; }
 
@@ -147,7 +146,7 @@ class NET_EXPORT_PRIVATE QuicStreamRequest {
   QuicServerId server_id_;
   NetLogWithSource net_log_;
   CompletionCallback callback_;
-  base::WeakPtr<QuicChromiumClientSession> session_;
+  std::unique_ptr<QuicChromiumClientSession::Handle> session_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicStreamRequest);
 };
@@ -194,7 +193,6 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
       SSLConfigService* ssl_config_service,
       ClientSocketFactory* client_socket_factory,
       HttpServerProperties* http_server_properties,
-      ProxyDelegate* proxy_delegate,
       CertVerifier* cert_verifier,
       CTPolicyEnforcer* ct_policy_enforcer,
       ChannelIDService* channel_id_service,
@@ -472,7 +470,6 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   ClientSocketFactory* client_socket_factory_;
   HttpServerProperties* http_server_properties_;
   ServerPushDelegate* push_delegate_;
-  ProxyDelegate* proxy_delegate_;
   TransportSecurityState* transport_security_state_;
   CTVerifier* cert_transparency_verifier_;
   QuicCryptoClientStreamFactory* quic_crypto_client_stream_factory_;

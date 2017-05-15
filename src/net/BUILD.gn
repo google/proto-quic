@@ -41,7 +41,7 @@ enable_built_in_dns = !is_ios && !is_proto_quic
 # in addition to use_openssl_certs or use_nss_certs, in that case byte certs
 # are used internally but OpenSSL or NSS are used for certificate verification.
 # TODO(mattm): crbug.com/671420: Implement and enable this for all platforms.
-use_byte_certs = is_mac || is_android
+use_byte_certs = is_mac || is_android || is_nacl
 
 buildflag_header("features") {
   header = "net_features.h"
@@ -172,7 +172,6 @@ component("net") {
     "cert/crl_set.h",
     "cert/ct_known_logs.cc",
     "cert/ct_known_logs.h",
-    "cert/ct_known_logs_static-inc.h",
     "cert/ct_policy_enforcer.cc",
     "cert/ct_policy_enforcer.h",
     "cert/ct_policy_status.h",
@@ -245,9 +244,9 @@ component("net") {
     "cert/x509_cert_types.h",
     "cert/x509_certificate.cc",
     "cert/x509_certificate.h",
+    "cert/x509_certificate_bytes.cc",
     "cert/x509_certificate_net_log_param.cc",
     "cert/x509_certificate_net_log_param.h",
-    "cert/x509_certificate_openssl.cc",
     "cert/x509_util.cc",
     "cert/x509_util.h",
     "cert/x509_util_openssl.cc",
@@ -360,6 +359,7 @@ component("net") {
     ":net_resources",
     "//base",
     "//net/base/registry_controlled_domains",
+    "//net/data/ssl/certificate_transparency:ct_log_list",
     "//net/data/ssl/wosign:wosign_domains",
     "//third_party/protobuf:protobuf_lite",
     "//url:url_features",
@@ -595,11 +595,11 @@ component("net") {
       "cert/test_root_certs_win.cc",
       "cert/x509_cert_types_mac.cc",
       "cert/x509_cert_types_win.cc",
-      "cert/x509_certificate_bytes.cc",
       "cert/x509_certificate_ios.cc",
       "cert/x509_certificate_known_roots_win.h",
       "cert/x509_certificate_mac.cc",
       "cert/x509_certificate_nss.cc",
+      "cert/x509_certificate_openssl.cc",
       "cert/x509_certificate_win.cc",
       "cert/x509_util_android.cc",
       "cert/x509_util_android.h",
@@ -1228,6 +1228,7 @@ component("net") {
       "quic/core/frames/quic_stream_frame.h",
       "quic/core/frames/quic_window_update_frame.cc",
       "quic/core/frames/quic_window_update_frame.h",
+      "quic/core/packet_number_indexed_queue.h",
       "quic/core/quic_ack_listener_interface.cc",
       "quic/core/quic_ack_listener_interface.h",
       "quic/core/quic_alarm.cc",
@@ -1353,6 +1354,7 @@ component("net") {
       "quic/platform/api/quic_map_util.h",
       "quic/platform/api/quic_mutex.cc",
       "quic/platform/api/quic_mutex.h",
+      "quic/platform/api/quic_pcc_sender.h",
       "quic/platform/api/quic_ptr_util.h",
       "quic/platform/api/quic_reference_counted.h",
       "quic/platform/api/quic_socket_address.cc",
@@ -1385,6 +1387,7 @@ component("net") {
       "quic/platform/impl/quic_map_util_impl.h",
       "quic/platform/impl/quic_mutex_impl.cc",
       "quic/platform/impl/quic_mutex_impl.h",
+      "quic/platform/impl/quic_pcc_sender_impl.h",
       "quic/platform/impl/quic_ptr_util_impl.h",
       "quic/platform/impl/quic_reference_counted_impl.h",
       "quic/platform/impl/quic_socket_address_impl.cc",
@@ -2194,6 +2197,8 @@ if (!is_ios) {
   }
 }
 
+# This section can be updated from globbing rules using:
+#    python ./tools/update_ios_bundle_data.py
 bundle_data("test_support_bundle_data") {
   visibility = [ ":test_support" ]
   testonly = true
@@ -2225,6 +2230,7 @@ bundle_data("test_support_bundle_data") {
     "data/ssl/certificates/768-rsa-ee-by-768-rsa-intermediate.pem",
     "data/ssl/certificates/768-rsa-ee-by-prime256v1-ecdsa-intermediate.pem",
     "data/ssl/certificates/768-rsa-intermediate.pem",
+    "data/ssl/certificates/README",
     "data/ssl/certificates/aia-cert.pem",
     "data/ssl/certificates/aia-intermediate.der",
     "data/ssl/certificates/aia-root.pem",
@@ -2317,6 +2323,7 @@ bundle_data("test_support_bundle_data") {
     "data/ssl/certificates/multi-root-crlset-D-and-E.raw",
     "data/ssl/certificates/multi-root-crlset-E.raw",
     "data/ssl/certificates/multi-root-crlset-unrelated.raw",
+    "data/ssl/certificates/multi-root.keychain",
     "data/ssl/certificates/multivalue_rdn.pem",
     "data/ssl/certificates/name_constraint_bad.pem",
     "data/ssl/certificates/name_constraint_good.pem",
@@ -2346,6 +2353,7 @@ bundle_data("test_support_bundle_data") {
     "data/ssl/certificates/quic_test.example.com.crt",
     "data/ssl/certificates/quic_test.example.com.key",
     "data/ssl/certificates/quic_test.example.com.key.pkcs8",
+    "data/ssl/certificates/quic_test.example.com.key.pkcs8.pem",
     "data/ssl/certificates/quic_test.example.com.key.sct",
     "data/ssl/certificates/quic_test_ecc.example.com.crt",
     "data/ssl/certificates/quic_test_ecc.example.com.key",
@@ -2369,6 +2377,7 @@ bundle_data("test_support_bundle_data") {
     "data/ssl/certificates/thawte.single.pem",
     "data/ssl/certificates/tls_feature_extension.pem",
     "data/ssl/certificates/tripadvisor-verisign-chain.pem",
+    "data/ssl/certificates/trustcenter.websecurity.symantec.com.pem",
     "data/ssl/certificates/twitter-chain.pem",
     "data/ssl/certificates/unescaped.pem",
     "data/ssl/certificates/unittest.key.bin",
@@ -2982,6 +2991,7 @@ if (is_android) {
     sources = [
       "android/javatests/src/org/chromium/net/AndroidKeyStoreTestUtil.java",
       "android/javatests/src/org/chromium/net/AndroidNetworkLibraryTestUtil.java",
+      "android/javatests/src/org/chromium/net/AndroidProxyConfigServiceTestUtil.java",
       "test/android/javatests/src/org/chromium/net/test/DummySpnegoAuthenticator.java",
       "test/android/javatests/src/org/chromium/net/test/EmbeddedTestServerImpl.java",
     ]
@@ -3131,12 +3141,15 @@ if (!is_ios) {
   }
 }
 
+# This section can be updated from globbing rules using:
+#    python ./tools/update_ios_bundle_data.py
 bundle_data("net_unittests_bundle_data") {
   testonly = true
   sources = [
     "data/cert_issuer_source_aia_unittest/i.pem",
     "data/cert_issuer_source_aia_unittest/i2.pem",
     "data/cert_issuer_source_aia_unittest/i3.pem",
+    "data/cert_issuer_source_aia_unittest/root.pem",
     "data/cert_issuer_source_aia_unittest/target_file_aia.pem",
     "data/cert_issuer_source_aia_unittest/target_file_and_http_aia.pem",
     "data/cert_issuer_source_aia_unittest/target_invalid_and_http_aia.pem",
@@ -3277,7 +3290,15 @@ bundle_data("net_unittests_bundle_data") {
     "data/parse_certificate_unittest/extensions_real.pem",
     "data/parse_certificate_unittest/key_usage.pem",
     "data/parse_certificate_unittest/policies.pem",
+    "data/parse_certificate_unittest/policy_constraints_empty.pem",
+    "data/parse_certificate_unittest/policy_constraints_inhibit.pem",
+    "data/parse_certificate_unittest/policy_constraints_inhibit_require.pem",
+    "data/parse_certificate_unittest/policy_constraints_require.pem",
     "data/parse_certificate_unittest/subject_alt_name.pem",
+    "data/parse_certificate_unittest/subject_t61string.pem",
+    "data/parse_certificate_unittest/subject_t61string_1-32.pem",
+    "data/parse_certificate_unittest/subject_t61string_126-160.pem",
+    "data/parse_certificate_unittest/subject_t61string_actual.pem",
     "data/parse_certificate_unittest/tbs_explicit_v1.pem",
     "data/parse_certificate_unittest/tbs_negative_serial_number.pem",
     "data/parse_certificate_unittest/tbs_serial_number_21_octets_leading_0.pem",
@@ -3300,7 +3321,6 @@ bundle_data("net_unittests_bundle_data") {
     "data/parse_certificate_unittest/tbs_validity_generalized_time_and_utc_time.pem",
     "data/parse_certificate_unittest/tbs_validity_relaxed.pem",
     "data/parse_certificate_unittest/tbs_validity_utc_time_and_generalized_time.pem",
-    "data/parse_certificate_unittest/v3_certificate_template.txt",
     "data/parse_ocsp_unittest/bad_ocsp_type.pem",
     "data/parse_ocsp_unittest/bad_signature.pem",
     "data/parse_ocsp_unittest/bad_status.pem",
@@ -3388,14 +3408,15 @@ bundle_data("net_unittests_bundle_data") {
     "data/verify_certificate_chain_unittest/basic-constraints-pathlen-0-self-issued/chain.pem",
     "data/verify_certificate_chain_unittest/basic-constraints-pathlen-0-self-issued/main.test",
     "data/verify_certificate_chain_unittest/expired-intermediate/chain.pem",
-    "data/verify_certificate_chain_unittest/expired-intermediate/main.test",
+    "data/verify_certificate_chain_unittest/expired-intermediate/not-after.test",
+    "data/verify_certificate_chain_unittest/expired-intermediate/not-before.test",
     "data/verify_certificate_chain_unittest/expired-root/chain.pem",
-    "data/verify_certificate_chain_unittest/expired-root/main.test",
-    "data/verify_certificate_chain_unittest/expired-root/ta-with-constraints.test",
-    "data/verify_certificate_chain_unittest/expired-target-notBefore/chain.pem",
-    "data/verify_certificate_chain_unittest/expired-target-notBefore/main.test",
+    "data/verify_certificate_chain_unittest/expired-root/not-after-ta-with-constraints.test",
+    "data/verify_certificate_chain_unittest/expired-root/not-after.test",
+    "data/verify_certificate_chain_unittest/expired-root/not-before.test",
     "data/verify_certificate_chain_unittest/expired-target/chain.pem",
-    "data/verify_certificate_chain_unittest/expired-target/main.test",
+    "data/verify_certificate_chain_unittest/expired-target/not-after.test",
+    "data/verify_certificate_chain_unittest/expired-target/not-before.test",
     "data/verify_certificate_chain_unittest/incorrect-trust-anchor/chain.pem",
     "data/verify_certificate_chain_unittest/incorrect-trust-anchor/main.test",
     "data/verify_certificate_chain_unittest/intermediate-basic-constraints-ca-false/chain.pem",
@@ -3442,24 +3463,10 @@ bundle_data("net_unittests_bundle_data") {
     "data/verify_certificate_chain_unittest/root-lacks-basic-constraints/chain.pem",
     "data/verify_certificate_chain_unittest/root-lacks-basic-constraints/main.test",
     "data/verify_certificate_chain_unittest/root-lacks-basic-constraints/ta-with-constraints.test",
-    "data/verify_certificate_chain_unittest/serverauth-ec-ku-decipheronly/chain.pem",
-    "data/verify_certificate_chain_unittest/serverauth-ec-ku-decipheronly/main.test",
-    "data/verify_certificate_chain_unittest/serverauth-ec-ku-digitalsignature/chain.pem",
-    "data/verify_certificate_chain_unittest/serverauth-ec-ku-digitalsignature/main.test",
-    "data/verify_certificate_chain_unittest/serverauth-ec-ku-keyagreement/chain.pem",
-    "data/verify_certificate_chain_unittest/serverauth-ec-ku-keyagreement/main.test",
-    "data/verify_certificate_chain_unittest/serverauth-ec-ku-keyencipherment/chain.pem",
-    "data/verify_certificate_chain_unittest/serverauth-ec-ku-keyencipherment/main.test",
-    "data/verify_certificate_chain_unittest/serverauth-rsa-ku-decipheronly/chain.pem",
-    "data/verify_certificate_chain_unittest/serverauth-rsa-ku-decipheronly/main.test",
-    "data/verify_certificate_chain_unittest/serverauth-rsa-ku-digitalsignature/chain.pem",
-    "data/verify_certificate_chain_unittest/serverauth-rsa-ku-digitalsignature/main.test",
-    "data/verify_certificate_chain_unittest/serverauth-rsa-ku-keyagreement/chain.pem",
-    "data/verify_certificate_chain_unittest/serverauth-rsa-ku-keyagreement/main.test",
-    "data/verify_certificate_chain_unittest/serverauth-rsa-ku-keyencipherment/chain.pem",
-    "data/verify_certificate_chain_unittest/serverauth-rsa-ku-keyencipherment/main.test",
     "data/verify_certificate_chain_unittest/target-and-intermediate/chain.pem",
+    "data/verify_certificate_chain_unittest/target-and-intermediate/distrusted-root.test",
     "data/verify_certificate_chain_unittest/target-and-intermediate/main.test",
+    "data/verify_certificate_chain_unittest/target-and-intermediate/unspecified-trust-root.test",
     "data/verify_certificate_chain_unittest/target-has-keycertsign-but-not-ca/chain.pem",
     "data/verify_certificate_chain_unittest/target-has-keycertsign-but-not-ca/main.test",
     "data/verify_certificate_chain_unittest/target-has-pathlen-but-not-ca/chain.pem",
@@ -3470,6 +3477,22 @@ bundle_data("net_unittests_bundle_data") {
     "data/verify_certificate_chain_unittest/target-not-end-entity/main.test",
     "data/verify_certificate_chain_unittest/target-restricts-eku-fail/chain.pem",
     "data/verify_certificate_chain_unittest/target-restricts-eku-fail/main.test",
+    "data/verify_certificate_chain_unittest/target-serverauth-various-keyusages/ec-decipherOnly.pem",
+    "data/verify_certificate_chain_unittest/target-serverauth-various-keyusages/ec-decipherOnly.test",
+    "data/verify_certificate_chain_unittest/target-serverauth-various-keyusages/ec-digitalSignature.pem",
+    "data/verify_certificate_chain_unittest/target-serverauth-various-keyusages/ec-digitalSignature.test",
+    "data/verify_certificate_chain_unittest/target-serverauth-various-keyusages/ec-keyAgreement.pem",
+    "data/verify_certificate_chain_unittest/target-serverauth-various-keyusages/ec-keyAgreement.test",
+    "data/verify_certificate_chain_unittest/target-serverauth-various-keyusages/ec-keyEncipherment.pem",
+    "data/verify_certificate_chain_unittest/target-serverauth-various-keyusages/ec-keyEncipherment.test",
+    "data/verify_certificate_chain_unittest/target-serverauth-various-keyusages/rsa-decipherOnly.pem",
+    "data/verify_certificate_chain_unittest/target-serverauth-various-keyusages/rsa-decipherOnly.test",
+    "data/verify_certificate_chain_unittest/target-serverauth-various-keyusages/rsa-digitalSignature.pem",
+    "data/verify_certificate_chain_unittest/target-serverauth-various-keyusages/rsa-digitalSignature.test",
+    "data/verify_certificate_chain_unittest/target-serverauth-various-keyusages/rsa-keyAgreement.pem",
+    "data/verify_certificate_chain_unittest/target-serverauth-various-keyusages/rsa-keyAgreement.test",
+    "data/verify_certificate_chain_unittest/target-serverauth-various-keyusages/rsa-keyEncipherment.pem",
+    "data/verify_certificate_chain_unittest/target-serverauth-various-keyusages/rsa-keyEncipherment.test",
     "data/verify_certificate_chain_unittest/target-sets-eku-any/chain.pem",
     "data/verify_certificate_chain_unittest/target-sets-eku-any/main.test",
     "data/verify_certificate_chain_unittest/target-signed-by-512bit-rsa/chain.pem",
@@ -4498,6 +4521,7 @@ test("net_unittests") {
     "nqe/effective_connection_type_unittest.cc",
     "nqe/event_creator_unittest.cc",
     "nqe/network_qualities_prefs_manager_unittest.cc",
+    "nqe/network_quality_estimator_params_unittest.cc",
     "nqe/network_quality_estimator_unittest.cc",
     "nqe/network_quality_store_unittest.cc",
     "nqe/observation_buffer_unittest.cc",
@@ -4593,6 +4617,7 @@ test("net_unittests") {
     "quic/core/crypto/quic_random_test.cc",
     "quic/core/crypto/strike_register_test.cc",
     "quic/core/frames/quic_frames_test.cc",
+    "quic/core/packet_number_indexed_queue_test.cc",
     "quic/core/quic_alarm_test.cc",
     "quic/core/quic_arena_scoped_ptr_test.cc",
     "quic/core/quic_bandwidth_test.cc",
@@ -4841,6 +4866,7 @@ test("net_unittests") {
     "ssl/ssl_platform_key_mac_unittest.cc",
     "ssl/ssl_platform_key_nss_unittest.cc",
     "ssl/ssl_platform_key_util_unittest.cc",
+    "ssl/ssl_platform_key_win_unittest.cc",
     "ssl/ssl_private_key_test_util.cc",
     "ssl/ssl_private_key_test_util.h",
     "test/embedded_test_server/embedded_test_server_unittest.cc",
@@ -4899,6 +4925,7 @@ test("net_unittests") {
     "//crypto:platform",
     "//crypto:test_support",
     "//net/base/registry_controlled_domains",
+    "//net/data/ssl/certificate_transparency:ct_log_list",
     "//net/http:transport_security_state_unittest_data",
     "//testing/gmock",
     "//testing/gtest",
@@ -5253,7 +5280,10 @@ test("net_unittests") {
   }
 
   if (is_win) {
-    libs = [ "iphlpapi.lib" ]
+    libs = [
+      "iphlpapi.lib",
+      "ncrypt.lib",
+    ]
   }
 
   if (is_chromecast && use_nss_certs) {

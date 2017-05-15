@@ -94,16 +94,17 @@ TEST(ParseNameTest, TeletexSafeStringValue) {
   ASSERT_EQ("Foo bar", result);
 }
 
-TEST(ParseNameTest, TeletexUnsafeStringValue) {
+TEST(ParseNameTest, TeletexLatin1StringValue) {
   const uint8_t der[] = {
-      0x46, 0x6f, 0x1F, 0x20, 0x62, 0x61, 0x72,
+      0x46, 0x6f, 0xd6, 0x20, 0x62, 0x61, 0x72,
   };
   X509NameAttribute value(der::Input(), der::kTeletexString, der::Input(der));
   std::string result_unsafe;
   ASSERT_TRUE(value.ValueAsStringUnsafe(&result_unsafe));
-  ASSERT_EQ("Fo\037 bar", result_unsafe);
+  ASSERT_EQ("Fo\xd6 bar", result_unsafe);
   std::string result;
-  ASSERT_FALSE(value.ValueAsString(&result));
+  ASSERT_TRUE(value.ValueAsString(&result));
+  ASSERT_EQ("FoÖ bar", result);
 }
 
 TEST(ParseNameTest, ConvertBmpString) {

@@ -12,6 +12,7 @@
 
 #include "base/memory/ptr_util.h"
 #include "base/stl_util.h"
+#include "base/time/tick_clock.h"
 #include "base/time/time.h"
 #include "net/reporting/reporting_client.h"
 #include "net/reporting/reporting_context.h"
@@ -60,6 +61,18 @@ void ReportingCache::AddReport(const GURL& url,
   auto inserted =
       reports_.insert(std::make_pair(report.get(), std::move(report)));
   DCHECK(inserted.second);
+
+  if (reports_.size() > context_->policy().max_report_count) {
+    // There should be at most one extra report (the one added above).
+    DCHECK_EQ(context_->policy().max_report_count + 1, reports_.size());
+    const ReportingReport* to_evict = FindReportToEvict();
+    DCHECK_NE(nullptr, to_evict);
+    // The newly-added report isn't pending, so even if all other reports are
+    // pending, the cache should have a report to evict.
+    DCHECK(!base::ContainsKey(pending_reports_, to_evict));
+    size_t erased = reports_.erase(to_evict);
+    DCHECK_EQ(1u, erased);
+  }
 
   context_->NotifyCacheUpdated();
 }
@@ -179,76 +192,158 @@ void ReportingCache::SetClient(const url::Origin& origin,
                                base::TimeTicks expires) {
   DCHECK(endpoint.SchemeIsCryptographic());
 
-  // Since |subdomains| may differ from a previous call to SetClient for this
-  // origin and endpoint, the cache needs to remove and re-add the client to the
-  // index of wildcard clients, if applicable.
-  if (base::ContainsKey(clients_, origin) &&
-      base::ContainsKey(clients_[origin], endpoint)) {
-    MaybeRemoveWildcardClient(clients_[origin][endpoint].get());
+  base::TimeTicks last_used = tick_clock()->NowTicks();
+
+  const ReportingClient* old_client =
+      GetClientByOriginAndEndpoint(origin, endpoint);
+  if (old_client) {
+    last_used = client_last_used_[old_client];
+    RemoveClient(old_client);
   }
 
-  clients_[origin][endpoint] = base::MakeUnique<ReportingClient>(
-      origin, endpoint, subdomains, group, expires);
+  AddClient(base::MakeUnique<ReportingClient>(origin, endpoint, subdomains,
+                                              group, expires),
+            last_used);
 
-  MaybeAddWildcardClient(clients_[origin][endpoint].get());
+  if (client_last_used_.size() > context_->policy().max_client_count) {
+    // There should only ever be one extra client, added above.
+    DCHECK_EQ(context_->policy().max_client_count + 1,
+              client_last_used_.size());
+    // And that shouldn't happen if it was replaced, not added.
+    DCHECK(!old_client);
+    const ReportingClient* to_evict =
+        FindClientToEvict(tick_clock()->NowTicks());
+    DCHECK(to_evict);
+    RemoveClient(to_evict);
+  }
 
   context_->NotifyCacheUpdated();
 }
 
+void ReportingCache::MarkClientUsed(const url::Origin& origin,
+                                    const GURL& endpoint) {
+  const ReportingClient* client =
+      GetClientByOriginAndEndpoint(origin, endpoint);
+  DCHECK(client);
+  client_last_used_[client] = tick_clock()->NowTicks();
+}
+
 void ReportingCache::RemoveClients(
     const std::vector<const ReportingClient*>& clients_to_remove) {
-  for (const ReportingClient* client : clients_to_remove) {
-    MaybeRemoveWildcardClient(client);
-    size_t erased = clients_[client->origin].erase(client->endpoint);
-    DCHECK_EQ(1u, erased);
-  }
+  for (const ReportingClient* client : clients_to_remove)
+    RemoveClient(client);
 
   context_->NotifyCacheUpdated();
 }
 
 void ReportingCache::RemoveClientForOriginAndEndpoint(const url::Origin& origin,
                                                       const GURL& endpoint) {
-  MaybeRemoveWildcardClient(clients_[origin][endpoint].get());
-  size_t erased = clients_[origin].erase(endpoint);
-  DCHECK_EQ(1u, erased);
+  const ReportingClient* client =
+      GetClientByOriginAndEndpoint(origin, endpoint);
+  RemoveClient(client);
 
   context_->NotifyCacheUpdated();
 }
 
 void ReportingCache::RemoveClientsForEndpoint(const GURL& endpoint) {
-  for (auto& origin_and_endpoints : clients_) {
-    if (base::ContainsKey(origin_and_endpoints.second, endpoint)) {
-      MaybeRemoveWildcardClient(origin_and_endpoints.second[endpoint].get());
-      origin_and_endpoints.second.erase(endpoint);
-    }
-  }
+  std::vector<const ReportingClient*> clients_to_remove;
 
-  context_->NotifyCacheUpdated();
+  for (auto& origin_and_endpoints : clients_)
+    if (base::ContainsKey(origin_and_endpoints.second, endpoint))
+      clients_to_remove.push_back(origin_and_endpoints.second[endpoint].get());
+
+  for (const ReportingClient* client : clients_to_remove)
+    RemoveClient(client);
+
+  if (!clients_to_remove.empty())
+    context_->NotifyCacheUpdated();
 }
 
 void ReportingCache::RemoveAllClients() {
   clients_.clear();
   wildcard_clients_.clear();
+  client_last_used_.clear();
 
   context_->NotifyCacheUpdated();
 }
 
-void ReportingCache::MaybeAddWildcardClient(const ReportingClient* client) {
-  if (client->subdomains != ReportingClient::Subdomains::INCLUDE)
-    return;
+const ReportingReport* ReportingCache::FindReportToEvict() const {
+  const ReportingReport* earliest_queued = nullptr;
 
-  const std::string& domain = client->origin.host();
-  auto inserted = wildcard_clients_[domain].insert(client);
-  DCHECK(inserted.second);
+  for (const auto& it : reports_) {
+    const ReportingReport* report = it.first;
+    if (base::ContainsKey(pending_reports_, report))
+      continue;
+    if (!earliest_queued || report->queued < earliest_queued->queued) {
+      earliest_queued = report;
+    }
+  }
+
+  return earliest_queued;
 }
 
-void ReportingCache::MaybeRemoveWildcardClient(const ReportingClient* client) {
-  if (client->subdomains != ReportingClient::Subdomains::INCLUDE)
-    return;
+void ReportingCache::AddClient(std::unique_ptr<ReportingClient> client,
+                               base::TimeTicks last_used) {
+  DCHECK(client);
 
-  const std::string& domain = client->origin.host();
-  size_t erased = wildcard_clients_[domain].erase(client);
-  DCHECK_EQ(1u, erased);
+  url::Origin origin = client->origin;
+  GURL endpoint = client->endpoint;
+
+  auto inserted_last_used =
+      client_last_used_.insert(std::make_pair(client.get(), last_used));
+  DCHECK(inserted_last_used.second);
+
+  if (client->subdomains == ReportingClient::Subdomains::INCLUDE) {
+    const std::string& domain = origin.host();
+    auto inserted_wildcard_client =
+        wildcard_clients_[domain].insert(client.get());
+    DCHECK(inserted_wildcard_client.second);
+  }
+
+  auto inserted_client =
+      clients_[origin].insert(std::make_pair(endpoint, std::move(client)));
+  DCHECK(inserted_client.second);
+}
+
+void ReportingCache::RemoveClient(const ReportingClient* client) {
+  DCHECK(client);
+
+  url::Origin origin = client->origin;
+  GURL endpoint = client->endpoint;
+
+  if (client->subdomains == ReportingClient::Subdomains::INCLUDE) {
+    const std::string& domain = origin.host();
+    size_t erased_wildcard_client = wildcard_clients_[domain].erase(client);
+    DCHECK_EQ(1u, erased_wildcard_client);
+    if (wildcard_clients_[domain].empty()) {
+      size_t erased_wildcard_domain = wildcard_clients_.erase(domain);
+      DCHECK_EQ(1u, erased_wildcard_domain);
+    }
+  }
+
+  size_t erased_last_used = client_last_used_.erase(client);
+  DCHECK_EQ(1u, erased_last_used);
+
+  size_t erased_endpoint = clients_[origin].erase(endpoint);
+  DCHECK_EQ(1u, erased_endpoint);
+  if (clients_[origin].empty()) {
+    size_t erased_origin = clients_.erase(origin);
+    DCHECK_EQ(1u, erased_origin);
+  }
+}
+
+const ReportingClient* ReportingCache::GetClientByOriginAndEndpoint(
+    const url::Origin& origin,
+    const GURL& endpoint) const {
+  const auto& origin_it = clients_.find(origin);
+  if (origin_it == clients_.end())
+    return nullptr;
+
+  const auto& endpoint_it = origin_it->second.find(endpoint);
+  if (endpoint_it == origin_it->second.end())
+    return nullptr;
+
+  return endpoint_it->second.get();
 }
 
 void ReportingCache::GetWildcardClientsForDomainAndGroup(
@@ -266,6 +361,39 @@ void ReportingCache::GetWildcardClientsForDomainAndGroup(
     if (client->group == group)
       clients_out->push_back(client);
   }
+}
+
+const ReportingClient* ReportingCache::FindClientToEvict(
+    base::TimeTicks now) const {
+  DCHECK(!client_last_used_.empty());
+
+  const ReportingClient* earliest_used = nullptr;
+  base::TimeTicks earliest_used_last_used;
+  const ReportingClient* earliest_expired = nullptr;
+
+  for (const auto& it : client_last_used_) {
+    const ReportingClient* client = it.first;
+    base::TimeTicks client_last_used = it.second;
+    if (earliest_used == nullptr ||
+        client_last_used < earliest_used_last_used) {
+      earliest_used = client;
+      earliest_used_last_used = client_last_used;
+    }
+    if (earliest_expired == nullptr ||
+        client->expires < earliest_expired->expires) {
+      earliest_expired = client;
+    }
+  }
+
+  // If there are expired clients, return the earliest-expired.
+  if (earliest_expired->expires < now)
+    return earliest_expired;
+  else
+    return earliest_used;
+}
+
+base::TickClock* ReportingCache::tick_clock() {
+  return context_->tick_clock();
 }
 
 }  // namespace net

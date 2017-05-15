@@ -29,6 +29,17 @@ def _PrettySize(size):
   return '%.1fmb' % size
 
 
+def _FormatPss(pss):
+  # Shows a decimal for small numbers to make it clear that a shared symbol has
+  # a non-zero pss.
+  if pss > 10:
+    return str(int(pss))
+  ret = str(round(pss, 1))
+  if ret.endswith('.0'):
+    ret = ret[:-2]
+  return ret
+
+
 def _DiffPrefix(diff, sym):
   if diff.IsAdded(sym):
     return '+ '
@@ -37,6 +48,10 @@ def _DiffPrefix(diff, sym):
   if sym.size:
     return '~ '
   return '= '
+
+
+def _Divide(a, b):
+  return float(a) / b if b else 0
 
 
 class Describer(object):
@@ -51,14 +66,17 @@ class Describer(object):
     total_bytes = sum(v for k, v in section_sizes.iteritems()
                       if k in section_names and k != '.bss')
     yield ''
-    yield 'Section Sizes (Total={:,} bytes):'.format(total_bytes)
+    yield 'Section Sizes (Total={} ({} bytes)):'.format(
+        _PrettySize(total_bytes), total_bytes)
     for name in section_names:
       size = section_sizes[name]
       if name == '.bss':
-        yield '    {}: {:,} bytes (not included in totals)'.format(name, size)
+        yield '    {}: {} ({} bytes) (not included in totals)'.format(
+            name, _PrettySize(size), size)
       else:
-        percent = float(size) / total_bytes if total_bytes else 0
-        yield '    {}: {:,} bytes ({:.1%})'.format(name, size, percent)
+        percent = _Divide(size, total_bytes)
+        yield '    {}: {} ({} bytes) ({:.1%})'.format(
+            name, _PrettySize(size), size, percent)
 
     if self.verbose:
       yield ''
@@ -66,9 +84,10 @@ class Describer(object):
       section_names = sorted(k for k in section_sizes.iterkeys()
                              if k not in section_names)
       for name in section_names:
-        yield '    {}: {:,} bytes'.format(name, section_sizes[name])
+        yield '    {}: {} ({} bytes)'.format(
+            name, _PrettySize(section_sizes[name]), section_sizes[name])
 
-  def _DescribeSymbol(self, sym):
+  def _DescribeSymbol(self, sym, single_line=False):
     if sym.IsGroup():
       address = 'Group'
     else:
@@ -76,20 +95,24 @@ class Describer(object):
     if self.verbose:
       count_part = '  count=%d' % len(sym) if sym.IsGroup() else ''
       yield '{}@{:<9s}  pss={}  padding={}  size_without_padding={}{}'.format(
-          sym.section, address, int(sym.pss), sym.padding,
+          sym.section, address, _FormatPss(sym.pss), sym.padding,
           sym.size_without_padding, count_part)
       yield '    source_path={} \tobject_path={}'.format(
           sym.source_path, sym.object_path)
       if sym.name:
         yield '    flags={}  name={}'.format(sym.FlagsString(), sym.name)
-        if sym.full_name:
-          yield '               full_name={}'.format(sym.full_name)
+        if sym.full_name is not sym.name:
+          yield '         full_name={}'.format(sym.full_name)
       elif sym.full_name:
         yield '    flags={}  full_name={}'.format(
             sym.FlagsString(), sym.full_name)
+    elif single_line:
+      count_part = ' (count=%d)' % len(sym) if sym.IsGroup() else ''
+      yield '{}@{:<9s}  {:<7} {}{}'.format(
+          sym.section, address, _FormatPss(sym.pss), sym.name, count_part)
     else:
       yield '{}@{:<9s}  {:<7} {}'.format(
-          sym.section, address, int(sym.pss),
+          sym.section, address, _FormatPss(sym.pss),
           sym.source_path or sym.object_path or '{no path}')
       if sym.name:
         count_part = ' (count=%d)' % len(sym) if sym.IsGroup() else ''
@@ -97,23 +120,27 @@ class Describer(object):
 
   def _DescribeSymbolGroupChildren(self, group, indent=0):
     running_total = 0
-    sorted_syms = group if group.is_sorted else group.Sorted()
+    running_percent = 0
     is_diff = isinstance(group, models.SymbolDiff)
+    all_groups = all(s.IsGroup() for s in group)
 
     indent_prefix = '> ' * indent
     diff_prefix = ''
-    for s in sorted_syms:
+    total = group.pss
+    for index, s in enumerate(group):
       if group.IsBss() or not s.IsBss():
         running_total += s.pss
-      for l in self._DescribeSymbol(s):
+        running_percent = _Divide(running_total, total)
+      for l in self._DescribeSymbol(s, single_line=all_groups):
         if l[:4].isspace():
           indent_size = 8 + len(indent_prefix) + len(diff_prefix)
           yield '{} {}'.format(' ' * indent_size, l)
         else:
           if is_diff:
             diff_prefix = _DiffPrefix(group, s)
-          yield '{}{}{:8} {}'.format(indent_prefix, diff_prefix,
-                                     int(running_total), l)
+          yield '{}{}{:<4} {:>8} {:7} {}'.format(
+              indent_prefix, diff_prefix, str(index) + ')',
+              _FormatPss(running_total), '({:.1%})'.format(running_percent), l)
 
       if self.recursive and s.IsGroup():
         for l in self._DescribeSymbolGroupChildren(s, indent=indent + 1):
@@ -121,20 +148,32 @@ class Describer(object):
 
   def _DescribeSymbolGroup(self, group):
     total_size = group.pss
-    code_syms = group.WhereInSection('t')
-    code_size = code_syms.pss
-    ro_size = code_syms.Inverted().WhereInSection('r').pss
-    unique_paths = set(s.object_path for s in group)
+    code_size = 0
+    ro_size = 0
+    data_size = 0
+    bss_size = 0
+    unique_paths = set()
+    for s in group.IterLeafSymbols():
+      if s.section == 't':
+        code_size += s.pss
+      elif s.section == 'r':
+        ro_size += s.pss
+      elif s.section == 'd':
+        data_size += s.pss
+      elif s.section == 'b':
+        bss_size += s.pss
+      unique_paths.add(s.object_path)
     header_desc = [
         'Showing {:,} symbols ({:,} unique) with total pss: {} bytes'.format(
             len(group), group.CountUniqueSymbols(), int(total_size)),
-        '.text={:<10} .rodata={:<10} other={:<10} total={}'.format(
+        '.text={:<10} .rodata={:<10} .data*={:<10} .bss={:<10} total={}'.format(
             _PrettySize(int(code_size)), _PrettySize(int(ro_size)),
-            _PrettySize(int(total_size - code_size - ro_size)),
+            _PrettySize(int(data_size)), _PrettySize(int(bss_size)),
             _PrettySize(int(total_size))),
         'Number of object files: {}'.format(len(unique_paths)),
         '',
-        'First columns are: running total, address, pss',
+        'Index, Running Total, Section@Address, PSS',
+        '-' * 60
     ]
     children_desc = self._DescribeSymbolGroupChildren(group)
     return itertools.chain(header_desc, children_desc)
@@ -228,10 +267,11 @@ def DescribeSizeInfoCoverage(size_info):
       expected_size = size_info.section_sizes[
           models.SECTION_TO_SECTION_NAME[section]]
 
-
-    in_section = size_info.symbols.WhereInSection(section)
+    # Use raw_symbols in case symbols contains groups.
+    in_section = models.SymbolGroup(size_info.raw_symbols).WhereInSection(
+        section)
     actual_size = in_section.size
-    size_percent = float(actual_size) / expected_size
+    size_percent = _Divide(actual_size, expected_size)
     yield ('Section {}: has {:.1%} of {} bytes accounted for from '
            '{} symbols. {} bytes are unaccounted for.').format(
                section, size_percent, actual_size, len(in_section),
@@ -240,15 +280,16 @@ def DescribeSizeInfoCoverage(size_info):
     padding = in_section.padding - star_syms.padding
     anonymous_syms = star_syms.Inverted().WhereHasAnyAttribution().Inverted()
     yield '* Padding accounts for {} bytes ({:.1%})'.format(
-        padding, float(padding) / in_section.size)
+        padding, _Divide(padding, in_section.size))
     if len(star_syms):
       yield ('* {} placeholders (symbols that start with **) account for '
              '{} bytes ({:.1%})').format(
-                 len(star_syms), star_syms.pss, star_syms.pss / in_section.size)
+                 len(star_syms), star_syms.size,
+                 _Divide(star_syms.size,  in_section.size))
     if anonymous_syms:
       yield '* {} anonymous symbols account for {} bytes ({:.1%})'.format(
           len(anonymous_syms), int(anonymous_syms.pss),
-          star_syms.pss / in_section.size)
+          _Divide(star_syms.size, in_section.size))
 
     aliased_symbols = in_section.Filter(lambda s: s.aliases)
     if section == 't':

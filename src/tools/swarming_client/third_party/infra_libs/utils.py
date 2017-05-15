@@ -75,14 +75,27 @@ def rmtree(file_path):  # pragma: no cover
   if not os.path.exists(file_path):
     return
 
+  if os.path.isfile(file_path):
+    for i in xrange(3):
+      try:
+        os.remove(file_path)
+        return
+      except OSError:
+        if i == 2:
+          raise
+        time.sleep(3)
+
   if sys.platform == 'win32':
     # Give up and use cmd.exe's rd command.
     file_path = os.path.normcase(file_path)
-    for _ in xrange(3):
-      if not subprocess.call(['cmd.exe', '/c', 'rd', '/q', '/s', file_path]):
-        break
-      time.sleep(3)
-    return
+    for i in xrange(3):
+      try:
+        subprocess.check_call(['cmd.exe', '/c', 'rd', '/q', '/s', file_path])
+        return
+      except subprocess.CalledProcessError:
+        if i == 2:
+          raise
+        time.sleep(3)
 
   def remove_with_retry(rmfunc, path):
     if os.path.islink(path):

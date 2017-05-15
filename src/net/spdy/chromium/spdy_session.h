@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_SPDY_SPDY_SESSION_H_
-#define NET_SPDY_SPDY_SESSION_H_
+#ifndef NET_SPDY_CHROMIUM_SPDY_SESSION_H_
+#define NET_SPDY_CHROMIUM_SPDY_SESSION_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -83,7 +83,6 @@ const SpdyStreamId kLastStreamId = 0x7fffffff;
 
 struct LoadTimingInfo;
 class NetLog;
-class NetLogWithSource;
 class ProxyDelegate;
 class SpdyStream;
 class SSLInfo;
@@ -1233,4 +1232,4 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
 
 }  // namespace net
 
-#endif  // NET_SPDY_SPDY_SESSION_H_
+#endif  // NET_SPDY_CHROMIUM_SPDY_SESSION_H_

@@ -6,8 +6,8 @@
 """Merge package entries from different package lists.
 """
 
-# This is used for replacing packages in eg. trusty with those in
-# trusty-updates.  The updated packages are ABI compatible, but
+# This is used for replacing packages in eg. jessie with those in
+# jessie-updates.  The updated packages are ABI compatible, but
 # include security patches, so we should use those instead in our
 # sysroots.
 

@@ -14,6 +14,7 @@ import sys
 import tempfile
 import threading
 import time
+import traceback
 import unittest
 
 # net_utils adjusts sys.path.
@@ -102,7 +103,11 @@ def gen_request_data(properties=None, **kwargs):
       'extra_args': ['--some-arg', '123'],
       'grace_period_secs': 30,
       'idempotent': False,
-      'inputs_ref': None,
+      'inputs_ref': {
+        'isolated': None,
+        'isolatedserver': '',
+        'namespace': 'default-gzip',
+      },
       'io_timeout_secs': 60,
       'outputs': [],
       'secret_bytes': None,
@@ -227,6 +232,19 @@ class Common(object):
     self.mock(sys, 'stdout', StringIO.StringIO())
     self.mock(sys, 'stderr', StringIO.StringIO())
 
+  def main_safe(self, args):
+    """Bypasses swarming.main()'s exception handling.
+
+    It gets in the way when debugging test failures.
+    """
+    # pylint: disable=bare-except
+    try:
+      return main(args)
+    except:
+      data = '%s\nSTDOUT:\n%s\nSTDERR:\n%s' % (
+          traceback.format_exc(), sys.stdout.getvalue(), sys.stderr.getvalue())
+      self.fail(data)
+
 
 class NetTestCase(net_utils.TestCase, Common):
   """Base class that defines the url_open mock."""
@@ -263,7 +281,10 @@ class TestIsolated(auto_stub.TestCase, Common):
 
       def call(cmd, env, cwd):
         self.assertEqual([sys.executable, u'main.py', u'foo', '--bar'], cmd)
-        self.assertEqual(None, env)
+        expected = os.environ.copy()
+        expected['SWARMING_TASK_ID'] = 'reproduce'
+        expected['SWARMING_BOT_ID'] = 'reproduce'
+        self.assertEqual(expected, env)
         self.assertEqual(unicode(os.path.abspath('work')), cwd)
         return 0
 
@@ -294,7 +315,7 @@ class TestIsolated(auto_stub.TestCase, Common):
           'secret_bytes': None,
         },
       }
-      ret = main(
+      ret = self.main_safe(
           [
             'reproduce', '--swarming', self._swarming.url, '123', '--',
             '--bar',
@@ -322,7 +343,11 @@ class TestSwarmingTrigger(NetTestCase):
             extra_args=[],
             grace_period_secs=30,
             idempotent=False,
-            inputs_ref=None,
+            inputs_ref={
+              'isolated': None,
+              'isolatedserver': '',
+              'namespace': 'default-gzip',
+            },
             io_timeout_secs=60,
             outputs=[],
             secret_bytes=None),
@@ -393,7 +418,11 @@ class TestSwarmingTrigger(NetTestCase):
             extra_args=[],
             grace_period_secs=30,
             idempotent=False,
-            inputs_ref=None,
+            inputs_ref={
+              'isolated': None,
+              'isolatedserver': '',
+              'namespace': 'default-gzip',
+            },
             io_timeout_secs=60,
             outputs=[],
             secret_bytes=None),
@@ -456,7 +485,11 @@ class TestSwarmingTrigger(NetTestCase):
             extra_args=[],
             grace_period_secs=30,
             idempotent=False,
-            inputs_ref=None,
+            inputs_ref={
+              'isolated': None,
+              'isolatedserver': '',
+              'namespace': 'default-gzip',
+            },
             io_timeout_secs=60,
             outputs=[],
             secret_bytes=None),
@@ -834,7 +867,7 @@ class TestMain(NetTestCase):
             {},
           ),
         ])
-    ret = main(
+    ret = self.main_safe(
         ['bot_delete', '--swarming', 'https://localhost:1', 'foo', '--force'])
     self._check_output('', '')
     self.assertEqual(0, ret)
@@ -875,7 +908,7 @@ class TestMain(NetTestCase):
             result,
           ),
         ])
-    ret = main([
+    ret = self.main_safe([
         'trigger',
         '--swarming', 'https://localhost:1',
         '--dimension', 'foo', 'bar',
@@ -894,6 +927,68 @@ class TestMain(NetTestCase):
         'Or visit:\n'
         '  https://localhost:1/user/task/12300\n',
         '')
+
+  def test_run_raw_cmd_isolated(self):
+    # Minimalist use.
+    request = {
+      'expiration_secs': 21600,
+      'name': u'None/foo=bar/' + FILE_HASH,
+      'parent_task_id': '',
+      'priority': 100,
+      'properties': {
+        'caches': [],
+        'cipd_input': None,
+        'command': ['python', '-c', 'print(\'hi\')'],
+        'dimensions': [
+          {'key': 'foo', 'value': 'bar'},
+        ],
+        'env': [],
+        'execution_timeout_secs': 3600,
+        'extra_args': None,
+        'grace_period_secs': 30,
+        'idempotent': False,
+        'inputs_ref': {
+          'isolated': FILE_HASH,
+          'isolatedserver': 'https://localhost:2',
+          'namespace': 'default-gzip',
+        },
+        'io_timeout_secs': 1200,
+        'outputs': [],
+        'secret_bytes': None,
+      },
+      'tags': [],
+      'user': None,
+    }
+    result = gen_request_response(request)
+    self.expected_requests(
+        [
+          (
+            'https://localhost:1/api/swarming/v1/tasks/new',
+            {'data': request},
+            result,
+          ),
+        ])
+    ret = self.main_safe([
+        'trigger',
+        '--swarming', 'https://localhost:1',
+        '--dimension', 'foo', 'bar',
+        '--raw-cmd',
+        '--isolate-server', 'https://localhost:2',
+        '--isolated', FILE_HASH,
+        '--',
+        'python',
+        '-c',
+        'print(\'hi\')',
+      ])
+    actual = sys.stdout.getvalue()
+    self.assertEqual(0, ret, (actual, sys.stderr.getvalue()))
+    self._check_output(
+        u'Triggered task: None/foo=bar/' + FILE_HASH + u'\n'
+        u'To collect results, use:\n'
+        u'  swarming.py collect -S https://localhost:1 12300\n'
+        u'Or visit:\n'
+        u'  https://localhost:1/user/task/12300\n',
+        u'')
 
   def test_run_raw_cmd_with_service_account(self):
     # Minimalist use.
@@ -932,7 +1027,7 @@ class TestMain(NetTestCase):
             result,
           ),
         ])
-    ret = main([
+    ret = self.main_safe([
         'trigger',
         '--swarming', 'https://localhost:1',
         '--dimension', 'foo', 'bar',
@@ -961,7 +1056,7 @@ class TestMain(NetTestCase):
         properties={
           'command': None,
           'inputs_ref': {
-            'isolated': u'1111111111111111111111111111111111111111',
+            'isolated': FILE_HASH,
             'isolatedserver': 'https://localhost:2',
             'namespace': 'default-gzip',
           },
@@ -976,7 +1071,7 @@ class TestMain(NetTestCase):
             result,
           ),
         ])
-    ret = main([
+    ret = self.main_safe([
         'trigger',
         '--swarming', 'https://localhost:1',
         '--isolate-server', 'https://localhost:2',
@@ -1006,7 +1101,7 @@ class TestMain(NetTestCase):
         '  https://localhost:1/user/task/12300\n',
         '')
 
-  def test_run_isolated_upload_and_json(self):
+  def test_run_isolated_and_json(self):
     # pylint: disable=unused-argument
     write_json_calls = []
     self.mock(tools, 'write_json', lambda *args: write_json_calls.append(args))
@@ -1040,7 +1135,7 @@ class TestMain(NetTestCase):
             result,
           ),
         ])
-    ret = main([
+    ret = self.main_safe([
         'trigger',
         '--swarming', 'https://localhost:1',
         '--isolate-server', 'https://localhost:2',
@@ -1057,7 +1152,7 @@ class TestMain(NetTestCase):
         '--idempotent',
         '--task-name', 'unit_tests',
         '--dump-json', 'foo.json',
-        isolated,
+        '--isolated', isolated_hash,
         '--',
         '--some-arg',
         '123',
@@ -1136,7 +1231,7 @@ class TestMain(NetTestCase):
           },
           'command': None,
           'inputs_ref': {
-            'isolated': u'1111111111111111111111111111111111111111',
+            'isolated': FILE_HASH,
             'isolatedserver': 'https://localhost:2',
             'namespace': 'default-gzip',
           },
@@ -1151,7 +1246,7 @@ class TestMain(NetTestCase):
             result,
           ),
         ])
-    ret = main([
+    ret = self.main_safe([
         'trigger',
         '--swarming', 'https://localhost:1',
         '--isolate-server', 'https://localhost:2',
@@ -1194,8 +1289,8 @@ class TestMain(NetTestCase):
         'Usage: swarming.py trigger [options] (hash|isolated) '
           '[-- extra_args|raw command]\n'
         '\n'
-        'swarming.py: error: Use --isolated, --raw-cmd or \'--\' to pass '
-          'arguments to the called process.\n')
+        'swarming.py: error: Specify at least one of --raw-cmd or --isolated '
+        'or both\n')
 
   def test_trigger_no_env_vars(self):
     with self.assertRaises(SystemExit):
@@ -1229,8 +1324,8 @@ class TestMain(NetTestCase):
         'Usage: swarming.py trigger [options] (hash|isolated) '
           '[-- extra_args|raw command]'
         '\n\n'
-        'swarming.py: error: --isolate-server is required.'
-        '\n')
+        'swarming.py: error: Specify at least one of --raw-cmd or --isolated '
+          'or both\n')
 
   def test_trigger_no_dimension(self):
     with self.assertRaises(SystemExit):
@@ -1272,7 +1367,7 @@ class TestMain(NetTestCase):
           'grace_period_secs': 30,
           'idempotent': True,
           'inputs_ref': {
-            'isolated': '1'*40,
+            'isolated': FILE_HASH,
             'isolatedserver': 'https://localhost:2',
             'namespace': 'default-gzip',
             },
@@ -1299,7 +1394,7 @@ class TestMain(NetTestCase):
       self.assertEqual(False, include_perf)
       print('Fake output')
     self.mock(swarming, 'collect', stub_collect)
-    main(
+    self.main_safe(
         ['collect', '--swarming', 'https://host', '--json', j, '--decorate',
           '--print-status-updates', '--task-summary-json', '/a',
           '--task-output-dir', '/b'])
@@ -1314,7 +1409,7 @@ class TestMain(NetTestCase):
             {'yo': 'dawg'},
           ),
         ])
-    ret = main(
+    ret = self.main_safe(
         [
           'query', '--swarming', 'https://localhost:1', 'bot/botid/tasks',
         ])
@@ -1345,7 +1440,7 @@ class TestMain(NetTestCase):
             },
           ),
         ])
-    ret = main(
+    ret = self.main_safe(
         [
           'query', '--swarming', 'https://localhost:1',
           'bot/botid/tasks?foo=bar',
@@ -1368,11 +1463,14 @@ class TestMain(NetTestCase):
       os.chdir(self.tempdir)
 
       def call(cmd, env, cwd):
-        self.assertEqual(['foo', '--bar'], cmd)
+        w = os.path.abspath('work')
+        self.assertEqual([os.path.join(w, 'foo'), '--bar'], cmd)
         expected = os.environ.copy()
         expected['aa'] = 'bb'
+        expected['SWARMING_TASK_ID'] = 'reproduce'
+        expected['SWARMING_BOT_ID'] = 'reproduce'
         self.assertEqual(expected, env)
-        self.assertEqual(unicode(os.path.abspath('work')), cwd)
+        self.assertEqual(unicode(w), cwd)
         return 0
 
       self.mock(subprocess, 'call', call)
@@ -1393,7 +1491,7 @@ class TestMain(NetTestCase):
               },
             ),
           ])
-      ret = main(
+      ret = self.main_safe(
           [
             'reproduce', '--swarming', 'https://localhost:1', '123', '--',
             '--bar',
@@ -1537,7 +1635,7 @@ class TestCommandBot(NetTestCase):
     }
 
   def test_bots(self):
-    ret = main(['bots', '--swarming', 'https://localhost:1'])
+    ret = self.main_safe(['bots', '--swarming', 'https://localhost:1'])
     expected = (
         u'swarm2\n'
         u'  {"cores": ["8"], "cpu": ["x86", "x86-64"], "gpu": '
@@ -1555,12 +1653,13 @@ class TestCommandBot(NetTestCase):
     self.assertEqual(0, ret)
 
   def test_bots_bare(self):
-    ret = main(['bots', '--swarming', 'https://localhost:1', '--bare'])
+    ret = self.main_safe(
+        ['bots', '--swarming', 'https://localhost:1', '--bare'])
     self._check_output("swarm2\nswarm3\nswarm4\n", '')
     self.assertEqual(0, ret)
 
   def test_bots_filter(self):
-    ret = main(
+    ret = self.main_safe(
         [
           'bots', '--swarming', 'https://localhost:1',
           '--dimension', 'os', 'Windows',
@@ -1574,7 +1673,7 @@ class TestCommandBot(NetTestCase):
     self.assertEqual(0, ret)
 
   def test_bots_filter_keep_dead(self):
-    ret = main(
+    ret = self.main_safe(
         [
           'bots', '--swarming', 'https://localhost:1',
           '--dimension', 'os', 'Linux', '--keep-dead',
@@ -1590,7 +1689,7 @@ class TestCommandBot(NetTestCase):
     self.assertEqual(0, ret)
 
   def test_bots_filter_dead_only(self):
-    ret = main(
+    ret = self.main_safe(
         [
           'bots', '--swarming', 'https://localhost:1',
           '--dimension', 'os', 'Linux', '--dead-only',

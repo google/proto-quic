@@ -34,10 +34,10 @@ class PostTaskAndReplyTaskRunner : public internal::PostTaskAndReplyImpl {
 // explicitly in |traits|, the returned TaskTraits have the current
 // TaskPriority.
 TaskTraits GetTaskTraitsWithExplicitPriority(const TaskTraits& traits) {
-  return traits.priority_set_explicitly()
-             ? traits
-             : TaskTraits(traits).WithPriority(
-                   internal::GetTaskPriorityForCurrentThread());
+  if (traits.priority_set_explicitly())
+    return traits;
+  return TaskTraits::Override(traits,
+                              {internal::GetTaskPriorityForCurrentThread()});
 }
 
 }  // namespace

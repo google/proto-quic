@@ -13,14 +13,9 @@ declare_args() {
   # faster, but linking is up to 5-20x slower).
   # Note: use target_os == "linux" rather than is_linux so that it does not
   # apply to host_toolchain when target_os="android".
-  allow_posix_link_time_opt = target_os == "linux" && !is_chromeos &&
-                              target_cpu == "x64" && is_official_build
-
-  # Set to true to use lld, the LLVM linker. This flag may be used on Windows
-  # with the shipped LLVM toolchain, or on Linux with a self-built top-of-tree
-  # LLVM toolchain (see llvm_force_head_revision in
-  # build/config/compiler/BUILD.gn).
-  use_lld = is_win && host_os != "win"
+  allow_posix_link_time_opt =
+      is_clang && target_os == "linux" && !is_chromeos && target_cpu == "x64" &&
+      is_official_build
 
   # If used with allow_posix_link_time_opt, it enables the experimental support
   # of ThinLTO that links 3x-10x faster but (as of now) does not have all the
@@ -52,6 +47,12 @@ declare_args() {
     # Clang compiler version. Clang files are placed at version-dependent paths.
     clang_version = "5.0.0"
   }
+
+  # Set to true to use lld, the LLVM linker. This flag may be used on Windows
+  # or Linux.
+  use_lld = (is_win && host_os != "win") ||
+            (allow_posix_link_time_opt && target_os == "linux" &&
+             !is_chromeos && target_cpu == "x64")
 }
 
 # Check target_os here instead of is_ios as this file is loaded for secondary

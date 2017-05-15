@@ -7,6 +7,7 @@
 
 #include <stddef.h>
 
+#include "base/unguessable_token.h"
 #include "build/build_config.h"
 
 #if defined(OS_WIN)
@@ -25,8 +26,12 @@
 
 namespace base {
 
-// SharedMemoryHandle is a platform specific type which represents
-// the underlying OS handle to a shared memory segment.
+// SharedMemoryHandle is the smallest possible IPC-transportable "reference" to
+// a shared memory OS resource. A "reference" can be consumed exactly once [by
+// base::SharedMemory] to map the shared memory OS resource into the virtual
+// address space of the current process.
+// TODO(erikchen): This class should have strong ownership semantics to prevent
+// leaks of the underlying OS resource. https://crbug.com/640840.
 class BASE_EXPORT SharedMemoryHandle {
  public:
   // The default constructor returns an invalid SharedMemoryHandle.
@@ -61,6 +66,11 @@ class BASE_EXPORT SharedMemoryHandle {
   // resource.
   SharedMemoryHandle Duplicate() const;
 
+  // Uniques identifies the shared memory region that the underlying OS resource
+  // points to. Multiple SharedMemoryHandles that point to the same shared
+  // memory region will have the same GUID. Preserved across IPC.
+  base::UnguessableToken GetGUID() const;
+
 #if defined(OS_MACOSX) && !defined(OS_IOS)
   enum Type {
     // The SharedMemoryHandle is backed by a POSIX fd.
@@ -76,15 +86,23 @@ class BASE_EXPORT SharedMemoryHandle {
   // common for existing code to make shallow copies of SharedMemoryHandle, and
   // the one that is finally passed into a base::SharedMemory is the one that
   // "consumes" the fd.
-  explicit SharedMemoryHandle(const base::FileDescriptor& file_descriptor);
+  // |guid| uniquely identifies the shared memory region pointed to by the
+  // underlying OS resource. If |file_descriptor| is associated with another
+  // SharedMemoryHandle, the caller must pass the |guid| of that
+  // SharedMemoryHandle. Otherwise, the caller should generate a new
+  // UnguessableToken.
+  SharedMemoryHandle(const base::FileDescriptor& file_descriptor,
+                     const base::UnguessableToken& guid);
 
   // Makes a Mach-based SharedMemoryHandle of the given size. On error,
   // subsequent calls to IsValid() return false.
-  explicit SharedMemoryHandle(mach_vm_size_t size);
+  SharedMemoryHandle(mach_vm_size_t size, const base::UnguessableToken& guid);
 
   // Makes a Mach-based SharedMemoryHandle from |memory_object|, a named entry
   // in the current task. The memory region has size |size|.
-  SharedMemoryHandle(mach_port_t memory_object, mach_vm_size_t size);
+  SharedMemoryHandle(mach_port_t memory_object,
+                     mach_vm_size_t size,
+                     const base::UnguessableToken& guid);
 
   // Exposed so that the SharedMemoryHandle can be transported between
   // processes.
@@ -100,15 +118,22 @@ class BASE_EXPORT SharedMemoryHandle {
   // mapped memory.
   bool MapAt(off_t offset, size_t bytes, void** memory, bool read_only);
 #elif defined(OS_WIN)
-  SharedMemoryHandle(HANDLE h);
-
+  // Takes implicit ownership of |h|.
+  // |guid| uniquely identifies the shared memory region pointed to by the
+  // underlying OS resource. If the HANDLE is associated with another
+  // SharedMemoryHandle, the caller must pass the |guid| of that
+  // SharedMemoryHandle. Otherwise, the caller should generate a new
+  // UnguessableToken.
+  SharedMemoryHandle(HANDLE h, const base::UnguessableToken& guid);
   HANDLE GetHandle() const;
 #else
-  // This constructor is deprecated, as it fails to propagate the GUID, which
-  // will be added in the near future.
-  // TODO(rockot): Remove this constructor once Mojo supports GUIDs.
-  // https://crbug.com/713763.
-  explicit SharedMemoryHandle(const base::FileDescriptor& file_descriptor);
+  // |guid| uniquely identifies the shared memory region pointed to by the
+  // underlying OS resource. If |file_descriptor| is associated with another
+  // SharedMemoryHandle, the caller must pass the |guid| of that
+  // SharedMemoryHandle. Otherwise, the caller should generate a new
+  // UnguessableToken.
+  SharedMemoryHandle(const base::FileDescriptor& file_descriptor,
+                     const base::UnguessableToken& guid);
 
   // Creates a SharedMemoryHandle from an |fd| supplied from an external
   // service.
@@ -128,9 +153,6 @@ class BASE_EXPORT SharedMemoryHandle {
  private:
 #if defined(OS_MACOSX) && !defined(OS_IOS)
   friend class SharedMemory;
-
-  // Shared code between copy constructor and operator=.
-  void CopyRelevantData(const SharedMemoryHandle& handle);
 
   Type type_;
 
@@ -165,6 +187,8 @@ class BASE_EXPORT SharedMemoryHandle {
 #else
   FileDescriptor file_descriptor_;
 #endif
+
+  base::UnguessableToken guid_;
 };
 
 }  // namespace base

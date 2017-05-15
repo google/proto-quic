@@ -7,6 +7,7 @@
 #include "net/cert/internal/certificate_policies.h"
 
 #include "net/der/input.h"
+#include "net/der/parse_values.h"
 #include "net/der/parser.h"
 #include "net/der/tag.h"
 
@@ -170,6 +171,70 @@ bool ParseCertificatePoliciesExtension(const der::Input& extension_value,
     if (!ParsePolicyQualifiers(policy_oid, &policy_qualifiers_sequence_parser))
       return false;
   }
+
+  return true;
+}
+
+// From RFC 5280:
+//
+//   PolicyConstraints ::= SEQUENCE {
+//        requireExplicitPolicy           [0] SkipCerts OPTIONAL,
+//        inhibitPolicyMapping            [1] SkipCerts OPTIONAL }
+//
+//   SkipCerts ::= INTEGER (0..MAX)
+bool ParsePolicyConstraints(const der::Input& policy_constraints_tlv,
+                            ParsedPolicyConstraints* out) {
+  der::Parser parser(policy_constraints_tlv);
+
+  //   PolicyConstraints ::= SEQUENCE {
+  der::Parser sequence_parser;
+  if (!parser.ReadSequence(&sequence_parser))
+    return false;
+
+  // RFC 5280 prohibits CAs from issuing PolicyConstraints as an empty sequence:
+  //
+  //   Conforming CAs MUST NOT issue certificates where policy constraints
+  //   is an empty sequence.  That is, either the inhibitPolicyMapping field
+  //   or the requireExplicitPolicy field MUST be present.  The behavior of
+  //   clients that encounter an empty policy constraints field is not
+  //   addressed in this profile.
+  if (!sequence_parser.HasMore())
+    return false;
+
+  der::Input value;
+  if (!sequence_parser.ReadOptionalTag(der::ContextSpecificPrimitive(0), &value,
+                                       &out->has_require_explicit_policy)) {
+    return false;
+  }
+
+  if (out->has_require_explicit_policy) {
+    if (!ParseUint8(value, &out->require_explicit_policy)) {
+      // TODO(eroman): Surface reason for failure if length was longer than
+      // uint8.
+      return false;
+    }
+  } else {
+    out->require_explicit_policy = 0;
+  }
+
+  if (!sequence_parser.ReadOptionalTag(der::ContextSpecificPrimitive(1), &value,
+                                       &out->has_inhibit_policy_mapping)) {
+    return false;
+  }
+
+  if (out->has_inhibit_policy_mapping) {
+    if (!ParseUint8(value, &out->inhibit_policy_mapping)) {
+      // TODO(eroman): Surface reason for failure if length was longer than
+      // uint8.
+      return false;
+    }
+  } else {
+    out->inhibit_policy_mapping = 0;
+  }
+
+  // There should be no remaining data.
+  if (sequence_parser.HasMore() || parser.HasMore())
+    return false;
 
   return true;
 }

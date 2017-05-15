@@ -89,7 +89,7 @@ sw{
         CW{"Kurakao"}
         CX{"Kisiwa cha Krismasi"}
         CY{"Cyprus"}
-        CZ{"Jamhuri ya Cheki"}
+        CZ{"Chechia"}
         DE{"Ujerumani"}
         DG{"Diego Garcia"}
         DJ{"Jibuti"}
@@ -108,7 +108,7 @@ sw{
         EU{"Umoja wa Ulaya"}
         FI{"Ufini"}
         FJ{"Fiji"}
-        FK{"Visiwa vya Falkland"}
+        FK{"Visiwa vya Falkland (Islas Malvinas)"}
         FM{"Mikronesia"}
         FO{"Visiwa vya Faroe"}
         FR{"Ufaransa"}
@@ -181,7 +181,7 @@ sw{
         MF{"Saint Martin"}
         MG{"Madagaska"}
         MH{"Visiwa vya Marshall"}
-        MK{"Macedonia"}
+        MK{"Masedonia (FYROM)"}
         ML{"Mali"}
         MM{"Myanmar (Burma)"}
         MN{"Mongolia"}
@@ -302,9 +302,8 @@ sw{
         CD{"Kongo (DRC)"}
         CG{"Jamhuri ya Kongo"}
         CI{"Ivory Coast"}
-        FK{"Visiwa vya Falkland (Islas Malvinas)"}
-        MK{"Masedonia (FYROM)"}
+        CZ{"Jamhuri ya Cheki"}
         TL{"Timor ya Mashariki"}
     }
-    Version{"2.1.28.79"}
+    Version{"2.1.33.73"}
 }

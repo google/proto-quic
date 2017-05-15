@@ -1122,6 +1122,38 @@ should be able to be added at any place in this file.
   <description>User closed the Chrome Home bottom sheet.</description>
 </action>
 
+<action name="Android.ChromeHome.ClosedByNTPCloseButton">
+  <owner>mdjones@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User closed the Chrome Home bottom sheet using the NTP's close button.
+  </description>
+</action>
+
+<action name="Android.ChromeHome.ClosedByNavigation">
+  <owner>mdjones@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User closed the Chrome Home bottom sheet by navigating.
+  </description>
+</action>
+
+<action name="Android.ChromeHome.ClosedBySwipe">
+  <owner>mdjones@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User closed the Chrome Home bottom sheet using a swipe gesture.
+  </description>
+</action>
+
+<action name="Android.ChromeHome.ClosedByTapScrim">
+  <owner>mdjones@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User closed the Chrome Home bottom sheet tapping the scrim behind the sheet.
+  </description>
+</action>
+
 <action name="Android.ChromeHome.FullState">
   <owner>mdjones@chromium.org</owner>
   <owner>twellington@chromium.org</owner>
@@ -1142,6 +1174,42 @@ should be able to be added at any place in this file.
   <owner>mdjones@chromium.org</owner>
   <owner>twellington@chromium.org</owner>
   <description>User opened the Chrome Home bottom sheet.</description>
+  <obsolete>
+    Deprecated 5/2017. Replaced by the versions with a suffix, which are more
+    descriptive.
+  </obsolete>
+</action>
+
+<action name="Android.ChromeHome.OpenedByExpandButton">
+  <owner>mdjones@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User opened the Chrome Home bottom sheet using the expand button.
+  </description>
+</action>
+
+<action name="Android.ChromeHome.OpenedByNTP">
+  <owner>mdjones@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User opened the Chrome Home bottom sheet by opening a new tab.
+  </description>
+</action>
+
+<action name="Android.ChromeHome.OpenedByOmnibox">
+  <owner>mdjones@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User opened the Chrome Home bottom sheet by focusing the omnibox.
+  </description>
+</action>
+
+<action name="Android.ChromeHome.OpenedBySwipe">
+  <owner>mdjones@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User opened the Chrome Home bottom sheet using a swipe gesture.
+  </description>
 </action>
 
 <action name="Android.ChromeHome.ShowBookmarks">
@@ -8804,7 +8872,7 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
-<action name="Launcher_ClickOnApplistButton">
+<action name="Launcher_ClickOnApplistButton" not_user_triggered="true">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
 </action>
@@ -8829,6 +8897,11 @@ should be able to be added at any place in this file.
     Recorded when the user minimizes an existing task by clicking an icon in the
     shelf.
   </description>
+</action>
+
+<action name="Launcher_Show">
+  <owner>vadimt@chromium.org</owner>
+  <description>Launcher got shown.</description>
 </action>
 
 <action name="Launcher_SwitchTask">
@@ -15826,6 +15899,62 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="Suggestions.Card.ActionTapped">
+  <owner>finkm@chromium.org</owner>
+  <owner>dgn@chromium.org</owner>
+  <description>
+    User tapped on a card's button in the content suggestions UI.
+  </description>
+</action>
+
+<action name="Suggestions.Card.SwipedAway">
+  <owner>finkm@chromium.org</owner>
+  <owner>dgn@chromium.org</owner>
+  <description>
+    User swiped a card away in the content suggestions UI.
+  </description>
+</action>
+
+<action name="Suggestions.Card.Tapped">
+  <owner>finkm@chromium.org</owner>
+  <owner>dgn@chromium.org</owner>
+  <description>
+    User tapped on a card in the content suggestions UI.
+  </description>
+</action>
+
+<action name="Suggestions.Category.Dismissed">
+  <owner>finkm@chromium.org</owner>
+  <owner>dgn@chromium.org</owner>
+  <description>User dismissed a content suggestions category.</description>
+</action>
+
+<action name="Suggestions.Category.Fetch">
+  <owner>finkm@chromium.org</owner>
+  <owner>dgn@chromium.org</owner>
+  <description>User requested fetching more content suggestions.</description>
+</action>
+
+<action name="Suggestions.Category.ViewAll">
+  <owner>finkm@chromium.org</owner>
+  <owner>dgn@chromium.org</owner>
+  <description>
+    User navigated to the complete view of a content suggestions section.
+  </description>
+</action>
+
+<action name="Suggestions.Content.Dismissed">
+  <owner>finkm@chromium.org</owner>
+  <owner>dgn@chromium.org</owner>
+  <description>User dismissed a content suggestion.</description>
+</action>
+
+<action name="Suggestions.Content.Opened">
+  <owner>finkm@chromium.org</owner>
+  <owner>dgn@chromium.org</owner>
+  <description>User opened a content suggestion.</description>
+</action>
+
 <action name="Suggestions.ContextMenu.DownloadItem">
   <owner>mvanouwerkerk@chromium.org</owner>
   <owner>galinap@google.com</owner>
@@ -15876,12 +16005,57 @@ should be able to be added at any place in this file.
   </description>
 </action>
 
+<action name="Suggestions.ScrolledAfterOpen">
+  <owner>dgn@chromium.org</owner>
+  <owner>finkm@chromium.org</owner>
+  <description>
+    Android: Recorded the first time the user scrolls after opening the
+    suggestions UI.
+  </description>
+</action>
+
+<action name="Suggestions.Site.RemovalUndone">
+  <owner>finkm@chromium.org</owner>
+  <owner>dgn@chromium.org</owner>
+  <description>User reverted the removal of a suggested site.</description>
+</action>
+
+<action name="Suggestions.Site.Removed">
+  <owner>finkm@chromium.org</owner>
+  <owner>dgn@chromium.org</owner>
+  <description>User removed a suggested site.</description>
+</action>
+
+<action name="Suggestions.SurfaceHidden">
+  <owner>finkm@chromium.org</owner>
+  <owner>dgn@chromium.org</owner>
+  <description>User closed the content suggestions UI.</description>
+</action>
+
+<action name="Suggestions.SurfaceVisible">
+  <owner>finkm@chromium.org</owner>
+  <owner>dgn@chromium.org</owner>
+  <description>User opened the content suggestions UI.</description>
+</action>
+
 <action name="Suggestions.Tile.RemovalUndone">
   <owner>mvanouwerkerk@chromium.org</owner>
   <owner>galinap@google.com</owner>
   <description>
     Android: User tapped the undo button in the snackbar after removing a
     suggested item.
+  </description>
+  <obsolete>
+    Deprecated as of 05/2017. Now recorded as
+    &quot;Suggestions.Site.RemovalUndone&quot;.
+  </obsolete>
+</action>
+
+<action name="Suggestions.Tile.Tapped">
+  <owner>finkm@chromium.org</owner>
+  <owner>dgn@chromium.org</owner>
+  <description>
+    User tapped on a tile in the content suggestions UI.
   </description>
 </action>
 
@@ -16317,6 +16491,13 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="Tray_NightLight">
+  <owner>afakhry@chromium.org</owner>
+  <description>
+    Records when the user toggles the Night Light feature on/off.
+  </description>
+</action>
+
 <action name="Tray_Overview">
   <owner>bruthig@chromium.org</owner>
   <owner>tdanderson@chromium.org</owner>
@@ -16447,6 +16628,30 @@ should be able to be added at any place in this file.
     prefs::kBrowserAddPersonEnabled are cleared because they no longer exist in
     the Material Design settings page.
   </description>
+</action>
+
+<action name="VR.DOFF">
+  <owner>billorr@chromium.org</owner>
+  <description>
+    The user has successfully completed the VR DOFF flow.
+  </description>
+</action>
+
+<action name="VR.DON">
+  <owner>billorr@chromium.org</owner>
+  <description>
+    The user has successfully completed the VR DON flow.
+  </description>
+</action>
+
+<action name="VR.WebVR.StopPresenting">
+  <owner>billorr@chromium.org</owner>
+  <description>The user (or site) has stopped WebVR presentation.</description>
+</action>
+
+<action name="VR.WebVR.requestPresent">
+  <owner>billorr@chromium.org</owner>
+  <description>The user has initiated WebVR presentation.</description>
 </action>
 
 <action name="VideoPlayer.CastVideoError">

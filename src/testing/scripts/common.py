@@ -74,7 +74,8 @@ def run_command_with_output(argv, env=None, cwd=None, stdoutfile=None):
   print 'Running %r in %r (env: %r)' % (argv, cwd, env)
   rc = 1
   try:
-    output = subprocess.check_output(argv, env=env, cwd=cwd)
+    output = subprocess.check_output(argv, env=env, cwd=cwd,
+        stderr=subprocess.STDOUT)
     if stdoutfile:
       with open(stdoutfile, 'w') as fp:
         fp.write(output)

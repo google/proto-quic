@@ -16,6 +16,7 @@
 #include "base/strings/string_piece.h"
 #include "base/task_runner.h"
 #include "base/task_scheduler/scheduler_worker_pool_params.h"
+#include "base/task_scheduler/single_thread_task_runner_thread_mode.h"
 #include "base/task_scheduler/task_traits.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
@@ -92,7 +93,10 @@ class BASE_EXPORT TaskScheduler {
   // scheduling tasks using |traits|. Tasks run on a single thread in posting
   // order.
   virtual scoped_refptr<SingleThreadTaskRunner>
-  CreateSingleThreadTaskRunnerWithTraits(const TaskTraits& traits) = 0;
+  CreateSingleThreadTaskRunnerWithTraits(
+      const TaskTraits& traits,
+      SingleThreadTaskRunnerThreadMode thread_mode =
+          SingleThreadTaskRunnerThreadMode::SHARED) = 0;
 
 #if defined(OS_WIN)
   // Returns a SingleThreadTaskRunner whose PostTask invocations result in
@@ -104,7 +108,10 @@ class BASE_EXPORT TaskScheduler {
   // apartments as necessary. In either case, care should be taken to make sure
   // COM pointers are not smuggled across apartments.
   virtual scoped_refptr<SingleThreadTaskRunner>
-  CreateCOMSTATaskRunnerWithTraits(const TaskTraits& traits) = 0;
+  CreateCOMSTATaskRunnerWithTraits(
+      const TaskTraits& traits,
+      SingleThreadTaskRunnerThreadMode thread_mode =
+          SingleThreadTaskRunnerThreadMode::SHARED) = 0;
 #endif  // defined(OS_WIN)
 
   // Returns a vector of all histograms available in this task scheduler.

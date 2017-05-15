@@ -94,7 +94,9 @@ class LocalDeviceEnvironment(environment.Environment):
     self._skip_clear_data = args.skip_clear_data
     self._target_devices_file = args.target_devices_file
     self._tool_name = args.tool
-    self._trace_output = args.trace_output
+    self._trace_output = None
+    if hasattr(args, 'trace_output'):
+      self._trace_output = args.trace_output
 
     devil_chromium.Initialize(
         output_directory=constants.GetOutDirectory(),

@@ -72,52 +72,13 @@ bool SpdyFrameBuilder::BeginNewFrame(const SpdyFramer& framer,
   DCHECK_EQ(0u, stream_id & ~kStreamIdMask);
   bool success = true;
   if (length_ > 0) {
-    // Update length field for previous frame.
-    OverwriteLength(framer, length_ - kFrameHeaderSize);
-    SPDY_BUG_IF(framer.GetFrameMaximumSize() < length_)
-        << "Frame length  " << length_
-        << " is longer than the maximum allowed length.";
+    SPDY_BUG << "SpdyFrameBuilder doesn't have a clean state when BeginNewFrame"
+             << "is called. Leftover length_ is " << length_;
+    offset_ += length_;
+    length_ = 0;
   }
 
-  offset_ += length_;
-  length_ = 0;
-
-  // TODO(yasong): remove after OverwriteLength() is deleted.
-  bool length_written = false;
-  // Remember where the length field is written. Used for OverwriteLength().
-  if (output_ != nullptr && CanWrite(kLengthFieldLength)) {
-    // Can write the length field.
-    char* dest = nullptr;
-    // |size| is the available bytes in the current memory block.
-    int size = 0;
-    output_->Next(&dest, &size);
-    start_of_current_frame_ = dest;
-    bytes_of_length_written_in_first_block_ =
-        size > (int)kLengthFieldLength ? kLengthFieldLength : size;
-    // If the current block is not enough for the length field, write the
-    // length field here, and remember the pointer to the next block.
-    if (size < (int)kLengthFieldLength) {
-      // Write the first portion of the length field.
-      int value = base::HostToNet32(capacity_ - offset_ - kFrameHeaderSize);
-      memcpy(dest, reinterpret_cast<char*>(&value) + 1, size);
-      Seek(size);
-      output_->Next(&dest, &size);
-      start_of_current_frame_in_next_block_ = dest;
-      int size_left =
-          kLengthFieldLength - bytes_of_length_written_in_first_block_;
-      memcpy(dest, reinterpret_cast<char*>(&value) + 1 + size, size_left);
-      Seek(size_left);
-      length_written = true;
-    }
-  }
-
-  // Assume all remaining capacity will be used for this frame. If not,
-  // the length will get overwritten when we begin the next frame.
-  // Don't check for length limits here because this may be larger than the
-  // actual frame length.
-  if (!length_written) {
-    success &= WriteUInt24(capacity_ - offset_ - kFrameHeaderSize);
-  }
+  success &= WriteUInt24(capacity_ - offset_ - kFrameHeaderSize);
   success &= WriteUInt8(raw_frame_type);
   success &= WriteUInt8(flags);
   success &= WriteUInt32(stream_id);
@@ -218,43 +179,6 @@ bool SpdyFrameBuilder::WriteBytes(const void* data, uint32_t data_len) {
     }
   }
   return true;
-}
-
-bool SpdyFrameBuilder::OverwriteLength(const SpdyFramer& framer,
-                                       size_t length) {
-  if (output_ != nullptr) {
-    size_t value = base::HostToNet32(length);
-    if (start_of_current_frame_ != nullptr &&
-        bytes_of_length_written_in_first_block_ == kLengthFieldLength) {
-      // Length field of the current frame is within one memory block.
-      memcpy(start_of_current_frame_, reinterpret_cast<char*>(&value) + 1,
-             kLengthFieldLength);
-      return true;
-    } else if (start_of_current_frame_ != nullptr &&
-               start_of_current_frame_in_next_block_ != nullptr &&
-               bytes_of_length_written_in_first_block_ < kLengthFieldLength) {
-      // Length field of the current frame crosses two memory blocks.
-      memcpy(start_of_current_frame_, reinterpret_cast<char*>(&value) + 1,
-             bytes_of_length_written_in_first_block_);
-      memcpy(start_of_current_frame_in_next_block_,
-             reinterpret_cast<char*>(&value) + 1 +
-                 bytes_of_length_written_in_first_block_,
-             kLengthFieldLength - bytes_of_length_written_in_first_block_);
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  DCHECK_GE(framer.GetFrameMaximumSize(), length);
-  bool success = false;
-  const size_t old_length = length_;
-
-  length_ = 0;
-  success = WriteUInt24(length);
-
-  length_ = old_length;
-  return success;
 }
 
 bool SpdyFrameBuilder::CanWrite(size_t length) const {

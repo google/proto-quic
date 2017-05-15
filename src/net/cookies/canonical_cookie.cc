@@ -74,36 +74,6 @@ bool GetCookieDomain(const GURL& url,
   return cookie_util::GetCookieDomainWithString(url, domain_string, result);
 }
 
-std::string CanonPathWithString(const GURL& url,
-                                const std::string& path_string) {
-  // The RFC says the path should be a prefix of the current URL path.
-  // However, Mozilla allows you to set any path for compatibility with
-  // broken websites.  We unfortunately will mimic this behavior.  We try
-  // to be generous and accept cookies with an invalid path attribute, and
-  // default the path to something reasonable.
-
-  // The path was supplied in the cookie, we'll take it.
-  if (!path_string.empty() && path_string[0] == '/')
-    return path_string;
-
-  // The path was not supplied in the cookie or invalid, we will default
-  // to the current URL path.
-  // """Defaults to the path of the request URL that generated the
-  //    Set-Cookie response, up to, but not including, the
-  //    right-most /."""
-  // How would this work for a cookie on /?  We will include it then.
-  const std::string& url_path = url.path();
-
-  size_t idx = url_path.find_last_of('/');
-
-  // The cookie path was invalid or a single '/'.
-  if (idx == 0 || idx == std::string::npos)
-    return std::string("/");
-
-  // Return up to the rightmost '/'.
-  return url_path.substr(0, idx);
-}
-
 // Compares cookies using name, domain and path, so that "equivalent" cookies
 // (per RFC 2965) are equal to each other.
 int PartialCookieOrdering(const CanonicalCookie& a, const CanonicalCookie& b) {
@@ -130,12 +100,35 @@ CanonicalCookie::CanonicalCookie(const CanonicalCookie& other) = default;
 CanonicalCookie::~CanonicalCookie() {}
 
 // static
-std::string CanonicalCookie::CanonPath(const GURL& url,
-                                       const ParsedCookie& pc) {
-  std::string path_string;
-  if (pc.HasPath())
-    path_string = pc.Path();
-  return CanonPathWithString(url, path_string);
+std::string CanonicalCookie::CanonPathWithString(
+    const GURL& url,
+    const std::string& path_string) {
+  // The RFC says the path should be a prefix of the current URL path.
+  // However, Mozilla allows you to set any path for compatibility with
+  // broken websites.  We unfortunately will mimic this behavior.  We try
+  // to be generous and accept cookies with an invalid path attribute, and
+  // default the path to something reasonable.
+
+  // The path was supplied in the cookie, we'll take it.
+  if (!path_string.empty() && path_string[0] == '/')
+    return path_string;
+
+  // The path was not supplied in the cookie or invalid, we will default
+  // to the current URL path.
+  // """Defaults to the path of the request URL that generated the
+  //    Set-Cookie response, up to, but not including, the
+  //    right-most /."""
+  // How would this work for a cookie on /?  We will include it then.
+  const std::string& url_path = url.path();
+
+  size_t idx = url_path.find_last_of('/');
+
+  // The cookie path was invalid or a single '/'.
+  if (idx == 0 || idx == std::string::npos)
+    return std::string("/");
+
+  // Return up to the rightmost '/'.
+  return url_path.substr(0, idx);
 }
 
 // static
@@ -201,7 +194,9 @@ std::unique_ptr<CanonicalCookie> CanonicalCookie::Create(
     return nullptr;
   }
 
-  std::string cookie_path = CanonicalCookie::CanonPath(url, parsed_cookie);
+  std::string cookie_path = CanonPathWithString(
+      url, parsed_cookie.HasPath() ? parsed_cookie.Path() : std::string());
+
   Time server_time(creation_time);
   if (options.has_server_time())
     server_time = options.server_time();
@@ -229,62 +224,6 @@ std::unique_ptr<CanonicalCookie> CanonicalCookie::Create(
 
 // static
 std::unique_ptr<CanonicalCookie> CanonicalCookie::Create(
-    const GURL& url,
-    const std::string& name,
-    const std::string& value,
-    const std::string& domain,
-    const std::string& path,
-    const base::Time& creation,
-    const base::Time& expiration,
-    bool secure,
-    bool http_only,
-    CookieSameSite same_site,
-    CookiePriority priority) {
-  // Expect valid attribute tokens and values, as defined by the ParsedCookie
-  // logic, otherwise don't create the cookie.
-  std::string parsed_name = ParsedCookie::ParseTokenString(name);
-  if (parsed_name != name)
-    return nullptr;
-  std::string parsed_value = ParsedCookie::ParseValueString(value);
-  if (parsed_value != value)
-    return nullptr;
-
-  std::string parsed_domain = ParsedCookie::ParseValueString(domain);
-  if (parsed_domain != domain)
-    return nullptr;
-  std::string cookie_domain;
-  if (!cookie_util::GetCookieDomainWithString(url, parsed_domain,
-                                               &cookie_domain)) {
-    return nullptr;
-  }
-
-  if (secure && !url.SchemeIsCryptographic())
-    return nullptr;
-
-  std::string parsed_path = ParsedCookie::ParseValueString(path);
-  if (parsed_path != path)
-    return nullptr;
-
-  std::string cookie_path = CanonPathWithString(url, parsed_path);
-  // Expect that the path was either not specified (empty), or is valid.
-  if (!parsed_path.empty() && cookie_path != parsed_path)
-    return nullptr;
-  // Canonicalize path again to make sure it escapes characters as needed.
-  url::Component path_component(0, cookie_path.length());
-  url::RawCanonOutputT<char> canon_path;
-  url::Component canon_path_component;
-  url::CanonicalizePath(cookie_path.data(), path_component, &canon_path,
-                        &canon_path_component);
-  cookie_path = std::string(canon_path.data() + canon_path_component.begin,
-                            canon_path_component.len);
-
-  return base::WrapUnique(new CanonicalCookie(
-      parsed_name, parsed_value, cookie_domain, cookie_path, creation,
-      expiration, creation, secure, http_only, same_site, priority));
-}
-
-// static
-std::unique_ptr<CanonicalCookie> CanonicalCookie::Create(
     const std::string& name,
     const std::string& value,
     const std::string& domain,
@@ -296,6 +235,9 @@ std::unique_ptr<CanonicalCookie> CanonicalCookie::Create(
     bool http_only,
     CookieSameSite same_site,
     CookiePriority priority) {
+  DCHECK(!name.empty());
+  DCHECK(!path.empty());
+
   return base::WrapUnique(
       new CanonicalCookie(name, value, domain, path, creation, expiration,
                           last_access, secure, http_only, same_site, priority));

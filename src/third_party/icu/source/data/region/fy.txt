@@ -108,7 +108,7 @@ fy{
         EU{"Europeeske Unie"}
         FI{"Finlân"}
         FJ{"Fiji"}
-        FK{"Falklâneilannen"}
+        FK{"Falklâneilannen (Islas Malvinas)"}
         FM{"Micronesië"}
         FO{"Faeröer"}
         FR{"Frankrijk"}
@@ -181,7 +181,7 @@ fy{
         MF{"Saint-Martin"}
         MG{"Madeiaskar"}
         MH{"Marshalleilannen"}
-        MK{"Macedonië"}
+        MK{"Macedonië (FYROM)"}
         ML{"Mali"}
         MM{"Myanmar (Birma)"}
         MN{"Mongolië"}
@@ -299,8 +299,6 @@ fy{
     Countries%variant{
         CD{"Congo (DRC)"}
         CG{"Congo (Republyk)"}
-        FK{"Falklâneilannen (Islas Malvinas)"}
-        MK{"Macedonië (FYROM)"}
     }
-    Version{"2.1.29.44"}
+    Version{"2.1.31.86"}
 }

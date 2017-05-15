@@ -392,7 +392,7 @@ BASE_EXPORT bool GetSystemMemoryInfo(SystemMemoryInfoKB* meminfo);
 // Parse the data found in /proc/<pid>/stat and return the sum of the
 // CPU-related ticks.  Returns -1 on parse error.
 // Exposed for testing.
-BASE_EXPORT int ParseProcStatCPU(const std::string& input);
+BASE_EXPORT int ParseProcStatCPU(StringPiece input);
 
 // Get the number of threads of |process| as available in /proc/<pid>/stat.
 // This should be used with care as no synchronization with running threads is
@@ -405,12 +405,14 @@ BASE_EXPORT extern const char kProcSelfExe[];
 
 // Parses a string containing the contents of /proc/meminfo
 // returns true on success or false for a parsing error
-BASE_EXPORT bool ParseProcMeminfo(const std::string& input,
+// Exposed for testing.
+BASE_EXPORT bool ParseProcMeminfo(StringPiece input,
                                   SystemMemoryInfoKB* meminfo);
 
 // Parses a string containing the contents of /proc/vmstat
 // returns true on success or false for a parsing error
-BASE_EXPORT bool ParseProcVmstat(const std::string& input,
+// Exposed for testing.
+BASE_EXPORT bool ParseProcVmstat(StringPiece input,
                                  SystemMemoryInfoKB* meminfo);
 
 // Data from /proc/diskstats about system-wide disk I/O.
@@ -437,7 +439,7 @@ struct BASE_EXPORT SystemDiskInfo {
 // Checks whether the candidate string is a valid disk name, [hsv]d[a-z]+
 // for a generic disk or mmcblk[0-9]+ for the MMC case.
 // Names of disk partitions (e.g. sda1) are not valid.
-BASE_EXPORT bool IsValidDiskName(const std::string& candidate);
+BASE_EXPORT bool IsValidDiskName(StringPiece candidate);
 
 // Retrieves data from /proc/diskstats about system-wide disk I/O.
 // Fills in the provided |diskinfo| structure. Returns true on success.

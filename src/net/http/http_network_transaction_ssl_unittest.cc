@@ -9,9 +9,7 @@
 #include "base/deferred_sequenced_task_runner.h"
 #include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted.h"
-#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
-#include "base/test/scoped_task_scheduler.h"
 #include "base/threading/thread.h"
 #include "net/base/request_priority.h"
 #include "net/cert/ct_policy_enforcer.h"
@@ -57,8 +55,7 @@ class TokenBindingSSLConfigService : public SSLConfigService {
 
 class HttpNetworkTransactionSSLTest : public testing::Test {
  protected:
-  HttpNetworkTransactionSSLTest()
-      : scoped_task_scheduler_(base::MessageLoop::current()) {}
+  HttpNetworkTransactionSSLTest() = default;
 
   void SetUp() override {
     ssl_config_service_ = new TokenBindingSSLConfigService;
@@ -86,8 +83,6 @@ class HttpNetworkTransactionSSLTest : public testing::Test {
     request_info_vector_.push_back(base::WrapUnique(request_info));
     return request_info;
   }
-
-  base::test::ScopedTaskScheduler scoped_task_scheduler_;
 
   scoped_refptr<SSLConfigService> ssl_config_service_;
   std::unique_ptr<HttpAuthHandlerMock::Factory> auth_handler_factory_;

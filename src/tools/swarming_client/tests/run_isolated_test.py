@@ -9,6 +9,7 @@ import StringIO
 import base64
 import contextlib
 import functools
+import hashlib
 import json
 import logging
 import os
@@ -24,6 +25,7 @@ sys.path.insert(0, os.path.join(ROOT_DIR, 'third_party'))
 import cipd
 import isolated_format
 import isolateserver
+import named_cache
 import run_isolated
 from depot_tools import auto_stub
 from depot_tools import fix_encoding
@@ -39,6 +41,9 @@ import isolateserver_mock
 import cipdserver_mock
 
 
+ALGO = hashlib.sha1
+
+
 def write_content(filepath, content):
   with open(filepath, 'wb') as f:
     f.write(content)
@@ -46,6 +51,19 @@ def write_content(filepath, content):
 
 def json_dumps(data):
   return json.dumps(data, sort_keys=True, separators=(',', ':'))
+
+
+def genTree(path):
+  """Returns a dict with {filepath: content}."""
+  if not os.path.isdir(path):
+    return None
+  out = {}
+  for root, _, filenames in os.walk(path):
+    for filename in filenames:
+      p = os.path.join(root, filename)
+      with open(p, 'rb') as f:
+        out[os.path.relpath(p, path)] = f.read()
+  return out
 
 
 @contextlib.contextmanager
@@ -92,9 +110,10 @@ class RunIsolatedTestBase(auto_stub.TestCase):
     self.cipd_server = cipdserver_mock.MockCipdServer()
 
   def tearDown(self):
+    # Remove mocks.
+    super(RunIsolatedTestBase, self).tearDown()
     file_path.rmtree(self.tempdir)
     self.cipd_server.close()
-    super(RunIsolatedTestBase, self).tearDown()
 
   @property
   def run_test_temp_dir(self):
@@ -173,6 +192,7 @@ class RunIsolatedTest(RunIsolatedTestBase):
         '--cache', self.tempdir,
         '--named-cache-root', os.path.join(self.tempdir, 'c'),
         '--isolate-server', 'https://localhost',
+        '--root-dir', self.tempdir,
     ]
     ret = run_isolated.main(cmd)
     self.assertEqual(0, ret)
@@ -195,6 +215,7 @@ class RunIsolatedTest(RunIsolatedTestBase):
         '--cache', self.tempdir,
         '--isolate-server', 'https://localhost',
         '--named-cache-root', os.path.join(self.tempdir, 'c'),
+        '--root-dir', self.tempdir,
         '--',
         '--extraargs',
         'bar',
@@ -218,14 +239,13 @@ class RunIsolatedTest(RunIsolatedTestBase):
       self.mock(file_path, i, functools.partial(add, i))
 
     ret = run_isolated.run_tha_test(
-        command,
+        command or [],
         isolated_hash,
         StorageFake(files),
         isolateserver.MemoryCache(),
         None,
         init_named_caches_stub,
         False,
-        None,
         None,
         None,
         None,
@@ -335,6 +355,7 @@ class RunIsolatedTest(RunIsolatedTestBase):
         '--cache', self.tempdir,
         '--isolate-server', 'https://localhost',
         '--named-cache-root', os.path.join(self.tempdir, 'c'),
+        '--root-dir', self.tempdir,
     ]
     ret = run_isolated.main(cmd)
     self.assertEqual(1, ret)
@@ -379,16 +400,15 @@ class RunIsolatedTest(RunIsolatedTestBase):
       fs.rmtree(unicode(workdir))
 
   def test_main_naked_with_packages(self):
-    pin_idx_ref = [0]
-    pins = [
-      [
+    pins = {
+      '': [
         ('infra/data/x', 'badc0fee'*5),
         ('infra/data/y', 'cafebabe'*5),
       ],
-      [
+      'bin': [
         ('infra/tools/echo/linux-amd64', 'deadbeef'*5),
       ],
-    ]
+    }
 
     def fake_ensure(args, **_kwargs):
       if (args[0].endswith('/cipd') and
@@ -397,12 +417,14 @@ class RunIsolatedTest(RunIsolatedTestBase):
         idx = args.index('-json-output')
         with open(args[idx+1], 'w') as json_out:
           json.dump({
-            'result': [
-              {'package': pkg, 'instance_id': ver}
-              for pkg, ver in pins[pin_idx_ref[0]]
-            ],
+            'result': {
+              subdir: [
+                {'package': pkg, 'instance_id': ver}
+                for pkg, ver in packages
+              ]
+              for subdir, packages in pins.iteritems()
+            }
           }, json_out)
-        pin_idx_ref[0] += 1
         return 0
 
     self.popen_mocks.append(fake_ensure)
@@ -424,18 +446,18 @@ class RunIsolatedTest(RunIsolatedTestBase):
     ret = run_isolated.main(cmd)
     self.assertEqual(0, ret)
 
-    self.assertEqual(3, len(self.popen_calls))
+    self.assertEqual(2, len(self.popen_calls))
 
     # Test cipd-ensure command for installing packages.
-    for cipd_ensure_cmd, _ in self.popen_calls[0:2]:
-      self.assertEqual(cipd_ensure_cmd[:2], [
-        os.path.join(cipd_cache, 'bin', 'cipd' + cipd.EXECUTABLE_SUFFIX),
-        'ensure',
-      ])
-      cache_dir_index = cipd_ensure_cmd.index('-cache-dir')
-      self.assertEqual(
-          cipd_ensure_cmd[cache_dir_index+1],
-          os.path.join(cipd_cache, 'cache'))
+    cipd_ensure_cmd, _ = self.popen_calls[0]
+    self.assertEqual(cipd_ensure_cmd[:2], [
+      os.path.join(cipd_cache, 'bin', 'cipd' + cipd.EXECUTABLE_SUFFIX),
+      'ensure',
+    ])
+    cache_dir_index = cipd_ensure_cmd.index('-cache-dir')
+    self.assertEqual(
+        cipd_ensure_cmd[cache_dir_index+1],
+        os.path.join(cipd_cache, 'cache'))
 
     # Test cipd client cache. `git:wowza` was a tag and so is cacheable.
     self.assertEqual(len(os.listdir(os.path.join(cipd_cache, 'versions'))), 2)
@@ -450,7 +472,7 @@ class RunIsolatedTest(RunIsolatedTestBase):
     self.assertTrue(fs.isfile(client_binary_file))
 
     # Test echo call.
-    echo_cmd, _ = self.popen_calls[2]
+    echo_cmd, _ = self.popen_calls[1]
     self.assertTrue(echo_cmd[0].endswith(
         os.path.sep + 'bin' + os.path.sep + 'echo' + cipd.EXECUTABLE_SUFFIX),
         echo_cmd[0])
@@ -555,6 +577,104 @@ class RunIsolatedTest(RunIsolatedTestBase):
         [([u'/bin/echo', u'hello', u'world'], {'detached': True})],
         self.popen_calls)
 
+  def test_clean_caches(self):
+    # Create an isolated cache and a named cache each with 2 items. Ensure that
+    # one item from each is removed.
+    fake_time = 1
+    fake_free_space = [102400]
+    np = self.temp_join('named_cache')
+    ip = self.temp_join('isolated_cache')
+    args = [
+      '--named-cache-root', np, '--cache', ip, '--clean',
+      '--min-free-space', '10240',
+      '--log-file', self.temp_join('run_isolated.log'),
+    ]
+    self.mock(file_path, 'get_free_space', lambda _: fake_free_space[0])
+    parser, options, _ = run_isolated.parse_args(args)
+    isolate_cache = isolateserver.process_cache_options(
+        options, trim=False, time_fn=lambda: fake_time)
+    self.assertIsInstance(isolate_cache, isolateserver.DiskCache)
+    named_cache_manager = named_cache.process_named_cache_options(
+        parser, options)
+    self.assertIsInstance(named_cache_manager, named_cache.CacheManager)
+
+    # Add items to these caches.
+    small = '0123456789'
+    big = small * 1014
+    small_digest = unicode(ALGO(small).hexdigest())
+    big_digest = unicode(ALGO(big).hexdigest())
+    with isolate_cache:
+      fake_time = 1
+      isolate_cache.write(big_digest, [big])
+      fake_time = 2
+      isolate_cache.write(small_digest, [small])
+    with named_cache_manager.open(time_fn=lambda: fake_time):
+      fake_time = 1
+      p = named_cache_manager.request('first')
+      with open(os.path.join(p, 'big'), 'wb') as f:
+        f.write(big)
+      fake_time = 3
+      p = named_cache_manager.request('second')
+      with open(os.path.join(p, 'small'), 'wb') as f:
+        f.write(small)
+
+    # Ensures the cache contain the expected data.
+    actual = genTree(np)
+    # Figure out the cache path names.
+    cache_small = [
+        os.path.dirname(n) for n in actual if os.path.basename(n) == 'small'][0]
+    cache_big = [
+        os.path.dirname(n) for n in actual if os.path.basename(n) == 'big'][0]
+    expected = {
+      os.path.join(cache_small, u'small'): small,
+      os.path.join(cache_big, u'big'): big,
+      u'state.json':
+          '{"items":[["first",["%s",1]],["second",["%s",3]]],"version":2}' % (
+          cache_big, cache_small),
+    }
+    self.assertEqual(expected, actual)
+    expected = {
+      big_digest: big,
+      small_digest: small,
+      u'state.json':
+          '{"items":[["%s",[10140,1]],["%s",[10,2]]],"version":2}' % (
+          big_digest, small_digest),
+    }
+    self.assertEqual(expected, genTree(ip))
+
+    # Request triming.
+    fake_free_space[0] = 1020
+    # Abuse the fact that named cache is trimed after isolated cache.
+    def rmtree(p):
+      self.assertEqual(os.path.join(np, cache_big), p)
+      fake_free_space[0] += 10240
+      return old_rmtree(p)
+    old_rmtree = self.mock(file_path, 'rmtree', rmtree)
+    isolate_cache = isolateserver.process_cache_options(options, trim=False)
+    named_cache_manager = named_cache.process_named_cache_options(
+        parser, options)
+    actual = run_isolated.clean_caches(
+        options, isolate_cache, named_cache_manager)
+    self.assertEqual(2, actual)
+    # One of each entry should have been cleaned up. This only happen to work
+    # because:
+    # - file_path.get_free_space() is mocked
+    # - DiskCache.trim() keeps its own internal counter while deleting files so
+    #   it ignores get_free_space() output while deleting files.
+    actual = genTree(np)
+    expected = {
+      os.path.join(cache_small, u'small'): small,
+      u'state.json':
+          '{"items":[["second",["%s",3]]],"version":2}' % cache_small,
+    }
+    self.assertEqual(expected, actual)
+    expected = {
+      small_digest: small,
+      u'state.json':
+          '{"items":[["%s",[10,2]]],"version":2}' % small_digest,
+    }
+    self.assertEqual(expected, genTree(ip))
+
 
 class RunIsolatedTestRun(RunIsolatedTestBase):
   def test_output(self):
@@ -588,14 +708,13 @@ class RunIsolatedTestRun(RunIsolatedTestBase):
 
       self.mock(sys, 'stdout', StringIO.StringIO())
       ret = run_isolated.run_tha_test(
-          None,
+          [],
           isolated_hash,
           store,
           isolateserver.MemoryCache(),
           None,
           init_named_caches_stub,
           False,
-          None,
           None,
           None,
           None,
@@ -642,7 +761,7 @@ class RunIsolatedTestRun(RunIsolatedTestBase):
 # Like RunIsolatedTestRun, but ensures that specific output files
 # (as opposed to anything in $(ISOLATED_OUTDIR)) are returned.
 class RunIsolatedTestOutputFiles(RunIsolatedTestBase):
-  def test_output(self):
+  def _run_test(self, isolated, command):
     # Starts a full isolate server mock and have run_tha_test() uploads results
     # back after the task completed.
     server = isolateserver_mock.MockIsolateServer()
@@ -652,17 +771,10 @@ class RunIsolatedTestOutputFiles(RunIsolatedTestBase):
         'open(sys.argv[1], "w").write("bar")\n'
         'open(sys.argv[2], "w").write("baz")\n')
       script_hash = isolateserver_mock.hash_content(script)
-      isolated = {
-        'algo': 'sha-1',
-        'command': ['cmd.py', 'foo', 'foodir/foo2'],
-        'files': {
-          'cmd.py': {
-            'h': script_hash,
-            'm': 0700,
-            's': len(script),
-          },
-        },
-        'version': isolated_format.ISOLATED_FILE_VERSION,
+      isolated['files']['cmd.py'] = {
+        'h': script_hash,
+        'm': 0700,
+        's': len(script),
       }
       if sys.platform == 'win32':
         isolated['files']['cmd.py'].pop('m')
@@ -674,14 +786,13 @@ class RunIsolatedTestOutputFiles(RunIsolatedTestBase):
 
       self.mock(sys, 'stdout', StringIO.StringIO())
       ret = run_isolated.run_tha_test(
-          None,
+          command,
           isolated_hash,
           store,
           isolateserver.MemoryCache(),
           ['foo', 'foodir/foo2'],
           init_named_caches_stub,
           False,
-          None,
           None,
           None,
           None,
@@ -732,6 +843,35 @@ class RunIsolatedTestOutputFiles(RunIsolatedTestBase):
       self.assertEqual(expected, sys.stdout.getvalue())
     finally:
       server.close()
+
+  def test_output_cmd_isolated(self):
+    isolated = {
+      'algo': 'sha-1',
+      'command': ['cmd.py', 'foo', 'foodir/foo2'],
+      'files': {
+      },
+      'version': isolated_format.ISOLATED_FILE_VERSION,
+    }
+    self._run_test(isolated, [])
+
+  def test_output_cmd(self):
+    isolated = {
+      'algo': 'sha-1',
+      'files': {
+      },
+      'version': isolated_format.ISOLATED_FILE_VERSION,
+    }
+    self._run_test(isolated, ['cmd.py', 'foo', 'foodir/foo2'])
+
+  def test_output_cmd_isolated_extra_args(self):
+    isolated = {
+      'algo': 'sha-1',
+      'command': ['cmd.py'],
+      'files': {
+      },
+      'version': isolated_format.ISOLATED_FILE_VERSION,
+    }
+    self._run_test(isolated, ['foo', 'foodir/foo2'])
 
 
 class RunIsolatedJsonTest(RunIsolatedTestBase):
@@ -784,6 +924,7 @@ class RunIsolatedJsonTest(RunIsolatedTestBase):
         '--isolate-server', 'https://localhost:1',
         '--named-cache-root', os.path.join(self.tempdir, 'c'),
         '--json', out,
+        '--root-dir', self.tempdir,
     ]
     ret = run_isolated.main(cmd)
     self.assertEqual(0, ret)

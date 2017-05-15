@@ -81,8 +81,8 @@ DirectoryLister::~DirectoryLister() {
 
 void DirectoryLister::Start() {
   base::PostTaskWithTraits(
-      FROM_HERE, base::TaskTraits().MayBlock().WithShutdownBehavior(
-                     base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN),
+      FROM_HERE,
+      {base::MayBlock(), base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN},
       base::Bind(&Core::Start, core_));
 }
 

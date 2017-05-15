@@ -81,6 +81,11 @@ TYPED_TEST_P(VerifyCertificateChainSingleRootTest, WrongSignature) {
   this->RunTest("incorrect-trust-anchor/main.test");
 }
 
+TYPED_TEST_P(VerifyCertificateChainSingleRootTest, LastCertificateNotTrusted) {
+  this->RunTest("target-and-intermediate/distrusted-root.test");
+  this->RunTest("target-and-intermediate/unspecified-trust-root.test");
+}
+
 TYPED_TEST_P(VerifyCertificateChainSingleRootTest, TargetSignedBy512bitRsa) {
   this->RunTest("target-signed-by-512bit-rsa/main.test");
 }
@@ -90,11 +95,13 @@ TYPED_TEST_P(VerifyCertificateChainSingleRootTest, TargetSignedUsingEcdsa) {
 }
 
 TYPED_TEST_P(VerifyCertificateChainSingleRootTest, Expired) {
-  this->RunTest("expired-target/main.test");
-  this->RunTest("expired-intermediate/main.test");
-  this->RunTest("expired-target-notBefore/main.test");
-  this->RunTest("expired-root/main.test");
-  this->RunTest("expired-root/ta-with-constraints.test");
+  this->RunTest("expired-target/not-before.test");
+  this->RunTest("expired-target/not-after.test");
+  this->RunTest("expired-intermediate/not-before.test");
+  this->RunTest("expired-intermediate/not-after.test");
+  this->RunTest("expired-root/not-before.test");
+  this->RunTest("expired-root/not-after.test");
+  this->RunTest("expired-root/not-after-ta-with-constraints.test");
 }
 
 TYPED_TEST_P(VerifyCertificateChainSingleRootTest, TargetNotEndEntity) {
@@ -105,15 +112,16 @@ TYPED_TEST_P(VerifyCertificateChainSingleRootTest, KeyUsage) {
   this->RunTest("intermediate-lacks-signing-key-usage/main.test");
   this->RunTest("target-has-keycertsign-but-not-ca/main.test");
 
-  this->RunTest("serverauth-ec-ku-decipheronly/main.test");
-  this->RunTest("serverauth-ec-ku-digitalsignature/main.test");
-  this->RunTest("serverauth-ec-ku-keyagreement/main.test");
-  this->RunTest("serverauth-ec-ku-keyencipherment/main.test");
+  this->RunTest("target-serverauth-various-keyusages/rsa-decipherOnly.test");
+  this->RunTest(
+      "target-serverauth-various-keyusages/rsa-digitalSignature.test");
+  this->RunTest("target-serverauth-various-keyusages/rsa-keyAgreement.test");
+  this->RunTest("target-serverauth-various-keyusages/rsa-keyEncipherment.test");
 
-  this->RunTest("serverauth-rsa-ku-decipheronly/main.test");
-  this->RunTest("serverauth-rsa-ku-digitalsignature/main.test");
-  this->RunTest("serverauth-rsa-ku-keyagreement/main.test");
-  this->RunTest("serverauth-rsa-ku-keyencipherment/main.test");
+  this->RunTest("target-serverauth-various-keyusages/ec-decipherOnly.test");
+  this->RunTest("target-serverauth-various-keyusages/ec-digitalSignature.test");
+  this->RunTest("target-serverauth-various-keyusages/ec-keyAgreement.test");
+  this->RunTest("target-serverauth-various-keyusages/ec-keyEncipherment.test");
 }
 
 TYPED_TEST_P(VerifyCertificateChainSingleRootTest, ExtendedKeyUsage) {
@@ -155,6 +163,7 @@ REGISTER_TYPED_TEST_CASE_P(VerifyCertificateChainSingleRootTest,
                            UnknownExtension,
                            Md5,
                            WrongSignature,
+                           LastCertificateNotTrusted,
                            TargetSignedBy512bitRsa,
                            TargetSignedUsingEcdsa,
                            Expired,

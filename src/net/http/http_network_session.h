@@ -175,9 +175,6 @@ class NET_EXPORT HttpNetworkSession
     bool quic_race_cert_verification;
     // If true, configure QUIC sockets to not fragment packets.
     bool quic_do_not_fragment;
-    // If true, alternative service is not marked as broken if the alternative
-    // job fails due to a network change event.
-    bool quic_do_not_mark_as_broken_on_network_change;
     // If true, estimate the initial RTT for QUIC connections based on network.
     bool quic_estimate_initial_rtt;
 

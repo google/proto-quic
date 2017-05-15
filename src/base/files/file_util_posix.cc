@@ -87,17 +87,6 @@ static int CallLstat(const char *path, stat_wrapper_t *sb) {
 #endif  // !(defined(OS_BSD) || defined(OS_MACOSX) || defined(OS_NACL))
 
 #if !defined(OS_NACL_NONSFI)
-// Helper for NormalizeFilePath(), defined below.
-bool RealPath(const FilePath& path, FilePath* real_path) {
-  ThreadRestrictions::AssertIOAllowed();  // For realpath().
-  FilePath::CharType buf[PATH_MAX];
-  if (!realpath(path.value().c_str(), buf))
-    return false;
-
-  *real_path = FilePath(buf);
-  return true;
-}
-
 // Helper for VerifyPathControlledByUser.
 bool VerifySpecificPathControlledByUser(const FilePath& path,
                                         uid_t owner_uid,
@@ -677,8 +666,8 @@ bool CreateDirectoryAndGetError(const FilePath& full_path,
 }
 
 bool NormalizeFilePath(const FilePath& path, FilePath* normalized_path) {
-  FilePath real_path_result;
-  if (!RealPath(path, &real_path_result))
+  FilePath real_path_result = MakeAbsoluteFilePath(path);
+  if (real_path_result.empty())
     return false;
 
   // To be consistant with windows, fail if |real_path_result| is a

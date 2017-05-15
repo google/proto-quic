@@ -27,13 +27,6 @@ class SPDY_EXPORT_PRIVATE SpdyHeadersHandlerInterface {
   // values for a given key will be emitted as multiple calls to OnHeader.
   virtual void OnHeader(SpdyStringPiece key, SpdyStringPiece value) = 0;
 
-  // TODO(yasong): deprecate this method with
-  // --chromium_http2_flag_log_compressed_size.
-  // A callback method which notifies when the parser finishes handling a
-  // header block (i.e. the containing frame has the END_HEADERS flag set).
-  // Also indicates the total number of bytes in this block.
-  virtual void OnHeaderBlockEnd(size_t uncompressed_header_bytes) = 0;
-
   // A callback method which notifies when the parser finishes handling a
   // header block (i.e. the containing frame has the END_HEADERS flag set).
   // Also indicates the total number of bytes in this block.

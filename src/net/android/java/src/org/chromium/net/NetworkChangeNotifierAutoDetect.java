@@ -26,14 +26,15 @@ import android.net.NetworkRequest;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.telephony.TelephonyManager;
 
 import org.chromium.base.ApplicationState;
 import org.chromium.base.ApplicationStatus;
+import org.chromium.base.BuildConfig;
 import org.chromium.base.ContextUtils;
-import org.chromium.base.ThreadUtils;
 import org.chromium.base.VisibleForTesting;
-import org.chromium.base.metrics.RecordHistogram;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -48,7 +49,10 @@ import javax.annotation.concurrent.GuardedBy;
 // TODO(crbug.com/635567): Fix this properly.
 @SuppressLint("NewApi")
 public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
-    static class NetworkState {
+    /**
+     * Immutable class representing the state of a device's network.
+     */
+    public static class NetworkState {
         private final boolean mConnected;
         private final int mType;
         private final int mSubtype;
@@ -80,18 +84,76 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
         public String getWifiSsid() {
             return mWifiSsid;
         }
+
+        /**
+         * Returns the connection type for the given NetworkState.
+         */
+        @ConnectionType
+        public int getConnectionType() {
+            if (!isConnected()) {
+                return ConnectionType.CONNECTION_NONE;
+            }
+            return convertToConnectionType(getNetworkType(), getNetworkSubType());
+        }
+
+        /**
+         * Returns the connection subtype for the given NetworkState.
+         */
+        public int getConnectionSubtype() {
+            if (!isConnected()) {
+                return ConnectionSubtype.SUBTYPE_NONE;
+            }
+
+            switch (getNetworkType()) {
+                case ConnectivityManager.TYPE_ETHERNET:
+                case ConnectivityManager.TYPE_WIFI:
+                case ConnectivityManager.TYPE_WIMAX:
+                case ConnectivityManager.TYPE_BLUETOOTH:
+                    return ConnectionSubtype.SUBTYPE_UNKNOWN;
+                case ConnectivityManager.TYPE_MOBILE:
+                    // Use information from TelephonyManager to classify the connection.
+                    switch (getNetworkSubType()) {
+                        case TelephonyManager.NETWORK_TYPE_GPRS:
+                            return ConnectionSubtype.SUBTYPE_GPRS;
+                        case TelephonyManager.NETWORK_TYPE_EDGE:
+                            return ConnectionSubtype.SUBTYPE_EDGE;
+                        case TelephonyManager.NETWORK_TYPE_CDMA:
+                            return ConnectionSubtype.SUBTYPE_CDMA;
+                        case TelephonyManager.NETWORK_TYPE_1xRTT:
+                            return ConnectionSubtype.SUBTYPE_1XRTT;
+                        case TelephonyManager.NETWORK_TYPE_IDEN:
+                            return ConnectionSubtype.SUBTYPE_IDEN;
+                        case TelephonyManager.NETWORK_TYPE_UMTS:
+                            return ConnectionSubtype.SUBTYPE_UMTS;
+                        case TelephonyManager.NETWORK_TYPE_EVDO_0:
+                            return ConnectionSubtype.SUBTYPE_EVDO_REV_0;
+                        case TelephonyManager.NETWORK_TYPE_EVDO_A:
+                            return ConnectionSubtype.SUBTYPE_EVDO_REV_A;
+                        case TelephonyManager.NETWORK_TYPE_HSDPA:
+                            return ConnectionSubtype.SUBTYPE_HSDPA;
+                        case TelephonyManager.NETWORK_TYPE_HSUPA:
+                            return ConnectionSubtype.SUBTYPE_HSUPA;
+                        case TelephonyManager.NETWORK_TYPE_HSPA:
+                            return ConnectionSubtype.SUBTYPE_HSPA;
+                        case TelephonyManager.NETWORK_TYPE_EVDO_B:
+                            return ConnectionSubtype.SUBTYPE_EVDO_REV_B;
+                        case TelephonyManager.NETWORK_TYPE_EHRPD:
+                            return ConnectionSubtype.SUBTYPE_EHRPD;
+                        case TelephonyManager.NETWORK_TYPE_HSPAP:
+                            return ConnectionSubtype.SUBTYPE_HSPAP;
+                        case TelephonyManager.NETWORK_TYPE_LTE:
+                            return ConnectionSubtype.SUBTYPE_LTE;
+                        default:
+                            return ConnectionSubtype.SUBTYPE_UNKNOWN;
+                    }
+                default:
+                    return ConnectionSubtype.SUBTYPE_UNKNOWN;
+            }
+        }
     }
 
     /** Queries the ConnectivityManager for information about the current connection. */
     static class ConnectivityManagerDelegate {
-        private static final int NETWORK_INFO_DISCONNECTED = 0;
-        private static final int NETWORK_INFO_CONNECTED = 1;
-        private static final int NETWORK_INFO_ANDROID_API_LEVEL_TOO_OLD_FOR_UNBLOCKING = 2;
-        private static final int NETWORK_INFO_NOT_BLOCKED = 3;
-        private static final int NETWORK_INFO_APP_NOT_IN_FOREGROUND = 4;
-        private static final int NETWORK_INFO_UNBLOCKED = 5;
-        private static final int NETWORK_INFO_BOUNDARY = 6;
-
         private final ConnectivityManager mConnectivityManager;
 
         ConnectivityManagerDelegate(Context context) {
@@ -112,12 +174,10 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
         private NetworkInfo getActiveNetworkInfo() {
             final NetworkInfo networkInfo = mConnectivityManager.getActiveNetworkInfo();
             if (networkInfo == null) {
-                recordGetActiveNetworkInfoResult(NETWORK_INFO_DISCONNECTED);
                 return null;
             }
 
             if (networkInfo.isConnected()) {
-                recordGetActiveNetworkInfoResult(NETWORK_INFO_CONNECTED);
                 return networkInfo;
             }
 
@@ -126,36 +186,21 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
             // meant for apps in the background.  See https://crbug.com/677365 for more details.
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
                 // https://crbug.com/677365 primarily affects only Lollipop and higher versions.
-                recordGetActiveNetworkInfoResult(
-                        NETWORK_INFO_ANDROID_API_LEVEL_TOO_OLD_FOR_UNBLOCKING);
                 return null;
             }
 
             if (networkInfo.getDetailedState() != NetworkInfo.DetailedState.BLOCKED) {
                 // Network state is not blocked which implies that network access is
                 // unavailable (not just blocked to this app).
-                recordGetActiveNetworkInfoResult(NETWORK_INFO_NOT_BLOCKED);
                 return null;
             }
 
             if (ApplicationStatus.getStateForApplication()
                     != ApplicationState.HAS_RUNNING_ACTIVITIES) {
                 // The app is not in the foreground.
-                recordGetActiveNetworkInfoResult(NETWORK_INFO_APP_NOT_IN_FOREGROUND);
                 return null;
             }
-            recordGetActiveNetworkInfoResult(NETWORK_INFO_UNBLOCKED);
             return networkInfo;
-        }
-
-        /**
-         * Records the result of querying the network info of the current active network.
-         * @param result Result of querying the network info of the current active network.
-         */
-        private static void recordGetActiveNetworkInfoResult(int result) {
-            assert result >= 0 && result < NETWORK_INFO_BOUNDARY;
-            RecordHistogram.recordEnumeratedHistogram(
-                    "NCN.GetActiveNetworkInfoResult", result, NETWORK_INFO_BOUNDARY);
         }
 
         /**
@@ -184,19 +229,12 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
         // Fetches NetworkInfo and records UMA for NullPointerExceptions.
         private NetworkInfo getNetworkInfo(Network network) {
             try {
-                NetworkInfo networkInfo = mConnectivityManager.getNetworkInfo(network);
-                RecordHistogram.recordBooleanHistogram("NCN.getNetInfo1stSuccess", true);
-                return networkInfo;
+                return mConnectivityManager.getNetworkInfo(network);
             } catch (NullPointerException firstException) {
-                RecordHistogram.recordBooleanHistogram("NCN.getNetInfo1stSuccess", false);
-                // Try the IPC again to test if the NPE is a random/transient/ephemeral failure.
-                // This will indicate if retrying is a viable solution.
+                // Rarely this unexpectedly throws. Retry or just return {@code null} if it fails.
                 try {
-                    NetworkInfo networkInfo = mConnectivityManager.getNetworkInfo(network);
-                    RecordHistogram.recordBooleanHistogram("NCN.getNetInfo2ndSuccess", true);
-                    return networkInfo;
+                    return mConnectivityManager.getNetworkInfo(network);
                 } catch (NullPointerException secondException) {
-                    RecordHistogram.recordBooleanHistogram("NCN.getNetInfo2ndSuccess", false);
                     return null;
                 }
             }
@@ -231,7 +269,9 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
         @TargetApi(Build.VERSION_CODES.LOLLIPOP)
         @VisibleForTesting
         protected Network[] getAllNetworksUnfiltered() {
-            return mConnectivityManager.getAllNetworks();
+            Network[] networks = mConnectivityManager.getAllNetworks();
+            // Very rarely this API inexplicably returns {@code null}, crbug.com/721116.
+            return networks == null ? new Network[0] : networks;
         }
 
         /**
@@ -367,7 +407,7 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
         }
 
         String getWifiSsid() {
-            // Synchronized because this method can be called on multiple threads (e.g. UI thread
+            // Synchronized because this method can be called on multiple threads (e.g. mLooper
             // from a private caller, and another thread calling a public API like
             // getCurrentNetworkState) and is otherwise racy.
             synchronized (mLock) {
@@ -387,19 +427,12 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
         @GuardedBy("mLock")
         private WifiInfo getWifiInfoLocked() {
             try {
-                WifiInfo wifiInfo = mWifiManager.getConnectionInfo();
-                RecordHistogram.recordBooleanHistogram("NCN.getWifiInfo1stSuccess", true);
-                return wifiInfo;
+                return mWifiManager.getConnectionInfo();
             } catch (NullPointerException firstException) {
-                RecordHistogram.recordBooleanHistogram("NCN.getWifiInfo1stSuccess", false);
-                // Try the IPC again to test if the NPE is a random/transient/ephemeral failure.
-                // This will indicate if retrying is a viable solution.
+                // Rarely this unexpectedly throws. Retry or just return {@code null} if it fails.
                 try {
-                    WifiInfo wifiInfo = mWifiManager.getConnectionInfo();
-                    RecordHistogram.recordBooleanHistogram("NCN.getWifiInfo2ndSuccess", true);
-                    return wifiInfo;
+                    return mWifiManager.getConnectionInfo();
                 } catch (NullPointerException secondException) {
-                    RecordHistogram.recordBooleanHistogram("NCN.getWifiInfo2ndSuccess", false);
                     return null;
                 }
             }
@@ -409,7 +442,7 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
     // This class gets called back by ConnectivityManager whenever networks come
     // and go. It gets called back on a special handler thread
     // ConnectivityManager creates for making the callbacks. The callbacks in
-    // turn post to the UI thread where mObserver lives.
+    // turn post to mLooper where mObserver lives.
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private class MyNetworkCallback extends NetworkCallback {
         // If non-null, this indicates a VPN is in place for the current user, and no other
@@ -484,7 +517,7 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
             final long netId = networkToNetId(network);
             @ConnectionType
             final int connectionType = mConnectivityManagerDelegate.getConnectionType(network);
-            ThreadUtils.postOnUiThread(new Runnable() {
+            runOnThread(new Runnable() {
                 @Override
                 public void run() {
                     mObserver.onNetworkConnect(netId, connectionType);
@@ -508,7 +541,7 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
             // so forward the new ConnectionType along to observer.
             final long netId = networkToNetId(network);
             final int connectionType = mConnectivityManagerDelegate.getConnectionType(network);
-            ThreadUtils.postOnUiThread(new Runnable() {
+            runOnThread(new Runnable() {
                 @Override
                 public void run() {
                     mObserver.onNetworkConnect(netId, connectionType);
@@ -522,7 +555,7 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
                 return;
             }
             final long netId = networkToNetId(network);
-            ThreadUtils.postOnUiThread(new Runnable() {
+            runOnThread(new Runnable() {
                 @Override
                 public void run() {
                     mObserver.onNetworkSoonToDisconnect(netId);
@@ -535,7 +568,7 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
             if (ignoreNetworkDueToVpn(network)) {
                 return;
             }
-            ThreadUtils.postOnUiThread(new Runnable() {
+            runOnThread(new Runnable() {
                 @Override
                 public void run() {
                     mObserver.onNetworkDisconnect(networkToNetId(network));
@@ -552,8 +585,8 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
                     onAvailable(newNetwork);
                 }
                 @ConnectionType
-                final int newConnectionType = convertToConnectionType(getCurrentNetworkState());
-                ThreadUtils.postOnUiThread(new Runnable() {
+                final int newConnectionType = getCurrentNetworkState().getConnectionType();
+                runOnThread(new Runnable() {
                     @Override
                     public void run() {
                         mObserver.onConnectionTypeChanged(newConnectionType);
@@ -597,10 +630,16 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
         protected abstract void destroy();
     }
 
-    private static final String TAG = "NetworkChangeNotifierAutoDetect";
+    private static final String TAG = NetworkChangeNotifierAutoDetect.class.getSimpleName();
     private static final int UNKNOWN_LINK_SPEED = -1;
 
+    // {@link Looper} for the thread this object lives on.
+    private final Looper mLooper;
+    // Used to post to the thread this object lives on.
+    private final Handler mHandler;
+    // {@link IntentFilter} for incoming global broadcast {@link Intent}s this object listens for.
     private final NetworkConnectivityIntentFilter mIntentFilter;
+    // Notifications are sent to this {@link Observer}.
     private final Observer mObserver;
     private final RegistrationPolicy mRegistrationPolicy;
 
@@ -611,11 +650,7 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
     private final MyNetworkCallback mNetworkCallback;
     private final NetworkRequest mNetworkRequest;
     private boolean mRegistered;
-    @ConnectionType
-    private int mConnectionType;
-    private String mWifiSSID;
-    private double mMaxBandwidthMbps;
-    private int mMaxBandwidthConnectionType;
+    private NetworkState mNetworkState;
     // When a BroadcastReceiver is registered for a sticky broadcast that has been sent out at
     // least once, onReceive() will immediately be called. mIgnoreNextBroadcast is set to true
     // when this class is registered in such a circumstance, and indicates that the next
@@ -640,9 +675,9 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
          */
         public void onConnectionTypeChanged(@ConnectionType int newConnectionType);
         /**
-         * Called when maximum bandwidth of default network changes.
+         * Called when connection subtype of default network changes.
          */
-        public void onMaxBandwidthChanged(double maxBandwidthMbps);
+        public void onConnectionSubtypeChanged(int newConnectionSubtype);
         /**
          * Called when device connects to network with NetID netId. For
          * example device associates with a WiFi access point.
@@ -675,16 +710,17 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
     }
 
     /**
-     * Constructs a NetworkChangeNotifierAutoDetect. Should only be called on UI thread.
+     * Constructs a NetworkChangeNotifierAutoDetect.  Lives on calling thread, receives broadcast
+     * notifications on the UI thread and forwards the notifications to be processed on the calling
+     * thread.
      * @param policy The RegistrationPolicy which determines when this class should watch
      *     for network changes (e.g. see (@link RegistrationPolicyAlwaysRegister} and
      *     {@link RegistrationPolicyApplicationStatus}).
      */
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public NetworkChangeNotifierAutoDetect(Observer observer, RegistrationPolicy policy) {
-        // Since BroadcastReceiver is always called back on UI thread, ensure
-        // running on UI thread so notification logic can be single-threaded.
-        ThreadUtils.assertOnUiThread();
+        mLooper = Looper.myLooper();
+        mHandler = new Handler(mLooper);
         mObserver = observer;
         mConnectivityManagerDelegate =
                 new ConnectivityManagerDelegate(ContextUtils.getApplicationContext());
@@ -700,17 +736,32 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
             mNetworkCallback = null;
             mNetworkRequest = null;
         }
-        final NetworkState networkState = getCurrentNetworkState();
-        mConnectionType = convertToConnectionType(networkState);
-        mWifiSSID = networkState.getWifiSsid();
-        mMaxBandwidthMbps = getCurrentMaxBandwidthInMbps(networkState);
-        mMaxBandwidthConnectionType = mConnectionType;
+        mNetworkState = getCurrentNetworkState();
         mIntentFilter = new NetworkConnectivityIntentFilter();
         mIgnoreNextBroadcast = false;
         mShouldSignalObserver = false;
         mRegistrationPolicy = policy;
         mRegistrationPolicy.init(this);
         mShouldSignalObserver = true;
+    }
+
+    private boolean onThread() {
+        return mLooper == Looper.myLooper();
+    }
+
+    private void assertOnThread() {
+        if (BuildConfig.DCHECK_IS_ON && !onThread()) {
+            throw new IllegalStateException(
+                    "Must be called on NetworkChangeNotifierAutoDetect thread.");
+        }
+    }
+
+    private void runOnThread(Runnable r) {
+        if (onThread()) {
+            r.run();
+        } else {
+            mHandler.post(r);
+        }
     }
 
     /**
@@ -741,6 +792,7 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
     }
 
     public void destroy() {
+        assertOnThread();
         mRegistrationPolicy.destroy();
         unregister();
     }
@@ -749,13 +801,11 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
      * Registers a BroadcastReceiver in the given context.
      */
     public void register() {
-        ThreadUtils.assertOnUiThread();
+        assertOnThread();
         if (mRegistered) return;
 
         if (mShouldSignalObserver) {
-            final NetworkState networkState = getCurrentNetworkState();
-            connectionTypeChanged(networkState);
-            maxBandwidthChanged(networkState);
+            connectionTypeChanged();
         }
         // When registering for a sticky broadcast, like CONNECTIVITY_ACTION, if registerReceiver
         // returns non-null, it means the broadcast was previously issued and onReceive() will be
@@ -790,6 +840,7 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
      * Unregisters a BroadcastReceiver in the given context.
      */
     public void unregister() {
+        assertOnThread();
         if (!mRegistered) return;
         ContextUtils.getApplicationContext().unregisterReceiver(this);
         mRegistered = false;
@@ -874,18 +925,6 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
     }
 
     /**
-     * Returns the connection type for the given NetworkState.
-     */
-    @ConnectionType
-    public static int convertToConnectionType(NetworkState networkState) {
-        if (!networkState.isConnected()) {
-            return ConnectionType.CONNECTION_NONE;
-        }
-        return convertToConnectionType(
-                networkState.getNetworkType(), networkState.getNetworkSubType());
-    }
-
-    /**
      * Returns the connection type for the given ConnectivityManager type and subtype.
      */
     @ConnectionType
@@ -928,106 +967,37 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
         }
     }
 
-    /**
-     * Returns the connection subtype for the given NetworkState.
-     */
-    public static int convertToConnectionSubtype(NetworkState networkState) {
-        if (!networkState.isConnected()) {
-            return ConnectionSubtype.SUBTYPE_NONE;
-        }
-
-        switch (networkState.getNetworkType()) {
-            case ConnectivityManager.TYPE_ETHERNET:
-            case ConnectivityManager.TYPE_WIFI:
-            case ConnectivityManager.TYPE_WIMAX:
-            case ConnectivityManager.TYPE_BLUETOOTH:
-                return ConnectionSubtype.SUBTYPE_UNKNOWN;
-            case ConnectivityManager.TYPE_MOBILE:
-                // Use information from TelephonyManager to classify the connection.
-                switch (networkState.getNetworkSubType()) {
-                    case TelephonyManager.NETWORK_TYPE_GPRS:
-                        return ConnectionSubtype.SUBTYPE_GPRS;
-                    case TelephonyManager.NETWORK_TYPE_EDGE:
-                        return ConnectionSubtype.SUBTYPE_EDGE;
-                    case TelephonyManager.NETWORK_TYPE_CDMA:
-                        return ConnectionSubtype.SUBTYPE_CDMA;
-                    case TelephonyManager.NETWORK_TYPE_1xRTT:
-                        return ConnectionSubtype.SUBTYPE_1XRTT;
-                    case TelephonyManager.NETWORK_TYPE_IDEN:
-                        return ConnectionSubtype.SUBTYPE_IDEN;
-                    case TelephonyManager.NETWORK_TYPE_UMTS:
-                        return ConnectionSubtype.SUBTYPE_UMTS;
-                    case TelephonyManager.NETWORK_TYPE_EVDO_0:
-                        return ConnectionSubtype.SUBTYPE_EVDO_REV_0;
-                    case TelephonyManager.NETWORK_TYPE_EVDO_A:
-                        return ConnectionSubtype.SUBTYPE_EVDO_REV_A;
-                    case TelephonyManager.NETWORK_TYPE_HSDPA:
-                        return ConnectionSubtype.SUBTYPE_HSDPA;
-                    case TelephonyManager.NETWORK_TYPE_HSUPA:
-                        return ConnectionSubtype.SUBTYPE_HSUPA;
-                    case TelephonyManager.NETWORK_TYPE_HSPA:
-                        return ConnectionSubtype.SUBTYPE_HSPA;
-                    case TelephonyManager.NETWORK_TYPE_EVDO_B:
-                        return ConnectionSubtype.SUBTYPE_EVDO_REV_B;
-                    case TelephonyManager.NETWORK_TYPE_EHRPD:
-                        return ConnectionSubtype.SUBTYPE_EHRPD;
-                    case TelephonyManager.NETWORK_TYPE_HSPAP:
-                        return ConnectionSubtype.SUBTYPE_HSPAP;
-                    case TelephonyManager.NETWORK_TYPE_LTE:
-                        return ConnectionSubtype.SUBTYPE_LTE;
-                    default:
-                        return ConnectionSubtype.SUBTYPE_UNKNOWN;
-                }
-            default:
-                return ConnectionSubtype.SUBTYPE_UNKNOWN;
-        }
-    }
-
-    /**
-     * Returns the bandwidth of the current connection in Mbps. The result is
-     * derived from the NetInfo v3 specification's mapping from network type to
-     * max link speed. In cases where more information is available that is used
-     * instead. For more on NetInfo, see http://w3c.github.io/netinfo/.
-     */
-    public double getCurrentMaxBandwidthInMbps(NetworkState networkState) {
-        return NetworkChangeNotifier.getMaxBandwidthForConnectionSubtype(
-                convertToConnectionSubtype(networkState));
-    }
-
     // BroadcastReceiver
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (mIgnoreNextBroadcast) {
-            mIgnoreNextBroadcast = false;
-            return;
-        }
-        final NetworkState networkState = getCurrentNetworkState();
-        if (ConnectivityManager.CONNECTIVITY_ACTION.equals(intent.getAction())) {
-            connectionTypeChanged(networkState);
-            maxBandwidthChanged(networkState);
-        }
+        runOnThread(new Runnable() {
+            @Override
+            public void run() {
+                // Once execution begins on the correct thread, make sure unregister() hasn't
+                // been called in the mean time. Ignore the broadcast if unregister() was called.
+                if (!mRegistered) {
+                    return;
+                }
+                if (mIgnoreNextBroadcast) {
+                    mIgnoreNextBroadcast = false;
+                    return;
+                }
+                connectionTypeChanged();
+            }
+        });
     }
 
-    private void connectionTypeChanged(NetworkState networkState) {
-        @ConnectionType
-        int newConnectionType = convertToConnectionType(networkState);
-        String newWifiSSID = networkState.getWifiSsid();
-        if (newConnectionType == mConnectionType && newWifiSSID.equals(mWifiSSID)) return;
-
-        mConnectionType = newConnectionType;
-        mWifiSSID = newWifiSSID;
-        mObserver.onConnectionTypeChanged(newConnectionType);
-    }
-
-    private void maxBandwidthChanged(NetworkState networkState) {
-        double newMaxBandwidthMbps = getCurrentMaxBandwidthInMbps(networkState);
-        if (newMaxBandwidthMbps == mMaxBandwidthMbps
-                && mConnectionType == mMaxBandwidthConnectionType) {
-            return;
+    private void connectionTypeChanged() {
+        NetworkState networkState = getCurrentNetworkState();
+        if (networkState.getConnectionType() != mNetworkState.getConnectionType()
+                || !networkState.getWifiSsid().equals(mNetworkState.getWifiSsid())) {
+            mObserver.onConnectionTypeChanged(networkState.getConnectionType());
         }
-        mMaxBandwidthMbps = newMaxBandwidthMbps;
-        mMaxBandwidthConnectionType = mConnectionType;
-        mObserver.onMaxBandwidthChanged(newMaxBandwidthMbps);
+        if (networkState.getConnectionType() != mNetworkState.getConnectionType()
+                || networkState.getConnectionSubtype() != mNetworkState.getConnectionSubtype()) {
+            mObserver.onConnectionSubtypeChanged(networkState.getConnectionSubtype());
+        }
+        mNetworkState = networkState;
     }
 
     // TODO(crbug.com/635567): Fix this properly.

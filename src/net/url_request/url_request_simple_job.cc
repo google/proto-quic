@@ -73,8 +73,7 @@ int URLRequestSimpleJob::ReadRawData(IOBuffer* buf, int buf_size) {
   // Do memory copy asynchronously on a thread that is not the network thread.
   // See crbug.com/422489.
   base::PostTaskWithTraitsAndReply(
-      FROM_HERE, base::TaskTraits().WithShutdownBehavior(
-                     base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN),
+      FROM_HERE, {base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN},
       base::Bind(&CopyData, make_scoped_refptr(buf), buf_size, data_,
                  next_data_offset_),
       base::Bind(&URLRequestSimpleJob::ReadRawDataComplete,

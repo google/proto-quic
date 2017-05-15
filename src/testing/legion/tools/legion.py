@@ -53,6 +53,7 @@ class ArgumentError(Error):
 
 
 def GetArgs(cmd_args):
+  default_dimension = ['pool', 'Legion']
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument('action', choices=['run', 'trigger'],
                       help='The swarming action to perform.')
@@ -68,7 +69,8 @@ def GetArgs(cmd_args):
   parser.add_argument('--task-name', help='Optional. The swarming task name '
                       'to use.')
   parser.add_argument('--dimension', action='append', dest='dimensions',
-                      nargs=2, default=[], help='Dimensions to pass to '
+                      nargs=2, default=default_dimension,
+                      help='Dimensions to pass to '
                       'swarming.py. This is in the form of --dimension key '
                       'value. The minimum required is --dimension os <OS>')
   parser.add_argument('--task', action='append', dest='tasks',

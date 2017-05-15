@@ -26,7 +26,7 @@ bool TestTaskRunner::PostDelayedTask(const tracked_objects::Location& from_here,
   return false;
 }
 
-bool TestTaskRunner::RunsTasksOnCurrentThread() const {
+bool TestTaskRunner::RunsTasksInCurrentSequence() const {
   return true;
 }
 

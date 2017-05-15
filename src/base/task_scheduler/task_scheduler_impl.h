@@ -18,7 +18,7 @@
 #include "base/task_scheduler/delayed_task_manager.h"
 #include "base/task_scheduler/scheduler_single_thread_task_runner_manager.h"
 #include "base/task_scheduler/scheduler_worker_pool_impl.h"
-#include "base/task_scheduler/sequence.h"
+#include "base/task_scheduler/single_thread_task_runner_thread_mode.h"
 #include "base/task_scheduler/task_scheduler.h"
 #include "base/task_scheduler/task_tracker.h"
 #include "base/task_scheduler/task_traits.h"
@@ -53,10 +53,12 @@ class BASE_EXPORT TaskSchedulerImpl : public TaskScheduler {
   scoped_refptr<SequencedTaskRunner> CreateSequencedTaskRunnerWithTraits(
       const TaskTraits& traits) override;
   scoped_refptr<SingleThreadTaskRunner> CreateSingleThreadTaskRunnerWithTraits(
-      const TaskTraits& traits) override;
+      const TaskTraits& traits,
+      SingleThreadTaskRunnerThreadMode thread_mode) override;
 #if defined(OS_WIN)
   scoped_refptr<SingleThreadTaskRunner> CreateCOMSTATaskRunnerWithTraits(
-      const TaskTraits& traits) override;
+      const TaskTraits& traits,
+      SingleThreadTaskRunnerThreadMode thread_mode) override;
 #endif  // defined(OS_WIN)
   std::vector<const HistogramBase*> GetHistograms() const override;
   int GetMaxConcurrentTasksWithTraitsDeprecated(
@@ -69,10 +71,6 @@ class BASE_EXPORT TaskSchedulerImpl : public TaskScheduler {
   // Returns the worker pool that runs Tasks with |traits|.
   SchedulerWorkerPoolImpl* GetWorkerPoolForTraits(
       const TaskTraits& traits) const;
-
-  // Callback invoked when a non-single-thread |sequence| isn't empty after a
-  // worker pops a Task from it.
-  void ReEnqueueSequenceCallback(scoped_refptr<Sequence> sequence);
 
   const std::string name_;
   Thread service_thread_;

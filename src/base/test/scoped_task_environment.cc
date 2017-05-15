@@ -12,6 +12,27 @@
 namespace base {
 namespace test {
 
+namespace {
+
+class TaskObserver : public MessageLoop::TaskObserver {
+ public:
+  TaskObserver() = default;
+
+  // MessageLoop::TaskObserver:
+  void WillProcessTask(const PendingTask& pending_task) override {}
+  void DidProcessTask(const PendingTask& pending_task) override {
+    ran_task_ = true;
+  }
+
+  bool ran_task() const { return ran_task_; }
+
+ private:
+  bool ran_task_ = false;
+  DISALLOW_COPY_AND_ASSIGN(TaskObserver);
+};
+
+}  // namespace
+
 ScopedTaskEnvironment::ScopedTaskEnvironment(MainThreadType main_thread_type)
     : message_loop_(main_thread_type == MainThreadType::DEFAULT
                         ? MessageLoop::TYPE_DEFAULT
@@ -34,8 +55,8 @@ ScopedTaskEnvironment::ScopedTaskEnvironment(MainThreadType main_thread_type)
 }
 
 ScopedTaskEnvironment::~ScopedTaskEnvironment() {
-  RunLoop().RunUntilIdle();
-
+  // Intentionally do not RunLoop().RunUntilIdle() here as this simulates the
+  // replaced base::~MessageLoop() behaviour better.
   DCHECK_EQ(TaskScheduler::GetInstance(), task_scheduler_);
   // Without FlushForTesting(), DeleteSoon() and ReleaseSoon() tasks could be
   // skipped, resulting in memory leaks.
@@ -43,6 +64,20 @@ ScopedTaskEnvironment::~ScopedTaskEnvironment() {
   TaskScheduler::GetInstance()->Shutdown();
   TaskScheduler::GetInstance()->JoinForTesting();
   TaskScheduler::SetInstance(nullptr);
+}
+
+void ScopedTaskEnvironment::RunUntilIdle() {
+  for (;;) {
+    TaskScheduler::GetInstance()->FlushForTesting();
+
+    TaskObserver task_observer;
+    MessageLoop::current()->AddTaskObserver(&task_observer);
+    RunLoop().RunUntilIdle();
+    MessageLoop::current()->RemoveTaskObserver(&task_observer);
+
+    if (!task_observer.ran_task())
+      return;
+  }
 }
 
 }  // namespace test

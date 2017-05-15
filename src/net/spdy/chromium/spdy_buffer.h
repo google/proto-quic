@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_SPDY_SPDY_BUFFER_H_
-#define NET_SPDY_SPDY_BUFFER_H_
+#ifndef NET_SPDY_CHROMIUM_SPDY_BUFFER_H_
+#define NET_SPDY_CHROMIUM_SPDY_BUFFER_H_
 
 #include <cstddef>
 #include <memory>
@@ -105,4 +105,4 @@ class NET_EXPORT_PRIVATE SpdyBuffer {
 
 }  // namespace net
 
-#endif  // NET_SPDY_SPDY_BUFFER_H_
+#endif  // NET_SPDY_CHROMIUM_SPDY_BUFFER_H_

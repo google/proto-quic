@@ -79,7 +79,6 @@ class SpdyNoOpVisitor : public SpdyFramerVisitorInterface,
   // SpdyHeadersHandlerInterface methods:
   void OnHeaderBlockStart() override {}
   void OnHeader(SpdyStringPiece key, SpdyStringPiece value) override {}
-  void OnHeaderBlockEnd(size_t uncompressed_header_bytes) override {}
   void OnHeaderBlockEnd(size_t /* uncompressed_header_bytes */,
                         size_t /* compressed_header_bytes */) override {}
 };

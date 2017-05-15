@@ -8,8 +8,21 @@ import collections
 import logging
 import re
 
+import function_signature
 
-# Refer to models.SymbolGroup.Cluster() for pydoc
+
+def _StripCloneSuffix(name):
+  # Multiple attributes could exist, so search from left-to-right.
+  idx = name.find(' [clone ')
+  if idx != -1:
+    return name[:idx]
+  return name
+
+
+# Refer to models.SymbolGroup.Clustered() for pydoc
+# TODO(agrieve): This logic should likely be combined with
+#    SymbolGroup.GroupedBy(), as it conceptually does the same thing.
+#    One could also thing of this as GroupedByFullName().
 def ClusterSymbols(symbols):
   # http://unix.stackexchange.com/questions/223013/function-symbol-gets-part-suffix-after-compilation
   # Example name suffixes:
@@ -22,40 +35,40 @@ def ClusterSymbols(symbols):
   logging.debug('Creating name -> symbol map')
   clone_indices = []
   indices_by_full_name = {}
-  # (section_name, name, full_name) -> [(index, sym),...]
+  # (section_name, full_name_no_attr) -> [(index, sym),...]
   replacements_by_tup = collections.defaultdict(list)
   for i, symbol in enumerate(symbols):
-    if symbol.name.startswith('**'):
+    name = symbol.full_name
+    if not name:
+      continue
+    if name.startswith('*'):
       # "symbol gap 3" -> "symbol gaps"
-      name = re.sub(r'\s+\d+( \(.*\))?$', 's', symbol.name)
-      replacements_by_tup[(symbol.section_name, name, None)].append((i, symbol))
-    elif symbol.full_name:
-      if symbol.full_name.endswith(']') and ' [clone ' in symbol.full_name:
-        clone_indices.append(i)
-      else:
-        indices_by_full_name[symbol.full_name] = i
+      name = re.sub(r'\s+\d+( \(.*\))?$', 's', name)
+      replacements_by_tup[(symbol.section_name, name)].append((i, symbol))
+    elif name.endswith(']') and ' [clone ' in name:
+      clone_indices.append(i)
+    else:
+      indices_by_full_name[name] = i
 
   # Step 2: Collect same-named clone symbols.
   logging.debug('Grouping all clones')
   group_names_by_index = {}
   for i in clone_indices:
     symbol = symbols[i]
-    # Multiple attributes could exist, so search from left-to-right.
-    stripped_name = symbol.name[:symbol.name.index(' [clone ')]
-    stripped_full_name = symbol.full_name[:symbol.full_name.index(' [clone ')]
-    name_tup = (symbol.section_name, stripped_name, stripped_full_name)
+    stripped_full_name = _StripCloneSuffix(symbol.full_name)
+    name_tup = (symbol.section_name, stripped_full_name)
     replacement_list = replacements_by_tup[name_tup]
 
     if not replacement_list:
       # First occurance, check for non-clone symbol.
-      non_clone_idx = indices_by_full_name.get(stripped_name)
+      non_clone_idx = indices_by_full_name.get(stripped_full_name)
       if non_clone_idx is not None:
         non_clone_symbol = symbols[non_clone_idx]
         replacement_list.append((non_clone_idx, non_clone_symbol))
-        group_names_by_index[non_clone_idx] = stripped_name
+        group_names_by_index[non_clone_idx] = stripped_full_name
 
     replacement_list.append((i, symbol))
-    group_names_by_index[i] = stripped_name
+    group_names_by_index[i] = stripped_full_name
 
   # Step 3: Undo clustering when length=1.
   # Removing these groups means Diff() logic must know about [clone] suffix.
@@ -77,14 +90,13 @@ def ClusterSymbols(symbols):
   dest_index = 0
   src_index = 0
   seen_tups = set()
-  replacement_tup_by_index = {}
+  index_and_name_tups = []
   for name_tup, replacement_list in replacements_by_tup.iteritems():
-    for tup in replacement_list:
-      replacement_tup_by_index[tup[0]] = name_tup
+    for symbol_tup in replacement_list:
+      index_and_name_tups.append((symbol_tup[0], name_tup))
 
-  sorted_items = replacement_tup_by_index.items()
-  sorted_items.sort(key=lambda tup: tup[0])
-  for index, name_tup in sorted_items:
+  index_and_name_tups.sort(key=lambda tup: tup[0])
+  for index, name_tup in index_and_name_tups:
     count = index - src_index
     grouped_symbols[dest_index:dest_index + count] = (
         symbols[src_index:src_index + count])
@@ -93,9 +105,20 @@ def ClusterSymbols(symbols):
     if name_tup not in seen_tups:
       seen_tups.add(name_tup)
       group_symbols = [tup[1] for tup in replacements_by_tup[name_tup]]
-      grouped_symbols[dest_index] = symbols._CreateTransformed(
-          group_symbols, name=name_tup[1], full_name=name_tup[2],
-          section_name=name_tup[0])
+      section_name, stripped_full_name = name_tup
+      if stripped_full_name.startswith('*'):
+        stripped_template_name = stripped_full_name
+        stripped_name = stripped_full_name
+      else:
+        stripped_template_name = _StripCloneSuffix(
+            group_symbols[0].template_name)
+        stripped_name = _StripCloneSuffix(group_symbols[0].name)
+      cluster = symbols._CreateTransformed(
+          group_symbols, full_name=stripped_full_name,
+          template_name=stripped_template_name, name=stripped_name,
+          section_name=section_name)
+      function_signature.InternSameNames(cluster)
+      grouped_symbols[dest_index] = cluster
       dest_index += 1
 
   assert len(grouped_symbols[dest_index:None]) == len(symbols[src_index:None])

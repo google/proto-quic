@@ -345,6 +345,17 @@ const char* const kForbiddenHeaderFields[] = {
 }  // namespace
 
 // static
+bool HttpUtil::IsMethodSafe(const std::string& method) {
+  return method == "GET" || method == "HEAD" || method == "OPTIONS" ||
+         method == "TRACE";
+}
+
+// static
+bool HttpUtil::IsMethodIdempotent(const std::string& method) {
+  return IsMethodSafe(method) || method == "PUT" || method == "DELETE";
+}
+
+// static
 bool HttpUtil::IsSafeHeader(const std::string& name) {
   std::string lower_name(base::ToLowerASCII(name));
   if (base::StartsWith(lower_name, "proxy-", base::CompareCase::SENSITIVE) ||

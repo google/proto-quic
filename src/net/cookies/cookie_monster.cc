@@ -1058,15 +1058,42 @@ bool CookieMonster::SetCookieWithDetails(const GURL& url,
     last_time_seen_ = actual_creation_time;
   }
 
+  // Validate consistency of passed arguments.
+  if (ParsedCookie::ParseTokenString(name) != name ||
+      ParsedCookie::ParseValueString(value) != value ||
+      ParsedCookie::ParseValueString(domain) != domain ||
+      ParsedCookie::ParseValueString(path) != path) {
+    return false;
+  }
+
+  // Validate passed arguments against URL.
+  if (secure && !url.SchemeIsCryptographic())
+    return false;
+
+  std::string cookie_domain;
+  if (!cookie_util::GetCookieDomainWithString(url, domain, &cookie_domain))
+    return false;
+
+  std::string cookie_path = CanonicalCookie::CanonPathWithString(url, path);
+  if (!path.empty() && cookie_path != path)
+    return false;
+
+  // Canonicalize path again to make sure it escapes characters as needed.
+  url::Component path_component(0, cookie_path.length());
+  url::RawCanonOutputT<char> canon_path;
+  url::Component canon_path_component;
+  url::CanonicalizePath(cookie_path.data(), path_component, &canon_path,
+                        &canon_path_component);
+  cookie_path = std::string(canon_path.data() + canon_path_component.begin,
+                            canon_path_component.len);
+
   std::unique_ptr<CanonicalCookie> cc(CanonicalCookie::Create(
-      url, name, value, domain, path, actual_creation_time, expiration_time,
-      secure, http_only, same_site, priority));
+      name, value, cookie_domain, cookie_path, actual_creation_time,
+      expiration_time, last_access_time, secure, http_only, same_site,
+      priority));
 
   if (!cc.get())
     return false;
-
-  if (!last_access_time.is_null())
-    cc->SetLastAccessDate(last_access_time);
 
   CookieOptions options;
   options.set_include_httponly();

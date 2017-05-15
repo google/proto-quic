@@ -48,11 +48,16 @@ class BlinkPerfTest(page_test_test_case.PageTestTestCase):
     frame_view_layouts = results.FindAllPageSpecificValuesNamed(
         'FrameView::layout')
     self.assertEquals(len(frame_view_layouts), 1)
+    # append-child-measure-time.html specifies 5 iterationCount.
+    self.assertEquals(len(frame_view_layouts[0].values), 5)
     self.assertGreater(frame_view_layouts[0].GetRepresentativeNumber, 0.1)
 
     update_layout_trees = results.FindAllPageSpecificValuesNamed(
         'UpdateLayoutTree')
     self.assertEquals(len(update_layout_trees), 1)
+    # append-child-measure-time.html specifies 5 iterationCount.
+    self.assertEquals(len(update_layout_trees[0].values), 5)
+
     self.assertGreater(update_layout_trees[0].GetRepresentativeNumber, 0.1)
 
   def testBlinkPerfTracingMetricsForMeasureFrameTime(self):
@@ -66,12 +71,62 @@ class BlinkPerfTest(page_test_test_case.PageTestTestCase):
     frame_view_prepaints = results.FindAllPageSpecificValuesNamed(
         'FrameView::prePaint')
     self.assertEquals(len(frame_view_prepaints), 1)
+    # color-changes-measure-frame-time.html specifies 9 iterationCount.
+    self.assertEquals(len(frame_view_prepaints[0].values), 9)
     self.assertGreater(frame_view_prepaints[0].GetRepresentativeNumber, 0.1)
 
     frame_view_painttrees = results.FindAllPageSpecificValuesNamed(
         'FrameView::paintTree')
     self.assertEquals(len(frame_view_painttrees), 1)
+    # color-changes-measure-frame-time.html specifies 9 iterationCount.
+    self.assertEquals(len(frame_view_painttrees[0].values), 9)
     self.assertGreater(frame_view_painttrees[0].GetRepresentativeNumber, 0.1)
+
+  def testBlinkPerfTracingMetricsForMeasurePageLoadTime(self):
+    results = self.RunMeasurement(measurement=self._measurement,
+        ps=self._CreateStorySetForTestFile(
+            'simple-html-measure-page-load-time.html'),
+        options=self._options)
+    self.assertFalse(results.failures)
+    self.assertEquals(len(results.FindAllTraceValues()), 1)
+
+    create_child_frame = results.FindAllPageSpecificValuesNamed(
+        'WebLocalFrameImpl::createChildframe')
+    self.assertEquals(len(create_child_frame), 1)
+    # color-changes-measure-frame-time.html specifies 7 iterationCount.
+    self.assertEquals(len(create_child_frame[0].values), 7)
+    self.assertGreater(create_child_frame[0].GetRepresentativeNumber, 0.1)
+
+    post_layout_task = results.FindAllPageSpecificValuesNamed(
+        'FrameView::performPostLayoutTasks')
+    self.assertEquals(len(post_layout_task), 1)
+    # color-changes-measure-frame-time.html specifies 7 iterationCount.
+    self.assertEquals(len(post_layout_task[0].values), 7)
+    self.assertGreater(post_layout_task[0].GetRepresentativeNumber, 0.1)
+
+
+  def testBlinkPerfTracingMetricsForMeasureAsync(self):
+    results = self.RunMeasurement(measurement=self._measurement,
+        ps=self._CreateStorySetForTestFile(
+            'simple-blob-measure-async.html'),
+        options=self._options)
+    self.assertFalse(results.failures)
+    self.assertEquals(len(results.FindAllTraceValues()), 1)
+
+    blob_requests = results.FindAllPageSpecificValuesNamed(
+        'BlobRequest')
+    self.assertEquals(len(blob_requests), 1)
+    # simple-blob-measure-async.html specifies 6 iterationCount.
+    self.assertEquals(len(blob_requests[0].values), 6)
+    self.assertGreater(blob_requests[0].GetRepresentativeNumber, 0.1)
+
+    blob_request_read_raw_data = results.FindAllPageSpecificValuesNamed(
+        'BlobRequest::ReadRawData')
+    self.assertEquals(len(blob_request_read_raw_data), 1)
+    # simple-blob-measure-async.html specifies 6 iterationCount.
+    self.assertEquals(len(blob_request_read_raw_data[0].values), 6)
+    self.assertGreater(
+        blob_request_read_raw_data[0].GetRepresentativeNumber, 0.01)
 
 
 # pylint: disable=protected-access
@@ -115,9 +170,8 @@ class ComputeTraceEventsMetricsForBlinkPerfTest(unittest.TestCase):
 
     self.assertEquals(
         blink_perf._ComputeTraceEventsThreadTimeForBlinkPerf(
-            renderer_main, ['foo', 'bar', 'baz']),
+            model, renderer_main, ['foo', 'bar', 'baz']),
         {'foo': [15], 'bar': [18], 'baz': [35]})
-
 
   def testTraceEventMetricsMultiBlinkTest(self):
     model = model_module.TimelineModel()
@@ -150,7 +204,7 @@ class ComputeTraceEventsMetricsForBlinkPerfTest(unittest.TestCase):
 
     self.assertEquals(
         blink_perf._ComputeTraceEventsThreadTimeForBlinkPerf(
-            renderer_main, ['foo', 'bar', 'baz']),
+            model, renderer_main, ['foo', 'bar', 'baz']),
         {'foo': [15, 32], 'bar': [18, 0], 'baz': [0, 0]})
 
   def testTraceEventMetricsNoThreadTimeAvailable(self):
@@ -176,5 +230,44 @@ class ComputeTraceEventsMetricsForBlinkPerfTest(unittest.TestCase):
 
     self.assertEquals(
         blink_perf._ComputeTraceEventsThreadTimeForBlinkPerf(
-            renderer_main, ['foo', 'bar']),
+            model, renderer_main, ['foo', 'bar']),
         {'foo': [20], 'bar': [20]})
+
+  def testTraceEventMetricsMultiBlinkTestCrossProcesses(self):
+    model = model_module.TimelineModel()
+    renderer_main = model.GetOrCreateProcess(1).GetOrCreateThread(2)
+    renderer_main.name = 'CrRendererMain'
+
+    foo_thread = model.GetOrCreateProcess(2).GetOrCreateThread(4)
+    bar_thread =  model.GetOrCreateProcess(2).GetOrCreateThread(5)
+
+    # Set up a main model that looks like (P1 & P2 are different processes):
+    # P1  [          blink_perf.run_test    ]         [ blink_perf.run_test  ]
+    #     |                                 |         |                      |
+    # P2  |     [ foo ]                     |     [   |    foo         ]     |
+    #     |     |  |  |          [  bar ]   |     |   |     |          |
+    #     |     |  |  |          |   |  |   |     |   |     |          |     |
+    #    100   120 | 140        400  | 420 440   500 520    |         600   640
+    #              |                 |                      |
+    # CPU dur:    15                N/A                     40
+    #
+    self._AddBlinkTestSlice(renderer_main, 100, 440)
+    self._AddBlinkTestSlice(renderer_main, 520, 640)
+
+    foo_thread.BeginSlice('blink', 'foo', 120, 122)
+    foo_thread.EndSlice(140, 137)
+
+    bar_thread.BeginSlice('blink', 'bar', 400)
+    bar_thread.EndSlice(420)
+
+    # Since this "foo" slice has CPU duration = 40ms, wall-time duration = 100ms
+    # & its overalapped wall-time with "blink_perf.run_test" is 80 ms, its
+    # overlapped CPU time with "blink_perf.run_test" is
+    # 80 * 40 / 100 = 32ms.
+    foo_thread.BeginSlice('blink', 'foo', 500, 520)
+    foo_thread.EndSlice(600, 560)
+
+    self.assertEquals(
+        blink_perf._ComputeTraceEventsThreadTimeForBlinkPerf(
+            model, renderer_main, ['foo', 'bar', 'baz']),
+        {'foo': [15, 32], 'bar': [20, 0], 'baz': [0, 0]})

@@ -7,8 +7,7 @@
 
 .p2align	4
 _sha1_block_data_order:
-	leaq	_OPENSSL_ia32cap_addr(%rip),%r10
-	movq	(%r10),%r10
+	leaq	_OPENSSL_ia32cap_P(%rip),%r10
 	movl	0(%r10),%r9d
 	movl	4(%r10),%r8d
 	movl	8(%r10),%r10d

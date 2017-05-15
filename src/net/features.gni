@@ -16,10 +16,11 @@ declare_args() {
   enable_websockets = !is_ios
   disable_ftp_support = is_ios || is_chromecast
 
-  # Enable Kerberos authentication. It is disabled by default on ChromeOS, iOS,
+  # Enable Kerberos authentication. It is disabled by default on iOS,
   # Chromecast, at least for now. This feature needs configuration (krb5.conf
-  # and so on).
-  use_kerberos = !is_chromeos && !is_ios && !is_chromecast
+  # and so on). On Chrome OS it is only supported on Active Directory
+  # managed devices.
+  use_kerberos = !is_ios && !is_chromecast
 
   # Do not disable brotli filter by default.
   disable_brotli_filter = false

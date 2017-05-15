@@ -12,6 +12,7 @@ import android.support.test.internal.util.AndroidRunnerParams;
 import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
+import org.junit.runners.model.Statement;
 
 import org.chromium.base.CollectionUtil;
 import org.chromium.base.test.BaseTestResult.PreTestHook;
@@ -155,5 +156,13 @@ public class BaseJUnit4ClassRunner extends AndroidJUnit4ClassRunner {
             }
         }
         return false;
+    }
+
+    /*
+     * Overriding this method to take screenshot of failure before tear down functions are run.
+     */
+    @Override
+    protected Statement withAfters(FrameworkMethod method, Object test, Statement base) {
+        return super.withAfters(method, test, new ScreenshotOnFailureStatement(base));
     }
 }
