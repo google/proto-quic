@@ -85,6 +85,10 @@ def _RunApp(name, args, debug_measures=False):
     return subprocess.check_output(argv, env=env).splitlines()
 
 
+def _DiffCounts(sym):
+  return (sym.changed_count, sym.added_count, sym.removed_count)
+
+
 class IntegrationTest(unittest.TestCase):
   maxDiff = None  # Don't trucate diffs in errors.
   cached_size_info = [None, None, None]
@@ -122,8 +126,11 @@ class IntegrationTest(unittest.TestCase):
     expected_size_info = self._CloneSizeInfo(
         use_output_directory=use_output_directory, use_elf=use_elf)
     self.assertEquals(expected_size_info.metadata, size_info.metadata)
-    expected = list(describe.GenerateLines(expected_size_info.Clustered()))
-    actual = list(describe.GenerateLines(size_info.Clustered()))
+    # Don't cluster.
+    expected_size_info.symbols = expected_size_info.raw_symbols
+    size_info.symbols = size_info.raw_symbols
+    expected = list(describe.GenerateLines(expected_size_info))
+    actual = list(describe.GenerateLines(size_info))
     self.assertEquals(expected, actual)
 
     sym_strs = (repr(sym) for sym in size_info.symbols)
@@ -184,7 +191,7 @@ class IntegrationTest(unittest.TestCase):
     size_info2.symbols -= size_info2.symbols[-3:]
     size_info1.symbols[1].size -= 10
     d = diff.Diff(size_info1, size_info2)
-    d.symbols = d.symbols.Clustered().Sorted()
+    d.symbols = d.symbols.Sorted()
     return describe.GenerateLines(d, verbose=True)
 
   def test_Diff_Aliases1(self):
@@ -193,17 +200,20 @@ class IntegrationTest(unittest.TestCase):
 
     # Removing 1 alias should not change the size.
     a1, _, _ = (
-        size_info2.symbols.Filter(lambda s: s.num_aliases == 3)[0].aliases)
-    size_info2.symbols -= [a1]
+        size_info2.raw_symbols.Filter(lambda s: s.num_aliases == 3)[0].aliases)
+    size_info2.raw_symbols -= [a1]
     a1.aliases.remove(a1)
     d = diff.Diff(size_info1, size_info2)
-    self.assertEquals(d.symbols.size, 0)
-    self.assertEquals(d.symbols.removed_count, 1)
+    self.assertEquals(d.raw_symbols.size, 0)
+    self.assertEquals((0, 0, 1), _DiffCounts(d.raw_symbols))
+    # shrinkToFit is in a cluster, so removed turns to a changed when clustered.
+    self.assertEquals((1, 0, 0), _DiffCounts(d.symbols.GroupedByFullName()))
 
     # Adding one alias should not change size.
     d = diff.Diff(size_info2, size_info1)
-    self.assertEquals(d.symbols.size, 0)
-    self.assertEquals(d.symbols.added_count, 1)
+    self.assertEquals(d.raw_symbols.size, 0)
+    self.assertEquals((0, 1, 0), _DiffCounts(d.raw_symbols))
+    self.assertEquals((1, 0, 0), _DiffCounts(d.symbols.GroupedByFullName()))
 
   def test_Diff_Aliases2(self):
     size_info1 = self._CloneSizeInfo()
@@ -211,18 +221,20 @@ class IntegrationTest(unittest.TestCase):
 
     # Removing 2 aliases should not change the size.
     a1, a2, _ = (
-        size_info2.symbols.Filter(lambda s: s.num_aliases == 3)[0].aliases)
-    size_info2.symbols -= [a1, a2]
+        size_info2.raw_symbols.Filter(lambda s: s.num_aliases == 3)[0].aliases)
+    size_info2.raw_symbols -= [a1, a2]
     a1.aliases.remove(a1)
     a1.aliases.remove(a2)
     d = diff.Diff(size_info1, size_info2)
-    self.assertEquals(d.symbols.size, 0)
-    self.assertEquals(d.symbols.removed_count, 2)
+    self.assertEquals(d.raw_symbols.size, 0)
+    self.assertEquals((0, 0, 2), _DiffCounts(d.raw_symbols))
+    self.assertEquals((1, 0, 1), _DiffCounts(d.symbols.GroupedByFullName()))
 
     # Adding 2 aliases should not change size.
     d = diff.Diff(size_info2, size_info1)
-    self.assertEquals(d.symbols.size, 0)
-    self.assertEquals(d.symbols.added_count, 2)
+    self.assertEquals(d.raw_symbols.size, 0)
+    self.assertEquals((0, 2, 0), _DiffCounts(d.raw_symbols))
+    self.assertEquals((1, 1, 0), _DiffCounts(d.symbols.GroupedByFullName()))
 
   def test_Diff_Aliases3(self):
     size_info1 = self._CloneSizeInfo()
@@ -230,16 +242,17 @@ class IntegrationTest(unittest.TestCase):
 
     # Removing all 3 aliases should change the size.
     a1, a2, a3 = (
-        size_info2.symbols.Filter(lambda s: s.num_aliases == 3)[0].aliases)
-    size_info2.symbols -= [a1, a2, a3]
+        size_info2.raw_symbols.Filter(lambda s: s.num_aliases == 3)[0].aliases)
+    size_info2.raw_symbols -= [a1, a2, a3]
     d = diff.Diff(size_info1, size_info2)
-    self.assertEquals(d.symbols.size, -a1.size)
-    self.assertEquals(d.symbols.removed_count, 3)
+    self.assertEquals((0, 0, 3), _DiffCounts(d.raw_symbols))
+    self.assertEquals((1, 0, 2), _DiffCounts(d.symbols.GroupedByFullName()))
 
     # Adding all 3 aliases should change size.
     d = diff.Diff(size_info2, size_info1)
-    self.assertEquals(d.symbols.size, a1.size)
-    self.assertEquals(d.symbols.added_count, 3)
+    self.assertEquals(d.raw_symbols.size, a1.size)
+    self.assertEquals((0, 3, 0), _DiffCounts(d.raw_symbols))
+    self.assertEquals((1, 2, 0), _DiffCounts(d.symbols.GroupedByFullName()))
 
   def test_Diff_Clustering(self):
     size_info1 = self._CloneSizeInfo()
@@ -260,15 +273,20 @@ class IntegrationTest(unittest.TestCase):
         models.Symbol(S, 55, name='.L__bar_295', object_path='b'), # 5
     ]
     d = diff.Diff(size_info1, size_info2)
-    d.symbols = d.symbols.Clustered().Sorted()
+    d.symbols = d.symbols.Sorted()
     self.assertEquals(d.symbols.added_count, 0)
     self.assertEquals(d.symbols.size, 0)
 
-
   @_CompareWithGolden()
   def test_FullDescription(self):
-    return describe.GenerateLines(self._CloneSizeInfo().Clustered(),
-                                  recursive=True, verbose=True)
+    size_info = self._CloneSizeInfo()
+    # Show both clustered and non-clustered so that they can be compared.
+    size_info.symbols = size_info.raw_symbols
+    return itertools.chain(
+        describe.GenerateLines(size_info, verbose=True),
+        describe.GenerateLines(size_info.symbols._Clustered(), recursive=True,
+                               verbose=True),
+    )
 
   @_CompareWithGolden()
   def test_SymbolGroupMethods(self):

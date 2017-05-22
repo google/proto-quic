@@ -27,6 +27,8 @@ public class TraceEvent {
     private static volatile boolean sATraceEnabled; // True when taking an Android systrace.
 
     private static class BasicLooperMonitor implements Printer {
+        private static final String EARLY_TOPLEVEL_TASK_NAME = "Looper.dispatchMessage: ";
+
         @Override
         public void println(final String line) {
             if (line.startsWith(">")) {
@@ -38,11 +40,36 @@ public class TraceEvent {
         }
 
         void beginHandling(final String line) {
-            if (sEnabled) nativeBeginToplevel();
+            // May return an out-of-date value. this is not an issue as EarlyTraceEvent#begin()
+            // will filter the event in this case.
+            boolean earlyTracingActive = EarlyTraceEvent.isActive();
+            if (sEnabled || earlyTracingActive) {
+                String target = getTarget(line);
+                if (sEnabled) {
+                    nativeBeginToplevel(target);
+                } else if (earlyTracingActive) {
+                    // Synthesize a task name instead of using a parameter, as early tracing doesn't
+                    // support parameters.
+                    EarlyTraceEvent.begin(EARLY_TOPLEVEL_TASK_NAME + target);
+                }
+            }
         }
 
         void endHandling(final String line) {
+            if (EarlyTraceEvent.isActive()) {
+                EarlyTraceEvent.end(EARLY_TOPLEVEL_TASK_NAME + getTarget(line));
+            }
             if (sEnabled) nativeEndToplevel();
+        }
+
+        /**
+         * Android Looper formats |line| as ">>>>> Dispatching to (TARGET) [...]" since at least
+         * 2009 (Donut). Extracts the TARGET part of the message.
+         */
+        private static String getTarget(String logLine) {
+            int start = logLine.indexOf('(', 21); // strlen(">>>>> Dispatching to ")
+            int end = start == -1 ? -1 : logLine.indexOf(')', start);
+            return end != -1 ? logLine.substring(start + 1, end) : "";
         }
     }
 
@@ -200,6 +227,9 @@ public class TraceEvent {
      */
     public static void maybeEnableEarlyTracing() {
         EarlyTraceEvent.maybeEnable();
+        if (EarlyTraceEvent.isActive()) {
+            ThreadUtils.getUiThreadLooper().setMessageLogging(LooperMonitorHolder.sInstance);
+        }
     }
 
     /**
@@ -307,7 +337,7 @@ public class TraceEvent {
     private static native void nativeInstant(String name, String arg);
     private static native void nativeBegin(String name, String arg);
     private static native void nativeEnd(String name, String arg);
-    private static native void nativeBeginToplevel();
+    private static native void nativeBeginToplevel(String target);
     private static native void nativeEndToplevel();
     private static native void nativeStartAsync(String name, long id);
     private static native void nativeFinishAsync(String name, long id);

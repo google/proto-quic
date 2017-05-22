@@ -10,7 +10,6 @@
 #include "base/logging.h"
 #include "base/memory/weak_ptr.h"
 #include "net/socket/client_socket_handle.h"
-#include "net/spdy/chromium/spdy_session.h"
 #include "net/websockets/websocket_basic_handshake_stream.h"
 
 namespace net {
@@ -26,7 +25,7 @@ WebSocketHandshakeStreamCreateHelper::WebSocketHandshakeStreamCreateHelper(
 
 WebSocketHandshakeStreamCreateHelper::~WebSocketHandshakeStreamCreateHelper() {}
 
-WebSocketHandshakeStreamBase*
+std::unique_ptr<WebSocketHandshakeStreamBase>
 WebSocketHandshakeStreamCreateHelper::CreateBasicStream(
     std::unique_ptr<ClientSocketHandle> connection,
     bool using_proxy) {
@@ -37,21 +36,12 @@ WebSocketHandshakeStreamCreateHelper::CreateBasicStream(
   // method.
   std::vector<std::string> extensions(
       1, "permessage-deflate; client_max_window_bits");
-  WebSocketBasicHandshakeStream* stream = new WebSocketBasicHandshakeStream(
+  auto stream = base::MakeUnique<WebSocketBasicHandshakeStream>(
       std::move(connection), connect_delegate_, using_proxy,
       requested_subprotocols_, extensions, request_);
-  OnBasicStreamCreated(stream);
-  request_->OnHandshakeStreamCreated(stream);
-  return stream;
-}
-
-// TODO(ricea): Create a WebSocketSpdyHandshakeStream. crbug.com/323852
-WebSocketHandshakeStreamBase*
-WebSocketHandshakeStreamCreateHelper::CreateSpdyStream(
-    const base::WeakPtr<SpdySession>& session,
-    bool use_relative_url) {
-  NOTREACHED() << "Not implemented";
-  return NULL;
+  OnBasicStreamCreated(stream.get());
+  request_->OnHandshakeStreamCreated(stream.get());
+  return std::move(stream);
 }
 
 void WebSocketHandshakeStreamCreateHelper::OnBasicStreamCreated(

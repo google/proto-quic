@@ -34,7 +34,8 @@ enum Version {
   VERSION_WIN8_1 = 6,       // Also includes Windows Server 2012 R2.
   VERSION_WIN10 = 7,        // Also includes Windows 10 Server.
   VERSION_WIN10_TH2 = 8,    // Threshold 2: Version 1511, Build 10586.
-  VERSION_WIN10_R1 = 9,     // Redstone 1: Version 1607, Build 14393.
+  VERSION_WIN10_RS1 = 9,    // Redstone 1: Version 1607, Build 14393.
+  VERSION_WIN10_RS2 = 10,   // Redstone 2: Version 1703, Build 15063.
   VERSION_WIN_LAST,         // Indicates error condition.
 };
 

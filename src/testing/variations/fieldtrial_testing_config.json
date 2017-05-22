@@ -510,7 +510,16 @@
             ],
             "experiments": [
                 {
-                    "name": "Enabled",
+                    "name": "Enabled"
+                },
+                {
+                    "name": "EnabledWithSnackbarPromo",
+                    "params": {
+                        "snackbar_promo_data_savings_in_megabytes": "1024;100"
+                    }
+                },
+                {
+                    "name": "SnackbarPromoOnly",
                     "params": {
                         "snackbar_promo_data_savings_in_megabytes": "1024;100"
                     }
@@ -595,7 +604,10 @@
             ],
             "experiments": [
                 {
-                    "name": "Enabled"
+                    "name": "Enabled",
+                    "params": {
+                        "enable_warmup": "true"
+                    }
                 }
             ]
         }
@@ -1528,6 +1540,21 @@
             ]
         }
     ],
+    "NTPFaviconsFromNewServer": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "ContentSuggestionsFaviconsFromNewServer"
+                    ]
+                }
+            ]
+        }
+    ],
     "NTPLaunchAfterInactivity": [
         {
             "platforms": [
@@ -1541,6 +1568,22 @@
                     },
                     "enable_features": [
                         "NTPLaunchAfterInactivity"
+                    ]
+                }
+            ]
+        }
+    ],
+    "NTPMostLikelyFaviconsFromServer": [
+        {
+            "platforms": [
+                "android",
+                "ios"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "NTPMostLikelyFaviconsFromServer"
                     ]
                 }
             ]
@@ -3023,6 +3066,21 @@
             ]
         }
     ],
+    "TranslateCompactUI": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "TranslateCompactUI"
+                    ]
+                }
+            ]
+        }
+    ],
     "TranslateRankerModel": [
         {
             "platforms": [
@@ -3208,21 +3266,6 @@
                     "name": "Enabled",
                     "enable_features": [
                         "ViewsSimplifiedFullscreenUI"
-                    ]
-                }
-            ]
-        }
-    ],
-    "VrShell": [
-        {
-            "platforms": [
-                "android"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled",
-                    "enable_features": [
-                        "VrShell"
                     ]
                 }
             ]

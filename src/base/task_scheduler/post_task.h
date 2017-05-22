@@ -16,6 +16,7 @@
 #include "base/sequenced_task_runner.h"
 #include "base/single_thread_task_runner.h"
 #include "base/task_runner.h"
+#include "base/task_scheduler/single_thread_task_runner_thread_mode.h"
 #include "base/task_scheduler/task_traits.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
@@ -190,8 +191,9 @@ BASE_EXPORT scoped_refptr<SequencedTaskRunner>
 CreateSequencedTaskRunnerWithTraits(const TaskTraits& traits);
 
 // Returns a SingleThreadTaskRunner whose PostTask invocations result in
-// scheduling tasks using |traits|. Tasks run on a single thread in posting
-// order.
+// scheduling tasks using |traits| on a thread determined by |thread_mode|. See
+// base/task_scheduler/single_thread_task_runner_thread_mode.h for |thread_mode|
+// details. Tasks run on a single thread in posting order.
 //
 // If all you need is to make sure that tasks don't run concurrently (e.g.
 // because they access a data structure which is not thread-safe), use
@@ -200,19 +202,26 @@ CreateSequencedTaskRunnerWithTraits(const TaskTraits& traits);
 // under-documented third-party APIs, e.g. other OS') or share data across tasks
 // using thread-local storage.
 BASE_EXPORT scoped_refptr<SingleThreadTaskRunner>
-CreateSingleThreadTaskRunnerWithTraits(const TaskTraits& traits);
+CreateSingleThreadTaskRunnerWithTraits(
+    const TaskTraits& traits,
+    SingleThreadTaskRunnerThreadMode thread_mode =
+        SingleThreadTaskRunnerThreadMode::SHARED);
 
 #if defined(OS_WIN)
 // Returns a SingleThreadTaskRunner whose PostTask invocations result in
-// scheduling tasks using |traits| in a COM Single-Threaded Apartment. Tasks run
-// in the same Single-Threaded Apartment in posting order for the returned
-// SingleThreadTaskRunner. There is not necessarily a one-to-one correspondence
-// between SingleThreadTaskRunners and Single-Threaded Apartments. The
-// implementation is free to share apartments or create new apartments as
-// necessary. In either case, care should be taken to make sure COM pointers are
-// not smuggled across apartments.
+// scheduling tasks using |traits| in a COM Single-Threaded Apartment on a
+// thread determined by |thread_mode|. See
+// base/task_scheduler/single_thread_task_runner_thread_mode.h for |thread_mode|
+// details. Tasks run in the same Single-Threaded Apartment in posting order for
+// the returned SingleThreadTaskRunner. There is not necessarily a one-to-one
+// correspondence between SingleThreadTaskRunners and Single-Threaded
+// Apartments. The implementation is free to share apartments or create new
+// apartments as necessary. In either case, care should be taken to make sure
+// COM pointers are not smuggled across apartments.
 BASE_EXPORT scoped_refptr<SingleThreadTaskRunner>
-CreateCOMSTATaskRunnerWithTraits(const TaskTraits& traits);
+CreateCOMSTATaskRunnerWithTraits(const TaskTraits& traits,
+                                 SingleThreadTaskRunnerThreadMode thread_mode =
+                                     SingleThreadTaskRunnerThreadMode::SHARED);
 #endif  // defined(OS_WIN)
 
 }  // namespace base

@@ -13,6 +13,13 @@ from devil.android.sdk import keyevent # pylint: disable=import-error
 
 # TODO(ssid): Rename the search stories to browse stories crbug.com/708300.
 class SearchGoogleStory(system_health_story.SystemHealthStory):
+  """ A typical Google search user story.
+  Issue the search query "what is science" in the search box and press Enter.
+  Wait for the search result page to be loaded, then scroll to the Wikipedia
+  result.
+  Navigate to wikipedia page by clicking on the result and wait for it to be
+  fully loaded.
+  """
   NAME = 'search:portal:google'
   URL = 'https://www.google.co.uk/'
   TAGS = [story_tags.EMERGING_MARKET]
@@ -74,12 +81,11 @@ class SearchOmniboxStory(system_health_story.SystemHealthStory):
 class MobileNewTabPageStory(system_health_story.SystemHealthStory):
   """Story that loads new tab page and performs searches.
 
-  For each of the search queries in |_SEARCH_TEXTS| below, this story does:
+  Given a list of typical search queries, this story does for each of them:
    - enter the search query on the new tab page search box
    - read results
    - navigates back to new tab page
   """
-
   NAME = 'browse:chrome:newtab'
   URL = 'chrome://newtab'
   _SEARCH_TEXTS = ['does google know everything',

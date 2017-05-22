@@ -44,14 +44,6 @@ CreateSecCertificateFromBytes(const uint8_t* data, size_t length);
 NET_EXPORT base::ScopedCFTypeRef<SecCertificateRef>
 CreateSecCertificateFromX509Certificate(const X509Certificate* cert);
 
-// Returns a new CFMutableArrayRef containing this certificate and its
-// intermediate certificates in the form expected by Security.framework
-// and Keychain Services, or NULL on failure.
-// The first item in the array will be this certificate, followed by its
-// intermediates, if any.
-NET_EXPORT base::ScopedCFTypeRef<CFMutableArrayRef>
-CreateSecCertificateArrayForX509Certificate(X509Certificate* cert);
-
 // Creates an X509Certificate representing |sec_cert| with intermediates
 // |sec_chain|.
 NET_EXPORT scoped_refptr<X509Certificate>

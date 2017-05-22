@@ -27,8 +27,8 @@ DEFAULT_SDCARD_SIZE = '512M'
 # Default internal storage (MB) of emulator image
 DEFAULT_STORAGE_SIZE = '1024M'
 
-# Each emulator has 60 secs of wait time for launching
-_BOOT_WAIT_INTERVALS = 6
+# Each emulator has 300 secs of wait time for launching
+_BOOT_WAIT_INTERVALS = 30
 _BOOT_WAIT_INTERVAL_TIME = 10
 
 # Path for avd files and avd dir

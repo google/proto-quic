@@ -22,6 +22,7 @@
 #include "crypto/mac_security_services_lock.h"
 #include "net/base/host_port_pair.h"
 #include "net/cert/x509_util.h"
+#include "net/cert/x509_util_ios_and_mac.h"
 #include "net/cert/x509_util_mac.h"
 
 using base::ScopedCFTypeRef;

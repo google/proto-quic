@@ -68,8 +68,9 @@ void ParseUrl(SpdyStringPiece url,
 // Chop a frame into an array of MockWrites.
 // |frame| is the frame to chop.
 // |num_chunks| is the number of chunks to create.
-MockWrite* ChopWriteFrame(const SpdySerializedFrame& frame, int num_chunks) {
-  MockWrite* chunks = new MockWrite[num_chunks];
+std::unique_ptr<MockWrite[]> ChopWriteFrame(const SpdySerializedFrame& frame,
+                                            int num_chunks) {
+  auto chunks = base::MakeUnique<MockWrite[]>(num_chunks);
   int chunk_size = frame.size() / num_chunks;
   for (int index = 0; index < num_chunks; index++) {
     const char* ptr = frame.data() + (index * chunk_size);
@@ -377,8 +378,7 @@ SpdySessionDependencies::SpdyCreateSessionWithSocketFactory(
     ClientSocketFactory* factory) {
   HttpNetworkSession::Params params = CreateSessionParams(session_deps);
   params.client_socket_factory = factory;
-  std::unique_ptr<HttpNetworkSession> http_session(
-      new HttpNetworkSession(params));
+  auto http_session = base::MakeUnique<HttpNetworkSession>(params);
   SpdySessionPoolPeer pool_peer(http_session->spdy_session_pool());
   pool_peer.SetEnableSendingInitialData(false);
   return http_session;
@@ -401,6 +401,7 @@ HttpNetworkSession::Params SpdySessionDependencies::CreateSessionParams(
   params.http_auth_handler_factory =
       session_deps->http_auth_handler_factory.get();
   params.http_server_properties = session_deps->http_server_properties.get();
+  params.client_socket_factory = session_deps->socket_factory.get();
   params.enable_spdy_ping_based_connection_checking = session_deps->enable_ping;
   params.enable_user_alternate_protocol_ports =
       session_deps->enable_user_alternate_protocol_ports;
@@ -507,7 +508,7 @@ base::WeakPtr<SpdySession> CreateSpdySessionHelper(
           key.host_port_pair(), false, OnHostResolutionCallback(),
           TransportSocketParams::COMBINE_CONNECT_AND_WRITE_DEFAULT));
 
-  std::unique_ptr<ClientSocketHandle> connection(new ClientSocketHandle);
+  auto connection = base::MakeUnique<ClientSocketHandle>();
   TestCompletionCallback callback;
 
   int rv = ERR_UNEXPECTED;
@@ -652,10 +653,9 @@ base::WeakPtr<SpdySession> CreateFakeSpdySessionHelper(
     Error expected_status) {
   EXPECT_NE(expected_status, ERR_IO_PENDING);
   EXPECT_FALSE(HasSpdySession(pool, key));
-  std::unique_ptr<ClientSocketHandle> handle(new ClientSocketHandle());
-  handle->SetSocket(
-      std::unique_ptr<StreamSocket>(new FakeSpdySessionClientSocket(
-          expected_status == OK ? ERR_IO_PENDING : expected_status)));
+  auto handle = base::MakeUnique<ClientSocketHandle>();
+  handle->SetSocket(base::MakeUnique<FakeSpdySessionClientSocket>(
+      expected_status == OK ? ERR_IO_PENDING : expected_status));
   base::WeakPtr<SpdySession> spdy_session =
       pool->CreateAvailableSessionFromSocket(
           key, std::move(handle), NetLogWithSource(), true /* is_secure */);
@@ -888,7 +888,7 @@ SpdySerializedFrame SpdyTestUtil::ConstructSpdyPush(
       response_spdy_framer_.SerializeFrame(headers));
 
   int joint_data_size = push_promise_frame.size() + headers_frame.size();
-  std::unique_ptr<char[]> data(new char[joint_data_size]);
+  auto data = base::MakeUnique<char[]>(joint_data_size);
   const SpdySerializedFrame* frames[2] = {
       &push_promise_frame, &headers_frame,
   };
@@ -923,7 +923,7 @@ SpdySerializedFrame SpdyTestUtil::ConstructSpdyPush(
       response_spdy_framer_.SerializeFrame(headers));
 
   int joint_data_size = push_promise_frame.size() + headers_frame.size();
-  std::unique_ptr<char[]> data(new char[joint_data_size]);
+  auto data = base::MakeUnique<char[]>(joint_data_size);
   const SpdySerializedFrame* frames[2] = {
       &push_promise_frame, &headers_frame,
   };

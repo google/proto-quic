@@ -37,6 +37,9 @@ class LoadingDesktop(_LoadingBase):
         cache_temperatures=[cache_temperature.PCV1_COLD,
                             cache_temperature.PCV1_WARM,])
 
+  def GetExpectations(self):
+    return page_sets.LoadingDesktopExpectations()
+
   @classmethod
   def Name(cls):
     return 'loading.desktop'

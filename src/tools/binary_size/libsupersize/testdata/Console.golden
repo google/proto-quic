@@ -1,17 +1,17 @@
 ********************************************************************************
 Entering interactive Python shell. Quick reference:
 
-SizeInfo: Clustered, metadata, raw_symbols, section_sizes, symbols
+SizeInfo: metadata, raw_symbols, section_sizes, symbols
 Symbol: FlagsString, IsBss, IsGeneratedByToolchain, IsGroup, address, aliases, end_address, flags, full_name, generated_source, is_anonymous, name, num_aliases, object_path, padding, pss, pss_without_padding, section, section_name, size, size_without_padding, source_path, template_name
 
-SymbolGroup (extends Symbol): Clustered, CountUniqueSymbols, Filter, GroupedBy, GroupedByName, GroupedByPath, GroupedBySectionName, Inverted, IterLeafSymbols, IterUniqueSymbols, Sorted, SortedByAddress, SortedByCount, SortedByName, WhereAddressInRange, WhereFullNameMatches, WhereGeneratedByToolchain, WhereHasAnyAttribution, WhereHasPath, WhereInSection, WhereIsTemplate, WhereMatches, WhereNameMatches, WhereObjectPathMatches, WherePathMatches, WherePssBiggerThan, WhereSizeBiggerThan, WhereSourceIsGenerated, WhereSourcePathMatches, WhereTemplateNameMatches, is_sorted
+SymbolGroup (extends Symbol): CountUniqueSymbols, Filter, GroupedBy, GroupedByFullName, GroupedByName, GroupedByPath, GroupedBySectionName, Inverted, IterLeafSymbols, IterUniqueSymbols, SetName, Sorted, SortedByAddress, SortedByCount, SortedByName, WhereAddressInRange, WhereFullNameMatches, WhereGeneratedByToolchain, WhereHasAnyAttribution, WhereHasPath, WhereInSection, WhereIsGroup, WhereIsTemplate, WhereMatches, WhereNameMatches, WhereObjectPathMatches, WherePathMatches, WherePssBiggerThan, WhereSizeBiggerThan, WhereSourceIsGenerated, WhereSourcePathMatches, WhereTemplateNameMatches, is_sorted
 
-SymbolDiff (extends SymbolGroup): IsAdded, IsRemoved, IsSimilar, WhereNotUnchanged, added_count, changed_count, removed_count, unchanged_count
+SymbolDiff (extends SymbolGroup): DiffStatus, IsAdded, IsChanged, IsRemoved, IsUnchanged, WhereNotUnchanged, added_count, changed_count, removed_count, unchanged_count
 
 canned_queries: CategorizeByChromeComponent, CategorizeGenerated, TemplatesByName
 
 Functions: Diff(), Disassemble(), ExpandRegex(), Print(), ShowExamples()
-Variables: canned_queries, size_info
+Variables: canned_queries, printed, size_info
 ********************************************************************************
 # Show pydoc for main types:
 import models
@@ -25,9 +25,9 @@ text_syms = size_info.symbols.WhereInSection("t")
 by_path = text_syms.GroupedByPath(depth=2)
 Print(by_path.WherePssBiggerThan(1024))
 
-# Show all non-vtable generated symbols
-generated_syms = size_info.symbols.WhereGeneratedByToolchain()
-Print(generated_syms.WhereNameMatches(r"vtable").Inverted().Sorted())
+# Show all generated symbols, then show only non-vtable ones
+Print(size_info.symbols.WhereGeneratedByToolchain())
+Print(printed[-1].WhereNameMatches(r"vtable").Inverted().Sorted())
 
 # Show all symbols that have "print" in their name or path, except
 # those within components/.
@@ -42,7 +42,7 @@ Print(Diff(size_info1, size_info2), to_file="output.txt")
 # View per-component breakdowns, then drill into the last entry.
 c = canned_queries.CategorizeByChromeComponent()
 Print(c)
-Print(c[-1].GroupedByPath(depth=2).Clustered().Sorted())
+Print(c[-1].GroupedByPath(depth=2).Sorted())
 
 # For even more inspiration, look at canned_queries.py
 # (and feel free to add your own!).
@@ -64,9 +64,9 @@ Section Sizes (Total=41.8mb (43785380 bytes)):
     .rodata: 5.65mb (5927652 bytes) (13.5%)
     .text: 34.2mb (35900712 bytes) (82.0%)
 
-Showing 48 symbols (45 unique) with total pss: 43785380 bytes
+Showing 45 symbols (42 unique) with total pss: 43785380 bytes
 .text=34.2mb     .rodata=5.65mb     .data*=1.87mb     .bss=512kb      total=41.8mb
-Number of object files: 10
+Number of unique paths: 9
 
 Index, Running Total, Section@Address, PSS
 ------------------------------------------------------------
@@ -80,88 +80,82 @@ Index, Running Total, Section@Address, PSS
              extFromUUseMapping
 4)        170 (0.0%)  t@0x28d98a   32      base/page_allocator.cc
              extFromUUseMapping
-5)       5888 (0.0%)  t@0x28f000   5718    {no path}
-             ** symbol gap 0
-6)       6336 (0.0%)  t@0x28f000   448     third_party/icu/ucnv_ext.c
+5)   35830930 (81.8%) t@Group      35830760 {no path}
+             ** symbol gaps (count=3)
+6)   35831378 (81.8%) t@0x28f000   448     third_party/icu/ucnv_ext.c
              ucnv_extMatchFromU
-7)       6364 (0.0%)  t@0x28f1c8   28      third_party/icu/ucnv_ext.c
+7)   35831406 (81.8%) t@0x28f1c8   28      third_party/icu/ucnv_ext.c
              _GLOBAL__sub_I_SkDeviceProfile.cpp
-8)      75488 (0.2%)  t@0x28f1e0   69124   third_party/icu/ucnv_ext.c
+8)   35900530 (82.0%) t@0x28f1e0   69124   third_party/icu/ucnv_ext.c
              foo_bar
-9)      75512 (0.2%)  t@0x2a0000   24      {no path}
+9)   35900554 (82.0%) t@0x2a0000   24      {no path}
              blink::ContiguousContainerBase::shrinkToFit
-10)     75536 (0.2%)  t@0x2a0000   24      third_party/icu/ucnv_ext.c
+10)  35900578 (82.0%) t@0x2a0000   24      third_party/icu/ucnv_ext.c
              BazAlias
-11)     75540 (0.2%)  t@0x2a0010   4       third_party/{shared}/2
-             blink::ContiguousContainerBase::shrinkToFit [clone .part.1234] [clone .isra.2]
-12)     75544 (0.2%)  t@0x2a0010   4       third_party/fft_float.cc
+11)  35900582 (82.0%) t@0x2a0010   4       third_party/{shared}/2
+             blink::ContiguousContainerBase::shrinkToFit
+12)  35900586 (82.0%) t@0x2a0010   4       third_party/fft_float.cc
              FooAlias
-13)     75548 (0.2%)  t@0x2a0010   4       third_party/fft_float.cc
+13)  35900590 (82.0%) t@0x2a0010   4       third_party/fft_float.cc
              BarAlias
-14)     75576 (0.2%)  t@0x2a0020   28      third_party/container.c
+14)  35900618 (82.0%) t@0x2a0020   28      third_party/container.c
              blink::ContiguousContainerBase::ContiguousContainerBase
-15)     79616 (0.2%)  t@0x2a1000   4040    {no path}
-             ** symbol gap 1
-16)     79710 (0.2%)  t@0x2a1000   94      third_party/container.c
-             blink::PaintChunker::releasePaintChunks [clone .part.1]
-17)  35900712 (82.0%) t@0x24ca628  35821002 {no path}
-             ** symbol gap 2 (end of section)
-18)  37866121 (86.5%) r@0x266e600  1965409 {no path}
-             ** merge strings
-19)  37866124 (86.5%) r@0x284e364  3       {no path}
-             ** symbol gap 2
-20)  37866132 (86.5%) r@0x284e364  8       base/page_allocator.cc
-21)  37866176 (86.5%) r@0x284e370  44      base/page_allocator.cc
+15)  35900712 (82.0%) t@0x2a1000   94      third_party/container.c
+             blink::PaintChunker::releasePaintChunks
+16)  38538681 (88.0%) r@Group      2637969 {no path}
+             ** merge strings (count=2)
+17)  38542106 (88.0%) r@0x284d600  3425    {no path}
+             ** merge constants
+18)  41828221 (95.5%) r@Group      3286115 {no path}
+             ** symbol gaps (count=2)
+19)  41828229 (95.5%) r@0x284e364  8       base/page_allocator.cc
+20)  41828273 (95.5%) r@0x284e370  44      base/page_allocator.cc
              Name
-22)  37866208 (86.5%) r@0x284e398  32      third_party/container.c
+21)  41828305 (95.5%) r@0x284e398  32      third_party/container.c
              chrome::mojom::FilePatcher::Name_
-23)  38542193 (88.0%) r@0x284e518  675985  {no path}
-             ** merge strings
-24)  38542248 (88.0%) r@0x28f3450  55      third_party/paint.cc
+22)  41828360 (95.5%) r@0x28f3450  55      third_party/paint.cc
              kAnimationFrameTimeHistogramClassPath
-25)  38542252 (88.0%) r@0x28f3480  4       third_party/paint.cc
+23)  41828364 (95.5%) r@0x28f3480  4       third_party/paint.cc
              blink::CSSValueKeywordsHash::findValueImpl::value_word_list
-26)  41828364 (95.5%) r@0x2c158e4  3286112 {no path}
-             ** symbol gap 3 (end of section)
-27)  41828420 (95.5%) d@0x2c176f0  56      third_party/icu/ucnv_ext.c
+24)  41828420 (95.5%) d@0x2c176f0  56      third_party/icu/ucnv_ext.c
              ChromeMainDelegate [vtable]
-28)  41828444 (95.5%) d@0x2c17728  24      third_party/icu/ucnv_ext.c
+25)  41828444 (95.5%) d@0x2c17728  24      third_party/icu/ucnv_ext.c
              chrome::mojom::FieldTrialRecorder [vtable]
-29)  42618348 (97.3%) d@0x2c17740  789904  third_party/container.c
+26)  42618348 (97.3%) d@0x2c17740  789904  third_party/container.c
              chrome::mojom::FieldTrialRecorderProxy [vtable]
-30)  42618380 (97.3%) d@0x2cd84e0  32      third_party/gvr-android-sdk/libgvr_shim_static_arm.a/libcontroller_api_impl.a_controller_api_impl.o
+27)  42618380 (97.3%) d@0x2cd84e0  32      third_party/gvr-android-sdk/libgvr_shim_static_arm.a/libcontroller_api_impl.a_controller_api_impl.o
              .Lswitch.table.45
-31)  42618388 (97.3%) d@0x2cd84f0  8       third_party/gvr-android-sdk/libgvr_shim_static_arm.a/libport_android_jni.a_jni_utils.o
+28)  42618388 (97.3%) d@0x2cd84f0  8       third_party/gvr-android-sdk/libgvr_shim_static_arm.a/libport_android_jni.a_jni_utils.o
              kSystemClassPrefixes
-32)  42618444 (97.3%) d@0x2cd8500  56      third_party/paint.cc
+29)  42618444 (97.3%) d@0x2cd8500  56      third_party/paint.cc
              ChromeMainDelegateAndroid [vtable]
-33)  42618468 (97.3%) d@0x2cd8538  24      base/page_allocator.cc
+30)  42618468 (97.3%) d@0x2cd8538  24      base/page_allocator.cc
              mojo::MessageReceiver [vtable]
-34)  42618480 (97.3%) d@0x2cd8550  12      base/page_allocator.cc
+31)  42618480 (97.3%) d@0x2cd8550  12      base/page_allocator.cc
              kMethodsAnimationFrameTimeHistogram
-35)  43683612 (99.8%) d@0x2ddc608  1065132 {no path}
-             ** symbol gap 3 (end of section)
-36)  43683616 (99.8%) d@0x2de7000  4       base/page_allocator.cc
+32)  43683612 (99.8%) d@0x2ddc608  1065132 {no path}
+             ** symbol gap 0 (end of section)
+33)  43683616 (99.8%) d@0x2de7000  4       base/page_allocator.cc
              google::protobuf::internal::pLinuxKernelCmpxchg
-37)  43683620 (99.8%) d@0x2de7004  4       third_party/container.c
+34)  43683620 (99.8%) d@0x2de7004  4       third_party/container.c
              google::protobuf::internal::pLinuxKernelMemoryBarrier
-38)  43683772 (99.8%) d@0x2de7008  152     third_party/container.c
+35)  43683772 (99.8%) d@0x2de7008  152     third_party/container.c
              base::android::kBaseRegisteredMethods
-39)  43683776 (99.8%) d@0x2de70a0  4       third_party/container.c
+36)  43683776 (99.8%) d@0x2de70a0  4       third_party/container.c
              base::android::g_renderer_histogram_code
-40)  43683780 (99.8%) d@0x2de70a4  4       third_party/container.c
+37)  43683780 (99.8%) d@0x2de70a4  4       third_party/container.c
              base::android::g_library_version_number
-41)  43785380 (100.0%) d@0x2dffd88  101600  {no path}
-             ** symbol gap 3 (end of section)
-42)  43785380 (100.0%) b@0x0        262144  third_party/fft_float.cc
+38)  43785380 (100.0%) d@0x2dffd88  101600  {no path}
+             ** symbol gap 0 (end of section)
+39)  43785380 (100.0%) b@0x0        262144  third_party/fft_float.cc
              ff_cos_131072
-43)  43785380 (100.0%) b@0x0        131072  third_party/fft_fixed.cc
+40)  43785380 (100.0%) b@0x0        131072  third_party/fft_fixed.cc
              ff_cos_131072_fixed
-44)  43785380 (100.0%) b@0x0        131072  third_party/fft_float.cc
+41)  43785380 (100.0%) b@0x0        131072  third_party/fft_float.cc
              ff_cos_65536
-45)  43785380 (100.0%) b@0x2dffda0  28      third_party/icu/ucnv_ext.c
+42)  43785380 (100.0%) b@0x2dffda0  28      third_party/icu/ucnv_ext.c
              g_chrome_content_browser_client
-46)  43785380 (100.0%) b@0x2dffe80  200     third_party/icu/ucnv_ext.c
+43)  43785380 (100.0%) b@0x2dffe80  200     third_party/icu/ucnv_ext.c
              SaveHistogram::atomic_histogram_pointer
-47)  43785380 (100.0%) b@0x2dffe84  4       third_party/icu/ucnv_ext.c
+44)  43785380 (100.0%) b@0x2dffe84  4       third_party/icu/ucnv_ext.c
              g_AnimationFrameTimeHistogram_clazz

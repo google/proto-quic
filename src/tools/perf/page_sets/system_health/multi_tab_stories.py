@@ -46,6 +46,7 @@ class MultiTabStory(system_health_story.SystemHealthStory):
 
 @benchmark.Disabled('all')  # crbug.com/704197
 class MultiTabTypical24Story(MultiTabStory):
+  """Load 24 different web sites in 24 tabs, then cycle through each tab."""
   NAME = 'multitab:misc:typical24'
   TAGS = [story_tags.TABS_SWITCHING]
   URL_LIST = [

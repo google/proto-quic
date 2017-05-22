@@ -38,19 +38,14 @@ class NET_EXPORT_PRIVATE WebSocketHandshakeStreamCreateHelper
   // WebSocketHandshakeStreamBase::CreateHelper methods
 
   // Creates a WebSocketBasicHandshakeStream.
-  WebSocketHandshakeStreamBase* CreateBasicStream(
+  std::unique_ptr<WebSocketHandshakeStreamBase> CreateBasicStream(
       std::unique_ptr<ClientSocketHandle> connection,
       bool using_proxy) override;
 
-  WebSocketHandshakeStreamBase* CreateSpdyStream(
-      const base::WeakPtr<SpdySession>& session,
-      bool use_relative_url) override;
-
   // WebSocketHandshakeStreamCreateHelper methods
 
-  // This method must be called before CreateBasicStream() or
-  // CreateSpdyStream(). The |request| pointer must remain valid as
-  // long as this object exists.
+  // This method must be called before CreateBasicStream().
+  // The |request| pointer must remain valid as long as this object exists.
   void set_stream_request(WebSocketStreamRequest* request) {
     request_ = request;
   }

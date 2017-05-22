@@ -374,6 +374,44 @@ TEST(URLUtilTest, TestNoRefComponent) {
   EXPECT_FALSE(resolved_parsed.ref.is_valid());
 }
 
+TEST(URLUtilTest, RelativeWhitespaceRemoved) {
+  struct ResolveRelativeCase {
+    const char* base;
+    const char* rel;
+    bool whitespace_removed;
+    const char* out;
+  } cases[] = {
+      {"https://example.com/", "/path", false, "https://example.com/path"},
+      {"https://example.com/", "\n/path", true, "https://example.com/path"},
+      {"https://example.com/", "\r/path", true, "https://example.com/path"},
+      {"https://example.com/", "\t/path", true, "https://example.com/path"},
+      {"https://example.com/", "/pa\nth", true, "https://example.com/path"},
+      {"https://example.com/", "/pa\rth", true, "https://example.com/path"},
+      {"https://example.com/", "/pa\tth", true, "https://example.com/path"},
+      {"https://example.com/", "/path\n", true, "https://example.com/path"},
+      {"https://example.com/", "/path\r", true, "https://example.com/path"},
+      {"https://example.com/", "/path\r", true, "https://example.com/path"},
+  };
+
+  for (const auto& test : cases) {
+    SCOPED_TRACE(::testing::Message() << test.base << ", " << test.rel);
+    Parsed base_parsed;
+    ParseStandardURL(test.base, strlen(test.base), &base_parsed);
+
+    std::string resolved;
+    StdStringCanonOutput output(&resolved);
+    Parsed resolved_parsed;
+    bool valid =
+        ResolveRelative(test.base, strlen(test.base), base_parsed, test.rel,
+                        strlen(test.rel), NULL, &output, &resolved_parsed);
+    ASSERT_TRUE(valid);
+    output.Complete();
+
+    EXPECT_EQ(test.whitespace_removed, resolved_parsed.whitespace_removed);
+    EXPECT_EQ(test.out, resolved);
+  }
+}
+
 TEST(URLUtilTest, TestDomainIs) {
   const struct {
     const char* canonicalized_host;

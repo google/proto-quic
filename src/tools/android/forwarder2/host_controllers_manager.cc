@@ -68,7 +68,7 @@ void HostControllersManager::DeleteHostController(
     // then all the controllers (including |controller|) were also deleted.
     return;
   }
-  DCHECK(manager->thread_->task_runner()->RunsTasksOnCurrentThread());
+  DCHECK(manager->thread_->task_runner()->RunsTasksInCurrentSequence());
   // Note that this will delete |controller| which is owned by the map.
   DeleteRefCountedValueInMap(
       MakeHostControllerMapKey(controller->adb_port(),

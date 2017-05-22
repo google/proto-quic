@@ -32,7 +32,7 @@
       #            is created (this probably suffices for many targets).
       # - out_file: a file where the compiled output is written to. The default
       #             is gen/closure/<path to |target_name|>/|target_name|.js.
-      # - script_args: additional arguments to pass to compile.py.
+      # - script_args: additional arguments to pass to compile2.py.
       # - closure_args: additional arguments to pass to the Closure compiler.
       # - disabled_closure_args: additional arguments dealing with the
       #                          strictness of compilation; Non-strict

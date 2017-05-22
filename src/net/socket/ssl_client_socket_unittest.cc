@@ -774,6 +774,7 @@ class FailingChannelIDStore : public ChannelIDStore {
   void GetAllChannelIDs(const GetChannelIDListCallback& callback) override {}
   int GetChannelIDCount() override { return 0; }
   void SetForceKeepSessionState() override {}
+  void Flush() override {}
   bool IsEphemeral() override { return true; }
 };
 
@@ -800,6 +801,7 @@ class AsyncFailingChannelIDStore : public ChannelIDStore {
   void GetAllChannelIDs(const GetChannelIDListCallback& callback) override {}
   int GetChannelIDCount() override { return 0; }
   void SetForceKeepSessionState() override {}
+  void Flush() override {}
   bool IsEphemeral() override { return true; }
 };
 

@@ -36,11 +36,6 @@ config("using_proto") {
   ]
 }
 
-protobuf_globals_sources = [
-  "src/google/protobuf/globals.cc",
-  "src/google/protobuf/stubs/atomicops_internals_x86_gcc.cc",
-]
-
 protobuf_lite_sources = [
   "src/google/protobuf/arena.cc",
   "src/google/protobuf/arena.h",
@@ -78,6 +73,7 @@ protobuf_lite_sources = [
   "src/google/protobuf/stubs/atomicops_internals_ppc_gcc.h",
   "src/google/protobuf/stubs/atomicops_internals_solaris.h",
   "src/google/protobuf/stubs/atomicops_internals_tsan.h",
+  "src/google/protobuf/stubs/atomicops_internals_x86_gcc.cc",
   "src/google/protobuf/stubs/atomicops_internals_x86_gcc.h",
   "src/google/protobuf/stubs/atomicops_internals_x86_msvc.cc",
   "src/google/protobuf/stubs/atomicops_internals_x86_msvc.h",
@@ -146,29 +142,21 @@ if (is_win) {
 # libmirclient -> libmirprotobuf -> libprotobuf-lite.  Trying to load
 # the system libprotobuf-lite after already having loaded the libprotobuf_lite
 # component will result in an immediate crash. (crbug.com/700120)
-if (is_linux && !is_chromeos) {
-  link_target_type = "static_library"
-} else {
-  link_target_type = "component"
-}
-
-if (is_component_build && is_linux && !is_chromeos) {
-  # Even though protobuf is statically linked on Linux, global data must
-  # be shared across different copies of the library in each component.
-  # protobuf_globals is a shared library that provides this state, but is
-  # careful to prefix all exported symbols with 'cr_' so they don't conflict
-  # with other versions of protobuf.
-  component("protobuf_globals") {
-    configs += [
-      ":protobuf_config",
-      ":protobuf_use_dlls",
+if (is_component_build && is_desktop_linux) {
+  shared_library("mirclient") {
+    inputs = [
+      "mirclient.map",
     ]
-    defines = [ "LIBPROTOBUF_EXPORTS" ]
-    sources = protobuf_globals_sources
+    sources = [
+      "mirclient.cc",
+    ]
+    ldflags = [ "-Wl,--version-script=" +
+                rebase_path("//third_party/protobuf/mirclient.map") ]
+    output_extension = "so.9"
   }
 }
 
-target(link_target_type, "protobuf_lite") {
+component("protobuf_lite") {
   sources = protobuf_lite_sources
 
   configs -= [ "//build/config/compiler:chromium_code" ]
@@ -192,23 +180,19 @@ target(link_target_type, "protobuf_lite") {
   ]
 
   deps = [
-    "//build/config/sanitizers:deps",
+    "//build/config:exe_and_shlib_deps",
   ]
 
   cflags = protobuf_lite_cflags
 
-  if (is_component_build && is_linux && !is_chromeos) {
-    deps += [ ":protobuf_globals" ]
-  } else {
-    sources += protobuf_globals_sources
+  if (is_component_build && is_desktop_linux) {
+    deps += [ ":mirclient" ]
   }
 
   # Required for component builds. See http://crbug.com/172800.
   if (is_component_build) {
     public_configs += [ ":protobuf_use_dlls" ]
-    if (!is_linux || is_chromeos) {
-      defines = [ "LIBPROTOBUF_EXPORTS" ]
-    }
+    defines = [ "LIBPROTOBUF_EXPORTS" ]
   }
 }
 
@@ -228,7 +212,7 @@ static_library("protobuf_full") {
     "//tools/traffic_annotation/*",
   ]
 
-  sources = protobuf_lite_sources + protobuf_globals_sources + [
+  sources = protobuf_lite_sources + [
     "src/google/protobuf/any.cc",
     "src/google/protobuf/any.h",
     "src/google/protobuf/any.pb.cc",
@@ -357,7 +341,7 @@ static_library("protobuf_full") {
   ]
 
   deps = [
-    "//build/config/sanitizers:deps",
+    "//build/config:exe_and_shlib_deps",
   ]
 
   configs -= [ "//build/config/compiler:chromium_code" ]

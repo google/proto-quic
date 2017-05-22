@@ -11,6 +11,9 @@ BrowserTest.*
 -BrowserTest.JavascriptAlertActivatesTab
 -BrowserTest.Title
 
+# Flaky tests -crbug.com/716727
+-ExtensionsLoadTestWithLoginScreenApps.CommandLineExtensionsDontLoad
+
 # Trying to whitelist
 AppWindowApiTest.AlphaEnabledHasPermissions
 AppWindowApiTest.AlphaEnabledInStable
@@ -122,7 +125,6 @@ ExecuteDefaultTaskOnDownloads/FileManagerBrowserTest.Test/0
 ExecuteDefaultTaskOnDownloads/FileManagerBrowserTest.Test/1
 ExecuteDefaultTaskOnDrive/FileManagerBrowserTest.Test/0
 ExtensionDetermineDownloadFilenameInternal.ExtensionDetermineDownloadFilenameInternal
-ExtensionsLoadTestWithLoginScreenApps.CommandLineExtensionsDontLoad
 FolderShortcuts/FileManagerBrowserTest.Test/0
 FolderShortcuts/FileManagerBrowserTest.Test/1
 FormAutocompleteTest.AjaxSucceeded_FilledFormIsInvisible

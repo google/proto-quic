@@ -46,7 +46,7 @@ be describing additional metrics about the same event.
       none of the field were autofilled. See |AutofillFormSubmittedState|.
     </summary>
   </metric>
-  <metric name="MillisecondsSinceFormLoaded">
+  <metric name="MillisecondsSinceFormParsed">
     <summary>
       Time since form parse.
     </summary>
@@ -78,7 +78,7 @@ be describing additional metrics about the same event.
 
 <event name="Autofill.SuggestionsShown">
   <owner>csashi@google.com</owner>
-  <metric name="MillisecondsSinceFormLoaded">
+  <metric name="MillisecondsSinceFormParsed">
     <summary>
       Time since form parse.
     </summary>
@@ -87,7 +87,7 @@ be describing additional metrics about the same event.
 
 <event name="Autofill.SelectedMaskedServerCard">
   <owner>csashi@google.com</owner>
-  <metric name="MillisecondsSinceFormLoaded">
+  <metric name="MillisecondsSinceFormParsed">
     <summary>
       Time since form parse.
     </summary>
@@ -100,7 +100,7 @@ be describing additional metrics about the same event.
     Recorded when user selects a suggestion and we fill the form with that
     suggestion.
   </summary>
-  <metric name="MillisecondsSinceFormLoaded">
+  <metric name="MillisecondsSinceFormParsed">
     <summary>
       Time since form parse.
     </summary>
@@ -146,7 +146,7 @@ be describing additional metrics about the same event.
       True whether field was autofilled. See |AutofillField.is_autofilled|.
     </summary>
   </metric>
-  <metric name="MillisecondsSinceFormLoaded">
+  <metric name="MillisecondsSinceFormParsed">
     <summary>
       Time since form parse.
     </summary>
@@ -155,6 +155,81 @@ be describing additional metrics about the same event.
     <summary>
       Field's |ServerFieldType| returned by server. See
       |AutofillField.server_type()|.
+    </summary>
+  </metric>
+</event>
+
+<event name="ContextualSearch">
+  <owner>donnd@chromium.org</owner>
+  <summary>
+    Metrics related to a Contextual Search Tap event on a page, for use with
+    Ranker.  These metrics are recorded each time the user triggers the
+    Contextual Search UI via a tap gesture (when enabled).
+  </summary>
+  <metric name="DURATION_AFTER_SCROLL_MS">
+    <summary>
+      Duration in MS between showing the UI and a subsequent scroll event, or
+      not recorded if there was no subsequent scroll.
+    </summary>
+  </metric>
+  <metric name="DURATION_BEFORE_SCROLL_MS">
+    <summary>
+      Duration in MS between showing the most recent scroll event and showing
+      the UI, or 0 if no previous scroll event occurred.
+    </summary>
+  </metric>
+  <metric name="OUTCOME_WAS_PANEL_OPENED">
+    <summary>
+      Whether the user opened the overlay panel.  This is the primary outcome
+      metric.
+    </summary>
+  </metric>
+  <metric name="OUTCOME_WAS_QUICK_ACTION_CLICKED">
+    <summary>
+      Whether the user clicked within the overlay panel when a Quick-Action was
+      shown.  This is a secondary outcome metric.
+    </summary>
+  </metric>
+  <metric name="OUTCOME_WAS_QUICK_ANSWER_SEEN">
+    <summary>
+      Whether the user could see a Quick-Answer caption within the overlay
+      panel.  This is a tertiary outcome metric.
+    </summary>
+  </metric>
+  <metric name="PREVIOUS_28DAY_CTR_PERCENT">
+    <summary>
+      The CTR of the overlay panel for this user, aggregated over a previous 28
+      day period, expressed as an integer between 0-99.
+    </summary>
+  </metric>
+  <metric name="PREVIOUS_28DAY_IMPRESSIONS_COUNT">
+    <summary>
+      The count of views of the overlay panel for this user, aggregated over a
+      previous 28 day period.
+    </summary>
+  </metric>
+  <metric name="PREVIOUS_WEEK_CTR_PERCENT">
+    <summary>
+      The CTR of the overlay panel for this user, aggregated over the previous
+      week, expressed as an integer between 0-99.
+    </summary>
+  </metric>
+  <metric name="PREVIOUS_WEEK_IMPRESSIONS_COUNT">
+    <summary>
+      The count of views of the overlay panel for this user, aggregated over the
+      previous week.
+    </summary>
+  </metric>
+  <metric name="SCREEN_TOP_DPS">
+    <summary>
+      The location of the tap relative to the top of the screen, expressed in
+      DPs.
+    </summary>
+  </metric>
+  <metric name="WAS_SCREEN_BOTTOM">
+    <summary>
+      The location of the tap relative to the bottom of the screen, expressed as
+      an integer with 0 meaning not at the bottom and 1 meaning at the bottom.
     </summary>
   </metric>
 </event>

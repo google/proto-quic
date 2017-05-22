@@ -56,6 +56,11 @@ const char switches::kTestLauncherPrintWritablePath[] =
 const char switches::kTestLauncherShardIndex[] =
     "test-launcher-shard-index";
 
+// Limit of test part results in the output. Default limit is 10.
+// Negative value will completely disable limit.
+const char switches::kTestLauncherTestPartResultsLimit[] =
+    "test-launcher-test-part-results-limit";
+
 // Total number of shards. Must be the same for all shards.
 const char switches::kTestLauncherTotalShards[] =
     "test-launcher-total-shards";

@@ -21,6 +21,7 @@
 #include "base/debug/thread_heap_usage_tracker.h"
 #include "base/memory/ptr_util.h"
 #include "base/optional.h"
+#include "base/sequenced_task_runner.h"
 #include "base/strings/pattern.h"
 #include "base/strings/string_piece.h"
 #include "base/threading/thread.h"
@@ -156,8 +157,11 @@ MemoryDumpManager* MemoryDumpManager::GetInstance() {
 }
 
 // static
-void MemoryDumpManager::SetInstanceForTesting(MemoryDumpManager* instance) {
-  g_instance_for_testing = instance;
+std::unique_ptr<MemoryDumpManager>
+MemoryDumpManager::CreateInstanceForTesting() {
+  std::unique_ptr<MemoryDumpManager> instance(new MemoryDumpManager());
+  g_instance_for_testing = instance.get();
+  return instance;
 }
 
 MemoryDumpManager::MemoryDumpManager()
@@ -185,6 +189,7 @@ MemoryDumpManager::~MemoryDumpManager() {
   }
   AutoLock lock(lock_);
   dump_thread_.reset();
+  g_instance_for_testing = nullptr;
 }
 
 void MemoryDumpManager::EnableHeapProfilingIfNeeded() {
@@ -320,10 +325,18 @@ void MemoryDumpManager::RegisterDumpProviderInternal(
   if (dumper_registrations_ignored_for_testing_)
     return;
 
+  // A handful of MDPs are required to compute the summary struct these are
+  // 'whitelisted for summary mode'. These MDPs are a subset of those which
+  // have small enough performance overhead that it is resonable to run them
+  // in the background while the user is doing other things. Those MDPs are
+  // 'whitelisted for background mode'.
   bool whitelisted_for_background_mode = IsMemoryDumpProviderWhitelisted(name);
-  scoped_refptr<MemoryDumpProviderInfo> mdpinfo =
-      new MemoryDumpProviderInfo(mdp, name, std::move(task_runner), options,
-                                 whitelisted_for_background_mode);
+  bool whitelisted_for_summary_mode =
+      IsMemoryDumpProviderWhitelistedForSummary(name);
+
+  scoped_refptr<MemoryDumpProviderInfo> mdpinfo = new MemoryDumpProviderInfo(
+      mdp, name, std::move(task_runner), options,
+      whitelisted_for_background_mode, whitelisted_for_summary_mode);
 
   if (options.is_fast_polling_supported) {
     DCHECK(!mdpinfo->task_runner) << "MemoryDumpProviders capable of fast "
@@ -559,6 +572,14 @@ void MemoryDumpManager::SetupNextMemoryDump(
   if (pmd_async_state->req_args.level_of_detail ==
           MemoryDumpLevelOfDetail::BACKGROUND &&
       !mdpinfo->whitelisted_for_background_mode) {
+    pmd_async_state->pending_dump_providers.pop_back();
+    return SetupNextMemoryDump(std::move(pmd_async_state));
+  }
+
+  // If we are in summary mode, we only need to invoke the providers
+  // whitelisted for summary mode.
+  if (pmd_async_state->req_args.dump_type == MemoryDumpType::SUMMARY_ONLY &&
+      !mdpinfo->whitelisted_for_summary_mode) {
     pmd_async_state->pending_dump_providers.pop_back();
     return SetupNextMemoryDump(std::move(pmd_async_state));
   }

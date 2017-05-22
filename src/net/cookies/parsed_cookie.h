@@ -23,8 +23,6 @@ class NET_EXPORT ParsedCookie {
 
   // The maximum length of a cookie string we will try to parse
   static const size_t kMaxCookieSize = 4096;
-  // The maximum number of Token/Value pairs.  Shouldn't have more than 8.
-  static const int kMaxPairs = 16;
 
   // Construct from a cookie string like "BLAH=1; path=/; domain=.google.com"
   // Format is according to RFC 6265. Cookies with both name and value empty

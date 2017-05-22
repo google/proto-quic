@@ -86,6 +86,16 @@ const der::Input AnyPolicy() {
   return der::Input(any_policy);
 }
 
+der::Input InhibitAnyPolicyOid() {
+  // From RFC 5280:
+  //
+  //     id-ce-inhibitAnyPolicy OBJECT IDENTIFIER ::=  { id-ce 54 }
+  //
+  // In dotted notation: 2.5.29.54
+  static const uint8_t oid[] = {0x55, 0x1d, 0x36};
+  return der::Input(oid);
+}
+
 // RFC 5280 section 4.2.1.4.  Certificate Policies:
 //
 // certificatePolicies ::= SEQUENCE SIZE (1..MAX) OF PolicyInformation
@@ -234,6 +244,26 @@ bool ParsePolicyConstraints(const der::Input& policy_constraints_tlv,
 
   // There should be no remaining data.
   if (sequence_parser.HasMore() || parser.HasMore())
+    return false;
+
+  return true;
+}
+
+// From RFC 5280:
+//
+//   InhibitAnyPolicy ::= SkipCerts
+//
+//   SkipCerts ::= INTEGER (0..MAX)
+bool ParseInhibitAnyPolicy(const der::Input& inhibit_any_policy_tlv,
+                           uint8_t* num_certs) {
+  der::Parser parser(inhibit_any_policy_tlv);
+
+  // TODO(eroman): Surface reason for failure if length was longer than uint8.
+  if (!parser.ReadUint8(num_certs))
+    return false;
+
+  // There should be no remaining data.
+  if (parser.HasMore())
     return false;
 
   return true;

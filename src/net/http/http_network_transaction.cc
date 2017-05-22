@@ -4,7 +4,6 @@
 
 #include "net/http/http_network_transaction.h"
 
-#include <memory>
 #include <set>
 #include <utility>
 #include <vector>
@@ -561,7 +560,7 @@ void HttpNetworkTransaction::OnHttpsProxyTunnelResponse(
     const HttpResponseInfo& response_info,
     const SSLConfig& used_ssl_config,
     const ProxyInfo& used_proxy_info,
-    HttpStream* stream) {
+    std::unique_ptr<HttpStream> stream) {
   DCHECK_EQ(STATE_CREATE_STREAM_COMPLETE, next_state_);
 
   CopyConnectionAttemptsFromStreamRequest();
@@ -574,7 +573,7 @@ void HttpNetworkTransaction::OnHttpsProxyTunnelResponse(
     total_received_bytes_ += stream_->GetTotalReceivedBytes();
     total_sent_bytes_ += stream_->GetTotalSentBytes();
   }
-  stream_.reset(stream);
+  stream_ = std::move(stream);
   stream_request_.reset();  // we're done with the stream request
   OnIOComplete(ERR_HTTPS_PROXY_TUNNEL_RESPONSE);
 }
@@ -841,17 +840,17 @@ int HttpNetworkTransaction::DoCreateStream() {
   if (!enable_ip_based_pooling_)
     DCHECK(!enable_alternative_services_);
   if (ForWebSocketHandshake()) {
-    stream_request_.reset(
+    stream_request_ =
         session_->http_stream_factory_for_websocket()
             ->RequestWebSocketHandshakeStream(
                 *request_, priority_, server_ssl_config_, proxy_ssl_config_,
                 this, websocket_handshake_stream_base_create_helper_,
                 enable_ip_based_pooling_, enable_alternative_services_,
-                net_log_));
+                net_log_);
   } else {
-    stream_request_.reset(session_->http_stream_factory()->RequestStream(
+    stream_request_ = session_->http_stream_factory()->RequestStream(
         *request_, priority_, server_ssl_config_, proxy_ssl_config_, this,
-        enable_ip_based_pooling_, enable_alternative_services_, net_log_));
+        enable_ip_based_pooling_, enable_alternative_services_, net_log_);
   }
   DCHECK(stream_request_.get());
   return ERR_IO_PENDING;

@@ -121,13 +121,6 @@ bool SafeConvertToWord(int in, WORD* out) {
 
 // Time -----------------------------------------------------------------------
 
-// The internal representation of Time uses FILETIME, whose epoch is 1601-01-01
-// 00:00:00 UTC.  ((1970-1601)*365+89)*24*60*60*1000*1000, where 89 is the
-// number of leap year days between 1601 and 1970: (1970-1601)/4 excluding
-// 1700, 1800, and 1900.
-// static
-const int64_t Time::kTimeTToMicrosecondsOffset = INT64_C(11644473600000000);
-
 // static
 Time Time::Now() {
   if (initial_time == 0)

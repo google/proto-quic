@@ -1,18 +1,8 @@
 blink_perf.blink_gc
-blink_style.key_mobile_sites
-blink_style.polymer
-blink_style.top_25
 blob_storage.blob_storage
-gpu_times.gpu_rasterization.key_mobile_sites_smooth
-gpu_times.gpu_rasterization.top_25_smooth
-gpu_times.key_mobile_sites_smooth
-gpu_times.top_25_smooth
 load_library_perf_tests
 power.idle_platform
 power.steady_state
-power.top_10
-power.top_25
-power.typical_10_mobile_reload
 rasterize_and_record_micro.key_mobile_sites
 rasterize_and_record_micro.partial_invalidation
 rasterize_and_record_micro.polymer
@@ -29,5 +19,3 @@ system_health.webview_startup_multiprocess
 thread_times.key_hit_test_cases
 thread_times.key_mobile_sites_smooth
 thread_times.key_noop_cases
-webrtc.getusermedia
-webrtc.peerconnection

@@ -1,5 +1,4 @@
 #if defined(__i386__)
-.file	"aes-586.S"
 .text
 .hidden	_x86_AES_encrypt_compact
 .type	_x86_AES_encrypt_compact,@function

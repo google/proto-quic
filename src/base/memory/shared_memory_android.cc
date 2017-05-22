@@ -27,7 +27,7 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
   int fd = ashmem_create_region(
       options.name_deprecated == NULL ? "" : options.name_deprecated->c_str(),
       options.size);
-  shm_ = SharedMemoryHandle::ImportHandle(fd);
+  shm_ = SharedMemoryHandle::ImportHandle(fd, options.size);
   if (!shm_.IsValid()) {
     DLOG(ERROR) << "Shared memory creation failed";
     return false;
@@ -42,8 +42,7 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
 
   // Android doesn't appear to have a way to drop write access on an ashmem
   // segment for a single descriptor.  http://crbug.com/320865
-  readonly_shm_ = SharedMemoryHandle(
-      base::FileDescriptor(dup(shm_.GetHandle()), false), shm_.GetGUID());
+  readonly_shm_ = shm_.Duplicate();
   if (!readonly_shm_.IsValid()) {
     DPLOG(ERROR) << "dup() failed";
     return false;

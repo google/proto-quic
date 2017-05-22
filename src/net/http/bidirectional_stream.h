@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include <memory>
+#include <vector>
 
 #include "base/compiler_specific.h"
 #include "base/macros.h"
@@ -208,7 +209,7 @@ class NET_EXPORT BidirectionalStream
   void OnHttpsProxyTunnelResponse(const HttpResponseInfo& response_info,
                                   const SSLConfig& used_ssl_config,
                                   const ProxyInfo& used_proxy_info,
-                                  HttpStream* stream) override;
+                                  std::unique_ptr<HttpStream> stream) override;
   void OnQuicBroken() override;
 
   // Helper method to notify delegate if there is an error.

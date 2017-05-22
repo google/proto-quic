@@ -121,8 +121,10 @@ scoped_refptr<TaskRunner> CreateTaskRunnerWithTraitsAndExecutionMode(
       return scheduler->CreateTaskRunnerWithTraits(traits);
     case test::ExecutionMode::SEQUENCED:
       return scheduler->CreateSequencedTaskRunnerWithTraits(traits);
-    case test::ExecutionMode::SINGLE_THREADED:
-      return scheduler->CreateSingleThreadTaskRunnerWithTraits(traits);
+    case test::ExecutionMode::SINGLE_THREADED: {
+      return scheduler->CreateSingleThreadTaskRunnerWithTraits(
+          traits, SingleThreadTaskRunnerThreadMode::SHARED);
+    }
   }
   ADD_FAILURE() << "Unknown ExecutionMode";
   return nullptr;

@@ -99,7 +99,7 @@ QUIC_FLAG(bool, FLAGS_quic_allow_chlo_buffering, true)
 
 // If true, fix some casts that were causing off-by-one errors in QUIC's cubic
 // "convex" increases.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode, true)
 
 // If true, GFE sends SETTINGS_MAX_HEADER_LIST_SIZE to the client at the
 // beginning of a connection.
@@ -108,10 +108,10 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_send_max_header_list_size, true)
 // If true, fix quantization of CubicBytes while performing convex increases.
 QUIC_FLAG(bool,
           FLAGS_quic_reloadable_flag_quic_fix_cubic_bytes_quantization,
-          false)
+          true)
 
 // If true, fix Cubic\'s use of kBetaLastMax for n-connection emulation.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_fix_beta_last_max, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_fix_beta_last_max, true)
 
 // If greater than zero, mean RTT variation is multiplied by the specified
 // factor and added to the congestion window limit.
@@ -119,10 +119,6 @@ QUIC_FLAG(double, FLAGS_quic_bbr_rtt_variation_weight, 0.0f)
 
 // Congestion window gain for QUIC BBR during PROBE_BW phase.
 QUIC_FLAG(double, FLAGS_quic_bbr_cwnd_gain, 2.0f)
-
-// If true, allows the 1RTT and 2RTT connection options to reduce the time
-// in BBR STARTUP to 1 or 2 RTTs with no bandwidth increase from 3.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_allow_2_rtt_bbr_startup, true)
 
 // If true, do not send or process stop waiting frames in QUIC if the NSTP
 // connection option is provided.
@@ -150,7 +146,7 @@ QUIC_FLAG(bool,
 // the frequency to once every 30ms.
 QUIC_FLAG(bool,
           FLAGS_quic_reloadable_flag_quic_enable_cubic_per_ack_updates,
-          false)
+          true)
 
 // Support bandwidth resumption in QUIC BBR.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_bandwidth_resumption, false)

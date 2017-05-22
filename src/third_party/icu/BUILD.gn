@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/host_byteorder.gni")
 import("//third_party/icu/config.gni")
 
 if (is_android) {
@@ -984,8 +985,9 @@ if (is_android) {
 } else {
   data_dir = "common"
 }
-# TODO(GYP): Support to use host byteorder to select the icu date file
-if (current_cpu == "mips" || current_cpu == "mips64") {
+
+if (current_cpu == "mips" || current_cpu == "mips64" ||
+    host_byteorder == "big") {
   data_bundle_prefix = "icudtb"
 } else {
   data_bundle_prefix = "icudtl"

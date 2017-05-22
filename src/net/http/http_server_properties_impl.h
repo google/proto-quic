@@ -84,7 +84,7 @@ class NET_EXPORT HttpServerPropertiesImpl
   void SetHTTP11Required(const HostPortPair& server) override;
   void MaybeForceHTTP11(const HostPortPair& server,
                         SSLConfig* ssl_config) override;
-  AlternativeServiceVector GetAlternativeServices(
+  AlternativeServiceInfoVector GetAlternativeServiceInfos(
       const url::SchemeHostPort& origin) override;
   bool SetAlternativeService(const url::SchemeHostPort& origin,
                              const AlternativeService& alternative_service,

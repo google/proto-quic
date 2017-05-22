@@ -66,10 +66,11 @@ def SplitParagraphs(text):
 class XmlStyle(object):
   """A class that stores all style specification for an output xml file."""
 
-  def __init__(self, attribute_order, tags_that_have_extra_newline,
-               tags_that_dont_indent, tags_that_allow_single_line,
-               tags_alphabetization_rules):
+  def __init__(self, attribute_order, required_attributes,
+               tags_that_have_extra_newline, tags_that_dont_indent,
+               tags_that_allow_single_line, tags_alphabetization_rules):
     self.attribute_order = attribute_order
+    self.required_attributes = required_attributes
     self.tags_that_have_extra_newline = tags_that_have_extra_newline
     self.tags_that_dont_indent = tags_that_dont_indent
     self.tags_that_allow_single_line = tags_that_allow_single_line
@@ -199,8 +200,27 @@ class XmlStyle(object):
       if not node.childNodes:
         closing_chars = 2
 
-      # Pretty-print the attributes.
       attributes = node.attributes.keys()
+      required_attributes = [attribute for attribute in self.required_attributes
+                             if attribute in self.attribute_order[node.tagName]]
+      missing_attributes = [attribute for attribute in required_attributes
+                            if attribute not in attributes]
+
+      for attribute in missing_attributes:
+        logging.error(
+            'Missing attribute "%s" in tag "%s"', attribute, node.tagName)
+      if missing_attributes:
+        missing_attributes_str = (
+            ', '.join('"%s"' % attribute for attribute in missing_attributes))
+        present_attributes = [
+            ' {0}="{1}"'.format(name, value)
+            for name, value in node.attributes.items()]
+        node_str = '<{0}{1}>'.format(node.tagName, ''.join(present_attributes))
+        raise Error(
+            'Missing attributes {0} in tag "{1}"'.format(
+                missing_attributes_str, node_str))
+
+      # Pretty-print the attributes.
       if attributes:
         # Reorder the attributes.
         unrecognized_attributes = (

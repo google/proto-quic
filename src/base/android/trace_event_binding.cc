@@ -121,8 +121,12 @@ static void End(JNIEnv* env,
   }
 }
 
-static void BeginToplevel(JNIEnv* env, const JavaParamRef<jclass>& clazz) {
-  TRACE_EVENT_BEGIN0(kToplevelCategory, kLooperDispatchMessage);
+static void BeginToplevel(JNIEnv* env,
+                          const JavaParamRef<jclass>& clazz,
+                          const JavaParamRef<jstring>& jtarget) {
+  std::string target = ConvertJavaStringToUTF8(env, jtarget);
+  TRACE_EVENT_BEGIN1(kToplevelCategory, kLooperDispatchMessage, "target",
+                     target);
 }
 
 static void EndToplevel(JNIEnv* env, const JavaParamRef<jclass>& clazz) {

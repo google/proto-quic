@@ -731,7 +731,6 @@ bool AppendToFile(const FilePath& filename, const char* data, int size) {
   return false;
 }
 
-// Gets the current working directory for the process.
 bool GetCurrentDirectory(FilePath* dir) {
   ThreadRestrictions::AssertIOAllowed();
 
@@ -748,11 +747,9 @@ bool GetCurrentDirectory(FilePath* dir) {
   return true;
 }
 
-// Sets the current working directory for the process.
 bool SetCurrentDirectory(const FilePath& directory) {
   ThreadRestrictions::AssertIOAllowed();
-  BOOL ret = ::SetCurrentDirectory(directory.value().c_str());
-  return ret != 0;
+  return ::SetCurrentDirectory(directory.value().c_str()) != 0;
 }
 
 int GetMaximumPathComponentLength(const FilePath& path) {

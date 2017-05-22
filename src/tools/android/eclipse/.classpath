@@ -287,7 +287,6 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="lib" path="out/Debug/lib.java/sync/android/sync_java.jar"/>
     <classpathentry kind="lib" path="out/Debug/lib.java/sync/test_support_proto_java.jar"/>
     <classpathentry kind="lib" path="out/Debug/lib.java/third_party/android_data_chart/android_data_chart_java.jar"/>
-    <classpathentry kind="lib" path="out/Debug/lib.java/third_party/android_media/android_media_java.jar"/>
     <classpathentry kind="lib" path="out/Debug/lib.java/third_party/android_protobuf/protobuf_nano_javalib.jar"/>
     <classpathentry kind="lib" path="out/Debug/lib.java/third_party/android_swipe_refresh/android_swipe_refresh_java.jar"/>
     <classpathentry kind="lib" path="out/Debug/lib.java/third_party/cacheinvalidation/cacheinvalidation_javalib.jar"/>

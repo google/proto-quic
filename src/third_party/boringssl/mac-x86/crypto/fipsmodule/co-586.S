@@ -1,5 +1,4 @@
 #if defined(__i386__)
-.file	"src/crypto/fipsmodule/bn/asm/co-586.S"
 .text
 .globl	_bn_mul_comba8
 .private_extern	_bn_mul_comba8

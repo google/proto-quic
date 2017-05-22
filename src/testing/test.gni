@@ -220,15 +220,6 @@ template("test") {
       test_suite = _output_name
       test_type = "gtest"
     }
-
-    # TODO(GYP_GONE): Delete this after we've converted everything to GN.
-    # The _run targets exist only for compatibility w/ GYP.
-    group("${target_name}_apk_run") {
-      testonly = true
-      deps = [
-        ":${invoker.target_name}",
-      ]
-    }
   } else if (is_ios) {
     import("//build/config/ios/ios_sdk.gni")
     import("//build/config/ios/rules.gni")
@@ -274,7 +265,7 @@ template("test") {
       deps += [
         # All shared libraries must have the sanitizer deps to properly link in
         # asan mode (this target will be empty in other cases).
-        "//build/config/sanitizers:deps",
+        "//build/config:exe_and_shlib_deps",
       ]
       if (!defined(bundle_deps)) {
         bundle_deps = []
@@ -290,7 +281,7 @@ template("test") {
       deps += [
         # All shared libraries must have the sanitizer deps to properly link in
         # asan mode (this target will be empty in other cases).
-        "//build/config/sanitizers:deps",
+        "//build/config:exe_and_shlib_deps",
 
         # Give tests the default manifest on Windows (a no-op elsewhere).
         "//build/win:default_exe_manifest",

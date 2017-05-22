@@ -132,7 +132,7 @@ def code_search(test, cs_base_url):
 def status_class(status):
   """Returns HTML class for test status."""
   if not status:
-    return 'failure unknwon'
+    return 'failure unknown'
   status = status.lower()
   if status not in ('success', 'skipped'):
     return 'failure %s' % status

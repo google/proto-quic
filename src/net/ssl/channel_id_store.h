@@ -95,6 +95,9 @@ class NET_EXPORT ChannelIDStore
   // Returns all channel ID keypairs.
   virtual void GetAllChannelIDs(const GetChannelIDListCallback& callback) = 0;
 
+  // Signals to the backing store that any pending writes should be flushed.
+  virtual void Flush() = 0;
+
   // Helper function that adds all keypairs from |list| into this instance.
   void InitializeFrom(const ChannelIDList& list);
 

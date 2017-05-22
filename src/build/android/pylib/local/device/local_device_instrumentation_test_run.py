@@ -6,7 +6,6 @@ import logging
 import os
 import posixpath
 import re
-import sys
 import tempfile
 import time
 
@@ -29,9 +28,10 @@ from py_utils import contextlib_ext
 from py_utils import tempfile_ext
 import tombstones
 
-sys.path.append(os.path.join(host_paths.DIR_SOURCE_ROOT, 'third_party'))
-import jinja2  # pylint: disable=import-error
-import markupsafe  # pylint: disable=import-error,unused-import
+with host_paths.SysPath(
+    os.path.join(host_paths.DIR_SOURCE_ROOT, 'third_party'), 0):
+  import jinja2  # pylint: disable=import-error
+  import markupsafe  # pylint: disable=import-error,unused-import
 
 
 _JINJA_TEMPLATE_DIR = os.path.join(
@@ -50,7 +50,7 @@ TIMEOUT_ANNOTATIONS = [
   ('SmallTest', 1 * 60),
 ]
 
-LOGCAT_FILTERS = ['*:e', 'chromium:v', 'cr_*:v']
+LOGCAT_FILTERS = ['*:e', 'chromium:v', 'cr_*:v', 'DEBUG:I']
 
 EXTRA_SCREENSHOT_FILE = (
     'org.chromium.base.test.ScreenshotOnFailureStatement.ScreenshotFile')
@@ -513,19 +513,17 @@ class LocalDeviceInstrumentationTestRun(
 
   def _ProcessRenderTestResults(
       self, device, render_tests_device_output_dir, results):
-    # Will archive test images if we are given a GS bucket to store the results
-    # in and are given a results file to output the links to.
-    if not bool(self._test_instance.gs_results_bucket):
+    # If GS results bucket is specified, will archive render result images.
+    # If render image dir is specified, will pull the render result image from
+    # the device and leave in the directory.
+    if not (bool(self._test_instance.gs_results_bucket) or
+            bool(self._test_instance.render_results_dir)):
       return
 
     failure_images_device_dir = posixpath.join(
         render_tests_device_output_dir, 'failures')
-
     if not device.FileExists(failure_images_device_dir):
       return
-
-    render_tests_bucket = (
-        self._test_instance.gs_results_bucket + '/render_tests')
 
     diff_images_device_dir = posixpath.join(
         render_tests_device_output_dir, 'diffs')
@@ -533,63 +531,85 @@ class LocalDeviceInstrumentationTestRun(
     golden_images_device_dir = posixpath.join(
         render_tests_device_output_dir, 'goldens')
 
-    with tempfile_ext.NamedTemporaryDirectory() as temp_dir:
-      device.PullFile(failure_images_device_dir, temp_dir)
+    with contextlib_ext.Optional(
+        tempfile_ext.NamedTemporaryDirectory(),
+        not bool(self._test_instance.render_results_dir)) as render_temp_dir:
+      render_host_dir = (
+          self._test_instance.render_results_dir or render_temp_dir)
+
+      if not os.path.exists(render_host_dir):
+        os.makedirs(render_host_dir)
+
+      # Pull all render test results from device.
+      device.PullFile(failure_images_device_dir, render_host_dir)
 
       if device.FileExists(diff_images_device_dir):
-        device.PullFile(diff_images_device_dir, temp_dir)
+        device.PullFile(diff_images_device_dir, render_host_dir)
       else:
         logging.error('Diff images not found on device.')
 
       if device.FileExists(golden_images_device_dir):
-        device.PullFile(golden_images_device_dir, temp_dir)
+        device.PullFile(golden_images_device_dir, render_host_dir)
       else:
         logging.error('Golden images not found on device.')
 
-      for failure_filename in os.listdir(os.path.join(temp_dir, 'failures')):
-        m = RE_RENDER_IMAGE_NAME.match(failure_filename)
-        if not m:
-          logging.warning('Unexpected file in render test failures: %s',
-                          failure_filename)
-          continue
+      # Upload results to Google Storage.
+      if self._test_instance.gs_results_bucket:
+        self._UploadRenderTestResults(render_host_dir, results)
 
-        failure_filepath = os.path.join(temp_dir, 'failures', failure_filename)
-        failure_link = google_storage_helper.upload_content_addressed(
-            failure_filepath, bucket=render_tests_bucket)
+  def _UploadRenderTestResults(self, render_host_dir, results):
+    render_tests_bucket = (
+        self._test_instance.gs_results_bucket + '/render_tests')
 
-        golden_filepath = os.path.join(temp_dir, 'goldens', failure_filename)
-        if os.path.exists(golden_filepath):
-          golden_link = google_storage_helper.upload_content_addressed(
-              golden_filepath, bucket=render_tests_bucket)
-        else:
-          golden_link = ''
+    for failure_filename in os.listdir(
+        os.path.join(render_host_dir, 'failures')):
+      m = RE_RENDER_IMAGE_NAME.match(failure_filename)
+      if not m:
+        logging.warning('Unexpected file in render test failures: %s',
+                        failure_filename)
+        continue
 
-        diff_filepath = os.path.join(temp_dir, 'diffs', failure_filename)
-        if os.path.exists(diff_filepath):
-          diff_link = google_storage_helper.upload_content_addressed(
-              diff_filepath, bucket=render_tests_bucket)
-        else:
-          diff_link = ''
+      failure_filepath = os.path.join(
+          render_host_dir, 'failures', failure_filename)
+      failure_link = google_storage_helper.upload_content_addressed(
+          failure_filepath, bucket=render_tests_bucket)
 
-        with tempfile.NamedTemporaryFile(suffix='.html') as temp_html:
-          jinja2_env = jinja2.Environment(
-              loader=jinja2.FileSystemLoader(_JINJA_TEMPLATE_DIR),
-              trim_blocks=True)
-          template = jinja2_env.get_template(_JINJA_TEMPLATE_FILENAME)
-          # pylint: disable=no-member
-          processed_template_output = template.render(
-              failure_link=failure_link,
-              golden_link=golden_link,
-              diff_link=diff_link)
+      golden_filepath = os.path.join(
+          render_host_dir, 'goldens', failure_filename)
+      if os.path.exists(golden_filepath):
+        golden_link = google_storage_helper.upload_content_addressed(
+            golden_filepath, bucket=render_tests_bucket)
+      else:
+        golden_link = ''
 
-          temp_html.write(processed_template_output)
-          temp_html.flush()
-          html_results_link = google_storage_helper.upload_content_addressed(
-              temp_html.name,
-              bucket=render_tests_bucket,
-              content_type='text/html')
-          for result in results:
-            result.SetLink(failure_filename, html_results_link)
+      diff_filepath = os.path.join(
+          render_host_dir, 'diffs', failure_filename)
+      if os.path.exists(diff_filepath):
+        diff_link = google_storage_helper.upload_content_addressed(
+            diff_filepath, bucket=render_tests_bucket)
+      else:
+        diff_link = ''
+
+      with tempfile.NamedTemporaryFile(suffix='.html') as temp_html:
+        jinja2_env = jinja2.Environment(
+            loader=jinja2.FileSystemLoader(_JINJA_TEMPLATE_DIR),
+            trim_blocks=True)
+        template = jinja2_env.get_template(_JINJA_TEMPLATE_FILENAME)
+        # pylint: disable=no-member
+        processed_template_output = template.render(
+            test_name=failure_filename,
+            failure_link=failure_link,
+            golden_link=golden_link,
+            diff_link=diff_link)
+
+        temp_html.write(processed_template_output)
+        temp_html.flush()
+        html_results_link = google_storage_helper.upload_content_addressed(
+            temp_html.name,
+            bucket=render_tests_bucket,
+            content_type='text/html')
+        for result in results:
+          result.SetLink(failure_filename, html_results_link)
 
   #override
   def _ShouldRetry(self, test):

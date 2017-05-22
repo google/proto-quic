@@ -183,6 +183,13 @@ bool QuicSentPacketManagerPeer::UsingPacing(
 }
 
 // static
+void QuicSentPacketManagerPeer::SetUsingPacing(
+    QuicSentPacketManager* sent_packet_manager,
+    bool using_pacing) {
+  sent_packet_manager->using_pacing_ = using_pacing;
+}
+
+// static
 bool QuicSentPacketManagerPeer::IsUnacked(
     QuicSentPacketManager* sent_packet_manager,
     QuicPacketNumber packet_number) {

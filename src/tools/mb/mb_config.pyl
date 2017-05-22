@@ -240,7 +240,6 @@
       'Android Release (Nexus 6)': 'android_release_trybot',
       'Android Release (Nexus 6P)': 'android_release_trybot_arm64',
       'Android Release (Nexus 9)': 'android_release_trybot_arm64',
-      'Android Release (Pixel C)': 'android_release_trybot_arm64',
       'Android Release (NVIDIA Shield TV)': 'android_release_trybot_arm64',
       'GPU Linux Builder (dbg)': 'gpu_fyi_tests_debug_trybot',
       'GPU Linux Builder': 'gpu_fyi_tests_release_trybot',
@@ -436,26 +435,6 @@
       'Linux Dev': 'debug_bot',
       'Mac Dev': 'debug_bot',
       'Windows Dev': 'debug_bot',
-    },
-
-    # TODO(mmoss): Move these to mb_configs_official.pyl in the release repo
-    # once the continuous builders are migrated to use recipes from that repo.
-    'official.desktop.continuous': {
-      'mac beta': 'official',
-      'mac stable': 'official',
-      'mac trunk': 'official',
-      'linux64 beta': 'official_six_concurrent_links',
-      'linux64 stable': 'official_six_concurrent_links',
-      'linux64 trunk': 'official_six_concurrent_links',
-      # TODO(mmoss): These precise64 entries can go away once the newly renamed
-      # builders are fully deployed.
-      'precise64 beta': 'official_six_concurrent_links',
-      'precise64 stable': 'official_six_concurrent_links',
-      'precise64 trunk': 'official_six_concurrent_links',
-      'win beta': 'official_six_concurrent_links',
-      'win stable': 'official_six_concurrent_links',
-      'win trunk': 'official_six_concurrent_links',
-      'win64 trunk': 'official_six_concurrent_links',
     },
 
     'tryserver.blink': {
@@ -755,27 +734,27 @@
     ],
 
     'android_cronet_release_bot_minimal_symbols_arm64': [
-      'android', 'cronet', 'release_bot', 'minimal_symbols', 'arm64',
+      'android', 'cronet', 'official_optimize', 'release_bot', 'minimal_symbols', 'arm64',
     ],
 
     'android_cronet_release_bot_minimal_symbols_armv6': [
-      'android', 'cronet', 'release_bot', 'minimal_symbols', 'armv6',
+      'android', 'cronet', 'official_optimize', 'release_bot', 'minimal_symbols', 'armv6',
     ],
 
     'android_cronet_release_bot_minimal_symbols_arm_no_neon': [
-      'android', 'cronet', 'release_bot', 'minimal_symbols', 'arm_no_neon',
+      'android', 'cronet', 'official_optimize', 'release_bot', 'minimal_symbols', 'arm_no_neon',
     ],
 
     'android_cronet_release_bot_minimal_symbols_arm_no_neon_clang_asan': [
-      'android', 'cronet', 'release_bot', 'minimal_symbols', 'arm_no_neon', 'clang', 'asan',
+      'android', 'cronet', 'official_optimize', 'release_bot', 'minimal_symbols', 'arm_no_neon', 'clang', 'asan',
     ],
 
     'android_cronet_release_bot_minimal_symbols_mipsel': [
-      'android', 'cronet', 'release_bot', 'minimal_symbols', 'mipsel',
+      'android', 'cronet', 'official_optimize', 'release_bot', 'minimal_symbols', 'mipsel',
     ],
 
     'android_cronet_release_bot_minimal_symbols_x86': [
-      'android', 'cronet', 'release_bot', 'minimal_symbols', 'x86',
+      'android', 'cronet', 'official_optimize', 'release_bot', 'minimal_symbols', 'x86',
     ],
 
     'android_cronet_release_trybot_arm_no_neon': [
@@ -1323,10 +1302,6 @@
       'msan', 'release_bot',
     ],
 
-    'official': [
-      'official',
-    ],
-
     'official_goma_minimal_symbols_clang': [
       'official', 'goma', 'minimal_symbols', 'clang',
     ],
@@ -1369,10 +1344,6 @@
 
     'official_optimize_chrome_pgo_phase_2_x86': [
       'official_optimize', 'chrome_pgo_phase_2', 'x86',
-    ],
-
-    'official_six_concurrent_links': [
-      'official', 'six_concurrent_links',
     ],
 
     'release_bot_ozone_linux': [
@@ -1852,12 +1823,6 @@
 
     'shared_release_bot': {
       'mixins': ['shared', 'release', 'goma']
-    },
-
-    'six_concurrent_links': {
-      # TODO(crbug.com/611491) Adjust the get_concurrent_links script
-      # to be more conservative so that we don't need this.
-      'gn_args': 'concurrent_links=6',
     },
 
     'static': {

@@ -9,13 +9,12 @@
 #include "base/bind.h"
 #include "base/compiler_specific.h"
 #include "base/files/scoped_temp_dir.h"
-#include "base/message_loop/message_loop.h"
 #include "base/sequenced_task_runner.h"
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/waitable_event.h"
+#include "base/task_scheduler/post_task.h"
 #include "base/test/perf_time_logger.h"
-#include "base/test/sequenced_worker_pool_owner.h"
-#include "base/threading/sequenced_worker_pool.h"
+#include "base/test/scoped_task_environment.h"
 #include "net/cookies/canonical_cookie.h"
 #include "net/cookies/cookie_constants.h"
 #include "net/extras/sqlite/cookie_crypto_delegate.h"
@@ -33,8 +32,7 @@ const base::FilePath::CharType cookie_filename[] = FILE_PATH_LITERAL("Cookies");
 class SQLitePersistentCookieStorePerfTest : public testing::Test {
  public:
   SQLitePersistentCookieStorePerfTest()
-      : pool_owner_(new base::SequencedWorkerPoolOwner(2, "SetupPool")),
-        loaded_event_(base::WaitableEvent::ResetPolicy::AUTOMATIC,
+      : loaded_event_(base::WaitableEvent::ResetPolicy::AUTOMATIC,
                       base::WaitableEvent::InitialState::NOT_SIGNALED),
         key_loaded_event_(base::WaitableEvent::ResetPolicy::AUTOMATIC,
                           base::WaitableEvent::InitialState::NOT_SIGNALED) {}
@@ -55,21 +53,11 @@ class SQLitePersistentCookieStorePerfTest : public testing::Test {
     loaded_event_.Wait();
   }
 
-  scoped_refptr<base::SequencedTaskRunner> background_task_runner() {
-    return pool_owner_->pool()->GetSequencedTaskRunner(
-        pool_owner_->pool()->GetNamedSequenceToken("background"));
-  }
-
-  scoped_refptr<base::SequencedTaskRunner> client_task_runner() {
-    return pool_owner_->pool()->GetSequencedTaskRunner(
-        pool_owner_->pool()->GetNamedSequenceToken("client"));
-  }
-
   void SetUp() override {
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
     store_ = new SQLitePersistentCookieStore(
-        temp_dir_.GetPath().Append(cookie_filename), client_task_runner(),
-        background_task_runner(), false, NULL);
+        temp_dir_.GetPath().Append(cookie_filename), client_task_runner_,
+        background_task_runner_, false, NULL);
     std::vector<CanonicalCookie*> cookies;
     Load();
     ASSERT_EQ(0u, cookies_.size());
@@ -79,7 +67,7 @@ class SQLitePersistentCookieStorePerfTest : public testing::Test {
       std::string domain_name(base::StringPrintf(".domain_%d.com", domain_num));
       for (int cookie_num = 0; cookie_num < 50; ++cookie_num) {
         t += base::TimeDelta::FromInternalValue(10);
-        store_->AddCookie(*CanonicalCookie::Create(
+        store_->AddCookie(CanonicalCookie(
             base::StringPrintf("Cookie_%d", cookie_num), "1", domain_name, "/",
             t, t, t, false, false, CookieSameSite::DEFAULT_MODE,
             COOKIE_PRIORITY_DEFAULT));
@@ -89,14 +77,12 @@ class SQLitePersistentCookieStorePerfTest : public testing::Test {
     // to write its data to disk.
     store_ = NULL;
 
-    // Shut down the pool, causing deferred (no-op) commits to be discarded.
-    pool_owner_->pool()->Shutdown();
-    // ~SequencedWorkerPoolOwner blocks on pool shutdown.
-    pool_owner_.reset(new base::SequencedWorkerPoolOwner(2, "TestPool"));
+    // Flush TaskScheduler tasks, causing pending commits to run.
+    scoped_task_environment_.RunUntilIdle();
 
     store_ = new SQLitePersistentCookieStore(
-        temp_dir_.GetPath().Append(cookie_filename), client_task_runner(),
-        background_task_runner(), false, NULL);
+        temp_dir_.GetPath().Append(cookie_filename), client_task_runner_,
+        background_task_runner_, false, NULL);
   }
 
   void TearDown() override {
@@ -104,8 +90,11 @@ class SQLitePersistentCookieStorePerfTest : public testing::Test {
   }
 
  protected:
-  base::MessageLoop main_loop_;
-  std::unique_ptr<base::SequencedWorkerPoolOwner> pool_owner_;
+  base::test::ScopedTaskEnvironment scoped_task_environment_;
+  const scoped_refptr<base::SequencedTaskRunner> background_task_runner_ =
+      base::CreateSequencedTaskRunnerWithTraits({base::MayBlock()});
+  const scoped_refptr<base::SequencedTaskRunner> client_task_runner_ =
+      base::CreateSequencedTaskRunnerWithTraits({base::MayBlock()});
   base::WaitableEvent loaded_event_;
   base::WaitableEvent key_loaded_event_;
   std::vector<std::unique_ptr<CanonicalCookie>> cookies_;

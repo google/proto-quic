@@ -10,6 +10,7 @@
 #include "base/callback.h"
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "net/base/io_buffer.h"
 #include "net/spdy/core/spdy_protocol.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
@@ -28,11 +29,11 @@ std::unique_ptr<SpdySerializedFrame> MakeSpdySerializedFrame(const char* data,
   DCHECK(data);
   CHECK_GT(size, 0u);
   CHECK_LE(size, kMaxSpdyFrameSize);
-  std::unique_ptr<char[]> frame_data(new char[size]);
+
+  auto frame_data = base::MakeUnique<char[]>(size);
   std::memcpy(frame_data.get(), data, size);
-  std::unique_ptr<SpdySerializedFrame> frame(new SpdySerializedFrame(
-      frame_data.release(), size, true /* owns_buffer */));
-  return frame;
+  return base::MakeUnique<SpdySerializedFrame>(frame_data.release(), size,
+                                               true /* owns_buffer */);
 }
 
 }  // namespace
@@ -92,7 +93,7 @@ void SpdyBuffer::AddConsumeCallback(const ConsumeCallback& consume_callback) {
 
 void SpdyBuffer::Consume(size_t consume_size) {
   ConsumeHelper(consume_size, CONSUME);
-};
+}
 
 IOBuffer* SpdyBuffer::GetIOBufferForRemainingData() {
   return new SharedFrameIOBuffer(shared_frame_, offset_);
@@ -112,6 +113,6 @@ void SpdyBuffer::ConsumeHelper(size_t consume_size,
            consume_callbacks_.begin(); it != consume_callbacks_.end(); ++it) {
     it->Run(consume_size, consume_source);
   }
-};
+}
 
 }  // namespace net

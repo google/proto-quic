@@ -9,7 +9,7 @@ import sys
 _SHRINK_TO_FIT_CLONE = ('blink::ContiguousContainerBase::shrinkToFit() '
                         '[clone .part.1234] [clone .isra.2]')
 _ELF_OUTPUT = """002b6e20 t $t
-00000010 N $d
+00000010 N
 002b6bb8 t $t
 002a0010 t {}
 0028d900 t startup._GLOBAL__sub_I_page_allocator.cc
@@ -88,7 +88,7 @@ _OBJECT_OUTPUTS = {
         '01010101 d .Lswitch.table.45',
         '',
         'libport_android_jni.a_jni_utils.o:',
-        '(anonymous namespace)::kSystemClassPrefixes',
+        '01010101 t (anonymous namespace)::kSystemClassPrefixes',
     ],
 }
 

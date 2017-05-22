@@ -95,8 +95,7 @@ class BASE_EXPORT TaskScheduler {
   virtual scoped_refptr<SingleThreadTaskRunner>
   CreateSingleThreadTaskRunnerWithTraits(
       const TaskTraits& traits,
-      SingleThreadTaskRunnerThreadMode thread_mode =
-          SingleThreadTaskRunnerThreadMode::SHARED) = 0;
+      SingleThreadTaskRunnerThreadMode thread_mode) = 0;
 
 #if defined(OS_WIN)
   // Returns a SingleThreadTaskRunner whose PostTask invocations result in
@@ -110,8 +109,7 @@ class BASE_EXPORT TaskScheduler {
   virtual scoped_refptr<SingleThreadTaskRunner>
   CreateCOMSTATaskRunnerWithTraits(
       const TaskTraits& traits,
-      SingleThreadTaskRunnerThreadMode thread_mode =
-          SingleThreadTaskRunnerThreadMode::SHARED) = 0;
+      SingleThreadTaskRunnerThreadMode thread_mode) = 0;
 #endif  // defined(OS_WIN)
 
   // Returns a vector of all histograms available in this task scheduler.

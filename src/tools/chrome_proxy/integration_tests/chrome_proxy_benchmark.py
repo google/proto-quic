@@ -8,7 +8,7 @@ from integration_tests import chrome_proxy_pagesets as pagesets
 from telemetry import benchmark
 
 DESKTOP_PLATFORMS = ['mac', 'linux', 'win', 'chromeos']
-WEBVIEW_PLATFORMS = ['android-webview', 'android-webview-shell']
+WEBVIEW_PLATFORMS = ['android-webview', 'android-webview-instrumentation']
 
 
 class ChromeProxyBypassOnTimeout(ChromeProxyBenchmark):

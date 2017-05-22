@@ -11,6 +11,7 @@
 #include "base/format_macros.h"
 #include "base/location.h"
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_util.h"
@@ -669,7 +670,7 @@ LoadState ClientSocketPoolBaseHelper::GetLoadState(
 std::unique_ptr<base::DictionaryValue>
 ClientSocketPoolBaseHelper::GetInfoAsValue(const std::string& name,
                                            const std::string& type) const {
-  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  auto dict = base::MakeUnique<base::DictionaryValue>();
   dict->SetString("name", name);
   dict->SetString("type", type);
   dict->SetInteger("handed_out_socket_count", handed_out_socket_count_);
@@ -682,11 +683,11 @@ ClientSocketPoolBaseHelper::GetInfoAsValue(const std::string& name,
   if (group_map_.empty())
     return dict;
 
-  base::DictionaryValue* all_groups_dict = new base::DictionaryValue();
+  auto all_groups_dict = base::MakeUnique<base::DictionaryValue>();
   for (GroupMap::const_iterator it = group_map_.begin();
        it != group_map_.end(); it++) {
     const Group* group = it->second;
-    base::DictionaryValue* group_dict = new base::DictionaryValue();
+    auto group_dict = base::MakeUnique<base::DictionaryValue>();
 
     group_dict->SetInteger("pending_request_count",
                            group->pending_request_count());
@@ -698,7 +699,7 @@ ClientSocketPoolBaseHelper::GetInfoAsValue(const std::string& name,
 
     group_dict->SetInteger("active_socket_count", group->active_socket_count());
 
-    base::ListValue* idle_socket_list = new base::ListValue();
+    auto idle_socket_list = base::MakeUnique<base::ListValue>();
     std::list<IdleSocket>::const_iterator idle_socket;
     for (idle_socket = group->idle_sockets().begin();
          idle_socket != group->idle_sockets().end();
@@ -706,23 +707,23 @@ ClientSocketPoolBaseHelper::GetInfoAsValue(const std::string& name,
       int source_id = idle_socket->socket->NetLog().source().id;
       idle_socket_list->AppendInteger(source_id);
     }
-    group_dict->Set("idle_sockets", idle_socket_list);
+    group_dict->Set("idle_sockets", std::move(idle_socket_list));
 
-    base::ListValue* connect_jobs_list = new base::ListValue();
+    auto connect_jobs_list = base::MakeUnique<base::ListValue>();
     for (auto job = group->jobs().begin(); job != group->jobs().end(); job++) {
       int source_id = (*job)->net_log().source().id;
       connect_jobs_list->AppendInteger(source_id);
     }
-    group_dict->Set("connect_jobs", connect_jobs_list);
+    group_dict->Set("connect_jobs", std::move(connect_jobs_list));
 
     group_dict->SetBoolean("is_stalled", group->CanUseAdditionalSocketSlot(
                                              max_sockets_per_group_));
     group_dict->SetBoolean("backup_job_timer_is_running",
                            group->BackupJobTimerIsRunning());
 
-    all_groups_dict->SetWithoutPathExpansion(it->first, group_dict);
+    all_groups_dict->SetWithoutPathExpansion(it->first, std::move(group_dict));
   }
-  dict->Set("groups", all_groups_dict);
+  dict->Set("groups", std::move(all_groups_dict));
   return dict;
 }
 
@@ -902,37 +903,36 @@ void ClientSocketPoolBaseHelper::ReleaseSocket(
 }
 
 void ClientSocketPoolBaseHelper::CheckForStalledSocketGroups() {
-  // If we have idle sockets, see if we can give one to the top-stalled group.
-  std::string top_group_name;
-  Group* top_group = NULL;
-  if (!FindTopStalledGroup(&top_group, &top_group_name)) {
-    // There may still be a stalled group in a lower level pool.
-    for (std::set<LowerLayeredPool*>::iterator it = lower_pools_.begin();
-         it != lower_pools_.end();
-         ++it) {
-       if ((*it)->IsStalled()) {
-         CloseOneIdleSocket();
-         break;
-       }
-    }
-    return;
-  }
-
-  if (ReachedMaxSocketsLimit()) {
-    if (idle_socket_count() > 0) {
-      CloseOneIdleSocket();
-    } else {
-      // We can't activate more sockets since we're already at our global
-      // limit.
+  // Loop until there's nothing more to do.
+  while (true) {
+    // If we have idle sockets, see if we can give one to the top-stalled group.
+    std::string top_group_name;
+    Group* top_group = NULL;
+    if (!FindTopStalledGroup(&top_group, &top_group_name)) {
+      // There may still be a stalled group in a lower level pool.
+      for (std::set<LowerLayeredPool*>::iterator it = lower_pools_.begin();
+           it != lower_pools_.end(); ++it) {
+        if ((*it)->IsStalled()) {
+          CloseOneIdleSocket();
+          break;
+        }
+      }
       return;
     }
-  }
 
-  // Note:  we don't loop on waking stalled groups.  If the stalled group is at
-  //        its limit, may be left with other stalled groups that could be
-  //        woken.  This isn't optimal, but there is no starvation, so to avoid
-  //        the looping we leave it at this.
-  OnAvailableSocketSlot(top_group_name, top_group);
+    if (ReachedMaxSocketsLimit()) {
+      if (idle_socket_count() > 0) {
+        CloseOneIdleSocket();
+      } else {
+        // We can't activate more sockets since we're already at our global
+        // limit.
+        return;
+      }
+    }
+
+    // Note that this may delete top_group.
+    OnAvailableSocketSlot(top_group_name, top_group);
+  }
 }
 
 // Search for the highest priority pending request, amongst the groups that

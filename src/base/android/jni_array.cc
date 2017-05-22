@@ -45,6 +45,20 @@ ScopedJavaLocalRef<jbyteArray> ToJavaByteArray(
   return ToJavaByteArray(env, bytes.data(), bytes.size());
 }
 
+ScopedJavaLocalRef<jbooleanArray> ToJavaBooleanArray(JNIEnv* env,
+                                                     const bool* bools,
+                                                     size_t len) {
+  jbooleanArray boolean_array = env->NewBooleanArray(len);
+  CheckException(env);
+  DCHECK(boolean_array);
+
+  env->SetBooleanArrayRegion(boolean_array, 0, len,
+                             reinterpret_cast<const jboolean*>(bools));
+  CheckException(env);
+
+  return ScopedJavaLocalRef<jbooleanArray>(env, boolean_array);
+}
+
 ScopedJavaLocalRef<jintArray> ToJavaIntArray(
     JNIEnv* env, const int* ints, size_t len) {
   jintArray int_array = env->NewIntArray(len);
@@ -157,7 +171,7 @@ void AppendJavaStringArrayToStringVector(JNIEnv* env,
   for (size_t i = 0; i < len; ++i) {
     ScopedJavaLocalRef<jstring> str(env,
         static_cast<jstring>(env->GetObjectArrayElement(array, i)));
-    ConvertJavaStringToUTF16(env, str.obj(), &((*out)[back + i]));
+    ConvertJavaStringToUTF16(env, str.obj(), out->data() + back + i);
   }
 }
 
@@ -173,7 +187,7 @@ void AppendJavaStringArrayToStringVector(JNIEnv* env,
   for (size_t i = 0; i < len; ++i) {
     ScopedJavaLocalRef<jstring> str(env,
         static_cast<jstring>(env->GetObjectArrayElement(array, i)));
-    ConvertJavaStringToUTF8(env, str.obj(), &((*out)[back + i]));
+    ConvertJavaStringToUTF8(env, str.obj(), out->data() + back + i);
   }
 }
 
@@ -189,7 +203,7 @@ void AppendJavaByteArrayToByteVector(JNIEnv* env,
   size_t back = out->size();
   out->resize(back + len);
   env->GetByteArrayRegion(byte_array, 0, len,
-                          reinterpret_cast<int8_t*>(&(*out)[back]));
+                          reinterpret_cast<int8_t*>(out->data() + back));
 }
 
 void JavaByteArrayToByteVector(JNIEnv* env,
@@ -201,6 +215,23 @@ void JavaByteArrayToByteVector(JNIEnv* env,
   AppendJavaByteArrayToByteVector(env, byte_array, out);
 }
 
+void JavaBooleanArrayToBoolVector(JNIEnv* env,
+                                  jbooleanArray boolean_array,
+                                  std::vector<bool>* out) {
+  DCHECK(out);
+  if (!boolean_array)
+    return;
+  size_t len = SafeGetArrayLength(env, boolean_array);
+  if (!len)
+    return;
+  out->resize(len);
+  // It is not possible to get bool* out of vector<bool>.
+  jboolean* values = env->GetBooleanArrayElements(boolean_array, nullptr);
+  for (size_t i = 0; i < len; ++i) {
+    out->at(i) = static_cast<bool>(values[i]);
+  }
+}
+
 void JavaIntArrayToIntVector(JNIEnv* env,
                              jintArray int_array,
                              std::vector<int>* out) {
@@ -209,9 +240,7 @@ void JavaIntArrayToIntVector(JNIEnv* env,
   out->resize(len);
   if (!len)
     return;
-  // TODO(jdduke): Use |out->data()| for pointer access after switch to libc++,
-  // both here and in the other conversion routines. See crbug.com/427718.
-  env->GetIntArrayRegion(int_array, 0, len, &(*out)[0]);
+  env->GetIntArrayRegion(int_array, 0, len, out->data());
 }
 
 void JavaLongArrayToInt64Vector(JNIEnv* env,
@@ -232,7 +261,7 @@ void JavaLongArrayToLongVector(JNIEnv* env,
   out->resize(len);
   if (!len)
     return;
-  env->GetLongArrayRegion(long_array, 0, len, &(*out)[0]);
+  env->GetLongArrayRegion(long_array, 0, len, out->data());
 }
 
 void JavaFloatArrayToFloatVector(JNIEnv* env,
@@ -243,7 +272,7 @@ void JavaFloatArrayToFloatVector(JNIEnv* env,
   out->resize(len);
   if (!len)
     return;
-  env->GetFloatArrayRegion(float_array, 0, len, &(*out)[0]);
+  env->GetFloatArrayRegion(float_array, 0, len, out->data());
 }
 
 void JavaArrayOfByteArrayToStringVector(
@@ -274,7 +303,7 @@ void JavaArrayOfIntArrayToIntVector(
   for (size_t i = 0; i < len; ++i) {
     ScopedJavaLocalRef<jintArray> int_array(
         env, static_cast<jintArray>(env->GetObjectArrayElement(array, i)));
-    JavaIntArrayToIntVector(env, int_array.obj(), &((*out)[i]));
+    JavaIntArrayToIntVector(env, int_array.obj(), &out->at(i));
   }
 }
 

@@ -1093,19 +1093,15 @@ class MockCreateHelper : public WebSocketHandshakeStreamBase::CreateHelper {
  public:
   // GoogleMock does not appear to play nicely with move-only types like
   // std::unique_ptr, so this forwarding method acts as a workaround.
-  WebSocketHandshakeStreamBase* CreateBasicStream(
+  std::unique_ptr<WebSocketHandshakeStreamBase> CreateBasicStream(
       std::unique_ptr<ClientSocketHandle> connection,
       bool using_proxy) override {
     // Discard the arguments since we don't need them anyway.
-    return CreateBasicStreamMock();
+    return base::WrapUnique(CreateBasicStreamMock());
   }
 
   MOCK_METHOD0(CreateBasicStreamMock,
                WebSocketHandshakeStreamBase*());
-
-  MOCK_METHOD2(CreateSpdyStream,
-               WebSocketHandshakeStreamBase*(const base::WeakPtr<SpdySession>&,
-                                             bool));
 };
 
 #if BUILDFLAG(ENABLE_WEBSOCKETS)

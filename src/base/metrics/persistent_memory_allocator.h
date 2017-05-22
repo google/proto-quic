@@ -793,7 +793,8 @@ class BASE_EXPORT DelayedPersistentAllocation {
   // Once allocated, a reference to the segment will be stored at |ref|.
   // This shared location must be initialized to zero (0); it is checked
   // with every Get() request to see if the allocation has already been
-  // done.
+  // done. If reading |ref| outside of this object, be sure to do an
+  // "acquire" load. Don't write to it -- leave that to this object.
   //
   // For convenience, methods taking both Atomic32 and std::atomic<Reference>
   // are defined.

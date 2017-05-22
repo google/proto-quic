@@ -19,6 +19,7 @@
 #include "net/test/url_request/url_request_failed_job.h"
 #include "net/test/url_request/url_request_mock_data_job.h"
 #include "net/test/url_request/url_request_mock_http_job.h"
+#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request_filter.h"
 #include "net/url_request/url_request_test_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -250,13 +251,13 @@ class ReportSenderTest : public ::testing::Test {
 // endpoint and sends the expected data.
 TEST_F(ReportSenderTest, SendsRequest) {
   GURL url = URLRequestMockDataJob::GetMockHttpsUrl("dummy data", 1);
-  ReportSender reporter(context());
+  ReportSender reporter(context(), TRAFFIC_ANNOTATION_FOR_TESTS);
   SendReport(&reporter, kDummyReport, url, 0);
 }
 
 TEST_F(ReportSenderTest, SendMultipleReportsSequentially) {
   GURL url = URLRequestMockDataJob::GetMockHttpsUrl("dummy data", 1);
-  ReportSender reporter(context());
+  ReportSender reporter(context(), TRAFFIC_ANNOTATION_FOR_TESTS);
   SendReport(&reporter, kDummyReport, url, 0);
   SendReport(&reporter, kDummyReport, url, 1);
 }
@@ -272,7 +273,7 @@ TEST_F(ReportSenderTest, SendMultipleReportsSimultaneously) {
   network_delegate_.ExpectReport(kSecondDummyReport);
   network_delegate_.set_expected_content_type("application/foobar");
 
-  ReportSender reporter(context());
+  ReportSender reporter(context(), TRAFFIC_ANNOTATION_FOR_TESTS);
 
   EXPECT_EQ(0u, network_delegate_.num_requests());
 
@@ -303,7 +304,8 @@ TEST_F(ReportSenderTest, PendingRequestGetsDeleted) {
 
   EXPECT_EQ(0u, network_delegate_.num_requests());
 
-  std::unique_ptr<ReportSender> reporter(new ReportSender(context()));
+  std::unique_ptr<ReportSender> reporter(
+      new ReportSender(context(), TRAFFIC_ANNOTATION_FOR_TESTS));
   reporter->Send(url, "application/foobar", kDummyReport,
                  base::Callback<void()>(),
                  base::Callback<void(const GURL&, int, int)>());
@@ -316,7 +318,7 @@ TEST_F(ReportSenderTest, PendingRequestGetsDeleted) {
 // Test that a request that returns an error gets cleaned up.
 TEST_F(ReportSenderTest, ErroredRequestGetsDeleted) {
   GURL url = URLRequestFailedJob::GetMockHttpsUrl(ERR_FAILED);
-  ReportSender reporter(context());
+  ReportSender reporter(context(), TRAFFIC_ANNOTATION_FOR_TESTS);
   // SendReport will block until the URLRequest is destroyed.
   SendReport(&reporter, kDummyReport, url, 0);
 }
@@ -327,7 +329,7 @@ TEST_F(ReportSenderTest, ErroredRequestCallsErrorCallback) {
   bool error_callback_called = false;
   bool success_callback_called = false;
   const GURL url = URLRequestFailedJob::GetMockHttpsUrl(ERR_FAILED);
-  ReportSender reporter(context());
+  ReportSender reporter(context(), TRAFFIC_ANNOTATION_FOR_TESTS);
   // SendReport will block until the URLRequest is destroyed.
   SendReport(&reporter, kDummyReport, url, 0,
              base::Bind(SuccessCallback, &success_callback_called),
@@ -343,7 +345,7 @@ TEST_F(ReportSenderTest, BadResponseCodeCallsErrorCallback) {
   bool error_callback_called = false;
   bool success_callback_called = false;
   const GURL url(std::string("http://") + kServerErrorHostname);
-  ReportSender reporter(context());
+  ReportSender reporter(context(), TRAFFIC_ANNOTATION_FOR_TESTS);
   // SendReport will block until the URLRequest is destroyed.
   SendReport(&reporter, kDummyReport, url, 0,
              base::Bind(SuccessCallback, &success_callback_called),
@@ -358,7 +360,7 @@ TEST_F(ReportSenderTest, SuccessfulRequestCallsSuccessCallback) {
   bool error_callback_called = false;
   bool success_callback_called = false;
   const GURL url = URLRequestMockDataJob::GetMockHttpsUrl("dummy data", 1);
-  ReportSender reporter(context());
+  ReportSender reporter(context(), TRAFFIC_ANNOTATION_FOR_TESTS);
   SendReport(&reporter, kDummyReport, url, 0,
              base::Bind(SuccessCallback, &success_callback_called),
              base::Bind(ErrorCallback, &error_callback_called));

@@ -98,6 +98,8 @@ struct GetKeyFromValuePairFirst {
 //   Mapped&              operator[](Key&&);
 //   pair<iterator, bool> insert(const pair<Key, Mapped>&);
 //   pair<iterator, bool> insert(pair<Key, Mapped>&&);
+//   void                 insert(InputIterator first, InputIterator last,
+//                               FlatContainerDupes);
 //   pair<iterator, bool> emplace(Args&&...);
 //   iterator             emplace_hint(const_iterator, Args&&...);
 //

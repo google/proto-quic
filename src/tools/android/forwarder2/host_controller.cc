@@ -58,7 +58,7 @@ std::unique_ptr<HostController> HostController::Create(
 }
 
 HostController::~HostController() {
-  DCHECK(deletion_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(deletion_task_runner_->RunsTasksInCurrentSequence());
   delete_controller_notifier_->Notify();
 }
 

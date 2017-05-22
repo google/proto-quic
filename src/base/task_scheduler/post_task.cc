@@ -100,20 +100,22 @@ scoped_refptr<SequencedTaskRunner> CreateSequencedTaskRunnerWithTraits(
 }
 
 scoped_refptr<SingleThreadTaskRunner> CreateSingleThreadTaskRunnerWithTraits(
-    const TaskTraits& traits) {
+    const TaskTraits& traits,
+    SingleThreadTaskRunnerThreadMode thread_mode) {
   DCHECK(TaskScheduler::GetInstance())
       << "Ref. Prerequisite section of post_task.h";
   return TaskScheduler::GetInstance()->CreateSingleThreadTaskRunnerWithTraits(
-      GetTaskTraitsWithExplicitPriority(traits));
+      GetTaskTraitsWithExplicitPriority(traits), thread_mode);
 }
 
 #if defined(OS_WIN)
 scoped_refptr<SingleThreadTaskRunner> CreateCOMSTATaskRunnerWithTraits(
-    const TaskTraits& traits) {
+    const TaskTraits& traits,
+    SingleThreadTaskRunnerThreadMode thread_mode) {
   DCHECK(TaskScheduler::GetInstance())
       << "Ref. Prerequisite section of post_task.h";
   return TaskScheduler::GetInstance()->CreateCOMSTATaskRunnerWithTraits(
-      GetTaskTraitsWithExplicitPriority(traits));
+      GetTaskTraitsWithExplicitPriority(traits), thread_mode);
 }
 #endif  // defined(OS_WIN)
 

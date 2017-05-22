@@ -50,7 +50,7 @@ void ForwardersManager::CreateAndStartNewForwarder(
 void ForwardersManager::CreateNewForwarderOnInternalThread(
     std::unique_ptr<Socket> socket1,
     std::unique_ptr<Socket> socket2) {
-  DCHECK(thread_.task_runner()->RunsTasksOnCurrentThread());
+  DCHECK(thread_.task_runner()->RunsTasksInCurrentSequence());
   forwarders_.push_back(new Forwarder(std::move(socket1), std::move(socket2)));
 }
 
@@ -62,7 +62,7 @@ void ForwardersManager::WaitForEventsOnInternalThreadSoon() {
 }
 
 void ForwardersManager::WaitForEventsOnInternalThread() {
-  DCHECK(thread_.task_runner()->RunsTasksOnCurrentThread());
+  DCHECK(thread_.task_runner()->RunsTasksInCurrentSequence());
   fd_set read_fds;
   fd_set write_fds;
 

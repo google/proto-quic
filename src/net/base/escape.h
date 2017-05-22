@@ -27,8 +27,6 @@ NET_EXPORT std::string EscapeQueryParamValue(base::StringPiece text,
 
 // Escapes a partial or complete file/pathname.  This includes:
 // non-printable, non-7bit, and (including space)  "#%:<>?[\]^`{|}
-// For the base::string16 version, we attempt a conversion to |codepage| before
-// encoding the string.  If this conversion fails, we return false.
 NET_EXPORT std::string EscapePath(base::StringPiece path);
 
 #if defined(OS_MACOSX)

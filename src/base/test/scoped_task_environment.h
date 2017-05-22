@@ -7,6 +7,7 @@
 
 #include "base/macros.h"
 #include "base/message_loop/message_loop.h"
+#include "base/single_thread_task_runner.h"
 
 namespace base {
 
@@ -66,6 +67,9 @@ class ScopedTaskEnvironment {
   // Waits until no undelayed TaskScheduler tasks remain. Then, unregisters the
   // TaskScheduler and the (Thread|Sequenced)TaskRunnerHandle.
   ~ScopedTaskEnvironment();
+
+  // Returns a TaskRunner that schedules tasks on the main thread.
+  scoped_refptr<base::SingleThreadTaskRunner> GetMainThreadTaskRunner();
 
   // Synchronously runs (Thread|Sequenced)TaskRunnerHandle tasks until no
   // undelayed (Thread|Sequenced)TaskRunnerHandle or TaskScheduler tasks remain.

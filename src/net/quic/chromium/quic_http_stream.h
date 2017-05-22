@@ -40,8 +40,8 @@ class NET_EXPORT_PRIVATE QuicHttpStream
       public QuicClientPushPromiseIndex::Delegate,
       public MultiplexedHttpStream {
  public:
-  QuicHttpStream(std::unique_ptr<QuicChromiumClientSession::Handle> session,
-                 HttpServerProperties* http_server_properties);
+  explicit QuicHttpStream(
+      std::unique_ptr<QuicChromiumClientSession::Handle> session);
 
   ~QuicHttpStream() override;
 
@@ -69,8 +69,6 @@ class NET_EXPORT_PRIVATE QuicHttpStream
   void SetPriority(RequestPriority priority) override;
 
   // QuicChromiumClientStream::Delegate implementation
-  void OnInitialHeadersAvailable(const SpdyHeaderBlock& headers,
-                                 size_t frame_len) override;
   void OnDataAvailable() override;
   void OnTrailingHeadersAvailable(const SpdyHeaderBlock& headers,
                                   size_t frame_len) override;
@@ -124,6 +122,7 @@ class NET_EXPORT_PRIVATE QuicHttpStream
   int DoSendBody();
   int DoSendBodyComplete(int rv);
 
+  void OnReadResponseHeadersComplete(int rv);
   int ProcessResponseHeaders(const SpdyHeaderBlock& headers);
 
   int ReadAvailableData(IOBuffer* buf, int buf_len);
@@ -153,8 +152,6 @@ class NET_EXPORT_PRIVATE QuicHttpStream
 
   State next_state_;
 
-  HttpServerProperties* http_server_properties_;  // Unowned.
-
   std::unique_ptr<QuicChromiumClientStream::Handle> stream_;
 
   // The following three fields are all owned by the caller and must
@@ -183,6 +180,7 @@ class NET_EXPORT_PRIVATE QuicHttpStream
   // Serialized request headers.
   SpdyHeaderBlock request_headers_;
 
+  SpdyHeaderBlock response_header_block_;
   bool response_headers_received_;
 
   // Number of bytes received by the headers stream on behalf of this stream.

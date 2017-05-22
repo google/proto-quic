@@ -280,6 +280,10 @@ void DefaultChannelIDStore::GetAllChannelIDs(
   RunOrEnqueueTask(std::unique_ptr<Task>(new GetAllChannelIDsTask(callback)));
 }
 
+void DefaultChannelIDStore::Flush() {
+  store_->Flush();
+}
+
 int DefaultChannelIDStore::GetChannelIDCount() {
   DCHECK(CalledOnValidThread());
 

@@ -286,4 +286,14 @@ D. Local Modifications
 
    - patches/string_literal_charptr.patch
 
-   
+8. Apply post-59 upstream fixes
+
+   http://www.icu-project.org/trac/ticket/12333
+   http://www.icu-project.org/trac/ticket/13189
+   http://www.icu-project.org/trac/ticket/12635
+   http://www.icu-project.org/trac/ticket/13202
+
+   - patches/ucase_utf8.patch
+   - patches/ucurr_locale.patch
+   - patches/collator_range.patch
+   - patches/fuchsia.patch

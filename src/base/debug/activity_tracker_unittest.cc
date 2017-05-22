@@ -394,7 +394,15 @@ TEST_F(ActivityTrackerTest, ThreadDeathTest) {
   EXPECT_EQ(starting_inactive + 1, GetGlobalInactiveTrackerCount());
 }
 
-TEST_F(ActivityTrackerTest, ProcessDeathTest) {
+// This test fails roughly 10% of runs on Android tablets.
+// See http://crbug.com/723060 for details.
+#if defined(OS_ANDROID)
+#define MAYBE_ProcessDeathTest DISABLED_ProcessDeathTest
+#else
+#define MAYBE_ProcessDeathTest ProcessDeathTest
+#endif
+
+TEST_F(ActivityTrackerTest, MAYBE_ProcessDeathTest) {
   // This doesn't actually create and destroy a process. Instead, it uses for-
   // testing interfaces to simulate data created by other processes.
   const ProcessId other_process_id = GetCurrentProcId() + 1;

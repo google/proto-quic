@@ -13,7 +13,6 @@ import subprocess
 import sys
 import tempfile
 
-import build.inputs
 import processor
 import error_filter
 
@@ -189,7 +188,7 @@ class Checker(object):
     return tmp_file.name
 
   def check(self, sources, out_file, closure_args=None,
-            custom_sources=True):
+            custom_sources=False, custom_includes=False):
     """Closure compile |sources| while checking for errors.
 
     Args:
@@ -209,6 +208,10 @@ class Checker(object):
     externs_and_deps = [self._POLYMER_EXTERNS]
 
     if custom_sources:
+      if custom_includes:
+        # TODO(dbeam): this is fairly hacky. Can we just remove custom_sources
+        # soon when all the things kept on life support using it die?
+        self._target = sources.pop()
       externs_and_deps += sources
     else:
       self._target = sources[0]
@@ -225,7 +228,8 @@ class Checker(object):
 
     js_args = deps + ([self._target] if self._target else [])
 
-    if not custom_sources:
+    process_includes = custom_includes or not custom_sources
+    if process_includes:
       # TODO(dbeam): compiler.jar automatically detects "@externs" in a --js arg
       # and moves these files to a different AST tree. However, because we use
       # one big funky <include> meta-file, it thinks all the code is one big
@@ -290,7 +294,7 @@ class Checker(object):
       with open(out_file, 'w') as f:
         f.write('')
 
-    if not custom_sources:
+    if process_includes:
       filtered_errors = self._filter_errors(errors)
       errors = map(self._clean_up_error, filtered_errors)
       output = self._format_errors(errors)
@@ -312,6 +316,9 @@ if __name__ == "__main__":
                       help="Path to a source file to typecheck")
   parser.add_argument("--custom_sources", action="store_true",
                       help="Whether this rules has custom sources.")
+  parser.add_argument("--custom_includes", action="store_true",
+                      help="If present, <include>s are processed when"
+                           "using --custom_files.")
   parser.add_argument("-o", "--out_file", required=True,
                       help="A file where the compiled output is written to")
   parser.add_argument("-c", "--closure_args", nargs=argparse.ZERO_OR_MORE,
@@ -324,7 +331,8 @@ if __name__ == "__main__":
 
   found_errors, stderr = checker.check(opts.sources, out_file=opts.out_file,
                                        closure_args=opts.closure_args,
-                                       custom_sources=opts.custom_sources)
+                                       custom_sources=opts.custom_sources,
+                                       custom_includes=opts.custom_includes)
 
   if found_errors:
     if opts.custom_sources:

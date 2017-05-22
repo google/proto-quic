@@ -108,8 +108,8 @@ class WebSocketHandshakeStreamCreateHelperTest : public ::testing::Test {
                                      extra_request_headers),
             WebSocketStandardResponse(extra_response_headers));
 
-    std::unique_ptr<WebSocketHandshakeStreamBase> handshake(
-        create_helper.CreateBasicStream(std::move(socket_handle), false));
+    std::unique_ptr<WebSocketHandshakeStreamBase> handshake =
+        create_helper.CreateBasicStream(std::move(socket_handle), false);
 
     // If in future the implementation type returned by CreateBasicStream()
     // changes, this static_cast will be wrong. However, in that case the test

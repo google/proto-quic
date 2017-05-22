@@ -11,6 +11,7 @@
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/memory/weak_ptr.h"
+#include "base/single_thread_task_runner.h"
 #include "base/threading/thread_checker.h"
 #include "tools/battor_agent/battor_connection.h"
 #include "tools/battor_agent/battor_error.h"
@@ -126,8 +127,6 @@ class BattOrAgent : public BattOrConnection::Listener,
   // Performs an action after a delay.
   void PerformDelayedAction(Action action, base::TimeDelta delay);
 
-
-
   // Requests a connection to the BattOr.
   void BeginConnect();
 
@@ -136,11 +135,17 @@ class BattOrAgent : public BattOrConnection::Listener,
                           uint16_t param1,
                           uint16_t param2);
 
+  // Retry the last command.
+  void RetryCommand();
+
   // Completes the command with the specified error.
   void CompleteCommand(BattOrError error);
 
   // Returns a formatted version of samples_ with timestamps and real units.
   std::string SamplesToString();
+
+  // Sets and restarts the action timeout timer.
+  void SetActionTimeout(uint16_t timeout_seconds);
 
   // The listener that handles the commands' results. It must outlive the agent.
   Listener* listener_;
@@ -180,14 +185,8 @@ class BattOrAgent : public BattOrConnection::Listener,
   // we receive frames in order.
   uint32_t next_sequence_number_;
 
-  // The number of times we've attempted to init the BattOr.
-  uint8_t num_init_attempts_;
-
-  // The number of times we've attempted the BattOr StartTracing command.
-  uint8_t num_start_tracing_attempts_;
-
-  // The number of times that we've attempted to read the last message.
-  uint8_t num_read_attempts_;
+  // The number of times we've attempted a command.
+  uint8_t num_command_attempts_;
 
   // The timeout that's run when an action times out.
   base::CancelableClosure timeout_callback_;

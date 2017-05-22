@@ -16,7 +16,8 @@ import sys
 
 
 def IsRealDepotTools(path):
-  return os.path.isfile(os.path.join(path, 'gclient.py'))
+  expanded_path = os.path.expanduser(path)
+  return os.path.isfile(os.path.join(expanded_path, 'gclient.py'))
 
 
 def add_depot_tools_to_path():

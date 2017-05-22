@@ -30,24 +30,20 @@
   #
   # chrome/ and ios/chrome/ must start at the same id.
   # App only use one file depending on whether it is iOS or other platform.
-  "chrome/app/address_input_strings.grd": {
-    "messages": [400],
-  },
-
   # Chromium strings and Google Chrome strings must start at the same id.
   # We only use one file depending on whether we're building Chromium or
   # Google Chrome.
   "chrome/app/chromium_strings.grd": {
-    "messages": [500],
+    "messages": [400],
   },
   "chrome/app/google_chrome_strings.grd": {
-    "messages": [500],
+    "messages": [400],
   },
 
   # Leave lots of space for generated_resources since it has most of our
   # strings.
   "chrome/app/generated_resources.grd": {
-    "messages": [900],
+    "messages": [800],
   },
 
   "chrome/app/resources/locale_settings.grd": {
@@ -235,6 +231,12 @@
   "ios/chrome/search_widget_extension/strings/ios_search_widget_extension_strings.grd": {
     "messages": [3050],
   },
+  "ios/chrome/search_widget_extension/strings/ios_search_widget_extension_chromium_strings.grd": {
+    "messages": [3070],
+  },
+  "ios/chrome/search_widget_extension/strings/ios_search_widget_extension_google_chrome_strings.grd": {
+    "messages": [3070],
+  },
 
   # content/ and ios/web/ must start at the same id.
   # App only use one file depending on whether it is iOS or other platform.
@@ -357,6 +359,10 @@
   "cloud_print/virtual_driver/win/install/virtual_driver_setup_resources.grd": {
     "includes": [28600],
 	"messages": [28650],
+  },
+
+  "third_party/libaddressinput/chromium/address_input_strings.grd": {
+    "messages": [28700],
   },
   # END "everything else" section.
   # Everything but chrome/, components/, content/, and ios/

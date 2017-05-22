@@ -83,6 +83,9 @@ class QuicSentPacketManagerPeer {
   static QuicSustainedBandwidthRecorder& GetBandwidthRecorder(
       QuicSentPacketManager* sent_packet_manager);
 
+  static void SetUsingPacing(QuicSentPacketManager* sent_packet_manager,
+                             bool using_pacing);
+
   static bool UsingPacing(const QuicSentPacketManager* sent_packet_manager);
 
   static bool IsUnacked(QuicSentPacketManager* sent_packet_manager,

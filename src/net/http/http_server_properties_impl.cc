@@ -222,11 +222,11 @@ bool HttpServerPropertiesImpl::SupportsRequestPriority(
 
   if (GetSupportsSpdy(server))
     return true;
-  const AlternativeServiceVector alternative_service_vector =
-      GetAlternativeServices(server);
-  for (const AlternativeService& alternative_service :
-       alternative_service_vector) {
-    if (alternative_service.protocol == kProtoQUIC) {
+  const AlternativeServiceInfoVector alternative_service_info_vector =
+      GetAlternativeServiceInfos(server);
+  for (const AlternativeServiceInfo& alternative_service_info :
+       alternative_service_info_vector) {
+    if (alternative_service_info.alternative_service.protocol == kProtoQUIC) {
       return true;
     }
   }
@@ -299,10 +299,12 @@ const std::string* HttpServerPropertiesImpl::GetCanonicalSuffix(
   return nullptr;
 }
 
-AlternativeServiceVector HttpServerPropertiesImpl::GetAlternativeServices(
+AlternativeServiceInfoVector
+HttpServerPropertiesImpl::GetAlternativeServiceInfos(
     const url::SchemeHostPort& origin) {
-  // Copy valid alternative services into |valid_alternative_services|.
-  AlternativeServiceVector valid_alternative_services;
+  // Copy valid alternative service infos into
+  // |valid_alternative_service_infos|.
+  AlternativeServiceInfoVector valid_alternative_service_infos;
   const base::Time now = base::Time::Now();
   AlternativeServiceMap::iterator map_it = alternative_service_map_.Get(origin);
   if (map_it != alternative_service_map_.end()) {
@@ -324,22 +326,23 @@ AlternativeServiceVector HttpServerPropertiesImpl::GetAlternativeServices(
         ++it;
         continue;
       }
-      valid_alternative_services.push_back(alternative_service);
+      valid_alternative_service_infos.push_back(
+          AlternativeServiceInfo(alternative_service, it->expiration));
       ++it;
     }
     if (map_it->second.empty()) {
       alternative_service_map_.Erase(map_it);
     }
-    return valid_alternative_services;
+    return valid_alternative_service_infos;
   }
 
   CanonicalHostMap::const_iterator canonical = GetCanonicalHost(origin);
   if (canonical == canonical_host_to_origin_map_.end()) {
-    return AlternativeServiceVector();
+    return AlternativeServiceInfoVector();
   }
   map_it = alternative_service_map_.Get(canonical->second);
   if (map_it == alternative_service_map_.end()) {
-    return AlternativeServiceVector();
+    return AlternativeServiceInfoVector();
   }
   for (AlternativeServiceInfoVector::iterator it = map_it->second.begin();
        it != map_it->second.end();) {
@@ -359,13 +362,14 @@ AlternativeServiceVector HttpServerPropertiesImpl::GetAlternativeServices(
       ++it;
       continue;
     }
-    valid_alternative_services.push_back(alternative_service);
+    valid_alternative_service_infos.push_back(
+        AlternativeServiceInfo(alternative_service, it->expiration));
     ++it;
   }
   if (map_it->second.empty()) {
     alternative_service_map_.Erase(map_it);
   }
-  return valid_alternative_services;
+  return valid_alternative_service_infos;
 }
 
 bool HttpServerPropertiesImpl::SetAlternativeService(
@@ -426,7 +430,7 @@ bool HttpServerPropertiesImpl::SetAlternativeServices(
   alternative_service_map_.Put(origin, alternative_service_info_vector);
 
   if (previously_no_alternative_services &&
-      !GetAlternativeServices(origin).empty()) {
+      !GetAlternativeServiceInfos(origin).empty()) {
     // TODO(rch): Consider the case where multiple requests are started
     // before the first completes. In this case, only one of the jobs
     // would reach this code, whereas all of them should should have.

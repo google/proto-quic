@@ -10,6 +10,9 @@ import time
 import models
 
 
+_DIFF_PREFIX_BY_STATUS = ['= ', '~ ', '+ ', '- ']
+
+
 def _PrettySize(size):
   # Arbitrarily chosen cut-off.
   if abs(size) < 2000:
@@ -37,17 +40,9 @@ def _FormatPss(pss):
   ret = str(round(pss, 1))
   if ret.endswith('.0'):
     ret = ret[:-2]
+    if ret == '0' and pss:
+      ret = '~0'
   return ret
-
-
-def _DiffPrefix(diff, sym):
-  if diff.IsAdded(sym):
-    return '+ '
-  if diff.IsRemoved(sym):
-    return '- '
-  if sym.size:
-    return '~ '
-  return '= '
 
 
 def _Divide(a, b):
@@ -137,7 +132,7 @@ class Describer(object):
           yield '{} {}'.format(' ' * indent_size, l)
         else:
           if is_diff:
-            diff_prefix = _DiffPrefix(group, s)
+            diff_prefix = _DIFF_PREFIX_BY_STATUS[group.DiffStatus(s)]
           yield '{}{}{:<4} {:>8} {:7} {}'.format(
               indent_prefix, diff_prefix, str(index) + ')',
               _FormatPss(running_total), '({:.1%})'.format(running_percent), l)
@@ -162,7 +157,9 @@ class Describer(object):
         data_size += s.pss
       elif s.section == 'b':
         bss_size += s.pss
-      unique_paths.add(s.object_path)
+      # Ignore paths like foo/{shared}/2
+      if '{' not in s.object_path:
+        unique_paths.add(s.object_path)
     header_desc = [
         'Showing {:,} symbols ({:,} unique) with total pss: {} bytes'.format(
             len(group), group.CountUniqueSymbols(), int(total_size)),
@@ -170,13 +167,45 @@ class Describer(object):
             _PrettySize(int(code_size)), _PrettySize(int(ro_size)),
             _PrettySize(int(data_size)), _PrettySize(int(bss_size)),
             _PrettySize(int(total_size))),
-        'Number of object files: {}'.format(len(unique_paths)),
+        'Number of unique paths: {}'.format(len(unique_paths)),
         '',
         'Index, Running Total, Section@Address, PSS',
         '-' * 60
     ]
     children_desc = self._DescribeSymbolGroupChildren(group)
     return itertools.chain(header_desc, children_desc)
+
+  def _DescribeDiffObjectPaths(self, diff):
+    paths_by_status = [set(), set(), set(), set()]
+    def helper(group):
+      for s in group:
+        if s.IsGroup():
+          helper(s)
+        else:
+          status = group.DiffStatus(s)
+          paths_by_status[status].add(s.source_path or s.object_path)
+    helper(diff)
+    # Show only paths that have no changed symbols (pure adds / removes).
+    unchanged, changed, added, removed = paths_by_status
+    added.difference_update(unchanged)
+    added.difference_update(changed)
+    removed.difference_update(unchanged)
+    removed.difference_update(changed)
+    yield '{} paths added, {} removed, {} changed'.format(
+        len(added), len(removed), len(changed))
+
+    if self.verbose and len(added):
+      yield 'Added files:'
+      for p in sorted(added):
+        yield '  ' + p
+    if self.verbose and len(removed):
+      yield 'Removed files:'
+      for p in sorted(removed):
+        yield '  ' + p
+    if self.verbose and len(changed):
+      yield 'Changed files:'
+      for p in sorted(changed):
+        yield '  ' + p
 
   def _DescribeSymbolDiff(self, diff):
     header_template = ('{} symbols added (+), {} changed (~), {} removed (-), '
@@ -185,27 +214,7 @@ class Describer(object):
     symbol_delta_desc = [header_template.format(
         diff.added_count, diff.changed_count, diff.removed_count,
         diff.unchanged_count, unchanged_msg)]
-
-    similar_paths = set()
-    added_paths = set()
-    removed_paths = set()
-    for s in diff:
-      if diff.IsAdded(s):
-        added_paths.add(s.object_path)
-      elif diff.IsRemoved(s):
-        removed_paths.add(s.object_path)
-      else:
-        similar_paths.add(s.object_path)
-    added_paths.difference_update(similar_paths)
-    removed_paths.difference_update(similar_paths)
-    path_delta_desc = ['{} object files added, {} removed'.format(
-        len(added_paths), len(removed_paths))]
-    if self.verbose and len(added_paths):
-      path_delta_desc.append('Added files:')
-      path_delta_desc.extend('  ' + p for p in sorted(added_paths))
-    if self.verbose and len(removed_paths):
-      path_delta_desc.append('Removed files:')
-      path_delta_desc.extend('  ' + p for p in sorted(removed_paths))
+    path_delta_desc = self._DescribeDiffObjectPaths(diff)
 
     diff = diff if self.verbose else diff.WhereNotUnchanged()
     group_desc = self._DescribeSymbolGroup(diff)
@@ -267,9 +276,7 @@ def DescribeSizeInfoCoverage(size_info):
       expected_size = size_info.section_sizes[
           models.SECTION_TO_SECTION_NAME[section]]
 
-    # Use raw_symbols in case symbols contains groups.
-    in_section = models.SymbolGroup(size_info.raw_symbols).WhereInSection(
-        section)
+    in_section = size_info.raw_symbols.WhereInSection(section)
     actual_size = in_section.size
     size_percent = _Divide(actual_size, expected_size)
     yield ('Section {}: has {:.1%} of {} bytes accounted for from '

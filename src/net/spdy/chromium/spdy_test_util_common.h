@@ -61,7 +61,8 @@ const int kUploadDataSize = arraysize(kUploadData)-1;
 // Chop a SpdySerializedFrame into an array of MockWrites.
 // |frame| is the frame to chop.
 // |num_chunks| is the number of chunks to create.
-MockWrite* ChopWriteFrame(const SpdySerializedFrame& frame, int num_chunks);
+std::unique_ptr<MockWrite[]> ChopWriteFrame(const SpdySerializedFrame& frame,
+                                            int num_chunks);
 
 // Adds headers and values to a map.
 // |extra_headers| is an array of { name, value } pairs, arranged as strings

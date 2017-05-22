@@ -110,9 +110,16 @@ class AnalyzeTest(unittest.TestCase):
     SIG = 'cc::{lambda(cc::PaintOp*)#63}::_FUN(cc::PaintOp*)'
     got_full_name, got_template_name, got_name = (
         function_signature.Parse(SIG))
-    self.assertEqual('cc::{lambda#63}', got_name)
-    self.assertEqual('cc::{lambda#63}', got_template_name)
-    self.assertEqual('cc::{lambda#63}(cc::PaintOp*)', got_full_name)
+    self.assertEqual('cc::$lambda#63', got_name)
+    self.assertEqual('cc::$lambda#63', got_template_name)
+    self.assertEqual('cc::$lambda#63(cc::PaintOp*)', got_full_name)
+
+    SIG = 'cc::$_63::__invoke(cc::PaintOp*)'
+    got_full_name, got_template_name, got_name = (
+        function_signature.Parse(SIG))
+    self.assertEqual('cc::$lambda#63', got_name)
+    self.assertEqual('cc::$lambda#63', got_template_name)
+    self.assertEqual('cc::$lambda#63(cc::PaintOp*)', got_full_name)
 
     # Data members
     check('', 'blink::CSSValueKeywordsHash::findValueImpl', '(char const*)',

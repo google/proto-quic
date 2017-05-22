@@ -1689,6 +1689,28 @@ TEST_F(ClientSocketPoolBaseTest, FailingActiveRequestWithPendingRequests) {
     EXPECT_THAT(request(i)->WaitForResult(), IsError(ERR_CONNECTION_FAILED));
 }
 
+// Make sure that pending requests that complete synchronously get serviced
+// after active requests fail. See https://crbug.com/723748
+TEST_F(ClientSocketPoolBaseTest, HandleMultipleSyncFailuresAfterAsyncFailure) {
+  const size_t kNumberOfRequests = 10;
+  const size_t kMaxSockets = 1;
+  CreatePool(kMaxSockets, kMaxSockets);
+
+  connect_job_factory_->set_job_type(TestConnectJob::kMockPendingFailingJob);
+
+  EXPECT_THAT(StartRequest("a", DEFAULT_PRIORITY), IsError(ERR_IO_PENDING));
+
+  connect_job_factory_->set_job_type(TestConnectJob::kMockFailingJob);
+
+  // Queue up all the other requests
+  for (size_t i = 1; i < kNumberOfRequests; ++i)
+    EXPECT_THAT(StartRequest("a", DEFAULT_PRIORITY), IsError(ERR_IO_PENDING));
+
+  // Make sure all requests fail, instead of hanging.
+  for (size_t i = 0; i < kNumberOfRequests; ++i)
+    EXPECT_THAT(request(i)->WaitForResult(), IsError(ERR_CONNECTION_FAILED));
+}
+
 TEST_F(ClientSocketPoolBaseTest, CancelActiveRequestThenRequestSocket) {
   CreatePool(kDefaultMaxSockets, kDefaultMaxSocketsPerGroup);
 

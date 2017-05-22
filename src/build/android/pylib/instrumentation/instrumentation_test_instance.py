@@ -489,6 +489,8 @@ class InstrumentationTestInstance(test_instance.TestInstance):
     self._driver_name = None
     self._initializeDriverAttributes()
 
+    self._render_results_dir = None
+    self._screenshot_dir = None
     self._timeout_scale = None
     self._initializeTestControlAttributes(args)
 
@@ -666,6 +668,7 @@ class InstrumentationTestInstance(test_instance.TestInstance):
       self._driver_apk = None
 
   def _initializeTestControlAttributes(self, args):
+    self._render_results_dir = args.render_results_dir
     self._screenshot_dir = args.screenshot_dir
     self._timeout_scale = args.timeout_scale or 1
 
@@ -752,6 +755,10 @@ class InstrumentationTestInstance(test_instance.TestInstance):
   @property
   def package_info(self):
     return self._package_info
+
+  @property
+  def render_results_dir(self):
+    return self._render_results_dir
 
   @property
   def screenshot_dir(self):

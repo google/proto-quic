@@ -41,6 +41,7 @@
 #include "net/base/upload_bytes_element_reader.h"
 #include "net/http/http_request_headers.h"
 #include "net/http/http_response_headers.h"
+#include "net/traffic_annotation/network_traffic_annotation.h"
 #include "net/url_request/redirect_info.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_context.h"
@@ -399,7 +400,28 @@ class OCSPRequestSession
       g_ocsp_io_loop.Get().AddRequest(this);
     }
 
-    request_ = url_request_context->CreateRequest(url_, DEFAULT_PRIORITY, this);
+    net::NetworkTrafficAnnotationTag traffic_annotation =
+        net::DefineNetworkTrafficAnnotation("ocsp_start_url_request", R"(
+        semantics {
+          sender: "OCSP"
+          description:
+            "Verifying the revocation status of a certificate via OCSP."
+          trigger:
+            "This may happen in response to visiting a website that uses "
+            "https://"
+          data:
+            "Identifier for the certificate whose revocation status is being "
+            "checked. See https://tools.ietf.org/html/rfc6960#section-2.1 for "
+            "more details."
+          destination: OTHER
+        }
+        policy {
+          cookies_allowed: false
+          setting: "This feature cannot be disabled by settings."
+          policy_exception_justification: "Not implemented."
+        })");
+    request_ = url_request_context->CreateRequest(url_, DEFAULT_PRIORITY, this,
+                                                  traffic_annotation);
     // To meet the privacy requirements of incognito mode.
     request_->SetLoadFlags(LOAD_DISABLE_CACHE | LOAD_DO_NOT_SAVE_COOKIES |
                            LOAD_DO_NOT_SEND_COOKIES);

@@ -15,6 +15,9 @@ ozone_platform_headless = true
 # Embed resource.pak into binary to simplify deployment.
 headless_use_embedded_resources = true
 
+# Expose headless bindings for freetype library bundled with Chromium.
+headless_fontconfig_utils = true
+
 # In order to simplify deployment we build ICU data file
 # into binary.
 icu_use_data_file = false

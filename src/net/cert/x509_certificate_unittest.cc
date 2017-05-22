@@ -362,25 +362,73 @@ TEST(X509CertificateTest, SerialNumbers) {
   ASSERT_EQ(sizeof(google_serial), google_cert->serial_number().size());
   EXPECT_TRUE(memcmp(google_cert->serial_number().data(), google_serial,
                      sizeof(google_serial)) == 0);
+}
 
-// TODO(mattm): Creating the X509Certificate fails on some platforms due to the
-// null in the subject. Generate a new test cert specifically for this case
-// rather than reusing paypal_null_cert.
-#if !defined(OS_WIN) && !BUILDFLAG(USE_BYTE_CERTS)
+TEST(X509CertificateTest, SerialNumberZeroPadded) {
+  base::FilePath certs_dir =
+      GetTestNetDataDirectory().AppendASCII("parse_certificate_unittest");
+  scoped_refptr<X509Certificate> cert =
+      ImportCertFromFile(certs_dir, "serial_zero_padded.pem");
+  ASSERT_TRUE(cert);
+
   // Check a serial number where the first byte is >= 0x80, the DER returned by
   // serial() should contain the leading 0 padding byte.
-  scoped_refptr<X509Certificate> paypal_null_cert(
-      X509Certificate::CreateFromBytes(
-          reinterpret_cast<const char*>(paypal_null_der),
-          sizeof(paypal_null_der)));
-  ASSERT_TRUE(paypal_null_cert);
+  static const uint8_t expected_serial[3] = {0x00, 0x80, 0x01};
+  ASSERT_EQ(sizeof(expected_serial), cert->serial_number().size());
+  EXPECT_TRUE(memcmp(cert->serial_number().data(), expected_serial,
+                     sizeof(expected_serial)) == 0);
+}
 
-  static const uint8_t paypal_null_serial[3] = {0x00, 0xf0, 0x9b};
-  ASSERT_EQ(sizeof(paypal_null_serial),
-            paypal_null_cert->serial_number().size());
-  EXPECT_TRUE(memcmp(paypal_null_cert->serial_number().data(),
-                     paypal_null_serial, sizeof(paypal_null_serial)) == 0);
-#endif  // !defined(OS_WIN)
+TEST(X509CertificateTest, SerialNumberZeroPadded21BytesLong) {
+  base::FilePath certs_dir =
+      GetTestNetDataDirectory().AppendASCII("parse_certificate_unittest");
+  scoped_refptr<X509Certificate> cert =
+      ImportCertFromFile(certs_dir, "serial_zero_padded_21_bytes.pem");
+  ASSERT_TRUE(cert);
+
+  // Check a serial number where the first byte is >= 0x80, causing the encoded
+  // length to be 21 bytes long. This should be an error, but serial number
+  // parsing is currently permissive.
+  static const uint8_t expected_serial[21] = {
+      0x00, 0x80, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
+      0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13};
+  ASSERT_EQ(sizeof(expected_serial), cert->serial_number().size());
+  EXPECT_TRUE(memcmp(cert->serial_number().data(), expected_serial,
+                     sizeof(expected_serial)) == 0);
+}
+
+TEST(X509CertificateTest, SerialNumberNegative) {
+  base::FilePath certs_dir =
+      GetTestNetDataDirectory().AppendASCII("parse_certificate_unittest");
+  scoped_refptr<X509Certificate> cert =
+      ImportCertFromFile(certs_dir, "serial_negative.pem");
+  ASSERT_TRUE(cert);
+
+  // RFC 5280 does not allow serial numbers to be negative, but serial number
+  // parsing is currently permissive, so this does not cause an error.
+  static const uint8_t expected_serial[2] = {0x80, 0x01};
+  ASSERT_EQ(sizeof(expected_serial), cert->serial_number().size());
+  EXPECT_TRUE(memcmp(cert->serial_number().data(), expected_serial,
+                     sizeof(expected_serial)) == 0);
+}
+
+TEST(X509CertificateTest, SerialNumber37BytesLong) {
+  base::FilePath certs_dir =
+      GetTestNetDataDirectory().AppendASCII("parse_certificate_unittest");
+  scoped_refptr<X509Certificate> cert =
+      ImportCertFromFile(certs_dir, "serial_37_bytes.pem");
+  ASSERT_TRUE(cert);
+
+  // Check a serial number which is very long. This should be an error, but
+  // serial number parsing is currently permissive.
+  static const uint8_t expected_serial[37] = {
+      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
+      0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14,
+      0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e,
+      0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25};
+  ASSERT_EQ(sizeof(expected_serial), cert->serial_number().size());
+  EXPECT_TRUE(memcmp(cert->serial_number().data(), expected_serial,
+                     sizeof(expected_serial)) == 0);
 }
 
 TEST(X509CertificateTest, SHA256FingerprintsCorrectly) {

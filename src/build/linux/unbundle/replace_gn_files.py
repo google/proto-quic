@@ -19,6 +19,7 @@ import sys
 REPLACEMENTS = {
   'ffmpeg': 'third_party/ffmpeg/BUILD.gn',
   'flac': 'third_party/flac/BUILD.gn',
+  'freetype': 'third_party/freetype/BUILD.gn',
   'harfbuzz-ng': 'third_party/harfbuzz-ng/BUILD.gn',
   'icu': 'third_party/icu/BUILD.gn',
   'libdrm': 'third_party/libdrm/BUILD.gn',
@@ -29,6 +30,7 @@ REPLACEMENTS = {
   'libwebp': 'third_party/libwebp/BUILD.gn',
   'libxml': 'third_party/libxml/BUILD.gn',
   'libxslt': 'third_party/libxslt/BUILD.gn',
+  'openh264': 'third_party/openh264/BUILD.gn',
   'opus': 'third_party/opus/BUILD.gn',
   're2': 'third_party/re2/BUILD.gn',
   'snappy': 'third_party/snappy/BUILD.gn',

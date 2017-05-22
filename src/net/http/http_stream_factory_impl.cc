@@ -4,8 +4,8 @@
 
 #include "net/http/http_stream_factory_impl.h"
 
-#include <string>
 #include <tuple>
+#include <utility>
 
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
@@ -32,77 +32,10 @@
 
 namespace net {
 
-namespace {
-// Default JobFactory for creating HttpStreamFactoryImpl::Jobs.
-class DefaultJobFactory : public HttpStreamFactoryImpl::JobFactory {
- public:
-  DefaultJobFactory() {}
-
-  ~DefaultJobFactory() override {}
-
-  HttpStreamFactoryImpl::Job* CreateJob(
-      HttpStreamFactoryImpl::Job::Delegate* delegate,
-      HttpStreamFactoryImpl::JobType job_type,
-      HttpNetworkSession* session,
-      const HttpRequestInfo& request_info,
-      RequestPriority priority,
-      const SSLConfig& server_ssl_config,
-      const SSLConfig& proxy_ssl_config,
-      HostPortPair destination,
-      GURL origin_url,
-      bool enable_ip_based_pooling,
-      NetLog* net_log) override {
-    return new HttpStreamFactoryImpl::Job(
-        delegate, job_type, session, request_info, priority, server_ssl_config,
-        proxy_ssl_config, destination, origin_url, enable_ip_based_pooling,
-        net_log);
-  }
-
-  HttpStreamFactoryImpl::Job* CreateJob(
-      HttpStreamFactoryImpl::Job::Delegate* delegate,
-      HttpStreamFactoryImpl::JobType job_type,
-      HttpNetworkSession* session,
-      const HttpRequestInfo& request_info,
-      RequestPriority priority,
-      const SSLConfig& server_ssl_config,
-      const SSLConfig& proxy_ssl_config,
-      HostPortPair destination,
-      GURL origin_url,
-      AlternativeService alternative_service,
-      bool enable_ip_based_pooling,
-      NetLog* net_log) override {
-    return new HttpStreamFactoryImpl::Job(
-        delegate, job_type, session, request_info, priority, server_ssl_config,
-        proxy_ssl_config, destination, origin_url, alternative_service,
-        ProxyServer(), enable_ip_based_pooling, net_log);
-  }
-
-  HttpStreamFactoryImpl::Job* CreateJob(
-      HttpStreamFactoryImpl::Job::Delegate* delegate,
-      HttpStreamFactoryImpl::JobType job_type,
-      HttpNetworkSession* session,
-      const HttpRequestInfo& request_info,
-      RequestPriority priority,
-      const SSLConfig& server_ssl_config,
-      const SSLConfig& proxy_ssl_config,
-      HostPortPair destination,
-      GURL origin_url,
-      const ProxyServer& alternative_proxy_server,
-      bool enable_ip_based_pooling,
-      NetLog* net_log) override {
-    return new HttpStreamFactoryImpl::Job(
-        delegate, job_type, session, request_info, priority, server_ssl_config,
-        proxy_ssl_config, destination, origin_url, AlternativeService(),
-        alternative_proxy_server, enable_ip_based_pooling, net_log);
-  }
-};
-
-}  // anonymous namespace
-
 HttpStreamFactoryImpl::HttpStreamFactoryImpl(HttpNetworkSession* session,
                                              bool for_websockets)
     : session_(session),
-      job_factory_(new DefaultJobFactory()),
+      job_factory_(new JobFactory()),
       for_websockets_(for_websockets),
       last_logged_job_controller_count_(0) {}
 
@@ -112,7 +45,7 @@ HttpStreamFactoryImpl::~HttpStreamFactoryImpl() {
                           job_controller_set_.size());
 }
 
-HttpStreamRequest* HttpStreamFactoryImpl::RequestStream(
+std::unique_ptr<HttpStreamRequest> HttpStreamFactoryImpl::RequestStream(
     const HttpRequestInfo& request_info,
     RequestPriority priority,
     const SSLConfig& server_ssl_config,
@@ -128,7 +61,8 @@ HttpStreamRequest* HttpStreamFactoryImpl::RequestStream(
       enable_alternative_services, net_log);
 }
 
-HttpStreamRequest* HttpStreamFactoryImpl::RequestWebSocketHandshakeStream(
+std::unique_ptr<HttpStreamRequest>
+HttpStreamFactoryImpl::RequestWebSocketHandshakeStream(
     const HttpRequestInfo& request_info,
     RequestPriority priority,
     const SSLConfig& server_ssl_config,
@@ -146,7 +80,8 @@ HttpStreamRequest* HttpStreamFactoryImpl::RequestWebSocketHandshakeStream(
       enable_alternative_services, net_log);
 }
 
-HttpStreamRequest* HttpStreamFactoryImpl::RequestBidirectionalStreamImpl(
+std::unique_ptr<HttpStreamRequest>
+HttpStreamFactoryImpl::RequestBidirectionalStreamImpl(
     const HttpRequestInfo& request_info,
     RequestPriority priority,
     const SSLConfig& server_ssl_config,
@@ -164,7 +99,7 @@ HttpStreamRequest* HttpStreamFactoryImpl::RequestBidirectionalStreamImpl(
       enable_alternative_services, net_log);
 }
 
-HttpStreamRequest* HttpStreamFactoryImpl::RequestStreamInternal(
+std::unique_ptr<HttpStreamRequest> HttpStreamFactoryImpl::RequestStreamInternal(
     const HttpRequestInfo& request_info,
     RequestPriority priority,
     const SSLConfig& server_ssl_config,
@@ -181,19 +116,19 @@ HttpStreamRequest* HttpStreamFactoryImpl::RequestStreamInternal(
   auto job_controller = base::MakeUnique<JobController>(
       this, delegate, session_, job_factory_.get(), request_info,
       /* is_preconnect = */ false, enable_ip_based_pooling,
-      enable_alternative_services);
+      enable_alternative_services, server_ssl_config, proxy_ssl_config);
   JobController* job_controller_raw_ptr = job_controller.get();
   job_controller_set_.insert(std::move(job_controller));
-  Request* request = job_controller_raw_ptr->Start(
-      request_info, delegate, websocket_handshake_stream_create_helper, net_log,
-      stream_type, priority, server_ssl_config, proxy_ssl_config);
-
-  return request;
+  return job_controller_raw_ptr->Start(delegate,
+                                       websocket_handshake_stream_create_helper,
+                                       net_log, stream_type, priority);
 }
 
 void HttpStreamFactoryImpl::PreconnectStreams(
     int num_streams,
     const HttpRequestInfo& request_info) {
+  DCHECK(request_info.url.is_valid());
+
   AddJobControllerCountToHistograms();
 
   SSLConfig server_ssl_config;
@@ -209,11 +144,11 @@ void HttpStreamFactoryImpl::PreconnectStreams(
       this, nullptr, session_, job_factory_.get(), request_info,
       /* is_preconnect = */ true,
       /* enable_ip_based_pooling = */ true,
-      /* enable_alternative_services = */ true);
+      /* enable_alternative_services = */ true, server_ssl_config,
+      proxy_ssl_config);
   JobController* job_controller_raw_ptr = job_controller.get();
   job_controller_set_.insert(std::move(job_controller));
-  job_controller_raw_ptr->Preconnect(num_streams, request_info,
-                                     server_ssl_config, proxy_ssl_config);
+  job_controller_raw_ptr->Preconnect(num_streams);
 }
 
 const HostMappingRules* HttpStreamFactoryImpl::GetHostMappingRules() const {

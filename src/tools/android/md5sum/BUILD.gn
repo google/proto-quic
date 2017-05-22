@@ -21,7 +21,7 @@ executable("md5sum_bin") {
   ]
   deps = [
     "//base",
-    "//build/config/sanitizers:deps",
+    "//build/config:exe_and_shlib_deps",
   ]
 
   if (is_android && use_order_profiling) {

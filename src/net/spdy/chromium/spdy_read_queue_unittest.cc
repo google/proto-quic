@@ -49,7 +49,7 @@ SpdyString DrainToString(size_t max_buffer_size, SpdyReadQueue* queue) {
   // Pad the buffer so we can detect out-of-bound writes.
   size_t padding = std::max(static_cast<size_t>(4096), queue->GetTotalSize());
   size_t buffer_size_with_padding = padding + max_buffer_size + padding;
-  std::unique_ptr<char[]> buffer(new char[buffer_size_with_padding]);
+  auto buffer = base::MakeUnique<char[]>(buffer_size_with_padding);
   std::memset(buffer.get(), 0, buffer_size_with_padding);
   char* buffer_data = buffer.get() + padding;
 

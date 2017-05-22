@@ -1,5 +1,4 @@
 #if defined(__i386__)
-.file	"sha512-586.S"
 .text
 .globl	_sha256_block_data_order
 .private_extern	_sha256_block_data_order

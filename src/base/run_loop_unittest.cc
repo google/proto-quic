@@ -8,8 +8,10 @@
 #include "base/bind_helpers.h"
 #include "base/location.h"
 #include "base/macros.h"
-#include "base/message_loop/message_loop.h"
 #include "base/single_thread_task_runner.h"
+#include "base/synchronization/waitable_event.h"
+#include "base/task_scheduler/post_task.h"
+#include "base/test/scoped_task_environment.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -52,7 +54,7 @@ class RunLoopTest : public testing::Test {
  protected:
   RunLoopTest() = default;
 
-  MessageLoop message_loop_;
+  test::ScopedTaskEnvironment task_environment_;
   RunLoop run_loop_;
   int counter_ = 0;
 
@@ -112,6 +114,141 @@ TEST_F(RunLoopTest, QuitWhenIdleClosureAfterRunLoopScope) {
     run_loop.RunUntilIdle();
   }
   quit_when_idle_closure.Run();
+}
+
+// Verify that Quit can be executed from another sequence.
+TEST_F(RunLoopTest, QuitFromOtherSequence) {
+  scoped_refptr<SequencedTaskRunner> other_sequence =
+      CreateSequencedTaskRunnerWithTraits({});
+
+  // Always expected to run before asynchronous Quit() kicks in.
+  ThreadTaskRunnerHandle::Get()->PostTask(
+      FROM_HERE, base::BindOnce(&ShouldRunTask, Unretained(&counter_)));
+
+  WaitableEvent loop_was_quit(WaitableEvent::ResetPolicy::MANUAL,
+                              WaitableEvent::InitialState::NOT_SIGNALED);
+  other_sequence->PostTask(
+      FROM_HERE, base::BindOnce([](RunLoop* run_loop) { run_loop->Quit(); },
+                                Unretained(&run_loop_)));
+  other_sequence->PostTask(
+      FROM_HERE,
+      base::BindOnce(&WaitableEvent::Signal, base::Unretained(&loop_was_quit)));
+
+  // Anything that's posted after the Quit closure was posted back to this
+  // sequence shouldn't get a chance to run.
+  loop_was_quit.Wait();
+  ThreadTaskRunnerHandle::Get()->PostTask(
+      FROM_HERE, base::BindOnce(&ShouldRunTask, Unretained(&counter_)));
+
+  run_loop_.Run();
+
+  EXPECT_EQ(1, counter_);
+}
+
+// Verify that QuitClosure can be executed from another sequence.
+TEST_F(RunLoopTest, QuitFromOtherSequenceWithClosure) {
+  scoped_refptr<SequencedTaskRunner> other_sequence =
+      CreateSequencedTaskRunnerWithTraits({});
+
+  // Always expected to run before asynchronous Quit() kicks in.
+  ThreadTaskRunnerHandle::Get()->PostTask(
+      FROM_HERE, base::BindOnce(&ShouldRunTask, Unretained(&counter_)));
+
+  WaitableEvent loop_was_quit(WaitableEvent::ResetPolicy::MANUAL,
+                              WaitableEvent::InitialState::NOT_SIGNALED);
+  other_sequence->PostTask(FROM_HERE, run_loop_.QuitClosure());
+  other_sequence->PostTask(
+      FROM_HERE,
+      base::BindOnce(&WaitableEvent::Signal, base::Unretained(&loop_was_quit)));
+
+  // Anything that's posted after the Quit closure was posted back to this
+  // sequence shouldn't get a chance to run.
+  loop_was_quit.Wait();
+  ThreadTaskRunnerHandle::Get()->PostTask(
+      FROM_HERE, base::BindOnce(&ShouldRunTask, Unretained(&counter_)));
+
+  run_loop_.Run();
+
+  EXPECT_EQ(1, counter_);
+}
+
+// Verify that Quit can be executed from another sequence even when the
+// Quit is racing with Run() -- i.e. forgo the WaitableEvent used above.
+TEST_F(RunLoopTest, QuitFromOtherSequenceRacy) {
+  scoped_refptr<SequencedTaskRunner> other_sequence =
+      CreateSequencedTaskRunnerWithTraits({});
+
+  // Always expected to run before asynchronous Quit() kicks in.
+  ThreadTaskRunnerHandle::Get()->PostTask(
+      FROM_HERE, base::BindOnce(&ShouldRunTask, Unretained(&counter_)));
+
+  other_sequence->PostTask(
+      FROM_HERE, base::BindOnce([](RunLoop* run_loop) { run_loop->Quit(); },
+                                Unretained(&run_loop_)));
+
+  run_loop_.Run();
+
+  EXPECT_EQ(1, counter_);
+}
+
+// Verify that QuitClosure can be executed from another sequence even when the
+// Quit is racing with Run() -- i.e. forgo the WaitableEvent used above.
+TEST_F(RunLoopTest, QuitFromOtherSequenceRacyWithClosure) {
+  scoped_refptr<SequencedTaskRunner> other_sequence =
+      CreateSequencedTaskRunnerWithTraits({});
+
+  // Always expected to run before asynchronous Quit() kicks in.
+  ThreadTaskRunnerHandle::Get()->PostTask(
+      FROM_HERE, base::BindOnce(&ShouldRunTask, Unretained(&counter_)));
+
+  other_sequence->PostTask(FROM_HERE, run_loop_.QuitClosure());
+
+  run_loop_.Run();
+
+  EXPECT_EQ(1, counter_);
+}
+
+// Verify that QuitWhenIdle can be executed from another sequence.
+TEST_F(RunLoopTest, QuitWhenIdleFromOtherSequence) {
+  scoped_refptr<SequencedTaskRunner> other_sequence =
+      CreateSequencedTaskRunnerWithTraits({});
+
+  ThreadTaskRunnerHandle::Get()->PostTask(
+      FROM_HERE, base::BindOnce(&ShouldRunTask, Unretained(&counter_)));
+
+  other_sequence->PostTask(
+      FROM_HERE,
+      base::BindOnce([](RunLoop* run_loop) { run_loop->QuitWhenIdle(); },
+                     Unretained(&run_loop_)));
+
+  ThreadTaskRunnerHandle::Get()->PostTask(
+      FROM_HERE, base::BindOnce(&ShouldRunTask, Unretained(&counter_)));
+
+  run_loop_.Run();
+
+  // Regardless of the outcome of the race this thread shouldn't have been idle
+  // until the counter was ticked twice.
+  EXPECT_EQ(2, counter_);
+}
+
+// Verify that QuitWhenIdleClosure can be executed from another sequence.
+TEST_F(RunLoopTest, QuitWhenIdleFromOtherSequenceWithClosure) {
+  scoped_refptr<SequencedTaskRunner> other_sequence =
+      CreateSequencedTaskRunnerWithTraits({});
+
+  ThreadTaskRunnerHandle::Get()->PostTask(
+      FROM_HERE, base::BindOnce(&ShouldRunTask, Unretained(&counter_)));
+
+  other_sequence->PostTask(FROM_HERE, run_loop_.QuitWhenIdleClosure());
+
+  ThreadTaskRunnerHandle::Get()->PostTask(
+      FROM_HERE, base::BindOnce(&ShouldRunTask, Unretained(&counter_)));
+
+  run_loop_.Run();
+
+  // Regardless of the outcome of the race this thread shouldn't have been idle
+  // until the counter was ticked twice.
+  EXPECT_EQ(2, counter_);
 }
 
 TEST_F(RunLoopTest, IsRunningOnCurrentThread) {

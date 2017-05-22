@@ -87,6 +87,21 @@ class SystemHealthStory(page.Page):
     self._take_memory_measurement = take_memory_measurement
 
   @classmethod
+  def GetStoryDescription(cls):
+    if cls.__doc__:
+      return cls.__doc__
+    return cls.GenerateStoryDescription()
+
+  @classmethod
+  def GenerateStoryDescription(cls):
+    """ Subclasses of SystemHealthStory can override this to auto generate
+    their story description.
+    However, it's recommended to use the Python docstring to describe the user
+    stories instead and this should only be used for very repetitive cases.
+    """
+    return None
+
+  @classmethod
   def CanRun(cls, possible_browser):
     if (decorators.ShouldSkip(cls, possible_browser)[0] or
         cls.ShouldDisable(possible_browser)):

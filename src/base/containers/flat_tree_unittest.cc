@@ -31,9 +31,10 @@
 //   this.
 // * No tests with min_allocator and no tests counting allocations.
 //   Flat sets currently don't support allocators.
-// * No tests for range insertion. Flat sets currently do not support this
-//   functionality.
 
+#include <forward_list>
+#include <iterator>
+#include <list>
 #include <string>
 #include <vector>
 
@@ -169,6 +170,20 @@ using TreeWithStrangeCompare = flat_tree<int,
 using ::testing::ElementsAre;
 
 }  // namespace
+
+TEST(FlatTree, IsMultipass) {
+  static_assert(!is_multipass<std::istream_iterator<int>>(),
+                "InputIterator is not multipass");
+  static_assert(!is_multipass<std::ostream_iterator<int>>(),
+                "OutputIterator is not multipass");
+
+  static_assert(is_multipass<std::forward_list<int>::iterator>(),
+                "ForwardIterator is multipass");
+  static_assert(is_multipass<std::list<int>::iterator>(),
+                "BidirectionalIterator is multipass");
+  static_assert(is_multipass<std::vector<int>::iterator>(),
+                "RandomAccessIterator is multipass");
+}
 
 TEST(FlatTree, LastUnique) {
   using Pair = std::pair<int, int>;
@@ -736,6 +751,108 @@ TEST(FlatTree, InsertPositionRValue) {
   EXPECT_EQ(std::prev(cont.end()), result);
   EXPECT_EQ(3U, cont.size());
   EXPECT_EQ(3, result->data());
+}
+
+// template <class InputIterator>
+//   void insert(InputIterator first, InputIterator last);
+
+TEST(FlatTree, InsertIterIter) {
+  struct GetKeyFromIntIntPair {
+    int operator()(const std::pair<int, int>& p) const { return p.first; }
+  };
+
+  using IntIntMap =
+      flat_tree<int, IntPair, GetKeyFromIntIntPair, std::less<int>>;
+
+  {
+    IntIntMap cont;
+    IntPair int_pairs[] = {{3, 1}, {1, 1}, {4, 1}, {2, 1}};
+    cont.insert(std::begin(int_pairs), std::end(int_pairs),
+                KEEP_FIRST_OF_DUPES);
+    EXPECT_THAT(cont, ElementsAre(IntPair(1, 1), IntPair(2, 1), IntPair(3, 1),
+                                  IntPair(4, 1)));
+  }
+
+  {
+    IntIntMap cont({{1, 1}, {2, 1}, {3, 1}, {4, 1}}, KEEP_FIRST_OF_DUPES);
+    std::vector<IntPair> int_pairs;
+    cont.insert(std::begin(int_pairs), std::end(int_pairs),
+                KEEP_FIRST_OF_DUPES);
+    EXPECT_THAT(cont, ElementsAre(IntPair(1, 1), IntPair(2, 1), IntPair(3, 1),
+                                  IntPair(4, 1)));
+  }
+
+  {
+    IntIntMap cont({{1, 1}, {2, 1}, {3, 1}, {4, 1}}, KEEP_FIRST_OF_DUPES);
+    IntPair int_pairs[] = {{1, 1}};
+    cont.insert(std::begin(int_pairs), std::end(int_pairs),
+                KEEP_FIRST_OF_DUPES);
+    EXPECT_THAT(cont, ElementsAre(IntPair(1, 1), IntPair(2, 1), IntPair(3, 1),
+                                  IntPair(4, 1)));
+  }
+
+  {
+    IntIntMap cont({{1, 1}, {2, 1}, {3, 1}, {4, 1}}, KEEP_FIRST_OF_DUPES);
+    IntPair int_pairs[] = {{1, 2}};
+    cont.insert(std::begin(int_pairs), std::end(int_pairs), KEEP_LAST_OF_DUPES);
+    EXPECT_THAT(cont, ElementsAre(IntPair(1, 2), IntPair(2, 1), IntPair(3, 1),
+                                  IntPair(4, 1)));
+  }
+
+  {
+    IntIntMap cont({{1, 1}, {2, 1}, {3, 1}, {4, 1}}, KEEP_FIRST_OF_DUPES);
+    IntPair int_pairs[] = {{5, 1}};
+    cont.insert(std::begin(int_pairs), std::end(int_pairs),
+                KEEP_FIRST_OF_DUPES);
+    EXPECT_THAT(cont, ElementsAre(IntPair(1, 1), IntPair(2, 1), IntPair(3, 1),
+                                  IntPair(4, 1), IntPair(5, 1)));
+  }
+
+  {
+    IntIntMap cont({{1, 1}, {2, 1}, {3, 1}, {4, 1}}, KEEP_FIRST_OF_DUPES);
+    IntPair int_pairs[] = {{5, 1}};
+    cont.insert(std::begin(int_pairs), std::end(int_pairs), KEEP_LAST_OF_DUPES);
+    EXPECT_THAT(cont, ElementsAre(IntPair(1, 1), IntPair(2, 1), IntPair(3, 1),
+                                  IntPair(4, 1), IntPair(5, 1)));
+  }
+
+  {
+    IntIntMap cont({{1, 1}, {2, 1}, {3, 1}, {4, 1}}, KEEP_FIRST_OF_DUPES);
+    IntPair int_pairs[] = {{3, 2}, {1, 2}, {4, 2}, {2, 2}};
+    cont.insert(std::begin(int_pairs), std::end(int_pairs),
+                KEEP_FIRST_OF_DUPES);
+    EXPECT_THAT(cont, ElementsAre(IntPair(1, 1), IntPair(2, 1), IntPair(3, 1),
+                                  IntPair(4, 1)));
+  }
+
+  {
+    IntIntMap cont({{1, 1}, {2, 1}, {3, 1}, {4, 1}}, KEEP_FIRST_OF_DUPES);
+    IntPair int_pairs[] = {{3, 2}, {1, 2}, {4, 2}, {2, 2}};
+    cont.insert(std::begin(int_pairs), std::end(int_pairs), KEEP_LAST_OF_DUPES);
+    EXPECT_THAT(cont, ElementsAre(IntPair(1, 2), IntPair(2, 2), IntPair(3, 2),
+                                  IntPair(4, 2)));
+  }
+
+  {
+    IntIntMap cont({{1, 1}, {2, 1}, {3, 1}, {4, 1}}, KEEP_FIRST_OF_DUPES);
+    IntPair int_pairs[] = {{3, 2}, {1, 2}, {4, 2}, {2, 2}, {7, 2}, {6, 2},
+                           {8, 2}, {5, 2}, {5, 3}, {6, 3}, {7, 3}, {8, 3}};
+    cont.insert(std::begin(int_pairs), std::end(int_pairs),
+                KEEP_FIRST_OF_DUPES);
+    EXPECT_THAT(cont, ElementsAre(IntPair(1, 1), IntPair(2, 1), IntPair(3, 1),
+                                  IntPair(4, 1), IntPair(5, 2), IntPair(6, 2),
+                                  IntPair(7, 2), IntPair(8, 2)));
+  }
+
+  {
+    IntIntMap cont({{1, 1}, {2, 1}, {3, 1}, {4, 1}}, KEEP_FIRST_OF_DUPES);
+    IntPair int_pairs[] = {{3, 2}, {1, 2}, {4, 2}, {2, 2}, {7, 2}, {6, 2},
+                           {8, 2}, {5, 2}, {5, 3}, {6, 3}, {7, 3}, {8, 3}};
+    cont.insert(std::begin(int_pairs), std::end(int_pairs), KEEP_LAST_OF_DUPES);
+    EXPECT_THAT(cont, ElementsAre(IntPair(1, 2), IntPair(2, 2), IntPair(3, 2),
+                                  IntPair(4, 2), IntPair(5, 3), IntPair(6, 3),
+                                  IntPair(7, 3), IntPair(8, 3)));
+  }
 }
 
 // template <class... Args>

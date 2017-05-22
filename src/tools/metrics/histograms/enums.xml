@@ -2221,6 +2221,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="166" label="BFSI_INVALID_TITLE"/>
   <int value="167" label="RWH_INVALID_FRAME_TOKEN"/>
   <int value="168" label="RWH_BAD_FRAME_SINK_REQUEST"/>
+  <int value="169" label="RWH_SURFACE_INVARIANTS_VIOLATION"/>
 </enum>
 
 <enum name="BadMessageReasonExtensions" type="int">
@@ -7205,7 +7206,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="11" label="Update Recommended"/>
   <int value="12" label="Crypto Password"/>
   <int value="13" label="Safe Browsing Download Feedback"/>
-  <int value="14" label="First Run"/>
+  <int value="14" label="First Run Bubble"/>
   <int value="15" label="Network Share Profile Warning"/>
   <int value="16" label="Conflicting Module"/>
   <int value="17" label="Critical Notification (Upgrade Installed)"/>
@@ -7223,6 +7224,54 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="29" label="Sign In Error"/>
   <int value="30" label="Sign In Email Confirmation"/>
   <int value="31" label="Profile Chooser"/>
+  <int value="32" label="Account Chooser"/>
+  <int value="33" label="Arc App"/>
+  <int value="34" label="Auto Signin First Run"/>
+  <int value="35" label="Bookmark App Confirmation"/>
+  <int value="36" label="Chooser Ui"/>
+  <int value="37" label="Chooser"/>
+  <int value="38" label="Collected Cookies"/>
+  <int value="39" label="Constrained Web"/>
+  <int value="40" label="Content Setting Contents"/>
+  <int value="41" label="Create Chrome Application Shortcut"/>
+  <int value="42" label="Download Danger Prompt"/>
+  <int value="43" label="Download In Progress"/>
+  <int value="44" label="Echo"/>
+  <int value="45" label="Enrollment"/>
+  <int value="46" label="Extension"/>
+  <int value="47" label="Extension Popup Aura"/>
+  <int value="48" label="External Protocol"/>
+  <int value="49" label="External Protocol ChromeOS"/>
+  <int value="50" label="First Run Dialog"/>
+  <int value="51" label="Home Page Undo"/>
+  <int value="52" label="Idle Action Warning"/>
+  <int value="53" label="Import Lock"/>
+  <int value="54" label="Intent Picker"/>
+  <int value="55" label="Invert"/>
+  <int value="56" label="Java Script"/>
+  <int value="57" label="Java Script App Modal X11"/>
+  <int value="58" label="Login Handler"/>
+  <int value="59" label="Manage Passwords"/>
+  <int value="60" label="Media Galleries"/>
+  <int value="61" label="Multiprofiles Intro"/>
+  <int value="62" label="Multiprofiles Session Aborted"/>
+  <int value="63" label="Native Container"/>
+  <int value="64" label="Network Config"/>
+  <int value="65" label="Permissions"/>
+  <int value="66" label="Platform Keys Certificate Selector"/>
+  <int value="67" label="Platform Verification"/>
+  <int value="68" label="Proximity Auth Error"/>
+  <int value="69" label="Request Pin"/>
+  <int value="70" label="SSL Client Certificate Selector"/>
+  <int value="71" label="Simple Message Box"/>
+  <int value="72" label="Tab Modal Confirm"/>
+  <int value="73" label="Task Manager"/>
+  <int value="74" label="Teleport Warning"/>
+  <int value="75" label="User Manager"/>
+  <int value="76" label="User Manager Profile"/>
+  <int value="77" label="Validation Message"/>
+  <int value="78" label="Web Share Target Picker"/>
+  <int value="79" label="Zoom"/>
 </enum>
 
 <enum name="DidNavigateToAd" type="int">
@@ -11049,6 +11098,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="405" label="FILE_MANAGER_PRIVATE_ON_APPS_UPDATED"/>
   <int value="406" label="ACCESSIBILITY_PRIVATE_ON_TWO_FINGER_TOUCH_START"/>
   <int value="407" label="ACCESSIBILITY_PRIVATE_ON_TWO_FINGER_TOUCH_STOP"/>
+  <int value="408" label="MEDIA_PERCEPTION_PRIVATE_ON_MEDIA_PERCEPTION"/>
 </enum>
 
 <enum name="ExtensionFileWriteResult" type="int">
@@ -12272,6 +12322,9 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="1171" label="AUTOTESTPRIVATE_GETPLAYSTORESTATE"/>
   <int value="1172" label="AUTOTESTPRIVATE_SETPLAYSTOREENABLED"/>
   <int value="1173" label="APP_CURRENTWINDOWINTERNAL_SETACTIVATEONPOINTER"/>
+  <int value="1174" label="MEDIAPERCEPTIONPRIVATE_GETSTATE"/>
+  <int value="1175" label="MEDIAPERCEPTIONPRIVATE_SETSTATE"/>
+  <int value="1176" label="MEDIAPERCEPTIONPRIVATE_GETDIAGNOSTICS"/>
 </enum>
 
 <enum name="ExtensionIconState" type="int">
@@ -12698,6 +12751,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="201" label="kNetworkingOnc"/>
   <int value="202" label="kVirtualKeyboard"/>
   <int value="203" label="kNetworkingCastPrivate"/>
+  <int value="204" label="kMediaPerceptionPrivate"/>
 </enum>
 
 <enum name="ExtensionServiceVerifyAllSuccess" type="int">
@@ -13887,8 +13941,8 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="958" label="BackspaceNavigatedBackAfterFormInteraction"/>
   <int value="959" label="CSPSourceWildcardWouldMatchExactHost"/>
   <int value="960" label="CredentialManagerGet"/>
-  <int value="961" label="CredentialManagerGetWithUI"/>
-  <int value="962" label="CredentialManagerGetWithoutUI"/>
+  <int value="961" label="CredentialManagerGetMediationOptional"/>
+  <int value="962" label="CredentialManagerGetMediationSilent"/>
   <int value="963" label="CredentialManagerStore"/>
   <int value="964" label="CredentialManagerRequireUserMediation"/>
   <int value="965" label="RequestAutocomplete"/>
@@ -14933,6 +14987,20 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="1973" label="FontShapingNotDefGlyphObserved"/>
   <int value="1974" label="PostMessageOutgoingWouldBeBlockedByConnectSrc"/>
   <int value="1975" label="PostMessageIncomingWouldBeBlockedByConnectSrc"/>
+  <int value="1976" label="PaymentRequestNetworkNameInSupportedMethods"/>
+  <int value="1977" label="CrossOriginPropertyAccess"/>
+  <int value="1978" label="CrossOriginPropertyAccessFromOpener"/>
+  <int value="1979" label="CredentialManagerCreate"/>
+  <int value="1980" label="WebDatabaseCreateDropFTS3Table"/>
+  <int value="1981" label="FieldEditInSecureContext"/>
+  <int value="1982" label="FieldEditInNonSecureContext"/>
+  <int value="1983"
+      label="CredentialManagerCredentialRequestOptionsUnmediated"/>
+  <int value="1984" label="CredentialManagerGetMediationRequired"/>
+  <int value="1985" label="CredentialManagerIdName"/>
+  <int value="1986" label="CredentialManagerPasswordName"/>
+  <int value="1987" label="CredentialManagerAdditionalData"/>
+  <int value="1988" label="CredentialManagerCustomFetch"/>
 </enum>
 
 <enum name="FeedbackSource" type="int">
@@ -15934,15 +16002,14 @@ uploading your change for review.  These are checked by presubmit scripts.
 </enum>
 
 <enum name="FtpDataConnectionError" type="int">
-  <int value="0">Data connection successful</int>
-  <int value="1">Local firewall blocked the connection</int>
-  <int value="2">Connection timed out</int>
-  <int value="3">
-    Connection has been established, but then got broken (either reset or
-    aborted)
-  </int>
-  <int value="4">Connection has been refused</int>
-  <int value="20">Other kind of error</int>
+  <int value="0" label="Data connection successful"/>
+  <int value="1" label="Local firewall blocked the connection"/>
+  <int value="2" label="Connection timed out"/>
+  <int value="3"
+      label="Connection has been established, but then got broken (either
+             reset or aborted)"/>
+  <int value="4" label="Connection has been refused"/>
+  <int value="20" label="Other kind of error"/>
 </enum>
 
 <enum name="FtpServerType" type="int">
@@ -19463,10 +19530,12 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="8" label="Inter process TimeTicks skew"/>
   <int value="9" label="No commit or failed provisional load received"/>
   <int value="10" label="No page load end time recorded"/>
-  <int value="11" label="Timing IPC received from subframe"/>
+  <int value="11" label="Timing IPC received from subframe (deprecated)"/>
   <int value="12" label="Invalid timing IPC (invalid timing descendent)"/>
   <int value="13" label="Invalid timing IPC (invalid behavior descendent)"/>
   <int value="14" label="Invalid timing IPC (invalid timing)"/>
+  <int value="15"
+      label="Subframe navigation start before main frame navigation start"/>
 </enum>
 
 <enum name="InterruptReason" type="int">
@@ -20915,7 +20984,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="1" label="native notifications not supported"/>
   <int value="2" label="missing required capabilities"/>
   <int value="3" label="could not connect to signals"/>
-  <int value="4" label="incompatible spec version"/>
+  <int value="4" label="(DEPRECATED) incompatible spec version"/>
 </enum>
 
 <enum name="LinuxSandboxStatus" type="int">
@@ -21133,17 +21202,6 @@ uploading your change for review.  These are checked by presubmit scripts.
 </enum>
 
 <enum name="LoginCustomFlags" type="int">
-<!--
-Values in LoginCustomFlags are:  value=(uint32_t)MD5(label).
-This enum is verified by AboutFlagsHistogramTest unit test.
-To add a new entry, add it with any unique value and run test to compute valid
-value. After that run tools/metrics/histograms/validate_format.py to find out
-where the value should be inserted to maintain ordering.
-Don't remove entries when removing a flag, they are still used to decode data
-from previous Chrome versions.
--->
-
-  <summary>Chrome flags that lead to chrome restart on ChromeOS.</summary>
   <int value="-2146613579" label="V8Future:disabled"/>
   <int value="-2143961262" label="D3DVsync:disabled"/>
   <int value="-2143328006"
@@ -21179,6 +21237,7 @@ from previous Chrome versions.
   <int value="-2062872298" label="market-url-for-testing"/>
   <int value="-2062373123" label="WebPaymentsModifiers:enabled"/>
   <int value="-2058656447" label="ContextualSearchUrlActions:enabled"/>
+  <int value="-2053860791" label="XGEOVisibleNetworks:enabled"/>
   <int value="-2048732429" label="enable-alternative-services"/>
   <int value="-2048679945" label="NTPOfflinePageDownloadSuggestions:disabled"/>
   <int value="-2047832738" label="enable-system-timezone-automatic-detection"/>
@@ -21186,6 +21245,7 @@ from previous Chrome versions.
   <int value="-2043128632" label="enable-tab-switcher-in-document-mode"/>
   <int value="-2040471724" label="CrOSComponent:disabled"/>
   <int value="-2040115518" label="load-media-router-component-extension"/>
+  <int value="-2036149591" label="FaviconsFromWebManifest:disabled"/>
   <int value="-2033225430" label="NTPMostLikelyFaviconsFromServer:disabled"/>
   <int value="-2029912304" label="StaleWhileRevalidate2:enabled"/>
   <int value="-2025367104" label="enable-material-design-ntp"/>
@@ -21213,6 +21273,7 @@ from previous Chrome versions.
   <int value="-1956349722" label="disable-smooth-scrolling"/>
   <int value="-1948540128" label="disable-webrtc-hw-encoding (deprecated)"/>
   <int value="-1946595906" label="enable-push-api-background-mode"/>
+  <int value="-1946522787" label="VrCustomTabBrowsing:disabled"/>
   <int value="-1943507605" label="enable-new-video-renderer"/>
   <int value="-1941852572" label="floating-virtual-keyboard"/>
   <int value="-1940806558" label="enable-syncfs-directory-operation"/>
@@ -21360,6 +21421,7 @@ from previous Chrome versions.
   <int value="-1460462432" label="disable-media-source"/>
   <int value="-1456004000" label="VrShell:disabled"/>
   <int value="-1443796945" label="OfflinePagesSharing:disabled"/>
+  <int value="-1440440375" label="WebVrAutopresent:enabled"/>
   <int value="-1440152291" label="disable-gesture-typing"/>
   <int value="-1438279809" label="GamepadExtensions:disabled"/>
   <int value="-1433719718" label="enable-webrtc-stun-origin"/>
@@ -21422,6 +21484,18 @@ from previous Chrome versions.
   <int value="-1203742042" label="enable-gesture-selection"/>
   <int value="-1201183153" label="enable-centered-app-list"/>
   <int value="-1197035323" label="ZeroSuggestRedirectToChrome:disabled"/>
+<!--
+Values in LoginCustomFlags are:  value=(uint32_t)MD5(label).
+This enum is verified by AboutFlagsHistogramTest unit test.
+To add a new entry, add it with any unique value and run test to compute valid
+value. After that run tools/metrics/histograms/validate_format.py to find out
+where the value should be inserted to maintain ordering.
+Don't remove entries when removing a flag, they are still used to decode data
+from previous Chrome versions.
+-->
+
+  <summary>Chrome flags that lead to chrome restart on ChromeOS.</summary>
+  <int value="-1195194959" label="XGEOVisibleNetworks:disabled"/>
   <int value="-1190174011" label="enable-hdr"/>
   <int value="-1184904651" label="enable-npapi"/>
   <int value="-1184480269" label="LsdPermissionPrompt:enabled"/>
@@ -21451,6 +21525,7 @@ from previous Chrome versions.
   <int value="-1107762575" label="enable-data-reduction-proxy-config-client"/>
   <int value="-1102212525" label="enable-tcp-fastopen"/>
   <int value="-1099142083" label="V8Ignition:disabled"/>
+  <int value="-1096595907" label="disable-new-virtual-keyboard-behavior"/>
   <int value="-1084055006" label="disable-web-notification-custom-layouts"/>
   <int value="-1082302549" label="scan-cards-in-web-payments"/>
   <int value="-1078093206" label="ash-debug-shortcuts"/>
@@ -21628,6 +21703,7 @@ from previous Chrome versions.
   <int value="-418868128" label="enable-experimental-web-platform-features"/>
   <int value="-410852857" label="ImprovedA2HS:disabled"/>
   <int value="-405380243" label="enable-encryption-migration"/>
+  <int value="-400584764" label="ChromeHomeNtpRedesign:enabled"/>
   <int value="-396994784" label="enable-vr-shell"/>
   <int value="-396496344" label="ViewsTaskManager:enabled"/>
   <int value="-395606844" label="enable-site-settings"/>
@@ -21678,6 +21754,7 @@ from previous Chrome versions.
   <int value="-268357961" label="enable-feature-policy"/>
   <int value="-254887599" label="google-profile-info"/>
   <int value="-250721831" label="AndroidAutofillAccessibility:disabled"/>
+  <int value="-248223420" label="AutofillKeyboardAccessory:disabled"/>
   <int value="-241353344" label="MidiManagerWinrt:disabled"/>
   <int value="-234966279" label="PointerEvent:disabled"/>
   <int value="-234687894"
@@ -21717,6 +21794,7 @@ from previous Chrome versions.
   <int value="-78035185" label="custom_summary"/>
   <int value="-77872983" label="BookmarkAppsMac:disabled"/>
   <int value="-76631048" label="disable-offline-auto-reload-visible-only"/>
+  <int value="-72455054" label="WebVrAutopresent:disabled"/>
   <int value="-70595606" label="ash-enable-unified-desktop"/>
   <int value="-68877684" label="BackgroundVideoTrackOptimization:enabled"/>
   <int value="-68225452" label="enable-translate-new-ux"/>
@@ -21767,10 +21845,14 @@ from previous Chrome versions.
   <int value="91938915" label="enable-suggestions-service"/>
   <int value="98134240" label="material-design-ink-drop-animation-speed"/>
   <int value="103932290" label="show-autofill-type-predictions"/>
+  <int value="106840653" label="mus"/>
   <int value="118991027" label="enable-accelerated-fixed-root-background"/>
+  <int value="119185738"
+      label="OmniboxUIExperimentMaxAutocompleteMatches:disabled"/>
   <int value="120429808" label="disable-new-profile-management"/>
   <int value="121684313" label="QuickUnlockPin:enabled"/>
   <int value="121858954" label="enable-supervised-user-safesites"/>
+  <int value="123097915" label="FaviconsFromWebManifest:enabled"/>
   <int value="125581289" label="WebRtcHWVP8Encoding:disabled"/>
   <int value="125934378" label="enable-password-link"/>
   <int value="131881947" label="D3DVsync:enabled"/>
@@ -21788,6 +21870,7 @@ from previous Chrome versions.
   <int value="203776499" label="enable-virtual-keyboard-overscroll"/>
   <int value="223662457" label="BackgroundLoadingForDownloads:enabled"/>
   <int value="244697230" label="enable-theme-color-in-tabbed-mode"/>
+  <int value="259021228" label="OffMainThreadFetch:disabled"/>
   <int value="262382944" label="GuestViewCrossProcessFrames:disabled"/>
   <int value="266702296" label="disable-plugin-power-saver"/>
   <int value="270267831" label="enable-scripts-require-action"/>
@@ -21903,7 +21986,6 @@ from previous Chrome versions.
   <int value="644674603" label="DataReductionProxySiteBreakdown:disabled"/>
   <int value="646252875" label="ReadItLaterInMenu:enabled"/>
   <int value="646738320" label="disable-gesture-editing"/>
-  <int value="650602639" label="enable-autofill-keyboard-accessory-view"/>
   <int value="651421878" label="VideoRotateToFullscreen:enabled"/>
   <int value="652561231" label="CustomContextMenu:enabled"/>
   <int value="683410401"
@@ -22042,6 +22124,8 @@ from previous Chrome versions.
   <int value="1166169237" label="disable-delay-agnostic-aec"/>
   <int value="1167613030" label="enable-permission-action-reporting"/>
   <int value="1174088940" label="enable-wasm"/>
+  <int value="1179013979"
+      label="OmniboxUIExperimentMaxAutocompleteMatches:enabled"/>
   <int value="1179936481" label="enable-android-pay-integration-v1"/>
   <int value="1181056275" label="enable-cloud-backup"/>
   <int value="1183431946" label="v8-cache-options"/>
@@ -22088,6 +22172,7 @@ from previous Chrome versions.
   <int value="1300282719" label="OfflinePagesBackgroundLoading:enabled"/>
   <int value="1302421166" label="NativeNotifications:disabled"/>
   <int value="1308537004" label="force-pnacl-subzero"/>
+  <int value="1311860720" label="ChromeHomeNtpRedesign:disabled"/>
   <int value="1312025202" label="NTPOfflinePageSuggestions:disabled"/>
   <int value="1314681756" label="NoStatePrefetch:disabled"/>
   <int value="1317562265" label="SeccompSandboxAndroid:disabled"/>
@@ -22100,6 +22185,7 @@ from previous Chrome versions.
   <int value="1359972809" label="enable-gesture-deletion"/>
   <int value="1361047396" label="disable-click-delay"/>
   <int value="1361073386" label="ContentSuggestionsNotifications:enabled"/>
+  <int value="1363136936" label="VrCustomTabBrowsing:enabled"/>
   <int value="1367529437" label="NTPAssetDownloadSuggestions:enabled"/>
   <int value="1367671275" label="enable-proximity-auth-proximity-detection"/>
   <int value="1371092708" label="disable-desktop-capture-picker-old-ui"/>
@@ -22197,6 +22283,7 @@ from previous Chrome versions.
   <int value="1733390925" label="force-enable-stylus-tools"/>
   <int value="1747279677" label="disable-delegated-renderer"/>
   <int value="1752168018" label="enable-stale-while-revalidate"/>
+  <int value="1762320532" label="AutofillKeyboardAccessory:enabled"/>
   <int value="1766676896" label="affiliation-based-matching:disabled"/>
   <int value="1772454319" label="enable-storage-manager"/>
   <int value="1775475563" label="malware-interstitial-v3"/>
@@ -22208,7 +22295,6 @@ from previous Chrome versions.
   <int value="1785093465" label="enable-document-passive-event-listeners"/>
   <int value="1786229999" label="disable-md-downloads"/>
   <int value="1786386775" label="TranslateCompactUI:disabled"/>
-  <int value="1791904609" label="disable-autofill-keyboard-accessory-view"/>
   <int value="1803465156" label="enable-zero-suggest-most-visited"/>
   <int value="1809940714" label="SpeculativeLaunchServiceWorker:disabled"/>
   <int value="1812368073" label="enable-new-app-list-mixer"/>
@@ -22263,6 +22349,7 @@ from previous Chrome versions.
   <int value="1951466218" label="enable-data-reduction-proxy-lite-page"/>
   <int value="1955677113" label="trace-export-events-to-etw"/>
   <int value="1958387645" label="ScanCardsInWebPayments:enabled"/>
+  <int value="1959148757" label="OffMainThreadFetch:enabled"/>
   <int value="1960169775" label="NewPhotoPicker:disabled"/>
   <int value="1961425320" label="force-qtkit"/>
   <int value="1964816410" label="AndroidPayIntegrationV2:enabled"/>
@@ -25608,34 +25695,96 @@ from previous Chrome versions.
 
   <int value="0" label="Unknown (not expected to be recorded)"/>
   <int value="1" label="Loaded (not expected to be recorded)"/>
-  <int value="2" label="Saved"/>
-  <int value="3" label="RequestCoordinator canceled"/>
-  <int value="4" label="Loading canceled"/>
-  <int value="5" label="Loading failed (retryable)"/>
-  <int value="6" label="Save failed"/>
-  <int value="7" label="Foreground transition canceled"/>
-  <int value="8" label="RequestCoordinator timed-out"/>
+  <int value="2" label="Saved">The attempt finished successfully.</int>
+  <int value="3" label="RequestCoordinator canceled">
+    The attempt was canceled by the request coordinator. This is triggered when
+    the user cancels an in-flight offlining attempt, and will always result in
+    BackgroundSavePageResult::USER_CANCELED.
+  </int>
+  <int value="4" label="Loading canceled">
+    Loading was canceled by various pre-render monitoring. These include when
+    window.open was called, when audio is detected, etc.
+  </int>
+  <int value="5" label="Loading failed (retriable)">
+    The attempt resulted in a retriable loading failure. This may be because we
+    found a network error or a page error (i.e. 404 pages will also result in an
+    Loading Failed). Because fickle networks make network errors unreliable, an
+    incorrectly typed URL will also result in retriable loading failure.
+  </int>
+  <int value="6" label="Save failed">
+    The attempt failed because save did not succeed.
+  </int>
+  <int value="7" label="Foreground transition canceled">
+    The attempt failed because chrome is now operating in the foreground on a
+    svelte device.
+  </int>
+  <int value="8" label="RequestCoordinator timed-out">
+    The attempt failed because the particular attempt ran out of time.
+  </int>
   <int value="9" label="Loading not started (deprecated 1/2017)"/>
-  <int value="10" label="Loading failed (non-retryable)"/>
-  <int value="11" label="Loading failed (don't start next request)"/>
-  <int value="12" label="Loading not accepted"/>
-  <int value="13" label="Queue update failed"/>
-  <int value="14" label="Background scheduler canceled processing"/>
-  <int value="15" label="Saved after timeout on last retry"/>
+  <int value="10" label="Loading failed (non-retriable)">
+    The attempt resulted in a non-retriable loading error. This is mostly
+    deprecated as of 4/2017 because a fickle network and a good page might
+    result in the same errors as a bad page with invalid URL.
+  </int>
+  <int value="11" label="Loading failed (don't start next request)">
+    The attempt resulted in a loading failure but we've reason to believe we
+    shouldn't try something else for a little while: i.e. we failed because a
+    renderer crashed or we got INTERNET_DISCONNECTED as the network error.
+  </int>
+  <int value="12" label="Loading not accepted">
+    The offliner was asked to attempt something when it's not ready.
+  </int>
+  <int value="13" label="Queue update failed">
+    The request coordinator failed updating the status of the request in the
+    queue. The attempt is aborted.
+  </int>
+  <int value="14" label="Background scheduler canceled processing">
+    Called when the background scheduler stops the processing.
+  </int>
+  <int value="15" label="Saved after timeout on last retry">
+    The attempt succeeded, but only as a result of snapshotting on the last
+    retry and we have already received DocumentAvailableInMainFrame. Note that
+    if we're already in the middle of snapshotting, we will record SAVED. The
+    quality of the page is presumed to be lower.
+  </int>
+  <int value="16" label="Browser killed">
+    The browser was killed for reasons such as OOM, swiped out, or crashed.
+  </int>
 </enum>
 
 <enum name="OfflinePagesBackgroundSavePageResult" type="int">
 <!-- Generated from components/offline_pages/core/background/request_notifier.h -->
 
-  <int value="0" label="Success"/>
-  <int value="1" label="Loading failure"/>
-  <int value="2" label="Loading canceled"/>
-  <int value="3" label="Foreground canceled"/>
-  <int value="4" label="Save failed"/>
-  <int value="5" label="Expired"/>
-  <int value="6" label="Retry count exceeded"/>
-  <int value="7" label="Start count exceeded"/>
-  <int value="8" label="Removed"/>
+  <int value="0" label="Success">Request was completed successfully.</int>
+  <int value="1" label="Loading failure">
+    Request failed because a non-recoverable loading failure occurred.
+  </int>
+  <int value="2" label="Loading canceled">
+    Loading was canceled by various pre-renderer monitoring. This is not used
+    anywhere.
+  </int>
+  <int value="3" label="Foreground canceled">
+    Loading was canceled by chrome moving to the foreground on a svelte device.
+  </int>
+  <int value="4" label="Save failed">
+    Loading failed because we failed saving the page.
+  </int>
+  <int value="5" label="Expired">
+    Request failed because it expired before we were able to get to it.
+  </int>
+  <int value="6" label="Retry count exceeded">
+    Request failed because we exceeded the maximum number of retries.
+  </int>
+  <int value="7" label="Start count exceeded">
+    Request failed because we exceeded the maximum number of starts. Each start
+    may have completed (resulting in a load error or one of the other
+    per-attempt statuses) or chrome may have died before the attempt's result
+    was recorded.
+  </int>
+  <int value="8" label="User canceled">
+    The request was removed by the user.
+  </int>
 </enum>
 
 <enum name="OfflinePagesCctApiPrerenderAllowedStatus" type="int">
@@ -25691,17 +25840,40 @@ from previous Chrome versions.
 </enum>
 
 <enum name="OfflinePagesSavePageResult" type="int">
-  <int value="0" label="Success"/>
-  <int value="1" label="Cancelled"/>
-  <int value="2" label="Device full"/>
-  <int value="3" label="Content unavailable"/>
-  <int value="4" label="Archive creation failed"/>
-  <int value="5" label="Store failure"/>
-  <int value="6" label="Already exists"/>
-  <int value="7" label="Skipped"/>
-  <int value="8" label="Security certificate error"/>
-  <int value="9" label="Error page detected"/>
-  <int value="10" label="Interstitial page detected"/>
+  <int value="0" label="Success">Page was saved successfully.</int>
+  <int value="1" label="Cancelled">Page save was cancelled in the interim.</int>
+  <int value="2" label="Device full">
+    Save operation failed because device storage was full.
+  </int>
+  <int value="3" label="Content unavailable">
+    A save operation was called with an invalid archiver.
+  </int>
+  <int value="4" label="Archive creation failed">
+    Either something went wrong with the save operation, or the url we saved was
+    different from the one we passed in.
+  </int>
+  <int value="5" label="Store failure">
+    The SQL operation to add the page to the offline store failed.
+  </int>
+  <int value="6" label="Already exists">
+    A page with this ID already exists.
+  </int>
+  <int value="7" label="Skipped">
+    Certain pages like file URL or NTP will not be saved because they're already
+    available offline.
+  </int>
+  <int value="8" label="Security certificate error">
+    Save operation failed because the page resulted in a security certificate
+    error.
+  </int>
+  <int value="9" label="Error page detected">
+    Save operation failed because an error page (i.e. offline dino page) was
+    detected.
+  </int>
+  <int value="10" label="Interstitial page detected">
+    Save operation failed because an interstitial page (i.e. page warning of
+    expired certificates or improper dev signatures) was detected.
+  </int>
 </enum>
 
 <enum name="OfflinePagesSharedPageWasOffline" type="int">
@@ -26367,6 +26539,13 @@ from previous Chrome versions.
   <int value="5" label="Successful first layout (backgrounded)"/>
 </enum>
 
+<enum name="PageLoadMetricsAMPViewType" type="int">
+  <int value="0" label="None"/>
+  <int value="1" label="AMP Cache"/>
+  <int value="2" label="Google Search AMP Viewer"/>
+  <int value="3" label="Google News AMP Viewer"/>
+</enum>
+
 <enum name="PageLoadTimingStatus" type="int">
   <summary>Status of PageLoadTimings received from the render process</summary>
   <int value="0" label="Valid"/>
@@ -26579,6 +26758,11 @@ from previous Chrome versions.
   <int value="6" label="HTTP connection type mismatch."/>
   <int value="7"
       label="Remaining download time does not meet the requirement."/>
+</enum>
+
+<enum name="ParentFrameKnown" type="int">
+  <int value="0" label="Parent Frame Not Known"/>
+  <int value="1" label="Parent Frame Known"/>
 </enum>
 
 <enum name="ParsedCookieStatus" type="int">
@@ -27208,11 +27392,13 @@ from previous Chrome versions.
   <int value="4" label="Matched whitelist"/>
   <int value="5" label="Response already cached"/>
   <int value="6" label="DEPRECATED: Not extended reporting user"/>
-  <int value="7" label="DEPRECATED: Incognito"/>
+  <int value="7" label="Disabled due to incognito"/>
   <int value="8" label="Request malformed"/>
   <int value="9" label="Fetch failed"/>
   <int value="10" label="Response malformed"/>
   <int value="11" label="Service destroyed"/>
+  <int value="12" label="Disabled due to feature disabled"/>
+  <int value="13" label="Disabled due to user population"/>
 </enum>
 
 <enum name="PasswordProtectionVerdict" type="int">
@@ -29768,6 +29954,14 @@ from previous Chrome versions.
   <int value="1" label="Increment"/>
 </enum>
 
+<enum name="RemoteHungProcessTerminateReason" type="int">
+  <int value="1" label="Terminate accepted by user"/>
+  <int value="2" label="No visible windows found"/>
+  <int value="3" label="Retry attempts to notify remote process exceeded"/>
+  <int value="4" label="Failed to write message to socket"/>
+  <int value="5" label="Failed to read ACK message from socket"/>
+</enum>
+
 <enum name="RemotePlaybackDeviceType" type="int">
   <int value="0" label="Cast Generic Media Player"/>
   <int value="1" label="Cast YouTube Player"/>
@@ -29782,6 +29976,25 @@ from previous Chrome versions.
   <int value="4" label="The response code indicated failure"/>
   <int value="5" label="IO exception while fetching the url"/>
   <int value="6" label="Unknown media type"/>
+</enum>
+
+<enum name="RemoteProcessInteractionResult" type="int">
+  <int value="0" label="Terminate succeeded"/>
+  <int value="1" label="Terminate failed"/>
+  <int value="2" label="Remote process not found"/>
+  <int value="3" label="Terminate wait timeout"/>
+  <int value="4" label="Error occured during remote process notification"/>
+  <int value="5" label="Not enough permissions to terminate"/>
+  <int value="6" label="Remote process is shutting down"/>
+  <int value="7" label="User accepted profile unlock"/>
+  <int value="8"
+      label="User accepted profile unlock prior to remote process kill"/>
+  <int value="9" label="Remote process is the same browser instance"/>
+  <int value="10"
+      label="Found the same browser instance prior to remote process kill"/>
+  <int value="11" label="Failed to extract pid from lock file path"/>
+  <int value="12" label="Invalid lock file"/>
+  <int value="13" label="Orphaned lock file"/>
 </enum>
 
 <enum name="RemotingStartTrigger" type="int">
@@ -31177,6 +31390,7 @@ from previous Chrome versions.
   <int value="1" label="Failed"/>
   <int value="2" label="No Answer"/>
   <int value="3" label="Received Answer"/>
+  <int value="4" label="Received Answer - Too Large"/>
 </enum>
 
 <enum name="SearchEngine" type="int">
@@ -33225,9 +33439,7 @@ from previous Chrome versions.
   <int value="11" label="SELF_SIGNED: The cert is self-signed">
     This cause is recorded only for CERT_AUTHORITY_INVALID errors.
   </int>
-  <int value="12" label="EXPIRED_RECENTLY: Cert expired within last 28 days.">
-
-  </int>
+  <int value="12" label="EXPIRED_RECENTLY: Cert expired within last 28 days."/>
   <int value="13" label="LIKELY_SAME_DOMAIN: (Deprecated)">
     (Deprecated in favor of LIKELY_SAME_DOMAIN2)
   </int>
@@ -33547,6 +33759,9 @@ from previous Chrome versions.
   <int value="4" label="Frame detached"/>
   <int value="5" label="By context menu"/>
   <int value="6" label="DOM mutation after XHR"/>
+  <int value="7" label="Provisionally saved form on start provisional load"/>
+  <int value="8" label="Filled form on start provisional load"/>
+  <int value="9" label="Filled input elements on start provisional load"/>
 </enum>
 
 <enum name="SubresourceFilterActions" type="int">
@@ -33554,14 +33769,14 @@ from previous Chrome versions.
   <int value="1" label="UI Shown"/>
   <int value="2" label="Details shown"/>
   <int value="3" label="Learn more clicked"/>
-  <int value="4" label="Content setting blocked from UI"/>
-  <int value="5" label="Content setting allowed"/>
-  <int value="6" label="Content setting blocked"/>
-  <int value="7" label="Content setting allowed (global)"/>
-  <int value="8" label="Content setting blocked (global)"/>
-  <int value="9" label="Content setting wildcard update"/>
+  <int value="4" label="Content setting: allowed from UI"/>
+  <int value="5" label="Content setting: blocked"/>
+  <int value="6" label="Content setting: allowed"/>
+  <int value="7" label="Content setting: blocked (global)"/>
+  <int value="8" label="Content setting: allowed (global)"/>
+  <int value="9" label="Content setting: wildcard update (Deprecated)"/>
   <int value="10" label="UI Suppressed (Smart Logic)"/>
-  <int value="11" label="Content setting blocked while UI suppressed"/>
+  <int value="11" label="Content setting: allowed while UI suppressed"/>
 </enum>
 
 <enum name="SubresourceFilterActivationDecision" type="int">
@@ -34794,7 +35009,7 @@ from previous Chrome versions.
 <enum name="TranslateCompactUIEvent" type="int">
   <int value="0" label="Infobar impression"/>
   <int value="1" label="Tab language clicked"/>
-  <int value="2" label="Infobar closed"/>
+  <int value="2" label="Translate services declined"/>
   <int value="3" label="Options menu clicked"/>
   <int value="4" label="More languages clicked"/>
   <int value="5" label="Language picked from more languages"/>
@@ -34811,6 +35026,12 @@ from previous Chrome versions.
   <int value="16" label="Cancel clicked on always translate snackbar"/>
   <int value="17" label="Cancel clicked on never translate this site snackbar"/>
   <int value="18" label="Cancel clicked on never translate snackbar"/>
+  <int value="19" label="Undo always translate"/>
+  <int value="20" label="Infobar closed"/>
+  <int value="21" label="Auto-always translate snackbar impression"/>
+  <int value="22" label="Auto-never translate snackbar impression"/>
+  <int value="23" label="Cancel clicked on auto-always translate snackbar"/>
+  <int value="24" label="Cancel clicked on auto-never translate snackbar"/>
 </enum>
 
 <enum name="TranslateError" type="int">
@@ -36089,6 +36310,7 @@ from previous Chrome versions.
   <int value="1" label="Device no longer in range."/>
   <int value="2" label="Not found"/>
   <int value="3" label="No services"/>
+  <int value="4" label="Device disconnected"/>
 </enum>
 
 <enum name="WebBluetoothRequestDeviceOutcome" type="int">
@@ -36427,6 +36649,7 @@ from previous Chrome versions.
   <int value="0" label="Closed by system"/>
   <int value="1" label="Closed by user"/>
   <int value="2" label="Clicked"/>
+  <int value="3" label="Manual navigation to the landing page"/>
 </enum>
 
 <enum name="WebUsbPermissionRevoked" type="int">
@@ -36599,6 +36822,8 @@ from previous Chrome versions.
   <int value="6" label="Windows 8.1"/>
   <int value="7" label="Windows 10"/>
   <int value="8" label="Windows 10 TH2"/>
+  <int value="9" label="Windows 10 RS1"/>
+  <int value="10" label="Windows 10 RS2"/>
 </enum>
 
 <enum name="WindowType" type="int">

@@ -8,7 +8,7 @@ import os
 import tempfile
 import unittest
 
-from compile import Checker
+from compile2 import Checker
 from processor import FileCache, Processor
 
 
@@ -19,7 +19,6 @@ _ASSERT_JS = os.path.join(_RESOURCES_DIR, "assert.js")
 _CR_JS = os.path.join(_RESOURCES_DIR, "cr.js")
 _CR_UI_JS = os.path.join(_RESOURCES_DIR, "cr", "ui.js")
 _PROMISE_RESOLVER_JS = os.path.join(_RESOURCES_DIR, "promise_resolver.js")
-_POLYMER_EXTERNS = os.path.join(_SCRIPT_DIR, "externs", "polymer-1.0.js")
 _CHROME_SEND_EXTERNS = os.path.join(_SRC_DIR, "third_party", "closure_compiler",
                                     "externs", "chrome_send.js")
 _CLOSURE_ARGS_GYPI = os.path.join(_SCRIPT_DIR, "closure_args.gypi")
@@ -52,9 +51,8 @@ class CompilerTest(unittest.TestCase):
     if needs_output:
       args.remove("checks_only")
 
-    externs = [_POLYMER_EXTERNS, _CHROME_SEND_EXTERNS]
-    found_errors, stderr = self._checker.check(file_path,
-                                               externs=externs,
+    sources = [file_path, _CHROME_SEND_EXTERNS]
+    found_errors, stderr = self._checker.check(sources,
                                                out_file=out_file,
                                                closure_args=args)
     return found_errors, stderr, out_file, out_map
@@ -300,7 +298,7 @@ var testScript = function() {
     self._runCheckerTestExpectSuccess(source_code, expected_output,
                                       closure_args)
 
-  def testCheckMultiple(self):
+  def testCustomSources(self):
     source_file1 = tempfile.NamedTemporaryFile(delete=False)
     with open(source_file1.name, "w") as f:
       f.write("""
@@ -321,10 +319,10 @@ testScript();
 
     out_file, out_map = self._createOutFiles()
     sources = [source_file1.name, source_file2.name]
-    externs = [_POLYMER_EXTERNS]
     closure_args = [a for a in _COMMON_CLOSURE_ARGS if a != "checks_only"]
-    found_errors, stderr = self._checker.check_multiple(
-        sources, externs=externs, out_file=out_file, closure_args=closure_args)
+    found_errors, stderr = self._checker.check(sources, out_file=out_file,
+                                               closure_args=closure_args,
+                                               custom_sources=True)
     self.assertFalse(found_errors,
         msg="Expected success, but got failure\n\nOutput:\n%s\n" % stderr)
 

@@ -278,19 +278,6 @@ class BASE_EXPORT SequencedWorkerPool : public TaskRunner {
   bool PostWorkerTask(const tracked_objects::Location& from_here,
                       OnceClosure task);
 
-  // Same as PostWorkerTask but allows a delay to be specified (although doing
-  // so changes the shutdown behavior). The task will be run after the given
-  // delay has elapsed.
-  //
-  // If the delay is nonzero, the task won't be guaranteed to run to completion
-  // before shutdown (SKIP_ON_SHUTDOWN semantics) to avoid shutdown hangs.
-  // If the delay is zero, this behaves exactly like PostWorkerTask, i.e. the
-  // task will be guaranteed to run to completion before shutdown
-  // (BLOCK_SHUTDOWN semantics).
-  bool PostDelayedWorkerTask(const tracked_objects::Location& from_here,
-                             OnceClosure task,
-                             TimeDelta delay);
-
   // Same as PostWorkerTask but allows specification of the shutdown behavior.
   bool PostWorkerTaskWithShutdownBehavior(
       const tracked_objects::Location& from_here,

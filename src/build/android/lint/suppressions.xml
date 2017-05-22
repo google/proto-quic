@@ -465,7 +465,7 @@ Still reading?
   <issue id="WrongCall" severity="ignore"/>
   <issue id="WrongConstant">
     <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/SSLClientCertificateRequest.java"/>
-    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/payments/ui/EditorView.java"/>
+    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/payments/ui/EditorDialog.java"/>
     <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/signin/SigninAndSyncView.java"/>
   </issue>
 </lint>

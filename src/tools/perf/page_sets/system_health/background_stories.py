@@ -24,6 +24,10 @@ class _BackgroundStory(system_health_story.SystemHealthStory):
     action_runner.tab.browser.Background()
     super(_BackgroundStory, self)._Measure(action_runner)
 
+  @classmethod
+  def GenerateStoryDescription(cls):
+    return 'Load %s, then put the browser into the background.' % cls.URL
+
 
 class BackgroundGoogleStory(_BackgroundStory):
   NAME = 'background:search:google'
@@ -43,7 +47,6 @@ class BackgroundFacebookMobileStory(_BackgroundStory):
 
 
 class BackgroundNytimesMobileStory(_BackgroundStory):
-  """The third top website in http://www.alexa.com/topsites/category/News"""
   NAME = 'background:news:nytimes'
   URL = 'http://www.nytimes.com/2016/10/04/us/politics/vice-presidential-debate.html?_r=0'
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY

@@ -335,6 +335,7 @@ TEST(SharedMemoryTest, GetReadOnlyHandle) {
 
   SharedMemoryHandle readonly_handle = writable_shmem.GetReadOnlyHandle();
   EXPECT_EQ(writable_shmem.handle().GetGUID(), readonly_handle.GetGUID());
+  EXPECT_EQ(writable_shmem.handle().GetSize(), readonly_handle.GetSize());
   ASSERT_TRUE(readonly_handle.IsValid());
   SharedMemory readonly_shmem(readonly_handle, /*readonly=*/true);
 
@@ -414,9 +415,9 @@ TEST(SharedMemoryTest, ShareToSelf) {
 
   SharedMemoryHandle shared_handle = shmem.handle().Duplicate();
   ASSERT_TRUE(shared_handle.IsValid());
-#if defined(OS_WIN)
-  ASSERT_TRUE(shared_handle.OwnershipPassesToIPC());
-#endif
+  EXPECT_TRUE(shared_handle.OwnershipPassesToIPC());
+  EXPECT_EQ(shared_handle.GetGUID(), shmem.handle().GetGUID());
+  EXPECT_EQ(shared_handle.GetSize(), shmem.handle().GetSize());
   SharedMemory shared(shared_handle, /*readonly=*/false);
 
   ASSERT_TRUE(shared.Map(contents.size()));
@@ -426,9 +427,7 @@ TEST(SharedMemoryTest, ShareToSelf) {
 
   shared_handle = shmem.handle().Duplicate();
   ASSERT_TRUE(shared_handle.IsValid());
-#if defined(OS_WIN)
   ASSERT_TRUE(shared_handle.OwnershipPassesToIPC());
-#endif
   SharedMemory readonly(shared_handle, /*readonly=*/true);
 
   ASSERT_TRUE(readonly.Map(contents.size()));
@@ -607,7 +606,7 @@ TEST(SharedMemoryTest, UnsafeImageSection) {
   EXPECT_EQ(nullptr, shared_memory_open.memory());
 
   SharedMemory shared_memory_handle_local(
-      SharedMemoryHandle(section_handle.Take(), UnguessableToken::Create()),
+      SharedMemoryHandle(section_handle.Take(), 1, UnguessableToken::Create()),
       true);
   EXPECT_FALSE(shared_memory_handle_local.Map(1));
   EXPECT_EQ(nullptr, shared_memory_handle_local.memory());
@@ -623,7 +622,9 @@ TEST(SharedMemoryTest, UnsafeImageSection) {
       ::GetCurrentProcess(), shared_memory_handle_dummy.handle().GetHandle(),
       ::GetCurrentProcess(), &handle_no_query, FILE_MAP_READ, FALSE, 0));
   SharedMemory shared_memory_handle_no_query(
-      SharedMemoryHandle(handle_no_query, UnguessableToken::Create()), true);
+      SharedMemoryHandle(handle_no_query, options.size,
+                         UnguessableToken::Create()),
+      true);
   EXPECT_FALSE(shared_memory_handle_no_query.Map(1));
   EXPECT_EQ(nullptr, shared_memory_handle_no_query.memory());
 }

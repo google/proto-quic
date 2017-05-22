@@ -17,6 +17,7 @@
 #include "net/http/http_request_headers.h"
 #include "net/http/http_response_headers.h"
 #include "net/http/http_status_code.h"
+#include "net/traffic_annotation/network_traffic_annotation.h"
 #include "net/url_request/redirect_info.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_context.h"
@@ -27,6 +28,34 @@
 #include "net/websockets/websocket_handshake_stream_create_helper.h"
 #include "url/gurl.h"
 #include "url/origin.h"
+
+namespace {
+
+constexpr net::NetworkTrafficAnnotationTag kTrafficAnnotation =
+    net::DefineNetworkTrafficAnnotation("websocket_stream", R"(
+        semantics {
+          sender: "WebSocket Handshake"
+          description:
+            "Renderer process initiated WebSocket handshake. The WebSocket "
+            "handshake is used to establish a connection between a web page "
+            "and a consenting server for bi-directional communication."
+          trigger:
+            "A handshake is performed every time a new connection is "
+            "established via the Javascript or PPAPI WebSocket API. Any web "
+            "page or extension can create a WebSocket connection."
+          data: "The path and sub-protocols requested when the WebSocket was "
+                "created, plus the origin of the creating page."
+          destination: OTHER
+        }
+        policy {
+          cookies_allowed: true
+          cookies_store: "user or per-app cookie store"
+          setting: "These requests cannot be disabled."
+          policy_exception_justification:
+            "Not implemented. WebSocket is a core web platform API."
+        })");
+
+}  // namespace
 
 namespace net {
 namespace {
@@ -90,8 +119,10 @@ class WebSocketStreamRequestImpl : public WebSocketStreamRequest {
       std::unique_ptr<WebSocketStream::ConnectDelegate> connect_delegate,
       std::unique_ptr<WebSocketHandshakeStreamCreateHelper> create_helper)
       : delegate_(new Delegate(this)),
-        url_request_(
-            context->CreateRequest(url, DEFAULT_PRIORITY, delegate_.get())),
+        url_request_(context->CreateRequest(url,
+                                            DEFAULT_PRIORITY,
+                                            delegate_.get(),
+                                            kTrafficAnnotation)),
         connect_delegate_(std::move(connect_delegate)),
         handshake_stream_(nullptr) {
     create_helper->set_stream_request(this);
@@ -219,11 +250,11 @@ class WebSocketStreamRequestImpl : public WebSocketStreamRequest {
 
   std::unique_ptr<WebSocketStream::ConnectDelegate> connect_delegate_;
 
-  // This is owned by the caller of CreateBaseStream() or
-  // CreateSpdyStream() of WebsocketHandshakeStreamCreateHelper. Both the
-  // stream and this object will be destroyed during the destruction of the
-  // URLRequest object associated with the handshake. This is only guaranteed
-  // to be a valid pointer if the handshake succeeded.
+  // This is owned by the caller of
+  // WebsocketHandshakeStreamCreateHelper::CreateBaseStream().  Both the stream
+  // and this object will be destroyed during the destruction of the URLRequest
+  // object associated with the handshake. This is only guaranteed to be a valid
+  // pointer if the handshake succeeded.
   WebSocketHandshakeStreamBase* handshake_stream_;
 
   // The failure message supplied by WebSocketBasicHandshakeStream, if any.

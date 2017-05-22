@@ -11,6 +11,7 @@
 
 #if defined(OS_WIN)
 #include <windows.h>
+#include <objbase.h>
 #include <shlobj.h>
 #endif
 
@@ -1262,8 +1263,8 @@ TEST_F(URLRequestTest, ResolveShortcutTest) {
   // Temporarily create a shortcut for test
   {
     base::win::ScopedComPtr<IShellLink> shell;
-    ASSERT_TRUE(SUCCEEDED(shell.CreateInstance(CLSID_ShellLink, NULL,
-                                               CLSCTX_INPROC_SERVER)));
+    ASSERT_TRUE(SUCCEEDED(::CoCreateInstance(
+        CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&shell))));
     base::win::ScopedComPtr<IPersistFile> persist;
     ASSERT_TRUE(SUCCEEDED(shell.CopyTo(persist.GetAddressOf())));
     EXPECT_TRUE(SUCCEEDED(shell->SetPath(app_path.value().c_str())));

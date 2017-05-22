@@ -13,6 +13,7 @@
 #include "base/strings/string_util.h"
 #include "crypto/openssl_util.h"
 #include "net/base/ip_address.h"
+#include "net/cert/x509_util_ios.h"
 #include "net/cert/x509_util_openssl.h"
 #include "net/ssl/openssl_ssl_util.h"
 #include "third_party/boringssl/src/include/openssl/x509.h"
@@ -23,21 +24,6 @@ using base::ScopedCFTypeRef;
 namespace net {
 
 namespace {
-
-// Returns true if a given |cert_handle| is actually a valid X.509 certificate
-// handle.
-//
-// SecCertificateCreateFromData() does not always force the immediate parsing of
-// the certificate, and as such, may return a SecCertificateRef for an
-// invalid/unparsable certificate. Force parsing to occur to ensure that the
-// SecCertificateRef is correct. On later versions where
-// SecCertificateCreateFromData() immediately parses, rather than lazily, this
-// call is cheap, as the subject is cached.
-bool IsValidOSCertHandle(SecCertificateRef cert_handle) {
-  ScopedCFTypeRef<CFStringRef> sanity_check(
-      SecCertificateCopySubjectSummary(cert_handle));
-  return sanity_check != nullptr;
-}
 
 bssl::UniquePtr<X509> OSCertHandleToOpenSSL(
     X509Certificate::OSCertHandle os_handle) {
@@ -245,19 +231,8 @@ SHA256HashValue X509Certificate::CalculateCAFingerprint256(
 X509Certificate::OSCertHandle X509Certificate::CreateOSCertHandleFromBytes(
     const char* data,
     size_t length) {
-  ScopedCFTypeRef<CFDataRef> cert_data(CFDataCreateWithBytesNoCopy(
-      kCFAllocatorDefault, reinterpret_cast<const UInt8*>(data),
-      base::checked_cast<CFIndex>(length), kCFAllocatorNull));
-  if (!cert_data)
-    return nullptr;
-  OSCertHandle cert_handle = SecCertificateCreateWithData(nullptr, cert_data);
-  if (!cert_handle)
-    return nullptr;
-  if (!IsValidOSCertHandle(cert_handle)) {
-    CFRelease(cert_handle);
-    return nullptr;
-  }
-  return cert_handle;
+  return x509_util::CreateSecCertificateFromBytes(
+      reinterpret_cast<const uint8_t*>(data), length);
 }
 
 // static
@@ -373,19 +348,6 @@ void X509Certificate::GetPublicKeyInfo(OSCertHandle os_cert,
       break;
   }
   *size_bits = EVP_PKEY_bits(key);
-}
-
-CFMutableArrayRef X509Certificate::CreateOSCertChainForCert() const {
-  CFMutableArrayRef cert_list =
-      CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
-  if (!cert_list)
-    return nullptr;
-
-  CFArrayAppendValue(cert_list, os_cert_handle());
-  for (size_t i = 0; i < intermediate_ca_certs_.size(); ++i)
-    CFArrayAppendValue(cert_list, intermediate_ca_certs_[i]);
-
-  return cert_list;
 }
 
 bool X509Certificate::IsIssuedByEncoded(

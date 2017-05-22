@@ -109,17 +109,21 @@ def shard_benchmarks(num_shards, all_benchmarks):
   return benchmark_to_shard_dict
 
 
-def regenerate(benchmarks, waterfall_configs):
+def regenerate(benchmarks, waterfall_configs, buildernames=None):
   """Regenerate the shard mapping file.
 
   This overwrites the current file with fresh data.
   """
-  sharding_map = {
-      'all_benchmarks': [b.Name() for b in benchmarks],
-  }
+  with open(get_sharding_map_path()) as f:
+    sharding_map = json.load(f)
+  sharding_map[u'all_benchmarks'] = [b.Name() for b in benchmarks]
+
   for name, config in waterfall_configs.items():
     for buildername, tester in config['testers'].items():
       if not tester.get('swarming'):
+        continue
+
+      if buildernames and buildername not in buildernames:
         continue
       per_builder = {}
 
@@ -133,6 +137,7 @@ def regenerate(benchmarks, waterfall_configs):
         device_map['benchmarks'].append(name)
         per_builder[device] = device_map
       sharding_map[buildername] = per_builder
+
 
   for name, builder_values in sharding_map.items():
     if name == 'all_benchmarks':
@@ -155,9 +160,10 @@ def get_args():
                    'benchmarks in tools/perf/benchmarks.'))
 
   parser.add_argument('mode', choices=['regenerate'])
+  parser.add_argument('--buildernames', '-b', action='append', default=None)
   return parser
 
 
 def main(args, benchmarks, configs):
   if args.mode == 'regenerate':
-    return regenerate(benchmarks, configs)
+    return regenerate(benchmarks, configs, args.buildernames)

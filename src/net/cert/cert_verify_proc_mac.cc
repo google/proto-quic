@@ -35,6 +35,7 @@
 #include "net/cert/test_root_certs.h"
 #include "net/cert/x509_certificate.h"
 #include "net/cert/x509_util.h"
+#include "net/cert/x509_util_ios_and_mac.h"
 #include "net/cert/x509_util_mac.h"
 
 // CSSM functions are deprecated as of OSX 10.7, but have no replacement.
@@ -741,8 +742,10 @@ int VerifyWithGivenFlags(X509Certificate* cert,
 
     ScopedCFTypeRef<CFMutableArrayRef> cert_array(
         x509_util::CreateSecCertificateArrayForX509Certificate(cert));
-    if (!cert_array)
+    if (!cert_array) {
+      verify_result->cert_status |= CERT_STATUS_INVALID;
       return ERR_CERT_INVALID;
+    }
 
     // Beginning with the certificate chain as supplied by the server, attempt
     // to verify the chain. If a failure is encountered, trim a certificate

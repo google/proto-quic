@@ -184,6 +184,6 @@ def Diff(before, after):
   assert isinstance(after, models.SizeInfo)
   section_sizes = {k: after.section_sizes[k] - v
                    for k, v in before.section_sizes.iteritems()}
-  symbol_diff = _DiffSymbolGroups(before.symbols, after.symbols)
+  symbol_diff = _DiffSymbolGroups(before.raw_symbols, after.raw_symbols)
   return models.SizeInfoDiff(section_sizes, symbol_diff, before.metadata,
                              after.metadata)

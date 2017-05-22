@@ -1,5 +1,4 @@
 #if defined(__i386__)
-.file	"aes-586.S"
 .text
 .private_extern	__x86_AES_encrypt_compact
 .align	4

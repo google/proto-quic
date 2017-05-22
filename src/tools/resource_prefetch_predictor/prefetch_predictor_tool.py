@@ -84,8 +84,7 @@ def DumpOriginDatabaseRow(domain, primary_key, proto):
   from resource_prefetch_predictor_pb2 import OriginData
   entry = OriginData()
   entry.ParseFromString(proto)
-  # For the offset, see kWindowsEpochDeltaMicroseconds in
-  # base/time/time_posix.cc.
+  # For the offset, see kTimeTToMicrosecondsOffset in base/time/time.h.
   last_visit_timestamp = int(entry.last_visit_time / 1e6 - 11644473600)
   formatted_last_visit_time = datetime.datetime.utcfromtimestamp(
       last_visit_timestamp).strftime('%Y-%m-%d %H:%M:%S')

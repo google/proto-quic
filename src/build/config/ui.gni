@@ -27,7 +27,7 @@ declare_args() {
   # Indicates if Ozone is enabled. Ozone is a low-level library layer for Linux
   # that does not require X11. Enabling this feature disables use of glib, x11,
   # Pango, and Cairo. Default to false on non-Chromecast builds.
-  use_ozone = is_chromecast && !is_android
+  use_ozone = is_chromeos || (is_chromecast && !is_android)
 
   # Indicates if Aura is enabled. Aura is a low-level windowing library, sort
   # of a replacement for GDI or GTK.

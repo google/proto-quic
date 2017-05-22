@@ -991,9 +991,9 @@ TEST_P(SequencedWorkerPoolTest, FlushForTesting) {
 
   // Queue up a bunch of work, including  a long delayed task and
   // a task that produces additional tasks as an artifact.
-  pool()->PostDelayedWorkerTask(
-      FROM_HERE, base::BindOnce(&TestTracker::FastTask, tracker(), 0),
-      TimeDelta::FromMinutes(5));
+  pool()->PostDelayedTask(FROM_HERE,
+                          base::BindOnce(&TestTracker::FastTask, tracker(), 0),
+                          TimeDelta::FromMinutes(5));
   pool()->PostWorkerTask(FROM_HERE,
                          base::BindOnce(&TestTracker::SlowTask, tracker(), 0));
   const size_t kNumFastTasks = 20;

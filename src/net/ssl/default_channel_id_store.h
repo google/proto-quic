@@ -61,6 +61,7 @@ class NET_EXPORT DefaultChannelIDStore : public ChannelIDStore {
       const base::Closure& callback) override;
   void DeleteAll(const base::Closure& callback) override;
   void GetAllChannelIDs(const GetChannelIDListCallback& callback) override;
+  void Flush() override;
   int GetChannelIDCount() override;
   void SetForceKeepSessionState() override;
   bool IsEphemeral() override;
@@ -163,6 +164,8 @@ class NET_EXPORT DefaultChannelIDStore::PersistentStore
   virtual void AddChannelID(const ChannelID& channel_id) = 0;
 
   virtual void DeleteChannelID(const ChannelID& channel_id) = 0;
+
+  virtual void Flush() = 0;
 
   // When invoked, instructs the store to keep session related data on
   // destruction.

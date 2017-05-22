@@ -194,6 +194,8 @@
   __interceptor_mbsnrtowcs;
   __interceptor_mbsrtowcs;
   __interceptor_mbstowcs;
+  __interceptor_mcheck;
+  __interceptor_mcheck_pedantic;
   __interceptor_memalign;
   __interceptor_memchr;
   __interceptor_memcmp;
@@ -211,6 +213,7 @@
   __interceptor_modf;
   __interceptor_modff;
   __interceptor_modfl;
+  __interceptor_mprobe;
   __interceptor_munlock;
   __interceptor_munlockall;
   __interceptor_munmap;
@@ -1359,6 +1362,8 @@
   mbsnrtowcs;
   mbsrtowcs;
   mbstowcs;
+  mcheck;
+  mcheck_pedantic;
   memalign;
   memchr;
   memcmp;
@@ -1375,6 +1380,7 @@
   modf;
   modff;
   modfl;
+  mprobe;
   munlock;
   munlockall;
   munmap;

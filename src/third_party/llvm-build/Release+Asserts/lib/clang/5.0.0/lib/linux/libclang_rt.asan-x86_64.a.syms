@@ -21,6 +21,7 @@
   __interceptor___isoc99_vsprintf;
   __interceptor___isoc99_vsscanf;
   __interceptor___libc_memalign;
+  __interceptor___longjmp_chk;
   __interceptor___lxstat;
   __interceptor___lxstat64;
   __interceptor___overflow;
@@ -184,6 +185,8 @@
   __interceptor_mbsnrtowcs;
   __interceptor_mbsrtowcs;
   __interceptor_mbstowcs;
+  __interceptor_mcheck;
+  __interceptor_mcheck_pedantic;
   __interceptor_memalign;
   __interceptor_memchr;
   __interceptor_memcmp;
@@ -199,6 +202,7 @@
   __interceptor_modf;
   __interceptor_modff;
   __interceptor_modfl;
+  __interceptor_mprobe;
   __interceptor_munlock;
   __interceptor_munlockall;
   __interceptor_open_memstream;
@@ -412,6 +416,7 @@
   __isoc99_vsprintf;
   __isoc99_vsscanf;
   __libc_memalign;
+  __longjmp_chk;
   __lsan_*;
   __lxstat;
   __lxstat64;
@@ -1282,6 +1287,8 @@
   mbsnrtowcs;
   mbsrtowcs;
   mbstowcs;
+  mcheck;
+  mcheck_pedantic;
   memalign;
   memchr;
   memcmp;
@@ -1296,6 +1303,7 @@
   modf;
   modff;
   modfl;
+  mprobe;
   munlock;
   munlockall;
   open_memstream;

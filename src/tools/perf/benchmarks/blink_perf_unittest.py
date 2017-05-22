@@ -271,3 +271,71 @@ class ComputeTraceEventsMetricsForBlinkPerfTest(unittest.TestCase):
         blink_perf._ComputeTraceEventsThreadTimeForBlinkPerf(
             model, renderer_main, ['foo', 'bar', 'baz']),
         {'foo': [15, 32], 'bar': [20, 0], 'baz': [0, 0]})
+
+  def testTraceEventMetricsNoDoubleCountingBasic(self):
+    model = model_module.TimelineModel()
+    renderer_main = model.GetOrCreateProcess(1).GetOrCreateThread(2)
+    renderer_main.name = 'CrRendererMain'
+
+    # Set up a main thread model that looks like:
+    #   [          blink_perf.run_test                     ]
+    #   |     [          foo           ]     [  foo  ]     |
+    #   |     [          foo           ]     |       |     |
+    #   |     |     [    foo     ]     |     |       |     |
+    #   |     |     |            |     |     |       |     |
+    #   100   120  140          400   420   440     510   550
+    #                     |                      |
+    # CPU dur of          |                      |
+    # of top most event:  280                    50
+    #
+    self._AddBlinkTestSlice(renderer_main, 100, 550)
+
+    renderer_main.BeginSlice('blink', 'foo', 120, 130)
+    renderer_main.BeginSlice('blink', 'foo', 120, 130)
+    renderer_main.BeginSlice('blink', 'foo', 140, 150)
+    renderer_main.EndSlice(400, 390)
+    renderer_main.EndSlice(420, 410)
+    renderer_main.EndSlice(420, 410)
+
+    renderer_main.BeginSlice('blink', 'foo', 440, 455)
+    renderer_main.EndSlice(510, 505)
+
+    self.assertEquals(
+        blink_perf._ComputeTraceEventsThreadTimeForBlinkPerf(
+            model, renderer_main, ['foo']), {'foo': [330]})
+
+
+  def testTraceEventMetricsNoDoubleCountingWithOtherSlidesMixedIn(self):
+    model = model_module.TimelineModel()
+    renderer_main = model.GetOrCreateProcess(1).GetOrCreateThread(2)
+    renderer_main.name = 'CrRendererMain'
+
+    # Set up a main thread model that looks like:
+    #   [          blink_perf.run_test                                   ]
+    #   |     [          foo                 ]      [      bar     ]     |
+    #   |     |   [        bar         ]     |      |    [ foo  ]  |     |
+    #   |     |   |    [    foo     ]  |     |      |    |      |  |     |
+    #   |     |   |    |            |  |     |      |    |      |  |     |
+    #   100   120 130 140     |    400 405   420    440  480 | 510 520  550
+    #                         |                              |
+    # CPU dur of              |                              |
+    # of top most event:  280 (foo) & 270 (bar)            50 (bar) & 20 (foo)
+    #
+    self._AddBlinkTestSlice(renderer_main, 100, 550)
+
+    renderer_main.BeginSlice('blink', 'foo', 120, 130)
+    renderer_main.BeginSlice('blink', 'bar', 130, 135)
+    renderer_main.BeginSlice('blink', 'foo', 140, 150)
+    renderer_main.EndSlice(400, 390)
+    renderer_main.EndSlice(405, 405)
+    renderer_main.EndSlice(420, 410)
+
+    renderer_main.BeginSlice('blink', 'bar', 440, 455)
+    renderer_main.BeginSlice('blink', 'foo', 480, 490)
+    renderer_main.EndSlice(510, 510)
+    renderer_main.EndSlice(510, 505)
+
+    self.assertEquals(
+        blink_perf._ComputeTraceEventsThreadTimeForBlinkPerf(
+            model, renderer_main, ['foo', 'bar']),
+            {'foo': [300], 'bar': [320]})

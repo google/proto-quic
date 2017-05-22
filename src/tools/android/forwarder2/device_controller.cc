@@ -37,7 +37,7 @@ std::unique_ptr<DeviceController> DeviceController::Create(
 }
 
 DeviceController::~DeviceController() {
-  DCHECK(construction_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(construction_task_runner_->RunsTasksInCurrentSequence());
 }
 
 void DeviceController::Start() {
@@ -145,7 +145,7 @@ void DeviceController::DeleteListenerOnError(
     // ownership.
     return;
   }
-  DCHECK(controller->construction_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(controller->construction_task_runner_->RunsTasksInCurrentSequence());
   bool listener_did_exist = DeleteRefCountedValueInMap(
       listener->listener_port(), &controller->listeners_);
   DCHECK(listener_did_exist);

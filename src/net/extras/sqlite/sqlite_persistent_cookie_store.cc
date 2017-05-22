@@ -16,6 +16,7 @@
 #include "base/location.h"
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/profiler/scoped_tracker.h"
@@ -815,7 +816,7 @@ void SQLitePersistentCookieStore::Backend::MakeCookiesFromSQLStatement(
     } else {
       value = smt.ColumnString(3);
     }
-    std::unique_ptr<CanonicalCookie> cc(CanonicalCookie::Create(
+    std::unique_ptr<CanonicalCookie> cc(base::MakeUnique<CanonicalCookie>(
         smt.ColumnString(2),                           // name
         value,                                         // value
         smt.ColumnString(1),                           // domain

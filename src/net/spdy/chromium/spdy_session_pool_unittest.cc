@@ -872,8 +872,9 @@ TEST_P(SpdySessionMemoryDumpTest, DumpMemoryStats) {
 
   EXPECT_TRUE(HasSpdySession(spdy_session_pool_, key));
   base::trace_event::MemoryDumpArgs dump_args = {GetParam()};
-  std::unique_ptr<base::trace_event::ProcessMemoryDump> process_memory_dump(
-      new base::trace_event::ProcessMemoryDump(nullptr, dump_args));
+  auto process_memory_dump =
+      base::MakeUnique<base::trace_event::ProcessMemoryDump>(nullptr,
+                                                             dump_args);
   base::trace_event::MemoryAllocatorDump* parent_dump =
       process_memory_dump->CreateAllocatorDump(
           "net/http_network_session_0x123");

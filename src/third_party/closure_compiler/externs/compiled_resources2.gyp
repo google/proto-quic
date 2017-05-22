@@ -73,6 +73,10 @@
       'includes': ['../include_js.gypi'],
     },
     {
+      'target_name': 'mime_handler_private',
+      'includes': ['../include_js.gypi'],
+    },
+    {
       'target_name': 'networking_private',
       'includes': ['../include_js.gypi'],
     },

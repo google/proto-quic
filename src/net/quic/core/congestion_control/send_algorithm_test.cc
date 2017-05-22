@@ -232,7 +232,13 @@ class SendAlgorithmTest : public QuicTestWithParam<TestParams> {
     SetExperimentalOptionsInServerConfig();
 
     QuicConnectionPeer::SetSendAlgorithm(quic_sender_.connection(), sender_);
-
+    // TODO(jokulik):  Remove once b/38032710 is fixed.
+    // Disable pacing for PCC.
+    if (sender_->GetCongestionControlType() == kPCC) {
+      QuicSentPacketManagerPeer::SetUsingPacing(
+          QuicConnectionPeer::GetSentPacketManager(quic_sender_.connection()),
+          false);
+    }
     clock_ = simulator_.GetClock();
     simulator_.set_random_generator(&random_);
 

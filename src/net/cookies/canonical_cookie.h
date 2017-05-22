@@ -26,6 +26,22 @@ class NET_EXPORT CanonicalCookie {
   CanonicalCookie();
   CanonicalCookie(const CanonicalCookie& other);
 
+  // This constructor does not validate or canonicalize their inputs;
+  // the resulting CanonicalCookies should not be relied on to be canonical
+  // unless the caller has done appropriate validation and canonicalization
+  // themselves.
+  CanonicalCookie(const std::string& name,
+                  const std::string& value,
+                  const std::string& domain,
+                  const std::string& path,
+                  const base::Time& creation,
+                  const base::Time& expiration,
+                  const base::Time& last_access,
+                  bool secure,
+                  bool httponly,
+                  CookieSameSite same_site,
+                  CookiePriority priority);
+
   ~CanonicalCookie();
 
   // Supports the default copy constructor.
@@ -38,21 +54,6 @@ class NET_EXPORT CanonicalCookie {
       const std::string& cookie_line,
       const base::Time& creation_time,
       const CookieOptions& options);
-
-  // Creates a canonical cookie from unparsed attribute values.
-  // It does not do any canonicalization.
-  // |name| and |path| must not be empty.
-  static std::unique_ptr<CanonicalCookie> Create(const std::string& name,
-                                                 const std::string& value,
-                                                 const std::string& domain,
-                                                 const std::string& path,
-                                                 const base::Time& creation,
-                                                 const base::Time& expiration,
-                                                 const base::Time& last_access,
-                                                 bool secure,
-                                                 bool http_only,
-                                                 CookieSameSite same_site,
-                                                 CookiePriority priority);
 
   const std::string& Name() const { return name_; }
   const std::string& Value() const { return value_; }
@@ -156,22 +157,6 @@ class NET_EXPORT CanonicalCookie {
     COOKIE_PREFIX_HOST,
     COOKIE_PREFIX_LAST
   };
-
-  // This constructor does not validate or canonicalize their inputs;
-  // the resulting CanonicalCookies should not be relied on to be canonical
-  // unless the caller has done appropriate validation and canonicalization
-  // themselves.
-  CanonicalCookie(const std::string& name,
-                  const std::string& value,
-                  const std::string& domain,
-                  const std::string& path,
-                  const base::Time& creation,
-                  const base::Time& expiration,
-                  const base::Time& last_access,
-                  bool secure,
-                  bool httponly,
-                  CookieSameSite same_site,
-                  CookiePriority priority);
 
   // Returns the CookiePrefix (or COOKIE_PREFIX_NONE if none) that
   // applies to the given cookie |name|.

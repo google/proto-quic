@@ -1,5 +1,4 @@
 #if defined(__i386__)
-.file	"ghash-x86.S"
 .text
 .globl	gcm_gmult_4bit_mmx
 .hidden	gcm_gmult_4bit_mmx

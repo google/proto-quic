@@ -240,7 +240,7 @@ class NET_EXPORT HttpServerProperties {
 
   // Return all alternative services for |origin|, including broken ones.
   // Returned alternative services never have empty hostnames.
-  virtual AlternativeServiceVector GetAlternativeServices(
+  virtual AlternativeServiceInfoVector GetAlternativeServiceInfos(
       const url::SchemeHostPort& origin) = 0;
 
   // Set a single alternative service for |origin|.  Previous alternative

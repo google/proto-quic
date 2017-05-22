@@ -6,5 +6,6 @@ source_set("libwebp") {
   libs = [
     "webp",
     "webpdemux",
+    "webpmux",
   ]
 }

@@ -331,16 +331,16 @@ SpdyHeaderBlock::Storage* SpdyHeaderBlock::GetStorage() {
 std::unique_ptr<base::Value> SpdyHeaderBlockNetLogCallback(
     const SpdyHeaderBlock* headers,
     NetLogCaptureMode capture_mode) {
-  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
-  base::DictionaryValue* headers_dict = new base::DictionaryValue();
+  auto dict = base::MakeUnique<base::DictionaryValue>();
+  auto headers_dict = base::MakeUnique<base::DictionaryValue>();
   for (SpdyHeaderBlock::const_iterator it = headers->begin();
        it != headers->end(); ++it) {
-    headers_dict->SetWithoutPathExpansion(
+    headers_dict->SetStringWithoutPathExpansion(
         it->first.as_string(),
-        new base::Value(ElideHeaderValueForNetLog(
-            capture_mode, it->first.as_string(), it->second.as_string())));
+        ElideHeaderValueForNetLog(capture_mode, it->first.as_string(),
+                                  it->second.as_string()));
   }
-  dict->Set("headers", headers_dict);
+  dict->Set("headers", std::move(headers_dict));
   return std::move(dict);
 }
 

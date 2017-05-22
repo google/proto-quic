@@ -78,6 +78,10 @@ class HistogramTester {
   //             histogram_tester.GetAllSamples("HistogramName"));
   std::vector<Bucket> GetAllSamples(const std::string& name) const;
 
+  // Returns the value of the |sample| bucket for ths histogram |name|.
+  HistogramBase::Count GetBucketCount(const std::string& name,
+                                      HistogramBase::Sample sample) const;
+
   // Finds histograms whose names start with |prefix|, and returns them along
   // with the counts of any samples added since the creation of this object.
   // Histograms that are unchanged are omitted from the result. The return value
@@ -118,6 +122,14 @@ class HistogramTester {
   void CheckTotalCount(const std::string& name,
                        Histogram::Count expected_count,
                        const HistogramSamples& samples) const;
+
+  // Sets the value for |count| to be the value in the |sample| bucket. The
+  // bucket's current value is determined from |samples| and is modified based
+  // on the snapshot stored for histogram |name|.
+  void GetBucketCountForSamples(const std::string& name,
+                                HistogramBase::Sample sample,
+                                const HistogramSamples& samples,
+                                HistogramBase::Count* count) const;
 
   // Used to determine the histogram changes made during this instance's
   // lifecycle.

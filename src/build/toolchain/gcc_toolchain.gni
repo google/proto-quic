@@ -254,10 +254,8 @@ template("gcc_toolchain") {
       extra_ldflags = ""
     }
 
-    # Currently disabled on LLD because of a bug (fixed upstream).
-    # See https://crbug.com/716209.
     enable_linker_map = defined(invoker.enable_linker_map) &&
-                        invoker.enable_linker_map && !use_lld
+                        invoker.enable_linker_map && generate_linker_map
 
     # These library switches can apply to all tools below.
     lib_switch = "-l"

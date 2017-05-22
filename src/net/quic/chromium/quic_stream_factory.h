@@ -107,8 +107,7 @@ enum QuicConnectionMigrationStatus {
 // cancel the request with the factory.
 class NET_EXPORT_PRIVATE QuicStreamRequest {
  public:
-  explicit QuicStreamRequest(QuicStreamFactory* factory,
-                             HttpServerProperties* http_server_properties);
+  explicit QuicStreamRequest(QuicStreamFactory* factory);
   ~QuicStreamRequest();
 
   // |cert_verify_flags| is bitwise OR'd of CertVerifier::VerifyFlags and it is
@@ -142,7 +141,6 @@ class NET_EXPORT_PRIVATE QuicStreamRequest {
 
  private:
   QuicStreamFactory* factory_;
-  HttpServerProperties* http_server_properties_;
   QuicServerId server_id_;
   NetLogWithSource net_log_;
   CompletionCallback callback_;

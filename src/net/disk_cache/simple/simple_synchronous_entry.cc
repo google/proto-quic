@@ -868,8 +868,19 @@ bool SimpleSynchronousEntry::MaybeCreateFile(
   int flags = File::FLAG_CREATE | File::FLAG_READ | File::FLAG_WRITE |
               File::FLAG_SHARE_DELETE;
   files_[file_index].Initialize(filename, flags);
-  *out_error = files_[file_index].error_details();
 
+  // It's possible that the creation failed because someone deleted the
+  // directory (e.g. because someone pressed "clear cache" on Android).
+  // If so, we would keep failing for a while until periodic index snapshot
+  // re-creates the cache dir, so try to recover from it quickly here.
+  if (!files_[file_index].IsValid() &&
+      files_[file_index].error_details() == File::FILE_ERROR_NOT_FOUND &&
+      !base::DirectoryExists(path_)) {
+    if (base::CreateDirectory(path_))
+      files_[file_index].Initialize(filename, flags);
+  }
+
+  *out_error = files_[file_index].error_details();
   empty_file_omitted_[file_index] = false;
 
   return files_[file_index].IsValid();

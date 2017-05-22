@@ -74,7 +74,10 @@ declare_args() {
                           (is_chromecast && !is_cast_desktop_build && !is_debug)
 
   # If true, optimize for size. Does not affect windows builds.
-  optimize_for_size = true
+  # Linux & Mac favor speed over size.
+  # TODO(brettw) it's weird that Mac and desktop Linux are different. We should
+  # explore favoring size over speed in this case as well.
+  optimize_for_size = is_android || is_ios
 
   # Enable fatal linker warnings. Building Chromium with certain versions
   # of binutils can cause linker warning.
@@ -484,16 +487,8 @@ config("compiler") {
         ldflags += [ "-Wl,-plugin-opt,jobs=8" ]
       }
     } else {
-      # Note: ThinLTO does not currently have this feature implemented
-      # For Full LTO, it provides a measurable runtime speedup of Chrome.
-      cflags += [
-        "-flto",
-        "-fwhole-program-vtables",
-      ]
-      ldflags += [
-        "-flto",
-        "-fwhole-program-vtables",
-      ]
+      cflags += [ "-flto" ]
+      ldflags += [ "-flto" ]
 
       # Apply a lower LTO optimization level as the default is too slow.
       if (is_linux) {
@@ -506,6 +501,9 @@ config("compiler") {
         ldflags += [ "-Wl,-mllvm,-O1" ]
       }
     }
+
+    cflags += [ "-fwhole-program-vtables" ]
+    ldflags += [ "-fwhole-program-vtables" ]
 
     # Work-around for http://openradar.appspot.com/20356002
     if (is_mac) {
@@ -1220,13 +1218,6 @@ config("no_chromium_code") {
       # Lots of third-party libraries have unused variables. Instead of
       # suppressing them individually, we just blanket suppress them here.
       "-Wno-unused-variable",
-    ]
-  }
-
-  if (is_linux || is_android) {
-    cflags_cc += [
-      # Don't warn about hash_map in third-party code.
-      "-Wno-deprecated",
     ]
   }
 

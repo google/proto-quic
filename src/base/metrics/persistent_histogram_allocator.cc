@@ -610,7 +610,7 @@ std::unique_ptr<HistogramBase> PersistentHistogramAllocator::CreateHistogram(
 
   size_t counts_bytes = CalculateRequiredCountsBytes(histogram_bucket_count);
   PersistentMemoryAllocator::Reference counts_ref =
-      subtle::NoBarrier_Load(&histogram_data_ptr->counts_ref);
+      subtle::Acquire_Load(&histogram_data_ptr->counts_ref);
   if (counts_bytes == 0 ||
       (counts_ref != 0 &&
        memory_allocator_->GetAllocSize(counts_ref) < counts_bytes)) {

@@ -17,6 +17,12 @@ import subprocess
 import sys
 
 
+script_dir = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, os.path.join(script_dir, os.pardir))
+
+import vs_toolchain
+
+
 def find_pgomgr(chrome_checkout_dir):
   """Find pgomgr.exe."""
   win_toolchain_json_file = os.path.join(chrome_checkout_dir, 'build',
@@ -30,7 +36,11 @@ def find_pgomgr(chrome_checkout_dir):
 
   # Always use the x64 version of pgomgr (the x86 one doesn't work on the bot's
   # environment).
-  pgomgr_dir = os.path.join(toolchain_data['path'], 'VC', 'bin', 'amd64')
+  if toolchain_data['version'] == '2015':
+    pgomgr_dir = os.path.join(toolchain_data['path'], 'VC', 'bin', 'amd64')
+  elif toolchain_data['version'] == '2017':
+    vc_tools_root = vs_toolchain.FindVCToolsRoot()
+    pgomgr_dir = os.path.join(vc_tools_root, 'HostX64', 'x64')
 
   pgomgr_path = os.path.join(pgomgr_dir, 'pgomgr.exe')
   if not os.path.exists(pgomgr_path):

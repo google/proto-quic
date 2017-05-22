@@ -14,11 +14,12 @@ namespace internal {
 TaskTrackerPosix::TaskTrackerPosix() = default;
 TaskTrackerPosix::~TaskTrackerPosix() = default;
 
-void TaskTrackerPosix::PerformRunTask(std::unique_ptr<Task> task) {
+void TaskTrackerPosix::PerformRunTask(std::unique_ptr<Task> task,
+                                      const SequenceToken& sequence_token) {
   DCHECK(watch_file_descriptor_message_loop_);
   FileDescriptorWatcher file_descriptor_watcher(
       watch_file_descriptor_message_loop_);
-  TaskTracker::PerformRunTask(std::move(task));
+  TaskTracker::PerformRunTask(std::move(task), sequence_token);
 }
 
 #if DCHECK_IS_ON()

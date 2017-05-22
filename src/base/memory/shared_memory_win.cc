@@ -227,7 +227,7 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
   DCHECK(!name_.empty());
   shm_ = SharedMemoryHandle(
       CreateFileMappingWithReducedPermissions(&sa, rounded_size, name_.c_str()),
-      UnguessableToken::Create());
+      rounded_size, UnguessableToken::Create());
   if (!shm_.IsValid()) {
     // The error is logged within CreateFileMappingWithReducedPermissions().
     return false;
@@ -274,9 +274,11 @@ bool SharedMemory::Open(const std::string& name, bool read_only) {
   // region. We don't do that - this means that we will overcount this memory,
   // which thankfully isn't relevant since Chrome only communicates with a
   // single version of the service process.
+  // We pass the size |0|, which is a dummy size and wrong, but otherwise
+  // harmless.
   shm_ = SharedMemoryHandle(
       OpenFileMapping(access, false, name_.empty() ? nullptr : name_.c_str()),
-      UnguessableToken::Create());
+      0u, UnguessableToken::Create());
   if (!shm_.IsValid())
     return false;
   // If a name specified assume it's an external section.
@@ -328,7 +330,8 @@ SharedMemoryHandle SharedMemory::GetReadOnlyHandle() {
                          FILE_MAP_READ | SECTION_QUERY, FALSE, 0)) {
     return SharedMemoryHandle();
   }
-  SharedMemoryHandle handle = SharedMemoryHandle(result, shm_.GetGUID());
+  SharedMemoryHandle handle =
+      SharedMemoryHandle(result, shm_.GetSize(), shm_.GetGUID());
   handle.SetOwnershipPassesToIPC(true);
   return handle;
 }

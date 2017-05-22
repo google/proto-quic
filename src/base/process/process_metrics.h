@@ -225,6 +225,11 @@ class BASE_EXPORT ProcessMetrics {
   int GetOpenFdSoftLimit() const;
 #endif  // defined(OS_LINUX) || defined(OS_AIX)
 
+#if defined(OS_LINUX) || defined(OS_ANDROID)
+  // Bytes of swap as reported by /proc/[pid]/status.
+  uint64_t GetVmSwapBytes() const;
+#endif  // defined(OS_LINUX) || defined(OS_ANDROID)
+
  private:
 #if !defined(OS_MACOSX) || defined(OS_IOS)
   explicit ProcessMetrics(ProcessHandle process);
@@ -299,7 +304,7 @@ BASE_EXPORT void SetFdLimit(unsigned int max_descriptors);
 #endif  // defined(OS_POSIX)
 
 #if defined(OS_WIN) || defined(OS_MACOSX) || defined(OS_LINUX) || \
-    defined(OS_ANDROID) || defined(OS_AIX)
+    defined(OS_ANDROID) || defined(OS_AIX) || defined(OS_FUCHSIA)
 // Data about system-wide memory consumption. Values are in KB. Available on
 // Windows, Mac, Linux, Android and Chrome OS.
 //
@@ -346,7 +351,8 @@ struct BASE_EXPORT SystemMemoryInfoKB {
   int swap_free = 0;
 #endif
 
-#if defined(OS_ANDROID) || defined(OS_LINUX) || defined(OS_AIX)
+#if defined(OS_ANDROID) || defined(OS_LINUX) || defined(OS_AIX) || \
+    defined(OS_FUCHSIA)
   int buffers = 0;
   int cached = 0;
   int active_anon = 0;
@@ -360,7 +366,8 @@ struct BASE_EXPORT SystemMemoryInfoKB {
   unsigned long pswpin = 0;
   unsigned long pswpout = 0;
   unsigned long pgmajfault = 0;
-#endif  // defined(OS_ANDROID) || defined(OS_LINUX) || defined(OS_AIX)
+#endif  // defined(OS_ANDROID) || defined(OS_LINUX) || defined(OS_AIX) ||
+        // defined(OS_FUCHSIA)
 
 #if defined(OS_CHROMEOS)
   int shmem = 0;
