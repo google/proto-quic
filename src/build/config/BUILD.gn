@@ -263,6 +263,16 @@ config("default_libs") {
   }
 }
 
+# Dependencies that all executables and shared libraries should have.
+# All targets that currently depend on //build/config/sanitizers:deps
+# are being made to depend on this target instead
+# (https://crbug.com/723069).
+group("exe_and_shlib_deps") {
+  public_deps = [
+    "//build/config/sanitizers:deps",
+  ]
+}
+
 # Executable configs -----------------------------------------------------------
 
 # Windows linker setup for EXEs and DLLs.

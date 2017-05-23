@@ -304,9 +304,9 @@ int TransportConnectJob::DoTransportConnect() {
       addresses_, std::move(socket_performance_watcher), net_log().net_log(),
       net_log().source());
 
-  // If the list contains IPv6 and IPv4 addresses, the first address will
-  // be IPv6, and the IPv4 addresses will be tried as fallback addresses,
-  // per "Happy Eyeballs" (RFC 6555).
+  // If the list contains IPv6 and IPv4 addresses, and the first address
+  // is IPv6, the IPv4 addresses will be tried as fallback addresses, per
+  // "Happy Eyeballs" (RFC 6555).
   bool try_ipv6_connect_with_ipv4_fallback =
       addresses_.front().GetFamily() == ADDRESS_FAMILY_IPV6 &&
       !AddressListOnlyContainsIPv6(addresses_);

@@ -222,7 +222,7 @@ static_library("libxml") {
     "//third_party/zlib",
   ]
 
-  if (is_mac || is_ios || is_android) {
+  if (is_mac || is_ios || is_android || is_fuchsia) {
     # http://www.xmlsoft.org/threads.html says that this is required when using
     # libxml from several threads, which can possibly happen in chrome. On
     # linux, this is picked up by transitivity from pkg-config output from

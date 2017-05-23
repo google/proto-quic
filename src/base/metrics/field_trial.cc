@@ -1127,6 +1127,7 @@ std::string FieldTrialList::SerializeSharedMemoryHandleMetadata(
 
   base::UnguessableToken guid = shm.GetGUID();
   ss << guid.GetHighForSerialization() << "," << guid.GetLowForSerialization();
+  ss << "," << shm.GetSize();
   return ss.str();
 }
 
@@ -1137,7 +1138,7 @@ SharedMemoryHandle FieldTrialList::DeserializeSharedMemoryHandleMetadata(
   std::vector<base::StringPiece> tokens = base::SplitStringPiece(
       switch_value, ",", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
 
-  if (tokens.size() != 3)
+  if (tokens.size() != 4)
     return SharedMemoryHandle();
 
   int field_trial_handle = 0;
@@ -1149,7 +1150,11 @@ SharedMemoryHandle FieldTrialList::DeserializeSharedMemoryHandleMetadata(
   if (!DeserializeGUIDFromStringPieces(tokens[1], tokens[2], &guid))
     return SharedMemoryHandle();
 
-  return SharedMemoryHandle(handle, guid);
+  int size;
+  if (!base::StringToInt(tokens[3], &size))
+    return SharedMemoryHandle();
+
+  return SharedMemoryHandle(handle, static_cast<size_t>(size), guid);
 }
 #endif  // defined(OS_WIN)
 
@@ -1161,14 +1166,19 @@ SharedMemoryHandle FieldTrialList::DeserializeSharedMemoryHandleMetadata(
   std::vector<base::StringPiece> tokens = base::SplitStringPiece(
       switch_value, ",", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
 
-  if (tokens.size() != 2)
+  if (tokens.size() != 3)
     return SharedMemoryHandle();
 
   base::UnguessableToken guid;
   if (!DeserializeGUIDFromStringPieces(tokens[0], tokens[1], &guid))
     return SharedMemoryHandle();
 
-  return SharedMemoryHandle(FileDescriptor(fd, true), guid);
+  int size;
+  if (!base::StringToInt(tokens[2], &size))
+    return SharedMemoryHandle();
+
+  return SharedMemoryHandle(FileDescriptor(fd, true), static_cast<size_t>(size),
+                            guid);
 }
 #endif  // defined(OS_POSIX) && !defined(OS_NACL)
 

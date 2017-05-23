@@ -43,7 +43,7 @@ std::unique_ptr<DeviceListener> DeviceListener::Create(
 }
 
 DeviceListener::~DeviceListener() {
-  DCHECK(deletion_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(deletion_task_runner_->RunsTasksInCurrentSequence());
   deletion_notifier_.Notify();
 }
 

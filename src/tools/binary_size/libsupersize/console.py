@@ -67,6 +67,7 @@ class _Session(object):
   _readline_initialized = False
 
   def __init__(self, size_infos, size_paths, lazy_paths):
+    self._printed_variables = []
     self._variables = {
         'Print': self._PrintFunc,
         'Diff': self._DiffFunc,
@@ -74,6 +75,7 @@ class _Session(object):
         'ExpandRegex': match_util.ExpandRegexIdentifierPlaceholder,
         'ShowExamples': self._ShowExamplesFunc,
         'canned_queries': canned_queries.CannedQueries(size_infos),
+        'printed': self._printed_variables,
     }
     self._lazy_paths = lazy_paths
     self._size_infos = size_infos
@@ -86,21 +88,17 @@ class _Session(object):
       for i, size_info in enumerate(size_infos):
         self._variables['size_info%d' % (i + 1)] = size_info
 
-  def _DiffFunc(self, before=None, after=None, cluster=True, sort=True):
+  def _DiffFunc(self, before=None, after=None, sort=True):
     """Diffs two SizeInfo objects. Returns a SizeInfoDiff.
 
     Args:
       before: Defaults to first size_infos[0].
       after: Defaults to second size_infos[1].
-      cluster: When True (default), calls SymbolGroup.Clustered() after diffing.
-          Generally reduces noise.
       sort: When True (default), calls SymbolGroup.Sorted() after diffing.
     """
     before = before if before is not None else self._size_infos[0]
     after = after if after is not None else self._size_infos[1]
     ret = diff.Diff(before, after)
-    if cluster:
-      ret.symbols = ret.symbols.Clustered()
     if sort:
       ret.symbols = ret.symbols.Sorted()
     return ret
@@ -109,14 +107,22 @@ class _Session(object):
                  to_file=None):
     """Prints out the given Symbol / SymbolGroup / SymbolDiff / SizeInfo.
 
+    For convenience, |obj| will be appended to the global "printed" list.
+
     Args:
-      obj: The object to be printed. Defaults to size_infos[-1].
+      obj: The object to be printed. Defaults to size_infos[-1]. Also accepts an
+          index into the |printed| array for showing previous results.
       verbose: Show more detailed output.
       recursive: Print children of nested SymbolGroups.
       use_pager: Pipe output through `less`. Ignored when |obj| is a Symbol.
           default is to automatically pipe when output is long.
       to_file: Rather than print to stdio, write to the given file.
     """
+    if isinstance(obj, int):
+      obj = self._printed_variables[obj]
+    elif not self._printed_variables or self._printed_variables[-1] != obj:
+      if not isinstance(obj, models.SymbolGroup) or len(obj) > 0:
+        self._printed_variables.append(obj)
     obj = obj if obj is not None else self._size_infos[-1]
     lines = describe.GenerateLines(obj, verbose=verbose, recursive=recursive)
     _WriteToStream(lines, use_pager=use_pager, to_file=to_file)
@@ -125,12 +131,12 @@ class _Session(object):
     size_info = None
     size_path = None
     for size_info, size_path in zip(self._size_infos, self._size_paths):
-      if symbol in size_info.symbols:
+      if symbol in size_info.raw_symbols:
         break
     else:
       # If symbols is from a diff(), use its address+name to find it.
       for size_info, size_path in zip(self._size_infos, self._size_paths):
-        matched = size_info.symbols.WhereAddressInRange(symbol.address)
+        matched = size_info.raw_symbols.WhereAddressInRange(symbol.address)
         # Use last matched symbol to skip over padding-only symbols.
         if len(matched) > 0 and matched[-1].full_name == symbol.full_name:
           symbol = matched[-1]
@@ -196,6 +202,7 @@ class _Session(object):
       elf_path: Path to the executable containing the symbol. Required only
           when auto-detection fails.
     """
+    assert not symbol.IsGroup()
     assert symbol.address and symbol.section_name == '.text'
 
     tool_prefix = self._lazy_paths.tool_prefix
@@ -247,9 +254,9 @@ class _Session(object):
         'by_path = text_syms.GroupedByPath(depth=2)',
         'Print(by_path.WherePssBiggerThan(1024))',
         '',
-        '# Show all non-vtable generated symbols',
-        'generated_syms = size_info.symbols.WhereGeneratedByToolchain()',
-        'Print(generated_syms.WhereNameMatches(r"vtable").Inverted().Sorted())',
+        '# Show all generated symbols, then show only non-vtable ones',
+        'Print(size_info.symbols.WhereGeneratedByToolchain())',
+        'Print(printed[-1].WhereNameMatches(r"vtable").Inverted().Sorted())',
         '',
         '# Show all symbols that have "print" in their name or path, except',
         '# those within components/.',
@@ -264,7 +271,7 @@ class _Session(object):
         '# View per-component breakdowns, then drill into the last entry.',
         'c = canned_queries.CategorizeByChromeComponent()',
         'Print(c)',
-        'Print(c[-1].GroupedByPath(depth=2).Clustered().Sorted())',
+        'Print(c[-1].GroupedByPath(depth=2).Sorted())',
         '',
         '# For even more inspiration, look at canned_queries.py',
         '# (and feel free to add your own!).',

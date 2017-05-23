@@ -54,5 +54,11 @@ class Examples(IntegrationTest):
       t.WaitForJavascriptExpression(
         'document.getElementsByClassName("pointsPanel")', 15)
 
+  # Show how to use SetNetworkConnection
+  def testSetNetworkConnection(self):
+    with TestDriver(control_network_connection=True) as t:
+      t.SetNetworkConnection("2G")
+      t.LoadURL('https://www.google.com')
+
 if __name__ == '__main__':
   IntegrationTest.RunAllTests()

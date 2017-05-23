@@ -1,5 +1,4 @@
 #if defined(__i386__)
-.file	"src/crypto/fipsmodule/bn/asm/x86-mont.S"
 .text
 .globl	bn_mul_mont
 .hidden	bn_mul_mont

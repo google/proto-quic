@@ -2757,14 +2757,17 @@ TEST(NetworkQualityEstimatorTest, CacheObserver) {
 TEST(NetworkQualityEstimatorTest,
      ForceEffectiveConnectionTypeThroughFieldTrial) {
   for (int i = 0; i < EFFECTIVE_CONNECTION_TYPE_LAST; ++i) {
+    EffectiveConnectionType ect_type = static_cast<EffectiveConnectionType>(i);
     std::map<std::string, std::string> variation_params;
     variation_params[kForceEffectiveConnectionType] =
         GetNameForEffectiveConnectionType(
             static_cast<EffectiveConnectionType>(i));
     TestNetworkQualityEstimator estimator(variation_params);
 
-    TestEffectiveConnectionTypeObserver observer;
-    estimator.AddEffectiveConnectionTypeObserver(&observer);
+    TestEffectiveConnectionTypeObserver ect_observer;
+    estimator.AddEffectiveConnectionTypeObserver(&ect_observer);
+    TestRTTAndThroughputEstimatesObserver rtt_throughput_observer;
+    estimator.AddRTTAndThroughputEstimatesObserver(&rtt_throughput_observer);
     // |observer| may be notified as soon as it is added. Run the loop to so
     // that the notification to |observer| is finished.
     base::RunLoop().RunUntilIdle();
@@ -2774,7 +2777,7 @@ TEST(NetworkQualityEstimatorTest,
     context.set_network_quality_estimator(&estimator);
     context.Init();
 
-    EXPECT_EQ(0U, observer.effective_connection_types().size());
+    EXPECT_EQ(0U, ect_observer.effective_connection_types().size());
 
     std::unique_ptr<URLRequest> request(
         context.CreateRequest(estimator.GetEchoURL(), DEFAULT_PRIORITY,
@@ -2785,16 +2788,33 @@ TEST(NetworkQualityEstimatorTest,
 
     EXPECT_EQ(i, estimator.GetEffectiveConnectionType());
 
-    size_t expected_count = static_cast<EffectiveConnectionType>(i) ==
-                                    EFFECTIVE_CONNECTION_TYPE_UNKNOWN
-                                ? 0
-                                : 1;
-    ASSERT_EQ(expected_count, observer.effective_connection_types().size());
+    size_t expected_count =
+        ect_type == EFFECTIVE_CONNECTION_TYPE_UNKNOWN ? 0 : 1;
+    ASSERT_EQ(expected_count, ect_observer.effective_connection_types().size());
     if (expected_count == 1) {
       EffectiveConnectionType last_notified_type =
-          observer.effective_connection_types().at(
-              observer.effective_connection_types().size() - 1);
+          ect_observer.effective_connection_types().at(
+              ect_observer.effective_connection_types().size() - 1);
       EXPECT_EQ(i, last_notified_type);
+
+      if (ect_type == EFFECTIVE_CONNECTION_TYPE_UNKNOWN ||
+          ect_type == EFFECTIVE_CONNECTION_TYPE_OFFLINE) {
+        EXPECT_EQ(nqe::internal::InvalidRTT(),
+                  rtt_throughput_observer.http_rtt());
+        EXPECT_EQ(nqe::internal::InvalidRTT(),
+                  rtt_throughput_observer.transport_rtt());
+        EXPECT_EQ(nqe::internal::kInvalidThroughput,
+                  rtt_throughput_observer.downstream_throughput_kbps());
+      } else {
+        EXPECT_EQ(estimator.params_.TypicalNetworkQuality(ect_type).http_rtt(),
+                  rtt_throughput_observer.http_rtt());
+        EXPECT_EQ(
+            estimator.params_.TypicalNetworkQuality(ect_type).transport_rtt(),
+            rtt_throughput_observer.transport_rtt());
+        EXPECT_EQ(estimator.params_.TypicalNetworkQuality(ect_type)
+                      .downstream_throughput_kbps(),
+                  rtt_throughput_observer.downstream_throughput_kbps());
+      }
     }
   }
 }
@@ -2813,69 +2833,12 @@ TEST(NetworkQualityEstimatorTest, TypicalNetworkQualities) {
   };
 
   for (const auto& test : tests) {
-    TestNetworkQualitiesCacheObserver observer;
     std::map<std::string, std::string> variation_params;
     if (test.use_transport_rtt) {
       variation_params["effective_connection_type_algorithm"] =
           "TransportRTTOrDownstreamThroughput";
     }
     TestNetworkQualityEstimator estimator(variation_params);
-
-    // Typical network quality should not be set for Unknown and Offline.
-    for (size_t i = EFFECTIVE_CONNECTION_TYPE_UNKNOWN;
-         i <= EFFECTIVE_CONNECTION_TYPE_OFFLINE; ++i) {
-      EXPECT_EQ(nqe::internal::InvalidRTT(),
-                estimator.typical_network_quality_[i].http_rtt());
-
-      EXPECT_EQ(nqe::internal::InvalidRTT(),
-                estimator.typical_network_quality_[i].transport_rtt());
-    }
-
-    // Typical network quality should be set for other effective connection
-    // types.
-    for (size_t i = EFFECTIVE_CONNECTION_TYPE_SLOW_2G;
-         i <= EFFECTIVE_CONNECTION_TYPE_3G; ++i) {
-      // The typical RTT for an effective connection type should be at least as
-      // much as the threshold RTT.
-      EXPECT_NE(nqe::internal::InvalidRTT(),
-                estimator.typical_network_quality_[i].http_rtt());
-      EXPECT_GT(estimator.typical_network_quality_[i].http_rtt(),
-                estimator.connection_thresholds_[i].http_rtt());
-
-      EXPECT_NE(nqe::internal::InvalidRTT(),
-                estimator.typical_network_quality_[i].transport_rtt());
-      EXPECT_GT(estimator.typical_network_quality_[i].transport_rtt(),
-                estimator.connection_thresholds_[i].transport_rtt());
-
-      // The typical throughput for an effective connection type should not be
-      // more than the threshold throughput.
-      if (estimator.connection_thresholds_[i].downstream_throughput_kbps() !=
-          nqe::internal::kInvalidThroughput) {
-        EXPECT_LT(
-            estimator.typical_network_quality_[i].downstream_throughput_kbps(),
-            estimator.connection_thresholds_[i].downstream_throughput_kbps());
-      }
-    }
-
-    // The typical network quality of 4G connection should be at least as fast
-    // as the threshold for 3G connection.
-    EXPECT_LT(estimator.typical_network_quality_[EFFECTIVE_CONNECTION_TYPE_4G]
-                  .http_rtt(),
-              estimator.connection_thresholds_[EFFECTIVE_CONNECTION_TYPE_3G]
-                  .http_rtt());
-    EXPECT_LT(estimator.typical_network_quality_[EFFECTIVE_CONNECTION_TYPE_4G]
-                  .transport_rtt(),
-              estimator.connection_thresholds_[EFFECTIVE_CONNECTION_TYPE_3G]
-                  .transport_rtt());
-    if (estimator.connection_thresholds_[EFFECTIVE_CONNECTION_TYPE_3G]
-            .downstream_throughput_kbps() !=
-        nqe::internal::kInvalidThroughput) {
-      EXPECT_GT(estimator.typical_network_quality_[EFFECTIVE_CONNECTION_TYPE_4G]
-                    .downstream_throughput_kbps(),
-                estimator.connection_thresholds_[EFFECTIVE_CONNECTION_TYPE_3G]
-                    .downstream_throughput_kbps());
-    }
-
     TestDelegate test_delegate;
     TestURLRequestContext context(true);
     context.set_network_quality_estimator(&estimator);
@@ -2888,10 +2851,14 @@ TEST(NetworkQualityEstimatorTest, TypicalNetworkQualities) {
       // |effective_connection_type|. The effective connection type should be
       // computed as |effective_connection_type|.
       estimator.set_start_time_null_http_rtt(
-          estimator.typical_network_quality_[effective_connection_type]
+          estimator.params_
+              .TypicalNetworkQuality(static_cast<EffectiveConnectionType>(
+                  effective_connection_type))
               .http_rtt());
       estimator.set_start_time_null_transport_rtt(
-          estimator.typical_network_quality_[effective_connection_type]
+          estimator.params_
+              .TypicalNetworkQuality(static_cast<EffectiveConnectionType>(
+                  effective_connection_type))
               .transport_rtt());
       estimator.set_start_time_null_downlink_throughput_kbps(INT32_MAX);
 

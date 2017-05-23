@@ -10,6 +10,7 @@
 #include <utility>
 
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted.h"
 #include "base/strings/string_number_conversions.h"
 #include "net/base/request_priority.h"
@@ -19,6 +20,8 @@
 #include "net/spdy/platform/api/spdy_string.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "url/gurl.h"
+
+using base::MakeUnique;
 
 namespace net {
 
@@ -32,12 +35,11 @@ class SpdyWriteQueueTest : public ::testing::Test {};
 // Makes a SpdyFrameProducer producing a frame with the data in the
 // given string.
 std::unique_ptr<SpdyBufferProducer> StringToProducer(const SpdyString& s) {
-  std::unique_ptr<char[]> data(new char[s.size()]);
+  auto data = MakeUnique<char[]>(s.size());
   std::memcpy(data.get(), s.data(), s.size());
-  return std::unique_ptr<SpdyBufferProducer>(
-      new SimpleBufferProducer(std::unique_ptr<SpdyBuffer>(
-          new SpdyBuffer(std::unique_ptr<SpdySerializedFrame>(
-              new SpdySerializedFrame(data.release(), s.size(), true))))));
+  auto frame = MakeUnique<SpdySerializedFrame>(data.release(), s.size(), true);
+  auto buffer = MakeUnique<SpdyBuffer>(std::move(frame));
+  return MakeUnique<SimpleBufferProducer>(std::move(buffer));
 }
 
 // Makes a SpdyBufferProducer producing a frame with the data in the
@@ -51,7 +53,7 @@ std::unique_ptr<SpdyBufferProducer> IntToProducer(int i) {
 class RequeingBufferProducer : public SpdyBufferProducer {
  public:
   explicit RequeingBufferProducer(SpdyWriteQueue* queue) {
-    buffer_.reset(new SpdyBuffer(kOriginal, arraysize(kOriginal)));
+    buffer_ = MakeUnique<SpdyBuffer>(kOriginal, arraysize(kOriginal));
     buffer_->AddConsumeCallback(
         base::Bind(RequeingBufferProducer::ConsumeCallback, queue));
   }
@@ -68,12 +70,11 @@ class RequeingBufferProducer : public SpdyBufferProducer {
   static void ConsumeCallback(SpdyWriteQueue* queue,
                               size_t size,
                               SpdyBuffer::ConsumeSource source) {
-    std::unique_ptr<SpdyBufferProducer> producer(
-        new SimpleBufferProducer(std::unique_ptr<SpdyBuffer>(
-            new SpdyBuffer(kRequeued, arraysize(kRequeued)))));
+    auto buffer = MakeUnique<SpdyBuffer>(kRequeued, arraysize(kRequeued));
+    auto buffer_producer = MakeUnique<SimpleBufferProducer>(std::move(buffer));
 
-    queue->Enqueue(MEDIUM, SpdyFrameType::RST_STREAM, std::move(producer),
-                   base::WeakPtr<SpdyStream>());
+    queue->Enqueue(MEDIUM, SpdyFrameType::RST_STREAM,
+                   std::move(buffer_producer), base::WeakPtr<SpdyStream>());
   }
 
  private:
@@ -98,9 +99,10 @@ int ProducerToInt(std::unique_ptr<SpdyBufferProducer> producer) {
 // Makes a SpdyStream with the given priority and a NULL SpdySession
 // -- be careful to not call any functions that expect the session to
 // be there.
-SpdyStream* MakeTestStream(RequestPriority priority) {
-  return new SpdyStream(SPDY_BIDIRECTIONAL_STREAM, base::WeakPtr<SpdySession>(),
-                        GURL(), priority, 0, 0, NetLogWithSource());
+std::unique_ptr<SpdyStream> MakeTestStream(RequestPriority priority) {
+  return MakeUnique<SpdyStream>(SPDY_BIDIRECTIONAL_STREAM,
+                                base::WeakPtr<SpdySession>(), GURL(), priority,
+                                0, 0, NetLogWithSource());
 }
 
 // Add some frame producers of different priority. The producers
@@ -114,8 +116,8 @@ TEST_F(SpdyWriteQueueTest, DequeuesByPriority) {
   std::unique_ptr<SpdyBufferProducer> producer_highest =
       StringToProducer("HIGHEST");
 
-  std::unique_ptr<SpdyStream> stream_medium(MakeTestStream(MEDIUM));
-  std::unique_ptr<SpdyStream> stream_highest(MakeTestStream(HIGHEST));
+  std::unique_ptr<SpdyStream> stream_medium = MakeTestStream(MEDIUM);
+  std::unique_ptr<SpdyStream> stream_highest = MakeTestStream(HIGHEST);
 
   // A NULL stream should still work.
   write_queue.Enqueue(LOW, SpdyFrameType::HEADERS, std::move(producer_low),
@@ -156,9 +158,9 @@ TEST_F(SpdyWriteQueueTest, DequeuesFIFO) {
   std::unique_ptr<SpdyBufferProducer> producer2 = IntToProducer(2);
   std::unique_ptr<SpdyBufferProducer> producer3 = IntToProducer(3);
 
-  std::unique_ptr<SpdyStream> stream1(MakeTestStream(DEFAULT_PRIORITY));
-  std::unique_ptr<SpdyStream> stream2(MakeTestStream(DEFAULT_PRIORITY));
-  std::unique_ptr<SpdyStream> stream3(MakeTestStream(DEFAULT_PRIORITY));
+  std::unique_ptr<SpdyStream> stream1 = MakeTestStream(DEFAULT_PRIORITY);
+  std::unique_ptr<SpdyStream> stream2 = MakeTestStream(DEFAULT_PRIORITY);
+  std::unique_ptr<SpdyStream> stream3 = MakeTestStream(DEFAULT_PRIORITY);
 
   write_queue.Enqueue(DEFAULT_PRIORITY, SpdyFrameType::HEADERS,
                       std::move(producer1), stream1->GetWeakPtr());
@@ -194,8 +196,8 @@ TEST_F(SpdyWriteQueueTest, DequeuesFIFO) {
 TEST_F(SpdyWriteQueueTest, RemovePendingWritesForStream) {
   SpdyWriteQueue write_queue;
 
-  std::unique_ptr<SpdyStream> stream1(MakeTestStream(DEFAULT_PRIORITY));
-  std::unique_ptr<SpdyStream> stream2(MakeTestStream(DEFAULT_PRIORITY));
+  std::unique_ptr<SpdyStream> stream1 = MakeTestStream(DEFAULT_PRIORITY);
+  std::unique_ptr<SpdyStream> stream2 = MakeTestStream(DEFAULT_PRIORITY);
 
   for (int i = 0; i < 100; ++i) {
     base::WeakPtr<SpdyStream> stream =
@@ -229,14 +231,14 @@ TEST_F(SpdyWriteQueueTest, RemovePendingWritesForStream) {
 TEST_F(SpdyWriteQueueTest, RemovePendingWritesForStreamsAfter) {
   SpdyWriteQueue write_queue;
 
-  std::unique_ptr<SpdyStream> stream1(MakeTestStream(DEFAULT_PRIORITY));
+  std::unique_ptr<SpdyStream> stream1 = MakeTestStream(DEFAULT_PRIORITY);
   stream1->set_stream_id(1);
-  std::unique_ptr<SpdyStream> stream2(MakeTestStream(DEFAULT_PRIORITY));
+  std::unique_ptr<SpdyStream> stream2 = MakeTestStream(DEFAULT_PRIORITY);
   stream2->set_stream_id(3);
-  std::unique_ptr<SpdyStream> stream3(MakeTestStream(DEFAULT_PRIORITY));
+  std::unique_ptr<SpdyStream> stream3 = MakeTestStream(DEFAULT_PRIORITY);
   stream3->set_stream_id(5);
   // No stream id assigned.
-  std::unique_ptr<SpdyStream> stream4(MakeTestStream(DEFAULT_PRIORITY));
+  std::unique_ptr<SpdyStream> stream4 = MakeTestStream(DEFAULT_PRIORITY);
   base::WeakPtr<SpdyStream> streams[] = {
     stream1->GetWeakPtr(), stream2->GetWeakPtr(),
     stream3->GetWeakPtr(), stream4->GetWeakPtr()
@@ -287,10 +289,9 @@ TEST_F(SpdyWriteQueueTest, Clear) {
 
 TEST_F(SpdyWriteQueueTest, RequeingProducerWithoutReentrance) {
   SpdyWriteQueue queue;
-  queue.Enqueue(
-      DEFAULT_PRIORITY, SpdyFrameType::HEADERS,
-      std::unique_ptr<SpdyBufferProducer>(new RequeingBufferProducer(&queue)),
-      base::WeakPtr<SpdyStream>());
+  queue.Enqueue(DEFAULT_PRIORITY, SpdyFrameType::HEADERS,
+                MakeUnique<RequeingBufferProducer>(&queue),
+                base::WeakPtr<SpdyStream>());
   {
     SpdyFrameType frame_type;
     std::unique_ptr<SpdyBufferProducer> producer;
@@ -315,10 +316,9 @@ TEST_F(SpdyWriteQueueTest, RequeingProducerWithoutReentrance) {
 
 TEST_F(SpdyWriteQueueTest, ReentranceOnClear) {
   SpdyWriteQueue queue;
-  queue.Enqueue(
-      DEFAULT_PRIORITY, SpdyFrameType::HEADERS,
-      std::unique_ptr<SpdyBufferProducer>(new RequeingBufferProducer(&queue)),
-      base::WeakPtr<SpdyStream>());
+  queue.Enqueue(DEFAULT_PRIORITY, SpdyFrameType::HEADERS,
+                MakeUnique<RequeingBufferProducer>(&queue),
+                base::WeakPtr<SpdyStream>());
 
   queue.Clear();
   EXPECT_FALSE(queue.IsEmpty());
@@ -333,14 +333,13 @@ TEST_F(SpdyWriteQueueTest, ReentranceOnClear) {
 }
 
 TEST_F(SpdyWriteQueueTest, ReentranceOnRemovePendingWritesAfter) {
-  std::unique_ptr<SpdyStream> stream(MakeTestStream(DEFAULT_PRIORITY));
+  std::unique_ptr<SpdyStream> stream = MakeTestStream(DEFAULT_PRIORITY);
   stream->set_stream_id(2);
 
   SpdyWriteQueue queue;
-  queue.Enqueue(
-      DEFAULT_PRIORITY, SpdyFrameType::HEADERS,
-      std::unique_ptr<SpdyBufferProducer>(new RequeingBufferProducer(&queue)),
-      stream->GetWeakPtr());
+  queue.Enqueue(DEFAULT_PRIORITY, SpdyFrameType::HEADERS,
+                MakeUnique<RequeingBufferProducer>(&queue),
+                stream->GetWeakPtr());
 
   queue.RemovePendingWritesForStreamsAfter(1);
   EXPECT_FALSE(queue.IsEmpty());
@@ -355,14 +354,13 @@ TEST_F(SpdyWriteQueueTest, ReentranceOnRemovePendingWritesAfter) {
 }
 
 TEST_F(SpdyWriteQueueTest, ReentranceOnRemovePendingWritesForStream) {
-  std::unique_ptr<SpdyStream> stream(MakeTestStream(DEFAULT_PRIORITY));
+  std::unique_ptr<SpdyStream> stream = MakeTestStream(DEFAULT_PRIORITY);
   stream->set_stream_id(2);
 
   SpdyWriteQueue queue;
-  queue.Enqueue(
-      DEFAULT_PRIORITY, SpdyFrameType::HEADERS,
-      std::unique_ptr<SpdyBufferProducer>(new RequeingBufferProducer(&queue)),
-      stream->GetWeakPtr());
+  queue.Enqueue(DEFAULT_PRIORITY, SpdyFrameType::HEADERS,
+                MakeUnique<RequeingBufferProducer>(&queue),
+                stream->GetWeakPtr());
 
   queue.RemovePendingWritesForStream(stream->GetWeakPtr());
   EXPECT_FALSE(queue.IsEmpty());

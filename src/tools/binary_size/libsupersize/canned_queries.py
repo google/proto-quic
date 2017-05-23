@@ -14,8 +14,9 @@ class _Grouper(object):
 
   def Add(self, name, group):
     logging.debug('Computed %s', name)
-    group.name = name
-    self.groups.append(group)
+    sorted_group = group.Sorted()
+    sorted_group.SetName(name)
+    self.groups.append(sorted_group)
     return group.Inverted()
 
   def Finalize(self, remaining):
@@ -24,9 +25,10 @@ class _Grouper(object):
       stars = remaining.Filter(lambda s: s.name.startswith('*'))
       if stars:
         remaining = stars.Inverted()
-        stars.name = '** Merged Symbols'
+        stars = stars.Sorted()
+        stars.SetName('** Merged Symbols')
         self.groups.append(stars)
-      remaining.name = 'Other'
+      remaining.SetName('Other')
       self.groups.append(remaining)
 
     logging.debug('Finalized')
@@ -143,5 +145,6 @@ class CannedQueries(object):
   def TemplatesByName(self, symbols=None, depth=0):
     """Lists C++ templates grouped by name."""
     symbols = self._SymbolsArg(symbols)
+    # Call Sorted() twice so that subgroups will be sorted.
     # TODO(agrieve): Might be nice to recursively GroupedByName() on these.
-    return symbols.WhereIsTemplate().GroupedByName(depth).Clustered().Sorted()
+    return symbols.WhereIsTemplate().Sorted().GroupedByName(depth).Sorted()

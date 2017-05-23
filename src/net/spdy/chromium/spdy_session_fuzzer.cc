@@ -4,7 +4,6 @@
 
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/memory/ptr_util.h"
 #include "base/run_loop.h"
 #include "base/test/fuzzed_data_provider.h"
 #include "net/base/net_errors.h"

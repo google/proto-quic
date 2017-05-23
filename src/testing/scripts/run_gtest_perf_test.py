@@ -102,9 +102,6 @@ def main():
       with common.temporary_file() as tempfile_path:
         rc = common.run_command_with_output([executable] + extra_flags,
             env=env, stdoutfile=tempfile_path)
-        with open(tempfile_path) as f:
-          print f.read()
-
         # Now get the correct json format from the stdout to write to the
         # perf results file
         results_processor = (

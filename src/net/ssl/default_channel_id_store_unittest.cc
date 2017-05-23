@@ -80,6 +80,7 @@ class MockPersistentStore
   void DeleteChannelID(
       const DefaultChannelIDStore::ChannelID& channel_id) override;
   void SetForceKeepSessionState() override;
+  void Flush() override;
 
  protected:
   ~MockPersistentStore() override;
@@ -120,6 +121,8 @@ void MockPersistentStore::DeleteChannelID(
 }
 
 void MockPersistentStore::SetForceKeepSessionState() {}
+
+void MockPersistentStore::Flush() {}
 
 MockPersistentStore::~MockPersistentStore() {}
 

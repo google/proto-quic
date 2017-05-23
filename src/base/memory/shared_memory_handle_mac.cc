@@ -16,13 +16,16 @@
 
 namespace base {
 
-SharedMemoryHandle::SharedMemoryHandle()
-    : type_(MACH), memory_object_(MACH_PORT_NULL) {}
+SharedMemoryHandle::SharedMemoryHandle() {}
 
 SharedMemoryHandle::SharedMemoryHandle(
     const base::FileDescriptor& file_descriptor,
+    size_t size,
     const base::UnguessableToken& guid)
-    : type_(POSIX), file_descriptor_(file_descriptor), guid_(guid) {}
+    : type_(POSIX),
+      file_descriptor_(file_descriptor),
+      guid_(guid),
+      size_(size) {}
 
 SharedMemoryHandle::SharedMemoryHandle(mach_vm_size_t size,
                                        const base::UnguessableToken& guid) {
@@ -51,9 +54,9 @@ SharedMemoryHandle::SharedMemoryHandle(mach_port_t memory_object,
                                        const base::UnguessableToken& guid)
     : type_(MACH),
       memory_object_(memory_object),
-      size_(size),
       ownership_passes_to_ipc_(false),
-      guid_(guid) {}
+      guid_(guid),
+      size_(size) {}
 
 SharedMemoryHandle SharedMemoryHandle::Duplicate() const {
   switch (type_) {
@@ -63,7 +66,7 @@ SharedMemoryHandle SharedMemoryHandle::Duplicate() const {
       int duped_fd = HANDLE_EINTR(dup(file_descriptor_.fd));
       if (duped_fd < 0)
         return SharedMemoryHandle();
-      return SharedMemoryHandle(FileDescriptor(duped_fd, true), guid_);
+      return SharedMemoryHandle(FileDescriptor(duped_fd, true), size_, guid_);
     }
     case MACH: {
       if (!IsValid())
@@ -92,27 +95,6 @@ bool SharedMemoryHandle::IsValid() const {
 mach_port_t SharedMemoryHandle::GetMemoryObject() const {
   DCHECK_EQ(type_, MACH);
   return memory_object_;
-}
-
-bool SharedMemoryHandle::GetSize(size_t* size) const {
-  if (!IsValid()) {
-    *size = 0;
-    return true;
-  }
-
-  switch (type_) {
-    case SharedMemoryHandle::POSIX:
-      struct stat st;
-      if (fstat(file_descriptor_.fd, &st) != 0)
-        return false;
-      if (st.st_size < 0)
-        return false;
-      *size = st.st_size;
-      return true;
-    case SharedMemoryHandle::MACH:
-      *size = size_;
-      return true;
-  }
 }
 
 bool SharedMemoryHandle::MapAt(off_t offset,

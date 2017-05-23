@@ -143,8 +143,6 @@ component("base") {
     "android/command_line_android.h",
     "android/content_uri_utils.cc",
     "android/content_uri_utils.h",
-    "android/context_utils.cc",
-    "android/context_utils.h",
     "android/cpu_features.cc",
     "android/cpu_features.h",
     "android/cxa_demangle_stub.cc",
@@ -926,9 +924,6 @@ component("base") {
     "time/tick_clock.h",
     "time/time.cc",
     "time/time.h",
-    "time/time_mac.cc",
-    "time/time_posix.cc",
-    "time/time_win.cc",
     "timer/elapsed_timer.cc",
     "timer/elapsed_timer.h",
     "timer/hi_res_timer_manager.h",
@@ -1107,7 +1102,7 @@ component("base") {
       "base_paths_win.h",
     ]
 
-    if (is_linux) {
+    if (is_linux || is_fuchsia) {
       sources += [ "base_paths_posix.cc" ]
     }
   }
@@ -1232,6 +1227,17 @@ component("base") {
     sources += [ "power_monitor/power_monitor_device_source_chromeos.cc" ]
   }
 
+  if (is_fuchsia) {
+    sources -= [
+      "debug/stack_trace_posix.cc",
+      "message_loop/message_pump_libevent.cc",
+      "message_loop/message_pump_libevent.h",
+      "process/kill_posix.cc",
+      "process/launch_posix.cc",
+      "process/process_posix.cc",
+    ]
+  }
+
   # NaCl.
   if (is_nacl) {
     # We reset sources_assignment_filter in order to explicitly include
@@ -1347,6 +1353,7 @@ component("base") {
       "power_monitor/power_monitor_device_source_win.cc",
       "profiler/win32_stack_frame_unwinder.cc",
       "profiler/win32_stack_frame_unwinder.h",
+      "time/time_win.cc",
     ]
 
     sources -= [
@@ -1444,7 +1451,7 @@ component("base") {
       "winmm.lib",
     ]
     all_dependent_configs += [ ":base_win_linker_flags" ]
-  } else if (!is_nacl || is_nacl_nonsfi) {
+  } else if ((!is_nacl && !is_fuchsia) || is_nacl_nonsfi) {
     # Non-Windows.
     deps += [ "//base/third_party/libevent" ]
   }
@@ -1454,6 +1461,8 @@ component("base") {
     sources += [
       "mac/scoped_typeref.h",
       "power_monitor/power_monitor_device_source_mac.mm",
+      "time/time_conversion_posix.cc",
+      "time/time_mac.cc",
     ]
 
     libs = [
@@ -1599,10 +1608,28 @@ component("base") {
       "process/memory_stubs.cc",
       "strings/sys_string_conversions_mac.mm",
       "threading/platform_thread_mac.mm",
+      "time/time_conversion_posix.cc",
       "time/time_mac.cc",
     ]
 
     set_sources_assignment_filter(sources_assignment_filter)
+  }
+
+  # Fuchsia.
+  if (is_fuchsia) {
+    sources += [
+      "time/time_conversion_posix.cc",
+      "time/time_exploded_posix.cc",
+      "time/time_fuchsia.cc",
+    ]
+  }
+
+  if (is_posix && !is_fuchsia && !is_mac && !is_ios) {
+    sources += [
+      "time/time_conversion_posix.cc",
+      "time/time_exploded_posix.cc",
+      "time/time_now_posix.cc",
+    ]
   }
 
   if (is_posix && !is_mac && !is_ios && !is_android && !is_chromeos) {
@@ -1788,7 +1815,7 @@ if (!is_ios) {
     ]
     deps = [
       ":base",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
       "//build/win:default_exe_manifest",
       "//third_party/icu:icuuc",
     ]
@@ -1800,7 +1827,7 @@ if (!is_ios) {
     ]
     deps = [
       ":base",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
       "//build/win:default_exe_manifest",
     ]
   }
@@ -1836,7 +1863,7 @@ if (is_win) {
       "shell32.lib",
     ]
     deps = [
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
     ]
   }
 
@@ -1859,7 +1886,7 @@ if (is_win || is_mac) {
         "profiler/test_support_library.cc",
       ]
       deps = [
-        "//build/config/sanitizers:deps",
+        "//build/config:exe_and_shlib_deps",
       ]
     }
   }
@@ -2339,7 +2366,7 @@ test("base_unittests") {
     sources -= [ "message_loop/message_pump_glib_unittest.cc" ]
   }
 
-  if (is_posix && !is_ios) {
+  if (is_posix && !is_ios && !is_fuchsia) {
     sources += [ "message_loop/message_pump_libevent_unittest.cc" ]
     deps += [ "//base/third_party/libevent" ]
   }
@@ -2440,7 +2467,6 @@ if (is_android) {
       "android/java/src/org/chromium/base/Callback.java",
       "android/java/src/org/chromium/base/CommandLine.java",
       "android/java/src/org/chromium/base/ContentUriUtils.java",
-      "android/java/src/org/chromium/base/ContextUtils.java",
       "android/java/src/org/chromium/base/CpuFeatures.java",
       "android/java/src/org/chromium/base/EarlyTraceEvent.java",
       "android/java/src/org/chromium/base/EventLog.java",

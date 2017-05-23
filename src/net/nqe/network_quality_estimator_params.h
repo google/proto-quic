@@ -44,25 +44,21 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimatorParams {
 
   // Returns a descriptive name corresponding to |connection_type|.
   static const char* GetNameForConnectionType(
-      net::NetworkChangeNotifier::ConnectionType connection_type);
+      NetworkChangeNotifier::ConnectionType connection_type);
 
-  // Sets the default observation for different connection types in
-  // |default_observations|. The default observations are different for
-  // different connection types (e.g., 2G, 3G, 4G, WiFi). The default
-  // observations may be used to determine the network quality in absence of any
-  // other information.
-  void ObtainDefaultObservations(
-      nqe::internal::NetworkQuality default_observations[]) const;
+  // Returns the default observation for connection |type|. The default
+  // observations are different for different connection types (e.g., 2G, 3G,
+  // 4G, WiFi). The default observations may be used to determine the network
+  // quality in absence of any other information.
+  const NetworkQuality& DefaultObservation(
+      NetworkChangeNotifier::ConnectionType type) const;
 
-  // Sets |typical_network_quality| to typical network quality for different
-  // effective connection types.
-  void ObtainTypicalNetworkQuality(
-      NetworkQuality typical_network_quality[]) const;
+  // Returns the typical network quality for connection |type|.
+  const NetworkQuality& TypicalNetworkQuality(
+      EffectiveConnectionType type) const;
 
-  // Sets the thresholds for different effective connection types in
-  // |connection_thresholds|.
-  void ObtainEffectiveConnectionTypeModelParams(
-      nqe::internal::NetworkQuality connection_thresholds[]) const;
+  // Returns the threshold for effective connection type |type|.
+  const NetworkQuality& ConnectionThreshold(EffectiveConnectionType type) const;
 
   // Returns the weight multiplier per second, which represents the factor by
   // which the weight of an observation reduces every second.
@@ -114,6 +110,21 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimatorParams {
       forced_effective_connection_type_;
   const bool persistent_cache_reading_enabled_;
   const base::TimeDelta min_socket_watcher_notification_interval_;
+
+  // Default network quality observations obtained from |params_|.
+  NetworkQuality
+      default_observations_[NetworkChangeNotifier::CONNECTION_LAST + 1];
+
+  // Typical network quality for different effective connection types obtained
+  // from |params_|.
+  NetworkQuality typical_network_quality_
+      [EffectiveConnectionType::EFFECTIVE_CONNECTION_TYPE_LAST];
+
+  // Thresholds for different effective connection types obtained from
+  // |params_|. These thresholds encode how different connection types behave
+  // in general.
+  NetworkQuality connection_thresholds_
+      [EffectiveConnectionType::EFFECTIVE_CONNECTION_TYPE_LAST];
 
   base::ThreadChecker thread_checker_;
 

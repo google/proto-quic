@@ -1353,6 +1353,43 @@ TEST(ValuesTest, DictionaryIterator) {
   EXPECT_TRUE(seen2);
 }
 
+TEST(ValuesTest, StdDictionaryIterator) {
+  DictionaryValue dict;
+  for (auto it = dict.begin(); it != dict.end(); ++it) {
+    ADD_FAILURE();
+  }
+
+  Value value1("value1");
+  dict.Set("key1", MakeUnique<Value>(value1));
+  bool seen1 = false;
+  for (const auto& it : dict) {
+    EXPECT_FALSE(seen1);
+    EXPECT_EQ("key1", it.first);
+    EXPECT_EQ(value1, *it.second);
+    seen1 = true;
+  }
+  EXPECT_TRUE(seen1);
+
+  Value value2("value2");
+  dict.Set("key2", MakeUnique<Value>(value2));
+  bool seen2 = seen1 = false;
+  for (const auto& it : dict) {
+    if (it.first == "key1") {
+      EXPECT_FALSE(seen1);
+      EXPECT_EQ(value1, *it.second);
+      seen1 = true;
+    } else if (it.first == "key2") {
+      EXPECT_FALSE(seen2);
+      EXPECT_EQ(value2, *it.second);
+      seen2 = true;
+    } else {
+      ADD_FAILURE();
+    }
+  }
+  EXPECT_TRUE(seen1);
+  EXPECT_TRUE(seen2);
+}
+
 // DictionaryValue/ListValue's Get*() methods should accept NULL as an out-value
 // and still return true/false based on success.
 TEST(ValuesTest, GetWithNullOutValue) {

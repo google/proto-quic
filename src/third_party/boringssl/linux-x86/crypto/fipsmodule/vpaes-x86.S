@@ -1,5 +1,4 @@
 #if defined(__i386__)
-.file	"vpaes-x86.S"
 .text
 .align	64
 .L_vpaes_consts:

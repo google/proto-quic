@@ -10,7 +10,10 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Environment;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.RemoteException;
+
+import org.junit.Assert;
 
 import org.chromium.base.Log;
 
@@ -226,6 +229,9 @@ public class EmbeddedTestServer {
      */
     public static EmbeddedTestServer createAndStartServer(Context context)
             throws InterruptedException {
+        Assert.assertNotEquals("EmbeddedTestServer should not be created on UiThread, "
+                + "the instantiation will hang forever waiting for tasks to post to UI thread",
+                Looper.getMainLooper(), Looper.myLooper());
         EmbeddedTestServer server = new EmbeddedTestServer();
         server.initializeNative(context);
         server.addDefaultHandlers("");

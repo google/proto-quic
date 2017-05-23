@@ -16,24 +16,22 @@ SharedMemoryHandle::SharedMemoryHandle() = default;
 
 SharedMemoryHandle::SharedMemoryHandle(
     const base::FileDescriptor& file_descriptor,
+    size_t size,
     const base::UnguessableToken& guid)
-    : file_descriptor_(file_descriptor), guid_(guid) {}
+    : file_descriptor_(file_descriptor), guid_(guid), size_(size) {}
 
 // static
-SharedMemoryHandle SharedMemoryHandle::ImportHandle(int fd) {
+SharedMemoryHandle SharedMemoryHandle::ImportHandle(int fd, size_t size) {
   SharedMemoryHandle handle;
   handle.file_descriptor_.fd = fd;
   handle.file_descriptor_.auto_close = false;
   handle.guid_ = UnguessableToken::Create();
+  handle.size_ = size;
   return handle;
 }
 
 int SharedMemoryHandle::GetHandle() const {
   return file_descriptor_.fd;
-}
-
-void SharedMemoryHandle::SetHandle(int handle) {
-  file_descriptor_.fd = handle;
 }
 
 bool SharedMemoryHandle::IsValid() const {
@@ -58,7 +56,8 @@ SharedMemoryHandle SharedMemoryHandle::Duplicate() const {
   int duped_handle = HANDLE_EINTR(dup(file_descriptor_.fd));
   if (duped_handle < 0)
     return SharedMemoryHandle();
-  return SharedMemoryHandle(FileDescriptor(duped_handle, true), GetGUID());
+  return SharedMemoryHandle(FileDescriptor(duped_handle, true), GetSize(),
+                            GetGUID());
 }
 
 void SharedMemoryHandle::SetOwnershipPassesToIPC(bool ownership_passes) {

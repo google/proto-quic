@@ -84,6 +84,8 @@ namespace base {
 // Insert and accessor functions:
 //   pair<iterator, bool> insert(const Key&);
 //   pair<iterator, bool> insert(Key&&);
+//   void                 insert(InputIterator first, InputIterator last,
+//                               FlatContainerDupes);
 //   pair<iterator, bool> emplace(Args&&...);
 //   iterator             emplace_hint(const_iterator, Args&&...);
 //

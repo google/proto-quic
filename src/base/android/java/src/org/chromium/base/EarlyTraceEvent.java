@@ -81,6 +81,7 @@ public class EarlyTraceEvent {
      */
     @SuppressFBWarnings("DMI_HARDCODED_ABSOLUTE_FILENAME")
     static void maybeEnable() {
+        ThreadUtils.assertOnUiThread();
         boolean shouldEnable = false;
         // Checking for the trace config filename touches the disk.
         StrictMode.ThreadPolicy oldPolicy = StrictMode.allowThreadDiskReads();
@@ -126,6 +127,16 @@ public class EarlyTraceEvent {
         }
     }
 
+    /**
+     * Returns whether early tracing is currently active.
+     *
+     * Active means that Early Tracing is either enabled or waiting to complete pending events.
+     */
+    static boolean isActive() {
+        int state = sState;
+        return (state == STATE_ENABLED || state == STATE_FINISHING);
+    }
+
     /** @see {@link TraceEvent#begin()}. */
     public static void begin(String name) {
         // begin() and end() are going to be called once per TraceEvent, this avoids entering a
@@ -145,10 +156,9 @@ public class EarlyTraceEvent {
 
     /** @see {@link TraceEvent#end()}. */
     public static void end(String name) {
-        int state = sState;
-        if (state != STATE_ENABLED && state != STATE_FINISHING) return;
+        if (!isActive()) return;
         synchronized (sLock) {
-            if (sState != STATE_ENABLED && sState != STATE_FINISHING) return;
+            if (!isActive()) return;
             Event event = sPendingEvents.remove(name);
             if (event == null) return;
             event.end();

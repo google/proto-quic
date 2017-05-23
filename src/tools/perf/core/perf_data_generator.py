@@ -32,32 +32,6 @@ from core.sharding_map_generator import load_benchmark_sharding_map
 SCRIPT_TESTS = [
   {
     'args': [
-      'gpu_perftests',
-      '--adb-path',
-      'src/third_party/catapult/devil/bin/deps/linux2/x86_64/bin/adb',
-    ],
-    'name': 'gpu_perftests',
-    'script': 'gtest_perf_test.py',
-    'testers': {
-      'chromium.perf': [
-        {
-          'name': 'Android Nexus5 Perf',
-          'shards': [2]
-        },
-        {
-          'name': 'Android Nexus7v2 Perf',
-          'shards': [2]
-        }
-        # crbug.com/663762
-        #{
-        #  'name': 'Android Nexus9 Perf',
-        #  'shards': [2]
-        #}
-      ],
-    }
-  },
-  {
-    'args': [
       'cc_perftests',
       '--adb-path',
       'src/third_party/catapult/devil/bin/deps/linux2/x86_64/bin/adb',
@@ -96,18 +70,6 @@ SCRIPT_TESTS = [
     'script': 'gtest_perf_test.py',
     'testers': {
       'chromium.perf': [
-        {
-          'name': 'Android Nexus5 Perf',
-          'shards': [2]
-        },
-        {
-          'name': 'Android Nexus6 Perf',
-          'shards': [2]
-        },
-        {
-          'name': 'Android Nexus7v2 Perf',
-          'shards': [2]
-        },
         {
           'name': 'Android Nexus9 Perf',
           'shards': [2]
@@ -227,18 +189,6 @@ def get_waterfall_config():
   # build/scripts/slave/recipe_modules/chromium_tests and must be kept in sync
   # to generate the correct json for each tester
   waterfall = add_tester(
-    waterfall, 'Android Nexus5 Perf', 'android-nexus5',
-    'android', target_bits=32, num_device_shards=7, num_host_shards=3)
-  waterfall = add_tester(
-    waterfall, 'Android Nexus5X Perf', 'android-nexus5X',
-    'android', target_bits=32, num_device_shards=7, num_host_shards=3)
-  waterfall = add_tester(
-    waterfall, 'Android Nexus6 Perf', 'android-nexus6',
-    'android', target_bits=32, num_device_shards=7, num_host_shards=3)
-  waterfall = add_tester(
-    waterfall, 'Android Nexus7v2 Perf', 'android-nexus7v2',
-   'android', target_bits=32, num_device_shards=7, num_host_shards=3)
-  waterfall = add_tester(
     waterfall, 'Android One Perf', 'android-one',
     'android', target_bits=32, num_device_shards=7, num_host_shards=3)
 
@@ -264,9 +214,113 @@ def get_waterfall_config():
          ('tracing_perftests', 'build73-b1--device2'),
          ('gpu_perftests', 'build73-b1--device2'),
          #  ('cc_perftests', 'build73-b1--device2'),  # crbug.com/721757
-         ]
+        ]
       }
     ])
+  waterfall = add_tester(
+    waterfall, 'Android Nexus5 Perf', 'android-nexus5', 'android',
+    swarming=[
+      {
+       'os': 'Android',
+       'android_devices': '1',
+       'pool': 'Chrome-perf',
+       'device_ids': [
+           'build13-b1--device1', 'build13-b1--device2', 'build13-b1--device3',
+           'build13-b1--device4', 'build13-b1--device5', 'build13-b1--device6',
+           'build13-b1--device7',
+           'build14-b1--device1', 'build14-b1--device2', 'build14-b1--device3',
+           'build14-b1--device4', 'build14-b1--device5', 'build14-b1--device6',
+           'build14-b1--device7',
+           'build48-b1--device1', 'build48-b1--device2', 'build48-b1--device3',
+           'build48-b1--device4', 'build48-b1--device5', 'build48-b1--device6',
+           'build48-b1--device7',
+          ],
+       'perf_tests': [
+         ('tracing_perftests', 'build13-b1--device2'),
+         ('gpu_perftests', 'build13-b1--device2'),
+         ('cc_perftests', 'build13-b1--device2'),
+        ]
+      }
+    ])
+
+  waterfall = add_tester(
+    waterfall, 'Android Nexus6 Perf', 'android-nexus6', 'android',
+    swarming=[
+      {
+       'os': 'Android',
+       'android_devices': '1',
+       'pool': 'Chrome-perf',
+       'device_ids': [
+           'build15-b1--device1', 'build15-b1--device2', 'build15-b1--device3',
+           'build15-b1--device4', 'build15-b1--device5', 'build15-b1--device6',
+           'build15-b1--device7',
+           'build16-b1--device1', 'build16-b1--device2', 'build16-b1--device3',
+           'build16-b1--device4', 'build16-b1--device5', 'build16-b1--device6',
+           'build16-b1--device7',
+           'build45-b1--device1', 'build45-b1--device2', 'build45-b1--device3',
+           'build45-b1--device4', 'build45-b1--device5', 'build45-b1--device6',
+           'build45-b1--device7',
+          ],
+       'perf_tests': [
+         ('tracing_perftests', 'build15-b1--device2'),
+         ('gpu_perftests', 'build16-b1--device2'),
+         ('cc_perftests', 'build45-b1--device2'),
+        ]
+      }
+    ])
+
+  waterfall = add_tester(
+    waterfall, 'Android Nexus7v2 Perf', 'android-nexus7v2', 'android',
+    swarming=[
+      {
+       'os': 'Android',
+       'android_devices': '1',
+       'pool': 'Chrome-perf',
+       'device_ids': [
+           'build9-b1--device1', 'build9-b1--device2', 'build9-b1--device3',
+           'build9-b1--device4', 'build9-b1--device5', 'build9-b1--device6',
+           'build9-b1--device7',
+           'build10-b1--device1', 'build10-b1--device2', 'build10-b1--device3',
+           'build10-b1--device4', 'build10-b1--device5', 'build10-b1--device6',
+           'build10-b1--device7',
+           'build49-b1--device1', 'build49-b1--device2', 'build49-b1--device3',
+           'build49-b1--device4', 'build49-b1--device5', 'build49-b1--device6',
+           'build49-b1--device7',
+          ],
+       'perf_tests': [
+         ('tracing_perftests', 'build9-b1--device2'),
+         ('gpu_perftests', 'build10-b1--device2'),
+         ('cc_perftests', 'build49-b1--device2'),
+        ]
+      }
+    ])
+
+  waterfall = add_tester(
+    waterfall, 'Android One Perf', 'android-nexus7v2', 'android',
+    swarming=[
+      {
+       'os': 'Android',
+       'android_devices': '1',
+       'pool': 'Chrome-perf',
+       'device_ids': [
+           'build17-b1--device1', 'build17-b1--device2', 'build17-b1--device3',
+           'build17-b1--device4', 'build17-b1--device5', 'build17-b1--device6',
+           'build17-b1--device7',
+           'build18-b1--device1', 'build18-b1--device2', 'build18-b1--device3',
+           'build18-b1--device4', 'build18-b1--device5', 'build18-b1--device6',
+           'build18-b1--device7',
+           'build47-b1--device1', 'build47-b1--device2', 'build47-b1--device3',
+           'build47-b1--device4', 'build47-b1--device5', 'build47-b1--device6',
+           'build47-b1--device7',
+          ],
+       'perf_tests': [
+         ('tracing_perftests', 'build17-b1--device2'),
+         ('gpu_perftests', 'build18-b1--device2'),
+         ('cc_perftests', 'build47-b1--device2'),
+        ]
+      }
+    ])
+
   waterfall = add_tester(
     waterfall, 'Win 10 High-DPI Perf', 'win-high-dpi', 'win',
     swarming=[
@@ -327,7 +381,7 @@ def get_waterfall_config():
           ],
        'perf_tests': [
          ('load_library_perf_tests', 'build187-m1'),
-         ('performance_browser_tests', 'build187-m1'),
+         #  ('performance_browser_tests', 'build187-m1'),  # crbug.com/722367
          ('media_perftests', 'build188-m1')]
       }
     ])
@@ -363,7 +417,7 @@ def get_waterfall_config():
        'perf_tests': [
          ('angle_perftests', 'build103-m1'),
          ('load_library_perf_tests', 'build103-m1'),
-         ('performance_browser_tests', 'build103-m1'),
+         # ('performance_browser_tests', 'build103-m1'),  # crbug.com/722367
          ('media_perftests', 'build104-m1')]
       }
     ])
@@ -400,7 +454,7 @@ def get_waterfall_config():
        'perf_tests': [
          ('angle_perftests', 'build94-m1'),
          ('load_library_perf_tests', 'build94-m1'),
-         ('performance_browser_tests', 'build94-m1'),
+         # ('performance_browser_tests', 'build94-m1'),  # crbug.com/722367
          ('media_perftests', 'build95-m1')]
       }
     ])
@@ -446,7 +500,7 @@ def get_waterfall_config():
            'build4-b1', 'build5-b1', 'build6-b1', 'build7-b1', 'build8-b1'
           ],
        'perf_tests': [
-         ('performance_browser_tests', 'build8-b1')
+         # ('performance_browser_tests', 'build8-b1')  # crbug.com/722367
        ]
       }
     ])
@@ -463,7 +517,7 @@ def get_waterfall_config():
            'build130-b1', 'build131-b1', 'build132-b1'
           ],
        'perf_tests': [
-         ('performance_browser_tests', 'build132-b1')
+         # ('performance_browser_tests', 'build132-b1')  # crbug.com/722367
        ]
       }
     ])
@@ -480,7 +534,7 @@ def get_waterfall_config():
            'build125-b1', 'build126-b1', 'build127-b1'
           ],
        'perf_tests': [
-         ('performance_browser_tests', 'build126-b1')
+         # ('performance_browser_tests', 'build126-b1')  # crbug.com/722367
        ]
       }
     ])
@@ -700,7 +754,7 @@ def generate_telemetry_tests(name, tester_config, benchmarks,
 
 # Overrides the default 2 hour timeout for swarming tasks.
 BENCHMARK_SWARMING_TIMEOUTS = {
-    'loading.mobile': 14400, # 4 hours
+    'loading.mobile': 16200, # 4.5 hours
     'system_health.memory_mobile': 10800, # 4 hours
 }
 

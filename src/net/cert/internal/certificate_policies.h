@@ -22,6 +22,13 @@ class Input;
 // certificate policy defined in RFC 5280 section 4.2.1.4.
 NET_EXPORT const der::Input AnyPolicy();
 
+// From RFC 5280:
+//
+//     id-ce-inhibitAnyPolicy OBJECT IDENTIFIER ::=  { id-ce 54 }
+//
+// In dotted notation: 2.5.29.54
+NET_EXPORT der::Input InhibitAnyPolicyOid();
+
 // Parses a certificatePolicies extension and stores the policy OIDs in
 // |*policies|, in sorted order. If policyQualifiers are present,
 // they are ignored. (RFC 5280 section 4.2.1.4 says "optional qualifiers, which
@@ -47,6 +54,11 @@ struct ParsedPolicyConstraints {
 NET_EXPORT bool ParsePolicyConstraints(const der::Input& policy_constraints_tlv,
                                        ParsedPolicyConstraints* out)
     WARN_UNUSED_RESULT;
+
+// Parses an InhibitAnyPolicy as defined by RFC 5280. Returns true on success,
+// and sets |out|.
+NET_EXPORT bool ParseInhibitAnyPolicy(const der::Input& inhibit_any_policy_tlv,
+                                      uint8_t* num_certs) WARN_UNUSED_RESULT;
 
 }  // namespace net
 

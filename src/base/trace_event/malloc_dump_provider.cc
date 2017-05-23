@@ -242,6 +242,8 @@ bool MallocDumpProvider::OnMemoryDump(const MemoryDumpArgs& args,
   resident_size = main_heap_info.committed_size;
   allocated_objects_size = main_heap_info.allocated_size;
   allocated_objects_count = main_heap_info.block_count;
+#elif defined(OS_FUCHSIA)
+// TODO(fuchsia): Port, see https://crbug.com/706592.
 #else
   struct mallinfo info = mallinfo();
   DCHECK_GE(info.arena + info.hblkhd, info.uordblks);

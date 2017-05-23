@@ -150,4 +150,7 @@ TEST(ParseCertificatePoliciesTest, TwoPoliciesWithQualifiers) {
 // NOTE: The tests for ParseCertificatePolicies() are part of
 // parsed_certificate_unittest.cc
 
+// NOTE: The tests for ParseInhibitAnyPolicy() are part of
+// parsed_certificate_unittest.cc
+
 }  // namespace net

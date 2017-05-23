@@ -104,17 +104,10 @@ def _ComputeTraceEventsThreadTimeForBlinkPerf(
 
   for event_name in trace_events_to_measure:
     curr_test_runs_bound_index = 0
-    seen_uuids = set()
+    prev_event = None
     for event in model.IterAllEventsOfName(event_name):
-      # Trace events can be duplicated in some cases. Filter out trace events
-      # that have duplicated uuid.
-      event_uuid = None
-      if event.args:
-        event_uuid = event.args.get('uuid')
-      if event_uuid and event_uuid in seen_uuids:
+      if prev_event and prev_event.end >= event.start:
         continue
-      elif event_uuid:
-        seen_uuids.add(event_uuid)
       while (curr_test_runs_bound_index < len(test_runs_bounds) and
              event.start > test_runs_bounds[curr_test_runs_bound_index].max):
         curr_test_runs_bound_index += 1
@@ -130,6 +123,7 @@ def _ComputeTraceEventsThreadTimeForBlinkPerf(
         intersect_cpu_time = intersect_wall_time
       trace_cpu_time_metrics[event_name][curr_test_runs_bound_index] += (
           intersect_cpu_time)
+      prev_event = event
   return trace_cpu_time_metrics
 
 
@@ -258,11 +252,6 @@ class _BlinkPerfBenchmark(perf_benchmark.PerfBenchmark):
 class BlinkPerfBindings(_BlinkPerfBenchmark):
   tag = 'bindings'
   subdir = 'Bindings'
-
-  @classmethod
-  def ShouldDisable(cls, possible_browser):
-    # http://crbug.com/563979
-    return cls.IsSvelte(possible_browser)
 
 
 @benchmark.Enabled('content-shell')

@@ -26,12 +26,6 @@ struct Dummy {
   int releases;
 };
 
-extern const IID dummy_iid;
-const IID dummy_iid = {0x12345678u,
-                       0x1234u,
-                       0x5678u,
-                       {01, 23, 45, 67, 89, 01, 23, 45}};
-
 }  // namespace
 
 TEST(ScopedComPtrTest, ScopedComPtr) {
@@ -39,7 +33,8 @@ TEST(ScopedComPtrTest, ScopedComPtr) {
   EXPECT_TRUE(com_initializer.succeeded());
 
   ScopedComPtr<IUnknown> unk;
-  EXPECT_TRUE(SUCCEEDED(unk.CreateInstance(CLSID_ShellLink)));
+  EXPECT_TRUE(SUCCEEDED(::CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_ALL,
+                                           IID_PPV_ARGS(&unk))));
   ScopedComPtr<IUnknown> unk2;
   unk2.Attach(unk.Detach());
   EXPECT_TRUE(unk.Get() == NULL);
@@ -55,7 +50,7 @@ TEST(ScopedComPtrTest, ScopedComPtr) {
 
 TEST(ScopedComPtrTest, ScopedComPtrVector) {
   // Verify we don't get error C2558.
-  typedef ScopedComPtr<Dummy, &dummy_iid> Ptr;
+  typedef ScopedComPtr<Dummy> Ptr;
   std::vector<Ptr> bleh;
 
   std::unique_ptr<Dummy> p(new Dummy);

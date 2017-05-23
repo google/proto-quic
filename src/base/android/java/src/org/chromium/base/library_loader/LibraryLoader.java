@@ -357,10 +357,6 @@ public class LibraryLoader {
         nativeInitCommandLine(CommandLine.getJavaSwitchesOrNull());
         CommandLine.enableNativeProxy();
         mCommandLineSwitched = true;
-
-        // Ensure that native side application context is loaded and in sync with java side. Must do
-        // this here so webview also gets its application context set before fully initializing.
-        ContextUtils.initApplicationContextForNative();
     }
 
     // Invoke base::android::LibraryLoaded in library_loader_hooks.cc

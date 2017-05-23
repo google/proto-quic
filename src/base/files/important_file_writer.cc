@@ -176,9 +176,6 @@ void ImportantFileWriter::WriteNow(std::unique_ptr<std::string> data) {
     return;
   }
 
-  if (HasPendingWrite())
-    timer_.Stop();
-
   Closure task = AdaptCallbackForRepeating(
       BindOnce(&WriteScopedStringToFileAtomically, path_, std::move(data),
                std::move(before_next_write_callback_),
@@ -192,6 +189,7 @@ void ImportantFileWriter::WriteNow(std::unique_ptr<std::string> data) {
 
     task.Run();
   }
+  ClearPendingWrite();
 }
 
 void ImportantFileWriter::ScheduleWrite(DataSerializer* serializer) {
@@ -215,7 +213,7 @@ void ImportantFileWriter::DoScheduledWrite() {
     DLOG(WARNING) << "failed to serialize data to be saved in "
                   << path_.value();
   }
-  serializer_ = nullptr;
+  ClearPendingWrite();
 }
 
 void ImportantFileWriter::RegisterOnNextWriteCallbacks(
@@ -223,6 +221,11 @@ void ImportantFileWriter::RegisterOnNextWriteCallbacks(
     const Callback<void(bool success)>& after_next_write_callback) {
   before_next_write_callback_ = before_next_write_callback;
   after_next_write_callback_ = after_next_write_callback;
+}
+
+void ImportantFileWriter::ClearPendingWrite() {
+  timer_.Stop();
+  serializer_ = nullptr;
 }
 
 }  // namespace base

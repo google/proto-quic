@@ -396,6 +396,65 @@ TEST_P(CertVerifyProcInternalTest, DISABLED_PaypalNullCertParsing) {
   // TODO(crbug.com/649017): What expectations to use for the other verifiers?
 }
 
+#if BUILDFLAG(USE_BYTE_CERTS)
+// Tests the case where the target certificate is accepted by
+// X509CertificateBytes, but has errors that should cause verification to fail.
+TEST_P(CertVerifyProcInternalTest, InvalidTarget) {
+  base::FilePath certs_dir =
+      GetTestNetDataDirectory().AppendASCII("parse_certificate_unittest");
+  scoped_refptr<X509Certificate> bad_cert =
+      ImportCertFromFile(certs_dir, "extensions_data_after_sequence.pem");
+  ASSERT_TRUE(bad_cert);
+
+  scoped_refptr<X509Certificate> ok_cert(
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem"));
+  ASSERT_TRUE(ok_cert);
+
+  scoped_refptr<X509Certificate> cert_with_bad_target(
+      X509Certificate::CreateFromHandle(bad_cert->os_cert_handle(),
+                                        {ok_cert->os_cert_handle()}));
+  ASSERT_TRUE(cert_with_bad_target);
+  EXPECT_EQ(1U, cert_with_bad_target->GetIntermediateCertificates().size());
+
+  int flags = 0;
+  CertVerifyResult verify_result;
+  int error = Verify(cert_with_bad_target.get(), "127.0.0.1", flags, NULL,
+                     CertificateList(), &verify_result);
+
+  EXPECT_TRUE(verify_result.cert_status & CERT_STATUS_INVALID);
+  EXPECT_THAT(error, IsError(ERR_CERT_INVALID));
+}
+
+// Tests the case where an intermediate certificate is accepted by
+// X509CertificateBytes, but has errors that should cause verification to fail.
+TEST_P(CertVerifyProcInternalTest, InvalidIntermediate) {
+  base::FilePath certs_dir =
+      GetTestNetDataDirectory().AppendASCII("parse_certificate_unittest");
+  scoped_refptr<X509Certificate> bad_cert =
+      ImportCertFromFile(certs_dir, "extensions_data_after_sequence.pem");
+  ASSERT_TRUE(bad_cert);
+
+  scoped_refptr<X509Certificate> ok_cert(
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem"));
+  ASSERT_TRUE(ok_cert);
+
+  scoped_refptr<X509Certificate> cert_with_bad_intermediate(
+      X509Certificate::CreateFromHandle(ok_cert->os_cert_handle(),
+                                        {bad_cert->os_cert_handle()}));
+  ASSERT_TRUE(cert_with_bad_intermediate);
+  EXPECT_EQ(1U,
+            cert_with_bad_intermediate->GetIntermediateCertificates().size());
+
+  int flags = 0;
+  CertVerifyResult verify_result;
+  int error = Verify(cert_with_bad_intermediate.get(), "127.0.0.1", flags, NULL,
+                     CertificateList(), &verify_result);
+
+  EXPECT_TRUE(verify_result.cert_status & CERT_STATUS_INVALID);
+  EXPECT_THAT(error, IsError(ERR_CERT_INVALID));
+}
+#endif  // BUILDFLAG(USE_BYTE_CERTS)
+
 // A regression test for http://crbug.com/31497.
 TEST_P(CertVerifyProcInternalTest, IntermediateCARequireExplicitPolicy) {
   if (verify_proc_type() == CERT_VERIFY_PROC_ANDROID) {

@@ -227,16 +227,6 @@ bool BidirectionalStreamQuicImpl::GetLoadTimingInfo(
   return true;
 }
 
-void BidirectionalStreamQuicImpl::OnInitialHeadersAvailable(
-    const SpdyHeaderBlock& headers,
-    size_t frame_len) {
-  headers_bytes_received_ += frame_len;
-  negotiated_protocol_ = kProtoQUIC;
-  connect_timing_ = session_->GetConnectTiming();
-  if (delegate_)
-    delegate_->OnHeadersReceived(headers);
-}
-
 void BidirectionalStreamQuicImpl::OnTrailingHeadersAvailable(
     const SpdyHeaderBlock& headers,
     size_t frame_len) {
@@ -295,6 +285,15 @@ void BidirectionalStreamQuicImpl::OnStreamReady(int rv) {
   if (rv == OK) {
     stream_ = session_->ReleaseStream(this);
     NotifyStreamReady();
+
+    rv = stream_->ReadInitialHeaders(
+        &initial_headers_,
+        base::Bind(&BidirectionalStreamQuicImpl::OnReadInitialHeadersComplete,
+                   weak_factory_.GetWeakPtr()));
+    if (rv == ERR_IO_PENDING)
+      return;
+
+    OnReadInitialHeadersComplete(rv);
   } else {
     NotifyError(rv);
   }
@@ -308,6 +307,20 @@ void BidirectionalStreamQuicImpl::OnSendDataComplete(int rv) {
   } else {
     NotifyError(rv);
   }
+}
+
+void BidirectionalStreamQuicImpl::OnReadInitialHeadersComplete(int rv) {
+  DCHECK_NE(ERR_IO_PENDING, rv);
+  if (rv < 0) {
+    NotifyError(rv);
+    return;
+  }
+
+  headers_bytes_received_ += rv;
+  negotiated_protocol_ = kProtoQUIC;
+  connect_timing_ = session_->GetConnectTiming();
+  if (delegate_)
+    delegate_->OnHeadersReceived(initial_headers_);
 }
 
 void BidirectionalStreamQuicImpl::NotifyError(int error) {

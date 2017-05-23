@@ -40,6 +40,12 @@ const char* const kDumpProviderWhitelist[] = {
     nullptr  // End of list marker.
 };
 
+// The names of dump providers whitelisted for summary tracing.
+const char* const kDumpProviderSummaryWhitelist[] = {
+    "Malloc", "PartitionAlloc", "ProcessMemoryMetrics", "V8Isolate",
+    nullptr  // End of list marker.
+};
+
 // A list of string names that are allowed for the memory allocator dumps in
 // background mode.
 const char* const kAllocatorDumpNameWhitelist[] = {
@@ -205,17 +211,28 @@ const char* const kAllocatorDumpNameWhitelist[] = {
 };
 
 const char* const* g_dump_provider_whitelist = kDumpProviderWhitelist;
+const char* const* g_dump_provider_whitelist_for_summary =
+    kDumpProviderSummaryWhitelist;
 const char* const* g_allocator_dump_name_whitelist =
     kAllocatorDumpNameWhitelist;
+
+bool IsMemoryDumpProviderInList(const char* mdp_name, const char* const* list) {
+  for (size_t i = 0; list[i] != nullptr; ++i) {
+    if (strcmp(mdp_name, list[i]) == 0)
+      return true;
+  }
+  return false;
+}
 
 }  // namespace
 
 bool IsMemoryDumpProviderWhitelisted(const char* mdp_name) {
-  for (size_t i = 0; g_dump_provider_whitelist[i] != nullptr; ++i) {
-    if (strcmp(mdp_name, g_dump_provider_whitelist[i]) == 0)
-      return true;
-  }
-  return false;
+  return IsMemoryDumpProviderInList(mdp_name, g_dump_provider_whitelist);
+}
+
+bool IsMemoryDumpProviderWhitelistedForSummary(const char* mdp_name) {
+  return IsMemoryDumpProviderInList(mdp_name,
+                                    g_dump_provider_whitelist_for_summary);
 }
 
 bool IsMemoryAllocatorDumpNameWhitelisted(const std::string& name) {
@@ -248,6 +265,10 @@ bool IsMemoryAllocatorDumpNameWhitelisted(const std::string& name) {
 
 void SetDumpProviderWhitelistForTesting(const char* const* list) {
   g_dump_provider_whitelist = list;
+}
+
+void SetDumpProviderSummaryWhitelistForTesting(const char* const* list) {
+  g_dump_provider_whitelist_for_summary = list;
 }
 
 void SetAllocatorDumpNameWhitelistForTesting(const char* const* list) {

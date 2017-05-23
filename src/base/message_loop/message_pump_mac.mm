@@ -44,39 +44,8 @@ const CFStringRef kAllModes[] = {
     CFSTR("NSUnhighlightMenuRunLoopMode"),
 };
 
-void CFRunLoopAddSourceToAllModes(CFRunLoopRef rl, CFRunLoopSourceRef source) {
-  for (const CFStringRef& mode : kAllModes)
-    CFRunLoopAddSource(rl, source, mode);
-}
-
-void CFRunLoopRemoveSourceFromAllModes(CFRunLoopRef rl,
-                                       CFRunLoopSourceRef source) {
-  for (const CFStringRef& mode : kAllModes)
-    CFRunLoopRemoveSource(rl, source, mode);
-}
-
-void CFRunLoopAddTimerToAllModes(CFRunLoopRef rl, CFRunLoopTimerRef timer) {
-  for (const CFStringRef& mode : kAllModes)
-    CFRunLoopAddTimer(rl, timer, mode);
-}
-
-void CFRunLoopRemoveTimerFromAllModes(CFRunLoopRef rl,
-                                      CFRunLoopTimerRef timer) {
-  for (const CFStringRef& mode : kAllModes)
-    CFRunLoopRemoveTimer(rl, timer, mode);
-}
-
-void CFRunLoopAddObserverToAllModes(CFRunLoopRef rl,
-                                    CFRunLoopObserverRef observer) {
-  for (const CFStringRef& mode : kAllModes)
-    CFRunLoopAddObserver(rl, observer, mode);
-}
-
-void CFRunLoopRemoveObserverFromAllModes(CFRunLoopRef rl,
-                                         CFRunLoopObserverRef observer) {
-  for (const CFStringRef& mode : kAllModes)
-    CFRunLoopRemoveObserver(rl, observer, mode);
-}
+// Mask that determines which modes in |kAllModes| to use.
+enum { kCommonModeMask = 0x1, kAllModesMask = ~0 };
 
 void NoOp(void* info) {
 }
@@ -154,6 +123,186 @@ class MessagePumpScopedAutoreleasePool {
   DISALLOW_COPY_AND_ASSIGN(MessagePumpScopedAutoreleasePool);
 };
 
+// Must be called on the run loop thread.
+void MessagePumpCFRunLoopBase::Run(Delegate* delegate) {
+  // nesting_level_ will be incremented in EnterExitRunLoop, so set
+  // run_nesting_level_ accordingly.
+  int last_run_nesting_level = run_nesting_level_;
+  run_nesting_level_ = nesting_level_ + 1;
+
+  Delegate* last_delegate = delegate_;
+  SetDelegate(delegate);
+
+  DoRun(delegate);
+
+  // Restore the previous state of the object.
+  SetDelegate(last_delegate);
+  run_nesting_level_ = last_run_nesting_level;
+}
+
+// May be called on any thread.
+void MessagePumpCFRunLoopBase::ScheduleWork() {
+  CFRunLoopSourceSignal(work_source_);
+  CFRunLoopWakeUp(run_loop_);
+}
+
+// Must be called on the run loop thread.
+void MessagePumpCFRunLoopBase::ScheduleDelayedWork(
+    const TimeTicks& delayed_work_time) {
+  TimeDelta delta = delayed_work_time - TimeTicks::Now();
+  delayed_work_fire_time_ = CFAbsoluteTimeGetCurrent() + delta.InSecondsF();
+
+  // Flip the timer's validation bit just before setting the new fire time. Do
+  // this now because CFRunLoopTimerSetNextFireDate() likely checks the validity
+  // of a timer before proceeding to set its fire date. Making the timer valid
+  // now won't have any side effects (such as a premature firing of the timer)
+  // because we're only flipping a bit.
+  //
+  // Please see the comment in RunDelayedWorkTimer() for more info on the whys
+  // of invalidation.
+  ChromeCFRunLoopTimerSetValid(delayed_work_timer_, true);
+
+  CFRunLoopTimerSetNextFireDate(delayed_work_timer_, delayed_work_fire_time_);
+  if (timer_slack_ == TIMER_SLACK_MAXIMUM) {
+    CFRunLoopTimerSetTolerance(delayed_work_timer_, delta.InSecondsF() * 0.5);
+  } else {
+    CFRunLoopTimerSetTolerance(delayed_work_timer_, 0);
+  }
+}
+
+void MessagePumpCFRunLoopBase::SetTimerSlack(TimerSlack timer_slack) {
+  timer_slack_ = timer_slack;
+}
+
+// Must be called on the run loop thread.
+MessagePumpCFRunLoopBase::MessagePumpCFRunLoopBase(int mode_mask)
+    : mode_mask_(mode_mask),
+      delegate_(NULL),
+      delayed_work_fire_time_(kCFTimeIntervalMax),
+      timer_slack_(base::TIMER_SLACK_NONE),
+      nesting_level_(0),
+      run_nesting_level_(0),
+      deepest_nesting_level_(0),
+      delegateless_work_(false),
+      delegateless_idle_work_(false) {
+  run_loop_ = CFRunLoopGetCurrent();
+  CFRetain(run_loop_);
+
+  // Set a repeating timer with a preposterous firing time and interval.  The
+  // timer will effectively never fire as-is.  The firing time will be adjusted
+  // as needed when ScheduleDelayedWork is called.
+  CFRunLoopTimerContext timer_context = CFRunLoopTimerContext();
+  timer_context.info = this;
+  delayed_work_timer_ = CFRunLoopTimerCreate(NULL,                // allocator
+                                             kCFTimeIntervalMax,  // fire time
+                                             kCFTimeIntervalMax,  // interval
+                                             0,                   // flags
+                                             0,                   // priority
+                                             RunDelayedWorkTimer,
+                                             &timer_context);
+  InvokeForEnabledModes(&CFRunLoopAddTimer, delayed_work_timer_);
+
+  CFRunLoopSourceContext source_context = CFRunLoopSourceContext();
+  source_context.info = this;
+  source_context.perform = RunWorkSource;
+  work_source_ = CFRunLoopSourceCreate(NULL,  // allocator
+                                       1,     // priority
+                                       &source_context);
+  InvokeForEnabledModes(&CFRunLoopAddSource, work_source_);
+
+  source_context.perform = RunIdleWorkSource;
+  idle_work_source_ = CFRunLoopSourceCreate(NULL,  // allocator
+                                            2,     // priority
+                                            &source_context);
+  InvokeForEnabledModes(&CFRunLoopAddSource, idle_work_source_);
+
+  source_context.perform = RunNestingDeferredWorkSource;
+  nesting_deferred_work_source_ = CFRunLoopSourceCreate(NULL,  // allocator
+                                                        0,     // priority
+                                                        &source_context);
+  InvokeForEnabledModes(&CFRunLoopAddSource, nesting_deferred_work_source_);
+
+  CFRunLoopObserverContext observer_context = CFRunLoopObserverContext();
+  observer_context.info = this;
+  pre_wait_observer_ = CFRunLoopObserverCreate(NULL,  // allocator
+                                               kCFRunLoopBeforeWaiting,
+                                               true,  // repeat
+                                               0,     // priority
+                                               PreWaitObserver,
+                                               &observer_context);
+  InvokeForEnabledModes(&CFRunLoopAddObserver, pre_wait_observer_);
+
+  pre_source_observer_ = CFRunLoopObserverCreate(NULL,  // allocator
+                                                 kCFRunLoopBeforeSources,
+                                                 true,  // repeat
+                                                 0,     // priority
+                                                 PreSourceObserver,
+                                                 &observer_context);
+  InvokeForEnabledModes(&CFRunLoopAddObserver, pre_source_observer_);
+
+  enter_exit_observer_ = CFRunLoopObserverCreate(NULL,  // allocator
+                                                 kCFRunLoopEntry |
+                                                     kCFRunLoopExit,
+                                                 true,  // repeat
+                                                 0,     // priority
+                                                 EnterExitObserver,
+                                                 &observer_context);
+  InvokeForEnabledModes(&CFRunLoopAddObserver, enter_exit_observer_);
+}
+
+// Ideally called on the run loop thread.  If other run loops were running
+// lower on the run loop thread's stack when this object was created, the
+// same number of run loops must be running when this object is destroyed.
+MessagePumpCFRunLoopBase::~MessagePumpCFRunLoopBase() {
+  for (const CFRunLoopObserverRef& observer :
+       {enter_exit_observer_, pre_source_observer_, pre_wait_observer_}) {
+    InvokeForEnabledModes(&CFRunLoopRemoveObserver, observer);
+    CFRelease(observer);
+  }
+  for (const CFRunLoopSourceRef& source :
+       {nesting_deferred_work_source_, idle_work_source_, work_source_}) {
+    InvokeForEnabledModes(&CFRunLoopRemoveSource, source);
+    CFRelease(source);
+  }
+  InvokeForEnabledModes(&CFRunLoopRemoveTimer, delayed_work_timer_);
+  CFRelease(delayed_work_timer_);
+  CFRelease(run_loop_);
+}
+
+void MessagePumpCFRunLoopBase::SetDelegate(Delegate* delegate) {
+  delegate_ = delegate;
+
+  if (delegate) {
+    // If any work showed up but could not be dispatched for want of a
+    // delegate, set it up for dispatch again now that a delegate is
+    // available.
+    if (delegateless_work_) {
+      CFRunLoopSourceSignal(work_source_);
+      delegateless_work_ = false;
+    }
+    if (delegateless_idle_work_) {
+      CFRunLoopSourceSignal(idle_work_source_);
+      delegateless_idle_work_ = false;
+    }
+  }
+}
+
+// Base version returns a standard NSAutoreleasePool.
+AutoreleasePoolType* MessagePumpCFRunLoopBase::CreateAutoreleasePool() {
+  return [[NSAutoreleasePool alloc] init];
+}
+
+template <typename Argument>
+void MessagePumpCFRunLoopBase::InvokeForEnabledModes(void method(CFRunLoopRef,
+                                                                 Argument,
+                                                                 CFStringRef),
+                                                     Argument argument) {
+  for (size_t i = 0; i < arraysize(kAllModes); ++i) {
+    if (mode_mask_ & (0x1 << i))
+      method(run_loop_, argument, kAllModes[i]);
+  }
+}
+
 #if !defined(OS_IOS)
 // This function uses private API to modify a test timer's valid state and
 // uses public API to confirm that the private API changed the correct bit.
@@ -193,178 +342,6 @@ void MessagePumpCFRunLoopBase::ChromeCFRunLoopTimerSetValid(
     __ChromeCFRunLoopTimerSetValid(timer, valid);
   }
 #endif  // !defined(OS_IOS)
-}
-
-// Must be called on the run loop thread.
-MessagePumpCFRunLoopBase::MessagePumpCFRunLoopBase()
-    : delegate_(NULL),
-      delayed_work_fire_time_(kCFTimeIntervalMax),
-      timer_slack_(base::TIMER_SLACK_NONE),
-      nesting_level_(0),
-      run_nesting_level_(0),
-      deepest_nesting_level_(0),
-      delegateless_work_(false),
-      delegateless_idle_work_(false) {
-  run_loop_ = CFRunLoopGetCurrent();
-  CFRetain(run_loop_);
-
-  // Set a repeating timer with a preposterous firing time and interval.  The
-  // timer will effectively never fire as-is.  The firing time will be adjusted
-  // as needed when ScheduleDelayedWork is called.
-  CFRunLoopTimerContext timer_context = CFRunLoopTimerContext();
-  timer_context.info = this;
-  delayed_work_timer_ = CFRunLoopTimerCreate(NULL,                // allocator
-                                             kCFTimeIntervalMax,  // fire time
-                                             kCFTimeIntervalMax,  // interval
-                                             0,                   // flags
-                                             0,                   // priority
-                                             RunDelayedWorkTimer,
-                                             &timer_context);
-  CFRunLoopAddTimerToAllModes(run_loop_, delayed_work_timer_);
-
-  CFRunLoopSourceContext source_context = CFRunLoopSourceContext();
-  source_context.info = this;
-  source_context.perform = RunWorkSource;
-  work_source_ = CFRunLoopSourceCreate(NULL,  // allocator
-                                       1,     // priority
-                                       &source_context);
-  CFRunLoopAddSourceToAllModes(run_loop_, work_source_);
-
-  source_context.perform = RunIdleWorkSource;
-  idle_work_source_ = CFRunLoopSourceCreate(NULL,  // allocator
-                                            2,     // priority
-                                            &source_context);
-  CFRunLoopAddSourceToAllModes(run_loop_, idle_work_source_);
-
-  source_context.perform = RunNestingDeferredWorkSource;
-  nesting_deferred_work_source_ = CFRunLoopSourceCreate(NULL,  // allocator
-                                                        0,     // priority
-                                                        &source_context);
-  CFRunLoopAddSourceToAllModes(run_loop_, nesting_deferred_work_source_);
-
-  CFRunLoopObserverContext observer_context = CFRunLoopObserverContext();
-  observer_context.info = this;
-  pre_wait_observer_ = CFRunLoopObserverCreate(NULL,  // allocator
-                                               kCFRunLoopBeforeWaiting,
-                                               true,  // repeat
-                                               0,     // priority
-                                               PreWaitObserver,
-                                               &observer_context);
-  CFRunLoopAddObserverToAllModes(run_loop_, pre_wait_observer_);
-
-  pre_source_observer_ = CFRunLoopObserverCreate(NULL,  // allocator
-                                                 kCFRunLoopBeforeSources,
-                                                 true,  // repeat
-                                                 0,     // priority
-                                                 PreSourceObserver,
-                                                 &observer_context);
-  CFRunLoopAddObserverToAllModes(run_loop_, pre_source_observer_);
-
-  enter_exit_observer_ = CFRunLoopObserverCreate(NULL,  // allocator
-                                                 kCFRunLoopEntry |
-                                                     kCFRunLoopExit,
-                                                 true,  // repeat
-                                                 0,     // priority
-                                                 EnterExitObserver,
-                                                 &observer_context);
-  CFRunLoopAddObserverToAllModes(run_loop_, enter_exit_observer_);
-}
-
-// Ideally called on the run loop thread.  If other run loops were running
-// lower on the run loop thread's stack when this object was created, the
-// same number of run loops must be running when this object is destroyed.
-MessagePumpCFRunLoopBase::~MessagePumpCFRunLoopBase() {
-  CFRunLoopRemoveObserverFromAllModes(run_loop_, enter_exit_observer_);
-  CFRelease(enter_exit_observer_);
-
-  CFRunLoopRemoveObserverFromAllModes(run_loop_, pre_source_observer_);
-  CFRelease(pre_source_observer_);
-
-  CFRunLoopRemoveObserverFromAllModes(run_loop_, pre_wait_observer_);
-  CFRelease(pre_wait_observer_);
-
-  CFRunLoopRemoveSourceFromAllModes(run_loop_, nesting_deferred_work_source_);
-  CFRelease(nesting_deferred_work_source_);
-
-  CFRunLoopRemoveSourceFromAllModes(run_loop_, idle_work_source_);
-  CFRelease(idle_work_source_);
-
-  CFRunLoopRemoveSourceFromAllModes(run_loop_, work_source_);
-  CFRelease(work_source_);
-
-  CFRunLoopRemoveTimerFromAllModes(run_loop_, delayed_work_timer_);
-  CFRelease(delayed_work_timer_);
-
-  CFRelease(run_loop_);
-}
-
-// Must be called on the run loop thread.
-void MessagePumpCFRunLoopBase::Run(Delegate* delegate) {
-  // nesting_level_ will be incremented in EnterExitRunLoop, so set
-  // run_nesting_level_ accordingly.
-  int last_run_nesting_level = run_nesting_level_;
-  run_nesting_level_ = nesting_level_ + 1;
-
-  Delegate* last_delegate = delegate_;
-  SetDelegate(delegate);
-
-  DoRun(delegate);
-
-  // Restore the previous state of the object.
-  SetDelegate(last_delegate);
-  run_nesting_level_ = last_run_nesting_level;
-}
-
-void MessagePumpCFRunLoopBase::SetDelegate(Delegate* delegate) {
-  delegate_ = delegate;
-
-  if (delegate) {
-    // If any work showed up but could not be dispatched for want of a
-    // delegate, set it up for dispatch again now that a delegate is
-    // available.
-    if (delegateless_work_) {
-      CFRunLoopSourceSignal(work_source_);
-      delegateless_work_ = false;
-    }
-    if (delegateless_idle_work_) {
-      CFRunLoopSourceSignal(idle_work_source_);
-      delegateless_idle_work_ = false;
-    }
-  }
-}
-
-// May be called on any thread.
-void MessagePumpCFRunLoopBase::ScheduleWork() {
-  CFRunLoopSourceSignal(work_source_);
-  CFRunLoopWakeUp(run_loop_);
-}
-
-// Must be called on the run loop thread.
-void MessagePumpCFRunLoopBase::ScheduleDelayedWork(
-    const TimeTicks& delayed_work_time) {
-  TimeDelta delta = delayed_work_time - TimeTicks::Now();
-  delayed_work_fire_time_ = CFAbsoluteTimeGetCurrent() + delta.InSecondsF();
-
-  // Flip the timer's validation bit just before setting the new fire time. Do
-  // this now because CFRunLoopTimerSetNextFireDate() likely checks the validity
-  // of a timer before proceeding to set its fire date. Making the timer valid
-  // now won't have any side effects (such as a premature firing of the timer)
-  // because we're only flipping a bit.
-  //
-  // Please see the comment in RunDelayedWorkTimer() for more info on the whys
-  // of invalidation.
-  ChromeCFRunLoopTimerSetValid(delayed_work_timer_, true);
-
-  CFRunLoopTimerSetNextFireDate(delayed_work_timer_, delayed_work_fire_time_);
-  if (timer_slack_ == TIMER_SLACK_MAXIMUM) {
-    CFRunLoopTimerSetTolerance(delayed_work_timer_, delta.InSecondsF() * 0.5);
-  } else {
-    CFRunLoopTimerSetTolerance(delayed_work_timer_, 0);
-  }
-}
-
-void MessagePumpCFRunLoopBase::SetTimerSlack(TimerSlack timer_slack) {
-  timer_slack_ = timer_slack;
 }
 
 // Called from the run loop.
@@ -639,14 +616,8 @@ void MessagePumpCFRunLoopBase::EnterExitObserver(CFRunLoopObserverRef observer,
 void MessagePumpCFRunLoopBase::EnterExitRunLoop(CFRunLoopActivity activity) {
 }
 
-// Base version returns a standard NSAutoreleasePool.
-AutoreleasePoolType* MessagePumpCFRunLoopBase::CreateAutoreleasePool() {
-  return [[NSAutoreleasePool alloc] init];
-}
-
 MessagePumpCFRunLoop::MessagePumpCFRunLoop()
-    : quit_pending_(false) {
-}
+    : MessagePumpCFRunLoopBase(kCommonModeMask), quit_pending_(false) {}
 
 MessagePumpCFRunLoop::~MessagePumpCFRunLoop() {}
 
@@ -697,17 +668,17 @@ void MessagePumpCFRunLoop::EnterExitRunLoop(CFRunLoopActivity activity) {
 }
 
 MessagePumpNSRunLoop::MessagePumpNSRunLoop()
-    : keep_running_(true) {
+    : MessagePumpCFRunLoopBase(kCommonModeMask), keep_running_(true) {
   CFRunLoopSourceContext source_context = CFRunLoopSourceContext();
   source_context.perform = NoOp;
   quit_source_ = CFRunLoopSourceCreate(NULL,  // allocator
                                        0,     // priority
                                        &source_context);
-  CFRunLoopAddSourceToAllModes(run_loop(), quit_source_);
+  InvokeForEnabledModes(&CFRunLoopAddSource, quit_source_);
 }
 
 MessagePumpNSRunLoop::~MessagePumpNSRunLoop() {
-  CFRunLoopRemoveSourceFromAllModes(run_loop(), quit_source_);
+  InvokeForEnabledModes(&CFRunLoopRemoveSource, quit_source_);
   CFRelease(quit_source_);
 }
 
@@ -729,8 +700,7 @@ void MessagePumpNSRunLoop::Quit() {
 
 #if defined(OS_IOS)
 MessagePumpUIApplication::MessagePumpUIApplication()
-    : run_loop_(NULL) {
-}
+    : MessagePumpCFRunLoopBase(kCommonModeMask), run_loop_(NULL) {}
 
 MessagePumpUIApplication::~MessagePumpUIApplication() {}
 
@@ -752,9 +722,9 @@ void MessagePumpUIApplication::Attach(Delegate* delegate) {
 #else
 
 MessagePumpNSApplication::MessagePumpNSApplication()
-    : keep_running_(true),
-      running_own_loop_(false) {
-}
+    : MessagePumpCFRunLoopBase(kAllModesMask),
+      keep_running_(true),
+      running_own_loop_(false) {}
 
 MessagePumpNSApplication::~MessagePumpNSApplication() {}
 

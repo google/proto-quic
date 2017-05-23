@@ -111,7 +111,6 @@ class MapFileParser(object):
 #                 0x0255fb00   0x8
 # ** common      0x02db5700   0x13ab48
     syms = self._symbols
-    symbol_gap_count = 0
     while True:
       line = self._SkipToLineWithPrefix('.')
       if not line:
@@ -133,6 +132,7 @@ class MapFileParser(object):
             # Common symbols have no address.
             syms.extend(self._common_symbols)
           prefix_len = len(section_name) + 1  # + 1 for the trailing .
+          symbol_gap_count = 0
           merge_symbol_start_address = section_address
           sym_count_at_start = len(syms)
           line = next(self._lines)
@@ -161,6 +161,8 @@ class MapFileParser(object):
               sym = models.Symbol(section_name, size, address=address,
                                   full_name=name, object_path=path)
               syms.append(sym)
+              if merge_symbol_start_address > 0:
+                merge_symbol_start_address += size
             else:
               # A normal symbol entry.
               subsection_name, address_str, size_str, path = (

@@ -246,57 +246,7 @@ bool TaskTracker::RunTask(std::unique_ptr<Task> task,
   const bool is_delayed = !task->delayed_run_time.is_null();
 
   if (can_run_task) {
-    RecordTaskLatencyHistogram(task.get());
-
-    const bool previous_singleton_allowed =
-        ThreadRestrictions::SetSingletonAllowed(
-            task->traits.shutdown_behavior() !=
-            TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN);
-    const bool previous_io_allowed =
-        ThreadRestrictions::SetIOAllowed(task->traits.may_block());
-    const bool previous_wait_allowed = ThreadRestrictions::SetWaitAllowed(
-        task->traits.with_base_sync_primitives());
-
-    {
-      ScopedSetSequenceTokenForCurrentThread
-          scoped_set_sequence_token_for_current_thread(sequence_token);
-      ScopedSetTaskPriorityForCurrentThread
-          scoped_set_task_priority_for_current_thread(task->traits.priority());
-
-      // Set up TaskRunnerHandle as expected for the scope of the task.
-      std::unique_ptr<SequencedTaskRunnerHandle> sequenced_task_runner_handle;
-      std::unique_ptr<ThreadTaskRunnerHandle> single_thread_task_runner_handle;
-      DCHECK(!task->sequenced_task_runner_ref ||
-             !task->single_thread_task_runner_ref);
-      if (task->sequenced_task_runner_ref) {
-        sequenced_task_runner_handle.reset(
-            new SequencedTaskRunnerHandle(task->sequenced_task_runner_ref));
-      } else if (task->single_thread_task_runner_ref) {
-        single_thread_task_runner_handle.reset(
-            new ThreadTaskRunnerHandle(task->single_thread_task_runner_ref));
-      }
-
-      TRACE_TASK_EXECUTION(kRunFunctionName, *task);
-
-      const char* const execution_mode =
-          task->single_thread_task_runner_ref
-              ? kSingleThreadExecutionMode
-              : (task->sequenced_task_runner_ref ? kSequencedExecutionMode
-                                                 : kParallelExecutionMode);
-      // TODO(gab): In a better world this would be tacked on as an extra arg
-      // to the trace event generated above. This is not possible however until
-      // http://crbug.com/652692 is resolved.
-      TRACE_EVENT1("task_scheduler", "TaskTracker::RunTask", "task_info",
-                   MakeUnique<TaskTracingInfo>(task->traits, execution_mode,
-                                               sequence_token));
-
-      PerformRunTask(std::move(task));
-    }
-
-    ThreadRestrictions::SetWaitAllowed(previous_wait_allowed);
-    ThreadRestrictions::SetIOAllowed(previous_io_allowed);
-    ThreadRestrictions::SetSingletonAllowed(previous_singleton_allowed);
-
+    PerformRunTask(std::move(task), sequence_token);
     AfterRunTask(shutdown_behavior);
   }
 
@@ -327,8 +277,58 @@ void TaskTracker::SetHasShutdownStartedForTesting() {
   state_->StartShutdown();
 }
 
-void TaskTracker::PerformRunTask(std::unique_ptr<Task> task) {
-  debug::TaskAnnotator().RunTask(kQueueFunctionName, task.get());
+void TaskTracker::PerformRunTask(std::unique_ptr<Task> task,
+                                 const SequenceToken& sequence_token) {
+  RecordTaskLatencyHistogram(task.get());
+
+  const bool previous_singleton_allowed =
+      ThreadRestrictions::SetSingletonAllowed(
+          task->traits.shutdown_behavior() !=
+          TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN);
+  const bool previous_io_allowed =
+      ThreadRestrictions::SetIOAllowed(task->traits.may_block());
+  const bool previous_wait_allowed = ThreadRestrictions::SetWaitAllowed(
+      task->traits.with_base_sync_primitives());
+
+  {
+    ScopedSetSequenceTokenForCurrentThread
+        scoped_set_sequence_token_for_current_thread(sequence_token);
+    ScopedSetTaskPriorityForCurrentThread
+        scoped_set_task_priority_for_current_thread(task->traits.priority());
+
+    // Set up TaskRunnerHandle as expected for the scope of the task.
+    std::unique_ptr<SequencedTaskRunnerHandle> sequenced_task_runner_handle;
+    std::unique_ptr<ThreadTaskRunnerHandle> single_thread_task_runner_handle;
+    DCHECK(!task->sequenced_task_runner_ref ||
+           !task->single_thread_task_runner_ref);
+    if (task->sequenced_task_runner_ref) {
+      sequenced_task_runner_handle.reset(
+          new SequencedTaskRunnerHandle(task->sequenced_task_runner_ref));
+    } else if (task->single_thread_task_runner_ref) {
+      single_thread_task_runner_handle.reset(
+          new ThreadTaskRunnerHandle(task->single_thread_task_runner_ref));
+    }
+
+    TRACE_TASK_EXECUTION(kRunFunctionName, *task);
+
+    const char* const execution_mode =
+        task->single_thread_task_runner_ref
+            ? kSingleThreadExecutionMode
+            : (task->sequenced_task_runner_ref ? kSequencedExecutionMode
+                                               : kParallelExecutionMode);
+    // TODO(gab): In a better world this would be tacked on as an extra arg
+    // to the trace event generated above. This is not possible however until
+    // http://crbug.com/652692 is resolved.
+    TRACE_EVENT1("task_scheduler", "TaskTracker::RunTask", "task_info",
+                 MakeUnique<TaskTracingInfo>(task->traits, execution_mode,
+                                             sequence_token));
+
+    debug::TaskAnnotator().RunTask(kQueueFunctionName, task.get());
+  }
+
+  ThreadRestrictions::SetWaitAllowed(previous_wait_allowed);
+  ThreadRestrictions::SetIOAllowed(previous_io_allowed);
+  ThreadRestrictions::SetSingletonAllowed(previous_singleton_allowed);
 }
 
 void TaskTracker::PerformShutdown() {

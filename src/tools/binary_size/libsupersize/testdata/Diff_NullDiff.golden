@@ -18,12 +18,12 @@ Section Sizes (Total=0 bytes (0 bytes)):
     .rodata: 0 bytes (0 bytes) (0.0%)
     .text: 0 bytes (0 bytes) (0.0%)
 
-0 symbols added (+), 0 changed (~), 0 removed (-), 43 unchanged (not shown)
-0 object files added, 0 removed
+0 symbols added (+), 0 changed (~), 0 removed (-), 45 unchanged (not shown)
+0 paths added, 0 removed, 0 changed
 
 Showing 0 symbols (0 unique) with total pss: 0 bytes
 .text=0 bytes    .rodata=0 bytes    .data*=0 bytes    .bss=0 bytes    total=0 bytes
-Number of object files: 0
+Number of unique paths: 0
 
 Index, Running Total, Section@Address, PSS
 ------------------------------------------------------------

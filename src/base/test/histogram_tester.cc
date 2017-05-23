@@ -95,6 +95,31 @@ std::vector<Bucket> HistogramTester::GetAllSamples(
   return samples;
 }
 
+HistogramBase::Count HistogramTester::GetBucketCount(
+    const std::string& name,
+    HistogramBase::Sample sample) const {
+  HistogramBase* histogram = StatisticsRecorder::FindHistogram(name);
+  EXPECT_NE(nullptr, histogram)
+      << "Histogram \"" << name << "\" does not exist.";
+  HistogramBase::Count count = 0;
+  if (histogram) {
+    std::unique_ptr<HistogramSamples> samples = histogram->SnapshotSamples();
+    GetBucketCountForSamples(name, sample, *samples, &count);
+  }
+  return count;
+}
+
+void HistogramTester::GetBucketCountForSamples(
+    const std::string& name,
+    HistogramBase::Sample sample,
+    const HistogramSamples& samples,
+    HistogramBase::Count* count) const {
+  *count = samples.GetCount(sample);
+  auto histogram_data = histograms_snapshot_.find(name);
+  if (histogram_data != histograms_snapshot_.end())
+    *count -= histogram_data->second->GetCount(sample);
+}
+
 HistogramTester::CountsMap HistogramTester::GetTotalCountsForPrefix(
     const std::string& prefix) const {
   EXPECT_TRUE(prefix.find('.') != std::string::npos)
@@ -147,10 +172,8 @@ void HistogramTester::CheckBucketCount(const std::string& name,
                                        HistogramBase::Sample sample,
                                        HistogramBase::Count expected_count,
                                        const HistogramSamples& samples) const {
-  int actual_count = samples.GetCount(sample);
-  auto histogram_data = histograms_snapshot_.find(name);
-  if (histogram_data != histograms_snapshot_.end())
-    actual_count -= histogram_data->second->GetCount(sample);
+  int actual_count;
+  GetBucketCountForSamples(name, sample, samples, &actual_count);
 
   EXPECT_EQ(expected_count, actual_count)
       << "Histogram \"" << name

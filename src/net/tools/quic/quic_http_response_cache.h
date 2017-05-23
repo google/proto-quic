@@ -65,7 +65,9 @@ class QuicHttpResponseCache {
     void set_trailers(SpdyHeaderBlock trailers) {
       trailers_ = std::move(trailers);
     }
-    void set_body(QuicStringPiece body) { body.CopyToString(&body_); }
+    void set_body(QuicStringPiece body) {
+      body_.assign(body.data(), body.size());
+    }
 
    private:
     SpecialResponseType response_type_;

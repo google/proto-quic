@@ -16,27 +16,21 @@ namespace battor {
 
 namespace {
 
-// The maximum number of times to retry when initializing a BattOr.
-const uint8_t kMaxInitAttempts = 20;
-
-// The maximum number of times to retry the StartTracing command.
-const uint8_t kMaxStartTracingAttempts = 5;
-
-// The number of milliseconds to wait before retrying initialization.
-const uint16_t kInitRetryDelayMilliseconds = 100;
-
-// The maximum number of times to retry when reading a message.
-const uint8_t kMaxReadAttempts = 20;
-
-// The number of milliseconds to wait before trying to read a message again.
-const uint8_t kReadRetryDelayMilliseconds = 1;
+// The maximum number of times to retry a command.
+const uint8_t kMaxCommandAttempts = 10;
 
 // The amount of time we need to wait after recording a clock sync marker in
 // order to ensure that the sample we synced to doesn't get thrown out.
 const uint8_t kStopTracingClockSyncDelayMilliseconds = 100;
 
-// The number of seconds allowed for a given action before timing out.
-const uint8_t kBattOrTimeoutSeconds = 4;
+// The number of seconds to wait before retrying a command.
+const uint16_t kCommandRetryDelaySeconds = 2;
+
+// The number of seconds allowed for a control message before timing out.
+const uint8_t kBattOrControlMessageTimeoutSeconds = 2;
+
+// The number of seconds allowed for connection to open before timing out.
+const uint8_t kBattOrConnectionTimeoutSeconds = 4;
 
 // Returns true if the specified vector of bytes decodes to a message that is an
 // ack for the specified control message type.
@@ -123,9 +117,7 @@ BattOrAgent::BattOrAgent(
       listener_(listener),
       last_action_(Action::INVALID),
       command_(Command::INVALID),
-      num_init_attempts_(0),
-      num_start_tracing_attempts_(0),
-      num_read_attempts_(0) {
+      num_command_attempts_(0) {
   // We don't care what thread the constructor is called on - we only care that
   // all of the other method invocations happen on the same thread.
   thread_checker_.DetachFromThread();
@@ -142,7 +134,6 @@ void BattOrAgent::StartTracing() {
   clock_sync_markers_.clear();
   last_clock_sync_time_ = base::TimeTicks();
 
-  num_start_tracing_attempts_ = 1;
   command_ = Command::START_TRACING;
   PerformAction(Action::REQUEST_CONNECTION);
 }
@@ -172,13 +163,13 @@ void BattOrAgent::GetFirmwareGitHash() {
 void BattOrAgent::BeginConnect() {
   DCHECK(thread_checker_.CalledOnValidThread());
 
+  SetActionTimeout(kBattOrConnectionTimeoutSeconds);
+
   connection_->Open();
 }
 
 void BattOrAgent::OnConnectionOpened(bool success) {
-  // Return immediately if opening the connection already timed out.
-  if (timeout_callback_.IsCancelled())
-    return;
+  // Cancel timeout because the connection was opened in time.
   timeout_callback_.Cancel();
 
   if (!success) {
@@ -188,7 +179,6 @@ void BattOrAgent::OnConnectionOpened(bool success) {
 
   switch (command_) {
     case Command::START_TRACING:
-      num_init_attempts_ = 1;
       PerformAction(Action::SEND_INIT);
       return;
     case Command::STOP_TRACING:
@@ -198,22 +188,16 @@ void BattOrAgent::OnConnectionOpened(bool success) {
       PerformAction(Action::SEND_CURRENT_SAMPLE_REQUEST);
       return;
     case Command::GET_FIRMWARE_GIT_HASH:
-      num_init_attempts_ = 1;
       PerformAction(Action::SEND_INIT);
       return;
     case Command::INVALID:
       NOTREACHED();
+      return;
   }
 }
 
 void BattOrAgent::OnBytesSent(bool success) {
   DCHECK(thread_checker_.CalledOnValidThread());
-
-  // Return immediately if whatever action we were trying to perform already
-  // timed out.
-  if (timeout_callback_.IsCancelled())
-    return;
-  timeout_callback_.Cancel();
 
   if (!success) {
     CompleteCommand(BATTOR_ERROR_SEND_ERROR);
@@ -231,90 +215,56 @@ void BattOrAgent::OnBytesSent(bool success) {
       PerformAction(Action::READ_START_TRACING_ACK);
       return;
     case Action::SEND_EEPROM_REQUEST:
-      num_read_attempts_ = 1;
       PerformAction(Action::READ_EEPROM);
       return;
     case Action::SEND_SAMPLES_REQUEST:
-      num_read_attempts_ = 1;
       PerformAction(Action::READ_CALIBRATION_FRAME);
       return;
     case Action::SEND_CURRENT_SAMPLE_REQUEST:
-      num_read_attempts_ = 1;
       PerformAction(Action::READ_CURRENT_SAMPLE);
       return;
     case Action::SEND_GIT_HASH_REQUEST:
-      num_read_attempts_ = 1;
       PerformAction(Action::READ_GIT_HASH);
       return;
     default:
-      CompleteCommand(BATTOR_ERROR_UNEXPECTED_MESSAGE);
+      NOTREACHED();
+      return;
   }
 }
 
 void BattOrAgent::OnMessageRead(bool success,
                                 BattOrMessageType type,
                                 std::unique_ptr<vector<char>> bytes) {
-  // Return immediately if whatever action we were trying to perform already
-  // timed out.
-  if (timeout_callback_.IsCancelled())
-    return;
-  timeout_callback_.Cancel();
-
   if (!success) {
     switch (last_action_) {
       case Action::READ_GIT_HASH:
+      case Action::READ_INIT_ACK:
+      case Action::READ_SET_GAIN_ACK:
+      case Action::READ_START_TRACING_ACK:
       case Action::READ_EEPROM:
       case Action::READ_CALIBRATION_FRAME:
       case Action::READ_DATA_FRAME:
+        RetryCommand();
+        return;
+
       case Action::READ_CURRENT_SAMPLE:
-        if (num_read_attempts_++ > kMaxReadAttempts) {
-          CompleteCommand(BATTOR_ERROR_RECEIVE_ERROR);
-          return;
-        }
-
-        PerformDelayedAction(last_action_, base::TimeDelta::FromMilliseconds(
-                                               kReadRetryDelayMilliseconds));
-        return;
-
-      // Retry sending an INIT if it an ACK is not received.
-      case Action::SEND_INIT:
-      case Action::READ_INIT_ACK:
-        if (num_init_attempts_++ < kMaxInitAttempts) {
-          PerformDelayedAction(Action::SEND_INIT,
-              base::TimeDelta::FromMilliseconds(kInitRetryDelayMilliseconds));
-        } else {
-          CompleteCommand(BATTOR_ERROR_TOO_MANY_INIT_RETRIES);
-        }
-
-        return;
-
-      case Action::READ_START_TRACING_ACK:
-        if (num_start_tracing_attempts_++ < kMaxStartTracingAttempts) {
-          num_init_attempts_ = 1;
-          PerformAction(Action::SEND_INIT);
-        } else {
-          CompleteCommand(BATTOR_ERROR_TOO_MANY_START_TRACING_RETRIES);
-        }
-
+        CompleteCommand(BATTOR_ERROR_RECEIVE_ERROR);
         return;
 
       default:
-        CompleteCommand(BATTOR_ERROR_RECEIVE_ERROR);
+        NOTREACHED();
         return;
     }
   }
+
+  // Successfully read a message, cancel any timeouts.
+  timeout_callback_.Cancel();
 
   switch (last_action_) {
     case Action::READ_INIT_ACK:
       if (!IsAckOfControlCommand(type, BATTOR_CONTROL_MESSAGE_TYPE_INIT,
                                  *bytes)) {
-        if (num_init_attempts_++ < kMaxInitAttempts) {
-          PerformDelayedAction(Action::SEND_INIT,
-              base::TimeDelta::FromMilliseconds(kInitRetryDelayMilliseconds));
-        } else {
-          CompleteCommand(BATTOR_ERROR_TOO_MANY_INIT_RETRIES);
-        }
-
+        RetryCommand();
         return;
       }
 
@@ -326,14 +276,14 @@ void BattOrAgent::OnMessageRead(bool success,
           PerformAction(Action::SEND_GIT_HASH_REQUEST);
           return;
         default:
-          CompleteCommand(BATTOR_ERROR_UNEXPECTED_MESSAGE);
+          NOTREACHED();
           return;
       }
 
     case Action::READ_SET_GAIN_ACK:
       if (!IsAckOfControlCommand(type, BATTOR_CONTROL_MESSAGE_TYPE_SET_GAIN,
                                  *bytes)) {
-        CompleteCommand(BATTOR_ERROR_UNEXPECTED_MESSAGE);
+        RetryCommand();
         return;
       }
 
@@ -343,13 +293,7 @@ void BattOrAgent::OnMessageRead(bool success,
     case Action::READ_START_TRACING_ACK:
       if (!IsAckOfControlCommand(
               type, BATTOR_CONTROL_MESSAGE_TYPE_START_SAMPLING_SD, *bytes)) {
-        if (num_start_tracing_attempts_++ < kMaxStartTracingAttempts) {
-          num_init_attempts_ = 1;
-          PerformAction(Action::SEND_INIT);
-        } else {
-          CompleteCommand(BATTOR_ERROR_TOO_MANY_START_TRACING_RETRIES);
-        }
-
+        RetryCommand();
         return;
       }
 
@@ -359,7 +303,7 @@ void BattOrAgent::OnMessageRead(bool success,
     case Action::READ_EEPROM: {
       battor_eeprom_ = ParseEEPROM(type, *bytes);
       if (!battor_eeprom_) {
-        CompleteCommand(BATTOR_ERROR_UNEXPECTED_MESSAGE);
+        RetryCommand();
         return;
       }
 
@@ -379,17 +323,16 @@ void BattOrAgent::OnMessageRead(bool success,
       BattOrFrameHeader frame_header;
       if (!ParseSampleFrame(type, *bytes, next_sequence_number_++,
                             &frame_header, &calibration_frame_)) {
-        CompleteCommand(BATTOR_ERROR_UNEXPECTED_MESSAGE);
+        RetryCommand();
         return;
       }
 
       // Make sure that the calibration frame has actual samples in it.
       if (calibration_frame_.empty()) {
-        CompleteCommand(BATTOR_ERROR_UNEXPECTED_MESSAGE);
+        RetryCommand();
         return;
       }
 
-      num_read_attempts_ = 1;
       PerformAction(Action::READ_DATA_FRAME);
       return;
     }
@@ -399,20 +342,21 @@ void BattOrAgent::OnMessageRead(bool success,
       vector<RawBattOrSample> frame;
       if (!ParseSampleFrame(type, *bytes, next_sequence_number_++,
                             &frame_header, &frame)) {
-        CompleteCommand(BATTOR_ERROR_UNEXPECTED_MESSAGE);
+        RetryCommand();
         return;
       }
 
       // Check for the empty frame the BattOr uses to indicate it's done
       // streaming samples.
       if (frame.empty()) {
+        // Cancel the next data frame timeout.
+        timeout_callback_.Cancel();
         CompleteCommand(BATTOR_ERROR_NONE);
         return;
       }
 
       samples_.insert(samples_.end(), frame.begin(), frame.end());
 
-      num_read_attempts_ = 1;
       PerformAction(Action::READ_DATA_FRAME);
       return;
     }
@@ -432,27 +376,23 @@ void BattOrAgent::OnMessageRead(bool success,
       return;
 
     case Action::READ_GIT_HASH:
-      if (type != BATTOR_MESSAGE_TYPE_CONTROL_ACK ){
-        CompleteCommand(BATTOR_ERROR_UNEXPECTED_MESSAGE);
+      if (type != BATTOR_MESSAGE_TYPE_CONTROL_ACK) {
+        RetryCommand();
         return;
       }
+
       firmware_git_hash_ = std::string(bytes->begin(), bytes->end());
       CompleteCommand(BATTOR_ERROR_NONE);
       return;
 
     default:
-      CompleteCommand(BATTOR_ERROR_UNEXPECTED_MESSAGE);
+      NOTREACHED();
+      return;
   }
 }
 
 void BattOrAgent::PerformAction(Action action) {
   DCHECK(thread_checker_.CalledOnValidThread());
-
-  timeout_callback_.Reset(
-      base::Bind(&BattOrAgent::OnActionTimeout, AsWeakPtr()));
-  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
-      FROM_HERE, timeout_callback_.callback(),
-      base::TimeDelta::FromSeconds(kBattOrTimeoutSeconds));
 
   last_action_ = action;
 
@@ -460,12 +400,8 @@ void BattOrAgent::PerformAction(Action action) {
     case Action::REQUEST_CONNECTION:
       BeginConnect();
       return;
-
     // The following actions are required for StartTracing:
     case Action::SEND_INIT:
-      // Clear out the serial data that may exist from prior init attempts.
-      connection_->Flush();
-
       SendControlMessage(BATTOR_CONTROL_MESSAGE_TYPE_INIT, 0, 0);
       return;
     case Action::READ_INIT_ACK:
@@ -486,7 +422,6 @@ void BattOrAgent::PerformAction(Action action) {
     case Action::READ_START_TRACING_ACK:
       connection_->ReadMessage(BATTOR_MESSAGE_TYPE_CONTROL_ACK);
       return;
-
     // The following actions are required for StopTracing:
     case Action::SEND_EEPROM_REQUEST:
       // Read the BattOr's EEPROM to get calibration information that's required
@@ -507,6 +442,10 @@ void BattOrAgent::PerformAction(Action action) {
       // data frame. We keep track of the next frame sequence number we expect
       // to see to ensure we don't miss any data.
       next_sequence_number_ = 0;
+
+      // Clear stored samples from prior attempts to read sample frames.
+      samples_.clear();
+      calibration_frame_.clear();
     case Action::READ_DATA_FRAME:
       // The first frame sent back from the BattOr contains voltage and current
       // data that excludes whatever device is being measured from the
@@ -515,6 +454,7 @@ void BattOrAgent::PerformAction(Action action) {
       //
       // All further frames contain real (but uncalibrated) voltage and current
       // data.
+      SetActionTimeout(kBattOrControlMessageTimeoutSeconds);
       connection_->ReadMessage(BATTOR_MESSAGE_TYPE_SAMPLES);
       return;
 
@@ -527,7 +467,6 @@ void BattOrAgent::PerformAction(Action action) {
       return;
 
     case Action::SEND_GIT_HASH_REQUEST:
-      connection_->Flush();
       SendControlMessage(
           BATTOR_CONTROL_MESSAGE_TYPE_GET_FIRMWARE_GIT_HASH, 0, 0);
       return;
@@ -538,6 +477,7 @@ void BattOrAgent::PerformAction(Action action) {
 
     case Action::INVALID:
       NOTREACHED();
+      return;
   }
 }
 
@@ -550,29 +490,13 @@ void BattOrAgent::PerformDelayedAction(Action action, base::TimeDelta delay) {
 void BattOrAgent::OnActionTimeout() {
   switch (last_action_) {
     case Action::READ_INIT_ACK:
-      if (num_init_attempts_++ < kMaxInitAttempts) {
-        // OnMessageRead() will fail and retry SEND_INIT.
-        connection_->CancelReadMessage();
-      } else {
-        CompleteCommand(BATTOR_ERROR_TOO_MANY_INIT_RETRIES);
-      }
-      return;
-
-    // TODO(crbug.com/672631): There's currently a BattOr firmware bug that's
-    // causing the BattOr to reset when it's sent the START_TRACING command.
-    // When the BattOr resets, it emits 0x00 to the serial connection. This 0x00
-    // isn't long enough for the connection to consider it a full ack of the
-    // START_TRACING command, so it continues to wait for more data. We handle
-    // this case here by assuming any timeouts while waiting for the
-    // StartTracing ack are related to this bug and retrying the full
-    // initialization sequence.
+    case Action::READ_SET_GAIN_ACK:
     case Action::READ_START_TRACING_ACK:
-      if (num_start_tracing_attempts_ < kMaxStartTracingAttempts) {
-        // OnMessageRead() will fail and retry StartTracing.
-        connection_->CancelReadMessage();
-      } else {
-        CompleteCommand(BATTOR_ERROR_TOO_MANY_START_TRACING_RETRIES);
-      }
+    case Action::READ_EEPROM:
+    case Action::READ_CALIBRATION_FRAME:
+    case Action::READ_DATA_FRAME:
+    case Action::READ_GIT_HASH:
+      connection_->CancelReadMessage();
       return;
 
     default:
@@ -586,8 +510,37 @@ void BattOrAgent::SendControlMessage(BattOrControlMessageType type,
                                      uint16_t param2) {
   DCHECK(thread_checker_.CalledOnValidThread());
 
+  SetActionTimeout(kBattOrControlMessageTimeoutSeconds);
+
   BattOrControlMessage msg{type, param1, param2};
   connection_->SendBytes(BATTOR_MESSAGE_TYPE_CONTROL, &msg, sizeof(msg));
+}
+
+void BattOrAgent::RetryCommand() {
+  if (++num_command_attempts_ >= kMaxCommandAttempts) {
+    CompleteCommand(BATTOR_ERROR_TOO_MANY_COMMAND_RETRIES);
+    return;
+  }
+
+  // Failed to read response to message, retry current command.
+  base::Callback<void()> next_command;
+  switch (command_) {
+    case Command::START_TRACING:
+      next_command = base::Bind(&BattOrAgent::StartTracing, AsWeakPtr());
+      break;
+    case Command::STOP_TRACING:
+      next_command = base::Bind(&BattOrAgent::StopTracing, AsWeakPtr());
+      break;
+    case Command::GET_FIRMWARE_GIT_HASH:
+      next_command = base::Bind(&BattOrAgent::GetFirmwareGitHash, AsWeakPtr());
+      break;
+    default:
+      NOTREACHED();
+  }
+
+  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+      FROM_HERE, next_command,
+      base::TimeDelta::FromSeconds(kCommandRetryDelaySeconds));
 }
 
 void BattOrAgent::CompleteCommand(BattOrError error) {
@@ -616,6 +569,7 @@ void BattOrAgent::CompleteCommand(BattOrError error) {
       break;
     case Command::INVALID:
       NOTREACHED();
+      return;
   }
 
   last_action_ = Action::INVALID;
@@ -625,6 +579,7 @@ void BattOrAgent::CompleteCommand(BattOrError error) {
   calibration_frame_.clear();
   samples_.clear();
   next_sequence_number_ = 0;
+  num_command_attempts_ = 0;
 }
 
 std::string BattOrAgent::SamplesToString() {
@@ -665,6 +620,14 @@ std::string BattOrAgent::SamplesToString() {
   }
 
   return trace_stream.str();
+}
+
+void BattOrAgent::SetActionTimeout(uint16_t timeout_seconds) {
+  timeout_callback_.Reset(
+      base::Bind(&BattOrAgent::OnActionTimeout, AsWeakPtr()));
+  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+      FROM_HERE, timeout_callback_.callback(),
+      base::TimeDelta::FromSeconds(timeout_seconds));
 }
 
 }  // namespace battor

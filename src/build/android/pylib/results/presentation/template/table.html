@@ -1,4 +1,4 @@
-<table id="{{tb_value.table_id}}" class="info" style="display:none;">
+<table id="{{tb_value.table_id}}" style="display:none;">
   <thead class="heads">
     <tr>
       {% for cell in tb_value.table_headers -%}
@@ -23,12 +23,12 @@
             {% if cell.cell_type == 'pre' -%}
               <pre>{{cell.data}}</pre>
             {%- elif cell.cell_type == 'links' -%}
-              {% for link in cell.links %}
+              {% for link in cell.links -%}
                 <a href="{{link.href}}" target="{{link.target}}">{{link.data}}</a>
                 {% if not loop.last -%}
                   <br />
                 {%- endif %}
-              {% endfor %}
+              {%- endfor %}
             {%- elif cell.cell_type == 'action' -%}
               <a onclick="{{cell.action}}">{{cell.data}}</a>
             {%- else -%}
@@ -45,9 +45,9 @@
         {% for cell in tb_value.table_footer -%}
           <td class="{{tb_value.table_id}}-summary-column-{{loop.index0}} {{cell.class}}">
             {% if cell.cell_type == 'links' -%}
-              {% for link in cell.links %}
+              {% for link in cell.links -%}
                 <a href="{{link.href}}" target="{{link.target}}"><b>{{link.data}}</b></a>
-              {% endfor %}
+              {%- endfor %}
             {%- elif cell.cell_type == 'action' -%}
               <a onclick="{{cell.action}}">{{cell.data}}</a>
             {%- else -%}

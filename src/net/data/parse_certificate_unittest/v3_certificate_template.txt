@@ -10,7 +10,9 @@ SEQUENCE {
     [0] {
       INTEGER { 2 }
     }
+#-----BEGIN SERIAL-----
     INTEGER { `00fbb04c2eab109b0c` }
+#-----END SERIAL-----
     SEQUENCE {
       # sha1WithRSAEncryption
       OBJECT_IDENTIFIER { 1.2.840.113549.1.1.5 }

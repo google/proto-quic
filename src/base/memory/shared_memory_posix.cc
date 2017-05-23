@@ -76,19 +76,6 @@ bool SharedMemory::CreateAndMapAnonymous(size_t size) {
 }
 
 #if !defined(OS_ANDROID)
-// static
-bool SharedMemory::GetSizeFromSharedMemoryHandle(
-    const SharedMemoryHandle& handle,
-    size_t* size) {
-  struct stat st;
-  if (fstat(handle.GetHandle(), &st) != 0)
-    return false;
-  if (st.st_size < 0)
-    return false;
-  *size = st.st_size;
-  return true;
-}
-
 // Chromium mostly only uses the unique/private shmem as specified by
 // "name == L"". The exception is in the StatsTable.
 // TODO(jrg): there is no way to "clean up" all unused named shmem if
@@ -209,9 +196,10 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
       PrepareMapFile(std::move(fp), std::move(readonly_fd), &mapped_file,
                      &readonly_mapped_file, &last_error_);
   shm_ = SharedMemoryHandle(base::FileDescriptor(mapped_file, false),
-                            UnguessableToken::Create());
-  readonly_shm_ = SharedMemoryHandle(
-      base::FileDescriptor(readonly_mapped_file, false), shm_.GetGUID());
+                            options.size, UnguessableToken::Create());
+  readonly_shm_ =
+      SharedMemoryHandle(base::FileDescriptor(readonly_mapped_file, false),
+                         options.size, shm_.GetGUID());
   return result;
 }
 
@@ -257,10 +245,12 @@ bool SharedMemory::Open(const std::string& name, bool read_only) {
   // region. We don't do that - this means that we will overcount this memory,
   // which thankfully isn't relevant since Chrome only communicates with a
   // single version of the service process.
-  shm_ = SharedMemoryHandle(base::FileDescriptor(mapped_file, false),
+  // We pass the size |0|, which is a dummy size and wrong, but otherwise
+  // harmless.
+  shm_ = SharedMemoryHandle(base::FileDescriptor(mapped_file, false), 0u,
                             UnguessableToken::Create());
   readonly_shm_ = SharedMemoryHandle(
-      base::FileDescriptor(readonly_mapped_file, false), shm_.GetGUID());
+      base::FileDescriptor(readonly_mapped_file, false), 0, shm_.GetGUID());
   return result;
 }
 #endif  // !defined(OS_ANDROID)

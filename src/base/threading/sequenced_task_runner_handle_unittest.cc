@@ -10,15 +10,13 @@
 #include "base/callback.h"
 #include "base/location.h"
 #include "base/memory/ref_counted.h"
-#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/sequence_checker_impl.h"
 #include "base/sequenced_task_runner.h"
 #include "base/synchronization/waitable_event.h"
-#include "base/test/sequenced_worker_pool_owner.h"
+#include "base/task_scheduler/post_task.h"
+#include "base/test/scoped_task_environment.h"
 #include "base/test/test_simple_task_runner.h"
-#include "base/threading/sequenced_worker_pool.h"
-#include "base/threading/simple_thread.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -29,8 +27,8 @@ class SequencedTaskRunnerHandleTest : public ::testing::Test {
  protected:
   // Verifies that the context it runs on has a SequencedTaskRunnerHandle
   // and that posting to it results in the posted task running in that same
-  // context (sequence). Runs |callback| on sequence when done.
-  static void VerifyCurrentSequencedTaskRunner(const Closure& callback) {
+  // context (sequence).
+  static void VerifyCurrentSequencedTaskRunner() {
     ASSERT_TRUE(SequencedTaskRunnerHandle::IsSet());
     scoped_refptr<SequencedTaskRunner> task_runner =
         SequencedTaskRunnerHandle::Get();
@@ -42,59 +40,35 @@ class SequencedTaskRunnerHandleTest : public ::testing::Test {
     task_runner->PostTask(
         FROM_HERE,
         base::BindOnce(&SequencedTaskRunnerHandleTest::CheckValidSequence,
-                       base::Passed(&sequence_checker), callback));
+                       base::Passed(&sequence_checker)));
   }
 
-  // Verifies that there is no SequencedTaskRunnerHandle in the context it runs.
-  // Runs |callback| when done.
-  static void VerifyNoSequencedTaskRunner(const Closure& callback) {
-    ASSERT_FALSE(SequencedTaskRunnerHandle::IsSet());
-    callback.Run();
-  }
-
- private:
   static void CheckValidSequence(
-      std::unique_ptr<SequenceCheckerImpl> sequence_checker,
-      const Closure& callback) {
+      std::unique_ptr<SequenceCheckerImpl> sequence_checker) {
     EXPECT_TRUE(sequence_checker->CalledOnValidSequence());
-    callback.Run();
   }
 
-  MessageLoop message_loop_;
+  base::test::ScopedTaskEnvironment scoped_task_environment_;
 };
 
 TEST_F(SequencedTaskRunnerHandleTest, FromMessageLoop) {
-  RunLoop run_loop;
-  VerifyCurrentSequencedTaskRunner(run_loop.QuitClosure());
-  run_loop.Run();
+  VerifyCurrentSequencedTaskRunner();
+  RunLoop().RunUntilIdle();
 }
 
-TEST_F(SequencedTaskRunnerHandleTest, FromSequencedWorkerPoolTask) {
-  // Wrap the SequencedWorkerPool to avoid leaks due to its asynchronous
-  // destruction.
-  SequencedWorkerPoolOwner owner(3, "Test");
-  WaitableEvent event(WaitableEvent::ResetPolicy::AUTOMATIC,
-                      WaitableEvent::InitialState::NOT_SIGNALED);
-  owner.pool()->PostSequencedWorkerTask(
-      owner.pool()->GetSequenceToken(), FROM_HERE,
+TEST_F(SequencedTaskRunnerHandleTest, FromTaskSchedulerSequencedTask) {
+  base::CreateSequencedTaskRunnerWithTraits({})->PostTask(
+      FROM_HERE,
       base::BindOnce(
-          &SequencedTaskRunnerHandleTest::VerifyCurrentSequencedTaskRunner,
-          base::Bind(&WaitableEvent::Signal, base::Unretained(&event))));
-  event.Wait();
+          &SequencedTaskRunnerHandleTest::VerifyCurrentSequencedTaskRunner));
+  scoped_task_environment_.RunUntilIdle();
 }
 
 TEST_F(SequencedTaskRunnerHandleTest, NoHandleFromUnsequencedTask) {
-  // Wrap the SequencedWorkerPool to avoid leaks due to its asynchronous
-  // destruction.
-  SequencedWorkerPoolOwner owner(3, "Test");
-  WaitableEvent event(WaitableEvent::ResetPolicy::AUTOMATIC,
-                      WaitableEvent::InitialState::NOT_SIGNALED);
-  owner.pool()->PostWorkerTask(
-      FROM_HERE,
-      base::BindOnce(
-          &SequencedTaskRunnerHandleTest::VerifyNoSequencedTaskRunner,
-          base::Bind(&WaitableEvent::Signal, base::Unretained(&event))));
-  event.Wait();
+  base::PostTask(FROM_HERE, base::BindOnce([]() {
+                   EXPECT_FALSE(SequencedTaskRunnerHandle::IsSet());
+                 }));
+  scoped_task_environment_.RunUntilIdle();
 }
 
 TEST(SequencedTaskRunnerHandleTestWithoutMessageLoop, FromHandleInScope) {

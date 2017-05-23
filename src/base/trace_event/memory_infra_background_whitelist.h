@@ -18,12 +18,18 @@ namespace trace_event {
 // Checks if the given |mdp_name| is in the whitelist.
 bool BASE_EXPORT IsMemoryDumpProviderWhitelisted(const char* mdp_name);
 
+// Checks if the given |mdp_name| is required for summary dumps.
+bool BASE_EXPORT
+IsMemoryDumpProviderWhitelistedForSummary(const char* mdp_name);
+
 // Checks if the given |name| matches any of the whitelisted patterns.
 bool BASE_EXPORT IsMemoryAllocatorDumpNameWhitelisted(const std::string& name);
 
 // The whitelist is replaced with the given list for tests. The last element of
 // the list must be nullptr.
 void BASE_EXPORT SetDumpProviderWhitelistForTesting(const char* const* list);
+void BASE_EXPORT
+SetDumpProviderSummaryWhitelistForTesting(const char* const* list);
 void BASE_EXPORT
 SetAllocatorDumpNameWhitelistForTesting(const char* const* list);
 

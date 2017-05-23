@@ -470,6 +470,8 @@ class NET_EXPORT NetworkQualityEstimator
                            TypicalNetworkQualities);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest,
                            OnPrefsReadWithReadingDisabled);
+  FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest,
+                           ForceEffectiveConnectionTypeThroughFieldTrial);
 
   // Value of round trip time observations is in base::TimeDelta.
   typedef nqe::internal::Observation<base::TimeDelta> RttObservation;
@@ -536,12 +538,6 @@ class NET_EXPORT NetworkQualityEstimator
   // a valid observation is available. |downstream_kbps| is the downstream
   // throughput in kilobits per second.
   void OnNewThroughputObservationAvailable(int32_t downstream_kbps);
-
-  // Obtains the model parameters for different effective connection types from
-  // the field trial parameters. For each effective connection type, a model
-  // (currently composed of a RTT threshold and a downlink throughput threshold)
-  // is provided by the field trial.
-  void ObtainOperatingParams();
 
   // Adds the default median RTT and downstream throughput estimate for the
   // current connection type to the observation buffer.
@@ -706,23 +702,6 @@ class NET_EXPORT NetworkQualityEstimator
 
   // Buffer that holds RTT observations sorted by timestamp.
   RttObservationBuffer rtt_observations_;
-
-  // Default network quality observations obtained from the network quality
-  // estimator field trial parameters. The observations are indexed by
-  // ConnectionType.
-  nqe::internal::NetworkQuality
-      default_observations_[NetworkChangeNotifier::CONNECTION_LAST + 1];
-
-  // Thresholds for different effective connection types obtained from field
-  // trial variation params. These thresholds encode how different connection
-  // types behave in general. In future, complex encodings (e.g., curve
-  // fitting) may be used.
-  nqe::internal::NetworkQuality connection_thresholds_
-      [EffectiveConnectionType::EFFECTIVE_CONNECTION_TYPE_LAST];
-
-  // Typical network quality for different effective connection types.
-  nqe::internal::NetworkQuality typical_network_quality_
-      [EffectiveConnectionType::EFFECTIVE_CONNECTION_TYPE_LAST];
 
   // Time when the transaction for the last main frame request was started.
   base::TimeTicks last_main_frame_request_;

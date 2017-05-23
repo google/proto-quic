@@ -112,11 +112,10 @@ class HttpStreamFactoryImpl::Request : public HttpStreamRequest {
                         HttpAuthController* auth_controller);
   void OnNeedsClientAuth(const SSLConfig& used_ssl_config,
                          SSLCertRequestInfo* cert_info);
-  void OnHttpsProxyTunnelResponse(
-      const HttpResponseInfo& response_info,
-      const SSLConfig& used_ssl_config,
-      const ProxyInfo& used_proxy_info,
-      HttpStream* stream);
+  void OnHttpsProxyTunnelResponse(const HttpResponseInfo& response_info,
+                                  const SSLConfig& used_ssl_config,
+                                  const ProxyInfo& used_proxy_info,
+                                  std::unique_ptr<HttpStream> stream);
 
   // HttpStreamRequest methods.
   int RestartTunnelWithProxyAuth() override;

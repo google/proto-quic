@@ -63,6 +63,10 @@
 #include "base/numerics/safe_math.h"
 #include "build/build_config.h"
 
+#if defined(OS_FUCHSIA)
+#include <magenta/types.h>
+#endif
+
 #if defined(OS_MACOSX)
 #include <CoreFoundation/CoreFoundation.h>
 // Avoid Mac system header macro leak.
@@ -413,22 +417,19 @@ inline TimeClass operator+(TimeDelta delta, TimeClass t) {
 // monotonically non-decreasing and are subject to large amounts of skew.
 class BASE_EXPORT Time : public time_internal::TimeBase<Time> {
  public:
-  // The representation of Jan 1, 1970 UTC in microseconds since the
-  // platform-dependent epoch.
-  static const int64_t kTimeTToMicrosecondsOffset;
+  // Offset of UNIX epoch (1970-01-01 00:00:00 UTC) from Windows FILETIME epoch
+  // (1601-01-01 00:00:00 UTC), in microseconds. This value is derived from the
+  // following: ((1970-1601)*365+89)*24*60*60*1000*1000, where 89 is the number
+  // of leap year days between 1601 and 1970: (1970-1601)/4 excluding 1700,
+  // 1800, and 1900.
+  static constexpr int64_t kTimeTToMicrosecondsOffset =
+      INT64_C(11644473600000000);
 
-#if !defined(OS_WIN)
-  // On Mac & Linux, this value is the delta from the Windows epoch of 1601 to
-  // the Posix delta of 1970. This is used for migrating between the old
-  // 1970-based epochs to the new 1601-based ones. It should be removed from
-  // this global header and put in the platform-specific ones when we remove the
-  // migration code.
-  static const int64_t kWindowsEpochDeltaMicroseconds;
-#else
+#if defined(OS_WIN)
   // To avoid overflow in QPC to Microseconds calculations, since we multiply
   // by kMicrosecondsPerSecond, then the QPC value should not exceed
   // (2^63 - 1) / 1E6. If it exceeds that threshold, we divide then multiply.
-  enum : int64_t{kQPCOverflowThreshold = 0x8637BD05AF7};
+  static constexpr int64_t kQPCOverflowThreshold = INT64_C(0x8637BD05AF7);
 #endif
 
   // Represents an exploded time that can be formatted nicely. This is kind of
@@ -701,6 +702,7 @@ class BASE_EXPORT TimeTicks : public time_internal::TimeBase<TimeTicks> {
  public:
   // The underlying clock used to generate new TimeTicks.
   enum class Clock {
+    FUCHSIA_MX_CLOCK_MONOTONIC,
     LINUX_CLOCK_MONOTONIC,
     IOS_CF_ABSOLUTE_TIME_MINUS_KERN_BOOTTIME,
     MAC_MACH_ABSOLUTE_TIME,
@@ -729,6 +731,12 @@ class BASE_EXPORT TimeTicks : public time_internal::TimeBase<TimeTicks> {
   // from different threads that are within one tick of each other must be
   // considered to have an ambiguous ordering.)
   static bool IsConsistentAcrossProcesses() WARN_UNUSED_RESULT;
+
+#if defined(OS_FUCHSIA)
+  // Creates a TimeTicks from a mx_time_t value. Note that the mx_time_t value
+  // is interpreted in terms of the MX_CLOCK_MONOTONIC clock.
+  static TimeTicks FromMXTime(mx_time_t nanos_since_boot);
+#endif
 
 #if defined(OS_WIN)
   // Translates an absolute QPC timestamp into a TimeTicks value. The returned
@@ -791,7 +799,8 @@ class BASE_EXPORT ThreadTicks : public time_internal::TimeBase<ThreadTicks> {
   // Returns true if ThreadTicks::Now() is supported on this system.
   static bool IsSupported() WARN_UNUSED_RESULT {
 #if (defined(_POSIX_THREAD_CPUTIME) && (_POSIX_THREAD_CPUTIME >= 0)) || \
-    (defined(OS_MACOSX) && !defined(OS_IOS)) || defined(OS_ANDROID)
+    (defined(OS_MACOSX) && !defined(OS_IOS)) || defined(OS_ANDROID) ||  \
+    defined(OS_FUCHSIA)
     return true;
 #elif defined(OS_WIN)
     return IsSupportedWin();

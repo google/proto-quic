@@ -35,6 +35,19 @@ declare_args() {
   # with the build. Used on iOS to ship official builds (as they are built
   # with the version of clang shipped with Xcode).
   use_xcode_clang = is_ios && is_official_build
+
+  # Used for binary size analysis.
+  # Currently disabled on LLD because of a bug (fixed upstream).
+  # See https://crbug.com/716209.
+  generate_linker_map = is_android && is_official_build
+}
+
+if (generate_linker_map) {
+  assert(
+      is_official_build,
+      "Linker map files should only be generated when is_official_build = true")
+  assert(target_os == "android" || target_os == "linux",
+         "Linker map files should only be generated for Android and Linux")
 }
 
 # The path to the hermetic install of Xcode. Only relevant when

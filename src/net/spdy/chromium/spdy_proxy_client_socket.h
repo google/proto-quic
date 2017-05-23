@@ -57,7 +57,7 @@ class NET_EXPORT_PRIVATE SpdyProxyClientSocket : public ProxyClientSocket,
 
   // ProxyClientSocket methods:
   const HttpResponseInfo* GetConnectResponseInfo() const override;
-  HttpStream* CreateConnectResponseStream() override;
+  std::unique_ptr<HttpStream> CreateConnectResponseStream() override;
   const scoped_refptr<HttpAuthController>& GetAuthController() const override;
   int RestartWithAuth(const CompletionCallback& callback) override;
   bool IsUsingSpdy() const override;

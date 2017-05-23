@@ -20,6 +20,7 @@
 #include "net/base/test_completion_callback.h"
 #include "net/disk_cache/blockfile/backend_impl.h"
 #include "net/disk_cache/blockfile/entry_impl.h"
+#include "net/disk_cache/cache_util.h"
 #include "net/disk_cache/disk_cache_test_base.h"
 #include "net/disk_cache/disk_cache_test_util.h"
 #include "net/disk_cache/memory/mem_entry_impl.h"
@@ -4299,4 +4300,25 @@ TEST_F(DiskCacheEntryTest, SimpleCacheReadCorruptLength) {
   EXPECT_TRUE(
       disk_cache::simple_util::CorruptStream0LengthFromEntry(key, cache_path_));
   EXPECT_NE(net::OK, OpenEntry(key, &entry));
+}
+
+TEST_F(DiskCacheEntryTest, SimpleCacheCreateRecoverFromRmdir) {
+  // This test runs as APP_CACHE to make operations more synchronous.
+  // (in particular we want to see if create succeeded or not, so we don't
+  //  want an optimistic one).
+  SetCacheType(net::APP_CACHE);
+  SetSimpleCacheMode();
+  InitCache();
+
+  // Pretend someone deleted the cache dir. This shouldn't be too scary in
+  // the test since cache_path_ is set as:
+  //   CHECK(temp_dir_.CreateUniqueTempDir());
+  //   cache_path_ = temp_dir_.GetPath();
+  disk_cache::DeleteCache(cache_path_,
+                          true /* delete the dir, what we really want*/);
+
+  disk_cache::Entry* entry;
+  std::string key("a key");
+  ASSERT_THAT(CreateEntry(key, &entry), IsOk());
+  entry->Close();
 }

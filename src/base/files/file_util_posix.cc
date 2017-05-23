@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/errno.h>
 #include <sys/mman.h>
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -212,11 +211,9 @@ bool DeleteFile(const FilePath& path, bool recursive) {
   ThreadRestrictions::AssertIOAllowed();
   const char* path_str = path.value().c_str();
   stat_wrapper_t file_info;
-  int test = CallLstat(path_str, &file_info);
-  if (test != 0) {
+  if (CallLstat(path_str, &file_info) != 0) {
     // The Windows version defines this condition as success.
-    bool ret = (errno == ENOENT || errno == ENOTDIR);
-    return ret;
+    return (errno == ENOENT || errno == ENOTDIR);
   }
   if (!S_ISDIR(file_info.st_mode))
     return (unlink(path_str) == 0);
@@ -425,9 +422,9 @@ bool PathIsWritable(const FilePath& path) {
 bool DirectoryExists(const FilePath& path) {
   ThreadRestrictions::AssertIOAllowed();
   stat_wrapper_t file_info;
-  if (CallStat(path.value().c_str(), &file_info) == 0)
-    return S_ISDIR(file_info.st_mode);
-  return false;
+  if (CallStat(path.value().c_str(), &file_info) != 0)
+    return false;
+  return S_ISDIR(file_info.st_mode);
 }
 
 bool ReadFromFD(int fd, char* buffer, size_t bytes) {
@@ -672,9 +669,7 @@ bool NormalizeFilePath(const FilePath& path, FilePath* normalized_path) {
 
   // To be consistant with windows, fail if |real_path_result| is a
   // directory.
-  stat_wrapper_t file_info;
-  if (CallStat(real_path_result.value().c_str(), &file_info) != 0 ||
-      S_ISDIR(file_info.st_mode))
+  if (DirectoryExists(real_path_result))
     return false;
 
   *normalized_path = real_path_result;
@@ -689,11 +684,7 @@ bool IsLink(const FilePath& file_path) {
   // least be a 'followable' link.
   if (CallLstat(file_path.value().c_str(), &st) != 0)
     return false;
-
-  if (S_ISLNK(st.st_mode))
-    return true;
-  else
-    return false;
+  return S_ISLNK(st.st_mode);
 }
 
 bool GetFileInfo(const FilePath& file_path, File::Info* results) {
@@ -818,7 +809,6 @@ bool AppendToFile(const FilePath& filename, const char* data, int size) {
   return ret;
 }
 
-// Gets the current working directory for the process.
 bool GetCurrentDirectory(FilePath* dir) {
   // getcwd can return ENOENT, which implies it checks against the disk.
   ThreadRestrictions::AssertIOAllowed();
@@ -832,11 +822,9 @@ bool GetCurrentDirectory(FilePath* dir) {
   return true;
 }
 
-// Sets the current working directory for the process.
 bool SetCurrentDirectory(const FilePath& path) {
   ThreadRestrictions::AssertIOAllowed();
-  int ret = chdir(path.value().c_str());
-  return !ret;
+  return chdir(path.value().c_str()) == 0;
 }
 
 bool VerifyPathControlledByUser(const FilePath& base,

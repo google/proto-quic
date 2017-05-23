@@ -16,4 +16,8 @@ base::UnguessableToken SharedMemoryHandle::GetGUID() const {
   return guid_;
 }
 
+size_t SharedMemoryHandle::GetSize() const {
+  return size_;
+}
+
 }  // namespace base

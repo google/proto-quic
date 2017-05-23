@@ -114,7 +114,10 @@ TestLauncherTracer* GetTestLauncherTracer() {
   return tracer;
 }
 
-#if defined(OS_POSIX)
+// TODO(fuchsia): Fuchsia does not have POSIX signals, but equivalent
+// functionality will probably be necessary eventually. See
+// https://crbug.com/706592.
+#if defined(OS_POSIX) && !defined(OS_FUCHSIA)
 // Self-pipe that makes it possible to do complex shutdown handling
 // outside of the signal handler.
 int g_shutdown_pipe[2] = { -1, -1 };
@@ -170,7 +173,7 @@ void OnShutdownPipeReadable() {
   // The signal would normally kill the process, so exit now.
   _exit(1);
 }
-#endif  // defined(OS_POSIX)
+#endif  // defined(OS_POSIX) && !defined(OS_FUCHSIA)
 
 // Parses the environment variable var as an Int32.  If it is unset, returns
 // true.  If it is set, unsets it then converts it to Int32 before
@@ -524,7 +527,9 @@ bool TestLauncher::Run() {
   // original value.
   int requested_cycles = cycles_;
 
-#if defined(OS_POSIX)
+// TODO(fuchsia): Fuchsia does not have POSIX signals. Something similiar to
+// this will likely need to be implemented. See https://crbug.com/706592.
+#if defined(OS_POSIX) && !defined(OS_FUCHSIA)
   CHECK_EQ(0, pipe(g_shutdown_pipe));
 
   struct sigaction action;
@@ -538,7 +543,7 @@ bool TestLauncher::Run() {
 
   auto controller = base::FileDescriptorWatcher::WatchReadable(
       g_shutdown_pipe[0], base::Bind(&OnShutdownPipeReadable));
-#endif  // defined(OS_POSIX)
+#endif  // defined(OS_POSIX) && !defined(OS_FUCHSIA)
 
   // Start the watchdog timer.
   watchdog_timer_.Reset();
@@ -679,9 +684,9 @@ void TestLauncher::OnTestFinished(const TestResult& original_result) {
             test_broken_count_);
     fflush(stdout);
 
-#if defined(OS_POSIX)
+#if defined(OS_POSIX) && !defined(OS_FUCHSIA)
     KillSpawnedTestProcesses();
-#endif  // defined(OS_POSIX)
+#endif  // defined(OS_POSIX) && !defined(OS_FUCHSIA)
 
     MaybeSaveSummaryAsJSON({"BROKEN_TEST_EARLY_EXIT", kUnreliableResultsTag});
 

@@ -52,11 +52,17 @@ code on your workstation. It does this by providing a special version of the
 Android SDK jar that can run in your host JVM. Some more information about
 Robolectric can be found [here](http://robolectric.org/).
 
+One on the main benefits of using Robolectric framework are [shadow classes](http://robolectric.org/extending/).
+Robolectric comes with many prebuilt shadow classes and also lets you define
+your own. Whenever an object is instantiated within a Robolectric test,
+Robolectric looks for a corresponding shadow class (marked by
+`@Implements(ClassBeingShadowed.class)`). If found, any time a method is invoked
+on the object, the shadow class's implementation of the method is invoked first.
+This works even for static and final methods.
+
 #### Useful Tips
 
 * Use `@RunWith(LocalRobolectricTestRunner.class)` for all Chromium Robolectric tests.
-* Use `@Config(manifest = Config.NONE)` for tests.
-  Currently, you are unable to pass your app's AndroidManifest to Robolectric.
 * You can specify the Android SDK to run your test with with `@Config(sdk = ??)`.
 
 > Currently, only SDK levels 18, 21, and 25 are supported in Chromium
@@ -94,6 +100,25 @@ public class MyRobolectricJUnitTest {
         // available to use thanks to Robolectric.
         assertTrue(TextUtils.equals(testString, "test"));
     }
+}
+```
+
+#### Example junit_binary build template.
+
+```python
+junit_binary("my_robolectric_tests") {
+
+    java_files = [
+        "java/src/foo/bar/MyJUnitTest.java"
+
+    deps = [
+        "//my/test:dependency",
+    ]
+
+    # Sets app's package name in Robolectric tests. You need to specify
+    # this variable in order for Robolectric to be able to find your app's
+    # resources.
+    package_name = manifest_package
 }
 ```
 

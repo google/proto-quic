@@ -71,6 +71,9 @@ class BASE_EXPORT SharedMemoryHandle {
   // memory region will have the same GUID. Preserved across IPC.
   base::UnguessableToken GetGUID() const;
 
+  // Returns the size of the memory region that SharedMemoryHandle points to.
+  size_t GetSize() const;
+
 #if defined(OS_MACOSX) && !defined(OS_IOS)
   enum Type {
     // The SharedMemoryHandle is backed by a POSIX fd.
@@ -91,15 +94,24 @@ class BASE_EXPORT SharedMemoryHandle {
   // SharedMemoryHandle, the caller must pass the |guid| of that
   // SharedMemoryHandle. Otherwise, the caller should generate a new
   // UnguessableToken.
+  // |size| refers to the size of the memory region pointed to by
+  // file_descriptor.fd. Passing the wrong |size| has no immediate consequence,
+  // but may cause errors when trying to map the SharedMemoryHandle at a later
+  // point in time.
   SharedMemoryHandle(const base::FileDescriptor& file_descriptor,
+                     size_t size,
                      const base::UnguessableToken& guid);
 
   // Makes a Mach-based SharedMemoryHandle of the given size. On error,
   // subsequent calls to IsValid() return false.
+  // Passing the wrong |size| has no immediate consequence, but may cause errors
+  // when trying to map the SharedMemoryHandle at a later point in time.
   SharedMemoryHandle(mach_vm_size_t size, const base::UnguessableToken& guid);
 
   // Makes a Mach-based SharedMemoryHandle from |memory_object|, a named entry
   // in the current task. The memory region has size |size|.
+  // Passing the wrong |size| has no immediate consequence, but may cause errors
+  // when trying to map the SharedMemoryHandle at a later point in time.
   SharedMemoryHandle(mach_port_t memory_object,
                      mach_vm_size_t size,
                      const base::UnguessableToken& guid);
@@ -107,10 +119,6 @@ class BASE_EXPORT SharedMemoryHandle {
   // Exposed so that the SharedMemoryHandle can be transported between
   // processes.
   mach_port_t GetMemoryObject() const;
-
-  // Returns false on a failure to determine the size. On success, populates the
-  // output variable |size|.
-  bool GetSize(size_t* size) const;
 
   // The SharedMemoryHandle must be valid.
   // Returns whether the SharedMemoryHandle was successfully mapped into memory.
@@ -124,7 +132,9 @@ class BASE_EXPORT SharedMemoryHandle {
   // SharedMemoryHandle, the caller must pass the |guid| of that
   // SharedMemoryHandle. Otherwise, the caller should generate a new
   // UnguessableToken.
-  SharedMemoryHandle(HANDLE h, const base::UnguessableToken& guid);
+  // Passing the wrong |size| has no immediate consequence, but may cause errors
+  // when trying to map the SharedMemoryHandle at a later point in time.
+  SharedMemoryHandle(HANDLE h, size_t size, const base::UnguessableToken& guid);
   HANDLE GetHandle() const;
 #else
   // |guid| uniquely identifies the shared memory region pointed to by the
@@ -132,18 +142,20 @@ class BASE_EXPORT SharedMemoryHandle {
   // SharedMemoryHandle, the caller must pass the |guid| of that
   // SharedMemoryHandle. Otherwise, the caller should generate a new
   // UnguessableToken.
+  // Passing the wrong |size| has no immediate consequence, but may cause errors
+  // when trying to map the SharedMemoryHandle at a later point in time.
   SharedMemoryHandle(const base::FileDescriptor& file_descriptor,
+                     size_t size,
                      const base::UnguessableToken& guid);
 
   // Creates a SharedMemoryHandle from an |fd| supplied from an external
   // service.
-  static SharedMemoryHandle ImportHandle(int fd);
+  // Passing the wrong |size| has no immediate consequence, but may cause errors
+  // when trying to map the SharedMemoryHandle at a later point in time.
+  static SharedMemoryHandle ImportHandle(int fd, size_t size);
 
   // Returns the underlying OS resource.
   int GetHandle() const;
-
-  // Takes ownership of the OS resource.
-  void SetHandle(int fd);
 
   // Invalidates [but doesn't close] the underlying OS resource. This will leak
   // unless the caller is careful.
@@ -154,7 +166,7 @@ class BASE_EXPORT SharedMemoryHandle {
 #if defined(OS_MACOSX) && !defined(OS_IOS)
   friend class SharedMemory;
 
-  Type type_;
+  Type type_ = MACH;
 
   // Each instance of a SharedMemoryHandle is backed either by a POSIX fd or a
   // mach port. |type_| determines the backing member.
@@ -162,33 +174,32 @@ class BASE_EXPORT SharedMemoryHandle {
     FileDescriptor file_descriptor_;
 
     struct {
-      mach_port_t memory_object_;
-
-      // The size of the shared memory region when |type_| is MACH. Only
-      // relevant if |memory_object_| is not |MACH_PORT_NULL|.
-      mach_vm_size_t size_;
+      mach_port_t memory_object_ = MACH_PORT_NULL;
 
       // Whether passing this object as a parameter to an IPC message passes
       // ownership of |memory_object_| to the IPC stack. This is meant to mimic
       // the behavior of the |auto_close| parameter of FileDescriptor.
       // Defaults to |false|.
-      bool ownership_passes_to_ipc_;
+      bool ownership_passes_to_ipc_ = false;
     };
   };
 #elif defined(OS_WIN)
-  HANDLE handle_;
+  HANDLE handle_ = nullptr;
 
   // Whether passing this object as a parameter to an IPC message passes
   // ownership of |handle_| to the IPC stack. This is meant to mimic the
   // behavior of the |auto_close| parameter of FileDescriptor. This member only
   // affects attachment-brokered SharedMemoryHandles.
   // Defaults to |false|.
-  bool ownership_passes_to_ipc_;
+  bool ownership_passes_to_ipc_ = false;
 #else
   FileDescriptor file_descriptor_;
 #endif
 
   base::UnguessableToken guid_;
+
+  // The size of the region referenced by the SharedMemoryHandle.
+  size_t size_ = 0;
 };
 
 }  // namespace base

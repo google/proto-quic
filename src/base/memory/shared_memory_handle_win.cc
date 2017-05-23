@@ -9,12 +9,12 @@
 
 namespace base {
 
-SharedMemoryHandle::SharedMemoryHandle()
-    : handle_(nullptr), ownership_passes_to_ipc_(false) {}
+SharedMemoryHandle::SharedMemoryHandle() {}
 
 SharedMemoryHandle::SharedMemoryHandle(HANDLE h,
+                                       size_t size,
                                        const base::UnguessableToken& guid)
-    : handle_(h), ownership_passes_to_ipc_(false), guid_(guid) {}
+    : handle_(h), guid_(guid), size_(size) {}
 
 void SharedMemoryHandle::Close() const {
   DCHECK(handle_ != nullptr);
@@ -33,7 +33,7 @@ SharedMemoryHandle SharedMemoryHandle::Duplicate() const {
   if (!success)
     return SharedMemoryHandle();
 
-  base::SharedMemoryHandle handle(duped_handle, GetGUID());
+  base::SharedMemoryHandle handle(duped_handle, GetSize(), GetGUID());
   handle.SetOwnershipPassesToIPC(true);
   return handle;
 }

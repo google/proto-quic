@@ -124,7 +124,8 @@ const HttpResponseInfo* HttpProxyClientSocketWrapper::GetConnectResponseInfo()
   return nullptr;
 }
 
-HttpStream* HttpProxyClientSocketWrapper::CreateConnectResponseStream() {
+std::unique_ptr<HttpStream>
+HttpProxyClientSocketWrapper::CreateConnectResponseStream() {
   if (transport_socket_)
     return transport_socket_->CreateConnectResponseStream();
   return nullptr;

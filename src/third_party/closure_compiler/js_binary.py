@@ -11,8 +11,10 @@ optional --flags argument which will add custom flags to the compiler.  Any
 extern files can also be passed in using the --extern flag.
 """
 
-from argparse import ArgumentParser
+import argparse
 import os
+import sys
+
 import compile2
 
 
@@ -38,7 +40,7 @@ def CrawlDepsTree(deps, sources):
 
 
 def main():
-  parser = ArgumentParser()
+  parser = argparse.ArgumentParser()
   parser.add_argument('-c', '--compiler', required=True,
                       help='Path to compiler')
   parser.add_argument('-s', '--sources', nargs='*', default=[],
@@ -73,8 +75,12 @@ def main():
   compiler_args += args.config
   compiler_args += sources
 
-  compile2.Checker().run_jar(args.compiler, compiler_args)
+  returncode, errors = compile2.Checker().run_jar(args.compiler, compiler_args)
+  if returncode != 0:
+    print errors
+
+  return returncode
 
 
 if __name__ == '__main__':
-  main()
+  sys.exit(main())

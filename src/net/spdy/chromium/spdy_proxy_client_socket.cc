@@ -5,7 +5,6 @@
 #include "net/spdy/chromium/spdy_proxy_client_socket.h"
 
 #include <algorithm>  // min
-#include <memory>
 #include <utility>
 
 #include "base/bind.h"
@@ -13,6 +12,7 @@
 #include "base/callback_helpers.h"
 #include "base/location.h"
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_util.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -94,9 +94,10 @@ NextProto SpdyProxyClientSocket::GetProxyNegotiatedProtocol() const {
   return spdy_stream_->GetNegotiatedProtocol();
 }
 
-HttpStream* SpdyProxyClientSocket::CreateConnectResponseStream() {
-  return new ProxyConnectRedirectHttpStream(
-      redirect_has_load_timing_info_ ? &redirect_load_timing_info_ : NULL);
+std::unique_ptr<HttpStream>
+SpdyProxyClientSocket::CreateConnectResponseStream() {
+  return base::MakeUnique<ProxyConnectRedirectHttpStream>(
+      redirect_has_load_timing_info_ ? &redirect_load_timing_info_ : nullptr);
 }
 
 // Sends a HEADERS frame to the proxy with a CONNECT request

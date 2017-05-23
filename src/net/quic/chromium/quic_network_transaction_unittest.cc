@@ -625,21 +625,22 @@ class QuicNetworkTransactionTest
 
   void ExpectBrokenAlternateProtocolMapping() {
     const url::SchemeHostPort server(request_.url);
-    const AlternativeServiceVector alternative_service_vector =
-        http_server_properties_.GetAlternativeServices(server);
-    EXPECT_EQ(1u, alternative_service_vector.size());
+    const AlternativeServiceInfoVector alternative_service_info_vector =
+        http_server_properties_.GetAlternativeServiceInfos(server);
+    EXPECT_EQ(1u, alternative_service_info_vector.size());
     EXPECT_TRUE(http_server_properties_.IsAlternativeServiceBroken(
-        alternative_service_vector[0]));
+        alternative_service_info_vector[0].alternative_service));
   }
 
   void ExpectQuicAlternateProtocolMapping() {
     const url::SchemeHostPort server(request_.url);
-    const AlternativeServiceVector alternative_service_vector =
-        http_server_properties_.GetAlternativeServices(server);
-    EXPECT_EQ(1u, alternative_service_vector.size());
-    EXPECT_EQ(kProtoQUIC, alternative_service_vector[0].protocol);
+    const AlternativeServiceInfoVector alternative_service_info_vector =
+        http_server_properties_.GetAlternativeServiceInfos(server);
+    EXPECT_EQ(1u, alternative_service_info_vector.size());
+    EXPECT_EQ(kProtoQUIC,
+              alternative_service_info_vector[0].alternative_service.protocol);
     EXPECT_FALSE(http_server_properties_.IsAlternativeServiceBroken(
-        alternative_service_vector[0]));
+        alternative_service_info_vector[0].alternative_service));
   }
 
   void AddHangingNonAlternateProtocolSocketData() {
@@ -1295,9 +1296,10 @@ TEST_P(QuicNetworkTransactionTest, SetAlternativeServiceWithScheme) {
   url::SchemeHostPort https_server("https", "mail.example.org", 443);
   // Check alternative service is set for the correct origin.
   EXPECT_EQ(
-      2u, http_server_properties->GetAlternativeServices(https_server).size());
+      2u,
+      http_server_properties->GetAlternativeServiceInfos(https_server).size());
   EXPECT_TRUE(
-      http_server_properties->GetAlternativeServices(http_server).empty());
+      http_server_properties->GetAlternativeServiceInfos(http_server).empty());
 }
 
 TEST_P(QuicNetworkTransactionTest, DoNotGetAltSvcForDifferentOrigin) {
@@ -1326,9 +1328,9 @@ TEST_P(QuicNetworkTransactionTest, DoNotGetAltSvcForDifferentOrigin) {
 
   const url::SchemeHostPort https_server(request_.url);
   // Check alternative service is set.
-  AlternativeServiceVector alternative_service_vector =
-      http_server_properties->GetAlternativeServices(https_server);
-  EXPECT_EQ(2u, alternative_service_vector.size());
+  EXPECT_EQ(
+      2u,
+      http_server_properties->GetAlternativeServiceInfos(https_server).size());
 
   // Send http request to the same origin but with diffrent scheme, should not
   // use QUIC.
@@ -2882,13 +2884,14 @@ TEST_P(QuicNetworkTransactionTest, AlternativeServiceDifferentPort) {
   SendRequestAndExpectHttpResponse("hello world");
 
   url::SchemeHostPort http_server("https", kDefaultServerHostName, 443);
-  AlternativeServiceVector alternative_service_vector =
-      http_server_properties_.GetAlternativeServices(http_server);
-  ASSERT_EQ(1u, alternative_service_vector.size());
-  const AlternativeService alternative_service = alternative_service_vector[0];
-  EXPECT_EQ(kProtoQUIC, alternative_service_vector[0].protocol);
-  EXPECT_EQ(kDefaultServerHostName, alternative_service_vector[0].host);
-  EXPECT_EQ(137, alternative_service_vector[0].port);
+  AlternativeServiceInfoVector alternative_service_info_vector =
+      http_server_properties_.GetAlternativeServiceInfos(http_server);
+  ASSERT_EQ(1u, alternative_service_info_vector.size());
+  const AlternativeService alternative_service =
+      alternative_service_info_vector[0].alternative_service;
+  EXPECT_EQ(kProtoQUIC, alternative_service.protocol);
+  EXPECT_EQ(kDefaultServerHostName, alternative_service.host);
+  EXPECT_EQ(137, alternative_service.port);
 }
 
 TEST_P(QuicNetworkTransactionTest, ConfirmAlternativeService) {

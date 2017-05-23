@@ -5,7 +5,7 @@
 import("//build/config/linux/pkg_config.gni")
 import("//build/shim_headers.gni")
 
-pkg_config("system_libpng") {
+pkg_config("libpng_config") {
   packages = [ "libpng" ]
 }
 
@@ -21,5 +21,5 @@ source_set("libpng") {
   deps = [
     ":libpng_shim",
   ]
-  public_configs = [ ":system_libpng" ]
+  public_configs = [ ":libpng_config" ]
 }

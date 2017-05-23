@@ -68,7 +68,8 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
   TestDelegateBase(base::WeakPtr<SpdySession> session,
                    IOBuffer* read_buf,
                    int read_buf_len)
-      : stream_(new BidirectionalStreamSpdyImpl(session, NetLogSource())),
+      : stream_(base::MakeUnique<BidirectionalStreamSpdyImpl>(session,
+                                                              NetLogSource())),
         read_buf_(read_buf),
         read_buf_len_(read_buf_len),
         loop_(nullptr),
@@ -154,7 +155,7 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
   // Sets whether the delegate should wait until the completion of the stream.
   void SetRunUntilCompletion(bool run_until_completion) {
     run_until_completion_ = run_until_completion;
-    loop_.reset(new base::RunLoop);
+    loop_ = base::MakeUnique<base::RunLoop>();
   }
 
   // Wait until the stream reaches completion.
@@ -258,8 +259,8 @@ class BidirectionalStreamSpdyImplTest : public testing::TestWithParam<bool> {
                    size_t writes_count) {
     ASSERT_TRUE(ssl_data_.cert.get());
     session_deps_.socket_factory->AddSSLSocketDataProvider(&ssl_data_);
-    sequenced_data_.reset(
-        new SequencedSocketData(reads, reads_count, writes, writes_count));
+    sequenced_data_ = base::MakeUnique<SequencedSocketData>(
+        reads, reads_count, writes, writes_count);
     session_deps_.socket_factory->AddSocketDataProvider(sequenced_data_.get());
     session_deps_.net_log = net_log_.bound().net_log();
     http_session_ = SpdySessionDependencies::SpdyCreateSession(&session_deps_);
@@ -306,8 +307,8 @@ TEST_F(BidirectionalStreamSpdyImplTest, SimplePostRequest) {
                                        base::SizeTToString(kBodyDataSize));
 
   scoped_refptr<IOBuffer> read_buffer(new IOBuffer(kReadBufferSize));
-  std::unique_ptr<TestDelegateBase> delegate(
-      new TestDelegateBase(session_, read_buffer.get(), kReadBufferSize));
+  auto delegate = base::MakeUnique<TestDelegateBase>(
+      session_, read_buffer.get(), kReadBufferSize);
   delegate->SetRunUntilCompletion(true);
   delegate->Start(&request_info, net_log_.bound());
   sequenced_data_->RunUntilPaused();
@@ -359,10 +360,10 @@ TEST_F(BidirectionalStreamSpdyImplTest, LoadTimingTwoRequests) {
 
   scoped_refptr<IOBuffer> read_buffer(new IOBuffer(kReadBufferSize));
   scoped_refptr<IOBuffer> read_buffer2(new IOBuffer(kReadBufferSize));
-  std::unique_ptr<TestDelegateBase> delegate(
-      new TestDelegateBase(session_, read_buffer.get(), kReadBufferSize));
-  std::unique_ptr<TestDelegateBase> delegate2(
-      new TestDelegateBase(session_, read_buffer2.get(), kReadBufferSize));
+  auto delegate = base::MakeUnique<TestDelegateBase>(
+      session_, read_buffer.get(), kReadBufferSize);
+  auto delegate2 = base::MakeUnique<TestDelegateBase>(
+      session_, read_buffer2.get(), kReadBufferSize);
   delegate->SetRunUntilCompletion(true);
   delegate2->SetRunUntilCompletion(true);
   delegate->Start(&request_info, net_log_.bound());
@@ -406,8 +407,8 @@ TEST_F(BidirectionalStreamSpdyImplTest, SendDataAfterStreamFailed) {
                                        base::SizeTToString(kBodyDataSize * 3));
 
   scoped_refptr<IOBuffer> read_buffer(new IOBuffer(kReadBufferSize));
-  std::unique_ptr<TestDelegateBase> delegate(
-      new TestDelegateBase(session_, read_buffer.get(), kReadBufferSize));
+  auto delegate = base::MakeUnique<TestDelegateBase>(
+      session_, read_buffer.get(), kReadBufferSize);
   delegate->SetRunUntilCompletion(true);
   delegate->Start(&request_info, net_log_.bound());
   base::RunLoop().RunUntilIdle();
@@ -458,8 +459,8 @@ TEST_P(BidirectionalStreamSpdyImplTest, RstWithNoErrorBeforeSendIsComplete) {
                                        base::SizeTToString(kBodyDataSize * 3));
 
   scoped_refptr<IOBuffer> read_buffer(new IOBuffer(kReadBufferSize));
-  std::unique_ptr<TestDelegateBase> delegate(
-      new TestDelegateBase(session_, read_buffer.get(), kReadBufferSize));
+  auto delegate = base::MakeUnique<TestDelegateBase>(
+      session_, read_buffer.get(), kReadBufferSize);
   delegate->SetRunUntilCompletion(true);
   delegate->Start(&request_info, net_log_.bound());
   sequenced_data_->RunUntilPaused();

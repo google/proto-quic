@@ -572,10 +572,8 @@ int QuicStreamFactory::Job::DoConnectComplete(int rv) {
   return OK;
 }
 
-QuicStreamRequest::QuicStreamRequest(
-    QuicStreamFactory* factory,
-    HttpServerProperties* http_server_properties)
-    : factory_(factory), http_server_properties_(http_server_properties) {}
+QuicStreamRequest::QuicStreamRequest(QuicStreamFactory* factory)
+    : factory_(factory) {}
 
 QuicStreamRequest::~QuicStreamRequest() {
   if (factory_ && !callback_.is_null())
@@ -626,8 +624,7 @@ std::unique_ptr<HttpStream> QuicStreamRequest::CreateStream() {
   if (!session_ || !session_->IsConnected())
     return nullptr;
 
-  return base::MakeUnique<QuicHttpStream>(std::move(session_),
-                                          http_server_properties_);
+  return base::MakeUnique<QuicHttpStream>(std::move(session_));
 }
 
 std::unique_ptr<BidirectionalStreamImpl>

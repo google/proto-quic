@@ -50,6 +50,10 @@ class _BrowsingStory(system_health_story.SystemHealthStory):
     action_runner.NavigateBack()
     self._WaitForNavigation(action_runner)
 
+  @classmethod
+  def GenerateStoryDescription(cls):
+    return 'Load %s and navigate to some items/articles.' % cls.URL
+
 
 class _ArticleBrowsingStory(_BrowsingStory):
   """Abstract base class for user stories browsing news / shopping articles.
@@ -396,6 +400,9 @@ class ImgurDesktopStory(_MediaBrowsingStory):
 
 
 class YouTubeMobileStory(_MediaBrowsingStory):
+  """Load a typical YouTube video then navigate to a next few videos. Stop and
+  watch each video for few seconds.
+  """
   NAME = 'browse:media:youtube'
   URL = 'https://m.youtube.com/watch?v=QGfhS1hfTWw&autoplay=false'
   ITEM_SELECTOR = '._mhgb > a'
@@ -407,6 +414,9 @@ class YouTubeMobileStory(_MediaBrowsingStory):
 
 
 class YouTubeDesktopStory(_MediaBrowsingStory):
+  """Load a typical YouTube video then navigate to a next few videos. Stop and
+  watch each video for a few seconds.
+  """
   NAME = 'browse:media:youtube'
   URL = 'https://www.youtube.com/watch?v=QGfhS1hfTWw&autoplay=false'
   ITEM_SELECTOR = '.yt-uix-simple-thumb-related'
@@ -421,6 +431,9 @@ class YouTubeDesktopStory(_MediaBrowsingStory):
 
 
 class FacebookPhotosMobileStory(_MediaBrowsingStory):
+  """Load a photo page from Rihanna's facebook page then navigate a few next
+  photos.
+  """
   NAME = 'browse:media:facebook_photos'
   URL = (
       'https://m.facebook.com/rihanna/photos/a.207477806675.138795.10092511675/10153911739606676/?type=3&source=54&ref=page_internal')
@@ -432,6 +445,9 @@ class FacebookPhotosMobileStory(_MediaBrowsingStory):
 
 
 class FacebookPhotosDesktopStory(_MediaBrowsingStory):
+  """Load a photo page from Rihanna's facebook page then navigate a few next
+  photos.
+  """
   NAME = 'browse:media:facebook_photos'
   URL = (
       'https://www.facebook.com/rihanna/photos/a.207477806675.138795.10092511675/10153911739606676/?type=3&theater')

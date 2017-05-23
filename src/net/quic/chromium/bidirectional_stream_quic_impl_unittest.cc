@@ -296,10 +296,13 @@ class DeleteStreamDelegate : public TestDelegateBase {
   ~DeleteStreamDelegate() override {}
 
   void OnHeadersReceived(const SpdyHeaderBlock& response_headers) override {
+    // Make a copy of |response_headers| before the stream is deleted, since
+    // the headers are owned by the stream.
+    SpdyHeaderBlock headers_copy = response_headers.Clone();
     if (phase_ == ON_HEADERS_RECEIVED) {
       DeleteStream();
     }
-    TestDelegateBase::OnHeadersReceived(response_headers);
+    TestDelegateBase::OnHeadersReceived(headers_copy);
   }
 
   void OnDataSent() override { NOTREACHED(); }

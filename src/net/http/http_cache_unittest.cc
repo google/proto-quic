@@ -618,15 +618,10 @@ class FakeWebSocketHandshakeStreamCreateHelper
     : public WebSocketHandshakeStreamBase::CreateHelper {
  public:
   ~FakeWebSocketHandshakeStreamCreateHelper() override {}
-  WebSocketHandshakeStreamBase* CreateBasicStream(
+  std::unique_ptr<WebSocketHandshakeStreamBase> CreateBasicStream(
       std::unique_ptr<ClientSocketHandle> connect,
       bool using_proxy) override {
-    return NULL;
-  }
-  WebSocketHandshakeStreamBase* CreateSpdyStream(
-      const base::WeakPtr<SpdySession>& session,
-      bool use_relative_url) override {
-    return NULL;
+    return nullptr;
   }
 };
 

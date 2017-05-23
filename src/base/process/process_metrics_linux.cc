@@ -289,6 +289,12 @@ bool ProcessMetrics::GetIOCounters(IoCounters* io_counters) const {
   return true;
 }
 
+#if defined(OS_LINUX) || defined(OS_ANDROID)
+uint64_t ProcessMetrics::GetVmSwapBytes() const {
+  return ReadProcStatusAndGetFieldAsSizeT(process_, "VmSwap") * 1024;
+}
+#endif  // defined(OS_LINUX) || defined(OS_ANDROID)
+
 #if defined(OS_LINUX) || defined(OS_AIX)
 int ProcessMetrics::GetOpenFdCount() const {
   // Use /proc/<pid>/fd to count the number of entries there.

@@ -80,6 +80,8 @@ BattOrConnectionImpl::~BattOrConnectionImpl() {}
 
 void BattOrConnectionImpl::Open() {
   if (io_handler_) {
+    // Opening new connection so flush serial data from old connection.
+    Flush();
     OnOpened(true);
     return;
   }

@@ -217,17 +217,17 @@ TEST(ParsedCookieTest, TrailingWhitespace) {
   EXPECT_EQ(2U, pc.NumberOfAttributes());
 }
 
-TEST(ParsedCookieTest, TooManyPairs) {
-  std::string blankpairs;
-  blankpairs.resize(ParsedCookie::kMaxPairs - 2, ';');
+TEST(ParsedCookieTest, LotsOfPairs) {
+  for (int i = 1; i < 100; i++) {
+    std::string blankpairs;
+    blankpairs.resize(i, ';');
 
-  ParsedCookie pc1("a=b;" + blankpairs + "secure");
-  EXPECT_TRUE(pc1.IsValid());
-  EXPECT_TRUE(pc1.IsSecure());
-
-  ParsedCookie pc2("a=b;" + blankpairs + ";secure");
-  EXPECT_TRUE(pc2.IsValid());
-  EXPECT_FALSE(pc2.IsSecure());
+    ParsedCookie c("a=b;" + blankpairs + "secure");
+    EXPECT_EQ("a", c.Name());
+    EXPECT_EQ("b", c.Value());
+    EXPECT_TRUE(c.IsValid());
+    EXPECT_TRUE(c.IsSecure());
+  }
 }
 
 // TODO(erikwright): some better test cases for invalid cookies.

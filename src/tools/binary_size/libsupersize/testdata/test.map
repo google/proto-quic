@@ -113,7 +113,9 @@ Memory map
 
 .rodata         0x0266e600   0x5a72e4
  ** merge strings
-                0x0266e600   0x1dfd61
+                0x0266e600   0x1df000
+ ** merge constants
+                0x0284d600      0xd61
  .rodata        0x0284e364        0x8 obj/base/base/page_allocator.o
  .rodata.Name
                 0x0284e370       0x28 obj/base/base/page_allocator.o

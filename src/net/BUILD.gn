@@ -41,7 +41,7 @@ enable_built_in_dns = !is_ios && !is_proto_quic
 # in addition to use_openssl_certs or use_nss_certs, in that case byte certs
 # are used internally but OpenSSL or NSS are used for certificate verification.
 # TODO(mattm): crbug.com/671420: Implement and enable this for all platforms.
-use_byte_certs = is_mac || is_android || is_nacl
+use_byte_certs = is_mac || is_android || is_nacl || is_ios
 
 buildflag_header("features") {
   header = "net_features.h"
@@ -605,6 +605,8 @@ component("net") {
       "cert/x509_util_android.h",
       "cert/x509_util_ios.cc",
       "cert/x509_util_ios.h",
+      "cert/x509_util_ios_and_mac.cc",
+      "cert/x509_util_ios_and_mac.h",
       "cert/x509_util_mac.cc",
       "cert/x509_util_mac.h",
       "cert/x509_util_nss.cc",
@@ -1893,6 +1895,8 @@ component("net") {
         "base/network_interfaces_mac.h",
         "base/platform_mime_util_mac.mm",
         "cert/test_root_certs_mac.cc",
+        "cert/x509_util_ios_and_mac.cc",
+        "cert/x509_util_ios_and_mac.h",
         "proxy/proxy_resolver_mac.cc",
         "proxy/proxy_resolver_mac.h",
         "proxy/proxy_server_mac.cc",
@@ -2191,7 +2195,7 @@ if (!is_ios) {
       ":net",
       ":test_support",
       "//base",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
       "//build/win:default_exe_manifest",
     ]
   }
@@ -2693,7 +2697,7 @@ if (!is_ios && !is_android) {
       ":net",
       ":test_support",
       "//base",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
       "//build/win:default_exe_manifest",
     ]
 
@@ -2714,7 +2718,7 @@ if (!is_ios && !is_android) {
       ":net",
       ":test_support",
       "//base",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
       "//build/win:default_exe_manifest",
     ]
   }
@@ -2730,7 +2734,7 @@ if (!is_ios && !is_android) {
     deps = [
       ":net",
       "//base",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
       "//build/win:default_exe_manifest",
     ]
   }
@@ -2746,7 +2750,7 @@ if (!is_ios && !is_android) {
     deps = [
       ":net",
       "//base",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
       "//build/win:default_exe_manifest",
     ]
   }
@@ -2761,7 +2765,7 @@ if (!is_ios && !is_android) {
     deps = [
       ":net",
       "//base",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
       "//build/win:default_exe_manifest",
     ]
   }
@@ -2778,7 +2782,7 @@ if (!is_ios && !is_android) {
       ":net",
       "//base",
       "//base:i18n",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
       "//build/win:default_exe_manifest",
       "//url",
     ]
@@ -2795,7 +2799,7 @@ if (!is_ios && !is_android) {
     deps = [
       ":net",
       "//base",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
       "//build/win:default_exe_manifest",
     ]
   }
@@ -2810,7 +2814,7 @@ if (!is_ios && !is_android) {
         ":net",
         ":net_with_v8",
         "//base",
-        "//build/config/sanitizers:deps",
+        "//build/config:exe_and_shlib_deps",
         "//build/win:default_exe_manifest",
       ]
     }
@@ -2825,7 +2829,7 @@ if (!is_ios && !is_android) {
       ":test_support",
       "//base",
       "//base/test:test_support",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
       "//build/win:default_exe_manifest",
       "//testing/gtest",
     ]
@@ -2843,7 +2847,7 @@ if (!is_ios && !is_android) {
       ":net",
       ":test_support",
       "//base",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
       "//build/win:default_exe_manifest",
     ]
   }
@@ -2858,7 +2862,7 @@ if (!is_ios && !is_android) {
     deps = [
       "//base",
       "//base:i18n",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
       "//build/win:default_exe_manifest",
       "//net/tools/tld_cleanup",
     ]
@@ -2949,7 +2953,7 @@ if (is_linux) {
       ":net",
       ":simple_quic_tools",
       "//base",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
       "//third_party/boringssl",
     ]
   }
@@ -2964,7 +2968,7 @@ if (is_linux) {
       ":net",
       ":simple_quic_tools",
       "//base",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
       "//third_party/boringssl",
     ]
   }
@@ -3008,7 +3012,7 @@ if (is_android || is_linux) {
     deps = [
       ":net",
       "//base",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
     ]
   }
 }
@@ -3081,7 +3085,7 @@ if (!is_ios) {
       ":net",
       ":simple_quic_tools",
       "//base",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
       "//build/win:default_exe_manifest",
       "//url",
     ]
@@ -3094,7 +3098,7 @@ if (!is_ios) {
       ":net",
       ":simple_quic_tools",
       "//base",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
       "//build/win:default_exe_manifest",
       "//third_party/boringssl",
       "//third_party/protobuf:protobuf_lite",
@@ -3108,7 +3112,7 @@ if (!is_ios) {
       ":net",
       ":simple_quic_tools",
       "//base",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
       "//build/win:default_exe_manifest",
       "//third_party/boringssl",
       "//third_party/protobuf:protobuf_lite",
@@ -3122,7 +3126,7 @@ if (!is_ios) {
       ":net",
       ":simple_quic_tools",
       "//base",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
       "//build/win:default_exe_manifest",
       "//third_party/boringssl",
       "//third_party/protobuf:protobuf_lite",
@@ -3135,7 +3139,7 @@ if (!is_ios) {
     deps = [
       ":net",
       "//base",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
       "//build/win:default_exe_manifest",
     ]
   }
@@ -3288,21 +3292,23 @@ bundle_data("net_unittests_bundle_data") {
     "data/parse_certificate_unittest/extensions_empty_sequence.pem",
     "data/parse_certificate_unittest/extensions_not_sequence.pem",
     "data/parse_certificate_unittest/extensions_real.pem",
+    "data/parse_certificate_unittest/inhibit_any_policy.pem",
     "data/parse_certificate_unittest/key_usage.pem",
     "data/parse_certificate_unittest/policies.pem",
     "data/parse_certificate_unittest/policy_constraints_empty.pem",
     "data/parse_certificate_unittest/policy_constraints_inhibit.pem",
     "data/parse_certificate_unittest/policy_constraints_inhibit_require.pem",
     "data/parse_certificate_unittest/policy_constraints_require.pem",
+    "data/parse_certificate_unittest/serial_37_bytes.pem",
+    "data/parse_certificate_unittest/serial_negative.pem",
+    "data/parse_certificate_unittest/serial_zero_padded.pem",
+    "data/parse_certificate_unittest/serial_zero_padded_21_bytes.pem",
     "data/parse_certificate_unittest/subject_alt_name.pem",
     "data/parse_certificate_unittest/subject_t61string.pem",
     "data/parse_certificate_unittest/subject_t61string_1-32.pem",
     "data/parse_certificate_unittest/subject_t61string_126-160.pem",
     "data/parse_certificate_unittest/subject_t61string_actual.pem",
     "data/parse_certificate_unittest/tbs_explicit_v1.pem",
-    "data/parse_certificate_unittest/tbs_negative_serial_number.pem",
-    "data/parse_certificate_unittest/tbs_serial_number_21_octets_leading_0.pem",
-    "data/parse_certificate_unittest/tbs_serial_number_26_octets.pem",
     "data/parse_certificate_unittest/tbs_v1.pem",
     "data/parse_certificate_unittest/tbs_v1_extensions.pem",
     "data/parse_certificate_unittest/tbs_v2_extensions.pem",
@@ -4319,6 +4325,7 @@ test("net_unittests") {
     "cert/test_root_certs_unittest.cc",
     "cert/x509_cert_types_unittest.cc",
     "cert/x509_certificate_unittest.cc",
+    "cert/x509_util_ios_and_mac_unittest.cc",
     "cert/x509_util_unittest.cc",
     "cert_net/cert_net_fetcher_impl_unittest.cc",
     "cert_net/nss_ocsp_unittest.cc",
@@ -4905,6 +4912,7 @@ test("net_unittests") {
     "url_request/url_request_unittest.cc",
     "url_request/view_cache_helper_unittest.cc",
   ]
+  net_unfiltered_sources = []
 
   configs += [
     "//build/config:precompiled_headers",
@@ -5206,6 +5214,7 @@ test("net_unittests") {
       "socket/unix_domain_client_socket_posix_unittest.cc",
       "socket/unix_domain_server_socket_posix_unittest.cc",
     ]
+    net_unfiltered_sources += [ "cert/x509_util_ios_and_mac_unittest.cc" ]
 
     bundle_deps = [ ":net_unittests_bundle_data" ]
   }
@@ -5295,6 +5304,11 @@ test("net_unittests") {
   if (host_toolchain == current_toolchain) {
     deps += [ "//net/tools/transport_security_state_generator:transport_security_state_generator_test_sources" ]
   }
+
+  # Add back some sources that were otherwise filtered out.
+  set_sources_assignment_filter([])
+  sources += net_unfiltered_sources
+  set_sources_assignment_filter(sources_assignment_filter)
 }
 
 # !is_android && !is_win && !is_mac
@@ -5320,7 +5334,7 @@ if (!is_ios && !is_proto_quic) {
       "//base",
       "//base:i18n",
       "//base/test:test_support_perf",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
       "//build/win:default_exe_manifest",
       "//testing/gtest",
       "//url",

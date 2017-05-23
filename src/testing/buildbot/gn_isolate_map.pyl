@@ -326,6 +326,10 @@
     "label": "//:chromiumos_preflight",
     "type": "additional_compile_target",
   },
+  "components_background_task_scheduler_junit_tests": {
+    "label": "//components/background_task_scheduler:components_background_task_scheduler_junit_tests",
+    "type": "junit_test",
+  },
   "components_browsertests": {
     "label": "//components:components_browsertests",
     "type": "windowed_test_launcher",
@@ -746,10 +750,6 @@
       "--service-overrides=../../chrome/app/mash/mash_service_overrides.json",
     ],
   },
-  "mus_clipboard_unittests": {
-    "label": "//services/ui/clipboard:mus_clipboard_unittests",
-    "type": "windowed_test_launcher",
-  },
   "mus_public_unittests": {
     "label": "//services/ui/public/cpp/tests:mus_public_unittests",
     "type": "windowed_test_launcher",
@@ -768,10 +768,6 @@
   },
   "mus_demo_unittests": {
     "label": "//services/ui/demo:mus_demo_unittests",
-    "type": "windowed_test_launcher",
-  },
-  "mus_ws_unittests": {
-    "label": "//services/ui/ws:mus_ws_unittests",
     "type": "windowed_test_launcher",
   },
   "nacl_helper_nonsfi_unittests": {
@@ -863,7 +859,7 @@
   },
   "service_unittests": {
     "label": "//services:service_unittests",
-    "type": "console_test_launcher",
+    "type": "windowed_test_launcher",
   },
   "setup_unittests": {
     "label": "//chrome/installer/setup:setup_unittests",
@@ -1045,6 +1041,10 @@
   "ui_junit_tests": {
     "label": "//ui/android:ui_junit_tests",
     "type": "junit_test",
+  },
+  "ui_service_unittests": {
+    "label": "//services/ui/ws:ui_service_unittests",
+    "type": "windowed_test_launcher",
   },
   "ui_struct_traits_unittests": {
     "label": "//services/ui/public/interfaces:ui_struct_traits_unittests",

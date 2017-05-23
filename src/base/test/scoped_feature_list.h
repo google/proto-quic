@@ -17,6 +17,16 @@ namespace test {
 // Note: Re-using the same object is not allowed. To reset the feature
 // list and initialize it anew, destroy an existing scoped list and init
 // a new one.
+//
+// ScopedFeatureList needs to be initialized (via one of Init... methods)
+// before running code that inspects the state of features.  In practice this
+// means:
+// - In browser tests, one of Init... methods should be called from the
+//   overriden ::testing::Test::SetUp method. For example:
+//     void SetUp() override {
+//       scoped_feature_list_.InitAndEnableFeature(features::kMyFeatureHere);
+//       InProcessBrowserTest::SetUp();
+//     }
 class ScopedFeatureList final {
  public:
   ScopedFeatureList();

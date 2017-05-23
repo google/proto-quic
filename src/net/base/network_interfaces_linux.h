@@ -11,6 +11,7 @@
 #include <string>
 #include <unordered_set>
 
+#include "base/files/scoped_file.h"
 #include "net/base/address_tracker_linux.h"
 #include "net/base/net_export.h"
 #include "net/base/network_interfaces.h"
@@ -37,6 +38,9 @@ NET_EXPORT bool GetNetworkListImpl(
 NET_EXPORT std::string GetWifiSSIDFromInterfaceListInternal(
     const NetworkInterfaceList& interfaces,
     internal::GetInterfaceSSIDFunction get_interface_ssid);
+
+// Returns a socket useful for performing ioctl()s.
+base::ScopedFD GetSocketForIoctl();
 
 }  // namespace internal
 }  // namespace net

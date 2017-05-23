@@ -590,25 +590,25 @@ struct FuzzTraits<base::DictionaryValue> {
         case base::Value::Type::BOOLEAN: {
           bool tmp;
           fuzzer->FuzzBool(&tmp);
-          p->SetWithoutPathExpansion(property, new base::Value(tmp));
+          p->SetBooleanWithoutPathExpansion(property, tmp);
           break;
         }
         case base::Value::Type::INTEGER: {
           int tmp;
           fuzzer->FuzzInt(&tmp);
-          p->SetWithoutPathExpansion(property, new base::Value(tmp));
+          p->SetIntegerWithoutPathExpansion(property, tmp);
           break;
         }
         case base::Value::Type::DOUBLE: {
           double tmp;
           fuzzer->FuzzDouble(&tmp);
-          p->SetWithoutPathExpansion(property, new base::Value(tmp));
+          p->SetDoubleWithoutPathExpansion(property, tmp);
           break;
         }
         case base::Value::Type::STRING: {
           std::string tmp;
           fuzzer->FuzzString(&tmp);
-          p->SetWithoutPathExpansion(property, new base::Value(tmp));
+          p->SetStringWithoutPathExpansion(property, tmp);
           break;
         }
         case base::Value::Type::BINARY: {
@@ -620,15 +620,15 @@ struct FuzzTraits<base::DictionaryValue> {
           break;
         }
         case base::Value::Type::DICTIONARY: {
-          base::DictionaryValue* tmp = new base::DictionaryValue();
-          FuzzParam(tmp, fuzzer);
-          p->SetWithoutPathExpansion(property, tmp);
+          auto tmp = base::MakeUnique<base::DictionaryValue>();
+          FuzzParam(tmp.get(), fuzzer);
+          p->SetWithoutPathExpansion(property, std::move(tmp));
           break;
         }
         case base::Value::Type::LIST: {
-          base::ListValue* tmp = new base::ListValue();
-          FuzzParam(tmp, fuzzer);
-          p->SetWithoutPathExpansion(property, tmp);
+          auto tmp = base::MakeUnique<base::ListValue>();
+          FuzzParam(tmp.get(), fuzzer);
+          p->SetWithoutPathExpansion(property, std::move(tmp));
           break;
         }
         case base::Value::Type::NONE:

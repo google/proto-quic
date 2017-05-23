@@ -20,6 +20,35 @@ sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir,
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
+# These network condition values are used in SetNetworkConnection()
+NETWORKS = {
+    '4G': {
+      'latency': 20,
+      'upload_throughput': 4096 * 1024,
+      'download_throughput': 4096 * 1024,
+      'offline': False,
+    },
+    '3G': {
+      'latency': 425,
+      'upload_throughput': 750 * 1024,
+      'download_throughput': 750 * 1024,
+      'offline': False,
+    },
+    '2G': {
+      'latency': 1650,
+      'upload_throughput': 250 * 1024,
+      'download_throughput': 250 * 1024,
+      'offline': False,
+    },
+    'OFFLINE': {
+      'latency': 0,
+      'upload_throughput': 0 * 1024,
+      'download_throughput': 0 * 1024,
+      # This stays false so that Chrome won't disconnect from ChromeDriver.
+      'offline': False,
+    },
+}
+
 def ParseFlags():
   """Parses the given command line arguments.
 
@@ -131,15 +160,21 @@ class TestDriver:
     _url: The string URL that Chrome will navigate to for this test.
     _has_logs: Boolean flag set when a page is loaded and cleared when logs are
       fetched.
+    _control_network_connection: Boolean signal that this chromedriver instance
+      was meant to support network connection control, and thus had to enable
+      mobile emulation
+    _network_connection: The connection type to use on start up
   """
 
-  def __init__(self):
+  def __init__(self, control_network_connection=False):
     self._flags = ParseFlags()
     self._driver = None
     self._chrome_args = set()
     self._url = ''
     self._logger = GetLogger(name='TestDriver')
     self._has_logs = False
+    self._control_network_connection = control_network_connection
+    self._network_connection = None
 
   def __enter__(self):
     return self
@@ -182,9 +217,16 @@ class TestDriver:
     """
     self._OverrideChromeArgs()
     capabilities = {
-      'loggingPrefs': {'performance': 'INFO'}
+      'loggingPrefs': {'performance': 'INFO'},
     }
     chrome_options = Options()
+    if self._control_network_connection:
+      capabilities.update({
+        'networkConnectionEnabled': True,
+        'mobileEmulationEnabled': True,
+      })
+      chrome_options.add_experimental_option('mobileEmulation',
+        {'deviceName': 'Google Nexus 5'})
     for arg in self._chrome_args:
       chrome_options.add_argument(arg)
     self._logger.info('Starting Chrome with these flags: %s',
@@ -203,8 +245,13 @@ class TestDriver:
       desired_capabilities=capabilities, chrome_options=chrome_options)
     driver.command_executor._commands.update({
       'getAvailableLogTypes': ('GET', '/session/$sessionId/log/types'),
-      'getLog': ('POST', '/session/$sessionId/log')})
+      'getLog': ('POST', '/session/$sessionId/log'),
+      'setNetworkConditions':
+        ('POST', '/session/$sessionId/chromium/network_conditions')})
     self._driver = driver
+    if self._control_network_connection:
+      # Set network connection if it was called before LoadURL()
+      self.SetNetworkConnection(self._network_connection)
 
   def _StopDriver(self):
     """Nicely stops the ChromeDriver.
@@ -270,6 +317,23 @@ class TestDriver:
       'clearHostResolverCache();}')
     self._logger.info('Cleared browser cache. Returned=%s', str(res))
 
+  def SetNetworkConnection(self, connection_type):
+    """Changes the emulated connection type.
+
+    Args:
+      connection_type: the connection type to use according to the dict near the
+        top of the file OR a dictionary specifying the network conditions
+    """
+    if not self._control_network_connection:
+      raise Exception('SetNetworkConnection can only be used with a TestDriver '
+        'initalized with control_network_connection=True')
+    self._network_connection = connection_type
+    network = (NETWORKS[self._network_connection]
+      if connection_type in NETWORKS else connection_type)
+    if self._driver and self._network_connection:
+      self._driver.execute('setNetworkConditions',
+        {'network_conditions': network})
+
   def LoadURL(self, url, timeout=30):
     """Starts Chromium with any arguments previously given and navigates to the
     given URL.
@@ -290,6 +354,18 @@ class TestDriver:
     self._driver.get(self._url)
     self._logger.debug('Loaded page %s', url)
     self._has_logs = True
+
+  def FindElement(self, by, value):
+    """Finds an element on the page.
+
+    Uses the By selector and value given.
+    Args:
+      by: the selenium.webdriver.common.By selector
+      value: the value
+    Returns:
+      a WebElement object
+    """
+    return self._driver.find_element(by=by, value=value)
 
   def ExecuteJavascript(self, script, timeout=30):
     """Executes the given javascript in the browser's current page in an

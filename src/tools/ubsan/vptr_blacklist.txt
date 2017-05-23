@@ -100,6 +100,17 @@ src:*/third_party/libwebm/source/mkvmuxer.cpp
 src:*third_party/swiftshader/third_party/LLVM*
 
 #############################################################################
+# UBSan yields false positives in libEGL when objects created in libGLESv2
+# from classes derived from libEGL base classes are used within libEGL.
+# UBSan wrongly detects that the libGLESv2 classes are not derived from libEGL
+# classes because libEGL doesn't know about libGLESv2 classes.
+# See crbug.com/722349.
+type:*egl*Context*
+type:*egl*Surface*
+type:*gl*Object*
+type:*sw*FrameBuffer*
+
+#############################################################################
 # UBSan seems to be emit false positives when virtual base classes are
 # involved, see e.g. crbug.com/448102.
 

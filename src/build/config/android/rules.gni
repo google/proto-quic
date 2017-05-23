@@ -2873,7 +2873,10 @@ if (enable_java_templates) {
         }
         deps += [ ":$_unpack_target_name" ]
         resource_dirs = []
-        generated_resource_dirs = [ "${_output_path}/res" ]
+        generated_resource_dirs = []
+        if (_scanned_files.resources != []) {
+          generated_resource_dirs += [ "${_output_path}/res" ]
+        }
         generated_resource_files =
             rebase_path(_scanned_files.resources, "", _output_path)
         android_manifest_dep = ":$_unpack_target_name"

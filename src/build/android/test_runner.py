@@ -19,6 +19,11 @@ import threading
 import traceback
 import unittest
 
+# Import _strptime before threaded code. datetime.datetime.strptime is
+# threadsafe except for the initial import of the _strptime module.
+# See http://crbug.com/724524 and https://bugs.python.org/issue7980.
+import _strptime  # pylint: disable=unused-import
+
 from pylib.constants import host_paths
 
 if host_paths.DEVIL_PATH not in sys.path:
@@ -377,13 +382,13 @@ def AddInstrumentationTestOptions(parser):
            'fails or the golden image is missing but to render'
            'the view and carry on.')
   parser.add_argument(
+      '--render-results-directory',
+      dest='render_results_dir',
+      help='Directory to pull render test result images off of the device to.')
+  parser.add_argument(
       '--runtime-deps-path',
       dest='runtime_deps_path', type=os.path.realpath,
       help='Runtime data dependency file from GN.')
-  parser.add_argument(
-      '--save-perf-json',
-      action='store_true',
-      help='Saves the JSON file for each UI Perf test.')
   parser.add_argument(
       '--screenshot-directory',
       dest='screenshot_dir', type=os.path.realpath,

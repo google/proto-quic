@@ -41,8 +41,10 @@ class CallbackInfo : public base::SupportsUserData::Data {
 
 namespace net {
 
-ReportSender::ReportSender(URLRequestContext* request_context)
-    : request_context_(request_context) {}
+ReportSender::ReportSender(URLRequestContext* request_context,
+                           net::NetworkTrafficAnnotationTag traffic_annotation)
+    : request_context_(request_context),
+      traffic_annotation_(traffic_annotation) {}
 
 ReportSender::~ReportSender() {
 }
@@ -53,8 +55,8 @@ void ReportSender::Send(const GURL& report_uri,
                         const SuccessCallback& success_callback,
                         const ErrorCallback& error_callback) {
   DCHECK(!content_type.empty());
-  std::unique_ptr<URLRequest> url_request =
-      request_context_->CreateRequest(report_uri, DEFAULT_PRIORITY, this);
+  std::unique_ptr<URLRequest> url_request = request_context_->CreateRequest(
+      report_uri, DEFAULT_PRIORITY, this, traffic_annotation_);
   url_request->SetUserData(
       &kUserDataKey,
       base::MakeUnique<CallbackInfo>(success_callback, error_callback));

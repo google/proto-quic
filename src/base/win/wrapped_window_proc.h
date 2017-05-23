@@ -13,6 +13,7 @@
 #include <windows.h>
 
 #include "base/base_export.h"
+#include "base/profiler/scoped_profile.h"
 #include "base/strings/string16.h"
 
 namespace base {
@@ -69,10 +70,13 @@ BASE_EXPORT void InitializeWindowClass(
 //   CreateWindowW(class_name, window_name, ...
 //
 template <WNDPROC proc>
-LRESULT CALLBACK WrappedWindowProc(HWND hwnd, UINT message,
-                                   WPARAM wparam, LPARAM lparam) {
+LRESULT CALLBACK
+WrappedWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
   LRESULT rv = 0;
   __try {
+    tracked_objects::ScopedProfile scoped_profile(
+        FROM_HERE, tracked_objects::ScopedProfile::ENABLED);
+
     rv = proc(hwnd, message, wparam, lparam);
   } __except(CallExceptionFilter(GetExceptionInformation())) {
   }

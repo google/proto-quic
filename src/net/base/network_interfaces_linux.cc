@@ -76,7 +76,7 @@ namespace internal {
 // or ethtool extensions.
 NetworkChangeNotifier::ConnectionType GetInterfaceConnectionType(
     const std::string& ifname) {
-  base::ScopedFD s(socket(AF_INET, SOCK_STREAM, 0));
+  base::ScopedFD s = GetSocketForIoctl();
   if (!s.is_valid())
     return NetworkChangeNotifier::CONNECTION_UNKNOWN;
 
@@ -101,7 +101,7 @@ NetworkChangeNotifier::ConnectionType GetInterfaceConnectionType(
 }
 
 std::string GetInterfaceSSID(const std::string& ifname) {
-  base::ScopedFD ioctl_socket(socket(AF_INET, SOCK_DGRAM, 0));
+  base::ScopedFD ioctl_socket = GetSocketForIoctl();
   if (!ioctl_socket.is_valid())
     return "";
   struct iwreq wreq = {};
@@ -199,6 +199,13 @@ std::string GetWifiSSIDFromInterfaceListInternal(
     }
   }
   return connected_ssid;
+}
+
+base::ScopedFD GetSocketForIoctl() {
+  base::ScopedFD ioctl_socket(socket(AF_INET6, SOCK_DGRAM, 0));
+  if (ioctl_socket.is_valid())
+    return ioctl_socket;
+  return base::ScopedFD(socket(AF_INET, SOCK_DGRAM, 0));
 }
 
 }  // namespace internal

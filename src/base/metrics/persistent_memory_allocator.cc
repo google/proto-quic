@@ -1133,7 +1133,7 @@ DelayedPersistentAllocation::~DelayedPersistentAllocation() {}
 void* DelayedPersistentAllocation::Get() const {
   // Relaxed operations are acceptable here because it's not protecting the
   // contents of the allocation in any way.
-  Reference ref = reference_->load(std::memory_order_relaxed);
+  Reference ref = reference_->load(std::memory_order_acquire);
   if (!ref) {
     ref = allocator_->Allocate(size_, type_);
     if (!ref)
@@ -1144,7 +1144,7 @@ void* DelayedPersistentAllocation::Get() const {
     // cannot be retried.
     Reference existing = 0;  // Must be mutable; receives actual value.
     if (reference_->compare_exchange_strong(existing, ref,
-                                            std::memory_order_relaxed,
+                                            std::memory_order_release,
                                             std::memory_order_relaxed)) {
       if (make_iterable_)
         allocator_->MakeIterable(ref);

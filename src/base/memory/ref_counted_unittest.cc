@@ -542,7 +542,7 @@ TEST(RefCountedUnitTest, TestOverloadResolutionMove) {
 
 TEST(RefCountedUnitTest, TestInitialRefCountIsOne) {
   scoped_refptr<InitialRefCountIsOne> obj =
-      base::MakeShared<InitialRefCountIsOne>();
+      base::MakeRefCounted<InitialRefCountIsOne>();
   EXPECT_TRUE(obj->HasOneRef());
   obj = nullptr;
 
@@ -551,7 +551,7 @@ TEST(RefCountedUnitTest, TestInitialRefCountIsOne) {
   EXPECT_TRUE(obj2->HasOneRef());
   obj2 = nullptr;
 
-  scoped_refptr<Other> obj3 = base::MakeShared<Other>();
+  scoped_refptr<Other> obj3 = base::MakeRefCounted<Other>();
   EXPECT_TRUE(obj3->HasOneRef());
   obj3 = nullptr;
 }
@@ -563,6 +563,6 @@ TEST(RefCountedDeathTest, TestAdoptRef) {
   EXPECT_DCHECK_DEATH(base::AdoptRef(ptr));
 
   scoped_refptr<InitialRefCountIsOne> obj =
-      base::MakeShared<InitialRefCountIsOne>();
+      base::MakeRefCounted<InitialRefCountIsOne>();
   EXPECT_DCHECK_DEATH(base::AdoptRef(obj.get()));
 }

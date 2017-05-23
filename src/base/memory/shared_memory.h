@@ -127,14 +127,6 @@ class BASE_EXPORT SharedMemory {
   static int GetFdFromSharedMemoryHandle(const SharedMemoryHandle& handle);
 #endif
 
-#if defined(OS_POSIX) && !defined(OS_ANDROID)
-  // Gets the size of the shared memory region referred to by |handle|.
-  // Returns false on a failure to determine the size. On success, populates the
-  // output variable |size|.
-  static bool GetSizeFromSharedMemoryHandle(const SharedMemoryHandle& handle,
-                                            size_t* size);
-#endif  // defined(OS_POSIX) && !defined(OS_ANDROID)
-
   // Creates a shared memory object as described by the options struct.
   // Returns true on success and false on failure.
   bool Create(const SharedMemoryCreateOptions& options);

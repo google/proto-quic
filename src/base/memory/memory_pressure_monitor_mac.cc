@@ -168,26 +168,17 @@ MemoryPressureMonitor::GetCurrentPressureLevel() {
 void MemoryPressureMonitor::OnMemoryPressureChanged(
     dispatch_source_s* event_source,
     const MemoryPressureMonitor::DispatchCallback& dispatch_callback) {
-  // Get the Chrome-equvialent memory pressure level.
-  int mac_memory_pressure_level = dispatch_source_get_data(event_source);
-  MemoryPressureListener::MemoryPressureLevel memory_pressure_level =
-      MemoryPressureLevelForMacMemoryPressureLevel(mac_memory_pressure_level);
+  // The OS has sent a notification that the memory pressure level has changed.
+  // Go through the normal memory pressure level checking mechanism so that
+  // last_pressure_level_ and UMA get updated to the current value.
+  UpdatePressureLevel();
 
   // Run the callback that's waiting on memory pressure change notifications.
-  // Note that we don't bother with updating |last_pressure_level_| or
-  // causing memory pressure stats to be sent to UMA. Memory pressure change
-  // notifications are delayed on the Mac, so the current actual memory pressure
-  // level may be different than the incoming pressure level from the event.
-  //
-  // In general we don't want to take action (such as freeing memory) on
-  // memory pressure change events, but that's how the current system is
-  // designed. Given that it's incorrect to act on either stale or current
-  // pressure level info, it's not clear which level is better to send. For
-  // now stick with how it's been implemented to date, which is to send the
-  // stale value.
-  if (memory_pressure_level !=
+  // The convention is to not send notifiations on memory pressure returning to
+  // normal.
+  if (last_pressure_level_ !=
       MemoryPressureListener::MEMORY_PRESSURE_LEVEL_NONE)
-    dispatch_callback.Run(memory_pressure_level);
+    dispatch_callback.Run(last_pressure_level_);
 }
 
 void MemoryPressureMonitor::SetDispatchCallback(

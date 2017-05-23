@@ -10,6 +10,7 @@
 #include "base/mac/scoped_cftyperef.h"
 #include "base/memory/ref_counted.h"
 #include "net/cert/x509_certificate.h"
+#include "net/cert/x509_util_ios_and_mac.h"
 #include "net/test/cert_test_util.h"
 #include "net/test/test_data_directory.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -23,14 +24,22 @@ base::ScopedCFTypeRef<SecTrustRef> CreateSecTrust(
 
   scoped_refptr<net::X509Certificate> cert =
       net::ImportCertFromFile(net::GetTestCertsDirectory(), cert_file);
+  if (!cert) {
+    ADD_FAILURE();
+    return scoped_result;
+  }
   base::ScopedCFTypeRef<CFMutableArrayRef> certs(
-      CFArrayCreateMutable(kCFAllocatorDefault, 1, &kCFTypeArrayCallBacks));
-  CFArrayAppendValue(certs, cert->os_cert_handle());
+      net::x509_util::CreateSecCertificateArrayForX509Certificate(cert.get()));
+  if (!certs) {
+    ADD_FAILURE();
+    return scoped_result;
+  }
 
   base::ScopedCFTypeRef<SecPolicyRef> policy(
       SecPolicyCreateSSL(TRUE, CFSTR("chromium.org")));
   SecTrustRef result = nullptr;
-  if (SecTrustCreateWithCertificates(certs, policy, &result) == errSecSuccess) {
+  if (SecTrustCreateWithCertificates(certs.get(), policy, &result) ==
+      errSecSuccess) {
     scoped_result.reset(result);
   }
   return scoped_result;

@@ -39,10 +39,6 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
    public:
     Delegate() {}
 
-    // Called when initial headers are available.
-    virtual void OnInitialHeadersAvailable(const SpdyHeaderBlock& headers,
-                                           size_t frame_len) = 0;
-
     // Called when trailing headers are available.
     virtual void OnTrailingHeadersAvailable(const SpdyHeaderBlock& headers,
                                             size_t frame_len) = 0;
@@ -70,6 +66,15 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
 
     // Returns true if the stream is still connected.
     bool IsOpen() { return stream_ != nullptr; }
+
+    // Reads initial headers into |header_block| and returns the length of
+    // the HEADERS frame which contained them. If headers are not available,
+    // returns ERR_IO_PENDING and will invoke |callback| asynchronously when
+    // the headers arrive.
+    // TODO(rch): Invoke |callback| when there is a stream or connection error
+    // instead of calling OnClose() or OnError().
+    int ReadInitialHeaders(SpdyHeaderBlock* header_block,
+                           const CompletionCallback& callback);
 
     // Writes |header_block| to the peer. Closes the write side if |fin| is
     // true. If non-null, |ack_notifier_delegate| will be notified when the
@@ -142,8 +147,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
     Handle(QuicChromiumClientStream* stream, Delegate* delegate);
 
     // Methods invoked by the stream.
-    void OnInitialHeadersAvailable(const SpdyHeaderBlock& headers,
-                                   size_t frame_len);
+    void OnInitialHeadersAvailable();
     void OnTrailingHeadersAvailable(const SpdyHeaderBlock& headers,
                                     size_t frame_len);
     void OnDataAvailable();
@@ -155,6 +159,9 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
 
     QuicChromiumClientStream* stream_;  // Unowned.
     Delegate* delegate_;                // Owns this.
+
+    CompletionCallback read_headers_callback_;
+    SpdyHeaderBlock* read_headers_buffer_;
 
     QuicStreamId id_;
     QuicErrorCode connection_error_;
@@ -234,14 +241,14 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
   // True if this stream is the first data stream created on this session.
   bool IsFirstStream();
 
+  bool DeliverInitialHeaders(SpdyHeaderBlock* header_block, int* frame_len);
+
   using QuicSpdyStream::HasBufferedData;
   using QuicStream::sequencer;
 
  private:
-  void NotifyHandleOfInitialHeadersAvailableLater(SpdyHeaderBlock headers,
-                                                  size_t frame_len);
-  void NotifyHandleOfInitialHeadersAvailable(SpdyHeaderBlock headers,
-                                             size_t frame_len);
+  void NotifyHandleOfInitialHeadersAvailableLater();
+  void NotifyHandleOfInitialHeadersAvailable();
   void NotifyHandleOfTrailingHeadersAvailableLater(SpdyHeaderBlock headers,
                                                    size_t frame_len);
   void NotifyHandleOfTrailingHeadersAvailable(SpdyHeaderBlock headers,

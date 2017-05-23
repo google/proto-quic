@@ -16,6 +16,10 @@ class _LoadingStory(system_health_story.SystemHealthStory):
   """Abstract base class for single-page System Health user stories."""
   ABSTRACT_STORY = True
 
+  @classmethod
+  def GenerateStoryDescription(cls):
+    return 'Load %s' % cls.URL
+
 
 ################################################################################
 # Search and e-commerce.
@@ -269,6 +273,7 @@ class LoadImgurStory(_LoadingStory):
 
 
 class LoadFacebookPhotosMobileStory(_LoadingStory):
+  """Load a page of rihanna's facebook with a photo."""
   NAME = 'load:media:facebook_photos'
   URL = (
       'https://m.facebook.com/rihanna/photos/a.207477806675.138795.10092511675/10153911739606676/?type=3&source=54&ref=page_internal')
@@ -277,6 +282,7 @@ class LoadFacebookPhotosMobileStory(_LoadingStory):
 
 
 class LoadFacebookPhotosDesktopStory(_LoadingStory):
+  """Load a page of rihanna's facebook with a photo."""
   NAME = 'load:media:facebook_photos'
   URL = (
       'https://www.facebook.com/rihanna/photos/a.207477806675.138795.10092511675/10153911739606676/?type=3&theater')
@@ -291,6 +297,7 @@ class LoadFacebookPhotosDesktopStory(_LoadingStory):
 
 
 class LoadDocsStory(_LoadingStory):
+  """Load a typical google doc page."""
   NAME = 'load:tools:docs'
   URL = (
       'https://docs.google.com/document/d/1GvzDP-tTLmJ0myRhUAfTYWs3ZUFilUICg8psNHyccwQ/edit?usp=sharing')
@@ -337,6 +344,7 @@ class LoadGmailMobileStory(_LoadGmailBaseStory):
         'document.getElementById("apploadingdiv").style.height === "0px"')
 
 class LoadStackOverflowStory(_LoadingStory):
+  """Load a typical question & answer page of stackoverflow.com"""
   NAME = 'load:tools:stackoverflow'
   URL = (
       'https://stackoverflow.com/questions/36827659/compiling-an-application-for-use-in-highly-radioactive-environments')
@@ -372,6 +380,7 @@ class LoadDriveStory(_LoadingStory):
 
 
 class LoadBubblesStory(_LoadingStory):
+  """Load "smarty bubbles" game on famobi.com"""
   NAME = 'load:games:bubbles'
   URL = (
       'https://games.cdn.famobi.com/html5games/s/smarty-bubbles/v010/?fg_domain=play.famobi.com&fg_uid=d8f24956-dc91-4902-9096-a46cb1353b6f&fg_pid=4638e320-4444-4514-81c4-d80a8c662371&fg_beat=620')

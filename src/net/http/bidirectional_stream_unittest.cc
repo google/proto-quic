@@ -1654,13 +1654,13 @@ TEST_F(BidirectionalStreamTest, TestHonorAlternativeServiceHeader) {
   EXPECT_EQ(CountReadBytes(reads, arraysize(reads)),
             delegate->GetTotalReceivedBytes());
 
-  AlternativeServiceVector alternative_service_vector =
-      http_session_->http_server_properties()->GetAlternativeServices(
+  AlternativeServiceInfoVector alternative_service_info_vector =
+      http_session_->http_server_properties()->GetAlternativeServiceInfos(
           url::SchemeHostPort(default_url_));
-  ASSERT_EQ(1u, alternative_service_vector.size());
-  EXPECT_EQ(kProtoQUIC, alternative_service_vector[0].protocol);
-  EXPECT_EQ("www.example.org", alternative_service_vector[0].host);
-  EXPECT_EQ(443, alternative_service_vector[0].port);
+  ASSERT_EQ(1u, alternative_service_info_vector.size());
+  AlternativeService alternative_service(kProtoQUIC, "www.example.org", 443);
+  EXPECT_EQ(alternative_service,
+            alternative_service_info_vector[0].alternative_service);
 }
 
 }  // namespace net

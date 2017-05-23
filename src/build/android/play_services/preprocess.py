@@ -220,7 +220,7 @@ def _EnumerateProguardFiles(root_dir, out_dir, gni_path):
   for client_dir in os.listdir(out_dir):
     proguard_path = os.path.join(
         out_dir, client_dir, 'proguard.txt')
-    if os.path.exists(os.path.dirname(proguard_path)):
+    if os.path.exists(proguard_path):
       rooted_path = os.path.relpath(proguard_path, root_dir)
       gni_lines.append('  "//{}",'.format(rooted_path))
   gni_lines.sort()

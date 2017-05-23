@@ -200,35 +200,38 @@ bool AllocationContextTracker::GetContextSnapshot(AllocationContext* ctx) {
       }
     case CaptureMode::NATIVE_STACK:
       {
-        // Backtrace contract requires us to return bottom frames, i.e.
-        // from main() and up. Stack unwinding produces top frames, i.e.
-        // from this point and up until main(). We request many frames to
-        // make sure we reach main(), and then copy bottom portion of them.
+// Backtrace contract requires us to return bottom frames, i.e.
+// from main() and up. Stack unwinding produces top frames, i.e.
+// from this point and up until main(). We intentionally request
+// kMaxFrameCount + 1 frames, so that we know if there are more frames
+// than our backtrace capacity.
 #if !defined(OS_NACL)  // We don't build base/debug/stack_trace.cc for NaCl.
 #if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
-        const void* frames[128];
-        static_assert(arraysize(frames) >= Backtrace::kMaxFrameCount,
-                      "not requesting enough frames to fill Backtrace");
-        size_t frame_count = debug::TraceStackFramePointers(
-            frames, arraysize(frames),
-            1 /* exclude this function from the trace */);
+      const void* frames[Backtrace::kMaxFrameCount + 1];
+      static_assert(arraysize(frames) >= Backtrace::kMaxFrameCount,
+                    "not requesting enough frames to fill Backtrace");
+      size_t frame_count = debug::TraceStackFramePointers(
+          frames, arraysize(frames),
+          1 /* exclude this function from the trace */);
 #else   // BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
         // Fall-back to capturing the stack with base::debug::StackTrace,
         // which is likely slower, but more reliable.
-        base::debug::StackTrace stack_trace(Backtrace::kMaxFrameCount);
+        base::debug::StackTrace stack_trace(Backtrace::kMaxFrameCount + 1);
         size_t frame_count = 0u;
         const void* const* frames = stack_trace.Addresses(&frame_count);
 #endif  // BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 
-        // Copy frames backwards
-        size_t backtrace_capacity = backtrace_end - backtrace;
-        int32_t top_frame_index = (backtrace_capacity >= frame_count)
-                                      ? 0
-                                      : frame_count - backtrace_capacity;
-        for (int32_t i = frame_count - 1; i >= top_frame_index; --i) {
-          const void* frame = frames[i];
-          *backtrace++ = StackFrame::FromProgramCounter(frame);
-        }
+      // If there are too many frames, keep the ones furthest from main().
+      size_t backtrace_capacity = backtrace_end - backtrace;
+      int32_t starting_frame_index = frame_count;
+      if (frame_count > backtrace_capacity) {
+        starting_frame_index = backtrace_capacity - 1;
+        *backtrace++ = StackFrame::FromTraceEventName("<truncated>");
+      }
+      for (int32_t i = starting_frame_index - 1; i >= 0; --i) {
+        const void* frame = frames[i];
+        *backtrace++ = StackFrame::FromProgramCounter(frame);
+      }
 #endif  // !defined(OS_NACL)
         break;
       }

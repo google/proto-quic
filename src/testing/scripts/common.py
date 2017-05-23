@@ -4,11 +4,14 @@
 
 import argparse
 import contextlib
+import io
 import json
 import os
+import logging
 import subprocess
 import sys
 import tempfile
+import time
 
 
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -70,21 +73,22 @@ def run_command(argv, env=None, cwd=None):
   return rc
 
 
-def run_command_with_output(argv, env=None, cwd=None, stdoutfile=None):
+def run_command_with_output(argv, stdoutfile, env=None, cwd=None):
+  """ Run command and stream its stdout/stderr to the console & |stdoutfile|.
+  """
   print 'Running %r in %r (env: %r)' % (argv, cwd, env)
-  rc = 1
-  try:
-    output = subprocess.check_output(argv, env=env, cwd=cwd,
+  assert stdoutfile
+  with io.open(stdoutfile, 'w') as writer, io.open(stdoutfile, 'r', 1) as \
+      reader:
+    process = subprocess.Popen(argv, env=env, cwd=cwd, stdout=writer,
         stderr=subprocess.STDOUT)
-    if stdoutfile:
-      with open(stdoutfile, 'w') as fp:
-        fp.write(output)
-    rc = 0
-  except Exception:
-    # Exit code remains 1 and we don't write output
-    pass
-  print 'Command %r returned exit code %d' % (argv, rc)
-  return rc
+    while process.poll() is None:
+      sys.stdout.write(reader.read())
+      time.sleep(0.1)
+    # Read the remaining
+    sys.stdout.write(reader.read())
+    print 'Command %r returned exit code %d' % (argv, process.returncode)
+    return process.returncode
 
 
 def run_runtest(cmd_args, runtest_args):

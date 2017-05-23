@@ -45,7 +45,7 @@ def _SaveSizeInfoToFile(size_info, file_obj):
   # Store a single copy of all paths and have them referenced by index.
   # Using an OrderedDict makes the indices more repetitive (better compression).
   path_tuples = collections.OrderedDict.fromkeys(
-      (s.object_path, s.source_path) for s in size_info.symbols)
+      (s.object_path, s.source_path) for s in size_info.raw_symbols)
   for i, key in enumerate(path_tuples):
     path_tuples[key] = i
   file_obj.write('%d\n' % len(path_tuples))
@@ -53,7 +53,7 @@ def _SaveSizeInfoToFile(size_info, file_obj):
   _LogSize(file_obj, 'paths')  # For libchrome, adds 200kb.
 
   # Symbol counts by section.
-  by_section = size_info.symbols.GroupedBySectionName().Sorted(
+  by_section = size_info.raw_symbols.GroupedBySectionName().Sorted(
       key=lambda s:(s[0].IsBss(), s[0].address, s.full_name))
   file_obj.write('%s\n' % '\t'.join(g.name for g in by_section))
   file_obj.write('%s\n' % '\t'.join(str(len(g)) for g in by_section))

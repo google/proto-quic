@@ -2,17 +2,29 @@
 <html>
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <link rel="stylesheet" href="https://storage.googleapis.com/chromium-result-details/css/default.css" type="text/css">
     <style>
+      body {
+        background-color: #fff;
+        color: #333;
+        font-family: Verdana, sans-serif;
+        font-size: 10px;
+        margin-left: 30px;
+        margin-right: 30px;
+        margin-top: 20px;
+        margin-bottom: 50px;
+        padding: 0;
+      }
       table, th, td {
         border: 1px solid black;
         border-collapse: collapse;
+        text-align: center;
       }
-      th, td {
-        padding: 5px;
+      table, td {
+        padding: 0.1em 1em 0.1em 1em;
       }
       th {
         cursor: pointer;
+        padding: 0.2em 1.5em 0.2em 1.5em;
       }
       table {
         width: 100%;
@@ -30,19 +42,34 @@
         text-decoration: underline;
         cursor: pointer;
       }
+      a:link,a:visited,a:active {
+        color: #444;
+      }
       .row_block:hover {
         background-color: #F6F6F6;
       }
       .skipped, .success, .failure {
         border-color: #000000;
       }
+      .success {
+        color: #000;
+        background-color: #8d4;
+      }
+      .failure {
+        color: #000;
+        background-color: #e88;
+      }
+      .skipped {
+        color: #000;
+        background: #AADDEE;
+      }
     </style>
     <script type="text/javascript">
       {% include "javascript/main_html.js" %}
     </script>
   </head>
-  <body class="interface">
-    <div class="content">
+  <body>
+    <div>
       <h2 id="summary-header"></h2>
       {% for tb_value in tb_values %}
         {% include 'template/table.html' %}
@@ -63,5 +90,6 @@
         }
     );
     setBrowserBackButtonLogic();
+    setTableCellsAsClickable();
   </script>
 </html>

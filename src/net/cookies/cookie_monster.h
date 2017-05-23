@@ -38,6 +38,7 @@ class HistogramBase;
 
 namespace net {
 
+class ChannelIDService;
 class CookieMonsterDelegate;
 
 // The cookie monster is the system for storing and retrieving cookies. It has
@@ -134,6 +135,13 @@ class NET_EXPORT CookieMonster : public CookieStore {
   // creation/deletion of cookies.
   CookieMonster(PersistentCookieStore* store, CookieMonsterDelegate* delegate);
 
+  // Like above, but includes a non-owning pointer |channel_id_service| for the
+  // corresponding ChannelIDService used with this CookieStore. The
+  // |channel_id_service| must outlive the CookieMonster.
+  CookieMonster(PersistentCookieStore* store,
+                CookieMonsterDelegate* delegate,
+                ChannelIDService* channel_id_service);
+
   // Only used during unit testing.
   CookieMonster(PersistentCookieStore* store,
                 CookieMonsterDelegate* delegate,
@@ -217,6 +225,11 @@ class NET_EXPORT CookieMonster : public CookieStore {
   bool IsEphemeral() override;
 
  private:
+  CookieMonster(PersistentCookieStore* store,
+                CookieMonsterDelegate* delegate,
+                ChannelIDService* channel_id_service,
+                base::TimeDelta last_access_threshold);
+
   // For queueing the cookie monster calls.
   class CookieMonsterTask;
   template <typename Result>
@@ -716,6 +729,7 @@ class NET_EXPORT CookieMonster : public CookieStore {
   std::vector<std::string> cookieable_schemes_;
 
   scoped_refptr<CookieMonsterDelegate> delegate_;
+  ChannelIDService* channel_id_service_;
 
   base::Time last_statistic_record_time_;
 

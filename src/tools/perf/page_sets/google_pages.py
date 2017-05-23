@@ -6,7 +6,6 @@ from page_sets.login_helpers import google_login
 
 from telemetry.page import page as page_module
 from telemetry.page import shared_page_state
-from telemetry.util import js_template
 
 import os
 
@@ -58,25 +57,3 @@ class GoogleDocPage(GooglePages):
     action_runner.Wait(2)
     action_runner.WaitForJavaScriptCondition(
         'document.getElementsByClassName("kix-appview-editor").length')
-
-
-INTERACTION_NAME = 'Interaction.AppLoad'
-class AdwordCampaignDesktopPage(page_module.Page):
-  def __init__(self, page_set):
-    super(AdwordCampaignDesktopPage, self).__init__(
-        url='https://adwords.google.com/cm/CampaignMgmt',
-        page_set=page_set, name='AdwordsCampaign',
-        credentials_path='data/credentials.json',
-        shared_page_state_class=shared_page_state.SharedDesktopPageState)
-    self.script_to_evaluate_on_commit = js_template.Render(
-        'console.time({{ label }});', label=INTERACTION_NAME)
-
-  def RunNavigateSteps(self, action_runner):
-    google_login.LoginGoogleAccount(action_runner, 'google3',
-                                    self.credentials_path)
-    super(AdwordCampaignDesktopPage, self).RunNavigateSteps(action_runner)
-
-  def RunPageInteractions(self, action_runner):
-    action_runner.WaitForElement(text='Welcome to AdWords!')
-    action_runner.ExecuteJavaScript(
-        'console.timeEnd({{ label }});', label=INTERACTION_NAME)

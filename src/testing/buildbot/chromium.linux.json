@@ -1530,6 +1530,9 @@
         "test": "chrome_junit_tests"
       },
       {
+        "test": "components_background_task_scheduler_junit_tests"
+      },
+      {
         "test": "components_gcm_driver_junit_tests"
       },
       {
@@ -3968,12 +3971,6 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
-        "test": "mus_clipboard_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
         "test": "mus_gpu_unittests"
       },
       {
@@ -3987,12 +3984,6 @@
           "can_use_on_swarming_builders": true
         },
         "test": "mus_public_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
-        "test": "mus_ws_unittests"
       },
       {
         "swarming": {
@@ -4095,6 +4086,12 @@
           "can_use_on_swarming_builders": true
         },
         "test": "ui_base_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "ui_service_unittests"
       },
       {
         "swarming": {
@@ -4668,12 +4665,6 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
-        "test": "mus_clipboard_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
         "test": "mus_gpu_unittests"
       },
       {
@@ -4687,12 +4678,6 @@
           "can_use_on_swarming_builders": true
         },
         "test": "mus_public_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
-        "test": "mus_ws_unittests"
       },
       {
         "swarming": {
@@ -4798,6 +4783,12 @@
           "can_use_on_swarming_builders": true
         },
         "test": "ui_base_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "ui_service_unittests"
       },
       {
         "swarming": {
@@ -5137,12 +5128,6 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
-        "test": "mus_ws_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
         "test": "nacl_loader_unittests"
       },
       {
@@ -5219,6 +5204,12 @@
           "can_use_on_swarming_builders": true
         },
         "test": "ui_base_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "ui_service_unittests"
       },
       {
         "swarming": {

@@ -5,14 +5,23 @@
 #include "base/test/gtest_xml_unittest_result_printer.h"
 
 #include "base/base64.h"
+#include "base/command_line.h"
 #include "base/files/file_util.h"
 #include "base/logging.h"
+#include "base/test/test_switches.h"
 #include "base/time/time.h"
 
 namespace base {
 
-XmlUnitTestResultPrinter::XmlUnitTestResultPrinter() : output_file_(NULL) {
-}
+namespace {
+const int kDefaultTestPartResultsLimit = 10;
+
+const char kTestPartLesultsLimitExceeded[] =
+    "Test part results limit exceeded. Use --test-launcher-test-part-limit to "
+    "increase or disable limit.";
+}  // namespace
+
+XmlUnitTestResultPrinter::XmlUnitTestResultPrinter() : output_file_(NULL) {}
 
 XmlUnitTestResultPrinter::~XmlUnitTestResultPrinter() {
   if (output_file_) {
@@ -73,12 +82,33 @@ void XmlUnitTestResultPrinter::OnTestEnd(const testing::TestInfo& test_info) {
     fprintf(output_file_,
             "      <failure message=\"\" type=\"\"></failure>\n");
   }
-  for (int i = 0; i < test_info.result()->total_part_count(); ++i) {
+
+  int limit = test_info.result()->total_part_count();
+  if (CommandLine::ForCurrentProcess()->HasSwitch(
+          switches::kTestLauncherTestPartResultsLimit)) {
+    std::string limit_str =
+        CommandLine::ForCurrentProcess()->GetSwitchValueASCII(
+            switches::kTestLauncherTestPartResultsLimit);
+    int test_part_results_limit = std::strtol(limit_str.c_str(), nullptr, 10);
+    if (test_part_results_limit >= 0)
+      limit = std::min(limit, test_part_results_limit);
+  } else {
+    limit = std::min(limit, kDefaultTestPartResultsLimit);
+  }
+
+  for (int i = 0; i < limit; ++i) {
     const auto& test_part_result = test_info.result()->GetTestPartResult(i);
     WriteTestPartResult(test_part_result.file_name(),
                         test_part_result.line_number(), test_part_result.type(),
                         test_part_result.summary(), test_part_result.message());
   }
+
+  if (test_info.result()->total_part_count() > limit) {
+    WriteTestPartResult(
+        "<unknown>", 0, testing::TestPartResult::kNonFatalFailure,
+        kTestPartLesultsLimitExceeded, kTestPartLesultsLimitExceeded);
+  }
+
   fprintf(output_file_, "    </testcase>\n");
   fflush(output_file_);
 }

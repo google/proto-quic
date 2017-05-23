@@ -349,7 +349,7 @@ void SpdySessionPool::UnregisterUnclaimedPushedStream(
 
 std::unique_ptr<base::Value> SpdySessionPool::SpdySessionPoolInfoToValue()
     const {
-  std::unique_ptr<base::ListValue> list(new base::ListValue());
+  auto list = base::MakeUnique<base::ListValue>();
 
   for (AvailableSessionMap::const_iterator it = available_sessions_.begin();
        it != available_sessions_.end(); ++it) {

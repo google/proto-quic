@@ -68,7 +68,7 @@ class BASE_EXPORT RefCountedBase {
     DCHECK(!needs_adopt_ref_)
         << "This RefCounted object is created with non-zero reference count."
         << " The first reference to such a object has to be made by AdoptRef or"
-        << " MakeShared.";
+        << " MakeRefCounted.";
     if (ref_count_ >= 1) {
       DCHECK(CalledOnValidSequence());
     }
@@ -218,8 +218,8 @@ class BASE_EXPORT ScopedAllowCrossThreadRefCountAccess final {
 // the ref counted class to opt-in.
 //
 // If an object has start-from-one ref count, the first scoped_refptr need to be
-// created by base::AdoptRef() or base::MakeShared(). We can use
-// base::MakeShared() to create create both type of ref counted object.
+// created by base::AdoptRef() or base::MakeRefCounted(). We can use
+// base::MakeRefCounted() to create create both type of ref counted object.
 //
 // The motivations to use start-from-one ref count are:
 //  - Start-from-one ref count doesn't need the ref count increment for the
@@ -371,7 +371,7 @@ scoped_refptr<T> AdoptRefIfNeeded(T* obj, StartRefCountFromOneTag) {
 // Constructs an instance of T, which is a ref counted type, and wraps the
 // object into a scoped_refptr.
 template <typename T, typename... Args>
-scoped_refptr<T> MakeShared(Args&&... args) {
+scoped_refptr<T> MakeRefCounted(Args&&... args) {
   T* obj = new T(std::forward<Args>(args)...);
   return subtle::AdoptRefIfNeeded(obj, T::kRefCountPreference);
 }

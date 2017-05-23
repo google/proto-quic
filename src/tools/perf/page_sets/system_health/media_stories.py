@@ -58,6 +58,7 @@ class _MediaStory(system_health_story.SystemHealthStory):
 
 @benchmark.Disabled('all')  # crbug.com/649392
 class GooglePlayMusicDesktopStory(_MediaStory):
+  """Browse the songs list in music.google.com, then play a song."""
   NAME = 'play:media:google_play_music'
   URL = 'https://music.google.com'
 
@@ -83,6 +84,7 @@ class GooglePlayMusicDesktopStory(_MediaStory):
 
 @benchmark.Disabled('win')  # crbug.com/649392
 class SoundCloudDesktopStory(_MediaStory):
+  """Load soundcloud.com, search for "Smooth Jazz", then play a song."""
   NAME = 'play:media:soundcloud'
   URL = 'https://soundcloud.com'
 
@@ -101,6 +103,7 @@ class SoundCloudDesktopStory(_MediaStory):
 
 @decorators.Disabled('all')  # crbug.com/649392
 class PandoraDesktopStory(_MediaStory):
+  """Load pandora.com, then play a song."""
   NAME = 'play:media:pandora'
   URL = 'https://pandora.com'
 

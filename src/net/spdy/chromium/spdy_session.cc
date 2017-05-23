@@ -891,7 +891,7 @@ void SpdySession::InitializeWithSocket(
   session_send_window_size_ = kDefaultInitialWindowSize;
   session_recv_window_size_ = kDefaultInitialWindowSize;
 
-  buffered_spdy_framer_.reset(new BufferedSpdyFramer(net_log_));
+  buffered_spdy_framer_ = base::MakeUnique<BufferedSpdyFramer>(net_log_);
   buffered_spdy_framer_->set_visitor(this);
   buffered_spdy_framer_->set_debug_visitor(this);
   buffered_spdy_framer_->UpdateHeaderDecoderTableSize(max_header_table_size_);
@@ -949,7 +949,6 @@ std::unique_ptr<SpdySerializedFrame> SpdySession::CreateHeaders(
   DCHECK(buffered_spdy_framer_.get());
   SpdyPriority spdy_priority = ConvertRequestPriorityToSpdyPriority(priority);
 
-  std::unique_ptr<SpdySerializedFrame> syn_frame;
   bool has_priority = true;
   int weight = Spdy3PriorityToHttp2Weight(spdy_priority);
   SpdyStreamId dependent_stream_id = 0;
@@ -972,12 +971,11 @@ std::unique_ptr<SpdySerializedFrame> SpdySession::CreateHeaders(
   headers.set_parent_stream_id(dependent_stream_id);
   headers.set_exclusive(exclusive);
   headers.set_fin((flags & CONTROL_FLAG_FIN) != 0);
-  syn_frame.reset(
-      new SpdySerializedFrame(buffered_spdy_framer_->SerializeFrame(headers)));
 
   streams_initiated_count_++;
 
-  return syn_frame;
+  return base::MakeUnique<SpdySerializedFrame>(
+      buffered_spdy_framer_->SerializeFrame(headers));
 }
 
 std::unique_ptr<SpdyBuffer> SpdySession::CreateDataBuffer(
@@ -1077,7 +1075,7 @@ std::unique_ptr<SpdyBuffer> SpdySession::CreateDataBuffer(
           stream_id, data->data(), static_cast<uint32_t>(effective_len),
           flags));
 
-  std::unique_ptr<SpdyBuffer> data_buffer(new SpdyBuffer(std::move(frame)));
+  auto data_buffer = base::MakeUnique<SpdyBuffer>(std::move(frame));
 
   // Send window size is based on payload size, so nothing to do if this is
   // just a FIN with no payload.
@@ -1249,13 +1247,13 @@ void SpdySession::MaybeFinishGoingAway() {
 }
 
 std::unique_ptr<base::Value> SpdySession::GetInfoAsValue() const {
-  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  auto dict = base::MakeUnique<base::DictionaryValue>();
 
   dict->SetInteger("source_id", net_log_.source().id);
 
   dict->SetString("host_port_pair", host_port_pair().ToString());
   if (!pooled_aliases_.empty()) {
-    std::unique_ptr<base::ListValue> alias_list(new base::ListValue());
+    auto alias_list = base::MakeUnique<base::ListValue>();
     for (const auto& alias : pooled_aliases_) {
       alias_list->AppendString(alias.host_port_pair().ToString());
     }
@@ -1449,10 +1447,10 @@ int SpdySession::CreateStream(const SpdyStreamRequest& request,
     return ERR_CONNECTION_CLOSED;
   }
 
-  std::unique_ptr<SpdyStream> new_stream(
-      new SpdyStream(request.type(), GetWeakPtr(), request.url(),
-                     request.priority(), stream_initial_send_window_size_,
-                     stream_max_recv_window_size_, request.net_log()));
+  auto new_stream = base::MakeUnique<SpdyStream>(
+      request.type(), GetWeakPtr(), request.url(), request.priority(),
+      stream_initial_send_window_size_, stream_max_recv_window_size_,
+      request.net_log());
   *stream = new_stream->GetWeakPtr();
   InsertCreatedStream(std::move(new_stream));
 
@@ -1667,10 +1665,9 @@ void SpdySession::TryCreatePushStream(SpdyStreamId stream_id,
     return;
   }
 
-  std::unique_ptr<SpdyStream> stream(
-      new SpdyStream(SPDY_PUSH_STREAM, GetWeakPtr(), gurl, request_priority,
-                     stream_initial_send_window_size_,
-                     stream_max_recv_window_size_, net_log_));
+  auto stream = base::MakeUnique<SpdyStream>(
+      SPDY_PUSH_STREAM, GetWeakPtr(), gurl, request_priority,
+      stream_initial_send_window_size_, stream_max_recv_window_size_, net_log_);
   stream->set_stream_id(stream_id);
 
   // Convert RequestPriority to a SpdyPriority to send in a PRIORITY frame.
@@ -2127,10 +2124,9 @@ int SpdySession::DoWriteComplete(int result) {
 void SpdySession::SendInitialData() {
   DCHECK(enable_sending_initial_data_);
 
-  std::unique_ptr<SpdySerializedFrame> connection_header_prefix_frame(
-      new SpdySerializedFrame(const_cast<char*>(kHttp2ConnectionHeaderPrefix),
-                              kHttp2ConnectionHeaderPrefixSize,
-                              false /* take_ownership */));
+  auto connection_header_prefix_frame = base::MakeUnique<SpdySerializedFrame>(
+      const_cast<char*>(kHttp2ConnectionHeaderPrefix),
+      kHttp2ConnectionHeaderPrefixSize, false /* take_ownership */);
   // Count the prefix as part of the subsequent SETTINGS frame.
   EnqueueSessionWrite(HIGHEST, SpdyFrameType::SETTINGS,
                       std::move(connection_header_prefix_frame));
@@ -2318,11 +2314,10 @@ void SpdySession::EnqueueSessionWrite(
          frame_type == SpdyFrameType::WINDOW_UPDATE ||
          frame_type == SpdyFrameType::PING ||
          frame_type == SpdyFrameType::GOAWAY);
-  EnqueueWrite(
-      priority, frame_type,
-      std::unique_ptr<SpdyBufferProducer>(new SimpleBufferProducer(
-          std::unique_ptr<SpdyBuffer>(new SpdyBuffer(std::move(frame))))),
-      base::WeakPtr<SpdyStream>());
+  auto buffer = base::MakeUnique<SpdyBuffer>(std::move(frame));
+  EnqueueWrite(priority, frame_type,
+               base::MakeUnique<SimpleBufferProducer>(std::move(buffer)),
+               base::WeakPtr<SpdyStream>());
 }
 
 void SpdySession::EnqueueWrite(RequestPriority priority,
@@ -2480,10 +2475,9 @@ void SpdySession::DoDrainSession(Error err, const SpdyString& description) {
     // Enqueue a GOAWAY to inform the peer of why we're closing the connection.
     SpdyGoAwayIR goaway_ir(last_accepted_push_stream_id_,
                            MapNetErrorToGoAwayStatus(err), description);
-    EnqueueSessionWrite(
-        HIGHEST, SpdyFrameType::GOAWAY,
-        std::unique_ptr<SpdySerializedFrame>(new SpdySerializedFrame(
-            buffered_spdy_framer_->SerializeFrame(goaway_ir))));
+    auto frame = base::MakeUnique<SpdySerializedFrame>(
+        buffered_spdy_framer_->SerializeFrame(goaway_ir));
+    EnqueueSessionWrite(HIGHEST, SpdyFrameType::GOAWAY, std::move(frame));
   }
 
   availability_state_ = STATE_DRAINING;
@@ -2749,7 +2743,7 @@ void SpdySession::OnStreamFrameData(SpdyStreamId stream_id,
   if (data) {
     DCHECK_GT(len, 0u);
     CHECK_LE(len, static_cast<size_t>(kReadBufferSize));
-    buffer.reset(new SpdyBuffer(data, len));
+    buffer = base::MakeUnique<SpdyBuffer>(data, len);
 
     DecreaseRecvWindowSize(static_cast<int32_t>(len));
     buffer->AddConsumeCallback(base::Bind(&SpdySession::OnReadBufferConsumed,
@@ -2817,10 +2811,9 @@ void SpdySession::OnSettings() {
   // Send an acknowledgment of the setting.
   SpdySettingsIR settings_ir;
   settings_ir.set_is_ack(true);
-  EnqueueSessionWrite(
-      HIGHEST, SpdyFrameType::SETTINGS,
-      std::unique_ptr<SpdySerializedFrame>(new SpdySerializedFrame(
-          buffered_spdy_framer_->SerializeFrame(settings_ir))));
+  auto frame = base::MakeUnique<SpdySerializedFrame>(
+      buffered_spdy_framer_->SerializeFrame(settings_ir));
+  EnqueueSessionWrite(HIGHEST, SpdyFrameType::SETTINGS, std::move(frame));
 }
 
 void SpdySession::OnSetting(SpdySettingsIds id, uint32_t value) {

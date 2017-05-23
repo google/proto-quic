@@ -24,14 +24,6 @@
 #include "base/trace_event/process_memory_dump.h"
 #include "base/trace_event/trace_event.h"
 
-// Forward declare |ProcessLocalDumpManagerImplTest| so that we can make it a
-// friend of |MemoryDumpManager| and give it access to |SetInstanceForTesting|.
-namespace memory_instrumentation {
-
-class ProcessLocalDumpManagerImplTest;
-
-}  // namespace memory_instrumentation
-
 namespace base {
 
 class SequencedTaskRunner;
@@ -61,6 +53,7 @@ class BASE_EXPORT MemoryDumpManager {
   static const uint64_t kInvalidTracingProcessId;
 
   static MemoryDumpManager* GetInstance();
+  static std::unique_ptr<MemoryDumpManager> CreateInstanceForTesting();
 
   // Invoked once per process to listen to trace begin / end events.
   // Initialization can happen after (Un)RegisterMemoryDumpProvider() calls
@@ -183,7 +176,6 @@ class BASE_EXPORT MemoryDumpManager {
   friend std::default_delete<MemoryDumpManager>;  // For the testing instance.
   friend struct DefaultSingletonTraits<MemoryDumpManager>;
   friend class MemoryDumpManagerTest;
-  friend class memory_instrumentation::ProcessLocalDumpManagerImplTest;
 
   // Holds the state of a process memory dump that needs to be carried over
   // across task runners in order to fulfil an asynchronous CreateProcessDump()

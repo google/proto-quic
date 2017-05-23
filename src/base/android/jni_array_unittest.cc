@@ -45,6 +45,30 @@ TEST(JniArray, BasicConversions) {
   EXPECT_EQ(expected_vec, vectorFromBytes);
 }
 
+void CheckBoolConversion(JNIEnv* env,
+                         const bool* bool_array,
+                         const size_t len,
+                         const ScopedJavaLocalRef<jbooleanArray>& booleans) {
+  ASSERT_TRUE(booleans.obj());
+
+  jsize java_array_len = env->GetArrayLength(booleans.obj());
+  ASSERT_EQ(static_cast<jsize>(len), java_array_len);
+
+  jboolean value;
+  for (size_t i = 0; i < len; ++i) {
+    env->GetBooleanArrayRegion(booleans.obj(), i, 1, &value);
+    ASSERT_EQ(bool_array[i], value);
+  }
+}
+
+TEST(JniArray, BoolConversions) {
+  const bool kBools[] = {false, true, false};
+  const size_t kLen = arraysize(kBools);
+
+  JNIEnv* env = AttachCurrentThread();
+  CheckBoolConversion(env, kBools, kLen, ToJavaBooleanArray(env, kBools, kLen));
+}
+
 void CheckIntConversion(
     JNIEnv* env,
     const int* int_array,
@@ -113,6 +137,17 @@ void CheckIntArrayConversion(JNIEnv* env,
   }
 }
 
+void CheckBoolArrayConversion(JNIEnv* env,
+                              ScopedJavaLocalRef<jbooleanArray> jbooleans,
+                              std::vector<bool> bool_vector,
+                              const size_t len) {
+  jboolean value;
+  for (size_t i = 0; i < len; ++i) {
+    env->GetBooleanArrayRegion(jbooleans.obj(), i, 1, &value);
+    ASSERT_EQ(bool_vector[i], value);
+  }
+}
+
 void CheckFloatConversion(
     JNIEnv* env,
     const float* float_array,
@@ -140,6 +175,29 @@ TEST(JniArray, FloatConversions) {
 
   const std::vector<float> vec(kFloats, kFloats + kLen);
   CheckFloatConversion(env, kFloats, kLen, ToJavaFloatArray(env, vec));
+}
+
+TEST(JniArray, JavaBooleanArrayToBoolVector) {
+  const bool kBools[] = {false, true, false};
+  const size_t kLen = arraysize(kBools);
+
+  JNIEnv* env = AttachCurrentThread();
+  ScopedJavaLocalRef<jbooleanArray> jbooleans(env, env->NewBooleanArray(kLen));
+  ASSERT_TRUE(jbooleans.obj());
+
+  for (size_t i = 0; i < kLen; ++i) {
+    jboolean j = static_cast<jboolean>(kBools[i]);
+    env->SetBooleanArrayRegion(jbooleans.obj(), i, 1, &j);
+    ASSERT_FALSE(HasException(env));
+  }
+
+  std::vector<bool> bools;
+  JavaBooleanArrayToBoolVector(env, jbooleans.obj(), &bools);
+
+  ASSERT_EQ(static_cast<jsize>(bools.size()),
+            env->GetArrayLength(jbooleans.obj()));
+
+  CheckBoolArrayConversion(env, jbooleans, bools, kLen);
 }
 
 TEST(JniArray, JavaIntArrayToIntVector) {

@@ -110,6 +110,8 @@ class BASE_EXPORT ImportantFileWriter : public NonThreadSafe {
   }
 
  private:
+  void ClearPendingWrite();
+
   // Invoked synchronously on the next write event.
   Closure before_next_write_callback_;
   Callback<void(bool success)> after_next_write_callback_;

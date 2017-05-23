@@ -85,31 +85,59 @@ def _NormalizeNames(raw_symbols):
   """
   found_prefixes = set()
   for symbol in raw_symbols:
-    if symbol.full_name.startswith('*'):
+    full_name = symbol.full_name
+    if full_name.startswith('*'):
       # See comment in _CalculatePadding() about when this
       # can happen.
-      symbol.template_name = symbol.full_name
-      symbol.name = symbol.full_name
+      symbol.template_name = full_name
+      symbol.name = full_name
       continue
 
-    # E.g.: vtable for FOO
-    idx = symbol.full_name.find(' for ', 0, 30)
+    # Remove [clone] suffix, and set flag accordingly.
+    # Search from left-to-right, as multiple [clone]s can exist.
+    # Example name suffixes:
+    #     [clone .part.322]  # GCC
+    #     [clone .isra.322]  # GCC
+    #     [clone .constprop.1064]  # GCC
+    #     [clone .11064]  # clang
+    # http://unix.stackexchange.com/questions/223013/function-symbol-gets-part-suffix-after-compilation
+    idx = full_name.find(' [clone ')
     if idx != -1:
-      found_prefixes.add(symbol.full_name[:idx + 4])
-      symbol.full_name = (
-          symbol.full_name[idx + 5:] + ' [' + symbol.full_name[:idx] + ']')
+      full_name = full_name[:idx]
+      symbol.flags |= models.FLAG_CLONE
+
+    # Clones for C symbols.
+    if symbol.section == 't':
+      idx = full_name.rfind('.')
+      if idx != -1 and full_name[idx + 1:].isdigit():
+        new_name = full_name[:idx]
+        # Generated symbols that end with .123 but are not clones.
+        # Find these via:
+        #   size_info.symbols.WhereInSection('t').WhereIsGroup().SortedByCount()
+        if new_name not in ('__tcf_0', 'startup'):
+          full_name = new_name
+          symbol.flags |= models.FLAG_CLONE
+          # Remove .part / .isra / .constprop.
+          idx = full_name.rfind('.', 0, idx)
+          if idx != -1:
+            full_name = full_name[:idx]
+
+    # E.g.: vtable for FOO
+    idx = full_name.find(' for ', 0, 30)
+    if idx != -1:
+      found_prefixes.add(full_name[:idx + 4])
+      full_name = '{} [{}]'.format(full_name[idx + 5:], full_name[:idx])
 
     # E.g.: virtual thunk to FOO
-    idx = symbol.full_name.find(' to ', 0, 30)
+    idx = full_name.find(' to ', 0, 30)
     if idx != -1:
-      found_prefixes.add(symbol.full_name[:idx + 3])
-      symbol.full_name = (
-          symbol.full_name[idx + 4:] + ' [' + symbol.full_name[:idx] + ']')
+      found_prefixes.add(full_name[:idx + 3])
+      full_name = '{} [{}]'.format(full_name[idx + 4:], full_name[:idx])
 
     # Strip out return type, and split out name, template_name.
     # Function parsing also applies to non-text symbols. E.g. Function statics.
     symbol.full_name, symbol.template_name, symbol.name = (
-        function_signature.Parse(symbol.full_name))
+        function_signature.Parse(full_name))
 
     # Remove anonymous namespaces (they just harm clustering).
     symbol.template_name = symbol.template_name.replace(
@@ -164,7 +192,6 @@ def _SourcePathForObjectPath(object_path, source_mapper):
 
 def _ExtractSourcePaths(raw_symbols, source_mapper):
   """Fills in the |source_path| attribute."""
-  logging.debug('Parsed %d .ninja files.', source_mapper.parsed_file_count)
   for symbol in raw_symbols:
     object_path = symbol.object_path
     if object_path and not symbol.source_path:
@@ -172,8 +199,8 @@ def _ExtractSourcePaths(raw_symbols, source_mapper):
           _SourcePathForObjectPath(object_path, source_mapper))
 
 
-def _ComputeAnscestorPath(path_list):
-  """Returns the common anscestor of the given paths."""
+def _ComputeAncestorPath(path_list):
+  """Returns the common ancestor of the given paths."""
   # Ignore missing paths.
   path_list = [p for p in path_list if p]
   prefix = os.path.commonprefix(path_list)
@@ -191,7 +218,7 @@ def _ComputeAnscestorPath(path_list):
 
 # This must normalize object paths at the same time because normalization
 # needs to occur before finding common ancestor.
-def _ComputeAnscestorPathsAndNormalizeObjectPaths(
+def _ComputeAncestorPathsAndNormalizeObjectPaths(
     raw_symbols, object_paths_by_name, source_mapper):
   num_found_paths = 0
   num_unknown_names = 0
@@ -235,11 +262,11 @@ def _ComputeAnscestorPathsAndNormalizeObjectPaths(
     if source_mapper:
       tups = [
           _SourcePathForObjectPath(p, source_mapper) for p in object_paths]
-      symbol.source_path = _ComputeAnscestorPath(t[1] for t in tups)
+      symbol.source_path = _ComputeAncestorPath(t[1] for t in tups)
       symbol.generated_source = all(t[0] for t in tups)
 
     object_paths = [_NormalizeObjectPath(p) for p in object_paths]
-    symbol.object_path = _ComputeAnscestorPath(object_paths)
+    symbol.object_path = _ComputeAncestorPath(object_paths)
 
   logging.debug('Cross-referenced %d symbols with nm output. '
                 'num_unknown_names=%d num_path_mismatches=%d '
@@ -324,8 +351,11 @@ def _AddSymbolAliases(raw_symbols, aliases_by_address):
       num_new_symbols += len(name_list) - 1
 
   if float(num_new_symbols) / len(raw_symbols) < .05:
+    # TODO(agrieve): Figure out if there's a way to get alias information from
+    # clang-compiled nm.
     logging.warning('Number of aliases is oddly low (%.0f%%). It should '
-                    'usually be around 25%%. Ensure --tool-prefix is correct.',
+                    'usually be around 25%%. Ensure --tool-prefix is correct. '
+                    'Ignore this if you compiled with clang.',
                     float(num_new_symbols) / len(raw_symbols) * 100)
 
   # Step 2: Create new symbols as siblings to each existing one.
@@ -360,16 +390,12 @@ def LoadAndPostProcessSizeInfo(path):
   """Returns a SizeInfo for the given |path|."""
   logging.debug('Loading results from: %s', path)
   size_info = file_format.LoadSizeInfo(path)
-  _PostProcessSizeInfo(size_info)
-  return size_info
-
-
-def _PostProcessSizeInfo(size_info):
   logging.info('Normalizing symbol names')
   _NormalizeNames(size_info.raw_symbols)
   logging.info('Calculating padding')
   _CalculatePadding(size_info.raw_symbols)
-  logging.info('Processed %d symbols', len(size_info.raw_symbols))
+  logging.info('Loaded %d symbols', len(size_info.raw_symbols))
+  return size_info
 
 
 def CreateMetadata(map_path, elf_path, apk_path, tool_prefix, output_directory):
@@ -405,7 +431,7 @@ def CreateMetadata(map_path, elf_path, apk_path, tool_prefix, output_directory):
 
 
 def CreateSizeInfo(map_path, elf_path, tool_prefix, output_directory,
-                   raw_only=False):
+                   normalize_names=True):
   """Creates a SizeInfo.
 
   Args:
@@ -415,7 +441,6 @@ def CreateSizeInfo(map_path, elf_path, tool_prefix, output_directory,
     tool_prefix: Prefix for c++filt & nm (required).
     output_directory: Build output directory. If None, source_paths and symbol
         alias information will not be recorded.
-    raw_only: Fill in just the information required for creating a .size file.
   """
   source_mapper = None
   if output_directory:
@@ -424,6 +449,7 @@ def CreateSizeInfo(map_path, elf_path, tool_prefix, output_directory,
     logging.info('Parsing ninja files.')
     source_mapper, elf_object_paths = ninja_parser.Parse(
         output_directory, elf_path)
+    logging.debug('Parsed %d .ninja files.', source_mapper.parsed_file_count)
     assert not elf_path or elf_object_paths, (
         'Failed to find link command in ninja files for ' +
         os.path.relpath(elf_path, output_directory))
@@ -497,7 +523,7 @@ def CreateSizeInfo(map_path, elf_path, tool_prefix, output_directory,
       logging.debug('Fetched path information for %d symbols from %d files',
                     len(object_paths_by_name),
                     len(elf_object_paths) + len(missed_object_paths))
-      _ComputeAnscestorPathsAndNormalizeObjectPaths(
+      _ComputeAncestorPathsAndNormalizeObjectPaths(
           raw_symbols, object_paths_by_name, source_mapper)
 
   if not elf_path or not output_directory:
@@ -505,19 +531,21 @@ def CreateSizeInfo(map_path, elf_path, tool_prefix, output_directory,
     for symbol in raw_symbols:
       symbol.object_path = _NormalizeObjectPath(symbol.object_path)
 
+  # Padding not really required, but it is useful to check for large padding and
+  # log a warning.
+  logging.info('Calculating padding')
+  _CalculatePadding(raw_symbols)
+
+  # Do not call _NormalizeNames() during archive since that method tends to need
+  # tweaks over time. Calling it only when loading .size files allows for more
+  # flexability.
+  if normalize_names:
+    _NormalizeNames(raw_symbols)
+
+  logging.info('Processed %d symbols', len(raw_symbols))
   size_info = models.SizeInfo(section_sizes, raw_symbols)
 
-  # Name normalization not strictly required, but makes for smaller files.
-  if raw_only:
-    logging.info('Normalizing symbol names')
-    _NormalizeNames(size_info.raw_symbols)
-  else:
-    _PostProcessSizeInfo(size_info)
-
-  if logging.getLogger().isEnabledFor(logging.DEBUG):
-    # Padding is reported in size coverage logs.
-    if raw_only:
-      _CalculatePadding(size_info.raw_symbols)
+  if logging.getLogger().isEnabledFor(logging.INFO):
     for line in describe.DescribeSizeInfoCoverage(size_info):
       logging.info(line)
   logging.info('Recorded info for %d symbols', len(size_info.raw_symbols))
@@ -664,8 +692,8 @@ def Run(args, parser):
     apk_elf_result = concurrent.ForkAndCall(
         _ElfInfoFromApk, (apk_path, apk_so_path, tool_prefix))
 
-  size_info = CreateSizeInfo(
-      map_path, elf_path, tool_prefix, output_directory, raw_only=True)
+  size_info = CreateSizeInfo(map_path, elf_path, tool_prefix, output_directory,
+                             normalize_names=False)
 
   if metadata:
     size_info.metadata = metadata

@@ -4,6 +4,8 @@
 
 #include "net/http/http_stream_factory_impl_request.h"
 
+#include <utility>
+
 #include "base/callback.h"
 #include "base/logging.h"
 #include "base/stl_util.h"
@@ -112,9 +114,9 @@ void HttpStreamFactoryImpl::Request::OnHttpsProxyTunnelResponse(
     const HttpResponseInfo& response_info,
     const SSLConfig& used_ssl_config,
     const ProxyInfo& used_proxy_info,
-    HttpStream* stream) {
-  delegate_->OnHttpsProxyTunnelResponse(
-      response_info, used_ssl_config, used_proxy_info, stream);
+    std::unique_ptr<HttpStream> stream) {
+  delegate_->OnHttpsProxyTunnelResponse(response_info, used_ssl_config,
+                                        used_proxy_info, std::move(stream));
 }
 
 int HttpStreamFactoryImpl::Request::RestartTunnelWithProxyAuth() {

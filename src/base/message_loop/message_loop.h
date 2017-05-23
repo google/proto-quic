@@ -21,6 +21,7 @@
 #include "base/message_loop/timer_slack.h"
 #include "base/observer_list.h"
 #include "base/pending_task.h"
+#include "base/run_loop.h"
 #include "base/synchronization/lock.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
@@ -46,7 +47,6 @@ class JavaMessageHandlerFactory;
 
 namespace base {
 
-class RunLoop;
 class ThreadTaskRunnerHandle;
 class WaitableEvent;
 
@@ -81,7 +81,8 @@ class WaitableEvent;
 // Please be SURE your task is reentrant (nestable) and all global variables
 // are stable and accessible before calling SetNestableTasksAllowed(true).
 //
-class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
+class BASE_EXPORT MessageLoop : public MessagePump::Delegate,
+                                public RunLoop::Delegate {
  public:
   // A MessageLoop has a particular type, which indicates the set of
   // asynchronous events it may process in addition to tasks and timers.
@@ -325,7 +326,6 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
 
  private:
   friend class internal::IncomingTaskQueue;
-  friend class RunLoop;
   friend class ScheduleWorkTest;
   friend class Thread;
   friend struct PendingTask;
@@ -351,8 +351,9 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   // task runner for this message loop.
   void SetThreadTaskRunnerHandle();
 
-  // Invokes the actual run loop using the message pump.
-  void RunHandler();
+  // RunLoop::Delegate:
+  void Run() override;
+  void Quit() override;
 
   // Called to process any delayed non-nestable tasks.
   bool ProcessNextDelayedNonNestableTask();
@@ -419,8 +420,6 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   // if type_ is TYPE_CUSTOM and pump_ is null.
   MessagePumpFactoryCallback pump_factory_;
 
-  RunLoop* run_loop_;
-
   ObserverList<TaskObserver> task_observers_;
 
   debug::TaskAnnotator task_annotator_;
@@ -445,11 +444,11 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   // MessageLoop is bound to its thread and constant forever after.
   PlatformThreadId thread_id_;
 
-  // Whether this MessageLoop is currently running in nested RunLoops.
-  bool is_nested_ = false;
-
   // Whether task observers are allowed.
   bool allow_task_observers_ = true;
+
+  // An interface back to RunLoop state accessible by this RunLoop::Delegate.
+  RunLoop::Delegate::Client* run_loop_client_ = nullptr;
 
   DISALLOW_COPY_AND_ASSIGN(MessageLoop);
 };

@@ -41,13 +41,13 @@ _APK_PATCH_SIZE_ESTIMATOR_PATH = os.path.join(
 
 # Prepend the grit module from the source tree so it takes precedence over other
 # grit versions that might present in the search path.
-with host_paths.SysPath(_GRIT_PATH, 1):
+with host_paths.SysPath(_GRIT_PATH, 0):
   from grit.format import data_pack # pylint: disable=import-error
 
 with host_paths.SysPath(host_paths.BUILD_COMMON_PATH):
   import perf_tests_results_helper # pylint: disable=import-error
 
-with host_paths.SysPath(_BUILD_UTILS_PATH, 1):
+with host_paths.SysPath(_BUILD_UTILS_PATH, 0):
   from util import build_utils # pylint: disable=import-error
 
 with host_paths.SysPath(_APK_PATCH_SIZE_ESTIMATOR_PATH):

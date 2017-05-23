@@ -58,6 +58,7 @@ android_library("net_java_test_support") {
     "//base:base_java",
     "//base:base_java_test_support",
     "//third_party/android_tools:android_support_annotations_java",
+    "//third_party/junit",
   ]
   srcjar_deps = [
     ":embedded_test_server_aidl",

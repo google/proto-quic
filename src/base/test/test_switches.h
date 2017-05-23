@@ -22,6 +22,7 @@ extern const char kTestLauncherSummaryOutput[];
 extern const char kTestLauncherPrintTestStdio[];
 extern const char kTestLauncherPrintWritablePath[];
 extern const char kTestLauncherShardIndex[];
+extern const char kTestLauncherTestPartResultsLimit[];
 extern const char kTestLauncherTotalShards[];
 extern const char kTestLauncherTimeout[];
 extern const char kTestLauncherTrace[];

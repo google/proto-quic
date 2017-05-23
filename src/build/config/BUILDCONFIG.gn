@@ -682,7 +682,7 @@ template("component") {
     if (!defined(deps)) {
       deps = []
     }
-    deps += [ "//build/config/sanitizers:deps" ]
+    deps += [ "//build/config:exe_and_shlib_deps" ]
   }
 }
 

@@ -4,6 +4,7 @@
 
 #include "base/win/shortcut.h"
 
+#include <objbase.h>
 #include <shellapi.h>
 #include <shlobj.h>
 #include <propkey.h>
@@ -31,9 +32,9 @@ void InitializeShortcutInterfaces(
     ScopedComPtr<IPersistFile>* i_persist_file) {
   i_shell_link->Reset();
   i_persist_file->Reset();
-  if (FAILED(i_shell_link->CreateInstance(CLSID_ShellLink, NULL,
-                                          CLSCTX_INPROC_SERVER)) ||
-      FAILED(i_persist_file->QueryFrom(i_shell_link->Get())) ||
+  if (FAILED(::CoCreateInstance(CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER,
+                                IID_PPV_ARGS(i_shell_link->GetAddressOf()))) ||
+      FAILED(i_shell_link->CopyTo(i_persist_file->GetAddressOf())) ||
       (shortcut && FAILED((*i_persist_file)->Load(shortcut, STGM_READWRITE)))) {
     i_shell_link->Reset();
     i_persist_file->Reset();
@@ -139,7 +140,7 @@ bool CreateOrUpdateShortcutLink(const FilePath& shortcut_path,
   if ((has_app_id || has_dual_mode) &&
       GetVersion() >= VERSION_WIN7) {
     ScopedComPtr<IPropertyStore> property_store;
-    if (FAILED(property_store.QueryFrom(i_shell_link.Get())) ||
+    if (FAILED(i_shell_link.CopyTo(property_store.GetAddressOf())) ||
         !property_store.Get())
       return false;
 
@@ -197,14 +198,14 @@ bool ResolveShortcutProperties(const FilePath& shortcut_path,
   ScopedComPtr<IShellLink> i_shell_link;
 
   // Get pointer to the IShellLink interface.
-  if (FAILED(i_shell_link.CreateInstance(CLSID_ShellLink, NULL,
-                                         CLSCTX_INPROC_SERVER))) {
+  if (FAILED(::CoCreateInstance(CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER,
+                                IID_PPV_ARGS(&i_shell_link)))) {
     return false;
   }
 
   ScopedComPtr<IPersistFile> persist;
   // Query IShellLink for the IPersistFile interface.
-  if (FAILED(persist.QueryFrom(i_shell_link.Get())))
+  if (FAILED(i_shell_link.CopyTo(persist.GetAddressOf())))
     return false;
 
   // Load the shell link.
@@ -251,7 +252,7 @@ bool ResolveShortcutProperties(const FilePath& shortcut_path,
   if ((options & ShortcutProperties::PROPERTIES_WIN7) &&
       GetVersion() >= VERSION_WIN7) {
     ScopedComPtr<IPropertyStore> property_store;
-    if (FAILED(property_store.QueryFrom(i_shell_link.Get())))
+    if (FAILED(i_shell_link.CopyTo(property_store.GetAddressOf())))
       return false;
 
     if (options & ShortcutProperties::PROPERTIES_APP_ID) {

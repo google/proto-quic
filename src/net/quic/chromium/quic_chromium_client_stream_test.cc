@@ -44,13 +44,6 @@ class MockDelegate : public QuicChromiumClientStream::Delegate {
 
   MOCK_METHOD0(OnSendData, int());
   MOCK_METHOD2(OnSendDataComplete, int(int, bool*));
-  void OnInitialHeadersAvailable(const SpdyHeaderBlock& headers,
-                                 size_t frame_len) override {
-    headers_ = headers.Clone();
-    OnInitialHeadersAvailableMock(headers, frame_len);
-  }
-  MOCK_METHOD2(OnInitialHeadersAvailableMock,
-               void(const SpdyHeaderBlock& headers, size_t frame_len));
   void OnTrailingHeadersAvailable(const SpdyHeaderBlock& headers,
                                   size_t frame_len) override {
     trailers_ = headers.Clone();
@@ -253,9 +246,10 @@ class QuicChromiumClientStreamTest
 
   QuicHeaderList ProcessHeadersFull(const SpdyHeaderBlock& headers) {
     QuicHeaderList h = ProcessHeaders(headers);
-    EXPECT_CALL(delegate_, OnInitialHeadersAvailableMock(
-                               _, h.uncompressed_header_bytes()));
-    base::RunLoop().RunUntilIdle();
+    TestCompletionCallback callback;
+    EXPECT_EQ(
+        static_cast<int>(h.uncompressed_header_bytes()),
+        handle_->ReadInitialHeaders(&delegate_.headers_, callback.callback()));
     EXPECT_EQ(headers, delegate_.headers_);
     EXPECT_TRUE(stream_->header_list().empty());
     return h;
@@ -731,10 +725,11 @@ TEST_P(QuicChromiumClientStreamTest, HeadersBeforeDelegate) {
   EXPECT_TRUE(delegate2_.headers_.empty());
 
   // Now set the delegate and verify that the headers are delivered.
-  EXPECT_CALL(delegate2_, OnInitialHeadersAvailableMock(
-                              _, header_list.uncompressed_header_bytes()));
   handle2_ = stream2->CreateHandle(&delegate2_);
-  base::RunLoop().RunUntilIdle();
+  TestCompletionCallback callback;
+  EXPECT_EQ(
+      static_cast<int>(header_list.uncompressed_header_bytes()),
+      handle2_->ReadInitialHeaders(&delegate2_.headers_, callback.callback()));
   EXPECT_EQ(headers_, delegate2_.headers_);
 
   // Both delegates should be notified that theirs streams are closed.
@@ -763,10 +758,11 @@ TEST_P(QuicChromiumClientStreamTest, HeadersAndDataBeforeDelegate) {
 
   // Now set the delegate and verify that the headers are delivered, but
   // not the data, which needs to be read explicitly.
-  EXPECT_CALL(delegate2_, OnInitialHeadersAvailableMock(
-                              _, header_list.uncompressed_header_bytes()));
   handle2_ = stream2->CreateHandle(&delegate2_);
-  base::RunLoop().RunUntilIdle();
+  TestCompletionCallback callback;
+  EXPECT_EQ(
+      static_cast<int>(header_list.uncompressed_header_bytes()),
+      handle2_->ReadInitialHeaders(&delegate2_.headers_, callback.callback()));
   EXPECT_EQ(headers_, delegate2_.headers_);
   base::RunLoop().RunUntilIdle();
 

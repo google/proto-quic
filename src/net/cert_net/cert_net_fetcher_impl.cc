@@ -66,11 +66,13 @@
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/numerics/safe_math.h"
+#include "base/single_thread_task_runner.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/timer/timer.h"
 #include "net/base/load_flags.h"
 #include "net/cert/cert_net_fetcher.h"
+#include "net/traffic_annotation/network_traffic_annotation.h"
 #include "net/url_request/redirect_info.h"
 #include "net/url_request/url_request_context.h"
 
@@ -449,8 +451,35 @@ void Job::StartURLRequest(URLRequestContext* context) {
 
   // Start the URLRequest.
   read_buffer_ = new IOBuffer(kReadBufferSizeInBytes);
-  url_request_ =
-      context->CreateRequest(request_params_->url, DEFAULT_PRIORITY, this);
+  net::NetworkTrafficAnnotationTag traffic_annotation =
+      net::DefineNetworkTrafficAnnotation("certificate_verifier", R"(
+        semantics {
+          sender: "Certificate Verifier"
+          description:
+            "When verifying certificates, the browser may need to fetch "
+            "additional URLs that are encoded in the server-provided "
+            "certificate chain. This may be part of revocation checking ("
+            "Online Certificate Status Protocol, Certificate Revocation List), "
+            "or path building (Authority Information Access fetches). Please "
+            "refer to the following for more on above protocols: "
+            "https://tools.ietf.org/html/rfc6960, "
+            "https://tools.ietf.org/html/rfc5280#section-4.2.1.13, and"
+            "https://tools.ietf.org/html/rfc5280#section-5.2.7."
+          trigger:
+            "Verifying a certificate (likely in response to navigating to an "
+            "'https://' website)."
+          data:
+            "In the case of OCSP this may divulge the website being viewed. No "
+            "user data in other cases."
+          destination: OTHER
+        }
+        policy {
+          cookies_allowed: false
+          setting: "This feature cannot be disabled by settings."
+          policy_exception_justification: "Not implemented."
+        })");
+  url_request_ = context->CreateRequest(request_params_->url, DEFAULT_PRIORITY,
+                                        this, traffic_annotation);
   if (request_params_->http_method == HTTP_METHOD_POST)
     url_request_->set_method("POST");
   url_request_->SetLoadFlags(LOAD_DO_NOT_SAVE_COOKIES |

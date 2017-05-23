@@ -65,6 +65,17 @@ void URLRequestContextStorage::set_http_auth_handler_factory(
   http_auth_handler_factory_ = std::move(http_auth_handler_factory);
 }
 
+void URLRequestContextStorage::set_proxy_delegate(
+    std::unique_ptr<ProxyDelegate> proxy_delegate) {
+  proxy_delegate_ = std::move(proxy_delegate);
+}
+
+void URLRequestContextStorage::set_network_delegate(
+    std::unique_ptr<NetworkDelegate> network_delegate) {
+  context_->set_network_delegate(network_delegate.get());
+  network_delegate_ = std::move(network_delegate);
+}
+
 void URLRequestContextStorage::set_proxy_service(
     std::unique_ptr<ProxyService> proxy_service) {
   context_->set_proxy_service(proxy_service.get());
@@ -75,17 +86,6 @@ void URLRequestContextStorage::set_ssl_config_service(
     SSLConfigService* ssl_config_service) {
   context_->set_ssl_config_service(ssl_config_service);
   ssl_config_service_ = ssl_config_service;
-}
-
-void URLRequestContextStorage::set_network_delegate(
-    std::unique_ptr<NetworkDelegate> network_delegate) {
-  context_->set_network_delegate(network_delegate.get());
-  network_delegate_ = std::move(network_delegate);
-}
-
-void URLRequestContextStorage::set_proxy_delegate(
-    std::unique_ptr<ProxyDelegate> proxy_delegate) {
-  proxy_delegate_ = std::move(proxy_delegate);
 }
 
 void URLRequestContextStorage::set_http_server_properties(

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/fuchsia/config.gni")
 import("//build/config/sysroot.gni")
 
 assert(is_fuchsia)
@@ -21,6 +22,15 @@ config("compiler") {
     assert(false, "Unsupported architecture")
   }
   asmflags = cflags
+
+  # TODO(thakis): Once Fuchsia's libclang_rt.builtin no longer has upstream
+  # patches, we might want to make tools/clang/scripts/update.py build it
+  # and bundle it with the clang package instead of using the library from
+  # the SDK, https://crbug.com/724204
+  ldflags += [
+    "-resource-dir",
+    rebase_path(fuchsia_sdk, root_build_dir) + "/toolchain_libs/clang/5.0.0",
+  ]
 
   libs = [
     "mxio",

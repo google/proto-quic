@@ -164,7 +164,6 @@ public class MultiprocessTestClientService extends Service {
         } catch (ProcessInitException pie) {
             Log.e(TAG, "Unable to load native libraries.", pie);
         }
-        ContextUtils.initApplicationContextForNative();
     }
 
     private void setMainReturnValue(int result) {

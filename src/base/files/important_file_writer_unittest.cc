@@ -46,6 +46,11 @@ class DataSerializer : public ImportantFileWriter::DataSerializer {
   const std::string data_;
 };
 
+class FailingDataSerializer : public ImportantFileWriter::DataSerializer {
+ public:
+  bool SerializeData(std::string* output) override { return false; }
+};
+
 enum WriteCallbackObservationState {
   NOT_CALLED,
   CALLED_WITH_ERROR,
@@ -222,17 +227,13 @@ TEST_F(ImportantFileWriterTest, CallbackRunsOnWriterThread) {
 }
 
 TEST_F(ImportantFileWriterTest, ScheduleWrite) {
-  ImportantFileWriter writer(file_,
-                             ThreadTaskRunnerHandle::Get(),
-                             TimeDelta::FromMilliseconds(25));
+  ImportantFileWriter writer(file_, ThreadTaskRunnerHandle::Get(),
+                             TimeDelta::FromMilliseconds(0));
   EXPECT_FALSE(writer.HasPendingWrite());
   DataSerializer serializer("foo");
   writer.ScheduleWrite(&serializer);
   EXPECT_TRUE(writer.HasPendingWrite());
-  ThreadTaskRunnerHandle::Get()->PostDelayedTask(
-      FROM_HERE, MessageLoop::QuitWhenIdleClosure(),
-      TimeDelta::FromMilliseconds(100));
-  RunLoop().Run();
+  RunLoop().RunUntilIdle();
   EXPECT_FALSE(writer.HasPendingWrite());
   ASSERT_TRUE(PathExists(writer.path()));
   EXPECT_EQ("foo", GetFileContent(writer.path()));
@@ -245,29 +246,67 @@ TEST_F(ImportantFileWriterTest, DoScheduledWrite) {
   writer.ScheduleWrite(&serializer);
   EXPECT_TRUE(writer.HasPendingWrite());
   writer.DoScheduledWrite();
-  ThreadTaskRunnerHandle::Get()->PostDelayedTask(
-      FROM_HERE, MessageLoop::QuitWhenIdleClosure(),
-      TimeDelta::FromMilliseconds(100));
-  RunLoop().Run();
+  RunLoop().RunUntilIdle();
   EXPECT_FALSE(writer.HasPendingWrite());
   ASSERT_TRUE(PathExists(writer.path()));
   EXPECT_EQ("foo", GetFileContent(writer.path()));
 }
 
 TEST_F(ImportantFileWriterTest, BatchingWrites) {
-  ImportantFileWriter writer(file_,
-                             ThreadTaskRunnerHandle::Get(),
-                             TimeDelta::FromMilliseconds(25));
+  ImportantFileWriter writer(file_, ThreadTaskRunnerHandle::Get(),
+                             TimeDelta::FromMilliseconds(0));
   DataSerializer foo("foo"), bar("bar"), baz("baz");
   writer.ScheduleWrite(&foo);
   writer.ScheduleWrite(&bar);
   writer.ScheduleWrite(&baz);
-  ThreadTaskRunnerHandle::Get()->PostDelayedTask(
-      FROM_HERE, MessageLoop::QuitWhenIdleClosure(),
-      TimeDelta::FromMilliseconds(100));
-  RunLoop().Run();
+  RunLoop().RunUntilIdle();
   ASSERT_TRUE(PathExists(writer.path()));
   EXPECT_EQ("baz", GetFileContent(writer.path()));
+}
+
+TEST_F(ImportantFileWriterTest, ScheduleWrite_FailToSerialize) {
+  ImportantFileWriter writer(file_, ThreadTaskRunnerHandle::Get(),
+                             TimeDelta::FromMilliseconds(0));
+  EXPECT_FALSE(writer.HasPendingWrite());
+  FailingDataSerializer serializer;
+  writer.ScheduleWrite(&serializer);
+  EXPECT_TRUE(writer.HasPendingWrite());
+  RunLoop().RunUntilIdle();
+  EXPECT_FALSE(writer.HasPendingWrite());
+  EXPECT_FALSE(PathExists(writer.path()));
+}
+
+TEST_F(ImportantFileWriterTest, ScheduleWrite_WriteNow) {
+  ImportantFileWriter writer(file_, ThreadTaskRunnerHandle::Get(),
+                             TimeDelta::FromMilliseconds(0));
+  EXPECT_FALSE(writer.HasPendingWrite());
+  DataSerializer serializer("foo");
+  writer.ScheduleWrite(&serializer);
+  EXPECT_TRUE(writer.HasPendingWrite());
+  writer.WriteNow(MakeUnique<std::string>("bar"));
+  EXPECT_FALSE(writer.HasPendingWrite());
+
+  RunLoop().RunUntilIdle();
+  EXPECT_FALSE(writer.HasPendingWrite());
+  ASSERT_TRUE(PathExists(writer.path()));
+  EXPECT_EQ("bar", GetFileContent(writer.path()));
+}
+
+TEST_F(ImportantFileWriterTest, DoScheduledWrite_FailToSerialize) {
+  ImportantFileWriter writer(file_, ThreadTaskRunnerHandle::Get(),
+                             TimeDelta::FromMilliseconds(0));
+  EXPECT_FALSE(writer.HasPendingWrite());
+  FailingDataSerializer serializer;
+  writer.ScheduleWrite(&serializer);
+  EXPECT_TRUE(writer.HasPendingWrite());
+
+  writer.DoScheduledWrite();
+  EXPECT_FALSE(writer.HasPendingWrite());
+  EXPECT_FALSE(PathExists(writer.path()));
+
+  RunLoop().RunUntilIdle();
+  EXPECT_FALSE(writer.HasPendingWrite());
+  EXPECT_FALSE(PathExists(writer.path()));
 }
 
 }  // namespace base

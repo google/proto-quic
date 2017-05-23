@@ -62,16 +62,6 @@ public class ContextUtils {
     }
 
     /**
-     * Initialize the native Android application context to be the same as the java counter-part.
-     */
-    public static void initApplicationContextForNative() {
-        if (sApplicationContext == null) {
-            throw new RuntimeException("Cannot have native global application context be null.");
-        }
-        nativeInitNativeSideApplicationContext(sApplicationContext);
-    }
-
-    /**
      * Only called by the static holder class and tests.
      *
      * @return The application-wide shared preferences.
@@ -110,6 +100,4 @@ public class ContextUtils {
         }
         sApplicationContext = appContext;
     }
-
-    private static native void nativeInitNativeSideApplicationContext(Context appContext);
 }

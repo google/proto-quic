@@ -77,9 +77,11 @@ class BASE_EXPORT TaskTracker {
   void SetHasShutdownStartedForTesting();
 
  protected:
-  // Runs |task|. An override is expected to call its parent's implementation
-  // but is free to perform extra work before and after doing so.
-  virtual void PerformRunTask(std::unique_ptr<Task> task);
+  // Runs |task|. |sequence_token| is the token identifying the sequence from
+  // which |task| was extracted. An override is expected to call its parent's
+  // implementation but is free to perform extra work before and after doing so.
+  virtual void PerformRunTask(std::unique_ptr<Task> task,
+                              const SequenceToken& sequence_token);
 
 #if DCHECK_IS_ON()
   // Returns true if this context should be exempt from blocking shutdown

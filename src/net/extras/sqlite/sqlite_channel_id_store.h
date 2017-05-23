@@ -40,6 +40,7 @@ class SQLiteChannelIDStore : public DefaultChannelIDStore::PersistentStore {
   void DeleteChannelID(
       const DefaultChannelIDStore::ChannelID& channel_id) override;
   void SetForceKeepSessionState() override;
+  void Flush() override;
 
   // Delete channel ids from servers in |server_identifiers|.
   void DeleteAllInList(const std::list<std::string>& server_identifiers);

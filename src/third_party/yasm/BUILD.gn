@@ -29,6 +29,31 @@
 
 import("//build/config/compiler/compiler.gni")
 
+configs_to_delete = []
+configs_to_add = []
+if (is_debug) {
+  configs_to_delete += [
+    # Build with full optimizations even on debug configurations, because some
+    # yasm build steps (highbd_sad4d_sse2.asm) can take ~33 seconds or more in
+    # debug component builds on Windows. Enabling compiler optimizations saves
+    #  ~5 seconds.
+    "//build/config/compiler:default_optimization",
+
+    # Don't define _DEBUG. Modest savings, but good for consistency.
+    "//build/config:debug",
+  ]
+  configs_to_add += [
+    "//build/config:release",
+    "//build/config/compiler:optimize_max",
+  ]
+  if (is_win) {
+    # This switches to using the release CRT. On debug component builds of
+    # highbd_sad4d_sse2.asm on Windows this saves about 15 s.
+    configs_to_delete += [ "//build/config/win:default_crt" ]
+    configs_to_add += [ "//build/config/win:release_crt" ]
+  }
+}
+
 if (current_toolchain == host_toolchain) {
   # Various files referenced by multiple targets.
   yasm_gen_include_dir = "$target_gen_dir/include"
@@ -58,7 +83,7 @@ if (current_toolchain == host_toolchain) {
       "//build/config/compiler:no_chromium_code",
     ]
     deps = [
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
 
       # Default manifest on Windows (a no-op elsewhere).
       "//build/win:default_exe_manifest",
@@ -75,7 +100,7 @@ if (current_toolchain == host_toolchain) {
       "//build/config/compiler:no_chromium_code",
     ]
     deps = [
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
 
       # Default manifest on Windows (a no-op elsewhere).
       "//build/win:default_exe_manifest",
@@ -94,9 +119,13 @@ if (current_toolchain == host_toolchain) {
       "//build/config/compiler:no_chromium_code",
     ]
 
+    # Must be compatible with yasm_utils/yasm
+    configs -= configs_to_delete
+    configs += configs_to_add
+
     deps = [
       ":yasm_utils",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
 
       # Default manifest on Windows (a no-op elsewhere).
       "//build/win:default_exe_manifest",
@@ -116,6 +145,10 @@ if (current_toolchain == host_toolchain) {
       ":yasm_config",
       "//build/config/compiler:no_chromium_code",
     ]
+
+    # Must be compatible with yasm
+    configs -= configs_to_delete
+    configs += configs_to_add
   }
 
   executable("genstring") {
@@ -128,7 +161,7 @@ if (current_toolchain == host_toolchain) {
       "//build/config/compiler:no_chromium_code",
     ]
     deps = [
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
 
       # Default manifest on Windows (a no-op elsewhere).
       "//build/win:default_exe_manifest",
@@ -145,7 +178,7 @@ if (current_toolchain == host_toolchain) {
       "//build/config/compiler:no_chromium_code",
     ]
     deps = [
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
 
       # Default manifest on Windows (a no-op elsewhere).
       "//build/win:default_exe_manifest",
@@ -189,7 +222,7 @@ if (current_toolchain == host_toolchain) {
       ":re2c_warnings",
     ]
     deps = [
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
 
       # Default manifest on Windows (a no-op elsewhere).
       "//build/win:default_exe_manifest",
@@ -308,6 +341,9 @@ if (current_toolchain == host_toolchain) {
     if (is_official_build && full_wpo_on_official) {
       configs -= [ "//build/config/compiler:default_optimization" ]
       configs += [ "//build/config/compiler:optimize_no_wpo" ]
+    } else {
+      configs -= configs_to_delete
+      configs += configs_to_add
     }
 
     # Yasm generates a bunch of .c files which its source file #include.
@@ -338,7 +374,7 @@ if (current_toolchain == host_toolchain) {
       ":generate_module",
       ":generate_version",
       ":yasm_utils",
-      "//build/config/sanitizers:deps",
+      "//build/config:exe_and_shlib_deps",
 
       # Default manifest on Windows (a no-op elsewhere).
       "//build/win:default_exe_manifest",

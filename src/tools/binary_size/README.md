@@ -1,13 +1,18 @@
 # Tools for Analyzing Chrome's Binary Size
 
-These currently focus on Android and Linux platforms. However, some great tools
-for Windows exist and are documented here:
+These tools currently focus on Android compiled with GCC. They somewhat work
+for Android + Clang, and Linux builds, but not as well. As for Windows, some
+great tools already exist and are documented here:
 
  * https://www.chromium.org/developers/windows-binary-sizes
 
 There is also a dedicated mailing-list for binary size discussions:
 
  * https://groups.google.com/a/chromium.org/forum/#!forum/binary-size
+
+Bugs are tracked here:
+
+ * [Tools > BinarySize](https://bugs.chromium.org/p/chromium/issues/list?q=component%3ATools>BinarySize)
 
 [TOC]
 
@@ -26,17 +31,19 @@ and Linux (although Linux symbol diffs have issues, as noted below).
 
 ### Example Usage
 
-    # Build and diff HEAD^ and HEAD.
-    tools/binary_size/diagnose_bloat.py HEAD -v
+``` bash
+# Build and diff HEAD^ and HEAD.
+tools/binary_size/diagnose_bloat.py HEAD -v
 
-    # Diff BEFORE_REV and AFTER_REV using build artifacts downloaded from perf bots.
-    tools/binary_size/diagnose_bloat.py AFTER_REV --reference-rev BEFORE_REV --cloud -v
+# Diff BEFORE_REV and AFTER_REV using build artifacts downloaded from perf bots.
+tools/binary_size/diagnose_bloat.py AFTER_REV --reference-rev BEFORE_REV --cloud -v
 
-    # Build and diff all contiguous revs in range BEFORE_REV..AFTER_REV for src/v8.
-    tools/binary_size/diagnose_bloat.py AFTER_REV --reference-rev BEFORE_REV --subrepo v8 --all -v
+# Build and diff all contiguous revs in range BEFORE_REV..AFTER_REV for src/v8.
+tools/binary_size/diagnose_bloat.py AFTER_REV --reference-rev BEFORE_REV --subrepo v8 --all -v
 
-    # Display detailed usage info (there are many options).
-    tools/binary_size/diagnose_bloat.py -h
+# Display detailed usage info (there are many options).
+tools/binary_size/diagnose_bloat.py -h
+```
 
 ## Super Size
 
@@ -58,8 +65,9 @@ between milestones.
 
 1. A list of .so section sizes, as reported by `readelf -S`,
 1. Metadata (GN args, filenames, timestamps, git revision, build id),
-1. A list of symbols, including name, address, size, and associated `.o` / `.cc`
-   files.
+1. A list of symbols, including name, address, size,
+  padding (caused by alignment), and associated `.o` / `.cc` files.
+
 
 #### How are Symbols Collected?
 
@@ -72,28 +80,41 @@ between milestones.
      inlined symbols is gathered.
 1. Symbol aliases (when multiple symbols share an address) are collected from
    debug information via `nm elf-file`.
+   * Aliases are created by identical code folding (linker optimization).
    * Aliases have the same address and size, but report their `.pss` as
       `.size / .num_aliases`.
 1. Paths for shared symbols (those found in multiple `.o` files) are collected
    by running `nm` on every `.o` file.
-   * Shared symbols do not store the complete list of `.o` files. Instead, the
-     common ancestor is computed and stored as the path (along with a
-     `{shared}/count` suffix).
 
 #### What Other Processing Happens?
 
 1. Path normalization:
    * Prefixes are removed: `out/Release/`, `gen/`, `obj/`
    * Archive names made more pathy: `foo/bar.a(baz.o)` -> `foo/bar.a/baz.o`
+   * Shared symbols do not store the complete source paths. Instead, the
+     common ancestor is computed and stored as the path.
+      * Example: `base/{shared}/3` (the "3" means three different files contain
+        the symbol)
 
 1. Name normalization:
-   * `(anonymous::)` is removed from names.
+   * `(anonymous::)` is removed from names (and stored as a symbol flag).
+   * `[clone]` suffix removed (and stored as a symbol flag).
    * `vtable for FOO` -> `Foo [vtable]`
-   * Names split into: `name`, `template_name`, `full_name`
+   * Mangling done by linkers is undone (e.g. prefixing with "unlikely.")
+   * Names are processed into:
+     * `name`: Name without template and argument parameters
+     * `template_name`: Name without argument parameters.
+     * `full_name`: Name with all parameters.
 
 1. Clustering
-   * Compiler optimizations can cause a symbol to be broken into multiple
-     smaller symbols. Clustering puts them back together.
+   * Compiler & linker optimizations can cause symbols to be broken into
+     multiple parts to become candidates for inlining ("partial inlining").
+   * These symbols are sometimes suffixed with "`[clone]`" (removed by
+     normalization).
+   * Clustering creates groups containing all pieces of a symbol (in the case
+     where multiple pieces remain after inlining).
+   * Clustering is done by default on `SizeInfo.symbols`. To view unclustered
+     symbols, use `SizeInfo.raw_symbols`.
 
 1. Diffing
    * Some heuristics for matching up before/after symbols.
@@ -117,49 +138,75 @@ Collect size information and dump it into a `.size` file.
 for list of GN args to build a Release binary.
 ***
 
-Example:
+Example Usage:
 
-    ninja -C out/Release -j 1000 apks/ChromePublic.apk
-    tools/binary_size/supersize archive chrome.size --apk-file out/Release/apks/ChromePublic.apk -v
+``` bash
+# Android:
+ninja -C out/Release -j 1000 apks/ChromePublic.apk
+tools/binary_size/supersize archive chrome.size --apk-file out/Release/apks/ChromePublic.apk -v
 
-    # Linux:
-    LLVM_DOWNLOAD_GOLD_PLUGIN=1 gclient runhooks  # One-time download.
-    ninja -C out/Release -j 1000 chrome
-    tools/binary_size/supersize archive chrome.size --elf-file out/Release/chrome -v
+# Linux:
+LLVM_DOWNLOAD_GOLD_PLUGIN=1 gclient runhooks  # One-time download.
+ninja -C out/Release -j 1000 chrome
+tools/binary_size/supersize archive chrome.size --elf-file out/Release/chrome -v
+```
 
 ### Usage: html_report
 
 Creates an interactive size breakdown (by source path) as a stand-alone html
 report.
 
-Example:
+Example output: https://agrieve.github.io/supersize-chrome-android-may-16-2017/index.html
 
-    tools/binary_size/supersize html_report chrome.size --report-dir size-report -v
-    xdg-open size-report/index.html
+Example Usage:
 
-### Usage: console
-
-Starts a Python interpreter where you can run custom queries.
-
-Example:
-
-    # Prints size infomation and exits (does not enter interactive mode).
-    tools/binary_size/supersize console chrome.size --query='Print(size_info)'
-
-    # Enters a Python REPL (it will print more guidance).
-    tools/binary_size/supersize console chrome.size
+``` bash
+tools/binary_size/supersize html_report chrome.size --report-dir size-report -v
+xdg-open size-report/index.html
+```
 
 ### Usage: diff
 
 A convenience command equivalent to: `console before.size after.size --query='Print(Diff(size_info1, size_info2))'`
 
-Example
+Example Usage:
 
-    tools/binary_size/supersize diff before.size after.size --all
+``` bash
+tools/binary_size/supersize diff before.size after.size --all
+```
+
+### Usage: console
+
+Starts a Python interpreter where you can run custom queries, or run pre-made
+queries from canned_queries.py.
+
+Example Usage:
+
+```bash
+# Prints size infomation and exits (does not enter interactive mode).
+tools/binary_size/supersize console chrome.size --query='Print(size_info)'
+
+# Enters a Python REPL (it will print more guidance).
+tools/binary_size/supersize console chrome.size
+```
+
+Example session:
+
+``` python
+>>> ShowExamples()  # Get some inspiration.
+...
+>>> sorted = size_info.symbols.WhereInSection('t').Sorted()
+>>> Print(sorted)  # Have a look at the largest symbols.
+...
+>>> sym = sorted.WhereNameMatches('TrellisQuantizeBlock')[0]
+>>> Disassemble(sym)  # Time to learn assembly.
+...
+>>> help(canned_queries)
+...
+>>> Print(canned_queries.TemplatesByName(depth=-1))
+```
 
 ### Roadmap
-
-Tracked in https://crbug.com/681694
 
 1. [Better Linux support](https://bugs.chromium.org/p/chromium/issues/detail?id=717550) (clang+lld+lto vs gcc+gold).
 1. More `archive` features:

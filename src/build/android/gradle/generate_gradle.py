@@ -253,6 +253,7 @@ class _ProjectContextGenerator(object):
     self.split_projects = split_projects
     self.processed_java_dirs = set()
     self.processed_prebuilts = set()
+    self.processed_res_dirs = set()
 
   def _GenJniLibs(self, root_entry):
     libraries = []
@@ -356,6 +357,9 @@ class _ProjectContextGenerator(object):
     variables['prebuilts'] = self._Relativize(root_entry, prebuilts)
     res_dirs = set(
         p for e in self._GetEntries(root_entry) for p in e.ResDirs())
+    # Do not add generated resources for the all module since it creates many
+    # duplicates, and currently resources are only used for editing.
+    self.processed_res_dirs.update(res_dirs)
     res_dirs.add(
         os.path.join(self.EntryOutputDir(root_entry), _RES_SUBDIR))
     variables['res_dirs'] = self._Relativize(root_entry, res_dirs)
@@ -566,6 +570,7 @@ def _GenerateModuleAll(gradle_output_dir, generator, build_vars,
   variables['template_type'] = target_type
   java_dirs = sorted(generator.processed_java_dirs)
   prebuilts = sorted(generator.processed_prebuilts)
+  res_dirs = sorted(generator.processed_res_dirs)
   def Relativize(paths):
     return _RebasePath(paths, os.path.join(gradle_output_dir, _MODULE_ALL))
   main_java_dirs = [d for d in java_dirs if not _IsTestDir(d)]
@@ -575,6 +580,7 @@ def _GenerateModuleAll(gradle_output_dir, generator, build_vars,
       'java_dirs': Relativize(main_java_dirs),
       'prebuilts': Relativize(prebuilts),
       'java_excludes': ['**/*.java'],
+      'res_dirs': Relativize(res_dirs),
   }
   variables['android_test'] = {
       'java_dirs': Relativize(test_java_dirs),

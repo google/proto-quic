@@ -12,6 +12,7 @@
 #include "base/compiler_specific.h"
 #include "base/location.h"
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_number_conversions.h"
@@ -37,7 +38,7 @@ std::unique_ptr<base::Value> NetLogSpdyStreamErrorCallback(
     int status,
     const SpdyString* description,
     NetLogCaptureMode /* capture_mode */) {
-  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  auto dict = base::MakeUnique<base::DictionaryValue>();
   dict->SetInteger("stream_id", static_cast<int>(stream_id));
   dict->SetInteger("status", status);
   dict->SetString("description", *description);
@@ -49,7 +50,7 @@ std::unique_ptr<base::Value> NetLogSpdyStreamWindowUpdateCallback(
     int32_t delta,
     int32_t window_size,
     NetLogCaptureMode /* capture_mode */) {
-  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  auto dict = base::MakeUnique<base::DictionaryValue>();
   dict->SetInteger("stream_id", stream_id);
   dict->SetInteger("delta", delta);
   dict->SetInteger("window_size", window_size);
@@ -78,8 +79,7 @@ class SpdyStream::HeadersBufferProducer : public SpdyBufferProducer {
       return std::unique_ptr<SpdyBuffer>();
     }
     DCHECK_GT(stream_->stream_id(), 0u);
-    return std::unique_ptr<SpdyBuffer>(
-        new SpdyBuffer(stream_->ProduceHeadersFrame()));
+    return base::MakeUnique<SpdyBuffer>(stream_->ProduceHeadersFrame());
   }
   size_t EstimateMemoryUsage() const override { return 0; }
 
@@ -703,9 +703,9 @@ int SpdyStream::SendRequestHeaders(SpdyHeaderBlock request_headers,
   request_headers_valid_ = true;
   url_from_header_block_ = GetUrlFromHeaderBlock(request_headers_);
   pending_send_status_ = send_status;
-  session_->EnqueueStreamWrite(GetWeakPtr(), SpdyFrameType::HEADERS,
-                               std::unique_ptr<SpdyBufferProducer>(
-                                   new HeadersBufferProducer(GetWeakPtr())));
+  session_->EnqueueStreamWrite(
+      GetWeakPtr(), SpdyFrameType::HEADERS,
+      base::MakeUnique<HeadersBufferProducer>(GetWeakPtr()));
   return ERR_IO_PENDING;
 }
 
@@ -874,8 +874,7 @@ void SpdyStream::QueueNextDataFrame() {
 
   session_->EnqueueStreamWrite(
       GetWeakPtr(), SpdyFrameType::DATA,
-      std::unique_ptr<SpdyBufferProducer>(
-          new SimpleBufferProducer(std::move(data_buffer))));
+      base::MakeUnique<SimpleBufferProducer>(std::move(data_buffer)));
 }
 
 void SpdyStream::SaveResponseHeaders(const SpdyHeaderBlock& response_headers) {

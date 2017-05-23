@@ -102,12 +102,23 @@ def _StripTemplateArgs(name):
     last_right_idx = left_idx
 
 
-def _NormalizeTopLevelLambda(name, space_idx, left_paren_idx):
-  # cc::{lambda(PaintOp*)#63}::_FUN() -> cc:{lambda#63}()
-  paren_idx = name.index('(', space_idx + 1)
-  hash_idx = name.rindex('#', paren_idx)
-  return (name[:paren_idx] + name[hash_idx:left_paren_idx - 6] +
-          name[left_paren_idx:])
+def _NormalizeTopLevelGccLambda(name, left_paren_idx):
+  # cc::{lambda(PaintOp*)#63}::_FUN() -> cc::$lambda#63()
+  left_brace_idx = name.index('{')
+  hash_idx = name.index('#', left_brace_idx + 1)
+  right_brace_idx = name.index('}', hash_idx + 1)
+  number = name[hash_idx + 1:right_brace_idx]
+  return '{}$lambda#{}{}'.format(
+      name[:left_brace_idx], number, name[left_paren_idx:])
+
+
+def _NormalizeTopLevelClangLambda(name, left_paren_idx):
+  # cc::$_21::__invoke() -> cc::$lambda#21()
+  dollar_idx = name.index('$')
+  colon_idx = name.index(':', dollar_idx + 1)
+  number = name[dollar_idx + 2:colon_idx]
+  return '{}$lambda#{}{}'.format(
+      name[:dollar_idx], number, name[left_paren_idx:])
 
 
 def Parse(name):
@@ -133,7 +144,11 @@ def Parse(name):
     if name_no_params.endswith('}::_FUN'):
       # Don't use name_no_params in here since prior _idx will be off if
       # there was a return value.
-      name = _NormalizeTopLevelLambda(name, space_idx, left_paren_idx)
+      name = _NormalizeTopLevelGccLambda(name, left_paren_idx)
+      return Parse(name)
+    elif name_no_params.endswith('::__invoke') and '$' in name_no_params:
+      assert '$_' in name_no_params, 'Surprising lambda: ' + name
+      name = _NormalizeTopLevelClangLambda(name, left_paren_idx)
       return Parse(name)
 
     full_name = name[space_idx + 1:]

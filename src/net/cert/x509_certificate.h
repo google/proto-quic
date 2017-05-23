@@ -231,15 +231,6 @@ class NET_EXPORT X509Certificate
     return intermediate_ca_certs_;
   }
 
-#if defined(OS_IOS)
-  // Returns a new CFMutableArrayRef containing this certificate and its
-  // intermediate certificates in the form expected by Security.framework
-  // and Keychain Services, or NULL on failure.
-  // The first item in the array will be this certificate, followed by its
-  // intermediates, if any.
-  CFMutableArrayRef CreateOSCertChainForCert() const;
-#endif
-
   // Do any of the given issuer names appear in this cert's chain of trust?
   // |valid_issuers| is a list of DER-encoded X.509 DistinguishedNames.
   bool IsIssuedByEncoded(const std::vector<std::string>& valid_issuers);

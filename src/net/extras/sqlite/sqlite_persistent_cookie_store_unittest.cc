@@ -7,6 +7,7 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <utility>
 
 #include "base/bind.h"
 #include "base/callback.h"
@@ -14,16 +15,18 @@
 #include "base/files/scoped_temp_dir.h"
 #include "base/location.h"
 #include "base/memory/ref_counted.h"
+#include "base/run_loop.h"
 #include "base/sequenced_task_runner.h"
 #include "base/synchronization/waitable_event.h"
-#include "base/test/sequenced_worker_pool_owner.h"
-#include "base/threading/sequenced_worker_pool.h"
+#include "base/task_scheduler/post_task.h"
+#include "base/test/scoped_task_environment.h"
 #include "base/time/time.h"
 #include "crypto/encryptor.h"
 #include "crypto/symmetric_key.h"
 #include "net/cookies/canonical_cookie.h"
 #include "net/cookies/cookie_constants.h"
 #include "net/extras/sqlite/cookie_crypto_delegate.h"
+#include "net/test/net_test_suite.h"
 #include "sql/connection.h"
 #include "sql/meta_table.h"
 #include "sql/statement.h"
@@ -85,11 +88,8 @@ typedef std::vector<std::unique_ptr<CanonicalCookie>> CanonicalCookieVector;
 class SQLitePersistentCookieStoreTest : public testing::Test {
  public:
   SQLitePersistentCookieStoreTest()
-      : pool_owner_(new base::SequencedWorkerPoolOwner(3, "Background Pool")),
-        loaded_event_(base::WaitableEvent::ResetPolicy::AUTOMATIC,
+      : loaded_event_(base::WaitableEvent::ResetPolicy::AUTOMATIC,
                       base::WaitableEvent::InitialState::NOT_SIGNALED),
-        key_loaded_event_(base::WaitableEvent::ResetPolicy::AUTOMATIC,
-                          base::WaitableEvent::InitialState::NOT_SIGNALED),
         db_thread_event_(base::WaitableEvent::ResetPolicy::AUTOMATIC,
                          base::WaitableEvent::InitialState::NOT_SIGNALED) {}
 
@@ -98,9 +98,9 @@ class SQLitePersistentCookieStoreTest : public testing::Test {
     loaded_event_.Signal();
   }
 
-  void OnKeyLoaded(CanonicalCookieVector cookies) {
+  void OnKeyLoaded(base::OnceClosure closure, CanonicalCookieVector cookies) {
     cookies_.swap(cookies);
-    key_loaded_event_.Signal();
+    std::move(closure).Run();
   }
 
   void Load(CanonicalCookieVector* cookies) {
@@ -119,24 +119,11 @@ class SQLitePersistentCookieStoreTest : public testing::Test {
     event.Wait();
   }
 
-  scoped_refptr<base::SequencedTaskRunner> background_task_runner() {
-    return pool_owner_->pool()->GetSequencedTaskRunner(
-        pool_owner_->pool()->GetNamedSequenceToken("background"));
-  }
-
-  scoped_refptr<base::SequencedTaskRunner> client_task_runner() {
-    return pool_owner_->pool()->GetSequencedTaskRunner(
-        pool_owner_->pool()->GetNamedSequenceToken("client"));
-  }
-
   void DestroyStore() {
     store_ = nullptr;
-    // Make sure we wait until the destructor has run by shutting down the pool
-    // resetting the owner (whose destructor blocks on the pool completion).
-    pool_owner_->pool()->Shutdown();
-    // Create a new pool for the few tests that create multiple stores. In other
-    // cases this is wasted but harmless.
-    pool_owner_.reset(new base::SequencedWorkerPoolOwner(3, "Background Pool"));
+    // Make sure we wait until the destructor has run by running all
+    // ScopedTaskEnvironment tasks.
+    NetTestSuite::GetScopedTaskEnvironment()->RunUntilIdle();
   }
 
   void Create(bool crypt_cookies, bool restore_old_session_cookies) {
@@ -144,8 +131,8 @@ class SQLitePersistentCookieStoreTest : public testing::Test {
       cookie_crypto_delegate_.reset(new CookieCryptor());
 
     store_ = new SQLitePersistentCookieStore(
-        temp_dir_.GetPath().Append(kCookieFilename), client_task_runner(),
-        background_task_runner(), restore_old_session_cookies,
+        temp_dir_.GetPath().Append(kCookieFilename), client_task_runner_,
+        background_task_runner_, restore_old_session_cookies,
         cookie_crypto_delegate_.get());
   }
 
@@ -172,7 +159,7 @@ class SQLitePersistentCookieStoreTest : public testing::Test {
                  const std::string& domain,
                  const std::string& path,
                  const base::Time& creation) {
-    store_->AddCookie(*CanonicalCookie::Create(
+    store_->AddCookie(CanonicalCookie(
         name, value, domain, path, creation, creation, base::Time(), false,
         false, CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
   }
@@ -183,7 +170,7 @@ class SQLitePersistentCookieStoreTest : public testing::Test {
                                const std::string& path,
                                const base::Time& creation,
                                const base::Time& expiration) {
-    store_->AddCookie(*CanonicalCookie::Create(
+    store_->AddCookie(CanonicalCookie(
         name, value, domain, path, creation, expiration, base::Time(), false,
         false, CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
   }
@@ -203,9 +190,12 @@ class SQLitePersistentCookieStoreTest : public testing::Test {
   }
 
  protected:
-  std::unique_ptr<base::SequencedWorkerPoolOwner> pool_owner_;
+  const scoped_refptr<base::SequencedTaskRunner> background_task_runner_ =
+      base::CreateSequencedTaskRunnerWithTraits(
+          {base::MayBlock(), base::WithBaseSyncPrimitives()});
+  const scoped_refptr<base::SequencedTaskRunner> client_task_runner_ =
+      base::CreateSequencedTaskRunnerWithTraits({base::MayBlock()});
   base::WaitableEvent loaded_event_;
-  base::WaitableEvent key_loaded_event_;
   base::WaitableEvent db_thread_event_;
   CanonicalCookieVector cookies_;
   base::ScopedTempDir temp_dir_;
@@ -308,12 +298,12 @@ TEST_F(SQLitePersistentCookieStoreTest, TestSessionCookiesDeletedOnStartup) {
   // Load the store a second time. Before the store finishes loading, add a
   // transient cookie and flush it to disk.
   store_ = new SQLitePersistentCookieStore(
-      temp_dir_.GetPath().Append(kCookieFilename), client_task_runner(),
-      background_task_runner(), false, nullptr);
+      temp_dir_.GetPath().Append(kCookieFilename), client_task_runner_,
+      background_task_runner_, false, nullptr);
 
   // Posting a blocking task to db_thread_ makes sure that the DB thread waits
   // until both Load and Flush have been posted to its task queue.
-  background_task_runner()->PostTask(
+  background_task_runner_->PostTask(
       FROM_HERE, base::Bind(&SQLitePersistentCookieStoreTest::WaitOnDBEvent,
                             base::Unretained(this)));
   store_->Load(base::Bind(&SQLitePersistentCookieStoreTest::OnLoaded,
@@ -342,8 +332,8 @@ TEST_F(SQLitePersistentCookieStoreTest, TestSessionCookiesDeletedOnStartup) {
   // store should contain exactly 4 cookies: the 3 persistent, and "c.com",
   // which was added during the second cookie store load.
   store_ = new SQLitePersistentCookieStore(
-      temp_dir_.GetPath().Append(kCookieFilename), client_task_runner(),
-      background_task_runner(), true, nullptr);
+      temp_dir_.GetPath().Append(kCookieFilename), client_task_runner_,
+      background_task_runner_, true, nullptr);
   store_->Load(base::Bind(&SQLitePersistentCookieStoreTest::OnLoaded,
                           base::Unretained(this)));
   loaded_event_.Wait();
@@ -365,21 +355,29 @@ TEST_F(SQLitePersistentCookieStoreTest, TestLoadCookiesForKey) {
   AddCookie("A", "B", "www.bbb.com", "/", t);
   DestroyStore();
 
+  // base::test::ScopedTaskEnvironment runs |background_task_runner_| and
+  // |client_task_runner_| on the same thread. Therefore, when a
+  // |background_task_runner_| task is blocked, |client_task_runner_| tasks
+  // can't run. To allow precise control of |background_task_runner_| without
+  // preventing client tasks to run, use base::ThreadTaskRunnerHandle::Get()
+  // instead of |client_task_runner_| for this test.
   store_ = new SQLitePersistentCookieStore(
-      temp_dir_.GetPath().Append(kCookieFilename), client_task_runner(),
-      background_task_runner(), false, nullptr);
+      temp_dir_.GetPath().Append(kCookieFilename),
+      base::ThreadTaskRunnerHandle::Get(), background_task_runner_, false,
+      nullptr);
 
   // Posting a blocking task to db_thread_ makes sure that the DB thread waits
   // until both Load and LoadCookiesForKey have been posted to its task queue.
-  background_task_runner()->PostTask(
+  background_task_runner_->PostTask(
       FROM_HERE, base::Bind(&SQLitePersistentCookieStoreTest::WaitOnDBEvent,
                             base::Unretained(this)));
   store_->Load(base::Bind(&SQLitePersistentCookieStoreTest::OnLoaded,
                           base::Unretained(this)));
+  base::RunLoop run_loop;
   store_->LoadCookiesForKey(
       "aaa.com", base::Bind(&SQLitePersistentCookieStoreTest::OnKeyLoaded,
-                            base::Unretained(this)));
-  background_task_runner()->PostTask(
+                            base::Unretained(this), run_loop.QuitClosure()));
+  background_task_runner_->PostTask(
       FROM_HERE, base::Bind(&SQLitePersistentCookieStoreTest::WaitOnDBEvent,
                             base::Unretained(this)));
 
@@ -391,8 +389,11 @@ TEST_F(SQLitePersistentCookieStoreTest, TestLoadCookiesForKey) {
   // 3. Priority Load (aaa.com)
   // 4. Wait (on db_event)
   db_thread_event_.Signal();
-  key_loaded_event_.Wait();
-  ASSERT_EQ(loaded_event_.IsSignaled(), false);
+
+  // Wait until the OnKeyLoaded callback has run.
+  run_loop.Run();
+  EXPECT_FALSE(loaded_event_.IsSignaled());
+
   std::set<std::string> cookies_loaded;
   for (CanonicalCookieVector::const_iterator it = cookies_.begin();
        it != cookies_.end(); ++it) {
@@ -405,7 +406,10 @@ TEST_F(SQLitePersistentCookieStoreTest, TestLoadCookiesForKey) {
             cookies_loaded.find("travel.aaa.com") != cookies_loaded.end());
 
   db_thread_event_.Signal();
-  loaded_event_.Wait();
+
+  NetTestSuite::GetScopedTaskEnvironment()->RunUntilIdle();
+  EXPECT_TRUE(loaded_event_.IsSignaled());
+
   for (CanonicalCookieVector::const_iterator it = cookies_.begin();
        it != cookies_.end(); ++it) {
     cookies_loaded.insert((*it)->Domain().c_str());
@@ -447,10 +451,10 @@ TEST_F(SQLitePersistentCookieStoreTest, TestLoadOldSessionCookies) {
   InitializeStore(false, true);
 
   // Add a session cookie.
-  store_->AddCookie(*CanonicalCookie::Create(
-      "C", "D", "sessioncookie.com", "/", base::Time::Now(), base::Time(),
-      base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
-      COOKIE_PRIORITY_DEFAULT));
+  store_->AddCookie(
+      CanonicalCookie("C", "D", "sessioncookie.com", "/", base::Time::Now(),
+                      base::Time(), base::Time(), false, false,
+                      CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
 
   // Force the store to write its data to the disk.
   DestroyStore();
@@ -474,10 +478,10 @@ TEST_F(SQLitePersistentCookieStoreTest, TestDontLoadOldSessionCookies) {
   InitializeStore(false, true);
 
   // Add a session cookie.
-  store_->AddCookie(*CanonicalCookie::Create(
-      "C", "D", "sessioncookie.com", "/", base::Time::Now(), base::Time(),
-      base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
-      COOKIE_PRIORITY_DEFAULT));
+  store_->AddCookie(
+      CanonicalCookie("C", "D", "sessioncookie.com", "/", base::Time::Now(),
+                      base::Time(), base::Time(), false, false,
+                      CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
 
   // Force the store to write its data to the disk.
   DestroyStore();
@@ -504,12 +508,12 @@ TEST_F(SQLitePersistentCookieStoreTest, PersistIsPersistent) {
   static const char kPersistentName[] = "persistent";
 
   // Add a session cookie.
-  store_->AddCookie(*CanonicalCookie::Create(
+  store_->AddCookie(CanonicalCookie(
       kSessionName, "val", "sessioncookie.com", "/", base::Time::Now(),
       base::Time(), base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
       COOKIE_PRIORITY_DEFAULT));
   // Add a persistent cookie.
-  store_->AddCookie(*CanonicalCookie::Create(
+  store_->AddCookie(CanonicalCookie(
       kPersistentName, "val", "sessioncookie.com", "/",
       base::Time::Now() - base::TimeDelta::FromDays(1),
       base::Time::Now() + base::TimeDelta::FromDays(1), base::Time(), false,
@@ -550,21 +554,21 @@ TEST_F(SQLitePersistentCookieStoreTest, PriorityIsPersistent) {
   InitializeStore(false, true);
 
   // Add a low-priority persistent cookie.
-  store_->AddCookie(*CanonicalCookie::Create(
+  store_->AddCookie(CanonicalCookie(
       kLowName, kCookieValue, kDomain, kCookiePath,
       base::Time::Now() - base::TimeDelta::FromMinutes(1),
       base::Time::Now() + base::TimeDelta::FromDays(1), base::Time(), false,
       false, CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_LOW));
 
   // Add a medium-priority persistent cookie.
-  store_->AddCookie(*CanonicalCookie::Create(
+  store_->AddCookie(CanonicalCookie(
       kMediumName, kCookieValue, kDomain, kCookiePath,
       base::Time::Now() - base::TimeDelta::FromMinutes(2),
       base::Time::Now() + base::TimeDelta::FromDays(1), base::Time(), false,
       false, CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_MEDIUM));
 
   // Add a high-priority peristent cookie.
-  store_->AddCookie(*CanonicalCookie::Create(
+  store_->AddCookie(CanonicalCookie(
       kHighName, kCookieValue, kDomain, kCookiePath,
       base::Time::Now() - base::TimeDelta::FromMinutes(3),
       base::Time::Now() + base::TimeDelta::FromDays(1), base::Time(), false,
@@ -611,21 +615,21 @@ TEST_F(SQLitePersistentCookieStoreTest, SameSiteIsPersistent) {
   InitializeStore(false, true);
 
   // Add a non-samesite cookie.
-  store_->AddCookie(*CanonicalCookie::Create(
+  store_->AddCookie(CanonicalCookie(
       kNoneName, kCookieValue, kDomain, kCookiePath,
       base::Time::Now() - base::TimeDelta::FromMinutes(1),
       base::Time::Now() + base::TimeDelta::FromDays(1), base::Time(), false,
       false, CookieSameSite::NO_RESTRICTION, COOKIE_PRIORITY_DEFAULT));
 
   // Add a lax-samesite persistent cookie.
-  store_->AddCookie(*CanonicalCookie::Create(
+  store_->AddCookie(CanonicalCookie(
       kLaxName, kCookieValue, kDomain, kCookiePath,
       base::Time::Now() - base::TimeDelta::FromMinutes(2),
       base::Time::Now() + base::TimeDelta::FromDays(1), base::Time(), false,
       false, CookieSameSite::LAX_MODE, COOKIE_PRIORITY_DEFAULT));
 
   // Add a strict-samesite persistent cookie.
-  store_->AddCookie(*CanonicalCookie::Create(
+  store_->AddCookie(CanonicalCookie(
       kStrictName, kCookieValue, kDomain, kCookiePath,
       base::Time::Now() - base::TimeDelta::FromMinutes(3),
       base::Time::Now() + base::TimeDelta::FromDays(1), base::Time(), false,

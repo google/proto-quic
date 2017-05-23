@@ -640,7 +640,6 @@ TEST_F(BbrSenderTest, NoBandwidthDropOnStartup) {
 
 // Test exiting STARTUP earlier due to the 1RTT connection option.
 TEST_F(BbrSenderTest, SimpleTransfer1RTTStartup) {
-  FLAGS_quic_reloadable_flag_quic_allow_2_rtt_bbr_startup = true;
   CreateDefaultSetup();
 
   QuicConfig config;
@@ -673,7 +672,6 @@ TEST_F(BbrSenderTest, SimpleTransfer1RTTStartup) {
 
 // Test exiting STARTUP earlier due to the 2RTT connection option.
 TEST_F(BbrSenderTest, SimpleTransfer2RTTStartup) {
-  FLAGS_quic_reloadable_flag_quic_allow_2_rtt_bbr_startup = true;
   // Adding TSO CWND causes packet loss before exiting startup.
   FLAGS_quic_reloadable_flag_quic_bbr_add_tso_cwnd = false;
   CreateDefaultSetup();

@@ -48,8 +48,7 @@ bool MakeMachSharedMemoryHandleReadOnly(SharedMemoryHandle* new_handle,
   if (!handle.IsValid())
     return false;
 
-  size_t size;
-  CHECK(handle.GetSize(&size));
+  size_t size = handle.GetSize();
 
   // Map if necessary.
   void* temp_addr = mapped_addr;
@@ -124,13 +123,6 @@ bool SharedMemory::CreateAndMapAnonymous(size_t size) {
   return CreateAnonymous(size) && Map(size);
 }
 
-// static
-bool SharedMemory::GetSizeFromSharedMemoryHandle(
-    const SharedMemoryHandle& handle,
-    size_t* size) {
-  return handle.GetSize(size);
-}
-
 // Chromium mostly only uses the unique/private shmem as specified by
 // "name == L"". The exception is in the StatsTable.
 bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
@@ -185,10 +177,11 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
   int readonly_mapped_file = -1;
   result = PrepareMapFile(std::move(fp), std::move(readonly_fd), &mapped_file,
                           &readonly_mapped_file, &last_error_);
-  shm_ = SharedMemoryHandle(FileDescriptor(mapped_file, false),
+  shm_ = SharedMemoryHandle(FileDescriptor(mapped_file, false), options.size,
                             UnguessableToken::Create());
-  readonly_shm_ = SharedMemoryHandle(
-      FileDescriptor(readonly_mapped_file, false), shm_.GetGUID());
+  readonly_shm_ =
+      SharedMemoryHandle(FileDescriptor(readonly_mapped_file, false),
+                         options.size, shm_.GetGUID());
   return result;
 }
 
@@ -241,13 +234,7 @@ bool SharedMemory::Unmap() {
 }
 
 SharedMemoryHandle SharedMemory::handle() const {
-  switch (shm_.type_) {
-    case SharedMemoryHandle::POSIX:
-      return SharedMemoryHandle(FileDescriptor(shm_.file_descriptor_.fd, false),
-                                shm_.GetGUID());
-    case SharedMemoryHandle::MACH:
-      return shm_;
-  }
+  return shm_;
 }
 
 SharedMemoryHandle SharedMemory::TakeHandle() {

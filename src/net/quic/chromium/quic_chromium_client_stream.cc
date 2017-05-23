@@ -23,7 +23,7 @@ namespace net {
 
 QuicChromiumClientStream::Handle::Handle(QuicChromiumClientStream* stream,
                                          Delegate* delegate)
-    : stream_(stream), delegate_(delegate) {
+    : stream_(stream), delegate_(delegate), read_headers_buffer_(nullptr) {
   SaveState();
 }
 
@@ -40,10 +40,15 @@ void QuicChromiumClientStream::Handle::ClearDelegate() {
   delegate_ = nullptr;
 }
 
-void QuicChromiumClientStream::Handle::OnInitialHeadersAvailable(
-    const SpdyHeaderBlock& headers,
-    size_t frame_len) {
-  delegate_->OnInitialHeadersAvailable(headers, frame_len);
+void QuicChromiumClientStream::Handle::OnInitialHeadersAvailable() {
+  if (!read_headers_callback_)
+    return;  // Wait for ReadInitialHeaders to be called.
+
+  int rv = ERR_QUIC_PROTOCOL_ERROR;
+  if (!stream_->DeliverInitialHeaders(read_headers_buffer_, &rv))
+    rv = ERR_QUIC_PROTOCOL_ERROR;
+
+  ResetAndReturn(&read_headers_callback_).Run(rv);
 }
 
 void QuicChromiumClientStream::Handle::OnTrailingHeadersAvailable(
@@ -76,6 +81,21 @@ void QuicChromiumClientStream::Handle::OnError(int error) {
     delegate_ = nullptr;
     delegate->OnError(error);
   }
+}
+
+int QuicChromiumClientStream::Handle::ReadInitialHeaders(
+    SpdyHeaderBlock* header_block,
+    const CompletionCallback& callback) {
+  if (!stream_)
+    return ERR_CONNECTION_CLOSED;
+
+  int frame_len = 0;
+  if (stream_->DeliverInitialHeaders(header_block, &frame_len))
+    return frame_len;
+
+  read_headers_buffer_ = header_block;
+  read_headers_callback_ = callback;
+  return ERR_IO_PENDING;
 }
 
 size_t QuicChromiumClientStream::Handle::WriteHeaders(
@@ -271,16 +291,14 @@ void QuicChromiumClientStream::OnInitialHeadersComplete(
   ConsumeHeaderList();
   session_->OnInitialHeadersComplete(id(), header_block);
 
-  if (handle_) {
-    // The handle will receive the headers via a posted task.
-    NotifyHandleOfInitialHeadersAvailableLater(std::move(header_block),
-                                               frame_len);
-    return;
-  }
-
   // Buffer the headers and deliver them when the handle arrives.
   initial_headers_ = std::move(header_block);
   initial_headers_frame_len_ = frame_len;
+
+  if (handle_) {
+    // The handle will be notified of the headers via a posted task.
+    NotifyHandleOfInitialHeadersAvailableLater();
+  }
 }
 
 void QuicChromiumClientStream::OnTrailingHeadersComplete(
@@ -414,10 +432,8 @@ QuicChromiumClientStream::CreateHandle(
   handle_ = handle.get();
 
   // Should this perhaps be via PostTask to make reasoning simpler?
-  if (!initial_headers_.empty()) {
-    handle_->OnInitialHeadersAvailable(std::move(initial_headers_),
-                                       initial_headers_frame_len_);
-  }
+  if (!initial_headers_.empty())
+    handle_->OnInitialHeadersAvailable();
 
   return handle;
 }
@@ -450,31 +466,21 @@ int QuicChromiumClientStream::Read(IOBuffer* buf, int buf_len) {
   return bytes_read;
 }
 
-void QuicChromiumClientStream::NotifyHandleOfInitialHeadersAvailableLater(
-    SpdyHeaderBlock headers,
-    size_t frame_len) {
+void QuicChromiumClientStream::NotifyHandleOfInitialHeadersAvailableLater() {
   DCHECK(handle_);
   base::ThreadTaskRunnerHandle::Get()->PostTask(
       FROM_HERE,
       base::Bind(
           &QuicChromiumClientStream::NotifyHandleOfInitialHeadersAvailable,
-          weak_factory_.GetWeakPtr(), base::Passed(std::move(headers)),
-          frame_len));
+          weak_factory_.GetWeakPtr()));
 }
 
-void QuicChromiumClientStream::NotifyHandleOfInitialHeadersAvailable(
-    SpdyHeaderBlock headers,
-    size_t frame_len) {
+void QuicChromiumClientStream::NotifyHandleOfInitialHeadersAvailable() {
   if (!handle_)
     return;
 
-  DCHECK(!headers_delivered_);
-  headers_delivered_ = true;
-  net_log_.AddEvent(
-      NetLogEventType::QUIC_CHROMIUM_CLIENT_STREAM_READ_RESPONSE_HEADERS,
-      base::Bind(&SpdyHeaderBlockNetLogCallback, &headers));
-
-  handle_->OnInitialHeadersAvailable(headers, frame_len);
+  if (!headers_delivered_)
+    handle_->OnInitialHeadersAvailable();
 }
 
 void QuicChromiumClientStream::NotifyHandleOfTrailingHeadersAvailableLater(
@@ -503,8 +509,22 @@ void QuicChromiumClientStream::NotifyHandleOfTrailingHeadersAvailable(
   net_log_.AddEvent(
       NetLogEventType::QUIC_CHROMIUM_CLIENT_STREAM_READ_RESPONSE_TRAILERS,
       base::Bind(&SpdyHeaderBlockNetLogCallback, &headers));
-
   handle_->OnTrailingHeadersAvailable(headers, frame_len);
+}
+
+bool QuicChromiumClientStream::DeliverInitialHeaders(SpdyHeaderBlock* headers,
+                                                     int* frame_len) {
+  if (initial_headers_.empty())
+    return false;
+
+  headers_delivered_ = true;
+  net_log_.AddEvent(
+      NetLogEventType::QUIC_CHROMIUM_CLIENT_STREAM_READ_RESPONSE_HEADERS,
+      base::Bind(&SpdyHeaderBlockNetLogCallback, &initial_headers_));
+
+  *headers = std::move(initial_headers_);
+  *frame_len = initial_headers_frame_len_;
+  return true;
 }
 
 void QuicChromiumClientStream::NotifyHandleOfDataAvailableLater() {

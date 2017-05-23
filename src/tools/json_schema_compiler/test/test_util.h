@@ -34,26 +34,28 @@ std::vector<T> Vector(const T& a, const T& b, const T& c) {
   return arr;
 }
 
-// TODO(dcheng): These various helpers should all take std::unique_ptr
-// arguments. See https://crbug.com/581865.
-std::unique_ptr<base::ListValue> List(base::Value* a);
-std::unique_ptr<base::ListValue> List(base::Value* a, base::Value* b);
-std::unique_ptr<base::ListValue> List(base::Value* a,
-                                      base::Value* b,
-                                      base::Value* c);
+std::unique_ptr<base::ListValue> List(std::unique_ptr<base::Value> a);
+std::unique_ptr<base::ListValue> List(std::unique_ptr<base::Value> a,
+                                      std::unique_ptr<base::Value> b);
+std::unique_ptr<base::ListValue> List(std::unique_ptr<base::Value> a,
+                                      std::unique_ptr<base::Value> b,
+                                      std::unique_ptr<base::Value> c);
 
-std::unique_ptr<base::DictionaryValue> Dictionary(const std::string& ak,
-                                                  base::Value* av);
-std::unique_ptr<base::DictionaryValue> Dictionary(const std::string& ak,
-                                                  base::Value* av,
-                                                  const std::string& bk,
-                                                  base::Value* bv);
-std::unique_ptr<base::DictionaryValue> Dictionary(const std::string& ak,
-                                                  base::Value* av,
-                                                  const std::string& bk,
-                                                  base::Value* bv,
-                                                  const std::string& ck,
-                                                  base::Value* cv);
+std::unique_ptr<base::DictionaryValue> Dictionary(
+    const std::string& ak,
+    std::unique_ptr<base::Value> av);
+std::unique_ptr<base::DictionaryValue> Dictionary(
+    const std::string& ak,
+    std::unique_ptr<base::Value> av,
+    const std::string& bk,
+    std::unique_ptr<base::Value> bv);
+std::unique_ptr<base::DictionaryValue> Dictionary(
+    const std::string& ak,
+    std::unique_ptr<base::Value> av,
+    const std::string& bk,
+    std::unique_ptr<base::Value> bv,
+    const std::string& ck,
+    std::unique_ptr<base::Value> cv);
 
 }  // namespace test_util
 }  // namespace json_schema_compiler

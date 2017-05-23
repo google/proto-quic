@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/android/config.gni")
+
 group("stack_py") {
   _py_files = read_file(
           "//build/secondary/third_party/android_platform/development/scripts/stack.pydeps",
@@ -10,4 +12,8 @@ group("stack_py") {
   set_sources_assignment_filter([ "#*" ])
   sources = _py_files
   data = sources
+
+  data += ["${android_tool_prefix}addr2line",
+           "${android_tool_prefix}objdump",
+           "${android_tool_prefix}c++filt"]
 }
