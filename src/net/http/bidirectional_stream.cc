@@ -120,12 +120,12 @@ BidirectionalStream::BidirectionalStream(
   http_request_info.url = request_info_->url;
   http_request_info.method = request_info_->method;
   http_request_info.extra_headers = request_info_->extra_headers;
-  stream_request_ =
+  stream_request_.reset(
       session->http_stream_factory()->RequestBidirectionalStreamImpl(
           http_request_info, request_info_->priority, server_ssl_config,
           server_ssl_config, this,
           /* enable_ip_based_pooling = */ true,
-          /* enable_alternative_services = */ true, net_log_);
+          /* enable_alternative_services = */ true, net_log_));
   // Check that this call cannot fail to set a non-NULL |stream_request_|.
   DCHECK(stream_request_);
   // Check that HttpStreamFactory does not invoke OnBidirectionalStreamImplReady

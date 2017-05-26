@@ -335,6 +335,30 @@ class TestLayeredNetworkDelegate : public LayeredNetworkDelegate {
                       "violating_referrer_header_count"]);
   }
 
+  void OnCanQueueReportingReportInternal(
+      const url::Origin& origin) const override {
+    ++(*counters_)["on_can_queue_reporting_report_count"];
+    EXPECT_EQ(1, (*counters_)["on_can_queue_reporting_report_count"]);
+  }
+
+  void OnCanSendReportingReportInternal(
+      const url::Origin& origin) const override {
+    ++(*counters_)["on_can_send_reporting_report_count"];
+    EXPECT_EQ(1, (*counters_)["on_can_send_reporting_report_count"]);
+  }
+
+  void OnCanSetReportingClientInternal(const url::Origin& origin,
+                                       const GURL& endpoint) const override {
+    ++(*counters_)["on_can_set_reporting_client_count"];
+    EXPECT_EQ(1, (*counters_)["on_can_set_reporting_client_count"]);
+  }
+
+  void OnCanUseReportingClientInternal(const url::Origin& origin,
+                                       const GURL& endpoint) const override {
+    ++(*counters_)["on_can_use_reporting_client_count"];
+    EXPECT_EQ(1, (*counters_)["on_can_use_reporting_client_count"]);
+  }
+
  private:
   TestURLRequestContext context_;
   TestDelegate delegate_;

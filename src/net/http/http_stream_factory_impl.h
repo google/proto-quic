@@ -8,9 +8,7 @@
 #include <stddef.h>
 
 #include <map>
-#include <memory>
 #include <set>
-#include <string>
 #include <vector>
 
 #include "base/gtest_prod_util.h"
@@ -46,17 +44,16 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
   ~HttpStreamFactoryImpl() override;
 
   // HttpStreamFactory interface
-  std::unique_ptr<HttpStreamRequest> RequestStream(
-      const HttpRequestInfo& info,
-      RequestPriority priority,
-      const SSLConfig& server_ssl_config,
-      const SSLConfig& proxy_ssl_config,
-      HttpStreamRequest::Delegate* delegate,
-      bool enable_ip_based_pooling,
-      bool enable_alternative_services,
-      const NetLogWithSource& net_log) override;
+  HttpStreamRequest* RequestStream(const HttpRequestInfo& info,
+                                   RequestPriority priority,
+                                   const SSLConfig& server_ssl_config,
+                                   const SSLConfig& proxy_ssl_config,
+                                   HttpStreamRequest::Delegate* delegate,
+                                   bool enable_ip_based_pooling,
+                                   bool enable_alternative_services,
+                                   const NetLogWithSource& net_log) override;
 
-  std::unique_ptr<HttpStreamRequest> RequestWebSocketHandshakeStream(
+  HttpStreamRequest* RequestWebSocketHandshakeStream(
       const HttpRequestInfo& info,
       RequestPriority priority,
       const SSLConfig& server_ssl_config,
@@ -67,7 +64,7 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
       bool enable_alternative_services,
       const NetLogWithSource& net_log) override;
 
-  std::unique_ptr<HttpStreamRequest> RequestBidirectionalStreamImpl(
+  HttpStreamRequest* RequestBidirectionalStreamImpl(
       const HttpRequestInfo& info,
       RequestPriority priority,
       const SSLConfig& server_ssl_config,
@@ -123,7 +120,7 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
     MAX_ALTERNATIVE_SERVICE_TYPE
   };
 
-  std::unique_ptr<HttpStreamRequest> RequestStreamInternal(
+  HttpStreamRequest* RequestStreamInternal(
       const HttpRequestInfo& info,
       RequestPriority priority,
       const SSLConfig& server_ssl_config,

@@ -343,7 +343,9 @@
       'Android Builder FYI': 'official_goma_minimal_symbols_android',
       'Win Builder FYI': 'official_goma',
       'Win Clang Builder': 'official_goma_minimal_symbols_clang',
-      'Battor Agent Linux': 'debug_bot',
+      'Battor Agent Linux': 'official_goma_minimal_symbols_clang',
+      'Battor Agent Mac': 'official_goma_minimal_symbols_clang',
+      'Battor Agent Win': 'official_goma_minimal_symbols_clang',
     },
 
     'chromium.swarm': {

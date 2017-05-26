@@ -7,10 +7,23 @@
 #include <algorithm>
 #include <limits>
 
-#include "base/trace_event/trace_event_memory_overhead.h"
-
 namespace base {
 namespace trace_event {
+
+size_t AllocationRegister::AddressHasher::operator()(
+    const void* address) const {
+  // The multiplicative hashing scheme from [Knuth 1998]. The value of |a| has
+  // been chosen carefully based on measurements with real-word data (addresses
+  // recorded from a Chrome trace run). It is the first prime after 2^17. For
+  // |shift|, 15 yield good results for both 2^18 and 2^19 bucket sizes.
+  // Microbenchmarks show that this simple scheme outperforms fancy hashes like
+  // Murmur3 by 20 to 40 percent.
+  const uintptr_t key = reinterpret_cast<uintptr_t>(address);
+  const uintptr_t a = 131101;
+  const uintptr_t shift = 15;
+  const uintptr_t h = (key * a) >> shift;
+  return h;
+}
 
 AllocationRegister::ConstIterator::ConstIterator(
     const AllocationRegister& alloc_register,
@@ -54,21 +67,6 @@ size_t AllocationRegister::BacktraceHasher::operator()(
   // per backtrace. They were found by replaying real backtraces from Linux
   // and Android against different hash functions.
   return (total_value * 131101) >> 14;
-}
-
-size_t AllocationRegister::AddressHasher::operator()(
-    const void* address) const {
-  // The multiplicative hashing scheme from [Knuth 1998]. The value of |a| has
-  // been chosen carefully based on measurements with real-word data (addresses
-  // recorded from a Chrome trace run). It is the first prime after 2^17. For
-  // |shift|, 15 yield good results for both 2^18 and 2^19 bucket sizes.
-  // Microbenchmarks show that this simple scheme outperforms fancy hashes like
-  // Murmur3 by 20 to 40 percent.
-  const uintptr_t key = reinterpret_cast<uintptr_t>(address);
-  const uintptr_t a = 131101;
-  const uintptr_t shift = 15;
-  const uintptr_t h = (key * a) >> shift;
-  return h;
 }
 
 AllocationRegister::AllocationRegister()
@@ -152,14 +150,13 @@ AllocationRegister::ConstIterator AllocationRegister::end() const {
   return ConstIterator(*this, AllocationMap::kInvalidKVIndex);
 }
 
-void AllocationRegister::EstimateTraceMemoryOverhead(
-    TraceEventMemoryOverhead* overhead) const {
-  size_t allocated = sizeof(AllocationRegister);
-  size_t resident = sizeof(AllocationRegister) +
-                    allocations_.EstimateUsedMemory() +
-                    backtraces_.EstimateUsedMemory();
-  overhead->Add(TraceEventMemoryOverhead::kHeapProfilerAllocationRegister,
-                allocated, resident);
+size_t AllocationRegister::EstimateAllocatedMemory() const {
+  return sizeof(AllocationRegister);
+}
+
+size_t AllocationRegister::EstimateResidentMemory() const {
+  return sizeof(AllocationRegister) + allocations_.EstimateUsedMemory() +
+         backtraces_.EstimateUsedMemory();
 }
 
 AllocationRegister::BacktraceMap::KVIndex AllocationRegister::InsertBacktrace(

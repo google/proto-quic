@@ -75,8 +75,9 @@ public final class CommandLineInitUtil {
                 return alternativeCommandLineFile;
             }
 
-            String debugApp = Build.VERSION.SDK_INT < 17
-                    ? getDebugAppPreJBMR1(context) : getDebugAppJBMR1(context);
+            String debugApp = Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1
+                    ? getDebugAppPreJBMR1(context)
+                    : getDebugAppJBMR1(context);
 
             if (debugApp != null
                     && debugApp.equals(context.getApplicationContext().getPackageName())) {

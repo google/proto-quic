@@ -7725,12 +7725,12 @@ TEST(HttpCache, SetPriorityNewTransaction) {
 
 namespace {
 
-void RunTransactionAndGetNetworkBytes(MockHttpCache& cache,
+void RunTransactionAndGetNetworkBytes(MockHttpCache* cache,
                                       const MockTransaction& trans_info,
                                       int64_t* sent_bytes,
                                       int64_t* received_bytes) {
   RunTransactionTestBase(
-      cache.http_cache(), trans_info, MockHttpRequest(trans_info), nullptr,
+      cache->http_cache(), trans_info, MockHttpRequest(trans_info), nullptr,
       NetLogWithSource(), nullptr, sent_bytes, received_bytes, nullptr);
 }
 
@@ -7741,11 +7741,11 @@ TEST(HttpCache, NetworkBytesCacheMissAndThenHit) {
 
   MockTransaction transaction(kSimpleGET_Transaction);
   int64_t sent, received;
-  RunTransactionAndGetNetworkBytes(cache, transaction, &sent, &received);
+  RunTransactionAndGetNetworkBytes(&cache, transaction, &sent, &received);
   EXPECT_EQ(MockNetworkTransaction::kTotalSentBytes, sent);
   EXPECT_EQ(MockNetworkTransaction::kTotalReceivedBytes, received);
 
-  RunTransactionAndGetNetworkBytes(cache, transaction, &sent, &received);
+  RunTransactionAndGetNetworkBytes(&cache, transaction, &sent, &received);
   EXPECT_EQ(0, sent);
   EXPECT_EQ(0, received);
 }
@@ -7755,13 +7755,13 @@ TEST(HttpCache, NetworkBytesConditionalRequest304) {
 
   ScopedMockTransaction transaction(kETagGET_Transaction);
   int64_t sent, received;
-  RunTransactionAndGetNetworkBytes(cache, transaction, &sent, &received);
+  RunTransactionAndGetNetworkBytes(&cache, transaction, &sent, &received);
   EXPECT_EQ(MockNetworkTransaction::kTotalSentBytes, sent);
   EXPECT_EQ(MockNetworkTransaction::kTotalReceivedBytes, received);
 
   transaction.load_flags = LOAD_VALIDATE_CACHE;
   transaction.handler = ETagGet_ConditionalRequest_Handler;
-  RunTransactionAndGetNetworkBytes(cache, transaction, &sent, &received);
+  RunTransactionAndGetNetworkBytes(&cache, transaction, &sent, &received);
   EXPECT_EQ(MockNetworkTransaction::kTotalSentBytes, sent);
   EXPECT_EQ(MockNetworkTransaction::kTotalReceivedBytes, received);
 }
@@ -7779,14 +7779,14 @@ TEST(HttpCache, NetworkBytesConditionalRequest200) {
       "Vary: Foo\n";
   AddMockTransaction(&transaction);
   int64_t sent, received;
-  RunTransactionAndGetNetworkBytes(cache, transaction, &sent, &received);
+  RunTransactionAndGetNetworkBytes(&cache, transaction, &sent, &received);
   EXPECT_EQ(MockNetworkTransaction::kTotalSentBytes, sent);
   EXPECT_EQ(MockNetworkTransaction::kTotalReceivedBytes, received);
 
   RevalidationServer server;
   transaction.handler = server.Handler;
   transaction.request_headers = "Foo: none\r\n";
-  RunTransactionAndGetNetworkBytes(cache, transaction, &sent, &received);
+  RunTransactionAndGetNetworkBytes(&cache, transaction, &sent, &received);
   EXPECT_EQ(MockNetworkTransaction::kTotalSentBytes, sent);
   EXPECT_EQ(MockNetworkTransaction::kTotalReceivedBytes, received);
 
@@ -7800,12 +7800,12 @@ TEST(HttpCache, NetworkBytesRange) {
 
   // Read bytes 40-49 from the network.
   int64_t sent, received;
-  RunTransactionAndGetNetworkBytes(cache, transaction, &sent, &received);
+  RunTransactionAndGetNetworkBytes(&cache, transaction, &sent, &received);
   EXPECT_EQ(MockNetworkTransaction::kTotalSentBytes, sent);
   EXPECT_EQ(MockNetworkTransaction::kTotalReceivedBytes, received);
 
   // Read bytes 40-49 from the cache.
-  RunTransactionAndGetNetworkBytes(cache, transaction, &sent, &received);
+  RunTransactionAndGetNetworkBytes(&cache, transaction, &sent, &received);
   EXPECT_EQ(0, sent);
   EXPECT_EQ(0, received);
   base::RunLoop().RunUntilIdle();
@@ -7813,7 +7813,7 @@ TEST(HttpCache, NetworkBytesRange) {
   // Read bytes 30-39 from the network.
   transaction.request_headers = "Range: bytes = 30-39\r\n" EXTRA_HEADER;
   transaction.data = "rg: 30-39 ";
-  RunTransactionAndGetNetworkBytes(cache, transaction, &sent, &received);
+  RunTransactionAndGetNetworkBytes(&cache, transaction, &sent, &received);
   EXPECT_EQ(MockNetworkTransaction::kTotalSentBytes, sent);
   EXPECT_EQ(MockNetworkTransaction::kTotalReceivedBytes, received);
   base::RunLoop().RunUntilIdle();
@@ -7821,7 +7821,7 @@ TEST(HttpCache, NetworkBytesRange) {
   // Read bytes 20-29 and 50-59 from the network, bytes 30-49 from the cache.
   transaction.request_headers = "Range: bytes = 20-59\r\n" EXTRA_HEADER;
   transaction.data = "rg: 20-29 rg: 30-39 rg: 40-49 rg: 50-59 ";
-  RunTransactionAndGetNetworkBytes(cache, transaction, &sent, &received);
+  RunTransactionAndGetNetworkBytes(&cache, transaction, &sent, &received);
   EXPECT_EQ(MockNetworkTransaction::kTotalSentBytes * 2, sent);
   EXPECT_EQ(MockNetworkTransaction::kTotalReceivedBytes * 2, received);
 

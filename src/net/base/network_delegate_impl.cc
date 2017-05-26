@@ -114,4 +114,24 @@ bool NetworkDelegateImpl::OnCancelURLRequestWithPolicyViolatingReferrerHeader(
   return false;
 }
 
+bool NetworkDelegateImpl::OnCanQueueReportingReport(
+    const url::Origin& origin) const {
+  return true;
+}
+
+bool NetworkDelegateImpl::OnCanSendReportingReport(
+    const url::Origin& origin) const {
+  return true;
+}
+
+bool NetworkDelegateImpl::OnCanSetReportingClient(const url::Origin& origin,
+                                                  const GURL& endpoint) const {
+  return true;
+}
+
+bool NetworkDelegateImpl::OnCanUseReportingClient(const url::Origin& origin,
+                                                  const GURL& endpoint) const {
+  return true;
+}
+
 }  // namespace net

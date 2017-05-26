@@ -318,9 +318,9 @@ config("asan_flags") {
   cflags = []
   if (is_asan) {
     cflags += [ "-fsanitize=address" ]
-    if (!is_mac && !is_win) {
+    if (!is_mac) {
       cflags += [ "-fsanitize-address-use-after-scope" ]
-    } else if (!is_win) {
+    } else {
       # https://crbug.com/708707
       cflags += [ "-fno-sanitize-address-use-after-scope" ]
     }

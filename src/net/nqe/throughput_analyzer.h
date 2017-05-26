@@ -31,6 +31,8 @@ namespace nqe {
 
 namespace internal {
 
+class NetworkQualityEstimatorParams;
+
 // Makes throughput observations. Polls NetworkActivityMonitor
 // (TrafficStats on Android) to count number of bits received over throughput
 // observation windows in accordance with the following rules:
@@ -55,6 +57,7 @@ class NET_EXPORT_PRIVATE ThroughputAnalyzer {
   // estimation.
   // Virtualized for testing.
   ThroughputAnalyzer(
+      const NetworkQualityEstimatorParams* params,
       scoped_refptr<base::SingleThreadTaskRunner> task_runner,
       ThroughputObservationCallback throughput_observation_callback,
       bool use_local_host_requests_for_tests,
@@ -106,7 +109,7 @@ class NET_EXPORT_PRIVATE ThroughputAnalyzer {
   // tracking throughput. A throughput observation can be taken only if the
   // time-window is currently active, and enough bytes have accumulated in
   // that window. |downstream_kbps| should not be null.
-  bool MayBeGetThroughputObservation(int32_t* downstream_kbps);
+  bool MaybeGetThroughputObservation(int32_t* downstream_kbps);
 
   // Starts the throughput observation window that keeps track of network
   // bytes if the following conditions are true:
@@ -133,6 +136,7 @@ class NET_EXPORT_PRIVATE ThroughputAnalyzer {
   // do not exceed their capacities.
   void BoundRequestsSize();
 
+  const NetworkQualityEstimatorParams* params_;
   scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
 
   // Called every time a new throughput observation is available.

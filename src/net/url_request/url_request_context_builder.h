@@ -112,7 +112,7 @@ class NET_EXPORT URLRequestContextBuilder {
   };
 
   URLRequestContextBuilder();
-  ~URLRequestContextBuilder();
+  virtual ~URLRequestContextBuilder();
 
   // Sets a name for this URLRequestContext. Currently the name is used in
   // MemoryDumpProvier to annotate memory usage. The name does not need to be
@@ -143,6 +143,11 @@ class NET_EXPORT URLRequestContextBuilder {
       std::unique_ptr<ProxyConfigService> proxy_config_service) {
     proxy_config_service_ = std::move(proxy_config_service);
   }
+
+  // Sets the proxy service. If one is not provided, by default, uses system
+  // libraries to evaluate PAC scripts, if available (And if not, skips PAC
+  // resolution). Subclasses may override CreateProxyService for different
+  // default behavior.
   void set_proxy_service(std::unique_ptr<ProxyService> proxy_service) {
     proxy_service_ = std::move(proxy_service);
   }
@@ -330,6 +335,17 @@ class NET_EXPORT URLRequestContextBuilder {
       std::unique_ptr<HttpServerProperties> http_server_properties);
 
   std::unique_ptr<URLRequestContext> Build();
+
+ protected:
+  // Lets subclasses override ProxyService creation, using a ProxyService that
+  // uses the URLRequestContext itself to get PAC scripts. When this method is
+  // invoked, the URLRequestContext is not yet ready to service requests.
+  virtual std::unique_ptr<ProxyService> CreateProxyService(
+      std::unique_ptr<ProxyConfigService> proxy_config_service,
+      URLRequestContext* url_request_context,
+      HostResolver* host_resolver,
+      NetworkDelegate* network_delegate,
+      NetLog* net_log);
 
  private:
   const char* name_;

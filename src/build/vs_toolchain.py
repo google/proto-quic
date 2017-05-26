@@ -229,6 +229,7 @@ def FindVCToolsRoot():
   This function should only be called when using VS2017.
   """
   assert GetVisualStudioVersion() == '2017'
+  SetEnvironmentAndGetRuntimeDllDirs()
   assert ('GYP_MSVS_OVERRIDE_PATH' in os.environ)
   vc_tools_msvc_root = os.path.join(os.environ['GYP_MSVS_OVERRIDE_PATH'],
       'VC', 'Tools', 'MSVC')

@@ -22,6 +22,7 @@ namespace net {
 
 class ReportingBrowsingDataRemover;
 class ReportingCache;
+class ReportingDelegate;
 class ReportingDeliveryAgent;
 class ReportingEndpointManager;
 class ReportingGarbageCollector;
@@ -47,6 +48,7 @@ class NET_EXPORT ReportingContext {
   base::TickClock* tick_clock() { return tick_clock_.get(); }
   ReportingUploader* uploader() { return uploader_.get(); }
 
+  ReportingDelegate* delegate() { return delegate_.get(); }
   ReportingCache* cache() { return cache_.get(); }
   ReportingEndpointManager* endpoint_manager() {
     return endpoint_manager_.get();
@@ -70,7 +72,8 @@ class NET_EXPORT ReportingContext {
   ReportingContext(const ReportingPolicy& policy,
                    std::unique_ptr<base::Clock> clock,
                    std::unique_ptr<base::TickClock> tick_clock,
-                   std::unique_ptr<ReportingUploader> uploader);
+                   std::unique_ptr<ReportingUploader> uploader,
+                   std::unique_ptr<ReportingDelegate> delegate);
 
  private:
   ReportingPolicy policy_;
@@ -81,13 +84,15 @@ class NET_EXPORT ReportingContext {
 
   base::ObserverList<ReportingObserver, /* check_empty= */ true> observers_;
 
+  std::unique_ptr<ReportingDelegate> delegate_;
+
   std::unique_ptr<ReportingCache> cache_;
 
   // |endpoint_manager_| must come after |tick_clock_| and |cache_|.
   std::unique_ptr<ReportingEndpointManager> endpoint_manager_;
 
-  // |delivery_agent_| must come after |tick_clock_|, |uploader_|, |cache_|,
-  // and |endpoint_manager_|.
+  // |delivery_agent_| must come after |tick_clock_|, |delegate_|, |uploader_|,
+  // |cache_|, and |endpoint_manager_|.
   std::unique_ptr<ReportingDeliveryAgent> delivery_agent_;
 
   // |persister_| must come after |clock_|, |tick_clock_|, and |cache_|.

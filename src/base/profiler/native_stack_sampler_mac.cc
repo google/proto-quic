@@ -7,6 +7,7 @@
 #include <dlfcn.h>
 #include <libkern/OSByteOrder.h>
 #include <libunwind.h>
+#include <mach-o/compact_unwind_encoding.h>
 #include <mach-o/swap.h>
 #include <mach/kern_return.h>
 #include <mach/mach.h>
@@ -113,6 +114,7 @@ void CopyStackAndRewritePointers(uintptr_t* stack_copy_bottom,
 // true.
 template <typename StackFrameCallback>
 bool WalkStackFromContext(unw_context_t* unwind_context,
+                          uintptr_t stack_top,
                           size_t* frame_count,
                           const StackFrameCallback& callback) {
   unw_cursor_t unwind_cursor;
@@ -125,6 +127,20 @@ bool WalkStackFromContext(unw_context_t* unwind_context,
     unw_get_reg(&unwind_cursor, UNW_REG_IP, &ip);
 
     callback(static_cast<uintptr_t>(ip));
+
+    // If this stack frame has a frame pointer, stepping the cursor will involve
+    // indexing memory access off of that pointer. In that case, sanity-check
+    // the frame pointer register to ensure it's within bounds.
+    unw_proc_info_t proc_info;
+    unw_get_proc_info(&unwind_cursor, &proc_info);
+    if ((proc_info.format & UNWIND_X86_64_MODE_MASK) ==
+        UNWIND_X86_64_MODE_RBP_FRAME) {
+      unw_word_t rsp, rbp;
+      unw_get_reg(&unwind_cursor, UNW_X86_64_RSP, &rsp);
+      unw_get_reg(&unwind_cursor, UNW_X86_64_RBP, &rbp);
+      if (rbp < rsp || rbp > stack_top)
+        return false;
+    }
 
     step_result = unw_step(&unwind_cursor);
   } while (step_result > 0);
@@ -172,7 +188,8 @@ void WalkStack(const x86_thread_state64_t& thread_state,
   // over.
   unw_context_t unwind_context;
   memcpy(&unwind_context, &thread_state, sizeof(uintptr_t) * 17);
-  bool result = WalkStackFromContext(&unwind_context, &frame_count, callback);
+  bool result =
+      WalkStackFromContext(&unwind_context, stack_top, &frame_count, callback);
 
   if (!result)
     return;
@@ -194,7 +211,7 @@ void WalkStack(const x86_thread_state64_t& thread_state,
       strcmp(info.dli_fname, LibSystemKernelName()) == 0) {
       rip = *reinterpret_cast<uint64_t*>(rsp);
       rsp += 8;
-      WalkStackFromContext(&unwind_context, &frame_count, callback);
+      WalkStackFromContext(&unwind_context, stack_top, &frame_count, callback);
     }
   }
 }

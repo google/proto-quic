@@ -7,7 +7,9 @@
 #include <stdint.h>
 
 #include <deque>
+#include <map>
 #include <memory>
+#include <string>
 
 #include "base/bind.h"
 #include "base/bind_helpers.h"
@@ -15,8 +17,10 @@
 #include "base/macros.h"
 #include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
+#include "base/strings/string_number_conversions.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "net/base/url_util.h"
+#include "net/nqe/network_quality_estimator_params.h"
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_test_util.h"
@@ -30,8 +34,10 @@ namespace {
 
 class TestThroughputAnalyzer : public internal::ThroughputAnalyzer {
  public:
-  TestThroughputAnalyzer()
+  explicit TestThroughputAnalyzer(
+      internal::NetworkQualityEstimatorParams* params)
       : internal::ThroughputAnalyzer(
+            params,
             base::ThreadTaskRunnerHandle::Get(),
             base::Bind(
                 &TestThroughputAnalyzer::OnNewThroughputObservationAvailable,
@@ -78,7 +84,9 @@ TEST(ThroughputAnalyzerTest, MaximumRequests) {
                }};
 
   for (const auto& test : tests) {
-    TestThroughputAnalyzer throughput_analyzer;
+    std::map<std::string, std::string> variation_params;
+    internal::NetworkQualityEstimatorParams params(variation_params);
+    TestThroughputAnalyzer throughput_analyzer(&params);
 
     TestDelegate test_delegate;
     TestURLRequestContext context;
@@ -128,7 +136,9 @@ TEST(ThroughputAnalyzerTest, TestThroughputWithMultipleRequestsOverlap) {
 
   for (const auto& test : tests) {
     // Localhost requests are not allowed for estimation purposes.
-    TestThroughputAnalyzer throughput_analyzer;
+    std::map<std::string, std::string> variation_params;
+    internal::NetworkQualityEstimatorParams params(variation_params);
+    TestThroughputAnalyzer throughput_analyzer(&params);
 
     TestDelegate test_delegate;
     TestURLRequestContext context;
@@ -186,47 +196,71 @@ TEST(ThroughputAnalyzerTest, TestThroughputWithMultipleRequestsOverlap) {
 // requests overlap.
 TEST(ThroughputAnalyzerTest, TestThroughputWithNetworkRequestsOverlap) {
   static const struct {
+    size_t throughput_min_requests_in_flight;
+    size_t number_requests_in_flight;
     int64_t increment_bits;
     bool expect_throughput_observation;
   } tests[] = {
       {
-          100 * 1000 * 8, true,
+          1, 2, 100 * 1000 * 8, true,
       },
       {
-          1, false,
+          3, 1, 100 * 1000 * 8, false,
+      },
+      {
+          3, 2, 100 * 1000 * 8, false,
+      },
+      {
+          3, 3, 100 * 1000 * 8, true,
+      },
+      {
+          3, 4, 100 * 1000 * 8, true,
+      },
+      {
+          1, 2, 1, false,
       },
   };
 
   for (const auto& test : tests) {
     // Localhost requests are not allowed for estimation purposes.
-    TestThroughputAnalyzer throughput_analyzer;
+    std::map<std::string, std::string> variation_params;
+    variation_params["throughput_min_requests_in_flight"] =
+        base::IntToString(test.throughput_min_requests_in_flight);
+    internal::NetworkQualityEstimatorParams params(variation_params);
+    TestThroughputAnalyzer throughput_analyzer(&params);
     TestDelegate test_delegate;
     TestURLRequestContext context;
 
     EXPECT_EQ(0, throughput_analyzer.throughput_observations_received());
 
-    std::unique_ptr<URLRequest> request_network_1 = context.CreateRequest(
-        GURL("http://example.com/echo.html"), DEFAULT_PRIORITY, &test_delegate,
-        TRAFFIC_ANNOTATION_FOR_TESTS);
-    std::unique_ptr<URLRequest> request_network_2 = context.CreateRequest(
-        GURL("http://example.com/echo.html"), DEFAULT_PRIORITY, &test_delegate,
-        TRAFFIC_ANNOTATION_FOR_TESTS);
-    request_network_1->Start();
-    request_network_2->Start();
+    std::vector<std::unique_ptr<URLRequest>> requests_in_flight;
+
+    for (size_t i = 0; i < test.number_requests_in_flight; ++i) {
+      std::unique_ptr<URLRequest> request_network_1 = context.CreateRequest(
+          GURL("http://example.com/echo.html"), DEFAULT_PRIORITY,
+          &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS);
+      requests_in_flight.push_back(std::move(request_network_1));
+      requests_in_flight.back()->Start();
+    }
 
     base::RunLoop().Run();
 
-    EXPECT_LE(0, throughput_analyzer.throughput_observations_received());
+    EXPECT_EQ(0, throughput_analyzer.throughput_observations_received());
 
-    throughput_analyzer.NotifyStartTransaction(*request_network_1);
-    throughput_analyzer.NotifyStartTransaction(*request_network_2);
+    for (size_t i = 0; i < test.number_requests_in_flight; ++i) {
+      URLRequest* request = requests_in_flight.at(i).get();
+      throughput_analyzer.NotifyStartTransaction(*request);
+    }
 
     // Increment the bytes received count to emulate the bytes received for
     // |request_network_1| and |request_network_2|.
     throughput_analyzer.IncrementBitsReceived(test.increment_bits);
 
-    throughput_analyzer.NotifyRequestCompleted(*request_network_1);
-    throughput_analyzer.NotifyRequestCompleted(*request_network_2);
+    for (size_t i = 0; i < test.number_requests_in_flight; ++i) {
+      URLRequest* request = requests_in_flight.at(i).get();
+      throughput_analyzer.NotifyRequestCompleted(*request);
+    }
+
     base::RunLoop().RunUntilIdle();
 
     // Only one observation should be taken since two requests overlap.
@@ -236,6 +270,73 @@ TEST(ThroughputAnalyzerTest, TestThroughputWithNetworkRequestsOverlap) {
       EXPECT_EQ(0, throughput_analyzer.throughput_observations_received());
     }
   }
+}
+
+// Tests if the throughput observation is taken correctly when the start and end
+// of network requests overlap, and the minimum number of in flight requests
+// when taking an observation is more than 1.
+TEST(ThroughputAnalyzerTest, TestThroughputWithMultipleNetworkRequests) {
+  std::map<std::string, std::string> variation_params;
+  variation_params["throughput_min_requests_in_flight"] = "3";
+  internal::NetworkQualityEstimatorParams params(variation_params);
+  TestThroughputAnalyzer throughput_analyzer(&params);
+  TestDelegate test_delegate;
+  TestURLRequestContext context;
+
+  EXPECT_EQ(0, throughput_analyzer.throughput_observations_received());
+
+  std::unique_ptr<URLRequest> request_1 = context.CreateRequest(
+      GURL("http://example.com/echo.html"), DEFAULT_PRIORITY, &test_delegate,
+      TRAFFIC_ANNOTATION_FOR_TESTS);
+  std::unique_ptr<URLRequest> request_2 = context.CreateRequest(
+      GURL("http://example.com/echo.html"), DEFAULT_PRIORITY, &test_delegate,
+      TRAFFIC_ANNOTATION_FOR_TESTS);
+  std::unique_ptr<URLRequest> request_3 = context.CreateRequest(
+      GURL("http://example.com/echo.html"), DEFAULT_PRIORITY, &test_delegate,
+      TRAFFIC_ANNOTATION_FOR_TESTS);
+  std::unique_ptr<URLRequest> request_4 = context.CreateRequest(
+      GURL("http://example.com/echo.html"), DEFAULT_PRIORITY, &test_delegate,
+      TRAFFIC_ANNOTATION_FOR_TESTS);
+
+  request_1->Start();
+  request_2->Start();
+  request_3->Start();
+  request_4->Start();
+
+  base::RunLoop().Run();
+
+  EXPECT_EQ(0, throughput_analyzer.throughput_observations_received());
+
+  throughput_analyzer.NotifyStartTransaction(*(request_1.get()));
+  throughput_analyzer.NotifyStartTransaction(*(request_2.get()));
+
+  const size_t increment_bits = 100 * 1000 * 8;
+
+  // Increment the bytes received count to emulate the bytes received for
+  // |request_1| and |request_2|.
+  throughput_analyzer.IncrementBitsReceived(increment_bits);
+
+  throughput_analyzer.NotifyRequestCompleted(*(request_1.get()));
+  base::RunLoop().RunUntilIdle();
+  // No observation should be taken since only 1 request is in flight.
+  EXPECT_EQ(0, throughput_analyzer.throughput_observations_received());
+
+  throughput_analyzer.NotifyStartTransaction(*(request_3.get()));
+  throughput_analyzer.NotifyStartTransaction(*(request_4.get()));
+  EXPECT_EQ(0, throughput_analyzer.throughput_observations_received());
+
+  // 3 requests are in flight which is at least as many as the minimum number of
+  // in flight requests required. An observation should be taken.
+  throughput_analyzer.IncrementBitsReceived(increment_bits);
+
+  // Only one observation should be taken since two requests overlap.
+  throughput_analyzer.NotifyRequestCompleted(*(request_2.get()));
+  base::RunLoop().RunUntilIdle();
+
+  EXPECT_EQ(1, throughput_analyzer.throughput_observations_received());
+  throughput_analyzer.NotifyRequestCompleted(*(request_3.get()));
+  throughput_analyzer.NotifyRequestCompleted(*(request_4.get()));
+  EXPECT_EQ(1, throughput_analyzer.throughput_observations_received());
 }
 
 }  // namespace

@@ -4,6 +4,7 @@
 
 #include "net/reporting/reporting_garbage_collector.h"
 
+#include <utility>
 #include <vector>
 
 #include "base/memory/ptr_util.h"

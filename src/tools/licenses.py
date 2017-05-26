@@ -316,6 +316,7 @@ KNOWN_NON_IOS_LIBRARIES = set([
     os.path.join('third_party', 'usb_ids'),
     os.path.join('third_party', 'v8-i18n'),
     os.path.join('third_party', 'wtl'),
+    os.path.join('third_party', 'yara'),
     os.path.join('third_party', 'yasm'),
     os.path.join('v8', 'strongtalk'),
 ])

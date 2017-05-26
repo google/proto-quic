@@ -102,6 +102,7 @@
 -SitePerProcessFeaturePolicyBrowserTest.TestFeaturePolicyReplicationOnCrossOriginNavigation
 -SitePerProcessFeaturePolicyBrowserTest.TestFeaturePolicyReplicationOnSameOriginNavigation
 -SitePerProcessIgnoreCertErrorsBrowserTest.SubresourceWithCertificateErrors
+-TopDocumentIsolationTest.*
 -TouchInputBrowserTest.MultiPointTouchPress
 -TouchInputBrowserTest.TouchHandlerNoConsume
 -WebContentsImplBrowserTest.ClearNonVisiblePendingOnFail
@@ -112,6 +113,7 @@
 -WebRtcGetUserMediaOldConstraintsBrowserTest.TwoGetUserMediaWithFirstHdSecondVga
 -WebRtcGetUserMediaOldConstraintsBrowserTest.TwoGetUserMediaWithSecondVideoCropped
 -WebUIMojoTest.EndToEndPing
+-WorkerFetchTest.*
 -WorkerTest.SharedWorkerHttpAuth
 -WorkerTest.WorkerHttpAuth
 -WorkerTest.WorkerTlsClientAuth

@@ -15,6 +15,7 @@
 #include "net/base/backoff_entry.h"
 #include "net/reporting/reporting_cache.h"
 #include "net/reporting/reporting_client.h"
+#include "net/reporting/reporting_delegate.h"
 #include "net/reporting/reporting_policy.h"
 #include "url/gurl.h"
 #include "url/origin.h"
@@ -45,6 +46,8 @@ bool ReportingEndpointManager::FindEndpointForOriginAndGroup(
         endpoint_backoff_[client->endpoint]->ShouldRejectRequest()) {
       continue;
     }
+    if (!delegate()->CanUseClient(client->origin, client->endpoint))
+      continue;
     available_clients.push_back(client);
   }
 

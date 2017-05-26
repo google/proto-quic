@@ -111,6 +111,7 @@
 ../../third_party/catapult/third_party/py_vulcanize/py_vulcanize/strip_js_comments.py
 ../../third_party/catapult/third_party/py_vulcanize/py_vulcanize/style_sheet.py
 ../../third_party/catapult/third_party/six/six.py
+../../third_party/catapult/third_party/zipfile/zipfile_2_7_13.py
 ../../third_party/catapult/tracing/tracing_build/__init__.py
 ../../third_party/catapult/tracing/tracing_build/trace2html.py
 ../../third_party/catapult/tracing/tracing_project.py

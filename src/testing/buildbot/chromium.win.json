@@ -301,18 +301,6 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
-        "test": "mus_gpu_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
-        "test": "mus_public_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
         "test": "nacl_loader_unittests"
       },
       {
@@ -320,12 +308,6 @@
           "can_use_on_swarming_builders": true
         },
         "test": "native_theme_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
-        "test": "navigation_unittests"
       },
       {
         "swarming": {
@@ -428,12 +410,6 @@
           "can_use_on_swarming_builders": true
         },
         "test": "ui_service_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
-        "test": "ui_struct_traits_unittests"
       },
       {
         "swarming": {
@@ -1475,12 +1451,6 @@
           "can_use_on_swarming_builders": true
         },
         "test": "ui_base_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
-        "test": "ui_struct_traits_unittests"
       },
       {
         "swarming": {

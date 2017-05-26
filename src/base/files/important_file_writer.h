@@ -109,7 +109,16 @@ class BASE_EXPORT ImportantFileWriter : public NonThreadSafe {
     return commit_interval_;
   }
 
+  // Overrides the timer to use for scheduling writes with |timer_override|.
+  void SetTimerForTesting(Timer* timer_override);
+
  private:
+  const Timer& timer() const {
+    return timer_override_ ? const_cast<const Timer&>(*timer_override_)
+                           : timer_;
+  }
+  Timer& timer() { return timer_override_ ? *timer_override_ : timer_; }
+
   void ClearPendingWrite();
 
   // Invoked synchronously on the next write event.
@@ -124,6 +133,9 @@ class BASE_EXPORT ImportantFileWriter : public NonThreadSafe {
 
   // Timer used to schedule commit after ScheduleWrite.
   OneShotTimer timer_;
+
+  // An override for |timer_| used for testing.
+  Timer* timer_override_ = nullptr;
 
   // Serializer which will provide the data to be saved.
   DataSerializer* serializer_;

@@ -20,6 +20,10 @@ namespace base {
 class FilePath;
 }
 
+namespace url {
+class Origin;
+}
+
 namespace net {
 
 class CookieOptions;
@@ -98,6 +102,16 @@ class NET_EXPORT NetworkDelegateImpl : public NetworkDelegate {
       const URLRequest& request,
       const GURL& target_url,
       const GURL& referrer_url) const override;
+
+  bool OnCanQueueReportingReport(const url::Origin& origin) const override;
+
+  bool OnCanSendReportingReport(const url::Origin& origin) const override;
+
+  bool OnCanSetReportingClient(const url::Origin& origin,
+                               const GURL& endpoint) const override;
+
+  bool OnCanUseReportingClient(const url::Origin& origin,
+                               const GURL& endpoint) const override;
 };
 
 }  // namespace net

@@ -368,7 +368,7 @@ bool ParseHPKPReportOnlyHeader(const std::string& value,
 // "Expect-CT" ":"
 //     "max-age" "=" delta-seconds
 //     [ "," "enforce" ]
-//     [ "," "report-uri" "=" uri-reference ]
+//     [ "," "report-uri" "=" absolute-URI ]
 bool ParseExpectCTHeader(const std::string& value,
                          base::TimeDelta* max_age,
                          bool* enforce,
@@ -412,9 +412,6 @@ bool ParseExpectCTHeader(const std::string& value,
       // "A given directive MUST NOT appear more than once in a given header
       // field."
       if (has_report_uri)
-        return false;
-      // report-uris are always quoted.
-      if (!name_value_pairs.value_is_quoted())
         return false;
 
       has_report_uri = true;

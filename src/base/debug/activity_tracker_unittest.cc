@@ -90,22 +90,22 @@ class ActivityTrackerTest : public testing::Test {
                          GlobalActivityTracker::ProcessPhase phase,
                          std::string&& command,
                          ActivityUserData::Snapshot&& data) {
-    exit_id = id;
-    exit_stamp = stamp;
-    exit_code = code;
-    exit_phase = phase;
-    exit_command = std::move(command);
-    exit_data = std::move(data);
+    exit_id_ = id;
+    exit_stamp_ = stamp;
+    exit_code_ = code;
+    exit_phase_ = phase;
+    exit_command_ = std::move(command);
+    exit_data_ = std::move(data);
   }
 
   static void DoNothing() {}
 
-  int64_t exit_id = 0;
-  int64_t exit_stamp;
-  int exit_code;
-  GlobalActivityTracker::ProcessPhase exit_phase;
-  std::string exit_command;
-  ActivityUserData::Snapshot exit_data;
+  int64_t exit_id_ = 0;
+  int64_t exit_stamp_;
+  int exit_code_;
+  GlobalActivityTracker::ProcessPhase exit_phase_;
+  std::string exit_command_;
+  ActivityUserData::Snapshot exit_data_;
 };
 
 TEST_F(ActivityTrackerTest, UserDataTest) {
@@ -394,15 +394,7 @@ TEST_F(ActivityTrackerTest, ThreadDeathTest) {
   EXPECT_EQ(starting_inactive + 1, GetGlobalInactiveTrackerCount());
 }
 
-// This test fails roughly 10% of runs on Android tablets.
-// See http://crbug.com/723060 for details.
-#if defined(OS_ANDROID)
-#define MAYBE_ProcessDeathTest DISABLED_ProcessDeathTest
-#else
-#define MAYBE_ProcessDeathTest ProcessDeathTest
-#endif
-
-TEST_F(ActivityTrackerTest, MAYBE_ProcessDeathTest) {
+TEST_F(ActivityTrackerTest, ProcessDeathTest) {
   // This doesn't actually create and destroy a process. Instead, it uses for-
   // testing interfaces to simulate data created by other processes.
   const ProcessId other_process_id = GetCurrentProcId() + 1;
@@ -446,7 +438,9 @@ TEST_F(ActivityTrackerTest, MAYBE_ProcessDeathTest) {
   std::unique_ptr<char[]> tracker_copy(new char[tracker_size]);
   memcpy(tracker_copy.get(), thread->GetBaseAddress(), tracker_size);
 
-  // Change the objects to appear to be owned by another process.
+  // Change the objects to appear to be owned by another process. Use a "past"
+  // time so that exit-time is always later than create-time.
+  const int64_t past_stamp = Time::Now().ToInternalValue() - 1;
   int64_t owning_id;
   int64_t stamp;
   ASSERT_TRUE(ActivityUserData::GetOwningProcessId(
@@ -458,9 +452,10 @@ TEST_F(ActivityTrackerTest, MAYBE_ProcessDeathTest) {
   ASSERT_TRUE(ActivityUserData::GetOwningProcessId(user_data.GetBaseAddress(),
                                                    &owning_id, &stamp));
   EXPECT_NE(other_process_id, owning_id);
-  global->process_data().SetOwningProcessIdForTesting(other_process_id, stamp);
-  thread->SetOwningProcessIdForTesting(other_process_id, stamp);
-  user_data.SetOwningProcessIdForTesting(other_process_id, stamp);
+  global->process_data().SetOwningProcessIdForTesting(other_process_id,
+                                                      past_stamp);
+  thread->SetOwningProcessIdForTesting(other_process_id, past_stamp);
+  user_data.SetOwningProcessIdForTesting(other_process_id, past_stamp);
   ASSERT_TRUE(ActivityUserData::GetOwningProcessId(
       global->process_data().GetBaseAddress(), &owning_id, &stamp));
   EXPECT_EQ(other_process_id, owning_id);
@@ -472,7 +467,7 @@ TEST_F(ActivityTrackerTest, MAYBE_ProcessDeathTest) {
   EXPECT_EQ(other_process_id, owning_id);
 
   // Check that process exit will perform callback and free the allocations.
-  ASSERT_EQ(0, exit_id);
+  ASSERT_EQ(0, exit_id_);
   ASSERT_EQ(GlobalActivityTracker::kTypeIdProcessDataRecord,
             global->allocator()->GetType(proc_data_ref));
   ASSERT_EQ(GlobalActivityTracker::kTypeIdActivityTracker,
@@ -480,8 +475,8 @@ TEST_F(ActivityTrackerTest, MAYBE_ProcessDeathTest) {
   ASSERT_EQ(GlobalActivityTracker::kTypeIdUserDataRecord,
             global->allocator()->GetType(user_data_ref));
   global->RecordProcessExit(other_process_id, 0);
-  EXPECT_EQ(other_process_id, exit_id);
-  EXPECT_EQ("foo --bar", exit_command);
+  EXPECT_EQ(other_process_id, exit_id_);
+  EXPECT_EQ("foo --bar", exit_command_);
   EXPECT_EQ(GlobalActivityTracker::kTypeIdProcessDataRecordFree,
             global->allocator()->GetType(proc_data_ref));
   EXPECT_EQ(GlobalActivityTracker::kTypeIdActivityTrackerFree,

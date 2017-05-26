@@ -64,9 +64,6 @@ struct QUIC_EXPORT_PRIVATE QuicPacketPublicHeader {
   // public flags.
   QuicConnectionId connection_id;
   QuicConnectionIdLength connection_id_length;
-  // TODO(fayang): Remove multipath_flag when deprecating
-  // quic_reloadable_flag_quic_remove_multipath_bit.
-  bool multipath_flag;
   bool reset_flag;
   bool version_flag;
   QuicPacketNumberLength packet_number_length;

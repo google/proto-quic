@@ -18,6 +18,10 @@
   *;
 }
 
+-keep public class * extends android.app.Service {
+  <init>();
+}
+
 # Used by tests for secondary dex extraction.
 -keep class android.support.v4.content.ContextCompat {
   *;

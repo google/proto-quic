@@ -339,17 +339,13 @@ TEST(MimeSnifferTest, XMLTest) {
   EXPECT_EQ("text/plain",
             SniffMimeType("<?xml?><notafeed", std::string(), "text/plain"));
 
-  // Positive test for the two instances we upgrade to XHTML.
-  EXPECT_EQ("application/xhtml+xml",
+  // We never upgrade to application/xhtml+xml.
+  EXPECT_EQ("text/xml",
             SniffMimeType("<html xmlns=\"http://www.w3.org/1999/xhtml\">",
-                          std::string(),
-                          "text/xml"));
-  EXPECT_EQ("application/xhtml+xml",
+                          std::string(), "text/xml"));
+  EXPECT_EQ("application/xml",
             SniffMimeType("<html xmlns=\"http://www.w3.org/1999/xhtml\">",
-                          std::string(),
-                          "application/xml"));
-
-  // Following our behavior with HTML, don't call other mime types XHTML.
+                          std::string(), "application/xml"));
   EXPECT_EQ("text/plain",
             SniffMimeType("<html xmlns=\"http://www.w3.org/1999/xhtml\">",
                           std::string(),
@@ -358,14 +354,13 @@ TEST(MimeSnifferTest, XMLTest) {
             SniffMimeType("<html xmlns=\"http://www.w3.org/1999/xhtml\">",
                           std::string(),
                           "application/rss+xml"));
-
-  // Don't sniff other HTML-looking bits as HTML.
   EXPECT_EQ("text/xml",
             SniffMimeType("<html><head>", std::string(), "text/xml"));
   EXPECT_EQ("text/xml",
-            SniffMimeType("<foo><html xmlns=\"http://www.w3.org/1999/xhtml\">",
-                          std::string(),
-                          "text/xml"));
+            SniffMimeType("<foo><rss "
+                          "xmlns:feedburner=\"http://rssnamespace.org/"
+                          "feedburner/ext/1.0\" version=\"2.0\">",
+                          std::string(), "text/xml"));
 }
 
 // Test content which is >= 1024 bytes, and includes no open angle bracket.

@@ -12828,6 +12828,8 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="31" label="ERROR_SERIALIZING_CATALOG"/>
   <int value="32" label="ERROR_SAVING_CATALOG"/>
   <int value="33" label="CRX_HASH_VERIFICATION_FAILED"/>
+  <int value="34" label="CRX_FILE_IS_DELTA_UPDATE"/>
+  <int value="35" label="CRX_EXPECTED_HASH_INVALID"/>
 </enum>
 
 <enum name="ExternalDeviceAction" type="int">
@@ -15001,6 +15003,13 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="1986" label="CredentialManagerPasswordName"/>
   <int value="1987" label="CredentialManagerAdditionalData"/>
   <int value="1988" label="CredentialManagerCustomFetch"/>
+  <int value="1989" label="NetInfoRtt"/>
+  <int value="1990" label="NetInfoDownlink"/>
+  <int value="1991" label="ShapeDetection_BarcodeDetectorConstructor"/>
+  <int value="1992" label="ShapeDetection_FaceDetectorConstructor"/>
+  <int value="1993" label="ShapeDetection_TextDetectorConstructor"/>
+  <int value="1994"
+      label="CredentialManagerCredentialRequestOptionsOnlyUnmediated"/>
 </enum>
 
 <enum name="FeedbackSource" type="int">
@@ -18921,6 +18930,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="73" label="AUTOMATION_INFOBAR_DELEGATE"/>
   <int value="74" label="VR_SERVICES_UPGRADE_ANDROID"/>
   <int value="75" label="READER_MODE_INFOBAR_ANDROID"/>
+  <int value="76" label="VR_FEEDBACK_INFOBAR_ANDROID"/>
 </enum>
 
 <enum name="InfoBarResponse" type="int">
@@ -27399,6 +27409,7 @@ from previous Chrome versions.
   <int value="11" label="Service destroyed"/>
   <int value="12" label="Disabled due to feature disabled"/>
   <int value="13" label="Disabled due to user population"/>
+  <int value="14" label="URL not valid for reputation computing"/>
 </enum>
 
 <enum name="PasswordProtectionVerdict" type="int">
@@ -32437,6 +32448,7 @@ from previous Chrome versions.
   <int value="6" label="Key Mismatch"/>
   <int value="7" label="Hash Mismatch"/>
   <int value="8" label="Sparse Open Failed"/>
+  <int value="9" label="Invalid File Length"/>
 </enum>
 
 <enum name="SimpleCacheSyncSHA256Result" type="int">

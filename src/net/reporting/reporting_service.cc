@@ -5,6 +5,7 @@
 #include "net/reporting/reporting_service.h"
 
 #include <memory>
+#include <utility>
 
 #include "base/bind.h"
 #include "base/macros.h"
@@ -15,6 +16,7 @@
 #include "net/reporting/reporting_browsing_data_remover.h"
 #include "net/reporting/reporting_cache.h"
 #include "net/reporting/reporting_context.h"
+#include "net/reporting/reporting_delegate.h"
 #include "net/reporting/reporting_header_parser.h"
 #include "net/reporting/reporting_persister.h"
 #include "url/gurl.h"
@@ -34,6 +36,9 @@ class ReportingServiceImpl : public ReportingService {
                    const std::string& group,
                    const std::string& type,
                    std::unique_ptr<const base::Value> body) override {
+    if (!context_->delegate()->CanQueueReport(url::Origin(url)))
+      return;
+
     context_->cache()->AddReport(url, group, type, std::move(body),
                                  context_->tick_clock()->NowTicks(), 0);
   }

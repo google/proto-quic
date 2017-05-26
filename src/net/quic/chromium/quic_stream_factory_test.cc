@@ -402,7 +402,8 @@ class QuicStreamFactoryTestBase {
   }
 
   // Helper method for server migration tests.
-  void VerifyServerMigration(QuicConfig& config, IPEndPoint expected_address) {
+  void VerifyServerMigration(const QuicConfig& config,
+                             IPEndPoint expected_address) {
     allow_server_migration_ = true;
     Initialize();
 

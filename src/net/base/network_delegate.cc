@@ -185,6 +185,28 @@ bool NetworkDelegate::CancelURLRequestWithPolicyViolatingReferrerHeader(
       request, target_url, referrer_url);
 }
 
+bool NetworkDelegate::CanQueueReportingReport(const url::Origin& origin) const {
+  DCHECK(CalledOnValidThread());
+  return OnCanQueueReportingReport(origin);
+}
+
+bool NetworkDelegate::CanSendReportingReport(const url::Origin& origin) const {
+  DCHECK(CalledOnValidThread());
+  return OnCanSendReportingReport(origin);
+}
+
+bool NetworkDelegate::CanSetReportingClient(const url::Origin& origin,
+                                            const GURL& endpoint) const {
+  DCHECK(CalledOnValidThread());
+  return OnCanSetReportingClient(origin, endpoint);
+}
+
+bool NetworkDelegate::CanUseReportingClient(const url::Origin& origin,
+                                            const GURL& endpoint) const {
+  DCHECK(CalledOnValidThread());
+  return OnCanUseReportingClient(origin, endpoint);
+}
+
 void NetworkDelegate::OnResponseStarted(URLRequest* request, int net_error) {
   OnResponseStarted(request);
 }

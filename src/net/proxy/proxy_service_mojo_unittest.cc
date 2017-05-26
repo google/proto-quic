@@ -11,10 +11,8 @@
 
 #include "base/callback_helpers.h"
 #include "base/memory/ptr_util.h"
-#include "base/memory/singleton.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/values.h"
-#include "mojo/public/cpp/bindings/strong_binding.h"
 #include "net/base/network_delegate_impl.h"
 #include "net/base/test_completion_callback.h"
 #include "net/dns/mock_host_resolver.h"
@@ -25,9 +23,9 @@
 #include "net/proxy/dhcp_proxy_script_fetcher.h"
 #include "net/proxy/mock_proxy_script_fetcher.h"
 #include "net/proxy/mojo_proxy_resolver_factory.h"
-#include "net/proxy/mojo_proxy_resolver_factory_impl.h"
 #include "net/proxy/proxy_config_service_fixed.h"
 #include "net/proxy/proxy_service.h"
+#include "net/proxy/test_mojo_proxy_resolver_factory.h"
 #include "net/test/event_waiter.h"
 #include "net/test/gtest_util.h"
 #include "testing/gmock/include/gmock/gmock.h"
@@ -124,34 +122,6 @@ class LoggingMockHostResolver : public MockHostResolver {
   }
 };
 
-class InProcessMojoProxyResolverFactory : public MojoProxyResolverFactory {
- public:
-  static InProcessMojoProxyResolverFactory* GetInstance() {
-    return base::Singleton<InProcessMojoProxyResolverFactory>::get();
-  }
-
-  // Overridden from MojoProxyResolverFactory:
-  std::unique_ptr<base::ScopedClosureRunner> CreateResolver(
-      const std::string& pac_script,
-      mojo::InterfaceRequest<interfaces::ProxyResolver> req,
-      interfaces::ProxyResolverFactoryRequestClientPtr client) override {
-    factory_->CreateResolver(pac_script, std::move(req), std::move(client));
-    return nullptr;
-  }
-
- private:
-  InProcessMojoProxyResolverFactory() {
-    mojo::MakeStrongBinding(base::MakeUnique<MojoProxyResolverFactoryImpl>(),
-                            mojo::MakeRequest(&factory_));
-  }
-  ~InProcessMojoProxyResolverFactory() override = default;
-  friend struct base::DefaultSingletonTraits<InProcessMojoProxyResolverFactory>;
-
-  interfaces::ProxyResolverFactoryPtr factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(InProcessMojoProxyResolverFactory);
-};
-
 }  // namespace
 
 class ProxyServiceMojoTest : public testing::Test,
@@ -172,7 +142,7 @@ class ProxyServiceMojoTest : public testing::Test,
       const std::string& pac_script,
       mojo::InterfaceRequest<interfaces::ProxyResolver> req,
       interfaces::ProxyResolverFactoryRequestClientPtr client) override {
-    InProcessMojoProxyResolverFactory::GetInstance()->CreateResolver(
+    TestMojoProxyResolverFactory::GetInstance()->CreateResolver(
         pac_script, std::move(req), std::move(client));
     return base::MakeUnique<base::ScopedClosureRunner>(
         on_delete_closure_.closure());

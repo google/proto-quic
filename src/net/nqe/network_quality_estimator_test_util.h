@@ -16,6 +16,7 @@
 #include "base/time/time.h"
 #include "net/base/network_change_notifier.h"
 #include "net/log/net_log.h"
+#include "net/log/test_net_log.h"
 #include "net/nqe/effective_connection_type.h"
 #include "net/nqe/network_quality_estimator.h"
 #include "net/test/embedded_test_server/embedded_test_server.h"
@@ -24,7 +25,6 @@
 
 namespace net {
 
-class BoundTestNetLog;
 class ExternalEstimateProvider;
 
 // Helps in setting the current network type and id.
@@ -46,6 +46,15 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
       bool allow_local_host_requests_for_tests,
       bool allow_smaller_responses_for_tests,
       bool add_default_platform_observations,
+      std::unique_ptr<BoundTestNetLog> net_log);
+
+  TestNetworkQualityEstimator(
+      std::unique_ptr<net::ExternalEstimateProvider> external_estimate_provider,
+      const std::map<std::string, std::string>& variation_params,
+      bool allow_local_host_requests_for_tests,
+      bool allow_smaller_responses_for_tests,
+      bool add_default_platform_observations,
+      bool suppress_notifications_for_testing,
       std::unique_ptr<BoundTestNetLog> net_log);
 
   ~TestNetworkQualityEstimator() override;
@@ -108,6 +117,11 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
       base::TimeDelta* http_rtt,
       base::TimeDelta* transport_rtt,
       int32_t* downstream_throughput_kbps) const override;
+
+  void NotifyObserversOfRTTOrThroughputComputed() const override;
+
+  void NotifyRTTAndThroughputEstimatesObserverIfPresent(
+      RTTAndThroughputEstimatesObserver* observer) const override;
 
   void set_start_time_null_http_rtt(const base::TimeDelta& http_rtt) {
     // Callers should not set effective connection type along with the
@@ -259,6 +273,9 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
   double rand_double_;
 
   LocalHttpTestServer embedded_test_server_;
+
+  // If true, notifications are not sent to any of the observers.
+  const bool suppress_notifications_for_testing_;
 
   // Net log provided to network quality estimator.
   std::unique_ptr<net::BoundTestNetLog> net_log_;

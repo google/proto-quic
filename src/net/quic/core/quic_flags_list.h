@@ -84,7 +84,7 @@ QUIC_FLAG(bool,
 // packet if insertion fails.
 QUIC_FLAG(bool,
           FLAGS_quic_reloadable_flag_quic_create_session_after_insertion,
-          false)
+          true)
 
 // If true, v33 QUIC client uses 1 bit to specify 8-byte connection id in
 // public flag.
@@ -126,15 +126,6 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_no_stop_waiting_frames, false)
 
 // Allows one self address change.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_allow_one_address_change, false)
-
-// If true, multipath bit is not used in public flag.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_remove_multipath_bit, true)
-
-// Allow QUIC's flow control autotuning to increase the window as
-// quickly for the first adjustment as in subsequent ones.
-QUIC_FLAG(bool,
-          FLAGS_quic_reloadable_flag_quic_flow_control_faster_autotune,
-          true)
 
 // If true, QUIC BBR stores a max filtered number of bytes delivered at a rate
 // faster than the sending rate.
@@ -200,9 +191,6 @@ QUIC_FLAG(bool,
           FLAGS_quic_reloadable_flag_quic_final_offset_from_trailers,
           false)
 
-// Fix the algorithm used by packet conservation.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_fix_conservation, false)
-
 // If enabled, use refactored stream creation methods.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_refactor_stream_creation, false)
 
@@ -228,3 +216,6 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_pcc, false)
 
 // If true, enable QUIC v40.
 QUIC_FLAG(bool, FLAGS_quic_enable_version_40, false)
+
+// If true, use the more CPU efficient bandwidth sampler datastructure.
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_faster_bandwidth_sampler, false)

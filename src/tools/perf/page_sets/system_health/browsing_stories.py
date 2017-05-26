@@ -389,8 +389,6 @@ class ImgurMobileStory(_MediaBrowsingStory):
   TAGS = [story_tags.EMERGING_MARKET]
 
 
-# crbug.com/704197 for win and mac
-@decorators.Disabled('win', 'mac')
 class ImgurDesktopStory(_MediaBrowsingStory):
   NAME = 'browse:media:imgur'
   URL = 'http://imgur.com/gallery/5UlBN'
