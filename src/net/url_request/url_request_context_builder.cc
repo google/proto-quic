@@ -133,13 +133,23 @@ class BasicNetworkDelegate : public NetworkDelegateImpl {
 };
 
 // Define a context class that can self-manage the ownership of its components
-// via a UrlRequestContextStorage object.
-class ContainerURLRequestContext : public URLRequestContext {
+// via a UrlRequestContextStorage object. Since it cancels requests in its
+// destructor, it's not safe to subclass this.
+class ContainerURLRequestContext final : public URLRequestContext {
  public:
   explicit ContainerURLRequestContext(
       const scoped_refptr<base::SingleThreadTaskRunner>& file_task_runner)
       : file_task_runner_(file_task_runner), storage_(this) {}
-  ~ContainerURLRequestContext() override { AssertNoURLRequests(); }
+
+  ~ContainerURLRequestContext() override {
+    // Shut down the ProxyService, as it may have pending URLRequests using this
+    // context. Since this cancels requests, it's not safe to subclass this, as
+    // some parts of the URLRequestContext may then be torn down before this
+    // cancels the ProxyService's URLRequests.
+    proxy_service()->OnShutdown();
+
+    AssertNoURLRequests();
+  }
 
   URLRequestContextStorage* storage() {
     return &storage_;
@@ -358,22 +368,6 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
   }
   storage->set_host_resolver(std::move(host_resolver_));
 
-  if (!proxy_service_) {
-    // TODO(willchan): Switch to using this code when
-    // ProxyService::CreateSystemProxyConfigService()'s signature doesn't suck.
-#if !defined(OS_LINUX) && !defined(OS_ANDROID)
-    if (!proxy_config_service_) {
-      proxy_config_service_ = ProxyService::CreateSystemProxyConfigService(
-          base::ThreadTaskRunnerHandle::Get().get(),
-          context->GetFileTaskRunner());
-    }
-#endif  // !defined(OS_LINUX) && !defined(OS_ANDROID)
-    proxy_service_ = ProxyService::CreateUsingSystemProxyResolver(
-        std::move(proxy_config_service_),
-        context->net_log());
-  }
-  storage->set_proxy_service(std::move(proxy_service_));
-
   storage->set_ssl_config_service(new SSLConfigServiceDefaults);
 
   if (!http_auth_handler_factory_) {
@@ -439,6 +433,23 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
     storage->set_throttler_manager(
         base::MakeUnique<URLRequestThrottlerManager>());
   }
+
+  if (!proxy_service_) {
+#if !defined(OS_LINUX) && !defined(OS_ANDROID)
+    // TODO(willchan): Switch to using this code when
+    // ProxyService::CreateSystemProxyConfigService()'s signature doesn't suck.
+    if (!proxy_config_service_) {
+      proxy_config_service_ = ProxyService::CreateSystemProxyConfigService(
+          base::ThreadTaskRunnerHandle::Get().get(),
+          context->GetFileTaskRunner());
+    }
+#endif  // !defined(OS_LINUX) && !defined(OS_ANDROID)
+    proxy_service_ =
+        CreateProxyService(std::move(proxy_config_service_), context.get(),
+                           context->host_resolver(),
+                           context->network_delegate(), context->net_log());
+  }
+  storage->set_proxy_service(std::move(proxy_service_));
 
   HttpNetworkSession::Params network_session_params;
   SetHttpNetworkSessionComponents(context.get(), &network_session_params);
@@ -523,6 +534,16 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
   // TODO(willchan): Support sdch.
 
   return std::move(context);
+}
+
+std::unique_ptr<ProxyService> URLRequestContextBuilder::CreateProxyService(
+    std::unique_ptr<ProxyConfigService> proxy_config_service,
+    URLRequestContext* url_request_context,
+    HostResolver* host_resolver,
+    NetworkDelegate* network_delegate,
+    NetLog* net_log) {
+  return ProxyService::CreateUsingSystemProxyResolver(
+      std::move(proxy_config_service), net_log);
 }
 
 }  // namespace net

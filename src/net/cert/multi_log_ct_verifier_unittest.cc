@@ -73,7 +73,7 @@ class MultiLogCTVerifierTest : public ::testing::Test {
     ASSERT_TRUE(embedded_sct_chain_.get());
   }
 
-  bool CheckForEmbeddedSCTInNetLog(TestNetLog& net_log) {
+  bool CheckForEmbeddedSCTInNetLog(const TestNetLog& net_log) {
     TestNetLogEntry::List entries;
     net_log.GetEntries(&entries);
     if (entries.size() != 2)

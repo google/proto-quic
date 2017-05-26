@@ -39,7 +39,7 @@
 #include "net/socket/transport_client_socket_pool.h"
 #include "net/ssl/ssl_config_service_defaults.h"
 #include "net/test/embedded_test_server/embedded_test_server.h"
-#include "net/test/embedded_test_server/embedded_test_server_connection_listener.h"
+#include "net/test/embedded_test_server/simple_connection_listener.h"
 #include "net/test/gtest_util.h"
 #include "net/url_request/url_request_context_storage.h"
 #include "net/url_request/url_request_file_job.h"
@@ -72,36 +72,6 @@ const base::FilePath::CharType kDocRoot[] =
 struct FetchResult {
   int code;
   base::string16 text;
-};
-
-// Waits for the specified number of connection attempts to be seen.
-class WaitForConnectionsListener
-    : public test_server::EmbeddedTestServerConnectionListener {
- public:
-  explicit WaitForConnectionsListener(int expected_num_connections)
-      : expected_num_connections_(expected_num_connections),
-        task_runner_(base::SequencedTaskRunnerHandle::Get()) {}
-
-  void AcceptedSocket(const StreamSocket& socket) override {
-    ++seen_connections_;
-    EXPECT_LE(seen_connections_, expected_num_connections_);
-    if (expected_num_connections_ == seen_connections_)
-      task_runner_->PostTask(FROM_HERE, run_loop_.QuitClosure());
-  }
-
-  void ReadFromSocket(const StreamSocket& socket, int rv) override {}
-
-  void Wait() { run_loop_.Run(); }
-
- private:
-  int seen_connections_ = 0;
-  int expected_num_connections_;
-
-  scoped_refptr<base::SequencedTaskRunner> task_runner_;
-
-  base::RunLoop run_loop_;
-
-  DISALLOW_COPY_AND_ASSIGN(WaitForConnectionsListener);
 };
 
 // A non-mock URL request which can access http:// and file:// urls, in the case
@@ -543,7 +513,9 @@ TEST_F(ProxyScriptFetcherImplTest, Priority) {
   int num_requests = 10 + ClientSocketPoolManager::max_sockets_per_pool(
                               HttpNetworkSession::NORMAL_SOCKET_POOL);
 
-  WaitForConnectionsListener connection_listener(num_requests);
+  net::test_server::SimpleConnectionListener connection_listener(
+      num_requests, net::test_server::SimpleConnectionListener::
+                        FAIL_ON_ADDITIONAL_CONNECTIONS);
   test_server_.SetConnectionListener(&connection_listener);
   ASSERT_TRUE(test_server_.Start());
 
@@ -562,7 +534,7 @@ TEST_F(ProxyScriptFetcherImplTest, Priority) {
     pac_fetchers.push_back(std::move(pac_fetcher));
   }
 
-  connection_listener.Wait();
+  connection_listener.WaitForConnections();
   // None of the callbacks should have been invoked - all jobs should still be
   // hung.
   EXPECT_FALSE(callback.have_result());

@@ -87,6 +87,16 @@ class NET_EXPORT LayeredNetworkDelegate : public NetworkDelegate {
       const GURL& target_url,
       const GURL& referrer_url) const final;
 
+  bool OnCanQueueReportingReport(const url::Origin& origin) const final;
+
+  bool OnCanSendReportingReport(const url::Origin& origin) const final;
+
+  bool OnCanSetReportingClient(const url::Origin& origin,
+                               const GURL& endpoint) const final;
+
+  bool OnCanUseReportingClient(const url::Origin& origin,
+                               const GURL& endpoint) const final;
+
  protected:
   virtual void OnBeforeURLRequestInternal(URLRequest* request,
                                           const CompletionCallback& callback,
@@ -156,6 +166,18 @@ class NET_EXPORT LayeredNetworkDelegate : public NetworkDelegate {
       const URLRequest& request,
       const GURL& target_url,
       const GURL& referrer_url) const;
+
+  virtual void OnCanQueueReportingReportInternal(
+      const url::Origin& origin) const;
+
+  virtual void OnCanSendReportingReportInternal(
+      const url::Origin& origin) const;
+
+  virtual void OnCanSetReportingClientInternal(const url::Origin& origin,
+                                               const GURL& endpoint) const;
+
+  virtual void OnCanUseReportingClientInternal(const url::Origin& origin,
+                                               const GURL& endpoint) const;
 
  private:
   std::unique_ptr<NetworkDelegate> nested_network_delegate_;

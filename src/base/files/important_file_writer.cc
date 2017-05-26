@@ -33,7 +33,7 @@ namespace base {
 
 namespace {
 
-const int kDefaultCommitIntervalMs = 10000;
+constexpr auto kDefaultCommitInterval = TimeDelta::FromSeconds(10);
 
 // This enum is used to define the buckets for an enumerated UMA histogram.
 // Hence,
@@ -139,10 +139,9 @@ bool ImportantFileWriter::WriteFileAtomically(const FilePath& path,
 ImportantFileWriter::ImportantFileWriter(
     const FilePath& path,
     scoped_refptr<SequencedTaskRunner> task_runner)
-    : ImportantFileWriter(
-          path,
-          std::move(task_runner),
-          TimeDelta::FromMilliseconds(kDefaultCommitIntervalMs)) {}
+    : ImportantFileWriter(path,
+                          std::move(task_runner),
+                          kDefaultCommitInterval) {}
 
 ImportantFileWriter::ImportantFileWriter(
     const FilePath& path,
@@ -166,7 +165,7 @@ ImportantFileWriter::~ImportantFileWriter() {
 
 bool ImportantFileWriter::HasPendingWrite() const {
   DCHECK(CalledOnValidThread());
-  return timer_.IsRunning();
+  return timer().IsRunning();
 }
 
 void ImportantFileWriter::WriteNow(std::unique_ptr<std::string> data) {
@@ -198,9 +197,10 @@ void ImportantFileWriter::ScheduleWrite(DataSerializer* serializer) {
   DCHECK(serializer);
   serializer_ = serializer;
 
-  if (!timer_.IsRunning()) {
-    timer_.Start(FROM_HERE, commit_interval_, this,
-                 &ImportantFileWriter::DoScheduledWrite);
+  if (!timer().IsRunning()) {
+    timer().Start(
+        FROM_HERE, commit_interval_,
+        Bind(&ImportantFileWriter::DoScheduledWrite, Unretained(this)));
   }
 }
 
@@ -224,8 +224,12 @@ void ImportantFileWriter::RegisterOnNextWriteCallbacks(
 }
 
 void ImportantFileWriter::ClearPendingWrite() {
-  timer_.Stop();
+  timer().Stop();
   serializer_ = nullptr;
+}
+
+void ImportantFileWriter::SetTimerForTesting(Timer* timer_override) {
+  timer_override_ = timer_override;
 }
 
 }  // namespace base

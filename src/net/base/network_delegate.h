@@ -24,6 +24,10 @@ namespace base {
 class FilePath;
 }
 
+namespace url {
+class Origin;
+}
+
 namespace net {
 
 // NOTE: Layering violations!
@@ -111,6 +115,13 @@ class NET_EXPORT NetworkDelegate : public base::NonThreadSafe {
       const URLRequest& request,
       const GURL& target_url,
       const GURL& referrer_url) const;
+
+  bool CanQueueReportingReport(const url::Origin& origin) const;
+  bool CanSendReportingReport(const url::Origin& origin) const;
+  bool CanSetReportingClient(const url::Origin& origin,
+                             const GURL& endpoint) const;
+  bool CanUseReportingClient(const url::Origin& origin,
+                             const GURL& endpoint) const;
 
  private:
   // This is the interface for subclasses of NetworkDelegate to implement. These
@@ -292,6 +303,16 @@ class NET_EXPORT NetworkDelegate : public base::NonThreadSafe {
       const URLRequest& request,
       const GURL& target_url,
       const GURL& referrer_url) const = 0;
+
+  virtual bool OnCanQueueReportingReport(const url::Origin& origin) const = 0;
+
+  virtual bool OnCanSendReportingReport(const url::Origin& origin) const = 0;
+
+  virtual bool OnCanSetReportingClient(const url::Origin& origin,
+                                       const GURL& endpoint) const = 0;
+
+  virtual bool OnCanUseReportingClient(const url::Origin& origin,
+                                       const GURL& endpoint) const = 0;
 };
 
 }  // namespace net

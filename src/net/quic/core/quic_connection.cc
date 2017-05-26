@@ -1313,17 +1313,6 @@ bool QuicConnection::ProcessValidatedPacket(const QuicPacketHeader& header) {
     return false;
   }
 
-  // Multipath is not enabled, but a packet with multipath flag on is
-  // received.
-  if (header.public_header.multipath_flag) {
-    const string error_details =
-        "Received a packet with multipath flag but multipath is not enabled.";
-    QUIC_BUG << error_details;
-    CloseConnection(QUIC_BAD_MULTIPATH_FLAG, error_details,
-                    ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
-    return false;
-  }
-
   if (version_negotiation_state_ != NEGOTIATED_VERSION) {
     if (perspective_ == Perspective::IS_SERVER) {
       if (!header.public_header.version_flag) {

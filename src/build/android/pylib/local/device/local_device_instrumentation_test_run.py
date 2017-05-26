@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import contextlib
 import logging
 import os
 import posixpath
@@ -50,7 +51,8 @@ TIMEOUT_ANNOTATIONS = [
   ('SmallTest', 1 * 60),
 ]
 
-LOGCAT_FILTERS = ['*:e', 'chromium:v', 'cr_*:v', 'DEBUG:I']
+LOGCAT_FILTERS = ['*:e', 'chromium:v', 'cr_*:v', 'DEBUG:I',
+                  'StrictMode:D', '%s:I' % _TAG]
 
 EXTRA_SCREENSHOT_FILE = (
     'org.chromium.base.test.ScreenshotOnFailureStatement.ScreenshotFile')
@@ -64,6 +66,18 @@ RE_RENDER_IMAGE_NAME = re.compile(
       r'(?P<description>\w+)\.'
       r'(?P<device_model>\w+)\.'
       r'(?P<orientation>port|land)\.png')
+
+@contextlib.contextmanager
+def _LogTestEndpoints(device, test_name):
+  device.RunShellCommand(
+      ['log', '-p', 'i', '-t', _TAG, 'START %s' % test_name],
+      check_return=True)
+  try:
+    yield
+  finally:
+    device.RunShellCommand(
+        ['log', '-p', 'i', '-t', _TAG, 'END %s' % test_name],
+        check_return=True)
 
 # TODO(jbudorick): Make this private once the instrumentation test_runner is
 # deprecated.
@@ -354,38 +368,32 @@ class LocalDeviceInstrumentationTestRun(
       self._flag_changers[str(device)].PushFlags(
         add=flags_to_add, remove=flags_to_remove)
 
-    try:
-      device.RunShellCommand(
-          ['log', '-p', 'i', '-t', _TAG, 'START %s' % test_name],
-          check_return=True)
-      time_ms = lambda: int(time.time() * 1e3)
-      start_ms = time_ms()
+    time_ms = lambda: int(time.time() * 1e3)
+    start_ms = time_ms()
 
-      stream_name = 'logcat_%s_%s_%s' % (
-          test_name.replace('#', '.'),
-          time.strftime('%Y%m%dT%H%M%S-UTC', time.gmtime()),
-          device.serial)
-      logmon = logdog_logcat_monitor.LogdogLogcatMonitor(
-          device.adb, stream_name, filter_specs=LOGCAT_FILTERS)
+    stream_name = 'logcat_%s_%s_%s' % (
+        test_name.replace('#', '.'),
+        time.strftime('%Y%m%dT%H%M%S-UTC', time.gmtime()),
+        device.serial)
+    logmon = logdog_logcat_monitor.LogdogLogcatMonitor(
+        device.adb, stream_name, filter_specs=LOGCAT_FILTERS)
 
-      with contextlib_ext.Optional(
-          logmon, self._test_instance.should_save_logcat):
+    with contextlib_ext.Optional(
+        logmon, self._test_instance.should_save_logcat):
+      with _LogTestEndpoints(device, test_name):
         with contextlib_ext.Optional(
             trace_event.trace(test_name),
             self._env.trace_output):
           output = device.StartInstrumentation(
               target, raw=True, extras=extras, timeout=timeout, retries=0)
-      logcat_url = logmon.GetLogcatURL()
-    finally:
-      device.RunShellCommand(
-          ['log', '-p', 'i', '-t', _TAG, 'END %s' % test_name],
-          check_return=True)
-      duration_ms = time_ms() - start_ms
-      if flags_to_add or flags_to_remove:
-        self._flag_changers[str(device)].Restore()
-      if test_timeout_scale:
-        valgrind_tools.SetChromeTimeoutScale(
-            device, self._test_instance.timeout_scale)
+
+    logcat_url = logmon.GetLogcatURL()
+    duration_ms = time_ms() - start_ms
+    if flags_to_add or flags_to_remove:
+      self._flag_changers[str(device)].Restore()
+    if test_timeout_scale:
+      valgrind_tools.SetChromeTimeoutScale(
+          device, self._test_instance.timeout_scale)
 
     # TODO(jbudorick): Make instrumentation tests output a JSON so this
     # doesn't have to parse the output.

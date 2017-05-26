@@ -11735,12 +11735,6 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
-        "test": "mus_demo_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
         "test": "ui_service_unittests"
       }
     ]

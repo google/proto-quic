@@ -92,12 +92,10 @@ class _LongRunningGmailDesktopBase(_LongRunningGmailBase):
         'document.getElementById("loading").style.display === "none"')
 
 
-@decorators.Disabled('android')  # crbug.com/657433
 class LongRunningGmailMobileForegroundStory(_LongRunningGmailMobileBase):
   NAME = 'long_running:tools:gmail-foreground'
 
 
-@decorators.Disabled('all')  # crbug.com/681839
 class LongRunningGmailDesktopForegroundStory(_LongRunningGmailDesktopBase):
   NAME = 'long_running:tools:gmail-foreground'
 

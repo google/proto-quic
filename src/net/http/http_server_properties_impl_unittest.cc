@@ -24,23 +24,23 @@ namespace net {
 class HttpServerPropertiesImplPeer {
  public:
   static void AddBrokenAlternativeServiceWithExpirationTime(
-      HttpServerPropertiesImpl& impl,
+      HttpServerPropertiesImpl* impl,
       AlternativeService alternative_service,
       base::TimeTicks when) {
-    impl.broken_alternative_services_.insert(
+    impl->broken_alternative_services_.insert(
         std::make_pair(alternative_service, when));
     auto it =
-        impl.recently_broken_alternative_services_.Get(alternative_service);
-    if (it == impl.recently_broken_alternative_services_.end()) {
-      impl.recently_broken_alternative_services_.Put(alternative_service, 1);
+        impl->recently_broken_alternative_services_.Get(alternative_service);
+    if (it == impl->recently_broken_alternative_services_.end()) {
+      impl->recently_broken_alternative_services_.Put(alternative_service, 1);
     } else {
       it->second++;
     }
   }
 
   static void ExpireBrokenAlternateProtocolMappings(
-      HttpServerPropertiesImpl& impl) {
-    impl.ExpireBrokenAlternateProtocolMappings();
+      HttpServerPropertiesImpl* impl) {
+    impl->ExpireBrokenAlternateProtocolMappings();
   }
 };
 
@@ -950,11 +950,11 @@ TEST_F(AlternateProtocolServerPropertiesTest,
   base::TimeTicks past =
       base::TimeTicks::Now() - base::TimeDelta::FromSeconds(42);
   HttpServerPropertiesImplPeer::AddBrokenAlternativeServiceWithExpirationTime(
-      impl_, alternative_service, past);
+      &impl_, alternative_service, past);
   EXPECT_TRUE(impl_.IsAlternativeServiceBroken(alternative_service));
   EXPECT_TRUE(impl_.WasAlternativeServiceRecentlyBroken(alternative_service));
 
-  HttpServerPropertiesImplPeer::ExpireBrokenAlternateProtocolMappings(impl_);
+  HttpServerPropertiesImplPeer::ExpireBrokenAlternateProtocolMappings(&impl_);
   EXPECT_FALSE(impl_.IsAlternativeServiceBroken(alternative_service));
   EXPECT_TRUE(impl_.WasAlternativeServiceRecentlyBroken(alternative_service));
 }
@@ -980,10 +980,10 @@ TEST_F(AlternateProtocolServerPropertiesTest, RemoveExpiredBrokenAltSvc) {
   base::TimeTicks past =
       base::TimeTicks::Now() - base::TimeDelta::FromSeconds(42);
   HttpServerPropertiesImplPeer::AddBrokenAlternativeServiceWithExpirationTime(
-      impl_, bar_alternative_service, past);
+      &impl_, bar_alternative_service, past);
 
   // Expire brokenness of "bar:443".
-  HttpServerPropertiesImplPeer::ExpireBrokenAlternateProtocolMappings(impl_);
+  HttpServerPropertiesImplPeer::ExpireBrokenAlternateProtocolMappings(&impl_);
 
   // "foo:443" should have no alternative service now.
   EXPECT_FALSE(HasAlternativeService(foo_server));

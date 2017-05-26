@@ -840,17 +840,17 @@ int HttpNetworkTransaction::DoCreateStream() {
   if (!enable_ip_based_pooling_)
     DCHECK(!enable_alternative_services_);
   if (ForWebSocketHandshake()) {
-    stream_request_ =
+    stream_request_.reset(
         session_->http_stream_factory_for_websocket()
             ->RequestWebSocketHandshakeStream(
                 *request_, priority_, server_ssl_config_, proxy_ssl_config_,
                 this, websocket_handshake_stream_base_create_helper_,
                 enable_ip_based_pooling_, enable_alternative_services_,
-                net_log_);
+                net_log_));
   } else {
-    stream_request_ = session_->http_stream_factory()->RequestStream(
+    stream_request_.reset(session_->http_stream_factory()->RequestStream(
         *request_, priority_, server_ssl_config_, proxy_ssl_config_, this,
-        enable_ip_based_pooling_, enable_alternative_services_, net_log_);
+        enable_ip_based_pooling_, enable_alternative_services_, net_log_));
   }
   DCHECK(stream_request_.get());
   return ERR_IO_PENDING;

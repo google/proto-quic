@@ -37,6 +37,10 @@ constexpr NetworkTrafficAnnotationTag DefineNetworkTrafficAnnotation(
 
 // Placeholder for unannotated usages.
 #define NO_TRAFFIC_ANNOTATION_YET \
-  net::DefineNetworkTrafficAnnotation("Undefined", "Nothing here yet.")
+  net::DefineNetworkTrafficAnnotation("undefined", "Nothing here yet.")
+
+#define MISSING_TRAFFIC_ANNOTATION     \
+  net::DefineNetworkTrafficAnnotation( \
+      "missing", "Function called without traffic annotation.")
 
 #endif  // NET_TRAFFIC_ANNOTATION_NETWORK_TRAFFIC_ANNOTATION_H_

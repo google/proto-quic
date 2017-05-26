@@ -19,6 +19,7 @@ chrome.usersPrivate = {};
 /**
  * @typedef {{
  *   email: string,
+ *   displayEmail: string,
  *   name: string,
  *   isOwner: boolean,
  *   isSupervised: boolean

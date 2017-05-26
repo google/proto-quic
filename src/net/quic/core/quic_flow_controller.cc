@@ -186,9 +186,7 @@ void QuicFlowController::MaybeSendWindowUpdate() {
   QuicStreamOffset available_window = receive_window_offset_ - bytes_consumed_;
   QuicByteCount threshold = WindowUpdateThreshold();
 
-  if (FLAGS_quic_reloadable_flag_quic_flow_control_faster_autotune &&
-      !prev_window_update_time_.IsInitialized()) {
-    QUIC_FLAG_COUNT(quic_reloadable_flag_quic_flow_control_faster_autotune);
+  if (!prev_window_update_time_.IsInitialized()) {
     // Treat the initial window as if it is a window update, so if 1/2 the
     // window is used in less than 2 RTTs, the window is increased.
     prev_window_update_time_ = connection_->clock()->ApproximateNow();

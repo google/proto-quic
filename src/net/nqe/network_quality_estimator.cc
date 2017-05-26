@@ -319,7 +319,7 @@ NetworkQualityEstimator::NetworkQualityEstimator(
   AddDefaultEstimates();
 
   throughput_analyzer_.reset(new nqe::internal::ThroughputAnalyzer(
-      base::ThreadTaskRunnerHandle::Get(),
+      &params_, base::ThreadTaskRunnerHandle::Get(),
       base::Bind(&NetworkQualityEstimator::OnNewThroughputObservationAvailable,
                  base::Unretained(this)),
       use_localhost_requests_, use_smaller_responses_for_tests));

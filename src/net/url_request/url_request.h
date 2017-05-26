@@ -34,6 +34,7 @@
 #include "net/log/net_log_with_source.h"
 #include "net/proxy/proxy_server.h"
 #include "net/socket/connection_attempts.h"
+#include "net/traffic_annotation/network_traffic_annotation.h"
 #include "net/url_request/url_request_status.h"
 #include "url/gurl.h"
 #include "url/origin.h"
@@ -651,6 +652,11 @@ class NET_EXPORT URLRequest : NON_EXPORTED_BASE(public base::NonThreadSafe),
   // Returns the error status of the request.
   // Do not use! Going to be protected!
   const URLRequestStatus& status() const { return status_; }
+
+  const NetworkTrafficAnnotationTag& traffic_annotation() const {
+    return traffic_annotation_;
+  }
+
  protected:
   // Allow the URLRequestJob class to control the is_pending() flag.
   void set_is_pending(bool value) { is_pending_ = value; }
@@ -686,7 +692,8 @@ class NET_EXPORT URLRequest : NON_EXPORTED_BASE(public base::NonThreadSafe),
              RequestPriority priority,
              Delegate* delegate,
              const URLRequestContext* context,
-             NetworkDelegate* network_delegate);
+             NetworkDelegate* network_delegate,
+             NetworkTrafficAnnotationTag traffic_annotation);
 
   // Resumes or blocks a request paused by the NetworkDelegate::OnBeforeRequest
   // handler. If |blocked| is true, the request is blocked and an error page is
@@ -852,6 +859,8 @@ class NET_EXPORT URLRequest : NON_EXPORTED_BASE(public base::NonThreadSafe),
 
   // The raw header size of the response.
   int raw_header_size_;
+
+  const NetworkTrafficAnnotationTag traffic_annotation_;
 
   DISALLOW_COPY_AND_ASSIGN(URLRequest);
 };

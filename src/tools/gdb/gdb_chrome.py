@@ -107,26 +107,6 @@ class FilePathPrinter(StringPrinter):
 pp_set.add_printer('FilePath', '^FilePath$', FilePathPrinter)
 
 
-class SizePrinter(Printer):
-    def to_string(self):
-        return '%sx%s' % (self.val['width_'], self.val['height_'])
-pp_set.add_printer('gfx::Size', '^gfx::(Size|SizeF|SizeBase<.*>)$', SizePrinter)
-
-
-class PointPrinter(Printer):
-    def to_string(self):
-        return '%s,%s' % (self.val['x_'], self.val['y_'])
-pp_set.add_printer('gfx::Point', '^gfx::(Point|PointF|PointBase<.*>)$',
-                   PointPrinter)
-
-
-class RectPrinter(Printer):
-    def to_string(self):
-        return '%s %s' % (self.val['origin_'], self.val['size_'])
-pp_set.add_printer('gfx::Rect', '^gfx::(Rect|RectF|RectBase<.*>)$',
-                   RectPrinter)
-
-
 class SmartPtrPrinter(Printer):
     def to_string(self):
         return '%s%s' % (self.typename, typed_ptr(self.ptr()))
@@ -246,7 +226,7 @@ class ManualConstructorPrinter(object):
 pp_set.add_printer('base::ManualConstructor', '^base::ManualConstructor<.*>$', ManualConstructorPrinter)
 
 
-class FlatMapPrinter(object):
+class FlatTreePrinter(object):
     def __init__(self, val):
         self.val = val
 
@@ -256,8 +236,11 @@ class FlatMapPrinter(object):
         # Python is much more complicated and this output is reasonable.
         # (Without this printer, a flat_map will output 7 lines of internal
         # template goop before the vector contents.)
-        return 'base::flat_map with ' + str(self.val['impl_']['body_'])
-pp_set.add_printer('base::flat_map', '^base::flat_map<.*>$', FlatMapPrinter)
+        return 'base::flat_tree with ' + str(self.val['impl_']['body_'])
+pp_set.add_printer('base::flat_map', '^base::flat_map<.*>$', FlatTreePrinter)
+pp_set.add_printer('base::flat_set', '^base::flat_set<.*>$', FlatTreePrinter)
+pp_set.add_printer('base::flat_tree', '^base::internal::flat_tree<.*>$',
+                   FlatTreePrinter)
 
 
 class ValuePrinter(object):
@@ -290,7 +273,10 @@ class ValuePrinter(object):
             valuestr = self.val['list_']
 
         return "base::Value of type %s = %s" % (typestr, str(valuestr))
-pp_set.add_printer('base::Value', '^base::(List|Dictionary|)Value$', ValuePrinter)
+pp_set.add_printer('base::Value', '^base::Value$', ValuePrinter)
+pp_set.add_printer('base::ListValue', '^base::ListValue$', ValuePrinter)
+pp_set.add_printer('base::DictionaryValue', '^base::DictionaryValue$',
+                   ValuePrinter)
 
 
 class IpcMessagePrinter(Printer):

@@ -590,7 +590,7 @@ class HTTPResponse:
       'status': self._status,
       'request_type': self._request_type
     }
-    return json.dumps(self_dict)
+    return json.dumps(self_dict, indent=2)
 
   @property
   def response_headers(self):

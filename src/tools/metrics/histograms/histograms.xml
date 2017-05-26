@@ -13036,8 +13036,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram name="DnsProbe.Probe.NcnOffline.Result"
-    enum="DnsProbe.ObsoleteProbeResult">
+<histogram name="DnsProbe.Probe.NcnOffline.Result">
   <obsolete>
     Removed 7/2013.
   </obsolete>
@@ -13057,8 +13056,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram name="DnsProbe.Probe.NcnOnline.Result"
-    enum="DnsProbe.ObsoleteProbeResult">
+<histogram name="DnsProbe.Probe.NcnOnline.Result">
   <obsolete>
     Removed 7/2013.
   </obsolete>
@@ -13068,7 +13066,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram name="DnsProbe.Probe.Result" enum="DnsProbe.ObsoleteProbeResult">
+<histogram name="DnsProbe.Probe.Result">
   <obsolete>
     Renamed 7/2013 to DnsProbe.ProbeResult.  (Also switched to the full
     DnsProbe.ProbeStatus enum.)
@@ -29554,6 +29552,15 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>Result of a request to join a route.</summary>
 </histogram>
 
+<histogram name="MediaRouter.Provider.RouteControllerCreationOutcome"
+    enum="BooleanSuccess">
+  <owner>takumif@chromium.org</owner>
+  <summary>
+    Records whether the Media Route Provider succeeded or failed to create a
+    controller for a media route.
+  </summary>
+</histogram>
+
 <histogram name="MediaRouter.Provider.TerminateRoute.Result"
     enum="MediaRouteProviderResult">
   <owner>mfoltz@chromium.org</owner>
@@ -33647,6 +33654,15 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     The net error code returned after attempting an AIA fetch on Android.
     Recorded once per intermediate that Chrome attempts to fetch via AIA on
     Android.
+  </summary>
+</histogram>
+
+<histogram name="Net.Certificate.IgnoreCertificateErrorsSPKIListPresent"
+    enum="BooleanPresent">
+  <owner>martinkr@google.com</owner>
+  <summary>
+    Whether certificate validation was disabled for a set of public keys because
+    the --ignore-certificate-errors-spki-list switch was set on startup.
   </summary>
 </histogram>
 
@@ -42926,6 +42942,15 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="NewTabPage.ContentSuggestions.SectionCountOnNtpOpened"
+    units="sections">
+  <owner>vitaliii@chromium.org</owner>
+  <summary>
+    Android: The number of suggestion sections that were shown at the time an
+    NTP was opened. All shown sections (including empty ones) are counted.
+  </summary>
+</histogram>
+
 <histogram name="NewTabPage.ContentSuggestions.Shown" units="index">
   <owner>treib@chromium.org</owner>
   <summary>
@@ -44106,6 +44131,27 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     are made to load thumbnails at different times during the NTP's lifetime.
     Each NTP session's error rate is logged after the user navigates to a new
     URL from that NTP.
+  </summary>
+</histogram>
+
+<histogram name="NewTabPage.TileFaviconFetchSuccess.Popular"
+    enum="BooleanSuccess">
+  <owner>jkrcal@chromium.org</owner>
+  <summary>
+    Mobile only. The result of fetching a favicon for a tile on the New Tab
+    Page. This is recorded for each gray PopularSites tile on the New Tab Page
+    once per updating the set of tiles (notably upon each NTP impression).
+  </summary>
+</histogram>
+
+<histogram name="NewTabPage.TileFaviconFetchSuccess.Server"
+    enum="BooleanSuccess">
+  <owner>jkrcal@chromium.org</owner>
+  <summary>
+    Mobile only. The result of fetching a favicon for a tile on the New Tab
+    Page. This is recorded for each gray MostVisited tile on the New Tab Page
+    once per lifetime of Chrome (there as an in-memory cache of failed
+    requests).
   </summary>
 </histogram>
 
@@ -46385,9 +46431,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
 <histogram name="Omnibox.ProgressBarBreakPointUpdateCount"
     units="break point updates">
-  <obselete>
+  <obsolete>
     Obselete 05/16/2017. Data is unused (crbug.com/719801).
-  </obselete>
+  </obsolete>
   <owner>kkimlabs@chromium.org</owner>
   <summary>
     The number of progress bar break point updates from page load started to
@@ -46396,9 +46442,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Omnibox.ProgressBarUpdateCount" units="frame updates">
-  <obselete>
+  <obsolete>
     Obselete 05/16/2017. Data is unused (crbug.com/719801).
-  </obselete>
+  </obsolete>
   <owner>kkimlabs@chromium.org</owner>
   <summary>
     The number of progress bar frame updates from page load started to page load
@@ -59146,6 +59192,10 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="RendererScheduler.BackgroundRendererMainThreadLoad" units="%">
+  <obsolete>
+    Replaced with RendererScheduler.BackgroundRendererMainThreadLoad2 as of May
+    2017.
+  </obsolete>
   <owner>altimin@chromium.org</owner>
   <summary>
     Renderer main thread load when renderer is backgrounded, i.e. percentage of
@@ -59154,6 +59204,21 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     This metric is emitted when the renderer main thread task is completed or
     renderer is backgrounded or foregrounded, at most once per minute per
     renderer amortized.
+  </summary>
+</histogram>
+
+<histogram name="RendererScheduler.BackgroundRendererMainThreadLoad2" units="%">
+  <owner>altimin@chromium.org</owner>
+  <summary>
+    Renderer main thread load when renderer is backgrounded, i.e. percentage of
+    time spent on running tasks.
+
+    This metric is emitted when the renderer main thread task is completed or
+    renderer is backgrounded or foregrounded, at most once per minute per
+    renderer amortized.
+
+    Note that this metric discards tasks longer than 30 seconds because they are
+    considered to be a result of measurement glitch.
   </summary>
 </histogram>
 
@@ -59167,6 +59232,10 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="RendererScheduler.ForegroundRendererMainThreadLoad" units="%">
+  <obsolete>
+    Replaced with RendererScheduler.ForegroundRendererMainThreadLoad2 as of May
+    2017.
+  </obsolete>
   <owner>altimin@chromium.org</owner>
   <summary>
     Renderer main thread load when renderer is foregrounded, i.e. percentage of
@@ -59178,8 +59247,26 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="RendererScheduler.ForegroundRendererMainThreadLoad2" units="%">
+  <owner>altimin@chromium.org</owner>
+  <summary>
+    Renderer main thread load when renderer is foregrounded, i.e. percentage of
+    time spent on running tasks.
+
+    This metric is emitted when the renderer main thread task is completed or
+    renderer is backgrounded or foregrounded, at most once per minute per
+    renderer amortized.
+
+    Note that this metric discards tasks longer than 30 seconds because they are
+    considered to be a result of measurement glitch.
+  </summary>
+</histogram>
+
 <histogram name="RendererScheduler.NumberOfTasksPerQueueType"
     enum="RendererSchedulerTaskQueueType">
+  <obsolete>
+    Replaced with RendererScheduler.NumberOfTasksPerQueueType2 as of May 2017.
+  </obsolete>
   <owner>altimin@chromium.org,alexclarke@chromium.org</owner>
   <summary>
     The number of completed renderer tasks split per task queue type. Used to
@@ -59188,7 +59275,36 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="RendererScheduler.NumberOfTasksPerQueueType2"
+    enum="RendererSchedulerTaskQueueType">
+  <owner>altimin@chromium.org,alexclarke@chromium.org</owner>
+  <summary>
+    The number of completed renderer tasks split per task queue type. Used to
+    monitor usage of each type of task queue. Reported each time when task is
+    completed.
+
+    Note that this metric discards tasks longer than 30 seconds because they are
+    considered to be a result of measurement glitch.
+  </summary>
+</histogram>
+
 <histogram name="RendererScheduler.TaskDurationPerQueueType"
+    enum="RendererSchedulerTaskQueueType" units="ms">
+  <obsolete>
+    Replaced with RendererScheduler.TaskDurationPerQueueType2 as of May 2017.
+  </obsolete>
+  <owner>altimin@chromium.org,alexclarke@chromium.org</owner>
+  <summary>
+    Total duration of renderer tasks split per task queue type. Used to monitor
+    usage of each type of task queues. Reported each time when task is completed
+    and current accumulated duration is longer than 1ms.
+
+    This metric is susceptible to problematic outliers and should be analyzed
+    with custom scripts accounting for that rather than from a dashboard.
+  </summary>
+</histogram>
+
+<histogram name="RendererScheduler.TaskDurationPerQueueType2"
     enum="RendererSchedulerTaskQueueType" units="ms">
   <owner>altimin@chromium.org,alexclarke@chromium.org</owner>
   <summary>
@@ -59198,6 +59314,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This metric is susceptible to problematic outliers and should be analyzed
     with custom scripts accounting for that rather than from a dashboard.
+
+    Note that this metric discards tasks longer than 30 seconds because they are
+    considered to be a result of measurement glitch.
   </summary>
 </histogram>
 
@@ -59223,11 +59342,26 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="RendererScheduler.TaskTime" units="microseconds">
+  <obsolete>
+    Replaced with RendererScheduler.TaskTime2 as of May 2017.
+  </obsolete>
   <owner>sunyunjia@chromium.org</owner>
   <owner>tdresser@chromium.org</owner>
   <summary>
     The duration of every task queued in the _renderer_ scheduler to see the
     distribution of the task duration.
+  </summary>
+</histogram>
+
+<histogram name="RendererScheduler.TaskTime2" units="microseconds">
+  <owner>sunyunjia@chromium.org</owner>
+  <owner>tdresser@chromium.org</owner>
+  <summary>
+    The duration of every task queued in the _renderer_ scheduler to see the
+    distribution of the task duration.
+
+    Note that this metric discards tasks longer than 30 seconds because they are
+    considered to be a result of measurement glitch.
   </summary>
 </histogram>
 
@@ -71975,6 +72109,16 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram base="true" name="Storage.BytesRead" units="bytes">
+  <owner>michaeln@chromium.org</owner>
+  <summary>The number of bytes read. Recorded on each read.</summary>
+</histogram>
+
+<histogram base="true" name="Storage.BytesWritten" units="bytes">
+  <owner>michaeln@chromium.org</owner>
+  <summary>The number of bytes written. Recorded on each write.</summary>
+</histogram>
+
 <histogram name="Storage.ImportantSites.CBDChosenReason"
     enum="ImportantSitesReason">
   <owner>dmurph@chromium.org</owner>
@@ -82047,8 +82191,8 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <owner>philipel@chromium.org</owner>
   <summary>
     A successful probing attempt for a given bitrate, triggered by an update to
-    the max configured bitrate. NOTE! This is not the resulting bitrate from
-    a probing attempt, see WebRTC.BWE.MidCallProbing.ProbedKbps.
+    the max configured bitrate. NOTE! This is not the resulting bitrate from a
+    probing attempt, see WebRTC.BWE.MidCallProbing.ProbedKbps.
   </summary>
 </histogram>
 
@@ -92723,6 +92867,20 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
       label="Eviction was triggered because the total size exceeded maximum
              in memory size allwed"/>
   <affected-histogram name="Storage.Blob.SizeEvictedToDiskInKB"/>
+</histogram_suffixes>
+
+<histogram_suffixes name="Storage.Bytes" separator=".">
+  <suffix name="DiskCache.AppCache" label="AppCache usage."/>
+  <suffix name="DiskCache.CacheStorage" label="CacheStorage usage."/>
+  <suffix name="DiskCache.ServiceWorker"
+      label="ServiceWorker scriptcache usage."/>
+  <suffix name="LevelDBEnv" label="Undifferentiated leveldb usage."/>
+  <suffix name="LevelDBEnv.IDB" label="IndexedDB usage."/>
+  <suffix name="LevelDBEnv.ServiceWorker"
+      label="ServiceWorker database usage."/>
+  <suffix name="MojoLevelDBEnv" label="Mojo leveldb component usage."/>
+  <affected-histogram name="Storage.BytesRead"/>
+  <affected-histogram name="Storage.BytesWritten"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="StunPingInternal" separator=".">

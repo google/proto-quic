@@ -381,7 +381,7 @@ def get_waterfall_config():
           ],
        'perf_tests': [
          ('load_library_perf_tests', 'build187-m1'),
-         #  ('performance_browser_tests', 'build187-m1'),  # crbug.com/722367
+         ('performance_browser_tests', 'build187-m1'),
          ('media_perftests', 'build188-m1')]
       }
     ])
@@ -417,7 +417,7 @@ def get_waterfall_config():
        'perf_tests': [
          ('angle_perftests', 'build103-m1'),
          ('load_library_perf_tests', 'build103-m1'),
-         # ('performance_browser_tests', 'build103-m1'),  # crbug.com/722367
+         ('performance_browser_tests', 'build103-m1'),
          ('media_perftests', 'build104-m1')]
       }
     ])
@@ -454,7 +454,7 @@ def get_waterfall_config():
        'perf_tests': [
          ('angle_perftests', 'build94-m1'),
          ('load_library_perf_tests', 'build94-m1'),
-         # ('performance_browser_tests', 'build94-m1'),  # crbug.com/722367
+         ('performance_browser_tests', 'build94-m1'),
          ('media_perftests', 'build95-m1')]
       }
     ])
@@ -500,7 +500,7 @@ def get_waterfall_config():
            'build4-b1', 'build5-b1', 'build6-b1', 'build7-b1', 'build8-b1'
           ],
        'perf_tests': [
-         # ('performance_browser_tests', 'build8-b1')  # crbug.com/722367
+         ('performance_browser_tests', 'build8-b1')
        ]
       }
     ])
@@ -517,7 +517,7 @@ def get_waterfall_config():
            'build130-b1', 'build131-b1', 'build132-b1'
           ],
        'perf_tests': [
-         # ('performance_browser_tests', 'build132-b1')  # crbug.com/722367
+         ('performance_browser_tests', 'build132-b1')
        ]
       }
     ])
@@ -534,7 +534,7 @@ def get_waterfall_config():
            'build125-b1', 'build126-b1', 'build127-b1'
           ],
        'perf_tests': [
-         # ('performance_browser_tests', 'build126-b1')  # crbug.com/722367
+         ('performance_browser_tests', 'build126-b1')
        ]
       }
     ])

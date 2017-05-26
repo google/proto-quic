@@ -447,6 +447,14 @@ class NET_EXPORT NetworkQualityEstimator
       const base::TimeTicks& start_time,
       int percentile) const;
 
+  // Notifies the observers of RTT or throughput estimates computation.
+  virtual void NotifyObserversOfRTTOrThroughputComputed() const;
+
+  // Notifies |observer| of the current RTT and throughput if |observer| is
+  // still registered as an observer.
+  virtual void NotifyRTTAndThroughputEstimatesObserverIfPresent(
+      RTTAndThroughputEstimatesObserver* observer) const;
+
   // Observer list for RTT or throughput estimates. Protected for testing.
   base::ObserverList<RTTAndThroughputEstimatesObserver>
       rtt_and_throughput_estimates_observer_list_;
@@ -565,18 +573,10 @@ class NET_EXPORT NetworkQualityEstimator
   // Notifies observers of a change in effective connection type.
   void NotifyObserversOfEffectiveConnectionTypeChanged();
 
-  // Notifies the observers of RTT or throughput estimates computation.
-  void NotifyObserversOfRTTOrThroughputComputed() const;
-
   // Notifies |observer| of the current effective connection type if |observer|
   // is still registered as an observer.
   void NotifyEffectiveConnectionTypeObserverIfPresent(
       EffectiveConnectionTypeObserver* observer) const;
-
-  // Notifies |observer| of the current RTT and throughput if |observer| is
-  // still registered as an observer.
-  void NotifyRTTAndThroughputEstimatesObserverIfPresent(
-      RTTAndThroughputEstimatesObserver* observer) const;
 
   // Records NQE accuracy metrics. |measuring_duration| should belong to the
   // vector returned by AccuracyRecordingIntervals().

@@ -52,7 +52,6 @@ size_t GetStartOfEncryptedData(QuicVersion version,
 QuicPacketPublicHeader::QuicPacketPublicHeader()
     : connection_id(0),
       connection_id_length(PACKET_8BYTE_CONNECTION_ID),
-      multipath_flag(false),
       reset_flag(false),
       version_flag(false),
       packet_number_length(PACKET_6BYTE_PACKET_NUMBER),

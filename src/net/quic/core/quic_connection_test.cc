@@ -850,7 +850,6 @@ class QuicConnectionTest : public QuicTestWithParam<TestParams> {
         GetPeerInMemoryConnectionId(connection_id_);
     header.public_header.packet_number_length = packet_number_length_;
     header.public_header.connection_id_length = connection_id_length_;
-    header.public_header.multipath_flag = false;
     header.packet_number = number;
     QuicFrames frames;
     frames.push_back(frame);
@@ -963,7 +962,6 @@ class QuicConnectionTest : public QuicTestWithParam<TestParams> {
         GetPeerInMemoryConnectionId(connection_id_);
     header.public_header.packet_number_length = packet_number_length_;
     header.public_header.connection_id_length = connection_id_length_;
-    header.public_header.multipath_flag = false;
     header.packet_number = number;
 
     QuicFrames frames;

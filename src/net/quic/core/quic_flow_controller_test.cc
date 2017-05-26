@@ -38,9 +38,7 @@ class QuicFlowControllerTest : public QuicTest {
       : stream_id_(1234),
         send_window_(kInitialSessionFlowControlWindowForTest),
         receive_window_(kInitialSessionFlowControlWindowForTest),
-        connection_(&helper_, &alarm_factory_, Perspective::IS_CLIENT) {
-    FLAGS_quic_reloadable_flag_quic_flow_control_faster_autotune = true;
-  }
+        connection_(&helper_, &alarm_factory_, Perspective::IS_CLIENT) {}
 
   void Initialize() {
     flow_controller_.reset(new QuicFlowController(
@@ -167,13 +165,7 @@ TEST_F(QuicFlowControllerTest, OnlySendBlockedFrameOncePerOffset) {
 
 TEST_F(QuicFlowControllerTest, ReceivingBytesFastIncreasesFlowWindow) {
   // This test will generate two WINDOW_UPDATE frames.
-  if (FLAGS_quic_reloadable_flag_quic_flow_control_faster_autotune) {
-    EXPECT_CALL(connection_, SendWindowUpdate(stream_id_, ::testing::_))
-        .Times(1);
-  } else {
-    EXPECT_CALL(connection_, SendWindowUpdate(stream_id_, ::testing::_))
-        .Times(2);
-  }
+  EXPECT_CALL(connection_, SendWindowUpdate(stream_id_, ::testing::_)).Times(1);
 
   Initialize();
   flow_controller_->set_auto_tune_receive_window(true);
@@ -203,32 +195,16 @@ TEST_F(QuicFlowControllerTest, ReceivingBytesFastIncreasesFlowWindow) {
   EXPECT_FALSE(flow_controller_->FlowControlViolation());
   EXPECT_EQ(kInitialSessionFlowControlWindowForTest - receive_offset,
             QuicFlowControllerPeer::ReceiveWindowSize(flow_controller_.get()));
-  if (FLAGS_quic_reloadable_flag_quic_flow_control_faster_autotune) {
-    EXPECT_CALL(
-        session_flow_controller_,
-        EnsureWindowAtLeast(kInitialSessionFlowControlWindowForTest * 2 * 1.5));
-  }
+  EXPECT_CALL(
+      session_flow_controller_,
+      EnsureWindowAtLeast(kInitialSessionFlowControlWindowForTest * 2 * 1.5));
 
   // Consume enough bytes to send a WINDOW_UPDATE frame.
   flow_controller_->AddBytesConsumed(threshold + 1);
   // Result is that once again we have a fully open receive window.
   EXPECT_FALSE(flow_controller_->FlowControlViolation());
-  if (FLAGS_quic_reloadable_flag_quic_flow_control_faster_autotune) {
-    EXPECT_EQ(
-        2 * kInitialSessionFlowControlWindowForTest,
-        QuicFlowControllerPeer::ReceiveWindowSize(flow_controller_.get()));
-  } else {
-    EXPECT_EQ(
-        kInitialSessionFlowControlWindowForTest,
-        QuicFlowControllerPeer::ReceiveWindowSize(flow_controller_.get()));
-
-    // Move time forward, but by less than two RTTs.  Then receive and consume
-    // some more, forcing a second WINDOW_UPDATE with an increased max window
-    // size.
-    EXPECT_CALL(
-        session_flow_controller_,
-        EnsureWindowAtLeast(kInitialSessionFlowControlWindowForTest * 2 * 1.5));
-  }
+  EXPECT_EQ(2 * kInitialSessionFlowControlWindowForTest,
+            QuicFlowControllerPeer::ReceiveWindowSize(flow_controller_.get()));
 
   connection_.AdvanceTime(QuicTime::Delta::FromMilliseconds(2 * kRtt - 1));
   receive_offset += threshold + 1;
@@ -295,13 +271,7 @@ TEST_F(QuicFlowControllerTest, ReceivingBytesFastNoAutoTune) {
 
 TEST_F(QuicFlowControllerTest, ReceivingBytesNormalStableFlowWindow) {
   // This test will generate two WINDOW_UPDATE frames.
-  if (FLAGS_quic_reloadable_flag_quic_flow_control_faster_autotune) {
-    EXPECT_CALL(connection_, SendWindowUpdate(stream_id_, ::testing::_))
-        .Times(1);
-  } else {
-    EXPECT_CALL(connection_, SendWindowUpdate(stream_id_, ::testing::_))
-        .Times(2);
-  }
+  EXPECT_CALL(connection_, SendWindowUpdate(stream_id_, ::testing::_)).Times(1);
 
   Initialize();
   flow_controller_->set_auto_tune_receive_window(true);
@@ -330,24 +300,15 @@ TEST_F(QuicFlowControllerTest, ReceivingBytesNormalStableFlowWindow) {
   EXPECT_FALSE(flow_controller_->FlowControlViolation());
   EXPECT_EQ(kInitialSessionFlowControlWindowForTest - receive_offset,
             QuicFlowControllerPeer::ReceiveWindowSize(flow_controller_.get()));
-  if (FLAGS_quic_reloadable_flag_quic_flow_control_faster_autotune) {
-    EXPECT_CALL(
-        session_flow_controller_,
-        EnsureWindowAtLeast(kInitialSessionFlowControlWindowForTest * 2 * 1.5));
-  }
+  EXPECT_CALL(
+      session_flow_controller_,
+      EnsureWindowAtLeast(kInitialSessionFlowControlWindowForTest * 2 * 1.5));
   flow_controller_->AddBytesConsumed(threshold + 1);
 
   // Result is that once again we have a fully open receive window.
   EXPECT_FALSE(flow_controller_->FlowControlViolation());
-  if (FLAGS_quic_reloadable_flag_quic_flow_control_faster_autotune) {
-    EXPECT_EQ(
-        2 * kInitialSessionFlowControlWindowForTest,
-        QuicFlowControllerPeer::ReceiveWindowSize(flow_controller_.get()));
-  } else {
-    EXPECT_EQ(
-        kInitialSessionFlowControlWindowForTest,
-        QuicFlowControllerPeer::ReceiveWindowSize(flow_controller_.get()));
-  }
+  EXPECT_EQ(2 * kInitialSessionFlowControlWindowForTest,
+            QuicFlowControllerPeer::ReceiveWindowSize(flow_controller_.get()));
 
   // Move time forward, but by more than two RTTs.  Then receive and consume
   // some more, forcing a second WINDOW_UPDATE with unchanged max window size.
@@ -361,11 +322,7 @@ TEST_F(QuicFlowControllerTest, ReceivingBytesNormalStableFlowWindow) {
 
   QuicByteCount new_threshold =
       QuicFlowControllerPeer::WindowUpdateThreshold(flow_controller_.get());
-  if (FLAGS_quic_reloadable_flag_quic_flow_control_faster_autotune) {
-    EXPECT_EQ(new_threshold, 2 * threshold);
-  } else {
-    EXPECT_EQ(new_threshold, threshold);
-  }
+  EXPECT_EQ(new_threshold, 2 * threshold);
 }
 
 TEST_F(QuicFlowControllerTest, ReceivingBytesNormalNoAutoTune) {

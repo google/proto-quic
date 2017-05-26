@@ -11,43 +11,23 @@ from telemetry import decorators
 from devil.android.sdk import keyevent # pylint: disable=import-error
 
 
-# TODO(ssid): Rename the search stories to browse stories crbug.com/708300.
-class SearchGoogleStory(system_health_story.SystemHealthStory):
-  """ A typical Google search user story.
-  Issue the search query "what is science" in the search box and press Enter.
-  Wait for the search result page to be loaded, then scroll to the Wikipedia
-  result.
-  Navigate to wikipedia page by clicking on the result and wait for it to be
-  fully loaded.
-  """
-  NAME = 'search:portal:google'
-  URL = 'https://www.google.co.uk/'
-  TAGS = [story_tags.EMERGING_MARKET]
-
-  _SEARCH_BOX_SELECTOR = 'input[aria-label="Search"]'
-  _RESULT_SELECTOR = '.r > a[href*="wikipedia"]'
+class BlankAboutBlankStory(system_health_story.SystemHealthStory):
+  """Story that loads the about:blank page."""
+  NAME = 'load:chrome:blank'
+  URL = 'about:blank'
 
   def _DidLoadDocument(self, action_runner):
-    # Click on the search box.
-    action_runner.Wait(1)
-    action_runner.WaitForElement(selector=self._SEARCH_BOX_SELECTOR)
-    action_runner.TapElement(selector=self._SEARCH_BOX_SELECTOR)
-
-    # Submit search query.
-    action_runner.Wait(1)
-    action_runner.EnterText('what is science')
-    action_runner.Wait(0.5)
-    action_runner.PressKey('Return')
-
-    # Scroll to the Wikipedia result.
-    action_runner.WaitForElement(selector=self._RESULT_SELECTOR)
-    action_runner.Wait(1)
-    action_runner.ScrollPageToElement(selector=self._RESULT_SELECTOR)
-
-    # Click on the Wikipedia result.
-    action_runner.Wait(1)
-    action_runner.TapElement(selector=self._RESULT_SELECTOR)
-    action_runner.tab.WaitForDocumentReadyStateToBeComplete()
+    # Request a RAF and wait for it to be processed to ensure that the metric
+    # Startup.FirstWebContents.NonEmptyPaint2 is recorded.
+    action_runner.ExecuteJavaScript(
+        """
+        window.__hasRunRAF = false;
+        requestAnimationFrame(function() {
+          window.__hasRunRAF = true;
+        });
+        """
+    )
+    action_runner.WaitForJavaScriptCondition("window.__hasRunRAF")
 
 
 @decorators.Disabled('android-webview')  # Webview does not have omnibox

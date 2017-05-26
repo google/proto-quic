@@ -401,7 +401,6 @@ HttpNetworkSession::Params SpdySessionDependencies::CreateSessionParams(
   params.http_auth_handler_factory =
       session_deps->http_auth_handler_factory.get();
   params.http_server_properties = session_deps->http_server_properties.get();
-  params.client_socket_factory = session_deps->socket_factory.get();
   params.enable_spdy_ping_based_connection_checking = session_deps->enable_ping;
   params.enable_user_alternate_protocol_ports =
       session_deps->enable_user_alternate_protocol_ports;

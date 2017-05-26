@@ -181,7 +181,7 @@ class ScopedComPtr {
     return details::ScopedComPtrRef<ScopedComPtr<Interface>>(this);
   }
 
-  void swap(ScopedComPtr<Interface>& r) {
+  void Swap(ScopedComPtr<Interface>& r) {
     Interface* tmp = ptr_;
     ptr_ = r.ptr_;
     r.ptr_ = tmp;

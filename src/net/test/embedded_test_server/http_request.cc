@@ -110,7 +110,7 @@ HttpRequestParser::ParseResult HttpRequestParser::ParseHeaders() {
     // know) anything about the server address.
     GURL url(header_line_tokens[1]);
     if (url.is_valid()) {
-      http_request_->relative_url = url.path();
+      http_request_->relative_url = url.PathForRequest();
     } else if (header_line_tokens[1][0] == '/') {
       http_request_->relative_url = header_line_tokens[1];
     } else {
