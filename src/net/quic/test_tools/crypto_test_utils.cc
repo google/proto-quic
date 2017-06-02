@@ -399,6 +399,14 @@ int HandshakeWithFakeServer(QuicConfig* server_quic_config,
   TestQuicSpdyServerSession server_session(server_conn, *server_quic_config,
                                            &crypto_config,
                                            &compressed_certs_cache);
+  EXPECT_CALL(*server_session.helper(),
+              CanAcceptClientHello(testing::_, testing::_, testing::_))
+      .Times(testing::AnyNumber());
+  EXPECT_CALL(*server_session.helper(),
+              GenerateConnectionIdForReject(testing::_))
+      .Times(testing::AnyNumber());
+  EXPECT_CALL(*server_conn, OnCanWrite()).Times(testing::AnyNumber());
+  EXPECT_CALL(*client_conn, OnCanWrite()).Times(testing::AnyNumber());
 
   // The client's handshake must have been started already.
   CHECK_NE(0u, client_conn->encrypted_packets_.size());
@@ -439,6 +447,9 @@ int HandshakeWithFakeClient(MockQuicConnectionHelper* helper,
 
   EXPECT_CALL(client_session, OnProofValid(testing::_))
       .Times(testing::AnyNumber());
+  EXPECT_CALL(client_session, OnProofVerifyDetailsAvailable(testing::_))
+      .Times(testing::AnyNumber());
+  EXPECT_CALL(*client_conn, OnCanWrite()).Times(testing::AnyNumber());
   client_session.GetMutableCryptoStream()->CryptoConnect();
   CHECK_EQ(1u, client_conn->encrypted_packets_.size());
 

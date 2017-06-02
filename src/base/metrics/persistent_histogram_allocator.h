@@ -404,10 +404,12 @@ class BASE_EXPORT GlobalHistogramAllocator
 
   // Creates a new file at |active_path|. If it already exists, it will first be
   // moved to |base_path|. In all cases, any old file at |base_path| will be
-  // removed. The file will be created using the given size, id, and name.
-  // Returns whether the global allocator was set.
+  // removed. If |spare_path| is non-empty and exists, that will be renamed and
+  // used as the active file. Otherwise, the file will be created using the
+  // given size, id, and name. Returns whether the global allocator was set.
   static bool CreateWithActiveFile(const FilePath& base_path,
                                    const FilePath& active_path,
+                                   const FilePath& spare_path,
                                    size_t size,
                                    uint64_t id,
                                    StringPiece name);
@@ -421,14 +423,27 @@ class BASE_EXPORT GlobalHistogramAllocator
                                         uint64_t id,
                                         StringPiece name);
 
-  // Constructs a pair of names in |dir| based on name that can be used for a
+  // Constructs a set of names in |dir| based on name that can be used for a
   // base + active persistent memory mapped location for CreateWithActiveFile().
-  // |name| will be used as the basename of the file inside |dir|.
-  // |out_base_path| or |out_active_path| may be null if not needed.
+  // The spare path is a file that can be pre-created and moved to be active
+  // without any startup penalty that comes from constructing the file. |name|
+  // will be used as the basename of the file inside |dir|. |out_base_path|,
+  // |out_active_path|, or |out_spare_path| may be null if not needed.
   static void ConstructFilePaths(const FilePath& dir,
                                  StringPiece name,
                                  FilePath* out_base_path,
-                                 FilePath* out_active_path);
+                                 FilePath* out_active_path,
+                                 FilePath* out_spare_path);
+
+  // Create a "spare" file that can later be made the "active" file. This
+  // should be done on a background thread if possible.
+  static bool CreateSpareFile(const FilePath& spare_path, size_t size);
+
+  // Same as above but uses standard names. |name| is the name of the allocator
+  // and is also used to create the correct filename.
+  static bool CreateSpareFileInDir(const FilePath& dir_path,
+                                   size_t size,
+                                   StringPiece name);
 #endif
 
   // Create a global allocator using a block of shared memory accessed

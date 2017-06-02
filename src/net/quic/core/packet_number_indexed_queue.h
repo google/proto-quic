@@ -42,6 +42,7 @@ class PacketNumberIndexedQueue {
   // Retrieve the entry associated with the packet number.  Returns the pointer
   // to the entry in case of success, or nullptr if the entry does not exist.
   T* GetEntry(QuicPacketNumber packet_number);
+  const T* GetEntry(QuicPacketNumber packet_number) const;
 
   // Inserts data associated |packet_number| into (or past) the end of the
   // queue, filling up the missing intermediate entries as necessary.  Returns
@@ -94,7 +95,11 @@ class PacketNumberIndexedQueue {
   // Cleans up unused slots in the front after removing an element.
   void Cleanup();
 
-  EntryWrapper* GetEntryWrapper(QuicPacketNumber offset);
+  const EntryWrapper* GetEntryWrapper(QuicPacketNumber offset) const;
+  EntryWrapper* GetEntryWrapper(QuicPacketNumber offset) {
+    const auto* const_this = this;
+    return const_cast<EntryWrapper*>(const_this->GetEntryWrapper(offset));
+  }
 
   std::deque<EntryWrapper> entries_;
   size_t number_of_present_entries_;
@@ -104,6 +109,16 @@ class PacketNumberIndexedQueue {
 template <typename T>
 T* PacketNumberIndexedQueue<T>::GetEntry(QuicPacketNumber packet_number) {
   EntryWrapper* entry = GetEntryWrapper(packet_number);
+  if (entry == nullptr) {
+    return nullptr;
+  }
+  return &entry->data;
+}
+
+template <typename T>
+const T* PacketNumberIndexedQueue<T>::GetEntry(
+    QuicPacketNumber packet_number) const {
+  const EntryWrapper* entry = GetEntryWrapper(packet_number);
   if (entry == nullptr) {
     return nullptr;
   }
@@ -168,8 +183,8 @@ void PacketNumberIndexedQueue<T>::Cleanup() {
 }
 
 template <typename T>
-auto PacketNumberIndexedQueue<T>::GetEntryWrapper(QuicPacketNumber offset)
-    -> EntryWrapper* {
+auto PacketNumberIndexedQueue<T>::GetEntryWrapper(QuicPacketNumber offset) const
+    -> const EntryWrapper* {
   if (offset < first_packet_) {
     return nullptr;
   }
@@ -179,7 +194,7 @@ auto PacketNumberIndexedQueue<T>::GetEntryWrapper(QuicPacketNumber offset)
     return nullptr;
   }
 
-  EntryWrapper* entry = &entries_[offset];
+  const EntryWrapper* entry = &entries_[offset];
   if (!entry->present) {
     return nullptr;
   }

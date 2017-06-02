@@ -86,6 +86,6 @@ class NET_EXPORT ProxyDelegate {
   DISALLOW_COPY_AND_ASSIGN(ProxyDelegate);
 };
 
-}
+}  // namespace net
 
 #endif  // NET_BASE_PROXY_DELEGATE_H_

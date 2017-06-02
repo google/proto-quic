@@ -52,12 +52,6 @@ class JSChecker(object):
     return self.RegexCheck(i, line, r"((?:Array|Object|Promise)\.<)",
         "Don't use a dot after generics (Object.<T> should be Object<T>).")
 
-  def GetElementByIdCheck(self, i, line):
-    """Checks for use of 'document.getElementById' instead of '$'."""
-    return self.RegexCheck(i, line, r"(document\.getElementById)\('",
-        "Use $('id') or getSVGElement('id') from chrome://resources/js/util.js "
-        "instead of document.getElementById('id')")
-
   def InheritDocCheck(self, i, line):
     """Checks for use of '@inheritDoc' instead of '@override'."""
     return self.RegexCheck(i, line, r"\* (@inheritDoc)",
@@ -68,12 +62,38 @@ class JSChecker(object):
     return self.RegexCheck(i, line, r"(?<!this)(\.\$)[\[\.]",
         "Please only use this.$.localId, not element.$.localId")
 
-  def WrapperTypeCheck(self, i, line):
-    """Check for wrappers (new String()) instead of builtins (string)."""
-    return self.RegexCheck(i, line,
-        r"(?:/\*)?\*.*?@(?:param|return|type) ?"     # /** @param/@return/@type
-        r"{[^}]*\b(String|Boolean|Number)\b[^}]*}",  # {(Boolean|Number|String)}
-        "Don't use wrapper types (i.e. new String() or @type {String})")
+  def RunEsLintChecks(self, affected_js_files, format='stylish'):
+    """Runs lint checks using ESLint. The ESLint rules being applied are defined
+       in the .eslintrc.js configuration file.
+    """
+    os_path = self.input_api.os_path
+
+    try:
+      # Import ESLint.
+      _HERE_PATH = os_path.dirname(os_path.realpath(__file__))
+      _SRC_PATH = os_path.normpath(os_path.join(_HERE_PATH, '..', '..'))
+      import sys
+      old_sys_path = sys.path[:]
+      sys.path.append(os_path.join(_SRC_PATH, 'third_party', 'node'))
+      import node, node_modules
+    finally:
+      sys.path = old_sys_path
+
+    # Extract paths to be passed to ESLint.
+    affected_js_files_paths = []
+    presubmit_path = self.input_api.PresubmitLocalPath()
+    for f in affected_js_files:
+      affected_js_files_paths.append(
+          os_path.relpath(f.AbsoluteLocalPath(), presubmit_path))
+
+    output = node.RunNode([
+        node_modules.PathToEsLint(),
+        '--color',
+        '--format', format,
+        '--ignore-pattern \'!.eslintrc.js\'',
+        ' '.join(affected_js_files_paths)])
+
+    return [self.output_api.PresubmitError(output)] if output else []
 
   def VarNameCheck(self, i, line):
     """See the style guide. http://goo.gl/eQiXVW"""
@@ -97,6 +117,10 @@ class JSChecker(object):
                                                   include_deletes=False)
     affected_js_files = filter(lambda f: f.LocalPath().endswith('.js'),
                                affected_files)
+
+    if affected_js_files:
+      results += self.RunEsLintChecks(affected_js_files)
+
     for f in affected_js_files:
       error_lines = []
 
@@ -105,12 +129,10 @@ class JSChecker(object):
             self.ChromeSendCheck(i, line),
             self.CommentIfAndIncludeCheck(i, line),
             self.ConstCheck(i, line),
-            self.GetElementByIdCheck(i, line),
             self.EndJsDocCommentCheck(i, line),
             self.ExtraDotInGenericCheck(i, line),
             self.InheritDocCheck(i, line),
             self.PolymerLocalIdCheck(i, line),
-            self.WrapperTypeCheck(i, line),
             self.VarNameCheck(i, line),
         ])
 

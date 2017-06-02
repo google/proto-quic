@@ -577,7 +577,6 @@ TEST_F(UDPSocketTest, ServerGetPeerAddress) {
 
 TEST_F(UDPSocketTest, ClientSetDoNotFragment) {
   for (std::string ip : {"127.0.0.1", "::1"}) {
-    LOG(INFO) << "ip: " << ip;
     UDPClientSocket client(DatagramSocket::DEFAULT_BIND, RandIntCallback(),
                            nullptr, NetLogSource());
     IPAddress ip_address;
@@ -600,7 +599,6 @@ TEST_F(UDPSocketTest, ClientSetDoNotFragment) {
 
 TEST_F(UDPSocketTest, ServerSetDoNotFragment) {
   for (std::string ip : {"127.0.0.1", "::1"}) {
-    LOG(INFO) << "ip: " << ip;
     IPEndPoint bind_address;
     CreateUDPAddress(ip, 0, &bind_address);
     UDPServerSocket server(nullptr, NetLogSource());

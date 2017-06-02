@@ -153,7 +153,7 @@ TEST_F(StackTraceTest, DebugPrintBacktrace) {
 }
 #endif  // !defined(__UCLIBC__)
 
-#if defined(OS_POSIX) && !defined(OS_ANDROID)
+#if defined(OS_POSIX) && !defined(OS_ANDROID) && !defined(OS_FUCHSIA)
 #if !defined(OS_IOS)
 static char* newArray() {
   // Clang warns about the mismatched new[]/delete if they occur in the same
@@ -253,7 +253,7 @@ TEST_F(StackTraceTest, itoa_r) {
   EXPECT_EQ("0688", itoa_r_wrapper(0x688, 128, 16, 4));
   EXPECT_EQ("00688", itoa_r_wrapper(0x688, 128, 16, 5));
 }
-#endif  // defined(OS_POSIX) && !defined(OS_ANDROID)
+#endif  // defined(OS_POSIX) && !defined(OS_ANDROID) && !defined(OS_FUCHSIA)
 
 #if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 

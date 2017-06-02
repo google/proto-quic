@@ -252,7 +252,7 @@ class FetcherTestURLRequestContextGetter : public URLRequestContextGetter {
                          double jitter_factor,
                          int maximum_backoff_ms,
                          bool reserve_sending_time_for_next_request) {
-    if (!network_task_runner_->RunsTasksOnCurrentThread()) {
+    if (!network_task_runner_->RunsTasksInCurrentSequence()) {
       network_task_runner_->PostTask(
           FROM_HERE,
           base::Bind(&FetcherTestURLRequestContextGetter::AddThrottlerEntry,
@@ -277,7 +277,7 @@ class FetcherTestURLRequestContextGetter : public URLRequestContextGetter {
   // Tells the getter to act as if the URLRequestContext is about to be shut
   // down.
   void Shutdown() {
-    if (!network_task_runner_->RunsTasksOnCurrentThread()) {
+    if (!network_task_runner_->RunsTasksInCurrentSequence()) {
       network_task_runner_->PostTask(
           FROM_HERE,
           base::Bind(&FetcherTestURLRequestContextGetter::Shutdown, this));

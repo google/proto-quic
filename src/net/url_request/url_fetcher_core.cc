@@ -5,12 +5,9 @@
 #include "net/url_request/url_fetcher_core.h"
 
 #include <stdint.h>
-#include <algorithm>
 #include <utility>
 
 #include "base/bind.h"
-#include "base/debug/alias.h"
-#include "base/debug/dump_without_crashing.h"
 #include "base/logging.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/profiler/scoped_tracker.h"
@@ -109,24 +106,13 @@ URLFetcherCore::URLFetcherCore(
       current_upload_bytes_(-1),
       current_response_bytes_(0),
       total_response_bytes_(-1),
-      traffic_annotation_(traffic_annotation),
-      stack_identifier_(nullptr) {
+      traffic_annotation_(traffic_annotation) {
   CHECK(original_url_.is_valid());
 }
 
 void URLFetcherCore::Start() {
   DCHECK(delegate_task_runner_);
   DCHECK(request_context_getter_.get()) << "We need an URLRequestContext!";
-
-  size_t stack_size = 0u;
-  stack_trace_on_start_ = base::MakeUnique<base::debug::StackTrace>();
-  const void* const* addresses = stack_trace_on_start_->Addresses(&stack_size);
-  // The #5 frame is the frame of the consumer. #0 and #1 are the constructor
-  // for StackTrace(). #2 is for MakeUnique. #3 is for URLFetcherCore::Start().
-  // #4 is URLFetcherImpl::Start().
-  if (stack_size > 5 && addresses)
-    stack_identifier_ = addresses[5];
-
   if (network_task_runner_.get()) {
     DCHECK_EQ(network_task_runner_,
               request_context_getter_->GetNetworkTaskRunner());
@@ -141,13 +127,13 @@ void URLFetcherCore::Start() {
 
 void URLFetcherCore::Stop() {
   if (delegate_task_runner_)  // May be NULL in tests.
-    DCHECK(delegate_task_runner_->RunsTasksOnCurrentThread());
+    DCHECK(delegate_task_runner_->RunsTasksInCurrentSequence());
 
   delegate_ = NULL;
   fetcher_ = NULL;
   if (!network_task_runner_.get())
     return;
-  if (network_task_runner_->RunsTasksOnCurrentThread()) {
+  if (network_task_runner_->RunsTasksInCurrentSequence()) {
     CancelURLRequest(ERR_ABORTED);
   } else {
     network_task_runner_->PostTask(
@@ -305,21 +291,21 @@ void URLFetcherCore::SetAutomaticallyRetryOnNetworkChanges(int max_retries) {
 void URLFetcherCore::SaveResponseToFileAtPath(
     const base::FilePath& file_path,
     scoped_refptr<base::SequencedTaskRunner> file_task_runner) {
-  DCHECK(delegate_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(delegate_task_runner_->RunsTasksInCurrentSequence());
   SaveResponseWithWriter(std::unique_ptr<URLFetcherResponseWriter>(
       new URLFetcherFileWriter(file_task_runner, file_path)));
 }
 
 void URLFetcherCore::SaveResponseToTemporaryFile(
     scoped_refptr<base::SequencedTaskRunner> file_task_runner) {
-  DCHECK(delegate_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(delegate_task_runner_->RunsTasksInCurrentSequence());
   SaveResponseWithWriter(std::unique_ptr<URLFetcherResponseWriter>(
       new URLFetcherFileWriter(file_task_runner, base::FilePath())));
 }
 
 void URLFetcherCore::SaveResponseWithWriter(
     std::unique_ptr<URLFetcherResponseWriter> response_writer) {
-  DCHECK(delegate_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(delegate_task_runner_->RunsTasksInCurrentSequence());
   response_writer_ = std::move(response_writer);
 }
 
@@ -367,7 +353,7 @@ int URLFetcherCore::GetResponseCode() const {
 }
 
 void URLFetcherCore::ReceivedContentWasMalformed() {
-  DCHECK(delegate_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(delegate_task_runner_->RunsTasksInCurrentSequence());
   if (network_task_runner_.get()) {
     network_task_runner_->PostTask(
         FROM_HERE, base::Bind(&URLFetcherCore::NotifyMalformedContent, this));
@@ -389,7 +375,7 @@ bool URLFetcherCore::GetResponseAsString(
 
 bool URLFetcherCore::GetResponseAsFilePath(bool take_ownership,
                                            base::FilePath* out_response_path) {
-  DCHECK(delegate_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(delegate_task_runner_->RunsTasksInCurrentSequence());
 
   URLFetcherFileWriter* file_writer =
       response_writer_ ? response_writer_->AsFileWriter() : NULL;
@@ -570,12 +556,6 @@ void URLFetcherCore::StartURLRequest() {
   request_context_getter_->AddObserver(this);
   request_ = request_context_getter_->GetURLRequestContext()->CreateRequest(
       original_url_, DEFAULT_PRIORITY, this, traffic_annotation_);
-
-  // TODO(xunjieli): Temporary to investigate crbug.com/711721.
-  if (!request_context_getter_->GetURLRequestContext()->AddToAddressMap(
-          stack_identifier_)) {
-    DumpWithoutCrashing();
-  }
   int flags = request_->load_flags() | load_flags_;
 
   // TODO(mmenke): This should really be with the other code to set the upload
@@ -735,7 +715,7 @@ void URLFetcherCore::CancelURLRequest(int error) {
 
 void URLFetcherCore::OnCompletedURLRequest(
     base::TimeDelta backoff_delay) {
-  DCHECK(delegate_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(delegate_task_runner_->RunsTasksInCurrentSequence());
 
   // Save the status and backoff_delay so that delegates can read it.
   if (delegate_) {
@@ -745,7 +725,7 @@ void URLFetcherCore::OnCompletedURLRequest(
 }
 
 void URLFetcherCore::InformDelegateFetchIsComplete() {
-  DCHECK(delegate_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(delegate_task_runner_->RunsTasksInCurrentSequence());
   if (delegate_)
     delegate_->OnURLFetchComplete(fetcher_);
 }
@@ -840,9 +820,6 @@ void URLFetcherCore::CancelRequestAndInformDelegate(int result) {
 void URLFetcherCore::ReleaseRequest() {
   request_context_getter_->RemoveObserver(this);
   upload_progress_checker_timer_.reset();
-  if (request_)
-    request_->context()->RemoveFromAddressMap(stack_identifier_);
-
   request_.reset();
   buffer_ = nullptr;
   g_registry.Get().RemoveURLFetcherCore(this);
@@ -949,7 +926,7 @@ void URLFetcherCore::InformDelegateUploadProgress() {
 void URLFetcherCore::InformDelegateUploadProgressInDelegateSequence(
     int64_t current,
     int64_t total) {
-  DCHECK(delegate_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(delegate_task_runner_->RunsTasksInCurrentSequence());
   if (delegate_)
     delegate_->OnURLFetchUploadProgress(fetcher_, current, total);
 }
@@ -974,7 +951,7 @@ void URLFetcherCore::InformDelegateDownloadProgressInDelegateSequence(
     int64_t current,
     int64_t total,
     int64_t current_network_bytes) {
-  DCHECK(delegate_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(delegate_task_runner_->RunsTasksInCurrentSequence());
   if (delegate_)
     delegate_->OnURLFetchDownloadProgress(fetcher_, current, total,
                                           current_network_bytes);
@@ -985,26 +962,6 @@ void URLFetcherCore::AssertHasNoUploadData() const {
   DCHECK(upload_content_.empty());
   DCHECK(upload_file_path_.empty());
   DCHECK(upload_stream_factory_.is_null());
-}
-
-void URLFetcherCore::DumpWithoutCrashing() const {
-  DCHECK(stack_trace_on_start_);
-
-  size_t stack_size = 0u;
-  const void* const* instruction_pointers =
-      stack_trace_on_start_->Addresses(&stack_size);
-  static constexpr size_t kMaxStackSize = 100;
-  const void* instruction_pointers_copy[kMaxStackSize + 2];
-  // Insert markers bracketing the crash to make it easier to locate.
-  memset(&instruction_pointers_copy[0], 0xAB,
-         sizeof(instruction_pointers_copy[0]));
-  memset(instruction_pointers_copy, 0xAB, sizeof(instruction_pointers_copy));
-  stack_size = std::min(kMaxStackSize, stack_size);
-  std::memcpy(&instruction_pointers_copy[1], instruction_pointers,
-              stack_size * sizeof(const void*));
-  base::debug::Alias(&stack_size);
-  base::debug::Alias(&instruction_pointers_copy);
-  base::debug::DumpWithoutCrashing();
 }
 
 }  // namespace net

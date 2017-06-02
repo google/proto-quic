@@ -345,6 +345,7 @@ MultiThreadedCertVerifier::MultiThreadedCertVerifier(
     : requests_(0), inflight_joins_(0), verify_proc_(verify_proc) {}
 
 MultiThreadedCertVerifier::~MultiThreadedCertVerifier() {
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 }
 
 int MultiThreadedCertVerifier::Verify(const RequestParams& params,
@@ -355,7 +356,7 @@ int MultiThreadedCertVerifier::Verify(const RequestParams& params,
                                       const NetLogWithSource& net_log) {
   out_req->reset();
 
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   if (callback.is_null() || !verify_result || params.hostname().empty())
     return ERR_INVALID_ARGUMENT;
@@ -404,7 +405,7 @@ bool MultiThreadedCertVerifier::JobComparator::operator()(
 
 std::unique_ptr<CertVerifierJob> MultiThreadedCertVerifier::RemoveJob(
     CertVerifierJob* job) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   auto it = inflight_.find(job);
   DCHECK(it != inflight_.end());
   std::unique_ptr<CertVerifierJob> job_ptr = std::move(it->second);
@@ -421,7 +422,7 @@ struct MultiThreadedCertVerifier::JobToRequestParamsComparator {
 };
 
 CertVerifierJob* MultiThreadedCertVerifier::FindJob(const RequestParams& key) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   // The JobSet is kept in sorted order so items can be found using binary
   // search.

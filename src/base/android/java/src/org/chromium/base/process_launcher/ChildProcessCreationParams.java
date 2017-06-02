@@ -70,29 +70,25 @@ public class ChildProcessCreationParams {
     }
 
     // Members should all be immutable to avoid worrying about thread safety.
-    private final String mPackageName;
-    private final boolean mIsExternalService;
+    private final String mPackageNameForSandboxedService;
+    private final boolean mIsSandboxedServiceExternal;
     private final int mLibraryProcessType;
     private final boolean mBindToCallerCheck;
 
-    public ChildProcessCreationParams(String packageName, boolean isExternalService,
-            int libraryProcessType, boolean bindToCallerCheck) {
-        mPackageName = packageName;
-        mIsExternalService = isExternalService;
+    public ChildProcessCreationParams(String packageNameForSandboxedService,
+            boolean isExternalSandboxedService, int libraryProcessType, boolean bindToCallerCheck) {
+        mPackageNameForSandboxedService = packageNameForSandboxedService;
+        mIsSandboxedServiceExternal = isExternalSandboxedService;
         mLibraryProcessType = libraryProcessType;
         mBindToCallerCheck = bindToCallerCheck;
     }
 
-    public String getPackageName() {
-        return mPackageName;
+    public String getPackageNameForSandboxedService() {
+        return mPackageNameForSandboxedService;
     }
 
-    public boolean getIsExternalService() {
-        return mIsExternalService;
-    }
-
-    public int getLibraryProcessType() {
-        return mLibraryProcessType;
+    public boolean getIsSandboxedServiceExternal() {
+        return mIsSandboxedServiceExternal;
     }
 
     public boolean getBindToCallerCheck() {

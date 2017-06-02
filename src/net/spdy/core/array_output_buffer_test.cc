@@ -14,7 +14,7 @@ TEST(ArrayOutputBufferTest, InitializedFromArray) {
   char array[100];
   ArrayOutputBuffer buffer(array, sizeof(array));
   EXPECT_EQ(sizeof(array), buffer.BytesFree());
-  EXPECT_EQ((uint64_t)0, buffer.Size());
+  EXPECT_EQ(0u, buffer.Size());
   EXPECT_EQ(array, buffer.Begin());
 }
 
@@ -35,14 +35,14 @@ TEST(ArrayOutputBufferTest, WriteAndReset) {
   buffer.AdvanceWritePtr(written);
 
   // The buffer should be partially used.
-  EXPECT_EQ((uint64_t)size - written, buffer.BytesFree());
-  EXPECT_EQ((uint64_t)written, buffer.Size());
+  EXPECT_EQ(static_cast<uint64_t>(size) - written, buffer.BytesFree());
+  EXPECT_EQ(static_cast<uint64_t>(written), buffer.Size());
 
   buffer.Reset();
 
   // After a reset, the buffer should regain its full capacity.
   EXPECT_EQ(sizeof(array), buffer.BytesFree());
-  EXPECT_EQ((uint64_t)0, buffer.Size());
+  EXPECT_EQ(0u, buffer.Size());
 }
 
 }  // namespace test

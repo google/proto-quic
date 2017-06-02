@@ -400,6 +400,13 @@ bool Histogram::InspectConstructionArguments(const std::string& name,
     check_okay = false;
     *bucket_count = 3;
   }
+  // Very high bucket counts are wasteful. Use a sparse histogram instead.
+  // Value of 10002 equals a user-supplied value of 10k + 2 overflow buckets.
+  constexpr uint32_t kMaxBucketCount = 10002;
+  if (*bucket_count > kMaxBucketCount) {
+    check_okay = false;
+    *bucket_count = kMaxBucketCount;
+  }
   if (*bucket_count > static_cast<uint32_t>(*maximum - *minimum + 2)) {
     check_okay = false;
     *bucket_count = static_cast<uint32_t>(*maximum - *minimum + 2);

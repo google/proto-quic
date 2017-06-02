@@ -16,7 +16,7 @@ import xml.etree.ElementTree
 
 from find_unused_resources import GetBaseResourceId
 
-IF_ELSE_TAGS = ('if', 'else')
+IF_ELSE_THEN_TAGS = ('if', 'else', 'then')
 
 
 def Usage(prog_name):
@@ -45,7 +45,7 @@ def GetResourcesForNode(node, parent_file, resource_tag):
   for child in node.getchildren():
     if child.tag == resource_tag:
       resources.append(child.attrib['name'])
-    elif child.tag in IF_ELSE_TAGS:
+    elif child.tag in IF_ELSE_THEN_TAGS:
       resources.extend(GetResourcesForNode(child, parent_file, resource_tag))
     elif child.tag == 'part':
       parent_dir = os.path.dirname(parent_file)
@@ -120,7 +120,7 @@ def GetOutputFileForNode(node):
       if child.attrib['type'] == 'rc_header':
         assert output_file is None
         output_file = child.attrib['filename']
-    elif child.tag in IF_ELSE_TAGS:
+    elif child.tag in IF_ELSE_THEN_TAGS:
       child_output_file = GetOutputFileForNode(child)
       if not child_output_file:
         continue
@@ -169,7 +169,7 @@ def NeedsGritInclude(grit_header, resources, filename):
   # To be more thorough, one would need to run a pre-processor.
   SPECIAL_KEYWORDS = (
       '#include "ui_localizer_table.h"',  # ui_localizer.mm
-      'DEFINE_RESOURCE_ID',  # chrome/browser/android/resource_mapper.cc
+      'DECLARE_RESOURCE_ID',  # chrome/browser/android/resource_mapper.cc
       )
   with open(filename, 'rb') as f:
     grit_header_line = grit_header + '"\n'
@@ -203,8 +203,9 @@ def main(argv):
   tree = xml.etree.ElementTree.parse(grd_file)
   grit_header = GetOutputHeaderFile(tree)
   if not grit_header:
-    print 'Error: %s does not generate any output headers.' % grit_header
+    print 'Error: %s does not generate any output headers.' % grd_file
     return 1
+
   resources = GetResourcesForGrdFile(tree, grd_file)
 
   files_with_unneeded_grit_includes = []

@@ -13,7 +13,7 @@
 #include "base/compiler_specific.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/threading/non_thread_safe.h"
+#include "base/threading/thread_checker.h"
 #include "base/win/object_watcher.h"
 #include "net/base/address_family.h"
 #include "net/base/completion_callback.h"
@@ -30,8 +30,7 @@ class IPEndPoint;
 class NetLog;
 struct NetLogSource;
 
-class NET_EXPORT TCPSocketWin : NON_EXPORTED_BASE(public base::NonThreadSafe),
-                                public base::win::ObjectWatcher::Delegate  {
+class NET_EXPORT TCPSocketWin : public base::win::ObjectWatcher::Delegate {
  public:
   TCPSocketWin(
       std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
@@ -185,6 +184,8 @@ class NET_EXPORT TCPSocketWin : NON_EXPORTED_BASE(public base::NonThreadSafe),
   bool logging_multiple_connect_attempts_;
 
   NetLogWithSource net_log_;
+
+  THREAD_CHECKER(thread_checker_);
 
   DISALLOW_COPY_AND_ASSIGN(TCPSocketWin);
 };

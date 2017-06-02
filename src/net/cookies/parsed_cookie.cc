@@ -505,4 +505,4 @@ bool ParsedCookie::IsSameSiteAttributeValid() const {
   return same_site_index_ == 0 || SameSite() != CookieSameSite::DEFAULT_MODE;
 }
 
-}  // namespace
+}  // namespace net

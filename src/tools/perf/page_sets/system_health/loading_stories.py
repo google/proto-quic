@@ -9,8 +9,6 @@ from page_sets.system_health import system_health_story
 from page_sets.login_helpers import dropbox_login
 from page_sets.login_helpers import google_login
 
-from telemetry import decorators
-
 
 class _LoadingStory(system_health_story.SystemHealthStory):
   """Abstract base class for single-page System Health user stories."""
@@ -333,7 +331,6 @@ class LoadGmailDesktopStory(_LoadGmailBaseStory):
         'document.getElementById("loading").style.display === "none"')
 
 
-@decorators.Disabled('android')  # crbug.com/657433
 class LoadGmailMobileStory(_LoadGmailBaseStory):
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
 
@@ -409,7 +406,6 @@ class LoadSpyChaseStory(_LoadingStory):
         'document.querySelector("#game canvas").style.background !== ""')
 
 
-@decorators.Disabled('mac') # crbug.com/664661
 class LoadMiniclipStory(_LoadingStory):
   NAME = 'load:games:miniclip'
   # Using "https://" causes "404 Not Found" during WPR recording.

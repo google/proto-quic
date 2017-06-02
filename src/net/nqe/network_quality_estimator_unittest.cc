@@ -224,6 +224,7 @@ TEST(NetworkQualityEstimatorTest, TestKbpsRTTUpdates) {
   EXPECT_TRUE(
       estimator.GetRecentDownlinkThroughputKbps(base::TimeTicks(), &kbps));
   base::TimeDelta transport_rtt;
+  EXPECT_FALSE(estimator.GetTransportRTT());
   EXPECT_FALSE(
       estimator.GetRecentTransportRTT(base::TimeTicks(), &transport_rtt));
 
@@ -401,6 +402,7 @@ TEST(NetworkQualityEstimatorTest, Caching) {
   EXPECT_NE(EFFECTIVE_CONNECTION_TYPE_UNKNOWN,
             estimator.GetEffectiveConnectionType());
   EXPECT_FALSE(estimator.GetRecentTransportRTT(base::TimeTicks(), &rtt));
+  EXPECT_FALSE(estimator.GetTransportRTT());
 
   histogram_tester.ExpectBucketCount("NQE.CachedNetworkQualityAvailable", false,
                                      1);
@@ -507,6 +509,7 @@ TEST(NetworkQualityEstimatorTest, CachingDisabled) {
   EXPECT_NE(EFFECTIVE_CONNECTION_TYPE_UNKNOWN,
             estimator.GetEffectiveConnectionType());
   EXPECT_FALSE(estimator.GetRecentTransportRTT(base::TimeTicks(), &rtt));
+  EXPECT_FALSE(estimator.GetTransportRTT());
 
   histogram_tester.ExpectTotalCount("NQE.CachedNetworkQualityAvailable", 0);
 
@@ -691,6 +694,7 @@ TEST(NetworkQualityEstimatorTest, DefaultObservations) {
   EXPECT_EQ(base::TimeDelta::FromMilliseconds(115), rtt);
   EXPECT_TRUE(estimator.GetRecentTransportRTT(base::TimeTicks(), &rtt));
   EXPECT_EQ(base::TimeDelta::FromMilliseconds(55), rtt);
+  EXPECT_EQ(rtt, estimator.GetTransportRTT().value());
   EXPECT_TRUE(
       estimator.GetRecentDownlinkThroughputKbps(base::TimeTicks(), &kbps));
   EXPECT_EQ(1961, kbps);
@@ -710,6 +714,7 @@ TEST(NetworkQualityEstimatorTest, DefaultObservations) {
   EXPECT_EQ(base::TimeDelta::FromMilliseconds(272), rtt);
   EXPECT_TRUE(estimator.GetRecentTransportRTT(base::TimeTicks(), &rtt));
   EXPECT_EQ(base::TimeDelta::FromMilliseconds(209), rtt);
+  EXPECT_EQ(rtt, estimator.GetTransportRTT());
   EXPECT_TRUE(
       estimator.GetRecentDownlinkThroughputKbps(base::TimeTicks(), &kbps));
   EXPECT_EQ(749, kbps);
@@ -785,6 +790,7 @@ TEST(NetworkQualityEstimatorTest, DefaultObservationsOverridden) {
   EXPECT_EQ(base::TimeDelta::FromMilliseconds(1000), rtt);
   EXPECT_TRUE(estimator.GetRecentTransportRTT(base::TimeTicks(), &rtt));
   EXPECT_EQ(base::TimeDelta::FromMilliseconds(500), rtt);
+  EXPECT_EQ(rtt, estimator.GetTransportRTT().value());
   EXPECT_TRUE(
       estimator.GetRecentDownlinkThroughputKbps(base::TimeTicks(), &kbps));
   EXPECT_EQ(100, kbps);
@@ -796,6 +802,7 @@ TEST(NetworkQualityEstimatorTest, DefaultObservationsOverridden) {
   EXPECT_EQ(base::TimeDelta::FromMilliseconds(2000), rtt);
   EXPECT_TRUE(estimator.GetRecentTransportRTT(base::TimeTicks(), &rtt));
   EXPECT_EQ(base::TimeDelta::FromMilliseconds(1000), rtt);
+  EXPECT_EQ(rtt, estimator.GetTransportRTT().value());
   EXPECT_TRUE(
       estimator.GetRecentDownlinkThroughputKbps(base::TimeTicks(), &kbps));
   EXPECT_EQ(200, kbps);
@@ -816,6 +823,7 @@ TEST(NetworkQualityEstimatorTest, DefaultObservationsOverridden) {
   EXPECT_EQ(base::TimeDelta::FromMilliseconds(1726), rtt);
   EXPECT_TRUE(estimator.GetRecentTransportRTT(base::TimeTicks(), &rtt));
   EXPECT_EQ(base::TimeDelta::FromMilliseconds(1531), rtt);
+  EXPECT_EQ(rtt, estimator.GetTransportRTT().value());
   EXPECT_TRUE(
       estimator.GetRecentDownlinkThroughputKbps(base::TimeTicks(), &kbps));
   EXPECT_EQ(300, kbps);
@@ -827,6 +835,7 @@ TEST(NetworkQualityEstimatorTest, DefaultObservationsOverridden) {
   EXPECT_EQ(base::TimeDelta::FromMilliseconds(272), rtt);
   EXPECT_TRUE(estimator.GetRecentTransportRTT(base::TimeTicks(), &rtt));
   EXPECT_EQ(base::TimeDelta::FromMilliseconds(209), rtt);
+  EXPECT_EQ(rtt, estimator.GetTransportRTT().value());
   EXPECT_TRUE(
       estimator.GetRecentDownlinkThroughputKbps(base::TimeTicks(), &kbps));
   EXPECT_EQ(749, kbps);
@@ -1525,6 +1534,7 @@ TEST(NetworkQualityEstimatorTest, TestExternalEstimateProvider) {
   int32_t kbps;
   EXPECT_TRUE(estimator.GetRecentHttpRTT(base::TimeTicks(), &rtt));
   EXPECT_FALSE(estimator.GetRecentTransportRTT(base::TimeTicks(), &rtt));
+  EXPECT_FALSE(estimator.GetTransportRTT());
   EXPECT_TRUE(
       estimator.GetRecentDownlinkThroughputKbps(base::TimeTicks(), &kbps));
 
@@ -2147,18 +2157,19 @@ TEST(NetworkQualityEstimatorTest, MAYBE_TestTCPSocketRTT) {
   TestURLRequestContext context(true);
   context.set_network_quality_estimator(&estimator);
 
-  std::unique_ptr<HttpNetworkSession::Params> params(
-      new HttpNetworkSession::Params);
+  std::unique_ptr<HttpNetworkSession::Context> session_context(
+      new HttpNetworkSession::Context);
   // |estimator| should be notified of TCP RTT observations.
-  params->socket_performance_watcher_factory =
+  session_context->socket_performance_watcher_factory =
       estimator.GetSocketPerformanceWatcherFactory();
-  context.set_http_network_session_params(std::move(params));
+  context.set_http_network_session_context(std::move(session_context));
   context.Init();
 
   EXPECT_EQ(0U, rtt_observer.observations().size());
   base::TimeDelta rtt;
   EXPECT_TRUE(estimator.GetRecentHttpRTT(base::TimeTicks(), &rtt));
   EXPECT_TRUE(estimator.GetRecentTransportRTT(base::TimeTicks(), &rtt));
+  EXPECT_EQ(rtt, estimator.GetTransportRTT().value());
 
   // Send two requests. Verify that the completion of each request generates at
   // least one TCP RTT observation.
@@ -2190,6 +2201,7 @@ TEST(NetworkQualityEstimatorTest, MAYBE_TestTCPSocketRTT) {
   }
   EXPECT_TRUE(estimator.GetRecentHttpRTT(base::TimeTicks(), &rtt));
   EXPECT_TRUE(estimator.GetRecentTransportRTT(base::TimeTicks(), &rtt));
+  EXPECT_EQ(rtt, estimator.GetTransportRTT().value());
 
   estimator.SimulateNetworkChange(
       NetworkChangeNotifier::ConnectionType::CONNECTION_WIFI, "test-1");

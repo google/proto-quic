@@ -445,7 +445,8 @@ std::unique_ptr<HttpResponse> HandleInfiniteRequest(
     const HttpRequest& request) {
   return base::WrapUnique(new InfiniteResponse);
 }
-}
+
+}  // anonymous namespace
 
 // Tests the case the connection is closed while the server is sending a
 // response.  May non-deterministically end up at one of three paths

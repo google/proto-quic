@@ -760,7 +760,7 @@ TEST(HpackInputStreamTest, IncompleteHeaderDecodeNextIdentityString) {
 
 TEST(HpackInputStreamTest, IncompleteHeaderDecodeNextHuffmanString) {
   SpdyString output, input(a2b_hex(kEncodedHuffmanFixture));
-  input.resize(input.size() - 1);  // Remove last byte.
+  input.pop_back();  // Remove last byte.
   HpackInputStream input_stream1(input);
   HpackInputStreamPeer input_stream1_peer(&input_stream1);
   EXPECT_FALSE(input_stream1.DecodeNextHuffmanString(&output));

@@ -172,7 +172,7 @@
   </Type>
   <!-- Layout: LayoutObject -->
   <Type Name="blink::LayoutObject">
-    <DisplayString Condition="bitfields_.m_IsAnonymous">Anonymous</DisplayString>
+    <DisplayString Condition="bitfields_.is_anonymous_">Anonymous</DisplayString>
     <DisplayString>{node_}</DisplayString>
   </Type>
   <Type Name="blink::LayoutObjectChildList">
@@ -212,6 +212,17 @@
   <!-- Layout: LayoutNG -->
   <Type Name="blink::NGBlockNode">
     <DisplayString>{layout_box_}</DisplayString>
+  </Type>
+  <Type Name="blink::NGInlineNode">
+    <DisplayString>{*start_inline_}</DisplayString>
+    <Expand>
+      <Item Name="inline_node_data">*block_->ng_inline_node_data_</Item>
+      <Item Name="text_content">block_->ng_inline_node_data_->text_content_</Item>
+      <Item Name="items">block_->ng_inline_node_data_->items_</Item>
+    </Expand>
+  </Type>
+  <Type Name="blink::NGInlineItem">
+    <DisplayString>{(NGInlineItem::NGInlineItemType)type_} {start_offset_}-{end_offset_} {*layout_object_}</DisplayString>
   </Type>
   <Type Name="blink::NGFragment">
     <DisplayString>{physical_fragment_}</DisplayString>

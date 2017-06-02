@@ -29,6 +29,7 @@ class Origin;
 namespace net {
 
 class ReportingCache;
+class ReportingDelegate;
 struct ReportingPolicy;
 
 // Keeps track of which endpoints are pending (have active delivery attempts to
@@ -67,6 +68,7 @@ class NET_EXPORT ReportingEndpointManager {
  private:
   const ReportingPolicy& policy() { return context_->policy(); }
   base::TickClock* tick_clock() { return context_->tick_clock(); }
+  ReportingDelegate* delegate() { return context_->delegate(); }
   ReportingCache* cache() { return context_->cache(); }
 
   ReportingContext* context_;

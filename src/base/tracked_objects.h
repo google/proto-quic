@@ -853,7 +853,7 @@ class BASE_EXPORT TaskStopwatch {
   // this thread during that period.
   int32_t RunDurationMs() const;
 
-#if BUILDFLAG(ENABLE_MEMORY_TASK_PROFILER)
+#if BUILDFLAG(USE_ALLOCATOR_SHIM)
   const base::debug::ThreadHeapUsageTracker& heap_usage() const {
     return heap_usage_;
   }
@@ -867,7 +867,7 @@ class BASE_EXPORT TaskStopwatch {
   // Time when the stopwatch was started.
   TrackedTime start_time_;
 
-#if BUILDFLAG(ENABLE_MEMORY_TASK_PROFILER)
+#if BUILDFLAG(USE_ALLOCATOR_SHIM)
   base::debug::ThreadHeapUsageTracker heap_usage_;
   bool heap_tracking_enabled_;
 #endif

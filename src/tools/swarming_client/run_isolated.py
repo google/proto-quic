@@ -401,9 +401,9 @@ def delete_and_upload(storage, out_dir, leak_temp_dir):
 
 
 def map_and_run(
-    command, isolated_hash, storage, isolate_cache, outputs, init_named_caches,
-    leak_temp_dir, root_dir, hard_timeout, grace_period, bot_file,
-    install_packages_fn, use_symlinks, constant_run_path):
+    command, isolated_hash, storage, isolate_cache, outputs,
+    install_named_caches, leak_temp_dir, root_dir, hard_timeout, grace_period,
+    bot_file, install_packages_fn, use_symlinks, constant_run_path):
   """Runs a command with optional isolated input/output.
 
   See run_tha_test for argument documentation.
@@ -458,6 +458,8 @@ def map_and_run(
   # make the constant_run_path an exposed flag.
   if constant_run_path and root_dir:
     run_dir = os.path.join(root_dir, ISOLATED_RUN_DIR)
+    if os.path.isdir(run_dir):
+      file_path.rmtree(run_dir)
     os.mkdir(run_dir)
   else:
     run_dir = make_temp_dir(ISOLATED_RUN_DIR, root_dir)
@@ -504,7 +506,7 @@ def map_and_run(
       command = process_command(command, out_dir, bot_file)
       file_path.ensure_command_has_abs_path(command, cwd)
 
-      with init_named_caches(run_dir):
+      with install_named_caches(run_dir):
         sys.stdout.flush()
         start = time.time()
         try:
@@ -583,9 +585,9 @@ def map_and_run(
 
 
 def run_tha_test(
-    command, isolated_hash, storage, isolate_cache, outputs, init_named_caches,
-    leak_temp_dir, result_json, root_dir, hard_timeout, grace_period, bot_file,
-    install_packages_fn, use_symlinks):
+    command, isolated_hash, storage, isolate_cache, outputs,
+    install_named_caches, leak_temp_dir, result_json, root_dir, hard_timeout,
+    grace_period, bot_file, install_packages_fn, use_symlinks):
   """Runs an executable and records execution metadata.
 
   Either command or isolated_hash must be specified.
@@ -612,8 +614,8 @@ def run_tha_test(
     isolate_cache: an isolateserver.LocalCache to keep from retrieving the
                    same objects constantly by caching the objects retrieved.
                    Can be on-disk or in-memory.
-    init_named_caches: a function (run_dir) => context manager that creates
-                      symlinks for named caches in |run_dir|.
+    install_named_caches: a function (run_dir) => context manager that installs
+                            named caches into |run_dir|.
     leak_temp_dir: if true, the temporary directory will be deliberately leaked
                    for later examination.
     result_json: file path to dump result metadata into. If set, the process
@@ -644,7 +646,7 @@ def run_tha_test(
   # run_isolated exit code. Depends on if result_json is used or not.
   result = map_and_run(
       command, isolated_hash, storage, isolate_cache, outputs,
-      init_named_caches, leak_temp_dir, root_dir, hard_timeout, grace_period,
+      install_named_caches, leak_temp_dir, root_dir, hard_timeout, grace_period,
       bot_file, install_packages_fn, use_symlinks, True)
   logging.info('Result:\n%s', tools.format_json(result, dense=True))
 
@@ -1008,16 +1010,22 @@ def main(args):
         options.cipd_client_version, cache_dir=options.cipd_cache)
 
   @contextlib.contextmanager
-  def init_named_caches(run_dir):
+  def install_named_caches(run_dir):
     # WARNING: this function depends on "options" variable defined in the outer
     # function.
+    caches = [
+      (os.path.join(run_dir, unicode(relpath)), name)
+      for name, relpath in options.named_caches
+    ]
     with named_cache_manager.open():
-      named_cache_manager.create_symlinks(run_dir, options.named_caches)
+      for path, name in caches:
+        named_cache_manager.install(path, name)
     try:
       yield
     finally:
-      if not options.leak_temp_dir:
-        named_cache_manager.delete_symlinks(run_dir, options.named_caches)
+      with named_cache_manager.open():
+        for path, name in caches:
+          named_cache_manager.uninstall(path, name)
 
   try:
     if options.isolate_server:
@@ -1032,7 +1040,7 @@ def main(args):
             storage,
             isolate_cache,
             options.output,
-            init_named_caches,
+            install_named_caches,
             options.leak_temp_dir,
             options.json, options.root_dir,
             options.hard_timeout,
@@ -1046,7 +1054,7 @@ def main(args):
         None,
         isolate_cache,
         options.output,
-        init_named_caches,
+        install_named_caches,
         options.leak_temp_dir,
         options.json,
         options.root_dir,

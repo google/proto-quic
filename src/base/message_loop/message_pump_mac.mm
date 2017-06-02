@@ -47,6 +47,11 @@ const CFStringRef kAllModes[] = {
 // Mask that determines which modes in |kAllModes| to use.
 enum { kCommonModeMask = 0x1, kAllModesMask = ~0 };
 
+// Modes to use for MessagePumpNSApplication. Currently just common and
+// exclusive modes. TODO(tapted): Use kAllModesMask once http://crbug.com/640466
+// blockers are fixed.
+enum { kNSApplicationModeMask = 0x3 };
+
 void NoOp(void* info) {
 }
 
@@ -722,7 +727,7 @@ void MessagePumpUIApplication::Attach(Delegate* delegate) {
 #else
 
 MessagePumpNSApplication::MessagePumpNSApplication()
-    : MessagePumpCFRunLoopBase(kAllModesMask),
+    : MessagePumpCFRunLoopBase(kNSApplicationModeMask),
       keep_running_(true),
       running_own_loop_(false) {}
 

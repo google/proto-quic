@@ -9,7 +9,6 @@
 // included files.
 
 #include <assert.h>
-#include <unistd.h>
 #include <fstream>
 #include <iostream>
 #include <memory>

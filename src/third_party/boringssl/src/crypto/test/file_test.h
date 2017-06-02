@@ -18,12 +18,13 @@
 #include <openssl/base.h>
 
 #include <stdint.h>
-#include <stdio.h>
 
 OPENSSL_MSVC_PRAGMA(warning(push))
 OPENSSL_MSVC_PRAGMA(warning(disable : 4702))
 
+#include <functional>
 #include <map>
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -83,20 +84,41 @@ OPENSSL_MSVC_PRAGMA(warning(pop))
 // consumed. When a test completes, if any attributes or insturctions haven't
 // been processed, the framework reports an error.
 
+class FileTest;
+typedef bool (*FileTestFunc)(FileTest *t, void *arg);
 
 class FileTest {
  public:
-  explicit FileTest(const char *path);
-  ~FileTest();
-
-  // is_open returns true if the file was successfully opened.
-  bool is_open() const { return file_ != nullptr; }
-
   enum ReadResult {
     kReadSuccess,
     kReadEOF,
     kReadError,
   };
+
+  class LineReader {
+   public:
+    virtual ~LineReader() {}
+    virtual ReadResult ReadLine(char *out, size_t len) = 0;
+  };
+
+  struct Options {
+    // path is the path to the input file.
+    const char *path = nullptr;
+    // callback is called for each test. It should get the parameters from this
+    // object and signal any errors by returning false.
+    FileTestFunc callback = nullptr;
+    // arg is an opaque pointer that is passed to |callback|.
+    void *arg = nullptr;
+    // silent suppressed the "PASS" string that is otherwise printed after
+    // successful runs.
+    bool silent = false;
+    // comment_callback is called after each comment in the input is parsed.
+    std::function<void(const std::string&)> comment_callback;
+  };
+
+  explicit FileTest(std::unique_ptr<LineReader> reader,
+                    std::function<void(const std::string &)> comment_callback);
+  ~FileTest();
 
   // ReadNext reads the next test from the file. It returns |kReadSuccess| if
   // successfully reading a test and |kReadEOF| at the end of the file. On
@@ -162,15 +184,13 @@ class FileTest {
   // instructions.
   void InjectInstruction(const std::string &key, const std::string &value);
 
-  void SetIgnoreUnusedAttributes(bool ignore);
-
  private:
   void ClearTest();
   void ClearInstructions();
   void OnKeyUsed(const std::string &key);
   void OnInstructionUsed(const std::string &key);
 
-  FILE *file_ = nullptr;
+  std::unique_ptr<LineReader> reader_;
   // line_ is the number of lines read.
   unsigned line_ = 0;
 
@@ -195,13 +215,13 @@ class FileTest {
 
   bool is_at_new_instruction_block_ = false;
 
-  bool ignore_unused_attributes_ = false;
+  // comment_callback_, if set, is a callback function that is called with the
+  // contents of each comment as they are parsed.
+  std::function<void(const std::string&)> comment_callback_;
 
   FileTest(const FileTest &) = delete;
   FileTest &operator=(const FileTest &) = delete;
 };
-
-typedef bool (*FileTestFunc)(FileTest *t, void *arg);
 
 // FileTestMain runs a file-based test out of |path| and returns an exit code
 // suitable to return out of |main|. |run_test| should return true on pass and
@@ -216,8 +236,11 @@ typedef bool (*FileTestFunc)(FileTest *t, void *arg);
 // subsequent tests.
 int FileTestMain(FileTestFunc run_test, void *arg, const char *path);
 
-// FileTestMainSilent behaves like FileTestMain but does not print a final
-// FAIL/PASS message to stdout.
-int FileTestMainSilent(FileTestFunc run_test, void *arg, const char *path);
+// FileTestMain accepts a larger number of options via a struct.
+int FileTestMain(const FileTest::Options &opts);
+
+// FileTestGTest behaves like FileTestMain, but for GTest. |path| must be the
+// name of a test file embedded in the test binary.
+void FileTestGTest(const char *path, std::function<void(FileTest *)> run_test);
 
 #endif /* OPENSSL_HEADER_CRYPTO_TEST_FILE_TEST_H */

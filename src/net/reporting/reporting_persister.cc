@@ -4,6 +4,7 @@
 
 #include "net/reporting/reporting_persister.h"
 
+#include <utility>
 #include <vector>
 
 #include "base/memory/ptr_util.h"

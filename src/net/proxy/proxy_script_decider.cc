@@ -39,7 +39,7 @@ bool LooksLikePacScript(const base::string16& script) {
              base::string16::npos;
 }
 
-}
+}  // anonymous namespace
 
 // This is the hard-coded location used by the DNS portion of web proxy
 // auto-discovery.

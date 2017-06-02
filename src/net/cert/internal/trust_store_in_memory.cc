@@ -28,6 +28,11 @@ void TrustStoreInMemory::AddDistrustedCertificateForTest(
   AddCertificate(std::move(cert), CertificateTrust::ForDistrusted());
 }
 
+void TrustStoreInMemory::AddCertificateWithUnspecifiedTrust(
+    scoped_refptr<ParsedCertificate> cert) {
+  AddCertificate(std::move(cert), CertificateTrust::ForUnspecified());
+}
+
 void TrustStoreInMemory::SyncGetIssuersOf(const ParsedCertificate* cert,
                                           ParsedCertificateList* issuers) {
   auto range = entries_.equal_range(cert->normalized_issuer().AsStringPiece());

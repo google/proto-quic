@@ -3520,6 +3520,7 @@ TEST_F(SSLClientSocketTest, CTIsRequiredByExpectCT) {
   EXPECT_EQ(ssl_info.cert.get(), reporter.validated_certificate_chain());
   EXPECT_EQ(0u, reporter.signed_certificate_timestamps().size());
 
+  transport_security_state_->ClearReportCachesForTesting();
   EXPECT_CALL(*ct_policy_enforcer_,
               DoesConformToCertPolicy(server_cert.get(), _, _))
       .WillRepeatedly(

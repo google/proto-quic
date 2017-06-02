@@ -671,12 +671,8 @@ int ReadFile(const FilePath& filename, char* data, int max_size) {
 
 int WriteFile(const FilePath& filename, const char* data, int size) {
   ThreadRestrictions::AssertIOAllowed();
-  win::ScopedHandle file(CreateFile(filename.value().c_str(),
-                                    GENERIC_WRITE,
-                                    0,
-                                    NULL,
-                                    CREATE_ALWAYS,
-                                    0,
+  win::ScopedHandle file(CreateFile(filename.value().c_str(), GENERIC_WRITE, 0,
+                                    NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL,
                                     NULL));
   if (!file.IsValid()) {
     DPLOG(WARNING) << "CreateFile failed for path "

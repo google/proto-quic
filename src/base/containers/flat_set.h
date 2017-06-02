@@ -48,7 +48,7 @@ namespace base {
 //   flat_set(const flat_set&);
 //   flat_set(flat_set&&);
 //   flat_set(std::vector<Key>, FlatContainerDupes);  // Re-use storage.
-//   flat_set(std::initializer_list<value_type> ilist,
+//   flat_set(std::initializer_list<value_type> ilist, FlatContainerDupes,
 //            const Compare& comp = Compare());
 //
 // Assignment functions:

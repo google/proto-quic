@@ -77,8 +77,13 @@ class TestURLRequestContext : public URLRequestContext {
   }
 
   void set_http_network_session_params(
-      std::unique_ptr<HttpNetworkSession::Params> params) {
-    http_network_session_params_ = std::move(params);
+      std::unique_ptr<HttpNetworkSession::Params> session_params) {
+    http_network_session_params_ = std::move(session_params);
+  }
+
+  void set_http_network_session_context(
+      std::unique_ptr<HttpNetworkSession::Context> session_context) {
+    http_network_session_context_ = std::move(session_context);
   }
 
   void SetSdchManager(std::unique_ptr<SdchManager> sdch_manager) {
@@ -93,10 +98,11 @@ class TestURLRequestContext : public URLRequestContext {
  private:
   bool initialized_ = false;
 
-  // Optional parameters to override default values.  Note that values that
-  // point to other objects the TestURLRequestContext creates will be
-  // overwritten.
+  // Optional parameters to override default values.  Note that values in the
+  // HttpNetworkSession::Context that point to other objects the
+  // TestURLRequestContext creates will be overwritten.
   std::unique_ptr<HttpNetworkSession::Params> http_network_session_params_;
+  std::unique_ptr<HttpNetworkSession::Context> http_network_session_context_;
 
   // Not owned:
   ClientSocketFactory* client_socket_factory_ = nullptr;
@@ -356,7 +362,8 @@ class TestNetworkDelegate : public NetworkDelegateImpl {
                       const std::string& cookie_line,
                       CookieOptions* options) override;
   bool OnCanAccessFile(const URLRequest& request,
-                       const base::FilePath& path) const override;
+                       const base::FilePath& original_path,
+                       const base::FilePath& absolute_path) const override;
   bool OnAreExperimentalCookieFeaturesEnabled() const override;
   bool OnCancelURLRequestWithPolicyViolatingReferrerHeader(
       const URLRequest& request,

@@ -60,7 +60,8 @@ class Video(IntegrationTest):
     }
     with TestDriver() as t:
       t.AddChromeArg('--enable-spdy-proxy-auth')
-      t.LoadURL('http://check.googlezip.net/cacheable/video/buck_bunny_tiny.html')
+      t.LoadURL(
+          'http://check.googlezip.net/cacheable/video/buck_bunny_tiny.html')
       # Check request was proxied and we got a compressed video back.
       for response in t.GetHTTPResponses():
         self.assertHasChromeProxyViaHeader(response)
@@ -83,18 +84,92 @@ class Video(IntegrationTest):
           "metric doesn't match expected! Metric=%s Expected=%f Actual=%f"
           % (metric, expected[metric], actual), places=None, delta=0.001)
 
+  # Check that the compressed video can be seeked. Use a slow network to ensure
+  # the entire video isn't downloaded before we have a chance to seek.
+  #
+  # This test cannot run on android because of control_network_connection=True.
+  # That option is used to reduce flakes that might happen on fast networks,
+  # where the video is completely downloaded before a seeking request can be
+  # sent. The test can be manually simulated by the following steps: set network
+  # emulation in DevTools on Android (via device inspector), load a video, pause
+  # the video, then seek and verify the seek continues to play the video.
+  @Slow
+  @NotAndroid
+  def testVideoSeeking(self):
+    with TestDriver(control_network_connection=True) as t:
+      t.SetNetworkConnection("3G")
+      t.AddChromeArg('--enable-spdy-proxy-auth')
+      t.LoadURL(
+          'http://check.googlezip.net/cacheable/video/'+
+          'buck_bunny_640x360_24fps.html')
+      # Play, pause, seek to 1s before the end, play again.
+      t.ExecuteJavascript(
+        '''
+        window.testDone = false;
+        const v = document.getElementsByTagName("video")[0];
+        let first = true;
+        v.onplaying = function() {
+          if (first) {
+            v.pause();
+            first = false;
+          } else {
+            window.testDone = true;
+          }
+        };
+        v.onpause = function() {
+          if (v.currentTime < v.duration) {
+            v.currentTime = v.duration-1;
+            v.play();
+          }
+        };
+        v.play();
+        ''')
+      t.WaitForJavascriptExpression('window.testDone', 10)
+      # Check request was proxied and we got a compressed video back.
+      # We expect to make multiple requests for the video: ensure they
+      # all have the same ETag.
+      video_etag = None
+      num_partial_requests = 0
+      for response in t.GetHTTPResponses():
+        self.assertHasChromeProxyViaHeader(response)
+        rh = response.response_headers
+        if ('content-type' in rh and 'video' in rh['content-type']):
+          self.assertTrue('etag' in rh),
+          self.assertEqual('video/webm', rh['content-type'])
+          if video_etag == None:
+            video_etag = rh['etag']
+          else:
+            self.assertEqual(video_etag, rh['etag'])
+          if ('range' in response.request_headers and
+              response.request_headers['range'] != 'bytes=0-'):
+            num_partial_requests += 1
+      # Also make sure that we had at least one partial Range request.
+      self.assertGreaterEqual(num_partial_requests, 1)
+
   # Check the frames of a compressed video.
   @Slow
   def testVideoFrames(self):
     self.instrumentedVideoTest('http://check.googlezip.net/cacheable/video/buck_bunny_640x360_24fps_video.html')
 
   # Check the audio volume of a compressed video.
-  @NotAndroid
+  #
+  # This test makes some assumptions about the way audio is decoded and
+  # processed in JavaScript on different platforms. Despite getting the same
+  # video bytes from the proxy across all platforms, different data is generated
+  # out of the window.AudioContext object. As of May 2017, there were only two
+  # known datasets, the second occuring on all tested Android devices. If this
+  # test fails on a new or different platform, examine whether the expected data
+  # is drastically different. See crbug.com/723031 for more information.
   @Slow
   def testVideoAudio(self):
-    self.instrumentedVideoTest('http://check.googlezip.net/cacheable/video/buck_bunny_640x360_24fps_audio.html')
+    alt_data = None
+    is_android = ParseFlags().android
+    if is_android:
+      alt_data = 'data/buck_bunny_640x360_24fps.mp4.expected_volume_alt.json'
+    self.instrumentedVideoTest('http://check.googlezip.net/cacheable/video/buck_bunny_640x360_24fps_audio.html',
+      alt_data=alt_data, needs_click=is_android)
 
-  def instrumentedVideoTest(self, url):
+  def instrumentedVideoTest(self, url, alt_data=None, needs_click=False):
     """Run an instrumented video test. The given page is reloaded up to some
     maximum number of times until a compressed video is seen by ChromeDriver by
     inspecting the network logs. Once that happens, test.ready is set and that
@@ -121,7 +196,11 @@ class Video(IntegrationTest):
             time.sleep(1)
       if attempts >= max_attempts:
         self.fail('Could not get a compressed video after %d tries' % attempts)
+      if alt_data != None:
+        t.ExecuteJavascriptStatement('test.expectedVolumeSrc = "%s"' % alt_data)
       t.ExecuteJavascriptStatement('test.ready = true')
+      if needs_click:
+        t.FindElement(By.ID, 'video').click()
       waitTimeQuery = 'test.waitTime'
       if ParseFlags().android:
         waitTimeQuery = 'test.androidWaitTime'
@@ -129,9 +208,9 @@ class Video(IntegrationTest):
       t.WaitForJavascriptExpression('test.metrics.complete', wait_time)
       metrics = t.ExecuteJavascriptStatement('test.metrics')
       if not metrics['complete']:
-        raise Exception('Test not complete after %d seconds.' % wait_time)
+        self.fail('Test not complete after %d seconds.' % wait_time)
       if metrics['failed']:
-        raise Exception('Test failed!')
+        self.fail('Test failed! ' + metrics['detailedStatus'])
 
   # Make sure YouTube autoplays.
   def testYoutube(self):

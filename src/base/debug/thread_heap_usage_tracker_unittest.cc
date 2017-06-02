@@ -553,7 +553,7 @@ TEST_F(ThreadHeapUsageTrackerTest, AllShimFunctionsAreProvided) {
   MockFree(alloc);
 }
 
-#if BUILDFLAG(USE_EXPERIMENTAL_ALLOCATOR_SHIM)
+#if BUILDFLAG(USE_ALLOCATOR_SHIM)
 class ThreadHeapUsageShimTest : public testing::Test {
 #if defined(OS_MACOSX)
   void SetUp() override { allocator::InitializeAllocatorShim(); }
@@ -601,7 +601,7 @@ TEST_F(ThreadHeapUsageShimTest, HooksIntoMallocWhenShimAvailable) {
 
   ASSERT_FALSE(ThreadHeapUsageTracker::IsHeapTrackingEnabled());
 }
-#endif  // BUILDFLAG(USE_EXPERIMENTAL_ALLOCATOR_SHIM)
+#endif  // BUILDFLAG(USE_ALLOCATOR_SHIM)
 
 }  // namespace debug
 }  // namespace base

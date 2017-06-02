@@ -146,10 +146,6 @@
     "type": "raw",
     "args": [],
   },
-  "aura_builder": {
-    "label": "//:aura_builder",
-    "type": "additional_compile_target",
-  },
   "aura_unittests": {
     "label": "//ui/aura:aura_unittests",
     "type": "windowed_test_launcher",
@@ -435,10 +431,6 @@
     "label": "//ui/display:display_unittests",
     "type": "console_test_launcher",
   },
-  "display_service_unittests": {
-    "label": "//services/ui/display:display_service_unittests",
-    "type": "console_test_launcher",
-  },
   "dump_syms" : {
     "label": "//breakpad:dump_syms",
     "type": "additional_compile_target",
@@ -531,10 +523,6 @@
   },
   "headless_unittests": {
     "label": "//headless:headless_unittests",
-    "type": "console_test_launcher",
-  },
-  "input_device_unittests": {
-    "label": "//services/ui/input_devices:input_device_unittests",
     "type": "console_test_launcher",
   },
   "installer_util_unittests": {
@@ -750,24 +738,12 @@
       "--service-overrides=../../chrome/app/mash/mash_service_overrides.json",
     ],
   },
-  "mus_public_unittests": {
-    "label": "//services/ui/public/cpp/tests:mus_public_unittests",
-    "type": "windowed_test_launcher",
-  },
   "message_center_unittests": {
     "label": "//ui/message_center:message_center_unittests",
     "type": "windowed_test_launcher",
   },
   "mash_unittests": {
     "label": "//mash:mash_unittests",
-    "type": "windowed_test_launcher",
-  },
-  "mus_gpu_unittests": {
-    "label": "//services/ui/gpu:mus_gpu_unittests",
-    "type": "console_test_launcher",
-  },
-  "mus_demo_unittests": {
-    "label": "//services/ui/demo:mus_demo_unittests",
     "type": "windowed_test_launcher",
   },
   "nacl_helper_nonsfi_unittests": {
@@ -779,10 +755,6 @@
     "label": "//components/nacl/loader:nacl_loader_unittests",
     "type": "raw",
     "args": [],
-  },
-  "navigation_unittests": {
-    "label": "//services/navigation:navigation_unittests",
-    "type": "windowed_test_launcher",
   },
   "net_junit_tests": {
     "label": "//net/android:net_junit_tests",
@@ -857,8 +829,8 @@
     "label": "//services:service_junit_tests",
     "type": "junit_test",
   },
-  "service_unittests": {
-    "label": "//services:service_unittests",
+  "services_unittests": {
+    "label": "//services:services_unittests",
     "type": "windowed_test_launcher",
   },
   "setup_unittests": {
@@ -1013,10 +985,6 @@
       "--enable-gpu"
     ],
   },
-  "mus_ime_unittests": {
-    "label": "//services/ui/ime:mus_ime_unittests",
-    "type": "windowed_test_launcher",
-  },
   "native_theme_unittests": {
     "label": "//ui/native_theme:native_theme_unittests",
     "type": "windowed_test_launcher",
@@ -1035,20 +1003,11 @@
   },
   "ui_arc_unittests": {
     "label": "//ui/arc:ui_arc_unittests",
-    "type": "raw",
-    "args": [],
+    "type": "windowed_test_launcher",
   },
   "ui_junit_tests": {
     "label": "//ui/android:ui_junit_tests",
     "type": "junit_test",
-  },
-  "ui_service_unittests": {
-    "label": "//services/ui/ws:ui_service_unittests",
-    "type": "windowed_test_launcher",
-  },
-  "ui_struct_traits_unittests": {
-    "label": "//services/ui/public/interfaces:ui_struct_traits_unittests",
-    "type": "console_test_launcher",
   },
   "ui_touch_selection_unittests": {
     "label": "//ui/touch_selection:ui_touch_selection_unittests",

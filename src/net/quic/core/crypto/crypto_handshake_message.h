@@ -73,13 +73,8 @@ class QUIC_EXPORT_PRIVATE CryptoHandshakeMessage {
 
   // GetTaglist finds an element with the given tag containing zero or more
   // tags. If such a tag doesn't exist, it returns an error code. Otherwise it
-  // sets |out_tags| and |out_len| to point to the array of tags and returns
-  // QUIC_NO_ERROR.  The array points into the CryptoHandshakeMessage and is
-  // valid only for as long as the CryptoHandshakeMessage exists and is not
-  // modified.
-  QuicErrorCode GetTaglist(QuicTag tag,
-                           const QuicTag** out_tags,
-                           size_t* out_len) const;
+  // populates |out_tags| with the tags and returns QUIC_NO_ERROR.
+  QuicErrorCode GetTaglist(QuicTag tag, QuicTagVector* out_tags) const;
 
   bool GetStringPiece(QuicTag tag, QuicStringPiece* out) const;
   bool HasStringPiece(QuicTag tag) const;

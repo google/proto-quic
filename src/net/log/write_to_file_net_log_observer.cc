@@ -57,7 +57,7 @@ void WriteToFileNetLogObserver::StartObserving(
 
   // Add events for in progress requests if a context is given.
   if (url_request_context) {
-    DCHECK(url_request_context->CalledOnValidThread());
+    url_request_context->AssertCalledOnValidThread();
 
     std::set<URLRequestContext*> contexts;
     contexts.insert(url_request_context);
@@ -76,7 +76,7 @@ void WriteToFileNetLogObserver::StopObserving(
 
   // Write state of the URLRequestContext when logging stopped.
   if (url_request_context) {
-    DCHECK(url_request_context->CalledOnValidThread());
+    url_request_context->AssertCalledOnValidThread();
 
     std::string json;
     base::JSONWriter::Write(

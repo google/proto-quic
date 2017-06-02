@@ -254,11 +254,6 @@ int TransportConnectJob::DoLoop(int result) {
   return rv;
 }
 int TransportConnectJob::DoResolveHost() {
-  // TODO(ricea): Remove ScopedTracker below once crbug.com/436634 is fixed.
-  tracked_objects::ScopedTracker tracking_profile(
-      FROM_HERE_WITH_EXPLICIT_FUNCTION(
-          "436634 TransportConnectJob::DoResolveHost"));
-
   next_state_ = STATE_RESOLVE_HOST_COMPLETE;
   connect_timing_.dns_start = base::TimeTicks::Now();
 

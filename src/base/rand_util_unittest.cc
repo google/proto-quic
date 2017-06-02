@@ -134,6 +134,17 @@ TEST(RandUtilTest, RandUint64ProducesBothValuesOfAllBits) {
   FAIL() << "Didn't achieve all bit values in maximum number of tries.";
 }
 
+TEST(RandUtilTest, RandBytesLonger) {
+  // Fuchsia can only retrieve 256 bytes of entropy at a time, so make sure we
+  // handle longer requests than that.
+  std::string random_string0 = base::RandBytesAsString(255);
+  EXPECT_EQ(255u, random_string0.size());
+  std::string random_string1 = base::RandBytesAsString(1023);
+  EXPECT_EQ(1023u, random_string1.size());
+  std::string random_string2 = base::RandBytesAsString(4097);
+  EXPECT_EQ(4097u, random_string2.size());
+}
+
 // Benchmark test for RandBytes().  Disabled since it's intentionally slow and
 // does not test anything that isn't already tested by the existing RandBytes()
 // tests.

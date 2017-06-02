@@ -39,7 +39,7 @@
 #include "net/socket/transport_client_socket_pool.h"
 #include "net/ssl/ssl_config_service_defaults.h"
 #include "net/test/embedded_test_server/embedded_test_server.h"
-#include "net/test/embedded_test_server/embedded_test_server_connection_listener.h"
+#include "net/test/embedded_test_server/simple_connection_listener.h"
 #include "net/test/gtest_util.h"
 #include "net/url_request/url_request_context_storage.h"
 #include "net/url_request/url_request_file_job.h"
@@ -74,36 +74,6 @@ struct FetchResult {
   base::string16 text;
 };
 
-// Waits for the specified number of connection attempts to be seen.
-class WaitForConnectionsListener
-    : public test_server::EmbeddedTestServerConnectionListener {
- public:
-  explicit WaitForConnectionsListener(int expected_num_connections)
-      : expected_num_connections_(expected_num_connections),
-        task_runner_(base::SequencedTaskRunnerHandle::Get()) {}
-
-  void AcceptedSocket(const StreamSocket& socket) override {
-    ++seen_connections_;
-    EXPECT_LE(seen_connections_, expected_num_connections_);
-    if (expected_num_connections_ == seen_connections_)
-      task_runner_->PostTask(FROM_HERE, run_loop_.QuitClosure());
-  }
-
-  void ReadFromSocket(const StreamSocket& socket, int rv) override {}
-
-  void Wait() { run_loop_.Run(); }
-
- private:
-  int seen_connections_ = 0;
-  int expected_num_connections_;
-
-  scoped_refptr<base::SequencedTaskRunner> task_runner_;
-
-  base::RunLoop run_loop_;
-
-  DISALLOW_COPY_AND_ASSIGN(WaitForConnectionsListener);
-};
-
 // A non-mock URL request which can access http:// and file:// urls, in the case
 // the tests were built with file support.
 class RequestContext : public URLRequestContext {
@@ -123,17 +93,17 @@ class RequestContext : public URLRequestContext {
     storage_.set_http_server_properties(
         std::unique_ptr<HttpServerProperties>(new HttpServerPropertiesImpl()));
 
-    HttpNetworkSession::Params params;
-    params.host_resolver = host_resolver();
-    params.cert_verifier = cert_verifier();
-    params.transport_security_state = transport_security_state();
-    params.cert_transparency_verifier = cert_transparency_verifier();
-    params.ct_policy_enforcer = ct_policy_enforcer();
-    params.proxy_service = proxy_service();
-    params.ssl_config_service = ssl_config_service();
-    params.http_server_properties = http_server_properties();
-    storage_.set_http_network_session(
-        base::MakeUnique<HttpNetworkSession>(params));
+    HttpNetworkSession::Context session_context;
+    session_context.host_resolver = host_resolver();
+    session_context.cert_verifier = cert_verifier();
+    session_context.transport_security_state = transport_security_state();
+    session_context.cert_transparency_verifier = cert_transparency_verifier();
+    session_context.ct_policy_enforcer = ct_policy_enforcer();
+    session_context.proxy_service = proxy_service();
+    session_context.ssl_config_service = ssl_config_service();
+    session_context.http_server_properties = http_server_properties();
+    storage_.set_http_network_session(base::MakeUnique<HttpNetworkSession>(
+        HttpNetworkSession::Params(), session_context));
     storage_.set_http_transaction_factory(base::MakeUnique<HttpCache>(
         storage_.http_network_session(), HttpCache::DefaultBackend::InMemory(0),
         false));
@@ -233,7 +203,8 @@ class BasicNetworkDelegate : public NetworkDelegateImpl {
   }
 
   bool OnCanAccessFile(const URLRequest& request,
-                       const base::FilePath& path) const override {
+                       const base::FilePath& original_path,
+                       const base::FilePath& absolute_path) const override {
     return true;
   }
 
@@ -543,7 +514,9 @@ TEST_F(ProxyScriptFetcherImplTest, Priority) {
   int num_requests = 10 + ClientSocketPoolManager::max_sockets_per_pool(
                               HttpNetworkSession::NORMAL_SOCKET_POOL);
 
-  WaitForConnectionsListener connection_listener(num_requests);
+  net::test_server::SimpleConnectionListener connection_listener(
+      num_requests, net::test_server::SimpleConnectionListener::
+                        FAIL_ON_ADDITIONAL_CONNECTIONS);
   test_server_.SetConnectionListener(&connection_listener);
   ASSERT_TRUE(test_server_.Start());
 
@@ -562,7 +535,7 @@ TEST_F(ProxyScriptFetcherImplTest, Priority) {
     pac_fetchers.push_back(std::move(pac_fetcher));
   }
 
-  connection_listener.Wait();
+  connection_listener.WaitForConnections();
   // None of the callbacks should have been invoked - all jobs should still be
   // hung.
   EXPECT_FALSE(callback.have_result());

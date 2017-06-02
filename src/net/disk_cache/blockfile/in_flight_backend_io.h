@@ -219,9 +219,9 @@ class InFlightBackendIO : public InFlightIO {
     return background_thread_;
   }
 
-  // Returns true if the current thread is the background thread.
-  bool BackgroundIsCurrentThread() {
-    return background_thread_->RunsTasksOnCurrentThread();
+  // Returns true if the current sequence is the background thread.
+  bool BackgroundIsCurrentSequence() {
+    return background_thread_->RunsTasksInCurrentSequence();
   }
 
   base::WeakPtr<InFlightBackendIO> GetWeakPtr();

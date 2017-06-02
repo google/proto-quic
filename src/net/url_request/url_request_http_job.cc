@@ -124,19 +124,21 @@ void LogChannelIDAndCookieStores(const GURL& url,
     PERSISTENT_UNKNOWN = 12,
     EPHEMERALITY_MAX
   } ephemerality;
-  const net::HttpNetworkSession::Params* params =
-      context->GetNetworkSessionParams();
+  const net::HttpNetworkSession::Context* session_context =
+      context->GetNetworkSessionContext();
   net::CookieStore* cookie_store = context->cookie_store();
-  if (params == nullptr || params->channel_id_service == nullptr) {
+  if (session_context == nullptr ||
+      session_context->channel_id_service == nullptr) {
     ephemerality = NO_CHANNEL_ID_STORE;
   } else if (cookie_store == nullptr) {
     ephemerality = NO_COOKIE_STORE;
-  } else if (params->channel_id_service->GetChannelIDStore()->IsEphemeral()) {
+  } else if (session_context->channel_id_service->GetChannelIDStore()
+                 ->IsEphemeral()) {
     if (cookie_store->IsEphemeral()) {
       if (cookie_store->GetChannelIDServiceID() == -1) {
         ephemerality = EPHEMERAL_UNKNOWN;
       } else if (cookie_store->GetChannelIDServiceID() ==
-                 params->channel_id_service->GetUniqueID()) {
+                 session_context->channel_id_service->GetUniqueID()) {
         ephemerality = EPHEMERAL_MATCH;
       } else {
         NOTREACHED();
@@ -152,7 +154,7 @@ void LogChannelIDAndCookieStores(const GURL& url,
   } else if (cookie_store->GetChannelIDServiceID() == -1) {
     ephemerality = PERSISTENT_UNKNOWN;
   } else if (cookie_store->GetChannelIDServiceID() ==
-             params->channel_id_service->GetUniqueID()) {
+             session_context->channel_id_service->GetUniqueID()) {
     ephemerality = PERSISTENT_MATCH;
   } else {
     NOTREACHED();

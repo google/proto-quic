@@ -1249,9 +1249,6 @@ EVENT_TYPE(BIDIRECTIONAL_STREAM_ALIVE)
 // }
 EVENT_TYPE(BIDIRECTIONAL_STREAM_READ_DATA)
 
-// Marks the SendData call of a net::BidirectionalStream.
-EVENT_TYPE(BIDIRECTIONAL_STREAM_SEND_DATA)
-
 // Marks the SendvData call of a net::BidirectionalStream.
 // The following parameters are attached:
 // {

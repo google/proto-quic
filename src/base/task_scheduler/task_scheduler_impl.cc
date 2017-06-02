@@ -6,8 +6,8 @@
 
 #include <utility>
 
-#include "base/memory/ptr_util.h"
 #include "base/task_scheduler/delayed_task_manager.h"
+#include "base/task_scheduler/environment_config.h"
 #include "base/task_scheduler/scheduler_worker_pool_params.h"
 #include "base/task_scheduler/sequence.h"
 #include "base/task_scheduler/sequence_sort_key.h"
@@ -17,46 +17,13 @@
 namespace base {
 namespace internal {
 
-namespace {
-
-enum EnvironmentType {
-  BACKGROUND = 0,
-  BACKGROUND_BLOCKING,
-  FOREGROUND,
-  FOREGROUND_BLOCKING,
-  ENVIRONMENT_COUNT  // Always last.
-};
-
-// Order must match the EnvironmentType enum.
-constexpr struct {
-  // The threads and histograms of this environment will be labeled with
-  // the task scheduler name concatenated to this.
-  const char* name_suffix;
-
-  // Preferred priority for threads in this environment; the actual thread
-  // priority depends on shutdown state and platform capabilities.
-  ThreadPriority priority_hint;
-} kEnvironmentParams[] = {
-    {"Background", base::ThreadPriority::BACKGROUND},
-    {"BackgroundBlocking", base::ThreadPriority::BACKGROUND},
-    {"Foreground", base::ThreadPriority::NORMAL},
-    {"ForegroundBlocking", base::ThreadPriority::NORMAL},
-};
-
-size_t GetEnvironmentIndexForTraits(const TaskTraits& traits) {
-  const bool is_background =
-      traits.priority() == base::TaskPriority::BACKGROUND;
-  if (traits.may_block() || traits.with_base_sync_primitives())
-    return is_background ? BACKGROUND_BLOCKING : FOREGROUND_BLOCKING;
-  return is_background ? BACKGROUND : FOREGROUND;
-}
-
-}  // namespace
-
-TaskSchedulerImpl::TaskSchedulerImpl(StringPiece name)
+TaskSchedulerImpl::TaskSchedulerImpl(
+    StringPiece name,
+    std::unique_ptr<TaskTrackerImpl> task_tracker)
     : name_(name),
       service_thread_("TaskSchedulerServiceThread"),
-      single_thread_task_runner_manager_(&task_tracker_,
+      task_tracker_(std::move(task_tracker)),
+      single_thread_task_runner_manager_(task_tracker_.get(),
                                          &delayed_task_manager_) {
   static_assert(arraysize(worker_pools_) == ENVIRONMENT_COUNT,
                 "The size of |worker_pools_| must match ENVIRONMENT_COUNT.");
@@ -68,7 +35,7 @@ TaskSchedulerImpl::TaskSchedulerImpl(StringPiece name)
        ++environment_type) {
     worker_pools_[environment_type] = MakeUnique<SchedulerWorkerPoolImpl>(
         name_ + kEnvironmentParams[environment_type].name_suffix,
-        kEnvironmentParams[environment_type].priority_hint, &task_tracker_,
+        kEnvironmentParams[environment_type].priority_hint, task_tracker_.get(),
         &delayed_task_manager_);
   }
 }
@@ -96,11 +63,11 @@ void TaskSchedulerImpl::Start(const TaskScheduler::InitParams& init_params) {
 #if defined(OS_POSIX) && !defined(OS_NACL_SFI)
   // Needs to happen after starting the service thread to get its
   // message_loop().
-  task_tracker_.set_watch_file_descriptor_message_loop(
+  task_tracker_->set_watch_file_descriptor_message_loop(
       static_cast<MessageLoopForIO*>(service_thread_.message_loop()));
 
 #if DCHECK_IS_ON()
-  task_tracker_.set_service_thread_handle(service_thread_.GetThreadHandle());
+  task_tracker_->set_service_thread_handle(service_thread_.GetThreadHandle());
 #endif  // DCHECK_IS_ON()
 #endif  // defined(OS_POSIX) && !defined(OS_NACL_SFI)
 
@@ -144,12 +111,8 @@ scoped_refptr<SingleThreadTaskRunner>
 TaskSchedulerImpl::CreateSingleThreadTaskRunnerWithTraits(
     const TaskTraits& traits,
     SingleThreadTaskRunnerThreadMode thread_mode) {
-  const auto& environment_params =
-      kEnvironmentParams[GetEnvironmentIndexForTraits(traits)];
   return single_thread_task_runner_manager_
-      .CreateSingleThreadTaskRunnerWithTraits(
-          name_ + environment_params.name_suffix,
-          environment_params.priority_hint, traits);
+      .CreateSingleThreadTaskRunnerWithTraits(name_, traits, thread_mode);
 }
 
 #if defined(OS_WIN)
@@ -157,10 +120,8 @@ scoped_refptr<SingleThreadTaskRunner>
 TaskSchedulerImpl::CreateCOMSTATaskRunnerWithTraits(
     const TaskTraits& traits,
     SingleThreadTaskRunnerThreadMode thread_mode) {
-  const auto& environment_params =
-      kEnvironmentParams[GetEnvironmentIndexForTraits(traits)];
   return single_thread_task_runner_manager_.CreateCOMSTATaskRunnerWithTraits(
-      environment_params.name_suffix, environment_params.priority_hint, traits);
+      name_, traits, thread_mode);
 }
 #endif  // defined(OS_WIN)
 
@@ -179,11 +140,11 @@ int TaskSchedulerImpl::GetMaxConcurrentTasksWithTraitsDeprecated(
 
 void TaskSchedulerImpl::Shutdown() {
   // TODO(fdoray): Increase the priority of BACKGROUND tasks blocking shutdown.
-  task_tracker_.Shutdown();
+  task_tracker_->Shutdown();
 }
 
 void TaskSchedulerImpl::FlushForTesting() {
-  task_tracker_.Flush();
+  task_tracker_->Flush();
 }
 
 void TaskSchedulerImpl::JoinForTesting() {

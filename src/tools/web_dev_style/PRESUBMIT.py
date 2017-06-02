@@ -27,6 +27,7 @@ def _CommonChecks(input_api, output_api):
 
   if utils_changed or any(f for f in files if f.startswith('js_checker')):
     tests.append(path.join(cwd, 'js_checker_test.py'))
+    tests.append(path.join(cwd, 'js_checker_eslint_test.py'))
 
   if utils_changed or any(f for f in files if f.startswith('resource_checker')):
     tests.append(path.join(cwd, 'resource_checker_test.py'))

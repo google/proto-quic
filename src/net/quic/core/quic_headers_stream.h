@@ -6,6 +6,7 @@
 #define NET_QUIC_CORE_QUIC_HEADERS_STREAM_H_
 
 #include <cstddef>
+#include <deque>
 #include <memory>
 
 #include "base/macros.h"
@@ -37,13 +38,52 @@ class QUIC_EXPORT_PRIVATE QuicHeadersStream : public QuicStream {
   // Release underlying buffer if allowed.
   void MaybeReleaseSequencerBuffer();
 
+  void OnStreamFrameAcked(const QuicStreamFrame& frame,
+                          QuicTime::Delta ack_delay_time) override;
+
+  void OnStreamFrameRetransmitted(const QuicStreamFrame& frame) override;
+
  private:
   friend class test::QuicHeadersStreamPeer;
+
+  // Override to store mapping from offset, length to ack_listener. This
+  // ack_listener is notified once data within [offset, offset + length] is
+  // acked or retransmitted.
+  QuicConsumedData WritevDataInner(
+      QuicIOVector iov,
+      QuicStreamOffset offset,
+      bool fin,
+      QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener)
+      override;
+
+  // CompressedHeaderInfo includes simple information of a header, including
+  // offset in headers stream, unacked length and ack listener of this header.
+  struct QUIC_EXPORT_PRIVATE CompressedHeaderInfo {
+    CompressedHeaderInfo(
+        QuicStreamOffset headers_stream_offset,
+        QuicStreamOffset full_length,
+        QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
+    CompressedHeaderInfo(const CompressedHeaderInfo& other);
+    ~CompressedHeaderInfo();
+
+    // Offset the header was sent on the headers stream.
+    QuicStreamOffset headers_stream_offset;
+    // The full length of the header.
+    QuicByteCount full_length;
+    // The remaining bytes to be acked.
+    QuicByteCount unacked_length;
+    // Ack listener of this header, and it is notified once any of the bytes has
+    // been acked or retransmitted.
+    QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener;
+  };
 
   // Returns true if the session is still connected.
   bool IsConnected();
 
   QuicSpdySession* spdy_session_;
+
+  // Headers that have not been fully acked.
+  std::deque<CompressedHeaderInfo> unacked_headers_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicHeadersStream);
 };

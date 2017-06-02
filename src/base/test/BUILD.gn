@@ -196,6 +196,9 @@ static_library("test_support") {
   }
 
   if (is_android) {
+    set_sources_assignment_filter([])
+    sources += [ "test_file_util_linux.cc" ]
+    set_sources_assignment_filter(sources_assignment_filter)
     deps += [
       ":base_unittests_jni_headers",
       ":test_support_jni_headers",

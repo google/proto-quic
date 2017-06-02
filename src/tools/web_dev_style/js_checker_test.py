@@ -203,49 +203,6 @@ class JsCheckerTest(SuperMoxTestBase):
     for line in lines:
       self.ShouldFailExtraDotInGenericCheck(line)
 
-  def ShouldFailGetElementByIdCheck(self, line):
-    """Checks that the 'getElementById' checker flags |line| as a style
-       error.
-    """
-    error = self.checker.GetElementByIdCheck(1, line)
-    self.assertNotEqual('', error,
-        'Should be flagged as style error: ' + line)
-    self.assertEqual(test_util.GetHighlight(line, error),
-                     'document.getElementById')
-
-  def ShouldPassGetElementByIdCheck(self, line):
-    """Checks that the 'getElementById' checker doesn't flag |line| as a style
-       error.
-    """
-    self.assertEqual('', self.checker.GetElementByIdCheck(1, line),
-        'Should not be flagged as style error: ' + line)
-
-  def testGetElementByIdFails(self):
-    lines = [
-        "document.getElementById('foo');",
-        "  document.getElementById('foo');",
-        "var x = document.getElementById('foo');",
-        "if (document.getElementById('foo').hidden) {",
-    ]
-    for line in lines:
-      self.ShouldFailGetElementByIdCheck(line)
-
-  def testGetElementByIdPasses(self):
-    lines = [
-        "elem.ownerDocument.getElementById('foo');",
-        "  elem.ownerDocument.getElementById('foo');",
-        "var x = elem.ownerDocument.getElementById('foo');",
-        "if (elem.ownerDocument.getElementById('foo').hidden) {",
-        "doc.getElementById('foo');",
-        "  doc.getElementById('foo');",
-        "cr.doc.getElementById('foo');",
-        "  cr.doc.getElementById('foo');",
-        "var x = doc.getElementById('foo');",
-        "if (doc.getElementById('foo').hidden) {",
-    ]
-    for line in lines:
-      self.ShouldPassGetElementByIdCheck(line)
-
   def ShouldFailInheritDocCheck(self, line):
     """Checks that the '@inheritDoc' checker flags |line| as a style error."""
     error = self.checker.InheritDocCheck(1, line)
@@ -309,50 +266,6 @@ class JsCheckerTest(SuperMoxTestBase):
     ]
     for line in lines:
       self.ShouldPassPolymerLocalIdCheck(line)
-
-  def ShouldFailWrapperTypeCheck(self, line):
-    """Checks that the use of wrapper types (i.e. new Number(), @type {Number})
-       is a style error.
-    """
-    error = self.checker.WrapperTypeCheck(1, line)
-    self.assertNotEqual('', error,
-        msg='Should be flagged as style error: ' + line)
-    highlight = test_util.GetHighlight(line, error)
-    self.assertTrue(highlight in ('Boolean', 'Number', 'String'))
-
-  def ShouldPassWrapperTypeCheck(self, line):
-    """Checks that the wrapper type checker doesn't flag |line| as a style
-       error.
-    """
-    self.assertEqual('', self.checker.WrapperTypeCheck(1, line),
-        msg='Should not be flagged as style error: ' + line)
-
-  def testWrapperTypePasses(self):
-    lines = [
-        "/** @param {!ComplexType} */",
-        "  * @type {Object}",
-        "   * @param {Function=} opt_callback",
-        "    * @param {} num Number of things to add to {blah}.",
-        "   *  @return {!print_preview.PageNumberSet}",
-        " /* @returns {Number} */",  # Should be /** @return {Number} */
-        "* @param {!LocalStrings}"
-        " Your type of Boolean is false!",
-        "  Then I parameterized a Number from my friend!",
-        "   A String of Pearls",
-        "    types.params.aBoolean.typeString(someNumber)",
-    ]
-    for line in lines:
-      self.ShouldPassWrapperTypeCheck(line)
-
-  def testWrapperTypeFails(self):
-    lines = [
-        "  /**@type {String}*/(string)",
-        "   * @param{Number=} opt_blah A number",
-        "/** @private @return {!Boolean} */",
-        " * @param {number|String}",
-    ]
-    for line in lines:
-      self.ShouldFailWrapperTypeCheck(line)
 
   def ShouldFailVarNameCheck(self, line):
     """Checks that var unix_hacker, $dollar are style errors."""

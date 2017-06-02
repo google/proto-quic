@@ -18,12 +18,17 @@
 #include <limits.h>
 #include <string.h>
 
+#if defined(BORINGSSL_FIPS)
+#include <unistd.h>
+#endif
+
 #include <openssl/chacha.h>
 #include <openssl/cpu.h>
 #include <openssl/mem.h>
 
 #include "internal.h"
 #include "../../internal.h"
+#include "../delocate.h"
 
 
 /* It's assumed that the operating system always has an unfailing source of
@@ -55,22 +60,66 @@ struct rand_thread_state {
   /* calls is the number of generate calls made on |drbg| since it was last
    * (re)seeded. This is bound by |kReseedInterval|. */
   unsigned calls;
-  /* last_block contains the previous block from |CRYPTO_sysrand|. */
-  uint8_t last_block[CRNGT_BLOCK_SIZE];
   /* last_block_valid is non-zero iff |last_block| contains data from
    * |CRYPTO_sysrand|. */
   int last_block_valid;
+
+#if defined(BORINGSSL_FIPS)
+  /* last_block contains the previous block from |CRYPTO_sysrand|. */
+  uint8_t last_block[CRNGT_BLOCK_SIZE];
+  /* next and prev form a NULL-terminated, double-linked list of all states in
+   * a process. */
+  struct rand_thread_state *next, *prev;
+#endif
 };
+
+#if defined(BORINGSSL_FIPS)
+/* thread_states_list is the head of a linked-list of all |rand_thread_state|
+ * objects in the process, one per thread. This is needed because FIPS requires
+ * that they be zeroed on process exit, but thread-local destructors aren't
+ * called when the whole process is exiting. */
+DEFINE_BSS_GET(struct rand_thread_state *, thread_states_list);
+DEFINE_STATIC_MUTEX(thread_states_list_lock);
+
+static void rand_thread_state_clear_all(void) __attribute__((destructor));
+static void rand_thread_state_clear_all(void) {
+  CRYPTO_STATIC_MUTEX_lock_write(thread_states_list_lock_bss_get());
+  for (struct rand_thread_state *cur = *thread_states_list_bss_get();
+       cur != NULL; cur = cur->next) {
+    CTR_DRBG_clear(&cur->drbg);
+  }
+  /* |thread_states_list_lock is deliberately left locked so that any threads
+   * that are still running will hang if they try to call |RAND_bytes|. */
+}
+#endif
 
 /* rand_thread_state_free frees a |rand_thread_state|. This is called when a
  * thread exits. */
 static void rand_thread_state_free(void *state_in) {
+  struct rand_thread_state *state = state_in;
+
   if (state_in == NULL) {
     return;
   }
 
-  struct rand_thread_state *state = state_in;
+#if defined(BORINGSSL_FIPS)
+  CRYPTO_STATIC_MUTEX_lock_write(thread_states_list_lock_bss_get());
+
+  if (state->prev != NULL) {
+    state->prev->next = state->next;
+  } else {
+    *thread_states_list_bss_get() = state->next;
+  }
+
+  if (state->next != NULL) {
+    state->next->prev = state->prev;
+  }
+
+  CRYPTO_STATIC_MUTEX_unlock_write(thread_states_list_lock_bss_get());
+
   CTR_DRBG_clear(&state->drbg);
+#endif
+
   OPENSSL_free(state);
 }
 
@@ -85,7 +134,7 @@ static int have_rdrand(void) {
   return (OPENSSL_ia32cap_get()[1] & (1u << 30)) != 0;
 }
 
-static int hwrand(uint8_t *buf, size_t len) {
+static int hwrand(uint8_t *buf, const size_t len) {
   if (!have_rdrand()) {
     return 0;
   }
@@ -94,17 +143,23 @@ static int hwrand(uint8_t *buf, size_t len) {
   if (!CRYPTO_rdrand_multiple8_buf(buf, len_multiple8)) {
     return 0;
   }
-  len -= len_multiple8;
+  const size_t remainder = len - len_multiple8;
 
-  if (len != 0) {
-    assert(len < 8);
+  if (remainder != 0) {
+    assert(remainder < 8);
 
     uint8_t rand_buf[8];
     if (!CRYPTO_rdrand(rand_buf)) {
       return 0;
     }
-    OPENSSL_memcpy(buf + len_multiple8, rand_buf, len);
+    OPENSSL_memcpy(buf + len_multiple8, rand_buf, remainder);
   }
+
+#if defined(BORINGSSL_FIPS_BREAK_CRNG)
+  // This breaks the "continuous random number generator test" defined in FIPS
+  // 140-2, section 4.9.2, and implemented in rand_get_seed().
+  OPENSSL_memset(buf, 0, len);
+#endif
 
   return 1;
 }
@@ -122,30 +177,35 @@ static int hwrand(uint8_t *buf, size_t len) {
 static void rand_get_seed(struct rand_thread_state *state,
                           uint8_t seed[CTR_DRBG_ENTROPY_LEN]) {
   if (!state->last_block_valid) {
-    CRYPTO_sysrand(state->last_block, sizeof(state->last_block));
+    if (!hwrand(state->last_block, sizeof(state->last_block))) {
+      CRYPTO_sysrand(state->last_block, sizeof(state->last_block));
+    }
     state->last_block_valid = 1;
   }
 
-  /* We overread from /dev/urandom by a factor of 10 and XOR to whiten. */
+  /* We overread from /dev/urandom or RDRAND by a factor of 10 and XOR to
+   * whiten. */
 #define FIPS_OVERREAD 10
   uint8_t entropy[CTR_DRBG_ENTROPY_LEN * FIPS_OVERREAD];
-  CRYPTO_sysrand(entropy, sizeof(entropy));
+
+  if (!hwrand(entropy, sizeof(entropy))) {
+    CRYPTO_sysrand(entropy, sizeof(entropy));
+  }
 
   /* See FIPS 140-2, section 4.9.2. This is the “continuous random number
    * generator test” which causes the program to randomly abort. Hopefully the
    * rate of failure is small enough not to be a problem in practice. */
   if (CRYPTO_memcmp(state->last_block, entropy, CRNGT_BLOCK_SIZE) == 0) {
-    for (;;) {
-      exit(1);
-      abort();
-    }
+    printf("CRNGT failed.\n");
+    BORINGSSL_FIPS_abort();
   }
 
   for (size_t i = CRNGT_BLOCK_SIZE; i < sizeof(entropy);
        i += CRNGT_BLOCK_SIZE) {
     if (CRYPTO_memcmp(entropy + i - CRNGT_BLOCK_SIZE, entropy + i,
                       CRNGT_BLOCK_SIZE) == 0) {
-      abort();
+      printf("CRNGT failed.\n");
+      BORINGSSL_FIPS_abort();
     }
   }
   OPENSSL_memcpy(state->last_block,
@@ -165,7 +225,8 @@ static void rand_get_seed(struct rand_thread_state *state,
 
 static void rand_get_seed(struct rand_thread_state *state,
                           uint8_t seed[CTR_DRBG_ENTROPY_LEN]) {
-  /* If not in FIPS mode, we don't overread from the system entropy source. */
+  /* If not in FIPS mode, we don't overread from the system entropy source and
+   * we don't depend only on the hardware RDRAND. */
   CRYPTO_sysrand(seed, CTR_DRBG_ENTROPY_LEN);
 }
 
@@ -198,7 +259,25 @@ void RAND_bytes_with_additional_data(uint8_t *out, size_t out_len,
       abort();
     }
     state->calls = 0;
+
+#if defined(BORINGSSL_FIPS)
+    if (state != &stack_state) {
+      CRYPTO_STATIC_MUTEX_lock_write(thread_states_list_lock_bss_get());
+      struct rand_thread_state **states_list = thread_states_list_bss_get();
+      state->next = *states_list;
+      if (state->next != NULL) {
+        state->next->prev = state;
+      }
+      state->prev = NULL;
+      *states_list = state;
+      CRYPTO_STATIC_MUTEX_unlock_write(thread_states_list_lock_bss_get());
+    }
+#endif
   }
+
+#if defined(BORINGSSL_FIPS)
+  CRYPTO_STATIC_MUTEX_lock_read(thread_states_list_lock_bss_get());
+#endif
 
   if (state->calls >= kReseedInterval) {
     uint8_t seed[CTR_DRBG_ENTROPY_LEN];
@@ -251,6 +330,10 @@ void RAND_bytes_with_additional_data(uint8_t *out, size_t out_len,
   if (state == &stack_state) {
     CTR_DRBG_clear(&state->drbg);
   }
+
+#if defined(BORINGSSL_FIPS)
+  CRYPTO_STATIC_MUTEX_unlock_read(thread_states_list_lock_bss_get());
+#endif
 
   return;
 }

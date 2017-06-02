@@ -2407,7 +2407,14 @@ TEST_F(HostResolverImplDnsTest, ManuallyDisableDnsClientWithPendingRequests) {
   EXPECT_TRUE(requests_[2]->HasOneAddress("192.168.0.3", 80));
 }
 
-TEST_F(HostResolverImplDnsTest, NoIPv6OnWifi) {
+// TODO(crbug.com/728808): This test causes HttpNetworkTransactionTests to crash
+// on iOS.
+#if defined(OS_IOS)
+#define MAYBE_NoIPv6OnWifi DISABLED_NoIPv6OnWifi
+#else
+#define MAYBE_NoIPv6OnWifi NoIPv6OnWifi
+#endif
+TEST_F(HostResolverImplDnsTest, MAYBE_NoIPv6OnWifi) {
   test::ScopedMockNetworkChangeNotifier notifier;
   CreateSerialResolver();  // To guarantee order of resolutions.
   resolver_->SetNoIPv6OnWifi(true);

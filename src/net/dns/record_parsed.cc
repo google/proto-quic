@@ -88,4 +88,5 @@ bool RecordParsed::IsEqual(const RecordParsed* other, bool is_mdns) const {
       type_ == other->type_ &&
       rdata_->IsEqual(other->rdata_.get());
 }
-}
+
+}  // namespace net

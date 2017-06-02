@@ -36,6 +36,7 @@ posix_avoid_mmap = is_android && current_cpu != "x86"
 
 use_v8_in_net = !is_ios && !is_proto_quic
 enable_built_in_dns = !is_ios && !is_proto_quic
+enable_net_mojo = !is_ios && !is_android && !is_proto_quic
 
 # True if certificates are represented with DER byte buffers. This can be true
 # in addition to use_openssl_certs or use_nss_certs, in that case byte certs
@@ -361,6 +362,7 @@ component("net") {
     "//net/base/registry_controlled_domains",
     "//net/data/ssl/certificate_transparency:ct_log_list",
     "//net/data/ssl/wosign:wosign_domains",
+    "//net/http:generate_transport_security_state",
     "//third_party/protobuf:protobuf_lite",
     "//url:url_features",
   ]
@@ -791,6 +793,8 @@ component("net") {
       "http/bidirectional_stream_impl.h",
       "http/bidirectional_stream_request_info.cc",
       "http/bidirectional_stream_request_info.h",
+      "http/broken_alternative_services.cc",
+      "http/broken_alternative_services.h",
       "http/des.cc",
       "http/des.h",
       "http/failing_http_transaction_factory.cc",
@@ -1423,6 +1427,8 @@ component("net") {
       "reporting/reporting_client.h",
       "reporting/reporting_context.cc",
       "reporting/reporting_context.h",
+      "reporting/reporting_delegate.cc",
+      "reporting/reporting_delegate.h",
       "reporting/reporting_delivery_agent.cc",
       "reporting/reporting_delivery_agent.h",
       "reporting/reporting_endpoint_manager.cc",
@@ -2492,8 +2498,12 @@ static_library("test_support") {
     "test/embedded_test_server/http_response.h",
     "test/embedded_test_server/request_handler_util.cc",
     "test/embedded_test_server/request_handler_util.h",
+    "test/embedded_test_server/simple_connection_listener.cc",
+    "test/embedded_test_server/simple_connection_listener.h",
     "test/event_waiter.h",
     "test/gtest_util.h",
+    "test/keychain_test_util_mac.cc",
+    "test/keychain_test_util_mac.h",
     "test/net_test_suite.cc",
     "test/net_test_suite.h",
     "test/python_utils.cc",
@@ -2634,7 +2644,7 @@ if (use_v8_in_net) {
   }
 }
 
-if (!is_ios && !is_android && !is_proto_quic) {
+if (enable_net_mojo) {
   source_set("net_browser_services") {
     sources = [
       "dns/mojo_host_resolver_impl.cc",
@@ -2675,6 +2685,33 @@ if (!is_ios && !is_android && !is_proto_quic) {
       "//mojo/public/cpp/bindings",
       "//net/interfaces",
     ]
+  }
+}
+
+if (use_v8_in_net) {
+  source_set("net_context_builder_with_v8") {
+    sources = [
+      "url_request/url_request_context_builder_v8.cc",
+      "url_request/url_request_context_builder_v8.h",
+    ]
+
+    defines = []
+
+    deps = [
+      ":net",
+      ":net_with_v8",
+      "//base",
+    ]
+
+    if (enable_net_mojo) {
+      deps += [
+        ":net_browser_services",
+        "//mojo/public/cpp/bindings",
+        "//net/interfaces",
+      ]
+
+      defines += [ "ENABLE_NET_MOJO" ]
+    }
   }
 }
 
@@ -2879,6 +2916,7 @@ if (is_linux || is_mac) {
       ":net",
       ":test_support",
       "//base",
+      "//build/config:exe_and_shlib_deps",
     ]
   }
 
@@ -2893,6 +2931,7 @@ if (is_linux || is_mac) {
       ":net",
       ":test_support",
       "//base",
+      "//build/config:exe_and_shlib_deps",
       "//url",
     ]
   }
@@ -3073,7 +3112,9 @@ source_set("traffic_annotation") {
   sources = [
     "traffic_annotation/network_traffic_annotation.h",
   ]
-  deps = []
+  deps = [
+    "//base",
+  ]
 }
 
 if (!is_ios) {
@@ -4292,6 +4333,7 @@ test("net_unittests") {
     "cert/internal/certificate_policies_unittest.cc",
     "cert/internal/extended_key_usage_unittest.cc",
     "cert/internal/name_constraints_unittest.cc",
+    "cert/internal/nist_pkits_unittest.cc",
     "cert/internal/nist_pkits_unittest.h",
     "cert/internal/parse_certificate_unittest.cc",
     "cert/internal/parse_name_unittest.cc",
@@ -4396,6 +4438,7 @@ test("net_unittests") {
     "ftp/ftp_network_transaction_unittest.cc",
     "ftp/ftp_util_unittest.cc",
     "http/bidirectional_stream_unittest.cc",
+    "http/broken_alternative_services_unittest.cc",
     "http/des_unittest.cc",
     "http/http_auth_cache_unittest.cc",
     "http/http_auth_challenge_tokenizer_unittest.cc",
@@ -4558,6 +4601,8 @@ test("net_unittests") {
     "proxy/proxy_server_unittest.cc",
     "proxy/proxy_service_mojo_unittest.cc",
     "proxy/proxy_service_unittest.cc",
+    "proxy/test_mojo_proxy_resolver_factory.cc",
+    "proxy/test_mojo_proxy_resolver_factory.h",
     "quic/chromium/bidirectional_stream_quic_impl_unittest.cc",
     "quic/chromium/crypto/proof_test_chromium.cc",
     "quic/chromium/crypto/proof_verifier_chromium_test.cc",
@@ -4679,6 +4724,8 @@ test("net_unittests") {
     "quic/platform/impl/quic_chromium_clock_test.cc",
     "quic/platform/impl/quic_test_impl.cc",
     "quic/platform/impl/quic_test_impl.h",
+    "quic/quartc/quartc_session_test.cc",
+    "quic/quartc/quartc_stream_test.cc",
     "quic/test_tools/crypto_test_utils.cc",
     "quic/test_tools/crypto_test_utils.h",
     "quic/test_tools/crypto_test_utils_test.cc",
@@ -4894,6 +4941,7 @@ test("net_unittests") {
     "url_request/url_fetcher_impl_unittest.cc",
     "url_request/url_fetcher_response_writer_unittest.cc",
     "url_request/url_request_context_builder_unittest.cc",
+    "url_request/url_request_context_builder_v8_unittest.cc",
     "url_request/url_request_context_unittest.cc",
     "url_request/url_request_data_job_unittest.cc",
     "url_request/url_request_file_dir_job_unittest.cc",
@@ -5153,21 +5201,27 @@ test("net_unittests") {
   }
 
   if (use_v8_in_net) {
-    deps += [ ":net_with_v8" ]
+    deps += [
+      ":net_context_builder_with_v8",
+      ":net_with_v8",
+    ]
   } else {
     sources -= [
       "proxy/proxy_resolver_v8_tracing_unittest.cc",
       "proxy/proxy_resolver_v8_tracing_wrapper_unittest.cc",
       "proxy/proxy_resolver_v8_unittest.cc",
+      "url_request/url_request_context_builder_v8_unittest.cc",
     ]
   }
 
-  if (use_v8_in_net && !is_android) {
+  if (enable_net_mojo) {
     deps += [
       ":net_browser_services",
       ":net_utility_services",
       "//mojo/edk/system",
     ]
+
+    defines += [ "ENABLE_NET_MOJO" ]
   } else {
     sources -= [
       "dns/host_resolver_mojo_unittest.cc",
@@ -5177,6 +5231,8 @@ test("net_unittests") {
       "proxy/mojo_proxy_resolver_v8_tracing_bindings_unittest.cc",
       "proxy/proxy_resolver_factory_mojo_unittest.cc",
       "proxy/proxy_service_mojo_unittest.cc",
+      "proxy/test_mojo_proxy_resolver_factory.cc",
+      "proxy/test_mojo_proxy_resolver_factory.h",
     ]
   }
 

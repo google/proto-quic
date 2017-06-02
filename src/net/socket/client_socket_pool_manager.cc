@@ -156,16 +156,11 @@ int InitSocketPoolHelper(ClientSocketPoolManager::SocketGroupType group_type,
         proxy_tcp_params = NULL;
       }
 
-      http_proxy_params =
-          new HttpProxySocketParams(proxy_tcp_params,
-                                    ssl_params,
-                                    user_agent,
-                                    origin_host_port,
-                                    session->http_auth_cache(),
-                                    session->http_auth_handler_factory(),
-                                    session->spdy_session_pool(),
-                                    force_tunnel || using_ssl,
-                                    session->params().proxy_delegate);
+      http_proxy_params = new HttpProxySocketParams(
+          proxy_tcp_params, ssl_params, user_agent, origin_host_port,
+          session->http_auth_cache(), session->http_auth_handler_factory(),
+          session->spdy_session_pool(), force_tunnel || using_ssl,
+          session->context().proxy_delegate);
     } else {
       DCHECK(proxy_info.is_socks());
       char socks_version;

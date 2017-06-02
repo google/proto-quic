@@ -15,7 +15,7 @@ SpdyNoOpVisitor::SpdyNoOpVisitor() {
 }
 SpdyNoOpVisitor::~SpdyNoOpVisitor() {}
 
-net::SpdyHeadersHandlerInterface* SpdyNoOpVisitor::OnHeaderFrameStart(
+SpdyHeadersHandlerInterface* SpdyNoOpVisitor::OnHeaderFrameStart(
     SpdyStreamId stream_id) {
   return this;
 }

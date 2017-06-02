@@ -36,6 +36,7 @@ from pyasn1.codec.der import decoder
 from pyasn1.type import univ
 
 from oauth2client import client
+from oauth2client import locked_file
 from oauth2client import multistore_file
 
 from third_party import requests
@@ -206,6 +207,9 @@ def add_oauth_options(parser):
            'also be set with SWARMING_AUTH_SERVICE_ACCOUNT_JSON environment '
            'variable. [default: %default]')
   parser.add_option_group(parser.oauth_group)
+  # Use this occasion to monkey patch oauth2client's LockedFile to do retries by
+  # default.
+  _monkey_patch_oauth2client_locked_file()
 
 
 def extract_oauth_config_from_options(options):
@@ -438,6 +442,17 @@ def _fetch_service_config(urlhost):
       if config:
         _service_config_cache[urlhost] = config
     return _service_config_cache.get(urlhost)
+
+
+def _monkey_patch_oauth2client_locked_file():
+  """Enables the use of locked file by multiple processes by retrying for a few
+  seconds.
+
+  When running multiple processes that reads the same file, even if it is open
+  for a few ms, there's a risk of one getting the lock of another instance, and
+  this raises, particularly on Windows. Workaround by enforcing retry.
+  """
+  locked_file.LockedFile.open_and_lock.im_func.func_defaults = (60, 0.05)
 
 
 # Service account related code.

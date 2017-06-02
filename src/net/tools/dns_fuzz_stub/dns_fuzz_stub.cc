@@ -203,7 +203,7 @@ bool ReadAndRunTestCase(const char* filename) {
   return true;
 }
 
-}
+}  // anonymous namespace
 
 int main(int argc, char** argv) {
   int ret = 0;

@@ -125,8 +125,7 @@ base::DictionaryValue* GetPersistentStoreDictionaryMap(
 void InitializePrefStore(SdchOwner::PrefStorage* store) {
   std::unique_ptr<base::DictionaryValue> empty_store(new base::DictionaryValue);
   empty_store->SetInteger(kVersionKey, kVersion);
-  empty_store->Set(kDictionariesKey,
-                   base::WrapUnique(new base::DictionaryValue));
+  empty_store->Set(kDictionariesKey, base::MakeUnique<base::DictionaryValue>());
   store->SetValue(std::move(empty_store));
 }
 

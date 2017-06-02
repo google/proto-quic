@@ -18,6 +18,9 @@ class ArrayOutputBuffer : public ZeroCopyOutputBuffer {
       : current_(buffer), begin_(buffer), capacity_(size) {}
   ~ArrayOutputBuffer() override{};
 
+  ArrayOutputBuffer(const ArrayOutputBuffer&) = delete;
+  ArrayOutputBuffer& operator=(const ArrayOutputBuffer&) = delete;
+
   void Next(char** data, int* size) override;
   void AdvanceWritePtr(int64_t count) override;
   uint64_t BytesFree() const override;
@@ -31,8 +34,6 @@ class ArrayOutputBuffer : public ZeroCopyOutputBuffer {
     current_ = begin_;
   }
 
-  ArrayOutputBuffer(const ArrayOutputBuffer&) = delete;
-  ArrayOutputBuffer& operator=(const ArrayOutputBuffer&) = delete;
 
  private:
   char* current_ = nullptr;

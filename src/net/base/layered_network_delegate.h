@@ -78,7 +78,8 @@ class NET_EXPORT LayeredNetworkDelegate : public NetworkDelegate {
                       const std::string& cookie_line,
                       CookieOptions* options) final;
   bool OnCanAccessFile(const URLRequest& request,
-                       const base::FilePath& path) const final;
+                       const base::FilePath& original_path,
+                       const base::FilePath& absolute_path) const final;
   bool OnCanEnablePrivacyMode(const GURL& url,
                               const GURL& first_party_for_cookies) const final;
   bool OnAreExperimentalCookieFeaturesEnabled() const final;
@@ -86,6 +87,16 @@ class NET_EXPORT LayeredNetworkDelegate : public NetworkDelegate {
       const URLRequest& request,
       const GURL& target_url,
       const GURL& referrer_url) const final;
+
+  bool OnCanQueueReportingReport(const url::Origin& origin) const final;
+
+  bool OnCanSendReportingReport(const url::Origin& origin) const final;
+
+  bool OnCanSetReportingClient(const url::Origin& origin,
+                               const GURL& endpoint) const final;
+
+  bool OnCanUseReportingClient(const url::Origin& origin,
+                               const GURL& endpoint) const final;
 
  protected:
   virtual void OnBeforeURLRequestInternal(URLRequest* request,
@@ -143,8 +154,10 @@ class NET_EXPORT LayeredNetworkDelegate : public NetworkDelegate {
                                       const AuthCallback& callback,
                                       AuthCredentials* credentials);
 
-  virtual void OnCanAccessFileInternal(const URLRequest& request,
-                                       const base::FilePath& path) const;
+  virtual void OnCanAccessFileInternal(
+      const URLRequest& request,
+      const base::FilePath& original_path,
+      const base::FilePath& absolute_path) const;
 
   virtual void OnCanEnablePrivacyModeInternal(
       const GURL& url,
@@ -156,6 +169,18 @@ class NET_EXPORT LayeredNetworkDelegate : public NetworkDelegate {
       const URLRequest& request,
       const GURL& target_url,
       const GURL& referrer_url) const;
+
+  virtual void OnCanQueueReportingReportInternal(
+      const url::Origin& origin) const;
+
+  virtual void OnCanSendReportingReportInternal(
+      const url::Origin& origin) const;
+
+  virtual void OnCanSetReportingClientInternal(const url::Origin& origin,
+                                               const GURL& endpoint) const;
+
+  virtual void OnCanUseReportingClientInternal(const url::Origin& origin,
+                                               const GURL& endpoint) const;
 
  private:
   std::unique_ptr<NetworkDelegate> nested_network_delegate_;

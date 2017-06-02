@@ -370,6 +370,7 @@ class DocumentType(object):
     types = self.root_type.GetNodeTypes()
     return pretty_print_xml.XmlStyle(
         attribute_order={t: types[t].GetAttributes() for t in types},
+        required_attributes=[],
         tags_that_have_extra_newline={t: types[t].extra_newlines for t in types
                                       if types[t].extra_newlines},
         tags_that_dont_indent=[t for t in types if not types[t].indent],

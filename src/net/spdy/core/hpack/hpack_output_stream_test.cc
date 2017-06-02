@@ -20,7 +20,7 @@ TEST(HpackOutputStreamTest, AppendBits) {
 
   output_stream.AppendBits(0x1, 1);
   expected_str.append(1, 0x00);
-  *expected_str.rbegin() |= (0x1 << 7);
+  expected_str.back() |= (0x1 << 7);
 
   output_stream.AppendBits(0x0, 1);
 
@@ -33,7 +33,7 @@ TEST(HpackOutputStreamTest, AppendBits) {
   output_stream.AppendBits(0x7, 3);
   *expected_str.rbegin() |= (0x7 >> 1);
   expected_str.append(1, 0x00);
-  *expected_str.rbegin() |= (0x7 << 7);
+  expected_str.back() |= (0x7 << 7);
 
   output_stream.AppendBits(0x0, 7);
 

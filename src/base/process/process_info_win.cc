@@ -6,11 +6,10 @@
 
 #include <windows.h>
 
-#include <memory>
-
+#include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/time/time.h"
 #include "base/win/scoped_handle.h"
-#include "base/win/windows_version.h"
 
 namespace base {
 
@@ -28,9 +27,6 @@ const Time CurrentProcessInfo::CreationTime() {
 }
 
 IntegrityLevel GetCurrentProcessIntegrityLevel() {
-  if (win::GetVersion() < base::win::VERSION_VISTA)
-    return INTEGRITY_UNKNOWN;
-
   HANDLE process_token;
   if (!::OpenProcessToken(::GetCurrentProcess(),
                           TOKEN_QUERY | TOKEN_QUERY_SOURCE, &process_token)) {
@@ -45,15 +41,9 @@ IntegrityLevel GetCurrentProcessIntegrityLevel() {
     return INTEGRITY_UNKNOWN;
   }
 
-  std::unique_ptr<char[]> token_label_bytes(new char[token_info_length]);
-  if (!token_label_bytes.get())
-    return INTEGRITY_UNKNOWN;
-
+  auto token_label_bytes = MakeUnique<char[]>(token_info_length);
   TOKEN_MANDATORY_LABEL* token_label =
       reinterpret_cast<TOKEN_MANDATORY_LABEL*>(token_label_bytes.get());
-  if (!token_label)
-    return INTEGRITY_UNKNOWN;
-
   if (!::GetTokenInformation(process_token, TokenIntegrityLevel, token_label,
                              token_info_length, &token_info_length)) {
     return INTEGRITY_UNKNOWN;

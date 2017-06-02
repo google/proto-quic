@@ -58,7 +58,7 @@ int CompareHashValueToRawHash(const void* key, const void* element) {
 
 namespace wosign {
 #include "net/data/ssl/wosign/wosign_domains-inc.cc"
-}  // namespace
+}  // namespace wosign
 
 }  // namespace
 

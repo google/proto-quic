@@ -4536,19 +4536,11 @@ bool QuickPrintableAsciiScan(const char* text, int text_length) {
   const uint8* srclimit = src + text_length;
   const uint8* srclimit8 = srclimit - 7;
   while (src < srclimit8) {
-    const uint32* s = reinterpret_cast<const uint32*>(src);
-    uint32 tmp1 = s[0];
-    uint32 tmp2 = s[1];
-    src += 8;
     // Exits on any byte outside [0x20..0x7E] range (HT LF CR exit)
-    uint32 byte_outside_range_mask = ((tmp1 - 0x20202020U) |
-                                      (tmp1 + 0x01010101U) |
-                                      (tmp2 - 0x20202020U) |
-                                      (tmp2 + 0x01010101U));
-    if ((byte_outside_range_mask & 0x80808080U) != 0) {
-      src -= 8;
-      break;
-    }
+    uint8 mask = 0;
+    for (int i = 0; i < 8; ++i) mask |= (src[i]-0x20)|(src[i]+0x01);
+    if ((mask & 0x80) != 0) break;
+    src += 8;
   }
   while (src < srclimit) {
     uint8 uc = *src++;
@@ -4820,14 +4812,15 @@ int RobustScan(const char* text,
   //====================================
   while (src < srclimitfast2) {
     // Skip to next interesting bigram
+
     while (src < srclimitfast4) {
-      uint32 u32 = *reinterpret_cast<const uint32*>(src);
-      src+= 4;
-      if ((u32 & 0x80808080) != 0) {src -= 4; break;}
+      if (((src[0] | src[1] | src[2] | src[3]) & 0x80) != 0) break;
+      src += 4;
     }
+
     while (src < srclimitfast2) {
-      uint8 uc = *src++;
-      if (static_cast<signed char>(uc) < 0) {src--; break;}
+      if ((src[0] & 0x80) != 0) break;
+      src++;
     }
 
     if (src < srclimitfast2) {
@@ -4871,6 +4864,7 @@ int RobustScan(const char* text,
       if ((bigram_count > kMinRobustBigramCount) && (src > srclimitmin)) {
         break;
       }
+
     }
   }
 
@@ -5335,13 +5329,13 @@ Encoding InternalDetectEncoding(
     while (src < srclimitfast2) {
       // Skip to next interesting byte (this is the faster part)
       while (src < srclimitfast4) {
-        uint32 u32 = *reinterpret_cast<const uint32*>(src);
-        src+= 4;
-        if ((u32 & 0x80808080) != 0) {src -= 4; break;}
+        if (((src[0] | src[1] | src[2] | src[3]) & 0x80) != 0) break;
+        src += 4;
       }
+
       while (src < srclimitfast2) {
-        uint8 uc = *src++;
-        if (static_cast<signed char>(uc) < 0) {src--; break;}
+        if ((src[0] & 0x80) != 0) break;
+        src++;
       }
 
       if (src < srclimitfast2) {

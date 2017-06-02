@@ -7,13 +7,13 @@
 
 #include "base/base_export.h"
 #include "base/message_loop/timer_slack.h"
-#include "base/threading/non_thread_safe.h"
+#include "base/sequence_checker.h"
 
 namespace base {
 
 class TimeTicks;
 
-class BASE_EXPORT MessagePump : public NonThreadSafe {
+class BASE_EXPORT MessagePump {
  public:
   // Please see the comments above the Run method for an illustration of how
   // these delegate methods are used.

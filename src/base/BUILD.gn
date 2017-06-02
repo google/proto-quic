@@ -37,11 +37,6 @@ declare_args() {
   # details and the expected format.
   override_build_date = "N/A"
 
-  # Turn on memory profiling in the task profiler when the heap shim is
-  # available. Profiling can then be enabled at runtime by passing the command
-  # line flag --enable-heap-profiling=task-profiler.
-  enable_memory_task_profiler = use_experimental_allocator_shim
-
   # Partition alloc is included by default except iOS.
   use_partition_alloc = !is_ios
 }
@@ -514,6 +509,8 @@ component("base") {
     "memory/shared_memory_mac.cc",
     "memory/shared_memory_nacl.cc",
     "memory/shared_memory_posix.cc",
+    "memory/shared_memory_tracker.cc",
+    "memory/shared_memory_tracker.h",
     "memory/shared_memory_win.cc",
     "memory/singleton.cc",
     "memory/singleton.h",
@@ -818,6 +815,8 @@ component("base") {
     "task_runner_util.h",
     "task_scheduler/delayed_task_manager.cc",
     "task_scheduler/delayed_task_manager.h",
+    "task_scheduler/environment_config.cc",
+    "task_scheduler/environment_config.h",
     "task_scheduler/initialization_util.cc",
     "task_scheduler/initialization_util.h",
     "task_scheduler/post_task.cc",
@@ -992,6 +991,8 @@ component("base") {
     "trace_event/process_memory_maps.h",
     "trace_event/process_memory_totals.cc",
     "trace_event/process_memory_totals.h",
+    "trace_event/sharded_allocation_register.cc",
+    "trace_event/sharded_allocation_register.h",
     "trace_event/trace_buffer.cc",
     "trace_event/trace_buffer.h",
     "trace_event/trace_category.h",
@@ -1102,7 +1103,7 @@ component("base") {
       "base_paths_win.h",
     ]
 
-    if (is_linux || is_fuchsia) {
+    if (is_linux) {
       sources += [ "base_paths_posix.cc" ]
     }
   }
@@ -1118,7 +1119,6 @@ component("base") {
   configs += [
     ":base_flags",
     ":base_implementation",
-    "//base/allocator:allocator_shim_define",  # for allocator_check.cc.
     "//build/config:precompiled_headers",
   ]
 
@@ -1143,9 +1143,7 @@ component("base") {
     libs = [ "atomic" ]
   }
 
-  if (use_experimental_allocator_shim) {
-    # TODO(primiano): support other platforms, currently this works only on
-    # Linux/CrOS/Android. http://crbug.com/550886 .
+  if (use_allocator_shim) {
     sources += [
       "allocator/allocator_shim.cc",
       "allocator/allocator_shim.h",
@@ -1234,8 +1232,32 @@ component("base") {
       "message_loop/message_pump_libevent.h",
       "process/kill_posix.cc",
       "process/launch_posix.cc",
+      "process/process_handle_posix.cc",
       "process/process_posix.cc",
+      "rand_util_posix.cc",
     ]
+
+    sources += [
+      "base_paths_fuchsia.cc",
+      "debug/stack_trace_fuchsia.cc",
+      "files/file_path_watcher_fuchsia.cc",
+      "message_loop/message_pump_fuchsia.cc",
+      "message_loop/message_pump_fuchsia.h",
+      "process/kill_fuchsia.cc",
+      "process/launch_fuchsia.cc",
+      "process/memory_fuchsia.cc",
+      "process/process_fuchsia.cc",
+      "process/process_handle_fuchsia.cc",
+      "process/process_metrics_fuchsia.cc",
+      "rand_util_fuchsia.cc",
+      "sys_info_fuchsia.cc",
+      "threading/platform_thread_fuchsia.cc",
+      "time/time_conversion_posix.cc",
+      "time/time_exploded_posix.cc",
+      "time/time_fuchsia.cc",
+    ]
+
+    libs = [ "launchpad" ]
   }
 
   # NaCl.
@@ -1450,7 +1472,10 @@ component("base") {
       "userenv.lib",
       "winmm.lib",
     ]
-    all_dependent_configs += [ ":base_win_linker_flags" ]
+    all_dependent_configs += [
+      ":base_win_linker_flags",
+      "//tools/win/DebugVisualizers:chrome",
+    ]
   } else if ((!is_nacl && !is_fuchsia) || is_nacl_nonsfi) {
     # Non-Windows.
     deps += [ "//base/third_party/libevent" ]
@@ -1615,15 +1640,6 @@ component("base") {
     set_sources_assignment_filter(sources_assignment_filter)
   }
 
-  # Fuchsia.
-  if (is_fuchsia) {
-    sources += [
-      "time/time_conversion_posix.cc",
-      "time/time_exploded_posix.cc",
-      "time/time_fuchsia.cc",
-    ]
-  }
-
   if (is_posix && !is_fuchsia && !is_mac && !is_ios) {
     sources += [
       "time/time_conversion_posix.cc",
@@ -1634,13 +1650,6 @@ component("base") {
 
   if (is_posix && !is_mac && !is_ios && !is_android && !is_chromeos) {
     sources += [ "power_monitor/power_monitor_device_source_posix.cc" ]
-  }
-
-  if (is_posix && !is_mac && !is_nacl) {
-    sources += [
-      "memory/shared_memory_tracker.cc",
-      "memory/shared_memory_tracker.h",
-    ]
   }
 
   if (!use_glib) {
@@ -1672,7 +1681,6 @@ buildflag_header("debugging_flags") {
   header_dir = "base/debug"
   flags = [
     "ENABLE_PROFILING=$enable_profiling",
-    "ENABLE_MEMORY_TASK_PROFILER=$enable_memory_task_profiler",
     "CAN_UNWIND_WITH_FRAME_POINTERS=$can_unwind_with_frame_pointers",
   ]
 }
@@ -1686,11 +1694,13 @@ static_library("base_static") {
     "base_switches.h",
     "task_scheduler/switches.cc",
     "task_scheduler/switches.h",
-    "win/pe_image.cc",
-    "win/pe_image.h",
   ]
 
   if (is_win) {
+    public_deps = [
+      "//base/win:pe_image",
+    ]
+
     # Disable sanitizer coverage in win/pe_image.cc. It is called by the sandbox
     # before sanitizer coverage can initialize. http://crbug.com/484711
     configs -= [ "//build/config/sanitizers:default_sanitizer_flags" ]
@@ -2281,9 +2291,6 @@ test("base_unittests") {
     ":base_unittests_bundle_data",
   ]
 
-  # Some unittests depend on the ALLOCATOR_SHIM macro.
-  configs += [ "//base/allocator:allocator_shim_define" ]
-
   data = [
     "test/data/",
   ]
@@ -2389,7 +2396,7 @@ test("base_unittests") {
     }
   }
 
-  if (use_experimental_allocator_shim) {
+  if (use_allocator_shim) {
     sources += [ "allocator/allocator_shim_unittest.cc" ]
   }
 
@@ -2637,6 +2644,7 @@ if (is_android) {
       ":base_java",
       "//testing/android/reporter:reporter_java",
       "//third_party/android_support_test_runner:exposed_instrumentation_api_publish_java",
+      "//third_party/android_support_test_runner:rules_java",
       "//third_party/android_support_test_runner:runner_java",
       "//third_party/android_tools:android_support_chromium_java",
       "//third_party/android_tools:android_support_compat_java",
@@ -2679,6 +2687,7 @@ if (is_android) {
       "test/android/javatests/src/org/chromium/base/test/util/RetryOnFailure.java",
       "test/android/javatests/src/org/chromium/base/test/util/ScalableTimeout.java",
       "test/android/javatests/src/org/chromium/base/test/util/SkipCheck.java",
+      "test/android/javatests/src/org/chromium/base/test/util/ScreenShooter.java",
       "test/android/javatests/src/org/chromium/base/test/util/TestFileUtil.java",
       "test/android/javatests/src/org/chromium/base/test/util/TestThread.java",
       "test/android/javatests/src/org/chromium/base/test/util/TimeoutScale.java",

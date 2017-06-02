@@ -20,14 +20,13 @@ DWORD kBasicProcessAccess =
 namespace base {
 
 Process::Process(ProcessHandle handle)
-    : is_current_process_(false),
-      process_(handle) {
+    : process_(handle), is_current_process_(false) {
   CHECK_NE(handle, ::GetCurrentProcess());
 }
 
 Process::Process(Process&& other)
-    : is_current_process_(other.is_current_process_),
-      process_(other.process_.Take()) {
+    : process_(other.process_.Take()),
+      is_current_process_(other.is_current_process_) {
   other.Close();
 }
 
@@ -130,6 +129,7 @@ void Process::Close() {
 }
 
 bool Process::Terminate(int exit_code, bool wait) const {
+  // exit_code cannot be implemented.
   DCHECK(IsValid());
   bool result = (::TerminateProcess(Handle(), exit_code) != FALSE);
   if (result && wait) {

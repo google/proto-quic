@@ -694,12 +694,8 @@ void QuicCryptoServerConfig::ProcessClientHello(
 
   // No need to get a new proof if one was already generated.
   if (!signed_config->chain) {
-    const QuicTag* tag_ptr;
-    size_t num_tags;
     QuicTagVector connection_options;
-    if (client_hello.GetTaglist(kCOPT, &tag_ptr, &num_tags) == QUIC_NO_ERROR) {
-      connection_options.assign(tag_ptr, tag_ptr + num_tags);
-    }
+    client_hello.GetTaglist(kCOPT, &connection_options);
     std::unique_ptr<ProcessClientHelloCallback> cb(
         new ProcessClientHelloCallback(
             this, validate_chlo_result, reject_only, connection_id,
@@ -790,39 +786,35 @@ void QuicCryptoServerConfig::ProcessClientHelloAfterGetProof(
     return;
   }
 
-  const QuicTag* their_aeads;
-  const QuicTag* their_key_exchanges;
-  size_t num_their_aeads, num_their_key_exchanges;
-  if (client_hello.GetTaglist(kAEAD, &their_aeads, &num_their_aeads) !=
-          QUIC_NO_ERROR ||
-      client_hello.GetTaglist(kKEXS, &their_key_exchanges,
-                              &num_their_key_exchanges) != QUIC_NO_ERROR ||
-      num_their_aeads != 1 || num_their_key_exchanges != 1) {
+  QuicTagVector their_aeads;
+  QuicTagVector their_key_exchanges;
+  if (client_hello.GetTaglist(kAEAD, &their_aeads) != QUIC_NO_ERROR ||
+      client_hello.GetTaglist(kKEXS, &their_key_exchanges) != QUIC_NO_ERROR ||
+      their_aeads.size() != 1 || their_key_exchanges.size() != 1) {
     helper.Fail(QUIC_INVALID_CRYPTO_MESSAGE_PARAMETER,
                 "Missing or invalid AEAD or KEXS");
     return;
   }
 
   size_t key_exchange_index;
-  if (!FindMutualQuicTag(requested_config->aead, their_aeads, num_their_aeads,
-                         &params->aead, nullptr) ||
-      !FindMutualQuicTag(requested_config->kexs, their_key_exchanges,
-                         num_their_key_exchanges, &params->key_exchange,
+  if (!FindMutualQuicTag(requested_config->aead, their_aeads.data(),
+                         their_aeads.size(), &params->aead, nullptr) ||
+      !FindMutualQuicTag(requested_config->kexs, their_key_exchanges.data(),
+                         their_key_exchanges.size(), &params->key_exchange,
                          &key_exchange_index)) {
     helper.Fail(QUIC_CRYPTO_NO_SUPPORT, "Unsupported AEAD or KEXS");
     return;
   }
 
   if (!requested_config->tb_key_params.empty()) {
-    const QuicTag* their_tbkps;
-    size_t num_their_tbkps;
-    switch (client_hello.GetTaglist(kTBKP, &their_tbkps, &num_their_tbkps)) {
+    QuicTagVector their_tbkps;
+    switch (client_hello.GetTaglist(kTBKP, &their_tbkps)) {
       case QUIC_CRYPTO_MESSAGE_PARAMETER_NOT_FOUND:
         break;
       case QUIC_NO_ERROR:
-        if (FindMutualQuicTag(requested_config->tb_key_params, their_tbkps,
-                              num_their_tbkps, &params->token_binding_key_param,
-                              nullptr)) {
+        if (FindMutualQuicTag(requested_config->tb_key_params,
+                              their_tbkps.data(), their_tbkps.size(),
+                              &params->token_binding_key_param, nullptr)) {
           break;
         }
       default:
@@ -1266,12 +1258,8 @@ void QuicCryptoServerConfig::EvaluateClientHello(
                                     Perspective::IS_SERVER);
   bool need_proof = true;
   need_proof = !signed_config->chain;
-  const QuicTag* tag_ptr;
-  size_t num_tags;
   QuicTagVector connection_options;
-  if (client_hello.GetTaglist(kCOPT, &tag_ptr, &num_tags) == QUIC_NO_ERROR) {
-    connection_options.assign(tag_ptr, tag_ptr + num_tags);
-  }
+  client_hello.GetTaglist(kCOPT, &connection_options);
 
   if (need_proof) {
     // Make an async call to GetProof and setup the callback to trampoline
@@ -1623,31 +1611,24 @@ QuicCryptoServerConfig::ParseConfigProtobuf(
   }
   config->id = scid.as_string();
 
-  const QuicTag* aead_tags;
-  size_t aead_len;
-  if (msg->GetTaglist(kAEAD, &aead_tags, &aead_len) != QUIC_NO_ERROR) {
+  if (msg->GetTaglist(kAEAD, &config->aead) != QUIC_NO_ERROR) {
     QUIC_LOG(WARNING) << "Server config message is missing AEAD";
     return nullptr;
   }
-  config->aead = std::vector<QuicTag>(aead_tags, aead_tags + aead_len);
 
-  const QuicTag* kexs_tags;
-  size_t kexs_len;
-  if (msg->GetTaglist(kKEXS, &kexs_tags, &kexs_len) != QUIC_NO_ERROR) {
+  QuicTagVector kexs_tags;
+  if (msg->GetTaglist(kKEXS, &kexs_tags) != QUIC_NO_ERROR) {
     QUIC_LOG(WARNING) << "Server config message is missing KEXS";
     return nullptr;
   }
 
-  const QuicTag* tbkp_tags;
-  size_t tbkp_len;
   QuicErrorCode err;
-  if ((err = msg->GetTaglist(kTBKP, &tbkp_tags, &tbkp_len)) !=
+  if ((err = msg->GetTaglist(kTBKP, &config->tb_key_params)) !=
           QUIC_CRYPTO_MESSAGE_PARAMETER_NOT_FOUND &&
       err != QUIC_NO_ERROR) {
     QUIC_LOG(WARNING) << "Server config message is missing or has invalid TBKP";
     return nullptr;
   }
-  config->tb_key_params = std::vector<QuicTag>(tbkp_tags, tbkp_tags + tbkp_len);
 
   QuicStringPiece orbit;
   if (!msg->GetStringPiece(kORBT, &orbit)) {
@@ -1664,26 +1645,24 @@ QuicCryptoServerConfig::ParseConfigProtobuf(
   static_assert(sizeof(config->orbit) == kOrbitSize, "incorrect orbit size");
   memcpy(config->orbit, orbit.data(), sizeof(config->orbit));
 
-  if (kexs_len != protobuf->key_size()) {
-    QUIC_LOG(WARNING) << "Server config has " << kexs_len
+  if (kexs_tags.size() != protobuf->key_size()) {
+    QUIC_LOG(WARNING) << "Server config has " << kexs_tags.size()
                       << " key exchange methods configured, but "
                       << protobuf->key_size() << " private keys";
     return nullptr;
   }
 
-  const QuicTag* proof_demand_tags;
-  size_t num_proof_demand_tags;
-  if (msg->GetTaglist(kPDMD, &proof_demand_tags, &num_proof_demand_tags) ==
-      QUIC_NO_ERROR) {
-    for (size_t i = 0; i < num_proof_demand_tags; i++) {
-      if (proof_demand_tags[i] == kCHID) {
+  QuicTagVector proof_demand_tags;
+  if (msg->GetTaglist(kPDMD, &proof_demand_tags) == QUIC_NO_ERROR) {
+    for (QuicTag tag : proof_demand_tags) {
+      if (tag == kCHID) {
         config->channel_id_enabled = true;
         break;
       }
     }
   }
 
-  for (size_t i = 0; i < kexs_len; i++) {
+  for (size_t i = 0; i < kexs_tags.size(); i++) {
     const QuicTag tag = kexs_tags[i];
     string private_key;
 
@@ -1941,18 +1920,15 @@ bool QuicCryptoServerConfig::ValidateExpectedLeafCertificate(
 
 bool QuicCryptoServerConfig::ClientDemandsX509Proof(
     const CryptoHandshakeMessage& client_hello) const {
-  const QuicTag* their_proof_demands;
-  size_t num_their_proof_demands;
+  QuicTagVector their_proof_demands;
 
-  if (client_hello.GetTaglist(kPDMD, &their_proof_demands,
-                              &num_their_proof_demands) != QUIC_NO_ERROR) {
+  if (client_hello.GetTaglist(kPDMD, &their_proof_demands) != QUIC_NO_ERROR) {
     return false;
   }
 
-  for (size_t i = 0; i < num_their_proof_demands; i++) {
-    switch (their_proof_demands[i]) {
-      case kX509:
-        return true;
+  for (const QuicTag tag : their_proof_demands) {
+    if (tag == kX509) {
+      return true;
     }
   }
   return false;

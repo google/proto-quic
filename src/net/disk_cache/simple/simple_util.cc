@@ -102,6 +102,6 @@ bool GetMTime(const base::FilePath& path, base::Time* out_mtime) {
   return true;
 }
 
-}  // namespace simple_backend
+}  // namespace simple_util
 
 }  // namespace disk_cache

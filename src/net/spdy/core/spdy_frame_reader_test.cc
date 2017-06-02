@@ -30,7 +30,7 @@ TEST(SpdyFrameReaderTest, ReadUInt16) {
 
   EXPECT_TRUE(frame_reader.ReadUInt16(&uint16_val));
   EXPECT_TRUE(frame_reader.IsDoneReading());
-  EXPECT_EQ(1<<15, uint16_val);
+  EXPECT_EQ(1 << 15, uint16_val);
 }
 
 TEST(SpdyFrameReaderTest, ReadUInt32) {
@@ -50,7 +50,7 @@ TEST(SpdyFrameReaderTest, ReadUInt32) {
 
   EXPECT_TRUE(frame_reader.ReadUInt32(&uint32_val));
   EXPECT_TRUE(frame_reader.IsDoneReading());
-  EXPECT_EQ(1u<<31, uint32_val);
+  EXPECT_EQ(1u << 31, uint32_val);
 }
 
 TEST(SpdyFrameReaderTest, ReadStringPiece16) {
@@ -125,8 +125,7 @@ TEST(SpdyFrameReaderTest, ReadUInt32WithBufferTooSmall) {
   EXPECT_FALSE(frame_reader.ReadUInt32(&uint32_val));
 
   // Also make sure that trying to read a uint16_t, which technically could
-  // work,
-  // fails immediately due to previously encountered failed read.
+  // work, fails immediately due to previously encountered failed read.
   uint16_t uint16_val;
   EXPECT_FALSE(frame_reader.ReadUInt16(&uint16_val));
 }
@@ -146,8 +145,7 @@ TEST(SpdyFrameReaderTest, ReadStringPiece16WithBufferTooSmall) {
   EXPECT_FALSE(frame_reader.ReadStringPiece16(&stringpiece_val));
 
   // Also make sure that trying to read a uint16_t, which technically could
-  // work,
-  // fails immediately due to previously encountered failed read.
+  // work, fails immediately due to previously encountered failed read.
   uint16_t uint16_val;
   EXPECT_FALSE(frame_reader.ReadUInt16(&uint16_val));
 }
@@ -166,8 +164,7 @@ TEST(SpdyFrameReaderTest, ReadStringPiece16WithBufferWayTooSmall) {
   EXPECT_FALSE(frame_reader.ReadStringPiece16(&stringpiece_val));
 
   // Also make sure that trying to read a uint16_t, which technically could
-  // work,
-  // fails immediately due to previously encountered failed read.
+  // work, fails immediately due to previously encountered failed read.
   uint16_t uint16_val;
   EXPECT_FALSE(frame_reader.ReadUInt16(&uint16_val));
 }
@@ -187,8 +184,7 @@ TEST(SpdyFrameReaderTest, ReadStringPiece32WithBufferTooSmall) {
   EXPECT_FALSE(frame_reader.ReadStringPiece32(&stringpiece_val));
 
   // Also make sure that trying to read a uint16_t, which technically could
-  // work,
-  // fails immediately due to previously encountered failed read.
+  // work, fails immediately due to previously encountered failed read.
   uint16_t uint16_val;
   EXPECT_FALSE(frame_reader.ReadUInt16(&uint16_val));
 }
@@ -207,8 +203,7 @@ TEST(SpdyFrameReaderTest, ReadStringPiece32WithBufferWayTooSmall) {
   EXPECT_FALSE(frame_reader.ReadStringPiece32(&stringpiece_val));
 
   // Also make sure that trying to read a uint16_t, which technically could
-  // work,
-  // fails immediately due to previously encountered failed read.
+  // work, fails immediately due to previously encountered failed read.
   uint16_t uint16_val;
   EXPECT_FALSE(frame_reader.ReadUInt16(&uint16_val));
 }
@@ -216,8 +211,8 @@ TEST(SpdyFrameReaderTest, ReadStringPiece32WithBufferWayTooSmall) {
 TEST(SpdyFrameReaderTest, ReadBytes) {
   // Frame data in network byte order.
   const char kFrameData[] = {
-    0x66, 0x6f, 0x6f,  // "foo"
-    0x48, 0x69,  // "Hi"
+      0x66, 0x6f, 0x6f,  // "foo"
+      0x48, 0x69,        // "Hi"
   };
 
   SpdyFrameReader frame_reader(kFrameData, arraysize(kFrameData));
@@ -237,7 +232,7 @@ TEST(SpdyFrameReaderTest, ReadBytes) {
 TEST(SpdyFrameReaderTest, ReadBytesWithBufferTooSmall) {
   // Frame data in network byte order.
   const char kFrameData[] = {
-    0x01,
+      0x01,
   };
 
   SpdyFrameReader frame_reader(kFrameData, arraysize(kFrameData));

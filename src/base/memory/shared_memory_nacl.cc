@@ -14,6 +14,7 @@
 #include <limits>
 
 #include "base/logging.h"
+#include "base/memory/shared_memory_tracker.h"
 
 namespace base {
 
@@ -85,6 +86,7 @@ bool SharedMemory::MapAt(off_t offset, size_t bytes) {
     mapped_size_ = bytes;
     DCHECK_EQ(0U, reinterpret_cast<uintptr_t>(memory_) &
         (SharedMemory::MAP_MINIMUM_ALIGNMENT - 1));
+    SharedMemoryTracker::GetInstance()->IncrementMemoryUsage(*this);
   } else {
     memory_ = NULL;
   }
@@ -96,6 +98,7 @@ bool SharedMemory::Unmap() {
   if (memory_ == NULL)
     return false;
 
+  SharedMemoryTracker::GetInstance()->DecrementMemoryUsage(*this);
   if (munmap(memory_, mapped_size_) < 0)
     DPLOG(ERROR) << "munmap";
   memory_ = NULL;

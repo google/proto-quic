@@ -55,7 +55,7 @@ bool CorruptKeySHA256FromEntry(const std::string& key,
 bool CorruptStream0LengthFromEntry(const std::string& key,
                                    const base::FilePath& cache_path);
 
-}  // namespace simple_backend
+}  // namespace simple_util
 }  // namespace disk_cache
 
 #endif  // NET_DISK_CACHE_SIMPLE_SIMPLE_TEST_UTIL_H_

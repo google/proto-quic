@@ -17,6 +17,7 @@
 #include "base/mac/mac_util.h"
 #include "base/mac/scoped_mach_vm.h"
 #include "base/memory/shared_memory_helper.h"
+#include "base/memory/shared_memory_tracker.h"
 #include "base/metrics/field_trial.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/posix/eintr_wrapper.h"
@@ -205,6 +206,7 @@ bool SharedMemory::MapAt(off_t offset, size_t bytes) {
     DCHECK_EQ(0U, reinterpret_cast<uintptr_t>(memory_) &
                       (SharedMemory::MAP_MINIMUM_ALIGNMENT - 1));
     mapped_memory_mechanism_ = shm_.type_;
+    SharedMemoryTracker::GetInstance()->IncrementMemoryUsage(*this);
   } else {
     last_error_ = SharedMemoryError::MMAP_FAILED;
     memory_ = NULL;
@@ -217,6 +219,7 @@ bool SharedMemory::Unmap() {
   if (memory_ == NULL)
     return false;
 
+  SharedMemoryTracker::GetInstance()->DecrementMemoryUsage(*this);
   switch (mapped_memory_mechanism_) {
     case SharedMemoryHandle::POSIX:
       munmap(memory_, mapped_size_);
@@ -227,7 +230,6 @@ bool SharedMemory::Unmap() {
                          mapped_size_);
       break;
   }
-
   memory_ = NULL;
   mapped_size_ = 0;
   return true;

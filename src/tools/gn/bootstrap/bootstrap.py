@@ -167,12 +167,11 @@ def build_gn_with_ninja_manually(tempdir, options):
   mkdir_p(root_gen_dir)
 
   write_buildflag_header_manually(root_gen_dir, 'base/allocator/features.h',
-      {'USE_EXPERIMENTAL_ALLOCATOR_SHIM': 'true' if is_linux else 'false'})
+      {'USE_ALLOCATOR_SHIM': 'true' if is_linux else 'false'})
 
   write_buildflag_header_manually(root_gen_dir, 'base/debug/debugging_flags.h',
       {
           'ENABLE_PROFILING': 'false',
-          'ENABLE_MEMORY_TASK_PROFILER': 'false',
           'CAN_UNWIND_WITH_FRAME_POINTERS': 'false'
       })
 
@@ -487,6 +486,7 @@ def write_gn_ninja(path, root_gen_dir, options):
       'base/sys_info.cc',
       'base/task_runner.cc',
       'base/task_scheduler/delayed_task_manager.cc',
+      'base/task_scheduler/environment_config.cc',
       'base/task_scheduler/post_task.cc',
       'base/task_scheduler/priority_queue.cc',
       'base/task_scheduler/scheduler_lock_impl.cc',
@@ -551,6 +551,7 @@ def write_gn_ninja(path, root_gen_dir, options):
       'base/trace_event/process_memory_dump.cc',
       'base/trace_event/process_memory_maps.cc',
       'base/trace_event/process_memory_totals.cc',
+      'base/trace_event/sharded_allocation_register.cc',
       'base/trace_event/trace_buffer.cc',
       'base/trace_event/trace_config.cc',
       'base/trace_event/trace_config_category_filter.cc',
@@ -600,7 +601,9 @@ def write_gn_ninja(path, root_gen_dir, options):
         'base/threading/platform_thread_posix.cc',
         'base/threading/thread_local_storage_posix.cc',
         'base/threading/worker_pool_posix.cc',
-        'base/time/time_posix.cc',
+        'base/time/time_conversion_posix.cc',
+        'base/time/time_exploded_posix.cc',
+        'base/time/time_now_posix.cc',
         'base/trace_event/heap_profiler_allocation_register_posix.cc',
     ])
     static_libraries['libevent'] = {

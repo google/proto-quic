@@ -114,25 +114,28 @@ void TestURLRequestContext::Init() {
     // Make sure we haven't been passed an object we're not going to use.
     EXPECT_FALSE(client_socket_factory_);
   } else {
-    HttpNetworkSession::Params params;
-
+    HttpNetworkSession::Params session_params;
     if (http_network_session_params_)
-      params = *http_network_session_params_;
-    params.client_socket_factory = client_socket_factory();
-    params.proxy_delegate = proxy_delegate();
-    params.host_resolver = host_resolver();
-    params.cert_verifier = cert_verifier();
-    params.cert_transparency_verifier = cert_transparency_verifier();
-    params.ct_policy_enforcer = ct_policy_enforcer();
-    params.transport_security_state = transport_security_state();
-    params.proxy_service = proxy_service();
-    params.ssl_config_service = ssl_config_service();
-    params.http_auth_handler_factory = http_auth_handler_factory();
-    params.http_server_properties = http_server_properties();
-    params.net_log = net_log();
-    params.channel_id_service = channel_id_service();
+      session_params = *http_network_session_params_;
+
+    HttpNetworkSession::Context session_context;
+    if (http_network_session_context_)
+      session_context = *http_network_session_context_;
+    session_context.client_socket_factory = client_socket_factory();
+    session_context.proxy_delegate = proxy_delegate();
+    session_context.host_resolver = host_resolver();
+    session_context.cert_verifier = cert_verifier();
+    session_context.cert_transparency_verifier = cert_transparency_verifier();
+    session_context.ct_policy_enforcer = ct_policy_enforcer();
+    session_context.transport_security_state = transport_security_state();
+    session_context.proxy_service = proxy_service();
+    session_context.ssl_config_service = ssl_config_service();
+    session_context.http_auth_handler_factory = http_auth_handler_factory();
+    session_context.http_server_properties = http_server_properties();
+    session_context.net_log = net_log();
+    session_context.channel_id_service = channel_id_service();
     context_storage_.set_http_network_session(
-        base::MakeUnique<HttpNetworkSession>(params));
+        base::MakeUnique<HttpNetworkSession>(session_params, session_context));
     context_storage_.set_http_transaction_factory(base::MakeUnique<HttpCache>(
         context_storage_.http_network_session(),
         HttpCache::DefaultBackend::InMemory(0), true /* is_main_cache */));
@@ -648,8 +651,10 @@ bool TestNetworkDelegate::OnCanSetCookie(const URLRequest& request,
   return allow;
 }
 
-bool TestNetworkDelegate::OnCanAccessFile(const URLRequest& request,
-                                          const base::FilePath& path) const {
+bool TestNetworkDelegate::OnCanAccessFile(
+    const URLRequest& request,
+    const base::FilePath& original_path,
+    const base::FilePath& absolute_path) const {
   return can_access_files_;
 }
 

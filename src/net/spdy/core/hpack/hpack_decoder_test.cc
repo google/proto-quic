@@ -26,9 +26,11 @@ class HpackDecoderPeer {
   void HandleHeaderRepresentation(SpdyStringPiece name, SpdyStringPiece value) {
     decoder_->HandleHeaderRepresentation(name, value);
   }
+
   bool DecodeNextName(HpackInputStream* in, SpdyStringPiece* out) {
     return decoder_->DecodeNextName(in, out);
   }
+
   HpackHeaderTable* header_table() { return &decoder_->header_table_; }
 
   bool DecodeNextStringLiteral(HpackInputStream* in,
@@ -648,9 +650,8 @@ TEST_P(HpackDecoderTest, SectionC4RequestHuffmanExamples) {
   //                                         |     Decoded:
   //                                         | custom-value
   //                                         | -> custom-key: custom-value
-  SpdyString third = a2b_hex(
-      "828785bf408825a849e95ba97d7f89"
-      "25a849e95bb8e8b4bf");
+  SpdyString third =
+      a2b_hex("828785bf408825a849e95ba97d7f8925a849e95bb8e8b4bf");
   const SpdyHeaderBlock& third_header_set = DecodeBlockExpectingSuccess(third);
 
   EXPECT_THAT(third_header_set,

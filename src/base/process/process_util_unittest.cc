@@ -858,11 +858,14 @@ TEST_F(ProcessUtilTest, GetAppOutputWithExitCode) {
   EXPECT_EQ(exit_code, 2);
 }
 
+// There's no such thing as a parent process id on Fuchsia.
+#if !defined(OS_FUCHSIA)
 TEST_F(ProcessUtilTest, GetParentProcessId) {
   base::ProcessId ppid =
       base::GetParentProcessId(base::GetCurrentProcessHandle());
-  EXPECT_EQ(ppid, getppid());
+  EXPECT_EQ(ppid, static_cast<base::ProcessId>(getppid()));
 }
+#endif  // !defined(OS_FUCHSIA)
 
 // TODO(port): port those unit tests.
 bool IsProcessDead(base::ProcessHandle child) {

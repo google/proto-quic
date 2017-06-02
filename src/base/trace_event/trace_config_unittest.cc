@@ -697,7 +697,7 @@ TEST(TraceConfigTest, LegacyStringToMemoryDumpConfig) {
   TraceConfig tc(MemoryDumpManager::kTraceCategory, "");
   EXPECT_TRUE(tc.IsCategoryGroupEnabled(MemoryDumpManager::kTraceCategory));
   EXPECT_NE(std::string::npos, tc.ToString().find("memory_dump_config"));
-  EXPECT_EQ(2u, tc.memory_dump_config().triggers.size());
+  EXPECT_EQ(0u, tc.memory_dump_config().triggers.size());
   EXPECT_EQ(
       TraceConfig::MemoryDumpConfig::HeapProfiler ::
           kDefaultBreakdownThresholdBytes,

@@ -33,4 +33,4 @@ bool RegisterGURLUtils(JNIEnv* env) {
   return RegisterNativesImpl(env);
 }
 
-}  // net namespace
+}  // namespace net

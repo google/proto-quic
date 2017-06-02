@@ -23,6 +23,11 @@
 #include "base/numerics/safe_conversions.h"
 #include "build/build_config.h"
 
+#if defined(OS_IOS)
+#include <time.h>
+#include "base/ios/ios_util.h"
+#endif
+
 namespace {
 
 #if defined(OS_MACOSX) && !defined(OS_IOS)
@@ -52,8 +57,20 @@ int64_t MachAbsoluteTimeToTicks(uint64_t mach_absolute_time) {
 }
 #endif  // defined(OS_MACOSX) && !defined(OS_IOS)
 
+// Returns monotonically growing number of ticks in microseconds since some
+// unspecified starting point.
 int64_t ComputeCurrentTicks() {
 #if defined(OS_IOS)
+  // iOS 10 supports clock_gettime(CLOCK_MONOTONIC, ...), which is
+  // around 15 times faster than sysctl() call. Use it if possible;
+  // otherwise, fall back to sysctl().
+  if (base::ios::IsRunningOnIOS10OrLater()) {
+    struct timespec tp;
+    if (clock_gettime(CLOCK_MONOTONIC, &tp) == 0) {
+      return (int64_t)tp.tv_sec * 1000000 + tp.tv_nsec / 1000;
+    }
+  }
+
   // On iOS mach_absolute_time stops while the device is sleeping. Instead use
   // now - KERN_BOOTTIME to get a time difference that is not impacted by clock
   // changes. KERN_BOOTTIME will be updated by the system whenever the system

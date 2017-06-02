@@ -502,8 +502,7 @@ TEST_F(HttpStreamFactoryTest, PreconnectDirect) {
             session_deps.transport_security_state.get(),
             session_deps.cert_transparency_verifier.get(),
             session_deps.ct_policy_enforcer.get());
-    std::unique_ptr<MockClientSocketPoolManager> mock_pool_manager(
-        new MockClientSocketPoolManager);
+    auto mock_pool_manager = base::MakeUnique<MockClientSocketPoolManager>();
     mock_pool_manager->SetTransportSocketPool(transport_conn_pool);
     mock_pool_manager->SetSSLSocketPool(ssl_conn_pool);
     peer.SetClientSocketPoolManager(std::move(mock_pool_manager));
@@ -535,8 +534,7 @@ TEST_F(HttpStreamFactoryTest, PreconnectHttpProxy) {
             session_deps.transport_security_state.get(),
             session_deps.cert_transparency_verifier.get(),
             session_deps.ct_policy_enforcer.get());
-    std::unique_ptr<MockClientSocketPoolManager> mock_pool_manager(
-        new MockClientSocketPoolManager);
+    auto mock_pool_manager = base::MakeUnique<MockClientSocketPoolManager>();
     mock_pool_manager->SetSocketPoolForHTTPProxy(
         proxy_host, base::WrapUnique(http_proxy_pool));
     mock_pool_manager->SetSocketPoolForSSLWithProxy(
@@ -570,8 +568,7 @@ TEST_F(HttpStreamFactoryTest, PreconnectSocksProxy) {
             session_deps.transport_security_state.get(),
             session_deps.cert_transparency_verifier.get(),
             session_deps.ct_policy_enforcer.get());
-    std::unique_ptr<MockClientSocketPoolManager> mock_pool_manager(
-        new MockClientSocketPoolManager);
+    auto mock_pool_manager = base::MakeUnique<MockClientSocketPoolManager>();
     mock_pool_manager->SetSocketPoolForSOCKSProxy(
         proxy_host, base::WrapUnique(socks_proxy_pool));
     mock_pool_manager->SetSocketPoolForSSLWithProxy(
@@ -610,8 +607,7 @@ TEST_F(HttpStreamFactoryTest, PreconnectDirectWithExistingSpdySession) {
             session_deps.transport_security_state.get(),
             session_deps.cert_transparency_verifier.get(),
             session_deps.ct_policy_enforcer.get());
-    std::unique_ptr<MockClientSocketPoolManager> mock_pool_manager(
-        new MockClientSocketPoolManager);
+    auto mock_pool_manager = base::MakeUnique<MockClientSocketPoolManager>();
     mock_pool_manager->SetTransportSocketPool(transport_conn_pool);
     mock_pool_manager->SetSSLSocketPool(ssl_conn_pool);
     peer.SetClientSocketPoolManager(std::move(mock_pool_manager));
@@ -641,8 +637,7 @@ TEST_F(HttpStreamFactoryTest, PreconnectUnsafePort) {
           session_deps.transport_security_state.get(),
           session_deps.cert_transparency_verifier.get(),
           session_deps.ct_policy_enforcer.get());
-  std::unique_ptr<MockClientSocketPoolManager> mock_pool_manager(
-      new MockClientSocketPoolManager);
+  auto mock_pool_manager = base::MakeUnique<MockClientSocketPoolManager>();
   mock_pool_manager->SetTransportSocketPool(transport_conn_pool);
   peer.SetClientSocketPoolManager(std::move(mock_pool_manager));
 
@@ -718,28 +713,31 @@ TEST_F(HttpStreamFactoryTest, QuicProxyMarkedAsBad) {
     proxy_service =
         ProxyService::CreateFixedFromPacResult("QUIC bad:99; DIRECT");
 
-    HttpNetworkSession::Params params;
-    params.enable_quic = true;
+    HttpNetworkSession::Params session_params;
+    session_params.enable_quic = true;
+
+    HttpNetworkSession::Context session_context;
     scoped_refptr<SSLConfigServiceDefaults> ssl_config_service(
         new SSLConfigServiceDefaults);
     HttpServerPropertiesImpl http_server_properties;
     MockClientSocketFactory socket_factory;
-    params.client_socket_factory = &socket_factory;
+    session_context.client_socket_factory = &socket_factory;
     MockHostResolver host_resolver;
-    params.host_resolver = &host_resolver;
+    session_context.host_resolver = &host_resolver;
     MockCertVerifier cert_verifier;
-    params.cert_verifier = &cert_verifier;
+    session_context.cert_verifier = &cert_verifier;
     TransportSecurityState transport_security_state;
-    params.transport_security_state = &transport_security_state;
+    session_context.transport_security_state = &transport_security_state;
     MultiLogCTVerifier ct_verifier;
-    params.cert_transparency_verifier = &ct_verifier;
+    session_context.cert_transparency_verifier = &ct_verifier;
     CTPolicyEnforcer ct_policy_enforcer;
-    params.ct_policy_enforcer = &ct_policy_enforcer;
-    params.proxy_service = proxy_service.get();
-    params.ssl_config_service = ssl_config_service.get();
-    params.http_server_properties = &http_server_properties;
+    session_context.ct_policy_enforcer = &ct_policy_enforcer;
+    session_context.proxy_service = proxy_service.get();
+    session_context.ssl_config_service = ssl_config_service.get();
+    session_context.http_server_properties = &http_server_properties;
 
-    std::unique_ptr<HttpNetworkSession> session(new HttpNetworkSession(params));
+    auto session =
+        base::MakeUnique<HttpNetworkSession>(session_params, session_context);
     session->quic_stream_factory()->set_require_confirmation(false);
 
     StaticSocketDataProvider socket_data1;
@@ -829,8 +827,8 @@ class MockQuicData {
   void AddSocketDataToFactory(MockClientSocketFactory* factory) {
     MockRead* reads = reads_.empty() ? nullptr : &reads_[0];
     MockWrite* writes = writes_.empty() ? nullptr : &writes_[0];
-    socket_data_.reset(
-        new SequencedSocketData(reads, reads_.size(), writes, writes_.size()));
+    socket_data_ = base::MakeUnique<SequencedSocketData>(
+        reads, reads_.size(), writes, writes_.size());
     factory->AddSocketDataProvider(socket_data_.get());
   }
 
@@ -843,7 +841,8 @@ class MockQuicData {
 };
 
 void SetupForQuicAlternativeProxyTest(
-    HttpNetworkSession::Params* params,
+    HttpNetworkSession::Params* session_params,
+    HttpNetworkSession::Context* session_context,
     MockClientSocketFactory* socket_factory,
     ProxyService* proxy_service,
     TestProxyDelegate* test_proxy_delegate,
@@ -855,22 +854,23 @@ void SetupForQuicAlternativeProxyTest(
     MockHostResolver* host_resolver,
     TransportSecurityState* transport_security_state,
     bool set_alternative_proxy_server) {
-  params->enable_quic = true;
-  params->client_socket_factory = socket_factory;
-  params->host_resolver = host_resolver;
-  params->transport_security_state = transport_security_state;
-  params->proxy_service = proxy_service;
-  params->ssl_config_service = ssl_config_service;
-  params->http_server_properties = http_server_properties;
-  params->cert_verifier = cert_verifier;
-  params->ct_policy_enforcer = ct_policy_enforcer;
-  params->cert_transparency_verifier = ct_verifier;
+  session_params->enable_quic = true;
+
+  session_context->client_socket_factory = socket_factory;
+  session_context->host_resolver = host_resolver;
+  session_context->transport_security_state = transport_security_state;
+  session_context->proxy_service = proxy_service;
+  session_context->ssl_config_service = ssl_config_service;
+  session_context->http_server_properties = http_server_properties;
+  session_context->cert_verifier = cert_verifier;
+  session_context->ct_policy_enforcer = ct_policy_enforcer;
+  session_context->cert_transparency_verifier = ct_verifier;
 
   if (set_alternative_proxy_server) {
     test_proxy_delegate->set_alternative_proxy_server(
         ProxyServer::FromPacString("QUIC badproxy:99"));
   }
-  params->proxy_delegate = test_proxy_delegate;
+  session_context->proxy_delegate = test_proxy_delegate;
 }
 
 }  // namespace
@@ -886,7 +886,8 @@ TEST_F(HttpStreamFactoryTest, WithQUICAlternativeProxyMarkedAsBad) {
   for (auto mock_error : quic_proxy_test_mock_errors) {
     for (auto set_alternative_proxy_server :
          set_alternative_proxy_server_values) {
-      HttpNetworkSession::Params params;
+      HttpNetworkSession::Params session_params;
+      HttpNetworkSession::Context session_context;
       MockClientSocketFactory socket_factory;
       std::unique_ptr<ProxyService> proxy_service =
           ProxyService::CreateFixedFromPacResult(
@@ -901,13 +902,14 @@ TEST_F(HttpStreamFactoryTest, WithQUICAlternativeProxyMarkedAsBad) {
       MockHostResolver host_resolver;
       TransportSecurityState transport_security_state;
       SetupForQuicAlternativeProxyTest(
-          &params, &socket_factory, proxy_service.get(), &test_proxy_delegate,
-          &http_server_properties, &cert_verifier, &ct_policy_enforcer,
-          &ct_verifier, ssl_config_service.get(), &host_resolver,
-          &transport_security_state, set_alternative_proxy_server);
+          &session_params, &session_context, &socket_factory,
+          proxy_service.get(), &test_proxy_delegate, &http_server_properties,
+          &cert_verifier, &ct_policy_enforcer, &ct_verifier,
+          ssl_config_service.get(), &host_resolver, &transport_security_state,
+          set_alternative_proxy_server);
 
-      std::unique_ptr<HttpNetworkSession> session(
-          new HttpNetworkSession(params));
+      auto session =
+          base::MakeUnique<HttpNetworkSession>(session_params, session_context);
 
       // Before starting the test, verify that there are no proxies marked as
       // bad.
@@ -935,20 +937,16 @@ TEST_F(HttpStreamFactoryTest, WithQUICAlternativeProxyMarkedAsBad) {
           MockConnect(ASYNC, mock_error));
       socket_factory.AddSocketDataProvider(&socket_data_proxy_main_job_2);
 
-      SSLSocketDataProvider ssl_data(ASYNC, OK);
-
       // First request would use DIRECT, and succeed.
       StaticSocketDataProvider socket_data_direct_first_request;
       socket_data_direct_first_request.set_connect_data(MockConnect(ASYNC, OK));
       socket_factory.AddSocketDataProvider(&socket_data_direct_first_request);
-      socket_factory.AddSSLSocketDataProvider(&ssl_data);
 
       // Second request would use DIRECT, and succeed.
       StaticSocketDataProvider socket_data_direct_second_request;
       socket_data_direct_second_request.set_connect_data(
           MockConnect(ASYNC, OK));
       socket_factory.AddSocketDataProvider(&socket_data_direct_second_request);
-      socket_factory.AddSSLSocketDataProvider(&ssl_data);
 
       // Now request a stream. It should succeed using the DIRECT.
       HttpRequestInfo request_info;
@@ -1009,7 +1007,8 @@ TEST_F(HttpStreamFactoryTest, WithQUICAlternativeProxyMarkedAsBad) {
 // not marked as bad if only the alternative proxy server job fails.
 TEST_F(HttpStreamFactoryTest, WithQUICAlternativeProxyNotMarkedAsBad) {
   for (auto mock_error : quic_proxy_test_mock_errors) {
-    HttpNetworkSession::Params params;
+    HttpNetworkSession::Params session_params;
+    HttpNetworkSession::Context session_context;
     MockClientSocketFactory socket_factory;
     std::unique_ptr<ProxyService> proxy_service =
         ProxyService::CreateFixedFromPacResult("HTTPS badproxy:99; DIRECT");
@@ -1025,13 +1024,14 @@ TEST_F(HttpStreamFactoryTest, WithQUICAlternativeProxyNotMarkedAsBad) {
     TransportSecurityState transport_security_state;
 
     SetupForQuicAlternativeProxyTest(
-        &params, &socket_factory, proxy_service.get(), &test_proxy_delegate,
-        &http_server_properties, &cert_verifier, &ct_policy_enforcer,
-        &ct_verifier, ssl_config_service.get(), &host_resolver,
-        &transport_security_state, true);
+        &session_params, &session_context, &socket_factory, proxy_service.get(),
+        &test_proxy_delegate, &http_server_properties, &cert_verifier,
+        &ct_policy_enforcer, &ct_verifier, ssl_config_service.get(),
+        &host_resolver, &transport_security_state, true);
 
     HostPortPair host_port_pair("badproxy", 99);
-    std::unique_ptr<HttpNetworkSession> session(new HttpNetworkSession(params));
+    auto session =
+        base::MakeUnique<HttpNetworkSession>(session_params, session_context);
 
     // Before starting the test, verify that there are no proxies marked as
     // bad.
@@ -1123,12 +1123,16 @@ TEST_F(HttpStreamFactoryTest, UsePreConnectIfNoZeroRTT) {
         ProxyService::CreateFixed("http_proxy"));
 
     // Setup params to disable preconnect, but QUIC doesn't 0RTT.
-    HttpNetworkSession::Params params =
+    HttpNetworkSession::Params session_params =
         SpdySessionDependencies::CreateSessionParams(&session_deps);
-    params.enable_quic = true;
-    params.http_server_properties = &http_server_properties;
+    session_params.enable_quic = true;
 
-    std::unique_ptr<HttpNetworkSession> session(new HttpNetworkSession(params));
+    HttpNetworkSession::Context session_context =
+        SpdySessionDependencies::CreateSessionContext(&session_deps);
+    session_context.http_server_properties = &http_server_properties;
+
+    auto session =
+        base::MakeUnique<HttpNetworkSession>(session_params, session_context);
     HttpNetworkSessionPeer peer(session.get());
     HostPortPair proxy_host("http_proxy", 80);
     CapturePreconnectsHttpProxySocketPool* http_proxy_pool =
@@ -1143,8 +1147,7 @@ TEST_F(HttpStreamFactoryTest, UsePreConnectIfNoZeroRTT) {
             session_deps.transport_security_state.get(),
             session_deps.cert_transparency_verifier.get(),
             session_deps.ct_policy_enforcer.get());
-    std::unique_ptr<MockClientSocketPoolManager> mock_pool_manager(
-        new MockClientSocketPoolManager);
+    auto mock_pool_manager = base::MakeUnique<MockClientSocketPoolManager>();
     mock_pool_manager->SetSocketPoolForHTTPProxy(
         proxy_host, base::WrapUnique(http_proxy_pool));
     mock_pool_manager->SetSocketPoolForSSLWithProxy(
@@ -1173,14 +1176,17 @@ TEST_F(HttpStreamFactoryTest, OnlyOnePreconnectToProxyServer) {
       }
 
       SpdySessionDependencies session_deps;
-      HttpNetworkSession::Params params =
+      HttpNetworkSession::Params session_params =
           SpdySessionDependencies::CreateSessionParams(&session_deps);
-      params.enable_quic = true;
-      params.proxy_service = proxy_service.get();
-      params.http_server_properties = &http_server_properties;
+      session_params.enable_quic = true;
 
-      std::unique_ptr<HttpNetworkSession> session(
-          new HttpNetworkSession(params));
+      HttpNetworkSession::Context session_context =
+          SpdySessionDependencies::CreateSessionContext(&session_deps);
+      session_context.proxy_service = proxy_service.get();
+      session_context.http_server_properties = &http_server_properties;
+
+      auto session =
+          base::MakeUnique<HttpNetworkSession>(session_params, session_context);
 
       HttpNetworkSessionPeer peer(session.get());
       HostPortPair proxy_host("myproxy.org", 443);
@@ -1202,8 +1208,8 @@ TEST_F(HttpStreamFactoryTest, OnlyOnePreconnectToProxyServer) {
                 session_deps.cert_transparency_verifier.get(),
                 session_deps.ct_policy_enforcer.get());
 
-        std::unique_ptr<MockClientSocketPoolManager> mock_pool_manager(
-            new MockClientSocketPoolManager);
+        auto mock_pool_manager =
+            base::MakeUnique<MockClientSocketPoolManager>();
         mock_pool_manager->SetSocketPoolForHTTPProxy(
             proxy_host, base::WrapUnique(http_proxy_pool));
         mock_pool_manager->SetSocketPoolForSSLWithProxy(
@@ -1262,13 +1268,17 @@ TEST_F(HttpStreamFactoryTest, ProxyServerPreconnectDifferentPrivacyModes) {
   http_server_properties.SetSupportsSpdy(spdy_server, true);
 
   SpdySessionDependencies session_deps;
-  HttpNetworkSession::Params params =
+  HttpNetworkSession::Params session_params =
       SpdySessionDependencies::CreateSessionParams(&session_deps);
-  params.enable_quic = true;
-  params.proxy_service = proxy_service.get();
-  params.http_server_properties = &http_server_properties;
+  session_params.enable_quic = true;
 
-  std::unique_ptr<HttpNetworkSession> session(new HttpNetworkSession(params));
+  HttpNetworkSession::Context session_context =
+      SpdySessionDependencies::CreateSessionContext(&session_deps);
+  session_context.proxy_service = proxy_service.get();
+  session_context.http_server_properties = &http_server_properties;
+
+  auto session =
+      base::MakeUnique<HttpNetworkSession>(session_params, session_context);
 
   HttpNetworkSessionPeer peer(session.get());
   HostPortPair proxy_host("myproxy.org", 443);
@@ -1286,8 +1296,7 @@ TEST_F(HttpStreamFactoryTest, ProxyServerPreconnectDifferentPrivacyModes) {
           session_deps.cert_transparency_verifier.get(),
           session_deps.ct_policy_enforcer.get());
 
-  std::unique_ptr<MockClientSocketPoolManager> mock_pool_manager(
-      new MockClientSocketPoolManager);
+  auto mock_pool_manager = base::MakeUnique<MockClientSocketPoolManager>();
   mock_pool_manager->SetSocketPoolForHTTPProxy(
       proxy_host, base::WrapUnique(http_proxy_pool));
   mock_pool_manager->SetSocketPoolForSSLWithProxy(
@@ -1684,8 +1693,7 @@ TEST_F(HttpStreamFactoryTest, RequestHttpStreamOverProxyWithPreconnects) {
       ProxyService::CreateFixed("https://myproxy.org:443"));
 
   // Set up the proxy server as a server that supports request priorities.
-  std::unique_ptr<HttpServerPropertiesImpl> http_server_properties(
-      new HttpServerPropertiesImpl());
+  auto http_server_properties = base::MakeUnique<HttpServerPropertiesImpl>();
   url::SchemeHostPort spdy_server("https", "myproxy.org", 443);
   http_server_properties->SetSupportsSpdy(spdy_server, true);
   session_deps.http_server_properties = std::move(http_server_properties);
@@ -2166,9 +2174,12 @@ class HttpStreamFactoryBidirectionalQuicTest
 
   void Initialize() {
     params_.enable_quic = true;
-    params_.http_server_properties = &http_server_properties_;
-    params_.quic_random = &random_generator_;
-    params_.quic_clock = &clock_;
+    params_.quic_supported_versions = test::SupportedVersions(GetParam());
+
+    HttpNetworkSession::Context session_context;
+    session_context.http_server_properties = &http_server_properties_;
+    session_context.quic_random = &random_generator_;
+    session_context.quic_clock = &clock_;
 
     // Load a certificate that is valid for *.example.org
     scoped_refptr<X509Certificate> test_cert(
@@ -2179,17 +2190,17 @@ class HttpStreamFactoryBidirectionalQuicTest
     crypto_client_stream_factory_.AddProofVerifyDetails(&verify_details_);
     crypto_client_stream_factory_.set_handshake_mode(
         MockCryptoClientStream::CONFIRM_HANDSHAKE);
-    params_.cert_verifier = &cert_verifier_;
-    params_.quic_crypto_client_stream_factory = &crypto_client_stream_factory_;
-    params_.quic_supported_versions = test::SupportedVersions(GetParam());
-    params_.transport_security_state = &transport_security_state_;
-    params_.cert_transparency_verifier = &ct_verifier_;
-    params_.ct_policy_enforcer = &ct_policy_enforcer_;
-    params_.host_resolver = &host_resolver_;
-    params_.proxy_service = proxy_service_.get();
-    params_.ssl_config_service = ssl_config_service_.get();
-    params_.client_socket_factory = &socket_factory_;
-    session_.reset(new HttpNetworkSession(params_));
+    session_context.cert_verifier = &cert_verifier_;
+    session_context.quic_crypto_client_stream_factory =
+        &crypto_client_stream_factory_;
+    session_context.transport_security_state = &transport_security_state_;
+    session_context.cert_transparency_verifier = &ct_verifier_;
+    session_context.ct_policy_enforcer = &ct_policy_enforcer_;
+    session_context.host_resolver = &host_resolver_;
+    session_context.proxy_service = proxy_service_.get();
+    session_context.ssl_config_service = ssl_config_service_.get();
+    session_context.client_socket_factory = &socket_factory_;
+    session_.reset(new HttpNetworkSession(params_, session_context));
     session_->quic_stream_factory()->set_require_confirmation(false);
   }
 
@@ -2268,8 +2279,7 @@ TEST_P(HttpStreamFactoryBidirectionalQuicTest,
   mock_quic_data.AddSocketDataToFactory(&socket_factory());
 
   // Add hanging data for http job.
-  std::unique_ptr<StaticSocketDataProvider> hanging_data;
-  hanging_data.reset(new StaticSocketDataProvider());
+  auto hanging_data = base::MakeUnique<StaticSocketDataProvider>();
   MockConnect hanging_connect(SYNCHRONOUS, ERR_IO_PENDING);
   hanging_data->set_connect_data(hanging_connect);
   socket_factory().AddSocketDataProvider(hanging_data.get());
@@ -2333,8 +2343,7 @@ TEST_P(HttpStreamFactoryBidirectionalQuicTest,
 TEST_P(HttpStreamFactoryBidirectionalQuicTest,
        RequestBidirectionalStreamImplQuicNotEnabled) {
   // Make the http job fail.
-  std::unique_ptr<StaticSocketDataProvider> http_job_data;
-  http_job_data.reset(new StaticSocketDataProvider());
+  auto http_job_data = base::MakeUnique<StaticSocketDataProvider>();
   MockConnect failed_connect(ASYNC, ERR_CONNECTION_REFUSED);
   http_job_data->set_connect_data(failed_connect);
   socket_factory().AddSocketDataProvider(http_job_data.get());
@@ -2396,8 +2405,7 @@ TEST_P(HttpStreamFactoryBidirectionalQuicTest,
   mock_quic_data.AddSocketDataToFactory(&socket_factory());
 
   // Make the http job fail.
-  std::unique_ptr<StaticSocketDataProvider> http_job_data;
-  http_job_data.reset(new StaticSocketDataProvider());
+  auto http_job_data = base::MakeUnique<StaticSocketDataProvider>();
   MockConnect failed_connect(ASYNC, ERR_CONNECTION_REFUSED);
   http_job_data->set_connect_data(failed_connect);
   socket_factory().AddSocketDataProvider(http_job_data.get());

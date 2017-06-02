@@ -42,7 +42,7 @@ const char* const kDumpProviderWhitelist[] = {
 
 // The names of dump providers whitelisted for summary tracing.
 const char* const kDumpProviderSummaryWhitelist[] = {
-    "Malloc", "PartitionAlloc", "ProcessMemoryMetrics", "V8Isolate",
+    "BlinkGC", "Malloc", "PartitionAlloc", "ProcessMemoryMetrics", "V8Isolate",
     nullptr  // End of list marker.
 };
 

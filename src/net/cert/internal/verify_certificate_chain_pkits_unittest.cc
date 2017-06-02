@@ -47,41 +47,44 @@ namespace {
 
 class VerifyCertificateChainPkitsTestDelegate {
  public:
-  static bool Verify(std::vector<std::string> cert_ders,
-                     std::vector<std::string> crl_ders) {
-    if (cert_ders.empty()) {
-      ADD_FAILURE() << "cert_ders is empty";
-      return false;
-    }
+  static void RunTest(std::vector<std::string> cert_ders,
+                      std::vector<std::string> crl_ders,
+                      const PkitsTestInfo& info) {
+    ASSERT_FALSE(cert_ders.empty());
 
-    // PKITS lists chains from trust anchor to target, VerifyCertificateChain
-    // takes them starting with the target and not including the trust anchor.
+    // PKITS lists chains from trust anchor to target, whereas
+    // VerifyCertificateChain takes them starting with the target and ending
+    // with the trust anchor.
     std::vector<scoped_refptr<net::ParsedCertificate>> input_chain;
     CertErrors parsing_errors;
     for (auto i = cert_ders.rbegin(); i != cert_ders.rend(); ++i) {
-      if (!net::ParsedCertificate::CreateAndAddToVector(
-              bssl::UniquePtr<CRYPTO_BUFFER>(
-                  CRYPTO_BUFFER_new(reinterpret_cast<const uint8_t*>(i->data()),
-                                    i->size(), nullptr)),
-              {}, &input_chain, &parsing_errors)) {
-        ADD_FAILURE() << "Cert failed to parse:\n"
-                      << parsing_errors.ToDebugString();
-        return false;
-      }
+      ASSERT_TRUE(net::ParsedCertificate::CreateAndAddToVector(
+          bssl::UniquePtr<CRYPTO_BUFFER>(CRYPTO_BUFFER_new(
+              reinterpret_cast<const uint8_t*>(i->data()), i->size(), nullptr)),
+          {}, &input_chain, &parsing_errors))
+          << parsing_errors.ToDebugString();
     }
 
     SimpleSignaturePolicy signature_policy(1024);
 
-    // Run all tests at the time the PKITS was published.
-    der::GeneralizedTime time = {2011, 4, 15, 0, 0, 0};
+    std::set<der::Input> user_constrained_policy_set;
 
     CertPathErrors path_errors;
-    VerifyCertificateChain(input_chain, CertificateTrust::ForTrustAnchor(),
-                           &signature_policy, time, KeyPurpose::ANY_EKU,
-                           &path_errors);
+    VerifyCertificateChain(
+        input_chain, CertificateTrust::ForTrustAnchor(), &signature_policy,
+        info.time, KeyPurpose::ANY_EKU, info.initial_explicit_policy,
+        info.initial_policy_set, info.initial_policy_mapping_inhibit,
+        info.initial_inhibit_any_policy, &user_constrained_policy_set,
+        &path_errors);
+    bool did_succeed = !path_errors.ContainsHighSeverityErrors();
+
+    EXPECT_EQ(info.user_constrained_policy_set, user_constrained_policy_set);
 
     //  TODO(crbug.com/634443): Test errors on failure?
-    return !path_errors.ContainsHighSeverityErrors();
+    if (info.should_validate != did_succeed) {
+      ASSERT_EQ(info.should_validate, did_succeed)
+          << path_errors.ToDebugString(input_chain);
+    }
   }
 };
 
@@ -97,7 +100,10 @@ TEST_F(PkitsTest01SignatureVerificationCustom,
                                "ValidDSASignaturesTest4EE"};
   const char* const crls[] = {"TrustAnchorRootCRL", "DSACACRL"};
   // DSA signatures are intentionally unsupported.
-  ASSERT_FALSE(this->Verify(certs, crls));
+  PkitsTestInfo info;
+  info.should_validate = false;
+
+  this->RunTest(certs, crls, info);
 }
 
 // Modified version of 4.1.5 Valid DSA Parameter Inheritance Test5
@@ -109,7 +115,10 @@ TEST_F(PkitsTest01SignatureVerificationCustom,
   const char* const crls[] = {"TrustAnchorRootCRL", "DSACACRL",
                               "DSAParametersInheritedCACRL"};
   // DSA signatures are intentionally unsupported.
-  ASSERT_FALSE(this->Verify(certs, crls));
+  PkitsTestInfo info;
+  info.should_validate = false;
+
+  this->RunTest(certs, crls, info);
 }
 
 class PkitsTest13SignatureVerificationCustom
@@ -124,7 +133,10 @@ TEST_F(PkitsTest13SignatureVerificationCustom,
   const char* const crls[] = {"TrustAnchorRootCRL",
                               "nameConstraintsRFC822CA1CRL"};
   // Name constraints on rfc822Names are not supported.
-  ASSERT_FALSE(this->Verify(certs, crls));
+  PkitsTestInfo info;
+  info.should_validate = false;
+
+  this->RunTest(certs, crls, info);
 }
 
 // Modified version of 4.13.23 Valid RFC822 nameConstraints Test23
@@ -136,7 +148,10 @@ TEST_F(PkitsTest13SignatureVerificationCustom,
   const char* const crls[] = {"TrustAnchorRootCRL",
                               "nameConstraintsRFC822CA2CRL"};
   // Name constraints on rfc822Names are not supported.
-  ASSERT_FALSE(this->Verify(certs, crls));
+  PkitsTestInfo info;
+  info.should_validate = false;
+
+  this->RunTest(certs, crls, info);
 }
 
 // Modified version of 4.13.25 Valid RFC822 nameConstraints Test25
@@ -148,7 +163,10 @@ TEST_F(PkitsTest13SignatureVerificationCustom,
   const char* const crls[] = {"TrustAnchorRootCRL",
                               "nameConstraintsRFC822CA3CRL"};
   // Name constraints on rfc822Names are not supported.
-  ASSERT_FALSE(this->Verify(certs, crls));
+  PkitsTestInfo info;
+  info.should_validate = false;
+
+  this->RunTest(certs, crls, info);
 }
 
 // Modified version of 4.13.27 Valid DN and RFC822 nameConstraints Test27
@@ -161,7 +179,10 @@ TEST_F(PkitsTest13SignatureVerificationCustom,
   const char* const crls[] = {"TrustAnchorRootCRL", "nameConstraintsDN1CACRL",
                               "nameConstraintsDN1subCA3CRL"};
   // Name constraints on rfc822Names are not supported.
-  ASSERT_FALSE(this->Verify(certs, crls));
+  PkitsTestInfo info;
+  info.should_validate = false;
+
+  this->RunTest(certs, crls, info);
 }
 
 // Modified version of 4.13.34 Valid URI nameConstraints Test34
@@ -172,7 +193,10 @@ TEST_F(PkitsTest13SignatureVerificationCustom,
                                "ValidURInameConstraintsTest34EE"};
   const char* const crls[] = {"TrustAnchorRootCRL", "nameConstraintsURI1CACRL"};
   // Name constraints on uniformResourceIdentifiers are not supported.
-  ASSERT_FALSE(this->Verify(certs, crls));
+  PkitsTestInfo info;
+  info.should_validate = false;
+
+  this->RunTest(certs, crls, info);
 }
 
 // Modified version of 4.13.36 Valid URI nameConstraints Test36
@@ -183,7 +207,10 @@ TEST_F(PkitsTest13SignatureVerificationCustom,
                                "ValidURInameConstraintsTest36EE"};
   const char* const crls[] = {"TrustAnchorRootCRL", "nameConstraintsURI2CACRL"};
   // Name constraints on uniformResourceIdentifiers are not supported.
-  ASSERT_FALSE(this->Verify(certs, crls));
+  PkitsTestInfo info;
+  info.should_validate = false;
+
+  this->RunTest(certs, crls, info);
 }
 
 INSTANTIATE_TYPED_TEST_CASE_P(VerifyCertificateChain,
@@ -202,6 +229,21 @@ INSTANTIATE_TYPED_TEST_CASE_P(VerifyCertificateChain,
                               PkitsTest07KeyUsage,
                               VerifyCertificateChainPkitsTestDelegate);
 INSTANTIATE_TYPED_TEST_CASE_P(VerifyCertificateChain,
+                              PkitsTest08CertificatePolicies,
+                              VerifyCertificateChainPkitsTestDelegate);
+INSTANTIATE_TYPED_TEST_CASE_P(VerifyCertificateChain,
+                              PkitsTest09RequireExplicitPolicy,
+                              VerifyCertificateChainPkitsTestDelegate);
+INSTANTIATE_TYPED_TEST_CASE_P(VerifyCertificateChain,
+                              PkitsTest10PolicyMappings,
+                              VerifyCertificateChainPkitsTestDelegate);
+INSTANTIATE_TYPED_TEST_CASE_P(VerifyCertificateChain,
+                              PkitsTest11InhibitPolicyMapping,
+                              VerifyCertificateChainPkitsTestDelegate);
+INSTANTIATE_TYPED_TEST_CASE_P(VerifyCertificateChain,
+                              PkitsTest12InhibitAnyPolicy,
+                              VerifyCertificateChainPkitsTestDelegate);
+INSTANTIATE_TYPED_TEST_CASE_P(VerifyCertificateChain,
                               PkitsTest13NameConstraints,
                               VerifyCertificateChainPkitsTestDelegate);
 INSTANTIATE_TYPED_TEST_CASE_P(VerifyCertificateChain,
@@ -211,9 +253,5 @@ INSTANTIATE_TYPED_TEST_CASE_P(VerifyCertificateChain,
 // TODO(mattm): CRL support: PkitsTest04BasicCertificateRevocationTests,
 // PkitsTest05VerifyingPathswithSelfIssuedCertificates,
 // PkitsTest14DistributionPoints, PkitsTest15DeltaCRLs
-
-// TODO(mattm): Certificate Policies support: PkitsTest08CertificatePolicies,
-// PkitsTest09RequireExplicitPolicy PkitsTest10PolicyMappings,
-// PkitsTest11InhibitPolicyMapping, PkitsTest12InhibitAnyPolicy
 
 }  // namespace net

@@ -34,7 +34,6 @@
 namespace base {
 
 bool PathProviderPosix(int key, FilePath* result) {
-  FilePath path;
   switch (key) {
     case FILE_EXE:
     case FILE_MODULE: {  // TODO(evanm): is this correct?
@@ -82,6 +81,7 @@ bool PathProviderPosix(int key, FilePath* result) {
       // tree configurations (sub-project builds, gyp --output_dir, etc.)
       std::unique_ptr<Environment> env(Environment::Create());
       std::string cr_source_root;
+      FilePath path;
       if (env->GetVar("CR_SOURCE_ROOT", &cr_source_root)) {
         path = FilePath(cr_source_root);
         if (PathExists(path)) {

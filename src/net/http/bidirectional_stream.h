@@ -147,11 +147,6 @@ class NET_EXPORT BidirectionalStream
   // invoked, and should not be called again until Delegate::OnDataSent is
   // invoked. If |end_stream| is true, the DATA frame will have an END_STREAM
   // flag.
-  void SendData(const scoped_refptr<IOBuffer>& data,
-                int length,
-                bool end_stream);
-
-  // Same as SendData except this takes in a vector of IOBuffers.
   void SendvData(const std::vector<scoped_refptr<IOBuffer>>& buffers,
                  const std::vector<int>& lengths,
                  bool end_stream);

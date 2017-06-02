@@ -151,32 +151,26 @@ int TCPClientSocket::DoConnect() {
 
   const IPEndPoint& endpoint = addresses_[current_address_index_];
 
-  {
-    // TODO(ricea): Remove ScopedTracker below once crbug.com/436634 is fixed.
-    tracked_objects::ScopedTracker tracking_profile(
-        FROM_HERE_WITH_EXPLICIT_FUNCTION("436634 TCPClientSocket::DoConnect"));
+  if (previously_disconnected_) {
+    use_history_.Reset();
+    connection_attempts_.clear();
+    previously_disconnected_ = false;
+  }
 
-    if (previously_disconnected_) {
-      use_history_.Reset();
-      connection_attempts_.clear();
-      previously_disconnected_ = false;
-    }
+  next_connect_state_ = CONNECT_STATE_CONNECT_COMPLETE;
 
-    next_connect_state_ = CONNECT_STATE_CONNECT_COMPLETE;
+  if (socket_->IsValid()) {
+    DCHECK(bind_address_);
+  } else {
+    int result = OpenSocket(endpoint.GetFamily());
+    if (result != OK)
+      return result;
 
-    if (socket_->IsValid()) {
-      DCHECK(bind_address_);
-    } else {
-      int result = OpenSocket(endpoint.GetFamily());
-      if (result != OK)
+    if (bind_address_) {
+      result = socket_->Bind(*bind_address_);
+      if (result != OK) {
+        socket_->Close();
         return result;
-
-      if (bind_address_) {
-        result = socket_->Bind(*bind_address_);
-        if (result != OK) {
-          socket_->Close();
-          return result;
-        }
       }
     }
   }

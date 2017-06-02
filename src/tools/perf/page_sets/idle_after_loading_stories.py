@@ -32,8 +32,8 @@ SITES = [
 
 # TODO(rnephew): Move to seperate file and merge with mac_gpu_sites BasePage.
 class _BasePage(page_module.Page):
-  def __init__(self, page_set, url, wait_in_seconds):
-    super(_BasePage, self).__init__(url=url, page_set=page_set)
+  def __init__(self, page_set, url, wait_in_seconds, name):
+    super(_BasePage, self).__init__(url=url, page_set=page_set, name=name)
     self._wait_in_seconds = wait_in_seconds
 
   def RunPageInteractions(self, action_runner):
@@ -47,9 +47,10 @@ class IdleAfterLoadingStories(story.StorySet):
   def __init__(self, wait_in_seconds=0):
     super(IdleAfterLoadingStories, self).__init__(
         archive_data_file='data/idle_after_loading_stories.json',
-        cloud_storage_bucket=story.PARTNER_BUCKET)
+        cloud_storage_bucket=story.PARTNER_BUCKET,
+        verify_names=True)
 
     # Chrome has high idle CPU usage on this site, even after its quiesced.
     # https://crbug.com/638365.
     for url in SITES:
-      self.AddStory(_BasePage(self, url, wait_in_seconds))
+      self.AddStory(_BasePage(self, url, wait_in_seconds, url))

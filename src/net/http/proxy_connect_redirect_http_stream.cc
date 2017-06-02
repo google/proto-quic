@@ -133,4 +133,4 @@ HttpStream* ProxyConnectRedirectHttpStream::RenewStreamForAuth() {
   return NULL;
 }
 
-}  // namespace
+}  // namespace net

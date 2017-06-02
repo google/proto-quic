@@ -29,57 +29,6 @@ from telemetry import decorators
 from core.sharding_map_generator import load_benchmark_sharding_map
 
 
-SCRIPT_TESTS = [
-  {
-    'args': [
-      'cc_perftests',
-      '--adb-path',
-      'src/third_party/catapult/devil/bin/deps/linux2/x86_64/bin/adb',
-    ],
-    'name': 'cc_perftests',
-    'script': 'gtest_perf_test.py',
-    'testers': {
-      'chromium.perf': [
-        # crbug.com/698831
-        # {
-        #   'name': 'Android Nexus5 Perf',
-        #   'shards': [2]
-        # },
-        # {
-        #   'name': 'Android Nexus6 Perf',
-        #   'shards': [2]
-        # },
-        # {
-        #   'name': 'Android Nexus7v2 Perf',
-        #   'shards': [2]
-        # },
-        {
-          'name': 'Android Nexus9 Perf',
-          'shards': [2]
-        },
-      ],
-    }
-  },
-  {
-    'args': [
-      'tracing_perftests',
-      '--adb-path',
-      'src/third_party/catapult/devil/bin/deps/linux2/x86_64/bin/adb',
-    ],
-    'name': 'tracing_perftests',
-    'script': 'gtest_perf_test.py',
-    'testers': {
-      'chromium.perf': [
-        {
-          'name': 'Android Nexus9 Perf',
-          'shards': [2]
-        },
-      ]
-    }
-  },
-]
-
-
 def add_builder(waterfall, name, additional_compile_targets=None):
   waterfall['builders'][name] = added = {}
   if additional_compile_targets:
@@ -381,7 +330,7 @@ def get_waterfall_config():
           ],
        'perf_tests': [
          ('load_library_perf_tests', 'build187-m1'),
-         #  ('performance_browser_tests', 'build187-m1'),  # crbug.com/722367
+         ('performance_browser_tests', 'build187-m1'),
          ('media_perftests', 'build188-m1')]
       }
     ])
@@ -417,7 +366,7 @@ def get_waterfall_config():
        'perf_tests': [
          ('angle_perftests', 'build103-m1'),
          ('load_library_perf_tests', 'build103-m1'),
-         # ('performance_browser_tests', 'build103-m1'),  # crbug.com/722367
+         ('performance_browser_tests', 'build103-m1'),
          ('media_perftests', 'build104-m1')]
       }
     ])
@@ -454,7 +403,7 @@ def get_waterfall_config():
        'perf_tests': [
          ('angle_perftests', 'build94-m1'),
          ('load_library_perf_tests', 'build94-m1'),
-         # ('performance_browser_tests', 'build94-m1'),  # crbug.com/722367
+         ('performance_browser_tests', 'build94-m1'),
          ('media_perftests', 'build95-m1')]
       }
     ])
@@ -497,10 +446,11 @@ def get_waterfall_config():
        'os': 'Mac-10.11',
        'pool': 'Chrome-perf',
        'device_ids': [
-           'build4-b1', 'build5-b1', 'build6-b1', 'build7-b1', 'build8-b1'
+           'build4-b1', 'build5-b1', 'build6-b1', 'build7-b1',
+           'build30-b4' # replacing build8-b1. crbug.com/724998
           ],
        'perf_tests': [
-         # ('performance_browser_tests', 'build8-b1')  # crbug.com/722367
+         ('performance_browser_tests', 'build30-b4')
        ]
       }
     ])
@@ -517,7 +467,7 @@ def get_waterfall_config():
            'build130-b1', 'build131-b1', 'build132-b1'
           ],
        'perf_tests': [
-         # ('performance_browser_tests', 'build132-b1')  # crbug.com/722367
+         ('performance_browser_tests', 'build132-b1')
        ]
       }
     ])
@@ -534,7 +484,7 @@ def get_waterfall_config():
            'build125-b1', 'build126-b1', 'build127-b1'
           ],
        'perf_tests': [
-         # ('performance_browser_tests', 'build126-b1')  # crbug.com/722367
+         ('performance_browser_tests', 'build126-b1')
        ]
       }
     ])
@@ -594,7 +544,7 @@ def generate_isolate_script_entry(swarming_dimensions, test_args,
       # supports swarming. It doesn't hurt.
       'can_use_on_swarming_builders': True,
       'expiration': 10 * 60 * 60, # 10 hour timeout for now (crbug.com/699312)
-      'hard_timeout': swarming_timeout if swarming_timeout else 9000, # 2.5hrs
+      'hard_timeout': swarming_timeout if swarming_timeout else 10800, # 3 hours
       'ignore_task_failure': ignore_task_failure,
       'io_timeout': 3600,
       'dimension_sets': swarming_dimensions,
@@ -640,19 +590,6 @@ def script_test_enabled_on_tester(master, test, tester_name, shard):
       if shard in enabled_tester['shards']:
         return True
   return False
-
-
-def generate_script_tests(master, tester_name, shard):
-  script_tests = []
-  for test in SCRIPT_TESTS:
-    if script_test_enabled_on_tester(master, test, tester_name, shard):
-      script = {
-        'args': test['args'],
-        'name': test['name'],
-        'script': test['script']
-      }
-      script_tests.append(script)
-  return script_tests
 
 
 def get_swarming_dimension(dimension, device_id):
@@ -711,8 +648,6 @@ def generate_telemetry_tests(name, tester_config, benchmarks,
   else:
     browser_name ='release'
 
-  num_shards = len(tester_config['swarming_dimensions'][0]['device_ids'])
-  current_shard = 0
   for benchmark in benchmarks:
     if not ShouldBenchmarkBeScheduled(benchmark, tester_config['platform']):
       continue
@@ -731,7 +666,6 @@ def generate_telemetry_tests(name, tester_config, benchmarks,
                          ' component and cc martiniss@ and nednguyen@ to'
                          ' execute the benchmark on the waterfall.' % (
                              benchmark.Name()))
-
       swarming_dimensions.append(get_swarming_dimension(
           dimension, device))
 
@@ -744,10 +678,6 @@ def generate_telemetry_tests(name, tester_config, benchmarks,
       reference_test = generate_telemetry_test(
         swarming_dimensions, benchmark.Name(),'reference')
       isolated_scripts.append(reference_test)
-      if current_shard == (num_shards - 1):
-        current_shard = 0
-      else:
-        current_shard += 1
 
   return isolated_scripts
 
@@ -755,8 +685,14 @@ def generate_telemetry_tests(name, tester_config, benchmarks,
 # Overrides the default 2 hour timeout for swarming tasks.
 BENCHMARK_SWARMING_TIMEOUTS = {
     'loading.mobile': 16200, # 4.5 hours
-    'system_health.memory_mobile': 10800, # 4 hours
+    'system_health.memory_mobile': 10800, # 3 hours
+    'system_health.memory_desktop': 10800, # 3 hours
 }
+
+
+# Devices which are broken right now. Tests will not be scheduled on them.
+# Please add a comment with a bug for replacing the device.
+BLACKLISTED_DEVICES = []
 
 
 # List of benchmarks that are to never be run with reference builds.
@@ -778,6 +714,28 @@ def current_benchmarks():
   return sorted(all_benchmarks, key=lambda b: b.Name())
 
 
+def remove_blacklisted_device_tests(tests, blacklisted_devices):
+  new_tests = []
+  blacklist_device_to_test = collections.defaultdict(list)
+  for test in tests:
+    if test.get('swarming', None):
+      swarming = test['swarming']
+      new_dimensions = []
+
+      for dimension in swarming['dimension_sets']:
+        if dimension['id'] in blacklisted_devices:
+          blacklist_device_to_test[dimension['id']].append(test['name'])
+          continue
+        new_dimensions.append(dimension)
+      if not new_dimensions:
+        continue
+    new_tests.append(test)
+
+  return new_tests, {
+      device: sorted(tests) for device, tests
+      in blacklist_device_to_test.items()}
+
+
 def generate_all_tests(waterfall):
   tests = {}
 
@@ -785,35 +743,32 @@ def generate_all_tests(waterfall):
   benchmark_sharding_map = load_benchmark_sharding_map()
 
   for name, config in waterfall['testers'].iteritems():
-    benchmark_list = all_benchmarks
-    if config.get('swarming', False):
-      # Our current configuration only ever has one set of swarming dimensions
-      # Make sure this still holds true
-      if len(config['swarming_dimensions']) > 1:
-        raise Exception('Invalid assumption on number of swarming dimensions')
-      # Generate benchmarks
-      isolated_scripts = generate_telemetry_tests(
-          name, config, benchmark_list, benchmark_sharding_map,
-          BENCHMARK_REF_BUILD_BLACKLIST)
-      # Generate swarmed non-telemetry tests if present
-      if config['swarming_dimensions'][0].get('perf_tests', False):
-        isolated_scripts += generate_cplusplus_isolate_script_test(
-          config['swarming_dimensions'][0])
-      tests[name] = {
-        'isolated_scripts': sorted(isolated_scripts, key=lambda x: x['name'])
-      }
-    else:
-      # scripts are only currently run in addition to the main waterfall.  They
-      # are currently the only thing generated in the perf json file.
-      # TODO eyaich: will need to handle the sharding differently when we have
-      # swarmed bots on the main waterfall.
-      for shard in range(0, config['num_host_shards']):
-        tester_name = '%s (%d)' % (name, shard + 1)
-        scripts = generate_script_tests(waterfall['name'], name, shard + 1)
-        if scripts:
-          tests[tester_name] = {
-            'scripts': sorted(scripts, key=lambda x: x['name'])
-          }
+    assert config.get('swarming', False), 'Only swarming config is supported'
+    # Our current configuration only ever has one set of swarming dimensions
+    # Make sure this still holds true
+    if len(config['swarming_dimensions']) > 1:
+      raise Exception('Invalid assumption on number of swarming dimensions')
+    # Generate benchmarks
+    isolated_scripts = generate_telemetry_tests(
+        name, config, all_benchmarks, benchmark_sharding_map,
+        BENCHMARK_REF_BUILD_BLACKLIST)
+    # Generate swarmed non-telemetry tests if present
+    if config['swarming_dimensions'][0].get('perf_tests', False):
+      isolated_scripts += generate_cplusplus_isolate_script_test(
+        config['swarming_dimensions'][0])
+
+    isolated_scripts, devices_to_test_skipped = remove_blacklisted_device_tests(
+        isolated_scripts, BLACKLISTED_DEVICES)
+    if devices_to_test_skipped:
+      for device, skipped_tests in devices_to_test_skipped.items():
+        print (
+          'Device "%s" is blacklisted. These benchmarks are not scheduled:' % (
+              device))
+        for test in skipped_tests:
+          print ' * %s' % test
+    tests[name] = {
+      'isolated_scripts': sorted(isolated_scripts, key=lambda x: x['name'])
+    }
 
   for name, config in waterfall['builders'].iteritems():
     tests[name] = config

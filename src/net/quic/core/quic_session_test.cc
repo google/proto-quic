@@ -228,6 +228,8 @@ class TestSession : public QuicSpdySession {
   }
 
   using QuicSession::PostProcessAfterData;
+  using QuicSession::closed_streams;
+  using QuicSession::zombie_streams;
 
  private:
   StrictMock<TestCryptoStream> crypto_stream_;
@@ -1344,6 +1346,24 @@ TEST_P(QuicSessionTestClient, EnableFHOLThroughConfigOption) {
   } else {
     EXPECT_TRUE(session_.force_hol_blocking());
   }
+}
+
+TEST_P(QuicSessionTestServer, ZombieStreams) {
+  if (!session_.use_stream_notifier()) {
+    return;
+  }
+  TestStream* stream2 = session_.CreateOutgoingDynamicStream(kDefaultPriority);
+  QuicStreamPeer::SetStreamBytesWritten(3, stream2);
+  EXPECT_TRUE(stream2->IsWaitingForAcks());
+
+  EXPECT_CALL(*connection_, SendRstStream(2, _, _));
+  session_.CloseStream(2);
+  EXPECT_TRUE(QuicContainsKey(session_.zombie_streams(), 2));
+  EXPECT_TRUE(session_.closed_streams()->empty());
+  session_.OnStreamDoneWaitingForAcks(2);
+  EXPECT_FALSE(QuicContainsKey(session_.zombie_streams(), 2));
+  EXPECT_EQ(1u, session_.closed_streams()->size());
+  EXPECT_EQ(2u, session_.closed_streams()->front()->id());
 }
 
 }  // namespace

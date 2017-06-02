@@ -17,7 +17,6 @@ import java.io.File;
  * Provides implementation of command line initialization for Android.
  */
 public final class CommandLineInitUtil {
-
     private static final String TAG = "CommandLineInitUtil";
 
     /**
@@ -52,9 +51,12 @@ public final class CommandLineInitUtil {
         if (!CommandLine.isInitialized()) {
             File commandLineFile = getAlternativeCommandLinePath(context, fileName);
             if (commandLineFile != null) {
-                Log.i(TAG, "Using alternative command line file in " + commandLineFile.getPath());
+                Log.i(TAG,
+                        "Initializing command line from alternative file "
+                                + commandLineFile.getPath());
             } else {
                 commandLineFile = new File(COMMAND_LINE_FILE_PATH, fileName);
+                Log.d(TAG, "Initializing command line from " + commandLineFile.getPath());
             }
             CommandLine.initFromFile(commandLineFile.getPath());
         }
@@ -75,8 +77,9 @@ public final class CommandLineInitUtil {
                 return alternativeCommandLineFile;
             }
 
-            String debugApp = Build.VERSION.SDK_INT < 17
-                    ? getDebugAppPreJBMR1(context) : getDebugAppJBMR1(context);
+            String debugApp = Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1
+                    ? getDebugAppPreJBMR1(context)
+                    : getDebugAppJBMR1(context);
 
             if (debugApp != null
                     && debugApp.equals(context.getApplicationContext().getPackageName())) {

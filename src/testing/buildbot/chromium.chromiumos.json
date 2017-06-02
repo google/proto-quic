@@ -44,10 +44,22 @@
       },
       {
         "args": [
+          "--mash",
+          "--test-launcher-filter-file=../../testing/buildbot/filters/ash_unittests_mash.filter"
+        ],
+        "name": "ash_unittests-mash",
+        "override_isolate_target": "ash_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "ash_unittests"
+      },
+      {
+        "args": [
           "--mus",
           "--test-launcher-filter-file=../../testing/buildbot/filters/ash_unittests_mus.filter"
         ],
-        "name": "ash_unittests --mus",
+        "name": "ash_unittests-mus",
         "override_isolate_target": "ash_unittests",
         "swarming": {
           "can_use_on_swarming_builders": true
@@ -146,12 +158,6 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
-        "test": "display_service_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
         "test": "display_unittests"
       },
       {
@@ -216,12 +222,6 @@
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
-        },
-        "test": "input_device_unittests"
-      },
-      {
-        "swarming": {
           "can_use_on_swarming_builders": true,
           "shards": 3
         },
@@ -244,6 +244,18 @@
           "can_use_on_swarming_builders": true
         },
         "test": "latency_unittests"
+      },
+      {
+        "args": [
+          "--ozone-platform=headless",
+          "--override-use-software-gl-for-tests",
+          "--test-launcher-filter-file=../../testing/buildbot/filters/mash.browser_tests.filter"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "hard_timeout": 900
+        },
+        "test": "mash_browser_tests"
       },
       {
         "swarming": {
@@ -292,18 +304,6 @@
           "hard_timeout": 900
         },
         "test": "mus_browser_tests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
-        "test": "mus_demo_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
-        "test": "mus_gpu_unittests"
       },
       {
         "swarming": {
@@ -378,7 +378,7 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
-        "test": "service_unittests"
+        "test": "services_unittests"
       },
       {
         "swarming": {
@@ -421,18 +421,6 @@
           "can_use_on_swarming_builders": true
         },
         "test": "ui_chromeos_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
-        "test": "ui_service_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
-        "test": "ui_struct_traits_unittests"
       },
       {
         "swarming": {
@@ -668,12 +656,6 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
-        "test": "input_device_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
         "test": "interactive_ui_tests"
       },
       {
@@ -773,7 +755,7 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
-        "test": "service_unittests"
+        "test": "services_unittests"
       },
       {
         "swarming": {
@@ -816,12 +798,6 @@
           "can_use_on_swarming_builders": true
         },
         "test": "ui_chromeos_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
-        "test": "ui_struct_traits_unittests"
       },
       {
         "swarming": {
@@ -1131,7 +1107,7 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
-        "test": "service_unittests"
+        "test": "services_unittests"
       },
       {
         "swarming": {

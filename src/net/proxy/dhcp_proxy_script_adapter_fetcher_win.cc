@@ -42,12 +42,13 @@ DhcpProxyScriptAdapterFetcher::DhcpProxyScriptAdapterFetcher(
 }
 
 DhcpProxyScriptAdapterFetcher::~DhcpProxyScriptAdapterFetcher() {
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   Cancel();
 }
 
 void DhcpProxyScriptAdapterFetcher::Fetch(
     const std::string& adapter_name, const CompletionCallback& callback) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK_EQ(state_, STATE_START);
   result_ = ERR_IO_PENDING;
   pac_script_ = base::string16();
@@ -70,7 +71,7 @@ void DhcpProxyScriptAdapterFetcher::Fetch(
 }
 
 void DhcpProxyScriptAdapterFetcher::Cancel() {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   callback_.Reset();
   wait_timer_.Stop();
   script_fetcher_.reset();
@@ -95,22 +96,22 @@ void DhcpProxyScriptAdapterFetcher::Cancel() {
 }
 
 bool DhcpProxyScriptAdapterFetcher::DidFinish() const {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   return state_ == STATE_FINISH;
 }
 
 int DhcpProxyScriptAdapterFetcher::GetResult() const {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   return result_;
 }
 
 base::string16 DhcpProxyScriptAdapterFetcher::GetPacScript() const {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   return pac_script_;
 }
 
 GURL DhcpProxyScriptAdapterFetcher::GetPacURL() const {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   return pac_url_;
 }
 
@@ -137,7 +138,7 @@ DhcpProxyScriptAdapterFetcher::DhcpQuery::~DhcpQuery() {
 
 void DhcpProxyScriptAdapterFetcher::OnDhcpQueryDone(
     scoped_refptr<DhcpQuery> dhcp_query) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   // Because we can't cancel the call to the Win32 API, we can expect
   // it to finish while we are in a few different states.  The expected
   // one is WAIT_DHCP, but it could be in CANCEL if Cancel() was called,
@@ -170,7 +171,7 @@ void DhcpProxyScriptAdapterFetcher::OnTimeout() {
 }
 
 void DhcpProxyScriptAdapterFetcher::OnFetcherDone(int result) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(state_ == STATE_WAIT_URL || state_ == STATE_CANCEL);
   if (state_ == STATE_CANCEL)
     return;

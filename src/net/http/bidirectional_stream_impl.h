@@ -128,10 +128,6 @@ class NET_EXPORT_PRIVATE BidirectionalStreamImpl {
   // Delegate::OnHeadersSent is invoked, and should not be called again until
   // Delegate::OnDataSent is invoked. If |end_stream| is true, the DATA frame
   // will have an END_STREAM flag.
-  virtual void SendData(const scoped_refptr<IOBuffer>& data,
-                        int length,
-                        bool end_stream) = 0;
-
   virtual void SendvData(const std::vector<scoped_refptr<IOBuffer>>& buffers,
                          const std::vector<int>& lengths,
                          bool end_stream) = 0;

@@ -12,7 +12,7 @@
 
 #include "base/macros.h"
 #include "base/memory/scoped_vector.h"
-#include "base/threading/non_thread_safe.h"
+#include "base/threading/thread_checker.h"
 #include "base/time/time.h"
 #include "base/timer/timer.h"
 // Needed on shared build with MSVS2010 to avoid multiple definitions of
@@ -92,8 +92,7 @@ struct NET_EXPORT_PRIVATE DnsConfig {
 
 // Service for reading system DNS settings, on demand or when signalled by
 // internal watchers and NetworkChangeNotifier.
-class NET_EXPORT_PRIVATE DnsConfigService
-    : NON_EXPORTED_BASE(public base::NonThreadSafe) {
+class NET_EXPORT_PRIVATE DnsConfigService {
  public:
   // Callback interface for the client, called on the same thread as
   // ReadConfig() and WatchConfig().
@@ -141,6 +140,8 @@ class NET_EXPORT_PRIVATE DnsConfigService
   void OnHostsRead(const DnsHosts& hosts);
 
   void set_watch_failed(bool value) { watch_failed_ = value; }
+
+  THREAD_CHECKER(thread_checker_);
 
  private:
   // The timer counts from the last Invalidate* until complete config is read.

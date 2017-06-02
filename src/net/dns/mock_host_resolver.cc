@@ -98,6 +98,7 @@ class MockHostResolverBase::RequestImpl : public HostResolver::Request {
 };
 
 MockHostResolverBase::~MockHostResolverBase() {
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(requests_.empty());
 }
 
@@ -107,7 +108,7 @@ int MockHostResolverBase::Resolve(const RequestInfo& info,
                                   const CompletionCallback& callback,
                                   std::unique_ptr<Request>* request,
                                   const NetLogWithSource& net_log) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(request);
   last_request_priority_ = priority;
   num_resolve_++;
@@ -142,7 +143,7 @@ int MockHostResolverBase::ResolveFromCache(const RequestInfo& info,
                                            AddressList* addresses,
                                            const NetLogWithSource& net_log) {
   num_resolve_from_cache_++;
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   next_request_id_++;
   int rv = ResolveFromIPLiteralOrCache(info, addresses);
   return rv;
@@ -159,7 +160,7 @@ HostCache* MockHostResolverBase::GetHostCache() {
 }
 
 void MockHostResolverBase::ResolveAllPending() {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(ondemand_mode_);
   for (RequestMap::iterator i = requests_.begin(); i != requests_.end(); ++i) {
     base::ThreadTaskRunnerHandle::Get()->PostTask(

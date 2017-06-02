@@ -183,7 +183,6 @@ enum SpdyErrorCode : uint32_t {
 typedef uint8_t SpdyPriority;
 
 // Lowest and Highest here refer to SPDY priorities as described in
-
 // https://www.chromium.org/spdy/spdy-protocol/spdy-protocol-draft3-1#TOC-2.3.3-Stream-priority
 const SpdyPriority kV3HighestPriority = 0;
 const SpdyPriority kV3LowestPriority = 7;
@@ -540,9 +539,7 @@ class SPDY_EXPORT_PRIVATE SpdySettingsIR : public SpdyFrameIR {
   void AddSetting(SpdySettingsIds id, int32_t value) { values_[id] = value; }
 
   bool is_ack() const { return is_ack_; }
-  void set_is_ack(bool is_ack) {
-    is_ack_ = is_ack;
-  }
+  void set_is_ack(bool is_ack) { is_ack_ = is_ack; }
 
   void Visit(SpdyFrameVisitor* visitor) const override;
 
@@ -595,6 +592,7 @@ class SPDY_EXPORT_PRIVATE SpdyGoAwayIR : public SpdyFrameIR {
                SpdyString description);
 
   ~SpdyGoAwayIR() override;
+
   SpdyStreamId last_good_stream_id() const { return last_good_stream_id_; }
   void set_last_good_stream_id(SpdyStreamId last_good_stream_id) {
     DCHECK_EQ(0u, last_good_stream_id & ~kStreamIdMask);
@@ -731,7 +729,7 @@ class SPDY_EXPORT_PRIVATE SpdyContinuationIR : public SpdyFrameIR {
   SpdyFrameType frame_type() const override;
 
   bool end_headers() const { return end_headers_; }
-  void set_end_headers(bool end_headers) {end_headers_ = end_headers;}
+  void set_end_headers(bool end_headers) { end_headers_ = end_headers; }
   const SpdyString& encoding() const { return *encoding_; }
   void take_encoding(std::unique_ptr<SpdyString> encoding) {
     encoding_ = std::move(encoding);

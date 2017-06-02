@@ -604,9 +604,12 @@ void CertPathBuilder::DoGetNextPathComplete() {
 
   // Verify the entire certificate chain.
   auto result_path = base::MakeUnique<ResultPath>();
-  VerifyCertificateChain(next_path_.certs, next_path_.last_cert_trust,
-                         signature_policy_, time_, key_purpose_,
-                         &result_path->errors);
+  // TODO(eroman): don't pass placeholder for policy.
+  VerifyCertificateChain(
+      next_path_.certs, next_path_.last_cert_trust, signature_policy_, time_,
+      key_purpose_, InitialExplicitPolicy::kFalse, {AnyPolicy()},
+      InitialPolicyMappingInhibit::kFalse, InitialAnyPolicyInhibit::kFalse,
+      nullptr /*user_constrained_policy_set*/, &result_path->errors);
   bool verify_result = !result_path->errors.ContainsHighSeverityErrors();
 
   DVLOG(1) << "CertPathBuilder VerifyCertificateChain result = "

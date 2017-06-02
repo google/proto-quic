@@ -336,6 +336,7 @@ HttpCache::HttpCache(std::unique_ptr<HttpTransactionFactory> network_layer,
 }
 
 HttpCache::~HttpCache() {
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   // Transactions should see an invalid cache after this point; otherwise they
   // could see an inconsistent object (half destroyed).
   weak_factory_.InvalidateWeakPtrs();

@@ -38,8 +38,7 @@ void ExpectDictStringValue(const std::string& expected_value,
                            const DictionaryValue& value,
                            const std::string& key);
 
-// Takes ownership of |actual|.
-void ExpectStringValue(const std::string& expected_str, Value* actual);
+void ExpectStringValue(const std::string& expected_str, const Value& actual);
 
 namespace test {
 

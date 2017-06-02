@@ -4,6 +4,8 @@
 
 #include "base/metrics/persistent_histogram_allocator.h"
 
+#include "base/files/file.h"
+#include "base/files/file_util.h"
 #include "base/files/scoped_temp_dir.h"
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
@@ -52,7 +54,7 @@ class PersistentHistogramAllocatorTest : public testing::Test {
   DISALLOW_COPY_AND_ASSIGN(PersistentHistogramAllocatorTest);
 };
 
-TEST_F(PersistentHistogramAllocatorTest, CreateAndIterateTest) {
+TEST_F(PersistentHistogramAllocatorTest, CreateAndIterate) {
   PersistentMemoryAllocator::MemoryInfo meminfo0;
   allocator_->GetMemoryInfo(&meminfo0);
 
@@ -126,7 +128,7 @@ TEST_F(PersistentHistogramAllocatorTest, CreateAndIterateTest) {
   EXPECT_FALSE(recovered);
 }
 
-TEST_F(PersistentHistogramAllocatorTest, CreateWithFileTest) {
+TEST_F(PersistentHistogramAllocatorTest, CreateWithFile) {
   const char temp_name[] = "CreateWithFileTest";
   ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
@@ -155,7 +157,29 @@ TEST_F(PersistentHistogramAllocatorTest, CreateWithFileTest) {
   GlobalHistogramAllocator::ReleaseForTesting();
 }
 
-TEST_F(PersistentHistogramAllocatorTest, StatisticsRecorderMergeTest) {
+TEST_F(PersistentHistogramAllocatorTest, CreateSpareFile) {
+  const char temp_name[] = "CreateSpareFileTest.pma";
+  ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
+  FilePath temp_file = temp_dir.GetPath().AppendASCII(temp_name);
+  const size_t temp_size = 64 << 10;  // 64 KiB
+
+  ASSERT_TRUE(GlobalHistogramAllocator::CreateSpareFile(temp_file, temp_size));
+
+  File file(temp_file, File::FLAG_OPEN | File::FLAG_READ);
+  ASSERT_TRUE(file.IsValid());
+  EXPECT_EQ(static_cast<int64_t>(temp_size), file.GetLength());
+
+  char buffer[256];
+  for (size_t pos = 0; pos < temp_size; pos += sizeof(buffer)) {
+    ASSERT_EQ(static_cast<int>(sizeof(buffer)),
+              file.ReadAtCurrentPos(buffer, sizeof(buffer)));
+    for (size_t i = 0; i < sizeof(buffer); ++i)
+      EXPECT_EQ(0, buffer[i]);
+  }
+}
+
+TEST_F(PersistentHistogramAllocatorTest, StatisticsRecorderMerge) {
   const char LinearHistogramName[] = "SRTLinearHistogram";
   const char SparseHistogramName[] = "SRTSparseHistogram";
   const size_t starting_sr_count = StatisticsRecorder::GetHistogramCount();

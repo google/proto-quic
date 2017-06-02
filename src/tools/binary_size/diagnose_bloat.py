@@ -222,10 +222,6 @@ class _BuildHelper(object):
     return 'gs://chrome-perf/%s Builder/' % self.target_os.title()
 
   @property
-  def download_output_dir(self):
-    return 'out/Release' if self.IsAndroid() else 'full-build-linux'
-
-  @property
   def map_file_path(self):
     return self.main_lib_path + '.map.gz'
 
@@ -249,7 +245,8 @@ class _BuildHelper(object):
       self.extra_gn_args_str = (' exclude_unwind_tables=true '
           'ffmpeg_branding="Chrome" proprietary_codecs=true')
     if self.IsLinux():
-      self.extra_gn_args_str += ' allow_posix_link_time_opt=false'
+      self.extra_gn_args_str += (
+          ' allow_posix_link_time_opt=false generate_linker_map=true')
     self.target = self.target if self.IsAndroid() else 'chrome'
 
   def _GenGnCmd(self):
@@ -326,12 +323,13 @@ class _BuildArchive(object):
       os.rename(
           existing_size_file, os.path.join(self.dir, self.build.size_name))
     else:
-      tool_prefix = _FindToolPrefix(self.build.output_directory)
       size_path = os.path.join(self.dir, self.build.size_name)
       supersize_cmd = [supersize_path, 'archive', size_path, '--elf-file',
-                       self.build.abs_main_lib_path, '--tool-prefix',
-                       tool_prefix, '--output-directory',
-                       self.build.output_directory, '--no-source-paths']
+                       self.build.abs_main_lib_path]
+      if self.build.IsCloud():
+        supersize_cmd += ['--no-source-paths']
+      else:
+        supersize_cmd += ['--output-directory', self.build.output_directory]
       if self.build.IsAndroid():
         supersize_cmd += ['--apk-file', self.build.abs_apk_path]
       logging.info('Creating .size file')
@@ -503,21 +501,6 @@ def _GclientSyncCmd(rev, subrepo):
   return retcode
 
 
-def _FindToolPrefix(output_directory):
-  build_vars_path = os.path.join(output_directory, 'build_vars.txt')
-  if os.path.exists(build_vars_path):
-    with open(build_vars_path) as f:
-      build_vars = dict(l.rstrip().split('=', 1) for l in f if '=' in l)
-    # Tool prefix is relative to output dir, rebase to source root.
-    tool_prefix = build_vars['android_tool_prefix']
-    while os.path.sep in tool_prefix:
-      rebased_tool_prefix = os.path.join(_SRC_ROOT, tool_prefix)
-      if os.path.exists(rebased_tool_prefix + 'readelf'):
-        return rebased_tool_prefix
-      tool_prefix = tool_prefix[tool_prefix.find(os.path.sep) + 1:]
-  return ''
-
-
 def _SyncAndBuild(archive, build, subrepo):
   """Sync, build and return non 0 if any commands failed."""
   # Simply do a checkout if subrepo is used.
@@ -611,6 +594,13 @@ def _DownloadBuildArtifacts(archive, build, supersize_path, depot_tools_path):
 
 
 def _DownloadAndArchive(gsutil_path, archive, dl_dir, build, supersize_path):
+  proc = subprocess.Popen([gsutil_path, 'version'], stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT)
+  output, _ = proc.communicate()
+  if proc.returncode:
+    _Die('gsutil error. Please file a bug in Tools>BinarySize. Output:\n%s',
+         output)
+
   dl_dst = os.path.join(dl_dir, archive.rev)
   logging.info('Downloading build artifacts for %s', archive.rev)
   # gsutil writes stdout and stderr to stderr, so pipe stdout and stderr to
@@ -629,25 +619,26 @@ def _DownloadAndArchive(gsutil_path, archive, dl_dir, build, supersize_path):
   if build.IsAndroid():
     to_extract += ['build_vars.txt', build.apk_path, build.apk_path + '.size']
   extract_dir = dl_dst + '_' + 'unzipped'
-  # Storage bucket stores entire output directory including out/Release prefix.
   logging.info('Extracting build artifacts')
   with zipfile.ZipFile(dl_dst, 'r') as z:
-    _ExtractFiles(to_extract, build.download_output_dir, extract_dir, z)
-    dl_out = os.path.join(extract_dir, build.download_output_dir)
+    dl_out = _ExtractFiles(to_extract, extract_dir, z)
     build.output_directory, output_directory = dl_out, build.output_directory
     archive.ArchiveBuildResults(supersize_path)
     build.output_directory = output_directory
 
 
-def _ExtractFiles(to_extract, prefix, dst, z):
-  """Extract prefixed files in |to_extract| from |z| if they exist."""
-  zipped_names = z.namelist()
-  assert all(name.startswith(prefix) for name in zipped_names), (
-      'Storage bucket folder structure doesn\'t start with %s' % prefix)
-  to_extract = [os.path.join(prefix, f) for f in to_extract]
+def _ExtractFiles(to_extract, dst, z):
+  """Extract a list of files. Returns the common prefix of the extracted files.
+
+  Paths in |to_extract| should be relative to the output directory.
+  """
+  zipped_paths = z.namelist()
+  output_dir = os.path.commonprefix(zipped_paths)
   for f in to_extract:
-    if f in zipped_names:
-      z.extract(f, path=dst)
+    path = os.path.join(output_dir, f)
+    if path in zipped_paths:
+      z.extract(path, path=dst)
+  return os.path.join(dst, output_dir)
 
 
 def _PrintAndWriteToFile(logfile, s, *args, **kwargs):
@@ -763,7 +754,6 @@ def main():
     if build.IsLinux():
       parser.error('--target-os linux doesn\'t work with --cloud because map '
                    'files aren\'t generated by builders (crbug.com/716209).')
-
 
   subrepo = args.subrepo or _SRC_ROOT
   if not build.IsCloud():

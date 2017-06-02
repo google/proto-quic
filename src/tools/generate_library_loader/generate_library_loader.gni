@@ -30,9 +30,9 @@ template("generate_library_loader") {
       "--name",
       invoker.name,
       "--output-h",
-      rebase_path(output_h),
+      rebase_path(output_h, root_build_dir),
       "--output-cc",
-      rebase_path(output_cc),
+      rebase_path(output_cc, root_build_dir),
       "--header",
       invoker.header,
 

@@ -23,7 +23,7 @@
 #include "base/files/file_path.h"
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
-#include "base/threading/non_thread_safe.h"
+#include "base/threading/thread_checker.h"
 #include "base/time/clock.h"
 #include "base/time/time.h"
 #include "net/base/cache_type.h"
@@ -57,8 +57,7 @@ class NetLog;
 class ViewCacheHelper;
 struct HttpRequestInfo;
 
-class NET_EXPORT HttpCache : public HttpTransactionFactory,
-                             NON_EXPORTED_BASE(public base::NonThreadSafe) {
+class NET_EXPORT HttpCache : public HttpTransactionFactory {
  public:
   // The cache mode of operation.
   enum Mode {
@@ -433,6 +432,8 @@ class NET_EXPORT HttpCache : public HttpTransactionFactory,
 
   // A clock that can be swapped out for testing.
   std::unique_ptr<base::Clock> clock_;
+
+  THREAD_CHECKER(thread_checker_);
 
   base::WeakPtrFactory<HttpCache> weak_factory_;
 

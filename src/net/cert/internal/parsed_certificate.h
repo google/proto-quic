@@ -208,6 +208,26 @@ class NET_EXPORT ParsedCertificate
     return policy_constraints_;
   }
 
+  // Returns true if the certificate has a PolicyMappings extension.
+  bool has_policy_mappings() const { return has_policy_mappings_; }
+
+  // Returns the PolicyMappings extension. Caller must check
+  // has_policy_mappings() before accessing this.
+  const std::vector<ParsedPolicyMapping>& policy_mappings() const {
+    DCHECK(has_policy_mappings_);
+    return policy_mappings_;
+  }
+
+  // Returns true if the certificate has a InhibitAnyPolicy extension.
+  bool has_inhibit_any_policy() const { return has_inhibit_any_policy_; }
+
+  // Returns the Inhibit Any Policy extension. Caller must check
+  // has_inhibit_any_policy() before accessing this.
+  uint8_t inhibit_any_policy() const {
+    DCHECK(has_inhibit_any_policy_);
+    return inhibit_any_policy_;
+  }
+
   // Returns a map of all the extensions in the certificate.
   const ExtensionsMap& extensions() const { return extensions_; }
 
@@ -287,6 +307,14 @@ class NET_EXPORT ParsedCertificate
   // Policy constraints extension.
   bool has_policy_constraints_ = false;
   ParsedPolicyConstraints policy_constraints_;
+
+  // Policy mappings extension.
+  bool has_policy_mappings_ = false;
+  std::vector<ParsedPolicyMapping> policy_mappings_;
+
+  // Inhibit Any Policy extension.
+  bool has_inhibit_any_policy_ = false;
+  uint8_t inhibit_any_policy_;
 
   // All of the extensions.
   ExtensionsMap extensions_;

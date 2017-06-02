@@ -498,7 +498,7 @@ void SQLitePersistentCookieStore::Backend::LoadCookiesForKey(
 void SQLitePersistentCookieStore::Backend::LoadAndNotifyInBackground(
     const LoadedCallback& loaded_callback,
     const base::Time& posted_at) {
-  DCHECK(background_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(background_task_runner_->RunsTasksInCurrentSequence());
   IncrementTimeDelta increment(&cookie_load_duration_);
 
   UMA_HISTOGRAM_CUSTOM_TIMES("Cookie.TimeLoadDBQueueWait",
@@ -518,7 +518,7 @@ void SQLitePersistentCookieStore::Backend::LoadKeyAndNotifyInBackground(
     const std::string& key,
     const LoadedCallback& loaded_callback,
     const base::Time& posted_at) {
-  DCHECK(background_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(background_task_runner_->RunsTasksInCurrentSequence());
   IncrementTimeDelta increment(&cookie_load_duration_);
 
   UMA_HISTOGRAM_CUSTOM_TIMES("Cookie.TimeKeyLoadDBQueueWait",
@@ -556,7 +556,7 @@ void SQLitePersistentCookieStore::Backend::CompleteLoadForKeyInForeground(
     const LoadedCallback& loaded_callback,
     bool load_success,
     const ::Time& requested_at) {
-  DCHECK(client_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(client_task_runner_->RunsTasksInCurrentSequence());
 
   UMA_HISTOGRAM_CUSTOM_TIMES("Cookie.TimeKeyLoadTotalWait",
                              base::Time::Now() - requested_at,
@@ -615,7 +615,7 @@ void SQLitePersistentCookieStore::Backend::CompleteLoadInForeground(
 void SQLitePersistentCookieStore::Backend::Notify(
     const LoadedCallback& loaded_callback,
     bool load_success) {
-  DCHECK(client_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(client_task_runner_->RunsTasksInCurrentSequence());
 
   std::vector<std::unique_ptr<CanonicalCookie>> cookies;
   {
@@ -627,7 +627,7 @@ void SQLitePersistentCookieStore::Backend::Notify(
 }
 
 bool SQLitePersistentCookieStore::Backend::InitializeDatabase() {
-  DCHECK(background_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(background_task_runner_->RunsTasksInCurrentSequence());
 
   if (initialized_ || corruption_detected_) {
     // Return false if we were previously initialized but the DB has since been
@@ -730,7 +730,7 @@ bool SQLitePersistentCookieStore::Backend::InitializeDatabase() {
 
 void SQLitePersistentCookieStore::Backend::ChainLoadCookies(
     const LoadedCallback& loaded_callback) {
-  DCHECK(background_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(background_task_runner_->RunsTasksInCurrentSequence());
   IncrementTimeDelta increment(&cookie_load_duration_);
 
   bool load_success = true;
@@ -765,7 +765,7 @@ void SQLitePersistentCookieStore::Backend::ChainLoadCookies(
 
 bool SQLitePersistentCookieStore::Backend::LoadCookiesForDomains(
     const std::set<std::string>& domains) {
-  DCHECK(background_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(background_task_runner_->RunsTasksInCurrentSequence());
 
   sql::Statement smt;
   if (restore_old_session_cookies_) {
@@ -1073,7 +1073,7 @@ void SQLitePersistentCookieStore::Backend::BatchOperation(
   static const int kCommitIntervalMs = 30 * 1000;
   // Commit right away if we have more than 512 outstanding operations.
   static const size_t kCommitAfterBatchSize = 512;
-  DCHECK(!background_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(!background_task_runner_->RunsTasksInCurrentSequence());
 
   // We do a full copy of the cookie here, and hopefully just here.
   std::unique_ptr<PendingOperation> po(new PendingOperation(op, cc));
@@ -1099,7 +1099,7 @@ void SQLitePersistentCookieStore::Backend::BatchOperation(
 }
 
 void SQLitePersistentCookieStore::Backend::Commit() {
-  DCHECK(background_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(background_task_runner_->RunsTasksInCurrentSequence());
 
   PendingOperationsList ops;
   {
@@ -1202,7 +1202,7 @@ void SQLitePersistentCookieStore::Backend::Commit() {
 
 void SQLitePersistentCookieStore::Backend::Flush(
     const base::Closure& callback) {
-  DCHECK(!background_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(!background_task_runner_->RunsTasksInCurrentSequence());
   PostBackgroundTask(FROM_HERE, base::Bind(&Backend::FlushAndNotifyInBackground,
                                            this, callback));
 }
@@ -1212,7 +1212,7 @@ void SQLitePersistentCookieStore::Backend::Flush(
 // this fires we will already have been cleaned up and it will be ignored.
 void SQLitePersistentCookieStore::Backend::Close(
     const base::Closure& callback) {
-  if (background_task_runner_->RunsTasksOnCurrentThread()) {
+  if (background_task_runner_->RunsTasksInCurrentSequence()) {
     InternalBackgroundClose(callback);
   } else {
     // Must close the backend on the background runner.
@@ -1223,7 +1223,7 @@ void SQLitePersistentCookieStore::Backend::Close(
 
 void SQLitePersistentCookieStore::Backend::InternalBackgroundClose(
     const base::Closure& callback) {
-  DCHECK(background_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(background_task_runner_->RunsTasksInCurrentSequence());
   // Commit any pending operations
   Commit();
 
@@ -1238,7 +1238,7 @@ void SQLitePersistentCookieStore::Backend::InternalBackgroundClose(
 void SQLitePersistentCookieStore::Backend::DatabaseErrorCallback(
     int error,
     sql::Statement* stmt) {
-  DCHECK(background_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(background_task_runner_->RunsTasksInCurrentSequence());
 
   if (!sql::IsErrorCatastrophic(error))
     return;
@@ -1259,7 +1259,7 @@ void SQLitePersistentCookieStore::Backend::DatabaseErrorCallback(
 }
 
 void SQLitePersistentCookieStore::Backend::KillDatabase() {
-  DCHECK(background_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(background_task_runner_->RunsTasksInCurrentSequence());
 
   if (db_) {
     // This Backend will now be in-memory only. In a future run we will recreate
@@ -1276,7 +1276,7 @@ void SQLitePersistentCookieStore::Backend::DeleteAllInList(
   if (cookies.empty())
     return;
 
-  if (background_task_runner_->RunsTasksOnCurrentThread()) {
+  if (background_task_runner_->RunsTasksInCurrentSequence()) {
     BackgroundDeleteAllInList(cookies);
   } else {
     // Perform deletion on background task runner.
@@ -1287,7 +1287,7 @@ void SQLitePersistentCookieStore::Backend::DeleteAllInList(
 }
 
 void SQLitePersistentCookieStore::Backend::DeleteSessionCookiesOnStartup() {
-  DCHECK(background_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(background_task_runner_->RunsTasksInCurrentSequence());
   base::Time start_time = base::Time::Now();
   if (!db_->Execute("DELETE FROM cookies WHERE persistent != 1"))
     LOG(WARNING) << "Unable to delete session cookies.";
@@ -1300,7 +1300,7 @@ void SQLitePersistentCookieStore::Backend::DeleteSessionCookiesOnStartup() {
 
 void SQLitePersistentCookieStore::Backend::BackgroundDeleteAllInList(
     const std::list<CookieOrigin>& cookies) {
-  DCHECK(background_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(background_task_runner_->RunsTasksInCurrentSequence());
 
   if (!db_)
     return;

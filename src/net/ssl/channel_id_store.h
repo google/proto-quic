@@ -10,7 +10,7 @@
 #include <string>
 
 #include "base/callback.h"
-#include "base/threading/non_thread_safe.h"
+#include "base/threading/thread_checker.h"
 #include "base/time/time.h"
 #include "crypto/ec_private_key.h"
 #include "net/base/net_export.h"
@@ -22,8 +22,7 @@ namespace net {
 
 // Owned only by a single ChannelIDService object, which is responsible
 // for deleting it.
-class NET_EXPORT ChannelIDStore
-    : NON_EXPORTED_BASE(public base::NonThreadSafe) {
+class NET_EXPORT ChannelIDStore {
  public:
   // The ChannelID class contains a keypair, along with the corresponding
   // hostname (server identifier) and creation time.
@@ -59,7 +58,7 @@ class NET_EXPORT ChannelIDStore
       GetChannelIDCallback;
   typedef base::Callback<void(const ChannelIDList&)> GetChannelIDListCallback;
 
-  virtual ~ChannelIDStore() {}
+  virtual ~ChannelIDStore();
 
   // GetChannelID may return the result synchronously through the
   // output parameters, in which case it will return either OK if a keypair is
@@ -113,6 +112,9 @@ class NET_EXPORT ChannelIDStore
   // Returns true if this ChannelIDStore is ephemeral, and false if it is
   // persistent.
   virtual bool IsEphemeral() = 0;
+
+ protected:
+  THREAD_CHECKER(thread_checker_);
 };
 
 }  // namespace net

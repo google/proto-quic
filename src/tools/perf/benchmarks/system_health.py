@@ -4,7 +4,7 @@
 
 import re
 
-from benchmarks import page_cycler_v2
+from benchmarks import loading_metrics_category
 
 from core import perf_benchmark
 
@@ -35,18 +35,18 @@ class _CommonSystemHealthBenchmark(perf_benchmark.PerfBenchmark):
 
   def CreateTimelineBasedMeasurementOptions(self):
     options = timeline_based_measurement.Options(
-        chrome_trace_category_filter.ChromeTraceCategoryFilter())
-    options.config.chrome_trace_config.category_filter.AddFilterString('rail')
+        chrome_trace_category_filter.ChromeTraceCategoryFilter(
+            filter_string='rail,toplevel'))
     options.config.enable_battor_trace = True
     options.config.enable_chrome_trace = True
     options.config.enable_cpu_trace = True
     options.SetTimelineBasedMetrics([
         'clockSyncLatencyMetric',
+        'cpuTimeMetric',
         'powerMetric',
         'tracingMetric'
     ])
-    # TODO(ulan): Remove dependency on page_cycler_v2.
-    page_cycler_v2.AugmentOptionsForLoadingMetrics(options)
+    loading_metrics_category.AugmentOptionsForLoadingMetrics(options)
     # The EQT metric depends on the same categories as the loading metric.
     options.AddTimelineBasedMetric('expectedQueueingTimeMetric')
     return options
@@ -72,6 +72,9 @@ class DesktopCommonSystemHealth(_CommonSystemHealthBenchmark):
   def Name(cls):
     return 'system_health.common_desktop'
 
+  def GetExpectations(self):
+    return page_sets.SystemHealthDesktopCommonExpectations()
+
 
 @benchmark.Enabled('android')
 @benchmark.Owner(emails=['charliea@chromium.org', 'nednguyen@chromium.org'])
@@ -82,6 +85,9 @@ class MobileCommonSystemHealth(_CommonSystemHealthBenchmark):
   @classmethod
   def Name(cls):
     return 'system_health.common_mobile'
+
+  def GetExpectations(self):
+    return page_sets.SystemHealthMobileCommonExpectations()
 
 
 class _MemorySystemHealthBenchmark(perf_benchmark.PerfBenchmark):
@@ -133,6 +139,9 @@ class DesktopMemorySystemHealth(_MemorySystemHealthBenchmark):
   def Name(cls):
     return 'system_health.memory_desktop'
 
+  def GetExpectations(self):
+    return page_sets.SystemHealthDesktopMemoryExpectations()
+
 
 @benchmark.Enabled('android')
 @benchmark.Owner(emails=['perezju@chromium.org'])
@@ -153,6 +162,9 @@ class MobileMemorySystemHealth(_MemorySystemHealthBenchmark):
   def Name(cls):
     return 'system_health.memory_mobile'
 
+  def GetExpectations(self):
+    return page_sets.SystemHealthMobileMemoryExpectations()
+
 
 @benchmark.Enabled('android-webview')
 @benchmark.Owner(emails=['perezju@chromium.org', 'torne@chromium.org'])
@@ -167,7 +179,10 @@ class WebviewStartupSystemHealthBenchmark(perf_benchmark.PerfBenchmark):
   options = {'pageset_repeat': 20}
 
   def CreateStorySet(self, options):
-    return page_sets.SystemHealthStorySet(platform='mobile', case='blank')
+    return page_sets.SystemHealthBlankStorySet()
+
+  def GetExpectations(self):
+    return page_sets.SystemHealthWebviewStartupExpectations()
 
   def CreateTimelineBasedMeasurementOptions(self):
     options = timeline_based_measurement.Options()
@@ -184,21 +199,3 @@ class WebviewStartupSystemHealthBenchmark(perf_benchmark.PerfBenchmark):
   @classmethod
   def Name(cls):
     return 'system_health.webview_startup'
-
-
-@benchmark.Enabled('android-webview')
-class WebviewMultiprocessStartupSystemHealthBenchmark(
-    WebviewStartupSystemHealthBenchmark):
-  """Webview multiprocess startup time benchmark
-
-  Benchmark that measures how long WebView takes to start up
-  and load a blank page with multiprocess enabled.
-  """
-
-  def SetExtraBrowserOptions(self, options):
-    options.AppendExtraBrowserArgs(
-        ['--webview-sandboxed-renderer'])
-
-  @classmethod
-  def Name(cls):
-    return 'system_health.webview_startup_multiprocess'

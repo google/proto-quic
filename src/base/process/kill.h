@@ -79,7 +79,7 @@ BASE_EXPORT bool KillProcessGroup(ProcessHandle process_group_id);
 BASE_EXPORT TerminationStatus GetTerminationStatus(ProcessHandle handle,
                                                    int* exit_code);
 
-#if defined(OS_POSIX)
+#if defined(OS_POSIX) && !defined(OS_FUCHSIA)
 // Send a kill signal to the process and then wait for the process to exit
 // and get the termination status.
 //
@@ -97,8 +97,11 @@ BASE_EXPORT TerminationStatus GetTerminationStatus(ProcessHandle handle,
 //
 BASE_EXPORT TerminationStatus GetKnownDeadTerminationStatus(
     ProcessHandle handle, int* exit_code);
-#endif  // defined(OS_POSIX)
+#endif  // defined(OS_POSIX) && !defined(OS_FUCHSIA)
 
+// These are only sparingly used, and not needed on Fuchsia. They could be
+// implemented if necessary.
+#if !defined(OS_FUCHSIA)
 // Wait for all the processes based on the named executable to exit.  If filter
 // is non-null, then only processes selected by the filter are waited on.
 // Returns after all processes have exited or wait_milliseconds have expired.
@@ -118,6 +121,7 @@ BASE_EXPORT bool CleanupProcesses(const FilePath::StringType& executable_name,
                                   base::TimeDelta wait,
                                   int exit_code,
                                   const ProcessFilter* filter);
+#endif  // !defined(OS_FUCHSIA)
 
 // This method ensures that the specified process eventually terminates, and
 // then it closes the given process handle.
@@ -135,7 +139,7 @@ BASE_EXPORT bool CleanupProcesses(const FilePath::StringType& executable_name,
 //
 BASE_EXPORT void EnsureProcessTerminated(Process process);
 
-#if defined(OS_POSIX) && !defined(OS_MACOSX)
+#if defined(OS_POSIX) && !defined(OS_MACOSX) && !defined(OS_FUCHSIA)
 // The nicer version of EnsureProcessTerminated() that is patient and will
 // wait for |pid| to finish and then reap it.
 BASE_EXPORT void EnsureProcessGetsReaped(ProcessId pid);

@@ -11,12 +11,9 @@
 
 #include "base/compiler_specific.h"
 #include "net/base/net_export.h"
+#include "net/der/input.h"
 
 namespace net {
-
-namespace der {
-class Input;
-}  // namespace der
 
 // Returns the DER-encoded OID, without tag or length, of the anyPolicy
 // certificate policy defined in RFC 5280 section 4.2.1.4.
@@ -28,6 +25,13 @@ NET_EXPORT const der::Input AnyPolicy();
 //
 // In dotted notation: 2.5.29.54
 NET_EXPORT der::Input InhibitAnyPolicyOid();
+
+// From RFC 5280:
+//
+//     id-ce-policyMappings OBJECT IDENTIFIER ::=  { id-ce 33 }
+//
+// In dotted notation: 2.5.29.33
+NET_EXPORT der::Input PolicyMappingsOid();
 
 // Parses a certificatePolicies extension and stores the policy OIDs in
 // |*policies|, in sorted order. If policyQualifiers are present,
@@ -56,9 +60,20 @@ NET_EXPORT bool ParsePolicyConstraints(const der::Input& policy_constraints_tlv,
     WARN_UNUSED_RESULT;
 
 // Parses an InhibitAnyPolicy as defined by RFC 5280. Returns true on success,
-// and sets |out|.
+// and sets |num_certs|.
 NET_EXPORT bool ParseInhibitAnyPolicy(const der::Input& inhibit_any_policy_tlv,
                                       uint8_t* num_certs) WARN_UNUSED_RESULT;
+
+struct ParsedPolicyMapping {
+  der::Input issuer_domain_policy;
+  der::Input subject_domain_policy;
+};
+
+// Parses a PolicyMappings SEQUENCE as defined by RFC 5280. Returns true on
+// success, and sets |mappings|.
+NET_EXPORT bool ParsePolicyMappings(const der::Input& policy_mappings_tlv,
+                                    std::vector<ParsedPolicyMapping>* mappings)
+    WARN_UNUSED_RESULT;
 
 }  // namespace net
 

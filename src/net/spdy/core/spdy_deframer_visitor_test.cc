@@ -10,7 +10,6 @@
 #include <limits>
 
 #include "base/logging.h"
-#include "base/memory/ptr_util.h"
 #include "base/rand_util.h"
 #include "net/spdy/core/hpack/hpack_constants.h"
 #include "net/spdy/core/mock_spdy_framer_visitor.h"
@@ -100,7 +99,7 @@ TEST_F(SpdyDeframerVisitorTest, DataFrame) {
   const CollectedFrame& cf0 = collected_frames_[0];
   ASSERT_NE(cf0.frame_ir, nullptr);
 
-  SpdyDataIR expected_ir(1, "hello");
+  SpdyDataIR expected_ir(/* stream_id = */ 1, "hello");
   expected_ir.set_padding_len(8);
   EXPECT_TRUE(cf0.VerifyHasFrame(expected_ir));
 }
@@ -136,7 +135,7 @@ TEST_F(SpdyDeframerVisitorTest, HeaderFrameWithContinuation) {
 
   EXPECT_TRUE(cf0.VerifyHasHeaders(headers));
 
-  SpdyHeadersIR expected_ir(1);
+  SpdyHeadersIR expected_ir(/* stream_id = */ 1);
   // Yet again SpdyFramerVisitorInterface is lossy: it doesn't call OnPadding
   // for HEADERS, just for DATA. Sigh.
   //    expected_ir.set_padding_len(5);
@@ -175,7 +174,9 @@ TEST_F(SpdyDeframerVisitorTest, PriorityFrame) {
   ASSERT_EQ(1u, collected_frames_.size());
   const CollectedFrame& cf0 = collected_frames_[0];
 
-  SpdyPriorityIR expected_ir(101, 1, 17, true);
+  SpdyPriorityIR expected_ir(/* stream_id = */ 101,
+                             /* parent_stream_id = */ 1, /* weight = */ 17,
+                             /* exclusive = */ true);
   EXPECT_TRUE(cf0.VerifyHasFrame(expected_ir));
 
   // Confirm that mismatches are also detected.

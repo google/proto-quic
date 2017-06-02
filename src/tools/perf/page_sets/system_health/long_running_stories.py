@@ -6,8 +6,6 @@ from page_sets.login_helpers import google_login
 from page_sets.system_health import platforms
 from page_sets.system_health import system_health_story
 
-from telemetry import decorators
-
 
 IDLE_TIME_IN_SECONDS = 100
 SAMPLING_INTERVAL_IN_SECONDS = 1
@@ -92,18 +90,14 @@ class _LongRunningGmailDesktopBase(_LongRunningGmailBase):
         'document.getElementById("loading").style.display === "none"')
 
 
-@decorators.Disabled('android')  # crbug.com/657433
 class LongRunningGmailMobileForegroundStory(_LongRunningGmailMobileBase):
   NAME = 'long_running:tools:gmail-foreground'
 
 
-@decorators.Disabled('all')  # crbug.com/681839
 class LongRunningGmailDesktopForegroundStory(_LongRunningGmailDesktopBase):
   NAME = 'long_running:tools:gmail-foreground'
 
 
-@decorators.Disabled('android-webview',  # Weview does not have tabs.
-                     'android')  # crbug.com/657433
 class LongRunningGmailMobileBackgroundStory(_LongRunningGmailMobileBase):
   BACKGROUND = True
   NAME = 'long_running:tools:gmail-background'

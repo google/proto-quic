@@ -136,7 +136,8 @@ class TrivialSitesStorySet(story.StorySet):
                wait_in_seconds=0, measure_memory=False):
     # Wait is time to wait_in_seconds on page in seconds.
     super(TrivialSitesStorySet, self).__init__(
-        cloud_storage_bucket=story.PUBLIC_BUCKET)
+        cloud_storage_bucket=story.PUBLIC_BUCKET,
+        verify_names=True)
     self.AddStory(TrivialScrollingPage(
         self, shared_state, wait_in_seconds, measure_memory))
     self.AddStory(TrivialBlinkingCursorPage(

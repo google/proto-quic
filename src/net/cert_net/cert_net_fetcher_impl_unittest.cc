@@ -57,17 +57,17 @@ class RequestContext : public URLRequestContext {
     storage_.set_http_server_properties(
         std::unique_ptr<HttpServerProperties>(new HttpServerPropertiesImpl()));
 
-    HttpNetworkSession::Params params;
-    params.host_resolver = host_resolver();
-    params.cert_verifier = cert_verifier();
-    params.transport_security_state = transport_security_state();
-    params.cert_transparency_verifier = cert_transparency_verifier();
-    params.ct_policy_enforcer = ct_policy_enforcer();
-    params.proxy_service = proxy_service();
-    params.ssl_config_service = ssl_config_service();
-    params.http_server_properties = http_server_properties();
-    storage_.set_http_network_session(
-        base::MakeUnique<HttpNetworkSession>(params));
+    HttpNetworkSession::Context session_context;
+    session_context.host_resolver = host_resolver();
+    session_context.cert_verifier = cert_verifier();
+    session_context.transport_security_state = transport_security_state();
+    session_context.cert_transparency_verifier = cert_transparency_verifier();
+    session_context.ct_policy_enforcer = ct_policy_enforcer();
+    session_context.proxy_service = proxy_service();
+    session_context.ssl_config_service = ssl_config_service();
+    session_context.http_server_properties = http_server_properties();
+    storage_.set_http_network_session(base::MakeUnique<HttpNetworkSession>(
+        HttpNetworkSession::Params(), session_context));
     storage_.set_http_transaction_factory(base::MakeUnique<HttpCache>(
         storage_.http_network_session(), HttpCache::DefaultBackend::InMemory(0),
         false /* is_main_cache */));

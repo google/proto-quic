@@ -5,39 +5,15 @@
 #include "net/url_request/url_request_context.h"
 
 #include <memory>
-#include <utility>
-#include <vector>
 
 #include "base/memory/ptr_util.h"
-#include "base/test/histogram_tester.h"
 #include "base/trace_event/memory_dump_request_args.h"
 #include "base/trace_event/process_memory_dump.h"
 #include "net/proxy/proxy_config_service_fixed.h"
-#include "net/test/url_request/url_request_failed_job.h"
-#include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request_context_builder.h"
-#include "net/url_request/url_request_filter.h"
-#include "net/url_request/url_request_interceptor.h"
-#include "net/url_request/url_request_test_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
-
-namespace {
-
-class HangingRequestInterceptor : public URLRequestInterceptor {
- public:
-  HangingRequestInterceptor() {}
-  ~HangingRequestInterceptor() override {}
-
-  URLRequestJob* MaybeInterceptRequest(
-      URLRequest* request,
-      NetworkDelegate* network_delegate) const override {
-    return new URLRequestFailedJob(request, network_delegate, ERR_IO_PENDING);
-  }
-};
-
-}  // namespace
 
 class URLRequestContextMemoryDumpTest
     : public testing::TestWithParam<
@@ -90,37 +66,4 @@ TEST_P(URLRequestContextMemoryDumpTest, MemoryDumpProvider) {
 }
 
 // TODO(xunjieli): Add more granular tests on the MemoryDumpProvider.
-
-// Tests that if many requests are outstanding, histogram is reported correctly.
-TEST(URLRequestContextTest, TooManyRequests) {
-  TestURLRequestContext context(false);
-  base::HistogramTester histogram_tester;
-  std::unique_ptr<URLRequestInterceptor> interceptor(
-      new HangingRequestInterceptor());
-  GURL url("http://www.example.com");
-  URLRequestFilter::GetInstance()->AddUrlInterceptor(url,
-                                                     std::move(interceptor));
-  std::vector<std::unique_ptr<URLRequest>> outstanding_requests;
-  const int kNumRequestLimit = 1000;
-  // Make two more requests above the limit to test that AddToAddressMap() only
-  // returns false once.
-  const int kNumRequests = kNumRequestLimit + 2;
-  const void* const dummy_address = &context;
-  for (int i = 0; i < kNumRequests; ++i) {
-    TestDelegate test_delegate;
-    test_delegate.set_quit_on_complete(true);
-    std::unique_ptr<URLRequest> request = context.CreateRequest(
-        url, DEFAULT_PRIORITY, &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS);
-    EXPECT_EQ(i != kNumRequestLimit, context.AddToAddressMap(dummy_address));
-    request->Start();
-    outstanding_requests.push_back(std::move(request));
-  }
-
-  histogram_tester.ExpectTotalCount("Net.URLRequestContext.OutstandingRequests",
-                                    kNumRequests);
-  for (int i = 0; i < kNumRequests; ++i) {
-    context.RemoveFromAddressMap(dummy_address);
-  }
-}
-
 }  // namespace net

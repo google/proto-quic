@@ -23,7 +23,10 @@ namespace net {
 
 QuicChromiumClientStream::Handle::Handle(QuicChromiumClientStream* stream,
                                          Delegate* delegate)
-    : stream_(stream), delegate_(delegate), read_headers_buffer_(nullptr) {
+    : stream_(stream),
+      delegate_(delegate),
+      read_headers_buffer_(nullptr),
+      read_body_buffer_len_(0) {
   SaveState();
 }
 
@@ -51,14 +54,35 @@ void QuicChromiumClientStream::Handle::OnInitialHeadersAvailable() {
   ResetAndReturn(&read_headers_callback_).Run(rv);
 }
 
-void QuicChromiumClientStream::Handle::OnTrailingHeadersAvailable(
-    const SpdyHeaderBlock& headers,
-    size_t frame_len) {
-  delegate_->OnTrailingHeadersAvailable(headers, frame_len);
+void QuicChromiumClientStream::Handle::OnTrailingHeadersAvailable() {
+  if (!read_headers_callback_)
+    return;  // Wait for ReadInitialHeaders to be called.
+
+  int rv = ERR_QUIC_PROTOCOL_ERROR;
+  if (!stream_->DeliverTrailingHeaders(read_headers_buffer_, &rv))
+    rv = ERR_QUIC_PROTOCOL_ERROR;
+
+  ResetAndReturn(&read_headers_callback_).Run(rv);
 }
 
 void QuicChromiumClientStream::Handle::OnDataAvailable() {
-  delegate_->OnDataAvailable();
+  if (!read_body_callback_)
+    return;  // Wait for ReadBody to be called.
+
+  int rv = stream_->Read(read_body_buffer_, read_body_buffer_len_);
+  if (rv == ERR_IO_PENDING)
+    return;  // Spurrious, likely because of trailers?
+
+  read_body_buffer_ = nullptr;
+  read_body_buffer_len_ = 0;
+  ResetAndReturn(&read_body_callback_).Run(rv);
+}
+
+void QuicChromiumClientStream::Handle::OnCanWrite() {
+  if (!write_callback_)
+    return;
+
+  base::ResetAndReturn(&write_callback_).Run(OK);
 }
 
 void QuicChromiumClientStream::Handle::OnClose() {
@@ -98,6 +122,38 @@ int QuicChromiumClientStream::Handle::ReadInitialHeaders(
   return ERR_IO_PENDING;
 }
 
+int QuicChromiumClientStream::Handle::ReadBody(
+    IOBuffer* buffer,
+    int buffer_len,
+    const CompletionCallback& callback) {
+  if (!stream_)
+    return ERR_CONNECTION_CLOSED;
+
+  int rv = stream_->Read(buffer, buffer_len);
+  if (rv != ERR_IO_PENDING)
+    return rv;
+
+  read_body_callback_ = callback;
+  read_body_buffer_ = buffer;
+  read_body_buffer_len_ = buffer_len;
+  return ERR_IO_PENDING;
+}
+
+int QuicChromiumClientStream::Handle::ReadTrailingHeaders(
+    SpdyHeaderBlock* header_block,
+    const CompletionCallback& callback) {
+  if (!stream_)
+    return ERR_CONNECTION_CLOSED;
+
+  int frame_len = 0;
+  if (stream_->DeliverTrailingHeaders(header_block, &frame_len))
+    return frame_len;
+
+  read_headers_buffer_ = header_block;
+  read_headers_callback_ = callback;
+  return ERR_IO_PENDING;
+}
+
 size_t QuicChromiumClientStream::Handle::WriteHeaders(
     SpdyHeaderBlock header_block,
     bool fin,
@@ -115,7 +171,12 @@ int QuicChromiumClientStream::Handle::WriteStreamData(
     const CompletionCallback& callback) {
   if (!stream_)
     return ERR_CONNECTION_CLOSED;
-  return stream_->WriteStreamData(data, fin, callback);
+
+  if (stream_->WriteStreamData(data, fin))
+    return OK;
+
+  write_callback_ = callback;
+  return ERR_IO_PENDING;
 }
 
 int QuicChromiumClientStream::Handle::WritevStreamData(
@@ -125,7 +186,12 @@ int QuicChromiumClientStream::Handle::WritevStreamData(
     const CompletionCallback& callback) {
   if (!stream_)
     return ERR_CONNECTION_CLOSED;
-  return stream_->WritevStreamData(buffers, lengths, fin, callback);
+
+  if (stream_->WritevStreamData(buffers, lengths, fin))
+    return OK;
+
+  write_callback_ = callback;
+  return ERR_IO_PENDING;
 }
 
 int QuicChromiumClientStream::Handle::Read(IOBuffer* buf, int buf_len) {
@@ -266,6 +332,7 @@ QuicChromiumClientStream::QuicChromiumClientStream(
       session_(session),
       can_migrate_(true),
       initial_headers_frame_len_(0),
+      trailing_headers_frame_len_(0),
       weak_factory_(this) {}
 
 QuicChromiumClientStream::~QuicChromiumClientStream() {
@@ -306,8 +373,11 @@ void QuicChromiumClientStream::OnTrailingHeadersComplete(
     size_t frame_len,
     const QuicHeaderList& header_list) {
   QuicSpdyStream::OnTrailingHeadersComplete(fin, frame_len, header_list);
-  NotifyHandleOfTrailingHeadersAvailableLater(received_trailers().Clone(),
-                                              frame_len);
+  trailing_headers_frame_len_ = frame_len;
+  if (handle_) {
+    // The handle will be notified of the headers via a posted task.
+    NotifyHandleOfTrailingHeadersAvailableLater();
+  }
 }
 
 void QuicChromiumClientStream::OnPromiseHeaderList(
@@ -357,9 +427,8 @@ void QuicChromiumClientStream::OnClose() {
 void QuicChromiumClientStream::OnCanWrite() {
   QuicStream::OnCanWrite();
 
-  if (!HasBufferedData() && !write_callback_.is_null()) {
-    base::ResetAndReturn(&write_callback_).Run(OK);
-  }
+  if (!HasBufferedData() && handle_)
+    handle_->OnCanWrite();
 }
 
 size_t QuicChromiumClientStream::WriteHeaders(
@@ -386,27 +455,18 @@ SpdyPriority QuicChromiumClientStream::priority() const {
                                : kV3HighestPriority;
 }
 
-int QuicChromiumClientStream::WriteStreamData(
-    QuicStringPiece data,
-    bool fin,
-    const CompletionCallback& callback) {
-  // We should not have data buffered.
+bool QuicChromiumClientStream::WriteStreamData(QuicStringPiece data, bool fin) {
+  // Must not be called when data is buffered.
   DCHECK(!HasBufferedData());
   // Writes the data, or buffers it.
   WriteOrBufferData(data, fin, nullptr);
-  if (!HasBufferedData()) {
-    return OK;
-  }
-
-  write_callback_ = callback;
-  return ERR_IO_PENDING;
+  return !HasBufferedData();  // Was all data written?
 }
 
-int QuicChromiumClientStream::WritevStreamData(
+bool QuicChromiumClientStream::WritevStreamData(
     const std::vector<scoped_refptr<IOBuffer>>& buffers,
     const std::vector<int>& lengths,
-    bool fin,
-    const CompletionCallback& callback) {
+    bool fin) {
   // Must not be called when data is buffered.
   DCHECK(!HasBufferedData());
   // Writes the data, or buffers it.
@@ -415,12 +475,7 @@ int QuicChromiumClientStream::WritevStreamData(
     QuicStringPiece string_data(buffers[i]->data(), lengths[i]);
     WriteOrBufferData(string_data, is_fin, nullptr);
   }
-  if (!HasBufferedData()) {
-    return OK;
-  }
-
-  write_callback_ = callback;
-  return ERR_IO_PENDING;
+  return !HasBufferedData();  // Was all data written?
 }
 
 std::unique_ptr<QuicChromiumClientStream::Handle>
@@ -483,33 +538,23 @@ void QuicChromiumClientStream::NotifyHandleOfInitialHeadersAvailable() {
     handle_->OnInitialHeadersAvailable();
 }
 
-void QuicChromiumClientStream::NotifyHandleOfTrailingHeadersAvailableLater(
-    SpdyHeaderBlock headers,
-    size_t frame_len) {
+void QuicChromiumClientStream::NotifyHandleOfTrailingHeadersAvailableLater() {
   DCHECK(handle_);
   base::ThreadTaskRunnerHandle::Get()->PostTask(
       FROM_HERE,
       base::Bind(
           &QuicChromiumClientStream::NotifyHandleOfTrailingHeadersAvailable,
-          weak_factory_.GetWeakPtr(), base::Passed(std::move(headers)),
-          frame_len));
+          weak_factory_.GetWeakPtr()));
 }
 
-void QuicChromiumClientStream::NotifyHandleOfTrailingHeadersAvailable(
-    SpdyHeaderBlock headers,
-    size_t frame_len) {
+void QuicChromiumClientStream::NotifyHandleOfTrailingHeadersAvailable() {
   if (!handle_)
     return;
 
   DCHECK(headers_delivered_);
-  // Only mark trailers consumed when we are about to notify delegate.
-  MarkTrailersConsumed();
   // Post an async task to notify delegate of the FIN flag.
   NotifyHandleOfDataAvailableLater();
-  net_log_.AddEvent(
-      NetLogEventType::QUIC_CHROMIUM_CLIENT_STREAM_READ_RESPONSE_TRAILERS,
-      base::Bind(&SpdyHeaderBlockNetLogCallback, &headers));
-  handle_->OnTrailingHeadersAvailable(headers, frame_len);
+  handle_->OnTrailingHeadersAvailable();
 }
 
 bool QuicChromiumClientStream::DeliverInitialHeaders(SpdyHeaderBlock* headers,
@@ -524,6 +569,22 @@ bool QuicChromiumClientStream::DeliverInitialHeaders(SpdyHeaderBlock* headers,
 
   *headers = std::move(initial_headers_);
   *frame_len = initial_headers_frame_len_;
+  return true;
+}
+
+bool QuicChromiumClientStream::DeliverTrailingHeaders(SpdyHeaderBlock* headers,
+                                                      int* frame_len) {
+  if (received_trailers().empty())
+    return false;
+
+  net_log_.AddEvent(
+      NetLogEventType::QUIC_CHROMIUM_CLIENT_STREAM_READ_RESPONSE_TRAILERS,
+      base::Bind(&SpdyHeaderBlockNetLogCallback, &received_trailers()));
+
+  *headers = received_trailers().Clone();
+  *frame_len = trailing_headers_frame_len_;
+
+  MarkTrailersConsumed();
   return true;
 }
 

@@ -150,22 +150,6 @@ enum {
 
 //-----------------------------------------------------------------------------
 
-// The return value of this function controls whether or not the LM hash will
-// be included in response to a NTLM challenge.
-//
-// In Mozilla, this function returns the value of the boolean preference
-// "network.ntlm.send-lm-response".  By default, the preference is disabled
-// since servers should almost never need the LM hash, and the LM hash is what
-// makes NTLM authentication less secure.  See
-// https://bugzilla.mozilla.org/show_bug.cgi?id=250691 for further details.
-//
-// We just return a hardcoded false.
-static bool SendLM() {
-  return false;
-}
-
-//-----------------------------------------------------------------------------
-
 #define LogFlags(x) ((void)0)
 #define LogBuf(a, b, c) ((void)0)
 #define LogToken(a, b, c) ((void)0)
@@ -245,34 +229,6 @@ static uint32_t ReadUint32(const uint8_t*& buf) {
 }
 
 //-----------------------------------------------------------------------------
-
-// LM_Hash computes the LM hash of the given password.
-//
-// param password
-//       unicode password.
-// param hash
-//       16-byte result buffer
-//
-// Note: This function is not being used because our SendLM() function always
-// returns false.
-static void LM_Hash(const base::string16& password, uint8_t* hash) {
-  static const uint8_t LM_MAGIC[] = "KGS!@#$%";
-
-  // Convert password to OEM character set.  We'll just use the native
-  // filesystem charset.
-  std::string passbuf = base::SysWideToNativeMB(base::UTF16ToWide(password));
-  passbuf = base::ToUpperASCII(passbuf);
-  passbuf.resize(14, '\0');
-
-  uint8_t k1[8], k2[8];
-  DESMakeKey(reinterpret_cast<const uint8_t*>(passbuf.data()), k1);
-  DESMakeKey(reinterpret_cast<const uint8_t*>(passbuf.data()) + 7, k2);
-  ZapString(&passbuf);
-
-  // Use password keys to hash LM magic string twice.
-  DESEncrypt(k1, LM_MAGIC, hash);
-  DESEncrypt(k2, LM_MAGIC, hash + 8);
-}
 
 // NTLM_Hash computes the NTLM hash of the given password.
 //
@@ -547,35 +503,20 @@ static int GenerateType3Msg(const base::string16& domain,
   uint8_t lm_resp[LM_RESP_LEN];
   uint8_t ntlm_resp[NTLM_RESP_LEN];
   uint8_t ntlm_hash[NTLM_HASH_LEN];
-  if (msg.flags & NTLM_NegotiateNTLM2Key) {
-    // compute NTLM2 session response
-    base::MD5Digest session_hash;
-    uint8_t temp[16];
 
-    memcpy(lm_resp, rand_8_bytes, 8);
-    memset(lm_resp + 8, 0, LM_RESP_LEN - 8);
+  // compute NTLM2 session response
+  base::MD5Digest session_hash;
+  uint8_t temp[16];
 
-    memcpy(temp, msg.challenge, 8);
-    memcpy(temp + 8, lm_resp, 8);
-    base::MD5Sum(temp, 16, &session_hash);
+  memcpy(lm_resp, rand_8_bytes, 8);
+  memset(lm_resp + 8, 0, LM_RESP_LEN - 8);
 
-    NTLM_Hash(password, ntlm_hash);
-    LM_Response(ntlm_hash, session_hash.a, ntlm_resp);
-  } else {
-    NTLM_Hash(password, ntlm_hash);
-    LM_Response(ntlm_hash, msg.challenge, ntlm_resp);
+  memcpy(temp, msg.challenge, 8);
+  memcpy(temp + 8, lm_resp, 8);
+  base::MD5Sum(temp, 16, &session_hash);
 
-    if (SendLM()) {
-      uint8_t lm_hash[LM_HASH_LEN];
-      LM_Hash(password, lm_hash);
-      LM_Response(lm_hash, msg.challenge, lm_resp);
-    } else {
-      // According to http://davenport.sourceforge.net/ntlm.html#ntlmVersion2,
-      // the correct way to not send the LM hash is to send the NTLM hash twice
-      // in both the LM and NTLM response fields.
-      LM_Response(ntlm_hash, msg.challenge, lm_resp);
-    }
-  }
+  NTLM_Hash(password, ntlm_hash);
+  LM_Response(ntlm_hash, session_hash.a, ntlm_resp);
 
   //
   // Finally, we assemble the Type-3 msg :-)

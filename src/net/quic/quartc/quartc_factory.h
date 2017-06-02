@@ -18,9 +18,9 @@ namespace net {
 // QuartcSessionInterface. Implements the QuicAlarmFactory to create alarms
 // using the QuartcTaskRunner. Implements the QuicConnectionHelperInterface used
 // by the QuicConnections. Only one QuartcFactory is expected to be created.
-class QuartcFactory : public QuartcFactoryInterface,
-                      public QuicAlarmFactory,
-                      public QuicConnectionHelperInterface {
+class QUIC_EXPORT_PRIVATE QuartcFactory : public QuartcFactoryInterface,
+                                          public QuicAlarmFactory,
+                                          public QuicConnectionHelperInterface {
  public:
   QuartcFactory(const QuartcFactoryConfig& factory_config);
   ~QuartcFactory() override;

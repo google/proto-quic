@@ -5,7 +5,7 @@
 from core import perf_benchmark
 import page_sets
 
-from benchmarks import page_cycler_v2
+from benchmarks import loading_metrics_category
 from telemetry import benchmark
 from telemetry.page import cache_temperature
 from telemetry.page import traffic_setting
@@ -19,7 +19,7 @@ class _LoadingBase(perf_benchmark.PerfBenchmark):
 
   def CreateTimelineBasedMeasurementOptions(self):
     tbm_options = timeline_based_measurement.Options()
-    page_cycler_v2.AugmentOptionsForLoadingMetrics(tbm_options)
+    loading_metrics_category.AugmentOptionsForLoadingMetrics(tbm_options)
     return tbm_options
 
 
@@ -68,6 +68,9 @@ class LoadingMobile(_LoadingBase):
     return page_sets.LoadingMobileStorySet(
         cache_temperatures=[cache_temperature.ANY],
         traffic_settings=[traffic_setting.NONE, traffic_setting.REGULAR_3G])
+
+  def GetExpectations(self):
+    return page_sets.LoadingMobileExpectations()
 
   @classmethod
   def Name(cls):

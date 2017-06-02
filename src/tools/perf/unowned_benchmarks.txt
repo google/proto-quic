@@ -1,4 +1,3 @@
-blink_perf.blink_gc
 blob_storage.blob_storage
 load_library_perf_tests
 power.idle_platform
@@ -15,7 +14,6 @@ startup.large_profile.cold.blank_page
 startup.large_profile.warm.blank_page
 startup.warm.blank_page
 startup.warm.chrome_signin
-system_health.webview_startup_multiprocess
 thread_times.key_hit_test_cases
 thread_times.key_mobile_sites_smooth
 thread_times.key_noop_cases

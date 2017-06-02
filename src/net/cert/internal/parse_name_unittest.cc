@@ -29,7 +29,8 @@ namespace {
 
   return ReadTestDataFromPemFile(path, mappings);
 }
-}
+
+}  // anonymous namespace
 
 TEST(ParseNameTest, IA5SafeStringValue) {
   const uint8_t der[] = {

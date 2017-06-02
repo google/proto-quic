@@ -177,6 +177,7 @@ class BASE_EXPORT TimeDelta {
   int64_t InMilliseconds() const;
   int64_t InMillisecondsRoundedUp() const;
   int64_t InMicroseconds() const;
+  int64_t InNanoseconds() const;
 
   TimeDelta& operator=(TimeDelta other) {
     delta_ = other.delta_;

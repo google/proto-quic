@@ -5,13 +5,24 @@
 import("//build/config/sanitizers/sanitizers.gni")
 import("//build/toolchain/toolchain.gni")
 
+# Sanitizer builds need to override operator new, operator delete, and
+# some exception handling symbols, so libc++ must be a shared library
+# to prevent duplicate symbol errors when linking.
+libcpp_is_static = !is_component_build && !using_sanitizer
+
 # Used by libc++ and libc++abi.
 config("config") {
   defines = [ "LIBCXX_BUILDING_LIBCXXABI" ]
+  if (libcpp_is_static) {
+    # Don't leak any symbols on a static build.
+    defines += [
+      "_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+      "_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+    ]
+  }
   cflags = [
     "-fPIC",
     "-fstrict-aliasing",
-    "-pthread",
   ]
   cflags_cc = [
     "-nostdinc++",
@@ -21,7 +32,12 @@ config("config") {
   ]
 }
 
-shared_library("libc++") {
+if (libcpp_is_static) {
+  link_target_type = "source_set"
+} else {
+  link_target_type = "shared_library"
+}
+target(link_target_type, "libc++") {
   sources = [
     "trunk/src/algorithm.cpp",
     "trunk/src/any.cpp",
@@ -30,6 +46,7 @@ shared_library("libc++") {
     "trunk/src/condition_variable.cpp",
     "trunk/src/debug.cpp",
     "trunk/src/exception.cpp",
+    "trunk/src/functional.cpp",
     "trunk/src/future.cpp",
     "trunk/src/hash.cpp",
     "trunk/src/ios.cpp",
@@ -50,44 +67,33 @@ shared_library("libc++") {
     "trunk/src/typeinfo.cpp",
     "trunk/src/utility.cpp",
     "trunk/src/valarray.cpp",
+    "trunk/src/variant.cpp",
   ]
   configs -= [
     "//build/config/compiler:chromium_code",
     "//build/config/compiler:no_rtti",
     "//build/config/gcc:no_exceptions",
-    "//build/config/gcc:symbol_visibility_hidden",
   ]
   configs += [
     ":config",
     "//build/config/compiler:no_chromium_code",
     "//build/config/compiler:rtti",
-    "//build/config/gcc:symbol_visibility_default",
     "//build/config/sanitizers:sanitizer_options_link_helper",
   ]
+  defines = [ "_LIBCPP_BUILDING_LIBRARY" ]
 
   ldflags = [ "-nodefaultlibs" ]
 
-  # Remove "-pthread" from ldflags.
-  # -nodefaultlibs turns -pthread into a no-op, causing an unused argument
-  # warning. Explicitly link with -lpthread instead.
-  configs -= [ "//build/config/compiler:pthread" ]
-
-  libs = [
-    "m",
-  ]
+  libs = [ "m" ]
 
   if (!is_mac) {
     libs += [
       "c",
       "gcc_s",
-      "pthread",
       "rt",
     ]
   }
 
-  # libc++abi is linked statically into libc++.so. This allows us to get both
-  # libc++ and libc++abi by passing '-stdlib=libc++'. If libc++abi was a
-  # separate DSO, we'd have to link against it explicitly.
   deps = [
     "//buildtools/third_party/libc++abi",
   ]
@@ -114,8 +120,16 @@ group("libcxx_proxy") {
 # //build/config/sanitizers:default_sanitizer_flags sets the include paths for
 # everything else.
 config("link_helper") {
-  ldflags = [
-    "-stdlib=libc++",
+  # Make sure we don't link against libc++ or libstdc++.
+  ldflags = [ "-nodefaultlibs" ]
+
+  # Unfortunately, there's no way to disable linking against just
+  # libc++; -nodefaultlibs removes all of the default libraries,
+  # so add back the ones that we need.
+  libs = [
+    "c",
+    "m",
+    "gcc_s",
   ]
 
   if (!is_mac) {

@@ -110,29 +110,46 @@ class MultiplePeerConnections(WebrtcPage):
   def RunPageInteractions(self, action_runner):
     with action_runner.CreateInteraction('Action_Create_PeerConnection',
                                          repeatable=False):
-      # Set the number of peer connections to create to 15.
+      # Set the number of peer connections to create to 10.
       action_runner.ExecuteJavaScript(
-          'document.getElementById("num-peerconnections").value=15')
+          'document.getElementById("num-peerconnections").value=10')
       action_runner.ExecuteJavaScript(
           'document.getElementById("cpuoveruse-detection").checked=false')
       action_runner.ClickElement('button[id="start-test"]')
-      action_runner.Wait(45)
+      action_runner.Wait(20)
 
 
 class WebrtcPageSet(story.StorySet):
   def __init__(self):
     super(WebrtcPageSet, self).__init__(
-        cloud_storage_bucket=story.PUBLIC_BUCKET)
+        cloud_storage_bucket=story.PUBLIC_BUCKET,
+        verify_names=True)
 
-    self.AddStory(GetUserMedia(self, tags=['getusermedia']))
     self.AddStory(MultiplePeerConnections(self, tags=['stress']))
-    self.AddStory(VideoCall(self, tags=['peerconnection', 'smoothness']))
     self.AddStory(DataChannel(self, tags=['datachannel']))
+    self.AddStory(GetUserMedia(self, tags=['getusermedia']))
+    self.AddStory(VideoCall(self, tags=['peerconnection', 'smoothness']))
     self.AddStory(CanvasCapturePeerConnection(self, tags=['smoothness']))
+    self.AddStory(AudioCall(self, 'OPUS', tags=['audio']))
+    self.AddStory(AudioCall(self, 'G772', tags=['audio']))
+    self.AddStory(AudioCall(self, 'PCMU', tags=['audio']))
+    self.AddStory(AudioCall(self, 'ISAC/1600', tags=['audio']))
+
+
+class WebrtcExpectations(story.expectations.StoryExpectations):
+  def SetExpectations(self):
     # TODO(qyearsley, mcasas): Add webrtc.audio when http://crbug.com/468732
     # is fixed, or revert https://codereview.chromium.org/1544573002/ when
     # http://crbug.com/568333 is fixed.
-    # self.AddStory(AudioCall(self, 'OPUS'))
-    # self.AddStory(AudioCall(self, 'G772'))
-    # self.AddStory(AudioCall(self, 'PCMU'))
-    # self.AddStory(AudioCall(self, 'ISAC/1600'))
+    self.DisableStory('audio_call_opus_10s',
+                      [story.expectations.ALL],
+                      'crbug.com/468732')
+    self.DisableStory('audio_call_g772_10s',
+                      [story.expectations.ALL],
+                      'crbug.com/468732')
+    self.DisableStory('audio_call_pcmu_10s',
+                      [story.expectations.ALL],
+                      'crbug.com/468732')
+    self.DisableStory('audio_call_isac/1600_10s',
+                      [story.expectations.ALL],
+                      'crbug.com/468732')

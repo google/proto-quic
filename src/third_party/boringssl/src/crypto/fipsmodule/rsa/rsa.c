@@ -284,10 +284,10 @@ int RSA_is_opaque(const RSA *rsa) {
 }
 
 int RSA_get_ex_new_index(long argl, void *argp, CRYPTO_EX_unused *unused,
-                         CRYPTO_EX_dup *dup_func, CRYPTO_EX_free *free_func) {
+                         CRYPTO_EX_dup *dup_unused, CRYPTO_EX_free *free_func) {
   int index;
   if (!CRYPTO_get_ex_new_index(g_rsa_ex_data_class_bss_get(), &index, argl,
-                               argp, dup_func, free_func)) {
+                               argp, free_func)) {
     return -1;
   }
   return index;
@@ -759,12 +759,20 @@ int RSA_check_fips(RSA *key) {
     return 0;
   }
 
-  if (!RSA_sign(NID_sha256, data, sizeof(data), sig, &sig_len, key) ||
-      !RSA_verify(NID_sha256, data, sizeof(data), sig, sig_len, key)) {
+  if (!RSA_sign(NID_sha256, data, sizeof(data), sig, &sig_len, key)) {
+    OPENSSL_PUT_ERROR(RSA, ERR_R_INTERNAL_ERROR);
+    ret = 0;
+    goto cleanup;
+  }
+#if defined(BORINGSSL_FIPS_BREAK_RSA_PWCT)
+  data[0] = ~data[0];
+#endif
+  if (!RSA_verify(NID_sha256, data, sizeof(data), sig, sig_len, key)) {
     OPENSSL_PUT_ERROR(RSA, ERR_R_INTERNAL_ERROR);
     ret = 0;
   }
 
+cleanup:
   OPENSSL_free(sig);
 
   return ret;

@@ -15,7 +15,9 @@
 #include "base/strings/string_split.h"
 #include "build/build_config.h"
 #include "net/base/address_list.h"
+#include "net/base/url_util.h"
 #include "net/dns/dns_protocol.h"
+#include "url/url_canon.h"
 
 namespace {
 
@@ -74,13 +76,20 @@ bool DNSDomainFromDot(const base::StringPiece& dotted, std::string* out) {
       return false;
     if (!IsValidHostLabelCharacter(ch, labellen == 0)) {
       // TODO(palmer): In the future, when we can remove support for invalid
-      // names, return false here instead (and remove the UMA counter).
+      // names, return false here instead (and remove the Net.Valid*DNSName UMA
+      // counters).
       valid_name = false;
     }
     label[labellen++] = ch;
   }
 
   UMA_HISTOGRAM_BOOLEAN("Net.ValidDNSName", valid_name);
+  if (valid_name) {
+    url::CanonHostInfo info;
+    UMA_HISTOGRAM_BOOLEAN("Net.DNSNameCompliantIfValid",
+                          net::IsCanonicalizedHostCompliant(
+                              net::CanonicalizeHost(dotted, &info)));
+  }
 
   // Allow empty label at end of name to disable suffix search.
   if (labellen) {

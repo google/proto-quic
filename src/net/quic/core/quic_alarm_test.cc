@@ -134,6 +134,7 @@ TEST_F(QuicAlarmTest, UpdateWithZero) {
 TEST_F(QuicAlarmTest, Fire) {
   QuicTime deadline = QuicTime::Zero() + QuicTime::Delta::FromSeconds(7);
   alarm_.Set(deadline);
+  EXPECT_CALL(*delegate_, OnAlarm());
   alarm_.FireAlarm();
   EXPECT_FALSE(alarm_.IsSet());
   EXPECT_FALSE(alarm_.scheduled());

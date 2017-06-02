@@ -815,6 +815,16 @@ NetworkChangeNotifier::ConnectionTypeFromInterfaceList(
     if (interfaces[i].friendly_name == "Teredo Tunneling Pseudo-Interface")
       continue;
 #endif
+#if defined(OS_MACOSX)
+    // Ignore tunnel and airdrop interfaces.
+    if (base::StartsWith(interfaces[i].friendly_name, "utun",
+                         base::CompareCase::SENSITIVE) ||
+        base::StartsWith(interfaces[i].friendly_name, "awdl",
+                         base::CompareCase::SENSITIVE)) {
+      continue;
+    }
+#endif
+
     // Remove VMware network interfaces as they're internal and should not be
     // used to determine the network connection type.
     if (base::ToLowerASCII(interfaces[i].friendly_name).find("vmnet") !=

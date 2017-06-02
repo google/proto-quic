@@ -4,15 +4,19 @@
 
 #include "net/dns/host_cache.h"
 
+#include <utility>
+
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
 #include "base/metrics/field_trial.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/trace_event/trace_event.h"
+#include "base/values.h"
 #include "net/base/net_errors.h"
 #include "net/base/trace_constants.h"
 #include "net/dns/dns_util.h"
+#include "net/log/net_log.h"
 
 namespace net {
 
@@ -26,6 +30,31 @@ namespace {
 
 #define CACHE_HISTOGRAM_ENUM(name, value, max) \
   UMA_HISTOGRAM_ENUMERATION("DNS.HostCache." name, value, max)
+
+// String constants for dictionary keys.
+const char kHostnameKey[] = "hostname";
+const char kAddressFamilyKey[] = "address_family";
+const char kFlagsKey[] = "flags";
+const char kExpirationKey[] = "expiration";
+const char kTtlKey[] = "ttl";
+const char kNetworkChangesKey[] = "network_changes";
+const char kErrorKey[] = "error";
+const char kAddressesKey[] = "addresses";
+
+bool AddressListFromListValue(base::ListValue* value, AddressList* list) {
+  list->clear();
+  for (base::ListValue::const_iterator it = value->begin(); it != value->end();
+       it++) {
+    IPAddress address;
+    std::string addr_string;
+    if (!it->GetAsString(&addr_string) ||
+        !address.AssignFromIPLiteral(addr_string)) {
+      return false;
+    }
+    list->push_back(IPEndPoint(address, 0));
+  }
+  return true;
+}
 
 }  // namespace
 
@@ -80,6 +109,18 @@ HostCache::Entry::Entry(const HostCache::Entry& entry,
       total_hits_(0),
       stale_hits_(0) {}
 
+HostCache::Entry::Entry(int error,
+                        const AddressList& addresses,
+                        base::TimeTicks expires,
+                        int network_changes)
+    : error_(error),
+      addresses_(addresses),
+      ttl_(base::TimeDelta::FromSeconds(-1)),
+      expires_(expires),
+      network_changes_(network_changes),
+      total_hits_(0),
+      stale_hits_(0) {}
+
 bool HostCache::Entry::IsStale(base::TimeTicks now, int network_changes) const {
   EntryStaleness stale;
   stale.expired_by = now - expires_;
@@ -107,12 +148,13 @@ HostCache::HostCache(size_t max_entries)
     : max_entries_(max_entries), network_changes_(0) {}
 
 HostCache::~HostCache() {
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   RecordEraseAll(ERASE_DESTRUCT, base::TimeTicks::Now());
 }
 
 const HostCache::Entry* HostCache::Lookup(const Key& key,
                                           base::TimeTicks now) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   if (caching_is_disabled())
     return nullptr;
 
@@ -135,7 +177,7 @@ const HostCache::Entry* HostCache::LookupStale(
     const Key& key,
     base::TimeTicks now,
     HostCache::EntryStaleness* stale_out) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   if (caching_is_disabled())
     return nullptr;
 
@@ -164,7 +206,7 @@ void HostCache::Set(const Key& key,
                     base::TimeTicks now,
                     base::TimeDelta ttl) {
   TRACE_EVENT0(kNetTracingCategory, "HostCache::Set");
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   if (caching_is_disabled())
     return;
 
@@ -182,10 +224,13 @@ void HostCache::Set(const Key& key,
     RecordSet(SET_INSERT, now, nullptr, entry);
   }
 
+  AddEntry(Key(key), Entry(entry, now, ttl, network_changes_));
+}
+
+void HostCache::AddEntry(const Key& key, const Entry& entry) {
   DCHECK_GT(max_entries_, size());
   DCHECK_EQ(0u, entries_.count(key));
-  entries_.insert(
-      std::make_pair(Key(key), Entry(entry, now, ttl, network_changes_)));
+  entries_.insert(std::make_pair(key, entry));
   DCHECK_GE(max_entries_, size());
 }
 
@@ -194,14 +239,14 @@ void HostCache::OnNetworkChange() {
 }
 
 void HostCache::clear() {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   RecordEraseAll(ERASE_CLEAR, base::TimeTicks::Now());
   entries_.clear();
 }
 
 void HostCache::ClearForHosts(
     const base::Callback<bool(const std::string&)>& host_filter) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   if (host_filter.is_null()) {
     clear();
@@ -221,13 +266,117 @@ void HostCache::ClearForHosts(
   }
 }
 
+std::unique_ptr<base::ListValue> HostCache::GetAsListValue(
+    bool include_staleness) const {
+  std::unique_ptr<base::ListValue> entry_list(new base::ListValue());
+
+  for (const auto& pair : entries_) {
+    const Key& key = pair.first;
+    const Entry& entry = pair.second;
+
+    std::unique_ptr<base::DictionaryValue> entry_dict(
+        new base::DictionaryValue());
+
+    entry_dict->SetString(kHostnameKey, key.hostname);
+    entry_dict->SetInteger(kAddressFamilyKey,
+                           static_cast<int>(key.address_family));
+    entry_dict->SetInteger(kFlagsKey, key.host_resolver_flags);
+
+    if (include_staleness) {
+      entry_dict->SetString(kExpirationKey,
+                            NetLog::TickCountToString(entry.expires()));
+      entry_dict->SetInteger(kTtlKey, entry.ttl().InMilliseconds());
+      entry_dict->SetInteger(kNetworkChangesKey, entry.network_changes());
+    } else {
+      // Convert expiration time in TimeTicks to Time for serialization, using a
+      // string because base::Value doesn't handle 64-bit integers.
+      base::Time expiration_time =
+          base::Time::Now() - (base::TimeTicks::Now() - entry.expires());
+      entry_dict->SetString(
+          kExpirationKey,
+          base::Int64ToString(expiration_time.ToInternalValue()));
+    }
+
+    if (entry.error() != OK) {
+      entry_dict->SetInteger(kErrorKey, entry.error());
+    } else {
+      const AddressList& addresses = entry.addresses();
+      // Append all of the resolved addresses.
+      auto addresses_value = base::MakeUnique<base::ListValue>();
+      for (size_t i = 0; i < addresses.size(); ++i)
+        addresses_value->AppendString(addresses[i].ToStringWithoutPort());
+      entry_dict->SetList(kAddressesKey, std::move(addresses_value));
+    }
+
+    entry_list->Append(std::move(entry_dict));
+  }
+
+  return entry_list;
+}
+
+// TODO(mgersh): Add histograms to track failures.
+bool HostCache::RestoreFromListValue(base::ListValue& old_cache) {
+  for (base::ListValue::iterator it = old_cache.begin(); it != old_cache.end();
+       it++) {
+    base::DictionaryValue* entry_dict;
+    if (!it->GetAsDictionary(&entry_dict))
+      return false;
+
+    std::string hostname;
+    int address_family;
+    HostResolverFlags flags;
+    int error = OK;
+    std::string expiration;
+    base::ListValue empty_list;
+    base::ListValue* addresses_value = &empty_list;
+    AddressList address_list;
+
+    if (!entry_dict->GetString(kHostnameKey, &hostname) ||
+        !entry_dict->GetInteger(kFlagsKey, &flags) ||
+        !entry_dict->GetInteger(kAddressFamilyKey, &address_family) ||
+        !entry_dict->GetString(kExpirationKey, &expiration)) {
+      return false;
+    }
+
+    // Only one of these fields should be in the dictionary.
+    if (!entry_dict->GetInteger(kErrorKey, &error) &&
+        !entry_dict->GetList(kAddressesKey, &addresses_value)) {
+      return false;
+    }
+
+    int64_t time_internal;
+    if (!base::StringToInt64(expiration, &time_internal))
+      return false;
+
+    base::TimeTicks expiration_time =
+        base::TimeTicks::Now() -
+        (base::Time::Now() - base::Time::FromInternalValue(time_internal));
+
+    Key key(hostname, static_cast<AddressFamily>(address_family), flags);
+    if (error == OK &&
+        !AddressListFromListValue(addresses_value, &address_list)) {
+      return false;
+    }
+
+    // If the key is already in the cache, assume it's more recent and don't
+    // replace the entry. If the cache is already full, don't bother
+    // prioritizing what to evict, just stop restoring.
+    auto found = entries_.find(key);
+    if (found == entries_.end() && size() < max_entries_) {
+      AddEntry(key, Entry(error, address_list, expiration_time,
+                          network_changes_ - 1));
+    }
+  }
+  return true;
+}
+
 size_t HostCache::size() const {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   return entries_.size();
 }
 
 size_t HostCache::max_entries() const {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   return max_entries_;
 }
 

@@ -19,25 +19,23 @@ if (is_android || current_cpu == "mipsel" || is_mac || is_ios || is_asan ||
 if ((is_linux || is_android || is_mac ||
      (is_win && !is_component_build && !is_debug)) && !is_asan && !is_lsan &&
     !is_tsan && !is_msan) {
-  _default_use_experimental_allocator_shim = true
+  _default_use_allocator_shim = true
 } else {
-  _default_use_experimental_allocator_shim = false
+  _default_use_allocator_shim = false
 }
 
 declare_args() {
   # Memory allocator to use. Set to "none" to use default allocator.
   use_allocator = _default_allocator
 
-  # TODO(primiano): this should just become the default without having a flag,
-  # but we need to get there first. http://crbug.com/550886 .
   # Causes all the allocations to be routed via allocator_shim.cc.
-  use_experimental_allocator_shim = _default_use_experimental_allocator_shim
+  use_allocator_shim = _default_use_allocator_shim
 }
 
 if (is_nacl) {
   # Turn off the build flag for NaCL builds to minimize confusion, as NaCL
   # doesn't support the heap shim.
-  use_experimental_allocator_shim = false
+  use_allocator_shim = false
 }
 
 assert(use_allocator == "none" || use_allocator == "tcmalloc")
@@ -45,12 +43,11 @@ assert(use_allocator == "none" || use_allocator == "tcmalloc")
 assert(!is_win || use_allocator == "none", "Tcmalloc doesn't work on Windows.")
 assert(!is_mac || use_allocator == "none", "Tcmalloc doesn't work on macOS.")
 
-assert(!use_experimental_allocator_shim || is_linux || is_android || is_win ||
-           is_mac,
-       "use_experimental_allocator_shim supported only on Linux, Android, " +
-           "Windows and macOS targets")
+assert(
+    !use_allocator_shim || is_linux || is_android || is_win || is_mac,
+    "use_allocator_shim is supported only on Linux, Android, Windows and macOS targets")
 
-if (is_win && use_experimental_allocator_shim) {
+if (is_win && use_allocator_shim) {
   assert(!is_component_build,
          "The allocator shim doesn't work for the component build on Windows.")
 }

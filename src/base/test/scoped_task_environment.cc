@@ -4,9 +4,15 @@
 
 #include "base/test/scoped_task_environment.h"
 
+#include "base/bind_helpers.h"
+#include "base/logging.h"
 #include "base/run_loop.h"
-#include "base/task_scheduler/scheduler_worker_pool_params.h"
+#include "base/synchronization/condition_variable.h"
+#include "base/synchronization/lock.h"
+#include "base/task_scheduler/post_task.h"
 #include "base/task_scheduler/task_scheduler.h"
+#include "base/task_scheduler/task_scheduler_impl.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
 
 namespace base {
@@ -21,25 +27,69 @@ class TaskObserver : public MessageLoop::TaskObserver {
   // MessageLoop::TaskObserver:
   void WillProcessTask(const PendingTask& pending_task) override {}
   void DidProcessTask(const PendingTask& pending_task) override {
-    ran_task_ = true;
+    ++task_count_;
   }
 
-  bool ran_task() const { return ran_task_; }
+  int task_count() const { return task_count_; }
 
  private:
-  bool ran_task_ = false;
+  int task_count_ = 0;
+
   DISALLOW_COPY_AND_ASSIGN(TaskObserver);
 };
 
 }  // namespace
 
-ScopedTaskEnvironment::ScopedTaskEnvironment(MainThreadType main_thread_type)
-    : message_loop_(main_thread_type == MainThreadType::DEFAULT
+class ScopedTaskEnvironment::TestTaskTracker
+    : public internal::TaskSchedulerImpl::TaskTrackerImpl {
+ public:
+  TestTaskTracker();
+
+  void RegisterOnQueueEmptyClosure(OnceClosure queue_empty_closure);
+  void AssertOnQueueEmptyClosureIsNull();
+
+  // Allow running tasks.
+  void AllowRunRask();
+
+  // Disallow running tasks. No-ops and returns false if a task is running.
+  bool DisallowRunTasks();
+
+ private:
+  friend class ScopedTaskEnvironment;
+
+  // internal::TaskSchedulerImpl::TaskTrackerImpl:
+  void PerformRunTask(std::unique_ptr<internal::Task> task,
+                      const SequenceToken& sequence_token) override;
+
+  // Synchronizes accesses to members below.
+  Lock lock_;
+
+  // Closure posted to the main thread when the task queue becomes empty.
+  OnceClosure queue_empty_closure_;
+
+  // True if running tasks is allowed.
+  bool can_run_tasks_ = true;
+
+  // Signaled when |can_run_tasks_| becomes true.
+  ConditionVariable can_run_tasks_cv_;
+
+  // Number of tasks that are currently running.
+  int num_tasks_running_ = 0;
+
+  DISALLOW_COPY_AND_ASSIGN(TestTaskTracker);
+};
+
+ScopedTaskEnvironment::ScopedTaskEnvironment(
+    MainThreadType main_thread_type,
+    ExecutionMode execution_control_mode)
+    : execution_control_mode_(execution_control_mode),
+      message_loop_(main_thread_type == MainThreadType::DEFAULT
                         ? MessageLoop::TYPE_DEFAULT
                         : (main_thread_type == MainThreadType::UI
                                ? MessageLoop::TYPE_UI
-                               : MessageLoop::TYPE_IO)) {
-  DCHECK(!TaskScheduler::GetInstance());
+                               : MessageLoop::TYPE_IO)),
+      task_tracker_(new TestTaskTracker()) {
+  CHECK(!TaskScheduler::GetInstance());
 
   // Instantiate a TaskScheduler with 1 thread in each of its 4 pools. Threads
   // stay alive even when they don't have work.
@@ -48,10 +98,14 @@ ScopedTaskEnvironment::ScopedTaskEnvironment(MainThreadType main_thread_type)
   const SchedulerWorkerPoolParams worker_pool_params(
       SchedulerWorkerPoolParams::StandbyThreadPolicy::ONE, kMaxThreads,
       kSuggestedReclaimTime);
-  TaskScheduler::Create("ScopedTaskEnvironment");
+  TaskScheduler::SetInstance(MakeUnique<internal::TaskSchedulerImpl>(
+      "ScopedTaskEnvironment", WrapUnique(task_tracker_)));
   task_scheduler_ = TaskScheduler::GetInstance();
   TaskScheduler::GetInstance()->Start({worker_pool_params, worker_pool_params,
                                        worker_pool_params, worker_pool_params});
+
+  if (execution_control_mode_ == ExecutionMode::QUEUED)
+    CHECK(task_tracker_->DisallowRunTasks());
 }
 
 ScopedTaskEnvironment::~ScopedTaskEnvironment() {
@@ -59,10 +113,10 @@ ScopedTaskEnvironment::~ScopedTaskEnvironment() {
   // infinite post loop in the remaining work but this isn't possible right now
   // because base::~MessageLoop() didn't use to do this and adding it here would
   // make the migration away from MessageLoop that much harder.
-
-  DCHECK_EQ(TaskScheduler::GetInstance(), task_scheduler_);
+  CHECK_EQ(TaskScheduler::GetInstance(), task_scheduler_);
   // Without FlushForTesting(), DeleteSoon() and ReleaseSoon() tasks could be
   // skipped, resulting in memory leaks.
+  task_tracker_->AllowRunRask();
   TaskScheduler::GetInstance()->FlushForTesting();
   TaskScheduler::GetInstance()->Shutdown();
   TaskScheduler::GetInstance()->JoinForTesting();
@@ -76,15 +130,108 @@ ScopedTaskEnvironment::GetMainThreadTaskRunner() {
 
 void ScopedTaskEnvironment::RunUntilIdle() {
   for (;;) {
-    TaskScheduler::GetInstance()->FlushForTesting();
+    RunLoop run_loop;
 
+    // Register a closure to stop running tasks on the main thread when the
+    // TaskScheduler queue becomes empty.
+    task_tracker_->RegisterOnQueueEmptyClosure(run_loop.QuitWhenIdleClosure());
+
+    // The closure registered above may never run if the TaskScheduler queue
+    // starts empty. Post a TaskScheduler tasks to make sure that the queue
+    // doesn't start empty.
+    PostTask(FROM_HERE, BindOnce(&DoNothing));
+
+    // Run main thread and TaskScheduler tasks.
+    task_tracker_->AllowRunRask();
     TaskObserver task_observer;
     MessageLoop::current()->AddTaskObserver(&task_observer);
-    RunLoop().RunUntilIdle();
+    run_loop.Run();
     MessageLoop::current()->RemoveTaskObserver(&task_observer);
 
-    if (!task_observer.ran_task())
-      return;
+    task_tracker_->AssertOnQueueEmptyClosureIsNull();
+
+    // If tasks other than the QuitWhenIdle closure ran on the main thread, they
+    // may have posted TaskScheduler tasks that didn't run yet. Another
+    // iteration is required to run them.
+    //
+    // If the ExecutionMode is QUEUED and DisallowRunTasks() fails,
+    // another iteration is required to make sure that RunUntilIdle() doesn't
+    // return while TaskScheduler tasks are still allowed to run.
+    //
+    // Note: DisallowRunTasks() fails when a TaskScheduler task is running. A
+    // TaskScheduler task may be running after the TaskScheduler queue became
+    // empty even if no tasks ran on the main thread in these cases:
+    // - An undelayed task became ripe for execution.
+    // - A task was posted from an external thread.
+    if (task_observer.task_count() == 1 &&
+        (execution_control_mode_ != ExecutionMode::QUEUED ||
+         task_tracker_->DisallowRunTasks())) {
+      break;
+    }
+  }
+}
+
+ScopedTaskEnvironment::TestTaskTracker::TestTaskTracker()
+    : can_run_tasks_cv_(&lock_) {}
+
+void ScopedTaskEnvironment::TestTaskTracker::RegisterOnQueueEmptyClosure(
+    OnceClosure queue_empty_closure) {
+  AutoLock auto_lock(lock_);
+  CHECK(!queue_empty_closure_);
+  queue_empty_closure_ = std::move(queue_empty_closure);
+}
+
+void ScopedTaskEnvironment::TestTaskTracker::AssertOnQueueEmptyClosureIsNull() {
+  AutoLock auto_lock(lock_);
+  CHECK(!queue_empty_closure_);
+}
+
+void ScopedTaskEnvironment::TestTaskTracker::AllowRunRask() {
+  AutoLock auto_lock(lock_);
+  can_run_tasks_ = true;
+  can_run_tasks_cv_.Broadcast();
+}
+
+bool ScopedTaskEnvironment::TestTaskTracker::DisallowRunTasks() {
+  AutoLock auto_lock(lock_);
+
+  // Can't disallow run task if there are tasks running.
+  if (num_tasks_running_ > 0)
+    return false;
+
+  can_run_tasks_ = false;
+  return true;
+}
+
+void ScopedTaskEnvironment::TestTaskTracker::PerformRunTask(
+    std::unique_ptr<internal::Task> task,
+    const SequenceToken& sequence_token) {
+  {
+    AutoLock auto_lock(lock_);
+
+    while (!can_run_tasks_)
+      can_run_tasks_cv_.Wait();
+
+    ++num_tasks_running_;
+  }
+
+  internal::TaskSchedulerImpl::TaskTrackerImpl::PerformRunTask(std::move(task),
+                                                               sequence_token);
+
+  {
+    AutoLock auto_lock(lock_);
+
+    CHECK_GT(num_tasks_running_, 0);
+    CHECK(can_run_tasks_);
+
+    // Notify the main thread when no task other than the current one is running
+    // or queued.
+    if (num_tasks_running_ == 1 &&
+        GetNumPendingUndelayedTasksForTesting() == 1 && queue_empty_closure_) {
+      std::move(queue_empty_closure_).Run();
+    }
+
+    --num_tasks_running_;
   }
 }
 

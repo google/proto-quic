@@ -37,7 +37,7 @@ void EnableTerminationOnOutOfMemory() {
 
 // Step 2: Enable OOM killer on C-malloc failures for the default zone (if we
 // have a shim).
-#if BUILDFLAG(USE_EXPERIMENTAL_ALLOCATOR_SHIM)
+#if BUILDFLAG(USE_ALLOCATOR_SHIM)
   allocator::SetCallNewHandlerOnMallocFailure(true);
 #endif
 

@@ -4,10 +4,11 @@
 
 #include "base/allocator/allocator_check.h"
 
+#include "base/allocator/features.h"
 #include "build/build_config.h"
 
 #if defined(OS_WIN)
-#include "base/allocator/allocator_shim_win.h"
+#include "base/allocator/winheap_stubs_win.h"
 #endif
 
 #if defined(OS_LINUX)
@@ -22,8 +23,9 @@ namespace base {
 namespace allocator {
 
 bool IsAllocatorInitialized() {
-#if defined(OS_WIN) && defined(ALLOCATOR_SHIM)
-  // Set by allocator_shim_win.cc when the shimmed _set_new_mode() is called.
+#if defined(OS_WIN) && BUILDFLAG(USE_ALLOCATOR_SHIM)
+  // Set by allocator_shim_override_ucrt_symbols_win.h when the
+  // shimmed _set_new_mode() is called.
   return g_is_win_shim_layer_initialized;
 #elif defined(OS_LINUX) && defined(USE_TCMALLOC) && \
     !defined(MEMORY_TOOL_REPLACES_ALLOCATOR)

@@ -18,7 +18,10 @@ class HostPortPair;
 class NET_EXPORT_PRIVATE HostMappingRules {
  public:
   HostMappingRules();
+  HostMappingRules(const HostMappingRules& host_mapping_rules);
   ~HostMappingRules();
+
+  HostMappingRules& operator=(const HostMappingRules& host_mapping_rules);
 
   // Modifies |*host_port| based on the current rules. Returns true if
   // |*host_port| was modified, false otherwise.
@@ -46,8 +49,6 @@ class NET_EXPORT_PRIVATE HostMappingRules {
 
   MapRuleList map_rules_;
   ExclusionRuleList exclusion_rules_;
-
-  DISALLOW_COPY_AND_ASSIGN(HostMappingRules);
 };
 
 }  // namespace net

@@ -376,9 +376,12 @@ std::unique_ptr<HttpNetworkSession>
 SpdySessionDependencies::SpdyCreateSessionWithSocketFactory(
     SpdySessionDependencies* session_deps,
     ClientSocketFactory* factory) {
-  HttpNetworkSession::Params params = CreateSessionParams(session_deps);
-  params.client_socket_factory = factory;
-  auto http_session = base::MakeUnique<HttpNetworkSession>(params);
+  HttpNetworkSession::Params session_params = CreateSessionParams(session_deps);
+  HttpNetworkSession::Context session_context =
+      CreateSessionContext(session_deps);
+  session_context.client_socket_factory = factory;
+  auto http_session =
+      base::MakeUnique<HttpNetworkSession>(session_params, session_context);
   SpdySessionPoolPeer pool_peer(http_session->spdy_session_pool());
   pool_peer.SetEnableSendingInitialData(false);
   return http_session;
@@ -388,20 +391,6 @@ SpdySessionDependencies::SpdyCreateSessionWithSocketFactory(
 HttpNetworkSession::Params SpdySessionDependencies::CreateSessionParams(
     SpdySessionDependencies* session_deps) {
   HttpNetworkSession::Params params;
-  params.host_resolver = session_deps->host_resolver.get();
-  params.cert_verifier = session_deps->cert_verifier.get();
-  params.channel_id_service = session_deps->channel_id_service.get();
-  params.transport_security_state =
-      session_deps->transport_security_state.get();
-  params.cert_transparency_verifier =
-      session_deps->cert_transparency_verifier.get();
-  params.ct_policy_enforcer = session_deps->ct_policy_enforcer.get();
-  params.proxy_service = session_deps->proxy_service.get();
-  params.ssl_config_service = session_deps->ssl_config_service.get();
-  params.http_auth_handler_factory =
-      session_deps->http_auth_handler_factory.get();
-  params.http_server_properties = session_deps->http_server_properties.get();
-  params.client_socket_factory = session_deps->socket_factory.get();
   params.enable_spdy_ping_based_connection_checking = session_deps->enable_ping;
   params.enable_user_alternate_protocol_ports =
       session_deps->enable_user_alternate_protocol_ports;
@@ -412,13 +401,32 @@ HttpNetworkSession::Params SpdySessionDependencies::CreateSessionParams(
       session_deps->session_max_recv_window_size;
   params.http2_settings = session_deps->http2_settings;
   params.time_func = session_deps->time_func;
-  params.proxy_delegate = session_deps->proxy_delegate.get();
   params.enable_http2_alternative_service =
       session_deps->enable_http2_alternative_service;
-  params.net_log = session_deps->net_log;
   params.http_09_on_non_default_ports_enabled =
       session_deps->http_09_on_non_default_ports_enabled;
   return params;
+}
+
+HttpNetworkSession::Context SpdySessionDependencies::CreateSessionContext(
+    SpdySessionDependencies* session_deps) {
+  HttpNetworkSession::Context context;
+  context.host_resolver = session_deps->host_resolver.get();
+  context.cert_verifier = session_deps->cert_verifier.get();
+  context.channel_id_service = session_deps->channel_id_service.get();
+  context.transport_security_state =
+      session_deps->transport_security_state.get();
+  context.cert_transparency_verifier =
+      session_deps->cert_transparency_verifier.get();
+  context.ct_policy_enforcer = session_deps->ct_policy_enforcer.get();
+  context.proxy_service = session_deps->proxy_service.get();
+  context.ssl_config_service = session_deps->ssl_config_service.get();
+  context.http_auth_handler_factory =
+      session_deps->http_auth_handler_factory.get();
+  context.http_server_properties = session_deps->http_server_properties.get();
+  context.proxy_delegate = session_deps->proxy_delegate.get();
+  context.net_log = session_deps->net_log;
+  return context;
 }
 
 class AllowAnyCertCTPolicyEnforcer : public CTPolicyEnforcer {
@@ -459,20 +467,22 @@ SpdyURLRequestContext::SpdyURLRequestContext() : storage_(this) {
   storage_.set_http_server_properties(
       std::unique_ptr<HttpServerProperties>(new HttpServerPropertiesImpl()));
   storage_.set_job_factory(base::MakeUnique<URLRequestJobFactoryImpl>());
-  HttpNetworkSession::Params params;
-  params.client_socket_factory = &socket_factory_;
-  params.host_resolver = host_resolver();
-  params.cert_verifier = cert_verifier();
-  params.transport_security_state = transport_security_state();
-  params.proxy_service = proxy_service();
-  params.ct_policy_enforcer = ct_policy_enforcer();
-  params.cert_transparency_verifier = cert_transparency_verifier();
-  params.ssl_config_service = ssl_config_service();
-  params.http_auth_handler_factory = http_auth_handler_factory();
-  params.enable_spdy_ping_based_connection_checking = false;
-  params.http_server_properties = http_server_properties();
+  HttpNetworkSession::Params session_params;
+  session_params.enable_spdy_ping_based_connection_checking = false;
+
+  HttpNetworkSession::Context session_context;
+  session_context.client_socket_factory = &socket_factory_;
+  session_context.host_resolver = host_resolver();
+  session_context.cert_verifier = cert_verifier();
+  session_context.transport_security_state = transport_security_state();
+  session_context.proxy_service = proxy_service();
+  session_context.ct_policy_enforcer = ct_policy_enforcer();
+  session_context.cert_transparency_verifier = cert_transparency_verifier();
+  session_context.ssl_config_service = ssl_config_service();
+  session_context.http_auth_handler_factory = http_auth_handler_factory();
+  session_context.http_server_properties = http_server_properties();
   storage_.set_http_network_session(
-      base::MakeUnique<HttpNetworkSession>(params));
+      base::MakeUnique<HttpNetworkSession>(session_params, session_context));
   SpdySessionPoolPeer pool_peer(
       storage_.http_network_session()->spdy_session_pool());
   pool_peer.SetEnableSendingInitialData(false);

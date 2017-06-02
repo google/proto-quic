@@ -29,7 +29,7 @@ IPEndPoint GetMDnsIPEndPoint(const char* address) {
 int Bind(const IPEndPoint& multicast_addr,
          uint32_t interface_index,
          DatagramServerSocket* socket) {
-  IPAddress address_any(std::vector<uint8_t>(multicast_addr.address().size()));
+  IPAddress address_any(IPAddress::AllZeros(multicast_addr.address().size()));
   IPEndPoint bind_endpoint(address_any, multicast_addr.port());
 
   socket->AllowAddressReuse();

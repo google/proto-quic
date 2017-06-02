@@ -10,7 +10,7 @@
 #include <string>
 
 #include "base/memory/ref_counted.h"
-#include "base/threading/non_thread_safe.h"
+#include "base/threading/thread_checker.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
 #include "net/http/http_auth.h"
@@ -29,8 +29,7 @@ struct HttpRequestInfo;
 class SSLInfo;
 
 class NET_EXPORT_PRIVATE HttpAuthController
-    : public base::RefCounted<HttpAuthController>,
-      NON_EXPORTED_BASE(public base::NonThreadSafe) {
+    : public base::RefCounted<HttpAuthController> {
  public:
   // The arguments are self explanatory except possibly for |auth_url|, which
   // should be both the auth target and auth path in a single url argument.
@@ -170,6 +169,8 @@ class NET_EXPORT_PRIVATE HttpAuthController
   std::set<HttpAuth::Scheme> disabled_schemes_;
 
   CompletionCallback callback_;
+
+  THREAD_CHECKER(thread_checker_);
 };
 
 }  // namespace net

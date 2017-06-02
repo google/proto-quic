@@ -99,5 +99,5 @@ TEST(MimeSnifferTest, PlainTextPerfTest) {
             << "ns per KB";
 }
 
-}  // namespace net
 }  // namespace
+}  // namespace net

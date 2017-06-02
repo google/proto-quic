@@ -11,6 +11,7 @@
 #include "base/macros.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_transmission_info.h"
+#include "net/quic/core/stream_notifier_interface.h"
 #include "net/quic/platform/api/quic_export.h"
 
 namespace net {
@@ -49,6 +50,10 @@ class QUIC_EXPORT_PRIVATE QuicUnackedPacketMap {
   // Notifies all the AckListeners attached to |newest_transmission|.
   void NotifyAndClearListeners(QuicPacketNumber newest_transmission,
                                QuicTime::Delta delta_largest_observed);
+
+  // Notifies stream_notifier that stream frames have been acked.
+  void NotifyStreamFramesAcked(const QuicTransmissionInfo& info,
+                               QuicTime::Delta ack_delay);
 
   // Marks |info| as no longer in flight.
   void RemoveFromInFlight(QuicTransmissionInfo* info);
@@ -146,6 +151,8 @@ class QUIC_EXPORT_PRIVATE QuicUnackedPacketMap {
   // RTT measurement purposes.
   void RemoveObsoletePackets();
 
+  void SetStreamNotifier(StreamNotifierInterface* stream_notifier);
+
  private:
   // Called when a packet is retransmitted with a new packet number.
   // |old_packet_number| will remain unacked, but will have no
@@ -193,6 +200,10 @@ class QUIC_EXPORT_PRIVATE QuicUnackedPacketMap {
   QuicByteCount bytes_in_flight_;
   // Number of retransmittable crypto handshake packets.
   size_t pending_crypto_packet_count_;
+
+  // Receives notifications of stream frames being retransmitted or
+  // acknowledged.
+  StreamNotifierInterface* stream_notifier_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicUnackedPacketMap);
 };

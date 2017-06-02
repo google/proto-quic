@@ -17,6 +17,7 @@
 #include "base/synchronization/cancellation_flag.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/threading/thread.h"
+#include "base/threading/thread_checker.h"
 #include "base/threading/thread_restrictions.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/trace_event/trace_event.h"
@@ -302,8 +303,7 @@ class Job : public base::RefCountedThreadSafe<Job>,
   AddressList pending_dns_addresses_;
 };
 
-class ProxyResolverV8TracingImpl : public ProxyResolverV8Tracing,
-                                   public base::NonThreadSafe {
+class ProxyResolverV8TracingImpl : public ProxyResolverV8Tracing {
  public:
   ProxyResolverV8TracingImpl(std::unique_ptr<base::Thread> thread,
                              std::unique_ptr<ProxyResolverV8> resolver,
@@ -337,6 +337,8 @@ class ProxyResolverV8TracingImpl : public ProxyResolverV8Tracing,
 
   // The number of outstanding (non-cancelled) jobs.
   int num_outstanding_callbacks_;
+
+  THREAD_CHECKER(thread_checker_);
 
   DISALLOW_COPY_AND_ASSIGN(ProxyResolverV8TracingImpl);
 };
@@ -942,6 +944,7 @@ ProxyResolverV8TracingImpl::ProxyResolverV8TracingImpl(
 }
 
 ProxyResolverV8TracingImpl::~ProxyResolverV8TracingImpl() {
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   // Note, all requests should have been cancelled.
   CHECK_EQ(0, num_outstanding_callbacks_);
 
@@ -967,7 +970,7 @@ void ProxyResolverV8TracingImpl::GetProxyForURL(
     const CompletionCallback& callback,
     std::unique_ptr<ProxyResolver::Request>* request,
     std::unique_ptr<Bindings> bindings) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(!callback.is_null());
 
   scoped_refptr<Job> job = new Job(job_params_.get(), std::move(bindings));

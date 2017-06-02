@@ -197,7 +197,7 @@ void SQLiteChannelIDStore::Backend::Load(
 void SQLiteChannelIDStore::Backend::LoadInBackground(
     std::vector<std::unique_ptr<DefaultChannelIDStore::ChannelID>>*
         channel_ids) {
-  DCHECK(background_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(background_task_runner_->RunsTasksInCurrentSequence());
 
   // This method should be called only once per instance.
   DCHECK(!db_.get());
@@ -428,7 +428,7 @@ bool SQLiteChannelIDStore::Backend::EnsureDatabaseVersion() {
 void SQLiteChannelIDStore::Backend::DatabaseErrorCallback(
     int error,
     sql::Statement* stmt) {
-  DCHECK(background_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(background_task_runner_->RunsTasksInCurrentSequence());
 
   if (!sql::IsErrorCatastrophic(error))
     return;
@@ -448,7 +448,7 @@ void SQLiteChannelIDStore::Backend::DatabaseErrorCallback(
 }
 
 void SQLiteChannelIDStore::Backend::KillDatabase() {
-  DCHECK(background_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(background_task_runner_->RunsTasksInCurrentSequence());
 
   if (db_) {
     // This Backend will now be in-memory only. In a future run the database
@@ -484,10 +484,17 @@ void SQLiteChannelIDStore::Backend::DeleteAllInList(
 void SQLiteChannelIDStore::Backend::BatchOperation(
     PendingOperation::OperationType op,
     const DefaultChannelIDStore::ChannelID& channel_id) {
-  // Commit every 30 seconds.
-  static const int kCommitIntervalMs = 30 * 1000;
-  // Commit right away if we have more than 512 outstanding operations.
-  static const size_t kCommitAfterBatchSize = 512;
+  // These thresholds used to be 30 seconds or 512 outstanding operations (the
+  // same values used in CookieMonster). Since cookies can be bound to Channel
+  // IDs, it's possible for a cookie to get committed to the cookie database
+  // before the Channel ID it is bound to gets committed. Decreasing these
+  // thresholds increases the chance that the Channel ID will be committed
+  // before or at the same time as the cookie.
+
+  // Commit every 2 seconds.
+  static const int kCommitIntervalMs = 2 * 1000;
+  // Commit right away if we have more than 3 outstanding operations.
+  static const size_t kCommitAfterBatchSize = 3;
 
   // We do a full copy of the cert here, and hopefully just here.
   std::unique_ptr<PendingOperation> po(new PendingOperation(op, channel_id));
@@ -514,7 +521,7 @@ void SQLiteChannelIDStore::Backend::BatchOperation(
 
 void SQLiteChannelIDStore::Backend::PrunePendingOperationsForDeletes(
     const std::list<std::string>& server_identifiers) {
-  DCHECK(background_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(background_task_runner_->RunsTasksInCurrentSequence());
   base::AutoLock locked(lock_);
 
   for (PendingOperationsList::iterator it = pending_.begin();
@@ -540,7 +547,7 @@ void SQLiteChannelIDStore::Backend::Flush() {
 }
 
 void SQLiteChannelIDStore::Backend::Commit() {
-  DCHECK(background_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(background_task_runner_->RunsTasksInCurrentSequence());
 
   PendingOperationsList ops;
   {
@@ -613,7 +620,7 @@ void SQLiteChannelIDStore::Backend::Close() {
 }
 
 void SQLiteChannelIDStore::Backend::InternalBackgroundClose() {
-  DCHECK(background_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(background_task_runner_->RunsTasksInCurrentSequence());
   // Commit any pending operations
   Commit();
   db_.reset();
@@ -621,7 +628,7 @@ void SQLiteChannelIDStore::Backend::InternalBackgroundClose() {
 
 void SQLiteChannelIDStore::Backend::BackgroundDeleteAllInList(
     const std::list<std::string>& server_identifiers) {
-  DCHECK(background_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(background_task_runner_->RunsTasksInCurrentSequence());
 
   if (!db_.get())
     return;

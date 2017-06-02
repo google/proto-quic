@@ -46,15 +46,13 @@ class InstrumentationTestInstanceTest(unittest.TestCase):
         'command_line_flags',
         'device_flags_file',
         'strict_mode',
-        'regenerate_goldens',
       ])
 
   def createFlagAttributesArgs(
       self, command_line_flags=None, device_flags_file=None,
-      strict_mode=None, regenerate_goldens=None):
+      strict_mode=None):
     return self._FlagAttributesArgs(
-        command_line_flags, device_flags_file, strict_mode,
-        regenerate_goldens)
+        command_line_flags, device_flags_file, strict_mode)
 
   def test_initializeFlagAttributes_commandLineFlags(self):
     o = self.createTestInstance()
@@ -83,13 +81,6 @@ class InstrumentationTestInstanceTest(unittest.TestCase):
     args = self.createFlagAttributesArgs(strict_mode='off')
     o._initializeFlagAttributes(args)
     self.assertEquals(o._flags, ['--enable-test-intents'])
-
-  def test_initializeFlagAttributes_regenerateGoldens(self):
-    o = self.createTestInstance()
-    args = self.createFlagAttributesArgs(regenerate_goldens=True)
-    o._initializeFlagAttributes(args)
-    self.assertEquals(
-        o._flags, ['--enable-test-intents', '--regenerate-goldens'])
 
   def testGetTests_noFilter(self):
     o = self.createTestInstance()

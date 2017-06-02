@@ -48,6 +48,9 @@ class NetworkChangeNotifierMac: public NetworkChangeNotifier {
  private:
   class DnsConfigServiceThread;
 
+  // Called on the main thread on startup, afterwards on the notifier thread.
+  static ConnectionType CalculateConnectionType(SCNetworkConnectionFlags flags);
+
   // Methods directly called by the NetworkConfigWatcherMac::Delegate:
   void StartReachabilityNotifications();
   void SetDynamicStoreNotificationKeys(SCDynamicStoreRef store);

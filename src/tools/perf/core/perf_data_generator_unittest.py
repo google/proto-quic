@@ -89,7 +89,7 @@ class PerfDataGeneratorTest(unittest.TestCase):
         'swarming': {
           'ignore_task_failure': False,
           'dimension_sets': [{'os': 'SkyNet', 'id': 'T-850', 'pool': 'T-RIP'}],
-          'hard_timeout': 9000,
+          'hard_timeout': 10800,
           'can_use_on_swarming_builders': True,
           'expiration': 36000,
           'io_timeout': 3600,
@@ -111,7 +111,7 @@ class PerfDataGeneratorTest(unittest.TestCase):
         'swarming': {
           'ignore_task_failure': True,
           'dimension_sets': [{'os': 'SkyNet', 'id': 'T-850', 'pool': 'T-RIP'}],
-          'hard_timeout': 9000,
+          'hard_timeout': 10800,
           'can_use_on_swarming_builders': True,
           'expiration': 36000,
           'io_timeout': 3600,
@@ -193,4 +193,58 @@ class PerfDataGeneratorTest(unittest.TestCase):
         perf_data_generator.ShouldBenchmarkBeScheduled(bench(), 'android'),
         False)
 
+  def testRemoveBlacklistedTestsNoop(self):
+    tests = [{
+        'swarming': {
+            'dimension_sets': [{
+                'id': 'build1-b1',
+            }]
+        },
+        'name': 'test',
+    }]
+    self.assertEqual(
+        perf_data_generator.remove_blacklisted_device_tests(tests, []), (
+            tests, {}))
 
+  def testRemoveBlacklistedTestsShouldRemove(self):
+    tests = [{
+        'swarming': {
+            'dimension_sets': [{
+                'id': 'build1-b1',
+            }]
+        },
+        'name': 'test',
+    }]
+    self.assertEqual(
+        perf_data_generator.remove_blacklisted_device_tests(
+            tests, ['build1-b1']), ([], {'build1-b1': ['test']}))
+
+  def testRemoveBlacklistedTestsShouldRemoveMultiple(self):
+    tests = [{
+        'swarming': {
+            'dimension_sets': [{
+                'id': 'build1-b1',
+            }]
+        },
+        'name': 'test',
+    }, {
+        'swarming': {
+            'dimension_sets': [{
+                'id': 'build2-b1',
+            }]
+        },
+        'name': 'other_test',
+    }, {
+        'swarming': {
+            'dimension_sets': [{
+                'id': 'build2-b1',
+            }]
+        },
+        'name': 'test',
+    }]
+    self.assertEqual(
+        perf_data_generator.remove_blacklisted_device_tests(
+            tests, ['build1-b1', 'build2-b1']), ([], {
+                'build1-b1': ['test'],
+                'build2-b1': ['other_test', 'test'],
+            }))

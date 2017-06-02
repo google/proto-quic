@@ -247,8 +247,6 @@ class FixedHashMap {
 
 }  // namespace internal
 
-class TraceEventMemoryOverhead;
-
 // The allocation register keeps track of all allocations that have not been
 // freed. Internally it has two hashtables: one for Backtraces and one for
 // actual allocations. Sizes of both hashtables are fixed, and this class
@@ -262,6 +260,10 @@ class BASE_EXPORT AllocationRegister {
     const void* address;
     size_t size;
     AllocationContext context;
+  };
+
+  struct BASE_EXPORT AddressHasher {
+    size_t operator()(const void* address) const;
   };
 
   // An iterator that iterates entries in no particular order.
@@ -306,8 +308,9 @@ class BASE_EXPORT AllocationRegister {
   ConstIterator begin() const;
   ConstIterator end() const;
 
-  // Estimates memory overhead including |sizeof(AllocationRegister)|.
-  void EstimateTraceMemoryOverhead(TraceEventMemoryOverhead* overhead) const;
+  // Estimates memory in use.
+  size_t EstimateAllocatedMemory() const;
+  size_t EstimateResidentMemory() const;
 
  private:
   friend AllocationRegisterTest;
@@ -316,20 +319,27 @@ class BASE_EXPORT AllocationRegister {
 // (capacity / bucket count) is kept less than 10 for optimal hashing. The
 // number of buckets should be changed together with AddressHasher.
 #if defined(OS_ANDROID) || defined(OS_IOS)
+  // Note that allocations are currently sharded over 1 different instance of
+  // AllocationRegister. See "base/trace_event/malloc_dump_provider.cc".
   static const size_t kAllocationBuckets = 1 << 18;
   static const size_t kAllocationCapacity = 1500000;
 #else
-  static const size_t kAllocationBuckets = 1 << 19;
-  static const size_t kAllocationCapacity = 5000000;
+  // Note that allocations are currently sharded over 256 different instances of
+  // AllocationRegister. See "base/trace_event/malloc_dump_provider.cc".
+  static const size_t kAllocationBuckets = 1 << 16;
+  static const size_t kAllocationCapacity = 400000;
 #endif
 
-  // 2^16 works well with BacktraceHasher. When increasing this number make
-  // sure BacktraceHasher still produces low number of collisions.
+#if defined(OS_ANDROID) || defined(OS_IOS)
+  // Note that allocations are currently sharded over 1 different instance of
+  // AllocationRegister. See "base/trace_event/malloc_dump_provider.cc".
   static const size_t kBacktraceBuckets = 1 << 16;
-#if defined(OS_ANDROID)
   static const size_t kBacktraceCapacity = 32000;  // 22K was observed
 #else
-  static const size_t kBacktraceCapacity = 55000;  // 45K was observed on Linux
+  // Note that allocations are currently sharded over 256 different instances of
+  // AllocationRegister. See "base/trace_event/malloc_dump_provider.cc".
+  static const size_t kBacktraceBuckets = 1 << 12;
+  static const size_t kBacktraceCapacity = 10000;  // 45K was observed on Linux
 #endif
 
   struct BacktraceHasher {
@@ -349,10 +359,6 @@ class BASE_EXPORT AllocationRegister {
     size_t size;
     const char* type_name;
     BacktraceMap::KVIndex backtrace_index;
-  };
-
-  struct AddressHasher {
-    size_t operator () (const void* address) const;
   };
 
   using AllocationMap = internal::FixedHashMap<

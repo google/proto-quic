@@ -15,7 +15,7 @@
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
-#include "base/threading/non_thread_safe.h"
+#include "base/threading/thread_checker.h"
 #include "base/time/time.h"
 #include "net/base/expiring_cache.h"
 #include "net/base/hash_value.h"
@@ -47,8 +47,7 @@ void NET_EXPORT_PRIVATE SetTransportSecurityStateSourceForTesting(
 // http://tools.ietf.org/html/ietf-websec-strict-transport-sec, and
 // HTTP-based dynamic public key pinning (HPKP) is defined in
 // http://tools.ietf.org/html/ietf-websec-key-pinning.
-class NET_EXPORT TransportSecurityState
-    : NON_EXPORTED_BASE(public base::NonThreadSafe) {
+class NET_EXPORT TransportSecurityState {
  public:
   class NET_EXPORT Delegate {
    public:
@@ -484,12 +483,6 @@ class NET_EXPORT TransportSecurityState
                             STSState* sts_result,
                             PKPState* pkp_result) const;
 
-  // Returns true iff there is static (built-in) state for |host| that
-  // references the Google pins.
-  // TODO(rch): Remove this temporary gross layering violation once QUIC 32 is
-  // deployed.
-  bool IsGooglePinnedHost(const std::string& host) const;
-
   // Returns true and updates |*result| iff |host| has HSTS/HPKP/Expect-CT
   // (respectively) state. If multiple entries match |host|, the most specific
   // match determines the return value.
@@ -566,11 +559,19 @@ class NET_EXPORT TransportSecurityState
                              const HostPortPair& host_port_pair,
                              const SSLInfo& ssl_info);
 
+  void AssertCalledOnValidThread() const {
+    DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
+  }
+
   // For unit tests only. Causes CheckCTRequirements() to return
   // CT_REQUIREMENTS_NOT_MET (if |*required| is true) or CT_REQUIREMENTS_MET (if
   // |*required| is false) for non-compliant connections by default (that is,
   // unless a RequireCTDelegate overrides). Set to nullptr to reset.
   static void SetShouldRequireCTForTesting(bool* required);
+
+  // For unit tests only. Clears the caches that deduplicate sent HPKP and
+  // Expect-CT reports.
+  void ClearReportCachesForTesting();
 
  private:
   friend class TransportSecurityStateTest;
@@ -583,6 +584,11 @@ class NET_EXPORT TransportSecurityState
   typedef std::map<std::string, STSState> STSStateMap;
   typedef std::map<std::string, PKPState> PKPStateMap;
   typedef std::map<std::string, ExpectCTState> ExpectCTStateMap;
+  typedef ExpiringCache<std::string,
+                        bool,
+                        base::TimeTicks,
+                        std::less<base::TimeTicks>>
+      ReportCache;
 
   // IsBuildTimely returns true if the current build is new enough ensure that
   // built in security information (i.e. HSTS preloading and pinning
@@ -662,6 +668,14 @@ class NET_EXPORT TransportSecurityState
       const std::string& host,
       ExpectStapleState* expect_staple_result) const;
 
+  void MaybeNotifyExpectCTFailed(
+      const HostPortPair& host_port_pair,
+      const GURL& report_uri,
+      const X509Certificate* validated_certificate_chain,
+      const X509Certificate* served_certificate_chain,
+      const SignedCertificateTimestampAndStatusList&
+          signed_certificate_timestamps);
+
   // The sets of hosts that have enabled TransportSecurity. |domain| will always
   // be empty for a STSState, PKPState, or ExpectCTState in these maps; the
   // domain comes from the map keys instead. In addition, |upgrade_mode| in the
@@ -693,8 +707,10 @@ class NET_EXPORT TransportSecurityState
 
   // Keeps track of reports that have been sent recently for
   // rate-limiting.
-  ExpiringCache<std::string, bool, base::TimeTicks, std::less<base::TimeTicks>>
-      sent_reports_cache_;
+  ReportCache sent_hpkp_reports_cache_;
+  ReportCache sent_expect_ct_reports_cache_;
+
+  THREAD_CHECKER(thread_checker_);
 
   DISALLOW_COPY_AND_ASSIGN(TransportSecurityState);
 };

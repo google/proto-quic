@@ -14,7 +14,7 @@
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
 #include "base/strings/string_piece.h"
-#include "base/threading/non_thread_safe.h"
+#include "base/threading/thread_checker.h"
 #include "base/time/time.h"
 #include "base/timer/timer.h"
 #include "net/base/net_export.h"
@@ -61,7 +61,6 @@ class NetLogWithSource;
 // Jobs are ordered in the queue based on their priority and order of arrival.
 class NET_EXPORT HostResolverImpl
     : public HostResolver,
-      NON_EXPORTED_BASE(public base::NonThreadSafe),
       public NetworkChangeNotifier::IPAddressObserver,
       public NetworkChangeNotifier::ConnectionTypeObserver,
       public NetworkChangeNotifier::DNSObserver {
@@ -381,6 +380,8 @@ class NET_EXPORT HostResolverImpl
   bool persist_initialized_;
   PersistCallback persist_callback_;
   base::OneShotTimer persist_timer_;
+
+  THREAD_CHECKER(thread_checker_);
 
   base::WeakPtrFactory<HostResolverImpl> weak_ptr_factory_;
 

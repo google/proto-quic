@@ -12,7 +12,6 @@
 #include <iterator>
 #include <list>
 #include <new>
-#include <vector>
 
 #include "base/lazy_instance.h"
 #include "base/logging.h"
@@ -32,8 +31,6 @@
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 #include "net/spdy/platform/api/spdy_ptr_util.h"
 #include "net/spdy/platform/api/spdy_string_utils.h"
-
-using std::vector;
 
 namespace net {
 
@@ -1022,12 +1019,10 @@ size_t SpdyFramer::ProcessControlFrameBeforeHeaderBlock(const char* data,
           DCHECK(successful_read);
           remaining_padding_payload_length_ = pad_payload_len;
         }
-        const bool has_priority =
-            (current_frame_flags_ & HEADERS_FLAG_PRIORITY) != 0;
         int weight = 0;
         uint32_t parent_stream_id = 0;
         bool exclusive = false;
-        if (has_priority) {
+        if (current_frame_flags_ & HEADERS_FLAG_PRIORITY) {
           uint32_t stream_dependency;
           successful_read = reader.ReadUInt32(&stream_dependency);
           DCHECK(successful_read);
@@ -1053,70 +1048,62 @@ size_t SpdyFramer::ProcessControlFrameBeforeHeaderBlock(const char* data,
                             weight, parent_stream_id, exclusive,
                             (current_frame_flags_ & CONTROL_FLAG_FIN) != 0,
                             expect_continuation_ == 0);
+      } break;
+      case SpdyFrameType::PUSH_PROMISE: {
+        if (current_frame_stream_id_ == 0) {
+          set_error(SPDY_INVALID_CONTROL_FRAME);
+          return original_len - len;
         }
-        break;
-        case SpdyFrameType::PUSH_PROMISE: {
-          if (current_frame_stream_id_ == 0) {
-            set_error(SPDY_INVALID_CONTROL_FRAME);
-            return original_len - len;
-          }
-          bool successful_read = true;
-          if (current_frame_flags_ & PUSH_PROMISE_FLAG_PADDED) {
-            DCHECK_EQ(remaining_padding_payload_length_, 0u);
-            uint8_t pad_payload_len = 0;
-            successful_read = reader.ReadUInt8(&pad_payload_len);
-            DCHECK(successful_read);
-            remaining_padding_payload_length_ = pad_payload_len;
-          }
-        }
-        {
-          SpdyStreamId promised_stream_id = kInvalidStream;
-          bool successful_read = reader.ReadUInt31(&promised_stream_id);
+        bool successful_read = true;
+        if (current_frame_flags_ & PUSH_PROMISE_FLAG_PADDED) {
+          DCHECK_EQ(remaining_padding_payload_length_, 0u);
+          uint8_t pad_payload_len = 0;
+          successful_read = reader.ReadUInt8(&pad_payload_len);
           DCHECK(successful_read);
-          DCHECK(reader.IsDoneReading());
-          if (promised_stream_id == 0) {
-            set_error(SPDY_INVALID_CONTROL_FRAME);
-            return original_len - len;
-          }
-          if (!(current_frame_flags_ & PUSH_PROMISE_FLAG_END_PUSH_PROMISE)) {
-            expect_continuation_ = current_frame_stream_id_;
-          }
-          if (debug_visitor_) {
-            debug_visitor_->OnReceiveCompressedFrame(
-                current_frame_stream_id_,
-                current_frame_type_,
-                current_frame_length_);
-          }
-          visitor_->OnPushPromise(current_frame_stream_id_,
-                                  promised_stream_id,
-                                  (current_frame_flags_ &
-                                   PUSH_PROMISE_FLAG_END_PUSH_PROMISE) != 0);
+          remaining_padding_payload_length_ = pad_payload_len;
         }
-        break;
-        case SpdyFrameType::CONTINUATION: {
-          // Check to make sure the stream id of the current frame is
-          // the same as that of the preceding frame.
-          // If we're at this point we should already know that
-          // expect_continuation_ != 0, so this doubles as a check
-          // that current_frame_stream_id != 0.
-          if (current_frame_stream_id_ != expect_continuation_) {
-            set_error(SPDY_UNEXPECTED_FRAME);
-            return original_len - len;
-          }
-          if (current_frame_flags_ & HEADERS_FLAG_END_HEADERS) {
-            expect_continuation_ = 0;
-          }
-          if (debug_visitor_) {
-            debug_visitor_->OnReceiveCompressedFrame(
-                current_frame_stream_id_,
-                current_frame_type_,
-                current_frame_length_);
-          }
-          visitor_->OnContinuation(current_frame_stream_id_,
-                                   (current_frame_flags_ &
-                                    HEADERS_FLAG_END_HEADERS) != 0);
+        SpdyStreamId promised_stream_id = kInvalidStream;
+        successful_read = reader.ReadUInt31(&promised_stream_id);
+        DCHECK(successful_read);
+        DCHECK(reader.IsDoneReading());
+        if (promised_stream_id == 0) {
+          set_error(SPDY_INVALID_CONTROL_FRAME);
+          return original_len - len;
         }
-        break;
+        if (!(current_frame_flags_ & PUSH_PROMISE_FLAG_END_PUSH_PROMISE)) {
+          expect_continuation_ = current_frame_stream_id_;
+        }
+        if (debug_visitor_) {
+          debug_visitor_->OnReceiveCompressedFrame(current_frame_stream_id_,
+                                                   current_frame_type_,
+                                                   current_frame_length_);
+        }
+        visitor_->OnPushPromise(
+            current_frame_stream_id_, promised_stream_id,
+            (current_frame_flags_ & PUSH_PROMISE_FLAG_END_PUSH_PROMISE) != 0);
+      } break;
+      case SpdyFrameType::CONTINUATION: {
+        // Check to make sure the stream id of the current frame is
+        // the same as that of the preceding frame.
+        // If we're at this point we should already know that
+        // expect_continuation_ != 0, so this doubles as a check
+        // that current_frame_stream_id != 0.
+        if (current_frame_stream_id_ != expect_continuation_) {
+          set_error(SPDY_UNEXPECTED_FRAME);
+          return original_len - len;
+        }
+        if (current_frame_flags_ & HEADERS_FLAG_END_HEADERS) {
+          expect_continuation_ = 0;
+        }
+        if (debug_visitor_) {
+          debug_visitor_->OnReceiveCompressedFrame(current_frame_stream_id_,
+                                                   current_frame_type_,
+                                                   current_frame_length_);
+        }
+        visitor_->OnContinuation(
+            current_frame_stream_id_,
+            (current_frame_flags_ & HEADERS_FLAG_END_HEADERS) != 0);
+      } break;
       default:
 #ifndef NDEBUG
         LOG(FATAL) << "Invalid control frame type: " << current_frame_type_;
@@ -1621,12 +1608,12 @@ size_t SpdyFramer::SpdyFrameIterator::NextFrame(ZeroCopyOutputBuffer* output) {
     debug_total_size_ += size_without_block;
     debug_total_size_ += encoding->size();
     if (!has_next_frame_) {
-      auto* header_block_frame_ir =
-          static_cast<const SpdyFrameWithHeaderBlockIR*>(frame_ir);
       // TODO(birenroy) are these (here and below) still necessary?
       // HTTP2 uses HPACK for header compression. However, continue to
       // use GetSerializedLength() for an apples-to-apples comparision of
       // compression performance between HPACK and SPDY w/ deflate.
+      auto* header_block_frame_ir =
+          static_cast<const SpdyFrameWithHeaderBlockIR*>(frame_ir);
       size_t debug_payload_len =
           framer_->GetSerializedLength(&header_block_frame_ir->header_block());
       framer_->debug_visitor_->OnSendCompressedFrame(
@@ -2844,29 +2831,6 @@ HpackDecoderInterface* SpdyFramer::GetHpackDecoder() {
   return hpack_decoder_.get();
 }
 
-void SpdyFramer::SetDecoderHeaderTableDebugVisitor(
-    std::unique_ptr<HpackHeaderTable::DebugVisitorInterface> visitor) {
-  if (decoder_adapter_ != nullptr) {
-    decoder_adapter_->SetDecoderHeaderTableDebugVisitor(std::move(visitor));
-  } else {
-    GetHpackDecoder()->SetHeaderTableDebugVisitor(std::move(visitor));
-  }
-}
-
-void SpdyFramer::SetEncoderHeaderTableDebugVisitor(
-    std::unique_ptr<HpackHeaderTable::DebugVisitorInterface> visitor) {
-  GetHpackEncoder()->SetHeaderTableDebugVisitor(std::move(visitor));
-}
-
-size_t SpdyFramer::EstimateMemoryUsage() const {
-  return SpdyEstimateMemoryUsage(current_frame_buffer_) +
-         SpdyEstimateMemoryUsage(settings_scratch_) +
-         SpdyEstimateMemoryUsage(altsvc_scratch_) +
-         SpdyEstimateMemoryUsage(hpack_encoder_) +
-         SpdyEstimateMemoryUsage(hpack_decoder_) +
-         SpdyEstimateMemoryUsage(decoder_adapter_);
-}
-
 void SpdyFramer::UpdateHeaderEncoderTableSize(uint32_t value) {
   GetHpackEncoder()->ApplyHeaderTableSizeSetting(value);
 }
@@ -2894,6 +2858,29 @@ void SpdyFramer::SerializeHeaderBlockWithoutCompression(
     builder->WriteStringPiece32(base::ToLowerASCII(header.first));
     builder->WriteStringPiece32(header.second);
   }
+}
+
+void SpdyFramer::SetDecoderHeaderTableDebugVisitor(
+    std::unique_ptr<HpackHeaderTable::DebugVisitorInterface> visitor) {
+  if (decoder_adapter_ != nullptr) {
+    decoder_adapter_->SetDecoderHeaderTableDebugVisitor(std::move(visitor));
+  } else {
+    GetHpackDecoder()->SetHeaderTableDebugVisitor(std::move(visitor));
+  }
+}
+
+void SpdyFramer::SetEncoderHeaderTableDebugVisitor(
+    std::unique_ptr<HpackHeaderTable::DebugVisitorInterface> visitor) {
+  GetHpackEncoder()->SetHeaderTableDebugVisitor(std::move(visitor));
+}
+
+size_t SpdyFramer::EstimateMemoryUsage() const {
+  return SpdyEstimateMemoryUsage(current_frame_buffer_) +
+         SpdyEstimateMemoryUsage(settings_scratch_) +
+         SpdyEstimateMemoryUsage(altsvc_scratch_) +
+         SpdyEstimateMemoryUsage(hpack_encoder_) +
+         SpdyEstimateMemoryUsage(hpack_decoder_) +
+         SpdyEstimateMemoryUsage(decoder_adapter_);
 }
 
 }  // namespace net

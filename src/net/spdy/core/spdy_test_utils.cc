@@ -38,9 +38,9 @@ SpdyString HexDumpWithMarks(const unsigned char* data,
   }
 
   SpdyString hex;
-  for (const unsigned char* row = data; length > 0;
+  for (const unsigned char *row = data; length > 0;
        row += kColumns, length -= kColumns) {
-    for (const unsigned char *p = row; p < row + 4; ++p) {
+    for (const unsigned char* p = row; p < row + 4; ++p) {
       if (p < row + length) {
         const bool mark =
             (marks && (p - data) < mark_length && marks[p - data]);
@@ -83,14 +83,14 @@ void CompareCharArraysWithHexError(const SpdyString& description,
   for (int i = min_len; i < max_len; ++i) {
     marks[i] = true;
   }
-  if (identical) return;
-  ADD_FAILURE()
-      << "Description:\n"
-      << description
-      << "\n\nExpected:\n"
-      << HexDumpWithMarks(expected, expected_len, marks.get(), max_len)
-      << "\nActual:\n"
-      << HexDumpWithMarks(actual, actual_len, marks.get(), max_len);
+  if (identical)
+    return;
+  ADD_FAILURE() << "Description:\n"
+                << description << "\n\nExpected:\n"
+                << HexDumpWithMarks(expected, expected_len, marks.get(),
+                                    max_len)
+                << "\nActual:\n"
+                << HexDumpWithMarks(actual, actual_len, marks.get(), max_len);
 }
 
 void SetFrameFlags(SpdySerializedFrame* frame, uint8_t flags) {

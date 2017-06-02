@@ -783,11 +783,20 @@ bool GlobalHistogramAllocator::CreateWithFile(
 // static
 bool GlobalHistogramAllocator::CreateWithActiveFile(const FilePath& base_path,
                                                     const FilePath& active_path,
+                                                    const FilePath& spare_path,
                                                     size_t size,
                                                     uint64_t id,
                                                     StringPiece name) {
+  // Old "active" becomes "base".
   if (!base::ReplaceFile(active_path, base_path, nullptr))
     base::DeleteFile(base_path, /*recursive=*/false);
+  DCHECK(!base::PathExists(active_path));
+
+  // Move any "spare" into "active". Okay to continue if file doesn't exist.
+  if (!spare_path.empty()) {
+    base::ReplaceFile(spare_path, active_path, nullptr);
+    DCHECK(!base::PathExists(spare_path));
+  }
 
   return base::GlobalHistogramAllocator::CreateWithFile(active_path, size, id,
                                                         name);
@@ -798,16 +807,18 @@ bool GlobalHistogramAllocator::CreateWithActiveFileInDir(const FilePath& dir,
                                                          size_t size,
                                                          uint64_t id,
                                                          StringPiece name) {
-  FilePath base_path, active_path;
-  ConstructFilePaths(dir, name, &base_path, &active_path);
-  return CreateWithActiveFile(base_path, active_path, size, id, name);
+  FilePath base_path, active_path, spare_path;
+  ConstructFilePaths(dir, name, &base_path, &active_path, &spare_path);
+  return CreateWithActiveFile(base_path, active_path, spare_path, size, id,
+                              name);
 }
 
 // static
 void GlobalHistogramAllocator::ConstructFilePaths(const FilePath& dir,
                                                   StringPiece name,
                                                   FilePath* out_base_path,
-                                                  FilePath* out_active_path) {
+                                                  FilePath* out_active_path,
+                                                  FilePath* out_spare_path) {
   if (out_base_path) {
     *out_base_path = dir.AppendASCII(name).AddExtension(
         PersistentMemoryAllocator::kFileExtension);
@@ -817,6 +828,46 @@ void GlobalHistogramAllocator::ConstructFilePaths(const FilePath& dir,
         dir.AppendASCII(name.as_string() + std::string("-active"))
             .AddExtension(PersistentMemoryAllocator::kFileExtension);
   }
+  if (out_spare_path) {
+    *out_spare_path =
+        dir.AppendASCII(name.as_string() + std::string("-spare"))
+            .AddExtension(PersistentMemoryAllocator::kFileExtension);
+  }
+}
+
+// static
+bool GlobalHistogramAllocator::CreateSpareFile(const FilePath& spare_path,
+                                               size_t size) {
+  FilePath temp_spare_path = spare_path.AddExtension(FILE_PATH_LITERAL(".tmp"));
+  bool success = true;
+  {
+    File spare_file(temp_spare_path, File::FLAG_CREATE_ALWAYS |
+                                         File::FLAG_READ | File::FLAG_WRITE);
+    if (!spare_file.IsValid())
+      return false;
+
+    MemoryMappedFile mmfile;
+    mmfile.Initialize(std::move(spare_file), {0, static_cast<int64_t>(size)},
+                      MemoryMappedFile::READ_WRITE_EXTEND);
+    success = mmfile.IsValid();
+  }
+
+  if (success)
+    success = ReplaceFile(temp_spare_path, spare_path, nullptr);
+
+  if (!success)
+    DeleteFile(temp_spare_path, /*recursive=*/false);
+
+  return success;
+}
+
+// static
+bool GlobalHistogramAllocator::CreateSpareFileInDir(const FilePath& dir,
+                                                    size_t size,
+                                                    StringPiece name) {
+  FilePath spare_path;
+  ConstructFilePaths(dir, name, nullptr, nullptr, &spare_path);
+  return CreateSpareFile(spare_path, size);
 }
 #endif  // !defined(OS_NACL)
 

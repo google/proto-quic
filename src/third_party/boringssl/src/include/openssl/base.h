@@ -197,6 +197,12 @@ extern "C" {
 #define OPENSSL_MSVC_PRAGMA(arg)
 #endif
 
+#if defined(__GNUC__) || defined(__clang__)
+#define OPENSSL_UNUSED __attribute__((unused))
+#else
+#define OPENSSL_UNUSED
+#endif
+
 #if defined(BORINGSSL_UNSAFE_FUZZER_MODE) && \
     !defined(BORINGSSL_UNSAFE_DETERMINISTIC_MODE)
 #define BORINGSSL_UNSAFE_DETERMINISTIC_MODE
@@ -205,6 +211,9 @@ extern "C" {
 #if defined(__has_feature)
 #if __has_feature(address_sanitizer)
 #define OPENSSL_ASAN
+#endif
+#if __has_feature(memory_sanitizer)
+#define OPENSSL_MSAN
 #endif
 #endif
 

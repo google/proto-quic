@@ -835,6 +835,41 @@ class URLRequestTest : public PlatformTest {
   TestURLRequestContext default_context_;
 };
 
+// This NetworkDelegate is picky about what files are accessible. Only
+// whitelisted files are allowed.
+class CookieBlockingNetworkDelegate : public TestNetworkDelegate {
+ public:
+  CookieBlockingNetworkDelegate(){};
+
+  // Adds |directory| to the access white list.
+  void AddToWhitelist(const base::FilePath& directory) {
+    whitelist_.insert(directory);
+  }
+
+ private:
+  // Returns true if |path| matches the white list.
+  bool OnCanAccessFileInternal(const base::FilePath& path) const {
+    for (const auto& directory : whitelist_) {
+      if (directory == path || directory.IsParent(path))
+        return true;
+    }
+    return false;
+  }
+
+  // Returns true only if both |original_path| and |absolute_path| match the
+  // white list.
+  bool OnCanAccessFile(const URLRequest& request,
+                       const base::FilePath& original_path,
+                       const base::FilePath& absolute_path) const override {
+    return (OnCanAccessFileInternal(original_path) &&
+            OnCanAccessFileInternal(absolute_path));
+  }
+
+  std::set<base::FilePath> whitelist_;
+
+  DISALLOW_COPY_AND_ASSIGN(CookieBlockingNetworkDelegate);
+};
+
 TEST_F(URLRequestTest, AboutBlankTest) {
   TestDelegate d;
   {
@@ -1083,39 +1118,176 @@ TEST_F(URLRequestTest, FileTestMultipleRanges) {
 TEST_F(URLRequestTest, AllowFileURLs) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
+  // Get an absolute path since |temp_dir| can contain a symbolic link. As of
+  // now, Mac and Android bots return a path with a symbolic link.
+  base::FilePath absolute_temp_dir =
+      base::MakeAbsoluteFilePath(temp_dir.GetPath());
+
   base::FilePath test_file;
-  ASSERT_TRUE(base::CreateTemporaryFileInDir(temp_dir.GetPath(), &test_file));
+  ASSERT_TRUE(base::CreateTemporaryFileInDir(absolute_temp_dir, &test_file));
+  // The directory part of the path returned from CreateTemporaryFileInDir()
+  // can be slightly different from |absolute_temp_dir| on Windows.
+  // Example: C:\\Users\\CHROME~2 -> C:\\Users\\chrome-bot
+  // Hence the test should use the directory name of |test_file|, rather than
+  // |absolute_temp_dir|, for whitelisting.
+  base::FilePath real_temp_dir = test_file.DirName();
   std::string test_data("monkey");
   base::WriteFile(test_file, test_data.data(), test_data.size());
   GURL test_file_url = FilePathToFileURL(test_file);
-
   {
     TestDelegate d;
-    TestNetworkDelegate network_delegate;
-    network_delegate.set_can_access_files(true);
+    CookieBlockingNetworkDelegate network_delegate;
+    network_delegate.AddToWhitelist(real_temp_dir);
     default_context_.set_network_delegate(&network_delegate);
     std::unique_ptr<URLRequest> r(default_context_.CreateRequest(
         test_file_url, DEFAULT_PRIORITY, &d, TRAFFIC_ANNOTATION_FOR_TESTS));
     r->Start();
     base::RunLoop().Run();
+    // This should be allowed as the file path is whitelisted.
     EXPECT_FALSE(d.request_failed());
     EXPECT_EQ(test_data, d.data_received());
   }
 
   {
     TestDelegate d;
-    TestNetworkDelegate network_delegate;
-    network_delegate.set_can_access_files(false);
+    CookieBlockingNetworkDelegate network_delegate;
     default_context_.set_network_delegate(&network_delegate);
     std::unique_ptr<URLRequest> r(default_context_.CreateRequest(
         test_file_url, DEFAULT_PRIORITY, &d, TRAFFIC_ANNOTATION_FOR_TESTS));
     r->Start();
     base::RunLoop().Run();
+    // This should be rejected as the file path is not whitelisted.
     EXPECT_TRUE(d.request_failed());
     EXPECT_EQ("", d.data_received());
+    EXPECT_EQ(ERR_ACCESS_DENIED, d.request_status());
   }
 }
 
+#if defined(OS_POSIX)  // Bacause of symbolic links.
+
+TEST_F(URLRequestTest, SymlinksToFiles) {
+  base::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
+  // Get an absolute path since temp_dir can contain a symbolic link.
+  base::FilePath absolute_temp_dir =
+      base::MakeAbsoluteFilePath(temp_dir.GetPath());
+
+  // Create a good directory (will be whitelisted) and a good file.
+  base::FilePath good_dir = absolute_temp_dir.AppendASCII("good");
+  ASSERT_TRUE(base::CreateDirectory(good_dir));
+  base::FilePath good_file;
+  ASSERT_TRUE(base::CreateTemporaryFileInDir(good_dir, &good_file));
+  std::string good_data("good");
+  base::WriteFile(good_file, good_data.data(), good_data.size());
+  // See the comment in AllowFileURLs() for why this is done.
+  base::FilePath real_good_dir = good_file.DirName();
+
+  // Create a bad directory (will not be whitelisted) and a bad file.
+  base::FilePath bad_dir = absolute_temp_dir.AppendASCII("bad");
+  ASSERT_TRUE(base::CreateDirectory(bad_dir));
+  base::FilePath bad_file;
+  ASSERT_TRUE(base::CreateTemporaryFileInDir(bad_dir, &bad_file));
+  std::string bad_data("bad");
+  base::WriteFile(bad_file, bad_data.data(), bad_data.size());
+
+  // This symlink will point to the good file. Access to the symlink will be
+  // allowed as both the symlink and the destination file are in the same
+  // good directory.
+  base::FilePath good_symlink = good_dir.AppendASCII("good_symlink");
+  ASSERT_TRUE(base::CreateSymbolicLink(good_file, good_symlink));
+  GURL good_file_url = FilePathToFileURL(good_symlink);
+  // This symlink will point to the bad file. Even though the symlink is in
+  // the good directory, access to the symlink will be rejected since it
+  // points to the bad file.
+  base::FilePath bad_symlink = good_dir.AppendASCII("bad_symlink");
+  ASSERT_TRUE(base::CreateSymbolicLink(bad_file, bad_symlink));
+  GURL bad_file_url = FilePathToFileURL(bad_symlink);
+
+  CookieBlockingNetworkDelegate network_delegate;
+  network_delegate.AddToWhitelist(real_good_dir);
+  {
+    TestDelegate d;
+    default_context_.set_network_delegate(&network_delegate);
+    std::unique_ptr<URLRequest> r(
+        default_context_.CreateRequest(good_file_url, DEFAULT_PRIORITY, &d));
+    r->Start();
+    base::RunLoop().Run();
+    // good_file_url should be allowed.
+    EXPECT_FALSE(d.request_failed());
+    EXPECT_EQ(good_data, d.data_received());
+  }
+
+  {
+    TestDelegate d;
+    default_context_.set_network_delegate(&network_delegate);
+    std::unique_ptr<URLRequest> r(
+        default_context_.CreateRequest(bad_file_url, DEFAULT_PRIORITY, &d));
+    r->Start();
+    base::RunLoop().Run();
+    // bad_file_url should be rejected.
+    EXPECT_TRUE(d.request_failed());
+    EXPECT_EQ("", d.data_received());
+    EXPECT_EQ(ERR_ACCESS_DENIED, d.request_status());
+  }
+}
+
+TEST_F(URLRequestTest, SymlinksToDirs) {
+  base::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
+  // Get an absolute path since temp_dir can contain a symbolic link.
+  base::FilePath absolute_temp_dir =
+      base::MakeAbsoluteFilePath(temp_dir.GetPath());
+
+  // Create a good directory (will be whitelisted).
+  base::FilePath good_dir = absolute_temp_dir.AppendASCII("good");
+  ASSERT_TRUE(base::CreateDirectory(good_dir));
+
+  // Create a bad directory (will not be whitelisted).
+  base::FilePath bad_dir = absolute_temp_dir.AppendASCII("bad");
+  ASSERT_TRUE(base::CreateDirectory(bad_dir));
+
+  // This symlink will point to the good directory. Access to the symlink
+  // will be allowed as the symlink is in the good dir that'll be white
+  // listed.
+  base::FilePath good_symlink = good_dir.AppendASCII("good_symlink");
+  ASSERT_TRUE(base::CreateSymbolicLink(good_dir, good_symlink));
+  GURL good_file_url = FilePathToFileURL(good_symlink);
+  // This symlink will point to the bad directory. Even though the symlink is
+  // in the good directory, access to the symlink will be rejected since it
+  // points to the bad directory.
+  base::FilePath bad_symlink = good_dir.AppendASCII("bad_symlink");
+  ASSERT_TRUE(base::CreateSymbolicLink(bad_dir, bad_symlink));
+  GURL bad_file_url = FilePathToFileURL(bad_symlink);
+
+  CookieBlockingNetworkDelegate network_delegate;
+  network_delegate.AddToWhitelist(good_dir);
+  {
+    TestDelegate d;
+    default_context_.set_network_delegate(&network_delegate);
+    std::unique_ptr<URLRequest> r(
+        default_context_.CreateRequest(good_file_url, DEFAULT_PRIORITY, &d));
+    r->Start();
+    base::RunLoop().Run();
+    // good_file_url should be allowed.
+    EXPECT_FALSE(d.request_failed());
+    ASSERT_NE(d.data_received().find("good_symlink"), std::string::npos);
+  }
+
+  {
+    TestDelegate d;
+    default_context_.set_network_delegate(&network_delegate);
+    std::unique_ptr<URLRequest> r(
+        default_context_.CreateRequest(bad_file_url, DEFAULT_PRIORITY, &d));
+    r->Start();
+    base::RunLoop().Run();
+    // bad_file_url should be rejected.
+    EXPECT_TRUE(d.request_failed());
+    EXPECT_EQ("", d.data_received());
+    EXPECT_EQ(ERR_ACCESS_DENIED, d.request_status());
+  }
+}
+
+#endif  // defined(OS_POSIX)
 
 TEST_F(URLRequestTest, FileDirCancelTest) {
   // Put in mock resource provider.
@@ -1167,9 +1339,8 @@ TEST_F(URLRequestTest, FileDirOutputSanity) {
   EXPECT_GT(info.size, 0);
   std::string sentinel_output = GetDirectoryListingEntry(
       base::string16(sentinel_name, sentinel_name + strlen(sentinel_name)),
-      std::string(sentinel_name),
-      false /* is_dir */,
-      info.size,
+      std::string(sentinel_name), false /* is_dir */, info.size,
+
       info.last_modified);
 
   ASSERT_LT(0, d.bytes_received());
@@ -9335,20 +9506,23 @@ TEST_F(HTTPSRequestTest, SSLSessionCacheShardTest) {
   }
 
   // Now create a new HttpCache with a different ssl_session_cache_shard value.
-  HttpNetworkSession::Params params;
-  params.host_resolver = default_context_.host_resolver();
-  params.cert_verifier = default_context_.cert_verifier();
-  params.transport_security_state = default_context_.transport_security_state();
-  params.cert_transparency_verifier =
+  HttpNetworkSession::Context session_context;
+  session_context.host_resolver = default_context_.host_resolver();
+  session_context.cert_verifier = default_context_.cert_verifier();
+  session_context.transport_security_state =
+      default_context_.transport_security_state();
+  session_context.cert_transparency_verifier =
       default_context_.cert_transparency_verifier();
-  params.ct_policy_enforcer = default_context_.ct_policy_enforcer();
-  params.proxy_service = default_context_.proxy_service();
-  params.ssl_config_service = default_context_.ssl_config_service();
-  params.http_auth_handler_factory =
+  session_context.ct_policy_enforcer = default_context_.ct_policy_enforcer();
+  session_context.proxy_service = default_context_.proxy_service();
+  session_context.ssl_config_service = default_context_.ssl_config_service();
+  session_context.http_auth_handler_factory =
       default_context_.http_auth_handler_factory();
-  params.http_server_properties = default_context_.http_server_properties();
+  session_context.http_server_properties =
+      default_context_.http_server_properties();
 
-  HttpNetworkSession network_session(params);
+  HttpNetworkSession network_session(HttpNetworkSession::Params(),
+                                     session_context);
   std::unique_ptr<HttpCache> cache(
       new HttpCache(&network_session, HttpCache::DefaultBackend::InMemory(0),
                     false /* is_main_cache */));

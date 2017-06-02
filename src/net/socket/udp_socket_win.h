@@ -14,7 +14,7 @@
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/threading/non_thread_safe.h"
+#include "base/threading/thread_checker.h"
 #include "base/win/object_watcher.h"
 #include "base/win/scoped_handle.h"
 #include "net/base/address_family.h"
@@ -35,8 +35,7 @@ class NetLog;
 struct NetLogSource;
 
 class NET_EXPORT UDPSocketWin
-    : NON_EXPORTED_BASE(public base::NonThreadSafe),
-      NON_EXPORTED_BASE(public base::win::ObjectWatcher::Delegate) {
+    : NON_EXPORTED_BASE(public base::win::ObjectWatcher::Delegate) {
  public:
   UDPSocketWin(DatagramSocket::BindType bind_type,
                const RandIntCallback& rand_int_cb,
@@ -324,6 +323,8 @@ class NET_EXPORT UDPSocketWin
   // QWAVE data. Used to set DSCP bits on outgoing packets.
   HANDLE qos_handle_;
   QOS_FLOWID qos_flow_id_;
+
+  THREAD_CHECKER(thread_checker_);
 
   DISALLOW_COPY_AND_ASSIGN(UDPSocketWin);
 };

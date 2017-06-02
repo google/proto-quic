@@ -37,6 +37,10 @@ class NET_EXPORT TrustStoreInMemory : public TrustStore {
   // issuer/serial is probably what we would want for a real implementation).
   void AddDistrustedCertificateForTest(scoped_refptr<ParsedCertificate> cert);
 
+  // Adds a certificate to the store, that is neither trusted nor untrusted.
+  void AddCertificateWithUnspecifiedTrust(
+      scoped_refptr<ParsedCertificate> cert);
+
   // TrustStore implementation:
   void SyncGetIssuersOf(const ParsedCertificate* cert,
                         ParsedCertificateList* issuers) override;

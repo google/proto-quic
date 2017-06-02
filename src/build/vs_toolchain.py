@@ -229,6 +229,7 @@ def FindVCToolsRoot():
   This function should only be called when using VS2017.
   """
   assert GetVisualStudioVersion() == '2017'
+  SetEnvironmentAndGetRuntimeDllDirs()
   assert ('GYP_MSVS_OVERRIDE_PATH' in os.environ)
   vc_tools_msvc_root = os.path.join(os.environ['GYP_MSVS_OVERRIDE_PATH'],
       'VC', 'Tools', 'MSVC')
@@ -341,8 +342,8 @@ def _GetDesiredVsToolchainHashes():
     # Update 3 final with patches with 10.0.14393.0 SDK.
     return ['d3cb0e37bdd120ad0ac4650b674b09e81be45616']
   if env_version == '2017':
-    # VS 2017 RTM with 10.0.14393.0 SDK and dbghelp.dll fixes.
-    return ['4e8a360587a3c8ff3fa46aa9271e982bf3e948ec']
+    # VS 2017 Update 3 Preview 1 with 10.0.14393.0 SDK and patched statreg.h.
+    return ['3915730f76bd9c6155aed871b944b0a25c18f15e']
   raise Exception('Unsupported VS version %s' % env_version)
 
 

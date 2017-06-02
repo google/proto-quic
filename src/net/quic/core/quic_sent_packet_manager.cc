@@ -117,6 +117,9 @@ void QuicSentPacketManager::SetFromConfig(const QuicConfig& config) {
     }
   } else if (config.HasClientRequestedIndependentOption(kBYTE, perspective_)) {
     SetSendAlgorithm(kCubic);
+  } else if (FLAGS_quic_reloadable_flag_quic_default_to_bbr &&
+             config.HasClientRequestedIndependentOption(kQBIC, perspective_)) {
+    SetSendAlgorithm(kCubicBytes);
   } else if (FLAGS_quic_reloadable_flag_quic_enable_pcc &&
              config.HasClientRequestedIndependentOption(kTPCC, perspective_)) {
     SetSendAlgorithm(kPCC);
@@ -464,6 +467,7 @@ void QuicSentPacketManager::MarkPacketHandled(QuicPacketNumber packet_number,
   // The AckListener needs to be notified about the most recent
   // transmission, since that's the one only one it tracks.
   if (newest_transmission == packet_number) {
+    unacked_packets_.NotifyStreamFramesAcked(*info, ack_delay_time);
     unacked_packets_.NotifyAndClearListeners(&info->ack_listeners,
                                              ack_delay_time);
   } else {
@@ -478,6 +482,8 @@ void QuicSentPacketManager::MarkPacketHandled(QuicPacketNumber packet_number,
     // only handle nullptr encrypted packets in a special way.
     const QuicTransmissionInfo& newest_transmission_info =
         unacked_packets_.GetTransmissionInfo(newest_transmission);
+    unacked_packets_.NotifyStreamFramesAcked(newest_transmission_info,
+                                             ack_delay_time);
     if (HasCryptoHandshake(newest_transmission_info)) {
       unacked_packets_.RemoveFromInFlight(newest_transmission);
     }
@@ -960,6 +966,11 @@ void QuicSentPacketManager::OnApplicationLimited() {
 
 const SendAlgorithmInterface* QuicSentPacketManager::GetSendAlgorithm() const {
   return send_algorithm_.get();
+}
+
+void QuicSentPacketManager::SetStreamNotifier(
+    StreamNotifierInterface* stream_notifier) {
+  unacked_packets_.SetStreamNotifier(stream_notifier);
 }
 
 }  // namespace net

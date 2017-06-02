@@ -28,6 +28,7 @@ import generate_build_files
 GENERATED_FILES = [
     'BUILD.generated.gni',
     'BUILD.generated_tests.gni',
+    'crypto_test_data.cc',
     'err_data.c',
 ]
 

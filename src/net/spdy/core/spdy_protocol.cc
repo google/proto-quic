@@ -6,7 +6,6 @@
 
 #include <ostream>
 
-#include "base/memory/ptr_util.h"
 #include "net/spdy/core/spdy_bug_tracker.h"
 
 namespace net {
@@ -364,8 +363,7 @@ SpdyFrameType SpdyPushPromiseIR::frame_type() const {
 
 SpdyAltSvcIR::SpdyAltSvcIR(SpdyStreamId stream_id) : SpdyFrameIR(stream_id) {}
 
-SpdyAltSvcIR::~SpdyAltSvcIR() {
-}
+SpdyAltSvcIR::~SpdyAltSvcIR() {}
 
 void SpdyAltSvcIR::Visit(SpdyFrameVisitor* visitor) const {
   return visitor->VisitAltSvc(*this);

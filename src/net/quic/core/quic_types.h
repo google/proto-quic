@@ -182,24 +182,13 @@ enum QuicPacketPublicFlags {
   PACKET_PUBLIC_FLAGS_4BYTE_PACKET = PACKET_FLAGS_4BYTE_PACKET << 4,
   PACKET_PUBLIC_FLAGS_6BYTE_PACKET = PACKET_FLAGS_6BYTE_PACKET << 4,
 
-  // TODO(fayang): Remove PACKET_PUBLIC_FLAGS_MULTIPATH when deprecating
-  // quic_reloadable_flag_quic_remove_multipath_bit.
-  // Bit 6: Does the packet header contain a path id?
-  PACKET_PUBLIC_FLAGS_MULTIPATH = 1 << 6,
-
   // Reserved, unimplemented flags:
 
   // Bit 7: indicates the presence of a second flags byte.
   PACKET_PUBLIC_FLAGS_TWO_OR_MORE_BYTES = 1 << 7,
 
-  // TODO(fayang): Remove PACKET_PUBLIC_FLAGS_MAX and rename
-  // PACKET_PUBLIC_FLAGS_MAX_WITHOUT_MULTIPATH_FLAG when deprecating
-  // quic_reloadable_flag_quic_remove_multipath_bit.
-  // All bits set (bit 7 is not currently used): 01111111
-  PACKET_PUBLIC_FLAGS_MAX = (1 << 7) - 1,
-
   // All bits set (bits 6 and 7 are not currently used): 00111111
-  PACKET_PUBLIC_FLAGS_MAX_WITHOUT_MULTIPATH_FLAG = (1 << 6) - 1,
+  PACKET_PUBLIC_FLAGS_MAX = (1 << 6) - 1,
 };
 
 // The private flags are specified in one byte.

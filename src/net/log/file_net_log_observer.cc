@@ -380,7 +380,7 @@ FileNetLogObserver::BoundedFileWriter::~BoundedFileWriter() {}
 
 void FileNetLogObserver::BoundedFileWriter::Initialize(
     std::unique_ptr<base::Value> constants_value) {
-  DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(task_runner_->RunsTasksInCurrentSequence());
 
   event_files_[current_file_idx_] = base::ScopedFILE(
       base::OpenFile(directory_.AppendASCII("event_file_0.json"), "w"));
@@ -400,7 +400,7 @@ void FileNetLogObserver::BoundedFileWriter::Initialize(
 
 void FileNetLogObserver::BoundedFileWriter::Stop(
     std::unique_ptr<base::Value> polled_data) {
-  DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(task_runner_->RunsTasksInCurrentSequence());
 
   base::ScopedFILE closing_file(
       base::OpenFile(directory_.AppendASCII("end_netlog.json"), "w"));
@@ -418,7 +418,7 @@ void FileNetLogObserver::BoundedFileWriter::Stop(
 }
 
 void FileNetLogObserver::BoundedFileWriter::IncrementCurrentFile() {
-  DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(task_runner_->RunsTasksInCurrentSequence());
 
   current_file_idx_++;
   current_file_idx_ %= total_num_files_;
@@ -431,7 +431,7 @@ void FileNetLogObserver::BoundedFileWriter::IncrementCurrentFile() {
 
 void FileNetLogObserver::BoundedFileWriter::Flush(
     scoped_refptr<FileNetLogObserver::WriteQueue> write_queue) {
-  DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(task_runner_->RunsTasksInCurrentSequence());
 
   EventQueue local_file_queue;
   write_queue->SwapQueue(&local_file_queue);
@@ -455,7 +455,7 @@ void FileNetLogObserver::BoundedFileWriter::Flush(
 }
 
 void FileNetLogObserver::BoundedFileWriter::DeleteAllFiles() {
-  DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(task_runner_->RunsTasksInCurrentSequence());
 
   // Reset |event_files_| to release all file handles so base::DeleteFile can
   // safely access files.
@@ -479,7 +479,7 @@ FileNetLogObserver::UnboundedFileWriter::~UnboundedFileWriter() {}
 
 void FileNetLogObserver::UnboundedFileWriter::Initialize(
     std::unique_ptr<base::Value> constants_value) {
-  DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(task_runner_->RunsTasksInCurrentSequence());
 
   file_.reset(base::OpenFile(file_path_, "w"));
   first_event_written_ = false;
@@ -495,7 +495,7 @@ void FileNetLogObserver::UnboundedFileWriter::Initialize(
 
 void FileNetLogObserver::UnboundedFileWriter::Stop(
     std::unique_ptr<base::Value> polled_data) {
-  DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(task_runner_->RunsTasksInCurrentSequence());
 
   std::string json;
   if (polled_data)
@@ -511,7 +511,7 @@ void FileNetLogObserver::UnboundedFileWriter::Stop(
 
 void FileNetLogObserver::UnboundedFileWriter::Flush(
     scoped_refptr<FileNetLogObserver::WriteQueue> write_queue) {
-  DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(task_runner_->RunsTasksInCurrentSequence());
 
   EventQueue local_file_queue;
   write_queue->SwapQueue(&local_file_queue);
@@ -528,7 +528,7 @@ void FileNetLogObserver::UnboundedFileWriter::Flush(
 }
 
 void FileNetLogObserver::UnboundedFileWriter::DeleteAllFiles() {
-  DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(task_runner_->RunsTasksInCurrentSequence());
 
   // Reset |file_| to release the file handle so base::DeleteFile can
   // safely access it.

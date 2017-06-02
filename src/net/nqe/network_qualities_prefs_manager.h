@@ -42,7 +42,8 @@ typedef std::map<nqe::internal::NetworkID, nqe::internal::CachedNetworkQuality>
 // propagates network quality pref changes from the network thread to the
 // provided pref delegate on the pref thread.
 //
-// ShutdownOnPrefThread must be called from the pref thread before destruction.
+// ShutdownOnPrefSequence must be called from the pref thread before
+// destruction.
 class NET_EXPORT NetworkQualitiesPrefsManager
     : public nqe::internal::NetworkQualityStore::NetworkQualitiesCacheObserver {
  public:
@@ -70,7 +71,7 @@ class NET_EXPORT NetworkQualitiesPrefsManager
       NetworkQualityEstimator* network_quality_estimator);
 
   // Prepare for shutdown. Must be called on the pref thread before destruction.
-  void ShutdownOnPrefThread();
+  void ShutdownOnPrefSequence();
 
   // Clear the network quality estimator prefs.
   void ClearPrefs();
@@ -82,7 +83,7 @@ class NET_EXPORT NetworkQualitiesPrefsManager
  private:
   // Pref thread members:
   // Called on pref thread when there is a change in the cached network quality.
-  void OnChangeInCachedNetworkQualityOnPrefThread(
+  void OnChangeInCachedNetworkQualityOnPrefSequence(
       const nqe::internal::NetworkID& network_id,
       const nqe::internal::CachedNetworkQuality& cached_network_quality);
 

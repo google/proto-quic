@@ -34,6 +34,9 @@ class BASE_EXPORT ProcessMemoryTotals {
 
   // Platform-specific data that will be used to compute the
   // PrivateMemoryFootprint.
+  //
+  // Keep this in sync with PlatformPrivateFootprint in
+  // services/resource_coordinator/public/interfaces/memory_instrumentation/memory_instrumentation.mojom
   struct PlatformPrivateFootprint {
     // macOS 10.12+
     uint64_t phys_footprint_bytes = 0;
@@ -47,15 +50,16 @@ class BASE_EXPORT ProcessMemoryTotals {
     uint64_t vm_swap_bytes = 0;
 
     // On Windows,
-    //   TBD: https://crbug.com/707022
+    uint64_t private_bytes = 0;
+
     // On iOS,
     //   TBD: https://crbug.com/714961
   };
   const PlatformPrivateFootprint& GetPlatformPrivateFootprint() const {
     return platform_private_footprint_;
   }
-  PlatformPrivateFootprint& GetPlatformPrivateFootprint() {
-    return platform_private_footprint_;
+  void SetPlatformPrivateFootprint(const PlatformPrivateFootprint& footprint) {
+    platform_private_footprint_ = footprint;
   }
 
   uint64_t peak_resident_set_bytes() const { return peak_resident_set_bytes_; }

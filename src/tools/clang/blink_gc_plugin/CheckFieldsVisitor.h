@@ -7,6 +7,7 @@
 
 #include <vector>
 
+#include "BlinkGCPluginOptions.h"
 #include "Edge.h"
 
 class FieldPoint;
@@ -34,19 +35,22 @@ class CheckFieldsVisitor : public RecursiveEdgeVisitor {
 
   using Errors = std::vector<std::pair<FieldPoint*, Error>>;
 
-  CheckFieldsVisitor();
+  explicit CheckFieldsVisitor(const BlinkGCPluginOptions&);
 
   Errors& invalid_fields();
 
   bool ContainsInvalidFields(RecordInfo* info);
 
-  void AtMember(Member* edge) override;
-  void AtValue(Value* edge) override;
-  void AtCollection(Collection* edge) override;
+  void AtMember(Member*) override;
+  void AtWeakMember(WeakMember*) override;
+  void AtValue(Value*) override;
+  void AtCollection(Collection*) override;
   void AtIterator(Iterator*) override;
 
  private:
   Error InvalidSmartPtr(Edge* ptr);
+
+  const BlinkGCPluginOptions& options_;
 
   FieldPoint* current_;
   bool stack_allocated_host_;

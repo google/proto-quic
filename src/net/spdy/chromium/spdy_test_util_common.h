@@ -192,6 +192,8 @@ struct SpdySessionDependencies {
       ClientSocketFactory* factory);
   static HttpNetworkSession::Params CreateSessionParams(
       SpdySessionDependencies* session_deps);
+  static HttpNetworkSession::Context CreateSessionContext(
+      SpdySessionDependencies* session_deps);
 
   // NOTE: host_resolver must be ordered before http_auth_handler_factory.
   std::unique_ptr<MockHostResolverBase> host_resolver;

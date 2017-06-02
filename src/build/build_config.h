@@ -66,6 +66,8 @@
 #else
 #error Please add support for your platform in build/build_config.h
 #endif
+// NOTE: Adding a new port? Please follow
+// https://chromium.googlesource.com/chromium/src/+/master/docs/new_port_policy.md
 
 #if defined(USE_OPENSSL_CERTS) && defined(USE_NSS_CERTS)
 #error Cannot use both OpenSSL and NSS for certificates
@@ -159,6 +161,18 @@
 #define ARCH_CPU_MIPSEL 1
 #define ARCH_CPU_32_BITS 1
 #define ARCH_CPU_LITTLE_ENDIAN 1
+#endif
+#elif defined(__MIPSEB__)
+#if defined(__LP64__)
+#define ARCH_CPU_MIPS_FAMILY 1
+#define ARCH_CPU_MIPS64 1
+#define ARCH_CPU_64_BITS 1
+#define ARCH_CPU_BIG_ENDIAN 1
+#else
+#define ARCH_CPU_MIPS_FAMILY 1
+#define ARCH_CPU_MIPS 1
+#define ARCH_CPU_32_BITS 1
+#define ARCH_CPU_BIG_ENDIAN 1
 #endif
 #else
 #error Please add support for your architecture in build/build_config.h

@@ -16,7 +16,7 @@ namespace {
 
 namespace test1 {
 #include "net/cert/cert_verify_proc_whitelist_unittest1-inc.cc"
-}  // namespace test
+}  // namespace test1
 
 TEST(CertVerifyProcWhitelistTest, HandlesWosignCerts) {
   // The domain must be in the whitelist from

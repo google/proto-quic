@@ -25,6 +25,6 @@ void ZapString(std::string* s);
 // Overwrite a base::string16's internal buffer with 0's.
 void ZapString(base::string16* s);
 
-}  // net
+}  // namespace net
 
 #endif  // NET_BASE_ZAP_H_

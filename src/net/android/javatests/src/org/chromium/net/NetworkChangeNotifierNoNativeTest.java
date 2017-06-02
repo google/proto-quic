@@ -5,7 +5,6 @@
 package org.chromium.net;
 
 import android.os.Looper;
-import android.support.test.InstrumentationRegistry;
 import android.support.test.filters.MediumTest;
 
 import org.junit.Test;
@@ -27,7 +26,7 @@ public class NetworkChangeNotifierNoNativeTest {
     @MediumTest
     public void testNoNativeDependence() {
         Looper.prepare();
-        NetworkChangeNotifier.init(InstrumentationRegistry.getInstrumentation().getTargetContext());
+        NetworkChangeNotifier.init();
         NetworkChangeNotifier.registerToReceiveNotificationsAlways();
     }
 }

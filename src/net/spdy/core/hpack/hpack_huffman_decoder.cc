@@ -292,9 +292,9 @@ HuffmanWord HpackHuffmanDecoder::DecodeToCanonical(
   return first_canonical + ordinal_in_length;
 }
 
-char HpackHuffmanDecoder::CanonicalToSource(HuffmanWord canonical) {
+uint8_t HpackHuffmanDecoder::CanonicalToSource(HuffmanWord canonical) {
   DCHECK_LT(canonical, 256u);
-  return static_cast<char>(kCanonicalToSymbol[canonical]);
+  return kCanonicalToSymbol[canonical];
 }
 
 // TODO(jamessynge): Maybe further refactorings, including just passing in a

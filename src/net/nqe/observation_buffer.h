@@ -94,7 +94,7 @@ class NET_EXPORT_PRIVATE ObservationBuffer {
     double total_weight = 0.0;
 
     ComputeWeightedObservations(begin_timestamp, current_signal_strength_dbm,
-                                weighted_observations, &total_weight,
+                                &weighted_observations, &total_weight,
                                 disallowed_observation_sources);
     if (weighted_observations.empty())
       return false;
@@ -139,7 +139,7 @@ class NET_EXPORT_PRIVATE ObservationBuffer {
     double total_weight = 0.0;
 
     ComputeWeightedObservations(begin_timestamp, current_signal_strength_dbm,
-                                weighted_observations, &total_weight,
+                                &weighted_observations, &total_weight,
                                 disallowed_observation_sources);
     if (weighted_observations.empty())
       return false;
@@ -176,7 +176,7 @@ class NET_EXPORT_PRIVATE ObservationBuffer {
     double total_weight = 0.0;
 
     ComputeWeightedObservations(begin_timestamp, current_signal_strength_dbm,
-                                weighted_observations, &total_weight,
+                                &weighted_observations, &total_weight,
                                 disallowed_observation_sources);
     if (weighted_observations.empty())
       return false;
@@ -226,13 +226,13 @@ class NET_EXPORT_PRIVATE ObservationBuffer {
   void ComputeWeightedObservations(
       const base::TimeTicks& begin_timestamp,
       int32_t current_signal_strength_dbm,
-      std::vector<WeightedObservation<ValueType>>& weighted_observations,
+      std::vector<WeightedObservation<ValueType>>* weighted_observations,
       double* total_weight,
       const std::vector<NetworkQualityObservationSource>&
           disallowed_observation_sources) const {
     DCHECK_GE(Capacity(), Size());
 
-    weighted_observations.clear();
+    weighted_observations->clear();
     double total_weight_observations = 0.0;
     base::TimeTicks now = tick_clock_->NowTicks();
 
@@ -265,22 +265,22 @@ class NET_EXPORT_PRIVATE ObservationBuffer {
 
       weight = std::max(DBL_MIN, std::min(1.0, weight));
 
-      weighted_observations.push_back(
+      weighted_observations->push_back(
           WeightedObservation<ValueType>(observation.value, weight));
       total_weight_observations += weight;
     }
 
     // Sort the samples by value in ascending order.
-    std::sort(weighted_observations.begin(), weighted_observations.end());
+    std::sort(weighted_observations->begin(), weighted_observations->end());
     *total_weight = total_weight_observations;
 
     DCHECK_LE(0.0, *total_weight);
-    DCHECK(weighted_observations.empty() || 0.0 < *total_weight);
+    DCHECK(weighted_observations->empty() || 0.0 < *total_weight);
 
     // |weighted_observations| may have a smaller size than |observations_|
     // since the former contains only the observations later than
     // |begin_timestamp|.
-    DCHECK_GE(observations_.size(), weighted_observations.size());
+    DCHECK_GE(observations_.size(), weighted_observations->size());
   }
 
   // Holds observations sorted by time, with the oldest observation at the

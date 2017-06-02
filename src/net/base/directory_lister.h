@@ -32,6 +32,7 @@ class NET_EXPORT DirectoryLister  {
   struct DirectoryListerData {
     base::FileEnumerator::FileInfo info;
     base::FilePath path;
+    base::FilePath absolute_path;
   };
 
   // Implement this class to receive directory entries.
@@ -83,8 +84,8 @@ class NET_EXPORT DirectoryLister  {
   // refcounted, it's destroyed when the final reference is released, which may
   // happen on either thread.
   //
-  // It's kept alive during the calls to Start() and DoneOnOriginThread() by the
-  // reference owned by the callback itself.
+  // It's kept alive during the calls to Start() and DoneOnOriginSequence() by
+  // the reference owned by the callback itself.
   class Core : public base::RefCountedThreadSafe<Core> {
    public:
     Core(const base::FilePath& dir, ListingType type, DirectoryLister* lister);
@@ -93,7 +94,7 @@ class NET_EXPORT DirectoryLister  {
     void Start();
 
     // Must be called on the origin thread.
-    void CancelOnOriginThread();
+    void CancelOnOriginSequence();
 
    private:
     friend class base::RefCountedThreadSafe<Core>;
@@ -105,8 +106,8 @@ class NET_EXPORT DirectoryLister  {
     bool IsCancelled() const;
 
     // Called on origin thread.
-    void DoneOnOriginThread(std::unique_ptr<DirectoryList> directory_list,
-                            int error) const;
+    void DoneOnOriginSequence(std::unique_ptr<DirectoryList> directory_list,
+                              int error) const;
 
     const base::FilePath dir_;
     const ListingType type_;
