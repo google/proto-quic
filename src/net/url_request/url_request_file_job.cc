@@ -196,6 +196,12 @@ std::unique_ptr<SourceStream> URLRequestFileJob::SetUpSourceStream() {
   return GzipSourceStream::Create(std::move(source), SourceStream::TYPE_GZIP);
 }
 
+bool URLRequestFileJob::CanAccessFile(const base::FilePath& original_path,
+                                      const base::FilePath& absolute_path) {
+  return !network_delegate() || network_delegate()->CanAccessFile(
+                                    *request(), original_path, absolute_path);
+}
+
 void URLRequestFileJob::FetchMetaInfo(const base::FilePath& file_path,
                                       FileMetaInfo* meta_info) {
   base::File::Info file_info;
@@ -208,6 +214,7 @@ void URLRequestFileJob::FetchMetaInfo(const base::FilePath& file_path,
   // done in WorkerPool.
   meta_info->mime_type_result = GetMimeTypeFromFile(file_path,
                                                     &meta_info->mime_type);
+  meta_info->absolute_path = base::MakeAbsoluteFilePath(file_path);
 }
 
 void URLRequestFileJob::DidFetchMetaInfo(const FileMetaInfo* meta_info) {
@@ -227,6 +234,11 @@ void URLRequestFileJob::DidFetchMetaInfo(const FileMetaInfo* meta_info) {
   }
   if (meta_info_.is_directory) {
     DidOpen(OK);
+    return;
+  }
+
+  if (!CanAccessFile(file_path_, meta_info->absolute_path)) {
+    DidOpen(ERR_ACCESS_DENIED);
     return;
   }
 

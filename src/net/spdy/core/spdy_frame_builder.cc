@@ -27,8 +27,7 @@ SpdyFrameBuilder::SpdyFrameBuilder(size_t size, ZeroCopyOutputBuffer* output)
       length_(0),
       offset_(0) {}
 
-SpdyFrameBuilder::~SpdyFrameBuilder() {
-}
+SpdyFrameBuilder::~SpdyFrameBuilder() {}
 
 char* SpdyFrameBuilder::GetWritableBuffer(size_t length) {
   if (!CanWrite(length)) {
@@ -46,7 +45,7 @@ char* SpdyFrameBuilder::GetWritableOutput(size_t length,
     return nullptr;
   }
   output_->Next(&dest, &size);
-  *actual_length = std::min(length, (size_t)size);
+  *actual_length = std::min<size_t>(length, size);
   return dest;
 }
 

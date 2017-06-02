@@ -169,5 +169,13 @@ TEST_F(PacketNumberIndexedQueueTest, FailToRemoveElementsTwice) {
   ASSERT_FALSE(queue_.Remove(1001));
 }
 
+TEST_F(PacketNumberIndexedQueueTest, ConstGetter) {
+  queue_.Emplace(1001, "one");
+  const auto& const_queue = queue_;
+
+  EXPECT_EQ("one", *const_queue.GetEntry(1001));
+  EXPECT_EQ(nullptr, const_queue.GetEntry(1002));
+}
+
 }  // namespace
 }  // namespace net

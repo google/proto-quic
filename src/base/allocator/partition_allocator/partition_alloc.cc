@@ -950,7 +950,7 @@ void PartitionFreeSlowPath(PartitionPage* page) {
   }
 }
 
-bool partitionReallocDirectMappedInPlace(PartitionRootGeneric* root,
+bool PartitionReallocDirectMappedInPlace(PartitionRootGeneric* root,
                                          PartitionPage* page,
                                          size_t raw_size) {
   DCHECK(PartitionBucketIsDirectMapped(page->bucket));
@@ -1028,16 +1028,16 @@ void* PartitionReallocGeneric(PartitionRootGeneric* root,
   if (new_size > kGenericMaxDirectMapped)
     PartitionExcessiveAllocationSize();
 
-  DCHECK(PartitionPointerIsValid(PartitionCookieFreePointerAdjust(ptr)));
-
   PartitionPage* page =
       PartitionPointerToPage(PartitionCookieFreePointerAdjust(ptr));
+  // TODO(palmer): See if we can afford to make this a CHECK.
+  DCHECK(PartitionPagePointerIsValid(page));
 
   if (UNLIKELY(PartitionBucketIsDirectMapped(page->bucket))) {
     // We may be able to perform the realloc in place by changing the
     // accessibility of memory pages and, if reducing the size, decommitting
     // them.
-    if (partitionReallocDirectMappedInPlace(root, page, new_size)) {
+    if (PartitionReallocDirectMappedInPlace(root, page, new_size)) {
       PartitionAllocHooks::ReallocHookIfEnabled(ptr, ptr, new_size, type_name);
       return ptr;
     }

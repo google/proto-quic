@@ -9,7 +9,6 @@
 #include "base/run_loop.h"
 #include "net/base/load_flags.h"
 #include "net/log/net_log_with_source.h"
-#include "net/log/test_net_log.h"
 #include "net/log/test_net_log_entry.h"
 #include "net/test/embedded_test_server/http_response.h"
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
@@ -51,6 +50,22 @@ TestNetworkQualityEstimator::TestNetworkQualityEstimator(
     bool allow_smaller_responses_for_tests,
     bool add_default_platform_observations,
     std::unique_ptr<BoundTestNetLog> net_log)
+    : TestNetworkQualityEstimator(std::move(external_estimate_provider),
+                                  variation_params,
+                                  allow_local_host_requests_for_tests,
+                                  allow_smaller_responses_for_tests,
+                                  add_default_platform_observations,
+                                  false,
+                                  std::move(net_log)) {}
+
+TestNetworkQualityEstimator::TestNetworkQualityEstimator(
+    std::unique_ptr<net::ExternalEstimateProvider> external_estimate_provider,
+    const std::map<std::string, std::string>& variation_params,
+    bool allow_local_host_requests_for_tests,
+    bool allow_smaller_responses_for_tests,
+    bool add_default_platform_observations,
+    bool suppress_notifications_for_testing,
+    std::unique_ptr<BoundTestNetLog> net_log)
     : NetworkQualityEstimator(std::move(external_estimate_provider),
                               variation_params,
                               allow_local_host_requests_for_tests,
@@ -61,6 +76,7 @@ TestNetworkQualityEstimator::TestNetworkQualityEstimator(
       accuracy_recording_intervals_set_(false),
       rand_double_(0.0),
       embedded_test_server_(base::FilePath(kTestFilePath)),
+      suppress_notifications_for_testing_(suppress_notifications_for_testing),
       net_log_(std::move(net_log)) {
   // Set up the embedded test server.
   EXPECT_TRUE(embedded_test_server_.Start());
@@ -269,6 +285,12 @@ void TestNetworkQualityEstimator::
   }
 }
 
+void TestNetworkQualityEstimator::NotifyObserversOfEffectiveConnectionType(
+    EffectiveConnectionType type) {
+  for (auto& observer : effective_connection_type_observer_list_)
+    observer.OnEffectiveConnectionTypeChanged(type);
+}
+
 nqe::internal::NetworkID TestNetworkQualityEstimator::GetCurrentNetworkID()
     const {
   return nqe::internal::NetworkID(current_network_type_, current_network_id_);
@@ -277,6 +299,24 @@ nqe::internal::NetworkID TestNetworkQualityEstimator::GetCurrentNetworkID()
 TestNetworkQualityEstimator::LocalHttpTestServer::LocalHttpTestServer(
     const base::FilePath& document_root) {
   AddDefaultHandlers(document_root);
+}
+
+void TestNetworkQualityEstimator::NotifyObserversOfRTTOrThroughputComputed()
+    const {
+  if (suppress_notifications_for_testing_)
+    return;
+
+  NetworkQualityEstimator::NotifyObserversOfRTTOrThroughputComputed();
+}
+
+void TestNetworkQualityEstimator::
+    NotifyRTTAndThroughputEstimatesObserverIfPresent(
+        RTTAndThroughputEstimatesObserver* observer) const {
+  if (suppress_notifications_for_testing_)
+    return;
+
+  NetworkQualityEstimator::NotifyRTTAndThroughputEstimatesObserverIfPresent(
+      observer);
 }
 
 }  // namespace net

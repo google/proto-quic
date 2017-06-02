@@ -153,6 +153,7 @@ TEST_P(QuicClientSessionTest, NoEncryptionAfterInitialEncryption) {
   // Now create a second session using the same crypto config.
   Initialize();
 
+  EXPECT_CALL(*connection_, OnCanWrite());
   // Starting the handshake should move immediately to encryption
   // established and will allow streams to be created.
   session_->CryptoConnect();
@@ -516,6 +517,8 @@ TEST_P(QuicClientSessionTest, IsClosedTrueAfterResetPromisedAlreadyOpen) {
   CompleteCryptoHandshake();
 
   session_->GetOrCreateStream(promised_stream_id_);
+  EXPECT_CALL(*connection_,
+              SendRstStream(promised_stream_id_, QUIC_REFUSED_STREAM, 0));
   session_->ResetPromised(promised_stream_id_, QUIC_REFUSED_STREAM);
   EXPECT_TRUE(session_->IsClosedStream(promised_stream_id_));
 }
@@ -524,6 +527,8 @@ TEST_P(QuicClientSessionTest, IsClosedTrueAfterResetPromisedNonexistant) {
   // Initialize crypto before the client session will create a stream.
   CompleteCryptoHandshake();
 
+  EXPECT_CALL(*connection_,
+              SendRstStream(promised_stream_id_, QUIC_REFUSED_STREAM, 0));
   session_->ResetPromised(promised_stream_id_, QUIC_REFUSED_STREAM);
   EXPECT_TRUE(session_->IsClosedStream(promised_stream_id_));
 }

@@ -298,10 +298,8 @@ bool CopyDirectory(const FilePath& from_path,
                 << from_path.value() << " errno = " << errno;
     return false;
   }
-  struct stat to_path_stat;
   FilePath from_path_base = from_path;
-  if (recursive && stat(to_path.value().c_str(), &to_path_stat) == 0 &&
-      S_ISDIR(to_path_stat.st_mode)) {
+  if (recursive && DirectoryExists(to_path)) {
     // If the destination already exists and is a directory, then the
     // top level of source needs to be copied.
     from_path_base = from_path.DirName();

@@ -28,22 +28,17 @@ struct HostMappingRules::ExclusionRule {
 
 HostMappingRules::HostMappingRules() {}
 
+HostMappingRules::HostMappingRules(const HostMappingRules& host_mapping_rules) =
+    default;
+
 HostMappingRules::~HostMappingRules() {}
 
+HostMappingRules& HostMappingRules::operator=(
+    const HostMappingRules& host_mapping_rules) = default;
+
 bool HostMappingRules::RewriteHost(HostPortPair* host_port) const {
-  // Check if the hostname was excluded.
-  for (ExclusionRuleList::const_iterator it = exclusion_rules_.begin();
-       it != exclusion_rules_.end(); ++it) {
-    const ExclusionRule& rule = *it;
-    if (base::MatchPattern(host_port->host(), rule.hostname_pattern))
-      return false;
-  }
-
   // Check if the hostname was remapped.
-  for (MapRuleList::const_iterator it = map_rules_.begin();
-       it != map_rules_.end(); ++it) {
-    const MapRule& rule = *it;
-
+  for (const auto& rule : map_rules_) {
     // The rule's hostname_pattern will be something like:
     //     www.foo.com
     //     *.foo.com
@@ -55,6 +50,12 @@ bool HostMappingRules::RewriteHost(HostPortPair* host_port) const {
       std::string host_port_string = host_port->ToString();
       if (!base::MatchPattern(host_port_string, rule.hostname_pattern))
         continue;  // This rule doesn't apply.
+    }
+
+    // Check if the hostname was excluded.
+    for (const auto& rule : exclusion_rules_) {
+      if (base::MatchPattern(host_port->host(), rule.hostname_pattern))
+        return false;
     }
 
     host_port->set_host(rule.replacement_hostname);

@@ -699,7 +699,7 @@ void ThreadData::TallyADeath(const Births& births,
   }  // Release lock ASAP.
   death_data->RecordDurations(queue_duration, run_duration, random_number_);
 
-#if BUILDFLAG(ENABLE_MEMORY_TASK_PROFILER)
+#if BUILDFLAG(USE_ALLOCATOR_SHIM)
   if (stopwatch.heap_tracking_enabled()) {
     base::debug::ThreadHeapUsage heap_usage = stopwatch.heap_usage().usage();
     // Saturate the 64 bit counts on conversion to 32 bit storage.
@@ -1044,7 +1044,7 @@ TaskStopwatch::TaskStopwatch()
   state_ = CREATED;
   child_ = NULL;
 #endif
-#if BUILDFLAG(ENABLE_MEMORY_TASK_PROFILER)
+#if BUILDFLAG(USE_ALLOCATOR_SHIM)
   heap_tracking_enabled_ =
       base::debug::ThreadHeapUsageTracker::IsHeapTrackingEnabled();
 #endif
@@ -1064,7 +1064,7 @@ void TaskStopwatch::Start() {
 #endif
 
   start_time_ = ThreadData::Now();
-#if BUILDFLAG(ENABLE_MEMORY_TASK_PROFILER)
+#if BUILDFLAG(USE_ALLOCATOR_SHIM)
   if (heap_tracking_enabled_)
     heap_usage_.Start();
 #endif
@@ -1091,7 +1091,7 @@ void TaskStopwatch::Stop() {
   state_ = STOPPED;
   DCHECK(child_ == NULL);
 #endif
-#if BUILDFLAG(ENABLE_MEMORY_TASK_PROFILER)
+#if BUILDFLAG(USE_ALLOCATOR_SHIM)
   if (heap_tracking_enabled_)
     heap_usage_.Stop(true);
 #endif

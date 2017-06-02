@@ -110,6 +110,7 @@
 #define OPENSSL_HEADER_CRYPTO_INTERNAL_H
 
 #include <openssl/ex_data.h>
+#include <openssl/stack.h>
 #include <openssl/thread.h>
 
 #include <string.h>
@@ -504,6 +505,8 @@ OPENSSL_EXPORT int CRYPTO_set_thread_local(
 
 typedef struct crypto_ex_data_func_st CRYPTO_EX_DATA_FUNCS;
 
+DECLARE_STACK_OF(CRYPTO_EX_DATA_FUNCS)
+
 /* CRYPTO_EX_DATA_CLASS tracks the ex_indices registered for a type which
  * supports ex_data. It should defined as a static global within the module
  * which defines that type. */
@@ -525,7 +528,7 @@ typedef struct {
  * zero otherwise. */
 OPENSSL_EXPORT int CRYPTO_get_ex_new_index(CRYPTO_EX_DATA_CLASS *ex_data_class,
                                            int *out_index, long argl,
-                                           void *argp, CRYPTO_EX_dup *dup_func,
+                                           void *argp,
                                            CRYPTO_EX_free *free_func);
 
 /* CRYPTO_set_ex_data sets an extra data pointer on a given object. Each class
@@ -539,13 +542,6 @@ OPENSSL_EXPORT void *CRYPTO_get_ex_data(const CRYPTO_EX_DATA *ad, int index);
 
 /* CRYPTO_new_ex_data initialises a newly allocated |CRYPTO_EX_DATA|. */
 OPENSSL_EXPORT void CRYPTO_new_ex_data(CRYPTO_EX_DATA *ad);
-
-/* CRYPTO_dup_ex_data duplicates |from| into a freshly allocated
- * |CRYPTO_EX_DATA|, |to|. Both of which are inside objects of the given
- * class. It returns one on success and zero otherwise. */
-OPENSSL_EXPORT int CRYPTO_dup_ex_data(CRYPTO_EX_DATA_CLASS *ex_data_class,
-                                      CRYPTO_EX_DATA *to,
-                                      const CRYPTO_EX_DATA *from);
 
 /* CRYPTO_free_ex_data frees |ad|, which is embedded inside |obj|, which is an
  * object of the given class. */
@@ -631,6 +627,12 @@ static inline void *OPENSSL_memset(void *dst, int c, size_t n) {
   return memset(dst, c, n);
 }
 
+#if defined(BORINGSSL_FIPS)
+/* BORINGSSL_FIPS_abort is called when a FIPS power-on or continuous test
+ * fails. It prevents any further cryptographic operations by the current
+ * process. */
+void BORINGSSL_FIPS_abort(void) __attribute__((noreturn));
+#endif
 
 #if defined(__cplusplus)
 }  /* extern C */

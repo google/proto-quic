@@ -2096,6 +2096,40 @@ TEST_F(TransportSecurityStateTest, ExpectCTReporter) {
             reporter.signed_certificate_timestamps()[0].sct);
 }
 
+// Tests that the Expect CT reporter is not notified for repeated noncompliant
+// connections to the same preloaded host.
+TEST_F(TransportSecurityStateTest, RepeatedExpectCTReportsForStaticExpectCT) {
+  HostPortPair host_port(kExpectCTStaticHostname, 443);
+  SSLInfo ssl_info;
+  ssl_info.ct_compliance_details_available = true;
+  ssl_info.ct_cert_policy_compliance =
+      ct::CertPolicyCompliance::CERT_POLICY_NOT_DIVERSE_SCTS;
+  ssl_info.is_issued_by_known_root = true;
+  scoped_refptr<X509Certificate> cert1 =
+      ImportCertFromFile(GetTestCertsDirectory(), "test_mail_google_com.pem");
+  scoped_refptr<X509Certificate> cert2 =
+      ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
+  ASSERT_TRUE(cert1);
+  ASSERT_TRUE(cert2);
+  ssl_info.unverified_cert = cert1;
+  ssl_info.cert = cert2;
+  MakeTestSCTAndStatus(ct::SignedCertificateTimestamp::SCT_EMBEDDED, "test_log",
+                       std::string(), std::string(), base::Time::Now(),
+                       ct::SCT_STATUS_INVALID_SIGNATURE,
+                       &ssl_info.signed_certificate_timestamps);
+
+  TransportSecurityState state;
+  TransportSecurityStateTest::EnableStaticExpectCT(&state);
+  MockExpectCTReporter reporter;
+  state.SetExpectCTReporter(&reporter);
+  state.ProcessExpectCTHeader("preload", host_port, ssl_info);
+  EXPECT_EQ(1u, reporter.num_failures());
+
+  // After processing a second header, the report should not be sent again.
+  state.ProcessExpectCTHeader("preload", host_port, ssl_info);
+  EXPECT_EQ(1u, reporter.num_failures());
+}
+
 // Simple test for the HSTS preload process. The trie (generated from
 // transport_security_state_static_unittest1.json) contains 1 entry. Test that
 // the lookup methods can find the entry and correctly decode the different
@@ -2863,6 +2897,89 @@ TEST_F(TransportSecurityStateTest, DynamicExpectCTState) {
   state.AddExpectCT(host, current_time - base::TimeDelta::FromSeconds(1000),
                     true, report_uri);
   EXPECT_FALSE(state.GetDynamicExpectCTState(host, &expect_ct_state));
+}
+
+// Tests that the Expect-CT reporter is not notified for repeated dynamic
+// Expect-CT violations for the same host/port.
+TEST_F(TransportSecurityStateTest, DynamicExpectCTDeduping) {
+  const char kHeader[] = "max-age=123,enforce,report-uri=\"http://foo.test\"";
+  SSLInfo ssl;
+  ssl.is_issued_by_known_root = true;
+  ssl.ct_compliance_details_available = true;
+  ssl.ct_cert_policy_compliance =
+      ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS;
+  scoped_refptr<X509Certificate> cert1 =
+      ImportCertFromFile(GetTestCertsDirectory(), "test_mail_google_com.pem");
+  scoped_refptr<X509Certificate> cert2 =
+      ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
+  ASSERT_TRUE(cert1);
+  ASSERT_TRUE(cert2);
+  SignedCertificateTimestampAndStatusList sct_list;
+
+  base::test::ScopedFeatureList feature_list;
+  feature_list.InitAndEnableFeature(
+      TransportSecurityState::kDynamicExpectCTFeature);
+  base::Time now = base::Time::Now();
+  TransportSecurityState state;
+  MockExpectCTReporter reporter;
+  state.SetExpectCTReporter(&reporter);
+  state.ProcessExpectCTHeader(kHeader, HostPortPair("example.test", 443), ssl);
+  TransportSecurityState::ExpectCTState expect_ct_state;
+  EXPECT_TRUE(state.GetDynamicExpectCTState("example.test", &expect_ct_state));
+  EXPECT_EQ(GURL("http://foo.test"), expect_ct_state.report_uri);
+  EXPECT_TRUE(expect_ct_state.enforce);
+  EXPECT_LT(now, expect_ct_state.expiry);
+  // No report should be sent when the header was processed over a connection
+  // that complied with CT policy.
+  EXPECT_EQ(0u, reporter.num_failures());
+
+  // The first time the host fails to meet CT requirements, a report should be
+  // sent.
+  EXPECT_EQ(TransportSecurityState::CT_REQUIREMENTS_NOT_MET,
+            state.CheckCTRequirements(
+                HostPortPair("example.test", 443), true, HashValueVector(),
+                cert1.get(), cert2.get(), sct_list,
+                TransportSecurityState::ENABLE_EXPECT_CT_REPORTS,
+                ct::CertPolicyCompliance::CERT_POLICY_NOT_ENOUGH_SCTS));
+  EXPECT_EQ(1u, reporter.num_failures());
+
+  // The second time it fails to meet CT requirements, a report should not be
+  // sent.
+  EXPECT_EQ(TransportSecurityState::CT_REQUIREMENTS_NOT_MET,
+            state.CheckCTRequirements(
+                HostPortPair("example.test", 443), true, HashValueVector(),
+                cert1.get(), cert2.get(), sct_list,
+                TransportSecurityState::ENABLE_EXPECT_CT_REPORTS,
+                ct::CertPolicyCompliance::CERT_POLICY_NOT_ENOUGH_SCTS));
+  EXPECT_EQ(1u, reporter.num_failures());
+}
+
+// Tests that the Expect-CT reporter is not notified when the Expect-CT header
+// is received repeatedly over non-compliant connections.
+TEST_F(TransportSecurityStateTest, DynamicExpectCTHeaderProcessingDeduping) {
+  const char kHeader[] = "max-age=123,enforce,report-uri=\"http://foo.test\"";
+  SSLInfo ssl;
+  ssl.is_issued_by_known_root = true;
+  ssl.ct_compliance_details_available = true;
+  ssl.ct_cert_policy_compliance =
+      ct::CertPolicyCompliance::CERT_POLICY_NOT_ENOUGH_SCTS;
+
+  base::test::ScopedFeatureList feature_list;
+  feature_list.InitAndEnableFeature(
+      TransportSecurityState::kDynamicExpectCTFeature);
+  TransportSecurityState state;
+  MockExpectCTReporter reporter;
+  state.SetExpectCTReporter(&reporter);
+  state.ProcessExpectCTHeader(kHeader, HostPortPair("example.test", 443), ssl);
+  TransportSecurityState::ExpectCTState expect_ct_state;
+  EXPECT_FALSE(state.GetDynamicExpectCTState("example.test", &expect_ct_state));
+  // The first time the header was received over a connection that failed to
+  // meet CT requirements, a report should be sent.
+  EXPECT_EQ(1u, reporter.num_failures());
+
+  // The second time the header was received, no report should be sent.
+  state.ProcessExpectCTHeader(kHeader, HostPortPair("example.test", 443), ssl);
+  EXPECT_EQ(1u, reporter.num_failures());
 }
 
 // Tests that dynamic Expect-CT state cannot be added when the feature is not

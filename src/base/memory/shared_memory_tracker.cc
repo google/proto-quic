@@ -5,17 +5,11 @@
 #include "base/memory/shared_memory_tracker.h"
 
 #include "base/memory/shared_memory.h"
-#include "base/strings/stringprintf.h"
+#include "base/strings/string_number_conversions.h"
 #include "base/trace_event/memory_dump_manager.h"
 #include "base/trace_event/process_memory_dump.h"
 
 namespace base {
-
-SharedMemoryTracker::Usage::Usage() = default;
-
-SharedMemoryTracker::Usage::Usage(const Usage& rhs) = default;
-
-SharedMemoryTracker::Usage::~Usage() = default;
 
 // static
 SharedMemoryTracker* SharedMemoryTracker::GetInstance() {
@@ -25,19 +19,8 @@ SharedMemoryTracker* SharedMemoryTracker::GetInstance() {
 
 void SharedMemoryTracker::IncrementMemoryUsage(
     const SharedMemory& shared_memory) {
-  Usage usage;
-  // |shared_memory|'s unique ID must be generated here and it'd be too late at
-  // OnMemoryDump. An ID is generated with a SharedMemoryHandle, but the handle
-  // might already be closed at that time. Now IncrementMemoryUsage is called
-  // just after mmap and the handle must live then. See the discussion at
-  // crbug.com/604726#c30.
-  SharedMemory::UniqueId id;
-  if (!shared_memory.GetUniqueId(&id))
-    return;
-  usage.unique_id = id;
-  usage.size = shared_memory.mapped_size();
   AutoLock hold(usages_lock_);
-  usages_[&shared_memory] = usage;
+  usages_[&shared_memory] = shared_memory.mapped_size();
 }
 
 void SharedMemoryTracker::DecrementMemoryUsage(
@@ -48,31 +31,43 @@ void SharedMemoryTracker::DecrementMemoryUsage(
 
 bool SharedMemoryTracker::OnMemoryDump(const trace_event::MemoryDumpArgs& args,
                                        trace_event::ProcessMemoryDump* pmd) {
-  std::unordered_map<SharedMemory::UniqueId, size_t, SharedMemory::UniqueIdHash>
-      sizes;
+  std::vector<std::tuple<UnguessableToken, uintptr_t, size_t>> usages;
   {
     AutoLock hold(usages_lock_);
-    for (const auto& usage : usages_)
-      sizes[usage.second.unique_id] += usage.second.size;
+    usages.reserve(usages_.size());
+    for (const auto& usage : usages_) {
+      usages.emplace_back(usage.first->handle().GetGUID(),
+                          reinterpret_cast<uintptr_t>(usage.first->memory()),
+                          usage.second);
+    }
   }
-  for (auto& size : sizes) {
-    const SharedMemory::UniqueId& id = size.first;
-    std::string dump_name = StringPrintf("%s/%lld.%lld", "shared_memory",
-                                         static_cast<long long>(id.first),
-                                         static_cast<long long>(id.second));
-    auto guid = trace_event::MemoryAllocatorDumpGuid(dump_name);
+  for (const auto& usage : usages) {
+    const UnguessableToken& memory_guid = std::get<0>(usage);
+    uintptr_t address = std::get<1>(usage);
+    size_t size = std::get<2>(usage);
+    std::string dump_name = "shared_memory/";
+    if (memory_guid.is_empty()) {
+      // TODO(hajimehoshi): As passing ID across mojo is not implemented yet
+      // (crbug/713763), ID can be empty. For such case, use an address instead
+      // of GUID so that approximate memory usages are available.
+      dump_name += Uint64ToString(address);
+    } else {
+      dump_name += memory_guid.ToString();
+    }
+    auto dump_guid = trace_event::MemoryAllocatorDumpGuid(dump_name);
+    // Discard duplicates that might be seen in single-process mode.
+    if (pmd->GetAllocatorDump(dump_name))
+      continue;
     trace_event::MemoryAllocatorDump* local_dump =
         pmd->CreateAllocatorDump(dump_name);
     // TODO(hajimehoshi): The size is not resident size but virtual size so far.
     // Fix this to record resident size.
     local_dump->AddScalar(trace_event::MemoryAllocatorDump::kNameSize,
-                          trace_event::MemoryAllocatorDump::kUnitsBytes,
-                          size.second);
+                          trace_event::MemoryAllocatorDump::kUnitsBytes, size);
     trace_event::MemoryAllocatorDump* global_dump =
-        pmd->CreateSharedGlobalAllocatorDump(guid);
+        pmd->CreateSharedGlobalAllocatorDump(dump_guid);
     global_dump->AddScalar(trace_event::MemoryAllocatorDump::kNameSize,
-                           trace_event::MemoryAllocatorDump::kUnitsBytes,
-                           size.second);
+                           trace_event::MemoryAllocatorDump::kUnitsBytes, size);
     // TOOD(hajimehoshi): Detect which the shared memory comes from browser,
     // renderer or GPU process.
     // TODO(hajimehoshi): Shared memory reported by GPU and discardable is

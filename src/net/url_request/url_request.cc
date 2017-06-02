@@ -174,6 +174,7 @@ void URLRequest::Delegate::OnResponseStarted(URLRequest* request) {
 // URLRequest
 
 URLRequest::~URLRequest() {
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   Cancel();
 
   if (network_delegate_) {
@@ -555,7 +556,8 @@ URLRequest::URLRequest(const GURL& url,
                        RequestPriority priority,
                        Delegate* delegate,
                        const URLRequestContext* context,
-                       NetworkDelegate* network_delegate)
+                       NetworkDelegate* network_delegate,
+                       NetworkTrafficAnnotationTag traffic_annotation)
     : context_(context),
       network_delegate_(network_delegate ? network_delegate
                                          : context->network_delegate()),
@@ -580,7 +582,8 @@ URLRequest::URLRequest(const GURL& url,
       has_notified_completion_(false),
       received_response_content_length_(0),
       creation_time_(base::TimeTicks::Now()),
-      raw_header_size_(0) {
+      raw_header_size_(0),
+      traffic_annotation_(traffic_annotation) {
   // Sanity check out environment.
   DCHECK(base::ThreadTaskRunnerHandle::IsSet());
 

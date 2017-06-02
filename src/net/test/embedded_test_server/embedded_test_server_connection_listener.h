@@ -26,7 +26,7 @@ class EmbeddedTestServerConnectionListener {
   virtual ~EmbeddedTestServerConnectionListener() {}
 };
 
-}  // test_server
-}  // net
+}  // namespace test_server
+}  // namespace net
 
 #endif  // NET_TEST_EMBEDDED_TEST_SERVER_EMBEDDED_TEST_SERVER_CONNECTION_LISTENER_H_

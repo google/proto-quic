@@ -352,6 +352,7 @@ TEST_F(QuicDispatcherTest, ProcessPackets) {
               ProcessUdpPacket(_, _, _))
       .WillOnce(testing::WithArgs<2>(Invoke(CreateFunctor(
           &QuicDispatcherTest::ValidatePacket, base::Unretained(this), 1))));
+  EXPECT_CALL(*dispatcher_, ShouldCreateOrBufferPacketForConnection(1));
   ProcessPacket(client_address, 1, true, SerializeCHLO());
   EXPECT_EQ(client_address, dispatcher_->current_client_address());
   EXPECT_EQ(server_address_, dispatcher_->current_server_address());
@@ -365,6 +366,7 @@ TEST_F(QuicDispatcherTest, ProcessPackets) {
               ProcessUdpPacket(_, _, _))
       .WillOnce(testing::WithArgs<2>(Invoke(CreateFunctor(
           &QuicDispatcherTest::ValidatePacket, base::Unretained(this), 2))));
+  EXPECT_CALL(*dispatcher_, ShouldCreateOrBufferPacketForConnection(2));
   ProcessPacket(client_address, 2, true, SerializeCHLO());
 
   EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session1_->connection()),
@@ -398,6 +400,7 @@ TEST_F(QuicDispatcherTest, Shutdown) {
       .WillOnce(testing::WithArgs<2>(Invoke(CreateFunctor(
           &QuicDispatcherTest::ValidatePacket, base::Unretained(this), 1))));
 
+  EXPECT_CALL(*dispatcher_, ShouldCreateOrBufferPacketForConnection(1));
   ProcessPacket(client_address, 1, true, SerializeCHLO());
 
   EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session1_->connection()),
@@ -422,6 +425,7 @@ TEST_F(QuicDispatcherTest, TimeWaitListManager) {
       .WillOnce(testing::WithArgs<2>(Invoke(CreateFunctor(
           &QuicDispatcherTest::ValidatePacket, base::Unretained(this), 1))));
 
+  EXPECT_CALL(*dispatcher_, ShouldCreateOrBufferPacketForConnection(1));
   ProcessPacket(client_address, connection_id, true, SerializeCHLO());
 
   // Close the connection by sending public reset packet.
@@ -502,6 +506,8 @@ TEST_F(QuicDispatcherTest, OKSeqNoPacketProcessed) {
           &QuicDispatcherTest::ValidatePacket, base::Unretained(this), 1))));
   // A packet whose packet number is the largest that is allowed to start a
   // connection.
+  EXPECT_CALL(*dispatcher_,
+              ShouldCreateOrBufferPacketForConnection(connection_id));
   ProcessPacket(client_address, connection_id, true, SerializeCHLO(),
                 PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER,
                 QuicDispatcher::kMaxReasonableInitialPacketNumber);
@@ -554,6 +560,8 @@ TEST_F(QuicDispatcherTest, SupportedVersionsChangeInFlight) {
       .WillOnce(testing::WithArgs<2>(
           Invoke(CreateFunctor(&QuicDispatcherTest::ValidatePacket,
                                base::Unretained(this), connection_id))));
+  EXPECT_CALL(*dispatcher_,
+              ShouldCreateOrBufferPacketForConnection(connection_id));
   ProcessPacket(client_address, connection_id, true, QuicVersionMin(),
                 SerializeCHLO(), PACKET_8BYTE_CONNECTION_ID,
                 PACKET_6BYTE_PACKET_NUMBER, 1);
@@ -568,6 +576,8 @@ TEST_F(QuicDispatcherTest, SupportedVersionsChangeInFlight) {
       .WillOnce(testing::WithArgs<2>(
           Invoke(CreateFunctor(&QuicDispatcherTest::ValidatePacket,
                                base::Unretained(this), connection_id))));
+  EXPECT_CALL(*dispatcher_,
+              ShouldCreateOrBufferPacketForConnection(connection_id));
   ProcessPacket(client_address, connection_id, true, QuicVersionMax(),
                 SerializeCHLO(), PACKET_8BYTE_CONNECTION_ID,
                 PACKET_6BYTE_PACKET_NUMBER, 1);
@@ -593,6 +603,8 @@ TEST_F(QuicDispatcherTest, SupportedVersionsChangeInFlight) {
       .WillOnce(testing::WithArgs<2>(
           Invoke(CreateFunctor(&QuicDispatcherTest::ValidatePacket,
                                base::Unretained(this), connection_id))));
+  EXPECT_CALL(*dispatcher_,
+              ShouldCreateOrBufferPacketForConnection(connection_id));
   ProcessPacket(client_address, connection_id, true, QUIC_VERSION_40,
                 SerializeCHLO(), PACKET_8BYTE_CONNECTION_ID,
                 PACKET_6BYTE_PACKET_NUMBER, 1);
@@ -619,6 +631,8 @@ TEST_F(QuicDispatcherTest, SupportedVersionsChangeInFlight) {
       .WillOnce(testing::WithArgs<2>(
           Invoke(CreateFunctor(&QuicDispatcherTest::ValidatePacket,
                                base::Unretained(this), connection_id))));
+  EXPECT_CALL(*dispatcher_,
+              ShouldCreateOrBufferPacketForConnection(connection_id));
   ProcessPacket(client_address, connection_id, true, QUIC_VERSION_39,
                 SerializeCHLO(), PACKET_8BYTE_CONNECTION_ID,
                 PACKET_6BYTE_PACKET_NUMBER, 1);
@@ -659,7 +673,7 @@ struct StatelessRejectTestParams {
        << p.enable_stateless_rejects_via_flag << std::endl;
     os << " client_supports_statelesss_rejects: "
        << p.client_supports_statelesss_rejects << std::endl;
-    os << "  crypto_handshake_successful: " << p.crypto_handshake_successful
+    os << " crypto_handshake_successful: " << p.crypto_handshake_successful
        << " }";
     return os;
   }
@@ -760,9 +774,15 @@ TEST_P(QuicDispatcherStatelessRejectTest, ParameterizedBasicTest) {
       .WillOnce(testing::WithArgs<2>(
           Invoke(CreateFunctor(&QuicDispatcherTest::ValidatePacket,
                                base::Unretained(this), connection_id))));
+  EXPECT_CALL(*dispatcher_,
+              ShouldCreateOrBufferPacketForConnection(connection_id))
+      .Times(1);
+
   // Process the first packet for the connection.
   ProcessPacket(client_address, connection_id, true, SerializeCHLO());
   if (ExpectStatelessReject()) {
+    EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session1_->connection()),
+                CloseConnection(QUIC_CRYPTO_HANDSHAKE_STATELESS_REJECT, _, _));
     // If this is a stateless reject, the crypto stream will close the
     // connection.
     session1_->connection()->CloseConnection(
@@ -820,6 +840,14 @@ TEST_P(QuicDispatcherStatelessRejectTest, CheapRejects) {
                                      {"VER\0", "Q025"}},
                                     kClientHelloMinimumSize);
 
+  if (GetParam().enable_stateless_rejects_via_flag) {
+    EXPECT_CALL(*time_wait_list_manager_, ProcessPacket(_, _, connection_id))
+        .Times(1);
+  } else {
+    EXPECT_CALL(*dispatcher_,
+                ShouldCreateOrBufferPacketForConnection(connection_id))
+        .Times(1);
+  }
   ProcessPacket(client_address, connection_id, true,
                 client_hello.GetSerialized(Perspective::IS_CLIENT)
                     .AsStringPiece()
@@ -838,6 +866,9 @@ TEST_P(QuicDispatcherStatelessRejectTest, BufferNonChlo) {
   const QuicSocketAddress client_address(QuicIpAddress::Loopback4(), 1);
   const QuicConnectionId connection_id = 1;
 
+  EXPECT_CALL(*dispatcher_,
+              ShouldCreateOrBufferPacketForConnection(connection_id))
+      .Times(1);
   ProcessPacket(client_address, connection_id, true, "NOT DATA FOR A CHLO");
 
   // Process the first packet for the connection.
@@ -935,6 +966,7 @@ class QuicDispatcherWriteBlockedListTest : public QuicDispatcherTest {
                 ProcessUdpPacket(_, _, _))
         .WillOnce(testing::WithArgs<2>(Invoke(CreateFunctor(
             &QuicDispatcherTest::ValidatePacket, base::Unretained(this), 1))));
+    EXPECT_CALL(*dispatcher_, ShouldCreateOrBufferPacketForConnection(1));
     ProcessPacket(client_address, 1, true, SerializeCHLO());
 
     EXPECT_CALL(*dispatcher_, CreateQuicSession(_, client_address))
@@ -946,6 +978,7 @@ class QuicDispatcherWriteBlockedListTest : public QuicDispatcherTest {
                 ProcessUdpPacket(_, _, _))
         .WillOnce(testing::WithArgs<2>(Invoke(CreateFunctor(
             &QuicDispatcherTest::ValidatePacket, base::Unretained(this), 2))));
+    EXPECT_CALL(*dispatcher_, ShouldCreateOrBufferPacketForConnection(2));
     ProcessPacket(client_address, 2, true, SerializeCHLO());
 
     blocked_list_ = QuicDispatcherPeer::GetWriteBlockedList(dispatcher_.get());

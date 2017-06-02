@@ -216,11 +216,10 @@ class CryptoServerTest : public QuicTestWithParam<TestParams> {
   };
 
   void CheckServerHello(const CryptoHandshakeMessage& server_hello) {
-    const QuicTag* versions;
-    size_t num_versions;
-    server_hello.GetTaglist(kVER, &versions, &num_versions);
-    ASSERT_EQ(supported_versions_.size(), num_versions);
-    for (size_t i = 0; i < num_versions; ++i) {
+    QuicTagVector versions;
+    server_hello.GetTaglist(kVER, &versions);
+    ASSERT_EQ(supported_versions_.size(), versions.size());
+    for (size_t i = 0; i < versions.size(); ++i) {
       EXPECT_EQ(QuicVersionToQuicTag(supported_versions_[i]), versions[i]);
     }
 
@@ -340,15 +339,13 @@ class CryptoServerTest : public QuicTestWithParam<TestParams> {
   void CheckRejectReasons(
       const HandshakeFailureReason* expected_handshake_failures,
       size_t expected_count) {
-    const uint32_t* reject_reasons;
-    size_t num_reject_reasons;
+    QuicTagVector reject_reasons;
     static_assert(sizeof(QuicTag) == sizeof(uint32_t), "header out of sync");
-    QuicErrorCode error_code =
-        out_.GetTaglist(kRREJ, &reject_reasons, &num_reject_reasons);
+    QuicErrorCode error_code = out_.GetTaglist(kRREJ, &reject_reasons);
     ASSERT_EQ(QUIC_NO_ERROR, error_code);
 
-    EXPECT_EQ(expected_count, num_reject_reasons);
-    for (size_t i = 0; i < num_reject_reasons; ++i) {
+    EXPECT_EQ(expected_count, reject_reasons.size());
+    for (size_t i = 0; i < reject_reasons.size(); ++i) {
       EXPECT_EQ(expected_handshake_failures[i], reject_reasons[i]);
     }
   }

@@ -494,7 +494,8 @@ class BASE_EXPORT PersistentMemoryAllocator {
   // Reserve space in the memory segment of the desired |size| and |type_id|.
   // A return value of zero indicates the allocation failed, otherwise the
   // returned reference can be used by any process to get a real pointer via
-  // the GetAsObject() or GetAsArray calls.
+  // the GetAsObject() or GetAsArray calls. The actual allocated size may be
+  // larger and will always be a multiple of 8 bytes (64 bits).
   Reference Allocate(size_t size, uint32_t type_id);
 
   // Allocate and construct an object in persistent memory. The type must have

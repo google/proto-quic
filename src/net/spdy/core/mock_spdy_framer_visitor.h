@@ -24,11 +24,11 @@ namespace test {
 class MockSpdyFramerVisitor : public SpdyFramerVisitorInterface {
  public:
   MockSpdyFramerVisitor();
-  virtual ~MockSpdyFramerVisitor();
+  ~MockSpdyFramerVisitor() override;
+
   MOCK_METHOD1(OnError, void(SpdyFramer* framer));
-  MOCK_METHOD3(OnDataFrameHeader, void(SpdyStreamId stream_id,
-                                       size_t length,
-                                       bool fin));
+  MOCK_METHOD3(OnDataFrameHeader,
+               void(SpdyStreamId stream_id, size_t length, bool fin));
   MOCK_METHOD3(OnStreamFrameData,
                void(SpdyStreamId stream_id, const char* data, size_t len));
   MOCK_METHOD1(OnStreamEnd, void(SpdyStreamId stream_id));
@@ -55,9 +55,10 @@ class MockSpdyFramerVisitor : public SpdyFramerVisitorInterface {
                     bool end));
   MOCK_METHOD2(OnWindowUpdate,
                void(SpdyStreamId stream_id, int delta_window_size));
-  MOCK_METHOD3(OnPushPromise, void(SpdyStreamId stream_id,
-                                   SpdyStreamId promised_stream_id,
-                                   bool end));
+  MOCK_METHOD3(OnPushPromise,
+               void(SpdyStreamId stream_id,
+                    SpdyStreamId promised_stream_id,
+                    bool end));
   MOCK_METHOD2(OnContinuation, void(SpdyStreamId stream_id, bool end));
   MOCK_METHOD3(OnAltSvc,
                void(SpdyStreamId stream_id,

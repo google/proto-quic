@@ -41,7 +41,6 @@ DEFAULT_EXCLUDE_FOLDERS = [
 'Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift',
 'Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-migrator',
 'Contents/Resources/Packages/MobileDevice.pkg',
-'Contents/SharedFrameworks/DNTDocumentationSupport.framework'
 ]
 
 MAC_EXCLUDE_FOLDERS = [

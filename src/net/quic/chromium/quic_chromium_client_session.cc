@@ -64,6 +64,9 @@ const size_t kTokenBindingSignatureMapSize = 10;
 // migrating sessions need to wait for a new network to connect.
 const size_t kWaitTimeForNewNetworkSecs = 10;
 
+// The maximum size of uncompressed QUIC headers that will be allowed.
+const size_t kMaxUncompressedHeaderSize = 256 * 1024;
+
 // Histograms for tracking down the crashes from http://crbug.com/354669
 // Note: these values must be kept in sync with the corresponding values in:
 // tools/metrics/histograms/histograms.xml
@@ -675,6 +678,7 @@ void QuicChromiumClientSession::Initialize() {
       base::MakeUnique<HpackEncoderDebugVisitor>());
   SetHpackDecoderDebugVisitor(
       base::MakeUnique<HpackDecoderDebugVisitor>());
+  set_max_uncompressed_header_bytes(kMaxUncompressedHeaderSize);
 }
 
 void QuicChromiumClientSession::OnHeadersHeadOfLineBlocking(

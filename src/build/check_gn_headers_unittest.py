@@ -44,7 +44,7 @@ gn_input = json.loads(r'''
       },
       "//:star_public": {
          "public": "*",
-         "sources": [ "//base/c.h" ],
+         "sources": [ "//base/c.h", "//tmp/gen/a.h" ],
          "visibility": [ "*" ]
       }
     }
@@ -90,12 +90,14 @@ class CheckGnHeadersTest(unittest.TestCase):
     os.sep = old_sep
 
   def testGn(self):
-    headers = check_gn_headers.ParseGNProjectJSON(gn_input)
+    headers = check_gn_headers.ParseGNProjectJSON(gn_input,
+                                                  'out/Release', 'tmp')
     expected = set([
         'base/a.h',
         'base/b.hh',
         'base/c.h',
         'base/p.h',
+        'out/Release/gen/a.h',
     ])
     self.assertEquals(headers, expected)
 

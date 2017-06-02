@@ -14,6 +14,7 @@
 #include "base/message_loop/message_loop.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/single_thread_task_runner.h"
+#include "base/task_runner_util.h"
 #include "base/threading/thread.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
@@ -65,6 +66,7 @@ NetworkChangeNotifierWin::NetworkChangeNotifierWin()
 }
 
 NetworkChangeNotifierWin::~NetworkChangeNotifierWin() {
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   if (is_watching_) {
     CancelIPChangeNotify(&addr_overlapped_);
     addr_watcher_.StopWatching();
@@ -136,8 +138,6 @@ NetworkChangeNotifierWin::NetworkChangeCalculatorParamsWin() {
 //
 NetworkChangeNotifier::ConnectionType
 NetworkChangeNotifierWin::RecomputeCurrentConnectionType() const {
-  DCHECK(CalledOnValidThread());
-
   EnsureWinsockInit();
 
   // The following code was adapted from:
@@ -205,6 +205,18 @@ NetworkChangeNotifierWin::RecomputeCurrentConnectionType() const {
                           : NetworkChangeNotifier::CONNECTION_NONE;
 }
 
+void NetworkChangeNotifierWin::RecomputeCurrentConnectionTypeOnDnsThread(
+    base::Callback<void(ConnectionType)> reply_callback) const {
+  // Unretained is safe in this call because this object owns the thread and the
+  // thread is stopped in this object's destructor.
+  base::PostTaskAndReplyWithResult(
+      dns_config_service_thread_->message_loop()->task_runner().get(),
+      FROM_HERE,
+      base::Bind(&NetworkChangeNotifierWin::RecomputeCurrentConnectionType,
+                 base::Unretained(this)),
+      reply_callback);
+}
+
 NetworkChangeNotifier::ConnectionType
 NetworkChangeNotifierWin::GetCurrentConnectionType() const {
   base::AutoLock auto_lock(last_computed_connection_type_lock_);
@@ -218,19 +230,20 @@ void NetworkChangeNotifierWin::SetCurrentConnectionType(
 }
 
 void NetworkChangeNotifierWin::OnObjectSignaled(HANDLE object) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(is_watching_);
   is_watching_ = false;
 
   // Start watching for the next address change.
   WatchForAddressChange();
 
-  NotifyObservers();
+  RecomputeCurrentConnectionTypeOnDnsThread(base::Bind(
+      &NetworkChangeNotifierWin::NotifyObservers, weak_factory_.GetWeakPtr()));
 }
 
-void NetworkChangeNotifierWin::NotifyObservers() {
-  DCHECK(CalledOnValidThread());
-  SetCurrentConnectionType(RecomputeCurrentConnectionType());
+void NetworkChangeNotifierWin::NotifyObservers(ConnectionType connection_type) {
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
+  SetCurrentConnectionType(connection_type);
   NotifyObserversOfIPAddressChange();
 
   // Calling GetConnectionType() at this very moment is likely to give
@@ -246,7 +259,7 @@ void NetworkChangeNotifierWin::NotifyObservers() {
 }
 
 void NetworkChangeNotifierWin::WatchForAddressChange() {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(!is_watching_);
 
   // NotifyAddrChange occasionally fails with ERROR_OPEN_FAILED for unknown
@@ -274,8 +287,11 @@ void NetworkChangeNotifierWin::WatchForAddressChange() {
   // Treat the transition from NotifyAddrChange failing to succeeding as a
   // network change event, since network changes were not being observed in
   // that interval.
-  if (sequential_failures_ > 0)
-    NotifyObservers();
+  if (sequential_failures_ > 0) {
+    RecomputeCurrentConnectionTypeOnDnsThread(
+        base::Bind(&NetworkChangeNotifierWin::NotifyObservers,
+                   weak_factory_.GetWeakPtr()));
+  }
 
   if (sequential_failures_ < 2000) {
     UMA_HISTOGRAM_COUNTS_10000("Net.NotifyAddrChangeFailures",
@@ -287,7 +303,7 @@ void NetworkChangeNotifierWin::WatchForAddressChange() {
 }
 
 bool NetworkChangeNotifierWin::WatchForAddressChangeInternal() {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   if (!dns_config_service_thread_->IsRunning()) {
     dns_config_service_thread_->StartWithOptions(
@@ -305,7 +321,14 @@ bool NetworkChangeNotifierWin::WatchForAddressChangeInternal() {
 }
 
 void NetworkChangeNotifierWin::NotifyParentOfConnectionTypeChange() {
-  SetCurrentConnectionType(RecomputeCurrentConnectionType());
+  RecomputeCurrentConnectionTypeOnDnsThread(base::Bind(
+      &NetworkChangeNotifierWin::NotifyParentOfConnectionTypeChangeImpl,
+      weak_factory_.GetWeakPtr()));
+}
+
+void NetworkChangeNotifierWin::NotifyParentOfConnectionTypeChangeImpl(
+    ConnectionType connection_type) {
+  SetCurrentConnectionType(connection_type);
   bool current_offline = IsOffline();
   offline_polls_++;
   // If we continue to appear offline, delay sending out the notification in
@@ -323,10 +346,10 @@ void NetworkChangeNotifierWin::NotifyParentOfConnectionTypeChange() {
 
   NotifyObserversOfConnectionTypeChange();
   double max_bandwidth_mbps = 0.0;
-  ConnectionType connection_type = CONNECTION_NONE;
+  ConnectionType max_connection_type = CONNECTION_NONE;
   GetCurrentMaxBandwidthAndConnectionType(&max_bandwidth_mbps,
-                                          &connection_type);
-  NotifyObserversOfMaxBandwidthChange(max_bandwidth_mbps, connection_type);
+                                          &max_connection_type);
+  NotifyObserversOfMaxBandwidthChange(max_bandwidth_mbps, max_connection_type);
 }
 
 }  // namespace net

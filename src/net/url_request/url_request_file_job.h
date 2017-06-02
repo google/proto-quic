@@ -72,6 +72,11 @@ class NET_EXPORT URLRequestFileJob : public URLRequestJob {
   base::FilePath file_path_;
 
  private:
+  // This class checks if a path is accessible via file: scheme, with
+  // NetworkDelegate. Subclasses can disable the check if needed.
+  virtual bool CanAccessFile(const base::FilePath& original_path,
+                             const base::FilePath& absolute_path);
+
   // Meta information about the file. It's used as a member in the
   // URLRequestFileJob and also passed between threads because disk access is
   // necessary to obtain it.
@@ -89,6 +94,8 @@ class NET_EXPORT URLRequestFileJob : public URLRequestJob {
     bool file_exists;
     // Flag showing whether the file name actually refers to a directory.
     bool is_directory;
+    // Absolute path of the file (i.e. symbolic link is resolved).
+    base::FilePath absolute_path;
   };
 
   // Fetches file info on a background thread.

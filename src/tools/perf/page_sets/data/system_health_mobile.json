@@ -84,6 +84,21 @@
         "browse:tools:maps": {
             "DEFAULT": "system_health_mobile_059.wpr"
         },
+        "browse:tech:discourse_infinite_scroll": {
+            "DEFAULT": "mobile_infinite_scroll_000.wpr"
+        },
+        "browse:social:facebook_infinite_scroll": {
+            "DEFAULT": "mobile_infinite_scroll_000.wpr"
+        },
+        "browse:media:flickr_infinite_scroll": {
+            "DEFAULT": "mobile_infinite_scroll_000.wpr"
+        },
+        "browse:social:pinterest_infinite_scroll": {
+            "DEFAULT": "mobile_infinite_scroll_001.wpr"
+        },
+        "browse:social:tumblr_infinite_scroll": {
+            "DEFAULT": "mobile_infinite_scroll_000.wpr"
+        },
         "load:games:bubbles": {
             "DEFAULT": "system_health_mobile_005.wpr"
         },

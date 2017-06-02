@@ -28,15 +28,15 @@ class Error(Exception):
 
 
 class CacheManager(object):
-  """Manages cache directories exposed to a task as symlinks.
+  """Manages cache directories exposed to a task.
 
   A task can specify that caches should be present on a bot. A cache is
   tuple (name, path), where
     name is a short identifier that describes the contents of the cache, e.g.
       "git_v8" could be all git repositories required by v8 builds, or
       "build_chromium" could be build artefacts of the Chromium.
-    path is a directory path relative to the task run dir. It will be mapped
-      to the cache directory persisted on the bot.
+    path is a directory path relative to the task run dir. Cache installation
+      puts the requested cache directory at the path.
   """
 
   def __init__(self, root_dir):
@@ -44,8 +44,9 @@ class CacheManager(object):
 
     |root_dir| is a directory for persistent cache storage.
     """
+    assert isinstance(root_dir, unicode), root_dir
     assert file_path.isabs(root_dir), root_dir
-    self.root_dir = unicode(root_dir)
+    self.root_dir = root_dir
     self._lock = threading_utils.LockWithAssert()
     # LRU {cache_name -> cache_location}
     # It is saved to |root_dir|/state.json.
@@ -53,9 +54,9 @@ class CacheManager(object):
 
   @contextlib.contextmanager
   def open(self, time_fn=None):
-    """Opens NamedCaches for mutation operations, such as request or trim.
+    """Opens NamedCaches for mutation operations, such as install.
 
-    Only on caller can open the cache manager at a time. If the same thread
+    Only one caller can open the cache manager at a time. If the same thread
     calls this function after opening it earlier, the call will deadlock.
 
     time_fn is a function that returns timestamp (float) and used to take
@@ -86,48 +87,14 @@ class CacheManager(object):
   def __len__(self):
     """Returns number of items in the cache.
 
-    Requires NamedCache to be open.
+    NamedCache must be open.
     """
     return len(self._lru)
-
-  def request(self, name):
-    """Returns an absolute path to the directory of the named cache.
-
-    Creates a cache directory if it does not exist yet.
-
-    Requires NamedCache to be open.
-    """
-    self._lock.assert_locked()
-    assert isinstance(name, basestring), name
-    path = self._lru.get(name)
-    create_named_link = False
-    if path is None:
-      path = self._allocate_dir()
-      create_named_link = True
-      logging.info('Created %r for %r', path, name)
-    abs_path = os.path.join(self.root_dir, path)
-
-    # TODO(maruel): That's weird, it should exist already.
-    file_path.ensure_tree(abs_path)
-    self._lru.add(name, path)
-
-    if create_named_link:
-      # Create symlink <root_dir>/<named>/<name> -> <root_dir>/<short name>
-      # for user convenience.
-      named_path = self._get_named_path(name)
-      if os.path.exists(named_path):
-        file_path.remove(named_path)
-      else:
-        file_path.ensure_tree(os.path.dirname(named_path))
-      logging.info('Symlink %r to %r', named_path, abs_path)
-      fs.symlink(abs_path, named_path)
-
-    return abs_path
 
   def get_oldest(self):
     """Returns name of the LRU cache or None.
 
-    Requires NamedCache to be open.
+    NamedCache must be open.
     """
     self._lock.assert_locked()
     try:
@@ -138,7 +105,7 @@ class CacheManager(object):
   def get_timestamp(self, name):
     """Returns timestamp of last use of an item.
 
-    Requires NamedCache to be open.
+    NamedCache must be open.
 
     Raises KeyError if cache is not found.
     """
@@ -146,46 +113,96 @@ class CacheManager(object):
     assert isinstance(name, basestring), name
     return self._lru.get_timestamp(name)
 
-  @contextlib.contextmanager
-  def create_symlinks(self, root, named_caches):
-    """Creates symlinks in |root| for the specified named_caches.
+  @property
+  def available(self):
+    """Returns a set of names of available caches.
 
-    named_caches must be a list of (name, path) tuples.
-
-    Requires NamedCache to be open.
-
-    Raises Error if cannot create a symlink.
+    NamedCache must be open.
     """
     self._lock.assert_locked()
-    for name, path in named_caches:
-      logging.info('Named cache %r -> %r', name, path)
-      try:
-        _validate_named_cache_path(path)
-        symlink_path = os.path.abspath(os.path.join(root, path))
-        file_path.ensure_tree(os.path.dirname(symlink_path))
-        requested = self.request(name)
-        logging.info('Symlink %r to %r', symlink_path, requested)
-        fs.symlink(requested, symlink_path)
-      except (OSError, Error) as ex:
-        raise Error(
-            'cannot create a symlink for cache named "%s" at "%s": %s' % (
-              name, symlink_path, ex))
+    return self._lru.keys_set()
 
-  def delete_symlinks(self, root, named_caches):
-    """Deletes symlinks from |root| for the specified named_caches.
+  def install(self, path, name):
+    """Moves the directory for the specified named cache to |path|.
 
-    named_caches must be a list of (name, path) tuples.
+    NamedCache must be open. path must be absolute, unicode and must not exist.
+
+    Raises Error if cannot install the cache.
     """
-    for name, path in named_caches:
-      logging.info('Unlinking named cache "%s"', name)
-      try:
-        _validate_named_cache_path(path)
-        symlink_path = os.path.abspath(os.path.join(root, path))
-        fs.unlink(symlink_path)
-      except (OSError, Error) as ex:
-        raise Error(
-            'cannot unlink cache named "%s" at "%s": %s' % (
-              name, symlink_path, ex))
+    self._lock.assert_locked()
+    logging.info('Installing named cache %r to %r', name, path)
+    try:
+      _check_abs(path)
+      if os.path.isdir(path):
+        raise Error('installation directory %r already exists' % path)
+
+      rel_cache = self._lru.get(name)
+      if rel_cache:
+        abs_cache = os.path.join(self.root_dir, rel_cache)
+        if os.path.isdir(abs_cache):
+          logging.info('Moving %r to %r', abs_cache, path)
+          file_path.ensure_tree(os.path.dirname(path))
+          fs.rename(abs_cache, path)
+          self._remove(name)
+          return
+
+        logging.warning('directory for named cache %r does not exist', name)
+        self._remove(name)
+
+      # The named cache does not exist, create an empty directory.
+      # When uninstalling, we will move it back to the cache and create an
+      # an entry.
+      file_path.ensure_tree(path)
+    except (OSError, Error) as ex:
+      raise Error(
+          'cannot install cache named %r at %r: %s' % (
+            name, path, ex))
+
+  def uninstall(self, path, name):
+    """Moves the cache directory back. Opposite to install().
+
+    NamedCache must be open. path must be absolute and unicode.
+
+    Raises Error if cannot uninstall the cache.
+    """
+    logging.info('Uninstalling named cache %r from %r', name, path)
+    try:
+      _check_abs(path)
+      if not os.path.isdir(path):
+        logging.warning(
+            'Directory %r does not exist anymore. Cache lost.', path)
+        return
+
+      rel_cache = self._lru.get(name)
+      if rel_cache:
+        # Do not crash because cache already exists.
+        logging.warning('overwriting an existing named cache %r', name)
+        create_named_link = False
+      else:
+        rel_cache = self._allocate_dir()
+        create_named_link = True
+
+      # Move the dir and create an entry for the named cache.
+      abs_cache = os.path.join(self.root_dir, rel_cache)
+      logging.info('Moving %r to %r', path, abs_cache)
+      file_path.ensure_tree(os.path.dirname(abs_cache))
+      fs.rename(path, abs_cache)
+      self._lru.add(name, rel_cache)
+
+      if create_named_link:
+        # Create symlink <root_dir>/<named>/<name> -> <root_dir>/<short name>
+        # for user convenience.
+        named_path = self._get_named_path(name)
+        if os.path.exists(named_path):
+          file_path.remove(named_path)
+        else:
+          file_path.ensure_tree(os.path.dirname(named_path))
+        fs.symlink(abs_cache, named_path)
+        logging.info('Created symlink %r to %r', named_path, abs_cache)
+    except (OSError, Error) as ex:
+      raise Error(
+          'cannot uninstall cache named %r at %r: %s' % (
+            name, path, ex))
 
   def trim(self, min_free_space):
     """Purges cache.
@@ -195,7 +212,7 @@ class CacheManager(object):
 
     If min_free_space is None, disk free space is not checked.
 
-    Requires NamedCache to be open.
+    NamedCache must be open.
 
     Returns:
       Number of caches deleted.
@@ -211,22 +228,16 @@ class CacheManager(object):
     while ((min_free_space and free_space < min_free_space)
            or len(self._lru) > MAX_CACHE_SIZE):
       logging.info(
-          'Making space for named cache %s > %s or %s > %s',
+          'Making space for named cache %d > %d or %d > %d',
           free_space, min_free_space, len(self._lru), MAX_CACHE_SIZE)
       try:
-        name, (path, _) = self._lru.get_oldest()
+        name, _ = self._lru.get_oldest()
       except KeyError:
         return total
-      named_dir = self._get_named_path(name)
-      if fs.islink(named_dir):
-        fs.unlink(named_dir)
-      path_abs = os.path.join(self.root_dir, path)
-      if os.path.isdir(path_abs):
-        logging.info('Removing named cache %s', path_abs)
-        file_path.rmtree(path_abs)
+      logging.info('Removing named cache %r', name)
+      self._remove(name)
       if min_free_space:
         free_space = file_path.get_free_space(self.root_dir)
-      self._lru.pop(name)
       total += 1
     return total
 
@@ -251,6 +262,28 @@ class CacheManager(object):
       tried.add(rel_path)
     raise Error('could not allocate a new cache dir, too many cache dirs')
 
+  def _remove(self, name):
+    """Removes a cache directory and entry.
+
+    NamedCache must be open.
+
+    Returns:
+      Number of caches deleted.
+    """
+    self._lock.assert_locked()
+    rel_path = self._lru.get(name)
+    if not rel_path:
+      return
+
+    named_dir = self._get_named_path(name)
+    if fs.islink(named_dir):
+      fs.unlink(named_dir)
+
+    abs_path = os.path.join(self.root_dir, rel_path)
+    if os.path.isdir(abs_path):
+      file_path.rmtree(abs_path)
+    self._lru.pop(name)
+
   def _get_named_path(self, name):
     return os.path.join(self.root_dir, 'named', name)
 
@@ -266,7 +299,7 @@ def add_named_cache_options(parser):
       help='A named cache to request. Accepts two arguments, name and path. '
            'name identifies the cache, must match regex [a-z0-9_]{1,4096}. '
            'path is a path relative to the run dir where the cache directory '
-           'must be symlinked to. '
+           'must be put to. '
            'This option can be specified more than once.')
   group.add_option(
       '--named-cache-root',
@@ -281,16 +314,16 @@ def process_named_cache_options(parser, options):
   for name, path in options.named_caches:
     if not CACHE_NAME_RE.match(name):
       parser.error(
-          'cache name "%s" does not match %s' % (name, CACHE_NAME_RE.pattern))
+          'cache name %r does not match %r' % (name, CACHE_NAME_RE.pattern))
     if not path:
       parser.error('cache path cannot be empty')
   if options.named_cache_root:
-    return CacheManager(os.path.abspath(options.named_cache_root))
+    return CacheManager(unicode(os.path.abspath(options.named_cache_root)))
   return None
 
 
-def _validate_named_cache_path(path):
-  if os.path.isabs(path):
-    raise Error('named cache path must not be absolute')
-  if '..' in path.split(os.path.sep):
-    raise Error('named cache path must not contain ".."')
+def _check_abs(path):
+  if not isinstance(path, unicode):
+    raise Error('named cache installation path must be unicode')
+  if not os.path.isabs(path):
+    raise Error('named cache installation path must be absolute')

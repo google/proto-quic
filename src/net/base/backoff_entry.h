@@ -8,7 +8,7 @@
 #include <stdint.h>
 
 #include "base/macros.h"
-#include "base/threading/non_thread_safe.h"
+#include "base/threading/thread_checker.h"
 #include "base/time/time.h"
 #include "net/base/net_export.h"
 
@@ -23,7 +23,7 @@ namespace net {
 //
 // This utility class knows nothing about network specifics; it is
 // intended for reuse in various networking scenarios.
-class NET_EXPORT BackoffEntry : NON_EXPORTED_BASE(public base::NonThreadSafe) {
+class NET_EXPORT BackoffEntry {
  public:
   // The set of parameters that define a back-off policy. When modifying this,
   // increment SERIALIZATION_VERSION_NUMBER in backoff_entry_serializer.cc.
@@ -125,6 +125,8 @@ class NET_EXPORT BackoffEntry : NON_EXPORTED_BASE(public base::NonThreadSafe) {
   const Policy* const policy_;  // Not owned.
 
   base::TickClock* const clock_;  // Not owned.
+
+  THREAD_CHECKER(thread_checker_);
 
   DISALLOW_COPY_AND_ASSIGN(BackoffEntry);
 };

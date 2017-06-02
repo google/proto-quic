@@ -63,7 +63,7 @@ const char kExistingEntryKey[] = "existing entry key";
 
 std::unique_ptr<disk_cache::BackendImpl> CreateExistingEntryCache(
     const base::Thread& cache_thread,
-    base::FilePath& cache_path) {
+    const base::FilePath& cache_path) {
   net::TestCompletionCallback cb;
 
   std::unique_ptr<disk_cache::BackendImpl> cache(new disk_cache::BackendImpl(

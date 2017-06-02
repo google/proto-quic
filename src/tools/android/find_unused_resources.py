@@ -54,7 +54,7 @@ def GetUsedResources(source_paths, resource_types):
     [('drawable', 'app_icon'), ('layout', 'month_picker'), ...]
   """
   type_regex = '|'.join(map(re.escape, resource_types))
-  patterns = [r'@(())(%s)/(\w+)' % type_regex,
+  patterns = [r'@((\+?))(%s)/(\w+)' % type_regex,
               r'\b((\w+\.)*)R\.(%s)\.(\w+)' % type_regex]
   resources = []
   for pattern in patterns:

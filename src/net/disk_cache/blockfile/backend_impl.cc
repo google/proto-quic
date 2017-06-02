@@ -179,8 +179,8 @@ BackendImpl::~BackendImpl() {
     background_queue_.DropPendingIO();
   }
 
-  if (background_queue_.BackgroundIsCurrentThread()) {
-    // Unit tests may use the same thread for everything.
+  if (background_queue_.BackgroundIsCurrentSequence()) {
+    // Unit tests may use the same sequence for everything.
     CleanupCache();
   } else {
     background_queue_.background_thread()->PostTask(

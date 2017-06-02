@@ -1933,6 +1933,7 @@ HostResolverImpl::HostResolverImpl(const Options& options, NetLog* net_log)
           base::WorkerPool::GetTaskRunner(true /* task_is_slow */)) {}
 
 HostResolverImpl::~HostResolverImpl() {
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   // Prevent the dispatcher from starting new jobs.
   dispatcher_->SetLimitsToZero();
   // It's now safe for Jobs to call KillDnsTask on destruction, because
@@ -1957,7 +1958,7 @@ int HostResolverImpl::Resolve(const RequestInfo& info,
                               std::unique_ptr<Request>* out_req,
                               const NetLogWithSource& source_net_log) {
   DCHECK(addresses);
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK_EQ(false, callback.is_null());
   DCHECK(out_req);
 
@@ -2132,7 +2133,7 @@ int HostResolverImpl::ResolveHelper(const Key& key,
 int HostResolverImpl::ResolveFromCache(const RequestInfo& info,
                                        AddressList* addresses,
                                        const NetLogWithSource& source_net_log) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(addresses);
 
   // Update the net log and notify registered observers.
@@ -2152,7 +2153,7 @@ int HostResolverImpl::ResolveFromCache(const RequestInfo& info,
 }
 
 void HostResolverImpl::SetDnsClientEnabled(bool enabled) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 #if defined(ENABLE_BUILT_IN_DNS)
   if (enabled && !dns_client_) {
     SetDnsClient(DnsClient::CreateClient(net_log_));
@@ -2185,7 +2186,7 @@ int HostResolverImpl::ResolveStaleFromCache(
     AddressList* addresses,
     HostCache::EntryStaleness* stale_info,
     const NetLogWithSource& source_net_log) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(addresses);
   DCHECK(stale_info);
 
@@ -2206,7 +2207,7 @@ int HostResolverImpl::ResolveStaleFromCache(
 }
 
 void HostResolverImpl::SetNoIPv6OnWifi(bool no_ipv6_on_wifi) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   assume_ipv6_failure_on_wifi_ = no_ipv6_on_wifi;
 }
 

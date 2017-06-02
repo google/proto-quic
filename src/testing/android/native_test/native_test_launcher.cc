@@ -111,6 +111,9 @@ static void RunTests(JNIEnv* env,
                stdout_file_path.value().c_str(), strerror(errno));
     exit(EXIT_FAILURE);
   }
+  // TODO(jbudorick): Remove this after resolving crbug.com/726880
+  AndroidLog(ANDROID_LOG_INFO, "Redirecting stdout to file: %s\n",
+             stdout_file_path.value().c_str());
   dup2(STDOUT_FILENO, STDERR_FILENO);
 
   if (command_line.HasSwitch(switches::kWaitForDebugger)) {

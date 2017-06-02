@@ -205,7 +205,7 @@ class RequestCore : public base::RefCountedThreadSafe<RequestCore> {
         task_runner_(std::move(task_runner)) {}
 
   void AttachedToJob(Job* job) {
-    DCHECK(task_runner_->RunsTasksOnCurrentThread());
+    DCHECK(task_runner_->RunsTasksInCurrentSequence());
     DCHECK(!job_);
     // Requests should not be attached to jobs after they have been signalled
     // with a cancellation error (which happens via either Cancel() or
@@ -217,7 +217,7 @@ class RequestCore : public base::RefCountedThreadSafe<RequestCore> {
   void OnJobCompleted(Job* job,
                       Error error,
                       const std::vector<uint8_t>& response_body) {
-    DCHECK(task_runner_->RunsTasksOnCurrentThread());
+    DCHECK(task_runner_->RunsTasksInCurrentSequence());
 
     DCHECK_EQ(job_, job);
     job_ = nullptr;
@@ -237,7 +237,7 @@ class RequestCore : public base::RefCountedThreadSafe<RequestCore> {
 
   // Should only be called once.
   void WaitForResult(Error* error, std::vector<uint8_t>* bytes) {
-    DCHECK(!task_runner_->RunsTasksOnCurrentThread());
+    DCHECK(!task_runner_->RunsTasksInCurrentSequence());
 
     completion_event_.Wait();
     *bytes = std::move(bytes_);
@@ -384,7 +384,7 @@ class Job : public URLRequest::Delegate {
 };
 
 void RequestCore::CancelJob() {
-  if (!task_runner_->RunsTasksOnCurrentThread()) {
+  if (!task_runner_->RunsTasksInCurrentSequence()) {
     task_runner_->PostTask(FROM_HERE,
                            base::Bind(&RequestCore::CancelJob, this));
     return;
@@ -711,7 +711,7 @@ class CertNetFetcherImpl : public CertNetFetcher {
       : task_runner_(base::ThreadTaskRunnerHandle::Get()), context_(context) {}
 
   void Shutdown() override {
-    DCHECK(task_runner_->RunsTasksOnCurrentThread());
+    DCHECK(task_runner_->RunsTasksInCurrentSequence());
     if (impl_) {
       impl_->Shutdown();
       impl_.reset();
@@ -769,9 +769,9 @@ class CertNetFetcherImpl : public CertNetFetcher {
     DCHECK(!context_);
   }
 
-  void DoFetchOnNetworkThread(std::unique_ptr<RequestParams> request_params,
-                              scoped_refptr<RequestCore> request) {
-    DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  void DoFetchOnNetworkSequence(std::unique_ptr<RequestParams> request_params,
+                                scoped_refptr<RequestCore> request) {
+    DCHECK(task_runner_->RunsTasksInCurrentSequence());
 
     if (!context_) {
       // The fetcher might have been shutdown between when this task was posted
@@ -792,13 +792,13 @@ class CertNetFetcherImpl : public CertNetFetcher {
       std::unique_ptr<RequestParams> request_params) {
     scoped_refptr<RequestCore> request_core = new RequestCore(task_runner_);
 
-    // If the fetcher has already been shutdown, DoFetchOnNetworkThread will
+    // If the fetcher has already been shutdown, DoFetchOnNetworkSequence will
     // signal the request with an error. However, if the fetcher shuts down
-    // before DoFetchOnNetworkThread runs and PostTask still returns true, then
-    // the request will hang (that is, WaitForResult will not return).
+    // before DoFetchOnNetworkSequence runs and PostTask still returns true,
+    // then the request will hang (that is, WaitForResult will not return).
     if (!task_runner_->PostTask(
             FROM_HERE,
-            base::Bind(&CertNetFetcherImpl::DoFetchOnNetworkThread, this,
+            base::Bind(&CertNetFetcherImpl::DoFetchOnNetworkSequence, this,
                        base::Passed(&request_params), request_core))) {
       request_core->SignalImmediateError();
     }

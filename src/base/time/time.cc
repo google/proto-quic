@@ -94,6 +94,14 @@ int64_t TimeDelta::InMicroseconds() const {
   return delta_;
 }
 
+int64_t TimeDelta::InNanoseconds() const {
+  if (is_max()) {
+    // Preserve max to prevent overflow.
+    return std::numeric_limits<int64_t>::max();
+  }
+  return delta_ * Time::kNanosecondsPerMicrosecond;
+}
+
 namespace time_internal {
 
 int64_t SaturatedAdd(TimeDelta delta, int64_t value) {

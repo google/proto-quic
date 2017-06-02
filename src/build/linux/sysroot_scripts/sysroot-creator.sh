@@ -7,10 +7,9 @@
 # to define certain environment variables: e.g.
 #  DISTRO=ubuntu
 #  DIST=jessie
-#  DIST_UPDATES=jessie-updates  # optional
-#  REPO_EXTRA="universe restricted multiverse"  # optional
-#  APT_REPO=http://archive.ubuntu.com/ubuntu
-#  KEYRING_FILE=/usr/share/keyrings/ubuntu-archive-keyring.gpg
+#  # Similar in syntax to /etc/apt/sources.list
+#  APT_SOURCES_LIST="http://ftp.us.debian.org/debian/ jessie main"
+#  KEYRING_FILE=debian-archive-jessie-stable.gpg
 #  DEBIAN_PACKAGES="gcc libz libssl"
 
 #@ This script builds Debian/Ubuntu sysroot images for building Google Chrome.
@@ -35,11 +34,6 @@ if [ -z "${DIST:-}" ]; then
   exit 1
 fi
 
-if [ -z "${APT_REPO:-}" ]; then
-  echo "error: APT_REPO not defined"
-  exit 1
-fi
-
 if [ -z "${KEYRING_FILE:-}" ]; then
   echo "error: KEYRING_FILE not defined"
   exit 1
@@ -56,13 +50,13 @@ readonly HAS_ARCH_ARM=${HAS_ARCH_ARM:=0}
 readonly HAS_ARCH_ARM64=${HAS_ARCH_ARM64:=0}
 readonly HAS_ARCH_MIPS=${HAS_ARCH_MIPS:=0}
 
-readonly REQUIRED_TOOLS="wget"
+readonly REQUIRED_TOOLS="curl gunzip"
 
 ######################################################################
 # Package Config
 ######################################################################
 
-PACKAGES_EXT=${PACKAGES_EXT:-bz2}
+readonly PACKAGES_EXT=gz
 readonly RELEASE_FILE="Release"
 readonly RELEASE_FILE_GPG="Release.gpg"
 
@@ -107,7 +101,9 @@ DownloadOrCopy() {
     SubBanner "downloading from $1 -> $2"
     # Appending the "$$" shell pid is necessary here to prevent concurrent
     # instances of sysroot-creator.sh from trying to write to the same file.
-    wget "$1" -O "${2}.partial.$$"
+    # --create-dirs is added in case there are slashes in the filename, as can
+    # happen with the "debian/security" release class.
+    curl "$1" --create-dirs -o "${2}.partial.$$"
     mv "${2}.partial.$$" $2
   else
     SubBanner "copying from $1"
@@ -185,75 +181,72 @@ CreateTarBall() {
   tar zcf ${TARBALL} -C ${INSTALL_ROOT} .
 }
 
-ExtractPackageBz2() {
-  if [ "${PACKAGES_EXT}" = "bz2" ]; then
-    bzcat "$1" | egrep '^(Package:|Filename:|SHA256:) ' > "$2"
-  else
-    xzcat "$1" | egrep '^(Package:|Filename:|SHA256:) ' > "$2"
-  fi
+ExtractPackageGz() {
+  local src_file="$1"
+  local dst_file="$2"
+  local repo="$3"
+  gunzip -c "${src_file}" | egrep '^(Package:|Filename:|SHA256:) ' |
+    sed "s|Filename: |Filename: ${repo}|" > "${dst_file}"
 }
 
 GeneratePackageListDist() {
   local arch="$1"
-  local apt_url="$2"
-  local dist="$3"
-  local repo_name="$4"
+  set -- $2
+  local repo="$1"
+  local dist="$2"
+  local repo_name="$3"
 
   TMP_PACKAGE_LIST="${BUILD_DIR}/Packages.${dist}_${repo_name}_${arch}"
-  local repo_basedir="${apt_url}/dists/${dist}"
+  local repo_basedir="${repo}/dists/${dist}"
   local package_list="${BUILD_DIR}/Packages.${dist}_${repo_name}_${arch}.${PACKAGES_EXT}"
   local package_file_arch="${repo_name}/binary-${arch}/Packages.${PACKAGES_EXT}"
   local package_list_arch="${repo_basedir}/${package_file_arch}"
 
   DownloadOrCopy "${package_list_arch}" "${package_list}"
-  VerifyPackageListing "${package_file_arch}" "${package_list}" ${dist}
-  ExtractPackageBz2 "${package_list}" "${TMP_PACKAGE_LIST}"
+  VerifyPackageListing "${package_file_arch}" "${package_list}" ${repo} ${dist}
+  ExtractPackageGz "${package_list}" "${TMP_PACKAGE_LIST}" ${repo}
 }
 
 GeneratePackageListCommon() {
   local output_file="$1"
   local arch="$2"
-  local apt_url="$3"
-  local packages="$4"
+  local packages="$3"
 
   local dists="${DIST} ${DIST_UPDATES:-}"
   local repos="main ${REPO_EXTRA:-}"
 
   local list_base="${BUILD_DIR}/Packages.${DIST}_${arch}"
-  > "${list_base}"
-  for dist in ${dists}; do
-    for repo in ${repos}; do
-      GeneratePackageListDist "${arch}" "${apt_url}" "${dist}" "${repo}"
-      cat "${TMP_PACKAGE_LIST}" | ./merge-package-lists.py "${list_base}"
-    done
+  > "${list_base}"  # Create (or truncate) a zero-length file.
+  echo "${APT_SOURCES_LIST}" | while read source; do
+    GeneratePackageListDist "${arch}" "${source}"
+    cat "${TMP_PACKAGE_LIST}" | ./merge-package-lists.py "${list_base}"
   done
 
   GeneratePackageList "${list_base}" "${output_file}" "${packages}"
 }
 
 GeneratePackageListAmd64() {
-  GeneratePackageListCommon "$1" amd64 ${APT_REPO} "${DEBIAN_PACKAGES}
+  GeneratePackageListCommon "$1" amd64 "${DEBIAN_PACKAGES}
     ${DEBIAN_PACKAGES_X86:=} ${DEBIAN_PACKAGES_AMD64:=}"
 }
 
 GeneratePackageListI386() {
-  GeneratePackageListCommon "$1" i386 ${APT_REPO} "${DEBIAN_PACKAGES}
+  GeneratePackageListCommon "$1" i386 "${DEBIAN_PACKAGES}
     ${DEBIAN_PACKAGES_X86:=}"
 }
 
 GeneratePackageListARM() {
-  GeneratePackageListCommon "$1" armhf ${APT_REPO_ARM:-${APT_REPO}} \
-                            "${DEBIAN_PACKAGES} ${DEBIAN_PACKAGES_ARM:=}"
+  GeneratePackageListCommon "$1" armhf "${DEBIAN_PACKAGES}
+    ${DEBIAN_PACKAGES_ARM:=}"
 }
 
 GeneratePackageListARM64() {
-  GeneratePackageListCommon "$1" arm64 ${APT_REPO_ARM64:-${APT_REPO}} \
-                            "${DEBIAN_PACKAGES} ${DEBIAN_PACKAGES_ARM64:=}"
+  GeneratePackageListCommon "$1" arm64 "${DEBIAN_PACKAGES}
+    ${DEBIAN_PACKAGES_ARM64:=}"
 }
 
 GeneratePackageListMips() {
-  GeneratePackageListCommon "$1" mipsel ${APT_REPO_MIPS:-${APT_REPO}} \
-                            "${DEBIAN_PACKAGES}"
+  GeneratePackageListCommon "$1" mipsel "${DEBIAN_PACKAGES}"
 }
 
 StripChecksumsFromPackageList() {
@@ -395,8 +388,8 @@ InstallIntoSysroot() {
       exit 1
     fi
 
-    Banner "Installing ${file}"
-    DownloadOrCopy ${APT_REPO}/pool/${file} ${package}
+    Banner "Installing $(basename ${file})"
+    DownloadOrCopy ${file} ${package}
     if [ ! -s "${package}" ] ; then
       echo
       echo "ERROR: bad package ${package}"
@@ -435,7 +428,7 @@ CleanupJailSymlinks() {
     echo "${target}" | grep -qs ^/ || continue
     echo "${link}: ${target}"
     case "${link}" in
-      usr/lib/gcc/*-linux-gnu/4.*/* | usr/lib/gcc/arm-linux-gnueabihf/4.*/* |\
+      usr/lib/gcc/*-linux-gnu/4.*/* | usr/lib/gcc/arm-linux-gnueabihf/4.*/* | \
       usr/lib/gcc/aarch64-linux-gnu/4.*/*)
         # Relativize the symlink.
         ln -snfv "../../../../..${target}" "${link}"
@@ -520,7 +513,6 @@ BuildSysrootARM() {
   local files_and_sha256sums="$(cat ${package_file})"
   StripChecksumsFromPackageList "$package_file"
   VerifyPackageFilesMatch "$package_file" "$DEBIAN_DEP_LIST_ARM"
-  APT_REPO=${APT_REPO_ARM:=$APT_REPO}
   InstallIntoSysroot ${files_and_sha256sums}
   CleanupJailSymlinks
   HacksAndPatchesARM
@@ -541,7 +533,6 @@ BuildSysrootARM64() {
   local files_and_sha256sums="$(cat ${package_file})"
   StripChecksumsFromPackageList "$package_file"
   VerifyPackageFilesMatch "$package_file" "$DEBIAN_DEP_LIST_ARM64"
-  APT_REPO=${APT_REPO_ARM64:=$APT_REPO}
   InstallIntoSysroot ${files_and_sha256sums}
   CleanupJailSymlinks
   HacksAndPatchesARM64
@@ -563,7 +554,6 @@ BuildSysrootMips() {
   local files_and_sha256sums="$(cat ${package_file})"
   StripChecksumsFromPackageList "$package_file"
   VerifyPackageFilesMatch "$package_file" "$DEBIAN_DEP_LIST_MIPS"
-  APT_REPO=${APT_REPO_MIPS:=$APT_REPO}
   InstallIntoSysroot ${files_and_sha256sums}
   CleanupJailSymlinks
   HacksAndPatchesMips
@@ -677,9 +667,10 @@ CheckForDebianGPGKeyring() {
 VerifyPackageListing() {
   local file_path="$1"
   local output_file="$2"
-  local dist="$3"
+  local repo="$3"
+  local dist="$4"
 
-  local repo_basedir="${APT_REPO}/dists/${dist}"
+  local repo_basedir="${repo}/dists/${dist}"
   local release_list="${repo_basedir}/${RELEASE_FILE}"
   local release_list_gpg="${repo_basedir}/${RELEASE_FILE_GPG}"
 
@@ -722,19 +713,18 @@ GeneratePackageList() {
   shift
   for pkg in $@ ; do
     local pkg_full=$(grep -A 1 " ${pkg}\$" "$input_file" | \
-      egrep -o "pool/.*")
+      egrep "pool/.*" | sed 's/.*Filename: //')
     if [ -z "${pkg_full}" ]; then
         echo "ERROR: missing package: $pkg"
         exit 1
     fi
-    local pkg_nopool=$(echo "$pkg_full" | sed "s/^pool\///")
     local sha256sum=$(grep -A 4 " ${pkg}\$" "$input_file" | \
       grep ^SHA256: | sed 's/^SHA256: //')
     if [ "${#sha256sum}" -ne "64" ]; then
       echo "Bad sha256sum from Packages"
       exit 1
     fi
-    echo $pkg_nopool $sha256sum >> "$output_file"
+    echo $pkg_full $sha256sum >> "$output_file"
   done
   # sort -o does an in-place sort of this file
   sort "$output_file" -o "$output_file"

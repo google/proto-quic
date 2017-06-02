@@ -140,11 +140,11 @@ Process LaunchProcessPosixSpawn(const std::vector<std::string>& argv,
     file_actions.Inherit(STDERR_FILENO);
   }
 
-  std::unique_ptr<char* []> argv_cstr(new char*[argv.size() + 1]);
-  for (size_t i = 0; i < argv.size(); i++) {
-    argv_cstr[i] = const_cast<char*>(argv[i].c_str());
-  }
-  argv_cstr[argv.size()] = nullptr;
+  std::vector<char*> argv_cstr;
+  argv_cstr.reserve(argv.size() + 1);
+  for (const auto& arg : argv)
+    argv_cstr.push_back(const_cast<char*>(arg.c_str()));
+  argv_cstr.push_back(nullptr);
 
   std::unique_ptr<char* []> owned_environ;
   char** new_environ = options.clear_environ ? nullptr : *_NSGetEnviron();

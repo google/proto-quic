@@ -12,7 +12,8 @@
 namespace net {
 
 // Implements a QuartcStreamInterface using a QuicStream.
-class QuartcStream : public QuicStream, public QuartcStreamInterface {
+class QUIC_EXPORT_PRIVATE QuartcStream : public QuicStream,
+                                         public QuartcStreamInterface {
  public:
   QuartcStream(QuicStreamId id, QuicSession* session);
 
@@ -31,6 +32,10 @@ class QuartcStream : public QuicStream, public QuartcStreamInterface {
   uint64_t buffered_amount() override;
 
   bool fin_sent() override;
+
+  int stream_error() override;
+
+  int connection_error() override;
 
   void Write(const char* data,
              size_t size,

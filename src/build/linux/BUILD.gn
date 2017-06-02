@@ -4,6 +4,7 @@
 
 import("//build/config/features.gni")
 import("//build/config/linux/pkg_config.gni")
+import("//net/features.gni")
 
 if (use_gio) {
   pkg_config("gio_config") {
@@ -36,15 +37,11 @@ if (use_gio) {
 }
 
 # Looking for libspeechd? Use //third_party/speech-dispatcher
-
 group("fontconfig") {
-  if (is_chromecast) {
-    # Chromecast platform does not provide fontconfig
+  if (!is_proto_quic) {
     public_deps = [
       "//third_party/fontconfig",
     ]
-  } else {
-    public_configs = [ "//build/config/linux:fontconfig" ]
   }
 }
 

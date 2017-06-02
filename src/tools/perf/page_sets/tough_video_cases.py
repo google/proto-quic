@@ -41,6 +41,9 @@ class ToughVideoCasesPage(page_module.Page):
     # Play the media until it has finished or it times out.
     action_runner.PlayMedia(playing_event_timeout_in_seconds=60,
                             ended_event_timeout_in_seconds=60)
+    # Generate memory dump for memoryMetric.
+    if self.page_set.measure_memory:
+      action_runner.MeasureMemory()
 
   def SeekBeforeAndAfterPlayhead(self, action_runner,
                                  action_timeout_in_seconds=60):
@@ -56,6 +59,9 @@ class ToughVideoCasesPage(page_module.Page):
     # Seek to after the play-head location.
     action_runner.SeekMedia(seconds=9, timeout_in_seconds=timeout,
                             label='seek_cold')
+    # Generate memory dump for memoryMetric.
+    if self.page_set.measure_memory:
+      action_runner.MeasureMemory()
 
 
 class Page2(ToughVideoCasesPage):
@@ -401,9 +407,11 @@ class ToughVideoCasesPageSet(story.StorySet):
   Description: Video Stack Perf pages that report time_to_play, seek time and
   many other media-specific and generic metrics.
   """
-  def __init__(self):
+  def __init__(self, measure_memory=False):
     super(ToughVideoCasesPageSet, self).__init__(
             cloud_storage_bucket=story.PARTNER_BUCKET)
+
+    self.measure_memory = measure_memory
 
     # Normal play tests:
     self.AddStory(Page2(self))

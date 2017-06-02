@@ -31,7 +31,7 @@ void QuartcStream::OnDataAvailable() {
 void QuartcStream::OnClose() {
   QuicStream::OnClose();
   DCHECK(delegate_);
-  delegate_->OnClose(this, connection_error());
+  delegate_->OnClose(this);
 }
 
 void QuartcStream::OnCanWrite() {
@@ -50,6 +50,14 @@ uint64_t QuartcStream::buffered_amount() {
 
 bool QuartcStream::fin_sent() {
   return QuicStream::fin_sent();
+}
+
+int QuartcStream::stream_error() {
+  return QuicStream::stream_error();
+}
+
+int QuartcStream::connection_error() {
+  return QuicStream::connection_error();
 }
 
 void QuartcStream::Write(const char* data,

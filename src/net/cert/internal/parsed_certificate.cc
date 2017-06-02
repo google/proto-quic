@@ -203,6 +203,23 @@ scoped_refptr<ParsedCertificate> ParsedCertificate::CreateInternal(
         return nullptr;
       }
     }
+
+    // Policy mappings.
+    if (result->GetExtension(PolicyMappingsOid(), &extension)) {
+      result->has_policy_mappings_ = true;
+      if (!ParsePolicyMappings(extension.value, &result->policy_mappings_)) {
+        return nullptr;
+      }
+    }
+
+    // Inhibit Any Policy.
+    if (result->GetExtension(InhibitAnyPolicyOid(), &extension)) {
+      result->has_inhibit_any_policy_ = true;
+      if (!ParseInhibitAnyPolicy(extension.value,
+                                 &result->inhibit_any_policy_)) {
+        return nullptr;
+      }
+    }
   }
 
   return result;

@@ -10,9 +10,9 @@ import time
 
 class LitePage(IntegrationTest):
 
-  # Checks that a Lite Page is served and that the ignore_preview_blacklist
-  # experiment is being used.
-  def testLitePage(self):
+  # Checks that a Lite Page is served and the force_lite_page experiment
+  # directive is provided when always-on.
+  def testLitePageForcedExperiment(self):
     # If it was attempted to run with another experiment, skip this test.
     if common.ParseFlags().browser_args and ('--data-reduction-proxy-experiment'
         in common.ParseFlags().browser_args):
@@ -22,18 +22,28 @@ class LitePage(IntegrationTest):
       test_driver.AddChromeArg('--data-reduction-proxy-lo-fi=always-on')
       test_driver.AddChromeArg('--enable-data-reduction-proxy-lite-page')
 
+      # Force ECT to be 4G to confirm that we get Lite Page even for fast
+      # conneciton.
+      test_driver.AddChromeArg('--force-fieldtrial-params='
+                               'NetworkQualityEstimator.Enabled:'
+                               'force_effective_connection_type/4G')
+      test_driver.AddChromeArg('--force-fieldtrials='
+                               'NetworkQualityEstimator/Enabled/')
+
       test_driver.LoadURL('http://check.googlezip.net/test.html')
 
       lite_page_responses = 0
       for response in test_driver.GetHTTPResponses():
+        # Verify client sends force directive on every request for session.
+        self.assertIn('exp=force_lite_page',
+          response.request_headers['chrome-proxy'])
+        self.assertEqual('4G', response.request_headers['chrome-proxy-ect'])
         # Skip CSI requests when validating Lite Page headers. CSI requests
         # aren't expected to have LoFi headers.
         if '/csi?' in response.url:
           continue
         if response.url.startswith('data:'):
           continue
-        self.assertIn('exp=ignore_preview_blacklist',
-          response.request_headers['chrome-proxy'])
         if (self.checkLitePageResponse(response)):
           lite_page_responses = lite_page_responses + 1
 
@@ -49,6 +59,7 @@ class LitePage(IntegrationTest):
       self.skipTest('This test cannot be run with other experiments.')
     with TestDriver() as test_driver:
       test_driver.AddChromeArg('--enable-spdy-proxy-auth')
+      # Need to force lite page so target page doesn't fallback to Lo-Fi
       test_driver.AddChromeArg('--data-reduction-proxy-lo-fi=always-on')
       test_driver.AddChromeArg('--enable-data-reduction-proxy-lite-page')
 
@@ -64,8 +75,6 @@ class LitePage(IntegrationTest):
           continue
         if response.url.startswith('data:'):
           continue
-        self.assertIn('exp=ignore_preview_blacklist',
-          response.request_headers['chrome-proxy'])
         if (self.checkLitePageResponse(response)):
           lite_page_responses = lite_page_responses + 1
       self.assertEqual(1, lite_page_responses)
@@ -89,15 +98,12 @@ class LitePage(IntegrationTest):
         self.assertIn(response.status, [200, 204])
 
   # Lo-Fi fallback is not currently supported via the client. Check that
-  # no Lo-Fi response is received if the user is in the
-  # DataCompressionProxyLitePageFallback field trial and a Lite Page is not
-  # served.
+  # no Lo-Fi response is received if a Lite Page is not served.
   def testLitePageFallback(self):
     with TestDriver() as test_driver:
       test_driver.AddChromeArg('--enable-spdy-proxy-auth')
       test_driver.AddChromeArg('--force-fieldtrials='
-                               'DataCompressionProxyLoFi/Enabled_Preview/'
-                               'DataCompressionProxyLitePageFallback/Enabled')
+                               'DataCompressionProxyLoFi/Enabled_Preview/')
       test_driver.AddChromeArg('--force-fieldtrial-params='
                                'DataCompressionProxyLoFi.Enabled_Preview:'
                                'effective_connection_type/4G')

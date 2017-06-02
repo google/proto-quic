@@ -16,7 +16,7 @@ class GURL;
 
 namespace base {
 class Value;
-}  // namespace
+}  // namespace base
 
 namespace net {
 

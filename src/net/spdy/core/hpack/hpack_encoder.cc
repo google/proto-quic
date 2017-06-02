@@ -8,7 +8,6 @@
 #include <limits>
 
 #include "base/logging.h"
-#include "base/memory/ptr_util.h"
 #include "net/spdy/core/hpack/hpack_constants.h"
 #include "net/spdy/core/hpack/hpack_header_table.h"
 #include "net/spdy/core/hpack/hpack_huffman_table.h"

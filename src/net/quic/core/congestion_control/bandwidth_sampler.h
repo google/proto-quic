@@ -5,6 +5,7 @@
 #ifndef NET_QUIC_CORE_CONGESTION_CONTROL_BANDWIDTH_SAMPLER_H_
 #define NET_QUIC_CORE_CONGESTION_CONTROL_BANDWIDTH_SAMPLER_H_
 
+#include "net/quic/core/packet_number_indexed_queue.h"
 #include "net/quic/core/quic_bandwidth.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_time.h"
@@ -206,6 +207,13 @@ class QUIC_EXPORT_PRIVATE BandwidthSampler {
           total_bytes_acked_at_the_last_acked_packet(
               sampler.total_bytes_acked_),
           is_app_limited(sampler.is_app_limited_) {}
+
+    // Default constructor.  Required to put this structure into
+    // PacketNumberIndexedQueue.
+    ConnectionStateOnSentPacket()
+        : sent_time(QuicTime::Zero()),
+          last_acked_packet_sent_time(QuicTime::Zero()),
+          last_acked_packet_ack_time(QuicTime::Zero()) {}
   };
 
   typedef QuicLinkedHashMap<QuicPacketNumber, ConnectionStateOnSentPacket>
@@ -242,6 +250,16 @@ class QUIC_EXPORT_PRIVATE BandwidthSampler {
   // Record of the connection state at the point where each packet in flight was
   // sent, indexed by the packet number.
   ConnectionStateMap connection_state_map_;
+  PacketNumberIndexedQueue<ConnectionStateOnSentPacket>
+      connection_state_map_new_;
+  const bool use_new_connection_state_map_;
+
+  // Handles the actual bandwidth calculations, whereas the outer method handles
+  // retrieving and removing |sent_packet|.
+  BandwidthSample OnPacketAcknowledgedInner(
+      QuicTime ack_time,
+      QuicPacketNumber packet_number,
+      const ConnectionStateOnSentPacket& sent_packet);
 };
 
 }  // namespace net

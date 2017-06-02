@@ -26,9 +26,9 @@ BackoffEntry::BackoffEntry(const BackoffEntry::Policy* policy,
 }
 
 BackoffEntry::~BackoffEntry() {
-  // TODO(joi): Remove this once our clients (e.g. URLRequestThrottlerManager)
+  // TODO(joi): Enable this once our clients (e.g. URLRequestThrottlerManager)
   // always destroy from the I/O thread.
-  DetachFromThread();
+  // DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 }
 
 void BackoffEntry::InformOfRequest(bool succeeded) {

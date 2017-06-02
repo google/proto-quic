@@ -22,6 +22,10 @@ class _SystemHealthSharedState(shared_page_state.SharedPageState):
   This class adds support for enabling/disabling individual stories on
   individual platforms using the same approaches as for benchmarks:
 
+  **************
+  *** DEPRECATED: Please use story expectations in ./exepctions.py to disable.
+  **************
+
     1. Disabled/Enabled decorator:
 
        @decorators.Disabled('win')

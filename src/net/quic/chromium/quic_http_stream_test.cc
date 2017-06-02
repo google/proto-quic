@@ -97,22 +97,6 @@ class TestQuicConnection : public QuicConnection {
   }
 };
 
-// Subclass of QuicHttpStream that closes itself when the first piece of data
-// is received.
-class AutoClosingStream : public QuicHttpStream {
- public:
-  explicit AutoClosingStream(
-      std::unique_ptr<QuicChromiumClientSession::Handle> session)
-      : QuicHttpStream(std::move(session)) {}
-
-  void OnTrailingHeadersAvailable(const SpdyHeaderBlock& headers,
-                                  size_t frame_len) override {
-    Close(false);
-  }
-
-  void OnDataAvailable() override { Close(false); }
-};
-
 // UploadDataStream that always returns errors on data read.
 class ReadErrorUploadDataStream : public UploadDataStream {
  public:
@@ -198,8 +182,7 @@ class QuicHttpStreamTest : public ::testing::TestWithParam<QuicVersion> {
   };
 
   QuicHttpStreamTest()
-      : use_closing_stream_(false),
-        crypto_config_(crypto_test_utils::ProofVerifierForTesting()),
+      : crypto_config_(crypto_test_utils::ProofVerifierForTesting()),
         read_buffer_(new IOBufferWithSize(4096)),
         promise_id_(GetNthServerInitiatedStreamId(0)),
         stream_id_(GetNthClientInitiatedStreamId(0)),
@@ -210,7 +193,7 @@ class QuicHttpStreamTest : public ::testing::TestWithParam<QuicVersion> {
                       kDefaultServerHostName,
                       Perspective::IS_CLIENT),
         server_maker_(GetParam(),
-                      connection_id_,
+                      GetPeerInMemoryConnectionId(connection_id_),
                       &clock_,
                       kDefaultServerHostName,
                       Perspective::IS_SERVER),
@@ -286,6 +269,8 @@ class QuicHttpStreamTest : public ::testing::TestWithParam<QuicVersion> {
         .WillRepeatedly(Return(QuicBandwidth::Zero()));
     EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _)).Times(AnyNumber());
     EXPECT_CALL(*send_algorithm_, OnApplicationLimited(_)).Times(AnyNumber());
+    EXPECT_CALL(*send_algorithm_, GetCongestionControlType())
+        .Times(AnyNumber());
     helper_.reset(
         new QuicChromiumConnectionHelper(&clock_, &random_generator_));
     alarm_factory_.reset(new QuicChromiumAlarmFactory(runner_.get(), &clock_));
@@ -325,13 +310,8 @@ class QuicHttpStreamTest : public ::testing::TestWithParam<QuicVersion> {
     TestCompletionCallback callback;
 
     session_->CryptoConnect(callback.callback());
-    stream_.reset(use_closing_stream_
-                      ? new AutoClosingStream(session_->CreateHandle())
-                      : new QuicHttpStream(session_->CreateHandle()));
-
-    promised_stream_.reset(use_closing_stream_
-                               ? new AutoClosingStream(session_->CreateHandle())
-                               : new QuicHttpStream(session_->CreateHandle()));
+    stream_.reset(new QuicHttpStream(session_->CreateHandle()));
+    promised_stream_.reset(new QuicHttpStream(session_->CreateHandle()));
 
     push_promise_[":path"] = "/bar";
     push_promise_[":authority"] = "www.example.org";
@@ -556,7 +536,6 @@ class QuicHttpStreamTest : public ::testing::TestWithParam<QuicVersion> {
   }
 
   BoundTestNetLog net_log_;
-  bool use_closing_stream_;
   MockSendAlgorithm* send_algorithm_;
   scoped_refptr<TestTaskRunner> runner_;
   std::unique_ptr<MockWrite[]> mock_writes_;
@@ -565,6 +544,7 @@ class QuicHttpStreamTest : public ::testing::TestWithParam<QuicVersion> {
   std::unique_ptr<QuicChromiumConnectionHelper> helper_;
   std::unique_ptr<QuicChromiumAlarmFactory> alarm_factory_;
   testing::StrictMock<MockQuicConnectionVisitor> visitor_;
+  std::unique_ptr<UploadDataStream> upload_data_stream_;
   std::unique_ptr<QuicHttpStream> stream_;
   TransportSecurityState transport_security_state_;
   std::unique_ptr<QuicChromiumClientSession> session_;
@@ -1008,7 +988,6 @@ TEST_P(QuicHttpStreamTest, LogGranularQuicConnectionError) {
       DEFAULT_PRIORITY, &spdy_request_headers_frame_length,
       &header_stream_offset));
   AddWrite(ConstructAckAndRstStreamPacket(3));
-  use_closing_stream_ = true;
   Initialize();
 
   request_.method = "GET";
@@ -1049,7 +1028,6 @@ TEST_P(QuicHttpStreamTest, DoNotLogGranularQuicErrorIfHandshakeNotConfirmed) {
       1, GetNthClientInitiatedStreamId(0), kIncludeVersion, kFin,
       DEFAULT_PRIORITY, &spdy_request_headers_frame_length,
       &header_stream_offset));
-  use_closing_stream_ = true;
   Initialize();
 
   request_.method = "GET";
@@ -1127,10 +1105,11 @@ TEST_P(QuicHttpStreamTest, SendPostRequest) {
   std::vector<std::unique_ptr<UploadElementReader>> element_readers;
   element_readers.push_back(base::MakeUnique<UploadBytesElementReader>(
       kUploadData, strlen(kUploadData)));
-  ElementsUploadDataStream upload_data_stream(std::move(element_readers), 0);
+  upload_data_stream_ =
+      base::MakeUnique<ElementsUploadDataStream>(std::move(element_readers), 0);
   request_.method = "POST";
   request_.url = GURL("https://www.example.org/");
-  request_.upload_data_stream = &upload_data_stream;
+  request_.upload_data_stream = upload_data_stream_.get();
   ASSERT_THAT(request_.upload_data_stream->Init(CompletionCallback(),
                                                 NetLogWithSource()),
               IsOk());
@@ -1194,12 +1173,14 @@ TEST_P(QuicHttpStreamTest, SendChunkedPostRequest) {
   AddWrite(ConstructClientAckPacket(5, 3, 1, 1));
   Initialize();
 
-  ChunkedUploadDataStream upload_data_stream(0);
-  upload_data_stream.AppendData(kUploadData, chunk_size, false);
+  upload_data_stream_ = base::MakeUnique<ChunkedUploadDataStream>(0);
+  auto* chunked_upload_stream =
+      static_cast<ChunkedUploadDataStream*>(upload_data_stream_.get());
+  chunked_upload_stream->AppendData(kUploadData, chunk_size, false);
 
   request_.method = "POST";
   request_.url = GURL("https://www.example.org/");
-  request_.upload_data_stream = &upload_data_stream;
+  request_.upload_data_stream = upload_data_stream_.get();
   ASSERT_EQ(OK, request_.upload_data_stream->Init(
                     TestCompletionCallback().callback(), NetLogWithSource()));
 
@@ -1209,7 +1190,7 @@ TEST_P(QuicHttpStreamTest, SendChunkedPostRequest) {
   ASSERT_EQ(ERR_IO_PENDING,
             stream_->SendRequest(headers_, &response_, callback_.callback()));
 
-  upload_data_stream.AppendData(kUploadData, chunk_size, true);
+  chunked_upload_stream->AppendData(kUploadData, chunk_size, true);
   EXPECT_THAT(callback_.WaitForResult(), IsOk());
 
   // Ack both packets in the request.
@@ -1266,12 +1247,14 @@ TEST_P(QuicHttpStreamTest, SendChunkedPostRequestWithFinalEmptyDataPacket) {
   AddWrite(ConstructClientAckPacket(5, 3, 1, 1));
   Initialize();
 
-  ChunkedUploadDataStream upload_data_stream(0);
-  upload_data_stream.AppendData(kUploadData, chunk_size, false);
+  upload_data_stream_ = base::MakeUnique<ChunkedUploadDataStream>(0);
+  auto* chunked_upload_stream =
+      static_cast<ChunkedUploadDataStream*>(upload_data_stream_.get());
+  chunked_upload_stream->AppendData(kUploadData, chunk_size, false);
 
   request_.method = "POST";
   request_.url = GURL("https://www.example.org/");
-  request_.upload_data_stream = &upload_data_stream;
+  request_.upload_data_stream = upload_data_stream_.get();
   ASSERT_EQ(OK, request_.upload_data_stream->Init(
                     TestCompletionCallback().callback(), NetLogWithSource()));
 
@@ -1281,7 +1264,7 @@ TEST_P(QuicHttpStreamTest, SendChunkedPostRequestWithFinalEmptyDataPacket) {
   ASSERT_EQ(ERR_IO_PENDING,
             stream_->SendRequest(headers_, &response_, callback_.callback()));
 
-  upload_data_stream.AppendData(nullptr, 0, true);
+  chunked_upload_stream->AppendData(nullptr, 0, true);
   EXPECT_THAT(callback_.WaitForResult(), IsOk());
 
   ProcessPacket(ConstructServerAckPacket(1, 0, 0, 0));
@@ -1333,11 +1316,13 @@ TEST_P(QuicHttpStreamTest, SendChunkedPostRequestWithOneEmptyDataPacket) {
   AddWrite(ConstructClientAckPacket(4, 3, 1, 1));
   Initialize();
 
-  ChunkedUploadDataStream upload_data_stream(0);
+  upload_data_stream_ = base::MakeUnique<ChunkedUploadDataStream>(0);
+  auto* chunked_upload_stream =
+      static_cast<ChunkedUploadDataStream*>(upload_data_stream_.get());
 
   request_.method = "POST";
   request_.url = GURL("https://www.example.org/");
-  request_.upload_data_stream = &upload_data_stream;
+  request_.upload_data_stream = upload_data_stream_.get();
   ASSERT_EQ(OK, request_.upload_data_stream->Init(
                     TestCompletionCallback().callback(), NetLogWithSource()));
 
@@ -1347,7 +1332,7 @@ TEST_P(QuicHttpStreamTest, SendChunkedPostRequestWithOneEmptyDataPacket) {
   ASSERT_EQ(ERR_IO_PENDING,
             stream_->SendRequest(headers_, &response_, callback_.callback()));
 
-  upload_data_stream.AppendData(nullptr, 0, true);
+  chunked_upload_stream->AppendData(nullptr, 0, true);
   EXPECT_THAT(callback_.WaitForResult(), IsOk());
 
   ProcessPacket(ConstructServerAckPacket(1, 0, 0, 0));
@@ -1396,7 +1381,6 @@ TEST_P(QuicHttpStreamTest, DestroyedEarly) {
       DEFAULT_PRIORITY, &spdy_request_headers_frame_length,
       &header_stream_offset));
   AddWrite(ConstructAckAndRstStreamPacket(3));
-  use_closing_stream_ = true;
   Initialize();
 
   request_.method = "GET";
@@ -1442,7 +1426,6 @@ TEST_P(QuicHttpStreamTest, Priority) {
   AddWrite(InnerConstructRequestHeadersPacket(
       2, GetNthClientInitiatedStreamId(0), kIncludeVersion, kFin, MEDIUM,
       &spdy_request_headers_frame_length, &header_stream_offset));
-  use_closing_stream_ = true;
   Initialize();
 
   request_.method = "GET";
@@ -1489,7 +1472,6 @@ TEST_P(QuicHttpStreamTest, Priority) {
 // Regression test for http://crbug.com/294870
 TEST_P(QuicHttpStreamTest, CheckPriorityWithNoDelegate) {
   SetRequest("GET", "/", MEDIUM);
-  use_closing_stream_ = true;
   QuicStreamOffset header_stream_offset = 0;
   AddWrite(ConstructInitialSettingsPacket(&header_stream_offset));
   AddWrite(ConstructClientRstStreamPacket(2));
@@ -1535,16 +1517,18 @@ TEST_P(QuicHttpStreamTest, SessionClosedDuringDoLoop) {
   AddWrite(SYNCHRONOUS, ERR_FAILED);
   Initialize();
 
-  ChunkedUploadDataStream upload_data_stream(0);
+  upload_data_stream_ = base::MakeUnique<ChunkedUploadDataStream>(0);
+  auto* chunked_upload_stream =
+      static_cast<ChunkedUploadDataStream*>(upload_data_stream_.get());
 
   request_.method = "POST";
   request_.url = GURL("https://www.example.org/");
-  request_.upload_data_stream = &upload_data_stream;
+  request_.upload_data_stream = upload_data_stream_.get();
   ASSERT_EQ(OK, request_.upload_data_stream->Init(
                     TestCompletionCallback().callback(), NetLogWithSource()));
 
   size_t chunk_size = strlen(kUploadData);
-  upload_data_stream.AppendData(kUploadData, chunk_size, false);
+  chunked_upload_stream->AppendData(kUploadData, chunk_size, false);
   ASSERT_EQ(OK,
             stream_->InitializeStream(&request_, DEFAULT_PRIORITY,
                                       net_log_.bound(), callback_.callback()));
@@ -1553,7 +1537,7 @@ TEST_P(QuicHttpStreamTest, SessionClosedDuringDoLoop) {
   // SendRequest() completes asynchronously after the final chunk is added.
   ASSERT_EQ(ERR_IO_PENDING,
             stream->SendRequest(headers_, &response_, callback_.callback()));
-  upload_data_stream.AppendData(kUploadData, chunk_size, true);
+  chunked_upload_stream->AppendData(kUploadData, chunk_size, true);
   int rv = callback_.WaitForResult();
   EXPECT_EQ(ERR_QUIC_PROTOCOL_ERROR, rv);
 }
@@ -1565,11 +1549,11 @@ TEST_P(QuicHttpStreamTest, SessionClosedBeforeSendHeadersComplete) {
   AddWrite(SYNCHRONOUS, ERR_FAILED);
   Initialize();
 
-  ChunkedUploadDataStream upload_data_stream(0);
+  upload_data_stream_ = base::MakeUnique<ChunkedUploadDataStream>(0);
 
   request_.method = "POST";
   request_.url = GURL("https://www.example.org/");
-  request_.upload_data_stream = &upload_data_stream;
+  request_.upload_data_stream = upload_data_stream_.get();
   ASSERT_EQ(OK, request_.upload_data_stream->Init(
                     TestCompletionCallback().callback(), NetLogWithSource()));
 
@@ -1592,13 +1576,15 @@ TEST_P(QuicHttpStreamTest, SessionClosedBeforeSendBodyComplete) {
   AddWrite(SYNCHRONOUS, ERR_FAILED);
   Initialize();
 
-  ChunkedUploadDataStream upload_data_stream(0);
+  upload_data_stream_ = base::MakeUnique<ChunkedUploadDataStream>(0);
+  auto* chunked_upload_stream =
+      static_cast<ChunkedUploadDataStream*>(upload_data_stream_.get());
   size_t chunk_size = strlen(kUploadData);
-  upload_data_stream.AppendData(kUploadData, chunk_size, false);
+  chunked_upload_stream->AppendData(kUploadData, chunk_size, false);
 
   request_.method = "POST";
   request_.url = GURL("https://www.example.org/");
-  request_.upload_data_stream = &upload_data_stream;
+  request_.upload_data_stream = upload_data_stream_.get();
   ASSERT_EQ(OK, request_.upload_data_stream->Init(
                     TestCompletionCallback().callback(), NetLogWithSource()));
 
@@ -2098,11 +2084,11 @@ TEST_P(QuicHttpStreamTest, DataReadErrorSynchronous) {
 
   Initialize();
 
-  ReadErrorUploadDataStream upload_data_stream(
+  upload_data_stream_ = base::MakeUnique<ReadErrorUploadDataStream>(
       ReadErrorUploadDataStream::FailureMode::SYNC);
   request_.method = "POST";
   request_.url = GURL("https://www.example.org/");
-  request_.upload_data_stream = &upload_data_stream;
+  request_.upload_data_stream = upload_data_stream_.get();
   ASSERT_EQ(OK, request_.upload_data_stream->Init(
                     TestCompletionCallback().callback(), NetLogWithSource()));
 
@@ -2134,11 +2120,11 @@ TEST_P(QuicHttpStreamTest, DataReadErrorAsynchronous) {
 
   Initialize();
 
-  ReadErrorUploadDataStream upload_data_stream(
+  upload_data_stream_ = base::MakeUnique<ReadErrorUploadDataStream>(
       ReadErrorUploadDataStream::FailureMode::ASYNC);
   request_.method = "POST";
   request_.url = GURL("https://www.example.org/");
-  request_.upload_data_stream = &upload_data_stream;
+  request_.upload_data_stream = upload_data_stream_.get();
   ASSERT_EQ(OK, request_.upload_data_stream->Init(
                     TestCompletionCallback().callback(), NetLogWithSource()));
 

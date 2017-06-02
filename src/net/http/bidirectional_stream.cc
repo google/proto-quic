@@ -39,7 +39,7 @@ namespace {
 std::unique_ptr<base::Value> NetLogHeadersCallback(
     const SpdyHeaderBlock* headers,
     NetLogCaptureMode capture_mode) {
-  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  auto dict = base::MakeUnique<base::DictionaryValue>();
   dict->Set("headers", ElideSpdyHeaderBlockForNetLog(*headers, capture_mode));
   return std::move(dict);
 }
@@ -48,7 +48,7 @@ std::unique_ptr<base::Value> NetLogCallback(const GURL* url,
                                             const std::string* method,
                                             const HttpRequestHeaders* headers,
                                             NetLogCaptureMode capture_mode) {
-  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  auto dict = base::MakeUnique<base::DictionaryValue>();
   dict->SetString("url", url->possibly_invalid_spec());
   dict->SetString("method", *method);
   std::string empty;
@@ -120,12 +120,12 @@ BidirectionalStream::BidirectionalStream(
   http_request_info.url = request_info_->url;
   http_request_info.method = request_info_->method;
   http_request_info.extra_headers = request_info_->extra_headers;
-  stream_request_ =
+  stream_request_.reset(
       session->http_stream_factory()->RequestBidirectionalStreamImpl(
           http_request_info, request_info_->priority, server_ssl_config,
           server_ssl_config, this,
           /* enable_ip_based_pooling = */ true,
-          /* enable_alternative_services = */ true, net_log_);
+          /* enable_alternative_services = */ true, net_log_));
   // Check that this call cannot fail to set a non-NULL |stream_request_|.
   DCHECK(stream_request_);
   // Check that HttpStreamFactory does not invoke OnBidirectionalStreamImplReady
@@ -165,21 +165,6 @@ int BidirectionalStream::ReadData(IOBuffer* buf, int buf_len) {
                       NetLog::IntCallback("rv", rv));
   }
   return rv;
-}
-
-void BidirectionalStream::SendData(const scoped_refptr<IOBuffer>& data,
-                                   int length,
-                                   bool end_stream) {
-  DCHECK(stream_impl_);
-  DCHECK(write_buffer_list_.empty());
-  DCHECK(write_buffer_len_list_.empty());
-
-  if (net_log_.IsCapturing()) {
-    net_log_.AddEvent(NetLogEventType::BIDIRECTIONAL_STREAM_SEND_DATA);
-  }
-  stream_impl_->SendData(data, length, end_stream);
-  write_buffer_list_.push_back(data);
-  write_buffer_len_list_.push_back(length);
 }
 
 void BidirectionalStream::SendvData(

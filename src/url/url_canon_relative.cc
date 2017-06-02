@@ -443,11 +443,11 @@ bool DoResolveRelativeURL(const char* base_url,
                           Parsed* out_parsed) {
   // |base_parsed| is the starting point for our output. Since we may have
   // removed whitespace from |relative_url| before entering this method, we'll
-  // carry over the |whitespace_removed| flag.
-  bool whitespace_removed = out_parsed->whitespace_removed;
+  // carry over the |potentially_dangling_markup| flag.
+  bool potentially_dangling_markup = out_parsed->potentially_dangling_markup;
   *out_parsed = base_parsed;
-  if (whitespace_removed)
-    out_parsed->whitespace_removed = true;
+  if (potentially_dangling_markup)
+    out_parsed->potentially_dangling_markup = true;
 
   // Sanity check: the input should have a host or we'll break badly below.
   // We can only resolve relative URLs with base URLs that have hosts and

@@ -555,7 +555,9 @@ class EndToEndTest : public QuicTestWithParam<TestParams> {
   void VerifyCleanConnection(bool had_packet_loss) {
     QuicConnectionStats client_stats =
         client_->client()->session()->connection()->GetStats();
-    if (!had_packet_loss) {
+    // TODO(ianswett): Determine why this becomes even more flaky with BBR
+    // enabled.  b/62141144
+    if (!had_packet_loss && !FLAGS_quic_reloadable_flag_quic_default_to_bbr) {
       EXPECT_EQ(0u, client_stats.packets_lost);
     }
     EXPECT_EQ(0u, client_stats.packets_discarded);
@@ -2248,6 +2250,27 @@ TEST_P(EndToEndTest, BadEncryptedData) {
   // The connection should not be terminated.
   EXPECT_EQ(kFooResponseBody, client_->SendSynchronousRequest("/foo"));
   EXPECT_EQ("200", client_->response_headers()->find(":status")->second);
+}
+
+TEST_P(EndToEndTest, CanceledStreamDoesNotBecomeZombie) {
+  ASSERT_TRUE(Initialize());
+  if (!FLAGS_quic_reloadable_flag_quic_use_stream_notifier) {
+    return;
+  }
+
+  EXPECT_TRUE(client_->client()->WaitForCryptoHandshakeConfirmed());
+  // Lose the request.
+  SetPacketLossPercentage(100);
+  client_->SendRequest("/small_response");
+  // Cancel the stream, and let the RST_STREAM go through.
+  SetPacketLossPercentage(0);
+  QuicSpdyClientStream* stream = client_->GetOrCreateStream();
+  // Reset stream.
+  stream->Reset(QUIC_STREAM_CANCELLED);
+  QuicSession* session = client_->client()->session();
+  // Verify canceled stream does not become zombie.
+  EXPECT_TRUE(QuicSessionPeer::zombie_streams(session).empty());
+  EXPECT_EQ(1u, QuicSessionPeer::closed_streams(session).size());
 }
 
 // A test stream that gives |response_body_| as an error response body.

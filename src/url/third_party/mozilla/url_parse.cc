@@ -690,7 +690,7 @@ bool DoExtractQueryKeyValue(const CHAR* spec,
 
 }  // namespace
 
-Parsed::Parsed() : whitespace_removed(false), inner_parsed_(NULL) {}
+Parsed::Parsed() : potentially_dangling_markup(false), inner_parsed_(NULL) {}
 
 Parsed::Parsed(const Parsed& other)
     : scheme(other.scheme),
@@ -701,7 +701,7 @@ Parsed::Parsed(const Parsed& other)
       path(other.path),
       query(other.query),
       ref(other.ref),
-      whitespace_removed(other.whitespace_removed),
+      potentially_dangling_markup(other.potentially_dangling_markup),
       inner_parsed_(NULL) {
   if (other.inner_parsed_)
     set_inner_parsed(*other.inner_parsed_);
@@ -717,7 +717,7 @@ Parsed& Parsed::operator=(const Parsed& other) {
     path = other.path;
     query = other.query;
     ref = other.ref;
-    whitespace_removed = other.whitespace_removed;
+    potentially_dangling_markup = other.potentially_dangling_markup;
     if (other.inner_parsed_)
       set_inner_parsed(*other.inner_parsed_);
     else

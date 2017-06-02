@@ -6,40 +6,17 @@
 from core import perf_benchmark
 import page_sets
 
+from benchmarks import loading_metrics_category
 from telemetry import benchmark
 from telemetry.page import cache_temperature
 from telemetry.web_perf import timeline_based_measurement
-
-
-def AugmentOptionsForLoadingMetrics(tbm_options):
-  cat_filter = tbm_options.config.chrome_trace_config.category_filter
-
-  # "blink.console" is used for marking ranges in
-  # cache_temperature.MarkTelemetryInternal.
-  cat_filter.AddIncludedCategory('blink.console')
-
-  # "navigation" and "blink.user_timing" are needed to capture core
-  # navigation events.
-  cat_filter.AddIncludedCategory('navigation')
-  cat_filter.AddIncludedCategory('blink.user_timing')
-
-  # "loading" is needed for first-meaningful-paint computation.
-  cat_filter.AddIncludedCategory('loading')
-
-  # "toplevel" category is used to capture TaskQueueManager events
-  # necessary to compute time-to-interactive.
-  cat_filter.AddIncludedCategory('toplevel')
-
-  tbm_options.AddTimelineBasedMetric('loadingMetric')
-  return tbm_options
-
 
 class _OopifBase(perf_benchmark.PerfBenchmark):
   options = {'pageset_repeat': 2}
 
   def CreateTimelineBasedMeasurementOptions(self):
     tbm_options = timeline_based_measurement.Options()
-    AugmentOptionsForLoadingMetrics(tbm_options)
+    loading_metrics_category.AugmentOptionsForLoadingMetrics(tbm_options)
     return tbm_options
 
   @classmethod

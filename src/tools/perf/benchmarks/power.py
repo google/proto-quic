@@ -85,9 +85,8 @@ class IdlePlatformBenchmark(perf_benchmark.PerfBenchmark):
   def CreateTimelineBasedMeasurementOptions(self):
     options = timeline_based_measurement.Options(
         chrome_trace_category_filter.ChromeTraceCategoryFilter())
-    # Enable CPU tracing when the bug is resolved.
-    # https://github.com/catapult-project/catapult/issues/3463
     options.config.enable_battor_trace = True
+    options.config.enable_cpu_trace = True
     # Atrace tracing agent autodetects if its android and only runs if it is.
     options.config.enable_atrace_trace = True
     options.config.enable_chrome_trace = False

@@ -12,7 +12,6 @@
 #include <string>
 
 #include "base/compiler_specific.h"
-#include "base/debug/stack_trace.h"
 #include "base/files/file_path.h"
 #include "base/lazy_instance.h"
 #include "base/macros.h"
@@ -231,10 +230,6 @@ class URLFetcherCore : public base::RefCountedThreadSafe<URLFetcherCore>,
   // Check if any upload data is set or not.
   void AssertHasNoUploadData() const;
 
-  // Calls base::debug::DumpWithoutCrashing().
-  // TODO(xunjieli): Temporary to investigate crbug.com/711721.
-  void DumpWithoutCrashing() const;
-
   URLFetcher* fetcher_;              // Corresponding fetcher object
   GURL original_url_;                // The URL we were asked to fetch
   GURL url_;                         // The URL we eventually wound up at
@@ -354,10 +349,6 @@ class URLFetcherCore : public base::RefCountedThreadSafe<URLFetcherCore>,
   int64_t total_response_bytes_;
 
   const net::NetworkTrafficAnnotationTag traffic_annotation_;
-
-  // TODO(xunjieli): Temporary to investigate crbug.com/711721.
-  std::unique_ptr<base::debug::StackTrace> stack_trace_on_start_;
-  void const* stack_identifier_;
 
   static base::LazyInstance<Registry>::DestructorAtExit g_registry;
 

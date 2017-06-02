@@ -4,65 +4,14 @@
   <Type Name="gfx::Point">
     <AlternativeType Name="gfx::PointF"/>
     <DisplayString>({x_}, {y_})</DisplayString>
-    <Expand>
-      <Item Name="X">x_</Item>
-      <Item Name="Y">y_</Item>
-    </Expand>
   </Type>
   <Type Name="gfx::Size">
     <AlternativeType Name="gfx::SizeF"/>
     <DisplayString>({width_}, {height_})</DisplayString>
-    <Expand>
-      <Item Name="Width">width_</Item>
-      <Item Name="Height">height_</Item>
-    </Expand>
   </Type>
   <Type Name="gfx::Rect">
     <AlternativeType Name="gfx::RectF"/>
     <DisplayString>({origin_.x_}, {origin_.y_}) x ({size_.width_}, {size_.height_})</DisplayString>
-    <Expand>
-      <Item Name="Left">origin_.x_</Item>
-      <Item Name="Top">origin_.y_</Item>
-      <Item Name="Width">size_.width_</Item>
-      <Item Name="Height">size_.height_</Item>
-    </Expand>
-  </Type>
-  <Type Name="aura::Window::Value">
-    <DisplayString>{name,s}: {value}</DisplayString>
-    <Expand/>
-  </Type>
-  <Type Name="aura::Window">
-    <DisplayString>{name_,s}</DisplayString>
-    <Expand>
-      <Item Name="Name">name_</Item>
-      <Item Name="Id">id_</Item>
-      <Item Name="Parent">parent_</Item>
-      <Item Name="Children">children_</Item>
-      <Item Name="Bounds">bounds_</Item>
-      <Item Name="Type">type_</Item>
-      <Item Name="Visible">visible_</Item>
-      <Item Name="Transparent">transparent_</Item>
-      <!--<Synthetic Name="Property Map">
-        <DisplayString>Size = {prop_map_._Mysize}</DisplayString>
-        <Expand>
-          <TreeItems>
-            <Size>prop_map_._Mysize</Size>
-            <HeadPointer>prop_map_._Myhead-&gt;_Parent</HeadPointer>
-            <LeftPointer>_Left</LeftPointer>
-            <RightPointer>_Right</RightPointer>
-            <ValueNode Condition="_Isnil == 0">_Myval.second</ValueNode>
-          </TreeItems>
-        </Expand>
-      </Synthetic>-->
-      <Item Name="Layer">layer_</Item>
-    </Expand>
-  </Type>
-  <Type Name="scoped_ptr&lt;*,*&gt;">
-    <DisplayString Condition="impl_.data_.ptr == 0">null</DisplayString>
-    <DisplayString>{impl_.data_.ptr}</DisplayString>
-    <Expand>
-      <ExpandedItem>impl_.data_.ptr</ExpandedItem>
-    </Expand>
   </Type>
   <Type Name="scoped_refptr&lt;*&gt;">
     <DisplayString Condition="ptr_ == 0">null</DisplayString>
@@ -182,89 +131,48 @@
   </Type>
   <Type Name="GURL">
     <DisplayString>{spec_}</DisplayString>
+  </Type>
+  <Type Name="base::ManualConstructor&lt;*&gt;">
+    <!-- $T1 expands to the first "*" in the name which is the template
+         type. Use that to cast to the correct value. -->
+    <DisplayString>{*($T1*)space_.data_}</DisplayString>
     <Expand>
-      <Item Name="Spec">spec_</Item>
-      <Item Name="IsValid">is_valid_</Item>
-      <Synthetic Name="Scheme">
-        <DisplayString
-            Condition="parsed_.scheme.len==-1">undefined</DisplayString>
-        <DisplayString>spec_._Myres[parsed_.scheme.begin][</DisplayString>
-      </Synthetic>
-      <Synthetic Name="Username">
-        <DisplayString
-            Condition="parsed_.username.len==-1">undefined</DisplayString>
-        <DisplayString>spec_._Myres[parsed_.username.begin][</DisplayString>
-      </Synthetic>
-      <Synthetic Name="Password">
-        <DisplayString
-            Condition="parsed_.password.len==-1">undefined</DisplayString>
-        <DisplayString>spec_._Myres[parsed_.password.begin][</DisplayString>
-      </Synthetic>
-      <Synthetic Name="Host">
-        <DisplayString
-            Condition="parsed_.host.len==-1">undefined</DisplayString>
-        <DisplayString>spec_._Myres[parsed_.host.begin][</DisplayString>
-      </Synthetic>
-      <Synthetic Name="Port">
-        <DisplayString
-            Condition="parsed_.port.len==-1">undefined</DisplayString>
-        <DisplayString>spec_._Myres[parsed_.port.begin][</DisplayString>
-      </Synthetic>
-      <Synthetic Name="Path">
-        <DisplayString
-            Condition="parsed_.path.len==-1">undefined</DisplayString>
-        <DisplayString>spec_._Myres[parsed_.path.begin][</DisplayString>
-      </Synthetic>
-      <Synthetic Name="Query">
-        <DisplayString
-            Condition="parsed_.query.len==-1">undefined</DisplayString>
-        <DisplayString>spec_._Myres[parsed_.query.begin][</DisplayString>
-      </Synthetic>
-      <Synthetic Name="Ref">
-        <DisplayString Condition="parsed_.ref.len==-1">undefined</DisplayString>
-        <DisplayString>spec_._Myres[parsed_.ref.begin][</DisplayString>
-      </Synthetic>
+      <ExpandedItem>*($T1*)space_.data_</ExpandedItem>
+    </Expand>
+  </Type>
+  <Type Name="base::internal::flat_tree&lt;*&gt;">
+    <AlternativeType Name="base::flat_set&lt;*&gt;"/>
+    <DisplayString>{impl_.body_}</DisplayString>
+    <Expand>
+      <ExpandedItem>impl_.body_</ExpandedItem>
+    </Expand>
+  </Type>
+  <Type Name="base::flat_map&lt;*&gt;">
+    <DisplayString>{impl_.body_}</DisplayString>
+    <Expand>
+      <ExpandedItem>impl_.body_</ExpandedItem>
     </Expand>
   </Type>
   <Type Name="base::Value">
-    <DisplayString>{type_}</DisplayString>
+    <DisplayString Condition="type_ == NONE">NONE</DisplayString>
+    <DisplayString Condition="type_ == BOOLEAN">BOOLEAN {bool_value_}</DisplayString>
+    <DisplayString Condition="type_ == INTEGER">INTEGER {int_value_}</DisplayString>
+    <DisplayString Condition="type_ == DOUBLE">DOUBLE {double_value_}</DisplayString>
+    <DisplayString Condition="type_ == STRING">STRING {string_value_}</DisplayString>
+    <DisplayString Condition="type_ == BINARY">BINARY {binary_value_}</DisplayString>
+    <DisplayString Condition="type_ == DICTIONARY">DICTIONARY {dict_}</DisplayString>
+    <DisplayString Condition="type_ == LIST">LIST {list_}</DisplayString>
     <Expand>
-      <Item Name="Type">type_</Item>
-    </Expand>
-  </Type>
-  <Type Name="base::Value">
-    <DisplayString>Fundamental</DisplayString>
-    <Expand>
-      <ExpandedItem>(base::Value*)this,nd</ExpandedItem>
-      <Item Name="Int">integer_value_</Item>
-      <Item Name="Bool">boolean_value_</Item>
-      <Item Name="Double">double_value_</Item>
-    </Expand>
-  </Type>
-  <Type Name="base::Value">
-    <DisplayString>String ({value_})</DisplayString>
-    <Expand>
-      <ExpandedItem>(base::Value*)this,nd</ExpandedItem>
-      <Item Name="Value">value_</Item>
-    </Expand>
-  </Type>
-  <Type Name="base::BinaryValue">
-    <DisplayString>Binary ({size_} byte(s))</DisplayString>
-    <Expand>
-      <ExpandedItem>(base::Value*)this,nd</ExpandedItem>
-      <Item Name="Data">buffer_</Item>
-    </Expand>
-  </Type>
-  <Type Name="base::DictionaryValue">
-    <DisplayString>Dictionary ({dictionary_._Mysize} entries)</DisplayString>
-    <Expand>
-      <ExpandedItem>dictionary_</ExpandedItem>
-    </Expand>
-  </Type>
-  <Type Name="base::ListValue">
-    <DisplayString>List ({list_._Mysize} entries)</DisplayString>
-    <Expand>
-      <ExpandedItem>list_</ExpandedItem>
+      <Item Name="[type]">type_</Item>
+      <Item Condition="type_ == BOOLEAN" Name="[boolean]">bool_value_</Item>
+      <Item Condition="type_ == INTEGER" Name="[integer]">int_value_</Item>
+      <Item Condition="type_ == DOUBLE" Name="[double]">double_value_</Item>
+      <Item Condition="type_ == STRING" Name="[string]">string_value_</Item>
+      <Item Condition="type_ == BINARY" Name="[binary]">binary_value_</Item>
+      <!-- Put the members for dictionary and list directly inline without
+           requiring a separate expansion to view. -->
+      <ExpandedItem Condition="type_ == DICTIONARY">dict_</ExpandedItem>
+      <ExpandedItem Condition="type_ == LIST">list_</ExpandedItem>
     </Expand>
   </Type>
 </AutoVisualizer>

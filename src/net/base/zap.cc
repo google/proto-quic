@@ -22,4 +22,4 @@ void ZapString(base::string16* s) {
     ZapBuf(&(*s)[0], s->length() * sizeof(base::char16));
 }
 
-}  // net
+}  // namespace net

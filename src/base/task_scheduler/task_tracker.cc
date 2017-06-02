@@ -388,6 +388,10 @@ bool TaskTracker::IsPostingBlockShutdownTaskAfterShutdownAllowed() {
 }
 #endif
 
+int TaskTracker::GetNumPendingUndelayedTasksForTesting() const {
+  return subtle::NoBarrier_Load(&num_pending_undelayed_tasks_);
+}
+
 bool TaskTracker::BeforePostTask(TaskShutdownBehavior shutdown_behavior) {
   if (shutdown_behavior == TaskShutdownBehavior::BLOCK_SHUTDOWN) {
     // BLOCK_SHUTDOWN tasks block shutdown between the moment they are posted
@@ -401,12 +405,18 @@ bool TaskTracker::BeforePostTask(TaskShutdownBehavior shutdown_behavior) {
       // ordering bug. This aims to catch those early.
       DCHECK(shutdown_event_);
       if (shutdown_event_->IsSignaled()) {
+#if DCHECK_IS_ON()
+// clang-format off
         // TODO(robliao): http://crbug.com/698140. Since the service thread
         // doesn't stop processing its own tasks at shutdown, we may still
         // attempt to post a BLOCK_SHUTDOWN task in response to a
-        // FileDescriptorWatcher.
-#if DCHECK_IS_ON()
-        DCHECK(IsPostingBlockShutdownTaskAfterShutdownAllowed());
+        // FileDescriptorWatcher. Same is true for FilePathWatcher
+        // (http://crbug.com/728235). Until it's possible for such services to
+        // post to non-BLOCK_SHUTDOWN sequences which are themselves funneled to
+        // the main execution sequence (a future plan for the post_task.h API),
+        // this DCHECK will be flaky and must be disabled.
+        // DCHECK(IsPostingBlockShutdownTaskAfterShutdownAllowed());
+// clang-format on
 #endif
         state_->DecrementNumTasksBlockingShutdown();
         return false;

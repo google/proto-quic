@@ -97,6 +97,6 @@ class URLRequestSlowDownloadJob : public URLRequestJob {
   base::WeakPtrFactory<URLRequestSlowDownloadJob> weak_factory_;
 };
 
-}  // namespace content
+}  // namespace net
 
 #endif  // NET_TEST_URL_REQUEST_URL_REQUEST_SLOW_DOWNLOAD_JOB_H_

@@ -4,6 +4,7 @@
 
 import os
 
+from page_sets.system_health import chrome_stories
 from page_sets.system_health import platforms
 from page_sets.system_health import system_health_story
 
@@ -19,7 +20,8 @@ class SystemHealthStorySet(story.StorySet):
   def __init__(self, platform, case=None, take_memory_measurement=False):
     super(SystemHealthStorySet, self).__init__(
         archive_data_file=('../data/system_health_%s.json' % platform),
-        cloud_storage_bucket=story.PARTNER_BUCKET)
+        cloud_storage_bucket=story.PARTNER_BUCKET,
+        verify_names=True)
 
     assert platform in platforms.ALL_PLATFORMS
 
@@ -29,6 +31,14 @@ class SystemHealthStorySet(story.StorySet):
           case and not story_class.NAME.startswith(case + ':')):
         continue
       self.AddStory(story_class(self, take_memory_measurement))
+
+
+class SystemHealthBlankStorySet(story.StorySet):
+  """A story set containing the chrome:blank story only."""
+  def __init__(self, take_memory_measurement=False, verify_names=True):
+    super(SystemHealthBlankStorySet, self).__init__()
+    self.AddStory(
+        chrome_stories.BlankAboutBlankStory(self, take_memory_measurement))
 
 
 class DesktopSystemHealthStorySet(SystemHealthStorySet):

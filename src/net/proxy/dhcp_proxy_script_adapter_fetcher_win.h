@@ -14,7 +14,7 @@
 #include "base/memory/ref_counted.h"
 #include "base/memory/weak_ptr.h"
 #include "base/strings/string16.h"
-#include "base/threading/non_thread_safe.h"
+#include "base/threading/thread_checker.h"
 #include "base/timer/timer.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
@@ -32,8 +32,7 @@ class URLRequestContext;
 // For a given adapter, this class takes care of first doing a DHCP lookup
 // to get the PAC URL, then if there is one, trying to fetch it.
 class NET_EXPORT_PRIVATE DhcpProxyScriptAdapterFetcher
-    : public base::SupportsWeakPtr<DhcpProxyScriptAdapterFetcher>,
-      NON_EXPORTED_BASE(public base::NonThreadSafe) {
+    : public base::SupportsWeakPtr<DhcpProxyScriptAdapterFetcher> {
  public:
   // |url_request_context| must outlive DhcpProxyScriptAdapterFetcher.
   // |task_runner| will be used to post tasks to a thread.
@@ -184,6 +183,8 @@ class NET_EXPORT_PRIVATE DhcpProxyScriptAdapterFetcher
   base::OneShotTimer wait_timer_;
 
   URLRequestContext* const url_request_context_;
+
+  THREAD_CHECKER(thread_checker_);
 
   DISALLOW_IMPLICIT_CONSTRUCTORS(DhcpProxyScriptAdapterFetcher);
 };

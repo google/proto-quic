@@ -68,7 +68,7 @@ namespace weak_crypto {
  */
 void MD4Sum(const uint8_t* input, uint32_t inputLen, uint8_t* result);
 
-}  // namespace net::weak_crypto
+}  // namespace weak_crypto
 }  // namespace net
 
 #endif  // NET_HTTP_MD4_H_

@@ -95,6 +95,16 @@ struct VerifyCertChainTest {
   // The Key Purpose to use when verifying the chain.
   KeyPurpose key_purpose = KeyPurpose::ANY_EKU;
 
+  InitialExplicitPolicy initial_explicit_policy = InitialExplicitPolicy::kFalse;
+
+  std::set<der::Input> user_initial_policy_set;
+
+  InitialPolicyMappingInhibit initial_policy_mapping_inhibit =
+      InitialPolicyMappingInhibit::kFalse;
+
+  InitialAnyPolicyInhibit initial_any_policy_inhibit =
+      InitialAnyPolicyInhibit::kFalse;
+
   // The expected errors/warnings from verification (as a string).
   std::string expected_errors;
 

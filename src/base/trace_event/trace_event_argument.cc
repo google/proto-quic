@@ -361,14 +361,13 @@ std::unique_ptr<base::Value> TracedValue::ToBaseValue() const {
     DCHECK((cur_dict && !cur_list) || (cur_list && !cur_dict));
     switch (*type) {
       case kTypeStartDict: {
-        auto* new_dict = new DictionaryValue();
+        auto new_dict = base::MakeUnique<DictionaryValue>();
         if (cur_dict) {
-          cur_dict->SetWithoutPathExpansion(ReadKeyName(it),
-                                            WrapUnique(new_dict));
           stack.push_back(cur_dict);
-          cur_dict = new_dict;
+          cur_dict = cur_dict->SetDictionaryWithoutPathExpansion(
+              ReadKeyName(it), std::move(new_dict));
         } else {
-          cur_list->Append(WrapUnique(new_dict));
+          cur_list->Append(std::move(new_dict));
           // |new_dict| is invalidated at this point, so |cur_dict| needs to be
           // reset.
           cur_list->GetDictionary(cur_list->GetSize() - 1, &cur_dict);
@@ -388,17 +387,17 @@ std::unique_ptr<base::Value> TracedValue::ToBaseValue() const {
       } break;
 
       case kTypeStartArray: {
-        auto* new_list = new ListValue();
+        auto new_list = base::MakeUnique<ListValue>();
         if (cur_dict) {
-          cur_dict->SetWithoutPathExpansion(ReadKeyName(it),
-                                            WrapUnique(new_list));
           stack.push_back(cur_dict);
+          cur_list = cur_dict->SetListWithoutPathExpansion(ReadKeyName(it),
+                                                           std::move(new_list));
           cur_dict = nullptr;
-          cur_list = new_list;
         } else {
-          cur_list->Append(WrapUnique(new_list));
+          cur_list->Append(std::move(new_list));
           stack.push_back(cur_list);
-          // |cur_list| is invalidated at this point, so it needs to be reset.
+          // |cur_list| is invalidated at this point by the Append, so it needs
+          // to be reset.
           cur_list->GetList(cur_list->GetSize() - 1, &cur_list);
         }
       } break;

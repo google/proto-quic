@@ -1,7 +1,7 @@
 # Traffic Annotation Extrator
 This is a clang tool to extract network traffic annotations. The tool is run by
-`tools/traffic_annotation/auditor/traffic_annotaion_auditor.py`. Refer to it for
-help on how to use.
+`tools/traffic_annotation/auditor/traffic_annotation_auditor.py`. Refer to it
+for help on how to use.
 
 ## Build on Linux
 `tools/clang/scripts/update.py --bootstrap --force-local-build
@@ -16,11 +16,35 @@ help on how to use.
 
 ## Usage
 Run `traffic_annotation_extractor --help` for parameters help.
-The executable extracts network traffic annotations from given file paths based
-  on build parameters in build path, and writes them to llvm::outs.
-  Each output will have the following format:
-  - Line 1: File path.
-  - Line 2: Name of the function in which annotation is defined.
-  - Line 3: Line number of annotation.
-  - Line 4: Unique id of annotation.
-  - Line 5-: Serialized protobuf of the annotation.
+
+Example for direct call:
+  `third_party/llvm-build/Release+Asserts/bin/traffic_annotation_extractor
+     -p=out/Debug components/spellcheck/browser/spelling_service_client.cc`
+
+Example for call using run_tool.py:
+  `tools/clang/scripts/run_tool.py --tool=traffic_annotation_extractor
+     --generate-compdb -p=out/Debug components/spellcheck/browser`
+
+The executable extracts network traffic annotations and calls to network request
+  generation functions from given file paths based on build parameters in build
+  path, and writes them to llvm::outs.
+
+Each annotation output will have the following format:
+  - Line 1: "==== NEW ANNOTATION ===="
+  - Line 2: File path.
+  - Line 3: Name of the function in which the annotation is defined.
+  - Line 4: Line number of the annotation.
+  - Line 5: Function type ("Definition", "Partial", "Completing",
+            "BranchedCompleting").
+  - Line 6: Unique id of annotation.
+  - Line 7: Completing id or group id, when applicable, empty otherwise.
+  - Line 8-: Serialized protobuf of the annotation. (Several lines)
+  - Last line:  "==== ANNOTATION ENDS ===="
+
+Each function call output will have the following format:
+  - Line 1: "==== NEW CALL ===="
+  - Line 2: File path.
+  - Line 3: Name of the function in which the call is made.
+  - Line 4: Name of the called function.
+  - Line 5: Does the call have an annotation?
+  - Line 6: "==== CALL ENDS ===="

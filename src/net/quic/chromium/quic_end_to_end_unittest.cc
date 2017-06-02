@@ -56,8 +56,10 @@ const char kResponseBody[] = "some arbitrary response body";
 // Factory for creating HttpTransactions, used by TestTransactionConsumer.
 class TestTransactionFactory : public HttpTransactionFactory {
  public:
-  explicit TestTransactionFactory(const HttpNetworkSession::Params& params)
-      : session_(new HttpNetworkSession(params)) {}
+  explicit TestTransactionFactory(
+      const HttpNetworkSession::Params& session_params,
+      const HttpNetworkSession::Context& session_context)
+      : session_(new HttpNetworkSession(session_params, session_context)) {}
 
   ~TestTransactionFactory() override {}
 
@@ -108,23 +110,25 @@ class QuicEndToEndTest : public ::testing::TestWithParam<TestParams> {
     request_.url = GURL("https://test.example.com/");
     request_.load_flags = 0;
 
-    params_.enable_quic = true;
-    params_.quic_random = nullptr;
+    session_params_.enable_quic = true;
     if (GetParam().use_stateless_rejects) {
-      params_.quic_connection_options.push_back(kSREJ);
+      session_params_.quic_connection_options.push_back(kSREJ);
     }
-    params_.host_resolver = &host_resolver_;
-    params_.cert_verifier = &cert_verifier_;
-    params_.transport_security_state = &transport_security_state_;
-    params_.cert_transparency_verifier = cert_transparency_verifier_.get();
-    params_.ct_policy_enforcer = &ct_policy_enforcer_;
-    params_.proxy_service = proxy_service_.get();
-    params_.ssl_config_service = ssl_config_service_.get();
-    params_.http_auth_handler_factory = auth_handler_factory_.get();
-    params_.http_server_properties = &http_server_properties_;
+
+    session_context_.quic_random = nullptr;
+    session_context_.host_resolver = &host_resolver_;
+    session_context_.cert_verifier = &cert_verifier_;
+    session_context_.transport_security_state = &transport_security_state_;
+    session_context_.cert_transparency_verifier =
+        cert_transparency_verifier_.get();
+    session_context_.ct_policy_enforcer = &ct_policy_enforcer_;
+    session_context_.proxy_service = proxy_service_.get();
+    session_context_.ssl_config_service = ssl_config_service_.get();
+    session_context_.http_auth_handler_factory = auth_handler_factory_.get();
+    session_context_.http_server_properties = &http_server_properties_;
     channel_id_service_.reset(
         new ChannelIDService(new DefaultChannelIDStore(nullptr)));
-    params_.channel_id_service = channel_id_service_.get();
+    session_context_.channel_id_service = channel_id_service_.get();
 
     CertVerifyResult verify_result;
     verify_result.verified_cert = ImportCertFromFile(
@@ -158,10 +162,11 @@ class QuicEndToEndTest : public ::testing::TestWithParam<TestParams> {
 
     // To simplify the test, and avoid the race with the HTTP request, we force
     // QUIC for these requests.
-    params_.origins_to_force_quic_on.insert(
+    session_params_.origins_to_force_quic_on.insert(
         HostPortPair::FromString("test.example.com:443"));
 
-    transaction_factory_.reset(new TestTransactionFactory(params_));
+    transaction_factory_.reset(
+        new TestTransactionFactory(session_params_, session_context_));
   }
 
   void TearDown() override {}
@@ -239,7 +244,8 @@ class QuicEndToEndTest : public ::testing::TestWithParam<TestParams> {
   std::unique_ptr<ProxyService> proxy_service_;
   std::unique_ptr<HttpAuthHandlerFactory> auth_handler_factory_;
   HttpServerPropertiesImpl http_server_properties_;
-  HttpNetworkSession::Params params_;
+  HttpNetworkSession::Params session_params_;
+  HttpNetworkSession::Context session_context_;
   std::unique_ptr<TestTransactionFactory> transaction_factory_;
   HttpRequestInfo request_;
   std::string request_body_;
@@ -275,8 +281,9 @@ TEST_P(QuicEndToEndTest, LargeGetWithNoPacketLoss) {
 
 TEST_P(QuicEndToEndTest, TokenBinding) {
   // Enable token binding and re-initialize the TestTransactionFactory.
-  params_.enable_token_binding = true;
-  transaction_factory_.reset(new TestTransactionFactory(params_));
+  session_params_.enable_token_binding = true;
+  transaction_factory_.reset(
+      new TestTransactionFactory(session_params_, session_context_));
 
   AddToCache(request_.url.PathForRequest(), 200, "OK", kResponseBody);
 

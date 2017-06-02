@@ -12,7 +12,7 @@
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/message_loop/message_loop.h"
-#include "base/threading/non_thread_safe.h"
+#include "base/threading/thread_checker.h"
 #include "net/base/address_family.h"
 #include "net/base/completion_callback.h"
 #include "net/base/io_buffer.h"
@@ -31,7 +31,7 @@ class IPAddress;
 class NetLog;
 struct NetLogSource;
 
-class NET_EXPORT UDPSocketPosix : public base::NonThreadSafe {
+class NET_EXPORT UDPSocketPosix {
  public:
   UDPSocketPosix(DatagramSocket::BindType bind_type,
                  const RandIntCallback& rand_int_cb,
@@ -320,6 +320,8 @@ class NET_EXPORT UDPSocketPosix : public base::NonThreadSafe {
 
   // Network that this socket is bound to via BindToNetwork().
   NetworkChangeNotifier::NetworkHandle bound_network_;
+
+  THREAD_CHECKER(thread_checker_);
 
   DISALLOW_COPY_AND_ASSIGN(UDPSocketPosix);
 };

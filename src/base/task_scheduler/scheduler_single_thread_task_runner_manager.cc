@@ -246,8 +246,12 @@ class SchedulerSingleThreadTaskRunnerManager::SchedulerSingleThreadTaskRunner
   SchedulerSingleThreadTaskRunner(
       SchedulerSingleThreadTaskRunnerManager* const outer,
       const TaskTraits& traits,
-      SchedulerWorker* worker)
-      : outer_(outer), traits_(traits), worker_(worker) {
+      SchedulerWorker* worker,
+      SingleThreadTaskRunnerThreadMode thread_mode)
+      : outer_(outer),
+        traits_(traits),
+        worker_(worker),
+        thread_mode_(thread_mode) {
     DCHECK(outer_);
     DCHECK(worker_);
   }
@@ -285,12 +289,16 @@ class SchedulerSingleThreadTaskRunnerManager::SchedulerSingleThreadTaskRunner
 
  private:
   ~SchedulerSingleThreadTaskRunner() override {
-    // Note: This will crash if SchedulerSingleThreadTaskRunnerManager is
-    // incorrectly destroyed first in tests (in production the TaskScheduler and
-    // all of its state are intentionally leaked after
-    // TaskScheduler::Shutdown(). See ~SchedulerSingleThreadTaskRunnerManager()
-    // for more details.
-    outer_->UnregisterSchedulerWorker(worker_);
+    // Only unregister if this is a DEDICATED SingleThreadTaskRunner. SHARED
+    // task runner SchedulerWorkers are managed separately as they are reused.
+    if (thread_mode_ == SingleThreadTaskRunnerThreadMode::DEDICATED) {
+      // Note: This will crash if SchedulerSingleThreadTaskRunnerManager is
+      // incorrectly destroyed first in tests (in production the TaskScheduler
+      // and all of its state are intentionally leaked after
+      // TaskScheduler::Shutdown(). See
+      // ~SchedulerSingleThreadTaskRunnerManager() for more details.
+      outer_->UnregisterSchedulerWorker(worker_);
+    }
   }
 
   void PostTaskNow(std::unique_ptr<Task> task) {
@@ -314,6 +322,7 @@ class SchedulerSingleThreadTaskRunnerManager::SchedulerSingleThreadTaskRunner
   SchedulerSingleThreadTaskRunnerManager* const outer_;
   const TaskTraits traits_;
   SchedulerWorker* const worker_;
+  const SingleThreadTaskRunnerThreadMode thread_mode_;
 
   DISALLOW_COPY_AND_ASSIGN(SchedulerSingleThreadTaskRunner);
 };
@@ -324,6 +333,12 @@ SchedulerSingleThreadTaskRunnerManager::SchedulerSingleThreadTaskRunnerManager(
     : task_tracker_(task_tracker), delayed_task_manager_(delayed_task_manager) {
   DCHECK(task_tracker_);
   DCHECK(delayed_task_manager_);
+#if defined(OS_WIN)
+  static_assert(arraysize(shared_com_scheduler_workers_) ==
+                    arraysize(shared_scheduler_workers_),
+                "The size of |shared_com_scheduler_workers_| must match "
+                "|shared_scheduler_workers_|");
+#endif  // defined(OS_WIN)
 }
 
 SchedulerSingleThreadTaskRunnerManager::
@@ -375,24 +390,74 @@ void SchedulerSingleThreadTaskRunnerManager::Start() {
 scoped_refptr<SingleThreadTaskRunner>
 SchedulerSingleThreadTaskRunnerManager::CreateSingleThreadTaskRunnerWithTraits(
     const std::string& name,
-    ThreadPriority priority_hint,
-    const TaskTraits& traits) {
-  return CreateSingleThreadTaskRunnerWithDelegate<SchedulerWorkerDelegate>(
-      name, priority_hint, traits);
+    const TaskTraits& traits,
+    SingleThreadTaskRunnerThreadMode thread_mode) {
+  return CreateTaskRunnerWithTraitsImpl<SchedulerWorkerDelegate>(name, traits,
+                                                                 thread_mode);
 }
 
 #if defined(OS_WIN)
 scoped_refptr<SingleThreadTaskRunner>
 SchedulerSingleThreadTaskRunnerManager::CreateCOMSTATaskRunnerWithTraits(
     const std::string& name,
-    ThreadPriority priority_hint,
-    const TaskTraits& traits) {
-  return CreateSingleThreadTaskRunnerWithDelegate<SchedulerWorkerCOMDelegate>(
-      name, priority_hint, traits);
+    const TaskTraits& traits,
+    SingleThreadTaskRunnerThreadMode thread_mode) {
+  return CreateTaskRunnerWithTraitsImpl<SchedulerWorkerCOMDelegate>(
+      name, traits, thread_mode);
 }
 #endif  // defined(OS_WIN)
 
+template <typename DelegateType>
+scoped_refptr<
+    SchedulerSingleThreadTaskRunnerManager::SchedulerSingleThreadTaskRunner>
+SchedulerSingleThreadTaskRunnerManager::CreateTaskRunnerWithTraitsImpl(
+    const std::string& name,
+    const TaskTraits& traits,
+    SingleThreadTaskRunnerThreadMode thread_mode) {
+  DCHECK(thread_mode != SingleThreadTaskRunnerThreadMode::SHARED ||
+         !traits.with_base_sync_primitives())
+      << "Using WithBaseSyncPrimitives() on a shared SingleThreadTaskRunner "
+         "may cause deadlocks. Either reevaluate your usage (e.g. use "
+         "SequencedTaskRunner) or use "
+         "SingleThreadTaskRunnerThreadMode::DEDICATED.";
+  // To simplify the code, |dedicated_worker| is a local only variable that
+  // allows the code to treat both the DEDICATED and SHARED cases similarly for
+  // SingleThreadTaskRunnerThreadMode. In DEDICATED, the scoped_refptr is backed
+  // by a local variable and in SHARED, the scoped_refptr is backed by a member
+  // variable.
+  SchedulerWorker* dedicated_worker = nullptr;
+  SchedulerWorker*& worker =
+      thread_mode == SingleThreadTaskRunnerThreadMode::DEDICATED
+          ? dedicated_worker
+          : GetSharedSchedulerWorkerForTraits<DelegateType>(traits);
+  bool new_worker = false;
+  bool started;
+  {
+    AutoSchedulerLock auto_lock(lock_);
+    if (!worker) {
+      const auto& environment_params =
+          kEnvironmentParams[GetEnvironmentIndexForTraits(traits)];
+      std::string processed_name =
+          thread_mode == SingleThreadTaskRunnerThreadMode::DEDICATED
+              ? name + environment_params.name_suffix
+              : "Shared" + name + environment_params.name_suffix;
+      worker = CreateAndRegisterSchedulerWorker<DelegateType>(
+          processed_name, environment_params.priority_hint);
+      new_worker = true;
+    }
+    started = started_;
+  }
+
+  if (new_worker && started)
+    worker->Start();
+
+  return MakeRefCounted<SchedulerSingleThreadTaskRunner>(this, traits, worker,
+                                                         thread_mode);
+}
+
 void SchedulerSingleThreadTaskRunnerManager::JoinForTesting() {
+  ReleaseSharedSchedulerWorkers();
+
   decltype(workers_) local_workers;
   {
     AutoSchedulerLock auto_lock(lock_);
@@ -408,16 +473,6 @@ void SchedulerSingleThreadTaskRunnerManager::JoinForTesting() {
         << "New worker(s) unexpectedly registered during join.";
     workers_ = std::move(local_workers);
   }
-}
-
-template <typename DelegateType>
-scoped_refptr<SingleThreadTaskRunner> SchedulerSingleThreadTaskRunnerManager::
-    CreateSingleThreadTaskRunnerWithDelegate(const std::string& name,
-                                             ThreadPriority priority_hint,
-                                             const TaskTraits& traits) {
-  return new SchedulerSingleThreadTaskRunner(
-      this, traits,
-      CreateAndRegisterSchedulerWorker<DelegateType>(name, priority_hint));
 }
 
 template <>
@@ -444,24 +499,29 @@ SchedulerWorker*
 SchedulerSingleThreadTaskRunnerManager::CreateAndRegisterSchedulerWorker(
     const std::string& name,
     ThreadPriority priority_hint) {
-  SchedulerWorker* worker;
-  bool start_worker;
-
-  {
-    AutoSchedulerLock auto_lock(lock_);
-    int id = next_worker_id_++;
-    workers_.emplace_back(make_scoped_refptr(new SchedulerWorker(
-        priority_hint, CreateSchedulerWorkerDelegate<DelegateType>(name, id),
-        task_tracker_)));
-    worker = workers_.back().get();
-    start_worker = started_;
-  }
-
-  if (start_worker)
-    worker->Start();
-
-  return worker;
+  lock_.AssertAcquired();
+  int id = next_worker_id_++;
+  workers_.emplace_back(make_scoped_refptr(new SchedulerWorker(
+      priority_hint, CreateSchedulerWorkerDelegate<DelegateType>(name, id),
+      task_tracker_)));
+  return workers_.back().get();
 }
+
+template <>
+SchedulerWorker*&
+SchedulerSingleThreadTaskRunnerManager::GetSharedSchedulerWorkerForTraits<
+    SchedulerWorkerDelegate>(const TaskTraits& traits) {
+  return shared_scheduler_workers_[GetEnvironmentIndexForTraits(traits)];
+}
+
+#if defined(OS_WIN)
+template <>
+SchedulerWorker*&
+SchedulerSingleThreadTaskRunnerManager::GetSharedSchedulerWorkerForTraits<
+    SchedulerWorkerCOMDelegate>(const TaskTraits& traits) {
+  return shared_com_scheduler_workers_[GetEnvironmentIndexForTraits(traits)];
+}
+#endif  // defined(OS_WIN)
 
 void SchedulerSingleThreadTaskRunnerManager::UnregisterSchedulerWorker(
     SchedulerWorker* worker) {
@@ -490,6 +550,33 @@ void SchedulerSingleThreadTaskRunnerManager::UnregisterSchedulerWorker(
     workers_.erase(worker_iter);
   }
   worker_to_destroy->Cleanup();
+}
+
+void SchedulerSingleThreadTaskRunnerManager::ReleaseSharedSchedulerWorkers() {
+  decltype(shared_scheduler_workers_) local_shared_scheduler_workers;
+#if defined(OS_WIN)
+  decltype(shared_com_scheduler_workers_) local_shared_com_scheduler_workers;
+#endif
+  {
+    AutoSchedulerLock auto_lock(lock_);
+    for (size_t i = 0; i < arraysize(shared_scheduler_workers_); ++i) {
+      local_shared_scheduler_workers[i] = shared_scheduler_workers_[i];
+      shared_scheduler_workers_[i] = nullptr;
+#if defined(OS_WIN)
+      local_shared_com_scheduler_workers[i] = shared_com_scheduler_workers_[i];
+      shared_com_scheduler_workers_[i] = nullptr;
+#endif
+    }
+  }
+
+  for (size_t i = 0; i < arraysize(local_shared_scheduler_workers); ++i) {
+    if (local_shared_scheduler_workers[i])
+      UnregisterSchedulerWorker(local_shared_scheduler_workers[i]);
+#if defined(OS_WIN)
+    if (local_shared_com_scheduler_workers[i])
+      UnregisterSchedulerWorker(local_shared_com_scheduler_workers[i]);
+#endif
+  }
 }
 
 }  // namespace internal

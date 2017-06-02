@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import contextlib
 import logging
 import os
 import posixpath
@@ -50,10 +51,16 @@ TIMEOUT_ANNOTATIONS = [
   ('SmallTest', 1 * 60),
 ]
 
-LOGCAT_FILTERS = ['*:e', 'chromium:v', 'cr_*:v', 'DEBUG:I']
+LOGCAT_FILTERS = ['*:e', 'chromium:v', 'cr_*:v', 'DEBUG:I',
+                  'StrictMode:D', '%s:I' % _TAG]
 
 EXTRA_SCREENSHOT_FILE = (
     'org.chromium.base.test.ScreenshotOnFailureStatement.ScreenshotFile')
+
+EXTRA_UI_CAPTURE_DIR = (
+    'org.chromium.base.test.util.Screenshooter.ScreenshotDir')
+
+UI_CAPTURE_DIRS = ['chromium_tests_root', 'UiCapture']
 
 FEATURE_ANNOTATION = 'Feature'
 RENDER_TEST_FEATURE_ANNOTATION = 'RenderTest'
@@ -64,6 +71,18 @@ RE_RENDER_IMAGE_NAME = re.compile(
       r'(?P<description>\w+)\.'
       r'(?P<device_model>\w+)\.'
       r'(?P<orientation>port|land)\.png')
+
+@contextlib.contextmanager
+def _LogTestEndpoints(device, test_name):
+  device.RunShellCommand(
+      ['log', '-p', 'i', '-t', _TAG, 'START %s' % test_name],
+      check_return=True)
+  try:
+    yield
+  finally:
+    device.RunShellCommand(
+        ['log', '-p', 'i', '-t', _TAG, 'END %s' % test_name],
+        check_return=True)
 
 # TODO(jbudorick): Make this private once the instrumentation test_runner is
 # deprecated.
@@ -92,6 +111,7 @@ class LocalDeviceInstrumentationTestRun(
   def __init__(self, env, test_instance):
     super(LocalDeviceInstrumentationTestRun, self).__init__(env, test_instance)
     self._flag_changers = {}
+    self._ui_capture_dir = dict()
 
   #override
   def TestPackage(self):
@@ -216,8 +236,20 @@ class LocalDeviceInstrumentationTestRun(
         valgrind_tools.SetChromeTimeoutScale(
             dev, self._test_instance.timeout_scale)
 
+      @trace_event.traced
+      def setup_ui_capture_dir():
+        # Make sure the UI capture directory exists and is empty by deleting
+        # and recreating it.
+        # TODO (aberent) once DeviceTempDir exists use it here.
+        self._ui_capture_dir[dev] = posixpath.join(dev.GetExternalStoragePath(),
+                                              *UI_CAPTURE_DIRS)
+
+        if dev.PathExists(self._ui_capture_dir[dev]):
+          dev.RunShellCommand(['rm', '-rf', self._ui_capture_dir[dev]])
+        dev.RunShellCommand(['mkdir', self._ui_capture_dir[dev]])
+
       steps += [set_debug_app, edit_shared_prefs, push_test_data,
-                create_flag_changer]
+                create_flag_changer, setup_ui_capture_dir]
       if self._env.concurrent_adb:
         reraiser_thread.RunAsync(steps)
       else:
@@ -243,6 +275,20 @@ class LocalDeviceInstrumentationTestRun(
       dev.RunShellCommand(['am', 'clear-debug-app'], check_return=True)
 
       valgrind_tools.SetChromeTimeoutScale(dev, None)
+
+      if self._test_instance.ui_screenshot_dir:
+        pull_ui_screen_captures(dev)
+
+    @trace_event.traced
+    def pull_ui_screen_captures(dev):
+      file_names = dev.ListDirectory(self._ui_capture_dir[dev])
+      target_path = self._test_instance.ui_screenshot_dir
+      if not os.path.exists(target_path):
+        os.makedirs(target_path)
+
+      for file_name in file_names:
+        dev.PullFile(posixpath.join(self._ui_capture_dir[dev], file_name),
+                     target_path)
 
     self._env.parallel_devices.pMap(individual_device_tear_down)
 
@@ -291,6 +337,8 @@ class LocalDeviceInstrumentationTestRun(
       screenshot_device_file = device_temp_file.DeviceTempFile(
           device.adb, suffix='.png', dir=device.GetExternalStoragePath())
       extras[EXTRA_SCREENSHOT_FILE] = screenshot_device_file.name
+
+    extras[EXTRA_UI_CAPTURE_DIR] = self._ui_capture_dir[device]
 
     if isinstance(test, list):
       if not self._test_instance.driver_apk:
@@ -354,38 +402,32 @@ class LocalDeviceInstrumentationTestRun(
       self._flag_changers[str(device)].PushFlags(
         add=flags_to_add, remove=flags_to_remove)
 
-    try:
-      device.RunShellCommand(
-          ['log', '-p', 'i', '-t', _TAG, 'START %s' % test_name],
-          check_return=True)
-      time_ms = lambda: int(time.time() * 1e3)
-      start_ms = time_ms()
+    time_ms = lambda: int(time.time() * 1e3)
+    start_ms = time_ms()
 
-      stream_name = 'logcat_%s_%s_%s' % (
-          test_name.replace('#', '.'),
-          time.strftime('%Y%m%dT%H%M%S-UTC', time.gmtime()),
-          device.serial)
-      logmon = logdog_logcat_monitor.LogdogLogcatMonitor(
-          device.adb, stream_name, filter_specs=LOGCAT_FILTERS)
+    stream_name = 'logcat_%s_%s_%s' % (
+        test_name.replace('#', '.'),
+        time.strftime('%Y%m%dT%H%M%S-UTC', time.gmtime()),
+        device.serial)
+    logmon = logdog_logcat_monitor.LogdogLogcatMonitor(
+        device.adb, stream_name, filter_specs=LOGCAT_FILTERS)
 
-      with contextlib_ext.Optional(
-          logmon, self._test_instance.should_save_logcat):
+    with contextlib_ext.Optional(
+        logmon, self._test_instance.should_save_logcat):
+      with _LogTestEndpoints(device, test_name):
         with contextlib_ext.Optional(
             trace_event.trace(test_name),
             self._env.trace_output):
           output = device.StartInstrumentation(
               target, raw=True, extras=extras, timeout=timeout, retries=0)
-      logcat_url = logmon.GetLogcatURL()
-    finally:
-      device.RunShellCommand(
-          ['log', '-p', 'i', '-t', _TAG, 'END %s' % test_name],
-          check_return=True)
-      duration_ms = time_ms() - start_ms
-      if flags_to_add or flags_to_remove:
-        self._flag_changers[str(device)].Restore()
-      if test_timeout_scale:
-        valgrind_tools.SetChromeTimeoutScale(
-            device, self._test_instance.timeout_scale)
+
+    logcat_url = logmon.GetLogcatURL()
+    duration_ms = time_ms() - start_ms
+    if flags_to_add or flags_to_remove:
+      self._flag_changers[str(device)].Restore()
+    if test_timeout_scale:
+      valgrind_tools.SetChromeTimeoutScale(
+          device, self._test_instance.timeout_scale)
 
     # TODO(jbudorick): Make instrumentation tests output a JSON so this
     # doesn't have to parse the output.

@@ -83,6 +83,14 @@ clang_toolchain("clang_x86_v8_mipsel") {
   }
 }
 
+clang_toolchain("clang_x86_v8_mips") {
+  toolchain_args = {
+    current_cpu = "x86"
+    v8_current_cpu = "mips"
+    current_os = "linux"
+  }
+}
+
 gcc_toolchain("x86") {
   cc = "gcc"
   cxx = "g++"
@@ -124,6 +132,14 @@ clang_toolchain("clang_x64_v8_mips64el") {
   toolchain_args = {
     current_cpu = "x64"
     v8_current_cpu = "mips64el"
+    current_os = "linux"
+  }
+}
+
+clang_toolchain("clang_x64_v8_mips64") {
+  toolchain_args = {
+    current_cpu = "x64"
+    v8_current_cpu = "mips64"
     current_os = "linux"
   }
 }
@@ -198,6 +214,38 @@ gcc_toolchain("ppc64") {
 
   toolchain_args = {
     current_cpu = "ppc64"
+    current_os = "linux"
+    is_clang = false
+  }
+}
+
+gcc_toolchain("mips") {
+  cc = "gcc"
+  cxx = "g++"
+
+  readelf = "readelf"
+  nm = "nm"
+  ar = "ar"
+  ld = cxx
+
+  toolchain_args = {
+    current_cpu = "mips"
+    current_os = "linux"
+    is_clang = false
+  }
+}
+
+gcc_toolchain("mips64") {
+  cc = "gcc"
+  cxx = "g++"
+
+  readelf = "readelf"
+  nm = "nm"
+  ar = "ar"
+  ld = cxx
+
+  toolchain_args = {
+    current_cpu = "mips64"
     current_os = "linux"
     is_clang = false
   }

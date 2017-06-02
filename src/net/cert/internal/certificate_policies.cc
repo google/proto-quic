@@ -96,6 +96,16 @@ der::Input InhibitAnyPolicyOid() {
   return der::Input(oid);
 }
 
+der::Input PolicyMappingsOid() {
+  // From RFC 5280:
+  //
+  //     id-ce-policyMappings OBJECT IDENTIFIER ::=  { id-ce 33 }
+  //
+  // In dotted notation: 2.5.29.33
+  static const uint8_t oid[] = {0x55, 0x1d, 0x21};
+  return der::Input(oid);
+}
+
 // RFC 5280 section 4.2.1.4.  Certificate Policies:
 //
 // certificatePolicies ::= SEQUENCE SIZE (1..MAX) OF PolicyInformation
@@ -263,6 +273,51 @@ bool ParseInhibitAnyPolicy(const der::Input& inhibit_any_policy_tlv,
     return false;
 
   // There should be no remaining data.
+  if (parser.HasMore())
+    return false;
+
+  return true;
+}
+
+// From RFC 5280:
+//
+//   PolicyMappings ::= SEQUENCE SIZE (1..MAX) OF SEQUENCE {
+//        issuerDomainPolicy      CertPolicyId,
+//        subjectDomainPolicy     CertPolicyId }
+bool ParsePolicyMappings(const der::Input& policy_mappings_tlv,
+                         std::vector<ParsedPolicyMapping>* mappings) {
+  mappings->clear();
+
+  der::Parser parser(policy_mappings_tlv);
+
+  //   PolicyMappings ::= SEQUENCE SIZE (1..MAX) OF SEQUENCE {
+  der::Parser sequence_parser;
+  if (!parser.ReadSequence(&sequence_parser))
+    return false;
+
+  // Must be at least 1 mapping.
+  if (!sequence_parser.HasMore())
+    return false;
+
+  while (sequence_parser.HasMore()) {
+    der::Parser mapping_parser;
+    if (!sequence_parser.ReadSequence(&mapping_parser))
+      return false;
+
+    ParsedPolicyMapping mapping;
+    if (!mapping_parser.ReadTag(der::kOid, &mapping.issuer_domain_policy))
+      return false;
+    if (!mapping_parser.ReadTag(der::kOid, &mapping.subject_domain_policy))
+      return false;
+
+    // There shouldn't be extra unconsumed data.
+    if (mapping_parser.HasMore())
+      return false;
+
+    mappings->push_back(mapping);
+  }
+
+  // There shouldn't be extra unconsumed data.
   if (parser.HasMore())
     return false;
 

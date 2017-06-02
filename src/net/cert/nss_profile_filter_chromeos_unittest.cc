@@ -68,7 +68,7 @@ CertificateList ListCertsInSlot(PK11SlotInfo* slot) {
   return result;
 }
 
-}
+}  // anonymous namespace
 
 class NSSProfileFilterChromeOSTest : public testing::Test {
  public:

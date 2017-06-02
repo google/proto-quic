@@ -112,7 +112,7 @@ class ChannelIDServiceWorker {
 
   // Starts the worker asynchronously.
   void Start(const scoped_refptr<base::TaskRunner>& task_runner) {
-    DCHECK(origin_task_runner_->RunsTasksOnCurrentThread());
+    DCHECK(origin_task_runner_->RunsTasksInCurrentSequence());
 
     auto callback = base::Bind(&ChannelIDServiceWorker::Run, base::Owned(this));
 
@@ -261,6 +261,7 @@ ChannelIDService::ChannelIDService(ChannelIDStore* channel_id_store)
       weak_ptr_factory_(this) {}
 
 ChannelIDService::~ChannelIDService() {
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 }
 
 // static
@@ -279,7 +280,7 @@ int ChannelIDService::GetOrCreateChannelID(
     const CompletionCallback& callback,
     Request* out_req) {
   DVLOG(1) << __func__ << " " << host;
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   if (callback.is_null() || !key || host.empty()) {
     RecordGetChannelIDResult(INVALID_ARGUMENT);
@@ -328,7 +329,7 @@ int ChannelIDService::GetChannelID(const std::string& host,
                                    const CompletionCallback& callback,
                                    Request* out_req) {
   DVLOG(1) << __func__ << " " << host;
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   if (callback.is_null() || !key || host.empty()) {
     RecordGetChannelIDResult(INVALID_ARGUMENT);
@@ -357,7 +358,7 @@ int ChannelIDService::GetChannelID(const std::string& host,
 void ChannelIDService::GotChannelID(int err,
                                     const std::string& server_identifier,
                                     std::unique_ptr<crypto::ECPrivateKey> key) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   auto j = inflight_.find(server_identifier);
   if (j == inflight_.end()) {
@@ -397,7 +398,7 @@ void ChannelIDService::GeneratedChannelID(
     const std::string& server_identifier,
     int error,
     std::unique_ptr<ChannelIDStore::ChannelID> channel_id) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   std::unique_ptr<crypto::ECPrivateKey> key;
   if (error == OK) {
@@ -410,7 +411,7 @@ void ChannelIDService::GeneratedChannelID(
 void ChannelIDService::HandleResult(int error,
                                     const std::string& server_identifier,
                                     std::unique_ptr<crypto::ECPrivateKey> key) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   auto j = inflight_.find(server_identifier);
   if (j == inflight_.end()) {

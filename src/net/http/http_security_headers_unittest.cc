@@ -57,7 +57,7 @@ std::string GetTestPinUnquoted(uint8_t label, HashValueTag tag) {
   return GetTestPinImpl(label, tag, false);
 }
 
-};
+}  // anonymous namespace
 
 // Parses the given header |value| as both a Public-Key-Pins-Report-Only
 // and Public-Key-Pins header. Returns true if the value parses
@@ -994,8 +994,6 @@ TEST_F(HttpSecurityHeadersTest, BogusExpectCTHeaders) {
                                    &max_age, &enforce, &report_uri));
   EXPECT_FALSE(ParseExpectCTHeader("max-age=999, report-uri=\"foo;bar\"",
                                    &max_age, &enforce, &report_uri));
-  EXPECT_FALSE(ParseExpectCTHeader("max-age=999, report-uri=http://blah",
-                                   &max_age, &enforce, &report_uri));
   EXPECT_FALSE(ParseExpectCTHeader("max-age=999, report-uri=\"\"", &max_age,
                                    &enforce, &report_uri));
 
@@ -1080,6 +1078,15 @@ TEST_F(HttpSecurityHeadersTest, ValidExpectCTHeaders) {
   report_uri = GURL();
   EXPECT_TRUE(
       ParseExpectCTHeader("enforce,report-uri=\"https://foo.test\",max-age=123",
+                          &max_age, &enforce, &report_uri));
+  EXPECT_EQ(base::TimeDelta::FromSeconds(123), max_age);
+  EXPECT_TRUE(enforce);
+  EXPECT_EQ(GURL("https://foo.test"), report_uri);
+
+  enforce = false;
+  report_uri = GURL();
+  EXPECT_TRUE(
+      ParseExpectCTHeader("enforce,report-uri=https://foo.test,max-age=123",
                           &max_age, &enforce, &report_uri));
   EXPECT_EQ(base::TimeDelta::FromSeconds(123), max_age);
   EXPECT_TRUE(enforce);
@@ -1192,4 +1199,4 @@ TEST_F(HttpSecurityHeadersTest, ValidExpectCTHeaders) {
   EXPECT_TRUE(report_uri.is_empty());
 }
 
-};    // namespace net
+}  // namespace net

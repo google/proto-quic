@@ -11,17 +11,17 @@ namespace net {
 
 namespace {
 
-void CheckCertVerifyFlags(SSLConfig& ssl_config,
+void CheckCertVerifyFlags(SSLConfig* ssl_config,
                           bool rev_checking_enabled,
                           bool verify_ev_cert,
                           bool cert_io_enabled,
                           bool rev_checking_required_local_anchors) {
-  ssl_config.rev_checking_enabled = rev_checking_enabled;
-  ssl_config.verify_ev_cert = verify_ev_cert;
-  ssl_config.cert_io_enabled = cert_io_enabled;
-  ssl_config.rev_checking_required_local_anchors =
+  ssl_config->rev_checking_enabled = rev_checking_enabled;
+  ssl_config->verify_ev_cert = verify_ev_cert;
+  ssl_config->cert_io_enabled = cert_io_enabled;
+  ssl_config->rev_checking_required_local_anchors =
       rev_checking_required_local_anchors;
-  int flags = ssl_config.GetCertVerifyFlags();
+  int flags = ssl_config->GetCertVerifyFlags();
   if (rev_checking_enabled)
     EXPECT_TRUE(flags & CertVerifier::VERIFY_REV_CHECKING_ENABLED);
   else
@@ -47,37 +47,37 @@ void CheckCertVerifyFlags(SSLConfig& ssl_config,
 
 TEST(SSLConfigTest, GetCertVerifyFlags) {
   SSLConfig ssl_config;
-  CheckCertVerifyFlags(ssl_config,
+  CheckCertVerifyFlags(&ssl_config,
                        /*rev_checking_enabled=*/true,
                        /*verify_ev_cert=*/true,
                        /*cert_io_enabled=*/true,
                        /*rev_checking_required_local_anchors=*/true);
 
-  CheckCertVerifyFlags(ssl_config,
+  CheckCertVerifyFlags(&ssl_config,
                        /*rev_checking_enabled=*/false,
                        /*verify_ev_cert=*/false,
                        /*cert_io_enabled=*/false,
                        /*rev_checking_required_local_anchors=*/false);
 
-  CheckCertVerifyFlags(ssl_config,
+  CheckCertVerifyFlags(&ssl_config,
                        /*rev_checking_enabled=*/true,
                        /*verify_ev_cert=*/false,
                        /*cert_io_enabled=*/false,
                        /*rev_checking_required_local_anchors=*/false);
 
-  CheckCertVerifyFlags(ssl_config,
+  CheckCertVerifyFlags(&ssl_config,
                        /*rev_checking_enabled=*/false,
                        /*verify_ev_cert=*/true,
                        /*cert_io_enabled=*/false,
                        /*rev_checking_required_local_anchors=*/false);
 
-  CheckCertVerifyFlags(ssl_config,
+  CheckCertVerifyFlags(&ssl_config,
                        /*rev_checking_enabled=*/false,
                        /*verify_ev_cert=*/false,
                        /*cert_io_enabled=*/true,
                        /*rev_checking_required_local_anchors=*/false);
 
-  CheckCertVerifyFlags(ssl_config,
+  CheckCertVerifyFlags(&ssl_config,
                        /*rev_checking_enabled=*/false,
                        /*verify_ev_cert=*/false,
                        /*cert_io_enabled=*/false,

@@ -13,6 +13,7 @@
 #include "base/values.h"
 #include "net/reporting/reporting_cache.h"
 #include "net/reporting/reporting_context.h"
+#include "net/reporting/reporting_delegate.h"
 
 namespace net {
 
@@ -24,38 +25,11 @@ const char kGroupKey[] = "group";
 const char kGroupDefaultValue[] = "default";
 const char kMaxAgeKey[] = "max-age";
 
-}  // namespace
-
-// static
-void ReportingHeaderParser::ParseHeader(ReportingContext* context,
-                                        const GURL& url,
-                                        const std::string& json_value) {
-  DCHECK(url.SchemeIsCryptographic());
-
-  std::unique_ptr<base::Value> value =
-      base::JSONReader::Read("[" + json_value + "]");
-  if (!value)
-    return;
-
-  const base::ListValue* list = nullptr;
-  bool is_list = value->GetAsList(&list);
-  DCHECK(is_list);
-
-  ReportingCache* cache = context->cache();
-  base::TimeTicks now = context->tick_clock()->NowTicks();
-  for (size_t i = 0; i < list->GetSize(); i++) {
-    const base::Value* endpoint = nullptr;
-    bool got_endpoint = list->Get(i, &endpoint);
-    DCHECK(got_endpoint);
-    ProcessEndpoint(cache, now, url, *endpoint);
-  }
-}
-
-// static
-void ReportingHeaderParser::ProcessEndpoint(ReportingCache* cache,
-                                            base::TimeTicks now,
-                                            const GURL& url,
-                                            const base::Value& value) {
+void ProcessEndpoint(ReportingDelegate* delegate,
+                     ReportingCache* cache,
+                     base::TimeTicks now,
+                     const GURL& url,
+                     const base::Value& value) {
   const base::DictionaryValue* dict = nullptr;
   if (!value.GetAsDictionary(&dict))
     return;
@@ -87,11 +61,44 @@ void ReportingHeaderParser::ProcessEndpoint(ReportingCache* cache,
     subdomains = ReportingClient::Subdomains::INCLUDE;
   }
 
+  url::Origin origin(url);
+
+  if (!delegate->CanSetClient(origin, endpoint_url))
+    return;
+
   if (ttl_sec > 0) {
-    cache->SetClient(url::Origin(url), endpoint_url, subdomains, group,
+    cache->SetClient(origin, endpoint_url, subdomains, group,
                      now + base::TimeDelta::FromSeconds(ttl_sec));
   } else {
-    cache->RemoveClientForOriginAndEndpoint(url::Origin(url), endpoint_url);
+    cache->RemoveClientForOriginAndEndpoint(origin, endpoint_url);
+  }
+}
+
+}  // namespace
+
+// static
+void ReportingHeaderParser::ParseHeader(ReportingContext* context,
+                                        const GURL& url,
+                                        const std::string& json_value) {
+  DCHECK(url.SchemeIsCryptographic());
+
+  std::unique_ptr<base::Value> value =
+      base::JSONReader::Read("[" + json_value + "]");
+  if (!value)
+    return;
+
+  const base::ListValue* list = nullptr;
+  bool is_list = value->GetAsList(&list);
+  DCHECK(is_list);
+
+  ReportingDelegate* delegate = context->delegate();
+  ReportingCache* cache = context->cache();
+  base::TimeTicks now = context->tick_clock()->NowTicks();
+  for (size_t i = 0; i < list->GetSize(); i++) {
+    const base::Value* endpoint = nullptr;
+    bool got_endpoint = list->Get(i, &endpoint);
+    DCHECK(got_endpoint);
+    ProcessEndpoint(delegate, cache, now, url, *endpoint);
   }
 }
 

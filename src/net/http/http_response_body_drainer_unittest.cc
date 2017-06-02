@@ -245,15 +245,15 @@ class HttpResponseBodyDrainerTest : public testing::Test {
   ~HttpResponseBodyDrainerTest() override {}
 
   HttpNetworkSession* CreateNetworkSession() {
-    HttpNetworkSession::Params params;
-    params.proxy_service = proxy_service_.get();
-    params.ssl_config_service = ssl_config_service_.get();
-    params.http_server_properties = http_server_properties_.get();
-    params.cert_verifier = &cert_verifier_;
-    params.transport_security_state = &transport_security_state_;
-    params.cert_transparency_verifier = &ct_verifier_;
-    params.ct_policy_enforcer = &ct_policy_enforcer_;
-    return new HttpNetworkSession(params);
+    HttpNetworkSession::Context context;
+    context.proxy_service = proxy_service_.get();
+    context.ssl_config_service = ssl_config_service_.get();
+    context.http_server_properties = http_server_properties_.get();
+    context.cert_verifier = &cert_verifier_;
+    context.transport_security_state = &transport_security_state_;
+    context.cert_transparency_verifier = &ct_verifier_;
+    context.ct_policy_enforcer = &ct_policy_enforcer_;
+    return new HttpNetworkSession(HttpNetworkSession::Params(), context);
   }
 
   std::unique_ptr<ProxyService> proxy_service_;

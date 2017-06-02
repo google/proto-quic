@@ -35,8 +35,7 @@
         '<(DEPTH)/chrome/browser/resources/ntp4/compiled_resources2.gyp:*',
         '<(DEPTH)/chrome/browser/resources/offline_pages/compiled_resources2.gyp:*',
         '<(DEPTH)/chrome/browser/resources/options/compiled_resources2.gyp:*',
-        # TODO(dpapad): Uncomment following line as part of crbug.com/721073.
-        #'<(DEPTH)/chrome/browser/resources/pdf/compiled_resources2.gyp:*',
+        '<(DEPTH)/chrome/browser/resources/pdf/compiled_resources2.gyp:*',
         '<(DEPTH)/chrome/browser/resources/print_preview/compiled_resources2.gyp:*',
         '<(DEPTH)/chrome/browser/resources/settings/compiled_resources2.gyp:*',
         '<(DEPTH)/chrome/browser/resources/uber/compiled_resources2.gyp:*',

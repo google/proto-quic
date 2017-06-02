@@ -16,6 +16,20 @@ struct BlinkGCPluginOptions {
   // GarbageCollectedFinalized<> when just GarbageCollected<> will do.
   bool warn_unneeded_finalizer = false;
 
+  // Member<T> fields are only permitted in managed classes,
+  // something CheckFieldsVisitor verifies, issuing errors if
+  // found in unmanaged classes. WeakMember<T> should be treated
+  // the exact same, but CheckFieldsVisitor was missing the case
+  // for handling the weak member variant until crbug.com/724418.
+  //
+  // We've default-enabled the checking for those also now, but do
+  // offer an opt-out option should enabling the check lead to
+  // unexpected (but wanted, really) compilation errors while
+  // rolling out an updated GC plugin version.
+  //
+  // TODO(sof): remove this option once safely rolled out.
+  bool enable_weak_members_in_unmanaged_classes = false;
+
   std::set<std::string> ignored_classes;
   std::set<std::string> checked_namespaces;
   std::vector<std::string> ignored_directories;

@@ -74,6 +74,14 @@ class _V8BrowsingBenchmark(perf_benchmark.PerfBenchmark):
   def CreateStorySet(self, options):
     return page_sets.SystemHealthStorySet(platform=self.PLATFORM, case='browse')
 
+  def GetExpectations(self):
+    if self.PLATFORM is 'desktop':
+      return page_sets.V8BrowsingDesktopExpecations()
+    if self.PLATFORM is 'mobile':
+      return page_sets.V8BrowsingMobileExpecations()
+    raise NotImplementedError, ('Only have expectations for mobile and desktop '
+                                'platforms for v8_browsing tests.')
+
   @classmethod
   def ValueCanBeAddedPredicate(cls, value, is_first_result):
     # TODO(crbug.com/610962): Remove this stopgap when the perf dashboard
@@ -226,8 +234,6 @@ class V8MobileClassicBrowsingBenchmark(_V8BrowsingBenchmark):
 
 
 @benchmark.Owner(emails=['mythria@chromium.org'])
-@benchmark.Disabled('win')  # http://crbug.com/704197
-@benchmark.Disabled('android')
 class V8RuntimeStatsDesktopBrowsingBenchmark(
     _V8RuntimeStatsBrowsingBenchmark):
   PLATFORM = 'desktop'
@@ -254,8 +260,6 @@ class V8RuntimeStatsDesktopTurboBrowsingBenchmark(
     return 'v8.runtimestats.browsing_desktop_turbo'
 
 
-@benchmark.Disabled('win')  # http://crbug.com/704197
-@benchmark.Disabled('android')
 @benchmark.Owner(emails=['hablich@chromium.org'])
 class V8RuntimeStatsDesktopClassicBrowsingBenchmark(
     _V8RuntimeStatsBrowsingBenchmark):

@@ -75,7 +75,7 @@ def main():
       '--dimension', 'os', options.swarming_os,
       '--dimension', 'pool', 'default',
       '--task-name', options.task_name,
-      isolated_hash,
+      '--isolated', isolated_hash,
     ]
     if options.idempotent:
       cmd.append('--idempotent')

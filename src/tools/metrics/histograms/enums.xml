@@ -359,6 +359,16 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="3" label="Crashpad database init failed"/>
 </enum>
 
+<enum name="ActivityTrackerCollectOnCrashEvent" type="int">
+  <int value="0" label="Collection attempt"/>
+  <int value="1" label="User data directory not empty"/>
+  <int value="2" label="Path exists"/>
+  <int value="3" label="Report extraction success"/>
+  <int value="4" label="PMA set deleted failed"/>
+  <int value="5" label="Open for delete failed"/>
+  <int value="6" label="Success"/>
+</enum>
+
 <enum name="ActivityTrackerCollectStatus" type="int">
   <int value="0" label="None"/>
   <int value="1" label="Sucess"/>
@@ -370,7 +380,20 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="7" label="Finished writing crash report failed"/>
 </enum>
 
+<enum name="ActivityTrackerRecordEvent" type="int">
+  <int value="0" label="Recording attempt"/>
+  <int value="1" label="Stability directory exists"/>
+  <int value="2" label="Got stability file path"/>
+  <int value="3" label="Got tracker"/>
+  <int value="4" label="Mark deleted"/>
+  <int value="5" label="Mark deleted got file"/>
+  <int value="6" label="Open for delete failed"/>
+</enum>
+
 <enum name="ActivityTrackerRecordInitStatus" type="int">
+  <obsolete>
+    Removed from code May 2017.
+  </obsolete>
   <int value="0" label="Success"/>
   <int value="1" label="Create stability dir failed"/>
   <int value="2" label="Get stability file path failed"/>
@@ -1561,6 +1584,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="24" label="Kerberos credentials cache not found"/>
   <int value="25" label="Kerberos ticket expired while renewing credentials"/>
   <int value="26" label="klist exited with unspecified error"/>
+  <int value="27" label="kinit failed because of bad machine name."/>
 </enum>
 
 <enum name="AutocheckoutBubble" type="int">
@@ -1723,6 +1747,232 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="15" label="fp05cco03"/>
   <int value="16" label="fp05cco03cstd"/>
   <int value="17" label="fp05cc03e1"/>
+</enum>
+
+<enum name="AutofillFieldPredictionQuality" type="int">
+  <int value="0" label="True Positive"/>
+  <int value="1" label="True Negative (Ambiguous)"/>
+  <int value="2" label="True Negative (Unknown)"/>
+  <int value="3" label="True Negative (Empty)"/>
+  <int value="4" label="False Positive (Mismatch)"/>
+  <int value="5" label="False Positive (Ambiguous)"/>
+  <int value="6" label="False Positive (Unknown)"/>
+  <int value="7" label="False Positive (Empty)"/>
+  <int value="8" label="False Negative (Mismatch)"/>
+  <int value="9" label="False Negative (Unknown)"/>
+</enum>
+
+<enum name="AutofillFieldPredictionQualityByFieldType" type="int">
+  <int value="0" label="Ambiguous: True Positive"/>
+  <int value="1" label="Ambiguous: True Negative (Ambiguous)"/>
+  <int value="2" label="Ambiguous: True Negative (Unknown)"/>
+  <int value="3" label="Ambiguous: True Negative (Empty)"/>
+  <int value="4" label="Ambiguous: False Positive (Mismatch)"/>
+  <int value="5" label="Ambiguous: False Positive (Ambiguous)"/>
+  <int value="6" label="Ambiguous: False Positive (Unknown)"/>
+  <int value="7" label="Ambiguous: False Positive (Empty)"/>
+  <int value="8" label="Ambiguous: False Negative (Mismatch)"/>
+  <int value="9" label="Ambiguous: False Negative (Unknown)"/>
+  <int value="256" label="Name: True Positive"/>
+  <int value="257" label="Name: True Negative (Ambiguous)"/>
+  <int value="258" label="Name: True Negative (Unknown)"/>
+  <int value="259" label="Name: True Negative (Empty)"/>
+  <int value="260" label="Name: False Positive (Mismatch)"/>
+  <int value="261" label="Name: False Positive (Ambiguous)"/>
+  <int value="262" label="Name: False Positive (Unknown)"/>
+  <int value="263" label="Name: False Positive (Empty)"/>
+  <int value="264" label="Name: False Negative (Mismatch)"/>
+  <int value="265" label="Name: False Negative (Unknown)"/>
+  <int value="512" label="Company: True Positive"/>
+  <int value="513" label="Company: True Negative (Ambiguous)"/>
+  <int value="514" label="Company: True Negative (Unknown)"/>
+  <int value="515" label="Company: True Negative (Empty)"/>
+  <int value="516" label="Company: False Positive (Mismatch)"/>
+  <int value="517" label="Company: False Positive (Ambiguous)"/>
+  <int value="518" label="Company: False Positive (Unknown)"/>
+  <int value="519" label="Company: False Positive (Empty)"/>
+  <int value="520" label="Company: False Negative (Mismatch)"/>
+  <int value="521" label="Company: False Negative (Unknown)"/>
+  <int value="768" label="Address Line 1: True Positive"/>
+  <int value="769" label="Address Line 1: True Negative (Ambiguous)"/>
+  <int value="770" label="Address Line 1: True Negative (Unknown)"/>
+  <int value="771" label="Address Line 1: True Negative (Empty)"/>
+  <int value="772" label="Address Line 1: False Positive (Mismatch)"/>
+  <int value="773" label="Address Line 1: False Positive (Ambiguous)"/>
+  <int value="774" label="Address Line 1: False Positive (Unknown)"/>
+  <int value="775" label="Address Line 1: False Positive (Empty)"/>
+  <int value="776" label="Address Line 1: False Negative (Mismatch)"/>
+  <int value="777" label="Address Line 1: False Negative (Unknown)"/>
+  <int value="1024" label="Address Line 2: True Positive"/>
+  <int value="1025" label="Address Line 2: True Negative (Ambiguous)"/>
+  <int value="1026" label="Address Line 2: True Negative (Unknown)"/>
+  <int value="1027" label="Address Line 2: True Negative (Empty)"/>
+  <int value="1028" label="Address Line 2: False Positive (Mismatch)"/>
+  <int value="1029" label="Address Line 2: False Positive (Ambiguous)"/>
+  <int value="1030" label="Address Line 2: False Positive (Unknown)"/>
+  <int value="1031" label="Address Line 2: False Positive (Empty)"/>
+  <int value="1032" label="Address Line 2: False Negative (Mismatch)"/>
+  <int value="1033" label="Address Line 2: False Negative (Unknown)"/>
+  <int value="1280" label="City: True Positive"/>
+  <int value="1281" label="City: True Negative (Ambiguous)"/>
+  <int value="1282" label="City: True Negative (Unknown)"/>
+  <int value="1283" label="City: True Negative (Empty)"/>
+  <int value="1284" label="City: False Positive (Mismatch)"/>
+  <int value="1285" label="City: False Positive (Ambiguous)"/>
+  <int value="1286" label="City: False Positive (Unknown)"/>
+  <int value="1287" label="City: False Positive (Empty)"/>
+  <int value="1288" label="City: False Negative (Mismatch)"/>
+  <int value="1289" label="City: False Negative (Unknown)"/>
+  <int value="1536" label="State: True Positive"/>
+  <int value="1537" label="State: True Negative (Ambiguous)"/>
+  <int value="1538" label="State: True Negative (Unknown)"/>
+  <int value="1539" label="State: True Negative (Empty)"/>
+  <int value="1540" label="State: False Positive (Mismatch)"/>
+  <int value="1541" label="State: False Positive (Ambiguous)"/>
+  <int value="1542" label="State: False Positive (Unknown)"/>
+  <int value="1543" label="State: False Positive (Empty)"/>
+  <int value="1544" label="State: False Negative (Mismatch)"/>
+  <int value="1545" label="State: False Negative (Unknown)"/>
+  <int value="1792" label="ZIP: True Positive"/>
+  <int value="1793" label="ZIP: True Negative (Ambiguous)"/>
+  <int value="1794" label="ZIP: True Negative (Unknown)"/>
+  <int value="1795" label="ZIP: True Negative (Empty)"/>
+  <int value="1796" label="ZIP: False Positive (Mismatch)"/>
+  <int value="1797" label="ZIP: False Positive (Ambiguous)"/>
+  <int value="1798" label="ZIP: False Positive (Unknown)"/>
+  <int value="1799" label="ZIP: False Positive (Empty)"/>
+  <int value="1800" label="ZIP: False Negative (Mismatch)"/>
+  <int value="1801" label="ZIP: False Negative (Unknown)"/>
+  <int value="2048" label="Country: True Positive"/>
+  <int value="2049" label="Country: True Negative (Ambiguous)"/>
+  <int value="2050" label="Country: True Negative (Unknown)"/>
+  <int value="2051" label="Country: True Negative (Empty)"/>
+  <int value="2052" label="Country: False Positive (Mismatch)"/>
+  <int value="2053" label="Country: False Positive (Ambiguous)"/>
+  <int value="2054" label="Country: False Positive (Unknown)"/>
+  <int value="2055" label="Country: False Positive (Empty)"/>
+  <int value="2056" label="Country: False Negative (Mismatch)"/>
+  <int value="2057" label="Country: False Negative (Unknown)"/>
+  <int value="2304" label="Phone: True Positive"/>
+  <int value="2305" label="Phone: True Negative (Ambiguous)"/>
+  <int value="2306" label="Phone: True Negative (Unknown)"/>
+  <int value="2307" label="Phone: True Negative (Empty)"/>
+  <int value="2308" label="Phone: False Positive (Mismatch)"/>
+  <int value="2309" label="Phone: False Positive (Ambiguous)"/>
+  <int value="2310" label="Phone: False Positive (Unknown)"/>
+  <int value="2311" label="Phone: False Positive (Empty)"/>
+  <int value="2312" label="Phone: False Negative (Mismatch)"/>
+  <int value="2313" label="Phone: False Negative (Unknown)"/>
+  <int value="2560" label="Fax: True Positive"/>
+  <int value="2561" label="Fax: True Negative (Ambiguous)"/>
+  <int value="2562" label="Fax: True Negative (Unknown)"/>
+  <int value="2563" label="Fax: True Negative (Empty)"/>
+  <int value="2564" label="Fax: False Positive (Mismatch)"/>
+  <int value="2565" label="Fax: False Positive (Ambiguous)"/>
+  <int value="2566" label="Fax: False Positive (Unknown)"/>
+  <int value="2567" label="Fax: False Positive (Empty)"/>
+  <int value="2568" label="Fax: False Negative (Mismatch)"/>
+  <int value="2569" label="Fax: False Negative (Unknown)"/>
+  <int value="2816" label="Email: True Positive"/>
+  <int value="2817" label="Email: True Negative (Ambiguous)"/>
+  <int value="2818" label="Email: True Negative (Unknown)"/>
+  <int value="2819" label="Email: True Negative (Empty)"/>
+  <int value="2820" label="Email: False Positive (Mismatch)"/>
+  <int value="2821" label="Email: False Positive (Ambiguous)"/>
+  <int value="2822" label="Email: False Positive (Unknown)"/>
+  <int value="2823" label="Email: False Positive (Empty)"/>
+  <int value="2824" label="Email: False Negative (Mismatch)"/>
+  <int value="2825" label="Email: False Negative (Unknown)"/>
+  <int value="3072" label="CC Name: True Positive"/>
+  <int value="3073" label="CC Name: True Negative (Ambiguous)"/>
+  <int value="3074" label="CC Name: True Negative (Unknown)"/>
+  <int value="3075" label="CC Name: True Negative (Empty)"/>
+  <int value="3076" label="CC Name: False Positive (Mismatch)"/>
+  <int value="3077" label="CC Name: False Positive (Ambiguous)"/>
+  <int value="3078" label="CC Name: False Positive (Unknown)"/>
+  <int value="3079" label="CC Name: False Positive (Empty)"/>
+  <int value="3080" label="CC Name: False Negative (Mismatch)"/>
+  <int value="3081" label="CC Name: False Negative (Unknown)"/>
+  <int value="3328" label="CC Number: True Positive"/>
+  <int value="3329" label="CC Number: True Negative (Ambiguous)"/>
+  <int value="3330" label="CC Number: True Negative (Unknown)"/>
+  <int value="3331" label="CC Number: True Negative (Empty)"/>
+  <int value="3332" label="CC Number: False Positive (Mismatch)"/>
+  <int value="3333" label="CC Number: False Positive (Ambiguous)"/>
+  <int value="3334" label="CC Number: False Positive (Unknown)"/>
+  <int value="3335" label="CC Number: False Positive (Empty)"/>
+  <int value="3336" label="CC Number: False Negative (Mismatch)"/>
+  <int value="3337" label="CC Number: False Negative (Unknown)"/>
+  <int value="3584" label="CC Expiry: True Positive"/>
+  <int value="3585" label="CC Expiry: True Negative (Ambiguous)"/>
+  <int value="3586" label="CC Expiry: True Negative (Unknown)"/>
+  <int value="3587" label="CC Expiry: True Negative (Empty)"/>
+  <int value="3588" label="CC Expiry: False Positive (Mismatch)"/>
+  <int value="3589" label="CC Expiry: False Positive (Ambiguous)"/>
+  <int value="3590" label="CC Expiry: False Positive (Unknown)"/>
+  <int value="3591" label="CC Expiry: False Positive (Empty)"/>
+  <int value="3592" label="CC Expiry: False Negative (Mismatch)"/>
+  <int value="3593" label="CC Expiry: False Negative (Unknown)"/>
+  <int value="3840" label="CC Type: True Positive"/>
+  <int value="3841" label="CC Type: True Negative (Ambiguous)"/>
+  <int value="3842" label="CC Type: True Negative (Unknown)"/>
+  <int value="3843" label="CC Type: True Negative (Empty)"/>
+  <int value="3844" label="CC Type: False Positive (Mismatch)"/>
+  <int value="3845" label="CC Type: False Positive (Ambiguous)"/>
+  <int value="3846" label="CC Type: False Positive (Unknown)"/>
+  <int value="3847" label="CC Type: False Positive (Empty)"/>
+  <int value="3848" label="CC Type: False Negative (Mismatch)"/>
+  <int value="3849" label="CC Type: False Negative (Unknown)"/>
+  <int value="4096" label="Password: True Positive"/>
+  <int value="4097" label="Password: True Negative (Ambiguous)"/>
+  <int value="4098" label="Password: True Negative (Unknown)"/>
+  <int value="4099" label="Password: True Negative (Empty)"/>
+  <int value="4100" label="Password: False Positive (Mismatch)"/>
+  <int value="4101" label="Password: False Positive (Ambiguous)"/>
+  <int value="4102" label="Password: False Positive (Unknown)"/>
+  <int value="4103" label="Password: False Positive (Empty)"/>
+  <int value="4104" label="Password: False Negative (Mismatch)"/>
+  <int value="4105" label="Password: False Negative (Unknown)"/>
+  <int value="4352" label="Address Line 3: True Positive"/>
+  <int value="4353" label="Address Line 3: True Negative (Ambiguous)"/>
+  <int value="4354" label="Address Line 3: True Negative (Unknown)"/>
+  <int value="4355" label="Address Line 3: True Negative (Empty)"/>
+  <int value="4356" label="Address Line 3: False Positive (Mismatch)"/>
+  <int value="4357" label="Address Line 3: False Positive (Ambiguous)"/>
+  <int value="4358" label="Address Line 3: False Positive (Unknown)"/>
+  <int value="4359" label="Address Line 3: False Positive (Empty)"/>
+  <int value="4360" label="Address Line 3: False Negative (Mismatch)"/>
+  <int value="4361" label="Address Line 3: False Negative (Unknown)"/>
+  <int value="4608" label="Username: True Positive"/>
+  <int value="4609" label="Username: True Negative (Ambiguous)"/>
+  <int value="4610" label="Username: True Negative (Unknown)"/>
+  <int value="4611" label="Username: True Negative (Empty)"/>
+  <int value="4612" label="Username: False Positive (Mismatch)"/>
+  <int value="4613" label="Username: False Positive (Ambiguous)"/>
+  <int value="4614" label="Username: False Positive (Unknown)"/>
+  <int value="4615" label="Username: False Positive (Empty)"/>
+  <int value="4616" label="Username: False Negative (Mismatch)"/>
+  <int value="4617" label="Username: False Negative (Unknown)"/>
+  <int value="4864" label="Street Address: True Positive"/>
+  <int value="4865" label="Street Address: True Negative (Ambiguous)"/>
+  <int value="4866" label="Street Address: True Negative (Unknown)"/>
+  <int value="4867" label="Street Address: True Negative (Empty)"/>
+  <int value="4868" label="Street Address: False Positive (Mismatch)"/>
+  <int value="4869" label="Street Address: False Positive (Ambiguous)"/>
+  <int value="4870" label="Street Address: False Positive (Unknown)"/>
+  <int value="4871" label="Street Address: False Positive (Empty)"/>
+  <int value="4872" label="Street Address: False Negative (Mismatch)"/>
+  <int value="4873" label="Street Address: False Negative (Unknown)"/>
+  <int value="5120" label="CVC: True Positive"/>
+  <int value="5121" label="CVC: True Negative (Ambiguous)"/>
+  <int value="5122" label="CVC: True Negative (Unknown)"/>
+  <int value="5123" label="CVC: True Negative (Empty)"/>
+  <int value="5124" label="CVC: False Positive (Mismatch)"/>
+  <int value="5125" label="CVC: False Positive (Ambiguous)"/>
+  <int value="5126" label="CVC: False Positive (Unknown)"/>
+  <int value="5127" label="CVC: False Positive (Empty)"/>
+  <int value="5128" label="CVC: False Negative (Mismatch)"/>
+  <int value="5129" label="CVC: False Negative (Unknown)"/>
 </enum>
 
 <enum name="AutofillFormEvent" type="int">
@@ -2022,6 +2272,17 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="5" label="Permission denied"/>
 </enum>
 
+<enum name="BackgroundTaskId" type="int">
+  <int value="0" label="Test task (should not appear)"/>
+  <int value="1" label="Omaha"/>
+  <int value="2" label="GCM Background Task"/>
+  <int value="3" label="Notification service task"/>
+  <int value="4" label="Webview minidump uploading task"/>
+  <int value="5" label="Chrome minidump uploading task"/>
+  <int value="6" label="Offlining pages task"/>
+  <int value="7" label="Offline page prefetch task"/>
+</enum>
+
 <enum name="BackgroundTracingState" type="int">
   <int value="0" label="Scenario activation requested"/>
   <int value="1" label="Scenario successfully activated"/>
@@ -2222,6 +2483,9 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="167" label="RWH_INVALID_FRAME_TOKEN"/>
   <int value="168" label="RWH_BAD_FRAME_SINK_REQUEST"/>
   <int value="169" label="RWH_SURFACE_INVARIANTS_VIOLATION"/>
+  <int value="170" label="RFH_ILLEGAL_UPLOAD_PARAMS"/>
+  <int value="171" label="RFH_BASE_URL_FOR_DATA_URL_SPECIFIED"/>
+  <int value="172" label="RFPH_ILLEGAL_UPLOAD_PARAMS"/>
 </enum>
 
 <enum name="BadMessageReasonExtensions" type="int">
@@ -2920,6 +3184,11 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="1" label="Migrated"/>
 </enum>
 
+<enum name="BooleanMissingCallbacks" type="int">
+  <int value="0" label="No missing callbacks"/>
+  <int value="1" label="Had missing callbacks"/>
+</enum>
+
 <enum name="BooleanMissingFromDiskCache" type="int">
   <int value="0" label="Has data in disk cache"/>
   <int value="1" label="Missing data in disk cache"/>
@@ -3165,6 +3434,11 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="1" label="Translated"/>
 </enum>
 
+<enum name="BooleanUninstallable" type="int">
+  <int value="0" label="Not uninstallable"/>
+  <int value="1" label="Uninstallable"/>
+</enum>
+
 <enum name="BooleanUnknown" type="int">
   <int value="0" label="Known"/>
   <int value="1" label="Unknown"/>
@@ -3400,6 +3674,8 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="3" label="Direct pixel write."/>
   <int value="4" label="Draw image of animated 2d canvas"/>
   <int value="5" label="Sub-pixel text anti-aliasing support (expect 0)"/>
+  <int value="6" label="drawImage called with a texture backed source image"/>
+  <int value="7" label="Running on low-end device"/>
 </enum>
 
 <enum name="CanvasHibernationEvent" type="int">
@@ -4946,6 +5222,20 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="5" label="Try to override the status when its valus is error."/>
 </enum>
 
+<enum name="ConfigParsingEvent" type="int">
+  <int value="0" label="SUCCESS"/>
+  <int value="1" label="FAILURE"/>
+  <int value="2" label="FAILURE_NO_FIELD_TRIAL"/>
+  <int value="3" label="FAILURE_USED_EVENT_PARSE"/>
+  <int value="4" label="FAILURE_USED_EVENT_MISSING"/>
+  <int value="5" label="FAILURE_TRIGGER_EVENT_PARSE"/>
+  <int value="6" label="FAILURE_TRIGGER_EVENT_MISSING"/>
+  <int value="7" label="FAILURE_OTHER_EVENT_PARSE"/>
+  <int value="8" label="FAILURE_SESSION_RATE_PARSE"/>
+  <int value="9" label="FAILURE_AVAILABILITY_PARSE"/>
+  <int value="10" label="FAILURE_UNKNOWN_KEY"/>
+</enum>
+
 <enum name="ConnectionDiagnosticsIssue" type="int">
   <int value="0" label="IP collision detected."/>
   <int value="1" label="Routing problem detected."/>
@@ -6432,6 +6722,19 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="2" label="Has enough SCTs"/>
 </enum>
 
+<enum name="D3D11FeatureLevel" type="int">
+  <int value="0" label="Unknown"/>
+  <int value="1" label="No D3D11 DLL"/>
+  <int value="2" label="No D3D11CreateDevice entry point"/>
+  <int value="3" label="D3D11CreateDevice failed"/>
+  <int value="4" label="9.1"/>
+  <int value="5" label="9.2"/>
+  <int value="6" label="9.3"/>
+  <int value="7" label="10.0"/>
+  <int value="8" label="10.1"/>
+  <int value="9" label="11.0"/>
+</enum>
+
 <enum name="D3D11InitializeResult" type="int">
   <int value="0" label="Success"/>
   <int value="1" label="Error initializing compiler"/>
@@ -6875,6 +7178,15 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="40" label="LargeIconService"/>
 </enum>
 
+<enum name="DCLayerResult" type="int">
+  <int value="0" label="Success"/>
+  <int value="1" label="Failed unsupported quad"/>
+  <int value="2" label="Failed quad blend mode"/>
+  <int value="3" label="Failed texture not candidate"/>
+  <int value="4" label="Failed occluded"/>
+  <int value="5" label="Failed complex transform"/>
+</enum>
+
 <enum name="DeclarativeAPIFunctionType" type="int">
   <int value="0" label="kDeclarativeContentAddRules"/>
   <int value="1" label="kDeclarativeContentRemoveRules"/>
@@ -7024,6 +7336,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="1" label="No thanks clicked."/>
   <int value="2" label="Close button clicked."/>
   <int value="3" label="Send SMS clicked."/>
+  <int value="4" label="Learn more link clicked."/>
 </enum>
 
 <enum name="DesktopIOSPromotionEntryPoint" type="int">
@@ -7031,6 +7344,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="2" label="Bookmarks new bubble."/>
   <int value="3" label="Bookmarks footnote."/>
   <int value="4" label="HistoryPage."/>
+  <int value="5" label="Footnote followup bubble"/>
 </enum>
 
 <enum name="DesktopSearchRedirectionInfobarCloseAction" type="int">
@@ -7380,6 +7694,12 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="10" label="AddLocalFile: get reference key failed"/>
   <int value="11" label="AddLocalFile: get path length failed"/>
   <int value="12" label="AddLocalFile: get path failed"/>
+</enum>
+
+<enum name="DisplayLinkInstallationStatus" type="int">
+  <int value="0" label="DisplayLink not installed"/>
+  <int value="1" label="7.1 or earlier"/>
+  <int value="2" label="7.2 or later"/>
 </enum>
 
 <enum name="DistillableType" type="int">
@@ -10274,6 +10594,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="367" label="InstantTetheringAllowed"/>
   <int value="368" label="RemoteAccessHostDomainList"/>
   <int value="369" label="RemoteAccessHostClientDomainList"/>
+  <int value="370" label="NetworkTimeQueriesEnabled"/>
 </enum>
 
 <enum name="EnterprisePolicyInvalidations" type="int">
@@ -11099,6 +11420,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="406" label="ACCESSIBILITY_PRIVATE_ON_TWO_FINGER_TOUCH_START"/>
   <int value="407" label="ACCESSIBILITY_PRIVATE_ON_TWO_FINGER_TOUCH_STOP"/>
   <int value="408" label="MEDIA_PERCEPTION_PRIVATE_ON_MEDIA_PERCEPTION"/>
+  <int value="409" label="NETWORKING_PRIVATE_ON_CERTIFICATE_LISTS_CHANGED"/>
 </enum>
 
 <enum name="ExtensionFileWriteResult" type="int">
@@ -12325,6 +12647,8 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="1174" label="MEDIAPERCEPTIONPRIVATE_GETSTATE"/>
   <int value="1175" label="MEDIAPERCEPTIONPRIVATE_SETSTATE"/>
   <int value="1176" label="MEDIAPERCEPTIONPRIVATE_GETDIAGNOSTICS"/>
+  <int value="1177" label="NETWORKINGPRIVATE_GETCERTIFICATELISTS"/>
+  <int value="1178" label="ACCESSIBILITY_PRIVATE_SETSWITCHACCESSKEYS"/>
 </enum>
 
 <enum name="ExtensionIconState" type="int">
@@ -12420,6 +12744,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="2" label="NOTIFICATION_TYPE_IMAGE"/>
   <int value="3" label="NOTIFICATION_TYPE_MULTIPLE"/>
   <int value="4" label="NOTIFICATION_TYPE_PROGRESS"/>
+  <int value="5" label="NOTIFICATION_TYPE_CUSTOM"/>
 </enum>
 
 <enum name="ExtensionPermission" type="int">
@@ -12828,6 +13153,8 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="31" label="ERROR_SERIALIZING_CATALOG"/>
   <int value="32" label="ERROR_SAVING_CATALOG"/>
   <int value="33" label="CRX_HASH_VERIFICATION_FAILED"/>
+  <int value="34" label="CRX_FILE_IS_DELTA_UPDATE"/>
+  <int value="35" label="CRX_EXPECTED_HASH_INVALID"/>
 </enum>
 
 <enum name="ExternalDeviceAction" type="int">
@@ -12968,7 +13295,7 @@ uploading your change for review.  These are checked by presubmit scripts.
 </enum>
 
 <enum name="FeatureObserver" type="int">
-<!-- Generated from third_party/WebKit/Source/core/frame/UseCounter.h -->
+<!-- Generated from third_party/WebKit/public/platform/UseCounterFeature.def -->
 
   <int value="0" label="OBSOLETE_PageDestruction"/>
   <int value="1" label="LegacyNotifications"/>
@@ -14094,8 +14421,8 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="1101" label="SVG1DOMUriReference"/>
   <int value="1102" label="SVG1DOMZoomAndPan"/>
   <int value="1103" label="V8SVGGraphicsElement_Transform_AttributeGetter"/>
-  <int value="1104" label="MenuItemElement"/>
-  <int value="1105" label="MenuItemCloseTag"/>
+  <int value="1104" label="OBSOLETE_MenuItemElement"/>
+  <int value="1105" label="OBSOLETE_MenuItemCloseTag"/>
   <int value="1106" label="SVG1DOMMarkerElement"/>
   <int value="1107" label="SVG1DOMUseElement"/>
   <int value="1108" label="SVG1DOMMaskElement"/>
@@ -14454,12 +14781,12 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="1455" label="SVGSMILBeginOrEndEventValue"/>
   <int value="1456" label="SVGSMILBeginOrEndSyncbaseValue"/>
   <int value="1457" label="SVGSMILElementInsertedAfterLoad"/>
-  <int value="1458" label="V8VisualViewport_ScrollLeft_AttributeGetter"/>
-  <int value="1459" label="V8VisualViewport_ScrollTop_AttributeGetter"/>
-  <int value="1460" label="V8VisualViewport_PageX_AttributeGetter"/>
-  <int value="1461" label="V8VisualViewport_PageY_AttributeGetter"/>
-  <int value="1462" label="V8VisualViewport_ClientWidth_AttributeGetter"/>
-  <int value="1463" label="V8VisualViewport_ClientHeight_AttributeGetter"/>
+  <int value="1458" label="V8VisualViewport_OffsetLeft_AttributeGetter"/>
+  <int value="1459" label="V8VisualViewport_OffsetTop_AttributeGetter"/>
+  <int value="1460" label="V8VisualViewport_PageLeft_AttributeGetter"/>
+  <int value="1461" label="V8VisualViewport_PageTop_AttributeGetter"/>
+  <int value="1462" label="V8VisualViewport_Width_AttributeGetter"/>
+  <int value="1463" label="V8VisualViewport_Height_AttributeGetter"/>
   <int value="1464" label="V8VisualViewport_Scale_AttributeGetter"/>
   <int value="1465" label="VisualViewportScrollFired"/>
   <int value="1466" label="VisualViewportResizeFired"/>
@@ -14919,7 +15246,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="1908" label="OrientationSensorPopulateMatrix"/>
   <int value="1909" label="WindowOpenWithInvalidURL"/>
   <int value="1910" label="CrossOriginMainFrameNulledNameAccessed"/>
-  <int value="1911" label="MenuItemElementIconAttribute"/>
+  <int value="1911" label="OBSOLETE_MenuItemElementIconAttribute"/>
   <int value="1912" label="WebkitCSSMatrixSetMatrixValue"/>
   <int value="1913" label="WebkitCSSMatrixConstructFromString"/>
   <int value="1914" label="CanRequestURLHTTPContainingNewline"/>
@@ -15001,6 +15328,42 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="1986" label="CredentialManagerPasswordName"/>
   <int value="1987" label="CredentialManagerAdditionalData"/>
   <int value="1988" label="CredentialManagerCustomFetch"/>
+  <int value="1989" label="NetInfoRtt"/>
+  <int value="1990" label="NetInfoDownlink"/>
+  <int value="1991" label="ShapeDetection_BarcodeDetectorConstructor"/>
+  <int value="1992" label="ShapeDetection_FaceDetectorConstructor"/>
+  <int value="1993" label="ShapeDetection_TextDetectorConstructor"/>
+  <int value="1994"
+      label="CredentialManagerCredentialRequestOptionsOnlyUnmediated"/>
+  <int value="1995" label="InertAttribute"/>
+  <int value="1996" label="PluginInstanceAccessFromIsolatedWorld"/>
+  <int value="1997" label="PluginInstanceAccessFromMainWorld"/>
+  <int value="1998" label="RequestFullscreenForDialogElement"/>
+  <int value="1999" label="RequestFullscreenForDialogElementInTopLayer"/>
+  <int value="2000" label="ShowModalForElementInFullscreenStack"/>
+  <int value="2001" label="ThreeValuedPositionBackground"/>
+  <int value="2002" label="ThreeValuedPositionBasicShape"/>
+  <int value="2003" label="ThreeValuedPositionGradient"/>
+  <int value="2004" label="ThreeValuedPositionObjectPosition"/>
+  <int value="2005" label="ThreeValuedPositionPerspectiveOrigin"/>
+  <int value="2006" label="UnitlessZeroAngleCustomProperty"/>
+  <int value="2007" label="UnitlessZeroAngleFilter"/>
+  <int value="2008" label="UnitlessZeroAngleGradient"/>
+  <int value="2009" label="UnitlessZeroAngleOffsetRotate"/>
+  <int value="2010" label="UnitlessZeroAngleTransform"/>
+  <int value="2011"
+      label="HTMLOListElementStartGetterReversedWithoutStartAttribute"/>
+  <int value="2012" label="CredentialManagerPreventSilentAccess"/>
+  <int value="2013" label="NetInfoEffectiveType"/>
+  <int value="2014" label="V8SpeechRecognition_Start_Method"/>
+  <int value="2015" label="TableRowDirectionDifferentFromTable"/>
+  <int value="2016" label="TableSectionDirectionDifferentFromTable"/>
+  <int value="2017" label="ClientHintsDeviceRAM"/>
+  <int value="2018" label="CSSRegisterProperty"/>
+  <int value="2019" label="RelativeOrientationSensorConstructor"/>
+  <int value="2020" label="SmoothScrollJSInterventionActivated"/>
+  <int value="2021" label="BudgetAPIGetCost"/>
+  <int value="2022" label="BudgetAPIGetBudget"/>
 </enum>
 
 <enum name="FeedbackSource" type="int">
@@ -16924,12 +17287,14 @@ uploading your change for review.  These are checked by presubmit scripts.
 
 <enum name="GCMDecryptionResult" type="int">
   <int value="0" label="Success (message unencrypted)"/>
-  <int value="1" label="Success (message decrypted)"/>
+  <int value="1" label="Success (message decrypted per draft 03)"/>
   <int value="2" label="Failure (invalid Encryption HTTP header)"/>
   <int value="3" label="Failure (invalid Crypto-Key HTTP header)"/>
   <int value="4" label="Failure (no keying material available)"/>
   <int value="5" label="Failure (unable to compute the shared secret)"/>
   <int value="6" label="Failure (unable to decrypt using AES-GCM)"/>
+  <int value="7" label="Failure (invalid binary header)"/>
+  <int value="8" label="Success (message decrypted per draft 08)"/>
 </enum>
 
 <enum name="GCMEndpoints" type="int">
@@ -17415,6 +17780,136 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="3" label="UPGRADE_SUCCESSFUL"/>
   <int value="4" label="UPGRADE_ALREADY_UP_TO_DATE"/>
   <int value="5" label="UPGRADE_ERROR"/>
+</enum>
+
+<enum name="GPUBlacklistFeatureTestResults" type="int">
+  <summary>
+    Results of testing against a GPU feature being allowed/blacklisted/disabled.
+  </summary>
+  <int value="0" label="Allowed"/>
+  <int value="1" label="Blacklisted"/>
+  <int value="2" label="User-disabled"/>
+</enum>
+
+<enum name="GPUBlacklistFeatureTestResultsWin" type="int">
+  <summary>
+    Results of testing against a GPU feature being blacklisted or not in various
+    Windows sub-versions.
+  </summary>
+  <int value="0" label="Allowed Others"/>
+  <int value="1" label="Blacklisted Others"/>
+  <int value="2" label="Allowed XP"/>
+  <int value="3" label="Blacklisted XP"/>
+  <int value="4" label="Allowed Vista"/>
+  <int value="5" label="Blacklisted Vista"/>
+  <int value="6" label="Allowed Win7"/>
+  <int value="7" label="Blacklisted Win7"/>
+</enum>
+
+<enum name="GPUBlacklistFeatureTestResultsWindows" type="int">
+  <summary>
+    Results of testing against a GPU feature being allowed/blacklisted/disabled
+    in various Windows sub-versions.
+  </summary>
+  <int value="0" label="Allowed Others"/>
+  <int value="1" label="Blacklisted Others"/>
+  <int value="2" label="User-disabled Others"/>
+  <int value="3" label="Allowed XP"/>
+  <int value="4" label="Blacklisted XP"/>
+  <int value="5" label="User-disabled XP"/>
+  <int value="6" label="Allowed Vista"/>
+  <int value="7" label="Blacklisted Vista"/>
+  <int value="8" label="User-disabled Vista"/>
+  <int value="9" label="Allowed Win7"/>
+  <int value="10" label="Blacklisted Win7"/>
+  <int value="11" label="User-disabled Win7"/>
+  <int value="12" label="Allowed Win8"/>
+  <int value="13" label="Blacklisted Win8"/>
+  <int value="14" label="User-disabled Win8"/>
+</enum>
+
+<enum name="GPUBlacklistTestResultPerEntry" type="int">
+  <summary>Results of testing against the GPU blacklist entries.</summary>
+  <int value="0" label="TotalCount"/>
+  <int value="1" label="Mac/ATI/Radeon X1900"/>
+  <int value="2" label="Linux/Intel/Before Mesa 7.9"/>
+  <int value="3" label="Linux/Intel/Software Renderer"/>
+  <int value="4" label="All/Intel/GMA 945"/>
+  <int value="5" label="Linux/ATI/Before 8.98"/>
+  <int value="6" label="Mac/ATI/Radeon HD2600"/>
+  <int value="7" label="Mac/ATI/Radeon HD2400"/>
+  <int value="8" label="All/NVIDIA/GeForce FX Go5200"/>
+  <int value="9" label="WinXP"/>
+  <int value="10" label="Mac/NVIDIA/GeForce 7300 GT"/>
+  <int value="11" label="Mac/ATI/Radeon HD2600 XT"/>
+  <int value="12" label="Win/All/Drivers older than 01/2009"/>
+  <int value="13" label="WinXP/ATI/Drivers older than 10.6"/>
+  <int value="14" label="WinXP/NVIDIA/Drivers older than 257.21"/>
+  <int value="15" label="WinXP/Intel/Drivers older than 14.42.7.5294"/>
+  <int value="16" label="Mac/ATI/multisampling"/>
+  <int value="17" label="Linux/Intel/older mesa drivers"/>
+  <int value="18" label="Linux/NVIDIA/Quadro FX 1500"/>
+  <int value="19" label="Mac 10.5/accelerated 2d-canvas and compositing"/>
+  <int value="20" label="Linux/NVIDIA/Driver 260.19.06"/>
+  <int value="21"
+      label="Linux/NVIDIA/Quadro FX 3450/4000, FX 1400/Driver 195.36.24"/>
+  <int value="22" label="Linux/NVIDIA/Drivers older than 195.36.24"/>
+  <int value="23" label="Linux/Mesa/Drivers older than 7.11"/>
+  <int value="24" label="Linux/accelrated 2d-canvas"/>
+  <int value="25"
+      label="Win7/GMA X4500/HD (2a42, 2a43)/Driver older than 15.17.11.2202"/>
+  <int value="26"
+      label="Win7/GMA X4500/HD (0042, 0046)/Driver 15.17.11.2202 or older"/>
+  <int value="27" label="Linux/ATI/Older drivers with 'ATI' in vendor"/>
+  <int value="28" label="Linux/ATI/Third party drivers with 'AMD' in renderer"/>
+  <int value="29" label="Linux/ATI/Third party drivers with 'ATI' in renderer"/>
+  <int value="30" label="Linux/NVIDIA/Nouveau drivers"/>
+  <int value="31" label=""/>
+  <int value="32" label="Win/perf_overall less than 3.5/2d-canvas"/>
+  <int value="33" label="Linux/Intel/IvyBridge/multisampling"/>
+  <int value="34" label="Win/S3 Trio/all"/>
+  <int value="35" label="Linux/Stage3D"/>
+  <int value="36" label=""/>
+  <int value="37" label="Linux/Optimus/all"/>
+  <int value="38" label="MacLion/NVIDIA GeForce 9400M/2d-canvas"/>
+  <int value="39" label=""/>
+  <int value="40" label=""/>
+  <int value="41" label="WinXP/Flash3D"/>
+  <int value="42" label="Mac10.6/AMD/Radeon HD 6490M/WebGL"/>
+  <int value="43" label="Win/Intel/8.15.10.1749/Texture_sharing"/>
+  <int value="44" label="Mac10.7.0-10.7.4/Intel/HD 4000/all"/>
+  <int value="45" label="Win/Parallells drivers older than 7/all"/>
+  <int value="46" label="Win/ATI/FireMV 2400/all"/>
+  <int value="47" label="Linux/NVIDIA/drivers older than 295/all"/>
+  <int value="48" label="Mac+Linux/video_decode"/>
+  <int value="49" label="Mac10.8.0-10.8.1/NVIDIA/GeForce GT 650M/Flash3D"/>
+  <int value="50" label="Linux/VMware software renderer/all"/>
+  <int value="51" label="WinXP/NVIDIA/6.14.11.9621/all"/>
+  <int value="52" label="WinXP/NVIDIA/6.14.11.8267/all"/>
+  <int value="53" label="Intel/GMA500/Stage3D"/>
+  <int value="54"
+      label="Mac10.7 or above/older MacBookPro models/discrete GPU only"/>
+  <int value="55" label="Win/Drivers older than 2007-01/all"/>
+  <int value="56" label="Linux/NVIDIA/video,video_decode,Flash3D"/>
+  <int value="57" label="ChromeOS/panel_fitting"/>
+  <int value="58" label="Win/Optimus Intel 8.15.10.*/texture_sharing"/>
+  <int value="59" label="Win/NVIDIA/8.15.11.8593/video_decode"/>
+  <int value="60" label="Mac/NVIDIA/multisampling"/>
+  <int value="61" label="Mac/Intel/multisampling"/>
+  <int value="62" label="Android/Qualcomm Adreno older drivers/2d-canvas"/>
+  <int value="63" label="Mac/AMD/multisampling"/>
+  <int value="64" label="WinVista+XP/video_decode"/>
+  <int value="65" label="WinVista/force_compositing_mode"/>
+  <int value="66" label="Mac10.7-/force_compositing_mode"/>
+  <int value="67" label="WinXP/2d-canvas"/>
+  <int value="68" label="WinVista+/VMWare/all"/>
+  <int value="69" label="Win/NVIDIA/8.17.11.9621/Flash3D_baseline"/>
+  <int value="70" label="Win/NVIDIA/8.17.11.8267/Flash3D_baseline"/>
+  <int value="71" label="Win/Intel/8.15.10.2021-/Flash3D_baseline"/>
+  <int value="72" label="Win/NVIDIA/GeForce6200LE/WebGL"/>
+  <int value="73" label="Mac10.7-/NVIDIA-GT330M-9400-9400M/WebGL"/>
+  <int value="74" label="Win/Microsoft/all"/>
+  <int value="75" label="Win/AMD_switchable/Texture_sharing"/>
 </enum>
 
 <enum name="GpuDriverBugWorkaroundEntry" type="int">
@@ -17922,6 +18417,62 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="21" label="Media worker context">
     CAUSE_FOR_GPU_LAUNCH_MEDIA_CONTEXT
   </int>
+</enum>
+
+<enum name="GPUProcessLifetimeEvent" type="int">
+  <summary>
+    Lifetime events of the GPU Process, as defined in
+    chrome/browser/gpu_process_host.cc. DiedFourth should never happen as it is
+    beyond the threshold number of launches enforced in
+    chrome/browser/gpu_process_host.cc.
+  </summary>
+  <int value="0" label="Launched"/>
+  <int value="1" label="DiedFirst"/>
+  <int value="2" label="DiedSecond"/>
+  <int value="3" label="DiedThird"/>
+  <int value="4" label="DiedFourth"/>
+</enum>
+
+<enum name="GPUProcessType" type="int">
+  <int value="0" label="Hardware"/>
+  <int value="1" label="Software"/>
+</enum>
+
+<enum name="GPUsetIsAcceleratedCompositingActive" type="int">
+  <summary>
+    Combinations of input parameter active and previous active state set in
+    third_party/WebKit/WebKit/chromium/src/ChromiumBridge.cpp
+  </summary>
+  <int value="0" label="inactive, was inactive"/>
+  <int value="1" label="inactive, was active"/>
+  <int value="2" label="active, was inactive"/>
+  <int value="3" label="active, was active"/>
+</enum>
+
+<enum name="GPUThreeDAPIInfoBarDismissal" type="int">
+  <summary>Results of user actions when a 3D API info bar is raised.</summary>
+  <int value="0" label="Ignored"/>
+  <int value="1" label="Reloaded"/>
+  <int value="2" label="Closed without action"/>
+</enum>
+
+<enum name="GPUWebGraphicsContext3D_Init_CanLoseContext" type="int">
+  <summary>
+    Combinations of context loss variables from
+    chrome/renderer/webgraphicscontext3d_command_buffer_impl.cc
+  </summary>
+  <int value="0"
+      label="InitOK attributes.canRecoverFromContextLoss=False
+             gpu_info.can_lose_context=False"/>
+  <int value="1"
+      label="InitFAILS attributes.canRecoverFromContextLoss=False
+             gpu_info.can_lose_context=True"/>
+  <int value="2"
+      label="InitOK attributes.canRecoverFromContextLoss=True
+             gpu_info.can_lose_context=False"/>
+  <int value="3"
+      label="InitOK attributes.canRecoverFromContextLoss=True
+             gpu_info.can_lose_context=True"/>
 </enum>
 
 <enum name="GsaAccountChangeNotificationSource" type="int">
@@ -18533,6 +19084,16 @@ uploading your change for review.  These are checked by presubmit scripts.
   </int>
 </enum>
 
+<enum name="IDBException" type="int">
+  <int value="0" label="Unknown error"/>
+  <int value="1" label="Constraint error"/>
+  <int value="2" label="Data error"/>
+  <int value="3" label="Version error"/>
+  <int value="4" label="Abort error"/>
+  <int value="5" label="Quota error"/>
+  <int value="6" label="Timeout error"/>
+</enum>
+
 <enum name="IDBKeyPathType" type="int">
   <int value="0" label="None">No key path.</int>
   <int value="1" label="String">Key path is a string.</int>
@@ -18921,6 +19482,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="73" label="AUTOMATION_INFOBAR_DELEGATE"/>
   <int value="74" label="VR_SERVICES_UPGRADE_ANDROID"/>
   <int value="75" label="READER_MODE_INFOBAR_ANDROID"/>
+  <int value="76" label="VR_FEEDBACK_INFOBAR_ANDROID"/>
 </enum>
 
 <enum name="InfoBarResponse" type="int">
@@ -20793,6 +21355,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="8" label="Menu item (shortcut)"/>
   <int value="9" label="External intent (WebAPK)"/>
   <int value="10" label="App banner (WebAPK)"/>
+  <int value="11" label="Unknown (WebAPK)"/>
 </enum>
 
 <enum name="LaunchIntentFlags" type="int">
@@ -20800,6 +21363,34 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="524288" label="NEW_DOCUMENT"/>
   <int value="268435456" label="NEW_TASK"/>
   <int value="268959744" label="NEW_TASK | NEW_DOCUMENT"/>
+</enum>
+
+<enum name="LaunchMode" type="int">
+  <int value="1" label="LM_AS_WEBAPP">
+    Launched as an installed web application
+  </int>
+  <int value="2" label="LM_WITH_URLS">Launched with urls in the cmd line</int>
+  <int value="3" label="LM_OTHER">
+    Fallback value when no other LM_ condition is satisfied
+  </int>
+  <int value="4" label="LM_SHORTCUT_NONAME">
+    Launched from shortcut but the path to the shortcut cannot be determined
+  </int>
+  <int value="5" label="LM_SHORTCUT_UNKNOWN">
+    Launched from user-defined shortcut
+  </int>
+  <int value="6" label="LM_SHORTCUT_QUICKLAUNCH">
+    Launched from the quick launch bar (pre-Win7)
+  </int>
+  <int value="7" label="LM_SHORTCUT_DESKTOP">
+    Launched from a desktop shortcut
+  </int>
+  <int value="8" label="LM_SHORTCUT_TASKBAR">
+    Launched from the taskbar (Win7 and higher)
+  </int>
+  <int value="9" label="LM_USER_EXPERIMENT">
+    Launched from the installer as part of a retention experiment
+  </int>
 </enum>
 
 <enum name="LazyCSSParseUsage" type="int">
@@ -20953,6 +21544,22 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="18" label="OTHER_KWALLET"/>
   <int value="19" label="OTHER_KEYRING"/>
   <int value="20" label="OTHER_LIBSECRET"/>
+</enum>
+
+<enum name="LinuxDistro" type="int">
+  <int value="0" label="Unknown"/>
+  <int value="1" label="Ubuntu Other"/>
+  <int value="2" label="Ubuntu 14.04"/>
+  <int value="3" label="Ubuntu 16.04"/>
+  <int value="4" label="Ubuntu 16.10"/>
+  <int value="5" label="Ubuntu 17.04"/>
+  <int value="6" label="Debian Other"/>
+  <int value="7" label="Debian 8"/>
+  <int value="8" label="openSUSE Other"/>
+  <int value="9" label="openSUSE Leap 42.2"/>
+  <int value="10" label="Fedora Other"/>
+  <int value="11" label="Fedora 24"/>
+  <int value="12" label="Fedora 25"/>
 </enum>
 
 <enum name="LinuxGlibcVersion" type="int">
@@ -21221,6 +21828,7 @@ uploading your change for review.  These are checked by presubmit scripts.
       label="CrossOriginMediaPlaybackRequiresUserGesture:enabled"/>
   <int value="-2099035488" label="enable-data-reduction-proxy-bypass-warning"/>
   <int value="-2098610409" label="disable-lcd-text"/>
+  <int value="-2098243118" label="OmniboxTailSuggestions:disabled"/>
   <int value="-2097515669" label="disable-cast"/>
   <int value="-2091404586" label="TabStripKeyboardFocus:enabled"/>
   <int value="-2090484194" label="ContextualSearchUrlActions:disabled"/>
@@ -21246,6 +21854,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="-2040471724" label="CrOSComponent:disabled"/>
   <int value="-2040115518" label="load-media-router-component-extension"/>
   <int value="-2036149591" label="FaviconsFromWebManifest:disabled"/>
+  <int value="-2035126988" label="enabled-new-style-notification"/>
   <int value="-2033225430" label="NTPMostLikelyFaviconsFromServer:disabled"/>
   <int value="-2029912304" label="StaleWhileRevalidate2:enabled"/>
   <int value="-2025367104" label="enable-material-design-ntp"/>
@@ -21405,6 +22014,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="-1510839574" label="disable-sync-synced-notifications"/>
   <int value="-1504305449" label="NTPPhysicalWebPageSuggestions:enabled"/>
   <int value="-1497338981" label="disable-accelerated-overflow-scroll"/>
+  <int value="-1492589689" label="ContentSuggestionsCategories:enabled"/>
   <int value="-1491417046" label="enable-fullscreen-toolbar-reveal"/>
   <int value="-1490298774" label="enable-captive-portal-bypass-proxy-option"/>
   <int value="-1488744539" label="QuickUnlockFingerprint:enabled"/>
@@ -21420,6 +22030,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="-1463410070" label="IPH_DemoMode:enabled"/>
   <int value="-1460462432" label="disable-media-source"/>
   <int value="-1456004000" label="VrShell:disabled"/>
+  <int value="-1450576851" label="OmniboxUIExperimentVerticalLayout:enabled"/>
   <int value="-1443796945" label="OfflinePagesSharing:disabled"/>
   <int value="-1440440375" label="WebVrAutopresent:enabled"/>
   <int value="-1440152291" label="disable-gesture-typing"/>
@@ -21526,12 +22137,14 @@ from previous Chrome versions.
   <int value="-1102212525" label="enable-tcp-fastopen"/>
   <int value="-1099142083" label="V8Ignition:disabled"/>
   <int value="-1096595907" label="disable-new-virtual-keyboard-behavior"/>
+  <int value="-1085492638" label="FetchKeepaliveTimeoutSetting:enabled"/>
   <int value="-1084055006" label="disable-web-notification-custom-layouts"/>
   <int value="-1082302549" label="scan-cards-in-web-payments"/>
   <int value="-1078093206" label="ash-debug-shortcuts"/>
   <int value="-1077752943" label="enable-password-generation"/>
   <int value="-1075156797" label="enable-brotli"/>
   <int value="-1075089382" label="enable-physical-web"/>
+  <int value="-1074107607" label="data-reduction-proxy-experiment"/>
   <int value="-1073479583" label="ShowArcFilesApp:disabled"/>
   <int value="-1067635248" label="SpeculativeResourcePrefetching:disabled"/>
   <int value="-1064733740" label="ui-show-composited-layer-borders"/>
@@ -21591,6 +22204,7 @@ from previous Chrome versions.
   <int value="-884864731" label="WebPaymentsSingleAppUiSkip:enabled"/>
   <int value="-881854123" label="enable-heap-profiling"/>
   <int value="-881054479" label="WebAssemblyStreaming:disabled"/>
+  <int value="-879031960" label="FetchKeepaliveTimeoutSetting:disabled"/>
   <int value="-876148583" label="ArcBootCompletedBroadcast:disabled"/>
   <int value="-867087281" label="enable-virtual-keyboard"/>
   <int value="-864266073" label="cros-regions-mode"/>
@@ -21607,6 +22221,7 @@ from previous Chrome versions.
   <int value="-836123854" label="wallet-service-use-sandbox"/>
   <int value="-835672415" label="PointerEventV1SpecCapturing:disabled"/>
   <int value="-834661509" label="ModalPermissionPrompts:disabled"/>
+  <int value="-832561975" label="enable-picture-in-picture"/>
   <int value="-825942229" label="tab-management-experiment-type-elderberry"/>
   <int value="-823165021" label="MaterialDesignUserMenu:enabled"/>
   <int value="-820041355" label="enable-transition-compositing"/>
@@ -21668,6 +22283,7 @@ from previous Chrome versions.
   <int value="-563980787" label="disable-webrtc"/>
   <int value="-562274241" label="enable-extension-action-redesign"/>
   <int value="-560551550" label="use-memory-pressure-chromeos"/>
+  <int value="-557742250" label="ContentSuggestionsCategories:disabled"/>
   <int value="-548082154" label="protect-sync-credential:disabled"/>
   <int value="-541611402" label="OfflinePagesPrefetching:enabled"/>
   <int value="-536289234" label="ssl-interstitial-v2-colorful"/>
@@ -21892,6 +22508,7 @@ from previous Chrome versions.
   <int value="334802038" label="OfflinePreviews:disabled"/>
   <int value="346711293" label="enable-save-password-bubble"/>
   <int value="348854923" label="v8-cache-strategies-for-cache-storage"/>
+  <int value="352191859" label="disabled-new-style-notification"/>
   <int value="358399482" label="enable-high-dpi-fixed-position-compositing"/>
   <int value="358493847" label="BackgroundLoader:disabled"/>
   <int value="360391863" label="NTPOfflineBadge:enabled"/>
@@ -21907,6 +22524,7 @@ from previous Chrome versions.
   <int value="385969127" label="disable-win32k-lockdown"/>
   <int value="387178525" label="VideoFullscreenOrientationLock:enabled"/>
   <int value="388996324" label="CustomContextMenu:disabled"/>
+  <int value="393704200" label="account-consistency"/>
   <int value="400322063" label="ash-disable-screen-orientation-lock"/>
   <int value="401983950" label="enable-spdy4"/>
   <int value="402143634" label="enable-search-button-in-omnibox-always"/>
@@ -21946,6 +22564,7 @@ from previous Chrome versions.
   <int value="504994663" label="GenericSensor:disabled"/>
   <int value="506680761" label="WebNFC:disabled"/>
   <int value="510814146" label="OfflineBookmarks:enabled"/>
+  <int value="535131384" label="OmniboxTailSuggestions:enabled"/>
   <int value="535976218" label="enable-plugin-power-saver"/>
   <int value="538468149" label="OfflinePagesCT:enabled"/>
   <int value="546520086" label="enable-data-reduction-proxy-savings-promo"/>
@@ -21978,6 +22597,7 @@ from previous Chrome versions.
   <int value="628570445" label="AndroidAutofillAccessibility:enabled"/>
   <int value="630244477" label="ServiceWorkerPaymentApps:enabled"/>
   <int value="630947363" label="touch-events"/>
+  <int value="632340413" label="network-settings-config"/>
   <int value="635971109" label="PrintPdfAsImage:disabled"/>
   <int value="636425179" label="mhtml-generator-option"/>
   <int value="637396292" label="AllBookmarks:enabled"/>
@@ -22017,8 +22637,6 @@ from previous Chrome versions.
   <int value="782167080" label="enable-new-qp-input-view"/>
   <int value="783270752" label="AndroidHistoryManager:enabled"/>
   <int value="803282885" label="PreferHtmlOverPlugins:disabled"/>
-  <int value="805567148"
-      label="enable-canvas-2d-dynamic-rendering-mode-switching"/>
   <int value="806334184" label="AndroidSpellChecker:enabled"/>
   <int value="807734471" label="tab-management-experiment-type-disabled"/>
   <int value="811374216" label="disable-new-bookmark-apps"/>
@@ -22179,6 +22797,7 @@ from previous Chrome versions.
   <int value="1318073661" label="MaterialDesignExtensions:enabled"/>
   <int value="1319725131" label="enable-distance-field-text"/>
   <int value="1320201920" label="enable-touchpad-three-finger-click"/>
+  <int value="1330264457" label="OmniboxUIExperimentVerticalLayout:disabled"/>
   <int value="1344833841" label="ImeThread:enabled"/>
   <int value="1351830811" label="do-not-ignore-autocomplete-off"/>
   <int value="1352447982" label="enable-lcd-text"/>
@@ -22256,6 +22875,7 @@ from previous Chrome versions.
   <int value="1612974229" label="allow-insecure-localhost"/>
   <int value="1617187093" label="enable-improved-a2hs"/>
   <int value="1622131033" label="ozone-test-single-overlay-support"/>
+  <int value="1633456034" label="chrome-home-swipe-logic"/>
   <int value="1634897915" label="password-import-export:enabled"/>
   <int value="1636962093" label="disable-material-design-ntp"/>
   <int value="1646498561" label="OfflineBookmarks:disabled"/>
@@ -23375,9 +23995,17 @@ from previous Chrome versions.
   <int value="0" label="Neutral (deprecated February 2017)"/>
   <int value="1" label="Non-Secure"/>
   <int value="2" label="Neutral with a verbose warning on sensitive fields"/>
+  <int value="3" label="Neutral with a verbose warning after editing a form"/>
+  <int value="4" label="Neutral with a verbose warning in Incognito mode"/>
+  <int value="5"
+      label="Neutral with a verbose warning after editing a form or in
+             Incognito mode"/>
 </enum>
 
 <enum name="MarkNonSecureAsStatus" type="int">
+  <obsolete>
+    Deprecated 09/2016 and replaced with MarkHttpAsStatus.
+  </obsolete>
   <int value="0" label="Neutral"/>
   <int value="1" label="Dubious (deprecated August 2015)"/>
   <int value="2" label="Non-Secure"/>
@@ -23968,9 +24596,38 @@ from previous Chrome versions.
   <int value="2" label="LowStorage"/>
 </enum>
 
+<enum name="MigrationUIMigrationResult" type="int">
+  <int value="0" label="Success in new migration"/>
+  <int value="1" label="Success in resumed migration"/>
+  <int value="2" label="General failure in new migration"/>
+  <int value="3" label="General failure in resumed migration"/>
+  <int value="4" label="Request failure in new migration"/>
+  <int value="5" label="Request failure in resumed migration"/>
+  <int value="6" label="Mount failure in new migration"/>
+  <int value="7" label="Mount failure in resumed migration"/>
+</enum>
+
+<enum name="MigrationUIRemoveCryptohomeResult" type="int">
+  <int value="0" label="Success in new migration"/>
+  <int value="1" label="Success in resumed migration"/>
+  <int value="2" label="Failure in new migration"/>
+  <int value="3" label="Failure in resumed migration"/>
+</enum>
+
+<enum name="MigrationUIScreen" type="int">
+  <int value="0" label="Initial"/>
+  <int value="1" label="Ready"/>
+  <int value="2" label="Migrating"/>
+  <int value="3" label="Migration failed"/>
+  <int value="4" label="Not enough storage"/>
+</enum>
+
 <enum name="MigrationUIUserChoice" type="int">
   <int value="0" label="Update"/>
   <int value="1" label="Skip"/>
+  <int value="2" label="Restart on migration failure"/>
+  <int value="3" label="Restart on low storage"/>
+  <int value="4" label="Report an issue"/>
 </enum>
 
 <enum name="MissingStartType" type="int">
@@ -24496,6 +25153,14 @@ from previous Chrome versions.
   <int value="4"
       label="Persistent sparse histogram active sample overflowed and became
              negative."/>
+  <int value="5"
+      label="Persistent sparse histogram accumulated a negative count."/>
+  <int value="6"
+      label="Persistent sparse histogram accumulated a negative count that
+             caused a negative value."/>
+  <int value="7"
+      label="Persistent sparse histogram active sample overflowed during
+             accumulation and became negative."/>
 </enum>
 
 <enum name="NetCacheState" type="int">
@@ -25983,7 +26648,8 @@ from previous Chrome versions.
   <int value="3" label="the user's home page"/>
   <int value="4" label="other (typically an arbitrary URL)"/>
   <int value="5" label="obsolete: instant new tab page"/>
-  <int value="6" label="search results page with search term replacement"/>
+  <int value="6"
+      label="obsolete: search results page with search term replacement"/>
   <int value="7" label="new tab page with omnibox as starting focus"/>
   <int value="8" label="new tab page with fakebox as starting focus"/>
   <int value="9" label="search results page without search term replacement"/>
@@ -26179,6 +26845,7 @@ from previous Chrome versions.
   <int value="45" label="Yahoo!"/>
   <int value="46" label="Yandex"/>
   <int value="47" label="Zoznam"/>
+  <int value="48" label="360"/>
 </enum>
 
 <enum name="OmniboxSuggestRequests" type="int">
@@ -26758,6 +27425,8 @@ from previous Chrome versions.
   <int value="6" label="HTTP connection type mismatch."/>
   <int value="7"
       label="Remaining download time does not meet the requirement."/>
+  <int value="8"
+      label="HTTP method or url scheme does not meet the requirement."/>
 </enum>
 
 <enum name="ParentFrameKnown" type="int">
@@ -27356,6 +28025,259 @@ from previous Chrome versions.
   <int value="1" label="Empty username"/>
 </enum>
 
+<enum name="PasswordManagerSuppressedAccountCrossActionsTaken" type="int">
+  <summary>
+    The value is a mixed-base encoding of the combination of four attributes:
+    whether there were suppressed stored credentials (and the kind if there
+    were); whether the form got ultimately submitted; what action the password
+    manager performed; and what action the user performed; in this order.
+  </summary>
+  <int value="0" label="(None, NotSubmitted, None, None)"/>
+  <int value="1" label="(None, NotSubmitted, None, Choose)"/>
+  <int value="2" label="(None, NotSubmitted, None, ChoosePSL)"/>
+  <int value="3" label="(None, NotSubmitted, None, OverridePassword)"/>
+  <int value="4"
+      label="(None, NotSubmitted, None, OverrideUsernameAndPassword)"/>
+  <int value="5" label="(None, NotSubmitted, Autofilled, None)"/>
+  <int value="6" label="(None, NotSubmitted, Autofilled, Choose)"/>
+  <int value="7" label="(None, NotSubmitted, Autofilled, ChoosePSL)"/>
+  <int value="8" label="(None, NotSubmitted, Autofilled, OverridePassword)"/>
+  <int value="9"
+      label="(None, NotSubmitted, Autofilled, OverrideUsernameAndPassword)"/>
+  <int value="10" label="(None, Failed, None, None)"/>
+  <int value="11" label="(None, Failed, None, Choose)"/>
+  <int value="12" label="(None, Failed, None, ChoosePSL)"/>
+  <int value="13" label="(None, Failed, None, OverridePassword)"/>
+  <int value="14" label="(None, Failed, None, OverrideUsernameAndPassword)"/>
+  <int value="15" label="(None, Failed, Autofilled, None)"/>
+  <int value="16" label="(None, Failed, Autofilled, Choose)"/>
+  <int value="17" label="(None, Failed, Autofilled, ChoosePSL)"/>
+  <int value="18" label="(None, Failed, Autofilled, OverridePassword)"/>
+  <int value="19"
+      label="(None, Failed, Autofilled, OverrideUsernameAndPassword)"/>
+  <int value="20" label="(None, Passed, None, None)"/>
+  <int value="21" label="(None, Passed, None, Choose)"/>
+  <int value="22" label="(None, Passed, None, ChoosePSL)"/>
+  <int value="23" label="(None, Passed, None, OverridePassword)"/>
+  <int value="24" label="(None, Passed, None, OverrideUsernameAndPassword)"/>
+  <int value="25" label="(None, Passed, Autofilled, None)"/>
+  <int value="26" label="(None, Passed, Autofilled, Choose)"/>
+  <int value="27" label="(None, Passed, Autofilled, ChoosePSL)"/>
+  <int value="28" label="(None, Passed, Autofilled, OverridePassword)"/>
+  <int value="29"
+      label="(None, Passed, Autofilled, OverrideUsernameAndPassword)"/>
+  <int value="30" label="(Exists, NotSubmitted, None, None)"/>
+  <int value="31" label="(Exists, NotSubmitted, None, Choose)"/>
+  <int value="32" label="(Exists, NotSubmitted, None, ChoosePSL)"/>
+  <int value="33" label="(Exists, NotSubmitted, None, OverridePassword)"/>
+  <int value="34"
+      label="(Exists, NotSubmitted, None, OverrideUsernameAndPassword)"/>
+  <int value="35" label="(Exists, NotSubmitted, Autofilled, None)"/>
+  <int value="36" label="(Exists, NotSubmitted, Autofilled, Choose)"/>
+  <int value="37" label="(Exists, NotSubmitted, Autofilled, ChoosePSL)"/>
+  <int value="38" label="(Exists, NotSubmitted, Autofilled, OverridePassword)"/>
+  <int value="39"
+      label="(Exists, NotSubmitted, Autofilled, OverrideUsernameAndPassword)"/>
+  <int value="40" label="(Exists, Failed, None, None)"/>
+  <int value="41" label="(Exists, Failed, None, Choose)"/>
+  <int value="42" label="(Exists, Failed, None, ChoosePSL)"/>
+  <int value="43" label="(Exists, Failed, None, OverridePassword)"/>
+  <int value="44" label="(Exists, Failed, None, OverrideUsernameAndPassword)"/>
+  <int value="45" label="(Exists, Failed, Autofilled, None)"/>
+  <int value="46" label="(Exists, Failed, Autofilled, Choose)"/>
+  <int value="47" label="(Exists, Failed, Autofilled, ChoosePSL)"/>
+  <int value="48" label="(Exists, Failed, Autofilled, OverridePassword)"/>
+  <int value="49"
+      label="(Exists, Failed, Autofilled, OverrideUsernameAndPassword)"/>
+  <int value="50" label="(Exists, Passed, None, None)"/>
+  <int value="51" label="(Exists, Passed, None, Choose)"/>
+  <int value="52" label="(Exists, Passed, None, ChoosePSL)"/>
+  <int value="53" label="(Exists, Passed, None, OverridePassword)"/>
+  <int value="54" label="(Exists, Passed, None, OverrideUsernameAndPassword)"/>
+  <int value="55" label="(Exists, Passed, Autofilled, None)"/>
+  <int value="56" label="(Exists, Passed, Autofilled, Choose)"/>
+  <int value="57" label="(Exists, Passed, Autofilled, ChoosePSL)"/>
+  <int value="58" label="(Exists, Passed, Autofilled, OverridePassword)"/>
+  <int value="59"
+      label="(Exists, Passed, Autofilled, OverrideUsernameAndPassword)"/>
+  <int value="60" label="(ExistsDifferentUsername, NotSubmitted, None, None)"/>
+  <int value="61"
+      label="(ExistsDifferentUsername, NotSubmitted, None, Choose)"/>
+  <int value="62"
+      label="(ExistsDifferentUsername, NotSubmitted, None, ChoosePSL)"/>
+  <int value="63"
+      label="(ExistsDifferentUsername, NotSubmitted, None, OverridePassword)"/>
+  <int value="64"
+      label="(ExistsDifferentUsername, NotSubmitted, None,
+             OverrideUsernameAndPassword)"/>
+  <int value="65"
+      label="(ExistsDifferentUsername, NotSubmitted, Autofilled, None)"/>
+  <int value="66"
+      label="(ExistsDifferentUsername, NotSubmitted, Autofilled, Choose)"/>
+  <int value="67"
+      label="(ExistsDifferentUsername, NotSubmitted, Autofilled, ChoosePSL)"/>
+  <int value="68"
+      label="(ExistsDifferentUsername, NotSubmitted, Autofilled,
+             OverridePassword)"/>
+  <int value="69"
+      label="(ExistsDifferentUsername, NotSubmitted, Autofilled,
+             OverrideUsernameAndPassword)"/>
+  <int value="70" label="(ExistsDifferentUsername, Failed, None, None)"/>
+  <int value="71" label="(ExistsDifferentUsername, Failed, None, Choose)"/>
+  <int value="72" label="(ExistsDifferentUsername, Failed, None, ChoosePSL)"/>
+  <int value="73"
+      label="(ExistsDifferentUsername, Failed, None, OverridePassword)"/>
+  <int value="74"
+      label="(ExistsDifferentUsername, Failed, None,
+             OverrideUsernameAndPassword)"/>
+  <int value="75" label="(ExistsDifferentUsername, Failed, Autofilled, None)"/>
+  <int value="76"
+      label="(ExistsDifferentUsername, Failed, Autofilled, Choose)"/>
+  <int value="77"
+      label="(ExistsDifferentUsername, Failed, Autofilled, ChoosePSL)"/>
+  <int value="78"
+      label="(ExistsDifferentUsername, Failed, Autofilled, OverridePassword)"/>
+  <int value="79"
+      label="(ExistsDifferentUsername, Failed, Autofilled,
+             OverrideUsernameAndPassword)"/>
+  <int value="80" label="(ExistsDifferentUsername, Passed, None, None)"/>
+  <int value="81" label="(ExistsDifferentUsername, Passed, None, Choose)"/>
+  <int value="82" label="(ExistsDifferentUsername, Passed, None, ChoosePSL)"/>
+  <int value="83"
+      label="(ExistsDifferentUsername, Passed, None, OverridePassword)"/>
+  <int value="84"
+      label="(ExistsDifferentUsername, Passed, None,
+             OverrideUsernameAndPassword)"/>
+  <int value="85" label="(ExistsDifferentUsername, Passed, Autofilled, None)"/>
+  <int value="86"
+      label="(ExistsDifferentUsername, Passed, Autofilled, Choose)"/>
+  <int value="87"
+      label="(ExistsDifferentUsername, Passed, Autofilled, ChoosePSL)"/>
+  <int value="88"
+      label="(ExistsDifferentUsername, Passed, Autofilled, OverridePassword)"/>
+  <int value="89"
+      label="(ExistsDifferentUsername, Passed, Autofilled,
+             OverrideUsernameAndPassword)"/>
+  <int value="90" label="(ExistsSameUsername, NotSubmitted, None, None)"/>
+  <int value="91" label="(ExistsSameUsername, NotSubmitted, None, Choose)"/>
+  <int value="92" label="(ExistsSameUsername, NotSubmitted, None, ChoosePSL)"/>
+  <int value="93"
+      label="(ExistsSameUsername, NotSubmitted, None, OverridePassword)"/>
+  <int value="94"
+      label="(ExistsSameUsername, NotSubmitted, None,
+             OverrideUsernameAndPassword)"/>
+  <int value="95" label="(ExistsSameUsername, NotSubmitted, Autofilled, None)"/>
+  <int value="96"
+      label="(ExistsSameUsername, NotSubmitted, Autofilled, Choose)"/>
+  <int value="97"
+      label="(ExistsSameUsername, NotSubmitted, Autofilled, ChoosePSL)"/>
+  <int value="98"
+      label="(ExistsSameUsername, NotSubmitted, Autofilled, OverridePassword)"/>
+  <int value="99"
+      label="(ExistsSameUsername, NotSubmitted, Autofilled,
+             OverrideUsernameAndPassword)"/>
+  <int value="100" label="(ExistsSameUsername, Failed, None, None)"/>
+  <int value="101" label="(ExistsSameUsername, Failed, None, Choose)"/>
+  <int value="102" label="(ExistsSameUsername, Failed, None, ChoosePSL)"/>
+  <int value="103"
+      label="(ExistsSameUsername, Failed, None, OverridePassword)"/>
+  <int value="104"
+      label="(ExistsSameUsername, Failed, None, OverrideUsernameAndPassword)"/>
+  <int value="105" label="(ExistsSameUsername, Failed, Autofilled, None)"/>
+  <int value="106" label="(ExistsSameUsername, Failed, Autofilled, Choose)"/>
+  <int value="107" label="(ExistsSameUsername, Failed, Autofilled, ChoosePSL)"/>
+  <int value="108"
+      label="(ExistsSameUsername, Failed, Autofilled, OverridePassword)"/>
+  <int value="109"
+      label="(ExistsSameUsername, Failed, Autofilled,
+             OverrideUsernameAndPassword)"/>
+  <int value="110" label="(ExistsSameUsername, Passed, None, None)"/>
+  <int value="111" label="(ExistsSameUsername, Passed, None, Choose)"/>
+  <int value="112" label="(ExistsSameUsername, Passed, None, ChoosePSL)"/>
+  <int value="113"
+      label="(ExistsSameUsername, Passed, None, OverridePassword)"/>
+  <int value="114"
+      label="(ExistsSameUsername, Passed, None, OverrideUsernameAndPassword)"/>
+  <int value="115" label="(ExistsSameUsername, Passed, Autofilled, None)"/>
+  <int value="116" label="(ExistsSameUsername, Passed, Autofilled, Choose)"/>
+  <int value="117" label="(ExistsSameUsername, Passed, Autofilled, ChoosePSL)"/>
+  <int value="118"
+      label="(ExistsSameUsername, Passed, Autofilled, OverridePassword)"/>
+  <int value="119"
+      label="(ExistsSameUsername, Passed, Autofilled,
+             OverrideUsernameAndPassword)"/>
+  <int value="120"
+      label="(ExistsSameUsernameAndPassword, NotSubmitted, None, None)"/>
+  <int value="121"
+      label="(ExistsSameUsernameAndPassword, NotSubmitted, None, Choose)"/>
+  <int value="122"
+      label="(ExistsSameUsernameAndPassword, NotSubmitted, None, ChoosePSL)"/>
+  <int value="123"
+      label="(ExistsSameUsernameAndPassword, NotSubmitted, None,
+             OverridePassword)"/>
+  <int value="124"
+      label="(ExistsSameUsernameAndPassword, NotSubmitted, None,
+             OverrideUsernameAndPassword)"/>
+  <int value="125"
+      label="(ExistsSameUsernameAndPassword, NotSubmitted, Autofilled, None)"/>
+  <int value="126"
+      label="(ExistsSameUsernameAndPassword, NotSubmitted, Autofilled,
+             Choose)"/>
+  <int value="127"
+      label="(ExistsSameUsernameAndPassword, NotSubmitted, Autofilled,
+             ChoosePSL)"/>
+  <int value="128"
+      label="(ExistsSameUsernameAndPassword, NotSubmitted, Autofilled,
+             OverridePassword)"/>
+  <int value="129"
+      label="(ExistsSameUsernameAndPassword, NotSubmitted, Autofilled,
+             OverrideUsernameAndPassword)"/>
+  <int value="130" label="(ExistsSameUsernameAndPassword, Failed, None, None)"/>
+  <int value="131"
+      label="(ExistsSameUsernameAndPassword, Failed, None, Choose)"/>
+  <int value="132"
+      label="(ExistsSameUsernameAndPassword, Failed, None, ChoosePSL)"/>
+  <int value="133"
+      label="(ExistsSameUsernameAndPassword, Failed, None, OverridePassword)"/>
+  <int value="134"
+      label="(ExistsSameUsernameAndPassword, Failed, None,
+             OverrideUsernameAndPassword)"/>
+  <int value="135"
+      label="(ExistsSameUsernameAndPassword, Failed, Autofilled, None)"/>
+  <int value="136"
+      label="(ExistsSameUsernameAndPassword, Failed, Autofilled, Choose)"/>
+  <int value="137"
+      label="(ExistsSameUsernameAndPassword, Failed, Autofilled, ChoosePSL)"/>
+  <int value="138"
+      label="(ExistsSameUsernameAndPassword, Failed, Autofilled,
+             OverridePassword)"/>
+  <int value="139"
+      label="(ExistsSameUsernameAndPassword, Failed, Autofilled,
+             OverrideUsernameAndPassword)"/>
+  <int value="140" label="(ExistsSameUsernameAndPassword, Passed, None, None)"/>
+  <int value="141"
+      label="(ExistsSameUsernameAndPassword, Passed, None, Choose)"/>
+  <int value="142"
+      label="(ExistsSameUsernameAndPassword, Passed, None, ChoosePSL)"/>
+  <int value="143"
+      label="(ExistsSameUsernameAndPassword, Passed, None, OverridePassword)"/>
+  <int value="144"
+      label="(ExistsSameUsernameAndPassword, Passed, None,
+             OverrideUsernameAndPassword)"/>
+  <int value="145"
+      label="(ExistsSameUsernameAndPassword, Passed, Autofilled, None)"/>
+  <int value="146"
+      label="(ExistsSameUsernameAndPassword, Passed, Autofilled, Choose)"/>
+  <int value="147"
+      label="(ExistsSameUsernameAndPassword, Passed, Autofilled, ChoosePSL)"/>
+  <int value="148"
+      label="(ExistsSameUsernameAndPassword, Passed, Autofilled,
+             OverridePassword)"/>
+  <int value="149"
+      label="(ExistsSameUsernameAndPassword, Passed, Autofilled,
+             OverrideUsernameAndPassword)"/>
+</enum>
+
 <enum name="PasswordManagerSyncingAccountState" type="int">
   <summary>
     The value is a combination of the current sync state and if the user has
@@ -27399,6 +28321,7 @@ from previous Chrome versions.
   <int value="11" label="Service destroyed"/>
   <int value="12" label="Disabled due to feature disabled"/>
   <int value="13" label="Disabled due to user population"/>
+  <int value="14" label="URL not valid for reputation computing"/>
 </enum>
 
 <enum name="PasswordProtectionVerdict" type="int">
@@ -27498,6 +28421,7 @@ from previous Chrome versions.
   <int value="0" label="Loaded a full-page PDF with PDFium"/>
   <int value="1" label="Loaded an embedded PDF with PDFium"/>
   <int value="2" label="Showed disabled plugin placeholder for embedded PDF"/>
+  <int value="3" label="Triggered a drive-by download without user gesture"/>
 </enum>
 
 <enum name="PeerConnectionCounters" type="int">
@@ -27792,6 +28716,7 @@ from previous Chrome versions.
   <int value="2" label="Mapped-File Success"/>
   <int value="3" label="Mapped-File Failure"/>
   <int value="5" label="Mapped-File Already Exists"/>
+  <int value="6" label="No Spare File"/>
 </enum>
 
 <enum name="PhotoEditorFileType" type="int">
@@ -28143,6 +29068,11 @@ from previous Chrome versions.
   <int value="3" label="Shortcut. Offer. Rollback unavailable."/>
   <int value="4" label="Shortcut. Offer. Rollback available."/>
   <int value="5" label="Shortcut. Restart required."/>
+</enum>
+
+<enum name="PpdSource" type="int">
+  <int value="0" label="PPD provided by user"/>
+  <int value="1" label="PPD downloaded from SCS"/>
 </enum>
 
 <enum name="PrecacheEvents" type="int">
@@ -28600,12 +29530,42 @@ from previous Chrome versions.
   <int value="1" label="The user chose to reload the full page."/>
 </enum>
 
+<enum name="PrinterProtocol" type="int">
+  <int value="0" label="Unknown"/>
+  <int value="1" label="Universal Serial Bus (usb)"/>
+  <int value="2" label="Internet Print Protocol (ipp)"/>
+  <int value="3" label="Internet Print Protocol Secure (ipps)"/>
+  <int value="4" label="HyperText Transfer Protocol (http)"/>
+  <int value="5" label="HyperText Transfer Protocol Secure (https)"/>
+  <int value="6" label="App Socket (socket)"/>
+  <int value="7" label="Line Print Daemon (lpd)"/>
+</enum>
+
 <enum name="PrinterServiceEventType" type="int">
   <int value="0" label="Printer added"/>
   <int value="1" label="Page displayed (Deprecated)"/>
   <int value="2" label="Printer supported notification shown"/>
   <int value="3" label="Printer not supported notification shown"/>
   <int value="4" label="Printer provider Web Store app launched"/>
+</enum>
+
+<enum name="PrinterSetupResult" type="int">
+  <int value="0" label="Fatal Error"/>
+  <int value="1" label="Success"/>
+  <int value="2" label="Printer Unreachable"/>
+  <int value="3" label="Could not contact debugd over dbus"/>
+  <int value="10" label="PPD exceeds size limit"/>
+  <int value="11" label="PPD Rejected by cupstestppd"/>
+  <int value="12" label="Could not find PPD"/>
+  <int value="13" label="Failed to download PPD"/>
+</enum>
+
+<enum name="PrintJobResult" type="int">
+  <int value="0" label="Unknown"/>
+  <int value="1" label="Successful Finish"/>
+  <int value="2" label="Cancelled due to timeout"/>
+  <int value="3" label="Cancelled by printer"/>
+  <int value="4" label="Lost track of job"/>
 </enum>
 
 <enum name="PrintPreviewFailureType" type="int">
@@ -31437,6 +32397,18 @@ from previous Chrome versions.
   <int value="33" label="NONE"/>
 </enum>
 
+<enum name="SearchEntryPoint" type="int">
+  <int value="0" label="From search widget"/>
+  <int value="1" label="From omnibox"/>
+</enum>
+
+<enum name="SearchWidgetUseInfo" type="int">
+  <int value="0" label="Present in partnership device"/>
+  <int value="1" label="Not present in partnership device"/>
+  <int value="2" label="Present in non-partnership device"/>
+  <int value="3" label="Not present in non-partnership device"/>
+</enum>
+
 <enum name="SecurityInterstitialDecision" type="int">
   <int value="0" label="SHOW"/>
   <int value="1" label="PROCEED"/>
@@ -32437,6 +33409,7 @@ from previous Chrome versions.
   <int value="6" label="Key Mismatch"/>
   <int value="7" label="Hash Mismatch"/>
   <int value="8" label="Sparse Open Failed"/>
+  <int value="9" label="Invalid File Length"/>
 </enum>
 
 <enum name="SimpleCacheSyncSHA256Result" type="int">
@@ -33764,6 +34737,13 @@ from previous Chrome versions.
   <int value="9" label="Filled input elements on start provisional load"/>
 </enum>
 
+<enum name="SubmittedPasswordFormFrame" type="int">
+  <int value="0" label="Main frame"/>
+  <int value="1" label="Iframe with the same url as main frame"/>
+  <int value="2" label="Iframe with different url and the same signon realm"/>
+  <int value="3" label="Iframe with different signon realm"/>
+</enum>
+
 <enum name="SubresourceFilterActions" type="int">
   <int value="0" label="New Navigation"/>
   <int value="1" label="UI Shown"/>
@@ -34500,6 +35480,8 @@ from previous Chrome versions.
   <int value="6" label="Media"/>
   <int value="7" label="Sites"/>
   <int value="8" label="Sync"/>
+  <int value="9" label="WebApk"/>
+  <int value="10" label="Browser Actions"/>
 </enum>
 
 <enum name="TabBackgroundLoadStatus" type="int">
@@ -34619,6 +35601,31 @@ from previous Chrome versions.
   <int value="3" label="Writing"/>
   <int value="4" label="Renaming"/>
   <int value="5" label="Flushing"/>
+</enum>
+
+<enum name="TerminationStatus" type="int">
+  <summary>
+    Return status values from GetTerminationStatus as defined in
+    base/process/kill.h enum TerminationStatus. The last couple enums are
+    different depending on the platform.
+  </summary>
+  <int value="0" label="Normal">TERMINATION_STATUS_NORMAL_TERMINATION</int>
+  <int value="1" label="Abnormal">TERMINATION_STATUS_ABNORMAL_TERMINATION</int>
+  <int value="2" label="Killed">TERMINATION_STATUS_PROCESS_WAS_KILLED</int>
+  <int value="3" label="Crashed">TERMINATION_STATUS_PROCESS_CRASHED</int>
+  <int value="4" label="Still Running">TERMINATION_STATUS_STILL_RUNNING</int>
+  <int value="5" label="OOM/OOM Protected/Launch Failed">
+    TERMINATION_STATUS_PROCESS_WAS_KILLED_BY_OOM on ChromeOS,
+    TERMINATION_STATUS_OOM_PROTECTED on Android,
+    TERMINATION_STATUS_LAUNCH_FAILED everywhere else
+  </int>
+  <int value="6" label="Launch Failed/OOM">
+    TERMINATION_STATUS_LAUNCH_FAILED on ChromeOS and Android,
+    TERMINATION_STATUS_OOM everywhere else
+  </int>
+  <int value="7" label="OOM">
+    TERMINATION_STATUS_OOM on ChromeOS and Android
+  </int>
 </enum>
 
 <enum name="ThreadType" type="int">
@@ -35089,6 +36096,21 @@ from previous Chrome versions.
   <int value="2" label="unexpected other schemes"/>
 </enum>
 
+<enum name="TriggerHelpUIResult" type="int">
+  <int value="0" label="SUCCESS"/>
+  <int value="1" label="FAILURE"/>
+  <int value="2" label="FAILURE_MODEL_NOT_READY"/>
+  <int value="3" label="FAILURE_CURRENTLY_SHOWING"/>
+  <int value="4" label="FAILURE_FEATURE_DISABLED"/>
+  <int value="5" label="FAILURE_CONFIG_INVALID"/>
+  <int value="6" label="FAILURE_USED_PRECONDITION_UNMET"/>
+  <int value="7" label="FAILURE_TRIGGER_PRECONDITION_UNMET"/>
+  <int value="8" label="FAILURE_OTHER_PRECONDITION_UNMET"/>
+  <int value="9" label="FAILURE_SESSION_RATE"/>
+  <int value="10" label="FAILURE_AVAILABILITY_MODEL_NOT_READY"/>
+  <int value="11" label="FAILURE_AVAILABILITY_PRECONDITION_UNMET"/>
+</enum>
+
 <enum name="TrimMemoryLevel" type="int">
   <summary>
     The level provided by Android's ComponentCallbacks2.onTrimMemory().
@@ -35398,6 +36420,147 @@ from previous Chrome versions.
   <int value="1" label="AUTOMATIC_UPDATES"/>
   <int value="2" label="MANUAL_UPDATES_ONLY"/>
   <int value="3" label="AUTO_UPDATES_ONLY"/>
+</enum>
+
+<enum name="URLRequestAnnotationType" type="int">
+  Generated by tools/traffic_annotation/auditor/traffic_annotation_auditor.py.
+  <int value="485305" label="data_reduction_proxy_config"/>
+  <int value="727478" label="metrics_report_ukm"/>
+  <int value="727528" label="metrics_report_uma"/>
+  <int value="1313982" label="safe_browsing_client_side_phishing_detector"/>
+  <int value="3556498" label="test"/>
+  <int value="3989826" label="dom_distiller"/>
+  <int value="4300475" label="gaia_cookie_manager_external_cc_result"/>
+  <int value="5021348" label="sync_stop_reporter"/>
+  <int value="5151071" label="extension_manifest_fetcher"/>
+  <int value="5492492" label="google_url_tracker"/>
+  <int value="6019475" label="safe_browsing_module_loader"/>
+  <int value="7687691" label="omnibox_zerosuggest"/>
+  <int value="8250451" label="data_reduction_proxy_warmup"/>
+  <int value="8561691" label="safe_browsing_v4_get_hash"/>
+  <int value="9459438" label="external_policy_fetcher"/>
+  <int value="13211343" label="suggestions_image_manager"/>
+  <int value="14257952" label="supervised_user_url_filter"/>
+  <int value="15418154" label="ntp_snippets_fetch"/>
+  <int value="17188928" label="websocket_stream"/>
+  <int value="18300705" label="gcm_channel_status_request"/>
+  <int value="18670926" label="CRD_telemetry_log"/>
+  <int value="19185953" label="offline_prefetch"/>
+  <int value="21145003" label="extension_crx_fetcher"/>
+  <int value="21785164" label="intranet_redirect_detector"/>
+  <int value="22096011" label="test_partial"/>
+  <int value="22265491" label="user_info_fetcher"/>
+  <int value="22774132" label="devtools_free_data_source"/>
+  <int value="24058523" label="CRD_relay_session_request"/>
+  <int value="24978481" label="cloud_print_privet_register"/>
+  <int value="25790702" label="appcache_update_job"/>
+  <int value="25921771" label="webstore_install_helper"/>
+  <int value="26096088" label="speech_recognition_downstream"/>
+  <int value="26302604" label="webstore_data_fetcher"/>
+  <int value="26372521" label="sync_attachment_downloader"/>
+  <int value="29865866" label="headless_url_request"/>
+  <int value="30913825" label="family_info"/>
+  <int value="32030464" label="persist_blob_to_indexed_db"/>
+  <int value="35370363" label="suggestions_service"/>
+  <int value="36859107" label="logo_tracker"/>
+  <int value="37531401" label="proxy_script_fetcher"/>
+  <int value="40534770" label="favicon_component"/>
+  <int value="41154842" label="doodle_service"/>
+  <int value="42848942" label="safe_browsing_extended_reporting"/>
+  <int value="43206794" label="permission_request_creator"/>
+  <int value="44583821" label="safe_browsing_feedback"/>
+  <int value="44606780" label="rappor_report"/>
+  <int value="45578882" label="undefined"/>
+  <int value="46188932" label="network_time_component"/>
+  <int value="47152935" label="sdch_dictionary_fetch"/>
+  <int value="47815025" label="omnibox_suggest"/>
+  <int value="49544361" label="remote_suggestions_provider"/>
+  <int value="49601082" label="plugins_resource_service"/>
+  <int value="49825319" label="CRD_ice_config_request"/>
+  <int value="50422598" label="dial_get_device_description"/>
+  <int value="50464499" label="extension_install_signer"/>
+  <int value="50755044" label="popular_sites_fetch"/>
+  <int value="50816767" label="lib_address_input"/>
+  <int value="51164680" label="profile_avatar"/>
+  <int value="53695122" label="credenential_avatar"/>
+  <int value="57144960" label="sync_http_bridge"/>
+  <int value="57276415" label="chrome_expect_ct_reporter"/>
+  <int value="58963098" label="resource_dispather_host"/>
+  <int value="59592717" label="extension_blacklist"/>
+  <int value="60921996" label="ocsp_start_url_request"/>
+  <int value="61656965" label="gcm_registration"/>
+  <int value="61684939" label="omnibox_navigation_observer"/>
+  <int value="62443804" label="webrtc_log_upload"/>
+  <int value="64733114" label="content_hash_verification_job"/>
+  <int value="65442685" label="wifi_prefetch_sites_from_network"/>
+  <int value="65957842" label="gcm_checkin"/>
+  <int value="66322287" label="password_protection_request"/>
+  <int value="66846958" label="speech_recognition_upstream"/>
+  <int value="68561428" label="data_reduction_proxy_pingback"/>
+  <int value="68745894" label="safe_browsing_get_full_hash"/>
+  <int value="70126372" label="notification_image_reporter"/>
+  <int value="72354423" label="invalidation_service"/>
+  <int value="73107389" label="omnibox_result_change"/>
+  <int value="73889867" label="wifi_prefetch_resource_from_network"/>
+  <int value="75153841" label="safe_browsing_g4_update"/>
+  <int value="77012883" label="missing"/>
+  <int value="77597059" label="domain_security_policy"/>
+  <int value="77673751" label="device_geolocation_request"/>
+  <int value="78544924" label="supervised_users_blacklist"/>
+  <int value="78917933" label="one_google_bar_service"/>
+  <int value="79957943" label="safe_browsing_chunk_backup_request"/>
+  <int value="84045030" label="payment_manifest_downloader"/>
+  <int value="84212388" label="omnibox_suggest_deletion"/>
+  <int value="84575287" label="background_performance_tracer"/>
+  <int value="88754904" label="captive_portal_service"/>
+  <int value="88863520" label="autofill_query"/>
+  <int value="95588446" label="payments_sync_cards"/>
+  <int value="97199008" label="doodle_fetcher"/>
+  <int value="100545943" label="webui_content_scripts_download"/>
+  <int value="101725581" label="cros_recovery_image_download"/>
+  <int value="102819690" label="sync_file_system"/>
+  <int value="102935425" label="safe_browsing_client_side_malware_detector"/>
+  <int value="103133150" label="icon_cacher"/>
+  <int value="104798869" label="autofill_upload"/>
+  <int value="105330607" label="profile_resetter_upload"/>
+  <int value="106980485" label="safe_browsing_backup_request"/>
+  <int value="107267424" label="open_search"/>
+  <int value="108804096" label="domain_reliability_report_upload"/>
+  <int value="108903331" label="signed_in_profile_avatar"/>
+  <int value="109200878" label="omnibox_prefetch_image"/>
+  <int value="109679553" label="brandcode_config"/>
+  <int value="109891200" label="reporting"/>
+  <int value="110815970" label="resource_prefetch"/>
+  <int value="111565057" label="devtools_hard_coded_data_source"/>
+  <int value="111712433" label="cloud_print"/>
+  <int value="111904019" label="affiliation_lookup"/>
+  <int value="112303907" label="blob_read"/>
+  <int value="113231892" label="url_fetcher_downloader"/>
+  <int value="113553577" label="certificate_verifier"/>
+  <int value="114468207" label="ssl_name_mismatch_lookup"/>
+  <int value="115188287" label="chrome_variations_service"/>
+  <int value="115907811" label="safe_browsing_cache_collector"/>
+  <int value="117649486" label="spellcheck_hunspell_dictionary"/>
+  <int value="117782019" label="device_management_service"/>
+  <int value="118389509" label="url_prevision_fetcher"/>
+  <int value="119542033" label="gcm_unregistration"/>
+  <int value="119677115" label="safe_search_url_reporter"/>
+  <int value="124950347" label="safe_browsing_incident"/>
+  <int value="125522256" label="client_download_request"/>
+  <int value="125596241" label="component_updater_utils"/>
+  <int value="129652775" label="devtools_network_resource"/>
+  <int value="131236802" label="data_reduction_proxy_secure_proxy_check"/>
+  <int value="131741641" label="permission_reporting"/>
+  <int value="132055347" label="cloud_print_search"/>
+  <int value="132546306" label="wifi_prefetch_from_cache"/>
+  <int value="132553989" label="spellcheck_lookup"/>
+  <int value="132657055" label="sync_attachment_uploader"/>
+  <int value="134729048" label="chrome_feedback_report_app"/>
+  <int value="135251783" label="thumbnail_source"/>
+  <int value="135636011" label="devtools_handle_front_end_messages"/>
+  <int value="135967426" label="ppapi_download_request"/>
+  <int value="136117054" label="supervised_user_refresh_token_fetcher"/>
+  <int value="137116619" label="translate_url_fetcher"/>
 </enum>
 
 <enum name="UrlResolutionResult" type="int">
@@ -36043,6 +37206,11 @@ from previous Chrome versions.
   <int value="6" label="L2TP/IPSec Username/Password"/>
 </enum>
 
+<enum name="VRUnsupportedMode" type="int">
+  <int value="0" label="Unhandled code point in URL"/>
+  <int value="1" label="Could not elide URL"/>
+</enum>
+
 <enum name="VRViewerType" type="int">
   <int value="0" label="UNKNOWN_TYPE"/>
   <int value="1" label="CARDBOARD"/>
@@ -36063,6 +37231,13 @@ from previous Chrome versions.
   <int value="3" label="Unsupported Stream Parameters"/>
   <int value="4" label="Decode Error"/>
   <int value="5" label="Unsupported Stream"/>
+</enum>
+
+<enum name="WaitForVBlankErrorCode" type="int">
+  <int value="0" label="Success"/>
+  <int value="1" label="Failed to get monitor info"/>
+  <int value="2" label="Failed to open adapter"/>
+  <int value="3" label="Failed to wait for VBlank event"/>
 </enum>
 
 <enum name="WakeOnWiFiFeaturesEnabledState" type="int">
@@ -36178,6 +37353,11 @@ from previous Chrome versions.
   <int value="8" label="Download error"/>
   <int value="9" label="Install error"/>
   <int value="10" label="Install timed out"/>
+  <int value="11" label="Request to Play install API failed - Policy disabled"/>
+  <int value="12"
+      label="Request to Play install API failed - User not signed into Play"/>
+  <int value="13" label="Request to Play install API failed - Network Error"/>
+  <int value="14" label="Request to Play install API failed - Resolve Error"/>
 </enum>
 
 <enum name="WebApkGooglePlayInstallState" type="int">

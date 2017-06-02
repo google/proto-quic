@@ -9,6 +9,8 @@
 #include <stdint.h>
 #include <string>
 
+#include "net/quic/core/quic_error_codes.h"
+#include "net/quic/core/quic_types.h"
 #include "net/quic/quartc/quartc_stream_interface.h"
 
 namespace net {
@@ -16,7 +18,7 @@ namespace net {
 // Given a PacketTransport, provides a way to send and receive separate streams
 // of reliable, in-order, encrypted data. For example, this can build on top of
 // a WebRTC IceTransport for sending and receiving data over QUIC.
-class QuartcSessionInterface {
+class QUIC_EXPORT_PRIVATE QuartcSessionInterface {
  public:
   virtual ~QuartcSessionInterface() {}
 
@@ -47,6 +49,13 @@ class QuartcSessionInterface {
 
   virtual QuartcStreamInterface* CreateOutgoingStream(
       const OutgoingStreamParameters& params) = 0;
+
+  // If the given stream is still open, sends a reset frame to cancel it.
+  // Note:  This method cancels a stream by QuicStreamId rather than by pointer
+  // (or by a method on QuartcStreamInterface) because QuartcSession (and not
+  // the caller) owns the streams.  Streams may finish and be deleted before the
+  // caller tries to cancel them, rendering the caller's pointers invalid.
+  virtual void CancelStream(QuicStreamId stream_id) = 0;
 
   // Send and receive packets, like a virtual UDP socket. For example, this
   // could be implemented by WebRTC's IceTransport.

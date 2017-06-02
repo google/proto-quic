@@ -646,8 +646,7 @@ ALWAYS_INLINE PartitionRootBase* PartitionPageToRoot(PartitionPage* page) {
   return extent_entry->root;
 }
 
-ALWAYS_INLINE bool PartitionPointerIsValid(void* ptr) {
-  PartitionPage* page = PartitionPointerToPage(ptr);
+ALWAYS_INLINE bool PartitionPagePointerIsValid(PartitionPage* page) {
   PartitionRootBase* root = PartitionPageToRoot(page);
   return root->inverted_self == ~reinterpret_cast<uintptr_t>(root);
 }
@@ -661,8 +660,9 @@ ALWAYS_INLINE void* PartitionBucketAlloc(PartitionRootBase* root,
   DCHECK(page->num_allocated_slots >= 0);
   void* ret = page->freelist_head;
   if (LIKELY(ret != 0)) {
-    // If these asserts fire, you probably corrupted memory.
-    DCHECK(PartitionPointerIsValid(ret));
+    // If these DCHECKs fire, you probably corrupted memory.
+    // TODO(palmer): See if we can afford to make this a CHECK.
+    DCHECK(PartitionPagePointerIsValid(page));
     // All large allocations must go through the slow path to correctly
     // update the size metadata.
     DCHECK(PartitionPageGetRawSize(page) == 0);
@@ -672,7 +672,8 @@ ALWAYS_INLINE void* PartitionBucketAlloc(PartitionRootBase* root,
     page->num_allocated_slots++;
   } else {
     ret = PartitionAllocSlowPath(root, flags, size, bucket);
-    DCHECK(!ret || PartitionPointerIsValid(ret));
+    // TODO(palmer): See if we can afford to make this a CHECK.
+    DCHECK(!ret || PartitionPagePointerIsValid(PartitionPointerToPage(ret)));
   }
 #if DCHECK_IS_ON()
   if (!ret)
@@ -732,7 +733,9 @@ ALWAYS_INLINE void PartitionFreeWithPage(void* ptr, PartitionPage* page) {
 #endif
   DCHECK(page->num_allocated_slots);
   PartitionFreelistEntry* freelist_head = page->freelist_head;
-  DCHECK(!freelist_head || PartitionPointerIsValid(freelist_head));
+  // TODO(palmer): See if we can afford to make this a CHECK.
+  DCHECK(!freelist_head ||
+         PartitionPagePointerIsValid(PartitionPointerToPage(freelist_head)));
   CHECK(ptr != freelist_head);  // Catches an immediate double free.
   // Look for double free one level deeper in debug.
   DCHECK(!freelist_head || ptr != PartitionFreelistMask(freelist_head->next));
@@ -753,10 +756,13 @@ ALWAYS_INLINE void PartitionFree(void* ptr) {
 #if defined(MEMORY_TOOL_REPLACES_ALLOCATOR)
   free(ptr);
 #else
+  // TODO(palmer): Check ptr alignment before continuing. Shall we do the check
+  // inside PartitionCookieFreePointerAdjust?
   PartitionAllocHooks::FreeHookIfEnabled(ptr);
   ptr = PartitionCookieFreePointerAdjust(ptr);
-  DCHECK(PartitionPointerIsValid(ptr));
   PartitionPage* page = PartitionPointerToPage(ptr);
+  // TODO(palmer): See if we can afford to make this a CHECK.
+  DCHECK(PartitionPagePointerIsValid(page));
   PartitionFreeWithPage(ptr, page);
 #endif
 }
@@ -818,8 +824,9 @@ ALWAYS_INLINE void PartitionFreeGeneric(PartitionRootGeneric* root, void* ptr) {
 
   PartitionAllocHooks::FreeHookIfEnabled(ptr);
   ptr = PartitionCookieFreePointerAdjust(ptr);
-  DCHECK(PartitionPointerIsValid(ptr));
   PartitionPage* page = PartitionPointerToPage(ptr);
+  // TODO(palmer): See if we can afford to make this a CHECK.
+  DCHECK(PartitionPagePointerIsValid(page));
   {
     subtle::SpinLock::Guard guard(root->lock);
     PartitionFreeWithPage(ptr, page);
@@ -868,8 +875,9 @@ ALWAYS_INLINE size_t PartitionAllocGetSize(void* ptr) {
   // cause trouble, and the caller is responsible for that not happening.
   DCHECK(PartitionAllocSupportsGetSize());
   ptr = PartitionCookieFreePointerAdjust(ptr);
-  DCHECK(PartitionPointerIsValid(ptr));
   PartitionPage* page = PartitionPointerToPage(ptr);
+  // TODO(palmer): See if we can afford to make this a CHECK.
+  DCHECK(PartitionPagePointerIsValid(page));
   size_t size = page->bucket->slot_size;
   return PartitionCookieSizeAdjustSubtract(size);
 }

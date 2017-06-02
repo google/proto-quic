@@ -26,18 +26,43 @@ std::string DumpIPAddress(const IPAddress& v) {
   return out;
 }
 
+TEST(IPAddressBytesTest, ConstructEmpty) {
+  IPAddressBytes bytes;
+  ASSERT_EQ(0u, bytes.size());
+}
+
+TEST(IPAddressBytesTest, ConstructIPv4) {
+  uint8_t data[] = {192, 168, 1, 1};
+  IPAddressBytes bytes(data, arraysize(data));
+  ASSERT_EQ(arraysize(data), bytes.size());
+  size_t i = 0;
+  for (uint8_t byte : bytes)
+    EXPECT_EQ(data[i++], byte);
+  ASSERT_EQ(arraysize(data), i);
+}
+
+TEST(IPAddressBytesTest, ConstructIPv6) {
+  uint8_t data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+  IPAddressBytes bytes(data, arraysize(data));
+  ASSERT_EQ(arraysize(data), bytes.size());
+  size_t i = 0;
+  for (uint8_t byte : bytes)
+    EXPECT_EQ(data[i++], byte);
+  ASSERT_EQ(arraysize(data), i);
+}
+
+TEST(IPAddressBytesTest, Assign) {
+  uint8_t data[] = {192, 168, 1, 1};
+  IPAddressBytes copy;
+  copy.Assign(data, arraysize(data));
+  EXPECT_EQ(IPAddressBytes(data, arraysize(data)), copy);
+}
+
 TEST(IPAddressTest, ConstructIPv4) {
   EXPECT_EQ("127.0.0.1", IPAddress::IPv4Localhost().ToString());
 
   IPAddress ipv4_ctor(192, 168, 1, 1);
   EXPECT_EQ("192.168.1.1", ipv4_ctor.ToString());
-}
-
-TEST(IPAddressTest, ConstructIPv6) {
-  EXPECT_EQ("::1", IPAddress::IPv6Localhost().ToString());
-
-  IPAddress ipv6_ctor(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
-  EXPECT_EQ("102:304:506:708:90a:b0c:d0e:f10", ipv6_ctor.ToString());
 }
 
 TEST(IPAddressTest, IsIPVersion) {
@@ -190,6 +215,7 @@ TEST(IPAddressTest, IsReservedIPv4) {
   IPAddress address;
   for (const auto& test : tests) {
     EXPECT_TRUE(address.AssignFromIPLiteral(test.address));
+    ASSERT_TRUE(address.IsValid());
     EXPECT_EQ(!!test.is_reserved, address.IsReserved());
   }
 }
@@ -420,6 +446,11 @@ TEST(IPAddressTest, LessThan) {
   EXPECT_TRUE(ip_address3.AssignFromIPLiteral("127.0.0.1"));
   EXPECT_FALSE(ip_address1 < ip_address3);
   EXPECT_FALSE(ip_address3 < ip_address1);
+
+  IPAddress ip_address4;
+  EXPECT_TRUE(ip_address4.AssignFromIPLiteral("128.0.0.0"));
+  EXPECT_TRUE(ip_address1 < ip_address4);
+  EXPECT_FALSE(ip_address4 < ip_address1);
 }
 
 // Test mapping an IPv4 address to an IPv6 address.

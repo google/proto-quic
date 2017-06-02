@@ -22,6 +22,7 @@ EXTENSION = Tag(
     'extension', 'Story has browser with extension installed.')
 IMAGES = Tag(
     'images', 'Story has sites with heavy uses of images.')
+INFINITE_SCROLL = Tag('infinite_scroll', 'Story has infinite scroll action.')
 INTERNATIONAL = Tag(
     'international', 'Story has navigations to websites with content in non '
     'English languages.')

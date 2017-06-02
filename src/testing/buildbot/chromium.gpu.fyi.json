@@ -5565,7 +5565,7 @@
             }
           ]
         },
-        "test": "service_unittests",
+        "test": "services_unittests",
         "use_xvfb": false
       },
       {
@@ -5977,7 +5977,7 @@
             }
           ]
         },
-        "test": "service_unittests",
+        "test": "services_unittests",
         "use_xvfb": false
       }
     ],
@@ -6410,7 +6410,7 @@
             }
           ]
         },
-        "test": "service_unittests",
+        "test": "services_unittests",
         "use_xvfb": false
       }
     ],
@@ -6854,7 +6854,7 @@
             }
           ]
         },
-        "test": "service_unittests",
+        "test": "services_unittests",
         "use_xvfb": false
       }
     ],
@@ -7337,7 +7337,7 @@
             }
           ]
         },
-        "test": "service_unittests",
+        "test": "services_unittests",
         "use_xvfb": false
       },
       {
@@ -8601,7 +8601,7 @@
             }
           ]
         },
-        "test": "service_unittests",
+        "test": "services_unittests",
         "use_xvfb": false
       },
       {
@@ -9033,7 +9033,7 @@
             }
           ]
         },
-        "test": "service_unittests",
+        "test": "services_unittests",
         "use_xvfb": false
       },
       {
@@ -9449,7 +9449,7 @@
             }
           ]
         },
-        "test": "service_unittests",
+        "test": "services_unittests",
         "use_xvfb": false
       },
       {
@@ -9886,7 +9886,7 @@
             }
           ]
         },
-        "test": "service_unittests",
+        "test": "services_unittests",
         "use_xvfb": false
       },
       {
@@ -10351,7 +10351,7 @@
             }
           ]
         },
-        "test": "service_unittests",
+        "test": "services_unittests",
         "use_xvfb": false
       },
       {
@@ -10913,7 +10913,7 @@
             }
           ]
         },
-        "test": "service_unittests",
+        "test": "services_unittests",
         "use_xvfb": false
       },
       {
@@ -11040,7 +11040,7 @@
             }
           ]
         },
-        "test": "service_unittests",
+        "test": "services_unittests",
         "use_xvfb": false
       },
       {
@@ -11167,7 +11167,7 @@
             }
           ]
         },
-        "test": "service_unittests",
+        "test": "services_unittests",
         "use_xvfb": false
       },
       {
@@ -11294,7 +11294,7 @@
             }
           ]
         },
-        "test": "service_unittests",
+        "test": "services_unittests",
         "use_xvfb": false
       },
       {
@@ -11424,7 +11424,7 @@
             }
           ]
         },
-        "test": "service_unittests",
+        "test": "services_unittests",
         "use_xvfb": false
       },
       {
@@ -11554,7 +11554,7 @@
             }
           ]
         },
-        "test": "service_unittests",
+        "test": "services_unittests",
         "use_xvfb": false
       },
       {

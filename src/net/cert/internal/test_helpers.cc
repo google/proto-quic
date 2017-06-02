@@ -125,7 +125,8 @@ der::Input SequenceValueFromString(const std::string* s) {
   return ::testing::AssertionSuccess();
 }
 
-VerifyCertChainTest::VerifyCertChainTest() = default;
+VerifyCertChainTest::VerifyCertChainTest()
+    : user_initial_policy_set{AnyPolicy()} {}
 VerifyCertChainTest::~VerifyCertChainTest() = default;
 
 bool VerifyCertChainTest::HasHighSeverityErrors() const {

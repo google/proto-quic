@@ -252,12 +252,10 @@ BASE_EXPORT bool ShouldCreateLogMessage(int severity);
 // Gets the VLOG default verbosity level.
 BASE_EXPORT int GetVlogVerbosity();
 
-// Gets the current vlog level for the given file (usually taken from
-// __FILE__).
-
 // Note that |N| is the size *with* the null terminator.
 BASE_EXPORT int GetVlogLevelHelper(const char* file_start, size_t N);
 
+// Gets the current vlog level for the given file (usually taken from __FILE__).
 template <size_t N>
 int GetVlogLevel(const char (&file)[N]) {
   return GetVlogLevelHelper(file, N);

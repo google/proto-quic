@@ -7,6 +7,8 @@
 #include <algorithm>
 
 #include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_flag_utils.h"
+#include "net/quic/platform/api/quic_flags.h"
 
 namespace net {
 BandwidthSampler::BandwidthSampler()
@@ -18,7 +20,10 @@ BandwidthSampler::BandwidthSampler()
       last_sent_packet_(0),
       is_app_limited_(false),
       end_of_app_limited_phase_(0),
-      connection_state_map_() {}
+      connection_state_map_(),
+      connection_state_map_new_(),
+      use_new_connection_state_map_(
+          FLAGS_quic_reloadable_flag_quic_faster_bandwidth_sampler) {}
 
 BandwidthSampler::~BandwidthSampler() {}
 
@@ -51,6 +56,23 @@ void BandwidthSampler::OnPacketSent(
     last_acked_packet_sent_time_ = sent_time;
   }
 
+  if (use_new_connection_state_map_) {
+    if (!connection_state_map_new_.IsEmpty() &&
+        packet_number >
+            connection_state_map_new_.last_packet() + kMaxTrackedPackets) {
+      QUIC_BUG << "BandwidthSampler in-flight packet map has exceeded maximum "
+                  "number "
+                  "of tracked packets.";
+    }
+
+    bool success = connection_state_map_new_.Emplace(packet_number, sent_time,
+                                                     bytes, *this);
+    QUIC_BUG_IF(!success) << "BandwidthSampler failed to insert the packet "
+                             "into the map, most likely because it's already "
+                             "in it.";
+    return;
+  }
+
   DCHECK(connection_state_map_.find(packet_number) ==
          connection_state_map_.end());
   connection_state_map_.emplace(
@@ -64,6 +86,20 @@ void BandwidthSampler::OnPacketSent(
 BandwidthSample BandwidthSampler::OnPacketAcknowledged(
     QuicTime ack_time,
     QuicPacketNumber packet_number) {
+  if (use_new_connection_state_map_) {
+    ConnectionStateOnSentPacket* sent_packet_pointer =
+        connection_state_map_new_.GetEntry(packet_number);
+    if (sent_packet_pointer == nullptr) {
+      // See the TODO below.
+      return BandwidthSample();
+    }
+    BandwidthSample sample = OnPacketAcknowledgedInner(ack_time, packet_number,
+                                                       *sent_packet_pointer);
+    connection_state_map_new_.Remove(packet_number);
+    QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_faster_bandwidth_sampler, 1, 2);
+    return sample;
+  }
+
   auto it = connection_state_map_.find(packet_number);
   if (it == connection_state_map_.end()) {
     // TODO(vasilvv): currently, this can happen because the congestion
@@ -72,14 +108,20 @@ BandwidthSample BandwidthSampler::OnPacketAcknowledged(
     // this should be a QUIC_BUG equivalent.
     return BandwidthSample();
   }
-  const ConnectionStateOnSentPacket sent_packet = it->second;
+  BandwidthSample sample =
+      OnPacketAcknowledgedInner(ack_time, packet_number, it->second);
+  connection_state_map_.erase(it);
+  return sample;
+}
 
+BandwidthSample BandwidthSampler::OnPacketAcknowledgedInner(
+    QuicTime ack_time,
+    QuicPacketNumber packet_number,
+    const ConnectionStateOnSentPacket& sent_packet) {
   total_bytes_acked_ += sent_packet.size;
   total_bytes_sent_at_last_acked_packet_ = sent_packet.total_bytes_sent;
   last_acked_packet_sent_time_ = sent_packet.sent_time;
   last_acked_packet_ack_time_ = ack_time;
-
-  connection_state_map_.erase(it);
 
   // Exit app-limited phase once a packet that was sent while the connection is
   // not app-limited is acknowledged.
@@ -130,6 +172,15 @@ BandwidthSample BandwidthSampler::OnPacketAcknowledged(
 }
 
 void BandwidthSampler::OnPacketLost(QuicPacketNumber packet_number) {
+  if (use_new_connection_state_map_) {
+    // TODO(vasilvv): see the comment for the case of missing packets in
+    // BandwidthSampler::OnPacketAcknowledged on why this does not raise a
+    // QUIC_BUG when removal fails.
+    connection_state_map_new_.Remove(packet_number);
+    QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_faster_bandwidth_sampler, 2, 2);
+    return;
+  }
+
   auto it = connection_state_map_.find(packet_number);
   if (it == connection_state_map_.end()) {
     // TODO(vasilvv): see the comment for the same case in
@@ -146,6 +197,14 @@ void BandwidthSampler::OnAppLimited() {
 }
 
 void BandwidthSampler::RemoveObsoletePackets(QuicPacketNumber least_unacked) {
+  if (use_new_connection_state_map_) {
+    while (!connection_state_map_new_.IsEmpty() &&
+           connection_state_map_new_.first_packet() < least_unacked) {
+      connection_state_map_new_.Remove(
+          connection_state_map_new_.first_packet());
+    }
+    return;
+  }
   while (!connection_state_map_.empty() &&
          connection_state_map_.begin()->first < least_unacked) {
     connection_state_map_.pop_front();

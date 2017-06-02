@@ -54,7 +54,7 @@ class SPDY_EXPORT_PRIVATE SpdyFrameBuilder {
                      SpdyStreamId stream_id);
 
   // Populates this frame with a HTTP2 frame prefix with type and length
-  // information.  |type| must be a defined type.
+  // information.  |type| must be a defined frame type.
   bool BeginNewFrame(const SpdyFramer& framer,
                      SpdyFrameType type,
                      uint8_t flags,

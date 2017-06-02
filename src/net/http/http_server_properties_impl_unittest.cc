@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "base/logging.h"
+#include "base/test/test_mock_time_task_runner.h"
 #include "base/values.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/ip_address.h"
@@ -21,26 +22,38 @@ class ListValue;
 
 namespace net {
 
+const base::TimeDelta BROKEN_ALT_SVC_EXPIRE_DELAYS[10] = {
+    base::TimeDelta::FromSeconds(300),   base::TimeDelta::FromSeconds(600),
+    base::TimeDelta::FromSeconds(1200),  base::TimeDelta::FromSeconds(2400),
+    base::TimeDelta::FromSeconds(4800),  base::TimeDelta::FromSeconds(9600),
+    base::TimeDelta::FromSeconds(19200), base::TimeDelta::FromSeconds(38400),
+    base::TimeDelta::FromSeconds(76800), base::TimeDelta::FromSeconds(153600),
+};
+
 class HttpServerPropertiesImplPeer {
  public:
   static void AddBrokenAlternativeServiceWithExpirationTime(
-      HttpServerPropertiesImpl& impl,
-      AlternativeService alternative_service,
+      HttpServerPropertiesImpl* impl,
+      const AlternativeService& alternative_service,
       base::TimeTicks when) {
-    impl.broken_alternative_services_.insert(
-        std::make_pair(alternative_service, when));
+    BrokenAlternativeServices::BrokenAlternativeServiceList::iterator unused_it;
+    impl->broken_alternative_services_.AddToBrokenAlternativeServiceListAndMap(
+        alternative_service, when, &unused_it);
     auto it =
-        impl.recently_broken_alternative_services_.Get(alternative_service);
-    if (it == impl.recently_broken_alternative_services_.end()) {
-      impl.recently_broken_alternative_services_.Put(alternative_service, 1);
+        impl->broken_alternative_services_.recently_broken_alternative_services_
+            .Get(alternative_service);
+    if (it == impl->broken_alternative_services_
+                  .recently_broken_alternative_services_.end()) {
+      impl->broken_alternative_services_.recently_broken_alternative_services_
+          .Put(alternative_service, 1);
     } else {
       it->second++;
     }
   }
 
   static void ExpireBrokenAlternateProtocolMappings(
-      HttpServerPropertiesImpl& impl) {
-    impl.ExpireBrokenAlternateProtocolMappings();
+      HttpServerPropertiesImpl* impl) {
+    impl->broken_alternative_services_.ExpireBrokenAlternateProtocolMappings();
   }
 };
 
@@ -50,6 +63,11 @@ const int kMaxSupportsSpdyServerHosts = 500;
 
 class HttpServerPropertiesImplTest : public testing::Test {
  protected:
+  HttpServerPropertiesImplTest()
+      : test_task_runner_(new base::TestMockTimeTaskRunner()),
+        broken_services_clock_(test_task_runner_->GetMockTickClock()),
+        impl_(broken_services_clock_.get()) {}
+
   bool HasAlternativeService(const url::SchemeHostPort& origin) {
     const AlternativeServiceInfoVector alternative_service_info_vector =
         impl_.GetAlternativeServiceInfos(origin);
@@ -63,6 +81,13 @@ class HttpServerPropertiesImplTest : public testing::Test {
     return impl_.SetAlternativeService(origin, alternative_service, expiration);
   }
 
+  void MarkBrokenAndLetExpireAlternativeServiceNTimes(
+      const AlternativeService& alternative_service,
+      int num_times) {}
+
+  scoped_refptr<base::TestMockTimeTaskRunner> test_task_runner_;
+
+  std::unique_ptr<base::TickClock> broken_services_clock_;
   HttpServerPropertiesImpl impl_;
 };
 
@@ -948,13 +973,13 @@ TEST_F(AlternateProtocolServerPropertiesTest,
   EXPECT_FALSE(impl_.WasAlternativeServiceRecentlyBroken(alternative_service));
 
   base::TimeTicks past =
-      base::TimeTicks::Now() - base::TimeDelta::FromSeconds(42);
+      broken_services_clock_->NowTicks() - base::TimeDelta::FromSeconds(42);
   HttpServerPropertiesImplPeer::AddBrokenAlternativeServiceWithExpirationTime(
-      impl_, alternative_service, past);
+      &impl_, alternative_service, past);
   EXPECT_TRUE(impl_.IsAlternativeServiceBroken(alternative_service));
   EXPECT_TRUE(impl_.WasAlternativeServiceRecentlyBroken(alternative_service));
 
-  HttpServerPropertiesImplPeer::ExpireBrokenAlternateProtocolMappings(impl_);
+  HttpServerPropertiesImplPeer::ExpireBrokenAlternateProtocolMappings(&impl_);
   EXPECT_FALSE(impl_.IsAlternativeServiceBroken(alternative_service));
   EXPECT_TRUE(impl_.WasAlternativeServiceRecentlyBroken(alternative_service));
 }
@@ -978,12 +1003,12 @@ TEST_F(AlternateProtocolServerPropertiesTest, RemoveExpiredBrokenAltSvc) {
 
   // Mark "bar:443" as broken.
   base::TimeTicks past =
-      base::TimeTicks::Now() - base::TimeDelta::FromSeconds(42);
+      broken_services_clock_->NowTicks() - base::TimeDelta::FromSeconds(42);
   HttpServerPropertiesImplPeer::AddBrokenAlternativeServiceWithExpirationTime(
-      impl_, bar_alternative_service, past);
+      &impl_, bar_alternative_service, past);
 
   // Expire brokenness of "bar:443".
-  HttpServerPropertiesImplPeer::ExpireBrokenAlternateProtocolMappings(impl_);
+  HttpServerPropertiesImplPeer::ExpireBrokenAlternateProtocolMappings(&impl_);
 
   // "foo:443" should have no alternative service now.
   EXPECT_FALSE(HasAlternativeService(foo_server));
@@ -996,6 +1021,70 @@ TEST_F(AlternateProtocolServerPropertiesTest, RemoveExpiredBrokenAltSvc) {
       impl_.WasAlternativeServiceRecentlyBroken(bar_alternative_service));
   EXPECT_FALSE(
       impl_.WasAlternativeServiceRecentlyBroken(baz_alternative_service));
+}
+
+// Regression test for https://crbug.com/724302
+TEST_F(AlternateProtocolServerPropertiesTest, RemoveExpiredBrokenAltSvc2) {
+  // This test will mark an alternative service A that has already been marked
+  // broken many times, then immediately mark another alternative service B as
+  // broken for the first time. Because A's been marked broken many times
+  // already, its brokenness will be scheduled to expire much further in the
+  // future than B, even though it was marked broken before B. This test makes
+  // sure that even though A was marked broken before B, B's brokenness should
+  // expire before A.
+
+  url::SchemeHostPort server1("https", "foo", 443);
+  AlternativeService alternative_service1(kProtoQUIC, "foo", 443);
+  SetAlternativeService(server1, alternative_service1);
+
+  url::SchemeHostPort server2("https", "bar", 443);
+  AlternativeService alternative_service2(kProtoQUIC, "bar", 443);
+  SetAlternativeService(server2, alternative_service2);
+
+  // Repeatedly mark alt svc 1 broken and wait for its brokenness to expire.
+  // This will increase its time until expiration.
+  for (int i = 0; i < 3; ++i) {
+    {
+      base::TestMockTimeTaskRunner::ScopedContext scoped_context(
+          test_task_runner_);
+      impl_.MarkAlternativeServiceBroken(alternative_service1);
+    }
+    // |impl_| should have posted task to expire the brokenness of
+    // |alternative_service1|
+    EXPECT_EQ(1u, test_task_runner_->GetPendingTaskCount());
+    EXPECT_TRUE(impl_.IsAlternativeServiceBroken(alternative_service1));
+
+    // Advance time by just enough so that |alternative_service1|'s brokenness
+    // expires.
+    test_task_runner_->FastForwardBy(BROKEN_ALT_SVC_EXPIRE_DELAYS[i]);
+
+    // Ensure brokenness of |alternative_service1| has expired.
+    EXPECT_FALSE(test_task_runner_->HasPendingTask());
+    EXPECT_FALSE(impl_.IsAlternativeServiceBroken(alternative_service1));
+  }
+
+  {
+    base::TestMockTimeTaskRunner::ScopedContext scoped_context(
+        test_task_runner_);
+    impl_.MarkAlternativeServiceBroken(alternative_service1);
+    impl_.MarkAlternativeServiceBroken(alternative_service2);
+  }
+
+  EXPECT_TRUE(impl_.IsAlternativeServiceBroken(alternative_service2));
+
+  // Advance time by just enough so that |alternative_service2|'s brokennness
+  // expires.
+  test_task_runner_->FastForwardBy(BROKEN_ALT_SVC_EXPIRE_DELAYS[0]);
+
+  EXPECT_TRUE(impl_.IsAlternativeServiceBroken(alternative_service1));
+  EXPECT_FALSE(impl_.IsAlternativeServiceBroken(alternative_service2));
+
+  // Advance time by enough so that |alternative_service1|'s brokenness expires.
+  test_task_runner_->FastForwardBy(BROKEN_ALT_SVC_EXPIRE_DELAYS[3] -
+                                   BROKEN_ALT_SVC_EXPIRE_DELAYS[0]);
+
+  EXPECT_FALSE(impl_.IsAlternativeServiceBroken(alternative_service1));
+  EXPECT_FALSE(impl_.IsAlternativeServiceBroken(alternative_service2));
 }
 
 typedef HttpServerPropertiesImplTest SupportsQuicServerPropertiesTest;

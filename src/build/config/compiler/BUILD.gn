@@ -13,7 +13,8 @@ import("//build_overrides/build.gni")
 if (current_cpu == "arm" || current_cpu == "arm64") {
   import("//build/config/arm.gni")
 }
-if (current_cpu == "mipsel" || current_cpu == "mips64el") {
+if (current_cpu == "mipsel" || current_cpu == "mips64el" ||
+    current_cpu == "mips" || current_cpu == "mips64") {
   import("//build/config/mips.gni")
 }
 if (is_mac) {
@@ -99,7 +100,9 @@ declare_args() {
   # branches)
   optimize_for_fuzzing = false
 
-  # Optimize symbol files for maximizing goma cache hit rate.
+  # Optimize symbol files for maximizing goma cache hit rate. This isn't
+  # on by default when goma is enabled because setting this to true may make
+  # it harder to debug binaries.
   strip_absolute_paths_from_debug_symbols = false
 }
 
@@ -418,6 +421,13 @@ config("compiler") {
     cflags += [ "-B$binutils_path" ]
   }
 
+  if (is_linux) {
+    cflags += [ "-pthread" ]
+    # Do not use the -pthread ldflag here since it becomes a no-op
+    # when using -nodefaultlibs, which would cause an unused argument
+    # error.  "-lpthread" is added in //build/config:default_libs.
+  }
+
   # Clang-specific compiler flags setup.
   # ------------------------------------
   if (is_clang) {
@@ -539,16 +549,6 @@ config("compiler") {
   if (is_posix) {
     asmflags += cflags
     asmflags += cflags_c
-  }
-}
-
-# This is separate from :compiler (and not even a sub-config there)
-# so that some targets can remove it from the list with:
-#   configs -= [ "//build/config/compiler:pthread" ]
-config("pthread") {
-  if (is_linux) {
-    cflags = [ "-pthread" ]
-    ldflags = [ "-pthread" ]
   }
 }
 
@@ -683,6 +683,40 @@ config("compiler_cpu_abi") {
       }
 
       cflags += [ "-m${mips_float_abi}-float" ]
+    } else if (current_cpu == "mips" && !is_nacl) {
+      if (mips_arch_variant == "r6") {
+        cflags += [
+          "-mips32r6",
+          "-Wa,-mips32r6",
+        ]
+        if (mips_use_msa == true) {
+          cflags += [
+            "-mmsa",
+            "-mfp64",
+          ]
+        }
+      } else if (mips_arch_variant == "r2") {
+        cflags += [
+          "-mips32r2",
+          "-Wa,-mips32r2",
+        ]
+        if (mips_float_abi == "hard" && mips_fpu_mode != "") {
+          cflags += [ "-m$mips_fpu_mode" ]
+        }
+      } else if (mips_arch_variant == "r1") {
+        cflags += [
+          "-mips32",
+          "-Wa,-mips32",
+        ]
+      }
+
+      if (mips_dsp_rev == 1) {
+        cflags += [ "-mdsp" ]
+      } else if (mips_dsp_rev == 2) {
+        cflags += [ "-mdspr2" ]
+      }
+
+      cflags += [ "-m${mips_float_abi}-float" ]
     } else if (current_cpu == "mips64el") {
       if (mips_arch_variant == "r6") {
         if (is_clang) {
@@ -701,6 +735,26 @@ config("compiler_cpu_abi") {
           ]
           ldflags += [ "-mips64r6" ]
         }
+        if (mips_use_msa == true) {
+          cflags += [
+            "-mmsa",
+            "-mfp64",
+          ]
+        }
+      } else if (mips_arch_variant == "r2") {
+        cflags += [
+          "-mips64r2",
+          "-Wa,-mips64r2",
+        ]
+        ldflags += [ "-mips64r2" ]
+      }
+    } else if (current_cpu == "mips64") {
+      if (mips_arch_variant == "r6") {
+        cflags += [
+          "-mips64r6",
+          "-Wa,-mips64r6",
+        ]
+        ldflags += [ "-mips64r6" ]
         if (mips_use_msa == true) {
           cflags += [
             "-mmsa",
@@ -1162,7 +1216,8 @@ config("chromium_code") {
     if (!is_debug && !using_sanitizer &&
         (!is_linux || !is_clang || is_official_build) &&
         current_cpu != "s390x" && current_cpu != "s390" &&
-        current_cpu != "ppc64" && current_cpu != "ppc64") {
+        current_cpu != "ppc64" && current_cpu != "ppc64" &&
+        current_cpu != "mips" && current_cpu != "mips64") {
       # _FORTIFY_SOURCE isn't really supported by Clang now, see
       # http://llvm.org/bugs/show_bug.cgi?id=16821.
       # It seems to work fine with Ubuntu 12 headers though, so use it in
@@ -1441,7 +1496,11 @@ config("optimize") {
     # Favor size over speed.
     # TODO(crbug.com/718650): Fix -Os in PNaCl compiler and remove the is_nacl
     # guard above.
-    cflags = [ "-Os" ] + common_optimize_on_cflags
+    if (is_clang) {
+      cflags = [ "-Oz" ] + common_optimize_on_cflags
+    } else {
+      cflags = [ "-Os" ] + common_optimize_on_cflags
+    }
   } else {
     cflags = [ "-O2" ] + common_optimize_on_cflags
   }
@@ -1458,7 +1517,11 @@ config("optimize_no_wpo") {
     # Favor size over speed.
     # TODO(crbug.com/718650): Fix -Os in PNaCl compiler and remove the is_nacl
     # guard above.
-    cflags = [ "-Os" ] + common_optimize_on_cflags
+    if (is_clang) {
+      cflags = [ "-Oz" ] + common_optimize_on_cflags
+    } else {
+      cflags = [ "-Os" ] + common_optimize_on_cflags
+    }
   } else if (optimize_for_fuzzing) {
     cflags = [ "-O1" ] + common_optimize_on_cflags
   } else {
@@ -1478,7 +1541,11 @@ config("no_optimize") {
   } else if (is_android && !android_full_debug) {
     # On Android we kind of optimize some things that don't affect debugging
     # much even when optimization is disabled to get the binary size down.
-    cflags = [ "-Os" ]
+    if (is_clang) {
+      cflags = [ "-Oz" ] + common_optimize_on_cflags
+    } else {
+      cflags = [ "-Os" ] + common_optimize_on_cflags
+    }
   } else {
     cflags = [ "-O0" ]
     ldflags = []

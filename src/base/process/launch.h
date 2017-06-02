@@ -27,6 +27,10 @@
 #include <windows.h>
 #endif
 
+#if defined(OS_FUCHSIA)
+#include <magenta/types.h>
+#endif
+
 namespace base {
 
 class CommandLine;
@@ -152,6 +156,11 @@ struct BASE_EXPORT LaunchOptions {
   // Sets parent process death signal to SIGKILL.
   bool kill_on_parent_death = false;
 #endif  // defined(OS_LINUX)
+
+#if defined(OS_FUCHSIA)
+  // If valid, launches the application in that job object.
+  mx_handle_t job_handle = MX_HANDLE_INVALID;
+#endif
 
 #if defined(OS_POSIX)
   // If not empty, launch the specified executable instead of

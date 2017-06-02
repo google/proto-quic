@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <array>
 #include <string>
 #include <vector>
 
@@ -17,6 +18,83 @@
 
 namespace net {
 
+// Helper class to represent the sequence of bytes in an IP address.
+// A vector<uint8_t> would be simpler but incurs heap allocation, so
+// IPAddressBytes uses a fixed size array.
+class NET_EXPORT IPAddressBytes {
+ public:
+  IPAddressBytes();
+  IPAddressBytes(const uint8_t* data, size_t data_len);
+  IPAddressBytes(const IPAddressBytes& other);
+  ~IPAddressBytes();
+
+  // Copies |data_len| elements from |data| into this object.
+  void Assign(const uint8_t* data, size_t data_len);
+
+  // Returns the number of elements in the underlying array.
+  size_t size() const { return size_; }
+
+  // Sets the size to be |size|. Does not actually change the size
+  // of the underlying array or zero-initialize the bytes.
+  void Resize(size_t size) {
+    DCHECK_LE(size, 16u);
+    size_ = static_cast<uint8_t>(size);
+  }
+
+  // Returns true if the underlying array is empty.
+  bool empty() const { return size_ == 0; }
+
+  // Returns a pointer to the underlying array of bytes.
+  const uint8_t* data() const { return bytes_.data(); }
+  uint8_t* data() { return bytes_.data(); }
+
+  // Returns a pointer to the first element.
+  const uint8_t* begin() const { return data(); }
+  uint8_t* begin() { return data(); }
+
+  // Returns a pointer past the last element.
+  const uint8_t* end() const { return data() + size_; }
+  uint8_t* end() { return data() + size_; }
+
+  // Returns a reference to the last element.
+  uint8_t& back() {
+    DCHECK(!empty());
+    return bytes_[size_ - 1];
+  }
+  const uint8_t& back() const {
+    DCHECK(!empty());
+    return bytes_[size_ - 1];
+  }
+
+  // Appends |val| to the end and increments the size.
+  void push_back(uint8_t val) {
+    DCHECK_GT(16, size_);
+    bytes_[size_++] = val;
+  }
+
+  // Returns a reference to the byte at index |pos|.
+  uint8_t& operator[](size_t pos) {
+    DCHECK_LT(pos, size_);
+    return bytes_[pos];
+  }
+  const uint8_t& operator[](size_t pos) const {
+    DCHECK_LT(pos, size_);
+    return bytes_[pos];
+  }
+
+  bool operator<(const IPAddressBytes& other) const;
+  bool operator!=(const IPAddressBytes& other) const;
+  bool operator==(const IPAddressBytes& other) const;
+
+ private:
+  // Underlying sequence of bytes
+  std::array<uint8_t, 16> bytes_;
+
+  // Number of elements in |bytes_|. Should be either kIPv4AddressSize
+  // or kIPv6AddressSize or 0.
+  uint8_t size_;
+};
+
 class NET_EXPORT IPAddress {
  public:
   enum : size_t { kIPv4AddressSize = 4, kIPv6AddressSize = 16 };
@@ -24,11 +102,10 @@ class NET_EXPORT IPAddress {
   // Creates a zero-sized, invalid address.
   IPAddress();
 
-  // Copies the input address to |ip_address_|. The input is expected to be in
-  // network byte order.
-  explicit IPAddress(const std::vector<uint8_t>& address);
-
   IPAddress(const IPAddress& other);
+
+  // Copies the input address to |ip_address_|.
+  explicit IPAddress(const IPAddressBytes& address);
 
   // Copies the input address to |ip_address_|. The input is expected to be in
   // network byte order.
@@ -102,8 +179,14 @@ class NET_EXPORT IPAddress {
   bool AssignFromIPLiteral(const base::StringPiece& ip_literal)
       WARN_UNUSED_RESULT;
 
-  // Returns the underlying byte vector.
-  const std::vector<uint8_t>& bytes() const { return ip_address_; };
+  // Returns the underlying bytes.
+  const IPAddressBytes& bytes() const { return ip_address_; };
+
+  // Copies the bytes to a new vector. Generally callers should be using
+  // |bytes()| and the IPAddressBytes abstraction. This method is provided as a
+  // convenience for call sites that existed prior to the introduction of
+  // IPAddressBytes.
+  std::vector<uint8_t> CopyBytesToVector() const;
 
   // Returns an IPAddress instance representing the 127.0.0.1 address.
   static IPAddress IPv4Localhost();
@@ -125,9 +208,7 @@ class NET_EXPORT IPAddress {
   bool operator<(const IPAddress& that) const;
 
  private:
-  // IPv4 addresses will have length kIPv4AddressSize, whereas IPv6 address
-  // will have length kIPv6AddressSize.
-  std::vector<uint8_t> ip_address_;
+  IPAddressBytes ip_address_;
 
   // This class is copyable and assignable.
 };

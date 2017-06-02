@@ -29,6 +29,7 @@ sys.path.insert(0, CLIENT_DIR)
 
 from third_party import colorama
 from utils import graph
+from utils import threading_utils
 
 
 _EPOCH = datetime.datetime.utcfromtimestamp(0)
@@ -53,84 +54,89 @@ def parse_time_option(value):
   raise ValueError('Failed to parse %s' % value)
 
 
-def flatten(dimensions):
+def _get_epoch(t):
+  return int((t - _EPOCH).total_seconds())
+
+
+def _flatten_dimensions(dimensions):
   items = {i['key']: i['value'] for i in dimensions}
   return ','.join('%s=%s' % (k, v) for k, v in sorted(items.iteritems()))
 
 
+def _get_dimensions(data):
+  """Returns the list of flattened dimensions for these tasks."""
+  items = data.get('items', [])
+  logging.info('- proessing %d items', len(items))
+  return [_flatten_dimensions(t['properties']['dimensions']) for t in items]
+
+
+def _run_json(key, process, cmd):
+  """Runs cmd and calls process with the decoded json."""
+  logging.info('Running %s', ' '.join(cmd))
+  raw = subprocess.check_output(cmd)
+  logging.info('- returned %d bytes', len(raw))
+  return key, process(json.loads(raw))
+
+
+def _get_cmd(swarming, endpoint, start, end, state, tags):
+  """Returns the command line to query this endpoint."""
+  cmd = [
+    sys.executable, os.path.join(CLIENT_DIR, 'swarming.py'),
+    'query', '-S', swarming, '--limit', '0',
+  ]
+  data = [('start', start), ('end', end), ('state', state)]
+  data.extend(('tags', tag) for tag in tags)
+  return cmd + [endpoint + '?' + urllib.urlencode(data)]
+
+
 def fetch_tasks(swarming, start, end, state, tags):
-  """Fetches the data."""
-  def process(data):
-    return [
-        flatten(t['properties']['dimensions']) for t in data.get('items', [])]
-  return _fetch_internal(
-      swarming, process, 'tasks/requests', start, end, state, tags)
+  """Fetches the data for each task.
+
+  Fetch per hour because otherwise it's too slow.
+  """
+  out = {}
+  delta = datetime.timedelta(hours=1)
+  with threading_utils.ThreadPool(1, 100, 0) as pool:
+    while start < end:
+      cmd = _get_cmd(
+          swarming, 'tasks/requests', _get_epoch(start),
+          _get_epoch(start + delta), state, tags)
+      pool.add_task(
+          0, _run_json, start.strftime('%Y-%m-%d'), _get_dimensions, cmd)
+      start += delta
+    for k, v in pool.iter_results():
+      sys.stdout.write('.')
+      sys.stdout.flush()
+      out.setdefault(k, []).extend(v)
+  print('')
+  return out
 
 
 def fetch_counts(swarming, start, end, state, tags):
   """Fetches counts from swarming and returns it."""
   def process(data):
     return int(data['count'])
-  return _fetch_internal(
+  return _fetch_daily_internal(
       swarming, process, 'tasks/count', start, end, state, tags)
 
 
-def _fetch_internal(swarming, process, endpoint, start, end, state, tags):
-  # Split the work in days. That's a lot of requests to do.
-  queue = Queue.Queue()
-  threads = []
-  def run(start, cmd):
-    logging.info('Running %s', ' '.join(cmd))
-    raw = subprocess.check_output(cmd)
-    logging.info('- returned %d', len(raw))
-    queue.put((start, process(json.loads(raw))))
-
-  day = start
-  while day != end:
-    data = [
-      ('start', int((day - _EPOCH).total_seconds())),
-      ('end', int((day + datetime.timedelta(days=1)-_EPOCH).total_seconds())),
-      ('state', state),
-    ]
-    for tag in tags:
-      data.append(('tags', tag))
-    cmd = [
-      sys.executable, os.path.join(CLIENT_DIR, 'swarming.py'),
-      'query', '-S', swarming,
-      endpoint + '?' + urllib.urlencode(data),
-    ]
-    thread = threading.Thread(target=run, args=(day.strftime('%Y-%m-%d'), cmd))
-    thread.daemon = True
-    thread.start()
-    threads.append(thread)
-    while len(threads) > 100:
-      # Throttle a bit.
-      for i, thread in enumerate(threads):
-        if not thread.is_alive():
-          thread.join()
-          threads.pop(i)
-          sys.stdout.write('.')
-          sys.stdout.flush()
-          break
-    day = day + datetime.timedelta(days=1)
-
-  while threads:
-    # Throttle a bit.
-    for i, thread in enumerate(threads):
-      if not thread.is_alive():
-        thread.join()
-        threads.pop(i)
-        sys.stdout.write('.')
-        sys.stdout.flush()
-        break
+def _fetch_daily_internal(swarming, process, endpoint, start, end, state, tags):
+  """Executes 'process' by parallelizing it once per day."""
+  out = {}
+  delta = datetime.timedelta(days=1)
+  with threading_utils.ThreadPool(1, 100, 0) as pool:
+    while start < end:
+      cmd = _get_cmd(
+          swarming, endpoint, _get_epoch(start), _get_epoch(start + delta),
+          state, tags)
+      pool.add_task(0, _run_json, start.strftime('%Y-%m-%d'), process, cmd)
+      start += delta
+    for k, v in pool.iter_results():
+      sys.stdout.write('.')
+      sys.stdout.flush()
+      out[k] = v
   print('')
-  data = []
-  while True:
-    try:
-      data.append(queue.get_nowait())
-    except Queue.Empty:
-      break
-  return dict(data)
+  return out
 
 
 def present_dimensions(items, daily_count):
@@ -204,26 +210,31 @@ def main():
       '-S', '--swarming',
       metavar='URL', default=os.environ.get('SWARMING_SERVER', ''),
       help='Swarming server to use')
+
   group = optparse.OptionGroup(parser, 'Filtering')
   group.add_option(
       '--start', default=year.strftime('%Y-%m-%d'),
       help='Starting date in UTC; defaults to start of year: %default')
   group.add_option(
       '--end', default=tomorrow.strftime('%Y-%m-%d'),
-      help='End date in UTC; defaults to tomorrow: %default')
+      help='End date in UTC (excluded); defaults to tomorrow: %default')
   group.add_option(
       '--state', default='ALL', type='choice', choices=STATES,
       help='State to filter on. Values are: %s' % ', '.join(STATES))
   group.add_option(
-      '--tags', action='append', default=[], help='Tags to filter on')
+      '--tags', action='append', default=[],
+      help='Tags to filter on; use this to filter on dimensions')
   parser.add_option_group(group)
+
   group = optparse.OptionGroup(parser, 'Presentation')
   group.add_option(
-      '--dimensions', action='store_true', help='Show the dimensions')
+      '--show-dimensions', action='store_true',
+      help='Show the dimensions; slower')
   group.add_option(
       '--daily-count', action='store_true',
       help='Show the daily count in raw number instead of histogram')
   parser.add_option_group(group)
+
   parser.add_option(
       '--json', default='counts.json',
       help='File containing raw data; default: %default')
@@ -240,7 +251,7 @@ def main():
       start, int((start- _EPOCH).total_seconds()),
       end, int((end - _EPOCH).total_seconds())))
   if options.swarming:
-    if options.dimensions:
+    if options.show_dimensions:
       data = fetch_tasks(
           options.swarming, start, end, options.state, options.tags)
     else:
@@ -255,7 +266,7 @@ def main():
       data = json.load(f)
 
   print('')
-  if options.dimensions:
+  if options.show_dimensions:
     present_dimensions(data, options.daily_count)
   else:
     present_counts(data, options.daily_count)

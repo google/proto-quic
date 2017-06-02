@@ -306,7 +306,7 @@ TransportSecurityPersister::TransportSecurityPersister(
 }
 
 TransportSecurityPersister::~TransportSecurityPersister() {
-  DCHECK(foreground_runner_->RunsTasksOnCurrentThread());
+  DCHECK(foreground_runner_->RunsTasksInCurrentSequence());
 
   if (writer_.HasPendingWrite())
     writer_.DoScheduledWrite();
@@ -315,7 +315,7 @@ TransportSecurityPersister::~TransportSecurityPersister() {
 }
 
 void TransportSecurityPersister::StateIsDirty(TransportSecurityState* state) {
-  DCHECK(foreground_runner_->RunsTasksOnCurrentThread());
+  DCHECK(foreground_runner_->RunsTasksInCurrentSequence());
   DCHECK_EQ(transport_security_state_, state);
 
   if (!readonly_)
@@ -323,7 +323,7 @@ void TransportSecurityPersister::StateIsDirty(TransportSecurityState* state) {
 }
 
 bool TransportSecurityPersister::SerializeData(std::string* output) {
-  DCHECK(foreground_runner_->RunsTasksOnCurrentThread());
+  DCHECK(foreground_runner_->RunsTasksInCurrentSequence());
 
   base::DictionaryValue toplevel;
 
@@ -340,7 +340,7 @@ bool TransportSecurityPersister::SerializeData(std::string* output) {
 
 bool TransportSecurityPersister::LoadEntries(const std::string& serialized,
                                              bool* dirty) {
-  DCHECK(foreground_runner_->RunsTasksOnCurrentThread());
+  DCHECK(foreground_runner_->RunsTasksInCurrentSequence());
 
   transport_security_state_->ClearDynamicData();
   return Deserialize(serialized, dirty, transport_security_state_);
@@ -491,7 +491,7 @@ bool TransportSecurityPersister::Deserialize(const std::string& serialized,
 }
 
 void TransportSecurityPersister::CompleteLoad(const std::string& state) {
-  DCHECK(foreground_runner_->RunsTasksOnCurrentThread());
+  DCHECK(foreground_runner_->RunsTasksInCurrentSequence());
 
   if (state.empty())
     return;

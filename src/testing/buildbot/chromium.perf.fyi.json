@@ -27,7 +27,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -57,7 +57,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -86,7 +86,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -116,7 +116,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -145,7 +145,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -175,66 +175,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "blink_perf.blink_gc",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=android-chromium"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "blink_perf.blink_gc",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build245-m4--device4",
-              "os": "Android",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "blink_perf.blink_gc",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "blink_perf.blink_gc.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build245-m4--device4",
-              "os": "Android",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -263,7 +204,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -293,7 +234,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -322,7 +263,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -352,7 +293,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -381,7 +322,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -411,7 +352,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -440,7 +381,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -470,7 +411,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -499,7 +440,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -529,7 +470,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -558,7 +499,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -588,7 +529,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -617,7 +558,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -647,7 +588,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -676,7 +617,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -706,7 +647,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -735,7 +676,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -765,7 +706,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -794,7 +735,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -824,7 +765,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -853,7 +794,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -883,7 +824,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -912,7 +853,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -942,7 +883,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -971,7 +912,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -1001,7 +942,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -1030,7 +971,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -1060,7 +1001,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -1089,7 +1030,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -1119,7 +1060,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -1148,7 +1089,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -1178,7 +1119,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -1207,7 +1148,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -1237,7 +1178,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -1325,7 +1266,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -1355,7 +1296,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -1384,7 +1325,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -1414,7 +1355,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -1443,7 +1384,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -1473,7 +1414,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -1502,7 +1443,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -1532,7 +1473,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -1561,7 +1502,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -1591,7 +1532,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -1620,7 +1561,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -1650,7 +1591,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -1679,7 +1620,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -1709,7 +1650,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -1738,7 +1679,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -1768,66 +1709,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "memory.top_10_mobile_stress",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=android-chromium"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "memory.top_10_mobile_stress",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build249-m4--device3",
-              "os": "Android",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "memory.top_10_mobile_stress",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "memory.top_10_mobile_stress.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build249-m4--device3",
-              "os": "Android",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -1856,7 +1738,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -1886,7 +1768,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -1915,7 +1797,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -1945,302 +1827,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_ar_fa_he",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=android-chromium"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_ar_fa_he",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build248-m4--device5",
-              "os": "Android",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_ar_fa_he",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_ar_fa_he.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build248-m4--device5",
-              "os": "Android",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_es_fr_pt-BR",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=android-chromium"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_es_fr_pt-BR",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build248-m4--device4",
-              "os": "Android",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_es_fr_pt-BR",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_es_fr_pt-BR.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build248-m4--device4",
-              "os": "Android",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_hi_ru",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=android-chromium"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_hi_ru",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build248-m4--device2",
-              "os": "Android",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_hi_ru",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_hi_ru.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build248-m4--device2",
-              "os": "Android",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_ko_th_vi",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=android-chromium"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_ko_th_vi",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build245-m4--device7",
-              "os": "Android",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_ko_th_vi",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_ko_th_vi.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build245-m4--device7",
-              "os": "Android",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.top_10_mobile",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=android-chromium"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.top_10_mobile",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build249-m4--device5",
-              "os": "Android",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.top_10_mobile",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.top_10_mobile.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build249-m4--device5",
-              "os": "Android",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -2269,7 +1856,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -2299,7 +1886,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -2328,7 +1915,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -2357,7 +1944,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -2387,7 +1974,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -2416,7 +2003,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -2446,7 +2033,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -2475,7 +2062,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -2505,7 +2092,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -2534,7 +2121,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -2564,7 +2151,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -2593,7 +2180,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -2623,7 +2210,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -2652,7 +2239,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -2682,7 +2269,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -2711,7 +2298,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -2741,7 +2328,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -2770,7 +2357,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -2800,7 +2387,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -2829,7 +2416,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -2859,7 +2446,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -2888,7 +2475,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -2918,7 +2505,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -2947,7 +2534,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -2977,7 +2564,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -3006,7 +2593,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -3036,7 +2623,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -3065,7 +2652,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -3095,7 +2682,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -3124,7 +2711,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -3154,7 +2741,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -3183,7 +2770,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -3213,7 +2800,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -3242,7 +2829,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -3272,7 +2859,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -3301,7 +2888,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -3331,7 +2918,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -3360,7 +2947,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -3390,7 +2977,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -3419,7 +3006,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -3449,7 +3036,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -3478,7 +3065,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -3508,7 +3095,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -3537,7 +3124,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -3567,7 +3154,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -3596,7 +3183,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -3626,7 +3213,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -3655,7 +3242,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -3685,7 +3272,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -3714,7 +3301,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -3744,7 +3331,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -3773,7 +3360,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -3802,7 +3389,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -3832,7 +3419,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -3862,7 +3449,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -3891,7 +3478,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -3921,7 +3508,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -3950,7 +3537,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -3980,7 +3567,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -4009,7 +3596,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -4039,7 +3626,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -4068,7 +3655,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -4098,7 +3685,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -4127,7 +3714,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -4157,7 +3744,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -4186,7 +3773,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -4216,7 +3803,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -4245,7 +3832,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -4275,7 +3862,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -4363,7 +3950,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -4393,66 +3980,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "system_health.webview_startup_multiprocess",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=android-chromium"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "system_health.webview_startup_multiprocess",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build249-m4--device4",
-              "os": "Android",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "system_health.webview_startup_multiprocess",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "system_health.webview_startup_multiprocess.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build249-m4--device4",
-              "os": "Android",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -4481,7 +4009,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -4511,7 +4039,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -4540,7 +4068,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -4570,7 +4098,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -4599,7 +4127,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -4629,7 +4157,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -4658,7 +4186,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -4688,7 +4216,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -4717,7 +4245,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -4747,7 +4275,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -4776,7 +4304,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -4806,7 +4334,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -4835,7 +4363,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -4865,7 +4393,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -4894,7 +4422,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -4924,7 +4452,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -4953,7 +4481,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -4983,7 +4511,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -5012,7 +4540,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -5042,7 +4570,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -5071,7 +4599,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -5101,7 +4629,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -5130,7 +4658,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -5160,7 +4688,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -5189,7 +4717,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -5219,7 +4747,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -5248,7 +4776,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -5278,7 +4806,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -5307,7 +4835,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -5337,7 +4865,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -5366,7 +4894,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -5396,7 +4924,125 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
+          "ignore_task_failure": true,
+          "io_timeout": 3600
+        }
+      },
+      {
+        "args": [
+          "v8.runtimestats.browsing_desktop",
+          "-v",
+          "--upload-results",
+          "--output-format=chartjson",
+          "--browser=android-chromium"
+        ],
+        "isolate_name": "telemetry_perf_tests",
+        "name": "v8.runtimestats.browsing_desktop",
+        "override_compile_targets": [
+          "telemetry_perf_tests"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "id": "build249-m4--device7",
+              "os": "Android",
+              "pool": "Chrome-perf-fyi"
+            }
+          ],
+          "expiration": 36000,
+          "hard_timeout": 10800,
+          "ignore_task_failure": false,
+          "io_timeout": 3600
+        }
+      },
+      {
+        "args": [
+          "v8.runtimestats.browsing_desktop",
+          "-v",
+          "--upload-results",
+          "--output-format=chartjson",
+          "--browser=reference",
+          "--output-trace-tag=_ref"
+        ],
+        "isolate_name": "telemetry_perf_tests",
+        "name": "v8.runtimestats.browsing_desktop.reference",
+        "override_compile_targets": [
+          "telemetry_perf_tests"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "id": "build249-m4--device7",
+              "os": "Android",
+              "pool": "Chrome-perf-fyi"
+            }
+          ],
+          "expiration": 36000,
+          "hard_timeout": 10800,
+          "ignore_task_failure": true,
+          "io_timeout": 3600
+        }
+      },
+      {
+        "args": [
+          "v8.runtimestats.browsing_desktop_classic",
+          "-v",
+          "--upload-results",
+          "--output-format=chartjson",
+          "--browser=android-chromium"
+        ],
+        "isolate_name": "telemetry_perf_tests",
+        "name": "v8.runtimestats.browsing_desktop_classic",
+        "override_compile_targets": [
+          "telemetry_perf_tests"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "id": "build249-m4--device7",
+              "os": "Android",
+              "pool": "Chrome-perf-fyi"
+            }
+          ],
+          "expiration": 36000,
+          "hard_timeout": 10800,
+          "ignore_task_failure": false,
+          "io_timeout": 3600
+        }
+      },
+      {
+        "args": [
+          "v8.runtimestats.browsing_desktop_classic",
+          "-v",
+          "--upload-results",
+          "--output-format=chartjson",
+          "--browser=reference",
+          "--output-trace-tag=_ref"
+        ],
+        "isolate_name": "telemetry_perf_tests",
+        "name": "v8.runtimestats.browsing_desktop_classic.reference",
+        "override_compile_targets": [
+          "telemetry_perf_tests"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "id": "build249-m4--device7",
+              "os": "Android",
+              "pool": "Chrome-perf-fyi"
+            }
+          ],
+          "expiration": 36000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -5425,7 +5071,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -5455,7 +5101,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -5484,7 +5130,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -5514,7 +5160,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -5543,7 +5189,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -5573,7 +5219,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -5597,7 +5243,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -5626,7 +5272,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -5656,7 +5302,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -5685,7 +5331,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -5715,7 +5361,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -5744,7 +5390,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -5774,66 +5420,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "blink_perf.blink_gc",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=release_x64"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "blink_perf.blink_gc",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:22b1",
-              "id": "build142-b1",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "blink_perf.blink_gc",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "blink_perf.blink_gc.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:22b1",
-              "id": "build142-b1",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -5862,7 +5449,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -5892,7 +5479,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -5921,7 +5508,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -5951,7 +5538,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -5980,7 +5567,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -6010,7 +5597,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -6039,7 +5626,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -6069,7 +5656,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -6098,7 +5685,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -6128,7 +5715,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -6157,7 +5744,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -6187,7 +5774,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -6216,7 +5803,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -6246,7 +5833,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -6275,7 +5862,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -6305,7 +5892,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -6334,7 +5921,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -6364,7 +5951,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -6393,7 +5980,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -6423,7 +6010,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -6443,7 +6030,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -6472,7 +6059,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -6502,7 +6089,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -6531,7 +6118,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -6561,7 +6148,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -6590,7 +6177,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -6620,7 +6207,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -6649,7 +6236,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -6679,7 +6266,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -6708,7 +6295,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -6738,7 +6325,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -6767,7 +6354,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -6797,7 +6384,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -6817,7 +6404,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -6846,7 +6433,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -6876,7 +6463,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -6905,7 +6492,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -6935,7 +6522,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -6964,7 +6551,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -6994,7 +6581,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -7014,7 +6601,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -7043,7 +6630,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -7073,7 +6660,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -7102,7 +6689,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -7132,7 +6719,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -7161,7 +6748,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -7191,7 +6778,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -7220,7 +6807,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -7250,7 +6837,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -7279,7 +6866,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -7309,7 +6896,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -7338,7 +6925,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -7368,7 +6955,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -7397,7 +6984,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -7427,7 +7014,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -7456,7 +7043,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -7486,7 +7073,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -7515,7 +7102,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -7545,7 +7132,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -7574,7 +7161,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -7604,7 +7191,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -7633,7 +7220,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -7663,361 +7250,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_ar_fa_he",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=release_x64"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_ar_fa_he",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:22b1",
-              "id": "build147-b1",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_ar_fa_he",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_ar_fa_he.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:22b1",
-              "id": "build147-b1",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_es_fr_pt-BR",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=release_x64"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_es_fr_pt-BR",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:22b1",
-              "id": "build146-b1",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_es_fr_pt-BR",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_es_fr_pt-BR.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:22b1",
-              "id": "build146-b1",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_hi_ru",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=release_x64"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_hi_ru",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:22b1",
-              "id": "build144-b1",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_hi_ru",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_hi_ru.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:22b1",
-              "id": "build144-b1",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_ja_zh",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=release_x64"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_ja_zh",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:22b1",
-              "id": "build138-b1",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_ja_zh",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_ja_zh.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:22b1",
-              "id": "build138-b1",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_ko_th_vi",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=release_x64"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_ko_th_vi",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:22b1",
-              "id": "build142-b1",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_ko_th_vi",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_ko_th_vi.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:22b1",
-              "id": "build142-b1",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.typical_25",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=release_x64"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.typical_25",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:22b1",
-              "id": "build139-b1",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.typical_25",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.typical_25.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:22b1",
-              "id": "build139-b1",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -8046,7 +7279,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -8076,7 +7309,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -8096,7 +7329,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -8125,7 +7358,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -8154,7 +7387,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -8184,7 +7417,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -8213,7 +7446,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -8243,7 +7476,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -8272,7 +7505,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -8302,7 +7535,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -8331,7 +7564,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -8361,7 +7594,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -8390,7 +7623,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -8420,7 +7653,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -8449,7 +7682,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -8479,7 +7712,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -8508,7 +7741,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -8538,7 +7771,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -8567,7 +7800,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -8597,7 +7830,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -8626,7 +7859,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -8656,7 +7889,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -8685,7 +7918,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -8715,7 +7948,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -8744,7 +7977,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -8774,7 +8007,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -8803,7 +8036,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -8833,7 +8066,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -8862,7 +8095,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -8892,7 +8125,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -8921,7 +8154,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -8951,7 +8184,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -8980,7 +8213,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -9010,7 +8243,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -9039,7 +8272,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -9069,7 +8302,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -9098,7 +8331,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -9128,7 +8361,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -9157,7 +8390,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -9187,7 +8420,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -9216,7 +8449,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -9246,7 +8479,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -9275,7 +8508,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -9305,7 +8538,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -9334,7 +8567,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -9364,7 +8597,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -9393,7 +8626,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -9423,7 +8656,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -9452,7 +8685,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -9482,7 +8715,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -9511,7 +8744,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -9541,7 +8774,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -9570,7 +8803,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -9600,7 +8833,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -9629,7 +8862,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -9659,7 +8892,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -9688,7 +8921,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -9717,7 +8950,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -9747,7 +8980,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -9777,7 +9010,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -9806,7 +9039,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -9836,7 +9069,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -9865,7 +9098,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -9895,7 +9128,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -9924,7 +9157,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -9954,7 +9187,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -9983,7 +9216,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -10013,7 +9246,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -10042,7 +9275,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -10072,7 +9305,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -10101,7 +9334,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -10131,7 +9364,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -10160,7 +9393,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -10190,7 +9423,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -10219,7 +9452,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -10249,7 +9482,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -10278,7 +9511,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -10308,7 +9541,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -10337,7 +9570,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -10367,7 +9600,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -10396,7 +9629,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -10426,66 +9659,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "system_health.webview_startup_multiprocess",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=release_x64"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "system_health.webview_startup_multiprocess",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:22b1",
-              "id": "build139-b1",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "system_health.webview_startup_multiprocess",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "system_health.webview_startup_multiprocess.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:22b1",
-              "id": "build139-b1",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -10514,7 +9688,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -10544,7 +9718,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -10573,7 +9747,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -10603,7 +9777,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -10632,7 +9806,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -10662,7 +9836,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -10691,7 +9865,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -10721,7 +9895,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -10750,7 +9924,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -10780,7 +9954,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -10800,7 +9974,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -10829,7 +10003,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -10859,7 +10033,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -10888,7 +10062,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -10918,7 +10092,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -10947,7 +10121,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -10977,7 +10151,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -11006,7 +10180,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -11036,7 +10210,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -11065,7 +10239,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -11095,7 +10269,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -11124,7 +10298,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -11154,7 +10328,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -11183,7 +10357,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -11213,7 +10387,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -11242,7 +10416,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -11272,7 +10446,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -11301,7 +10475,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -11331,7 +10505,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -11364,7 +10538,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -11394,7 +10568,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -11423,7 +10597,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -11453,7 +10627,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -11482,7 +10656,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -11512,66 +10686,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "blink_perf.blink_gc",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=release_x64"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "blink_perf.blink_gc",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:9874",
-              "id": "build206-b4",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "blink_perf.blink_gc",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "blink_perf.blink_gc.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:9874",
-              "id": "build206-b4",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -11600,7 +10715,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -11630,7 +10745,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -11659,7 +10774,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -11689,7 +10804,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -11718,7 +10833,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -11748,7 +10863,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -11777,7 +10892,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -11807,7 +10922,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -11836,7 +10951,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -11866,7 +10981,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -11895,7 +11010,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -11925,7 +11040,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -11954,7 +11069,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -11984,7 +11099,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -12013,7 +11128,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -12043,7 +11158,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -12072,7 +11187,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -12102,7 +11217,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -12131,7 +11246,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -12161,7 +11276,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -12190,7 +11305,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -12220,7 +11335,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -12249,7 +11364,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -12279,7 +11394,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -12308,7 +11423,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -12338,7 +11453,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -12367,7 +11482,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -12397,7 +11512,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -12426,7 +11541,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -12456,7 +11571,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -12485,7 +11600,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -12515,7 +11630,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -12544,7 +11659,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -12574,7 +11689,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -12603,7 +11718,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -12633,7 +11748,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -12662,7 +11777,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -12692,7 +11807,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -12721,7 +11836,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -12751,7 +11866,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -12780,7 +11895,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -12810,7 +11925,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -12839,7 +11954,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -12869,7 +11984,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -12898,7 +12013,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -12928,7 +12043,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -12957,7 +12072,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -12987,7 +12102,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -13016,7 +12131,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -13046,7 +12161,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -13075,7 +12190,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -13105,7 +12220,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -13134,7 +12249,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -13164,7 +12279,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -13193,7 +12308,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -13223,7 +12338,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -13252,7 +12367,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -13282,7 +12397,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -13311,7 +12426,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -13341,361 +12456,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_ar_fa_he",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=release_x64"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_ar_fa_he",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:9874",
-              "id": "build211-b4",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_ar_fa_he",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_ar_fa_he.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:9874",
-              "id": "build211-b4",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_es_fr_pt-BR",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=release_x64"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_es_fr_pt-BR",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:9874",
-              "id": "build210-b4",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_es_fr_pt-BR",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_es_fr_pt-BR.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:9874",
-              "id": "build210-b4",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_hi_ru",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=release_x64"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_hi_ru",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:9874",
-              "id": "build208-b4",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_hi_ru",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_hi_ru.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:9874",
-              "id": "build208-b4",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_ja_zh",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=release_x64"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_ja_zh",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:9874",
-              "id": "build202-b4",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_ja_zh",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_ja_zh.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:9874",
-              "id": "build202-b4",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_ko_th_vi",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=release_x64"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_ko_th_vi",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:9874",
-              "id": "build206-b4",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.intl_ko_th_vi",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.intl_ko_th_vi.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:9874",
-              "id": "build206-b4",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.typical_25",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=release_x64"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.typical_25",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:9874",
-              "id": "build203-b4",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "page_cycler_v2.typical_25",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "page_cycler_v2.typical_25.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:9874",
-              "id": "build203-b4",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -13724,7 +12485,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -13754,7 +12515,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -13783,7 +12544,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -13812,7 +12573,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -13842,7 +12603,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -13871,7 +12632,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -13901,7 +12662,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -13930,7 +12691,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -13960,7 +12721,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -13989,7 +12750,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -14019,7 +12780,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -14048,7 +12809,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -14078,7 +12839,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -14107,7 +12868,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -14137,7 +12898,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -14166,7 +12927,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -14196,7 +12957,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -14225,7 +12986,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -14255,7 +13016,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -14284,7 +13045,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -14314,7 +13075,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -14343,7 +13104,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -14373,7 +13134,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -14402,7 +13163,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -14432,7 +13193,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -14461,7 +13222,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -14491,7 +13252,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -14520,7 +13281,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -14550,7 +13311,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -14579,7 +13340,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -14609,7 +13370,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -14638,7 +13399,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -14668,7 +13429,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -14697,7 +13458,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -14727,7 +13488,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -14756,7 +13517,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -14786,7 +13547,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -14815,7 +13576,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -14845,7 +13606,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -14874,7 +13635,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -14904,7 +13665,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -14933,7 +13694,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -14963,7 +13724,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -14992,7 +13753,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -15022,7 +13783,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -15051,7 +13812,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -15081,7 +13842,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -15110,7 +13871,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -15140,7 +13901,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -15169,7 +13930,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -15199,7 +13960,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -15228,7 +13989,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -15258,7 +14019,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -15287,7 +14048,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -15317,7 +14078,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -15346,7 +14107,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -15375,7 +14136,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -15405,7 +14166,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -15435,7 +14196,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -15464,7 +14225,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -15494,7 +14255,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -15523,7 +14284,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -15553,7 +14314,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -15582,7 +14343,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -15612,7 +14373,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -15641,7 +14402,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -15671,7 +14432,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -15700,7 +14461,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -15730,7 +14491,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -15759,7 +14520,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -15789,7 +14550,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -15818,7 +14579,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -15848,7 +14609,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -15877,7 +14638,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -15907,7 +14668,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -15936,7 +14697,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -15966,7 +14727,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -15995,7 +14756,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -16025,7 +14786,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -16054,7 +14815,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -16084,66 +14845,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": true,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "system_health.webview_startup_multiprocess",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=release_x64"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "system_health.webview_startup_multiprocess",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:9874",
-              "id": "build203-b4",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
-          "ignore_task_failure": false,
-          "io_timeout": 3600
-        }
-      },
-      {
-        "args": [
-          "system_health.webview_startup_multiprocess",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "system_health.webview_startup_multiprocess.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:9874",
-              "id": "build203-b4",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf-fyi"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -16172,7 +14874,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -16202,7 +14904,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -16231,7 +14933,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -16261,7 +14963,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -16290,7 +14992,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -16320,7 +15022,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -16349,7 +15051,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -16379,7 +15081,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -16408,7 +15110,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -16438,7 +15140,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -16467,7 +15169,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -16497,7 +15199,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -16526,7 +15228,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -16556,7 +15258,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -16585,7 +15287,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -16615,7 +15317,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -16644,7 +15346,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -16674,7 +15376,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -16703,7 +15405,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -16733,7 +15435,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -16762,7 +15464,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -16792,7 +15494,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -16821,7 +15523,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -16851,7 +15553,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -16880,7 +15582,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -16910,7 +15612,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }
@@ -16939,7 +15641,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": false,
           "io_timeout": 3600
         }
@@ -16969,7 +15671,7 @@
             }
           ],
           "expiration": 36000,
-          "hard_timeout": 9000,
+          "hard_timeout": 10800,
           "ignore_task_failure": true,
           "io_timeout": 3600
         }

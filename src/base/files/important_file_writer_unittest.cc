@@ -18,6 +18,7 @@
 #include "base/threading/thread.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
+#include "base/timer/mock_timer.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -227,85 +228,100 @@ TEST_F(ImportantFileWriterTest, CallbackRunsOnWriterThread) {
 }
 
 TEST_F(ImportantFileWriterTest, ScheduleWrite) {
+  constexpr TimeDelta kCommitInterval = TimeDelta::FromSeconds(12345);
+  MockTimer timer(true, false);
   ImportantFileWriter writer(file_, ThreadTaskRunnerHandle::Get(),
-                             TimeDelta::FromMilliseconds(0));
+                             kCommitInterval);
+  writer.SetTimerForTesting(&timer);
   EXPECT_FALSE(writer.HasPendingWrite());
   DataSerializer serializer("foo");
   writer.ScheduleWrite(&serializer);
   EXPECT_TRUE(writer.HasPendingWrite());
-  RunLoop().RunUntilIdle();
+  ASSERT_TRUE(timer.IsRunning());
+  EXPECT_EQ(kCommitInterval, timer.GetCurrentDelay());
+  timer.Fire();
   EXPECT_FALSE(writer.HasPendingWrite());
+  EXPECT_FALSE(timer.IsRunning());
+  RunLoop().RunUntilIdle();
   ASSERT_TRUE(PathExists(writer.path()));
   EXPECT_EQ("foo", GetFileContent(writer.path()));
 }
 
 TEST_F(ImportantFileWriterTest, DoScheduledWrite) {
+  MockTimer timer(true, false);
   ImportantFileWriter writer(file_, ThreadTaskRunnerHandle::Get());
+  writer.SetTimerForTesting(&timer);
   EXPECT_FALSE(writer.HasPendingWrite());
   DataSerializer serializer("foo");
   writer.ScheduleWrite(&serializer);
   EXPECT_TRUE(writer.HasPendingWrite());
   writer.DoScheduledWrite();
-  RunLoop().RunUntilIdle();
   EXPECT_FALSE(writer.HasPendingWrite());
+  RunLoop().RunUntilIdle();
   ASSERT_TRUE(PathExists(writer.path()));
   EXPECT_EQ("foo", GetFileContent(writer.path()));
 }
 
 TEST_F(ImportantFileWriterTest, BatchingWrites) {
-  ImportantFileWriter writer(file_, ThreadTaskRunnerHandle::Get(),
-                             TimeDelta::FromMilliseconds(0));
+  MockTimer timer(true, false);
+  ImportantFileWriter writer(file_, ThreadTaskRunnerHandle::Get());
+  writer.SetTimerForTesting(&timer);
   DataSerializer foo("foo"), bar("bar"), baz("baz");
   writer.ScheduleWrite(&foo);
   writer.ScheduleWrite(&bar);
   writer.ScheduleWrite(&baz);
+  ASSERT_TRUE(timer.IsRunning());
+  timer.Fire();
   RunLoop().RunUntilIdle();
   ASSERT_TRUE(PathExists(writer.path()));
   EXPECT_EQ("baz", GetFileContent(writer.path()));
 }
 
 TEST_F(ImportantFileWriterTest, ScheduleWrite_FailToSerialize) {
-  ImportantFileWriter writer(file_, ThreadTaskRunnerHandle::Get(),
-                             TimeDelta::FromMilliseconds(0));
+  MockTimer timer(true, false);
+  ImportantFileWriter writer(file_, ThreadTaskRunnerHandle::Get());
+  writer.SetTimerForTesting(&timer);
   EXPECT_FALSE(writer.HasPendingWrite());
   FailingDataSerializer serializer;
   writer.ScheduleWrite(&serializer);
   EXPECT_TRUE(writer.HasPendingWrite());
-  RunLoop().RunUntilIdle();
+  ASSERT_TRUE(timer.IsRunning());
+  timer.Fire();
   EXPECT_FALSE(writer.HasPendingWrite());
+  RunLoop().RunUntilIdle();
   EXPECT_FALSE(PathExists(writer.path()));
 }
 
 TEST_F(ImportantFileWriterTest, ScheduleWrite_WriteNow) {
-  ImportantFileWriter writer(file_, ThreadTaskRunnerHandle::Get(),
-                             TimeDelta::FromMilliseconds(0));
+  MockTimer timer(true, false);
+  ImportantFileWriter writer(file_, ThreadTaskRunnerHandle::Get());
+  writer.SetTimerForTesting(&timer);
   EXPECT_FALSE(writer.HasPendingWrite());
   DataSerializer serializer("foo");
   writer.ScheduleWrite(&serializer);
   EXPECT_TRUE(writer.HasPendingWrite());
   writer.WriteNow(MakeUnique<std::string>("bar"));
   EXPECT_FALSE(writer.HasPendingWrite());
+  EXPECT_FALSE(timer.IsRunning());
 
   RunLoop().RunUntilIdle();
-  EXPECT_FALSE(writer.HasPendingWrite());
   ASSERT_TRUE(PathExists(writer.path()));
   EXPECT_EQ("bar", GetFileContent(writer.path()));
 }
 
 TEST_F(ImportantFileWriterTest, DoScheduledWrite_FailToSerialize) {
-  ImportantFileWriter writer(file_, ThreadTaskRunnerHandle::Get(),
-                             TimeDelta::FromMilliseconds(0));
+  MockTimer timer(true, false);
+  ImportantFileWriter writer(file_, ThreadTaskRunnerHandle::Get());
+  writer.SetTimerForTesting(&timer);
   EXPECT_FALSE(writer.HasPendingWrite());
   FailingDataSerializer serializer;
   writer.ScheduleWrite(&serializer);
   EXPECT_TRUE(writer.HasPendingWrite());
 
   writer.DoScheduledWrite();
+  EXPECT_FALSE(timer.IsRunning());
   EXPECT_FALSE(writer.HasPendingWrite());
-  EXPECT_FALSE(PathExists(writer.path()));
-
   RunLoop().RunUntilIdle();
-  EXPECT_FALSE(writer.HasPendingWrite());
   EXPECT_FALSE(PathExists(writer.path()));
 }
 

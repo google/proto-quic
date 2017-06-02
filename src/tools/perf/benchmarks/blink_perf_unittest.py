@@ -46,11 +46,11 @@ class BlinkPerfTest(page_test_test_case.PageTestTestCase):
     self.assertEquals(len(results.FindAllTraceValues()), 1)
 
     frame_view_layouts = results.FindAllPageSpecificValuesNamed(
-        'FrameView::layout')
+        'LocalFrameView::layout')
     self.assertEquals(len(frame_view_layouts), 1)
     # append-child-measure-time.html specifies 5 iterationCount.
     self.assertEquals(len(frame_view_layouts[0].values), 5)
-    self.assertGreater(frame_view_layouts[0].GetRepresentativeNumber, 0.1)
+    self.assertGreater(frame_view_layouts[0].GetRepresentativeNumber(), 0.001)
 
     update_layout_trees = results.FindAllPageSpecificValuesNamed(
         'UpdateLayoutTree')
@@ -58,7 +58,7 @@ class BlinkPerfTest(page_test_test_case.PageTestTestCase):
     # append-child-measure-time.html specifies 5 iterationCount.
     self.assertEquals(len(update_layout_trees[0].values), 5)
 
-    self.assertGreater(update_layout_trees[0].GetRepresentativeNumber, 0.1)
+    self.assertGreater(update_layout_trees[0].GetRepresentativeNumber(), 0.001)
 
   def testBlinkPerfTracingMetricsForMeasureFrameTime(self):
     results = self.RunMeasurement(measurement=self._measurement,
@@ -69,18 +69,20 @@ class BlinkPerfTest(page_test_test_case.PageTestTestCase):
     self.assertEquals(len(results.FindAllTraceValues()), 1)
 
     frame_view_prepaints = results.FindAllPageSpecificValuesNamed(
-        'FrameView::prePaint')
+        'LocalFrameView::prePaint')
+
     self.assertEquals(len(frame_view_prepaints), 1)
     # color-changes-measure-frame-time.html specifies 9 iterationCount.
     self.assertEquals(len(frame_view_prepaints[0].values), 9)
-    self.assertGreater(frame_view_prepaints[0].GetRepresentativeNumber, 0.1)
+    self.assertGreater(frame_view_prepaints[0].GetRepresentativeNumber(), 0.001)
 
     frame_view_painttrees = results.FindAllPageSpecificValuesNamed(
-        'FrameView::paintTree')
+        'LocalFrameView::paintTree')
     self.assertEquals(len(frame_view_painttrees), 1)
     # color-changes-measure-frame-time.html specifies 9 iterationCount.
     self.assertEquals(len(frame_view_painttrees[0].values), 9)
-    self.assertGreater(frame_view_painttrees[0].GetRepresentativeNumber, 0.1)
+    self.assertGreater(frame_view_painttrees[0].GetRepresentativeNumber(),
+        0.001)
 
   def testBlinkPerfTracingMetricsForMeasurePageLoadTime(self):
     results = self.RunMeasurement(measurement=self._measurement,
@@ -95,14 +97,14 @@ class BlinkPerfTest(page_test_test_case.PageTestTestCase):
     self.assertEquals(len(create_child_frame), 1)
     # color-changes-measure-frame-time.html specifies 7 iterationCount.
     self.assertEquals(len(create_child_frame[0].values), 7)
-    self.assertGreater(create_child_frame[0].GetRepresentativeNumber, 0.1)
+    self.assertGreater(create_child_frame[0].GetRepresentativeNumber(), 0.001)
 
     post_layout_task = results.FindAllPageSpecificValuesNamed(
-        'FrameView::performPostLayoutTasks')
+        'LocalFrameView::performPostLayoutTasks')
     self.assertEquals(len(post_layout_task), 1)
     # color-changes-measure-frame-time.html specifies 7 iterationCount.
     self.assertEquals(len(post_layout_task[0].values), 7)
-    self.assertGreater(post_layout_task[0].GetRepresentativeNumber, 0.1)
+    self.assertGreater(post_layout_task[0].GetRepresentativeNumber(), 0.001)
 
 
   def testBlinkPerfTracingMetricsForMeasureAsync(self):
@@ -118,7 +120,7 @@ class BlinkPerfTest(page_test_test_case.PageTestTestCase):
     self.assertEquals(len(blob_requests), 1)
     # simple-blob-measure-async.html specifies 6 iterationCount.
     self.assertEquals(len(blob_requests[0].values), 6)
-    self.assertGreater(blob_requests[0].GetRepresentativeNumber, 0.1)
+    self.assertGreater(blob_requests[0].GetRepresentativeNumber(), 0.001)
 
     blob_request_read_raw_data = results.FindAllPageSpecificValuesNamed(
         'BlobRequest::ReadRawData')
@@ -126,7 +128,7 @@ class BlinkPerfTest(page_test_test_case.PageTestTestCase):
     # simple-blob-measure-async.html specifies 6 iterationCount.
     self.assertEquals(len(blob_request_read_raw_data[0].values), 6)
     self.assertGreater(
-        blob_request_read_raw_data[0].GetRepresentativeNumber, 0.01)
+        blob_request_read_raw_data[0].GetRepresentativeNumber(), 0.001)
 
 
 # pylint: disable=protected-access

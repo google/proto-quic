@@ -15,11 +15,13 @@
 #include "file_test.h"
 
 #include <algorithm>
-#include <memory>
+#include <utility>
 
+#include <assert.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -28,18 +30,11 @@
 #include "../internal.h"
 
 
-FileTest::FileTest(const char *path) {
-  file_ = fopen(path, "r");
-  if (file_ == nullptr) {
-    fprintf(stderr, "Could not open file %s: %s.\n", path, strerror(errno));
-  }
-}
+FileTest::FileTest(std::unique_ptr<FileTest::LineReader> reader,
+                   std::function<void(const std::string &)> comment_callback)
+    : reader_(std::move(reader)), comment_callback_(comment_callback) {}
 
-FileTest::~FileTest() {
-  if (file_ != nullptr) {
-    fclose(file_);
-  }
-}
+FileTest::~FileTest() {}
 
 // FindDelimiter returns a pointer to the first '=' or ':' in |str| or nullptr
 // if there is none.
@@ -81,13 +76,13 @@ static std::pair<std::string, std::string> ParseKeyValue(const char *str, const 
 
 FileTest::ReadResult FileTest::ReadNext() {
   // If the previous test had unused attributes or instructions, it is an error.
-  if (!unused_attributes_.empty() && !ignore_unused_attributes_) {
+  if (!unused_attributes_.empty()) {
     for (const std::string &key : unused_attributes_) {
       PrintLine("Unused attribute: %s", key.c_str());
     }
     return kReadError;
   }
-  if (!unused_instructions_.empty() && !ignore_unused_attributes_) {
+  if (!unused_instructions_.empty()) {
     for (const std::string &key : unused_instructions_) {
       PrintLine("Unused instruction: %s", key.c_str());
     }
@@ -104,23 +99,19 @@ FileTest::ReadResult FileTest::ReadNext() {
 
   while (true) {
     // Read the next line.
-    if (fgets(buf.get(), kBufLen, file_) == nullptr) {
-      if (feof(file_)) {
+    switch (reader_->ReadLine(buf.get(), kBufLen)) {
+      case kReadError:
+        fprintf(stderr, "Error reading from input at line %u.\n", line_ + 1);
+        return kReadError;
+      case kReadEOF:
         // EOF is a valid terminator for a test.
         return start_line_ > 0 ? kReadSuccess : kReadEOF;
-      }
-      fprintf(stderr, "Error reading from input.\n");
-      return kReadError;
+      case kReadSuccess:
+        break;
     }
 
     line_++;
     size_t len = strlen(buf.get());
-    // Check for truncation.
-    if (len > 0 && buf[len - 1] != '\n' && !feof(file_)) {
-      fprintf(stderr, "Line %u too long.\n", line_);
-      return kReadError;
-    }
-
     if (buf[0] == '\n' || buf[0] == '\r' || buf[0] == '\0') {
       // Empty lines delimit tests.
       if (start_line_ > 0) {
@@ -131,12 +122,15 @@ FileTest::ReadResult FileTest::ReadNext() {
         // Delimit instruction block from test with a blank line.
         current_test_ += "\r\n";
       }
-    } else if (buf[0] == '#' ||
-               strcmp("[B.4.2 Key Pair Generation by Testing Candidates]\r\n",
+    } else if (buf[0] == '#') {
+      if (comment_callback_) {
+        comment_callback_(buf.get());
+      }
+      // Otherwise ignore comments.
+    } else if (strcmp("[B.4.2 Key Pair Generation by Testing Candidates]\r\n",
                       buf.get()) == 0) {
-      // Ignore comments. The above instruction-like line is treated as a
-      // comment because the FIPS lab's request files are hopelessly
-      // inconsistent.
+      // The above instruction-like line is ignored because the FIPS lab's
+      // request files are hopelessly inconsistent.
     } else if (buf[0] == '[') {  // Inside an instruction block.
       is_at_new_instruction_block_ = true;
       if (start_line_ != 0) {
@@ -372,15 +366,62 @@ void FileTest::InjectInstruction(const std::string &key,
   instructions_[key] = value;
 }
 
-void FileTest::SetIgnoreUnusedAttributes(bool ignore) {
-  ignore_unused_attributes_ = ignore;
+class FileLineReader : public FileTest::LineReader {
+ public:
+  explicit FileLineReader(const char *path) : file_(fopen(path, "r")) {}
+  ~FileLineReader() override {
+    if (file_ != nullptr) {
+      fclose(file_);
+    }
+  }
+
+  // is_open returns true if the file was successfully opened.
+  bool is_open() const { return file_ != nullptr; }
+
+  FileTest::ReadResult ReadLine(char *out, size_t len) override {
+    assert(len > 0);
+    if (file_ == nullptr) {
+      return FileTest::kReadError;
+    }
+
+    if (fgets(out, len, file_) == nullptr) {
+      return feof(file_) ? FileTest::kReadEOF : FileTest::kReadError;
+    }
+
+    if (strlen(out) == len - 1 && out[len - 2] != '\n' && !feof(file_)) {
+      fprintf(stderr, "Line too long.\n");
+      return FileTest::kReadError;
+    }
+
+    return FileTest::kReadSuccess;
+  }
+
+ private:
+  FILE *file_;
+
+  FileLineReader(const FileLineReader &) = delete;
+  FileLineReader &operator=(const FileLineReader &) = delete;
+};
+
+int FileTestMain(FileTestFunc run_test, void *arg, const char *path) {
+  FileTest::Options opts;
+  opts.callback = run_test;
+  opts.arg = arg;
+  opts.path = path;
+
+  return FileTestMain(opts);
 }
 
-int FileTestMainSilent(FileTestFunc run_test, void *arg, const char *path) {
-  FileTest t(path);
-  if (!t.is_open()) {
+int FileTestMain(const FileTest::Options &opts) {
+  std::unique_ptr<FileLineReader> reader(
+      new FileLineReader(opts.path));
+  if (!reader->is_open()) {
+    fprintf(stderr, "Could not open file %s: %s.\n", opts.path,
+            strerror(errno));
     return 1;
   }
+
+  FileTest t(std::move(reader), opts.comment_callback);
 
   bool failed = false;
   while (true) {
@@ -391,7 +432,7 @@ int FileTestMainSilent(FileTestFunc run_test, void *arg, const char *path) {
       break;
     }
 
-    bool result = run_test(&t, arg);
+    bool result = opts.callback(&t, opts.arg);
     if (t.HasAttribute("Error")) {
       if (result) {
         t.PrintLine("Operation unexpectedly succeeded.");
@@ -418,13 +459,9 @@ int FileTestMainSilent(FileTestFunc run_test, void *arg, const char *path) {
     }
   }
 
-  return failed ? 1 : 0;
-}
-
-int FileTestMain(FileTestFunc run_test, void *arg, const char *path) {
-  int result = FileTestMainSilent(run_test, arg, path);
-  if (!result) {
+  if (!opts.silent && !failed) {
     printf("PASS\n");
   }
-  return result;
+
+  return failed ? 1 : 0;
 }

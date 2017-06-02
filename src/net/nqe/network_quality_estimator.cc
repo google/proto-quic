@@ -319,7 +319,7 @@ NetworkQualityEstimator::NetworkQualityEstimator(
   AddDefaultEstimates();
 
   throughput_analyzer_.reset(new nqe::internal::ThroughputAnalyzer(
-      base::ThreadTaskRunnerHandle::Get(),
+      &params_, base::ThreadTaskRunnerHandle::Get(),
       base::Bind(&NetworkQualityEstimator::OnNewThroughputObservationAvailable,
                  base::Unretained(this)),
       use_localhost_requests_, use_smaller_responses_for_tests));
@@ -1765,6 +1765,15 @@ void NetworkQualityEstimator::OnPrefsRead(
     network_quality_store_->Add(it.first, cached_network_quality);
     MaybeUpdateNetworkQualityFromCache(it.first, cached_network_quality);
   }
+}
+
+base::Optional<base::TimeDelta> NetworkQualityEstimator::GetTransportRTT()
+    const {
+  DCHECK(thread_checker_.CalledOnValidThread());
+
+  if (network_quality_.transport_rtt() == nqe::internal::InvalidRTT())
+    return base::Optional<base::TimeDelta>();
+  return network_quality_.transport_rtt();
 }
 
 void NetworkQualityEstimator::MaybeUpdateNetworkQualityFromCache(

@@ -222,13 +222,7 @@ void BattOrConnectionImpl::OnBytesRead(int bytes_read,
     return;
   }
 
-  if (bytes_read == 0) {
-    // If we didn't have a message before, and we weren't able to read any
-    // additional bytes, then there's no valid message available.
-    LogSerial("Read failed due to no bytes being read.");
-    EndReadBytes(false, BATTOR_MESSAGE_TYPE_CONTROL, nullptr);
-    return;
-  }
+  // NOTE: Zero bytes may have been read.
 
   if (pending_read_message_type_ == BATTOR_MESSAGE_TYPE_SAMPLES) {
     // If we're reading samples, don't log every byte that we receive. This

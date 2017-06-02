@@ -16,7 +16,7 @@
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/synchronization/waitable_event.h"
-#include "base/threading/non_thread_safe.h"
+#include "base/threading/thread_checker.h"
 #include "net/base/completion_callback.h"
 #include "net/base/load_states.h"
 #include "net/base/net_export.h"
@@ -49,8 +49,7 @@ class ProxyScriptFetcher;
 // resolution.  See ProxyResolverV8 for example.
 class NET_EXPORT ProxyService : public NetworkChangeNotifier::IPAddressObserver,
                                 public NetworkChangeNotifier::DNSObserver,
-                                public ProxyConfigService::Observer,
-                                NON_EXPORTED_BASE(public base::NonThreadSafe) {
+                                public ProxyConfigService::Observer {
  public:
   // Enumerates the policy to use when sanitizing URLs for proxy resolution
   // (before passing them off to PAC scripts).
@@ -481,6 +480,8 @@ class NET_EXPORT ProxyService : public NetworkChangeNotifier::IPAddressObserver,
 
   // The method to use for sanitizing URLs seen by the proxy resolver.
   SanitizeUrlPolicy sanitize_url_policy_;
+
+  THREAD_CHECKER(thread_checker_);
 
   DISALLOW_COPY_AND_ASSIGN(ProxyService);
 };

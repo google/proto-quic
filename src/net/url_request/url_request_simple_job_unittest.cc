@@ -14,10 +14,8 @@
 #include "base/sequenced_task_runner.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/stringprintf.h"
-#include "base/test/scoped_task_environment.h"
 #include "net/base/request_priority.h"
 #include "net/test/gtest_util.h"
-#include "net/test/net_test_suite.h"
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request_job.h"
 #include "net/url_request/url_request_job_factory.h"
@@ -219,9 +217,7 @@ TEST_F(URLRequestSimpleJobTest, CancelAfterFirstReadStarted) {
                              &cancel_delegate, TRAFFIC_ANNOTATION_FOR_TESTS);
   request_->Start();
   cancel_delegate.WaitUntilHeadersReceived();
-
-  // Run TaskScheduler tasks and their reply on the main thread.
-  NetTestSuite::GetScopedTaskEnvironment()->RunUntilIdle();
+  base::RunLoop().RunUntilIdle();
 
   EXPECT_THAT(cancel_delegate.request_status(), IsError(ERR_ABORTED));
   EXPECT_EQ(1, cancel_delegate.response_started_count());

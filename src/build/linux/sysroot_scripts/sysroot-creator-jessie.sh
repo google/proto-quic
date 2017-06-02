@@ -7,13 +7,14 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 DISTRO=debian
 DIST=jessie
-DIST_UPDATES=jessie-updates
 
-PACKAGES_EXT=xz
+APT_SOURCES_LIST="\
+http://ftp.us.debian.org/debian/ jessie main
+http://security.debian.org/ jessie/updates main
+http://ftp.us.debian.org/debian/ jessie-updates main"
 
-APT_REPO=http://http.us.debian.org/debian
 # gpg keyring file generated using:
-#   export KEYS="518E17E1 46925553 2B90D010"
+#   export KEYS="518E17E1 46925553 2B90D010 C857C906"
 #   gpg --recv-keys $KEYS
 #   gpg --output ./debian-archive-jessie-stable.gpg --export $KEYS
 KEYRING_FILE="${SCRIPT_DIR}/debian-archive-jessie-stable.gpg"

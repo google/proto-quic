@@ -27,11 +27,6 @@ config("runtime_library") {
   }
 }
 
-config("fontconfig") {
-  visibility = [ "//build/linux:fontconfig" ]
-  libs = [ "fontconfig" ]
-}
-
 config("x11") {
   libs = [
     "X11",

@@ -139,7 +139,8 @@ declare_args() {
       current_os == "mac" || current_os == "ios" || current_os == "chromeos" ||
       current_os == "fuchsia" ||
       (current_os == "linux" && current_cpu != "s390x" &&
-       current_cpu != "s390" && current_cpu != "ppc64" && current_cpu != "ppc")
+       current_cpu != "s390" && current_cpu != "ppc64" &&
+       current_cpu != "ppc" && current_cpu != "mips" && current_cpu != "mips64")
 
   # Allows the path to a custom target toolchain to be injected as a single
   # argument, and set as the default toolchain.
@@ -508,7 +509,6 @@ default_compiler_configs = [
   "//build/config:feature_flags",
   "//build/config/compiler:afdo",
   "//build/config/compiler:compiler",
-  "//build/config/compiler:pthread",
   "//build/config/compiler:clang_stackrealign",
   "//build/config/compiler:compiler_arm_fpu",
   "//build/config/compiler:compiler_arm_thumb",

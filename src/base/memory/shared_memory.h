@@ -226,21 +226,6 @@ class BASE_EXPORT SharedMemory {
   // failure.
   SharedMemoryHandle GetReadOnlyHandle();
 
-#if defined(OS_POSIX) && (!defined(OS_MACOSX) || defined(OS_IOS)) && \
-    !defined(OS_NACL)
-  using UniqueId = std::pair<dev_t, ino_t>;
-
-  struct UniqueIdHash {
-    size_t operator()(const UniqueId& id) const {
-      return HashInts(id.first, id.second);
-    }
-  };
-
-  // Returns a unique ID for this shared memory's handle. Note this function may
-  // access file system and be slow.
-  bool GetUniqueId(UniqueId* id) const;
-#endif
-
   // Returns the last error encountered as a result of a call to Create() or
   // Map(). Note: Currently only errors from Mac POSIX shared memory
   // implementation are fully instrumented.

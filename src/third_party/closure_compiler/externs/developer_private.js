@@ -379,8 +379,7 @@ chrome.developerPrivate.GetExtensionsInfoOptions;
  *   fileAccess: (boolean|undefined),
  *   incognitoAccess: (boolean|undefined),
  *   errorCollection: (boolean|undefined),
- *   runOnAllUrls: (boolean|undefined),
- *   showActionButton: (boolean|undefined)
+ *   runOnAllUrls: (boolean|undefined)
  * }}
  * @see https://developer.chrome.com/extensions/developerPrivate#type-ExtensionConfigurationUpdate
  */

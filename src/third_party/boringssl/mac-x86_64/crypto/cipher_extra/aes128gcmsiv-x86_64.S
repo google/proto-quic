@@ -364,7 +364,7 @@ L$polyval_horner_loop:
 .p2align	4
 _aes128gcmsiv_aes_ks:
 
-	vmovdqa	(%rdi),%xmm1
+	vmovdqu	(%rdi),%xmm1
 	vmovdqa	%xmm1,(%rsi)
 
 	vmovdqa	con1(%rip),%xmm0
@@ -420,8 +420,8 @@ L$ks128_loop:
 .p2align	4
 _aes256gcmsiv_aes_ks:
 
-	vmovdqa	(%rdi),%xmm1
-	vmovdqa	16(%rdi),%xmm3
+	vmovdqu	(%rdi),%xmm1
+	vmovdqu	16(%rdi),%xmm3
 	vmovdqa	%xmm1,(%rsi)
 	vmovdqa	%xmm3,16(%rsi)
 	vmovdqa	con1(%rip),%xmm0

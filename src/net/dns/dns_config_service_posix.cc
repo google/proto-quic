@@ -441,7 +441,7 @@ void DnsConfigServicePosix::OnHostsChanged(bool succeeded) {
 
 void DnsConfigServicePosix::SetDnsConfigForTesting(
     const DnsConfig* dns_config) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   dns_config_for_testing_ = dns_config;
   // Reset ConfigReader to bind new DnsConfig for testing.
   config_reader_->Cancel();
@@ -450,7 +450,7 @@ void DnsConfigServicePosix::SetDnsConfigForTesting(
 
 void DnsConfigServicePosix::SetHostsFilePathForTesting(
     const base::FilePath::CharType* file_path) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   file_path_hosts_ = file_path;
   // Reset HostsReader to bind new hosts file path.
   hosts_reader_->Cancel();
@@ -574,13 +574,13 @@ ConfigParsePosixResult ConvertResStateToDnsConfig(const struct __res_state& res,
 
 bool DnsConfigServicePosix::SeenChangeSince(
     const base::Time& since_time) const {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   return seen_config_change_;
 }
 
 void DnsConfigServicePosix::OnNetworkChanged(
     NetworkChangeNotifier::ConnectionType type) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(watcher_);
   watcher_->OnNetworkChanged(type);
 }

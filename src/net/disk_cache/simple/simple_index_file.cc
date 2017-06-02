@@ -160,14 +160,50 @@ void ProcessEntryFile(SimpleIndex::EntrySet* entries,
   SimpleIndex::EntrySet::iterator it = entries->find(hash_key);
   base::CheckedNumeric<uint32_t> total_entry_size = size;
 
+  // Sometimes we see entry sizes here which are nonsense. We can't use them
+  // as-is, as they simply won't fit the type. The options that come to mind
+  // are:
+  // 1) Ignore the file.
+  // 2) Make something up.
+  // 3) Delete the files for the hash.
+  // ("crash the browser" isn't considered a serious alternative).
+  //
+  // The problem with doing (1) is that we are recovering the index here, so if
+  // we don't include the info on the file here, we may completely lose track of
+  // the entry and never clean the file up.
+  //
+  // (2) is actually mostly fine: we may trigger eviction too soon or too late,
+  // but we can't really do better since we can't trust the size. If the entry
+  // is never opened, it will eventually get evicted. If it is opened, we will
+  // re-check the file size, and if it's nonsense delete it there, and if it's
+  // fine we will fix up the index via a UpdateDataFromEntryStat to have the
+  // correct size.
+  //
+  // (3) does the best thing except when the wrong size is some weird interim
+  // thing just on directory listing (in which case it may evict an entry
+  // prematurely). It's a little harder to think about since it involves
+  // mutating the disk while there are other mutations going on, however,
+  // while (2) is single-threaded.
+  //
+  // Hence this picks (2).
+
+  const int kPlaceHolderSizeWhenInvalid = 32768;
+  if (!total_entry_size.IsValid()) {
+    LOG(WARNING) << "Invalid file size while restoring index from disk: "
+                 << size << " on file:" << file_name;
+  }
+
   if (it == entries->end()) {
     SimpleIndex::InsertInEntrySet(
-        hash_key, EntryMetadata(last_used_time, total_entry_size.ValueOrDie()),
+        hash_key,
+        EntryMetadata(last_used_time, total_entry_size.ValueOrDefault(
+                                          kPlaceHolderSizeWhenInvalid)),
         entries);
   } else {
     // Summing up the total size of the entry through all the *_[0-1] files
     total_entry_size += it->second.GetEntrySize();
-    it->second.SetEntrySize(total_entry_size.ValueOrDie());
+    it->second.SetEntrySize(
+        total_entry_size.ValueOrDefault(kPlaceHolderSizeWhenInvalid));
   }
 }
 

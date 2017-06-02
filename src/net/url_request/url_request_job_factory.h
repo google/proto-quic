@@ -9,7 +9,7 @@
 
 #include "base/compiler_specific.h"
 #include "base/macros.h"
-#include "base/threading/non_thread_safe.h"
+#include "base/threading/thread_checker.h"
 #include "net/base/net_export.h"
 
 class GURL;
@@ -20,8 +20,7 @@ class NetworkDelegate;
 class URLRequest;
 class URLRequestJob;
 
-class NET_EXPORT URLRequestJobFactory
-    : NON_EXPORTED_BASE(public base::NonThreadSafe) {
+class NET_EXPORT URLRequestJobFactory {
  public:
   // TODO(shalev): Move this to URLRequestJobFactoryImpl.
   class NET_EXPORT ProtocolHandler {
@@ -59,6 +58,9 @@ class NET_EXPORT URLRequestJobFactory
   virtual bool IsHandledProtocol(const std::string& scheme) const = 0;
 
   virtual bool IsSafeRedirectTarget(const GURL& location) const = 0;
+
+ protected:
+  THREAD_CHECKER(thread_checker_);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(URLRequestJobFactory);

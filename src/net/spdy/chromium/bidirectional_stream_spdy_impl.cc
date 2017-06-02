@@ -110,30 +110,6 @@ int BidirectionalStreamSpdyImpl::ReadData(IOBuffer* buf, int buf_len) {
   return ERR_IO_PENDING;
 }
 
-void BidirectionalStreamSpdyImpl::SendData(const scoped_refptr<IOBuffer>& data,
-                                           int length,
-                                           bool end_stream) {
-  DCHECK(length > 0 || (length == 0 && end_stream));
-  DCHECK(!write_pending_);
-
-  if (written_end_of_stream_) {
-    LOG(ERROR) << "Writing after end of stream is written.";
-    base::ThreadTaskRunnerHandle::Get()->PostTask(
-        FROM_HERE, base::Bind(&BidirectionalStreamSpdyImpl::NotifyError,
-                              weak_factory_.GetWeakPtr(), ERR_UNEXPECTED));
-    return;
-  }
-
-  write_pending_ = true;
-  written_end_of_stream_ = end_stream;
-  if (MaybeHandleStreamClosedInSendData())
-    return;
-
-  DCHECK(!stream_closed_);
-  stream_->SendData(data.get(), length,
-                    end_stream ? NO_MORE_DATA_TO_SEND : MORE_DATA_TO_SEND);
-}
-
 void BidirectionalStreamSpdyImpl::SendvData(
     const std::vector<scoped_refptr<IOBuffer>>& buffers,
     const std::vector<int>& lengths,
@@ -160,13 +136,17 @@ void BidirectionalStreamSpdyImpl::SendvData(
     total_len += len;
   }
 
-  pending_combined_buffer_ = new net::IOBuffer(total_len);
-  int len = 0;
-  // TODO(xunjieli): Get rid of extra copy. Coalesce headers and data frames.
-  for (size_t i = 0; i < buffers.size(); ++i) {
-    memcpy(pending_combined_buffer_->data() + len, buffers[i]->data(),
-           lengths[i]);
-    len += lengths[i];
+  if (buffers.size() == 1) {
+    pending_combined_buffer_ = buffers[0];
+  } else {
+    pending_combined_buffer_ = new net::IOBuffer(total_len);
+    int len = 0;
+    // TODO(xunjieli): Get rid of extra copy. Coalesce headers and data frames.
+    for (size_t i = 0; i < buffers.size(); ++i) {
+      memcpy(pending_combined_buffer_->data() + len, buffers[i]->data(),
+             lengths[i]);
+      len += lengths[i];
+    }
   }
   stream_->SendData(pending_combined_buffer_.get(), total_len,
                     end_stream ? NO_MORE_DATA_TO_SEND : MORE_DATA_TO_SEND);

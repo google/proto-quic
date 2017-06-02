@@ -15,7 +15,7 @@
 #include "base/memory/weak_ptr.h"
 #include "base/synchronization/lock.h"
 #include "base/synchronization/waitable_event.h"
-#include "base/threading/non_thread_safe.h"
+#include "base/threading/thread_checker.h"
 #include "net/dns/host_resolver.h"
 #include "net/dns/host_resolver_proc.h"
 
@@ -56,9 +56,9 @@ int ParseAddressList(const std::string& host_list,
 // 127.0.0.1.
 
 // Base class shared by MockHostResolver and MockCachingHostResolver.
-class MockHostResolverBase : public HostResolver,
-                             public base::SupportsWeakPtr<MockHostResolverBase>,
-                             public base::NonThreadSafe {
+class MockHostResolverBase
+    : public HostResolver,
+      public base::SupportsWeakPtr<MockHostResolverBase> {
  private:
   class RequestImpl;
 
@@ -146,6 +146,8 @@ class MockHostResolverBase : public HostResolver,
 
   size_t num_resolve_;
   size_t num_resolve_from_cache_;
+
+  THREAD_CHECKER(thread_checker_);
 
   DISALLOW_COPY_AND_ASSIGN(MockHostResolverBase);
 };

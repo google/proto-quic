@@ -116,11 +116,12 @@ SdchDictionaryFetcher::SdchDictionaryFetcher(URLRequestContext* context)
       in_loop_(false),
       fetch_queue_(new UniqueFetchQueue()),
       context_(context) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(context);
 }
 
 SdchDictionaryFetcher::~SdchDictionaryFetcher() {
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 }
 
 bool SdchDictionaryFetcher::Schedule(
@@ -136,7 +137,7 @@ bool SdchDictionaryFetcher::ScheduleReload(
 }
 
 void SdchDictionaryFetcher::Cancel() {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   ResetRequest();
   next_state_ = STATE_NONE;
@@ -157,7 +158,7 @@ void SdchDictionaryFetcher::OnReceivedRedirect(
 
 void SdchDictionaryFetcher::OnResponseStarted(URLRequest* request,
                                               int net_error) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK_EQ(request, current_request_.get());
   DCHECK_EQ(next_state_, STATE_SEND_REQUEST_PENDING);
   DCHECK(!in_loop_);
@@ -180,7 +181,7 @@ void SdchDictionaryFetcher::OnResponseStarted(URLRequest* request,
 
 void SdchDictionaryFetcher::OnReadCompleted(URLRequest* request,
                                             int bytes_read) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK_EQ(request, current_request_.get());
   DCHECK_EQ(next_state_, STATE_READ_BODY_COMPLETE);
   DCHECK(!in_loop_);
@@ -193,7 +194,7 @@ bool SdchDictionaryFetcher::ScheduleInternal(
     const GURL& dictionary_url,
     bool reload,
     const OnDictionaryFetchedCallback& callback) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   // If Push() fails, |dictionary_url| has already been fetched or scheduled to
   // be fetched.
@@ -264,7 +265,7 @@ int SdchDictionaryFetcher::DoLoop(int rv) {
 }
 
 int SdchDictionaryFetcher::DoSendRequest(int rv) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   // |rv| is ignored, as the result from the previous request doesn't
   // affect the next request.
@@ -336,7 +337,7 @@ int SdchDictionaryFetcher::DoReceivedRedirect(int rv) {
 }
 
 int SdchDictionaryFetcher::DoSendRequestPending(int rv) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   // If there's been an error, abort the current request.
   if (rv != OK) {
@@ -350,7 +351,7 @@ int SdchDictionaryFetcher::DoSendRequestPending(int rv) {
 }
 
 int SdchDictionaryFetcher::DoReadBody(int rv) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   // If there's been an error, abort the current request.
   if (rv != OK) {
@@ -368,7 +369,7 @@ int SdchDictionaryFetcher::DoReadBody(int rv) {
 }
 
 int SdchDictionaryFetcher::DoReadBodyComplete(int rv) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   // An error; abort the current request.
   if (rv < 0) {
@@ -392,7 +393,7 @@ int SdchDictionaryFetcher::DoReadBodyComplete(int rv) {
 }
 
 int SdchDictionaryFetcher::DoCompleteRequest(int rv) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   // If the dictionary was successfully fetched, add it to the manager.
   if (rv == OK) {

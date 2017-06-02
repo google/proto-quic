@@ -61,3 +61,10 @@ shared_library("eventlog_provider") {
     "//base/win:eventlog_provider_dll_version",
   ]
 }
+
+static_library("pe_image") {
+  sources = [
+    "pe_image.cc",
+    "pe_image.h",
+  ]
+}

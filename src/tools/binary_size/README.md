@@ -25,7 +25,8 @@ and Linux (although Linux symbol diffs have issues, as noted below).
 
 1. Builds multiple revisions using release GN args.
    * Default is to build just two revisions (before & after commit)
-   * Rather than building, can fetch build artifacts from perf bots (`--cloud`)
+   * Rather than building, can fetch build artifacts and `.size` files from perf
+     bots (`--cloud`)
 1. Measures all outputs using `resource_size.py` and `supersize`.
 1. Saves & displays a breakdown of the difference in binary sizes.
 

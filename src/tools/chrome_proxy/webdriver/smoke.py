@@ -19,8 +19,37 @@ class Smoke(IntegrationTest):
       t.AddChromeArg('--enable-spdy-proxy-auth')
       t.AddChromeArg('--incognito')
       t.LoadURL('http://check.googlezip.net/test.html')
-      for response in t.GetHTTPResponses():
+      responses = t.GetHTTPResponses()
+      self.assertNotEqual(0, len(responses))
+      for response in responses:
         self.assertNotHasChromeProxyViaHeader(response)
+
+  # Ensure Chrome does not use DataSaver when holdback is enabled.
+  def testCheckPageWithHoldback(self):
+    with TestDriver() as t:
+      t.AddChromeArg('--enable-spdy-proxy-auth')
+      t.AddChromeArg('--force-fieldtrials=DataCompressionProxyHoldback/'
+                               'Enabled')
+      t.LoadURL('http://check.googlezip.net/test.html')
+      responses = t.GetHTTPResponses()
+      self.assertNotEqual(0, len(responses))
+      num_chrome_proxy_request_headers = 0
+      for response in responses:
+        self.assertNotHasChromeProxyViaHeader(response)
+        if ('chrome-proxy' in response.request_headers):
+          num_chrome_proxy_request_headers += 1
+      # DataSaver histograms must still be logged.
+      t.SleepUntilHistogramHasEntry('PageLoad.Clients.DataReductionProxy.'
+              'ParseTiming.NavigationToParseStart')
+      self.assertEqual(num_chrome_proxy_request_headers, 0)
+      # Ensure that Chrome did not attempt to use DataSaver and got a bypass.
+      histogram = t.GetHistogram('DataReductionProxy.BypassedBytes.'
+        'Status502HttpBadGateway', 5)
+      self.assertEqual(histogram, {})
+      histogram = t.GetHistogram('DataReductionProxy.BlockTypePrimary', 5)
+      self.assertEqual(histogram, {})
+      histogram = t.GetHistogram('DataReductionProxy.BypassTypePrimary', 5)
+      self.assertEqual(histogram, {})
 
   # Ensure Chrome uses DataSaver in normal mode.
   def testCheckPageWithNormalMode(self):
@@ -29,8 +58,14 @@ class Smoke(IntegrationTest):
       t.LoadURL('http://check.googlezip.net/test.html')
       responses = t.GetHTTPResponses()
       self.assertNotEqual(0, len(responses))
+      num_chrome_proxy_request_headers = 0
       for response in responses:
         self.assertHasChromeProxyViaHeader(response)
+        if ('chrome-proxy' in response.request_headers):
+          num_chrome_proxy_request_headers += 1
+      t.SleepUntilHistogramHasEntry('PageLoad.Clients.DataReductionProxy.'
+        'ParseTiming.NavigationToParseStart')
+      self.assertGreater(num_chrome_proxy_request_headers, 0)
 
   # Ensure pageload metric pingback with DataSaver.
   def testPingback(self):

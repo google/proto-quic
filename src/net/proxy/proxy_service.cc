@@ -1042,7 +1042,7 @@ int ProxyService::ResolveProxyHelper(const GURL& raw_url,
                                      PacRequest** pac_request,
                                      ProxyDelegate* proxy_delegate,
                                      const NetLogWithSource& net_log) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   net_log.BeginEvent(NetLogEventType::PROXY_SERVICE);
 
@@ -1137,6 +1137,7 @@ int ProxyService::TryToCompleteSynchronously(const GURL& url,
 }
 
 ProxyService::~ProxyService() {
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   NetworkChangeNotifier::RemoveIPAddressObserver(this);
   NetworkChangeNotifier::RemoveDNSObserver(this);
   config_service_->RemoveObserver(this);
@@ -1272,7 +1273,7 @@ int ProxyService::ReconsiderProxyAfterError(const GURL& url,
                                             PacRequest** pac_request,
                                             ProxyDelegate* proxy_delegate,
                                             const NetLogWithSource& net_log) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   // Check to see if we have a new config since ResolveProxy was called.  We
   // want to re-run ResolveProxy in two cases: 1) we have a new config, or 2) a
@@ -1314,7 +1315,7 @@ bool ProxyService::MarkProxiesAsBadUntil(
 
 void ProxyService::ReportSuccess(const ProxyInfo& result,
                                  ProxyDelegate* proxy_delegate) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   const ProxyRetryInfoMap& new_retry_info = result.proxy_retry_info();
   if (new_retry_info.empty())
@@ -1343,7 +1344,7 @@ void ProxyService::ReportSuccess(const ProxyInfo& result,
 }
 
 void ProxyService::CancelPacRequest(PacRequest* req) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(req);
   req->Cancel();
   RemovePendingRequest(req);
@@ -1454,7 +1455,7 @@ int ProxyService::DidFinishResolvingProxy(const GURL& url,
 void ProxyService::SetProxyScriptFetchers(
     ProxyScriptFetcher* proxy_script_fetcher,
     std::unique_ptr<DhcpProxyScriptFetcher> dhcp_proxy_script_fetcher) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   State previous_state = ResetProxyConfig(false);
   proxy_script_fetcher_.reset(proxy_script_fetcher);
   dhcp_proxy_script_fetcher_ = std::move(dhcp_proxy_script_fetcher);
@@ -1474,12 +1475,12 @@ void ProxyService::OnShutdown() {
 }
 
 ProxyScriptFetcher* ProxyService::GetProxyScriptFetcher() const {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   return proxy_script_fetcher_.get();
 }
 
 ProxyService::State ProxyService::ResetProxyConfig(bool reset_fetched_config) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   State previous_state = current_state_;
 
   permanent_error_ = OK;
@@ -1498,7 +1499,7 @@ ProxyService::State ProxyService::ResetProxyConfig(bool reset_fetched_config) {
 
 void ProxyService::ResetConfigService(
     std::unique_ptr<ProxyConfigService> new_proxy_config_service) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   State previous_state = ResetProxyConfig(true);
 
   // Release the old configuration service.
@@ -1514,7 +1515,7 @@ void ProxyService::ResetConfigService(
 }
 
 void ProxyService::ForceReloadProxyConfig() {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   ResetProxyConfig(false);
   ApplyProxyConfigIfAvailable();
 }

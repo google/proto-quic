@@ -84,7 +84,7 @@ QUIC_FLAG(bool,
 // packet if insertion fails.
 QUIC_FLAG(bool,
           FLAGS_quic_reloadable_flag_quic_create_session_after_insertion,
-          false)
+          true)
 
 // If true, v33 QUIC client uses 1 bit to specify 8-byte connection id in
 // public flag.
@@ -127,15 +127,6 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_no_stop_waiting_frames, false)
 // Allows one self address change.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_allow_one_address_change, false)
 
-// If true, multipath bit is not used in public flag.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_remove_multipath_bit, true)
-
-// Allow QUIC's flow control autotuning to increase the window as
-// quickly for the first adjustment as in subsequent ones.
-QUIC_FLAG(bool,
-          FLAGS_quic_reloadable_flag_quic_flow_control_faster_autotune,
-          true)
-
 // If true, QUIC BBR stores a max filtered number of bytes delivered at a rate
 // faster than the sending rate.
 QUIC_FLAG(bool,
@@ -165,13 +156,13 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_version_39, true)
 // written in big endian.
 QUIC_FLAG(bool,
           FLAGS_quic_restart_flag_quic_big_endian_connection_id_client,
-          false)
+          true)
 
 // If true, on server side, 8-byte connection ID in public header is read and
 // written in big endian.
 QUIC_FLAG(bool,
           FLAGS_quic_restart_flag_quic_big_endian_connection_id_server,
-          false)
+          true)
 
 // Simplify QUIC\'s adaptive time loss detection to measure the necessary
 // reordering window for every spurious retransmit.
@@ -179,7 +170,7 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_fix_adaptive_time_loss, false)
 
 // If true, enable random padding of size [1, 256] when response body is
 // compressed for QUIC version >= 38.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_random_padding, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_random_padding, true)
 
 // Use conservation in PROBE_BW ouside of super-unity gain and immediately
 // preceeding cycle.
@@ -199,9 +190,6 @@ QUIC_FLAG(double, FLAGS_quic_bbr_slow_delivery_threshold_multiplier, 0.5f)
 QUIC_FLAG(bool,
           FLAGS_quic_reloadable_flag_quic_final_offset_from_trailers,
           false)
-
-// Fix the algorithm used by packet conservation.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_fix_conservation, false)
 
 // If enabled, use refactored stream creation methods.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_refactor_stream_creation, false)
@@ -228,3 +216,13 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_pcc, false)
 
 // If true, enable QUIC v40.
 QUIC_FLAG(bool, FLAGS_quic_enable_version_40, false)
+
+// If true, use the more CPU efficient bandwidth sampler datastructure.
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_faster_bandwidth_sampler, false)
+
+// In QUIC, notify StreamNotifier instead of per-packet AckNotifier on
+// every ack or retransmitted.
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_use_stream_notifier, false)
+
+// When true, defaults to BBR congestion control instead of Cubic.
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_default_to_bbr, false)

@@ -7,6 +7,7 @@ from core import perf_benchmark
 from telemetry import benchmark
 from telemetry.page import legacy_page_test
 from telemetry.timeline import chrome_trace_category_filter
+from telemetry.timeline import chrome_trace_config
 from telemetry.value import list_of_scalar_values
 from telemetry.value import scalar
 from telemetry.web_perf import timeline_based_measurement
@@ -74,7 +75,8 @@ class MediaAndroidToughVideoCases(perf_benchmark.PerfBenchmark):
 
 
 class _MediaTBMv2Benchmark(perf_benchmark.PerfBenchmark):
-  page_set = page_sets.ToughVideoCasesPageSet
+  def CreateStorySet(self, options):
+    return page_sets.ToughVideoCasesPageSet(measure_memory=True)
 
   def CreateTimelineBasedMeasurementOptions(self):
     category_filter = chrome_trace_category_filter.ChromeTraceCategoryFilter()
@@ -86,9 +88,19 @@ class _MediaTBMv2Benchmark(perf_benchmark.PerfBenchmark):
     # time to different activities, such as video_animation, etc.
     category_filter.AddIncludedCategory('rail')
 
+    # Collect memory data.
+    category_filter.AddDisabledByDefault('disabled-by-default-memory-infra')
+
     options = timeline_based_measurement.Options(category_filter)
     options.config.enable_battor_trace = True
-    options.SetTimelineBasedMetrics(['powerMetric', 'cpuTimeMetric'])
+    options.config.enable_android_graphics_memtrack = True
+
+    # Setting an empty memory dump config disables periodic dumps.
+    options.config.chrome_trace_config.SetMemoryDumpConfig(
+        chrome_trace_config.MemoryDumpConfig())
+
+    options.SetTimelineBasedMetrics(['powerMetric',
+                                     'cpuTimeMetric', 'memoryMetric'])
     return options
 
 

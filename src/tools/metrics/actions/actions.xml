@@ -5127,6 +5127,81 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="InProductHelp.Dismissed">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>The user dismissed the in-product help.</description>
+</action>
+
+<action name="InProductHelp.NotifyEvent.IPH_DataSaverPreview">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>The user triggered an event in in-product help.</description>
+</action>
+
+<action name="InProductHelp.NotifyEvent.IPH_DownloadHome">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>The user triggered an event in in-product help.</description>
+</action>
+
+<action name="InProductHelp.NotifyEvent.IPH_DownloadPage">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>The user triggered an event in in-product help.</description>
+</action>
+
+<action name="InProductHelp.NotifyUsedEvent.IPH_DataSaverPreview">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>
+    The user triggered an used event in in-product help.
+  </description>
+</action>
+
+<action name="InProductHelp.NotifyUsedEvent.IPH_DownloadHome">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>
+    The user triggered an used event in in-product help.
+  </description>
+</action>
+
+<action name="InProductHelp.NotifyUsedEvent.IPH_DownloadPage">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>
+    The user triggered an used event in in-product help.
+  </description>
+</action>
+
+<action name="InProductHelp.ShouldTriggerHelpUI.IPH_DataSaverPreview">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>
+    The feature engagement tracker tried to determine whether in-product help
+    should be shown to the user.
+  </description>
+</action>
+
+<action name="InProductHelp.ShouldTriggerHelpUI.IPH_DownloadHome">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>
+    The feature engagement tracker tried to determine whether in-product help
+    should be shown to the user.
+  </description>
+</action>
+
+<action name="InProductHelp.ShouldTriggerHelpUI.IPH_DownloadPage">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>
+    The feature engagement tracker tried to determine whether in-product help
+    should be shown to the user.
+  </description>
+</action>
+
 <action name="Indent">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
@@ -14454,6 +14529,62 @@ should be able to be added at any place in this file.
   <description>User interacts with an answer card.</description>
 </action>
 
+<action name="SearchEnginePromo.ExistingDevice.PromoSelected">
+  <owner>yusufo@chromium.org</owner>
+  <description>
+    The user has made a selection in the search engine promo in an existing
+    device that is setup before the promo was first introduced. This is a dialog
+    prompting the user to pick a default search engine. Android only.
+  </description>
+</action>
+
+<action name="SearchEnginePromo.ExistingDevice.Shown.Dialog">
+  <owner>dfalcantara@chromium.org</owner>
+  <owner>tedchoc@chromium.org</owner>
+  <owner>yusufo@chromium.org</owner>
+  <description>
+    The Existing Device search engine promo screen was shown as a dialog.
+  </description>
+</action>
+
+<action name="SearchEnginePromo.ExistingDevice.Shown.FirstRun">
+  <owner>dfalcantara@chromium.org</owner>
+  <owner>tedchoc@chromium.org</owner>
+  <owner>yusufo@chromium.org</owner>
+  <description>
+    The Existing Device search engine promo screen was shown in the first run
+    experience.
+  </description>
+</action>
+
+<action name="SearchEnginePromo.NewDevice.PromoSelected">
+  <owner>yusufo@chromium.org</owner>
+  <description>
+    The user has made a selection in the search engine promo in a new device
+    that is setup after the promo was introduced. This is a dialog prompting the
+    user to pick a default search engine. Android only.
+  </description>
+</action>
+
+<action name="SearchEnginePromo.NewDevice.Shown.Dialog">
+  <owner>dfalcantara@chromium.org</owner>
+  <owner>tedchoc@chromium.org</owner>
+  <owner>yusufo@chromium.org</owner>
+  <description>
+    The New Device search engine promo screen was shown as a dialog.
+  </description>
+</action>
+
+<action name="SearchEnginePromo.NewDevice.Shown.FirstRun">
+  <owner>dfalcantara@chromium.org</owner>
+  <owner>tedchoc@chromium.org</owner>
+  <owner>yusufo@chromium.org</owner>
+  <description>
+    The New Device search engine promo screen was shown in the first run
+    experience.
+  </description>
+</action>
+
 <action name="SearchEngine_ManualChange">
   <owner>ianwen@chromium.org</owner>
   <description>
@@ -14461,6 +14592,20 @@ should be able to be added at any place in this file.
     disables search engine auto switch feature in special locale. This is
     recorded on Android for every locale, but is currently only meaningful for
     studying special locales.
+  </description>
+</action>
+
+<action name="SearchWidget.SearchMade">
+  <owner>yusufo@chromium.org</owner>
+  <description>
+    The user made a search from the Android search widget.
+  </description>
+</action>
+
+<action name="SearchWidget.WidgetSelected">
+  <owner>yusufo@chromium.org</owner>
+  <description>
+    The user launched the Android search widget from home screen.
   </description>
 </action>
 
@@ -14742,6 +14887,7 @@ should be able to be added at any place in this file.
 <action name="ShowBookmarks">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>Duplicate of ShowBookmarkManager.</obsolete>
 </action>
 
 <action name="ShowBookmarksBar">
@@ -16119,6 +16265,25 @@ should be able to be added at any place in this file.
   <description>User removed a suggested site.</description>
 </action>
 
+<action name="Suggestions.SurfaceFullyVisible">
+  <owner>finkm@chromium.org</owner>
+  <owner>dgn@chromium.org</owner>
+  <description>
+    ChromeHome: The Suggestion surface is loaded or brought in the foreground in
+    its fully visible state. In regular Chrome, MobileNTPShown is the
+    equivalent.
+  </description>
+</action>
+
+<action name="Suggestions.SurfaceHalfVisible">
+  <owner>finkm@chromium.org</owner>
+  <owner>dgn@chromium.org</owner>
+  <description>
+    ChromeHome: The Suggestion surface is loaded or brought in the foreground in
+    its half visible state. In regular Chrome, MobileNTPShown is the equivalent.
+  </description>
+</action>
+
 <action name="Suggestions.SurfaceHidden">
   <owner>finkm@chromium.org</owner>
   <owner>dgn@chromium.org</owner>
@@ -16784,6 +16949,33 @@ should be able to be added at any place in this file.
 <action name="VirtualKeyboardLoaded">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+</action>
+
+<action name="VoiceInteraction.MetalayerStarted.Search_Shift_A">
+  <owner>muyuanli@chromium.org</owner>
+  <description>User launched metalayer through Search + Shift + A.</description>
+</action>
+
+<action name="VoiceInteraction.Started.AppListButtonLongPress">
+  <owner>muyuanli@chromium.org</owner>
+  <description>
+    User launched voice interaction session through long pressing app list
+    button.
+  </description>
+</action>
+
+<action name="VoiceInteraction.Started.Search_A">
+  <owner>muyuanli@chromium.org</owner>
+  <description>
+    User launched voice interaction session through Search + A.
+  </description>
+</action>
+
+<action name="VoiceInteraction.Started.Search_Space">
+  <owner>muyuanli@chromium.org</owner>
+  <description>
+    User launched voice interaction session through Search + Space.
+  </description>
 </action>
 
 <action name="WP_EditImage">

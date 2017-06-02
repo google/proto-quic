@@ -48,16 +48,16 @@ template("fuzzer_test") {
 
         args = [
           "--output",
-          rebase_path(out),
+          rebase_path(out, root_build_dir),
         ]
 
         if (defined(invoker.seed_corpus)) {
-          args += [ rebase_path(invoker.seed_corpus) ]
+          args += [ rebase_path(invoker.seed_corpus, root_build_dir) ]
         }
 
         if (defined(invoker.seed_corpuses)) {
           foreach(seed_corpus_path, invoker.seed_corpuses) {
-            args += [ rebase_path(seed_corpus_path) ]
+            args += [ rebase_path(seed_corpus_path, root_build_dir) ]
           }
         }
 
@@ -93,13 +93,14 @@ template("fuzzer_test") {
         script = "//testing/libfuzzer/gen_fuzzer_config.py"
         args = [
           "--config",
-          rebase_path("$root_build_dir/" + config_name),
+          rebase_path("$root_build_dir/" + config_name, root_build_dir),
         ]
 
         if (defined(invoker.dict)) {
           args += [
             "--dict",
-            rebase_path("$root_build_dir/" + invoker.target_name + ".dict"),
+            rebase_path("$root_build_dir/" + invoker.target_name + ".dict",
+                        root_build_dir),
           ]
         }
 

@@ -189,13 +189,6 @@ Still reading?
   </issue>
   <issue id="NewApi">
     <ignore regexp="Attribute `paddingStart` referenced here can result in a crash on some specific devices older than API 17"/>
-    <ignore regexp="chrome/android/java/res/drawable/downloads_big.xml"/>
-    <ignore regexp="chrome/android/java/res/drawable/ic_bluetooth_connected.xml"/>
-    <ignore regexp="chrome/android/java/res/drawable/ic_signal_cellular_0_bar.xml" />
-    <ignore regexp="chrome/android/java/res/drawable/ic_signal_cellular_1_bar.xml" />
-    <ignore regexp="chrome/android/java/res/drawable/ic_signal_cellular_2_bar.xml" />
-    <ignore regexp="chrome/android/java/res/drawable/ic_signal_cellular_3_bar.xml" />
-    <ignore regexp="chrome/android/java/res/drawable/ic_signal_cellular_4_bar.xml" />
     <ignore regexp="chrome/android/java/res/values-v17/styles.xml"/>
     <ignore regexp="chromecast/internal"/>
     <ignore regexp="com/android/tv"/>

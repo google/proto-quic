@@ -204,7 +204,7 @@ class ProxyConfigServiceAndroid::Delegate
   }
 
   void SetupJNI() {
-    DCHECK(OnJNIThread());
+    DCHECK(InJNISequence());
     JNIEnv* env = AttachCurrentThread();
     if (java_proxy_change_listener_.is_null()) {
       java_proxy_change_listener_.Reset(Java_ProxyChangeListener_create(env));
@@ -215,60 +215,58 @@ class ProxyConfigServiceAndroid::Delegate
   }
 
   void FetchInitialConfig() {
-    DCHECK(OnJNIThread());
+    DCHECK(InJNISequence());
     ProxyConfig proxy_config;
     GetLatestProxyConfigInternal(get_property_callback_, &proxy_config);
     network_task_runner_->PostTask(
-        FROM_HERE,
-        base::Bind(&Delegate::SetNewConfigOnNetworkThread, this, proxy_config));
+        FROM_HERE, base::Bind(&Delegate::SetNewConfigInNetworkSequence, this,
+                              proxy_config));
   }
 
   void Shutdown() {
-    if (OnJNIThread()) {
-      ShutdownOnJNIThread();
+    if (InJNISequence()) {
+      ShutdownInJNISequence();
     } else {
       jni_task_runner_->PostTask(
-          FROM_HERE,
-          base::Bind(&Delegate::ShutdownOnJNIThread, this));
+          FROM_HERE, base::Bind(&Delegate::ShutdownInJNISequence, this));
     }
   }
 
-  // Called only on the network thread.
+  // Called only in the network sequence.
   void AddObserver(Observer* observer) {
-    DCHECK(OnNetworkThread());
+    DCHECK(InNetworkSequence());
     observers_.AddObserver(observer);
   }
 
   void RemoveObserver(Observer* observer) {
-    DCHECK(OnNetworkThread());
+    DCHECK(InNetworkSequence());
     observers_.RemoveObserver(observer);
   }
 
   ConfigAvailability GetLatestProxyConfig(ProxyConfig* config) {
-    DCHECK(OnNetworkThread());
+    DCHECK(InNetworkSequence());
     if (!config)
       return ProxyConfigService::CONFIG_UNSET;
     *config = proxy_config_;
     return ProxyConfigService::CONFIG_VALID;
   }
 
-  // Called on the JNI thread.
+  // Called in the JNI sequence.
   void ProxySettingsChanged() {
-    DCHECK(OnJNIThread());
+    DCHECK(InJNISequence());
     ProxyConfig proxy_config;
     GetLatestProxyConfigInternal(get_property_callback_, &proxy_config);
     network_task_runner_->PostTask(
-        FROM_HERE,
-        base::Bind(
-            &Delegate::SetNewConfigOnNetworkThread, this, proxy_config));
+        FROM_HERE, base::Bind(&Delegate::SetNewConfigInNetworkSequence, this,
+                              proxy_config));
   }
 
-  // Called on the JNI thread.
+  // Called in the JNI sequence.
   void ProxySettingsChangedTo(const std::string& host,
                               int port,
                               const std::string& pac_url,
                               const std::vector<std::string>& exclusion_list) {
-    DCHECK(OnJNIThread());
+    DCHECK(InJNISequence());
     ProxyConfig proxy_config;
     if (exclude_pac_url_) {
       CreateStaticProxyConfig(host, port, "", exclusion_list, &proxy_config);
@@ -277,9 +275,8 @@ class ProxyConfigServiceAndroid::Delegate
           &proxy_config);
     }
     network_task_runner_->PostTask(
-        FROM_HERE,
-        base::Bind(
-            &Delegate::SetNewConfigOnNetworkThread, this, proxy_config));
+        FROM_HERE, base::Bind(&Delegate::SetNewConfigInNetworkSequence, this,
+                              proxy_config));
   }
 
   void set_exclude_pac_url(bool enabled) {
@@ -322,16 +319,16 @@ class ProxyConfigServiceAndroid::Delegate
 
   virtual ~Delegate() {}
 
-  void ShutdownOnJNIThread() {
+  void ShutdownInJNISequence() {
     if (java_proxy_change_listener_.is_null())
       return;
     JNIEnv* env = AttachCurrentThread();
     Java_ProxyChangeListener_stop(env, java_proxy_change_listener_);
   }
 
-  // Called on the network thread.
-  void SetNewConfigOnNetworkThread(const ProxyConfig& proxy_config) {
-    DCHECK(OnNetworkThread());
+  // Called on the network sequence.
+  void SetNewConfigInNetworkSequence(const ProxyConfig& proxy_config) {
+    DCHECK(InNetworkSequence());
     proxy_config_ = proxy_config;
     for (auto& observer : observers_) {
       observer.OnProxyConfigChanged(proxy_config,
@@ -339,12 +336,12 @@ class ProxyConfigServiceAndroid::Delegate
     }
   }
 
-  bool OnJNIThread() const {
-    return jni_task_runner_->RunsTasksOnCurrentThread();
+  bool InJNISequence() const {
+    return jni_task_runner_->RunsTasksInCurrentSequence();
   }
 
-  bool OnNetworkThread() const {
-    return network_task_runner_->RunsTasksOnCurrentThread();
+  bool InNetworkSequence() const {
+    return network_task_runner_->RunsTasksInCurrentSequence();
   }
 
   ScopedJavaGlobalRef<jobject> java_proxy_change_listener_;

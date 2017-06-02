@@ -9,12 +9,12 @@
 namespace net {
 
 SpdyPinnableBufferPiece::SpdyPinnableBufferPiece()
-    : buffer_(0), length_(0) {}
+    : buffer_(nullptr), length_(0) {}
 
 SpdyPinnableBufferPiece::~SpdyPinnableBufferPiece() {}
 
 void SpdyPinnableBufferPiece::Pin() {
-  if (!storage_ && buffer_ != NULL && length_ != 0) {
+  if (!storage_ && buffer_ != nullptr && length_ != 0) {
     storage_.reset(new char[length_]);
     std::copy(buffer_, buffer_ + length_, storage_.get());
     buffer_ = storage_.get();

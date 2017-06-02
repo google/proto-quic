@@ -22,10 +22,12 @@ inline bool IsRemovableURLWhitespace(int ch) {
 // Backend for RemoveURLWhitespace (see declaration in url_canon.h).
 // It sucks that we have to do this, since this takes about 13% of the total URL
 // canonicalization time.
-template<typename CHAR>
-const CHAR* DoRemoveURLWhitespace(const CHAR* input, int input_len,
+template <typename CHAR>
+const CHAR* DoRemoveURLWhitespace(const CHAR* input,
+                                  int input_len,
                                   CanonOutputT<CHAR>* buffer,
-                                  int* output_len) {
+                                  int* output_len,
+                                  bool* potentially_dangling_markup) {
   // Fast verification that there's nothing that needs removal. This is the 99%
   // case, so we want it to be fast and don't care about impacting the speed
   // when we do find whitespace.
@@ -46,8 +48,11 @@ const CHAR* DoRemoveURLWhitespace(const CHAR* input, int input_len,
 
   // Remove the whitespace into the new buffer and return it.
   for (int i = 0; i < input_len; i++) {
-    if (!IsRemovableURLWhitespace(input[i]))
+    if (!IsRemovableURLWhitespace(input[i])) {
+      if (potentially_dangling_markup && input[i] == 0x3C)
+        *potentially_dangling_markup = true;
       buffer->push_back(input[i]);
+    }
   }
   *output_len = buffer->length();
   return buffer->data();
@@ -274,17 +279,22 @@ void DoCanonicalizeRef(const CHAR* spec,
 
 }  // namespace
 
-const char* RemoveURLWhitespace(const char* input, int input_len,
+const char* RemoveURLWhitespace(const char* input,
+                                int input_len,
                                 CanonOutputT<char>* buffer,
-                                int* output_len) {
-  return DoRemoveURLWhitespace(input, input_len, buffer, output_len);
+                                int* output_len,
+                                bool* potentially_dangling_markup) {
+  return DoRemoveURLWhitespace(input, input_len, buffer, output_len,
+                               potentially_dangling_markup);
 }
 
 const base::char16* RemoveURLWhitespace(const base::char16* input,
                                         int input_len,
                                         CanonOutputT<base::char16>* buffer,
-                                        int* output_len) {
-  return DoRemoveURLWhitespace(input, input_len, buffer, output_len);
+                                        int* output_len,
+                                        bool* potentially_dangling_markup) {
+  return DoRemoveURLWhitespace(input, input_len, buffer, output_len,
+                               potentially_dangling_markup);
 }
 
 char CanonicalSchemeChar(base::char16 ch) {

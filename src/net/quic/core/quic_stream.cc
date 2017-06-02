@@ -54,12 +54,14 @@ QuicStream::QuicStream(QuicStreamId id, QuicSession* session)
       session_(session),
       stream_bytes_read_(0),
       stream_bytes_written_(0),
+      stream_bytes_acked_(0),
       stream_error_(QUIC_STREAM_NO_ERROR),
       connection_error_(QUIC_NO_ERROR),
       read_side_closed_(false),
       write_side_closed_(false),
       fin_buffered_(false),
       fin_sent_(false),
+      fin_acked_(false),
       fin_received_(false),
       rst_sent_(false),
       rst_received_(false),
@@ -74,11 +76,15 @@ QuicStream::QuicStream(QuicStreamId id, QuicSession* session)
       connection_flow_controller_(session_->flow_controller()),
       stream_contributes_to_connection_flow_control_(true),
       busy_counter_(0),
-      add_random_padding_after_fin_(false) {
+      add_random_padding_after_fin_(false),
+      ack_listener_(nullptr) {
   SetFromConfig();
 }
 
-QuicStream::~QuicStream() {}
+QuicStream::~QuicStream() {
+  QUIC_LOG_IF(WARNING, !IsWaitingForAcks())
+      << "Stream destroyed while waiting for acks.";
+}
 
 void QuicStream::SetFromConfig() {}
 
@@ -171,6 +177,9 @@ void QuicStream::Reset(QuicRstStreamErrorCode error) {
   // Sending a RstStream results in calling CloseStream.
   session()->SendRstStream(id(), error, stream_bytes_written_);
   rst_sent_ = true;
+  if (session()->use_stream_notifier() && !IsWaitingForAcks()) {
+    session_->OnStreamDoneWaitingForAcks(id_);
+  }
 }
 
 void QuicStream::CloseConnectionWithDetails(QuicErrorCode error,
@@ -490,6 +499,50 @@ void QuicStream::UpdateSendWindowOffset(QuicStreamOffset new_window) {
 
 void QuicStream::AddRandomPaddingAfterFin() {
   add_random_padding_after_fin_ = true;
+}
+
+void QuicStream::OnStreamFrameAcked(const QuicStreamFrame& frame,
+                                    QuicTime::Delta ack_delay_time) {
+  DCHECK_EQ(frame.stream_id, id());
+  stream_bytes_acked_ += frame.data_length;
+  if (stream_bytes_acked_ > stream_bytes_written_) {
+    CloseConnectionWithDetails(QUIC_INTERNAL_ERROR,
+                               "Unsent stream data is acked");
+    return;
+  }
+  if (frame.fin) {
+    fin_acked_ = true;
+  }
+  if (ack_listener_ != nullptr) {
+    ack_listener_->OnPacketAcked(frame.data_length, ack_delay_time);
+  }
+  if (!IsWaitingForAcks()) {
+    session_->OnStreamDoneWaitingForAcks(id_);
+  }
+}
+
+void QuicStream::OnStreamFrameRetransmitted(const QuicStreamFrame& frame) {
+  if (ack_listener_ != nullptr) {
+    ack_listener_->OnPacketRetransmitted(frame.data_length);
+  }
+}
+
+bool QuicStream::IsWaitingForAcks() const {
+  if (rst_sent_ && stream_error_ != QUIC_STREAM_NO_ERROR) {
+    // RST_STREAM sent because of error.
+    return false;
+  }
+  if (connection_error_ != QUIC_NO_ERROR) {
+    // Connection encounters error and is going to close.
+    return false;
+  }
+  if (stream_bytes_acked_ == stream_bytes_written_ &&
+      ((fin_sent_ && fin_acked_) || !fin_sent_)) {
+    // All sent data has been acked.
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace net

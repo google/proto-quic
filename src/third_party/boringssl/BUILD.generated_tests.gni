@@ -17,23 +17,39 @@ test_support_sources = [
 ]
 
 crypto_test_sources = [
+  "crypto_test_data.cc",
   "src/crypto/asn1/asn1_test.cc",
   "src/crypto/base64/base64_test.cc",
   "src/crypto/bio/bio_test.cc",
   "src/crypto/bytestring/bytestring_test.cc",
   "src/crypto/chacha/chacha_test.cc",
+  "src/crypto/cipher_extra/aead_test.cc",
+  "src/crypto/cipher_extra/cipher_test.cc",
   "src/crypto/cmac/cmac_test.cc",
   "src/crypto/compiler_test.cc",
   "src/crypto/constant_time_test.cc",
+  "src/crypto/curve25519/ed25519_test.cc",
   "src/crypto/curve25519/spake25519_test.cc",
   "src/crypto/curve25519/x25519_test.cc",
   "src/crypto/dh/dh_test.cc",
+  "src/crypto/digest_extra/digest_test.cc",
   "src/crypto/dsa/dsa_test.cc",
+  "src/crypto/ecdh/ecdh_test.cc",
   "src/crypto/err/err_test.cc",
   "src/crypto/evp/evp_extra_test.cc",
+  "src/crypto/evp/pbkdf_test.cc",
+  "src/crypto/fipsmodule/aes/aes_test.cc",
   "src/crypto/fipsmodule/ec/ec_test.cc",
+  "src/crypto/fipsmodule/modes/gcm_test.cc",
   "src/crypto/fipsmodule/rand/ctrdrbg_test.cc",
+  "src/crypto/hkdf/hkdf_test.cc",
+  "src/crypto/hmac_extra/hmac_test.cc",
+  "src/crypto/lhash/lhash_test.cc",
+  "src/crypto/poly1305/poly1305_test.cc",
+  "src/crypto/pool/pool_test.cc",
+  "src/crypto/refcount_test.cc",
   "src/crypto/rsa_extra/rsa_test.cc",
+  "src/crypto/test/file_test_gtest.cc",
   "src/crypto/test/gtest_main.cc",
 ]
 
@@ -43,66 +59,6 @@ ssl_test_sources = [
 ]
 
 template("create_tests") {
-  executable("boringssl_aead_test") {
-    sources = [
-      "src/crypto/cipher_extra/aead_test.cc",
-    ]
-    sources += test_support_sources
-    if (defined(invoker.configs_exclude)) {
-      configs -= invoker.configs_exclude
-    }
-    configs += invoker.configs
-    deps = invoker.deps
-  }
-
-  executable("boringssl_cipher_test") {
-    sources = [
-      "src/crypto/cipher_extra/cipher_test.cc",
-    ]
-    sources += test_support_sources
-    if (defined(invoker.configs_exclude)) {
-      configs -= invoker.configs_exclude
-    }
-    configs += invoker.configs
-    deps = invoker.deps
-  }
-
-  executable("boringssl_ed25519_test") {
-    sources = [
-      "src/crypto/curve25519/ed25519_test.cc",
-    ]
-    sources += test_support_sources
-    if (defined(invoker.configs_exclude)) {
-      configs -= invoker.configs_exclude
-    }
-    configs += invoker.configs
-    deps = invoker.deps
-  }
-
-  executable("boringssl_digest_test") {
-    sources = [
-      "src/crypto/digest_extra/digest_test.cc",
-    ]
-    sources += test_support_sources
-    if (defined(invoker.configs_exclude)) {
-      configs -= invoker.configs_exclude
-    }
-    configs += invoker.configs
-    deps = invoker.deps
-  }
-
-  executable("boringssl_ecdh_test") {
-    sources = [
-      "src/crypto/ecdh/ecdh_test.cc",
-    ]
-    sources += test_support_sources
-    if (defined(invoker.configs_exclude)) {
-      configs -= invoker.configs_exclude
-    }
-    configs += invoker.configs
-    deps = invoker.deps
-  }
-
   executable("boringssl_evp_test") {
     sources = [
       "src/crypto/evp/evp_test.cc",
@@ -112,31 +68,7 @@ template("create_tests") {
       configs -= invoker.configs_exclude
     }
     configs += invoker.configs
-    deps = invoker.deps
-  }
-
-  executable("boringssl_pbkdf_test") {
-    sources = [
-      "src/crypto/evp/pbkdf_test.cc",
-    ]
-    sources += test_support_sources
-    if (defined(invoker.configs_exclude)) {
-      configs -= invoker.configs_exclude
-    }
-    configs += invoker.configs
-    deps = invoker.deps
-  }
-
-  executable("boringssl_aes_test") {
-    sources = [
-      "src/crypto/fipsmodule/aes/aes_test.cc",
-    ]
-    sources += test_support_sources
-    if (defined(invoker.configs_exclude)) {
-      configs -= invoker.configs_exclude
-    }
-    configs += invoker.configs
-    deps = invoker.deps
+    deps = invoker.deps + [ "//build/config:exe_and_shlib_deps" ]
   }
 
   executable("boringssl_bn_test") {
@@ -148,7 +80,7 @@ template("create_tests") {
       configs -= invoker.configs_exclude
     }
     configs += invoker.configs
-    deps = invoker.deps
+    deps = invoker.deps + [ "//build/config:exe_and_shlib_deps" ]
   }
 
   executable("boringssl_example_mul") {
@@ -160,7 +92,7 @@ template("create_tests") {
       configs -= invoker.configs_exclude
     }
     configs += invoker.configs
-    deps = invoker.deps
+    deps = invoker.deps + [ "//build/config:exe_and_shlib_deps" ]
   }
 
   executable("boringssl_p256-x86_64_test") {
@@ -172,7 +104,7 @@ template("create_tests") {
       configs -= invoker.configs_exclude
     }
     configs += invoker.configs
-    deps = invoker.deps
+    deps = invoker.deps + [ "//build/config:exe_and_shlib_deps" ]
   }
 
   executable("boringssl_ecdsa_sign_test") {
@@ -184,7 +116,7 @@ template("create_tests") {
       configs -= invoker.configs_exclude
     }
     configs += invoker.configs
-    deps = invoker.deps
+    deps = invoker.deps + [ "//build/config:exe_and_shlib_deps" ]
   }
 
   executable("boringssl_ecdsa_test") {
@@ -196,7 +128,7 @@ template("create_tests") {
       configs -= invoker.configs_exclude
     }
     configs += invoker.configs
-    deps = invoker.deps
+    deps = invoker.deps + [ "//build/config:exe_and_shlib_deps" ]
   }
 
   executable("boringssl_ecdsa_verify_test") {
@@ -208,67 +140,7 @@ template("create_tests") {
       configs -= invoker.configs_exclude
     }
     configs += invoker.configs
-    deps = invoker.deps
-  }
-
-  executable("boringssl_gcm_test") {
-    sources = [
-      "src/crypto/fipsmodule/modes/gcm_test.cc",
-    ]
-    sources += test_support_sources
-    if (defined(invoker.configs_exclude)) {
-      configs -= invoker.configs_exclude
-    }
-    configs += invoker.configs
-    deps = invoker.deps
-  }
-
-  executable("boringssl_ctrdrbg_vector_test") {
-    sources = [
-      "src/crypto/fipsmodule/rand/ctrdrbg_vector_test.cc",
-    ]
-    sources += test_support_sources
-    if (defined(invoker.configs_exclude)) {
-      configs -= invoker.configs_exclude
-    }
-    configs += invoker.configs
-    deps = invoker.deps
-  }
-
-  executable("boringssl_hkdf_test") {
-    sources = [
-      "src/crypto/hkdf/hkdf_test.cc",
-    ]
-    sources += test_support_sources
-    if (defined(invoker.configs_exclude)) {
-      configs -= invoker.configs_exclude
-    }
-    configs += invoker.configs
-    deps = invoker.deps
-  }
-
-  executable("boringssl_hmac_test") {
-    sources = [
-      "src/crypto/hmac_extra/hmac_test.cc",
-    ]
-    sources += test_support_sources
-    if (defined(invoker.configs_exclude)) {
-      configs -= invoker.configs_exclude
-    }
-    configs += invoker.configs
-    deps = invoker.deps
-  }
-
-  executable("boringssl_lhash_test") {
-    sources = [
-      "src/crypto/lhash/lhash_test.cc",
-    ]
-    sources += test_support_sources
-    if (defined(invoker.configs_exclude)) {
-      configs -= invoker.configs_exclude
-    }
-    configs += invoker.configs
-    deps = invoker.deps
+    deps = invoker.deps + [ "//build/config:exe_and_shlib_deps" ]
   }
 
   executable("boringssl_obj_test") {
@@ -280,7 +152,7 @@ template("create_tests") {
       configs -= invoker.configs_exclude
     }
     configs += invoker.configs
-    deps = invoker.deps
+    deps = invoker.deps + [ "//build/config:exe_and_shlib_deps" ]
   }
 
   executable("boringssl_pkcs7_test") {
@@ -292,7 +164,7 @@ template("create_tests") {
       configs -= invoker.configs_exclude
     }
     configs += invoker.configs
-    deps = invoker.deps
+    deps = invoker.deps + [ "//build/config:exe_and_shlib_deps" ]
   }
 
   executable("boringssl_pkcs12_test") {
@@ -304,7 +176,7 @@ template("create_tests") {
       configs -= invoker.configs_exclude
     }
     configs += invoker.configs
-    deps = invoker.deps
+    deps = invoker.deps + [ "//build/config:exe_and_shlib_deps" ]
   }
 
   executable("boringssl_pkcs8_test") {
@@ -316,43 +188,7 @@ template("create_tests") {
       configs -= invoker.configs_exclude
     }
     configs += invoker.configs
-    deps = invoker.deps
-  }
-
-  executable("boringssl_poly1305_test") {
-    sources = [
-      "src/crypto/poly1305/poly1305_test.cc",
-    ]
-    sources += test_support_sources
-    if (defined(invoker.configs_exclude)) {
-      configs -= invoker.configs_exclude
-    }
-    configs += invoker.configs
-    deps = invoker.deps
-  }
-
-  executable("boringssl_pool_test") {
-    sources = [
-      "src/crypto/pool/pool_test.cc",
-    ]
-    sources += test_support_sources
-    if (defined(invoker.configs_exclude)) {
-      configs -= invoker.configs_exclude
-    }
-    configs += invoker.configs
-    deps = invoker.deps
-  }
-
-  executable("boringssl_refcount_test") {
-    sources = [
-      "src/crypto/refcount_test.cc",
-    ]
-    sources += test_support_sources
-    if (defined(invoker.configs_exclude)) {
-      configs -= invoker.configs_exclude
-    }
-    configs += invoker.configs
-    deps = invoker.deps
+    deps = invoker.deps + [ "//build/config:exe_and_shlib_deps" ]
   }
 
   executable("boringssl_thread_test") {
@@ -364,7 +200,7 @@ template("create_tests") {
       configs -= invoker.configs_exclude
     }
     configs += invoker.configs
-    deps = invoker.deps
+    deps = invoker.deps + [ "//build/config:exe_and_shlib_deps" ]
   }
 
   executable("boringssl_x509_test") {
@@ -376,7 +212,7 @@ template("create_tests") {
       configs -= invoker.configs_exclude
     }
     configs += invoker.configs
-    deps = invoker.deps
+    deps = invoker.deps + [ "//build/config:exe_and_shlib_deps" ]
   }
 
   executable("boringssl_tab_test") {
@@ -388,7 +224,7 @@ template("create_tests") {
       configs -= invoker.configs_exclude
     }
     configs += invoker.configs
-    deps = invoker.deps
+    deps = invoker.deps + [ "//build/config:exe_and_shlib_deps" ]
   }
 
   executable("boringssl_v3name_test") {
@@ -400,37 +236,22 @@ template("create_tests") {
       configs -= invoker.configs_exclude
     }
     configs += invoker.configs
-    deps = invoker.deps
+    deps = invoker.deps + [ "//build/config:exe_and_shlib_deps" ]
   }
 
   group(target_name) {
     deps = [
-      ":boringssl_aead_test",
-      ":boringssl_aes_test",
       ":boringssl_bn_test",
-      ":boringssl_cipher_test",
-      ":boringssl_ctrdrbg_vector_test",
-      ":boringssl_digest_test",
-      ":boringssl_ecdh_test",
       ":boringssl_ecdsa_sign_test",
       ":boringssl_ecdsa_test",
       ":boringssl_ecdsa_verify_test",
-      ":boringssl_ed25519_test",
       ":boringssl_evp_test",
       ":boringssl_example_mul",
-      ":boringssl_gcm_test",
-      ":boringssl_hkdf_test",
-      ":boringssl_hmac_test",
-      ":boringssl_lhash_test",
       ":boringssl_obj_test",
       ":boringssl_p256-x86_64_test",
-      ":boringssl_pbkdf_test",
       ":boringssl_pkcs12_test",
       ":boringssl_pkcs7_test",
       ":boringssl_pkcs8_test",
-      ":boringssl_poly1305_test",
-      ":boringssl_pool_test",
-      ":boringssl_refcount_test",
       ":boringssl_tab_test",
       ":boringssl_thread_test",
       ":boringssl_v3name_test",

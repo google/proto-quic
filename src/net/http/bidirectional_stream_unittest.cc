@@ -184,9 +184,7 @@ class TestDelegateBase : public BidirectionalStream::Delegate {
   void SendData(const scoped_refptr<IOBuffer>& data,
                 int length,
                 bool end_of_stream) {
-    not_expect_callback_ = true;
-    stream_->SendData(data, length, end_of_stream);
-    not_expect_callback_ = false;
+    SendvData({data}, {length}, end_of_stream);
   }
 
   void SendvData(const std::vector<scoped_refptr<IOBuffer>>& data,
@@ -445,9 +443,9 @@ TEST_F(BidirectionalStreamTest, CreateInsecureStream) {
   request_info->url = GURL("http://www.example.org/");
 
   TestDelegateBase delegate(nullptr, 0);
-  HttpNetworkSession::Params params =
-      SpdySessionDependencies::CreateSessionParams(&session_deps_);
-  std::unique_ptr<HttpNetworkSession> session(new HttpNetworkSession(params));
+  std::unique_ptr<HttpNetworkSession> session(new HttpNetworkSession(
+      SpdySessionDependencies::CreateSessionParams(&session_deps_),
+      SpdySessionDependencies::CreateSessionContext(&session_deps_)));
   delegate.SetRunUntilCompletion(true);
   delegate.Start(std::move(request_info), session.get());
 
@@ -566,9 +564,9 @@ TEST_F(BidirectionalStreamTest,
   request_info->url = GURL("http://www.example.org/");
 
   std::unique_ptr<TestDelegateBase> delegate(new TestDelegateBase(nullptr, 0));
-  HttpNetworkSession::Params params =
-      SpdySessionDependencies::CreateSessionParams(&session_deps_);
-  std::unique_ptr<HttpNetworkSession> session(new HttpNetworkSession(params));
+  std::unique_ptr<HttpNetworkSession> session(new HttpNetworkSession(
+      SpdySessionDependencies::CreateSessionParams(&session_deps_),
+      SpdySessionDependencies::CreateSessionContext(&session_deps_)));
   delegate->Start(std::move(request_info), session.get());
   // Reset stream right before the OnFailed task is executed.
   delegate.reset();
@@ -769,7 +767,7 @@ TEST_F(BidirectionalStreamTest, TestNetLogContainEntries) {
       entries, index, NetLogEventType::BIDIRECTIONAL_STREAM_RECV_TRAILERS,
       NetLogEventPhase::NONE);
   index = ExpectLogContainsSomewhere(
-      entries, index, NetLogEventType::BIDIRECTIONAL_STREAM_SEND_DATA,
+      entries, index, NetLogEventType::BIDIRECTIONAL_STREAM_SENDV_DATA,
       NetLogEventPhase::NONE);
   index = ExpectLogContainsSomewhere(
       entries, index, NetLogEventType::BIDIRECTIONAL_STREAM_READ_DATA,

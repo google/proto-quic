@@ -28,6 +28,8 @@ bool PathProviderWin(int key, FilePath* result);
 bool PathProviderMac(int key, FilePath* result);
 #elif defined(OS_ANDROID)
 bool PathProviderAndroid(int key, FilePath* result);
+#elif defined(OS_FUCHSIA)
+bool PathProviderFuchsia(int key, FilePath* result);
 #elif defined(OS_POSIX)
 // PathProviderPosix is the default path provider on POSIX OSes other than
 // Mac and Android.
@@ -96,7 +98,16 @@ Provider base_provider_android = {
 };
 #endif
 
-#if defined(OS_POSIX) && !defined(OS_MACOSX) && !defined(OS_ANDROID)
+#if defined(OS_FUCHSIA)
+Provider base_provider_fuchsia = {PathProviderFuchsia, &base_provider,
+#ifndef NDEBUG
+                                  0, 0,
+#endif
+                                  true};
+#endif
+
+#if defined(OS_POSIX) && !defined(OS_MACOSX) && !defined(OS_ANDROID) && \
+    !defined(OS_FUCHSIA)
 Provider base_provider_posix = {
   PathProviderPosix,
   &base_provider,
@@ -123,6 +134,8 @@ struct PathData {
     providers = &base_provider_mac;
 #elif defined(OS_ANDROID)
     providers = &base_provider_android;
+#elif defined(OS_FUCHSIA)
+    providers = &base_provider_fuchsia;
 #elif defined(OS_POSIX)
     providers = &base_provider_posix;
 #endif

@@ -2748,7 +2748,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushDuplicate) {
   SpdySerializedFrame stream2_priority(
       spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
   SpdySerializedFrame stream3_rst(
-      spdy_util_.ConstructSpdyRstStream(4, ERROR_CODE_PROTOCOL_ERROR));
+      spdy_util_.ConstructSpdyRstStream(4, ERROR_CODE_REFUSED_STREAM));
   MockWrite writes[] = {
       CreateMockWrite(stream1_syn, 0), CreateMockWrite(stream2_priority, 3),
       CreateMockWrite(stream3_rst, 5),
@@ -2918,7 +2918,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushInvalidUrl) {
       response_spdy_framer.SerializeFrame(push_promise));
 
   SpdySerializedFrame stream2_rst(
-      spdy_util_.ConstructSpdyRstStream(2, ERROR_CODE_PROTOCOL_ERROR));
+      spdy_util_.ConstructSpdyRstStream(2, ERROR_CODE_REFUSED_STREAM));
 
   MockWrite writes[] = {CreateMockWrite(req, 0),
                         CreateMockWrite(stream2_rst, 2)};
@@ -2978,7 +2978,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushNoURL) {
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
   SpdySerializedFrame stream1_body(spdy_util_.ConstructSpdyDataFrame(1, true));
   SpdySerializedFrame stream2_rst(
-      spdy_util_.ConstructSpdyRstStream(2, ERROR_CODE_PROTOCOL_ERROR));
+      spdy_util_.ConstructSpdyRstStream(2, ERROR_CODE_REFUSED_STREAM));
   MockWrite writes[] = {
       CreateMockWrite(stream1_syn, 0), CreateMockWrite(stream2_rst, 3),
   };

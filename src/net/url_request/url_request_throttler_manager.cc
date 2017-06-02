@@ -31,6 +31,7 @@ URLRequestThrottlerManager::URLRequestThrottlerManager()
 }
 
 URLRequestThrottlerManager::~URLRequestThrottlerManager() {
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   NetworkChangeNotifier::RemoveIPAddressObserver(this);
   NetworkChangeNotifier::RemoveConnectionTypeObserver(this);
 
@@ -50,7 +51,9 @@ URLRequestThrottlerManager::~URLRequestThrottlerManager() {
 
 scoped_refptr<URLRequestThrottlerEntryInterface>
     URLRequestThrottlerManager::RegisterRequestUrl(const GURL &url) {
-  DCHECK(!enable_thread_checks_ || CalledOnValidThread());
+#if DCHECK_IS_ON()
+  DCHECK(!enable_thread_checks_ || thread_checker_.CalledOnValidThread());
+#endif
 
   // Normalize the url.
   std::string url_id = GetIdFromUrl(url);

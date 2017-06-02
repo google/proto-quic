@@ -11,11 +11,13 @@
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/core/quic_write_blocked_list.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_map_util.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/platform/api/quic_test.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/quic_flow_controller_peer.h"
+#include "net/quic/test_tools/quic_session_peer.h"
 #include "net/quic/test_tools/quic_spdy_session_peer.h"
 #include "net/quic/test_tools/quic_stream_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
@@ -55,6 +57,7 @@ class TestStream : public QuicSpdyStream {
 
   using QuicStream::WriteOrBufferData;
   using QuicStream::CloseWriteSide;
+  using QuicSpdyStream::set_ack_listener;
 
   const string& data() const { return data_; }
 
@@ -961,6 +964,67 @@ TEST_P(QuicSpdyStreamTest, WritingTrailersAfterFIN) {
   // populated with the number of body bytes written.
   EXPECT_QUIC_BUG(stream_->WriteTrailers(SpdyHeaderBlock(), nullptr),
                   "Trailers cannot be sent after a FIN");
+}
+
+TEST_P(QuicSpdyStreamTest, HeaderStreamNotiferCorrespondingSpdyStream) {
+  Initialize(kShouldProcessData);
+  if (!session_->use_stream_notifier()) {
+    return;
+  }
+
+  EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
+      .Times(AnyNumber())
+      .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
+  testing::InSequence s;
+  QuicReferenceCountedPointer<MockAckListener> ack_listener1(
+      new MockAckListener());
+  QuicReferenceCountedPointer<MockAckListener> ack_listener2(
+      new MockAckListener());
+  stream_->set_ack_listener(ack_listener1);
+  stream2_->set_ack_listener(ack_listener2);
+
+  session_->headers_stream()->WriteOrBufferData("Header1", false,
+                                                ack_listener1);
+  stream_->WriteOrBufferData("Test1", true, nullptr);
+
+  session_->headers_stream()->WriteOrBufferData("Header2", false,
+                                                ack_listener2);
+  stream2_->WriteOrBufferData("Test2", false, nullptr);
+
+  QuicStreamFrame frame1(kHeadersStreamId, false, 0, "Header1");
+  QuicStreamFrame frame2(stream_->id(), true, 0, "Test1");
+  QuicStreamFrame frame3(kHeadersStreamId, false, 7, "Header2");
+  QuicStreamFrame frame4(stream2_->id(), false, 0, "Test2");
+
+  EXPECT_CALL(*ack_listener1, OnPacketRetransmitted(7));
+  session_->OnStreamFrameRetransmitted(frame1);
+
+  EXPECT_CALL(*ack_listener1, OnPacketAcked(7, _));
+  session_->OnStreamFrameAcked(frame1, QuicTime::Delta::Zero());
+  EXPECT_CALL(*ack_listener1, OnPacketAcked(5, _));
+  session_->OnStreamFrameAcked(frame2, QuicTime::Delta::Zero());
+  EXPECT_CALL(*ack_listener2, OnPacketAcked(7, _));
+  session_->OnStreamFrameAcked(frame3, QuicTime::Delta::Zero());
+  EXPECT_CALL(*ack_listener2, OnPacketAcked(5, _));
+  session_->OnStreamFrameAcked(frame4, QuicTime::Delta::Zero());
+}
+
+TEST_P(QuicSpdyStreamTest, StreamBecomesZombieWithWriteThatCloses) {
+  Initialize(kShouldProcessData);
+  if (!session_->use_stream_notifier()) {
+    return;
+  }
+
+  EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
+      .Times(AnyNumber())
+      .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
+  QuicStreamPeer::CloseReadSide(stream_);
+  // This write causes stream to be closed.
+  stream_->WriteOrBufferData("Test1", true, nullptr);
+  // stream_ has unacked data and should become zombie.
+  EXPECT_TRUE(QuicContainsKey(QuicSessionPeer::zombie_streams(session_.get()),
+                              stream_->id()));
+  EXPECT_TRUE(QuicSessionPeer::closed_streams(session_.get()).empty());
 }
 
 }  // namespace

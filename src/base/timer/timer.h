@@ -35,11 +35,17 @@
 // Both OneShotTimer and RepeatingTimer also support a Reset method, which
 // allows you to easily defer the timer event until the timer delay passes once
 // again.  So, in the above example, if 0.5 seconds have already passed,
-// calling Reset on timer_ would postpone DoStuff by another 1 second.  In
+// calling Reset on |timer_| would postpone DoStuff by another 1 second.  In
 // other words, Reset is shorthand for calling Stop and then Start again with
 // the same arguments.
 //
-// NOTE: These APIs are not thread safe. Always call from the same thread.
+// These APIs are not thread safe. All methods must be called from the same
+// sequence (not necessarily the construction sequence), except for the
+// destructor and SetTaskRunner() which may be called from any sequence when the
+// timer is not running (i.e. when Start() has never been called or Stop() has
+// been called since the last Start()). By default, the scheduled tasks will be
+// run on the same sequence that the Timer was *started on*, but this can be
+// changed *prior* to Start() via SetTaskRunner().
 
 #ifndef BASE_TIMER_TIMER_H_
 #define BASE_TIMER_TIMER_H_
@@ -57,26 +63,29 @@
 #include "base/callback.h"
 #include "base/location.h"
 #include "base/macros.h"
+#include "base/sequence_checker_impl.h"
+#include "base/sequenced_task_runner.h"
 #include "base/time/time.h"
 
 namespace base {
 
 class BaseTimerTaskInternal;
-class SingleThreadTaskRunner;
 class TickClock;
 
+// TODO(gab): Removing this fwd-decl causes IWYU failures in other headers,
+// remove it in a follow- up CL.
+class SingleThreadTaskRunner;
+
 //-----------------------------------------------------------------------------
-// This class wraps MessageLoop::PostDelayedTask to manage delayed and repeating
-// tasks. It must be destructed on the same thread that starts tasks. There are
-// DCHECKs in place to verify this.
+// This class wraps TaskRunner::PostDelayedTask to manage delayed and repeating
+// tasks. See meta comment above for thread-safety requirements.
 //
 class BASE_EXPORT Timer {
  public:
-  // Construct a timer in repeating or one-shot mode. Start or SetTaskInfo must
-  // be called later to set task info. |retain_user_task| determines whether the
-  // user_task is retained or reset when it runs or stops. If |tick_clock| is
-  // provided, it is used instead of TimeTicks::Now() to get TimeTicks when
-  // scheduling tasks.
+  // Construct a timer in repeating or one-shot mode. Start must be called later
+  // to set task info. |retain_user_task| determines whether the user_task is
+  // retained or reset when it runs or stops. If |tick_clock| is provided, it is
+  // used instead of TimeTicks::Now() to get TimeTicks when scheduling tasks.
   Timer(bool retain_user_task, bool is_repeating);
   Timer(bool retain_user_task, bool is_repeating, TickClock* tick_clock);
 
@@ -101,9 +110,11 @@ class BASE_EXPORT Timer {
   virtual TimeDelta GetCurrentDelay() const;
 
   // Set the task runner on which the task should be scheduled. This method can
-  // only be called before any tasks have been scheduled. The task runner must
-  // run tasks on the same thread the timer is used on.
-  virtual void SetTaskRunner(scoped_refptr<SingleThreadTaskRunner> task_runner);
+  // only be called before any tasks have been scheduled. If |task_runner| runs
+  // tasks on a different sequence than the sequence owning this Timer,
+  // |user_task_| will be posted to it when the Timer fires (note that this
+  // means |user_task_| can run after ~Timer() and should support that).
+  void SetTaskRunner(scoped_refptr<SequencedTaskRunner> task_runner);
 
   // Start the timer to run at the given |delay| from now. If the timer is
   // already running, it will be replaced to call the given |user_task|.
@@ -115,7 +126,7 @@ class BASE_EXPORT Timer {
   // is not running.
   virtual void Stop();
 
-  // Call this method to reset the timer delay. The user_task_ must be set. If
+  // Call this method to reset the timer delay. The |user_task_| must be set. If
   // the timer is not running, this will start it by posting a task.
   virtual void Reset();
 
@@ -125,12 +136,6 @@ class BASE_EXPORT Timer {
  protected:
   // Returns the current tick count.
   TimeTicks Now() const;
-
-  // Used to initiate a new delayed task.  This has the side-effect of disabling
-  // scheduled_task_ if it is non-null.
-  void SetTaskInfo(const tracked_objects::Location& posted_from,
-                   TimeDelta delay,
-                   const base::Closure& user_task);
 
   void set_user_task(const Closure& task) { user_task_ = task; }
   void set_desired_run_time(TimeTicks desired) { desired_run_time_ = desired; }
@@ -144,74 +149,74 @@ class BASE_EXPORT Timer {
  private:
   friend class BaseTimerTaskInternal;
 
-  // Allocates a new scheduled_task_ and posts it on the current MessageLoop
-  // with the given |delay|. scheduled_task_ must be NULL. scheduled_run_time_
-  // and desired_run_time_ are reset to Now() + delay.
+  // Allocates a new |scheduled_task_| and posts it on the current sequence with
+  // the given |delay|. |scheduled_task_| must be null. |scheduled_run_time_|
+  // and |desired_run_time_| are reset to Now() + delay.
   void PostNewScheduledTask(TimeDelta delay);
 
   // Returns the task runner on which the task should be scheduled. If the
-  // corresponding task_runner_ field is null, the task runner for the current
-  // thread is returned.
-  scoped_refptr<SingleThreadTaskRunner> GetTaskRunner();
+  // corresponding |task_runner_| field is null, the task runner for the current
+  // sequence is returned.
+  scoped_refptr<SequencedTaskRunner> GetTaskRunner();
 
-  // Disable scheduled_task_ and abandon it so that it no longer refers back to
-  // this object.
+  // Disable |scheduled_task_| and abandon it so that it no longer refers back
+  // to this object.
   void AbandonScheduledTask();
 
-  // Called by BaseTimerTaskInternal when the MessageLoop runs it.
+  // Called by BaseTimerTaskInternal when the delayed task fires.
   void RunScheduledTask();
 
   // Stop running task (if any) and abandon scheduled task (if any).
-  void StopAndAbandon() {
+  void AbandonAndStop() {
     AbandonScheduledTask();
 
     Stop();
     // No more member accesses here: |this| could be deleted at this point.
   }
 
-  // When non-NULL, the scheduled_task_ is waiting in the MessageLoop to call
-  // RunScheduledTask() at scheduled_run_time_.
+  // When non-null, the |scheduled_task_| was posted to call RunScheduledTask()
+  // at |scheduled_run_time_|.
   BaseTimerTaskInternal* scheduled_task_;
 
   // The task runner on which the task should be scheduled. If it is null, the
-  // task runner for the current thread should be used.
-  scoped_refptr<SingleThreadTaskRunner> task_runner_;
+  // task runner for the current sequence will be used.
+  scoped_refptr<SequencedTaskRunner> task_runner_;
 
   // Location in user code.
   tracked_objects::Location posted_from_;
   // Delay requested by user.
   TimeDelta delay_;
-  // user_task_ is what the user wants to be run at desired_run_time_.
+  // |user_task_| is what the user wants to be run at |desired_run_time_|.
   base::Closure user_task_;
 
-  // The estimated time that the MessageLoop will run the scheduled_task_ that
-  // will call RunScheduledTask(). This time can be a "zero" TimeTicks if the
-  // task must be run immediately.
+  // The time at which |scheduled_task_| is expected to fire. This time can be a
+  // "zero" TimeTicks if the task must be run immediately.
   TimeTicks scheduled_run_time_;
 
-  // The desired run time of user_task_. The user may update this at any time,
-  // even if their previous request has not run yet. If desired_run_time_ is
-  // greater than scheduled_run_time_, a continuation task will be posted to
+  // The desired run time of |user_task_|. The user may update this at any time,
+  // even if their previous request has not run yet. If |desired_run_time_| is
+  // greater than |scheduled_run_time_|, a continuation task will be posted to
   // wait for the remaining time. This allows us to reuse the pending task so as
-  // not to flood the MessageLoop with orphaned tasks when the user code
+  // not to flood the delayed queues with orphaned tasks when the user code
   // excessively Stops and Starts the timer. This time can be a "zero" TimeTicks
   // if the task must be run immediately.
   TimeTicks desired_run_time_;
 
-  // Thread ID of current MessageLoop for verifying single-threaded usage.
-  int thread_id_;
+  // Timer isn't thread-safe and must only be used on its origin sequence
+  // (sequence on which it was started).
+  SequenceChecker origin_sequence_checker_;
 
   // Repeating timers automatically post the task again before calling the task
   // callback.
   const bool is_repeating_;
 
-  // If true, hold on to the user_task_ closure object for reuse.
+  // If true, hold on to the |user_task_| closure object for reuse.
   const bool retain_user_task_;
 
   // The tick clock used to calculate the run time for scheduled tasks.
   TickClock* const tick_clock_;
 
-  // If true, user_task_ is scheduled to run sometime in the future.
+  // If true, |user_task_| is scheduled to run sometime in the future.
   bool is_running_;
 
   DISALLOW_COPY_AND_ASSIGN(Timer);
@@ -266,8 +271,8 @@ class RepeatingTimer : public BaseTimerMethodPointer {
 
 //-----------------------------------------------------------------------------
 // A Delay timer is like The Button from Lost. Once started, you have to keep
-// calling Reset otherwise it will call the given method in the MessageLoop
-// thread.
+// calling Reset otherwise it will call the given method on the sequence it was
+// initially Reset() from.
 //
 // Once created, it is inactive until Reset is called. Once |delay| seconds have
 // passed since the last call to Reset, the callback is made. Once the callback

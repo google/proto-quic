@@ -5,6 +5,7 @@
 #ifndef BASE_WIN_SCOPED_COMPTR_H_
 #define BASE_WIN_SCOPED_COMPTR_H_
 
+#include <stddef.h>
 #include <unknwn.h>
 
 #include "base/logging.h"
@@ -35,8 +36,9 @@ class ScopedComPtr {
     STDMETHOD_(ULONG, Release)() = 0;
   };
 
-  ScopedComPtr() {
-  }
+  ScopedComPtr() {}
+
+  ScopedComPtr(std::nullptr_t) : ptr_(nullptr) {}
 
   explicit ScopedComPtr(Interface* p) : ptr_(p) {
     if (ptr_)
@@ -129,6 +131,11 @@ class ScopedComPtr {
     return reinterpret_cast<BlockIUnknownMethods*>(ptr_);
   }
 
+  ScopedComPtr<Interface>& operator=(std::nullptr_t) {
+    Reset();
+    return *this;
+  }
+
   ScopedComPtr<Interface>& operator=(Interface* rhs) {
     // AddRef first so that self assignment should work
     if (rhs)
@@ -181,7 +188,7 @@ class ScopedComPtr {
     return details::ScopedComPtrRef<ScopedComPtr<Interface>>(this);
   }
 
-  void swap(ScopedComPtr<Interface>& r) {
+  void Swap(ScopedComPtr<Interface>& r) {
     Interface* tmp = ptr_;
     ptr_ = r.ptr_;
     r.ptr_ = tmp;

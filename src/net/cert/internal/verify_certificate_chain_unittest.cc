@@ -19,8 +19,13 @@ class VerifyCertificateChainDelegate {
     SimpleSignaturePolicy signature_policy(1024);
 
     CertPathErrors errors;
-    VerifyCertificateChain(test.chain, test.last_cert_trust, &signature_policy,
-                           test.time, test.key_purpose, &errors);
+    // TODO(eroman): Check user_constrained_policy_set.
+    VerifyCertificateChain(
+        test.chain, test.last_cert_trust, &signature_policy, test.time,
+        test.key_purpose, test.initial_explicit_policy,
+        test.user_initial_policy_set, test.initial_policy_mapping_inhibit,
+        test.initial_any_policy_inhibit,
+        nullptr /*user_constrained_policy_set*/, &errors);
     EXPECT_EQ(test.expected_errors, errors.ToDebugString(test.chain))
         << "Test file: " << test_file_path;
   }

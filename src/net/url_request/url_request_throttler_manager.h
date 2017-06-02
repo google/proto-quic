@@ -11,8 +11,8 @@
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/threading/non_thread_safe.h"
 #include "base/threading/platform_thread.h"
+#include "base/threading/thread_checker.h"
 #include "net/base/net_export.h"
 #include "net/base/network_change_notifier.h"
 #include "net/url_request/url_request_throttler_entry.h"
@@ -33,8 +33,7 @@ class NetLogWithSource;
 // clean out outdated entries. URL ID consists of lowercased scheme, host, port
 // and path. All URLs converted to the same ID will share the same entry.
 class NET_EXPORT URLRequestThrottlerManager
-    : NON_EXPORTED_BASE(public base::NonThreadSafe),
-      public NetworkChangeNotifier::IPAddressObserver,
+    : public NetworkChangeNotifier::IPAddressObserver,
       public NetworkChangeNotifier::ConnectionTypeObserver {
  public:
   URLRequestThrottlerManager();
@@ -145,6 +144,8 @@ class NET_EXPORT URLRequestThrottlerManager
 
   // Valid once we've registered for network notifications.
   base::PlatformThreadId registered_from_thread_;
+
+  THREAD_CHECKER(thread_checker_);
 
   DISALLOW_COPY_AND_ASSIGN(URLRequestThrottlerManager);
 };

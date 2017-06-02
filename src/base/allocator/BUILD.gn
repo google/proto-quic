@@ -13,11 +13,6 @@ declare_args() {
   enable_debugallocation = is_debug
 }
 
-# The Windows-only allocator shim is only enabled for Release static builds, and
-# is mutually exclusive with the generalized shim.
-win_use_allocator_shim = is_win && !is_component_build && !is_debug &&
-                         !use_experimental_allocator_shim && !is_asan
-
 # This "allocator" meta-target will forward to the default allocator according
 # to the build settings.
 group("allocator") {
@@ -26,22 +21,6 @@ group("allocator") {
 
   if (use_allocator == "tcmalloc") {
     deps += [ ":tcmalloc" ]
-  }
-
-  if (win_use_allocator_shim) {
-    public_deps += [ ":allocator_shim" ]
-  }
-}
-
-# This config defines ALLOCATOR_SHIM in the same conditions that the allocator
-# shim will be used by the allocator target.
-#
-# TODO(brettw) this is only used in one place and is kind of mess, because it
-# assumes that the library using it will eventually be linked with
-# //base/allocator in the default way. Clean this up and delete this.
-config("allocator_shim_define") {
-  if (win_use_allocator_shim) {
-    defines = [ "ALLOCATOR_SHIM" ]
   }
 }
 
@@ -54,7 +33,7 @@ config("tcmalloc_flags") {
       "TCMALLOC_FOR_DEBUGALLOCATION",
     ]
   }
-  if (use_experimental_allocator_shim) {
+  if (use_allocator_shim) {
     defines += [ "TCMALLOC_DONT_REPLACE_SYSTEM_ALLOC" ]
   }
   if (is_clang) {
@@ -83,20 +62,6 @@ config("tcmalloc_flags") {
       "-Wno-sign-compare",
       "-Wno-unused-result",
     ]
-  }
-}
-
-# This config is only used on Windows static release builds for the
-# allocator shim.
-if (win_use_allocator_shim) {
-  source_set("allocator_shim") {
-    sources = [
-      "allocator_shim_win.cc",
-      "allocator_shim_win.h",
-      "winheap_stubs_win.cc",
-      "winheap_stubs_win.h",
-    ]
-    configs += [ ":allocator_shim_define" ]
   }
 }
 
@@ -261,7 +226,7 @@ if (use_allocator == "tcmalloc") {
       # //base/allocator/allocator_shim_override_glibc_weak_symbols.h and
       # //base/allocator/allocator_shim_internals.h for the definition of
       # SHIM_ALWAYS_EXPORT).
-      if (!use_experimental_allocator_shim) {
+      if (!use_allocator_shim) {
         configs -= [ "//build/config/gcc:symbol_visibility_hidden" ]
         configs += [ "//build/config/gcc:symbol_visibility_default" ]
       }
@@ -291,10 +256,7 @@ if (use_allocator == "tcmalloc") {
 
 buildflag_header("features") {
   header = "features.h"
-  flags = [
-    "USE_EXPERIMENTAL_ALLOCATOR_SHIM=$use_experimental_allocator_shim",
-    "ENABLE_WIN_ALLOCATOR_SHIM_TESTS=($use_experimental_allocator_shim || $win_use_allocator_shim)",
-  ]
+  flags = [ "USE_ALLOCATOR_SHIM=$use_allocator_shim" ]
 }
 
 # Used to shim malloc symbols on Android. see //base/allocator/README.md.

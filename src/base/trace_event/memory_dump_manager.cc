@@ -213,13 +213,13 @@ void MemoryDumpManager::EnableHeapProfilingIfNeeded() {
     AllocationContextTracker::SetCaptureMode(
         AllocationContextTracker::CaptureMode::NATIVE_STACK);
 #endif  // !defined(OS_NACL)
-#if BUILDFLAG(ENABLE_MEMORY_TASK_PROFILER)
+#if BUILDFLAG(USE_ALLOCATOR_SHIM)
   } else if (profiling_mode == switches::kEnableHeapProfilingTaskProfiler) {
     // Enable heap tracking, which in turn enables capture of heap usage
     // tracking in tracked_objects.cc.
     if (!base::debug::ThreadHeapUsageTracker::IsHeapTrackingEnabled())
       base::debug::ThreadHeapUsageTracker::EnableHeapTracking();
-#endif  // BUILDFLAG(ENABLE_MEMORY_TASK_PROFILER)
+#endif  // BUILDFLAG(USE_ALLOCATOR_SHIM)
   } else {
     LOG(FATAL) << "Invalid mode '" << profiling_mode << "' for "
                << switches::kEnableHeapProfiling << " flag.";

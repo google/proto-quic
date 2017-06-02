@@ -368,6 +368,10 @@ base::Optional<EffectiveConnectionType> GetForcedEffectiveConnectionType(
 NetworkQualityEstimatorParams::NetworkQualityEstimatorParams(
     const std::map<std::string, std::string>& params)
     : params_(params),
+      throughput_min_requests_in_flight_(
+          GetValueForVariationParam(params_,
+                                    "throughput_min_requests_in_flight",
+                                    1)),
       weight_multiplier_per_second_(GetWeightMultiplierPerSecond(params_)),
       weight_multiplier_per_dbm_(
           GetDoubleValueForVariationParamWithDefaultValue(params_,

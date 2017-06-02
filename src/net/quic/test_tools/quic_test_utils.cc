@@ -334,6 +334,10 @@ void MockQuicConnection::AdvanceTime(QuicTime::Delta delta) {
   static_cast<MockQuicConnectionHelper*>(helper())->AdvanceTime(delta);
 }
 
+bool MockQuicConnection::OnProtocolVersionMismatch(QuicVersion version) {
+  return false;
+}
+
 PacketSavingConnection::PacketSavingConnection(MockQuicConnectionHelper* helper,
                                                MockAlarmFactory* alarm_factory,
                                                Perspective perspective)
@@ -373,6 +377,14 @@ MockQuicSession::~MockQuicSession() {
   delete connection();
 }
 
+QuicCryptoStream* MockQuicSession::GetMutableCryptoStream() {
+  return crypto_stream_.get();
+}
+
+const QuicCryptoStream* MockQuicSession::GetCryptoStream() const {
+  return crypto_stream_.get();
+}
+
 // static
 QuicConsumedData MockQuicSession::ConsumeAllData(
     QuicStream* /*stream*/,
@@ -395,6 +407,24 @@ MockQuicSpdySession::MockQuicSpdySession(QuicConnection* connection)
 
 MockQuicSpdySession::~MockQuicSpdySession() {
   delete connection();
+}
+
+QuicCryptoStream* MockQuicSpdySession::GetMutableCryptoStream() {
+  return crypto_stream_.get();
+}
+
+const QuicCryptoStream* MockQuicSpdySession::GetCryptoStream() const {
+  return crypto_stream_.get();
+}
+
+size_t MockQuicSpdySession::WriteHeaders(
+    QuicStreamId id,
+    SpdyHeaderBlock headers,
+    bool fin,
+    SpdyPriority priority,
+    QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener) {
+  write_headers_ = std::move(headers);
+  return WriteHeadersMock(id, write_headers_, fin, priority, ack_listener);
 }
 
 TestQuicSpdyServerSession::TestQuicSpdyServerSession(
@@ -614,7 +644,6 @@ QuicEncryptedPacket* ConstructEncryptedPacket(
   header.public_header.connection_id = connection_id;
   header.public_header.connection_id_length = connection_id_length;
   header.public_header.version_flag = version_flag;
-  header.public_header.multipath_flag = false;
   header.public_header.reset_flag = reset_flag;
   header.public_header.packet_number_length = packet_number_length;
   header.packet_number = packet_number;

@@ -59,7 +59,7 @@ TEST(SpdyFrameBuilderTest, GetWritableOutputNegative) {
   size_t actual_size = 0;
   char* writable_buffer = builder.GetWritableOutput(kBuilderSize, &actual_size);
   builder.GetWritableOutput(kBuilderSize, &actual_size);
-  EXPECT_EQ((uint64_t)0, actual_size);
+  EXPECT_EQ(0u, actual_size);
   EXPECT_EQ(nullptr, writable_buffer);
 }
 

@@ -139,7 +139,7 @@ declare_args() {
   # This is intended to be used for instrumented builds.
   use_custom_libcxx =
       (is_asan && is_linux && !is_chromeos) || is_tsan || is_msan || is_ubsan ||
-      is_ubsan_security || use_libfuzzer || use_afl
+      is_ubsan_security || (use_libfuzzer && !is_mac) || use_afl
 
   # Enable -fsanitize-coverage.
   use_sanitizer_coverage =

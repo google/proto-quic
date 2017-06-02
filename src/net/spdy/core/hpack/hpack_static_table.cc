@@ -31,7 +31,7 @@ void HpackStaticTable::Initialize(const HpackStaticEntry* static_entry_table,
     HpackEntry* entry = &static_entries_.back();
     CHECK(static_index_.insert(entry).second);
     // Multiple static entries may have the same name, so inserts may fail.
-    static_name_index_.insert(make_pair(entry->name(), entry));
+    static_name_index_.insert(std::make_pair(entry->name(), entry));
 
     ++total_insertions;
   }

@@ -163,10 +163,13 @@ class BASE_EXPORT Process {
 
  private:
 #if defined(OS_WIN)
-  bool is_current_process_;
   win::ScopedHandle process_;
 #else
   ProcessHandle process_;
+#endif
+
+#if defined(OS_WIN) || defined(OS_FUCHSIA)
+  bool is_current_process_;
 #endif
 
   DISALLOW_COPY_AND_ASSIGN(Process);

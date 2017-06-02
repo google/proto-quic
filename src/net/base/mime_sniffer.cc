@@ -80,15 +80,6 @@
 // compatibility if we don't sniff from application/octet stream at all.
 // => Chrome: Download as application/octet-stream
 //
-// XHTML payload, Content-Type: "text/xml":
-// * IE 7: Render as XML
-// * Firefox 2: Render as HTML
-// * Safari 3: Render as HTML
-// * Opera 9: Render as HTML
-// The layout tests rely on us rendering this as HTML.
-// But we're conservative in XHTML detection, as this runs afoul of the
-// "don't detect dangerous mime types" rule.
-//
 // Note that our definition of HTML payload is much stricter than IE's
 // definition and roughly the same as Firefox's definition.
 
@@ -542,12 +533,6 @@ static bool SniffForInvalidOfficeDocs(const char* content,
 
 // Byte order marks
 static const MagicNumber kMagicXML[] = {
-  // We want to be very conservative in interpreting text/xml content as
-  // XHTML -- we just want to sniff enough to make unit tests pass.
-  // So we match explicitly on this, and don't match other ways of writing
-  // it in semantically-equivalent ways.
-  MAGIC_STRING("application/xhtml+xml",
-               "<html xmlns=\"http://www.w3.org/1999/xhtml\""),
   MAGIC_STRING("application/atom+xml", "<feed"),
   MAGIC_STRING("application/rss+xml", "<rss"),  // UTF-8
 };

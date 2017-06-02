@@ -10,11 +10,12 @@
 
 namespace base {
 
-#if !defined(OS_IOS)
+// See https://crbug.com/726484 for Fuchsia.
+#if !defined(OS_IOS) && !defined(OS_FUCHSIA)
 TEST(ProcessInfoTest, CreationTime) {
   Time creation_time = CurrentProcessInfo::CreationTime();
   ASSERT_FALSE(creation_time.is_null());
 }
-#endif  // !defined(OS_IOS)
+#endif  // !defined(OS_IOS) && !defined(OS_FUCHSIA)
 
 }  // namespace base

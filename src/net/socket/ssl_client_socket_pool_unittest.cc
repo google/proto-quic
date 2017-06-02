@@ -167,18 +167,20 @@ class SSLClientSocketPoolTest : public testing::Test {
   }
 
   HttpNetworkSession* CreateNetworkSession() {
-    HttpNetworkSession::Params params;
-    params.host_resolver = &host_resolver_;
-    params.cert_verifier = cert_verifier_.get();
-    params.transport_security_state = transport_security_state_.get();
-    params.cert_transparency_verifier = &ct_verifier_;
-    params.ct_policy_enforcer = &ct_policy_enforcer_;
-    params.proxy_service = proxy_service_.get();
-    params.client_socket_factory = &socket_factory_;
-    params.ssl_config_service = ssl_config_service_.get();
-    params.http_auth_handler_factory = http_auth_handler_factory_.get();
-    params.http_server_properties = http_server_properties_.get();
-    return new HttpNetworkSession(params);
+    HttpNetworkSession::Context session_context;
+    session_context.host_resolver = &host_resolver_;
+    session_context.cert_verifier = cert_verifier_.get();
+    session_context.transport_security_state = transport_security_state_.get();
+    session_context.cert_transparency_verifier = &ct_verifier_;
+    session_context.ct_policy_enforcer = &ct_policy_enforcer_;
+    session_context.proxy_service = proxy_service_.get();
+    session_context.client_socket_factory = &socket_factory_;
+    session_context.ssl_config_service = ssl_config_service_.get();
+    session_context.http_auth_handler_factory =
+        http_auth_handler_factory_.get();
+    session_context.http_server_properties = http_server_properties_.get();
+    return new HttpNetworkSession(HttpNetworkSession::Params(),
+                                  session_context);
   }
 
   void TestIPPoolingDisabled(SSLSocketDataProvider* ssl);

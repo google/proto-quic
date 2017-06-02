@@ -15,6 +15,8 @@ bool URLRequestJobFactory::ProtocolHandler::IsSafeRedirectTarget(
 
 URLRequestJobFactory::URLRequestJobFactory() {}
 
-URLRequestJobFactory::~URLRequestJobFactory() {}
+URLRequestJobFactory::~URLRequestJobFactory() {
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
+}
 
 }  // namespace net

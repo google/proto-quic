@@ -9,8 +9,6 @@ from page_sets.system_health import system_health_story
 from page_sets.system_health import story_tags
 from page_sets.system_health import platforms
 
-from telemetry import benchmark
-
 
 class MultiTabStory(system_health_story.SystemHealthStory):
   ABSTRACT_STORY = True
@@ -44,7 +42,6 @@ class MultiTabStory(system_health_story.SystemHealthStory):
       tab.WaitForFrameToBeDisplayed()
 
 
-@benchmark.Disabled('all')  # crbug.com/704197
 class MultiTabTypical24Story(MultiTabStory):
   """Load 24 different web sites in 24 tabs, then cycle through each tab."""
   NAME = 'multitab:misc:typical24'

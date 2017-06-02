@@ -227,7 +227,7 @@ int DefaultChannelIDStore::GetChannelID(
     const std::string& server_identifier,
     std::unique_ptr<crypto::ECPrivateKey>* key_result,
     const GetChannelIDCallback& callback) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   InitIfNecessary();
 
   if (!loaded_) {
@@ -285,13 +285,13 @@ void DefaultChannelIDStore::Flush() {
 }
 
 int DefaultChannelIDStore::GetChannelIDCount() {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   return channel_ids_.size();
 }
 
 void DefaultChannelIDStore::SetForceKeepSessionState() {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   InitIfNecessary();
 
   if (store_)
@@ -303,7 +303,7 @@ DefaultChannelIDStore::~DefaultChannelIDStore() {
 }
 
 void DefaultChannelIDStore::DeleteAllInMemory() {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   for (ChannelIDMap::iterator it = channel_ids_.begin();
        it != channel_ids_.end(); ++it) {
@@ -313,7 +313,7 @@ void DefaultChannelIDStore::DeleteAllInMemory() {
 }
 
 void DefaultChannelIDStore::InitStore() {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(store_) << "Store must exist to initialize";
   DCHECK(!loaded_);
 
@@ -323,7 +323,7 @@ void DefaultChannelIDStore::InitStore() {
 
 void DefaultChannelIDStore::OnLoaded(
     std::unique_ptr<std::vector<std::unique_ptr<ChannelID>>> channel_ids) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   for (std::vector<std::unique_ptr<ChannelID>>::iterator it =
            channel_ids->begin();
        it != channel_ids->end(); ++it) {
@@ -343,7 +343,7 @@ void DefaultChannelIDStore::OnLoaded(
 
 void DefaultChannelIDStore::SyncSetChannelID(
     std::unique_ptr<ChannelID> channel_id) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(loaded_);
 
   InternalDeleteChannelID(channel_id->server_identifier());
@@ -352,7 +352,7 @@ void DefaultChannelIDStore::SyncSetChannelID(
 
 void DefaultChannelIDStore::SyncDeleteChannelID(
     const std::string& server_identifier) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(loaded_);
   InternalDeleteChannelID(server_identifier);
 }
@@ -361,7 +361,7 @@ void DefaultChannelIDStore::SyncDeleteForDomainsCreatedBetween(
     const base::Callback<bool(const std::string&)>& domain_predicate,
     base::Time delete_begin,
     base::Time delete_end) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(loaded_);
   for (ChannelIDMap::iterator it = channel_ids_.begin();
        it != channel_ids_.end();) {
@@ -383,7 +383,7 @@ void DefaultChannelIDStore::SyncDeleteForDomainsCreatedBetween(
 
 void DefaultChannelIDStore::SyncGetAllChannelIDs(
     ChannelIDList* channel_id_list) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(loaded_);
   for (ChannelIDMap::iterator it = channel_ids_.begin();
        it != channel_ids_.end(); ++it)
@@ -391,13 +391,13 @@ void DefaultChannelIDStore::SyncGetAllChannelIDs(
 }
 
 void DefaultChannelIDStore::EnqueueTask(std::unique_ptr<Task> task) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(!loaded_);
   waiting_tasks_.push_back(std::move(task));
 }
 
 void DefaultChannelIDStore::RunOrEnqueueTask(std::unique_ptr<Task> task) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   InitIfNecessary();
 
   if (!loaded_) {
@@ -410,7 +410,7 @@ void DefaultChannelIDStore::RunOrEnqueueTask(std::unique_ptr<Task> task) {
 
 void DefaultChannelIDStore::InternalDeleteChannelID(
     const std::string& server_identifier) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(loaded_);
 
   ChannelIDMap::iterator it = channel_ids_.find(server_identifier);
@@ -426,7 +426,7 @@ void DefaultChannelIDStore::InternalDeleteChannelID(
 
 void DefaultChannelIDStore::InternalInsertChannelID(
     std::unique_ptr<ChannelID> channel_id) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(loaded_);
 
   if (store_)

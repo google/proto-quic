@@ -409,6 +409,25 @@
             ]
         }
     ],
+    "CheckerImaging": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "CheckerImaging",
+                    "enable_features": [
+                        "CheckerImaging"
+                    ]
+                }
+            ]
+        }
+    ],
     "ChildAccountDetection": [
         {
             "platforms": [
@@ -452,6 +471,37 @@
             "experiments": [
                 {
                     "name": "Enabled"
+                }
+            ]
+        }
+    ],
+    "ClientSidePreviews": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled_2G_2",
+                    "params": {
+                        "max_allowed_effective_connection_type": "2G",
+                        "show_offline_pages": "true"
+                    }
+                }
+            ]
+        }
+    ],
+    "ContextualSearch": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Default",
+                    "params": {
+                        "enable_ranker_logging": "true"
+                    }
                 }
             ]
         }
@@ -1432,24 +1482,6 @@
             ]
         }
     ],
-    "MetricsServiceUrl": [
-        {
-            "platforms": [
-                "chromeos",
-                "mac",
-                "win",
-                "linux"
-            ],
-            "experiments": [
-                {
-                    "name": "NewURL",
-                    "enable_features": [
-                        "NewMetricsUrl"
-                    ]
-                }
-            ]
-        }
-    ],
     "MidiManagerAndroid": [
         {
             "platforms": [
@@ -1516,25 +1548,6 @@
                     },
                     "enable_features": [
                         "NTPArticleSuggestions"
-                    ]
-                }
-            ]
-        }
-    ],
-    "NTPBookmarkSuggestions": [
-        {
-            "platforms": [
-                "android"
-            ],
-            "experiments": [
-                {
-                    "name": "Phase2Enabled3wWithDesktop",
-                    "params": {
-                        "bookmarks_consider_desktop_visits": "true",
-                        "bookmarks_max_age_in_days": "21"
-                    },
-                    "enable_features": [
-                        "NTPBookmarkSuggestions"
                     ]
                 }
             ]
@@ -1615,21 +1628,6 @@
             "experiments": [
                 {
                     "name": "EnabledFull"
-                }
-            ]
-        }
-    ],
-    "NTPPreferAmpUrls": [
-        {
-            "platforms": [
-                "android"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled",
-                    "enable_features": [
-                        "NTPPreferAmpUrls"
-                    ]
                 }
             ]
         }
@@ -1754,9 +1752,9 @@
             ],
             "experiments": [
                 {
-                    "name": "NetworkTimeQueriesEnabledBackgroundAndOnDemand",
+                    "name": "NetworkTimeQueriesEnabledOnDemand",
                     "params": {
-                        "FetchBehavior": "background-and-on-demand"
+                        "FetchBehavior": "on-demand-only"
                     },
                     "enable_features": [
                         "NetworkTimeServiceQuerying"
@@ -1891,6 +1889,42 @@
                     "enable_features": [
                         "OmniboxEnableClipboardProvider"
                     ]
+                }
+            ]
+        }
+    ],
+    "OmniboxPlaceholderExperiment": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "SearchOrTypeUrl"
+                },
+                {
+                    "name": "SearchOrTypeWebsiteName"
+                },
+                {
+                    "name": "SearchTheWeb"
+                },
+                {
+                    "name": "EnterASearchOrWebsite"
+                },
+                {
+                    "name": "SearchNews"
+                },
+                {
+                    "name": "SearchRecipes"
+                },
+                {
+                    "name": "SearchWeather"
+                },
+                {
+                    "name": "Blank"
+                },
+                {
+                    "name": "Default"
                 }
             ]
         }
@@ -2536,6 +2570,26 @@
             ]
         }
     ],
+    "ReportingAPI": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "ios",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "ReportingEnabled",
+                    "enable_features": [
+                        "Reporting"
+                    ]
+                }
+            ]
+        }
+    ],
     "SRTPromptFieldTrial": [
         {
             "platforms": [
@@ -2914,6 +2968,26 @@
             ]
         }
     ],
+    "SocketReadIfReady": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "linux",
+                "mac",
+                "ios",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "SocketReadIfReady"
+                    ]
+                }
+            ]
+        }
+    ],
     "SpeculativeLaunchServiceWorker": [
         {
             "platforms": [
@@ -3093,12 +3167,25 @@
             ],
             "experiments": [
                 {
+                    "name": "Query",
+                    "params": {
+                        "translate-ranker-model-url": "https://www.gstatic.com/chrome/intelligence/assist/ranker/models/translate/2017/03/translate_ranker_model_20170329.pb.bin"
+                    },
+                    "enable_features": [
+                        "TranslateRankerQuery"
+                    ],
+                    "disable_features": [
+                        "TranslateRankerEnforcement"
+                    ]
+                },
+                {
                     "name": "Enforcement",
                     "params": {
                         "translate-ranker-model-url": "https://www.gstatic.com/chrome/intelligence/assist/ranker/models/translate/2017/03/translate_ranker_model_20170329.pb.bin"
                     },
                     "enable_features": [
-                        "TranslateRankerEnforcement"
+                        "TranslateRankerEnforcement",
+                        "TranslateRankerQuery"
                     ]
                 }
             ]

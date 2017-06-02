@@ -60,6 +60,13 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimatorParams {
   // Returns the threshold for effective connection type |type|.
   const NetworkQuality& ConnectionThreshold(EffectiveConnectionType type) const;
 
+  // Returns the minimum number of requests in-flight to consider the network
+  // fully utilized. A throughput observation is taken only when the network is
+  // considered as fully utilized.
+  size_t throughput_min_requests_in_flight() const {
+    return throughput_min_requests_in_flight_;
+  }
+
   // Returns the weight multiplier per second, which represents the factor by
   // which the weight of an observation reduces every second.
   double weight_multiplier_per_second() const {
@@ -103,6 +110,7 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimatorParams {
   // NetworkQualityEstimator field trial.
   const std::map<std::string, std::string> params_;
 
+  const size_t throughput_min_requests_in_flight_;
   const double weight_multiplier_per_second_;
   const double weight_multiplier_per_dbm_;
   const double correlation_uma_logging_probability_;

@@ -180,5 +180,5 @@ void MD4Sum(const Uint8 *input, Uint32 inputLen, Uint8 *result)
   w2b(result, state, 16);
 }
 
-}  // namespace net::weak_crypto
+}  // namespace weak_crypto
 }  // namespace net

@@ -420,7 +420,7 @@ $L$SEH_begin_aes128gcmsiv_aes_ks:
 
 
 
-	vmovdqa	xmm1,XMMWORD[rdi]
+	vmovdqu	xmm1,XMMWORD[rdi]
 	vmovdqa	XMMWORD[rsi],xmm1
 
 	vmovdqa	xmm0,XMMWORD[con1]
@@ -485,8 +485,8 @@ $L$SEH_begin_aes256gcmsiv_aes_ks:
 
 
 
-	vmovdqa	xmm1,XMMWORD[rdi]
-	vmovdqa	xmm3,XMMWORD[16+rdi]
+	vmovdqu	xmm1,XMMWORD[rdi]
+	vmovdqu	xmm3,XMMWORD[16+rdi]
 	vmovdqa	XMMWORD[rsi],xmm1
 	vmovdqa	XMMWORD[16+rsi],xmm3
 	vmovdqa	xmm0,XMMWORD[con1]

@@ -102,6 +102,14 @@ chrome.accessibilityPrivate.setKeyboardListener = function(enabled, capture) {};
 chrome.accessibilityPrivate.darkenScreen = function(enabled) {};
 
 /**
+ * Change the keyboard keys captured by Switch Access.
+ * @param {!Array<number>} key_codes The key codes for the keys that will be
+ *     captured.
+ * @see https://developer.chrome.com/extensions/accessibilityPrivate#method-setSwitchAccessKeys
+ */
+chrome.accessibilityPrivate.setSwitchAccessKeys = function(key_codes) {};
+
+/**
  * Fired whenever ChromeVox should output introduction.
  * @type {!ChromeEvent}
  * @see https://developer.chrome.com/extensions/accessibilityPrivate#event-onIntroduceChromeVox

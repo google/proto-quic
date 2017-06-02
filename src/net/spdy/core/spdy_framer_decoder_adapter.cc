@@ -92,8 +92,7 @@ void SpdyFramerVisitorAdapter::OnRstStream(SpdyStreamId stream_id,
   visitor_->OnRstStream(stream_id, error_code);
 }
 
-void SpdyFramerVisitorAdapter::OnSetting(SpdySettingsIds id,
-                                         uint32_t value) {
+void SpdyFramerVisitorAdapter::OnSetting(SpdySettingsIds id, uint32_t value) {
   visitor_->OnSetting(id, value);
 }
 

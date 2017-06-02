@@ -8,9 +8,6 @@ from page_sets.system_health import system_health_story
 from page_sets.login_helpers import google_login
 from page_sets.login_helpers import pandora_login
 
-from telemetry import benchmark
-from telemetry import decorators
-
 
 class _MediaStory(system_health_story.SystemHealthStory):
   """Abstract base class for media System Health user stories."""
@@ -56,7 +53,6 @@ class _MediaStory(system_health_story.SystemHealthStory):
 ################################################################################
 
 
-@benchmark.Disabled('all')  # crbug.com/649392
 class GooglePlayMusicDesktopStory(_MediaStory):
   """Browse the songs list in music.google.com, then play a song."""
   NAME = 'play:media:google_play_music'
@@ -82,7 +78,6 @@ class GooglePlayMusicDesktopStory(_MediaStory):
                                            self.NAVIGATE_SELECTOR)
 
 
-@benchmark.Disabled('win')  # crbug.com/649392
 class SoundCloudDesktopStory(_MediaStory):
   """Load soundcloud.com, search for "Smooth Jazz", then play a song."""
   NAME = 'play:media:soundcloud'
@@ -101,7 +96,6 @@ class SoundCloudDesktopStory(_MediaStory):
     action_runner.PressKey('Return')
 
 
-@decorators.Disabled('all')  # crbug.com/649392
 class PandoraDesktopStory(_MediaStory):
   """Load pandora.com, then play a song."""
   NAME = 'play:media:pandora'

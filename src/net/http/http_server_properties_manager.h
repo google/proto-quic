@@ -49,7 +49,7 @@ class IPAddress;
 // It must be constructed with correct task runners passed in to set up
 // |pref_task_runner_| and |network_task_runner| as well as the prefs listeners.
 //
-// ShutdownOnPrefThread must be called from pref thread before destruction, to
+// ShutdownOnPrefSequence must be called from pref thread before destruction, to
 // release the prefs listeners on the pref thread.
 //
 // Class requires that update tasks from the Pref thread can post safely to the
@@ -99,10 +99,10 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
   ~HttpServerPropertiesManager() override;
 
   // Initialize on Network thread.
-  void InitializeOnNetworkThread();
+  void InitializeOnNetworkSequence();
 
   // Prepare for shutdown. Must be called on the Pref thread before destruction.
-  void ShutdownOnPrefThread();
+  void ShutdownOnPrefSequence();
 
   // Helper function for unit tests to set the version in the dictionary.
   static void SetVersion(base::DictionaryValue* http_server_properties_dict,
@@ -167,7 +167,7 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
   static base::TimeDelta GetUpdatePrefsDelayForTesting();
 
  protected:
-  // The location where ScheduleUpdatePrefsOnNetworkThread was called.
+  // The location where ScheduleUpdatePrefsOnNetworkSequence was called.
   // Must be kept up to date with HttpServerPropertiesUpdatePrefsLocation in
   // histograms.xml.
   enum Location {
@@ -201,11 +201,11 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
   // preferences. It gets the data on pref thread and calls
   // UpdateSpdyServersFromPrefsOnNetworkThread() to perform the update on
   // network thread.
-  virtual void UpdateCacheFromPrefsOnPrefThread();
+  virtual void UpdateCacheFromPrefsOnPrefSequence();
 
   // Starts the update of cached prefs in |http_server_properties_impl_| on the
   // network thread. Protected for testing.
-  void UpdateCacheFromPrefsOnNetworkThread(
+  void UpdateCacheFromPrefsOnNetworkSequence(
       std::vector<std::string>* spdy_servers,
       AlternativeServiceMap* alternative_service_map,
       IPAddress* last_quic_address,
@@ -217,17 +217,17 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
   // |http_server_properties_impl_| is changing, and execute only one update per
   // simultaneous spdy_servers or spdy_settings or alternative_service changes.
   // |location| specifies where this method is called from. Virtual for testing.
-  virtual void ScheduleUpdatePrefsOnNetworkThread(Location location);
+  virtual void ScheduleUpdatePrefsOnNetworkSequence(Location location);
 
   // Update prefs::kHttpServerProperties in preferences with the cached data
   // from |http_server_properties_impl_|. This gets the data on network thread
   // and posts a task (UpdatePrefsOnPrefThread) to update preferences on pref
   // thread.
-  void UpdatePrefsFromCacheOnNetworkThread();
+  void UpdatePrefsFromCacheOnNetworkSequence();
 
   // Same as above, but fires an optional |completion| callback on pref thread
   // when finished. Virtual for testing.
-  virtual void UpdatePrefsFromCacheOnNetworkThread(
+  virtual void UpdatePrefsFromCacheOnNetworkSequence(
       const base::Closure& completion);
 
   // Update prefs::kHttpServerProperties preferences on pref thread. Executes an
@@ -303,7 +303,7 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
   // Network thread
   // --------------
 
-  // Whether InitializeOnNetworkThread() has completed.
+  // Whether InitializeOnNetworkSequence() has completed.
   bool is_initialized_;
 
   const scoped_refptr<base::SingleThreadTaskRunner> network_task_runner_;

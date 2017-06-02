@@ -69,7 +69,7 @@ class SPDY_EXPORT_PRIVATE SpdyFramerVisitorInterface {
  public:
   virtual ~SpdyFramerVisitorInterface() {}
 
-  // Called if an error is detected in the SpdySerializedFrame protocol.
+  // Called if an error is detected in the SpdyFrame protocol.
   virtual void OnError(SpdyFramer* framer) = 0;
 
   // Called when the common header for a frame is received. Validating the
@@ -95,7 +95,7 @@ class SPDY_EXPORT_PRIVATE SpdyFramerVisitorInterface {
                                  size_t len) = 0;
 
   // Called when the other side has finished sending data on this stream.
-  // |stream_id| The stream that was receivin data.
+  // |stream_id| The stream that was receiving data.
   virtual void OnStreamEnd(SpdyStreamId stream_id) = 0;
 
   // Called when padding is received (padding length field or padding octets).

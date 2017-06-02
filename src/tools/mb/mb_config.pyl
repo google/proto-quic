@@ -27,8 +27,8 @@
       'Android': 'android_without_codecs_release_bot_minimal_symbols',
       'Linux x64': 'release_bot',
       'Mac': 'release_bot_mac_strip',
-      'Win': 'release_bot_x86',
-      'Win x64': 'release_bot',
+      'Win': 'release_bot_x86_minimal_symbols',
+      'Win x64': 'release_bot_minimal_symbols',
     },
 
     'chromium.android': {
@@ -79,7 +79,7 @@
     },
 
     'chromium.chromedriver': {
-      'Win7': 'release_bot_x86',
+      'Win7': 'release_bot_x86_minimal_symbols',
       'Mac 10.6': 'release_bot',
       'Linux': 'release_bot',
       'Linux32': 'release_bot_x86',
@@ -130,9 +130,9 @@
         '2': 'official_optimize_chrome_pgo_phase_2',
       },
       'Chromium Windows Analyze': 'windows_analyze',
-      'CrWin7Goma': 'release_bot_x86',
+      'CrWin7Goma': 'release_bot_x86_minimal_symbols',
       'CrWin7Goma(clbr)': 'shared_release_bot_x86',
-      'CrWin7Goma(dbg)': 'debug_bot_x86',
+      'CrWin7Goma(dbg)': 'debug_bot_x86_minimal_symbols',
       'CrWin7Goma(dll)': 'shared_release_bot_x86',
 
       # if CrWinClang is modified, please update CrWinClangGoma in the same way.
@@ -140,9 +140,9 @@
 
       'CrWinClang(dbg)': 'clang_debug_bot_minimal_symbols_x86',
       'CrWinClang64': 'clang_official_release_bot_minimal_symbols',
-      'CrWinClang64(dll)': 'clang_shared_release_bot',
+      'CrWinClang64(dll)': 'clang_shared_release_bot_dcheck',
       'CrWinClangGoma': 'clang_official_optimize_release_bot_minimal_symbols_x86',
-      'CrWinGoma': 'release_bot_x86',
+      'CrWinGoma': 'release_bot_x86_minimal_symbols',
       'CrWinGoma(dll)': 'shared_release_bot_x86',
       'CrWinGoma(loc)': 'shared_release_bot_x86',
       'ClangToTAndroidASan': 'android_clang_tot_asan',
@@ -161,19 +161,19 @@
       'ClangToTMacASan': 'asan_disable_nacl_clang_tot_full_symbols_static_release',
       'ClangToTWin': 'clang_tot_official_minimal_symbols_static_release_x86',
       'ClangToTWin(dbg)': 'clang_tot_shared_debug_x86',
-      'ClangToTWin(dll)': 'clang_tot_minimal_symbols_shared_release_x86',
+      'ClangToTWin(dll)': 'clang_tot_minimal_symbols_shared_release_x86_dcheck',
       'ClangToTWin64': 'clang_tot_official_minimal_symbols_static_release',
       'ClangToTWin64(dbg)': 'clang_tot_shared_debug',
-      'ClangToTWin64(dll)': 'clang_tot_shared_release',
+      'ClangToTWin64(dll)': 'clang_tot_shared_release_dcheck',
       'ClangToTiOS': 'ios',
       'Closure Compilation Linux': 'closure_compilation',
       'CrWinAsan': 'asan_clang_fuzzer_static_v8_heap_x86_full_symbols_release',
       'CrWinAsan(dll)': 'asan_clang_shared_v8_heap_x86_full_symbols_release',
       'CrWinAsanCov': 'asan_clang_edge_fuzzer_static_v8_heap_x86_full_symbols_release',
-      'CrWinClang(shared)': 'clang_minimal_symbols_shared_release_bot_x86',
+      'CrWinClang(shared)': 'clang_minimal_symbols_shared_release_bot_x86_dcheck',
       'CrWinClang64(dbg)': 'win_clang_debug_bot',
       'CrWinClangLLD': 'clang_tot_official_static_use_lld_x86',
-      'CrWinClangLLD64': 'clang_tot_shared_release_use_lld',
+      'CrWinClangLLD64': 'clang_tot_shared_release_use_lld_dcheck',
       'CrWinClngLLD64dbg': 'clang_tot_full_symbols_shared_debug_use_lld',
       'CrWinClngLLDdbg': 'clang_tot_full_symbols_shared_debug_use_lld_x86',
       'EarlGreyiOS': 'ios',
@@ -183,7 +183,7 @@
       'Headless Linux (dbg)': 'headless_linux_debug_bot',
       'MD Top Chrome ChromeOS material-hybrid': 'chromeos_with_codecs_debug_bot',
       'MD Top Chrome ChromeOS non-material': 'chromeos_with_codecs_debug_bot',
-      'MD Top Chrome Win material': 'debug_bot',
+      'MD Top Chrome Win material': 'debug_bot_minimal_symbols',
       'MD Top Chrome Linux material': 'debug_bot',
       'LTO Linux': 'official_goma_thin_lto_use_lld',
       'LTO Linux Perf': 'official_goma_thin_lto_use_lld',
@@ -202,7 +202,7 @@
       'Mac deterministic (dbg)': 'debug_bot',
       'Mojo ChromiumOS': 'chromeos_with_codecs_ozone_release_trybot',
       'Mojo Linux': 'release_bot',
-      'Mojo Windows': 'release_bot_x86',
+      'Mojo Windows': 'release_bot_x86_minimal_symbols',
       'Ozone Linux': 'release_bot_ozone_linux',
       'Site Isolation Android': 'android_release_bot_minimal_symbols_arm64',
       'Site Isolation Linux': 'release_trybot',
@@ -211,16 +211,17 @@
       'UBSanVptr Linux': 'ubsan_vptr_release_bot',
       'WebKit Linux - RandomOrder': 'release_bot',
       'WebKit Mac - RandomOrder': 'release_bot',
-      'WebKit Win - RandomOrder': 'release_bot_x86',
+      'WebKit Win - RandomOrder': 'release_bot_x86_minimal_symbols',
       'Win 10 Fast Ring': 'release_trybot',
-      'Windows deterministic': 'release_bot_x86',
+      'Windows deterministic': 'release_bot_x86_minimal_symbols',
       'Windows Clang deterministic': 'clang_release_bot_minimal_symbols_x86',
     },
 
     'chromium.goma': {
       'Chromium Linux Goma Staging': 'release_bot',
       'Chromium Mac Goma Staging': 'release_bot',
-      'CrWinGomaStaging': 'release_bot_x86',
+      'CrWinGomaStaging': 'release_bot_x86_minimal_symbols',
+      'Chromium Linux Goma GCE Staging': 'release_bot',
     },
 
     'chromium.gpu': {
@@ -229,8 +230,8 @@
       'GPU Mac Builder (dbg)': 'gpu_tests_debug_trybot',
       'GPU Linux Builder (dbg)': 'gpu_tests_debug_trybot',
       'GPU Linux Builder': 'gpu_tests_release_trybot',
-      'GPU Win Builder': 'gpu_tests_release_trybot_x86',
-      'GPU Win Builder (dbg)': 'gpu_tests_debug_trybot_x86',
+      'GPU Win Builder': 'gpu_tests_release_trybot_x86_minimal_symbols',
+      'GPU Win Builder (dbg)': 'gpu_tests_debug_trybot_x86_minimal_symbols',
     },
 
     'chromium.gpu.fyi': {
@@ -343,7 +344,9 @@
       'Android Builder FYI': 'official_goma_minimal_symbols_android',
       'Win Builder FYI': 'official_goma',
       'Win Clang Builder': 'official_goma_minimal_symbols_clang',
-      'Battor Agent Linux': 'debug_bot',
+      'Battor Agent Linux': 'official_goma_minimal_symbols_clang',
+      'Battor Agent Mac': 'official_goma_minimal_symbols_clang',
+      'Battor Agent Win': 'official_goma_minimal_symbols_clang',
     },
 
     'chromium.swarm': {
@@ -351,7 +354,7 @@
       'Android N5X Swarm': 'android_release_bot_minimal_symbols_arm64',
       'Linux Swarm': 'release_bot',
       'Mac Swarm': 'release_bot_mac_strip',
-      'Windows Swarm': 'release_bot_x86',
+      'Windows Swarm': 'release_bot_x86_minimal_symbols',
     },
 
     'client.nacl.sdk': {
@@ -360,8 +363,8 @@
       'linux-sdk-multirel': 'release_bot',
       'mac-sdk-multi': 'release_bot',
       'mac-sdk-multirel': 'release_bot',
-      'windows-sdk-multi': 'release_bot_x86',
-      'windows-sdk-multirel': 'release_bot_x86',
+      'windows-sdk-multi': 'release_bot_x86_minimal_symbols',
+      'windows-sdk-multirel': 'release_bot_x86_minimal_symbols',
     },
 
     'client.v8.chromium': {
@@ -384,8 +387,8 @@
       'V8-Blink Linux 64 - ignition': 'release_bot',
       'V8-Blink Linux 64 (dbg)': 'debug_bot',
       'V8-Blink Mac': 'release_bot',
-      'V8-Blink Win': 'release_bot_x86',
-      'Win Release (NVIDIA)': 'gpu_tests_release_trybot_x86',
+      'V8-Blink Win': 'release_bot_x86_minimal_symbols',
+      'Win Release (NVIDIA)': 'gpu_tests_release_trybot_x86_minimal_symbols',
     },
 
     'chromium.webkit': {
@@ -400,10 +403,10 @@
       'WebKit Mac10.11 (retina)': 'release_bot',
       'WebKit Mac10.12': 'release_bot',
       'WebKit Mac10.9': 'release_bot',
-      'WebKit Win Builder (dbg)': 'debug_bot_x86',
-      'WebKit Win Builder': 'release_bot_x86',
-      'WebKit Win x64 Builder (dbg)': 'debug_bot',
-      'WebKit Win x64 Builder': 'release_bot',
+      'WebKit Win Builder (dbg)': 'debug_bot_x86_minimal_symbols',
+      'WebKit Win Builder': 'release_bot_x86_minimal_symbols',
+      'WebKit Win x64 Builder (dbg)': 'debug_bot_minimal_symbols',
+      'WebKit Win x64 Builder': 'release_bot_minimal_symbols',
     },
 
     'chromium.webrtc': {
@@ -423,10 +426,10 @@
 
     'chromium.win': {
       # Windows bots take too long to link w/ full symbols and time out.
-      'Win Builder': 'release_bot_x86',
-      'Win Builder (dbg)': 'debug_bot_x86',
-      'Win x64 Builder': 'release_bot',
-      'Win x64 Builder (dbg)': 'debug_bot',
+      'Win Builder': 'release_bot_x86_minimal_symbols',
+      'Win Builder (dbg)': 'debug_bot_x86_minimal_symbols',
+      'Win x64 Builder': 'release_bot_minimal_symbols',
+      'Win x64 Builder (dbg)': 'debug_bot_minimal_symbols',
       'WinClang64 (dbg)': 'win_clang_debug_bot',
     },
 
@@ -434,7 +437,7 @@
       'Linux Canary': 'debug_bot',
       'Linux Dev': 'debug_bot',
       'Mac Dev': 'debug_bot',
-      'Windows Dev': 'debug_bot',
+      'Windows Dev': 'debug_bot_minimal_symbols',
     },
 
     'tryserver.blink': {
@@ -455,11 +458,11 @@
       'mac10.11_blink_rel': 'release_bot_minimal_symbols',
       'mac10.11_retina_blink_rel': 'release_bot_minimal_symbols',
       'mac10.12_blink_rel': 'release_bot_minimal_symbols',
-      'win7_blink_compile_dbg': 'debug_trybot_x86',
-      'win7_blink_compile_rel': 'release_bot_x86',
-      'win7_blink_dbg': 'debug_trybot_x86',
-      'win7_blink_rel': 'release_bot_x86',
-      'win10_blink_rel': 'release_bot_x86',
+      'win7_blink_compile_dbg': 'debug_trybot_x86_minimal_symbols',
+      'win7_blink_compile_rel': 'release_bot_x86_minimal_symbols',
+      'win7_blink_dbg': 'debug_trybot_x86_minimal_symbols',
+      'win7_blink_rel': 'release_bot_x86_minimal_symbols',
+      'win10_blink_rel': 'release_bot_x86_minimal_symbols',
     },
 
     'tryserver.chromium.android': {
@@ -511,6 +514,7 @@
       'chromeos_daisy_chromium_compile_only_ng': 'cros_chrome_sdk',
       'chromeos_x86-generic_chromium_compile_only_ng': 'cros_chrome_sdk',
       'closure_compilation': 'closure_compilation',
+      'fuchsia': 'release_trybot_fuchsia',
       'linux_arm': 'release_trybot_arm',
       'linux_chromium_archive_rel_ng': 'release_bot',
       'linux_chromium_asan_rel_ng': 'asan_lsan_release_trybot',
@@ -624,23 +628,23 @@
     'tryserver.chromium.win': {
       'win10_chromium_x64_rel_ng': 'release_trybot',
       'win10_chromium_x64_rel_ng_exp': 'release_trybot',
-      'win8_chromium_gn_upload': 'release_bot_x86',
+      'win8_chromium_gn_upload': 'release_bot_x86_minimal_symbols',
       'win_x64_archive': 'release_trybot',
       'win_archive': 'release_trybot_x86',
-      'win_chromium_compile_dbg_ng': 'debug_trybot_x86',
-      'win_chromium_compile_rel_ng': 'gpu_tests_release_trybot_x86',
-      'win_chromium_dbg_ng': 'debug_trybot_x86',
-      'win_chromium_rel_ng': 'gpu_tests_release_trybot_x86',
+      'win_chromium_compile_dbg_ng': 'debug_trybot_x86_minimal_symbols',
+      'win_chromium_compile_rel_ng': 'gpu_tests_release_trybot_x86_minimal_symbols',
+      'win_chromium_dbg_ng': 'debug_trybot_x86_minimal_symbols',
+      'win_chromium_rel_ng': 'gpu_tests_release_trybot_x86_minimal_symbols',
       'win_chromium_syzyasan_rel': 'syzyasan_no_pch_release_x86',
-      'win_chromium_x64_rel_ng': 'release_trybot',
+      'win_chromium_x64_rel_ng': 'release_trybot_minimal_symbols',
       'win_clang': 'win_clang_debug_bot',
       'win_clang_dbg': 'clang_debug_trybot_x86',
       'win_clang_rel': 'clang_official_release_trybot_x86',
       'win_clang_x64_dbg': 'win_clang_debug_bot',
       'win_clang_x64_rel': 'clang_official_release_trybot',
       'win_mojo': 'release_trybot_x86',
-      'win_nacl_sdk': 'release_bot_x86',
-      'win_nacl_sdk_build': 'release_bot_x86',
+      'win_nacl_sdk': 'release_bot_x86_minimal_symbols',
+      'win_nacl_sdk_build': 'release_bot_x86_minimal_symbols',
       'win_optional_gpu_tests_rel': 'gpu_tests_deqp_gles_release_trybot_x86',
       'win_pgo': {
         '1': 'official_optimize_chrome_pgo_phase_1_x86',
@@ -1045,8 +1049,8 @@
       'clang', 'release_bot', 'minimal_symbols', 'x86',
     ],
 
-    'clang_minimal_symbols_shared_release_bot_x86': [
-      'clang', 'minimal_symbols', 'shared_release_bot', 'x86',
+    'clang_minimal_symbols_shared_release_bot_x86_dcheck': [
+      'clang', 'minimal_symbols', 'shared_release_bot', 'x86', 'dcheck_always_on',
     ],
 
     'clang_official_release_bot_minimal_symbols': [
@@ -1069,8 +1073,8 @@
       'clang', 'official', 'release_trybot', 'x86',
     ],
 
-    'clang_shared_release_bot': [
-      'clang', 'shared_release_bot',
+    'clang_shared_release_bot_dcheck': [
+      'clang', 'shared_release_bot', 'dcheck_always_on',
     ],
 
     'clang_tot_asan_lsan_static_release': [
@@ -1103,9 +1107,9 @@
       'clang_tot', 'shared', 'debug', 'x86',
     ],
 
-    'clang_tot_shared_release_use_lld': [
+    'clang_tot_shared_release_use_lld_dcheck': [
       # TODO(crbug.com/706492): Enable symbols when LLD makes PDBs.
-      'clang_tot', 'no_symbols', 'shared', 'release', 'use_lld',
+      'clang_tot', 'no_symbols', 'shared', 'release', 'use_lld', 'dcheck_always_on',
     ],
 
     'clang_tot_official_static_use_lld_x86': [
@@ -1117,12 +1121,12 @@
       'clang_tot', 'minimal_symbols', 'shared', 'release',
     ],
 
-    'clang_tot_shared_release': [
-      'clang_tot', 'shared', 'release',
+    'clang_tot_shared_release_dcheck': [
+      'clang_tot', 'shared', 'release', 'dcheck_always_on',
     ],
 
-    'clang_tot_minimal_symbols_shared_release_x86': [
-      'clang_tot', 'minimal_symbols', 'shared', 'release', 'x86',
+    'clang_tot_minimal_symbols_shared_release_x86_dcheck': [
+      'clang_tot', 'minimal_symbols', 'shared', 'release', 'x86', 'dcheck_always_on',
     ],
 
     'clang_tot_official_minimal_symbols_static_release': [
@@ -1179,6 +1183,12 @@
       'debug_bot', 'x86',
     ],
 
+    # compiler.gni implicitly sets symbol_level=1 on Windows if goma is enabled,
+    # if MSVC is used.  Explicitly set it here so that it's set consistently for
+    # both MSVC and clang.
+    'debug_bot_minimal_symbols': [ 'debug_bot', 'minimal_symbols' ],
+    'debug_bot_x86_minimal_symbols': [ 'debug_bot', 'x86', 'minimal_symbols' ],
+
     'debug_libfuzzer_asan': [
       'debug', 'libfuzzer', 'asan', 'chromeos_codecs', 'pdf_xfa', 'disable_nacl',
     ],
@@ -1188,6 +1198,10 @@
     ],
 
     'debug_trybot_x86': [
+      'debug_trybot', 'x86',
+    ],
+
+    'debug_trybot_x86_minimal_symbols': [
       'debug_trybot', 'x86',
     ],
 
@@ -1232,27 +1246,29 @@
     ],
 
     'gpu_tests_deqp_gles_release_trybot': [
-      'gpu_fyi_tests', 'release_trybot',
+      # TODO(thakis): Remove no_clang once https://crbug.com/727437 is fixed.
+      'gpu_fyi_tests', 'release_trybot', 'no_clang',
     ],
 
     'gpu_tests_deqp_gles_release_trybot_x86': [
-      'gpu_fyi_tests', 'release_trybot', 'x86',
+      # TODO(thakis): Remove no_clang once https://crbug.com/727437 is fixed.
+      'gpu_fyi_tests', 'release_trybot', 'x86', 'no_clang',
     ],
 
     'gpu_tests_debug_trybot': [
       'gpu_tests', 'debug_trybot',
     ],
 
-    'gpu_tests_debug_trybot_x86': [
-      'gpu_tests', 'debug_trybot', 'x86',
+    'gpu_tests_debug_trybot_x86_minimal_symbols': [
+      'gpu_tests', 'debug_trybot', 'x86', 'minimal_symbols',
     ],
 
     'gpu_tests_release_trybot': [
       'gpu_tests', 'release_trybot',
     ],
 
-    'gpu_tests_release_trybot_x86': [
-      'gpu_tests', 'release_trybot', 'x86',
+    'gpu_tests_release_trybot_x86_minimal_symbols': [
+      'gpu_tests', 'release_trybot', 'x86', 'minimal_symbols',
     ],
 
     'gpu_tests_release_bot': [
@@ -1382,13 +1398,15 @@
       'release_bot', 'mac_strip',
     ],
 
-    'release_bot_minimal_symbols': [
-      'release_bot', 'minimal_symbols',
-    ],
-
     'release_bot_x86': [
       'release_bot', 'x86',
     ],
+
+    # compiler.gni implicitly sets symbol_level=1 on Windows if goma is enabled,
+    # if MSVC is used.  Explicitly set it here so that it's set consistently for
+    # both MSVC and clang.
+    'release_bot_minimal_symbols': [ 'release_bot', 'minimal_symbols' ],
+    'release_bot_x86_minimal_symbols': [ 'release_bot', 'x86', 'minimal_symbols' ],
 
     'release_libfuzzer_asan': [
       'release', 'libfuzzer', 'asan', 'chromeos_codecs', 'pdf_xfa', 'disable_nacl', 'optimize_for_fuzzing',
@@ -1414,8 +1432,16 @@
       'release_trybot',
     ],
 
+    'release_trybot_minimal_symbols': [
+      'release_trybot', 'minimal_symbols',
+    ],
+
     'release_trybot_arm': [
       'release_trybot', 'arm',
+    ],
+
+    'release_trybot_fuchsia': [
+      'release_trybot', 'fuchsia',
     ],
 
     'release_trybot_x86': [
@@ -1593,6 +1619,10 @@
       'gn_args': 'is_clang=true',
     },
 
+    'no_clang': {
+      'gn_args': 'is_clang=false',
+    },
+
     'cronet': {
       'gn_args': ('disable_file_support=true disable_ftp_support=true '
                   'enable_websockets=false use_platform_icu_alternatives=true '
@@ -1681,7 +1711,10 @@
     'goma': {
       # The MB code will properly escape goma_dir if necessary in the GYP
       # code path; the GN code path needs no escaping.
-      'gn_args': 'use_goma=true',
+      # We also set strip_absolute_paths to ensure that we can get deterministic
+      # builds. This isn't just on by default when goma is on so that devs
+      # can do goma builds but still be able to debug by default.
+      'gn_args': 'use_goma=true strip_absolute_paths_from_debug_symbols=true',
     },
 
     'gpu_fyi_tests': {
@@ -1732,7 +1765,7 @@
     },
 
     'minimal_symbols': {
-      'gn_args': 'symbol_level=1 strip_absolute_paths_from_debug_symbols=true',
+      'gn_args': 'symbol_level=1',
     },
 
     'mipsel': {

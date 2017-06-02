@@ -177,6 +177,10 @@ class _ApkDelegate(object):
       except Exception:
         device.ForceStop(self._package)
         raise
+      # TODO(jbudorick): Remove this after resolving crbug.com/726880
+      logging.info(
+          '%s size on device: %s',
+          stdout_file.name, device.StatPath(stdout_file.name).get('st_size', 0))
       return device.ReadFile(stdout_file.name).splitlines()
 
   def PullAppFiles(self, device, files, directory):

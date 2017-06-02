@@ -7,9 +7,9 @@ from page_sets.system_health import platforms
 from page_sets.system_health import story_tags
 from page_sets.system_health import system_health_story
 
+from page_sets.login_helpers import facebook_login
 from page_sets.login_helpers import pinterest_login
 
-from telemetry import decorators
 from telemetry.util import js_template
 
 
@@ -159,8 +159,6 @@ class FlipboardDesktopStory(_ArticleBrowsingStory):
   SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
 
 
-# crbug.com/657665 for win and mac
-@decorators.Disabled('win', 'mac')
 class HackerNewsDesktopStory(_ArticleBrowsingStory):
   NAME = 'browse:news:hackernews'
   URL = 'https://news.ycombinator.com'
@@ -211,7 +209,6 @@ class TwitterMobileStory(_ArticleBrowsingStory):
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
 
 
-@decorators.Disabled('win')  # crbug.com/662971
 class TwitterDesktopStory(_ArticleBrowsingStory):
   NAME = 'browse:social:twitter'
   URL = 'https://www.twitter.com/nasa'
@@ -247,7 +244,6 @@ class WashingtonPostMobileStory(_ArticleBrowsingStory):
 ##############################################################################
 
 
-@decorators.Disabled('win')  # crbug.com/673775
 class GoogleDesktopStory(_ArticleBrowsingStory):
   """
   A typical google search story:
@@ -389,8 +385,6 @@ class ImgurMobileStory(_MediaBrowsingStory):
   TAGS = [story_tags.EMERGING_MARKET]
 
 
-# crbug.com/704197 for win and mac
-@decorators.Disabled('win', 'mac')
 class ImgurDesktopStory(_MediaBrowsingStory):
   NAME = 'browse:media:imgur'
   URL = 'http://imgur.com/gallery/5UlBN'
@@ -515,7 +509,6 @@ class PinterestDesktopStory(_MediaBrowsingStory):
 ##############################################################################
 
 
-@decorators.Disabled('android')  # crbug.com/708300.
 class BrowseFlipKartMobileStory(_ArticleBrowsingStory):
   NAME = 'browse:shopping:flipkart'
   URL = 'https://flipkart.com/search?q=Sunglasses'
@@ -575,7 +568,6 @@ class BrowseTOIMobileStory(_ArticleBrowsingStory):
   ITEM_SELECTOR = '.dummy-img'
 
 
-@decorators.Disabled('android')  # crbug.com/714650
 class BrowseGloboMobileStory(_ArticleBrowsingStory):
   NAME = 'browse:news:globo'
   URL = 'http://www.globo.com'
@@ -653,8 +645,6 @@ class GoogleMapsMobileStory(system_health_story.SystemHealthStory):
     action_runner.ClickElement(selector=selector)
 
 
-# crbug.com/712694 on all platforms.
-@decorators.Disabled('all')
 class GoogleMapsStory(_BrowsingStory):
   """
   Google maps story:
@@ -737,8 +727,6 @@ class GoogleMapsStory(_BrowsingStory):
     action_runner.Wait(2)
 
 
-# crbug.com/708590 on all platforms.
-@decorators.Disabled('all')
 class GoogleEarthStory(_BrowsingStory):
   """
   Google Earth story:
@@ -786,3 +774,131 @@ class GoogleEarthStory(_BrowsingStory):
     action_runner.RepeatableBrowserDrivenScroll(
         x_scroll_distance_ratio = 1, y_scroll_distance_ratio = 0,
         repeat_count=3, speed=500, timeout=120)
+
+
+##############################################################################
+# Browsing stories with infinite scrolling
+##############################################################################
+
+
+class _InfiniteScrollStory(system_health_story.SystemHealthStory):
+  SUPPORTED_PLATFORMS = platforms.ALL_PLATFORMS
+
+  SCROLL_DISTANCE = 25000
+  SCROLL_STEP = 1000
+  MAX_SCROLL_RETRIES = 3
+  TIME_BEFORE_SCROLL_RETRY_IN_SECONDS = 1
+  TIME_TO_WAIT_BEFORE_STARTING_IN_SECONDS = 5
+
+  def __init__(self, story_set, take_memory_measurement):
+    super(_InfiniteScrollStory, self).__init__(story_set,
+        take_memory_measurement)
+    self.script_to_evaluate_on_commit = '''
+        window.WebSocket = undefined;
+        window.Worker = undefined;
+        window.performance = undefined;'''
+
+  def _DidLoadDocument(self, action_runner):
+    action_runner.WaitForJavaScriptCondition(
+      'document.body != null && '
+      'document.body.scrollHeight > window.innerHeight && '
+      '!document.body.addEventListener("touchstart", function() {})')
+    action_runner.Wait(self.TIME_TO_WAIT_BEFORE_STARTING_IN_SECONDS)
+    self._Scroll(action_runner, self.SCROLL_DISTANCE, self.SCROLL_STEP)
+
+
+  def _Scroll(self, action_runner, distance, step_size):
+    """ This function scrolls the webpage by the given scroll distance in
+    multiple steps, where each step (except the last one) has the given size.
+
+    If scrolling gets stuck, the functions retries scrolling MAX_SCROLL_RETRIES
+    times waiting TIME_BEFORE_SCROLL_RETRY_IN_SECONDS seconds between retries.
+    """
+    remaining = distance - action_runner.EvaluateJavaScript('window.scrollY')
+    retry_count = 0
+    # Scroll until the window.scrollY is within 1 pixel of the target distance.
+    while remaining > 1:
+      action_runner.ScrollPage(distance=min(remaining, step_size) + 1)
+      new_remaining = (distance -
+          action_runner.EvaluateJavaScript('window.scrollY'))
+      if remaining <= new_remaining:
+        # Scrolling is stuck. This can happen if the page is loading
+        # resources. Give the page some time and retry scrolling.
+        if retry_count == self.MAX_SCROLL_RETRIES:
+          raise Exception('Scrolling stuck at %d' % remaining)
+        retry_count += 1
+        action_runner.Wait(self.TIME_BEFORE_SCROLL_RETRY_IN_SECONDS)
+      else:
+        retry_count = 0
+        remaining = new_remaining
+
+  @classmethod
+  def GenerateStoryDescription(cls):
+    return 'Load %s then make a very long scroll.' % cls.URL
+
+
+class DiscourseDesktopStory(_InfiniteScrollStory):
+  NAME = 'browse:tech:discourse_infinite_scroll'
+  URL = ('https://meta.discourse.org/t/the-official-discourse-tags-plugin-discourse-tagging/26482')
+  SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
+  TAGS = [story_tags.INFINITE_SCROLL]
+
+
+class DiscourseMobileStory(_InfiniteScrollStory):
+  NAME = 'browse:tech:discourse_infinite_scroll'
+  URL = ('https://meta.discourse.org/t/the-official-discourse-tags-plugin-discourse-tagging/26482')
+  SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
+  SCROLL_DISTANCE = 15000
+  TAGS = [story_tags.INFINITE_SCROLL]
+
+
+class FacebookScrollDesktopStory(_InfiniteScrollStory):
+  NAME = 'browse:social:facebook_infinite_scroll'
+  URL = 'https://www.facebook.com/shakira'
+  SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
+  TAGS = [story_tags.INFINITE_SCROLL]
+
+
+class FacebookScrollMobileStory(_InfiniteScrollStory):
+  NAME = 'browse:social:facebook_infinite_scroll'
+  URL = 'https://m.facebook.com/shakira'
+  SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
+
+  def _Login(self, action_runner):
+    facebook_login.LoginWithMobileSite(
+        action_runner, 'facebook3', self.credentials_path)
+
+
+class FlickrDesktopStory(_InfiniteScrollStory):
+  NAME = 'browse:media:flickr_infinite_scroll'
+  URL = 'https://www.flickr.com/explore'
+  SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
+  TAGS = [story_tags.INFINITE_SCROLL]
+
+
+class FlickrMobileStory(_InfiniteScrollStory):
+  NAME = 'browse:media:flickr_infinite_scroll'
+  URL = 'https://www.flickr.com/explore'
+  SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
+  SCROLL_DISTANCE = 10000
+  TAGS = [story_tags.INFINITE_SCROLL]
+
+
+class PinterestMobileStory(_InfiniteScrollStory):
+  NAME = 'browse:social:pinterest_infinite_scroll'
+  URL = 'https://www.pinterest.com/all'
+  SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
+  TAGS = [story_tags.INFINITE_SCROLL]
+
+
+class TumblrStory(_InfiniteScrollStory):
+  NAME = 'browse:social:tumblr_infinite_scroll'
+  URL = 'http://techcrunch.tumblr.com/'  # This page doesn't support HTTPS.
+  TAGS = [story_tags.INFINITE_SCROLL]
+
+
+class TwitterScrollDesktopStory(_InfiniteScrollStory):
+  NAME = 'browse:social:twitter_infinite_scroll'
+  URL = 'https://twitter.com/taylorswift13'
+  SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
+  TAGS = [story_tags.INFINITE_SCROLL]

@@ -139,7 +139,6 @@ SKIP_GN_ISOLATE_MAP_TARGETS = {
 
   # These targets are listed only in build-side recipes.
   'All_syzygy',
-  'aura_builder',
   'blink_tests',
   'cast_shell',
   'cast_shell_apk',

@@ -129,8 +129,8 @@ typedef struct x509_object_st
 		} data;
 	} X509_OBJECT;
 
-DECLARE_STACK_OF(X509_LOOKUP)
-DECLARE_STACK_OF(X509_OBJECT)
+DEFINE_STACK_OF(X509_LOOKUP)
+DEFINE_STACK_OF(X509_OBJECT)
 
 /* This is a static that defines the function interface */
 typedef struct x509_lookup_method_st
@@ -173,7 +173,7 @@ struct X509_VERIFY_PARAM_st
 	X509_VERIFY_PARAM_ID *id;	/* opaque ID data */
 	};
 
-DECLARE_STACK_OF(X509_VERIFY_PARAM)
+DEFINE_STACK_OF(X509_VERIFY_PARAM)
 
 /* This is used to hold everything.  It is used for all certificate
  * validation.  Once we have a certificate chain, the 'verify'
@@ -513,7 +513,7 @@ OPENSSL_EXPORT int	X509_STORE_set_default_paths(X509_STORE *ctx);
 #endif
 
 OPENSSL_EXPORT int X509_STORE_CTX_get_ex_new_index(long argl, void *argp, CRYPTO_EX_unused *unused,
-	CRYPTO_EX_dup *dup_func, CRYPTO_EX_free *free_func);
+	CRYPTO_EX_dup *dup_unused, CRYPTO_EX_free *free_func);
 OPENSSL_EXPORT int	X509_STORE_CTX_set_ex_data(X509_STORE_CTX *ctx,int idx,void *data);
 OPENSSL_EXPORT void *	X509_STORE_CTX_get_ex_data(X509_STORE_CTX *ctx,int idx);
 OPENSSL_EXPORT int	X509_STORE_CTX_get_error(X509_STORE_CTX *ctx);

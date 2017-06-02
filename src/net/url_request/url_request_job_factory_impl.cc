@@ -25,7 +25,7 @@ URLRequestJobFactoryImpl::~URLRequestJobFactoryImpl() {}
 bool URLRequestJobFactoryImpl::SetProtocolHandler(
     const std::string& scheme,
     std::unique_ptr<ProtocolHandler> protocol_handler) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   if (!protocol_handler) {
     ProtocolHandlerMap::iterator it = protocol_handler_map_.find(scheme);
@@ -46,7 +46,7 @@ URLRequestJob* URLRequestJobFactoryImpl::MaybeCreateJobWithProtocolHandler(
     const std::string& scheme,
     URLRequest* request,
     NetworkDelegate* network_delegate) const {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   if (g_interceptor_for_testing) {
     URLRequestJob* job = g_interceptor_for_testing->MaybeInterceptRequest(
         request, network_delegate);
@@ -75,14 +75,14 @@ URLRequestJob* URLRequestJobFactoryImpl::MaybeInterceptResponse(
 
 bool URLRequestJobFactoryImpl::IsHandledProtocol(
     const std::string& scheme) const {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   return base::ContainsKey(protocol_handler_map_, scheme) ||
          URLRequestJobManager::GetInstance()->SupportsScheme(scheme);
 }
 
 bool URLRequestJobFactoryImpl::IsSafeRedirectTarget(
     const GURL& location) const {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   if (!location.is_valid()) {
     // Error cases are safely handled.
     return true;

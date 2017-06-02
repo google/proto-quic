@@ -6,6 +6,7 @@
 
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "base/bind.h"
@@ -16,6 +17,7 @@
 #include "base/timer/timer.h"
 #include "base/values.h"
 #include "net/reporting/reporting_cache.h"
+#include "net/reporting/reporting_delegate.h"
 #include "net/reporting/reporting_endpoint_manager.h"
 #include "net/reporting/reporting_observer.h"
 #include "net/reporting/reporting_report.h"
@@ -115,6 +117,9 @@ class ReportingDeliveryAgentImpl : public ReportingDeliveryAgent,
     std::map<OriginGroup, std::vector<const ReportingReport*>>
         origin_group_reports;
     for (const ReportingReport* report : reports) {
+      url::Origin origin(report->url);
+      if (!delegate()->CanSendReport(origin))
+        continue;
       OriginGroup origin_group(url::Origin(report->url), report->group);
       origin_group_reports[origin_group].push_back(report);
     }
@@ -186,6 +191,7 @@ class ReportingDeliveryAgentImpl : public ReportingDeliveryAgent,
 
   const ReportingPolicy& policy() { return context_->policy(); }
   base::TickClock* tick_clock() { return context_->tick_clock(); }
+  ReportingDelegate* delegate() { return context_->delegate(); }
   ReportingCache* cache() { return context_->cache(); }
   ReportingUploader* uploader() { return context_->uploader(); }
   ReportingEndpointManager* endpoint_manager() {

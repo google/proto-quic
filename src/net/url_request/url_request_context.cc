@@ -5,7 +5,6 @@
 #include "net/url_request/url_request_context.h"
 
 #include <inttypes.h>
-#include <utility>
 
 #include "base/compiler_specific.h"
 #include "base/debug/alias.h"
@@ -53,13 +52,13 @@ URLRequestContext::URLRequestContext()
       enable_brotli_(false),
       check_cleartext_permitted_(false),
       name_(nullptr),
-      largest_outstanding_requests_count_seen_(0),
-      has_reported_too_many_outstanding_requests_(false) {
+      largest_outstanding_requests_count_seen_(0) {
   base::trace_event::MemoryDumpManager::GetInstance()->RegisterDumpProvider(
       this, "URLRequestContext", base::ThreadTaskRunnerHandle::Get());
 }
 
 URLRequestContext::~URLRequestContext() {
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   AssertNoURLRequests();
   base::trace_event::MemoryDumpManager::GetInstance()->UnregisterDumpProvider(
       this);
@@ -103,12 +102,22 @@ const HttpNetworkSession::Params* URLRequestContext::GetNetworkSessionParams(
   return &network_session->params();
 }
 
+const HttpNetworkSession::Context* URLRequestContext::GetNetworkSessionContext()
+    const {
+  HttpTransactionFactory* transaction_factory = http_transaction_factory();
+  if (!transaction_factory)
+    return nullptr;
+  HttpNetworkSession* network_session = transaction_factory->GetSession();
+  if (!network_session)
+    return nullptr;
+  return &network_session->context();
+}
+
 std::unique_ptr<URLRequest> URLRequestContext::CreateRequest(
     const GURL& url,
     RequestPriority priority,
     URLRequest::Delegate* delegate) const {
-  return base::WrapUnique(
-      new URLRequest(url, priority, delegate, this, network_delegate_));
+  return CreateRequest(url, priority, delegate, MISSING_TRAFFIC_ANNOTATION);
 }
 
 std::unique_ptr<URLRequest> URLRequestContext::CreateRequest(
@@ -116,30 +125,12 @@ std::unique_ptr<URLRequest> URLRequestContext::CreateRequest(
     RequestPriority priority,
     URLRequest::Delegate* delegate,
     NetworkTrafficAnnotationTag traffic_annotation) const {
-  // |traffic_annotation| is just a tag that is extracted during static
-  // code analysis and can be ignored here.
-  return CreateRequest(url, priority, delegate);
+  return base::WrapUnique(new URLRequest(
+      url, priority, delegate, this, network_delegate_, traffic_annotation));
 }
 
 void URLRequestContext::set_cookie_store(CookieStore* cookie_store) {
   cookie_store_ = cookie_store;
-}
-
-bool URLRequestContext::AddToAddressMap(const void* const address) {
-  int count = ++address_map_[address];
-  if (!has_reported_too_many_outstanding_requests_ && count > 1000) {
-    has_reported_too_many_outstanding_requests_ = true;
-    return false;
-  }
-  return true;
-}
-
-void URLRequestContext::RemoveFromAddressMap(const void* const address) const {
-  auto iter = address_map_.find(address);
-  DCHECK(address_map_.end() != iter);
-  iter->second -= 1;
-  if (iter->second == 0)
-    address_map_.erase(iter);
 }
 
 void URLRequestContext::InsertURLRequest(const URLRequest* request) const {
@@ -148,6 +139,9 @@ void URLRequestContext::InsertURLRequest(const URLRequest* request) const {
     largest_outstanding_requests_count_seen_ = url_requests_.size();
     UMA_HISTOGRAM_COUNTS_1M("Net.URLRequestContext.OutstandingRequests",
                             largest_outstanding_requests_count_seen_);
+    UMA_HISTOGRAM_SPARSE_SLOWLY(
+        "Net.URLRequestContext.OutstandingRequests.Type",
+        request->traffic_annotation().unique_id_hash_code);
   }
 }
 
@@ -171,7 +165,6 @@ void URLRequestContext::AssertNoURLRequests() const {
     CHECK(false) << "Leaked " << num_requests << " URLRequest(s). First URL: "
                  << request->url().spec().c_str() << ".";
   }
-  DCHECK(address_map_.empty());
 }
 
 bool URLRequestContext::OnMemoryDump(

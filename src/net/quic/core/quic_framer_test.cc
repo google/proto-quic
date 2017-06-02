@@ -676,7 +676,6 @@ TEST_P(QuicFramerTest, PacketHeader) {
   EXPECT_EQ(QUIC_MISSING_PAYLOAD, framer_.error());
   ASSERT_TRUE(visitor_.header_.get());
   EXPECT_EQ(kConnectionId, visitor_.header_->public_header.connection_id);
-  EXPECT_FALSE(visitor_.header_->public_header.multipath_flag);
   EXPECT_FALSE(visitor_.header_->public_header.reset_flag);
   EXPECT_FALSE(visitor_.header_->public_header.version_flag);
   EXPECT_EQ(kPacketNumber, visitor_.header_->packet_number);
@@ -730,7 +729,6 @@ TEST_P(QuicFramerTest, PacketHeaderWith0ByteConnectionId) {
   EXPECT_EQ(QUIC_MISSING_PAYLOAD, framer_.error());
   ASSERT_TRUE(visitor_.header_.get());
   EXPECT_EQ(kConnectionId, visitor_.header_->public_header.connection_id);
-  EXPECT_FALSE(visitor_.header_->public_header.multipath_flag);
   EXPECT_FALSE(visitor_.header_->public_header.reset_flag);
   EXPECT_FALSE(visitor_.header_->public_header.version_flag);
   EXPECT_EQ(kPacketNumber, visitor_.header_->packet_number);
@@ -812,7 +810,6 @@ TEST_P(QuicFramerTest, PacketHeaderWithVersionFlag) {
   EXPECT_EQ(QUIC_MISSING_PAYLOAD, framer_.error());
   ASSERT_TRUE(visitor_.header_.get());
   EXPECT_EQ(kConnectionId, visitor_.header_->public_header.connection_id);
-  EXPECT_FALSE(visitor_.header_->public_header.multipath_flag);
   EXPECT_FALSE(visitor_.header_->public_header.reset_flag);
   EXPECT_TRUE(visitor_.header_->public_header.version_flag);
   EXPECT_EQ(GetParam(), visitor_.header_->public_header.versions[0]);
@@ -889,7 +886,6 @@ TEST_P(QuicFramerTest, PacketHeaderWith4BytePacketNumber) {
   EXPECT_EQ(QUIC_MISSING_PAYLOAD, framer_.error());
   ASSERT_TRUE(visitor_.header_.get());
   EXPECT_EQ(kConnectionId, visitor_.header_->public_header.connection_id);
-  EXPECT_FALSE(visitor_.header_->public_header.multipath_flag);
   EXPECT_FALSE(visitor_.header_->public_header.reset_flag);
   EXPECT_FALSE(visitor_.header_->public_header.version_flag);
   EXPECT_EQ(kPacketNumber, visitor_.header_->packet_number);
@@ -963,7 +959,6 @@ TEST_P(QuicFramerTest, PacketHeaderWith2BytePacketNumber) {
   EXPECT_EQ(QUIC_MISSING_PAYLOAD, framer_.error());
   ASSERT_TRUE(visitor_.header_.get());
   EXPECT_EQ(kConnectionId, visitor_.header_->public_header.connection_id);
-  EXPECT_FALSE(visitor_.header_->public_header.multipath_flag);
   EXPECT_FALSE(visitor_.header_->public_header.reset_flag);
   EXPECT_FALSE(visitor_.header_->public_header.version_flag);
   EXPECT_EQ(PACKET_2BYTE_PACKET_NUMBER,
@@ -1025,7 +1020,6 @@ TEST_P(QuicFramerTest, PacketHeaderWith1BytePacketNumber) {
   EXPECT_EQ(QUIC_MISSING_PAYLOAD, framer_.error());
   ASSERT_TRUE(visitor_.header_.get());
   EXPECT_EQ(kConnectionId, visitor_.header_->public_header.connection_id);
-  EXPECT_FALSE(visitor_.header_->public_header.multipath_flag);
   EXPECT_FALSE(visitor_.header_->public_header.reset_flag);
   EXPECT_FALSE(visitor_.header_->public_header.version_flag);
   EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
@@ -1116,8 +1110,7 @@ TEST_P(QuicFramerTest, PacketWithDiversificationNonce) {
   // clang-format off
   unsigned char packet[] = {
     // public flags: includes nonce flag
-    static_cast<unsigned char>(
-        FLAGS_quic_reloadable_flag_quic_remove_multipath_bit ? 0x3C : 0x7C),
+    0x3C,
     // connection_id
     0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
     // nonce
@@ -1135,8 +1128,7 @@ TEST_P(QuicFramerTest, PacketWithDiversificationNonce) {
 
   unsigned char packet_cid_be[] = {
     // public flags: includes nonce flag
-    static_cast<unsigned char>(
-        FLAGS_quic_reloadable_flag_quic_remove_multipath_bit ? 0x3C : 0x7C),
+    0x3C,
     // connection_id
     0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
     // nonce
@@ -1154,8 +1146,7 @@ TEST_P(QuicFramerTest, PacketWithDiversificationNonce) {
 
   unsigned char packet39[] = {
     // public flags: includes nonce flag
-    static_cast<unsigned char>(
-        FLAGS_quic_reloadable_flag_quic_remove_multipath_bit ? 0x3C : 0x7C),
+    0x3C,
     // connection_id
     0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
     // nonce
@@ -1173,8 +1164,7 @@ TEST_P(QuicFramerTest, PacketWithDiversificationNonce) {
 
   unsigned char packet_cid_be39[] = {
     // public flags: includes nonce flag
-    static_cast<unsigned char>(
-        FLAGS_quic_reloadable_flag_quic_remove_multipath_bit ? 0x3C : 0x7C),
+    0x3C,
     // connection_id
     0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
     // nonce
@@ -1209,8 +1199,7 @@ TEST_P(QuicFramerTest, LargePublicFlagWithMismatchedVersions) {
   // clang-format off
   unsigned char packet[] = {
     // public flags (8 byte connection_id, version flag and an unknown flag)
-    static_cast<unsigned char>(
-        FLAGS_quic_reloadable_flag_quic_remove_multipath_bit ? 0x39 : 0x79),
+    0x39,
     // connection_id
     0x10, 0x32, 0x54, 0x76,
     0x98, 0xBA, 0xDC, 0xFE,
@@ -1227,8 +1216,7 @@ TEST_P(QuicFramerTest, LargePublicFlagWithMismatchedVersions) {
 
   unsigned char packet_cid_be[] = {
     // public flags (8 byte connection_id, version flag and an unknown flag)
-    static_cast<unsigned char>(
-        FLAGS_quic_reloadable_flag_quic_remove_multipath_bit ? 0x39 : 0x79),
+    0x39,
     // connection_id
     0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
     // version tag
@@ -1244,8 +1232,7 @@ TEST_P(QuicFramerTest, LargePublicFlagWithMismatchedVersions) {
 
   unsigned char packet39[] = {
     // public flags (8 byte connection_id, version flag and an unknown flag)
-    static_cast<unsigned char>(
-        FLAGS_quic_reloadable_flag_quic_remove_multipath_bit ? 0x39 : 0x79),
+    0x39,
     // connection_id
     0x10, 0x32, 0x54, 0x76,
     0x98, 0xBA, 0xDC, 0xFE,
@@ -1262,8 +1249,7 @@ TEST_P(QuicFramerTest, LargePublicFlagWithMismatchedVersions) {
 
   unsigned char packet_cid_be39[] = {
     // public flags (8 byte connection_id, version flag and an unknown flag)
-    static_cast<unsigned char>(
-        FLAGS_quic_reloadable_flag_quic_remove_multipath_bit ? 0x39 : 0x79),
+    0x39,
     // connection_id
     0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
     // version tag
@@ -4777,7 +4763,7 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithVersionFlag) {
       static_cast<unsigned char>(
           FLAGS_quic_reloadable_flag_quic_remove_v33_hacks2 ? 0x39 : 0x3D),
       // connection_id
-          0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
+      0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
       // version tag
       'Q', '0',  GetQuicVersionDigitTens(), GetQuicVersionDigitOnes(),
       // packet number
@@ -4819,7 +4805,7 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithVersionFlag) {
       static_cast<unsigned char>(
           FLAGS_quic_reloadable_flag_quic_remove_v33_hacks2 ? 0x39 : 0x3D),
       // connection_id
-          0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
+      0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
       // version tag
       'Q', '0',  GetQuicVersionDigitTens(), GetQuicVersionDigitOnes(),
       // packet number
@@ -4858,9 +4844,9 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithVersionFlag) {
   // clang-format on
 
   unsigned char* packets[] = {packet, packet_cid_be, packet39, packet_cid_be39};
-  size_t index = GetPacketIndex(framer_.version(), framer_.perspective());
 
   QuicFramerPeer::SetPerspective(&framer_, Perspective::IS_CLIENT);
+  size_t index = GetPacketIndex(framer_.version(), framer_.perspective());
   std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 

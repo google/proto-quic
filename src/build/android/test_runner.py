@@ -376,12 +376,6 @@ def AddInstrumentationTestOptions(parser):
       dest='run_disabled', action='store_true',
       help='Also run disabled tests if applicable.')
   parser.add_argument(
-      '--regenerate-goldens',
-      action='store_true', dest='regenerate_goldens',
-      help='Causes the render tests to not fail when a check'
-           'fails or the golden image is missing but to render'
-           'the view and carry on.')
-  parser.add_argument(
       '--render-results-directory',
       dest='render_results_dir',
       help='Directory to pull render test result images off of the device to.')
@@ -430,6 +424,10 @@ def AddInstrumentationTestOptions(parser):
       '--timeout-scale',
       type=float,
       help='Factor by which timeouts should be scaled.')
+  parser.add_argument(
+      '--ui-screenshot-directory',
+      dest='ui_screenshot_dir', type=os.path.realpath,
+      help='Destination for screenshots captured by the tests')
 
   # These arguments are suppressed from the help text because they should
   # only ever be specified by an intermediate script.

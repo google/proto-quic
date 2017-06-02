@@ -105,6 +105,40 @@ TEST(NetworkChangeNotifierTest, IgnoreTeredoOnWindows) {
 #endif
 }
 
+TEST(NetworkChangeNotifierTest, IgnoreAirdropOnMac) {
+  NetworkInterfaceList list;
+  NetworkInterface interface_airdrop;
+  interface_airdrop.type = NetworkChangeNotifier::CONNECTION_ETHERNET;
+  interface_airdrop.name = "awdl0";
+  interface_airdrop.friendly_name = "awdl0";
+  list.push_back(interface_airdrop);
+
+#if defined(OS_MACOSX)
+  EXPECT_EQ(NetworkChangeNotifier::CONNECTION_NONE,
+            NetworkChangeNotifier::ConnectionTypeFromInterfaceList(list));
+#else
+  EXPECT_EQ(NetworkChangeNotifier::CONNECTION_ETHERNET,
+            NetworkChangeNotifier::ConnectionTypeFromInterfaceList(list));
+#endif
+}
+
+TEST(NetworkChangeNotifierTest, IgnoreTunnelsOnMac) {
+  NetworkInterfaceList list;
+  NetworkInterface interface_tunnel;
+  interface_tunnel.type = NetworkChangeNotifier::CONNECTION_ETHERNET;
+  interface_tunnel.name = "utun0";
+  interface_tunnel.friendly_name = "utun0";
+  list.push_back(interface_tunnel);
+
+#if defined(OS_MACOSX)
+  EXPECT_EQ(NetworkChangeNotifier::CONNECTION_NONE,
+            NetworkChangeNotifier::ConnectionTypeFromInterfaceList(list));
+#else
+  EXPECT_EQ(NetworkChangeNotifier::CONNECTION_ETHERNET,
+            NetworkChangeNotifier::ConnectionTypeFromInterfaceList(list));
+#endif
+}
+
 TEST(NetworkChangeNotifierTest, IgnoreVMInterfaces) {
   NetworkInterfaceList list;
   NetworkInterface interface_vmnet_linux;

@@ -972,7 +972,7 @@ TEST_P(QuicHeadersStreamTest, WritevStreamData) {
       framer_->ProcessInput(saved_data_.data(), saved_data_.length());
       EXPECT_EQ(saved_payloads_, data);
 
-      if (use_ack_listener) {
+      if (use_ack_listener && !session_.use_stream_notifier()) {
         // Notice, acked bytes doesn't include extra bytes used by
         // HTTP/2 DATA frame headers.
         EXPECT_EQ(ack_listener->total_acked_bytes(), data_len);
@@ -1039,6 +1039,65 @@ TEST_P(QuicHeadersStreamTest, WritevStreamDataSendBlocked) {
 
   EXPECT_EQ(consumed_data.bytes_consumed, 0u);
   EXPECT_EQ(consumed_data.fin_consumed, false);
+}
+
+TEST_P(QuicHeadersStreamTest, AckSentData) {
+  if (!session_.use_stream_notifier()) {
+    return;
+  }
+  EXPECT_CALL(session_,
+              WritevData(headers_stream_, kHeadersStreamId, _, _, NO_FIN, _))
+      .WillRepeatedly(
+          WithArgs<2>(Invoke(this, &QuicHeadersStreamTest::SaveIov)));
+  InSequence s;
+  QuicReferenceCountedPointer<MockAckListener> ack_listener1(
+      new MockAckListener());
+  QuicReferenceCountedPointer<MockAckListener> ack_listener2(
+      new MockAckListener());
+  QuicReferenceCountedPointer<MockAckListener> ack_listener3(
+      new MockAckListener());
+
+  // Packet 1.
+  headers_stream_->WriteOrBufferData("Header5", false, ack_listener1);
+  headers_stream_->WriteOrBufferData("Header5", false, ack_listener1);
+  headers_stream_->WriteOrBufferData("Header7", false, ack_listener2);
+
+  // Packet 2.
+  headers_stream_->WriteOrBufferData("Header9", false, ack_listener3);
+  headers_stream_->WriteOrBufferData("Header7", false, ack_listener2);
+
+  // Packet 3.
+  headers_stream_->WriteOrBufferData("Header9", false, ack_listener3);
+
+  QuicStreamFrame frame1(kHeadersStreamId, false, 0, "Header5");
+  QuicStreamFrame frame2(kHeadersStreamId, false, 7, "Header5");
+  // This is a bad frame3.
+  QuicStreamFrame frame3(kHeadersStreamId, false, 14, "BadHeader7");
+  QuicStreamFrame frame4(kHeadersStreamId, false, 21, "Header9");
+  QuicStreamFrame frame5(kHeadersStreamId, false, 28, "Header7");
+  QuicStreamFrame frame6(kHeadersStreamId, false, 35, "Header9");
+  // Packet 2 gets retransmitted.
+  EXPECT_CALL(*ack_listener3, OnPacketRetransmitted(7)).Times(1);
+  EXPECT_CALL(*ack_listener2, OnPacketRetransmitted(7)).Times(1);
+  headers_stream_->OnStreamFrameRetransmitted(frame4);
+  headers_stream_->OnStreamFrameRetransmitted(frame5);
+
+  // Packets are acked in order: 2, 3, 1.
+  EXPECT_CALL(*ack_listener3, OnPacketAcked(7, _));
+  EXPECT_CALL(*ack_listener2, OnPacketAcked(7, _));
+  headers_stream_->OnStreamFrameAcked(frame4, QuicTime::Delta::Zero());
+  headers_stream_->OnStreamFrameAcked(frame5, QuicTime::Delta::Zero());
+
+  EXPECT_CALL(*ack_listener3, OnPacketAcked(7, _));
+  headers_stream_->OnStreamFrameAcked(frame6, QuicTime::Delta::Zero());
+
+  EXPECT_CALL(*ack_listener1, OnPacketAcked(7, _));
+  EXPECT_CALL(*ack_listener1, OnPacketAcked(7, _));
+  headers_stream_->OnStreamFrameAcked(frame1, QuicTime::Delta::Zero());
+  headers_stream_->OnStreamFrameAcked(frame2, QuicTime::Delta::Zero());
+  // Unsent data is acked.
+  EXPECT_CALL(*connection_, CloseConnection(QUIC_INTERNAL_ERROR, _, _));
+  headers_stream_->OnStreamFrameAcked(frame3, QuicTime::Delta::Zero());
 }
 
 }  // namespace

@@ -21,24 +21,6 @@ static bool CalculateReachability(SCNetworkConnectionFlags flags) {
   return reachable && !connection_required;
 }
 
-NetworkChangeNotifier::ConnectionType CalculateConnectionType(
-    SCNetworkConnectionFlags flags) {
-  bool reachable = CalculateReachability(flags);
-  if (reachable) {
-#if defined(OS_IOS)
-    return (flags & kSCNetworkReachabilityFlagsIsWWAN) ?
-        NetworkChangeNotifier::CONNECTION_3G :
-        NetworkChangeNotifier::CONNECTION_WIFI;
-#else
-    // TODO(droger): Get something more detailed than CONNECTION_UNKNOWN.
-    // http://crbug.com/112937
-    return NetworkChangeNotifier::CONNECTION_UNKNOWN;
-#endif  // defined(OS_IOS)
-  } else {
-    return NetworkChangeNotifier::CONNECTION_NONE;
-  }
-}
-
 // Thread on which we can run DnsConfigService, which requires a TYPE_IO
 // message loop.
 class NetworkChangeNotifierMac::DnsConfigServiceThread : public base::Thread {
@@ -115,6 +97,23 @@ NetworkChangeNotifierMac::GetCurrentConnectionType() const {
 
 void NetworkChangeNotifierMac::Forwarder::Init()  {
   net_config_watcher_->SetInitialConnectionType();
+}
+
+// static
+NetworkChangeNotifier::ConnectionType
+NetworkChangeNotifierMac::CalculateConnectionType(
+    SCNetworkConnectionFlags flags) {
+  bool reachable = CalculateReachability(flags);
+  if (reachable) {
+#if defined(OS_IOS)
+    return (flags & kSCNetworkReachabilityFlagsIsWWAN) ? CONNECTION_3G
+                                                       : CONNECTION_WIFI;
+#else
+    return ConnectionTypeFromInterfaces();
+#endif  // defined(OS_IOS)
+  } else {
+    return CONNECTION_NONE;
+  }
 }
 
 void NetworkChangeNotifierMac::Forwarder::StartReachabilityNotifications() {

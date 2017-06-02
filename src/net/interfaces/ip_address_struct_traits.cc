@@ -13,7 +13,7 @@ bool StructTraits<net::interfaces::IPAddressDataView, net::IPAddress>::Read(
   if (!data.ReadAddress(&bytes))
     return false;
 
-  *out = net::IPAddress(bytes);
+  *out = net::IPAddress(bytes.data(), bytes.size());
   return out->IsValid();
 }
 

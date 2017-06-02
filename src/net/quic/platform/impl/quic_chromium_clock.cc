@@ -4,12 +4,6 @@
 
 #include "net/quic/platform/impl/quic_chromium_clock.h"
 
-#if defined(OS_IOS)
-#include <time.h>
-
-#include "base/ios/ios_util.h"
-#endif
-
 #include "base/memory/singleton.h"
 #include "base/time/time.h"
 
@@ -29,21 +23,17 @@ QuicTime QuicChromiumClock::ApproximateNow() const {
 }
 
 QuicTime QuicChromiumClock::Now() const {
-#if defined(OS_IOS)
-  if (base::ios::IsRunningOnIOS10OrLater()) {
-    struct timespec tp;
-    if (clock_gettime(CLOCK_MONOTONIC, &tp) == 0) {
-      return CreateTimeFromMicroseconds(tp.tv_sec * 1000000 +
-                                        tp.tv_nsec / 1000);
-    }
-  }
-#endif
-  return CreateTimeFromMicroseconds(base::TimeTicks::Now().ToInternalValue());
+  int64_t ticks = (base::TimeTicks::Now() - base::TimeTicks()).InMicroseconds();
+  DCHECK_GE(ticks, 0);
+  return CreateTimeFromMicroseconds(ticks);
 }
 
 QuicWallTime QuicChromiumClock::WallNow() const {
-  return QuicWallTime::FromUNIXMicroseconds(base::Time::Now().ToJavaTime() *
-                                            1000);
+  const base::TimeDelta time_since_unix_epoch =
+      base::Time::Now() - base::Time::UnixEpoch();
+  int64_t time_since_unix_epoch_micro = time_since_unix_epoch.InMicroseconds();
+  DCHECK_GE(time_since_unix_epoch_micro, 0);
+  return QuicWallTime::FromUNIXMicroseconds(time_since_unix_epoch_micro);
 }
 
 }  // namespace net

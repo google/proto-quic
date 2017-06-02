@@ -112,7 +112,14 @@ std::unique_ptr<QuartcSessionInterface> QuartcFactory::CreateQuartcSession(
                                 : Perspective::IS_CLIENT;
   std::unique_ptr<QuicConnection> quic_connection =
       CreateQuicConnection(quartc_session_config, perspective);
+  QuicTagVector copt;
+  if (quartc_session_config.congestion_control ==
+      QuartcCongestionControl::kBBR) {
+    copt.push_back(kTBBR);
+  }
   QuicConfig quic_config;
+  quic_config.SetConnectionOptionsToSend(copt);
+  quic_config.SetClientConnectionOptions(copt);
   return std::unique_ptr<QuartcSessionInterface>(new QuartcSession(
       std::move(quic_connection), quic_config,
       quartc_session_config.unique_remote_server_id, perspective,

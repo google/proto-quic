@@ -33,7 +33,7 @@ namespace base {
 
 namespace {
 
-const int kDefaultCommitIntervalMs = 10000;
+constexpr auto kDefaultCommitInterval = TimeDelta::FromSeconds(10);
 
 // This enum is used to define the buckets for an enumerated UMA histogram.
 // Hence,
@@ -139,10 +139,9 @@ bool ImportantFileWriter::WriteFileAtomically(const FilePath& path,
 ImportantFileWriter::ImportantFileWriter(
     const FilePath& path,
     scoped_refptr<SequencedTaskRunner> task_runner)
-    : ImportantFileWriter(
-          path,
-          std::move(task_runner),
-          TimeDelta::FromMilliseconds(kDefaultCommitIntervalMs)) {}
+    : ImportantFileWriter(path,
+                          std::move(task_runner),
+                          kDefaultCommitInterval) {}
 
 ImportantFileWriter::ImportantFileWriter(
     const FilePath& path,
@@ -153,11 +152,11 @@ ImportantFileWriter::ImportantFileWriter(
       serializer_(nullptr),
       commit_interval_(interval),
       weak_factory_(this) {
-  DCHECK(CalledOnValidThread());
   DCHECK(task_runner_);
 }
 
 ImportantFileWriter::~ImportantFileWriter() {
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   // We're usually a member variable of some other object, which also tends
   // to be our serializer. It may not be safe to call back to the parent object
   // being destructed.
@@ -165,12 +164,12 @@ ImportantFileWriter::~ImportantFileWriter() {
 }
 
 bool ImportantFileWriter::HasPendingWrite() const {
-  DCHECK(CalledOnValidThread());
-  return timer_.IsRunning();
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+  return timer().IsRunning();
 }
 
 void ImportantFileWriter::WriteNow(std::unique_ptr<std::string> data) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   if (!IsValueInRangeForNumericType<int32_t>(data->length())) {
     NOTREACHED();
     return;
@@ -193,14 +192,15 @@ void ImportantFileWriter::WriteNow(std::unique_ptr<std::string> data) {
 }
 
 void ImportantFileWriter::ScheduleWrite(DataSerializer* serializer) {
-  DCHECK(CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 
   DCHECK(serializer);
   serializer_ = serializer;
 
-  if (!timer_.IsRunning()) {
-    timer_.Start(FROM_HERE, commit_interval_, this,
-                 &ImportantFileWriter::DoScheduledWrite);
+  if (!timer().IsRunning()) {
+    timer().Start(
+        FROM_HERE, commit_interval_,
+        Bind(&ImportantFileWriter::DoScheduledWrite, Unretained(this)));
   }
 }
 
@@ -224,8 +224,12 @@ void ImportantFileWriter::RegisterOnNextWriteCallbacks(
 }
 
 void ImportantFileWriter::ClearPendingWrite() {
-  timer_.Stop();
+  timer().Stop();
   serializer_ = nullptr;
+}
+
+void ImportantFileWriter::SetTimerForTesting(Timer* timer_override) {
+  timer_override_ = timer_override;
 }
 
 }  // namespace base

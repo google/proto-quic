@@ -71,6 +71,19 @@ def init_named_caches_stub(_run_dir):
   yield
 
 
+def put_to_named_cache(manager, cache_name, file_name, contents):
+  """Puts files into named cache."""
+  tdir = tempfile.mkdtemp(prefix=u'run_isolated_test')
+  try:
+    cache_dir = os.path.join(tdir, 'cache')
+    manager.install(cache_dir, cache_name)
+    with open(os.path.join(cache_dir, file_name), 'wb') as f:
+      f.write(contents)
+    manager.uninstall(cache_dir, cache_name)
+  finally:
+    file_path.rmtree(tdir)
+
+
 class StorageFake(object):
   def __init__(self, files):
     self._files = files.copy()
@@ -533,12 +546,12 @@ class RunIsolatedTest(RunIsolatedTestBase):
     ret = run_isolated.main(cmd)
     self.assertEqual(0, ret)
 
-    for path, cache_name in [('foo', 'cache_foo'), ('bar', 'cache_bar')]:
+    for cache_name in ('cache_foo', 'cache_bar'):
+      named_path = os.path.join(self.tempdir, 'c', 'named', cache_name)
+      self.assertTrue(os.path.exists(named_path))
       self.assertEqual(
-          os.path.abspath(os.readlink(
-              os.path.join(self.tempdir, 'ir', path))),
-          os.path.abspath(os.readlink(
-              os.path.join(self.tempdir, 'c', 'named', cache_name))),
+          os.path.join(self.tempdir, 'c'),
+          os.path.dirname(os.readlink(named_path)),
       )
 
   def test_modified_cwd(self):
@@ -610,13 +623,9 @@ class RunIsolatedTest(RunIsolatedTestBase):
       isolate_cache.write(small_digest, [small])
     with named_cache_manager.open(time_fn=lambda: fake_time):
       fake_time = 1
-      p = named_cache_manager.request('first')
-      with open(os.path.join(p, 'big'), 'wb') as f:
-        f.write(big)
+      put_to_named_cache(named_cache_manager, u'first', u'big', big)
       fake_time = 3
-      p = named_cache_manager.request('second')
-      with open(os.path.join(p, 'small'), 'wb') as f:
-        f.write(small)
+      put_to_named_cache(named_cache_manager, u'second', u'small', small)
 
     # Ensures the cache contain the expected data.
     actual = genTree(np)

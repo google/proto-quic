@@ -30,7 +30,7 @@ class PathBuilderDelegate {
         trust_store.AddTrustAnchorWithConstraints(test.chain.back());
         break;
       case CertificateTrustType::UNSPECIFIED:
-        LOG(ERROR) << "Unexpected CertificateTrustType";
+        trust_store.AddCertificateWithUnspecifiedTrust(test.chain.back());
         break;
       case CertificateTrustType::DISTRUSTED:
         trust_store.AddDistrustedCertificateForTest(test.chain.back());

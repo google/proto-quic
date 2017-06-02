@@ -16,12 +16,14 @@
 
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
-#include "base/threading/non_thread_safe.h"
+#include "base/threading/thread_checker.h"
+#include "base/time/default_tick_clock.h"
 #include "base/values.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/ip_address.h"
 #include "net/base/linked_hash_map.h"
 #include "net/base/net_export.h"
+#include "net/http/broken_alternative_services.h"
 #include "net/http/http_server_properties.h"
 
 namespace base {
@@ -30,18 +32,14 @@ class ListValue;
 
 namespace net {
 
-struct AlternativeServiceHash {
-  size_t operator()(const net::AlternativeService& entry) const {
-    return entry.protocol ^ std::hash<std::string>()(entry.host) ^ entry.port;
-  }
-};
-
 // The implementation for setting/retrieving the HTTP server properties.
 class NET_EXPORT HttpServerPropertiesImpl
     : public HttpServerProperties,
-      NON_EXPORTED_BASE(public base::NonThreadSafe) {
+      public BrokenAlternativeServices::Delegate {
  public:
   HttpServerPropertiesImpl();
+  explicit HttpServerPropertiesImpl(
+      base::TickClock* broken_alternative_services_clock);
   ~HttpServerPropertiesImpl() override;
 
   // Sets |spdy_servers_map_| with the servers (host/port) from
@@ -122,7 +120,13 @@ class NET_EXPORT HttpServerPropertiesImpl
       size_t max_server_configs_stored_in_properties) override;
   bool IsInitialized() const override;
 
+  // BrokenAlternativeServices::Delegate method.
+  void OnExpireBrokenAlternativeService(
+      const AlternativeService& expired_alternative_service) override;
+
  private:
+  // TODO (wangyix): modify HttpServerPropertiesImpl unit tests so this
+  // friendness is no longer required.
   friend class HttpServerPropertiesImplPeer;
 
   // |spdy_servers_map_| has flattened representation of servers
@@ -131,14 +135,6 @@ class NET_EXPORT HttpServerPropertiesImpl
   typedef std::map<url::SchemeHostPort, url::SchemeHostPort> CanonicalHostMap;
   typedef std::vector<std::string> CanonicalSufficList;
   typedef std::set<HostPortPair> Http11ServerHostPortSet;
-
-  // Linked hash map from AlternativeService to expiration time.  This container
-  // is a queue with O(1) enqueue and dequeue, and a hash_map with O(1) lookup
-  // at the same time.
-  typedef linked_hash_map<AlternativeService,
-                          base::TimeTicks,
-                          AlternativeServiceHash>
-      BrokenAlternativeServices;
 
   // Return the iterator for |server|, or for its canonical host, or end.
   AlternativeServiceMap::const_iterator GetAlternateProtocolIterator(
@@ -150,17 +146,14 @@ class NET_EXPORT HttpServerPropertiesImpl
 
   // Remove the cononical host for |server|.
   void RemoveCanonicalHost(const url::SchemeHostPort& server);
-  void ExpireBrokenAlternateProtocolMappings();
-  void ScheduleBrokenAlternateProtocolMappingsExpiration();
+
+  base::DefaultTickClock broken_alternative_services_clock_;
+  BrokenAlternativeServices broken_alternative_services_;
 
   SpdyServersMap spdy_servers_map_;
   Http11ServerHostPortSet http11_servers_;
 
   AlternativeServiceMap alternative_service_map_;
-  BrokenAlternativeServices broken_alternative_services_;
-  // Class invariant:  Every alternative service in broken_alternative_services_
-  // must also be in recently_broken_alternative_services_.
-  RecentlyBrokenAlternativeServices recently_broken_alternative_services_;
 
   IPAddress last_quic_address_;
   ServerNetworkStatsMap server_network_stats_map_;
@@ -175,7 +168,7 @@ class NET_EXPORT HttpServerPropertiesImpl
   QuicServerInfoMap quic_server_info_map_;
   size_t max_server_configs_stored_in_properties_;
 
-  base::WeakPtrFactory<HttpServerPropertiesImpl> weak_ptr_factory_;
+  THREAD_CHECKER(thread_checker_);
 
   DISALLOW_COPY_AND_ASSIGN(HttpServerPropertiesImpl);
 };

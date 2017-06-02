@@ -9,7 +9,18 @@ config("libc++abi_warnings") {
   }
 }
 
-static_library("libc++abi") {
+# TODO(thomasanderson): Make this a source_set on all platforms when
+# https://bugs.llvm.org/show_bug.cgi?id=33272 is fixed.  Making this
+# target a static_library coincidentally fixes the issue since the
+# linking rules for it are different (__cxa_thread_atexit_impl is
+# undefined, but the only symbol that uses it, __cxa_thread_atexit, is
+# unused and optimized away).
+if (is_mac) {
+  link_target_type = "static_library"
+} else {
+  link_target_type = "source_set"
+}
+target(link_target_type, "libc++abi") {
   sources = [
     "trunk/src/abort_message.cpp",
     "trunk/src/cxa_aux_runtime.cpp",
@@ -19,28 +30,32 @@ static_library("libc++abi") {
     "trunk/src/cxa_exception_storage.cpp",
     "trunk/src/cxa_guard.cpp",
     "trunk/src/cxa_handlers.cpp",
-    "trunk/src/cxa_new_delete.cpp",
+
+    # This file is supposed to be used in fno-exception builds of
+    # libc++abi.  We build lib++/libc++abi with exceptions enabled.
+    #"trunk/src/cxa_noexception.cpp",
     "trunk/src/cxa_personality.cpp",
     "trunk/src/cxa_thread_atexit.cpp",
     "trunk/src/cxa_unexpected.cpp",
     "trunk/src/cxa_vector.cpp",
     "trunk/src/cxa_virtual.cpp",
-    "trunk/src/exception.cpp",
+    "trunk/src/fallback_malloc.cpp",
     "trunk/src/private_typeinfo.cpp",
-    "trunk/src/stdexcept.cpp",
-    "trunk/src/typeinfo.cpp",
+    "trunk/src/stdlib_exception.cpp",
+    "trunk/src/stdlib_new_delete.cpp",
+    "trunk/src/stdlib_stdexcept.cpp",
+    "trunk/src/stdlib_typeinfo.cpp",
   ]
   configs -= [
     "//build/config/compiler:chromium_code",
     "//build/config/compiler:no_rtti",
     "//build/config/gcc:no_exceptions",
-    "//build/config/gcc:symbol_visibility_hidden",
   ]
   configs += [
     "//build/config/compiler:no_chromium_code",
     "//build/config/compiler:rtti",
-    "//build/config/gcc:symbol_visibility_default",
     "//buildtools/third_party/libc++:config",
+
     # Must be after no_chromium_code.
     ":libc++abi_warnings",
   ]

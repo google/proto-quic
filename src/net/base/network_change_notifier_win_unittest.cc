@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "net/base/network_change_notifier_win.h"
+
 #include "base/macros.h"
 #include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
+#include "base/single_thread_task_runner.h"
 #include "net/base/network_change_notifier.h"
 #include "net/base/network_change_notifier_factory.h"
-#include "net/base/network_change_notifier_win.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -36,6 +38,14 @@ class TestNetworkChangeNotifierWin : public NetworkChangeNotifierWin {
   NetworkChangeNotifier::ConnectionType RecomputeCurrentConnectionType()
       const override {
     return NetworkChangeNotifier::CONNECTION_UNKNOWN;
+  }
+
+  // From NetworkChangeNotifierWin.
+  void RecomputeCurrentConnectionTypeOnDnsThread(
+      base::Callback<void(ConnectionType)> reply_callback) const override {
+    base::ThreadTaskRunnerHandle::Get()->PostTask(
+        FROM_HERE,
+        base::Bind(reply_callback, NetworkChangeNotifier::CONNECTION_UNKNOWN));
   }
 
   // From NetworkChangeNotifierWin.

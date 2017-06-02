@@ -162,6 +162,11 @@ void PersistentMemoryAllocator::Iterator::Reset() {
 }
 
 void PersistentMemoryAllocator::Iterator::Reset(Reference starting_after) {
+  if (starting_after == 0) {
+    Reset();
+    return;
+  }
+
   last_record_.store(starting_after, std::memory_order_relaxed);
   record_count_.store(0, std::memory_order_relaxed);
 

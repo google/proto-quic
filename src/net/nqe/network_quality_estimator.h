@@ -341,6 +341,10 @@ class NET_EXPORT NetworkQualityEstimator
       const std::map<nqe::internal::NetworkID,
                      nqe::internal::CachedNetworkQuality> read_prefs);
 
+  // Returns the current transport RTT estimate. If the estimate is unavailable,
+  // the returned optional has no value.
+  base::Optional<base::TimeDelta> GetTransportRTT() const;
+
  protected:
   // A protected constructor for testing that allows setting the value of
   // |add_default_platform_observations_|.
@@ -447,9 +451,21 @@ class NET_EXPORT NetworkQualityEstimator
       const base::TimeTicks& start_time,
       int percentile) const;
 
+  // Notifies the observers of RTT or throughput estimates computation.
+  virtual void NotifyObserversOfRTTOrThroughputComputed() const;
+
+  // Notifies |observer| of the current RTT and throughput if |observer| is
+  // still registered as an observer.
+  virtual void NotifyRTTAndThroughputEstimatesObserverIfPresent(
+      RTTAndThroughputEstimatesObserver* observer) const;
+
   // Observer list for RTT or throughput estimates. Protected for testing.
   base::ObserverList<RTTAndThroughputEstimatesObserver>
       rtt_and_throughput_estimates_observer_list_;
+
+  // Observer list for changes in effective connection type.
+  base::ObserverList<EffectiveConnectionTypeObserver>
+      effective_connection_type_observer_list_;
 
  private:
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest,
@@ -565,18 +581,10 @@ class NET_EXPORT NetworkQualityEstimator
   // Notifies observers of a change in effective connection type.
   void NotifyObserversOfEffectiveConnectionTypeChanged();
 
-  // Notifies the observers of RTT or throughput estimates computation.
-  void NotifyObserversOfRTTOrThroughputComputed() const;
-
   // Notifies |observer| of the current effective connection type if |observer|
   // is still registered as an observer.
   void NotifyEffectiveConnectionTypeObserverIfPresent(
       EffectiveConnectionTypeObserver* observer) const;
-
-  // Notifies |observer| of the current RTT and throughput if |observer| is
-  // still registered as an observer.
-  void NotifyRTTAndThroughputEstimatesObserverIfPresent(
-      RTTAndThroughputEstimatesObserver* observer) const;
 
   // Records NQE accuracy metrics. |measuring_duration| should belong to the
   // vector returned by AccuracyRecordingIntervals().
@@ -722,10 +730,6 @@ class NET_EXPORT NetworkQualityEstimator
   // ExternalEstimateProvider that provides network quality using operating
   // system APIs. May be NULL.
   const std::unique_ptr<ExternalEstimateProvider> external_estimate_provider_;
-
-  // Observer list for changes in effective connection type.
-  base::ObserverList<EffectiveConnectionTypeObserver>
-      effective_connection_type_observer_list_;
 
   // Observer lists for round trip times and throughput measurements.
   base::ObserverList<RTTObserver> rtt_observer_list_;

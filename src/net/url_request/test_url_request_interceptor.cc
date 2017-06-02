@@ -77,7 +77,7 @@ class TestURLRequestInterceptor::Delegate : public URLRequestInterceptor {
   void SetResponse(const GURL& url,
                    const base::FilePath& path,
                    bool ignore_query) {
-    DCHECK(network_task_runner_->RunsTasksOnCurrentThread());
+    DCHECK(network_task_runner_->RunsTasksInCurrentSequence());
     if (ignore_query) {
       ignore_query_responses_[url] = path;
     } else {
@@ -98,7 +98,7 @@ class TestURLRequestInterceptor::Delegate : public URLRequestInterceptor {
   URLRequestJob* MaybeInterceptRequest(
       URLRequest* request,
       NetworkDelegate* network_delegate) const override {
-    DCHECK(network_task_runner_->RunsTasksOnCurrentThread());
+    DCHECK(network_task_runner_->RunsTasksInCurrentSequence());
     if (request->url().scheme() != scheme_ ||
         request->url().host() != hostname_) {
       return NULL;

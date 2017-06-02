@@ -44,17 +44,18 @@ class HttpNetworkLayerTest : public PlatformTest {
     cert_verifier_.reset(new MockCertVerifier);
     transport_security_state_.reset(new TransportSecurityState);
     proxy_service_ = std::move(proxy_service);
-    HttpNetworkSession::Params session_params;
-    session_params.client_socket_factory = &mock_socket_factory_;
-    session_params.host_resolver = &host_resolver_;
-    session_params.cert_verifier = cert_verifier_.get();
-    session_params.transport_security_state = transport_security_state_.get();
-    session_params.cert_transparency_verifier = &ct_verifier_;
-    session_params.ct_policy_enforcer = &ct_policy_enforcer_;
-    session_params.proxy_service = proxy_service_.get();
-    session_params.ssl_config_service = ssl_config_service_.get();
-    session_params.http_server_properties = &http_server_properties_;
-    network_session_.reset(new HttpNetworkSession(session_params));
+    HttpNetworkSession::Context session_context;
+    session_context.client_socket_factory = &mock_socket_factory_;
+    session_context.host_resolver = &host_resolver_;
+    session_context.cert_verifier = cert_verifier_.get();
+    session_context.transport_security_state = transport_security_state_.get();
+    session_context.cert_transparency_verifier = &ct_verifier_;
+    session_context.ct_policy_enforcer = &ct_policy_enforcer_;
+    session_context.proxy_service = proxy_service_.get();
+    session_context.ssl_config_service = ssl_config_service_.get();
+    session_context.http_server_properties = &http_server_properties_;
+    network_session_.reset(
+        new HttpNetworkSession(HttpNetworkSession::Params(), session_context));
     factory_.reset(new HttpNetworkLayer(network_session_.get()));
   }
 

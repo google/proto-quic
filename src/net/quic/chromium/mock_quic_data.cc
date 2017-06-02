@@ -38,6 +38,12 @@ void MockQuicData::AddWrite(std::unique_ptr<QuicEncryptedPacket> packet) {
   packets_.push_back(std::move(packet));
 }
 
+void MockQuicData::AddAsyncWrite(std::unique_ptr<QuicEncryptedPacket> packet) {
+  writes_.push_back(
+      MockWrite(ASYNC, packet->data(), packet->length(), sequence_number_++));
+  packets_.push_back(std::move(packet));
+}
+
 void MockQuicData::AddWrite(IoMode mode, int rv) {
   writes_.push_back(MockWrite(mode, rv, sequence_number_++));
 }

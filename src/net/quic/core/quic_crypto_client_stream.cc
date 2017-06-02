@@ -391,13 +391,11 @@ void QuicCryptoClientStream::DoReceiveREJ(
     return;
   }
 
-  const uint32_t* reject_reasons;
-  size_t num_reject_reasons;
+  QuicTagVector reject_reasons;
   static_assert(sizeof(QuicTag) == sizeof(uint32_t), "header out of sync");
-  if (in->GetTaglist(kRREJ, &reject_reasons, &num_reject_reasons) ==
-      QUIC_NO_ERROR) {
+  if (in->GetTaglist(kRREJ, &reject_reasons) == QUIC_NO_ERROR) {
     uint32_t packed_error = 0;
-    for (size_t i = 0; i < num_reject_reasons; ++i) {
+    for (size_t i = 0; i < reject_reasons.size(); ++i) {
       // HANDSHAKE_OK is 0 and don't report that as error.
       if (reject_reasons[i] == HANDSHAKE_OK || reject_reasons[i] >= 32) {
         continue;
@@ -663,14 +661,12 @@ bool QuicCryptoClientStream::RequiresChannelID(
   if (!scfg) {  // scfg may be null then we send an inchoate CHLO.
     return false;
   }
-  const QuicTag* their_proof_demands;
-  size_t num_their_proof_demands;
-  if (scfg->GetTaglist(kPDMD, &their_proof_demands, &num_their_proof_demands) !=
-      QUIC_NO_ERROR) {
+  QuicTagVector their_proof_demands;
+  if (scfg->GetTaglist(kPDMD, &their_proof_demands) != QUIC_NO_ERROR) {
     return false;
   }
-  for (size_t i = 0; i < num_their_proof_demands; i++) {
-    if (their_proof_demands[i] == kCHID) {
+  for (const QuicTag tag : their_proof_demands) {
+    if (tag == kCHID) {
       return true;
     }
   }

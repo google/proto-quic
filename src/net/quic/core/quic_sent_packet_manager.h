@@ -224,6 +224,8 @@ class QUIC_EXPORT_PRIVATE QuicSentPacketManager {
 
   const SendAlgorithmInterface* GetSendAlgorithm() const;
 
+  void SetStreamNotifier(StreamNotifierInterface* stream_notifier);
+
   QuicPacketNumber largest_packet_peer_knows_is_acked() const {
     return largest_packet_peer_knows_is_acked_;
   }

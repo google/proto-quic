@@ -5,7 +5,6 @@
 package org.chromium.net;
 
 import android.annotation.SuppressLint;
-import android.content.Context;
 
 import org.chromium.base.ObserverList;
 import org.chromium.base.VisibleForTesting;
@@ -48,11 +47,6 @@ public class NetworkChangeNotifier {
     protected NetworkChangeNotifier() {
         mNativeChangeNotifiers = new ArrayList<Long>();
         mConnectionTypeObservers = new ObserverList<ConnectionTypeObserver>();
-    }
-
-    // TODO(wnwen): Remove after downstream no longer depends on this.
-    public static NetworkChangeNotifier init(Context context) {
-        return init();
     }
 
     /**

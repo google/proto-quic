@@ -221,36 +221,36 @@ TEST(SpdyDataIRTest, Construct) {
   // Confirm that it makes a string of zero length from a
   // SpdyStringPiece(nullptr).
   SpdyStringPiece s1;
-  SpdyDataIR d1(1, s1);
-  EXPECT_EQ(d1.data_len(), 0ul);
-  EXPECT_NE(d1.data(), nullptr);
+  SpdyDataIR d1(/* stream_id = */ 1, s1);
+  EXPECT_EQ(0u, d1.data_len());
+  EXPECT_NE(nullptr, d1.data());
 
   // Confirms makes a copy of char array.
   const char s2[] = "something";
-  SpdyDataIR d2(2, s2);
+  SpdyDataIR d2(/* stream_id = */ 2, s2);
   EXPECT_EQ(SpdyStringPiece(d2.data(), d2.data_len()), s2);
   EXPECT_NE(SpdyStringPiece(d1.data(), d1.data_len()), s2);
 
   // Confirm copies a const string.
   const SpdyString foo = "foo";
-  SpdyDataIR d3(3, foo);
+  SpdyDataIR d3(/* stream_id = */ 3, foo);
   EXPECT_EQ(foo, d3.data());
 
   // Confirm copies a non-const string.
   SpdyString bar = "bar";
-  SpdyDataIR d4(4, bar);
+  SpdyDataIR d4(/* stream_id = */ 4, bar);
   EXPECT_EQ("bar", bar);
   EXPECT_EQ("bar", SpdyStringPiece(d4.data(), d4.data_len()));
 
   // Confirm moves an rvalue reference. Note that the test string "baz" is too
   // short to trigger the move optimization, and instead a copy occurs.
   SpdyString baz = "the quick brown fox";
-  SpdyDataIR d5(5, std::move(baz));
+  SpdyDataIR d5(/* stream_id = */ 5, std::move(baz));
   EXPECT_EQ("", baz);
   EXPECT_EQ(SpdyStringPiece(d5.data(), d5.data_len()), "the quick brown fox");
 
   // Confirms makes a copy of string literal.
-  SpdyDataIR d7(7, "something else");
+  SpdyDataIR d7(/* stream_id = */ 7, "something else");
   EXPECT_EQ(SpdyStringPiece(d7.data(), d7.data_len()), "something else");
 }
 

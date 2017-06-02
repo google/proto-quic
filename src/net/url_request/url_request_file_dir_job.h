@@ -42,7 +42,8 @@ class NET_EXPORT_PRIVATE URLRequestFileDirJob
   ~URLRequestFileDirJob() override;
 
  private:
-  void CloseLister();
+  // Called after the target directory path is resolved to an absolute path.
+  void DidMakeAbsolutePath(const base::FilePath& absolute_path);
 
   // When we have data and a read has been pending, this function
   // will fill the response buffer and notify the request

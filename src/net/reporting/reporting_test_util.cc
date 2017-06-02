@@ -17,6 +17,7 @@
 #include "net/reporting/reporting_cache.h"
 #include "net/reporting/reporting_client.h"
 #include "net/reporting/reporting_context.h"
+#include "net/reporting/reporting_delegate.h"
 #include "net/reporting/reporting_delivery_agent.h"
 #include "net/reporting/reporting_garbage_collector.h"
 #include "net/reporting/reporting_persister.h"
@@ -103,11 +104,34 @@ void TestReportingUploader::StartUpload(const GURL& url,
       url, json, callback, base::Bind(&ErasePendingUpload, &pending_uploads_)));
 }
 
+TestReportingDelegate::TestReportingDelegate() {}
+
+TestReportingDelegate::~TestReportingDelegate() {}
+
+bool TestReportingDelegate::CanQueueReport(const url::Origin& origin) const {
+  return true;
+}
+
+bool TestReportingDelegate::CanSendReport(const url::Origin& origin) const {
+  return true;
+}
+
+bool TestReportingDelegate::CanSetClient(const url::Origin& origin,
+                                         const GURL& endpoint) const {
+  return true;
+}
+
+bool TestReportingDelegate::CanUseClient(const url::Origin& origin,
+                                         const GURL& endpoint) const {
+  return true;
+}
+
 TestReportingContext::TestReportingContext(const ReportingPolicy& policy)
     : ReportingContext(policy,
                        base::MakeUnique<base::SimpleTestClock>(),
                        base::MakeUnique<base::SimpleTestTickClock>(),
-                       base::MakeUnique<TestReportingUploader>()),
+                       base::MakeUnique<TestReportingUploader>(),
+                       base::MakeUnique<TestReportingDelegate>()),
       delivery_timer_(new base::MockTimer(/* retain_user_task= */ false,
                                           /* is_repeating= */ false)),
       garbage_collection_timer_(

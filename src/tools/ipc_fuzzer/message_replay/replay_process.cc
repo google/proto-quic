@@ -17,7 +17,6 @@
 #include "content/public/common/content_switches.h"
 #include "content/public/common/mojo_channel_switches.h"
 #include "ipc/ipc_channel_mojo.h"
-#include "ipc/ipc_descriptors.h"
 #include "mojo/edk/embedder/configuration.h"
 #include "mojo/edk/embedder/embedder.h"
 #include "mojo/edk/embedder/incoming_broker_client_invitation.h"

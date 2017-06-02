@@ -73,11 +73,10 @@ void MemoryDumpScheduler::StartInternal(MemoryDumpScheduler::Config config) {
   light_dump_rate_ = light_dump_period_ms / min_period_ms;
   heavy_dump_rate_ = heavy_dump_period_ms / min_period_ms;
 
-  // Trigger the first dump after |period_ms_| and not as soon as timer starts.
-  SequencedTaskRunnerHandle::Get()->PostDelayedTask(
+  // Trigger the first dump immediately.
+  SequencedTaskRunnerHandle::Get()->PostTask(
       FROM_HERE,
-      BindOnce(&MemoryDumpScheduler::Tick, Unretained(this), ++generation_),
-      TimeDelta::FromMilliseconds(period_ms_));
+      BindOnce(&MemoryDumpScheduler::Tick, Unretained(this), ++generation_));
 }
 
 void MemoryDumpScheduler::StopInternal() {

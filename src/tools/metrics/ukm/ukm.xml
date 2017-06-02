@@ -26,7 +26,7 @@ be describing additional metrics about the same event.
 </event>
 
 <event name="Autofill.DeveloperEngagement">
-  <owner>csashi@google.com</owner>
+  <owner>jiahuiguo@google.com</owner>
   <summary>
     Recorded when we parse a form to log whether developer has used autocomplete
     markup or UPI-VPA hints. The value is a bitmask of
@@ -36,7 +36,7 @@ be describing additional metrics about the same event.
 </event>
 
 <event name="Autofill.FormSubmitted">
-  <owner>csashi@google.com</owner>
+  <owner>jiahuiguo@google.com</owner>
   <summary>
     Recorded when user submits a form.
   </summary>
@@ -54,7 +54,7 @@ be describing additional metrics about the same event.
 </event>
 
 <event name="Autofill.InteractedWithForm">
-  <owner>csashi@google.com</owner>
+  <owner>jiahuiguo@google.com</owner>
   <summary>
     Recorded when we parse a form to log form metadata and autofill settings
     that apply to all subsequent events for this form.
@@ -76,17 +76,8 @@ be describing additional metrics about the same event.
   </metric>
 </event>
 
-<event name="Autofill.SuggestionsShown">
-  <owner>csashi@google.com</owner>
-  <metric name="MillisecondsSinceFormParsed">
-    <summary>
-      Time since form parse.
-    </summary>
-  </metric>
-</event>
-
 <event name="Autofill.SelectedMaskedServerCard">
-  <owner>csashi@google.com</owner>
+  <owner>jiahuiguo@google.com</owner>
   <metric name="MillisecondsSinceFormParsed">
     <summary>
       Time since form parse.
@@ -95,7 +86,7 @@ be describing additional metrics about the same event.
 </event>
 
 <event name="Autofill.SuggestionFilled">
-  <owner>csashi@google.com</owner>
+  <owner>jiahuiguo@google.com</owner>
   <summary>
     Recorded when user selects a suggestion and we fill the form with that
     suggestion.
@@ -113,8 +104,37 @@ be describing additional metrics about the same event.
   </metric>
 </event>
 
+<event name="Autofill.SuggestionsShown">
+  <owner>jiahuiguo@google.com</owner>
+  <summary>
+    Recorded when a suggestion is shown to user.
+  </summary>
+  <metric name="HeuristicType">
+    <summary>
+      Field's |ServerFieldType| based on heuristics. See
+      |AutofillField.heuristic_type()|.
+    </summary>
+  </metric>
+  <metric name="HtmlFieldType">
+    <summary>
+      Field's autocomplete field type hint. See |AutofillField.html_type()|.
+    </summary>
+  </metric>
+  <metric name="MillisecondsSinceFormParsed">
+    <summary>
+      Time since form parse.
+    </summary>
+  </metric>
+  <metric name="ServerType">
+    <summary>
+      Field's |ServerFieldType| returned by server. See
+      |AutofillField.server_type()|.
+    </summary>
+  </metric>
+</event>
+
 <event name="Autofill.TextFieldDidChange">
-  <owner>csashi@google.com</owner>
+  <owner>jiahuiguo@google.com</owner>
   <summary>
     Recorded when user edits a text field. The text field may have been
     autofilled.
@@ -234,27 +254,150 @@ be describing additional metrics about the same event.
   </metric>
 </event>
 
+<event name="Event.ScrollUpdate.Touch">
+  <owner>nzolghadr@chromium.org</owner>
+  <summary>
+    Metrics related to a scroll action caused by the generated ScrollUpdate
+    gesture event.
+  </summary>
+  <metric name="TimeToScrollUpdateSwapBegin">
+    <summary>
+      The time in microseconds between the initial creation of a touch event and
+      the start of the frame swap on the GPU service. If no swap was induced by
+      the event, no recording is made.
+    </summary>
+  </metric>
+</event>
+
+<event name="Media.WatchTime">
+  <owner>dalecurtis@chromium.org</owner>
+  <summary>
+    Watch time is defined as the amount of elapsed media time for audio+video
+    media aggregated per player instance. A minimum of 7 seconds of unmuted,
+    foreground media must be watched to start watch time monitoring. Watch time
+    is checked on a regular basis and reported upon one of the stop events
+    mentioned below or at player destruction if none occur prior.
+
+    Any one of paused, hidden, or muted is sufficient to stop watch time metric
+    reports. Each of these has a hysteresis where if the state change is undone
+    within some time, the watch time will be counted as uninterrupted.
+
+    Power events (on/off battery power) have a similar hysteresis, but unlike
+    the aforementioned properties, will not stop metric collection.
+
+    Each seek event will result in a new watch time metric being started and the
+    old metric finalized as accurately as possible.
+  </summary>
+  <metric name="Audio.AC"/>
+  <metric name="Audio.All"/>
+  <metric name="Audio.Battery"/>
+  <metric name="Audio.EME"/>
+  <metric name="Audio.MSE"/>
+  <metric name="Audio.SRC"/>
+  <metric name="AudioVideo.AC"/>
+  <metric name="AudioVideo.All"/>
+  <metric name="AudioVideo.Background.AC"/>
+  <metric name="AudioVideo.Background.All"/>
+  <metric name="AudioVideo.Background.Battery"/>
+  <metric name="AudioVideo.Background.EME"/>
+  <metric name="AudioVideo.Background.MSE"/>
+  <metric name="AudioVideo.Background.SRC"/>
+  <metric name="AudioVideo.Battery"/>
+  <metric name="AudioVideo.EME"/>
+  <metric name="AudioVideo.MSE"/>
+  <metric name="AudioVideo.SRC"/>
+</event>
+
 <event name="PageLoad" singular="True">
   <owner>bmcquade@chromium.org</owner>
   <summary>
-    Recorded when Pageload observer events fire.
+    Core metrics associated with web page loads.
   </summary>
   <metric name="DocumentTiming.NavigationToDOMContentLoadedEventFired">
     <summary>
-      Time from navigation to dom content loaded in ms.
+      Measures the time in milliseconds from navigation timing's navigation
+      start to the time the DOMContentLoaded event is fired, for main frame
+      documents.
     </summary>
   </metric>
-  <metric name="DocumentTiming.NavigationToLoadEventFired"/>
-  <metric name="Experimental.PaintTiming.NavigationToFirstMeaningfulPaint"/>
-  <metric name="Navigation.PageTransition"/>
-  <metric name="Net.EffectiveConnectionType.OnNavigationStart"/>
-  <metric name="Net.ErrorCode.OnFailedProvisionalLoad"/>
-  <metric name="PageTiming.ForegroundDuration"/>
-  <metric name="PageTiming.NavigationToFailedProvisionalLoad"/>
-  <metric name="PaintTiming.NavigationToFirstContentfulPaint"/>
+  <metric name="DocumentTiming.NavigationToLoadEventFired">
+    <summary>
+      Measures the time in milliseconds from navigation timing's navigation
+      start to the time the load event is fired, for main frame documents.
+    </summary>
+  </metric>
+  <metric name="Experimental.PaintTiming.NavigationToFirstMeaningfulPaint">
+    <summary>
+      Measures the time in milliseconds from navigation timing's navigation
+      start to the first meaningful paint (http://bit.ly/ttfmp-doc), for main
+      frame documents.
+    </summary>
+  </metric>
+  <metric name="Navigation.PageTransition">
+    <summary>
+      The |ui::PageTransition| for the main frame navigation of this page load.
+    </summary>
+  </metric>
+  <metric name="Net.EffectiveConnectionType.OnNavigationStart">
+    <summary>
+      The |net::EffectiveConnectionType| at the time the navigation for this
+      page load was initiated.
+    </summary>
+  </metric>
+  <metric name="Net.ErrorCode.OnFailedProvisionalLoad">
+    <summary>
+      The |net::Error| code for this page load. Only logged for failed
+      provisional navigations.
+    </summary>
+  </metric>
+  <metric name="Net.HttpRttEstimate.OnNavigationStart">
+    <summary>
+      The HTTP round trip time estimate for this page load, at the time the
+      navigation for this page load was initiated.
+    </summary>
+  </metric>
+  <metric name="Net.TransportRttEstimate.OnNavigationStart">
+    <summary>
+      The transport round trip time estimate for this page load, at the time the
+      navigation for this page load was initiated.
+    </summary>
+  </metric>
+  <metric name="PageTiming.ForegroundDuration">
+    <summary>
+      For page loads that start in the foreground, measures the duration of time
+      in milliseconds until one of the following events occurs: the load of the
+      main resource fails, the page load is stopped, the tab hosting the page is
+      closed, the render process hosting the page goes away, a new navigation
+      which later commits is initiated in the same tab, or the tab hosting the
+      page is backgrounded. This metric has a very long tail, for pages that
+      spend a long period of time in the foreground. As such, use of the mean or
+      tail values are not recommended.
+    </summary>
+  </metric>
+  <metric name="PageTiming.NavigationToFailedProvisionalLoad">
+    <summary>
+      Measures the time in milliseconds from navigation timing's navigation
+      start to the time the provisional load failed. Only measures provisional
+      loads that failed in the foreground.
+    </summary>
+  </metric>
+  <metric name="PaintTiming.NavigationToFirstContentfulPaint">
+    <summary>
+      Measures the time in milliseconds from navigation timing's navigation
+      start to the time when the page first paints content. A contentful paint
+      includes a paint of text, image, SVG, or canvas.
+    </summary>
+  </metric>
+  <metric name="PaintTiming.NavigationToFirstPaint">
+    <summary>
+      Measures the time in milliseconds from navigation timing's navigation
+      start to the time the first paint is performed.
+    </summary>
+  </metric>
   <metric name="ParseTiming.NavigationToParseStart">
     <summary>
-      Time from navigation to parse start in ms.
+      Measures the time in milliseconds from navigation timing's navigation
+      start to the time the parser started, for main frame documents.
     </summary>
   </metric>
 </event>

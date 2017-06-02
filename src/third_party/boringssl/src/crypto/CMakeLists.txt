@@ -16,7 +16,7 @@ if(UNIX)
       set(PERLASM_STYLE linux32)
     endif()
   elseif (${ARCH} STREQUAL "ppc64le")
-    set(PERLASM_STYLE ppc64le)
+    set(PERLASM_STYLE linux64le)
   else()
     if (${ARCH} STREQUAL "x86")
       set(PERLASM_FLAGS "-fPIC -DOPENSSL_IA32_SSE2")
@@ -47,10 +47,8 @@ if(UNIX)
   endif()
 else()
   if (CMAKE_CL_64)
-    message("Using nasm")
     set(PERLASM_STYLE nasm)
   else()
-    message("Using win32n")
     set(PERLASM_STYLE win32n)
     set(PERLASM_FLAGS "-DOPENSSL_IA32_SSE2")
   endif()
@@ -110,7 +108,6 @@ add_subdirectory(rsa_extra)
 add_subdirectory(ec_extra)
 add_subdirectory(ecdh)
 add_subdirectory(ecdsa_extra)
-add_subdirectory(hmac_extra)
 
 # Level 3
 add_subdirectory(cmac)
@@ -150,7 +147,7 @@ add_library(
   thread_win.c
 )
 
-if(FIPS)
+if(FIPS_DELOCATE)
   SET_SOURCE_FILES_PROPERTIES(fipsmodule/bcm.o PROPERTIES EXTERNAL_OBJECT true)
   SET_SOURCE_FILES_PROPERTIES(fipsmodule/bcm.o PROPERTIES GENERATED true)
 
@@ -204,7 +201,7 @@ add_library(
   ${CRYPTO_FIPS_OBJECTS}
 )
 
-if(FIPS)
+if(FIPS_DELOCATE)
   add_dependencies(crypto bcm_o_target)
 endif()
 
@@ -225,15 +222,6 @@ add_executable(
 target_link_libraries(thread_test crypto)
 add_dependencies(all_tests thread_test)
 
-add_executable(
-  refcount_test
-
-  refcount_test.cc
-)
-
-target_link_libraries(refcount_test crypto)
-add_dependencies(all_tests refcount_test)
-
 # TODO(davidben): Convert the remaining tests to GTest.
 add_executable(
   crypto_test
@@ -243,19 +231,35 @@ add_executable(
   bio/bio_test.cc
   bytestring/bytestring_test.cc
   chacha/chacha_test.cc
+  cipher_extra/aead_test.cc
+  cipher_extra/cipher_test.cc
   cmac/cmac_test.cc
   compiler_test.cc
   constant_time_test.cc
+  curve25519/ed25519_test.cc
   curve25519/spake25519_test.cc
   curve25519/x25519_test.cc
+  ecdh/ecdh_test.cc
   dh/dh_test.cc
+  digest_extra/digest_test.cc
   dsa/dsa_test.cc
   err/err_test.cc
   evp/evp_extra_test.cc
+  evp/pbkdf_test.cc
+  fipsmodule/aes/aes_test.cc
   fipsmodule/ec/ec_test.cc
+  fipsmodule/modes/gcm_test.cc
   fipsmodule/rand/ctrdrbg_test.cc
+  hkdf/hkdf_test.cc
+  hmac_extra/hmac_test.cc
+  lhash/lhash_test.cc
+  poly1305/poly1305_test.cc
+  pool/pool_test.cc
+  refcount_test.cc
   rsa_extra/rsa_test.cc
+  test/file_test_gtest.cc
 
+  $<TARGET_OBJECTS:crypto_test_data>
   $<TARGET_OBJECTS:gtest_main>
   $<TARGET_OBJECTS:test_support>
 )

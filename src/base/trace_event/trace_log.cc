@@ -1500,7 +1500,8 @@ void TraceLog::AddMetadataEventsWhileLocked() {
                             process_name_);
   }
 
-#if !defined(OS_NACL) && !defined(OS_IOS)
+// See https://crbug.com/726484 for Fuchsia.
+#if !defined(OS_NACL) && !defined(OS_IOS) && !defined(OS_FUCHSIA)
   Time process_creation_time = CurrentProcessInfo::CreationTime();
   if (!process_creation_time.is_null()) {
     TimeDelta process_uptime = Time::Now() - process_creation_time;
@@ -1508,7 +1509,7 @@ void TraceLog::AddMetadataEventsWhileLocked() {
                             current_thread_id, "process_uptime_seconds",
                             "uptime", process_uptime.InSeconds());
   }
-#endif  // !defined(OS_NACL) && !defined(OS_IOS)
+#endif  // !defined(OS_NACL) && !defined(OS_IOS) && !defined(OS_FUCHSIA)
 
   if (!process_labels_.empty()) {
     std::vector<base::StringPiece> labels;

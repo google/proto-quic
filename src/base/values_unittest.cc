@@ -777,45 +777,25 @@ TEST(ValuesTest, DictionaryRemovePath) {
 
 TEST(ValuesTest, DeepCopy) {
   DictionaryValue original_dict;
-  auto scoped_null = MakeUnique<Value>();
-  Value* original_null = scoped_null.get();
-  original_dict.Set("null", std::move(scoped_null));
-  std::unique_ptr<Value> scoped_bool(new Value(true));
-  Value* original_bool = scoped_bool.get();
-  original_dict.Set("bool", std::move(scoped_bool));
-  std::unique_ptr<Value> scoped_int(new Value(42));
-  Value* original_int = scoped_int.get();
-  original_dict.Set("int", std::move(scoped_int));
-  std::unique_ptr<Value> scoped_double(new Value(3.14));
-  Value* original_double = scoped_double.get();
-  original_dict.Set("double", std::move(scoped_double));
-  std::unique_ptr<Value> scoped_string(new Value("hello"));
-  Value* original_string = scoped_string.get();
-  original_dict.Set("string", std::move(scoped_string));
-  std::unique_ptr<Value> scoped_string16(new Value(ASCIIToUTF16("hello16")));
-  Value* original_string16 = scoped_string16.get();
-  original_dict.Set("string16", std::move(scoped_string16));
+  Value* null_weak = original_dict.Set("null", MakeUnique<Value>());
+  Value* bool_weak = original_dict.Set("bool", MakeUnique<Value>(true));
+  Value* int_weak = original_dict.Set("int", MakeUnique<Value>(42));
+  Value* double_weak = original_dict.Set("double", MakeUnique<Value>(3.14));
+  Value* string_weak = original_dict.Set("string", MakeUnique<Value>("hello"));
+  Value* string16_weak =
+      original_dict.Set("string16", MakeUnique<Value>(ASCIIToUTF16("hello16")));
 
-  Value::BlobStorage original_buffer(42, '!');
-  std::unique_ptr<Value> scoped_binary(new Value(std::move(original_buffer)));
-  Value* original_binary = scoped_binary.get();
-  original_dict.Set("binary", std::move(scoped_binary));
+  Value* binary_weak = original_dict.Set(
+      "binary", MakeUnique<Value>(Value::BlobStorage(42, '!')));
 
-  std::unique_ptr<ListValue> scoped_list(new ListValue());
-  Value* original_list = scoped_list.get();
-  std::unique_ptr<Value> scoped_list_element_0(new Value(0));
-  Value* original_list_element_0 = scoped_list_element_0.get();
-  scoped_list->Append(std::move(scoped_list_element_0));
-  std::unique_ptr<Value> scoped_list_element_1(new Value(1));
-  Value* original_list_element_1 = scoped_list_element_1.get();
-  scoped_list->Append(std::move(scoped_list_element_1));
-  original_dict.Set("list", std::move(scoped_list));
+  Value* list_weak = original_dict.Set(
+      "list", MakeUnique<Value>(Value::ListStorage({Value(0), Value(1)})));
+  Value* list_element_0_weak = &list_weak->GetList()[0];
+  Value* list_element_1_weak = &list_weak->GetList()[1];
 
-  std::unique_ptr<DictionaryValue> scoped_nested_dictionary(
-      new DictionaryValue());
-  Value* original_nested_dictionary = scoped_nested_dictionary.get();
-  scoped_nested_dictionary->SetString("key", "value");
-  original_dict.Set("dictionary", std::move(scoped_nested_dictionary));
+  DictionaryValue* dict_weak =
+      original_dict.SetDictionary("dictionary", MakeUnique<DictionaryValue>());
+  dict_weak->SetString("key", "value");
 
   auto copy_dict = MakeUnique<DictionaryValue>(original_dict);
   ASSERT_TRUE(copy_dict.get());
@@ -824,13 +804,13 @@ TEST(ValuesTest, DeepCopy) {
   Value* copy_null = NULL;
   ASSERT_TRUE(copy_dict->Get("null", &copy_null));
   ASSERT_TRUE(copy_null);
-  ASSERT_NE(copy_null, original_null);
+  ASSERT_NE(copy_null, null_weak);
   ASSERT_TRUE(copy_null->IsType(Value::Type::NONE));
 
   Value* copy_bool = NULL;
   ASSERT_TRUE(copy_dict->Get("bool", &copy_bool));
   ASSERT_TRUE(copy_bool);
-  ASSERT_NE(copy_bool, original_bool);
+  ASSERT_NE(copy_bool, bool_weak);
   ASSERT_TRUE(copy_bool->IsType(Value::Type::BOOLEAN));
   bool copy_bool_value = false;
   ASSERT_TRUE(copy_bool->GetAsBoolean(&copy_bool_value));
@@ -839,7 +819,7 @@ TEST(ValuesTest, DeepCopy) {
   Value* copy_int = NULL;
   ASSERT_TRUE(copy_dict->Get("int", &copy_int));
   ASSERT_TRUE(copy_int);
-  ASSERT_NE(copy_int, original_int);
+  ASSERT_NE(copy_int, int_weak);
   ASSERT_TRUE(copy_int->IsType(Value::Type::INTEGER));
   int copy_int_value = 0;
   ASSERT_TRUE(copy_int->GetAsInteger(&copy_int_value));
@@ -848,7 +828,7 @@ TEST(ValuesTest, DeepCopy) {
   Value* copy_double = NULL;
   ASSERT_TRUE(copy_dict->Get("double", &copy_double));
   ASSERT_TRUE(copy_double);
-  ASSERT_NE(copy_double, original_double);
+  ASSERT_NE(copy_double, double_weak);
   ASSERT_TRUE(copy_double->IsType(Value::Type::DOUBLE));
   double copy_double_value = 0;
   ASSERT_TRUE(copy_double->GetAsDouble(&copy_double_value));
@@ -857,7 +837,7 @@ TEST(ValuesTest, DeepCopy) {
   Value* copy_string = NULL;
   ASSERT_TRUE(copy_dict->Get("string", &copy_string));
   ASSERT_TRUE(copy_string);
-  ASSERT_NE(copy_string, original_string);
+  ASSERT_NE(copy_string, string_weak);
   ASSERT_TRUE(copy_string->IsType(Value::Type::STRING));
   std::string copy_string_value;
   string16 copy_string16_value;
@@ -869,7 +849,7 @@ TEST(ValuesTest, DeepCopy) {
   Value* copy_string16 = NULL;
   ASSERT_TRUE(copy_dict->Get("string16", &copy_string16));
   ASSERT_TRUE(copy_string16);
-  ASSERT_NE(copy_string16, original_string16);
+  ASSERT_NE(copy_string16, string16_weak);
   ASSERT_TRUE(copy_string16->IsType(Value::Type::STRING));
   ASSERT_TRUE(copy_string16->GetAsString(&copy_string_value));
   ASSERT_TRUE(copy_string16->GetAsString(&copy_string16_value));
@@ -879,15 +859,15 @@ TEST(ValuesTest, DeepCopy) {
   Value* copy_binary = NULL;
   ASSERT_TRUE(copy_dict->Get("binary", &copy_binary));
   ASSERT_TRUE(copy_binary);
-  ASSERT_NE(copy_binary, original_binary);
+  ASSERT_NE(copy_binary, binary_weak);
   ASSERT_TRUE(copy_binary->IsType(Value::Type::BINARY));
-  ASSERT_NE(original_binary->GetBlob().data(), copy_binary->GetBlob().data());
-  ASSERT_EQ(original_binary->GetBlob(), copy_binary->GetBlob());
+  ASSERT_NE(binary_weak->GetBlob().data(), copy_binary->GetBlob().data());
+  ASSERT_EQ(binary_weak->GetBlob(), copy_binary->GetBlob());
 
   Value* copy_value = NULL;
   ASSERT_TRUE(copy_dict->Get("list", &copy_value));
   ASSERT_TRUE(copy_value);
-  ASSERT_NE(copy_value, original_list);
+  ASSERT_NE(copy_value, list_weak);
   ASSERT_TRUE(copy_value->IsType(Value::Type::LIST));
   ListValue* copy_list = NULL;
   ASSERT_TRUE(copy_value->GetAsList(&copy_list));
@@ -897,7 +877,7 @@ TEST(ValuesTest, DeepCopy) {
   Value* copy_list_element_0;
   ASSERT_TRUE(copy_list->Get(0, &copy_list_element_0));
   ASSERT_TRUE(copy_list_element_0);
-  ASSERT_NE(copy_list_element_0, original_list_element_0);
+  ASSERT_NE(copy_list_element_0, list_element_0_weak);
   int copy_list_element_0_value;
   ASSERT_TRUE(copy_list_element_0->GetAsInteger(&copy_list_element_0_value));
   ASSERT_EQ(0, copy_list_element_0_value);
@@ -905,7 +885,7 @@ TEST(ValuesTest, DeepCopy) {
   Value* copy_list_element_1;
   ASSERT_TRUE(copy_list->Get(1, &copy_list_element_1));
   ASSERT_TRUE(copy_list_element_1);
-  ASSERT_NE(copy_list_element_1, original_list_element_1);
+  ASSERT_NE(copy_list_element_1, list_element_1_weak);
   int copy_list_element_1_value;
   ASSERT_TRUE(copy_list_element_1->GetAsInteger(&copy_list_element_1_value));
   ASSERT_EQ(1, copy_list_element_1_value);
@@ -913,7 +893,7 @@ TEST(ValuesTest, DeepCopy) {
   copy_value = NULL;
   ASSERT_TRUE(copy_dict->Get("dictionary", &copy_value));
   ASSERT_TRUE(copy_value);
-  ASSERT_NE(copy_value, original_nested_dictionary);
+  ASSERT_NE(copy_value, dict_weak);
   ASSERT_TRUE(copy_value->IsType(Value::Type::DICTIONARY));
   DictionaryValue* copy_nested_dictionary = NULL;
   ASSERT_TRUE(copy_value->GetAsDictionary(&copy_nested_dictionary));
@@ -942,17 +922,16 @@ TEST(ValuesTest, Equals) {
   EXPECT_EQ(dv, *copy);
 
   std::unique_ptr<ListValue> list(new ListValue);
-  ListValue* original_list = list.get();
   list->Append(MakeUnique<Value>());
   list->Append(WrapUnique(new DictionaryValue));
   auto list_copy = MakeUnique<Value>(*list);
 
-  dv.Set("f", std::move(list));
+  ListValue* list_weak = dv.SetList("f", std::move(list));
   EXPECT_NE(dv, *copy);
   copy->Set("f", std::move(list_copy));
   EXPECT_EQ(dv, *copy);
 
-  original_list->Append(MakeUnique<Value>(true));
+  list_weak->Append(MakeUnique<Value>(true));
   EXPECT_NE(dv, *copy);
 
   // Check if Equals detects differences in only the keys.
@@ -1108,72 +1087,53 @@ TEST(ValuesTest, Comparisons) {
 
 TEST(ValuesTest, DeepCopyCovariantReturnTypes) {
   DictionaryValue original_dict;
-  auto scoped_null = MakeUnique<Value>();
-  Value* original_null = scoped_null.get();
-  original_dict.Set("null", std::move(scoped_null));
-  std::unique_ptr<Value> scoped_bool(new Value(true));
-  Value* original_bool = scoped_bool.get();
-  original_dict.Set("bool", std::move(scoped_bool));
-  std::unique_ptr<Value> scoped_int(new Value(42));
-  Value* original_int = scoped_int.get();
-  original_dict.Set("int", std::move(scoped_int));
-  std::unique_ptr<Value> scoped_double(new Value(3.14));
-  Value* original_double = scoped_double.get();
-  original_dict.Set("double", std::move(scoped_double));
-  std::unique_ptr<Value> scoped_string(new Value("hello"));
-  Value* original_string = scoped_string.get();
-  original_dict.Set("string", std::move(scoped_string));
-  std::unique_ptr<Value> scoped_string16(new Value(ASCIIToUTF16("hello16")));
-  Value* original_string16 = scoped_string16.get();
-  original_dict.Set("string16", std::move(scoped_string16));
+  Value* null_weak = original_dict.Set("null", MakeUnique<Value>());
+  Value* bool_weak = original_dict.Set("bool", MakeUnique<Value>(true));
+  Value* int_weak = original_dict.Set("int", MakeUnique<Value>(42));
+  Value* double_weak = original_dict.Set("double", MakeUnique<Value>(3.14));
+  Value* string_weak = original_dict.Set("string", MakeUnique<Value>("hello"));
+  Value* string16_weak =
+      original_dict.Set("string16", MakeUnique<Value>(ASCIIToUTF16("hello16")));
 
-  Value::BlobStorage original_buffer(42, '!');
-  std::unique_ptr<Value> scoped_binary(new Value(std::move(original_buffer)));
-  Value* original_binary = scoped_binary.get();
-  original_dict.Set("binary", std::move(scoped_binary));
+  Value* binary_weak = original_dict.Set(
+      "binary", MakeUnique<Value>(Value::BlobStorage(42, '!')));
 
-  std::unique_ptr<ListValue> scoped_list(new ListValue());
-  Value* original_list = scoped_list.get();
-  std::unique_ptr<Value> scoped_list_element_0(new Value(0));
-  scoped_list->Append(std::move(scoped_list_element_0));
-  std::unique_ptr<Value> scoped_list_element_1(new Value(1));
-  scoped_list->Append(std::move(scoped_list_element_1));
-  original_dict.Set("list", std::move(scoped_list));
+  Value* list_weak = original_dict.Set(
+      "list", MakeUnique<Value>(Value::ListStorage({Value(0), Value(1)})));
 
   auto copy_dict = MakeUnique<Value>(original_dict);
-  auto copy_null = MakeUnique<Value>(*original_null);
-  auto copy_bool = MakeUnique<Value>(*original_bool);
-  auto copy_int = MakeUnique<Value>(*original_int);
-  auto copy_double = MakeUnique<Value>(*original_double);
-  auto copy_string = MakeUnique<Value>(*original_string);
-  auto copy_string16 = MakeUnique<Value>(*original_string16);
-  auto copy_binary = MakeUnique<Value>(*original_binary);
-  auto copy_list = MakeUnique<Value>(*original_list);
+  auto copy_null = MakeUnique<Value>(*null_weak);
+  auto copy_bool = MakeUnique<Value>(*bool_weak);
+  auto copy_int = MakeUnique<Value>(*int_weak);
+  auto copy_double = MakeUnique<Value>(*double_weak);
+  auto copy_string = MakeUnique<Value>(*string_weak);
+  auto copy_string16 = MakeUnique<Value>(*string16_weak);
+  auto copy_binary = MakeUnique<Value>(*binary_weak);
+  auto copy_list = MakeUnique<Value>(*list_weak);
 
   EXPECT_EQ(original_dict, *copy_dict);
-  EXPECT_EQ(*original_null, *copy_null);
-  EXPECT_EQ(*original_bool, *copy_bool);
-  EXPECT_EQ(*original_int, *copy_int);
-  EXPECT_EQ(*original_double, *copy_double);
-  EXPECT_EQ(*original_string, *copy_string);
-  EXPECT_EQ(*original_string16, *copy_string16);
-  EXPECT_EQ(*original_binary, *copy_binary);
-  EXPECT_EQ(*original_list, *copy_list);
+  EXPECT_EQ(*null_weak, *copy_null);
+  EXPECT_EQ(*bool_weak, *copy_bool);
+  EXPECT_EQ(*int_weak, *copy_int);
+  EXPECT_EQ(*double_weak, *copy_double);
+  EXPECT_EQ(*string_weak, *copy_string);
+  EXPECT_EQ(*string16_weak, *copy_string16);
+  EXPECT_EQ(*binary_weak, *copy_binary);
+  EXPECT_EQ(*list_weak, *copy_list);
 }
 
 TEST(ValuesTest, RemoveEmptyChildren) {
-  std::unique_ptr<DictionaryValue> root(new DictionaryValue);
+  auto root = base::MakeUnique<DictionaryValue>();
   // Remove empty lists and dictionaries.
-  root->Set("empty_dict", WrapUnique(new DictionaryValue));
-  root->Set("empty_list", WrapUnique(new ListValue));
-  root->SetWithoutPathExpansion("a.b.c.d.e",
-                                WrapUnique(new DictionaryValue));
+  root->Set("empty_dict", MakeUnique<DictionaryValue>());
+  root->Set("empty_list", MakeUnique<ListValue>());
+  root->SetWithoutPathExpansion("a.b.c.d.e", MakeUnique<DictionaryValue>());
   root = root->DeepCopyWithoutEmptyChildren();
   EXPECT_TRUE(root->empty());
 
   // Make sure we don't prune too much.
   root->SetBoolean("bool", true);
-  root->Set("empty_dict", WrapUnique(new DictionaryValue));
+  root->Set("empty_dict", MakeUnique<DictionaryValue>());
   root->SetString("empty_string", std::string());
   root = root->DeepCopyWithoutEmptyChildren();
   EXPECT_EQ(2U, root->size());
@@ -1185,22 +1145,22 @@ TEST(ValuesTest, RemoveEmptyChildren) {
   // Nested test cases.  These should all reduce back to the bool and string
   // set above.
   {
-    root->Set("a.b.c.d.e", WrapUnique(new DictionaryValue));
+    root->Set("a.b.c.d.e", MakeUnique<DictionaryValue>());
     root = root->DeepCopyWithoutEmptyChildren();
     EXPECT_EQ(2U, root->size());
   }
   {
-    std::unique_ptr<DictionaryValue> inner(new DictionaryValue);
-    inner->Set("empty_dict", WrapUnique(new DictionaryValue));
-    inner->Set("empty_list", WrapUnique(new ListValue));
+    auto inner = base::MakeUnique<DictionaryValue>();
+    inner->Set("empty_dict", MakeUnique<DictionaryValue>());
+    inner->Set("empty_list", MakeUnique<ListValue>());
     root->Set("dict_with_empty_children", std::move(inner));
     root = root->DeepCopyWithoutEmptyChildren();
     EXPECT_EQ(2U, root->size());
   }
   {
-    std::unique_ptr<ListValue> inner(new ListValue);
-    inner->Append(WrapUnique(new DictionaryValue));
-    inner->Append(WrapUnique(new ListValue));
+    auto inner = base::MakeUnique<ListValue>();
+    inner->Append(MakeUnique<DictionaryValue>());
+    inner->Append(MakeUnique<ListValue>());
     root->Set("list_with_empty_children", std::move(inner));
     root = root->DeepCopyWithoutEmptyChildren();
     EXPECT_EQ(2U, root->size());
@@ -1208,13 +1168,13 @@ TEST(ValuesTest, RemoveEmptyChildren) {
 
   // Nested with siblings.
   {
-    std::unique_ptr<ListValue> inner(new ListValue());
-    inner->Append(WrapUnique(new DictionaryValue));
-    inner->Append(WrapUnique(new ListValue));
+    auto inner = base::MakeUnique<ListValue>();
+    inner->Append(MakeUnique<DictionaryValue>());
+    inner->Append(MakeUnique<ListValue>());
     root->Set("list_with_empty_children", std::move(inner));
-    std::unique_ptr<DictionaryValue> inner2(new DictionaryValue);
-    inner2->Set("empty_dict", WrapUnique(new DictionaryValue));
-    inner2->Set("empty_list", WrapUnique(new ListValue));
+    auto inner2 = base::MakeUnique<DictionaryValue>();
+    inner2->Set("empty_dict", MakeUnique<DictionaryValue>());
+    inner2->Set("empty_list", MakeUnique<ListValue>());
     root->Set("dict_with_empty_children", std::move(inner2));
     root = root->DeepCopyWithoutEmptyChildren();
     EXPECT_EQ(2U, root->size());
@@ -1222,10 +1182,10 @@ TEST(ValuesTest, RemoveEmptyChildren) {
 
   // Make sure nested values don't get pruned.
   {
-    std::unique_ptr<ListValue> inner(new ListValue);
-    std::unique_ptr<ListValue> inner2(new ListValue);
+    auto inner = base::MakeUnique<ListValue>();
+    auto inner2 = base::MakeUnique<ListValue>();
     inner2->Append(MakeUnique<Value>("hello"));
-    inner->Append(WrapUnique(new DictionaryValue));
+    inner->Append(MakeUnique<DictionaryValue>());
     inner->Append(std::move(inner2));
     root->Set("list_with_empty_children", std::move(inner));
     root = root->DeepCopyWithoutEmptyChildren();

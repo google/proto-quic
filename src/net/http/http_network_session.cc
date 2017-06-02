@@ -49,19 +49,19 @@ base::StaticAtomicSequenceNumber g_next_shard_id;
 
 ClientSocketPoolManager* CreateSocketPoolManager(
     HttpNetworkSession::SocketPoolType pool_type,
-    const HttpNetworkSession::Params& params,
+    const HttpNetworkSession::Context& context,
     const std::string& ssl_session_cache_shard) {
   // TODO(yutak): Differentiate WebSocket pool manager and allow more
   // simultaneous connections for WebSockets.
   return new ClientSocketPoolManagerImpl(
-      params.net_log,
-      params.client_socket_factory ? params.client_socket_factory
-                                   : ClientSocketFactory::GetDefaultFactory(),
-      params.socket_performance_watcher_factory, params.host_resolver,
-      params.cert_verifier, params.channel_id_service,
-      params.transport_security_state, params.cert_transparency_verifier,
-      params.ct_policy_enforcer, ssl_session_cache_shard,
-      params.ssl_config_service, pool_type);
+      context.net_log,
+      context.client_socket_factory ? context.client_socket_factory
+                                    : ClientSocketFactory::GetDefaultFactory(),
+      context.socket_performance_watcher_factory, context.host_resolver,
+      context.cert_verifier, context.channel_id_service,
+      context.transport_security_state, context.cert_transparency_verifier,
+      context.ct_policy_enforcer, ssl_session_cache_shard,
+      context.ssl_config_service, pool_type);
 }
 
 }  // unnamed namespace
@@ -97,20 +97,7 @@ SettingsMap AddDefaultHttp2Settings(SettingsMap http2_settings) {
 }  // unnamed namespace
 
 HttpNetworkSession::Params::Params()
-    : client_socket_factory(nullptr),
-      host_resolver(nullptr),
-      cert_verifier(nullptr),
-      enable_server_push_cancellation(false),
-      channel_id_service(nullptr),
-      transport_security_state(nullptr),
-      cert_transparency_verifier(nullptr),
-      ct_policy_enforcer(nullptr),
-      proxy_service(nullptr),
-      ssl_config_service(nullptr),
-      http_auth_handler_factory(nullptr),
-      net_log(nullptr),
-      host_mapping_rules(nullptr),
-      socket_performance_watcher_factory(nullptr),
+    : enable_server_push_cancellation(false),
       ignore_certificate_errors(false),
       testing_fixed_http_port(0),
       testing_fixed_https_port(0),
@@ -123,10 +110,6 @@ HttpNetworkSession::Params::Params()
       enable_http2_alternative_service(false),
       enable_quic(false),
       quic_max_packet_length(kDefaultMaxPacketSize),
-      quic_clock(nullptr),
-      quic_random(nullptr),
-      quic_crypto_client_stream_factory(
-          QuicCryptoClientStreamFactory::GetDefaultFactory()),
       quic_max_server_configs_stored_in_properties(0u),
       mark_quic_broken_when_network_blackholes(false),
       retry_without_alt_svc_on_quic_errors(false),
@@ -143,7 +126,6 @@ HttpNetworkSession::Params::Params()
       quic_race_cert_verification(false),
       quic_do_not_fragment(false),
       quic_estimate_initial_rtt(false),
-      proxy_delegate(nullptr),
       enable_token_binding(false),
       http_09_on_non_default_ports_enabled(false) {
   quic_supported_versions.push_back(QUIC_VERSION_37);
@@ -153,33 +135,57 @@ HttpNetworkSession::Params::Params(const Params& other) = default;
 
 HttpNetworkSession::Params::~Params() {}
 
+HttpNetworkSession::Context::Context()
+    : client_socket_factory(nullptr),
+      host_resolver(nullptr),
+      cert_verifier(nullptr),
+      channel_id_service(nullptr),
+      transport_security_state(nullptr),
+      cert_transparency_verifier(nullptr),
+      ct_policy_enforcer(nullptr),
+      proxy_service(nullptr),
+      ssl_config_service(nullptr),
+      http_auth_handler_factory(nullptr),
+      net_log(nullptr),
+      socket_performance_watcher_factory(nullptr),
+      quic_clock(nullptr),
+      quic_random(nullptr),
+      quic_crypto_client_stream_factory(
+          QuicCryptoClientStreamFactory::GetDefaultFactory()),
+      proxy_delegate(nullptr) {}
+
+HttpNetworkSession::Context::Context(const Context& other) = default;
+
+HttpNetworkSession::Context::~Context() {}
+
 // TODO(mbelshe): Move the socket factories into HttpStreamFactory.
-HttpNetworkSession::HttpNetworkSession(const Params& params)
-    : net_log_(params.net_log),
-      http_server_properties_(params.http_server_properties),
-      cert_verifier_(params.cert_verifier),
-      http_auth_handler_factory_(params.http_auth_handler_factory),
-      proxy_service_(params.proxy_service),
-      ssl_config_service_(params.ssl_config_service),
+HttpNetworkSession::HttpNetworkSession(const Params& params,
+                                       const Context& context)
+    : net_log_(context.net_log),
+      http_server_properties_(context.http_server_properties),
+      cert_verifier_(context.cert_verifier),
+      http_auth_handler_factory_(context.http_auth_handler_factory),
+      proxy_service_(context.proxy_service),
+      ssl_config_service_(context.ssl_config_service),
       push_delegate_(nullptr),
       quic_stream_factory_(
-          params.net_log,
-          params.host_resolver,
-          params.ssl_config_service,
-          params.client_socket_factory
-              ? params.client_socket_factory
+          context.net_log,
+          context.host_resolver,
+          context.ssl_config_service,
+          context.client_socket_factory
+              ? context.client_socket_factory
               : ClientSocketFactory::GetDefaultFactory(),
-          params.http_server_properties,
-          params.cert_verifier,
-          params.ct_policy_enforcer,
-          params.channel_id_service,
-          params.transport_security_state,
-          params.cert_transparency_verifier,
-          params.socket_performance_watcher_factory,
-          params.quic_crypto_client_stream_factory,
-          params.quic_random ? params.quic_random : QuicRandom::GetInstance(),
-          params.quic_clock ? params.quic_clock
-                            : QuicChromiumClock::GetInstance(),
+          context.http_server_properties,
+          context.cert_verifier,
+          context.ct_policy_enforcer,
+          context.channel_id_service,
+          context.transport_security_state,
+          context.cert_transparency_verifier,
+          context.socket_performance_watcher_factory,
+          context.quic_crypto_client_stream_factory,
+          context.quic_random ? context.quic_random : QuicRandom::GetInstance(),
+          context.quic_clock ? context.quic_clock
+                             : QuicChromiumClock::GetInstance(),
           params.quic_max_packet_length,
           params.quic_user_agent_id,
           params.quic_supported_versions,
@@ -198,19 +204,20 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
           params.quic_estimate_initial_rtt,
           params.quic_connection_options,
           params.enable_token_binding),
-      spdy_session_pool_(params.host_resolver,
-                         params.ssl_config_service,
-                         params.http_server_properties,
-                         params.transport_security_state,
+      spdy_session_pool_(context.host_resolver,
+                         context.ssl_config_service,
+                         context.http_server_properties,
+                         context.transport_security_state,
                          params.enable_spdy_ping_based_connection_checking,
                          params.spdy_session_max_recv_window_size,
                          AddDefaultHttp2Settings(params.http2_settings),
                          params.time_func,
-                         params.proxy_delegate),
+                         context.proxy_delegate),
       http_stream_factory_(new HttpStreamFactoryImpl(this, false)),
       http_stream_factory_for_websocket_(new HttpStreamFactoryImpl(this, true)),
       network_stream_throttler_(new NetworkThrottleManagerImpl()),
-      params_(params) {
+      params_(params),
+      context_(context) {
   DCHECK(proxy_service_);
   DCHECK(ssl_config_service_.get());
   CHECK(http_server_properties_);
@@ -218,9 +225,9 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
   const std::string ssl_session_cache_shard =
       "http_network_session/" + base::IntToString(g_next_shard_id.GetNext());
   normal_socket_pool_manager_.reset(CreateSocketPoolManager(
-      NORMAL_SOCKET_POOL, params, ssl_session_cache_shard));
+      NORMAL_SOCKET_POOL, context, ssl_session_cache_shard));
   websocket_socket_pool_manager_.reset(CreateSocketPoolManager(
-      WEBSOCKET_SOCKET_POOL, params, ssl_session_cache_shard));
+      WEBSOCKET_SOCKET_POOL, context, ssl_session_cache_shard));
 
   if (params_.enable_http2) {
     next_protos_.push_back(kProtoHTTP2);
@@ -237,6 +244,7 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
 }
 
 HttpNetworkSession::~HttpNetworkSession() {
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   response_drainers_.clear();
   spdy_session_pool_.CloseAllSessions();
   base::MemoryCoordinatorClientRegistry::GetInstance()->Unregister(this);
@@ -402,7 +410,7 @@ void HttpNetworkSession::GetSSLConfig(const HttpRequestInfo& request,
   *proxy_config = *server_config;
   if (request.privacy_mode == PRIVACY_MODE_ENABLED) {
     server_config->channel_id_enabled = false;
-  } else if (params_.enable_token_binding && params_.channel_id_service) {
+  } else if (params_.enable_token_binding && context_.channel_id_service) {
     server_config->token_binding_params.push_back(TB_PARAM_ECDSAP256);
   }
 }

@@ -52,11 +52,6 @@ class QUIC_EXPORT_PRIVATE PacketNumberQueue {
   // Removes the smallest interval in the queue.
   void RemoveSmallestInterval();
 
-  // Mutates packet number set so that it contains only those packet numbers
-  // from minimum to maximum packet number not currently in the set. Do nothing
-  // if packet number set is empty.
-  void Complement();
-
   // Returns true if the queue contains |packet_number|.
   bool Contains(QuicPacketNumber packet_number) const;
 

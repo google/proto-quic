@@ -29,7 +29,7 @@ int ParseIntAndAdvance(const char** field, size_t field_len, bool* ok) {
   return result;
 }
 
-}
+}  // anonymous namespace
 
 CertPrincipal::CertPrincipal() {
 }
