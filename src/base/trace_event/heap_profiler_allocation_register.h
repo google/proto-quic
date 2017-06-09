@@ -379,7 +379,7 @@ class BASE_EXPORT AllocationRegister {
   //
   // This is a slightly abstraction to allow for constant propagation. It
   // knows that the sentinel will be the first item inserted into the table
-  // and that the first index retuned will be 0. The constructor DCHECKs
+  // and that the first index returned will be 0. The constructor DCHECKs
   // this assumption.
   enum : BacktraceMap::KVIndex { kOutOfStorageBacktraceIndex = 0 };
 

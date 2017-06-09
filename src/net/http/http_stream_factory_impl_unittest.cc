@@ -191,11 +191,11 @@ class StreamRequestWaiter : public HttpStreamRequest::Delegate {
 
   void OnStreamReady(const SSLConfig& used_ssl_config,
                      const ProxyInfo& used_proxy_info,
-                     HttpStream* stream) override {
+                     std::unique_ptr<HttpStream> stream) override {
     stream_done_ = true;
     if (waiting_for_stream_)
       loop_.Quit();
-    stream_.reset(stream);
+    stream_ = std::move(stream);
     used_ssl_config_ = used_ssl_config;
     used_proxy_info_ = used_proxy_info;
   }
@@ -203,11 +203,11 @@ class StreamRequestWaiter : public HttpStreamRequest::Delegate {
   void OnWebSocketHandshakeStreamReady(
       const SSLConfig& used_ssl_config,
       const ProxyInfo& used_proxy_info,
-      WebSocketHandshakeStreamBase* stream) override {
+      std::unique_ptr<WebSocketHandshakeStreamBase> stream) override {
     stream_done_ = true;
     if (waiting_for_stream_)
       loop_.Quit();
-    websocket_stream_.reset(stream);
+    websocket_stream_ = std::move(stream);
     used_ssl_config_ = used_ssl_config;
     used_proxy_info_ = used_proxy_info;
   }
@@ -215,11 +215,11 @@ class StreamRequestWaiter : public HttpStreamRequest::Delegate {
   void OnBidirectionalStreamImplReady(
       const SSLConfig& used_ssl_config,
       const ProxyInfo& used_proxy_info,
-      BidirectionalStreamImpl* stream) override {
+      std::unique_ptr<BidirectionalStreamImpl> stream) override {
     stream_done_ = true;
     if (waiting_for_stream_)
       loop_.Quit();
-    bidirectional_stream_impl_.reset(stream);
+    bidirectional_stream_impl_ = std::move(stream);
     used_ssl_config_ = used_ssl_config;
     used_proxy_info_ = used_proxy_info;
   }
@@ -937,16 +937,20 @@ TEST_F(HttpStreamFactoryTest, WithQUICAlternativeProxyMarkedAsBad) {
           MockConnect(ASYNC, mock_error));
       socket_factory.AddSocketDataProvider(&socket_data_proxy_main_job_2);
 
+      SSLSocketDataProvider ssl_data(ASYNC, OK);
+
       // First request would use DIRECT, and succeed.
       StaticSocketDataProvider socket_data_direct_first_request;
       socket_data_direct_first_request.set_connect_data(MockConnect(ASYNC, OK));
       socket_factory.AddSocketDataProvider(&socket_data_direct_first_request);
+      socket_factory.AddSSLSocketDataProvider(&ssl_data);
 
       // Second request would use DIRECT, and succeed.
       StaticSocketDataProvider socket_data_direct_second_request;
       socket_data_direct_second_request.set_connect_data(
           MockConnect(ASYNC, OK));
       socket_factory.AddSocketDataProvider(&socket_data_direct_second_request);
+      socket_factory.AddSSLSocketDataProvider(&ssl_data);
 
       // Now request a stream. It should succeed using the DIRECT.
       HttpRequestInfo request_info;

@@ -8,6 +8,8 @@ from telemetry.page import shared_page_state
 class KeyMobileSitesPage(page_module.Page):
 
   def __init__(self, url, page_set, name='', tags=None):
+    if name == '':
+      name = url
     super(KeyMobileSitesPage, self).__init__(
         url=url, page_set=page_set, name=name,
         shared_page_state_class=shared_page_state.SharedMobilePageState,

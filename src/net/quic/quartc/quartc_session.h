@@ -10,6 +10,7 @@
 #include "net/quic/core/quic_crypto_stream.h"
 #include "net/quic/core/quic_error_codes.h"
 #include "net/quic/core/quic_session.h"
+#include "net/quic/platform/api/quic_export.h"
 #include "net/quic/quartc/quartc_clock_interface.h"
 #include "net/quic/quartc/quartc_session_interface.h"
 #include "net/quic/quartc/quartc_stream.h"

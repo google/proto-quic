@@ -115,7 +115,8 @@ TEST(ObjCClassSwizzlerTest, SwizzleClassMethods) {
 
     IMP original = swizzler.GetOriginalImplementation();
     id expected_result = reinterpret_cast<id>(10);
-    EXPECT_EQ(expected_result, original(nil, @selector(function)));
+    EXPECT_EQ(expected_result,
+              original([ObjCClassSwizzlerTestOne class], @selector(function)));
   }
 
   EXPECT_EQ(10, [ObjCClassSwizzlerTestOne function]);

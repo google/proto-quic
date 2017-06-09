@@ -4,7 +4,6 @@
 
 import re
 
-from benchmarks import v8_helper
 from core import perf_benchmark
 from telemetry import benchmark
 from telemetry.timeline import chrome_trace_config
@@ -30,7 +29,25 @@ _V8_GC_HIGH_LEVEL_STATS_RE = re.compile(r'^v8-gc-('
     r'total_)')
 
 
-class _V8BrowsingBenchmark(perf_benchmark.PerfBenchmark):
+class _v8BrowsingBenchmarkBaseClass(perf_benchmark.PerfBenchmark):
+  """Base class for all v8 browsing benchmarks."""
+  @classmethod
+  def ShouldTearDownStateAfterEachStoryRun(cls):
+    return True
+
+  def CreateStorySet(self, options):
+    return page_sets.SystemHealthStorySet(platform=self.PLATFORM, case='browse')
+
+  def GetExpectations(self):
+    if self.PLATFORM is 'desktop':
+      return page_sets.V8BrowsingDesktopExpecations()
+    if self.PLATFORM is 'mobile':
+      return page_sets.V8BrowsingMobileExpecations()
+    raise NotImplementedError, ('Only have expectations for mobile and desktop '
+                                'platforms for v8_browsing tests.')
+
+
+class _V8BrowsingBenchmark(_v8BrowsingBenchmarkBaseClass):
   """Base class for V8 browsing benchmarks.
   This benchmark measures memory usage with periodic memory dumps and v8 times.
   See browsing_stories._BrowsingStory for workload description.
@@ -71,17 +88,6 @@ class _V8BrowsingBenchmark(perf_benchmark.PerfBenchmark):
       'expectedQueueingTimeMetric', 'v8AndMemoryMetrics'])
     return options
 
-  def CreateStorySet(self, options):
-    return page_sets.SystemHealthStorySet(platform=self.PLATFORM, case='browse')
-
-  def GetExpectations(self):
-    if self.PLATFORM is 'desktop':
-      return page_sets.V8BrowsingDesktopExpecations()
-    if self.PLATFORM is 'mobile':
-      return page_sets.V8BrowsingMobileExpecations()
-    raise NotImplementedError, ('Only have expectations for mobile and desktop '
-                                'platforms for v8_browsing tests.')
-
   @classmethod
   def ValueCanBeAddedPredicate(cls, value, is_first_result):
     # TODO(crbug.com/610962): Remove this stopgap when the perf dashboard
@@ -95,12 +101,8 @@ class _V8BrowsingBenchmark(perf_benchmark.PerfBenchmark):
     # Allow all other metrics.
     return True
 
-  @classmethod
-  def ShouldTearDownStateAfterEachStoryRun(cls):
-    return True
 
-
-class _V8RuntimeStatsBrowsingBenchmark(perf_benchmark.PerfBenchmark):
+class _V8RuntimeStatsBrowsingBenchmark(_v8BrowsingBenchmarkBaseClass):
   """Base class for V8 browsing benchmarks that measure RuntimeStats.
   RuntimeStats measure the time spent by v8 in different phases like
   compile, JS execute, runtime etc.,
@@ -142,13 +144,6 @@ class _V8RuntimeStatsBrowsingBenchmark(perf_benchmark.PerfBenchmark):
       'expectedQueueingTimeMetric', 'runtimeStatsTotalMetric', 'gcMetric'])
     return options
 
-  def CreateStorySet(self, options):
-    return page_sets.SystemHealthStorySet(platform=self.PLATFORM, case='browse')
-
-  @classmethod
-  def ShouldTearDownStateAfterEachStoryRun(cls):
-    return True
-
 
 @benchmark.Owner(emails=['ulan@chromium.org'])
 @benchmark.Disabled('android')
@@ -171,68 +166,6 @@ class V8MobileBrowsingBenchmark(_V8BrowsingBenchmark):
 
 
 @benchmark.Disabled('android')
-@benchmark.Disabled('all')
-@benchmark.Owner(emails=['mvstaton@chromium.org'])
-class V8DesktopTurboBrowsingBenchmark(_V8BrowsingBenchmark):
-  PLATFORM = 'desktop'
-
-  def SetExtraBrowserOptions(self, options):
-    super(V8DesktopTurboBrowsingBenchmark, self).SetExtraBrowserOptions(
-        options)
-    v8_helper.EnableTurbo(options)
-
-  @classmethod
-  def Name(cls):
-    return 'v8.browsing_desktop_turbo'
-
-
-
-@benchmark.Enabled('android')
-@benchmark.Disabled('all')
-@benchmark.Owner(emails=['mvstaton@chromium.org'])
-class V8MobileTurboBrowsingBenchmark(_V8BrowsingBenchmark):
-  PLATFORM = 'mobile'
-
-  def SetExtraBrowserOptions(self, options):
-    super(V8MobileTurboBrowsingBenchmark, self).SetExtraBrowserOptions(
-        options)
-    v8_helper.EnableTurbo(options)
-
-  @classmethod
-  def Name(cls):
-    return 'v8.browsing_mobile_turbo'
-
-
-@benchmark.Disabled('android')
-@benchmark.Owner(emails=['hablich@chromium.org'])
-class V8DesktopClassicBrowsingBenchmark(_V8BrowsingBenchmark):
-  PLATFORM = 'desktop'
-
-  def SetExtraBrowserOptions(self, options):
-    super(V8DesktopClassicBrowsingBenchmark, self).SetExtraBrowserOptions(
-        options)
-    v8_helper.EnableClassic(options)
-
-  @classmethod
-  def Name(cls):
-    return 'v8.browsing_desktop_classic'
-
-
-@benchmark.Enabled('android')
-@benchmark.Owner(emails=['hablich@chromium.org'])
-class V8MobileClassicBrowsingBenchmark(_V8BrowsingBenchmark):
-  PLATFORM = 'mobile'
-
-  def SetExtraBrowserOptions(self, options):
-    super(V8MobileClassicBrowsingBenchmark, self).SetExtraBrowserOptions(
-        options)
-    v8_helper.EnableClassic(options)
-
-  @classmethod
-  def Name(cls):
-    return 'v8.browsing_mobile_classic'
-
-
 @benchmark.Owner(emails=['mythria@chromium.org'])
 class V8RuntimeStatsDesktopBrowsingBenchmark(
     _V8RuntimeStatsBrowsingBenchmark):
@@ -241,39 +174,6 @@ class V8RuntimeStatsDesktopBrowsingBenchmark(
   @classmethod
   def Name(cls):
     return 'v8.runtimestats.browsing_desktop'
-
-
-@benchmark.Disabled('android')
-@benchmark.Disabled('all')
-@benchmark.Owner(emails=['mythria@chromium.org'])
-class V8RuntimeStatsDesktopTurboBrowsingBenchmark(
-    _V8RuntimeStatsBrowsingBenchmark):
-  PLATFORM = 'desktop'
-
-  def SetExtraBrowserOptions(self, options):
-    super(V8RuntimeStatsDesktopTurboBrowsingBenchmark,
-        self).SetExtraBrowserOptions(options)
-    v8_helper.EnableTurbo(options)
-
-  @classmethod
-  def Name(cls):
-    return 'v8.runtimestats.browsing_desktop_turbo'
-
-
-@benchmark.Owner(emails=['hablich@chromium.org'])
-class V8RuntimeStatsDesktopClassicBrowsingBenchmark(
-    _V8RuntimeStatsBrowsingBenchmark):
-  PLATFORM = 'desktop'
-
-  def SetExtraBrowserOptions(self, options):
-    super(V8RuntimeStatsDesktopClassicBrowsingBenchmark,
-        self).SetExtraBrowserOptions(options)
-    v8_helper.EnableClassic(options)
-
-  @classmethod
-  def Name(cls):
-    return 'v8.runtimestats.browsing_desktop_classic'
-
 
 
 @benchmark.Enabled('android')
@@ -285,36 +185,3 @@ class V8RuntimeStatsMobileBrowsingBenchmark(
   @classmethod
   def Name(cls):
     return 'v8.runtimestats.browsing_mobile'
-
-
-@benchmark.Enabled('android')
-@benchmark.Disabled('all')
-@benchmark.Owner(emails=['mythria@chromium.org'])
-class V8RuntimeStatsMobileTurboBrowsingBenchmark(
-    _V8RuntimeStatsBrowsingBenchmark):
-  PLATFORM = 'mobile'
-
-  def SetExtraBrowserOptions(self, options):
-    super(V8RuntimeStatsMobileTurboBrowsingBenchmark,
-        self).SetExtraBrowserOptions(options)
-    v8_helper.EnableTurbo(options)
-
-  @classmethod
-  def Name(cls):
-    return 'v8.runtimestats.browsing_mobile_turbo'
-
-
-@benchmark.Enabled('android')
-@benchmark.Owner(emails=['hablich@chromium.org'])
-class V8RuntimeStatsMobileClassicBrowsingBenchmark(
-    _V8RuntimeStatsBrowsingBenchmark):
-  PLATFORM = 'mobile'
-
-  def SetExtraBrowserOptions(self, options):
-    super(V8RuntimeStatsMobileClassicBrowsingBenchmark,
-        self).SetExtraBrowserOptions(options)
-    v8_helper.EnableClassic(options)
-
-  @classmethod
-  def Name(cls):
-    return 'v8.runtimestats.browsing_mobile_classic'

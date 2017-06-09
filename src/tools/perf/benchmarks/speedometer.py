@@ -20,8 +20,6 @@ import os
 
 from core import perf_benchmark
 
-from benchmarks import v8_helper
-
 from telemetry import benchmark
 from telemetry import page as page_module
 from telemetry.page import legacy_page_test
@@ -103,31 +101,10 @@ class Speedometer(perf_benchmark.PerfBenchmark):
     ps = story.StorySet(
         base_dir=os.path.dirname(os.path.abspath(__file__)),
         archive_data_file='../page_sets/data/speedometer.json',
-        cloud_storage_bucket=story.PUBLIC_BUCKET)
+        cloud_storage_bucket=story.PUBLIC_BUCKET,
+        verify_names=True)
     ps.AddStory(page_module.Page(
         'http://browserbench.org/Speedometer/', ps, ps.base_dir,
-        make_javascript_deterministic=False))
+        make_javascript_deterministic=False,
+        name='http://browserbench.org/Speedometer/'))
     return ps
-
-
-@benchmark.Owner(emails=['hablich@chromium.org'])
-@benchmark.Disabled('all')
-class SpeedometerTurbo(Speedometer):
-  def SetExtraBrowserOptions(self, options):
-    super(SpeedometerTurbo, self).SetExtraBrowserOptions(options)
-    v8_helper.EnableTurbo(options)
-
-  @classmethod
-  def Name(cls):
-    return 'speedometer-turbo'
-
-
-@benchmark.Owner(emails=['hablich@chromium.org'])
-class SpeedometerClassic(Speedometer):
-  def SetExtraBrowserOptions(self, options):
-    super(SpeedometerClassic, self).SetExtraBrowserOptions(options)
-    v8_helper.EnableClassic(options)
-
-  @classmethod
-  def Name(cls):
-    return 'speedometer-classic'

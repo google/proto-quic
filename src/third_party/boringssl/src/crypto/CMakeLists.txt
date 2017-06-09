@@ -1,61 +1,63 @@
 include_directories(../include)
 
-if(UNIX)
-  if (${ARCH} STREQUAL "aarch64")
-    # The "armx" Perl scripts look for "64" in the style argument
-    # in order to decide whether to generate 32- or 64-bit asm.
-    if (APPLE)
-      set(PERLASM_STYLE ios64)
+if(NOT OPENSSL_NO_ASM)
+  if(UNIX)
+    if (${ARCH} STREQUAL "aarch64")
+      # The "armx" Perl scripts look for "64" in the style argument
+      # in order to decide whether to generate 32- or 64-bit asm.
+      if (APPLE)
+        set(PERLASM_STYLE ios64)
+      else()
+        set(PERLASM_STYLE linux64)
+      endif()
+    elseif (${ARCH} STREQUAL "arm")
+      if (APPLE)
+        set(PERLASM_STYLE ios32)
+      else()
+        set(PERLASM_STYLE linux32)
+      endif()
+    elseif (${ARCH} STREQUAL "ppc64le")
+      set(PERLASM_STYLE linux64le)
     else()
-      set(PERLASM_STYLE linux64)
+      if (${ARCH} STREQUAL "x86")
+        set(PERLASM_FLAGS "-fPIC -DOPENSSL_IA32_SSE2")
+      endif()
+      if (APPLE)
+        set(PERLASM_STYLE macosx)
+      else()
+        set(PERLASM_STYLE elf)
+      endif()
     endif()
-  elseif (${ARCH} STREQUAL "arm")
+    set(ASM_EXT S)
+    enable_language(ASM)
+    set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -Wa,--noexecstack")
+
+    # Clang's integerated assembler does not support debug symbols.
+    if(NOT CMAKE_ASM_COMPILER_ID MATCHES "Clang")
+      set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -Wa,-g")
+    endif()
+
+    # CMake does not add -isysroot and -arch flags to assembly.
     if (APPLE)
-      set(PERLASM_STYLE ios32)
-    else()
-      set(PERLASM_STYLE linux32)
+      if (CMAKE_OSX_SYSROOT)
+        set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -isysroot ${CMAKE_OSX_SYSROOT}")
+      endif()
+      foreach(arch ${CMAKE_OSX_ARCHITECTURES})
+        set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -arch ${arch}")
+      endforeach()
     endif()
-  elseif (${ARCH} STREQUAL "ppc64le")
-    set(PERLASM_STYLE linux64le)
   else()
-    if (${ARCH} STREQUAL "x86")
-      set(PERLASM_FLAGS "-fPIC -DOPENSSL_IA32_SSE2")
-    endif()
-    if (APPLE)
-      set(PERLASM_STYLE macosx)
+    if (CMAKE_CL_64)
+      set(PERLASM_STYLE nasm)
     else()
-      set(PERLASM_STYLE elf)
+      set(PERLASM_STYLE win32n)
+      set(PERLASM_FLAGS "-DOPENSSL_IA32_SSE2")
     endif()
-  endif()
-  set(ASM_EXT S)
-  enable_language(ASM)
-  set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -Wa,--noexecstack")
 
-  # Clang's integerated assembler does not support debug symbols.
-  if(NOT CMAKE_ASM_COMPILER_ID MATCHES "Clang")
-    set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -Wa,-g")
+    # On Windows, we use the NASM output, specifically built with Yasm.
+    set(ASM_EXT asm)
+    enable_language(ASM_NASM)
   endif()
-
-  # CMake does not add -isysroot and -arch flags to assembly.
-  if (APPLE)
-    if (CMAKE_OSX_SYSROOT)
-      set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -isysroot ${CMAKE_OSX_SYSROOT}")
-    endif()
-    foreach(arch ${CMAKE_OSX_ARCHITECTURES})
-      set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -arch ${arch}")
-    endforeach()
-  endif()
-else()
-  if (CMAKE_CL_64)
-    set(PERLASM_STYLE nasm)
-  else()
-    set(PERLASM_STYLE win32n)
-    set(PERLASM_FLAGS "-DOPENSSL_IA32_SSE2")
-  endif()
-
-  # On Windows, we use the NASM output, specifically built with Yasm.
-  set(ASM_EXT asm)
-  enable_language(ASM_NASM)
 endif()
 
 function(perlasm dest src)
@@ -211,17 +213,6 @@ if(NOT MSVC AND NOT ANDROID)
   target_link_libraries(crypto pthread)
 endif()
 
-add_executable(
-  thread_test
-
-  thread_test.c
-
-  $<TARGET_OBJECTS:test_support>
-)
-
-target_link_libraries(thread_test crypto)
-add_dependencies(all_tests thread_test)
-
 # TODO(davidben): Convert the remaining tests to GTest.
 add_executable(
   crypto_test
@@ -247,17 +238,25 @@ add_executable(
   evp/evp_extra_test.cc
   evp/pbkdf_test.cc
   fipsmodule/aes/aes_test.cc
+  fipsmodule/bn/bn_test.cc
   fipsmodule/ec/ec_test.cc
+  fipsmodule/ecdsa/ecdsa_test.cc
   fipsmodule/modes/gcm_test.cc
   fipsmodule/rand/ctrdrbg_test.cc
   hkdf/hkdf_test.cc
   hmac_extra/hmac_test.cc
   lhash/lhash_test.cc
+  obj/obj_test.cc
+  pkcs7/pkcs7_test.cc
+  pkcs8/pkcs8_test.cc
+  pkcs8/pkcs12_test.cc
   poly1305/poly1305_test.cc
   pool/pool_test.cc
   refcount_test.cc
   rsa_extra/rsa_test.cc
   test/file_test_gtest.cc
+  thread_test.cc
+  x509/x509_test.cc
 
   $<TARGET_OBJECTS:crypto_test_data>
   $<TARGET_OBJECTS:gtest_main>

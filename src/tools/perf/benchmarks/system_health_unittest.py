@@ -8,6 +8,7 @@ import unittest
 from benchmarks import system_health as system_health_benchmark
 from core import path_util
 from page_sets.system_health import system_health_stories
+from page_sets.system_health import system_health_story
 
 from telemetry import benchmark as benchmark_module
 from telemetry.core import discover
@@ -44,3 +45,21 @@ class TestSystemHealthBenchmarks(unittest.TestCase):
           b().CreateStorySet(None),
           system_health_stories.SystemHealthStorySet,
           '%r does not use SystemHealthStorySet' % b)
+
+
+class TestSystemHealthStories(unittest.TestCase):
+
+  def testNoOverrideRunPageInteractions(self):
+    desktop_stories = (
+        system_health_stories.DesktopSystemHealthStorySet().stories)
+    mobile_stories = (
+        system_health_stories.MobileSystemHealthStorySet().stories)
+    for s in desktop_stories + mobile_stories:
+      # Long running stories has their own way of collecting memory dumps,
+      # so they explicitly override RunPageInteractions method.
+      if s.name.startswith('long_running:'):
+        continue
+      self.assertEquals(s.__class__.RunPageInteractions,
+          system_health_story.SystemHealthStory.RunPageInteractions,
+          'Story %s overrides RunPageInteractions. Override _DidLoadDocument '
+          'instead' % s.name)

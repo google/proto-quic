@@ -166,40 +166,14 @@ std::vector<TestParams> GetTestParams() {
   std::vector<TestParams> params;
   for (const CongestionControlType congestion_control_type :
        {kBBR, kCubic, kCubicBytes, kReno, kRenoBytes, kPCC}) {
+    params.push_back(
+        TestParams(congestion_control_type, false, false, false, false));
     if (congestion_control_type != kCubic &&
         congestion_control_type != kCubicBytes) {
-      params.push_back(
-          TestParams(congestion_control_type, false, false, false, false));
       continue;
     }
-    for (bool fix_convex_mode : {true, false}) {
-      for (bool fix_cubic_quantization : {true, false}) {
-        for (bool fix_beta_last_max : {true, false}) {
-          for (bool allow_per_ack_updates : {true, false}) {
-            if (!FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode &&
-                fix_convex_mode) {
-              continue;
-            }
-            if (!FLAGS_quic_reloadable_flag_quic_fix_cubic_bytes_quantization &&
-                fix_cubic_quantization) {
-              continue;
-            }
-            if (!FLAGS_quic_reloadable_flag_quic_fix_beta_last_max &&
-                fix_beta_last_max) {
-              continue;
-            }
-            if (!FLAGS_quic_reloadable_flag_quic_enable_cubic_per_ack_updates &&
-                allow_per_ack_updates) {
-              continue;
-            }
-            TestParams param(congestion_control_type, fix_convex_mode,
-                             fix_cubic_quantization, fix_beta_last_max,
-                             allow_per_ack_updates);
-            params.push_back(param);
-          }
-        }
-      }
-    }
+    params.push_back(
+        TestParams(congestion_control_type, true, true, true, true));
   }
   return params;
 }
@@ -220,6 +194,10 @@ class SendAlgorithmTest : public QuicTestWithParam<TestParams> {
                   "QUIC sender",
                   Perspective::IS_SERVER,
                   net::test::GetPeerInMemoryConnectionId(42)) {
+    FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode = true;
+    FLAGS_quic_reloadable_flag_quic_fix_cubic_bytes_quantization = true;
+    FLAGS_quic_reloadable_flag_quic_fix_beta_last_max = true;
+    FLAGS_quic_reloadable_flag_quic_enable_cubic_per_ack_updates = true;
     rtt_stats_ = quic_sender_.connection()->sent_packet_manager().GetRttStats();
     sender_ = SendAlgorithmInterface::Create(
         simulator_.GetClock(), rtt_stats_,

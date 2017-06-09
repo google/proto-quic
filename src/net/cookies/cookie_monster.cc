@@ -222,14 +222,12 @@ struct CookieSignature {
 };
 
 // For a CookieItVector iterator range [|it_begin|, |it_end|),
-// sorts the first |num_sort| + 1 elements by LastAccessDate().
-// The + 1 element exists so for any interval of length <= |num_sort| starting
-// from |cookies_its_begin|, a LastAccessDate() bound can be found.
+// sorts the first |num_sort| elements by LastAccessDate().
 void SortLeastRecentlyAccessed(CookieMonster::CookieItVector::iterator it_begin,
                                CookieMonster::CookieItVector::iterator it_end,
                                size_t num_sort) {
-  DCHECK_LT(static_cast<int>(num_sort), it_end - it_begin);
-  std::partial_sort(it_begin, it_begin + num_sort + 1, it_end, LRACookieSorter);
+  DCHECK_LE(static_cast<int>(num_sort), it_end - it_begin);
+  std::partial_sort(it_begin, it_begin + num_sort, it_end, LRACookieSorter);
 }
 
 // Given a single cookie vector |cookie_its|, pushs all of the secure cookies in
@@ -2022,18 +2020,44 @@ size_t CookieMonster::GarbageCollect(const Time& current,
       SplitCookieVectorIntoSecureAndNonSecure(cookie_its, &secure_cookie_its,
                                               &non_secure_cookie_its);
       size_t non_secure_purge_goal =
-          std::min<size_t>(purge_goal, non_secure_cookie_its.size() - 1);
+          std::min<size_t>(purge_goal, non_secure_cookie_its.size());
 
+      base::Time earliest_non_secure_access_time;
       size_t just_deleted = GarbageCollectLeastRecentlyAccessed(
-          current, safe_date, non_secure_purge_goal, non_secure_cookie_its);
+          current, safe_date, non_secure_purge_goal, non_secure_cookie_its,
+          &earliest_non_secure_access_time);
       num_deleted += just_deleted;
 
-      if (just_deleted < purge_goal && secure_cookie_its.size() > 0) {
-        size_t secure_purge_goal = std::min<size_t>(
-            purge_goal - just_deleted, secure_cookie_its.size() - 1);
+      if (secure_cookie_its.size() == 0) {
+        // This case is unlikely, but should still update
+        // |earliest_access_time_| if only have non-secure cookies.
+        earliest_access_time_ = earliest_non_secure_access_time;
+        // Garbage collection can't delete all cookies.
+        DCHECK(!earliest_access_time_.is_null());
+      } else if (just_deleted < purge_goal) {
+        size_t secure_purge_goal = std::min<size_t>(purge_goal - just_deleted,
+                                                    secure_cookie_its.size());
+        base::Time earliest_secure_access_time;
         num_deleted += GarbageCollectLeastRecentlyAccessed(
-            current, safe_date, secure_purge_goal, secure_cookie_its);
+            current, safe_date, secure_purge_goal, secure_cookie_its,
+            &earliest_secure_access_time);
+
+        if (!earliest_non_secure_access_time.is_null() &&
+            earliest_non_secure_access_time < earliest_secure_access_time) {
+          earliest_access_time_ = earliest_non_secure_access_time;
+        } else {
+          earliest_access_time_ = earliest_secure_access_time;
+        }
+
+        // Garbage collection can't delete all cookies.
+        DCHECK(!earliest_access_time_.is_null());
       }
+
+      // If there are secure cookies, but deleting non-secure cookies was enough
+      // to meet the purge goal, secure cookies are never examined, so
+      // |earliest_access_time_| can't be determined. Leaving it alone will mean
+      // it's no later than the real earliest last access time, so this won't
+      // lead to any problems.
     }
   }
 
@@ -2132,13 +2156,17 @@ size_t CookieMonster::GarbageCollectLeastRecentlyAccessed(
     const base::Time& current,
     const base::Time& safe_date,
     size_t purge_goal,
-    CookieItVector cookie_its) {
+    CookieItVector cookie_its,
+    base::Time* earliest_time) {
+  DCHECK_LE(purge_goal, cookie_its.size());
   DCHECK(thread_checker_.CalledOnValidThread());
 
-  // Sorts up to *and including* |cookie_its[purge_goal]|, so
-  // |earliest_access_time| will be properly assigned even if
+  // Sorts up to *and including* |cookie_its[purge_goal]| (if it exists), so
+  // |earliest_time| will be properly assigned even if
   // |global_purge_it| == |cookie_its.begin() + purge_goal|.
-  SortLeastRecentlyAccessed(cookie_its.begin(), cookie_its.end(), purge_goal);
+  SortLeastRecentlyAccessed(
+      cookie_its.begin(), cookie_its.end(),
+      cookie_its.size() < purge_goal ? purge_goal + 1 : purge_goal);
   // Find boundary to cookies older than safe_date.
   CookieItVector::iterator global_purge_it = LowerBoundAccessDate(
       cookie_its.begin(), cookie_its.begin() + purge_goal, safe_date);
@@ -2146,8 +2174,8 @@ size_t CookieMonster::GarbageCollectLeastRecentlyAccessed(
   size_t num_deleted =
       GarbageCollectDeleteRange(current, DELETE_COOKIE_EVICTED_GLOBAL,
                                 cookie_its.begin(), global_purge_it);
-  // Set access day to the oldest cookie that wasn't deleted.
-  earliest_access_time_ = (*global_purge_it)->second->LastAccessDate();
+  if (global_purge_it != cookie_its.end())
+    *earliest_time = (*global_purge_it)->second->LastAccessDate();
   return num_deleted;
 }
 

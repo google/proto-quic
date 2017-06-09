@@ -13,21 +13,6 @@ from telemetry.web_perf import timeline_based_measurement
 
 @benchmark.Enabled('android')
 @benchmark.Owner(emails=['perezju@chromium.org'])
-class PowerAndroidAcceptance(perf_benchmark.PerfBenchmark):
-  """Android power acceptance test."""
-  test = power.Power
-  page_set = page_sets.AndroidAcceptancePageSet
-
-  def SetExtraBrowserOptions(self, options):
-    options.full_performance_mode = False
-
-  @classmethod
-  def Name(cls):
-    return 'power.android_acceptance'
-
-
-@benchmark.Enabled('android')
-@benchmark.Owner(emails=['perezju@chromium.org'])
 class PowerTypical10Mobile(perf_benchmark.PerfBenchmark):
   """Android typical 10 mobile power test."""
   test = power.Power

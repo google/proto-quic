@@ -2123,48 +2123,76 @@ int SpdySession::DoWriteComplete(int result) {
 
 void SpdySession::SendInitialData() {
   DCHECK(enable_sending_initial_data_);
+  DCHECK(buffered_spdy_framer_.get());
 
-  auto connection_header_prefix_frame = base::MakeUnique<SpdySerializedFrame>(
-      const_cast<char*>(kHttp2ConnectionHeaderPrefix),
-      kHttp2ConnectionHeaderPrefixSize, false /* take_ownership */);
-  // Count the prefix as part of the subsequent SETTINGS frame.
-  EnqueueSessionWrite(HIGHEST, SpdyFrameType::SETTINGS,
-                      std::move(connection_header_prefix_frame));
-
-  // First, notify the server about the settings they should use when
-  // communicating with us.  Only send settings that have a value different from
-  // the protocol default value.
+  // Prepare initial SETTINGS frame.  Only send settings that have a value
+  // different from the protocol default value.
   SettingsMap settings_map;
   for (auto setting : initial_settings_) {
     if (!IsSpdySettingAtDefaultInitialValue(setting.first, setting.second)) {
       settings_map.insert(setting);
     }
   }
-  SendSettings(settings_map);
+  net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_SEND_SETTINGS,
+                    base::Bind(&NetLogSpdySendSettingsCallback, &settings_map));
+  std::unique_ptr<SpdySerializedFrame> settings_frame(
+      buffered_spdy_framer_->CreateSettings(settings_map));
 
-  // Next, notify the server about our initial recv window size.
-  // Bump up the receive window size to the real initial value. This
-  // has to go here since the WINDOW_UPDATE frame sent by
-  // IncreaseRecvWindowSize() call uses |buffered_spdy_framer_|.
-  // This condition implies that |session_max_recv_window_size_| -
-  // |session_recv_window_size_| doesn't overflow.
+  // Prepare initial WINDOW_UPDATE frame.
+  // Make sure |session_max_recv_window_size_ - session_recv_window_size_|
+  // does not underflow.
   DCHECK_GE(session_max_recv_window_size_, session_recv_window_size_);
   DCHECK_GE(session_recv_window_size_, 0);
-  if (session_max_recv_window_size_ > session_recv_window_size_) {
-    IncreaseRecvWindowSize(session_max_recv_window_size_ -
-                           session_recv_window_size_);
-  }
-}
+  DCHECK_EQ(0, session_unacked_recv_window_bytes_);
+  std::unique_ptr<SpdySerializedFrame> window_update_frame;
+  const bool send_window_update =
+      session_max_recv_window_size_ > session_recv_window_size_;
+  if (send_window_update) {
+    const int32_t delta_window_size =
+        session_max_recv_window_size_ - session_recv_window_size_;
+    session_recv_window_size_ += delta_window_size;
+    net_log_.AddEvent(NetLogEventType::HTTP2_STREAM_UPDATE_RECV_WINDOW,
+                      base::Bind(&NetLogSpdySessionWindowUpdateCallback,
+                                 delta_window_size, session_recv_window_size_));
 
-void SpdySession::SendSettings(const SettingsMap& settings) {
-  net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_SEND_SETTINGS,
-                    base::Bind(&NetLogSpdySendSettingsCallback, &settings));
-  // Create the SETTINGS frame and send it.
-  DCHECK(buffered_spdy_framer_.get());
-  std::unique_ptr<SpdySerializedFrame> settings_frame(
-      buffered_spdy_framer_->CreateSettings(settings));
+    session_unacked_recv_window_bytes_ += delta_window_size;
+    net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_SEND_WINDOW_UPDATE,
+                      base::Bind(&NetLogSpdyWindowUpdateFrameCallback,
+                                 kSessionFlowControlStreamId,
+                                 session_unacked_recv_window_bytes_));
+    window_update_frame = buffered_spdy_framer_->CreateWindowUpdate(
+        kSessionFlowControlStreamId, session_unacked_recv_window_bytes_);
+    session_unacked_recv_window_bytes_ = 0;
+  }
+
+  // Create a single frame to hold connection prefix, initial SETTINGS frame,
+  // and optional initial WINDOW_UPDATE frame, so that they are sent on the wire
+  // in a single packet.
+  size_t initial_frame_size =
+      kHttp2ConnectionHeaderPrefixSize + settings_frame->size();
+  if (send_window_update)
+    initial_frame_size += window_update_frame->size();
+  auto initial_frame_data = base::MakeUnique<char[]>(initial_frame_size);
+  size_t offset = 0;
+
+  memcpy(initial_frame_data.get() + offset, kHttp2ConnectionHeaderPrefix,
+         kHttp2ConnectionHeaderPrefixSize);
+  offset += kHttp2ConnectionHeaderPrefixSize;
+
+  memcpy(initial_frame_data.get() + offset, settings_frame->data(),
+         settings_frame->size());
+  offset += settings_frame->size();
+
+  if (send_window_update) {
+    memcpy(initial_frame_data.get() + offset, window_update_frame->data(),
+           window_update_frame->size());
+  }
+
+  auto initial_frame = base::MakeUnique<SpdySerializedFrame>(
+      initial_frame_data.release(), initial_frame_size,
+      /* owns_buffer = */ true);
   EnqueueSessionWrite(HIGHEST, SpdyFrameType::SETTINGS,
-                      std::move(settings_frame));
+                      std::move(initial_frame));
 }
 
 void SpdySession::HandleSetting(uint32_t id, uint32_t value) {

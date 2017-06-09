@@ -302,10 +302,8 @@ Still reading?
     <ignore regexp="android_webview/tools/automated_ui_tests/java/res/"/>
     <!-- TODO(crbug.com/635567): Fix this properly. -->
     <ignore regexp="chrome/android/java/res/drawable-hdpi/*"/>
-    <ignore regexp="chrome/android/java/res/drawable-hdpi/bubble_white.9.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/cvc_icon.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/cvc_icon_amex.png"/>
-    <ignore regexp="chrome/android/java/res/drawable-hdpi/ic_folder_white_24dp.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/ic_settings.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_3d_blocked.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_autofill_cc.png"/>
@@ -324,12 +322,9 @@ Still reading?
     <ignore regexp="chrome/android/java/res/drawable-hdpi/pageinfo_bad.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/pageinfo_good.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/pageinfo_warning.png"/>
-    <ignore regexp="chrome/android/java/res/drawable-hdpi/permission_images.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/pr_generic.png"/>
-    <ignore regexp="chrome/android/java/res/drawable-hdpi/progress_bar_background_white.9.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/shortcut_incognito.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/shortcut_newtab.png"/>
-    <ignore regexp="chrome/android/java/res/drawable-hdpi/signin_promo_illustration.png"/>
     <ignore regexp="chrome/android/java/res/drawable-nodpi/missing.png"/>
     <ignore regexp="chrome/android/java/res/values-v17/styles.xml"/>
     <ignore regexp="chromecast/browser/android/apk/res/values/strings.xml"/>

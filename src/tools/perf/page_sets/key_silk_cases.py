@@ -15,9 +15,13 @@ class KeySilkCasesPage(page_module.Page):
       run_no_page_interactions: whether the page will run any interactions after
         navigate steps.
     """
+    name = url
+    if not name.startswith('http'):
+      name = url.split('/')[-1]
     super(KeySilkCasesPage, self).__init__(
         url=url, page_set=page_set, credentials_path = 'data/credentials.json',
-        shared_page_state_class=shared_page_state.SharedMobilePageState)
+        shared_page_state_class=shared_page_state.SharedMobilePageState,
+        name=name)
     self.archive_data_file = 'data/key_silk_cases.json'
     self._run_no_page_interactions = run_no_page_interactions
 
@@ -723,7 +727,8 @@ class KeySilkCasesPageSet(story.StorySet):
   def __init__(self, run_no_page_interactions=False):
     super(KeySilkCasesPageSet, self).__init__(
       archive_data_file='data/key_silk_cases.json',
-      cloud_storage_bucket=story.PARTNER_BUCKET)
+      cloud_storage_bucket=story.PARTNER_BUCKET,
+      verify_names=True)
 
     self.AddStory(Page1(self, run_no_page_interactions))
     self.AddStory(Page2(self, run_no_page_interactions))

@@ -39,6 +39,10 @@ class BASE_EXPORT MemoryAllocatorDumpGuid {
     return !(*this == other);
   }
 
+  bool operator<(const MemoryAllocatorDumpGuid& other) const {
+    return guid_ < other.guid_;
+  }
+
  private:
   uint64_t guid_;
 

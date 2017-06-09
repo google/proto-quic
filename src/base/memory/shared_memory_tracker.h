@@ -14,6 +14,7 @@
 namespace base {
 
 namespace trace_event {
+class MemoryAllocatorDumpGuid;
 class ProcessMemoryDump;
 }
 
@@ -22,6 +23,12 @@ class BASE_EXPORT SharedMemoryTracker : public trace_event::MemoryDumpProvider {
  public:
   // Returns a singleton instance.
   static SharedMemoryTracker* GetInstance();
+
+  static trace_event::MemoryAllocatorDumpGuid GetDumpGUIDForTracing(
+      const UnguessableToken& id);
+
+  static trace_event::MemoryAllocatorDumpGuid GetGlobalDumpGUIDForTracing(
+      const UnguessableToken& id);
 
   // Records shared memory usage on mapping.
   void IncrementMemoryUsage(const SharedMemory& shared_memory);

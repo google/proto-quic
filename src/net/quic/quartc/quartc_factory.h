@@ -8,6 +8,7 @@
 #include "net/quic/core/quic_alarm_factory.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_simple_buffer_allocator.h"
+#include "net/quic/platform/api/quic_export.h"
 #include "net/quic/quartc/quartc_factory_interface.h"
 #include "net/quic/quartc/quartc_packet_writer.h"
 #include "net/quic/quartc/quartc_task_runner_interface.h"

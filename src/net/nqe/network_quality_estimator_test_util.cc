@@ -10,6 +10,7 @@
 #include "net/base/load_flags.h"
 #include "net/log/net_log_with_source.h"
 #include "net/log/test_net_log_entry.h"
+#include "net/nqe/network_quality_estimator_params.h"
 #include "net/test/embedded_test_server/http_response.h"
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request.h"
@@ -66,12 +67,14 @@ TestNetworkQualityEstimator::TestNetworkQualityEstimator(
     bool add_default_platform_observations,
     bool suppress_notifications_for_testing,
     std::unique_ptr<BoundTestNetLog> net_log)
-    : NetworkQualityEstimator(std::move(external_estimate_provider),
-                              variation_params,
-                              allow_local_host_requests_for_tests,
-                              allow_smaller_responses_for_tests,
-                              add_default_platform_observations,
-                              net_log->bound()),
+    : NetworkQualityEstimator(
+          std::move(external_estimate_provider),
+          base::MakeUnique<NetworkQualityEstimatorParams>(variation_params),
+          allow_local_host_requests_for_tests,
+          allow_smaller_responses_for_tests,
+          add_default_platform_observations,
+          net_log->bound()),
+
       current_network_type_(NetworkChangeNotifier::CONNECTION_UNKNOWN),
       accuracy_recording_intervals_set_(false),
       rand_double_(0.0),

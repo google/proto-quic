@@ -10,6 +10,7 @@
 #define BROTLI_DEC_STATE_H_
 
 #include "../common/constants.h"
+#include "../common/dictionary.h"
 #include <brotli/types.h>
 #include "./bit_reader.h"
 #include "./huffman.h"
@@ -140,6 +141,8 @@ struct BrotliDecoderStateStruct {
   /* This is true if the literal context map histogram type always matches the
   block type. It is then not needed to keep the context (faster decoding). */
   int trivial_literal_context;
+  /* Distance context is actual after command is decoded and before distance
+  is computed. After distance computation it is used as a temporary variable. */
   int distance_context;
   int meta_block_remaining_len;
   uint32_t block_length_index;
@@ -220,6 +223,7 @@ struct BrotliDecoderStateStruct {
   uint32_t num_literal_htrees;
   uint8_t* context_map;
   uint8_t* context_modes;
+  const BrotliDictionary* dictionary;
 
   uint32_t trivial_literal_contexts[8];  /* 256 bits */
 };
@@ -238,8 +242,6 @@ BROTLI_INTERNAL void BrotliDecoderStateCleanupAfterMetablock(
 BROTLI_INTERNAL BROTLI_BOOL BrotliDecoderHuffmanTreeGroupInit(
     BrotliDecoderState* s, HuffmanTreeGroup* group, uint32_t alphabet_size,
     uint32_t ntrees);
-BROTLI_INTERNAL void BrotliDecoderHuffmanTreeGroupRelease(
-    BrotliDecoderState* s, HuffmanTreeGroup* group);
 
 #if defined(__cplusplus) || defined(c_plusplus)
 }  /* extern "C" */

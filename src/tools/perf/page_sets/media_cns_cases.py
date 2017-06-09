@@ -46,7 +46,7 @@ class MediaCnsCasesPageSet(story.StorySet):
   """ Media benchmark on network constrained conditions. """
 
   def __init__(self):
-    super(MediaCnsCasesPageSet, self).__init__()
+    super(MediaCnsCasesPageSet, self).__init__(verify_names=True)
 
     urls_list = [
       # pylint: disable=line-too-long
@@ -94,7 +94,7 @@ class MediaCnsCasesPageSet(story.StorySet):
     ]
 
     for url in urls_list:
-      self.AddStory(BasicPlayPage(url, self))
+      self.AddStory(BasicPlayPage(url, self, url.split('/')[-1]))
 
     urls_list2 = [
       # pylint: disable=line-too-long
@@ -117,5 +117,5 @@ class MediaCnsCasesPageSet(story.StorySet):
       if url in urls_list:
         name = 'seek_' + url
       else:
-        name = ''
+        name = url.split('/')[-1]
       self.AddStory(SeekBeforeAndAfterPlayheadPage(url, self, name=name))

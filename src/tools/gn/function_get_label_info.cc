@@ -71,7 +71,7 @@ Examples
   get_label_info(":foo", "name")
   # Returns string "foo".
 
-  get_label_info("//foo/bar:baz", "gen_dir")
+  get_label_info("//foo/bar:baz", "target_gen_dir")
   # Returns string "//out/Debug/gen/foo/bar".
 )*";
 

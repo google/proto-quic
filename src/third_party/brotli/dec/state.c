@@ -41,6 +41,8 @@ void BrotliDecoderStateInitWithCustomAllocators(BrotliDecoderState* s,
     s->memory_manager_opaque = opaque;
   }
 
+  s->error_code = 0; /* BROTLI_DECODER_NO_ERROR */
+
   BrotliInitBitReader(&s->br);
   s->state = BROTLI_STATE_UNINITED;
   s->substate_metablock_header = BROTLI_STATE_METABLOCK_HEADER_NONE;
@@ -50,6 +52,8 @@ void BrotliDecoderStateInitWithCustomAllocators(BrotliDecoderState* s,
   s->substate_huffman = BROTLI_STATE_HUFFMAN_NONE;
   s->substate_decode_uint8 = BROTLI_STATE_DECODE_UINT8_NONE;
   s->substate_read_block_length = BROTLI_STATE_READ_BLOCK_LENGTH_NONE;
+
+  s->dictionary = BrotliGetDictionary();
 
   s->buffer_length = 0;
   s->loop_counter = 0;
@@ -135,10 +139,9 @@ void BrotliDecoderStateCleanupAfterMetablock(BrotliDecoderState* s) {
   BROTLI_FREE(s, s->context_modes);
   BROTLI_FREE(s, s->context_map);
   BROTLI_FREE(s, s->dist_context_map);
-
-  BrotliDecoderHuffmanTreeGroupRelease(s, &s->literal_hgroup);
-  BrotliDecoderHuffmanTreeGroupRelease(s, &s->insert_copy_hgroup);
-  BrotliDecoderHuffmanTreeGroupRelease(s, &s->distance_hgroup);
+  BROTLI_FREE(s, s->literal_hgroup.htrees);
+  BROTLI_FREE(s, s->insert_copy_hgroup.htrees);
+  BROTLI_FREE(s, s->distance_hgroup.htrees);
 }
 
 void BrotliDecoderStateCleanup(BrotliDecoderState* s) {
@@ -158,15 +161,9 @@ BROTLI_BOOL BrotliDecoderHuffmanTreeGroupInit(BrotliDecoderState* s,
   HuffmanCode** p = (HuffmanCode**)BROTLI_ALLOC(s, code_size + htree_size);
   group->alphabet_size = (uint16_t)alphabet_size;
   group->num_htrees = (uint16_t)ntrees;
-  group->htrees = (HuffmanCode**)p;
+  group->htrees = p;
   group->codes = (HuffmanCode*)(&p[ntrees]);
   return !!p;
-}
-
-void BrotliDecoderHuffmanTreeGroupRelease(
-    BrotliDecoderState* s, HuffmanTreeGroup* group) {
-  BROTLI_FREE(s, group->htrees);
-  group->htrees = NULL;
 }
 
 #if defined(__cplusplus) || defined(c_plusplus)

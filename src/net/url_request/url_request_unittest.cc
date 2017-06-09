@@ -6782,7 +6782,7 @@ TEST_F(URLRequestTestHTTP, ExpectCTHeader) {
   context.set_network_delegate(&network_delegate);
   context.set_cert_verifier(&cert_verifier);
   context.set_cert_transparency_verifier(&ct_verifier);
-  context.set_ct_policy_enforcer(std::move(&ct_policy_enforcer));
+  context.set_ct_policy_enforcer(&ct_policy_enforcer);
   context.Init();
 
   // Now send a request to trigger the violation.
@@ -6991,6 +6991,9 @@ TEST_F(URLRequestTestHTTP, RestrictFileRedirects) {
   base::RunLoop().Run();
 
   EXPECT_EQ(ERR_UNSAFE_REDIRECT, d.request_status());
+
+  // The redirect should have been rejected before reporting it to the caller.
+  EXPECT_EQ(0, d.received_redirect_count());
 }
 #endif  // !BUILDFLAG(DISABLE_FILE_SUPPORT)
 
@@ -7005,8 +7008,14 @@ TEST_F(URLRequestTestHTTP, RestrictDataRedirects) {
   base::RunLoop().Run();
 
   EXPECT_EQ(ERR_UNSAFE_REDIRECT, d.request_status());
+
+  // The redirect should have been rejected before reporting it to the
+  // caller. See https://crbug.com/723796
+  EXPECT_EQ(0, d.received_redirect_count());
 }
 
+// Test that redirects to invalid URLs are rejected. See
+// https://crbug.com/462272.
 TEST_F(URLRequestTestHTTP, RedirectToInvalidURL) {
   ASSERT_TRUE(http_test_server()->Start());
 
@@ -7017,7 +7026,11 @@ TEST_F(URLRequestTestHTTP, RedirectToInvalidURL) {
   req->Start();
   base::RunLoop().Run();
 
-  EXPECT_EQ(ERR_INVALID_URL, d.request_status());
+  EXPECT_EQ(1, d.response_started_count());
+  EXPECT_EQ(ERR_INVALID_REDIRECT, d.request_status());
+
+  // The redirect should have been rejected before reporting it to the caller.
+  EXPECT_EQ(0, d.received_redirect_count());
 }
 
 // Make sure redirects are cached, despite not reading their bodies.
@@ -7141,6 +7154,9 @@ TEST_F(URLRequestTestHTTP, UnsafeRedirectToDifferentUnsafeURL) {
     base::RunLoop().Run();
 
     EXPECT_EQ(ERR_UNSAFE_REDIRECT, d.request_status());
+
+    // The redirect should have been rejected before reporting it to the caller.
+    EXPECT_EQ(0, d.received_redirect_count());
   }
 }
 

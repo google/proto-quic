@@ -100,9 +100,6 @@
     "includes": [11940],
     "structures": [11950],
   },
-  "chrome/browser/resources/options_test_resources.grd": {
-    "structures": [12000],
-  },
   "chrome/browser/resources/password_manager_internals_resources.grd": {
     "includes": [12010],
   },

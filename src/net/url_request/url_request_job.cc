@@ -314,15 +314,11 @@ void URLRequestJob::ContinueDespiteLastError() {
 }
 
 void URLRequestJob::FollowDeferredRedirect() {
+  // OnReceivedRedirect must have been called.
   DCHECK_NE(-1, deferred_redirect_info_.status_code);
 
-  // NOTE: deferred_redirect_info_ may be invalid, and attempting to follow it
-  // will fail inside FollowRedirect.  The DCHECK above asserts that we called
-  // OnReceivedRedirect.
-
-  // It is also possible that FollowRedirect will delete |this|, so not safe to
-  // pass along reference to |deferred_redirect_info_|.
-
+  // It is possible that FollowRedirect will delete |this|, so it is not safe to
+  // pass along a reference to |deferred_redirect_info_|.
   RedirectInfo redirect_info = deferred_redirect_info_;
   deferred_redirect_info_ = RedirectInfo();
   FollowRedirect(redirect_info);
@@ -456,6 +452,16 @@ void URLRequestJob::NotifyHeadersComplete() {
     // Redirect response bodies are not read. Notify the transaction
     // so it does not treat being stopped as an error.
     DoneReadingRedirectResponse();
+
+    // Invalid redirect targets are failed early before
+    // NotifyReceivedRedirect. This means the delegate can assume that, if it
+    // accepts the redirect, future calls to OnResponseStarted correspond to
+    // |redirect_info.new_url|.
+    int redirect_valid = CanFollowRedirect(new_location);
+    if (redirect_valid != OK) {
+      OnDone(URLRequestStatus::FromError(redirect_valid), true);
+      return;
+    }
 
     // When notifying the URLRequest::Delegate, it can destroy the request,
     // which will destroy |this|.  After calling to the URLRequest::Delegate,
@@ -720,10 +726,25 @@ int URLRequestJob::ReadRawDataHelper(IOBuffer* buf,
   return result;
 }
 
+int URLRequestJob::CanFollowRedirect(const GURL& new_url) {
+  if (request_->redirect_limit_ <= 0) {
+    DVLOG(1) << "disallowing redirect: exceeds limit";
+    return ERR_TOO_MANY_REDIRECTS;
+  }
+
+  if (!new_url.is_valid())
+    return ERR_INVALID_REDIRECT;
+
+  if (!IsSafeRedirect(new_url)) {
+    DVLOG(1) << "disallowing redirect: unsafe protocol";
+    return ERR_UNSAFE_REDIRECT;
+  }
+
+  return OK;
+}
+
 void URLRequestJob::FollowRedirect(const RedirectInfo& redirect_info) {
-  int rv = request_->Redirect(redirect_info);
-  if (rv != OK)
-    OnDone(URLRequestStatus(URLRequestStatus::FAILED, rv), true);
+  request_->Redirect(redirect_info);
 }
 
 void URLRequestJob::GatherRawReadStats(int bytes_read) {

@@ -10,9 +10,9 @@
 #include <map>
 
 #include "base/containers/linked_list.h"
+#include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/memory/singleton.h"
 #include "base/time/time.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_export.h"
@@ -88,6 +88,8 @@ class NET_EXPORT_PRIVATE WebSocketEndpointLockManager {
   base::TimeDelta SetUnlockDelayForTesting(base::TimeDelta new_delay);
 
  private:
+  friend struct base::LazyInstanceTraitsBase<net::WebSocketEndpointLockManager>;
+
   struct LockInfo {
     typedef base::LinkedList<Waiter> WaiterQueue;
 
@@ -143,12 +145,6 @@ class NET_EXPORT_PRIVATE WebSocketEndpointLockManager {
 
   // Number of sockets currently pending unlock.
   size_t pending_unlock_count_;
-
-  // The messsage loop holding the unlock delay callback may outlive this
-  // object.
-  base::WeakPtrFactory<WebSocketEndpointLockManager> weak_factory_;
-
-  friend struct base::DefaultSingletonTraits<WebSocketEndpointLockManager>;
 
   DISALLOW_COPY_AND_ASSIGN(WebSocketEndpointLockManager);
 };

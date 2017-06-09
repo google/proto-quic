@@ -153,3 +153,7 @@ class WebrtcExpectations(story.expectations.StoryExpectations):
     self.DisableStory('audio_call_isac/1600_10s',
                       [story.expectations.ALL],
                       'crbug.com/468732')
+
+    self.DisableStory('30s_datachannel_transfer',
+                      [story.expectations.ALL_DESKTOP],
+                      'crbug.com/726811')

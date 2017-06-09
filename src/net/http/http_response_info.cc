@@ -239,6 +239,12 @@ bool HttpResponseInfo::InitFromPickle(const base::Pickle& pickle,
     int connection_status;
     if (!iter.ReadInt(&connection_status))
       return false;
+
+    // SSLv3 is gone, so drop cached entries that were loaded over SSLv3.
+    if (SSLConnectionStatusToVersion(connection_status) ==
+        SSL_CONNECTION_VERSION_SSL3) {
+      return false;
+    }
     ssl_info.connection_status = connection_status;
   }
 

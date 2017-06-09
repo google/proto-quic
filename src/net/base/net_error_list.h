@@ -528,6 +528,9 @@ NET_ERROR(DISALLOWED_URL_SCHEME, -301)
 // The scheme of the URL is unknown.
 NET_ERROR(UNKNOWN_URL_SCHEME, -302)
 
+// Attempting to load an URL resulted in a redirect to an invalid URL.
+NET_ERROR(INVALID_REDIRECT, -303)
+
 // Attempting to load an URL resulted in too many redirects.
 NET_ERROR(TOO_MANY_REDIRECTS, -310)
 

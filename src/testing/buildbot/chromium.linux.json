@@ -43,7 +43,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
@@ -82,7 +82,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
@@ -121,12 +121,12 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
           ],
-          "hard_timeout": 120,
+          "hard_timeout": 180,
           "output_links": [
             {
               "link": [
@@ -308,7 +308,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
@@ -327,6 +327,9 @@
         "test": "cc_unittests"
       },
       {
+        "args": [
+          "--gs-results-bucket=chromium-result-details"
+        ],
         "merge": {
           "args": [
             "--bucket",
@@ -367,6 +370,9 @@
         "test": "chrome_public_test_apk"
       },
       {
+        "args": [
+          "--gs-results-bucket=chromium-result-details"
+        ],
         "merge": {
           "args": [
             "--bucket",
@@ -427,7 +433,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
@@ -525,6 +531,9 @@
         "test": "content_browsertests"
       },
       {
+        "args": [
+          "--gs-results-bucket=chromium-result-details"
+        ],
         "merge": {
           "args": [
             "--bucket",
@@ -820,7 +829,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
@@ -928,7 +937,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
@@ -1087,12 +1096,12 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
           ],
-          "hard_timeout": 120,
+          "hard_timeout": 180,
           "output_links": [
             {
               "link": [
@@ -1127,7 +1136,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
@@ -1284,11 +1293,12 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
           ],
+          "hard_timeout": 180,
           "output_links": [
             {
               "link": [
@@ -1459,6 +1469,9 @@
         "test": "unit_tests"
       },
       {
+        "args": [
+          "--gs-results-bucket=chromium-result-details"
+        ],
         "merge": {
           "args": [
             "--bucket",
@@ -1497,29 +1510,6 @@
           ]
         },
         "test": "webview_instrumentation_test_apk"
-      }
-    ],
-    "isolated_scripts": [
-      {
-        "args": [
-          "--browser=android-chromium",
-          "--device=android",
-          "--skip=benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.*"
-        ],
-        "isolate_name": "telemetry_perf_unittests",
-        "name": "telemetry_perf_unittests",
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "6",
-              "device_os": "KTU84P",
-              "device_type": "hammerhead"
-            }
-          ],
-          "hard_timeout": 1500,
-          "shards": 1
-        }
       }
     ],
     "junit_tests": [
@@ -1596,7 +1586,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
@@ -1635,7 +1625,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
@@ -1674,12 +1664,12 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
           ],
-          "hard_timeout": 120,
+          "hard_timeout": 180,
           "output_links": [
             {
               "link": [
@@ -1861,7 +1851,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
@@ -1880,6 +1870,9 @@
         "test": "cc_unittests"
       },
       {
+        "args": [
+          "--gs-results-bucket=chromium-result-details"
+        ],
         "merge": {
           "args": [
             "--bucket",
@@ -1920,6 +1913,9 @@
         "test": "chrome_public_test_apk"
       },
       {
+        "args": [
+          "--gs-results-bucket=chromium-result-details"
+        ],
         "merge": {
           "args": [
             "--bucket",
@@ -1980,7 +1976,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
@@ -2078,6 +2074,9 @@
         "test": "content_browsertests"
       },
       {
+        "args": [
+          "--gs-results-bucket=chromium-result-details"
+        ],
         "merge": {
           "args": [
             "--bucket",
@@ -2373,7 +2372,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
@@ -2481,7 +2480,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
@@ -2640,12 +2639,12 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
           ],
-          "hard_timeout": 120,
+          "hard_timeout": 180,
           "output_links": [
             {
               "link": [
@@ -2680,7 +2679,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
@@ -2868,11 +2867,12 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
           ],
+          "hard_timeout": 180,
           "output_links": [
             {
               "link": [
@@ -3043,6 +3043,9 @@
         "test": "unit_tests"
       },
       {
+        "args": [
+          "--gs-results-bucket=chromium-result-details"
+        ],
         "merge": {
           "args": [
             "--bucket",
@@ -3081,29 +3084,6 @@
           ]
         },
         "test": "webview_instrumentation_test_apk"
-      }
-    ],
-    "isolated_scripts": [
-      {
-        "args": [
-          "--browser=android-chromium",
-          "--device=android",
-          "--skip=benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.*"
-        ],
-        "isolate_name": "telemetry_perf_unittests",
-        "name": "telemetry_perf_unittests",
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "6",
-              "device_os": "KTU84P",
-              "device_type": "hammerhead"
-            }
-          ],
-          "hard_timeout": 1500,
-          "shards": 1
-        }
       }
     ],
     "junit_tests": [
@@ -3519,11 +3499,23 @@
   "Linux Builder": {
     "additional_compile_targets": [
       "all"
+    ],
+    "scripts": [
+      {
+        "name": "check_gn_headers",
+        "script": "check_gn_headers.py"
+      }
     ]
   },
   "Linux Builder (dbg)": {
     "additional_compile_targets": [
       "all"
+    ],
+    "scripts": [
+      {
+        "name": "check_gn_headers",
+        "script": "check_gn_headers.py"
+      }
     ]
   },
   "Linux Tests": {
@@ -4170,6 +4162,35 @@
         "swarming": {
           "can_use_on_swarming_builders": true,
           "shards": 4
+        }
+      },
+      {
+        "isolate_name": "webkit_layout_tests_exparchive",
+        "merge": {
+          "args": [
+            "--verbose",
+            "--results-json-override-with-build-property",
+            "build_number",
+            "buildnumber",
+            "--results-json-override-with-build-property",
+            "builder_name",
+            "buildername",
+            "--results-json-override-with-build-property",
+            "chromium_revision",
+            "got_revision_cp"
+          ],
+          "script": "//third_party/WebKit/Tools/Scripts/merge-layout-test-results"
+        },
+        "name": "webkit_layout_tests",
+        "results_handler": "layout tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "os": "Ubuntu-14.04"
+            }
+          ],
+          "shards": 6
         }
       }
     ],

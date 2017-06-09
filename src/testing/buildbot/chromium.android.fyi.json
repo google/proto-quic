@@ -1650,7 +1650,7 @@
             }
           ]
         },
-        "test": "vr_shell_unittests"
+        "test": "vr_common_unittests"
       },
       {
         "swarming": {

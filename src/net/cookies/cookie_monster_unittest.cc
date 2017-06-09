@@ -2222,6 +2222,25 @@ TEST_F(CookieMonsterTest, MAYBE_GarbageCollectionTriggers) {
   }
 }
 
+// Tests garbage collection when there are only secure cookies.
+// See https://crbug/730000
+TEST_F(CookieMonsterTest, GarbageCollectWithSecureCookiesOnly) {
+  // Create a CookieMonster at its cookie limit. A bit confusing, but the second
+  // number is a subset of the first number.
+  std::unique_ptr<CookieMonster> cm = CreateMonsterFromStoreForGC(
+      CookieMonster::kMaxCookies /* num_secure_cookies */,
+      CookieMonster::kMaxCookies /* num_old_secure_cookies */,
+      0 /* num_non_secure_cookies */, 0 /* num_old_non_secure_cookies */,
+      CookieMonster::kSafeFromGlobalPurgeDays * 2 /* days_old */);
+  EXPECT_EQ(CookieMonster::kMaxCookies, GetAllCookies(cm.get()).size());
+
+  // Trigger purge with a secure cookie (So there are still no insecure
+  // cookies).
+  SetCookie(cm.get(), GURL("https://newdomain.com"), "b=2; Secure");
+  EXPECT_EQ(CookieMonster::kMaxCookies - CookieMonster::kPurgeCookies,
+            GetAllCookies(cm.get()).size());
+}
+
 // Tests that if the main load event happens before the loaded event for a
 // particular key, the tasks for that key run first.
 TEST_F(CookieMonsterTest, WhileLoadingLoadCompletesBeforeKeyLoadCompletes) {

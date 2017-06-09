@@ -69,7 +69,7 @@ CONTENT_ENCODERS = {
 
 
 # Google Storage URL regular expression.
-GS_STORAGE_HOST_URL_RE = re.compile(r'https://.*\.storage\.googleapis\.com')
+GS_STORAGE_HOST_URL_RE = re.compile(r'https://(.+\.)?storage\.googleapis\.com')
 
 # Global (for now) map: server URL (http://example.com) -> HttpService instance.
 # Used by get_http_service to cache HttpService instances.

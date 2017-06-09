@@ -148,8 +148,10 @@ class Octane(perf_benchmark.PerfBenchmark):
     ps = story.StorySet(
         archive_data_file='../page_sets/data/octane.json',
         base_dir=os.path.dirname(os.path.abspath(__file__)),
-        cloud_storage_bucket=story.PUBLIC_BUCKET)
+        cloud_storage_bucket=story.PUBLIC_BUCKET,
+        verify_names=True)
     ps.AddStory(page_module.Page(
         'http://chromium.github.io/octane/index.html?auto=1',
-        ps, ps.base_dir, make_javascript_deterministic=False))
+        ps, ps.base_dir, make_javascript_deterministic=False,
+        name='http://chromium.github.io/octane/index.html?auto=1'))
     return ps

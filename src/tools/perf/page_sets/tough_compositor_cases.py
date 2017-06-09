@@ -11,7 +11,8 @@ class ToughCompositorPage(page_module.Page):
   def __init__(self, url, page_set):
     super(ToughCompositorPage, self).__init__(
         url=url, page_set=page_set, credentials_path = 'data/credentials.json',
-        shared_page_state_class=shared_page_state.SharedMobilePageState)
+        shared_page_state_class=shared_page_state.SharedMobilePageState,
+        name=url)
     self.archive_data_file = 'data/tough_compositor_cases.json'
 
   def RunNavigateSteps(self, action_runner):
@@ -47,7 +48,8 @@ class ToughCompositorCasesPageSet(story.StorySet):
   def __init__(self):
     super(ToughCompositorCasesPageSet, self).__init__(
       archive_data_file='data/tough_compositor_cases.json',
-      cloud_storage_bucket=story.PUBLIC_BUCKET)
+      cloud_storage_bucket=story.PUBLIC_BUCKET,
+      verify_names=True)
 
     scroll_urls_list = [
       # Why: Baseline CC scrolling page. A long page with only text. """

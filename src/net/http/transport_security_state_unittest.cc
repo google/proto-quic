@@ -1432,10 +1432,10 @@ TEST_F(TransportSecurityStateTest, HPKPReporting) {
   // Two dummy certs to use as the server-sent and validated chains. The
   // contents don't matter.
   scoped_refptr<X509Certificate> cert1 =
-      ImportCertFromFile(GetTestCertsDirectory(), "test_mail_google_com.pem");
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
   scoped_refptr<X509Certificate> cert2 =
       ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
-  ASSERT_TRUE(cert1);
   ASSERT_TRUE(cert2);
 
   HashValueVector good_hashes, bad_hashes;
@@ -1540,10 +1540,10 @@ TEST_F(TransportSecurityStateTest, UMAOnHPKPReportingFailure) {
   // Two dummy certs to use as the server-sent and validated chains. The
   // contents don't matter.
   scoped_refptr<X509Certificate> cert1 =
-      ImportCertFromFile(GetTestCertsDirectory(), "test_mail_google_com.pem");
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
   scoped_refptr<X509Certificate> cert2 =
       ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
-  ASSERT_TRUE(cert1);
   ASSERT_TRUE(cert2);
 
   HashValueVector good_hashes, bad_hashes;
@@ -1583,10 +1583,10 @@ TEST_F(TransportSecurityStateTest, HPKPReportOnly) {
   // Two dummy certs to use as the server-sent and validated chains. The
   // contents don't matter.
   scoped_refptr<X509Certificate> cert1 =
-      ImportCertFromFile(GetTestCertsDirectory(), "test_mail_google_com.pem");
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
   scoped_refptr<X509Certificate> cert2 =
       ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
-  ASSERT_TRUE(cert1);
   ASSERT_TRUE(cert2);
 
   TransportSecurityState state;
@@ -1650,10 +1650,10 @@ TEST_F(TransportSecurityStateTest, HPKPReportOnlyOnLocalRoot) {
   // Two dummy certs to use as the server-sent and validated chains. The
   // contents don't matter.
   scoped_refptr<X509Certificate> cert1 =
-      ImportCertFromFile(GetTestCertsDirectory(), "test_mail_google_com.pem");
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
   scoped_refptr<X509Certificate> cert2 =
       ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
-  ASSERT_TRUE(cert1);
   ASSERT_TRUE(cert2);
 
   std::string header =
@@ -1687,10 +1687,10 @@ TEST_F(TransportSecurityStateTest, HPKPReportOnlyParseErrors) {
   // Two dummy certs to use as the server-sent and validated chains. The
   // contents don't matter.
   scoped_refptr<X509Certificate> cert1 =
-      ImportCertFromFile(GetTestCertsDirectory(), "test_mail_google_com.pem");
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
   scoped_refptr<X509Certificate> cert2 =
       ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
-  ASSERT_TRUE(cert1);
   ASSERT_TRUE(cert2);
 
   std::string header = "pin-sha256=\"" + std::string(kGoodPin1) +
@@ -1742,10 +1742,10 @@ TEST_F(TransportSecurityStateTest, PreloadedPKPReportUri) {
   // contents don't matter, as long as they are not the real google.com
   // certs in the pins.
   scoped_refptr<X509Certificate> cert1 =
-      ImportCertFromFile(GetTestCertsDirectory(), "test_mail_google_com.pem");
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
   scoped_refptr<X509Certificate> cert2 =
       ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
-  ASSERT_TRUE(cert1);
   ASSERT_TRUE(cert2);
 
   HashValueVector bad_hashes;
@@ -1790,10 +1790,10 @@ TEST_F(TransportSecurityStateTest, HPKPReportUriToSameHost) {
   // contents don't matter, as long as they are not the real google.com
   // certs in the pins.
   scoped_refptr<X509Certificate> cert1 =
-      ImportCertFromFile(GetTestCertsDirectory(), "test_mail_google_com.pem");
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
   scoped_refptr<X509Certificate> cert2 =
       ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
-  ASSERT_TRUE(cert1);
   ASSERT_TRUE(cert2);
 
   HashValueVector bad_hashes;
@@ -1830,10 +1830,10 @@ TEST_F(TransportSecurityStateTest, HPKPReportRateLimiting) {
   // Two dummy certs to use as the server-sent and validated chains. The
   // contents don't matter.
   scoped_refptr<X509Certificate> cert1 =
-      ImportCertFromFile(GetTestCertsDirectory(), "test_mail_google_com.pem");
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
   scoped_refptr<X509Certificate> cert2 =
       ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
-  ASSERT_TRUE(cert1);
   ASSERT_TRUE(cert2);
 
   HashValueVector good_hashes, bad_hashes;
@@ -1951,6 +1951,14 @@ TEST_F(TransportSecurityStateTest, InvalidExpectCTHeader) {
   ssl_info.ct_cert_policy_compliance =
       ct::CertPolicyCompliance::CERT_POLICY_NOT_ENOUGH_SCTS;
   ssl_info.is_issued_by_known_root = true;
+  scoped_refptr<X509Certificate> cert1 =
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
+  scoped_refptr<X509Certificate> cert2 =
+      ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
+  ASSERT_TRUE(cert2);
+  ssl_info.unverified_cert = cert1;
+  ssl_info.cert = cert2;
 
   TransportSecurityState state;
   TransportSecurityStateTest::EnableStaticExpectCT(&state);
@@ -1975,6 +1983,14 @@ TEST_F(TransportSecurityStateTest, ExpectCTNonPublicRoot) {
   ssl_info.ct_cert_policy_compliance =
       ct::CertPolicyCompliance::CERT_POLICY_NOT_ENOUGH_SCTS;
   ssl_info.is_issued_by_known_root = false;
+  scoped_refptr<X509Certificate> cert1 =
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
+  scoped_refptr<X509Certificate> cert2 =
+      ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
+  ASSERT_TRUE(cert2);
+  ssl_info.unverified_cert = cert1;
+  ssl_info.cert = cert2;
 
   TransportSecurityState state;
   TransportSecurityStateTest::EnableStaticExpectCT(&state);
@@ -1997,6 +2013,14 @@ TEST_F(TransportSecurityStateTest, ExpectCTComplianceNotAvailable) {
   ssl_info.ct_cert_policy_compliance =
       ct::CertPolicyCompliance::CERT_POLICY_NOT_ENOUGH_SCTS;
   ssl_info.is_issued_by_known_root = true;
+  scoped_refptr<X509Certificate> cert1 =
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
+  scoped_refptr<X509Certificate> cert2 =
+      ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
+  ASSERT_TRUE(cert2);
+  ssl_info.unverified_cert = cert1;
+  ssl_info.cert = cert2;
 
   TransportSecurityState state;
   TransportSecurityStateTest::EnableStaticExpectCT(&state);
@@ -2019,6 +2043,14 @@ TEST_F(TransportSecurityStateTest, ExpectCTCompliantCert) {
   ssl_info.ct_cert_policy_compliance =
       ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS;
   ssl_info.is_issued_by_known_root = true;
+  scoped_refptr<X509Certificate> cert1 =
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
+  scoped_refptr<X509Certificate> cert2 =
+      ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
+  ASSERT_TRUE(cert2);
+  ssl_info.unverified_cert = cert1;
+  ssl_info.cert = cert2;
 
   TransportSecurityState state;
   TransportSecurityStateTest::EnableStaticExpectCT(&state);
@@ -2042,6 +2074,14 @@ TEST_F(TransportSecurityStateTest, ExpectCTNotPreloaded) {
   ssl_info.ct_cert_policy_compliance =
       ct::CertPolicyCompliance::CERT_POLICY_NOT_DIVERSE_SCTS;
   ssl_info.is_issued_by_known_root = true;
+  scoped_refptr<X509Certificate> cert1 =
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
+  scoped_refptr<X509Certificate> cert2 =
+      ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
+  ASSERT_TRUE(cert2);
+  ssl_info.unverified_cert = cert1;
+  ssl_info.cert = cert2;
 
   TransportSecurityState state;
   TransportSecurityStateTest::EnableStaticExpectCT(&state);
@@ -2065,7 +2105,7 @@ TEST_F(TransportSecurityStateTest, ExpectCTReporter) {
       ct::CertPolicyCompliance::CERT_POLICY_NOT_DIVERSE_SCTS;
   ssl_info.is_issued_by_known_root = true;
   scoped_refptr<X509Certificate> cert1 =
-      ImportCertFromFile(GetTestCertsDirectory(), "test_mail_google_com.pem");
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
   scoped_refptr<X509Certificate> cert2 =
       ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
   ASSERT_TRUE(cert1);
@@ -2106,10 +2146,10 @@ TEST_F(TransportSecurityStateTest, RepeatedExpectCTReportsForStaticExpectCT) {
       ct::CertPolicyCompliance::CERT_POLICY_NOT_DIVERSE_SCTS;
   ssl_info.is_issued_by_known_root = true;
   scoped_refptr<X509Certificate> cert1 =
-      ImportCertFromFile(GetTestCertsDirectory(), "test_mail_google_com.pem");
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
   scoped_refptr<X509Certificate> cert2 =
       ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
-  ASSERT_TRUE(cert1);
   ASSERT_TRUE(cert2);
   ssl_info.unverified_cert = cert1;
   ssl_info.cert = cert2;
@@ -2428,9 +2468,11 @@ TEST_P(ExpectStapleErrorResponseTest, CheckResponseStatusSerialization) {
   // Two dummy certs to use as the server-sent and validated chains. The
   // contents don't matter.
   scoped_refptr<X509Certificate> cert1 =
-      ImportCertFromFile(GetTestCertsDirectory(), "test_mail_google_com.pem");
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
   scoped_refptr<X509Certificate> cert2 =
       ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
+  ASSERT_TRUE(cert2);
 
   SSLInfo ssl_info;
   ssl_info.cert = cert1;
@@ -2480,9 +2522,11 @@ TEST_P(ExpectStapleErrorCertStatusTest, CheckCertStatusSerialization) {
   // Two dummy certs to use as the server-sent and validated chains. The
   // contents don't matter.
   scoped_refptr<X509Certificate> cert1 =
-      ImportCertFromFile(GetTestCertsDirectory(), "test_mail_google_com.pem");
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
   scoped_refptr<X509Certificate> cert2 =
       ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
+  ASSERT_TRUE(cert2);
 
   SSLInfo ssl_info;
   ssl_info.cert = cert1;
@@ -2521,9 +2565,11 @@ TEST_F(TransportSecurityStateTest, ExpectStapleDoesNotReportValidStaple) {
   // Two dummy certs to use as the server-sent and validated chains. The
   // contents don't matter.
   scoped_refptr<X509Certificate> cert1 =
-      ImportCertFromFile(GetTestCertsDirectory(), "test_mail_google_com.pem");
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
   scoped_refptr<X509Certificate> cert2 =
       ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
+  ASSERT_TRUE(cert2);
 
   SSLInfo ssl_info;
   ssl_info.cert = cert1;
@@ -2555,9 +2601,11 @@ TEST_F(TransportSecurityStateTest, ExpectStapleRequiresPreload) {
   // Two dummy certs to use as the server-sent and validated chains. The
   // contents don't matter.
   scoped_refptr<X509Certificate> cert1 =
-      ImportCertFromFile(GetTestCertsDirectory(), "test_mail_google_com.pem");
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
   scoped_refptr<X509Certificate> cert2 =
       ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
+  ASSERT_TRUE(cert2);
 
   SSLInfo ssl_info;
   ssl_info.cert = cert1;
@@ -2908,12 +2956,14 @@ TEST_F(TransportSecurityStateTest, DynamicExpectCTDeduping) {
   ssl.ct_compliance_details_available = true;
   ssl.ct_cert_policy_compliance =
       ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS;
+
   scoped_refptr<X509Certificate> cert1 =
-      ImportCertFromFile(GetTestCertsDirectory(), "test_mail_google_com.pem");
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
   scoped_refptr<X509Certificate> cert2 =
       ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
-  ASSERT_TRUE(cert1);
   ASSERT_TRUE(cert2);
+
   SignedCertificateTimestampAndStatusList sct_list;
 
   base::test::ScopedFeatureList feature_list;
@@ -3075,6 +3125,15 @@ TEST_F(TransportSecurityStateTest, DynamicExpectCTNoComplianceDetails) {
   ssl.ct_cert_policy_compliance =
       ct::CertPolicyCompliance::CERT_POLICY_NOT_ENOUGH_SCTS;
 
+  scoped_refptr<X509Certificate> cert1 =
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
+  scoped_refptr<X509Certificate> cert2 =
+      ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
+  ASSERT_TRUE(cert2);
+  ssl.unverified_cert = cert1;
+  ssl.cert = cert2;
+
   base::test::ScopedFeatureList feature_list;
   feature_list.InitAndEnableFeature(
       TransportSecurityState::kDynamicExpectCTFeature);
@@ -3097,14 +3156,16 @@ TEST_F(TransportSecurityStateTest,
   ssl.ct_compliance_details_available = true;
   ssl.ct_cert_policy_compliance =
       ct::CertPolicyCompliance::CERT_POLICY_NOT_ENOUGH_SCTS;
+
   scoped_refptr<X509Certificate> cert1 =
-      ImportCertFromFile(GetTestCertsDirectory(), "test_mail_google_com.pem");
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
   scoped_refptr<X509Certificate> cert2 =
       ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
-  ASSERT_TRUE(cert1);
   ASSERT_TRUE(cert2);
   ssl.unverified_cert = cert1;
   ssl.cert = cert2;
+
   MakeTestSCTAndStatus(ct::SignedCertificateTimestamp::SCT_EMBEDDED, "test_log",
                        std::string(), std::string(), base::Time::Now(),
                        ct::SCT_STATUS_INVALID_SIGNATURE,
@@ -3137,10 +3198,10 @@ TEST_F(TransportSecurityStateTest, CheckCTRequirementsWithExpectCT) {
   const base::Time current_time(base::Time::Now());
   const base::Time expiry = current_time + base::TimeDelta::FromSeconds(1000);
   scoped_refptr<X509Certificate> cert1 =
-      ImportCertFromFile(GetTestCertsDirectory(), "test_mail_google_com.pem");
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
   scoped_refptr<X509Certificate> cert2 =
       ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
-  ASSERT_TRUE(cert1);
   ASSERT_TRUE(cert2);
   SignedCertificateTimestampAndStatusList sct_list;
   MakeTestSCTAndStatus(ct::SignedCertificateTimestamp::SCT_EMBEDDED, "test_log",
@@ -3266,10 +3327,10 @@ TEST_F(TransportSecurityStateTest, CheckCTRequirementsWithExpectCTAndDelegate) {
   const base::Time current_time(base::Time::Now());
   const base::Time expiry = current_time + base::TimeDelta::FromSeconds(1000);
   scoped_refptr<X509Certificate> cert1 =
-      ImportCertFromFile(GetTestCertsDirectory(), "test_mail_google_com.pem");
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+  ASSERT_TRUE(cert1);
   scoped_refptr<X509Certificate> cert2 =
       ImportCertFromFile(GetTestCertsDirectory(), "expired_cert.pem");
-  ASSERT_TRUE(cert1);
   ASSERT_TRUE(cert2);
   SignedCertificateTimestampAndStatusList sct_list;
   MakeTestSCTAndStatus(ct::SignedCertificateTimestamp::SCT_EMBEDDED, "test_log",

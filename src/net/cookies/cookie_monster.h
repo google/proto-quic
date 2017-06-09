@@ -257,8 +257,9 @@ class NET_EXPORT CookieMonster : public CookieStore {
 
   // For garbage collection constants.
   FRIEND_TEST_ALL_PREFIXES(CookieMonsterTest, TestHostGarbageCollection);
-  FRIEND_TEST_ALL_PREFIXES(CookieMonsterTest, TestTotalGarbageCollection);
   FRIEND_TEST_ALL_PREFIXES(CookieMonsterTest, GarbageCollectionTriggers);
+  FRIEND_TEST_ALL_PREFIXES(CookieMonsterTest,
+                           GarbageCollectWithSecureCookiesOnly);
   FRIEND_TEST_ALL_PREFIXES(CookieMonsterTest, TestGCTimes);
 
   // For validation of key values.
@@ -605,10 +606,14 @@ class NET_EXPORT CookieMonster : public CookieStore {
   // Helper for GarbageCollect(). Deletes cookies in |cookie_its| from least to
   // most recently used, but only before |safe_date|. Also will stop deleting
   // when the number of remaining cookies hits |purge_goal|.
+  //
+  // Sets |earliest_time| to be the earliest last access time of a cookie that
+  // was not deleted, or base::Time() if no such cookie exists.
   size_t GarbageCollectLeastRecentlyAccessed(const base::Time& current,
                                              const base::Time& safe_date,
                                              size_t purge_goal,
-                                             CookieItVector cookie_its);
+                                             CookieItVector cookie_its,
+                                             base::Time* earliest_time);
 
   // Find the key (for lookup in cookies_) based on the given domain.
   // See comment on keys before the CookieMap typedef.
@@ -712,12 +717,12 @@ class NET_EXPORT CookieMonster : public CookieStore {
   // Approximate date of access time of least recently accessed cookie
   // in |cookies_|.  Note that this is not guaranteed to be accurate, only a)
   // to be before or equal to the actual time, and b) to be accurate
-  // immediately after a garbage collection that scans through all the cookies.
-  // This value is used to determine whether global garbage collection might
-  // find cookies to purge.
-  // Note: The default Time() constructor will create a value that compares
-  // earlier than any other time value, which is wanted.  Thus this
-  // value is not initialized.
+  // immediately after a garbage collection that scans through all the cookies
+  // (When garbage collection does not scan through all cookies, it may not be
+  // updated). This value is used to determine whether global garbage collection
+  // might find cookies to purge. Note: The default Time() constructor will
+  // create a value that compares earlier than any other time value, which is
+  // wanted.  Thus this value is not initialized.
   base::Time earliest_access_time_;
 
   // During loading, holds the set of all loaded cookie creation times. Used to

@@ -221,7 +221,7 @@ final class ClassLoaderPatcher {
     private static Object[] makeNativePathElements(File[] paths)
             throws ReflectiveOperationException {
         Object[] entries = new Object[paths.length];
-        if (Build.VERSION.CODENAME.startsWith("O")) {
+        if (Build.VERSION.SDK_INT >= 26) {
             Class<?> entryClazz = Class.forName("dalvik.system.DexPathList$NativeLibraryElement");
             for (int i = 0; i < paths.length; ++i) {
                 entries[i] = Reflect.newInstance(entryClazz, paths[i]);
@@ -253,7 +253,7 @@ final class ClassLoaderPatcher {
                 dexFile = Reflect.invokeMethod(clazz, "loadDexFile", file, optimizedDirectory);
             }
             Object dexElement;
-            if (Build.VERSION.CODENAME.startsWith("O")) {
+            if (Build.VERSION.SDK_INT >= 26) {
                 dexElement = Reflect.newInstance(entryClazz, dexFile, file);
             } else {
                 dexElement = Reflect.newInstance(entryClazz, emptyDir, false, file, dexFile);

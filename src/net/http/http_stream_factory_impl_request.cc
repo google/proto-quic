@@ -59,27 +59,27 @@ void HttpStreamFactoryImpl::Request::Complete(bool was_alpn_negotiated,
 void HttpStreamFactoryImpl::Request::OnStreamReady(
     const SSLConfig& used_ssl_config,
     const ProxyInfo& used_proxy_info,
-    HttpStream* stream) {
+    std::unique_ptr<HttpStream> stream) {
   DCHECK(completed_);
-  delegate_->OnStreamReady(used_ssl_config, used_proxy_info, stream);
+  delegate_->OnStreamReady(used_ssl_config, used_proxy_info, std::move(stream));
 }
 
 void HttpStreamFactoryImpl::Request::OnBidirectionalStreamImplReady(
     const SSLConfig& used_ssl_config,
     const ProxyInfo& used_proxy_info,
-    BidirectionalStreamImpl* stream_job) {
+    std::unique_ptr<BidirectionalStreamImpl> stream) {
   DCHECK(completed_);
   delegate_->OnBidirectionalStreamImplReady(used_ssl_config, used_proxy_info,
-                                            stream_job);
+                                            std::move(stream));
 }
 
 void HttpStreamFactoryImpl::Request::OnWebSocketHandshakeStreamReady(
     const SSLConfig& used_ssl_config,
     const ProxyInfo& used_proxy_info,
-    WebSocketHandshakeStreamBase* stream) {
+    std::unique_ptr<WebSocketHandshakeStreamBase> stream) {
   DCHECK(completed_);
-  delegate_->OnWebSocketHandshakeStreamReady(
-      used_ssl_config, used_proxy_info, stream);
+  delegate_->OnWebSocketHandshakeStreamReady(used_ssl_config, used_proxy_info,
+                                             std::move(stream));
 }
 
 void HttpStreamFactoryImpl::Request::OnStreamFailed(

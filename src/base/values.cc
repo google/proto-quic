@@ -636,10 +636,6 @@ Value* DictionaryValue::Set(StringPiece path, std::unique_ptr<Value> in_value) {
                                                      std::move(in_value));
 }
 
-Value* DictionaryValue::Set(StringPiece path, Value* in_value) {
-  return Set(path, WrapUnique(in_value));
-}
-
 Value* DictionaryValue::SetBoolean(StringPiece path, bool in_value) {
   return Set(path, MakeUnique<Value>(in_value));
 }

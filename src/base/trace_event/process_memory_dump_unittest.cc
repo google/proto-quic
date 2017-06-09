@@ -54,7 +54,7 @@ TEST(ProcessMemoryDumpTest, Clear) {
 
   pmd1->Clear();
   ASSERT_TRUE(pmd1->allocator_dumps().empty());
-  ASSERT_TRUE(pmd1->allocator_dumps_edges().empty());
+  ASSERT_TRUE(pmd1->allocator_dumps_edges_for_testing().empty());
   ASSERT_EQ(nullptr, pmd1->GetAllocatorDump("mad1"));
   ASSERT_EQ(nullptr, pmd1->GetAllocatorDump("mad2"));
   ASSERT_FALSE(pmd1->has_process_totals());
@@ -126,7 +126,7 @@ TEST(ProcessMemoryDumpTest, TakeAllDumpsFrom) {
 
   // Make sure that pmd2 is empty but still usable after it has been emptied.
   ASSERT_TRUE(pmd2->allocator_dumps().empty());
-  ASSERT_TRUE(pmd2->allocator_dumps_edges().empty());
+  ASSERT_TRUE(pmd2->allocator_dumps_edges_for_testing().empty());
   ASSERT_TRUE(pmd2->heap_dumps().empty());
   pmd2->CreateAllocatorDump("pmd2/this_mad_stays_with_pmd2");
   ASSERT_EQ(1u, pmd2->allocator_dumps().size());
@@ -147,7 +147,7 @@ TEST(ProcessMemoryDumpTest, TakeAllDumpsFrom) {
   ASSERT_EQ(1u, pmd1->allocator_dumps().count("pmd1/mad2"));
   ASSERT_EQ(1u, pmd1->allocator_dumps().count("pmd2/mad1"));
   ASSERT_EQ(1u, pmd1->allocator_dumps().count("pmd1/mad2"));
-  ASSERT_EQ(2u, pmd1->allocator_dumps_edges().size());
+  ASSERT_EQ(2u, pmd1->allocator_dumps_edges_for_testing().size());
   ASSERT_EQ(shared_mad1, pmd1->GetSharedGlobalAllocatorDump(shared_mad_guid1));
   ASSERT_EQ(shared_mad2, pmd1->GetSharedGlobalAllocatorDump(shared_mad_guid2));
   ASSERT_TRUE(MemoryAllocatorDump::Flags::WEAK & shared_mad2->flags());
@@ -162,6 +162,72 @@ TEST(ProcessMemoryDumpTest, TakeAllDumpsFrom) {
   pmd1->AsValueInto(traced_value.get());
 
   pmd1.reset();
+}
+
+TEST(ProcessMemoryDumpTest, OverrideOwnershipEdge) {
+  std::unique_ptr<ProcessMemoryDump> pmd(
+      new ProcessMemoryDump(nullptr, kDetailedDumpArgs));
+
+  auto* shm_dump1 = pmd->CreateAllocatorDump("shared_mem/seg1");
+  auto* shm_dump2 = pmd->CreateAllocatorDump("shared_mem/seg2");
+  auto* shm_dump3 = pmd->CreateAllocatorDump("shared_mem/seg3");
+  auto* shm_dump4 = pmd->CreateAllocatorDump("shared_mem/seg4");
+
+  // Create one allocation with an auto-assigned guid and mark it as a
+  // suballocation of "fakealloc/allocated_objects".
+  auto* child1_dump = pmd->CreateAllocatorDump("shared_mem/child/seg1");
+  pmd->AddOverridableOwnershipEdge(child1_dump->guid(), shm_dump1->guid(),
+                                   0 /* importance */);
+  auto* child2_dump = pmd->CreateAllocatorDump("shared_mem/child/seg2");
+  pmd->AddOwnershipEdge(child2_dump->guid(), shm_dump2->guid(),
+                        3 /* importance */);
+  MemoryAllocatorDumpGuid shared_mad_guid(1);
+  pmd->CreateSharedGlobalAllocatorDump(shared_mad_guid);
+  pmd->AddOverridableOwnershipEdge(shm_dump3->guid(), shared_mad_guid,
+                                   0 /* importance */);
+  auto* child4_dump = pmd->CreateAllocatorDump("shared_mem/child/seg4");
+  pmd->AddOverridableOwnershipEdge(child4_dump->guid(), shm_dump4->guid(),
+                                   4 /* importance */);
+
+  const ProcessMemoryDump::AllocatorDumpEdgesMap& edges =
+      pmd->allocator_dumps_edges_for_testing();
+  EXPECT_EQ(4u, edges.size());
+  EXPECT_EQ(shm_dump1->guid(), edges.find(child1_dump->guid())->second.target);
+  EXPECT_EQ(0, edges.find(child1_dump->guid())->second.importance);
+  EXPECT_TRUE(edges.find(child1_dump->guid())->second.overridable);
+  EXPECT_EQ(shm_dump2->guid(), edges.find(child2_dump->guid())->second.target);
+  EXPECT_EQ(3, edges.find(child2_dump->guid())->second.importance);
+  EXPECT_FALSE(edges.find(child2_dump->guid())->second.overridable);
+  EXPECT_EQ(shared_mad_guid, edges.find(shm_dump3->guid())->second.target);
+  EXPECT_EQ(0, edges.find(shm_dump3->guid())->second.importance);
+  EXPECT_TRUE(edges.find(shm_dump3->guid())->second.overridable);
+  EXPECT_EQ(shm_dump4->guid(), edges.find(child4_dump->guid())->second.target);
+  EXPECT_EQ(4, edges.find(child4_dump->guid())->second.importance);
+  EXPECT_TRUE(edges.find(child4_dump->guid())->second.overridable);
+
+  // These should override old edges:
+  pmd->AddOwnershipEdge(child1_dump->guid(), shm_dump1->guid(),
+                        1 /* importance */);
+  pmd->AddOwnershipEdge(shm_dump3->guid(), shared_mad_guid, 2 /* importance */);
+  // This should not change the old edges.
+  pmd->AddOverridableOwnershipEdge(child2_dump->guid(), shm_dump2->guid(),
+                                   0 /* importance */);
+  pmd->AddOwnershipEdge(child4_dump->guid(), shm_dump4->guid(),
+                        0 /* importance */);
+
+  EXPECT_EQ(4u, edges.size());
+  EXPECT_EQ(shm_dump1->guid(), edges.find(child1_dump->guid())->second.target);
+  EXPECT_EQ(1, edges.find(child1_dump->guid())->second.importance);
+  EXPECT_FALSE(edges.find(child1_dump->guid())->second.overridable);
+  EXPECT_EQ(shm_dump2->guid(), edges.find(child2_dump->guid())->second.target);
+  EXPECT_EQ(3, edges.find(child2_dump->guid())->second.importance);
+  EXPECT_FALSE(edges.find(child2_dump->guid())->second.overridable);
+  EXPECT_EQ(shared_mad_guid, edges.find(shm_dump3->guid())->second.target);
+  EXPECT_EQ(2, edges.find(shm_dump3->guid())->second.importance);
+  EXPECT_FALSE(edges.find(shm_dump3->guid())->second.overridable);
+  EXPECT_EQ(shm_dump4->guid(), edges.find(child4_dump->guid())->second.target);
+  EXPECT_EQ(0, edges.find(child4_dump->guid())->second.importance);
+  EXPECT_FALSE(edges.find(child4_dump->guid())->second.overridable);
 }
 
 TEST(ProcessMemoryDumpTest, Suballocations) {
@@ -193,11 +259,11 @@ TEST(ProcessMemoryDumpTest, Suballocations) {
   // Finally check that AddSuballocation() has created also the
   // edges between the pictures and the anonymous allocator child dumps.
   bool found_edge[2]{false, false};
-  for (const auto& e : pmd->allocator_dumps_edges()) {
-    found_edge[0] |= (e.source == pic1_dump->guid() &&
-                      e.target == anon_node_1_it->second->guid());
-    found_edge[1] |= (e.source == pic2_dump->guid() &&
-                      e.target == anon_node_2_it->second->guid());
+  for (const auto& e : pmd->allocator_dumps_edges_for_testing()) {
+    found_edge[0] |= (e.first == pic1_dump->guid() &&
+                      e.second.target == anon_node_1_it->second->guid());
+    found_edge[1] |= (e.first == pic2_dump->guid() &&
+                      e.second.target == anon_node_2_it->second->guid());
   }
   ASSERT_TRUE(found_edge[0]);
   ASSERT_TRUE(found_edge[1]);

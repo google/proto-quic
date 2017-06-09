@@ -53,6 +53,9 @@ minifying_closure_args = [
 
   "language_in=ECMASCRIPT_NEXT",
   "language_out=ECMASCRIPT6",
+
+  # TODO(wychen): turn on 'use strict'. crbug.com/729689
+  "emit_use_strict=false",
 ]
 
 # For compatibility with old uses.

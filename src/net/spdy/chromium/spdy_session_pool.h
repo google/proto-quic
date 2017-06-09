@@ -21,6 +21,7 @@
 #include "net/base/net_export.h"
 #include "net/base/network_change_notifier.h"
 #include "net/cert/cert_database.h"
+#include "net/http/http_stream_factory_impl_request.h"
 #include "net/proxy/proxy_config.h"
 #include "net/proxy/proxy_server.h"
 #include "net/spdy/chromium/server_push_delegate.h"
@@ -166,9 +167,34 @@ class NET_EXPORT SpdySessionPool
   void DumpMemoryStats(base::trace_event::ProcessMemoryDump* pmd,
                        const SpdyString& parent_dump_absolute_name) const;
 
+  // Called when a SpdySession is ready. It will find appropriate Requests and
+  // fulfill them. |direct| indicates whether or not |spdy_session| uses a
+  // proxy.
+  void OnNewSpdySessionReady(const base::WeakPtr<SpdySession>& spdy_session,
+                             bool direct,
+                             const SSLConfig& used_ssl_config,
+                             const ProxyInfo& used_proxy_info,
+                             bool was_alpn_negotiated,
+                             NextProto negotiated_protocol,
+                             bool using_spdy,
+                             NetLogSource source_dependency);
+
+  // Adds |request| to |spdy_session_request_map_| under |spdy_session_key| Key.
+  // Sets |spdy_session_key| as |request|'s SpdySessionKey.
+  void AddRequestToSpdySessionRequestMap(
+      const SpdySessionKey& spdy_session_key,
+      HttpStreamFactoryImpl::Request* request);
+
+  // Removes |request| from |spdy_session_request_map_|. No-op if |request| does
+  // not have a SpdySessionKey.
+  void RemoveRequestFromSpdySessionRequestMap(
+      HttpStreamFactoryImpl::Request* request);
+
  private:
   friend class SpdySessionPoolPeer;  // For testing.
 
+  typedef std::set<HttpStreamFactoryImpl::Request*> RequestSet;
+  typedef std::map<SpdySessionKey, RequestSet> SpdySessionRequestMap;
   typedef std::set<SpdySession*> SessionSet;
   typedef std::vector<base::WeakPtr<SpdySession> > WeakSessionList;
   typedef std::map<SpdySessionKey, base::WeakPtr<SpdySession> >
@@ -244,6 +270,8 @@ class NET_EXPORT SpdySessionPool
   // and also control SpdySession parameters like initial receive window size
   // and maximum HPACK dynamic table size.
   const SettingsMap initial_settings_;
+
+  SpdySessionRequestMap spdy_session_request_map_;
 
   TimeFunc time_func_;
   ServerPushDelegate* push_delegate_;

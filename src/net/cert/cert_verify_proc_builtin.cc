@@ -221,9 +221,12 @@ void DoVerify(X509Certificate* input_cert,
 
   // Initialize the path builder.
   CertPathBuilder::Result result;
-  CertPathBuilder path_builder(target, ssl_trust_store->GetTrustStore(),
-                               &signature_policy, verification_time,
-                               KeyPurpose::SERVER_AUTH, &result);
+  CertPathBuilder path_builder(
+      target, ssl_trust_store->GetTrustStore(), &signature_policy,
+      verification_time, KeyPurpose::SERVER_AUTH, InitialExplicitPolicy::kFalse,
+      {AnyPolicy()} /* user_initial_policy_set*/,
+      InitialPolicyMappingInhibit::kFalse, InitialAnyPolicyInhibit::kFalse,
+      &result);
 
   // Allow the path builder to discover the explicitly provided intermediates in
   // |input_cert|.

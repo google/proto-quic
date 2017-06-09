@@ -35,7 +35,7 @@ ACTIONS_XML = """
 <actions>
 
 <action name="action1" {not_user_triggered}>
-{owners}{obsolete}{description}
+{obsolete}{owners}{description}
 </action>
 
 </actions>"""
@@ -82,10 +82,10 @@ NO_DESCRIPTION_EXPECTED_XML = (
 OBSOLETE_EXPECTED_XML = (
     '<actions>\n\n'
     '<action name="action1">\n'
+    '  <obsolete>Not used anymore. Replaced by action2.</obsolete>\n'
     '  <owner>name1@google.com</owner>\n'
     '  <owner>name2@google.com</owner>\n'
     '  <description>Description.</description>\n'
-    '  <obsolete>Not used anymore. Replaced by action2.</obsolete>\n'
     '</action>\n\n'
     '</actions>\n'
 )

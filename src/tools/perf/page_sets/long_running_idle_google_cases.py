@@ -35,7 +35,8 @@ class LongRunningIdleGmailPageSet(story.StorySet):
   def __init__(self):
     super(LongRunningIdleGmailPageSet, self).__init__(
         archive_data_file='data/long_running_idle_gmail_page.json',
-        cloud_storage_bucket=story.PARTNER_BUCKET)
+        cloud_storage_bucket=story.PARTNER_BUCKET,
+        verify_names=True)
     self.AddStory(
         _CreateIdlePageClass(google_pages.GmailPage)(self))
 
@@ -45,6 +46,7 @@ class LongRunningIdleGmailBackgroundPageSet(story.StorySet):
     # Reuse the wpr of foreground gmail.
     super(LongRunningIdleGmailBackgroundPageSet, self).__init__(
         archive_data_file='data/long_running_idle_gmail_page.json',
-        cloud_storage_bucket=story.PARTNER_BUCKET)
+        cloud_storage_bucket=story.PARTNER_BUCKET,
+        verify_names=True)
     self.AddStory(
         _CreateIdleBackgroundPageClass(google_pages.GmailPage)(self))

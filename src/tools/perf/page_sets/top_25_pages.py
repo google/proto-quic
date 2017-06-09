@@ -15,7 +15,8 @@ class Top25PageSet(story.StorySet):
   def __init__(self):
     super(Top25PageSet, self).__init__(
         archive_data_file='data/top_25.json',
-        cloud_storage_bucket=story.PARTNER_BUCKET)
+        cloud_storage_bucket=story.PARTNER_BUCKET,
+        verify_names=True)
 
     shared_desktop_state = shared_page_state.SharedDesktopPageState
     self.AddStory(top_pages.GoogleWebSearchPage(self, shared_desktop_state))
@@ -60,4 +61,5 @@ class Top25PageSet(story.StorySet):
 
     for url in other_urls:
       self.AddStory(
-          page.Page(url, self, shared_page_state_class=shared_desktop_state))
+          page.Page(url, self, shared_page_state_class=shared_desktop_state,
+                    name=url))

@@ -218,10 +218,10 @@ config("default_sanitizer_ldflags") {
         ]
       }
       if (use_cfi_diag) {
-        ldflags += [
-          "-fno-sanitize-trap=cfi",
-          "-fsanitize-recover=cfi",
-        ]
+        ldflags += [ "-fno-sanitize-trap=cfi" ]
+        if (use_cfi_recover) {
+          ldflags += [ "-fsanitize-recover=cfi" ]
+        }
       }
     }
   } else if (is_win && is_asan) {
@@ -382,12 +382,14 @@ config("cfi_flags") {
     if (use_cfi_diag) {
       cflags += [
         "-fno-sanitize-trap=cfi",
-        "-fsanitize-recover=cfi",
         "-fno-inline-functions",
         "-fno-inline",
         "-fno-omit-frame-pointer",
         "-O1",
       ]
+      if (use_cfi_recover) {
+        cflags += [ "-fsanitize-recover=cfi" ]
+      }
     } else {
       defines = [ "CFI_ENFORCEMENT" ]
     }

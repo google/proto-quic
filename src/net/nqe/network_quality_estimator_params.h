@@ -22,13 +22,9 @@ namespace net {
 // |params| provided to the NetworkQualityEstimatorParams constructor.
 NET_EXPORT extern const char kForceEffectiveConnectionType[];
 
-namespace nqe {
-
-namespace internal {
-
 // NetworkQualityEstimatorParams computes the configuration parameters for
 // the network quality estimator.
-class NET_EXPORT_PRIVATE NetworkQualityEstimatorParams {
+class NET_EXPORT NetworkQualityEstimatorParams {
  public:
   // |params| is the map containing all field trial parameters related to
   // NetworkQualityEstimator field trial.
@@ -50,15 +46,16 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimatorParams {
   // observations are different for different connection types (e.g., 2G, 3G,
   // 4G, WiFi). The default observations may be used to determine the network
   // quality in absence of any other information.
-  const NetworkQuality& DefaultObservation(
+  const nqe::internal::NetworkQuality& DefaultObservation(
       NetworkChangeNotifier::ConnectionType type) const;
 
   // Returns the typical network quality for connection |type|.
-  const NetworkQuality& TypicalNetworkQuality(
+  const nqe::internal::NetworkQuality& TypicalNetworkQuality(
       EffectiveConnectionType type) const;
 
   // Returns the threshold for effective connection type |type|.
-  const NetworkQuality& ConnectionThreshold(EffectiveConnectionType type) const;
+  const nqe::internal::NetworkQuality& ConnectionThreshold(
+      EffectiveConnectionType type) const;
 
   // Returns the minimum number of requests in-flight to consider the network
   // fully utilized. A throughput observation is taken only when the network is
@@ -120,28 +117,24 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimatorParams {
   const base::TimeDelta min_socket_watcher_notification_interval_;
 
   // Default network quality observations obtained from |params_|.
-  NetworkQuality
+  nqe::internal::NetworkQuality
       default_observations_[NetworkChangeNotifier::CONNECTION_LAST + 1];
 
   // Typical network quality for different effective connection types obtained
   // from |params_|.
-  NetworkQuality typical_network_quality_
+  nqe::internal::NetworkQuality typical_network_quality_
       [EffectiveConnectionType::EFFECTIVE_CONNECTION_TYPE_LAST];
 
   // Thresholds for different effective connection types obtained from
   // |params_|. These thresholds encode how different connection types behave
   // in general.
-  NetworkQuality connection_thresholds_
+  nqe::internal::NetworkQuality connection_thresholds_
       [EffectiveConnectionType::EFFECTIVE_CONNECTION_TYPE_LAST];
 
   base::ThreadChecker thread_checker_;
 
   DISALLOW_COPY_AND_ASSIGN(NetworkQualityEstimatorParams);
 };
-
-}  // namespace internal
-
-}  // namespace nqe
 
 }  // namespace net
 

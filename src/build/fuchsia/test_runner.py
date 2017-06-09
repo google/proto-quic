@@ -89,7 +89,7 @@ def AddToManifest(manifest_file, target_name, source, mapper):
 
 
 def BuildBootfs(output_directory, runtime_deps_path, test_name, gtest_filter,
-                dry_run):
+                gtest_repeat, dry_run):
   with open(runtime_deps_path) as f:
     lines = f.readlines()
 
@@ -123,10 +123,12 @@ def BuildBootfs(output_directory, runtime_deps_path, test_name, gtest_filter,
   autorun_file.write(' --test-launcher-retry-limit=0')
   if gtest_filter:
     autorun_file.write(' --gtest_filter=' + gtest_filter)
+  if gtest_repeat:
+    autorun_file.write(' --gtest_repeat=' + gtest_repeat)
   autorun_file.write('\n')
   # If shutdown happens too soon after the test completion, log statements from
   # the end of the run will be lost, so sleep for a bit before shutting down.
-  autorun_file.write('sleep 3\n')
+  autorun_file.write('msleep 3000\n')
   autorun_file.write('dm poweroff\n')
   autorun_file.flush()
   os.chmod(autorun_file.name, 0750)
@@ -184,10 +186,13 @@ def main():
                       help='Name of the the test')
   parser.add_argument('--gtest_filter',
                       help='GTest filter to use in place of any default')
+  parser.add_argument('--gtest_repeat',
+                      help='GTest repeat value to use')
   args = parser.parse_args()
 
   bootfs = BuildBootfs(args.output_directory, args.runtime_deps_path,
-                       args.test_name, args.gtest_filter, args.dry_run)
+                       args.test_name, args.gtest_filter, args.gtest_repeat,
+                       args.dry_run)
 
   qemu_path = os.path.join(SDK_ROOT, 'qemu', 'bin', 'qemu-system-x86_64')
 

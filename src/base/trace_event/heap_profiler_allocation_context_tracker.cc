@@ -42,7 +42,7 @@ void DestructAllocationContextTracker(void* alloc_ctx_tracker) {
 // Cannot call ThreadIdNameManager::GetName because it holds a lock and causes
 // deadlock when lock is already held by ThreadIdNameManager before the current
 // allocation. Gets the thread name from kernel if available or returns a string
-// with id. This function intenionally leaks the allocated strings since they
+// with id. This function intentionally leaks the allocated strings since they
 // are used to tag allocations even after the thread dies.
 const char* GetAndLeakThreadName() {
   char name[16];
@@ -156,7 +156,6 @@ void AllocationContextTracker::PopCurrentTaskContext(const char* context) {
   task_contexts_.pop_back();
 }
 
-// static
 bool AllocationContextTracker::GetContextSnapshot(AllocationContext* ctx) {
   if (ignore_scope_depth_)
     return false;

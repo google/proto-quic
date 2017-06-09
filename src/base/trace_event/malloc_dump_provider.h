@@ -5,9 +5,6 @@
 #ifndef BASE_TRACE_EVENT_MALLOC_DUMP_PROVIDER_H_
 #define BASE_TRACE_EVENT_MALLOC_DUMP_PROVIDER_H_
 
-#include <istream>
-#include <memory>
-
 #include "base/macros.h"
 #include "base/memory/singleton.h"
 #include "base/threading/platform_thread.h"
@@ -53,7 +50,7 @@ class BASE_EXPORT MallocDumpProvider : public MemoryDumpProvider {
 
   // When in OnMemoryDump(), this contains the current thread ID.
   // This is to prevent re-entrancy in the heap profiler when the heap dump
-  // generation is malloc/new-ing for its own bookeeping data structures.
+  // generation is malloc/new-ing for its own bookkeeping data structures.
   PlatformThreadId tid_dumping_heap_;
 
   DISALLOW_COPY_AND_ASSIGN(MallocDumpProvider);

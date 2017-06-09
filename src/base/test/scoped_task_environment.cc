@@ -59,7 +59,8 @@ class ScopedTaskEnvironment::TestTaskTracker
 
   // internal::TaskSchedulerImpl::TaskTrackerImpl:
   void PerformRunTask(std::unique_ptr<internal::Task> task,
-                      const SequenceToken& sequence_token) override;
+                      internal::Sequence* sequence) override;
+  void OnRunNextTaskCompleted() override;
 
   // Synchronizes accesses to members below.
   Lock lock_;
@@ -205,7 +206,7 @@ bool ScopedTaskEnvironment::TestTaskTracker::DisallowRunTasks() {
 
 void ScopedTaskEnvironment::TestTaskTracker::PerformRunTask(
     std::unique_ptr<internal::Task> task,
-    const SequenceToken& sequence_token) {
+    internal::Sequence* sequence) {
   {
     AutoLock auto_lock(lock_);
 
@@ -216,7 +217,7 @@ void ScopedTaskEnvironment::TestTaskTracker::PerformRunTask(
   }
 
   internal::TaskSchedulerImpl::TaskTrackerImpl::PerformRunTask(std::move(task),
-                                                               sequence_token);
+                                                               sequence);
 
   {
     AutoLock auto_lock(lock_);
@@ -224,14 +225,16 @@ void ScopedTaskEnvironment::TestTaskTracker::PerformRunTask(
     CHECK_GT(num_tasks_running_, 0);
     CHECK(can_run_tasks_);
 
-    // Notify the main thread when no task other than the current one is running
-    // or queued.
-    if (num_tasks_running_ == 1 &&
-        GetNumPendingUndelayedTasksForTesting() == 1 && queue_empty_closure_) {
-      std::move(queue_empty_closure_).Run();
-    }
-
     --num_tasks_running_;
+  }
+}
+
+void ScopedTaskEnvironment::TestTaskTracker::OnRunNextTaskCompleted() {
+  // Notify the main thread when no tasks are running or queued.
+  AutoLock auto_lock(lock_);
+  if (num_tasks_running_ == 0 && GetNumPendingUndelayedTasksForTesting() == 0 &&
+      queue_empty_closure_) {
+    std::move(queue_empty_closure_).Run();
   }
 }
 

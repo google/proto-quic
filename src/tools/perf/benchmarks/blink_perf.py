@@ -67,11 +67,17 @@ def CreateStorySetFromPath(path, skipped_file,
   else:
     _AddPage(path)
   ps = story.StorySet(base_dir=os.getcwd() + os.sep,
-                      serving_dirs=serving_dirs)
+                      serving_dirs=serving_dirs,
+                      verify_names=True)
+
+  all_urls = [p.rstrip('/') for p in page_urls]
+  common_prefix = os.path.dirname(os.path.commonprefix(all_urls))
   for url in page_urls:
+    name = url[len(common_prefix):].strip('/')
     ps.AddStory(page_module.Page(
         url, ps, ps.base_dir,
-        shared_page_state_class=shared_page_state_class))
+        shared_page_state_class=shared_page_state_class,
+        name=name))
   return ps
 
 
@@ -246,8 +252,8 @@ class _BlinkPerfBenchmark(perf_benchmark.PerfBenchmark):
     return CreateStorySetFromPath(path, SKIPPED_FILE)
 
 
-@benchmark.Owner(emails=['yukishiino@chromium.org',
-                         'bashi@chromium.org',
+@benchmark.Owner(emails=['jbroman@chromium.org',
+                         'yukishiino@chromium.org',
                          'haraken@chromium.org'])
 class BlinkPerfBindings(_BlinkPerfBenchmark):
   tag = 'bindings'
@@ -288,8 +294,8 @@ class BlinkPerfCanvas(_BlinkPerfBenchmark):
         '--enable-color-correct-rendering',
     ])
 
-@benchmark.Owner(emails=['yukishiino@chromium.org',
-                         'bashi@chromium.org',
+@benchmark.Owner(emails=['jbroman@chromium.org',
+                         'yukishiino@chromium.org',
                          'haraken@chromium.org'])
 class BlinkPerfDOM(_BlinkPerfBenchmark):
   tag = 'dom'
@@ -324,8 +330,8 @@ class BlinkPerfPaint(_BlinkPerfBenchmark):
 
 
 @benchmark.Disabled('win')  # crbug.com/488493
-@benchmark.Owner(emails=['yukishiino@chromium.org',
-                         'bashi@chromium.org',
+@benchmark.Owner(emails=['jbroman@chromium.org',
+                         'yukishiino@chromium.org',
                          'haraken@chromium.org'])
 class BlinkPerfParser(_BlinkPerfBenchmark):
   tag = 'parser'

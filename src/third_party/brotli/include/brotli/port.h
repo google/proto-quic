@@ -36,7 +36,7 @@
 
 #if defined(BROTLI_BUILD_MODERN_COMPILER)
 #define BROTLI_MODERN_COMPILER 1
-#elif BROTLI_GCC_VERSION > 300 || BROTLI_ICC_VERSION >= 1600
+#elif BROTLI_GCC_VERSION >= 304 || BROTLI_ICC_VERSION >= 1600
 #define BROTLI_MODERN_COMPILER 1
 #else
 #define BROTLI_MODERN_COMPILER 0
@@ -134,7 +134,6 @@ OR:
 #else
 #define BROTLI_NOINLINE
 #endif
-
 
 #if BROTLI_MODERN_COMPILER || __has_attribute(deprecated)
 #define BROTLI_DEPRECATED __attribute__((deprecated))

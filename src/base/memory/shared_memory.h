@@ -64,22 +64,6 @@ struct BASE_EXPORT SharedMemoryCreateOptions {
   bool share_read_only = false;
 };
 
-// Enumeration of different shared memory error types. Note: Currently only
-// errors from Mac POSIX shared memory implementation are fully instrumented.
-// TODO(asvitkine): Evaluate whether we want to keep this ability after
-// crbug.com/703649 is fixed and expand to all platforms or remove.
-enum class SharedMemoryError {
-  NO_ERRORS,
-  NO_FILE,
-  BAD_PARAMS,
-  STAT_FAILED,
-  TRUNCATE_FAILED,
-  NO_TEMP_DIR,
-  MAKE_READONLY_FAILED,
-  INODE_MISMATCH,
-  MMAP_FAILED,
-};
-
 // Platform abstraction for shared memory.
 // SharedMemory consumes a SharedMemoryHandle [potentially one that it created]
 // to map a shared memory OS resource into the virtual address space of the
@@ -226,13 +210,6 @@ class BASE_EXPORT SharedMemory {
   // failure.
   SharedMemoryHandle GetReadOnlyHandle();
 
-  // Returns the last error encountered as a result of a call to Create() or
-  // Map(). Note: Currently only errors from Mac POSIX shared memory
-  // implementation are fully instrumented.
-  // TODO(asvitkine): Evaluate whether we want to keep this ability after
-  // crbug.com/703649 is fixed and expand to all platforms or remove.
-  SharedMemoryError get_last_error() const { return last_error_; }
-
  private:
 #if defined(OS_POSIX) && !defined(OS_NACL) && !defined(OS_ANDROID) && \
     (!defined(OS_MACOSX) || defined(OS_IOS))
@@ -263,7 +240,6 @@ class BASE_EXPORT SharedMemory {
   void* memory_ = nullptr;
   bool read_only_ = false;
   size_t requested_size_ = 0;
-  SharedMemoryError last_error_ = SharedMemoryError::NO_ERRORS;
 
   DISALLOW_COPY_AND_ASSIGN(SharedMemory);
 };

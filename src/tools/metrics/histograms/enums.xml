@@ -53,6 +53,56 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="2" label="ScrolledMainFrameWithUnacceleratedFixedRootBackground"/>
 </enum>
 
+<enum name="AccessibilityAndroidServiceInfoEnum" type="int">
+  <summary>
+    Track flags and capabilities of enabled accessibility services on Android.
+  </summary>
+  <int value="0" label="CAPABILITY_CAN_CONTROL_MAGNIFICATION"/>
+  <int value="1" label="CAPABILITY_CAN_PERFORM_GESTURES"/>
+  <int value="2" label="CAPABILITY_CAN_REQUEST_ENHANCED_WEB_ACCESSIBILITY"/>
+  <int value="3" label="CAPABILITY_CAN_REQUEST_FILTER_KEY_EVENTS"/>
+  <int value="4" label="CAPABILITY_CAN_REQUEST_TOUCH_EXPLORATION"/>
+  <int value="5" label="CAPABILITY_CAN_RETRIEVE_WINDOW_CONTENT"/>
+  <int value="6" label="EVENT_ANNOUNCEMENT"/>
+  <int value="7" label="EVENT_ASSIST_READING_CONTEXT"/>
+  <int value="8" label="EVENT_GESTURE_DETECTION_END"/>
+  <int value="9" label="EVENT_GESTURE_DETECTION_START"/>
+  <int value="10" label="EVENT_NOTIFICATION_STATE_CHANGED"/>
+  <int value="11" label="EVENT_TOUCH_EXPLORATION_GESTURE_END"/>
+  <int value="12" label="EVENT_TOUCH_EXPLORATION_GESTURE_START"/>
+  <int value="13" label="EVENT_TOUCH_INTERACTION_END"/>
+  <int value="14" label="EVENT_TOUCH_INTERACTION_START"/>
+  <int value="15" label="EVENT_VIEW_ACCESSIBILITY_FOCUSED"/>
+  <int value="16" label="EVENT_VIEW_ACCESSIBILITY_FOCUS_CLEARED"/>
+  <int value="17" label="EVENT_VIEW_CLICKED"/>
+  <int value="18" label="EVENT_VIEW_CONTEXT_CLICKED"/>
+  <int value="19" label="EVENT_VIEW_FOCUSED"/>
+  <int value="20" label="EVENT_VIEW_HOVER_ENTER"/>
+  <int value="21" label="EVENT_VIEW_HOVER_EXIT"/>
+  <int value="22" label="EVENT_VIEW_LONG_CLICKED"/>
+  <int value="23" label="EVENT_VIEW_SCROLLED"/>
+  <int value="24" label="EVENT_VIEW_SELECTED"/>
+  <int value="25" label="EVENT_VIEW_TEXT_CHANGED"/>
+  <int value="26" label="EVENT_VIEW_TEXT_SELECTION_CHANGED"/>
+  <int value="27" label="EVENT_VIEW_TEXT_TRAVERSED_AT_MOVEMENT_GRANULARITY"/>
+  <int value="28" label="EVENT_WINDOWS_CHANGED"/>
+  <int value="29" label="EVENT_WINDOW_CONTENT_CHANGED"/>
+  <int value="30" label="EVENT_WINDOW_STATE_CHANGED"/>
+  <int value="31" label="FEEDBACK_AUDIBLE"/>
+  <int value="32" label="FEEDBACK_BRAILLE"/>
+  <int value="33" label="FEEDBACK_GENERIC"/>
+  <int value="34" label="FEEDBACK_HAPTIC"/>
+  <int value="35" label="FEEDBACK_SPOKEN"/>
+  <int value="36" label="FEEDBACK_VISUAL"/>
+  <int value="37" label="FLAG_FORCE_DIRECT_BOOT_AWARE"/>
+  <int value="38" label="FLAG_INCLUDE_NOT_IMPORTANT_VIEWS"/>
+  <int value="39" label="FLAG_REPORT_VIEW_IDS"/>
+  <int value="40" label="FLAG_REQUEST_ENHANCED_WEB_ACCESSIBILITY"/>
+  <int value="41" label="FLAG_REQUEST_FILTER_KEY_EVENTS"/>
+  <int value="42" label="FLAG_REQUEST_TOUCH_EXPLORATION_MODE"/>
+  <int value="43" label="FLAG_RETRIEVE_INTERACTIVE_WINDOWS"/>
+</enum>
+
 <enum name="AccessibilityModeFlagEnum" type="int">
   <summary>Track individual accessibility mode flags that are enabled.</summary>
   <int value="0" label="Native APIs"/>
@@ -378,6 +428,9 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="5" label="Write to minidump failed"/>
   <int value="6" label="Debug file deletion failed"/>
   <int value="7" label="Finished writing crash report failed"/>
+  <int value="8" label="Unclean shutdown"/>
+  <int value="9" label="Unclean session"/>
+  <int value="10" label="Collection attempt"/>
 </enum>
 
 <enum name="ActivityTrackerRecordEvent" type="int">
@@ -6720,6 +6773,27 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="0" label="Not Compliant"/>
   <int value="1" label="Whitelisted"/>
   <int value="2" label="Has enough SCTs"/>
+</enum>
+
+<enum name="CustomTabsSpeculationStatusOnStart" type="int">
+  <int value="0"
+      label="Speculation allowed. If started, the kind will also be recorded"/>
+  <int value="1" label="Prefetch kind of speculation started"/>
+  <int value="2" label="Prerender kind of speculation started"/>
+  <int value="3" label="Background Tab kind of speculation started"/>
+  <int value="4" label="Prerender speculation allowed, but not started"/>
+  <int value="5" label="Not allowed: Device class"/>
+  <int value="6" label="Not allowed: Block 3rd party cookies"/>
+  <int value="7" label="Not allowed: Network prediction disabled"/>
+  <int value="8" label="Not allowed: Data reduction enabled"/>
+  <int value="9" label="Not allowed: Network metered"/>
+</enum>
+
+<enum name="CustomTabsSpeculationStatusOnSwap" type="int">
+  <int value="0" label="Background Tab Swapped In"/>
+  <int value="1" label="Background Tab Not Matched"/>
+  <int value="2" label="Prerender Swapped In"/>
+  <int value="3" label="Prerender Not Matched"/>
 </enum>
 
 <enum name="D3D11FeatureLevel" type="int">
@@ -13077,6 +13151,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="202" label="kVirtualKeyboard"/>
   <int value="203" label="kNetworkingCastPrivate"/>
   <int value="204" label="kMediaPerceptionPrivate"/>
+  <int value="205" label="kLockScreen"/>
 </enum>
 
 <enum name="ExtensionServiceVerifyAllSuccess" type="int">
@@ -14421,8 +14496,8 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="1101" label="SVG1DOMUriReference"/>
   <int value="1102" label="SVG1DOMZoomAndPan"/>
   <int value="1103" label="V8SVGGraphicsElement_Transform_AttributeGetter"/>
-  <int value="1104" label="OBSOLETE_MenuItemElement"/>
-  <int value="1105" label="OBSOLETE_MenuItemCloseTag"/>
+  <int value="1104" label="MenuItemElement"/>
+  <int value="1105" label="MenuItemCloseTag"/>
   <int value="1106" label="SVG1DOMMarkerElement"/>
   <int value="1107" label="SVG1DOMUseElement"/>
   <int value="1108" label="SVG1DOMMaskElement"/>
@@ -15246,7 +15321,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="1908" label="OrientationSensorPopulateMatrix"/>
   <int value="1909" label="WindowOpenWithInvalidURL"/>
   <int value="1910" label="CrossOriginMainFrameNulledNameAccessed"/>
-  <int value="1911" label="OBSOLETE_MenuItemElementIconAttribute"/>
+  <int value="1911" label="MenuItemElementIconAttribute"/>
   <int value="1912" label="WebkitCSSMatrixSetMatrixValue"/>
   <int value="1913" label="WebkitCSSMatrixConstructFromString"/>
   <int value="1914" label="CanRequestURLHTTPContainingNewline"/>
@@ -15364,6 +15439,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="2020" label="SmoothScrollJSInterventionActivated"/>
   <int value="2021" label="BudgetAPIGetCost"/>
   <int value="2022" label="BudgetAPIGetBudget"/>
+  <int value="2023" label="CrossOriginMainFrameNulledNonEmptyNameAccessed"/>
 </enum>
 
 <enum name="FeedbackSource" type="int">
@@ -21948,6 +22024,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="-1746767834" label="ssl-interstitial-v2-gray"/>
   <int value="-1740519217" label="disable-software-rasterizer"/>
   <int value="-1735643253" label="enable-display-list-2d-canvas"/>
+  <int value="-1734254845" label="ash-enable-night-light"/>
   <int value="-1732561795" label="ConsistentOmniboxGeolocation:enabled"/>
   <int value="-1729926412" label="enable-webusb-notifications"/>
   <int value="-1725507605" label="enable-web-midi"/>
@@ -22124,7 +22201,6 @@ from previous Chrome versions.
   <int value="-1158993534" label="PrintScaling:enabled"/>
   <int value="-1155543191" label="CopylessPaste:disabled"/>
   <int value="-1151766565" label="enable-fullscreen-tab-detaching"/>
-  <int value="-1150827131" label="enable-tether"/>
   <int value="-1137442543" label="enable-slimming-paint"/>
   <int value="-1136627751" label="ignore-autocomplete-off-autofill"/>
   <int value="-1136509631" label="ssl-interstitial-v1"/>
@@ -22396,6 +22472,7 @@ from previous Chrome versions.
   <int value="-147283486" label="enable-network-portal-notification"/>
   <int value="-146552997" label="enable-affiliation-based-matching"/>
   <int value="-144134779" label="AndroidPayIntegrationV2:disabled"/>
+  <int value="-143382681" label="InstantTethering:enabled"/>
   <int value="-138773929" label="PassiveDocumentEventListeners:enabled"/>
   <int value="-122492389" label="enable-browser-task-scheduler"/>
   <int value="-119055644" label="GenericSensor:enabled"/>
@@ -22564,6 +22641,7 @@ from previous Chrome versions.
   <int value="504994663" label="GenericSensor:disabled"/>
   <int value="506680761" label="WebNFC:disabled"/>
   <int value="510814146" label="OfflineBookmarks:enabled"/>
+  <int value="513356954" label="InstantTethering:disabled"/>
   <int value="535131384" label="OmniboxTailSuggestions:enabled"/>
   <int value="535976218" label="enable-plugin-power-saver"/>
   <int value="538468149" label="OfflinePagesCT:enabled"/>
@@ -25335,6 +25413,7 @@ from previous Chrome versions.
   <int value="300" label="INVALID_URL"/>
   <int value="301" label="DISALLOWED_URL_SCHEME"/>
   <int value="302" label="UNKNOWN_URL_SCHEME"/>
+  <int value="303" label="INVALID_REDIRECT"/>
   <int value="310" label="TOO_MANY_REDIRECTS"/>
   <int value="311" label="UNSAFE_REDIRECT"/>
   <int value="312" label="UNSAFE_PORT"/>
@@ -28362,6 +28441,8 @@ from previous Chrome versions.
   <int value="6" label="NoMatchingPaymentMethod - Deprecated"/>
   <int value="7" label="NoSupportedPaymentMethod - Deprecated"/>
   <int value="8" label="Other"/>
+  <int value="9" label="User Navigation"/>
+  <int value="10" label="Merchant Navigation"/>
 </enum>
 
 <enum name="PaymentRequestCanMakePaymentEffectOnShow" type="int">
@@ -28751,6 +28832,13 @@ from previous Chrome versions.
   <int value="6" label="Rotate redo"/>
   <int value="7" label="Share"/>
   <int value="8" label="Other"/>
+</enum>
+
+<enum name="PhotoPickerDialogAction" type="int">
+  <int value="0" label="Cancel"/>
+  <int value="1" label="Photo picked"/>
+  <int value="2" label="New photo"/>
+  <int value="3" label="Use Android picker"/>
 </enum>
 
 <enum name="PhysicalWebActivityReferer" type="int">
@@ -29861,8 +29949,9 @@ from previous Chrome versions.
   <int value="23" label="Margarita"/>
   <int value="24" label="Note"/>
   <int value="25" label="Sun And Cloud"/>
-  <int value="26" label="Unknown"/>
-  <int value="27" label="GAIA"/>
+  <int value="26" label="Placeholder"/>
+  <int value="27" label="Unknown"/>
+  <int value="28" label="GAIA"/>
 </enum>
 
 <enum name="ProfileCreateResult" type="int">
@@ -33131,6 +33220,7 @@ from previous Chrome versions.
   <int value="20" label="NTP Content Suggestions"/>
   <int value="21" label="Re-signin infobar"/>
   <int value="22" label="Tab switcher"/>
+  <int value="23" label="Force signin warning"/>
 </enum>
 
 <enum name="SigninAccountEquality" type="int">
@@ -33629,6 +33719,13 @@ from previous Chrome versions.
   <int value="1" label="Invalid registry key"/>
   <int value="2" label="Value not found"/>
   <int value="3" label="Value out of bounds"/>
+</enum>
+
+<enum name="SpareWebContentsStatus" type="int">
+  <int value="0" label="Created"/>
+  <int value="1" label="Used"/>
+  <int value="2" label="Render process gone"/>
+  <int value="3" label="Destroyed"/>
 </enum>
 
 <enum name="SpdyFrameFlowControlState" type="int">
@@ -35628,6 +35725,59 @@ from previous Chrome versions.
   </int>
 </enum>
 
+<enum name="TextToSpeechEvent" type="int">
+  <int value="0" label="Start"/>
+  <int value="1" label="End"/>
+  <int value="2" label="Word"/>
+  <int value="3" label="Sentence"/>
+  <int value="4" label="Marker"/>
+  <int value="5" label="Interrupted"/>
+  <int value="6" label="Cancelled"/>
+  <int value="7" label="Error"/>
+  <int value="8" label="Pause"/>
+  <int value="9" label="Resume"/>
+</enum>
+
+<enum name="TextToSpeechFromExtensionAPI" type="int">
+  <int value="0" label="Web speech API"/>
+  <int value="1" label="Chrome TTS extension API"/>
+</enum>
+
+<enum name="TextToSpeechHasGender" type="int">
+  <int value="0" label="Does Not Have Gender"/>
+  <int value="1" label="Has Gender"/>
+</enum>
+
+<enum name="TextToSpeechHasLang" type="int">
+  <int value="0" label="Does Not Have Language"/>
+  <int value="1" label="Has Language"/>
+</enum>
+
+<enum name="TextToSpeechHasPitch" type="int">
+  <int value="0" label="Does Not Have Pitch"/>
+  <int value="1" label="Has Pitch"/>
+</enum>
+
+<enum name="TextToSpeechHasRate" type="int">
+  <int value="0" label="Does Not Have Rate"/>
+  <int value="1" label="Has Rate"/>
+</enum>
+
+<enum name="TextToSpeechHasVoiceName" type="int">
+  <int value="0" label="Does Not Have Voice Name"/>
+  <int value="1" label="Has Voice Name"/>
+</enum>
+
+<enum name="TextToSpeechHasVolume" type="int">
+  <int value="0" label="Does Not Have Volume"/>
+  <int value="1" label="Has Volume"/>
+</enum>
+
+<enum name="TextToSpeechNative" type="int">
+  <int value="0" label="Extension Speech"/>
+  <int value="1" label="Native Speech"/>
+</enum>
+
 <enum name="ThreadType" type="int">
   <int value="0" label="UI"/>
   <int value="1" label="Blocking"/>
@@ -37209,6 +37359,8 @@ from previous Chrome versions.
 <enum name="VRUnsupportedMode" type="int">
   <int value="0" label="Unhandled code point in URL"/>
   <int value="1" label="Could not elide URL"/>
+  <int value="2" label="Unhandled PageInfo"/>
+  <int value="3" label="URL contained strong RTL chars"/>
 </enum>
 
 <enum name="VRViewerType" type="int">

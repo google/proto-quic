@@ -15,7 +15,6 @@
 #include "base/test/test_file_util.h"
 #include "base/test/test_shortcut_win.h"
 #include "base/win/scoped_com_initializer.h"
-#include "base/win/windows_version.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -84,8 +83,7 @@ class ShortcutTest : public testing::Test {
 
 TEST_F(ShortcutTest, CreateAndResolveShortcutProperties) {
   uint32_t valid_properties = ShortcutProperties::PROPERTIES_BASIC;
-  if (GetVersion() >= VERSION_WIN7)
-    valid_properties |= ShortcutProperties::PROPERTIES_WIN7;
+  valid_properties |= ShortcutProperties::PROPERTIES_WIN7;
 
   // Test all properties.
   FilePath file_1(temp_dir_.GetPath().Append(L"Link1.lnk"));
@@ -103,10 +101,8 @@ TEST_F(ShortcutTest, CreateAndResolveShortcutProperties) {
   EXPECT_EQ(link_properties_.description, properties_read_1.description);
   ValidatePathsAreEqual(link_properties_.icon, properties_read_1.icon);
   EXPECT_EQ(link_properties_.icon_index, properties_read_1.icon_index);
-  if (GetVersion() >= VERSION_WIN7) {
-    EXPECT_EQ(link_properties_.app_id, properties_read_1.app_id);
-    EXPECT_EQ(link_properties_.dual_mode, properties_read_1.dual_mode);
-  }
+  EXPECT_EQ(link_properties_.app_id, properties_read_1.app_id);
+  EXPECT_EQ(link_properties_.dual_mode, properties_read_1.dual_mode);
 
   // Test simple shortcut with no special properties set.
   FilePath file_2(temp_dir_.GetPath().Append(L"Link2.lnk"));
@@ -126,10 +122,8 @@ TEST_F(ShortcutTest, CreateAndResolveShortcutProperties) {
   EXPECT_EQ(L"", properties_read_2.description);
   ValidatePathsAreEqual(FilePath(), properties_read_2.icon);
   EXPECT_EQ(0, properties_read_2.icon_index);
-  if (GetVersion() >= VERSION_WIN7) {
-    EXPECT_EQ(L"", properties_read_2.app_id);
-    EXPECT_FALSE(properties_read_2.dual_mode);
-  }
+  EXPECT_EQ(L"", properties_read_2.app_id);
+  EXPECT_FALSE(properties_read_2.dual_mode);
 }
 
 TEST_F(ShortcutTest, CreateAndResolveShortcut) {

@@ -285,6 +285,8 @@ be describing additional metrics about the same event.
     Power events (on/off battery power) have a similar hysteresis, but unlike
     the aforementioned properties, will not stop metric collection.
 
+    Native controls events have a similar behavior than power events.
+
     Each seek event will result in a new watch time metric being started and the
     old metric finalized as accurately as possible.
   </summary>
@@ -293,6 +295,8 @@ be describing additional metrics about the same event.
   <metric name="Audio.Battery"/>
   <metric name="Audio.EME"/>
   <metric name="Audio.MSE"/>
+  <metric name="Audio.NativeControlsOff"/>
+  <metric name="Audio.NativeControlsOn"/>
   <metric name="Audio.SRC"/>
   <metric name="AudioVideo.AC"/>
   <metric name="AudioVideo.All"/>
@@ -305,6 +309,8 @@ be describing additional metrics about the same event.
   <metric name="AudioVideo.Battery"/>
   <metric name="AudioVideo.EME"/>
   <metric name="AudioVideo.MSE"/>
+  <metric name="AudioVideo.NativeControlsOff"/>
+  <metric name="AudioVideo.NativeControlsOn"/>
   <metric name="AudioVideo.SRC"/>
 </event>
 

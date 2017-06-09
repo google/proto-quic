@@ -75,6 +75,34 @@
       }
     ]
   },
+  "WebKit Linux Trusty ASAN": {
+    "gtest_tests": [
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "blink_heap_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "blink_platform_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "webkit_unit_tests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "wtf_unittests"
+      }
+    ]
+  },
   "WebKit Linux Trusty Leak": {
     "gtest_tests": [
       {
@@ -102,14 +130,33 @@
         "test": "wtf_unittests"
       }
     ],
-    "scripts": [
+    "scripts": []
+  },
+  "WebKit Linux Trusty MSAN": {
+    "gtest_tests": [
       {
-        "name": "webkit_lint",
-        "script": "webkit_lint.py"
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "blink_heap_unittests"
       },
       {
-        "name": "webkit_python_tests",
-        "script": "webkit_python_tests.py"
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "blink_platform_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "webkit_unit_tests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "wtf_unittests"
       }
     ]
   },

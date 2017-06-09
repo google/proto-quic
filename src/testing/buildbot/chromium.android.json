@@ -1463,7 +1463,7 @@
             "--bucket",
             "chromium-result-details",
             "--test-name",
-            "vr_shell_unittests"
+            "vr_common_unittests"
           ],
           "script": "//build/android/pylib/results/presentation/test_results_presentation.py"
         },
@@ -1495,7 +1495,7 @@
             }
           ]
         },
-        "test": "vr_shell_unittests"
+        "test": "vr_common_unittests"
       },
       {
         "merge": {
@@ -1657,7 +1657,7 @@
         "test": "unit_tests"
       },
       {
-        "test": "vr_shell_unittests"
+        "test": "vr_common_unittests"
       }
     ],
     "instrumentation_tests": [
@@ -1982,7 +1982,7 @@
             }
           ],
           "expiration": 10800,
-          "hard_timeout": 1200,
+          "hard_timeout": 1800,
           "output_links": [
             {
               "link": [
@@ -2822,7 +2822,7 @@
             "--bucket",
             "chromium-result-details",
             "--test-name",
-            "vr_shell_unittests"
+            "vr_common_unittests"
           ],
           "script": "//build/android/pylib/results/presentation/test_results_presentation.py"
         },
@@ -2855,7 +2855,7 @@
             }
           ]
         },
-        "test": "vr_shell_unittests"
+        "test": "vr_common_unittests"
       },
       {
         "args": [
@@ -3162,7 +3162,7 @@
         "test": "unit_tests"
       },
       {
-        "test": "vr_shell_unittests"
+        "test": "vr_common_unittests"
       }
     ],
     "instrumentation_tests": [
@@ -4791,7 +4791,7 @@
             "--bucket",
             "chromium-result-details",
             "--test-name",
-            "vr_shell_unittests"
+            "vr_common_unittests"
           ],
           "script": "//build/android/pylib/results/presentation/test_results_presentation.py"
         },
@@ -4822,7 +4822,7 @@
             }
           ]
         },
-        "test": "vr_shell_unittests"
+        "test": "vr_common_unittests"
       },
       {
         "merge": {
@@ -4992,7 +4992,7 @@
         "test": "unit_tests"
       },
       {
-        "test": "vr_shell_unittests"
+        "test": "vr_common_unittests"
       }
     ],
     "instrumentation_tests": [

@@ -208,6 +208,8 @@ URLRequestContextBuilder::URLRequestContextBuilder()
       sdch_enabled_(false),
       cookie_store_set_by_client_(false),
       net_log_(nullptr),
+      pac_quick_check_enabled_(true),
+      pac_sanitize_url_policy_(ProxyService::SanitizeUrlPolicy::SAFE),
       socket_performance_watcher_factory_(nullptr) {
 }
 
@@ -407,6 +409,8 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
         CreateProxyService(std::move(proxy_config_service_), context.get(),
                            context->host_resolver(),
                            context->network_delegate(), context->net_log());
+    proxy_service_->set_quick_check_enabled(pac_quick_check_enabled_);
+    proxy_service_->set_sanitize_url_policy(pac_sanitize_url_policy_);
   }
   storage->set_proxy_service(std::move(proxy_service_));
 

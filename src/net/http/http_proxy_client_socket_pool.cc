@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "base/compiler_specific.h"
+#include "base/memory/ptr_util.h"
 #include "base/time/time.h"
 #include "base/values.h"
 #include "net/base/load_flags.h"
@@ -291,7 +292,7 @@ HttpProxyClientSocketPool::GetInfoAsValue(const std::string& name,
                                           bool include_nested_pools) const {
   std::unique_ptr<base::DictionaryValue> dict(base_.GetInfoAsValue(name, type));
   if (include_nested_pools) {
-    base::ListValue* list = new base::ListValue();
+    auto list = base::MakeUnique<base::ListValue>();
     if (transport_pool_) {
       list->Append(transport_pool_->GetInfoAsValue("transport_socket_pool",
                                                    "transport_socket_pool",
@@ -302,7 +303,7 @@ HttpProxyClientSocketPool::GetInfoAsValue(const std::string& name,
                                              "ssl_socket_pool",
                                              true));
     }
-    dict->Set("nested_pools", list);
+    dict->Set("nested_pools", std::move(list));
   }
   return dict;
 }

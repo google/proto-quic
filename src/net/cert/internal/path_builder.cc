@@ -11,6 +11,7 @@
 #include "base/memory/ptr_util.h"
 #include "net/base/net_errors.h"
 #include "net/cert/internal/cert_issuer_source.h"
+#include "net/cert/internal/certificate_policies.h"
 #include "net/cert/internal/parse_certificate.h"
 #include "net/cert/internal/parse_name.h"  // For CertDebugString.
 #include "net/cert/internal/signature_policy.h"
@@ -544,16 +545,25 @@ void CertPathBuilder::Result::Clear() {
   best_result_index = 0;
 }
 
-CertPathBuilder::CertPathBuilder(scoped_refptr<ParsedCertificate> cert,
-                                 TrustStore* trust_store,
-                                 const SignaturePolicy* signature_policy,
-                                 const der::GeneralizedTime& time,
-                                 KeyPurpose key_purpose,
-                                 Result* result)
+CertPathBuilder::CertPathBuilder(
+    scoped_refptr<ParsedCertificate> cert,
+    TrustStore* trust_store,
+    const SignaturePolicy* signature_policy,
+    const der::GeneralizedTime& time,
+    KeyPurpose key_purpose,
+    InitialExplicitPolicy initial_explicit_policy,
+    const std::set<der::Input>& user_initial_policy_set,
+    InitialPolicyMappingInhibit initial_policy_mapping_inhibit,
+    InitialAnyPolicyInhibit initial_any_policy_inhibit,
+    Result* result)
     : cert_path_iter_(new CertPathIter(std::move(cert), trust_store)),
       signature_policy_(signature_policy),
       time_(time),
       key_purpose_(key_purpose),
+      initial_explicit_policy_(initial_explicit_policy),
+      user_initial_policy_set_(user_initial_policy_set),
+      initial_policy_mapping_inhibit_(initial_policy_mapping_inhibit),
+      initial_any_policy_inhibit_(initial_any_policy_inhibit),
       next_state_(STATE_NONE),
       out_result_(result) {
   result->Clear();
@@ -604,12 +614,11 @@ void CertPathBuilder::DoGetNextPathComplete() {
 
   // Verify the entire certificate chain.
   auto result_path = base::MakeUnique<ResultPath>();
-  // TODO(eroman): don't pass placeholder for policy.
   VerifyCertificateChain(
       next_path_.certs, next_path_.last_cert_trust, signature_policy_, time_,
-      key_purpose_, InitialExplicitPolicy::kFalse, {AnyPolicy()},
-      InitialPolicyMappingInhibit::kFalse, InitialAnyPolicyInhibit::kFalse,
-      nullptr /*user_constrained_policy_set*/, &result_path->errors);
+      key_purpose_, initial_explicit_policy_, user_initial_policy_set_,
+      initial_policy_mapping_inhibit_, initial_any_policy_inhibit_,
+      &result_path->user_constrained_policy_set, &result_path->errors);
   bool verify_result = !result_path->errors.ContainsHighSeverityErrors();
 
   DVLOG(1) << "CertPathBuilder VerifyCertificateChain result = "

@@ -10,6 +10,7 @@ from page_sets.system_health import system_health_story
 from page_sets.login_helpers import facebook_login
 from page_sets.login_helpers import pinterest_login
 
+from telemetry.core import exceptions
 from telemetry.util import js_template
 
 
@@ -825,7 +826,8 @@ class _InfiniteScrollStory(system_health_story.SystemHealthStory):
         # Scrolling is stuck. This can happen if the page is loading
         # resources. Give the page some time and retry scrolling.
         if retry_count == self.MAX_SCROLL_RETRIES:
-          raise Exception('Scrolling stuck at %d' % remaining)
+          raise exceptions.StoryActionError(
+              'Scrolling stuck at %d' % remaining)
         retry_count += 1
         action_runner.Wait(self.TIME_BEFORE_SCROLL_RETRY_IN_SECONDS)
       else:

@@ -203,7 +203,8 @@ class BASE_EXPORT Timer {
   TimeTicks desired_run_time_;
 
   // Timer isn't thread-safe and must only be used on its origin sequence
-  // (sequence on which it was started).
+  // (sequence on which it was started). Once fully Stop()'ed it may be
+  // destroyed or restarted on another sequence.
   SequenceChecker origin_sequence_checker_;
 
   // Repeating timers automatically post the task again before calling the task

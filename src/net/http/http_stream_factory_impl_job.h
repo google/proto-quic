@@ -64,7 +64,7 @@ class HttpStreamFactoryImpl::Job {
         Job* job,
         const SSLConfig& used_ssl_config,
         const ProxyInfo& used_proxy_info,
-        WebSocketHandshakeStreamBase* stream) = 0;
+        std::unique_ptr<WebSocketHandshakeStreamBase> stream) = 0;
 
     // Invoked when |job| fails to create a stream.
     virtual void OnStreamFailed(Job* job,
@@ -101,16 +101,6 @@ class HttpStreamFactoryImpl::Job {
     // Returns true if the connection initialization to the proxy server
     // contained in |proxy_info| can be skipped.
     virtual bool OnInitConnection(const ProxyInfo& proxy_info) = 0;
-
-    // Invoked when |job| has completed proxy resolution. The delegate may
-    // create an alternative proxy server job to fetch the request.
-    virtual void OnResolveProxyComplete(
-        Job* job,
-        const HttpRequestInfo& request_info,
-        RequestPriority priority,
-        const SSLConfig& server_ssl_config,
-        const SSLConfig& proxy_ssl_config,
-        HttpStreamRequest::StreamType stream_type) = 0;
 
     // Invoked to notify the Request and Factory of the readiness of new
     // SPDY session.
@@ -163,6 +153,7 @@ class HttpStreamFactoryImpl::Job {
       HttpNetworkSession* session,
       const HttpRequestInfo& request_info,
       RequestPriority priority,
+      const ProxyInfo& proxy_info,
       const SSLConfig& server_ssl_config,
       const SSLConfig& proxy_ssl_config,
       HostPortPair destination,
@@ -183,6 +174,7 @@ class HttpStreamFactoryImpl::Job {
       HttpNetworkSession* session,
       const HttpRequestInfo& request_info,
       RequestPriority priority,
+      const ProxyInfo& proxy_info,
       const SSLConfig& server_ssl_config,
       const SSLConfig& proxy_ssl_config,
       HostPortPair destination,
@@ -251,6 +243,8 @@ class HttpStreamFactoryImpl::Job {
     return using_existing_quic_session_;
   }
 
+  bool should_reconsider_proxy() const { return should_reconsider_proxy_; }
+
   // TODO(xunjieli): Added to investigate crbug.com/711721. Remove when no
   // longer needed.
   void LogHistograms() const;
@@ -260,12 +254,8 @@ class HttpStreamFactoryImpl::Job {
 
   enum State {
     STATE_START,
-    STATE_RESOLVE_PROXY,
-    STATE_RESOLVE_PROXY_COMPLETE,
-
     // The main and alternative jobs are started in parallel.  The main job
-    // waits after it finishes proxy resolution.  The alternative job never
-    // waits.
+    // can wait if it's paused. The alternative job never waits.
     //
     // An HTTP/2 alternative job notifies the JobController in DoInitConnection
     // unless it can pool to an existing SpdySession.  JobController, in turn,
@@ -321,8 +311,6 @@ class HttpStreamFactoryImpl::Job {
   // ERR_IO_PENDING, then the result from OnIOComplete will be passed to the
   // next state method as the result arg.
   int DoStart();
-  int DoResolveProxy();
-  int DoResolveProxyComplete(int result);
   int DoWait();
   int DoWaitComplete(int result);
   int DoInitConnection();
@@ -346,8 +334,6 @@ class HttpStreamFactoryImpl::Job {
   // Set the motivation for this request onto the underlying socket.
   void SetSocketMotivation();
 
-  bool IsHttpsProxyAndHttpUrl() const;
-
   // Is this a SPDY or QUIC alternative Job?
   bool IsSpdyAlternative() const;
   bool IsQuicAlternative() const;
@@ -358,9 +344,9 @@ class HttpStreamFactoryImpl::Job {
 
   // Retrieve SSLInfo from our SSL Socket.
   // This must only be called when we are using an SSLSocket.
-  // After calling, the caller can use ssl_info_.
-  void GetSSLInfo();
+  void GetSSLInfo(SSLInfo* ssl_info);
 
+  // Called in Job constructor. Use |spdy_session_key_| after construction.
   SpdySessionKey GetSpdySessionKey() const;
 
   // Returns true if the current request can use an existing spdy session.
@@ -405,12 +391,12 @@ class HttpStreamFactoryImpl::Job {
 
   const HttpRequestInfo request_info_;
   RequestPriority priority_;
-  ProxyInfo proxy_info_;
+  const ProxyInfo proxy_info_;
   SSLConfig server_ssl_config_;
   SSLConfig proxy_ssl_config_;
   const NetLogWithSource net_log_;
 
-  CompletionCallback io_callback_;
+  const CompletionCallback io_callback_;
   std::unique_ptr<ClientSocketHandle> connection_;
   HttpNetworkSession* const session_;
 
@@ -418,8 +404,6 @@ class HttpStreamFactoryImpl::Job {
   State state_;
 
   State next_state_;
-  ProxyService::PacRequest* pac_request_;
-  SSLInfo ssl_info_;
 
   // The server we are trying to reach, could be that of the origin or of the
   // alternative service (after applying host mapping rules).
@@ -441,7 +425,7 @@ class HttpStreamFactoryImpl::Job {
   const bool enable_ip_based_pooling_;
 
   // Unowned. |this| job is owned by |delegate_|.
-  Delegate* delegate_;
+  Delegate* const delegate_;
 
   const JobType job_type_;
 
@@ -453,6 +437,10 @@ class HttpStreamFactoryImpl::Job {
 
   // True if this network transaction is using QUIC instead of HTTP.
   bool using_quic_;
+
+  // True if this job might succeed with a different proxy config.
+  bool should_reconsider_proxy_;
+
   QuicStreamRequest quic_request_;
 
   // True if this job used an existing QUIC session.
@@ -482,8 +470,10 @@ class HttpStreamFactoryImpl::Job {
   // Initialized when we have an existing SpdySession.
   base::WeakPtr<SpdySession> existing_spdy_session_;
 
-  // Only used if |new_spdy_session_| is non-NULL.
-  bool spdy_session_direct_;
+  // True if not connecting to an Https proxy for an Http url.
+  const bool spdy_session_direct_;
+
+  const SpdySessionKey spdy_session_key_;
 
   base::TimeTicks job_stream_ready_start_time_;
 
@@ -498,51 +488,53 @@ class HttpStreamFactoryImpl::Job {
 // Factory for creating Jobs.
 class HttpStreamFactoryImpl::JobFactory {
  public:
-  virtual ~JobFactory() {}
+  JobFactory();
 
-  // Creates an alternative service Job.
-  virtual HttpStreamFactoryImpl::Job* CreateJob(
+  virtual ~JobFactory();
+
+  virtual std::unique_ptr<HttpStreamFactoryImpl::Job> CreateMainJob(
       HttpStreamFactoryImpl::Job::Delegate* delegate,
       HttpStreamFactoryImpl::JobType job_type,
       HttpNetworkSession* session,
       const HttpRequestInfo& request_info,
       RequestPriority priority,
+      const ProxyInfo& proxy_info,
+      const SSLConfig& server_ssl_config,
+      const SSLConfig& proxy_ssl_config,
+      HostPortPair destination,
+      GURL origin_url,
+      bool enable_ip_based_pooling,
+      NetLog* net_log);
+
+  virtual std::unique_ptr<HttpStreamFactoryImpl::Job> CreateAltSvcJob(
+      HttpStreamFactoryImpl::Job::Delegate* delegate,
+      HttpStreamFactoryImpl::JobType job_type,
+      HttpNetworkSession* session,
+      const HttpRequestInfo& request_info,
+      RequestPriority priority,
+      const ProxyInfo& proxy_info,
       const SSLConfig& server_ssl_config,
       const SSLConfig& proxy_ssl_config,
       HostPortPair destination,
       GURL origin_url,
       AlternativeService alternative_service,
       bool enable_ip_based_pooling,
-      NetLog* net_log) = 0;
+      NetLog* net_log);
 
-  // Creates an alternative proxy server Job.
-  virtual HttpStreamFactoryImpl::Job* CreateJob(
+  virtual std::unique_ptr<HttpStreamFactoryImpl::Job> CreateAltProxyJob(
       HttpStreamFactoryImpl::Job::Delegate* delegate,
       HttpStreamFactoryImpl::JobType job_type,
       HttpNetworkSession* session,
       const HttpRequestInfo& request_info,
       RequestPriority priority,
+      const ProxyInfo& proxy_info,
       const SSLConfig& server_ssl_config,
       const SSLConfig& proxy_ssl_config,
       HostPortPair destination,
       GURL origin_url,
       const ProxyServer& alternative_proxy_server,
       bool enable_ip_based_pooling,
-      NetLog* net_log) = 0;
-
-  // Creates a non-alternative Job.
-  virtual HttpStreamFactoryImpl::Job* CreateJob(
-      HttpStreamFactoryImpl::Job::Delegate* delegate,
-      HttpStreamFactoryImpl::JobType job_type,
-      HttpNetworkSession* session,
-      const HttpRequestInfo& request_info,
-      RequestPriority priority,
-      const SSLConfig& server_ssl_config,
-      const SSLConfig& proxy_ssl_config,
-      HostPortPair destination,
-      GURL origin_url,
-      bool enable_ip_based_pooling,
-      NetLog* net_log) = 0;
+      NetLog* net_log);
 };
 
 }  // namespace net

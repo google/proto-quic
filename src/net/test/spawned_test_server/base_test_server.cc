@@ -85,18 +85,18 @@ void GetCiphersList(int cipher, base::ListValue* values) {
     values->AppendString("aes128gcm");
 }
 
-base::Value* GetTLSIntoleranceType(
+std::unique_ptr<base::Value> GetTLSIntoleranceType(
     BaseTestServer::SSLOptions::TLSIntoleranceType type) {
   switch (type) {
     case BaseTestServer::SSLOptions::TLS_INTOLERANCE_ALERT:
-      return new base::Value("alert");
+      return base::MakeUnique<base::Value>("alert");
     case BaseTestServer::SSLOptions::TLS_INTOLERANCE_CLOSE:
-      return new base::Value("close");
+      return base::MakeUnique<base::Value>("close");
     case BaseTestServer::SSLOptions::TLS_INTOLERANCE_RESET:
-      return new base::Value("reset");
+      return base::MakeUnique<base::Value>("reset");
     default:
       NOTREACHED();
-      return new base::Value("");
+      return base::MakeUnique<base::Value>("");
   }
 }
 
@@ -580,7 +580,7 @@ bool BaseTestServer::GenerateArguments(base::DictionaryValue* arguments) const {
     }
 
     if (ssl_client_certs->GetSize())
-      arguments->Set("ssl-client-ca", ssl_client_certs.release());
+      arguments->Set("ssl-client-ca", std::move(ssl_client_certs));
 
     std::unique_ptr<base::ListValue> client_cert_types(new base::ListValue());
     for (size_t i = 0; i < ssl_options_.client_cert_types.size(); i++) {
@@ -588,7 +588,7 @@ bool BaseTestServer::GenerateArguments(base::DictionaryValue* arguments) const {
           GetClientCertType(ssl_options_.client_cert_types[i]));
     }
     if (client_cert_types->GetSize())
-      arguments->Set("ssl-client-cert-type", client_cert_types.release());
+      arguments->Set("ssl-client-cert-type", std::move(client_cert_types));
   }
 
   if (type_ == TYPE_HTTPS) {
@@ -618,12 +618,12 @@ bool BaseTestServer::GenerateArguments(base::DictionaryValue* arguments) const {
     std::unique_ptr<base::ListValue> key_exchange_values(new base::ListValue());
     GetKeyExchangesList(ssl_options_.key_exchanges, key_exchange_values.get());
     if (key_exchange_values->GetSize())
-      arguments->Set("ssl-key-exchange", key_exchange_values.release());
+      arguments->Set("ssl-key-exchange", std::move(key_exchange_values));
     // Check bulk cipher argument.
     std::unique_ptr<base::ListValue> bulk_cipher_values(new base::ListValue());
     GetCiphersList(ssl_options_.bulk_ciphers, bulk_cipher_values.get());
     if (bulk_cipher_values->GetSize())
-      arguments->Set("ssl-bulk-cipher", bulk_cipher_values.release());
+      arguments->Set("ssl-bulk-cipher", std::move(bulk_cipher_values));
     if (ssl_options_.record_resume)
       arguments->Set("https-record-resume", base::MakeUnique<base::Value>());
     if (ssl_options_.tls_intolerant != SSLOptions::TLS_INTOLERANT_NONE) {

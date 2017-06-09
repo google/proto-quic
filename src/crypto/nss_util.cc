@@ -670,16 +670,13 @@ class NSSInitSingleton {
 
     EnsureNSPRInit();
 
-    // We *must* have NSS >= 3.14.3.
-    static_assert(
-        (NSS_VMAJOR == 3 && NSS_VMINOR == 14 && NSS_VPATCH >= 3) ||
-        (NSS_VMAJOR == 3 && NSS_VMINOR > 14) ||
-        (NSS_VMAJOR > 3),
-        "nss version check failed");
+    // We *must* have NSS >= 3.26 at compile time.
+    static_assert((NSS_VMAJOR == 3 && NSS_VMINOR >= 26) || (NSS_VMAJOR > 3),
+                  "nss version check failed");
     // Also check the run-time NSS version.
     // NSS_VersionCheck is a >= check, not strict equality.
-    if (!NSS_VersionCheck("3.14.3")) {
-      LOG(FATAL) << "NSS_VersionCheck(\"3.14.3\") failed. NSS >= 3.14.3 is "
+    if (!NSS_VersionCheck("3.26")) {
+      LOG(FATAL) << "NSS_VersionCheck(\"3.26\") failed. NSS >= 3.26 is "
                     "required. Please upgrade to the latest NSS, and if you "
                     "still get this error, contact your distribution "
                     "maintainer.";

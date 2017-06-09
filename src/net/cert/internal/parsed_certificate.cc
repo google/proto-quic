@@ -189,8 +189,9 @@ scoped_refptr<ParsedCertificate> ParsedCertificate::CreateInternal(
     // Policies.
     if (result->GetExtension(CertificatePoliciesOid(), &extension)) {
       result->has_policy_oids_ = true;
-      if (!ParseCertificatePoliciesExtension(extension.value,
-                                             &result->policy_oids_)) {
+      if (!ParseCertificatePoliciesExtension(
+              extension.value, false /*fail_parsing_unknown_qualifier_oids*/,
+              &result->policy_oids_)) {
         return nullptr;
       }
     }

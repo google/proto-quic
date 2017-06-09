@@ -139,6 +139,9 @@ class BASE_EXPORT Process {
   // Returns true if the priority was changed, false otherwise. If
   // |port_provider| is null, this is a no-op and it returns false.
   bool SetProcessBackgrounded(PortProvider* port_provider, bool value);
+
+  // Returns |true| if helper processes should participate in AppNap.
+  static bool IsAppNapEnabled();
 #else
   // A process is backgrounded when it's priority is lower than normal.
   // Return true if this process is backgrounded, false otherwise.

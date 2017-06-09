@@ -19,7 +19,7 @@ class _MediaStory(system_health_story.SystemHealthStory):
   STOP_SELECTOR = NotImplemented
   TIME_SELECTOR = NotImplemented
 
-  def RunPageInteractions(self, action_runner):
+  def _DidLoadDocument(self, action_runner):
     self._NavigateToMedia(action_runner)
     # Play Media.
     if self.PLAY_SELECTOR:

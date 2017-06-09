@@ -130,6 +130,13 @@ bool MemoryMappedFile::MapFileRegionToMemory(
         struct stat statbuf;
         if (fstat(file_.GetPlatformFile(), &statbuf) == 0)
           block_size = statbuf.st_blksize;
+#if defined(OS_FUCHSIA)
+        // TODO(fuchsia): Fuchsia stat() currently returns 0 for st_blksize,
+        // which hangs the loop below. Remove this after the next SDK update.
+        // https://crbug.com/706592 and MG-815.
+        if (block_size == 0)
+          block_size = 512;
+#endif  // defined(OS_FUCHSIA)
         const off_t map_end = map_start + static_cast<off_t>(map_size);
         for (off_t i = map_start; i < map_end; i += block_size) {
           char existing_byte;

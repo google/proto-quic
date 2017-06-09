@@ -2296,161 +2296,165 @@ TEST_F(SpdyNetworkTransactionTest,
   EXPECT_TRUE(data.AllWriteDataConsumed());
 }
 
-// Send a spdy request to www.example.org that gets redirected to www.foo.com.
-TEST_F(SpdyNetworkTransactionTest, DISABLED_RedirectGetRequest) {
-  SpdyHeaderBlock headers(spdy_util_.ConstructGetHeaderBlock(kDefaultUrl));
-  headers["user-agent"] = "";
-  headers["accept-encoding"] = "gzip, deflate";
+TEST_F(SpdyNetworkTransactionTest, RedirectGetRequest) {
+  SpdyURLRequestContext spdy_url_request_context;
 
-  // Setup writes/reads to www.example.org
-  SpdySerializedFrame req(
-      spdy_util_.ConstructSpdyHeaders(1, std::move(headers), LOWEST, true));
-  SpdySerializedFrame resp(spdy_util_.ConstructSpdyGetReplyRedirect(1));
-  MockWrite writes[] = {
-      CreateMockWrite(req, 1),
-  };
-  MockRead reads[] = {
-      CreateMockRead(resp, 2), MockRead(ASYNC, 0, 0, 3)  // EOF
-  };
-  SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
+  SSLSocketDataProvider ssl_provider0(ASYNC, OK);
+  ssl_provider0.next_proto = kProtoHTTP2;
+  spdy_url_request_context.socket_factory().AddSSLSocketDataProvider(
+      &ssl_provider0);
 
-  // Setup writes/reads to www.foo.com
-  SpdyHeaderBlock headers2(
-      spdy_util_.ConstructGetHeaderBlock("http://www.foo.com/index.php"));
-  headers2["user-agent"] = "";
-  headers2["accept-encoding"] = "gzip, deflate";
-  SpdySerializedFrame req2(
-      spdy_util_.ConstructSpdyHeaders(1, std::move(headers2), LOWEST, true));
-  MockWrite writes2[] = {
-      CreateMockWrite(req2, 1),
-  };
+  SpdyHeaderBlock headers0(spdy_util_.ConstructGetHeaderBlock(kDefaultUrl));
+  headers0["user-agent"] = "";
+  headers0["accept-encoding"] = "gzip, deflate";
 
-  SpdySerializedFrame resp2(spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
-  SpdySerializedFrame body2(spdy_util_.ConstructSpdyDataFrame(1, true));
-  MockRead reads2[] = {
-      CreateMockRead(resp2, 2), CreateMockRead(body2, 3),
-      MockRead(ASYNC, 0, 0, 4)  // EOF
-  };
+  SpdySerializedFrame req0(
+      spdy_util_.ConstructSpdyHeaders(1, std::move(headers0), LOWEST, true));
+  MockWrite writes0[] = {CreateMockWrite(req0, 0)};
 
-  SequencedSocketData data2(reads2, arraysize(reads2), writes2,
-                            arraysize(writes2));
+  const char* const kExtraHeaders[] = {"location",
+                                       "https://www.foo.com/index.php"};
+  SpdySerializedFrame resp0(spdy_util_.ConstructSpdyReplyError(
+      "301", kExtraHeaders, arraysize(kExtraHeaders) / 2, 1));
+  MockRead reads0[] = {CreateMockRead(resp0, 1), MockRead(ASYNC, 0, 2)};
 
-  // TODO(erikchen): Make test support SPDYSSL, SPDYNPN
-  TestDelegate d;
-  {
-    SpdyURLRequestContext spdy_url_request_context;
-    std::unique_ptr<URLRequest> r(spdy_url_request_context.CreateRequest(
-        default_url_, DEFAULT_PRIORITY, &d, TRAFFIC_ANNOTATION_FOR_TESTS));
-    spdy_url_request_context.socket_factory().
-        AddSocketDataProvider(&data);
-    spdy_url_request_context.socket_factory().
-        AddSocketDataProvider(&data2);
+  SequencedSocketData data0(reads0, arraysize(reads0), writes0,
+                            arraysize(writes0));
+  spdy_url_request_context.socket_factory().AddSocketDataProvider(&data0);
 
-    d.set_quit_on_redirect(true);
-    r->Start();
-    base::RunLoop().Run();
+  SSLSocketDataProvider ssl_provider1(ASYNC, OK);
+  ssl_provider1.next_proto = kProtoHTTP2;
+  spdy_url_request_context.socket_factory().AddSSLSocketDataProvider(
+      &ssl_provider1);
 
-    EXPECT_EQ(1, d.received_redirect_count());
+  SpdyTestUtil spdy_util1;
+  SpdyHeaderBlock headers1(
+      spdy_util1.ConstructGetHeaderBlock("https://www.foo.com/index.php"));
+  headers1["user-agent"] = "";
+  headers1["accept-encoding"] = "gzip, deflate";
+  SpdySerializedFrame req1(
+      spdy_util1.ConstructSpdyHeaders(1, std::move(headers1), LOWEST, true));
+  MockWrite writes1[] = {CreateMockWrite(req1, 0)};
 
-    r->FollowDeferredRedirect();
-    base::RunLoop().Run();
-    EXPECT_EQ(1, d.response_started_count());
-    EXPECT_FALSE(d.received_data_before_response());
-    EXPECT_EQ(OK, d.request_status());
-    SpdyString contents("hello!");
-    EXPECT_EQ(contents, d.data_received());
-  }
-  EXPECT_TRUE(data.AllReadDataConsumed());
-  EXPECT_TRUE(data.AllWriteDataConsumed());
-  EXPECT_TRUE(data2.AllReadDataConsumed());
-  EXPECT_TRUE(data2.AllWriteDataConsumed());
+  SpdySerializedFrame resp1(spdy_util1.ConstructSpdyGetReply(nullptr, 0, 1));
+  SpdySerializedFrame body1(spdy_util1.ConstructSpdyDataFrame(1, true));
+  MockRead reads1[] = {CreateMockRead(resp1, 1), CreateMockRead(body1, 2),
+                       MockRead(ASYNC, 0, 3)};
+
+  SequencedSocketData data1(reads1, arraysize(reads1), writes1,
+                            arraysize(writes1));
+  spdy_url_request_context.socket_factory().AddSocketDataProvider(&data1);
+
+  TestDelegate delegate;
+  delegate.set_quit_on_redirect(true);
+
+  std::unique_ptr<URLRequest> request = spdy_url_request_context.CreateRequest(
+      default_url_, DEFAULT_PRIORITY, &delegate, TRAFFIC_ANNOTATION_FOR_TESTS);
+  request->Start();
+  base::RunLoop().Run();
+
+  EXPECT_EQ(1, delegate.received_redirect_count());
+
+  request->FollowDeferredRedirect();
+  base::RunLoop().Run();
+
+  EXPECT_EQ(1, delegate.response_started_count());
+  EXPECT_FALSE(delegate.received_data_before_response());
+  EXPECT_THAT(delegate.request_status(), IsOk());
+  EXPECT_EQ("hello!", delegate.data_received());
+
+  EXPECT_TRUE(data0.AllReadDataConsumed());
+  EXPECT_TRUE(data0.AllWriteDataConsumed());
+  EXPECT_TRUE(data1.AllReadDataConsumed());
+  EXPECT_TRUE(data1.AllWriteDataConsumed());
 }
 
-// Send a spdy request to www.example.org. Get a pushed stream that redirects to
-// www.foo.com.
-TEST_F(SpdyNetworkTransactionTest, DISABLED_RedirectServerPush) {
-  SpdyHeaderBlock headers(spdy_util_.ConstructGetHeaderBlock(kDefaultUrl));
-  headers["user-agent"] = "";
-  headers["accept-encoding"] = "gzip, deflate";
+TEST_F(SpdyNetworkTransactionTest, RedirectServerPush) {
+  const char url[] = "https://www.example.org/foo.dat";
+  const char redirected_url[] = "https://www.foo.com/index.php";
+  SpdyURLRequestContext spdy_url_request_context;
 
-  // Setup writes/reads to www.example.org
-  SpdySerializedFrame req(
-      spdy_util_.ConstructSpdyHeaders(1, std::move(headers), LOWEST, true));
-  SpdySerializedFrame resp(spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
-  SpdySerializedFrame rep(spdy_util_.ConstructSpdyPush(
-      nullptr, 0, 2, 1, GetDefaultUrlWithPath("/foo.dat").c_str(),
-      "301 Moved Permanently", "http://www.foo.com/index.php"));
-  SpdySerializedFrame body(spdy_util_.ConstructSpdyDataFrame(1, true));
+  SSLSocketDataProvider ssl_provider0(ASYNC, OK);
+  ssl_provider0.next_proto = kProtoHTTP2;
+  ssl_provider0.cert =
+      ImportCertFromFile(GetTestCertsDirectory(), "spdy_pooling.pem");
+  spdy_url_request_context.socket_factory().AddSSLSocketDataProvider(
+      &ssl_provider0);
+
+  SpdyHeaderBlock headers0(spdy_util_.ConstructGetHeaderBlock(kDefaultUrl));
+  headers0["user-agent"] = "";
+  headers0["accept-encoding"] = "gzip, deflate";
+  SpdySerializedFrame req0(
+      spdy_util_.ConstructSpdyHeaders(1, std::move(headers0), LOWEST, true));
+  SpdySerializedFrame priority(
+      spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
   SpdySerializedFrame rst(
       spdy_util_.ConstructSpdyRstStream(2, ERROR_CODE_CANCEL));
-  MockWrite writes[] = {
-      CreateMockWrite(req, 1), CreateMockWrite(rst, 6),
-  };
-  MockRead reads[] = {
-      CreateMockRead(resp, 2), CreateMockRead(rep, 3), CreateMockRead(body, 4),
-      MockRead(ASYNC, ERR_IO_PENDING, 5),  // Force a pause
-      MockRead(ASYNC, 0, 0, 7)             // EOF
-  };
+  MockWrite writes[] = {CreateMockWrite(req0, 0), CreateMockWrite(priority, 3),
+                        CreateMockWrite(rst, 5)};
 
-  // Setup writes/reads to www.foo.com
-  SpdyHeaderBlock headers2(
-      spdy_util_.ConstructGetHeaderBlock("http://www.foo.com/index.php"));
-  headers2["user-agent"] = "";
-  headers2["accept-encoding"] = "gzip, deflate";
-  SpdySerializedFrame req2(
-      spdy_util_.ConstructSpdyHeaders(1, std::move(headers2), LOWEST, true));
-  SpdySerializedFrame resp2(spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
-  SpdySerializedFrame body2(spdy_util_.ConstructSpdyDataFrame(1, true));
-  MockWrite writes2[] = {
-      CreateMockWrite(req2, 1),
-  };
-  MockRead reads2[] = {
-      CreateMockRead(resp2, 2), CreateMockRead(body2, 3),
-      MockRead(ASYNC, 0, 0, 5)  // EOF
-  };
-  SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
-  SequencedSocketData data2(reads2, arraysize(reads2), writes2,
-                            arraysize(writes2));
+  SpdySerializedFrame resp0(spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
+  SpdySerializedFrame push(spdy_util_.ConstructSpdyPush(nullptr, 0, 2, 1, url,
+                                                        "301", redirected_url));
+  SpdySerializedFrame body0(spdy_util_.ConstructSpdyDataFrame(1, true));
+  MockRead reads[] = {CreateMockRead(resp0, 1), CreateMockRead(push, 2),
+                      CreateMockRead(body0, 4), MockRead(ASYNC, 0, 6)};
 
-  TestDelegate d;
-  TestDelegate d2;
-  SpdyURLRequestContext spdy_url_request_context;
-  {
-    std::unique_ptr<URLRequest> r(spdy_url_request_context.CreateRequest(
-        default_url_, DEFAULT_PRIORITY, &d, TRAFFIC_ANNOTATION_FOR_TESTS));
-    spdy_url_request_context.socket_factory().
-        AddSocketDataProvider(&data);
+  SequencedSocketData data0(reads, arraysize(reads), writes, arraysize(writes));
+  spdy_url_request_context.socket_factory().AddSocketDataProvider(&data0);
 
-    r->Start();
-    base::RunLoop().Run();
+  SSLSocketDataProvider ssl_provider1(ASYNC, OK);
+  ssl_provider1.next_proto = kProtoHTTP2;
+  spdy_url_request_context.socket_factory().AddSSLSocketDataProvider(
+      &ssl_provider1);
 
-    EXPECT_EQ(0, d.received_redirect_count());
-    SpdyString contents("hello!");
-    EXPECT_EQ(contents, d.data_received());
+  SpdyTestUtil spdy_util1;
+  SpdyHeaderBlock headers1(spdy_util1.ConstructGetHeaderBlock(redirected_url));
+  headers1["user-agent"] = "";
+  headers1["accept-encoding"] = "gzip, deflate";
+  SpdySerializedFrame req1(
+      spdy_util1.ConstructSpdyHeaders(1, std::move(headers1), LOWEST, true));
+  MockWrite writes1[] = {CreateMockWrite(req1, 0)};
 
-    std::unique_ptr<URLRequest> r2(spdy_url_request_context.CreateRequest(
-        GURL(GetDefaultUrlWithPath("/foo.dat")), DEFAULT_PRIORITY, &d2,
-        TRAFFIC_ANNOTATION_FOR_TESTS));
-    spdy_url_request_context.socket_factory().
-        AddSocketDataProvider(&data2);
+  SpdySerializedFrame resp1(spdy_util1.ConstructSpdyGetReply(nullptr, 0, 1));
+  SpdySerializedFrame body1(spdy_util1.ConstructSpdyDataFrame(1, true));
+  MockRead reads1[] = {CreateMockRead(resp1, 1), CreateMockRead(body1, 2),
+                       MockRead(ASYNC, 0, 3)};
 
-    d2.set_quit_on_redirect(true);
-    r2->Start();
-    base::RunLoop().Run();
-    EXPECT_EQ(1, d2.received_redirect_count());
+  SequencedSocketData data1(reads1, arraysize(reads1), writes1,
+                            arraysize(writes1));
+  spdy_url_request_context.socket_factory().AddSocketDataProvider(&data1);
 
-    r2->FollowDeferredRedirect();
-    base::RunLoop().Run();
-    EXPECT_EQ(1, d2.response_started_count());
-    EXPECT_FALSE(d2.received_data_before_response());
-    EXPECT_EQ(OK, d2.request_status());
-    SpdyString contents2("hello!");
-    EXPECT_EQ(contents2, d2.data_received());
-  }
-  EXPECT_TRUE(data.AllReadDataConsumed());
-  EXPECT_TRUE(data.AllWriteDataConsumed());
-  EXPECT_TRUE(data2.AllReadDataConsumed());
-  EXPECT_TRUE(data2.AllWriteDataConsumed());
+  TestDelegate delegate0;
+  std::unique_ptr<URLRequest> request = spdy_url_request_context.CreateRequest(
+      default_url_, DEFAULT_PRIORITY, &delegate0, TRAFFIC_ANNOTATION_FOR_TESTS);
+
+  request->Start();
+  base::RunLoop().Run();
+
+  EXPECT_EQ(0, delegate0.received_redirect_count());
+  EXPECT_EQ("hello!", delegate0.data_received());
+
+  TestDelegate delegate1;
+  std::unique_ptr<URLRequest> request1 = spdy_url_request_context.CreateRequest(
+      GURL(url), DEFAULT_PRIORITY, &delegate1, TRAFFIC_ANNOTATION_FOR_TESTS);
+
+  delegate1.set_quit_on_redirect(true);
+  request1->Start();
+  base::RunLoop().Run();
+  EXPECT_EQ(1, delegate1.received_redirect_count());
+
+  request1->FollowDeferredRedirect();
+  base::RunLoop().Run();
+  EXPECT_EQ(1, delegate1.response_started_count());
+  EXPECT_FALSE(delegate1.received_data_before_response());
+  EXPECT_EQ(OK, delegate1.request_status());
+  EXPECT_EQ("hello!", delegate1.data_received());
+
+  EXPECT_TRUE(data0.AllReadDataConsumed());
+  EXPECT_TRUE(data0.AllWriteDataConsumed());
+  EXPECT_TRUE(data1.AllReadDataConsumed());
+  EXPECT_TRUE(data1.AllWriteDataConsumed());
 }
 
 TEST_F(SpdyNetworkTransactionTest, ServerPushSingleDataFrame) {
@@ -5620,6 +5624,10 @@ TEST_F(SpdyNetworkTransactionTest, WindowUpdateSent) {
   const int32_t stream_window_update_delta =
       stream_max_recv_window_size / 2 + kChunkSize;
 
+  SpdySerializedFrame preface(const_cast<char*>(kHttp2ConnectionHeaderPrefix),
+                              kHttp2ConnectionHeaderPrefixSize,
+                              /* owns_buffer = */ false);
+
   SettingsMap initial_settings;
   initial_settings[SETTINGS_HEADER_TABLE_SIZE] = kSpdyMaxHeaderTableSize;
   initial_settings[SETTINGS_MAX_CONCURRENT_STREAMS] =
@@ -5627,22 +5635,23 @@ TEST_F(SpdyNetworkTransactionTest, WindowUpdateSent) {
   initial_settings[SETTINGS_INITIAL_WINDOW_SIZE] = stream_max_recv_window_size;
   SpdySerializedFrame initial_settings_frame(
       spdy_util_.ConstructSpdySettings(initial_settings));
+
   SpdySerializedFrame initial_window_update(
       spdy_util_.ConstructSpdyWindowUpdate(
           kSessionFlowControlStreamId,
           session_max_recv_window_size - kDefaultInitialWindowSize));
-  SpdySerializedFrame req(
-      spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
-  SpdySerializedFrame session_window_update(
-      spdy_util_.ConstructSpdyWindowUpdate(0, session_window_update_delta));
-  SpdySerializedFrame stream_window_update(
-      spdy_util_.ConstructSpdyWindowUpdate(1, stream_window_update_delta));
+
+  const SpdySerializedFrame* frames[3] = {&preface, &initial_settings_frame,
+                                          &initial_window_update};
+  char combined_frames[100];
+  int combined_frames_len = CombineFrames(
+      frames, arraysize(frames), combined_frames, arraysize(combined_frames));
 
   std::vector<MockWrite> writes;
-  writes.push_back(MockWrite(ASYNC, kHttp2ConnectionHeaderPrefix,
-                             kHttp2ConnectionHeaderPrefixSize, 0));
-  writes.push_back(CreateMockWrite(initial_settings_frame, writes.size()));
-  writes.push_back(CreateMockWrite(initial_window_update, writes.size()));
+  writes.push_back(MockWrite(ASYNC, combined_frames, combined_frames_len));
+
+  SpdySerializedFrame req(
+      spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
   writes.push_back(CreateMockWrite(req, writes.size()));
 
   std::vector<MockRead> reads;
@@ -5663,8 +5672,12 @@ TEST_F(SpdyNetworkTransactionTest, WindowUpdateSent) {
   reads.push_back(
       MockRead(SYNCHRONOUS, ERR_IO_PENDING, writes.size() + reads.size()));
 
+  SpdySerializedFrame session_window_update(
+      spdy_util_.ConstructSpdyWindowUpdate(0, session_window_update_delta));
   writes.push_back(
       CreateMockWrite(session_window_update, writes.size() + reads.size()));
+  SpdySerializedFrame stream_window_update(
+      spdy_util_.ConstructSpdyWindowUpdate(1, stream_window_update_delta));
   writes.push_back(
       CreateMockWrite(stream_window_update, writes.size() + reads.size()));
 

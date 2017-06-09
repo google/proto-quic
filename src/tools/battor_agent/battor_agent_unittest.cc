@@ -297,15 +297,6 @@ class BattOrAgentTest : public testing::Test, public BattOrAgent::Listener {
       return;
 
     OnBytesSent(true);
-    if (end_state == BattOrAgentState::INIT_SENT)
-      return;
-
-    OnMessageRead(true, BATTOR_MESSAGE_TYPE_CONTROL_ACK,
-                  ToCharVector(kInitAck));
-    if (end_state == BattOrAgentState::INIT_ACKED)
-      return;
-
-    OnBytesSent(true);
     if (end_state == BattOrAgentState::GIT_FIRMWARE_HASH_REQUEST_SENT)
       return;
 
@@ -1046,43 +1037,4 @@ TEST_F(BattOrAgentTest, GetFirmwareGitHashSucceedsReadHasWrongType) {
   EXPECT_EQ(BATTOR_ERROR_NONE, GetCommandError());
 }
 
-TEST_F(BattOrAgentTest, GetFirmwareGitHashFailsIfInitSendFails) {
-  GetAgent()->GetFirmwareGitHash();
-
-  RunGetFirmwareGitHashTo(BattOrAgentState::CONNECTED);
-
-  OnBytesSent(false);
-
-  EXPECT_TRUE(IsCommandComplete());
-  EXPECT_EQ(BATTOR_ERROR_SEND_ERROR, GetCommandError());
-}
-
-TEST_F(BattOrAgentTest, GetFirmwareGitHashSucceedsAfterInitAckReadFails) {
-  GetAgent()->GetFirmwareGitHash();
-
-  RunGetFirmwareGitHashTo(BattOrAgentState::INIT_SENT);
-  OnMessageRead(false, BATTOR_MESSAGE_TYPE_CONTROL_ACK, nullptr);
-
-  EXPECT_FALSE(IsCommandComplete());
-
-  RunGetFirmwareGitHashTo(BattOrAgentState::READ_GIT_HASH_RECEIVED);
-
-  EXPECT_TRUE(IsCommandComplete());
-  EXPECT_EQ(BATTOR_ERROR_NONE, GetCommandError());
-}
-
-TEST_F(BattOrAgentTest, GetFirmwareGitHashSucceedsAfterInitWrongAckRead) {
-  GetAgent()->GetFirmwareGitHash();
-
-  RunGetFirmwareGitHashTo(BattOrAgentState::INIT_SENT);
-  OnMessageRead(true, BATTOR_MESSAGE_TYPE_CONTROL_ACK,
-                ToCharVector(kStartTracingAck));
-
-  EXPECT_FALSE(IsCommandComplete());
-
-  RunGetFirmwareGitHashTo(BattOrAgentState::READ_GIT_HASH_RECEIVED);
-
-  EXPECT_TRUE(IsCommandComplete());
-  EXPECT_EQ(BATTOR_ERROR_NONE, GetCommandError());
-}
 }  // namespace battor

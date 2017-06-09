@@ -1403,7 +1403,7 @@ TEST_P(QuicHttpStreamTest, DestroyedEarly) {
   SetResponse("404 OK", "hello world!");
   // In the course of processing this packet, the QuicHttpStream close itself.
   size_t response_size = 0;
-  ProcessPacket(ConstructResponseHeadersPacket(2, kFin, &response_size));
+  ProcessPacket(ConstructResponseHeadersPacket(2, !kFin, &response_size));
 
   base::RunLoop().RunUntilIdle();
 
@@ -1467,38 +1467,6 @@ TEST_P(QuicHttpStreamTest, Priority) {
             stream_->GetTotalSentBytes());
   EXPECT_EQ(static_cast<int64_t>(response_size),
             stream_->GetTotalReceivedBytes());
-}
-
-// Regression test for http://crbug.com/294870
-TEST_P(QuicHttpStreamTest, CheckPriorityWithNoDelegate) {
-  SetRequest("GET", "/", MEDIUM);
-  QuicStreamOffset header_stream_offset = 0;
-  AddWrite(ConstructInitialSettingsPacket(&header_stream_offset));
-  AddWrite(ConstructClientRstStreamPacket(2));
-
-  Initialize();
-
-  request_.method = "GET";
-  request_.url = GURL("https://www.example.org/");
-
-  EXPECT_EQ(OK, stream_->InitializeStream(&request_, MEDIUM, net_log_.bound(),
-                                          callback_.callback()));
-
-  // Check that priority is highest.
-  QuicChromiumClientStream::Handle* reliable_stream =
-      QuicHttpStreamPeer::GetQuicChromiumClientStream(stream_.get());
-  DCHECK(reliable_stream);
-  QuicChromiumClientStream::Delegate* delegate = reliable_stream->GetDelegate();
-  DCHECK(delegate);
-  DCHECK_EQ(kV3HighestPriority, reliable_stream->priority());
-
-  // Set Delegate to nullptr and make sure Priority returns highest
-  // priority.
-  reliable_stream->ClearDelegate();
-  DCHECK_EQ(kV3HighestPriority, reliable_stream->priority());
-
-  EXPECT_EQ(0, stream_->GetTotalSentBytes());
-  EXPECT_EQ(0, stream_->GetTotalReceivedBytes());
 }
 
 TEST_P(QuicHttpStreamTest, SessionClosedDuringDoLoop) {

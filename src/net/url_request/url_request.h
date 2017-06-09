@@ -663,9 +663,8 @@ class NET_EXPORT URLRequest : public base::SupportsUserData {
   // Allow the URLRequestJob class to set our status too.
   void set_status(URLRequestStatus status);
 
-  // Allow the URLRequestJob to redirect this request.  Returns OK if
-  // successful, otherwise an error code is returned.
-  int Redirect(const RedirectInfo& redirect_info);
+  // Allow the URLRequestJob to redirect this request.
+  void Redirect(const RedirectInfo& redirect_info);
 
   // Called by URLRequestJob to allow interception when a redirect occurs.
   void NotifyReceivedRedirect(const RedirectInfo& redirect_info,

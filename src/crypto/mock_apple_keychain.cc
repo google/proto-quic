@@ -72,9 +72,6 @@ OSStatus MockAppleKeychain::AddGenericPassword(
 
   DCHECK_GT(passwordLength, 0U);
   DCHECK(passwordData);
-  add_generic_password_ =
-      std::string(const_cast<char*>(static_cast<const char*>(passwordData)),
-                  passwordLength);
   return noErr;
 }
 

@@ -27,7 +27,8 @@ class AndroidAcceptancePageSet(story.StorySet):
   def __init__(self):
     super(AndroidAcceptancePageSet, self).__init__(
       archive_data_file='data/android_acceptance.json',
-      cloud_storage_bucket=story.PARTNER_BUCKET)
+      cloud_storage_bucket=story.PARTNER_BUCKET,
+      verify_names=True)
 
     urls_list = [
        'http://www.amazon.com',
@@ -36,4 +37,4 @@ class AndroidAcceptancePageSet(story.StorySet):
     ]
 
     for url in urls_list:
-      self.AddStory(AndroidAcceptancePage(url, self))
+      self.AddStory(AndroidAcceptancePage(url, self, name=url))

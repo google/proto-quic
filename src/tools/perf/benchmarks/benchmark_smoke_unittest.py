@@ -123,14 +123,6 @@ def load_tests(loader, standard_tests, pattern):
   for benchmark in all_benchmarks:
     if sys.modules[benchmark.__module__] in _BLACK_LIST_TEST_MODULES:
       continue
-    # TODO(tonyg): Smoke doesn't work with session_restore yet.
-    if (benchmark.Name().startswith('session_restore') or
-        benchmark.Name().startswith('skpicture_printer')):
-      continue
-
-    if hasattr(benchmark, 'generated_profile_archive'):
-      # We'd like to test these, but don't know how yet.
-      continue
 
     class BenchmarkSmokeTest(unittest.TestCase):
       pass

@@ -18,6 +18,7 @@ namespace net {
 struct PkitsTestInfo {
   // Default construction results in the "default settings".
   PkitsTestInfo();
+  PkitsTestInfo(const PkitsTestInfo& other);
   ~PkitsTestInfo();
 
   // Sets |initial_policy_set| to the specified policies. The
@@ -37,6 +38,13 @@ struct PkitsTestInfo {
   void SetInitialExplicitPolicy(bool b);
   void SetInitialPolicyMappingInhibit(bool b);
   void SetInitialInhibitAnyPolicy(bool b);
+
+  // ----------------
+  // Info
+  // ----------------
+
+  // The PKITS test number. For example, "4.1.1".
+  const char* test_number = nullptr;
 
   // ----------------
   // Inputs
@@ -88,7 +96,41 @@ class PkitsTest : public ::testing::Test {
     for (const std::string& s : crl_names)
       crl_ders.push_back(net::ReadTestFileToString(
           "net/third_party/nist-pkits/crls/" + s + ".crl"));
-    PkitsTestDelegate::RunTest(cert_ders, crl_ders, info);
+
+    base::StringPiece test_number = info.test_number;
+
+    // Some of the PKITS tests are intentionally given different expectations
+    // from PKITS.pdf.
+    //
+    // Expected to fail because DSA signatures are not supported:
+    //
+    //   4.1.4 - Valid DSA Signatures Test4
+    //   4.1.5 - Valid DSA Parameter Inheritance Test5
+    //
+    // Expected to fail because Name constraints on rfc822Names are not
+    // supported:
+    //
+    //   4.13.21 - Valid RFC822 nameConstraints Test21
+    //   4.13.23 - Valid RFC822 nameConstraints Test23
+    //   4.13.25 - Valid RFC822 nameConstraints Test25
+    //   4.13.27 - Valid DN and RFC822 nameConstraints Test27
+    //
+    // Expected to fail because Name constraints on
+    // uniformResourceIdentifiers are not supported:
+    //
+    //   4.13.34 - Valid URI nameConstraints Test34
+    //   4.13.36 - Valid URI nameConstraints Test36
+    if (test_number == "4.1.4" || test_number == "4.1.4" ||
+        test_number == "4.1.5" || test_number == "4.13.21" ||
+        test_number == "4.13.23" || test_number == "4.13.25" ||
+        test_number == "4.13.27" || test_number == "4.13.34" ||
+        test_number == "4.13.36") {
+      PkitsTestInfo modified_info = info;
+      modified_info.should_validate = false;
+      PkitsTestDelegate::RunTest(cert_ders, crl_ders, modified_info);
+    } else {
+      PkitsTestDelegate::RunTest(cert_ders, crl_ders, info);
+    }
   }
 };
 

@@ -95,14 +95,15 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
   // HttpStreamRequest::Delegate methods:
   void OnStreamReady(const SSLConfig& used_ssl_config,
                      const ProxyInfo& used_proxy_info,
-                     HttpStream* stream) override;
-  void OnBidirectionalStreamImplReady(const SSLConfig& used_ssl_config,
-                                      const ProxyInfo& used_proxy_info,
-                                      BidirectionalStreamImpl* stream) override;
+                     std::unique_ptr<HttpStream> stream) override;
+  void OnBidirectionalStreamImplReady(
+      const SSLConfig& used_ssl_config,
+      const ProxyInfo& used_proxy_info,
+      std::unique_ptr<BidirectionalStreamImpl> stream) override;
   void OnWebSocketHandshakeStreamReady(
       const SSLConfig& used_ssl_config,
       const ProxyInfo& used_proxy_info,
-      WebSocketHandshakeStreamBase* stream) override;
+      std::unique_ptr<WebSocketHandshakeStreamBase> stream) override;
   void OnStreamFailed(int status, const SSLConfig& used_ssl_config) override;
   void OnCertificateError(int status,
                           const SSLConfig& used_ssl_config,

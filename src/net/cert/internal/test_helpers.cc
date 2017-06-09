@@ -308,4 +308,41 @@ std::string ReadTestFileToString(const std::string& file_path_ascii) {
   return file_data;
 }
 
+void VerifyCertPathErrors(const std::string& expected_errors_str,
+                          const CertPathErrors& actual_errors,
+                          const ParsedCertificateList& chain,
+                          const std::string& errors_file_path) {
+  std::string actual_errors_str = actual_errors.ToDebugString(chain);
+
+  if (expected_errors_str != actual_errors_str) {
+    ADD_FAILURE() << "Cert path errors don't match expectations ("
+                  << errors_file_path << ")\n\n"
+                  << "EXPECTED:\n\n"
+                  << expected_errors_str << "\n"
+                  << "ACTUAL:\n\n"
+                  << actual_errors_str << "\n"
+                  << "===> Use "
+                     "net/data/verify_certificate_chain_unittest/"
+                     "rebase-errors.py to rebaseline.\n";
+  }
+}
+
+void VerifyCertErrors(const std::string& expected_errors_str,
+                      const CertErrors& actual_errors,
+                      const std::string& errors_file_path) {
+  std::string actual_errors_str = actual_errors.ToDebugString();
+
+  if (expected_errors_str != actual_errors_str) {
+    ADD_FAILURE() << "Cert errors don't match expectations ("
+                  << errors_file_path << ")\n\n"
+                  << "EXPECTED:\n\n"
+                  << expected_errors_str << "\n"
+                  << "ACTUAL:\n\n"
+                  << actual_errors_str << "\n"
+                  << "===> Use "
+                     "net/data/parse_certificate_unittest/"
+                     "rebase-errors.py to rebaseline.\n";
+  }
+}
+
 }  // namespace net

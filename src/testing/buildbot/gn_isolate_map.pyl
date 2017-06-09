@@ -760,6 +760,14 @@
     "label": "//net/android:net_junit_tests",
     "type": "junit_test",
   },
+  "net_perftests": {
+    "label": "//net:net_perftests",
+    "type": "script",
+    "script": "//testing/scripts/run_gtest_perf_test.py",
+    "args": [
+      "net_perftests",
+    ],
+  },
   "net_unittests": {
     "label": "//net:net_unittests",
     "type": "console_test_launcher",
@@ -1038,8 +1046,8 @@
     "label": "//ui/views:views_unittests",
     "type": "windowed_test_launcher",
   },
-  "vr_shell_unittests": {
-    "label": "//chrome/browser/android/vr_shell:vr_shell_unittests",
+  "vr_common_unittests": {
+    "label": "//chrome/browser/android/vr_shell:vr_common_unittests",
     "type": "console_test_launcher",
   },
   "webapk_client_junit_tests": {

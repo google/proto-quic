@@ -23,7 +23,8 @@ class StartedPage(page_module.Page):
   def __init__(self, url, page_set):
     super(StartedPage, self).__init__(
         url=url, page_set=page_set, startup_url=url,
-        shared_page_state_class=BrowserStartupSharedState)
+        shared_page_state_class=BrowserStartupSharedState,
+        name=url)
     self.archive_data_file = 'data/startup_pages.json'
 
   def RunNavigateSteps(self, action_runner):
@@ -47,7 +48,8 @@ class StartupPagesPageSet(story.StorySet):
   def __init__(self):
     super(StartupPagesPageSet, self).__init__(
         archive_data_file='data/startup_pages.json',
-        cloud_storage_bucket=story.PARTNER_BUCKET)
+        cloud_storage_bucket=story.PARTNER_BUCKET,
+        verify_names=True)
 
     # Typical page.
     self.AddStory(StartedPage('about:blank', self))

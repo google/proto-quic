@@ -51,8 +51,8 @@ class ReportingServiceImpl : public ReportingService {
   void RemoveBrowsingData(
       int data_type_mask,
       base::Callback<bool(const GURL&)> origin_filter) override {
-    context_->browsing_data_remover()->RemoveBrowsingData(data_type_mask,
-                                                          origin_filter);
+    ReportingBrowsingDataRemover::RemoveBrowsingData(
+        context_->cache(), data_type_mask, origin_filter);
   }
 
  private:

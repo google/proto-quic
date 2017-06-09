@@ -763,9 +763,6 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // |enable_sending_initial_data_| is true.
   void SendInitialData();
 
-  // Helper method to send a SETTINGS frame.
-  void SendSettings(const SettingsMap& settings);
-
   // Handle SETTING.  Either when we send settings, or when we receive a
   // SETTINGS control frame, update our SpdySession accordingly.
   void HandleSetting(uint32_t id, uint32_t value);

@@ -161,18 +161,6 @@ void KillSpawnedTestProcesses() {
   fprintf(stdout, "done.\n");
   fflush(stdout);
 }
-
-// I/O watcher for the reading end of the self-pipe above.
-// Terminates any launched child processes and exits the process.
-void OnShutdownPipeReadable() {
-  fprintf(stdout, "\nCaught signal. Killing spawned test processes...\n");
-  fflush(stdout);
-
-  KillSpawnedTestProcesses();
-
-  // The signal would normally kill the process, so exit now.
-  _exit(1);
-}
 #endif  // defined(OS_POSIX) && !defined(OS_FUCHSIA)
 
 // Parses the environment variable var as an Int32.  If it is unset, returns
@@ -492,8 +480,7 @@ const char kGTestRepeatFlag[] = "gtest_repeat";
 const char kGTestRunDisabledTestsFlag[] = "gtest_also_run_disabled_tests";
 const char kGTestOutputFlag[] = "gtest_output";
 
-TestLauncherDelegate::~TestLauncherDelegate() {
-}
+TestLauncherDelegate::~TestLauncherDelegate() {}
 
 TestLauncher::TestLauncher(TestLauncherDelegate* launcher_delegate,
                            size_t parallel_jobs)
@@ -514,8 +501,7 @@ TestLauncher::TestLauncher(TestLauncherDelegate* launcher_delegate,
                       TimeDelta::FromSeconds(kOutputTimeoutSeconds),
                       this,
                       &TestLauncher::OnOutputTimeout),
-      parallel_jobs_(parallel_jobs) {
-}
+      parallel_jobs_(parallel_jobs) {}
 
 TestLauncher::~TestLauncher() {}
 
@@ -542,7 +528,8 @@ bool TestLauncher::Run() {
   CHECK_EQ(0, sigaction(SIGTERM, &action, NULL));
 
   auto controller = base::FileDescriptorWatcher::WatchReadable(
-      g_shutdown_pipe[0], base::Bind(&OnShutdownPipeReadable));
+      g_shutdown_pipe[0],
+      base::Bind(&TestLauncher::OnShutdownPipeReadable, Unretained(this)));
 #endif  // defined(OS_POSIX) && !defined(OS_FUCHSIA)
 
   // Start the watchdog timer.
@@ -1104,6 +1091,22 @@ void TestLauncher::RunTestIteration() {
   ThreadTaskRunnerHandle::Get()->PostTask(
       FROM_HERE, BindOnce(&TestLauncher::RunTests, Unretained(this)));
 }
+
+#if defined(OS_POSIX) && !defined(OS_FUCHSIA)
+// I/O watcher for the reading end of the self-pipe above.
+// Terminates any launched child processes and exits the process.
+void TestLauncher::OnShutdownPipeReadable() {
+  fprintf(stdout, "\nCaught signal. Killing spawned test processes...\n");
+  fflush(stdout);
+
+  KillSpawnedTestProcesses();
+
+  MaybeSaveSummaryAsJSON({"CAUGHT_TERMINATION_SIGNAL", kUnreliableResultsTag});
+
+  // The signal would normally kill the process, so exit now.
+  _exit(1);
+}
+#endif  // defined(OS_POSIX)
 
 void TestLauncher::MaybeSaveSummaryAsJSON(
     const std::vector<std::string>& additional_tags) {

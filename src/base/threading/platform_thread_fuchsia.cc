@@ -8,6 +8,7 @@
 #include <sched.h>
 
 #include "base/threading/platform_thread_internal_posix.h"
+#include "base/threading/thread_id_name_manager.h"
 
 namespace base {
 
@@ -48,8 +49,9 @@ size_t GetDefaultThreadStackSize(const pthread_attr_t& attributes) {
 
 // static
 void PlatformThread::SetName(const std::string& name) {
-  // TODO(fuchsia): There's no available API at the moment to set the thread
-  // name. See https://crbug.com/725726.
+  // TODO(fuchsia): There's no system-level API to communicate a thread name
+  // (for the debugger, etc.), so for now only set to our internal mechanism.
+  ThreadIdNameManager::GetInstance()->SetName(pthread_self(), name);
 }
 
 }  // namespace base

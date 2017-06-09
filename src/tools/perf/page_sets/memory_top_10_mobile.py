@@ -68,7 +68,8 @@ class MemoryTop10Mobile(story.StorySet):
   def __init__(self):
     super(MemoryTop10Mobile, self).__init__(
         archive_data_file='data/memory_top_10_mobile.json',
-        cloud_storage_bucket=story.PARTNER_BUCKET)
+        cloud_storage_bucket=story.PARTNER_BUCKET,
+        verify_names=True)
 
     for url in top_10_mobile.URL_LIST:
       # We name pages so their foreground/background counterparts are easy

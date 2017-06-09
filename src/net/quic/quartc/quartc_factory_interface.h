@@ -10,6 +10,7 @@
 
 #include <memory>
 
+#include "net/quic/platform/api/quic_export.h"
 #include "net/quic/quartc/quartc_clock_interface.h"
 #include "net/quic/quartc/quartc_session_interface.h"
 #include "net/quic/quartc/quartc_task_runner_interface.h"

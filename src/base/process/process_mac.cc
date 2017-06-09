@@ -8,15 +8,27 @@
 
 #include "base/feature_list.h"
 #include "base/mac/mach_logging.h"
+#include "base/metrics/field_trial_params.h"
 
 namespace base {
+
+namespace {
+const char kAppNapFeatureParamName[] = "app_nap";
+}
 
 // Enables backgrounding hidden renderers on Mac.
 const Feature kMacAllowBackgroundingProcesses{"MacAllowBackgroundingProcesses",
                                               FEATURE_DISABLED_BY_DEFAULT};
 
+bool Process::IsAppNapEnabled() {
+  return !base::GetFieldTrialParamValueByFeature(
+              kMacAllowBackgroundingProcesses, kAppNapFeatureParamName)
+              .empty();
+}
+
 bool Process::CanBackgroundProcesses() {
-  return FeatureList::IsEnabled(kMacAllowBackgroundingProcesses);
+  return FeatureList::IsEnabled(kMacAllowBackgroundingProcesses) &&
+         !IsAppNapEnabled();
 }
 
 bool Process::IsProcessBackgrounded(PortProvider* port_provider) const {

@@ -163,6 +163,36 @@ TEST_F(HttpResponseInfoTest, LegacyKeyExchangeInfoUnknown) {
   EXPECT_EQ(0, restored_response_info.ssl_info.key_exchange_group);
 }
 
+// Tests that cache entries loaded over SSLv3 (no longer supported) are dropped.
+TEST_F(HttpResponseInfoTest, FailsInitFromPickleWithSSLV3) {
+  // A valid certificate is needed for ssl_info.is_valid() to be true.
+  response_info_.ssl_info.cert =
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem");
+
+  // Non-SSLv3 versions should succeed.
+  SSLConnectionStatusSetVersion(SSL_CONNECTION_VERSION_TLS1_2,
+                                &response_info_.ssl_info.connection_status);
+  base::Pickle tls12_pickle;
+  response_info_.Persist(&tls12_pickle, false, false);
+  bool truncated = false;
+  net::HttpResponseInfo restored_tls12_response_info;
+  EXPECT_TRUE(
+      restored_tls12_response_info.InitFromPickle(tls12_pickle, &truncated));
+  EXPECT_EQ(SSL_CONNECTION_VERSION_TLS1_2,
+            SSLConnectionStatusToVersion(
+                restored_tls12_response_info.ssl_info.connection_status));
+  EXPECT_FALSE(truncated);
+
+  // SSLv3 should fail.
+  SSLConnectionStatusSetVersion(SSL_CONNECTION_VERSION_SSL3,
+                                &response_info_.ssl_info.connection_status);
+  base::Pickle ssl3_pickle;
+  response_info_.Persist(&ssl3_pickle, false, false);
+  net::HttpResponseInfo restored_ssl3_response_info;
+  EXPECT_FALSE(
+      restored_ssl3_response_info.InitFromPickle(ssl3_pickle, &truncated));
+}
+
 }  // namespace
 
 }  // namespace net

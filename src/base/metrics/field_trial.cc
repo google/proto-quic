@@ -11,7 +11,6 @@
 #include "base/build_time.h"
 #include "base/command_line.h"
 #include "base/debug/activity_tracker.h"
-#include "base/debug/crash_logging.h"
 #include "base/logging.h"
 #include "base/metrics/field_trial_param_associator.h"
 #include "base/process/memory.h"
@@ -1280,25 +1279,11 @@ void FieldTrialList::InstantiateFieldTrialAllocatorIfNeeded() {
 #endif
 
   std::unique_ptr<SharedMemory> shm(new SharedMemory());
-  if (!shm->Create(options)) {
-#if !defined(OS_NACL)
-    // Temporary for http://crbug.com/703649.
-    base::debug::ScopedCrashKey crash_key(
-        "field_trial_shmem_create_error",
-        base::IntToString(static_cast<int>(shm->get_last_error())));
-#endif
+  if (!shm->Create(options))
     OnOutOfMemory(kFieldTrialAllocationSize);
-  }
 
-  if (!shm->Map(kFieldTrialAllocationSize)) {
-#if !defined(OS_NACL)
-    // Temporary for http://crbug.com/703649.
-    base::debug::ScopedCrashKey crash_key(
-        "field_trial_shmem_map_error",
-        base::IntToString(static_cast<int>(shm->get_last_error())));
-#endif
+  if (!shm->Map(kFieldTrialAllocationSize))
     OnOutOfMemory(kFieldTrialAllocationSize);
-  }
 
   global_->field_trial_allocator_.reset(
       new FieldTrialAllocator(std::move(shm), 0, kAllocatorName, false));

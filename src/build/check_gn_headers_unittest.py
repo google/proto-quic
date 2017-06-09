@@ -25,6 +25,7 @@ obj/c.o: #deps 1, deps mtime 123 (VALID)
     ../../c.cc
     ../../build/a.h
     gen/b.h
+    ../../out/Release/gen/no.h
     ../../dir3/path/b.h
     ../../c3.hh
 '''
@@ -64,7 +65,8 @@ a/b/c
 
 class CheckGnHeadersTest(unittest.TestCase):
   def testNinja(self):
-    headers = check_gn_headers.ParseNinjaDepsOutput(ninja_input.split('\n'))
+    headers = check_gn_headers.ParseNinjaDepsOutput(
+        ninja_input.split('\n'), 'out/Release')
     expected = set([
         'dir/path/b.h',
         'c.hh',
@@ -78,7 +80,7 @@ class CheckGnHeadersTest(unittest.TestCase):
     os.sep = '\\'
 
     headers = check_gn_headers.ParseNinjaDepsOutput(
-        ninja_input_win.split('\n'))
+        ninja_input_win.split('\n'), 'out\\Release')
     expected = set([
         'dir\\path\\b.h',
         'c.hh',

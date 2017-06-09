@@ -55,17 +55,31 @@ class Describer(object):
     self.recursive = recursive
 
   def _DescribeSectionSizes(self, section_sizes):
-    relevant_names = models.SECTION_TO_SECTION_NAME.values()
-    section_names = sorted(k for k in section_sizes.iterkeys()
-                           if k in relevant_names or k.startswith('.data'))
+    def include_in_totals(name):
+      return name != '.bss' and '(' not in name
+
     total_bytes = sum(v for k, v in section_sizes.iteritems()
-                      if k in section_names and k != '.bss')
+                      if include_in_totals(k))
+    max_bytes = max(abs(v) for k, v in section_sizes.iteritems()
+                    if include_in_totals(k))
+
+    def is_relevant_section(name, size):
+      # Show all sections containing symbols, plus relocations.
+      # As a catch-all, also include any section that comprises > 4% of the
+      # largest section. Use largest section rather than total so that it still
+      # works out when showing a diff containing +100, -100 (total=0).
+      return (name in models.SECTION_TO_SECTION_NAME.values() or
+              name in ('.rela.dyn', '.rel.dyn') or
+              include_in_totals(name) and abs(_Divide(size, max_bytes)) > .04)
+
+    section_names = sorted(k for k, v  in section_sizes.iteritems()
+                           if is_relevant_section(k, v))
     yield ''
     yield 'Section Sizes (Total={} ({} bytes)):'.format(
         _PrettySize(total_bytes), total_bytes)
     for name in section_names:
       size = section_sizes[name]
-      if name == '.bss':
+      if not include_in_totals(name):
         yield '    {}: {} ({} bytes) (not included in totals)'.format(
             name, _PrettySize(size), size)
       else:
@@ -79,8 +93,12 @@ class Describer(object):
       section_names = sorted(k for k in section_sizes.iterkeys()
                              if k not in section_names)
       for name in section_names:
-        yield '    {}: {} ({} bytes)'.format(
-            name, _PrettySize(section_sizes[name]), section_sizes[name])
+        not_included_part = ''
+        if not include_in_totals(name):
+          not_included_part = ' (not included in totals)'
+        yield '    {}: {} ({} bytes){}'.format(
+            name, _PrettySize(section_sizes[name]), section_sizes[name],
+            not_included_part)
 
   def _DescribeSymbol(self, sym, single_line=False):
     if sym.IsGroup():

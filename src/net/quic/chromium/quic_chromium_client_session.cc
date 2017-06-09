@@ -305,11 +305,10 @@ int QuicChromiumClientSession::Handle::RequestStream(
 }
 
 std::unique_ptr<QuicChromiumClientStream::Handle>
-QuicChromiumClientSession::Handle::ReleaseStream(
-    QuicChromiumClientStream::Delegate* delegate) {
+QuicChromiumClientSession::Handle::ReleaseStream() {
   DCHECK(stream_request_);
 
-  auto handle = stream_request_->ReleaseStream(delegate);
+  auto handle = stream_request_->ReleaseStream();
   stream_request_.reset();
   return handle;
 }
@@ -354,7 +353,7 @@ int QuicChromiumClientSession::Handle::GetPeerAddress(
 QuicChromiumClientSession::StreamRequest::StreamRequest(
     QuicChromiumClientSession::Handle* session,
     bool requires_confirmation)
-    : session_(std::move(session)),
+    : session_(session),
       requires_confirmation_(requires_confirmation),
       stream_(nullptr),
       weak_factory_(this) {}
@@ -381,12 +380,11 @@ int QuicChromiumClientSession::StreamRequest::StartRequest(
 }
 
 std::unique_ptr<QuicChromiumClientStream::Handle>
-QuicChromiumClientSession::StreamRequest::ReleaseStream(
-    QuicChromiumClientStream::Delegate* delegate) {
+QuicChromiumClientSession::StreamRequest::ReleaseStream() {
   DCHECK(stream_);
   QuicChromiumClientStream* stream = stream_;
   stream_ = nullptr;
-  return stream->CreateHandle(delegate);
+  return stream->CreateHandle();
 }
 
 void QuicChromiumClientSession::StreamRequest::OnRequestCompleteSuccess(

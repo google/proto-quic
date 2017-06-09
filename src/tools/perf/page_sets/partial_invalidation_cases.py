@@ -14,7 +14,7 @@ class PartialInvalidationCasesPage(page_module.Page):
 
   def __init__(self, url, page_set):
     super(PartialInvalidationCasesPage, self).__init__(
-        url=url, page_set=page_set)
+        url=url, page_set=page_set, name=url.split('/')[-1])
 
 
 class PartialInvalidationCasesPageSet(story.StorySet):
@@ -24,7 +24,7 @@ class PartialInvalidationCasesPageSet(story.StorySet):
 
   def __init__(self):
     super(PartialInvalidationCasesPageSet, self).__init__(
-        cloud_storage_bucket=story.PARTNER_BUCKET)
+        cloud_storage_bucket=story.PARTNER_BUCKET, verify_names=True)
 
     other_urls = [
         # Why: Reduced test case similar to the single page html5 spec wherein

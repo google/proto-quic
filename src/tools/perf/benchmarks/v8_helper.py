@@ -4,15 +4,6 @@
 
 _JS_FLAGS_SWITCH = '--js-flags='
 
-
-def EnableTurbo(options):
-  AppendJSFlags(options, '--turbo')
-
-
-def EnableClassic(options):
-  AppendJSFlags(options, '--no-turbo')
-
-
 def AppendJSFlags(options, js_flags):
   existing_js_flags = ''
   # There should be only one occurence of --js-flags in the browser flags. When

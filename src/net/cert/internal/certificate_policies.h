@@ -34,15 +34,21 @@ NET_EXPORT der::Input InhibitAnyPolicyOid();
 NET_EXPORT der::Input PolicyMappingsOid();
 
 // Parses a certificatePolicies extension and stores the policy OIDs in
-// |*policies|, in sorted order. If policyQualifiers are present,
-// they are ignored. (RFC 5280 section 4.2.1.4 says "optional qualifiers, which
-// MAY be present, are not expected to change the definition of the policy.",
-// furthermore policyQualifiers do not affect the success or failure of the
-// section 6 Certification Path Validation algorithm.)
+// |*policies|, in sorted order.
+//
+// If policyQualifiers for User Notice or CPS are present then they are
+// ignored (RFC 5280 section 4.2.1.4 says "optional qualifiers, which MAY
+// be present, are not expected to change the definition of the policy."
+//
+// If a policy qualifier other than User Notice/CPS is present, parsing
+// will fail if |fail_parsing_unknown_qualifier_oids| was set to true,
+// otherwise the unrecognized qualifiers wil be skipped and not parsed
+// any further.
 //
 // The returned values is only valid as long as |extension_value| is.
 NET_EXPORT bool ParseCertificatePoliciesExtension(
     const der::Input& extension_value,
+    bool fail_parsing_unknown_qualifier_oids,
     std::vector<der::Input>* policies);
 
 struct ParsedPolicyConstraints {
