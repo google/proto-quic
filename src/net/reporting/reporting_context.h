@@ -20,7 +20,6 @@ class TickClock;
 
 namespace net {
 
-class ReportingBrowsingDataRemover;
 class ReportingCache;
 class ReportingDelegate;
 class ReportingDeliveryAgent;
@@ -56,9 +55,6 @@ class NET_EXPORT ReportingContext {
   ReportingDeliveryAgent* delivery_agent() { return delivery_agent_.get(); }
   ReportingGarbageCollector* garbage_collector() {
     return garbage_collector_.get();
-  }
-  ReportingBrowsingDataRemover* browsing_data_remover() {
-    return browsing_data_remover_.get();
   }
 
   ReportingPersister* persister() { return persister_.get(); }
@@ -103,9 +99,6 @@ class NET_EXPORT ReportingContext {
 
   // |network_change_observer_| must come after |cache_|.
   std::unique_ptr<ReportingNetworkChangeObserver> network_change_observer_;
-
-  // |browsing_data_remover_| must come after |cache_|.
-  std::unique_ptr<ReportingBrowsingDataRemover> browsing_data_remover_;
 
   DISALLOW_COPY_AND_ASSIGN(ReportingContext);
 };

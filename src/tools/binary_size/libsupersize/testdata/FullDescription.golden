@@ -8,18 +8,21 @@ Metadata:
     map_file_name=../test.map
     tool_prefix=tools/binary_size/libsupersize/testdata/mock_toolchain/
 
-Section Sizes (Total=41.8mb (43785380 bytes)):
+Section Sizes (Total=95.6mb (100233874 bytes)):
+    .ARM.exidx: 1.47mb (1536456 bytes) (1.5%)
     .bss: 1.24mb (1300456 bytes) (not included in totals)
-    .data: 99.4kb (101768 bytes) (0.2%)
-    .data.rel.ro: 1.02mb (1065224 bytes) (2.4%)
-    .data.rel.ro.local: 771kb (790024 bytes) (1.8%)
-    .rodata: 5.65mb (5927652 bytes) (13.5%)
-    .text: 34.2mb (35900712 bytes) (82.0%)
+    .data: 99.4kb (101768 bytes) (0.1%)
+    .rel.dyn: 2.53mb (2655384 bytes) (2.6%)
+    .rodata: 5.65mb (5927652 bytes) (5.9%)
+    .strtab: 33.2mb (34841854 bytes) (34.8%)
+    .symtab: 16.4mb (17166112 bytes) (17.1%)
+    .text: 34.2mb (35900712 bytes) (35.8%)
 
 Other section sizes:
     .ARM.attributes: 60 bytes (60 bytes)
-    .ARM.exidx: 1.47mb (1536456 bytes)
     .ARM.extab: 179kb (183632 bytes)
+    .data.rel.ro: 1.02mb (1065224 bytes)
+    .data.rel.ro.local: 771kb (790024 bytes)
     .dynamic: 304 bytes (304 bytes)
     .dynstr: 3.93kb (4025 bytes)
     .dynsym: 6.34kb (6496 bytes)
@@ -34,11 +37,8 @@ Other section sizes:
     .note.gnu.build-id: 36 bytes (36 bytes)
     .note.gnu.gold-version: 28 bytes (28 bytes)
     .plt: 4.14kb (4244 bytes)
-    .rel.dyn: 2.53mb (2655384 bytes)
     .rel.plt: 2.75kb (2816 bytes)
     .shstrtab: 436 bytes (436 bytes)
-    .strtab: 33.2mb (34841854 bytes)
-    .symtab: 16.4mb (17166112 bytes)
 
 Section r: has 100.0% of 5927652 bytes accounted for from 10 symbols. 0 bytes are unaccounted for.
 * Padding accounts for 11 bytes (0.0%)

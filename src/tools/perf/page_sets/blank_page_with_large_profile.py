@@ -7,17 +7,19 @@ from telemetry import story
 
 
 class BlankPageWithLargeProfile(page_module.Page):
-  def __init__(self, url, page_set):
+  def __init__(self, url, page_set, name):
     super(BlankPageWithLargeProfile, self).__init__(
         url=url, page_set=page_set,
         shared_page_state_class=pregenerated_large_profile_shared_state.
-        PregeneratedLargeProfileSharedState)
+        PregeneratedLargeProfileSharedState,
+        name=name)
 
 
 class BlankPageSetWithLargeProfile(story.StorySet):
   """A single blank page loaded with a large profile."""
 
   def __init__(self):
-    super(BlankPageSetWithLargeProfile, self).__init__()
+    super(BlankPageSetWithLargeProfile, self).__init__(verify_names=True)
     self.AddStory(BlankPageWithLargeProfile(
-        'file://blank_page/blank_page.html', self))
+        'file://blank_page/blank_page.html', self,
+        'blank_page.html'))

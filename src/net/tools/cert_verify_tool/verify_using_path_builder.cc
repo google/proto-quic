@@ -210,7 +210,9 @@ bool VerifyUsingPathBuilder(
   net::CertPathBuilder::Result result;
   net::CertPathBuilder path_builder(
       target_cert, ssl_trust_store->GetTrustStore(), &signature_policy, time,
-      net::KeyPurpose::SERVER_AUTH, &result);
+      net::KeyPurpose::SERVER_AUTH, net::InitialExplicitPolicy::kFalse,
+      {net::AnyPolicy()}, net::InitialPolicyMappingInhibit::kFalse,
+      net::InitialAnyPolicyInhibit::kFalse, &result);
   path_builder.AddCertIssuerSource(&intermediate_cert_issuer_source);
 
   // Create a network thread to be used for AIA fetches, and wait for a

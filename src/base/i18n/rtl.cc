@@ -9,7 +9,6 @@
 
 #include <algorithm>
 
-#include "base/atomicops.h"
 #include "base/command_line.h"
 #include "base/files/file_path.h"
 #include "base/i18n/base_i18n_switches.h"
@@ -114,8 +113,7 @@ namespace base {
 namespace i18n {
 
 // Represents the locale-specific ICU text direction.
-static subtle::Atomic32 g_icu_text_direction =
-    static_cast<subtle::Atomic32>(UNKNOWN_DIRECTION);
+static TextDirection g_icu_text_direction = UNKNOWN_DIRECTION;
 
 // Convert the ICU default locale to a string.
 std::string GetConfiguredLocale() {
@@ -164,10 +162,7 @@ void SetICUDefaultLocale(const std::string& locale_string) {
   // presence of actual locale data). However,
   // it does not hurt to have it as a sanity check.
   DCHECK(U_SUCCESS(error_code));
-  subtle::Release_Store(
-      &g_icu_text_direction,
-      static_cast<subtle::Atomic32>(
-          GetTextDirectionForLocaleInStartUp(locale.getName())));
+  g_icu_text_direction = UNKNOWN_DIRECTION;
 }
 
 bool IsRTL() {
@@ -175,11 +170,11 @@ bool IsRTL() {
 }
 
 bool ICUIsRTL() {
-  // Note: There is still  a race if this is executed between the
-  // icu::Locale::setDefault and the g_icu_text_direction store
-  // that happens in SetICUDefaultLocale.
-  return static_cast<TextDirection>(
-             subtle::Acquire_Load(&g_icu_text_direction)) == RIGHT_TO_LEFT;
+  if (g_icu_text_direction == UNKNOWN_DIRECTION) {
+    const icu::Locale& locale = icu::Locale::getDefault();
+    g_icu_text_direction = GetTextDirectionForLocaleInStartUp(locale.getName());
+  }
+  return g_icu_text_direction == RIGHT_TO_LEFT;
 }
 
 TextDirection GetTextDirectionForLocaleInStartUp(const char* locale_name) {

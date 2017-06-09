@@ -461,3 +461,13 @@ fuzzer_test("hash_fuzzer") {
     "//base",
   ]
 }
+
+# TODO(yawano): Add compress test case
+fuzzer_test("minizip_uncompress_fuzzer") {
+  sources = [
+    "minizip_uncompress_fuzzer.cc",
+  ]
+  deps = [
+    "//third_party/minizip:minizip",
+  ]
+}

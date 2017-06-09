@@ -137,8 +137,7 @@ bool CreateOrUpdateShortcutLink(const FilePath& shortcut_path,
       (properties.options & ShortcutProperties::PROPERTIES_APP_ID) != 0;
   bool has_dual_mode =
       (properties.options & ShortcutProperties::PROPERTIES_DUAL_MODE) != 0;
-  if ((has_app_id || has_dual_mode) &&
-      GetVersion() >= VERSION_WIN7) {
+  if (has_app_id || has_dual_mode) {
     ScopedComPtr<IPropertyStore> property_store;
     if (FAILED(i_shell_link.CopyTo(property_store.GetAddressOf())) ||
         !property_store.Get())
@@ -248,9 +247,7 @@ bool ResolveShortcutProperties(const FilePath& shortcut_path,
     properties->set_icon(FilePath(temp), temp_index);
   }
 
-  // Windows 7+ options, avoiding unnecessary work.
-  if ((options & ShortcutProperties::PROPERTIES_WIN7) &&
-      GetVersion() >= VERSION_WIN7) {
+  if (options & ShortcutProperties::PROPERTIES_WIN7) {
     ScopedComPtr<IPropertyStore> property_store;
     if (FAILED(i_shell_link.CopyTo(property_store.GetAddressOf())))
       return false;
@@ -319,9 +316,8 @@ bool ResolveShortcut(const FilePath& shortcut_path,
 }
 
 bool CanPinShortcutToTaskbar() {
-  // "Pin to taskbar" appeared in Windows 7 and stopped being supported in
-  // Windows 10.
-  return GetVersion() >= VERSION_WIN7 && GetVersion() < VERSION_WIN10;
+  // "Pin to taskbar" stopped being supported in Windows 10.
+  return GetVersion() < VERSION_WIN10;
 }
 
 bool PinShortcutToTaskbar(const FilePath& shortcut) {
@@ -335,11 +331,6 @@ bool PinShortcutToTaskbar(const FilePath& shortcut) {
 
 bool UnpinShortcutFromTaskbar(const FilePath& shortcut) {
   base::ThreadRestrictions::AssertIOAllowed();
-
-  // "Unpin from taskbar" is only supported after Win7. It is possible to remove
-  // a shortcut pinned by a user on Windows 10+.
-  if (GetVersion() < VERSION_WIN7)
-    return false;
 
   intptr_t result = reinterpret_cast<intptr_t>(ShellExecute(
       NULL, L"taskbarunpin", shortcut.value().c_str(), NULL, NULL, 0));

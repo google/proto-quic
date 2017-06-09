@@ -12,12 +12,14 @@ class ChromeSigninPage(page_module.Page):
   """A page that signs in a user to Chrome."""
 
   def __init__(self, page_set):
+    url = 'chrome://signin-internals'
     super(ChromeSigninPage, self).__init__(
-        url='chrome://signin-internals',
+        url=url,
         page_set=page_set,
         credentials_path='data/chrome_signin_credentials.json',
         credentials_bucket=story.INTERNAL_BUCKET,
-        shared_page_state_class=shared_page_state.SharedDesktopPageState)
+        shared_page_state_class=shared_page_state.SharedDesktopPageState,
+        name=url)
 
   def RunPageInteractions(self, action_runner):
     # Use page.credentials_path because it is automatically translated into a
@@ -31,5 +33,6 @@ class ChromeSigninPageSet(story.StorySet):
   def __init__(self):
     super(ChromeSigninPageSet, self).__init__(
         archive_data_file='data/chrome_signin_archive.json',
-        cloud_storage_bucket=story.INTERNAL_BUCKET)
+        cloud_storage_bucket=story.INTERNAL_BUCKET,
+        verify_names=True)
     self.AddStory(ChromeSigninPage(self))

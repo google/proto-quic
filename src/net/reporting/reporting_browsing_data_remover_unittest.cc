@@ -35,7 +35,8 @@ class ReportingBrowsingDataRemoverTest : public ReportingTestBase {
           base::Bind(&ReportingBrowsingDataRemoverTest::HostIs, host);
     }
 
-    browsing_data_remover()->RemoveBrowsingData(data_type_mask, origin_filter);
+    ReportingBrowsingDataRemover::RemoveBrowsingData(cache(), data_type_mask,
+                                                     origin_filter);
   }
 
   static bool HostIs(std::string host, const GURL& url) {

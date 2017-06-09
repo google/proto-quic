@@ -1,6 +1,6 @@
 Name: Brotli
 URL: https://github.com/google/brotli
-Version: 222564a95d9ab58865a096b8d9f7324ea5f2e03e
+Version: 19dc934e391752b78f78eca60c2c1ca5f6ac647b
 License: MIT
 License File: LICENSE
 Security Critical: yes
@@ -11,12 +11,11 @@ byte-compression level in WOFF 2.0 font file format. This library is used
 to decode WOFF 2.0 fonts.
 
 Local Modifications:
-- This only includes the common/, dec/, enc/, fuzz/ and tools/ directories, the
-  README.md and the LICENSE files, removing unneeded directories such as docs,
-  java, and tests.
+- This only includes the contents of c/ directory, the README.md and the LICENSE
+  files.
 - Auxiliary fuzzer runners removed from fuzz/
 - Line 19 of enc/cluster_inc.h was modified to eliminate build error on Windows.
+- Line 700 of tools/brotli.c was modified to eliminate build error on Windows.
+- common/dictionary.bin: Removed.
 - BUILD.gn: Added.
-- brotli.gyp: Added.
 - brotli.gni: Added.
-- bro.gypi: Added.

@@ -198,8 +198,9 @@ ProxyResolverMojo::Job::Job(ProxyResolverMojo* resolver,
       results_(results),
       callback_(callback),
       binding_(this) {
-  resolver->mojo_proxy_resolver_ptr_->GetProxyForUrl(
-      url_, binding_.CreateInterfacePtrAndBind());
+  interfaces::ProxyResolverRequestClientPtr client;
+  binding_.Bind(mojo::MakeRequest(&client));
+  resolver->mojo_proxy_resolver_ptr_->GetProxyForUrl(url_, std::move(client));
   binding_.set_connection_error_handler(base::Bind(
       &ProxyResolverMojo::Job::OnConnectionError, base::Unretained(this)));
 }
@@ -305,10 +306,11 @@ class ProxyResolverFactoryMojo::Job
         callback_(callback),
         binding_(this),
         error_observer_(std::move(error_observer)) {
+    interfaces::ProxyResolverFactoryRequestClientPtr client;
+    binding_.Bind(mojo::MakeRequest(&client));
     on_delete_callback_runner_ = factory_->mojo_proxy_factory_->CreateResolver(
         base::UTF16ToUTF8(pac_script->utf16()),
-        mojo::MakeRequest(&resolver_ptr_),
-        binding_.CreateInterfacePtrAndBind());
+        mojo::MakeRequest(&resolver_ptr_), std::move(client));
     resolver_ptr_.set_connection_error_handler(
         base::Bind(&ProxyResolverFactoryMojo::Job::OnConnectionError,
                    base::Unretained(this)));

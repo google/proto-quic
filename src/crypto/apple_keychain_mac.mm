@@ -15,91 +15,9 @@ AppleKeychain::AppleKeychain() {}
 
 AppleKeychain::~AppleKeychain() {}
 
-OSStatus AppleKeychain::ItemCopyAttributesAndData(
-    SecKeychainItemRef itemRef,
-    SecKeychainAttributeInfo* info,
-    SecItemClass* itemClass,
-    SecKeychainAttributeList** attrList,
-    UInt32* length,
-    void** outData) const {
-  base::AutoLock lock(GetMacSecurityServicesLock());
-  return SecKeychainItemCopyAttributesAndData(itemRef, info, itemClass,
-                                              attrList, length, outData);
-}
-
-OSStatus AppleKeychain::ItemModifyAttributesAndData(
-    SecKeychainItemRef itemRef,
-    const SecKeychainAttributeList* attrList,
-    UInt32 length,
-    const void* data) const {
-  base::AutoLock lock(GetMacSecurityServicesLock());
-  return SecKeychainItemModifyAttributesAndData(itemRef, attrList, length,
-                                                data);
-}
-
-OSStatus AppleKeychain::ItemFreeAttributesAndData(
-    SecKeychainAttributeList* attrList,
-    void* data) const {
-  base::AutoLock lock(GetMacSecurityServicesLock());
-  return SecKeychainItemFreeAttributesAndData(attrList, data);
-}
-
 OSStatus AppleKeychain::ItemDelete(SecKeychainItemRef itemRef) const {
   base::AutoLock lock(GetMacSecurityServicesLock());
   return SecKeychainItemDelete(itemRef);
-}
-
-OSStatus AppleKeychain::SearchCreateFromAttributes(
-    CFTypeRef keychainOrArray,
-    SecItemClass itemClass,
-    const SecKeychainAttributeList* attrList,
-    SecKeychainSearchRef* searchRef) const {
-  base::AutoLock lock(GetMacSecurityServicesLock());
-// Eventually, this deprecated method should be removed entirely.
-// https://crbug.com/595468
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  return SecKeychainSearchCreateFromAttributes(keychainOrArray, itemClass,
-                                               attrList, searchRef);
-#pragma clang diagnostic pop
-}
-
-OSStatus AppleKeychain::SearchCopyNext(SecKeychainSearchRef searchRef,
-                                       SecKeychainItemRef* itemRef) const {
-  base::AutoLock lock(GetMacSecurityServicesLock());
-// Eventually, this deprecated method should be removed entirely.
-// https://crbug.com/595468
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  return SecKeychainSearchCopyNext(searchRef, itemRef);
-#pragma clang diagnostic pop
-}
-
-OSStatus AppleKeychain::AddInternetPassword(
-    SecKeychainRef keychain,
-    UInt32 serverNameLength,
-    const char* serverName,
-    UInt32 securityDomainLength,
-    const char* securityDomain,
-    UInt32 accountNameLength,
-    const char* accountName,
-    UInt32 pathLength,
-    const char* path,
-    UInt16 port,
-    SecProtocolType protocol,
-    SecAuthenticationType authenticationType,
-    UInt32 passwordLength,
-    const void* passwordData,
-    SecKeychainItemRef* itemRef) const {
-  base::AutoLock lock(GetMacSecurityServicesLock());
-  return SecKeychainAddInternetPassword(keychain,
-                                        serverNameLength, serverName,
-                                        securityDomainLength, securityDomain,
-                                        accountNameLength, accountName,
-                                        pathLength, path,
-                                        port, protocol, authenticationType,
-                                        passwordLength, passwordData,
-                                        itemRef);
 }
 
 OSStatus AppleKeychain::FindGenericPassword(CFTypeRef keychainOrArray,
@@ -144,11 +62,6 @@ OSStatus AppleKeychain::AddGenericPassword(SecKeychainRef keychain,
                                        passwordLength,
                                        passwordData,
                                        itemRef);
-}
-
-void AppleKeychain::Free(CFTypeRef ref) const {
-  if (ref)
-    CFRelease(ref);
 }
 
 }  // namespace crypto

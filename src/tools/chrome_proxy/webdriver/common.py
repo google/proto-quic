@@ -228,8 +228,9 @@ class TestDriver:
         'networkConnectionEnabled': True,
         'mobileEmulationEnabled': True,
       })
-      chrome_options.add_experimental_option('mobileEmulation',
-        {'deviceName': 'Google Nexus 5'})
+      if not self._flags.android:
+        chrome_options.add_experimental_option('mobileEmulation',
+          {'deviceName': 'Google Nexus 5'})
     for arg in self._chrome_args:
       chrome_options.add_argument(arg)
     self._logger.info('Starting Chrome with these flags: %s',

@@ -7,6 +7,7 @@
 
 #include "net/quic/core/quic_session.h"
 #include "net/quic/core/quic_stream.h"
+#include "net/quic/platform/api/quic_export.h"
 #include "net/quic/quartc/quartc_stream_interface.h"
 
 namespace net {

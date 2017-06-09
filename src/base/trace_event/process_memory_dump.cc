@@ -301,8 +301,7 @@ void ProcessMemoryDump::TakeAllDumpsFrom(ProcessMemoryDump* other) {
   other->allocator_dumps_.clear();
 
   // Move all the edges.
-  allocator_dumps_edges_.insert(allocator_dumps_edges_.end(),
-                                other->allocator_dumps_edges_.begin(),
+  allocator_dumps_edges_.insert(other->allocator_dumps_edges_.begin(),
                                 other->allocator_dumps_edges_.end());
   other->allocator_dumps_edges_.clear();
 
@@ -341,7 +340,8 @@ void ProcessMemoryDump::AsValueInto(TracedValue* value) const {
   }
 
   value->BeginArray("allocators_graph");
-  for (const MemoryAllocatorDumpEdge& edge : allocator_dumps_edges_) {
+  for (const auto& it : allocator_dumps_edges_) {
+    const MemoryAllocatorDumpEdge& edge = it.second;
     value->BeginDictionary();
     value->SetString("source", edge.source.ToString());
     value->SetString("target", edge.target.ToString());
@@ -355,14 +355,31 @@ void ProcessMemoryDump::AsValueInto(TracedValue* value) const {
 void ProcessMemoryDump::AddOwnershipEdge(const MemoryAllocatorDumpGuid& source,
                                          const MemoryAllocatorDumpGuid& target,
                                          int importance) {
-  allocator_dumps_edges_.push_back(
-      {source, target, importance, kEdgeTypeOwnership});
+  DCHECK(allocator_dumps_edges_.count(source) == 0 ||
+         allocator_dumps_edges_[source].overridable);
+  allocator_dumps_edges_[source] = {
+      source, target, importance, kEdgeTypeOwnership, false /* overridable */};
 }
 
 void ProcessMemoryDump::AddOwnershipEdge(
     const MemoryAllocatorDumpGuid& source,
     const MemoryAllocatorDumpGuid& target) {
   AddOwnershipEdge(source, target, 0 /* importance */);
+}
+
+void ProcessMemoryDump::AddOverridableOwnershipEdge(
+    const MemoryAllocatorDumpGuid& source,
+    const MemoryAllocatorDumpGuid& target,
+    int importance) {
+  if (allocator_dumps_edges_.count(source) == 0) {
+    allocator_dumps_edges_[source] = {
+        source, target, importance, kEdgeTypeOwnership, true /* overridable */};
+  } else {
+    // An edge between the source and target already exits. So, do nothing here
+    // since the new overridable edge is implicitly overridden by a strong edge
+    // which was created earlier.
+    DCHECK(!allocator_dumps_edges_[source].overridable);
+  }
 }
 
 void ProcessMemoryDump::AddSuballocation(const MemoryAllocatorDumpGuid& source,

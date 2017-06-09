@@ -141,14 +141,19 @@ class BASE_EXPORT Value {
   // If the current object can be converted into the given type, the value is
   // returned through the |out_value| parameter and true is returned;
   // otherwise, false is returned and |out_value| is unchanged.
+  // DEPRECATED, use GetBool() instead.
   bool GetAsBoolean(bool* out_value) const;
+  // DEPRECATED, use GetInt() instead.
   bool GetAsInteger(int* out_value) const;
+  // DEPRECATED, use GetDouble() instead.
   bool GetAsDouble(double* out_value) const;
+  // DEPRECATED, use GetString() instead.
   bool GetAsString(std::string* out_value) const;
   bool GetAsString(string16* out_value) const;
   bool GetAsString(const Value** out_value) const;
   bool GetAsString(StringPiece* out_value) const;
   // ListValue::From is the equivalent for std::unique_ptr conversions.
+  // DEPRECATED, use GetList() instead.
   bool GetAsList(ListValue** out_value);
   bool GetAsList(const ListValue** out_value) const;
   // DictionaryValue::From is the equivalent for std::unique_ptr conversions.
@@ -163,7 +168,8 @@ class BASE_EXPORT Value {
   // DEPRECATED, use Value's copy constructor instead.
   // TODO(crbug.com/646113): Delete this and migrate callsites.
   Value* DeepCopy() const;
-  // Preferred version of DeepCopy. TODO(estade): remove the above.
+  // DEPRECATED, use Value's copy constructor instead.
+  // TODO(crbug.com/646113): Delete this and migrate callsites.
   std::unique_ptr<Value> CreateDeepCopy() const;
 
   // Comparison operators so that Values can easily be used with standard
@@ -243,8 +249,6 @@ class BASE_EXPORT DictionaryValue : public Value {
   // to the path in that location. |in_value| must be non-null.
   // Returns a pointer to the inserted value.
   Value* Set(StringPiece path, std::unique_ptr<Value> in_value);
-  // Deprecated version of the above. TODO(estade): remove.
-  Value* Set(StringPiece path, Value* in_value);
 
   // Convenience forms of Set().  These methods will replace any existing
   // value at that path, even if it has a different type.
@@ -386,7 +390,8 @@ class BASE_EXPORT DictionaryValue : public Value {
   // DEPRECATED, use DictionaryValue's copy constructor instead.
   // TODO(crbug.com/646113): Delete this and migrate callsites.
   DictionaryValue* DeepCopy() const;
-  // Preferred version of DeepCopy. TODO(estade): remove the above.
+  // DEPRECATED, use DictionaryValue's copy constructor instead.
+  // TODO(crbug.com/646113): Delete this and migrate callsites.
   std::unique_ptr<DictionaryValue> CreateDeepCopy() const;
 };
 
@@ -404,18 +409,23 @@ class BASE_EXPORT ListValue : public Value {
   explicit ListValue(ListStorage&& in_list) noexcept;
 
   // Clears the contents of this ListValue
+  // DEPRECATED, use GetList()::clear() instead.
   void Clear();
 
   // Returns the number of Values in this list.
+  // DEPRECATED, use GetList()::size() instead.
   size_t GetSize() const { return list_->size(); }
 
   // Returns the capacity of storage for Values in this list.
+  // DEPRECATED, use GetList()::capacity() instead.
   size_t capacity() const { return list_->capacity(); }
 
   // Returns whether the list is empty.
+  // DEPRECATED, use GetList()::empty() instead.
   bool empty() const { return list_->empty(); }
 
   // Reserves storage for at least |n| values.
+  // DEPRECATED, use GetList()::reserve() instead.
   void Reserve(size_t n);
 
   // Sets the list item at the given index to be the Value specified by
@@ -423,12 +433,14 @@ class BASE_EXPORT ListValue : public Value {
   // Values will be used to pad out the list.
   // Returns true if successful, or false if the index was negative or
   // the value is a null pointer.
+  // DEPRECATED, use GetList()::operator[] instead.
   bool Set(size_t index, std::unique_ptr<Value> in_value);
 
   // Gets the Value at the given index.  Modifies |out_value| (and returns true)
   // only if the index falls within the current list range.
   // Note that the list always owns the Value passed out via |out_value|.
   // |out_value| is optional and will only be set if non-NULL.
+  // DEPRECATED, use GetList()::operator[] instead.
   bool Get(size_t index, const Value** out_value) const;
   bool Get(size_t index, Value** out_value);
 
@@ -436,19 +448,26 @@ class BASE_EXPORT ListValue : public Value {
   // only if the index is valid and the Value at that index can be returned
   // in the specified form.
   // |out_value| is optional and will only be set if non-NULL.
+  // DEPRECATED, use GetList()::operator[]::GetBool() instead.
   bool GetBoolean(size_t index, bool* out_value) const;
+  // DEPRECATED, use GetList()::operator[]::GetInt() instead.
   bool GetInteger(size_t index, int* out_value) const;
   // Values of both type Type::INTEGER and Type::DOUBLE can be obtained as
   // doubles.
+  // DEPRECATED, use GetList()::operator[]::GetDouble() instead.
   bool GetDouble(size_t index, double* out_value) const;
+  // DEPRECATED, use GetList()::operator[]::GetString() instead.
   bool GetString(size_t index, std::string* out_value) const;
   bool GetString(size_t index, string16* out_value) const;
+  // DEPRECATED, use GetList()::operator[]::GetBlob() instead.
   bool GetBinary(size_t index, const Value** out_value) const;
   bool GetBinary(size_t index, Value** out_value);
+
   bool GetDictionary(size_t index, const DictionaryValue** out_value) const;
   bool GetDictionary(size_t index, DictionaryValue** out_value);
 
   using Value::GetList;
+  // DEPRECATED, use GetList()::operator[]::GetList() instead.
   bool GetList(size_t index, const ListValue** out_value) const;
   bool GetList(size_t index, ListValue** out_value);
 
@@ -457,58 +476,73 @@ class BASE_EXPORT ListValue : public Value {
   // passed out via |out_value|.  If |out_value| is NULL, the removed value will
   // be deleted.  This method returns true if |index| is valid; otherwise
   // it will return false and the ListValue object will be unchanged.
+  // DEPRECATED, use GetList()::erase() instead.
   bool Remove(size_t index, std::unique_ptr<Value>* out_value);
 
   // Removes the first instance of |value| found in the list, if any, and
   // deletes it. |index| is the location where |value| was found. Returns false
   // if not found.
+  // DEPRECATED, use GetList()::erase() instead.
   bool Remove(const Value& value, size_t* index);
 
   // Removes the element at |iter|. If |out_value| is NULL, the value will be
   // deleted, otherwise ownership of the value is passed back to the caller.
   // Returns an iterator pointing to the location of the element that
   // followed the erased element.
+  // DEPRECATED, use GetList()::erase() instead.
   iterator Erase(iterator iter, std::unique_ptr<Value>* out_value);
 
   // Appends a Value to the end of the list.
+  // DEPRECATED, use GetList()::push_back() instead.
   void Append(std::unique_ptr<Value> in_value);
 
   // Convenience forms of Append.
+  // DEPRECATED, use GetList()::emplace_back() instead.
   void AppendBoolean(bool in_value);
   void AppendInteger(int in_value);
   void AppendDouble(double in_value);
   void AppendString(StringPiece in_value);
   void AppendString(const string16& in_value);
+  // DEPRECATED, use GetList()::emplace_back() in a loop instead.
   void AppendStrings(const std::vector<std::string>& in_values);
   void AppendStrings(const std::vector<string16>& in_values);
 
   // Appends a Value if it's not already present. Returns true if successful,
   // or false if the value was already
+  // DEPRECATED, use std::find() with GetList()::push_back() instead.
   bool AppendIfNotPresent(std::unique_ptr<Value> in_value);
 
   // Insert a Value at index.
   // Returns true if successful, or false if the index was out of range.
+  // DEPRECATED, use GetList()::insert() instead.
   bool Insert(size_t index, std::unique_ptr<Value> in_value);
 
   // Searches for the first instance of |value| in the list using the Equals
   // method of the Value type.
   // Returns a const_iterator to the found item or to end() if none exists.
+  // DEPRECATED, use std::find() instead.
   const_iterator Find(const Value& value) const;
 
   // Swaps contents with the |other| list.
+  // DEPRECATED, use GetList()::swap() instead.
   void Swap(ListValue* other);
 
   // Iteration.
+  // DEPRECATED, use GetList()::begin() instead.
   iterator begin() { return list_->begin(); }
+  // DEPRECATED, use GetList()::end() instead.
   iterator end() { return list_->end(); }
 
+  // DEPRECATED, use GetList()::begin() instead.
   const_iterator begin() const { return list_->begin(); }
+  // DEPRECATED, use GetList()::end() instead.
   const_iterator end() const { return list_->end(); }
 
   // DEPRECATED, use ListValue's copy constructor instead.
   // TODO(crbug.com/646113): Delete this and migrate callsites.
   ListValue* DeepCopy() const;
-  // Preferred version of DeepCopy. TODO(estade): remove DeepCopy.
+  // DEPRECATED, use ListValue's copy constructor instead.
+  // TODO(crbug.com/646113): Delete this and migrate callsites.
   std::unique_ptr<ListValue> CreateDeepCopy() const;
 };
 

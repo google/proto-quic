@@ -1215,6 +1215,8 @@ if (enable_java_templates) {
   #   supports_android: If true, Android targets (android_library, android_apk)
   #     may depend on this target. Note: if true, this target must only use the
   #     subset of Java available on Android.
+  #   process_java8: The specified prebuilt jar contains Java 8 bytecode;
+  #     process it for compatibility with Java 7.
   #
   # Example
   #   java_prebuilt("foo_java") {
@@ -1433,6 +1435,8 @@ if (enable_java_templates) {
   #     Defaults to the input .jar file name.
   #   proguard_configs: List of proguard configs to use in final apk step for
   #     any apk that depends on this library.
+  #   process_java8: The specified prebuilt jar contains Java 8 bytecode;
+  #     process it for compatibility with Java 7.
   #
   # Example
   #   android_java_prebuilt("foo_java") {
@@ -2063,6 +2067,9 @@ if (enable_java_templates) {
         }
         args = [ "--inputs=@FileArg($_dex_arg_key)" ]
       }
+
+      # http://crbug.com/725224. Speculative fix for bots running out of memory.
+      use_pool = true
     }
 
     _native_libs_file_arg_dep = ":$build_config_target"

@@ -8,6 +8,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "net/quic/platform/api/quic_export.h"
+
 namespace net {
 
 // Sends and receives data with a particular QUIC stream ID, reliably and

@@ -13,7 +13,8 @@ class SimplePage(page_module.Page):
         url=url,
         page_set=page_set,
         shared_page_state_class=shared_page_state.Shared10InchTabletPageState,
-        credentials_path='data/credentials.json')
+        credentials_path='data/credentials.json',
+        name=url)
 
   def RunNavigateSteps(self, action_runner):
     super(SimplePage, self).RunNavigateSteps(action_runner)
@@ -37,7 +38,8 @@ class SimpleMobileSitesPageSet(story.StorySet):
   def __init__(self):
     super(SimpleMobileSitesPageSet, self).__init__(
       archive_data_file='data/simple_mobile_sites.json',
-      cloud_storage_bucket=story.PUBLIC_BUCKET)
+      cloud_storage_bucket=story.PUBLIC_BUCKET,
+      verify_names=True)
 
     scroll_page_list = [
       # Why: Scrolls moderately complex pages (up to 60 layers)

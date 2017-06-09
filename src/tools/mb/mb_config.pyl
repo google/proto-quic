@@ -46,7 +46,7 @@
       'Android Cronet MIPS Builder': 'android_cronet_release_bot_minimal_symbols_mipsel',
       'Android Cronet x86 Builder': 'android_cronet_release_bot_minimal_symbols_x86',
       'Android Cronet x86 Builder (dbg)': 'android_cronet_debug_static_bot_x86',
-      'Android MIPS Builder (dbg)': 'android_debug_static_minimal_symbols_mipsel',
+      'Android MIPS Builder (dbg)': 'android_debug_static_bot_mipsel',
       'Android N5X Swarm Builder': 'android_release_bot_minimal_symbols_arm64',
       'Android arm Builder (dbg)': 'android_debug_static_bot',
       'Android arm64 Builder (dbg)': 'android_debug_static_bot_arm64',
@@ -102,7 +102,7 @@
       'Android deterministic': 'android_without_codecs_release_bot_minimal_symbols',
       'Android deterministic (dbg)': 'android_debug_bot',
       'Browser Side Navigation Linux': 'release_bot',
-      'CFI Linux CF': 'cfi_full_cfi_diag_release_static',
+      'CFI Linux CF': 'cfi_full_cfi_diag_recover_release_static',
       'CFI Linux ToT': 'cfi_full_clang_tot_release_static',
       'CFI Linux': 'cfi_release_static',
       'CFI Linux Full': 'cfi_thin_lto_full_release_static_use_lld',
@@ -178,6 +178,7 @@
       'CrWinClngLLDdbg': 'clang_tot_full_symbols_shared_debug_use_lld_x86',
       'EarlGreyiOS': 'ios',
       'Fuchsia': 'release_bot_fuchsia',
+      'Fuchsia (dbg)': 'debug_bot_fuchsia',
       'GomaCanaryiOS': 'ios',
       'ios-simulator': 'ios',
       'Headless Linux (dbg)': 'headless_linux_debug_bot',
@@ -215,6 +216,7 @@
       'Win 10 Fast Ring': 'release_trybot',
       'Windows deterministic': 'release_bot_x86_minimal_symbols',
       'Windows Clang deterministic': 'clang_release_bot_minimal_symbols_x86',
+      'Windows Clang Analyzer': 'windows_chromium_analysis',
     },
 
     'chromium.goma': {
@@ -384,7 +386,7 @@
       'V8 Android GN (dbg)': 'android_debug_bot',
       'V8 Linux GN': 'release_bot',
       'V8-Blink Linux 64': 'release_bot',
-      'V8-Blink Linux 64 - ignition': 'release_bot',
+      'V8-Blink Linux 64 - future': 'release_bot',
       'V8-Blink Linux 64 (dbg)': 'debug_bot',
       'V8-Blink Mac': 'release_bot',
       'V8-Blink Win': 'release_bot_x86_minimal_symbols',
@@ -813,8 +815,8 @@
       'android', 'debug_static_bot', 'x86',
     ],
 
-    'android_debug_static_minimal_symbols_mipsel': [
-      'android', 'debug', 'static', 'minimal_symbols', 'mipsel',
+    'android_debug_static_bot_mipsel': [
+      'android', 'debug_static_bot', 'minimal_symbols', 'mipsel',
     ],
 
     'android_debug_trybot_java_coverage': [
@@ -973,8 +975,8 @@
       'cast', 'cast_audio', 'release_trybot',
     ],
 
-    'cfi_full_cfi_diag_release_static': [
-      'cfi_full', 'cfi_diag', 'release', 'static',
+    'cfi_full_cfi_diag_recover_release_static': [
+      'cfi_full', 'cfi_diag', 'cfi_recover', 'release', 'static',
     ],
 
     'cfi_full_clang_tot_release_static': [
@@ -1179,6 +1181,10 @@
       'debug_bot',
     ],
 
+    'debug_bot_fuchsia': [
+      'debug_bot', 'fuchsia',
+    ],
+
     'debug_bot_x86': [
       'debug_bot', 'x86',
     ],
@@ -1295,6 +1301,10 @@
     'ios': [ 'error'],
 
     'linux_chromium_analysis': [
+      'analysis'
+    ],
+
+    'windows_chromium_analysis': [
       'analysis'
     ],
 
@@ -1584,6 +1594,10 @@
 
     'cfi_diag': {
       'gn_args': 'use_cfi_diag=true',
+    },
+
+    'cfi_recover': {
+      'gn_args': 'use_cfi_recover=true',
     },
 
     'chrome_pgo_phase_1': {
@@ -1901,10 +1915,7 @@
     },
 
     'v8_future': {
-      # TODO(machenbach): Switch back to v8_enable_future=true when
-      # turbofan+ignition are stable.
-      # http://crbug.com/682617
-      'gn_args': 'v8_disable_turbo=true',
+      'gn_args': 'v8_enable_future=true',
     },
 
     'v8_heap': {

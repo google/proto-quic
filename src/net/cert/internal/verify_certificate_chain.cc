@@ -68,31 +68,42 @@ DEFINE_CERT_ERROR_ID(kNoValidPolicy, "No valid policy");
 DEFINE_CERT_ERROR_ID(kPolicyMappingAnyPolicy,
                      "PolicyMappings must not map anyPolicy");
 
-bool IsHandledCriticalExtensionOid(const der::Input& oid) {
-  if (oid == BasicConstraintsOid())
+bool IsHandledCriticalExtension(const ParsedExtension& extension) {
+  if (extension.oid == BasicConstraintsOid())
     return true;
   // Key Usage is NOT processed for end-entity certificates (this is the
   // responsibility of callers), however it is considered "handled" here in
   // order to allow being marked as critical.
-  if (oid == KeyUsageOid())
+  if (extension.oid == KeyUsageOid())
     return true;
-  if (oid == ExtKeyUsageOid())
+  if (extension.oid == ExtKeyUsageOid())
     return true;
-  if (oid == NameConstraintsOid())
+  if (extension.oid == NameConstraintsOid())
     return true;
-  if (oid == SubjectAltNameOid())
+  if (extension.oid == SubjectAltNameOid())
     return true;
-  // TODO(eroman): The policy qualifiers are not processed (or in some cases
-  // even parsed). This is fine when the policies extension is non-critical,
-  // however if it is critical the code should also ensure that the policy
-  // qualifiers are only recognized ones (CPS and User Notice).
-  if (oid == CertificatePoliciesOid())
+  if (extension.oid == CertificatePoliciesOid()) {
+    // Policy qualifiers are skipped during processing, so if the
+    // extension is marked critical need to ensure there weren't any
+    // qualifiers other than User Notice / CPS.
+    //
+    // This follows from RFC 5280 section 4.2.1.4:
+    //
+    //   If this extension is critical, the path validation software MUST
+    //   be able to interpret this extension (including the optional
+    //   qualifier), or MUST reject the certificate.
+    std::vector<der::Input> unused_policies;
+    return ParseCertificatePoliciesExtension(
+        extension.value, true /*fail_parsing_unknown_qualifier_oids*/,
+        &unused_policies);
+
+    // TODO(eroman): Give a better error message.
+  }
+  if (extension.oid == PolicyMappingsOid())
     return true;
-  if (oid == PolicyMappingsOid())
+  if (extension.oid == PolicyConstraintsOid())
     return true;
-  if (oid == PolicyConstraintsOid())
-    return true;
-  if (oid == InhibitAnyPolicyOid())
+  if (extension.oid == InhibitAnyPolicyOid())
     return true;
 
   return false;
@@ -104,7 +115,7 @@ void VerifyNoUnconsumedCriticalExtensions(const ParsedCertificate& cert,
                                           CertErrors* errors) {
   for (const auto& it : cert.extensions()) {
     const ParsedExtension& extension = it.second;
-    if (extension.critical && !IsHandledCriticalExtensionOid(extension.oid)) {
+    if (extension.critical && !IsHandledCriticalExtension(extension)) {
       errors->AddError(kUnconsumedCriticalExtension,
                        CreateCertErrorParams2Der("oid", extension.oid, "value",
                                                  extension.value));

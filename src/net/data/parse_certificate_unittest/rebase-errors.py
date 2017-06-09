@@ -14,9 +14,9 @@ To use this run the affected tests, and then pass the input to this script
   $ ./out/Release/net_unittests --gtest_filter="*ParseCertificate*" | \
      net/data/parse_certificate_unittest/rebase-errors.py
 
-The script works by scanning the stdout looking for gtest failures when
-comparing "errors.ToDebugString()". The C++ test side should have been
-instrumented to dump out the test file's path on mismatch.
+The script works by scanning the stdout looking for gtest failures having a
+particular format. The C++ test side should have been instrumented to dump
+out the test file's path on mismatch.
 
 This script will then update the corresponding .pem file
 """
@@ -32,14 +32,19 @@ import re
 
 
 # Regular expression to find the failed errors in test stdout.
-#  * Group 1 of the match is the actual error text (backslash-escaped)
-#  * Group 2 of the match is file path (relative to //src) where the expected
-#    errors were read from.
+#  * Group 1 of the match is file path (relative to //src) where the
+#    expected errors were read from.
+#  * Group 2 of the match is the actual error text
 failed_test_regex = re.compile(r"""
-Value of: errors.ToDebugString\(\)
-  Actual: "(.*)"
-(?:.|\n)+?
-Test file: (.*[.]pem)
+Cert errors don't match expectations \((.+?)\)
+
+EXPECTED:
+
+(?:.|\n)*?
+ACTUAL:
+
+((?:.|\n)*?)
+===> Use net/data/parse_certificate_unittest/rebase-errors.py to rebaseline.
 """, re.MULTILINE)
 
 
@@ -129,10 +134,11 @@ def main():
     test_stdout = sys.stdin.read()
 
   for m in failed_test_regex.finditer(test_stdout):
-    actual_errors = m.group(1)
-    actual_errors = actual_errors.decode('string-escape')
-    relative_test_path = m.group(2)
-    fixup_pem_file(get_abs_path(relative_test_path), actual_errors)
+    src_relative_errors_path = m.group(1)
+    errors_path = get_abs_path(src_relative_errors_path)
+    actual_errors = m.group(2)
+
+    fixup_pem_file(errors_path, actual_errors)
 
 
 if __name__ == "__main__":

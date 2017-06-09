@@ -15,7 +15,6 @@
 #include "base/time/tick_clock.h"
 #include "base/time/time.h"
 #include "net/base/backoff_entry.h"
-#include "net/reporting/reporting_browsing_data_remover.h"
 #include "net/reporting/reporting_cache.h"
 #include "net/reporting/reporting_delegate.h"
 #include "net/reporting/reporting_delivery_agent.h"
@@ -80,12 +79,11 @@ ReportingContext::ReportingContext(const ReportingPolicy& policy,
       tick_clock_(std::move(tick_clock)),
       uploader_(std::move(uploader)),
       delegate_(std::move(delegate)),
-      cache_(base::MakeUnique<ReportingCache>(this)),
-      endpoint_manager_(base::MakeUnique<ReportingEndpointManager>(this)),
+      cache_(ReportingCache::Create(this)),
+      endpoint_manager_(ReportingEndpointManager::Create(this)),
       delivery_agent_(ReportingDeliveryAgent::Create(this)),
       persister_(ReportingPersister::Create(this)),
       garbage_collector_(ReportingGarbageCollector::Create(this)),
-      network_change_observer_(ReportingNetworkChangeObserver::Create(this)),
-      browsing_data_remover_(ReportingBrowsingDataRemover::Create(this)) {}
+      network_change_observer_(ReportingNetworkChangeObserver::Create(this)) {}
 
 }  // namespace net

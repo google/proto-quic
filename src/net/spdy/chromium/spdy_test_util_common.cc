@@ -411,6 +411,7 @@ HttpNetworkSession::Params SpdySessionDependencies::CreateSessionParams(
 HttpNetworkSession::Context SpdySessionDependencies::CreateSessionContext(
     SpdySessionDependencies* session_deps) {
   HttpNetworkSession::Context context;
+  context.client_socket_factory = session_deps->socket_factory.get();
   context.host_resolver = session_deps->host_resolver.get();
   context.cert_verifier = session_deps->cert_verifier.get();
   context.channel_id_service = session_deps->channel_id_service.get();
@@ -1023,14 +1024,6 @@ SpdySerializedFrame SpdyTestUtil::ConstructSpdyReplyError(
   AppendToHeaderBlock(extra_headers, extra_header_count, &block);
 
   return ConstructSpdyReply(stream_id, std::move(block));
-}
-
-SpdySerializedFrame SpdyTestUtil::ConstructSpdyGetReplyRedirect(int stream_id) {
-  static const char* const kExtraHeaders[] = {
-    "location", "http://www.foo.com/index.php",
-  };
-  return ConstructSpdyReplyError("301", kExtraHeaders,
-                                 arraysize(kExtraHeaders) / 2, stream_id);
 }
 
 SpdySerializedFrame SpdyTestUtil::ConstructSpdyReplyError(int stream_id) {

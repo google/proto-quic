@@ -8,6 +8,8 @@ from telemetry import story
 
 class SimplePage(page_module.Page):
   def __init__(self, url, page_set, credentials='', name=''):
+    if name == '':
+      name = url
     super(SimplePage, self).__init__(
         url, page_set=page_set, name=name,
         credentials_path='data/credentials.json',
@@ -92,7 +94,8 @@ class Top10PageSet(story.StorySet):
   def __init__(self):
     super(Top10PageSet, self).__init__(
       archive_data_file='data/top_10.json',
-      cloud_storage_bucket=story.PARTNER_BUCKET)
+      cloud_storage_bucket=story.PARTNER_BUCKET,
+      verify_names=True)
 
     # top google property; a google tab is often open
     self.AddStory(Google(self))

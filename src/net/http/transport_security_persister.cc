@@ -15,6 +15,7 @@
 #include "base/json/json_reader.h"
 #include "base/json/json_writer.h"
 #include "base/location.h"
+#include "base/memory/ptr_util.h"
 #include "base/sequenced_task_runner.h"
 #include "base/task_runner_util.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -27,8 +28,9 @@ namespace net {
 
 namespace {
 
-base::ListValue* SPKIHashesToListValue(const HashValueVector& hashes) {
-  base::ListValue* pins = new base::ListValue;
+std::unique_ptr<base::ListValue> SPKIHashesToListValue(
+    const HashValueVector& hashes) {
+  auto pins = base::MakeUnique<base::ListValue>();
   for (size_t i = 0; i != hashes.size(); i++)
     pins->AppendString(hashes[i].ToString());
   return pins;

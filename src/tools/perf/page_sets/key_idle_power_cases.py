@@ -16,7 +16,8 @@ class KeyIdlePowerPage(page_module.Page):
         url=url,
         page_set=page_set,
         shared_page_state_class=(android_screen_restoration_shared_state
-            .AndroidScreenRestorationSharedState))
+            .AndroidScreenRestorationSharedState),
+        name=url.split('/')[-1])
     self._turn_screen_off = turn_screen_off
     self._duration_seconds = duration_seconds
 
@@ -57,7 +58,7 @@ class KeyIdlePowerCasesPageSet(story.StorySet):
   """ Key idle power cases """
 
   def __init__(self):
-    super(KeyIdlePowerCasesPageSet, self).__init__()
+    super(KeyIdlePowerCasesPageSet, self).__init__(verify_names=True)
 
     foreground_urls_list = [
       # Why: Ensure minimal activity for static, empty pages in the foreground.

@@ -235,10 +235,11 @@ bool TaskTracker::WillPostTask(const Task* task) {
   return true;
 }
 
-bool TaskTracker::RunTask(std::unique_ptr<Task> task,
-                          const SequenceToken& sequence_token) {
+bool TaskTracker::RunNextTask(Sequence* sequence) {
+  DCHECK(sequence);
+
+  std::unique_ptr<Task> task = sequence->TakeTask();
   DCHECK(task);
-  DCHECK(sequence_token.IsValid());
 
   const TaskShutdownBehavior shutdown_behavior =
       task->traits.shutdown_behavior();
@@ -246,14 +247,16 @@ bool TaskTracker::RunTask(std::unique_ptr<Task> task,
   const bool is_delayed = !task->delayed_run_time.is_null();
 
   if (can_run_task) {
-    PerformRunTask(std::move(task), sequence_token);
+    PerformRunTask(std::move(task), sequence);
     AfterRunTask(shutdown_behavior);
   }
 
   if (!is_delayed)
     DecrementNumPendingUndelayedTasks();
 
-  return can_run_task;
+  OnRunNextTaskCompleted();
+
+  return sequence->Pop();
 }
 
 bool TaskTracker::HasShutdownStarted() const {
@@ -278,7 +281,7 @@ void TaskTracker::SetHasShutdownStartedForTesting() {
 }
 
 void TaskTracker::PerformRunTask(std::unique_ptr<Task> task,
-                                 const SequenceToken& sequence_token) {
+                                 Sequence* sequence) {
   RecordTaskLatencyHistogram(task.get());
 
   const bool previous_singleton_allowed =
@@ -291,6 +294,8 @@ void TaskTracker::PerformRunTask(std::unique_ptr<Task> task,
       task->traits.with_base_sync_primitives());
 
   {
+    const SequenceToken& sequence_token = sequence->token();
+    DCHECK(sequence_token.IsValid());
     ScopedSetSequenceTokenForCurrentThread
         scoped_set_sequence_token_for_current_thread(sequence_token);
     ScopedSetTaskPriorityForCurrentThread

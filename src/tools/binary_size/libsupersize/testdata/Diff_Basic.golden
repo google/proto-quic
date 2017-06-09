@@ -9,8 +9,7 @@ New Metadata:
 Section Sizes (Total=0 bytes (0 bytes)):
     .bss: 0 bytes (0 bytes) (not included in totals)
     .data: 0 bytes (0 bytes) (0.0%)
-    .data.rel.ro: 0 bytes (0 bytes) (0.0%)
-    .data.rel.ro.local: 0 bytes (0 bytes) (0.0%)
+    .rel.dyn: 0 bytes (0 bytes) (0.0%)
     .rodata: 0 bytes (0 bytes) (0.0%)
     .text: 0 bytes (0 bytes) (0.0%)
 
@@ -18,6 +17,8 @@ Other section sizes:
     .ARM.attributes: 0 bytes (0 bytes)
     .ARM.exidx: 0 bytes (0 bytes)
     .ARM.extab: 0 bytes (0 bytes)
+    .data.rel.ro: 0 bytes (0 bytes)
+    .data.rel.ro.local: 0 bytes (0 bytes)
     .dynamic: 0 bytes (0 bytes)
     .dynstr: 0 bytes (0 bytes)
     .dynsym: 0 bytes (0 bytes)
@@ -32,7 +33,6 @@ Other section sizes:
     .note.gnu.build-id: 0 bytes (0 bytes)
     .note.gnu.gold-version: 0 bytes (0 bytes)
     .plt: 0 bytes (0 bytes)
-    .rel.dyn: 0 bytes (0 bytes)
     .rel.plt: 0 bytes (0 bytes)
     .shstrtab: 0 bytes (0 bytes)
     .strtab: 0 bytes (0 bytes)

@@ -13,7 +13,8 @@ class OopifBasicPageSet(story.StorySet):
   def __init__(self, cache_temperatures=None):
     super(OopifBasicPageSet, self).__init__(
         archive_data_file='data/oopif_basic.json',
-        cloud_storage_bucket=story.PARTNER_BUCKET)
+        cloud_storage_bucket=story.PARTNER_BUCKET,
+        verify_names=True)
     if cache_temperatures is None:
       cache_temperatures = [cache_temperature_module.ANY]
 
@@ -36,4 +37,4 @@ class OopifBasicPageSet(story.StorySet):
 
     for url in urls:
       for temp in cache_temperatures:
-        self.AddStory(page.Page(url, self, cache_temperature=temp))
+        self.AddStory(page.Page(url, self, cache_temperature=temp, name=url))

@@ -8,7 +8,6 @@ import common
 from common import TestDriver
 from common import IntegrationTest
 from common import ParseFlags
-from decorators import NotAndroid
 from decorators import Slow
 
 from selenium.webdriver.common.by import By
@@ -86,18 +85,10 @@ class Video(IntegrationTest):
 
   # Check that the compressed video can be seeked. Use a slow network to ensure
   # the entire video isn't downloaded before we have a chance to seek.
-  #
-  # This test cannot run on android because of control_network_connection=True.
-  # That option is used to reduce flakes that might happen on fast networks,
-  # where the video is completely downloaded before a seeking request can be
-  # sent. The test can be manually simulated by the following steps: set network
-  # emulation in DevTools on Android (via device inspector), load a video, pause
-  # the video, then seek and verify the seek continues to play the video.
   @Slow
-  @NotAndroid
   def testVideoSeeking(self):
     with TestDriver(control_network_connection=True) as t:
-      t.SetNetworkConnection("3G")
+      t.SetNetworkConnection("2G")
       t.AddChromeArg('--enable-spdy-proxy-auth')
       t.LoadURL(
           'http://check.googlezip.net/cacheable/video/'+
@@ -124,7 +115,10 @@ class Video(IntegrationTest):
         };
         v.play();
         ''')
-      t.WaitForJavascriptExpression('window.testDone', 10)
+      if ParseFlags().android:
+        # v.play() won't work on Android, so give it a click instead.
+        t.FindElement(By.TAG_NAME, "video").click()
+      t.WaitForJavascriptExpression('window.testDone', 15)
       # Check request was proxied and we got a compressed video back.
       # We expect to make multiple requests for the video: ensure they
       # all have the same ETag.

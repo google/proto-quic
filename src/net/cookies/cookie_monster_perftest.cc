@@ -154,7 +154,8 @@ TEST_F(CookieMonsterTest, TestAddCookiesOnSingleHost) {
   timer3.Done();
 }
 
-TEST_F(CookieMonsterTest, TestAddCookieOnManyHosts) {
+// TODO(xunjieli): Renable after crbug.com/730000 is fixed.
+TEST_F(CookieMonsterTest, DISABLED_TestAddCookieOnManyHosts) {
   std::unique_ptr<CookieMonster> cm(new CookieMonster(nullptr, nullptr));
   std::string cookie(kCookieLine);
   std::vector<GURL> gurls;  // just wanna have ffffuunnn

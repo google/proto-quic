@@ -439,12 +439,6 @@ class SpdyTestUtil {
                                             int extra_header_count,
                                             int stream_id);
 
-  // Constructs a standard SPDY HEADERS frame to match the SPDY GET.
-  // |extra_headers| are the extra header-value pairs, which typically
-  // will vary the most between calls.
-  // Returns a SpdySerializedFrame.
-  SpdySerializedFrame ConstructSpdyGetReplyRedirect(int stream_id);
-
   // Constructs a standard SPDY HEADERS frame with an Internal Server
   // Error status code.
   // Returns a SpdySerializedFrame.

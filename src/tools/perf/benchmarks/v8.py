@@ -97,35 +97,6 @@ class V8InfiniteScroll(_InfiniteScrollBenchmark):
   def Name(cls):
     return 'v8.infinite_scroll_tbmv2'
 
-@benchmark.Disabled('all')
-@benchmark.Disabled('android') # Android runs V8MobileInfiniteScroll.
-@benchmark.Owner(emails=['mvstaton@chromium.org'])
-class V8InfiniteScrollTurbo(V8InfiniteScroll):
-  """Measures V8 GC metrics using Ignition+TurboFan."""
-
-  def SetExtraBrowserOptions(self, options):
-    super(V8InfiniteScrollTurbo, self).SetExtraBrowserOptions(options)
-    v8_helper.EnableTurbo(options)
-
-  @classmethod
-  def Name(cls):
-    return 'v8.infinite_scroll-turbo_tbmv2'
-
-
-@benchmark.Disabled('linux')  # crbug.com/715716
-@benchmark.Disabled('android') # Android runs V8MobileInfiniteScroll.
-@benchmark.Owner(emails=['hablich@chromium.org'])
-class V8InfiniteScrollClassic(V8InfiniteScroll):
-  """Measures V8 GC metrics using the Classic pipeline."""
-
-  def SetExtraBrowserOptions(self, options):
-    super(V8InfiniteScrollClassic, self).SetExtraBrowserOptions(options)
-    v8_helper.EnableClassic(options)
-
-  @classmethod
-  def Name(cls):
-    return 'v8.infinite_scroll-classic_tbmv2'
-
 
 @benchmark.Enabled('android')
 @benchmark.Owner(emails=['ulan@chromium.org'])
@@ -139,38 +110,6 @@ class V8MobileInfiniteScroll(_InfiniteScrollBenchmark):
   @classmethod
   def Name(cls):
     return 'v8.mobile_infinite_scroll_tbmv2'
-
-
-@benchmark.Disabled('all') # was enabled only on android
-@benchmark.Owner(emails=['mvstaton@chromium.org'])
-class V8MobileInfiniteScrollTurbo(V8MobileInfiniteScroll):
-  """Measures V8 GC metrics and memory usage while scrolling the top mobile
-  web pages and running Ignition+TurboFan.
-  http://www.chromium.org/developers/design-documents/rendering-benchmarks"""
-
-  def SetExtraBrowserOptions(self, options):
-    super(V8MobileInfiniteScrollTurbo, self).SetExtraBrowserOptions(options)
-    v8_helper.EnableTurbo(options)
-
-  @classmethod
-  def Name(cls):
-    return 'v8.mobile_infinite_scroll-turbo_tbmv2'
-
-
-@benchmark.Enabled('android')
-@benchmark.Owner(emails=['hablich@chromium.org'])
-class V8MobileInfiniteScrollClassic(V8MobileInfiniteScroll):
-  """Measures V8 GC metrics and memory usage while scrolling the top mobile
-  web pages and running the Classic pipeline.
-  http://www.chromium.org/developers/design-documents/rendering-benchmarks"""
-
-  def SetExtraBrowserOptions(self, options):
-    super(V8MobileInfiniteScrollClassic, self).SetExtraBrowserOptions(options)
-    v8_helper.EnableClassic(options)
-
-  @classmethod
-  def Name(cls):
-    return 'v8.mobile_infinite_scroll-classic_tbmv2'
 
 
 class _Top25RuntimeStats(perf_benchmark.PerfBenchmark):

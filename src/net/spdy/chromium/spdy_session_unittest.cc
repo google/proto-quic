@@ -5511,11 +5511,17 @@ class SendInitialSettingsOnNewSpdySessionTest : public SpdySessionTest {
 
     MockRead reads[] = {MockRead(SYNCHRONOUS, ERR_IO_PENDING)};
 
+    SpdySerializedFrame preface(const_cast<char*>(kHttp2ConnectionHeaderPrefix),
+                                kHttp2ConnectionHeaderPrefixSize,
+                                /* owns_buffer = */ false);
     SpdySerializedFrame settings_frame(
         spdy_util_.ConstructSpdySettings(expected_settings));
-    MockWrite writes[] = {MockWrite(ASYNC, kHttp2ConnectionHeaderPrefix,
-                                    kHttp2ConnectionHeaderPrefixSize),
-                          CreateMockWrite(settings_frame)};
+    const SpdySerializedFrame* frames[2] = {&preface, &settings_frame};
+    char combined_frames[100];
+    int combined_frames_len = CombineFrames(
+        frames, arraysize(frames), combined_frames, arraysize(combined_frames));
+    MockWrite writes[] = {
+        MockWrite(ASYNC, combined_frames, combined_frames_len)};
 
     StaticSocketDataProvider data(reads, arraysize(reads), writes,
                                   arraysize(writes));

@@ -126,8 +126,8 @@ class _DromaeoBenchmark(perf_benchmark.PerfBenchmark):
     return ps
 
 
-@benchmark.Owner(emails=['yukishiino@chromium.org',
-                         'bashi@chromium.org',
+@benchmark.Owner(emails=['jbroman@chromium.org',
+                         'yukishiino@chromium.org',
                          'haraken@chromium.org'])
 class DromaeoDomCoreAttr(_DromaeoBenchmark):
   """Dromaeo DOMCore attr JavaScript benchmark.
@@ -147,8 +147,8 @@ class DromaeoDomCoreAttr(_DromaeoBenchmark):
         pass # http://dromaeo.com?dom-attr not disabled.
     return StoryExpectations()
 
-@benchmark.Owner(emails=['yukishiino@chromium.org',
-                         'bashi@chromium.org',
+@benchmark.Owner(emails=['jbroman@chromium.org',
+                         'yukishiino@chromium.org',
                          'haraken@chromium.org'])
 class DromaeoDomCoreModify(_DromaeoBenchmark):
   """Dromaeo DOMCore modify JavaScript benchmark.
@@ -169,8 +169,8 @@ class DromaeoDomCoreModify(_DromaeoBenchmark):
     return StoryExpectations()
 
 
-@benchmark.Owner(emails=['yukishiino@chromium.org',
-                         'bashi@chromium.org',
+@benchmark.Owner(emails=['jbroman@chromium.org',
+                         'yukishiino@chromium.org',
                          'haraken@chromium.org'])
 class DromaeoDomCoreQuery(_DromaeoBenchmark):
   """Dromaeo DOMCore query JavaScript benchmark.
@@ -191,8 +191,8 @@ class DromaeoDomCoreQuery(_DromaeoBenchmark):
     return StoryExpectations()
 
 
-@benchmark.Owner(emails=['yukishiino@chromium.org',
-                         'bashi@chromium.org',
+@benchmark.Owner(emails=['jbroman@chromium.org',
+                         'yukishiino@chromium.org',
                          'haraken@chromium.org'])
 class DromaeoDomCoreTraverse(_DromaeoBenchmark):
   """Dromaeo DOMCore traverse JavaScript benchmark.

@@ -1236,16 +1236,16 @@ TEST_P(CertVerifyProcInternalTest, PublicKeyHashes) {
 
   std::vector<std::string> expected_public_key_hashes = {
       // Target
-      "sha1/fSQl8GTgpmark/9mDK9qzIIGfFE=",
-      "sha256/5I5+4ndAhwDiWd1WqfBgDkKAAIEhsq0MfAx25Hoc+dA=",
+      "sha1/eykCtxdjf+9TcP+dle4RZOcuWfI=",
+      "sha256/jpsUnwFFTO7e+l5zQDYhutkf7uA+dCVsWfRvv0UDX40=",
 
       // Intermediate
-      "sha1/7+0Ms07hEkAc6zVPOo+uLtMEwfU=",
-      "sha256/MtnqgdSwAIgEjse7SpxnmyKoo/RTiL9CDIWwFnz4nas=",
+      "sha1/UCuWOTyNcmLrd/Ie2jTjCHyGV7M=",
+      "sha256/D9u0epgvPYlG9YiVp7V+IMT+xhUpB5BhsS/INjDXc4Y=",
 
       // Trust anchor
-      "sha1/dJwvO4gEVIZvretArGyBNggjlrQ=",
-      "sha256/z7x1Szes+eQOqJp6rBK3u/tQMs55FYojZHUCFiBcjuc="};
+      "sha1/7lRAdhiny84OU7rosLno5A+v0ls=",
+      "sha256/VypP3VWL7OaqTJ7mIBehWYlv8khPuFHpWiearZI2YjI="};
 
   // |public_key_hashes| does not have an ordering guarantee.
   EXPECT_THAT(expected_public_key_hashes,

@@ -36,8 +36,7 @@ class QuicHttpStreamPeer;
 // non-owning pointer to a QuicChromiumClientStream which it uses to
 // send and receive data.
 class NET_EXPORT_PRIVATE QuicHttpStream
-    : public QuicChromiumClientStream::Delegate,
-      public QuicClientPushPromiseIndex::Delegate,
+    : public QuicClientPushPromiseIndex::Delegate,
       public MultiplexedHttpStream {
  public:
   explicit QuicHttpStream(
@@ -67,10 +66,6 @@ class NET_EXPORT_PRIVATE QuicHttpStream
       AlternativeService* alternative_service) const override;
   void PopulateNetErrorDetails(NetErrorDetails* details) override;
   void SetPriority(RequestPriority priority) override;
-
-  // QuicChromiumClientStream::Delegate implementation
-  void OnClose() override;
-  void OnError(int error) override;
 
   // QuicClientPushPromiseIndex::Delegate implementation
   bool CheckVary(const SpdyHeaderBlock& client_request,
@@ -130,6 +125,10 @@ class NET_EXPORT_PRIVATE QuicHttpStream
   void EnterStateSendHeaders();
 
   void ResetStream();
+
+  // Returns ERR_QUIC_HANDSHAKE_FAILED, if |rv| is ERR_QUIC_PROTOCOL_ERROR and
+  // the handshake was never confirmed. Otherwise, returns |rv|.
+  int MapStreamError(int rv);
 
   // If |has_response_status_| is false, sets |response_status| to the result
   // of ComputeResponseStatus(). Returns |response_status_|.
@@ -216,8 +215,6 @@ class NET_EXPORT_PRIVATE QuicHttpStream
   NetLogWithSource stream_net_log_;
 
   int session_error_;  // Error code from the connection shutdown.
-  QuicErrorCode quic_connection_error_;       // Cached connection error code.
-  QuicRstStreamErrorCode quic_stream_error_;  // Cached stream error code.
 
   bool found_promise_;
   // |QuicClientPromisedInfo| owns this. It will be set when |Try()|

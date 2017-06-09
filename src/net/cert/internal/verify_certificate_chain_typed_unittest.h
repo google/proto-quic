@@ -153,6 +153,13 @@ TYPED_TEST_P(VerifyCertificateChainSingleRootTest, KeyRollover) {
   this->RunTest("key-rollover/newchain.test");
 }
 
+// Test coverage of policies comes primarily from the PKITS tests. The
+// tests here only cover aspects not already tested by PKITS.
+TYPED_TEST_P(VerifyCertificateChainSingleRootTest, Policies) {
+  this->RunTest("unknown-critical-policy-qualifier/main.test");
+  this->RunTest("unknown-non-critical-policy-qualifier/main.test");
+}
+
 // TODO(eroman): Add test that invalid validity dates where the day or month
 // ordinal not in range, like "March 39, 2016" are rejected.
 
@@ -172,7 +179,8 @@ REGISTER_TYPED_TEST_CASE_P(VerifyCertificateChainSingleRootTest,
                            ExtendedKeyUsage,
                            IssuerAndSubjectNotByteForByteEqual,
                            TrustAnchorNotSelfSigned,
-                           KeyRollover);
+                           KeyRollover,
+                           Policies);
 
 }  // namespace net
 

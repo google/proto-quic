@@ -1,20 +1,10 @@
 [
 	["crypto/crypto_test"],
 	["crypto/evp/evp_test", "crypto/evp/evp_tests.txt"],
-	["crypto/fipsmodule/bn_test", "crypto/fipsmodule/bn/bn_tests.txt"],
-	["crypto/fipsmodule/ecdsa_sign_test", "crypto/fipsmodule/ecdsa/ecdsa_sign_tests.txt"],
-	["crypto/fipsmodule/ecdsa_test"],
-	["crypto/fipsmodule/ecdsa_verify_test", "crypto/fipsmodule/ecdsa/ecdsa_verify_tests.txt"],
 	["crypto/fipsmodule/example_mul"],
 	["crypto/fipsmodule/p256-x86_64_test", "crypto/fipsmodule/ec/p256-x86_64_tests.txt"],
-	["crypto/obj/obj_test"],
-	["crypto/pkcs7/pkcs7_test"],
-	["crypto/pkcs8/pkcs12_test"],
-	["crypto/pkcs8/pkcs8_test"],
-	["crypto/thread_test"],
 	["crypto/x509v3/tab_test"],
 	["crypto/x509v3/v3name_test"],
-	["crypto/x509/x509_test"],
 	["decrepit/decrepit_test"],
 	["ssl/ssl_test"]
 ]

@@ -9,6 +9,7 @@
 
 #include "base/bind.h"
 #include "base/bind_helpers.h"
+#include "base/memory/ptr_util.h"
 #include "base/metrics/field_trial.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/metrics/sparse_histogram.h"
@@ -716,7 +717,7 @@ std::unique_ptr<base::DictionaryValue> SSLClientSocketPool::GetInfoAsValue(
     bool include_nested_pools) const {
   std::unique_ptr<base::DictionaryValue> dict(base_.GetInfoAsValue(name, type));
   if (include_nested_pools) {
-    base::ListValue* list = new base::ListValue();
+    auto list = base::MakeUnique<base::ListValue>();
     if (transport_pool_) {
       list->Append(transport_pool_->GetInfoAsValue("transport_socket_pool",
                                                    "transport_socket_pool",
@@ -732,7 +733,7 @@ std::unique_ptr<base::DictionaryValue> SSLClientSocketPool::GetInfoAsValue(
                                                     "http_proxy_pool",
                                                     true));
     }
-    dict->Set("nested_pools", list);
+    dict->Set("nested_pools", std::move(list));
   }
   return dict;
 }

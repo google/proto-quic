@@ -94,14 +94,16 @@ class HttpStreamFactoryImpl::Request : public HttpStreamRequest {
   // actually subclass HttpStreamRequest::Delegate.
   void OnStreamReady(const SSLConfig& used_ssl_config,
                      const ProxyInfo& used_proxy_info,
-                     HttpStream* stream);
-  void OnBidirectionalStreamImplReady(const SSLConfig& used_ssl_config,
-                                      const ProxyInfo& used_proxy_info,
-                                      BidirectionalStreamImpl* stream);
+                     std::unique_ptr<HttpStream> stream);
+  void OnBidirectionalStreamImplReady(
+      const SSLConfig& used_ssl_config,
+      const ProxyInfo& used_proxy_info,
+      std::unique_ptr<BidirectionalStreamImpl> stream);
 
-  void OnWebSocketHandshakeStreamReady(const SSLConfig& used_ssl_config,
-                                       const ProxyInfo& used_proxy_info,
-                                       WebSocketHandshakeStreamBase* stream);
+  void OnWebSocketHandshakeStreamReady(
+      const SSLConfig& used_ssl_config,
+      const ProxyInfo& used_proxy_info,
+      std::unique_ptr<WebSocketHandshakeStreamBase> stream);
   void OnStreamFailed(int status, const SSLConfig& used_ssl_config);
   void OnCertificateError(int status,
                           const SSLConfig& used_ssl_config,

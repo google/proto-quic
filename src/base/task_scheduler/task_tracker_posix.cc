@@ -15,11 +15,11 @@ TaskTrackerPosix::TaskTrackerPosix() = default;
 TaskTrackerPosix::~TaskTrackerPosix() = default;
 
 void TaskTrackerPosix::PerformRunTask(std::unique_ptr<Task> task,
-                                      const SequenceToken& sequence_token) {
+                                      Sequence* sequence) {
   DCHECK(watch_file_descriptor_message_loop_);
   FileDescriptorWatcher file_descriptor_watcher(
       watch_file_descriptor_message_loop_);
-  TaskTracker::PerformRunTask(std::move(task), sequence_token);
+  TaskTracker::PerformRunTask(std::move(task), sequence);
 }
 
 #if DCHECK_IS_ON()

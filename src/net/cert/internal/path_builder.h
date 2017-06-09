@@ -78,6 +78,10 @@ class NET_EXPORT CertPathBuilder {
     // |path.trust_anchor| may be null, and the path may be incomplete.
     CertPath path;
 
+    // The set of policies that the certificate is valid for (of the
+    // subset of policies user requested during verification).
+    std::set<der::Input> user_constrained_policy_set;
+
     // The errors/warnings from this path. Use |IsValid()| to determine if the
     // path is valid.
     CertPathErrors errors;
@@ -120,11 +124,18 @@ class NET_EXPORT CertPathBuilder {
   //
   // The caller must keep |trust_store|, |signature_policy|, and |*result| valid
   // for the lifetime of the CertPathBuilder.
+  //
+  // See VerifyCertificateChain() for a more detailed explanation of the
+  // same-named parameters.
   CertPathBuilder(scoped_refptr<ParsedCertificate> cert,
                   TrustStore* trust_store,
                   const SignaturePolicy* signature_policy,
                   const der::GeneralizedTime& time,
                   KeyPurpose key_purpose,
+                  InitialExplicitPolicy initial_explicit_policy,
+                  const std::set<der::Input>& user_initial_policy_set,
+                  InitialPolicyMappingInhibit initial_policy_mapping_inhibit,
+                  InitialAnyPolicyInhibit initial_any_policy_inhibit,
                   Result* result);
   ~CertPathBuilder();
 
@@ -160,6 +171,10 @@ class NET_EXPORT CertPathBuilder {
   const SignaturePolicy* signature_policy_;
   const der::GeneralizedTime time_;
   const KeyPurpose key_purpose_;
+  const InitialExplicitPolicy initial_explicit_policy_;
+  const std::set<der::Input> user_initial_policy_set_;
+  const InitialPolicyMappingInhibit initial_policy_mapping_inhibit_;
+  const InitialAnyPolicyInhibit initial_any_policy_inhibit_;
 
   // Stores the next complete path to attempt verification on. This is filled in
   // by |cert_path_iter_| during the STATE_GET_NEXT_PATH step, and thus should

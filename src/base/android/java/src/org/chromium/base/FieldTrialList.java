@@ -31,6 +31,16 @@ public class FieldTrialList {
         return nativeTrialExists(trialName);
     }
 
+    /**
+     * @param trialName    The name of the trial with the parameter.
+     * @param parameterKey The key of the parameter.
+     * @return The value of the parameter or an empty string if not found.
+     */
+    public static String getVariationParameter(String trialName, String parameterKey) {
+        return nativeGetVariationParameter(trialName, parameterKey);
+    }
+
     private static native String nativeFindFullName(String trialName);
     private static native boolean nativeTrialExists(String trialName);
+    private static native String nativeGetVariationParameter(String trialName, String parameterKey);
 }

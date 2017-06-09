@@ -15,6 +15,7 @@
 
 #include "base/format_macros.h"
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/pickle.h"
 #include "base/strings/string_number_conversions.h"
@@ -62,7 +63,8 @@ const char* const kChallengeResponseHeaders[] = {
 // not to be stored by caches or disclosed otherwise.
 const char* const kCookieResponseHeaders[] = {
   "set-cookie",
-  "set-cookie2"
+  "set-cookie2",
+  "clear-site-data",
 };
 
 // By default, do not cache Strict-Transport-Security or Public-Key-Pins.
@@ -1264,8 +1266,8 @@ bool HttpResponseHeaders::GetContentRangeFor206(
 
 std::unique_ptr<base::Value> HttpResponseHeaders::NetLogCallback(
     NetLogCaptureMode capture_mode) const {
-  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
-  base::ListValue* headers = new base::ListValue();
+  auto dict = base::MakeUnique<base::DictionaryValue>();
+  auto headers = base::MakeUnique<base::ListValue>();
   headers->AppendString(EscapeNonASCII(GetStatusLine()));
   size_t iterator = 0;
   std::string name;
@@ -1278,7 +1280,7 @@ std::unique_ptr<base::Value> HttpResponseHeaders::NetLogCallback(
     headers->AppendString(base::StringPrintf("%s: %s", escaped_name.c_str(),
                                              escaped_value.c_str()));
   }
-  dict->Set("headers", headers);
+  dict->Set("headers", std::move(headers));
   return std::move(dict);
 }
 

@@ -90,9 +90,8 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
     int RequestStream(bool requires_confirmation,
                       const CompletionCallback& callback);
 
-    // Releases |stream_| to the caller and sets |delegate| on the handle.
-    std::unique_ptr<QuicChromiumClientStream::Handle> ReleaseStream(
-        QuicChromiumClientStream::Delegate* delegate);
+    // Releases |stream_| to the caller.
+    std::unique_ptr<QuicChromiumClientStream::Handle> ReleaseStream();
 
     // Sends Rst for the stream, and makes sure that future calls to
     // IsClosedStream(id) return true, which ensures that any subsequent
@@ -193,9 +192,8 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
     // complete |callback| will be called.
     int StartRequest(const CompletionCallback& callback);
 
-    // Releases |stream_| to the caller and sets |delegate| on it.
-    std::unique_ptr<QuicChromiumClientStream::Handle> ReleaseStream(
-        QuicChromiumClientStream::Delegate* delegate);
+    // Releases |stream_| to the caller.
+    std::unique_ptr<QuicChromiumClientStream::Handle> ReleaseStream();
 
    private:
     friend class QuicChromiumClientSession;

@@ -62,6 +62,12 @@ def CompileXCAssets(
       continue
     if line == os.path.abspath(output):
       continue
+    # crbug.com/730054 Xcode 9's beta introduced a CoreUI(DEBUG) message and
+    # IBMessageChannelErrorDomain message that can be ignored.
+    if line.startswith('CoreUI(DEBUG)'):
+      continue
+    if 'Error Domain=IBMessageChannelErrorDomain Code=4' in line:
+      continue
     sys.stderr.write(stdout)
     sys.exit(1)
 

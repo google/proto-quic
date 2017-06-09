@@ -42,13 +42,6 @@ bool ReturnsValidPath(int dir_type) {
   if (dir_type == DIR_USER_DESKTOP)
     check_path_exists = false;
 #endif
-#if defined(OS_WIN)
-  if (dir_type == DIR_TASKBAR_PINS) {
-    // There is no pinned-to-taskbar shortcuts prior to Win7.
-    if (base::win::GetVersion() < base::win::VERSION_WIN7)
-      check_path_exists = false;
-  }
-#endif
 #if defined(OS_MACOSX)
   if (dir_type != DIR_EXE && dir_type != DIR_MODULE &&
       dir_type != FILE_EXE && dir_type != FILE_MODULE) {

@@ -262,11 +262,15 @@ class ThreadPriorityTestThread : public FunctionTestThread {
 TEST(PlatformThreadTest, ThreadPriorityCurrentThread) {
   const bool increase_priority_allowed =
       PlatformThread::CanIncreaseCurrentThreadPriority();
-  if (increase_priority_allowed) {
-    // Bump the priority in order to verify that new threads are started with
-    // normal priority.
+
+// Bump the priority in order to verify that new threads are started with normal
+// priority. Skip this on Mac since this platform doesn't allow changing the
+// priority of the main thread. Also skip this on platforms that don't allow
+// increasing the priority of a thread.
+#if !defined(OS_MACOSX)
+  if (increase_priority_allowed)
     PlatformThread::SetCurrentThreadPriority(ThreadPriority::DISPLAY);
-  }
+#endif
 
   // Toggle each supported priority on the thread and confirm it affects it.
   for (size_t i = 0; i < arraysize(kThreadPriorityTestValues); ++i) {

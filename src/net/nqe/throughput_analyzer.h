@@ -25,13 +25,12 @@ class SingleThreadTaskRunner;
 
 namespace net {
 
+class NetworkQualityEstimatorParams;
 class URLRequest;
 
 namespace nqe {
 
 namespace internal {
-
-class NetworkQualityEstimatorParams;
 
 // Makes throughput observations. Polls NetworkActivityMonitor
 // (TrafficStats on Android) to count number of bits received over throughput

@@ -9,6 +9,7 @@
 
 #include "base/bind.h"
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/values.h"
@@ -199,12 +200,12 @@ const char* NetLog::EventTypeToString(NetLogEventType event) {
 }
 
 // static
-base::Value* NetLog::GetEventTypesAsValue() {
-  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+std::unique_ptr<base::Value> NetLog::GetEventTypesAsValue() {
+  auto dict = base::MakeUnique<base::DictionaryValue>();
   for (int i = 0; i < static_cast<int>(NetLogEventType::COUNT); ++i) {
     dict->SetInteger(EventTypeToString(static_cast<NetLogEventType>(i)), i);
   }
-  return dict.release();
+  return std::move(dict);
 }
 
 // static
@@ -222,12 +223,12 @@ const char* NetLog::SourceTypeToString(NetLogSourceType source) {
 }
 
 // static
-base::Value* NetLog::GetSourceTypesAsValue() {
-  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+std::unique_ptr<base::Value> NetLog::GetSourceTypesAsValue() {
+  auto dict = base::MakeUnique<base::DictionaryValue>();
   for (int i = 0; i < static_cast<int>(NetLogSourceType::COUNT); ++i) {
     dict->SetInteger(SourceTypeToString(static_cast<NetLogSourceType>(i)), i);
   }
-  return dict.release();
+  return std::move(dict);
 }
 
 // static

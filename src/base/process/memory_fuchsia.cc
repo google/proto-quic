@@ -4,10 +4,17 @@
 
 #include "base/process/memory.h"
 
+#include <stdlib.h>
+
 namespace base {
 
 void EnableTerminationOnHeapCorruption() {
   // Nothing to be done here.
+}
+
+bool UncheckedMalloc(size_t size, void** result) {
+  *result = malloc(size);
+  return *result != nullptr;
 }
 
 }  // namespace base

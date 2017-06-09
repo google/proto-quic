@@ -1,0 +1,8 @@
+----- Certificate i=0 (CN=Valid DSA Parameter Inheritance EE Certificate Test5,O=Test Certificates 2011,C=US) -----
+ERROR: Unacceptable signature algorithm
+ERROR: VerifySignedData failed
+
+----- Certificate i=1 (CN=DSA Parameters Inherited CA,O=Test Certificates 2011,C=US) -----
+ERROR: Unacceptable signature algorithm
+ERROR: VerifySignedData failed
+

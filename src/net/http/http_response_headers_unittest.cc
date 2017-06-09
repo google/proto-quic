@@ -444,6 +444,16 @@ const struct PersistData persistence_tests[] = {
 
      "HTTP/1.1 200 OK\n"
      "Bar: 1\n"},
+    {HttpResponseHeaders::PERSIST_SANS_COOKIES,
+     "HTTP/1.1 200 OK\n"
+     "Set-Cookie: foo=bar\n"
+     "Foo: 2\n"
+     "Clear-Site-Data: { \"types\" : [ \"cookies\" ] }\n"
+     "Bar: 3\n",
+
+     "HTTP/1.1 200 OK\n"
+     "Foo: 2\n"
+     "Bar: 3\n"},
     // Test LWS at the end of a header.
     {HttpResponseHeaders::PERSIST_ALL,
      "HTTP/1.1 200 OK\n"

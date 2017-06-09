@@ -345,6 +345,10 @@ class NET_EXPORT URLRequestJob : public base::PowerObserver {
                         int buf_size,
                         const CompletionCallback& callback);
 
+  // Returns OK if |new_url| is a valid redirect target and an error code
+  // otherwise.
+  int CanFollowRedirect(const GURL& new_url);
+
   // Called in response to a redirect that was not canceled to follow the
   // redirect. The current job will be replaced with a new job loading the
   // given redirect destination.
@@ -417,7 +421,8 @@ class NET_EXPORT URLRequestJob : public base::PowerObserver {
   // Expected content size
   int64_t expected_content_size_;
 
-  // Set when a redirect is deferred.
+  // Set when a redirect is deferred. Redirects are deferred after validity
+  // checks are performed, so this field must not be modified.
   RedirectInfo deferred_redirect_info_;
 
   // The network delegate to use with this request, if any.

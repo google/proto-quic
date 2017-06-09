@@ -76,12 +76,10 @@ class SchedulerWorker::Thread : public PlatformThread::Delegate {
         continue;
       }
 
-      if (outer_->task_tracker_->RunTask(sequence->TakeTask(),
-                                         sequence->token())) {
-        outer_->delegate_->DidRunTask();
-      }
+      const bool sequence_became_empty =
+          outer_->task_tracker_->RunNextTask(sequence.get());
 
-      const bool sequence_became_empty = sequence->Pop();
+      outer_->delegate_->DidRunTask();
 
       // If |sequence| isn't empty immediately after the pop, re-enqueue it to
       // maintain the invariant that a non-empty Sequence is always referenced

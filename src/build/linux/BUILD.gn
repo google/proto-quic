@@ -4,7 +4,6 @@
 
 import("//build/config/features.gni")
 import("//build/config/linux/pkg_config.gni")
-import("//net/features.gni")
 
 if (use_gio) {
   pkg_config("gio_config") {
@@ -30,20 +29,9 @@ if (use_gio) {
     # GYP build.
     #ignore_libs = true  # Loader generated below.
   }
-
-  deps = [
-    "//build/linux/libgio",
-  ]
 }
 
 # Looking for libspeechd? Use //third_party/speech-dispatcher
-group("fontconfig") {
-  if (!is_proto_quic) {
-    public_deps = [
-      "//third_party/fontconfig",
-    ]
-  }
-}
 
 if (!is_chromecast) {
   # Only provided for distributions which prefer to keep linking to FreeType on

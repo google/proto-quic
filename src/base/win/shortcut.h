@@ -46,6 +46,8 @@ struct BASE_EXPORT ShortcutProperties {
         PROPERTIES_ARGUMENTS |
         PROPERTIES_DESCRIPTION |
         PROPERTIES_ICON,
+    // TODO(pmonette): Get rid of PROPERTIES_WIN7 now that Windows 7 is the last
+    // supported Windows version.
     PROPERTIES_WIN7 = PROPERTIES_APP_ID | PROPERTIES_DUAL_MODE,
     PROPERTIES_ALL = PROPERTIES_BASIC | PROPERTIES_WIN7
   };

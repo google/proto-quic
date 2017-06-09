@@ -491,21 +491,6 @@
             ]
         }
     ],
-    "ContextualSearch": [
-        {
-            "platforms": [
-                "android"
-            ],
-            "experiments": [
-                {
-                    "name": "Default",
-                    "params": {
-                        "enable_ranker_logging": "true"
-                    }
-                }
-            ]
-        }
-    ],
     "CopylessPaste": [
         {
             "platforms": [
@@ -1418,23 +1403,6 @@
             ]
         }
     ],
-    "MarkNonSecureAs": [
-        {
-            "platforms": [
-                "android",
-                "chromeos",
-                "ios",
-                "linux",
-                "mac",
-                "win"
-            ],
-            "experiments": [
-                {
-                    "name": "show-non-secure-passwords-cc-ui"
-                }
-            ]
-        }
-    ],
     "MaterialDesignDownloads": [
         {
             "platforms": [
@@ -1823,22 +1791,6 @@
             "experiments": [
                 {
                     "name": "Enabled"
-                }
-            ]
-        }
-    ],
-    "OfflinePageCache": [
-        {
-            "platforms": [
-                "android"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled",
-                    "enable_features": [
-                        "OfflineBookmarks",
-                        "OfflineRecentPages"
-                    ]
                 }
             ]
         }
@@ -2279,25 +2231,6 @@
                     "name": "Enabled",
                     "enable_features": [
                         "PhysicalWebEnabled"
-                    ]
-                }
-            ]
-        }
-    ],
-    "PointerEvent": [
-        {
-            "platforms": [
-                "android",
-                "chromeos",
-                "linux",
-                "mac",
-                "win"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled",
-                    "enable_features": [
-                        "PointerEvent"
                     ]
                 }
             ]
@@ -2836,21 +2769,6 @@
                     "name": "EnableExperiment",
                     "enable_features": [
                         "ConsistentOmniboxGeolocation"
-                    ]
-                }
-            ]
-        }
-    ],
-    "SeccompSandboxAndroid": [
-        {
-            "platforms": [
-                "android"
-            ],
-            "experiments": [
-                {
-                    "name": "SandboxEnabled",
-                    "enable_features": [
-                        "SeccompSandboxAndroid"
                     ]
                 }
             ]

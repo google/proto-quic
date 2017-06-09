@@ -11,7 +11,6 @@
 #include "base/compiler_specific.h"
 #include "base/logging.h"
 #include "base/memory/ref_counted.h"
-#include "base/threading/non_thread_safe.h"
 #include "base/threading/thread_checker.h"
 
 // WeakNSObject<> is patterned after scoped_nsobject<>, but instead of

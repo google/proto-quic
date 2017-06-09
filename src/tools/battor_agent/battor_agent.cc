@@ -188,7 +188,7 @@ void BattOrAgent::OnConnectionOpened(bool success) {
       PerformAction(Action::SEND_CURRENT_SAMPLE_REQUEST);
       return;
     case Command::GET_FIRMWARE_GIT_HASH:
-      PerformAction(Action::SEND_INIT);
+      PerformAction(Action::SEND_GIT_HASH_REQUEST);
       return;
     case Command::INVALID:
       NOTREACHED();
@@ -271,9 +271,6 @@ void BattOrAgent::OnMessageRead(bool success,
       switch (command_) {
         case Command::START_TRACING:
           PerformAction(Action::SEND_SET_GAIN);
-          return;
-        case Command::GET_FIRMWARE_GIT_HASH:
-          PerformAction(Action::SEND_GIT_HASH_REQUEST);
           return;
         default:
           NOTREACHED();

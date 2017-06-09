@@ -99,8 +99,7 @@ Timer::Timer(const tracked_objects::Location& posted_from,
 }
 
 Timer::~Timer() {
-  // TODO(gab): Enable this once Stop() properly detaches from sequence.
-  // DCHECK(origin_sequence_checker_.CalledOnValidSequence());
+  DCHECK(origin_sequence_checker_.CalledOnValidSequence());
   AbandonAndStop();
 }
 
@@ -144,6 +143,10 @@ void Timer::Stop() {
   // DCHECK(origin_sequence_checker_.CalledOnValidSequence());
 
   is_running_ = false;
+
+  // It's safe to destroy or restart Timer on another sequence after Stop().
+  origin_sequence_checker_.DetachFromSequence();
+
   if (!retain_user_task_)
     user_task_.Reset();
   // No more member accesses here: |this| could be deleted after freeing

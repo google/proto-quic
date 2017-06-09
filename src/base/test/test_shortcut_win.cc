@@ -14,7 +14,6 @@
 #include "base/strings/utf_string_conversions.h"
 #include "base/win/scoped_comptr.h"
 #include "base/win/scoped_propvariant.h"
-#include "base/win/windows_version.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -113,44 +112,42 @@ void ValidateShortcut(const base::FilePath& shortcut_path,
     EXPECT_EQ(properties.icon_index, read_icon_index);
   }
 
-  if (GetVersion() >= VERSION_WIN7) {
-    ScopedComPtr<IPropertyStore> property_store;
-    EXPECT_TRUE(
-        SUCCEEDED(hr = i_shell_link.CopyTo(property_store.GetAddressOf())));
-    if (FAILED(hr))
-      return;
+  ScopedComPtr<IPropertyStore> property_store;
+  EXPECT_TRUE(
+      SUCCEEDED(hr = i_shell_link.CopyTo(property_store.GetAddressOf())));
+  if (FAILED(hr))
+    return;
 
-    if (properties.options & ShortcutProperties::PROPERTIES_APP_ID) {
-      ScopedPropVariant pv_app_id;
-      EXPECT_EQ(S_OK, property_store->GetValue(PKEY_AppUserModel_ID,
-                                               pv_app_id.Receive()));
-      switch (pv_app_id.get().vt) {
-        case VT_EMPTY:
-          EXPECT_TRUE(properties.app_id.empty());
-          break;
-        case VT_LPWSTR:
-          EXPECT_EQ(properties.app_id, pv_app_id.get().pwszVal);
-          break;
-        default:
-          ADD_FAILURE() << "Unexpected variant type: " << pv_app_id.get().vt;
-      }
+  if (properties.options & ShortcutProperties::PROPERTIES_APP_ID) {
+    ScopedPropVariant pv_app_id;
+    EXPECT_EQ(S_OK, property_store->GetValue(PKEY_AppUserModel_ID,
+                                             pv_app_id.Receive()));
+    switch (pv_app_id.get().vt) {
+      case VT_EMPTY:
+        EXPECT_TRUE(properties.app_id.empty());
+        break;
+      case VT_LPWSTR:
+        EXPECT_EQ(properties.app_id, pv_app_id.get().pwszVal);
+        break;
+      default:
+        ADD_FAILURE() << "Unexpected variant type: " << pv_app_id.get().vt;
     }
+  }
 
-    if (properties.options & ShortcutProperties::PROPERTIES_DUAL_MODE) {
-      ScopedPropVariant pv_dual_mode;
-      EXPECT_EQ(S_OK, property_store->GetValue(PKEY_AppUserModel_IsDualMode,
-                                               pv_dual_mode.Receive()));
-      switch (pv_dual_mode.get().vt) {
-        case VT_EMPTY:
-          EXPECT_FALSE(properties.dual_mode);
-          break;
-        case VT_BOOL:
-          EXPECT_EQ(properties.dual_mode,
-                    static_cast<bool>(pv_dual_mode.get().boolVal));
-          break;
-        default:
-          ADD_FAILURE() << "Unexpected variant type: " << pv_dual_mode.get().vt;
-      }
+  if (properties.options & ShortcutProperties::PROPERTIES_DUAL_MODE) {
+    ScopedPropVariant pv_dual_mode;
+    EXPECT_EQ(S_OK, property_store->GetValue(PKEY_AppUserModel_IsDualMode,
+                                             pv_dual_mode.Receive()));
+    switch (pv_dual_mode.get().vt) {
+      case VT_EMPTY:
+        EXPECT_FALSE(properties.dual_mode);
+        break;
+      case VT_BOOL:
+        EXPECT_EQ(properties.dual_mode,
+                  static_cast<bool>(pv_dual_mode.get().boolVal));
+        break;
+      default:
+        ADD_FAILURE() << "Unexpected variant type: " << pv_dual_mode.get().vt;
     }
   }
 }

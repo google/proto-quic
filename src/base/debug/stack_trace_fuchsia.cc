@@ -32,7 +32,7 @@ _Unwind_Reason_Code UnwindStore(struct _Unwind_Context* context,
   BacktraceData* data = reinterpret_cast<BacktraceData*>(user_data);
   uintptr_t pc = _Unwind_GetIP(context);
   data->trace_array[*data->count] = reinterpret_cast<void*>(pc);
-  data->count += 1;
+  *data->count += 1;
   if (*data->count == data->max)
     return _URC_END_OF_STACK;
   return _URC_NO_REASON;

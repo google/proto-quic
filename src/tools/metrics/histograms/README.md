@@ -53,14 +53,14 @@ enum NEW_TAB_PAGE_ACTION {
   USE_OMNIBOX = 0,
   CLICK_TILE = 1,
   OPEN_BOOKMARK = 2,
-  NEW_TAB_PAGE_ACTION_MAX
+  NEW_TAB_PAGE_ACTION_COUNT
 };
 ```
 
 Also, please explicitly set enum values `= 0`, `= 1`, `= 2`, etc.  This makes
 clearer that the actual values are important.  In addition, it helps confirm
 the values align between the enum definition and
-[histograms.xml](./histograms.xml).  If a "max" value is included it
+[histograms.xml](./histograms.xml).  If a "count" value is included it
 should not include an explicit value.
 
 If your enum histogram has a catch-all / miscellaneous bucket, put that bucket

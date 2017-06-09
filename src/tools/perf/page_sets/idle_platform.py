@@ -44,7 +44,7 @@ class _IdleStory(story.Story):
 
 class IdleStorySet(story.StorySet):
   def __init__(self):
-    super(IdleStorySet, self).__init__()
+    super(IdleStorySet, self).__init__(verify_names=True)
     self.AddStory(_IdleStory('IdleStory_10s', 10))
     self.AddStory(_IdleStory('IdleStory_60s', 60))
     self.AddStory(_IdleStory('IdleStory_120s', 120))

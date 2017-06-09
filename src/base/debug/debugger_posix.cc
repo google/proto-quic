@@ -161,6 +161,13 @@ bool BeingDebugged() {
   return pid_index < status.size() && status[pid_index] != '0';
 }
 
+#elif defined(OS_FUCHSIA)
+
+bool BeingDebugged() {
+  // TODO(fuchsia): No gdb/gdbserver in the SDK yet.
+  return false;
+}
+
 #else
 
 bool BeingDebugged() {

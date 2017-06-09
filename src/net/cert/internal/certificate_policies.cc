@@ -39,7 +39,7 @@ const der::Input UserNoticeId() {
 // Ignores the policyQualifiers, but does some minimal correctness checking.
 // TODO(mattm): parse and return the policyQualifiers, since the cert viewer
 // still needs to display them.
-bool ParsePolicyQualifiers(const der::Input& policy_oid,
+bool ParsePolicyQualifiers(bool restrict_to_known_qualifiers,
                            der::Parser* policy_qualifiers_sequence_parser) {
   // If it is present, the policyQualifiers sequence should have at least 1
   // element.
@@ -54,10 +54,7 @@ bool ParsePolicyQualifiers(const der::Input& policy_oid,
     der::Input qualifier_oid;
     if (!policy_information_parser.ReadTag(der::kOid, &qualifier_oid))
       return false;
-    // RFC 5280 section 4.2.1.4: When qualifiers are used with the special
-    // policy anyPolicy, they MUST be limited to the qualifiers identified in
-    // this section.
-    if (policy_oid == AnyPolicy() && qualifier_oid != CpsPointerId() &&
+    if (restrict_to_known_qualifiers && qualifier_oid != CpsPointerId() &&
         qualifier_oid != UserNoticeId()) {
       return false;
     }
@@ -143,6 +140,7 @@ der::Input PolicyMappingsOid() {
 //      bmpString        BMPString      (SIZE (1..200)),
 //      utf8String       UTF8String     (SIZE (1..200)) }
 bool ParseCertificatePoliciesExtension(const der::Input& extension_value,
+                                       bool fail_parsing_unknown_qualifier_oids,
                                        std::vector<der::Input>* policies) {
   der::Parser extension_parser(extension_value);
   der::Parser policies_sequence_parser;
@@ -188,8 +186,15 @@ bool ParseCertificatePoliciesExtension(const der::Input& extension_value,
     // Should not have trailing data after policyQualifiers sequence.
     if (policy_information_parser.HasMore())
       return false;
-    if (!ParsePolicyQualifiers(policy_oid, &policy_qualifiers_sequence_parser))
+
+    // RFC 5280 section 4.2.1.4: When qualifiers are used with the special
+    // policy anyPolicy, they MUST be limited to the qualifiers identified in
+    // this section.
+    if (!ParsePolicyQualifiers(
+            fail_parsing_unknown_qualifier_oids || policy_oid == AnyPolicy(),
+            &policy_qualifiers_sequence_parser)) {
       return false;
+    }
   }
 
   return true;

@@ -163,12 +163,16 @@ class ProguardCmdBuilder(object):
 
   def _WriteFlagsFile(self, out):
     # Quite useful for auditing proguard flags.
-    for config in self._configs:
+    for config in sorted(self._configs):
       out.write('#' * 80 + '\n')
       out.write(config + '\n')
       out.write('#' * 80 + '\n')
       with open(config) as config_file:
-        out.write(config_file.read().rstrip())
+        contents = config_file.read().rstrip()
+      # Remove numbers from generated rule comments to make file more
+      # diff'able.
+      contents = re.sub(r' #generated:\d+', '', contents)
+      out.write(contents)
       out.write('\n\n')
     out.write('#' * 80 + '\n')
     out.write('Command-line\n')

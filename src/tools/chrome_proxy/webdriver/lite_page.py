@@ -50,6 +50,37 @@ class LitePage(IntegrationTest):
       # Verify that a Lite Page response for the main frame was seen.
       self.assertEqual(1, lite_page_responses)
 
+
+  # Checks that a Lite Page is not served for the Cellular-Only option but
+  # not on cellular connection.
+  def testLitePageNotAcceptedForCellularOnlyFlag(self):
+    with TestDriver() as test_driver:
+      test_driver.AddChromeArg('--enable-spdy-proxy-auth')
+      test_driver.AddChromeArg('--data-reduction-proxy-lo-fi=cellular-only')
+      test_driver.AddChromeArg('--enable-data-reduction-proxy-lite-page')
+
+      test_driver.LoadURL('http://check.googlezip.net/test.html')
+
+      non_lite_page_responses = 0
+      for response in test_driver.GetHTTPResponses():
+        if response.url.endswith('html'):
+          self.assertNotIn('chrome-proxy-accept-transform',
+                           response.request_headers)
+          self.assertNotIn('chrome-proxy-content-transform',
+                           response.response_headers)
+          non_lite_page_responses = non_lite_page_responses + 1
+          # Note that the client will still send exp=force_lite_page (if not
+          # using the exp paramter to specify other experiments).
+          if common.ParseFlags().browser_args:
+            if ('--data-reduction-proxy-experiment'
+                not in common.ParseFlags().browser_args):
+              # Verify force directive present.
+              self.assertIn('exp=force_lite_page',
+                response.request_headers['chrome-proxy'])
+
+      # Verify that a main frame without Lite Page was seen.
+      self.assertEqual(1, non_lite_page_responses)
+
   # Checks that a Lite Page does not have an error when scrolling to the bottom
   # of the page and is able to load all resources.
   def testLitePageBTF(self):

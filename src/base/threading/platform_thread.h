@@ -200,10 +200,16 @@ class BASE_EXPORT PlatformThread {
   // priority of the current thread.
   static bool CanIncreaseCurrentThreadPriority();
 
-  // Toggles the current thread's priority at runtime. A thread may not be able
-  // to raise its priority back up after lowering it if the process does not
-  // have a proper permission, e.g. CAP_SYS_NICE on Linux. A thread may not be
-  // able to lower its priority back down after raising it to REALTIME_AUDIO.
+  // Toggles the current thread's priority at runtime.
+  //
+  // A thread may not be able to raise its priority back up after lowering it if
+  // the process does not have a proper permission, e.g. CAP_SYS_NICE on Linux.
+  // A thread may not be able to lower its priority back down after raising it
+  // to REALTIME_AUDIO.
+  //
+  // This function must not be called from the main thread on Mac. This is to
+  // avoid performance regressions (https://crbug.com/601270).
+  //
   // Since changing other threads' priority is not permitted in favor of
   // security, this interface is restricted to change only the current thread
   // priority (https://crbug.com/399473).

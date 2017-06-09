@@ -8,8 +8,6 @@
 -CursorWindowControllerTest.MoveToDifferentDisplay
 -CursorWindowControllerTest.VisibilityTest
 -DisplayManagerTest.SoftwareMirroringWithCompositingCursor
--DisplayManagerTest.TestDeviceScaleOnlyChange
--DisplayManagerTest.UnifiedDesktopWith2xDSF
 -DisplayManagerTest.UpdateMouseCursorAfterRotateZoom
 -DragDropControllerTest.CaptureLostCancelsDragDrop
 -DragDropControllerTest.DragCancelAcrossDisplays

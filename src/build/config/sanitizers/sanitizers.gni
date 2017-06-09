@@ -67,9 +67,12 @@ declare_args() {
   # https://crbug.com/701919
   use_cfi_icall = false
 
-  # By default, Control Flow Integrity will crash the program if it detects a
-  # violation. Set this to true to print detailed diagnostics instead.
+  # Print detailed diagnostics when Control Flow Integrity detects a violation.
   use_cfi_diag = false
+
+  # Let Control Flow Integrity continue execution instead of crashing when
+  # printing diagnostics (use_cfi_diag = true).
+  use_cfi_recover = false
 
   # Compile for fuzzing with LLVM LibFuzzer.
   # See http://www.chromium.org/developers/testing/libfuzzer
@@ -122,6 +125,7 @@ if (current_toolchain != default_toolchain) {
   sanitizer_coverage_flags = ""
   use_afl = false
   use_cfi_diag = false
+  use_cfi_recover = false
   use_custom_libcxx = false
   use_drfuzz = false
   use_libfuzzer = false
@@ -201,3 +205,8 @@ assert(!is_msan || (is_linux && current_cpu == "x64"),
 # allocation functions is hard on Windows and not yet implemented in LLVM.
 assert(!is_win || !is_debug || !is_asan,
        "ASan on Windows doesn't work in debug (set is_debug=false).")
+
+# Make sure that if we recover on detection (i.e. not crash), diagnostics are
+# printed.
+assert(!use_cfi_recover || use_cfi_diag,
+       "Only use CFI recovery together with diagnostics.")

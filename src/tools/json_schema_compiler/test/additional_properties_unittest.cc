@@ -21,7 +21,7 @@ TEST(JsonSchemaCompilerAdditionalPropertiesTest,
         new base::DictionaryValue());
     type_value->SetString("string", "value");
     type_value->SetInteger("other", 9);
-    type_value->Set("another", list_value.release());
+    type_value->Set("another", std::move(list_value));
     std::unique_ptr<AdditionalPropertiesType> type(
         new AdditionalPropertiesType());
     ASSERT_TRUE(AdditionalPropertiesType::Populate(*type_value, type.get()));

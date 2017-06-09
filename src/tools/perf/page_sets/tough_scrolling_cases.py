@@ -31,7 +31,7 @@ class ToughScrollingCasesPageSet(story.StorySet):
   """
 
   def __init__(self):
-    super(ToughScrollingCasesPageSet, self).__init__()
+    super(ToughScrollingCasesPageSet, self).__init__(verify_names=True)
 
     fast_scrolling_page_name_list = [
       'text',

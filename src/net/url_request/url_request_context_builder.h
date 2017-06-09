@@ -116,6 +116,20 @@ class NET_EXPORT URLRequestContextBuilder {
     proxy_config_service_ = std::move(proxy_config_service);
   }
 
+  // Sets whether quick PAC checks are enabled. Defaults to true. Ignored if
+  // a ProxyService is set directly.
+  void set_pac_quick_check_enabled(bool pac_quick_check_enabled) {
+    pac_quick_check_enabled_ = pac_quick_check_enabled;
+  }
+
+  // Sets policy for sanitizing URLs before passing them to a PAC. Defaults to
+  // ProxyService::SanitizeUrlPolicy::SAFE. Ignored if
+  // a ProxyService is set directly.
+  void set_pac_sanitize_url_policy(
+      net::ProxyService::SanitizeUrlPolicy pac_sanitize_url_policy) {
+    pac_sanitize_url_policy_ = pac_sanitize_url_policy;
+  }
+
   // Sets the proxy service. If one is not provided, by default, uses system
   // libraries to evaluate PAC scripts, if available (And if not, skips PAC
   // resolution). Subclasses may override CreateProxyService for different
@@ -349,6 +363,8 @@ class NET_EXPORT URLRequestContextBuilder {
   std::unique_ptr<HostResolver> host_resolver_;
   std::unique_ptr<ChannelIDService> channel_id_service_;
   std::unique_ptr<ProxyConfigService> proxy_config_service_;
+  bool pac_quick_check_enabled_;
+  ProxyService::SanitizeUrlPolicy pac_sanitize_url_policy_;
   std::unique_ptr<ProxyService> proxy_service_;
   std::unique_ptr<NetworkDelegate> network_delegate_;
   std::unique_ptr<ProxyDelegate> proxy_delegate_;

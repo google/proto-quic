@@ -37,7 +37,15 @@ class _Generator(object):
     """Generates a Code object with the schema for the entire namespace.
     """
     c = Code()
-    (c.Append(self._GetHeader(sys.argv[0], self._namespace.name))
+    # /abs/path/src/tools/json_schema_compiler/
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # /abs/path/src/
+    src_root = os.path.normpath(os.path.join(script_dir, '..', '..'))
+    # tools/json_schema_compiler/
+    src_to_script = os.path.relpath(script_dir, src_root)
+    # tools/json_schema_compiler/compiler.py
+    compiler_path = os.path.join(src_to_script, 'compiler.py')
+    (c.Append(self._GetHeader(compiler_path, self._namespace.name))
       .Append())
 
     self._AppendNamespaceObject(c)

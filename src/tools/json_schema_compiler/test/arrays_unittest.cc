@@ -10,6 +10,8 @@
 #include <utility>
 
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
+#include "base/values.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "tools/json_schema_compiler/test/enums.h"
 
@@ -19,31 +21,31 @@ namespace {
 
 // TODO(calamity): Change to AppendString etc once kalman's patch goes through
 static std::unique_ptr<base::DictionaryValue> CreateBasicArrayTypeDictionary() {
-  std::unique_ptr<base::DictionaryValue> value(new base::DictionaryValue());
-  base::ListValue* strings_value = new base::ListValue();
+  auto value = base::MakeUnique<base::DictionaryValue>();
+  auto strings_value = base::MakeUnique<base::ListValue>();
   strings_value->AppendString("a");
   strings_value->AppendString("b");
   strings_value->AppendString("c");
   strings_value->AppendString("it's easy as");
-  base::ListValue* integers_value = new base::ListValue();
+  auto integers_value = base::MakeUnique<base::ListValue>();
   integers_value->AppendInteger(1);
   integers_value->AppendInteger(2);
   integers_value->AppendInteger(3);
-  base::ListValue* booleans_value = new base::ListValue();
+  auto booleans_value = base::MakeUnique<base::ListValue>();
   booleans_value->AppendBoolean(false);
   booleans_value->AppendBoolean(true);
-  base::ListValue* numbers_value = new base::ListValue();
+  auto numbers_value = base::MakeUnique<base::ListValue>();
   numbers_value->AppendDouble(6.1);
-  value->Set("numbers", numbers_value);
-  value->Set("booleans", booleans_value);
-  value->Set("strings", strings_value);
-  value->Set("integers", integers_value);
+  value->Set("numbers", std::move(numbers_value));
+  value->Set("booleans", std::move(booleans_value));
+  value->Set("strings", std::move(strings_value));
+  value->Set("integers", std::move(integers_value));
   return value;
 }
 
 std::unique_ptr<base::DictionaryValue> CreateItemValue(int val) {
-  std::unique_ptr<base::DictionaryValue> value(new base::DictionaryValue());
-  value->Set("val", new base::Value(val));
+  auto value = base::MakeUnique<base::DictionaryValue>();
+  value->SetInteger("val", val);
   return value;
 }
 
@@ -61,12 +63,12 @@ TEST(JsonSchemaCompilerArrayTest, BasicArrayType) {
 
 TEST(JsonSchemaCompilerArrayTest, EnumArrayReference) {
   // { "types": ["one", "two", "three"] }
-  base::ListValue* types = new base::ListValue();
+  auto types = base::MakeUnique<base::ListValue>();
   types->AppendString("one");
   types->AppendString("two");
   types->AppendString("three");
   base::DictionaryValue value;
-  value.Set("types", types);
+  value.Set("types", std::move(types));
 
   EnumArrayReference enum_array_reference;
 
@@ -86,19 +88,19 @@ TEST(JsonSchemaCompilerArrayTest, EnumArrayReference) {
 
 TEST(JsonSchemaCompilerArrayTest, EnumArrayMixed) {
   // { "types": ["one", "two", "three"] }
-  base::ListValue* infile_enums = new base::ListValue();
+  auto infile_enums = base::MakeUnique<base::ListValue>();
   infile_enums->AppendString("one");
   infile_enums->AppendString("two");
   infile_enums->AppendString("three");
 
-  base::ListValue* external_enums = new base::ListValue();
+  auto external_enums = base::MakeUnique<base::ListValue>();
   external_enums->AppendString("one");
   external_enums->AppendString("two");
   external_enums->AppendString("three");
 
   base::DictionaryValue value;
-  value.Set("infile_enums", infile_enums);
-  value.Set("external_enums", external_enums);
+  value.Set("infile_enums", std::move(infile_enums));
+  value.Set("external_enums", std::move(external_enums));
 
   EnumArrayMixed enum_array_mixed;
 
@@ -132,12 +134,12 @@ TEST(JsonSchemaCompilerArrayTest, OptionalEnumArrayType) {
     enums.push_back(ENUMERATION_TWO);
     enums.push_back(ENUMERATION_THREE);
 
-    std::unique_ptr<base::ListValue> types(new base::ListValue());
+    auto types = base::MakeUnique<base::ListValue>();
     for (size_t i = 0; i < enums.size(); ++i)
       types->AppendString(ToString(enums[i]));
 
     base::DictionaryValue value;
-    value.Set("types", types.release());
+    value.Set("types", std::move(types));
 
     OptionalEnumArrayType enum_array_type;
     ASSERT_TRUE(OptionalEnumArrayType::Populate(value, &enum_array_type));
@@ -145,10 +147,10 @@ TEST(JsonSchemaCompilerArrayTest, OptionalEnumArrayType) {
   }
   {
     base::DictionaryValue value;
-    std::unique_ptr<base::ListValue> enum_array(new base::ListValue());
+    auto enum_array = base::MakeUnique<base::ListValue>();
     enum_array->AppendString("invalid");
 
-    value.Set("types", enum_array.release());
+    value.Set("types", std::move(enum_array));
     OptionalEnumArrayType enum_array_type;
     ASSERT_FALSE(OptionalEnumArrayType::Populate(value, &enum_array_type));
     EXPECT_TRUE(enum_array_type.types->empty());
@@ -157,13 +159,13 @@ TEST(JsonSchemaCompilerArrayTest, OptionalEnumArrayType) {
 
 TEST(JsonSchemaCompilerArrayTest, RefArrayType) {
   {
-    std::unique_ptr<base::DictionaryValue> value(new base::DictionaryValue());
-    std::unique_ptr<base::ListValue> ref_array(new base::ListValue());
+    auto value = base::MakeUnique<base::DictionaryValue>();
+    auto ref_array = base::MakeUnique<base::ListValue>();
     ref_array->Append(CreateItemValue(1));
     ref_array->Append(CreateItemValue(2));
     ref_array->Append(CreateItemValue(3));
-    value->Set("refs", ref_array.release());
-    std::unique_ptr<RefArrayType> ref_array_type(new RefArrayType());
+    value->Set("refs", std::move(ref_array));
+    auto ref_array_type = base::MakeUnique<RefArrayType>();
     EXPECT_TRUE(RefArrayType::Populate(*value, ref_array_type.get()));
     ASSERT_EQ(3u, ref_array_type->refs.size());
     EXPECT_EQ(1, ref_array_type->refs[0].val);
@@ -171,12 +173,12 @@ TEST(JsonSchemaCompilerArrayTest, RefArrayType) {
     EXPECT_EQ(3, ref_array_type->refs[2].val);
   }
   {
-    std::unique_ptr<base::DictionaryValue> value(new base::DictionaryValue());
-    std::unique_ptr<base::ListValue> not_ref_array(new base::ListValue());
+    auto value = base::MakeUnique<base::DictionaryValue>();
+    auto not_ref_array = base::MakeUnique<base::ListValue>();
     not_ref_array->Append(CreateItemValue(1));
     not_ref_array->AppendInteger(3);
-    value->Set("refs", not_ref_array.release());
-    std::unique_ptr<RefArrayType> ref_array_type(new RefArrayType());
+    value->Set("refs", std::move(not_ref_array));
+    auto ref_array_type = base::MakeUnique<RefArrayType>();
     EXPECT_FALSE(RefArrayType::Populate(*value, ref_array_type.get()));
   }
 }

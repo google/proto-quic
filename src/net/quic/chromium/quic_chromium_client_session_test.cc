@@ -58,25 +58,6 @@ const char kServerHostname[] = "test.example.com";
 const uint16_t kServerPort = 443;
 const size_t kMaxReadersPerQuicSession = 5;
 
-class MockStreamDelegate : public QuicChromiumClientStream::Delegate {
- public:
-  MockStreamDelegate() {}
-
-  MOCK_METHOD0(OnSendData, int());
-  MOCK_METHOD2(OnSendDataComplete, int(int, bool*));
-  MOCK_METHOD2(OnInitialHeadersAvailable,
-               void(const SpdyHeaderBlock& headers, size_t frame_len));
-  MOCK_METHOD2(OnTrailingHeadersAvailable,
-               void(const SpdyHeaderBlock& headers, size_t frame_len));
-  MOCK_METHOD2(OnDataReceived, int(const char*, int));
-  MOCK_METHOD0(OnDataAvailable, void());
-  MOCK_METHOD0(OnClose, void());
-  MOCK_METHOD1(OnError, void(int));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockStreamDelegate);
-};
-
 class QuicChromiumClientSessionTest
     : public ::testing::TestWithParam<QuicVersion> {
  protected:
@@ -178,7 +159,6 @@ class QuicChromiumClientSessionTest
   MockCryptoClientStreamFactory crypto_client_stream_factory_;
   QuicClientPushPromiseIndex push_promise_index_;
   QuicServerId server_id_;
-  MockStreamDelegate delegate_;
   std::unique_ptr<QuicChromiumClientSession> session_;
   TestServerPushDelegate test_push_delegate_;
   QuicConnectionVisitorInterface* visitor_;
@@ -240,7 +220,7 @@ TEST_P(QuicChromiumClientSessionTest, Handle) {
   TestCompletionCallback callback;
   ASSERT_EQ(OK, handle->RequestStream(/*requires_confirmation=*/false,
                                       callback.callback()));
-  EXPECT_TRUE(handle->ReleaseStream(&delegate_) != nullptr);
+  EXPECT_TRUE(handle->ReleaseStream() != nullptr);
 
   quic_data.Resume();
   EXPECT_TRUE(quic_data.AllReadDataConsumed());
@@ -302,7 +282,7 @@ TEST_P(QuicChromiumClientSessionTest, StreamRequest) {
   TestCompletionCallback callback;
   ASSERT_EQ(OK, handle->RequestStream(/*requires_confirmation=*/false,
                                       callback.callback()));
-  EXPECT_TRUE(handle->ReleaseStream(&delegate_) != nullptr);
+  EXPECT_TRUE(handle->ReleaseStream() != nullptr);
 
   quic_data.Resume();
   EXPECT_TRUE(quic_data.AllReadDataConsumed());
@@ -325,7 +305,7 @@ TEST_P(QuicChromiumClientSessionTest, ConfirmationRequiredStreamRequest) {
   TestCompletionCallback callback;
   ASSERT_EQ(OK, handle->RequestStream(/*requires_confirmation=*/true,
                                       callback.callback()));
-  EXPECT_TRUE(handle->ReleaseStream(&delegate_) != nullptr);
+  EXPECT_TRUE(handle->ReleaseStream() != nullptr);
 
   quic_data.Resume();
   EXPECT_TRUE(quic_data.AllReadDataConsumed());
@@ -353,7 +333,7 @@ TEST_P(QuicChromiumClientSessionTest, StreamRequestBeforeConfirmation) {
 
   EXPECT_THAT(callback.WaitForResult(), IsOk());
 
-  EXPECT_TRUE(handle->ReleaseStream(&delegate_) != nullptr);
+  EXPECT_TRUE(handle->ReleaseStream() != nullptr);
 
   quic_data.Resume();
   EXPECT_TRUE(quic_data.AllReadDataConsumed());
@@ -419,7 +399,7 @@ TEST_P(QuicChromiumClientSessionTest, AsyncStreamRequest) {
   session_->OnRstStream(rst);
   ASSERT_TRUE(callback.have_result());
   EXPECT_THAT(callback.WaitForResult(), IsOk());
-  EXPECT_TRUE(handle->ReleaseStream(&delegate_) != nullptr);
+  EXPECT_TRUE(handle->ReleaseStream() != nullptr);
 
   quic_data.Resume();
   EXPECT_TRUE(quic_data.AllReadDataConsumed());
@@ -924,7 +904,7 @@ TEST_P(QuicChromiumClientSessionTest, MaxNumStreamsViaRequest) {
   session_->OnRstStream(rst1);
   ASSERT_TRUE(callback.have_result());
   EXPECT_THAT(callback.WaitForResult(), IsOk());
-  EXPECT_TRUE(handle->ReleaseStream(&delegate_) != nullptr);
+  EXPECT_TRUE(handle->ReleaseStream() != nullptr);
 }
 
 TEST_P(QuicChromiumClientSessionTest, GoAwayReceived) {

@@ -14,11 +14,11 @@ To use this run the affected tests, and then pass the input to this script
   $ ./out/Release/net_unittests --gtest_filter="*VerifyCertificateChain*" | \
      net/data/verify_certificate_chain_unittest/rebase-errors.py
 
-The script works by scanning the stdout looking for gtest failures when
-comparing "errors.ToDebugString(chain)". The C++ test side should have been
-instrumented to dump out the test file's path on mismatch.
+The script works by scanning the stdout looking for gtest failures having a
+particular format.  The C++ test side should have been instrumented to dump out
+the test file's path on mismatch.
 
-This script will then update the corresponding .test file that contains the
+This script will then update the corresponding test/error file that contains the
 error expectation.
 """
 
@@ -27,14 +27,19 @@ import sys
 import re
 
 # Regular expression to find the failed errors in test stdout.
-#  * Group 1 of the match is the actual error text (backslash-escaped)
-#  * Group 2 of the match is file path (relative to //src) where the expected
-#    errors were read from.
+#  * Group 1 of the match is file path (relative to //src) where the
+#    expected errors were read from.
+#  * Group 2 of the match is the actual error text
 failed_test_regex = re.compile(r"""
-Value of: errors.ToDebugString\((?:test.chain)?\)
-  Actual: "(.*)"
-(?:.|\n)+?
-Test file: (.*[.]test)
+Cert path errors don't match expectations \((.+?)\)
+
+EXPECTED:
+
+(?:.|\n)*?
+ACTUAL:
+
+((?:.|\n)*?)
+===> Use net/data/verify_certificate_chain_unittest/rebase-errors.py to rebaseline.
 """, re.MULTILINE)
 
 
@@ -104,10 +109,18 @@ def main():
     test_stdout = sys.stdin.read()
 
   for m in failed_test_regex.finditer(test_stdout):
-    actual_errors = m.group(1)
-    actual_errors = actual_errors.decode('string-escape')
-    relative_test_path = m.group(2)
-    fixup_errors_for_file(actual_errors, get_abs_path(relative_test_path))
+    src_relative_errors_path = m.group(1)
+    errors_path = get_abs_path(src_relative_errors_path)
+    actual_errors = m.group(2)
+
+    if errors_path.endswith(".test"):
+      fixup_errors_for_file(actual_errors, errors_path)
+    elif errors_path.endswith(".txt"):
+      write_string_to_file(actual_errors, errors_path)
+    else:
+      print 'Unknown file extension'
+      sys.exit(1)
+
 
 
 if __name__ == "__main__":

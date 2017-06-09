@@ -9,6 +9,8 @@
 #include <utility>
 
 #include "base/json/json_writer.h"
+#include "base/memory/ptr_util.h"
+#include "base/values.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "tools/json_schema_compiler/test/objects_movable.h"
 #include "tools/json_schema_compiler/test/objects_movable_json.h"
@@ -19,16 +21,15 @@ using namespace test::api::objects_movable_json;
 
 TEST(JsonSchemaCompilerObjectsTest, ObjectParamParamsCreate) {
   {
-    std::unique_ptr<base::ListValue> strings(new base::ListValue());
+    auto strings = base::MakeUnique<base::ListValue>();
     strings->AppendString("one");
     strings->AppendString("two");
-    std::unique_ptr<base::DictionaryValue> info_value(
-        new base::DictionaryValue());
-    info_value->Set("strings", strings.release());
-    info_value->Set("integer", new base::Value(5));
-    info_value->Set("boolean", new base::Value(true));
+    auto info_value = base::MakeUnique<base::DictionaryValue>();
+    info_value->Set("strings", std::move(strings));
+    info_value->SetInteger("integer", 5);
+    info_value->SetBoolean("boolean", true);
 
-    std::unique_ptr<base::ListValue> params_value(new base::ListValue());
+    auto params_value = base::MakeUnique<base::ListValue>();
     params_value->Append(std::move(info_value));
     std::unique_ptr<ObjectParam::Params> params(
         ObjectParam::Params::Create(*params_value));
@@ -40,15 +41,14 @@ TEST(JsonSchemaCompilerObjectsTest, ObjectParamParamsCreate) {
     EXPECT_TRUE(params->info.boolean);
   }
   {
-    std::unique_ptr<base::ListValue> strings(new base::ListValue());
+    auto strings = base::MakeUnique<base::ListValue>();
     strings->AppendString("one");
     strings->AppendString("two");
-    std::unique_ptr<base::DictionaryValue> info_value(
-        new base::DictionaryValue());
-    info_value->Set("strings", strings.release());
-    info_value->Set("integer", new base::Value(5));
+    auto info_value = base::MakeUnique<base::DictionaryValue>();
+    info_value->Set("strings", std::move(strings));
+    info_value->SetInteger("integer", 5);
 
-    std::unique_ptr<base::ListValue> params_value(new base::ListValue());
+    auto params_value = base::MakeUnique<base::ListValue>();
     params_value->Append(std::move(info_value));
     std::unique_ptr<ObjectParam::Params> params(
         ObjectParam::Params::Create(*params_value));

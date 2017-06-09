@@ -7,9 +7,6 @@
 
 #include <string>
 
-#include "base/callback_forward.h"
-#include "crypto/scoped_nss_types.h"
-
 namespace crypto {
 
 // PK11_SetPasswordFunc is a global setting.  An implementation of
@@ -35,16 +32,6 @@ class CryptoModuleBlockingPasswordDelegate {
   // user entered.
   virtual std::string RequestPassword(const std::string& slot_name, bool retry,
                                       bool* cancelled) = 0;
-};
-
-// Extends CryptoModuleBlockingPasswordDelegate with the ability to return a
-// slot in which to act. (Eg, which slot to store a generated key in.)
-class NSSCryptoModuleDelegate : public CryptoModuleBlockingPasswordDelegate {
- public:
-  ~NSSCryptoModuleDelegate() override {}
-
-  // Get the slot to store the generated key.
-  virtual ScopedPK11Slot RequestSlot() = 0;
 };
 
 }  // namespace crypto

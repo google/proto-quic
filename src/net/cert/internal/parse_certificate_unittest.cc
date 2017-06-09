@@ -62,8 +62,7 @@ void RunCertificateTest(const std::string& file_name) {
                        &signature_algorithm_tlv, &signature_value, &errors);
 
   EXPECT_EQ(expected_result, actual_result);
-  EXPECT_EQ(expected_errors, errors.ToDebugString()) << "Test file: "
-                                                     << test_file_path;
+  VerifyCertErrors(expected_errors, errors, test_file_path);
 
   // Ensure that the parsed certificate matches expectations.
   if (expected_result && actual_result) {
@@ -166,8 +165,7 @@ void RunTbsCertificateTestGivenVersion(const std::string& file_name,
       ParseTbsCertificate(der::Input(&data), {}, &parsed, &errors);
 
   EXPECT_EQ(expected_result, actual_result);
-  EXPECT_EQ(expected_errors, errors.ToDebugString()) << "Test file: "
-                                                     << test_file_path;
+  VerifyCertErrors(expected_errors, errors, test_file_path);
 
   if (!expected_result || !actual_result)
     return;

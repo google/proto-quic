@@ -99,12 +99,6 @@ unit tests.
      https://www.google.com:443.
 - unittest.originbound.key.der: matching PrivateKeyInfo.
 
-- test_mail_google_com.pem : A certificate signed by the test CA for
-    "mail.google.com". Because it is signed by that CA instead of the true CA
-    for that host, it will fail the
-    TransportSecurityState::IsChainOfPublicKeysPermitted test. Format
-    intentionally does not include diagnostic output.
-
 - multivalue_rdn.pem : A regression test for http://crbug.com/101009. A
      certificate with all of the AttributeTypeAndValues stored within a single
      RelativeDistinguishedName, rather than one AVA per RDN as normally seen.

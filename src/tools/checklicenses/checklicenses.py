@@ -541,6 +541,10 @@ PATH_SPECIFIC_WHITELISTED_LICENSES = {
         'UNKNOWN',
     ],
 
+    'third_party/minizip': [
+        'UNKNOWN',
+    ],
+
     # BSD License. http://bugzilla.maptools.org/show_bug.cgi?id=2532
     'third_party/pdfium/third_party/libtiff/tif_ojpeg.c': [
         'UNKNOWN',

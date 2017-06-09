@@ -7,8 +7,8 @@ from page_sets.startup_pages import BrowserStartupSharedState
 
 
 class BlankPage(page_module.Page):
-  def __init__(self, url, page_set):
-    super(BlankPage, self).__init__(url, page_set=page_set)
+  def __init__(self, url, page_set, name):
+    super(BlankPage, self).__init__(url, page_set=page_set, name=name)
 
   def RunPageInteractions(self, action_runner):
     # Request a RAF and wait for it to be processed to ensure that the metric
@@ -27,8 +27,9 @@ class BlankPageSet(story.StorySet):
   """A single blank page."""
 
   def __init__(self):
-    super(BlankPageSet, self).__init__()
-    self.AddStory(BlankPage('file://blank_page/blank_page.html', self))
+    super(BlankPageSet, self).__init__(verify_names=True)
+    self.AddStory(BlankPage('file://blank_page/blank_page.html',
+                            self, 'blank_page.html'))
 
 
 class BlankPageTBM(page_module.Page):

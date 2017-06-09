@@ -402,7 +402,10 @@ template("grit") {
         "--js-minifier",
         js_minifier_command,
       ]
-      inputs += [ _js_minifier ]
+      inputs += [
+        _js_minifier,
+        "//third_party/closure_compiler/compiler/compiler.jar",
+      ]
     }
 
     # Must be after the args are computed since they are re-used.

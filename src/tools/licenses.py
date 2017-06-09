@@ -555,6 +555,19 @@ def GenerateCredits(
             template = template.replace('{{%s}}' % key, val)
         return template
 
+    def MetadataToTemplateEntry(metadata, entry_template, entry_id):
+        env = {
+            'name': metadata['Name'],
+            'url': metadata['URL'],
+            'license': open(metadata['License File'], 'rb').read(),
+            'id': str(entry_id),
+        }
+        return {
+            'name': metadata['Name'],
+            'content': EvaluateTemplate(entry_template, env),
+            'license_file': metadata['License File'],
+        }
+
     if gn_target:
         third_party_dirs = FindThirdPartyDeps(gn_out_dir, gn_target)
 
@@ -575,7 +588,17 @@ def GenerateCredits(
                                            'about_credits_entry.tmpl')
 
     entry_template = open(entry_template_file).read()
+    entry_id = 0
     entries = []
+    # Start from Chromium's LICENSE file
+    chromium_license_metadata = {
+        'Name': 'The Chromium Project',
+        'URL': 'http://www.chromium.org',
+        'License File': os.path.join(_REPOSITORY_ROOT, 'LICENSE') }
+    entries.append(MetadataToTemplateEntry(chromium_license_metadata,
+        entry_template, entry_id))
+    entry_id += 1
+
     for path in third_party_dirs:
         try:
             metadata = ParseDir(path, _REPOSITORY_ROOT)
@@ -592,22 +615,11 @@ def GenerateCredits(
             # updated to provide --gn-target to this script.
             if path in KNOWN_NON_IOS_LIBRARIES:
                 continue
-        env = {
-            'name': metadata['Name'],
-            'url': metadata['URL'],
-            'license': open(metadata['License File'], 'rb').read(),
-        }
-        entry = {
-            'name': metadata['Name'],
-            'content': EvaluateTemplate(entry_template, env),
-            'license_file': metadata['License File'],
-        }
-        entries.append(entry)
-    # Sort by size in order to improve gzip compression ratio (puts similar
-    # licenses near each other). The licenses are re-sorted by the JavaScript
-    # when loaded.
-    entries.sort(key=lambda entry: (len(entry['content']),
-                                    entry['name'], entry['content']))
+        entries.append(MetadataToTemplateEntry(metadata, entry_template,
+            entry_id))
+        entry_id += 1
+
+    entries.sort(key=lambda entry: (entry['name'], entry['content']))
 
     entries_contents = '\n'.join([entry['content'] for entry in entries])
     file_template = open(file_template_file).read()

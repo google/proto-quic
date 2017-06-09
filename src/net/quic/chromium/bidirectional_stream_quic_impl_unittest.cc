@@ -1716,10 +1716,10 @@ TEST_P(BidirectionalStreamQuicImplTest, SessionClosedBeforeReadData) {
   // Try to send data after OnFailed(), should not get called back.
   scoped_refptr<StringIOBuffer> buf(new StringIOBuffer(kUploadData));
   delegate->SendData(buf, buf->size(), false);
-  base::RunLoop().RunUntilIdle();
 
-  EXPECT_THAT(delegate->ReadData(cb.callback()), IsError(ERR_UNEXPECTED));
-  EXPECT_THAT(delegate->error(), IsError(ERR_UNEXPECTED));
+  EXPECT_THAT(delegate->ReadData(cb.callback()),
+              IsError(ERR_QUIC_PROTOCOL_ERROR));
+  EXPECT_THAT(delegate->error(), IsError(ERR_QUIC_PROTOCOL_ERROR));
   EXPECT_EQ(0, delegate->on_data_read_count());
   EXPECT_EQ(0, delegate->on_data_sent_count());
   EXPECT_EQ(kProtoQUIC, delegate->GetProtocol());

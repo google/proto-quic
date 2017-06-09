@@ -12,7 +12,8 @@ class NoOpPage(page_module.Page):
     super(NoOpPage, self).__init__(
         url=url,
         page_set=page_set,
-        shared_page_state_class=shared_page_state.SharedMobilePageState)
+        shared_page_state_class=shared_page_state.SharedMobilePageState,
+        name=url.split('/')[-1])
 
   def RunNavigateSteps(self, action_runner):
     super(NoOpPage, self).RunNavigateSteps(action_runner)
@@ -41,7 +42,7 @@ class KeyNoOpCasesPageSet(story.StorySet):
   """ Key no-op cases """
 
   def __init__(self):
-    super(KeyNoOpCasesPageSet, self).__init__()
+    super(KeyNoOpCasesPageSet, self).__init__(verify_names=True)
 
     # Why: An infinite rAF loop which does not modify the page should incur
     # minimal activity.

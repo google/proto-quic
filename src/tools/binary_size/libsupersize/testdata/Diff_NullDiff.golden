@@ -13,8 +13,7 @@ New Metadata:
 Section Sizes (Total=0 bytes (0 bytes)):
     .bss: 0 bytes (0 bytes) (not included in totals)
     .data: 0 bytes (0 bytes) (0.0%)
-    .data.rel.ro: 0 bytes (0 bytes) (0.0%)
-    .data.rel.ro.local: 0 bytes (0 bytes) (0.0%)
+    .rel.dyn: 0 bytes (0 bytes) (0.0%)
     .rodata: 0 bytes (0 bytes) (0.0%)
     .text: 0 bytes (0 bytes) (0.0%)
 

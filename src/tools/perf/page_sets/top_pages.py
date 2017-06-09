@@ -9,6 +9,8 @@ class TopPages(page_module.Page):
 
   def __init__(self, url, page_set, shared_page_state_class,
                name='', credentials=None):
+    if name == '':
+      name = url
     super(TopPages, self).__init__(
         url=url, page_set=page_set, name=name,
         credentials_path='data/credentials.json',

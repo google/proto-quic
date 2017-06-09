@@ -50,7 +50,7 @@ def _ExtractImportantEnvironment(output_of_set):
           # path. Add the path to this python here so that if it's not in the
           # path when ninja is run later, python will still be found.
           setting = os.path.dirname(sys.executable) + os.pathsep + setting
-        env[var.upper()] = setting
+        env[var.upper()] = setting.lower()
         break
   if sys.platform in ('win32', 'cygwin'):
     for required in ('SYSTEMROOT', 'TEMP', 'TMP'):

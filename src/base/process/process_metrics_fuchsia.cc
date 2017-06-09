@@ -12,4 +12,18 @@ size_t GetSystemCommitCharge() {
   return 0;
 }
 
-}  // namespace bse
+// static
+std::unique_ptr<ProcessMetrics> ProcessMetrics::CreateProcessMetrics(
+    ProcessHandle process) {
+  // TODO(fuchsia): Not currently implementable. May eventually be for the
+  // current process. https://crbug.com/706592.
+  return nullptr;
+}
+
+double ProcessMetrics::GetCPUUsage() {
+  // TODO(fuchsia): Not current implementable. May eventually be for the current
+  // process. https://crbug.com/706592.
+  return 0.0;
+}
+
+}  // namespace base

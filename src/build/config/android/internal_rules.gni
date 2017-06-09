@@ -852,6 +852,11 @@ if (enable_java_templates) {
                                "testonly",
                              ])
       script = "//build/android/gyp/proguard.py"
+
+      # http://crbug.com/725224. Speculative fix for bots running out of memory.
+      # TODO(agrieve): Change this to an explicit pool once those are supported.
+      #     http://crbug.com/635308
+      console = true
       if (defined(invoker.proguard_jar_path)) {
         _proguard_jar_path = invoker.proguard_jar_path
       } else {
@@ -1029,6 +1034,12 @@ if (enable_java_templates) {
         script = "//build/android/gyp/main_dex_list.py"
         depfile = "$target_gen_dir/$target_name.d"
 
+        # http://crbug.com/725224. Speculative fix for bots running out of
+        #     memory.
+        # TODO(agrieve): Change this to an explicit pool once those are
+        #     supported. http://crbug.com/635308
+        console = true
+
         main_dex_rules = "//build/android/main_dex_classes.flags"
 
         if (defined(invoker.proguard_jar_path)) {
@@ -1095,6 +1106,12 @@ if (enable_java_templates) {
         invoker.output,
       ]
 
+      if (defined(invoker.use_pool) && invoker.use_pool) {
+        # TODO(agrieve): Change this to an explicit pool once those are
+        #     supported. http://crbug.com/635308
+        console = true
+      }
+
       rebased_output = rebase_path(invoker.output, root_build_dir)
 
       args = [
@@ -1159,8 +1176,9 @@ if (enable_java_templates) {
         defined(invoker.supports_android) && invoker.supports_android &&
         (is_java_debug || dcheck_always_on)
 
-    _retrolambda = defined(invoker.supports_android) &&
-                   invoker.supports_android && use_java8
+    _retrolambda =
+        defined(invoker.supports_android) && invoker.supports_android &&
+        ((defined(invoker.process_java8) && invoker.process_java8) || use_java8)
 
     _deps = []
     _previous_output_jar = _input_jar_path
@@ -1963,6 +1981,7 @@ if (enable_java_templates) {
                              [
                                "jar_excluded_patterns",
                                "strip_resource_classes",
+                               "process_java8",
                              ])
 
       visibility = [

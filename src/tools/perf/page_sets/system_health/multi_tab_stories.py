@@ -36,7 +36,7 @@ class MultiTabStory(system_health_story.SystemHealthStory):
         logging.warning('WaitForNetworkQuiescence() timeout, url[%d]: %s'
                         % (i, url))
 
-  def RunPageInteractions(self, action_runner):
+  def _DidLoadDocument(self, action_runner):
     for tab in action_runner.tab.browser.tabs:
       tab.Activate()
       tab.WaitForFrameToBeDisplayed()

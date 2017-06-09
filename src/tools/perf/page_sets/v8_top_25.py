@@ -67,7 +67,8 @@ class V8Top25StorySet(story.StorySet):
   def __init__(self):
     super(V8Top25StorySet, self).__init__(
         archive_data_file='data/v8_top_25.json',
-        cloud_storage_bucket=story.INTERNAL_BUCKET)
+        cloud_storage_bucket=story.INTERNAL_BUCKET,
+        verify_names=True)
 
     for url in urls_list:
-      self.AddStory(V8Top25(url, self))
+      self.AddStory(V8Top25(url, self, url))

@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
@@ -190,9 +191,9 @@ std::string HttpRequestHeaders::ToString() const {
 std::unique_ptr<base::Value> HttpRequestHeaders::NetLogCallback(
     const std::string* request_line,
     NetLogCaptureMode capture_mode) const {
-  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  auto dict = base::MakeUnique<base::DictionaryValue>();
   dict->SetString("line", EscapeNonASCII(*request_line));
-  base::ListValue* headers = new base::ListValue();
+  auto headers = base::MakeUnique<base::ListValue>();
   for (HeaderVector::const_iterator it = headers_.begin(); it != headers_.end();
        ++it) {
     std::string log_value =
@@ -202,7 +203,7 @@ std::unique_ptr<base::Value> HttpRequestHeaders::NetLogCallback(
     headers->AppendString(base::StringPrintf("%s: %s", escaped_name.c_str(),
                                              escaped_value.c_str()));
   }
-  dict->Set("headers", headers);
+  dict->Set("headers", std::move(headers));
   return std::move(dict);
 }
 

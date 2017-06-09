@@ -6,6 +6,7 @@
 #define NET_QUIC_CORE_CRYPTO_CRYPTO_SECRET_BOXER_H_
 
 #include <cstddef>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -51,8 +52,13 @@ class QUIC_EXPORT_PRIVATE CryptoSecretBoxer {
              QuicStringPiece* out) const;
 
  private:
+  struct State;
+
   mutable QuicMutex lock_;
-  std::vector<std::string> keys_ GUARDED_BY(lock_);
+
+  // state_ is an opaque pointer to whatever additional state the concrete
+  // implementation of CryptoSecretBoxer requires.
+  std::unique_ptr<State> state_ GUARDED_BY(lock_);
 
   DISALLOW_COPY_AND_ASSIGN(CryptoSecretBoxer);
 };

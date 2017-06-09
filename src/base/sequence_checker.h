@@ -37,7 +37,7 @@
 //       // otherwise knows usage on the associated sequence is done. If you're
 //       // not detaching in the constructor, you probably want to explicitly
 //       // check in the destructor.
-//       DCHECK_CALLED_ON_VALID_THREAD(my_thread_checker_);
+//       DCHECK_CALLED_ON_VALID_SEQUENCE(my_sequence_checker_);
 //     }
 //     void MyMethod() {
 //       DCHECK_CALLED_ON_VALID_SEQUENCE(my_sequence_checker_);

@@ -302,14 +302,14 @@ std::unique_ptr<base::Value> NetLogProxyConfigChangedCallback(
 std::unique_ptr<base::Value> NetLogBadProxyListCallback(
     const ProxyRetryInfoMap* retry_info,
     NetLogCaptureMode /* capture_mode */) {
-  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
-  base::ListValue* list = new base::ListValue();
+  auto dict = base::MakeUnique<base::DictionaryValue>();
+  auto list = base::MakeUnique<base::ListValue>();
 
   for (ProxyRetryInfoMap::const_iterator iter = retry_info->begin();
        iter != retry_info->end(); ++iter) {
     list->AppendString(iter->first);
   }
-  dict->Set("bad_proxy_list", list);
+  dict->Set("bad_proxy_list", std::move(list));
   return std::move(dict);
 }
 

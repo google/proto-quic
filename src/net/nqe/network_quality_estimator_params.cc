@@ -13,10 +13,6 @@ namespace net {
 
 const char kForceEffectiveConnectionType[] = "force_effective_connection_type";
 
-namespace nqe {
-
-namespace internal {
-
 namespace {
 
 // Minimum valid value of the variation parameter that holds RTT (in
@@ -135,12 +131,14 @@ const char* GetNameForConnectionTypeInternal(
 // different connection types (e.g., 2G, 3G, 4G, WiFi). The default
 // observations may be used to determine the network quality in absence of any
 // other information.
-void ObtainDefaultObservations(const std::map<std::string, std::string>& params,
-                               NetworkQuality default_observations[]) {
+void ObtainDefaultObservations(
+    const std::map<std::string, std::string>& params,
+    nqe::internal::NetworkQuality default_observations[]) {
   for (size_t i = 0; i < NetworkChangeNotifier::CONNECTION_LAST; ++i) {
-    DCHECK_EQ(InvalidRTT(), default_observations[i].http_rtt());
-    DCHECK_EQ(InvalidRTT(), default_observations[i].transport_rtt());
-    DCHECK_EQ(kInvalidThroughput,
+    DCHECK_EQ(nqe::internal::InvalidRTT(), default_observations[i].http_rtt());
+    DCHECK_EQ(nqe::internal::InvalidRTT(),
+              default_observations[i].transport_rtt());
+    DCHECK_EQ(nqe::internal::kInvalidThroughput,
               default_observations[i].downstream_throughput_kbps());
   }
 
@@ -149,36 +147,43 @@ void ObtainDefaultObservations(const std::map<std::string, std::string>& params,
   // variations params. The default observation for a connection type
   // corresponds to typical network quality for that connection type.
   default_observations[NetworkChangeNotifier::CONNECTION_UNKNOWN] =
-      NetworkQuality(base::TimeDelta::FromMilliseconds(115),
-                     base::TimeDelta::FromMilliseconds(55), 1961);
+      nqe::internal::NetworkQuality(base::TimeDelta::FromMilliseconds(115),
+                                    base::TimeDelta::FromMilliseconds(55),
+                                    1961);
 
   default_observations[NetworkChangeNotifier::CONNECTION_ETHERNET] =
-      NetworkQuality(base::TimeDelta::FromMilliseconds(90),
-                     base::TimeDelta::FromMilliseconds(33), 1456);
+      nqe::internal::NetworkQuality(base::TimeDelta::FromMilliseconds(90),
+                                    base::TimeDelta::FromMilliseconds(33),
+                                    1456);
 
   default_observations[NetworkChangeNotifier::CONNECTION_WIFI] =
-      NetworkQuality(base::TimeDelta::FromMilliseconds(116),
-                     base::TimeDelta::FromMilliseconds(66), 2658);
+      nqe::internal::NetworkQuality(base::TimeDelta::FromMilliseconds(116),
+                                    base::TimeDelta::FromMilliseconds(66),
+                                    2658);
 
   default_observations[NetworkChangeNotifier::CONNECTION_2G] =
-      NetworkQuality(base::TimeDelta::FromMilliseconds(1726),
-                     base::TimeDelta::FromMilliseconds(1531), 74);
+      nqe::internal::NetworkQuality(base::TimeDelta::FromMilliseconds(1726),
+                                    base::TimeDelta::FromMilliseconds(1531),
+                                    74);
 
   default_observations[NetworkChangeNotifier::CONNECTION_3G] =
-      NetworkQuality(base::TimeDelta::FromMilliseconds(272),
-                     base::TimeDelta::FromMilliseconds(209), 749);
+      nqe::internal::NetworkQuality(base::TimeDelta::FromMilliseconds(272),
+                                    base::TimeDelta::FromMilliseconds(209),
+                                    749);
 
   default_observations[NetworkChangeNotifier::CONNECTION_4G] =
-      NetworkQuality(base::TimeDelta::FromMilliseconds(137),
-                     base::TimeDelta::FromMilliseconds(80), 1708);
+      nqe::internal::NetworkQuality(base::TimeDelta::FromMilliseconds(137),
+                                    base::TimeDelta::FromMilliseconds(80),
+                                    1708);
 
   default_observations[NetworkChangeNotifier::CONNECTION_NONE] =
-      NetworkQuality(base::TimeDelta::FromMilliseconds(163),
-                     base::TimeDelta::FromMilliseconds(83), 575);
+      nqe::internal::NetworkQuality(base::TimeDelta::FromMilliseconds(163),
+                                    base::TimeDelta::FromMilliseconds(83), 575);
 
   default_observations[NetworkChangeNotifier::CONNECTION_BLUETOOTH] =
-      NetworkQuality(base::TimeDelta::FromMilliseconds(385),
-                     base::TimeDelta::FromMilliseconds(318), 476);
+      nqe::internal::NetworkQuality(base::TimeDelta::FromMilliseconds(385),
+                                    base::TimeDelta::FromMilliseconds(318),
+                                    476);
 
   // Override using the values provided via variation params.
   for (size_t i = 0; i <= NetworkChangeNotifier::CONNECTION_LAST; ++i) {
@@ -193,10 +198,10 @@ void ObtainDefaultObservations(const std::map<std::string, std::string>& params,
     if (it != params.end() &&
         base::StringToInt(it->second, &variations_value) &&
         variations_value >= kMinimumRTTVariationParameterMsec) {
-      default_observations[i] =
-          NetworkQuality(base::TimeDelta::FromMilliseconds(variations_value),
-                         default_observations[i].transport_rtt(),
-                         default_observations[i].downstream_throughput_kbps());
+      default_observations[i] = nqe::internal::NetworkQuality(
+          base::TimeDelta::FromMilliseconds(variations_value),
+          default_observations[i].transport_rtt(),
+          default_observations[i].downstream_throughput_kbps());
     }
 
     variations_value = kMinimumRTTVariationParameterMsec - 1;
@@ -206,10 +211,10 @@ void ObtainDefaultObservations(const std::map<std::string, std::string>& params,
     if (it != params.end() &&
         base::StringToInt(it->second, &variations_value) &&
         variations_value >= kMinimumRTTVariationParameterMsec) {
-      default_observations[i] =
-          NetworkQuality(default_observations[i].http_rtt(),
-                         base::TimeDelta::FromMilliseconds(variations_value),
-                         default_observations[i].downstream_throughput_kbps());
+      default_observations[i] = nqe::internal::NetworkQuality(
+          default_observations[i].http_rtt(),
+          base::TimeDelta::FromMilliseconds(variations_value),
+          default_observations[i].downstream_throughput_kbps());
     }
 
     variations_value = kMinimumThroughputVariationParameterKbps - 1;
@@ -220,7 +225,7 @@ void ObtainDefaultObservations(const std::map<std::string, std::string>& params,
     if (it != params.end() &&
         base::StringToInt(it->second, &variations_value) &&
         variations_value >= kMinimumThroughputVariationParameterKbps) {
-      default_observations[i] = NetworkQuality(
+      default_observations[i] = nqe::internal::NetworkQuality(
           default_observations[i].http_rtt(),
           default_observations[i].transport_rtt(), variations_value);
     }
@@ -231,39 +236,45 @@ void ObtainDefaultObservations(const std::map<std::string, std::string>& params,
 // effective connection types.
 void ObtainTypicalNetworkQualities(
     const std::map<std::string, std::string>& params,
-    NetworkQuality typical_network_quality[]) {
+    nqe::internal::NetworkQuality typical_network_quality[]) {
   for (size_t i = 0; i < EFFECTIVE_CONNECTION_TYPE_LAST; ++i) {
-    DCHECK_EQ(InvalidRTT(), typical_network_quality[i].http_rtt());
-    DCHECK_EQ(InvalidRTT(), typical_network_quality[i].transport_rtt());
-    DCHECK_EQ(kInvalidThroughput,
+    DCHECK_EQ(nqe::internal::InvalidRTT(),
+              typical_network_quality[i].http_rtt());
+    DCHECK_EQ(nqe::internal::InvalidRTT(),
+              typical_network_quality[i].transport_rtt());
+    DCHECK_EQ(nqe::internal::kInvalidThroughput,
               typical_network_quality[i].downstream_throughput_kbps());
   }
 
-  typical_network_quality[EFFECTIVE_CONNECTION_TYPE_SLOW_2G] = NetworkQuality(
-      // Set to the 77.5th percentile of 2G RTT observations on Android.
-      // This corresponds to the median RTT observation when effective
-      // connection type is Slow 2G.
-      base::TimeDelta::FromMilliseconds(3600),
-      base::TimeDelta::FromMilliseconds(3000), 40);
+  typical_network_quality[EFFECTIVE_CONNECTION_TYPE_SLOW_2G] =
+      nqe::internal::NetworkQuality(
+          // Set to the 77.5th percentile of 2G RTT observations on Android.
+          // This corresponds to the median RTT observation when effective
+          // connection type is Slow 2G.
+          base::TimeDelta::FromMilliseconds(3600),
+          base::TimeDelta::FromMilliseconds(3000), 40);
 
-  typical_network_quality[EFFECTIVE_CONNECTION_TYPE_2G] = NetworkQuality(
-      // Set to the 58th percentile of 2G RTT observations on Android. This
-      // corresponds to the median RTT observation when effective connection
-      // type is 2G.
-      base::TimeDelta::FromMilliseconds(1800),
-      base::TimeDelta::FromMilliseconds(1500), 75);
+  typical_network_quality[EFFECTIVE_CONNECTION_TYPE_2G] =
+      nqe::internal::NetworkQuality(
+          // Set to the 58th percentile of 2G RTT observations on Android. This
+          // corresponds to the median RTT observation when effective connection
+          // type is 2G.
+          base::TimeDelta::FromMilliseconds(1800),
+          base::TimeDelta::FromMilliseconds(1500), 75);
 
-  typical_network_quality[EFFECTIVE_CONNECTION_TYPE_3G] = NetworkQuality(
-      // Set to the 75th percentile of 3G RTT observations on Android. This
-      // corresponds to the median RTT observation when effective connection
-      // type is 3G.
-      base::TimeDelta::FromMilliseconds(450),
-      base::TimeDelta::FromMilliseconds(400), 400);
+  typical_network_quality[EFFECTIVE_CONNECTION_TYPE_3G] =
+      nqe::internal::NetworkQuality(
+          // Set to the 75th percentile of 3G RTT observations on Android. This
+          // corresponds to the median RTT observation when effective connection
+          // type is 3G.
+          base::TimeDelta::FromMilliseconds(450),
+          base::TimeDelta::FromMilliseconds(400), 400);
 
   // Set to the 25th percentile of 3G RTT observations on Android.
   typical_network_quality[EFFECTIVE_CONNECTION_TYPE_4G] =
-      NetworkQuality(base::TimeDelta::FromMilliseconds(175),
-                     base::TimeDelta::FromMilliseconds(125), 1600);
+      nqe::internal::NetworkQuality(base::TimeDelta::FromMilliseconds(175),
+                                    base::TimeDelta::FromMilliseconds(125),
+                                    1600);
 
   static_assert(
       EFFECTIVE_CONNECTION_TYPE_4G + 1 == EFFECTIVE_CONNECTION_TYPE_LAST,
@@ -274,28 +285,31 @@ void ObtainTypicalNetworkQualities(
 // |connection_thresholds|.
 void ObtainConnectionThresholds(
     const std::map<std::string, std::string>& params,
-    NetworkQuality connection_thresholds[]) {
+    nqe::internal::NetworkQuality connection_thresholds[]) {
   // First set the default thresholds.
-  NetworkQuality default_effective_connection_type_thresholds
+  nqe::internal::NetworkQuality default_effective_connection_type_thresholds
       [EffectiveConnectionType::EFFECTIVE_CONNECTION_TYPE_LAST];
 
   default_effective_connection_type_thresholds
-      [EFFECTIVE_CONNECTION_TYPE_SLOW_2G] = NetworkQuality(
+      [EFFECTIVE_CONNECTION_TYPE_SLOW_2G] = nqe::internal::NetworkQuality(
           // Set to the 66th percentile of 2G RTT observations on Android.
           base::TimeDelta::FromMilliseconds(2010),
-          base::TimeDelta::FromMilliseconds(1870), kInvalidThroughput);
+          base::TimeDelta::FromMilliseconds(1870),
+          nqe::internal::kInvalidThroughput);
 
   default_effective_connection_type_thresholds[EFFECTIVE_CONNECTION_TYPE_2G] =
-      NetworkQuality(
+      nqe::internal::NetworkQuality(
           // Set to the 50th percentile of RTT observations on Android.
           base::TimeDelta::FromMilliseconds(1420),
-          base::TimeDelta::FromMilliseconds(1280), kInvalidThroughput);
+          base::TimeDelta::FromMilliseconds(1280),
+          nqe::internal::kInvalidThroughput);
 
   default_effective_connection_type_thresholds[EFFECTIVE_CONNECTION_TYPE_3G] =
-      NetworkQuality(
+      nqe::internal::NetworkQuality(
           // Set to the 50th percentile of 3G RTT observations on Android.
           base::TimeDelta::FromMilliseconds(273),
-          base::TimeDelta::FromMilliseconds(204), kInvalidThroughput);
+          base::TimeDelta::FromMilliseconds(204),
+          nqe::internal::kInvalidThroughput);
 
   // Connection threshold should not be set for 4G effective connection type
   // since it is the fastest.
@@ -308,9 +322,10 @@ void ObtainConnectionThresholds(
   for (size_t i = 0; i <= EFFECTIVE_CONNECTION_TYPE_3G; ++i) {
     EffectiveConnectionType effective_connection_type =
         static_cast<EffectiveConnectionType>(i);
-    DCHECK_EQ(InvalidRTT(), connection_thresholds[i].http_rtt());
-    DCHECK_EQ(InvalidRTT(), connection_thresholds[i].transport_rtt());
-    DCHECK_EQ(kInvalidThroughput,
+    DCHECK_EQ(nqe::internal::InvalidRTT(), connection_thresholds[i].http_rtt());
+    DCHECK_EQ(nqe::internal::InvalidRTT(),
+              connection_thresholds[i].transport_rtt());
+    DCHECK_EQ(nqe::internal::kInvalidThroughput,
               connection_thresholds[i].downstream_throughput_kbps());
     if (effective_connection_type == EFFECTIVE_CONNECTION_TYPE_UNKNOWN)
       continue;
@@ -416,26 +431,25 @@ const char* NetworkQualityEstimatorParams::GetNameForConnectionType(
   return GetNameForConnectionTypeInternal(connection_type);
 }
 
-const NetworkQuality& NetworkQualityEstimatorParams::DefaultObservation(
+const nqe::internal::NetworkQuality&
+NetworkQualityEstimatorParams::DefaultObservation(
     NetworkChangeNotifier::ConnectionType type) const {
   DCHECK(thread_checker_.CalledOnValidThread());
   return default_observations_[type];
 }
 
-const NetworkQuality& NetworkQualityEstimatorParams::TypicalNetworkQuality(
+const nqe::internal::NetworkQuality&
+NetworkQualityEstimatorParams::TypicalNetworkQuality(
     EffectiveConnectionType type) const {
   DCHECK(thread_checker_.CalledOnValidThread());
   return typical_network_quality_[type];
 }
 
-const NetworkQuality& NetworkQualityEstimatorParams::ConnectionThreshold(
+const nqe::internal::NetworkQuality&
+NetworkQualityEstimatorParams::ConnectionThreshold(
     EffectiveConnectionType type) const {
   DCHECK(thread_checker_.CalledOnValidThread());
   return connection_thresholds_[type];
 }
-
-}  // namespace internal
-
-}  // namespace nqe
 
 }  // namespace net

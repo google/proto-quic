@@ -16,21 +16,18 @@ namespace base {
 // with the fdopened FILE. |readonly_fd| is populated with the opened fd if
 // options.share_read_only is true. |path| is populated with the location of
 // the file before it was unlinked.
-// Returns false if there's a failure and sets |error|.
+// Returns false if there's an unhandled failure.
 bool CreateAnonymousSharedMemory(const SharedMemoryCreateOptions& options,
                                  ScopedFILE* fp,
                                  ScopedFD* readonly_fd,
-                                 FilePath* path,
-                                 SharedMemoryError* error);
+                                 FilePath* path);
 
 // Takes the outputs of CreateAnonymousSharedMemory and maps them properly to
 // |mapped_file| or |readonly_mapped_file|, depending on which one is populated.
-// Returns false if there's a failure and sets |error|.
 bool PrepareMapFile(ScopedFILE fp,
                     ScopedFD readonly_fd,
                     int* mapped_file,
-                    int* readonly_mapped_file,
-                    SharedMemoryError* error);
+                    int* readonly_mapped_file);
 #endif
 
 }  // namespace base

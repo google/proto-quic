@@ -71,8 +71,9 @@ WRAPPED_TYPED_TEST_P(%(test_case_name)s, %(sanitized_test_name)s) {
   default_info = TestInfo(None)
 
   output.write('''PkitsTestInfo info;
+  info.test_number = "%s";
   info.should_validate = %s;
-''' % (bool_to_str(info.should_validate)))
+''' % (test_number, bool_to_str(info.should_validate)))
 
   # Output any non-default inputs/outputs. Only properties that differ from
   # the defaults are written, so as to keep the generated file more readable.

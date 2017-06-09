@@ -182,8 +182,12 @@ def Diff(before, after):
   """Diffs two SizeInfo objects. Returns a SizeInfoDiff."""
   assert isinstance(before, models.SizeInfo)
   assert isinstance(after, models.SizeInfo)
-  section_sizes = {k: after.section_sizes[k] - v
+  section_sizes = {k: after.section_sizes.get(k, 0) - v
                    for k, v in before.section_sizes.iteritems()}
+  for k, v in after.section_sizes.iteritems():
+    if k not in section_sizes:
+      section_sizes[k] = v
+
   symbol_diff = _DiffSymbolGroups(before.raw_symbols, after.raw_symbols)
   return models.SizeInfoDiff(section_sizes, symbol_diff, before.metadata,
                              after.metadata)

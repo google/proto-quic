@@ -1206,8 +1206,6 @@ TEST_P(QuicNetworkTransactionTest, RetryMisdirectedRequest) {
   mock_quic_data.AddRead(ConstructServerResponseHeadersPacket(
       1, GetNthClientInitiatedStreamId(0), false, true,
       GetResponseHeaders("421"), nullptr));
-  mock_quic_data.AddWrite(ConstructClientAckAndRstPacket(
-      3, GetNthClientInitiatedStreamId(0), QUIC_STREAM_CANCELLED, 1, 1, 1));
   mock_quic_data.AddRead(ASYNC, OK);
   mock_quic_data.AddSocketDataToFactory(&socket_factory_);
 

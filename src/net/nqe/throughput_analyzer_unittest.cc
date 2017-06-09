@@ -34,8 +34,7 @@ namespace {
 
 class TestThroughputAnalyzer : public internal::ThroughputAnalyzer {
  public:
-  explicit TestThroughputAnalyzer(
-      internal::NetworkQualityEstimatorParams* params)
+  explicit TestThroughputAnalyzer(NetworkQualityEstimatorParams* params)
       : internal::ThroughputAnalyzer(
             params,
             base::ThreadTaskRunnerHandle::Get(),
@@ -85,7 +84,7 @@ TEST(ThroughputAnalyzerTest, MaximumRequests) {
 
   for (const auto& test : tests) {
     std::map<std::string, std::string> variation_params;
-    internal::NetworkQualityEstimatorParams params(variation_params);
+    NetworkQualityEstimatorParams params(variation_params);
     TestThroughputAnalyzer throughput_analyzer(&params);
 
     TestDelegate test_delegate;
@@ -137,7 +136,7 @@ TEST(ThroughputAnalyzerTest, TestThroughputWithMultipleRequestsOverlap) {
   for (const auto& test : tests) {
     // Localhost requests are not allowed for estimation purposes.
     std::map<std::string, std::string> variation_params;
-    internal::NetworkQualityEstimatorParams params(variation_params);
+    NetworkQualityEstimatorParams params(variation_params);
     TestThroughputAnalyzer throughput_analyzer(&params);
 
     TestDelegate test_delegate;
@@ -226,7 +225,7 @@ TEST(ThroughputAnalyzerTest, TestThroughputWithNetworkRequestsOverlap) {
     std::map<std::string, std::string> variation_params;
     variation_params["throughput_min_requests_in_flight"] =
         base::IntToString(test.throughput_min_requests_in_flight);
-    internal::NetworkQualityEstimatorParams params(variation_params);
+    NetworkQualityEstimatorParams params(variation_params);
     TestThroughputAnalyzer throughput_analyzer(&params);
     TestDelegate test_delegate;
     TestURLRequestContext context;
@@ -278,7 +277,7 @@ TEST(ThroughputAnalyzerTest, TestThroughputWithNetworkRequestsOverlap) {
 TEST(ThroughputAnalyzerTest, TestThroughputWithMultipleNetworkRequests) {
   std::map<std::string, std::string> variation_params;
   variation_params["throughput_min_requests_in_flight"] = "3";
-  internal::NetworkQualityEstimatorParams params(variation_params);
+  NetworkQualityEstimatorParams params(variation_params);
   TestThroughputAnalyzer throughput_analyzer(&params);
   TestDelegate test_delegate;
   TestURLRequestContext context;

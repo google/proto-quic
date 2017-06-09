@@ -140,7 +140,7 @@ def gen_result_response(**kwargs):
     u'failure': False,
     u'internal_failure': False,
     u'modified_ts': u'2014-09-24T13:49:17.012345',
-    u'name': u'heartbeat-canary-2014-09-24_13:49:01-os=Linux',
+    u'name': u'heartbeat-canary-2014-09-24_13:49:01-os=Ubuntu',
     u'server_versions': [u'1'],
     u'started_ts': u'2014-09-24T13:49:09.012345',
     u'state': 'COMPLETED',
@@ -337,7 +337,7 @@ class TestSwarmingTrigger(NetTestCase):
             caches=[],
             cipd_input=None,
             command=['a', 'b'],
-            dimensions={'foo': 'bar', 'os': 'Mac'},
+            dimensions=[('foo', 'bar'), ('os', 'Mac')],
             env={},
             execution_timeout_secs=60,
             extra_args=[],
@@ -412,7 +412,7 @@ class TestSwarmingTrigger(NetTestCase):
             caches=[],
             cipd_input=None,
             command=['a', 'b'],
-            dimensions={'foo': 'bar', 'os': 'Mac'},
+            dimensions=[('foo', 'bar'), ('os', 'Mac')],
             env={},
             execution_timeout_secs=60,
             extra_args=[],
@@ -479,7 +479,7 @@ class TestSwarmingTrigger(NetTestCase):
                         version='abc123')],
                 server=None),
             command=['a', 'b'],
-            dimensions={'foo': 'bar', 'os': 'Mac'},
+            dimensions=[('foo', 'bar'), ('os', 'Mac')],
             env={},
             execution_timeout_secs=60,
             extra_args=[],
@@ -1506,135 +1506,124 @@ class TestCommandBot(NetTestCase):
   # Specialized test fixture for command 'bot'.
   def setUp(self):
     super(TestCommandBot, self).setUp()
-    # Expected requests are always the same, independent of the test case.
-    self.expected_requests(
-        [
-          (
-            'https://localhost:1/api/swarming/v1/bots/list?limit=250',
-            {},
-            self.mock_swarming_api_v1_bots_page_1(),
-          ),
-          (
-            'https://localhost:1/api/swarming/v1/bots/list?limit=250&'
-              'cursor=opaque_cursor',
-            {},
-            self.mock_swarming_api_v1_bots_page_2(),
-          ),
-        ])
-
-  @staticmethod
-  def mock_swarming_api_v1_bots_page_1():
-    """Returns fake /api/swarming/v1/bots/list data."""
     # Sample data retrieved from actual server.
-    now = unicode(datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
-    return {
-      u'items': [
-        {
-          u'bot_id': u'swarm3',
-          u'created_ts': now,
-          u'dimensions': [
-            {u'key': u'cores', u'value': [u'4']},
-            {u'key': u'cpu', u'value': [u'x86', u'x86-64']},
-            {u'key': u'gpu', u'value': [u'15ad', u'15ad:0405']},
-            {u'key': u'id', u'value': [u'swarm3']},
-            {u'key': u'os', u'value': [u'Mac', u'Mac-10.9']},
-          ],
-          u'external_ip': u'1.1.1.3',
-          u'hostname': u'swarm3.example.com',
-          u'internal_ip': u'192.168.0.3',
-          u'is_dead': False,
-          u'last_seen_ts': now,
-          u'quarantined': False,
-          u'task_id': u'148569b73a89501',
-          u'task_name': u'browser_tests',
-          u'version': u'56918a2ea28a6f51751ad14cc086f118b8727905',
-        },
-        {
-          u'bot_id': u'swarm1',
-          u'created_ts': now,
-          u'dimensions': [
-            {u'key': u'cores', u'value': [u'8']},
-            {u'key': u'cpu', u'value': [u'x86', u'x86-64']},
-            {u'key': u'gpu', u'value': []},
-            {u'key': u'id', u'value': [u'swarm1']},
-            {u'key': u'os', u'value': [u'Linux', u'Linux-12.04']},
-          ],
-          u'external_ip': u'1.1.1.1',
-          u'hostname': u'swarm1.example.com',
-          u'internal_ip': u'192.168.0.1',
-          u'is_dead': True,
-          u'last_seen_ts': 'A long time ago',
-          u'quarantined': False,
-          u'task_id': u'',
-          u'task_name': None,
-          u'version': u'56918a2ea28a6f51751ad14cc086f118b8727905',
-        },
-        {
-          u'bot_id': u'swarm2',
-          u'created_ts': now,
-          u'dimensions': [
-            {u'key': u'cores', u'value': [u'8']},
-            {u'key': u'cpu', u'value': [u'x86', u'x86-64']},
-            {u'key': u'gpu', u'value': [
-              u'15ad',
-              u'15ad:0405',
-              u'VMware Virtual SVGA 3D Graphics Adapter',
-            ]},
-            {u'key': u'id', u'value': [u'swarm2']},
-            {u'key': u'os', u'value': [u'Windows', u'Windows-6.1']},
-          ],
-          u'external_ip': u'1.1.1.2',
-          u'hostname': u'swarm2.example.com',
-          u'internal_ip': u'192.168.0.2',
-          u'is_dead': False,
-          u'last_seen_ts': now,
-          u'quarantined': False,
-          u'task_id': u'',
-          u'task_name': None,
-          u'version': u'56918a2ea28a6f51751ad14cc086f118b8727905',
-        },
+    self.now = unicode(datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
+    self.bot_1 = {
+      u'bot_id': u'swarm1',
+      u'created_ts': self.now,
+      u'dimensions': [
+        {u'key': u'cores', u'value': [u'8']},
+        {u'key': u'cpu', u'value': [u'x86', u'x86-64']},
+        {u'key': u'gpu', u'value': []},
+        {u'key': u'id', u'value': [u'swarm1']},
+        {u'key': u'os', u'value': [u'Ubuntu', u'Ubuntu-12.04']},
       ],
-      u'cursor': u'opaque_cursor',
-      u'death_timeout': 1800.0,
-      u'limit': 4,
-      u'now': unicode(now),
+      u'external_ip': u'1.1.1.1',
+      u'hostname': u'swarm1.example.com',
+      u'internal_ip': u'192.168.0.1',
+      u'is_dead': True,
+      u'last_seen_ts': 'A long time ago',
+      u'quarantined': False,
+      u'task_id': u'',
+      u'task_name': None,
+      u'version': u'56918a2ea28a6f51751ad14cc086f118b8727905',
+    }
+    self.bot_2 = {
+      u'bot_id': u'swarm2',
+      u'created_ts': self.now,
+      u'dimensions': [
+        {u'key': u'cores', u'value': [u'8']},
+        {u'key': u'cpu', u'value': [u'x86', u'x86-64']},
+        {u'key': u'gpu', u'value': [
+          u'15ad',
+          u'15ad:0405',
+          u'VMware Virtual SVGA 3D Graphics Adapter',
+        ]},
+        {u'key': u'id', u'value': [u'swarm2']},
+        {u'key': u'os', u'value': [u'Windows', u'Windows-6.1']},
+      ],
+      u'external_ip': u'1.1.1.2',
+      u'hostname': u'swarm2.example.com',
+      u'internal_ip': u'192.168.0.2',
+      u'is_dead': False,
+      u'last_seen_ts': self.now,
+      u'quarantined': False,
+      u'task_id': u'',
+      u'task_name': None,
+      u'version': u'56918a2ea28a6f51751ad14cc086f118b8727905',
+    }
+    self.bot_3 = {
+      u'bot_id': u'swarm3',
+      u'created_ts': self.now,
+      u'dimensions': [
+        {u'key': u'cores', u'value': [u'4']},
+        {u'key': u'cpu', u'value': [u'x86', u'x86-64']},
+        {u'key': u'gpu', u'value': [u'15ad', u'15ad:0405']},
+        {u'key': u'id', u'value': [u'swarm3']},
+        {u'key': u'os', u'value': [u'Mac', u'Mac-10.9']},
+      ],
+      u'external_ip': u'1.1.1.3',
+      u'hostname': u'swarm3.example.com',
+      u'internal_ip': u'192.168.0.3',
+      u'is_dead': False,
+      u'last_seen_ts': self.now,
+      u'quarantined': False,
+      u'task_id': u'148569b73a89501',
+      u'task_name': u'browser_tests',
+      u'version': u'56918a2ea28a6f51751ad14cc086f118b8727905',
+    }
+    self.bot_4 = {
+      u'bot_id': u'swarm4',
+      u'created_ts': self.now,
+      u'dimensions': [
+        {u'key': u'cores', u'value': [u'8']},
+        {u'key': u'cpu', u'value': [u'x86', u'x86-64']},
+        {u'key': u'gpu', u'value': []},
+        {u'key': u'id', u'value': [u'swarm4']},
+        {u'key': u'os', u'value': [u'Ubuntu', u'Ubuntu-12.04']},
+      ],
+      u'external_ip': u'1.1.1.4',
+      u'hostname': u'swarm4.example.com',
+      u'internal_ip': u'192.168.0.4',
+      u'is_dead': False,
+      u'last_seen_ts': self.now,
+      u'quarantined': False,
+      u'task_id': u'14856971a64c601',
+      u'task_name': u'base_unittests',
+      u'version': u'56918a2ea28a6f51751ad14cc086f118b8727905',
     }
 
-  @staticmethod
-  def mock_swarming_api_v1_bots_page_2():
+  def mock_swarming_api(self, bots, cursor):
     """Returns fake /api/swarming/v1/bots/list data."""
     # Sample data retrieved from actual server.
-    now = unicode(datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
     return {
-      u'items': [
-        {
-          u'bot_id': u'swarm4',
-          u'created_ts': now,
-          u'dimensions': [
-            {u'key': u'cores', u'value': [u'8']},
-            {u'key': u'cpu', u'value': [u'x86', u'x86-64']},
-            {u'key': u'gpu', u'value': []},
-            {u'key': u'id', u'value': [u'swarm4']},
-            {u'key': u'os', u'value': [u'Linux', u'Linux-12.04']},
-          ],
-          u'external_ip': u'1.1.1.4',
-          u'hostname': u'swarm4.example.com',
-          u'internal_ip': u'192.168.0.4',
-          u'is_dead': False,
-          u'last_seen_ts': now,
-          u'quarantined': False,
-          u'task_id': u'14856971a64c601',
-          u'task_name': u'base_unittests',
-          u'version': u'56918a2ea28a6f51751ad14cc086f118b8727905',
-        }
-      ],
-      u'cursor': None,
+      u'items': bots,
+      u'cursor': cursor,
       u'death_timeout': 1800.0,
       u'limit': 4,
-      u'now': unicode(now),
+      u'now': unicode(self.now),
     }
 
   def test_bots(self):
+    base_url = 'https://localhost:1/api/swarming/v1/bots/list?'
+    self.expected_requests(
+        [
+          (
+            base_url + 'is_dead=FALSE&is_busy=NONE&is_mp=NONE',
+            {},
+            self.mock_swarming_api([self.bot_2], 'opaque'),
+          ),
+          (
+            base_url + 'is_dead=FALSE&is_busy=NONE&is_mp=NONE&cursor=opaque',
+            {},
+            self.mock_swarming_api([self.bot_3], 'opaque2'),
+          ),
+          (
+            base_url + 'is_dead=FALSE&is_busy=NONE&is_mp=NONE&cursor=opaque2',
+            {},
+            self.mock_swarming_api([self.bot_4], None),
+          ),
+        ])
     ret = self.main_safe(['bots', '--swarming', 'https://localhost:1'])
     expected = (
         u'swarm2\n'
@@ -1647,21 +1636,51 @@ class TestCommandBot(NetTestCase):
         u'  task: 148569b73a89501\n'
         u'swarm4\n'
         u'  {"cores": ["8"], "cpu": ["x86", "x86-64"], "gpu": [], '
-          '"id": ["swarm4"], "os": ["Linux", "Linux-12.04"]}\n'
+          '"id": ["swarm4"], "os": ["Ubuntu", "Ubuntu-12.04"]}\n'
         u'  task: 14856971a64c601\n')
     self._check_output(expected, '')
     self.assertEqual(0, ret)
 
   def test_bots_bare(self):
+    base_url = 'https://localhost:1/api/swarming/v1/bots/list?'
+    self.expected_requests(
+        [
+          (
+            base_url + 'is_dead=FALSE&is_busy=NONE&is_mp=NONE',
+            {},
+            self.mock_swarming_api([self.bot_2], 'opaque'),
+          ),
+          (
+            base_url + 'is_dead=FALSE&is_busy=NONE&is_mp=NONE&cursor=opaque',
+            {},
+            self.mock_swarming_api([self.bot_3], 'opaque2'),
+          ),
+          (
+            base_url + 'is_dead=FALSE&is_busy=NONE&is_mp=NONE&cursor=opaque2',
+            {},
+            self.mock_swarming_api([self.bot_4], None),
+          ),
+        ])
     ret = self.main_safe(
         ['bots', '--swarming', 'https://localhost:1', '--bare'])
     self._check_output("swarm2\nswarm3\nswarm4\n", '')
     self.assertEqual(0, ret)
 
   def test_bots_filter(self):
+    base_url = 'https://localhost:1/api/swarming/v1/bots/list?'
+    self.expected_requests(
+        [
+          (
+            base_url +
+              'is_dead=FALSE&is_busy=TRUE&is_mp=NONE&dimensions=os%3AWindows',
+            {},
+            self.mock_swarming_api([self.bot_2], None),
+          ),
+        ])
     ret = self.main_safe(
         [
           'bots', '--swarming', 'https://localhost:1',
+          '--busy',
           '--dimension', 'os', 'Windows',
         ])
     expected = (
@@ -1673,30 +1692,49 @@ class TestCommandBot(NetTestCase):
     self.assertEqual(0, ret)
 
   def test_bots_filter_keep_dead(self):
+    base_url = 'https://localhost:1/api/swarming/v1/bots/list?'
+    self.expected_requests(
+        [
+          (
+            base_url + 'is_dead=NONE&is_busy=NONE&is_mp=NONE',
+            {},
+            self.mock_swarming_api([self.bot_1, self.bot_4], None),
+          ),
+        ])
     ret = self.main_safe(
         [
           'bots', '--swarming', 'https://localhost:1',
-          '--dimension', 'os', 'Linux', '--keep-dead',
+          '--keep-dead',
         ])
     expected = (
         u'swarm1\n  {"cores": ["8"], "cpu": ["x86", "x86-64"], "gpu": [], '
-          '"id": ["swarm1"], "os": ["Linux", "Linux-12.04"]}\n'
+          '"id": ["swarm1"], "os": ["Ubuntu", "Ubuntu-12.04"]}\n'
         u'swarm4\n'
         u'  {"cores": ["8"], "cpu": ["x86", "x86-64"], "gpu": [], '
-          '"id": ["swarm4"], "os": ["Linux", "Linux-12.04"]}\n'
+          '"id": ["swarm4"], "os": ["Ubuntu", "Ubuntu-12.04"]}\n'
         u'  task: 14856971a64c601\n')
     self._check_output(expected, '')
     self.assertEqual(0, ret)
 
   def test_bots_filter_dead_only(self):
+    base_url = 'https://localhost:1/api/swarming/v1/bots/list?'
+    self.expected_requests(
+        [
+          (
+            base_url +
+              'is_dead=TRUE&is_busy=NONE&is_mp=NONE&dimensions=os%3AUbuntu',
+            {},
+            self.mock_swarming_api([self.bot_1], None),
+          ),
+        ])
     ret = self.main_safe(
         [
           'bots', '--swarming', 'https://localhost:1',
-          '--dimension', 'os', 'Linux', '--dead-only',
+          '--dimension', 'os', 'Ubuntu', '--dead-only',
         ])
     expected = (
         u'swarm1\n  {"cores": ["8"], "cpu": ["x86", "x86-64"], "gpu": [], '
-          '"id": ["swarm1"], "os": ["Linux", "Linux-12.04"]}\n')
+          '"id": ["swarm1"], "os": ["Ubuntu", "Ubuntu-12.04"]}\n')
     self._check_output(expected, '')
     self.assertEqual(0, ret)
 

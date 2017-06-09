@@ -4,7 +4,10 @@
 
 #include "net/dns/dns_config_service.h"
 
+#include <utility>
+
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/values.h"
 #include "net/base/ip_endpoint.h"
@@ -60,17 +63,17 @@ void DnsConfig::CopyIgnoreHosts(const DnsConfig& d) {
 }
 
 std::unique_ptr<base::Value> DnsConfig::ToValue() const {
-  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  auto dict = base::MakeUnique<base::DictionaryValue>();
 
-  base::ListValue* list = new base::ListValue();
+  auto list = base::MakeUnique<base::ListValue>();
   for (size_t i = 0; i < nameservers.size(); ++i)
     list->AppendString(nameservers[i].ToString());
-  dict->Set("nameservers", list);
+  dict->Set("nameservers", std::move(list));
 
-  list = new base::ListValue();
+  list = base::MakeUnique<base::ListValue>();
   for (size_t i = 0; i < search.size(); ++i)
     list->AppendString(search[i]);
-  dict->Set("search", list);
+  dict->Set("search", std::move(list));
 
   dict->SetBoolean("unhandled_options", unhandled_options);
   dict->SetBoolean("append_to_multi_label_name", append_to_multi_label_name);
