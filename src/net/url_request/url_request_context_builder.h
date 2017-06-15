@@ -53,10 +53,26 @@ class HttpAuthHandlerFactory;
 class HttpServerProperties;
 class NetworkQualityEstimator;
 class ProxyConfigService;
-class SocketPerformanceWatcherFactory;
+struct ReportingPolicy;
 class URLRequestContext;
 class URLRequestInterceptor;
 
+// A URLRequestContextBuilder creates a single URLRequestContext. It provides
+// methods to manage various URLRequestContext components which should be called
+// before creating the Context. Once configuration is complete, calling Build()
+// will create a URLRequestContext with the specified configuration. Components
+// that are not explicitly configured will use reasonable in-memory defaults.
+//
+// The returned URLRequestContext is self-contained: Deleting it will safely
+// shut down all of the URLRequests owned by its internal components, and then
+// tear down those components. The only exception to this are objects not owned
+// by URLRequestContext. This includes components passed in to the methods that
+// take raw pointers, and objects that components passed in to the Builder have
+// raw pointers to.
+//
+// A Builder should be destroyed after calling Build, and there is no need to
+// keep it around for the lifetime of the created URLRequestContext. Each
+// Builder may be used to create only a single URLRequestContext.
 class NET_EXPORT URLRequestContextBuilder {
  public:
   struct NET_EXPORT HttpCacheParams {
@@ -278,14 +294,14 @@ class NET_EXPORT URLRequestContextBuilder {
     throttling_enabled_ = throttling_enabled;
   }
 
-  void set_socket_performance_watcher_factory(
-      SocketPerformanceWatcherFactory* socket_performance_watcher_factory) {
-    socket_performance_watcher_factory_ = socket_performance_watcher_factory;
-  }
-
   void set_ct_verifier(std::unique_ptr<CTVerifier> ct_verifier);
 
   void SetCertVerifier(std::unique_ptr<CertVerifier> cert_verifier);
+
+  // Sets the reporting policy of the created request context. If not set, or
+  // set to nullptr, reporting is disabled.
+  void set_reporting_policy(
+      std::unique_ptr<net::ReportingPolicy> reporting_policy);
 
   void SetInterceptors(std::vector<std::unique_ptr<URLRequestInterceptor>>
                            url_request_interceptors);
@@ -320,6 +336,9 @@ class NET_EXPORT URLRequestContextBuilder {
   void SetHttpServerProperties(
       std::unique_ptr<HttpServerProperties> http_server_properties);
 
+  // Creates a mostly self-contained URLRequestContext. May only be called once
+  // per URLRequestContextBuilder. After this is called, the Builder can be
+  // safely destroyed.
   std::unique_ptr<URLRequestContext> Build();
 
  protected:
@@ -372,14 +391,11 @@ class NET_EXPORT URLRequestContextBuilder {
   std::unique_ptr<HttpAuthHandlerFactory> http_auth_handler_factory_;
   std::unique_ptr<CertVerifier> cert_verifier_;
   std::unique_ptr<CTVerifier> ct_verifier_;
+  std::unique_ptr<net::ReportingPolicy> reporting_policy_;
   std::vector<std::unique_ptr<URLRequestInterceptor>> url_request_interceptors_;
   std::unique_ptr<HttpServerProperties> http_server_properties_;
   std::map<std::string, std::unique_ptr<URLRequestJobFactory::ProtocolHandler>>
       protocol_handlers_;
-  // SocketPerformanceWatcherFactory to be used by this context builder.
-  // Not owned by the context builder. Once it is set to a non-null value, it
-  // is guaranteed to be non-null during the lifetime of |this|.
-  SocketPerformanceWatcherFactory* socket_performance_watcher_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(URLRequestContextBuilder);
 };

@@ -593,7 +593,7 @@ def _AnnotatePakResources():
 
 
 def _PrintStaticInitializersCountFromApk(apk_filename, tools_prefix,
-                                         chartjson=None):
+                                         dump_sis, chartjson=None):
   with zipfile.ZipFile(apk_filename) as z:
     so_files = [f for f in z.infolist()
                 if f.filename.endswith('.so') and f.file_size > 0]
@@ -610,7 +610,8 @@ def _PrintStaticInitializersCountFromApk(apk_filename, tools_prefix,
     unstripped_path = os.path.join(out_dir, 'lib.unstripped', lib_name)
     if os.path.exists(unstripped_path):
       si_count += _PrintStaticInitializersCount(
-          apk_filename, so_info.filename, unstripped_path, tools_prefix)
+          apk_filename, so_info.filename, unstripped_path, tools_prefix,
+          dump_sis)
     else:
       raise Exception('Unstripped .so not found. Looked here: %s',
                       unstripped_path)
@@ -619,16 +620,16 @@ def _PrintStaticInitializersCountFromApk(apk_filename, tools_prefix,
 
 
 def _PrintStaticInitializersCount(apk_path, apk_so_name, so_with_symbols_path,
-                                  tools_prefix):
+                                  tools_prefix, dump_sis):
   """Counts the number of static initializers in the given shared library.
-     Additionally, files for which static initializers were found are printed
-     on the standard output.
 
      Args:
       apk_path: Path to the apk.
       apk_so_name: Name of the so.
       so_with_symbols_path: Path to the unstripped libchrome.so file.
       tools_prefix: Prefix for arch-specific version of binary utility tools.
+      dump_sis: Whether or not to run dump-static-initializers.py and print
+          the list of static initializers to stdout.
      Returns:
        The number of static initializers found.
   """
@@ -639,13 +640,16 @@ def _PrintStaticInitializersCount(apk_path, apk_so_name, so_with_symbols_path,
   with Unzip(apk_path, filename=apk_so_name) as unzipped_so:
     _VerifyLibBuildIdsMatch(tools_prefix, unzipped_so, so_with_symbols_path)
     readelf_si_count = CountStaticInitializers(unzipped_so, tools_prefix)
-  sis, dump_si_count = GetStaticInitializers(so_with_symbols_path, tools_prefix)
-  print ('Found %s files with static initializers using readelf\n'
-         'Found %s files with static initializers using '
-         'dump-static-initializers') % (readelf_si_count, dump_si_count)
-  print '\n'.join(sis)
+  if dump_sis:
+    sis, dump_si_count = GetStaticInitializers(
+        so_with_symbols_path, tools_prefix)
+    print ('Found %s files with static initializers using readelf\n'
+           'Found %s files with static initializers using '
+           'dump-static-initializers') % (readelf_si_count, dump_si_count)
+    print '\n'.join(sis)
 
   return readelf_si_count
+
 
 def _FormatBytes(byts):
   """Pretty-print a number of bytes."""
@@ -738,9 +742,9 @@ def main():
   argparser.add_argument('--no-output-dir', action='store_true',
                          help='Skip all measurements that rely on having '
                          'output-dir')
-  argparser.add_argument('--no-static-initializer-check', action='store_false',
-                         dest='static_initializer_check', default=True,
-                         help='Skip checking for static initializers')
+  argparser.add_argument('--dump-static-initializers', action='store_true',
+                         help='Run dump-static-initializers.py to get the list'
+                         'of static initializers (slow).')
   argparser.add_argument('-d', '--device',
                          help='Dummy option for perf runner.')
   argparser.add_argument('--estimate-patch-size', action='store_true',
@@ -777,9 +781,9 @@ def main():
                             args.reference_apk_bucket, chartjson=chartjson)
   if not args.no_output_dir:
     PrintPakAnalysis(args.apk, args.min_pak_resource_size)
-    if args.static_initializer_check:
-      _PrintStaticInitializersCountFromApk(
-          args.apk, tools_prefix, chartjson=chartjson)
+    _PrintStaticInitializersCountFromApk(
+        args.apk, tools_prefix, args.dump_static_initializers,
+        chartjson=chartjson)
   if chartjson:
     results_path = os.path.join(args.output_dir, 'results-chart.json')
     logging.critical('Dumping json to %s', results_path)

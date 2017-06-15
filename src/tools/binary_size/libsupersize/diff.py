@@ -32,11 +32,14 @@ def _SymbolKey(symbol):
     # "symbol gap 3 (bar)" -> "symbol gaps"
     name = re.sub(r'\s+\d+( \(.*\))?$', 's', name)
 
+  # Use section rather than section_name since clang & gcc use
+  # .data.rel.ro vs .data.rel.ro.local.
   if '.' not in name:
-    return (symbol.section_name, name)
+    return (symbol.section, name)
+
   # Compiler or Linker generated symbol.
   name = re.sub(r'[.0-9]', '', name)  # Strip out all numbers and dots.
-  return (symbol.section_name, name, symbol.object_path)
+  return (symbol.section, name, symbol.object_path)
 
 
 def _CloneSymbol(sym, size):

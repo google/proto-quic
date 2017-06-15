@@ -2069,7 +2069,7 @@ if (enable_java_templates) {
       }
 
       # http://crbug.com/725224. Speculative fix for bots running out of memory.
-      use_pool = true
+      use_pool = !enable_concurrent_apk_finalization
     }
 
     _native_libs_file_arg_dep = ":$build_config_target"

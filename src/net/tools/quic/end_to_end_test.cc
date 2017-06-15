@@ -35,6 +35,7 @@
 #include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/platform/api/quic_test.h"
+#include "net/quic/platform/api/quic_test_loopback.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_config_peer.h"
@@ -299,7 +300,7 @@ class EndToEndTest : public QuicTestWithParam<TestParams> {
  protected:
   EndToEndTest()
       : initialized_(false),
-        server_address_(QuicSocketAddress(QuicIpAddress::Loopback4(), 0)),
+        server_address_(QuicSocketAddress(TestLoopback(), 0)),
         server_hostname_("test.example.com"),
         client_writer_(nullptr),
         server_writer_(nullptr),
@@ -1600,7 +1601,6 @@ class WrongAddressWriter : public QuicPacketWriterWrapper {
 
 TEST_P(EndToEndTest, ConnectionMigrationClientIPChanged) {
   ASSERT_TRUE(Initialize());
-
   EXPECT_EQ(kFooResponseBody, client_->SendSynchronousRequest("/foo"));
   EXPECT_EQ("200", client_->response_headers()->find(":status")->second);
 
@@ -1608,8 +1608,7 @@ TEST_P(EndToEndTest, ConnectionMigrationClientIPChanged) {
   QuicIpAddress old_host = client_->client()->GetLatestClientAddress().host();
 
   // Migrate socket to the new IP address.
-  QuicIpAddress new_host;
-  new_host.FromString("127.0.0.2");
+  QuicIpAddress new_host = TestLoopback(2);
   EXPECT_NE(old_host, new_host);
   ASSERT_TRUE(client_->client()->MigrateSocket(new_host));
 
@@ -2364,7 +2363,7 @@ class ServerStreamThatDropsBodyFactory : public QuicTestServer::StreamFactory {
  public:
   ServerStreamThatDropsBodyFactory() {}
 
-  ~ServerStreamThatDropsBodyFactory() override{};
+  ~ServerStreamThatDropsBodyFactory() override {}
 
   QuicSimpleServerStream* CreateStream(
       QuicStreamId id,
@@ -2407,7 +2406,7 @@ class ServerStreamThatSendsHugeResponseFactory
   explicit ServerStreamThatSendsHugeResponseFactory(int64_t body_bytes)
       : body_bytes_(body_bytes) {}
 
-  ~ServerStreamThatSendsHugeResponseFactory() override{};
+  ~ServerStreamThatSendsHugeResponseFactory() override {}
 
   QuicSimpleServerStream* CreateStream(
       QuicStreamId id,

@@ -38,3 +38,11 @@ class StorySetUnitTest(story_set_smoke_test.StorySetSmokeTest):
             'Page %s in page set %s has non empty synthetic delay. '
             'Synthetic delay is no longer supported. See crbug.com/508538.' %
             (story.display_name, story_set.Name()))
+
+  def testNoStorySetDefinedWithUnnamedStories(self):
+    for story_set_class in self.GetAllStorySetClasses(self.story_sets_dir,
+                                                      self.top_level_dir):
+      story_set = story_set_class()
+      for story in story_set:
+        self.assertTrue(story.name != '',
+                        'stories must be named: ' + str(story_set_class))

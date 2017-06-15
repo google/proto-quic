@@ -50,10 +50,9 @@ source_set("icuuc") {
 shim_headers("icui18n_shim") {
   root_path = "source/i18n"
   headers = [
-    # This list can easily be updated using the command below:
-    # find third_party/icu/source/i18n/unicode \
-    # -iname '*.h' -printf '"%p",\n' | \
-    # sed -e 's|third_party/icu/i18n/common/||' | sort -u
+    # This list can easily be updated using the commands below:
+    # cd third_party/icu/source/i18n
+    # find unicode -iname '*.h' -printf '    "%p",\n' | LC_ALL=C sort -u
     "unicode/alphaindex.h",
     "unicode/basictz.h",
     "unicode/calendar.h",
@@ -78,7 +77,6 @@ shim_headers("icui18n_shim") {
     "unicode/fpositer.h",
     "unicode/gender.h",
     "unicode/gregocal.h",
-    "unicode/locdspnm.h",
     "unicode/measfmt.h",
     "unicode/measunit.h",
     "unicode/measure.h",
@@ -113,15 +111,12 @@ shim_headers("icui18n_shim") {
     "unicode/ucol.h",
     "unicode/ucoleitr.h",
     "unicode/ucsdet.h",
-    "unicode/ucurr.h",
     "unicode/udat.h",
     "unicode/udateintervalformat.h",
     "unicode/udatpg.h",
-    "unicode/udisplaycontext.h",
     "unicode/ufieldpositer.h",
     "unicode/uformattable.h",
     "unicode/ugender.h",
-    "unicode/uldnames.h",
     "unicode/ulocdata.h",
     "unicode/umsg.h",
     "unicode/unirepl.h",
@@ -130,6 +125,7 @@ shim_headers("icui18n_shim") {
     "unicode/upluralrules.h",
     "unicode/uregex.h",
     "unicode/uregion.h",
+    "unicode/ureldatefmt.h",
     "unicode/usearch.h",
     "unicode/uspoof.h",
     "unicode/utmscale.h",
@@ -141,20 +137,22 @@ shim_headers("icui18n_shim") {
 shim_headers("icuuc_shim") {
   root_path = "source/common"
   headers = [
-    # This list can easily be updated using the command below:
-    # find third_party/icu/source/common/unicode \
-    # -iname '*.h' -printf '"%p",\n' | \
-    # sed -e 's|third_party/icu/source/common/||' | sort -u
+    # This list can easily be updated using the commands below:
+    # cd third_party/icu/source/common
+    # find unicode -iname '*.h' -printf '    "%p",\n' | LC_ALL=C sort -u
     "unicode/appendable.h",
     "unicode/brkiter.h",
     "unicode/bytestream.h",
     "unicode/bytestrie.h",
     "unicode/bytestriebuilder.h",
     "unicode/caniter.h",
+    "unicode/casemap.h",
+    "unicode/char16ptr.h",
     "unicode/chariter.h",
     "unicode/dbbi.h",
     "unicode/docmain.h",
     "unicode/dtintrv.h",
+    "unicode/edits.h",
     "unicode/enumset.h",
     "unicode/errorcode.h",
     "unicode/filteredbrk.h",
@@ -163,6 +161,7 @@ shim_headers("icuuc_shim") {
     "unicode/idna.h",
     "unicode/listformatter.h",
     "unicode/localpointer.h",
+    "unicode/locdspnm.h",
     "unicode/locid.h",
     "unicode/messagepattern.h",
     "unicode/normalizer2.h",
@@ -176,12 +175,14 @@ shim_headers("icuuc_shim") {
     "unicode/rep.h",
     "unicode/resbund.h",
     "unicode/schriter.h",
+    "unicode/simpleformatter.h",
     "unicode/std_string.h",
     "unicode/strenum.h",
     "unicode/stringpiece.h",
     "unicode/stringtriebuilder.h",
     "unicode/symtable.h",
     "unicode/ubidi.h",
+    "unicode/ubiditransform.h",
     "unicode/ubrk.h",
     "unicode/ucasemap.h",
     "unicode/ucat.h",
@@ -195,10 +196,13 @@ shim_headers("icuuc_shim") {
     "unicode/ucnv_err.h",
     "unicode/ucnvsel.h",
     "unicode/uconfig.h",
+    "unicode/ucurr.h",
     "unicode/udata.h",
+    "unicode/udisplaycontext.h",
     "unicode/uenum.h",
     "unicode/uidna.h",
     "unicode/uiter.h",
+    "unicode/uldnames.h",
     "unicode/ulistformatter.h",
     "unicode/uloc.h",
     "unicode/umachine.h",

@@ -538,6 +538,9 @@ template <typename T>
 class CheckedNumeric;
 
 template <typename T>
+class ClampedNumeric;
+
+template <typename T>
 class StrictNumeric;
 
 // Used to treat CheckedNumeric and arithmetic underlying types the same.
@@ -554,6 +557,16 @@ struct UnderlyingType<CheckedNumeric<T>> {
   using type = T;
   static const bool is_numeric = true;
   static const bool is_checked = true;
+  static const bool is_clamped = false;
+  static const bool is_strict = false;
+};
+
+template <typename T>
+struct UnderlyingType<ClampedNumeric<T>> {
+  using type = T;
+  static const bool is_numeric = true;
+  static const bool is_checked = false;
+  static const bool is_clamped = true;
   static const bool is_strict = false;
 };
 
@@ -562,6 +575,7 @@ struct UnderlyingType<StrictNumeric<T>> {
   using type = T;
   static const bool is_numeric = true;
   static const bool is_checked = false;
+  static const bool is_clamped = false;
   static const bool is_strict = true;
 };
 
@@ -570,6 +584,13 @@ struct IsCheckedOp {
   static const bool value =
       UnderlyingType<L>::is_numeric && UnderlyingType<R>::is_numeric &&
       (UnderlyingType<L>::is_checked || UnderlyingType<R>::is_checked);
+};
+
+template <typename L, typename R>
+struct IsClampedOp {
+  static const bool value =
+      UnderlyingType<L>::is_numeric && UnderlyingType<R>::is_numeric &&
+      (UnderlyingType<L>::is_clamped || UnderlyingType<R>::is_clamped);
 };
 
 template <typename L, typename R>
@@ -702,7 +723,7 @@ constexpr bool SafeCompare(const L lhs, const R rhs) {
                    static_cast<BigType>(static_cast<R>(rhs)))
              // Let the template functions figure it out for mixed types.
              : C<L, R>::Test(lhs, rhs);
-};
+}
 
 }  // namespace internal
 }  // namespace base

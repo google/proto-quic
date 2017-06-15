@@ -42,7 +42,7 @@ class KeyNoOpCasesPageSet(story.StorySet):
   """ Key no-op cases """
 
   def __init__(self):
-    super(KeyNoOpCasesPageSet, self).__init__(verify_names=True)
+    super(KeyNoOpCasesPageSet, self).__init__()
 
     # Why: An infinite rAF loop which does not modify the page should incur
     # minimal activity.

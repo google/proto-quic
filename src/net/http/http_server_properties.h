@@ -114,28 +114,26 @@ NET_EXPORT_PRIVATE std::ostream& operator<<(
     std::ostream& os,
     const AlternativeService& alternative_service);
 
-struct NET_EXPORT AlternativeServiceInfo {
-  AlternativeServiceInfo() : alternative_service() {}
+class NET_EXPORT_PRIVATE AlternativeServiceInfo {
+ public:
+  AlternativeServiceInfo();
 
   AlternativeServiceInfo(const AlternativeService& alternative_service,
-                         base::Time expiration)
-      : alternative_service(alternative_service),
-        expiration(expiration) {}
+                         base::Time expiration);
 
   AlternativeServiceInfo(NextProto protocol,
                          const std::string& host,
                          uint16_t port,
-                         base::Time expiration)
-      : alternative_service(protocol, host, port), expiration(expiration) {}
+                         base::Time expiration);
 
   AlternativeServiceInfo(
-      const AlternativeServiceInfo& alternative_service_info) = default;
+      const AlternativeServiceInfo& alternative_service_info);
   AlternativeServiceInfo& operator=(
-      const AlternativeServiceInfo& alternative_service_info) = default;
+      const AlternativeServiceInfo& alternative_service_info);
 
   bool operator==(const AlternativeServiceInfo& other) const {
-    return alternative_service == other.alternative_service &&
-           expiration == other.expiration;
+    return alternative_service_ == other.alternative_service() &&
+           expiration_ == other.expiration();
   }
 
   bool operator!=(const AlternativeServiceInfo& other) const {
@@ -144,8 +142,31 @@ struct NET_EXPORT AlternativeServiceInfo {
 
   std::string ToString() const;
 
-  AlternativeService alternative_service;
-  base::Time expiration;
+  void set_alternative_service(const AlternativeService& alternative_service) {
+    alternative_service_ = alternative_service;
+  }
+
+  void set_protocol(const NextProto& protocol) {
+    alternative_service_.protocol = protocol;
+  }
+
+  void set_host(const std::string& host) { alternative_service_.host = host; }
+
+  void set_port(uint16_t port) { alternative_service_.port = port; }
+
+  void set_expiration(const base::Time& expiration) {
+    expiration_ = expiration;
+  }
+
+  const AlternativeService& alternative_service() const {
+    return alternative_service_;
+  }
+
+  base::Time expiration() const { return expiration_; }
+
+ private:
+  AlternativeService alternative_service_;
+  base::Time expiration_;
 };
 
 struct NET_EXPORT SupportsQuic {

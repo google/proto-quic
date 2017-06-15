@@ -50,6 +50,8 @@ SECTION_TO_SECTION_NAME = {
     'r': '.rodata',
     't': '.text',
 }
+# Used by SymbolGroup when they contain a mix of sections.
+SECTION_NAME_MULTIPLE = '.*'
 
 FLAG_ANONYMOUS = 1
 FLAG_STARTUP = 2
@@ -311,7 +313,7 @@ class SymbolGroup(BaseSymbol):
     self.full_name = full_name if full_name is not None else name
     self.template_name = template_name if template_name is not None else name
     self.name = name or ''
-    self.section_name = section_name or '.*'
+    self.section_name = section_name or SECTION_NAME_MULTIPLE
     self.is_sorted = is_sorted
 
   def __repr__(self):
@@ -333,7 +335,7 @@ class SymbolGroup(BaseSymbol):
     Raises if multiple symbols map to the address.
     """
     if isinstance(key, slice):
-      return self._symbols.__getitem__(key)
+      return self._CreateTransformed(self._symbols.__getitem__(key))
     if isinstance(key, basestring) or key > len(self._symbols):
       found = self.WhereAddressInRange(key)
       if len(found) != 1:
@@ -344,14 +346,12 @@ class SymbolGroup(BaseSymbol):
   def __sub__(self, other):
     other_ids = set(id(s) for s in other)
     after_symbols = [s for s in self if id(s) not in other_ids]
-    return self._CreateTransformed(after_symbols,
-                                   section_name=self.section_name)
+    return self._CreateTransformed(after_symbols)
 
   def __add__(self, other):
     self_ids = set(id(s) for s in self)
     after_symbols = self._symbols + [s for s in other if id(s) not in self_ids]
-    return self._CreateTransformed(
-        after_symbols, section_name=self.section_name, is_sorted=False)
+    return self._CreateTransformed(after_symbols, is_sorted=False)
 
   @property
   def address(self):
@@ -436,6 +436,8 @@ class SymbolGroup(BaseSymbol):
                          is_sorted=None):
     if is_sorted is None:
       is_sorted = self.is_sorted
+    if section_name is None:
+      section_name = self.section_name
     return SymbolGroup(symbols, filtered_symbols=filtered_symbols,
                        full_name=full_name, template_name=template_name,
                        name=name, section_name=section_name,
@@ -449,7 +451,7 @@ class SymbolGroup(BaseSymbol):
     after_symbols = sorted(self._symbols, cmp_func, key, reverse)
     return self._CreateTransformed(
         after_symbols, filtered_symbols=self._filtered_symbols,
-        section_name=self.section_name, is_sorted=True)
+        is_sorted=True)
 
   def SortedByName(self, reverse=False):
     return self.Sorted(key=(lambda s:s.name), reverse=reverse)
@@ -473,8 +475,7 @@ class SymbolGroup(BaseSymbol):
       raise
 
     return self._CreateTransformed(filtered_and_kept[1],
-                                   filtered_symbols=filtered_and_kept[0],
-                                   section_name=self.section_name)
+                                   filtered_symbols=filtered_and_kept[0])
 
   def WhereIsGroup(self):
     return self.Filter(lambda s: s.IsGroup())
@@ -567,7 +568,8 @@ class SymbolGroup(BaseSymbol):
         symbols.WherePathMatches(r'third_party').WhereMatches('foo').Inverted()
     """
     return self._CreateTransformed(
-        self._filtered_symbols, filtered_symbols=self._symbols, is_sorted=False)
+        self._filtered_symbols, filtered_symbols=self._symbols,
+        section_name=SECTION_NAME_MULTIPLE, is_sorted=False)
 
   def GroupedBy(self, func, min_count=0, group_factory=None):
     """Returns a SymbolGroup of SymbolGroups, indexed by |func|.
@@ -586,8 +588,7 @@ class SymbolGroup(BaseSymbol):
     """
     if group_factory is None:
       group_factory = lambda token, symbols: self._CreateTransformed(
-            symbols, full_name=token, template_name=token, name=token,
-            section_name=self.section_name)
+            symbols, full_name=token, template_name=token, name=token)
 
     after_syms = []
     filtered_symbols = []
@@ -626,8 +627,7 @@ class SymbolGroup(BaseSymbol):
           target_list.extend(symbol_or_list)
 
     return self._CreateTransformed(
-        after_syms, filtered_symbols=filtered_symbols,
-        section_name=self.section_name)
+        after_syms, filtered_symbols=filtered_symbols)
 
   def _Clustered(self):
     """Returns a new SymbolGroup with some symbols moved into subgroups.

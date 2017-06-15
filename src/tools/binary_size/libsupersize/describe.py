@@ -200,15 +200,23 @@ class Describer(object):
         if s.IsGroup():
           helper(s)
         else:
-          status = group.DiffStatus(s)
-          paths_by_status[status].add(s.source_path or s.object_path)
+          path = s.source_path or s.object_path
+          # Ignore paths like foo/{shared}/2
+          if '{' not in path:
+            paths_by_status[group.DiffStatus(s)].add(path)
     helper(diff)
-    # Show only paths that have no changed symbols (pure adds / removes).
+    # Initial paths sets are those where *any* symbol is
+    # unchanged/changed/added/removed.
     unchanged, changed, added, removed = paths_by_status
+    # Consider a path with both adds & removes as "changed".
+    changed.update(added.intersection(removed))
+    # Consider a path added / removed only when all symbols are new/removed.
     added.difference_update(unchanged)
     added.difference_update(changed)
+    added.difference_update(removed)
     removed.difference_update(unchanged)
     removed.difference_update(changed)
+    removed.difference_update(added)
     yield '{} paths added, {} removed, {} changed'.format(
         len(added), len(removed), len(changed))
 

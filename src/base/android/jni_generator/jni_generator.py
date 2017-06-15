@@ -420,7 +420,7 @@ def IsMainDexJavaClass(contents):
   needed by non-browser processes must explicitly be annotated with @MainDex
   to force JNI registration.
   """
-  re_maindex = re.compile(r'@MainDex[\s\S]*class\s+\w+\s*{')
+  re_maindex = re.compile(r'@MainDex[\s\S]*class({|[\s\S]*{)')
   found = re.search(re_maindex, contents)
   return 'true' if found else 'false'
 

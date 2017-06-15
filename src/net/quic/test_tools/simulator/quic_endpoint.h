@@ -158,7 +158,7 @@ class QuicEndpointMultiplexer : public Endpoint,
   // Sets the egress port for all the endpoints being multiplexed.
   void SetTxPort(ConstrainedPortInterface* port) override;
 
-  void Act() override{};
+  void Act() override {}
 
  private:
   std::unordered_map<std::string, QuicEndpoint*> mapping_;

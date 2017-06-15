@@ -421,6 +421,7 @@ void SpdySessionPool::OnNewSpdySessionReady(
       return;
     HttpStreamFactoryImpl::Request* request = *iter->second.begin();
     request->Complete(was_alpn_negotiated, negotiated_protocol, using_spdy);
+    RemoveRequestFromSpdySessionRequestMap(request);
     if (request->stream_type() == HttpStreamRequest::BIDIRECTIONAL_STREAM) {
       request->OnBidirectionalStreamImplReady(
           used_ssl_config, used_proxy_info,

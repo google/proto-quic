@@ -5,7 +5,6 @@
 
 import logging
 import json
-import os
 import unittest
 import check_gn_headers
 
@@ -29,7 +28,6 @@ obj/c.o: #deps 1, deps mtime 123 (VALID)
     ../../dir3/path/b.h
     ../../c3.hh
 '''
-ninja_input_win = ninja_input.replace('/', '\\')
 
 
 gn_input = json.loads(r'''
@@ -66,30 +64,14 @@ a/b/c
 class CheckGnHeadersTest(unittest.TestCase):
   def testNinja(self):
     headers = check_gn_headers.ParseNinjaDepsOutput(
-        ninja_input.split('\n'), 'out/Release')
-    expected = set([
-        'dir/path/b.h',
-        'c.hh',
-        'dir3/path/b.h',
-        'c3.hh',
-    ])
+        ninja_input.split('\n'), 'out/Release', False)
+    expected = {
+        'dir/path/b.h': ['obj/a.o'],
+        'c.hh': ['obj/a.o'],
+        'dir3/path/b.h': ['obj/c.o'],
+        'c3.hh': ['obj/c.o'],
+    }
     self.assertEquals(headers, expected)
-
-  def testNinjaWin(self):
-    old_sep = os.sep
-    os.sep = '\\'
-
-    headers = check_gn_headers.ParseNinjaDepsOutput(
-        ninja_input_win.split('\n'), 'out\\Release')
-    expected = set([
-        'dir\\path\\b.h',
-        'c.hh',
-        'dir3\\path\\b.h',
-        'c3.hh',
-    ])
-    self.assertEquals(headers, expected)
-
-    os.sep = old_sep
 
   def testGn(self):
     headers = check_gn_headers.ParseGNProjectJSON(gn_input,

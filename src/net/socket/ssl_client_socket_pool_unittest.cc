@@ -127,6 +127,7 @@ class SSLClientSocketPoolTest : public testing::Test {
                                 kMaxSocketsPerGroup,
                                 &transport_socket_pool_,
                                 NULL,
+                                NULL,
                                 NULL) {
     scoped_refptr<SSLConfigService> ssl_config_service(
         new SSLConfigServiceDefaults);

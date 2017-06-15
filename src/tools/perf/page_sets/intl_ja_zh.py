@@ -14,7 +14,8 @@ class IntlJaZhPage(page_cycler_story.PageCyclerStory):
     super(IntlJaZhPage, self).__init__(
         url=url, page_set=page_set,
         shared_page_state_class=shared_page_state.SharedDesktopPageState,
-        cache_temperature=cache_temperature)
+        cache_temperature=cache_temperature,
+        name=url)
 
 
 class IntlJaZhPageSet(story.StorySet):

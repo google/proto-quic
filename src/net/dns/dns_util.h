@@ -24,6 +24,14 @@ class AddressList;
 NET_EXPORT_PRIVATE bool DNSDomainFromDot(const base::StringPiece& dotted,
                                          std::string* out);
 
+//   dotted: a string in dotted form: "www.google.com"
+//   out: a result in DNS form: "\x03www\x06google\x03com\x00"
+//   valid_name: whether or not |IsValidHostLabelCharacter| returned true for
+//       all characters in all labels in the name.
+bool DNSDomainFromDotWithValidityCheck(const base::StringPiece& dotted,
+                                       std::string* out,
+                                       bool* valid_name);
+
 // Checks that a hostname is valid. Simple wrapper around DNSDomainFromDot.
 NET_EXPORT_PRIVATE bool IsValidDNSDomain(const base::StringPiece& dotted);
 

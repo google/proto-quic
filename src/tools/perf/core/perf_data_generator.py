@@ -516,9 +516,8 @@ def get_waterfall_config():
           ],
        'perf_tests': [
          # crbug.com/698831
-         # ('cc_perftests', 2),
-         # crbug.com/709274
-         # ('load_library_perf_tests', 2),
+         # ('cc_perftests', 'build150-m1'),
+         ('load_library_perf_tests', 'build150-m1'),
          ('net_perftests', 'build150-m1'),
          ('tracing_perftests', 'build150-m1'),
          ('media_perftests', 'build151-m1')]
@@ -694,7 +693,6 @@ BENCHMARK_SWARMING_TIMEOUTS = {
 # Devices which are broken right now. Tests will not be scheduled on them.
 # Please add a comment with a bug for replacing the device.
 BLACKLISTED_DEVICES = [
-    'build47-b1--device4',  # crbug.com/731168
 ]
 
 

@@ -24,7 +24,7 @@ class ImageDecodingMeasurementPageSet(story.StorySet):
   """ A directed benchmark of image decoding performance """
 
   def __init__(self):
-    super(ImageDecodingMeasurementPageSet, self).__init__(verify_names=True)
+    super(ImageDecodingMeasurementPageSet, self).__init__()
     self.image_decoding_measurement_limit_results_to_min_iterations = True
 
     urls_list = [

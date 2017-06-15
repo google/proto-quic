@@ -38,8 +38,7 @@ class SimpleMobileSitesPageSet(story.StorySet):
   def __init__(self):
     super(SimpleMobileSitesPageSet, self).__init__(
       archive_data_file='data/simple_mobile_sites.json',
-      cloud_storage_bucket=story.PUBLIC_BUCKET,
-      verify_names=True)
+      cloud_storage_bucket=story.PUBLIC_BUCKET)
 
     scroll_page_list = [
       # Why: Scrolls moderately complex pages (up to 60 layers)

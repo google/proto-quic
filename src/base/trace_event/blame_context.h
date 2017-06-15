@@ -82,7 +82,7 @@ class BASE_EXPORT BlameContext
   void Enter();
 
   // Leave and stop doing work for a previously entered blame context. If
-  // another blame context belongin to the same tree was entered prior to this
+  // another blame context belonging to the same tree was entered prior to this
   // one, it becomes the active blame context for this thread again.  Similar
   // to Enter(), this function can be called in a thread different from where
   // the blame context was created, and the same requirement on thread safety

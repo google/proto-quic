@@ -58,7 +58,7 @@ class KeyIdlePowerCasesPageSet(story.StorySet):
   """ Key idle power cases """
 
   def __init__(self):
-    super(KeyIdlePowerCasesPageSet, self).__init__(verify_names=True)
+    super(KeyIdlePowerCasesPageSet, self).__init__()
 
     foreground_urls_list = [
       # Why: Ensure minimal activity for static, empty pages in the foreground.

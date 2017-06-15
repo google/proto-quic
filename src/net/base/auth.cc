@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "net/base/auth.h"
-#include "net/base/zap.h"
 
 namespace net {
 
@@ -43,10 +42,6 @@ bool AuthCredentials::Equals(const AuthCredentials& other) const {
 
 bool AuthCredentials::Empty() const {
   return username_.empty() && password_.empty();
-}
-
-void AuthCredentials::Zap() {
-  ZapString(&password_);
 }
 
 }  // namespace net

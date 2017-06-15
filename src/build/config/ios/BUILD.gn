@@ -100,19 +100,6 @@ config("runtime_library") {
   cflags = common_flags
   ldflags = common_flags
 
-  # TODO(crbug.com/634373): Remove once Xcode's libc++ has LLVM r256325. Most
-  # likely this means one Xcode 8 is released and required.
-  if (use_xcode_clang && get_path_info(ios_sdk_version, "name") != "10") {
-    common_cc_flags = [
-      "-isystem",
-      rebase_path("//third_party/llvm-build/Release+Asserts/include/c++/v1",
-                  root_build_dir),
-    ]
-
-    cflags_cc = common_cc_flags
-    cflags_objcc = common_cc_flags
-  }
-
   if (ios_enable_coverage) {
     configs = [ ":enable_coverage" ]
   }

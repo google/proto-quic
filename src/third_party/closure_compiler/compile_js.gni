@@ -17,6 +17,10 @@ compiler_path = "$script_path/compiler/compiler.jar"
 #   deps:
 #     List of js_library targets to depend on
 #
+#   extra_deps:
+#     List of any other rules to depend on. E.g. a rule that generates js source
+#     files
+#
 # Example:
 #   js_library("apple_tree") {
 #     sources = ["tree_main.js"]
@@ -36,6 +40,7 @@ template("js_library") {
                            [
                              "sources",
                              "deps",
+                             "extra_deps",
                            ])
     output_file = "$target_gen_dir/$target_name.js_library"
     outputs = [
@@ -54,6 +59,12 @@ template("js_library") {
         dep_output_path = "$dep_gen_dir/$dep_name.js_library"
         args += [ rebase_path(dep_output_path, root_build_dir) ]
       }
+    }
+    if (defined(extra_deps)) {
+      if (!defined(deps)) {
+        deps = []
+      }
+      deps += extra_deps
     }
   }
 }

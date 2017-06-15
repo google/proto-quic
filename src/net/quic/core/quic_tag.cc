@@ -11,19 +11,16 @@
 
 namespace net {
 
-bool FindMutualQuicTag(const QuicTagVector& our_tags_vector,
-                       const QuicTag* their_tags,
-                       size_t num_their_tags,
+bool FindMutualQuicTag(const QuicTagVector& our_tags,
+                       const QuicTagVector& their_tags,
                        QuicTag* out_result,
                        size_t* out_index) {
-  if (our_tags_vector.empty()) {
-    return false;
-  }
-  const size_t num_our_tags = our_tags_vector.size();
+  const size_t num_our_tags = our_tags.size();
+  const size_t num_their_tags = their_tags.size();
   for (size_t i = 0; i < num_our_tags; i++) {
     for (size_t j = 0; j < num_their_tags; j++) {
-      if (our_tags_vector[i] == their_tags[j]) {
-        *out_result = our_tags_vector[i];
+      if (our_tags[i] == their_tags[j]) {
+        *out_result = our_tags[i];
         if (out_index != nullptr) {
           *out_index = j;
         }

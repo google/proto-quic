@@ -727,8 +727,7 @@ class KeySilkCasesPageSet(story.StorySet):
   def __init__(self, run_no_page_interactions=False):
     super(KeySilkCasesPageSet, self).__init__(
       archive_data_file='data/key_silk_cases.json',
-      cloud_storage_bucket=story.PARTNER_BUCKET,
-      verify_names=True)
+      cloud_storage_bucket=story.PARTNER_BUCKET)
 
     self.AddStory(Page1(self, run_no_page_interactions))
     self.AddStory(Page2(self, run_no_page_interactions))

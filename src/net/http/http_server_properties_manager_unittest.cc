@@ -414,18 +414,18 @@ TEST_P(HttpServerPropertiesManagerTest,
     AlternativeServiceMap::const_iterator map_it = map.begin();
     EXPECT_EQ("mail.google.com", map_it->first.host());
     ASSERT_EQ(1u, map_it->second.size());
-    EXPECT_EQ(kProtoHTTP2, map_it->second[0].alternative_service.protocol);
-    EXPECT_TRUE(map_it->second[0].alternative_service.host.empty());
-    EXPECT_EQ(444, map_it->second[0].alternative_service.port);
+    EXPECT_EQ(kProtoHTTP2, map_it->second[0].alternative_service().protocol);
+    EXPECT_TRUE(map_it->second[0].alternative_service().host.empty());
+    EXPECT_EQ(444, map_it->second[0].alternative_service().port);
     ++map_it;
     EXPECT_EQ("www.google.com", map_it->first.host());
     ASSERT_EQ(2u, map_it->second.size());
-    EXPECT_EQ(kProtoHTTP2, map_it->second[0].alternative_service.protocol);
-    EXPECT_TRUE(map_it->second[0].alternative_service.host.empty());
-    EXPECT_EQ(443, map_it->second[0].alternative_service.port);
-    EXPECT_EQ(kProtoQUIC, map_it->second[1].alternative_service.protocol);
-    EXPECT_TRUE(map_it->second[1].alternative_service.host.empty());
-    EXPECT_EQ(1234, map_it->second[1].alternative_service.port);
+    EXPECT_EQ(kProtoHTTP2, map_it->second[0].alternative_service().protocol);
+    EXPECT_TRUE(map_it->second[0].alternative_service().host.empty());
+    EXPECT_EQ(443, map_it->second[0].alternative_service().port);
+    EXPECT_EQ(kProtoQUIC, map_it->second[1].alternative_service().protocol);
+    EXPECT_TRUE(map_it->second[1].alternative_service().host.empty());
+    EXPECT_EQ(1234, map_it->second[1].alternative_service().port);
   } else {
     const AlternativeServiceMap& map =
         http_server_props_manager_->alternative_service_map();
@@ -433,18 +433,18 @@ TEST_P(HttpServerPropertiesManagerTest,
     AlternativeServiceMap::const_iterator map_it = map.begin();
     EXPECT_EQ("www.google.com", map_it->first.host());
     ASSERT_EQ(2u, map_it->second.size());
-    EXPECT_EQ(kProtoHTTP2, map_it->second[0].alternative_service.protocol);
-    EXPECT_TRUE(map_it->second[0].alternative_service.host.empty());
-    EXPECT_EQ(443, map_it->second[0].alternative_service.port);
-    EXPECT_EQ(kProtoQUIC, map_it->second[1].alternative_service.protocol);
-    EXPECT_TRUE(map_it->second[1].alternative_service.host.empty());
-    EXPECT_EQ(1234, map_it->second[1].alternative_service.port);
+    EXPECT_EQ(kProtoHTTP2, map_it->second[0].alternative_service().protocol);
+    EXPECT_TRUE(map_it->second[0].alternative_service().host.empty());
+    EXPECT_EQ(443, map_it->second[0].alternative_service().port);
+    EXPECT_EQ(kProtoQUIC, map_it->second[1].alternative_service().protocol);
+    EXPECT_TRUE(map_it->second[1].alternative_service().host.empty());
+    EXPECT_EQ(1234, map_it->second[1].alternative_service().port);
     ++map_it;
     EXPECT_EQ("mail.google.com", map_it->first.host());
     ASSERT_EQ(1u, map_it->second.size());
-    EXPECT_EQ(kProtoHTTP2, map_it->second[0].alternative_service.protocol);
-    EXPECT_TRUE(map_it->second[0].alternative_service.host.empty());
-    EXPECT_EQ(444, map_it->second[0].alternative_service.port);
+    EXPECT_EQ(kProtoHTTP2, map_it->second[0].alternative_service().protocol);
+    EXPECT_TRUE(map_it->second[0].alternative_service().host.empty());
+    EXPECT_EQ(444, map_it->second[0].alternative_service().port);
   }
 
   // Verify SupportsQuic.
@@ -749,7 +749,7 @@ TEST_P(HttpServerPropertiesManagerTest, GetAlternativeServiceInfos) {
       http_server_props_manager_->GetAlternativeServiceInfos(spdy_server_mail);
   ASSERT_EQ(1u, alternative_service_info_vector.size());
   EXPECT_EQ(alternative_service,
-            alternative_service_info_vector[0].alternative_service);
+            alternative_service_info_vector[0].alternative_service());
 }
 
 TEST_P(HttpServerPropertiesManagerTest, SetAlternativeServices) {
@@ -788,9 +788,9 @@ TEST_P(HttpServerPropertiesManagerTest, SetAlternativeServices) {
       http_server_props_manager_->GetAlternativeServiceInfos(spdy_server_mail);
   ASSERT_EQ(2u, alternative_service_info_vector2.size());
   EXPECT_EQ(alternative_service1,
-            alternative_service_info_vector2[0].alternative_service);
+            alternative_service_info_vector2[0].alternative_service());
   EXPECT_EQ(alternative_service2,
-            alternative_service_info_vector2[1].alternative_service);
+            alternative_service_info_vector2[1].alternative_service());
 }
 
 TEST_P(HttpServerPropertiesManagerTest, SetAlternativeServicesEmpty) {
@@ -1145,9 +1145,10 @@ TEST_P(HttpServerPropertiesManagerTest, BadSupportsQuic) {
     AlternativeServiceInfoVector alternative_service_info_vector =
         http_server_props_manager_->GetAlternativeServiceInfos(server);
     ASSERT_EQ(1u, alternative_service_info_vector.size());
-    EXPECT_EQ(kProtoQUIC,
-              alternative_service_info_vector[0].alternative_service.protocol);
-    EXPECT_EQ(i, alternative_service_info_vector[0].alternative_service.port);
+    EXPECT_EQ(
+        kProtoQUIC,
+        alternative_service_info_vector[0].alternative_service().protocol);
+    EXPECT_EQ(i, alternative_service_info_vector[0].alternative_service().port);
   }
 
   // Verify SupportsQuic.
@@ -1294,31 +1295,33 @@ TEST_P(HttpServerPropertiesManagerTest, AddToAlternativeServiceMap) {
   ASSERT_EQ(3u, alternative_service_info_vector.size());
 
   EXPECT_EQ(kProtoHTTP2,
-            alternative_service_info_vector[0].alternative_service.protocol);
-  EXPECT_EQ("", alternative_service_info_vector[0].alternative_service.host);
-  EXPECT_EQ(443, alternative_service_info_vector[0].alternative_service.port);
+            alternative_service_info_vector[0].alternative_service().protocol);
+  EXPECT_EQ("", alternative_service_info_vector[0].alternative_service().host);
+  EXPECT_EQ(443, alternative_service_info_vector[0].alternative_service().port);
   // Expiration defaults to one day from now, testing with tolerance.
   const base::Time now = base::Time::Now();
-  const base::Time expiration = alternative_service_info_vector[0].expiration;
+  const base::Time expiration = alternative_service_info_vector[0].expiration();
   EXPECT_LE(now + base::TimeDelta::FromHours(23), expiration);
   EXPECT_GE(now + base::TimeDelta::FromDays(1), expiration);
 
   EXPECT_EQ(kProtoQUIC,
-            alternative_service_info_vector[1].alternative_service.protocol);
-  EXPECT_EQ("", alternative_service_info_vector[1].alternative_service.host);
-  EXPECT_EQ(123, alternative_service_info_vector[1].alternative_service.port);
+            alternative_service_info_vector[1].alternative_service().protocol);
+  EXPECT_EQ("", alternative_service_info_vector[1].alternative_service().host);
+  EXPECT_EQ(123, alternative_service_info_vector[1].alternative_service().port);
   // numeric_limits<int64_t>::max() represents base::Time::Max().
-  EXPECT_EQ(base::Time::Max(), alternative_service_info_vector[1].expiration);
+  EXPECT_EQ(base::Time::Max(), alternative_service_info_vector[1].expiration());
 
   EXPECT_EQ(kProtoHTTP2,
-            alternative_service_info_vector[2].alternative_service.protocol);
+            alternative_service_info_vector[2].alternative_service().protocol);
   EXPECT_EQ("example.org",
-            alternative_service_info_vector[2].alternative_service.host);
-  EXPECT_EQ(1234, alternative_service_info_vector[2].alternative_service.port);
+            alternative_service_info_vector[2].alternative_service().host);
+  EXPECT_EQ(1234,
+            alternative_service_info_vector[2].alternative_service().port);
   base::Time expected_expiration;
   ASSERT_TRUE(
       base::Time::FromUTCString("2036-12-31 10:00:00", &expected_expiration));
-  EXPECT_EQ(expected_expiration, alternative_service_info_vector[2].expiration);
+  EXPECT_EQ(expected_expiration,
+            alternative_service_info_vector[2].expiration());
 }
 
 // Regression test for https://crbug.com/615497.
@@ -1459,11 +1462,11 @@ TEST_P(HttpServerPropertiesManagerTest, DoNotLoadExpiredAlternativeService) {
   ASSERT_EQ(1u, alternative_service_info_vector.size());
 
   EXPECT_EQ(kProtoHTTP2,
-            alternative_service_info_vector[0].alternative_service.protocol);
+            alternative_service_info_vector[0].alternative_service().protocol);
   EXPECT_EQ("valid.example.com",
-            alternative_service_info_vector[0].alternative_service.host);
-  EXPECT_EQ(443, alternative_service_info_vector[0].alternative_service.port);
-  EXPECT_EQ(one_day_from_now_, alternative_service_info_vector[0].expiration);
+            alternative_service_info_vector[0].alternative_service().host);
+  EXPECT_EQ(443, alternative_service_info_vector[0].alternative_service().port);
+  EXPECT_EQ(one_day_from_now_, alternative_service_info_vector[0].expiration());
 }
 
 TEST_P(HttpServerPropertiesManagerTest, ShutdownWithPendingUpdateCache0) {

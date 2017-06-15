@@ -399,6 +399,10 @@
     "label": "//crypto:crypto_unittests",
     "type": "console_test_launcher",
   },
+  "d8": {
+    "label": "//v8:d8",
+    "type": "additional_compile_target",
+  },
   "dbus_unittests": {
     "label": "//dbus:dbus_unittests",
     "type": "windowed_test_launcher",

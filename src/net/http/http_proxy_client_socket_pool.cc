@@ -33,6 +33,20 @@
 
 namespace net {
 
+namespace {
+
+// HttpProxyConnectJobs will time out after this many seconds.  Note this is on
+// top of the timeout for the transport socket.
+// TODO(kundaji): Proxy connect timeout should be independent of platform and be
+// based on proxy. Bug http://crbug.com/407446.
+#if defined(OS_ANDROID) || defined(OS_IOS)
+static const int kHttpProxyConnectJobTimeoutInSeconds = 10;
+#else
+static const int kHttpProxyConnectJobTimeoutInSeconds = 30;
+#endif
+
+}  // namespace
+
 HttpProxySocketParams::HttpProxySocketParams(
     const scoped_refptr<TransportSocketParams>& transport_params,
     const scoped_refptr<SSLSocketParams>& ssl_params,
@@ -65,16 +79,6 @@ const HostResolver::RequestInfo& HttpProxySocketParams::destination() const {
 }
 
 HttpProxySocketParams::~HttpProxySocketParams() {}
-
-// HttpProxyConnectJobs will time out after this many seconds.  Note this is on
-// top of the timeout for the transport socket.
-// TODO(kundaji): Proxy connect timeout should be independent of platform and be
-// based on proxy. Bug http://crbug.com/407446.
-#if defined(OS_ANDROID) || defined(OS_IOS)
-static const int kHttpProxyConnectJobTimeoutInSeconds = 10;
-#else
-static const int kHttpProxyConnectJobTimeoutInSeconds = 30;
-#endif
 
 HttpProxyConnectJob::HttpProxyConnectJob(
     const std::string& group_name,
@@ -150,29 +154,15 @@ int HttpProxyConnectJob::HandleConnectResult(int result) {
   return result;
 }
 
-HttpProxyClientSocketPool::
-HttpProxyConnectJobFactory::HttpProxyConnectJobFactory(
-    TransportClientSocketPool* transport_pool,
-    SSLClientSocketPool* ssl_pool,
-    NetLog* net_log)
+HttpProxyClientSocketPool::HttpProxyConnectJobFactory::
+    HttpProxyConnectJobFactory(TransportClientSocketPool* transport_pool,
+                               SSLClientSocketPool* ssl_pool,
+                               NetworkQualityProvider* network_quality_provider,
+                               NetLog* net_log)
     : transport_pool_(transport_pool),
       ssl_pool_(ssl_pool),
-      net_log_(net_log) {
-  base::TimeDelta max_pool_timeout = base::TimeDelta();
-
-// TODO(kundaji): Proxy connect timeout should be independent of platform and be
-// based on proxy. Bug http://crbug.com/407446.
-#if (defined(OS_ANDROID) || defined(OS_IOS))
-#else
-  if (transport_pool_)
-    max_pool_timeout = transport_pool_->ConnectionTimeout();
-  if (ssl_pool_)
-    max_pool_timeout = std::max(max_pool_timeout,
-                                ssl_pool_->ConnectionTimeout());
-#endif
-  timeout_ = max_pool_timeout +
-    base::TimeDelta::FromSeconds(kHttpProxyConnectJobTimeoutInSeconds);
-}
+      network_quality_provider_(network_quality_provider),
+      net_log_(net_log) {}
 
 std::unique_ptr<ConnectJob>
 HttpProxyClientSocketPool::HttpProxyConnectJobFactory::NewConnectJob(
@@ -188,7 +178,23 @@ HttpProxyClientSocketPool::HttpProxyConnectJobFactory::NewConnectJob(
 base::TimeDelta
 HttpProxyClientSocketPool::HttpProxyConnectJobFactory::ConnectionTimeout(
     ) const {
-  return timeout_;
+  // TODO(tbansal): https://crbug.com/704339. Use |network_quality_provider_|
+  // and field trial to determine the connection timeout.
+  ALLOW_UNUSED_LOCAL(network_quality_provider_);
+
+  // Return the default proxy connection timeout.
+  base::TimeDelta max_pool_timeout = base::TimeDelta();
+#if (!defined(OS_ANDROID) && !defined(OS_IOS))
+  if (transport_pool_)
+    max_pool_timeout = transport_pool_->ConnectionTimeout();
+  if (ssl_pool_) {
+    max_pool_timeout =
+        std::max(max_pool_timeout, ssl_pool_->ConnectionTimeout());
+  }
+#endif  // !defined(OS_ANDROID) && !defined(OS_IOS)
+
+  return max_pool_timeout +
+         base::TimeDelta::FromSeconds(kHttpProxyConnectJobTimeoutInSeconds);
 }
 
 HttpProxyClientSocketPool::HttpProxyClientSocketPool(
@@ -196,6 +202,7 @@ HttpProxyClientSocketPool::HttpProxyClientSocketPool(
     int max_sockets_per_group,
     TransportClientSocketPool* transport_pool,
     SSLClientSocketPool* ssl_pool,
+    NetworkQualityProvider* network_quality_provider,
     NetLog* net_log)
     : transport_pool_(transport_pool),
       ssl_pool_(ssl_pool),
@@ -204,7 +211,10 @@ HttpProxyClientSocketPool::HttpProxyClientSocketPool(
             max_sockets_per_group,
             ClientSocketPool::unused_idle_socket_timeout(),
             ClientSocketPool::used_idle_socket_timeout(),
-            new HttpProxyConnectJobFactory(transport_pool, ssl_pool, net_log)) {
+            new HttpProxyConnectJobFactory(transport_pool,
+                                           ssl_pool,
+                                           network_quality_provider,
+                                           net_log)) {
   // We should always have a |transport_pool_| except in unit tests.
   if (transport_pool_)
     base_.AddLowerLayeredPool(transport_pool_);

@@ -16,7 +16,6 @@ namespace net {
 namespace ct {
 
 enum class CertPolicyCompliance;
-enum class EVPolicyCompliance;
 
 typedef std::vector<scoped_refptr<SignedCertificateTimestamp> > SCTList;
 
@@ -36,9 +35,6 @@ struct NET_EXPORT CTVerifyResult {
   // The result of evaluating whether the connection complies with the
   // CT certificate policy.
   CertPolicyCompliance cert_policy_compliance;
-  // The result of evaluating whether the connection complies with the
-  // EV CT policy.
-  EVPolicyCompliance ev_policy_compliance;
 };
 
 // Returns a list of SCTs from |sct_and_status_list| whose status matches

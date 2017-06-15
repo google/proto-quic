@@ -12,13 +12,31 @@ namespace base {
 namespace trace_event {
 
 namespace {
+
+bool g_use_shared_memory_guid = false;
+
 uint64_t HashString(const std::string& str) {
   uint64_t hash[(kSHA1Length + sizeof(uint64_t) - 1) / sizeof(uint64_t)] = {0};
   SHA1HashBytes(reinterpret_cast<const unsigned char*>(str.data()), str.size(),
                 reinterpret_cast<unsigned char*>(hash));
   return hash[0];
 }
+
 }  // namespace
+
+// static
+bool MemoryAllocatorDumpGuid::UseSharedMemoryBasedGUIDs() {
+  // TODO(hajimehoshi): This should just become the default behavior once the
+  // Mojo GUID (crbug.com/604726) is fixed.
+  if (g_use_shared_memory_guid)
+    return true;
+  return false;
+}
+
+// static
+void MemoryAllocatorDumpGuid::SetUseSharedMemoryBasedGUIDsForTesting() {
+  g_use_shared_memory_guid = true;
+}
 
 MemoryAllocatorDumpGuid::MemoryAllocatorDumpGuid(uint64_t guid) : guid_(guid) {}
 

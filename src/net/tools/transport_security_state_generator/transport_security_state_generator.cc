@@ -152,6 +152,50 @@ bool CheckSubdomainsFlags(const TransportSecurityStateEntries& entries) {
   return true;
 }
 
+bool IsLowercaseAlphanumeric(char c) {
+  return ((c >= 'a') && (c <= 'z')) || ((c >= '0') && (c <= '9'));
+}
+
+// Checks the well-formedness of the hostnames. All hostnames should be in their
+// canonicalized form because they will be matched against canonicalized input.
+bool CheckHostnames(const TransportSecurityStateEntries& entries) {
+  for (const auto& entry : entries) {
+    const std::string& hostname = entry->hostname;
+
+    bool in_component = false;
+    bool most_recent_component_started_alphanumeric = false;
+    for (const char& c : hostname) {
+      if (!in_component) {
+        most_recent_component_started_alphanumeric = IsLowercaseAlphanumeric(c);
+        if (!most_recent_component_started_alphanumeric && (c != '-') &&
+            (c != '_')) {
+          LOG(ERROR) << hostname << " is not in canonicalized form";
+          return false;
+        }
+        in_component = true;
+      } else if (c == '.') {
+        in_component = false;
+      } else if (!IsLowercaseAlphanumeric(c) && (c != '-') && (c != '_')) {
+        LOG(ERROR) << hostname << " is not in canonicalized form";
+        return false;
+      }
+    }
+
+    if (!most_recent_component_started_alphanumeric) {
+      LOG(ERROR) << "The last label of " << hostname
+                 << " must start with a lowercase alphanumeric character";
+      return false;
+    }
+
+    if (!in_component) {
+      LOG(ERROR) << hostname << " must not end with a \".\"";
+      return false;
+    }
+  }
+
+  return true;
+}
+
 }  // namespace
 
 int main(int argc, char* argv[]) {
@@ -216,7 +260,7 @@ int main(int argc, char* argv[]) {
 
   if (!CheckDuplicateEntries(entries) || !CheckNoopEntries(entries) ||
       !CheckSubdomainsFlags(entries) || !CheckForDuplicatePins(pinsets) ||
-      !CheckCertificatesInPinsets(pinsets)) {
+      !CheckCertificatesInPinsets(pinsets) || !CheckHostnames(entries)) {
     LOG(ERROR) << "Checks failed. Aborting.";
     return 1;
   }

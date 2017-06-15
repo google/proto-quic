@@ -1033,6 +1033,19 @@ void QuicStreamFactory::OnCertVerifyJobComplete(CertVerifierJob* job, int rv) {
   active_cert_verifier_jobs_.erase(job->server_id());
 }
 
+bool QuicStreamFactory::IsQuicBroken(QuicChromiumClientSession* session) {
+  const AlternativeService alternative_service(
+      kProtoQUIC, session->server_id().host_port_pair());
+  if (!http_server_properties_->IsAlternativeServiceBroken(
+          alternative_service)) {
+    return false;
+  }
+  // No longer send requests to a server for which QUIC is broken, but
+  // continue to service existing requests.
+  OnSessionGoingAway(session);
+  return true;
+}
+
 void QuicStreamFactory::OnIdleSession(QuicChromiumClientSession* session) {}
 
 void QuicStreamFactory::OnSessionGoingAway(QuicChromiumClientSession* session) {

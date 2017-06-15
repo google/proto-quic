@@ -22,8 +22,9 @@ config("compiler") {
     # does. Define them here instead.
     "HAVE_SYS_UIO_H",
 
-    # Forces full rebuilds on NDK rolls.
-    "ANDROID_NDK_VERSION=${android_ndk_version}",
+    # Forces full rebuilds on NDK rolls. To rebuild everything when NDK version
+    # stays the same, increment the suffix number.
+    "ANDROID_NDK_VERSION_ROLL=${android_ndk_version}_1",
   ]
 
   if (is_clang) {
@@ -150,7 +151,7 @@ config("runtime_library") {
   ]
 
   # Clang with libc++ does not require an explicit atomic library reference.
-  if (!is_clang) {
+  if (!is_clang || (current_cpu == "arm" && arm_version == 6)) {
     libs += [ "atomic" ]
   }
 

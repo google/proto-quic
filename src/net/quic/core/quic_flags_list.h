@@ -129,9 +129,7 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_allow_one_address_change, false)
 
 // If true, QUIC BBR stores a max filtered number of bytes delivered at a rate
 // faster than the sending rate.
-QUIC_FLAG(bool,
-          FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes,
-          false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes, true)
 
 // If true, allow cubic updates on every ack, rather than occasionally limiting
 // the frequency to once every 30ms.
@@ -189,13 +187,13 @@ QUIC_FLAG(double, FLAGS_quic_bbr_slow_delivery_threshold_multiplier, 0.5f)
 // received for a previously closed QUIC stream.
 QUIC_FLAG(bool,
           FLAGS_quic_reloadable_flag_quic_final_offset_from_trailers,
-          false)
+          true)
 
 // If enabled, use refactored stream creation methods.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_refactor_stream_creation, false)
 
 // A second take on fixing QUIC BBR packet conservation.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_fix_conservation2, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_fix_conservation2, true)
 
 // If true, GFEs generate and validate source address token using the actual
 // client IP for proxied session.

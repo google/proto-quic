@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "base/macros.h"
+#include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
@@ -150,9 +151,27 @@ class StatelessConnectionTerminator {
   QuicTimeWaitListManager* time_wait_list_manager_;
 };
 
+// Class which extracts the ALPN from a CHLO packet.
+class ChloAlpnExtractor : public ChloExtractor::Delegate {
+ public:
+  void OnChlo(QuicVersion version,
+              QuicConnectionId connection_id,
+              const CryptoHandshakeMessage& chlo) override {
+    QuicStringPiece alpn_value;
+    if (chlo.GetStringPiece(kALPN, &alpn_value)) {
+      alpn_ = string(alpn_value);
+    }
+  }
+
+  string&& ConsumeAlpn() { return std::move(alpn_); }
+
+ private:
+  string alpn_;
+};
+
 // Class which sits between the ChloExtractor and the StatelessRejector
 // to give the QuicDispatcher a chance to apply policy checks to the CHLO.
-class ChloValidator : public ChloExtractor::Delegate {
+class ChloValidator : public ChloAlpnExtractor {
  public:
   ChloValidator(QuicCryptoServerStream::Helper* helper,
                 QuicSocketAddress self_address,
@@ -166,6 +185,8 @@ class ChloValidator : public ChloExtractor::Delegate {
   void OnChlo(QuicVersion version,
               QuicConnectionId connection_id,
               const CryptoHandshakeMessage& chlo) override {
+    // Extract the ALPN
+    ChloAlpnExtractor::OnChlo(version, connection_id, chlo);
     if (helper_->CanAcceptClientHello(chlo, self_address_, &error_details_)) {
       can_accept_ = true;
       rejector_->OnChlo(version, connection_id,
@@ -648,13 +669,14 @@ void QuicDispatcher::ProcessBufferedChlos(size_t max_connections_to_create) {
   for (; new_sessions_allowed_per_event_loop_ > 0;
        --new_sessions_allowed_per_event_loop_) {
     QuicConnectionId connection_id;
-    std::list<BufferedPacket> packets =
+    BufferedPacketList packet_list =
         buffered_packets_.DeliverPacketsForNextConnection(&connection_id);
+    const std::list<BufferedPacket>& packets = packet_list.buffered_packets;
     if (packets.empty()) {
       return;
     }
-    QuicSession* session =
-        CreateQuicSession(connection_id, packets.front().client_address);
+    QuicSession* session = CreateQuicSession(
+        connection_id, packets.front().client_address, packet_list.alpn);
     QUIC_DLOG(INFO) << "Created new session for " << connection_id;
     session_map_.insert(std::make_pair(connection_id, QuicWrapUnique(session)));
     DeliverPacketsToSession(packets, session);
@@ -706,7 +728,7 @@ void QuicDispatcher::BufferEarlyPacket(QuicConnectionId connection_id) {
   }
   EnqueuePacketResult rs = buffered_packets_.EnqueuePacket(
       connection_id, *current_packet_, current_server_address_,
-      current_client_address_, /*is_chlo=*/false);
+      current_client_address_, /*is_chlo=*/false, /*alpn=*/"");
   if (rs != EnqueuePacketResult::SUCCESS) {
     OnBufferPacketFailure(rs, connection_id);
   } else if (!FLAGS_quic_reloadable_flag_quic_create_session_after_insertion &&
@@ -744,7 +766,7 @@ void QuicDispatcher::ProcessChlo() {
         !buffered_packets_.HasBufferedPackets(current_connection_id_);
     EnqueuePacketResult rs = buffered_packets_.EnqueuePacket(
         current_connection_id_, *current_packet_, current_server_address_,
-        current_client_address_, /*is_chlo=*/true);
+        current_client_address_, /*is_chlo=*/true, current_alpn_);
     if (rs != EnqueuePacketResult::SUCCESS) {
       OnBufferPacketFailure(rs, current_connection_id_);
     } else if (
@@ -755,13 +777,13 @@ void QuicDispatcher::ProcessChlo() {
     return;
   }
   // Creates a new session and process all buffered packets for this connection.
-  QuicSession* session =
-      CreateQuicSession(current_connection_id_, current_client_address_);
+  QuicSession* session = CreateQuicSession(
+      current_connection_id_, current_client_address_, current_alpn_);
   QUIC_DLOG(INFO) << "Created new session for " << current_connection_id_;
   session_map_.insert(
       std::make_pair(current_connection_id_, QuicWrapUnique(session)));
   std::list<BufferedPacket> packets =
-      buffered_packets_.DeliverPackets(current_connection_id_);
+      buffered_packets_.DeliverPackets(current_connection_id_).buffered_packets;
   // Check if CHLO is the first packet arrived on this connection.
   if (!FLAGS_quic_reloadable_flag_quic_create_session_after_insertion &&
       packets.empty()) {
@@ -847,13 +869,15 @@ void QuicDispatcher::MaybeRejectStatelessly(QuicConnectionId connection_id,
       !FLAGS_quic_reloadable_flag_enable_quic_stateless_reject_support ||
       !ShouldAttemptCheapStatelessRejection()) {
     // Not use cheap stateless reject.
+    ChloAlpnExtractor alpn_extractor;
     if (FLAGS_quic_allow_chlo_buffering &&
         !ChloExtractor::Extract(*current_packet_, GetSupportedVersions(),
-                                nullptr)) {
+                                &alpn_extractor)) {
       // Buffer non-CHLO packets.
       ProcessUnauthenticatedHeaderFate(kFateBuffer, connection_id);
       return;
     }
+    current_alpn_ = alpn_extractor.ConsumeAlpn();
     ProcessUnauthenticatedHeaderFate(kFateProcess, connection_id);
     return;
   }
@@ -869,6 +893,7 @@ void QuicDispatcher::MaybeRejectStatelessly(QuicConnectionId connection_id,
     ProcessUnauthenticatedHeaderFate(kFateBuffer, connection_id);
     return;
   }
+  current_alpn_ = validator.ConsumeAlpn();
 
   if (!validator.can_accept()) {
     // This CHLO is prohibited by policy.

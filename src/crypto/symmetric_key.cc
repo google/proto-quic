@@ -100,7 +100,7 @@ std::unique_ptr<SymmetricKey> SymmetricKey::Import(Algorithm algorithm,
   return key;
 }
 
-bool SymmetricKey::GetRawKey(std::string* raw_key) {
+bool SymmetricKey::GetRawKey(std::string* raw_key) const {
   *raw_key = key_;
   return true;
 }

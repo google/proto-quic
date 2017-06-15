@@ -158,6 +158,8 @@ class MockDiskCache : public disk_cache::Backend {
 
   void ReleaseAll();
 
+  bool IsDiskEntryDoomed(const std::string& key);
+
  private:
   using EntryMap = std::unordered_map<std::string, MockDiskEntry*>;
   class NotImplementedIterator;
@@ -233,6 +235,14 @@ class MockHttpCache {
   // Overrides the test mode for a given operation. Remember to reset it after
   // the test! (by setting test_mode to zero).
   static void SetTestMode(int test_mode);
+
+  // Functions to test the state of ActiveEntry.
+
+  bool IsWriterPresent(const std::string& key);
+  bool IsHeadersTransactionPresent(const std::string& key);
+  int GetCountReaders(const std::string& key);
+  int GetCountAddToEntryQueue(const std::string& key);
+  int GetCountDoneHeadersQueue(const std::string& key);
 
  private:
   HttpCache http_cache_;

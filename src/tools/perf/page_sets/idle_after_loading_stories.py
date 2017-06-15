@@ -47,8 +47,7 @@ class IdleAfterLoadingStories(story.StorySet):
   def __init__(self, wait_in_seconds=0):
     super(IdleAfterLoadingStories, self).__init__(
         archive_data_file='data/idle_after_loading_stories.json',
-        cloud_storage_bucket=story.PARTNER_BUCKET,
-        verify_names=True)
+        cloud_storage_bucket=story.PARTNER_BUCKET)
 
     # Chrome has high idle CPU usage on this site, even after its quiesced.
     # https://crbug.com/638365.

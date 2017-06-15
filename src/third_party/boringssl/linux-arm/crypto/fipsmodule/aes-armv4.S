@@ -32,7 +32,6 @@
 @ Profiler-assisted and platform-specific optimization resulted in 16%
 @ improvement on Cortex A8 core and ~21.5 cycles per byte.
 
-#if defined(__arm__)
 #ifndef __KERNEL__
 # include <openssl/arm_arch.h>
 #else
@@ -1195,6 +1194,4 @@ _armv4_AES_decrypt:
 .byte	65,69,83,32,102,111,114,32,65,82,77,118,52,44,32,67,82,89,80,84,79,71,65,77,83,32,98,121,32,60,97,112,112,114,111,64,111,112,101,110,115,115,108,46,111,114,103,62,0
 .align	2
 .align	2
-
-#endif
 #endif

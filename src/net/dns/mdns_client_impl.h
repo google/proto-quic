@@ -37,7 +37,7 @@ namespace net {
 class MDnsSocketFactoryImpl : public MDnsSocketFactory {
  public:
   MDnsSocketFactoryImpl() {}
-  ~MDnsSocketFactoryImpl() override{};
+  ~MDnsSocketFactoryImpl() override {}
 
   void CreateSockets(
       std::vector<std::unique_ptr<DatagramServerSocket>>* sockets) override;

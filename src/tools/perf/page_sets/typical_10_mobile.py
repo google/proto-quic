@@ -20,18 +20,6 @@ class Typical10MobilePage(page_module.Page):
     action_runner.ScrollPage()
     action_runner.Wait(20)
 
-class Typical10MobileReloadPage(Typical10MobilePage):
-
-  def __init__(self, url, page_set, name=''):
-    super(Typical10MobileReloadPage, self).__init__(
-        url=url, page_set=page_set, name=name,)
-
-  def RunPageInteractions(self, action_runner):
-    for _ in range(0, 5):
-      action_runner.ReloadPage()
-      action_runner.WaitForJavaScriptCondition(
-          'document.readyState === "complete"')
-
 
 urls_list = [
     # Why: Top site
@@ -63,19 +51,7 @@ class Typical10MobilePageSet(story.StorySet):
   def __init__(self):
     super(Typical10MobilePageSet, self).__init__(
         archive_data_file='data/typical_10_mobile.json',
-        cloud_storage_bucket=story.PARTNER_BUCKET,
-        verify_names=True)
-
-    for url in urls_list:
-      self.AddStory(Typical10MobilePage(url, self, name=url))
-
-class Typical10MobileReloadPageSet(story.StorySet):
-  """10 typical mobile pages, used for reloading power testing."""
-
-  def __init__(self):
-    super(Typical10MobileReloadPageSet, self).__init__(
-        archive_data_file='data/typical_10_mobile.json',
         cloud_storage_bucket=story.PARTNER_BUCKET)
 
     for url in urls_list:
-      self.AddStory(Typical10MobileReloadPage(url, self))
+      self.AddStory(Typical10MobilePage(url, self, name=url))

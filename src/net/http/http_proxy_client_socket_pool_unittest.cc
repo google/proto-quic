@@ -19,6 +19,7 @@
 #include "net/http/http_proxy_client_socket.h"
 #include "net/http/http_response_headers.h"
 #include "net/log/net_log_with_source.h"
+#include "net/nqe/network_quality_estimator_test_util.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/next_proto.h"
 #include "net/socket/socket_test_util.h"
@@ -78,6 +79,7 @@ class HttpProxyClientSocketPoolTest
               kMaxSocketsPerGroup,
               &transport_socket_pool_,
               &ssl_socket_pool_,
+              &estimator_,
               NULL) {
     session_ = CreateNetworkSession();
   }
@@ -196,6 +198,8 @@ class HttpProxyClientSocketPoolTest
 
  private:
   SpdySessionDependencies session_deps_;
+
+  TestNetworkQualityEstimator estimator_;
 
   MockTransportClientSocketPool transport_socket_pool_;
   MockHostResolver host_resolver_;
@@ -720,6 +724,18 @@ TEST_P(HttpProxyClientSocketPoolTest, TunnelSetupRedirect) {
     EXPECT_TRUE(headers->IsRedirect(&location));
     EXPECT_EQ(location, redirectTarget);
   }
+}
+
+TEST_P(HttpProxyClientSocketPoolTest, ProxyPoolTimeout) {
+  ASSERT_LE(base::TimeDelta(), pool_.ConnectionTimeout());
+
+  // Test against a large value.
+  ASSERT_GE(base::TimeDelta::FromMinutes(10), pool_.ConnectionTimeout());
+
+#if (defined(OS_ANDROID) || defined(OS_IOS))
+  // On Android and iOS, the timeout is fixed to 10 seconds.
+  ASSERT_EQ(base::TimeDelta::FromSeconds(10), pool_.ConnectionTimeout());
+#endif
 }
 
 // It would be nice to also test the timeouts in HttpProxyClientSocketPool.

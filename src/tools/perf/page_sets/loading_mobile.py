@@ -19,8 +19,7 @@ class LoadingMobileStorySet(story.StorySet):
   def __init__(self, cache_temperatures=None, traffic_settings=None):
     super(LoadingMobileStorySet, self).__init__(
         archive_data_file='data/loading_mobile.json',
-        cloud_storage_bucket=story.PARTNER_BUCKET,
-        verify_names=True)
+        cloud_storage_bucket=story.PARTNER_BUCKET)
 
     if cache_temperatures is None:
       cache_temperatures = [cache_temperature_module.ANY]

@@ -154,8 +154,6 @@ component("net") {
     "base/sys_addrinfo.h",
     "base/url_util.cc",
     "base/url_util.h",
-    "base/zap.cc",
-    "base/zap.h",
     "cert/asn1_util.cc",
     "cert/asn1_util.h",
     "cert/cert_database.cc",
@@ -361,7 +359,6 @@ component("net") {
     "//base",
     "//net/base/registry_controlled_domains",
     "//net/data/ssl/certificate_transparency:ct_log_list",
-    "//net/data/ssl/wosign:wosign_domains",
     "//net/http:generate_transport_security_state",
     "//third_party/protobuf:protobuf_lite",
     "//url:url_features",
@@ -372,6 +369,7 @@ component("net") {
     ":traffic_annotation",
     "//crypto",
     "//crypto:platform",
+    "//third_party/boringssl",
   ]
 
   if (!is_nacl) {
@@ -534,13 +532,10 @@ component("net") {
       "cert/cert_verify_proc_mac.h",
       "cert/cert_verify_proc_nss.cc",
       "cert/cert_verify_proc_nss.h",
-      "cert/cert_verify_proc_whitelist.cc",
-      "cert/cert_verify_proc_whitelist.h",
       "cert/cert_verify_proc_win.cc",
       "cert/cert_verify_proc_win.h",
       "cert/crl_set_storage.cc",
       "cert/crl_set_storage.h",
-      "cert/ct_ev_whitelist.h",
       "cert/ct_log_response_parser.cc",
       "cert/ct_log_response_parser.h",
       "cert/ct_log_verifier.cc",
@@ -2416,8 +2411,6 @@ bundle_data("test_support_bundle_data") {
     "data/ssl/certificates/websocket_cacert.pem",
     "data/ssl/certificates/websocket_client_cert.p12",
     "data/ssl/certificates/wildcard.pem",
-    "data/ssl/certificates/wosign_after_oct_21.pem",
-    "data/ssl/certificates/wosign_before_oct_21.pem",
     "data/ssl/certificates/www_us_army_mil_cert.der",
     "data/ssl/certificates/x509_verify_results.chain.pem",
   ]
@@ -3039,8 +3032,12 @@ source_set("quic_test_tools") {
   sources = [
     "quic/chromium/crypto_test_utils_chromium.cc",
     "quic/platform/api/quic_test.h",
+    "quic/platform/api/quic_test_loopback.cc",
+    "quic/platform/api/quic_test_loopback.h",
     "quic/platform/impl/quic_test_impl.cc",
     "quic/platform/impl/quic_test_impl.h",
+    "quic/platform/impl/quic_test_loopback_impl.cc",
+    "quic/platform/impl/quic_test_loopback_impl.h",
     "quic/test_tools/crypto_test_utils.cc",
     "quic/test_tools/crypto_test_utils.h",
     "quic/test_tools/delayed_verify_strike_register_client.cc",
@@ -4530,7 +4527,6 @@ test("net_unittests") {
     "cert/cert_verify_proc_ios_unittest.cc",
     "cert/cert_verify_proc_mac_unittest.cc",
     "cert/cert_verify_proc_unittest.cc",
-    "cert/cert_verify_proc_whitelist_unittest.cc",
     "cert/crl_set_unittest.cc",
     "cert/ct_known_logs_unittest.cc",
     "cert/ct_log_response_parser_unittest.cc",
@@ -5095,7 +5091,6 @@ test("net_unittests") {
   defines = []
 
   deps = [
-    ":cert_verify_proc_whitelist_unittest_data",
     ":net",
     ":quic_test_tools",
     ":simple_quic_tools",
@@ -5497,7 +5492,13 @@ if (!is_ios && !is_proto_quic) {
       "//testing/perf",
       "//url",
     ]
-
+    data = [
+      # Needed for isolate script to execute.
+      "//testing/scripts/common.py",
+      "//testing/xvfb.py",
+      "//testing/scripts/run_gtest_perf_test.py",
+      "//tools/perf/generate_legacy_perf_dashboard_json.py",
+    ]
     if (enable_websockets) {
       sources += [ "websockets/websocket_frame_perftest.cc" ]
     }
@@ -5509,21 +5510,6 @@ if (!is_ios && !is_proto_quic) {
       ldflags = [ "/LINKREPRO:" + linkrepro_root_dir + "/" + target_name ]
     }
   }
-}
-
-action_foreach("cert_verify_proc_whitelist_unittest_data") {
-  script = "//net/tools/dafsa/make_dafsa.py"
-  sources = [
-    "//net/cert/cert_verify_proc_whitelist_unittest1.gperf",
-  ]
-  outputs = [
-    "${target_gen_dir}/cert/{{source_name_part}}-inc.cc",
-  ]
-  args = [
-    "{{source}}",
-    rebase_path("${target_gen_dir}/cert/{{source_name_part}}-inc.cc",
-                root_build_dir),
-  ]
 }
 
 # Fuzzers

@@ -49,7 +49,7 @@ bool HMAC::Init(const unsigned char* key, size_t key_length) {
   return true;
 }
 
-bool HMAC::Init(SymmetricKey* key) {
+bool HMAC::Init(const SymmetricKey* key) {
   std::string raw_key;
   bool result = key->GetRawKey(&raw_key) && Init(raw_key);
   // Zero out key copy.  This might get optimized away, but one can hope.

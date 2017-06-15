@@ -12749,7 +12749,6 @@
     { "name": "01seguridad.com.ar", "include_subdomains": true, "mode": "force-https" },
     { "name": "0i0.nl", "include_subdomains": true, "mode": "force-https" },
     { "name": "0x52.org", "include_subdomains": true, "mode": "force-https" },
-    { "name": "0xAA55.me", "include_subdomains": true, "mode": "force-https" },
     { "name": "0xaa55.me", "include_subdomains": true, "mode": "force-https" },
     { "name": "0xb612.org", "include_subdomains": true, "mode": "force-https" },
     { "name": "100dayloans.com", "include_subdomains": true, "mode": "force-https" },

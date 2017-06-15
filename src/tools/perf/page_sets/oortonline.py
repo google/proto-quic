@@ -43,8 +43,7 @@ class OortOnlinePageSet(story.StorySet):
   def __init__(self):
     super(OortOnlinePageSet, self).__init__(
       archive_data_file='data/oortonline.json',
-      cloud_storage_bucket=story.PARTNER_BUCKET,
-      verify_names=True)
+      cloud_storage_bucket=story.PARTNER_BUCKET)
     self.AddStory(OortOnlinePage(self))
 
 class OortOnlineTBMPage(OortOnlinePage):
@@ -78,6 +77,5 @@ class OortOnlineTBMPageSet(story.StorySet):
   def __init__(self):
     super(OortOnlineTBMPageSet, self).__init__(
       archive_data_file='data/oortonline.json',
-      cloud_storage_bucket=story.PARTNER_BUCKET,
-      verify_names=True)
+      cloud_storage_bucket=story.PARTNER_BUCKET)
     self.AddStory(OortOnlineTBMPage(self))

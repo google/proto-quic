@@ -36,8 +36,7 @@ class TabSwitchingTypical25(perf_benchmark.PerfBenchmark):
     story_set = story.StorySet(
         archive_data_file='../page_sets/data/system_health_desktop.json',
         base_dir=os.path.dirname(os.path.abspath(__file__)),
-        cloud_storage_bucket=story.PARTNER_BUCKET,
-        verify_names=True)
+        cloud_storage_bucket=story.PARTNER_BUCKET)
     story_set.AddStory(multi_tab_stories.MultiTabTypical24Story(
         story_set, False, options.tabset_repeat))
     return story_set

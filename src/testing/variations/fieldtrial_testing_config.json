@@ -1042,31 +1042,6 @@
             ]
         }
     ],
-    "ExpensiveBackgroundTimerThrottling": [
-        {
-            "platforms": [
-                "android",
-                "chromeos",
-                "linux",
-                "mac",
-                "win"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled_30sMaxThrottilingDelay",
-                    "params": {
-                        "cpu_budget": "0.01",
-                        "initial_budget": "1.0",
-                        "max_budget": "3.0",
-                        "max_delay": "-1"
-                    },
-                    "enable_features": [
-                        "ExpensiveBackgroundTimerThrottling"
-                    ]
-                }
-            ]
-        }
-    ],
     "ExtensionContentVerification": [
         {
             "platforms": [
@@ -1146,6 +1121,25 @@
             "experiments": [
                 {
                     "name": "Enable"
+                }
+            ]
+        }
+    ],
+    "GpuScheduler": [
+        {
+            "platforms": [
+                "mac",
+                "win",
+                "linux",
+                "chromeos",
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "GpuScheduler"
+                    ]
                 }
             ]
         }
@@ -2048,7 +2042,7 @@
             ],
             "experiments": [
                 {
-                    "name": "SBEROnlyNoIncognito",
+                    "name": "SBEROnlyNoIncognito2",
                     "params": {
                         "extended_reporting": "true",
                         "history_sync": "false",
@@ -2071,11 +2065,10 @@
             ],
             "experiments": [
                 {
-                    "name": "SBEROnlyNoIncognito",
+                    "name": "AllPopulation",
                     "params": {
-                        "extended_reporting": "true",
-                        "history_sync": "false",
-                        "incognito": "false"
+                        "all_population": "true",
+                        "incognito": "true"
                     },
                     "enable_features": [
                         "ProtectedPasswordEntryPinging"
@@ -2194,9 +2187,9 @@
             ],
             "experiments": [
                 {
-                    "name": "EnabledOnDiskNoStability3",
+                    "name": "EnabledOnDisk5",
                     "params": {
-                        "send_unreported_metrics": "no",
+                        "send_unreported_metrics": "yes",
                         "storage": "MappedFile"
                     },
                     "enable_features": [
@@ -3085,7 +3078,7 @@
             ],
             "experiments": [
                 {
-                    "name": "Query",
+                    "name": "QueryExperiment2",
                     "params": {
                         "translate-ranker-model-url": "https://www.gstatic.com/chrome/intelligence/assist/ranker/models/translate/2017/03/translate_ranker_model_20170329.pb.bin"
                     },
@@ -3097,7 +3090,7 @@
                     ]
                 },
                 {
-                    "name": "Enforcement",
+                    "name": "EnforcementExperiment2",
                     "params": {
                         "translate-ranker-model-url": "https://www.gstatic.com/chrome/intelligence/assist/ranker/models/translate/2017/03/translate_ranker_model_20170329.pb.bin"
                     },
@@ -3378,30 +3371,6 @@
             "experiments": [
                 {
                     "name": "Enabled"
-                }
-            ]
-        }
-    ],
-    "WebRTC-TunedClippingLevelMin-SessionRandomized": [
-        {
-            "platforms": [
-                "chromeos",
-                "linux",
-                "mac",
-                "win"
-            ],
-            "experiments": [
-                {
-                    "name": "TunedClippingLevelMin070",
-                    "enable_features": [
-                        "TunedClippingLevelMin70"
-                    ],
-                    "disable_features": [
-                        "TunedClippingLevelMin110",
-                        "TunedClippingLevelMin150",
-                        "TunedClippingLevelMin170",
-                        "TunedClippingLevelMin30"
-                    ]
                 }
             ]
         }

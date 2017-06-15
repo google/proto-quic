@@ -88,7 +88,13 @@ TEST_F(MemoryDumpSchedulerTest, SingleTrigger) {
   scheduler_->Stop();
 }
 
-TEST_F(MemoryDumpSchedulerTest, MultipleTriggers) {
+// Flaky on Linux. http://crbug.com/732861
+#if defined(OS_LINUX)
+#define MAYBE_MultipleTriggers DISABLED_MultipleTriggers
+#else
+#define MAYBE_MultipleTriggers MultipleTriggers
+#endif
+TEST_F(MemoryDumpSchedulerTest, MAYBE_MultipleTriggers) {
   const uint32_t kPeriodLightMs = 3;
   const uint32_t kPeriodDetailedMs = 9;
   WaitableEvent evt(WaitableEvent::ResetPolicy::MANUAL,

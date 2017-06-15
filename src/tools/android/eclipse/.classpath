@@ -45,6 +45,9 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="src" path="chrome/test/chromedriver/test/webview_shell/java/src"/>
     <classpathentry kind="src" path="chromecast/browser/android/apk/src"/>
     <classpathentry kind="src" path="components/autofill/android/java/src"/>
+    <classpathentry kind="src" path="components/background_task_scheduler/android/java/src"/>
+    <classpathentry kind="src" path="components/background_task_scheduler/android/javatests/src"/>
+    <classpathentry kind="src" path="components/background_task_scheduler/android/junit/src"/>
     <classpathentry kind="src" path="components/bookmarks/common/android/java/src"/>
     <classpathentry kind="src" path="components/cronet/android/api/src"/>
     <classpathentry kind="src" path="components/cronet/android/java/src"/>

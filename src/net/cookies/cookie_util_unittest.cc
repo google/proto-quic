@@ -45,11 +45,7 @@ TEST(CookieUtilTest, TestDomainIsHostOnly) {
   const struct {
     const char* str;
     const bool is_host_only;
-  } tests[] = {
-    { "",               true },
-    { "www.google.com", true },
-    { ".google.com",    false }
-  };
+  } tests[] = {{"", true}, {"www.foo.com", true}, {".foo.com", false}};
 
   for (size_t i = 0; i < arraysize(tests); ++i) {
     EXPECT_EQ(tests[i].is_host_only,

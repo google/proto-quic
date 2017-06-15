@@ -5,6 +5,7 @@
 #ifndef BASE_MESSAGE_LOOP_MESSAGE_PUMP_FUCHSIA_H_
 #define BASE_MESSAGE_LOOP_MESSAGE_PUMP_FUCHSIA_H_
 
+#include "base/base_export.h"
 #include "base/location.h"
 #include "base/macros.h"
 #include "base/message_loop/message_pump.h"
@@ -15,7 +16,7 @@
 
 namespace base {
 
-class MessagePumpFuchsia : public MessagePump {
+class BASE_EXPORT MessagePumpFuchsia : public MessagePump {
  public:
   class Watcher {
    public:

@@ -3606,13 +3606,9 @@ TEST_F(SpdyNetworkTransactionTest, BufferFull) {
       spdy_util_.ConstructSpdyDataFrame(1, "goodby", 6, /*fin=*/false));
   SpdySerializedFrame data_frame_2(
       spdy_util_.ConstructSpdyDataFrame(1, "e worl", 6, /*fin=*/false));
-  const SpdySerializedFrame* data_frames[2] = {
-      &data_frame_1, &data_frame_2,
-  };
-  char combined_data_frames[100];
-  int combined_data_frames_len =
-      CombineFrames(data_frames, arraysize(data_frames),
-                    combined_data_frames, arraysize(combined_data_frames));
+  SpdySerializedFrame combined_data_frames =
+      CombineFrames({&data_frame_1, &data_frame_2});
+
   SpdySerializedFrame last_frame(
       spdy_util_.ConstructSpdyDataFrame(1, "d", 1, /*fin=*/true));
 
@@ -3620,7 +3616,7 @@ TEST_F(SpdyNetworkTransactionTest, BufferFull) {
   MockRead reads[] = {
       CreateMockRead(resp, 1),
       MockRead(ASYNC, ERR_IO_PENDING, 2),  // Force a pause
-      MockRead(ASYNC, combined_data_frames, combined_data_frames_len, 3),
+      CreateMockRead(combined_data_frames, 3),
       MockRead(ASYNC, ERR_IO_PENDING, 4),  // Force a pause
       CreateMockRead(last_frame, 5),
       MockRead(ASYNC, 0, 6)  // EOF
@@ -3696,19 +3692,14 @@ TEST_F(SpdyNetworkTransactionTest, Buffering) {
       spdy_util_.ConstructSpdyDataFrame(1, "message", 7, /*fin=*/false));
   SpdySerializedFrame data_frame_fin(
       spdy_util_.ConstructSpdyDataFrame(1, "message", 7, /*fin=*/true));
-  const SpdySerializedFrame* data_frames[4] = {&data_frame, &data_frame,
-                                               &data_frame, &data_frame_fin};
-  char combined_data_frames[100];
-  int combined_data_frames_len =
-      CombineFrames(data_frames, arraysize(data_frames),
-                    combined_data_frames, arraysize(combined_data_frames));
+  SpdySerializedFrame combined_data_frames =
+      CombineFrames({&data_frame, &data_frame, &data_frame, &data_frame_fin});
 
   SpdySerializedFrame resp(spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
   MockRead reads[] = {
       CreateMockRead(resp, 1),
       MockRead(ASYNC, ERR_IO_PENDING, 2),  // Force a pause
-      MockRead(ASYNC, combined_data_frames, combined_data_frames_len, 3),
-      MockRead(ASYNC, 0, 4)  // EOF
+      CreateMockRead(combined_data_frames, 3), MockRead(ASYNC, 0, 4)  // EOF
   };
 
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
@@ -3785,16 +3776,11 @@ TEST_F(SpdyNetworkTransactionTest, BufferedAll) {
       spdy_util_.ConstructSpdyDataFrame(1, "message", 7, /*fin=*/false));
   SpdySerializedFrame data_frame_fin(
       spdy_util_.ConstructSpdyDataFrame(1, "message", 7, /*fin=*/true));
-  const SpdySerializedFrame* frames[5] = {&reply, &data_frame, &data_frame,
-                                          &data_frame, &data_frame_fin};
-  char combined_frames[200];
-  int combined_frames_len =
-      CombineFrames(frames, arraysize(frames),
-                    combined_frames, arraysize(combined_frames));
+  SpdySerializedFrame combined_frames = CombineFrames(
+      {&reply, &data_frame, &data_frame, &data_frame, &data_frame_fin});
 
   MockRead reads[] = {
-      MockRead(ASYNC, combined_frames, combined_frames_len, 1),
-      MockRead(ASYNC, 0, 2)  // EOF
+      CreateMockRead(combined_frames, 1), MockRead(ASYNC, 0, 2)  // EOF
   };
 
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
@@ -3865,18 +3851,13 @@ TEST_F(SpdyNetworkTransactionTest, BufferedClosed) {
   // NOTE: We don't FIN the stream.
   SpdySerializedFrame data_frame(
       spdy_util_.ConstructSpdyDataFrame(1, "message", 7, /*fin=*/false));
-  const SpdySerializedFrame* data_frames[4] = {&data_frame, &data_frame,
-                                               &data_frame, &data_frame};
-  char combined_data_frames[100];
-  int combined_data_frames_len =
-      CombineFrames(data_frames, arraysize(data_frames),
-                    combined_data_frames, arraysize(combined_data_frames));
+  SpdySerializedFrame combined_data_frames =
+      CombineFrames({&data_frame, &data_frame, &data_frame, &data_frame});
   SpdySerializedFrame resp(spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
   MockRead reads[] = {
       CreateMockRead(resp, 1),
       MockRead(ASYNC, ERR_IO_PENDING, 2),  // Force a wait
-      MockRead(ASYNC, combined_data_frames, combined_data_frames_len, 3),
-      MockRead(ASYNC, 0, 4)  // EOF
+      CreateMockRead(combined_data_frames, 3), MockRead(ASYNC, 0, 4)  // EOF
   };
 
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
@@ -5641,14 +5622,11 @@ TEST_F(SpdyNetworkTransactionTest, WindowUpdateSent) {
           kSessionFlowControlStreamId,
           session_max_recv_window_size - kDefaultInitialWindowSize));
 
-  const SpdySerializedFrame* frames[3] = {&preface, &initial_settings_frame,
-                                          &initial_window_update};
-  char combined_frames[100];
-  int combined_frames_len = CombineFrames(
-      frames, arraysize(frames), combined_frames, arraysize(combined_frames));
+  SpdySerializedFrame combined_frames = CombineFrames(
+      {&preface, &initial_settings_frame, &initial_window_update});
 
   std::vector<MockWrite> writes;
-  writes.push_back(MockWrite(ASYNC, combined_frames, combined_frames_len));
+  writes.push_back(CreateMockWrite(combined_frames));
 
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));

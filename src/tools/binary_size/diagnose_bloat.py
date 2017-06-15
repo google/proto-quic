@@ -161,9 +161,7 @@ class ResourceSizesDiff(BaseDiff):
     cmd = [self._RESOURCE_SIZES_PATH, apk_path,'--output-dir', archive_dir,
            '--no-output-dir', '--chartjson']
     if self._slow_options:
-      cmd += ['--estimate-patch-size']
-    else:
-      cmd += ['--no-static-initializer-check']
+      cmd += ['--estimate-patch-size', '--dump-static-initializers']
     _RunCmd(cmd)
     with open(chartjson_file) as f:
       chartjson = json.load(f)

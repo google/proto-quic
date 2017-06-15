@@ -122,6 +122,21 @@ public class EmbeddedTestServerImpl extends IEmbeddedTestServerImpl.Stub {
         });
     }
 
+    /** Register multiple request handlers.
+     *  Handlers must be registered before starting the server.
+     *
+     *  @param handler The pointer of handler to be registered.
+     */
+    public void registerRequestHandler(final long handler) {
+        runOnHandlerThread(new Callable<Void>() {
+            @Override
+            public Void call() {
+                nativeRegisterRequestHandler(mNativeEmbeddedTestServer, handler);
+                return null;
+            }
+        });
+    }
+
     /** Serve files from the provided directory.
      *
      *  @param directoryPath The path of the directory from which files should be served.
@@ -213,9 +228,11 @@ public class EmbeddedTestServerImpl extends IEmbeddedTestServerImpl.Stub {
     private native void nativeDestroy(long nativeEmbeddedTestServerAndroid);
     private native boolean nativeStart(long nativeEmbeddedTestServerAndroid);
     private native boolean nativeShutdownAndWaitUntilComplete(long nativeEmbeddedTestServerAndroid);
-    private native String nativeGetURL(long nativeEmbeddedTestServerAndroid, String relativeUrl);
     private native void nativeAddDefaultHandlers(
             long nativeEmbeddedTestServerAndroid, String directoryPath);
+    private native void nativeRegisterRequestHandler(
+            long nativeEmbeddedTestServerAndroid, long handler);
+    private native String nativeGetURL(long nativeEmbeddedTestServerAndroid, String relativeUrl);
     private native void nativeServeFilesFromDirectory(
             long nativeEmbeddedTestServerAndroid, String directoryPath);
 }

@@ -15,8 +15,7 @@ class ServiceWorkerPageSet(story.StorySet):
   def __init__(self):
     super(ServiceWorkerPageSet, self).__init__(
         archive_data_file=archive_data_file_path,
-        cloud_storage_bucket=story.PARTNER_BUCKET,
-        verify_names=True)
+        cloud_storage_bucket=story.PARTNER_BUCKET)
 
     # Why: the first application using ServiceWorker
     # 1st time: registration

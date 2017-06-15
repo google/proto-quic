@@ -409,13 +409,6 @@ int MockNetworkTransaction::StartInternal(const HttpRequestInfo* request,
   if (!t)
     return ERR_FAILED;
 
-  if (!before_network_start_callback_.is_null()) {
-    bool defer = false;
-    before_network_start_callback_.Run(&defer);
-    if (defer)
-      return net::ERR_IO_PENDING;
-  }
-
   test_mode_ = t->test_mode;
 
   // Return immediately if we're returning an error.
@@ -466,6 +459,16 @@ int MockNetworkTransaction::StartInternal(const HttpRequestInfo* request,
   if (request_->load_flags & LOAD_PREFETCH)
     response_.unused_since_prefetch = true;
 
+  // Pause and resume.
+  if (!before_network_start_callback_.is_null()) {
+    bool defer = false;
+    before_network_start_callback_.Run(&defer);
+    if (defer) {
+      resume_start_callback_ = callback;
+      return net::ERR_IO_PENDING;
+    }
+  }
+
   if (test_mode_ & TEST_MODE_SYNC_NET_START)
     return OK;
 
@@ -482,8 +485,9 @@ void MockNetworkTransaction::SetBeforeHeadersSentCallback(
     const BeforeHeadersSentCallback& callback) {}
 
 int MockNetworkTransaction::ResumeNetworkStart() {
-  // Should not get here.
-  return ERR_FAILED;
+  DCHECK(!resume_start_callback_.is_null());
+  CallbackLater(resume_start_callback_, OK);
+  return ERR_IO_PENDING;
 }
 
 void MockNetworkTransaction::GetConnectionAttempts(

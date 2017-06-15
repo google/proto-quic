@@ -162,7 +162,8 @@ class QuicDispatcher : public QuicTimeWaitListManager::Visitor,
  protected:
   virtual QuicSession* CreateQuicSession(
       QuicConnectionId connection_id,
-      const QuicSocketAddress& client_address) = 0;
+      const QuicSocketAddress& client_address,
+      QuicStringPiece alpn) = 0;
 
   // Called when a connection is rejected statelessly.
   virtual void OnConnectionRejectedStatelessly();
@@ -377,6 +378,8 @@ class QuicDispatcher : public QuicTimeWaitListManager::Visitor,
   QuicSocketAddress current_client_address_;
   QuicSocketAddress current_server_address_;
   const QuicReceivedPacket* current_packet_;
+  // If |current_packet_| is a CHLO packet, the extracted alpn.
+  std::string current_alpn_;
   QuicConnectionId current_connection_id_;
 
   // Used to get the supported versions based on flag. Does not own.

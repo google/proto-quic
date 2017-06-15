@@ -40,6 +40,6 @@ class PaperCalculatorHitTest(polymer.PolymerPage):
 class KeyHitTestCasesPageSet(story.StorySet):
 
   def __init__(self):
-    super(KeyHitTestCasesPageSet, self).__init__(verify_names=True)
+    super(KeyHitTestCasesPageSet, self).__init__()
 
     self.AddStory(PaperCalculatorHitTest(self))

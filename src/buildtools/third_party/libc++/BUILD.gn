@@ -32,6 +32,35 @@ config("config") {
   ]
 }
 
+config("no_libstdcpp") {
+  # Make sure we don't link against libc++ or libstdc++.
+  ldflags = [ "-nodefaultlibs" ]
+
+  # Unfortunately, there's no way to disable linking against just
+  # libc++ (besides using clang instead of clang++); -nodefaultlibs
+  # removes all of the default libraries, so add back the ones that we
+  # need.
+  libs = [
+    "c",
+    "m",
+  ]
+
+  if (!is_mac) {
+    libs += [
+      "gcc_s",
+      "rt",
+    ]
+  }
+
+  if (is_mac && using_sanitizer) {
+    lib_dirs = [ "//third_party/llvm-build/Release+Asserts/lib/clang/$clang_version/lib/darwin" ]
+
+    if (is_asan) {
+      libs += [ "clang_rt.asan_osx_dynamic" ]
+    }
+  }
+}
+
 if (libcpp_is_static) {
   link_target_type = "source_set"
 } else {
@@ -76,37 +105,16 @@ target(link_target_type, "libc++") {
   ]
   configs += [
     ":config",
+    ":no_libstdcpp",
     "//build/config/compiler:no_chromium_code",
     "//build/config/compiler:rtti",
     "//build/config/sanitizers:sanitizer_options_link_helper",
   ]
   defines = [ "_LIBCPP_BUILDING_LIBRARY" ]
 
-  ldflags = [ "-nodefaultlibs" ]
-
-  libs = [ "m" ]
-
-  if (!is_mac) {
-    libs += [
-      "c",
-      "gcc_s",
-      "rt",
-    ]
-  }
-
   deps = [
     "//buildtools/third_party/libc++abi",
   ]
-
-  if (is_mac && using_sanitizer) {
-    # -nodefaultlibs on mac doesn't add any kind of runtime libraries.
-    # These runtimes have to be added manually.
-    lib_dirs = [ "//third_party/llvm-build/Release+Asserts/lib/clang/$clang_version/lib/darwin" ]
-
-    if (is_asan) {
-      libs += [ "clang_rt.asan_osx_dynamic" ]
-    }
-  }
 }
 
 group("libcxx_proxy") {
@@ -120,20 +128,10 @@ group("libcxx_proxy") {
 # //build/config/sanitizers:default_sanitizer_flags sets the include paths for
 # everything else.
 config("link_helper") {
-  # Make sure we don't link against libc++ or libstdc++.
-  ldflags = [ "-nodefaultlibs" ]
-
-  # Unfortunately, there's no way to disable linking against just
-  # libc++; -nodefaultlibs removes all of the default libraries,
-  # so add back the ones that we need.
-  libs = [
-    "c",
-    "m",
-    "gcc_s",
-  ]
+  configs = [ ":no_libstdcpp" ]
 
   if (!is_mac) {
-    ldflags += [
+    ldflags = [
       # Normally the generator takes care of RPATH. Our case is special because
       # the generator is unaware of the libc++.so dependency. Note that setting
       # RPATH here is a potential security issue. See the following for another

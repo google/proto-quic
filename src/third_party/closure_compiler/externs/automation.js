@@ -954,6 +954,34 @@ chrome.automation.AutomationNode.prototype.backgroundColor;
 chrome.automation.AutomationNode.prototype.colorValue;
 
 /**
+ * Indicates node text is bold.
+ * @type {boolean}
+ * @see https://developer.chrome.com/extensions/automation#type-bold
+ */
+chrome.automation.AutomationNode.prototype.bold;
+
+/**
+ * Indicates node text is italic.
+ * @type {boolean}
+ * @see https://developer.chrome.com/extensions/automation#type-italic
+ */
+chrome.automation.AutomationNode.prototype.italic;
+
+/**
+ * Indicates node text is underline.
+ * @type {boolean}
+ * @see https://developer.chrome.com/extensions/automation#type-underline
+ */
+chrome.automation.AutomationNode.prototype.underline;
+
+/**
+ * Indicates node text is line through.
+ * @type {boolean}
+ * @see https://developer.chrome.com/extensions/automation#type-lineThrough
+ */
+chrome.automation.AutomationNode.prototype.lineThrough;
+
+/**
  * Walking the tree.
  * @type {!Array<!chrome.automation.AutomationNode>}
  * @see https://developer.chrome.com/extensions/automation#type-children

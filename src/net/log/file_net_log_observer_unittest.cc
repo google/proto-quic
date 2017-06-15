@@ -792,6 +792,75 @@ TEST_F(FileNetLogObserverBoundedTest, PartiallyOverwriteFiles) {
   }
 }
 
+void AddEntriesViaNetLog(NetLog* net_log, int num_entries) {
+  for (int i = 0; i < num_entries; i++) {
+    net_log->AddGlobalEntry(NetLogEventType::PAC_JAVASCRIPT_ERROR);
+  }
+}
+
+TEST_P(FileNetLogObserverTest, AddEventsFromMultipleThreadsWithStopObserving) {
+  const size_t kNumThreads = 10;
+  std::vector<std::unique_ptr<base::Thread>> threads(kNumThreads);
+  // Start all the threads. Waiting for them to start is to hopefuly improve
+  // the odds of hitting interesting races once events start being added.
+  for (size_t i = 0; i < threads.size(); ++i) {
+    threads[i] = base::MakeUnique<base::Thread>(
+        base::StringPrintf("WorkerThread%i", static_cast<int>(i)));
+    threads[i]->Start();
+    threads[i]->WaitUntilThreadStarted();
+  }
+
+  CreateAndStartObserving(nullptr);
+
+  const size_t kNumEventsAddedPerThread = 200;
+
+  // Add events in parallel from all the threads.
+  for (size_t i = 0; i < kNumThreads; ++i) {
+    threads[i]->task_runner()->PostTask(
+        FROM_HERE, base::Bind(&AddEntriesViaNetLog, base::Unretained(&net_log_),
+                              kNumEventsAddedPerThread));
+  }
+
+  // Stop observing.
+  TestClosure closure;
+  logger_->StopObserving(nullptr, closure.closure());
+  closure.WaitForResult();
+
+  // Join all the threads.
+  threads.clear();
+}
+
+TEST_P(FileNetLogObserverTest,
+       AddEventsFromMultipleThreadsWithoutStopObserving) {
+  const size_t kNumThreads = 10;
+  std::vector<std::unique_ptr<base::Thread>> threads(kNumThreads);
+  // Start all the threads. Waiting for them to start is to hopefuly improve
+  // the odds of hitting interesting races once events start being added.
+  for (size_t i = 0; i < threads.size(); ++i) {
+    threads[i] = base::MakeUnique<base::Thread>(
+        base::StringPrintf("WorkerThread%i", static_cast<int>(i)));
+    threads[i]->Start();
+    threads[i]->WaitUntilThreadStarted();
+  }
+
+  CreateAndStartObserving(nullptr);
+
+  const size_t kNumEventsAddedPerThread = 200;
+
+  // Add events in parallel from all the threads.
+  for (size_t i = 0; i < kNumThreads; ++i) {
+    threads[i]->task_runner()->PostTask(
+        FROM_HERE, base::Bind(&AddEntriesViaNetLog, base::Unretained(&net_log_),
+                              kNumEventsAddedPerThread));
+  }
+
+  // Destroy logger.
+  logger_.reset();
+
+  // Join all the threads.
+  threads.clear();
+}
+
 }  // namespace
 
 }  // namespace net

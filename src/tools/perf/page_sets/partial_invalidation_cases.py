@@ -24,7 +24,7 @@ class PartialInvalidationCasesPageSet(story.StorySet):
 
   def __init__(self):
     super(PartialInvalidationCasesPageSet, self).__init__(
-        cloud_storage_bucket=story.PARTNER_BUCKET, verify_names=True)
+        cloud_storage_bucket=story.PARTNER_BUCKET)
 
     other_urls = [
         # Why: Reduced test case similar to the single page html5 spec wherein

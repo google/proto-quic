@@ -1162,6 +1162,7 @@ static size_t PartitionPurgePage(PartitionPage* page, bool discard) {
       *entry_ptr = PartitionFreelistMask(entry);
       entry_ptr = reinterpret_cast<PartitionFreelistEntry**>(entry);
       num_new_entries++;
+      last_slot = slotIndex;
     }
     // Terminate the freelist chain.
     *entry_ptr = nullptr;

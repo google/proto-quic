@@ -21,7 +21,9 @@ namespace {
 // architectures where we know it works, otherwise gcc will attempt to emulate
 // the vector ops, which is unlikely to be efficient.
 // TODO(ricea): Add ARCH_CPU_ARM_FAMILY when arm_neon=1 becomes the default.
-#if defined(COMPILER_GCC) && defined(ARCH_CPU_X86_FAMILY) && !defined(OS_NACL)
+#if defined(COMPILER_GCC) &&                                          \
+    (defined(ARCH_CPU_X86_FAMILY) || defined(ARCH_CPU_ARM_FAMILY)) && \
+    !defined(OS_NACL)
 
 using PackedMaskType = uint32_t __attribute__((vector_size(16)));
 
@@ -29,7 +31,8 @@ using PackedMaskType = uint32_t __attribute__((vector_size(16)));
 
 using PackedMaskType = size_t;
 
-#endif  // defined(COMPILER_GCC) && defined(ARCH_CPU_X86_FAMILY) &&
+#endif  // defined(COMPILER_GCC) &&
+        // (defined(ARCH_CPU_X86_FAMILY) || defined(ARCH_CPU_ARM_FAMILY)) &&
         // !defined(OS_NACL)
 
 const uint8_t kFinalBit = 0x80;

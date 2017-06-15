@@ -55,12 +55,12 @@ class CRYPTO_EXPORT SymmetricKey {
   static std::unique_ptr<SymmetricKey> Import(Algorithm algorithm,
                                               const std::string& raw_key);
 
-  const std::string& key() { return key_; }
+  const std::string& key() const { return key_; }
 
   // Extracts the raw key from the platform specific data.
   // Warning: |raw_key| holds the raw key as bytes and thus must be handled
   // carefully.
-  bool GetRawKey(std::string* raw_key);
+  bool GetRawKey(std::string* raw_key) const;
 
  private:
   SymmetricKey();

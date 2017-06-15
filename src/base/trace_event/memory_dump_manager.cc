@@ -131,9 +131,6 @@ const char* const MemoryDumpManager::kTraceCategory =
     TRACE_DISABLED_BY_DEFAULT("memory-infra");
 
 // static
-const char* const MemoryDumpManager::kLogPrefix = "Memory-infra dump";
-
-// static
 const int MemoryDumpManager::kMaxConsecutiveFailuresCount = 3;
 
 // static
@@ -159,6 +156,7 @@ MemoryDumpManager* MemoryDumpManager::GetInstance() {
 // static
 std::unique_ptr<MemoryDumpManager>
 MemoryDumpManager::CreateInstanceForTesting() {
+  DCHECK(!g_instance_for_testing);
   std::unique_ptr<MemoryDumpManager> instance(new MemoryDumpManager());
   g_instance_for_testing = instance.get();
   return instance;
@@ -428,10 +426,8 @@ void MemoryDumpManager::RequestGlobalDump(
     MemoryDumpType dump_type,
     MemoryDumpLevelOfDetail level_of_detail,
     const GlobalMemoryDumpCallback& callback) {
-  // If |request_dump_function_| is null MDM hasn't been initialized yet.
-  if (request_dump_function_.is_null()) {
-    VLOG(1) << kLogPrefix << " failed because"
-            << " memory dump manager is not enabled.";
+  if (!is_initialized()) {
+    VLOG(1) << "RequestGlobalDump() FAIL: MemoryDumpManager is not initialized";
     if (!callback.is_null())
       callback.Run(0u /* guid */, false /* success */);
     return;
@@ -468,7 +464,8 @@ void MemoryDumpManager::GetDumpProvidersForPolling(
 void MemoryDumpManager::RequestGlobalDump(
     MemoryDumpType dump_type,
     MemoryDumpLevelOfDetail level_of_detail) {
-  RequestGlobalDump(dump_type, level_of_detail, GlobalMemoryDumpCallback());
+  auto noop_callback = [](uint64_t dump_guid, bool success) {};
+  RequestGlobalDump(dump_type, level_of_detail, Bind(noop_callback));
 }
 
 bool MemoryDumpManager::IsDumpProviderRegisteredForTesting(
@@ -499,6 +496,15 @@ MemoryDumpManager::GetOrCreateBgTaskRunnerLocked() {
 void MemoryDumpManager::CreateProcessDump(
     const MemoryDumpRequestArgs& args,
     const ProcessMemoryDumpCallback& callback) {
+  if (!is_initialized()) {
+    VLOG(1) << "CreateProcessDump() FAIL: MemoryDumpManager is not initialized";
+    if (!callback.is_null()) {
+      callback.Run(args.dump_guid, false /* success */,
+                   Optional<MemoryDumpCallbackResult>());
+    }
+    return;
+  }
+
   char guid_str[20];
   sprintf(guid_str, "0x%" PRIx64, args.dump_guid);
   TRACE_EVENT_NESTABLE_ASYNC_BEGIN1(kTraceCategory, "ProcessMemoryDump",
@@ -732,7 +738,7 @@ void MemoryDumpManager::FinalizeDumpAndAddToTrace(
 
   // The results struct to fill.
   // TODO(hjd): Transitional until we send the full PMD. See crbug.com/704203
-  base::Optional<MemoryDumpCallbackResult> result;
+  Optional<MemoryDumpCallbackResult> result;
 
   bool dump_successful = pmd_async_state->dump_successful;
 
@@ -862,7 +868,7 @@ void MemoryDumpManager::SetupForTracing(
     }
   }
 
-  // Only coordinator process triggers periodic global memory dumps.
+  // Only coordinator process triggers periodic memory dumps.
   if (is_coordinator_ && !periodic_config.triggers.empty()) {
     MemoryDumpScheduler::GetInstance()->Start(periodic_config,
                                               GetOrCreateBgTaskRunnerLocked());

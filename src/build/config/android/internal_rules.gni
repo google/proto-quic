@@ -856,7 +856,9 @@ if (enable_java_templates) {
       # http://crbug.com/725224. Speculative fix for bots running out of memory.
       # TODO(agrieve): Change this to an explicit pool once those are supported.
       #     http://crbug.com/635308
-      console = true
+      if (!enable_concurrent_apk_finalization) {
+        console = true
+      }
       if (defined(invoker.proguard_jar_path)) {
         _proguard_jar_path = invoker.proguard_jar_path
       } else {
@@ -1038,7 +1040,9 @@ if (enable_java_templates) {
         #     memory.
         # TODO(agrieve): Change this to an explicit pool once those are
         #     supported. http://crbug.com/635308
-        console = true
+        if (!enable_concurrent_apk_finalization) {
+          console = true
+        }
 
         main_dex_rules = "//build/android/main_dex_classes.flags"
 

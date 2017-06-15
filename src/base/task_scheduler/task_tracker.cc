@@ -15,6 +15,7 @@
 #include "base/sequence_token.h"
 #include "base/synchronization/condition_variable.h"
 #include "base/task_scheduler/scoped_set_task_priority_for_current_thread.h"
+#include "base/threading/sequence_local_storage_map.h"
 #include "base/threading/sequenced_task_runner_handle.h"
 #include "base/threading/thread_restrictions.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -300,6 +301,9 @@ void TaskTracker::PerformRunTask(std::unique_ptr<Task> task,
         scoped_set_sequence_token_for_current_thread(sequence_token);
     ScopedSetTaskPriorityForCurrentThread
         scoped_set_task_priority_for_current_thread(task->traits.priority());
+    ScopedSetSequenceLocalStorageMapForCurrentThread
+        scoped_set_sequence_local_storage_map_for_current_thread(
+            sequence->sequence_local_storage());
 
     // Set up TaskRunnerHandle as expected for the scope of the task.
     std::unique_ptr<SequencedTaskRunnerHandle> sequenced_task_runner_handle;

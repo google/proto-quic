@@ -28,6 +28,7 @@ class HttpAuthCache;
 class HttpAuthHandlerFactory;
 class HttpProxyClientSocketWrapper;
 class NetLog;
+class NetworkQualityProvider;
 class ProxyDelegate;
 class SSLClientSocketPool;
 class SSLSocketParams;
@@ -143,6 +144,7 @@ class NET_EXPORT_PRIVATE HttpProxyClientSocketPool
                             int max_sockets_per_group,
                             TransportClientSocketPool* transport_pool,
                             SSLClientSocketPool* ssl_pool,
+                            NetworkQualityProvider* network_quality_provider,
                             NetLog* net_log);
 
   ~HttpProxyClientSocketPool() override;
@@ -209,6 +211,7 @@ class NET_EXPORT_PRIVATE HttpProxyClientSocketPool
    public:
     HttpProxyConnectJobFactory(TransportClientSocketPool* transport_pool,
                                SSLClientSocketPool* ssl_pool,
+                               NetworkQualityProvider* network_quality_provider,
                                NetLog* net_log);
 
     // ClientSocketPoolBase::ConnectJobFactory methods.
@@ -222,8 +225,8 @@ class NET_EXPORT_PRIVATE HttpProxyClientSocketPool
    private:
     TransportClientSocketPool* const transport_pool_;
     SSLClientSocketPool* const ssl_pool_;
+    NetworkQualityProvider* network_quality_provider_;
     NetLog* net_log_;
-    base::TimeDelta timeout_;
 
     DISALLOW_COPY_AND_ASSIGN(HttpProxyConnectJobFactory);
   };

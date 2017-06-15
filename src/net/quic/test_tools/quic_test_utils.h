@@ -477,8 +477,8 @@ class MockQuicSession : public QuicSession {
   MOCK_METHOD1(MaybeCreateIncomingDynamicStream, QuicStream*(QuicStreamId id));
   MOCK_METHOD1(MaybeCreateOutgoingDynamicStream,
                QuicStream*(SpdyPriority priority));
-  MOCK_METHOD1(ShouldCreateIncomingDynamicStream, bool(QuicStreamId id));
-  MOCK_METHOD0(ShouldCreateOutgoingDynamicStream, bool());
+  MOCK_METHOD1(ShouldCreateIncomingDynamicStream2, bool(QuicStreamId id));
+  MOCK_METHOD0(ShouldCreateOutgoingDynamicStream2, bool());
   MOCK_METHOD6(
       WritevData,
       QuicConsumedData(QuicStream* stream,

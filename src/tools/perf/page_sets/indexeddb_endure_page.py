@@ -29,7 +29,7 @@ class IndexedDBEndurePageSet(story.StorySet):
   """
 
   def __init__(self):
-    super(IndexedDBEndurePageSet, self).__init__(verify_names=True)
+    super(IndexedDBEndurePageSet, self).__init__()
     tests = [
       'testCreateAndDeleteDatabases',
       'testCreateAndDeleteDatabase',

@@ -47,7 +47,7 @@ class Top10MobilePage(page_module.Page):
     super(Top10MobilePage, self).__init__(
         url=url, page_set=page_set, credentials_path = 'data/credentials.json',
         shared_page_state_class=shared_page_state.SharedMobilePageState,
-        cache_temperature=cache_temperature)
+        cache_temperature=cache_temperature, name=url)
     self.archive_data_file = 'data/top_10_mobile.json'
     self._run_no_page_interactions = run_no_page_interactions
     self._collect_memory_dumps = collect_memory_dumps
@@ -86,12 +86,3 @@ class Top10MobilePageSet(_Top10MobilePageSet):
   def __init__(self, run_no_page_interactions=False, cache_temperatures=None):
     super(Top10MobilePageSet, self).__init__(run_no_page_interactions,
         cache_temperatures=cache_temperatures)
-
-
-class Top10MobileMemoryPageSet(_Top10MobilePageSet):
-  """ Top 10 mobile sites for measuring memory"""
-
-  def __init__(self):
-    super(Top10MobileMemoryPageSet, self).__init__(
-        run_no_page_interactions=False, collect_memory_dumps=True)
-

@@ -194,6 +194,9 @@
       'Libfuzzer Upload Linux UBSan': 'release_libfuzzer_ubsan',
       'Libfuzzer Upload Mac ASan': 'release_libfuzzer_mac_asan',
       'Linux ARM': 'release_bot_arm',
+      'Linux ARM (dbg)': 'debug_bot_arm',
+      'Linux ARM64': 'release_bot_arm64',
+      'Linux ARM64 (dbg)': 'debug_bot_arm64',
       'Linux Clang Analyzer': 'linux_chromium_analysis',
       'Linux deterministic': 'release_bot',
       'Linux deterministic (dbg)': 'debug_bot',
@@ -517,7 +520,12 @@
       'chromeos_x86-generic_chromium_compile_only_ng': 'cros_chrome_sdk',
       'closure_compilation': 'closure_compilation',
       'fuchsia': 'release_trybot_fuchsia',
+      # TODO(kjellander): Remove linux_arm after tryserver restart.
       'linux_arm': 'release_trybot_arm',
+      'linux_arm_dbg': 'debug_trybot_arm',
+      'linux_arm_rel': 'release_trybot_arm',
+      'linux_arm64_dbg': 'debug_trybot_arm64',
+      'linux_arm64_rel': 'release_trybot_arm64',
       'linux_chromium_archive_rel_ng': 'release_bot',
       'linux_chromium_asan_rel_ng': 'asan_lsan_release_trybot',
       'linux_chromium_browser_side_navigation_rel': 'release_trybot',
@@ -1181,6 +1189,14 @@
       'debug_bot',
     ],
 
+    'debug_bot_arm': [
+      'debug_bot', 'arm',
+    ],
+
+    'debug_bot_arm64': [
+      'debug_bot', 'arm64',
+    ],
+
     'debug_bot_fuchsia': [
       'debug_bot', 'fuchsia',
     ],
@@ -1201,6 +1217,14 @@
 
     'debug_trybot': [
       'debug_trybot',
+    ],
+
+    'debug_trybot_arm': [
+      'debug_trybot', 'arm',
+    ],
+
+    'debug_trybot_arm64': [
+      'debug_trybot', 'arm64',
     ],
 
     'debug_trybot_x86': [
@@ -1396,6 +1420,10 @@
       'release_bot', 'arm',
     ],
 
+    'release_bot_arm64': [
+      'release_bot', 'arm64',
+    ],
+
     'release_bot_chrome_with_codecs': [
       'release_bot', 'chrome_with_codecs',
     ],
@@ -1448,6 +1476,10 @@
 
     'release_trybot_arm': [
       'release_trybot', 'arm',
+    ],
+
+    'release_trybot_arm64': [
+      'release_trybot', 'arm64',
     ],
 
     'release_trybot_fuchsia': [

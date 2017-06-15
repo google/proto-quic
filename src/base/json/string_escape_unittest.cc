@@ -18,14 +18,14 @@ TEST(JSONStringEscapeTest, EscapeUTF8) {
     const char* to_escape;
     const char* escaped;
   } cases[] = {
-    {"\b\001aZ\"\\wee", "\\b\\u0001aZ\\\"\\\\wee"},
-    {"a\b\f\n\r\t\v\1\\.\"z",
-        "a\\b\\f\\n\\r\\t\\u000B\\u0001\\\\.\\\"z"},
-    {"b\x0f\x7f\xf0\xff!",  // \xf0\xff is not a valid UTF-8 unit.
-        "b\\u000F\x7F\xEF\xBF\xBD\xEF\xBF\xBD!"},
-    {"c<>d", "c\\u003C>d"},
-    {"Hello\xe2\x80\xa8world", "Hello\\u2028world"},
-    {"\xe2\x80\xa9purple", "\\u2029purple"},
+      {"\b\001aZ\"\\wee", "\\b\\u0001aZ\\\"\\\\wee"},
+      {"a\b\f\n\r\t\v\1\\.\"z", "a\\b\\f\\n\\r\\t\\u000B\\u0001\\\\.\\\"z"},
+      {"b\x0f\x7f\xf0\xff!",  // \xf0\xff is not a valid UTF-8 unit.
+       "b\\u000F\x7F\xEF\xBF\xBD\xEF\xBF\xBD!"},
+      {"c<>d", "c\\u003C>d"},
+      {"Hello\xe2\x80\xa8world", "Hello\\u2028world"},
+      {"\xe2\x80\xa9purple", "\\u2029purple"},
+      {"\xF3\xBF\xBF\xBF", "\xEF\xBF\xBD"},
   };
 
   for (size_t i = 0; i < arraysize(cases); ++i) {

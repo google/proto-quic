@@ -797,11 +797,10 @@ void QuicCryptoServerConfig::ProcessClientHelloAfterGetProof(
   }
 
   size_t key_exchange_index;
-  if (!FindMutualQuicTag(requested_config->aead, their_aeads.data(),
-                         their_aeads.size(), &params->aead, nullptr) ||
-      !FindMutualQuicTag(requested_config->kexs, their_key_exchanges.data(),
-                         their_key_exchanges.size(), &params->key_exchange,
-                         &key_exchange_index)) {
+  if (!FindMutualQuicTag(requested_config->aead, their_aeads, &params->aead,
+                         nullptr) ||
+      !FindMutualQuicTag(requested_config->kexs, their_key_exchanges,
+                         &params->key_exchange, &key_exchange_index)) {
     helper.Fail(QUIC_CRYPTO_NO_SUPPORT, "Unsupported AEAD or KEXS");
     return;
   }
@@ -812,8 +811,7 @@ void QuicCryptoServerConfig::ProcessClientHelloAfterGetProof(
       case QUIC_CRYPTO_MESSAGE_PARAMETER_NOT_FOUND:
         break;
       case QUIC_NO_ERROR:
-        if (FindMutualQuicTag(requested_config->tb_key_params,
-                              their_tbkps.data(), their_tbkps.size(),
+        if (FindMutualQuicTag(requested_config->tb_key_params, their_tbkps,
                               &params->token_binding_key_param, nullptr)) {
           break;
         }

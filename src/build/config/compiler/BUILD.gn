@@ -1168,10 +1168,9 @@ config("default_warnings") {
         # TODO(thakis ): https://crbug.com/683349
         "-Wno-user-defined-warnings",
       ]
-    } else if (use_xcode_clang &&
-               (xcode_version == "0830" || xcode_version == "0831" ||
-                xcode_version == "0832")) {
-      # This is necessary to allow a progressive transition from using xcode 8 to 8.3. Remove when all bots are migrated to 8.3.
+    } else if (use_xcode_clang && xcode_version_int >= 830) {
+      # This is necessary to allow a progressive transition from using xcode 8.0
+      # to 8.3 or more recent. Remove when all bots are migrated to 8.3.
       cflags += [
         # TODO(thakis): https://crbug.com/604888
         "-Wno-undefined-var-template",

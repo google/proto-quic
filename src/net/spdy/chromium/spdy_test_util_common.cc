@@ -161,24 +161,21 @@ MockRead CreateMockRead(const SpdySerializedFrame& resp, int seq, IoMode mode) {
   return MockRead(mode, resp.data(), resp.size(), seq);
 }
 
-// Combines the given SpdyFrames into the given char array and returns
-// the total length.
-int CombineFrames(const SpdySerializedFrame** frames,
-                  int num_frames,
-                  char* buf,
-                  int buf_len) {
-  int total_len = 0;
-  for (int i = 0; i < num_frames; ++i) {
-    total_len += frames[i]->size();
+// Combines the given vector of SpdySerializedFrame into a single frame.
+SpdySerializedFrame CombineFrames(
+    std::vector<const SpdySerializedFrame*> frames) {
+  int total_size = 0;
+  for (const auto* frame : frames) {
+    total_size += frame->size();
   }
-  DCHECK_LE(total_len, buf_len);
-  char* ptr = buf;
-  for (int i = 0; i < num_frames; ++i) {
-    int len = frames[i]->size();
-    memcpy(ptr, frames[i]->data(), len);
-    ptr += len;
+  auto data = base::MakeUnique<char[]>(total_size);
+  char* ptr = data.get();
+  for (const auto* frame : frames) {
+    memcpy(ptr, frame->data(), frame->size());
+    ptr += frame->size();
   }
-  return total_len;
+  return SpdySerializedFrame(data.release(), total_size,
+                             /* owns_buffer = */ true);
 }
 
 namespace {
@@ -440,14 +437,6 @@ class AllowAnyCertCTPolicyEnforcer : public CTPolicyEnforcer {
       const SCTList& verified_scts,
       const NetLogWithSource& net_log) override {
     return ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS;
-  }
-
-  ct::EVPolicyCompliance DoesConformToCTEVPolicy(
-      X509Certificate* cert,
-      const ct::EVCertsWhitelist* ev_whitelist,
-      const SCTList& verified_scts,
-      const NetLogWithSource& net_log) override {
-    return ct::EVPolicyCompliance::EV_POLICY_COMPLIES_VIA_SCTS;
   }
 };
 
@@ -898,15 +887,7 @@ SpdySerializedFrame SpdyTestUtil::ConstructSpdyPush(
   SpdySerializedFrame headers_frame(
       response_spdy_framer_.SerializeFrame(headers));
 
-  int joint_data_size = push_promise_frame.size() + headers_frame.size();
-  auto data = base::MakeUnique<char[]>(joint_data_size);
-  const SpdySerializedFrame* frames[2] = {
-      &push_promise_frame, &headers_frame,
-  };
-  int combined_size =
-      CombineFrames(frames, arraysize(frames), data.get(), joint_data_size);
-  DCHECK_EQ(combined_size, joint_data_size);
-  return SpdySerializedFrame(data.release(), joint_data_size, true);
+  return CombineFrames({&push_promise_frame, &headers_frame});
 }
 
 SpdySerializedFrame SpdyTestUtil::ConstructSpdyPush(
@@ -933,15 +914,7 @@ SpdySerializedFrame SpdyTestUtil::ConstructSpdyPush(
   SpdySerializedFrame headers_frame(
       response_spdy_framer_.SerializeFrame(headers));
 
-  int joint_data_size = push_promise_frame.size() + headers_frame.size();
-  auto data = base::MakeUnique<char[]>(joint_data_size);
-  const SpdySerializedFrame* frames[2] = {
-      &push_promise_frame, &headers_frame,
-  };
-  int combined_size =
-      CombineFrames(frames, arraysize(frames), data.get(), joint_data_size);
-  DCHECK_EQ(combined_size, joint_data_size);
-  return SpdySerializedFrame(data.release(), joint_data_size, true);
+  return CombineFrames({&push_promise_frame, &headers_frame});
 }
 
 SpdySerializedFrame SpdyTestUtil::ConstructInitialSpdyPushFrame(

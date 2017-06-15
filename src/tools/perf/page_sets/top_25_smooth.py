@@ -26,6 +26,8 @@ def _CreatePageClassWithSmoothInteractions(page_cls):
 class TopSmoothPage(page_module.Page):
 
   def __init__(self, url, page_set, name='', credentials=None):
+    if name == '':
+      name = url
     super(TopSmoothPage, self).__init__(
         url=url, page_set=page_set, name=name,
         shared_page_state_class=shared_page_state.SharedDesktopPageState,
@@ -172,9 +174,3 @@ class Top25SmoothPageSet(story.StorySet):
 
     for url in other_urls:
       self.AddStory(TopSmoothPage(url, self))
-
-
-class V8Top25SmoothPageSet(Top25SmoothPageSet):
-  def __init__(self):
-    # Disabled for V8 because of crbug.com/507836, crbug.com/527425
-    super(V8Top25SmoothPageSet, self).__init__(techcrunch=False)

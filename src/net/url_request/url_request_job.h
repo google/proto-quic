@@ -228,11 +228,11 @@ class NET_EXPORT URLRequestJob : public base::PowerObserver {
   // has failed or the response headers have been received.
   virtual void GetConnectionAttempts(ConnectionAttempts* out) const;
 
-  // Given |policy|, |referrer|, and |redirect_destination|, returns the
+  // Given |policy|, |referrer|, and |destination|, returns the
   // referrer URL mandated by |request|'s referrer policy.
-  static GURL ComputeReferrerForRedirect(URLRequest::ReferrerPolicy policy,
-                                         const GURL& original_referrer,
-                                         const GURL& redirect_destination);
+  static GURL ComputeReferrerForPolicy(URLRequest::ReferrerPolicy policy,
+                                       const GURL& original_referrer,
+                                       const GURL& destination);
 
  protected:
   // Notifies the job that a certificate is requested.

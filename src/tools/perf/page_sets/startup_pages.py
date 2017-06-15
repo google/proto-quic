@@ -48,8 +48,7 @@ class StartupPagesPageSet(story.StorySet):
   def __init__(self):
     super(StartupPagesPageSet, self).__init__(
         archive_data_file='data/startup_pages.json',
-        cloud_storage_bucket=story.PARTNER_BUCKET,
-        verify_names=True)
+        cloud_storage_bucket=story.PARTNER_BUCKET)
 
     # Typical page.
     self.AddStory(StartedPage('about:blank', self))

@@ -73,7 +73,7 @@ class BlobWorkshopPageSet(story.StorySet):
   """The BlobWorkshop page set."""
 
   def __init__(self):
-    super(BlobWorkshopPageSet, self).__init__(verify_names=True)
+    super(BlobWorkshopPageSet, self).__init__()
     self.AddStory(
         BlobMassCreate('2Bx200', [2] * 200, self))
     self.AddStory(

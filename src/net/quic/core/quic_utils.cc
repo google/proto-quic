@@ -11,6 +11,7 @@
 #include "base/containers/adapters.h"
 #include "base/logging.h"
 #include "net/quic/core/quic_constants.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_flags.h"
 
 using std::string;
@@ -214,6 +215,59 @@ bool QuicUtils::IsConnectionIdWireFormatBigEndian(Perspective perspective) {
           FLAGS_quic_restart_flag_quic_big_endian_connection_id_client) ||
          (perspective == Perspective::IS_SERVER &&
           FLAGS_quic_restart_flag_quic_big_endian_connection_id_server);
+}
+
+// static
+void QuicUtils::CopyToBuffer(QuicIOVector iov,
+                             size_t iov_offset,
+                             size_t length,
+                             char* buffer) {
+  int iovnum = 0;
+  while (iovnum < iov.iov_count && iov_offset >= iov.iov[iovnum].iov_len) {
+    iov_offset -= iov.iov[iovnum].iov_len;
+    ++iovnum;
+  }
+  DCHECK_LE(iovnum, iov.iov_count);
+  DCHECK_LE(iov_offset, iov.iov[iovnum].iov_len);
+  if (iovnum >= iov.iov_count || length == 0) {
+    return;
+  }
+
+  // Unroll the first iteration that handles iov_offset.
+  const size_t iov_available = iov.iov[iovnum].iov_len - iov_offset;
+  size_t copy_len = std::min(length, iov_available);
+
+  // Try to prefetch the next iov if there is at least one more after the
+  // current. Otherwise, it looks like an irregular access that the hardware
+  // prefetcher won't speculatively prefetch. Only prefetch one iov because
+  // generally, the iov_offset is not 0, input iov consists of 2K buffers and
+  // the output buffer is ~1.4K.
+  if (copy_len == iov_available && iovnum + 1 < iov.iov_count) {
+    // TODO(ckrasic) - this is unused without prefetch()
+    // char* next_base = static_cast<char*>(iov.iov[iovnum + 1].iov_base);
+    // char* next_base = static_cast<char*>(iov.iov[iovnum + 1].iov_base);
+    // Prefetch 2 cachelines worth of data to get the prefetcher started; leave
+    // it to the hardware prefetcher after that.
+    // TODO(ckrasic) - investigate what to do about prefetch directives.
+    // prefetch(next_base, PREFETCH_HINT_T0);
+    if (iov.iov[iovnum + 1].iov_len >= 64) {
+      // TODO(ckrasic) - investigate what to do about prefetch directives.
+      // prefetch(next_base + CACHELINE_SIZE, PREFETCH_HINT_T0);
+    }
+  }
+
+  const char* src = static_cast<char*>(iov.iov[iovnum].iov_base) + iov_offset;
+  while (true) {
+    memcpy(buffer, src, copy_len);
+    length -= copy_len;
+    buffer += copy_len;
+    if (length == 0 || ++iovnum >= iov.iov_count) {
+      break;
+    }
+    src = static_cast<char*>(iov.iov[iovnum].iov_base);
+    copy_len = std::min(length, iov.iov[iovnum].iov_len);
+  }
+  QUIC_BUG_IF(length > 0) << "Failed to copy entire length to buffer.";
 }
 
 }  // namespace net

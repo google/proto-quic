@@ -52,7 +52,7 @@ def validate_mappings(options, args):
       team = mappings_file['component-to-team'].get(component)
     else:
       team = None
-    current_mappings[dir_name] = (team, component)
+    current_mappings[dir_name] = {'team': team, 'component': component}
 
   # Extract dir -> (team, component) for affected files
   affected = {}
@@ -73,7 +73,8 @@ def validate_mappings(options, args):
   team_to_dir = defaultdict(list)
   errors = {}
   for dir_name, tags in current_mappings.iteritems():
-    team, component = tags
+    team = tags.get('team')
+    component = tags.get('component')
     if component:
       new_dir_to_component[dir_name] = component
     if team:

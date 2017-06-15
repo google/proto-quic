@@ -18,7 +18,11 @@ import os
 import sys
 import unittest
 import jni_generator
-from jni_generator import CalledByNative, JniParams, NativeMethod, Param
+from jni_generator import CalledByNative
+from jni_generator import IsMainDexJavaClass
+from jni_generator import JniParams
+from jni_generator import NativeMethod
+from jni_generator import Param
 
 
 SCRIPT_NAME = 'base/android/jni_generator/jni_generator.py'
@@ -976,6 +980,45 @@ class Foo {
     jni_from_java = jni_generator.JNIFromJavaSource(
       test_data, 'org/chromium/foo/Bar', options)
     self.assertGoldenTextEquals(jni_from_java.GetContent())
+
+  def testMainDexAnnotation(self):
+    mainDexEntries = [
+      '@MainDex public class Test {',
+      '@MainDex public class Test{',
+      """@MainDex
+         public class Test {
+      """,
+      """@MainDex public class Test
+         {
+      """,
+      '@MainDex /* This class is a test */ public class Test {',
+      '@MainDex public class Test implements java.io.Serializable {',
+      '@MainDex public class Test implements java.io.Serializable, Bidule {',
+      '@MainDex public class Test extends BaseTest {',
+      """@MainDex
+         public class Test extends BaseTest implements Bidule {
+      """,
+      """@MainDex
+         public class Test extends BaseTest implements Bidule, Machin, Chose {
+      """,
+      """@MainDex
+         public class Test implements Testable<java.io.Serializable> {
+      """,
+      '@MainDex public class Test implements Testable<java.io.Serializable> {',
+      '@MainDex public class Test extends Testable<java.io.Serializable> {',
+    ]
+    for entry in mainDexEntries:
+      self.assertEquals("true", IsMainDexJavaClass(entry))
+
+  def testNoMainDexAnnotation(self):
+    noMainDexEntries = [
+      'public class Test {',
+      '@NotMainDex public class Test {',
+      'public class Test implements java.io.Serializable {',
+      'public class Test extends BaseTest {'
+    ]
+    for entry in noMainDexEntries:
+      self.assertEquals("false", IsMainDexJavaClass(entry))
 
   def testNativeExportsOnlyOption(self):
     test_data = """

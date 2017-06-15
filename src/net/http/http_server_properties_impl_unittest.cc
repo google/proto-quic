@@ -379,7 +379,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, Basic) {
       impl_.GetAlternativeServiceInfos(test_server);
   ASSERT_EQ(1u, alternative_service_info_vector.size());
   EXPECT_EQ(alternative_service,
-            alternative_service_info_vector[0].alternative_service);
+            alternative_service_info_vector[0].alternative_service());
 
   impl_.Clear();
   EXPECT_FALSE(HasAlternativeService(test_server));
@@ -475,18 +475,18 @@ TEST_F(AlternateProtocolServerPropertiesTest, Set) {
 
   EXPECT_TRUE(map_it->first.Equals(test_server2));
   ASSERT_EQ(1u, map_it->second.size());
-  EXPECT_EQ(alternative_service3, map_it->second[0].alternative_service);
-  EXPECT_EQ(expiration3, map_it->second[0].expiration);
+  EXPECT_EQ(alternative_service3, map_it->second[0].alternative_service());
+  EXPECT_EQ(expiration3, map_it->second[0].expiration());
   ++map_it;
   EXPECT_TRUE(map_it->first.Equals(test_server1));
   ASSERT_EQ(1u, map_it->second.size());
-  EXPECT_EQ(alternative_service1, map_it->second[0].alternative_service);
-  EXPECT_EQ(expiration1, map_it->second[0].expiration);
+  EXPECT_EQ(alternative_service1, map_it->second[0].alternative_service());
+  EXPECT_EQ(expiration1, map_it->second[0].expiration());
   ++map_it;
   EXPECT_TRUE(map_it->first.Equals(test_server3));
   ASSERT_EQ(1u, map_it->second.size());
-  EXPECT_EQ(alternative_service4, map_it->second[0].alternative_service);
-  EXPECT_EQ(expiration4, map_it->second[0].expiration);
+  EXPECT_EQ(alternative_service4, map_it->second[0].alternative_service());
+  EXPECT_EQ(expiration4, map_it->second[0].expiration());
 }
 
 // Regression test for https://crbug.com/504032:
@@ -511,7 +511,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, SetWithEmptyHostname) {
       impl_.GetAlternativeServiceInfos(server);
   ASSERT_EQ(1u, alternative_service_info_vector.size());
   EXPECT_EQ(alternative_service_with_foo_hostname,
-            alternative_service_info_vector[0].alternative_service);
+            alternative_service_info_vector[0].alternative_service());
 }
 
 // Regression test for https://crbug.com/516486:
@@ -600,8 +600,8 @@ TEST_F(AlternateProtocolServerPropertiesTest, ClearServerWithCanonical) {
       impl_.GetAlternativeServiceInfos(server);
   ASSERT_EQ(1u, alternative_service_info_vector.size());
   EXPECT_EQ(kProtoQUIC,
-            alternative_service_info_vector[0].alternative_service.protocol);
-  EXPECT_EQ(443, alternative_service_info_vector[0].alternative_service.port);
+            alternative_service_info_vector[0].alternative_service().protocol);
+  EXPECT_EQ(443, alternative_service_info_vector[0].alternative_service().port);
 
   // Now clear the alternatives for the other server and make sure it stays
   // cleared.
@@ -624,19 +624,19 @@ TEST_F(AlternateProtocolServerPropertiesTest, MRUOfGetAlternativeServiceInfos) {
   AlternativeServiceMap::const_iterator it = map.begin();
   EXPECT_TRUE(it->first.Equals(test_server2));
   ASSERT_EQ(1u, it->second.size());
-  EXPECT_EQ(alternative_service2, it->second[0].alternative_service);
+  EXPECT_EQ(alternative_service2, it->second[0].alternative_service());
 
   const AlternativeServiceInfoVector alternative_service_info_vector =
       impl_.GetAlternativeServiceInfos(test_server1);
   ASSERT_EQ(1u, alternative_service_info_vector.size());
   EXPECT_EQ(alternative_service1,
-            alternative_service_info_vector[0].alternative_service);
+            alternative_service_info_vector[0].alternative_service());
 
   // GetAlternativeServices should reorder the AlternateProtocol map.
   it = map.begin();
   EXPECT_TRUE(it->first.Equals(test_server1));
   ASSERT_EQ(1u, it->second.size());
-  EXPECT_EQ(alternative_service1, it->second[0].alternative_service);
+  EXPECT_EQ(alternative_service1, it->second[0].alternative_service());
 }
 
 TEST_F(AlternateProtocolServerPropertiesTest, SetBroken) {
@@ -647,7 +647,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, SetBroken) {
       impl_.GetAlternativeServiceInfos(test_server);
   ASSERT_EQ(1u, alternative_service_info_vector.size());
   EXPECT_EQ(alternative_service1,
-            alternative_service_info_vector[0].alternative_service);
+            alternative_service_info_vector[0].alternative_service());
   EXPECT_FALSE(impl_.IsAlternativeServiceBroken(alternative_service1));
 
   // GetAlternativeServiceInfos should return the broken alternative service.
@@ -656,7 +656,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, SetBroken) {
       impl_.GetAlternativeServiceInfos(test_server);
   ASSERT_EQ(1u, alternative_service_info_vector.size());
   EXPECT_EQ(alternative_service1,
-            alternative_service_info_vector[0].alternative_service);
+            alternative_service_info_vector[0].alternative_service());
   EXPECT_TRUE(impl_.IsAlternativeServiceBroken(alternative_service1));
 
   // SetAlternativeServices should add a broken alternative service to the map.
@@ -672,9 +672,9 @@ TEST_F(AlternateProtocolServerPropertiesTest, SetBroken) {
       impl_.GetAlternativeServiceInfos(test_server);
   ASSERT_EQ(2u, alternative_service_info_vector.size());
   EXPECT_EQ(alternative_service1,
-            alternative_service_info_vector[0].alternative_service);
+            alternative_service_info_vector[0].alternative_service());
   EXPECT_EQ(alternative_service2,
-            alternative_service_info_vector[1].alternative_service);
+            alternative_service_info_vector[1].alternative_service());
   EXPECT_TRUE(impl_.IsAlternativeServiceBroken(alternative_service1));
   EXPECT_FALSE(impl_.IsAlternativeServiceBroken(alternative_service2));
 
@@ -684,7 +684,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, SetBroken) {
       impl_.GetAlternativeServiceInfos(test_server);
   ASSERT_EQ(1u, alternative_service_info_vector.size());
   EXPECT_EQ(alternative_service1,
-            alternative_service_info_vector[0].alternative_service);
+            alternative_service_info_vector[0].alternative_service());
   EXPECT_TRUE(impl_.IsAlternativeServiceBroken(alternative_service1));
 }
 
@@ -712,7 +712,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, MaxAge) {
       impl_.GetAlternativeServiceInfos(test_server);
   ASSERT_EQ(1u, alternative_service_info_vector2.size());
   EXPECT_EQ(alternative_service2,
-            alternative_service_info_vector2[0].alternative_service);
+            alternative_service_info_vector2[0].alternative_service());
 }
 
 TEST_F(AlternateProtocolServerPropertiesTest, MaxAgeCanonical) {
@@ -741,7 +741,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, MaxAgeCanonical) {
       impl_.GetAlternativeServiceInfos(test_server);
   ASSERT_EQ(1u, alternative_service_info_vector2.size());
   EXPECT_EQ(alternative_service2,
-            alternative_service_info_vector2[0].alternative_service);
+            alternative_service_info_vector2[0].alternative_service());
 }
 
 TEST_F(AlternateProtocolServerPropertiesTest, AlternativeServiceWithScheme) {
@@ -761,8 +761,8 @@ TEST_F(AlternateProtocolServerPropertiesTest, AlternativeServiceWithScheme) {
   net::AlternativeServiceMap::const_iterator it = map.begin();
   EXPECT_TRUE(it->first.Equals(http_server));
   ASSERT_EQ(2u, it->second.size());
-  EXPECT_EQ(alternative_service1, it->second[0].alternative_service);
-  EXPECT_EQ(alternative_service2, it->second[1].alternative_service);
+  EXPECT_EQ(alternative_service1, it->second[0].alternative_service());
+  EXPECT_EQ(alternative_service2, it->second[1].alternative_service());
 
   // Check Alt-Svc list should not be set for |https_server|.
   url::SchemeHostPort https_server("https", "foo", 80);
@@ -796,8 +796,8 @@ TEST_F(AlternateProtocolServerPropertiesTest, ClearAlternativeServices) {
   net::AlternativeServiceMap::const_iterator it = map.begin();
   EXPECT_TRUE(it->first.Equals(test_server));
   ASSERT_EQ(2u, it->second.size());
-  EXPECT_EQ(alternative_service1, it->second[0].alternative_service);
-  EXPECT_EQ(alternative_service2, it->second[1].alternative_service);
+  EXPECT_EQ(alternative_service1, it->second[0].alternative_service());
+  EXPECT_EQ(alternative_service2, it->second[1].alternative_service());
 
   impl_.SetAlternativeServices(test_server, AlternativeServiceInfoVector());
   EXPECT_TRUE(map.empty());
@@ -817,7 +817,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, BrokenShadowsCanonical) {
       impl_.GetAlternativeServiceInfos(test_server);
   ASSERT_EQ(1u, alternative_service_info_vector.size());
   EXPECT_EQ(canonical_alternative_service,
-            alternative_service_info_vector[0].alternative_service);
+            alternative_service_info_vector[0].alternative_service());
 
   const AlternativeService broken_alternative_service(kProtoHTTP2, "foo", 443);
   impl_.MarkAlternativeServiceBroken(broken_alternative_service);
@@ -828,7 +828,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, BrokenShadowsCanonical) {
       impl_.GetAlternativeServiceInfos(test_server);
   ASSERT_EQ(1u, alternative_service_info_vector.size());
   EXPECT_EQ(broken_alternative_service,
-            alternative_service_info_vector[0].alternative_service);
+            alternative_service_info_vector[0].alternative_service());
   EXPECT_TRUE(impl_.IsAlternativeServiceBroken(broken_alternative_service));
 }
 
@@ -887,17 +887,17 @@ TEST_F(AlternateProtocolServerPropertiesTest, Canonical) {
       impl_.GetAlternativeServiceInfos(test_server);
   ASSERT_EQ(2u, alternative_service_info_vector2.size());
   EXPECT_EQ(canonical_alternative_service1,
-            alternative_service_info_vector2[0].alternative_service);
+            alternative_service_info_vector2[0].alternative_service());
 
   // Since |canonical_alternative_service2| has an empty host,
   // GetAlternativeServiceInfos should substitute the hostname of its |origin|
   // argument.
   EXPECT_EQ(test_server.host(),
-            alternative_service_info_vector2[1].alternative_service.host);
+            alternative_service_info_vector2[1].alternative_service().host);
   EXPECT_EQ(canonical_alternative_service2.protocol,
-            alternative_service_info_vector2[1].alternative_service.protocol);
+            alternative_service_info_vector2[1].alternative_service().protocol);
   EXPECT_EQ(canonical_alternative_service2.port,
-            alternative_service_info_vector2[1].alternative_service.port);
+            alternative_service_info_vector2[1].alternative_service().port);
 
   // Verify the canonical suffix.
   EXPECT_EQ(".c.youtube.com", *impl_.GetCanonicalSuffix(test_server.host()));
@@ -939,7 +939,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, CanonicalOverride) {
       impl_.GetAlternativeServiceInfos(foo_server);
   ASSERT_EQ(1u, alternative_service_info_vector.size());
   EXPECT_EQ(bar_alternative_service,
-            alternative_service_info_vector[0].alternative_service);
+            alternative_service_info_vector[0].alternative_service());
 
   url::SchemeHostPort qux_server("https", "qux.c.youtube.com", 443);
   AlternativeService qux_alternative_service(kProtoQUIC, "qux.c.youtube.com",
@@ -949,7 +949,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, CanonicalOverride) {
       impl_.GetAlternativeServiceInfos(foo_server);
   ASSERT_EQ(1u, alternative_service_info_vector.size());
   EXPECT_EQ(qux_alternative_service,
-            alternative_service_info_vector[0].alternative_service);
+            alternative_service_info_vector[0].alternative_service());
 }
 
 TEST_F(AlternateProtocolServerPropertiesTest, ClearWithCanonical) {

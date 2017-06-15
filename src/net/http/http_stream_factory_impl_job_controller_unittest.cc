@@ -266,7 +266,7 @@ class HttpStreamFactoryImplJobControllerTest : public ::testing::Test {
     EXPECT_EQ(1u, alternative_service_info_vector.size());
     EXPECT_EQ(should_mark_broken,
               session_->http_server_properties()->IsAlternativeServiceBroken(
-                  alternative_service_info_vector[0].alternative_service));
+                  alternative_service_info_vector[0].alternative_service()));
   }
 
   TestJobFactory job_factory_;

@@ -30,7 +30,8 @@ class TestProofVerifyDetails : public ProofVerifyDetails {
 
 class OneServerIdFilter : public QuicCryptoClientConfig::ServerIdFilter {
  public:
-  OneServerIdFilter(const QuicServerId* server_id) : server_id_(*server_id) {}
+  explicit OneServerIdFilter(const QuicServerId* server_id)
+      : server_id_(*server_id) {}
 
   bool Matches(const QuicServerId& server_id) const override {
     return server_id == server_id_;
@@ -173,6 +174,8 @@ TEST_F(QuicCryptoClientConfigTest, CachedState_InitializeFrom) {
 TEST_F(QuicCryptoClientConfigTest, InchoateChlo) {
   QuicCryptoClientConfig::CachedState state;
   QuicCryptoClientConfig config(crypto_test_utils::ProofVerifierForTesting());
+  config.set_user_agent_id("quic-tester");
+  config.set_alpn("hq");
   QuicReferenceCountedPointer<QuicCryptoNegotiatedParameters> params(
       new QuicCryptoNegotiatedParameters);
   CryptoHandshakeMessage msg;
@@ -187,6 +190,12 @@ TEST_F(QuicCryptoClientConfigTest, InchoateChlo) {
   QuicStringPiece proof_nonce;
   EXPECT_TRUE(msg.GetStringPiece(kNONP, &proof_nonce));
   EXPECT_EQ(string(32, 'r'), proof_nonce);
+  QuicStringPiece user_agent_id;
+  EXPECT_TRUE(msg.GetStringPiece(kUAID, &user_agent_id));
+  EXPECT_EQ("quic-tester", user_agent_id);
+  QuicStringPiece alpn;
+  EXPECT_TRUE(msg.GetStringPiece(kALPN, &alpn));
+  EXPECT_EQ("hq", alpn);
 }
 
 TEST_F(QuicCryptoClientConfigTest, PreferAesGcm) {

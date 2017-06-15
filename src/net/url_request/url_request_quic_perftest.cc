@@ -19,6 +19,7 @@
 #include "base/test/trace_event_analyzer.h"
 #include "base/time/time.h"
 #include "base/trace_event/memory_dump_manager.h"
+#include "base/trace_event/memory_dump_manager_test_utils.h"
 #include "base/trace_event/memory_dump_request_args.h"
 #include "base/trace_event/process_memory_dump.h"
 #include "base/trace_event/trace_buffer.h"
@@ -87,37 +88,12 @@ void PrintPerfTest(const std::string& name,
                          static_cast<double>(value), unit, true);
 }
 
-void RequestGlobalDumpCallback(base::Closure quit_closure,
-                               uint64_t,
-                               bool success) {
-  base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, quit_closure);
-  ASSERT_TRUE(success);
-}
-
-void ProcessDumpCallbackAdapter(
-    base::trace_event::GlobalMemoryDumpCallback callback,
-    uint64_t dump_guid,
-    bool success,
-    const base::Optional<base::trace_event::MemoryDumpCallbackResult>&) {
-  callback.Run(dump_guid, success);
-}
-
-void RequestGlobalMemoryDumpCallback(
-    const base::trace_event::MemoryDumpRequestArgs& args,
-    const base::trace_event::GlobalMemoryDumpCallback& callback) {
-  base::trace_event::ProcessMemoryDumpCallback process_callback =
-      base::Bind(&ProcessDumpCallbackAdapter, callback);
-  base::trace_event::MemoryDumpManager::GetInstance()->CreateProcessDump(
-      args, process_callback);
-}
-
 class URLRequestQuicPerfTest : public ::testing::Test {
  protected:
   URLRequestQuicPerfTest() : message_loop_(new base::MessageLoopForIO()) {
     memory_dump_manager_ =
         base::trace_event::MemoryDumpManager::CreateInstanceForTesting();
-    memory_dump_manager_->Initialize(
-        base::BindRepeating(&RequestGlobalMemoryDumpCallback),
+    base::trace_event::InitializeMemoryDumpManagerForInProcessTesting(
         /*is_coordinator_process=*/false);
     memory_dump_manager_->set_dumper_registrations_ignored_for_testing(false);
     context_ = base::MakeUnique<TestURLRequestContext>(true);
@@ -269,11 +245,17 @@ TEST_F(URLRequestQuicPerfTest, TestGetRequest) {
       base::trace_event::TraceLog::RECORDING_MODE);
 
   base::RunLoop run_loop;
-  base::trace_event::MemoryDumpManager::GetInstance()->RequestGlobalDump(
-      base::trace_event::MemoryDumpType::EXPLICITLY_TRIGGERED,
-      base::trace_event::MemoryDumpLevelOfDetail::LIGHT,
-      base::Bind(&RequestGlobalDumpCallback, run_loop.QuitClosure()));
-
+  base::trace_event::MemoryDumpRequestArgs args{
+      1 /* dump_guid*/, base::trace_event::MemoryDumpType::EXPLICITLY_TRIGGERED,
+      base::trace_event::MemoryDumpLevelOfDetail::LIGHT};
+  auto on_memory_dump_done =
+      [](base::Closure quit_closure, uint64_t dump_guid, bool success,
+         const base::Optional<base::trace_event::MemoryDumpCallbackResult>&) {
+        base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, quit_closure);
+        ASSERT_TRUE(success);
+      };
+  base::trace_event::MemoryDumpManager::GetInstance()->CreateProcessDump(
+      args, base::Bind(on_memory_dump_done, run_loop.QuitClosure()));
   run_loop.Run();
   base::trace_event::TraceLog::GetInstance()->SetDisabled();
   std::unique_ptr<trace_analyzer::TraceAnalyzer> analyzer =

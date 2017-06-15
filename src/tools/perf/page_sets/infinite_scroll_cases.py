@@ -134,8 +134,7 @@ class InfiniteScrollStorySet(story.StorySet):
   def __init__(self):
     super(InfiniteScrollStorySet, self).__init__(
         archive_data_file='data/infinite_scroll.json',
-        cloud_storage_bucket=story.PARTNER_BUCKET,
-        verify_names=True)
+        cloud_storage_bucket=story.PARTNER_BUCKET)
     for story_class in _FindInfiniteScrollStoryClasses(platforms.DESKTOP):
       self.AddStory(story_class(self))
 
@@ -144,8 +143,7 @@ class MobileInfiniteScrollStorySet(story.StorySet):
   def __init__(self):
     super(MobileInfiniteScrollStorySet, self).__init__(
         archive_data_file='data/mobile_infinite_scroll.json',
-        cloud_storage_bucket=story.PARTNER_BUCKET,
-        verify_names=True)
+        cloud_storage_bucket=story.PARTNER_BUCKET)
     for story_class in _FindInfiniteScrollStoryClasses(platforms.MOBILE):
       self.AddStory(story_class(self))
 
