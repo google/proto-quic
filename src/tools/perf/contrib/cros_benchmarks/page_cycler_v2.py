@@ -157,6 +157,5 @@ class PageCyclerV2Top10Mobile(_PageCyclerV2):
     return 'page_cycler_v2.top_10_mobile'
 
   def CreateStorySet(self, options):
-    return page_sets.Top10MobilePageSet(run_no_page_interactions=True,
-        cache_temperatures=[
-            cache_temperature.PCV1_COLD, cache_temperature.PCV1_WARM])
+    return page_sets.Top10MobilePageSet(cache_temperatures=[
+        cache_temperature.PCV1_COLD, cache_temperature.PCV1_WARM])

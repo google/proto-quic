@@ -19,7 +19,6 @@
 #include "base/strings/utf_string_conversions.h"
 #include "net/base/net_errors.h"
 #include "net/base/network_interfaces.h"
-#include "net/base/zap.h"
 #include "net/http/des.h"
 #include "net/http/md4.h"
 
@@ -245,7 +244,6 @@ static void NTLM_Hash(const base::string16& password, uint8_t* hash) {
   WriteUnicodeLE(passbuf, password.data(), len);
   weak_crypto::MD4Sum(passbuf, len * 2, hash);
 
-  ZapBuf(passbuf, len * 2);
   free(passbuf);
 #else
   weak_crypto::MD4Sum(reinterpret_cast<const uint8_t*>(password.data()),
@@ -270,7 +268,7 @@ static void LM_Response(const uint8_t* hash,
   uint8_t keybytes[21], k1[8], k2[8], k3[8];
 
   memcpy(keybytes, hash, 16);
-  ZapBuf(keybytes + 16, 5);
+  memset(keybytes + 16, 0, 5);
 
   DESMakeKey(keybytes, k1);
   DESMakeKey(keybytes + 7, k2);
@@ -594,9 +592,7 @@ int HttpAuthHandlerNTLM::InitializeBeforeFirstChallenge() {
   return OK;
 }
 
-HttpAuthHandlerNTLM::~HttpAuthHandlerNTLM() {
-  credentials_.Zap();
-}
+HttpAuthHandlerNTLM::~HttpAuthHandlerNTLM() {}
 
 // static
 HttpAuthHandlerNTLM::GenerateRandomProc

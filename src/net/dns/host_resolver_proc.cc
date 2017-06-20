@@ -7,6 +7,7 @@
 #include "build/build_config.h"
 
 #include "base/logging.h"
+#include "base/metrics/histogram_macros.h"
 #include "base/sys_byteorder.h"
 #include "net/base/address_list.h"
 #include "net/base/net_errors.h"
@@ -125,10 +126,14 @@ int SystemHostResolverCall(const std::string& host,
                            HostResolverFlags host_resolver_flags,
                            AddressList* addrlist,
                            int* os_error) {
-  // Make sure |host| is properly formed.
+  // Make sure |host| is properly formed. Save the validity check result so that
+  // we can count how often invalid names (see |net::IsValidHostLabelCharacter|)
+  // successfully resolve, if ever. TODO(crbug.com/695474): Remove this when we
+  // no longer need the UMA metrics.
+  bool valid_hostname = false;
   {
     std::string out_ignored;
-    if (!DNSDomainFromDot(host, &out_ignored))
+    if (!DNSDomainFromDotWithValidityCheck(host, &out_ignored, &valid_hostname))
       return ERR_NAME_NOT_RESOLVED;
   }
 
@@ -253,6 +258,8 @@ int SystemHostResolverCall(const std::string& host,
 
   *addrlist = AddressList::CreateFromAddrinfo(ai);
   freeaddrinfo(ai);
+  UMA_HISTOGRAM_BOOLEAN("Net.SuccessfulResolutionWithValidDNSName",
+                        valid_hostname);
   return OK;
 }
 

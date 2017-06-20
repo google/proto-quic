@@ -21,8 +21,7 @@ class MseCasesPageSet(story.StorySet):
 
   def __init__(self):
     super(MseCasesPageSet, self).__init__(
-        cloud_storage_bucket=story.PUBLIC_BUCKET,
-        verify_names=True)
+        cloud_storage_bucket=story.PUBLIC_BUCKET)
 
     urls_list = [
       'file://mse_cases/startup_test.html?testType=AV',
@@ -47,3 +46,9 @@ class MseCasesPageSet(story.StorySet):
 
     for url in urls_list:
       self.AddStory(MseCasesPage(url, self, url.split('/')[-1]))
+
+class MseCasesStoryExpectations(
+    story.expectations.StoryExpectations):
+
+  def SetExpectations(self):
+    pass

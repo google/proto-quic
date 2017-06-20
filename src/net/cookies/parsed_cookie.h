@@ -103,6 +103,9 @@ class NET_EXPORT ParsedCookie {
   static std::string ParseTokenString(const std::string& token);
   static std::string ParseValueString(const std::string& value);
 
+  // Is the string valid as the value of a cookie attribute?
+  static bool IsValidCookieAttributeValue(const std::string& value);
+
  private:
   void ParseTokenValuePairs(const std::string& cookie_line);
   void SetupAttributes();

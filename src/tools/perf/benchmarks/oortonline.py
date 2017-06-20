@@ -8,6 +8,7 @@ import page_sets
 
 from core import perf_benchmark
 from telemetry import benchmark
+from telemetry import story
 from telemetry.page import legacy_page_test
 from telemetry.value import scalar
 from telemetry.value import improvement_direction
@@ -49,6 +50,11 @@ class OortOnline(perf_benchmark.PerfBenchmark):
   def CreateStorySet(self, options):
     return page_sets.OortOnlinePageSet()
 
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # http://oortonline.gl/#run not disabled.
+    return StoryExpectations()
 
 # Disabled on Linux due to timeouts; crbug.com/727850
 @benchmark.Disabled('linux', 'win')
@@ -66,6 +72,12 @@ class OortOnlineTBMv2(perf_benchmark.PerfBenchmark):
       r'(reported_by_chrome:v8|reported_by_os:system_memory:[^:]+$)')
 
   page_set = page_sets.OortOnlineTBMPageSet
+
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # http://oortonline.gl/#run not disabled.
+    return StoryExpectations()
 
   def CreateTimelineBasedMeasurementOptions(self):
     categories = [

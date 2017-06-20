@@ -19,8 +19,6 @@
 #include "net/android/keystore.h"
 #include "net/android/legacy_openssl.h"
 #include "net/base/net_errors.h"
-#include "net/ssl/openssl_client_key_store.h"
-#include "net/ssl/ssl_platform_key.h"
 #include "net/ssl/ssl_platform_key_util.h"
 #include "net/ssl/threaded_ssl_private_key.h"
 #include "third_party/boringssl/src/include/openssl/ecdsa.h"
@@ -217,12 +215,6 @@ scoped_refptr<SSLPrivateKey> WrapJavaPrivateKey(
   return make_scoped_refptr(new ThreadedSSLPrivateKey(
       base::MakeUnique<SSLPlatformKeyAndroid>(type, key, max_length, sys_rsa),
       GetSSLPlatformKeyTaskRunner()));
-}
-
-scoped_refptr<SSLPrivateKey> FetchClientCertPrivateKey(
-    const X509Certificate* certificate) {
-  return OpenSSLClientKeyStore::GetInstance()->FetchClientCertPrivateKey(
-      certificate);
 }
 
 }  // namespace net

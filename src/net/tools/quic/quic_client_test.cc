@@ -12,6 +12,7 @@
 #include "base/files/file_enumerator.h"
 #include "base/files/file_util.h"
 #include "net/quic/platform/api/quic_test.h"
+#include "net/quic/platform/api/quic_test_loopback.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
@@ -49,8 +50,7 @@ size_t NumOpenSocketFDs() {
 // Creates a new QuicClient and Initializes it. Caller is responsible for
 // deletion.
 QuicClient* CreateAndInitializeQuicClient(EpollServer* eps, uint16_t port) {
-  QuicSocketAddress server_address(
-      QuicSocketAddress(QuicIpAddress::Loopback4(), port));
+  QuicSocketAddress server_address(QuicSocketAddress(TestLoopback(), port));
   QuicServerId server_id("hostname", server_address.port(),
                          PRIVACY_MODE_DISABLED);
   QuicVersionVector versions = AllSupportedVersions();

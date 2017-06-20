@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "base/stl_util.h"
 #include "tools/gn/functions.h"
 #include "tools/gn/parse_tree.h"
 #include "tools/gn/scope.h"
@@ -94,8 +95,7 @@ Value RunProcessFileTemplate(Scope* scope,
   }
 
   auto& types = subst.required_types();
-  if (std::find(types.begin(), types.end(),
-                SUBSTITUTION_SOURCE_TARGET_RELATIVE) != types.end()) {
+  if (base::ContainsValue(types, SUBSTITUTION_SOURCE_TARGET_RELATIVE)) {
     *err = Err(template_arg, "Not a valid substitution type for the function.");
     return Value();
   }

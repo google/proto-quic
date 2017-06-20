@@ -124,16 +124,6 @@ bool IsControlCharacter(unsigned char c) {
   return c <= 31;
 }
 
-bool IsValidCookieAttributeValue(const std::string& value) {
-  // The greatest common denominator of cookie attribute values is
-  // <any CHAR except CTLs or ";"> according to RFC 6265.
-  for (std::string::const_iterator i = value.begin(); i != value.end(); ++i) {
-    if (IsControlCharacter(*i) || *i == ';')
-      return false;
-  }
-  return true;
-}
-
 }  // namespace
 
 namespace net {
@@ -240,6 +230,7 @@ std::string ParsedCookie::ToCookieLine() const {
   return out;
 }
 
+// static
 std::string::const_iterator ParsedCookie::FindFirstTerminator(
     const std::string& s) {
   std::string::const_iterator end = s.end();
@@ -251,6 +242,7 @@ std::string::const_iterator ParsedCookie::FindFirstTerminator(
   return end;
 }
 
+// static
 bool ParsedCookie::ParseToken(std::string::const_iterator* it,
                               const std::string::const_iterator& end,
                               std::string::const_iterator* token_start,
@@ -287,6 +279,7 @@ bool ParsedCookie::ParseToken(std::string::const_iterator* it,
   return true;
 }
 
+// static
 void ParsedCookie::ParseValue(std::string::const_iterator* it,
                               const std::string::const_iterator& end,
                               std::string::const_iterator* value_start,
@@ -313,6 +306,7 @@ void ParsedCookie::ParseValue(std::string::const_iterator* it,
   }
 }
 
+// static
 std::string ParsedCookie::ParseTokenString(const std::string& token) {
   std::string::const_iterator it = token.begin();
   std::string::const_iterator end = FindFirstTerminator(token);
@@ -323,6 +317,7 @@ std::string ParsedCookie::ParseTokenString(const std::string& token) {
   return std::string();
 }
 
+// static
 std::string ParsedCookie::ParseValueString(const std::string& value) {
   std::string::const_iterator it = value.begin();
   std::string::const_iterator end = FindFirstTerminator(value);
@@ -330,6 +325,17 @@ std::string ParsedCookie::ParseValueString(const std::string& value) {
   std::string::const_iterator value_start, value_end;
   ParseValue(&it, end, &value_start, &value_end);
   return std::string(value_start, value_end);
+}
+
+// static
+bool ParsedCookie::IsValidCookieAttributeValue(const std::string& value) {
+  // The greatest common denominator of cookie attribute values is
+  // <any CHAR except CTLs or ";"> according to RFC 6265.
+  for (std::string::const_iterator i = value.begin(); i != value.end(); ++i) {
+    if (IsControlCharacter(*i) || *i == ';')
+      return false;
+  }
+  return true;
 }
 
 // Parse all token/value pairs and populate pairs_.

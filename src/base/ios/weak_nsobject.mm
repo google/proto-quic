@@ -12,6 +12,14 @@ namespace {
 char sentinelObserverKey_;
 }
 
+namespace base {
+
+WeakContainer::WeakContainer(id object) : object_(object) {}
+
+WeakContainer::~WeakContainer() {}
+
+}  // namespace base
+
 @interface CRBWeakNSProtocolSentinel ()
 // Container to notify on dealloc.
 @property(readonly, assign) scoped_refptr<base::WeakContainer> container;

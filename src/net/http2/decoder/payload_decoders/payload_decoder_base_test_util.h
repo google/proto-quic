@@ -431,7 +431,7 @@ class AbstractPaddablePayloadDecoderTest
       fb.AppendZeroes(pad_length());
       VLOG(1) << "fb.size=" << fb.size();
       // Pick a random length for the payload that is shorter than neccesary.
-      payload_length = Random().Rand32() % fb.size();
+      payload_length = Random().Uniform(fb.size());
     }
 
     VLOG(1) << "payload_length=" << payload_length;

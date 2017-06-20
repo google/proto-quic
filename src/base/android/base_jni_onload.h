@@ -14,10 +14,6 @@
 namespace base {
 namespace android {
 
-// Returns whether JNI registration succeeded.
-typedef base::Callback<bool(JNIEnv*)> RegisterCallback;
-BASE_EXPORT bool OnJNIOnLoadRegisterJNI(JNIEnv* env);
-
 // Returns whether initialization succeeded.
 BASE_EXPORT bool OnJNIOnLoadInit();
 

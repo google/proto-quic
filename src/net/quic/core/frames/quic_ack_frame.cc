@@ -115,23 +115,6 @@ QuicPacketNumber PacketNumberQueue::LastIntervalLength() const {
   return packet_number_intervals_.rbegin()->Length();
 }
 
-PacketNumberQueue::const_iterator PacketNumberQueue::lower_bound(
-    QuicPacketNumber packet_number) const {
-  // lower_bound returns the first interval that contains |packet_number| or the
-  // first interval after |packet_number|.
-  auto itr = packet_number_intervals_.Find(packet_number);
-  if (itr != packet_number_intervals_.end()) {
-    return itr;
-  }
-  for (itr = packet_number_intervals_.begin();
-       itr != packet_number_intervals_.end(); ++itr) {
-    if (packet_number < itr->min()) {
-      return itr;
-    }
-  }
-  return packet_number_intervals_.end();
-}
-
 PacketNumberQueue::const_iterator PacketNumberQueue::begin() const {
   return packet_number_intervals_.begin();
 }

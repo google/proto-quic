@@ -1601,6 +1601,12 @@ void GlobalActivityTracker::RecordFieldTrial(const std::string& trial_name,
   process_data_.SetString(key, group_name);
 }
 
+void GlobalActivityTracker::RecordException(const void* pc,
+                                            const void* origin,
+                                            uint32_t code) {
+  RecordExceptionImpl(pc, origin, code);
+}
+
 void GlobalActivityTracker::MarkDeleted() {
   allocator_->SetMemoryState(PersistentMemoryAllocator::MEMORY_DELETED);
 }

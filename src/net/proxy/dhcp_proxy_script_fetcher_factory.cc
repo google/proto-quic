@@ -14,42 +14,16 @@
 
 namespace net {
 
-DhcpProxyScriptFetcherFactory::DhcpProxyScriptFetcherFactory()
-    : feature_enabled_(false) {
-  set_enabled(true);
-}
+DhcpProxyScriptFetcherFactory::DhcpProxyScriptFetcherFactory() {}
+
+DhcpProxyScriptFetcherFactory::~DhcpProxyScriptFetcherFactory() {}
 
 std::unique_ptr<DhcpProxyScriptFetcher> DhcpProxyScriptFetcherFactory::Create(
     URLRequestContext* context) {
-  if (!feature_enabled_) {
-    return base::MakeUnique<DoNothingDhcpProxyScriptFetcher>();
-  } else {
-    DCHECK(IsSupported());
-    std::unique_ptr<DhcpProxyScriptFetcher> ret;
 #if defined(OS_WIN)
-    ret.reset(new DhcpProxyScriptFetcherWin(context));
-#endif
-    DCHECK(ret);
-    return ret;
-  }
-}
-
-void DhcpProxyScriptFetcherFactory::set_enabled(bool enabled) {
-  if (IsSupported()) {
-    feature_enabled_ = enabled;
-  }
-}
-
-bool DhcpProxyScriptFetcherFactory::enabled() const {
-  return feature_enabled_;
-}
-
-// static
-bool DhcpProxyScriptFetcherFactory::IsSupported() {
-#if defined(OS_WIN)
-  return true;
+  return base::MakeUnique<DhcpProxyScriptFetcherWin>(context);
 #else
-  return false;
+  return base::MakeUnique<DoNothingDhcpProxyScriptFetcher>();
 #endif
 }
 

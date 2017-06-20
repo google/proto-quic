@@ -199,20 +199,12 @@ DataPack.RePack = staticmethod(RePack)
 
 
 def main():
-  if len(sys.argv) > 1:
-    # When an argument is given, read and explode the file to text
-    # format, for easier diffing.
-    data = ReadDataPack(sys.argv[1])
-    print data.encoding
-    for (resource_id, text) in data.resources.iteritems():
-      print '%s: %s' % (resource_id, text)
-  else:
-    # Just write a simple file.
-    data = {1: '', 4: 'this is id 4', 6: 'this is id 6', 10: ''}
-    WriteDataPack(data, 'datapack1.pak', UTF8)
-    data2 = {1000: 'test', 5: 'five'}
-    WriteDataPack(data2, 'datapack2.pak', UTF8)
-    print 'wrote datapack1 and datapack2 to current directory.'
+  # Write a simple file.
+  data = {1: '', 4: 'this is id 4', 6: 'this is id 6', 10: ''}
+  WriteDataPack(data, 'datapack1.pak', UTF8)
+  data2 = {1000: 'test', 5: 'five'}
+  WriteDataPack(data2, 'datapack2.pak', UTF8)
+  print 'wrote datapack1 and datapack2 to current directory.'
 
 
 if __name__ == '__main__':

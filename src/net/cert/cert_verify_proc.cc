@@ -15,13 +15,13 @@
 #include "base/strings/stringprintf.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
+#include "crypto/sha2.h"
 #include "net/base/net_errors.h"
 #include "net/base/registry_controlled_domains/registry_controlled_domain.h"
 #include "net/base/url_util.h"
 #include "net/cert/asn1_util.h"
 #include "net/cert/cert_status_flags.h"
 #include "net/cert/cert_verifier.h"
-#include "net/cert/cert_verify_proc_whitelist.h"
 #include "net/cert/cert_verify_result.h"
 #include "net/cert/crl_set.h"
 #include "net/cert/internal/parse_ocsp.h"
@@ -579,12 +579,6 @@ int CertVerifyProc::Verify(X509Certificate* cert,
                                   dns_names,
                                   ip_addrs)) {
     verify_result->cert_status |= CERT_STATUS_NAME_CONSTRAINT_VIOLATION;
-    rv = MapCertStatusToNetError(verify_result->cert_status);
-  }
-
-  if (IsNonWhitelistedCertificate(*verify_result->verified_cert,
-                                  verify_result->public_key_hashes, hostname)) {
-    verify_result->cert_status |= CERT_STATUS_AUTHORITY_INVALID;
     rv = MapCertStatusToNetError(verify_result->cert_status);
   }
 

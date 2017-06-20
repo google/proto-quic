@@ -529,10 +529,7 @@
   __lxstat64;
   __msan_*;
   __overflow;
-  __sanitizer_cov;
   __sanitizer_cov_dump;
-  __sanitizer_cov_init;
-  __sanitizer_cov_module_init;
   __sanitizer_cov_trace_cmp;
   __sanitizer_cov_trace_cmp1;
   __sanitizer_cov_trace_cmp2;
@@ -545,7 +542,6 @@
   __sanitizer_cov_trace_pc_guard_init;
   __sanitizer_cov_trace_pc_indir;
   __sanitizer_cov_trace_switch;
-  __sanitizer_cov_with_check;
   __sanitizer_dtor_callback;
   __sanitizer_dump_coverage;
   __sanitizer_dump_trace_pc_guard_coverage;
@@ -556,10 +552,8 @@
   __sanitizer_get_heap_size;
   __sanitizer_get_module_and_offset_for_pc;
   __sanitizer_get_ownership;
-  __sanitizer_get_total_unique_coverage;
   __sanitizer_get_unmapped_bytes;
   __sanitizer_install_malloc_and_free_hooks;
-  __sanitizer_maybe_open_cov_file;
   __sanitizer_print_stack_trace;
   __sanitizer_report_error_summary;
   __sanitizer_sandbox_on_notify;

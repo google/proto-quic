@@ -42,7 +42,11 @@ class FeatureCompilerTest(unittest.TestCase):
       'channel': 'stable',
       'command_line_switch': 'switch',
       'component_extensions_auto_granted': False,
-      'contexts': ['blessed_extension', 'blessed_web_page'],
+      'contexts': [
+        'blessed_extension',
+        'blessed_web_page',
+        'lock_screen_extension'
+      ],
       'default_parent': True,
       'dependencies': ['dependency1', 'dependency2'],
       'extension_types': ['extension'],

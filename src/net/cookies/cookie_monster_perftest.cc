@@ -25,7 +25,7 @@ namespace {
 
 const int kNumCookies = 20000;
 const char kCookieLine[] = "A  = \"b=;\\\"\"  ;secure;;;";
-const char kGoogleURL[] = "http://www.google.izzle";
+const char kGoogleURL[] = "http://www.foo.com";
 
 int CountInString(const std::string& str, char c) {
   return std::count(str.begin(), str.end(), c);
@@ -154,8 +154,7 @@ TEST_F(CookieMonsterTest, TestAddCookiesOnSingleHost) {
   timer3.Done();
 }
 
-// TODO(xunjieli): Renable after crbug.com/730000 is fixed.
-TEST_F(CookieMonsterTest, DISABLED_TestAddCookieOnManyHosts) {
+TEST_F(CookieMonsterTest, TestAddCookieOnManyHosts) {
   std::unique_ptr<CookieMonster> cm(new CookieMonster(nullptr, nullptr));
   std::string cookie(kCookieLine);
   std::vector<GURL> gurls;  // just wanna have ffffuunnn
@@ -306,7 +305,7 @@ TEST_F(CookieMonsterTest, TestImport) {
   std::unique_ptr<CookieMonster> cm(new CookieMonster(store.get(), nullptr));
 
   // Import will happen on first access.
-  GURL gurl("www.google.com");
+  GURL gurl("www.foo.com");
   CookieOptions options;
   base::PerfTimeLogger timer("Cookie_monster_import_from_store");
   getCookiesCallback.GetCookies(cm.get(), gurl);
@@ -320,7 +319,7 @@ TEST_F(CookieMonsterTest, TestGetKey) {
   std::unique_ptr<CookieMonster> cm(new CookieMonster(nullptr, nullptr));
   base::PerfTimeLogger timer("Cookie_monster_get_key");
   for (int i = 0; i < kNumCookies; i++)
-    cm->GetKey("www.google.com");
+    cm->GetKey("www.foo.com");
   timer.Done();
 }
 
@@ -377,7 +376,7 @@ TEST_F(CookieMonsterTest, TestGCTimes) {
         test_case.num_cookies, test_case.num_old_cookies, 0, 0,
         CookieMonster::kSafeFromGlobalPurgeDays * 2);
 
-    GURL gurl("http://google.com");
+    GURL gurl("http://foo.com");
     std::string cookie_line("z=3");
     // Trigger the Garbage collection we're allowed.
     setCookieCallback.SetCookie(cm.get(), gurl, cookie_line);

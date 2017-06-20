@@ -48,6 +48,10 @@ class BattOrTrivialPages(_BattOrBenchmark):
   def Name(cls):
     return 'battor.trivial_pages'
 
+  def GetExpectations(self):
+    return page_sets.TrivialStoryExpectations()
+
+
 @benchmark.Enabled('mac')
 @benchmark.Owner(emails=['charliea@chromium.org'])
 class BattOrSteadyStatePages(_BattOrBenchmark):
@@ -59,3 +63,6 @@ class BattOrSteadyStatePages(_BattOrBenchmark):
   @classmethod
   def Name(cls):
     return 'battor.steady_state'
+
+  def GetExpectations(self):
+    return page_sets.IdleAfterLoadingStoryExpectations()

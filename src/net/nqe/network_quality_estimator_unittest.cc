@@ -861,54 +861,6 @@ TEST(NetworkQualityEstimatorTest, DefaultObservationsOverridden) {
   EXPECT_EQ(kbps, estimator.GetDownstreamThroughputKbps().value());
 }
 
-TEST(NetworkQualityEstimatorTest, ObtainAlgorithmToUseFromParams) {
-  const struct {
-    bool set_variation_param;
-    std::string algorithm;
-    NetworkQualityEstimator::EffectiveConnectionTypeAlgorithm
-        expected_algorithm;
-  } tests[] = {
-      {false, "", NetworkQualityEstimator::EffectiveConnectionTypeAlgorithm::
-                      HTTP_RTT_AND_DOWNSTREAM_THROUGHOUT},
-      {true, "", NetworkQualityEstimator::EffectiveConnectionTypeAlgorithm::
-                     HTTP_RTT_AND_DOWNSTREAM_THROUGHOUT},
-      {true, "HttpRTTAndDownstreamThroughput",
-       NetworkQualityEstimator::EffectiveConnectionTypeAlgorithm::
-           HTTP_RTT_AND_DOWNSTREAM_THROUGHOUT},
-      {true, "TransportRTTOrDownstreamThroughput",
-       NetworkQualityEstimator::EffectiveConnectionTypeAlgorithm::
-           TRANSPORT_RTT_OR_DOWNSTREAM_THROUGHOUT},
-  };
-
-  for (const auto& test : tests) {
-    std::map<std::string, std::string> variation_params;
-    if (test.set_variation_param)
-      variation_params["effective_connection_type_algorithm"] = test.algorithm;
-
-    TestNetworkQualityEstimator estimator(variation_params);
-    EXPECT_EQ(test.expected_algorithm,
-              estimator.effective_connection_type_algorithm_)
-        << test.algorithm;
-
-    // Make sure no two values are same in the map.
-    typedef std::map<std::string,
-                     NetworkQualityEstimator::EffectiveConnectionTypeAlgorithm>
-        Algorithms;
-
-    for (Algorithms::const_iterator it_first =
-             estimator.algorithm_name_to_enum_.begin();
-         it_first != estimator.algorithm_name_to_enum_.end(); ++it_first) {
-      for (Algorithms::const_iterator it_second =
-               estimator.algorithm_name_to_enum_.begin();
-           it_second != estimator.algorithm_name_to_enum_.end(); ++it_second) {
-        if (it_first != it_second) {
-          DCHECK_NE(it_first->second, it_second->second);
-        }
-      }
-    }
-  }
-}
-
 // Tests that |GetEffectiveConnectionType| returns
 // EFFECTIVE_CONNECTION_TYPE_OFFLINE when the device is currently offline.
 TEST(NetworkQualityEstimatorTest, Offline) {

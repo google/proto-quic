@@ -20,7 +20,7 @@ void PrintUsage() {
       "test.\n"
       "  -e  Specifies an environment key=value pair that will be"
       " set in the simulated application's environment.\n"
-      "  -o  Specifies a test or test suite that should be included in the"
+      "  -t  Specifies a test or test suite that should be included in the"
       "test run. All other tests will be excluded from this run.\n"
       "  -c  Specifies command line flags to pass to application.\n"
       "  -p  Print the device's home directory, does not run a test.\n"
@@ -225,7 +225,7 @@ void RunApplication(NSString* app_path,
                     NSString* udid,
                     NSMutableDictionary* app_env,
                     NSString* cmd_args,
-                    NSMutableArray* only_testing_tests) {
+                    NSMutableArray* tests_filter) {
   NSString* tempFilePath = [NSTemporaryDirectory()
       stringByAppendingPathComponent:[[NSUUID UUID] UUIDString]];
   [[NSFileManager defaultManager] createFileAtPath:tempFilePath
@@ -269,8 +269,8 @@ void RunApplication(NSString* app_path,
     [testTargetName setObject:@[ cmd_args ] forKey:@"CommandLineArguments"];
   }
 
-  if (only_testing_tests) {
-    [testTargetName setObject:only_testing_tests forKey:@"OnlyTestIdentifiers"];
+  if ([tests_filter count] > 0) {
+    [testTargetName setObject:tests_filter forKey:@"OnlyTestIdentifiers"];
   }
 
   [testTargetName setObject:testingEnvironmentVariables
@@ -337,10 +337,10 @@ int main(int argc, char* const argv[]) {
   }
   NSString* sdk_version = [NSString stringWithFormat:@"%0.1f", sdk];
   NSMutableDictionary* app_env = [NSMutableDictionary dictionary];
-  NSMutableArray* only_testing_tests = [NSMutableArray array];
+  NSMutableArray* tests_filter = [NSMutableArray array];
 
   int c;
-  while ((c = getopt(argc, argv, "hs:d:u:t:e:c:o:pwl")) != -1) {
+  while ((c = getopt(argc, argv, "hs:d:u:t:e:c:pwl")) != -1) {
     switch (c) {
       case 's':
         sdk_version = [NSString stringWithUTF8String:optarg];
@@ -354,9 +354,9 @@ int main(int argc, char* const argv[]) {
       case 'c':
         cmd_args = [NSString stringWithUTF8String:optarg];
         break;
-      case 'o': {
-        NSString* only_testing_test = [NSString stringWithUTF8String:optarg];
-        [only_testing_tests addObject:only_testing_test];
+      case 't': {
+        NSString* test = [NSString stringWithUTF8String:optarg];
+        [tests_filter addObject:test];
       } break;
       case 'e': {
         NSString* envLine = [NSString stringWithUTF8String:optarg];
@@ -435,8 +435,7 @@ int main(int argc, char* const argv[]) {
     exit(kExitInvalidArguments);
   }
 
-  RunApplication(app_path, xctest_path, udid, app_env, cmd_args,
-                 only_testing_tests);
+  RunApplication(app_path, xctest_path, udid, app_env, cmd_args, tests_filter);
   KillSimulator();
   return kExitSuccess;
 }

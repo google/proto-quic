@@ -34,7 +34,7 @@ class URLRequestContextBuilderMojo : public URLRequestContextBuilder {
   // MojoProxyResolverFactory is provided.
   void set_dhcp_fetcher_factory(
       std::unique_ptr<DhcpProxyScriptFetcherFactory> dhcp_fetcher_factory) {
-    dhcp_fetcher_factory = std::move(dhcp_fetcher_factory_);
+    dhcp_fetcher_factory_ = std::move(dhcp_fetcher_factory);
   }
 
   // Sets Mojo factory used to create ProxyResolvers. If not set, falls back to

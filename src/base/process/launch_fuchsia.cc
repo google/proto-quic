@@ -36,7 +36,7 @@ bool GetAppOutputInternal(const std::vector<std::string>& argv,
   launchpad_clone_fd(lp, STDIN_FILENO, STDIN_FILENO);
   int pipe_fd;
   mx_status_t status = launchpad_add_pipe(lp, &pipe_fd, STDOUT_FILENO);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     LOG(ERROR) << "launchpad_add_pipe failed: " << status;
     launchpad_destroy(lp);
     return false;
@@ -50,7 +50,7 @@ bool GetAppOutputInternal(const std::vector<std::string>& argv,
   mx_handle_t proc;
   const char* errmsg;
   status = launchpad_go(lp, &proc, &errmsg);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     LOG(ERROR) << "launchpad_go failed: " << errmsg << ", status=" << status;
     return false;
   }
@@ -121,7 +121,7 @@ Process LaunchProcess(const std::vector<std::string>& argv,
   mx_handle_t proc;
   const char* errmsg;
   mx_status_t status = launchpad_go(lp, &proc, &errmsg);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     LOG(ERROR) << "launchpad_go failed: " << errmsg << ", status=" << status;
     return Process();
   }

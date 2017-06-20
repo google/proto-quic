@@ -19,6 +19,12 @@ namespace net {
 class SSLPrivateKey;
 class X509Certificate;
 
+// Returns an SSLPrivateKey backed by the platform private key for
+// |cert_context| which must correspond to |certificate|.
+scoped_refptr<SSLPrivateKey> FetchClientCertPrivateKey(
+    const X509Certificate* certificate,
+    PCCERT_CONTEXT cert_context);
+
 // Returns an SSLPrivateKey backed by |prov| and |key_spec|, which must
 // correspond to |certificate|'s public key. Takes ownership of |prov|.
 NET_EXPORT_PRIVATE scoped_refptr<SSLPrivateKey> WrapCAPIPrivateKey(

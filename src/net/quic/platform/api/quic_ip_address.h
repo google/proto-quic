@@ -21,6 +21,8 @@ class QUIC_EXPORT_PRIVATE QuicIpAddress {
     kIPv4AddressSize = QuicIpAddressImpl::kIPv4AddressSize,
     kIPv6AddressSize = QuicIpAddressImpl::kIPv6AddressSize
   };
+
+  // TODO(fayang): Remove Loopback*() and use TestLoopback*() in tests.
   static QuicIpAddress Loopback4();
   static QuicIpAddress Loopback6();
   static QuicIpAddress Any4();

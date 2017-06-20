@@ -89,7 +89,8 @@ TEST(AtomicFlagTest, ReadFromDifferentThread) {
 
   // Use |reset_flag| to confirm that the above completed (which the rest of
   // this test assumes).
-  ASSERT_TRUE(reset_flag.IsSet());
+  while (!reset_flag.IsSet())
+    PlatformThread::YieldCurrentThread();
 
   tested_flag.UnsafeResetForTesting();
   EXPECT_FALSE(tested_flag.IsSet());

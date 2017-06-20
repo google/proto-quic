@@ -69,7 +69,7 @@ TEST_P(SSLPlatformKeyMacTest, KeyMatches) {
 
   // Finally, test the code to look up the key.
   scoped_refptr<SSLPrivateKey> key =
-      FetchClientCertPrivateKeyFromKeychain(cert.get(), keychain);
+      CreateSSLPrivateKeyForSecIdentity(cert.get(), sec_identity.get());
   ASSERT_TRUE(key);
 
   // All Mac keys are expected to have the same hash preferences.

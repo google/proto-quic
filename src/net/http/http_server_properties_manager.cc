@@ -587,17 +587,18 @@ bool HttpServerPropertiesManager::ParseAlternativeServiceDict(
              << server_str;
     return false;
   }
-  alternative_service_info->alternative_service.protocol = protocol;
+  alternative_service_info->set_protocol(protocol);
 
   // Host is optional, defaults to "".
-  alternative_service_info->alternative_service.host.clear();
+  std::string host = "";
   if (alternative_service_dict.HasKey(kHostKey) &&
-      !alternative_service_dict.GetStringWithoutPathExpansion(
-          kHostKey, &(alternative_service_info->alternative_service.host))) {
+      !alternative_service_dict.GetStringWithoutPathExpansion(kHostKey,
+                                                              &host)) {
     DVLOG(1) << "Malformed alternative service host string for server: "
              << server_str;
     return false;
   }
+  alternative_service_info->set_host(host);
 
   // Port is mandatory.
   int port = 0;
@@ -606,14 +607,13 @@ bool HttpServerPropertiesManager::ParseAlternativeServiceDict(
     DVLOG(1) << "Malformed alternative service port for server: " << server_str;
     return false;
   }
-  alternative_service_info->alternative_service.port =
-      static_cast<uint32_t>(port);
+  alternative_service_info->set_port(static_cast<uint32_t>(port));
 
   // Expiration is optional, defaults to one day.
   base::Time expiration;
   if (!alternative_service_dict.HasKey(kExpirationKey)) {
-    alternative_service_info->expiration =
-        base::Time::Now() + base::TimeDelta::FromDays(1);
+    alternative_service_info->set_expiration(base::Time::Now() +
+                                             base::TimeDelta::FromDays(1));
     return true;
   }
 
@@ -626,8 +626,8 @@ bool HttpServerPropertiesManager::ParseAlternativeServiceDict(
                << server_str;
       return false;
     }
-    alternative_service_info->expiration =
-        base::Time::FromInternalValue(expiration_int64);
+    alternative_service_info->set_expiration(
+        base::Time::FromInternalValue(expiration_int64));
     return true;
   }
 
@@ -663,7 +663,7 @@ bool HttpServerPropertiesManager::AddToAlternativeServiceMap(
                                      &alternative_service_info)) {
       return false;
     }
-    if (base::Time::Now() < alternative_service_info.expiration) {
+    if (base::Time::Now() < alternative_service_info.expiration()) {
       alternative_service_info_vector.push_back(alternative_service_info);
     }
   }
@@ -858,11 +858,11 @@ void HttpServerPropertiesManager::UpdatePrefsFromCacheOnNetworkSequence(
     AlternativeServiceInfoVector notbroken_alternative_service_info_vector;
     for (const AlternativeServiceInfo& alternative_service_info : it->second) {
       // Do not persist expired entries.
-      if (alternative_service_info.expiration < base::Time::Now()) {
+      if (alternative_service_info.expiration() < base::Time::Now()) {
         continue;
       }
       AlternativeService alternative_service(
-          alternative_service_info.alternative_service);
+          alternative_service_info.alternative_service());
       if (!IsAlternateProtocolValid(alternative_service.protocol)) {
         continue;
       }
@@ -1072,7 +1072,7 @@ void HttpServerPropertiesManager::SaveAlternativeServiceToServerPrefs(
   for (const AlternativeServiceInfo& alternative_service_info :
        *alternative_service_info_vector) {
     const AlternativeService alternative_service =
-        alternative_service_info.alternative_service;
+        alternative_service_info.alternative_service();
     DCHECK(IsAlternateProtocolValid(alternative_service.protocol));
     std::unique_ptr<base::DictionaryValue> alternative_service_dict(
         new base::DictionaryValue);
@@ -1086,7 +1086,7 @@ void HttpServerPropertiesManager::SaveAlternativeServiceToServerPrefs(
     alternative_service_dict->SetString(
         kExpirationKey,
         base::Int64ToString(
-            alternative_service_info.expiration.ToInternalValue()));
+            alternative_service_info.expiration().ToInternalValue()));
     alternative_service_list->Append(std::move(alternative_service_dict));
   }
   if (alternative_service_list->GetSize() == 0)

@@ -42,7 +42,7 @@ class KeyNoOpCasesPageSet(story.StorySet):
   """ Key no-op cases """
 
   def __init__(self):
-    super(KeyNoOpCasesPageSet, self).__init__(verify_names=True)
+    super(KeyNoOpCasesPageSet, self).__init__()
 
     # Why: An infinite rAF loop which does not modify the page should incur
     # minimal activity.
@@ -60,3 +60,8 @@ class KeyNoOpCasesPageSet(story.StorySet):
     # Why: Feeding a stream of touch events to a no-op handler should be cheap.
     self.AddStory(NoOpTouchScrollPage(
         'file://key_noop_cases/no_op_touch_handler.html', self))
+
+
+class KeyNoOpCasesStoryExpectations(story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    pass

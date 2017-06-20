@@ -8,6 +8,7 @@
 #include "base/macros.h"
 #include "base/message_loop/message_loop.h"
 #include "base/single_thread_task_runner.h"
+#include "base/task_scheduler/lazy_task_runner.h"
 
 namespace base {
 
@@ -101,6 +102,10 @@ class ScopedTaskEnvironment {
 
   // Owned by |task_scheduler_|.
   TestTaskTracker* const task_tracker_;
+
+  // Ensures destruction of lazy TaskRunners when this is destroyed.
+  internal::ScopedLazyTaskRunnerListForTesting
+      scoped_lazy_task_runner_list_for_testing_;
 
   DISALLOW_COPY_AND_ASSIGN(ScopedTaskEnvironment);
 };

@@ -52,7 +52,7 @@ const unsigned char kAuthorityRootDN[] = {
 // the platform implementation should implement this method:
 // bool SelectClientCerts(const CertificateList& input_certs,
 //                        const SSLCertRequestInfo& cert_request_info,
-//                        CertificateList* selected_certs);
+//                        ClientCertIdentityList* selected_identities);
 template <typename T>
 class ClientCertStoreTest : public ::testing::Test {
  public:
@@ -62,14 +62,14 @@ class ClientCertStoreTest : public ::testing::Test {
 TYPED_TEST_CASE_P(ClientCertStoreTest);
 
 TYPED_TEST_P(ClientCertStoreTest, EmptyQuery) {
-  std::vector<scoped_refptr<X509Certificate> > certs;
+  CertificateList certs;
   scoped_refptr<SSLCertRequestInfo> request(new SSLCertRequestInfo());
 
-  std::vector<scoped_refptr<X509Certificate> > selected_certs;
-  bool rv = this->delegate_.SelectClientCerts(
-      certs, *request.get(), &selected_certs);
+  ClientCertIdentityList selected_identities;
+  bool rv = this->delegate_.SelectClientCerts(certs, *request.get(),
+                                              &selected_identities);
   EXPECT_TRUE(rv);
-  EXPECT_EQ(0u, selected_certs.size());
+  EXPECT_EQ(0u, selected_identities.size());
 }
 
 // Verify that CertRequestInfo with empty |cert_authorities| matches all
@@ -83,12 +83,12 @@ TYPED_TEST_P(ClientCertStoreTest, AllIssuersAllowed) {
   certs.push_back(cert);
   scoped_refptr<SSLCertRequestInfo> request(new SSLCertRequestInfo());
 
-  std::vector<scoped_refptr<X509Certificate> > selected_certs;
-  bool rv = this->delegate_.SelectClientCerts(
-      certs, *request.get(), &selected_certs);
+  ClientCertIdentityList selected_identities;
+  bool rv = this->delegate_.SelectClientCerts(certs, *request.get(),
+                                              &selected_identities);
   EXPECT_TRUE(rv);
-  ASSERT_EQ(1u, selected_certs.size());
-  EXPECT_TRUE(selected_certs[0]->Equals(cert.get()));
+  ASSERT_EQ(1u, selected_identities.size());
+  EXPECT_TRUE(selected_identities[0]->certificate()->Equals(cert.get()));
 }
 
 // Verify that certificates are correctly filtered against CertRequestInfo with
@@ -119,12 +119,12 @@ TYPED_TEST_P(ClientCertStoreTest, DISABLED_CertAuthorityFiltering) {
   scoped_refptr<SSLCertRequestInfo> request(new SSLCertRequestInfo());
   request->cert_authorities = authority_1;
 
-  std::vector<scoped_refptr<X509Certificate> > selected_certs;
-  bool rv = this->delegate_.SelectClientCerts(
-      certs, *request.get(), &selected_certs);
+  ClientCertIdentityList selected_identities;
+  bool rv = this->delegate_.SelectClientCerts(certs, *request.get(),
+                                              &selected_identities);
   EXPECT_TRUE(rv);
-  ASSERT_EQ(1u, selected_certs.size());
-  EXPECT_TRUE(selected_certs[0]->Equals(cert_1.get()));
+  ASSERT_EQ(1u, selected_identities.size());
+  EXPECT_TRUE(selected_identities[0]->certificate()->Equals(cert_1.get()));
 }
 
 REGISTER_TYPED_TEST_CASE_P(ClientCertStoreTest,

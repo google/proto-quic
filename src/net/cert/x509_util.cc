@@ -60,39 +60,6 @@ static const uint16_t kRSAKeyLength = 1024;
 //  CreateKeyAndChannelIDEC will be signed using this digest algorithm.
 static const DigestAlgorithm kSignatureDigestAlgorithm = DIGEST_SHA256;
 
-ClientCertSorter::ClientCertSorter() : now_(base::Time::Now()) {}
-
-bool ClientCertSorter::operator()(
-    const scoped_refptr<X509Certificate>& a,
-    const scoped_refptr<X509Certificate>& b) const {
-  // Certificates that are null are sorted last.
-  if (!a.get() || !b.get())
-    return a.get() && !b.get();
-
-  // Certificates that are expired/not-yet-valid are sorted last.
-  bool a_is_valid = now_ >= a->valid_start() && now_ <= a->valid_expiry();
-  bool b_is_valid = now_ >= b->valid_start() && now_ <= b->valid_expiry();
-  if (a_is_valid != b_is_valid)
-    return a_is_valid && !b_is_valid;
-
-  // Certificates with longer expirations appear as higher priority (less
-  // than) certificates with shorter expirations.
-  if (a->valid_expiry() != b->valid_expiry())
-    return a->valid_expiry() > b->valid_expiry();
-
-  // If the expiration dates are equivalent, certificates that were issued
-  // more recently should be prioritized over older certificates.
-  if (a->valid_start() != b->valid_start())
-    return a->valid_start() > b->valid_start();
-
-  // Otherwise, prefer client certificates with shorter chains.
-  const X509Certificate::OSCertHandles& a_intermediates =
-      a->GetIntermediateCertificates();
-  const X509Certificate::OSCertHandles& b_intermediates =
-      b->GetIntermediateCertificates();
-  return a_intermediates.size() < b_intermediates.size();
-}
-
 bool CreateKeyAndSelfSignedCert(const std::string& subject,
                                 uint32_t serial_number,
                                 base::Time not_valid_before,

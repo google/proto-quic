@@ -35,14 +35,14 @@ using ::testing::Return;
 using ::testing::_;
 
 // Needs to be global since log assert handlers can't maintain state.
-int log_sink_call_count = 0;
+int g_log_sink_call_count = 0;
 
 #if !defined(OFFICIAL_BUILD) || defined(DCHECK_ALWAYS_ON) || !defined(NDEBUG)
 void LogSink(const char* file,
              int line,
              const base::StringPiece message,
              const base::StringPiece stack_trace) {
-  ++log_sink_call_count;
+  ++g_log_sink_call_count;
 }
 #endif
 
@@ -54,7 +54,7 @@ class LogStateSaver {
 
   ~LogStateSaver() {
     SetMinLogLevel(old_min_log_level_);
-    log_sink_call_count = 0;
+    g_log_sink_call_count = 0;
   }
 
  private:
@@ -145,7 +145,7 @@ TEST_F(LoggingTest, LogIsOn) {
   EXPECT_FALSE(LOG_IS_ON(WARNING));
   EXPECT_FALSE(LOG_IS_ON(ERROR));
   EXPECT_TRUE(LOG_IS_ON(FATAL));
-  EXPECT_TRUE(kDfatalIsFatal == LOG_IS_ON(DFATAL));
+  EXPECT_EQ(kDfatalIsFatal, LOG_IS_ON(DFATAL));
 }
 
 TEST_F(LoggingTest, LoggingIsLazyBySeverity) {
@@ -371,7 +371,7 @@ TEST_F(LoggingTest, CheckCausesDistinctBreakpoints) {
 #endif  // OS_POSIX
 
 TEST_F(LoggingTest, DebugLoggingReleaseBehavior) {
-#if !defined(NDEBUG) || defined(DCHECK_ALWAYS_ON)
+#if DCHECK_IS_ON()
   int debug_only_variable = 1;
 #endif
   // These should avoid emitting references to |debug_only_variable|
@@ -428,33 +428,33 @@ TEST_F(LoggingTest, MAYBE_Dcheck) {
   EXPECT_TRUE(DLOG_IS_ON(DCHECK));
 #endif
 
-  EXPECT_EQ(0, log_sink_call_count);
+  EXPECT_EQ(0, g_log_sink_call_count);
   DCHECK(false);
-  EXPECT_EQ(DCHECK_IS_ON() ? 1 : 0, log_sink_call_count);
+  EXPECT_EQ(DCHECK_IS_ON() ? 1 : 0, g_log_sink_call_count);
   DPCHECK(false);
-  EXPECT_EQ(DCHECK_IS_ON() ? 2 : 0, log_sink_call_count);
+  EXPECT_EQ(DCHECK_IS_ON() ? 2 : 0, g_log_sink_call_count);
   DCHECK_EQ(0, 1);
-  EXPECT_EQ(DCHECK_IS_ON() ? 3 : 0, log_sink_call_count);
+  EXPECT_EQ(DCHECK_IS_ON() ? 3 : 0, g_log_sink_call_count);
 
   // Test DCHECK on std::nullptr_t
-  log_sink_call_count = 0;
+  g_log_sink_call_count = 0;
   const void* p_null = nullptr;
   const void* p_not_null = &p_null;
   DCHECK_EQ(p_null, nullptr);
   DCHECK_EQ(nullptr, p_null);
   DCHECK_NE(p_not_null, nullptr);
   DCHECK_NE(nullptr, p_not_null);
-  EXPECT_EQ(0, log_sink_call_count);
+  EXPECT_EQ(0, g_log_sink_call_count);
 
   // Test DCHECK on a scoped enum.
   enum class Animal { DOG, CAT };
   DCHECK_EQ(Animal::DOG, Animal::DOG);
-  EXPECT_EQ(0, log_sink_call_count);
+  EXPECT_EQ(0, g_log_sink_call_count);
   DCHECK_EQ(Animal::DOG, Animal::CAT);
-  EXPECT_EQ(DCHECK_IS_ON() ? 1 : 0, log_sink_call_count);
+  EXPECT_EQ(DCHECK_IS_ON() ? 1 : 0, g_log_sink_call_count);
 
   // Test DCHECK on functions and function pointers.
-  log_sink_call_count = 0;
+  g_log_sink_call_count = 0;
   struct MemberFunctions {
     void MemberFunction1() {
       // See the comment in DcheckEmptyFunction1().
@@ -468,15 +468,15 @@ TEST_F(LoggingTest, MAYBE_Dcheck) {
   void (*fp2)() = DcheckEmptyFunction2;
   void (*fp3)() = DcheckEmptyFunction1;
   DCHECK_EQ(fp1, fp3);
-  EXPECT_EQ(0, log_sink_call_count);
+  EXPECT_EQ(0, g_log_sink_call_count);
   DCHECK_EQ(mp1, &MemberFunctions::MemberFunction1);
-  EXPECT_EQ(0, log_sink_call_count);
+  EXPECT_EQ(0, g_log_sink_call_count);
   DCHECK_EQ(mp2, &MemberFunctions::MemberFunction2);
-  EXPECT_EQ(0, log_sink_call_count);
+  EXPECT_EQ(0, g_log_sink_call_count);
   DCHECK_EQ(fp1, fp2);
-  EXPECT_EQ(DCHECK_IS_ON() ? 1 : 0, log_sink_call_count);
+  EXPECT_EQ(DCHECK_IS_ON() ? 1 : 0, g_log_sink_call_count);
   DCHECK_EQ(mp2, &MemberFunctions::MemberFunction1);
-  EXPECT_EQ(DCHECK_IS_ON() ? 2 : 0, log_sink_call_count);
+  EXPECT_EQ(DCHECK_IS_ON() ? 2 : 0, g_log_sink_call_count);
 }
 
 TEST_F(LoggingTest, DcheckReleaseBehavior) {

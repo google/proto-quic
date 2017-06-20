@@ -7,6 +7,8 @@
 
 #include <string>
 
+#include "base/memory/ref_counted.h"
+
 namespace crypto {
 
 // PK11_SetPasswordFunc is a global setting.  An implementation of
@@ -14,9 +16,9 @@ namespace crypto {
 // user data argument (|wincx|) to relevant NSS functions, which the global
 // password handler will call to do the actual work. This delegate should only
 // be used in NSS calls on worker threads due to the blocking nature.
-class CryptoModuleBlockingPasswordDelegate {
+class CryptoModuleBlockingPasswordDelegate
+    : public base::RefCountedThreadSafe<CryptoModuleBlockingPasswordDelegate> {
  public:
-  virtual ~CryptoModuleBlockingPasswordDelegate() {}
 
   // Return a value suitable for passing to the |wincx| argument of relevant NSS
   // functions. This should be used instead of passing the object pointer
@@ -32,6 +34,11 @@ class CryptoModuleBlockingPasswordDelegate {
   // user entered.
   virtual std::string RequestPassword(const std::string& slot_name, bool retry,
                                       bool* cancelled) = 0;
+
+ protected:
+  friend class base::RefCountedThreadSafe<CryptoModuleBlockingPasswordDelegate>;
+
+  virtual ~CryptoModuleBlockingPasswordDelegate() {}
 };
 
 }  // namespace crypto

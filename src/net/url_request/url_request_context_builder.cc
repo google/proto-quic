@@ -37,7 +37,10 @@
 #include "net/http/transport_security_persister.h"
 #include "net/http/transport_security_state.h"
 #include "net/net_features.h"
+#include "net/nqe/network_quality_estimator.h"
 #include "net/quic/chromium/quic_stream_factory.h"
+#include "net/reporting/reporting_policy.h"
+#include "net/reporting/reporting_service.h"
 #include "net/ssl/channel_id_service.h"
 #include "net/ssl/default_channel_id_store.h"
 #include "net/ssl/ssl_config_service_defaults.h"
@@ -49,6 +52,7 @@
 #include "net/url_request/url_request_interceptor.h"
 #include "net/url_request/url_request_job_factory_impl.h"
 #include "net/url_request/url_request_throttler_manager.h"
+#include "url/url_constants.h"
 
 #if !BUILDFLAG(DISABLE_FILE_SUPPORT)
 #include "net/url_request/file_protocol_handler.h"  // nogncheck
@@ -133,9 +137,11 @@ class BasicNetworkDelegate : public NetworkDelegateImpl {
   DISALLOW_COPY_AND_ASSIGN(BasicNetworkDelegate);
 };
 
-// Define a context class that can self-manage the ownership of its components
-// via a UrlRequestContextStorage object. Since it cancels requests in its
-// destructor, it's not safe to subclass this.
+// A URLRequestContext subclass that owns most of its components
+// via a UrlRequestContextStorage object. When URLRequestContextBuilder::Build()
+// is called, ownership of all URLRequestContext components is passed to the
+// ContainerURLRequestContext. Since this cancels requests in its destructor,
+// it's not safe to subclass this.
 class ContainerURLRequestContext final : public URLRequestContext {
  public:
   explicit ContainerURLRequestContext(
@@ -143,6 +149,10 @@ class ContainerURLRequestContext final : public URLRequestContext {
       : file_task_runner_(file_task_runner), storage_(this) {}
 
   ~ContainerURLRequestContext() override {
+    // Destroy the ReportingService before the rest of the URLRequestContext, so
+    // it cancels any pending requests it may have.
+    storage_.set_reporting_service(nullptr);
+
     // Shut down the ProxyService, as it may have pending URLRequests using this
     // context. Since this cancels requests, it's not safe to subclass this, as
     // some parts of the URLRequestContext may then be torn down before this
@@ -209,8 +219,7 @@ URLRequestContextBuilder::URLRequestContextBuilder()
       cookie_store_set_by_client_(false),
       net_log_(nullptr),
       pac_quick_check_enabled_(true),
-      pac_sanitize_url_policy_(ProxyService::SanitizeUrlPolicy::SAFE),
-      socket_performance_watcher_factory_(nullptr) {
+      pac_sanitize_url_policy_(ProxyService::SanitizeUrlPolicy::SAFE) {
 }
 
 URLRequestContextBuilder::~URLRequestContextBuilder() {}
@@ -233,6 +242,13 @@ void URLRequestContextBuilder::SetHttpNetworkSessionComponents(
       request_context->http_server_properties();
   session_context->net_log = request_context->net_log();
   session_context->channel_id_service = request_context->channel_id_service();
+  session_context->network_quality_provider =
+      request_context->network_quality_estimator();
+  if (request_context->network_quality_estimator()) {
+    session_context->socket_performance_watcher_factory =
+        request_context->network_quality_estimator()
+            ->GetSocketPerformanceWatcherFactory();
+  }
 }
 
 void URLRequestContextBuilder::EnableHttpCache(const HttpCacheParams& params) {
@@ -259,6 +275,11 @@ void URLRequestContextBuilder::set_ct_verifier(
 void URLRequestContextBuilder::SetCertVerifier(
     std::unique_ptr<CertVerifier> cert_verifier) {
   cert_verifier_ = std::move(cert_verifier);
+}
+
+void URLRequestContextBuilder::set_reporting_policy(
+    std::unique_ptr<net::ReportingPolicy> reporting_policy) {
+  reporting_policy_ = std::move(reporting_policy);
 }
 
 void URLRequestContextBuilder::SetInterceptors(
@@ -329,7 +350,13 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
   }
   storage->set_host_resolver(std::move(host_resolver_));
 
-  storage->set_ssl_config_service(new SSLConfigServiceDefaults);
+  if (ssl_config_service_) {
+    // This takes a raw pointer, but |storage| will hold onto a reference to the
+    // service.
+    storage->set_ssl_config_service(ssl_config_service_.get());
+  } else {
+    storage->set_ssl_config_service(new SSLConfigServiceDefaults);
+  }
 
   if (!http_auth_handler_factory_) {
     http_auth_handler_factory_ =
@@ -421,10 +448,6 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
     network_session_context.proxy_delegate = proxy_delegate_.get();
     storage->set_proxy_delegate(std::move(proxy_delegate_));
   }
-  if (socket_performance_watcher_factory_) {
-    network_session_context.socket_performance_watcher_factory =
-        socket_performance_watcher_factory_;
-  }
 
   storage->set_http_network_session(base::MakeUnique<HttpNetworkSession>(
       http_network_session_params_, network_session_context));
@@ -463,13 +486,13 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
   protocol_handlers_.clear();
 
   if (data_enabled_)
-    job_factory->SetProtocolHandler("data",
+    job_factory->SetProtocolHandler(url::kDataScheme,
                                     base::WrapUnique(new DataProtocolHandler));
 
 #if !BUILDFLAG(DISABLE_FILE_SUPPORT)
   if (file_enabled_) {
     job_factory->SetProtocolHandler(
-        "file",
+        url::kFileScheme,
         base::MakeUnique<FileProtocolHandler>(context->GetFileTaskRunner()));
   }
 #endif  // !BUILDFLAG(DISABLE_FILE_SUPPORT)
@@ -477,7 +500,7 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
 #if !BUILDFLAG(DISABLE_FTP_SUPPORT)
   if (ftp_enabled_) {
     job_factory->SetProtocolHandler(
-        "ftp", FtpProtocolHandler::Create(context->host_resolver()));
+        url::kFtpScheme, FtpProtocolHandler::Create(context->host_resolver()));
   }
 #endif  // !BUILDFLAG(DISABLE_FTP_SUPPORT)
 
@@ -493,7 +516,11 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
     url_request_interceptors_.clear();
   }
   storage->set_job_factory(std::move(top_job_factory));
-  // TODO(willchan): Support sdch.
+
+  if (reporting_policy_) {
+    storage->set_reporting_service(
+        ReportingService::Create(*reporting_policy_, context.get()));
+  }
 
   return std::move(context);
 }

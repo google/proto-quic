@@ -555,12 +555,11 @@ def GenerateCredits(
             template = template.replace('{{%s}}' % key, val)
         return template
 
-    def MetadataToTemplateEntry(metadata, entry_template, entry_id):
+    def MetadataToTemplateEntry(metadata, entry_template):
         env = {
             'name': metadata['Name'],
             'url': metadata['URL'],
             'license': open(metadata['License File'], 'rb').read(),
-            'id': str(entry_id),
         }
         return {
             'name': metadata['Name'],
@@ -588,7 +587,6 @@ def GenerateCredits(
                                            'about_credits_entry.tmpl')
 
     entry_template = open(entry_template_file).read()
-    entry_id = 0
     entries = []
     # Start from Chromium's LICENSE file
     chromium_license_metadata = {
@@ -596,8 +594,7 @@ def GenerateCredits(
         'URL': 'http://www.chromium.org',
         'License File': os.path.join(_REPOSITORY_ROOT, 'LICENSE') }
     entries.append(MetadataToTemplateEntry(chromium_license_metadata,
-        entry_template, entry_id))
-    entry_id += 1
+        entry_template))
 
     for path in third_party_dirs:
         try:
@@ -615,11 +612,11 @@ def GenerateCredits(
             # updated to provide --gn-target to this script.
             if path in KNOWN_NON_IOS_LIBRARIES:
                 continue
-        entries.append(MetadataToTemplateEntry(metadata, entry_template,
-            entry_id))
-        entry_id += 1
+        entries.append(MetadataToTemplateEntry(metadata, entry_template))
 
     entries.sort(key=lambda entry: (entry['name'], entry['content']))
+    for entry_id, entry in enumerate(entries):
+        entry['content'] = entry['content'].replace('{{id}}', str(entry_id))
 
     entries_contents = '\n'.join([entry['content'] for entry in entries])
     file_template = open(file_template_file).read()

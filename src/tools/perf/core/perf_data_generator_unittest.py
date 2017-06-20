@@ -121,6 +121,33 @@ class PerfDataGeneratorTest(unittest.TestCase):
       }
     self.assertEquals(test, expected_generated_test)
 
+  def testGenerateTelemetryTestsWebView(self):
+    class RegularBenchmark(benchmark.Benchmark):
+      @classmethod
+      def Name(cls):
+        return 'regular'
+
+    swarming_dimensions = [
+        {'os': 'SkyNet', 'id': 'T-850', 'pool': 'T-RIP', 'device_ids': ['a']}
+    ]
+    test_config = {
+        'platform': 'android',
+        'swarming_dimensions': swarming_dimensions,
+        'replace_system_webview': True,
+    }
+    sharding_map = {'fake': {'regular': 'a'}}
+    benchmarks = [RegularBenchmark]
+    tests = perf_data_generator.generate_telemetry_tests(
+        'fake', test_config, benchmarks, sharding_map, ['blacklisted'])
+
+    self.assertEqual(len(tests), 1)
+    test = tests[0]
+    self.assertEquals(test['args'], [
+        'regular', '-v', '--upload-results', '--output-format=chartjson',
+        '--browser=android-webview',
+        '--webview-embedder-apk=../../out/Release/apks/SystemWebViewShell.apk'])
+    self.assertEquals(test['isolate_name'], 'telemetry_perf_webview_tests')
+
   def testGenerateTelemetryTestsBlacklistedReferenceBuildTest(self):
     class BlacklistedBenchmark(benchmark.Benchmark):
       @classmethod

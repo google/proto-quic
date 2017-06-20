@@ -727,8 +727,7 @@ class KeySilkCasesPageSet(story.StorySet):
   def __init__(self, run_no_page_interactions=False):
     super(KeySilkCasesPageSet, self).__init__(
       archive_data_file='data/key_silk_cases.json',
-      cloud_storage_bucket=story.PARTNER_BUCKET,
-      verify_names=True)
+      cloud_storage_bucket=story.PARTNER_BUCKET)
 
     self.AddStory(Page1(self, run_no_page_interactions))
     self.AddStory(Page2(self, run_no_page_interactions))
@@ -749,12 +748,12 @@ class KeySilkCasesPageSet(story.StorySet):
     self.AddStory(Page17(self, run_no_page_interactions))
     self.AddStory(Page18(self, run_no_page_interactions))
     # Missing frames during tap interaction; crbug.com/446332
-    # self.AddStory(Page19(self, run_no_page_interactions))
+    self.AddStory(Page19(self, run_no_page_interactions))
     self.AddStory(Page20(self, run_no_page_interactions))
     self.AddStory(GwsGoogleExpansion(self, run_no_page_interactions))
     self.AddStory(GwsBoogieExpansion(self, run_no_page_interactions))
     # Times out on Windows; crbug.com/338838
-    # self.AddStory(Page22(self, run_no_page_interactions))
+    self.AddStory(Page22(self, run_no_page_interactions))
     self.AddStory(Page23(self, run_no_page_interactions))
     self.AddStory(Page24(self, run_no_page_interactions))
     self.AddStory(Page25(self, run_no_page_interactions))
@@ -763,7 +762,7 @@ class KeySilkCasesPageSet(story.StorySet):
     self.AddStory(UpdateHistoryState(self, run_no_page_interactions))
     self.AddStory(SilkFinance(self, run_no_page_interactions))
     # Flaky interaction steps on Android; crbug.com/507865
-    # self.AddStory(PolymerTopeka(self, run_no_page_interactions))
+    self.AddStory(PolymerTopeka(self, run_no_page_interactions))
     self.AddStory(Masonry(self, run_no_page_interactions))
 
     for page in self:
@@ -771,3 +770,13 @@ class KeySilkCasesPageSet(story.StorySet):
               KeySilkCasesPage.RunPageInteractions), (
               'Pages in this page set must not override KeySilkCasesPage\' '
               'RunPageInteractions method.')
+
+
+class KeySilkCasesStoryExpectations(story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    self.DisableStory('https://polymer-topeka.appspot.com/',
+                      [story.expectations.ALL], 'crbug.com/507865')
+    self.DisableStory('http://plus.google.com/app/basic/stream',
+                      [story.expectations.ALL], 'crbug.com/338838')
+    self.DisableStory('inbox_app.html?slide_drawer',
+                      [story.expectations.ALL], 'crbug.com/446332')

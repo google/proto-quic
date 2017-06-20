@@ -26,35 +26,7 @@ MockHttpStreamFactoryImplJob::MockHttpStreamFactoryImplJob(
     const SSLConfig& proxy_ssl_config,
     HostPortPair destination,
     GURL origin_url,
-    bool enable_ip_based_pooling,
-    NetLog* net_log)
-    : HttpStreamFactoryImpl::Job(delegate,
-                                 job_type,
-                                 session,
-                                 request_info,
-                                 priority,
-                                 proxy_info,
-                                 server_ssl_config,
-                                 proxy_ssl_config,
-                                 destination,
-                                 origin_url,
-                                 enable_ip_based_pooling,
-                                 net_log) {
-  DCHECK(!is_waiting());
-}
-
-MockHttpStreamFactoryImplJob::MockHttpStreamFactoryImplJob(
-    HttpStreamFactoryImpl::Job::Delegate* delegate,
-    HttpStreamFactoryImpl::JobType job_type,
-    HttpNetworkSession* session,
-    const HttpRequestInfo& request_info,
-    RequestPriority priority,
-    ProxyInfo proxy_info,
-    const SSLConfig& server_ssl_config,
-    const SSLConfig& proxy_ssl_config,
-    HostPortPair destination,
-    GURL origin_url,
-    AlternativeService alternative_service,
+    NextProto alternative_protocol,
     const ProxyServer& alternative_proxy_server,
     bool enable_ip_based_pooling,
     NetLog* net_log)
@@ -68,10 +40,12 @@ MockHttpStreamFactoryImplJob::MockHttpStreamFactoryImplJob(
                                  proxy_ssl_config,
                                  destination,
                                  origin_url,
-                                 alternative_service,
+                                 alternative_protocol,
                                  alternative_proxy_server,
                                  enable_ip_based_pooling,
-                                 net_log) {}
+                                 net_log) {
+  DCHECK(!is_waiting());
+}
 
 MockHttpStreamFactoryImplJob::~MockHttpStreamFactoryImplJob() {}
 
@@ -100,8 +74,8 @@ std::unique_ptr<HttpStreamFactoryImpl::Job> TestJobFactory::CreateMainJob(
 
   auto main_job = base::MakeUnique<MockHttpStreamFactoryImplJob>(
       delegate, job_type, session, request_info, priority, proxy_info,
-      SSLConfig(), SSLConfig(), destination, origin_url,
-      enable_ip_based_pooling, nullptr);
+      SSLConfig(), SSLConfig(), destination, origin_url, kProtoUnknown,
+      ProxyServer(), enable_ip_based_pooling, net_log);
 
   // Keep raw pointer to Job but pass ownership.
   main_job_ = main_job.get();
@@ -120,13 +94,13 @@ std::unique_ptr<HttpStreamFactoryImpl::Job> TestJobFactory::CreateAltSvcJob(
     const SSLConfig& proxy_ssl_config,
     HostPortPair destination,
     GURL origin_url,
-    AlternativeService alternative_service,
+    NextProto alternative_protocol,
     bool enable_ip_based_pooling,
     NetLog* net_log) {
   auto alternative_job = base::MakeUnique<MockHttpStreamFactoryImplJob>(
       delegate, job_type, session, request_info, priority, proxy_info,
-      SSLConfig(), SSLConfig(), destination, origin_url, alternative_service,
-      ProxyServer(), enable_ip_based_pooling, nullptr);
+      SSLConfig(), SSLConfig(), destination, origin_url, alternative_protocol,
+      ProxyServer(), enable_ip_based_pooling, net_log);
 
   // Keep raw pointer to Job but pass ownership.
   alternative_job_ = alternative_job.get();
@@ -150,8 +124,8 @@ std::unique_ptr<HttpStreamFactoryImpl::Job> TestJobFactory::CreateAltProxyJob(
     NetLog* net_log) {
   auto alternative_job = base::MakeUnique<MockHttpStreamFactoryImplJob>(
       delegate, job_type, session, request_info, priority, proxy_info,
-      SSLConfig(), SSLConfig(), destination, origin_url, AlternativeService(),
-      alternative_proxy_server, enable_ip_based_pooling, nullptr);
+      SSLConfig(), SSLConfig(), destination, origin_url, kProtoUnknown,
+      alternative_proxy_server, enable_ip_based_pooling, net_log);
 
   // Keep raw pointer to Job but pass ownership.
   alternative_job_ = alternative_job.get();

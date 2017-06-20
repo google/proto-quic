@@ -26,7 +26,7 @@ struct MemoryDumpProviderInfo;
 // Detects temporally local memory peaks. Peak detection is based on
 // continuously querying memory usage using MemoryDumpprovider(s) that support
 // fast polling (e.g., ProcessMetricsDumpProvider which under the hoods reads
-// /proc/PID/statm on Linux) and using a cobination of:
+// /proc/PID/statm on Linux) and using a combination of:
 // - An static threshold (currently 1% of total system memory).
 // - Sliding window stddev analysis.
 // Design doc: https://goo.gl/0kOU4A .

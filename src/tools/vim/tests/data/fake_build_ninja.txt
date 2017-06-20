@@ -11,13 +11,13 @@ default_cc_file = ../../base/logging.cc
 default_test_file = ../../base/logging_unittest.cc
 
 rule cxx
-  command = $cxx -Ia -isysroot /mac.sdk -Itag-$tag $in -o $out
+  command = $cxx -Ia -Itag-$tag $in -o $out
 
 rule cxx_sysroot_abs
-  command = $cxx -Ia --sysroot=/usr/lib/sysroot-image $in -o $out
+  command = $cxx -Ia --sysroot=/usr/lib/sysroot-image -isysroot /mac.sdk $in -o $out
 
 rule cxx_sysroot_rel
-  command = $cxx -Ia --sysroot=../../build/sysroot-image $in -o $out
+  command = $cxx -Ia --sysroot=../../build/sysroot-image -isysroot ../../build/mac.sdk $in -o $out
 
 rule link
   command = $link $in $out

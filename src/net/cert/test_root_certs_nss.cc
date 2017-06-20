@@ -43,7 +43,7 @@ bool TestRootCerts::Add(X509Certificate* certificate) {
 
   // Change the trust bits to unconditionally trust this certificate.
   CERTCertTrust new_trust;
-  rv = CERT_DecodeTrustString(&new_trust, "TCu,Cu,Tu");
+  rv = CERT_DecodeTrustString(&new_trust, "TCPu,Cu,Tu");
   if (rv != SECSuccess) {
     LOG(ERROR) << "Cannot decode certificate trust string.";
     return false;

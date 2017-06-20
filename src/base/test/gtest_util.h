@@ -38,18 +38,18 @@
 // conditions in which it's needed here.
 // TODO(gab): Expose macro in upstream gtest repo for consumers like us that
 // want more specific death tests and remove this hack.
-# define GTEST_UNSUPPORTED_DEATH_TEST(statement, regex, terminator) \
-    GTEST_AMBIGUOUS_ELSE_BLOCKER_ \
-    if (::testing::internal::AlwaysTrue()) { \
-      GTEST_LOG_(WARNING) \
-          << "Death tests are not supported on this platform.\n" \
-          << "Statement '" #statement "' cannot be verified."; \
-    } else if (::testing::internal::AlwaysFalse()) { \
-      ::testing::internal::RE::PartialMatch(".*", (regex)); \
-      GTEST_SUPPRESS_UNREACHABLE_CODE_WARNING_BELOW_(statement); \
-      terminator; \
-    } else \
-      ::testing::Message()
+#define GTEST_UNSUPPORTED_DEATH_TEST(statement, regex, terminator)  \
+  GTEST_AMBIGUOUS_ELSE_BLOCKER_                                     \
+  if (::testing::internal::AlwaysTrue()) {                          \
+    GTEST_LOG_(WARNING)                                             \
+        << "Death tests are not supported in this configuration.\n" \
+        << "Statement '" #statement "' cannot be verified.";        \
+  } else if (::testing::internal::AlwaysFalse()) {                  \
+    ::testing::internal::RE::PartialMatch(".*", (regex));           \
+    GTEST_SUPPRESS_UNREACHABLE_CODE_WARNING_BELOW_(statement);      \
+    terminator;                                                     \
+  } else                                                            \
+    ::testing::Message()
 
 #define EXPECT_DCHECK_DEATH(statement) \
     GTEST_UNSUPPORTED_DEATH_TEST(statement, "Check failed", )

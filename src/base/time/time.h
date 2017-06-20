@@ -136,6 +136,11 @@ class BASE_EXPORT TimeDelta {
   // delta to a time or another time delta has an undefined result.
   static constexpr TimeDelta Max();
 
+  // Returns the minimum time delta, which should be less than than any
+  // reasonable time delta we might compare it to. Adding or subtracting the
+  // minimum time delta to a time or another time delta has an undefined result.
+  static constexpr TimeDelta Min();
+
   // Returns the internal numeric value of the TimeDelta object. Please don't
   // use this and do arithmetic on it, as it is more error prone than using the
   // provided operators.
@@ -156,8 +161,9 @@ class BASE_EXPORT TimeDelta {
     return delta_ == 0;
   }
 
-  // Returns true if the time delta is the maximum time delta.
+  // Returns true if the time delta is the maximum/minimum time delta.
   bool is_max() const { return delta_ == std::numeric_limits<int64_t>::max(); }
+  bool is_min() const { return delta_ == std::numeric_limits<int64_t>::min(); }
 
 #if defined(OS_POSIX)
   struct timespec ToTimeSpec() const;
@@ -211,7 +217,7 @@ class BASE_EXPORT TimeDelta {
       return TimeDelta(rv.ValueOrDie());
     // Matched sign overflows. Mismatched sign underflows.
     if ((delta_ < 0) ^ (a < 0))
-      return TimeDelta(-std::numeric_limits<int64_t>::max());
+      return TimeDelta(std::numeric_limits<int64_t>::min());
     return TimeDelta(std::numeric_limits<int64_t>::max());
   }
   template<typename T>
@@ -223,7 +229,7 @@ class BASE_EXPORT TimeDelta {
     // Matched sign overflows. Mismatched sign underflows.
     // Special case to catch divide by zero.
     if ((delta_ < 0) ^ (a <= 0))
-      return TimeDelta(-std::numeric_limits<int64_t>::max());
+      return TimeDelta(std::numeric_limits<int64_t>::min());
     return TimeDelta(std::numeric_limits<int64_t>::max());
   }
   template<typename T>
@@ -332,13 +338,18 @@ class TimeBase {
     return us_ == 0;
   }
 
-  // Returns true if this object represents the maximum time.
+  // Returns true if this object represents the maximum/minimum time.
   bool is_max() const { return us_ == std::numeric_limits<int64_t>::max(); }
+  bool is_min() const { return us_ == std::numeric_limits<int64_t>::min(); }
 
-  // Returns the maximum time, which should be greater than any reasonable time
-  // with which we might compare it.
+  // Returns the maximum/minimum times, which should be greater/less than than
+  // any reasonable time with which we might compare it.
   static TimeClass Max() {
     return TimeClass(std::numeric_limits<int64_t>::max());
+  }
+
+  static TimeClass Min() {
+    return TimeClass(std::numeric_limits<int64_t>::min());
   }
 
   // For serializing only. Use FromInternalValue() to reconstitute. Please don't
@@ -497,8 +508,9 @@ class BASE_EXPORT Time : public time_internal::TimeBase<Time> {
   static Time FromJsTime(double ms_since_epoch);
   double ToJsTime() const;
 
-  // Converts to/from Java convention for times, a number of
-  // milliseconds since the epoch.
+  // Converts to/from Java convention for times, a number of milliseconds since
+  // the epoch. Because the Java format has less resolution, converting to Java
+  // time is a lossy operation.
   static Time FromJavaTime(int64_t ms_since_epoch);
   int64_t ToJavaTime() const;
 
@@ -666,13 +678,18 @@ constexpr TimeDelta TimeDelta::Max() {
 }
 
 // static
+constexpr TimeDelta TimeDelta::Min() {
+  return TimeDelta(std::numeric_limits<int64_t>::min());
+}
+
+// static
 constexpr TimeDelta TimeDelta::FromDouble(double value) {
   // TODO(crbug.com/612601): Use saturated_cast<int64_t>(value) once we sort out
   // the Min() behavior.
   return value > std::numeric_limits<int64_t>::max()
              ? Max()
-             : value < -std::numeric_limits<int64_t>::max()
-                   ? -Max()
+             : value < std::numeric_limits<int64_t>::min()
+                   ? Min()
                    : TimeDelta(static_cast<int64_t>(value));
 }
 
@@ -681,16 +698,16 @@ constexpr TimeDelta TimeDelta::FromProduct(int64_t value,
                                            int64_t positive_value) {
   return (
 #if !defined(_PREFAST_) || !defined(OS_WIN)
-          // Avoid internal compiler errors in /analyze builds with VS 2015
-          // update 3.
-          // https://connect.microsoft.com/VisualStudio/feedback/details/2870865
-          DCHECK(positive_value > 0),
+      // Avoid internal compiler errors in /analyze builds with VS 2015
+      // update 3.
+      // https://connect.microsoft.com/VisualStudio/feedback/details/2870865
+      DCHECK(positive_value > 0),
 #endif
-          value > std::numeric_limits<int64_t>::max() / positive_value
-              ? Max()
-              : value < -std::numeric_limits<int64_t>::max() / positive_value
-                    ? -Max()
-                    : TimeDelta(value * positive_value));
+      value > std::numeric_limits<int64_t>::max() / positive_value
+          ? Max()
+          : value < std::numeric_limits<int64_t>::min() / positive_value
+                ? Min()
+                : TimeDelta(value * positive_value));
 }
 
 // For logging use only.

@@ -11,10 +11,17 @@
 #include "net/base/privacy_mode.h"
 #include "net/http/http_stream_factory_impl_job.h"
 #include "net/http/http_stream_factory_impl_request.h"
+#include "net/socket/next_proto.h"
 
 namespace net {
 
 class NetLogWithSource;
+
+namespace test {
+
+class JobControllerPeer;
+
+}  // namespace test
 
 // HttpStreamFactoryImpl::JobController manages Request and Job(s).
 class HttpStreamFactoryImpl::JobController
@@ -180,7 +187,7 @@ class HttpStreamFactoryImpl::JobController
   size_t EstimateMemoryUsage() const;
 
  private:
-  friend class JobControllerPeer;
+  friend class test::JobControllerPeer;
 
   enum State {
     STATE_RESOLVE_PROXY,
@@ -312,11 +319,12 @@ class HttpStreamFactoryImpl::JobController
   // |main_job_| to proceed and then race the two jobs.
   std::unique_ptr<Job> main_job_;
   std::unique_ptr<Job> alternative_job_;
+  // The alternative service used by |alternative_job_|
+  // (or by |main_job_| if |is_preconnect_|.)
+  AlternativeService alternative_service_;
 
   // Net error code of the failed alternative job. Set to OK by default.
   int alternative_job_net_error_;
-  // The alternative service server that |alternative_job_| uses failed.
-  AlternativeService failed_alternative_service_;
 
   // True if a Job has ever been bound to the |request_|.
   bool job_bound_;

@@ -103,7 +103,10 @@ def GenerateArgs(config_path, platform):
 def main():
   if len(sys.argv) < 3:
     print 'Usage: fieldtrial_util.py [config_path] [platform]'
+    print 'Optionally pass \'shell_cmd\' as an extra argument to print'
+    print 'quoted command line arguments.'
     exit(-1)
+  print_shell_cmd = len(sys.argv) >= 4 and sys.argv[3] == 'shell_cmd'
 
   supported_platforms = ['android', 'chromeos', 'ios', 'linux', 'mac', 'win']
   if sys.argv[2] not in supported_platforms:
@@ -111,7 +114,11 @@ def main():
         (sys.argv[2], supported_platforms))
     exit(-1)
 
-  print GenerateArgs(sys.argv[1], sys.argv[2])
+  generated_args = GenerateArgs(sys.argv[1], sys.argv[2])
+  if print_shell_cmd:
+    print " ".join(map((lambda arg: '"{0}"'.format(arg)), generated_args))
+  else:
+    print generated_args
 
 if __name__ == '__main__':
   main()

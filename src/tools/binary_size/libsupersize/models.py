@@ -13,6 +13,7 @@ Description of common properties:
   * num_aliases: The number of symbols with the same address (including self).
   * pss: size / num_aliases.
   * padding: The number of bytes of padding before |address| due to this symbol.
+  * padding_pss: padding / num_aliases.
   * name: Names with templates and parameter list removed.
         Never None, but will be '' for anonymous symbols.
   * template_name: Name with parameter list removed (but templates left in).
@@ -50,6 +51,8 @@ SECTION_TO_SECTION_NAME = {
     'r': '.rodata',
     't': '.text',
 }
+# Used by SymbolGroup when they contain a mix of sections.
+SECTION_NAME_MULTIPLE = '.*'
 
 FLAG_ANONYMOUS = 1
 FLAG_STARTUP = 2
@@ -63,6 +66,7 @@ DIFF_STATUS_UNCHANGED = 0
 DIFF_STATUS_CHANGED = 1
 DIFF_STATUS_ADDED = 2
 DIFF_STATUS_REMOVED = 3
+DIFF_PREFIX_BY_STATUS = ['= ', '~ ', '+ ', '- ']
 
 
 class SizeInfo(object):
@@ -75,22 +79,26 @@ class SizeInfo(object):
         applicable). May be re-assigned when it is desirable to show custom
         groupings while still printing metadata and section_sizes.
     metadata: A dict.
+    size_path: Path to .size file this was loaded from (or None).
   """
   __slots__ = (
       'section_sizes',
       'raw_symbols',
       '_symbols',
       'metadata',
+      'size_path',
   )
 
   """Root size information."""
-  def __init__(self, section_sizes, raw_symbols, metadata=None, symbols=None):
+  def __init__(self, section_sizes, raw_symbols, metadata=None, symbols=None,
+               size_path=None):
     if isinstance(raw_symbols, list):
       raw_symbols = SymbolGroup(raw_symbols)
     self.section_sizes = section_sizes  # E.g. {'.text': 0}
     self.raw_symbols = raw_symbols
     self._symbols = symbols
     self.metadata = metadata or {}
+    self.size_path = size_path
 
   @property
   def symbols(self):
@@ -103,15 +111,16 @@ class SizeInfo(object):
     self._symbols = value
 
 
-class SizeInfoDiff(object):
+class DeltaSizeInfo(object):
   """What you get when you Diff() two SizeInfo objects.
 
   Fields:
     section_sizes: A dict of section_name -> size delta.
-    raw_symbols: A SymbolDiff with all top-level symbols in it (no groups).
-    symbols: A SymbolDiff where symbols have been grouped by full_name (where
-        applicable). May be re-assigned when it is desirable to show custom
-        groupings while still printing metadata and section_sizes.
+    raw_symbols: A DeltaSymbolGroup with all top-level symbols in it
+        (no groups).
+    symbols: A DeltaSymbolGroup where symbols have been grouped by full_name
+        (where applicable). May be re-assigned when it is desirable to show
+        custom groupings while still printing metadata and section_sizes.
     before_metadata: metadata of the "before" SizeInfo.
     after_metadata: metadata of the "after" SizeInfo.
   """
@@ -187,7 +196,7 @@ class BaseSymbol(object):
   def FlagsString(self):
     # Most flags are 0.
     flags = self.flags
-    if not flags and not self.aliases:
+    if not flags:
       return '{}'
     parts = []
     if flags & FLAG_ANONYMOUS:
@@ -204,15 +213,15 @@ class BaseSymbol(object):
       parts.append('gen')
     if flags & FLAG_CLONE:
       parts.append('clone')
-    # Not actually a part of flags, but useful to show it here.
-    if self.aliases:
-      parts.append('{} aliases'.format(self.num_aliases))
     return '{%s}' % ','.join(parts)
 
   def IsBss(self):
     return self.section_name == '.bss'
 
   def IsGroup(self):
+    return False
+
+  def IsDelta(self):
     return False
 
   def IsGeneratedByToolchain(self):
@@ -257,11 +266,11 @@ class Symbol(BaseSymbol):
 
   def __repr__(self):
     template = ('{}@{:x}(size_without_padding={},padding={},full_name={},'
-                'object_path={},source_path={},flags={})')
+                'object_path={},source_path={},flags={},num_aliases={})')
     return template.format(
         self.section_name, self.address, self.size_without_padding,
         self.padding, self.full_name, self.object_path, self.source_path,
-        self.FlagsString())
+        self.FlagsString(), self.num_aliases)
 
   @property
   def pss(self):
@@ -270,6 +279,138 @@ class Symbol(BaseSymbol):
   @property
   def pss_without_padding(self):
     return float(self.size_without_padding) / self.num_aliases
+
+  @property
+  def padding_pss(self):
+    return float(self.padding) / self.num_aliases
+
+
+class DeltaSymbol(BaseSymbol):
+  """Represents a changed symbol.
+
+  PSS is not just size / num_aliases, because aliases information is not
+  directly tracked. It is not directly tracked because a symbol may be an alias
+  to one symbol in the |before|, and then be an alias to another in |after|.
+  """
+
+  __slots__ = (
+      'before_symbol',
+      'after_symbol',
+  )
+
+  def __init__(self, before_symbol, after_symbol):
+    self.before_symbol = before_symbol
+    self.after_symbol = after_symbol
+
+  def __repr__(self):
+    template = ('{}{}@{:x}(size_without_padding={},padding={},full_name={},'
+                'object_path={},source_path={},flags={})')
+    return template.format(
+        DIFF_PREFIX_BY_STATUS[self.diff_status], self.section_name,
+        self.address, self.size_without_padding, self.padding,
+        self.full_name, self.object_path, self.source_path,
+        self.FlagsString())
+
+  def IsDelta(self):
+    return True
+
+  @property
+  def diff_status(self):
+    if self.before_symbol is None:
+      return DIFF_STATUS_ADDED
+    if self.after_symbol is None:
+      return DIFF_STATUS_REMOVED
+    if self.size == 0:
+      return DIFF_STATUS_UNCHANGED
+    return DIFF_STATUS_CHANGED
+
+  @property
+  def address(self):
+    return self.after_symbol.address if self.after_symbol else 0
+
+  @property
+  def full_name(self):
+    return (self.after_symbol or self.before_symbol).full_name
+
+  @property
+  def template_name(self):
+    return (self.after_symbol or self.before_symbol).template_name
+
+  @property
+  def name(self):
+    return (self.after_symbol or self.before_symbol).name
+
+  @property
+  def flags(self):
+    before_flags = self.before_symbol.flags if self.before_symbol else 0
+    after_flags = self.after_symbol.flags if self.after_symbol else 0
+    return before_flags ^ after_flags
+
+  @property
+  def object_path(self):
+    return (self.after_symbol or self.before_symbol).object_path
+
+  @property
+  def source_path(self):
+    return (self.after_symbol or self.before_symbol).source_path
+
+  @property
+  def aliases(self):
+    return None
+
+  @property
+  def section_name(self):
+    return (self.after_symbol or self.before_symbol).section_name
+
+  @property
+  def padding_pss(self):
+    if self.after_symbol is None:
+      return -self.before_symbol.padding_pss
+    if self.before_symbol is None:
+      return self.after_symbol.padding_pss
+    # Padding tracked in aggregate, except for padding-only symbols.
+    if self.before_symbol.size_without_padding == 0:
+      return self.after_symbol.padding_pss - self.before_symbol.padding_pss
+    return 0
+
+  @property
+  def padding(self):
+    if self.after_symbol is None:
+      return -self.before_symbol.padding
+    if self.before_symbol is None:
+      return self.after_symbol.padding
+    # Padding tracked in aggregate, except for padding-only symbols.
+    if self.before_symbol.size_without_padding == 0:
+      return self.after_symbol.padding - self.before_symbol.padding
+    return 0
+
+  @property
+  def pss(self):
+    if self.after_symbol is None:
+      return -self.before_symbol.pss
+    if self.before_symbol is None:
+      return self.after_symbol.pss
+    # Padding tracked in aggregate, except for padding-only symbols.
+    if self.before_symbol.size_without_padding == 0:
+      return self.after_symbol.pss - self.before_symbol.pss
+    return (self.after_symbol.pss_without_padding -
+            self.before_symbol.pss_without_padding)
+
+  @property
+  def size(self):
+    if self.after_symbol is None:
+      return -self.before_symbol.size
+    if self.before_symbol is None:
+      return self.after_symbol.size
+    # Padding tracked in aggregate, except for padding-only symbols.
+    if self.before_symbol.size_without_padding == 0:
+      return self.after_symbol.padding - self.before_symbol.padding
+    return (self.after_symbol.size_without_padding -
+            self.before_symbol.size_without_padding)
+
+  @property
+  def pss_without_padding(self):
+    return self.pss - self.padding_pss
 
 
 class SymbolGroup(BaseSymbol):
@@ -311,7 +452,7 @@ class SymbolGroup(BaseSymbol):
     self.full_name = full_name if full_name is not None else name
     self.template_name = template_name if template_name is not None else name
     self.name = name or ''
-    self.section_name = section_name or '.*'
+    self.section_name = section_name or SECTION_NAME_MULTIPLE
     self.is_sorted = is_sorted
 
   def __repr__(self):
@@ -327,13 +468,16 @@ class SymbolGroup(BaseSymbol):
   def __eq__(self, other):
     return isinstance(other, SymbolGroup) and self._symbols == other._symbols
 
+  def __contains__(self, sym):
+    return sym in self._symbols
+
   def __getitem__(self, key):
     """|key| can be an index or an address.
 
     Raises if multiple symbols map to the address.
     """
     if isinstance(key, slice):
-      return self._symbols.__getitem__(key)
+      return self._CreateTransformed(self._symbols.__getitem__(key))
     if isinstance(key, basestring) or key > len(self._symbols):
       found = self.WhereAddressInRange(key)
       if len(found) != 1:
@@ -344,14 +488,15 @@ class SymbolGroup(BaseSymbol):
   def __sub__(self, other):
     other_ids = set(id(s) for s in other)
     after_symbols = [s for s in self if id(s) not in other_ids]
-    return self._CreateTransformed(after_symbols,
-                                   section_name=self.section_name)
+    return self._CreateTransformed(after_symbols)
 
   def __add__(self, other):
     self_ids = set(id(s) for s in self)
     after_symbols = self._symbols + [s for s in other if id(s) not in self_ids]
-    return self._CreateTransformed(
-        after_symbols, section_name=self.section_name, is_sorted=False)
+    return self._CreateTransformed(after_symbols, is_sorted=False)
+
+  def index(self, item):
+    return self._symbols.index(item)
 
   @property
   def address(self):
@@ -377,9 +522,10 @@ class SymbolGroup(BaseSymbol):
   def size(self):
     if self._size is None:
       if self.IsBss():
-        self._size = sum(s.size for s in self)
-      else:
         self._size = sum(s.size for s in self.IterUniqueSymbols())
+      else:
+        self._size = sum(
+            s.size for s in self.IterUniqueSymbols() if not s.IsBss())
     return self._size
 
   @property
@@ -436,10 +582,12 @@ class SymbolGroup(BaseSymbol):
                          is_sorted=None):
     if is_sorted is None:
       is_sorted = self.is_sorted
-    return SymbolGroup(symbols, filtered_symbols=filtered_symbols,
-                       full_name=full_name, template_name=template_name,
-                       name=name, section_name=section_name,
-                       is_sorted=is_sorted)
+    if section_name is None:
+      section_name = self.section_name
+    return self.__class__(symbols, filtered_symbols=filtered_symbols,
+                          full_name=full_name, template_name=template_name,
+                          name=name, section_name=section_name,
+                          is_sorted=is_sorted)
 
   def Sorted(self, cmp_func=None, key=None, reverse=False):
     if cmp_func is None and key is None:
@@ -449,7 +597,7 @@ class SymbolGroup(BaseSymbol):
     after_symbols = sorted(self._symbols, cmp_func, key, reverse)
     return self._CreateTransformed(
         after_symbols, filtered_symbols=self._filtered_symbols,
-        section_name=self.section_name, is_sorted=True)
+        is_sorted=True)
 
   def SortedByName(self, reverse=False):
     return self.Sorted(key=(lambda s:s.name), reverse=reverse)
@@ -473,8 +621,7 @@ class SymbolGroup(BaseSymbol):
       raise
 
     return self._CreateTransformed(filtered_and_kept[1],
-                                   filtered_symbols=filtered_and_kept[0],
-                                   section_name=self.section_name)
+                                   filtered_symbols=filtered_and_kept[0])
 
   def WhereIsGroup(self):
     return self.Filter(lambda s: s.IsGroup())
@@ -567,7 +714,8 @@ class SymbolGroup(BaseSymbol):
         symbols.WherePathMatches(r'third_party').WhereMatches('foo').Inverted()
     """
     return self._CreateTransformed(
-        self._filtered_symbols, filtered_symbols=self._symbols, is_sorted=False)
+        self._filtered_symbols, filtered_symbols=self._symbols,
+        section_name=SECTION_NAME_MULTIPLE, is_sorted=False)
 
   def GroupedBy(self, func, min_count=0, group_factory=None):
     """Returns a SymbolGroup of SymbolGroups, indexed by |func|.
@@ -586,8 +734,7 @@ class SymbolGroup(BaseSymbol):
     """
     if group_factory is None:
       group_factory = lambda token, symbols: self._CreateTransformed(
-            symbols, full_name=token, template_name=token, name=token,
-            section_name=self.section_name)
+            symbols, full_name=token, template_name=token, name=token)
 
     after_syms = []
     filtered_symbols = []
@@ -626,8 +773,7 @@ class SymbolGroup(BaseSymbol):
           target_list.extend(symbol_or_list)
 
     return self._CreateTransformed(
-        after_syms, filtered_symbols=filtered_symbols,
-        section_name=self.section_name)
+        after_syms, filtered_symbols=filtered_symbols)
 
   def _Clustered(self):
     """Returns a new SymbolGroup with some symbols moved into subgroups.
@@ -721,6 +867,9 @@ class SymbolGroup(BaseSymbol):
                   fallback_to_object_path=True, min_count=0):
     """Groups by source_path.
 
+    Due to path sharing (symbols where path looks like foo/bar/{shared}/3),
+    grouping by path will not show 100% of they bytes consumed by each path.
+
     Args:
       depth: When 0 (default), groups by entire path. When 1, groups by
              top-level directory, when 2, groups by top 2 directories, etc.
@@ -737,117 +886,58 @@ class SymbolGroup(BaseSymbol):
       if fallback_to_object_path and not path:
         path = symbol.object_path
       path = path or fallback
+      # Group by base of foo/bar/{shared}/2
+      shared_idx = path.find('{shared}')
+      if shared_idx != -1:
+        path = path[:shared_idx + 8]
       return _ExtractPrefixBeforeSeparator(path, os.path.sep, depth)
     return self.GroupedBy(extract_path, min_count=min_count)
 
 
-class SymbolDiff(SymbolGroup):
+class DeltaSymbolGroup(SymbolGroup):
   """A SymbolGroup subclass representing a diff of two other SymbolGroups.
 
-  All Symbols contained within have a |size| which is actually the size delta.
-  Additionally, metadata is kept about which symbols were added / removed /
-  changed.
+  Contains a list of DeltaSymbols.
   """
-  __slots__ = (
-      '_added_ids',
-      '_removed_ids',
-      '_diff_status',
-      '_changed_count',
-  )
-
-  def __init__(self, added, removed, similar):
-    self._added_ids = set(id(s) for s in added)
-    self._removed_ids = set(id(s) for s in removed)
-    self._diff_status = DIFF_STATUS_CHANGED
-    self._changed_count = None
-    symbols = []
-    symbols.extend(added)
-    symbols.extend(removed)
-    symbols.extend(similar)
-    super(SymbolDiff, self).__init__(symbols)
+  __slots__ = ()
 
   def __repr__(self):
+    counts = self.CountsByDiffStatus()
     return '%s(%d added, %d removed, %d changed, %d unchanged, size=%d)' % (
-        'SymbolGroup', self.added_count, self.removed_count, self.changed_count,
-        self.unchanged_count, self.size)
+        'DeltaSymbolGroup', counts[DIFF_STATUS_ADDED],
+        counts[DIFF_STATUS_REMOVED], counts[DIFF_STATUS_CHANGED],
+        counts[DIFF_STATUS_UNCHANGED], self.size)
 
-  def _CreateTransformed(self, symbols, filtered_symbols=None, full_name=None,
-                         template_name=None, name=None, section_name=None,
-                         is_sorted=None):
-    new_added_ids = set()
-    new_removed_ids = set()
-    group_diff_status = DIFF_STATUS_UNCHANGED
-    changed_count = 0
-    if symbols:
-      group_diff_status = self.DiffStatus(symbols[0])
-      for sym in symbols:
-        status = self.DiffStatus(sym)
-        if status != group_diff_status:
-          group_diff_status = DIFF_STATUS_CHANGED
-        if status == DIFF_STATUS_ADDED:
-          new_added_ids.add(id(sym))
-        elif status == DIFF_STATUS_REMOVED:
-          new_removed_ids.add(id(sym))
-        elif status == DIFF_STATUS_CHANGED:
-          changed_count += 1
+  def IsDelta(self):
+    return True
 
-    ret = SymbolDiff.__new__(SymbolDiff)
-    ret._added_ids = new_added_ids
-    ret._removed_ids = new_removed_ids
-    ret._diff_status = group_diff_status
-    ret._changed_count = changed_count
-    super(SymbolDiff, ret).__init__(
-        symbols, filtered_symbols=filtered_symbols, full_name=full_name,
-        template_name=template_name, name=name, section_name=section_name,
-        is_sorted=is_sorted)
+  def CountsByDiffStatus(self):
+    """Returns a map of diff_status -> count of children with that status."""
+    ret = [0, 0, 0, 0]
+    for sym in self:
+      ret[sym.diff_status] += 1
     return ret
 
-  @property
-  def added_count(self):
-    return len(self._added_ids)
+  def CountUniqueSymbols(self):
+    """Returns (num_unique_before_symbols, num_unique_after_symbols)."""
+    syms = (s.before_symbol for s in self.IterLeafSymbols() if s.before_symbol)
+    before_count = SymbolGroup(syms).CountUniqueSymbols()
+    syms = (s.after_symbol for s in self.IterLeafSymbols() if s.after_symbol)
+    after_count = SymbolGroup(syms).CountUniqueSymbols()
+    return before_count, after_count
 
   @property
-  def removed_count(self):
-    return len(self._removed_ids)
+  def diff_status(self):
+    if not self:
+      return DIFF_STATUS_UNCHANGED
+    ret = self._symbols[0].diff_status
+    for sym in self._symbols[1:]:
+      if sym.diff_status != ret:
+        return DIFF_STATUS_CHANGED
+    return ret
 
-  @property
-  def changed_count(self):
-    if self._changed_count is None:
-      self._changed_count = sum(1 for s in self if self.IsChanged(s))
-    return self._changed_count
-
-  @property
-  def unchanged_count(self):
-    return (len(self) - self.changed_count - self.added_count -
-            self.removed_count)
-
-  def DiffStatus(self, sym):
-    # Groups store their own status, computed during _CreateTransformed().
-    if sym.IsGroup():
-      return sym._diff_status
-    sym_id = id(sym)
-    if sym_id in self._added_ids:
-      return DIFF_STATUS_ADDED
-    if sym_id in self._removed_ids:
-      return DIFF_STATUS_REMOVED
-    # 0 --> unchanged
-    # 1 --> changed
-    return int(sym.size != 0)
-
-  def IsUnchanged(self, sym):
-    return self.DiffStatus(sym) == DIFF_STATUS_UNCHANGED
-
-  def IsChanged(self, sym):
-    return self.DiffStatus(sym) == DIFF_STATUS_CHANGED
-
-  def IsAdded(self, sym):
-    return self.DiffStatus(sym) == DIFF_STATUS_ADDED
-
-  def IsRemoved(self, sym):
-    return self.DiffStatus(sym) == DIFF_STATUS_REMOVED
-
-  def WhereNotUnchanged(self):
-    return self.Filter(lambda s: not self.IsUnchanged(s))
+  def WhereDiffStatusIs(self, diff_status):
+    return self.Filter(lambda s: s.diff_status == diff_status)
 
 
 def _ExtractPrefixBeforeSeparator(string, separator, count):

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "net/ssl/ssl_platform_key_nss.h"
+
 #include <cert.h>
 #include <keyhi.h>
 #include <pk11pub.h>
@@ -12,10 +14,9 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
+#include "crypto/nss_crypto_module_delegate.h"
 #include "crypto/scoped_nss_types.h"
 #include "net/cert/x509_certificate.h"
-#include "net/ssl/client_key_store.h"
-#include "net/ssl/ssl_platform_key.h"
 #include "net/ssl/ssl_platform_key_util.h"
 #include "net/ssl/ssl_private_key.h"
 #include "net/ssl/threaded_ssl_private_key.h"
@@ -153,13 +154,13 @@ class SSLPlatformKeyNSS : public ThreadedSSLPrivateKey::Delegate {
 }  // namespace
 
 scoped_refptr<SSLPrivateKey> FetchClientCertPrivateKey(
-    const X509Certificate* certificate) {
+    const X509Certificate* certificate,
+    crypto::CryptoModuleBlockingPasswordDelegate* password_delegate) {
+  void* wincx = password_delegate ? password_delegate->wincx() : nullptr;
   crypto::ScopedSECKEYPrivateKey key(
-      PK11_FindKeyByAnyCert(certificate->os_cert_handle(), nullptr));
-  if (!key) {
-    return ClientKeyStore::GetInstance()->FetchClientCertPrivateKey(
-        *certificate);
-  }
+      PK11_FindKeyByAnyCert(certificate->os_cert_handle(), wincx));
+  if (!key)
+    return nullptr;
 
   int type;
   size_t max_length;

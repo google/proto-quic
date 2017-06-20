@@ -2,39 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import shutil
-
-from profile_creators import profile_generator
 from telemetry.page import page as page_module
 from telemetry.page import cache_temperature as cache_temperature_module
 from telemetry.page import shared_page_state
 from telemetry import story
-
-
-class Typical25ProfileSharedState(shared_page_state.SharedDesktopPageState):
-  """Shared state associated with a profile generated from 25 navigations.
-
-  Generates a shared profile on initialization.
-  """
-
-  def __init__(self, test, finder_options, story_set):
-    super(Typical25ProfileSharedState, self).__init__(
-        test, finder_options, story_set)
-    from profile_creators import small_profile_extender
-    generator = profile_generator.ProfileGenerator(
-        small_profile_extender.SmallProfileExtender,
-        'small_profile')
-    self._out_dir, self._owns_out_dir = generator.Run(finder_options)
-    if self._out_dir:
-      finder_options.browser_options.profile_dir = self._out_dir
-    else:
-      finder_options.browser_options.dont_override_profile = True
-
-  def TearDownState(self):
-    """Clean up generated profile directory."""
-    super(Typical25ProfileSharedState, self).TearDownState()
-    if self._owns_out_dir:
-      shutil.rmtree(self._out_dir)
 
 
 class Typical25Page(page_module.Page):
@@ -45,7 +16,7 @@ class Typical25Page(page_module.Page):
     super(Typical25Page, self).__init__(
         url=url, page_set=page_set,
         shared_page_state_class=shared_page_state_class,
-        cache_temperature=cache_temperature)
+        cache_temperature=cache_temperature, name=url)
     self._run_no_page_interactions = run_no_page_interactions
 
   def RunPageInteractions(self, action_runner):

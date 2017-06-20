@@ -69,24 +69,15 @@ void ShardedAllocationRegister::EstimateTraceMemoryOverhead(
                 allocated, resident);
 }
 
-ShardedAllocationRegister::OutputMetrics
-ShardedAllocationRegister::UpdateAndReturnsMetrics(MetricsMap& map) const {
-  OutputMetrics output_metrics;
-  output_metrics.size = 0;
-  output_metrics.count = 0;
+void ShardedAllocationRegister::VisitAllocations(
+    const AllocationVisitor& visitor) const {
   for (size_t i = 0; i < ShardCount; ++i) {
     RegisterAndLock& ral = allocation_registers_[i];
     AutoLock lock(ral.lock);
-    for (const auto& alloc_size : ral.allocation_register) {
-      AllocationMetrics& metrics = map[alloc_size.context];
-      metrics.size += alloc_size.size;
-      metrics.count++;
-
-      output_metrics.size += alloc_size.size;
-      output_metrics.count++;
+    for (const auto& alloc : ral.allocation_register) {
+      visitor.Run(alloc);
     }
   }
-  return output_metrics;
 }
 
 ShardedAllocationRegister::RegisterAndLock::RegisterAndLock() = default;

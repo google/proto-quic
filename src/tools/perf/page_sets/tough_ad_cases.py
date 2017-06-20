@@ -13,7 +13,8 @@ class SwiffyPage(page_module.Page):
 
   def __init__(self, url, page_set):
     super(SwiffyPage, self).__init__(url=url, page_set=page_set,
-                                     make_javascript_deterministic=False)
+                                     make_javascript_deterministic=False,
+                                     name=url)
 
   def RunNavigateSteps(self, action_runner):
     super(SwiffyPage, self).RunNavigateSteps(action_runner)
@@ -42,13 +43,17 @@ class AdPage(page_module.Page):
                y_scroll_distance_multiplier=0.5,
                scroll=False,
                wait_for_interactive_or_better=False):
+    name = url
+    if not name.startswith('http'):
+      name = url.split('/')[-1]
     super(AdPage, self).__init__(
         url=url,
         page_set=page_set,
         make_javascript_deterministic=make_javascript_deterministic,
         shared_page_state_class=(
             repeatable_synthesize_scroll_gesture_shared_state.\
-                RepeatableSynthesizeScrollGestureSharedState))
+                RepeatableSynthesizeScrollGestureSharedState),
+        name=name)
     self._y_scroll_distance_multiplier = y_scroll_distance_multiplier
     self._scroll = scroll
     self._wait_for_interactive_or_better = wait_for_interactive_or_better

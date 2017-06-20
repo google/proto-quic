@@ -39,8 +39,7 @@ QUIC_EXPORT_PRIVATE bool ContainsQuicTag(const QuicTagVector& tag_vector,
 // If |out_index| is non-nullptr and a match is found then the index of that
 // match in |their_tags| is written to |out_index|.
 QUIC_EXPORT_PRIVATE bool FindMutualQuicTag(const QuicTagVector& our_tags,
-                                           const QuicTag* their_tags,
-                                           size_t num_their_tags,
+                                           const QuicTagVector& their_tags,
                                            QuicTag* out_result,
                                            size_t* out_index);
 

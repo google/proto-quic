@@ -224,8 +224,7 @@ class PolymerPageSet(story.StorySet):
   def __init__(self, run_no_page_interactions=False):
     super(PolymerPageSet, self).__init__(
       archive_data_file='data/polymer.json',
-      cloud_storage_bucket=story.PUBLIC_BUCKET,
-      verify_names=True)
+      cloud_storage_bucket=story.PUBLIC_BUCKET)
 
     self.AddStory(PolymerCalculatorPage(self, run_no_page_interactions))
     self.AddStory(PolymerShadowPage(self, run_no_page_interactions))
@@ -262,3 +261,13 @@ class PolymerPageSet(story.StorySet):
               PolymerPage.RunPageInteractions), (
               'Pages in this page set must not override PolymerPage\' '
               'RunPageInteractions method.')
+
+
+class PolymerRasterizeAndRecordStoryExpectations(story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    pass # No tests disabled.
+
+
+class PolymerThreadTimesStoryExpectations(story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    pass # No tests disabled.

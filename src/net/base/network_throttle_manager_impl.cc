@@ -4,9 +4,8 @@
 
 #include "net/base/network_throttle_manager_impl.h"
 
-#include <algorithm>
-
 #include "base/logging.h"
+#include "base/stl_util.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/default_tick_clock.h"
 
@@ -241,10 +240,8 @@ void NetworkThrottleManagerImpl::OnThrottleDestroyed(ThrottleImpl* throttle) {
       break;
   }
 
-  DCHECK(std::find(blocked_throttles_.begin(), blocked_throttles_.end(),
-                   throttle) == blocked_throttles_.end());
-  DCHECK(std::find(outstanding_throttles_.begin(), outstanding_throttles_.end(),
-                   throttle) == outstanding_throttles_.end());
+  DCHECK(!base::ContainsValue(blocked_throttles_, throttle));
+  DCHECK(!base::ContainsValue(outstanding_throttles_, throttle));
 
   // Unblock the throttles if there's some chance there's a throttle to
   // unblock.

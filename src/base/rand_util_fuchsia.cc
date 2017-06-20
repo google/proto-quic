@@ -28,7 +28,7 @@ void RandBytes(void* output, size_t output_length) {
 
     size_t actual;
     mx_status_t status = mx_cprng_draw(cur, read_len, &actual);
-    CHECK(status == NO_ERROR && read_len == actual);
+    CHECK(status == MX_OK && read_len == actual);
 
     CHECK(remaining >= actual);
     remaining -= actual;

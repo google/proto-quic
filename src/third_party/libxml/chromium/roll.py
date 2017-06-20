@@ -72,12 +72,9 @@ import tempfile
 
 PATCHES = [
     'chromium-issue-599427.patch',
-    'chromium-issue-620679.patch',
     'chromium-issue-628581.patch',
-    'chromium-issue-683629.patch',
     'libxml2-2.9.4-security-CVE-2017-7376-nanohttp-out-of-bounds-write.patch',
     'libxml2-2.9.4-security-xpath-nodetab-uaf.patch',
-    'libxml2-2.9.4-xmlDumpElementContent-null-deref.patch',
     'chromium-issue-708434.patch',
 ]
 
@@ -343,6 +340,7 @@ def roll_libxml_linux(src_path, libxml2_repo_path):
                          's/Version: .*$/Version: %s/' % commit)
 
             for patch in PATCHES:
+                print(patch)
                 subprocess.check_call(
                     'cat ../chromium/%s | patch -p1 --fuzz=0' % patch,
                     shell=True)

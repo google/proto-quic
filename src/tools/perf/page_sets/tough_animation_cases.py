@@ -8,7 +8,8 @@ from telemetry import story
 class ToughAnimationCasesPage(page_module.Page):
 
   def __init__(self, url, page_set, need_measurement_ready):
-    super(ToughAnimationCasesPage, self).__init__(url=url, page_set=page_set)
+    super(ToughAnimationCasesPage, self).__init__(url=url, page_set=page_set,
+                                                  name=url.split('/')[-1])
     self.archive_data_file = 'data/tough_animation_cases.json'
     self._need_measurement_ready = need_measurement_ready
 

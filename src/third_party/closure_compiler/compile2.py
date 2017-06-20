@@ -243,7 +243,7 @@ class Checker(object):
 
     self._log_debug("Args: %s" % " ".join(args))
 
-    _, stderr = self.run_jar(self._compiler_jar, args)
+    return_code, stderr = self.run_jar(self._compiler_jar, args)
 
     errors = stderr.strip().split("\n\n")
     maybe_summary = errors.pop()
@@ -262,7 +262,7 @@ class Checker(object):
         os.remove(out_file)
       if os.path.exists(self._MAP_FILE_FORMAT % out_file):
         os.remove(self._MAP_FILE_FORMAT % out_file)
-    elif checks_only:
+    elif checks_only and return_code == 0:
       # Compile succeeded but --checks_only disables --js_output_file from
       # actually writing a file. Write a file ourselves so incremental builds
       # still work.
@@ -280,7 +280,7 @@ class Checker(object):
         self._log_debug("Output: %s" % output)
 
     self._nuke_temp_files()
-    return bool(errors), stderr
+    return bool(errors) or return_code > 0, stderr
 
 
 if __name__ == "__main__":

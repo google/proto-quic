@@ -97,10 +97,6 @@ class QUIC_EXPORT_PRIVATE QuicFlowController
     receive_window_size_limit_ = receive_window_size_limit;
   }
 
-  void set_auto_tune_receive_window(bool enable) {
-    auto_tune_receive_window_ = enable;
-  }
-
   // Should only be called before any data is received.
   void UpdateReceiveWindowSize(QuicStreamOffset size);
 

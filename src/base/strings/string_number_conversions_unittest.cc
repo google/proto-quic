@@ -102,7 +102,7 @@ TEST(StringNumberConversionsTest, SizeTToString) {
   };
 
   for (size_t i = 0; i < arraysize(cases); ++i)
-    EXPECT_EQ(cases[i].output, Uint64ToString(cases[i].input));
+    EXPECT_EQ(cases[i].output, SizeTToString(cases[i].input));
 }
 
 TEST(StringNumberConversionsTest, StringToInt) {

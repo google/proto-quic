@@ -71,6 +71,7 @@ bool MemoryMappedFile::Initialize(File file,
                                   Access access) {
   switch (access) {
     case READ_WRITE_EXTEND:
+      DCHECK(Region::kWholeFile != region);
       // Ensure that the extended size is within limits of File.
       if (region.size > std::numeric_limits<int64_t>::max() - region.offset) {
         DLOG(ERROR) << "Region bounds exceed maximum for base::File.";

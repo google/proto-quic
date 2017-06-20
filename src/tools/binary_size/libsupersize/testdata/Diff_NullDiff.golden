@@ -18,11 +18,12 @@ Section Sizes (Total=0 bytes (0 bytes)):
     .text: 0 bytes (0 bytes) (0.0%)
 
 0 symbols added (+), 0 changed (~), 0 removed (-), 45 unchanged (not shown)
+Number of unique symbols 46 -> 46 (+0)
 0 paths added, 0 removed, 0 changed
 
-Showing 0 symbols (0 unique) with total pss: 0 bytes
+Showing 45 symbols (aliases not grouped for diffs) with total pss: 0 bytes
 .text=0 bytes    .rodata=0 bytes    .data*=0 bytes    .bss=0 bytes    total=0 bytes
-Number of unique paths: 0
+Number of unique paths: 9
 
-Index, Running Total, Section@Address, PSS
+Index | Running Total | Section@Address | Δ PSS (Δ size_without_padding) | Path
 ------------------------------------------------------------

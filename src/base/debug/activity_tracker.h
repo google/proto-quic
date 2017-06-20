@@ -1021,6 +1021,7 @@ class BASE_EXPORT GlobalActivityTracker {
     return RecordExceptionImpl(::tracked_objects::GetProgramCounter(), origin,
                                code);
   }
+  void RecordException(const void* pc, const void* origin, uint32_t code);
 
   // Marks the tracked data as deleted.
   void MarkDeleted();

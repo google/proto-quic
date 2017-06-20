@@ -406,6 +406,15 @@ NetworkQualityEstimatorParams::NetworkQualityEstimatorParams(
   DCHECK_LE(0.0, correlation_uma_logging_probability_);
   DCHECK_GE(1.0, correlation_uma_logging_probability_);
 
+  const auto algorithm_it = params_.find("effective_connection_type_algorithm");
+  effective_connection_type_algorithm_ =
+      GetEffectiveConnectionTypeAlgorithmFromString(
+          algorithm_it == params_.end() ? std::string() : algorithm_it->second);
+
+  DCHECK_NE(EffectiveConnectionTypeAlgorithm::
+                EFFECTIVE_CONNECTION_TYPE_ALGORITHM_LAST,
+            effective_connection_type_algorithm_);
+
   ObtainDefaultObservations(params_, default_observations_);
   ObtainTypicalNetworkQualities(params_, typical_network_quality_);
   ObtainConnectionThresholds(params_, connection_thresholds_);
@@ -415,14 +424,36 @@ NetworkQualityEstimatorParams::~NetworkQualityEstimatorParams() {
   DCHECK(thread_checker_.CalledOnValidThread());
 }
 
-std::string NetworkQualityEstimatorParams::GetEffectiveConnectionTypeAlgorithm()
-    const {
-  DCHECK(thread_checker_.CalledOnValidThread());
+// static
+NetworkQualityEstimatorParams::EffectiveConnectionTypeAlgorithm
+NetworkQualityEstimatorParams::GetEffectiveConnectionTypeAlgorithmFromString(
+    const std::string& algorithm_param_value) {
+  // The default algorithm to be used if the algorithm value is not available
+  // through field trial parameters.
+  static const EffectiveConnectionTypeAlgorithm
+      kDefaultEffectiveConnectionTypeAlgorithm =
+          EffectiveConnectionTypeAlgorithm::HTTP_RTT_AND_DOWNSTREAM_THROUGHOUT;
 
-  const auto it = params_.find("effective_connection_type_algorithm");
-  if (it == params_.end())
-    return std::string();
-  return it->second;
+  if (algorithm_param_value.empty())
+    return kDefaultEffectiveConnectionTypeAlgorithm;
+
+  if (algorithm_param_value == "HttpRTTAndDownstreamThroughput") {
+    return EffectiveConnectionTypeAlgorithm::HTTP_RTT_AND_DOWNSTREAM_THROUGHOUT;
+  }
+  if (algorithm_param_value == "TransportRTTOrDownstreamThroughput") {
+    return EffectiveConnectionTypeAlgorithm::
+        TRANSPORT_RTT_OR_DOWNSTREAM_THROUGHOUT;
+  }
+  static_assert(
+      static_cast<int>(EffectiveConnectionTypeAlgorithm::
+                           TRANSPORT_RTT_OR_DOWNSTREAM_THROUGHOUT) +
+              1 ==
+          static_cast<int>(EffectiveConnectionTypeAlgorithm::
+                               EFFECTIVE_CONNECTION_TYPE_ALGORITHM_LAST),
+      "Not all algorithms are accounted for.");
+
+  NOTREACHED();
+  return kDefaultEffectiveConnectionTypeAlgorithm;
 }
 
 // static
@@ -450,6 +481,12 @@ NetworkQualityEstimatorParams::ConnectionThreshold(
     EffectiveConnectionType type) const {
   DCHECK(thread_checker_.CalledOnValidThread());
   return connection_thresholds_[type];
+}
+
+NetworkQualityEstimatorParams::EffectiveConnectionTypeAlgorithm
+NetworkQualityEstimatorParams::GetEffectiveConnectionTypeAlgorithm() const {
+  DCHECK(thread_checker_.CalledOnValidThread());
+  return effective_connection_type_algorithm_;
 }
 
 }  // namespace net

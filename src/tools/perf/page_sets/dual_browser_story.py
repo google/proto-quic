@@ -257,3 +257,8 @@ class DualBrowserStorySet(story_module.StorySet):
           url=url,
           browser_type='default',
           phase='on_chrome'))
+
+
+class DualBrowserStoryExpectations(story_module.expectations.StoryExpectations):
+  def SetExpectations(self):
+    pass  # No tests disabled.

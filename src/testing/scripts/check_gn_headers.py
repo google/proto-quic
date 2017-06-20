@@ -20,7 +20,8 @@ def main_run(args):
         os.path.join(args.paths['checkout'], 'out', args.build_config_fs),
         '--whitelist',
         os.path.join(common.SRC_DIR, 'build', 'check_gn_headers_whitelist.txt'),
-        '--json', tempfile_path
+        '--json', tempfile_path,
+        '--verbose',
     ], cwd=common.SRC_DIR)
 
     with open(tempfile_path) as f:

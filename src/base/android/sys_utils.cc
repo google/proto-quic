@@ -16,6 +16,11 @@ bool SysUtils::IsLowEndDeviceFromJni() {
   return Java_SysUtils_isLowEndDevice(env);
 }
 
+bool SysUtils::IsCurrentlyLowMemory() {
+  JNIEnv* env = AttachCurrentThread();
+  return Java_SysUtils_isCurrentlyLowMemory(env);
+}
+
 }  // namespace android
 
 }  // namespace base

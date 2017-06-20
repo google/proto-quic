@@ -339,11 +339,11 @@ def _GetDesiredVsToolchainHashes():
   to build with."""
   env_version = GetVisualStudioVersion()
   if env_version == '2015':
-    # Update 3 final with patches with 10.0.14393.0 SDK.
-    return ['d3cb0e37bdd120ad0ac4650b674b09e81be45616']
+    # Update 3 final with fixed 10.0.15063.0 SDK and patched event.h.
+    return ['a11b39300bafe01d9d46bbc16483e373503acc29']
   if env_version == '2017':
-    # VS 2017 Update 3 Preview 1 with 10.0.14393.0 SDK and patched statreg.h.
-    return ['3915730f76bd9c6155aed871b944b0a25c18f15e']
+    # VS 2017 Update 3 Preview 2 with 10.0.15063.0 SDK and patched event.h.
+    return ['425bd64734a387734dfcf445b285a7c5073e4262']
   raise Exception('Unsupported VS version %s' % env_version)
 
 

@@ -80,11 +80,14 @@ EnqueuePacketResult QuicBufferedPacketStore::EnqueuePacket(
     const QuicReceivedPacket& packet,
     QuicSocketAddress server_address,
     QuicSocketAddress client_address,
-    bool is_chlo) {
+    bool is_chlo,
+    const std::string& alpn) {
   QUIC_BUG_IF(!FLAGS_quic_allow_chlo_buffering)
       << "Shouldn't buffer packets if disabled via flag.";
   QUIC_BUG_IF(is_chlo && QuicContainsKey(connections_with_chlo_, connection_id))
       << "Shouldn't buffer duplicated CHLO on connection " << connection_id;
+  QUIC_BUG_IF(!is_chlo && !alpn.empty())
+      << "Shouldn't have an ALPN defined for a non-CHLO packet.";
 
   if (!QuicContainsKey(undecryptable_packets_, connection_id) &&
       ShouldBufferPacket(is_chlo)) {
@@ -125,6 +128,7 @@ EnqueuePacketResult QuicBufferedPacketStore::EnqueuePacket(
     // Add CHLO to the beginning of buffered packets so that it can be delivered
     // first later.
     queue.buffered_packets.push_front(std::move(new_entry));
+    queue.alpn = alpn;
     connections_with_chlo_[connection_id] = false;  // Dummy value.
   } else {
     // Buffer non-CHLO packets in arrival order.
@@ -143,12 +147,12 @@ bool QuicBufferedPacketStore::HasChlosBuffered() const {
   return !connections_with_chlo_.empty();
 }
 
-std::list<BufferedPacket> QuicBufferedPacketStore::DeliverPackets(
+BufferedPacketList QuicBufferedPacketStore::DeliverPackets(
     QuicConnectionId connection_id) {
-  std::list<BufferedPacket> packets_to_deliver;
+  BufferedPacketList packets_to_deliver;
   auto it = undecryptable_packets_.find(connection_id);
   if (it != undecryptable_packets_.end()) {
-    packets_to_deliver = std::move(it->second.buffered_packets);
+    packets_to_deliver = std::move(it->second);
     undecryptable_packets_.erase(connection_id);
   }
   return packets_to_deliver;
@@ -199,18 +203,18 @@ bool QuicBufferedPacketStore::ShouldBufferPacket(bool is_chlo) {
   return is_store_full || reach_non_chlo_limit;
 }
 
-std::list<BufferedPacket>
-QuicBufferedPacketStore::DeliverPacketsForNextConnection(
+BufferedPacketList QuicBufferedPacketStore::DeliverPacketsForNextConnection(
     QuicConnectionId* connection_id) {
   if (connections_with_chlo_.empty()) {
     // Returns empty list if no CHLO has been buffered.
-    return std::list<BufferedPacket>();
+    return BufferedPacketList();
   }
   *connection_id = connections_with_chlo_.front().first;
   connections_with_chlo_.pop_front();
 
-  std::list<BufferedPacket> packets = DeliverPackets(*connection_id);
-  DCHECK(!packets.empty()) << "Try to deliver connectons without CHLO";
+  BufferedPacketList packets = DeliverPackets(*connection_id);
+  DCHECK(!packets.buffered_packets.empty())
+      << "Try to deliver connectons without CHLO";
   return packets;
 }
 

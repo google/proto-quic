@@ -30,7 +30,6 @@ crypto_sources = [
   "src/crypto/asn1/f_enum.c",
   "src/crypto/asn1/f_int.c",
   "src/crypto/asn1/f_string.c",
-  "src/crypto/asn1/t_bitst.c",
   "src/crypto/asn1/tasn_dec.c",
   "src/crypto/asn1/tasn_enc.c",
   "src/crypto/asn1/tasn_fre.c",
@@ -112,6 +111,7 @@ crypto_sources = [
   "src/crypto/evp/p_rsa_asn1.c",
   "src/crypto/evp/pbkdf.c",
   "src/crypto/evp/print.c",
+  "src/crypto/evp/scrypt.c",
   "src/crypto/evp/sign.c",
   "src/crypto/ex_data.c",
   "src/crypto/fipsmodule/aes/internal.h",
@@ -209,7 +209,6 @@ crypto_sources = [
   "src/crypto/x509/x509name.c",
   "src/crypto/x509/x509rset.c",
   "src/crypto/x509/x509spki.c",
-  "src/crypto/x509/x509type.c",
   "src/crypto/x509/x_algor.c",
   "src/crypto/x509/x_all.c",
   "src/crypto/x509/x_attrib.c",
@@ -370,6 +369,29 @@ ssl_sources = [
   "src/ssl/tls13_server.c",
   "src/ssl/tls_method.c",
   "src/ssl/tls_record.c",
+]
+
+crypto_sources_ios_aarch64 = [
+  "ios-aarch64/crypto/chacha/chacha-armv8.S",
+  "ios-aarch64/crypto/fipsmodule/aesv8-armx64.S",
+  "ios-aarch64/crypto/fipsmodule/armv8-mont.S",
+  "ios-aarch64/crypto/fipsmodule/ghashv8-armx64.S",
+  "ios-aarch64/crypto/fipsmodule/sha1-armv8.S",
+  "ios-aarch64/crypto/fipsmodule/sha256-armv8.S",
+  "ios-aarch64/crypto/fipsmodule/sha512-armv8.S",
+]
+
+crypto_sources_ios_arm = [
+  "ios-arm/crypto/chacha/chacha-armv4.S",
+  "ios-arm/crypto/fipsmodule/aes-armv4.S",
+  "ios-arm/crypto/fipsmodule/aesv8-armx32.S",
+  "ios-arm/crypto/fipsmodule/armv4-mont.S",
+  "ios-arm/crypto/fipsmodule/bsaes-armv7.S",
+  "ios-arm/crypto/fipsmodule/ghash-armv4.S",
+  "ios-arm/crypto/fipsmodule/ghashv8-armx32.S",
+  "ios-arm/crypto/fipsmodule/sha1-armv4-large.S",
+  "ios-arm/crypto/fipsmodule/sha256-armv4.S",
+  "ios-arm/crypto/fipsmodule/sha512-armv4.S",
 ]
 
 crypto_sources_linux_aarch64 = [

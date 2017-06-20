@@ -869,11 +869,6 @@ class MockCTPolicyEnforcer : public CTPolicyEnforcer {
                ct::CertPolicyCompliance(X509Certificate* cert,
                                         const ct::SCTList&,
                                         const NetLogWithSource&));
-  MOCK_METHOD4(DoesConformToCTEVPolicy,
-               ct::EVPolicyCompliance(X509Certificate* cert,
-                                      const ct::EVCertsWhitelist*,
-                                      const ct::SCTList&,
-                                      const NetLogWithSource&));
 };
 
 class MockRequireCTDelegate : public TransportSecurityState::RequireCTDelegate {
@@ -899,9 +894,6 @@ class SSLClientSocketTest : public PlatformTest {
     EXPECT_CALL(*ct_policy_enforcer_, DoesConformToCertPolicy(_, _, _))
         .WillRepeatedly(
             Return(ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS));
-    EXPECT_CALL(*ct_policy_enforcer_, DoesConformToCTEVPolicy(_, _, _, _))
-        .WillRepeatedly(
-            Return(ct::EVPolicyCompliance::EV_POLICY_COMPLIES_VIA_SCTS));
   }
 
  protected:
@@ -2564,9 +2556,6 @@ TEST_F(SSLClientSocketTest, EVCertStatusMaintainedForCompliantCert) {
   EXPECT_CALL(policy_enforcer, DoesConformToCertPolicy(_, _, _))
       .WillRepeatedly(
           Return(ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS));
-  EXPECT_CALL(policy_enforcer, DoesConformToCTEVPolicy(_, _, _, _))
-      .WillRepeatedly(
-          Return(ct::EVPolicyCompliance::EV_POLICY_COMPLIES_VIA_SCTS));
 
   int rv;
   ASSERT_TRUE(CreateAndConnectSSLClientSocket(ssl_config, &rv));
@@ -2594,9 +2583,6 @@ TEST_F(SSLClientSocketTest, EVCertStatusRemovedForNonCompliantCert) {
   EXPECT_CALL(policy_enforcer, DoesConformToCertPolicy(_, _, _))
       .WillRepeatedly(
           Return(ct::CertPolicyCompliance::CERT_POLICY_NOT_ENOUGH_SCTS));
-  EXPECT_CALL(policy_enforcer, DoesConformToCTEVPolicy(_, _, _, _))
-      .WillRepeatedly(
-          Return(ct::EVPolicyCompliance::EV_POLICY_NOT_ENOUGH_SCTS));
 
   int rv;
   ASSERT_TRUE(CreateAndConnectSSLClientSocket(ssl_config, &rv));

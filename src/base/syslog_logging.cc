@@ -12,7 +12,10 @@
 
 #include <windows.h>
 #elif defined(OS_LINUX)
+// <syslog.h> defines a LOG_WARNING macro that could conflict with
+// base::LOG_WARNING.
 #include <syslog.h>
+#undef LOG_WARNING
 #endif
 
 #include <cstring>

@@ -132,7 +132,7 @@ BASE_EXPORT bool CleanupProcesses(const FilePath::StringType& executable_name,
 // aggressive about ensuring that the process terminates.
 //
 // On Linux this method does not block the calling thread.
-// On OS X this method may block for up to 2 seconds.
+// On OS X and Fuchsia, this method may block for up to 2 seconds.
 //
 // NOTE: The process must have been opened with the PROCESS_TERMINATE and
 // SYNCHRONIZE permissions.

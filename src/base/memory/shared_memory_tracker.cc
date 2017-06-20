@@ -89,11 +89,10 @@ bool SharedMemoryTracker::OnMemoryDump(const trace_event::MemoryDumpArgs& args,
         pmd->CreateSharedGlobalAllocatorDump(dump_guid);
     global_dump->AddScalar(trace_event::MemoryAllocatorDump::kNameSize,
                            trace_event::MemoryAllocatorDump::kUnitsBytes, size);
-    // TOOD(hajimehoshi): Detect which the shared memory comes from browser,
-    // renderer or GPU process.
-    // TODO(hajimehoshi): Shared memory reported by GPU and discardable is
-    // currently double-counted. Add ownership edges to avoid this.
-    pmd->AddOwnershipEdge(local_dump->guid(), global_dump->guid());
+
+    // The edges will be overriden by the clients with correct importance.
+    pmd->AddOverridableOwnershipEdge(local_dump->guid(), global_dump->guid(),
+                                     0 /* importance */);
   }
   return true;
 }

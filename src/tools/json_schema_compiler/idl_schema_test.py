@@ -79,6 +79,17 @@ class IdlSchemaTest(unittest.TestCase):
         'c': {'name': 'c', 'type': 'string'}},
       getType(self.idl_basics, 'MyType1')['properties'])
 
+  def testIOThreadFunc(self):
+    schema = self.idl_basics
+
+    func = getFunction(schema, 'function32')
+    self.assertTrue(func is not None)
+    self.assertTrue(func['forIOThread'])
+
+    func = getFunction(schema, 'function1')
+    self.assertTrue(func is not None)
+    self.assertTrue('forIOThread' not in func)
+
   def testMemberOrdering(self):
     self.assertEquals(
         ['x', 'y', 'z', 'a', 'b', 'c'],

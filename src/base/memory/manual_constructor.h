@@ -34,17 +34,15 @@ class ManualConstructor {
   // Support users creating arrays of ManualConstructor<>s.  This ensures that
   // the array itself has the correct alignment.
   static void* operator new[](size_t size) {
-    return AlignedAlloc(size, ALIGNOF(Type));
+    return AlignedAlloc(size, alignof(Type));
   }
   static void operator delete[](void* mem) {
     AlignedFree(mem);
   }
 
-  inline Type* get() {
-    return space_.template data_as<Type>();
-  }
+  inline Type* get() { return reinterpret_cast<Type*>(space_); }
   inline const Type* get() const  {
-    return space_.template data_as<Type>();
+    return reinterpret_cast<const Type*>(space_);
   }
 
   inline Type* operator->() { return get(); }
@@ -55,7 +53,7 @@ class ManualConstructor {
 
   template <typename... Ts>
   inline void Init(Ts&&... params) {
-    new(space_.void_data()) Type(std::forward<Ts>(params)...);
+    new (space_) Type(std::forward<Ts>(params)...);
   }
 
   inline void InitFromMove(ManualConstructor<Type>&& o) {
@@ -67,7 +65,7 @@ class ManualConstructor {
   }
 
  private:
-  AlignedMemory<sizeof(Type), ALIGNOF(Type)> space_;
+  alignas(Type) char space_[sizeof(Type)];
 };
 
 }  // namespace base

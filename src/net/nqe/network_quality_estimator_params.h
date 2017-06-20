@@ -26,6 +26,14 @@ NET_EXPORT extern const char kForceEffectiveConnectionType[];
 // the network quality estimator.
 class NET_EXPORT NetworkQualityEstimatorParams {
  public:
+  // Algorithms supported by network quality estimator for computing effective
+  // connection type.
+  enum class EffectiveConnectionTypeAlgorithm {
+    HTTP_RTT_AND_DOWNSTREAM_THROUGHOUT = 0,
+    TRANSPORT_RTT_OR_DOWNSTREAM_THROUGHOUT,
+    EFFECTIVE_CONNECTION_TYPE_ALGORITHM_LAST
+  };
+
   // |params| is the map containing all field trial parameters related to
   // NetworkQualityEstimator field trial.
   explicit NetworkQualityEstimatorParams(
@@ -33,10 +41,10 @@ class NET_EXPORT NetworkQualityEstimatorParams {
 
   ~NetworkQualityEstimatorParams();
 
-  // Returns the algorithm that should be used for computing effective
-  // connection type. Returns an empty string if a valid algorithm paramter is
-  // not specified.
-  std::string GetEffectiveConnectionTypeAlgorithm() const;
+  // Returns the algorithm to use for computing effective connection type. The
+  // value is obtained from |params|. If the value from |params| is unavailable,
+  // a default value is used.
+  EffectiveConnectionTypeAlgorithm GetEffectiveConnectionTypeAlgorithm() const;
 
   // Returns a descriptive name corresponding to |connection_type|.
   static const char* GetNameForConnectionType(
@@ -102,6 +110,13 @@ class NET_EXPORT NetworkQualityEstimatorParams {
     return min_socket_watcher_notification_interval_;
   }
 
+  // Returns the algorithm that should be used for computing effective
+  // connection type. Returns an empty string if a valid algorithm parameter is
+  // not specified.
+  static EffectiveConnectionTypeAlgorithm
+  GetEffectiveConnectionTypeAlgorithmFromString(
+      const std::string& algorithm_param_value);
+
  private:
   // Map containing all field trial parameters related to
   // NetworkQualityEstimator field trial.
@@ -115,6 +130,8 @@ class NET_EXPORT NetworkQualityEstimatorParams {
       forced_effective_connection_type_;
   const bool persistent_cache_reading_enabled_;
   const base::TimeDelta min_socket_watcher_notification_interval_;
+
+  EffectiveConnectionTypeAlgorithm effective_connection_type_algorithm_;
 
   // Default network quality observations obtained from |params_|.
   nqe::internal::NetworkQuality

@@ -9,6 +9,8 @@ from telemetry import story
 class ToughPinchZoomCasesPage(page_module.Page):
 
   def __init__(self, url, page_set, name=''):
+    if name == '':
+      name = url
     super(ToughPinchZoomCasesPage, self).__init__(
         url=url, page_set=page_set, name=name,
         shared_page_state_class=shared_page_state.SharedDesktopPageState,

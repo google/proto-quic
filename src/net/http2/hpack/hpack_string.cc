@@ -19,7 +19,7 @@ HpackString::HpackString(string str) : str_(std::move(str)) {}
 HpackString::HpackString(const HpackString& other) : str_(other.str_) {}
 HpackString::~HpackString() {}
 
-HpackString::operator StringPiece() const {
+StringPiece HpackString::ToStringPiece() const {
   return str_;
 }
 

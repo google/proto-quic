@@ -67,6 +67,14 @@ const char kSimpleGetMockWrite[] =
     "Accept-Encoding: gzip, deflate\r\n"
     "Accept-Language: en-us,fr\r\n\r\n";
 
+const char kSimpleHeadMockWrite[] =
+    "HEAD / HTTP/1.1\r\n"
+    "Host: www.example.com\r\n"
+    "Connection: keep-alive\r\n"
+    "User-Agent:\r\n"
+    "Accept-Encoding: gzip, deflate\r\n"
+    "Accept-Language: en-us,fr\r\n\r\n";
+
 // Inherit from URLRequestHttpJob to expose the priority and some
 // other hidden functions.
 class TestURLRequestHttpJob : public URLRequestHttpJob {
@@ -301,6 +309,132 @@ TEST_F(URLRequestHttpJobWithMockSocketsTest,
             network_delegate_.total_network_bytes_sent());
   EXPECT_EQ(CountReadBytes(reads, arraysize(reads)),
             network_delegate_.total_network_bytes_received());
+}
+
+// Tests a successful HEAD request.
+TEST_F(URLRequestHttpJobWithMockSocketsTest, TestSuccessfulHead) {
+  MockWrite writes[] = {MockWrite(kSimpleHeadMockWrite)};
+  MockRead reads[] = {
+      MockRead("HTTP/1.1 200 OK\r\n"
+               "Content-Length: 0\r\n\r\n")};
+
+  StaticSocketDataProvider socket_data(reads, arraysize(reads), writes,
+                                       arraysize(writes));
+  socket_factory_.AddSocketDataProvider(&socket_data);
+
+  TestDelegate delegate;
+  std::unique_ptr<URLRequest> request = context_->CreateRequest(
+      GURL("http://www.example.com"), DEFAULT_PRIORITY, &delegate);
+
+  request->set_method("HEAD");
+  request->Start();
+  ASSERT_TRUE(request->is_pending());
+  base::RunLoop().Run();
+
+  EXPECT_THAT(delegate.request_status(), IsOk());
+  EXPECT_EQ(0, request->received_response_content_length());
+  EXPECT_EQ(CountWriteBytes(writes, arraysize(writes)),
+            request->GetTotalSentBytes());
+  EXPECT_EQ(CountReadBytes(reads, arraysize(reads)),
+            request->GetTotalReceivedBytes());
+  EXPECT_EQ(CountWriteBytes(writes, arraysize(writes)),
+            network_delegate_.total_network_bytes_sent());
+  EXPECT_EQ(CountReadBytes(reads, arraysize(reads)),
+            network_delegate_.total_network_bytes_received());
+}
+
+// Similar to above test but tests that even if response body is there in the
+// HEAD response stream, it should not be read due to HttpStreamParser's logic.
+TEST_F(URLRequestHttpJobWithMockSocketsTest, TestSuccessfulHeadWithContent) {
+  MockWrite writes[] = {MockWrite(kSimpleHeadMockWrite)};
+  MockRead reads[] = {MockRead("HTTP/1.1 200 OK\r\n"
+                               "Content-Length: 12\r\n\r\n"),
+                      MockRead("Test Content")};
+
+  StaticSocketDataProvider socket_data(reads, arraysize(reads), writes,
+                                       arraysize(writes));
+  socket_factory_.AddSocketDataProvider(&socket_data);
+
+  TestDelegate delegate;
+  std::unique_ptr<URLRequest> request = context_->CreateRequest(
+      GURL("http://www.example.com"), DEFAULT_PRIORITY, &delegate);
+
+  request->set_method("HEAD");
+  request->Start();
+  ASSERT_TRUE(request->is_pending());
+  base::RunLoop().Run();
+
+  EXPECT_THAT(delegate.request_status(), IsOk());
+  EXPECT_EQ(0, request->received_response_content_length());
+  EXPECT_EQ(CountWriteBytes(writes, arraysize(writes)),
+            request->GetTotalSentBytes());
+  EXPECT_EQ(CountReadBytes(reads, arraysize(reads)) - 12,
+            request->GetTotalReceivedBytes());
+  EXPECT_EQ(CountWriteBytes(writes, arraysize(writes)),
+            network_delegate_.total_network_bytes_sent());
+  EXPECT_EQ(CountReadBytes(reads, arraysize(reads)) - 12,
+            network_delegate_.total_network_bytes_received());
+}
+
+TEST_F(URLRequestHttpJobWithMockSocketsTest, TestSuccessfulCachedHeadRequest) {
+  // Cache the response.
+  {
+    MockWrite writes[] = {MockWrite(kSimpleGetMockWrite)};
+    MockRead reads[] = {MockRead("HTTP/1.1 200 OK\r\n"
+                                 "Content-Length: 12\r\n\r\n"),
+                        MockRead("Test Content")};
+
+    StaticSocketDataProvider socket_data(reads, arraysize(reads), writes,
+                                         arraysize(writes));
+    socket_factory_.AddSocketDataProvider(&socket_data);
+
+    TestDelegate delegate;
+    std::unique_ptr<URLRequest> request = context_->CreateRequest(
+        GURL("http://www.example.com"), DEFAULT_PRIORITY, &delegate);
+
+    request->Start();
+    ASSERT_TRUE(request->is_pending());
+    base::RunLoop().Run();
+
+    EXPECT_THAT(delegate.request_status(), IsOk());
+    EXPECT_EQ(12, request->received_response_content_length());
+    EXPECT_EQ(CountWriteBytes(writes, arraysize(writes)),
+              request->GetTotalSentBytes());
+    EXPECT_EQ(CountReadBytes(reads, arraysize(reads)),
+              request->GetTotalReceivedBytes());
+    EXPECT_EQ(CountWriteBytes(writes, arraysize(writes)),
+              network_delegate_.total_network_bytes_sent());
+    EXPECT_EQ(CountReadBytes(reads, arraysize(reads)),
+              network_delegate_.total_network_bytes_received());
+  }
+
+  // Send a HEAD request for the cached response.
+  {
+    MockWrite writes[] = {MockWrite(kSimpleHeadMockWrite)};
+    MockRead reads[] = {
+        MockRead("HTTP/1.1 200 OK\r\n"
+                 "Content-Length: 0\r\n\r\n")};
+
+    StaticSocketDataProvider socket_data(reads, arraysize(reads), writes,
+                                         arraysize(writes));
+    socket_factory_.AddSocketDataProvider(&socket_data);
+
+    TestDelegate delegate;
+    std::unique_ptr<URLRequest> request = context_->CreateRequest(
+        GURL("http://www.example.com"), DEFAULT_PRIORITY, &delegate);
+
+    // Use the cached version.
+    request->SetLoadFlags(LOAD_SKIP_CACHE_VALIDATION);
+    request->set_method("HEAD");
+    request->Start();
+    ASSERT_TRUE(request->is_pending());
+    base::RunLoop().Run();
+
+    EXPECT_THAT(delegate.request_status(), IsOk());
+    EXPECT_EQ(0, request->received_response_content_length());
+    EXPECT_EQ(0, request->GetTotalSentBytes());
+    EXPECT_EQ(0, request->GetTotalReceivedBytes());
+  }
 }
 
 TEST_F(URLRequestHttpJobWithMockSocketsTest,

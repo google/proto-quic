@@ -44,6 +44,16 @@ TEST(CanonicalCookieTest, Constructor) {
   EXPECT_EQ(CookieSameSite::NO_RESTRICTION, cookie2->SameSite());
 }
 
+TEST(CanonicalCookie, SpaceInName) {
+  GURL url("http://www.example.com/test/foo.html");
+  base::Time creation_time = base::Time::Now();
+  CookieOptions options;
+  std::unique_ptr<CanonicalCookie> cookie(
+      CanonicalCookie::Create(url, "A C=2", creation_time, options));
+  EXPECT_TRUE(cookie.get());
+  EXPECT_EQ("A C", cookie->Name());
+}
+
 TEST(CanonicalCookieTest, Create) {
   // Test creating cookies from a cookie string.
   GURL url("http://www.example.com/test/foo.html");
@@ -594,6 +604,264 @@ TEST(CanonicalCookieTest, EnforceSecureCookiesRequireSecureScheme) {
   EXPECT_FALSE(http_cookie_secure.get());
   EXPECT_TRUE(https_cookie_no_secure.get());
   EXPECT_TRUE(https_cookie_secure.get());
+}
+
+TEST(CanonicalCookieTest, IsCanonical) {
+  // Base correct template.
+  EXPECT_TRUE(CanonicalCookie("A", "B", "x.y", "/path", base::Time(),
+                              base::Time(), base::Time(), false, false,
+                              CookieSameSite::NO_RESTRICTION,
+                              COOKIE_PRIORITY_LOW)
+                  .IsCanonical());
+
+  // Newline in name.
+  EXPECT_FALSE(CanonicalCookie("A\n", "B", "x.y", "/path", base::Time(),
+                               base::Time(), base::Time(), false, false,
+                               CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Carriage return in name.
+  EXPECT_FALSE(CanonicalCookie("A\r", "B", "x.y", "/path", base::Time(),
+                               base::Time(), base::Time(), false, false,
+                               CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Null character in name.
+  EXPECT_FALSE(CanonicalCookie(std::string("A\0Z", 3), "B", "x.y", "/path",
+                               base::Time(), base::Time(), base::Time(), false,
+                               false, CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Name begins with whitespace.
+  EXPECT_FALSE(CanonicalCookie(" A", "B", "x.y", "/path", base::Time(),
+                               base::Time(), base::Time(), false, false,
+                               CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Name ends with whitespace.
+  EXPECT_FALSE(CanonicalCookie("A ", "B", "x.y", "/path", base::Time(),
+                               base::Time(), base::Time(), false, false,
+                               CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Empty name.  (Note this is against the spec but compatible with other
+  // browsers.)
+  EXPECT_TRUE(CanonicalCookie("", "B", "x.y", "/path", base::Time(),
+                              base::Time(), base::Time(), false, false,
+                              CookieSameSite::NO_RESTRICTION,
+                              COOKIE_PRIORITY_LOW)
+                  .IsCanonical());
+
+  // Space in name
+  EXPECT_TRUE(CanonicalCookie("A C", "B", "x.y", "/path", base::Time(),
+                              base::Time(), base::Time(), false, false,
+                              CookieSameSite::NO_RESTRICTION,
+                              COOKIE_PRIORITY_LOW)
+                  .IsCanonical());
+
+  // Extra space suffixing name.
+  EXPECT_FALSE(CanonicalCookie("A ", "B", "x.y", "/path", base::Time(),
+                               base::Time(), base::Time(), false, false,
+                               CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // '=' character in name.
+  EXPECT_FALSE(CanonicalCookie("A=", "B", "x.y", "/path", base::Time(),
+                               base::Time(), base::Time(), false, false,
+                               CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Separator in name.
+  EXPECT_FALSE(CanonicalCookie("A;", "B", "x.y", "/path", base::Time(),
+                               base::Time(), base::Time(), false, false,
+                               CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // '=' character in value.
+  EXPECT_TRUE(CanonicalCookie("A", "B=", "x.y", "/path", base::Time(),
+                              base::Time(), base::Time(), false, false,
+                              CookieSameSite::NO_RESTRICTION,
+                              COOKIE_PRIORITY_LOW)
+                  .IsCanonical());
+
+  // Separator in value.
+  EXPECT_FALSE(CanonicalCookie("A", "B;", "x.y", "/path", base::Time(),
+                               base::Time(), base::Time(), false, false,
+                               CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Separator in domain.
+  EXPECT_FALSE(CanonicalCookie("A", "B", ";x.y", "/path", base::Time(),
+                               base::Time(), base::Time(), false, false,
+                               CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Garbage in domain.
+  EXPECT_FALSE(CanonicalCookie("A", "B", "@:&", "/path", base::Time(),
+                               base::Time(), base::Time(), false, false,
+                               CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Space in domain.
+  EXPECT_FALSE(CanonicalCookie("A", "B", "x.y ", "/path", base::Time(),
+                               base::Time(), base::Time(), false, false,
+                               CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Empty domain.  (This is against cookie spec, but needed for Chrome's
+  // out-of-spec use of cookies for extensions; see http://crbug.com/730633.
+  EXPECT_TRUE(CanonicalCookie("A", "B", "", "/path", base::Time(), base::Time(),
+                              base::Time(), false, false,
+                              CookieSameSite::NO_RESTRICTION,
+                              COOKIE_PRIORITY_LOW)
+                  .IsCanonical());
+
+  // Path does not start with a "/".
+  EXPECT_FALSE(CanonicalCookie("A", "B", "x.y", "path", base::Time(),
+                               base::Time(), base::Time(), false, false,
+                               CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Empty path.
+  EXPECT_FALSE(CanonicalCookie("A", "B", "x.y", "", base::Time(), base::Time(),
+                               base::Time(), false, false,
+                               CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Path suffixed with a space.
+  EXPECT_FALSE(CanonicalCookie("A", "B", "x.y", "/path ", base::Time(),
+                               base::Time(), base::Time(), false, false,
+                               CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Path suffixed with separator.
+  EXPECT_FALSE(CanonicalCookie("A", "B", "x.y", "/path;", base::Time(),
+                               base::Time(), base::Time(), false, false,
+                               CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Simple IPv4 address as domain.
+  EXPECT_TRUE(CanonicalCookie("A", "B", "1.2.3.4", "/path", base::Time(),
+                              base::Time(), base::Time(), false, false,
+                              CookieSameSite::NO_RESTRICTION,
+                              COOKIE_PRIORITY_LOW)
+                  .IsCanonical());
+
+  // NOn-canonical IPv4 address as domain.
+  EXPECT_FALSE(CanonicalCookie("A", "B", "01.2.03.4", "/path", base::Time(),
+                               base::Time(), base::Time(), false, false,
+                               CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Null IPv6 address as domain.
+  EXPECT_TRUE(CanonicalCookie("A", "B", "[::]", "/path", base::Time(),
+                              base::Time(), base::Time(), false, false,
+                              CookieSameSite::NO_RESTRICTION,
+                              COOKIE_PRIORITY_LOW)
+                  .IsCanonical());
+
+  // Localhost IPv6 address as domain.
+  EXPECT_TRUE(CanonicalCookie("A", "B", "[::1]", "/path", base::Time(),
+                              base::Time(), base::Time(), false, false,
+                              CookieSameSite::NO_RESTRICTION,
+                              COOKIE_PRIORITY_LOW)
+                  .IsCanonical());
+
+  // Fully speced IPv6 address as domain.
+  EXPECT_FALSE(CanonicalCookie(
+                   "A", "B", "[2001:0DB8:AC10:FE01:0000:0000:0000:0000]",
+                   "/path", base::Time(), base::Time(), base::Time(), false,
+                   false, CookieSameSite::NO_RESTRICTION, COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Zero abbreviated IPv6 address as domain.  Not canonical because of leading
+  // zeros & uppercase hex letters.
+  EXPECT_FALSE(CanonicalCookie("A", "B", "[2001:0DB8:AC10:FE01::]", "/path",
+                               base::Time(), base::Time(), base::Time(), false,
+                               false, CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Zero prefixes removed IPv6 address as domain.  Not canoncial because of
+  // uppercase hex letters.
+  EXPECT_FALSE(CanonicalCookie("A", "B", "[2001:DB8:AC10:FE01::]", "/path",
+                               base::Time(), base::Time(), base::Time(), false,
+                               false, CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Lowercased hex IPv6 address as domain.
+  EXPECT_TRUE(CanonicalCookie("A", "B", "[2001:db8:ac10:fe01::]", "/path",
+                              base::Time(), base::Time(), base::Time(), false,
+                              false, CookieSameSite::NO_RESTRICTION,
+                              COOKIE_PRIORITY_LOW)
+                  .IsCanonical());
+
+  // Properly formatted host cookie.
+  EXPECT_TRUE(CanonicalCookie("__Host-A", "B", "x.y", "/", base::Time(),
+                              base::Time(), base::Time(), true, false,
+                              CookieSameSite::NO_RESTRICTION,
+                              COOKIE_PRIORITY_LOW)
+                  .IsCanonical());
+
+  // Insecure host cookie.
+  EXPECT_FALSE(CanonicalCookie("__Host-A", "B", "x.y", "/", base::Time(),
+                               base::Time(), base::Time(), false, false,
+                               CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Host cookie with non-null path.
+  EXPECT_FALSE(CanonicalCookie("__Host-A", "B", "x.y", "/path", base::Time(),
+                               base::Time(), base::Time(), true, false,
+                               CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Host cookie with empty domain.
+  EXPECT_FALSE(CanonicalCookie("__Host-A", "B", "", "/", base::Time(),
+                               base::Time(), base::Time(), true, false,
+                               CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Host cookie with period prefixed domain.
+  EXPECT_FALSE(CanonicalCookie("__Host-A", "B", ".x.y", "/", base::Time(),
+                               base::Time(), base::Time(), true, false,
+                               CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
+
+  // Properly formatted secure cookie.
+  EXPECT_TRUE(CanonicalCookie("__Secure-A", "B", "x.y", "/", base::Time(),
+                              base::Time(), base::Time(), true, false,
+                              CookieSameSite::NO_RESTRICTION,
+                              COOKIE_PRIORITY_LOW)
+                  .IsCanonical());
+
+  // Insecure secure cookie.
+  EXPECT_FALSE(CanonicalCookie("__Secure-A", "B", "x.y", "/", base::Time(),
+                               base::Time(), base::Time(), false, false,
+                               CookieSameSite::NO_RESTRICTION,
+                               COOKIE_PRIORITY_LOW)
+                   .IsCanonical());
 }
 
 TEST(CanonicalCookieTest, TestPrefixHistograms) {

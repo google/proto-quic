@@ -52,9 +52,10 @@ class NET_EXPORT_PRIVATE HttpTransaction {
 
   // Starts the HTTP transaction (i.e., sends the HTTP request).
   //
-  // The consumer should ensure that request_info points to a valid value till
-  // final response headers are received; after that point, the HttpTransaction
-  // will not access |*request_info| and it may be deleted.
+  // TODO(crbug.com/723786) The consumer should ensure that request_info points
+  // to a valid value till final response headers are received; after that
+  // point, the HttpTransaction will not access |*request_info| and it may be
+  // deleted.
   //
   // Returns OK if the transaction could be started synchronously, which means
   // that the request was served from the cache.  ERR_IO_PENDING is returned to
@@ -85,9 +86,10 @@ class NET_EXPORT_PRIVATE HttpTransaction {
   virtual int RestartIgnoringLastError(const CompletionCallback& callback) = 0;
 
   // Restarts the HTTP transaction with a client certificate.
-  virtual int RestartWithCertificate(X509Certificate* client_cert,
-                                     SSLPrivateKey* client_private_key,
-                                     const CompletionCallback& callback) = 0;
+  virtual int RestartWithCertificate(
+      scoped_refptr<X509Certificate> client_cert,
+      scoped_refptr<SSLPrivateKey> client_private_key,
+      const CompletionCallback& callback) = 0;
 
   // Restarts the HTTP transaction with authentication credentials.
   virtual int RestartWithAuth(const AuthCredentials& credentials,

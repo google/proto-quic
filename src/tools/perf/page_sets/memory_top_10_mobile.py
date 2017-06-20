@@ -68,8 +68,7 @@ class MemoryTop10Mobile(story.StorySet):
   def __init__(self):
     super(MemoryTop10Mobile, self).__init__(
         archive_data_file='data/memory_top_10_mobile.json',
-        cloud_storage_bucket=story.PARTNER_BUCKET,
-        verify_names=True)
+        cloud_storage_bucket=story.PARTNER_BUCKET)
 
     for url in top_10_mobile.URL_LIST:
       # We name pages so their foreground/background counterparts are easy
@@ -80,9 +79,6 @@ class MemoryTop10Mobile(story.StorySet):
       self.AddStory(BackgroundPage(self, 'after_' + name))
 
 
-class MemoryTop10MobileRealistic(MemoryTop10Mobile):
-  """Top 10 mobile user story in realistic mode.
-
-  This means, in particular, neither forced GCs nor clearing caches.
-  """
-  DETERMINISTIC_MODE = False
+class MemoryTop10MobileStoryExpectations(story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    pass  # No tests disabled.

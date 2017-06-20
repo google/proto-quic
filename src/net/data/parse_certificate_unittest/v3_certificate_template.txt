@@ -13,11 +13,13 @@ SEQUENCE {
 #-----BEGIN SERIAL-----
     INTEGER { `00fbb04c2eab109b0c` }
 #-----END SERIAL-----
+#-----BEGIN SIGNATURE_ALGORITHM-----
     SEQUENCE {
       # sha1WithRSAEncryption
       OBJECT_IDENTIFIER { 1.2.840.113549.1.1.5 }
       NULL {}
     }
+#-----END SIGNATURE_ALGORITHM-----
     SEQUENCE {
       SET {
         SEQUENCE {

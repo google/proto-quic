@@ -132,14 +132,17 @@ class Kraken(perf_benchmark.PerfBenchmark):
     ps = story.StorySet(
         archive_data_file='../page_sets/data/kraken.json',
         base_dir=os.path.dirname(os.path.abspath(__file__)),
-        cloud_storage_bucket=story.PARTNER_BUCKET,
-        verify_names=True)
+        cloud_storage_bucket=story.PARTNER_BUCKET)
     ps.AddStory(page_module.Page(
         'http://krakenbenchmark.mozilla.org/kraken-1.1/driver.html',
         ps, ps.base_dir,
         name='http://krakenbenchmark.mozilla.org/kraken-1.1/driver.html'))
     return ps
 
-  @classmethod
-  def ShouldDisable(cls, possible_browser):
-    return cls.IsSvelte(possible_browser)  # http://crbug.com/624411
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        self.DisableStory(
+            'http://krakenbenchmark.mozilla.org/kraken-1.1/driver.html',
+            [story.expectations.ANDROID_SVELTE], 'crbug.com/624411')
+    return StoryExpectations()

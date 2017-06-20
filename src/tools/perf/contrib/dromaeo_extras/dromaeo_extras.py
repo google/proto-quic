@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 from telemetry import benchmark
+from telemetry import story
 
 from benchmarks import dromaeo
 
@@ -28,6 +29,12 @@ class DromaeoJslibAttrJquery(_BaseDromaeoBenchmark):
   def Name(cls):
     return 'dromaeo.jslibattrjquery'
 
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()
+
 
 @benchmark.Owner(emails=['yukishiino@chromium.org',
                          'bashi@chromium.org',
@@ -44,6 +51,12 @@ class DromaeoJslibAttrPrototype(_BaseDromaeoBenchmark):
   @classmethod
   def Name(cls):
     return 'dromaeo.jslibattrprototype'
+
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()
 
 
 @benchmark.Owner(emails=['yukishiino@chromium.org',
@@ -62,6 +75,12 @@ class DromaeoJslibEventJquery(_BaseDromaeoBenchmark):
   def Name(cls):
     return 'dromaeo.jslibeventjquery'
 
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()
+
 
 @benchmark.Owner(emails=['yukishiino@chromium.org',
                          'bashi@chromium.org',
@@ -78,6 +97,12 @@ class DromaeoJslibEventPrototype(_BaseDromaeoBenchmark):
   @classmethod
   def Name(cls):
     return 'dromaeo.jslibeventprototype'
+
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()
 
 
 # win-ref: http://crbug.com/598705
@@ -99,6 +124,12 @@ class DromaeoJslibModifyJquery(_BaseDromaeoBenchmark):
   def Name(cls):
     return 'dromaeo.jslibmodifyjquery'
 
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()
+
 
 @benchmark.Owner(emails=['yukishiino@chromium.org',
                          'bashi@chromium.org',
@@ -115,6 +146,12 @@ class DromaeoJslibModifyPrototype(_BaseDromaeoBenchmark):
   @classmethod
   def Name(cls):
     return 'dromaeo.jslibmodifyprototype'
+
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()
 
 
 @benchmark.Owner(emails=['yukishiino@chromium.org',
@@ -133,6 +170,12 @@ class DromaeoJslibStyleJquery(_BaseDromaeoBenchmark):
   def Name(cls):
     return 'dromaeo.jslibstylejquery'
 
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()
+
 
 @benchmark.Owner(emails=['yukishiino@chromium.org',
                          'bashi@chromium.org',
@@ -149,6 +192,12 @@ class DromaeoJslibStylePrototype(_BaseDromaeoBenchmark):
   @classmethod
   def Name(cls):
     return 'dromaeo.jslibstyleprototype'
+
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()
 
 
 @benchmark.Owner(emails=['yukishiino@chromium.org',
@@ -168,6 +217,12 @@ class DromaeoJslibTraverseJquery(_BaseDromaeoBenchmark):
   def Name(cls):
     return 'dromaeo.jslibtraversejquery'
 
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()
+
 
 @benchmark.Owner(emails=['yukishiino@chromium.org',
                          'bashi@chromium.org',
@@ -184,6 +239,12 @@ class DromaeoJslibTraversePrototype(_BaseDromaeoBenchmark):
   def Name(cls):
     return 'dromaeo.jslibtraverseprototype'
 
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()
+
 
 class DromaeoCSSQueryJquery(_BaseDromaeoBenchmark):
   """Dromaeo CSS Query jquery JavaScript benchmark.
@@ -196,3 +257,9 @@ class DromaeoCSSQueryJquery(_BaseDromaeoBenchmark):
   @classmethod
   def Name(cls):
     return 'dromaeo.cssqueryjquery'
+
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()

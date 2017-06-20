@@ -139,6 +139,10 @@ void PersistentSampleMap::Accumulate(Sample value, Count count) {
   if (reason != MAX_NEGATIVE_SAMPLE_REASONS) {
     UMA_HISTOGRAM_ENUMERATION("UMA.NegativeSamples.Reason", reason,
                               MAX_NEGATIVE_SAMPLE_REASONS);
+    UMA_HISTOGRAM_CUSTOM_COUNTS("UMA.NegativeSamples.Increment", count, 1,
+                                1 << 30, 100);
+    UMA_HISTOGRAM_SPARSE_SLOWLY("UMA.NegativeSamples.Histogram",
+                                static_cast<int32_t>(id()));
   }
 #endif
   IncreaseSumAndCount(strict_cast<int64_t>(count) * value, count);

@@ -10,7 +10,6 @@
 #include <vector>
 
 #include "base/macros.h"
-#include "base/memory/aligned_memory.h"
 #include "build/build_config.h"
 
 namespace base {
@@ -47,17 +46,17 @@ class StackAllocator : public std::allocator<T> {
     }
 
     // Casts the buffer in its right type.
-    T* stack_buffer() { return stack_buffer_.template data_as<T>(); }
+    T* stack_buffer() { return reinterpret_cast<T*>(stack_buffer_); }
     const T* stack_buffer() const {
-      return stack_buffer_.template data_as<T>();
+      return reinterpret_cast<const T*>(&stack_buffer_);
     }
 
     // The buffer itself. It is not of type T because we don't want the
     // constructors and destructors to be automatically called. Define a POD
     // buffer of the right size instead.
-    base::AlignedMemory<sizeof(T[stack_capacity]), ALIGNOF(T)> stack_buffer_;
+    alignas(T) char stack_buffer_[sizeof(T[stack_capacity])];
 #if defined(__GNUC__) && !defined(ARCH_CPU_X86_FAMILY)
-    static_assert(ALIGNOF(T) <= 16, "http://crbug.com/115612");
+    static_assert(alignof(T) <= 16, "http://crbug.com/115612");
 #endif
 
     // Set when the stack buffer is used for an allocation. We do not track

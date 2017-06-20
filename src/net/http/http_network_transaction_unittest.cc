@@ -733,8 +733,7 @@ template <>
 CaptureGroupNameHttpProxySocketPool::CaptureGroupNameSocketPool(
     HostResolver* /* host_resolver */,
     CertVerifier* /* cert_verifier */)
-    : HttpProxyClientSocketPool(0, 0, NULL, NULL, NULL) {
-}
+    : HttpProxyClientSocketPool(0, 0, NULL, NULL, NULL, NULL) {}
 
 template <>
 CaptureGroupNameSSLSocketPool::CaptureGroupNameSocketPool(
@@ -10111,7 +10110,7 @@ TEST_F(HttpNetworkTransactionTest, HonorAlternativeServiceHeader) {
   ASSERT_EQ(1u, alternative_service_info_vector.size());
   AlternativeService alternative_service(kProtoHTTP2, "mail.example.org", 443);
   EXPECT_EQ(alternative_service,
-            alternative_service_info_vector[0].alternative_service);
+            alternative_service_info_vector[0].alternative_service());
 }
 
 // Regression test for https://crbug.com/615497.
@@ -10353,11 +10352,11 @@ TEST_F(HttpNetworkTransactionTest, HonorMultipleAlternativeServiceHeaders) {
 
   AlternativeService alternative_service(kProtoHTTP2, "www.example.com", 443);
   EXPECT_EQ(alternative_service,
-            alternative_service_info_vector[0].alternative_service);
+            alternative_service_info_vector[0].alternative_service());
   AlternativeService alternative_service_2(kProtoHTTP2, "www.example.org",
                                            1234);
   EXPECT_EQ(alternative_service_2,
-            alternative_service_info_vector[1].alternative_service);
+            alternative_service_info_vector[1].alternative_service());
 }
 
 TEST_F(HttpNetworkTransactionTest, IdentifyQuicBroken) {
@@ -10544,7 +10543,7 @@ TEST_F(HttpNetworkTransactionTest, MarkBrokenAlternateProtocolAndFallback) {
       http_server_properties->GetAlternativeServiceInfos(server);
   ASSERT_EQ(1u, alternative_service_info_vector.size());
   EXPECT_EQ(alternative_service,
-            alternative_service_info_vector[0].alternative_service);
+            alternative_service_info_vector[0].alternative_service());
   EXPECT_TRUE(
       http_server_properties->IsAlternativeServiceBroken(alternative_service));
 }

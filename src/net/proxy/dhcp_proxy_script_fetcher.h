@@ -95,6 +95,7 @@ class NET_EXPORT_PRIVATE DoNothingDhcpProxyScriptFetcher
   void Cancel() override;
   void OnShutdown() override;
   const GURL& GetPacURL() const override;
+  std::string GetFetcherName() const override;
 
  private:
   GURL gurl_;

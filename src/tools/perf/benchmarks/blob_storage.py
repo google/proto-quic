@@ -46,3 +46,6 @@ class BlobStorage(perf_benchmark.PerfBenchmark):
         'blob-reads' not in value.name):
       return False
     return value.values != None
+
+  def GetExpectations(self):
+    return page_sets.BlobWorkshopStoryExpectations()

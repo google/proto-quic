@@ -16,7 +16,7 @@ class ArrayOutputBuffer : public ZeroCopyOutputBuffer {
   // of the output.
   ArrayOutputBuffer(char* buffer, int64_t size)
       : current_(buffer), begin_(buffer), capacity_(size) {}
-  ~ArrayOutputBuffer() override{};
+  ~ArrayOutputBuffer() override {}
 
   ArrayOutputBuffer(const ArrayOutputBuffer&) = delete;
   ArrayOutputBuffer& operator=(const ArrayOutputBuffer&) = delete;

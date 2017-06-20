@@ -118,8 +118,7 @@ class _DromaeoBenchmark(perf_benchmark.PerfBenchmark):
     ps = story.StorySet(
         archive_data_file=archive_data_file,
         base_dir=os.path.dirname(os.path.abspath(__file__)),
-        cloud_storage_bucket=story.PUBLIC_BUCKET,
-        verify_names=True)
+        cloud_storage_bucket=story.PUBLIC_BUCKET)
     url = 'http://dromaeo.com?%s' % self.query_param
     ps.AddStory(page_module.Page(
         url, ps, ps.base_dir, make_javascript_deterministic=False, name=url))

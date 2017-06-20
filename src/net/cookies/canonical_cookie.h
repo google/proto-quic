@@ -144,6 +144,21 @@ class NET_EXPORT CanonicalCookie {
   // FullCompare() are also sorted with respect to PartialCompare().
   bool FullCompare(const CanonicalCookie& other) const;
 
+  // Return whether this object is a valid CanonicalCookie().  Invalid
+  // cookies may be constructed by the detailed constructor.
+  // A cookie is considered canonical if-and-only-if:
+  // * It can be created by CanonicalCookie::Create, or
+  // * It is identical to a cookie created by CanonicalCookie::Create except
+  //   that the creation time is null, or
+  // * It can be derived from a cookie created by CanonicalCookie::Create by
+  //   entry into and retrieval from a cookie store (specifically, this means
+  //   by the setting of an creation time in place of a null creation time, and
+  //   the setting of a last access time).
+  // An additional requirement on a CanonicalCookie is that if the last
+  // access time is non-null, the creation time must also be non-null and
+  // greater than the last access time.
+  bool IsCanonical() const;
+
  private:
   FRIEND_TEST_ALL_PREFIXES(CanonicalCookieTest, TestPrefixHistograms);
 

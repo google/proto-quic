@@ -31,7 +31,7 @@ class ToughScrollingCasesPageSet(story.StorySet):
   """
 
   def __init__(self):
-    super(ToughScrollingCasesPageSet, self).__init__(verify_names=True)
+    super(ToughScrollingCasesPageSet, self).__init__()
 
     fast_scrolling_page_name_list = [
       'text',
@@ -55,3 +55,7 @@ class ToughScrollingCasesPageSet(story.StorySet):
           speed,
           self,
           synthetic_gesture_source))
+
+class ToughScrollingCasesStoryExpectations(story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    pass

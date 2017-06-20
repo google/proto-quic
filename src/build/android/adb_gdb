@@ -87,6 +87,7 @@ ADB=
 ANNOTATE=
 FORCE=
 GDBEXEPOSTFIX=gdb
+CGDB=
 GDBINIT=
 GDBSERVER=
 HELP=
@@ -206,6 +207,12 @@ for opt; do
     --ui)
       GDBEXEPOSTFIX=gdbtui
       ;;
+    --cgdb)
+      CGDB=cgdb
+      ;;
+    --cgdb=*)
+      CGDB=$optarg
+      ;;
     --verbose)
       VERBOSE=$(( $VERBOSE + 1 ))
       ;;
@@ -306,6 +313,7 @@ Valid options:
   --help|-h|-?          Print this message.
   --verbose             Increase verbosity.
 
+  --cgdb[=<file>]       Use cgdb (an interface for gdb that shows the code).
   --sandboxed           Debug first sandboxed process we find.
   --sandboxed=<num>     Debug specific sandboxed process.
   --symbol-dir=<path>   Specify directory with symbol shared libraries.
@@ -1047,5 +1055,9 @@ if [ "$VERBOSE" -gt 0 ]; then
 fi
 
 log "Launching gdb client: $GDB $GDB_ARGS -x $COMMANDS"
-$GDB $GDB_ARGS -x $COMMANDS &&
+if [ "$CGDB" ]; then
+  $CGDB -d $GDB -- $GDB_ARGS -x $COMMANDS
+else
+  $GDB $GDB_ARGS -x $COMMANDS
+fi
 rm -f "$GDBSERVER_PIDFILE"

@@ -33,6 +33,5 @@ class ChromeSigninPageSet(story.StorySet):
   def __init__(self):
     super(ChromeSigninPageSet, self).__init__(
         archive_data_file='data/chrome_signin_archive.json',
-        cloud_storage_bucket=story.INTERNAL_BUCKET,
-        verify_names=True)
+        cloud_storage_bucket=story.INTERNAL_BUCKET)
     self.AddStory(ChromeSigninPage(self))

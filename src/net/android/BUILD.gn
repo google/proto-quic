@@ -41,28 +41,47 @@ android_aidl("embedded_test_server_aidl") {
   ]
 }
 
+android_library("embedded_test_server_aidl_java") {
+  testonly = true
+  deps = [
+    "//third_party/android_tools:android_support_annotations_java",
+  ]
+  srcjar_deps = [ ":embedded_test_server_aidl" ]
+}
+
 android_library("net_java_test_support") {
   testonly = true
   java_files = [
-    "../test/android/javatests/src/org/chromium/net/test/DummySpnegoAuthenticator.java",
-    "../test/android/javatests/src/org/chromium/net/test/DummySpnegoAuthenticatorService.java",
     "../test/android/javatests/src/org/chromium/net/test/EmbeddedTestServer.java",
-    "../test/android/javatests/src/org/chromium/net/test/EmbeddedTestServerImpl.java",
-    "../test/android/javatests/src/org/chromium/net/test/EmbeddedTestServerService.java",
     "../test/android/javatests/src/org/chromium/net/test/util/CertTestUtil.java",
     "../test/android/javatests/src/org/chromium/net/test/util/NetworkChangeNotifierTestUtil.java",
     "../test/android/javatests/src/org/chromium/net/test/util/TestWebServer.java",
   ]
   deps = [
+    ":embedded_test_server_aidl_java",
     ":net_java",
     "//base:base_java",
     "//base:base_java_test_support",
     "//third_party/android_tools:android_support_annotations_java",
     "//third_party/junit",
   ]
-  srcjar_deps = [
-    ":embedded_test_server_aidl",
-    ":net_java_test_support_enums_srcjar",
+  srcjar_deps = [ ":net_java_test_support_enums_srcjar" ]
+}
+
+android_library("net_java_test_support_provider") {
+  testonly = true
+  java_files = [
+    "../test/android/javatests/src/org/chromium/net/test/DummySpnegoAuthenticator.java",
+    "../test/android/javatests/src/org/chromium/net/test/DummySpnegoAuthenticatorService.java",
+    "../test/android/javatests/src/org/chromium/net/test/EmbeddedTestServerImpl.java",
+    "../test/android/javatests/src/org/chromium/net/test/EmbeddedTestServerService.java",
+  ]
+
+  deps = [
+    ":embedded_test_server_aidl_java",
+    ":net_java",
+    "//base:base_java",
+    "//base:base_java_test_support",
   ]
 }
 
@@ -99,6 +118,7 @@ android_apk("net_test_support_apk") {
   never_incremental = true
   deps = [
     ":net_java_test_support",
+    ":net_java_test_support_provider",
     "//base:base_java",
   ]
   android_manifest = "../test/android/javatests/AndroidManifest.xml"

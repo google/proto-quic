@@ -16,6 +16,14 @@ static_assert(DefaultSingletonTraits<int>::kRegisterAtExit == true,
 
 typedef void (*CallbackFunc)();
 
+template <size_t alignment>
+class AlignedData {
+ public:
+  AlignedData() {}
+  ~AlignedData() {}
+  alignas(alignment) char data_[alignment];
+};
+
 class IntSingleton {
  public:
   static IntSingleton* GetInstance() {
@@ -269,19 +277,17 @@ TEST_F(SingletonTest, Basic) {
     EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(ptr) & (align - 1))
 
 TEST_F(SingletonTest, Alignment) {
-  using base::AlignedMemory;
-
   // Create some static singletons with increasing sizes and alignment
   // requirements. By ordering this way, the linker will need to do some work to
   // ensure proper alignment of the static data.
   AlignedTestSingleton<int32_t>* align4 =
       AlignedTestSingleton<int32_t>::GetInstance();
-  AlignedTestSingleton<AlignedMemory<32, 32> >* align32 =
-      AlignedTestSingleton<AlignedMemory<32, 32> >::GetInstance();
-  AlignedTestSingleton<AlignedMemory<128, 128> >* align128 =
-      AlignedTestSingleton<AlignedMemory<128, 128> >::GetInstance();
-  AlignedTestSingleton<AlignedMemory<4096, 4096> >* align4096 =
-      AlignedTestSingleton<AlignedMemory<4096, 4096> >::GetInstance();
+  AlignedTestSingleton<AlignedData<32>>* align32 =
+      AlignedTestSingleton<AlignedData<32>>::GetInstance();
+  AlignedTestSingleton<AlignedData<128>>* align128 =
+      AlignedTestSingleton<AlignedData<128>>::GetInstance();
+  AlignedTestSingleton<AlignedData<4096>>* align4096 =
+      AlignedTestSingleton<AlignedData<4096>>::GetInstance();
 
   EXPECT_ALIGNED(align4, 4);
   EXPECT_ALIGNED(align32, 32);

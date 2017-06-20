@@ -593,10 +593,12 @@ component("base") {
     "nix/mime_util_xdg.h",
     "nix/xdg_util.cc",
     "nix/xdg_util.h",
+    "numerics/checked_math.h",
+    "numerics/checked_math_impl.h",
     "numerics/safe_conversions.h",
     "numerics/safe_conversions_impl.h",
     "numerics/safe_math.h",
-    "numerics/safe_math_impl.h",
+    "numerics/safe_math_shared_impl.h",
     "numerics/saturated_arithmetic.h",
     "numerics/saturated_arithmetic_arm.h",
     "observer_list.h",
@@ -818,6 +820,8 @@ component("base") {
     "task_scheduler/environment_config.h",
     "task_scheduler/initialization_util.cc",
     "task_scheduler/initialization_util.h",
+    "task_scheduler/lazy_task_runner.cc",
+    "task_scheduler/lazy_task_runner.h",
     "task_scheduler/post_task.cc",
     "task_scheduler/post_task.h",
     "task_scheduler/priority_queue.cc",
@@ -878,6 +882,10 @@ component("base") {
     "threading/platform_thread_win.cc",
     "threading/post_task_and_reply_impl.cc",
     "threading/post_task_and_reply_impl.h",
+    "threading/sequence_local_storage_map.cc",
+    "threading/sequence_local_storage_map.h",
+    "threading/sequence_local_storage_slot.cc",
+    "threading/sequence_local_storage_slot.h",
     "threading/sequenced_task_runner_handle.cc",
     "threading/sequenced_task_runner_handle.h",
     "threading/sequenced_worker_pool.cc",
@@ -948,12 +956,14 @@ component("base") {
     "trace_event/heap_profiler_allocation_register_win.cc",
     "trace_event/heap_profiler_event_filter.cc",
     "trace_event/heap_profiler_event_filter.h",
-    "trace_event/heap_profiler_heap_dump_writer.cc",
-    "trace_event/heap_profiler_heap_dump_writer.h",
+    "trace_event/heap_profiler_event_writer.cc",
+    "trace_event/heap_profiler_event_writer.h",
     "trace_event/heap_profiler_serialization_state.cc",
     "trace_event/heap_profiler_serialization_state.h",
     "trace_event/heap_profiler_stack_frame_deduplicator.cc",
     "trace_event/heap_profiler_stack_frame_deduplicator.h",
+    "trace_event/heap_profiler_string_deduplicator.cc",
+    "trace_event/heap_profiler_string_deduplicator.h",
     "trace_event/heap_profiler_type_name_deduplicator.cc",
     "trace_event/heap_profiler_type_name_deduplicator.h",
     "trace_event/java_heap_dump_provider_android.cc",
@@ -966,6 +976,7 @@ component("base") {
     "trace_event/memory_allocator_dump_guid.h",
     "trace_event/memory_dump_manager.cc",
     "trace_event/memory_dump_manager.h",
+    "trace_event/memory_dump_manager_test_utils.h",
     "trace_event/memory_dump_provider.h",
     "trace_event/memory_dump_provider_info.cc",
     "trace_event/memory_dump_provider_info.h",
@@ -1032,6 +1043,8 @@ component("base") {
     "version.h",
     "vlog.cc",
     "vlog.h",
+    "win/com_init_check_hook.cc",
+    "win/com_init_check_hook.h",
     "win/com_init_util.cc",
     "win/com_init_util.h",
     "win/current_module.h",
@@ -1052,6 +1065,8 @@ component("base") {
     "win/message_window.h",
     "win/object_watcher.cc",
     "win/object_watcher.h",
+    "win/patch_util.cc",
+    "win/patch_util.h",
     "win/process_startup_helper.cc",
     "win/process_startup_helper.h",
     "win/registry.cc",
@@ -1224,6 +1239,12 @@ component("base") {
   }
 
   if (is_fuchsia) {
+    # These are files that are not expected to have equivalent implementations
+    # on Fuchsia.
+    sources -= [ "sync_socket_posix.cc" ]
+
+    # These files have Fuchsia-specific implementations in the sources += block
+    # below, rather than using the generic POSIX or Linux-y ones.
     sources -= [
       "debug/stack_trace_posix.cc",
       "message_loop/message_pump_libevent.cc",
@@ -1246,6 +1267,7 @@ component("base") {
       "process/memory_fuchsia.cc",
       "process/process_fuchsia.cc",
       "process/process_handle_fuchsia.cc",
+      "process/process_iterator_fuchsia.cc",
       "process/process_metrics_fuchsia.cc",
       "rand_util_fuchsia.cc",
       "sys_info_fuchsia.cc",
@@ -2159,6 +2181,7 @@ test("base_unittests") {
     "task/cancelable_task_tracker_unittest.cc",
     "task_runner_util_unittest.cc",
     "task_scheduler/delayed_task_manager_unittest.cc",
+    "task_scheduler/lazy_task_runner_unittest.cc",
     "task_scheduler/priority_queue_unittest.cc",
     "task_scheduler/scheduler_lock_unittest.cc",
     "task_scheduler/scheduler_single_thread_task_runner_manager_unittest.cc",
@@ -2189,6 +2212,8 @@ test("base_unittests") {
     "test/user_action_tester_unittest.cc",
     "threading/platform_thread_unittest.cc",
     "threading/post_task_and_reply_impl_unittest.cc",
+    "threading/sequence_local_storage_map_unittest.cc",
+    "threading/sequence_local_storage_slot_unittest.cc",
     "threading/sequenced_task_runner_handle_unittest.cc",
     "threading/sequenced_worker_pool_unittest.cc",
     "threading/simple_thread_unittest.cc",
@@ -2213,8 +2238,9 @@ test("base_unittests") {
     "trace_event/event_name_filter_unittest.cc",
     "trace_event/heap_profiler_allocation_context_tracker_unittest.cc",
     "trace_event/heap_profiler_allocation_register_unittest.cc",
-    "trace_event/heap_profiler_heap_dump_writer_unittest.cc",
+    "trace_event/heap_profiler_event_writer_unittest.cc",
     "trace_event/heap_profiler_stack_frame_deduplicator_unittest.cc",
+    "trace_event/heap_profiler_string_deduplicator_unittest.cc",
     "trace_event/heap_profiler_type_name_deduplicator_unittest.cc",
     "trace_event/java_heap_dump_provider_android_unittest.cc",
     "trace_event/memory_allocator_dump_unittest.cc",
@@ -2237,6 +2263,7 @@ test("base_unittests") {
     "values_unittest.cc",
     "version_unittest.cc",
     "vlog_unittest.cc",
+    "win/com_init_check_hook_unittest.cc",
     "win/com_init_util_unittest.cc",
     "win/dllmain.cc",
     "win/enum_variant_unittest.cc",
@@ -2311,6 +2338,10 @@ test("base_unittests") {
       "//base/android/jni_generator:jni_generator_tests",
       "//base/test:test_support_java",
     ]
+  }
+
+  if (is_fuchsia) {
+    sources -= [ "sync_socket_unittest.cc" ]
   }
 
   if (is_ios) {
@@ -2558,7 +2589,6 @@ if (is_android) {
       "android/java/src/org/chromium/base/PackageUtils.java",
       "android/java/src/org/chromium/base/PathService.java",
       "android/java/src/org/chromium/base/PathUtils.java",
-      "android/java/src/org/chromium/base/PerfTraceEvent.java",
       "android/java/src/org/chromium/base/PowerMonitor.java",
       "android/java/src/org/chromium/base/Promise.java",
       "android/java/src/org/chromium/base/ResourceExtractor.java",
@@ -2680,7 +2710,6 @@ if (is_android) {
       "test/android/javatests/src/org/chromium/base/test/util/MetricsUtils.java",
       "test/android/javatests/src/org/chromium/base/test/util/MinAndroidSdkLevel.java",
       "test/android/javatests/src/org/chromium/base/test/util/MinAndroidSdkLevelSkipCheck.java",
-      "test/android/javatests/src/org/chromium/base/test/util/PerfTest.java",
       "test/android/javatests/src/org/chromium/base/test/util/Restriction.java",
       "test/android/javatests/src/org/chromium/base/test/util/RestrictionSkipCheck.java",
       "test/android/javatests/src/org/chromium/base/test/util/RetryOnFailure.java",

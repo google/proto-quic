@@ -76,14 +76,13 @@ public class EmbeddedTestServer {
     /** Bind the service that will run the native server object.
      *
      *  @param context The context to use to bind the service. This will also be used to unbind
-     #          the service at server destruction time.
+     *          the service at server destruction time.
      */
     public void initializeNative(Context context) throws InterruptedException {
         mContext = context;
 
         Intent intent = new Intent(EMBEDDED_TEST_SERVER_SERVICE);
-        intent.setClassName(
-                "org.chromium.net.test.support", "org.chromium.net.test.EmbeddedTestServerService");
+        setIntentClassName(intent);
         if (!mContext.bindService(intent, mConn, Context.BIND_AUTO_CREATE)) {
             throw new EmbeddedTestServerFailure(
                     "Unable to bind to the EmbeddedTestServer service.");
@@ -107,6 +106,15 @@ public class EmbeddedTestServer {
                 throw new EmbeddedTestServerFailure("Failed to initialize native server.");
             }
         }
+    }
+
+    /** Set intent package and class name that will pass to the service.
+     *
+     *  @param intent The intent to use to pass into the service.
+     */
+    protected void setIntentClassName(Intent intent) {
+        intent.setClassName(
+                "org.chromium.net.test.support", "org.chromium.net.test.EmbeddedTestServerService");
     }
 
     /** Add the default handlers and serve files from the provided directory relative to the
@@ -233,6 +241,20 @@ public class EmbeddedTestServer {
                 + "the instantiation will hang forever waiting for tasks to post to UI thread",
                 Looper.getMainLooper(), Looper.myLooper());
         EmbeddedTestServer server = new EmbeddedTestServer();
+        return initializeAndStartServer(server, context);
+    }
+
+    /** Initialize a server with the default handlers.
+     *
+     *  This handles native object initialization, server configuration, and server initialization.
+     *  On returning, the server is ready for use.
+     *
+     *  @param server The server instance that will be initialized.
+     *  @param context The context in which the server will run.
+     *  @return The created server.
+     */
+    public static <T extends EmbeddedTestServer> T initializeAndStartServer(
+            T server, Context context) throws InterruptedException {
         server.initializeNative(context);
         server.addDefaultHandlers("");
         if (!server.start()) {

@@ -49,13 +49,8 @@ bool HMAC::Init(const unsigned char* key, size_t key_length) {
   return true;
 }
 
-bool HMAC::Init(SymmetricKey* key) {
-  std::string raw_key;
-  bool result = key->GetRawKey(&raw_key) && Init(raw_key);
-  // Zero out key copy.  This might get optimized away, but one can hope.
-  // Using std::string to store key info at all is a larger problem.
-  std::fill(raw_key.begin(), raw_key.end(), 0);
-  return result;
+bool HMAC::Init(const SymmetricKey* key) {
+  return Init(key->key());
 }
 
 bool HMAC::Sign(const base::StringPiece& data,

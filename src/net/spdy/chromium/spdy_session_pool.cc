@@ -421,6 +421,7 @@ void SpdySessionPool::OnNewSpdySessionReady(
       return;
     HttpStreamFactoryImpl::Request* request = *iter->second.begin();
     request->Complete(was_alpn_negotiated, negotiated_protocol, using_spdy);
+    RemoveRequestFromSpdySessionRequestMap(request);
     if (request->stream_type() == HttpStreamRequest::BIDIRECTIONAL_STREAM) {
       request->OnBidirectionalStreamImplReady(
           used_ssl_config, used_proxy_info,
@@ -436,6 +437,29 @@ void SpdySessionPool::OnNewSpdySessionReady(
     }
   }
   // TODO(mbelshe): Alert other valid requests.
+}
+
+bool SpdySessionPool::StartRequest(const SpdySessionKey& spdy_session_key,
+                                   const base::Closure& callback) {
+  auto iter = spdy_session_pending_request_map_.find(spdy_session_key);
+  if (iter == spdy_session_pending_request_map_.end()) {
+    spdy_session_pending_request_map_.emplace(spdy_session_key,
+                                              std::list<base::Closure>{});
+    return true;
+  }
+  iter->second.push_back(callback);
+  return false;
+}
+
+void SpdySessionPool::ResumePendingRequests(
+    const SpdySessionKey& spdy_session_key) {
+  auto iter = spdy_session_pending_request_map_.find(spdy_session_key);
+  if (iter != spdy_session_pending_request_map_.end()) {
+    for (auto callback : iter->second) {
+      base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, callback);
+    }
+    spdy_session_pending_request_map_.erase(iter);
+  }
 }
 
 void SpdySessionPool::AddRequestToSpdySessionRequestMap(
@@ -454,6 +478,9 @@ void SpdySessionPool::RemoveRequestFromSpdySessionRequestMap(
   if (!request->HasSpdySessionKey())
     return;
   const SpdySessionKey& spdy_session_key = request->GetSpdySessionKey();
+  // Resume all pending requests now that |request| is done/canceled.
+  ResumePendingRequests(spdy_session_key);
+
   auto iter = spdy_session_request_map_.find(spdy_session_key);
   DCHECK(iter != spdy_session_request_map_.end());
   RequestSet& request_set = iter->second;
@@ -461,6 +488,7 @@ void SpdySessionPool::RemoveRequestFromSpdySessionRequestMap(
   request_set.erase(request);
   if (request_set.empty())
     spdy_session_request_map_.erase(spdy_session_key);
+  // Resets |request|'s SpdySessionKey. This will invalid |spdy_session_key|.
   request->ResetSpdySessionKey();
 }
 

@@ -48,8 +48,7 @@ class ToughCompositorCasesPageSet(story.StorySet):
   def __init__(self):
     super(ToughCompositorCasesPageSet, self).__init__(
       archive_data_file='data/tough_compositor_cases.json',
-      cloud_storage_bucket=story.PUBLIC_BUCKET,
-      verify_names=True)
+      cloud_storage_bucket=story.PUBLIC_BUCKET)
 
     scroll_urls_list = [
       # Why: Baseline CC scrolling page. A long page with only text. """
@@ -78,3 +77,9 @@ class ToughCompositorCasesPageSet(story.StorySet):
 
     for url in wait_urls_list:
       self.AddStory(ToughCompositorWaitPage(url, self))
+
+
+class ToughCompositorCaseStoryExpectations(
+    story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    pass

@@ -4,6 +4,7 @@
 
 #include "net/test/embedded_test_server/android/embedded_test_server_android.h"
 
+#include "base/android/jni_array.h"
 #include "base/android/jni_string.h"
 #include "base/android/scoped_java_ref.h"
 #include "base/bind.h"
@@ -14,6 +15,7 @@
 
 using base::android::JavaParamRef;
 using base::android::JavaRef;
+using base::android::ScopedJavaLocalRef;
 
 namespace net {
 namespace test_server {
@@ -42,7 +44,7 @@ jboolean EmbeddedTestServerAndroid::ShutdownAndWaitUntilComplete(
   return test_server_.ShutdownAndWaitUntilComplete();
 }
 
-base::android::ScopedJavaLocalRef<jstring> EmbeddedTestServerAndroid::GetURL(
+ScopedJavaLocalRef<jstring> EmbeddedTestServerAndroid::GetURL(
     JNIEnv* env,
     const JavaParamRef<jobject>& jobj,
     const JavaParamRef<jstring>& jrelative_url) const {
@@ -58,6 +60,17 @@ void EmbeddedTestServerAndroid::AddDefaultHandlers(
   const base::FilePath directory(
       base::android::ConvertJavaStringToUTF8(env, jdirectory_path));
   test_server_.AddDefaultHandlers(directory);
+}
+
+typedef std::unique_ptr<HttpResponse> (*HandleRequestPtr)(
+    const HttpRequest& request);
+
+void EmbeddedTestServerAndroid::RegisterRequestHandler(
+    JNIEnv* env,
+    const JavaParamRef<jobject>& jobj,
+    jlong handler) {
+  HandleRequestPtr handler_ptr = reinterpret_cast<HandleRequestPtr>(handler);
+  test_server_.RegisterRequestHandler(base::Bind(handler_ptr));
 }
 
 void EmbeddedTestServerAndroid::ServeFilesFromDirectory(

@@ -17,7 +17,8 @@ class CTPage(page_module.Page):
         url=url,
         page_set=page_set,
         shared_page_state_class=shared_page_state_class,
-        traffic_setting=traffic_setting)
+        traffic_setting=traffic_setting,
+        name=url)
     self.archive_data_file = archive_data_file
     self._run_page_interaction_callback = run_page_interaction_callback
 

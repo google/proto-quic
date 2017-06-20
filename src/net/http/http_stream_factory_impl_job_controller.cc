@@ -107,9 +107,7 @@ HttpStreamFactoryImpl::JobController::~JobController() {
   alternative_job_.reset();
   bound_job_ = nullptr;
   if (pac_request_) {
-    // TODO(mmenke):  Convert this to a DCHECK once https://crbug.com/723589 is
-    // resolved.
-    CHECK_EQ(STATE_RESOLVE_PROXY_COMPLETE, next_state_);
+    DCHECK_EQ(STATE_RESOLVE_PROXY_COMPLETE, next_state_);
     session_->proxy_service()->CancelPacRequest(pac_request_);
   }
   net_log_.EndEvent(NetLogEventType::HTTP_STREAM_JOB_CONTROLLER);
@@ -176,8 +174,10 @@ LoadState HttpStreamFactoryImpl::JobController::GetLoadState() const {
 }
 
 void HttpStreamFactoryImpl::JobController::OnRequestComplete() {
-  CancelJobs();
   DCHECK(request_);
+
+  RemoveRequestFromSpdySessionRequestMap();
+  CancelJobs();
   request_ = nullptr;
   if (bound_job_) {
     if (bound_job_->job_type() == MAIN) {
@@ -331,8 +331,7 @@ void HttpStreamFactoryImpl::JobController::OnStreamFailed(
   if (next_state_ == STATE_RESOLVE_PROXY_COMPLETE) {
     if (status == ERR_IO_PENDING)
       return;
-    // TODO(xunjieli): Use DCHECK once https://crbug.com/723589 is fixed.
-    CHECK_EQ(OK, status);
+    DCHECK_EQ(OK, status);
     RunLoop(status);
     return;
   }
@@ -602,6 +601,8 @@ bool HttpStreamFactoryImpl::JobController::ShouldWait(Job* job) {
 void HttpStreamFactoryImpl::JobController::SetSpdySessionKey(
     Job* job,
     const SpdySessionKey& spdy_session_key) {
+  DCHECK(!job->using_quic());
+
   if (is_preconnect_ || IsJobOrphaned(job))
     return;
 
@@ -611,6 +612,8 @@ void HttpStreamFactoryImpl::JobController::SetSpdySessionKey(
 
 void HttpStreamFactoryImpl::JobController::
     RemoveRequestFromSpdySessionRequestMapForJob(Job* job) {
+  DCHECK(!job->using_quic());
+
   if (is_preconnect_ || IsJobOrphaned(job))
     return;
 
@@ -711,9 +714,7 @@ int HttpStreamFactoryImpl::JobController::DoLoop(int rv) {
 }
 
 int HttpStreamFactoryImpl::JobController::DoResolveProxy() {
-  // TODO(mmenke):  Convert this to a DCHECK once https://crbug.com/723589 is
-  // resolved.
-  CHECK(!pac_request_);
+  DCHECK(!pac_request_);
   DCHECK(session_);
 
   next_state_ = STATE_RESOLVE_PROXY_COMPLETE;
@@ -736,7 +737,7 @@ int HttpStreamFactoryImpl::JobController::DoResolveProxyComplete(int rv) {
 
   pac_request_ = nullptr;
   net_log_.AddEvent(
-      NetLogEventType::HTTP_STREAM_JOB_PROXY_SERVER_RESOLVED,
+      NetLogEventType::HTTP_STREAM_JOB_CONTROLLER_PROXY_SERVER_RESOLVED,
       base::Bind(
           &NetLogHttpStreamJobProxyServerResolved,
           proxy_info_.is_empty() ? ProxyServer() : proxy_info_.proxy_server()));
@@ -769,24 +770,24 @@ int HttpStreamFactoryImpl::JobController::DoCreateJobs() {
   GURL origin_url = ApplyHostMappingRules(request_info_.url, &destination);
 
   // Create an alternative job if alternative service is set up for this domain.
-  const AlternativeService alternative_service =
+  alternative_service_ =
       GetAlternativeServiceInfoFor(request_info_, delegate_, stream_type_)
-          .alternative_service;
+          .alternative_service();
 
   if (is_preconnect_) {
     // Due to how the socket pools handle priorities and idle sockets, only IDLE
     // priority currently makes sense for preconnects. The priority for
     // preconnects is currently ignored (see RequestSocketsForPool()), but could
     // be used at some point for proxy resolution or something.
-    if (alternative_service.protocol != kProtoUnknown) {
+    if (alternative_service_.protocol != kProtoUnknown) {
       HostPortPair alternative_destination(
-          alternative_service.host_port_pair());
+          alternative_service_.host_port_pair());
       ignore_result(
           ApplyHostMappingRules(request_info_.url, &alternative_destination));
       main_job_ = job_factory_->CreateAltSvcJob(
           this, PRECONNECT, session_, request_info_, IDLE, proxy_info_,
           server_ssl_config_, proxy_ssl_config_, alternative_destination,
-          origin_url, alternative_service, enable_ip_based_pooling_,
+          origin_url, alternative_service_.protocol, enable_ip_based_pooling_,
           session_->net_log());
     } else {
       main_job_ = job_factory_->CreateMainJob(
@@ -803,21 +804,22 @@ int HttpStreamFactoryImpl::JobController::DoCreateJobs() {
       enable_ip_based_pooling_, net_log_.net_log());
   // Alternative Service can only be set for HTTPS requests while Alternative
   // Proxy is set for HTTP requests.
-  if (alternative_service.protocol != kProtoUnknown) {
+  if (alternative_service_.protocol != kProtoUnknown) {
     // Never share connection with other jobs for FTP requests.
     DVLOG(1) << "Selected alternative service (host: "
-             << alternative_service.host_port_pair().host()
-             << " port: " << alternative_service.host_port_pair().port() << ")";
+             << alternative_service_.host_port_pair().host()
+             << " port: " << alternative_service_.host_port_pair().port()
+             << ")";
 
     DCHECK(!request_info_.url.SchemeIs(url::kFtpScheme));
-    HostPortPair alternative_destination(alternative_service.host_port_pair());
+    HostPortPair alternative_destination(alternative_service_.host_port_pair());
     ignore_result(
         ApplyHostMappingRules(request_info_.url, &alternative_destination));
 
     alternative_job_ = job_factory_->CreateAltSvcJob(
         this, ALTERNATIVE, session_, request_info_, priority_, proxy_info_,
         server_ssl_config_, proxy_ssl_config_, alternative_destination,
-        origin_url, alternative_service, enable_ip_based_pooling_,
+        origin_url, alternative_service_.protocol, enable_ip_based_pooling_,
         net_log_.net_log());
 
     main_job_is_blocked_ = true;
@@ -870,7 +872,6 @@ void HttpStreamFactoryImpl::JobController::BindJob(Job* job) {
 
 void HttpStreamFactoryImpl::JobController::CancelJobs() {
   DCHECK(request_);
-  RemoveRequestFromSpdySessionRequestMap();
   if (job_bound_)
     return;
   if (alternative_job_)
@@ -908,6 +909,8 @@ void HttpStreamFactoryImpl::JobController::OnJobSucceeded(Job* job) {
   // |job| should only be nullptr if we're being serviced by a late bound
   // SpdySession (one that was not created by a job in our |jobs_| set).
   if (!job) {
+    // TODO(xunjieli): This seems to be dead code. Remove it. crbug.com/475060.
+    CHECK(false);
     DCHECK(!bound_job_);
     // NOTE(willchan): We do *NOT* call OrphanUnboundJob() here. The reason is
     // because we *WANT* to cancel the unnecessary Jobs from other requests if
@@ -945,10 +948,9 @@ void HttpStreamFactoryImpl::JobController::OnAlternativeServiceJobFailed(
     int net_error) {
   DCHECK_EQ(alternative_job_->job_type(), ALTERNATIVE);
   DCHECK_NE(OK, net_error);
-  DCHECK_NE(kProtoUnknown, alternative_job_->alternative_service().protocol);
+  DCHECK_NE(kProtoUnknown, alternative_service_.protocol);
 
   alternative_job_net_error_ = net_error;
-  failed_alternative_service_ = alternative_job_->alternative_service();
 
   if (IsJobOrphaned(alternative_job_.get())) {
     // If |request_| is gone then it must have been successfully served by
@@ -974,7 +976,7 @@ void HttpStreamFactoryImpl::JobController::OnAlternativeProxyJobFailed(
 }
 
 void HttpStreamFactoryImpl::JobController::ReportBrokenAlternativeService() {
-  DCHECK(failed_alternative_service_.protocol != kProtoUnknown);
+  DCHECK(alternative_service_.protocol != kProtoUnknown);
   DCHECK_NE(OK, alternative_job_net_error_);
 
   int error_to_report = alternative_job_net_error_;
@@ -990,7 +992,7 @@ void HttpStreamFactoryImpl::JobController::ReportBrokenAlternativeService() {
   HistogramBrokenAlternateProtocolLocation(
       BROKEN_ALTERNATE_PROTOCOL_LOCATION_HTTP_STREAM_FACTORY_IMPL_JOB_ALT);
   session_->http_server_properties()->MarkAlternativeServiceBroken(
-      failed_alternative_service_);
+      alternative_service_);
 }
 
 void HttpStreamFactoryImpl::JobController::MaybeNotifyFactoryOfCompletion() {
@@ -1031,19 +1033,20 @@ HttpStreamFactoryImpl::JobController::GetAlternativeServiceInfoFor(
   AlternativeServiceInfo alternative_service_info =
       GetAlternativeServiceInfoInternal(request_info, delegate, stream_type);
   AlternativeServiceType type;
-  if (alternative_service_info.alternative_service.protocol == kProtoUnknown) {
+  if (alternative_service_info.alternative_service().protocol ==
+      kProtoUnknown) {
     type = NO_ALTERNATIVE_SERVICE;
-  } else if (alternative_service_info.alternative_service.protocol ==
+  } else if (alternative_service_info.alternative_service().protocol ==
              kProtoQUIC) {
     if (request_info.url.host_piece() ==
-        alternative_service_info.alternative_service.host) {
+        alternative_service_info.alternative_service().host) {
       type = QUIC_SAME_DESTINATION;
     } else {
       type = QUIC_DIFFERENT_DESTINATION;
     }
   } else {
     if (request_info.url.host_piece() ==
-        alternative_service_info.alternative_service.host) {
+        alternative_service_info.alternative_service().host) {
       type = NOT_QUIC_SAME_DESTINATION;
     } else {
       type = NOT_QUIC_DIFFERENT_DESTINATION;
@@ -1081,12 +1084,12 @@ HttpStreamFactoryImpl::JobController::GetAlternativeServiceInfoInternal(
   for (const AlternativeServiceInfo& alternative_service_info :
        alternative_service_info_vector) {
     DCHECK(IsAlternateProtocolValid(
-        alternative_service_info.alternative_service.protocol));
+        alternative_service_info.alternative_service().protocol));
     if (!quic_advertised &&
-        alternative_service_info.alternative_service.protocol == kProtoQUIC)
+        alternative_service_info.alternative_service().protocol == kProtoQUIC)
       quic_advertised = true;
     if (http_server_properties.IsAlternativeServiceBroken(
-            alternative_service_info.alternative_service)) {
+            alternative_service_info.alternative_service())) {
       HistogramAlternateProtocolUsage(ALTERNATE_PROTOCOL_USAGE_BROKEN, false);
       continue;
     }
@@ -1099,24 +1102,25 @@ HttpStreamFactoryImpl::JobController::GetAlternativeServiceInfoInternal(
     // allow protocol upgrades to user-controllable ports.
     const int kUnrestrictedPort = 1024;
     if (!session_->params().enable_user_alternate_protocol_ports &&
-        (alternative_service_info.alternative_service.port >=
+        (alternative_service_info.alternative_service().port >=
              kUnrestrictedPort &&
          origin.port() < kUnrestrictedPort))
       continue;
 
-    if (alternative_service_info.alternative_service.protocol == kProtoHTTP2) {
+    if (alternative_service_info.alternative_service().protocol ==
+        kProtoHTTP2) {
       if (!session_->params().enable_http2_alternative_service)
         continue;
 
       // Cache this entry if we don't have a non-broken Alt-Svc yet.
-      if (first_alternative_service_info.alternative_service.protocol ==
+      if (first_alternative_service_info.alternative_service().protocol ==
           kProtoUnknown)
         first_alternative_service_info = alternative_service_info;
       continue;
     }
 
     DCHECK_EQ(kProtoQUIC,
-              alternative_service_info.alternative_service.protocol);
+              alternative_service_info.alternative_service().protocol);
     quic_all_broken = false;
     if (!session_->IsQuicEnabled())
       continue;
@@ -1135,7 +1139,7 @@ HttpStreamFactoryImpl::JobController::GetAlternativeServiceInfoInternal(
     QuicServerId server_id(mapped_origin, request_info.privacy_mode);
 
     HostPortPair destination(
-        alternative_service_info.alternative_service.host_port_pair());
+        alternative_service_info.alternative_service().host_port_pair());
     ignore_result(ApplyHostMappingRules(original_url, &destination));
 
     if (session_->quic_stream_factory()->CanUseExistingSession(server_id,
@@ -1144,7 +1148,7 @@ HttpStreamFactoryImpl::JobController::GetAlternativeServiceInfoInternal(
     }
 
     // Cache this entry if we don't have a non-broken Alt-Svc yet.
-    if (first_alternative_service_info.alternative_service.protocol ==
+    if (first_alternative_service_info.alternative_service().protocol ==
         kProtoUnknown)
       first_alternative_service_info = alternative_service_info;
   }
@@ -1243,9 +1247,7 @@ int HttpStreamFactoryImpl::JobController::ReconsiderProxyAfterError(Job* job,
                                                                     int error) {
   // ReconsiderProxyAfterError() should only be called when the last job fails.
   DCHECK(!(alternative_job_ && main_job_));
-  // TODO(mmenke):  Convert this to a DCHECK once https://crbug.com/723589 is
-  // resolved.
-  CHECK(!pac_request_);
+  DCHECK(!pac_request_);
   DCHECK(session_);
 
   if (!job->should_reconsider_proxy())
@@ -1272,7 +1274,8 @@ int HttpStreamFactoryImpl::JobController::ReconsiderProxyAfterError(Job* job,
       origin_url, request_info_.method, error, &proxy_info_, io_callback_,
       &pac_request_, session_->context().proxy_delegate, net_log_);
   if (rv == OK || rv == ERR_IO_PENDING) {
-    RemoveRequestFromSpdySessionRequestMap();
+    if (!job->using_quic())
+      RemoveRequestFromSpdySessionRequestMap();
     // Abandon all Jobs and start over.
     job_bound_ = false;
     bound_job_ = nullptr;

@@ -19,6 +19,7 @@
 #include "base/files/file_util.h"
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/metrics/histogram_functions.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/numerics/safe_conversions.h"
 #include "base/strings/string_number_conversions.h"
@@ -49,10 +50,34 @@ enum TempFileFailure {
   TEMP_FILE_FAILURE_MAX
 };
 
-void LogFailure(const FilePath& path, TempFileFailure failure_code,
+// Helper function to write samples to a histogram with a dynamically assigned
+// histogram name.  Works with different error code types convertible to int
+// which is the actual argument type of UmaHistogramExactLinear.
+template <typename SampleType>
+void UmaHistogramExactLinearWithSuffix(const char* histogram_name,
+                                       StringPiece histogram_suffix,
+                                       SampleType add_sample,
+                                       SampleType max_sample) {
+  static_assert(std::is_convertible<SampleType, int>::value,
+                "SampleType should be convertible to int");
+  DCHECK(histogram_name);
+  std::string histogram_full_name(histogram_name);
+  if (!histogram_suffix.empty()) {
+    histogram_full_name.append(".");
+    histogram_full_name.append(histogram_suffix.data(),
+                               histogram_suffix.length());
+  }
+  UmaHistogramExactLinear(histogram_full_name, static_cast<int>(add_sample),
+                          static_cast<int>(max_sample));
+}
+
+void LogFailure(const FilePath& path,
+                StringPiece histogram_suffix,
+                TempFileFailure failure_code,
                 StringPiece message) {
-  UMA_HISTOGRAM_ENUMERATION("ImportantFile.TempFileFailures", failure_code,
-                            TEMP_FILE_FAILURE_MAX);
+  UmaHistogramExactLinearWithSuffix("ImportantFile.TempFileFailures",
+                                    histogram_suffix, failure_code,
+                                    TEMP_FILE_FAILURE_MAX);
   DPLOG(WARNING) << "temp file failure: " << path.value() << " : " << message;
 }
 
@@ -62,21 +87,43 @@ void WriteScopedStringToFileAtomically(
     const FilePath& path,
     std::unique_ptr<std::string> data,
     Closure before_write_callback,
-    Callback<void(bool success)> after_write_callback) {
+    Callback<void(bool success)> after_write_callback,
+    const std::string& histogram_suffix) {
   if (!before_write_callback.is_null())
     before_write_callback.Run();
 
-  bool result = ImportantFileWriter::WriteFileAtomically(path, *data);
+  bool result =
+      ImportantFileWriter::WriteFileAtomically(path, *data, histogram_suffix);
 
   if (!after_write_callback.is_null())
     after_write_callback.Run(result);
+}
+
+base::File::Error GetLastFileError() {
+#if defined(OS_WIN)
+  return base::File::OSErrorToFileError(::GetLastError());
+#elif defined(OS_POSIX)
+  return base::File::OSErrorToFileError(errno);
+#else
+  return base::File::FILE_OK;
+#endif
+}
+
+void DeleteTmpFile(const FilePath& tmp_file_path,
+                   StringPiece histogram_suffix) {
+  if (!DeleteFile(tmp_file_path, false)) {
+    UmaHistogramExactLinearWithSuffix("ImportantFile.FileDeleteError",
+                                      histogram_suffix, -GetLastFileError(),
+                                      -base::File::FILE_ERROR_MAX);
+  }
 }
 
 }  // namespace
 
 // static
 bool ImportantFileWriter::WriteFileAtomically(const FilePath& path,
-                                              StringPiece data) {
+                                              StringPiece data,
+                                              StringPiece histogram_suffix) {
 #if defined(OS_CHROMEOS)
   // On Chrome OS, chrome gets killed when it cannot finish shutdown quickly,
   // and this function seems to be one of the slowest shutdown steps.
@@ -97,13 +144,21 @@ bool ImportantFileWriter::WriteFileAtomically(const FilePath& path,
   // is securely created.
   FilePath tmp_file_path;
   if (!CreateTemporaryFileInDir(path.DirName(), &tmp_file_path)) {
-    LogFailure(path, FAILED_CREATING, "could not create temporary file");
+    UmaHistogramExactLinearWithSuffix("ImportantFile.FileCreateError",
+                                      histogram_suffix, -GetLastFileError(),
+                                      -base::File::FILE_ERROR_MAX);
+    LogFailure(path, histogram_suffix, FAILED_CREATING,
+               "could not create temporary file");
     return false;
   }
 
   File tmp_file(tmp_file_path, File::FLAG_OPEN | File::FLAG_WRITE);
   if (!tmp_file.IsValid()) {
-    LogFailure(path, FAILED_OPENING, "could not open temporary file");
+    UmaHistogramExactLinearWithSuffix(
+        "ImportantFile.FileOpenError", histogram_suffix,
+        -tmp_file.error_details(), -base::File::FILE_ERROR_MAX);
+    LogFailure(path, histogram_suffix, FAILED_OPENING,
+               "could not open temporary file");
     DeleteFile(tmp_file_path, false);
     return false;
   }
@@ -111,25 +166,35 @@ bool ImportantFileWriter::WriteFileAtomically(const FilePath& path,
   // If this fails in the wild, something really bad is going on.
   const int data_length = checked_cast<int32_t>(data.length());
   int bytes_written = tmp_file.Write(0, data.data(), data_length);
+  if (bytes_written < data_length) {
+    UmaHistogramExactLinearWithSuffix("ImportantFile.FileWriteError",
+                                      histogram_suffix, -GetLastFileError(),
+                                      -base::File::FILE_ERROR_MAX);
+  }
   bool flush_success = tmp_file.Flush();
   tmp_file.Close();
 
   if (bytes_written < data_length) {
-    LogFailure(path, FAILED_WRITING, "error writing, bytes_written=" +
-               IntToString(bytes_written));
-    DeleteFile(tmp_file_path, false);
+    LogFailure(path, histogram_suffix, FAILED_WRITING,
+               "error writing, bytes_written=" + IntToString(bytes_written));
+    DeleteTmpFile(tmp_file_path, histogram_suffix);
     return false;
   }
 
   if (!flush_success) {
-    LogFailure(path, FAILED_FLUSHING, "error flushing");
-    DeleteFile(tmp_file_path, false);
+    LogFailure(path, histogram_suffix, FAILED_FLUSHING, "error flushing");
+    DeleteTmpFile(tmp_file_path, histogram_suffix);
     return false;
   }
 
-  if (!ReplaceFile(tmp_file_path, path, nullptr)) {
-    LogFailure(path, FAILED_RENAMING, "could not rename temporary file");
-    DeleteFile(tmp_file_path, false);
+  base::File::Error replace_file_error = base::File::FILE_OK;
+  if (!ReplaceFile(tmp_file_path, path, &replace_file_error)) {
+    UmaHistogramExactLinearWithSuffix("ImportantFile.FileRenameError",
+                                      histogram_suffix, -replace_file_error,
+                                      -base::File::FILE_ERROR_MAX);
+    LogFailure(path, histogram_suffix, FAILED_RENAMING,
+               "could not rename temporary file");
+    DeleteTmpFile(tmp_file_path, histogram_suffix);
     return false;
   }
 
@@ -138,19 +203,23 @@ bool ImportantFileWriter::WriteFileAtomically(const FilePath& path,
 
 ImportantFileWriter::ImportantFileWriter(
     const FilePath& path,
-    scoped_refptr<SequencedTaskRunner> task_runner)
+    scoped_refptr<SequencedTaskRunner> task_runner,
+    const char* histogram_suffix)
     : ImportantFileWriter(path,
                           std::move(task_runner),
-                          kDefaultCommitInterval) {}
+                          kDefaultCommitInterval,
+                          histogram_suffix) {}
 
 ImportantFileWriter::ImportantFileWriter(
     const FilePath& path,
     scoped_refptr<SequencedTaskRunner> task_runner,
-    TimeDelta interval)
+    TimeDelta interval,
+    const char* histogram_suffix)
     : path_(path),
       task_runner_(std::move(task_runner)),
       serializer_(nullptr),
       commit_interval_(interval),
+      histogram_suffix_(histogram_suffix ? histogram_suffix : ""),
       weak_factory_(this) {
   DCHECK(task_runner_);
 }
@@ -178,7 +247,7 @@ void ImportantFileWriter::WriteNow(std::unique_ptr<std::string> data) {
   Closure task = AdaptCallbackForRepeating(
       BindOnce(&WriteScopedStringToFileAtomically, path_, std::move(data),
                std::move(before_next_write_callback_),
-               std::move(after_next_write_callback_)));
+               std::move(after_next_write_callback_), histogram_suffix_));
 
   if (!task_runner_->PostTask(FROM_HERE, MakeCriticalClosure(task))) {
     // Posting the task to background message loop is not expected

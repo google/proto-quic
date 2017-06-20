@@ -16,6 +16,8 @@ import android.os.RemoteException;
 import org.chromium.base.annotations.CalledByNative;
 import org.chromium.base.annotations.JNINamespace;
 import org.chromium.base.process_launcher.FileDescriptorInfo;
+import org.chromium.base.process_launcher.ICallbackInt;
+import org.chromium.base.process_launcher.IChildProcessService;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -105,7 +107,7 @@ public final class MultiprocessTestClientLauncher {
         private final Object mConnectedLock = new Object();
         private final CountDownLatch mPidReceived = new CountDownLatch(1);
         private final int mSlot;
-        private ITestClient mService = null;
+        private IChildProcessService mService = null;
         @GuardedBy("mConnectedLock")
         private boolean mConnected;
         private int mPid;
@@ -151,13 +153,15 @@ public final class MultiprocessTestClientLauncher {
         @Override
         public void onServiceConnected(ComponentName className, IBinder service) {
             try {
-                mService = ITestClient.Stub.asInterface(service);
-                if (!mService.bindToCaller()) {
-                    Log.e(TAG, "Failed to bind to child service");
-                    return;
-                }
-                mPid = mService.setupConnection(mSetupBundle, mCallback);
-                mPidReceived.countDown();
+                mService = IChildProcessService.Stub.asInterface(service);
+                ICallbackInt pidCallback = new ICallbackInt.Stub() {
+                    @Override
+                    public void call(int pid) {
+                        mPid = pid;
+                        mPidReceived.countDown();
+                    }
+                };
+                mService.setupConnection(mSetupBundle, pidCallback, mCallback);
             } catch (RemoteException e) {
                 Log.e(TAG, "Connect failed");
             }
@@ -251,7 +255,8 @@ public final class MultiprocessTestClientLauncher {
             return null;
         }
         try {
-            return connection.getTestController().waitForMainToReturn(timeoutMs);
+            ITestController testController = connection.getTestController();
+            return testController.waitForMainToReturn(timeoutMs);
         } catch (RemoteException e) {
             Log.e(TAG, "Remote call to waitForMainToReturn failed.");
             return null;

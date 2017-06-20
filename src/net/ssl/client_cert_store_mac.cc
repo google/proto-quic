@@ -17,6 +17,7 @@
 #include "base/logging.h"
 #include "base/mac/mac_logging.h"
 #include "base/mac/scoped_cftyperef.h"
+#include "base/memory/ptr_util.h"
 #include "base/strings/sys_string_conversions.h"
 #include "base/synchronization/lock.h"
 #include "crypto/mac_security_services_lock.h"
@@ -24,6 +25,7 @@
 #include "net/cert/x509_util.h"
 #include "net/cert/x509_util_ios_and_mac.h"
 #include "net/cert/x509_util_mac.h"
+#include "net/ssl/client_cert_identity_mac.h"
 
 using base::ScopedCFTypeRef;
 
@@ -83,18 +85,18 @@ OSStatus CopyCertChain(SecCertificateRef cert_handle,
   return result;
 }
 
-// Returns true if |*cert| is issued by an authority in |valid_issuers|
-// according to Keychain Services, rather than using |cert|'s intermediate
-// certificates. If it is, |*cert| is updated to point to the completed
-// certificate
+// Returns true if |*identity| is issued by an authority in |valid_issuers|
+// according to Keychain Services, rather than using |identity|'s intermediate
+// certificates. If it is, |*identity| is updated to include the intermediates.
 bool IsIssuedByInKeychain(const std::vector<std::string>& valid_issuers,
-                          scoped_refptr<X509Certificate>* cert) {
-  DCHECK(cert);
-  DCHECK(cert->get());
+                          ClientCertIdentity* identity) {
+  DCHECK(identity);
+  DCHECK(identity->sec_identity_ref());
 
-  base::ScopedCFTypeRef<SecCertificateRef> os_cert(
-      x509_util::CreateSecCertificateFromX509Certificate(cert->get()));
-  if (!os_cert)
+  ScopedCFTypeRef<SecCertificateRef> os_cert;
+  int err = SecIdentityCopyCertificate(identity->sec_identity_ref(),
+                                       os_cert.InitializeInto());
+  if (err != noErr)
     return false;
   CFArrayRef cert_chain = NULL;
   OSStatus result = CopyCertChain(os_cert.get(), &cert_chain);
@@ -109,9 +111,9 @@ bool IsIssuedByInKeychain(const std::vector<std::string>& valid_issuers,
   std::vector<SecCertificateRef> intermediates;
   for (CFIndex i = 1, chain_count = CFArrayGetCount(cert_chain);
        i < chain_count; ++i) {
-    SecCertificateRef cert = reinterpret_cast<SecCertificateRef>(
+    SecCertificateRef sec_cert = reinterpret_cast<SecCertificateRef>(
         const_cast<void*>(CFArrayGetValueAtIndex(cert_chain, i)));
-    intermediates.push_back(cert);
+    intermediates.push_back(sec_cert);
   }
 
   scoped_refptr<X509Certificate> new_cert(
@@ -122,7 +124,7 @@ bool IsIssuedByInKeychain(const std::vector<std::string>& valid_issuers,
   if (!new_cert || !new_cert->IsIssuedByEncoded(valid_issuers))
     return false;
 
-  cert->swap(new_cert);
+  identity->SetIntermediates(new_cert->GetIntermediateCertificates());
   return true;
 }
 
@@ -177,58 +179,65 @@ bool SupportsSSLClientAuth(SecCertificateRef cert) {
   return true;
 }
 
-// Examines the certificates in |preferred_cert| and |regular_certs| to find
-// all certificates that match the client certificate request in |request|,
-// storing the matching certificates in |selected_certs|.
+// Examines the certificates in |preferred_identity| and |regular_identities| to
+// find all certificates that match the client certificate request in |request|,
+// storing the matching certificates in |selected_identities|.
 // If |query_keychain| is true, Keychain Services will be queried to construct
 // full certificate chains. If it is false, only the the certificates and their
 // intermediates (available via X509Certificate::GetIntermediateCertificates())
 // will be considered.
-void GetClientCertsImpl(const scoped_refptr<X509Certificate>& preferred_cert,
-                        const CertificateList& regular_certs,
+void GetClientCertsImpl(std::unique_ptr<ClientCertIdentity> preferred_identity,
+                        ClientCertIdentityList regular_identities,
                         const SSLCertRequestInfo& request,
                         bool query_keychain,
-                        CertificateList* selected_certs) {
-  CertificateList preliminary_list;
-  if (preferred_cert.get())
-    preliminary_list.push_back(preferred_cert);
-  preliminary_list.insert(preliminary_list.end(), regular_certs.begin(),
-                          regular_certs.end());
+                        ClientCertIdentityList* selected_identities) {
+  scoped_refptr<X509Certificate> preferred_cert_orig;
+  ClientCertIdentityList preliminary_list(std::move(regular_identities));
+  if (preferred_identity) {
+    preferred_cert_orig = preferred_identity->certificate();
+    preliminary_list.insert(preliminary_list.begin(),
+                            std::move(preferred_identity));
+  }
 
-  selected_certs->clear();
+  selected_identities->clear();
   for (size_t i = 0; i < preliminary_list.size(); ++i) {
-    scoped_refptr<X509Certificate>& cert = preliminary_list[i];
-    if (cert->HasExpired())
+    std::unique_ptr<ClientCertIdentity>& cert = preliminary_list[i];
+    if (cert->certificate()->HasExpired())
       continue;
 
     // Skip duplicates (a cert may be in multiple keychains).
     auto cert_iter = std::find_if(
-        selected_certs->begin(), selected_certs->end(),
-        [&cert](const scoped_refptr<X509Certificate>& other_cert) {
-          return X509Certificate::IsSameOSCert(cert->os_cert_handle(),
-                                               other_cert->os_cert_handle());
+        selected_identities->begin(), selected_identities->end(),
+        [&cert](
+            const std::unique_ptr<ClientCertIdentity>& other_cert_identity) {
+          return X509Certificate::IsSameOSCert(
+              cert->certificate()->os_cert_handle(),
+              other_cert_identity->certificate()->os_cert_handle());
         });
-    if (cert_iter != selected_certs->end())
+    if (cert_iter != selected_identities->end())
       continue;
 
     // Check if the certificate issuer is allowed by the server.
     if (request.cert_authorities.empty() ||
-        cert->IsIssuedByEncoded(request.cert_authorities) ||
+        cert->certificate()->IsIssuedByEncoded(request.cert_authorities) ||
         (query_keychain &&
-         IsIssuedByInKeychain(request.cert_authorities, &cert))) {
-      selected_certs->push_back(cert);
+         IsIssuedByInKeychain(request.cert_authorities, cert.get()))) {
+      selected_identities->push_back(std::move(cert));
     }
   }
 
   // Preferred cert should appear first in the ui, so exclude it from the
-  // sorting.
-  CertificateList::iterator sort_begin = selected_certs->begin();
-  CertificateList::iterator sort_end = selected_certs->end();
-  if (preferred_cert.get() && sort_begin != sort_end &&
-      sort_begin->get() == preferred_cert.get()) {
+  // sorting.  Compare the os_cert_handle since the X509Certificate object may
+  // have changed if intermediates were added.
+  ClientCertIdentityList::iterator sort_begin = selected_identities->begin();
+  ClientCertIdentityList::iterator sort_end = selected_identities->end();
+  if (preferred_cert_orig && sort_begin != sort_end &&
+      X509Certificate::IsSameOSCert(
+          sort_begin->get()->certificate()->os_cert_handle(),
+          preferred_cert_orig->os_cert_handle())) {
     ++sort_begin;
   }
-  sort(sort_begin, sort_end, x509_util::ClientCertSorter());
+  sort(sort_begin, sort_end, ClientCertIdentitySorter());
 }
 
 }  // namespace
@@ -242,12 +251,12 @@ void ClientCertStoreMac::GetClientCerts(
     const ClientCertListCallback& callback) {
   std::string server_domain = request.host_and_port.host();
 
-  ScopedCFTypeRef<SecIdentityRef> preferred_identity;
+  ScopedCFTypeRef<SecIdentityRef> preferred_sec_identity;
   if (!server_domain.empty()) {
     // See if there's an identity preference for this domain:
     ScopedCFTypeRef<CFStringRef> domain_str(
         base::SysUTF8ToCFStringRef("https://" + server_domain));
-    SecIdentityRef identity = NULL;
+    SecIdentityRef sec_identity = NULL;
     // While SecIdentityCopyPreferences appears to take a list of CA issuers
     // to restrict the identity search to, within Security.framework the
     // argument is ignored and filtering unimplemented. See
@@ -255,14 +264,15 @@ void ClientCertStoreMac::GetClientCerts(
     // _SecIdentityCopyPreferenceMatchingName().
     {
       base::AutoLock lock(crypto::GetMacSecurityServicesLock());
-      if (SecIdentityCopyPreference(domain_str, 0, NULL, &identity) == noErr)
-        preferred_identity.reset(identity);
+      if (SecIdentityCopyPreference(domain_str, 0, NULL, &sec_identity) ==
+          noErr)
+        preferred_sec_identity.reset(sec_identity);
     }
   }
 
   // Now enumerate the identities in the available keychains.
-  scoped_refptr<X509Certificate> preferred_cert = NULL;
-  CertificateList regular_certs;
+  std::unique_ptr<ClientCertIdentity> preferred_identity;
+  ClientCertIdentityList regular_identities;
 
   SecIdentitySearchRef search = NULL;
   OSStatus err;
@@ -271,71 +281,76 @@ void ClientCertStoreMac::GetClientCerts(
     err = SecIdentitySearchCreate(NULL, CSSM_KEYUSE_SIGN, &search);
   }
   if (err) {
-    callback.Run(CertificateList());
+    callback.Run(ClientCertIdentityList());
     return;
   }
   ScopedCFTypeRef<SecIdentitySearchRef> scoped_search(search);
   while (!err) {
-    SecIdentityRef identity = NULL;
+    ScopedCFTypeRef<SecIdentityRef> sec_identity;
     {
       base::AutoLock lock(crypto::GetMacSecurityServicesLock());
-      err = SecIdentitySearchCopyNext(search, &identity);
+      err = SecIdentitySearchCopyNext(search, sec_identity.InitializeInto());
     }
     if (err)
       break;
-    ScopedCFTypeRef<SecIdentityRef> scoped_identity(identity);
 
-    SecCertificateRef cert_handle;
-    err = SecIdentityCopyCertificate(identity, &cert_handle);
+    ScopedCFTypeRef<SecCertificateRef> cert_handle;
+    err = SecIdentityCopyCertificate(sec_identity.get(),
+                                     cert_handle.InitializeInto());
     if (err != noErr)
       continue;
-    ScopedCFTypeRef<SecCertificateRef> scoped_cert_handle(cert_handle);
 
-    if (!SupportsSSLClientAuth(cert_handle))
+    if (!SupportsSSLClientAuth(cert_handle.get()))
       continue;
 
     scoped_refptr<X509Certificate> cert(
         x509_util::CreateX509CertificateFromSecCertificate(
-            cert_handle, std::vector<SecCertificateRef>()));
+            cert_handle.get(), std::vector<SecCertificateRef>()));
     if (!cert)
       continue;
 
-    if (preferred_identity && CFEqual(preferred_identity, identity)) {
+    if (preferred_sec_identity &&
+        CFEqual(preferred_sec_identity, sec_identity.get())) {
       // Only one certificate should match.
-      DCHECK(!preferred_cert.get());
-      preferred_cert = cert;
+      DCHECK(!preferred_identity.get());
+      preferred_identity = base::MakeUnique<ClientCertIdentityMac>(
+          std::move(cert), std::move(sec_identity));
     } else {
-      regular_certs.push_back(cert);
+      regular_identities.push_back(base::MakeUnique<ClientCertIdentityMac>(
+          std::move(cert), std::move(sec_identity)));
     }
   }
 
   if (err != errSecItemNotFound) {
     OSSTATUS_LOG(ERROR, err) << "SecIdentitySearch error";
-    callback.Run(CertificateList());
+    callback.Run(ClientCertIdentityList());
     return;
   }
 
-  CertificateList selected_certs;
-  GetClientCertsImpl(preferred_cert, regular_certs, request, true,
-                     &selected_certs);
-  callback.Run(std::move(selected_certs));
+  ClientCertIdentityList selected_identities;
+  GetClientCertsImpl(std::move(preferred_identity),
+                     std::move(regular_identities), request, true,
+                     &selected_identities);
+  callback.Run(std::move(selected_identities));
 }
 
 bool ClientCertStoreMac::SelectClientCertsForTesting(
-    const CertificateList& input_certs,
+    ClientCertIdentityList input_identities,
     const SSLCertRequestInfo& request,
-    CertificateList* selected_certs) {
-  GetClientCertsImpl(NULL, input_certs, request, false, selected_certs);
+    ClientCertIdentityList* selected_identities) {
+  GetClientCertsImpl(NULL, std::move(input_identities), request, false,
+                     selected_identities);
   return true;
 }
 
 bool ClientCertStoreMac::SelectClientCertsGivenPreferredForTesting(
-    const scoped_refptr<X509Certificate>& preferred_cert,
-    const CertificateList& regular_certs,
+    std::unique_ptr<ClientCertIdentity> preferred_identity,
+    ClientCertIdentityList regular_identities,
     const SSLCertRequestInfo& request,
-    CertificateList* selected_certs) {
-  GetClientCertsImpl(
-      preferred_cert, regular_certs, request, false, selected_certs);
+    ClientCertIdentityList* selected_identities) {
+  GetClientCertsImpl(std::move(preferred_identity),
+                     std::move(regular_identities), request, false,
+                     selected_identities);
   return true;
 }
 

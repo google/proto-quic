@@ -447,6 +447,9 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
   // the relative priority of the given stream.
   SpdySerializedFrame SerializePriority(const SpdyPriorityIR& priority) const;
 
+  // Serializes an unknown frame given a frame header and payload.
+  SpdySerializedFrame SerializeUnknown(const SpdyUnknownIR& unknown) const;
+
   // Serialize a frame of unknown type.
   SpdySerializedFrame SerializeFrame(const SpdyFrameIR& frame);
 
@@ -511,6 +514,10 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
   // the relative priority of the given stream.
   bool SerializePriority(const SpdyPriorityIR& priority,
                          ZeroCopyOutputBuffer* output) const;
+
+  // Serializes an unknown frame given a frame header and payload.
+  bool SerializeUnknown(const SpdyUnknownIR& unknown,
+                        ZeroCopyOutputBuffer* output) const;
 
   // Serialize a frame of unknown type.
   size_t SerializeFrame(const SpdyFrameIR& frame, ZeroCopyOutputBuffer* output);

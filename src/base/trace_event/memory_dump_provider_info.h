@@ -31,7 +31,7 @@ namespace trace_event {
 // At any time, there is at most one instance of this class for each instance
 // of a given MemoryDumpProvider, but there might be several scoped_refptr
 // holding onto each of this. Specifically:
-// - In nominal conditions, there is a refptr for each registerd MDP in the
+// - In nominal conditions, there is a refptr for each registered MDP in the
 //   MDM's |dump_providers_| list.
 // - In most cases, the only refptr (in the |dump_providers_| list) is destroyed
 //   by MDM::UnregisterDumpProvider().

@@ -25,7 +25,7 @@ ProcessId GetProcId(ProcessHandle process) {
   mx_info_handle_basic_t basic;
   mx_status_t status = mx_object_get_info(process, MX_INFO_HANDLE_BASIC, &basic,
                                           sizeof(basic), nullptr, nullptr);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     DLOG(ERROR) << "mx_object_get_info failed: " << status;
     return MX_KOID_INVALID;
   }

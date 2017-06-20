@@ -716,9 +716,6 @@ TEST_F(QuicStreamTest, EarlyResponseFinHandling) {
 
 TEST_F(QuicStreamTest, StreamWaitsForAcks) {
   Initialize(kShouldProcessData);
-  if (!session_->use_stream_notifier()) {
-    return;
-  }
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
   // Stream is not waiting for acks initially.
@@ -752,53 +749,53 @@ TEST_F(QuicStreamTest, StreamWaitsForAcks) {
 
 TEST_F(QuicStreamTest, CancelStream) {
   Initialize(kShouldProcessData);
-  if (!session_->use_stream_notifier()) {
-    return;
-  }
-
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
   EXPECT_FALSE(stream_->IsWaitingForAcks());
 
   stream_->WriteOrBufferData(kData1, false, nullptr);
+  QuicStreamFrame frame(stream_->id(), 0, false, kData1);
   EXPECT_TRUE(stream_->IsWaitingForAcks());
   // Cancel stream.
   stream_->Reset(QUIC_STREAM_NO_ERROR);
   // stream still waits for acks as the error code is QUIC_STREAM_NO_ERROR, and
   // data is going to be retransmitted.
   EXPECT_TRUE(stream_->IsWaitingForAcks());
+  EXPECT_CALL(*session_,
+              SendRstStream(stream_->id(), QUIC_STREAM_CANCELLED, 9));
   stream_->Reset(QUIC_STREAM_CANCELLED);
-  // Stream stops waiting for acks as data is not going to be retransmitted.
-  EXPECT_FALSE(stream_->IsWaitingForAcks());
+  if (session_->use_stream_notifier()) {
+    stream_->OnStreamFrameDiscarded(frame);
+    // Stream stops waiting for acks as data is not going to be retransmitted.
+    EXPECT_FALSE(stream_->IsWaitingForAcks());
+  }
 }
 
 TEST_F(QuicStreamTest, RstFrameReceivedStreamNotFinishSending) {
   Initialize(kShouldProcessData);
-  if (!session_->use_stream_notifier()) {
-    return;
-  }
-
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
   EXPECT_FALSE(stream_->IsWaitingForAcks());
 
   stream_->WriteOrBufferData(kData1, false, nullptr);
+  QuicStreamFrame frame(stream_->id(), 0, false, kData1);
   EXPECT_TRUE(stream_->IsWaitingForAcks());
 
   // RST_STREAM received.
-  QuicRstStreamFrame rst_frame(stream_->id(), QUIC_STREAM_CANCELLED, 1234);
+  QuicRstStreamFrame rst_frame(stream_->id(), QUIC_STREAM_CANCELLED, 9);
+  EXPECT_CALL(*session_,
+              SendRstStream(stream_->id(), QUIC_RST_ACKNOWLEDGEMENT, 9));
   stream_->OnStreamReset(rst_frame);
-  // Stream stops waiting for acks as it does not finish sending and rst is
-  // sent.
-  EXPECT_FALSE(stream_->IsWaitingForAcks());
+  if (session_->use_stream_notifier()) {
+    stream_->OnStreamFrameDiscarded(frame);
+    // Stream stops waiting for acks as it does not finish sending and rst is
+    // sent.
+    EXPECT_FALSE(stream_->IsWaitingForAcks());
+  }
 }
 
 TEST_F(QuicStreamTest, RstFrameReceivedStreamFinishSending) {
   Initialize(kShouldProcessData);
-  if (!session_->use_stream_notifier()) {
-    return;
-  }
-
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
   EXPECT_FALSE(stream_->IsWaitingForAcks());
@@ -807,6 +804,7 @@ TEST_F(QuicStreamTest, RstFrameReceivedStreamFinishSending) {
   EXPECT_TRUE(stream_->IsWaitingForAcks());
 
   // RST_STREAM received.
+  EXPECT_CALL(*session_, SendRstStream(_, _, _)).Times(0);
   QuicRstStreamFrame rst_frame(stream_->id(), QUIC_STREAM_CANCELLED, 1234);
   stream_->OnStreamReset(rst_frame);
   // Stream stops waiting for acks as it has unacked data.
@@ -815,21 +813,23 @@ TEST_F(QuicStreamTest, RstFrameReceivedStreamFinishSending) {
 
 TEST_F(QuicStreamTest, ConnectionClosed) {
   Initialize(kShouldProcessData);
-  if (!session_->use_stream_notifier()) {
-    return;
-  }
-
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
   EXPECT_FALSE(stream_->IsWaitingForAcks());
 
   stream_->WriteOrBufferData(kData1, false, nullptr);
+  QuicStreamFrame frame(stream_->id(), 0, false, kData1);
   EXPECT_TRUE(stream_->IsWaitingForAcks());
 
+  EXPECT_CALL(*session_,
+              SendRstStream(stream_->id(), QUIC_RST_ACKNOWLEDGEMENT, 9));
   stream_->OnConnectionClosed(QUIC_INTERNAL_ERROR,
                               ConnectionCloseSource::FROM_SELF);
-  // Stream stops waiting for acks as connection is going to close.
-  EXPECT_FALSE(stream_->IsWaitingForAcks());
+  if (session_->use_stream_notifier()) {
+    stream_->OnStreamFrameDiscarded(frame);
+    // Stream stops waiting for acks as connection is going to close.
+    EXPECT_FALSE(stream_->IsWaitingForAcks());
+  }
 }
 
 }  // namespace

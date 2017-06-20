@@ -34,7 +34,7 @@ class BlinkPerfTest(page_test_test_case.PageTestTestCase):
         serving_dirs={self._BLINK_PERF_TEST_DATA_DIR,
                       self._BLINK_PERF_RESOURCES_DIR})
     page = page_module.Page('file://' + test_file_name, story_set,
-        base_dir=story_set.base_dir)
+        base_dir=story_set.base_dir, name=test_file_name)
     story_set.AddStory(page)
     return story_set
 

@@ -114,6 +114,90 @@ void BrokenAlternativeServices::ConfirmAlternativeService(
   }
 }
 
+const BrokenAlternativeServiceList&
+BrokenAlternativeServices::broken_alternative_service_list() const {
+  return broken_alternative_service_list_;
+}
+
+const RecentlyBrokenAlternativeServices&
+BrokenAlternativeServices::recently_broken_alternative_services() const {
+  return recently_broken_alternative_services_;
+}
+
+void BrokenAlternativeServices::SetBrokenAndRecentlyBrokenAlternativeServices(
+    std::unique_ptr<BrokenAlternativeServiceList>
+        broken_alternative_service_list,
+    std::unique_ptr<RecentlyBrokenAlternativeServices>
+        recently_broken_alternative_services) {
+  DCHECK(broken_alternative_service_list);
+  DCHECK(recently_broken_alternative_services);
+
+  // Make sure all alt svcs in |broken_alternative_service_list| has an entry
+  // in |recently_broken_alternative_services|
+  for (const auto& pair : *broken_alternative_service_list) {
+    DCHECK(recently_broken_alternative_services->Peek(pair.first) !=
+           recently_broken_alternative_services->end());
+  }
+
+  base::TimeTicks next_expiration =
+      broken_alternative_service_list_.empty()
+          ? base::TimeTicks::Max()
+          : broken_alternative_service_list_.front().second;
+
+  // Add recently broken alt svcs to |recently_broken_alternative_services_|.
+  // If an alt-svc already exists, update its broken-count to the one provided
+  // in |recently_broken_alternative_services|.
+
+  recently_broken_alternative_services_.Swap(
+      *recently_broken_alternative_services);
+  // Add back all existing recently broken alt svcs to cache so they're at
+  // front of recency list (MRUCache::Get() does this automatically).
+  for (auto it = recently_broken_alternative_services->rbegin();
+       it != recently_broken_alternative_services->rend(); ++it) {
+    if (recently_broken_alternative_services_.Get(it->first) ==
+        recently_broken_alternative_services_.end()) {
+      recently_broken_alternative_services_.Put(it->first, it->second);
+    }
+  }
+
+  // Add broken alt svcs to |broken_alternative_service_map_|. If an entry
+  // already exists, delete its corresponding entry in
+  // |broken_alternative_service_list_| and update its map entry to point to
+  // its position in |broken_alternative_service_list|.
+  for (auto it = broken_alternative_service_list->begin();
+       it != broken_alternative_service_list->end(); ++it) {
+    const AlternativeService& alternative_service = it->first;
+    auto map_it = broken_alternative_service_map_.find(alternative_service);
+    if (map_it != broken_alternative_service_map_.end()) {
+      broken_alternative_service_list_.erase(map_it->second);
+      map_it->second = it;
+    } else {
+      broken_alternative_service_map_.insert(
+          std::make_pair(alternative_service, it));
+    }
+  }
+
+  // Merge |broken_alternative_service_list| with
+  // |broken_alternative_service_list_|. Both should already be sorted by
+  // expiration time. std::list::merge() will not invalidate any iterators
+  // of either list, so all iterators in |broken_alternative_service_map_|
+  // remain valid.
+  broken_alternative_service_list_.merge(
+      *broken_alternative_service_list,
+      [](const std::pair<AlternativeService, base::TimeTicks>& lhs,
+         const std::pair<AlternativeService, base::TimeTicks>& rhs) -> bool {
+        return lhs.second < rhs.second;
+      });
+
+  base::TimeTicks new_next_expiration =
+      broken_alternative_service_list_.empty()
+          ? base::TimeTicks::Max()
+          : broken_alternative_service_list_.front().second;
+
+  if (new_next_expiration != next_expiration)
+    ScheduleBrokenAlternateProtocolMappingsExpiration();
+}
+
 bool BrokenAlternativeServices::AddToBrokenAlternativeServiceListAndMap(
     const AlternativeService& alternative_service,
     base::TimeTicks expiration,
@@ -129,7 +213,7 @@ bool BrokenAlternativeServices::AddToBrokenAlternativeServiceListAndMap(
   auto list_it = broken_alternative_service_list_.end();
   while (list_it != broken_alternative_service_list_.begin()) {
     --list_it;
-    if (list_it->expiration <= expiration) {
+    if (list_it->second <= expiration) {
       ++list_it;
       break;
     }
@@ -137,7 +221,7 @@ bool BrokenAlternativeServices::AddToBrokenAlternativeServiceListAndMap(
 
   // Insert |alternative_service| into the list and the map
   list_it = broken_alternative_service_list_.insert(
-      list_it, BrokenAltSvcExpireInfo(alternative_service, expiration));
+      list_it, std::make_pair(alternative_service, expiration));
   broken_alternative_service_map_.insert(
       std::make_pair(alternative_service, list_it));
 
@@ -150,13 +234,13 @@ void BrokenAlternativeServices::ExpireBrokenAlternateProtocolMappings() {
 
   while (!broken_alternative_service_list_.empty()) {
     auto it = broken_alternative_service_list_.begin();
-    if (now < it->expiration) {
+    if (now < it->second) {
       break;
     }
 
-    delegate_->OnExpireBrokenAlternativeService(it->alternative_service);
+    delegate_->OnExpireBrokenAlternativeService(it->first);
 
-    broken_alternative_service_map_.erase(it->alternative_service);
+    broken_alternative_service_map_.erase(it->first);
     broken_alternative_service_list_.erase(it);
   }
 
@@ -168,7 +252,7 @@ void BrokenAlternativeServices ::
     ScheduleBrokenAlternateProtocolMappingsExpiration() {
   DCHECK(!broken_alternative_service_list_.empty());
   base::TimeTicks now = clock_->NowTicks();
-  base::TimeTicks when = broken_alternative_service_list_.front().expiration;
+  base::TimeTicks when = broken_alternative_service_list_.front().second;
   base::TimeDelta delay = when > now ? when - now : base::TimeDelta();
   expiration_timer_.Stop();
   expiration_timer_.Start(

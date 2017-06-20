@@ -96,7 +96,7 @@ struct TraceCategory {
   uint8_t state_;
 
   // When ENABLED_FOR_FILTERING is set, this contains a bitmap to the
-  // coressponding filter (see event_filters.h).
+  // corresponding filter (see event_filters.h).
   uint32_t enabled_filters_;
 
   // TraceCategory group names are long lived static strings.

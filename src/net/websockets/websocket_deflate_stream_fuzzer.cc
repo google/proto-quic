@@ -45,7 +45,7 @@ constexpr size_t MIN_USEFUL_SIZE =
 
 class WebSocketFuzzedStream final : public WebSocketStream {
  public:
-  WebSocketFuzzedStream(base::FuzzedDataProvider* fuzzed_data_provider)
+  explicit WebSocketFuzzedStream(base::FuzzedDataProvider* fuzzed_data_provider)
       : fuzzed_data_provider_(fuzzed_data_provider) {}
 
   int ReadFrames(std::vector<std::unique_ptr<WebSocketFrame>>* frames,

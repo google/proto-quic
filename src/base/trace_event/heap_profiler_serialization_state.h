@@ -29,17 +29,18 @@ class BASE_EXPORT HeapProfilerSerializationState
     return stack_frame_deduplicator_.get();
   }
 
-  void SetStackFrameDeduplicator(
-      std::unique_ptr<StackFrameDeduplicator> stack_frame_deduplicator);
-
   // Returns the type name deduplicator that should be used by memory dump
   // providers when doing a heap dump.
   TypeNameDeduplicator* type_name_deduplicator() const {
     return type_name_deduplicator_.get();
   }
 
-  void SetTypeNameDeduplicator(
-      std::unique_ptr<TypeNameDeduplicator> type_name_deduplicator);
+  // Returns generic string deduplicator used by other deduplicators.
+  StringDeduplicator* string_deduplicator() const {
+    return string_deduplicator_.get();
+  }
+
+  void CreateDeduplicators();
 
   void SetAllowedDumpModes(
       std::set<MemoryDumpLevelOfDetail> allowed_dump_modes);
@@ -65,6 +66,10 @@ class BASE_EXPORT HeapProfilerSerializationState
   // Deduplicates type names in heap dumps so they can be written once when the
   // trace is finalized.
   std::unique_ptr<TypeNameDeduplicator> type_name_deduplicator_;
+
+  // Generic string deduplicator, used by other deduplicators; must be defined
+  // after ones that depend on it.
+  std::unique_ptr<StringDeduplicator> string_deduplicator_;
 
   uint32_t heap_profiler_breakdown_threshold_bytes_;
 };

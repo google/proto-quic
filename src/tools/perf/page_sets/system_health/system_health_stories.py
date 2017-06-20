@@ -20,8 +20,7 @@ class SystemHealthStorySet(story.StorySet):
   def __init__(self, platform, case=None, take_memory_measurement=False):
     super(SystemHealthStorySet, self).__init__(
         archive_data_file=('../data/system_health_%s.json' % platform),
-        cloud_storage_bucket=story.PARTNER_BUCKET,
-        verify_names=True)
+        cloud_storage_bucket=story.PARTNER_BUCKET)
 
     assert platform in platforms.ALL_PLATFORMS
 
@@ -35,7 +34,7 @@ class SystemHealthStorySet(story.StorySet):
 
 class SystemHealthBlankStorySet(story.StorySet):
   """A story set containing the chrome:blank story only."""
-  def __init__(self, take_memory_measurement=False, verify_names=True):
+  def __init__(self, take_memory_measurement=False):
     super(SystemHealthBlankStorySet, self).__init__()
     self.AddStory(
         chrome_stories.BlankAboutBlankStory(self, take_memory_measurement))

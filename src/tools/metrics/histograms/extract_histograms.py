@@ -184,11 +184,6 @@ def _ExtractEnumsFromXmlTree(tree):
 
   last_name = None
   for enum in tree.getElementsByTagName('enum'):
-    if enum.getAttribute('type') != 'int':
-      logging.error('Unknown enum type %s', enum.getAttribute('type'))
-      have_errors = True
-      continue
-
     name = enum.getAttribute('name')
     if last_name is not None and name.lower() < last_name.lower():
       logging.error('Enums %s and %s are not in alphabetical order',

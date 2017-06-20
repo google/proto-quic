@@ -59,7 +59,7 @@ static_library("sdch") {
     "//third_party/zlib",
   ]
 
-  if (is_linux || is_android) {
+  if (is_linux || is_android || is_fuchsia) {
     include_dirs = [ "linux" ]
   } else if (is_ios) {
     include_dirs = [ "ios" ]

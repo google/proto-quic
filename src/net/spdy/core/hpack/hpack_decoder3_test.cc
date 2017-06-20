@@ -137,7 +137,7 @@ class HpackDecoder3Test
         // Decode some fragment of the remaining bytes.
         size_t bytes = str.length();
         if (!str.empty()) {
-          bytes = (random_.Rand8() % str.length()) + 1;
+          bytes = random_.Uniform(str.length()) + 1;
         }
         EXPECT_LE(bytes, str.length());
         if (!HandleControlFrameHeadersData(str.substr(0, bytes))) {

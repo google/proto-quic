@@ -36,7 +36,7 @@ class NET_EXPORT_PRIVATE HpackString {
 
   size_t size() const { return str_.size(); }
   const std::string& ToString() const { return str_; }
-  operator base::StringPiece() const;
+  base::StringPiece ToStringPiece() const;
 
   bool operator==(const HpackString& other) const;
 

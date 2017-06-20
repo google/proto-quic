@@ -206,12 +206,7 @@ struct FunctorTraits<R (Receiver::*)(Args...)> {
   static R Invoke(R (Receiver::*method)(Args...),
                   ReceiverPtr&& receiver_ptr,
                   RunArgs&&... args) {
-    // Clang skips CV qualifier check on a method pointer invocation when the
-    // receiver is a subclass. Store the receiver into a const reference to
-    // T to ensure the CV check works.
-    // https://llvm.org/bugs/show_bug.cgi?id=27037
-    Receiver& receiver = *receiver_ptr;
-    return (receiver.*method)(std::forward<RunArgs>(args)...);
+    return ((*receiver_ptr).*method)(std::forward<RunArgs>(args)...);
   }
 };
 
@@ -226,12 +221,7 @@ struct FunctorTraits<R (Receiver::*)(Args...) const> {
   static R Invoke(R (Receiver::*method)(Args...) const,
                   ReceiverPtr&& receiver_ptr,
                   RunArgs&&... args) {
-    // Clang skips CV qualifier check on a method pointer invocation when the
-    // receiver is a subclass. Store the receiver into a const reference to
-    // T to ensure the CV check works.
-    // https://llvm.org/bugs/show_bug.cgi?id=27037
-    const Receiver& receiver = *receiver_ptr;
-    return (receiver.*method)(std::forward<RunArgs>(args)...);
+    return ((*receiver_ptr).*method)(std::forward<RunArgs>(args)...);
   }
 };
 

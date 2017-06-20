@@ -87,10 +87,15 @@ class Jetstream(perf_benchmark.PerfBenchmark):
     ps = story.StorySet(
         archive_data_file='../page_sets/data/jetstream.json',
         base_dir=os.path.dirname(os.path.abspath(__file__)),
-        cloud_storage_bucket=story.INTERNAL_BUCKET,
-        verify_names=True)
+        cloud_storage_bucket=story.INTERNAL_BUCKET)
     ps.AddStory(page_module.Page(
         'http://browserbench.org/JetStream/', ps, ps.base_dir,
         make_javascript_deterministic=False,
         name='http://browserbench.org/JetStream/'))
     return ps
+
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # http://browserbench.org/JetStream/ not disabled.
+    return StoryExpectations()

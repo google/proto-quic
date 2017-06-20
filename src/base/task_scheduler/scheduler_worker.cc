@@ -203,9 +203,11 @@ SchedulerWorker::SchedulerWorker(
     ThreadPriority priority_hint,
     std::unique_ptr<Delegate> delegate,
     TaskTracker* task_tracker,
+    const SchedulerLock* predecessor_lock,
     SchedulerBackwardCompatibility backward_compatibility,
     InitialState initial_state)
-    : priority_hint_(priority_hint),
+    : thread_lock_(predecessor_lock),
+      priority_hint_(priority_hint),
       delegate_(std::move(delegate)),
       task_tracker_(task_tracker),
 #if defined(OS_WIN)

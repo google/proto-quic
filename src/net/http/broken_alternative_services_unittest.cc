@@ -330,6 +330,186 @@ TEST_F(BrokenAlternativeServicesTest, RemoveExpiredBrokenAltSvc) {
   EXPECT_EQ(alternative_service1, expired_alt_svcs_[1]);
 }
 
+TEST_F(BrokenAlternativeServicesTest, SetBrokenAlternativeServices) {
+  AlternativeService alternative_service1(kProtoQUIC, "foo1", 443);
+  AlternativeService alternative_service2(kProtoQUIC, "foo2", 443);
+
+  base::TimeDelta delay1 = base::TimeDelta::FromMinutes(1);
+
+  std::unique_ptr<BrokenAlternativeServiceList> broken_list =
+      base::MakeUnique<BrokenAlternativeServiceList>();
+  broken_list->push_back(
+      {alternative_service1, broken_services_clock_->NowTicks() + delay1});
+
+  std::unique_ptr<RecentlyBrokenAlternativeServices> recently_broken_map =
+      base::MakeUnique<RecentlyBrokenAlternativeServices>(
+          RecentlyBrokenAlternativeServices::NO_AUTO_EVICT);
+  recently_broken_map->Put(alternative_service1, 1);
+  recently_broken_map->Put(alternative_service2, 2);
+
+  broken_services_.SetBrokenAndRecentlyBrokenAlternativeServices(
+      std::move(broken_list), std::move(recently_broken_map));
+
+  EXPECT_TRUE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service1));
+  EXPECT_FALSE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service2));
+
+  EXPECT_TRUE(broken_services_.WasAlternativeServiceRecentlyBroken(
+      alternative_service1));
+  EXPECT_TRUE(broken_services_.WasAlternativeServiceRecentlyBroken(
+      alternative_service2));
+
+  // Make sure |alternative_service1| expires after the delay in |broken_list|.
+  test_task_runner_->FastForwardBy(delay1 -
+                                   base::TimeDelta::FromInternalValue(1));
+  EXPECT_TRUE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service1));
+
+  test_task_runner_->FastForwardBy(base::TimeDelta::FromInternalValue(1));
+  EXPECT_FALSE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service1));
+
+  // Make sure the broken counts in |recently_broken_map| translate to the
+  // correct expiration delays if the alternative services are marked broken.
+  broken_services_.MarkAlternativeServiceBroken(alternative_service2);
+  broken_services_.MarkAlternativeServiceBroken(alternative_service1);
+
+  test_task_runner_->FastForwardBy(base::TimeDelta::FromMinutes(10) -
+                                   base::TimeDelta::FromInternalValue(1));
+  EXPECT_TRUE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service1));
+  EXPECT_TRUE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service2));
+
+  test_task_runner_->FastForwardBy(base::TimeDelta::FromInternalValue(1));
+  EXPECT_FALSE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service1));
+  EXPECT_TRUE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service2));
+
+  test_task_runner_->FastForwardBy(base::TimeDelta::FromMinutes(20) -
+                                   base::TimeDelta::FromMinutes(10) -
+                                   base::TimeDelta::FromInternalValue(1));
+  EXPECT_FALSE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service1));
+  EXPECT_TRUE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service2));
+
+  test_task_runner_->FastForwardBy(base::TimeDelta::FromInternalValue(1));
+  EXPECT_FALSE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service1));
+  EXPECT_FALSE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service2));
+}
+
+TEST_F(BrokenAlternativeServicesTest,
+       SetBrokenAlternativeServicesWithExisting) {
+  AlternativeService alternative_service1(kProtoQUIC, "foo1", 443);
+  AlternativeService alternative_service2(kProtoQUIC, "foo2", 443);
+  AlternativeService alternative_service3(kProtoQUIC, "foo3", 443);
+
+  std::unique_ptr<BrokenAlternativeServiceList> broken_list =
+      base::MakeUnique<BrokenAlternativeServiceList>();
+  broken_list->push_back(
+      {alternative_service3,
+       broken_services_clock_->NowTicks() + base::TimeDelta::FromMinutes(1)});
+  broken_list->push_back(
+      {alternative_service1,
+       broken_services_clock_->NowTicks() + base::TimeDelta::FromMinutes(3)});
+
+  std::unique_ptr<RecentlyBrokenAlternativeServices> recently_broken_map =
+      base::MakeUnique<RecentlyBrokenAlternativeServices>(
+          RecentlyBrokenAlternativeServices::NO_AUTO_EVICT);
+  recently_broken_map->Put(alternative_service1, 1);
+  recently_broken_map->Put(alternative_service3, 1);
+
+  broken_services_.MarkAlternativeServiceBroken(alternative_service1);
+  broken_services_.MarkAlternativeServiceBroken(alternative_service2);
+
+  // At this point, |alternative_service1| and |alternative_service2| are marked
+  // broken and should expire in 5 minutes.
+  // Adding |broken_list| should overwrite |alternative_service1|'s expiration
+  // time to 3 minutes, and additionally mark |alternative_service3|
+  // broken with an expiration time of 1 minute.
+  broken_services_.SetBrokenAndRecentlyBrokenAlternativeServices(
+      std::move(broken_list), std::move(recently_broken_map));
+
+  EXPECT_TRUE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service1));
+  EXPECT_TRUE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service2));
+  EXPECT_TRUE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service3));
+
+  // Make sure |alternative_service3|'s brokenness expires in 1 minute.
+  test_task_runner_->FastForwardBy(base::TimeDelta::FromMinutes(1) -
+                                   base::TimeDelta::FromInternalValue(1));
+  EXPECT_TRUE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service1));
+  EXPECT_TRUE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service2));
+  EXPECT_TRUE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service3));
+
+  test_task_runner_->FastForwardBy(base::TimeDelta::FromInternalValue(1));
+  EXPECT_TRUE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service1));
+  EXPECT_TRUE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service2));
+  EXPECT_FALSE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service3));
+
+  // Make sure |alternative_service1|'s brokenness expires in 2 more minutes.
+  test_task_runner_->FastForwardBy(base::TimeDelta::FromMinutes(2) -
+                                   base::TimeDelta::FromInternalValue(1));
+  EXPECT_TRUE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service1));
+  EXPECT_TRUE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service2));
+  EXPECT_FALSE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service3));
+
+  test_task_runner_->FastForwardBy(base::TimeDelta::FromInternalValue(1));
+  EXPECT_FALSE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service1));
+  EXPECT_TRUE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service2));
+  EXPECT_FALSE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service3));
+
+  // Make sure |alternative_service2|'s brokenness expires in 2 more minutes.
+  test_task_runner_->FastForwardBy(base::TimeDelta::FromMinutes(2) -
+                                   base::TimeDelta::FromInternalValue(1));
+  EXPECT_FALSE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service1));
+  EXPECT_TRUE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service2));
+  EXPECT_FALSE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service3));
+
+  test_task_runner_->FastForwardBy(base::TimeDelta::FromInternalValue(1));
+  EXPECT_FALSE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service1));
+  EXPECT_FALSE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service2));
+  EXPECT_FALSE(
+      broken_services_.IsAlternativeServiceBroken(alternative_service3));
+
+  // Make sure recently broken alternative services are in most-recently-used
+  // order. SetBrokenAndRecentlyBrokenAlternativeServices() will add
+  // entries in |recently_broken_map| (that aren't already marked recently
+  // broken in |broken_services_|) to the back of |broken_services_|'s
+  // recency list; in this case, only |alternative_service3| is added as
+  // recently broken.
+  auto it = broken_services_.recently_broken_alternative_services().begin();
+  EXPECT_EQ(alternative_service2, it->first);
+  ++it;
+  EXPECT_EQ(alternative_service1, it->first);
+  ++it;
+  EXPECT_EQ(alternative_service3, it->first);
+}
+
 TEST_F(BrokenAlternativeServicesTest, ScheduleExpireTaskAfterExpire) {
   // This test will check that when a broken alt svc expires, an expiration task
   // is scheduled for the next broken alt svc in the expiration queue.

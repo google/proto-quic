@@ -239,6 +239,7 @@ TEST_F(FilePathTest, Append) {
   const struct BinaryTestData cases[] = {
     { { FPL(""),           FPL("cc") }, FPL("cc") },
     { { FPL("."),          FPL("ff") }, FPL("ff") },
+    { { FPL("."),          FPL("") },   FPL(".") },
     { { FPL("/"),          FPL("cc") }, FPL("/cc") },
     { { FPL("/aa"),        FPL("") },   FPL("/aa") },
     { { FPL("/aa/"),       FPL("") },   FPL("/aa") },

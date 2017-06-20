@@ -5,7 +5,8 @@
 import common
 from common import TestDriver
 from common import IntegrationTest
-
+from decorators import ChromeVersionBeforeM
+from decorators import ChromeVersionEqualOrAfterM
 
 class LoFi(IntegrationTest):
 
@@ -68,6 +69,8 @@ class LoFi(IntegrationTest):
   # Checks that LoFi images are not served, but the if-heavy CPAT header is
   # added when LoFi slow connections are used and the network quality estimator
   # returns 4G.
+  # If-heavy stopped being added in M61.
+  @ChromeVersionBeforeM(61)
   def testLoFiIfHeavyFastConnection(self):
     with TestDriver() as test_driver:
       test_driver.AddChromeArg('--enable-spdy-proxy-auth')
@@ -179,6 +182,68 @@ class LoFi(IntegrationTest):
 
       # Verify that responses were seen.
       self.assertNotEqual(0, responses)
+
+  # Checks that LoFi images are served and the force empty image experiment
+  # directive is provided when LoFi is always-on without Lite Pages enabled.
+  @ChromeVersionEqualOrAfterM(61)
+  def testLoFiForcedExperiment(self):
+    # If it was attempted to run with another experiment, skip this test.
+    if common.ParseFlags().browser_args and ('--data-reduction-proxy-experiment'
+        in common.ParseFlags().browser_args):
+      self.skipTest('This test cannot be run with other experiments.')
+    with TestDriver() as test_driver:
+      test_driver.AddChromeArg('--enable-spdy-proxy-auth')
+      test_driver.AddChromeArg('--data-reduction-proxy-lo-fi=always-on')
+      test_driver.AddChromeArg('--enable-features='
+                               'DataReductionProxyDecidesTransform')
+
+      # Ensure fast network (4G) to ensure force flag ignores ECT.
+      test_driver.AddChromeArg('--force-fieldtrial-params='
+                               'NetworkQualityEstimator.Enabled:'
+                               'force_effective_connection_type/4G')
+      test_driver.AddChromeArg('--force-fieldtrials=NetworkQualityEstimator/'
+                               'Enabled')
+
+      test_driver.LoadURL('http://check.googlezip.net/static/index.html')
+
+      lofi_responses = 0
+      for response in test_driver.GetHTTPResponses():
+        self.assertIn('exp=force_page_policies_empty_image',
+          response.request_headers['chrome-proxy'])
+        if response.url.endswith('html'):
+          # Verify that the server provides the fallback directive
+          self.assertIn('chrome-proxy', response.response_headers)
+          self.assertIn('page-policies=empty-image',
+                        response.response_headers['chrome-proxy'])
+          continue
+        if response.url.endswith('png'):
+          self.checkLoFiResponse(response, True)
+          lofi_responses = lofi_responses + 1
+
+      # Verify that Lo-Fi responses were seen.
+      self.assertNotEqual(0, lofi_responses)
+
+  # Checks that Client LoFi resource requests have the Intervention header
+  # (in case page has https images that may not be fully loaded).
+  @ChromeVersionEqualOrAfterM(61)
+  def testClientLoFiInterventionHeader(self):
+    with TestDriver() as test_driver:
+      test_driver.AddChromeArg('--enable-spdy-proxy-auth')
+      test_driver.AddChromeArg('--force-fieldtrials='
+                               'PreviewsClientLoFi/Enabled')
+      test_driver.AddChromeArg('--force-fieldtrial-params='
+                               'PreviewsClientLoFi.Enabled:'
+                               'max_allowed_effective_connection_type/4G')
+
+      test_driver.LoadURL('http://check.googlezip.net/static/index.html')
+
+      intervention_headers = 0
+      for response in test_driver.GetHTTPResponses():
+        if not response.url.endswith('html'):
+          self.assertIn('intervention', response.request_headers)
+          intervention_headers = intervention_headers + 1
+
+      self.assertNotEqual(0, intervention_headers)
 
 if __name__ == '__main__':
   IntegrationTest.RunAllTests()

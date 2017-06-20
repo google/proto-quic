@@ -3091,9 +3091,23 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="ClearBrowsingData_AdvancedTab">
+  <owner>dullweber@chromium.org</owner>
+  <owner>msramek@chromium.org</owner>
+  <description>
+    Browsing data has been deleted from the advanced tab.
+  </description>
+</action>
+
 <action name="ClearBrowsingData_Autofill">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+</action>
+
+<action name="ClearBrowsingData_BasicTab">
+  <owner>dullweber@chromium.org</owner>
+  <owner>msramek@chromium.org</owner>
+  <description>Browsing data has been deleted from the basic tab.</description>
 </action>
 
 <action name="ClearBrowsingData_Cache">
@@ -3113,6 +3127,12 @@ should be able to be added at any place in this file.
     &quot;Media Licenses&quot; when clearing browsing data and Flash was
     enabled.
   </description>
+</action>
+
+<action name="ClearBrowsingData_ContentSettings">
+  <owner>dullweber@chromium.org</owner>
+  <owner>msramek@chromium.org</owner>
+  <description>Content settings have been deleted.</description>
 </action>
 
 <action name="ClearBrowsingData_Cookies">
@@ -3199,6 +3219,36 @@ should be able to be added at any place in this file.
 <action name="ClearBrowsingData_ShowDlg">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+</action>
+
+<action name="ClearBrowsingData_TimePeriodChanged_Everything">
+  <owner>dullweber@chromium.org</owner>
+  <owner>msramek@chromium.org</owner>
+  <description>Time period in CBD was changed.</description>
+</action>
+
+<action name="ClearBrowsingData_TimePeriodChanged_LastDay">
+  <owner>dullweber@chromium.org</owner>
+  <owner>msramek@chromium.org</owner>
+  <description>Time period in CBD was changed.</description>
+</action>
+
+<action name="ClearBrowsingData_TimePeriodChanged_LastHour">
+  <owner>dullweber@chromium.org</owner>
+  <owner>msramek@chromium.org</owner>
+  <description>Time period in CBD was changed.</description>
+</action>
+
+<action name="ClearBrowsingData_TimePeriodChanged_LastMonth">
+  <owner>dullweber@chromium.org</owner>
+  <owner>msramek@chromium.org</owner>
+  <description>Time period in CBD was changed.</description>
+</action>
+
+<action name="ClearBrowsingData_TimePeriodChanged_LastWeek">
+  <owner>dullweber@chromium.org</owner>
+  <owner>msramek@chromium.org</owner>
+  <description>Time period in CBD was changed.</description>
 </action>
 
 <action name="ClearSelection">
@@ -5133,10 +5183,18 @@ should be able to be added at any place in this file.
   <description>The user dismissed the in-product help.</description>
 </action>
 
-<action name="InProductHelp.NotifyEvent.IPH_DataSaverPreview">
+<action name="InProductHelp.NotifyEvent.IPH_DataSaverDetail">
   <owner>nyquist@chromium.org</owner>
   <owner>xingliu@chromium.org</owner>
   <description>The user triggered an event in in-product help.</description>
+</action>
+
+<action name="InProductHelp.NotifyEvent.IPH_DataSaverPreview">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>
+    A event related to the new tab in-product help experiment.
+  </description>
 </action>
 
 <action name="InProductHelp.NotifyEvent.IPH_DownloadHome">
@@ -5151,27 +5209,48 @@ should be able to be added at any place in this file.
   <description>The user triggered an event in in-product help.</description>
 </action>
 
+<action name="InProductHelp.NotifyEvent.IPH_NewTab">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>The user triggered an event in in-product help.</description>
+</action>
+
+<action name="InProductHelp.NotifyUsedEvent.IPH_DataSaverDetail">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>The user triggered a used event in in-product help.</description>
+</action>
+
 <action name="InProductHelp.NotifyUsedEvent.IPH_DataSaverPreview">
   <owner>nyquist@chromium.org</owner>
   <owner>xingliu@chromium.org</owner>
-  <description>
-    The user triggered an used event in in-product help.
-  </description>
+  <description>The user triggered a used event in in-product help.</description>
 </action>
 
 <action name="InProductHelp.NotifyUsedEvent.IPH_DownloadHome">
   <owner>nyquist@chromium.org</owner>
   <owner>xingliu@chromium.org</owner>
-  <description>
-    The user triggered an used event in in-product help.
-  </description>
+  <description>The user triggered a used event in in-product help.</description>
 </action>
 
 <action name="InProductHelp.NotifyUsedEvent.IPH_DownloadPage">
   <owner>nyquist@chromium.org</owner>
   <owner>xingliu@chromium.org</owner>
+  <description>The user triggered a used event in in-product help.</description>
+</action>
+
+<action name="InProductHelp.NotifyUsedEvent.IPH_NewTab">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>The user triggered a used event in in-product help.</description>
+</action>
+
+<action name="InProductHelp.ShouldTriggerHelpUI.IPH_DataSaverDetail">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
   <description>
-    The user triggered an used event in in-product help.
+    The feature engagement tracker tried to determine whether in-product help
+    should be shown to the user.
   </description>
 </action>
 
@@ -5194,6 +5273,15 @@ should be able to be added at any place in this file.
 </action>
 
 <action name="InProductHelp.ShouldTriggerHelpUI.IPH_DownloadPage">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>
+    The feature engagement tracker tried to determine whether in-product help
+    should be shown to the user.
+  </description>
+</action>
+
+<action name="InProductHelp.ShouldTriggerHelpUI.IPH_NewTab">
   <owner>nyquist@chromium.org</owner>
   <owner>xingliu@chromium.org</owner>
   <description>
@@ -9401,6 +9489,24 @@ should be able to be added at any place in this file.
   </description>
 </action>
 
+<action name="Media.Video.RotateToFullscreen.Enter">
+  <owner>johnme@chromium.org</owner>
+  <owner>media-dev@chromium.org</owner>
+  <description>
+    The user entered fullscreen by rotating their device to match the
+    orientation of the video. Is a subset of Media.Controls.EnterFullscreen.
+  </description>
+</action>
+
+<action name="Media.Video.RotateToFullscreen.Exit">
+  <owner>johnme@chromium.org</owner>
+  <owner>media-dev@chromium.org</owner>
+  <description>
+    The user exited fullscreen by rotating their device so it no longer matches
+    the orientation of the video. Is a subset of Media.Controls.ExitFullscreen.
+  </description>
+</action>
+
 <action name="MediaContextMenu_Controls">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
@@ -9876,6 +9982,11 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="MobileCustomFeedback">
+  <owner>wychen@chromium.org</owner>
+  <description>Custom Feedback dialog is shown.</description>
+</action>
+
 <action name="MobileExternalNavigationDispatched">
   <owner>mariakhomenko@chromium.org</owner>
   <description>
@@ -9966,6 +10077,11 @@ should be able to be added at any place in this file.
     tracking uses onPause and onResume, this metric is also tied to that to
     ensure we capture the event.
   </description>
+</action>
+
+<action name="MobileHelpAndFeedback">
+  <owner>wychen@chromium.org</owner>
+  <description>The Help and Feedback dialog is shown.</description>
 </action>
 
 <action name="MobileMWSession">
@@ -16529,6 +16645,30 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="Tablet_WindowCloseFromCaptionButton">
+  <owner>xdai@chromium.org</owner>
+  <description>
+    User closed the window through the close button in the caption area in
+    tablet mode on Chrome OS.
+  </description>
+</action>
+
+<action name="Tablet_WindowCloseFromContextMenu">
+  <owner>xdai@chromium.org</owner>
+  <description>
+    User closed the window through the shelf context menu in tablet mode on
+    Chrome OS.
+  </description>
+</action>
+
+<action name="Tablet_WindowCloseFromOverviewButton">
+  <owner>xdai@chromium.org</owner>
+  <description>
+    User closed the window through the close button in overview mode in tablet
+    mode on Chrome OS.
+  </description>
+</action>
+
 <action name="TaskManagement.OpenInChromeActionButtonClicked">
   <obsolete>The button option was removed and code deleted.</obsolete>
   <owner>dfalcantara@chromium.org</owner>
@@ -17237,6 +17377,14 @@ should be able to be added at any place in this file.
   <owner>tbarzic@google.com</owner>
   <description>
     Tracks Chrome Webstore Gallery Widget app being launched.
+  </description>
+</action>
+
+<action name="WelcomePage_SignInClicked">
+  <owner>tmartino@chromium.org</owner>
+  <description>
+    The user clicked the Sign In button on the Welcome page, starting the
+    authentication flow.
   </description>
 </action>
 

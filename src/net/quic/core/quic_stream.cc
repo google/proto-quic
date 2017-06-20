@@ -54,14 +54,14 @@ QuicStream::QuicStream(QuicStreamId id, QuicSession* session)
       session_(session),
       stream_bytes_read_(0),
       stream_bytes_written_(0),
-      stream_bytes_acked_(0),
+      stream_bytes_outstanding_(0),
       stream_error_(QUIC_STREAM_NO_ERROR),
       connection_error_(QUIC_NO_ERROR),
       read_side_closed_(false),
       write_side_closed_(false),
       fin_buffered_(false),
       fin_sent_(false),
-      fin_acked_(false),
+      fin_outstanding_(false),
       fin_received_(false),
       rst_sent_(false),
       rst_received_(false),
@@ -82,7 +82,9 @@ QuicStream::QuicStream(QuicStreamId id, QuicSession* session)
 }
 
 QuicStream::~QuicStream() {
-  QUIC_LOG_IF(WARNING, !IsWaitingForAcks())
+  QUIC_DLOG_IF(WARNING, session_ != nullptr &&
+                            session_->use_stream_notifier() &&
+                            IsWaitingForAcks())
       << "Stream destroyed while waiting for acks.";
 }
 
@@ -177,9 +179,6 @@ void QuicStream::Reset(QuicRstStreamErrorCode error) {
   // Sending a RstStream results in calling CloseStream.
   session()->SendRstStream(id(), error, stream_bytes_written_);
   rst_sent_ = true;
-  if (session()->use_stream_notifier() && !IsWaitingForAcks()) {
-    session_->OnStreamDoneWaitingForAcks(id_);
-  }
 }
 
 void QuicStream::CloseConnectionWithDetails(QuicErrorCode error,
@@ -330,6 +329,7 @@ QuicConsumedData QuicStream::WritevData(
       WritevDataInner(QuicIOVector(iov, iov_count, write_length),
                       stream_bytes_written_, fin, std::move(ack_listener));
   stream_bytes_written_ += consumed_data.bytes_consumed;
+  stream_bytes_outstanding_ += consumed_data.bytes_consumed;
 
   AddBytesSent(consumed_data.bytes_consumed);
 
@@ -345,6 +345,7 @@ QuicConsumedData QuicStream::WritevData(
     }
     if (fin && consumed_data.fin_consumed) {
       fin_sent_ = true;
+      fin_outstanding_ = true;
       if (fin_received_) {
         session_->StreamDraining(id_);
       }
@@ -503,21 +504,9 @@ void QuicStream::AddRandomPaddingAfterFin() {
 
 void QuicStream::OnStreamFrameAcked(const QuicStreamFrame& frame,
                                     QuicTime::Delta ack_delay_time) {
-  DCHECK_EQ(frame.stream_id, id());
-  stream_bytes_acked_ += frame.data_length;
-  if (stream_bytes_acked_ > stream_bytes_written_) {
-    CloseConnectionWithDetails(QUIC_INTERNAL_ERROR,
-                               "Unsent stream data is acked");
-    return;
-  }
-  if (frame.fin) {
-    fin_acked_ = true;
-  }
+  OnStreamFrameDiscarded(frame);
   if (ack_listener_ != nullptr) {
     ack_listener_->OnPacketAcked(frame.data_length, ack_delay_time);
-  }
-  if (!IsWaitingForAcks()) {
-    session_->OnStreamDoneWaitingForAcks(id_);
   }
 }
 
@@ -527,22 +516,25 @@ void QuicStream::OnStreamFrameRetransmitted(const QuicStreamFrame& frame) {
   }
 }
 
-bool QuicStream::IsWaitingForAcks() const {
-  if (rst_sent_ && stream_error_ != QUIC_STREAM_NO_ERROR) {
-    // RST_STREAM sent because of error.
-    return false;
+void QuicStream::OnStreamFrameDiscarded(const QuicStreamFrame& frame) {
+  DCHECK_EQ(id_, frame.stream_id);
+  if (stream_bytes_outstanding_ < frame.data_length ||
+      (!fin_outstanding_ && frame.fin)) {
+    CloseConnectionWithDetails(QUIC_INTERNAL_ERROR,
+                               "Trying to discard unsent data.");
+    return;
   }
-  if (connection_error_ != QUIC_NO_ERROR) {
-    // Connection encounters error and is going to close.
-    return false;
+  stream_bytes_outstanding_ -= frame.data_length;
+  if (frame.fin) {
+    fin_outstanding_ = false;
   }
-  if (stream_bytes_acked_ == stream_bytes_written_ &&
-      ((fin_sent_ && fin_acked_) || !fin_sent_)) {
-    // All sent data has been acked.
-    return false;
+  if (!IsWaitingForAcks()) {
+    session_->OnStreamDoneWaitingForAcks(id_);
   }
+}
 
-  return true;
+bool QuicStream::IsWaitingForAcks() const {
+  return stream_bytes_outstanding_ || fin_outstanding_;
 }
 
 }  // namespace net

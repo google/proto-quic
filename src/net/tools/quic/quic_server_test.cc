@@ -10,6 +10,7 @@
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/platform/api/quic_test.h"
+#include "net/quic/platform/api/quic_test_loopback.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/mock_quic_dispatcher.h"
 #include "net/tools/quic/quic_epoll_alarm_factory.h"
@@ -124,7 +125,9 @@ TEST_F(QuicServerEpollInTest, ProcessBufferedCHLOsOnEpollin) {
           DoAll(testing::Assign(&more_chlos, false), testing::Return(false)));
 
   // Send a packet to trigger epoll event.
-  int fd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
+  int fd = socket(
+      AddressFamilyUnderTest() == IpAddressFamily::IP_V4 ? AF_INET : AF_INET6,
+      SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
   ASSERT_LT(0, fd);
 
   char buf[1024];

@@ -385,8 +385,6 @@ int ProofVerifierChromium::Job::DoVerifyCertComplete(int result) {
       verify_details_->cert_verify_result;
   const CertStatus cert_status = cert_verify_result.cert_status;
   verify_details_->ct_verify_result.ct_policies_applied = result == OK;
-  verify_details_->ct_verify_result.ev_policy_compliance =
-      ct::EVPolicyCompliance::EV_POLICY_DOES_NOT_APPLY;
 
   // If the connection was good, check HPKP and CT status simultaneously,
   // but prefer to treat the HPKP error as more serious, if there was one.
@@ -395,29 +393,17 @@ int ProofVerifierChromium::Job::DoVerifyCertComplete(int result) {
        (IsCertificateError(result) && IsCertStatusMinorError(cert_status)))) {
     SCTList verified_scts = ct::SCTsMatchingStatus(
         verify_details_->ct_verify_result.scts, ct::SCT_STATUS_OK);
-    if ((cert_verify_result.cert_status & CERT_STATUS_IS_EV)) {
-      ct::EVPolicyCompliance ev_policy_compliance =
-          policy_enforcer_->DoesConformToCTEVPolicy(
-              cert_verify_result.verified_cert.get(),
-              SSLConfigService::GetEVCertsWhitelist().get(), verified_scts,
-              net_log_);
-      verify_details_->ct_verify_result.ev_policy_compliance =
-          ev_policy_compliance;
-      if (ev_policy_compliance !=
-              ct::EVPolicyCompliance::EV_POLICY_DOES_NOT_APPLY &&
-          ev_policy_compliance !=
-              ct::EVPolicyCompliance::EV_POLICY_COMPLIES_VIA_WHITELIST &&
-          ev_policy_compliance !=
-              ct::EVPolicyCompliance::EV_POLICY_COMPLIES_VIA_SCTS) {
-        verify_details_->cert_verify_result.cert_status |=
-            CERT_STATUS_CT_COMPLIANCE_FAILED;
-        verify_details_->cert_verify_result.cert_status &= ~CERT_STATUS_IS_EV;
-      }
-    }
 
     verify_details_->ct_verify_result.cert_policy_compliance =
         policy_enforcer_->DoesConformToCertPolicy(
             cert_verify_result.verified_cert.get(), verified_scts, net_log_);
+    if ((verify_details_->cert_verify_result.cert_status & CERT_STATUS_IS_EV) &&
+        (verify_details_->ct_verify_result.cert_policy_compliance !=
+         ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS)) {
+      verify_details_->cert_verify_result.cert_status |=
+          CERT_STATUS_CT_COMPLIANCE_FAILED;
+      verify_details_->cert_verify_result.cert_status &= ~CERT_STATUS_IS_EV;
+    }
 
     int ct_result = OK;
     if (transport_security_state_->CheckCTRequirements(

@@ -33,6 +33,7 @@ class CTVerifier;
 class HttpProxyClientSocketPool;
 class HostResolver;
 class NetLog;
+class NetworkQualityProvider;
 class SocketPerformanceWatcherFactory;
 class SOCKSClientSocketPool;
 class SSLClientSocketPool;
@@ -47,6 +48,7 @@ class ClientSocketPoolManagerImpl : public ClientSocketPoolManager,
       NetLog* net_log,
       ClientSocketFactory* socket_factory,
       SocketPerformanceWatcherFactory* socket_performance_watcher_factory,
+      NetworkQualityProvider* network_quality_provider,
       HostResolver* host_resolver,
       CertVerifier* cert_verifier,
       ChannelIDService* channel_id_service,
@@ -97,6 +99,7 @@ class ClientSocketPoolManagerImpl : public ClientSocketPoolManager,
   NetLog* const net_log_;
   ClientSocketFactory* const socket_factory_;
   SocketPerformanceWatcherFactory* socket_performance_watcher_factory_;
+  NetworkQualityProvider* network_quality_provider_;
   HostResolver* const host_resolver_;
   CertVerifier* const cert_verifier_;
   ChannelIDService* const channel_id_service_;

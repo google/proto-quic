@@ -5,6 +5,7 @@
 #include <limits>
 
 #include "base/base64.h"
+#include "base/stl_util.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/string_tokenizer.h"
 #include "base/strings/string_util.h"
@@ -49,8 +50,7 @@ bool MaxAgeToLimitedInt(std::string::const_iterator begin,
 bool IsBackupPinPresent(const HashValueVector& pins,
                         const HashValueVector& from_cert_chain) {
   for (const auto& pin : pins) {
-    auto p = std::find(from_cert_chain.begin(), from_cert_chain.end(), pin);
-    if (p == from_cert_chain.end())
+    if (!base::ContainsValue(from_cert_chain, pin))
       return true;
   }
   return false;
@@ -61,8 +61,7 @@ bool IsBackupPinPresent(const HashValueVector& pins,
 bool HashesIntersect(const HashValueVector& a,
                      const HashValueVector& b) {
   for (const auto& pin : a) {
-    auto p = std::find(b.begin(), b.end(), pin);
-    if (p != b.end())
+    if (base::ContainsValue(b, pin))
       return true;
   }
   return false;

@@ -53,7 +53,9 @@ class BASE_EXPORT ImportantFileWriter {
   // Save |data| to |path| in an atomic manner. Blocks and writes data on the
   // current thread. Does not guarantee file integrity across system crash (see
   // the class comment above).
-  static bool WriteFileAtomically(const FilePath& path, StringPiece data);
+  static bool WriteFileAtomically(const FilePath& path,
+                                  StringPiece data,
+                                  StringPiece histogram_suffix = StringPiece());
 
   // Initialize the writer.
   // |path| is the name of file to write.
@@ -61,12 +63,14 @@ class BASE_EXPORT ImportantFileWriter {
   // execute file I/O operations.
   // All non-const methods, ctor and dtor must be called on the same thread.
   ImportantFileWriter(const FilePath& path,
-                      scoped_refptr<SequencedTaskRunner> task_runner);
+                      scoped_refptr<SequencedTaskRunner> task_runner,
+                      const char* histogram_suffix = nullptr);
 
   // Same as above, but with a custom commit interval.
   ImportantFileWriter(const FilePath& path,
                       scoped_refptr<SequencedTaskRunner> task_runner,
-                      TimeDelta interval);
+                      TimeDelta interval,
+                      const char* histogram_suffix = nullptr);
 
   // You have to ensure that there are no pending writes at the moment
   // of destruction.
@@ -142,6 +146,9 @@ class BASE_EXPORT ImportantFileWriter {
 
   // Time delta after which scheduled data will be written to disk.
   const TimeDelta commit_interval_;
+
+  // Custom histogram suffix.
+  const std::string histogram_suffix_;
 
   SEQUENCE_CHECKER(sequence_checker_);
 

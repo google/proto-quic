@@ -249,7 +249,7 @@ WriteResult QuicSocketUtils::WritePacket(
       (kSpaceForIpv4 < kSpaceForIpv6) ? kSpaceForIpv6 : kSpaceForIpv4;
   char cbuf[kSpaceForIp];
   if (!self_address.IsInitialized()) {
-    hdr.msg_control = 0;
+    hdr.msg_control = nullptr;
     hdr.msg_controllen = 0;
   } else {
     hdr.msg_control = cbuf;

@@ -6,6 +6,7 @@ from core import perf_benchmark
 from measurements import startup
 import page_sets
 from telemetry import benchmark
+from telemetry import story
 
 
 class _StartWithExt(perf_benchmark.PerfBenchmark):
@@ -41,6 +42,12 @@ class StartWithExtCold(_StartWithExt):
   def Name(cls):
     return 'start_with_ext.cold.blank_page'
 
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # blank_page.html not disabled.
+    return StoryExpectations()
+
 
 @benchmark.Enabled('has tabs')
 @benchmark.Disabled('mac')  # crbug.com/563424
@@ -53,3 +60,9 @@ class StartWithExtWarm(_StartWithExt):
   @classmethod
   def Name(cls):
     return 'start_with_ext.warm.blank_page'
+
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # blank_page.html not disabled.
+    return StoryExpectations()

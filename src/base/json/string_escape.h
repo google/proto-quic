@@ -14,11 +14,12 @@
 
 namespace base {
 
-// Appends to |dest| an escaped version of |str|. Valid UTF-8 code units will
-// pass through from the input to the output. Invalid code units will be
-// replaced with the U+FFFD replacement character. This function returns true
-// if no replacement was necessary and false if there was a lossy replacement.
-// On return, |dest| will contain a valid UTF-8 JSON string.
+// Appends to |dest| an escaped version of |str|. Valid UTF-8 code units and
+// characters will pass through from the input to the output. Invalid code
+// units and characters will be replaced with the U+FFFD replacement character.
+// This function returns true if no replacement was necessary and false if
+// there was a lossy replacement. On return, |dest| will contain a valid UTF-8
+// JSON string.
 //
 // Non-printing control characters will be escaped as \uXXXX sequences for
 // readability.

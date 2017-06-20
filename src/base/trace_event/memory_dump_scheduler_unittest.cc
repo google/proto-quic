@@ -185,7 +185,6 @@ TEST_F(MemoryDumpSchedulerTest, StopAndStartOnAnotherThread) {
   bg_thread_->Start();
   evt.Reset();
   expected_task_runner = bg_thread_->task_runner();
-  scheduler_->Start(config, bg_thread_->task_runner());
   EXPECT_CALL(on_tick_, OnTick(_)).Times(kTicks - 1);
   EXPECT_CALL(on_tick_, OnTick(_))
       .WillRepeatedly(
@@ -193,6 +192,7 @@ TEST_F(MemoryDumpSchedulerTest, StopAndStartOnAnotherThread) {
             EXPECT_TRUE(expected_task_runner->RunsTasksOnCurrentThread());
             evt.Signal();
           }));
+  scheduler_->Start(config, bg_thread_->task_runner());
   evt.Wait();
   scheduler_->Stop();
 }

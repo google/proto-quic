@@ -14,12 +14,15 @@ It assumes that you've already uploaded a change and the try jobs have finished.
 It collects all of the results from try jobs on all platforms and updates the
 expectation files locally. From there you can run 'git diff' to make sure all
 of the changes look reasonable, then upload the change for code review.
+
+Optional argument: patchset number, otherwise will default to latest patchset
 """
 
 import json
 import os
 import re
 import sys
+import tempfile
 import time
 import urllib
 import urlparse
@@ -34,55 +37,6 @@ TEST_DATA_PATH = os.path.join(os.getcwd(), 'content/test/data/accessibility')
 # A global that keeps track of files we've already updated, so we don't
 # bother to update the same file twice.
 completed_files = set()
-
-def GitClIssue():
-  '''Retrieve the current issue number as a string.'''
-  result = os.popen('git cl issue').read()
-  # Returns string like: 'Issue number: 12345 (https://...)'
-  return result.split()[2]
-
-def ParseFailure(name, url):
-  '''Parse given the name of a failing trybot and the url of its build log.'''
-  print
-  print "Checking trybot: %s" % name
-  parse_result = urlparse.urlsplit(url)
-  url = "http://chrome-build-extract.appspot.com" + parse_result.path + "?json=1"
-  response = urllib.urlopen(url)
-  if response.getcode() != 200:
-    print 'Error code %d accessing trybot url: %s' % (response.getcode(), url)
-    return
-
-  jsondata = response.read()
-  if not jsondata:
-    print "Failed to fetch from: " + url
-    return
-
-  try:
-    data = json.loads(jsondata)
-  except:
-    print "Failed to parse JSON from: " + url
-    return
-
-  for step in data["steps"]:
-    name = step["name"]
-    if name[:len("content_browsertests")] == "content_browsertests":
-      if name.find("without") >= 0:
-        continue
-      if name.find("retry") >= 0:
-        continue
-      print "Found content_browsertests logs"
-      for log in step["logs"]:
-        (log_name, log_url) = log
-        if log_name == "stdio" or log_name == "swarming.summary" or log_name == "step_metadata":
-          continue
-        log_url += '/text'
-        log_response = urllib.urlopen(log_url)
-        if log_response.getcode() == 200:
-          logdata = log_response.read()
-          print "Parsing test log: %s" % log_name
-          ParseLog(logdata)
-        else:
-          print "Error code %d when fetching test log data from url: %s" % (log_response.getcode(), url)
 
 def Fix(line):
   if line[:3] == '@@@':
@@ -126,44 +80,55 @@ def ParseLog(logdata):
       test_file = None
       expected_file = None
 
-def ParseTrybots(data):
-  '''Parse the code review page to find links to try bots.'''
-  soup = BeautifulSoup(data)
-  failures = soup.findAll(
-      'a',
-      { "class" : "build-result build-status-color-failure" })
-  print 'Found %d trybots that failed' % len(failures)
-  for f in failures:
-    name = f.text.replace('&nbsp;', '')
-    url = f['href']
-    ParseFailure(name, url)
-
 def Run():
   '''Main. Get the issue number and parse the code review page.'''
   if len(sys.argv) == 2:
-    issue = sys.argv[1]
+    patchSetArg = '--patchset=%s' % sys.argv[1]
   else:
-    issue = GitClIssue()
+    patchSetArg = '';
 
-  url = 'https://codereview.chromium.org/%s' % issue
-  print 'Fetching issue from %s' % url
-  response = urllib.urlopen(url)
-  if response.getcode() != 200:
-    print 'Error code %d accessing url: %s' % (response.getcode(), url)
-    return
-  data = response.read()
-  ParseTrybots(data)
+  (_, tmppath) = tempfile.mkstemp()
+  print 'Temp file: %s' % tmppath
+  os.system('git cl try-results --json %s %s' % (tmppath, patchSetArg))
 
-  print
-  if len(completed_files) == 0:
-    print "No output from DumpAccessibilityTree test results found."
+  try_result = open(tmppath).read()
+  if len(try_result) < 1000:
+    print 'Did not seem to get try bot data.'
+    print try_result
     return
-  else:
-    print "Summary: modified the following files:"
-    all_files = list(completed_files)
-    all_files.sort()
-    for f in all_files:
-      print "* %s" % os.path.relpath(f)
+
+  data = json.loads(try_result)
+  os.unlink(tmppath)
+
+  #print(json.dumps(data, indent=4))
+
+  for builder in data:
+    #print builder['result']
+    if builder['result'] == 'FAILURE':
+      url = builder['url']
+      tokens = url.split('/')
+      bucket = tokens[4]
+      platform = tokens[6]
+      build = tokens[8]
+      logdog_prefix = 'chromium/bb/%s/%s/%s' % (bucket, platform, build)
+      logdog_steps = '%s/+/recipes/steps' % logdog_prefix
+      print logdog_prefix
+      steps = os.popen('cit logdog ls "%s"' % logdog_steps).readlines()
+      a11y_step = None
+      for step in steps:
+        if (step.find('content_browsertests') >= 0 and
+            step.find('with_patch') >= 0 and
+            step.find('trigger') == -1 and
+            step.find('Upload') == -1):
+          a11y_step = step.rstrip()
+      if not a11y_step:
+        print 'No content_browsertests (with patch) step found'
+        continue
+      print a11y_step
+      logdog_cat = ('cit logdog cat -raw "%s/%s/0/stdout"' %
+        (logdog_steps, a11y_step))
+      output = os.popen(logdog_cat).read()
+      ParseLog(output)
 
 if __name__ == '__main__':
   sys.exit(Run())

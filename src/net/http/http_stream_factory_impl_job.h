@@ -33,6 +33,12 @@
 
 namespace net {
 
+namespace test {
+
+class HttpStreamFactoryImplJobPeer;
+
+}  // namespace test
+
 class ClientSocketHandle;
 class HttpAuthController;
 class HttpNetworkSession;
@@ -45,6 +51,11 @@ struct SSLConfig;
 // created for the StreamFactory.
 class HttpStreamFactoryImpl::Job {
  public:
+  // For jobs issued simultaneously to an HTTP/2 supported server, a delay is
+  // applied to avoid unnecessary socket connection establishments.
+  // crbug.com/718576
+  static const int kHTTP2ThrottleMs = 300;
+
   // Delegate to report Job's status to Request and HttpStreamFactory.
   class NET_EXPORT_PRIVATE Delegate {
    public:
@@ -145,9 +156,29 @@ class HttpStreamFactoryImpl::Job {
     virtual bool for_websockets() = 0;
   };
 
-  // Constructor for non-alternative Job.
-  // Job is owned by |delegate|, hence |delegate| is valid for the
-  // lifetime of the Job.
+  // Job is owned by |delegate|, hence |delegate| is valid for the lifetime of
+  // the Job.
+  //
+  // |alternative_protocol| is the protocol required by Alternative Service, if
+  // any:
+  // * |alternative_protocol == kProtoUnknown| means that the Job can pool to an
+  //   existing SpdySession, or bind to a idle TCP socket that might use either
+  //   HTTP/1.1 or HTTP/2.
+  // * |alternative_protocol == kProtoHTTP2| means that the Job can pool to an
+  //   existing SpdySession, or bind to a idle TCP socket.  In the latter case,
+  //   if the socket does not use HTTP/2, then the Job fails.
+  // * |alternative_protocol == kProtoQUIC| means that the Job can pool to an
+  //   existing QUIC connection or open a new one.
+  // Note that this can be overwritten by specifying a QUIC proxy in
+  // |proxy_info|, or by setting
+  // HttpNetworkSession::Params::origins_to_force_quic_on.
+  //
+  // If |alternative_proxy_server| is a valid proxy server, then the Job will
+  // use that instead of using ProxyService for proxy resolution.  Further, if
+  // |alternative_proxy_server| is a valid but bad proxy, then fallback proxies
+  // are not used. It is illegal to call this constructor with a valid
+  // |alternative_proxy_server| and an |alternate_protocol| different from
+  // kProtoUnknown.
   Job(Delegate* delegate,
       JobType job_type,
       HttpNetworkSession* session,
@@ -158,28 +189,7 @@ class HttpStreamFactoryImpl::Job {
       const SSLConfig& proxy_ssl_config,
       HostPortPair destination,
       GURL origin_url,
-      bool enable_ip_based_pooling,
-      NetLog* net_log);
-
-  // Constructor for the alternative Job. The Job is owned by |delegate|, hence
-  // |delegate| is valid for the lifetime of the Job. If |alternative_service|
-  // is initialized, then the Job will use the alternative service. On the
-  // other hand, if |alternative_proxy_server| is a valid proxy server, then the
-  // job will use that instead of using ProxyService for proxy resolution.
-  // Further, if |alternative_proxy_server| is a valid but bad proxy, then
-  // fallback proxies are not used. It is illegal to call this with an
-  // initialized |alternative_service|, and a valid |alternative_proxy_server|.
-  Job(Delegate* delegate,
-      JobType job_type,
-      HttpNetworkSession* session,
-      const HttpRequestInfo& request_info,
-      RequestPriority priority,
-      const ProxyInfo& proxy_info,
-      const SSLConfig& server_ssl_config,
-      const SSLConfig& proxy_ssl_config,
-      HostPortPair destination,
-      GURL origin_url,
-      AlternativeService alternative_service,
+      NextProto alternative_protocol,
       const ProxyServer& alternative_proxy_server,
       bool enable_ip_based_pooling,
       NetLog* net_log);
@@ -231,10 +241,6 @@ class HttpStreamFactoryImpl::Job {
 
   JobType job_type() const { return job_type_; }
 
-  const AlternativeService alternative_service() const {
-    return alternative_service_;
-  }
-
   const ProxyServer alternative_proxy_server() const {
     return alternative_proxy_server_;
   }
@@ -243,6 +249,8 @@ class HttpStreamFactoryImpl::Job {
     return using_existing_quic_session_;
   }
 
+  bool using_quic() const { return using_quic_; }
+
   bool should_reconsider_proxy() const { return should_reconsider_proxy_; }
 
   // TODO(xunjieli): Added to investigate crbug.com/711721. Remove when no
@@ -250,7 +258,7 @@ class HttpStreamFactoryImpl::Job {
   void LogHistograms() const;
 
  private:
-  friend class HttpStreamFactoryImplJobPeer;
+  friend class test::HttpStreamFactoryImplJobPeer;
 
   enum State {
     STATE_START,
@@ -269,6 +277,7 @@ class HttpStreamFactoryImpl::Job {
     STATE_WAIT,
     STATE_WAIT_COMPLETE,
 
+    STATE_EVALUATE_THROTTLE,
     STATE_INIT_CONNECTION,
     STATE_INIT_CONNECTION_COMPLETE,
     STATE_WAITING_USER_ACTION,
@@ -313,6 +322,7 @@ class HttpStreamFactoryImpl::Job {
   int DoStart();
   int DoWait();
   int DoWaitComplete(int result);
+  int DoEvaluateThrottle();
   int DoInitConnection();
   int DoInitConnectionComplete(int result);
   int DoWaitingUserAction(int result);
@@ -321,6 +331,7 @@ class HttpStreamFactoryImpl::Job {
   int DoRestartTunnelAuth();
   int DoRestartTunnelAuthComplete(int result);
 
+  void ResumeInitConnection();
   // Creates a SpdyHttpStream or a BidirectionalStreamImpl from the given values
   // and sets to |stream_| or |bidirectional_stream_impl_| respectively. Does
   // nothing if |stream_factory_| is for WebSockets.
@@ -334,10 +345,6 @@ class HttpStreamFactoryImpl::Job {
   // Set the motivation for this request onto the underlying socket.
   void SetSocketMotivation();
 
-  // Is this a SPDY or QUIC alternative Job?
-  bool IsSpdyAlternative() const;
-  bool IsQuicAlternative() const;
-
   // Sets several fields of |ssl_config| based on the proxy info and other
   // factors.
   void InitSSLConfig(SSLConfig* ssl_config, bool is_proxy) const;
@@ -346,8 +353,17 @@ class HttpStreamFactoryImpl::Job {
   // This must only be called when we are using an SSLSocket.
   void GetSSLInfo(SSLInfo* ssl_info);
 
+  // Called in Job constructor: should Job be forced to use QUIC.
+  static bool ShouldForceQuic(HttpNetworkSession* session,
+                              const HostPortPair& destination,
+                              const GURL& origin_url,
+                              const ProxyInfo& proxy_info);
+
   // Called in Job constructor. Use |spdy_session_key_| after construction.
-  SpdySessionKey GetSpdySessionKey() const;
+  static SpdySessionKey GetSpdySessionKey(bool spdy_session_direct,
+                                          const ProxyServer& proxy_server,
+                                          const GURL& origin_url,
+                                          PrivacyMode privacy_mode);
 
   // Returns true if the current request can use an existing spdy session.
   bool CanUseExistingSpdySession() const;
@@ -367,9 +383,6 @@ class HttpStreamFactoryImpl::Job {
 
   // Called to handle a client certificate request.
   int HandleCertificateRequest(int error);
-
-  // Should we force QUIC for this stream request.
-  bool ShouldForceQuic() const;
 
   ClientSocketPoolManager::SocketGroupType GetSocketGroup() const;
 
@@ -413,9 +426,6 @@ class HttpStreamFactoryImpl::Job {
   // original request when host mapping rules are set-up.
   const GURL origin_url_;
 
-  // AlternativeService for this Job if this is an alternative Job.
-  const AlternativeService alternative_service_;
-
   // Alternative proxy server that should be used by |this| to fetch the
   // request.
   const ProxyServer alternative_proxy_server_;
@@ -432,11 +442,16 @@ class HttpStreamFactoryImpl::Job {
   // True if handling a HTTPS request.
   const bool using_ssl_;
 
-  // True if this network transaction is using SPDY instead of HTTP.
-  bool using_spdy_;
+  // True if Job uses QUIC.
+  const bool using_quic_;
 
-  // True if this network transaction is using QUIC instead of HTTP.
-  bool using_quic_;
+  // True if Alternative Service protocol field requires that HTTP/2 is used.
+  // In this case, Job fails if it cannot pool to an existing SpdySession and
+  // the server does not negotiate HTTP/2 on a new socket.
+  const bool expect_spdy_;
+
+  // True if Job actually uses HTTP/2.
+  bool using_spdy_;
 
   // True if this job might succeed with a different proxy config.
   bool should_reconsider_proxy_;
@@ -480,6 +495,9 @@ class HttpStreamFactoryImpl::Job {
   // Type of stream that is requested.
   HttpStreamRequest::StreamType stream_type_;
 
+  // Whether Job has continued to DoInitConnection().
+  bool init_connection_already_resumed_;
+
   base::WeakPtrFactory<Job> ptr_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(Job);
@@ -517,7 +535,7 @@ class HttpStreamFactoryImpl::JobFactory {
       const SSLConfig& proxy_ssl_config,
       HostPortPair destination,
       GURL origin_url,
-      AlternativeService alternative_service,
+      NextProto alternative_protocol,
       bool enable_ip_based_pooling,
       NetLog* net_log);
 

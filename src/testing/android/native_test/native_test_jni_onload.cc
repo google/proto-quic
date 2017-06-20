@@ -28,8 +28,7 @@ bool NativeInit() {
 JNI_EXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
   base::android::InitVM(vm);
   JNIEnv* env = base::android::AttachCurrentThread();
-  if (!base::android::OnJNIOnLoadRegisterJNI(env) || !RegisterJNI(env) ||
-      !NativeInit()) {
+  if (!RegisterJNI(env) || !NativeInit()) {
     return -1;
   }
   return JNI_VERSION_1_4;

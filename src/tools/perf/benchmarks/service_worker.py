@@ -174,6 +174,9 @@ class ServiceWorkerPerfTest(perf_benchmark.PerfBenchmark):
   def Name(cls):
     return 'service_worker.service_worker'
 
+  def GetExpectations(self):
+    return page_sets.ServiceWorkerStoryExpectations()
+
 
 @benchmark.Disabled('android-webview')  # http://crbug.com/653924
 @benchmark.Owner(emails=['horo@chromium.org'])
@@ -195,3 +198,6 @@ class ServiceWorkerMicroBenchmarkPerfTest(perf_benchmark.PerfBenchmark):
   def ShouldDisable(cls, possible_browser):  # http://crbug.com/597656
       return (possible_browser.browser_type == 'reference' and
               possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X')
+
+  def GetExpectations(self):
+    return page_sets.ServiceWorkerMicroBenchmarksStoryExpectations()

@@ -33,6 +33,7 @@
   __interceptor___overflow;
   __interceptor___res_iclose;
   __interceptor___sigsetjmp;
+  __interceptor___strndup;
   __interceptor___tls_get_addr;
   __interceptor___uflow;
   __interceptor___underflow;
@@ -384,6 +385,7 @@
   __interceptor_strncasecmp;
   __interceptor_strncmp;
   __interceptor_strncpy;
+  __interceptor_strndup;
   __interceptor_strnlen;
   __interceptor_strpbrk;
   __interceptor_strptime;
@@ -480,10 +482,7 @@
   __lxstat64;
   __overflow;
   __res_iclose;
-  __sanitizer_cov;
   __sanitizer_cov_dump;
-  __sanitizer_cov_init;
-  __sanitizer_cov_module_init;
   __sanitizer_cov_trace_cmp;
   __sanitizer_cov_trace_cmp1;
   __sanitizer_cov_trace_cmp2;
@@ -496,7 +495,6 @@
   __sanitizer_cov_trace_pc_guard_init;
   __sanitizer_cov_trace_pc_indir;
   __sanitizer_cov_trace_switch;
-  __sanitizer_cov_with_check;
   __sanitizer_dump_coverage;
   __sanitizer_dump_trace_pc_guard_coverage;
   __sanitizer_free_hook;
@@ -507,11 +505,9 @@
   __sanitizer_get_heap_size;
   __sanitizer_get_module_and_offset_for_pc;
   __sanitizer_get_ownership;
-  __sanitizer_get_total_unique_coverage;
   __sanitizer_get_unmapped_bytes;
   __sanitizer_install_malloc_and_free_hooks;
   __sanitizer_malloc_hook;
-  __sanitizer_maybe_open_cov_file;
   __sanitizer_print_stack_trace;
   __sanitizer_report_error_summary;
   __sanitizer_sandbox_on_notify;
@@ -1179,6 +1175,7 @@
   __sanitizer_weak_hook_strncmp;
   __sanitizer_weak_hook_strstr;
   __sigsetjmp;
+  __strndup;
   __tls_get_addr;
   __tsan_acquire;
   __tsan_atomic*;
@@ -1542,6 +1539,7 @@
   strncasecmp;
   strncmp;
   strncpy;
+  strndup;
   strnlen;
   strpbrk;
   strptime;

@@ -59,10 +59,6 @@ class NET_EXPORT AuthCredentials {
   // Returns true if all credentials are empty.
   bool Empty() const;
 
-  // Overwrites the password memory to prevent it from being read if
-  // it's paged out to disk.
-  void Zap();
-
   const base::string16& username() const { return username_; }
   const base::string16& password() const { return password_; }
 

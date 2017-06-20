@@ -17,7 +17,7 @@ import pretty_print_xml
 ATTRIBUTE_ORDER = {
     'affected-histogram': ['name'],
     'details': [],
-    'enum': ['name', 'type'],
+    'enum': ['name'],
     'enums': [],
     'histogram': ['base', 'name', 'enum', 'units'],
     'histogram-configuration': ['logsource'],

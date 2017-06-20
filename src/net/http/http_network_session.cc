@@ -57,7 +57,8 @@ ClientSocketPoolManager* CreateSocketPoolManager(
       context.net_log,
       context.client_socket_factory ? context.client_socket_factory
                                     : ClientSocketFactory::GetDefaultFactory(),
-      context.socket_performance_watcher_factory, context.host_resolver,
+      context.socket_performance_watcher_factory,
+      context.network_quality_provider, context.host_resolver,
       context.cert_verifier, context.channel_id_service,
       context.transport_security_state, context.cert_transparency_verifier,
       context.ct_policy_enforcer, ssl_session_cache_shard,
@@ -148,6 +149,7 @@ HttpNetworkSession::Context::Context()
       http_auth_handler_factory(nullptr),
       net_log(nullptr),
       socket_performance_watcher_factory(nullptr),
+      network_quality_provider(nullptr),
       quic_clock(nullptr),
       quic_random(nullptr),
       quic_crypto_client_stream_factory(
@@ -354,6 +356,8 @@ std::unique_ptr<base::Value> HttpNetworkSession::QuicInfoToValue() const {
   dict->SetBoolean("do_not_fragment", params_.quic_do_not_fragment);
   dict->SetBoolean("estimate_initial_rtt", params_.quic_estimate_initial_rtt);
   dict->SetBoolean("force_hol_blocking", params_.quic_force_hol_blocking);
+  dict->SetBoolean("server_push_cancellation",
+                   params_.enable_server_push_cancellation);
 
   return std::move(dict);
 }

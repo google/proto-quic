@@ -66,7 +66,7 @@ def _WriteToStream(lines, use_pager=None, to_file=None):
 class _Session(object):
   _readline_initialized = False
 
-  def __init__(self, size_infos, size_paths, lazy_paths):
+  def __init__(self, size_infos, lazy_paths):
     self._printed_variables = []
     self._variables = {
         'Print': self._PrintFunc,
@@ -79,7 +79,6 @@ class _Session(object):
     }
     self._lazy_paths = lazy_paths
     self._size_infos = size_infos
-    self._size_paths = size_paths
     self._disassemble_prefix_len = None
 
     if len(size_infos) == 1:
@@ -89,7 +88,7 @@ class _Session(object):
         self._variables['size_info%d' % (i + 1)] = size_info
 
   def _DiffFunc(self, before=None, after=None, sort=True):
-    """Diffs two SizeInfo objects. Returns a SizeInfoDiff.
+    """Diffs two SizeInfo objects. Returns a DeltaSizeInfo.
 
     Args:
       before: Defaults to first size_infos[0].
@@ -105,7 +104,7 @@ class _Session(object):
 
   def _PrintFunc(self, obj=None, verbose=False, recursive=False, use_pager=None,
                  to_file=None):
-    """Prints out the given Symbol / SymbolGroup / SymbolDiff / SizeInfo.
+    """Prints out the given Symbol / SymbolGroup / SizeInfo.
 
     For convenience, |obj| will be appended to the global "printed" list.
 
@@ -127,23 +126,8 @@ class _Session(object):
     lines = describe.GenerateLines(obj, verbose=verbose, recursive=recursive)
     _WriteToStream(lines, use_pager=use_pager, to_file=to_file)
 
-  def _ElfPathAndToolPrefixForSymbol(self, symbol, elf_path, tool_prefix):
-    size_info = None
-    size_path = None
-    for size_info, size_path in zip(self._size_infos, self._size_paths):
-      if symbol in size_info.raw_symbols:
-        break
-    else:
-      # If symbols is from a diff(), use its address+name to find it.
-      for size_info, size_path in zip(self._size_infos, self._size_paths):
-        matched = size_info.raw_symbols.WhereAddressInRange(symbol.address)
-        # Use last matched symbol to skip over padding-only symbols.
-        if len(matched) > 0 and matched[-1].full_name == symbol.full_name:
-          symbol = matched[-1]
-          break
-      else:
-        assert False, 'Symbol does not belong to a size_info.'
-
+  def _ElfPathAndToolPrefixForSymbol(self, size_info, elf_path):
+    tool_prefix = self._lazy_paths.tool_prefix
     orig_tool_prefix = size_info.metadata.get(models.METADATA_TOOL_PREFIX)
     if orig_tool_prefix:
       orig_tool_prefix = paths.FromSrcRootRelative(orig_tool_prefix)
@@ -156,29 +140,44 @@ class _Session(object):
         'Could not determine --tool-prefix. Possible fixes include setting '
         '--tool-prefix, or setting --output-directory')
 
-    if elf_path is None:
-      filename = size_info.metadata.get(models.METADATA_ELF_FILENAME)
-      output_dir = self._lazy_paths.output_directory
-      size_path = self._size_paths[self._size_infos.index(size_info)]
-      if output_dir:
-        # Local build: File is located in output directory.
-        path = os.path.normpath(os.path.join(output_dir, filename))
-      if not output_dir or not os.path.exists(path):
+    def build_id_matches(elf_path):
+      found_build_id = archive.BuildIdFromElf(elf_path, tool_prefix)
+      expected_build_id = size_info.metadata.get(models.METADATA_ELF_BUILD_ID)
+      return found_build_id == expected_build_id
+
+    filename = size_info.metadata.get(models.METADATA_ELF_FILENAME)
+    paths_to_try = []
+    if elf_path:
+      paths_to_try.append(elf_path)
+    else:
+      auto_lazy_paths = [
+          paths.LazyPaths(any_path_within_output_directory=s.size_path)
+          for s in self._size_infos]
+      for lazy_paths in auto_lazy_paths + [self._lazy_paths]:
+        output_dir = lazy_paths.output_directory
+        if output_dir:
+          # Local build: File is located in output directory.
+          paths_to_try.append(
+              os.path.normpath(os.path.join(output_dir, filename)))
         # Downloaded build: File is located beside .size file.
-        path = os.path.normpath(os.path.join(
-            os.path.dirname(size_path), os.path.basename(filename)))
+        paths_to_try.append(os.path.normpath(os.path.join(
+            os.path.dirname(size_info.size_path), os.path.basename(filename))))
 
-      assert os.path.exists(path), (
-          'Could locate ELF file. If binary was built locally, ensure '
-          '--output-directory is set. If output directory is unavailable, '
-          'ensure {} is located beside {}, or pass its path explicitly using '
-          'elf_path=').format(os.path.basename(filename), size_path)
+    paths_to_try = [p for p in paths_to_try if os.path.exists(p)]
 
-    found_build_id = archive.BuildIdFromElf(path, tool_prefix)
-    expected_build_id = size_info.metadata.get(models.METADATA_ELF_BUILD_ID)
-    assert found_build_id == expected_build_id, (
-        'Build ID does not match for %s' % path)
-    return path, tool_prefix
+    for i, elf_path in enumerate(paths_to_try):
+      if build_id_matches(elf_path):
+        return elf_path, tool_prefix
+
+      # Show an error only once all paths are tried.
+      if i + 1 == len(paths_to_try):
+        assert False, 'Build ID does not match for %s' % elf_path
+
+    assert False, (
+        'Could not locate ELF file. If binary was built locally, ensure '
+        '--output-directory is set. If output directory is unavailable, '
+        'ensure {} is located beside {}, or pass its path explicitly using '
+        'elf_path=').format(os.path.basename(filename), size_info.size_path)
 
   def _DetectDisassemblePrefixLen(self, args):
     # Look for a line that looks like:
@@ -187,9 +186,16 @@ class _Session(object):
     for line in output.splitlines():
       if line and line[0] == os.path.sep and line[-1].isdigit():
         release_idx = line.find('Release')
-        if release_idx == -1:
-          break
-        return line.count(os.path.sep, 0, release_idx)
+        if release_idx != -1:
+          return line.count(os.path.sep, 0, release_idx)
+        dot_dot_idx = line.find('..')
+        if dot_dot_idx != -1:
+          return line.count(os.path.sep, 0, dot_dot_idx) - 1
+        out_idx = line.find(os.path.sep + 'out')
+        if out_idx != -1:
+          return line.count(os.path.sep, 0, out_idx) + 2
+        logging.warning('Could not guess source path from found path.')
+        return None
     logging.warning('Found no source paths in objdump output.')
     return None
 
@@ -204,11 +210,17 @@ class _Session(object):
     """
     assert not symbol.IsGroup()
     assert symbol.address and symbol.section_name == '.text'
+    assert not symbol.IsDelta(), ('Cannot disasseble a Diff\'ed symbol. Try '
+                                  'passing .before_symbol or .after_symbol.')
+    size_info = None
+    for size_info in self._size_infos:
+      if symbol in size_info.raw_symbols:
+        break
+    else:
+      assert False, 'Symbol does not belong to a size_info.'
 
-    tool_prefix = self._lazy_paths.tool_prefix
-    if not elf_path:
-      elf_path, tool_prefix = self._ElfPathAndToolPrefixForSymbol(
-          symbol, elf_path, tool_prefix)
+    elf_path, tool_prefix = self._ElfPathAndToolPrefixForSymbol(
+        size_info, elf_path)
 
     args = [tool_prefix + 'objdump', '--disassemble', '--source',
             '--line-numbers', '--demangle',
@@ -278,18 +290,23 @@ class _Session(object):
     ])
 
   def _CreateBanner(self):
-    symbol_info_keys = sorted(m for m in dir(models.SizeInfo) if m[0] != '_')
-    symbol_keys = sorted(m for m in dir(models.Symbol) if m[0] != '_')
-    symbol_group_keys = [m for m in dir(models.SymbolGroup) if m[0] != '_']
-    symbol_diff_keys = sorted(m for m in dir(models.SymbolDiff)
-                              if m[0] != '_' and m not in symbol_group_keys)
-    symbol_group_keys = sorted(m for m in symbol_group_keys
-                               if m not in symbol_keys)
-    canned_queries_keys = sorted(m for m in dir(canned_queries.CannedQueries)
-                                 if m[0] != '_')
+    def keys(cls, super_keys=None):
+      ret = sorted(m for m in dir(cls) if m[0] != '_')
+      if super_keys:
+        ret = sorted(m for m in ret if m not in super_keys)
+      return ret
+
+    symbol_info_keys = keys(models.SizeInfo)
+    symbol_keys = keys(models.Symbol)
+    symbol_group_keys = keys(models.SymbolGroup, symbol_keys)
+    delta_size_info_keys = keys(models.DeltaSizeInfo)
+    delta_symbol_keys = keys(models.DeltaSymbol, symbol_keys)
+    delta_symbol_group_keys = keys(models.DeltaSymbolGroup,
+                                   symbol_keys + symbol_group_keys)
+    canned_queries_keys = keys(canned_queries.CannedQueries)
+
     functions = sorted(k for k in self._variables if k[0].isupper())
-    variables = sorted(k for k in self._variables if k[0].islower())
-    return '\n'.join([
+    lines = [
         '*' * 80,
         'Entering interactive Python shell. Quick reference:',
         '',
@@ -298,14 +315,23 @@ class _Session(object):
         '',
         'SymbolGroup (extends Symbol): %s' % ', '.join(symbol_group_keys),
         '',
-        'SymbolDiff (extends SymbolGroup): %s' % ', '.join(symbol_diff_keys),
+        'DeltaSizeInfo: %s' % ', '.join(delta_size_info_keys),
+        'DeltaSymbol (extends Symbol): %s' % ', '.join(delta_symbol_keys),
+        'DeltaSymbolGroup (extends SymbolGroup): %s' % ', '.join(
+            delta_symbol_group_keys),
         '',
         'canned_queries: %s' % ', '.join(canned_queries_keys),
         '',
         'Functions: %s' % ', '.join('%s()' % f for f in functions),
-        'Variables: %s' % ', '.join(variables),
-        '*' * 80,
-    ])
+        'Variables: ',
+        '  printed: List of objects passed to Print().',
+    ]
+    for key, value in self._variables.iteritems():
+      if key.startswith('size_info'):
+        lines.append('  {}: Loaded from {}'.format(key, value.size_path))
+    lines.append('*' * 80)
+    return '\n'.join(lines)
+
 
   @classmethod
   def _InitReadline(cls):
@@ -354,7 +380,7 @@ def Run(args, parser):
   lazy_paths = paths.LazyPaths(tool_prefix=args.tool_prefix,
                                output_directory=args.output_directory,
                                any_path_within_output_directory=args.inputs[0])
-  session = _Session(size_infos, args.inputs, lazy_paths)
+  session = _Session(size_infos, lazy_paths)
 
   if args.query:
     logging.info('Running query from command-line.')

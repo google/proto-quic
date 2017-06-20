@@ -22,7 +22,7 @@ class BlankPageSetWithExtensionProfile(story.StorySet):
   """PageSet tied to BlankPageWithExtensionProfile."""
 
   def __init__(self):
-    super(BlankPageSetWithExtensionProfile, self).__init__(verify_names=True)
+    super(BlankPageSetWithExtensionProfile, self).__init__()
     self.AddStory(BlankPageWithExtensionProfile(
         'file://blank_page/blank_page.html', self,
         'blank_page.html'))

@@ -1715,7 +1715,7 @@ Sources for binary targets
   For binary targets (source sets, executables, and libraries), the known file
   types will be compiled with the associated tools. Unknown file types and
   headers will be skipped. However, you should still list all C/C+ header files
-  so GN knows about the existance of those files for the purposes of include
+  so GN knows about the existence of those files for the purposes of include
   checking.
 
   As a special case, a file ending in ".def" will be treated as a Windows

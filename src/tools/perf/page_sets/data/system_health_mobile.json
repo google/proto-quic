@@ -24,6 +24,9 @@
         "browse:media:facebook_photos": {
             "DEFAULT": "system_health_mobile_040.wpr"
         },
+        "browse:media:flickr_infinite_scroll": {
+            "DEFAULT": "system_health_mobile_062.wpr"
+        },
         "browse:media:imgur": {
             "DEFAULT": "system_health_mobile_035.wpr"
         },
@@ -75,29 +78,26 @@
         "browse:social:facebook": {
             "DEFAULT": "system_health_mobile_028.wpr"
         },
+        "browse:social:facebook_infinite_scroll": {
+            "DEFAULT": "system_health_mobile_062.wpr"
+        },
         "browse:social:instagram": {
             "DEFAULT": "system_health_mobile_060.wpr"
+        },
+        "browse:social:pinterest_infinite_scroll": {
+            "DEFAULT": "system_health_mobile_063.wpr"
+        },
+        "browse:social:tumblr_infinite_scroll": {
+            "DEFAULT": "system_health_mobile_062.wpr"
         },
         "browse:social:twitter": {
             "DEFAULT": "system_health_mobile_023.wpr"
         },
+        "browse:tech:discourse_infinite_scroll": {
+            "DEFAULT": "system_health_mobile_062.wpr"
+        },
         "browse:tools:maps": {
             "DEFAULT": "system_health_mobile_059.wpr"
-        },
-        "browse:tech:discourse_infinite_scroll": {
-            "DEFAULT": "mobile_infinite_scroll_000.wpr"
-        },
-        "browse:social:facebook_infinite_scroll": {
-            "DEFAULT": "mobile_infinite_scroll_000.wpr"
-        },
-        "browse:media:flickr_infinite_scroll": {
-            "DEFAULT": "mobile_infinite_scroll_000.wpr"
-        },
-        "browse:social:pinterest_infinite_scroll": {
-            "DEFAULT": "mobile_infinite_scroll_001.wpr"
-        },
-        "browse:social:tumblr_infinite_scroll": {
-            "DEFAULT": "mobile_infinite_scroll_000.wpr"
         },
         "load:games:bubbles": {
             "DEFAULT": "system_health_mobile_005.wpr"

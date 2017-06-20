@@ -388,6 +388,97 @@ TEST(URLRequestJob, RedirectTransactionWithReferrerPolicyHeader) {
            ORIGIN_ONLY_ON_TRANSITION_CROSS_ORIGIN /* expected final policy */,
        "https://foo.test/" /* expected final referrer */},
 
+      // If a redirect serves 'Referrer-Policy: same-origin', then the referrer
+      // should be untouched for a same-origin redirect,
+      {"https://foo.test/one" /* original url */,
+       "https://foo.test/referrer" /* original referrer */,
+       "Location: https://foo.test/two\n"
+       "Referrer-Policy: same-origin\n",
+       URLRequest::NEVER_CLEAR_REFERRER /* original policy */,
+       URLRequest::CLEAR_REFERRER_ON_TRANSITION_CROSS_ORIGIN /* final policy */
+       ,
+       "https://foo.test/referrer" /* expected final referrer */},
+
+      // ... but should be cleared for a cross-origin redirect.
+      {"https://foo.test/one" /* original url */,
+       "https://foo.test/referrer" /* original referrer */,
+       "Location: https://bar.test/two\n"
+       "Referrer-Policy: same-origin\n",
+       URLRequest::NEVER_CLEAR_REFERRER /* original policy */,
+       URLRequest::CLEAR_REFERRER_ON_TRANSITION_CROSS_ORIGIN,
+       "" /* expected final referrer */},
+
+      // If a redirect serves 'Referrer-Policy: strict-origin', then the
+      // referrer should be the origin only for a cross-origin non-downgrading
+      // redirect,
+      {"https://foo.test/one" /* original url */,
+       "https://foo.test/referrer" /* original referrer */,
+       "Location: https://bar.test/two\n"
+       "Referrer-Policy: strict-origin\n",
+       URLRequest::NEVER_CLEAR_REFERRER /* original policy */,
+       URLRequest::ORIGIN_CLEAR_ON_TRANSITION_FROM_SECURE_TO_INSECURE,
+       "https://foo.test/" /* expected final referrer */},
+      {"http://foo.test/one" /* original url */,
+       "http://foo.test/referrer" /* original referrer */,
+       "Location: http://bar.test/two\n"
+       "Referrer-Policy: strict-origin\n",
+       URLRequest::NEVER_CLEAR_REFERRER /* original policy */,
+       URLRequest::ORIGIN_CLEAR_ON_TRANSITION_FROM_SECURE_TO_INSECURE,
+       "http://foo.test/" /* expected final referrer */},
+
+      // ... but should be cleared for a downgrading redirect.
+      {"https://foo.test/one" /* original url */,
+       "https://foo.test/referrer" /* original referrer */,
+       "Location: http://foo.test/two\n"
+       "Referrer-Policy: strict-origin\n",
+       URLRequest::NEVER_CLEAR_REFERRER /* original policy */,
+       URLRequest::ORIGIN_CLEAR_ON_TRANSITION_FROM_SECURE_TO_INSECURE,
+       "" /* expected final referrer */},
+
+      // If a redirect serves 'Referrer-Policy:
+      // strict-origin-when-cross-origin', then the referrer should be preserved
+      // for a same-origin redirect,
+      {"https://foo.test/one" /* original url */,
+       "https://foo.test/referrer" /* original referrer */,
+       "Location: https://foo.test/two\n"
+       "Referrer-Policy: strict-origin-when-cross-origin\n",
+       URLRequest::NEVER_CLEAR_REFERRER /* original policy */,
+       URLRequest::REDUCE_REFERRER_GRANULARITY_ON_TRANSITION_CROSS_ORIGIN,
+       "https://foo.test/referrer" /* expected final referrer */},
+      {"http://foo.test/one" /* original url */,
+       "http://foo.test/referrer" /* original referrer */,
+       "Location: http://foo.test/two\n"
+       "Referrer-Policy: strict-origin-when-cross-origin\n",
+       URLRequest::NEVER_CLEAR_REFERRER /* original policy */,
+       URLRequest::REDUCE_REFERRER_GRANULARITY_ON_TRANSITION_CROSS_ORIGIN,
+       "http://foo.test/referrer" /* expected final referrer */},
+
+      // ... but should be stripped to the origin for a cross-origin
+      // non-downgrading redirect,
+      {"https://foo.test/one" /* original url */,
+       "https://foo.test/referrer" /* original referrer */,
+       "Location: https://bar.test/two\n"
+       "Referrer-Policy: strict-origin-when-cross-origin\n",
+       URLRequest::NEVER_CLEAR_REFERRER /* original policy */,
+       URLRequest::REDUCE_REFERRER_GRANULARITY_ON_TRANSITION_CROSS_ORIGIN,
+       "https://foo.test/" /* expected final referrer */},
+      {"http://foo.test/one" /* original url */,
+       "http://foo.test/referrer" /* original referrer */,
+       "Location: http://bar.test/two\n"
+       "Referrer-Policy: strict-origin-when-cross-origin\n",
+       URLRequest::NEVER_CLEAR_REFERRER /* original policy */,
+       URLRequest::REDUCE_REFERRER_GRANULARITY_ON_TRANSITION_CROSS_ORIGIN,
+       "http://foo.test/" /* expected final referrer */},
+
+      // ... and should be cleared for a downgrading redirect.
+      {"https://foo.test/one" /* original url */,
+       "https://foo.test/referrer" /* original referrer */,
+       "Location: http://foo.test/two\n"
+       "Referrer-Policy: strict-origin-when-cross-origin\n",
+       URLRequest::NEVER_CLEAR_REFERRER /* original policy */,
+       URLRequest::REDUCE_REFERRER_GRANULARITY_ON_TRANSITION_CROSS_ORIGIN,
+       "" /* expected final referrer */},
+
       // If a redirect serves 'Referrer-Policy: unsafe-url', then the
       // referrer should remain, even if originally set to clear on
       // downgrade.

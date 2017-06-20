@@ -12,10 +12,6 @@
 namespace base {
 namespace android {
 
-bool OnJNIOnLoadRegisterJNI(JNIEnv* env) {
-  return RegisterLibraryLoaderEntryHook(env);
-}
-
 bool OnJNIOnLoadInit() {
   InitAtExitManager();
   JNIEnv* env = base::android::AttachCurrentThread();

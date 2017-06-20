@@ -4,6 +4,7 @@
 
 #include "tools/gn/action_target_generator.h"
 
+#include "base/stl_util.h"
 #include "tools/gn/build_settings.h"
 #include "tools/gn/err.h"
 #include "tools/gn/filesystem_utils.h"
@@ -73,10 +74,8 @@ void ActionTargetGenerator::DoRun() {
   // together.
   const auto& required_args_substitutions =
       target_->action_values().args().required_types();
-  bool has_rsp_file_name = std::find(required_args_substitutions.begin(),
-                                     required_args_substitutions.end(),
-                                     SUBSTITUTION_RSP_FILE_NAME) !=
-      required_args_substitutions.end();
+  bool has_rsp_file_name = base::ContainsValue(required_args_substitutions,
+                                               SUBSTITUTION_RSP_FILE_NAME);
   if (target_->action_values().uses_rsp_file() && !has_rsp_file_name) {
     *err_ = Err(function_call_, "Missing {{response_file_name}} in args.",
         "This target defines response_file_contents but doesn't use\n"

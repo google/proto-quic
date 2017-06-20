@@ -24,7 +24,6 @@
 #include "net/quic/platform/api/quic_test.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
-#include "net/quic/test_tools/delayed_verify_strike_register_client.h"
 #include "net/quic/test_tools/failing_proof_source.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/mock_random.h"
@@ -361,11 +360,8 @@ class CryptoServerTest : public QuicTestWithParam<TestParams> {
     } else {
       ASSERT_EQ(QUIC_NO_ERROR,
                 out_.GetUint64(kRCID, &server_designated_connection_id));
-      if (QuicUtils::IsConnectionIdWireFormatBigEndian(
-              Perspective::IS_SERVER)) {
-        server_designated_connection_id =
-            QuicEndian::NetToHost64(server_designated_connection_id);
-      }
+      server_designated_connection_id =
+          QuicEndian::NetToHost64(server_designated_connection_id);
       EXPECT_EQ(rand_for_id_generation_.RandUint64(),
                 server_designated_connection_id);
     }

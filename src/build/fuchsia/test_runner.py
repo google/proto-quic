@@ -47,6 +47,9 @@ def MakeTargetImageName(common_prefix, output_directory, location):
   output_directory: an optional prefix on location that will also be removed.
   location: the file path to relativize.
 
+  .so files will be stored into the lib subdirectory to be able to be found by
+  default by the loader.
+
   Examples:
 
   >>> MakeTargetImageName(common_prefix='/work/cr/src/',
@@ -58,6 +61,11 @@ def MakeTargetImageName(common_prefix, output_directory, location):
   ...                     output_directory='/work/cr/src/out/fuch',
   ...                     location='/work/cr/src/out/fuch/icudtl.dat')
   'icudtl.dat'
+
+  >>> MakeTargetImageName(common_prefix='/work/cr/src/',
+  ...                     output_directory='/work/cr/src/out/fuch',
+  ...                     location='/work/cr/src/out/fuch/libbase.so')
+  'lib/libbase.so'
   """
   assert output_directory.startswith(common_prefix)
   output_dir_no_common_prefix = output_directory[len(common_prefix):]
@@ -65,6 +73,10 @@ def MakeTargetImageName(common_prefix, output_directory, location):
   loc = location[len(common_prefix):]
   if loc.startswith(output_dir_no_common_prefix):
     loc = loc[len(output_dir_no_common_prefix)+1:]
+  # TODO(fuchsia): The requirements for finding/loading .so are in flux, so this
+  # ought to be reconsidered at some point. See https://crbug.com/732897.
+  if location.endswith('.so'):
+    loc = 'lib/' + loc
   return loc
 
 
@@ -89,7 +101,7 @@ def AddToManifest(manifest_file, target_name, source, mapper):
 
 
 def BuildBootfs(output_directory, runtime_deps_path, test_name, gtest_filter,
-                gtest_repeat, dry_run):
+                gtest_repeat, test_launcher_filter_file, dry_run):
   with open(runtime_deps_path) as f:
     lines = f.readlines()
 
@@ -121,6 +133,20 @@ def BuildBootfs(output_directory, runtime_deps_path, test_name, gtest_filter,
   autorun_file.write('#!/bin/sh\n')
   autorun_file.write('/system/' + os.path.basename(test_name))
   autorun_file.write(' --test-launcher-retry-limit=0')
+  if int(os.environ.get('CHROME_HEADLESS', 0)) != 0:
+    # When running on bots (without KVM) execution is quite slow. The test
+    # launcher times out a subprocess after 45s which can be too short. Make the
+    # timeout 10x longer.
+    autorun_file.write(' --test-launcher-timeout=450000')
+  if test_launcher_filter_file:
+    test_launcher_filter_file = os.path.normpath(
+            os.path.join(output_directory, test_launcher_filter_file))
+    filter_file_on_device = MakeTargetImageName(
+          common_prefix, output_directory, test_launcher_filter_file)
+    autorun_file.write(' --test-launcher-filter-file=/system/' +
+                       filter_file_on_device)
+    target_source_pairs.append(
+        [filter_file_on_device, test_launcher_filter_file])
   if gtest_filter:
     autorun_file.write(' --gtest_filter=' + gtest_filter)
   if gtest_repeat:
@@ -146,7 +172,7 @@ def BuildBootfs(output_directory, runtime_deps_path, test_name, gtest_filter,
 ''')
   initial_config_file.flush()
   DumpFile(dry_run, initial_config_file.name, 'initial.config')
-  target_source_pairs.append(('data/application_manager/initial.config',
+  target_source_pairs.append(('data/appmgr/initial.config',
                               initial_config_file.name))
 
   manifest_file = tempfile.NamedTemporaryFile()
@@ -166,7 +192,6 @@ def BuildBootfs(output_directory, runtime_deps_path, test_name, gtest_filter,
                '--target=boot', os.path.join(SDK_ROOT, 'bootdata.bin'),
                '--target=system', manifest_file.name,
               ])
-  print 'Wrote bootfs to', bootfs_name
   return bootfs_name
 
 
@@ -188,25 +213,46 @@ def main():
                       help='GTest filter to use in place of any default')
   parser.add_argument('--gtest_repeat',
                       help='GTest repeat value to use')
+  parser.add_argument('--test-launcher-filter-file',
+                      help='Pass filter file through to target process')
   args = parser.parse_args()
 
   bootfs = BuildBootfs(args.output_directory, args.runtime_deps_path,
                        args.test_name, args.gtest_filter, args.gtest_repeat,
-                       args.dry_run)
+                       args.test_launcher_filter_file, args.dry_run)
 
   qemu_path = os.path.join(SDK_ROOT, 'qemu', 'bin', 'qemu-system-x86_64')
 
-  if int(os.environ.get('CHROME_HEADLESS', 0)) == 0:
-    args_for_kvm_and_cpu = ['-enable-kvm', '-cpu', 'host,migratable=no']
-  else:
-    args_for_kvm_and_cpu = ['-cpu', 'Haswell,+smap,-check']
-  RunAndCheck(args.dry_run,
-      [qemu_path, '-m', '2048', '-nographic', '-net', 'none', '-smp', '4',
+  qemu_command = [qemu_path,
+       '-m', '2048',
+       '-nographic',
+       '-net', 'none',
+       '-smp', '4',
        '-machine', 'q35',
        '-kernel', os.path.join(SDK_ROOT, 'kernel', 'magenta.bin'),
        '-initrd', bootfs,
-       '-append', 'TERM=xterm-256color kernel.halt_on_panic=true'] +
-       args_for_kvm_and_cpu)
+       '-append', 'TERM=xterm-256color kernel.halt_on_panic=true']
+  if int(os.environ.get('CHROME_HEADLESS', 0)) == 0:
+    qemu_command += ['-enable-kvm', '-cpu', 'host,migratable=no']
+  else:
+    qemu_command += ['-cpu', 'Haswell,+smap,-check']
+
+  if args.dry_run:
+    print 'Run:', qemu_command
+  else:
+    qemu_popen = subprocess.Popen(qemu_command, stdout=subprocess.PIPE)
+    success = False
+    # TODO(scottmg): Pipe through magenta/scripts/symbolize too, once that's
+    # available in the SDK.
+    while True:
+      line = qemu_popen.stdout.readline()
+      if not line:
+        break
+      if 'SUCCESS: all tests passed.' in line:
+        success = True
+      print line,
+    qemu_popen.wait()
+    return 0 if success else 1
 
   return 0
 

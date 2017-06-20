@@ -36,6 +36,14 @@ class MemoryTracingObserver;
 class MemoryDumpProvider;
 class HeapProfilerSerializationState;
 
+enum HeapProfilingMode {
+  kHeapProfilingModeNone,
+  kHeapProfilingModePseudo,
+  kHeapProfilingModeNative,
+  kHeapProfilingModeTaskProfiler,
+  kHeapProfilingModeInvalid
+};
+
 // This is the interface exposed to the rest of the codebase to deal with
 // memory tracing. The main entry point for clients is represented by
 // RequestDumpPoint(). The extension by Un(RegisterDumpProvider).
@@ -46,7 +54,6 @@ class BASE_EXPORT MemoryDumpManager {
                              const GlobalMemoryDumpCallback& callback)>;
 
   static const char* const kTraceCategory;
-  static const char* const kLogPrefix;
 
   // This value is returned as the tracing id of the child processes by
   // GetTracingProcessId() when tracing is not enabled.
@@ -63,7 +70,7 @@ class BASE_EXPORT MemoryDumpManager {
   // Arguments:
   //  request_dump_function: Function to invoke a global dump. Global dump
   //      involves embedder-specific behaviors like multiprocess handshaking.
-  //  is_coordinator: True when current process coodinates the periodic dump
+  //  is_coordinator: True when current process coordinates the periodic dump
   //      triggering.
   void Initialize(RequestGlobalDumpFunction request_dump_function,
                   bool is_coordinator);
@@ -113,13 +120,12 @@ class BASE_EXPORT MemoryDumpManager {
   // to notify about the completion of the global dump (i.e. after all the
   // processes have dumped) and its success (true iff all the dumps were
   // successful).
-  void RequestGlobalDump(MemoryDumpType dump_type,
-                         MemoryDumpLevelOfDetail level_of_detail,
-                         const GlobalMemoryDumpCallback& callback);
+  void RequestGlobalDump(MemoryDumpType,
+                         MemoryDumpLevelOfDetail,
+                         const GlobalMemoryDumpCallback&);
 
   // Same as above (still asynchronous), but without callback.
-  void RequestGlobalDump(MemoryDumpType dump_type,
-                         MemoryDumpLevelOfDetail level_of_detail);
+  void RequestGlobalDump(MemoryDumpType, MemoryDumpLevelOfDetail);
 
   // Prepare MemoryDumpManager for RequestGlobalMemoryDump calls for tracing
   // related modes (non-SUMMARY_ONLY).
@@ -139,7 +145,12 @@ class BASE_EXPORT MemoryDumpManager {
   void CreateProcessDump(const MemoryDumpRequestArgs& args,
                          const ProcessMemoryDumpCallback& callback);
 
-  // Enable heap profiling if kEnableHeapProfiling is specified.
+  // Returns the heap profiling mode configured on the command-line, if any.
+  // If heap profiling is configured but not supported by this binary, or if an
+  // invalid mode is specified, then kHeapProfilingInvalid is returned.
+  static HeapProfilingMode GetHeapProfilingModeFromCommandLine();
+
+  // Enable heap profiling if supported, and kEnableHeapProfiling is specified.
   void EnableHeapProfilingIfNeeded();
 
   // Lets tests see if a dump provider is registered.
@@ -178,7 +189,7 @@ class BASE_EXPORT MemoryDumpManager {
   friend class MemoryDumpManagerTest;
 
   // Holds the state of a process memory dump that needs to be carried over
-  // across task runners in order to fulfil an asynchronous CreateProcessDump()
+  // across task runners in order to fulfill an asynchronous CreateProcessDump()
   // request. At any time exactly one task runner owns a
   // ProcessMemoryDumpAsyncState.
   struct ProcessMemoryDumpAsyncState {
@@ -280,7 +291,10 @@ class BASE_EXPORT MemoryDumpManager {
   void GetDumpProvidersForPolling(
       std::vector<scoped_refptr<MemoryDumpProviderInfo>>*);
 
-  // An ordererd set of registered MemoryDumpProviderInfo(s), sorted by task
+  // Returns true if Initialize() has been called, false otherwise.
+  bool is_initialized() const { return !request_dump_function_.is_null(); }
+
+  // An ordered set of registered MemoryDumpProviderInfo(s), sorted by task
   // runner affinity (MDPs belonging to the same task runners are adjacent).
   MemoryDumpProviderInfo::OrderedSet dump_providers_;
 

@@ -4,7 +4,10 @@
 
 #include "net/ssl/client_cert_store_mac.h"
 
+#include "base/memory/ptr_util.h"
+#include "net/ssl/client_cert_identity_test_util.h"
 #include "net/ssl/client_cert_store_unittest-inl.h"
+#include "net/ssl/ssl_private_key.h"
 
 namespace net {
 
@@ -12,9 +15,10 @@ class ClientCertStoreMacTestDelegate {
  public:
   bool SelectClientCerts(const CertificateList& input_certs,
                          const SSLCertRequestInfo& cert_request_info,
-                         CertificateList* selected_certs) {
+                         ClientCertIdentityList* selected_certs) {
     return store_.SelectClientCertsForTesting(
-        input_certs, cert_request_info, selected_certs);
+        FakeClientCertIdentityListFromCertificateList(input_certs),
+        cert_request_info, selected_certs);
   }
 
  private:
@@ -31,9 +35,14 @@ class ClientCertStoreMacTest : public ::testing::Test {
       const scoped_refptr<X509Certificate>& preferred_cert,
       const CertificateList& regular_certs,
       const SSLCertRequestInfo& request,
-      CertificateList* selected_certs) {
+      ClientCertIdentityList* selected_certs) {
+    std::unique_ptr<ClientCertIdentity> preferred_identity(
+        base::MakeUnique<FakeClientCertIdentity>(preferred_cert, nullptr));
+
     return store_.SelectClientCertsGivenPreferredForTesting(
-        preferred_cert, regular_certs, request, selected_certs);
+        std::move(preferred_identity),
+        FakeClientCertIdentityListFromCertificateList(regular_certs), request,
+        selected_certs);
   }
 
  private:
@@ -56,7 +65,7 @@ TEST_F(ClientCertStoreMacTest, FilterOutThePreferredCert) {
   scoped_refptr<SSLCertRequestInfo> request(new SSLCertRequestInfo());
   request->cert_authorities = authority_2;
 
-  std::vector<scoped_refptr<X509Certificate> > selected_certs;
+  ClientCertIdentityList selected_certs;
   bool rv = SelectClientCertsGivenPreferred(
       cert_1, certs, *request.get(), &selected_certs);
   EXPECT_TRUE(rv);
@@ -77,13 +86,13 @@ TEST_F(ClientCertStoreMacTest, PreferredCertGoesFirst) {
   certs.push_back(cert_2);
   scoped_refptr<SSLCertRequestInfo> request(new SSLCertRequestInfo());
 
-  std::vector<scoped_refptr<X509Certificate> > selected_certs;
+  ClientCertIdentityList selected_certs;
   bool rv = SelectClientCertsGivenPreferred(
       cert_1, certs, *request.get(), &selected_certs);
   EXPECT_TRUE(rv);
   ASSERT_EQ(2u, selected_certs.size());
-  EXPECT_TRUE(selected_certs[0]->Equals(cert_1.get()));
-  EXPECT_TRUE(selected_certs[1]->Equals(cert_2.get()));
+  EXPECT_TRUE(selected_certs[0]->certificate()->Equals(cert_1.get()));
+  EXPECT_TRUE(selected_certs[1]->certificate()->Equals(cert_2.get()));
 }
 
 }  // namespace net

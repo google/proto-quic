@@ -6,6 +6,7 @@
 
 #include "base/numerics/safe_conversions.h"
 #include "base/pickle.h"
+#include "base/stl_util.h"
 #include "crypto/openssl_util.h"
 #include "net/base/ip_address.h"
 #include "net/cert/asn1_util.h"
@@ -263,15 +264,13 @@ bool X509Certificate::IsIssuedByEncoded(
   std::string normalized_cert_issuer;
   if (!GetNormalizedCertIssuer(cert_handle_, &normalized_cert_issuer))
     return false;
-  if (std::find(normalized_issuers.begin(), normalized_issuers.end(),
-                normalized_cert_issuer) != normalized_issuers.end())
+  if (base::ContainsValue(normalized_issuers, normalized_cert_issuer))
     return true;
 
   for (CRYPTO_BUFFER* intermediate : intermediate_ca_certs_) {
     if (!GetNormalizedCertIssuer(intermediate, &normalized_cert_issuer))
       return false;
-    if (std::find(normalized_issuers.begin(), normalized_issuers.end(),
-                  normalized_cert_issuer) != normalized_issuers.end())
+    if (base::ContainsValue(normalized_issuers, normalized_cert_issuer))
       return true;
   }
   return false;

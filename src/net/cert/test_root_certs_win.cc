@@ -8,6 +8,7 @@
 
 #include "base/lazy_instance.h"
 #include "base/logging.h"
+#include "base/numerics/safe_conversions.h"
 #include "base/win/win_util.h"
 #include "net/cert/x509_certificate.h"
 
@@ -142,9 +143,12 @@ bool TestRootCerts::Add(X509Certificate* certificate) {
   // happen.
   g_capi_injector.Get();
 
-  BOOL ok = CertAddCertificateContextToStore(
-      temporary_roots_, certificate->os_cert_handle(),
-      CERT_STORE_ADD_NEW, NULL);
+  std::string der_cert;
+  X509Certificate::GetDEREncoded(certificate->os_cert_handle(), &der_cert);
+  BOOL ok = CertAddEncodedCertificateToStore(
+      temporary_roots_, X509_ASN_ENCODING,
+      reinterpret_cast<const BYTE*>(der_cert.data()),
+      base::checked_cast<DWORD>(der_cert.size()), CERT_STORE_ADD_NEW, NULL);
   if (!ok) {
     // If the certificate is already added, return successfully.
     return GetLastError() == static_cast<DWORD>(CRYPT_E_EXISTS);

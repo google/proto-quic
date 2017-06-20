@@ -1,6 +1,6 @@
 Name: libxml
 URL: http://xmlsoft.org
-Version: 074180119fc90d5fd04ef9e8a5ee1910d6f9ad8e
+Version: 3939178e4cb797417ff033b1e04ab4b038e224d9
 License: MIT
 License File: src/Copyright
 Security Critical: yes
@@ -14,14 +14,10 @@ Modifications:
   chromium/include/libxml/libxml_utils.h.
 - Applied these patches in chromium/*.patch:
   chromium-issue-599427.patch: workaround for VS 2015 Update 2 code-gen bug
-  chromium-issue-620679.patch: See https://crbug.com/620679#c34
   chromium-issue-628581.patch: See https://crbug.com/628581#c18
-  chromium-issue-683629.patch: See https://crbug.com/683629#c9
   libxml2-2.9.4-security-CVE-2017-7376-nanohttp-out-of-bounds-write.patch:
   See https://crbug.com/708433
   libxml2-2.9.4-security-xpath-nodetab-uaf.patch: See https://crbug.com/705445
-  libxml2-2.9.4-xmlDumpElementContent-null-deref.patch:
-  See https://crbug.com/700750
   chromium-issue-708434.patch: Guard against input counter overflow.
 - Delete various unused files, see chromium/roll.py
 

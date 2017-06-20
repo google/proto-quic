@@ -17,7 +17,7 @@ class PowerMonitorTest : public testing::Test {
     power_monitor_.reset(new PowerMonitor(
         std::unique_ptr<PowerMonitorSource>(power_monitor_source_)));
   }
-  ~PowerMonitorTest() override{};
+  ~PowerMonitorTest() override {}
 
   PowerMonitorTestSource* source() { return power_monitor_source_; }
   PowerMonitor* monitor() { return power_monitor_.get(); }

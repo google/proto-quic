@@ -31,7 +31,7 @@ MemoryTracingObserver::MemoryTracingObserver(
     MemoryDumpManager* memory_dump_manager)
     : memory_dump_manager_(memory_dump_manager), trace_log_(trace_log) {
   // If tracing was enabled before initializing MemoryDumpManager, we missed the
-  // OnTraceLogEnabled() event. Synthetize it so we can late-join the party.
+  // OnTraceLogEnabled() event. Synthesize it so we can late-join the party.
   // IsEnabled is called before adding observer to avoid calling
   // OnTraceLogEnabled twice.
   bool is_tracing_already_enabled = trace_log_->IsEnabled();

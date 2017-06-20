@@ -21,11 +21,14 @@
 namespace net {
 
 HttpServerPropertiesImpl::HttpServerPropertiesImpl()
-    : HttpServerPropertiesImpl(&broken_alternative_services_clock_) {}
+    : HttpServerPropertiesImpl(nullptr) {}
 
 HttpServerPropertiesImpl::HttpServerPropertiesImpl(
     base::TickClock* broken_alternative_services_clock)
-    : broken_alternative_services_(this, broken_alternative_services_clock),
+    : broken_alternative_services_(this,
+                                   broken_alternative_services_clock
+                                       ? broken_alternative_services_clock
+                                       : &broken_alternative_services_clock_),
       spdy_servers_map_(SpdyServersMap::NO_AUTO_EVICT),
       alternative_service_map_(AlternativeServiceMap::NO_AUTO_EVICT),
       server_network_stats_map_(ServerNetworkStatsMap::NO_AUTO_EVICT),
@@ -219,7 +222,7 @@ bool HttpServerPropertiesImpl::SupportsRequestPriority(
       GetAlternativeServiceInfos(server);
   for (const AlternativeServiceInfo& alternative_service_info :
        alternative_service_info_vector) {
-    if (alternative_service_info.alternative_service.protocol == kProtoQUIC) {
+    if (alternative_service_info.alternative_service().protocol == kProtoQUIC) {
       return true;
     }
   }
@@ -304,11 +307,11 @@ HttpServerPropertiesImpl::GetAlternativeServiceInfos(
     HostPortPair host_port_pair(origin.host(), origin.port());
     for (AlternativeServiceInfoVector::iterator it = map_it->second.begin();
          it != map_it->second.end();) {
-      if (it->expiration < now) {
+      if (it->expiration() < now) {
         it = map_it->second.erase(it);
         continue;
       }
-      AlternativeService alternative_service(it->alternative_service);
+      AlternativeService alternative_service(it->alternative_service());
       if (alternative_service.host.empty()) {
         alternative_service.host = origin.host();
       }
@@ -320,7 +323,7 @@ HttpServerPropertiesImpl::GetAlternativeServiceInfos(
         continue;
       }
       valid_alternative_service_infos.push_back(
-          AlternativeServiceInfo(alternative_service, it->expiration));
+          AlternativeServiceInfo(alternative_service, it->expiration()));
       ++it;
     }
     if (map_it->second.empty()) {
@@ -339,11 +342,11 @@ HttpServerPropertiesImpl::GetAlternativeServiceInfos(
   }
   for (AlternativeServiceInfoVector::iterator it = map_it->second.begin();
        it != map_it->second.end();) {
-    if (it->expiration < now) {
+    if (it->expiration() < now) {
       it = map_it->second.erase(it);
       continue;
     }
-    AlternativeService alternative_service(it->alternative_service);
+    AlternativeService alternative_service(it->alternative_service());
     if (alternative_service.host.empty()) {
       alternative_service.host = canonical->second.host();
       if (IsAlternativeServiceBroken(alternative_service)) {
@@ -356,7 +359,7 @@ HttpServerPropertiesImpl::GetAlternativeServiceInfos(
       continue;
     }
     valid_alternative_service_infos.push_back(
-        AlternativeServiceInfo(alternative_service, it->expiration));
+        AlternativeServiceInfo(alternative_service, it->expiration()));
     ++it;
   }
   if (map_it->second.empty()) {
@@ -399,14 +402,14 @@ bool HttpServerPropertiesImpl::SetAlternativeServices(
       for (const auto& old : it->second) {
         // Persist to disk immediately if new entry has different scheme, host,
         // or port.
-        if (old.alternative_service != new_it->alternative_service) {
+        if (old.alternative_service() != new_it->alternative_service()) {
           changed = true;
           break;
         }
         // Also persist to disk if new expiration it more that twice as far or
         // less than half as far in the future.
-        base::Time old_time = old.expiration;
-        base::Time new_time = new_it->expiration;
+        base::Time old_time = old.expiration();
+        base::Time new_time = new_it->expiration();
         if (new_time - now > 2 * (old_time - now) ||
             2 * (new_time - now) < (old_time - now)) {
           changed = true;
@@ -491,7 +494,7 @@ HttpServerPropertiesImpl::GetAlternativeServiceInfoAsValue() const {
       std::string alternative_service_string(
           alternative_service_info.ToString());
       AlternativeService alternative_service(
-          alternative_service_info.alternative_service);
+          alternative_service_info.alternative_service());
       if (alternative_service.host.empty()) {
         alternative_service.host = server.host();
       }
@@ -627,7 +630,7 @@ HttpServerPropertiesImpl::GetAlternateProtocolIterator(
 
   for (const AlternativeServiceInfo& alternative_service_info : it->second) {
     AlternativeService alternative_service(
-        alternative_service_info.alternative_service);
+        alternative_service_info.alternative_service());
     if (alternative_service.host.empty()) {
       alternative_service.host = canonical_server.host();
     }
@@ -674,7 +677,7 @@ void HttpServerPropertiesImpl::OnExpireBrokenAlternativeService(
        map_it != alternative_service_map_.end();) {
     for (AlternativeServiceInfoVector::iterator it = map_it->second.begin();
          it != map_it->second.end();) {
-      AlternativeService alternative_service(it->alternative_service);
+      AlternativeService alternative_service(it->alternative_service());
       // Empty hostname in map means hostname of key: substitute before
       // comparing to |expired_alternative_service|.
       if (alternative_service.host.empty()) {

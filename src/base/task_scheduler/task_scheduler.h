@@ -10,6 +10,7 @@
 
 #include "base/base_export.h"
 #include "base/callback.h"
+#include "base/gtest_prod_util.h"
 #include "base/memory/ref_counted.h"
 #include "base/sequenced_task_runner.h"
 #include "base/single_thread_task_runner.h"
@@ -24,6 +25,12 @@
 namespace gin {
 class V8Platform;
 }
+
+namespace content {
+// Can't use the FRIEND_TEST_ALL_PREFIXES macro because the test is in a
+// different namespace.
+class BrowserMainLoopTest_CreateThreadsInSingleProcess_Test;
+}  // namespace content
 
 namespace tracked_objects {
 class Location;
@@ -56,10 +63,10 @@ class BASE_EXPORT TaskScheduler {
             foreground_blocking_worker_pool_params_in);
     ~InitParams();
 
-    const SchedulerWorkerPoolParams background_worker_pool_params;
-    const SchedulerWorkerPoolParams background_blocking_worker_pool_params;
-    const SchedulerWorkerPoolParams foreground_worker_pool_params;
-    const SchedulerWorkerPoolParams foreground_blocking_worker_pool_params;
+    SchedulerWorkerPoolParams background_worker_pool_params;
+    SchedulerWorkerPoolParams background_blocking_worker_pool_params;
+    SchedulerWorkerPoolParams foreground_worker_pool_params;
+    SchedulerWorkerPoolParams foreground_blocking_worker_pool_params;
   };
 
   // Destroying a TaskScheduler is not allowed in production; it is always
@@ -192,6 +199,7 @@ class BASE_EXPORT TaskScheduler {
 
  private:
   friend class gin::V8Platform;
+  friend class content::BrowserMainLoopTest_CreateThreadsInSingleProcess_Test;
 
   // Returns the maximum number of non-single-threaded tasks posted with
   // |traits| that can run concurrently in this TaskScheduler.

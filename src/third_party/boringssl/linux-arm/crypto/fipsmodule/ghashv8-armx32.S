@@ -4,6 +4,7 @@
 .text
 .fpu	neon
 .code	32
+#undef	__thumb2__
 .globl	gcm_init_v8
 .hidden	gcm_init_v8
 .type	gcm_init_v8,%function

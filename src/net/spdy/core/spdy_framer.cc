@@ -2182,6 +2182,16 @@ SpdySerializedFrame SpdyFramer::SerializePriority(
   return builder.take();
 }
 
+SpdySerializedFrame SpdyFramer::SerializeUnknown(
+    const SpdyUnknownIR& unknown) const {
+  const size_t total_size = kFrameHeaderSize + unknown.payload().size();
+  SpdyFrameBuilder builder(total_size);
+  builder.BeginNewExtensionFrame(*this, unknown.type(), unknown.flags(),
+                                 unknown.stream_id(), unknown.payload().size());
+  builder.WriteBytes(unknown.payload().data(), unknown.payload().size());
+  return builder.take();
+}
+
 namespace {
 
 class FrameSerializationVisitor : public SpdyFrameVisitor {
@@ -2224,6 +2234,9 @@ class FrameSerializationVisitor : public SpdyFrameVisitor {
   }
   void VisitPriority(const SpdyPriorityIR& priority) override {
     frame_ = framer_->SerializePriority(priority);
+  }
+  void VisitUnknown(const SpdyUnknownIR& unknown) override {
+    frame_ = framer_->SerializeUnknown(unknown);
   }
 
  private:
@@ -2628,6 +2641,18 @@ bool SpdyFramer::SerializePriority(const SpdyPriorityIR& priority,
   return ok;
 }
 
+bool SpdyFramer::SerializeUnknown(const SpdyUnknownIR& unknown,
+                                  ZeroCopyOutputBuffer* output) const {
+  const size_t total_size = kFrameHeaderSize + unknown.payload().size();
+  SpdyFrameBuilder builder(total_size, output);
+  bool ok = builder.BeginNewExtensionFrame(*this, unknown.type(),
+                                           unknown.flags(), unknown.stream_id(),
+                                           unknown.payload().size());
+  ok = ok &&
+       builder.WriteBytes(unknown.payload().data(), unknown.payload().size());
+  return ok;
+}
+
 namespace {
 
 class FrameSerializationVisitorWithOutput : public SpdyFrameVisitor {
@@ -2671,6 +2696,9 @@ class FrameSerializationVisitorWithOutput : public SpdyFrameVisitor {
   }
   void VisitPriority(const SpdyPriorityIR& priority) override {
     result_ = framer_->SerializePriority(priority, output_);
+  }
+  void VisitUnknown(const SpdyUnknownIR& unknown) override {
+    result_ = framer_->SerializeUnknown(unknown, output_);
   }
 
  private:

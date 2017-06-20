@@ -35,7 +35,7 @@ class V8GCTimesTestPageHelper(object):
 
     def __init__(self, page_set):
       super(V8GCTimesTestPageHelper.MockV8GCTimesPage, self).__init__(
-          'file://blank.html', page_set, page_set.base_dir)
+          'file://blank.html', page_set, page_set.base_dir, name='blank.html')
 
   def MeasureFakePage(self):
     # Create a fake page and add it to the page set.

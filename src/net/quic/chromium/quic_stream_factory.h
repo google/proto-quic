@@ -250,6 +250,9 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   // Called by a session when it becomes idle.
   void OnIdleSession(QuicChromiumClientSession* session);
 
+  // Returns true if QUIC is know to be broken for |session|.
+  bool IsQuicBroken(QuicChromiumClientSession* session);
+
   // Called by a session when it is going away and no more streams should be
   // created on it.
   void OnSessionGoingAway(QuicChromiumClientSession* session);

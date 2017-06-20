@@ -52,6 +52,8 @@ def _CompareWithGolden(name=None):
       actual_lines = func(self)
       actual_lines = (re.sub(r'(elf_mtime=).*', r'\1{redacted}', l)
                       for l in actual_lines)
+      actual_lines = (re.sub(r'(Loaded from ).*', r'\1{redacted}', l)
+                      for l in actual_lines)
 
       if update_goldens:
         with open(golden_path, 'w') as file_obj:
@@ -86,7 +88,10 @@ def _RunApp(name, args, debug_measures=False):
 
 
 def _DiffCounts(sym):
-  return (sym.changed_count, sym.added_count, sym.removed_count)
+  counts = sym.CountsByDiffStatus()
+  return (counts[models.DIFF_STATUS_CHANGED],
+          counts[models.DIFF_STATUS_ADDED],
+          counts[models.DIFF_STATUS_REMOVED])
 
 
 class IntegrationTest(unittest.TestCase):
@@ -204,14 +209,14 @@ class IntegrationTest(unittest.TestCase):
     size_info2.raw_symbols -= [a1]
     a1.aliases.remove(a1)
     d = diff.Diff(size_info1, size_info2)
-    self.assertEquals(d.raw_symbols.size, 0)
+    self.assertEquals(d.raw_symbols.pss, 0)
     self.assertEquals((0, 0, 1), _DiffCounts(d.raw_symbols))
     # shrinkToFit is in a cluster, so removed turns to a changed when clustered.
     self.assertEquals((1, 0, 0), _DiffCounts(d.symbols.GroupedByFullName()))
 
     # Adding one alias should not change size.
     d = diff.Diff(size_info2, size_info1)
-    self.assertEquals(d.raw_symbols.size, 0)
+    self.assertEquals(d.raw_symbols.pss, 0)
     self.assertEquals((0, 1, 0), _DiffCounts(d.raw_symbols))
     self.assertEquals((1, 0, 0), _DiffCounts(d.symbols.GroupedByFullName()))
 
@@ -226,13 +231,13 @@ class IntegrationTest(unittest.TestCase):
     a1.aliases.remove(a1)
     a1.aliases.remove(a2)
     d = diff.Diff(size_info1, size_info2)
-    self.assertEquals(d.raw_symbols.size, 0)
+    self.assertEquals(d.raw_symbols.pss, 0)
     self.assertEquals((0, 0, 2), _DiffCounts(d.raw_symbols))
     self.assertEquals((1, 0, 1), _DiffCounts(d.symbols.GroupedByFullName()))
 
     # Adding 2 aliases should not change size.
     d = diff.Diff(size_info2, size_info1)
-    self.assertEquals(d.raw_symbols.size, 0)
+    self.assertEquals(d.raw_symbols.pss, 0)
     self.assertEquals((0, 2, 0), _DiffCounts(d.raw_symbols))
     self.assertEquals((1, 1, 0), _DiffCounts(d.symbols.GroupedByFullName()))
 
@@ -250,7 +255,7 @@ class IntegrationTest(unittest.TestCase):
 
     # Adding all 3 aliases should change size.
     d = diff.Diff(size_info2, size_info1)
-    self.assertEquals(d.raw_symbols.size, a1.size)
+    self.assertEquals(d.raw_symbols.pss, a1.size)
     self.assertEquals((0, 3, 0), _DiffCounts(d.raw_symbols))
     self.assertEquals((1, 2, 0), _DiffCounts(d.symbols.GroupedByFullName()))
 
@@ -274,7 +279,8 @@ class IntegrationTest(unittest.TestCase):
     ]
     d = diff.Diff(size_info1, size_info2)
     d.symbols = d.symbols.Sorted()
-    self.assertEquals(d.symbols.added_count, 0)
+    self.assertEquals(d.symbols.CountsByDiffStatus()[models.DIFF_STATUS_ADDED],
+                      0)
     self.assertEquals(d.symbols.size, 0)
 
   @_CompareWithGolden()

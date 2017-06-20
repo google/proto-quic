@@ -290,13 +290,13 @@ fuzzer_test("v8_wasm_fuzzer") {
   libfuzzer_options = [ "max_len=500" ]
 }
 
-fuzzer_test("v8_wasm_asmjs_fuzzer") {
+fuzzer_test("v8_wasm_async_fuzzer") {
   sources = []
   deps = [
-    "//v8:wasm_asmjs_fuzzer",
+    "//v8:wasm_async_fuzzer",
   ]
   dict = "dicts/v8_wasm.dict"
-  seed_corpus = "//v8/test/fuzzer/wasm_asmjs_corpus/"
+  seed_corpus = "//v8/test/fuzzer/wasm_corpus/"
   libfuzzer_options = [ "max_len=500" ]
 }
 

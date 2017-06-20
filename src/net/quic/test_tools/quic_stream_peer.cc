@@ -21,6 +21,7 @@ void QuicStreamPeer::SetStreamBytesWritten(
     QuicStreamOffset stream_bytes_written,
     QuicStream* stream) {
   stream->stream_bytes_written_ = stream_bytes_written;
+  stream->stream_bytes_outstanding_ = stream_bytes_written;
 }
 
 // static

@@ -534,6 +534,13 @@ void MockDiskCache::CallbackLater(const CompletionCallback& callback,
       FROM_HERE, base::Bind(&CallbackForwader, callback, result));
 }
 
+bool MockDiskCache::IsDiskEntryDoomed(const std::string& key) {
+  auto it = entries_.find(key);
+  if (it == entries_.end())
+    return false;
+  return it->second->is_doomed();
+}
+
 //-----------------------------------------------------------------------------
 
 int MockBackendFactory::CreateBackend(
@@ -645,6 +652,41 @@ int MockHttpCache::GetTestMode(int test_mode) {
 // Static.
 void MockHttpCache::SetTestMode(int test_mode) {
   g_test_mode = test_mode;
+}
+
+bool MockHttpCache::IsWriterPresent(const std::string& key) {
+  HttpCache::ActiveEntry* entry = http_cache_.FindActiveEntry(key);
+  if (entry)
+    return entry->writer;
+  return false;
+}
+
+bool MockHttpCache::IsHeadersTransactionPresent(const std::string& key) {
+  HttpCache::ActiveEntry* entry = http_cache_.FindActiveEntry(key);
+  if (entry)
+    return entry->headers_transaction;
+  return false;
+}
+
+int MockHttpCache::GetCountReaders(const std::string& key) {
+  HttpCache::ActiveEntry* entry = http_cache_.FindActiveEntry(key);
+  if (entry)
+    return entry->readers.size();
+  return false;
+}
+
+int MockHttpCache::GetCountAddToEntryQueue(const std::string& key) {
+  HttpCache::ActiveEntry* entry = http_cache_.FindActiveEntry(key);
+  if (entry)
+    return entry->add_to_entry_queue.size();
+  return false;
+}
+
+int MockHttpCache::GetCountDoneHeadersQueue(const std::string& key) {
+  HttpCache::ActiveEntry* entry = http_cache_.FindActiveEntry(key);
+  if (entry)
+    return entry->done_headers_queue.size();
+  return false;
 }
 
 //-----------------------------------------------------------------------------

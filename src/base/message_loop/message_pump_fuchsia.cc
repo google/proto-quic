@@ -17,7 +17,8 @@ MessagePumpFuchsia::FileDescriptorWatcher::FileDescriptorWatcher(
 
 MessagePumpFuchsia::FileDescriptorWatcher::~FileDescriptorWatcher() {
   StopWatchingFileDescriptor();
-  __mxio_release(io_);
+  if (io_)
+    __mxio_release(io_);
   if (was_destroyed_) {
     DCHECK(!*was_destroyed_);
     *was_destroyed_ = true;
@@ -27,16 +28,16 @@ MessagePumpFuchsia::FileDescriptorWatcher::~FileDescriptorWatcher() {
 bool MessagePumpFuchsia::FileDescriptorWatcher::StopWatchingFileDescriptor() {
   uint64_t controller_as_key =
       static_cast<uint64_t>(reinterpret_cast<uintptr_t>(this));
-  return mx_port_cancel(port_, handle_, controller_as_key) == NO_ERROR;
+  return mx_port_cancel(port_, handle_, controller_as_key) == MX_OK;
 }
 
 MessagePumpFuchsia::MessagePumpFuchsia() : keep_running_(true) {
-  CHECK(mx_port_create(MX_PORT_OPT_V2, &port_) == NO_ERROR);
+  CHECK(mx_port_create(MX_PORT_OPT_V2, &port_) == MX_OK);
 }
 
 MessagePumpFuchsia::~MessagePumpFuchsia() {
   mx_status_t status = mx_handle_close(port_);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     DLOG(ERROR) << "mx_handle_close failed: " << status;
   }
 }
@@ -68,11 +69,14 @@ bool MessagePumpFuchsia::WatchFileDescriptor(int fd,
       return false;
   }
 
+  controller->io_ = __mxio_fd_to_io(fd);
+  if (!controller->io_)
+    return false;
+
   controller->watcher_ = delegate;
   controller->fd_ = fd;
   controller->desired_events_ = events;
 
-  controller->io_ = __mxio_fd_to_io(fd);
   uint32_t signals;
   __mxio_wait_begin(controller->io_, events, &controller->handle_, &signals);
   if (controller->handle_ == MX_HANDLE_INVALID)
@@ -84,7 +88,7 @@ bool MessagePumpFuchsia::WatchFileDescriptor(int fd,
   mx_status_t status =
       mx_object_wait_async(controller->handle_, port_, controller_as_key,
                            signals, MX_WAIT_ASYNC_ONCE);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     DLOG(ERROR) << "mx_object_wait_async failed: " << status;
     return false;
   }
@@ -119,14 +123,14 @@ void MessagePumpFuchsia::Run(Delegate* delegate) {
                                    delayed_work_time_.ToInternalValue();
     mx_port_packet_t packet;
     const mx_status_t wait_status = mx_port_wait(port_, deadline, &packet, 0);
-    if (wait_status != NO_ERROR && wait_status != ERR_TIMED_OUT) {
+    if (wait_status != MX_OK && wait_status != MX_ERR_TIMED_OUT) {
       NOTREACHED() << "unexpected wait status: " << wait_status;
       continue;
     }
 
     if (packet.type == MX_PKT_TYPE_SIGNAL_ONE) {
       // A watched fd caused the wakeup via mx_object_wait_async().
-      DCHECK(packet.status == NO_ERROR);
+      DCHECK(packet.status == MX_OK);
       FileDescriptorWatcher* controller =
           reinterpret_cast<FileDescriptorWatcher*>(
               static_cast<uintptr_t>(packet.key));
@@ -181,7 +185,7 @@ void MessagePumpFuchsia::ScheduleWork() {
   mx_port_packet_t packet = {};
   packet.type = MX_PKT_TYPE_USER;
   mx_status_t status = mx_port_queue(port_, &packet, 0);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     DLOG(ERROR) << "mx_port_queue failed: " << status;
   }
 }

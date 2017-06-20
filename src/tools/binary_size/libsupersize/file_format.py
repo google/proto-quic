@@ -93,7 +93,7 @@ def _SaveSizeInfoToFile(size_info, file_obj):
   _LogSize(file_obj, 'names (final)')  # For libchrome: adds 3.5mb.
 
 
-def _LoadSizeInfoFromFile(file_obj):
+def _LoadSizeInfoFromFile(file_obj, size_path):
   """Loads a size_info from the given file."""
   lines = iter(file_obj)
   next(lines)  # Comment line.
@@ -181,7 +181,8 @@ def _LoadSizeInfoFromFile(file_obj):
       raw_symbols[symbol_idx] = new_sym
       symbol_idx += 1
 
-  return models.SizeInfo(section_sizes, raw_symbols, metadata=metadata)
+  return models.SizeInfo(section_sizes, raw_symbols, metadata=metadata,
+                         size_path=size_path)
 
 
 def SaveSizeInfo(size_info, path):
@@ -203,4 +204,4 @@ def SaveSizeInfo(size_info, path):
 def LoadSizeInfo(path):
   """Returns a SizeInfo loaded from |path|."""
   with gzip.open(path) as f:
-    return _LoadSizeInfoFromFile(f)
+    return _LoadSizeInfoFromFile(f, path)

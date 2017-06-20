@@ -18,7 +18,7 @@ class TestTaskExecutionTimePage(page_module.Page):
 
   def __init__(self, page_set, base_dir):
     super(TestTaskExecutionTimePage, self).__init__(
-        'file://blank.html', page_set, base_dir)
+        'file://blank.html', page_set, base_dir, name='blank.html')
 
   def RunPageInteractions(self, action_runner):
     with action_runner.CreateGestureInteraction('ScrollAction'):

@@ -6,13 +6,14 @@
 
 #include "base/metrics/histogram_macros.h"
 #include "crypto/sha2.h"
-#include "net/cert/x509_certificate.h"
+#include "net/base/hash_value.h"
 #include "net/cert/x509_certificate_known_roots_win.h"
+#include "net/cert/x509_util_win.h"
 
 namespace net {
 
 bool IsKnownRoot(PCCERT_CONTEXT cert) {
-  SHA256HashValue hash = X509Certificate::CalculateFingerprint256(cert);
+  SHA256HashValue hash = x509_util::CalculateFingerprint256(cert);
   bool is_builtin =
       IsSHA256HashInSortedArray(hash, &kKnownRootCertSHA256Hashes[0][0],
                                 sizeof(kKnownRootCertSHA256Hashes));

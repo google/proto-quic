@@ -14,6 +14,12 @@
 #include "base/logging.h"
 #include "build/build_config.h"
 
+#if defined(OS_MACOSX)
+#include <malloc/malloc.h>
+#else
+#include <malloc.h>
+#endif
+
 namespace base {
 
 int64_t TimeValToMicroseconds(const struct timeval& tv) {
@@ -81,6 +87,21 @@ void SetFdLimit(unsigned int max_descriptors) {
 
 size_t GetPageSize() {
   return getpagesize();
+}
+
+size_t ProcessMetrics::GetMallocUsage() {
+#if defined(OS_MACOSX) || defined(OS_IOS)
+  malloc_statistics_t stats = {0};
+  malloc_zone_statistics(nullptr, &stats);
+  return stats.size_in_use;
+#elif defined(OS_LINUX) || defined(OS_ANDROID)
+  struct mallinfo minfo = mallinfo();
+#if defined(USE_TCMALLOC)
+  return minfo.uordblks;
+#else
+  return minfo.hblkhd + minfo.arena;
+#endif
+#endif
 }
 
 }  // namespace base

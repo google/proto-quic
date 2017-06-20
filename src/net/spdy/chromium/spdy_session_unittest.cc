@@ -5222,6 +5222,7 @@ TEST_F(SpdySessionTest, IgnoreReservedRemoteStreamsCount) {
   SpdySerializedFrame push_a(spdy_util_.ConstructSpdyPush(
       nullptr, 0, 2, 1, "https://www.example.org/a.dat"));
   SpdyHeaderBlock push_headers;
+  push_headers[":method"] = "GET";
   spdy_util_.AddUrlToHeaderBlock("https://www.example.org/b.dat",
                                  &push_headers);
   SpdySerializedFrame push_b(
@@ -5316,6 +5317,7 @@ TEST_F(SpdySessionTest, IgnoreReservedRemoteStreamsCount) {
 TEST_F(SpdySessionTest, CancelReservedStreamOnHeadersReceived) {
   const char kPushedUrl[] = "https://www.example.org/a.dat";
   SpdyHeaderBlock push_headers;
+  push_headers[":method"] = "GET";
   spdy_util_.AddUrlToHeaderBlock(kPushedUrl, &push_headers);
   SpdySerializedFrame push_promise(
       spdy_util_.ConstructInitialSpdyPushFrame(std::move(push_headers), 2, 1));
@@ -5516,12 +5518,10 @@ class SendInitialSettingsOnNewSpdySessionTest : public SpdySessionTest {
                                 /* owns_buffer = */ false);
     SpdySerializedFrame settings_frame(
         spdy_util_.ConstructSpdySettings(expected_settings));
-    const SpdySerializedFrame* frames[2] = {&preface, &settings_frame};
-    char combined_frames[100];
-    int combined_frames_len = CombineFrames(
-        frames, arraysize(frames), combined_frames, arraysize(combined_frames));
-    MockWrite writes[] = {
-        MockWrite(ASYNC, combined_frames, combined_frames_len)};
+
+    SpdySerializedFrame combined_frame =
+        CombineFrames({&preface, &settings_frame});
+    MockWrite writes[] = {CreateMockWrite(combined_frame, 0)};
 
     StaticSocketDataProvider data(reads, arraysize(reads), writes,
                                   arraysize(writes));
@@ -5654,7 +5654,7 @@ TEST_F(AltSvcFrameTest, ProcessAltSvcFrame) {
   ASSERT_EQ(1u, altsvc_info_vector.size());
   AlternativeService alternative_service(kProtoQUIC, "alternative.example.org",
                                          443u);
-  EXPECT_EQ(alternative_service, altsvc_info_vector[0].alternative_service);
+  EXPECT_EQ(alternative_service, altsvc_info_vector[0].alternative_service());
 }
 
 TEST_F(AltSvcFrameTest, DoNotProcessAltSvcFrameOnInsecureSession) {
@@ -5797,10 +5797,10 @@ TEST_F(AltSvcFrameTest, ProcessAltSvcFrameOnActiveStream) {
       spdy_session_pool_->http_server_properties()->GetAlternativeServiceInfos(
           url::SchemeHostPort(GURL(request_origin)));
   ASSERT_EQ(1u, altsvc_info_vector.size());
-  EXPECT_EQ(kProtoQUIC, altsvc_info_vector[0].alternative_service.protocol);
+  EXPECT_EQ(kProtoQUIC, altsvc_info_vector[0].alternative_service().protocol);
   EXPECT_EQ("alternative.example.org",
-            altsvc_info_vector[0].alternative_service.host);
-  EXPECT_EQ(443u, altsvc_info_vector[0].alternative_service.port);
+            altsvc_info_vector[0].alternative_service().host);
+  EXPECT_EQ(443u, altsvc_info_vector[0].alternative_service().port);
 }
 
 TEST_F(AltSvcFrameTest, DoNotProcessAltSvcFrameOnStreamWithInsecureOrigin) {

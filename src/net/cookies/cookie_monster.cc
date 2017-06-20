@@ -44,7 +44,6 @@
 
 #include "net/cookies/cookie_monster.h"
 
-#include <algorithm>
 #include <functional>
 #include <memory>
 #include <set>
@@ -59,6 +58,7 @@
 #include "base/metrics/histogram.h"
 #include "base/profiler/scoped_tracker.h"
 #include "base/single_thread_task_runner.h"
+#include "base/stl_util.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -1011,8 +1011,7 @@ void CookieMonster::SetPersistSessionCookies(bool persist_session_cookies) {
 bool CookieMonster::IsCookieableScheme(const std::string& scheme) {
   DCHECK(thread_checker_.CalledOnValidThread());
 
-  return std::find(cookieable_schemes_.begin(), cookieable_schemes_.end(),
-                   scheme) != cookieable_schemes_.end();
+  return base::ContainsValue(cookieable_schemes_, scheme);
 }
 
 const char* const CookieMonster::kDefaultCookieableSchemes[] = {"http", "https",

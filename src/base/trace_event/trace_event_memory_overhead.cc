@@ -41,6 +41,8 @@ const char* ObjectTypeToString(TraceEventMemoryOverhead::ObjectType type) {
       return "TypeNameDeduplicator";
     case TraceEventMemoryOverhead::kHeapProfilerStackFrameDeduplicator:
       return "StackFrameDeduplicator";
+    case TraceEventMemoryOverhead::kHeapProfilerStringDeduplicator:
+      return "StringDeduplicator";
     case TraceEventMemoryOverhead::kStdString:
       return "std::string";
     case TraceEventMemoryOverhead::kBaseValue:

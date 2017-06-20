@@ -96,9 +96,17 @@ class LocalMachineJunitTestRun(test_run.TestRun):
         command.extend(['--jvm-args', '"%s"' % ' '.join(jvm_args)])
 
       cmd_helper.RunCmd(command)
-      with open(json_file_path, 'r') as f:
-        results_list = json_results.ParseResultsFromJson(
-            json.loads(f.read()))
+      try:
+        with open(json_file_path, 'r') as f:
+          results_list = json_results.ParseResultsFromJson(
+              json.loads(f.read()))
+      except IOError:
+        # In the case of a failure in the JUnit or Robolectric test runner
+        # the output json file may never be written.
+        results_list = [
+          base_test_result.BaseTestResult(
+              'Test Runner Failure', base_test_result.ResultType.UNKNOWN)
+        ]
 
       test_run_results = base_test_result.TestRunResults()
       test_run_results.AddResults(results_list)

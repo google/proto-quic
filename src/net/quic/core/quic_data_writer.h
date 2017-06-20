@@ -88,6 +88,7 @@ class QUIC_EXPORT_PRIVATE QuicDataWriter {
   size_t capacity_;  // Allocation size of payload (or -1 if buffer is const).
   size_t length_;    // Current length of the buffer.
 
+  // TODO(zhongyi): remove this field as it is no longer used.
   // Perspective of this data writer. Please note, although client and server
   // may have different in-memory representation of the same field, the on wire
   // representation must be consistent.

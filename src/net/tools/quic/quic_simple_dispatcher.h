@@ -31,7 +31,8 @@ class QuicSimpleDispatcher : public QuicDispatcher {
  protected:
   QuicServerSessionBase* CreateQuicSession(
       QuicConnectionId connection_id,
-      const QuicSocketAddress& client_address) override;
+      const QuicSocketAddress& client_address,
+      QuicStringPiece alpn) override;
 
   QuicHttpResponseCache* response_cache() { return response_cache_; }
 
