@@ -379,7 +379,6 @@ if (is_android) {
     ]
     sources = [
       "android/java/src/org/chromium/base/ITestCallback.aidl",
-      "android/java/src/org/chromium/base/ITestClient.aidl",
       "android/java/src/org/chromium/base/ITestController.aidl",
     ]
   }

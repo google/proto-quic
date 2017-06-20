@@ -44,6 +44,9 @@ class ThreadTimesKeySilkCases(_ThreadTimes):
   def Name(cls):
     return 'thread_times.key_silk_cases'
 
+  def GetExpectations(self):
+    return page_sets.KeySilkCasesStoryExpectations()
+
 
 @benchmark.Enabled('android', 'linux')
 class ThreadTimesKeyHitTestCases(_ThreadTimes):
@@ -54,6 +57,9 @@ class ThreadTimesKeyHitTestCases(_ThreadTimes):
   @classmethod
   def Name(cls):
     return 'thread_times.key_hit_test_cases'
+
+  def GetExpectations(self):
+    return page_sets.KeyHitTestCasesStoryExpectations()
 
 
 @benchmark.Enabled('android')
@@ -68,6 +74,9 @@ class ThreadTimesFastPathMobileSites(_ThreadTimes):
   def Name(cls):
     return 'thread_times.key_mobile_sites_smooth'
 
+  def GetExpectations(self):
+    return page_sets.KeyMobileSitesStoryExpectations()
+
 
 @benchmark.Enabled('android')
 @benchmark.Owner(emails=['vmiura@chromium.org'])
@@ -79,6 +88,9 @@ class ThreadTimesSimpleMobileSites(_ThreadTimes):
   @classmethod
   def Name(cls):
     return 'thread_times.simple_mobile_sites'
+
+  def GetExpectations(self):
+    return page_sets.SimpleMobileSitesStoryExpectations()
 
 
 @benchmark.Owner(emails=['vmiura@chromium.org'])
@@ -97,6 +109,9 @@ class ThreadTimesCompositorCases(_ThreadTimes):
   def Name(cls):
     return 'thread_times.tough_compositor_cases'
 
+  def GetExpectations(self):
+    return page_sets.ToughCompositorCaseStoryExpectations()
+
 
 @benchmark.Enabled('android')
 @benchmark.Owner(emails=['ykyyip@chromium.org'])
@@ -108,6 +123,9 @@ class ThreadTimesPolymer(_ThreadTimes):
   @classmethod
   def Name(cls):
     return 'thread_times.polymer'
+
+  def GetExpectations(self):
+    return page_sets.PolymerThreadTimesStoryExpectations()
 
 
 @benchmark.Enabled('android')
@@ -126,6 +144,9 @@ class ThreadTimesKeyIdlePowerCases(_ThreadTimes):
     # Only report per-second metrics.
     return 'per_frame' not in value.name and 'mean_frame' not in value.name
 
+  def GetExpectations(self):
+    return page_sets.KeyIdlePowerCasesStoryExpectations()
+
 
 @benchmark.Enabled('android')
 class ThreadTimesKeyNoOpCases(_ThreadTimes):
@@ -142,6 +163,9 @@ class ThreadTimesKeyNoOpCases(_ThreadTimes):
     # Only report per-second metrics.
     return 'per_frame' not in value.name and 'mean_frame' not in value.name
 
+  def GetExpectations(self):
+    return page_sets.KeyNoOpCasesStoryExpectations()
+
 
 @benchmark.Owner(emails=['tdresser@chromium.org'])
 class ThreadTimesToughScrollingCases(_ThreadTimes):
@@ -152,3 +176,6 @@ class ThreadTimesToughScrollingCases(_ThreadTimes):
   @classmethod
   def Name(cls):
     return 'thread_times.tough_scrolling_cases'
+
+  def GetExpectations(self):
+    return page_sets.ToughScrollingCasesStoryExpectations()

@@ -27,6 +27,7 @@
 #include "net/cert/known_roots_win.h"
 #include "net/cert/test_root_certs.h"
 #include "net/cert/x509_certificate.h"
+#include "net/cert/x509_util_win.h"
 
 #if !defined(CERT_TRUST_HAS_WEAK_SIGNATURE)
 // This was introduced in Windows 8 / Windows Server 2012, but retroactively
@@ -52,21 +53,11 @@ struct FreeCertChainContextFunctor {
   }
 };
 
-struct FreeCertContextFunctor {
-  void operator()(PCCERT_CONTEXT context) const {
-    if (context)
-      CertFreeCertificateContext(context);
-  }
-};
-
 typedef crypto::ScopedCAPIHandle<HCERTCHAINENGINE, FreeChainEngineFunctor>
     ScopedHCERTCHAINENGINE;
 
 typedef std::unique_ptr<const CERT_CHAIN_CONTEXT, FreeCertChainContextFunctor>
     ScopedPCCERT_CHAIN_CONTEXT;
-
-typedef std::unique_ptr<const CERT_CONTEXT, FreeCertContextFunctor>
-    ScopedPCCERT_CONTEXT;
 
 //-----------------------------------------------------------------------------
 
@@ -331,7 +322,8 @@ void GetCertChainInfo(PCCERT_CHAIN_CONTEXT chain_context,
     if (has_root_ca)
       verified_chain.push_back(element[num_elements]->pCertContext);
     scoped_refptr<X509Certificate> verified_cert_with_chain =
-        X509Certificate::CreateFromHandle(verified_cert, verified_chain);
+        x509_util::CreateX509CertificateFromCertContexts(verified_cert,
+                                                         verified_chain);
     if (verified_cert_with_chain)
       verify_result->verified_cert = std::move(verified_cert_with_chain);
     else
@@ -870,9 +862,11 @@ int CertVerifyProcWin::VerifyInternal(
   // CRLSet.
   ScopedThreadLocalCRLSet thread_local_crlset(crl_set);
 
-  PCCERT_CONTEXT cert_handle = cert->os_cert_handle();
-  if (!cert_handle)
-    return ERR_UNEXPECTED;
+  ScopedPCCERT_CONTEXT cert_list = x509_util::CreateCertContextWithChain(cert);
+  if (!cert_list) {
+    verify_result->cert_status |= CERT_STATUS_INVALID;
+    return ERR_CERT_INVALID;
+  }
 
   // Build and validate certificate chain.
   CERT_CHAIN_PARA chain_para;
@@ -896,7 +890,7 @@ int CertVerifyProcWin::VerifyInternal(
   std::unique_ptr<CERT_POLICIES_INFO, base::FreeDeleter> policies_info;
   LPSTR ev_policy_oid = NULL;
   if (flags & CertVerifier::VERIFY_EV_CERT) {
-    GetCertPoliciesInfo(cert_handle, &policies_info);
+    GetCertPoliciesInfo(cert_list.get(), &policies_info);
     if (policies_info.get()) {
       EVRootCAMetadata* metadata = EVRootCAMetadata::GetInstance();
       for (DWORD i = 0; i < policies_info->cPolicyInfo; ++i) {
@@ -946,8 +940,6 @@ int CertVerifyProcWin::VerifyInternal(
   ScopedHCERTCHAINENGINE chain_engine(NULL);
   if (TestRootCerts::HasInstance())
     chain_engine.reset(TestRootCerts::GetInstance()->GetChainEngine());
-
-  ScopedPCCERT_CONTEXT cert_list(cert->CreateOSCertChainForCert());
 
   // Add stapled OCSP response data, which will be preferred over online checks
   // and used when in cache-only mode.
@@ -1119,7 +1111,7 @@ int CertVerifyProcWin::VerifyInternal(
       chain_context->TrustStatus.dwErrorStatus);
 
   // Flag certificates that have a Subject common name with a NULL character.
-  if (CertSubjectCommonNameHasNull(cert_handle))
+  if (CertSubjectCommonNameHasNull(cert_list.get()))
     verify_result->cert_status |= CERT_STATUS_INVALID;
 
   base::string16 hostname16 = base::ASCIIToUTF16(hostname);

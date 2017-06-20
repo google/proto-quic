@@ -9,6 +9,10 @@
 #include "net/base/net_export.h"
 #include "third_party/boringssl/src/include/openssl/base.h"
 
+namespace crypto {
+class RSAPrivateKey;
+}
+
 namespace net {
 
 class SSLPrivateKey;
@@ -17,6 +21,8 @@ class SSLPrivateKey;
 // nullptr on error.
 NET_EXPORT scoped_refptr<SSLPrivateKey> WrapOpenSSLPrivateKey(
     bssl::UniquePtr<EVP_PKEY> key);
+NET_EXPORT scoped_refptr<SSLPrivateKey> WrapRSAPrivateKey(
+    crypto::RSAPrivateKey* rsa_private_key);
 
 }  // namespace net
 

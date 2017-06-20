@@ -242,29 +242,6 @@ TEST_F(PacketNumberQueueTest, Iterators) {
   EXPECT_EQ(expected_intervals, actual_intervals);
 }
 
-TEST_F(PacketNumberQueueTest, LowerBoundEquals) {
-  PacketNumberQueue queue;
-  queue.Add(1, 100);
-
-  PacketNumberQueue::const_iterator it = queue.lower_bound(10);
-  ASSERT_NE(queue.end(), it);
-  EXPECT_TRUE(it->Contains(10u));
-
-  it = queue.lower_bound(101);
-  EXPECT_TRUE(queue.end() == it);
-}
-
-TEST_F(PacketNumberQueueTest, LowerBoundGreater) {
-  PacketNumberQueue queue;
-  queue.Add(15, 25);
-  queue.Add(50, 100);
-
-  PacketNumberQueue::const_iterator it = queue.lower_bound(10);
-  ASSERT_NE(queue.end(), it);
-  EXPECT_EQ(15u, it->min());
-  EXPECT_EQ(25u, it->max());
-}
-
 TEST_F(PacketNumberQueueTest, IntervalLengthAndRemoveInterval) {
   PacketNumberQueue queue;
   queue.Add(1, 10);

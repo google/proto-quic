@@ -45,7 +45,7 @@
 #   * That whole ninja & clang thing? We could support other configs if someone
 #     were willing to write the correct commands and a parser.
 #
-#   * This has only been tested on gPrecise.
+#   * This has only been tested on Linux and macOS.
 
 import os
 import os.path
@@ -233,6 +233,9 @@ def GetClangOptionsFromCommandLine(clang_commandline, out_dir,
   """
   clang_flags = [] + additional_flags
 
+  def abspath(path):
+    return os.path.normpath(os.path.join(out_dir, path))
+
   # Parse flags that are important for YCM's purposes.
   clang_tokens = shlex.split(clang_commandline)
   for flag_index, flag in enumerate(clang_tokens):
@@ -242,8 +245,7 @@ def GetClangOptionsFromCommandLine(clang_commandline, out_dir,
       if flag[2] == '/':
         clang_flags.append(flag)
       else:
-        abs_path = os.path.normpath(os.path.join(out_dir, flag[2:]))
-        clang_flags.append('-I' + abs_path)
+        clang_flags.append('-I' + abspath(flag[2:]))
     elif flag.startswith('-std'):
       clang_flags.append(flag)
     elif flag.startswith('-') and flag[1] in 'DWFfmO':
@@ -257,15 +259,14 @@ def GetClangOptionsFromCommandLine(clang_commandline, out_dir,
       # Copy over both flags.
       if flag_index + 1 < len(clang_tokens):
         clang_flags.append(flag)
-        clang_flags.append(clang_tokens[flag_index + 1])
+        clang_flags.append(abspath(clang_tokens[flag_index + 1]))
     elif flag.startswith('--sysroot='):
       # On Linux we use a sysroot image.
       sysroot_path = flag.lstrip('--sysroot=')
       if sysroot_path.startswith('/'):
         clang_flags.append(flag)
       else:
-        abs_path = os.path.normpath(os.path.join(out_dir, sysroot_path))
-        clang_flags.append('--sysroot=' + abs_path)
+        clang_flags.append('--sysroot=' + abspath(sysroot_path))
   return clang_flags
 
 

@@ -32,9 +32,10 @@ _ALLOWED_CONSECUTIVE_FAILURES = 2
 _DIFF_DETAILS_LINES_THRESHOLD = 100
 _SRC_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
-_DEFAULT_ARCHIVE_DIR = os.path.join(_SRC_ROOT, 'binary-size-bloat')
-_DEFAULT_OUT_DIR = os.path.join(_SRC_ROOT, 'out', 'diagnose-apk-bloat')
+_DEFAULT_ARCHIVE_DIR = os.path.join(_SRC_ROOT, 'out', 'binary-size-results')
+_DEFAULT_OUT_DIR = os.path.join(_SRC_ROOT, 'out', 'binary-size-build')
 _DEFAULT_ANDROID_TARGET = 'monochrome_public_apk'
+_BINARY_SIZE_DIR = os.path.join(_SRC_ROOT, 'tools', 'binary_size')
 
 
 _DiffResult = collections.namedtuple('DiffResult', ['name', 'value', 'units'])
@@ -161,9 +162,7 @@ class ResourceSizesDiff(BaseDiff):
     cmd = [self._RESOURCE_SIZES_PATH, apk_path,'--output-dir', archive_dir,
            '--no-output-dir', '--chartjson']
     if self._slow_options:
-      cmd += ['--estimate-patch-size']
-    else:
-      cmd += ['--no-static-initializer-check']
+      cmd += ['--estimate-patch-size', '--dump-static-initializers']
     _RunCmd(cmd)
     with open(chartjson_file) as f:
       chartjson = json.load(f)
@@ -268,7 +267,8 @@ class _BuildHelper(object):
 
   def Run(self):
     """Run GN gen/ninja build and return the process returncode."""
-    logging.info('Building: %s (this might take a while).', self.target)
+    logging.info('Building %s within %s (this might take a while).',
+                 self.target, os.path.relpath(self.output_directory))
     retcode = _RunCmd(
         self._GenGnCmd(), verbose=True, exit_on_failure=False)[1]
     if retcode:
@@ -373,7 +373,16 @@ class _DiffArchiveManager(object):
       with open(diff_path, 'a') as diff_file:
         for d in self.diffs:
           d.RunDiff(diff_file, before.dir, after.dir)
-        logging.info('See detailed diff results here: %s', diff_path)
+        logging.info('See detailed diff results here: %s',
+                     os.path.relpath(diff_path))
+        if len(self.build_archives) == 2:
+          supersize_path = os.path.join(_BINARY_SIZE_DIR, 'supersize')
+          size_paths = [os.path.join(a.dir, a.build.size_name)
+                        for a in self.build_archives]
+          logging.info('Enter supersize console via: %s, console %s %s',
+                       os.path.relpath(supersize_path),
+                       os.path.relpath(size_paths[0]),
+                       os.path.relpath(size_paths[1]))
       metadata.Write()
       self._AddDiffSummaryStat(before, after)
 
@@ -505,7 +514,12 @@ def _SyncAndBuild(archive, build, subrepo):
   """Sync, build and return non 0 if any commands failed."""
   # Simply do a checkout if subrepo is used.
   retcode = 0
-  if subrepo != _SRC_ROOT:
+  if _CurrentGitHash(subrepo) == archive.rev:
+    if subrepo != _SRC_ROOT:
+      logging.info('Skipping git checkout since already at desired rev')
+    else:
+      logging.info('Skipping gclient sync since already at desired rev')
+  elif subrepo != _SRC_ROOT:
     _GitCmd(['checkout',  archive.rev], subrepo)
   else:
     # Move to a detached state since gclient sync doesn't work with local
@@ -663,10 +677,14 @@ def _TmpCopyBinarySizeDir():
   tmp_dir = tempfile.mkdtemp(dir=_SRC_ROOT)
   try:
     bs_dir = os.path.join(tmp_dir, 'binary_size')
-    shutil.copytree(os.path.join(_SRC_ROOT, 'tools', 'binary_size'), bs_dir)
+    shutil.copytree(_BINARY_SIZE_DIR, bs_dir)
     yield os.path.join(bs_dir, 'supersize')
   finally:
     shutil.rmtree(tmp_dir)
+
+
+def _CurrentGitHash(subrepo):
+  return _GitCmd(['rev-parse', 'HEAD'], subrepo)
 
 
 def _SetRestoreFunc(subrepo):

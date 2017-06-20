@@ -23,6 +23,7 @@
 #include "base/pending_task.h"
 #include "base/run_loop.h"
 #include "base/synchronization/lock.h"
+#include "base/threading/sequence_local_storage_map.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
 
@@ -459,6 +460,14 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate,
 
   // An interface back to RunLoop state accessible by this RunLoop::Delegate.
   RunLoop::Delegate::Client* run_loop_client_ = nullptr;
+
+  // Holds data stored through the SequenceLocalStorageSlot API.
+  internal::SequenceLocalStorageMap sequence_local_storage_map_;
+
+  // Enables the SequenceLocalStorageSlot API within its scope.
+  // Instantiated in BindToCurrentThread().
+  std::unique_ptr<internal::ScopedSetSequenceLocalStorageMapForCurrentThread>
+      scoped_set_sequence_local_storage_map_for_current_thread_;
 
   DISALLOW_COPY_AND_ASSIGN(MessageLoop);
 };

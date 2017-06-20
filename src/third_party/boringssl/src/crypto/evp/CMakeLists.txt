@@ -18,17 +18,6 @@ add_library(
   p_rsa_asn1.c
   pbkdf.c
   print.c
+  scrypt.c
   sign.c
 )
-
-
-add_executable(
-  evp_test
-
-  evp_test.cc
-
-  $<TARGET_OBJECTS:test_support>
-)
-
-target_link_libraries(evp_test crypto)
-add_dependencies(all_tests evp_test)

@@ -633,7 +633,7 @@ class QuicNetworkTransactionTest
         http_server_properties_.GetAlternativeServiceInfos(server);
     EXPECT_EQ(1u, alternative_service_info_vector.size());
     EXPECT_TRUE(http_server_properties_.IsAlternativeServiceBroken(
-        alternative_service_info_vector[0].alternative_service));
+        alternative_service_info_vector[0].alternative_service()));
   }
 
   void ExpectQuicAlternateProtocolMapping() {
@@ -641,10 +641,11 @@ class QuicNetworkTransactionTest
     const AlternativeServiceInfoVector alternative_service_info_vector =
         http_server_properties_.GetAlternativeServiceInfos(server);
     EXPECT_EQ(1u, alternative_service_info_vector.size());
-    EXPECT_EQ(kProtoQUIC,
-              alternative_service_info_vector[0].alternative_service.protocol);
+    EXPECT_EQ(
+        kProtoQUIC,
+        alternative_service_info_vector[0].alternative_service().protocol);
     EXPECT_FALSE(http_server_properties_.IsAlternativeServiceBroken(
-        alternative_service_info_vector[0].alternative_service));
+        alternative_service_info_vector[0].alternative_service()));
   }
 
   void AddHangingNonAlternateProtocolSocketData() {
@@ -2576,6 +2577,230 @@ TEST_P(QuicNetworkTransactionTest,
   ASSERT_TRUE(http_data.AllReadDataConsumed());
 }
 
+// Verify that with retry_without_alt_svc_on_quic_errors enabled, if a QUIC
+// request is reset from, then QUIC will be marked as broken and the request
+// retried over TCP.
+TEST_P(QuicNetworkTransactionTest, ResetAfterHandshakeConfirmedThenBroken) {
+  session_params_.retry_without_alt_svc_on_quic_errors = true;
+
+  // The request will initially go out over QUIC.
+  MockQuicData quic_data;
+  QuicStreamOffset header_stream_offset = 0;
+  SpdyPriority priority =
+      ConvertRequestPriorityToQuicPriority(DEFAULT_PRIORITY);
+
+  std::string request_data;
+  quic_data.AddWrite(client_maker_.MakeRequestHeadersPacketAndSaveData(
+      1, GetNthClientInitiatedStreamId(0), true, true, priority,
+      GetRequestHeaders("GET", "https", "/"), nullptr, &header_stream_offset,
+      &request_data));
+
+  std::string settings_data;
+  // QuicStreamOffset settings_offset = header_stream_offset;
+  quic_data.AddWrite(client_maker_.MakeInitialSettingsPacketAndSaveData(
+      2, &header_stream_offset, &settings_data));
+
+  quic_data.AddRead(ConstructServerRstPacket(
+      1, false, GetNthClientInitiatedStreamId(0), QUIC_HEADERS_TOO_LARGE));
+
+  quic_data.AddRead(ASYNC, OK);
+  quic_data.AddSocketDataToFactory(&socket_factory_);
+
+  // After that fails, it will be resent via TCP.
+  MockWrite http_writes[] = {
+      MockWrite(SYNCHRONOUS, 0, "GET / HTTP/1.1\r\n"),
+      MockWrite(SYNCHRONOUS, 1, "Host: mail.example.org\r\n"),
+      MockWrite(SYNCHRONOUS, 2, "Connection: keep-alive\r\n\r\n")};
+
+  MockRead http_reads[] = {
+      MockRead(SYNCHRONOUS, 3, "HTTP/1.1 200 OK\r\n"),
+      MockRead(SYNCHRONOUS, 4, kQuicAlternativeServiceHeader),
+      MockRead(SYNCHRONOUS, 5, "hello world"), MockRead(SYNCHRONOUS, OK, 6)};
+  SequencedSocketData http_data(http_reads, arraysize(http_reads), http_writes,
+                                arraysize(http_writes));
+  socket_factory_.AddSocketDataProvider(&http_data);
+  socket_factory_.AddSSLSocketDataProvider(&ssl_data_);
+
+  // In order for a new QUIC session to be established via alternate-protocol
+  // without racing an HTTP connection, we need the host resolution to happen
+  // synchronously.  Of course, even though QUIC *could* perform a 0-RTT
+  // connection to the the server, in this test we require confirmation
+  // before encrypting so the HTTP job will still start.
+  host_resolver_.set_synchronous_mode(true);
+  host_resolver_.rules()->AddIPLiteralRule("mail.example.org", "192.168.0.1",
+                                           "");
+  HostResolver::RequestInfo info(HostPortPair("mail.example.org", 443));
+  AddressList address;
+  std::unique_ptr<HostResolver::Request> request;
+  host_resolver_.Resolve(info, DEFAULT_PRIORITY, &address, CompletionCallback(),
+                         &request, net_log_.bound());
+
+  CreateSession();
+
+  AddQuicAlternateProtocolMapping(MockCryptoClientStream::ZERO_RTT);
+
+  HttpNetworkTransaction trans(DEFAULT_PRIORITY, session_.get());
+  TestCompletionCallback callback;
+  int rv = trans.Start(&request_, callback.callback(), net_log_.bound());
+  EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
+
+  // Pump the message loop to get the request started.
+  base::RunLoop().RunUntilIdle();
+  // Explicitly confirm the handshake.
+  crypto_client_stream_factory_.last_stream()->SendOnCryptoHandshakeEvent(
+      QuicSession::HANDSHAKE_CONFIRMED);
+
+  // Run the QUIC session to completion.
+  ASSERT_TRUE(quic_data.AllWriteDataConsumed());
+
+  ExpectQuicAlternateProtocolMapping();
+
+  // Let the transaction proceed which will result in QUIC being marked
+  // as broken and the request falling back to TCP.
+  EXPECT_THAT(callback.WaitForResult(), IsOk());
+
+  ASSERT_TRUE(quic_data.AllWriteDataConsumed());
+  ASSERT_FALSE(http_data.AllReadDataConsumed());
+
+  // Read the response body over TCP.
+  CheckResponseData(&trans, "hello world");
+  ExpectBrokenAlternateProtocolMapping();
+  ASSERT_TRUE(http_data.AllWriteDataConsumed());
+  ASSERT_TRUE(http_data.AllReadDataConsumed());
+}
+
+// Verify that with retry_without_alt_svc_on_quic_errors enabled, if a QUIC
+// request is reset from, then QUIC will be marked as broken and the request
+// retried over TCP. Then, subsequent requests will go over a new QUIC
+// connection instead of going back to the broken QUIC connection.
+// This is a regression tests for crbug/731303.
+TEST_P(QuicNetworkTransactionTest,
+       ResetPooledAfterHandshakeConfirmedThenBroken) {
+  session_params_.retry_without_alt_svc_on_quic_errors = true;
+
+  GURL origin1 = request_.url;
+  GURL origin2("https://www.example.org/");
+  ASSERT_NE(origin1.host(), origin2.host());
+
+  MockQuicData mock_quic_data;
+  QuicStreamOffset request_header_offset(0);
+  QuicStreamOffset response_header_offset(0);
+
+  scoped_refptr<X509Certificate> cert(
+      ImportCertFromFile(GetTestCertsDirectory(), "wildcard.pem"));
+  ASSERT_TRUE(cert->VerifyNameMatch("www.example.org", false));
+  ASSERT_TRUE(cert->VerifyNameMatch("mail.example.org", false));
+
+  ProofVerifyDetailsChromium verify_details;
+  verify_details.cert_verify_result.verified_cert = cert;
+  verify_details.cert_verify_result.is_issued_by_known_root = true;
+  crypto_client_stream_factory_.AddProofVerifyDetails(&verify_details);
+
+  mock_quic_data.AddWrite(
+      ConstructInitialSettingsPacket(1, &request_header_offset));
+  // First request.
+  mock_quic_data.AddWrite(ConstructClientRequestHeadersPacket(
+      2, GetNthClientInitiatedStreamId(0), true, true,
+      GetRequestHeaders("GET", "https", "/"), &request_header_offset));
+  mock_quic_data.AddRead(ConstructServerResponseHeadersPacket(
+      1, GetNthClientInitiatedStreamId(0), false, false,
+      GetResponseHeaders("200 OK"), &response_header_offset));
+  mock_quic_data.AddRead(ConstructServerDataPacket(
+      2, GetNthClientInitiatedStreamId(0), false, true, 0, "hello!"));
+  mock_quic_data.AddWrite(ConstructClientAckPacket(3, 2, 1, 1));
+
+  // Second request will go over the pooled QUIC connection, but will be
+  // reset by the server.
+  QuicTestPacketMaker client_maker2(version_, 0, &clock_, origin2.host(),
+                                    Perspective::IS_CLIENT);
+  QuicTestPacketMaker server_maker2(version_, 0, &clock_, origin2.host(),
+                                    Perspective::IS_SERVER);
+  mock_quic_data.AddWrite(ConstructClientRequestHeadersPacket(
+      4, GetNthClientInitiatedStreamId(1), false, true,
+      GetRequestHeaders("GET", "https", "/", &client_maker2),
+      &request_header_offset));
+  mock_quic_data.AddRead(ConstructServerRstPacket(
+      3, false, GetNthClientInitiatedStreamId(1), QUIC_HEADERS_TOO_LARGE));
+  mock_quic_data.AddRead(ASYNC, ERR_IO_PENDING);  // No more data to read
+  mock_quic_data.AddRead(ASYNC, 0);               // EOF
+
+  mock_quic_data.AddSocketDataToFactory(&socket_factory_);
+
+  // After that fails, it will be resent via TCP.
+  MockWrite http_writes[] = {
+      MockWrite(SYNCHRONOUS, 0, "GET / HTTP/1.1\r\n"),
+      MockWrite(SYNCHRONOUS, 1, "Host: www.example.org\r\n"),
+      MockWrite(SYNCHRONOUS, 2, "Connection: keep-alive\r\n\r\n")};
+
+  MockRead http_reads[] = {
+      MockRead(SYNCHRONOUS, 3, "HTTP/1.1 200 OK\r\n"),
+      MockRead(SYNCHRONOUS, 4, kQuicAlternativeServiceHeader),
+      MockRead(SYNCHRONOUS, 5, "hello world"), MockRead(SYNCHRONOUS, OK, 6)};
+  SequencedSocketData http_data(http_reads, arraysize(http_reads), http_writes,
+                                arraysize(http_writes));
+  socket_factory_.AddSocketDataProvider(&http_data);
+  socket_factory_.AddSSLSocketDataProvider(&ssl_data_);
+
+  // Then the next request to the second origin will go over a new QUIC
+  // connection.
+  MockQuicData mock_quic_data2;
+  QuicTestPacketMaker client_maker3(version_, 0, &clock_, origin2.host(),
+                                    Perspective::IS_CLIENT);
+  QuicTestPacketMaker server_maker3(version_, 0, &clock_, origin2.host(),
+                                    Perspective::IS_SERVER);
+  QuicStreamOffset request_header_offset2(0);
+  QuicStreamOffset response_header_offset2(0);
+
+  crypto_client_stream_factory_.AddProofVerifyDetails(&verify_details);
+
+  mock_quic_data2.AddWrite(
+      client_maker3.MakeInitialSettingsPacket(1, &request_header_offset2));
+  mock_quic_data2.AddWrite(
+      client_maker3.MakeRequestHeadersPacketWithOffsetTracking(
+          2, GetNthClientInitiatedStreamId(0), true, true,
+          ConvertRequestPriorityToQuicPriority(DEFAULT_PRIORITY),
+          GetRequestHeaders("GET", "https", "/", &client_maker3),
+          &request_header_offset2));
+  mock_quic_data2.AddRead(
+      server_maker2.MakeResponseHeadersPacketWithOffsetTracking(
+          1, GetNthClientInitiatedStreamId(0), false, false,
+          GetResponseHeaders("200 OK"), &response_header_offset2));
+  mock_quic_data2.AddRead(server_maker2.MakeDataPacket(
+      2, GetNthClientInitiatedStreamId(0), false, true, 0, "hello!"));
+  mock_quic_data2.AddWrite(ConstructClientAckPacket(3, 2, 1, 1));
+  mock_quic_data2.AddRead(ASYNC, ERR_IO_PENDING);  // No more data to read
+  mock_quic_data2.AddRead(ASYNC, 0);               // EOF
+
+  mock_quic_data2.AddSocketDataToFactory(&socket_factory_);
+
+  CreateSession();
+
+  // Set up alternative service for |origin1|.
+  base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
+  http_server_properties_.SetAlternativeService(
+      url::SchemeHostPort(origin1),
+      AlternativeService(kProtoQUIC, "mail.example.com", 443), expiration);
+
+  // Set up alternative service for |origin2|.
+  AlternativeServiceInfoVector alternative_services;
+  http_server_properties_.SetAlternativeService(
+      url::SchemeHostPort(origin2),
+      AlternativeService(kProtoQUIC, "www.example.com", 443), expiration);
+  // First request opens connection to |destination1|
+  // with QuicServerId.host() == origin1.host().
+  SendRequestAndExpectQuicResponse("hello!");
+
+  // Second request pools to existing connection with same destination,
+  // because certificate matches, even though QuicServerId is different.
+  // After it is reset, it will fail back to QUIC and mark QUIC as broken.
+  request_.url = origin2;
+  SendRequestAndExpectHttpResponse("hello world");
+
+  // The third request should use a new QUIC connection, not the broken
+  // QUIC connection.
+  SendRequestAndExpectQuicResponse("hello!");
+}
+
 TEST_P(QuicNetworkTransactionTest,
        DoNotUseAlternativeServiceQuicUnsupportedVersion) {
   std::string altsvc_header = base::StringPrintf(
@@ -2997,7 +3222,7 @@ TEST_P(QuicNetworkTransactionTest, AlternativeServiceDifferentPort) {
       http_server_properties_.GetAlternativeServiceInfos(http_server);
   ASSERT_EQ(1u, alternative_service_info_vector.size());
   const AlternativeService alternative_service =
-      alternative_service_info_vector[0].alternative_service;
+      alternative_service_info_vector[0].alternative_service();
   EXPECT_EQ(kProtoQUIC, alternative_service.protocol);
   EXPECT_EQ(kDefaultServerHostName, alternative_service.host);
   EXPECT_EQ(137, alternative_service.port);

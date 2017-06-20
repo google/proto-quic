@@ -86,28 +86,6 @@ NET_EXPORT bool ParseCertificateSandboxed(
     std::vector<std::string>* dns_names,
     std::vector<std::string>* ip_addresses);
 
-// Comparator for use in STL algorithms that will sort client certificates by
-// order of preference.
-// Returns true if |a| is more preferable than |b|, allowing it to be used
-// with any algorithm that compares according to strict weak ordering.
-//
-// Criteria include:
-// - Prefer certificates that have a longer validity period (later
-//   expiration dates)
-// - If equal, prefer certificates that were issued more recently
-// - If equal, prefer shorter chains (if available)
-class NET_EXPORT_PRIVATE ClientCertSorter {
- public:
-  ClientCertSorter();
-
-  bool operator()(
-      const scoped_refptr<X509Certificate>& a,
-      const scoped_refptr<X509Certificate>& b) const;
-
- private:
-  base::Time now_;
-};
-
 // Returns a CRYPTO_BUFFER_POOL for deduplicating certificates.
 NET_EXPORT CRYPTO_BUFFER_POOL* GetBufferPool();
 

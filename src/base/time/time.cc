@@ -111,7 +111,7 @@ int64_t SaturatedAdd(TimeDelta delta, int64_t value) {
     return rv.ValueOrDie();
   // Positive RHS overflows. Negative RHS underflows.
   if (value < 0)
-    return -std::numeric_limits<int64_t>::max();
+    return std::numeric_limits<int64_t>::min();
   return std::numeric_limits<int64_t>::max();
 }
 
@@ -123,7 +123,7 @@ int64_t SaturatedSub(TimeDelta delta, int64_t value) {
   // Negative RHS overflows. Positive RHS underflows.
   if (value < 0)
     return std::numeric_limits<int64_t>::max();
-  return -std::numeric_limits<int64_t>::max();
+  return std::numeric_limits<int64_t>::min();
 }
 
 }  // namespace time_internal

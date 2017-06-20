@@ -206,7 +206,7 @@ struct BASE_EXPORT LoggingSettings {
 // whether NDEBUG is defined or not so that we'll fail to link if someone tries
 // to compile logging.cc with NDEBUG but includes logging.h without defining it,
 // or vice versa.
-#if NDEBUG
+#if defined(NDEBUG)
 #define BaseInitLoggingImpl BaseInitLoggingImpl_built_with_NDEBUG
 #else
 #define BaseInitLoggingImpl BaseInitLoggingImpl_built_without_NDEBUG
@@ -337,7 +337,7 @@ const LogSeverity LOG_FATAL = 3;
 const LogSeverity LOG_NUM_SEVERITIES = 4;
 
 // LOG_DFATAL is LOG_FATAL in debug mode, ERROR in normal mode
-#ifdef NDEBUG
+#if defined(NDEBUG)
 const LogSeverity LOG_DFATAL = LOG_ERROR;
 #else
 const LogSeverity LOG_DFATAL = LOG_FATAL;
@@ -804,7 +804,7 @@ DEFINE_CHECK_OP_IMPL(GT, > )
 #if DCHECK_IS_ON()
 
 #define COMPACT_GOOGLE_LOG_EX_DCHECK(ClassName, ...) \
-  COMPACT_GOOGLE_LOG_EX_FATAL(ClassName , ##__VA_ARGS__)
+  COMPACT_GOOGLE_LOG_EX_FATAL(ClassName, ##__VA_ARGS__)
 #define COMPACT_GOOGLE_LOG_DCHECK COMPACT_GOOGLE_LOG_FATAL
 const LogSeverity LOG_DCHECK = LOG_FATAL;
 

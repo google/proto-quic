@@ -90,12 +90,9 @@ MockRead CreateMockRead(const SpdySerializedFrame& resp, int seq);
 
 MockRead CreateMockRead(const SpdySerializedFrame& resp, int seq, IoMode mode);
 
-// Combines the given SpdySerializedFrame into the given char array and returns
-// the total length.
-int CombineFrames(const SpdySerializedFrame** frames,
-                  int num_frames,
-                  char* buf,
-                  int buf_len);
+// Combines the given vector of SpdySerializedFrame into a single frame.
+SpdySerializedFrame CombineFrames(
+    std::vector<const SpdySerializedFrame*> frames);
 
 // Returns the SpdyPriority embedded in the given frame.  Returns true
 // and fills in |priority| on success.

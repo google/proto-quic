@@ -233,14 +233,6 @@ class QUIC_EXPORT_PRIVATE QuicPacketCreator {
                          bool fin,
                          QuicFrame* frame);
 
-  // Copies |length| bytes from iov starting at offset |iov_offset| into buffer.
-  // |iov| must be at least iov_offset+length total length and buffer must be
-  // at least |length| long.
-  static void CopyToBuffer(QuicIOVector iov,
-                           size_t iov_offset,
-                           size_t length,
-                           char* buffer);
-
   void FillPacketHeader(QuicPacketHeader* header);
 
   // Adds a |frame| if there is space and returns false and flushes all pending

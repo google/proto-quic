@@ -58,7 +58,7 @@ class KeyIdlePowerCasesPageSet(story.StorySet):
   """ Key idle power cases """
 
   def __init__(self):
-    super(KeyIdlePowerCasesPageSet, self).__init__(verify_names=True)
+    super(KeyIdlePowerCasesPageSet, self).__init__()
 
     foreground_urls_list = [
       # Why: Ensure minimal activity for static, empty pages in the foreground.
@@ -85,3 +85,8 @@ class KeyIdlePowerCasesPageSet(story.StorySet):
     # Why: Ensure that activity strictly diminishes the longer the idle time.
     self.AddStory(KeyLongIdlePowerPage(
         'file://key_idle_power_cases/set-timeout.html', self, True))
+
+
+class KeyIdlePowerCasesStoryExpectations(story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    pass

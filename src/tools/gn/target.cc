@@ -6,9 +6,8 @@
 
 #include <stddef.h>
 
-#include <algorithm>
-
 #include "base/bind.h"
+#include "base/stl_util.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "tools/gn/config_values_extractors.h"
@@ -95,8 +94,7 @@ bool EnsureFileIsGeneratedByDependency(const Target* target,
       Toolchain::ToolType tool_type;
       if (!target->GetOutputFilesForSource(source, &tool_type, &source_outputs))
         continue;
-      if (std::find(source_outputs.begin(), source_outputs.end(), file) !=
-          source_outputs.end())
+      if (base::ContainsValue(source_outputs, file))
         return true;
     }
   }

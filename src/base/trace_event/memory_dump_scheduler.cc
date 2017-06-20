@@ -89,12 +89,6 @@ void MemoryDumpScheduler::Tick(uint32_t expected_generation) {
   if (period_ms_ == 0 || generation_ != expected_generation)
     return;
 
-  SequencedTaskRunnerHandle::Get()->PostDelayedTask(
-      FROM_HERE,
-      BindOnce(&MemoryDumpScheduler::Tick, Unretained(this),
-               expected_generation),
-      TimeDelta::FromMilliseconds(period_ms_));
-
   MemoryDumpLevelOfDetail level_of_detail = MemoryDumpLevelOfDetail::BACKGROUND;
   if (light_dump_rate_ > 0 && tick_count_ % light_dump_rate_ == 0)
     level_of_detail = MemoryDumpLevelOfDetail::LIGHT;
@@ -103,6 +97,12 @@ void MemoryDumpScheduler::Tick(uint32_t expected_generation) {
   tick_count_++;
 
   callback_.Run(level_of_detail);
+
+  SequencedTaskRunnerHandle::Get()->PostDelayedTask(
+      FROM_HERE,
+      BindOnce(&MemoryDumpScheduler::Tick, Unretained(this),
+               expected_generation),
+      TimeDelta::FromMilliseconds(period_ms_));
 }
 
 MemoryDumpScheduler::Config::Config() {}

@@ -381,4 +381,12 @@ SpdyFrameType SpdyPriorityIR::frame_type() const {
   return SpdyFrameType::PRIORITY;
 }
 
+void SpdyUnknownIR::Visit(SpdyFrameVisitor* visitor) const {
+  return visitor->VisitUnknown(*this);
+}
+
+SpdyFrameType SpdyUnknownIR::frame_type() const {
+  return static_cast<SpdyFrameType>(type());
+}
+
 }  // namespace net

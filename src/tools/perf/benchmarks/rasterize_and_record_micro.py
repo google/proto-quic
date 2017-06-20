@@ -57,6 +57,9 @@ class RasterizeAndRecordMicroTop25(_RasterizeAndRecordMicro):
   def Name(cls):
     return 'rasterize_and_record_micro.top_25'
 
+  def GetExpectations(self):
+    return page_sets.Top25StoryExpectations()
+
 
 @benchmark.Disabled('all')  # http://crbug.com/531597
 class RasterizeAndRecordMicroKeyMobileSites(_RasterizeAndRecordMicro):
@@ -68,6 +71,9 @@ class RasterizeAndRecordMicroKeyMobileSites(_RasterizeAndRecordMicro):
   @classmethod
   def Name(cls):
     return 'rasterize_and_record_micro.key_mobile_sites'
+
+  def GetExpectations(self):
+    return page_sets.KeyMobileSitesStoryExpectations()
 
 
 @benchmark.Disabled('all') # http://crbug.com/610424
@@ -84,6 +90,9 @@ class RasterizeAndRecordMicroKeySilkCases(_RasterizeAndRecordMicro):
   def CreateStorySet(self, options):
     return page_sets.KeySilkCasesPageSet(run_no_page_interactions=True)
 
+  def GetExpectations(self):
+    return page_sets.KeySilkCasesStoryExpectations()
+
 
 @benchmark.Disabled('all')  # http://crbug.com/709561
 class RasterizeAndRecordMicroPolymer(_RasterizeAndRecordMicro):
@@ -97,6 +106,9 @@ class RasterizeAndRecordMicroPolymer(_RasterizeAndRecordMicro):
 
   def CreateStorySet(self, options):
     return page_sets.PolymerPageSet(run_no_page_interactions=True)
+
+  def GetExpectations(self):
+    return page_sets.PolymerRasterizeAndRecordStoryExpectations()
 
 
 # New benchmark only enabled on Linux until we've observed behavior for a
@@ -112,4 +124,5 @@ class RasterizeAndRecordMicroPartialInvalidation(_RasterizeAndRecordMicro):
   def Name(cls):
     return 'rasterize_and_record_micro.partial_invalidation'
 
-
+  def GetExpectations(self):
+    return page_sets.PartialInvalidationCasesStoryExpectations()

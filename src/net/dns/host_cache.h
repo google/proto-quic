@@ -171,7 +171,7 @@ class NET_EXPORT HostCache {
   // Takes a base::ListValue representing cache entries and stores them in the
   // cache, skipping any that already have entries. Returns true on success,
   // false on failure.
-  bool RestoreFromListValue(base::ListValue& old_cache);
+  bool RestoreFromListValue(const base::ListValue& old_cache);
 
   // Returns the number of entries in the cache.
   size_t size() const;

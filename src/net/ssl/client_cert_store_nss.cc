@@ -16,6 +16,7 @@
 #include "base/bind_helpers.h"
 #include "base/location.h"
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/strings/string_piece.h"
 #include "base/task_runner_util.h"
 #include "base/threading/worker_pool.h"
@@ -23,9 +24,46 @@
 #include "net/cert/scoped_nss_types.h"
 #include "net/cert/x509_util.h"
 #include "net/ssl/ssl_cert_request_info.h"
+#include "net/ssl/ssl_platform_key_nss.h"
+#include "net/ssl/threaded_ssl_private_key.h"
 #include "net/third_party/nss/ssl/cmpcert.h"
 
 namespace net {
+
+namespace {
+
+class ClientCertIdentityNSS : public ClientCertIdentity {
+ public:
+  ClientCertIdentityNSS(
+      scoped_refptr<net::X509Certificate> cert,
+      scoped_refptr<crypto::CryptoModuleBlockingPasswordDelegate>
+          password_delegate)
+      : ClientCertIdentity(std::move(cert)),
+        password_delegate_(std::move(password_delegate)) {}
+  ~ClientCertIdentityNSS() override = default;
+
+  void AcquirePrivateKey(
+      const base::Callback<void(scoped_refptr<SSLPrivateKey>)>&
+          private_key_callback) override {
+    if (base::PostTaskAndReplyWithResult(
+            base::WorkerPool::GetTaskRunner(true /* task_is_slow */).get(),
+            FROM_HERE,
+            base::Bind(&FetchClientCertPrivateKey,
+                       base::RetainedRef(certificate()),
+                       base::RetainedRef(password_delegate_)),
+            private_key_callback)) {
+      return;
+    }
+    // If the task could not be posted, behave as if there was no key.
+    private_key_callback.Run(nullptr);
+  }
+
+ private:
+  scoped_refptr<crypto::CryptoModuleBlockingPasswordDelegate>
+      password_delegate_;
+};
+
+}  // namespace
 
 ClientCertStoreNSS::ClientCertStoreNSS(
     const PasswordDelegateFactory& password_delegate_factory)
@@ -36,40 +74,37 @@ ClientCertStoreNSS::~ClientCertStoreNSS() {}
 void ClientCertStoreNSS::GetClientCerts(
     const SSLCertRequestInfo& request,
     const ClientCertListCallback& callback) {
-  std::unique_ptr<crypto::CryptoModuleBlockingPasswordDelegate>
-      password_delegate;
-  if (!password_delegate_factory_.is_null()) {
-    password_delegate.reset(
-        password_delegate_factory_.Run(request.host_and_port));
-  }
+  scoped_refptr<crypto::CryptoModuleBlockingPasswordDelegate> password_delegate;
+  if (!password_delegate_factory_.is_null())
+    password_delegate = password_delegate_factory_.Run(request.host_and_port);
   if (base::PostTaskAndReplyWithResult(
           base::WorkerPool::GetTaskRunner(true /* task_is_slow */).get(),
           FROM_HERE,
           base::Bind(&ClientCertStoreNSS::GetAndFilterCertsOnWorkerThread,
                      // Caller is responsible for keeping the ClientCertStore
                      // alive until the callback is run.
-                     base::Unretained(this), base::Passed(&password_delegate),
+                     base::Unretained(this), std::move(password_delegate),
                      &request),
           callback)) {
     return;
   }
   // If the task could not be posted, behave as if there were no certificates.
-  callback.Run(CertificateList());
+  callback.Run(ClientCertIdentityList());
 }
 
 // static
 void ClientCertStoreNSS::FilterCertsOnWorkerThread(
-    const CertificateList& certs,
-    const SSLCertRequestInfo& request,
-    CertificateList* filtered_certs) {
-  DCHECK(filtered_certs);
-
-  filtered_certs->clear();
-
+    ClientCertIdentityList* identities,
+    const SSLCertRequestInfo& request) {
   size_t num_raw = 0;
-  for (const auto& cert : certs) {
+
+  auto keep_iter = identities->begin();
+
+  for (auto examine_iter = identities->begin();
+       examine_iter != identities->end(); ++examine_iter) {
     ++num_raw;
-    X509Certificate::OSCertHandle handle = cert->os_cert_handle();
+    X509Certificate::OSCertHandle handle =
+        (*examine_iter)->certificate()->os_cert_handle();
 
     // Only offer unexpired certificates.
     if (CERT_CheckCertValidTimes(handle, PR_Now(), PR_TRUE) !=
@@ -97,34 +132,36 @@ void ClientCertStoreNSS::FilterCertsOnWorkerThread(
     // Retain a copy of the intermediates. Some deployments expect the client to
     // supply intermediates out of the local store. See
     // https://crbug.com/548631.
-    filtered_certs->push_back(
-        X509Certificate::CreateFromHandle(handle, intermediates_raw));
-    // |handle| was successfully parsed by |cert|, so this should never fail.
-    DCHECK(filtered_certs->back());
-  }
-  DVLOG(2) << "num_raw:" << num_raw
-           << " num_filtered:" << filtered_certs->size();
+    (*examine_iter)->SetIntermediates(intermediates_raw);
 
-  std::sort(filtered_certs->begin(), filtered_certs->end(),
-            x509_util::ClientCertSorter());
+    if (examine_iter == keep_iter)
+      ++keep_iter;
+    else
+      *keep_iter++ = std::move(*examine_iter);
+  }
+  identities->erase(keep_iter, identities->end());
+
+  DVLOG(2) << "num_raw:" << num_raw << " num_filtered:" << identities->size();
+
+  std::sort(identities->begin(), identities->end(), ClientCertIdentitySorter());
 }
 
-CertificateList ClientCertStoreNSS::GetAndFilterCertsOnWorkerThread(
-    std::unique_ptr<crypto::CryptoModuleBlockingPasswordDelegate>
+ClientCertIdentityList ClientCertStoreNSS::GetAndFilterCertsOnWorkerThread(
+    scoped_refptr<crypto::CryptoModuleBlockingPasswordDelegate>
         password_delegate,
     const SSLCertRequestInfo* request) {
-  CertificateList platform_certs;
-  GetPlatformCertsOnWorkerThread(std::move(password_delegate), &platform_certs);
-  CertificateList selected_certs;
-  FilterCertsOnWorkerThread(platform_certs, *request, &selected_certs);
-  return selected_certs;
+  ClientCertIdentityList selected_identities;
+  GetPlatformCertsOnWorkerThread(std::move(password_delegate),
+                                 &selected_identities);
+  FilterCertsOnWorkerThread(&selected_identities, *request);
+  return selected_identities;
 }
 
 // static
 void ClientCertStoreNSS::GetPlatformCertsOnWorkerThread(
-    std::unique_ptr<crypto::CryptoModuleBlockingPasswordDelegate>
+    scoped_refptr<crypto::CryptoModuleBlockingPasswordDelegate>
         password_delegate,
-    net::CertificateList* certs) {
+    ClientCertIdentityList* identities) {
   CERTCertList* found_certs =
       CERT_FindUserCertsByUsage(CERT_GetDefaultCertDB(), certUsageSSLClient,
                                 PR_FALSE, PR_FALSE, password_delegate.get());
@@ -140,7 +177,8 @@ void ClientCertStoreNSS::GetPlatformCertsOnWorkerThread(
       DVLOG(2) << "X509Certificate::CreateFromHandle failed";
       continue;
     }
-    certs->push_back(std::move(cert));
+    identities->push_back(
+        base::MakeUnique<ClientCertIdentityNSS>(cert, password_delegate));
   }
   CERT_DestroyCertList(found_certs);
 }

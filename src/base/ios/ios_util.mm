@@ -29,7 +29,13 @@ namespace base {
 namespace ios {
 
 bool IsRunningOnIOS10OrLater() {
-  return IsRunningOnOrLater(10, 0, 0);
+  static const bool is_running_on_or_later = IsRunningOnOrLater(10, 0, 0);
+  return is_running_on_or_later;
+}
+
+bool IsRunningOnIOS11OrLater() {
+  static const bool is_running_on_or_later = IsRunningOnOrLater(11, 0, 0);
+  return is_running_on_or_later;
 }
 
 bool IsRunningOnOrLater(int32_t major, int32_t minor, int32_t bug_fix) {

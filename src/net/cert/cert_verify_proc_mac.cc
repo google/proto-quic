@@ -337,8 +337,10 @@ bool CheckCertChainEV(const X509Certificate* cert,
 
   // Root should have matching policy in EVRootCAMetadata.
   std::string der_cert;
-  if (!X509Certificate::GetDEREncoded(os_cert_chain.back(), &der_cert))
+  if (os_cert_chain.empty() ||
+      !X509Certificate::GetDEREncoded(os_cert_chain.back(), &der_cert)) {
     return false;
+  }
   SHA1HashValue weak_fingerprint;
   base::SHA1HashBytes(reinterpret_cast<const unsigned char*>(der_cert.data()),
                       der_cert.size(), weak_fingerprint.data);

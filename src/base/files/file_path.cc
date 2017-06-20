@@ -492,7 +492,7 @@ FilePath FilePath::Append(StringPieceType component) const {
 
   DCHECK(!IsPathAbsolute(appended));
 
-  if (path_.compare(kCurrentDirectory) == 0) {
+  if (path_.compare(kCurrentDirectory) == 0 && !appended.empty()) {
     // Append normally doesn't do any normalization, but as a special case,
     // when appending to kCurrentDirectory, just return a new path for the
     // component argument.  Appending component to kCurrentDirectory would

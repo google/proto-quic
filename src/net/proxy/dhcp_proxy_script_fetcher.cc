@@ -33,4 +33,8 @@ const GURL& DoNothingDhcpProxyScriptFetcher::GetPacURL() const {
   return gurl_;
 }
 
+std::string DoNothingDhcpProxyScriptFetcher::GetFetcherName() const {
+  return "do nothing";
+}
+
 }  // namespace net

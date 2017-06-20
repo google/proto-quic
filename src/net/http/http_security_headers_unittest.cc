@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <stdint.h>
-#include <algorithm>
 
 #include "base/base64.h"
+#include "base/stl_util.h"
 #include "base/strings/string_piece.h"
 #include "crypto/sha2.h"
 #include "net/base/host_port_pair.h"
@@ -693,14 +693,9 @@ TEST_F(HttpSecurityHeadersTest, UpdateDynamicPKPOnly) {
   EXPECT_EQ(2UL, dynamic_pkp_state.spki_hashes.size());
   EXPECT_EQ(report_uri, dynamic_pkp_state.report_uri);
 
-  HashValueVector::const_iterator hash =
-      std::find(dynamic_pkp_state.spki_hashes.begin(),
-                dynamic_pkp_state.spki_hashes.end(), good_hash);
-  EXPECT_NE(dynamic_pkp_state.spki_hashes.end(), hash);
+  EXPECT_TRUE(base::ContainsValue(dynamic_pkp_state.spki_hashes, good_hash));
 
-  hash = std::find(dynamic_pkp_state.spki_hashes.begin(),
-                   dynamic_pkp_state.spki_hashes.end(), backup_hash);
-  EXPECT_NE(dynamic_pkp_state.spki_hashes.end(), hash);
+  EXPECT_TRUE(base::ContainsValue(dynamic_pkp_state.spki_hashes, backup_hash));
 
   // Expect the overall state to reflect the header, too.
   EXPECT_TRUE(state.HasPublicKeyPins(domain));
@@ -719,13 +714,11 @@ TEST_F(HttpSecurityHeadersTest, UpdateDynamicPKPOnly) {
   EXPECT_EQ(2UL, new_dynamic_pkp_state.spki_hashes.size());
   EXPECT_EQ(report_uri, new_dynamic_pkp_state.report_uri);
 
-  hash = std::find(new_dynamic_pkp_state.spki_hashes.begin(),
-                   new_dynamic_pkp_state.spki_hashes.end(), good_hash);
-  EXPECT_NE(new_dynamic_pkp_state.spki_hashes.end(), hash);
+  EXPECT_TRUE(
+      base::ContainsValue(new_dynamic_pkp_state.spki_hashes, good_hash));
 
-  hash = std::find(new_dynamic_pkp_state.spki_hashes.begin(),
-                   new_dynamic_pkp_state.spki_hashes.end(), backup_hash);
-  EXPECT_NE(new_dynamic_pkp_state.spki_hashes.end(), hash);
+  EXPECT_TRUE(
+      base::ContainsValue(new_dynamic_pkp_state.spki_hashes, backup_hash));
 }
 
 TEST_F(HttpSecurityHeadersTest, UpdateDynamicPKPMaxAge0) {

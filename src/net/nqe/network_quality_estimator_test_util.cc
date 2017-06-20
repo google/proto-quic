@@ -183,6 +183,13 @@ bool TestNetworkQualityEstimator::GetRecentTransportRTT(
   return NetworkQualityEstimator::GetRecentTransportRTT(start_time, rtt);
 }
 
+base::Optional<base::TimeDelta> TestNetworkQualityEstimator::GetTransportRTT()
+    const {
+  if (start_time_null_transport_rtt_)
+    return start_time_null_transport_rtt_;
+  return NetworkQualityEstimator::GetTransportRTT();
+}
+
 bool TestNetworkQualityEstimator::GetRecentDownlinkThroughputKbps(
     const base::TimeTicks& start_time,
     int32_t* kbps) const {

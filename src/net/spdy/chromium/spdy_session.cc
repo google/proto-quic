@@ -1665,6 +1665,19 @@ void SpdySession::TryCreatePushStream(SpdyStreamId stream_id,
     return;
   }
 
+  // "Promised requests MUST be cacheable and MUST be safe [...]" (RFC7540
+  // Section 8.2).  Only cacheable safe request methods are GET and HEAD.
+  SpdyHeaderBlock::const_iterator it = headers.find(":method");
+  if (it == headers.end() ||
+      (it->second.compare("GET") != 0 && it->second.compare("HEAD") != 0)) {
+    EnqueueResetStreamFrame(
+        stream_id, request_priority, ERROR_CODE_REFUSED_STREAM,
+        SpdyStringPrintf(
+            "Rejected push stream %d due to inadequate request method",
+            associated_stream_id));
+    return;
+  }
+
   auto stream = base::MakeUnique<SpdyStream>(
       SPDY_PUSH_STREAM, GetWeakPtr(), gurl, request_priority,
       stream_initial_send_window_size_, stream_max_recv_window_size_, net_log_);

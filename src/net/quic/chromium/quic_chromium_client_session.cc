@@ -728,6 +728,11 @@ int QuicChromiumClientSession::WaitForHandshakeConfirmation(
 }
 
 int QuicChromiumClientSession::TryCreateStream(StreamRequest* request) {
+  if (stream_factory_ && stream_factory_->IsQuicBroken(this)) {
+    DVLOG(1) << "QUIC broken.";
+    return ERR_QUIC_PROTOCOL_ERROR;
+  }
+
   if (goaway_received()) {
     DVLOG(1) << "Going away.";
     return ERR_CONNECTION_CLOSED;

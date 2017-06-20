@@ -87,8 +87,9 @@ namespace {
 VlogInfo* g_vlog_info = nullptr;
 VlogInfo* g_vlog_info_prev = nullptr;
 
-const char* const log_severity_names[LOG_NUM_SEVERITIES] = {
-  "INFO", "WARNING", "ERROR", "FATAL" };
+const char* const log_severity_names[] = {"INFO", "WARNING", "ERROR", "FATAL"};
+static_assert(LOG_NUM_SEVERITIES == arraysize(log_severity_names),
+              "Incorrect number of log_severity_names");
 
 const char* log_severity_name(int severity) {
   if (severity >= 0 && severity < LOG_NUM_SEVERITIES)

@@ -3,9 +3,10 @@
 
 #if __ARM_MAX_ARCH__>=7
 .text
-.arch	armv7-a
+.arch	armv7-a	@ don't confuse not-so-latest binutils with argv8 :-)
 .fpu	neon
 .code	32
+#undef	__thumb2__
 .align	5
 .Lrcon:
 .long	0x01,0x01,0x01,0x01

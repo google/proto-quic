@@ -32,101 +32,14 @@ def _SymbolKey(symbol):
     # "symbol gap 3 (bar)" -> "symbol gaps"
     name = re.sub(r'\s+\d+( \(.*\))?$', 's', name)
 
+  # Use section rather than section_name since clang & gcc use
+  # .data.rel.ro vs .data.rel.ro.local.
   if '.' not in name:
-    return (symbol.section_name, name)
+    return (symbol.section, name)
+
   # Compiler or Linker generated symbol.
   name = re.sub(r'[.0-9]', '', name)  # Strip out all numbers and dots.
-  return (symbol.section_name, name, symbol.object_path)
-
-
-def _CloneSymbol(sym, size):
-  """Returns a copy of |sym| with an updated |size|.
-
-  Padding and aliases are not copied.
-  """
-  return models.Symbol(
-      sym.section_name, size, address=sym.address, full_name=sym.full_name,
-      template_name=sym.template_name, name=sym.name,
-      source_path=sym.source_path, object_path=sym.object_path, flags=sym.flags)
-
-
-def _CloneAlias(sym, diffed_alias):
-  """Returns a copy of |sym| and making it an alias of |diffed_alias|."""
-  ret = _CloneSymbol(sym, diffed_alias.size_without_padding)
-  ret.padding = diffed_alias.padding
-  ret.aliases = diffed_alias.aliases
-  ret.aliases.append(ret)
-  return ret
-
-
-def _DiffSymbol(before_sym, after_sym, diffed_symbol_by_after_aliases,
-                padding_by_section_name):
-  diffed_alias = None
-  if after_sym.aliases:
-    diffed_alias = diffed_symbol_by_after_aliases.get(id(after_sym.aliases))
-
-  if diffed_alias:
-    ret = _CloneAlias(after_sym, diffed_alias)
-  else:
-    size_diff = (after_sym.size_without_padding -
-                 before_sym.size_without_padding)
-    ret = _CloneSymbol(after_sym, size_diff)
-    # Diffs are more stable when comparing size without padding, except when
-    # the symbol is a padding-only symbol.
-    if after_sym.size_without_padding == 0 and size_diff == 0:
-      ret.padding = after_sym.padding - before_sym.padding
-    else:
-      padding_diff = after_sym.padding - before_sym.padding
-      padding_by_section_name[ret.section_name] += padding_diff
-
-    # If this is the first matched symbol of an alias group, initialize its
-    # aliases list. The remaining aliases will be appended when diff'ed.
-    if after_sym.aliases:
-      ret.aliases = [ret]
-      diffed_symbol_by_after_aliases[id(after_sym.aliases)] = ret
-  return ret
-
-
-def _CloneUnmatched(after_symbols, diffed_symbol_by_after_aliases):
-  ret = [None] * len(after_symbols)
-  for i, sym in enumerate(after_symbols):
-    cloned = sym
-    if sym.aliases:
-      diffed_alias = diffed_symbol_by_after_aliases.get(id(sym.aliases))
-      if diffed_alias:
-        # At least one alias was diffed.
-        cloned = _CloneAlias(sym, diffed_alias)
-    ret[i] = cloned
-  return ret
-
-
-def _NegateAndClone(before_symbols, matched_before_aliases,
-                    negated_symbol_by_before_aliases):
-  ret = [None] * len(before_symbols)
-  for i, sym in enumerate(before_symbols):
-    if sym.aliases:
-      negated_alias = negated_symbol_by_before_aliases.get(id(sym.aliases))
-      if negated_alias:
-        cloned = _CloneAlias(sym, negated_alias)
-      else:
-        all_aliases_removed = id(sym.aliases) not in matched_before_aliases
-        # If all alises are removed, then given them negative size to reflect
-        # the savings.
-        if all_aliases_removed:
-          cloned = _CloneSymbol(sym, -sym.size_without_padding)
-          cloned.padding = -sym.padding
-        else:
-          # But if only a subset of aliases are removed, do not actually treat
-          # them as aliases anymore, or else they will weigh down the PSS of
-          # the symbols that were not removed.
-          cloned = _CloneSymbol(sym, 0)
-        cloned.aliases = [cloned]
-        negated_symbol_by_before_aliases[id(sym.aliases)] = cloned
-    else:
-      cloned = _CloneSymbol(sym, -sym.size_without_padding)
-      cloned.padding = -sym.padding
-    ret[i] = cloned
-  return ret
+  return (symbol.section, name, symbol.object_path)
 
 
 def _DiffSymbolGroups(before, after):
@@ -134,52 +47,41 @@ def _DiffSymbolGroups(before, after):
   for s in before:
     before_symbols_by_key[_SymbolKey(s)].append(s)
 
-  similar = []
-  diffed_symbol_by_after_aliases = {}
-  matched_before_aliases = set()
-  unmatched_after_syms = []
-  # For similar symbols, padding is zeroed out. In order to not lose the
+  delta_symbols = []
+  # For changed symbols, padding is zeroed out. In order to not lose the
   # information entirely, store it in aggregate.
   padding_by_section_name = collections.defaultdict(int)
 
-  # Step 1: Create all delta symbols and record unmatched symbols.
+  # Create a DeltaSymbol for each after symbol.
   for after_sym in after:
     matching_syms = before_symbols_by_key.get(_SymbolKey(after_sym))
+    before_sym = None
     if matching_syms:
       before_sym = matching_syms.pop(0)
-      if before_sym.IsGroup() and after_sym.IsGroup():
-        similar.append(_DiffSymbolGroups(before_sym, after_sym))
-      else:
-        if before_sym.aliases:
-          matched_before_aliases.add(id(before_sym.aliases))
-        similar.append(
-            _DiffSymbol(before_sym, after_sym, diffed_symbol_by_after_aliases,
-                        padding_by_section_name))
-    else:
-      unmatched_after_syms.append(after_sym)
-      continue
+      # Padding tracked in aggregate, except for padding-only symbols.
+      if before_sym.size_without_padding:
+        padding_by_section_name[before_sym.section_name] += (
+            after_sym.padding_pss - before_sym.padding_pss)
+    delta_symbols.append(models.DeltaSymbol(before_sym, after_sym))
 
-  # Step 2: Copy symbols only in "after" (being careful with aliases).
-  added = _CloneUnmatched(unmatched_after_syms, diffed_symbol_by_after_aliases)
-
-  # Step 3: Negate symbols only in "before" (being careful with aliases).
-  removed = []
-  negated_symbol_by_before_aliases = {}
+  # Create a DeltaSymbol for each unmatched before symbol.
   for remaining_syms in before_symbols_by_key.itervalues():
-    removed.extend(_NegateAndClone(remaining_syms, matched_before_aliases,
-                                   negated_symbol_by_before_aliases))
+    for before_sym in remaining_syms:
+      delta_symbols.append(models.DeltaSymbol(before_sym, None))
 
-  # Step 4: Create ** symbols to represent padding differences.
+  # Create a DeltaSymbol to represent the zero'd out padding of matched symbols.
   for section_name, padding in padding_by_section_name.iteritems():
     if padding != 0:
-      similar.append(models.Symbol(
-          section_name, padding,
-          name="** aggregate padding of diff'ed symbols"))
-  return models.SymbolDiff(added, removed, similar)
+      after_sym = models.Symbol(section_name, padding,
+                                name="** aggregate padding of diff'ed symbols")
+      after_sym.padding = padding
+      delta_symbols.append(models.DeltaSymbol(None, after_sym))
+
+  return models.DeltaSymbolGroup(delta_symbols)
 
 
 def Diff(before, after):
-  """Diffs two SizeInfo objects. Returns a SizeInfoDiff."""
+  """Diffs two SizeInfo objects. Returns a DeltaSizeInfo."""
   assert isinstance(before, models.SizeInfo)
   assert isinstance(after, models.SizeInfo)
   section_sizes = {k: after.section_sizes.get(k, 0) - v
@@ -189,5 +91,5 @@ def Diff(before, after):
       section_sizes[k] = v
 
   symbol_diff = _DiffSymbolGroups(before.raw_symbols, after.raw_symbols)
-  return models.SizeInfoDiff(section_sizes, symbol_diff, before.metadata,
-                             after.metadata)
+  return models.DeltaSizeInfo(section_sizes, symbol_diff, before.metadata,
+                              after.metadata)

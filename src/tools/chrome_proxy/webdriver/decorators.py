@@ -105,7 +105,7 @@ def ChromeVersionBeforeM(milestone):
     return wrapper
   return puesdo_wrapper
 
-def ChromeVersionAfterM(milestone):
+def ChromeVersionEqualOrAfterM(milestone):
   def puesdo_wrapper(func):
     def wrapper(*args, **kwargs):
       global chrome_version

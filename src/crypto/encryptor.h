@@ -58,7 +58,7 @@ class CRYPTO_EXPORT Encryptor {
   //
   // If |mode| is CBC, |iv| must not be empty; if it is CTR, then |iv| must be
   // empty.
-  bool Init(SymmetricKey* key, Mode mode, const base::StringPiece& iv);
+  bool Init(const SymmetricKey* key, Mode mode, const base::StringPiece& iv);
 
   // Encrypts |plaintext| into |ciphertext|.  |plaintext| may only be empty if
   // the mode is CBC.
@@ -84,7 +84,7 @@ class CRYPTO_EXPORT Encryptor {
   // TODO(albertb): Support streaming encryption.
 
  private:
-  SymmetricKey* key_;
+  const SymmetricKey* key_;
   Mode mode_;
   std::unique_ptr<Counter> counter_;
 

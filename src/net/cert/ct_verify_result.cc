@@ -13,8 +13,7 @@ namespace ct {
 CTVerifyResult::CTVerifyResult()
     : ct_policies_applied(false),
       cert_policy_compliance(
-          ct::CertPolicyCompliance::CERT_POLICY_NOT_ENOUGH_SCTS),
-      ev_policy_compliance(ct::EVPolicyCompliance::EV_POLICY_DOES_NOT_APPLY) {}
+          ct::CertPolicyCompliance::CERT_POLICY_NOT_ENOUGH_SCTS) {}
 
 CTVerifyResult::CTVerifyResult(const CTVerifyResult& other) = default;
 

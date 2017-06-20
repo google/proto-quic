@@ -15,12 +15,11 @@ namespace net {
 class SSLPrivateKey;
 class X509Certificate;
 
-// Returns an SSLPrivateKey backed by the platform private key in |keychain|
-// that corresponds to |certificate|'s public key. If |keychain| is nullptr, the
-// user's default search list is used instead.
-NET_EXPORT_PRIVATE scoped_refptr<SSLPrivateKey>
-FetchClientCertPrivateKeyFromKeychain(const X509Certificate* certificate,
-                                      SecKeychainRef keychain);
+// Returns an SSLPrivateKey backed by the platform private key in |identity|
+// which must correspond to |certificate|'s public key.
+NET_EXPORT scoped_refptr<SSLPrivateKey> CreateSSLPrivateKeyForSecIdentity(
+    const X509Certificate* certificate,
+    SecIdentityRef identity);
 
 }  // namespace net
 

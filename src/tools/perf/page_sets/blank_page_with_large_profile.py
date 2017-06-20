@@ -19,7 +19,7 @@ class BlankPageSetWithLargeProfile(story.StorySet):
   """A single blank page loaded with a large profile."""
 
   def __init__(self):
-    super(BlankPageSetWithLargeProfile, self).__init__(verify_names=True)
+    super(BlankPageSetWithLargeProfile, self).__init__()
     self.AddStory(BlankPageWithLargeProfile(
         'file://blank_page/blank_page.html', self,
         'blank_page.html'))

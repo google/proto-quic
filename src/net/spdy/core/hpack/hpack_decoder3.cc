@@ -143,10 +143,11 @@ void HpackDecoder3::ListenerAdapter::OnHeader(HpackEntryType entry_type,
   total_uncompressed_bytes_ += name.size() + value.size();
   if (handler_ == nullptr) {
     DVLOG(3) << "Adding to decoded_block";
-    decoded_block_.AppendValueOrAddHeader(name, value);
+    decoded_block_.AppendValueOrAddHeader(name.ToStringPiece(),
+                                          value.ToStringPiece());
   } else {
     DVLOG(3) << "Passing to handler";
-    handler_->OnHeader(name, value);
+    handler_->OnHeader(name.ToStringPiece(), value.ToStringPiece());
   }
 }
 
@@ -173,7 +174,8 @@ int64_t HpackDecoder3::ListenerAdapter::OnEntryInserted(
   if (visitor_ == nullptr) {
     return 0;
   }
-  HpackEntry entry(sp.name, sp.value, /*is_static*/ false, insert_count);
+  HpackEntry entry(sp.name.ToStringPiece(), sp.value.ToStringPiece(),
+                   /*is_static*/ false, insert_count);
   int64_t time_added = visitor_->OnNewEntry(entry);
   DVLOG(2) << "HpackDecoder3::ListenerAdapter::OnEntryInserted: time_added="
            << time_added;
@@ -187,7 +189,8 @@ void HpackDecoder3::ListenerAdapter::OnUseEntry(const HpackStringPair& sp,
            << ",  insert_count=" << insert_count
            << ",  time_added=" << time_added;
   if (visitor_ != nullptr) {
-    HpackEntry entry(sp.name, sp.value, /*is_static*/ false, insert_count);
+    HpackEntry entry(sp.name.ToStringPiece(), sp.value.ToStringPiece(),
+                     /*is_static*/ false, insert_count);
     entry.set_time_added(time_added);
     visitor_->OnUseEntry(entry);
   }

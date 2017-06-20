@@ -118,7 +118,7 @@ TEST_F(TraceCategoryTest, Basic) {
 }
 
 // Tries to cover the case of multiple threads creating the same category
-// simultaeously. Should never end up with distinct entries with the same name.
+// simultaneously. Should never end up with distinct entries with the same name.
 TEST_F(TraceCategoryTest, ThreadRaces) {
   const int kNumThreads = 32;
   std::unique_ptr<Thread> threads[kNumThreads];

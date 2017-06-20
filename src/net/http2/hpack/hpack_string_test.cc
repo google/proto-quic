@@ -35,7 +35,7 @@ class HpackStringTest : public ::testing::Test {
     VERIFY_NE(*actual, not_expected_ptr);
     VERIFY_NE(*actual, not_expected_sp);
     VERIFY_NE(*actual, not_expected_str);
-    VERIFY_NE(static_cast<StringPiece>(*actual), not_expected_sp);
+    VERIFY_NE(actual->ToStringPiece(), not_expected_sp);
 
     if (!(not_expected_ptr != *actual)) {
       return AssertionFailure();
@@ -46,7 +46,7 @@ class HpackStringTest : public ::testing::Test {
     if (!(not_expected_str != *actual)) {
       return AssertionFailure();
     }
-    if (!(not_expected_sp != static_cast<StringPiece>(*actual))) {
+    if (!(not_expected_sp != actual->ToStringPiece())) {
       return AssertionFailure();
     }
 
@@ -62,7 +62,7 @@ class HpackStringTest : public ::testing::Test {
     VERIFY_EQ(*actual, expected_ptr);
     VERIFY_EQ(*actual, expected_sp);
     VERIFY_EQ(*actual, expected_str);
-    VERIFY_EQ(static_cast<StringPiece>(*actual), expected_sp);
+    VERIFY_EQ(actual->ToStringPiece(), expected_sp);
 
     if (!(expected_sp == *actual)) {
       return AssertionFailure();
@@ -73,7 +73,7 @@ class HpackStringTest : public ::testing::Test {
     if (!(expected_str == *actual)) {
       return AssertionFailure();
     }
-    if (!(expected_sp == static_cast<StringPiece>(*actual))) {
+    if (!(expected_sp == actual->ToStringPiece())) {
       return AssertionFailure();
     }
 

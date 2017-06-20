@@ -18,7 +18,7 @@ class TestOilpanGCTimesPage(page_module.Page):
 
   def __init__(self, page_set):
     super(TestOilpanGCTimesPage, self).__init__(
-        'file://blank.html', page_set, page_set.base_dir)
+        'file://blank.html', page_set, page_set.base_dir, name='blank.html')
 
   def RunPageInteractions(self, action_runner):
     with action_runner.CreateGestureInteraction('ScrollAction'):

@@ -15,36 +15,27 @@ TEST(SymmetricKeyTest, GenerateRandomKey) {
   std::unique_ptr<crypto::SymmetricKey> key(
       crypto::SymmetricKey::GenerateRandomKey(crypto::SymmetricKey::AES, 256));
   ASSERT_TRUE(key);
-  std::string raw_key;
-  EXPECT_TRUE(key->GetRawKey(&raw_key));
-  EXPECT_EQ(32U, raw_key.size());
+  EXPECT_EQ(32U, key->key().size());
 
   // Do it again and check that the keys are different.
   // (Note: this has a one-in-10^77 chance of failure!)
   std::unique_ptr<crypto::SymmetricKey> key2(
       crypto::SymmetricKey::GenerateRandomKey(crypto::SymmetricKey::AES, 256));
   ASSERT_TRUE(key2);
-  std::string raw_key2;
-  EXPECT_TRUE(key2->GetRawKey(&raw_key2));
-  EXPECT_EQ(32U, raw_key2.size());
-  EXPECT_NE(raw_key, raw_key2);
+  EXPECT_EQ(32U, key2->key().size());
+  EXPECT_NE(key->key(), key2->key());
 }
 
 TEST(SymmetricKeyTest, ImportGeneratedKey) {
   std::unique_ptr<crypto::SymmetricKey> key1(
       crypto::SymmetricKey::GenerateRandomKey(crypto::SymmetricKey::AES, 256));
   ASSERT_TRUE(key1);
-  std::string raw_key1;
-  EXPECT_TRUE(key1->GetRawKey(&raw_key1));
 
   std::unique_ptr<crypto::SymmetricKey> key2(
-      crypto::SymmetricKey::Import(crypto::SymmetricKey::AES, raw_key1));
+      crypto::SymmetricKey::Import(crypto::SymmetricKey::AES, key1->key()));
   ASSERT_TRUE(key2);
 
-  std::string raw_key2;
-  EXPECT_TRUE(key2->GetRawKey(&raw_key2));
-
-  EXPECT_EQ(raw_key1, raw_key2);
+  EXPECT_EQ(key1->key(), key2->key());
 }
 
 TEST(SymmetricKeyTest, ImportDerivedKey) {
@@ -52,17 +43,12 @@ TEST(SymmetricKeyTest, ImportDerivedKey) {
       crypto::SymmetricKey::DeriveKeyFromPassword(
           crypto::SymmetricKey::HMAC_SHA1, "password", "somesalt", 1024, 160));
   ASSERT_TRUE(key1);
-  std::string raw_key1;
-  EXPECT_TRUE(key1->GetRawKey(&raw_key1));
 
-  std::unique_ptr<crypto::SymmetricKey> key2(
-      crypto::SymmetricKey::Import(crypto::SymmetricKey::HMAC_SHA1, raw_key1));
+  std::unique_ptr<crypto::SymmetricKey> key2(crypto::SymmetricKey::Import(
+      crypto::SymmetricKey::HMAC_SHA1, key1->key()));
   ASSERT_TRUE(key2);
 
-  std::string raw_key2;
-  EXPECT_TRUE(key2->GetRawKey(&raw_key2));
-
-  EXPECT_EQ(raw_key1, raw_key2);
+  EXPECT_EQ(key1->key(), key2->key());
 }
 
 struct PBKDF2TestVector {
@@ -86,8 +72,7 @@ TEST_P(SymmetricKeyDeriveKeyFromPasswordTest, DeriveKeyFromPassword) {
           test_data.rounds, test_data.key_size_in_bits));
   ASSERT_TRUE(key);
 
-  std::string raw_key;
-  key->GetRawKey(&raw_key);
+  const std::string& raw_key = key->key();
   EXPECT_EQ(test_data.key_size_in_bits / 8, raw_key.size());
   EXPECT_EQ(test_data.expected,
             base::ToLowerASCII(base::HexEncode(raw_key.data(),

@@ -12,7 +12,8 @@ class ToughTextureUploadCasesPage(page_module.Page):
       ToughTextureUploadCasesPage,
       self).__init__(
         url=url,
-        page_set=page_set)
+        page_set=page_set,
+        name=url.split('/')[-1])
 
   def RunPageInteractions(self, action_runner):
     with action_runner.CreateInteraction('Animation'):

@@ -14,7 +14,7 @@ from measurements import v8_detached_context_age_in_gc
 class FakePage(page_module.Page):
 
   def __init__(self, url):
-    super(FakePage, self).__init__(url=url)
+    super(FakePage, self).__init__(url=url, name=url)
 
   @property
   def is_file(self):
@@ -58,7 +58,7 @@ class SimplePage(page_module.Page):
 
   def __init__(self, page_set):
     super(SimplePage, self).__init__(
-        'file://host.html', page_set, page_set.base_dir)
+        'file://host.html', page_set, page_set.base_dir, name='host.html')
 
   def RunPageInteractions(self, action_runner):
     # Reload the page to detach the previous context.

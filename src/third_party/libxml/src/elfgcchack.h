@@ -6547,16 +6547,6 @@ extern __typeof (xmlNoNetExternalEntityLoader) xmlNoNetExternalEntityLoader__int
 #endif
 #endif
 
-#ifdef bottom_xmlIO
-#undef xmlNoXxeExternalEntityLoader
-extern __typeof (xmlNoXxeExternalEntityLoader) xmlNoXxeExternalEntityLoader __attribute((alias("xmlNoXxeExternalEntityLoader__internal_alias")));
-#else
-#ifndef xmlNoXxeExternalEntityLoader
-extern __typeof (xmlNoXxeExternalEntityLoader) xmlNoXxeExternalEntityLoader__internal_alias __attribute((visibility("hidden")));
-#define xmlNoXxeExternalEntityLoader xmlNoXxeExternalEntityLoader__internal_alias
-#endif
-#endif
-
 #ifdef bottom_tree
 #undef xmlNodeAddContent
 extern __typeof (xmlNodeAddContent) xmlNodeAddContent __attribute((alias("xmlNodeAddContent__internal_alias")));

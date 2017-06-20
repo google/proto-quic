@@ -8,14 +8,17 @@
 
 #include <vector>
 
+#include "base/bind.h"
 #include "base/memory/ptr_util.h"
+#include "base/memory/shared_memory_tracker.h"
 #include "base/process/process_metrics.h"
 #include "base/strings/stringprintf.h"
-#include "base/trace_event/heap_profiler_heap_dump_writer.h"
-#include "base/trace_event/heap_profiler_serialization_state.h"
+#include "base/trace_event/heap_profiler_event_writer.h"
 #include "base/trace_event/memory_infra_background_whitelist.h"
 #include "base/trace_event/process_memory_totals.h"
+#include "base/trace_event/sharded_allocation_register.h"
 #include "base/trace_event/trace_event_argument.h"
+#include "base/unguessable_token.h"
 #include "build/build_config.h"
 
 #if defined(OS_IOS)
@@ -251,12 +254,9 @@ MemoryAllocatorDump* ProcessMemoryDump::GetSharedGlobalAllocatorDump(
 }
 
 void ProcessMemoryDump::DumpHeapUsage(
-    const std::unordered_map<base::trace_event::AllocationContext,
-                             base::trace_event::AllocationMetrics>&
-        metrics_by_context,
-    base::trace_event::TraceEventMemoryOverhead& overhead,
+    const ShardedAllocationRegister& allocation_register,
     const char* allocator_name) {
-  if (!metrics_by_context.empty()) {
+  if (dump_args_.level_of_detail == MemoryDumpLevelOfDetail::DETAILED) {
     // We shouldn't end up here unless we're doing a detailed dump with
     // heap profiling enabled and if that is the case tracing should be
     // enabled which sets up the heap profiler serialization state.
@@ -265,11 +265,13 @@ void ProcessMemoryDump::DumpHeapUsage(
       return;
     }
     DCHECK_EQ(0ul, heap_dumps_.count(allocator_name));
-    std::unique_ptr<TracedValue> heap_dump = ExportHeapDump(
-        metrics_by_context, *heap_profiler_serialization_state());
+    std::unique_ptr<TracedValue> heap_dump = SerializeHeapDump(
+        allocation_register, heap_profiler_serialization_state_.get());
     heap_dumps_[allocator_name] = std::move(heap_dump);
   }
 
+  TraceEventMemoryOverhead overhead;
+  allocation_register.EstimateTraceMemoryOverhead(&overhead);
   std::string base_name = base::StringPrintf("tracing/heap_profiler_%s",
                                              allocator_name);
   overhead.DumpInto(base_name.c_str(), this);
@@ -333,10 +335,9 @@ void ProcessMemoryDump::AsValueInto(TracedValue* value) const {
   }
 
   if (heap_dumps_.size() > 0) {
-    value->BeginDictionary("heaps");
-    for (const auto& name_and_dump : heap_dumps_)
-      value->SetValueWithCopiedName(name_and_dump.first, *name_and_dump.second);
-    value->EndDictionary();  // "heaps"
+    auto profile_data = SerializeHeapProfileEventData(
+        heap_dumps_, heap_profiler_serialization_state_.get());
+    value->SetValue("heaps_v2", *profile_data);
   }
 
   value->BeginArray("allocators_graph");
@@ -379,6 +380,69 @@ void ProcessMemoryDump::AddOverridableOwnershipEdge(
     // since the new overridable edge is implicitly overridden by a strong edge
     // which was created earlier.
     DCHECK(!allocator_dumps_edges_[source].overridable);
+  }
+}
+
+void ProcessMemoryDump::CreateSharedMemoryOwnershipEdge(
+    const MemoryAllocatorDumpGuid& client_local_dump_guid,
+    const MemoryAllocatorDumpGuid& client_global_dump_guid,
+    const UnguessableToken& shared_memory_guid,
+    int importance) {
+  CreateSharedMemoryOwnershipEdgeInternal(
+      client_local_dump_guid, client_global_dump_guid, shared_memory_guid,
+      importance, false /*is_weak*/);
+}
+
+void ProcessMemoryDump::CreateWeakSharedMemoryOwnershipEdge(
+    const MemoryAllocatorDumpGuid& client_local_dump_guid,
+    const MemoryAllocatorDumpGuid& client_global_dump_guid,
+    const UnguessableToken& shared_memory_guid,
+    int importance) {
+  CreateSharedMemoryOwnershipEdgeInternal(
+      client_local_dump_guid, client_global_dump_guid, shared_memory_guid,
+      importance, true /*is_weak*/);
+}
+
+void ProcessMemoryDump::CreateSharedMemoryOwnershipEdgeInternal(
+    const MemoryAllocatorDumpGuid& client_local_dump_guid,
+    const MemoryAllocatorDumpGuid& client_global_dump_guid,
+    const UnguessableToken& shared_memory_guid,
+    int importance,
+    bool is_weak) {
+  if (MemoryAllocatorDumpGuid::UseSharedMemoryBasedGUIDs()) {
+    DCHECK(!shared_memory_guid.is_empty());
+    // New model where the global dumps created by SharedMemoryTracker are used
+    // for the clients.
+
+    // The guid of the local dump created by SharedMemoryTracker for the memory
+    // segment.
+    auto local_shm_guid =
+        SharedMemoryTracker::GetDumpGUIDForTracing(shared_memory_guid);
+
+    // The dump guid of the global dump created by the tracker for the memory
+    // segment.
+    auto global_shm_guid =
+        SharedMemoryTracker::GetGlobalDumpGUIDForTracing(shared_memory_guid);
+
+    // Create an edge between local dump of the client and the local dump of the
+    // SharedMemoryTracker. Do not need to create the dumps here since the
+    // tracker would create them.
+    AddOwnershipEdge(client_local_dump_guid, local_shm_guid);
+
+    // TODO(ssid): Handle the case of weak dumps here. This needs a new function
+    // GetOrCreaetGlobalDump() in PMD since we need to change the behavior of
+    // the created global dump.
+    // Create an edge that overrides the edge created by SharedMemoryTracker.
+    AddOwnershipEdge(local_shm_guid, global_shm_guid, importance);
+  } else {
+    // This is the old model where the clients create global dumps for
+    // themselves.
+    if (is_weak)
+      CreateWeakSharedGlobalAllocatorDump(client_global_dump_guid);
+    else
+      CreateSharedGlobalAllocatorDump(client_global_dump_guid);
+    AddOwnershipEdge(client_local_dump_guid, client_global_dump_guid,
+                     importance);
   }
 }
 

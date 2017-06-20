@@ -300,14 +300,6 @@ XMLPUBFUN xmlParserInputPtr XMLCALL
 					 xmlParserCtxtPtr ctxt);
 
 /*
- * A predefined entity loader external entity expansion
- */
-XMLPUBFUN xmlParserInputPtr XMLCALL
-	xmlNoXxeExternalEntityLoader	(const char *URL,
-					 const char *ID,
-					 xmlParserCtxtPtr ctxt);
-
-/*
  * xmlNormalizeWindowsPath is obsolete, don't use it.
  * Check xmlCanonicPath in uri.h for a better alternative.
  */

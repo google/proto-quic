@@ -95,8 +95,7 @@ TEST_F(ChloExtractorTest, FindsValidChlo) {
     EXPECT_TRUE(ChloExtractor::Extract(*packet_, versions, &delegate_))
         << QuicVersionToString(version);
     EXPECT_EQ(version, delegate_.version());
-    EXPECT_EQ(GetPeerInMemoryConnectionId(header_.public_header.connection_id),
-              delegate_.connection_id());
+    EXPECT_EQ(header_.public_header.connection_id, delegate_.connection_id());
     EXPECT_EQ(client_hello.DebugString(Perspective::IS_SERVER),
               delegate_.chlo())
         << QuicVersionToString(version);

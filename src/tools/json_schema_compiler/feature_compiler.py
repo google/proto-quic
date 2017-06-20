@@ -136,6 +136,7 @@ FEATURE_GRAMMAR = (
           'blessed_web_page': 'Feature::BLESSED_WEB_PAGE_CONTEXT',
           'content_script': 'Feature::CONTENT_SCRIPT_CONTEXT',
           'extension_service_worker': 'Feature::SERVICE_WORKER_CONTEXT',
+          'lock_screen_extension': 'Feature::LOCK_SCREEN_EXTENSION_CONTEXT',
           'web_page': 'Feature::WEB_PAGE_CONTEXT',
           'webui': 'Feature::WEBUI_CONTEXT',
           'unblessed_extension': 'Feature::UNBLESSED_EXTENSION_CONTEXT',

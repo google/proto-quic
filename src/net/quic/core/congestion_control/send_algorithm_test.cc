@@ -193,7 +193,7 @@ class SendAlgorithmTest : public QuicTestWithParam<TestParams> {
                   "Receiver",
                   "QUIC sender",
                   Perspective::IS_SERVER,
-                  net::test::GetPeerInMemoryConnectionId(42)) {
+                  42) {
     FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode = true;
     FLAGS_quic_reloadable_flag_quic_fix_cubic_bytes_quantization = true;
     FLAGS_quic_reloadable_flag_quic_fix_beta_last_max = true;

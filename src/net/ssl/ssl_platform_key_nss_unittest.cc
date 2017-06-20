@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "net/ssl/ssl_platform_key.h"
+#include "net/ssl/ssl_platform_key_nss.h"
 
 #include <keyhi.h>
 #include <pk11pub.h>
@@ -121,7 +121,8 @@ TEST_P(SSLPlatformKeyNSSTest, KeyMatches) {
   }
 
   // Look up the key.
-  scoped_refptr<SSLPrivateKey> key = FetchClientCertPrivateKey(cert.get());
+  scoped_refptr<SSLPrivateKey> key =
+      FetchClientCertPrivateKey(cert.get(), nullptr);
   ASSERT_TRUE(key);
 
   // All NSS keys are expected to have the same hash preferences.

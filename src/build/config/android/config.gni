@@ -171,6 +171,10 @@ if (is_android) {
     # Ex. with this arg set to true, the chrome_public_apk target result in
     # chrome_public_apk_incremental being built.
     incremental_apk_by_default = false
+
+    # Allow concurrent proguarding and final dexing.
+    # TODO(jbudorick): Remove this once pools are supported for actions.
+    enable_concurrent_apk_finalization = false
   }
 
   # We need a second declare_args block to make sure we are using the overridden

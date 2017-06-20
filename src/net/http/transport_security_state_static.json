@@ -4852,9 +4852,6 @@
     { "name": "zirtue.io", "include_subdomains": true, "mode": "force-https" },
     { "name": "zoneminder.com", "include_subdomains": true, "mode": "force-https" },
     { "name": "thundr.eu", "include_subdomains": true, "mode": "force-https" },
-    { "name": "cloudflare.com", "include_subdomains": false, "mode": "force-https" },
-    { "name": "www.cloudflare.com", "include_subdomains": false, "mode": "force-https" },
-    { "name": "api.cloudflare.com", "include_subdomains": false, "mode": "force-https" },
     { "name": "6969.us", "include_subdomains": true, "mode": "force-https" },
     { "name": "aaeblog.com", "include_subdomains": true, "mode": "force-https" },
     { "name": "advancis.net", "include_subdomains": true, "mode": "force-https" },
@@ -12749,7 +12746,6 @@
     { "name": "01seguridad.com.ar", "include_subdomains": true, "mode": "force-https" },
     { "name": "0i0.nl", "include_subdomains": true, "mode": "force-https" },
     { "name": "0x52.org", "include_subdomains": true, "mode": "force-https" },
-    { "name": "0xAA55.me", "include_subdomains": true, "mode": "force-https" },
     { "name": "0xaa55.me", "include_subdomains": true, "mode": "force-https" },
     { "name": "0xb612.org", "include_subdomains": true, "mode": "force-https" },
     { "name": "100dayloans.com", "include_subdomains": true, "mode": "force-https" },
@@ -29359,6 +29355,9 @@
     },
     // hstspreload.org can't scan IPv6-only sites due to Google Cloud limitations.
     { "name": "ipv6only.network", "include_subdomains": true, "mode": "force-https" },
+    { "name": "cloudflare.com", "include_subdomains": false, "mode": "force-https", "expect_staple": true, "expect_staple_report_uri": "https://staple.watch/cdn-cgi/beacon/expect-staple" },
+    { "name": "www.cloudflare.com", "include_subdomains": false, "mode": "force-https", "expect_staple": true, "expect_staple_report_uri": "https://staple.watch/cdn-cgi/beacon/expect-staple" },
+    { "name": "api.cloudflare.com", "include_subdomains": false, "mode": "force-https", "expect_staple": true, "expect_staple_report_uri": "https://staple.watch/cdn-cgi/beacon/expect-staple" },
     // END OF MANUAL ENTRIES
 
     // To avoid trailing comma changes from showing up in diffs, we place a

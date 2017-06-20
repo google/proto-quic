@@ -42,7 +42,7 @@ class QuartcAlarm : public QuicAlarm, public QuartcTaskRunnerInterface::Task {
 
     DCHECK(task_runner_);
     DCHECK(!scheduled_task_);
-    scheduled_task_.reset(task_runner_->Schedule(this, delay_ms).release());
+    scheduled_task_ = task_runner_->Schedule(this, delay_ms);
   }
 
   void CancelImpl() override {

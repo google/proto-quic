@@ -23,7 +23,7 @@ class QUIC_EXPORT_PRIVATE QuartcFactory : public QuartcFactoryInterface,
                                           public QuicAlarmFactory,
                                           public QuicConnectionHelperInterface {
  public:
-  QuartcFactory(const QuartcFactoryConfig& factory_config);
+  explicit QuartcFactory(const QuartcFactoryConfig& factory_config);
   ~QuartcFactory() override;
 
   // QuartcFactoryInterface overrides.

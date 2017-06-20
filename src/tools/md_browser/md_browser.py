@@ -31,15 +31,22 @@ def main(argv):
   parser.add_argument('-p', '--port', type=int, default=8080,
                       help='port to run on (default = %(default)s)')
   parser.add_argument('-d', '--directory', type=str, default=SRC_DIR)
+  parser.add_argument('-e', '--external', action='store_true',
+                      help='whether to bind to external port')
   parser.add_argument('file', nargs='?',
                       help='open file in browser')
   args = parser.parse_args(argv)
 
   top_level = os.path.realpath(args.directory)
-  server_address = ('localhost', args.port)
+  hostname = '0.0.0.0' if args.external else 'localhost'
+  server_address = (hostname, args.port)
   s = Server(server_address, top_level)
 
-  print('Listening on http://%s:%s/' % server_address)
+  origin = 'http://' + hostname
+  if args.port != 80:
+    origin += ':%s' % args.port
+  print('Listening on %s/' % origin)
+
   thread = None
   if args.file:
     path = os.path.realpath(args.file)
@@ -47,15 +54,15 @@ def main(argv):
       print('%s is not under %s' % (args.file, args.directory))
       return 1
     rpath = os.path.relpath(path, top_level)
-    url = 'http://localhost:%d/%s' % (args.port, rpath)
+    url = '%s/%s' % (origin, rpath)
     print('Opening %s' % url)
     thread = threading.Thread(target=_open_url, args=(url,))
     thread.start()
 
   elif os.path.isfile(os.path.join(top_level, 'docs', 'README.md')):
-    print(' Try loading http://localhost:%d/docs/README.md' % args.port)
+    print(' Try loading %s/docs/README.md' % origin)
   elif os.path.isfile(os.path.join(args.directory, 'README.md')):
-    print(' Try loading http://localhost:%d/README.md' % args.port)
+    print(' Try loading %s/README.md' % origin)
 
   retcode = 1
   try:

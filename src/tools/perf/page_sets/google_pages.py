@@ -41,20 +41,3 @@ class GmailPage(GooglePages):
     action_runner.WaitForJavaScriptCondition(
         'window.gmonkey !== undefined &&'
         'document.getElementById("gb") !== null')
-
-class GoogleDocPage(GooglePages):
-  def __init__(self, page_set,
-               shared_page_state_class=shared_page_state.SharedPageState):
-    super(GoogleDocPage, self).__init__(
-        # pylint: disable=line-too-long
-        url='https://docs.google.com/document/d/1X-IKNjtEnx-WW5JIKRLsyhz5sbsat3mfTpAPUSX3_s4/view',
-        page_set=page_set,
-        shared_page_state_class=shared_page_state_class)
-
-  def RunNavigateSteps(self, action_runner):
-    google_login.LoginGoogleAccount(action_runner, 'google',
-                                    self.credentials_path)
-    super(GoogleDocPage, self).RunNavigateSteps(action_runner)
-    action_runner.Wait(2)
-    action_runner.WaitForJavaScriptCondition(
-        'document.getElementsByClassName("kix-appview-editor").length')

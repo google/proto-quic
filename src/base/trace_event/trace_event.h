@@ -50,7 +50,7 @@
 //     TRACE_ID_WITH_SCOPE("BlinkResourceID", resourceID));
 //
 // Also, it is possible to prepend the ID with another number, like the process
-// ID. This is useful in creatin IDs that are unique among all processes. To do
+// ID. This is useful in creating IDs that are unique among all processes. To do
 // that, pass two numbers after the scope string instead of one. For example,
 //
 // TRACE_EVENT_NESTABLE_ASYNC_BEGIN0(

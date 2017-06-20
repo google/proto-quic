@@ -74,12 +74,12 @@ const char kToolsetVersionVs2015[] = "v140";               // Visual Studio 2015
 const char kToolsetVersionVs2017[] = "v141";               // Visual Studio 2017
 const char kProjectVersionVs2013[] = "12.0";               // Visual Studio 2013
 const char kProjectVersionVs2015[] = "14.0";               // Visual Studio 2015
-const char kProjectVersionVs2017[] = "15.0";               // Visual Studio 2015
+const char kProjectVersionVs2017[] = "15.0";               // Visual Studio 2017
 const char kVersionStringVs2013[] = "Visual Studio 2013";  // Visual Studio 2013
 const char kVersionStringVs2015[] = "Visual Studio 2015";  // Visual Studio 2015
 const char kVersionStringVs2017[] = "Visual Studio 2017";  // Visual Studio 2017
 const char kWindowsKitsVersion[] = "10";                   // Windows 10 SDK
-const char kWindowsKitsIncludeVersion[] = "10.0.14393.0";  // Windows 10 SDK
+const char kWindowsKitsDefaultVersion[] = "10.0.14393.0";  // Windows 10 SDK
 
 const char kGuidTypeProject[] = "{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}";
 const char kGuidTypeFolder[] = "{2150E333-8FDC-42A3-9474-1A3956D46DE8}";
@@ -89,7 +89,7 @@ const char kGuidSeedFilter[] = "filter";
 
 const char kConfigurationName[] = "GN";
 
-std::string GetWindowsKitsIncludeDirs() {
+std::string GetWindowsKitsIncludeDirs(const std::string& win_kit) {
   std::string kits_path;
 
 #if defined(OS_WIN)
@@ -115,9 +115,8 @@ std::string GetWindowsKitsIncludeDirs() {
                 kWindowsKitsVersion + "\\";
   }
 
-  return kits_path + "Include\\" + kWindowsKitsIncludeVersion + "\\shared;" +
-         kits_path + "Include\\" + kWindowsKitsIncludeVersion + "\\um;" +
-         kits_path + "Include\\" + kWindowsKitsIncludeVersion + "\\winrt;";
+  const std::string kit_prefix = kits_path + "Include\\" + win_kit + "\\";
+  return kit_prefix + "shared;" + kit_prefix + "um;" + kit_prefix + "winrt;";
 }
 
 std::string GetConfigurationType(const Target* target, Err* err) {
@@ -259,12 +258,16 @@ VisualStudioWriter::SourceFileCompileTypePair::~SourceFileCompileTypePair() =
 
 VisualStudioWriter::VisualStudioWriter(const BuildSettings* build_settings,
                                        const char* config_platform,
-                                       Version version)
+                                       Version version,
+                                       const std::string& win_kit)
     : build_settings_(build_settings),
       config_platform_(config_platform),
       ninja_path_output_(build_settings->build_dir(),
                          build_settings->root_path_utf8(),
-                         EscapingMode::ESCAPE_NINJA_COMMAND) {
+                         EscapingMode::ESCAPE_NINJA_COMMAND),
+      windows_sdk_version_(win_kit) {
+  DCHECK(!win_kit.empty());
+
   switch (version) {
     case Version::Vs2013:
       project_version_ = kProjectVersionVs2013;
@@ -285,7 +288,7 @@ VisualStudioWriter::VisualStudioWriter(const BuildSettings* build_settings,
       NOTREACHED() << "Not a valid Visual Studio Version: " << version;
   }
 
-  windows_kits_include_dirs_ = GetWindowsKitsIncludeDirs();
+  windows_kits_include_dirs_ = GetWindowsKitsIncludeDirs(win_kit);
 }
 
 VisualStudioWriter::~VisualStudioWriter() {
@@ -297,11 +300,16 @@ bool VisualStudioWriter::RunAndWriteFiles(const BuildSettings* build_settings,
                                           Version version,
                                           const std::string& sln_name,
                                           const std::string& filters,
+                                          const std::string& win_sdk,
                                           bool no_deps,
                                           Err* err) {
   std::vector<const Target*> targets;
   if (!FilterTargets(build_settings, builder, filters, no_deps, &targets, err))
     return false;
+
+  std::string win_kit = kWindowsKitsDefaultVersion;
+  if (!win_sdk.empty())
+    win_kit = win_sdk;
 
   const char* config_platform = "Win32";
 
@@ -315,7 +323,7 @@ bool VisualStudioWriter::RunAndWriteFiles(const BuildSettings* build_settings,
       config_platform = "x64";
   }
 
-  VisualStudioWriter writer(build_settings, config_platform, version);
+  VisualStudioWriter writer(build_settings, config_platform, version, win_kit);
   writer.projects_.reserve(targets.size());
   writer.folders_.reserve(targets.size());
 
@@ -436,7 +444,7 @@ bool VisualStudioWriter::WriteProjectFileContents(
     globals->SubElement("IgnoreWarnCompileDuplicatedFilename")->Text("true");
     globals->SubElement("PreferredToolArchitecture")->Text("x64");
     globals->SubElement("WindowsTargetPlatformVersion")
-        ->Text(kWindowsKitsIncludeVersion);
+        ->Text(windows_sdk_version_);
   }
 
   project.SubElement(

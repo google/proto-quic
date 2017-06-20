@@ -5,10 +5,56 @@
 import common
 from common import TestDriver
 from common import IntegrationTest
+from decorators import ChromeVersionEqualOrAfterM
 
 import time
 
 class LitePage(IntegrationTest):
+
+  # Verifies that a Lite Page is served for slow connection if any copyright
+  # restricted country blacklist is ignored.
+  # Note: this test is for the CPAT protocol change in M-61.
+  @ChromeVersionEqualOrAfterM(61)
+  def testLitePageWithoutCopyrightRestriction(self):
+    # If it was attempted to run with another experiment, skip this test.
+    if common.ParseFlags().browser_args and ('--data-reduction-proxy-experiment'
+        in common.ParseFlags().browser_args):
+      self.skipTest('This test cannot be run with other experiments.')
+    with TestDriver() as test_driver:
+      test_driver.AddChromeArg('--enable-spdy-proxy-auth')
+      test_driver.AddChromeArg('--enable-features='
+                               'DataReductionProxyDecidesTransform')
+      test_driver.AddChromeArg(
+          '--force-fieldtrial-params=NetworkQualityEstimator.Enabled:'
+          'force_effective_connection_type/2G,'
+          'DataReductionProxyServerExperiments.IgnoreCountryBlacklist:'
+          'exp/ignore_preview_blacklist')
+      test_driver.AddChromeArg(
+          '--force-fieldtrials=NetworkQualityEstimator/Enabled/'
+          'DataReductionProxyServerExperiments/IgnoreCountryBlacklist')
+
+      test_driver.LoadURL('http://check.googlezip.net/test.html')
+
+      lite_page_responses = 0
+      for response in test_driver.GetHTTPResponses():
+        # Verify client sends ignore directive on every request for session.
+        self.assertIn('exp=ignore_preview_blacklist',
+          response.request_headers['chrome-proxy'])
+        self.assertEqual('2G', response.request_headers['chrome-proxy-ect'])
+        if response.url.endswith('html'):
+          self.assertTrue(self.checkLitePageResponse(response))
+          lite_page_responses = lite_page_responses + 1
+          # Expect no fallback page policy
+          if 'chrome-proxy' in response.response_headers:
+            self.assertNotIn('page-policies',
+                             response.response_headers['chrome-proxy'])
+        else:
+          # No subresources should accept transforms.
+          self.assertNotIn('chrome-proxy-accept-transform',
+            response.request_headers)
+
+      # Verify that a Lite Page response for the main frame was seen.
+      self.assertEqual(1, lite_page_responses)
 
   # Checks that a Lite Page is served and the force_lite_page experiment
   # directive is provided when always-on.
@@ -49,7 +95,6 @@ class LitePage(IntegrationTest):
 
       # Verify that a Lite Page response for the main frame was seen.
       self.assertEqual(1, lite_page_responses)
-
 
   # Checks that a Lite Page is not served for the Cellular-Only option but
   # not on cellular connection.
@@ -128,9 +173,10 @@ class LitePage(IntegrationTest):
         self.assertHasChromeProxyViaHeader(response)
         self.assertIn(response.status, [200, 204])
 
-  # Lo-Fi fallback is not currently supported via the client. Check that
-  # no Lo-Fi response is received if a Lite Page is not served.
-  def testLitePageFallback(self):
+  # Lo-Fi fallback is not supported without the
+  # DataReductionProxyDecidesTransform feature. Check that no Lo-Fi response
+  # is received if a Lite Page is not served.
+  def testLitePageNoFallback(self):
     with TestDriver() as test_driver:
       test_driver.AddChromeArg('--enable-spdy-proxy-auth')
       test_driver.AddChromeArg('--force-fieldtrials='
@@ -164,6 +210,108 @@ class LitePage(IntegrationTest):
 
       # Verify that a Lite Page was requested.
       self.assertEqual(1, lite_page_requests)
+
+  # Verifies Lo-Fi fallback via the page-policies server directive.
+  # Note: this test is for the CPAT protocol change in M-61.
+  @ChromeVersionEqualOrAfterM(61)
+  def testLitePageFallbackViaPagePolicies(self):
+    with TestDriver() as test_driver:
+      test_driver.AddChromeArg('--enable-spdy-proxy-auth')
+      test_driver.AddChromeArg('--enable-features='
+                               'DataReductionProxyDecidesTransform')
+      test_driver.AddChromeArg('--force-fieldtrial-params='
+                               'NetworkQualityEstimator.Enabled:'
+                               'force_effective_connection_type/Slow2G')
+      test_driver.AddChromeArg('--force-fieldtrials='
+                               'NetworkQualityEstimator/Enabled/')
+
+      test_driver.LoadURL('http://check.googlezip.net/lite-page-fallback')
+
+      lite_page_responses = 0
+      lofi_resource = 0
+      for response in test_driver.GetHTTPResponses():
+        self.assertEqual('Slow-2G',
+                         response.request_headers['chrome-proxy-ect'])
+
+        if response.url.endswith('html'):
+          # Verify that the server provides the fallback directive
+          self.assertIn('page-policies=empty-image',
+                        response.response_headers['chrome-proxy'])
+          # Main resource should not accept and transform to lite page.
+          if self.checkLitePageResponse(response):
+            lite_page_responses = lite_page_responses + 1
+        if response.url.endswith('png'):
+          if self.checkLoFiResponse(response, True):
+            lofi_resource = lofi_resource + 1
+
+      self.assertEqual(0, lite_page_responses)
+      self.assertNotEqual(0, lofi_resource)
+      self.assertNotEqual(0, lofi_resource)
+
+  # Checks that the server provides a preview (either Lite Page or fallback
+  # to LoFi) for a 2G connection.
+  # Note: this test is for the CPAT protocol change in M-61.
+  @ChromeVersionEqualOrAfterM(61)
+  def testPreviewProvidedForSlowConnection(self):
+    with TestDriver() as test_driver:
+      test_driver.AddChromeArg('--enable-spdy-proxy-auth')
+      test_driver.AddChromeArg('--enable-features='
+                               'DataReductionProxyDecidesTransform')
+      test_driver.AddChromeArg('--force-fieldtrial-params='
+                               'NetworkQualityEstimator.Enabled:'
+                               'force_effective_connection_type/2G')
+      test_driver.AddChromeArg('--force-fieldtrials='
+                               'NetworkQualityEstimator/Enabled/')
+
+      test_driver.LoadURL('http://check.googlezip.net/test.html')
+
+      lite_page_responses = 0
+      page_policies_responses = 0
+      for response in test_driver.GetHTTPResponses():
+        self.assertEqual('2G', response.request_headers['chrome-proxy-ect'])
+        if response.url.endswith('html'):
+          if self.checkLitePageResponse(response):
+            lite_page_responses = lite_page_responses + 1
+          elif 'chrome-proxy' in response.response_headers:
+            self.assertIn('page-policies',
+                             response.response_headers['chrome-proxy'])
+            page_policies_responses = page_policies_responses + 1
+
+      self.assertTrue(lite_page_responses == 1 or page_policies_responses == 1)
+
+  # Checks that the server does not provide a preview (neither Lite Page nor
+  # fallback to LoFi) for a fast connection.
+  # Note: this test is for the CPAT protocol change in M-61.
+  @ChromeVersionEqualOrAfterM(61)
+  def testPreviewNotProvidedForFastConnection(self):
+    with TestDriver() as test_driver:
+      test_driver.AddChromeArg('--enable-spdy-proxy-auth')
+      test_driver.AddChromeArg('--enable-features='
+                               'DataReductionProxyDecidesTransform')
+      test_driver.AddChromeArg('--force-fieldtrial-params='
+                               'NetworkQualityEstimator.Enabled:'
+                               'force_effective_connection_type/4G')
+      test_driver.AddChromeArg('--force-fieldtrials='
+                               'NetworkQualityEstimator/Enabled/')
+
+      test_driver.LoadURL('http://check.googlezip.net/test.html')
+
+      for response in test_driver.GetHTTPResponses():
+        self.assertEqual('4G', response.request_headers['chrome-proxy-ect'])
+        if response.url.endswith('html'):
+          # Main resource should accept lite page but not be transformed.
+          self.assertEqual('lite-page',
+            response.request_headers['chrome-proxy-accept-transform'])
+          self.assertNotIn('chrome-proxy-content-transform',
+            response.response_headers)
+          # Expect no fallback page policy
+          if 'chrome-proxy' in response.response_headers:
+            self.assertNotIn('page-policies',
+                             response.response_headers['chrome-proxy'])
+        else:
+          # No subresources should accept transforms.
+          self.assertNotIn('chrome-proxy-accept-transform',
+            response.request_headers)
 
 if __name__ == '__main__':
   IntegrationTest.RunAllTests()

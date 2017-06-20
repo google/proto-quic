@@ -37,6 +37,8 @@
       "ios/chrome/app/strings/ios_chromium_strings.grd",
       "ios/chrome/app/strings/ios_google_chrome_strings.grd",
       "ios/chrome/app/strings/ios_strings.grd",
+      "ios/chrome/content_widget_extension/strings/ios_content_widget_extension_chromium_strings.grd",
+      "ios/chrome/content_widget_extension/strings/ios_content_widget_extension_google_chrome_strings.grd",
       "ios/chrome/search_widget_extension/strings/ios_search_widget_extension_strings.grd",
       "ios/chrome/search_widget_extension/strings/ios_search_widget_extension_chromium_strings.grd",
       "ios/chrome/search_widget_extension/strings/ios_search_widget_extension_google_chrome_strings.grd",

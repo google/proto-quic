@@ -14,29 +14,42 @@ def parse(filename):
   Args:
     filename (str): path to the file to parse.
   Returns:
-    (team (str), component(str)): The team and component found in the file, the
-        last one of each if multiple, None if missing.
-  """
-  team = None
-  component = None
+    a dict with the following format, with any subset of the listed keys:
+    {
+        'component': 'component>name',
+        'team': 'team@email.here',
+        'os': 'Linux|Windows|Mac|Android|Chrome|Fuchsia'
+    }
+ """
   team_regex = re.compile('\s*#\s*TEAM\s*:\s*(\S+)')
   component_regex = re.compile('\s*#\s*COMPONENT\s*:\s*(\S+)')
+  os_regex = re.compile('\s*#\s*OS\s*:\s*(\S+)')
+  result = {}
   with open(filename) as f:
     for line in f:
       team_matches = team_regex.match(line)
       if team_matches:
-        team = team_matches.group(1)
+        result['team'] = team_matches.group(1)
       component_matches = component_regex.match(line)
       if component_matches:
-        component = component_matches.group(1)
-  return team, component
+        result['component'] = component_matches.group(1)
+      os_matches = os_regex.match(line)
+      if os_matches:
+        result['os'] = os_matches.group(1)
+  return result
 
 
-def aggregate_components_from_owners(root, include_subdirs=False):
-  """Traverses the given dir and parse OWNERS files for team and component tags.
+def aggregate_components_from_owners(all_owners_data, root,
+                                     include_subdirs=False):
+  """Converts the team/component/os tags parsed from OWNERS into mappings.
 
   Args:
+    all_owners_data (dict): A mapping from relative path to a dir to a dict
+        mapping the tag names to their values. See docstring for scrape_owners.
     root (str): the path to the src directory.
+    include_subdirs (bool): Deprecated, whether to generate the additional
+        dir-to-team mapping. This mapping is being replaced by the result of
+        scrape_owners below.
 
   Returns:
     A tuple (data, warnings, errors, stats) where data is a dict of the form
@@ -66,37 +79,41 @@ def aggregate_components_from_owners(root, include_subdirs=False):
   # TODO(sergiyb): Remove this mapping. Please do not use it as it is going to
   # be removed in the future. See http://crbug.com/702202.
   dir_to_team = {}
-  for dirname, _, files in os.walk(root):
-    # Proofing against windows casing oddities.
-    owners_file_names = [f for f in files if f.upper() == 'OWNERS']
-    rel_dirname = os.path.relpath(dirname, root)
-    if owners_file_names:
-      file_depth = dirname[len(root) + len(os.path.sep):].count(os.path.sep)
-      num_total += 1
-      num_total_by_depth[file_depth] += 1
-      owners_full_path = os.path.join(dirname, owners_file_names[0])
-      owners_rel_path = os.path.relpath(owners_full_path, root)
-      team, component = parse(owners_full_path)
-      if component:
-        num_with_component += 1
-        num_with_component_by_depth[file_depth] += 1
-        dir_to_component[rel_dirname] = component
-        if team:
-          num_with_team_component += 1
-          num_with_team_component_by_depth[file_depth] += 1
-          component_to_team[component].add(team)
-      else:
-        warnings.append('%s has no COMPONENT tag' % owners_rel_path)
-        if not team:
-          dir_missing_info_by_depth[file_depth].append(owners_rel_path)
+  for rel_dirname, owners_data in all_owners_data.iteritems():
+    # We apply relpath to remove any possible `.` and `..` chunks and make
+    # counting separators work correctly as a means of obtaining the file_depth.
+    rel_path = os.path.relpath(rel_dirname, root)
+    file_depth = 0 if rel_path == '.' else rel_path.count(os.path.sep) + 1
+    num_total += 1
+    num_total_by_depth[file_depth] += 1
+    component = owners_data.get('component')
+    team = owners_data.get('team')
+    os_tag = owners_data.get('os')
+    if os_tag and component:
+      component = '%s(%s)' % (component, os_tag)
+    if component:
+      num_with_component += 1
+      num_with_component_by_depth[file_depth] += 1
+      dir_to_component[rel_dirname] = component
+      if team:
+        num_with_team_component += 1
+        num_with_team_component_by_depth[file_depth] += 1
+        component_to_team[component].add(team)
+    else:
+      rel_owners_path = os.path.join(rel_dirname, 'OWNERS')
+      warnings.append('%s has no COMPONENT tag' % rel_owners_path)
+      if not team and not os_tag:
+        dir_missing_info_by_depth[file_depth].append(rel_owners_path)
 
-      # Add dir-to-team mapping unless there is also dir-to-component mapping.
-      if (include_subdirs and team and not component and
-          rel_dirname.startswith('third_party/WebKit/LayoutTests')):
-        dir_to_team[rel_dirname] = team
+    # TODO(robertocn): Remove the dir-to-team mapping once the raw owners data
+    # is being exported in its own file and being used by sergiyb's scripts.
+    # Add dir-to-team mapping unless there is also dir-to-component mapping.
+    if (include_subdirs and team and not component and
+        rel_dirname.startswith('third_party/WebKit/LayoutTests')):
+      dir_to_team[rel_dirname] = team
 
     if include_subdirs and rel_dirname not in dir_to_component:
-      rel_parent_dirname = os.path.relpath(os.path.dirname(dirname), root)
+      rel_parent_dirname = os.path.relpath(rel_dirname, root)
       if rel_parent_dirname in dir_to_component:
         dir_to_component[rel_dirname] = dir_to_component[rel_parent_dirname]
       if rel_parent_dirname in dir_to_team:
@@ -137,3 +154,41 @@ def unwrap(mappings):
   for c in mappings['component-to-team']:
     mappings['component-to-team'][c] = mappings['component-to-team'][c].pop()
   return mappings
+
+def scrape_owners(root, include_subdirs):
+  """Recursively parse OWNERS files for tags.
+
+  Args:
+    root (str): The directory where to start parsing.
+    include_subdirs (bool): Whether to generate entries for subdirs with no
+        own OWNERS files based on the parent dir's tags.
+
+  Returns a dict in the form below.
+  {
+      '/path/to/dir': {
+          'component': 'component>name',
+          'team': 'team@email.here',
+          'os': 'Linux|Windows|Mac|Android|Chrome|Fuchsia'
+      },
+      '/path/to/dir/inside/dir': {
+          'component': ...
+      }
+  }
+  """
+  data = {}
+  for dirname, _, files in os.walk(root):
+    # Proofing against windows casing oddities.
+    owners_file_names = [f for f in files if f.upper() == 'OWNERS']
+    rel_dirname = os.path.relpath(dirname, root)
+    if owners_file_names:
+      owners_full_path = os.path.join(dirname, owners_file_names[0])
+      data[rel_dirname] = parse(owners_full_path)
+    if include_subdirs and not data.get(rel_dirname):
+      parent_dirname = os.path.dirname(dirname)
+      # In the case where the root doesn't have an OWNERS file, don't try to
+      # check its parent.
+      if parent_dirname:
+        rel_parent_dirname = os.path.relpath(parent_dirname , root)
+        if rel_parent_dirname in data:
+          data[rel_dirname] = data[rel_parent_dirname]
+  return data

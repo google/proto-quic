@@ -46,19 +46,19 @@
             "DEFAULT": "system_health_desktop_052.wpr"
         },
         "browse:tech:discourse_infinite_scroll": {
-            "DEFAULT": "infinite_scroll_004.wpr"
+            "DEFAULT": "system_health_desktop_058.wpr"
         },
         "browse:social:facebook_infinite_scroll": {
-            "DEFAULT": "infinite_scroll_001.wpr"
+            "DEFAULT": "system_health_desktop_055.wpr"
         },
         "browse:media:flickr_infinite_scroll": {
-            "DEFAULT": "infinite_scroll_003.wpr"
+            "DEFAULT": "system_health_desktop_057.wpr"
         },
         "browse:social:tumblr_infinite_scroll": {
-            "DEFAULT": "infinite_scroll_002.wpr"
+            "DEFAULT": "system_health_desktop_056.wpr"
         },
         "browse:social:twitter_infinite_scroll": {
-            "DEFAULT": "infinite_scroll_000.wpr"
+            "DEFAULT": "system_health_desktop_054.wpr"
         },
         "load:games:alphabetty": {
             "DEFAULT": "system_health_desktop_005.wpr"

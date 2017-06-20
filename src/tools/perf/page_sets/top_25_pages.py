@@ -15,8 +15,7 @@ class Top25PageSet(story.StorySet):
   def __init__(self):
     super(Top25PageSet, self).__init__(
         archive_data_file='data/top_25.json',
-        cloud_storage_bucket=story.PARTNER_BUCKET,
-        verify_names=True)
+        cloud_storage_bucket=story.PARTNER_BUCKET)
 
     shared_desktop_state = shared_page_state.SharedDesktopPageState
     self.AddStory(top_pages.GoogleWebSearchPage(self, shared_desktop_state))
@@ -42,8 +41,7 @@ class Top25PageSet(story.StorySet):
         # Why: #1 news worldwide (Alexa global)
         'http://news.yahoo.com',
         # Why: #2 news worldwide
-        # crbug.com/528472
-        #'http://www.cnn.com',
+        'http://www.cnn.com',
         # Why: #1 world commerce website by visits; #3 commerce in the US by
         # time spent
         'http://www.amazon.com',
@@ -63,3 +61,8 @@ class Top25PageSet(story.StorySet):
       self.AddStory(
           page.Page(url, self, shared_page_state_class=shared_desktop_state,
                     name=url))
+
+class Top25StoryExpectations(story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    self.DisableStory(
+        'http://www.cnn.com', [story.expectations.ALL], 'crbug.com/528472')

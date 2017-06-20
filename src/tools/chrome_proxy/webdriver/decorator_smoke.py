@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 from decorators import AndroidOnly
-from decorators import ChromeVersionAfterM
+from decorators import ChromeVersionEqualOrAfterM
 from decorators import ChromeVersionBeforeM
 from common import ParseFlags
 from common import IntegrationTest
@@ -26,7 +26,7 @@ class DecoratorSmokeTest(IntegrationTest):
     self.fail('This function should not be called when the Chrome Milestone is '
       'greater than 0')
 
-  @ChromeVersionAfterM(999999999)
+  @ChromeVersionEqualOrAfterM(999999999)
   def testVersionAfterDecorator(self):
     self.fail('This function should not be called when the Chrome Milestone is '
       'less than 999999999')

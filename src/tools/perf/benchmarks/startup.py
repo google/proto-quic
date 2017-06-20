@@ -6,6 +6,7 @@ from core import perf_benchmark
 from measurements import startup
 import page_sets
 from telemetry import benchmark
+from telemetry import story
 
 
 class _StartupCold(perf_benchmark.PerfBenchmark):
@@ -47,6 +48,12 @@ class StartupColdBlankPage(_StartupCold):
   def Name(cls):
     return 'startup.cold.blank_page'
 
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # blank_page.html not disabled.
+    return StoryExpectations()
+
 
 @benchmark.Disabled('android')
 class StartupWarmBlankPage(_StartupWarm):
@@ -80,6 +87,12 @@ class StartupLargeProfileColdBlankPage(_StartupCold):
   def Name(cls):
     return 'startup.large_profile.cold.blank_page'
 
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # blank_page.html not disabled.
+    return StoryExpectations()
+
 
 @benchmark.Disabled('reference',                   # http://crbug.com/476882
                     'android',                     # http://crbug.com/481919
@@ -102,3 +115,9 @@ class StartupLargeProfileWarmBlankPage(_StartupWarm):
   @classmethod
   def Name(cls):
     return 'startup.large_profile.warm.blank_page'
+
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # blank_page.html not disabled.
+    return StoryExpectations()

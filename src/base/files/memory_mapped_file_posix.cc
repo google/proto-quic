@@ -84,9 +84,12 @@ bool MemoryMappedFile::MapFileRegionToMemory(
     case READ_WRITE_EXTEND:
       flags |= PROT_READ | PROT_WRITE;
 
+      const int64_t new_file_len = region.offset + region.size;
+
       // POSIX won't auto-extend the file when it is written so it must first
       // be explicitly extended to the maximum size. Zeros will fill the new
-      // space.
+      // space. It is assumed that the existing file is fully realized as
+      // otherwise the entire file would have to be read and possibly written.
       const int64_t original_file_len = file_.GetLength();
       if (original_file_len < 0) {
         DPLOG(ERROR) << "fstat " << file_.GetPlatformFile();
@@ -95,8 +98,7 @@ bool MemoryMappedFile::MapFileRegionToMemory(
 
       // Increase the actual length of the file, if necessary. This can fail if
       // the disk is full and the OS doesn't support sparse files.
-      if (!file_.SetLength(
-              std::max(original_file_len, region.offset + region.size))) {
+      if (!file_.SetLength(std::max(original_file_len, new_file_len))) {
         DPLOG(ERROR) << "ftruncate " << file_.GetPlatformFile();
         return false;
       }
@@ -124,21 +126,19 @@ bool MemoryMappedFile::MapFileRegionToMemory(
       }
 #endif
 
-      // Manually realize the entire file by writing bytes to it at intervals.
+      // Manually realize the extended file by writing bytes to it at intervals.
       if (do_manual_extension) {
-        int64_t block_size = 1024;  // Start with something safe.
+        int64_t block_size = 512;  // Start with something safe.
         struct stat statbuf;
-        if (fstat(file_.GetPlatformFile(), &statbuf) == 0)
+        if (fstat(file_.GetPlatformFile(), &statbuf) == 0 &&
+            statbuf.st_blksize > 0) {
           block_size = statbuf.st_blksize;
-#if defined(OS_FUCHSIA)
-        // TODO(fuchsia): Fuchsia stat() currently returns 0 for st_blksize,
-        // which hangs the loop below. Remove this after the next SDK update.
-        // https://crbug.com/706592 and MG-815.
-        if (block_size == 0)
-          block_size = 512;
-#endif  // defined(OS_FUCHSIA)
-        const off_t map_end = map_start + static_cast<off_t>(map_size);
-        for (off_t i = map_start; i < map_end; i += block_size) {
+        }
+
+        // Write starting at the next block boundary after the old file length.
+        const int64_t extension_start =
+            (original_file_len + block_size - 1) & ~(block_size - 1);
+        for (int64_t i = extension_start; i < new_file_len; i += block_size) {
           char existing_byte;
           if (pread(file_.GetPlatformFile(), &existing_byte, 1, i) != 1)
             return false;  // Can't read? Not viable.

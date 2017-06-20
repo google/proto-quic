@@ -36,7 +36,6 @@ namespace test {
 namespace {
 
 class HpackVarintDecoderTest : public RandomDecoderTest {
-
  protected:
   DecodeStatus StartDecoding(DecodeBuffer* b) override {
     CHECK_LT(0u, b->Remaining());
@@ -221,7 +220,7 @@ class HpackVarintDecoderTest : public RandomDecoderTest {
       // values that require exactly |expected_bytes| extension bytes.
       values.insert({start, start + 1, beyond - 2, beyond - 1});
       while (values.size() < 100) {
-        values.insert(start + Random().Rand32() % range);
+        values.insert(start + Random().Uniform(range));
       }
     }
 

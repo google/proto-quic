@@ -82,7 +82,6 @@ class QUIC_EXPORT_PRIVATE PacketNumberQueue {
   const_iterator end() const;
   const_reverse_iterator rbegin() const;
   const_reverse_iterator rend() const;
-  const_iterator lower_bound(QuicPacketNumber packet_number) const;
 
   friend QUIC_EXPORT_PRIVATE std::ostream& operator<<(
       std::ostream& os,

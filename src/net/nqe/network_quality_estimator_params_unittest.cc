@@ -105,6 +105,39 @@ TEST(NetworkQualityEstimatorParamsTest, TypicalNetworkQualities) {
   }
 }
 
+TEST(NetworkQualityEstimatorParamsTest, ObtainAlgorithmToUseFromParams) {
+  const struct {
+    bool set_variation_param;
+    std::string algorithm;
+    NetworkQualityEstimatorParams::EffectiveConnectionTypeAlgorithm
+        expected_algorithm;
+  } tests[] = {
+      {false, "",
+       NetworkQualityEstimatorParams::EffectiveConnectionTypeAlgorithm::
+           HTTP_RTT_AND_DOWNSTREAM_THROUGHOUT},
+      {true, "",
+       NetworkQualityEstimatorParams::EffectiveConnectionTypeAlgorithm::
+           HTTP_RTT_AND_DOWNSTREAM_THROUGHOUT},
+      {true, "HttpRTTAndDownstreamThroughput",
+       NetworkQualityEstimatorParams::EffectiveConnectionTypeAlgorithm::
+           HTTP_RTT_AND_DOWNSTREAM_THROUGHOUT},
+      {true, "TransportRTTOrDownstreamThroughput",
+       NetworkQualityEstimatorParams::EffectiveConnectionTypeAlgorithm::
+           TRANSPORT_RTT_OR_DOWNSTREAM_THROUGHOUT},
+  };
+
+  for (const auto& test : tests) {
+    std::map<std::string, std::string> variation_params;
+    if (test.set_variation_param)
+      variation_params["effective_connection_type_algorithm"] = test.algorithm;
+
+    NetworkQualityEstimatorParams params(variation_params);
+    EXPECT_EQ(test.expected_algorithm,
+              params.GetEffectiveConnectionTypeAlgorithm())
+        << test.algorithm;
+  }
+}
+
 }  // namespace
 
 }  // namespace internal

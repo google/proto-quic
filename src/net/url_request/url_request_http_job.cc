@@ -1264,8 +1264,8 @@ void URLRequestHttpJob::CancelAuth() {
 }
 
 void URLRequestHttpJob::ContinueWithCertificate(
-    X509Certificate* client_cert,
-    SSLPrivateKey* client_private_key) {
+    scoped_refptr<X509Certificate> client_cert,
+    scoped_refptr<SSLPrivateKey> client_private_key) {
   DCHECK(transaction_.get());
 
   DCHECK(!response_info_) << "should not have a response yet";
@@ -1274,7 +1274,7 @@ void URLRequestHttpJob::ContinueWithCertificate(
   ResetTimer();
 
   int rv = transaction_->RestartWithCertificate(
-      client_cert, client_private_key,
+      std::move(client_cert), std::move(client_private_key),
       base::Bind(&URLRequestHttpJob::OnStartCompleted, base::Unretained(this)));
   if (rv == ERR_IO_PENDING)
     return;

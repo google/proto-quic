@@ -41,7 +41,6 @@
 #include "base/base_export.h"
 #include "base/debug/leak_annotations.h"
 #include "base/logging.h"
-#include "base/memory/aligned_memory.h"
 #include "base/threading/thread_restrictions.h"
 
 // LazyInstance uses its own struct initializer-list style static
@@ -55,7 +54,7 @@ namespace base {
 template <typename Type>
 struct LazyInstanceTraitsBase {
   static Type* New(void* instance) {
-    DCHECK_EQ(reinterpret_cast<uintptr_t>(instance) & (ALIGNOF(Type) - 1), 0u);
+    DCHECK_EQ(reinterpret_cast<uintptr_t>(instance) & (alignof(Type) - 1), 0u);
     // Use placement new to initialize our instance in our preallocated space.
     // The parenthesis is very important here to force POD type initialization.
     return new (instance) Type();
@@ -118,7 +117,7 @@ struct ErrorMustSelectLazyOrDestructorAtExitForLazyInstance {};
 
 // Our AtomicWord doubles as a spinlock, where a value of
 // kLazyInstanceStateCreating means the spinlock is being held for creation.
-static const subtle::AtomicWord kLazyInstanceStateCreating = 1;
+constexpr subtle::AtomicWord kLazyInstanceStateCreating = 1;
 
 // Check if instance needs to be created. If so return true otherwise
 // if another thread has beat us, wait for instance to be created and
@@ -129,8 +128,38 @@ BASE_EXPORT bool NeedsLazyInstance(subtle::AtomicWord* state);
 // at program exit and to update the atomic state to hold the |new_instance|
 BASE_EXPORT void CompleteLazyInstance(subtle::AtomicWord* state,
                                       subtle::AtomicWord new_instance,
-                                      void* lazy_instance,
-                                      void (*dtor)(void*));
+                                      void (*destructor)(void*),
+                                      void* destructor_arg);
+
+// If |state| is uninitialized, constructs a value using |creator_func|, stores
+// it into |state| and registers |destructor| to be called with |destructor_arg|
+// as argument when the current AtExitManager goes out of scope. Then, returns
+// the value stored in |state|. It is safe to have concurrent calls to this
+// function with the same |state|.
+template <typename CreatorFunc>
+void* GetOrCreateLazyPointer(subtle::AtomicWord* state,
+                             const CreatorFunc& creator_func,
+                             void (*destructor)(void*),
+                             void* destructor_arg) {
+  // If any bit in the created mask is true, the instance has already been
+  // fully constructed.
+  constexpr subtle::AtomicWord kLazyInstanceCreatedMask =
+      ~internal::kLazyInstanceStateCreating;
+
+  // We will hopefully have fast access when the instance is already created.
+  // Since a thread sees |state| == 0 or kLazyInstanceStateCreating at most
+  // once, the load is taken out of NeedsLazyInstance() as a fast-path. The load
+  // has acquire memory ordering as a thread which sees |state| > creating needs
+  // to acquire visibility over the associated data. Pairing Release_Store is in
+  // CompleteLazyInstance().
+  subtle::AtomicWord value = subtle::Acquire_Load(state);
+  if (!(value & kLazyInstanceCreatedMask) && NeedsLazyInstance(state)) {
+    // Create the instance in the space provided by |private_buf_|.
+    value = reinterpret_cast<subtle::AtomicWord>(creator_func());
+    CompleteLazyInstance(state, value, destructor, destructor_arg);
+  }
+  return reinterpret_cast<void*>(subtle::NoBarrier_Load(state));
+}
 
 }  // namespace internal
 
@@ -163,28 +192,10 @@ class LazyInstance {
     if (!Traits::kAllowedToAccessOnNonjoinableThread)
       ThreadRestrictions::AssertSingletonAllowed();
 #endif
-    // If any bit in the created mask is true, the instance has already been
-    // fully constructed.
-    static const subtle::AtomicWord kLazyInstanceCreatedMask =
-        ~internal::kLazyInstanceStateCreating;
-
-    // We will hopefully have fast access when the instance is already created.
-    // Since a thread sees private_instance_ == 0 or kLazyInstanceStateCreating
-    // at most once, the load is taken out of NeedsInstance() as a fast-path.
-    // The load has acquire memory ordering as a thread which sees
-    // private_instance_ > creating needs to acquire visibility over
-    // the associated data (private_buf_). Pairing Release_Store is in
-    // CompleteLazyInstance().
-    subtle::AtomicWord value = subtle::Acquire_Load(&private_instance_);
-    if (!(value & kLazyInstanceCreatedMask) &&
-        internal::NeedsLazyInstance(&private_instance_)) {
-      // Create the instance in the space provided by |private_buf_|.
-      value = reinterpret_cast<subtle::AtomicWord>(
-          Traits::New(private_buf_.void_data()));
-      internal::CompleteLazyInstance(&private_instance_, value, this,
-                                     Traits::kRegisterOnExit ? OnExit : NULL);
-    }
-    return instance();
+    return static_cast<Type*>(internal::GetOrCreateLazyPointer(
+        &private_instance_,
+        [this]() { return Traits::New(private_buf_); },
+        Traits::kRegisterOnExit ? OnExit : nullptr, this));
   }
 
   bool operator==(Type* p) {
@@ -192,19 +203,31 @@ class LazyInstance {
       case 0:
         return p == NULL;
       case internal::kLazyInstanceStateCreating:
-        return static_cast<void*>(p) == private_buf_.void_data();
+        return static_cast<void*>(p) == private_buf_;
       default:
         return p == instance();
     }
   }
 
+  // MSVC gives a warning that the alignment expands the size of the
+  // LazyInstance struct to make the size a multiple of the alignment. This
+  // is expected in this case.
+#if defined(OS_WIN)
+#pragma warning(push)
+#pragma warning(disable: 4324)
+#endif
+
   // Effectively private: member data is only public to allow the linker to
   // statically initialize it and to maintain a POD class. DO NOT USE FROM
   // OUTSIDE THIS CLASS.
-
   subtle::AtomicWord private_instance_;
+
   // Preallocated space for the Type instance.
-  base::AlignedMemory<sizeof(Type), ALIGNOF(Type)> private_buf_;
+  alignas(Type) char private_buf_[sizeof(Type)];
+
+#if defined(OS_WIN)
+#pragma warning(pop)
+#endif
 
  private:
   Type* instance() {

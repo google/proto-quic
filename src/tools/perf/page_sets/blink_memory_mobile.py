@@ -92,8 +92,7 @@ class BlinkMemoryMobilePageSet(story.StorySet):
   def __init__(self):
     super(BlinkMemoryMobilePageSet, self).__init__(
         archive_data_file='data/blink_memory_mobile.json',
-        cloud_storage_bucket=story.PARTNER_BUCKET,
-        verify_names=True)
+        cloud_storage_bucket=story.PARTNER_BUCKET)
 
     # Why: High rate of Blink's memory consumption rate.
     self.AddStory(BlinkMemoryMobilePage(
@@ -133,3 +132,8 @@ class BlinkMemoryMobilePageSet(story.StorySet):
         'https://plus.google.com/app/basic/110031535020051778989/posts?source=apppromo',
         page_set=self,
         name='GooglePlus'))
+
+
+class BlinkMemoryMobileStoryExpectations(story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    pass  # No tests disabled.

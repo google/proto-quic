@@ -144,6 +144,7 @@ class QUIC_EXPORT_PRIVATE QuicDataReader {
   // The location of the next read from our data buffer.
   size_t pos_;
 
+  // TODO(zhongyi): remove this field as it is no longer used.
   // Perspective of this data reader. Please note, although client and server
   // may have different in-memory representation of the same field, the on wire
   // representation must be consistent.

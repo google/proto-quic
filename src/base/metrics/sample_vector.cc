@@ -272,7 +272,7 @@ void SampleVectorBase::MountCountsStorageAndMoveSingleSample() {
       // Point |counts_| to the newly created storage. This is done while
       // locked to prevent possible concurrent calls to CreateCountsStorage
       // but, between that call and here, other threads could notice the
-      // existance of the storage and race with this to set_counts(). That's
+      // existence of the storage and race with this to set_counts(). That's
       // okay because (a) it's atomic and (b) it always writes the same value.
       set_counts(counts);
     }

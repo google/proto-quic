@@ -39,143 +39,144 @@ Other section sizes:
     .symtab: 0 bytes (0 bytes)
 
 0 symbols added (+), 1 changed (~), 0 removed (-), 40 unchanged (=)
+Number of unique symbols 46 -> 46 (+0)
 0 paths added, 0 removed, 1 changed
 Changed files:
   base/page_allocator.cc
 
-Showing 41 symbols (41 unique) with total pss: 10 bytes
+Showing 41 symbols (aliases not grouped for diffs) with total pss: 10 bytes
 .text=10 bytes   .rodata=0 bytes    .data*=0 bytes    .bss=0 bytes    total=10 bytes
 Number of unique paths: 9
 
-Index, Running Total, Section@Address, PSS
+Index | Running Total | Section@Address | ...
 ------------------------------------------------------------
-~ 0)         10 (100.0%) t@0x28d964   pss=10  padding=0  size_without_padding=10
+~ 0)         10 (100.0%) t@0x28d964   +10 (28->38)  num_aliases=1
                source_path=base/page_allocator.cc 	object_path=base/base/page_allocator.o
                flags={}  name=extFromUUseMapping
                     full_name=extFromUUseMapping(signed char, unsigned int, int)
-= 1)         10 (100.0%) r@0x284e364  pss=0  padding=0  size_without_padding=0
+= 1)         10 (100.0%) r@0x284e364  +0 (8->8)  num_aliases=1
                source_path=base/page_allocator.cc 	object_path=base/base/page_allocator.o
-= 2)         10 (100.0%) r@0x284d600  pss=0  padding=0  size_without_padding=0
+= 2)         10 (100.0%) r@0x284d600  +0 (3425->3425)  num_aliases=1
                source_path= 	object_path=
                flags={}  name=** merge constants
-= 3)         10 (100.0%) r@Group      pss=0  padding=0  size_without_padding=0  count=2
+= 3)         10 (100.0%) r@Group      +0 (2637617->2637617)  count=2
                source_path= 	object_path=
                flags={}  name=** merge strings
-= 4)         10 (100.0%) d@0x2ddc608  pss=0  padding=0  size_without_padding=0
+= 4)         10 (100.0%) d@0x2ddc608  +0 (0->0)  num_aliases=1
                source_path= 	object_path=
                flags={}  name=** symbol gap 0 (end of section)
-= 5)         10 (100.0%) d@0x2dffd88  pss=0  padding=0  size_without_padding=0
+= 5)         10 (100.0%) d@0x2dffd88  +0 (0->0)  num_aliases=1
                source_path= 	object_path=
                flags={}  name=** symbol gap 0 (end of section)
-= 6)         10 (100.0%) t@Group      pss=0  padding=0  size_without_padding=0  count=3
+= 6)         10 (100.0%) t@Group      +0 (0->0)  count=3
                source_path= 	object_path=
                flags={}  name=** symbol gaps
-= 7)         10 (100.0%) r@Group      pss=0  padding=0  size_without_padding=0  count=2
+= 7)         10 (100.0%) r@Group      +0 (0->0)  count=2
                source_path= 	object_path=
                flags={}  name=** symbol gaps
-= 8)         10 (100.0%) d@0x2cd84e0  pss=0  padding=0  size_without_padding=0
+= 8)         10 (100.0%) d@0x2cd84e0  +0 (16->16)  num_aliases=1
                source_path= 	object_path=third_party/gvr-android-sdk/libgvr_shim_static_arm.a/libcontroller_api_impl.a_controller_api_impl.o
                flags={}  name=.Lswitch.table.45
-= 9)         10 (100.0%) d@0x2c176f0  pss=0  padding=0  size_without_padding=0
+= 9)         10 (100.0%) d@0x2c176f0  +0 (56->56)  num_aliases=1
                source_path=third_party/icu/ucnv_ext.c 	object_path=third_party/icu/icuuc/ucnv_ext.o
-               flags={gen}  name=ChromeMainDelegate [vtable]
-= 10)        10 (100.0%) d@0x2cd8500  pss=0  padding=0  size_without_padding=0
+               flags={}  name=ChromeMainDelegate [vtable]
+= 10)        10 (100.0%) d@0x2cd8500  +0 (56->56)  num_aliases=1
                source_path=third_party/paint.cc 	object_path=third_party/WebKit.a/PaintChunker.o
                flags={}  name=ChromeMainDelegateAndroid [vtable]
-= 11)        10 (100.0%) r@0x284e370  pss=0  padding=0  size_without_padding=0
+= 11)        10 (100.0%) r@0x284e370  +0 (40->40)  num_aliases=1
                source_path=base/page_allocator.cc 	object_path=base/base/page_allocator.o
                flags={}  name=Name
-= 12)        10 (100.0%) t@0x28f1c8   pss=0  padding=0  size_without_padding=0
+= 12)        10 (100.0%) t@0x28f1c8   +0 (20->20)  num_aliases=1
                source_path=third_party/icu/ucnv_ext.c 	object_path=third_party/icu/icuuc/ucnv_ext.o
-               flags={startup,gen}  name=_GLOBAL__sub_I_SkDeviceProfile.cpp
-= 13)        10 (100.0%) t@0x28d910   pss=0  padding=0  size_without_padding=0
+               flags={}  name=_GLOBAL__sub_I_SkDeviceProfile.cpp
+= 13)        10 (100.0%) t@0x28d910   +0 (56->56)  num_aliases=1
                source_path=base/page_allocator.cc 	object_path=base/base/page_allocator.o
-               flags={startup}  name=_GLOBAL__sub_I_bbr_sender.cc
-= 14)        10 (100.0%) t@0x28d948   pss=0  padding=0  size_without_padding=0
+               flags={}  name=_GLOBAL__sub_I_bbr_sender.cc
+= 14)        10 (100.0%) t@0x28d948   +0 (28->28)  num_aliases=1
                source_path=base/page_allocator.cc 	object_path=base/base/page_allocator.o
-               flags={startup}  name=_GLOBAL__sub_I_pacing_sender.cc
-= 15)        10 (100.0%) t@0x28d900   pss=0  padding=0  size_without_padding=0
+               flags={}  name=_GLOBAL__sub_I_pacing_sender.cc
+= 15)        10 (100.0%) t@0x28d900   +0 (16->16)  num_aliases=1
                source_path=base/page_allocator.cc 	object_path=base/base/page_allocator.o
-               flags={startup}  name=_GLOBAL__sub_I_page_allocator.cc
-= 16)        10 (100.0%) d@0x2de70a4  pss=0  padding=0  size_without_padding=0
+               flags={}  name=_GLOBAL__sub_I_page_allocator.cc
+= 16)        10 (100.0%) d@0x2de70a4  +0 (4->4)  num_aliases=1
                source_path=third_party/container.c 	object_path=third_party/WebKit.a/ContiguousContainer.o
-               flags={anon,rel.loc}  name=base::android::g_library_version_number
-= 17)        10 (100.0%) d@0x2de70a0  pss=0  padding=0  size_without_padding=0
+               flags={}  name=base::android::g_library_version_number
+= 17)        10 (100.0%) d@0x2de70a0  +0 (4->4)  num_aliases=1
                source_path=third_party/container.c 	object_path=third_party/WebKit.a/ContiguousContainer.o
-               flags={anon}  name=base::android::g_renderer_histogram_code
-= 18)        10 (100.0%) d@0x2de7008  pss=0  padding=0  size_without_padding=0
+               flags={}  name=base::android::g_renderer_histogram_code
+= 18)        10 (100.0%) d@0x2de7008  +0 (152->152)  num_aliases=1
                source_path=third_party/container.c 	object_path=third_party/WebKit.a/ContiguousContainer.o
-               flags={rel}  name=base::android::kBaseRegisteredMethods
-= 19)        10 (100.0%) r@0x28f3480  pss=0  padding=0  size_without_padding=0
+               flags={}  name=base::android::kBaseRegisteredMethods
+= 19)        10 (100.0%) r@0x28f3480  +0 (4->4)  num_aliases=1
                source_path=third_party/paint.cc 	object_path=third_party/WebKit.a/PaintChunker.o
-               flags={anon}  name=blink::CSSValueKeywordsHash::findValueImpl::value_word_list
+               flags={}  name=blink::CSSValueKeywordsHash::findValueImpl::value_word_list
                     full_name=blink::CSSValueKeywordsHash::findValueImpl(char const*, unsigned int)::value_word_list
-= 20)        10 (100.0%) t@0x2a0020   pss=0  padding=0  size_without_padding=0
+= 20)        10 (100.0%) t@0x2a0020   +0 (24->24)  num_aliases=1
                source_path=third_party/container.c 	object_path=third_party/WebKit.a/ContiguousContainer.o
                flags={}  name=blink::ContiguousContainerBase::ContiguousContainerBase
                     full_name=blink::ContiguousContainerBase::ContiguousContainerBase(blink::ContiguousContainerBase&&)
-= 21)        10 (100.0%) t@Group      pss=0  padding=0  size_without_padding=0  count=2
+= 21)        10 (100.0%) t@Group      +0 (28->28)  count=2
                source_path=third_party/paint.cc 	object_path=third_party/WebKit.a/PaintChunker.o
                flags={}  name=blink::ContiguousContainerBase::shrinkToFit
                     full_name=blink::ContiguousContainerBase::shrinkToFit()
-= 22)        10 (100.0%) t@0x2a1000   pss=0  padding=0  size_without_padding=0
+= 22)        10 (100.0%) t@0x2a1000   +0 (94->94)  num_aliases=1
                source_path=third_party/container.c 	object_path=third_party/WebKit.a/ContiguousContainer.o
-               flags={anon,clone}  name=blink::PaintChunker::releasePaintChunks
+               flags={}  name=blink::PaintChunker::releasePaintChunks
                     full_name=blink::PaintChunker::releasePaintChunks()
-= 23)        10 (100.0%) d@0x2c17728  pss=0  padding=0  size_without_padding=0
+= 23)        10 (100.0%) d@0x2c17728  +0 (24->24)  num_aliases=1
                source_path=third_party/icu/ucnv_ext.c 	object_path=third_party/icu/icuuc/ucnv_ext.o
-               flags={gen}  name=chrome::mojom::FieldTrialRecorder [vtable]
-= 24)        10 (100.0%) d@0x2c17740  pss=0  padding=0  size_without_padding=0
+               flags={}  name=chrome::mojom::FieldTrialRecorder [vtable]
+= 24)        10 (100.0%) d@0x2c17740  +0 (789904->789904)  num_aliases=1
                source_path=third_party/container.c 	object_path=third_party/WebKit.a/ContiguousContainer.o
                flags={}  name=chrome::mojom::FieldTrialRecorderProxy [vtable]
-= 25)        10 (100.0%) r@0x284e398  pss=0  padding=0  size_without_padding=0
+= 25)        10 (100.0%) r@0x284e398  +0 (32->32)  num_aliases=1
                source_path=third_party/container.c 	object_path=third_party/WebKit.a/ContiguousContainer.o
                flags={}  name=chrome::mojom::FilePatcher::Name_
-= 26)        10 (100.0%) t@0x28d98a   pss=0  padding=0  size_without_padding=0
+= 26)        10 (100.0%) t@0x28d98a   +0 (32->32)  num_aliases=1
                source_path=base/page_allocator.cc 	object_path=base/base/page_allocator.o
                flags={}  name=extFromUUseMapping
                     full_name=extFromUUseMapping(aj, int)
-= 27)        10 (100.0%) t@0x28f1e0   pss=0  padding=0  size_without_padding=0
+= 27)        10 (100.0%) t@0x28f1e0   +0 (69120->69120)  num_aliases=1
                source_path=third_party/icu/ucnv_ext.c 	object_path=third_party/icu/icuuc/ucnv_ext.o
-               flags={unlikely,gen}  name=foo_bar
-= 28)        10 (100.0%) d@0x2de7000  pss=0  padding=0  size_without_padding=0
+               flags={}  name=foo_bar
+= 28)        10 (100.0%) d@0x2de7000  +0 (4->4)  num_aliases=1
                source_path=base/page_allocator.cc 	object_path=base/base/page_allocator.o
                flags={}  name=google::protobuf::internal::pLinuxKernelCmpxchg
-= 29)        10 (100.0%) d@0x2de7004  pss=0  padding=0  size_without_padding=0
+= 29)        10 (100.0%) d@0x2de7004  +0 (4->4)  num_aliases=1
                source_path=third_party/container.c 	object_path=third_party/WebKit.a/ContiguousContainer.o
                flags={}  name=google::protobuf::internal::pLinuxKernelMemoryBarrier
-= 30)        10 (100.0%) r@0x28f3450  pss=0  padding=0  size_without_padding=0
+= 30)        10 (100.0%) r@0x28f3450  +0 (48->48)  num_aliases=1
                source_path=third_party/paint.cc 	object_path=third_party/WebKit.a/PaintChunker.o
-               flags={anon}  name=kAnimationFrameTimeHistogramClassPath
-= 31)        10 (100.0%) d@0x2cd8550  pss=0  padding=0  size_without_padding=0
+               flags={}  name=kAnimationFrameTimeHistogramClassPath
+= 31)        10 (100.0%) d@0x2cd8550  +0 (12->12)  num_aliases=1
                source_path=base/page_allocator.cc 	object_path=base/base/page_allocator.o
                flags={}  name=kMethodsAnimationFrameTimeHistogram
-= 32)        10 (100.0%) d@0x2cd84f0  pss=0  padding=0  size_without_padding=0
+= 32)        10 (100.0%) d@0x2cd84f0  +0 (8->8)  num_aliases=1
                source_path= 	object_path=third_party/gvr-android-sdk/libgvr_shim_static_arm.a/libport_android_jni.a_jni_utils.o
-               flags={anon}  name=kSystemClassPrefixes
-= 33)        10 (100.0%) d@0x2cd8538  pss=0  padding=0  size_without_padding=0
+               flags={}  name=kSystemClassPrefixes
+= 33)        10 (100.0%) d@0x2cd8538  +0 (24->24)  num_aliases=1
                source_path=base/page_allocator.cc 	object_path=base/base/page_allocator.o
                flags={}  name=mojo::MessageReceiver [vtable]
-= 34)        10 (100.0%) t@0x28f000   pss=0  padding=0  size_without_padding=0
+= 34)        10 (100.0%) t@0x28f000   +0 (448->448)  num_aliases=1
                source_path=third_party/icu/ucnv_ext.c 	object_path=third_party/icu/icuuc/ucnv_ext.o
-               flags={gen}  name=ucnv_extMatchFromU
+               flags={}  name=ucnv_extMatchFromU
                     full_name=ucnv_extMatchFromU(int const*, int, unsigned short const*, int, unsigned short const*, int, unsigned int*, signed char, signed char)
-= 35)        10 (100.0%) b@0x2dffe80  pss=0  padding=0  size_without_padding=0
+= 35)        10 (100.0%) b@0x2dffe80  +0 (4->4)  num_aliases=1
                source_path=third_party/icu/ucnv_ext.c 	object_path=third_party/icu/icuuc/ucnv_ext.o
-               flags={gen}  name=SaveHistogram::atomic_histogram_pointer
+               flags={}  name=SaveHistogram::atomic_histogram_pointer
                     full_name=SaveHistogram(_JNIEnv*, base::android::JavaParamRef<_jobject*> const&, base::android::JavaParamRef<_jstring*> const&, base::android::JavaParamRef<_jlongArray*> const&, int)::atomic_histogram_pointer
-= 36)        10 (100.0%) b@0x0        pss=0  padding=0  size_without_padding=0
+= 36)        10 (100.0%) b@0x0        +0 (262144->262144)  num_aliases=1
                source_path=third_party/fft_float.cc 	object_path=third_party/ffmpeg/libffmpeg_internal.a/fft_float.o
                flags={}  name=ff_cos_131072
-= 37)        10 (100.0%) b@0x0        pss=0  padding=0  size_without_padding=0
+= 37)        10 (100.0%) b@0x0        +0 (131072->131072)  num_aliases=1
                source_path=third_party/fft_fixed.cc 	object_path=third_party/ffmpeg/libffmpeg_internal.a/fft_fixed.o
                flags={}  name=ff_cos_131072_fixed
-= 38)        10 (100.0%) b@0x0        pss=0  padding=0  size_without_padding=0
+= 38)        10 (100.0%) b@0x0        +0 (131072->131072)  num_aliases=1
                source_path=third_party/fft_float.cc 	object_path=third_party/ffmpeg/libffmpeg_internal.a/fft_float.o
                flags={}  name=ff_cos_65536
-= 39)        10 (100.0%) b@0x2dffe84  pss=0  padding=0  size_without_padding=0
+= 39)        10 (100.0%) b@0x2dffe84  +0 (4->4)  num_aliases=1
                source_path=third_party/icu/ucnv_ext.c 	object_path=third_party/icu/icuuc/ucnv_ext.o
-               flags={anon,gen}  name=g_AnimationFrameTimeHistogram_clazz
-= 40)        10 (100.0%) b@0x2dffda0  pss=0  padding=0  size_without_padding=0
+               flags={}  name=g_AnimationFrameTimeHistogram_clazz
+= 40)        10 (100.0%) b@0x2dffda0  +0 (28->28)  num_aliases=1
                source_path=third_party/icu/ucnv_ext.c 	object_path=third_party/icu/icuuc/ucnv_ext.o
-               flags={gen}  name=g_chrome_content_browser_client
+               flags={}  name=g_chrome_content_browser_client

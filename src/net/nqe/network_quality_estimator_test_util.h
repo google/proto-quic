@@ -8,6 +8,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "base/files/file_path.h"
@@ -155,6 +156,9 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
     DCHECK(!effective_connection_type_ && !recent_effective_connection_type_);
     recent_transport_rtt_ = recent_transport_rtt;
   }
+
+  base::Optional<base::TimeDelta> GetTransportRTT() const override;
+
   // Returns the recent transport RTT that was set using
   // |set_recent_transport_rtt|. If the recent transport RTT has not been set,
   // then the base implementation is called.

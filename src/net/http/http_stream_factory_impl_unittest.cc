@@ -454,7 +454,7 @@ CapturePreconnectsHttpProxySocketPool::CapturePreconnectsSocketPool(
     TransportSecurityState*,
     CTVerifier*,
     CTPolicyEnforcer*)
-    : HttpProxyClientSocketPool(0, 0, nullptr, nullptr, nullptr),
+    : HttpProxyClientSocketPool(0, 0, nullptr, nullptr, nullptr, nullptr),
       last_num_streams_(-1) {}
 
 template <>
@@ -2099,6 +2099,67 @@ TEST_F(HttpStreamFactoryTest, NewSpdySessionCloseIdleH2Sockets) {
   EXPECT_EQ(0, session->GetSSLSocketPool(HttpNetworkSession::NORMAL_SOCKET_POOL)
                    ->IdleSocketCount());
   EXPECT_EQ(1, GetSpdySessionCount(session.get()));
+}
+
+// Regression test for https://crbug.com/706974.
+TEST_F(HttpStreamFactoryTest, TwoSpdyConnects) {
+  SpdySessionDependencies session_deps(ProxyService::CreateDirect());
+
+  SSLSocketDataProvider ssl_socket_data0(ASYNC, OK);
+  ssl_socket_data0.next_proto = kProtoHTTP2;
+  session_deps.socket_factory->AddSSLSocketDataProvider(&ssl_socket_data0);
+
+  MockRead reads0[] = {MockRead(SYNCHRONOUS, ERR_IO_PENDING)};
+  SequencedSocketData data0(reads0, arraysize(reads0), nullptr, 0);
+  data0.set_connect_data(MockConnect(ASYNC, OK));
+  session_deps.socket_factory->AddSocketDataProvider(&data0);
+
+  SSLSocketDataProvider ssl_socket_data1(ASYNC, OK);
+  ssl_socket_data1.next_proto = kProtoHTTP2;
+  session_deps.socket_factory->AddSSLSocketDataProvider(&ssl_socket_data1);
+
+  SequencedSocketData data1(nullptr, 0, nullptr, 0);
+  data1.set_connect_data(MockConnect(ASYNC, OK));
+  session_deps.socket_factory->AddSocketDataProvider(&data1);
+
+  std::unique_ptr<HttpNetworkSession> session =
+      SpdySessionDependencies::SpdyCreateSession(&session_deps);
+  HttpRequestInfo request_info;
+  request_info.method = "GET";
+  request_info.url = GURL("https://www.google.com");
+  request_info.load_flags = 0;
+  SSLConfig ssl_config;
+
+  // Request two streams at once and make sure they use the same connection.
+  StreamRequestWaiter waiter1;
+  std::unique_ptr<HttpStreamRequest> request1 =
+      session->http_stream_factory()->RequestStream(
+          request_info, DEFAULT_PRIORITY, ssl_config, ssl_config, &waiter1,
+          /* enable_ip_based_pooling = */ true,
+          /* enable_alternative_services = */ true, NetLogWithSource());
+
+  StreamRequestWaiter waiter2;
+  std::unique_ptr<HttpStreamRequest> request2 =
+      session->http_stream_factory()->RequestStream(
+          request_info, DEFAULT_PRIORITY, ssl_config, ssl_config, &waiter2,
+          /* enable_ip_based_pooling = */ true,
+          /* enable_alternative_services = */ true, NetLogWithSource());
+
+  waiter1.WaitForStream();
+  waiter2.WaitForStream();
+
+  EXPECT_TRUE(waiter1.stream_done());
+  EXPECT_TRUE(waiter2.stream_done());
+  ASSERT_NE(nullptr, waiter1.stream());
+  ASSERT_NE(nullptr, waiter2.stream());
+  ASSERT_NE(waiter1.stream(), waiter2.stream());
+
+  // Establishing the SpdySession will close the extra H2 socket.
+  EXPECT_EQ(0, session->GetSSLSocketPool(HttpNetworkSession::NORMAL_SOCKET_POOL)
+                   ->IdleSocketCount());
+  EXPECT_EQ(1, GetSpdySessionCount(session.get()));
+  EXPECT_TRUE(data0.AllReadDataConsumed());
+  EXPECT_TRUE(data1.AllReadDataConsumed());
 }
 
 TEST_F(HttpStreamFactoryTest, RequestBidirectionalStreamImpl) {

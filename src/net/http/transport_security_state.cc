@@ -4,7 +4,6 @@
 
 #include "net/http/transport_security_state.h"
 
-#include <algorithm>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -17,6 +16,7 @@
 #include "base/metrics/histogram_macros.h"
 #include "base/metrics/sparse_histogram.h"
 #include "base/sha1.h"
+#include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
@@ -224,8 +224,7 @@ std::string HashHost(const std::string& canonicalized_host) {
 bool HashesIntersect(const HashValueVector& a,
                      const HashValueVector& b) {
   for (const auto& hash : a) {
-    auto p = std::find(b.begin(), b.end(), hash);
-    if (p != b.end())
+    if (base::ContainsValue(b, hash))
       return true;
   }
   return false;

@@ -82,19 +82,18 @@ class BbrSenderTest : public QuicTest {
                   "Receiver",
                   "BBR sender",
                   Perspective::IS_SERVER,
-                  /*connection_id=*/GetPeerInMemoryConnectionId(42)),
+                  /*connection_id=*/42),
         competing_receiver_(&simulator_,
                             "Competing receiver",
                             "Competing sender",
                             Perspective::IS_SERVER,
-                            /*connection_id=*/GetPeerInMemoryConnectionId(43)),
+                            /*connection_id=*/43),
         receiver_multiplexer_("Receiver multiplexer",
                               {&receiver_, &competing_receiver_}) {
     // These will be changed by the appropriate tests as necessary.
     FLAGS_quic_reloadable_flag_quic_bbr_slow_recent_delivery = false;
     FLAGS_quic_reloadable_flag_quic_bbr_add_tso_cwnd = false;
 
-    FLAGS_quic_reloadable_flag_quic_bbr_extra_conservation = true;
     FLAGS_quic_reloadable_flag_quic_bbr_fix_conservation2 = true;
 
     rtt_stats_ = bbr_sender_.connection()->sent_packet_manager().GetRttStats();
@@ -443,13 +442,8 @@ TEST_F(BbrSenderTest, RecoveryStates) {
       timeout);
 
   ASSERT_EQ(BbrSender::PROBE_BW, sender_->ExportDebugState().mode);
-  if (FLAGS_quic_reloadable_flag_quic_bbr_extra_conservation) {
-    ASSERT_EQ(BbrSender::CONSERVATION,
-              sender_->ExportDebugState().recovery_state);
-  } else {
-    ASSERT_EQ(BbrSender::NOT_IN_RECOVERY,
-              sender_->ExportDebugState().recovery_state);
-  }
+  ASSERT_EQ(BbrSender::NOT_IN_RECOVERY,
+            sender_->ExportDebugState().recovery_state);
   ASSERT_TRUE(simulator_result);
 }
 

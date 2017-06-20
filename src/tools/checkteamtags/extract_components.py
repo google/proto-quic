@@ -21,7 +21,7 @@ import optparse
 import os
 import sys
 
-from owners_file_tags import aggregate_components_from_owners
+from owners_file_tags import aggregate_components_from_owners, scrape_owners
 
 
 _DEFAULT_SRC_LOCATION = os.path.join(
@@ -188,8 +188,9 @@ Examples:
   else:
     root = _DEFAULT_SRC_LOCATION
 
+  scrape_result = scrape_owners(root, include_subdirs=options.include_subdirs)
   mappings, warnings, errors, stats = aggregate_components_from_owners(
-      root, include_subdirs=options.include_subdirs)
+      scrape_result, root, include_subdirs=options.include_subdirs)
   if options.verbose:
     for w in warnings:
       print w

@@ -17,6 +17,7 @@
 #include "base/macros.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/sequenced_task_runner.h"
+#include "base/stl_util.h"
 #include "base/strings/string_util.h"
 #include "crypto/ec_private_key.h"
 #include "net/cert/asn1_util.h"
@@ -526,12 +527,8 @@ void SQLiteChannelIDStore::Backend::PrunePendingOperationsForDeletes(
 
   for (PendingOperationsList::iterator it = pending_.begin();
        it != pending_.end();) {
-    bool remove =
-        std::find(server_identifiers.begin(), server_identifiers.end(),
-                  (*it)->channel_id().server_identifier()) !=
-        server_identifiers.end();
-
-    if (remove) {
+    if (base::ContainsValue(server_identifiers,
+                            (*it)->channel_id().server_identifier())) {
       std::unique_ptr<PendingOperation> po(*it);
       it = pending_.erase(it);
       --num_pending_;

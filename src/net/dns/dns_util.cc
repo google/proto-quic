@@ -45,7 +45,9 @@ const int kMaxLabelLength = 63;
 namespace net {
 
 // Based on DJB's public domain code.
-bool DNSDomainFromDot(const base::StringPiece& dotted, std::string* out) {
+bool DNSDomainFromDotWithValidityCheck(const base::StringPiece& dotted,
+                                       std::string* out,
+                                       bool* valid_name) {
   const char* buf = dotted.data();
   size_t n = dotted.size();
   char label[kMaxLabelLength];
@@ -53,7 +55,7 @@ bool DNSDomainFromDot(const base::StringPiece& dotted, std::string* out) {
   char name[dns_protocol::kMaxNameLength];
   size_t namelen = 0; /* <= sizeof name */
   char ch;
-  bool valid_name = true;
+  *valid_name = true;
 
   for (;;) {
     if (!n)
@@ -75,16 +77,18 @@ bool DNSDomainFromDot(const base::StringPiece& dotted, std::string* out) {
     if (labellen >= sizeof label)
       return false;
     if (!IsValidHostLabelCharacter(ch, labellen == 0)) {
-      // TODO(palmer): In the future, when we can remove support for invalid
-      // names, return false here instead (and remove the Net.Valid*DNSName UMA
-      // counters).
-      valid_name = false;
+      // TODO(crbug.com/695474): In the future, when we can remove support for
+      // invalid names, return false here instead (and remove the UMA counter).
+      // And remove the |valid_name| parameter, rename this function back to
+      // |DNSDomainFromDot|, and remove the helper function by that name
+      // (below).
+      *valid_name = false;
     }
     label[labellen++] = ch;
   }
 
-  UMA_HISTOGRAM_BOOLEAN("Net.ValidDNSName", valid_name);
-  if (valid_name) {
+  UMA_HISTOGRAM_BOOLEAN("Net.ValidDNSName", *valid_name);
+  if (*valid_name) {
     url::CanonHostInfo info;
     UMA_HISTOGRAM_BOOLEAN("Net.DNSNameCompliantIfValid",
                           net::IsCanonicalizedHostCompliant(
@@ -109,6 +113,11 @@ bool DNSDomainFromDot(const base::StringPiece& dotted, std::string* out) {
 
   *out = std::string(name, namelen);
   return true;
+}
+
+bool DNSDomainFromDot(const base::StringPiece& dotted, std::string* out) {
+  bool ignored;
+  return DNSDomainFromDotWithValidityCheck(dotted, out, &ignored);
 }
 
 bool IsValidDNSDomain(const base::StringPiece& dotted) {

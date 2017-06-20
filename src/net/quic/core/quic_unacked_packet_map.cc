@@ -272,6 +272,15 @@ void QuicUnackedPacketMap::CancelRetransmissionsForStream(
     if (frames->empty()) {
       continue;
     }
+    if (stream_notifier_ != nullptr) {
+      for (const QuicFrame& frame : *frames) {
+        if (frame.type != STREAM_FRAME ||
+            frame.stream_frame->stream_id != stream_id) {
+          continue;
+        }
+        stream_notifier_->OnStreamFrameDiscarded(*frame.stream_frame);
+      }
+    }
     RemoveFramesForStream(frames, stream_id);
     if (frames->empty()) {
       RemoveRetransmittability(packet_number);

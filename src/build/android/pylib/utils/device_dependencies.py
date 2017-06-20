@@ -16,8 +16,12 @@ _BLACKLIST = [
   re.compile(r'.*\.py'),  # Some test_support targets include python deps.
   re.compile(r'.*\.stamp'),  # Stamp files should never be included.
 
-  # Some test_support targets include python deps.
-  re.compile(r'.*\.mojom\.js'),
+  # Adding dependency on mojom targets adds data dependency on js bindings.
+  # Do not include those files except for JsToCppTest.mojom.js, which is
+  # required by webkit_unit_tests during runtime.
+  # TODO(yzshen): Remove this rule by generating foo_js that targets can
+  # explicitly depend on (crbug.com/603212).
+  re.compile(r'.*(?<!JsToCpp)\.mojom\.js'),
 
   # Chrome external extensions config file.
   re.compile(r'.*external_extensions\.json'),

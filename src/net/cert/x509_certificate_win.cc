@@ -17,6 +17,7 @@
 #include "crypto/scoped_capi_types.h"
 #include "crypto/sha2.h"
 #include "net/base/net_errors.h"
+#include "net/cert/x509_util_win.h"
 #include "third_party/boringssl/src/include/openssl/sha.h"
 
 using base::Time;
@@ -199,40 +200,6 @@ bool X509Certificate::GetSubjectAltName(
   return has_san;
 }
 
-PCCERT_CONTEXT X509Certificate::CreateOSCertChainForCert() const {
-  // Create an in-memory certificate store to hold this certificate and
-  // any intermediate certificates in |intermediate_ca_certs_|. The store
-  // will be referenced in the returned PCCERT_CONTEXT, and will not be freed
-  // until the PCCERT_CONTEXT is freed.
-  ScopedHCERTSTORE store(CertOpenStore(
-      CERT_STORE_PROV_MEMORY, 0, NULL,
-      CERT_STORE_DEFER_CLOSE_UNTIL_LAST_FREE_FLAG, NULL));
-  if (!store.get())
-    return NULL;
-
-  // NOTE: This preserves all of the properties of |os_cert_handle()| except
-  // for CERT_KEY_PROV_HANDLE_PROP_ID and CERT_KEY_CONTEXT_PROP_ID - the two
-  // properties that hold access to already-opened private keys. If a handle
-  // has already been unlocked (eg: PIN prompt), then the first time that the
-  // identity is used for client auth, it may prompt the user again.
-  PCCERT_CONTEXT primary_cert;
-  BOOL ok = CertAddCertificateContextToStore(store.get(), os_cert_handle(),
-                                             CERT_STORE_ADD_ALWAYS,
-                                             &primary_cert);
-  if (!ok || !primary_cert)
-    return NULL;
-
-  for (size_t i = 0; i < intermediate_ca_certs_.size(); ++i) {
-    CertAddCertificateContextToStore(store.get(), intermediate_ca_certs_[i],
-                                     CERT_STORE_ADD_ALWAYS, NULL);
-  }
-
-  // Note: |store| is explicitly not released, as the call to CertCloseStore()
-  // when |store| goes out of scope will not actually free the store. Instead,
-  // the store will be freed when |primary_cert| is freed.
-  return primary_cert;
-}
-
 // static
 bool X509Certificate::GetDEREncoded(X509Certificate::OSCertHandle cert_handle,
                                     std::string* encoded) {
@@ -308,20 +275,7 @@ void X509Certificate::FreeOSCertHandle(OSCertHandle cert_handle) {
 
 // static
 SHA256HashValue X509Certificate::CalculateFingerprint256(OSCertHandle cert) {
-  DCHECK(NULL != cert->pbCertEncoded);
-  DCHECK_NE(0u, cert->cbCertEncoded);
-
-  SHA256HashValue sha256;
-  size_t sha256_size = sizeof(sha256.data);
-
-  // Use crypto::SHA256HashString for two reasons:
-  // * < Windows Vista does not have universal SHA-256 support.
-  // * More efficient on Windows > Vista (less overhead since non-default CSP
-  // is not needed).
-  base::StringPiece der_cert(reinterpret_cast<const char*>(cert->pbCertEncoded),
-                             cert->cbCertEncoded);
-  crypto::SHA256HashString(der_cert, sha256.data, sha256_size);
-  return sha256;
+  return x509_util::CalculateFingerprint256(cert);
 }
 
 SHA256HashValue X509Certificate::CalculateCAFingerprint256(
@@ -458,16 +412,7 @@ bool X509Certificate::IsIssuedByEncoded(
 
 // static
 bool X509Certificate::IsSelfSigned(OSCertHandle cert_handle) {
-  bool valid_signature = !!CryptVerifyCertificateSignatureEx(
-      NULL, X509_ASN_ENCODING, CRYPT_VERIFY_CERT_SIGN_SUBJECT_CERT,
-      reinterpret_cast<void*>(const_cast<PCERT_CONTEXT>(cert_handle)),
-      CRYPT_VERIFY_CERT_SIGN_ISSUER_CERT,
-      reinterpret_cast<void*>(const_cast<PCERT_CONTEXT>(cert_handle)), 0, NULL);
-  if (!valid_signature)
-    return false;
-  return !!CertCompareCertificateName(X509_ASN_ENCODING,
-                                      &cert_handle->pCertInfo->Subject,
-                                      &cert_handle->pCertInfo->Issuer);
+  return x509_util::IsSelfSigned(cert_handle);
 }
 
 }  // namespace net

@@ -66,6 +66,8 @@ class QUIC_EXPORT_PRIVATE QuicBufferedPacketStore {
 
     std::list<BufferedPacket> buffered_packets;
     QuicTime creation_time;
+    // The alpn from the CHLO, if one was found.
+    std::string alpn;
   };
 
   typedef QuicLinkedHashMap<QuicConnectionId, BufferedPacketList>
@@ -95,7 +97,8 @@ class QUIC_EXPORT_PRIVATE QuicBufferedPacketStore {
                                     const QuicReceivedPacket& packet,
                                     QuicSocketAddress server_address,
                                     QuicSocketAddress client_address,
-                                    bool is_chlo);
+                                    bool is_chlo,
+                                    const std::string& alpn);
 
   // Returns true if there are any packets buffered for |connection_id|.
   bool HasBufferedPackets(QuicConnectionId connection_id) const;
@@ -103,7 +106,7 @@ class QUIC_EXPORT_PRIVATE QuicBufferedPacketStore {
   // Returns the list of buffered packets for |connection_id| and removes them
   // from the store. Returns an empty list if no early arrived packets for this
   // connection are present.
-  std::list<BufferedPacket> DeliverPackets(QuicConnectionId connection_id);
+  BufferedPacketList DeliverPackets(QuicConnectionId connection_id);
 
   // Discards packets buffered for |connection_id|, if any.
   void DiscardPackets(QuicConnectionId connection_id);
@@ -120,7 +123,7 @@ class QUIC_EXPORT_PRIVATE QuicBufferedPacketStore {
   // The returned list should at least has one packet(CHLO) if
   // store does have any connection to open. If no connection in the store has
   // received CHLO yet, empty list will be returned.
-  std::list<BufferedPacket> DeliverPacketsForNextConnection(
+  BufferedPacketList DeliverPacketsForNextConnection(
       QuicConnectionId* connection_id);
 
   // Is given connection already buffered in the store?

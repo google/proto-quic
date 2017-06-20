@@ -298,6 +298,10 @@
     "label": "//chromeos:chromeos_unittests",
     "type": "console_test_launcher",
   },
+  "chromeos_components_unittests": {
+    "label": "//chromeos/components:chromeos_components_unittests",
+    "type": "console_test_launcher",
+  },
   "chromevox_tests": {
     "label": "//chrome/browser/resources/chromeos/chromevox:chromevox_tests",
     "type": "windowed_test_launcher",
@@ -398,6 +402,10 @@
   "crypto_unittests": {
     "label": "//crypto:crypto_unittests",
     "type": "console_test_launcher",
+  },
+  "d8": {
+    "label": "//v8:d8",
+    "type": "additional_compile_target",
   },
   "dbus_unittests": {
     "label": "//dbus:dbus_unittests",
@@ -905,6 +913,21 @@
     "type": "script",
     "script": "//testing/scripts/run_telemetry_benchmark_as_googletest.py",
     "args": [
+      "../../tools/perf/run_benchmark",
+    ],
+  },
+  "telemetry_perf_webview_tests": {
+    "label": "//chrome/test:telemetry_perf_webview_tests",
+    "type": "script",
+    "script": "//third_party/catapult/devil/devil/android/tools/system_app.py",
+    "args": [
+      "remove",
+      "--package",
+      "com.android.webview",
+      "com.google.android.webview",
+      "-v",
+      "--",
+      "../../testing/scripts/run_telemetry_benchmark_as_googletest.py",
       "../../tools/perf/run_benchmark",
     ],
   },

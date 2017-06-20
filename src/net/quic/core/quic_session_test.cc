@@ -1349,15 +1349,17 @@ TEST_P(QuicSessionTestClient, EnableFHOLThroughConfigOption) {
 }
 
 TEST_P(QuicSessionTestServer, ZombieStreams) {
-  if (!session_.use_stream_notifier()) {
-    return;
-  }
   TestStream* stream2 = session_.CreateOutgoingDynamicStream(kDefaultPriority);
   QuicStreamPeer::SetStreamBytesWritten(3, stream2);
   EXPECT_TRUE(stream2->IsWaitingForAcks());
 
   EXPECT_CALL(*connection_, SendRstStream(2, _, _));
   session_.CloseStream(2);
+  if (!session_.use_stream_notifier()) {
+    EXPECT_TRUE(session_.zombie_streams().empty());
+    EXPECT_FALSE(session_.closed_streams()->empty());
+    return;
+  }
   EXPECT_TRUE(QuicContainsKey(session_.zombie_streams(), 2));
   EXPECT_TRUE(session_.closed_streams()->empty());
   session_.OnStreamDoneWaitingForAcks(2);

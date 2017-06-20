@@ -9,6 +9,8 @@ from telemetry import story
 class KeyDesktopMoveCasesPage(page_module.Page):
 
   def __init__(self, url, page_set, name='', credentials=None):
+    if name == '':
+      name = url
     super(KeyDesktopMoveCasesPage, self).__init__(
         url=url, page_set=page_set, name=name,
         credentials_path='data/credentials.json',

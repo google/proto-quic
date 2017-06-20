@@ -193,7 +193,7 @@ class QuicHttpStreamTest : public ::testing::TestWithParam<QuicVersion> {
                       kDefaultServerHostName,
                       Perspective::IS_CLIENT),
         server_maker_(GetParam(),
-                      GetPeerInMemoryConnectionId(connection_id_),
+                      connection_id_,
                       &clock_,
                       kDefaultServerHostName,
                       Perspective::IS_SERVER),
@@ -1530,6 +1530,9 @@ TEST_P(QuicHttpStreamTest, SessionClosedBeforeSendHeadersComplete) {
                                       net_log_.bound(), callback_.callback()));
   ASSERT_EQ(ERR_QUIC_PROTOCOL_ERROR,
             stream_->SendRequest(headers_, &response_, callback_.callback()));
+
+  EXPECT_LE(0, stream_->GetTotalSentBytes());
+  EXPECT_EQ(0, stream_->GetTotalReceivedBytes());
 }
 
 TEST_P(QuicHttpStreamTest, SessionClosedBeforeSendBodyComplete) {

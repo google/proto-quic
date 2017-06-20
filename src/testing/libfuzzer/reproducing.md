@@ -70,8 +70,8 @@ $ out/libfuzzer/$FUZZER_NAME /path/to/repro
 ### Reproducing LibFuzzer + MSan bugs
 
 ```bash
-# The gclient sync is necessary to pull in instrumented libraries.
-$ GYP_DEFINES='msan=1 use_prebuilt_instrumented_libraries=1' gclient sync
+# The gclient runhooks is necessary to pull in instrumented libraries.
+$ GYP_DEFINES='msan=1 use_prebuilt_instrumented_libraries=1' gclient runhooks
 $ gn gen out/libfuzzer '--args=is_debug=false use_libfuzzer=true is_msan=true msan_track_origins=2 use_prebuilt_instrumented_libraries=true enable_nacl=false proprietary_codecs=true ffmpeg_branding="ChromeOS"'
 $ ninja -C out/libfuzzer $FUZZER_NAME
 $ out/libfuzzer/$FUZZER_NAME /path/to/repro

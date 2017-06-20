@@ -25,6 +25,7 @@ def FillXcodeVersion(settings):
   """Fills the Xcode version and build number into |settings|."""
   lines = subprocess.check_output(['xcodebuild', '-version']).splitlines()
   settings['xcode_version'] = FormatVersion(lines[0].split()[-1])
+  settings['xcode_version_int'] = int(settings['xcode_version'], 10)
   settings['xcode_build'] = lines[-1].split()[-1]
 
 
@@ -70,4 +71,7 @@ if __name__ == '__main__':
   FillSDKPathAndVersion(settings, unknownargs[0], settings['xcode_version'])
 
   for key in sorted(settings):
-    print '%s="%s"' % (key, settings[key])
+    value = settings[key]
+    if isinstance(value, str):
+      value = '"%s"' % value
+    print '%s=%s' % (key, value)

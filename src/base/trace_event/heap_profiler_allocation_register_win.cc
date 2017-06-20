@@ -51,7 +51,7 @@ void* AllocateGuardedVirtualMemory(size_t size) {
 }
 
 void FreeGuardedVirtualMemory(void* address, size_t allocated_size) {
-  // For |VirtualFree|, the size passed with |MEM_RELEASE| mut be 0. Windows
+  // For |VirtualFree|, the size passed with |MEM_RELEASE| must be 0. Windows
   // automatically frees the entire region that was reserved by the
   // |VirtualAlloc| with flag |MEM_RESERVE|.
   VirtualFree(address, 0, MEM_RELEASE);

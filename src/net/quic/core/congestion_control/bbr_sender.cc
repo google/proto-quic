@@ -555,26 +555,8 @@ void BbrSender::UpdateRecoveryState(QuicPacketNumber last_acked_packet,
       // Exit recovery if appropriate.
       if (!has_losses && last_acked_packet > end_recovery_at_) {
         recovery_state_ = NOT_IN_RECOVERY;
-        return;
       }
 
-      if (!FLAGS_quic_reloadable_flag_quic_bbr_extra_conservation) {
-        return;
-      }
-
-      // Use "single round in conservation" approach outside of PROBE_BW.
-      if (mode_ != PROBE_BW) {
-        return;
-      }
-
-      // Switch between conservation and growth depending on position in the
-      // gain cycle.
-      if (cycle_current_offset_ == 0 ||
-          cycle_current_offset_ == kGainCycleLength - 1) {
-        recovery_state_ = GROWTH;
-      } else {
-        recovery_state_ = CONSERVATION;
-      }
       break;
   }
 }

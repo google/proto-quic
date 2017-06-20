@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/chrome_build.gni")
+import("//build/config/chromecast_build.gni")
 import("//build/toolchain/toolchain.gni")
 
 declare_args() {
@@ -142,8 +143,9 @@ declare_args() {
   # buildtools/third_party/libc++abi) instead of stdlibc++ as standard library.
   # This is intended to be used for instrumented builds.
   use_custom_libcxx =
-      (is_asan && is_linux && !is_chromeos) || is_tsan || is_msan || is_ubsan ||
-      is_ubsan_security || (use_libfuzzer && !is_mac) || use_afl
+      (is_asan && is_linux && !is_chromeos &&
+       (!is_chromecast || is_cast_desktop_build)) || is_tsan || is_msan ||
+      is_ubsan || is_ubsan_security || (use_libfuzzer && !is_mac) || use_afl
 
   # Enable -fsanitize-coverage.
   use_sanitizer_coverage =

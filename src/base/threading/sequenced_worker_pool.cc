@@ -75,8 +75,6 @@ enum class AllPoolsState {
 // debug::DumpWithoutCrashing() in case of waterfall failures.
 AllPoolsState g_all_pools_state = AllPoolsState::USE_WORKER_POOL;
 
-TaskPriority g_max_task_priority = TaskPriority::HIGHEST;
-
 struct SequencedTask : public TrackingInfo  {
   SequencedTask()
       : sequence_token_id(0),
@@ -656,10 +654,7 @@ SequencedWorkerPool::Inner::Inner(SequencedWorkerPool* worker_pool,
       cleanup_idlers_(0),
       cleanup_cv_(&lock_),
       testing_observer_(observer),
-      task_priority_(static_cast<int>(task_priority) <=
-                             static_cast<int>(g_max_task_priority)
-                         ? task_priority
-                         : g_max_task_priority) {
+      task_priority_(task_priority) {
   DCHECK_GT(max_threads_, 1U);
 }
 
@@ -1464,15 +1459,13 @@ void SequencedWorkerPool::EnableForProcess() {
 }
 
 // static
-void SequencedWorkerPool::EnableWithRedirectionToTaskSchedulerForProcess(
-    TaskPriority max_task_priority) {
+void SequencedWorkerPool::EnableWithRedirectionToTaskSchedulerForProcess() {
   // TODO(fdoray): Uncomment this line. It is initially commented to avoid a
   // revert of the CL that adds debug::DumpWithoutCrashing() in case of
   // waterfall failures.
   // DCHECK_EQ(AllPoolsState::POST_TASK_DISABLED, g_all_pools_state);
   DCHECK(TaskScheduler::GetInstance());
   g_all_pools_state = AllPoolsState::REDIRECTED_TO_TASK_SCHEDULER;
-  g_max_task_priority = max_task_priority;
 }
 
 // static

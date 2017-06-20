@@ -16,6 +16,11 @@ namespace trace_event {
 
 class BASE_EXPORT MemoryAllocatorDumpGuid {
  public:
+  // If the clients of base::SharedMemory should use the global dump guid(s)
+  // created by SharedMemoryTracker.
+  static bool UseSharedMemoryBasedGUIDs();
+  static void SetUseSharedMemoryBasedGUIDsForTesting();
+
   MemoryAllocatorDumpGuid();
   explicit MemoryAllocatorDumpGuid(uint64_t guid);
 

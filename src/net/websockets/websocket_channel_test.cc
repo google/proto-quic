@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <string.h>
 
+#include <algorithm>
 #include <iostream>
 #include <iterator>
 #include <memory>
@@ -379,7 +380,7 @@ template <size_t N>
 class EqualsFramesMatcher : public ::testing::MatcherInterface<
                                 std::vector<std::unique_ptr<WebSocketFrame>>*> {
  public:
-  EqualsFramesMatcher(const InitFrame (*expect_frames)[N])
+  explicit EqualsFramesMatcher(const InitFrame (*expect_frames)[N])
       : expect_frames_(expect_frames) {}
 
   virtual bool MatchAndExplain(

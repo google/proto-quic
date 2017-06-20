@@ -26,6 +26,37 @@
         "test": "wtf_unittests"
       }
     ],
+    "isolated_scripts": [
+      {
+        "isolate_name": "webkit_layout_tests_exparchive",
+        "merge": {
+          "args": [
+            "--verbose",
+            "--results-json-override-with-build-property",
+            "build_number",
+            "buildnumber",
+            "--results-json-override-with-build-property",
+            "builder_name",
+            "buildername",
+            "--results-json-override-with-build-property",
+            "chromium_revision",
+            "got_revision_cp"
+          ],
+          "script": "//third_party/WebKit/Tools/Scripts/merge-layout-test-results"
+        },
+        "name": "webkit_layout_tests",
+        "results_handler": "layout tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "os": "Ubuntu-14.04"
+            }
+          ],
+          "shards": 6
+        }
+      }
+    ],
     "scripts": [
       {
         "name": "webkit_lint",
@@ -62,6 +93,40 @@
           "can_use_on_swarming_builders": true
         },
         "test": "wtf_unittests"
+      }
+    ],
+    "isolated_scripts": [
+      {
+        "args": [
+          "--debug"
+        ],
+        "isolate_name": "webkit_layout_tests_exparchive",
+        "merge": {
+          "args": [
+            "--verbose",
+            "--results-json-override-with-build-property",
+            "build_number",
+            "buildnumber",
+            "--results-json-override-with-build-property",
+            "builder_name",
+            "buildername",
+            "--results-json-override-with-build-property",
+            "chromium_revision",
+            "got_revision_cp"
+          ],
+          "script": "//third_party/WebKit/Tools/Scripts/merge-layout-test-results"
+        },
+        "name": "webkit_layout_tests",
+        "results_handler": "layout tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "os": "Ubuntu-14.04"
+            }
+          ],
+          "shards": 20
+        }
       }
     ],
     "scripts": [
@@ -101,6 +166,44 @@
         },
         "test": "wtf_unittests"
       }
+    ],
+    "isolated_scripts": [
+      {
+        "args": [
+          "--additional-expectations",
+          "../../third_party/WebKit/LayoutTests/ASANExpectations",
+          "--time-out-ms",
+          "48000",
+          "--enable-sanitizer"
+        ],
+        "isolate_name": "webkit_layout_tests_exparchive",
+        "merge": {
+          "args": [
+            "--verbose",
+            "--results-json-override-with-build-property",
+            "build_number",
+            "buildnumber",
+            "--results-json-override-with-build-property",
+            "builder_name",
+            "buildername",
+            "--results-json-override-with-build-property",
+            "chromium_revision",
+            "got_revision_cp"
+          ],
+          "script": "//third_party/WebKit/Tools/Scripts/merge-layout-test-results"
+        },
+        "name": "webkit_layout_tests",
+        "results_handler": "layout tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "os": "Ubuntu-14.04"
+            }
+          ],
+          "shards": 20
+        }
+      }
     ]
   },
   "WebKit Linux Trusty Leak": {
@@ -130,7 +233,44 @@
         "test": "wtf_unittests"
       }
     ],
-    "scripts": []
+    "isolated_scripts": [
+      {
+        "args": [
+          "--additional-expectations",
+          "../../third_party/WebKit/LayoutTests/LeakExpectations",
+          "--time-out-ms",
+          "48000",
+          "--enable-leak-detection"
+        ],
+        "isolate_name": "webkit_layout_tests_exparchive",
+        "merge": {
+          "args": [
+            "--verbose",
+            "--results-json-override-with-build-property",
+            "build_number",
+            "buildnumber",
+            "--results-json-override-with-build-property",
+            "builder_name",
+            "buildername",
+            "--results-json-override-with-build-property",
+            "chromium_revision",
+            "got_revision_cp"
+          ],
+          "script": "//third_party/WebKit/Tools/Scripts/merge-layout-test-results"
+        },
+        "name": "webkit_layout_tests",
+        "results_handler": "layout tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "os": "Ubuntu-14.04"
+            }
+          ],
+          "shards": 10
+        }
+      }
+    ]
   },
   "WebKit Linux Trusty MSAN": {
     "gtest_tests": [
@@ -157,6 +297,47 @@
           "can_use_on_swarming_builders": true
         },
         "test": "wtf_unittests"
+      }
+    ],
+    "isolated_scripts": [
+      {
+        "args": [
+          "--additional-expectations",
+          "../../third_party/WebKit/LayoutTests/MSANExpectations",
+          "--time-out-ms",
+          "66000",
+          "--enable-sanitizer"
+        ],
+        "isolate_name": "webkit_layout_tests_exparchive",
+        "merge": {
+          "args": [
+            "--verbose",
+            "--results-json-override-with-build-property",
+            "build_number",
+            "buildnumber",
+            "--results-json-override-with-build-property",
+            "builder_name",
+            "buildername",
+            "--results-json-override-with-build-property",
+            "chromium_revision",
+            "got_revision_cp"
+          ],
+          "script": "//third_party/WebKit/Tools/Scripts/merge-layout-test-results"
+        },
+        "name": "webkit_layout_tests",
+        "results_handler": "layout tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "os": "Ubuntu-14.04"
+            }
+          ],
+          "expiration": 36000,
+          "hard_timeout": 10800,
+          "io_timeout": 3600,
+          "shards": 20
+        }
       }
     ]
   },

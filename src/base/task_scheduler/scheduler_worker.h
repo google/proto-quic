@@ -102,13 +102,16 @@ class BASE_EXPORT SchedulerWorker
   // before Start() is called. |priority_hint| is the preferred thread priority;
   // the actual thread priority depends on shutdown state and platform
   // capabilities. |task_tracker| is used to handle shutdown behavior of Tasks.
-  // |backward_compatibility| indicates whether backward compatibility is
-  // enabled. |initial_state| determines whether the thread is created in
-  // Start() or in the first WakeUp() after Start(). Either JoinForTesting() or
-  // Cleanup() must be called before releasing the last external reference.
+  // |predecessor_lock| is a lock that is allowed to be held when calling
+  // methods on this SchedulerWorker. |backward_compatibility| indicates
+  // whether backward compatibility is enabled. |initial_state| determines
+  // whether the thread is created in Start() or in the first WakeUp() after
+  // Start(). Either JoinForTesting() or Cleanup() must be called before
+  // releasing the last external reference.
   SchedulerWorker(ThreadPriority priority_hint,
                   std::unique_ptr<Delegate> delegate,
                   TaskTracker* task_tracker,
+                  const SchedulerLock* predecessor_lock = nullptr,
                   SchedulerBackwardCompatibility backward_compatibility =
                       SchedulerBackwardCompatibility::DISABLED,
                   InitialState initial_state = InitialState::ALIVE);

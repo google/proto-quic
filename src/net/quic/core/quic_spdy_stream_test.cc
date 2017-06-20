@@ -971,7 +971,6 @@ TEST_P(QuicSpdyStreamTest, HeaderStreamNotiferCorrespondingSpdyStream) {
   if (!session_->use_stream_notifier()) {
     return;
   }
-
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
       .Times(AnyNumber())
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
@@ -1011,20 +1010,21 @@ TEST_P(QuicSpdyStreamTest, HeaderStreamNotiferCorrespondingSpdyStream) {
 
 TEST_P(QuicSpdyStreamTest, StreamBecomesZombieWithWriteThatCloses) {
   Initialize(kShouldProcessData);
-  if (!session_->use_stream_notifier()) {
-    return;
-  }
-
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
       .Times(AnyNumber())
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
   QuicStreamPeer::CloseReadSide(stream_);
   // This write causes stream to be closed.
   stream_->WriteOrBufferData("Test1", true, nullptr);
-  // stream_ has unacked data and should become zombie.
-  EXPECT_TRUE(QuicContainsKey(QuicSessionPeer::zombie_streams(session_.get()),
-                              stream_->id()));
-  EXPECT_TRUE(QuicSessionPeer::closed_streams(session_.get()).empty());
+  if (!session_->use_stream_notifier()) {
+    EXPECT_TRUE(QuicSessionPeer::zombie_streams(session_.get()).empty());
+    EXPECT_FALSE(QuicSessionPeer::closed_streams(session_.get()).empty());
+  } else {
+    // stream_ has unacked data and should become zombie.
+    EXPECT_TRUE(QuicContainsKey(QuicSessionPeer::zombie_streams(session_.get()),
+                                stream_->id()));
+    EXPECT_TRUE(QuicSessionPeer::closed_streams(session_.get()).empty());
+  }
 }
 
 }  // namespace

@@ -1,10 +1,15 @@
 #if defined(__arm__)
 #include <openssl/arm_arch.h>
 
-.syntax	unified
-
 .text
+#if defined(__thumb2__) || defined(__clang__)
+.syntax	unified
+#endif
+#if defined(__thumb2__)
+.thumb
+#else
 .code	32
+#endif
 
 #ifdef  __clang__
 #define ldrplb  ldrbpl
@@ -22,20 +27,28 @@ rem_4bit:
 
 .type	rem_4bit_get,%function
 rem_4bit_get:
-	sub	r2,pc,#8
-	sub	r2,r2,#32	@ &rem_4bit
+#if defined(__thumb2__)
+	adr	r2,rem_4bit
+#else
+	sub	r2,pc,#8+32	@ &rem_4bit
+#endif
 	b	.Lrem_4bit_got
+	nop
 	nop
 .size	rem_4bit_get,.-rem_4bit_get
 
 .globl	gcm_ghash_4bit
 .hidden	gcm_ghash_4bit
 .type	gcm_ghash_4bit,%function
+.align	4
 gcm_ghash_4bit:
-	sub	r12,pc,#8
+#if defined(__thumb2__)
+	adr	r12,rem_4bit
+#else
+	sub	r12,pc,#8+48		@ &rem_4bit
+#endif
 	add	r3,r2,r3		@ r3 to point at the end
 	stmdb	sp!,{r3,r4,r5,r6,r7,r8,r9,r10,r11,lr}		@ save r3/end too
-	sub	r12,r12,#48		@ &rem_4bit
 
 	ldmia	r12,{r4,r5,r6,r7,r8,r9,r10,r11}		@ copy rem_4bit ...
 	stmdb	sp!,{r4,r5,r6,r7,r8,r9,r10,r11}		@ ... to stack
@@ -82,7 +95,10 @@ gcm_ghash_4bit:
 	eor	r5,r5,r6,lsl#28
 	ldrh	r8,[sp,r12]		@ rem_4bit[rem]
 	eor	r6,r10,r6,lsr#4
-	ldrbpl	r12,[r2,r3]
+#ifdef	__thumb2__
+	it	pl
+#endif
+	ldrplb	r12,[r2,r3]
 	eor	r6,r6,r7,lsl#28
 	eor	r7,r11,r7,lsr#4
 
@@ -92,15 +108,24 @@ gcm_ghash_4bit:
 	add	r14,r14,r14
 	ldmia	r11,{r8,r9,r10,r11}	@ load Htbl[nhi]
 	eor	r4,r8,r4,lsr#4
-	ldrbpl	r8,[r0,r3]
+#ifdef	__thumb2__
+	it	pl
+#endif
+	ldrplb	r8,[r0,r3]
 	eor	r4,r4,r5,lsl#28
 	eor	r5,r9,r5,lsr#4
 	ldrh	r9,[sp,r14]
 	eor	r5,r5,r6,lsl#28
 	eor	r6,r10,r6,lsr#4
 	eor	r6,r6,r7,lsl#28
+#ifdef	__thumb2__
+	it	pl
+#endif
 	eorpl	r12,r12,r8
 	eor	r7,r11,r7,lsr#4
+#ifdef	__thumb2__
+	itt	pl
+#endif
 	andpl	r14,r12,#0xf0
 	andpl	r12,r12,#0x0f
 	eor	r7,r7,r9,lsl#16	@ ^= rem_4bit[rem]
@@ -138,7 +163,11 @@ gcm_ghash_4bit:
 	strb	r10,[r0,#8+1]
 	strb	r11,[r0,#8]
 #endif
-	ldrbne	r12,[r2,#15]
+
+#ifdef __thumb2__
+	it	ne
+#endif
+	ldrneb	r12,[r2,#15]
 #if __ARM_ARCH__>=7 && defined(__ARMEL__)
 	rev	r6,r6
 	str	r6,[r0,#4]
@@ -226,7 +255,10 @@ gcm_gmult_4bit:
 	eor	r5,r5,r6,lsl#28
 	ldrh	r8,[r2,r12]	@ rem_4bit[rem]
 	eor	r6,r10,r6,lsr#4
-	ldrbpl	r12,[r0,r3]
+#ifdef	__thumb2__
+	it	pl
+#endif
+	ldrplb	r12,[r0,r3]
 	eor	r6,r6,r7,lsl#28
 	eor	r7,r11,r7,lsr#4
 
@@ -243,6 +275,9 @@ gcm_gmult_4bit:
 	eor	r6,r10,r6,lsr#4
 	eor	r6,r6,r7,lsl#28
 	eor	r7,r11,r7,lsr#4
+#ifdef	__thumb2__
+	itt	pl
+#endif
 	andpl	r14,r12,#0xf0
 	andpl	r12,r12,#0x0f
 	eor	r7,r7,r8,lsl#16	@ ^= rem_4bit[rem]

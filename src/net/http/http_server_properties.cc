@@ -78,6 +78,25 @@ bool IsAlternateProtocolValid(NextProto protocol) {
   return false;
 }
 
+AlternativeServiceInfo::AlternativeServiceInfo() : alternative_service_() {}
+
+AlternativeServiceInfo::AlternativeServiceInfo(
+    const AlternativeService& alternative_service,
+    base::Time expiration)
+    : alternative_service_(alternative_service), expiration_(expiration) {}
+
+AlternativeServiceInfo::AlternativeServiceInfo(NextProto protocol,
+                                               const std::string& host,
+                                               uint16_t port,
+                                               base::Time expiration)
+    : alternative_service_(protocol, host, port), expiration_(expiration) {}
+
+AlternativeServiceInfo::AlternativeServiceInfo(
+    const AlternativeServiceInfo& alternative_service_info) = default;
+
+AlternativeServiceInfo& AlternativeServiceInfo::operator=(
+    const AlternativeServiceInfo& alternative_service_info) = default;
+
 std::string AlternativeService::ToString() const {
   return base::StringPrintf("%s %s:%d", NextProtoToString(protocol),
                             host.c_str(), port);
@@ -85,10 +104,10 @@ std::string AlternativeService::ToString() const {
 
 std::string AlternativeServiceInfo::ToString() const {
   base::Time::Exploded exploded;
-  expiration.LocalExplode(&exploded);
+  expiration_.LocalExplode(&exploded);
   return base::StringPrintf(
       "%s, expires %04d-%02d-%02d %02d:%02d:%02d",
-      alternative_service.ToString().c_str(), exploded.year, exploded.month,
+      alternative_service_.ToString().c_str(), exploded.year, exploded.month,
       exploded.day_of_month, exploded.hour, exploded.minute, exploded.second);
 }
 

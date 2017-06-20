@@ -23,6 +23,7 @@
 #include "base/synchronization/waitable_event.h"
 #include "base/test/test_simple_task_runner.h"
 #include "base/threading/platform_thread.h"
+#include "base/threading/sequence_local_storage_slot.h"
 #include "base/threading/thread.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "build/build_config.h"
@@ -1041,6 +1042,55 @@ TEST(MessageLoopTest, ThreadName) {
     ASSERT_TRUE(thread.StartAndWaitForTesting());
     EXPECT_EQ(kThreadName, thread.message_loop()->GetThreadName());
   }
+}
+
+// Verify that tasks posted to and code running in the scope of the same
+// MessageLoop access the same SequenceLocalStorage values.
+TEST(MessageLoopTest, SequenceLocalStorageSetGet) {
+  MessageLoop loop;
+
+  SequenceLocalStorageSlot<int> slot;
+
+  ThreadTaskRunnerHandle::Get()->PostTask(
+      FROM_HERE,
+      BindOnce(&SequenceLocalStorageSlot<int>::Set, Unretained(&slot), 11));
+
+  ThreadTaskRunnerHandle::Get()->PostTask(
+      FROM_HERE, BindOnce(
+                     [](SequenceLocalStorageSlot<int>* slot) {
+                       EXPECT_EQ(slot->Get(), 11);
+                     },
+                     &slot));
+
+  RunLoop().RunUntilIdle();
+  EXPECT_EQ(slot.Get(), 11);
+}
+
+// Verify that tasks posted to and code running in different MessageLoops access
+// different SequenceLocalStorage values.
+TEST(MessageLoopTest, SequenceLocalStorageDifferentMessageLoops) {
+  SequenceLocalStorageSlot<int> slot;
+
+  {
+    MessageLoop loop;
+    ThreadTaskRunnerHandle::Get()->PostTask(
+        FROM_HERE,
+        BindOnce(&SequenceLocalStorageSlot<int>::Set, Unretained(&slot), 11));
+
+    RunLoop().RunUntilIdle();
+    EXPECT_EQ(slot.Get(), 11);
+  }
+
+  MessageLoop loop;
+  ThreadTaskRunnerHandle::Get()->PostTask(
+      FROM_HERE, BindOnce(
+                     [](SequenceLocalStorageSlot<int>* slot) {
+                       EXPECT_NE(slot->Get(), 11);
+                     },
+                     &slot));
+
+  RunLoop().RunUntilIdle();
+  EXPECT_NE(slot.Get(), 11);
 }
 
 }  // namespace base

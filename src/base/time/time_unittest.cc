@@ -902,7 +902,7 @@ TEST(TimeDelta, Max) {
 }
 
 bool IsMin(TimeDelta delta) {
-  return (-delta).is_max();
+  return delta.is_min();
 }
 
 TEST(TimeDelta, MaxConversions) {
@@ -928,6 +928,7 @@ TEST(TimeDelta, MaxConversions) {
   EXPECT_TRUE(t.is_max());
 
   int64_t max_int = std::numeric_limits<int64_t>::max();
+  int64_t min_int = std::numeric_limits<int64_t>::min();
 
   t = TimeDelta::FromSeconds(max_int / Time::kMicrosecondsPerSecond + 1);
   EXPECT_TRUE(t.is_max());
@@ -938,22 +939,23 @@ TEST(TimeDelta, MaxConversions) {
   t = TimeDelta::FromMicroseconds(max_int);
   EXPECT_TRUE(t.is_max());
 
-  t = TimeDelta::FromSeconds(-max_int / Time::kMicrosecondsPerSecond - 1);
+  t = TimeDelta::FromSeconds(min_int / Time::kMicrosecondsPerSecond - 1);
   EXPECT_TRUE(IsMin(t));
 
-  t = TimeDelta::FromMilliseconds(-max_int / Time::kMillisecondsPerSecond - 1);
+  t = TimeDelta::FromMilliseconds(min_int / Time::kMillisecondsPerSecond - 1);
   EXPECT_TRUE(IsMin(t));
 
-  t = TimeDelta::FromMicroseconds(-max_int);
+  t = TimeDelta::FromMicroseconds(min_int);
   EXPECT_TRUE(IsMin(t));
 
-  t = -TimeDelta::FromMicroseconds(std::numeric_limits<int64_t>::min());
-  EXPECT_FALSE(IsMin(t));
+  t = TimeDelta::FromMicroseconds(std::numeric_limits<int64_t>::min());
+  EXPECT_TRUE(IsMin(t));
 
   t = TimeDelta::FromSecondsD(std::numeric_limits<double>::infinity());
   EXPECT_TRUE(t.is_max());
 
   double max_d = max_int;
+  double min_d = min_int;
 
   t = TimeDelta::FromSecondsD(max_d / Time::kMicrosecondsPerSecond + 1);
   EXPECT_TRUE(t.is_max());
@@ -964,10 +966,10 @@ TEST(TimeDelta, MaxConversions) {
   t = TimeDelta::FromMillisecondsD(max_d / Time::kMillisecondsPerSecond * 2);
   EXPECT_TRUE(t.is_max());
 
-  t = TimeDelta::FromSecondsD(-max_d / Time::kMicrosecondsPerSecond - 1);
+  t = TimeDelta::FromSecondsD(min_d / Time::kMicrosecondsPerSecond - 1);
   EXPECT_TRUE(IsMin(t));
 
-  t = TimeDelta::FromMillisecondsD(-max_d / Time::kMillisecondsPerSecond * 2);
+  t = TimeDelta::FromMillisecondsD(min_d / Time::kMillisecondsPerSecond * 2);
   EXPECT_TRUE(IsMin(t));
 }
 
@@ -1046,7 +1048,8 @@ TEST(TimeDelta, NumericOperators) {
 TEST(TimeDelta, Overflows) {
   // Some sanity checks.
   EXPECT_TRUE(TimeDelta::Max().is_max());
-  EXPECT_TRUE(IsMin(-TimeDelta::Max()));
+  EXPECT_LT(-TimeDelta::Max(), TimeDelta());
+  EXPECT_GT(-TimeDelta::Max(), TimeDelta::Min());
   EXPECT_GT(TimeDelta(), -TimeDelta::Max());
 
   TimeDelta large_delta = TimeDelta::Max() - TimeDelta::FromMilliseconds(1);

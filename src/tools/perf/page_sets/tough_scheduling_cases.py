@@ -397,8 +397,7 @@ class ToughSchedulingCasesPageSet(story.StorySet):
   def __init__(self):
     super(ToughSchedulingCasesPageSet, self).__init__(
         archive_data_file='data/tough_scheduling_cases.json',
-        cloud_storage_bucket=story.INTERNAL_BUCKET,
-        verify_names=True)
+        cloud_storage_bucket=story.INTERNAL_BUCKET)
 
     # Why: Simple scrolling baseline
     self.AddStory(ToughSchedulingCasesPage(

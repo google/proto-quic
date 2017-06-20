@@ -9,6 +9,7 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
+#include "crypto/rsa_private_key.h"
 #include "net/base/net_errors.h"
 #include "net/ssl/ssl_platform_key_util.h"
 #include "net/ssl/ssl_private_key.h"
@@ -106,6 +107,13 @@ scoped_refptr<SSLPrivateKey> WrapOpenSSLPrivateKey(
   return make_scoped_refptr(new ThreadedSSLPrivateKey(
       base::MakeUnique<TestSSLPlatformKey>(std::move(key)),
       GetSSLPlatformKeyTaskRunner()));
+}
+
+scoped_refptr<SSLPrivateKey> WrapRSAPrivateKey(
+    crypto::RSAPrivateKey* rsa_private_key) {
+  EVP_PKEY_up_ref(rsa_private_key->key());
+  return net::WrapOpenSSLPrivateKey(
+      bssl::UniquePtr<EVP_PKEY>(rsa_private_key->key()));
 }
 
 }  // namespace net

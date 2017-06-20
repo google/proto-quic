@@ -15,6 +15,7 @@
 #include "base/memory/ptr_util.h"
 #include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
+#include "base/test/histogram_tester.h"
 #include "base/threading/thread.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
@@ -323,6 +324,27 @@ TEST_F(ImportantFileWriterTest, DoScheduledWrite_FailToSerialize) {
   EXPECT_FALSE(writer.HasPendingWrite());
   RunLoop().RunUntilIdle();
   EXPECT_FALSE(PathExists(writer.path()));
+}
+
+TEST_F(ImportantFileWriterTest, WriteFileAtomicallyHistogramSuffixTest) {
+  base::HistogramTester histogram_tester;
+  EXPECT_FALSE(PathExists(file_));
+  EXPECT_TRUE(ImportantFileWriter::WriteFileAtomically(file_, "baz", "test"));
+  EXPECT_TRUE(PathExists(file_));
+  EXPECT_EQ("baz", GetFileContent(file_));
+  histogram_tester.ExpectTotalCount("ImportantFile.FileCreateError", 0);
+  histogram_tester.ExpectTotalCount("ImportantFile.FileCreateError.test", 0);
+
+  FilePath invalid_file_ = FilePath().AppendASCII("bad/../path");
+  EXPECT_FALSE(PathExists(invalid_file_));
+  EXPECT_FALSE(
+      ImportantFileWriter::WriteFileAtomically(invalid_file_, nullptr));
+  histogram_tester.ExpectTotalCount("ImportantFile.FileCreateError", 1);
+  histogram_tester.ExpectTotalCount("ImportantFile.FileCreateError.test", 0);
+  EXPECT_FALSE(
+      ImportantFileWriter::WriteFileAtomically(invalid_file_, nullptr, "test"));
+  histogram_tester.ExpectTotalCount("ImportantFile.FileCreateError", 1);
+  histogram_tester.ExpectTotalCount("ImportantFile.FileCreateError.test", 1);
 }
 
 }  // namespace base

@@ -4,6 +4,7 @@
 
 package org.chromium.base;
 
+import android.app.ActivityManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -101,6 +102,19 @@ public class SysUtils {
             sLowEndDevice = detectLowEndDevice();
         }
         return sLowEndDevice.booleanValue();
+    }
+
+    /**
+     * @return Whether or not the system has low available memory.
+     */
+    @CalledByNative
+    private static boolean isCurrentlyLowMemory() {
+        ActivityManager am =
+                (ActivityManager) ContextUtils.getApplicationContext().getSystemService(
+                        Context.ACTIVITY_SERVICE);
+        ActivityManager.MemoryInfo info = new ActivityManager.MemoryInfo();
+        am.getMemoryInfo(info);
+        return info.lowMemory;
     }
 
     /**

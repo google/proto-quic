@@ -1606,7 +1606,7 @@
             }
           ],
           "expiration": 10800,
-          "hard_timeout": 960,
+          "hard_timeout": 1200,
           "output_links": [
             {
               "link": [
@@ -1616,7 +1616,8 @@
               ],
               "name": "shard #${SHARD_INDEX} logcats"
             }
-          ]
+          ],
+          "shards": 2
         },
         "test": "unit_tests"
       },

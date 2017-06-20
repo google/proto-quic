@@ -10,17 +10,22 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "base/bind.h"
 #include "base/bind_helpers.h"
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/threading/thread_task_runner_handle.h"
-#include "net/base/url_util.h"
+#include "net/dns/mock_host_resolver.h"
+#include "net/log/test_net_log.h"
 #include "net/nqe/network_quality_estimator_params.h"
+#include "net/nqe/network_quality_estimator_util.h"
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_test_util.h"
@@ -42,7 +47,8 @@ class TestThroughputAnalyzer : public internal::ThroughputAnalyzer {
                 &TestThroughputAnalyzer::OnNewThroughputObservationAvailable,
                 base::Unretained(this)),
             false,
-            false),
+            false,
+            base::MakeUnique<BoundTestNetLog>()->bound()),
         throughput_observations_received_(0),
         bits_received_(0) {}
 
@@ -62,12 +68,25 @@ class TestThroughputAnalyzer : public internal::ThroughputAnalyzer {
     bits_received_ += additional_bits_received;
   }
 
+  // Uses a mock resolver to force example.com to resolve to a public IP
+  // address.
+  void AddIPAddressResolution(TestURLRequestContext* context) {
+    scoped_refptr<net::RuleBasedHostResolverProc> rules(
+        new net::RuleBasedHostResolverProc(nullptr));
+    // example1.com resolves to a public IP address.
+    rules->AddRule("example.com", "27.0.0.3");
+    mock_host_resolver_.set_rules(rules.get());
+    context->set_host_resolver(&mock_host_resolver_);
+  }
+
   using internal::ThroughputAnalyzer::disable_throughput_measurements;
 
  private:
   int throughput_observations_received_;
 
   int64_t bits_received_;
+
+  MockCachingHostResolver mock_host_resolver_;
 
   DISALLOW_COPY_AND_ASSIGN(TestThroughputAnalyzer);
 };
@@ -89,6 +108,7 @@ TEST(ThroughputAnalyzerTest, MaximumRequests) {
 
     TestDelegate test_delegate;
     TestURLRequestContext context;
+    throughput_analyzer.AddIPAddressResolution(&context);
 
     ASSERT_FALSE(throughput_analyzer.disable_throughput_measurements());
     std::deque<std::unique_ptr<URLRequest>> requests;
@@ -98,19 +118,23 @@ TEST(ThroughputAnalyzerTest, MaximumRequests) {
     const std::string url = test.use_local_requests
                                 ? "http://127.0.0.1/test.html"
                                 : "http://example.com/test.html";
+
+    EXPECT_EQ(test.use_local_requests,
+              nqe::internal::IsPrivateHost(
+                  context.host_resolver(),
+                  HostPortPair(GURL(url).host(), GURL(url).EffectiveIntPort()),
+                  base::MakeUnique<BoundTestNetLog>()->bound()));
     for (size_t i = 0; i < 1000; ++i) {
       std::unique_ptr<URLRequest> request(
           context.CreateRequest(GURL(url), DEFAULT_PRIORITY, &test_delegate,
                                 TRAFFIC_ANNOTATION_FOR_TESTS));
-      ASSERT_EQ(test.use_local_requests, IsLocalhost(request->url().host()));
-
       throughput_analyzer.NotifyStartTransaction(*(request.get()));
       requests.push_back(std::move(request));
     }
     // Too many local requests should cause the |throughput_analyzer| to disable
     // throughput measurements.
-    EXPECT_EQ(test.use_local_requests,
-              throughput_analyzer.disable_throughput_measurements());
+    EXPECT_NE(test.use_local_requests,
+              throughput_analyzer.IsCurrentlyTrackingThroughput());
   }
 }
 
@@ -141,6 +165,7 @@ TEST(ThroughputAnalyzerTest, TestThroughputWithMultipleRequestsOverlap) {
 
     TestDelegate test_delegate;
     TestURLRequestContext context;
+    throughput_analyzer.AddIPAddressResolution(&context);
 
     std::unique_ptr<URLRequest> request_local;
 
@@ -150,7 +175,7 @@ TEST(ThroughputAnalyzerTest, TestThroughputWithMultipleRequestsOverlap) {
     request_not_local->Start();
 
     if (test.start_local_request) {
-      request_local = context.CreateRequest(GURL("http://localhost/echo.html"),
+      request_local = context.CreateRequest(GURL("http://127.0.0.1/echo.html"),
                                             DEFAULT_PRIORITY, &test_delegate,
                                             TRAFFIC_ANNOTATION_FOR_TESTS);
       request_local->Start();
@@ -229,6 +254,7 @@ TEST(ThroughputAnalyzerTest, TestThroughputWithNetworkRequestsOverlap) {
     TestThroughputAnalyzer throughput_analyzer(&params);
     TestDelegate test_delegate;
     TestURLRequestContext context;
+    throughput_analyzer.AddIPAddressResolution(&context);
 
     EXPECT_EQ(0, throughput_analyzer.throughput_observations_received());
 
@@ -281,6 +307,7 @@ TEST(ThroughputAnalyzerTest, TestThroughputWithMultipleNetworkRequests) {
   TestThroughputAnalyzer throughput_analyzer(&params);
   TestDelegate test_delegate;
   TestURLRequestContext context;
+  throughput_analyzer.AddIPAddressResolution(&context);
 
   EXPECT_EQ(0, throughput_analyzer.throughput_observations_received());
 

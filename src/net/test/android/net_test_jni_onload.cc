@@ -23,8 +23,7 @@ bool RegisterJNI(JNIEnv* env) {
 }  // namesapce
 
 bool OnJNIOnLoadRegisterJNI(JNIEnv* env) {
-  return base::android::OnJNIOnLoadRegisterJNI(env) &&
-         base::android::RegisterJni(env) && RegisterJNI(env);
+  return base::android::RegisterJni(env) && RegisterJNI(env);
 }
 
 bool OnJNIOnLoadInit() {

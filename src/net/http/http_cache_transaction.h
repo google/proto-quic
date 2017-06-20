@@ -80,6 +80,8 @@ class HttpCache::Transaction : public HttpTransaction {
 
   Mode mode() const { return mode_; }
 
+  std::string& method() { return method_; }
+
   const std::string& key() const { return cache_key_; }
 
   // Writes |buf_len| bytes of meta-data from the provided buffer |buf|. to the
@@ -104,8 +106,10 @@ class HttpCache::Transaction : public HttpTransaction {
   // This transaction is being deleted and we are not done writing to the cache.
   // We need to indicate that the response data was truncated.  Returns true on
   // success. Keep in mind that this operation may have side effects, such as
-  // deleting the active entry.
-  bool AddTruncatedFlag();
+  // deleting the active entry. This also returns success if the response was
+  // completely written, |*did_truncate| will be set to true if it was actually
+  // truncated.
+  bool AddTruncatedFlag(bool* did_truncate);
 
   HttpCache::ActiveEntry* entry() { return entry_; }
 
@@ -134,8 +138,8 @@ class HttpCache::Transaction : public HttpTransaction {
             const CompletionCallback& callback,
             const NetLogWithSource& net_log) override;
   int RestartIgnoringLastError(const CompletionCallback& callback) override;
-  int RestartWithCertificate(X509Certificate* client_cert,
-                             SSLPrivateKey* client_private_key,
+  int RestartWithCertificate(scoped_refptr<X509Certificate> client_cert,
+                             scoped_refptr<SSLPrivateKey> client_private_key,
                              const CompletionCallback& callback) override;
   int RestartWithAuth(const AuthCredentials& credentials,
                       const CompletionCallback& callback) override;
@@ -164,6 +168,10 @@ class HttpCache::Transaction : public HttpTransaction {
   int ResumeNetworkStart() override;
   void GetConnectionAttempts(ConnectionAttempts* out) const override;
 
+  // Invoked when parallel validation cannot proceed due to response failure
+  // and this transaction needs to be restarted.
+  void SetValidatingCannotProceed();
+
   // Returns the estimate of dynamically allocated memory in bytes.
   size_t EstimateMemoryUsage() const;
 
@@ -175,7 +183,20 @@ class HttpCache::Transaction : public HttpTransaction {
     ValidationHeaders() : initialized(false) {}
 
     std::string values[kNumValidationHeaders];
+    void Reset() {
+      initialized = false;
+      for (auto& value : values)
+        value.clear();
+    }
     bool initialized;
+  };
+
+  // A snapshot of pieces of the transaction before entering the state machine
+  // so that the state can be restored when restarting the state machine.
+  struct RestartInfo {
+    Mode mode = NONE;
+    HttpResponseInfo::CacheEntryStatus cache_entry_status =
+        HttpResponseInfo::CacheEntryStatus::ENTRY_UNDEFINED;
   };
 
   enum State {
@@ -220,6 +241,9 @@ class HttpCache::Transaction : public HttpTransaction {
     STATE_PARTIAL_HEADERS_RECEIVED,
     STATE_CACHE_READ_METADATA,
     STATE_CACHE_READ_METADATA_COMPLETE,
+    STATE_HEADERS_PHASE_CANNOT_PROCEED,
+    STATE_FINISH_HEADERS,
+    STATE_FINISH_HEADERS_COMPLETE,
 
     // These states are entered from Read/AddTruncatedFlag.
     STATE_NETWORK_READ,
@@ -288,6 +312,9 @@ class HttpCache::Transaction : public HttpTransaction {
   int DoPartialHeadersReceived();
   int DoCacheReadMetadata();
   int DoCacheReadMetadataComplete(int result);
+  int DoHeadersPhaseCannotProceed();
+  int DoFinishHeaders(int result);
+  int DoFinishHeadersComplete(int result);
   int DoNetworkRead();
   int DoNetworkReadComplete(int result);
   int DoCacheReadData();
@@ -298,8 +325,7 @@ class HttpCache::Transaction : public HttpTransaction {
   int DoCacheWriteTruncatedResponseComplete(int result);
 
   // Sets request_ and fields derived from it.
-  void SetRequest(const NetLogWithSource& net_log,
-                  const HttpRequestInfo* request);
+  void SetRequest(const NetLogWithSource& net_log);
 
   // Returns true if the request should be handled exclusively by the network
   // layer (skipping the cache entirely).
@@ -331,8 +357,9 @@ class HttpCache::Transaction : public HttpTransaction {
 
   // Called to restart a network transaction with a client certificate.
   // Returns network error code.
-  int RestartNetworkRequestWithCertificate(X509Certificate* client_cert,
-                                           SSLPrivateKey* client_private_key);
+  int RestartNetworkRequestWithCertificate(
+      scoped_refptr<X509Certificate> client_cert,
+      scoped_refptr<SSLPrivateKey> client_private_key);
 
   // Called to restart a network transaction with authentication credentials.
   // Returns network error code.
@@ -430,7 +457,12 @@ class HttpCache::Transaction : public HttpTransaction {
   void SyncCacheEntryStatusToResponse();
   void RecordHistograms();
 
-  // Called to signal completion of asynchronous IO.
+  // Called to signal completion of asynchronous IO. Note that this callback is
+  // used in the conventional sense where one layer calls the callback of the
+  // layer above it e.g. this callback gets called from the network transaction
+  // layer. In addition, it is also used for HttpCache layer to let this
+  // transaction know when it is out of a queued state in ActiveEntry and can
+  // continue its processing.
   void OnIOComplete(int result);
 
   // When in a DoLoop, use this to set the next state as it verifies that the
@@ -438,7 +470,13 @@ class HttpCache::Transaction : public HttpTransaction {
   void TransitionToState(State state);
 
   State next_state_;
+
+  // Initial request with which Start() was invoked.
+  const HttpRequestInfo* initial_request_;
+
   const HttpRequestInfo* request_;
+
+  std::string method_;
   RequestPriority priority_;
   NetLogWithSource net_log_;
   std::unique_ptr<HttpRequestInfo> custom_request_;

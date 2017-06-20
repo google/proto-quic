@@ -43,7 +43,7 @@ class QuicSimpleServerStreamPeer : public QuicSimpleServerStream {
                              QuicHttpResponseCache* response_cache)
       : QuicSimpleServerStream(stream_id, session, response_cache) {}
 
-  ~QuicSimpleServerStreamPeer() override{};
+  ~QuicSimpleServerStreamPeer() override {}
 
   using QuicSimpleServerStream::SendResponse;
   using QuicSimpleServerStream::SendErrorResponse;

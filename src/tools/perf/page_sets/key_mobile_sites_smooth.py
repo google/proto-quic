@@ -25,6 +25,8 @@ class KeyMobileSitesSmoothPage(page_module.Page):
 
   def __init__(self, url, page_set, name='', tags=None,
                action_on_load_complete=False):
+    if name == '':
+      name = url
     super(KeyMobileSitesSmoothPage, self).__init__(
         url=url, page_set=page_set, name=name,
         credentials_path='data/credentials.json', tags=tags,
@@ -65,17 +67,6 @@ class WowwikiSmoothPage(KeyMobileSitesSmoothPage):
     super(WowwikiSmoothPage, self).RunNavigateSteps(action_runner)
     action_runner.ScrollPage()
     super(WowwikiSmoothPage, self).RunNavigateSteps(action_runner)
-
-
-class GmailSmoothPage(key_mobile_sites_pages.GmailPage):
-
-  def RunPageInteractions(self, action_runner):
-    with action_runner.CreateGestureInteraction('ScrollAction'):
-      action_runner.ScrollElement(element_function=(
-          'document.getElementById("views").childNodes[1].firstChild'))
-    with action_runner.CreateGestureInteraction('ScrollAction'):
-      action_runner.ScrollElement(element_function=(
-          'document.getElementById("views").childNodes[1].firstChild'))
 
 
 class GroupClonedSmoothPage(key_mobile_sites_pages.GroupClonedPage):

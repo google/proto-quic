@@ -49,7 +49,7 @@ namespace base {
 // receives nullify() from the object's sentinel.
 class WeakContainer : public base::RefCountedThreadSafe<WeakContainer> {
  public:
-  explicit WeakContainer(id object) : object_(object) {}
+  explicit WeakContainer(id object);
 
   id object() {
     DCHECK(checker_.CalledOnValidThread());
@@ -63,9 +63,9 @@ class WeakContainer : public base::RefCountedThreadSafe<WeakContainer> {
 
  private:
   friend base::RefCountedThreadSafe<WeakContainer>;
-  ~WeakContainer() {}
+  ~WeakContainer();
   base::ThreadChecker checker_;
-  id object_;
+  __unsafe_unretained id object_;
 };
 
 }  // namespace base

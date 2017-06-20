@@ -463,7 +463,7 @@ TEST_F(QuicCryptoClientStreamStatelessTest, StatelessReject) {
       client_state->GetNextServerDesignatedConnectionId();
   QuicConnectionId expected_id =
       server_session_->connection()->random_generator()->RandUint64();
-  EXPECT_EQ(GetPeerInMemoryConnectionId(expected_id), server_designated_id);
+  EXPECT_EQ(expected_id, server_designated_id);
   EXPECT_FALSE(client_state->has_server_designated_connection_id());
 }
 

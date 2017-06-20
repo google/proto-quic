@@ -200,6 +200,7 @@ class QUIC_EXPORT_PRIVATE QuicStream : public StreamNotifierInterface {
   void OnStreamFrameAcked(const QuicStreamFrame& frame,
                           QuicTime::Delta ack_delay_time) override;
   void OnStreamFrameRetransmitted(const QuicStreamFrame& frame) override;
+  void OnStreamFrameDiscarded(const QuicStreamFrame& frame) override;
 
  protected:
   // Sends as many bytes in the first |count| buffers of |iov| to the connection
@@ -287,8 +288,8 @@ class QUIC_EXPORT_PRIVATE QuicStream : public StreamNotifierInterface {
   // framing, encryption overhead etc.
   uint64_t stream_bytes_read_;
   uint64_t stream_bytes_written_;
-  // Written bytes which have been acked.
-  uint64_t stream_bytes_acked_;
+  // Written bytes which are waiting to be acked.
+  uint64_t stream_bytes_outstanding_;
 
   // Stream error code received from a RstStreamFrame or error code sent by the
   // visitor or sequencer in the RstStreamFrame.
@@ -308,8 +309,8 @@ class QUIC_EXPORT_PRIVATE QuicStream : public StreamNotifierInterface {
   bool fin_buffered_;
   // True if a FIN has been sent to the session.
   bool fin_sent_;
-  // True if a FIN has been acked.
-  bool fin_acked_;
+  // True if a FIN is waiting to be acked.
+  bool fin_outstanding_;
 
   // True if this stream has received (and the sequencer has accepted) a
   // StreamFrame with the FIN set.

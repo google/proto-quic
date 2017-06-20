@@ -16,12 +16,14 @@ declare_args() {
   allow_posix_link_time_opt =
       is_clang && target_os == "linux" && !is_chromeos && target_cpu == "x64" &&
       is_official_build
+}
 
-  # If used with allow_posix_link_time_opt, it enables the experimental support
-  # of ThinLTO that links 3x-10x faster but (as of now) does not have all the
-  # important optimizations such us devirtualization implemented. See also
+declare_args() {
+  # If used with allow_posix_link_time_opt, it enables support for ThinLTO,
+  # which links 3x-10x faster than full LTO. See also
   # http://blog.llvm.org/2016/06/thinlto-scalable-and-incremental-lto.html
-  use_thin_lto = false
+  use_thin_lto = allow_posix_link_time_opt && target_os == "linux" &&
+                 !is_chromeos && target_cpu == "x64"
 
   # If this is set to true, or if LLVM_FORCE_HEAD_REVISION is set to 1
   # in the environment, we use the revision in the llvm repo to determine
@@ -63,7 +65,7 @@ declare_args() {
 
   # Set to true to use lld, the LLVM linker. This flag may be used on Windows
   # or Linux.
-  use_lld = (is_win && host_os != "win") ||
+  use_lld = (is_win && host_os != "win") || is_fuchsia ||
             (allow_posix_link_time_opt && target_os == "linux" &&
              !is_chromeos && target_cpu == "x64")
 }

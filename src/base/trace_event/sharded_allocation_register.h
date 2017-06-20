@@ -11,6 +11,7 @@
 
 #include "base/atomicops.h"
 #include "base/base_export.h"
+#include "base/callback.h"
 #include "base/macros.h"
 #include "base/synchronization/lock.h"
 #include "base/trace_event/heap_profiler_allocation_register.h"
@@ -25,15 +26,6 @@ class TraceEventMemoryOverhead;
 // This container is thread-safe.
 class BASE_EXPORT ShardedAllocationRegister {
  public:
-  using MetricsMap = std::unordered_map<AllocationContext, AllocationMetrics>;
-
-  struct OutputMetrics {
-    // Total size of allocated objects.
-    size_t size;
-    // Total count of allocated objects.
-    size_t count;
-  };
-
   ShardedAllocationRegister();
 
   // This class must be enabled before calling Insert() or Remove(). Once the
@@ -61,9 +53,10 @@ class BASE_EXPORT ShardedAllocationRegister {
   // Estimates memory overhead including |sizeof(AllocationRegister)|.
   void EstimateTraceMemoryOverhead(TraceEventMemoryOverhead* overhead) const;
 
-  // Updates |map| with all allocated objects and their statistics.
-  // Returns aggregate statistics.
-  OutputMetrics UpdateAndReturnsMetrics(MetricsMap& map) const;
+  using AllocationVisitor =
+      base::RepeatingCallback<void(const AllocationRegister::Allocation&)>;
+
+  void VisitAllocations(const AllocationVisitor& visitor) const;
 
  private:
   struct RegisterAndLock {

@@ -29,7 +29,7 @@ class IndexedDBEndurePageSet(story.StorySet):
   """
 
   def __init__(self):
-    super(IndexedDBEndurePageSet, self).__init__(verify_names=True)
+    super(IndexedDBEndurePageSet, self).__init__()
     tests = [
       'testCreateAndDeleteDatabases',
       'testCreateAndDeleteDatabase',
@@ -45,3 +45,8 @@ class IndexedDBEndurePageSet(story.StorySet):
     ]
     for test in tests:
       self.AddStory(IndexedDBEndurePage(test, self))
+
+
+class IndexedDBEndureStoryExpectations(story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    pass # Nothing disabled.

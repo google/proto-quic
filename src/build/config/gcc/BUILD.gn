@@ -29,18 +29,12 @@ declare_args() {
 #
 # See http://gcc.gnu.org/wiki/Visibility
 config("symbol_visibility_hidden") {
-  # Note that -fvisibility-inlines-hidden is set globally in the compiler
-  # config since that can almost always be applied.
   cflags = [ "-fvisibility=hidden" ]
 
   # Visibility attribute is not supported on AIX.
   if (current_os != "aix") {
-    cflags_cc = [
-      # Not exporting C++ inline functions can generally be applied anywhere
-      # so we do so here. Normal function visibility is controlled by
-      # //build/config/gcc:symbol_visibility_hidden.
-      "-fvisibility-inlines-hidden",
-    ]
+    cflags_cc = [ "-fvisibility-inlines-hidden" ]
+    cflags_objcc = cflags_cc
   }
 }
 

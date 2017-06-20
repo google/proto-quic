@@ -182,12 +182,15 @@ class Member(object):
     name = self.node.GetName()
     if self.node.GetProperty('deprecated'):
       properties['deprecated'] = self.node.GetProperty('deprecated')
-    if self.node.GetProperty('allowAmbiguousOptionalArguments'):
-      properties['allowAmbiguousOptionalArguments'] = True
-    for property_name in ('OPTIONAL', 'nodoc', 'nocompile', 'nodart',
-                          'nodefine'):
+
+    for property_name in ['allowAmbiguousOptionalArguments', 'forIOThread',
+                          'nodoc', 'nocompile', 'nodart', 'nodefine']:
       if self.node.GetProperty(property_name):
-        properties[property_name.lower()] = True
+        properties[property_name] = True
+
+    if self.node.GetProperty('OPTIONAL'):
+      properties['optional'] = True
+
     for option_name, sanitizer in [
         ('maxListeners', int),
         ('supportsFilters', lambda s: s == 'true'),

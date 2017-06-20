@@ -10,9 +10,6 @@ import time
 import models
 
 
-_DIFF_PREFIX_BY_STATUS = ['= ', '~ ', '+ ', '- ']
-
-
 def _PrettySize(size):
   # Arbitrarily chosen cut-off.
   if abs(size) < 2000:
@@ -35,7 +32,7 @@ def _PrettySize(size):
 def _FormatPss(pss):
   # Shows a decimal for small numbers to make it clear that a shared symbol has
   # a non-zero pss.
-  if pss > 10:
+  if abs(pss) > 10:
     return str(int(pss))
   ret = str(round(pss, 1))
   if ret.endswith('.0'):
@@ -105,11 +102,52 @@ class Describer(object):
       address = 'Group'
     else:
       address = hex(sym.address)
+    last_field = ''
+    if sym.IsGroup():
+      last_field = 'count=%d' % len(sym)
+    elif sym.IsDelta():
+      if sym.before_symbol is None:
+        num_aliases = sym.after_symbol.num_aliases
+      elif sym.after_symbol is None:
+        num_aliases = sym.before_symbol.num_aliases
+      elif sym.before_symbol.num_aliases == sym.after_symbol.num_aliases:
+        num_aliases = sym.before_symbol.num_aliases
+      else:
+        last_field = 'num_aliases=%d->%d' % (
+            sym.before_symbol.num_aliases, sym.after_symbol.num_aliases)
+      if not last_field and (num_aliases > 1 or self.verbose):
+        last_field = 'num_aliases=%d' % num_aliases
+    elif sym.num_aliases > 1 or self.verbose:
+      last_field = 'num_aliases=%d' % sym.num_aliases
+
+    if sym.IsDelta():
+      if sym.IsGroup():
+        b = sum(s.before_symbol.size_without_padding if s.before_symbol else 0
+                for s in sym)
+        a = sum(s.after_symbol.size_without_padding if s.after_symbol else 0
+                for s in sym)
+      else:
+        b = sym.before_symbol.size_without_padding if sym.before_symbol else 0
+        a = sym.after_symbol.size_without_padding if sym.after_symbol else 0
+      pss_with_sign = _FormatPss(sym.pss)
+      if pss_with_sign[0] not in '~-':
+        pss_with_sign = '+' + pss_with_sign
+      pss_field = '{} ({}->{})'.format(pss_with_sign, b, a)
+    elif sym.num_aliases > 1:
+      pss_field = '{} (size={})'.format(_FormatPss(sym.pss), sym.size)
+    else:
+      pss_field = '{}'.format(_FormatPss(sym.pss))
+
     if self.verbose:
-      count_part = '  count=%d' % len(sym) if sym.IsGroup() else ''
-      yield '{}@{:<9s}  pss={}  padding={}  size_without_padding={}{}'.format(
-          sym.section, address, _FormatPss(sym.pss), sym.padding,
-          sym.size_without_padding, count_part)
+      if last_field:
+        last_field = '  ' + last_field
+      if sym.IsDelta():
+        yield '{}@{:<9s}  {}{}'.format(
+            sym.section, address, pss_field, last_field)
+      else:
+        l = '{}@{:<9s}  pss={}  padding={}{}'.format(
+            sym.section, address, pss_field, sym.padding, last_field)
+        yield l
       yield '    source_path={} \tobject_path={}'.format(
           sym.source_path, sym.object_path)
       if sym.name:
@@ -119,22 +157,27 @@ class Describer(object):
       elif sym.full_name:
         yield '    flags={}  full_name={}'.format(
             sym.FlagsString(), sym.full_name)
-    elif single_line:
-      count_part = ' (count=%d)' % len(sym) if sym.IsGroup() else ''
-      yield '{}@{:<9s}  {:<7} {}{}'.format(
-          sym.section, address, _FormatPss(sym.pss), sym.name, count_part)
     else:
-      yield '{}@{:<9s}  {:<7} {}'.format(
-          sym.section, address, _FormatPss(sym.pss),
-          sym.source_path or sym.object_path or '{no path}')
-      if sym.name:
-        count_part = ' (count=%d)' % len(sym) if sym.IsGroup() else ''
-        yield '    {}{}'.format(sym.name, count_part)
+      if last_field:
+        last_field = ' ({})'.format(last_field)
+      if sym.IsDelta():
+        pss_field = '{:<18}'.format(pss_field)
+      else:
+        pss_field = '{:<14}'.format(pss_field)
+      if single_line:
+        yield '{}@{:<9s}  {}  {}{}'.format(
+            sym.section, address, pss_field, sym.name, last_field)
+      else:
+        yield '{}@{:<9s}  {} {}'.format(
+            sym.section, address, pss_field,
+            sym.source_path or sym.object_path or '{no path}')
+        if sym.name:
+          yield '    {}{}'.format(sym.name, last_field)
 
   def _DescribeSymbolGroupChildren(self, group, indent=0):
     running_total = 0
     running_percent = 0
-    is_diff = isinstance(group, models.SymbolDiff)
+    is_delta = group.IsDelta()
     all_groups = all(s.IsGroup() for s in group)
 
     indent_prefix = '> ' * indent
@@ -149,8 +192,8 @@ class Describer(object):
           indent_size = 8 + len(indent_prefix) + len(diff_prefix)
           yield '{} {}'.format(' ' * indent_size, l)
         else:
-          if is_diff:
-            diff_prefix = _DIFF_PREFIX_BY_STATUS[group.DiffStatus(s)]
+          if is_delta:
+            diff_prefix = models.DIFF_PREFIX_BY_STATUS[s.diff_status]
           yield '{}{}{:<4} {:>8} {:7} {}'.format(
               indent_prefix, diff_prefix, str(index) + ')',
               _FormatPss(running_total), '({:.1%})'.format(running_percent), l)
@@ -178,37 +221,58 @@ class Describer(object):
       # Ignore paths like foo/{shared}/2
       if '{' not in s.object_path:
         unique_paths.add(s.object_path)
+
+    if group.IsDelta():
+      unique_part = 'aliases not grouped for diffs'
+    else:
+      unique_part = '{:,} unique'.format(group.CountUniqueSymbols())
+
+    if self.verbose:
+      titles = 'Index | Running Total | Section@Address | ...'
+    elif group.IsDelta():
+      titles = (u'Index | Running Total | Section@Address | \u0394 PSS '
+                u'(\u0394 size_without_padding) | Path').encode('utf-8')
+    else:
+      titles = ('Index | Running Total | Section@Address | PSS | Path')
+
     header_desc = [
-        'Showing {:,} symbols ({:,} unique) with total pss: {} bytes'.format(
-            len(group), group.CountUniqueSymbols(), int(total_size)),
+        'Showing {:,} symbols ({}) with total pss: {} bytes'.format(
+            len(group), unique_part, int(total_size)),
         '.text={:<10} .rodata={:<10} .data*={:<10} .bss={:<10} total={}'.format(
             _PrettySize(int(code_size)), _PrettySize(int(ro_size)),
             _PrettySize(int(data_size)), _PrettySize(int(bss_size)),
             _PrettySize(int(total_size))),
         'Number of unique paths: {}'.format(len(unique_paths)),
         '',
-        'Index, Running Total, Section@Address, PSS',
+        titles,
         '-' * 60
     ]
+    # Apply this filter after calcualating stats since an alias being removed
+    # causes some symbols to be UNCHANGED, yet have pss != 0.
+    if group.IsDelta() and not self.verbose:
+      group = group.WhereDiffStatusIs(models.DIFF_STATUS_UNCHANGED).Inverted()
     children_desc = self._DescribeSymbolGroupChildren(group)
     return itertools.chain(header_desc, children_desc)
 
-  def _DescribeDiffObjectPaths(self, diff):
+  def _DescribeDiffObjectPaths(self, delta_group):
     paths_by_status = [set(), set(), set(), set()]
-    def helper(group):
-      for s in group:
-        if s.IsGroup():
-          helper(s)
-        else:
-          status = group.DiffStatus(s)
-          paths_by_status[status].add(s.source_path or s.object_path)
-    helper(diff)
-    # Show only paths that have no changed symbols (pure adds / removes).
+    for s in delta_group.IterLeafSymbols():
+      path = s.source_path or s.object_path
+      # Ignore paths like foo/{shared}/2
+      if '{' not in path:
+        paths_by_status[s.diff_status].add(path)
+    # Initial paths sets are those where *any* symbol is
+    # unchanged/changed/added/removed.
     unchanged, changed, added, removed = paths_by_status
+    # Consider a path with both adds & removes as "changed".
+    changed.update(added.intersection(removed))
+    # Consider a path added / removed only when all symbols are new/removed.
     added.difference_update(unchanged)
     added.difference_update(changed)
+    added.difference_update(removed)
     removed.difference_update(unchanged)
     removed.difference_update(changed)
+    removed.difference_update(added)
     yield '{} paths added, {} removed, {} changed'.format(
         len(added), len(removed), len(changed))
 
@@ -225,21 +289,31 @@ class Describer(object):
       for p in sorted(changed):
         yield '  ' + p
 
-  def _DescribeSymbolDiff(self, diff):
+  def _DescribeDeltaSymbolGroup(self, delta_group):
     header_template = ('{} symbols added (+), {} changed (~), {} removed (-), '
                        '{} unchanged ({})')
     unchanged_msg = '=' if self.verbose else 'not shown'
-    symbol_delta_desc = [header_template.format(
-        diff.added_count, diff.changed_count, diff.removed_count,
-        diff.unchanged_count, unchanged_msg)]
-    path_delta_desc = self._DescribeDiffObjectPaths(diff)
+    counts = delta_group.CountsByDiffStatus()
+    num_unique_before_symbols, num_unique_after_symbols = (
+        delta_group.CountUniqueSymbols())
+    diff_summary_desc = [
+        header_template.format(
+            counts[models.DIFF_STATUS_ADDED],
+            counts[models.DIFF_STATUS_CHANGED],
+            counts[models.DIFF_STATUS_REMOVED],
+            counts[models.DIFF_STATUS_UNCHANGED],
+            unchanged_msg),
+        'Number of unique symbols {} -> {} ({:+})'.format(
+            num_unique_before_symbols, num_unique_after_symbols,
+            num_unique_after_symbols - num_unique_before_symbols),
+        ]
+    path_delta_desc = self._DescribeDiffObjectPaths(delta_group)
 
-    diff = diff if self.verbose else diff.WhereNotUnchanged()
-    group_desc = self._DescribeSymbolGroup(diff)
-    return itertools.chain(symbol_delta_desc, path_delta_desc, ('',),
+    group_desc = self._DescribeSymbolGroup(delta_group)
+    return itertools.chain(diff_summary_desc, path_delta_desc, ('',),
                            group_desc)
 
-  def _DescribeSizeInfoDiff(self, diff):
+  def _DescribeDeltaSizeInfo(self, diff):
     common_metadata = {k: v for k, v in diff.before_metadata.iteritems()
                        if diff.after_metadata[k] == v}
     before_metadata = {k: v for k, v in diff.before_metadata.iteritems()
@@ -271,12 +345,12 @@ class Describer(object):
                            group_desc)
 
   def GenerateLines(self, obj):
-    if isinstance(obj, models.SizeInfoDiff):
-      return self._DescribeSizeInfoDiff(obj)
+    if isinstance(obj, models.DeltaSizeInfo):
+      return self._DescribeDeltaSizeInfo(obj)
     if isinstance(obj, models.SizeInfo):
       return self._DescribeSizeInfo(obj)
-    if isinstance(obj, models.SymbolDiff):
-      return self._DescribeSymbolDiff(obj)
+    if isinstance(obj, models.DeltaSymbolGroup):
+      return self._DescribeDeltaSymbolGroup(obj)
     if isinstance(obj, models.SymbolGroup):
       return self._DescribeSymbolGroup(obj)
     if isinstance(obj, models.Symbol):

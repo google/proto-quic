@@ -1,4 +1,11 @@
-#!/usr/bin/env perl
+#! /usr/bin/env perl
+# Copyright 2007-2016 The OpenSSL Project Authors. All Rights Reserved.
+#
+# Licensed under the OpenSSL license (the "License").  You may not use
+# this file except in compliance with the License.  You can obtain a copy
+# in the file LICENSE in the source distribution or at
+# https://www.openssl.org/source/license.html
+
 
 # ====================================================================
 # Written by Andy Polyakov <appro@openssl.org> for the OpenSSL
@@ -181,7 +188,12 @@ $code=<<___;
 #include <openssl/arm_arch.h>
 
 .text
+#if defined(__thumb2__)
+.syntax	unified
+.thumb
+#else
 .code	32
+#endif
 
 .global	sha1_block_data_order
 .type	sha1_block_data_order,%function
@@ -189,7 +201,8 @@ $code=<<___;
 .align	5
 sha1_block_data_order:
 #if __ARM_MAX_ARCH__>=7
-	sub	r3,pc,#8		@ sha1_block_data_order
+.Lsha1_block:
+	adr	r3,.Lsha1_block
 	ldr	r12,.LOPENSSL_armcap
 	ldr	r12,[r3,r12]		@ OPENSSL_armcap_P
 #ifdef	__APPLE__
@@ -216,7 +229,12 @@ for($i=0;$i<5;$i++) {
 	&BODY_00_15(@V);	unshift(@V,pop(@V));
 }
 $code.=<<___;
+#if defined(__thumb2__)
+	mov	$t3,sp
+	teq	$Xi,$t3
+#else
 	teq	$Xi,sp
+#endif
 	bne	.L_00_15		@ [((11+4)*5+2)*3]
 	sub	sp,sp,#25*4
 ___
@@ -235,7 +253,12 @@ for($i=0;$i<5;$i++) {
 	&BODY_20_39(@V);	unshift(@V,pop(@V));
 }
 $code.=<<___;
+#if defined(__thumb2__)
+	mov	$t3,sp
+	teq	$Xi,$t3
+#else
 	teq	$Xi,sp			@ preserve carry
+#endif
 	bne	.L_20_39_or_60_79	@ [+((12+3)*5+2)*4]
 	bcs	.L_done			@ [+((12+3)*5+2)*4], spare 300 bytes
 
@@ -247,7 +270,12 @@ for($i=0;$i<5;$i++) {
 	&BODY_40_59(@V);	unshift(@V,pop(@V));
 }
 $code.=<<___;
+#if defined(__thumb2__)
+	mov	$t3,sp
+	teq	$Xi,$t3
+#else
 	teq	$Xi,sp
+#endif
 	bne	.L_40_59		@ [+((12+5)*5+2)*4]
 
 	ldr	$K,.LK_60_79
@@ -283,7 +311,7 @@ $code.=<<___;
 .LK_60_79:	.word	0xca62c1d6
 #if __ARM_MAX_ARCH__>=7
 .LOPENSSL_armcap:
-.word	OPENSSL_armcap_P-sha1_block_data_order
+.word	OPENSSL_armcap_P-.Lsha1_block
 #endif
 .asciz	"SHA1 block transform for ARMv4/NEON/ARMv8, CRYPTOGAMS by <appro\@openssl.org>"
 .align	5
@@ -458,6 +486,7 @@ sub Xuplast_80 ()
 
 	&teq		($inp,$len);
 	&sub		($K_XX_XX,$K_XX_XX,16);	# rewind $K_XX_XX
+	&it		("eq");
 	&subeq		($inp,$inp,64);		# reload last block to avoid SEGV
 	&vld1_8		("{@X[-4&7]-@X[-3&7]}","[$inp]!");
 	 eval(shift(@insns));
@@ -508,12 +537,12 @@ sha1_block_data_order_neon:
 	@ dmb				@ errata #451034 on early Cortex A8
 	@ vstmdb	sp!,{d8-d15}	@ ABI specification says so
 	mov	$saved_sp,sp
-	sub	sp,sp,#64		@ alloca
+	sub	$Xfer,sp,#64
 	adr	$K_XX_XX,.LK_00_19
-	bic	sp,sp,#15		@ align for 128-bit stores
+	bic	$Xfer,$Xfer,#15		@ align for 128-bit stores
 
 	ldmia	$ctx,{$a,$b,$c,$d,$e}	@ load context
-	mov	$Xfer,sp
+	mov	sp,$Xfer		@ alloca
 
 	vld1.8		{@X[-4&7]-@X[-3&7]},[$inp]!	@ handles unaligned
 	veor		$zero,$zero,$zero
@@ -560,10 +589,13 @@ $code.=<<___;
 	add	$b,$b,$t0
 	add	$c,$c,$t1
 	add	$d,$d,$Xfer
+	it	eq
 	moveq	sp,$saved_sp
 	add	$e,$e,$Ki
+	it	ne
 	ldrne	$Ki,[sp]
 	stmia	$ctx,{$a,$b,$c,$d,$e}
+	itt	ne
 	addne	$Xfer,sp,#3*16
 	bne	.Loop_neon
 
@@ -584,6 +616,13 @@ my ($W0,$W1,$ABCD_SAVE)=map("q$_",(12..14));
 
 $code.=<<___;
 #if __ARM_MAX_ARCH__>=7
+
+# if defined(__thumb2__)
+#  define INST(a,b,c,d)	.byte	c,d|0xf,a,b
+# else
+#  define INST(a,b,c,d)	.byte	a,b,c,d|0x10
+# endif
+
 .type	sha1_block_data_order_armv8,%function
 .align	5
 sha1_block_data_order_armv8:
@@ -678,7 +717,10 @@ ___
 	    # since ARMv7 instructions are always encoded little-endian.
 	    # correct solution is to use .inst directive, but older
 	    # assemblers don't implement it:-(
-	    sprintf ".byte\t0x%02x,0x%02x,0x%02x,0x%02x\t@ %s %s",
+
+	    # this fix-up provides Thumb encoding in conjunction with INST
+	    $word &= ~0x10000000 if (($word & 0x0f000000) == 0x02000000);
+	    sprintf "INST(0x%02x,0x%02x,0x%02x,0x%02x)\t@ %s %s",
 			$word&0xff,($word>>8)&0xff,
 			($word>>16)&0xff,($word>>24)&0xff,
 			$mnemonic,$arg;

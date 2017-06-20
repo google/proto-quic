@@ -230,6 +230,9 @@ class BASE_EXPORT ProcessMetrics {
   uint64_t GetVmSwapBytes() const;
 #endif  // defined(OS_LINUX) || defined(OS_ANDROID)
 
+  // Returns total memory usage of malloc.
+  size_t GetMallocUsage();
+
  private:
 #if !defined(OS_MACOSX) || defined(OS_IOS)
   explicit ProcessMetrics(ProcessHandle process);

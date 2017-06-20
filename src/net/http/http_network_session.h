@@ -55,6 +55,7 @@ class HttpProxyClientSocketPool;
 class HttpResponseBodyDrainer;
 class HttpServerProperties;
 class NetLog;
+class NetworkQualityProvider;
 class NetworkThrottleManager;
 class ProxyDelegate;
 class ProxyService;
@@ -188,6 +189,7 @@ class NET_EXPORT HttpNetworkSession : public base::MemoryCoordinatorClient {
     HttpServerProperties* http_server_properties;
     NetLog* net_log;
     SocketPerformanceWatcherFactory* socket_performance_watcher_factory;
+    NetworkQualityProvider* network_quality_provider;
 
     // Source of time for QUIC connections.
     QuicClock* quic_clock;

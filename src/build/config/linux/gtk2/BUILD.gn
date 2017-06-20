@@ -26,7 +26,6 @@ pkg_config("gtk2_internal_config") {
 # parts that explicitly need GTK2 are whitelisted on this target.
 group("gtk2") {
   visibility = [
-    "//gpu/gles2_conform_support:gles2_conform_test_windowless",
     "//build/config/linux/gtk",
     "//chrome/browser/ui/libgtkui:*",
   ]

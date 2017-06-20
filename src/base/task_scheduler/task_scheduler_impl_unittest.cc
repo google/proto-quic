@@ -22,6 +22,7 @@
 #include "base/task_scheduler/test_task_factory.h"
 #include "base/test/test_timeouts.h"
 #include "base/threading/platform_thread.h"
+#include "base/threading/sequence_local_storage_slot.h"
 #include "base/threading/simple_thread.h"
 #include "base/threading/thread.h"
 #include "base/threading/thread_restrictions.h"
@@ -521,6 +522,39 @@ TEST_F(TaskSchedulerImplTest, FileDescriptorWatcherNoOpsAfterShutdown) {
   EXPECT_EQ(0, IGNORE_EINTR(close(pipes[1])));
 }
 #endif  // defined(OS_POSIX)
+
+// Verify that tasks posted on the same sequence access the same values on
+// SequenceLocalStorage, and tasks on different sequences see different values.
+TEST_F(TaskSchedulerImplTest, SequenceLocalStorage) {
+  StartTaskScheduler();
+
+  SequenceLocalStorageSlot<int> slot;
+  auto sequenced_task_runner1 =
+      scheduler_.CreateSequencedTaskRunnerWithTraits(TaskTraits());
+  auto sequenced_task_runner2 =
+      scheduler_.CreateSequencedTaskRunnerWithTraits(TaskTraits());
+
+  sequenced_task_runner1->PostTask(
+      FROM_HERE,
+      BindOnce([](SequenceLocalStorageSlot<int>* slot) { slot->Set(11); },
+               &slot));
+
+  sequenced_task_runner1->PostTask(FROM_HERE,
+                                   BindOnce(
+                                       [](SequenceLocalStorageSlot<int>* slot) {
+                                         EXPECT_EQ(slot->Get(), 11);
+                                       },
+                                       &slot));
+
+  sequenced_task_runner2->PostTask(FROM_HERE,
+                                   BindOnce(
+                                       [](SequenceLocalStorageSlot<int>* slot) {
+                                         EXPECT_NE(slot->Get(), 11);
+                                       },
+                                       &slot));
+
+  scheduler_.FlushForTesting();
+}
 
 }  // namespace internal
 }  // namespace base

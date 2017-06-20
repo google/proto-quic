@@ -17,67 +17,6 @@ namespace net {
 
 namespace x509_util {
 
-TEST(X509UtilTest, SortClientCertificates) {
-  CertificateList certs;
-  certs.push_back(nullptr);
-
-  std::unique_ptr<crypto::RSAPrivateKey> key(
-      crypto::RSAPrivateKey::Create(1024));
-  ASSERT_TRUE(key);
-
-  scoped_refptr<X509Certificate> cert;
-  std::string der_cert;
-
-  ASSERT_TRUE(CreateSelfSignedCert(key.get(), x509_util::DIGEST_SHA1,
-                                   "CN=expired", 1, base::Time::UnixEpoch(),
-                                   base::Time::UnixEpoch(), &der_cert));
-  cert = X509Certificate::CreateFromBytes(der_cert.data(), der_cert.size());
-  ASSERT_TRUE(cert);
-  certs.push_back(cert);
-
-  const base::Time now = base::Time::Now();
-
-  ASSERT_TRUE(CreateSelfSignedCert(
-      key.get(), x509_util::DIGEST_SHA1, "CN=not yet valid", 2,
-      now + base::TimeDelta::FromDays(10), now + base::TimeDelta::FromDays(15),
-      &der_cert));
-  cert = X509Certificate::CreateFromBytes(der_cert.data(), der_cert.size());
-  ASSERT_TRUE(cert);
-  certs.push_back(cert);
-
-  ASSERT_TRUE(
-      CreateSelfSignedCert(key.get(), x509_util::DIGEST_SHA1, "CN=older cert",
-                           3, now - base::TimeDelta::FromDays(5),
-                           now + base::TimeDelta::FromDays(5), &der_cert));
-  cert = X509Certificate::CreateFromBytes(der_cert.data(), der_cert.size());
-  ASSERT_TRUE(cert);
-  certs.push_back(cert);
-
-  certs.push_back(nullptr);
-
-  ASSERT_TRUE(
-      CreateSelfSignedCert(key.get(), x509_util::DIGEST_SHA1, "CN=newer cert",
-                           2, now - base::TimeDelta::FromDays(3),
-                           now + base::TimeDelta::FromDays(5), &der_cert));
-  cert = X509Certificate::CreateFromBytes(der_cert.data(), der_cert.size());
-  ASSERT_TRUE(cert);
-  certs.push_back(cert);
-
-  std::sort(certs.begin(), certs.end(), ClientCertSorter());
-
-  ASSERT_EQ(6u, certs.size());
-  ASSERT_TRUE(certs[0].get());
-  EXPECT_EQ("newer cert", certs[0]->subject().common_name);
-  ASSERT_TRUE(certs[1].get());
-  EXPECT_EQ("older cert", certs[1]->subject().common_name);
-  ASSERT_TRUE(certs[2].get());
-  EXPECT_EQ("not yet valid", certs[2]->subject().common_name);
-  ASSERT_TRUE(certs[3].get());
-  EXPECT_EQ("expired", certs[3]->subject().common_name);
-  ASSERT_FALSE(certs[4].get());
-  ASSERT_FALSE(certs[5].get());
-}
-
 // This test creates a self-signed cert and a private key and then verifies the
 // content of the certificate.
 TEST(X509UtilTest, CreateKeyAndSelfSigned) {

@@ -527,10 +527,10 @@ Histogram::Histogram(const std::string& name,
     bucket_ranges_(ranges),
     declared_min_(minimum),
     declared_max_(maximum) {
-  if (ranges) {
-    unlogged_samples_.reset(new SampleVector(HashMetricName(name), ranges));
-    logged_samples_.reset(new SampleVector(unlogged_samples_->id(), ranges));
-  }
+  // TODO(bcwhite): Make this a DCHECK once crbug/734049 is resolved.
+  CHECK(ranges) << name << ": " << minimum << "-" << maximum;
+  unlogged_samples_.reset(new SampleVector(HashMetricName(name), ranges));
+  logged_samples_.reset(new SampleVector(unlogged_samples_->id(), ranges));
 }
 
 Histogram::Histogram(const std::string& name,
@@ -545,12 +545,12 @@ Histogram::Histogram(const std::string& name,
       bucket_ranges_(ranges),
       declared_min_(minimum),
       declared_max_(maximum) {
-  if (ranges) {
-    unlogged_samples_.reset(
-        new PersistentSampleVector(HashMetricName(name), ranges, meta, counts));
-    logged_samples_.reset(new PersistentSampleVector(
-        unlogged_samples_->id(), ranges, logged_meta, logged_counts));
-  }
+  // TODO(bcwhite): Make this a DCHECK once crbug/734049 is resolved.
+  CHECK(ranges) << name << ": " << minimum << "-" << maximum;
+  unlogged_samples_.reset(
+      new PersistentSampleVector(HashMetricName(name), ranges, meta, counts));
+  logged_samples_.reset(new PersistentSampleVector(
+      unlogged_samples_->id(), ranges, logged_meta, logged_counts));
 }
 
 Histogram::~Histogram() {

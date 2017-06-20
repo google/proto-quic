@@ -354,6 +354,41 @@
         },
         "test": "unit_tests"
       }
+    ],
+    "isolated_scripts": [
+      {
+        "args": [
+          "--additional-driver-flag",
+          "--enable-browser-side-navigation"
+        ],
+        "isolate_name": "webkit_layout_tests_exparchive",
+        "merge": {
+          "args": [
+            "--verbose",
+            "--results-json-override-with-build-property",
+            "build_number",
+            "buildnumber",
+            "--results-json-override-with-build-property",
+            "builder_name",
+            "buildername",
+            "--results-json-override-with-build-property",
+            "chromium_revision",
+            "got_revision_cp"
+          ],
+          "script": "//third_party/WebKit/Tools/Scripts/merge-layout-test-results"
+        },
+        "name": "webkit_layout_tests",
+        "results_handler": "layout tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "os": "Ubuntu-14.04"
+            }
+          ],
+          "shards": 1
+        }
+      }
     ]
   },
   "CFI Linux": {
@@ -10129,6 +10164,40 @@
       }
     ]
   },
+  "Fuchsia": {
+    "additional_compile_targets": [
+      "base_unittests",
+      "d8"
+    ],
+    "gtest_tests": [
+      {
+        "args": [
+          "--test-launcher-filter-file=../../testing/buildbot/filters/fuchsia.base_unittests.filter"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "base_unittests"
+      }
+    ]
+  },
+  "Fuchsia (dbg)": {
+    "additional_compile_targets": [
+      "base_unittests",
+      "d8"
+    ],
+    "gtest_tests": [
+      {
+        "args": [
+          "--test-launcher-filter-file=../../testing/buildbot/filters/fuchsia.base_unittests.filter"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "base_unittests"
+      }
+    ]
+  },
   "Headless Linux (dbg)": {
     "additional_compile_targets": [
       "headless_lib",
@@ -10549,6 +10618,81 @@
       }
     ]
   },
+  "Linux ARM (dbg)": {
+    "gtest_tests": [
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "nacl_helper_nonsfi_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "nacl_loader_unittests"
+      },
+      {
+        "args": [
+          "--test-launcher-print-test-stdio=always"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "sandbox_linux_unittests"
+      }
+    ]
+  },
+  "Linux ARM64": {
+    "gtest_tests": [
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "nacl_helper_nonsfi_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "nacl_loader_unittests"
+      },
+      {
+        "args": [
+          "--test-launcher-print-test-stdio=always"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "sandbox_linux_unittests"
+      }
+    ]
+  },
+  "Linux ARM64 (dbg)": {
+    "gtest_tests": [
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "nacl_helper_nonsfi_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "nacl_loader_unittests"
+      },
+      {
+        "args": [
+          "--test-launcher-print-test-stdio=always"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "sandbox_linux_unittests"
+      }
+    ]
+  },
   "Linux Clang Analyzer": {
     "additional_compile_targets": [
       "chrome"
@@ -10604,6 +10748,35 @@
           "can_use_on_swarming_builders": true
         },
         "test": "mus_browser_tests"
+      }
+    ],
+    "isolated_scripts": [
+      {
+        "args": [
+          "--browser=exact",
+          "--browser-executable=./test_chrome",
+          "--xvfb"
+        ],
+        "isolate_name": "telemetry_perf_unittests",
+        "name": "telemetry_perf_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "hard_timeout": 960,
+          "shards": 12
+        }
+      },
+      {
+        "args": [
+          "--browser=exact",
+          "--browser-executable=./test_chrome",
+          "--jobs=1"
+        ],
+        "isolate_name": "telemetry_unittests",
+        "name": "telemetry_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "shards": 4
+        }
       }
     ]
   },
@@ -10902,6 +11075,44 @@
           "can_use_on_swarming_builders": true
         },
         "test": "unit_tests"
+      }
+    ],
+    "isolated_scripts": [
+      {
+        "args": [
+          "--additional-driver-flag",
+          "--site-per-process",
+          "--additional-expectations",
+          "src/third_party/WebKit/LayoutTests/FlagExpectations/site-per-process",
+          "http/tests"
+        ],
+        "isolate_name": "webkit_layout_tests_exparchive",
+        "merge": {
+          "args": [
+            "--verbose",
+            "--results-json-override-with-build-property",
+            "build_number",
+            "buildnumber",
+            "--results-json-override-with-build-property",
+            "builder_name",
+            "buildername",
+            "--results-json-override-with-build-property",
+            "chromium_revision",
+            "got_revision_cp"
+          ],
+          "script": "//third_party/WebKit/Tools/Scripts/merge-layout-test-results"
+        },
+        "name": "webkit_layout_tests",
+        "results_handler": "layout tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "os": "Ubuntu-14.04"
+            }
+          ],
+          "shards": 1
+        }
       }
     ]
   },
@@ -11776,6 +11987,80 @@
       }
     ]
   },
+  "WebKit Linux layout_ng Dummy Builder": {
+    "isolated_scripts": [
+      {
+        "args": [
+          "--additional-driver-flag=--enable-blink-features=LayoutNG"
+        ],
+        "isolate_name": "webkit_layout_tests_exparchive",
+        "merge": {
+          "args": [
+            "--verbose",
+            "--results-json-override-with-build-property",
+            "build_number",
+            "buildnumber",
+            "--results-json-override-with-build-property",
+            "builder_name",
+            "buildername",
+            "--results-json-override-with-build-property",
+            "chromium_revision",
+            "got_revision_cp"
+          ],
+          "script": "//third_party/WebKit/Tools/Scripts/merge-layout-test-results"
+        },
+        "name": "webkit_layout_tests",
+        "results_handler": "layout tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "os": "Ubuntu-14.04"
+            }
+          ],
+          "hard_timeout": 6000,
+          "shards": 15
+        }
+      }
+    ]
+  },
+  "WebKit Linux slimming_paint_v2 Dummy Builder": {
+    "isolated_scripts": [
+      {
+        "args": [
+          "--additional-driver-flag=--enable-slimming-paint-v2"
+        ],
+        "isolate_name": "webkit_layout_tests_exparchive",
+        "merge": {
+          "args": [
+            "--verbose",
+            "--results-json-override-with-build-property",
+            "build_number",
+            "buildnumber",
+            "--results-json-override-with-build-property",
+            "builder_name",
+            "buildername",
+            "--results-json-override-with-build-property",
+            "chromium_revision",
+            "got_revision_cp"
+          ],
+          "script": "//third_party/WebKit/Tools/Scripts/merge-layout-test-results"
+        },
+        "name": "webkit_layout_tests",
+        "results_handler": "layout tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "os": "Ubuntu-14.04"
+            }
+          ],
+          "hard_timeout": 6000,
+          "shards": 15
+        }
+      }
+    ]
+  },
   "WebKit Mac - RandomOrder": {
     "isolated_scripts": [
       {
@@ -11788,7 +12073,7 @@
               "os": "Mac-10.12"
             }
           ],
-          "shards": 1
+          "shards": 8
         }
       }
     ]

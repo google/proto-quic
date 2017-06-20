@@ -14,6 +14,8 @@ class BASE_EXPORT SysUtils {
  public:
   // Returns true iff this is a low-end device.
   static bool IsLowEndDeviceFromJni();
+  // Returns true if system has low available memory.
+  static bool IsCurrentlyLowMemory();
 };
 
 }  // namespace android

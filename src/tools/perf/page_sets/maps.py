@@ -11,11 +11,13 @@ from page_sets import webgl_supported_shared_state
 class MapsPage(page_module.Page):
 
   def __init__(self, page_set):
+    url = 'http://localhost:8000/performance.html'
     super(MapsPage, self).__init__(
-      url='http://localhost:8000/performance.html',
+      url=url,
       page_set=page_set,
       shared_page_state_class=(
-          webgl_supported_shared_state.WebGLSupportedSharedState))
+          webgl_supported_shared_state.WebGLSupportedSharedState),
+      name=url)
     self.archive_data_file = 'data/maps.json'
 
   @property

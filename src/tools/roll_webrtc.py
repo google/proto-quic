@@ -269,7 +269,8 @@ class AutoRoller(object):
     readme.write(m)
     readme.truncate()
 
-  def PrepareRoll(self, dry_run, ignore_checks, no_commit, close_previous_roll):
+  def PrepareRoll(self, dry_run, ignore_checks, no_commit, close_previous_roll,
+                  revision):
     # TODO(kjellander): use os.path.normcase, os.path.join etc for all paths for
     # cross platform compatibility.
 
@@ -298,21 +299,22 @@ class AutoRoller(object):
     deps = _ParseDepsFile(deps_filename)
     webrtc_current = self._GetDepsCommitInfo(deps, WEBRTC_PATH)
 
-    # Find ToT revisions.
-    webrtc_latest = self._GetCommitInfo(WEBRTC_PATH)
+    # Get the commit info for the given revision. If it's None, get the commit
+    # info for ToT.
+    revision_info = self._GetCommitInfo(WEBRTC_PATH, revision)
 
     if IS_WIN:
       # Make sure the roll script doesn't use Windows line endings.
       self._RunCommand(['git', 'config', 'core.autocrlf', 'true'])
 
-    self._UpdateDep(deps_filename, WEBRTC_PATH, webrtc_latest)
+    self._UpdateDep(deps_filename, WEBRTC_PATH, revision_info)
 
     if self._IsTreeClean():
       print 'The latest revision is already rolled for WebRTC.'
       self._DeleteRollBranch()
     else:
       description = self._GenerateCLDescriptionCommand(
-        webrtc_current, webrtc_latest)
+        webrtc_current, revision_info)
       logging.debug('Committing changes locally.')
       self._RunCommand(['git', 'add', '--update', '.'])
       self._RunCommand(['git', 'commit', '-m', description])
@@ -414,6 +416,9 @@ def main():
       help=('Skips checks for being on the master branch, dirty workspaces and '
             'the updating of the checkout. Will still delete and create local '
             'Git branches.'))
+  parser.add_argument('-r', '--revision', default=None,
+                      help='WebRTC revision to roll. If not specified,'
+                           'the latest version will be used')
   parser.add_argument('-v', '--verbose', action='store_true', default=False,
       help='Be extra verbose in printing of log messages.')
   args = parser.parse_args()
@@ -430,7 +435,8 @@ def main():
     return autoroller.WaitForTrybots()
   else:
     return autoroller.PrepareRoll(args.dry_run, args.ignore_checks,
-                                  args.no_commit, args.close_previous_roll)
+                                  args.no_commit, args.close_previous_roll,
+                                  args.revision)
 
 if __name__ == '__main__':
   sys.exit(main())

@@ -158,16 +158,6 @@
     8
    ],
    "dns_api_endpoint": "startcom1.ct.googleapis.com"
-  },
-  {
-   "description": "PuChuangSiDa CT log",
-   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArM8vS3Cs8Q2Wv+gK/kSd1IwXncOaEBGEE+2M+Tdtg+QAb7FLwKaJx2GPmjS7VlLKA1ZQ7yR/S0npNYHd8OcX9XLSI8XjE3/Xjng1j0nemASKY6+tojlwlYRoS5Ez/kzhMhfC8mG4Oo05f9WVgj5WGVBFb8sIMw3VGUIIGkhCEPFow8NBE8sNHtsCtyR6UZZuvAjqaa9t75KYjlXzZeXonL4aR2AwfXqArVaDepPDrpMraiiKpl9jGQy+fHshY0E4t/fodnNrhcy8civBUtBbXTFOnSrzTZtkFJkmxnH4e/hE1eMjIPMK14tRPnKA0nh4NS1K50CZEZU01C9/+V81NwIDAQAB",
-   "url": "www.certificatetransparency.cn/ct/",
-   "maximum_merge_delay": 86400,
-   "operated_by": [
-    9
-   ],
-   "dns_api_endpoint": "puchuangsida1.ct.googleapis.com"
   }
  ],
  "operators": [
@@ -206,10 +196,6 @@
   {
    "name": "StartSSL",
    "id": 8
-  },
-  {
-   "name": "Beijing PuChuangSiDa Technology Ltd.",
-   "id": 9
   }
  ]
 }

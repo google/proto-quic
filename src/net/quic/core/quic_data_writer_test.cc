@@ -254,9 +254,6 @@ TEST_P(QuicDataWriterTest, RoundTripUFloat16) {
 
 TEST_P(QuicDataWriterTest, WriteConnectionId) {
   uint64_t connection_id = 0x0011223344556677;
-  char little_endian[] = {
-      0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00,
-  };
   char big_endian[] = {
       0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
   };
@@ -265,12 +262,8 @@ TEST_P(QuicDataWriterTest, WriteConnectionId) {
   QuicDataWriter writer(kBufferLength, buffer, GetParam().perspective,
                         GetParam().endianness);
   writer.WriteConnectionId(connection_id);
-  test::CompareCharArraysWithHexError(
-      "connection_id", buffer, kBufferLength,
-      QuicUtils::IsConnectionIdWireFormatBigEndian(GetParam().perspective)
-          ? big_endian
-          : little_endian,
-      kBufferLength);
+  test::CompareCharArraysWithHexError("connection_id", buffer, kBufferLength,
+                                      big_endian, kBufferLength);
 
   uint64_t read_connection_id;
   QuicDataReader reader(buffer, kBufferLength, GetParam().perspective,

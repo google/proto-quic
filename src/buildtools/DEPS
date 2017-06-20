@@ -3,7 +3,7 @@ use_relative_paths = True
 vars = {
   "chromium_url": "https://chromium.googlesource.com",
 
-  "clang_format_rev": "c09c8deeac31f05bd801995c475e7c8070f9ecda",   # r296408
+  "clang_format_rev": "0653eee0c81ea04715c635dd0885e8096ff6ba6d",   # r302580
   "libcxx_revision": "3a07dd740be63878167a0ea19fe81869954badd7",    # r303878
   "libcxxabi_revision": "4072e8fd76febee37f60aeda76d6d9f5e3791daa", # r303806
 }

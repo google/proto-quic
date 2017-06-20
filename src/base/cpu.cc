@@ -19,7 +19,7 @@
 #endif
 
 #if defined(ARCH_CPU_X86_FAMILY)
-#if defined(_MSC_VER)
+#if defined(COMPILER_MSVC)
 #include <intrin.h>
 #include <immintrin.h>  // For _xgetbv()
 #endif
@@ -54,7 +54,7 @@ CPU::CPU()
 namespace {
 
 #if defined(ARCH_CPU_X86_FAMILY)
-#ifndef _MSC_VER
+#if !defined(COMPILER_MSVC)
 
 #if defined(__pic__) && defined(__i386__)
 
@@ -89,7 +89,7 @@ uint64_t _xgetbv(uint32_t xcr) {
   return (static_cast<uint64_t>(edx) << 32) | eax;
 }
 
-#endif  // !_MSC_VER
+#endif  // !defined(COMPILER_MSVC)
 #endif  // ARCH_CPU_X86_FAMILY
 
 #if defined(ARCH_CPU_ARM_FAMILY) && (defined(OS_ANDROID) || defined(OS_LINUX))

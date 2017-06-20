@@ -30,8 +30,8 @@ BASE_EXPORT void AssertComInitialized();
 BASE_EXPORT void AssertComApartmentType(ComApartmentType apartment_type);
 
 #else   // DCHECK_IS_ON()
-void AssertComInitialized() {}
-void AssertComApartmentType(ComApartmentType apartment_type) {}
+inline void AssertComInitialized() {}
+inline void AssertComApartmentType(ComApartmentType apartment_type) {}
 #endif  // DCHECK_IS_ON()
 
 }  // namespace win

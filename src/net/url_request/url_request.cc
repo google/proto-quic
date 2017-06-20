@@ -648,7 +648,7 @@ void URLRequest::StartJob(URLRequestJob* job) {
   response_info_.was_cached = false;
 
   GURL referrer_url(referrer_);
-  if (referrer_url != URLRequestJob::ComputeReferrerForRedirect(
+  if (referrer_url != URLRequestJob::ComputeReferrerForPolicy(
                           referrer_policy_, referrer_url, url())) {
     if (!network_delegate_ ||
         !network_delegate_->CancelURLRequestWithPolicyViolatingReferrerHeader(
@@ -875,15 +875,17 @@ void URLRequest::CancelAuth() {
   job_->CancelAuth();
 }
 
-void URLRequest::ContinueWithCertificate(X509Certificate* client_cert,
-                                         SSLPrivateKey* client_private_key) {
+void URLRequest::ContinueWithCertificate(
+    scoped_refptr<X509Certificate> client_cert,
+    scoped_refptr<SSLPrivateKey> client_private_key) {
   DCHECK(job_.get());
 
   // Matches the call in NotifyCertificateRequested.
   OnCallToDelegateComplete();
 
   status_ = URLRequestStatus::FromError(ERR_IO_PENDING);
-  job_->ContinueWithCertificate(client_cert, client_private_key);
+  job_->ContinueWithCertificate(std::move(client_cert),
+                                std::move(client_private_key));
 }
 
 void URLRequest::ContinueDespiteLastError() {

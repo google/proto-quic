@@ -15,6 +15,7 @@
 #include "base/android/java_handler_thread.h"
 #include "base/android/jni_android.h"
 #include "base/android/jni_registrar.h"
+#include "base/android/library_loader/library_loader_hooks.h"
 #include "base/android/memory_pressure_listener_android.h"
 #include "base/android/path_service_android.h"
 #include "base/android/record_histogram.h"
@@ -41,6 +42,7 @@ static RegistrationMethod kBaseRegisteredMethods[] = {
     {"FieldTrialList", base::android::RegisterFieldTrialList},
     {"ImportantFileWriterAndroid",
      base::android::RegisterImportantFileWriterAndroid},
+    {"LibraryLoaderEntryHook", base::android::RegisterLibraryLoaderEntryHook},
     {"MemoryPressureListenerAndroid",
      base::android::MemoryPressureListenerAndroid::Register},
     {"JavaExceptionReporter", base::android::RegisterJavaExceptionReporterJni},

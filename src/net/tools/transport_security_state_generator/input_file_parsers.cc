@@ -303,6 +303,12 @@ bool ParseJSON(base::StringPiece json,
       return false;
     }
 
+    if (entry->hostname.empty()) {
+      LOG(ERROR) << "The hostname for entry " << base::SizeTToString(i)
+                 << " is empty";
+      return false;
+    }
+
     parsed->GetBoolean("include_subdomains", &entry->include_subdomains);
     std::string mode;
     parsed->GetString("mode", &mode);

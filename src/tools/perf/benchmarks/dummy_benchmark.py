@@ -18,7 +18,6 @@ from telemetry.page import legacy_page_test
 
 from page_sets import dummy_story_set
 
-
 class _DummyTest(legacy_page_test.LegacyPageTest):
 
   def __init__(self, avg, std):
@@ -51,6 +50,9 @@ class DummyBenchmarkOne(_DummyBenchmark):
   def Name(cls):
     return 'dummy_benchmark.stable_benchmark_1'
 
+  def GetExpectations(self):
+    return dummy_story_set.DummyStoryExpectations()
+
 
 @benchmark.Owner(emails=['nednguyen@google.com'])
 class DummyBenchmarkTwo(_DummyBenchmark):
@@ -62,3 +64,6 @@ class DummyBenchmarkTwo(_DummyBenchmark):
   @classmethod
   def Name(cls):
     return 'dummy_benchmark.noisy_benchmark_1'
+
+  def GetExpectations(self):
+    return dummy_story_set.DummyStoryExpectations()

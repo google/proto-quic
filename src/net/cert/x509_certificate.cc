@@ -7,7 +7,6 @@
 #include <limits.h>
 #include <stdlib.h>
 
-#include <algorithm>
 #include <map>
 #include <memory>
 #include <string>
@@ -21,6 +20,7 @@
 #include "base/metrics/histogram_macros.h"
 #include "base/pickle.h"
 #include "base/profiler/scoped_tracker.h"
+#include "base/stl_util.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/string_util.h"
 #include "base/synchronization/lock.h"
@@ -540,8 +540,7 @@ bool X509Certificate::VerifyHostname(
     base::StringPiece ip_addr_string(
         reinterpret_cast<const char*>(host_info.address),
         host_info.AddressLength());
-    return std::find(cert_san_ip_addrs.begin(), cert_san_ip_addrs.end(),
-                     ip_addr_string) != cert_san_ip_addrs.end();
+    return base::ContainsValue(cert_san_ip_addrs, ip_addr_string);
   }
 
   // |reference_domain| is the remainder of |host| after the leading host

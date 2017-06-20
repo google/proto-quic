@@ -9,7 +9,10 @@ assert(is_fuchsia)
 assert(is_posix)
 
 config("compiler") {
-  defines = [ "SYSROOT_VERSION=$sysroot_version" ]
+  defines = [
+    # To force full builds after sysroot updates.
+    "SYSROOT_VERSION=$sysroot_version",
+  ]
   cflags = []
   ldflags = []
   if (current_cpu == "arm64") {
@@ -30,6 +33,14 @@ config("compiler") {
   ldflags += [
     "-resource-dir",
     rebase_path(fuchsia_sdk, root_build_dir) + "/toolchain_libs/clang/5.0.0",
+  ]
+
+  ldflags += [
+    # The stack defaults to 256k on Fuchsia (see
+    # https://fuchsia.googlesource.com/magenta/+/master/system/private/magenta/stack.h#9),
+    # but on other platforms it's much higher, so a variety of code assumes more
+    # will be available. Raise to 8M which matches e.g. macOS.
+    "-Wl,-z,stack-size=0x800000",
   ]
 
   libs = [

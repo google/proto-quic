@@ -41,7 +41,7 @@ const char kNetworkChangesKey[] = "network_changes";
 const char kErrorKey[] = "error";
 const char kAddressesKey[] = "addresses";
 
-bool AddressListFromListValue(base::ListValue* value, AddressList* list) {
+bool AddressListFromListValue(const base::ListValue* value, AddressList* list) {
   list->clear();
   for (base::ListValue::const_iterator it = value->begin(); it != value->end();
        it++) {
@@ -315,10 +315,9 @@ std::unique_ptr<base::ListValue> HostCache::GetAsListValue(
 }
 
 // TODO(mgersh): Add histograms to track failures.
-bool HostCache::RestoreFromListValue(base::ListValue& old_cache) {
-  for (base::ListValue::iterator it = old_cache.begin(); it != old_cache.end();
-       it++) {
-    base::DictionaryValue* entry_dict;
+bool HostCache::RestoreFromListValue(const base::ListValue& old_cache) {
+  for (auto it = old_cache.begin(); it != old_cache.end(); it++) {
+    const base::DictionaryValue* entry_dict;
     if (!it->GetAsDictionary(&entry_dict))
       return false;
 
@@ -328,7 +327,7 @@ bool HostCache::RestoreFromListValue(base::ListValue& old_cache) {
     int error = OK;
     std::string expiration;
     base::ListValue empty_list;
-    base::ListValue* addresses_value = &empty_list;
+    const base::ListValue* addresses_value = &empty_list;
     AddressList address_list;
 
     if (!entry_dict->GetString(kHostnameKey, &hostname) ||

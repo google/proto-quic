@@ -35,7 +35,8 @@ const QuicTag kSREJ = TAG('S', 'R', 'E', 'J');   // Stateless reject
 const QuicTag kCETV = TAG('C', 'E', 'T', 'V');   // Client encrypted tag-value
                                                  // pairs
 const QuicTag kPRST = TAG('P', 'R', 'S', 'T');   // Public reset
-const QuicTag kSCUP = TAG('S', 'C', 'U', 'P');   // Server config update.
+const QuicTag kSCUP = TAG('S', 'C', 'U', 'P');   // Server config update
+const QuicTag kALPN = TAG('A', 'L', 'P', 'N');   // Application-layer protocol
 
 // Key exchange methods
 const QuicTag kP256 = TAG('P', '2', '5', '6');   // ECDH, Curve P-256

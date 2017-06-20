@@ -7,9 +7,7 @@ from telemetry import story
 # Chrome has high idle CPU usage on these sites, even after they have quiesced.
 SITES = [
   # https://bugs.chromium.org/p/chromium/issues/detail?id=505990
-  # TODO(charliea): Temporarily disable this site, since it causes tracing to
-  # explode from too much data. https://crbug.com/647398
-  # 'http://abcnews.go.com/',
+  'http://abcnews.go.com/',
 
   # https://bugs.chromium.org/p/chromium/issues/detail?id=505601
   'http://www.slideshare.net/patrickmeenan',
@@ -47,10 +45,15 @@ class IdleAfterLoadingStories(story.StorySet):
   def __init__(self, wait_in_seconds=0):
     super(IdleAfterLoadingStories, self).__init__(
         archive_data_file='data/idle_after_loading_stories.json',
-        cloud_storage_bucket=story.PARTNER_BUCKET,
-        verify_names=True)
+        cloud_storage_bucket=story.PARTNER_BUCKET)
 
     # Chrome has high idle CPU usage on this site, even after its quiesced.
     # https://crbug.com/638365.
     for url in SITES:
       self.AddStory(_BasePage(self, url, wait_in_seconds, url))
+
+
+class IdleAfterLoadingStoryExpectations(story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    self.DisableStory(
+        'http://abcnews.go.com/', [story.expectations.ALL], 'crbug.com/505990')

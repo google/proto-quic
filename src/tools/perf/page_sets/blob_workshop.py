@@ -73,7 +73,7 @@ class BlobWorkshopPageSet(story.StorySet):
   """The BlobWorkshop page set."""
 
   def __init__(self):
-    super(BlobWorkshopPageSet, self).__init__(verify_names=True)
+    super(BlobWorkshopPageSet, self).__init__()
     self.AddStory(
         BlobMassCreate('2Bx200', [2] * 200, self))
     self.AddStory(
@@ -85,8 +85,8 @@ class BlobWorkshopPageSet(story.StorySet):
     self.AddStory(
         BlobMassCreate('10MBx30', [10 * 1024 * 1024] * 30, self))
     # http://crbug.com/510815
-    #self.AddStory(
-    #    BlobMassCreate('80MBx5', [80 * 1024 * 1024] * 5, self))
+    self.AddStory(
+        BlobMassCreate('80MBx5', [80 * 1024 * 1024] * 5, self))
 
     self.AddStory(BlobCreateThenRead('2Bx200', [2] * 200, self))
     self.AddStory(BlobCreateThenRead('1KBx200', [1024] * 200, self))
@@ -97,3 +97,9 @@ class BlobWorkshopPageSet(story.StorySet):
         BlobCreateThenRead('10MBx30', [10 * 1024 * 1024] * 30, self))
     self.AddStory(
         BlobCreateThenRead('80MBx5', [80 * 1024 * 1024] * 5, self))
+
+
+class BlobWorkshopStoryExpectations(story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    self.DisableStory(
+        'blob-mass-create-80MBx5', [story.expectations.ALL], 'crbug.com/510815')

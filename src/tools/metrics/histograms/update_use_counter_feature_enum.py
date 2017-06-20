@@ -32,9 +32,9 @@ if __name__ == '__main__':
                     'https://github.com/GoogleChrome/chromium-dashboard')
   options, args = parser.parse_args()
 
-  source_path = 'third_party/WebKit/public/platform/UseCounterFeature.def'
+  source_path = 'third_party/WebKit/public/platform/WebFeature.h'
 
-  START_MARKER = '^'
+  START_MARKER = '^enum class WebFeature : uint32_t {'
   END_MARKER = '^kNumberOfFeatures'
 
   if options.dashboard:

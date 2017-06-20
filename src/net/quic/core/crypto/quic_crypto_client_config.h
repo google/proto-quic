@@ -343,6 +343,9 @@ class QUIC_EXPORT_PRIVATE QuicCryptoClientConfig : public QuicCryptoConfig {
     user_agent_id_ = user_agent_id;
   }
 
+  // Saves the |alpn| that will be passed in QUIC's CHLO message.
+  void set_alpn(const std::string& alpn) { alpn_ = alpn; }
+
  private:
   // Sets the members to reasonable, default values.
   void SetDefaults();
@@ -386,6 +389,9 @@ class QUIC_EXPORT_PRIVATE QuicCryptoClientConfig : public QuicCryptoConfig {
 
   // The |user_agent_id_| passed in QUIC's CHLO message.
   std::string user_agent_id_;
+
+  // The |alpn_| passed in QUIC's CHLO message.
+  std::string alpn_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicCryptoClientConfig);
 };

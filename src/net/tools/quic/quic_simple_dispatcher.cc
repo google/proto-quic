@@ -48,7 +48,8 @@ void QuicSimpleDispatcher::OnRstStreamReceived(
 
 QuicServerSessionBase* QuicSimpleDispatcher::CreateQuicSession(
     QuicConnectionId connection_id,
-    const QuicSocketAddress& client_address) {
+    const QuicSocketAddress& client_address,
+    QuicStringPiece /*alpn*/) {
   // The QuicServerSessionBase takes ownership of |connection| below.
   QuicConnection* connection = new QuicConnection(
       connection_id, client_address, helper(), alarm_factory(),

@@ -7,8 +7,8 @@
 #include "base/at_exit.h"
 #include "base/atomic_sequence_num.h"
 #include "base/lazy_instance.h"
-#include "base/memory/aligned_memory.h"
 #include "base/threading/simple_thread.h"
+#include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace {
@@ -152,10 +152,10 @@ class AlignedData {
  public:
   AlignedData() {}
   ~AlignedData() {}
-  base::AlignedMemory<alignment, alignment> data_;
+  alignas(alignment) char data_[alignment];
 };
 
-}  // anonymous namespace
+}  // namespace
 
 #define EXPECT_ALIGNED(ptr, align) \
     EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(ptr) & (align - 1))

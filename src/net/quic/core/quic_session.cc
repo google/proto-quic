@@ -47,7 +47,7 @@ QuicSession::QuicSession(QuicConnection* connection,
       currently_writing_stream_id_(0),
       respect_goaway_(true),
       use_stream_notifier_(
-          FLAGS_quic_reloadable_flag_quic_use_stream_notifier) {}
+          FLAGS_quic_reloadable_flag_quic_use_stream_notifier2) {}
 
 void QuicSession::Initialize() {
   connection_->set_visitor(this);
@@ -382,7 +382,7 @@ void QuicSession::CloseStreamInner(QuicStreamId stream_id, bool locally_reset) {
     stream->set_rst_sent(true);
   }
 
-  if (stream->IsWaitingForAcks()) {
+  if (use_stream_notifier_ && stream->IsWaitingForAcks()) {
     zombie_streams_[stream->id()] = std::move(it->second);
   } else {
     closed_streams_.push_back(std::move(it->second));
@@ -990,6 +990,7 @@ QuicStream* QuicSession::GetStream(QuicStreamId id) const {
 void QuicSession::OnStreamFrameAcked(const QuicStreamFrame& frame,
                                      QuicTime::Delta ack_delay_time) {
   QuicStream* stream = GetStream(frame.stream_id);
+  // Stream can already be reset when sent frame gets acked.
   if (stream != nullptr) {
     stream->OnStreamFrameAcked(frame, ack_delay_time);
   }
@@ -997,9 +998,28 @@ void QuicSession::OnStreamFrameAcked(const QuicStreamFrame& frame,
 
 void QuicSession::OnStreamFrameRetransmitted(const QuicStreamFrame& frame) {
   QuicStream* stream = GetStream(frame.stream_id);
-  if (stream != nullptr) {
-    stream->OnStreamFrameRetransmitted(frame);
+  if (stream == nullptr) {
+    QUIC_BUG << "Stream: " << frame.stream_id << " is closed when " << frame
+             << " is retransmitted.";
+    connection()->CloseConnection(
+        QUIC_INTERNAL_ERROR, "Attempt to retransmit frame of a closed stream",
+        ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
+    return;
   }
+  stream->OnStreamFrameRetransmitted(frame);
+}
+
+void QuicSession::OnStreamFrameDiscarded(const QuicStreamFrame& frame) {
+  QuicStream* stream = GetStream(frame.stream_id);
+  if (stream == nullptr) {
+    QUIC_BUG << "Stream: " << frame.stream_id << " is closed when " << frame
+             << " is discarded.";
+    connection()->CloseConnection(
+        QUIC_INTERNAL_ERROR, "Attempt to discard frame of a closed stream",
+        ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
+    return;
+  }
+  stream->OnStreamFrameDiscarded(frame);
 }
 
 }  // namespace net

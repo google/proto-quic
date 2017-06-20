@@ -10,6 +10,7 @@
 #include "base/bind.h"
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
+#include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/values.h"
@@ -175,8 +176,7 @@ void NetLog::UpdateIsCapturing() {
 
 bool NetLog::HasObserver(ThreadSafeObserver* observer) {
   lock_.AssertAcquired();
-  auto it = std::find(observers_.begin(), observers_.end(), observer);
-  return it != observers_.end();
+  return base::ContainsValue(observers_, observer);
 }
 
 // static

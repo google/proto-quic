@@ -258,7 +258,8 @@ void SchedulerWorkerPoolImpl::Start(const SchedulerWorkerPoolParams& params) {
     for (int index = params.max_threads() - 1; index >= 0; --index) {
       workers_[index] = make_scoped_refptr(new SchedulerWorker(
           priority_hint_, MakeUnique<SchedulerWorkerDelegateImpl>(this, index),
-          task_tracker_, params.backward_compatibility(),
+          task_tracker_, &idle_workers_stack_lock_,
+          params.backward_compatibility(),
           index < num_alive_workers ? SchedulerWorker::InitialState::ALIVE
                                     : SchedulerWorker::InitialState::DETACHED));
 
@@ -271,14 +272,20 @@ void SchedulerWorkerPoolImpl::Start(const SchedulerWorkerPoolParams& params) {
 #if DCHECK_IS_ON()
     workers_created_.Set();
 #endif
+
+    // Start all workers. CHECK that the first worker can be started (assume
+    // that failure means that threads can't be created on this machine). Note
+    // that the workers must be started before the idle_workers_stack_lock_ is
+    // released, otherwise WakeUpOneWorker() could WakeUp() a worker before it's
+    // started (after the lock's released, but before it's started).
+    for (size_t index = 0; index < workers_.size(); ++index) {
+      const bool start_success = workers_[index]->Start();
+      CHECK(start_success || index > 0);
+    }
   }
 
-  // Start all workers. CHECK that the first worker can be started (assume that
-  // failure means that threads can't be created on this machine). Wake up one
-  // worker for each wake up that occurred before Start().
+  // Wake up one worker for each wake up that occurred before Start().
   for (size_t index = 0; index < workers_.size(); ++index) {
-    const bool start_success = workers_[index]->Start();
-    CHECK(start_success || index > 0);
     if (static_cast<int>(index) < num_wake_ups_before_start_)
       workers_[index]->WakeUp();
   }

@@ -18,12 +18,6 @@ class TickClock;
 
 namespace net {
 
-struct AlternativeServiceHash {
-  size_t operator()(const net::AlternativeService& entry) const {
-    return entry.protocol ^ std::hash<std::string>()(entry.host) ^ entry.port;
-  }
-};
-
 // This class tracks HTTP alternative services that have been marked as broken.
 // The brokenness of an alt-svc will expire after some time according to an
 // exponential back-off formula: each time an alt-svc is marked broken, the
@@ -85,23 +79,32 @@ class NET_EXPORT_PRIVATE BrokenAlternativeServices {
   // Marks |alternative_service| as not broken and not recently broken.
   void ConfirmAlternativeService(const AlternativeService& alternative_service);
 
+  // Sets broken and recently broken alternative services.
+  // |broken_alternative_service_list| must be sorted from earliest to latest
+  // expiration time.
+  // All AlternativeServices in |broken_alternative_service_list| must exist in
+  // |recently_broken_alternative_services|.
+  void SetBrokenAndRecentlyBrokenAlternativeServices(
+      std::unique_ptr<BrokenAlternativeServiceList>
+          broken_alternative_service_list,
+      std::unique_ptr<RecentlyBrokenAlternativeServices>
+          recently_broken_alternative_services);
+
+  const BrokenAlternativeServiceList& broken_alternative_service_list() const;
+
+  const RecentlyBrokenAlternativeServices&
+  recently_broken_alternative_services() const;
+
  private:
   // TODO (wangyix): modify HttpServerPropertiesImpl unit tests so this
   // friendness is no longer required.
   friend class HttpServerPropertiesImplPeer;
 
-  // A pair containing a broken AlternativeService and the expiration time of
-  // its brokenness.
-  struct BrokenAltSvcExpireInfo {
-    BrokenAltSvcExpireInfo(const AlternativeService& alt_svc,
-                           base::TimeTicks expire)
-        : alternative_service(alt_svc), expiration(expire) {}
-
-    AlternativeService alternative_service;
-    base::TimeTicks expiration;
+  struct AlternativeServiceHash {
+    size_t operator()(const net::AlternativeService& entry) const {
+      return entry.protocol ^ std::hash<std::string>()(entry.host) ^ entry.port;
+    }
   };
-
-  typedef std::list<BrokenAltSvcExpireInfo> BrokenAlternativeServiceList;
 
   typedef std::unordered_map<AlternativeService,
                              BrokenAlternativeServiceList::iterator,

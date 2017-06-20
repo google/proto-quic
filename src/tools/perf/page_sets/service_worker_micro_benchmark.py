@@ -20,8 +20,7 @@ class ServiceWorkerMicroBenchmarkPageSet(story.StorySet):
   def __init__(self):
     super(ServiceWorkerMicroBenchmarkPageSet, self).__init__(
         archive_data_file='data/service_worker_micro_benchmark.json',
-        cloud_storage_bucket=story.PUBLIC_BUCKET,
-        verify_names=True)
+        cloud_storage_bucket=story.PUBLIC_BUCKET)
 
     # pylint: disable=line-too-long
     # The latest code of localhost:8091 is from:
@@ -34,3 +33,8 @@ class ServiceWorkerMicroBenchmarkPageSet(story.StorySet):
         'http://localhost:8091/index.html', self,
         make_javascript_deterministic=False,
         name='http://localhost:8091/index.html'))
+
+class ServiceWorkerMicroBenchmarksStoryExpectations(
+    story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    pass # Nothing disabled.

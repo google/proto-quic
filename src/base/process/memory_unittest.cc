@@ -38,7 +38,7 @@
 
 #if defined(OS_WIN)
 
-#if defined(_MSC_VER)
+#if defined(COMPILER_MSVC)
 // ssize_t needed for OutOfMemoryTest.
 #if defined(_WIN64)
 typedef __int64 ssize_t;

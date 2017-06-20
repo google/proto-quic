@@ -9,6 +9,7 @@
 #include "base/macros.h"
 #include "net/base/net_export.h"
 #include "net/cert/x509_certificate.h"
+#include "net/ssl/client_cert_identity.h"
 
 namespace net {
 
@@ -22,13 +23,12 @@ class NET_EXPORT ClientCertStore {
  public:
   virtual ~ClientCertStore() {}
 
-  using ClientCertListCallback = base::Callback<void(CertificateList)>;
+  using ClientCertListCallback = base::Callback<void(ClientCertIdentityList)>;
 
-  // Get client certs matching the |cert_request_info|. On completion, the
-  // results will be stored in |selected_certs| and the |callback| will be run.
-  // The |callback| may be called sychronously. The caller must ensure the
-  // ClientCertStore and |cert_request_info| remain alive until the callback
-  // has been run.
+  // Get client certs matching the |cert_request_info| and pass them to the
+  // |callback|.  The |callback| may be called sychronously. The caller must
+  // ensure the ClientCertStore and |cert_request_info| remain alive until the
+  // callback has been run.
   virtual void GetClientCerts(const SSLCertRequestInfo& cert_request_info,
                               const ClientCertListCallback& callback) = 0;
 

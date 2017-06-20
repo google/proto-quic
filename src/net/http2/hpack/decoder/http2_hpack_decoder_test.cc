@@ -194,8 +194,8 @@ class Http2HpackDecoderTest : public ::testing::TestWithParam<bool>,
     const HpackStringPair* entry =
         Lookup(dynamic_index + kFirstDynamicTableIndex - 1);
     VERIFY_NE(entry, nullptr);
-    VERIFY_EQ(static_cast<StringPiece>(entry->name), name);
-    VERIFY_EQ(static_cast<StringPiece>(entry->value), value);
+    VERIFY_EQ(entry->name.ToStringPiece(), name);
+    VERIFY_EQ(entry->value.ToStringPiece(), value);
     return AssertionSuccess();
   }
   AssertionResult VerifyNoEntry(size_t dynamic_index) {

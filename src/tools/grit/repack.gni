@@ -46,14 +46,14 @@ template("repack") {
     assert(defined(invoker.sources), "Need sources for $target_name")
     assert(defined(invoker.output), "Need output for $target_name")
 
-    script = "//tools/grit/grit/format/repack.py"
+    script = "//tools/grit/pak_util.py"
 
     inputs = invoker.sources
     outputs = [
       invoker.output,
     ]
 
-    args = []
+    args = [ "repack" ]
     if (defined(invoker.repack_whitelist)) {
       inputs += [ invoker.repack_whitelist ]
       _rebased_whitelist = rebase_path(invoker.repack_whitelist)

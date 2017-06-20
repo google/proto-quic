@@ -35,6 +35,9 @@ class PowerTypical10Mobile(perf_benchmark.PerfBenchmark):
   def Name(cls):
     return 'power.typical_10_mobile'
 
+  def GetExpectations(self):
+    return page_sets.Typical10MobileStoryExpectations()
+
 
 @benchmark.Enabled('mac')
 @benchmark.Owner(emails=['erikchen@chromium.org'])
@@ -47,6 +50,9 @@ class PowerScrollingTrivialPage(perf_benchmark.PerfBenchmark):
   def Name(cls):
     return 'power.trivial_pages'
 
+  def GetExpectations(self):
+    return page_sets.TrivialStoryExpectations()
+
 
 @benchmark.Enabled('mac')
 class PowerSteadyStatePages(perf_benchmark.PerfBenchmark):
@@ -58,6 +64,9 @@ class PowerSteadyStatePages(perf_benchmark.PerfBenchmark):
   @classmethod
   def Name(cls):
     return 'power.steady_state'
+
+  def GetExpectations(self):
+    return page_sets.IdleAfterLoadingStoryExpectations()
 
 
 class IdlePlatformBenchmark(perf_benchmark.PerfBenchmark):
@@ -96,3 +105,6 @@ class IdlePlatformBenchmark(perf_benchmark.PerfBenchmark):
   @classmethod
   def Name(cls):
     return 'power.idle_platform'
+
+  def GetExpectations(self):
+    return page_sets.IdleStoryExpectations()

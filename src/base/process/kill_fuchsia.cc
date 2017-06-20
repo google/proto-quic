@@ -15,9 +15,9 @@ namespace base {
 bool KillProcessGroup(ProcessHandle process_group_id) {
   // |process_group_id| is really a job on Fuchsia.
   mx_status_t status = mx_task_kill(process_group_id);
-  DLOG_IF(ERROR, status != NO_ERROR)
+  DLOG_IF(ERROR, status != MX_OK)
       << "unable to terminate job " << process_group_id;
-  return status == NO_ERROR;
+  return status == MX_OK;
 }
 
 TerminationStatus GetTerminationStatus(ProcessHandle handle, int* exit_code) {
@@ -25,7 +25,7 @@ TerminationStatus GetTerminationStatus(ProcessHandle handle, int* exit_code) {
   mx_status_t status =
       mx_object_get_info(handle, MX_INFO_PROCESS, &process_info,
                          sizeof(process_info), nullptr, nullptr);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     DLOG(ERROR) << "unable to get termination status for " << handle;
     *exit_code = 0;
     return TERMINATION_STATUS_NORMAL_TERMINATION;
@@ -49,28 +49,17 @@ TerminationStatus GetTerminationStatus(ProcessHandle handle, int* exit_code) {
 void EnsureProcessTerminated(Process process) {
   DCHECK(!process.is_current());
 
+  // Wait for up to two seconds for the process to terminate, and then kill it
+  // forcefully if it hasn't already exited.
   mx_signals_t signals;
-  if (mx_object_wait_one(process.Handle(), MX_TASK_TERMINATED, 0, &signals) ==
-      NO_ERROR) {
+  if (mx_object_wait_one(process.Handle(), MX_TASK_TERMINATED,
+                         mx_deadline_after(MX_SEC(2)), &signals) == MX_OK) {
     DCHECK(signals & MX_TASK_TERMINATED);
     // If already signaled, then the process is terminated.
     return;
   }
 
-  PostDelayedTaskWithTraits(
-      FROM_HERE,
-      {TaskPriority::BACKGROUND, TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN},
-      Bind(
-          [](Process process) {
-            mx_signals_t signals;
-            if (mx_object_wait_one(process.Handle(), MX_TASK_TERMINATED, 0,
-                                   &signals) == NO_ERROR) {
-              return;
-            }
-            process.Terminate(1, false);
-          },
-          Passed(&process)),
-      TimeDelta::FromSeconds(2));
+  process.Terminate(/*exit_code=*/1, /*wait=*/false);
 }
 
 }  // namespace base

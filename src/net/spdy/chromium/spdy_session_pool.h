@@ -179,6 +179,15 @@ class NET_EXPORT SpdySessionPool
                              bool using_spdy,
                              NetLogSource source_dependency);
 
+  // Called when a HttpStreamRequest is started with |spdy_session_key|.
+  // Returns true if the request should continue. Returns false if the request
+  // should wait until |callback| is invoked before continuing.
+  bool StartRequest(const SpdySessionKey& spdy_session_key,
+                    const base::Closure& callback);
+
+  // Resumes pending requests with |spdy_session_key|.
+  void ResumePendingRequests(const SpdySessionKey& spdy_session_key);
+
   // Adds |request| to |spdy_session_request_map_| under |spdy_session_key| Key.
   // Sets |spdy_session_key| as |request|'s SpdySessionKey.
   void AddRequestToSpdySessionRequestMap(
@@ -271,7 +280,11 @@ class NET_EXPORT SpdySessionPool
   // and maximum HPACK dynamic table size.
   const SettingsMap initial_settings_;
 
+  // TODO(xunjieli): Merge these two.
   SpdySessionRequestMap spdy_session_request_map_;
+  typedef std::map<SpdySessionKey, std::list<base::Closure>>
+      SpdySessionPendingRequestMap;
+  SpdySessionPendingRequestMap spdy_session_pending_request_map_;
 
   TimeFunc time_func_;
   ServerPushDelegate* push_delegate_;

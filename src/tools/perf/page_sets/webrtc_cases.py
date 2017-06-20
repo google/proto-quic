@@ -122,8 +122,7 @@ class MultiplePeerConnections(WebrtcPage):
 class WebrtcPageSet(story.StorySet):
   def __init__(self):
     super(WebrtcPageSet, self).__init__(
-        cloud_storage_bucket=story.PUBLIC_BUCKET,
-        verify_names=True)
+        cloud_storage_bucket=story.PUBLIC_BUCKET)
 
     self.AddStory(MultiplePeerConnections(self, tags=['stress']))
     self.AddStory(DataChannel(self, tags=['datachannel']))

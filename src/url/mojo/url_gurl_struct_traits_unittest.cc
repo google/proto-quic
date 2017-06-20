@@ -20,13 +20,12 @@ class UrlTestImpl : public mojom::UrlTest {
   }
 
   // UrlTest:
-  void BounceUrl(const GURL& in, const BounceUrlCallback& callback) override {
-    callback.Run(in);
+  void BounceUrl(const GURL& in, BounceUrlCallback callback) override {
+    std::move(callback).Run(in);
   }
 
-  void BounceOrigin(const Origin& in,
-                    const BounceOriginCallback& callback) override {
-    callback.Run(in);
+  void BounceOrigin(const Origin& in, BounceOriginCallback callback) override {
+    std::move(callback).Run(in);
   }
 
  private:

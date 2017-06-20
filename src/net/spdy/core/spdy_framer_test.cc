@@ -2681,6 +2681,35 @@ TEST_P(SpdyFramerTest, CreatePriority) {
   CompareFrame(kDescription, frame, kFrameData, arraysize(kFrameData));
 }
 
+TEST_P(SpdyFramerTest, CreateUnknown) {
+  SpdyFramer framer(SpdyFramer::ENABLE_COMPRESSION);
+
+  const char kDescription[] = "Unknown frame";
+  const uint8_t kType = 0xaf;
+  const uint8_t kFlags = 0x11;
+  const uint8_t kLength = strlen(kDescription);
+  const unsigned char kFrameData[] = {
+      0x00,   0x00, kLength,        // Length: 13
+      kType,                        //   Type: undefined
+      kFlags,                       //  Flags: arbitrary, undefined
+      0x00,   0x00, 0x00,    0x02,  // Stream: 2
+      0x55,   0x6e, 0x6b,    0x6e,  // "Unkn"
+      0x6f,   0x77, 0x6e,    0x20,  // "own "
+      0x66,   0x72, 0x61,    0x6d,  // "fram"
+      0x65,                         // "e"
+  };
+  SpdyUnknownIR unknown_ir(/* stream_id = */ 2,
+                           /* type = */ kType,
+                           /* flags = */ kFlags,
+                           /* payload = */ kDescription);
+  SpdySerializedFrame frame(framer.SerializeFrame(unknown_ir));
+  if (use_output_) {
+    EXPECT_EQ(framer.SerializeFrame(unknown_ir, &output_), frame.size());
+    frame = SpdySerializedFrame(output_.Begin(), output_.Size(), false);
+  }
+  CompareFrame(kDescription, frame, kFrameData, arraysize(kFrameData));
+}
+
 TEST_P(SpdyFramerTest, ReadCompressedHeadersHeaderBlock) {
   SpdyFramer framer(SpdyFramer::ENABLE_COMPRESSION);
   SpdyHeadersIR headers_ir(/* stream_id = */ 1);

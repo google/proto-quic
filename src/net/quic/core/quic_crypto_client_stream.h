@@ -28,7 +28,7 @@ class QUIC_EXPORT_PRIVATE QuicCryptoClientStreamBase : public QuicCryptoStream {
  public:
   explicit QuicCryptoClientStreamBase(QuicSession* session);
 
-  ~QuicCryptoClientStreamBase() override{};
+  ~QuicCryptoClientStreamBase() override {}
 
   // Performs a crypto handshake with the server. Returns true if the connection
   // is still connected.

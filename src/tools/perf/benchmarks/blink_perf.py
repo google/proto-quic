@@ -67,8 +67,7 @@ def CreateStorySetFromPath(path, skipped_file,
   else:
     _AddPage(path)
   ps = story.StorySet(base_dir=os.getcwd() + os.sep,
-                      serving_dirs=serving_dirs,
-                      verify_names=True)
+                      serving_dirs=serving_dirs)
 
   all_urls = [p.rstrip('/') for p in page_urls]
   common_prefix = os.path.dirname(os.path.commonprefix(all_urls))
@@ -259,11 +258,23 @@ class BlinkPerfBindings(_BlinkPerfBenchmark):
   tag = 'bindings'
   subdir = 'Bindings'
 
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()
+
 
 @benchmark.Owner(emails=['rune@opera.com'])
 class BlinkPerfCSS(_BlinkPerfBenchmark):
   tag = 'css'
   subdir = 'CSS'
+
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()
 
 
 @benchmark.Disabled('android', # http://crbug.com/685320
@@ -272,10 +283,6 @@ class BlinkPerfCSS(_BlinkPerfBenchmark):
 class BlinkPerfCanvas(_BlinkPerfBenchmark):
   tag = 'canvas'
   subdir = 'Canvas'
-
-  @classmethod
-  def ShouldDisable(cls, possible_browser):
-    return cls.IsSvelte(possible_browser)  # http://crbug.com/593973.
 
   def CreateStorySet(self, options):
     path = os.path.join(BLINK_PERF_BASE_DIR, self.subdir)
@@ -289,6 +296,13 @@ class BlinkPerfCanvas(_BlinkPerfBenchmark):
       page.skipped_gpus = []
     return story_set
 
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        self.PermanentlyDisableBenchmark(
+            [story.expectations.ANDROID_SVELTE], 'crbug.com/593973')
+    return StoryExpectations()
+
   def SetExtraBrowserOptions(self, options):
     options.AppendExtraBrowserArgs([
         '--enable-color-correct-rendering',
@@ -301,11 +315,23 @@ class BlinkPerfDOM(_BlinkPerfBenchmark):
   tag = 'dom'
   subdir = 'DOM'
 
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()
+
 
 @benchmark.Owner(emails=['hayato@chromium.org'])
 class BlinkPerfEvents(_BlinkPerfBenchmark):
   tag = 'events'
   subdir = 'Events'
+
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()
 
 
 @benchmark.Disabled('win8')  # http://crbug.com/462350
@@ -314,9 +340,12 @@ class BlinkPerfLayout(_BlinkPerfBenchmark):
   tag = 'layout'
   subdir = 'Layout'
 
-  @classmethod
-  def ShouldDisable(cls, possible_browser):
-    return cls.IsSvelte(possible_browser)  # http://crbug.com/551950
+  def GetExpectations(self):
+    class Expectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        self.PermanentlyDisableBenchmark(
+            [story.expectations.ANDROID_SVELTE], 'crbug.com/551950')
+    return Expectations()
 
 
 @benchmark.Owner(emails=['wangxianzhu@chromium.org'])
@@ -324,9 +353,12 @@ class BlinkPerfPaint(_BlinkPerfBenchmark):
   tag = 'paint'
   subdir = 'Paint'
 
-  @classmethod
-  def ShouldDisable(cls, possible_browser):
-    return cls.IsSvelte(possible_browser)  # http://crbug.com/574483
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        self.PermanentlyDisableBenchmark(
+            [story.expectations.ANDROID_SVELTE], 'crbug.com/574483')
+    return StoryExpectations()
 
 
 @benchmark.Disabled('win')  # crbug.com/488493
@@ -337,11 +369,23 @@ class BlinkPerfParser(_BlinkPerfBenchmark):
   tag = 'parser'
   subdir = 'Parser'
 
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()
+
 
 @benchmark.Owner(emails=['kouhei@chromium.org', 'fs@opera.com'])
 class BlinkPerfSVG(_BlinkPerfBenchmark):
   tag = 'svg'
   subdir = 'SVG'
+
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()
 
 
 @benchmark.Owner(emails=['hayato@chromium.org'])
@@ -349,6 +393,10 @@ class BlinkPerfShadowDOM(_BlinkPerfBenchmark):
   tag = 'shadow_dom'
   subdir = 'ShadowDOM'
 
-  @classmethod
-  def ShouldDisable(cls, possible_browser):  # http://crbug.com/702319
-    return possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X'
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        self.PermanentlyDisableBenchmark(
+            [story.expectations.ANDROID_NEXUS5X], 'crbug.com/702319')
+    return StoryExpectations()
+

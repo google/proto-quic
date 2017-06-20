@@ -37,13 +37,15 @@ def add_builder(waterfall, name, additional_compile_targets=None):
   return waterfall
 
 def add_tester(waterfall, name, perf_id, platform, target_bits=64,
-              num_host_shards=1, num_device_shards=1, swarming=None):
+               num_host_shards=1, num_device_shards=1, swarming=None,
+               replace_system_webview=False):
   del perf_id # this will be needed
   waterfall['testers'][name] = {
     'platform': platform,
     'num_device_shards': num_device_shards,
     'num_host_shards': num_host_shards,
     'target_bits': target_bits,
+    'replace_system_webview': replace_system_webview,
   }
 
   if swarming:
@@ -119,6 +121,28 @@ def get_fyi_waterfall_config():
         ]
       }
     ])
+
+  waterfall = add_tester(
+    waterfall, 'Android Nexus5X WebView Perf',
+    'fyi-android-webview-nexus5X', 'android', swarming=[
+      {
+       'os': 'Android',
+       'android_devices': '1',
+       'pool': 'Chrome-perf-fyi',
+       'device_ids': [
+           'build243-m4--device1', 'build243-m4--device2',
+           'build243-m4--device3', 'build243-m4--device4',
+           'build243-m4--device5', 'build243-m4--device6',
+           'build243-m4--device7',
+          ],
+       'perf_tests': [
+         # TODO(martiniss): implement these isolate targets
+         # ('tracing_webview_perftests', 'build112-b1--device2'),
+         # ('gpu_webview_perftests', 'build113-b1--device2'),
+         # ('cc_webview_perftests', 'build114-b1--device2'),
+        ]
+      }
+    ], replace_system_webview=True)
   return waterfall
 
 
@@ -269,6 +293,67 @@ def get_waterfall_config():
         ]
       }
     ])
+
+  # TODO(martiniss): comment this back in once we're confident webview works
+  # waterfall = add_tester(
+  #   waterfall, 'Android Nexus5X WebView Perf', 'android-webview-nexus5X',
+  #   'android', swarming=[
+  #     {
+  #      'os': 'Android',
+  #      'android_devices': '1',
+  #      'pool': 'Chrome-perf',
+  #      'device_ids': [
+  #          'build164-b1--device1', 'build164-b1--device2',
+  #          'build164-b1--device3', 'build164-b1--device4',
+  #          'build164-b1--device5', 'build164-b1--device6',
+  #          'build164-b1--device7',
+  #          'build165-b1--device1', 'build165-b1--device2',
+  #          'build165-b1--device3', 'build165-b1--device4',
+  #          'build165-b1--device5', 'build165-b1--device6',
+  #          'build165-b1--device7',
+  #          'build166-b1--device1', 'build166-b1--device2',
+  #          'build166-b1--device3', 'build166-b1--device4',
+  #          'build166-b1--device5', 'build166-b1--device6',
+  #          'build166-b1--device7',
+  #         ],
+  #      'perf_tests': [
+  #        # TODO(martiniss): implement these isolate targets
+  #        # ('tracing_webview_perftests', 'build164-b1--device2'),
+  #        # ('gpu_webview_perftests', 'build165-b1--device2'),
+  #        # ('cc_webview_perftests', 'build166-b1--device2'),
+  #       ]
+  #     }
+  #   ], replace_system_webview=True)
+
+  # waterfall = add_tester(
+  #   waterfall, 'Android Nexus6 WebView Perf', 'android-webview-nexus6',
+  #   'android', swarming=[
+  #     {
+  #      'os': 'Android',
+  #      'android_devices': '1',
+  #      'pool': 'Chrome-perf',
+  #      'device_ids': [
+  #          'build112-b1--device1', 'build112-b1--device2',
+  #          'build112-b1--device3', 'build112-b1--device4',
+  #          'build112-b1--device5', 'build112-b1--device6',
+  #          'build112-b1--device7',
+  #          'build113-b1--device1', 'build113-b1--device2',
+  #          'build113-b1--device3', 'build113-b1--device4',
+  #          'build113-b1--device5', 'build113-b1--device6',
+  #          'build113-b1--device7',
+  #          'build114-b1--device1', 'build114-b1--device2',
+  #          'build114-b1--device3', 'build114-b1--device4',
+  #          'build114-b1--device5', 'build114-b1--device6',
+  #          'build114-b1--device7',
+  #         ],
+  #      'perf_tests': [
+  #        # TODO(martiniss): implement these isolate targets
+  #        # ('tracing_webview_perftests', 'build112-b1--device2'),
+  #        # ('gpu_webview_perftests', 'build113-b1--device2'),
+  #        # ('cc_webview_perftests', 'build114-b1--device2'),
+  #       ]
+  #     }
+  #   ], replace_system_webview=True)
 
   waterfall = add_tester(
     waterfall, 'Win 10 High-DPI Perf', 'win-high-dpi', 'win',
@@ -516,9 +601,8 @@ def get_waterfall_config():
           ],
        'perf_tests': [
          # crbug.com/698831
-         # ('cc_perftests', 2),
-         # crbug.com/709274
-         # ('load_library_perf_tests', 2),
+         # ('cc_perftests', 'build150-m1'),
+         ('load_library_perf_tests', 'build150-m1'),
          ('net_perftests', 'build150-m1'),
          ('tracing_perftests', 'build150-m1'),
          ('media_perftests', 'build151-m1')]
@@ -578,10 +662,16 @@ def generate_telemetry_test(swarming_dimensions, benchmark_name, browser):
     # to fix them except waiting for the reference build to update.
     ignore_task_failure = True
 
+  isolate_name = 'telemetry_perf_tests'
+  if browser == 'android-webview':
+    test_args.append(
+        '--webview-embedder-apk=../../out/Release/apks/SystemWebViewShell.apk')
+    isolate_name = 'telemetry_perf_webview_tests'
+
   return generate_isolate_script_entry(
-      swarming_dimensions, test_args, 'telemetry_perf_tests',
+      swarming_dimensions, test_args, isolate_name,
       step_name, ignore_task_failure=ignore_task_failure,
-      override_compile_targets=['telemetry_perf_tests'],
+      override_compile_targets=[isolate_name],
       swarming_timeout=BENCHMARK_SWARMING_TIMEOUTS.get(benchmark_name))
 
 
@@ -642,7 +732,10 @@ def generate_telemetry_tests(name, tester_config, benchmarks,
   # First determine the browser that you need based on the tester
   browser_name = ''
   if tester_config['platform'] == 'android':
-    browser_name = 'android-chromium'
+    if tester_config.get('replace_system_webview', False):
+      browser_name = 'android-webview'
+    else:
+      browser_name = 'android-chromium'
   elif (tester_config['platform'] == 'win'
     and tester_config['target_bits'] == 64):
     browser_name = 'release_x64'
@@ -675,7 +768,9 @@ def generate_telemetry_tests(name, tester_config, benchmarks,
     isolated_scripts.append(test)
     # Now create another executable for this benchmark on the reference browser
     # if it is not blacklisted from running on the reference browser.
-    if benchmark.Name() not in benchmark_ref_build_blacklist:
+    # Webview doesn't have a reference build right now.
+    if not tester_config.get('replace_system_webview', False) and (
+        benchmark.Name() not in benchmark_ref_build_blacklist):
       reference_test = generate_telemetry_test(
         swarming_dimensions, benchmark.Name(),'reference')
       isolated_scripts.append(reference_test)
@@ -694,7 +789,6 @@ BENCHMARK_SWARMING_TIMEOUTS = {
 # Devices which are broken right now. Tests will not be scheduled on them.
 # Please add a comment with a bug for replacing the device.
 BLACKLISTED_DEVICES = [
-    'build47-b1--device4',  # crbug.com/731168
 ]
 
 

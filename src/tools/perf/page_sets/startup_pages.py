@@ -48,14 +48,24 @@ class StartupPagesPageSet(story.StorySet):
   def __init__(self):
     super(StartupPagesPageSet, self).__init__(
         archive_data_file='data/startup_pages.json',
-        cloud_storage_bucket=story.PARTNER_BUCKET,
-        verify_names=True)
+        cloud_storage_bucket=story.PARTNER_BUCKET)
 
     # Typical page.
     self.AddStory(StartedPage('about:blank', self))
     # Typical page.
     self.AddStory(StartedPage('http://bbc.co.uk', self))
-    # TODO(charliea): Reenable this when kabook.com is working again.
-    # crbug.com/667470
     # Horribly complex page - stress test!
-    # self.AddStory(StartedPage('http://kapook.com', self))
+    self.AddStory(StartedPage('http://kapook.com', self))
+
+
+# TODO(rnephew): Test if kapook.com fails on both or just one of the configs.
+class WarmStartupStoryExpectations(story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    self.DisableStory(
+        'http://kapook.com', [story.expectations.ALL], 'crbug.com/667470')
+
+
+class ColdStartupStoryExpectations(story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    self.DisableStory(
+        'http://kapook.com', [story.expectations.ALL], 'crbug.com/667470')

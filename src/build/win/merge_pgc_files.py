@@ -130,7 +130,7 @@ def main():
     # happening with VS2017.
     if ret != 0:
       print ('Error while trying to merge several PGC files at the same time, '
-             'trying to merge them one by one.'
+             'trying to merge them one by one.')
       for pgc_file in chunk:
         ret = merge_pgc_files(
             pgomgr_path,

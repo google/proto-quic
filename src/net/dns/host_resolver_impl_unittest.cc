@@ -4,7 +4,6 @@
 
 #include "net/dns/host_resolver_impl.h"
 
-#include <algorithm>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -19,6 +18,7 @@
 #include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
+#include "base/stl_util.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/condition_variable.h"
@@ -203,9 +203,7 @@ bool AddressListContains(const AddressList& list,
   IPAddress ip;
   bool rv = ip.AssignFromIPLiteral(address);
   DCHECK(rv);
-  return std::find(list.begin(),
-                   list.end(),
-                   IPEndPoint(ip, port)) != list.end();
+  return base::ContainsValue(list, IPEndPoint(ip, port));
 }
 
 // A wrapper for requests to a HostResolver.

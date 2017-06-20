@@ -123,10 +123,19 @@ TEST_P(PerAEADTest, TestVector) {
     ASSERT_TRUE(t->GetBytes(&ad, "AD"));
     ASSERT_TRUE(t->GetBytes(&ct, "CT"));
     ASSERT_TRUE(t->GetBytes(&tag, "TAG"));
+    size_t tag_len = tag.size();
+    if (t->HasAttribute("TAG_LEN")) {
+      // Legacy AEADs are MAC-then-encrypt and may include padding in the TAG
+      // field. TAG_LEN contains the actual size of the digest in that case.
+      std::string tag_len_str;
+      ASSERT_TRUE(t->GetAttribute(&tag_len_str, "TAG_LEN"));
+      tag_len = strtoul(tag_len_str.c_str(), nullptr, 10);
+      ASSERT_TRUE(tag_len);
+    }
 
     bssl::ScopedEVP_AEAD_CTX ctx;
     ASSERT_TRUE(EVP_AEAD_CTX_init_with_direction(
-        ctx.get(), aead(), key.data(), key.size(), tag.size(), evp_aead_seal));
+        ctx.get(), aead(), key.data(), key.size(), tag_len, evp_aead_seal));
 
     std::vector<uint8_t> out(in.size() + EVP_AEAD_max_overhead(aead()));
     if (!t->HasAttribute("NO_SEAL")) {
@@ -149,7 +158,7 @@ TEST_P(PerAEADTest, TestVector) {
     // reset after each operation.
     ctx.Reset();
     ASSERT_TRUE(EVP_AEAD_CTX_init_with_direction(
-        ctx.get(), aead(), key.data(), key.size(), tag.size(), evp_aead_open));
+        ctx.get(), aead(), key.data(), key.size(), tag_len, evp_aead_open));
 
     std::vector<uint8_t> out2(out.size());
     size_t out2_len;
@@ -170,7 +179,7 @@ TEST_P(PerAEADTest, TestVector) {
     // reset after each operation.
     ctx.Reset();
     ASSERT_TRUE(EVP_AEAD_CTX_init_with_direction(
-        ctx.get(), aead(), key.data(), key.size(), tag.size(), evp_aead_open));
+        ctx.get(), aead(), key.data(), key.size(), tag_len, evp_aead_open));
 
     // Garbage at the end isn't ignored.
     out.push_back(0);
@@ -185,7 +194,7 @@ TEST_P(PerAEADTest, TestVector) {
     // reset after each operation.
     ctx.Reset();
     ASSERT_TRUE(EVP_AEAD_CTX_init_with_direction(
-        ctx.get(), aead(), key.data(), key.size(), tag.size(), evp_aead_open));
+        ctx.get(), aead(), key.data(), key.size(), tag_len, evp_aead_open));
 
     // Verify integrity is checked.
     out[0] ^= 0x80;
@@ -194,6 +203,128 @@ TEST_P(PerAEADTest, TestVector) {
     EXPECT_FALSE(EVP_AEAD_CTX_open(
         ctx.get(), out2.data(), &out2_len, out2.size(), nonce.data(),
         nonce.size(), out.data(), out.size(), ad.data(), ad.size()))
+        << "Decrypted bad data with corrupted byte.";
+    ERR_clear_error();
+  });
+}
+
+TEST_P(PerAEADTest, TestVectorScatterGather) {
+  std::string test_vectors = "crypto/cipher_extra/test/";
+  const KnownAEAD &aead_config = GetParam();
+  test_vectors += aead_config.test_vectors;
+  FileTestGTest(test_vectors.c_str(), [&](FileTest *t) {
+    std::vector<uint8_t> key, nonce, in, ad, ct, tag;
+    ASSERT_TRUE(t->GetBytes(&key, "KEY"));
+    ASSERT_TRUE(t->GetBytes(&nonce, "NONCE"));
+    ASSERT_TRUE(t->GetBytes(&in, "IN"));
+    ASSERT_TRUE(t->GetBytes(&ad, "AD"));
+    ASSERT_TRUE(t->GetBytes(&ct, "CT"));
+    ASSERT_TRUE(t->GetBytes(&tag, "TAG"));
+    size_t tag_len = tag.size();
+    if (t->HasAttribute("TAG_LEN")) {
+      // Legacy AEADs are MAC-then-encrypt and may include padding in the TAG
+      // field. TAG_LEN contains the actual size of the digest in that case.
+      std::string tag_len_str;
+      ASSERT_TRUE(t->GetAttribute(&tag_len_str, "TAG_LEN"));
+      tag_len = strtoul(tag_len_str.c_str(), nullptr, 10);
+      ASSERT_TRUE(tag_len);
+    }
+
+    bssl::ScopedEVP_AEAD_CTX ctx;
+    ASSERT_TRUE(EVP_AEAD_CTX_init_with_direction(
+        ctx.get(), aead(), key.data(), key.size(), tag_len, evp_aead_seal));
+
+    std::vector<uint8_t> out(in.size());
+    std::vector<uint8_t> out_tag(EVP_AEAD_max_overhead(aead()));
+    if (!t->HasAttribute("NO_SEAL")) {
+      size_t out_tag_len;
+      ASSERT_TRUE(EVP_AEAD_CTX_seal_scatter(
+          ctx.get(), out.data(), out_tag.data(), &out_tag_len, out_tag.size(),
+          nonce.data(), nonce.size(), in.data(), in.size(), ad.data(),
+          ad.size()));
+      out_tag.resize(out_tag_len);
+
+      ASSERT_EQ(out.size(), ct.size());
+      ASSERT_EQ(out_tag.size(), tag.size());
+      EXPECT_EQ(Bytes(ct), Bytes(out.data(), ct.size()));
+      EXPECT_EQ(Bytes(tag), Bytes(out_tag.data(), tag.size()));
+    } else {
+      out.resize(ct.size());
+      out_tag.resize(tag.size());
+      OPENSSL_memcpy(out.data(), ct.data(), ct.size());
+      OPENSSL_memcpy(out_tag.data(), tag.data(), tag.size());
+    }
+
+    // The "stateful" AEADs for implementing pre-AEAD cipher suites need to be
+    // reset after each operation.
+    ctx.Reset();
+    ASSERT_TRUE(EVP_AEAD_CTX_init_with_direction(
+        ctx.get(), aead(), key.data(), key.size(), tag_len, evp_aead_open));
+
+    std::vector<uint8_t> out2(out.size());
+    int ret = EVP_AEAD_CTX_open_gather(
+        ctx.get(), out2.data(), nonce.data(), nonce.size(), out.data(),
+        out.size(), out_tag.data(), out_tag.size(), ad.data(), ad.size());
+
+    // Skip decryption for AEADs that don't implement open_gather().
+    if (!ret) {
+      int err = ERR_peek_error();
+      if (ERR_GET_LIB(err) == ERR_LIB_CIPHER &&
+          ERR_GET_REASON(err) == CIPHER_R_CTRL_NOT_IMPLEMENTED) {
+          (void)t->HasAttribute("FAILS");  // All attributes need to be used.
+          return;
+        }
+    }
+
+    if (t->HasAttribute("FAILS")) {
+      ASSERT_FALSE(ret) << "Decrypted bad data";
+      ERR_clear_error();
+      return;
+    }
+
+    ASSERT_TRUE(ret) << "Failed to decrypt: "
+                     << ERR_reason_error_string(ERR_get_error());
+    EXPECT_EQ(Bytes(in), Bytes(out2));
+
+    // The "stateful" AEADs for implementing pre-AEAD cipher suites need to be
+    // reset after each operation.
+    ctx.Reset();
+    ASSERT_TRUE(EVP_AEAD_CTX_init_with_direction(
+        ctx.get(), aead(), key.data(), key.size(), tag_len, evp_aead_open));
+
+    // Garbage at the end isn't ignored.
+    out_tag.push_back(0);
+    out2.resize(out.size());
+    EXPECT_FALSE(EVP_AEAD_CTX_open_gather(
+        ctx.get(), out2.data(), nonce.data(), nonce.size(), out.data(),
+        out.size(), out_tag.data(), out_tag.size(), ad.data(), ad.size()))
+        << "Decrypted bad data with trailing garbage.";
+    ERR_clear_error();
+
+    // The "stateful" AEADs for implementing pre-AEAD cipher suites need to be
+    // reset after each operation.
+    ctx.Reset();
+    ASSERT_TRUE(EVP_AEAD_CTX_init_with_direction(
+        ctx.get(), aead(), key.data(), key.size(), tag_len, evp_aead_open));
+
+    // Verify integrity is checked.
+    out_tag[0] ^= 0x80;
+    out_tag.resize(out_tag.size() - 1);
+    out2.resize(out.size());
+    EXPECT_FALSE(EVP_AEAD_CTX_open_gather(
+        ctx.get(), out2.data(), nonce.data(), nonce.size(), out.data(),
+        out.size(), out_tag.data(), out_tag.size(), ad.data(), ad.size()))
+        << "Decrypted bad data with corrupted byte.";
+    ERR_clear_error();
+
+    ctx.Reset();
+    ASSERT_TRUE(EVP_AEAD_CTX_init_with_direction(
+        ctx.get(), aead(), key.data(), key.size(), tag_len, evp_aead_open));
+
+    // Check edge case for tag length.
+    EXPECT_FALSE(EVP_AEAD_CTX_open_gather(
+        ctx.get(), out2.data(), nonce.data(), nonce.size(), out.data(),
+        out.size(), out_tag.data(), 0, ad.data(), ad.size()))
         << "Decrypted bad data with corrupted byte.";
     ERR_clear_error();
   });

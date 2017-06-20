@@ -37,6 +37,7 @@ const char kSwitchIdeValueVs[] = "vs";
 const char kSwitchIdeValueVs2013[] = "vs2013";
 const char kSwitchIdeValueVs2015[] = "vs2015";
 const char kSwitchIdeValueVs2017[] = "vs2017";
+const char kSwitchIdeValueWinSdk[] = "winsdk";
 const char kSwitchIdeValueXcode[] = "xcode";
 const char kSwitchIdeValueJson[] = "json";
 const char kSwitchNinjaExtraArgs[] = "ninja-extra-args";
@@ -207,9 +208,13 @@ bool RunIdeWriter(const std::string& ide,
     std::string filters;
     if (command_line->HasSwitch(kSwitchFilters))
       filters = command_line->GetSwitchValueASCII(kSwitchFilters);
+    std::string win_kit;
+    if (command_line->HasSwitch(kSwitchIdeValueWinSdk))
+      win_kit = command_line->GetSwitchValueASCII(kSwitchIdeValueWinSdk);
     bool no_deps = command_line->HasSwitch(kSwitchNoDeps);
-    bool res = VisualStudioWriter::RunAndWriteFiles(
-        build_settings, builder, version, sln_name, filters, no_deps, err);
+    bool res = VisualStudioWriter::RunAndWriteFiles(build_settings, builder,
+                                                    version, sln_name, filters,
+                                                    win_kit, no_deps, err);
     if (res && !quiet) {
       OutputString("Generating Visual Studio projects took " +
                    base::Int64ToString(timer.Elapsed().InMilliseconds()) +
@@ -320,6 +325,11 @@ Visual Studio Flags
   --no-deps
       Don't include targets dependencies to the solution. Changes the way how
       --filters option works. Only directly matching targets are included.
+
+  --winsdk=<sdk_version>
+      Use the specified Windows 10 SDK version to generate project files.
+      As an example, "10.0.15063.0" can be specified to use Creators Update SDK
+      instead of the default one.
 
 Xcode Flags
 

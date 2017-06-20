@@ -115,6 +115,12 @@
 ../../third_party/catapult/tracing/tracing_build/__init__.py
 ../../third_party/catapult/tracing/tracing_build/trace2html.py
 ../../third_party/catapult/tracing/tracing_project.py
+../../third_party/colorama/src/colorama/__init__.py
+../../third_party/colorama/src/colorama/ansi.py
+../../third_party/colorama/src/colorama/ansitowin32.py
+../../third_party/colorama/src/colorama/initialise.py
+../../third_party/colorama/src/colorama/win32.py
+../../third_party/colorama/src/colorama/winterm.py
 ../../third_party/jinja2/__init__.py
 ../../third_party/jinja2/_compat.py
 ../../third_party/jinja2/bccache.py
@@ -200,6 +206,7 @@ pylib/utils/device_dependencies.py
 pylib/utils/dexdump.py
 pylib/utils/google_storage_helper.py
 pylib/utils/logdog_helper.py
+pylib/utils/logging_utils.py
 pylib/utils/proguard.py
 pylib/utils/repo_utils.py
 pylib/valgrind_tools.py

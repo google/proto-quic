@@ -550,10 +550,14 @@ def main(args):
   input_paths.extend(options.dependencies_res_zips)
   input_paths.extend(options.extra_r_text_files)
 
+  # Resource files aren't explicitly listed in GN. Listing them in the depfile
+  # ensures the target will be marked stale when resource files are removed.
+  depfile_deps = []
   resource_names = []
   for resource_dir in options.resource_dirs:
     for resource_file in build_utils.FindInDirectory(resource_dir, '*'):
       input_paths.append(resource_file)
+      depfile_deps.append(resource_file)
       resource_names.append(os.path.relpath(resource_file, resource_dir))
 
   # Resource filenames matter to the output, so add them to strings as well.
@@ -567,7 +571,8 @@ def main(args):
       input_strings=input_strings,
       output_paths=output_paths,
       # TODO(agrieve): Remove R_dir when it's no longer used (used only by GYP).
-      force=options.R_dir)
+      force=options.R_dir,
+      depfile_deps=depfile_deps)
 
 
 if __name__ == '__main__':

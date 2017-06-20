@@ -17,6 +17,10 @@
 #include "base/process/memory.h"
 #include "base/sys_info.h"
 
+#if defined(OS_WIN)
+#include <windows.h>
+#endif
+
 namespace base {
 namespace {
 
@@ -365,6 +369,24 @@ bool GetSystemMemoryInfo(SystemMemoryInfoKB* meminfo) {
   meminfo->swap_free = mem_status.ullAvailPageFile / 1024;
 
   return true;
+}
+
+size_t ProcessMetrics::GetMallocUsage() {
+  // Iterate through whichever heap the CRT is using.
+  HANDLE crt_heap = reinterpret_cast<HANDLE>(_get_heap_handle());
+  if (crt_heap == NULL)
+    return 0;
+  if (!::HeapLock(crt_heap))
+    return 0;
+  size_t malloc_usage = 0;
+  PROCESS_HEAP_ENTRY heap_entry;
+  heap_entry.lpData = NULL;
+  while (::HeapWalk(crt_heap, &heap_entry) != 0) {
+    if ((heap_entry.wFlags & PROCESS_HEAP_ENTRY_BUSY) != 0)
+      malloc_usage += heap_entry.cbData;
+  }
+  ::HeapUnlock(crt_heap);
+  return malloc_usage;
 }
 
 }  // namespace base

@@ -2,25 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-config("libc++abi_warnings") {
-  if (is_clang) {
-    # http://llvm.org/PR25978
-    cflags = [ "-Wno-unused-function" ]
-  }
-}
-
-# TODO(thomasanderson): Make this a source_set on all platforms when
-# https://bugs.llvm.org/show_bug.cgi?id=33272 is fixed.  Making this
-# target a static_library coincidentally fixes the issue since the
-# linking rules for it are different (__cxa_thread_atexit_impl is
-# undefined, but the only symbol that uses it, __cxa_thread_atexit, is
-# unused and optimized away).
-if (is_mac) {
-  link_target_type = "static_library"
-} else {
-  link_target_type = "source_set"
-}
-target(link_target_type, "libc++abi") {
+source_set("libc++abi") {
+  visibility = [ "//buildtools/third_party/libc++" ]
   sources = [
     "trunk/src/abort_message.cpp",
     "trunk/src/cxa_aux_runtime.cpp",
@@ -35,7 +18,6 @@ target(link_target_type, "libc++abi") {
     # libc++abi.  We build lib++/libc++abi with exceptions enabled.
     #"trunk/src/cxa_noexception.cpp",
     "trunk/src/cxa_personality.cpp",
-    "trunk/src/cxa_thread_atexit.cpp",
     "trunk/src/cxa_unexpected.cpp",
     "trunk/src/cxa_vector.cpp",
     "trunk/src/cxa_virtual.cpp",
@@ -46,6 +28,9 @@ target(link_target_type, "libc++abi") {
     "trunk/src/stdlib_stdexcept.cpp",
     "trunk/src/stdlib_typeinfo.cpp",
   ]
+  if (is_posix && !is_mac) {
+    sources += [ "trunk/src/cxa_thread_atexit.cpp" ]
+  }
   configs -= [
     "//build/config/compiler:chromium_code",
     "//build/config/compiler:no_rtti",
@@ -55,8 +40,5 @@ target(link_target_type, "libc++abi") {
     "//build/config/compiler:no_chromium_code",
     "//build/config/compiler:rtti",
     "//buildtools/third_party/libc++:config",
-
-    # Must be after no_chromium_code.
-    ":libc++abi_warnings",
   ]
 }

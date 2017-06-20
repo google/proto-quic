@@ -18,6 +18,8 @@ import org.chromium.base.library_loader.LibraryLoader;
 import org.chromium.base.library_loader.LibraryProcessType;
 import org.chromium.base.library_loader.ProcessInitException;
 import org.chromium.base.process_launcher.FileDescriptorInfo;
+import org.chromium.base.process_launcher.ICallbackInt;
+import org.chromium.base.process_launcher.IChildProcessService;
 import org.chromium.native_test.MainRunner;
 
 import javax.annotation.concurrent.GuardedBy;
@@ -72,14 +74,14 @@ public class MultiprocessTestClientService extends Service {
         }
     };
 
-    private final ITestClient.Stub mBinder = new ITestClient.Stub() {
+    private final IChildProcessService.Stub mBinder = new IChildProcessService.Stub() {
         @Override
         public boolean bindToCaller() {
             return true;
         }
 
         @Override
-        public int setupConnection(Bundle args, final IBinder callback) {
+        public void setupConnection(Bundle args, ICallbackInt pidCallback, final IBinder callback) {
             // Required to unparcel FileDescriptorInfo.
             args.setClassLoader(getApplicationContext().getClassLoader());
 
@@ -110,7 +112,7 @@ public class MultiprocessTestClientService extends Service {
                         ITestCallback testCallback = ITestCallback.Stub.asInterface(callback);
                         testCallback.childConnected(mTestController);
                     } catch (RemoteException re) {
-                        Log.e(TAG, "Failed to notify parent process of connection.");
+                        Log.e(TAG, "Failed to notify parent process of connection.", re);
                     }
                 }
             });
@@ -125,7 +127,16 @@ public class MultiprocessTestClientService extends Service {
                 }
             });
 
-            return Process.myPid();
+            try {
+                pidCallback.call(Process.myPid());
+            } catch (RemoteException re) {
+                Log.e(TAG, "Service failed to report PID to launcher.", re);
+            }
+        }
+
+        @Override
+        public void crashIntentionallyForTesting() {
+            assert false : "crashIntentionallyForTesting not implemented.";
         }
     };
 

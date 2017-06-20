@@ -22,6 +22,10 @@ class QUIC_EXPORT_PRIVATE StreamNotifierInterface {
 
   // Called when |frame| is retransmitted.
   virtual void OnStreamFrameRetransmitted(const QuicStreamFrame& frame) = 0;
+
+  // Called when |frame| is discarded from unacked packet map because stream is
+  // reset.
+  virtual void OnStreamFrameDiscarded(const QuicStreamFrame& frame) = 0;
 };
 
 }  // namespace net

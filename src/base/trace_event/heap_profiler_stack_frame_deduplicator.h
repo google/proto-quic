@@ -12,12 +12,13 @@
 #include "base/base_export.h"
 #include "base/macros.h"
 #include "base/trace_event/heap_profiler_allocation_context.h"
-#include "base/trace_event/trace_event_impl.h"
 
 namespace base {
 namespace trace_event {
 
+class StringDeduplicator;
 class TraceEventMemoryOverhead;
+class TracedValue;
 
 // A data structure that allows grouping a set of backtraces in a space-
 // efficient manner by creating a call tree and writing it as a set of (node,
@@ -26,7 +27,7 @@ class TraceEventMemoryOverhead;
 // of |StackFrame|s to index into |frames_|. So there is a trie for bottum-up
 // lookup of a backtrace for deduplication, and a tree for compact storage in
 // the trace log.
-class BASE_EXPORT StackFrameDeduplicator : public ConvertableToTraceFormat {
+class BASE_EXPORT StackFrameDeduplicator {
  public:
   // A node in the call tree.
   struct FrameNode {
@@ -38,9 +39,10 @@ class BASE_EXPORT StackFrameDeduplicator : public ConvertableToTraceFormat {
 
     StackFrame frame;
 
-    // The index of the parent stack frame in |frames_|, or -1 if there is no
-    // parent frame (when it is at the bottom of the call stack).
+    // The index of the parent stack frame in |frames_|, or kInvalidFrameIndex
+    // if there is no parent frame (when it is at the bottom of the call stack).
     int parent_frame_index;
+    constexpr static int kInvalidFrameIndex = -1;
 
     // Indices into |frames_| of frames called from the current frame.
     std::map<StackFrame, int> children;
@@ -48,8 +50,10 @@ class BASE_EXPORT StackFrameDeduplicator : public ConvertableToTraceFormat {
 
   using ConstIterator = std::vector<FrameNode>::const_iterator;
 
-  StackFrameDeduplicator();
-  ~StackFrameDeduplicator() override;
+  // |string_deduplication| is used during serialization, and is expected
+  // to outlive instances of this class.
+  explicit StackFrameDeduplicator(StringDeduplicator* string_deduplicator);
+  ~StackFrameDeduplicator();
 
   // Inserts a backtrace where |beginFrame| is a pointer to the bottom frame
   // (e.g. main) and |endFrame| is a pointer past the top frame (most recently
@@ -61,16 +65,19 @@ class BASE_EXPORT StackFrameDeduplicator : public ConvertableToTraceFormat {
   ConstIterator begin() const { return frames_.begin(); }
   ConstIterator end() const { return frames_.end(); }
 
-  // Writes the |stackFrames| dictionary as defined in https://goo.gl/GerkV8 to
-  // the trace log.
-  void AppendAsTraceFormat(std::string* out) const override;
+  // Appends new |stackFrames| dictionary items that were added after the
+  // last call to this function.
+  void SerializeIncrementally(TracedValue* traced_value);
 
   // Estimates memory overhead including |sizeof(StackFrameDeduplicator)|.
-  void EstimateTraceMemoryOverhead(TraceEventMemoryOverhead* overhead) override;
+  void EstimateTraceMemoryOverhead(TraceEventMemoryOverhead* overhead);
 
  private:
+  StringDeduplicator* string_deduplicator_;
+
   std::map<StackFrame, int> roots_;
   std::vector<FrameNode> frames_;
+  size_t last_exported_index_;
 
   DISALLOW_COPY_AND_ASSIGN(StackFrameDeduplicator);
 };

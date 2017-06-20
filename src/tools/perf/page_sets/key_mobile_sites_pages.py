@@ -135,25 +135,6 @@ class YahooAnswersPage(KeyMobileSitesPage):
     action_runner.ClickElement(text='Other Answers (1 - 20 of 149)')
 
 
-class GmailPage(KeyMobileSitesPage):
-
-  """ Why: productivity, top google properties """
-
-  def __init__(self, page_set):
-    super(GmailPage, self).__init__(
-      url='https://mail.google.com/mail/',
-      page_set=page_set)
-
-    self.credentials = 'google'
-
-  def RunNavigateSteps(self, action_runner):
-    super(GmailPage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition(
-        'document.getElementById("og_user_warning") !== null')
-    action_runner.WaitForJavaScriptCondition(
-        'document.getElementById("og_user_warning") === null')
-
-
 class GroupClonedPage(KeyMobileSitesPage):
 
   """ Why: crbug.com/172906 """

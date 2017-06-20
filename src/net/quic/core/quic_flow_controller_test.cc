@@ -34,27 +34,24 @@ class MockFlowController : public QuicFlowControllerInterface {
 
 class QuicFlowControllerTest : public QuicTest {
  public:
-  QuicFlowControllerTest()
-      : stream_id_(1234),
-        send_window_(kInitialSessionFlowControlWindowForTest),
-        receive_window_(kInitialSessionFlowControlWindowForTest),
-        connection_(&helper_, &alarm_factory_, Perspective::IS_CLIENT) {}
-
   void Initialize() {
     flow_controller_.reset(new QuicFlowController(
         &connection_, stream_id_, Perspective::IS_CLIENT, send_window_,
-        receive_window_, false, &session_flow_controller_));
+        receive_window_, should_auto_tune_receive_window_,
+        &session_flow_controller_));
   }
 
  protected:
-  QuicStreamId stream_id_;
-  QuicByteCount send_window_;
-  QuicByteCount receive_window_;
+  QuicStreamId stream_id_ = 1234;
+  QuicByteCount send_window_ = kInitialSessionFlowControlWindowForTest;
+  QuicByteCount receive_window_ = kInitialSessionFlowControlWindowForTest;
   std::unique_ptr<QuicFlowController> flow_controller_;
   MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
-  MockQuicConnection connection_;
+  MockQuicConnection connection_ = {&helper_, &alarm_factory_,
+                                    Perspective::IS_CLIENT};
   MockFlowController session_flow_controller_;
+  bool should_auto_tune_receive_window_ = false;
 };
 
 TEST_F(QuicFlowControllerTest, SendingBytes) {
@@ -167,8 +164,9 @@ TEST_F(QuicFlowControllerTest, ReceivingBytesFastIncreasesFlowWindow) {
   // This test will generate two WINDOW_UPDATE frames.
   EXPECT_CALL(connection_, SendWindowUpdate(stream_id_, ::testing::_)).Times(1);
 
+  should_auto_tune_receive_window_ = true;
   Initialize();
-  flow_controller_->set_auto_tune_receive_window(true);
+  EXPECT_TRUE(flow_controller_->auto_tune_receive_window());
 
   // Make sure clock is inititialized.
   connection_.AdvanceTime(QuicTime::Delta::FromMilliseconds(1));
@@ -221,7 +219,7 @@ TEST_F(QuicFlowControllerTest, ReceivingBytesFastNoAutoTune) {
   EXPECT_CALL(connection_, SendWindowUpdate(stream_id_, ::testing::_)).Times(2);
 
   Initialize();
-  flow_controller_->set_auto_tune_receive_window(false);
+  EXPECT_FALSE(flow_controller_->auto_tune_receive_window());
 
   // Make sure clock is inititialized.
   connection_.AdvanceTime(QuicTime::Delta::FromMilliseconds(1));
@@ -273,8 +271,9 @@ TEST_F(QuicFlowControllerTest, ReceivingBytesNormalStableFlowWindow) {
   // This test will generate two WINDOW_UPDATE frames.
   EXPECT_CALL(connection_, SendWindowUpdate(stream_id_, ::testing::_)).Times(1);
 
+  should_auto_tune_receive_window_ = true;
   Initialize();
-  flow_controller_->set_auto_tune_receive_window(true);
+  EXPECT_TRUE(flow_controller_->auto_tune_receive_window());
 
   // Make sure clock is inititialized.
   connection_.AdvanceTime(QuicTime::Delta::FromMilliseconds(1));
@@ -330,7 +329,7 @@ TEST_F(QuicFlowControllerTest, ReceivingBytesNormalNoAutoTune) {
   EXPECT_CALL(connection_, SendWindowUpdate(stream_id_, ::testing::_)).Times(2);
 
   Initialize();
-  flow_controller_->set_auto_tune_receive_window(false);
+  EXPECT_FALSE(flow_controller_->auto_tune_receive_window());
 
   // Make sure clock is inititialized.
   connection_.AdvanceTime(QuicTime::Delta::FromMilliseconds(1));
