@@ -487,7 +487,8 @@ class QuicStreamFactoryTestBase {
     AlternativeServiceInfoVector alternative_service_info_vector;
     base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
     alternative_service_info_vector.push_back(
-        AlternativeServiceInfo(alternative_service1, expiration));
+        AlternativeServiceInfo::CreateQuicAlternativeServiceInfo(
+            alternative_service1, expiration, {version_}));
     http_server_properties_.SetAlternativeServices(
         url::SchemeHostPort(url_), alternative_service_info_vector);
 
@@ -497,7 +498,8 @@ class QuicStreamFactoryTestBase {
         kProtoQUIC, host_port_pair2.host(), host_port_pair2.port());
     AlternativeServiceInfoVector alternative_service_info_vector2;
     alternative_service_info_vector2.push_back(
-        AlternativeServiceInfo(alternative_service2, expiration));
+        AlternativeServiceInfo::CreateQuicAlternativeServiceInfo(
+            alternative_service2, expiration, {version_}));
 
     http_server_properties_.SetAlternativeServices(
         server2, alternative_service_info_vector2);

@@ -9,13 +9,13 @@
 #define NET_HTTP2_HPACK_DECODER_HPACK_DECODER_LISTENER_H_
 
 #include "base/strings/string_piece.h"
-#include "net/base/net_export.h"
 #include "net/http2/hpack/hpack_string.h"
 #include "net/http2/hpack/http2_hpack_constants.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 
-class NET_EXPORT HpackDecoderListener {
+class HTTP2_EXPORT_PRIVATE HpackDecoderListener {
  public:
   HpackDecoderListener();
   virtual ~HpackDecoderListener();
@@ -44,7 +44,8 @@ class NET_EXPORT HpackDecoderListener {
 
 // A no-op implementation of HpackDecoderListener, useful for ignoring
 // callbacks once an error is detected.
-class NET_EXPORT HpackDecoderNoOpListener : public HpackDecoderListener {
+class HTTP2_EXPORT_PRIVATE HpackDecoderNoOpListener
+    : public HpackDecoderListener {
  public:
   HpackDecoderNoOpListener();
   ~HpackDecoderNoOpListener() override;

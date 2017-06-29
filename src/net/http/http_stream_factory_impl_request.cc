@@ -29,15 +29,12 @@ HttpStreamFactoryImpl::Request::Request(
       helper_(helper),
       websocket_handshake_stream_create_helper_(
           websocket_handshake_stream_create_helper),
-      delegate_(delegate),
       net_log_(net_log),
       completed_(false),
       was_alpn_negotiated_(false),
       negotiated_protocol_(kProtoUnknown),
       using_spdy_(false),
       stream_type_(stream_type) {
-  DCHECK(delegate_);
-
   net_log_.BeginEvent(NetLogEventType::HTTP_STREAM_REQUEST);
 }
 
@@ -56,67 +53,23 @@ void HttpStreamFactoryImpl::Request::Complete(bool was_alpn_negotiated,
   using_spdy_ = using_spdy;
 }
 
-void HttpStreamFactoryImpl::Request::OnStreamReady(
+void HttpStreamFactoryImpl::Request::OnStreamReadyOnPooledConnection(
     const SSLConfig& used_ssl_config,
     const ProxyInfo& used_proxy_info,
     std::unique_ptr<HttpStream> stream) {
   DCHECK(completed_);
-  delegate_->OnStreamReady(used_ssl_config, used_proxy_info, std::move(stream));
+  helper_->OnStreamReadyOnPooledConnection(used_ssl_config, used_proxy_info,
+                                           std::move(stream));
 }
 
-void HttpStreamFactoryImpl::Request::OnBidirectionalStreamImplReady(
-    const SSLConfig& used_ssl_config,
-    const ProxyInfo& used_proxy_info,
-    std::unique_ptr<BidirectionalStreamImpl> stream) {
+void HttpStreamFactoryImpl::Request::
+    OnBidirectionalStreamImplReadyOnPooledConnection(
+        const SSLConfig& used_ssl_config,
+        const ProxyInfo& used_proxy_info,
+        std::unique_ptr<BidirectionalStreamImpl> stream) {
   DCHECK(completed_);
-  delegate_->OnBidirectionalStreamImplReady(used_ssl_config, used_proxy_info,
-                                            std::move(stream));
-}
-
-void HttpStreamFactoryImpl::Request::OnWebSocketHandshakeStreamReady(
-    const SSLConfig& used_ssl_config,
-    const ProxyInfo& used_proxy_info,
-    std::unique_ptr<WebSocketHandshakeStreamBase> stream) {
-  DCHECK(completed_);
-  delegate_->OnWebSocketHandshakeStreamReady(used_ssl_config, used_proxy_info,
-                                             std::move(stream));
-}
-
-void HttpStreamFactoryImpl::Request::OnStreamFailed(
-    int status,
-    const SSLConfig& used_ssl_config) {
-  delegate_->OnStreamFailed(status, used_ssl_config);
-}
-
-void HttpStreamFactoryImpl::Request::OnCertificateError(
-    int status,
-    const SSLConfig& used_ssl_config,
-    const SSLInfo& ssl_info) {
-  delegate_->OnCertificateError(status, used_ssl_config, ssl_info);
-}
-
-void HttpStreamFactoryImpl::Request::OnNeedsProxyAuth(
-    const HttpResponseInfo& proxy_response,
-    const SSLConfig& used_ssl_config,
-    const ProxyInfo& used_proxy_info,
-    HttpAuthController* auth_controller) {
-  delegate_->OnNeedsProxyAuth(
-      proxy_response, used_ssl_config, used_proxy_info, auth_controller);
-}
-
-void HttpStreamFactoryImpl::Request::OnNeedsClientAuth(
-    const SSLConfig& used_ssl_config,
-    SSLCertRequestInfo* cert_info) {
-  delegate_->OnNeedsClientAuth(used_ssl_config, cert_info);
-}
-
-void HttpStreamFactoryImpl::Request::OnHttpsProxyTunnelResponse(
-    const HttpResponseInfo& response_info,
-    const SSLConfig& used_ssl_config,
-    const ProxyInfo& used_proxy_info,
-    std::unique_ptr<HttpStream> stream) {
-  delegate_->OnHttpsProxyTunnelResponse(response_info, used_ssl_config,
-                                        used_proxy_info, std::move(stream));
+  helper_->OnBidirectionalStreamImplReadyOnPooledConnection(
+      used_ssl_config, used_proxy_info, std::move(stream));
 }
 
 int HttpStreamFactoryImpl::Request::RestartTunnelWithProxyAuth() {

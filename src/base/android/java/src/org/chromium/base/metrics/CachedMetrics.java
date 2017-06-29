@@ -159,6 +159,35 @@ public class CachedMetrics {
         }
     }
 
+    /** Caches a set of boolean histogram samples. */
+    public static class BooleanHistogramSample extends CachedHistogram {
+        private final List<Boolean> mSamples = new ArrayList<Boolean>();
+
+        public BooleanHistogramSample(String histogramName) {
+            super(histogramName);
+        }
+
+        public void record(boolean sample) {
+            if (LibraryLoader.isInitialized()) {
+                recordWithNative(sample);
+            } else {
+                mSamples.add(sample);
+            }
+        }
+
+        private void recordWithNative(boolean sample) {
+            RecordHistogram.recordBooleanHistogram(mHistogramName, sample);
+        }
+
+        @Override
+        protected void commitAndClear() {
+            for (Boolean sample : mSamples) {
+                recordWithNative(sample);
+            }
+            mSamples.clear();
+        }
+    }
+
     /**
      * Calls out to native code to commit any cached histograms and events.
      * Should be called once the native library has been loaded.

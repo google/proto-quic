@@ -39,8 +39,12 @@
 # http://crbug.com/721398
 -ClearSiteDataThrottleBrowserTest.*
 
-# https://crbug.com/734670
--RenderProcessHostTest.KillProcessZerosAudioStreams
+# http://crbug.com/736362
+-ServiceWorkerVersionBrowserTest.Activate_Rejected
+-ServiceWorkerVersionBrowserTest.FetchEvent_Response
+-ServiceWorkerVersionBrowserTest.Activate_NoEventListener
+-ServiceWorkerVersionBrowserTest.FetchEvent_ResponseViaCache
+-ServiceWorkerVersionBrowserTest.FetchEvent_respondWithRejection
 
 -AsyncResourceHandlerBrowserTest/AsyncResourceHandlerBrowserTest.UploadProgress*
 -BrowserSideNavigationBrowserTest.FailedNavigation
@@ -88,6 +92,8 @@
 -PaymentAppBrowserTest.PaymentAppInvocation
 -PaymentAppBrowserTest.PaymentAppOpenWindowFailed
 -PlzNavigateNavigationHandleImplBrowserTest.ErrorPageNetworkError
+-PowerMonitorTest.TestRendererProcess
+-PowerMonitorTest.TestUtilityProcess
 -PreviewsStateResourceDispatcherHostBrowserTest.ShouldEnableLoFiModeNavigateBackThenForward
 -PreviewsStateResourceDispatcherHostBrowserTest.ShouldEnableLoFiModeOff
 -PreviewsStateResourceDispatcherHostBrowserTest.ShouldEnableLoFiModeOn
@@ -140,7 +146,6 @@
 -TouchInputBrowserTest.MultiPointTouchPress
 -TouchInputBrowserTest.TouchHandlerNoConsume
 -WebContentsImplBrowserTest.ClearNonVisiblePendingOnFail
--WebContentsImplBrowserTest.DismissingBeforeUnloadDialogInvalidatesUrl
 -WebContentsImplBrowserTest.DownloadImage_Deny_FileImage
 -WebContentsImplBrowserTest.GetSizeForNewRenderView
 -WebContentsImplBrowserTest.UserAgentOverride

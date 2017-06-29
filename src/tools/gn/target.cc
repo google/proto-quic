@@ -273,8 +273,10 @@ Dependencies
   future, do not rely on this behavior.
 )";
 
-Target::Target(const Settings* settings, const Label& label)
-    : Item(settings, label),
+Target::Target(const Settings* settings,
+               const Label& label,
+               const InputFileSet& input_files)
+    : Item(settings, label, input_files),
       output_type_(UNKNOWN),
       output_prefix_override_(false),
       output_extension_set_(false),
@@ -282,8 +284,7 @@ Target::Target(const Settings* settings, const Label& label)
       check_includes_(true),
       complete_static_lib_(false),
       testonly_(false),
-      toolchain_(nullptr) {
-}
+      toolchain_(nullptr) {}
 
 Target::~Target() {
 }

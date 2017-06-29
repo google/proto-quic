@@ -453,7 +453,8 @@ Value RunToolchain(Scope* scope,
 
   // This object will actually be copied into the one owned by the toolchain
   // manager, but that has to be done in the lock.
-  std::unique_ptr<Toolchain> toolchain(new Toolchain(scope->settings(), label));
+  std::unique_ptr<Toolchain> toolchain(
+      new Toolchain(scope->settings(), label, scope->input_files()));
   toolchain->set_defined_from(function);
   toolchain->visibility().SetPublic();
 
@@ -531,6 +532,7 @@ Tool types
     Other tools:
       "stamp": Tool for creating stamp files
       "copy": Tool to copy files.
+      "action": Defaults for actions
 
     Platform specific tools:
       "copy_bundle_data": [iOS, OS X] Tool to copy files in a bundle.
@@ -539,7 +541,7 @@ Tool types
 Tool variables
 
     command  [string with substitutions]
-        Valid for: all tools (required)
+        Valid for: all tools except "action" (required)
 
         The command to run.
 
@@ -639,6 +641,7 @@ Tool variables
           ]
 
     pool [label, optional]
+        Valid for: all tools (optional)
 
         Label of the pool to use for the tool. Pools are used to limit the
         number of tasks that can execute concurrently during the build.
@@ -709,13 +712,13 @@ Tool variables
           restat = true
 
     rspfile  [string with substitutions]
-        Valid for: all tools (optional)
+        Valid for: all tools except "action" (optional)
 
         Name of the response file. If empty, no response file will be
         used. See "rspfile_content".
 
     rspfile_content  [string with substitutions]
-        Valid for: all tools (required when "rspfile" is specified)
+        Valid for: all tools except "action" (required when "rspfile" is used)
 
         The contents to be written to the response file. This may include all
         or part of the command to send to the tool which allows you to get
@@ -1051,12 +1054,12 @@ Value RunTool(Scope* scope,
     return Value();
   }
 
-  if (tool_type != Toolchain::TYPE_COPY &&
-      tool_type != Toolchain::TYPE_STAMP &&
+  if (tool_type != Toolchain::TYPE_COPY && tool_type != Toolchain::TYPE_STAMP &&
       tool_type != Toolchain::TYPE_COPY_BUNDLE_DATA &&
-      tool_type != Toolchain::TYPE_COMPILE_XCASSETS) {
+      tool_type != Toolchain::TYPE_COMPILE_XCASSETS &&
+      tool_type != Toolchain::TYPE_ACTION) {
     // All tools should have outputs, except the copy, stamp, copy_bundle_data
-    // and compile_xcassets tools that generate their outputs internally.
+    // compile_xcassets and action tools that generate their outputs internally.
     if (!ReadPatternList(&block_scope, "outputs", subst_output_validator,
                          tool.get(), &Tool::set_outputs, err) ||
         !ValidateOutputs(tool.get(), err))

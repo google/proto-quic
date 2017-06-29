@@ -20,6 +20,7 @@
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
+#include "base/synchronization/lock.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/threading/thread.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -57,9 +58,7 @@ struct EnvVarValues {
 
 // So as to distinguish between an unset gconf boolean variable and
 // one that is false.
-enum BoolSettingValue {
-  UNSET = 0, TRUE, FALSE
-};
+enum BoolSettingValue { UNSET = 0, TRUE, FALSE };
 
 // Set of values for all gconf settings that we might query.
 struct GConfValues {
@@ -85,7 +84,7 @@ struct GConfValues {
 
 // Mapping from a setting name to the location of the corresponding
 // value (inside a EnvVarValues or GConfValues struct).
-template<typename key_type, typename value_type>
+template <typename key_type, typename value_type>
 struct SettingsTable {
   typedef std::map<key_type, value_type*> map_type;
 
@@ -124,7 +123,7 @@ class MockEnvironment : public base::Environment {
 
   // Zeroes all environment values.
   void Reset() {
-    EnvVarValues zero_values = { 0 };
+    EnvVarValues zero_values = {0};
     values = zero_values;
   }
 
@@ -158,13 +157,12 @@ class MockEnvironment : public base::Environment {
   std::map<base::StringPiece, const char**> table_;
 };
 
-class MockSettingGetter
-    : public ProxyConfigServiceLinux::SettingGetter {
+class MockSettingGetter : public ProxyConfigServiceLinux::SettingGetter {
  public:
   typedef ProxyConfigServiceLinux::SettingGetter SettingGetter;
   MockSettingGetter() {
 #define ENTRY(key, field) \
-      strings_table.settings[SettingGetter::key] = &values.field
+  strings_table.settings[SettingGetter::key] = &values.field
     ENTRY(PROXY_MODE, mode);
     ENTRY(PROXY_AUTOCONF_URL, autoconfig_url);
     ENTRY(PROXY_HTTP_HOST, http_host);
@@ -173,14 +171,14 @@ class MockSettingGetter
     ENTRY(PROXY_SOCKS_HOST, socks_host);
 #undef ENTRY
 #define ENTRY(key, field) \
-      ints_table.settings[SettingGetter::key] = &values.field
+  ints_table.settings[SettingGetter::key] = &values.field
     ENTRY(PROXY_HTTP_PORT, http_port);
     ENTRY(PROXY_HTTPS_PORT, secure_port);
     ENTRY(PROXY_FTP_PORT, ftp_port);
     ENTRY(PROXY_SOCKS_PORT, socks_port);
 #undef ENTRY
 #define ENTRY(key, field) \
-      bools_table.settings[SettingGetter::key] = &values.field
+  bools_table.settings[SettingGetter::key] = &values.field
     ENTRY(PROXY_USE_HTTP_PROXY, use_proxy);
     ENTRY(PROXY_USE_SAME_PROXY, same_proxy);
     ENTRY(PROXY_USE_AUTHENTICATION, use_auth);
@@ -192,12 +190,11 @@ class MockSettingGetter
 
   // Zeros all environment values.
   void Reset() {
-    GConfValues zero_values = { 0 };
+    GConfValues zero_values = {0};
     values = zero_values;
   }
 
-  bool Init(const scoped_refptr<base::SingleThreadTaskRunner>& glib_task_runner,
-            const scoped_refptr<base::SingleThreadTaskRunner>& file_task_runner)
+  bool Init(const scoped_refptr<base::SingleThreadTaskRunner>& glib_task_runner)
       override {
     task_runner_ = glib_task_runner;
     return true;
@@ -210,7 +207,7 @@ class MockSettingGetter
     return true;
   }
 
-  const scoped_refptr<base::SingleThreadTaskRunner>& GetNotificationTaskRunner()
+  const scoped_refptr<base::SequencedTaskRunner>& GetNotificationTaskRunner()
       override {
     return task_runner_;
   }
@@ -231,13 +228,13 @@ class MockSettingGetter
   bool GetBool(BoolSetting key, bool* result) override {
     BoolSettingValue value = bools_table.Get(key);
     switch (value) {
-    case UNSET:
-      return false;
-    case TRUE:
-      *result = true;
-      break;
-    case FALSE:
-      *result = false;
+      case UNSET:
+        return false;
+      case TRUE:
+        *result = true;
+        break;
+      case FALSE:
+        *result = false;
     }
     return true;
   }
@@ -263,25 +260,27 @@ class MockSettingGetter
   GConfValues values;
 
  private:
-  scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
+  scoped_refptr<base::SequencedTaskRunner> task_runner_;
   SettingsTable<StringSetting, const char*> strings_table;
   SettingsTable<BoolSetting, BoolSettingValue> bools_table;
   SettingsTable<IntSetting, int> ints_table;
-  SettingsTable<StringListSetting,
-                std::vector<std::string> > string_lists_table;
+  SettingsTable<StringListSetting, std::vector<std::string>> string_lists_table;
 };
 
 // This helper class runs ProxyConfigServiceLinux::GetLatestProxyConfig() on
 // the IO thread and synchronously waits for the result.
 // Some code duplicated from proxy_script_fetcher_unittest.cc.
-class SynchConfigGetter {
+class SyncConfigGetter : public ProxyConfigService::Observer {
  public:
   // Takes ownership of |config_service|.
-  explicit SynchConfigGetter(ProxyConfigServiceLinux* config_service)
+  explicit SyncConfigGetter(ProxyConfigServiceLinux* config_service)
       : event_(base::WaitableEvent::ResetPolicy::AUTOMATIC,
                base::WaitableEvent::InitialState::NOT_SIGNALED),
         io_thread_("IO_Thread"),
-        config_service_(config_service) {
+        config_service_(config_service),
+        matches_pac_url_event_(
+            base::WaitableEvent::ResetPolicy::AUTOMATIC,
+            base::WaitableEvent::InitialState::NOT_SIGNALED) {
     // Start an IO thread.
     base::Thread::Options options;
     options.message_loop_type = base::MessageLoop::TYPE_IO;
@@ -289,19 +288,15 @@ class SynchConfigGetter {
 
     // Make sure the thread started.
     io_thread_.task_runner()->PostTask(
-        FROM_HERE,
-        base::Bind(&SynchConfigGetter::Init, base::Unretained(this)));
+        FROM_HERE, base::Bind(&SyncConfigGetter::Init, base::Unretained(this)));
     Wait();
   }
 
-  ~SynchConfigGetter() {
-    // Let the config service post a destroy message to the IO thread
-    // before cleaning up that thread.
-    delete config_service_;
+  ~SyncConfigGetter() override {
     // Clean up the IO thread.
     io_thread_.task_runner()->PostTask(
         FROM_HERE,
-        base::Bind(&SynchConfigGetter::CleanUp, base::Unretained(this)));
+        base::Bind(&SyncConfigGetter::CleanUp, base::Unretained(this)));
     Wait();
   }
 
@@ -309,25 +304,57 @@ class SynchConfigGetter {
   // all on the calling thread (meant to be the thread with the
   // default glib main loop, which is the UI thread).
   void SetupAndInitialFetch() {
-    // We pass the mock IO thread as both the IO and file threads.
     config_service_->SetupAndFetchInitialConfig(
-        base::ThreadTaskRunnerHandle::Get(), io_thread_.task_runner(),
-        io_thread_.task_runner());
+        base::ThreadTaskRunnerHandle::Get(), io_thread_.task_runner());
   }
   // Synchronously gets the proxy config.
   ProxyConfigService::ConfigAvailability SyncGetLatestProxyConfig(
       ProxyConfig* config) {
     io_thread_.task_runner()->PostTask(
-        FROM_HERE, base::Bind(&SynchConfigGetter::GetLatestConfigOnIOThread,
+        FROM_HERE, base::Bind(&SyncConfigGetter::GetLatestConfigOnIOThread,
                               base::Unretained(this)));
     Wait();
     *config = proxy_config_;
     return get_latest_config_result_;
   }
 
+  // Instructs |matches_pac_url_event_| to be signalled once the configuration
+  // changes to |pac_url|. The way to use this function is:
+  //
+  //   SetExpectedPacUrl(..);
+  //   WriteFile(...)
+  //   WaitUntilPacUrlMatchesExpectation();
+  //
+  // The expectation must be set *before* any file-level mutation is done,
+  // otherwise the change may be received before
+  // WaitUntilPacUrlMatchesExpectation(), and subsequently be lost.
+  void SetExpectedPacUrl(const std::string& pac_url) {
+    base::AutoLock lock(lock_);
+    expected_pac_url_ = GURL(pac_url);
+  }
+
+  // Blocks until the proxy config service has received a configuration
+  // matching the value previously passed to SetExpectedPacUrl().
+  void WaitUntilPacUrlMatchesExpectation() {
+    matches_pac_url_event_.Wait();
+    matches_pac_url_event_.Reset();
+  }
+
  private:
+  void OnProxyConfigChanged(
+      const ProxyConfig& config,
+      ProxyConfigService::ConfigAvailability availability) override {
+    // If the configuration changed to |expected_pac_url_| signal the event.
+    base::AutoLock lock(lock_);
+    if (config.has_pac_url() && config.pac_url() == expected_pac_url_) {
+      expected_pac_url_ = GURL();
+      matches_pac_url_event_.Signal();
+    }
+  }
+
   // [Runs on |io_thread_|]
   void Init() {
+    config_service_->AddObserver(this);
     event_.Signal();
   }
 
@@ -341,6 +368,8 @@ class SynchConfigGetter {
 
   // [Runs on |io_thread_|] Signals |event_| on cleanup completion.
   void CleanUp() {
+    config_service_->RemoveObserver(this);
+    delete config_service_;
     base::RunLoop().RunUntilIdle();
     event_.Signal();
   }
@@ -361,6 +390,14 @@ class SynchConfigGetter {
 
   // Return value from GetLatestProxyConfig().
   ProxyConfigService::ConfigAvailability get_latest_config_result_;
+
+  // If valid, |expected_pac_url_| is the URL that is being waited for in
+  // the proxy configuration. The URL should only be accessed while |lock_|
+  // is held. Once a configuration arrives for |expected_pac_url_| then the
+  // event |matches_pac_url_event_| will be signalled.
+  base::Lock lock_;
+  GURL expected_pac_url_;
+  base::WaitableEvent matches_pac_url_event_;
 };
 
 // This test fixture is only really needed for the KDEConfigParser test case,
@@ -431,273 +468,282 @@ TEST_F(ProxyConfigServiceLinuxTest, BasicGConfTest) {
     GURL pac_url;
     ProxyRulesExpectation proxy_rules;
   } tests[] = {
-    {
-      TEST_DESC("No proxying"),
-      { // Input.
-        "none",                   // mode
-        "",                       // autoconfig_url
-        "", "", "", "",           // hosts
-        0, 0, 0, 0,               // ports
-        FALSE, FALSE, FALSE,      // use, same, auth
-        empty_ignores,            // ignore_hosts
+      {
+          TEST_DESC("No proxying"),
+          {
+              // Input.
+              "none",               // mode
+              "",                   // autoconfig_url
+              "", "", "", "",       // hosts
+              0, 0, 0, 0,           // ports
+              FALSE, FALSE, FALSE,  // use, same, auth
+              empty_ignores,        // ignore_hosts
+          },
+
+          // Expected result.
+          ProxyConfigService::CONFIG_VALID,
+          false,   // auto_detect
+          GURL(),  // pac_url
+          ProxyRulesExpectation::Empty(),
       },
 
-      // Expected result.
-      ProxyConfigService::CONFIG_VALID,
-      false,                      // auto_detect
-      GURL(),                     // pac_url
-      ProxyRulesExpectation::Empty(),
-    },
+      {
+          TEST_DESC("Auto detect"),
+          {
+              // Input.
+              "auto",               // mode
+              "",                   // autoconfig_url
+              "", "", "", "",       // hosts
+              0, 0, 0, 0,           // ports
+              FALSE, FALSE, FALSE,  // use, same, auth
+              empty_ignores,        // ignore_hosts
+          },
 
-    {
-      TEST_DESC("Auto detect"),
-      { // Input.
-        "auto",                   // mode
-        "",                       // autoconfig_url
-        "", "", "", "",           // hosts
-        0, 0, 0, 0,               // ports
-        FALSE, FALSE, FALSE,      // use, same, auth
-        empty_ignores,            // ignore_hosts
+          // Expected result.
+          ProxyConfigService::CONFIG_VALID,
+          true,    // auto_detect
+          GURL(),  // pac_url
+          ProxyRulesExpectation::Empty(),
       },
 
-      // Expected result.
-      ProxyConfigService::CONFIG_VALID,
-      true,                       // auto_detect
-      GURL(),                     // pac_url
-      ProxyRulesExpectation::Empty(),
-    },
+      {
+          TEST_DESC("Valid PAC URL"),
+          {
+              // Input.
+              "auto",                  // mode
+              "http://wpad/wpad.dat",  // autoconfig_url
+              "", "", "", "",          // hosts
+              0, 0, 0, 0,              // ports
+              FALSE, FALSE, FALSE,     // use, same, auth
+              empty_ignores,           // ignore_hosts
+          },
 
-    {
-      TEST_DESC("Valid PAC URL"),
-      { // Input.
-        "auto",                      // mode
-        "http://wpad/wpad.dat",      // autoconfig_url
-        "", "", "", "",              // hosts
-        0, 0, 0, 0,                  // ports
-        FALSE, FALSE, FALSE,         // use, same, auth
-        empty_ignores,               // ignore_hosts
+          // Expected result.
+          ProxyConfigService::CONFIG_VALID,
+          false,                         // auto_detect
+          GURL("http://wpad/wpad.dat"),  // pac_url
+          ProxyRulesExpectation::Empty(),
       },
 
-      // Expected result.
-      ProxyConfigService::CONFIG_VALID,
-      false,                         // auto_detect
-      GURL("http://wpad/wpad.dat"),  // pac_url
-      ProxyRulesExpectation::Empty(),
-    },
+      {
+          TEST_DESC("Invalid PAC URL"),
+          {
+              // Input.
+              "auto",               // mode
+              "wpad.dat",           // autoconfig_url
+              "", "", "", "",       // hosts
+              0, 0, 0, 0,           // ports
+              FALSE, FALSE, FALSE,  // use, same, auth
+              empty_ignores,        // ignore_hosts
+          },
 
-    {
-      TEST_DESC("Invalid PAC URL"),
-      { // Input.
-        "auto",                      // mode
-        "wpad.dat",                  // autoconfig_url
-        "", "", "", "",              // hosts
-        0, 0, 0, 0,                  // ports
-        FALSE, FALSE, FALSE,         // use, same, auth
-        empty_ignores,               // ignore_hosts
+          // Expected result.
+          ProxyConfigService::CONFIG_VALID,
+          false,   // auto_detect
+          GURL(),  // pac_url
+          ProxyRulesExpectation::Empty(),
       },
 
-      // Expected result.
-      ProxyConfigService::CONFIG_VALID,
-      false,                          // auto_detect
-      GURL(),                        // pac_url
-      ProxyRulesExpectation::Empty(),
-    },
+      {
+          TEST_DESC("Single-host in proxy list"),
+          {
+              // Input.
+              "manual",                      // mode
+              "",                            // autoconfig_url
+              "www.google.com", "", "", "",  // hosts
+              80, 0, 0, 0,                   // ports
+              TRUE, TRUE, FALSE,             // use, same, auth
+              empty_ignores,                 // ignore_hosts
+          },
 
-    {
-      TEST_DESC("Single-host in proxy list"),
-      { // Input.
-        "manual",                              // mode
-        "",                                    // autoconfig_url
-        "www.google.com", "", "", "",          // hosts
-        80, 0, 0, 0,                           // ports
-        TRUE, TRUE, FALSE,                     // use, same, auth
-        empty_ignores,                         // ignore_hosts
+          // Expected result.
+          ProxyConfigService::CONFIG_VALID,
+          false,                                              // auto_detect
+          GURL(),                                             // pac_url
+          ProxyRulesExpectation::Single("www.google.com:80",  // single proxy
+                                        ""),                  // bypass rules
       },
 
-      // Expected result.
-      ProxyConfigService::CONFIG_VALID,
-      false,                                   // auto_detect
-      GURL(),                                  // pac_url
-      ProxyRulesExpectation::Single(
-          "www.google.com:80",  // single proxy
-          ""),                  // bypass rules
-    },
+      {
+          TEST_DESC("use_http_proxy is honored"),
+          {
+              // Input.
+              "manual",                      // mode
+              "",                            // autoconfig_url
+              "www.google.com", "", "", "",  // hosts
+              80, 0, 0, 0,                   // ports
+              FALSE, TRUE, FALSE,            // use, same, auth
+              empty_ignores,                 // ignore_hosts
+          },
 
-    {
-      TEST_DESC("use_http_proxy is honored"),
-      { // Input.
-        "manual",                              // mode
-        "",                                    // autoconfig_url
-        "www.google.com", "", "", "",          // hosts
-        80, 0, 0, 0,                           // ports
-        FALSE, TRUE, FALSE,                    // use, same, auth
-        empty_ignores,                         // ignore_hosts
+          // Expected result.
+          ProxyConfigService::CONFIG_VALID,
+          false,   // auto_detect
+          GURL(),  // pac_url
+          ProxyRulesExpectation::Empty(),
       },
 
-      // Expected result.
-      ProxyConfigService::CONFIG_VALID,
-      false,                                   // auto_detect
-      GURL(),                                  // pac_url
-      ProxyRulesExpectation::Empty(),
-    },
+      {
+          TEST_DESC("use_http_proxy and use_same_proxy are optional"),
+          {
+              // Input.
+              "manual",                      // mode
+              "",                            // autoconfig_url
+              "www.google.com", "", "", "",  // hosts
+              80, 0, 0, 0,                   // ports
+              UNSET, UNSET, FALSE,           // use, same, auth
+              empty_ignores,                 // ignore_hosts
+          },
 
-    {
-      TEST_DESC("use_http_proxy and use_same_proxy are optional"),
-      { // Input.
-        "manual",                                     // mode
-        "",                                           // autoconfig_url
-        "www.google.com", "", "", "",                 // hosts
-        80, 0, 0, 0,                                  // ports
-        UNSET, UNSET, FALSE,                          // use, same, auth
-        empty_ignores,                                // ignore_hosts
+          // Expected result.
+          ProxyConfigService::CONFIG_VALID,
+          false,                                                 // auto_detect
+          GURL(),                                                // pac_url
+          ProxyRulesExpectation::PerScheme("www.google.com:80",  // http
+                                           "",                   // https
+                                           "",                   // ftp
+                                           ""),                  // bypass rules
       },
 
-      // Expected result.
-      ProxyConfigService::CONFIG_VALID,
-      false,                                          // auto_detect
-      GURL(),                                         // pac_url
-      ProxyRulesExpectation::PerScheme(
-          "www.google.com:80",  // http
-          "",                   // https
-          "",                   // ftp
-          ""),                  // bypass rules
-    },
+      {
+          TEST_DESC("Single-host, different port"),
+          {
+              // Input.
+              "manual",                      // mode
+              "",                            // autoconfig_url
+              "www.google.com", "", "", "",  // hosts
+              88, 0, 0, 0,                   // ports
+              TRUE, TRUE, FALSE,             // use, same, auth
+              empty_ignores,                 // ignore_hosts
+          },
 
-    {
-      TEST_DESC("Single-host, different port"),
-      { // Input.
-        "manual",                                     // mode
-        "",                                           // autoconfig_url
-        "www.google.com", "", "", "",                 // hosts
-        88, 0, 0, 0,                                  // ports
-        TRUE, TRUE, FALSE,                            // use, same, auth
-        empty_ignores,                                // ignore_hosts
+          // Expected result.
+          ProxyConfigService::CONFIG_VALID,
+          false,                                              // auto_detect
+          GURL(),                                             // pac_url
+          ProxyRulesExpectation::Single("www.google.com:88",  // single proxy
+                                        ""),                  // bypass rules
       },
 
-      // Expected result.
-      ProxyConfigService::CONFIG_VALID,
-      false,                                          // auto_detect
-      GURL(),                                         // pac_url
-      ProxyRulesExpectation::Single(
-          "www.google.com:88",  // single proxy
-          ""),                  // bypass rules
-    },
+      {
+          TEST_DESC("Per-scheme proxy rules"),
+          {
+              // Input.
+              "manual",            // mode
+              "",                  // autoconfig_url
+              "www.google.com",    // http_host
+              "www.foo.com",       // secure_host
+              "ftp.foo.com",       // ftp
+              "",                  // socks
+              88, 110, 121, 0,     // ports
+              TRUE, FALSE, FALSE,  // use, same, auth
+              empty_ignores,       // ignore_hosts
+          },
 
-    {
-      TEST_DESC("Per-scheme proxy rules"),
-      { // Input.
-        "manual",                                     // mode
-        "",                                           // autoconfig_url
-        "www.google.com",                             // http_host
-        "www.foo.com",                                // secure_host
-        "ftp.foo.com",                                // ftp
-        "",                                           // socks
-        88, 110, 121, 0,                              // ports
-        TRUE, FALSE, FALSE,                           // use, same, auth
-        empty_ignores,                                // ignore_hosts
+          // Expected result.
+          ProxyConfigService::CONFIG_VALID,
+          false,                                                 // auto_detect
+          GURL(),                                                // pac_url
+          ProxyRulesExpectation::PerScheme("www.google.com:88",  // http
+                                           "www.foo.com:110",    // https
+                                           "ftp.foo.com:121",    // ftp
+                                           ""),                  // bypass rules
       },
 
-      // Expected result.
-      ProxyConfigService::CONFIG_VALID,
-      false,                                          // auto_detect
-      GURL(),                                         // pac_url
-      ProxyRulesExpectation::PerScheme(
-          "www.google.com:88",  // http
-          "www.foo.com:110",    // https
-          "ftp.foo.com:121",    // ftp
-          ""),                  // bypass rules
-    },
+      {
+          TEST_DESC("socks"),
+          {
+              // Input.
+              "manual",                 // mode
+              "",                       // autoconfig_url
+              "", "", "", "socks.com",  // hosts
+              0, 0, 0, 99,              // ports
+              TRUE, FALSE, FALSE,       // use, same, auth
+              empty_ignores,            // ignore_hosts
+          },
 
-    {
-      TEST_DESC("socks"),
-      { // Input.
-        "manual",                                     // mode
-        "",                                           // autoconfig_url
-        "", "", "", "socks.com",                      // hosts
-        0, 0, 0, 99,                                  // ports
-        TRUE, FALSE, FALSE,                           // use, same, auth
-        empty_ignores,                                // ignore_hosts
+          // Expected result.
+          ProxyConfigService::CONFIG_VALID,
+          false,   // auto_detect
+          GURL(),  // pac_url
+          ProxyRulesExpectation::Single(
+              "socks5://socks.com:99",  // single proxy
+              "")                       // bypass rules
       },
 
-      // Expected result.
-      ProxyConfigService::CONFIG_VALID,
-      false,                                          // auto_detect
-      GURL(),                                         // pac_url
-      ProxyRulesExpectation::Single(
-          "socks5://socks.com:99",  // single proxy
-          "")                       // bypass rules
-    },
+      {
+          TEST_DESC("Per-scheme proxy rules with fallback to SOCKS"),
+          {
+              // Input.
+              "manual",            // mode
+              "",                  // autoconfig_url
+              "www.google.com",    // http_host
+              "www.foo.com",       // secure_host
+              "ftp.foo.com",       // ftp
+              "foobar.net",        // socks
+              88, 110, 121, 99,    // ports
+              TRUE, FALSE, FALSE,  // use, same, auth
+              empty_ignores,       // ignore_hosts
+          },
 
-    {
-      TEST_DESC("Per-scheme proxy rules with fallback to SOCKS"),
-      { // Input.
-        "manual",                                     // mode
-        "",                                           // autoconfig_url
-        "www.google.com",                             // http_host
-        "www.foo.com",                                // secure_host
-        "ftp.foo.com",                                // ftp
-        "foobar.net",                                 // socks
-        88, 110, 121, 99,                             // ports
-        TRUE, FALSE, FALSE,                           // use, same, auth
-        empty_ignores,                                // ignore_hosts
+          // Expected result.
+          ProxyConfigService::CONFIG_VALID,
+          false,   // auto_detect
+          GURL(),  // pac_url
+          ProxyRulesExpectation::PerSchemeWithSocks(
+              "www.google.com:88",       // http
+              "www.foo.com:110",         // https
+              "ftp.foo.com:121",         // ftp
+              "socks5://foobar.net:99",  // socks
+              ""),                       // bypass rules
       },
 
-      // Expected result.
-      ProxyConfigService::CONFIG_VALID,
-      false,                                          // auto_detect
-      GURL(),                                         // pac_url
-      ProxyRulesExpectation::PerSchemeWithSocks(
-          "www.google.com:88",      // http
-          "www.foo.com:110",        // https
-          "ftp.foo.com:121",        // ftp
-          "socks5://foobar.net:99", // socks
-          ""),                      // bypass rules
-    },
+      {
+          TEST_DESC(
+              "Per-scheme proxy rules (just HTTP) with fallback to SOCKS"),
+          {
+              // Input.
+              "manual",            // mode
+              "",                  // autoconfig_url
+              "www.google.com",    // http_host
+              "",                  // secure_host
+              "",                  // ftp
+              "foobar.net",        // socks
+              88, 0, 0, 99,        // ports
+              TRUE, FALSE, FALSE,  // use, same, auth
+              empty_ignores,       // ignore_hosts
+          },
 
-    {
-      TEST_DESC("Per-scheme proxy rules (just HTTP) with fallback to SOCKS"),
-      { // Input.
-        "manual",                                     // mode
-        "",                                           // autoconfig_url
-        "www.google.com",                             // http_host
-        "",                                           // secure_host
-        "",                                           // ftp
-        "foobar.net",                                 // socks
-        88, 0, 0, 99,                                 // ports
-        TRUE, FALSE, FALSE,                           // use, same, auth
-        empty_ignores,                                // ignore_hosts
+          // Expected result.
+          ProxyConfigService::CONFIG_VALID,
+          false,   // auto_detect
+          GURL(),  // pac_url
+          ProxyRulesExpectation::PerSchemeWithSocks(
+              "www.google.com:88",       // http
+              "",                        // https
+              "",                        // ftp
+              "socks5://foobar.net:99",  // socks
+              ""),                       // bypass rules
       },
 
-      // Expected result.
-      ProxyConfigService::CONFIG_VALID,
-      false,                                          // auto_detect
-      GURL(),                                         // pac_url
-      ProxyRulesExpectation::PerSchemeWithSocks(
-          "www.google.com:88",      // http
-          "",                       // https
-          "",                       // ftp
-          "socks5://foobar.net:99", // socks
-          ""),                      // bypass rules
-    },
+      {
+          TEST_DESC("Bypass *.google.com"),
+          {
+              // Input.
+              "manual",                      // mode
+              "",                            // autoconfig_url
+              "www.google.com", "", "", "",  // hosts
+              80, 0, 0, 0,                   // ports
+              TRUE, TRUE, FALSE,             // use, same, auth
+              google_ignores,                // ignore_hosts
+          },
 
-    {
-      TEST_DESC("Bypass *.google.com"),
-      { // Input.
-        "manual",                                     // mode
-        "",                                           // autoconfig_url
-        "www.google.com", "", "", "",                 // hosts
-        80, 0, 0, 0,                                  // ports
-        TRUE, TRUE, FALSE,                            // use, same, auth
-        google_ignores,                               // ignore_hosts
+          ProxyConfigService::CONFIG_VALID,
+          false,                                              // auto_detect
+          GURL(),                                             // pac_url
+          ProxyRulesExpectation::Single("www.google.com:80",  // single proxy
+                                        "*.google.com"),      // bypass rules
       },
-
-      ProxyConfigService::CONFIG_VALID,
-      false,                                          // auto_detect
-      GURL(),                                         // pac_url
-      ProxyRulesExpectation::Single(
-          "www.google.com:80",   // single proxy
-          "*.google.com"),       // bypass rules
-    },
   };
 
   for (size_t i = 0; i < arraysize(tests); ++i) {
@@ -705,7 +751,7 @@ TEST_F(ProxyConfigServiceLinuxTest, BasicGConfTest) {
                                     tests[i].description.c_str()));
     std::unique_ptr<MockEnvironment> env(new MockEnvironment);
     MockSettingGetter* setting_getter = new MockSettingGetter;
-    SynchConfigGetter sync_config_getter(
+    SyncConfigGetter sync_config_getter(
         new ProxyConfigServiceLinux(std::move(env), setting_getter));
     ProxyConfig config;
     setting_getter->values = tests[i].values;
@@ -1035,7 +1081,7 @@ TEST_F(ProxyConfigServiceLinuxTest, BasicEnvTest) {
     std::unique_ptr<MockEnvironment> env(new MockEnvironment);
     env->values = tests[i].values;
     MockSettingGetter* setting_getter = new MockSettingGetter;
-    SynchConfigGetter sync_config_getter(
+    SyncConfigGetter sync_config_getter(
         new ProxyConfigServiceLinux(std::move(env), setting_getter));
     ProxyConfig config;
     sync_config_getter.SetupAndInitialFetch();
@@ -1056,7 +1102,7 @@ TEST_F(ProxyConfigServiceLinuxTest, GconfNotification) {
   MockSettingGetter* setting_getter = new MockSettingGetter;
   ProxyConfigServiceLinux* service =
       new ProxyConfigServiceLinux(std::move(env), setting_getter);
-  SynchConfigGetter sync_config_getter(service);
+  SyncConfigGetter sync_config_getter(service);
   ProxyConfig config;
 
   // Start with no proxy.
@@ -1532,7 +1578,7 @@ TEST_F(ProxyConfigServiceLinuxTest, KDEConfigParser) {
     // Force the KDE getter to be used and tell it where the test is.
     env->values.DESKTOP_SESSION = "kde4";
     env->values.KDEHOME = kde_home_.value().c_str();
-    SynchConfigGetter sync_config_getter(
+    SyncConfigGetter sync_config_getter(
         new ProxyConfigServiceLinux(std::move(env)));
     ProxyConfig config;
     // Overwrite the kioslaverc file.
@@ -1555,8 +1601,9 @@ TEST_F(ProxyConfigServiceLinuxTest, KDEHomePicker) {
   // Auto detect proxy settings.
   std::string slaverc3 = "[Proxy Settings]\nProxyType=3\n";
   // Valid PAC URL.
-  std::string slaverc4 = "[Proxy Settings]\nProxyType=2\n"
-                             "Proxy Config Script=http://wpad/wpad.dat\n";
+  std::string slaverc4 =
+      "[Proxy Settings]\nProxyType=2\n"
+      "Proxy Config Script=http://wpad/wpad.dat\n";
   GURL slaverc4_pac_url("http://wpad/wpad.dat");
   // Basic HTTP proxy setting.
   std::string slaverc5 =
@@ -1574,11 +1621,12 @@ TEST_F(ProxyConfigServiceLinuxTest, KDEHomePicker) {
   // we created the directory for $HOME in the test setup.
   CHECK(!base::DirectoryExists(kde4_home_));
 
-  { SCOPED_TRACE("KDE4, no .kde4 directory, verify fallback");
+  {
+    SCOPED_TRACE("KDE4, no .kde4 directory, verify fallback");
     std::unique_ptr<MockEnvironment> env(new MockEnvironment);
     env->values.DESKTOP_SESSION = "kde4";
     env->values.HOME = user_home_.value().c_str();
-    SynchConfigGetter sync_config_getter(
+    SyncConfigGetter sync_config_getter(
         new ProxyConfigServiceLinux(std::move(env)));
     ProxyConfig config;
     sync_config_getter.SetupAndInitialFetch();
@@ -1594,11 +1642,12 @@ TEST_F(ProxyConfigServiceLinuxTest, KDEHomePicker) {
   base::WriteFile(kioslaverc4_, slaverc4.c_str(), slaverc4.length());
   CHECK(base::PathExists(kioslaverc4_));
 
-  { SCOPED_TRACE("KDE4, .kde4 directory present, use it");
+  {
+    SCOPED_TRACE("KDE4, .kde4 directory present, use it");
     std::unique_ptr<MockEnvironment> env(new MockEnvironment);
     env->values.DESKTOP_SESSION = "kde4";
     env->values.HOME = user_home_.value().c_str();
-    SynchConfigGetter sync_config_getter(
+    SyncConfigGetter sync_config_getter(
         new ProxyConfigServiceLinux(std::move(env)));
     ProxyConfig config;
     sync_config_getter.SetupAndInitialFetch();
@@ -1608,11 +1657,12 @@ TEST_F(ProxyConfigServiceLinuxTest, KDEHomePicker) {
     EXPECT_EQ(slaverc4_pac_url, config.pac_url());
   }
 
-  { SCOPED_TRACE("KDE3, .kde4 directory present, ignore it");
+  {
+    SCOPED_TRACE("KDE3, .kde4 directory present, ignore it");
     std::unique_ptr<MockEnvironment> env(new MockEnvironment);
     env->values.DESKTOP_SESSION = "kde";
     env->values.HOME = user_home_.value().c_str();
-    SynchConfigGetter sync_config_getter(
+    SyncConfigGetter sync_config_getter(
         new ProxyConfigServiceLinux(std::move(env)));
     ProxyConfig config;
     sync_config_getter.SetupAndInitialFetch();
@@ -1622,12 +1672,13 @@ TEST_F(ProxyConfigServiceLinuxTest, KDEHomePicker) {
     EXPECT_EQ(GURL(), config.pac_url());
   }
 
-  { SCOPED_TRACE("KDE4, .kde4 directory present, KDEHOME set to .kde");
+  {
+    SCOPED_TRACE("KDE4, .kde4 directory present, KDEHOME set to .kde");
     std::unique_ptr<MockEnvironment> env(new MockEnvironment);
     env->values.DESKTOP_SESSION = "kde4";
     env->values.HOME = user_home_.value().c_str();
     env->values.KDEHOME = kde_home_.value().c_str();
-    SynchConfigGetter sync_config_getter(
+    SyncConfigGetter sync_config_getter(
         new ProxyConfigServiceLinux(std::move(env)));
     ProxyConfig config;
     sync_config_getter.SetupAndInitialFetch();
@@ -1641,11 +1692,12 @@ TEST_F(ProxyConfigServiceLinuxTest, KDEHomePicker) {
   // and make sure we then use .kde instead of .kde4 since it's newer.
   base::TouchFile(kde4_config_, base::Time(), base::Time());
 
-  { SCOPED_TRACE("KDE4, very old .kde4 directory present, use .kde");
+  {
+    SCOPED_TRACE("KDE4, very old .kde4 directory present, use .kde");
     std::unique_ptr<MockEnvironment> env(new MockEnvironment);
     env->values.DESKTOP_SESSION = "kde4";
     env->values.HOME = user_home_.value().c_str();
-    SynchConfigGetter sync_config_getter(
+    SyncConfigGetter sync_config_getter(
         new ProxyConfigServiceLinux(std::move(env)));
     ProxyConfig config;
     sync_config_getter.SetupAndInitialFetch();
@@ -1666,7 +1718,7 @@ TEST_F(ProxyConfigServiceLinuxTest, KDEHomePicker) {
     env->values.XDG_CURRENT_DESKTOP = "KDE";
     env->values.KDE_SESSION_VERSION = "5";
     env->values.HOME = user_home_.value().c_str();
-    SynchConfigGetter sync_config_getter(
+    SyncConfigGetter sync_config_getter(
         new ProxyConfigServiceLinux(std::move(env)));
     ProxyConfig config;
     sync_config_getter.SetupAndInitialFetch();
@@ -1675,6 +1727,82 @@ TEST_F(ProxyConfigServiceLinuxTest, KDEHomePicker) {
     EXPECT_FALSE(config.auto_detect());
     EXPECT_TRUE(slaverc5_rules.Matches(config.proxy_rules()));
   }
+}
+
+void WriteFile(const base::FilePath& path, base::StringPiece data) {
+  EXPECT_TRUE(base::WriteFile(path, data.data(), data.size()));
+}
+
+// Tests that the KDE proxy config service watches for file and directory
+// changes.
+TEST_F(ProxyConfigServiceLinuxTest, KDEFileChanged) {
+  // Set up the initial .kde kioslaverc file.
+  WriteFile(kioslaverc_,
+            "[Proxy Settings]\nProxyType=2\n"
+            "Proxy Config Script=http://version1/wpad.dat\n");
+
+  // Initialize the config service using kioslaverc.
+  std::unique_ptr<MockEnvironment> env(new MockEnvironment);
+  env->values.DESKTOP_SESSION = "kde4";
+  env->values.HOME = user_home_.value().c_str();
+  SyncConfigGetter sync_config_getter(
+      new ProxyConfigServiceLinux(std::move(env)));
+  ProxyConfig config;
+  sync_config_getter.SetupAndInitialFetch();
+  EXPECT_EQ(ProxyConfigService::CONFIG_VALID,
+            sync_config_getter.SyncGetLatestProxyConfig(&config));
+  EXPECT_TRUE(config.has_pac_url());
+  EXPECT_EQ(GURL("http://version1/wpad.dat"), config.pac_url());
+
+  //-----------------------------------------------------
+
+  // Change the kioslaverc file by overwriting it. Verify that the change was
+  // observed.
+  sync_config_getter.SetExpectedPacUrl("http://version2/wpad.dat");
+
+  WriteFile(kioslaverc_,
+            "[Proxy Settings]\nProxyType=2\n"
+            "Proxy Config Script=http://version2/wpad.dat\n");
+
+  // Wait for change to be noticed.
+  sync_config_getter.WaitUntilPacUrlMatchesExpectation();
+
+  //-----------------------------------------------------
+
+  // Change the kioslaverc file by renaming it. If only the file's inode
+  // were being watched (rather than directory) this will not result in
+  // an observable change. Note that KDE when re-writing proxy settings does
+  // so by renaming a new file, so the inode will change.
+  sync_config_getter.SetExpectedPacUrl("http://version3/wpad.dat");
+
+  // Create a new file, and rename it into place.
+  WriteFile(kioslaverc_.AddExtension("new"),
+            "[Proxy Settings]\nProxyType=2\n"
+            "Proxy Config Script=http://version3/wpad.dat\n");
+  base::Move(kioslaverc_, kioslaverc_.AddExtension("old"));
+  base::Move(kioslaverc_.AddExtension("new"), kioslaverc_);
+
+  // Wait for change to be noticed.
+  sync_config_getter.WaitUntilPacUrlMatchesExpectation();
+
+  //-----------------------------------------------------
+
+  // Change the kioslaverc file once more by ovewriting it. This is really
+  // just another test to make sure things still work after the directory
+  // change was observed (this final test probably isn't very useful).
+  sync_config_getter.SetExpectedPacUrl("http://version4/wpad.dat");
+
+  WriteFile(kioslaverc_,
+            "[Proxy Settings]\nProxyType=2\n"
+            "Proxy Config Script=http://version4/wpad.dat\n");
+
+  // Wait for change to be noticed.
+  sync_config_getter.WaitUntilPacUrlMatchesExpectation();
+
+  //-----------------------------------------------------
+
+  // TODO(eroman): Add a test where kioslaverc is deleted next. Currently this
+  //               doesn't trigger any notifications, but it probably should.
 }
 
 }  // namespace

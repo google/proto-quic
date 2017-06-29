@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "testing/gtest/include/gtest/gtest.h"
 #include "tools/gn/analyzer.h"
+#include "base/memory/ptr_util.h"
+#include "testing/gtest/include/gtest/gtest.h"
 #include "tools/gn/build_settings.h"
 #include "tools/gn/builder.h"
+#include "tools/gn/input_file.h"
 #include "tools/gn/loader.h"
 #include "tools/gn/settings.h"
 #include "tools/gn/source_file.h"
-
 
 namespace {
 
@@ -34,6 +35,7 @@ class MockLoader : public Loader {
 
 class AnalyzerTest : public testing::Test {
  public:
+  using InputFileMap = base::hash_map<SourceFile, std::unique_ptr<InputFile>>;
   AnalyzerTest()
       : loader_(new MockLoader),
         builder_(loader_.get()),
@@ -49,9 +51,22 @@ class AnalyzerTest : public testing::Test {
                      const std::string name,
                      Target::OutputType type,
                      const std::vector<std::string>& sources,
-                     const std::vector<Target*>& deps) {
+                     const std::vector<Target*>& deps,
+                     const std::vector<std::string>& gn_files) {
     Label lbl(SourceDir(dir), name, tc_dir_, tc_name_);
-    Target* target = new Target(&settings_, lbl);
+    InputFileSet input_files;
+    for (const auto& gn : gn_files) {
+      SourceFile source_file(gn);
+      auto found_input_file = input_files_.find(source_file);
+      if (found_input_file != input_files_.end()) {
+        input_files.insert(found_input_file->second.get());
+      } else {
+        auto input_file = base::MakeUnique<InputFile>(source_file);
+        input_files.insert(input_file.get());
+        input_files_.insert(std::make_pair(source_file, std::move(input_file)));
+      }
+    }
+    Target* target = new Target(&settings_, lbl, input_files);
     target->set_output_type(type);
     for (const auto& s : sources)
       target->sources().push_back(SourceFile(s));
@@ -73,32 +88,38 @@ class AnalyzerTest : public testing::Test {
     // get leaked.
 
     // Ignore the returned target since nothing depends on it.
-    MakeTarget("//", "a", Target::EXECUTABLE, {"//a.cc"}, no_deps);
+    MakeTarget("//", "a", Target::EXECUTABLE, {"//a.cc"}, no_deps,
+               {"//BUILD.gn", "//features.gni"});
 
-    Target* b =
-        MakeTarget("//d", "b", Target::SOURCE_SET, {"//d/b.cc"}, no_deps);
+    Target* b = MakeTarget("//d", "b", Target::SOURCE_SET, {"//d/b.cc"},
+                           no_deps, {"//d/BUILD.gn"});
 
-    Target* b_unittests = MakeTarget("//d", "b_unittests", Target::EXECUTABLE,
-                                     {"//d/b_unittest.cc"}, {b});
+    Target* b_unittests =
+        MakeTarget("//d", "b_unittests", Target::EXECUTABLE,
+                   {"//d/b_unittest.cc"}, {b}, {"//d/BUILD.gn"});
 
-    Target* c = MakeTarget("//d", "c", Target::EXECUTABLE, {"//d/c.cc"}, {b});
+    Target* c = MakeTarget("//d", "c", Target::EXECUTABLE, {"//d/c.cc"}, {b},
+                           {"//d/BUILD.gn"});
 
     Target* b_unittests_and_c =
         MakeTarget("//d", "b_unittests_and_c", Target::GROUP, no_sources,
-                   {b_unittests, c});
+                   {b_unittests, c}, {"//d/BUILD.gn"});
 
-    Target* e =
-        MakeTarget("//d", "e", Target::EXECUTABLE, {"//d/e.cc"}, no_deps);
+    Target* e = MakeTarget("//d", "e", Target::EXECUTABLE, {"//d/e.cc"},
+                           no_deps, {"//d/BUILD.gn"});
 
     // Also ignore this returned target since nothing depends on it.
-    MakeTarget("//d", "d", Target::GROUP, no_sources, {b_unittests_and_c, e});
+    MakeTarget("//d", "d", Target::GROUP, no_sources, {b_unittests_and_c, e},
+               {"//d/BUILD.gn"});
   }
 
   void RunBasicTest(const std::string& input,
                     const std::string& expected_output) {
     SetUpABasicBuildGraph();
     Err err;
-    std::string actual_output = Analyzer(builder_).Analyze(input, &err);
+    Analyzer analyzer(builder_, build_settings_.build_config_file(),
+                      SourceFile("//.gn"));
+    std::string actual_output = analyzer.Analyze(input, &err);
     EXPECT_EQ(err.has_error(), false);
     EXPECT_EQ(expected_output, actual_output);
   }
@@ -110,6 +131,7 @@ class AnalyzerTest : public testing::Test {
   Settings settings_;
   SourceDir tc_dir_;
   std::string tc_name_;
+  InputFileMap input_files_;
 };
 
 }  // namespace
@@ -201,13 +223,10 @@ TEST_F(AnalyzerTest, WrongInputFields) {
       "}");
 }
 
-TEST_F(AnalyzerTest, BuildFilesWereModified) {
-  // This tests that if a build file is modified, we bail out early with
-  // "Found dependency (all)" error since we can't handle changes to
-  // build files yet (crbug.com/555273).
+TEST_F(AnalyzerTest, DotGnFileWasModified) {
   RunBasicTest(
       "{"
-      "  \"files\": [ \"//a.cc\", \"//BUILD.gn\" ],"
+      "  \"files\": [ \"//.gn\" ],"
       "  \"additional_compile_targets\": [],"
       "  \"test_targets\": [ \"//:a\" ]"
       "}",
@@ -218,13 +237,10 @@ TEST_F(AnalyzerTest, BuildFilesWereModified) {
       "}");
 }
 
-TEST_F(AnalyzerTest, BuildFilesWereModifiedAndCompilingAll) {
-  // This tests that if a build file is modified, we bail out early with
-  // "Found dependency (all)" error since we can't handle changes to
-  // build files yet (crbug.com/555273).
+TEST_F(AnalyzerTest, DotGnFileWasModifiedAndCompilingAll) {
   RunBasicTest(
       "{"
-      "  \"files\": [ \"//a.cc\", \"//BUILD.gn\" ],"
+      "  \"files\": [ \"//.gn\" ],"
       "  \"additional_compile_targets\": [ \"all\" ],"
       "  \"test_targets\": [ \"//:a\" ]"
       "}",
@@ -232,5 +248,47 @@ TEST_F(AnalyzerTest, BuildFilesWereModifiedAndCompilingAll) {
       "\"compile_targets\":[\"all\"],"
       "\"status\":\"Found dependency (all)\","
       "\"test_targets\":[\"//:a\"]"
+      "}");
+}
+
+TEST_F(AnalyzerTest, BuildFileWasModified) {
+  RunBasicTest(
+      "{"
+      "  \"files\": [ \"//BUILD.gn\" ],"
+      "  \"additional_compile_targets\": [],"
+      "  \"test_targets\": [ \"//:a\" ]"
+      "}",
+      "{"
+      "\"compile_targets\":[],"
+      "\"status\":\"Found dependency\","
+      "\"test_targets\":[\"//:a\"]"
+      "}");
+}
+
+TEST_F(AnalyzerTest, BuildFileWasModifiedAndCompilingAll) {
+  RunBasicTest(
+      "{"
+      "  \"files\": [ \"//BUILD.gn\" ],"
+      "  \"additional_compile_targets\": [ \"all\" ],"
+      "  \"test_targets\": [ \"//:a\" ]"
+      "}",
+      "{"
+      "\"compile_targets\":[\"//:a\"],"
+      "\"status\":\"Found dependency\","
+      "\"test_targets\":[\"//:a\"]"
+      "}");
+}
+
+TEST_F(AnalyzerTest, UnnededBuildFileWasModified) {
+  RunBasicTest(
+      "{"
+      "  \"files\": [ \"//BUILD.gn\" ],"
+      "  \"additional_compile_targets\": [],"
+      "  \"test_targets\": [ \"//d:b_unittests\" ]"
+      "}",
+      "{"
+      "\"compile_targets\":[],"
+      "\"status\":\"No dependency\","
+      "\"test_targets\":[]"
       "}");
 }

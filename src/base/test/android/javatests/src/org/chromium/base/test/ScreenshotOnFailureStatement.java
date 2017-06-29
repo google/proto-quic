@@ -52,7 +52,14 @@ public class ScreenshotOnFailureStatement extends Statement {
             return;
         }
 
-        UiDevice uiDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
+        UiDevice uiDevice = null;
+        try {
+            uiDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
+        } catch (RuntimeException ex) {
+            Log.d(TAG, "Failed to initialize UiDevice", ex);
+            return;
+        }
+
         File screenshotFile = new File(screenshotFilePath);
         File screenshotDir = screenshotFile.getParentFile();
         if (screenshotDir == null) {

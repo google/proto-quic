@@ -26,7 +26,7 @@ bool CreateAnonymousSharedMemory(const SharedMemoryCreateOptions& options,
                                  ScopedFILE* fp,
                                  ScopedFD* readonly_fd,
                                  FilePath* path) {
-#if !(defined(OS_MACOSX) && !defined(OS_IOS))
+#if !(defined(OS_MACOSX) && !defined(OS_IOS)) && !defined(OS_FUCHSIA)
   // It doesn't make sense to have a open-existing private piece of shmem
   DCHECK(!options.open_existing_deprecated);
 #endif  // !(defined(OS_MACOSX) && !defined(OS_IOS)

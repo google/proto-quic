@@ -44,7 +44,6 @@ class SimpleMobileSitesPageSet(story.StorySet):
       # Why: Scrolls moderately complex pages (up to 60 layers)
       'http://www.ebay.co.uk/',
       'https://www.flickr.com/',
-      'http://www.apple.com/mac/',
       'http://www.nyc.gov',
       'http://m.nytimes.com/'
     ]

@@ -260,8 +260,10 @@ class LitePage(IntegrationTest):
       test_driver.AddChromeArg('--force-fieldtrial-params='
                                'NetworkQualityEstimator.Enabled:'
                                'force_effective_connection_type/2G')
-      test_driver.AddChromeArg('--force-fieldtrials='
-                               'NetworkQualityEstimator/Enabled/')
+      test_driver.AddChromeArg(
+          '--force-fieldtrials='
+          'NetworkQualityEstimator/Enabled/'
+          'DataReductionProxyPreviewsBlackListTransition/Enabled/')
 
       test_driver.LoadURL('http://check.googlezip.net/test.html')
 
@@ -291,8 +293,10 @@ class LitePage(IntegrationTest):
       test_driver.AddChromeArg('--force-fieldtrial-params='
                                'NetworkQualityEstimator.Enabled:'
                                'force_effective_connection_type/4G')
-      test_driver.AddChromeArg('--force-fieldtrials='
-                               'NetworkQualityEstimator/Enabled/')
+      test_driver.AddChromeArg(
+          '--force-fieldtrials='
+          'NetworkQualityEstimator/Enabled/'
+          'DataReductionProxyPreviewsBlackListTransition/Enabled/')
 
       test_driver.LoadURL('http://check.googlezip.net/test.html')
 

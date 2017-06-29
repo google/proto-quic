@@ -96,16 +96,59 @@ class BASE_EXPORT WeakReference {
    public:
     Flag();
 
-    void Invalidate();
-    bool IsValid() const;
+    // Get a pointer to the "Null Flag", a sentinel object used by WeakReference
+    // objects that don't point to a valid Flag, either because they're default
+    // constructed or because they have been invalidated. This can be used like
+    // any other Flag object, but it is invalidated already from the start, and
+    // its refcount will never reach zero.
+    static Flag* NullFlag();
+
+    void Invalidate() {
+#if DCHECK_IS_ON()
+      if (this == NullFlag()) {
+        // The Null Flag does not participate in the sequence checks below.
+        // Since its state never changes, it can be accessed from any thread.
+        DCHECK(!is_valid_);
+        return;
+      }
+      // The flag being invalidated with a single ref implies that there are no
+      // weak pointers in existence. Allow deletion on other thread in this
+      // case.
+      DCHECK(sequence_checker_.CalledOnValidSequence() || HasOneRef())
+          << "WeakPtrs must be invalidated on the same sequenced thread.";
+#endif
+      is_valid_ = 0;
+    }
+
+    // Returns a pointer-sized bitmask of all 1s if valid or all 0s otherwise.
+    uintptr_t IsValid() const {
+#if DCHECK_IS_ON()
+      if (this == NullFlag()) {
+        // The Null Flag does not participate in the sequence checks below.
+        // Since its state never changes, it can be accessed from any thread.
+        DCHECK(!is_valid_);
+        return 0;
+      }
+      DCHECK(sequence_checker_.CalledOnValidSequence())
+          << "WeakPtrs must be checked on the same sequenced thread.";
+#endif
+      return is_valid_;
+    }
 
    private:
     friend class base::RefCountedThreadSafe<Flag>;
 
+    enum NullFlagTag { kNullFlagTag };
+    Flag(NullFlagTag);
+
     ~Flag();
 
+    uintptr_t is_valid_;
+#if DCHECK_IS_ON()
+    // Even if SequenceChecker is an empty class in non-dcheck builds, it still
+    // takes up space in the class.
     SequenceChecker sequence_checker_;
-    bool is_valid_;
+#endif
   };
 
   WeakReference();
@@ -117,9 +160,11 @@ class BASE_EXPORT WeakReference {
   WeakReference& operator=(WeakReference&& other) = default;
   WeakReference& operator=(const WeakReference& other) = default;
 
-  bool is_valid() const;
+  uintptr_t is_valid() const { return flag_->IsValid(); }
 
  private:
+  // Note: To avoid null-checks, flag_ always points to either Flag::NullFlag()
+  // or some other object.
   scoped_refptr<const Flag> flag_;
 };
 
@@ -131,7 +176,7 @@ class BASE_EXPORT WeakReferenceOwner {
   WeakReference GetRef() const;
 
   bool HasRefs() const {
-    return flag_.get() && !flag_->HasOneRef();
+    return flag_ != WeakReference::Flag::NullFlag() && !flag_->HasOneRef();
   }
 
   void Invalidate();
@@ -222,7 +267,13 @@ class WeakPtr : public internal::WeakPtrBase {
   WeakPtr(WeakPtr<U>&& other)
       : WeakPtrBase(std::move(other)), ptr_(other.ptr_) {}
 
-  T* get() const { return ref_.is_valid() ? ptr_ : nullptr; }
+  T* get() const {
+    // Intentionally bitwise and; see command on Flag::IsValid(). This provides
+    // a fast way of conditionally retrieving the pointer, and conveniently sets
+    // EFLAGS for any null-check performed by the caller.
+    return reinterpret_cast<T*>(ref_.is_valid() &
+                                reinterpret_cast<uintptr_t>(ptr_));
+  }
 
   T& operator*() const {
     DCHECK(get() != nullptr);
@@ -275,22 +326,33 @@ bool operator==(std::nullptr_t, const WeakPtr<T>& weak_ptr) {
   return weak_ptr == nullptr;
 }
 
+namespace internal {
+class BASE_EXPORT WeakPtrFactoryBase {
+ protected:
+  WeakPtrFactoryBase(uintptr_t ptr);
+  ~WeakPtrFactoryBase();
+  internal::WeakReferenceOwner weak_reference_owner_;
+  uintptr_t ptr_;
+};
+}  // namespace internal
+
 // A class may be composed of a WeakPtrFactory and thereby
 // control how it exposes weak pointers to itself.  This is helpful if you only
 // need weak pointers within the implementation of a class.  This class is also
 // useful when working with primitive types.  For example, you could have a
 // WeakPtrFactory<bool> that is used to pass around a weak reference to a bool.
 template <class T>
-class WeakPtrFactory {
+class WeakPtrFactory : public internal::WeakPtrFactoryBase {
  public:
-  explicit WeakPtrFactory(T* ptr) : ptr_(ptr) {
-  }
+  explicit WeakPtrFactory(T* ptr)
+      : WeakPtrFactoryBase(reinterpret_cast<uintptr_t>(ptr)) {}
 
-  ~WeakPtrFactory() { ptr_ = nullptr; }
+  ~WeakPtrFactory() {}
 
   WeakPtr<T> GetWeakPtr() {
     DCHECK(ptr_);
-    return WeakPtr<T>(weak_reference_owner_.GetRef(), ptr_);
+    return WeakPtr<T>(weak_reference_owner_.GetRef(),
+                      reinterpret_cast<T*>(ptr_));
   }
 
   // Call this method to invalidate all existing weak pointers.
@@ -306,8 +368,6 @@ class WeakPtrFactory {
   }
 
  private:
-  internal::WeakReferenceOwner weak_reference_owner_;
-  T* ptr_;
   DISALLOW_IMPLICIT_CONSTRUCTORS(WeakPtrFactory);
 };
 

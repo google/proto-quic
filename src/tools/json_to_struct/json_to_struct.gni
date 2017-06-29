@@ -33,6 +33,7 @@ template("json_to_struct") {
       "//tools/json_to_struct/element_generator.py",
       "//tools/json_to_struct/struct_generator.py",
       invoker.source,
+      invoker.schema_file,
     ]
 
     out_dir = get_path_info(invoker.source, "gen_dir")

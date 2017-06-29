@@ -3,16 +3,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Certificate chain where the target has an incorrect signature. Everything
-else should check out, however the digital signature contained in the target
-certificate is wrong."""
+"""Certificate chain where the target certificate has an incorrect signature."""
 
 import sys
 sys.path += ['..']
 
 import common
 
-# Self-signed root certificate (used as trust anchor).
+# Self-signed root certificate.
 root = common.create_self_signed_root_certificate('Root')
 
 # Intermediate certificate to include in the certificate chain.

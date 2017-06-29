@@ -16,12 +16,12 @@
 
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
-#include "net/base/net_export.h"
 #include "net/http2/hpack/huffman/http2_hpack_huffman_decoder.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 
-class NET_EXPORT_PRIVATE HpackDecoderStringBuffer {
+class HTTP2_EXPORT_PRIVATE HpackDecoderStringBuffer {
  public:
   enum class State : uint8_t { RESET, COLLECTING, COMPLETE };
   enum class Backing : uint8_t { RESET, UNBUFFERED, BUFFERED, STATIC };
@@ -92,8 +92,9 @@ class NET_EXPORT_PRIVATE HpackDecoderStringBuffer {
   DISALLOW_COPY_AND_ASSIGN(HpackDecoderStringBuffer);
 };
 
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
-                                            const HpackDecoderStringBuffer& v);
+HTTP2_EXPORT_PRIVATE std::ostream& operator<<(
+    std::ostream& out,
+    const HpackDecoderStringBuffer& v);
 
 }  // namespace net
 

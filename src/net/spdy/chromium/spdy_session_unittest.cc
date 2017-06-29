@@ -5657,6 +5657,41 @@ TEST_F(AltSvcFrameTest, ProcessAltSvcFrame) {
   EXPECT_EQ(alternative_service, altsvc_info_vector[0].alternative_service());
 }
 
+// Regression test for https://crbug.com/736063.
+TEST_F(AltSvcFrameTest, IgnoreQuicAltSvcWithUnsupportedVersion) {
+  const char origin[] = "https://mail.example.org";
+  SpdyAltSvcIR altsvc_ir(/* stream_id = */ 0);
+  SpdyAltSvcWireFormat::AlternativeService quic_alternative_service(
+      "quic", "alternative.example.org", 443, 86400,
+      SpdyAltSvcWireFormat::VersionVector());
+  // TODO(zhongyi): SpdyAltSvcWireFormat::ParseHeaderFieldValue expects positve
+  // versions while VersionVector allows nonnegative verisons.
+  // Fix the parse function and change the hardcoded invalid version to
+  // QUIC_VERSION_UNSUPPORTED.
+  quic_alternative_service.version.push_back(/* invalid QUIC version */ 1);
+  altsvc_ir.add_altsvc(quic_alternative_service);
+  altsvc_ir.set_origin(origin);
+  AddSocketData(altsvc_ir);
+  AddSSLSocketData();
+
+  CreateNetworkSession();
+  CreateSecureSpdySession();
+
+  base::RunLoop().RunUntilIdle();
+
+  const url::SchemeHostPort session_origin("https", test_url_.host(),
+                                           test_url_.EffectiveIntPort());
+  AlternativeServiceInfoVector altsvc_info_vector =
+      spdy_session_pool_->http_server_properties()->GetAlternativeServiceInfos(
+          session_origin);
+  ASSERT_TRUE(altsvc_info_vector.empty());
+
+  altsvc_info_vector =
+      spdy_session_pool_->http_server_properties()->GetAlternativeServiceInfos(
+          url::SchemeHostPort(GURL(origin)));
+  ASSERT_EQ(0u, altsvc_info_vector.size());
+}
+
 TEST_F(AltSvcFrameTest, DoNotProcessAltSvcFrameOnInsecureSession) {
   const char origin[] = "https://mail.example.org";
   SpdyAltSvcIR altsvc_ir(/* stream_id = */ 0);

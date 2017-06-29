@@ -255,7 +255,7 @@ std::unique_ptr<SdchManager::DictionarySet> SdchManager::GetDictionarySet(
   if (count == 0)
     return NULL;
 
-  UMA_HISTOGRAM_COUNTS("Sdch3.Advertisement_Count", count);
+  UMA_HISTOGRAM_COUNTS_1M("Sdch3.Advertisement_Count", count);
 
   return result;
 }
@@ -449,7 +449,8 @@ SdchProblemCode SdchManager::AddSdchDictionary(
   if (rv != SDCH_OK)
     return rv;
 
-  UMA_HISTOGRAM_COUNTS("Sdch3.Dictionary size loaded", dictionary_text.size());
+  UMA_HISTOGRAM_COUNTS_1M("Sdch3.Dictionary size loaded",
+                          dictionary_text.size());
   DVLOG(1) << "Loaded dictionary with client hash " << client_hash
            << " and server hash " << server_hash;
   SdchDictionary dictionary(dictionary_text, header_end + 2, client_hash,

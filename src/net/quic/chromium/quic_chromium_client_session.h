@@ -32,6 +32,7 @@
 #include "net/quic/chromium/quic_chromium_packet_reader.h"
 #include "net/quic/chromium/quic_chromium_packet_writer.h"
 #include "net/quic/chromium/quic_connection_logger.h"
+#include "net/quic/core/quic_client_push_promise_index.h"
 #include "net/quic/core/quic_client_session_base.h"
 #include "net/quic/core/quic_crypto_client_stream.h"
 #include "net/quic/core/quic_packets.h"
@@ -71,7 +72,9 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   // Wrapper for interacting with the session in a restricted fashion which
   // hides the details of the underlying session's lifetime. All methods of
   // the Handle are safe to use even after the underlying session is destroyed.
-  class NET_EXPORT_PRIVATE Handle : public MultiplexedSessionHandle {
+  class NET_EXPORT_PRIVATE Handle
+      : public MultiplexedSessionHandle,
+        public QuicClientPushPromiseIndex::Delegate {
    public:
     explicit Handle(const base::WeakPtr<QuicChromiumClientSession>& session);
     Handle(const Handle& other) = delete;
@@ -83,6 +86,13 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
     // Returns true if the handshake has been confirmed.
     bool IsCryptoHandshakeConfirmed() const;
 
+    // Starts a request to rendezvous with a promised a stream.  If OK is
+    // returned, then |push_stream_| will be updated with the promised
+    // stream.  If ERR_IO_PENDING is returned, then when the rendezvous is
+    // eventually completed |callback| will be called.
+    int RendezvousWithPromised(const SpdyHeaderBlock& headers,
+                               const CompletionCallback& callback);
+
     // Starts a request to create a stream.  If OK is returned, then
     // |stream_| will be updated with the newly created stream.  If
     // ERR_IO_PENDING is returned, then when the request is eventuallly
@@ -92,6 +102,9 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
 
     // Releases |stream_| to the caller.
     std::unique_ptr<QuicChromiumClientStream::Handle> ReleaseStream();
+
+    // Releases |push_stream_| to the caller.
+    std::unique_ptr<QuicChromiumClientStream::Handle> ReleasePromisedStream();
 
     // Sends Rst for the stream, and makes sure that future calls to
     // IsClosedStream(id) return true, which ensures that any subsequent
@@ -135,6 +148,12 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
     // Returns the session's net log.
     const NetLogWithSource& net_log() const { return net_log_; }
 
+    // QuicClientPushPromiseIndex::Delegate implementation
+    bool CheckVary(const SpdyHeaderBlock& client_request,
+                   const SpdyHeaderBlock& promise_request,
+                   const SpdyHeaderBlock& promise_response) override;
+    void OnRendezvousResult(QuicSpdyStream* stream) override;
+
    private:
     friend class QuicChromiumClientSession;
     friend class QuicChromiumClientSession::StreamRequest;
@@ -177,6 +196,14 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
     QuicVersion quic_version_;
     LoadTimingInfo::ConnectTiming connect_timing_;
     QuicClientPushPromiseIndex* push_promise_index_;
+
+    // |QuicClientPromisedInfo| owns this. It will be set when |Try()|
+    // is asynchronous, i.e. it returned QUIC_PENDING, and remains valid
+    // until |OnRendezvouResult()| fires or |push_handle_->Cancel()| is
+    // invoked.
+    QuicClientPushPromiseIndex::TryHandle* push_handle_;
+    CompletionCallback push_callback_;
+    std::unique_ptr<QuicChromiumClientStream::Handle> push_stream_;
   };
 
   // A helper class used to manage a request to create a stream.

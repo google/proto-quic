@@ -47,6 +47,7 @@ for key_type in sorted(KEYS.keys()):
 
     # Write the chain.
     chain = [target, intermediate, root]
-    description = ('Certificate chain where the target uses a %s key and has '
-                   'the single key usage %s') % (key_type.upper(), key_usage)
+    description = ('Certificate chain where the target certificate uses a %s '
+                   'key and has the single key usage %s') % (key_type.upper(),
+                                                             key_usage)
     common.write_chain(description, chain, '%s-%s.pem' % (key_type, key_usage))

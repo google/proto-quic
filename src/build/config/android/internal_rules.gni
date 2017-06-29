@@ -835,6 +835,7 @@ if (enable_java_templates) {
           "--classpath=@FileArg($_rebased_build_config:javac:interface_classpath)",
           "--resource-sources=@FileArg($_rebased_build_config:deps_info:owned_resources_dirs)",
           "--resource-sources=@FileArg($_rebased_build_config:deps_info:owned_resources_zips)",
+          "--srcjars=@FileArg($_rebased_build_config:gradle:bundled_srcjars)",
           "--can-fail-build",
         ]
       }
@@ -1709,6 +1710,12 @@ if (enable_java_templates) {
             invoker.extensions_to_not_compress,
           ]
         }
+        if (defined(invoker.exclude_xxxhdpi) && invoker.exclude_xxxhdpi) {
+          args += [ "--exclude-xxxhdpi" ]
+          if (defined(invoker.xxxhdpi_whitelist)) {
+            args += [ "--xxxhdpi-whitelist=${invoker.xxxhdpi_whitelist}" ]
+          }
+        }
       }
     }
 
@@ -1719,7 +1726,9 @@ if (enable_java_templates) {
                                "aapt_locale_whitelist",
                                "alternative_android_sdk_jar",
                                "android_aapt_path",
+                               "exclude_xxxhdpi",
                                "extensions_to_not_compress",
+                               "xxxhdpi_whitelist",
                              ])
       deps = _deps
       android_manifest = _android_manifest
@@ -1768,7 +1777,9 @@ if (enable_java_templates) {
                                "aapt_locale_whitelist",
                                "alternative_android_sdk_jar",
                                "android_aapt_path",
+                               "exclude_xxxhdpi",
                                "extensions_to_not_compress",
+                               "xxxhdpi_whitelist",
                              ])
       deps =
           _incremental_deps + [ ":$_generate_incremental_manifest_target_name" ]

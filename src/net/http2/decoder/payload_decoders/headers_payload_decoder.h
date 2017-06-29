@@ -7,18 +7,18 @@
 
 // Decodes the payload of a HEADERS frame.
 
-#include "net/base/net_export.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
 #include "net/http2/decoder/frame_decoder_state.h"
 #include "net/http2/http2_structures.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 namespace test {
 class HeadersPayloadDecoderPeer;
 }  // namespace test
 
-class NET_EXPORT_PRIVATE HeadersPayloadDecoder {
+class HTTP2_EXPORT_PRIVATE HeadersPayloadDecoder {
  public:
   // States during decoding of a HEADERS frame, unless the fast path kicks
   // in, in which case the state machine will be bypassed.

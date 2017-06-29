@@ -40,7 +40,7 @@ TEST(SPKIHashTest, FromString) {
 
   SPKIHash hash3;
 
-  // Valid SHA1 should rejected.
+  // Valid SHA1 should be rejected.
   EXPECT_FALSE(hash3.FromString("sha1/111111111111111111111111111="));
   EXPECT_FALSE(hash3.FromString("sha1/gzF+YoVCU9bXeDGQ7JGQVumRueM="));
 

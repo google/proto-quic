@@ -53,6 +53,7 @@ class _MemoryInfra(perf_benchmark.PerfBenchmark):
 
 @benchmark.Enabled('mac')
 @benchmark.Enabled('win')
+@benchmark.Disabled('android')
 @benchmark.Owner(emails=['erikchen@chromium.org'])
 class MemoryBenchmarkTrivialSitesDesktop(_MemoryInfra):
   """Measure memory usage on trivial sites."""

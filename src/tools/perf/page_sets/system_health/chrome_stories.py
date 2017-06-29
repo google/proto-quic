@@ -87,4 +87,4 @@ class MobileNewTabPageStory(system_health_story.SystemHealthStory):
       action_runner.WaitForNavigate()
 
     app_ui.WaitForUiNode(resource_id='menu_button').Tap()
-    app_ui.WaitForUiNode(resource_id='menu_item_text')
+    app_ui.WaitForUiNode(content_desc='New tab')

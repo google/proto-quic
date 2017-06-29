@@ -1,5 +1,8 @@
 {
     "archives": {
+        "Facebook": {
+            "DEFAULT": "loading_mobile_002.wpr"
+        },
         "http://enquiry.indianrail.gov.in/mntes/MntesServlet?action=MainMenu&subAction=excep&excpType=EC": {
             "DEFAULT": "loading_mobile_000.wpr"
         },

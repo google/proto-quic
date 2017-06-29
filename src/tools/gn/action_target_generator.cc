@@ -8,6 +8,7 @@
 #include "tools/gn/build_settings.h"
 #include "tools/gn/err.h"
 #include "tools/gn/filesystem_utils.h"
+#include "tools/gn/functions.h"
 #include "tools/gn/parse_tree.h"
 #include "tools/gn/scope.h"
 #include "tools/gn/value.h"
@@ -58,7 +59,7 @@ void ActionTargetGenerator::DoRun() {
   if (!FillDepfile())
     return;
 
-  if (!FillConsole())
+  if (!FillPool())
     return;
 
   if (!FillCheckIncludes())
@@ -159,13 +160,20 @@ bool ActionTargetGenerator::FillDepfile() {
   return true;
 }
 
-bool ActionTargetGenerator::FillConsole() {
-  const Value* value = scope_->GetValue(variables::kConsole, true);
+bool ActionTargetGenerator::FillPool() {
+  const Value* value = scope_->GetValue(variables::kPool, true);
   if (!value)
     return true;
-  if (!value->VerifyTypeIs(Value::BOOLEAN, err_))
+
+  Label label = Label::Resolve(scope_->GetSourceDir(),
+                               ToolchainLabelForScope(scope_), *value, err_);
+  if (err_->has_error())
     return false;
-  target_->action_values().set_console(value->boolean_value());
+
+  LabelPtrPair<Pool> pair(label);
+  pair.origin = target_->defined_from();
+
+  target_->action_values().set_pool(std::move(pair));
   return true;
 }
 

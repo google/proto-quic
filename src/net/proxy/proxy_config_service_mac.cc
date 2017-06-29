@@ -198,7 +198,7 @@ void ProxyConfigServiceMac::Forwarder::OnNetworkConfigChange(
 }
 
 ProxyConfigServiceMac::ProxyConfigServiceMac(
-    const scoped_refptr<base::SingleThreadTaskRunner>& io_thread_task_runner)
+    const scoped_refptr<base::SequencedTaskRunner>& io_thread_task_runner)
     : forwarder_(this),
       has_fetched_config_(false),
       helper_(new Helper(this)),
@@ -208,7 +208,7 @@ ProxyConfigServiceMac::ProxyConfigServiceMac(
 }
 
 ProxyConfigServiceMac::~ProxyConfigServiceMac() {
-  DCHECK(io_thread_task_runner_->BelongsToCurrentThread());
+  DCHECK(io_thread_task_runner_->RunsTasksInCurrentSequence());
   // Delete the config_watcher_ to ensure the notifier thread finishes before
   // this object is destroyed.
   config_watcher_.reset();
@@ -216,18 +216,18 @@ ProxyConfigServiceMac::~ProxyConfigServiceMac() {
 }
 
 void ProxyConfigServiceMac::AddObserver(Observer* observer) {
-  DCHECK(io_thread_task_runner_->BelongsToCurrentThread());
+  DCHECK(io_thread_task_runner_->RunsTasksInCurrentSequence());
   observers_.AddObserver(observer);
 }
 
 void ProxyConfigServiceMac::RemoveObserver(Observer* observer) {
-  DCHECK(io_thread_task_runner_->BelongsToCurrentThread());
+  DCHECK(io_thread_task_runner_->RunsTasksInCurrentSequence());
   observers_.RemoveObserver(observer);
 }
 
 ProxyConfigService::ConfigAvailability
 ProxyConfigServiceMac::GetLatestProxyConfig(ProxyConfig* config) {
-  DCHECK(io_thread_task_runner_->BelongsToCurrentThread());
+  DCHECK(io_thread_task_runner_->RunsTasksInCurrentSequence());
 
   // Lazy-initialize by fetching the proxy setting from this thread.
   if (!has_fetched_config_) {
@@ -270,7 +270,7 @@ void ProxyConfigServiceMac::OnNetworkConfigChange(CFArrayRef changed_keys) {
 
 void ProxyConfigServiceMac::OnProxyConfigChanged(
     const ProxyConfig& new_config) {
-  DCHECK(io_thread_task_runner_->BelongsToCurrentThread());
+  DCHECK(io_thread_task_runner_->RunsTasksInCurrentSequence());
 
   // Keep track of the last value we have seen.
   has_fetched_config_ = true;

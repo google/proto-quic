@@ -7,6 +7,7 @@ package org.chromium.base.test.util;
 import android.content.Context;
 
 import org.junit.Assert;
+import org.junit.Rule;
 
 import org.chromium.base.BaseChromiumApplication;
 import org.chromium.base.CommandLine;
@@ -19,6 +20,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -32,7 +34,24 @@ import java.util.Set;
  * so a derived class can add a command-line flag that a base class has removed (or vice versa).
  * Similarly, uses of these annotations on a test method will take precedence over uses on the
  * containing class.
+ * <p>
+ * These annonations may also be used on Junit4 Rule classes and on their base classes. Note,
+ * however that the annotation processor only looks at the declared type of the Rule, not its actual
+ * type, so in, for example:
  *
+ * <pre>
+ *     &#64Rule
+ *     TestRule mRule = new ChromeActivityTestRule();
+ * </pre>
+ *
+ * will only look for CommandLineFlags annotations on TestRule, not for CommandLineFlags annotations
+ * on ChromeActivityTestRule.
+ * <p>
+ * In addition a rule may not remove flags added by an independently invoked rule, although it may
+ * remove flags added by its base classes.
+ * <p>
+ * Uses of these annotations on the test class or methods take precedence over uses on Rule classes.
+ * <p>
  * Note that this class should never be instantiated.
  */
 public final class CommandLineFlags {
@@ -81,12 +100,42 @@ public final class CommandLineFlags {
         }
     }
 
-    private static Set<String> getFlags(AnnotatedElement element) {
+    private static Set<String> getFlags(AnnotatedElement type) {
+        Set<String> rule_flags = new HashSet<>();
+        updateFlagsForElement(type, rule_flags);
+        return rule_flags;
+    }
+
+    private static void updateFlagsForElement(AnnotatedElement element, Set<String> flags) {
+        if (element instanceof Class<?>) {
+            // Get flags from rules within the class.
+            for (Field field : ((Class<?>) element).getFields()) {
+                if (field.isAnnotationPresent(Rule.class)) {
+                    // The order in which fields are returned is undefined, so, for consistency,
+                    // a rule must not remove a flag added by a different rule. Ensure this by
+                    // initially getting the flags into a new set.
+                    Set<String> rule_flags = getFlags(field.getType());
+                    flags.addAll(rule_flags);
+                }
+            }
+            for (Method method : ((Class<?>) element).getMethods()) {
+                if (method.isAnnotationPresent(Rule.class)) {
+                    // The order in which methods are returned is undefined, so, for consistency,
+                    // a rule must not remove a flag added by a different rule. Ensure this by
+                    // initially getting the flags into a new set.
+                    Set<String> rule_flags = getFlags(method.getReturnType());
+                    flags.addAll(rule_flags);
+                }
+            }
+        }
+
+        // Add the flags from the parent. Override any flags defined by the rules.
         AnnotatedElement parent = (element instanceof Method)
                 ? ((Method) element).getDeclaringClass()
-                : ((Class) element).getSuperclass();
-        Set<String> flags = (parent == null) ? new HashSet<String>() : getFlags(parent);
+                : ((Class<?>) element).getSuperclass();
+        if (parent != null) updateFlagsForElement(parent, flags);
 
+        // Flags on the element itself override all other flag sources.
         if (element.isAnnotationPresent(CommandLineFlags.Add.class)) {
             flags.addAll(
                     Arrays.asList(element.getAnnotation(CommandLineFlags.Add.class).value()));
@@ -104,8 +153,6 @@ public final class CommandLineFlags {
             }
             flags.removeAll(flagsToRemove);
         }
-
-        return flags;
     }
 
     private CommandLineFlags() {
@@ -129,18 +176,16 @@ public final class CommandLineFlags {
      * instructs to run the test with default command-line flags.
      *
      * Example:
+     *
      * @ParameterizedTest.Set(tests = {
-     *             @ParameterizedTest(parameters = {
-     *                         @Parameter(
-     *                                 tag = CommandLineFlags.Parameter.PARAMETER_TAG)}),
-     *             @ParameterizedTest(parameters = {
-     *                         @Parameter(
-     *                                 tag = CommandLineFlags.Parameter.PARAMETER_TAG,
-     *                                 arguments = {
-     *                                     @Parameter.Argument(
-     *                                         name = CommandLineFlags.Parameter.ADD_ARG,
-     *                                         stringArray = {'arg1', 'arg2'})
-     *             })})})
+     * @ParameterizedTest(parameters = {
+     * @Parameter( tag = CommandLineFlags.Parameter.PARAMETER_TAG)}),
+     * @ParameterizedTest(parameters = {
+     * @Parameter( tag = CommandLineFlags.Parameter.PARAMETER_TAG,
+     * arguments = {
+     * @Parameter.Argument( name = CommandLineFlags.Parameter.ADD_ARG,
+     * stringArray = {'arg1', 'arg2'})
+     * })})})
      *
      * Note that because the entire instrumentation test process needs to be restarted to apply
      * modified command-line arguments, this annotation is handled by test_runner.py, not by

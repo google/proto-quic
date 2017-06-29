@@ -249,7 +249,7 @@ TEST_F(URLRequestQuicPerfTest, TestGetRequest) {
       1 /* dump_guid*/, base::trace_event::MemoryDumpType::EXPLICITLY_TRIGGERED,
       base::trace_event::MemoryDumpLevelOfDetail::LIGHT};
   auto on_memory_dump_done =
-      [](base::Closure quit_closure, uint64_t dump_guid, bool success,
+      [](base::Closure quit_closure, bool success, uint64_t dump_guid,
          const base::Optional<base::trace_event::MemoryDumpCallbackResult>&) {
         base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, quit_closure);
         ASSERT_TRUE(success);

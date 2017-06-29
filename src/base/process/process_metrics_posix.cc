@@ -101,6 +101,9 @@ size_t ProcessMetrics::GetMallocUsage() {
 #else
   return minfo.hblkhd + minfo.arena;
 #endif
+#elif defined(OS_FUCHSIA)
+  // TODO(fuchsia): Not currently exposed. https://crbug.com/735087.
+  return 0;
 #endif
 }
 

@@ -16,7 +16,7 @@
 #include "net/proxy/proxy_config_service.h"
 
 namespace base {
-class SingleThreadTaskRunner;
+class SequencedTaskRunner;
 }  // namespace base
 
 namespace net {
@@ -24,10 +24,10 @@ namespace net {
 class ProxyConfigServiceMac : public ProxyConfigService {
  public:
   // Constructs a ProxyConfigService that watches the Mac OS system settings.
-  // This instance is expected to be operated and deleted on the same thread
-  // (however it may be constructed from a different thread).
+  // This instance is expected to be operated and deleted on the
+  // same sequenced task runner (however it may be constructed elsewhere).
   explicit ProxyConfigServiceMac(
-      const scoped_refptr<base::SingleThreadTaskRunner>& io_thread_task_runner);
+      const scoped_refptr<base::SequencedTaskRunner>& io_thread_task_runner);
   ~ProxyConfigServiceMac() override;
 
  public:
@@ -74,8 +74,8 @@ class ProxyConfigServiceMac : public ProxyConfigService {
 
   scoped_refptr<Helper> helper_;
 
-  // The thread that we expect to be operated on.
-  const scoped_refptr<base::SingleThreadTaskRunner> io_thread_task_runner_;
+  // The task runner that |this| will be operated on.
+  const scoped_refptr<base::SequencedTaskRunner> io_thread_task_runner_;
 
   DISALLOW_COPY_AND_ASSIGN(ProxyConfigServiceMac);
 };

@@ -27,7 +27,7 @@ class ActionTargetGenerator : public TargetGenerator {
   bool FillScriptArgs();
   bool FillResponseFileContents();
   bool FillDepfile();
-  bool FillConsole();
+  bool FillPool();
 
   // Checks for errors in the outputs variable.
   bool CheckOutputs();

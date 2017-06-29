@@ -10,7 +10,7 @@
 
 #include <ostream>
 
-#include "net/base/net_export.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 
@@ -25,7 +25,8 @@ enum class DecodeStatus {
   // an HTTP/2 frame has padding declared to be larger than the payload).
   kDecodeError,
 };
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out, DecodeStatus v);
+HTTP2_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
+                                              DecodeStatus v);
 
 }  // namespace net
 

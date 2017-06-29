@@ -125,16 +125,21 @@ bool FileEnumerator::ReadDirectory(std::vector<FileInfo>* entries,
   if (!dir)
     return false;
 
-#if !defined(OS_LINUX) && !defined(OS_MACOSX) && !defined(OS_BSD) &&    \
-    !defined(OS_SOLARIS) && !defined(OS_ANDROID) && !defined(OS_AIX) && \
-    !defined(OS_FUCHSIA)
-#error Port warning: depending on the definition of struct dirent, \
-         additional space for pathname may be needed
-#endif
+#if defined(OS_FUCHSIA)
+  // Fuchsia does not support .. on the file system server side, see
+  // https://fuchsia.googlesource.com/docs/+/master/dotdot.md and
+  // https://crbug.com/735540. However, for UI purposes, having the parent
+  // directory show up in directory listings makes sense, so we add it here to
+  // match the expectation on other operating systems. In cases where this
+  // is useful it should be resolvable locally.
+  FileInfo dotdot;
+  dotdot.stat_.st_mode = S_IFDIR;
+  dotdot.filename_ = FilePath("..");
+  entries->push_back(dotdot);
+#endif  // OS_FUCHSIA
 
-  struct dirent dent_buf;
   struct dirent* dent;
-  while (readdir_r(dir, &dent_buf, &dent) == 0 && dent) {
+  while ((dent = readdir(dir))) {
     FileInfo info;
     info.filename_ = FilePath(dent->d_name);
 

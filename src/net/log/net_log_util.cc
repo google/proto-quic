@@ -383,13 +383,16 @@ NET_EXPORT std::unique_ptr<base::DictionaryValue> GetNetInfo(
         dict->Set("dns_config", std::move(dns_config));
 
       auto cache_info_dict = base::MakeUnique<base::DictionaryValue>();
+      auto cache_contents_list = base::MakeUnique<base::ListValue>();
 
       cache_info_dict->SetInteger("capacity",
                                   static_cast<int>(cache->max_entries()));
       cache_info_dict->SetInteger("network_changes", cache->network_changes());
 
-      cache_info_dict->Set("entries",
-                           cache->GetAsListValue(/*include_staleness=*/true));
+      cache->GetAsListValue(cache_contents_list.get(),
+                            /*include_staleness=*/true);
+      cache_info_dict->Set("entries", std::move(cache_contents_list));
+
       dict->Set("cache", std::move(cache_info_dict));
       net_info_dict->Set(NetInfoSourceToString(NET_INFO_HOST_RESOLVER),
                          std::move(dict));

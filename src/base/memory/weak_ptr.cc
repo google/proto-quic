@@ -4,50 +4,55 @@
 
 #include "base/memory/weak_ptr.h"
 
+#include "base/debug/leak_annotations.h"
+
 namespace base {
 namespace internal {
 
-WeakReference::Flag::Flag() : is_valid_(true) {
+static constexpr uintptr_t kTrueMask = ~static_cast<uintptr_t>(0);
+
+WeakReference::Flag::Flag() : is_valid_(kTrueMask) {
+#if DCHECK_IS_ON()
   // Flags only become bound when checked for validity, or invalidated,
   // so that we can check that later validity/invalidation operations on
   // the same Flag take place on the same sequenced thread.
   sequence_checker_.DetachFromSequence();
+#endif
 }
 
-void WeakReference::Flag::Invalidate() {
-  // The flag being invalidated with a single ref implies that there are no
-  // weak pointers in existence. Allow deletion on other thread in this case.
-  DCHECK(sequence_checker_.CalledOnValidSequence() || HasOneRef())
-      << "WeakPtrs must be invalidated on the same sequenced thread.";
-  is_valid_ = false;
+WeakReference::Flag::Flag(WeakReference::Flag::NullFlagTag) : is_valid_(false) {
+  // There is no need for sequence_checker_.DetachFromSequence() because the
+  // null flag doesn't participate in the sequence checks. See DCHECK in
+  // Invalidate() and IsValid().
+
+  // Keep the object alive perpetually, even when there are no references to it.
+  AddRef();
 }
 
-bool WeakReference::Flag::IsValid() const {
-  DCHECK(sequence_checker_.CalledOnValidSequence())
-      << "WeakPtrs must be checked on the same sequenced thread.";
-  return is_valid_;
+WeakReference::Flag* WeakReference::Flag::NullFlag() {
+  ANNOTATE_SCOPED_MEMORY_LEAK;
+  static Flag* g_null_flag = new Flag(kNullFlagTag);
+  return g_null_flag;
 }
 
-WeakReference::Flag::~Flag() {
-}
+WeakReference::Flag::~Flag() {}
 
-WeakReference::WeakReference() {
-}
-
-WeakReference::WeakReference(const Flag* flag) : flag_(flag) {
-}
+WeakReference::WeakReference() : flag_(Flag::NullFlag()) {}
 
 WeakReference::~WeakReference() {
 }
 
-WeakReference::WeakReference(WeakReference&& other) = default;
+WeakReference::WeakReference(const Flag* flag) : flag_(flag) {}
+
+WeakReference::WeakReference(WeakReference&& other)
+    : flag_(std::move(other.flag_)) {
+  other.flag_ = Flag::NullFlag();
+}
 
 WeakReference::WeakReference(const WeakReference& other) = default;
 
-bool WeakReference::is_valid() const { return flag_.get() && flag_->IsValid(); }
-
-WeakReferenceOwner::WeakReferenceOwner() {
-}
+WeakReferenceOwner::WeakReferenceOwner()
+    : flag_(WeakReference::Flag::NullFlag()) {}
 
 WeakReferenceOwner::~WeakReferenceOwner() {
   Invalidate();
@@ -62,10 +67,8 @@ WeakReference WeakReferenceOwner::GetRef() const {
 }
 
 void WeakReferenceOwner::Invalidate() {
-  if (flag_.get()) {
-    flag_->Invalidate();
-    flag_ = NULL;
-  }
+  flag_->Invalidate();
+  flag_ = WeakReference::Flag::NullFlag();
 }
 
 WeakPtrBase::WeakPtrBase() {
@@ -75,6 +78,12 @@ WeakPtrBase::~WeakPtrBase() {
 }
 
 WeakPtrBase::WeakPtrBase(const WeakReference& ref) : ref_(ref) {
+}
+
+WeakPtrFactoryBase::WeakPtrFactoryBase(uintptr_t ptr) : ptr_(ptr) {}
+
+WeakPtrFactoryBase::~WeakPtrFactoryBase() {
+  ptr_ = 0;
 }
 
 }  // namespace internal

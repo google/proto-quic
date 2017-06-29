@@ -30,9 +30,9 @@
 #include <string>
 
 #include "base/logging.h"
-#include "net/base/net_export.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 // Decodes an HPACK variable length unsigned integer, in a resumable fashion
@@ -45,7 +45,7 @@ namespace net {
 // needed. Start and StartExtended handles the initialization of member
 // variables. This is necessary in order for HpackVarintDecoder to be part
 // of a union.
-class NET_EXPORT_PRIVATE HpackVarintDecoder {
+class HTTP2_EXPORT_PRIVATE HpackVarintDecoder {
  public:
   // |prefix_value| is the first byte of the encoded varint.
   // |prefix_mask| is the mask of the valid bits, i.e. without the top 1 to 4

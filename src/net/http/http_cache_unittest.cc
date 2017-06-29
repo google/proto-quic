@@ -1576,6 +1576,92 @@ TEST(HttpCache, RangeGET_ParallelValidationDifferentRanges) {
   EXPECT_EQ(1, cache.disk_cache()->create_count());
 }
 
+// Tests parallel validation on range requests can be successfully restarted
+// when there is a cache lock timeout.
+TEST(HttpCache, RangeGET_ParallelValidationCacheLockTimeout) {
+  MockHttpCache cache;
+
+  ScopedMockTransaction transaction(kRangeGET_TransactionOK);
+
+  std::vector<std::unique_ptr<Context>> context_list;
+  const int kNumTransactions = 2;
+
+  for (int i = 0; i < kNumTransactions; ++i) {
+    context_list.push_back(base::MakeUnique<Context>());
+  }
+
+  // Let 1st transaction complete headers phase for ranges 40-49.
+  std::string first_read;
+  MockHttpRequest request1(transaction);
+  {
+    auto& c = context_list[0];
+    c->result = cache.CreateTransaction(&c->trans);
+    ASSERT_THAT(c->result, IsOk());
+    EXPECT_EQ(LOAD_STATE_IDLE, c->trans->GetLoadState());
+
+    c->result =
+        c->trans->Start(&request1, c->callback.callback(), NetLogWithSource());
+    base::RunLoop().RunUntilIdle();
+
+    // Start writing to the cache so that MockDiskEntry::CouldBeSparse() returns
+    // true.
+    const int kBufferSize = 5;
+    scoped_refptr<IOBuffer> buffer(new IOBuffer(kBufferSize));
+    ReleaseBufferCompletionCallback cb(buffer.get());
+    c->result = c->trans->Read(buffer.get(), kBufferSize, cb.callback());
+    EXPECT_EQ(kBufferSize, cb.GetResult(c->result));
+
+    std::string data_read(buffer->data(), kBufferSize);
+    first_read = data_read;
+
+    EXPECT_EQ(LOAD_STATE_READING_RESPONSE, c->trans->GetLoadState());
+  }
+
+  cache.SimulateCacheLockTimeoutAfterHeaders();
+
+  // 2nd transaction requests ranges 30-39.
+  transaction.request_headers = "Range: bytes = 30-39\r\n" EXTRA_HEADER;
+  MockHttpRequest request2(transaction);
+  {
+    auto& c = context_list[1];
+    c->result = cache.CreateTransaction(&c->trans);
+    ASSERT_THAT(c->result, IsOk());
+    EXPECT_EQ(LOAD_STATE_IDLE, c->trans->GetLoadState());
+
+    c->result =
+        c->trans->Start(&request2, c->callback.callback(), NetLogWithSource());
+    base::RunLoop().RunUntilIdle();
+
+    EXPECT_EQ(LOAD_STATE_IDLE, c->trans->GetLoadState());
+  }
+
+  EXPECT_TRUE(cache.IsWriterPresent(kRangeGET_TransactionOK.url));
+  EXPECT_EQ(0, cache.GetCountDoneHeadersQueue(kRangeGET_TransactionOK.url));
+
+  EXPECT_EQ(3, cache.network_layer()->transaction_count());
+  EXPECT_EQ(0, cache.disk_cache()->open_count());
+  EXPECT_EQ(1, cache.disk_cache()->create_count());
+
+  for (int i = 0; i < kNumTransactions; ++i) {
+    auto& c = context_list[i];
+    if (c->result == ERR_IO_PENDING)
+      c->result = c->callback.WaitForResult();
+
+    if (i == 0) {
+      ReadRemainingAndVerifyTransaction(c->trans.get(), first_read,
+                                        transaction);
+      continue;
+    }
+
+    transaction.data = "rg: 30-39 ";
+    ReadAndVerifyTransaction(c->trans.get(), transaction);
+  }
+
+  EXPECT_EQ(3, cache.network_layer()->transaction_count());
+  EXPECT_EQ(0, cache.disk_cache()->open_count());
+  EXPECT_EQ(1, cache.disk_cache()->create_count());
+}
+
 // Tests parallel validation on range requests with overlapping ranges.
 TEST(HttpCache, RangeGET_ParallelValidationOverlappingRanges) {
   MockHttpCache cache;
@@ -1935,6 +2021,53 @@ TEST(HttpCache, SimpleGET_ParallelValidationCancelValidated) {
   }
 
   EXPECT_EQ(1, cache.network_layer()->transaction_count());
+  EXPECT_EQ(0, cache.disk_cache()->open_count());
+  EXPECT_EQ(1, cache.disk_cache()->create_count());
+}
+
+// Tests that a transaction which is in validated queue can timeout and start
+// reading from the network without writing to the cache.
+TEST(HttpCache, SimpleGET_ParallelValidationValidatedTimeout) {
+  MockHttpCache cache;
+
+  MockHttpRequest request(kSimpleGET_Transaction);
+
+  std::vector<std::unique_ptr<Context>> context_list;
+  const int kNumTransactions = 2;
+
+  for (int i = 0; i < kNumTransactions; ++i) {
+    context_list.push_back(base::MakeUnique<Context>());
+    auto& c = context_list[i];
+
+    if (i == 1)
+      cache.SimulateCacheLockTimeoutAfterHeaders();
+
+    c->result = cache.CreateTransaction(&c->trans);
+    ASSERT_THAT(c->result, IsOk());
+
+    c->result =
+        c->trans->Start(&request, c->callback.callback(), NetLogWithSource());
+  }
+
+  // Allow all requests to move from the Create queue to the active entry.
+  base::RunLoop().RunUntilIdle();
+
+  // The first request should be a writer at this point, and the subsequent
+  // requests should have completed validation, timed out and restarted.
+
+  EXPECT_EQ(2, cache.network_layer()->transaction_count());
+  EXPECT_EQ(0, cache.disk_cache()->open_count());
+  EXPECT_EQ(1, cache.disk_cache()->create_count());
+
+  EXPECT_TRUE(cache.IsWriterPresent(kSimpleGET_Transaction.url));
+  EXPECT_EQ(0, cache.GetCountDoneHeadersQueue(kSimpleGET_Transaction.url));
+
+  // Complete the rest of the transactions.
+  for (auto& context : context_list) {
+    ReadAndVerifyTransaction(context->trans.get(), kSimpleGET_Transaction);
+  }
+
+  EXPECT_EQ(2, cache.network_layer()->transaction_count());
   EXPECT_EQ(0, cache.disk_cache()->open_count());
   EXPECT_EQ(1, cache.disk_cache()->create_count());
 }

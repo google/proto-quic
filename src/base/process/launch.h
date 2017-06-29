@@ -37,6 +37,8 @@ class CommandLine;
 
 #if defined(OS_WIN)
 typedef std::vector<HANDLE> HandlesToInheritVector;
+#elif defined(OS_FUCHSIA)
+typedef std::vector<mx_handle_t> HandlesToInheritVector;
 #endif
 // TODO(viettrungluu): Only define this on POSIX?
 typedef std::vector<std::pair<int, int> > FileHandleMappingVector;

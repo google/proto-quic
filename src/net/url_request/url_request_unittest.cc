@@ -5,8 +5,7 @@
 #include <memory>
 #include <utility>
 
-#include "base/memory/ptr_util.h"
-#include "base/run_loop.h"
+// This must be before Windows headers
 #include "build/build_config.h"
 
 #if defined(OS_WIN)
@@ -47,6 +46,7 @@
 #include "base/test/histogram_tester.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/values.h"
+#include "build/buildflag.h"
 #include "net/base/chunked_upload_data_stream.h"
 #include "net/base/directory_listing.h"
 #include "net/base/elements_upload_data_stream.h"
@@ -93,7 +93,6 @@
 #include "net/proxy/proxy_service.h"
 #include "net/quic/chromium/mock_crypto_client_stream_factory.h"
 #include "net/quic/chromium/quic_server_info.h"
-#include "net/reporting/reporting_service.h"
 #include "net/socket/socket_test_util.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/ssl/channel_id_service.h"
@@ -140,6 +139,10 @@
 #include "base/win/scoped_com_initializer.h"
 #include "base/win/scoped_comptr.h"
 #endif
+
+#if BUILDFLAG(ENABLE_REPORTING)
+#include "net/reporting/reporting_service.h"
+#endif  // BUILDFLAG(ENABLE_REPORTING)
 
 using net::test::IsError;
 using net::test::IsOk;
@@ -6704,6 +6707,7 @@ class MockExpectCTReporter : public TransportSecurityState::ExpectCTReporter {
 
   void OnExpectCTFailed(const HostPortPair& host_port_pair,
                         const GURL& report_uri,
+                        base::Time expiration,
                         const X509Certificate* validated_certificate_chain,
                         const X509Certificate* served_certificate_chain,
                         const SignedCertificateTimestampAndStatusList&
@@ -6798,7 +6802,9 @@ TEST_F(URLRequestTestHTTP, ExpectCTHeader) {
 
   EXPECT_EQ(1u, reporter.num_failures());
 }
+#endif  // !defined(OS_IOS)
 
+#if BUILDFLAG(ENABLE_REPORTING)
 namespace {
 
 class TestReportingService : public ReportingService {
@@ -6935,8 +6941,7 @@ TEST_F(URLRequestTestHTTP, DontProcessReportToHeaderInvalidHTTPS) {
   EXPECT_TRUE(IsCertStatusError(request->ssl_info().cert_status));
   EXPECT_TRUE(reporting_service.headers().empty());
 }
-
-#endif  // !defined(OS_IOS)
+#endif  // BUILDFLAG(ENABLE_REPORTING)
 
 TEST_F(URLRequestTestHTTP, ContentTypeNormalizationTest) {
   ASSERT_TRUE(http_test_server()->Start());

@@ -51,8 +51,9 @@ class DestructionIndicator {
 TEST(BarrierClosureTest, ReleasesDoneClosureWhenDone) {
   bool done_destructed = false;
   base::Closure barrier_closure = base::BarrierClosure(
-      1, base::Bind(&DestructionIndicator::DoNothing,
-                    base::Owned(new DestructionIndicator(&done_destructed))));
+      1,
+      base::BindOnce(&DestructionIndicator::DoNothing,
+                     base::Owned(new DestructionIndicator(&done_destructed))));
   EXPECT_FALSE(done_destructed);
   barrier_closure.Run();
   EXPECT_TRUE(done_destructed);

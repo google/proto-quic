@@ -9,9 +9,9 @@
 #include <algorithm>
 #include <vector>
 
-#include "third_party/libsrtp/include/rtp.h"
-#include "third_party/libsrtp/include/rtp_priv.h"
 #include "third_party/libsrtp/include/srtp.h"
+#include "third_party/libsrtp/include/srtp_priv.h"
+#include "third_party/libsrtp/test/rtp.h"
 
 // TODO(katrielc) Also test the authenticated path, which is what
 // WebRTC uses.  This is nontrivial because you need to bypass the MAC

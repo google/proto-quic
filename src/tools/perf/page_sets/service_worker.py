@@ -44,4 +44,6 @@ class ServiceWorkerPageSet(story.StorySet):
 
 class ServiceWorkerStoryExpectations(story.expectations.StoryExpectations):
   def SetExpectations(self):
-    pass # Nothing disabled.
+    self.DisableStory('first_load',
+                      [story.expectations.ANDROID_ONE],
+                      'crbug.com/736518')

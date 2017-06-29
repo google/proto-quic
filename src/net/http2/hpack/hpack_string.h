@@ -16,11 +16,11 @@
 #include <string>
 
 #include "base/strings/string_piece.h"
-#include "net/base/net_export.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 
-class NET_EXPORT_PRIVATE HpackString {
+class HTTP2_EXPORT_PRIVATE HpackString {
  public:
   explicit HpackString(const char* data);
   explicit HpackString(base::StringPiece str);
@@ -46,14 +46,15 @@ class NET_EXPORT_PRIVATE HpackString {
   std::string str_;
 };
 
-NET_EXPORT_PRIVATE bool operator==(base::StringPiece a, const HpackString& b);
-NET_EXPORT_PRIVATE bool operator!=(base::StringPiece a, const HpackString& b);
-NET_EXPORT_PRIVATE bool operator!=(const HpackString& a, const HpackString& b);
-NET_EXPORT_PRIVATE bool operator!=(const HpackString& a, base::StringPiece b);
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
-                                            const HpackString& v);
+HTTP2_EXPORT_PRIVATE bool operator==(base::StringPiece a, const HpackString& b);
+HTTP2_EXPORT_PRIVATE bool operator!=(base::StringPiece a, const HpackString& b);
+HTTP2_EXPORT_PRIVATE bool operator!=(const HpackString& a,
+                                     const HpackString& b);
+HTTP2_EXPORT_PRIVATE bool operator!=(const HpackString& a, base::StringPiece b);
+HTTP2_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
+                                              const HpackString& v);
 
-struct NET_EXPORT_PRIVATE HpackStringPair {
+struct HTTP2_EXPORT_PRIVATE HpackStringPair {
   HpackStringPair(const HpackString& name, const HpackString& value);
   HpackStringPair(base::StringPiece name, base::StringPiece value);
   ~HpackStringPair();
@@ -68,8 +69,8 @@ struct NET_EXPORT_PRIVATE HpackStringPair {
   HpackString value;
 };
 
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& os,
-                                            const HpackStringPair& p);
+HTTP2_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& os,
+                                              const HpackStringPair& p);
 
 }  // namespace net
 

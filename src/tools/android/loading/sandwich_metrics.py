@@ -20,9 +20,9 @@ _SRC_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '..', '..', '..'))
 
 sys.path.append(os.path.join(_SRC_DIR, 'tools', 'perf'))
-from chrome_telemetry_build import chromium_config
+from core import path_util
+sys.path.append(path_util.GetTelemetryDir())
 
-sys.path.append(chromium_config.GetTelemetryDir())
 from telemetry.internal.image_processing import video
 from telemetry.util import image_util
 from telemetry.util import rgba_color

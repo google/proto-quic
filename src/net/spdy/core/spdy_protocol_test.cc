@@ -230,11 +230,13 @@ TEST(SpdyDataIRTest, Construct) {
   SpdyDataIR d2(/* stream_id = */ 2, s2);
   EXPECT_EQ(SpdyStringPiece(d2.data(), d2.data_len()), s2);
   EXPECT_NE(SpdyStringPiece(d1.data(), d1.data_len()), s2);
+  EXPECT_EQ((int)d1.data_len(), d1.flow_control_window_consumed());
 
   // Confirm copies a const string.
   const SpdyString foo = "foo";
   SpdyDataIR d3(/* stream_id = */ 3, foo);
   EXPECT_EQ(foo, d3.data());
+  EXPECT_EQ((int)d3.data_len(), d3.flow_control_window_consumed());
 
   // Confirm copies a non-const string.
   SpdyString bar = "bar";
@@ -252,6 +254,10 @@ TEST(SpdyDataIRTest, Construct) {
   // Confirms makes a copy of string literal.
   SpdyDataIR d7(/* stream_id = */ 7, "something else");
   EXPECT_EQ(SpdyStringPiece(d7.data(), d7.data_len()), "something else");
+
+  SpdyDataIR d8(/* stream_id = */ 8, "shawarma");
+  d8.set_padding_len(20);
+  EXPECT_EQ(28, d8.flow_control_window_consumed());
 }
 
 }  // namespace test

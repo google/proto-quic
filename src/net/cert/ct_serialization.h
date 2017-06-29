@@ -85,6 +85,11 @@ NET_EXPORT_PRIVATE bool DecodeSignedCertificateTimestamp(
     base::StringPiece* input,
     scoped_refptr<ct::SignedCertificateTimestamp>* output);
 
+// Serializes a Signed Certificate Timestamp (SCT) into |output|.
+NET_EXPORT void EncodeSignedCertificateTimestamp(
+    const scoped_refptr<ct::SignedCertificateTimestamp>& input,
+    std::string* output);
+
 // Writes an SCTList into |output|, containing a single |sct|.
 NET_EXPORT_PRIVATE bool EncodeSCTListForTesting(const base::StringPiece& sct,
                                                 std::string* output);

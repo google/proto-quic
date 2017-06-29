@@ -7,18 +7,18 @@
 
 // Decodes the payload of a ALTSVC frame.
 
-#include "net/base/net_export.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
 #include "net/http2/decoder/frame_decoder_state.h"
 #include "net/http2/http2_structures.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 namespace test {
 class AltSvcPayloadDecoderPeer;
 }  // namespace test
 
-class NET_EXPORT_PRIVATE AltSvcPayloadDecoder {
+class HTTP2_EXPORT_PRIVATE AltSvcPayloadDecoder {
  public:
   // States during decoding of a ALTSVC frame.
   enum class PayloadState {

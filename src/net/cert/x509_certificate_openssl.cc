@@ -5,7 +5,6 @@
 #include "net/cert/x509_certificate.h"
 
 #include "base/macros.h"
-#include "base/memory/singleton.h"
 #include "base/numerics/safe_conversions.h"
 #include "base/pickle.h"
 #include "base/sha1.h"
@@ -139,36 +138,6 @@ bool ParseSubjectAltName(X509Certificate::OSCertHandle cert,
   return has_san;
 }
 
-class X509InitSingleton {
- public:
-  static X509InitSingleton* GetInstance() {
-    // We allow the X509 store to leak, because it is used from a non-joinable
-    // worker that is not stopped on shutdown, hence may still be using
-    // OpenSSL library after the AtExit runner has completed.
-    return base::Singleton<X509InitSingleton, base::LeakySingletonTraits<
-                                                  X509InitSingleton>>::get();
-  }
-  X509_STORE* store() const { return store_.get(); }
-
-  void ResetCertStore() {
-    store_.reset(X509_STORE_new());
-    DCHECK(store_.get());
-    X509_STORE_set_default_paths(store_.get());
-    // TODO(joth): Enable CRL (see X509_STORE_set_flags(X509_V_FLAG_CRL_CHECK)).
-  }
-
- private:
-  friend struct base::DefaultSingletonTraits<X509InitSingleton>;
-  X509InitSingleton() {
-    crypto::EnsureOpenSSLInit();
-    ResetCertStore();
-  }
-
-  bssl::UniquePtr<X509_STORE> store_;
-
-  DISALLOW_COPY_AND_ASSIGN(X509InitSingleton);
-};
-
 }  // namespace
 
 // static
@@ -212,11 +181,6 @@ bool X509Certificate::Initialize() {
                      &issuer_) &&
       x509_util::ParseDate(X509_get_notBefore(cert_handle_), &valid_start_) &&
       x509_util::ParseDate(X509_get_notAfter(cert_handle_), &valid_expiry_));
-}
-
-// static
-void X509Certificate::ResetCertStore() {
-  X509InitSingleton::GetInstance()->ResetCertStore();
 }
 
 // static
@@ -294,11 +258,6 @@ bool X509Certificate::GetSubjectAltName(
     ip_addrs->clear();
 
   return ParseSubjectAltName(cert_handle_, dns_names, ip_addrs);
-}
-
-// static
-X509_STORE* X509Certificate::cert_store() {
-  return X509InitSingleton::GetInstance()->store();
 }
 
 // static

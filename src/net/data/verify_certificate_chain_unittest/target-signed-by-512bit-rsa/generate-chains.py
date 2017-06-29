@@ -3,16 +3,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Certificate chain with 1 intermediate and a trusted root. The target
-certificate is signed using a weak RSA key (512-bit modulus), and so
-verification is expected to fail."""
+"""Certificate chain where the target certificate is signed using a weak RSA
+key (512-bit modulus)."""
 
 import sys
 sys.path += ['..']
 
 import common
 
-# Self-signed root certificate (used as trust anchor).
+# Self-signed root certificate.
 root = common.create_self_signed_root_certificate('Root')
 
 # Intermediate with a very weak key size (512-bit RSA).

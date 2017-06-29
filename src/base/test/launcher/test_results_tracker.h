@@ -43,10 +43,15 @@ class TestResultsTracker {
 
   // Adds |test_name| to the set of discovered tests (this includes all tests
   // present in the executable, not necessarily run).
-  void AddTest(const std::string& test_name, const std::string& file, int line);
+  void AddTest(const std::string& test_name);
 
   // Adds |test_name| to the set of disabled tests.
   void AddDisabledTest(const std::string& test_name);
+
+  // Adds location for the |test_name|.
+  void AddTestLocation(const std::string& test_name,
+                       const std::string& file,
+                       int line);
 
   // Adds |result| to the stored test results.
   void AddTestResult(const TestResult& result);

@@ -44,14 +44,21 @@ TEST(CanonicalCookieTest, Constructor) {
   EXPECT_EQ(CookieSameSite::NO_RESTRICTION, cookie2->SameSite());
 }
 
-TEST(CanonicalCookie, SpaceInName) {
-  GURL url("http://www.example.com/test/foo.html");
+TEST(CanonicalCookie, CreationCornerCases) {
   base::Time creation_time = base::Time::Now();
   CookieOptions options;
-  std::unique_ptr<CanonicalCookie> cookie(
-      CanonicalCookie::Create(url, "A C=2", creation_time, options));
+  std::unique_ptr<CanonicalCookie> cookie;
+
+  // Space in name.
+  cookie = CanonicalCookie::Create(GURL("http://www.example.com/test/foo.html"),
+                                   "A C=2", creation_time, options);
   EXPECT_TRUE(cookie.get());
   EXPECT_EQ("A C", cookie->Name());
+
+  // Semicolon in path.
+  cookie = CanonicalCookie::Create(GURL("http://fool/;/"), "*", creation_time,
+                                   options);
+  EXPECT_TRUE(cookie.get());
 }
 
 TEST(CanonicalCookieTest, Create) {
@@ -742,20 +749,6 @@ TEST(CanonicalCookieTest, IsCanonical) {
                                COOKIE_PRIORITY_LOW)
                    .IsCanonical());
 
-  // Path suffixed with a space.
-  EXPECT_FALSE(CanonicalCookie("A", "B", "x.y", "/path ", base::Time(),
-                               base::Time(), base::Time(), false, false,
-                               CookieSameSite::NO_RESTRICTION,
-                               COOKIE_PRIORITY_LOW)
-                   .IsCanonical());
-
-  // Path suffixed with separator.
-  EXPECT_FALSE(CanonicalCookie("A", "B", "x.y", "/path;", base::Time(),
-                               base::Time(), base::Time(), false, false,
-                               CookieSameSite::NO_RESTRICTION,
-                               COOKIE_PRIORITY_LOW)
-                   .IsCanonical());
-
   // Simple IPv4 address as domain.
   EXPECT_TRUE(CanonicalCookie("A", "B", "1.2.3.4", "/path", base::Time(),
                               base::Time(), base::Time(), false, false,
@@ -862,6 +855,17 @@ TEST(CanonicalCookieTest, IsCanonical) {
                                CookieSameSite::NO_RESTRICTION,
                                COOKIE_PRIORITY_LOW)
                    .IsCanonical());
+}
+
+TEST(CanonicalCookieTest, TestSetCreationDate) {
+  CanonicalCookie cookie("A", "B", "x.y", "/path", base::Time(), base::Time(),
+                         base::Time(), false, false,
+                         CookieSameSite::NO_RESTRICTION, COOKIE_PRIORITY_LOW);
+  EXPECT_TRUE(cookie.CreationDate().is_null());
+
+  base::Time now(base::Time::Now());
+  cookie.SetCreationDate(now);
+  EXPECT_EQ(now, cookie.CreationDate());
 }
 
 TEST(CanonicalCookieTest, TestPrefixHistograms) {

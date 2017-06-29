@@ -827,8 +827,8 @@ void SpdyStream::UpdateHistograms() {
   UMA_HISTOGRAM_TIMES("Net.SpdyStreamTime",
                       recv_last_byte_time_ - effective_send_time);
 
-  UMA_HISTOGRAM_COUNTS("Net.SpdySendBytes", send_bytes_);
-  UMA_HISTOGRAM_COUNTS("Net.SpdyRecvBytes", recv_bytes_);
+  UMA_HISTOGRAM_COUNTS_1M("Net.SpdySendBytes", send_bytes_);
+  UMA_HISTOGRAM_COUNTS_1M("Net.SpdyRecvBytes", recv_bytes_);
 }
 
 void SpdyStream::QueueNextDataFrame() {

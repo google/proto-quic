@@ -270,8 +270,9 @@ class SchedulerSingleThreadTaskRunnerManager::SchedulerSingleThreadTaskRunner
       PostTaskNow(std::move(task));
     } else {
       outer_->delayed_task_manager_->AddDelayedTask(
-          std::move(task), Bind(&SchedulerSingleThreadTaskRunner::PostTaskNow,
-                                Unretained(this)));
+          std::move(task),
+          BindOnce(&SchedulerSingleThreadTaskRunner::PostTaskNow,
+                   Unretained(this)));
     }
     return true;
   }

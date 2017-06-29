@@ -2,15 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/debug/stack_trace.h"
 #include "base/syslog_logging.h"
 
 #if defined(OS_WIN)
 #include "base/bind.h"
 #include "base/callback_helpers.h"
-#include "base/win/eventlog_messages.h"
-
-#include <windows.h>
+#include "base/debug/stack_trace.h"
 #elif defined(OS_LINUX)
 // <syslog.h> defines a LOG_WARNING macro that could conflict with
 // base::LOG_WARNING.
@@ -18,7 +15,6 @@
 #undef LOG_WARNING
 #endif
 
-#include <cstring>
 #include <ostream>
 #include <string>
 
@@ -27,13 +23,22 @@ namespace logging {
 #if defined(OS_WIN)
 
 namespace {
-std::string* g_event_source_name = nullptr;
-}
 
-void SetEventSourceName(const std::string& name) {
+std::string* g_event_source_name = nullptr;
+uint16_t g_category = 0;
+uint32_t g_event_id = 0;
+
+}  // namespace
+
+void SetEventSource(const std::string& name,
+                    uint16_t category,
+                    uint32_t event_id) {
   DCHECK_EQ(nullptr, g_event_source_name);
   g_event_source_name = new std::string(name);
+  g_category = category;
+  g_event_id = event_id;
 }
+
 #endif  // defined(OS_WIN)
 
 EventLogMessage::EventLogMessage(const char* file,
@@ -51,8 +56,8 @@ EventLogMessage::~EventLogMessage() {
     return;
 
   HANDLE event_log_handle =
-      RegisterEventSourceA(NULL, g_event_source_name->c_str());
-  if (event_log_handle == NULL) {
+      RegisterEventSourceA(nullptr, g_event_source_name->c_str());
+  if (event_log_handle == nullptr) {
     stream() << " !!NOT ADDED TO EVENTLOG!!";
     return;
   }
@@ -78,8 +83,8 @@ EventLogMessage::~EventLogMessage() {
       break;
   }
   LPCSTR strings[1] = {message.data()};
-  if (!ReportEventA(event_log_handle, log_type, BROWSER_CATEGORY,
-                    MSG_LOG_MESSAGE, NULL, 1, 0, strings, NULL)) {
+  if (!ReportEventA(event_log_handle, log_type, g_category, g_event_id, nullptr,
+                    1, 0, strings, nullptr)) {
     stream() << " !!NOT ADDED TO EVENTLOG!!";
   }
 #elif defined(OS_LINUX)

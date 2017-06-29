@@ -615,14 +615,6 @@ SECOidTag GetFirstCertPolicy(CERTCertificate* cert_handle) {
   return SECOID_AddEntry(&od);
 }
 
-HashValue CertPublicKeyHashSHA1(CERTCertificate* cert) {
-  HashValue hash(HASH_VALUE_SHA1);
-  SECStatus rv = HASH_HashBuf(HASH_AlgSHA1, hash.data(),
-                              cert->derPublicKey.data, cert->derPublicKey.len);
-  DCHECK_EQ(SECSuccess, rv);
-  return hash;
-}
-
 HashValue CertPublicKeyHashSHA256(CERTCertificate* cert) {
   HashValue hash(HASH_VALUE_SHA256);
   SECStatus rv = HASH_HashBuf(HASH_AlgSHA256, hash.data(),
@@ -637,11 +629,9 @@ void AppendPublicKeyHashes(CERTCertList* cert_list,
   for (CERTCertListNode* node = CERT_LIST_HEAD(cert_list);
        !CERT_LIST_END(node, cert_list);
        node = CERT_LIST_NEXT(node)) {
-    hashes->push_back(CertPublicKeyHashSHA1(node->cert));
     hashes->push_back(CertPublicKeyHashSHA256(node->cert));
   }
   if (root_cert) {
-    hashes->push_back(CertPublicKeyHashSHA1(root_cert));
     hashes->push_back(CertPublicKeyHashSHA256(root_cert));
   }
 }

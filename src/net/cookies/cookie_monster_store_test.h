@@ -99,7 +99,7 @@ class MockPersistentCookieStore : public CookieMonster::PersistentCookieStore {
 
   void DeleteCookie(const CanonicalCookie& cookie) override;
 
-  void Flush(const base::Closure& callback) override;
+  void Flush(base::OnceClosure callback) override;
 
   void SetForceKeepSessionState() override;
 
@@ -174,7 +174,7 @@ class MockSimplePersistentCookieStore
 
   void DeleteCookie(const CanonicalCookie& cookie) override;
 
-  void Flush(const base::Closure& callback) override;
+  void Flush(base::OnceClosure callback) override;
 
   void SetForceKeepSessionState() override;
 

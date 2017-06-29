@@ -927,29 +927,6 @@ Example
   }
 )";
 
-const char kConsole[] = "console";
-const char kConsole_HelpShort[] =
-    "console: [boolean] Run this action in the console pool.";
-const char kConsole_Help[] =
-    R"(console: Run this action in the console pool.
-
-  Boolean. Defaults to false.
-
-  Actions marked "console = true" will be run in the built-in ninja "console"
-  pool. They will have access to real stdin and stdout, and output will not be
-  buffered by ninja. This can be useful for long-running actions with progress
-  logs, or actions that require user input.
-
-  Only one console pool target can run at any one time in Ninja. Refer to the
-  Ninja documentation on the console pool for more info.
-
-Example
-
-  action("long_action_with_progress_logs") {
-    console = true
-  }
-)";
-
 const char kData[] = "data";
 const char kData_HelpShort[] =
     "data: [file list] Runtime data file dependencies.";
@@ -1441,6 +1418,23 @@ const char kOutputs_Help[] =
     with no source expansions. See "gn help action".
 )";
 
+const char kPool[] = "pool";
+const char kPool_HelpShort[] =
+    "pool: [string] Label of the pool used by the action.";
+const char kPool_Help[] =
+    R"(pool: Label of the pool used by the action.
+
+  A fully-qualified label representing the pool that will be used for the
+  action. Pools are defined using the pool() {...} declaration.
+
+Example
+
+  action("action") {
+    pool = "//build:custom_pool"
+    ...
+  }
+)";
+
 const char kPrecompiledHeader[] = "precompiled_header";
 const char kPrecompiledHeader_HelpShort[] =
     "precompiled_header: [string] Header file to precompile.";
@@ -1905,7 +1899,6 @@ const VariableInfoMap& GetTargetVariables() {
     INSERT_VARIABLE(CodeSigningOutputs)
     INSERT_VARIABLE(CompleteStaticLib)
     INSERT_VARIABLE(Configs)
-    INSERT_VARIABLE(Console)
     INSERT_VARIABLE(Data)
     INSERT_VARIABLE(DataDeps)
     INSERT_VARIABLE(Defines)
@@ -1921,6 +1914,7 @@ const VariableInfoMap& GetTargetVariables() {
     INSERT_VARIABLE(OutputName)
     INSERT_VARIABLE(OutputPrefixOverride)
     INSERT_VARIABLE(Outputs)
+    INSERT_VARIABLE(Pool)
     INSERT_VARIABLE(PrecompiledHeader)
     INSERT_VARIABLE(PrecompiledHeaderType)
     INSERT_VARIABLE(PrecompiledSource)

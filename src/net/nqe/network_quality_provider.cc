@@ -20,4 +20,9 @@ base::Optional<int32_t> NetworkQualityProvider::GetDownstreamThroughputKbps()
   return base::Optional<int32_t>();
 }
 
+base::Optional<int32_t> NetworkQualityProvider::GetBandwidthDelayProductKbits()
+    const {
+  return base ::Optional<int32_t>();
+}
+
 }  // namespace net

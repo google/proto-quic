@@ -3,16 +3,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Certificate chain with 1 intermediate and a trusted root. The intermediate
-contains a keyUsage extension, HOWEVER it does not contain the keyCertSign bit.
-Hence validation is expected to fail."""
+"""Certificate chain where the intermediate lacks a keyUsage extension."""
 
 import sys
 sys.path += ['..']
 
 import common
 
-# Self-signed root certificate (used as trust anchor).
+# Self-signed root certificate.
 root = common.create_self_signed_root_certificate('Root')
 
 # Intermediate that is missing keyCertSign.

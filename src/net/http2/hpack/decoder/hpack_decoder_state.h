@@ -17,19 +17,19 @@
 
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
-#include "net/base/net_export.h"
 #include "net/http2/hpack/decoder/hpack_decoder_listener.h"
 #include "net/http2/hpack/decoder/hpack_decoder_string_buffer.h"
 #include "net/http2/hpack/decoder/hpack_decoder_tables.h"
 #include "net/http2/hpack/decoder/hpack_whole_entry_listener.h"
 #include "net/http2/hpack/http2_hpack_constants.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 namespace test {
 class HpackDecoderStatePeer;
 }  // namespace test
 
-class NET_EXPORT HpackDecoderState : public HpackWholeEntryListener {
+class HTTP2_EXPORT_PRIVATE HpackDecoderState : public HpackWholeEntryListener {
  public:
   explicit HpackDecoderState(HpackDecoderListener* listener);
   ~HpackDecoderState() override;

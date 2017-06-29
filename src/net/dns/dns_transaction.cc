@@ -608,7 +608,7 @@ class DnsTransactionImpl : public DnsTransaction,
     if (result.rv == OK) {
       qnames_initial_size_ = qnames_.size();
       if (qtype_ == dns_protocol::kTypeA)
-        UMA_HISTOGRAM_COUNTS("AsyncDNS.SuffixSearchStart", qnames_.size());
+        UMA_HISTOGRAM_COUNTS_1M("AsyncDNS.SuffixSearchStart", qnames_.size());
       result = ProcessAttemptResult(StartQuery());
     }
 
@@ -688,14 +688,14 @@ class DnsTransactionImpl : public DnsTransaction,
     timer_.Stop();
     RecordLostPacketsIfAny();
     if (result.rv == OK)
-      UMA_HISTOGRAM_COUNTS("AsyncDNS.AttemptCountSuccess", attempts_count_);
+      UMA_HISTOGRAM_COUNTS_1M("AsyncDNS.AttemptCountSuccess", attempts_count_);
     else
-      UMA_HISTOGRAM_COUNTS("AsyncDNS.AttemptCountFail", attempts_count_);
+      UMA_HISTOGRAM_COUNTS_1M("AsyncDNS.AttemptCountFail", attempts_count_);
 
     if (response && qtype_ == dns_protocol::kTypeA) {
-      UMA_HISTOGRAM_COUNTS("AsyncDNS.SuffixSearchRemain", qnames_.size());
-      UMA_HISTOGRAM_COUNTS("AsyncDNS.SuffixSearchDone",
-                           qnames_initial_size_ - qnames_.size());
+      UMA_HISTOGRAM_COUNTS_1M("AsyncDNS.SuffixSearchRemain", qnames_.size());
+      UMA_HISTOGRAM_COUNTS_1M("AsyncDNS.SuffixSearchDone",
+                              qnames_initial_size_ - qnames_.size());
     }
 
     DnsTransactionFactory::CallbackType callback = callback_;

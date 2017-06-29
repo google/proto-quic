@@ -16,7 +16,7 @@
 # Since these only add ldflags, the targets themselves are not rebuilt when the
 # natvis files are updated. To debug, erase the .pdb file and build to re-link.
 
-import("//build/toolchain/toolchain.gni")
+import("//build/config/compiler/compiler.gni")
 
 assert(is_win)
 

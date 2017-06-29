@@ -367,7 +367,7 @@ class SharedIsolateFactory {
 
   // Lazily creates a v8::Isolate, or returns the already created instance.
   v8::Isolate* GetSharedIsolate() {
-    base::AutoLock l(lock_);
+    base::AutoLock lock(lock_);
 
     if (!holder_) {
       // Do one-time initialization for V8.
@@ -400,7 +400,7 @@ class SharedIsolateFactory {
   }
 
   v8::Isolate* GetSharedIsolateWithoutCreating() {
-    base::AutoLock l(lock_);
+    base::AutoLock lock(lock_);
     return holder_ ? holder_->isolate() : NULL;
   }
 

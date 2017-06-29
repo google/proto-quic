@@ -3,15 +3,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""The intermediate has a policies extension marked as critical, which contains
-an unknown qualifer (1.2.3.4)."""
+"""Certificate chain where the intermediate has a policies extension marked as
+critical, and contains an unknown policy qualifer (1.2.3.4)."""
 
 import sys
 sys.path += ['..']
 
 import common
 
-# Self-signed root certificate (used as trust anchor).
+# Self-signed root certificate.
 root = common.create_self_signed_root_certificate('Root')
 
 # Intermediate that has a critical policies extension containing an unknown

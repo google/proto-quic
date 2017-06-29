@@ -27,8 +27,7 @@ class WebrtcPerfBenchmark(perf_benchmark.PerfBenchmark):
         '-*',
         'toplevel',
         # WebRTC
-        # TODO(ehmaldonado): Re-enable once http://crbug.com/725502 is fixed.
-        # 'webrtc',
+        'webmediaplayerms',
     ]
 
     category_filter = chrome_trace_category_filter.ChromeTraceCategoryFilter(
@@ -36,8 +35,7 @@ class WebrtcPerfBenchmark(perf_benchmark.PerfBenchmark):
     options = timeline_based_measurement.Options(category_filter)
     options.SetTimelineBasedMetrics([
         'cpuTimeMetric',
-        # TODO(ehmaldonado): Re-enable once http://crbug.com/725502 is fixed.
-        # 'webrtcRenderingMetric',
+        'webrtcRenderingMetric',
     ])
     return options
 

@@ -82,7 +82,7 @@ class MockBattOrConnection : public BattOrConnection {
 class TestableBattOrAgent : public BattOrAgent {
  public:
   TestableBattOrAgent(BattOrAgent::Listener* listener)
-      : BattOrAgent("/dev/test", listener, nullptr, nullptr) {
+      : BattOrAgent("/dev/test", listener, nullptr) {
     connection_ =
         std::unique_ptr<BattOrConnection>(new MockBattOrConnection(this));
   }

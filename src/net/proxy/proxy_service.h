@@ -29,7 +29,7 @@
 class GURL;
 
 namespace base {
-class SingleThreadTaskRunner;
+class SequencedTaskRunner;
 class TimeDelta;
 }  // namespace base
 
@@ -292,8 +292,7 @@ class NET_EXPORT ProxyService : public NetworkChangeNotifier::IPAddressObserver,
   // Creates a config service appropriate for this platform that fetches the
   // system proxy settings.
   static std::unique_ptr<ProxyConfigService> CreateSystemProxyConfigService(
-      const scoped_refptr<base::SingleThreadTaskRunner>& io_task_runner,
-      const scoped_refptr<base::SingleThreadTaskRunner>& file_task_runner);
+      const scoped_refptr<base::SequencedTaskRunner>& io_task_runner);
 
   // This method should only be used by unit tests.
   void set_stall_proxy_auto_config_delay(base::TimeDelta delay) {

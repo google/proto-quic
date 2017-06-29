@@ -15,8 +15,7 @@
 #include "base/message_loop/message_loop.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_util.h"
-#include "base/threading/thread.h"
-#include "base/threading/thread_task_runner_handle.h"
+#include "base/task_scheduler/post_task.h"
 #include "net/base/cache_type.h"
 #include "net/base/net_errors.h"
 #include "net/base/network_delegate_impl.h"
@@ -39,8 +38,6 @@
 #include "net/net_features.h"
 #include "net/nqe/network_quality_estimator.h"
 #include "net/quic/chromium/quic_stream_factory.h"
-#include "net/reporting/reporting_policy.h"
-#include "net/reporting/reporting_service.h"
 #include "net/ssl/channel_id_service.h"
 #include "net/ssl/default_channel_id_store.h"
 #include "net/ssl/ssl_config_service_defaults.h"
@@ -62,6 +59,11 @@
 #include "net/ftp/ftp_network_layer.h"             // nogncheck
 #include "net/url_request/ftp_protocol_handler.h"  // nogncheck
 #endif
+
+#if BUILDFLAG(ENABLE_REPORTING)
+#include "net/reporting/reporting_policy.h"
+#include "net/reporting/reporting_service.h"
+#endif  // BUILDFLAG(ENABLE_REPORTING)
 
 namespace net {
 
@@ -144,14 +146,14 @@ class BasicNetworkDelegate : public NetworkDelegateImpl {
 // it's not safe to subclass this.
 class ContainerURLRequestContext final : public URLRequestContext {
  public:
-  explicit ContainerURLRequestContext(
-      const scoped_refptr<base::SingleThreadTaskRunner>& file_task_runner)
-      : file_task_runner_(file_task_runner), storage_(this) {}
+  ContainerURLRequestContext() : storage_(this) {}
 
   ~ContainerURLRequestContext() override {
+#if BUILDFLAG(ENABLE_REPORTING)
     // Destroy the ReportingService before the rest of the URLRequestContext, so
     // it cancels any pending requests it may have.
     storage_.set_reporting_service(nullptr);
+#endif  // BUILDFLAG(ENABLE_REPORTING)
 
     // Shut down the ProxyService, as it may have pending URLRequests using this
     // context. Since this cancels requests, it's not safe to subclass this, as
@@ -166,18 +168,6 @@ class ContainerURLRequestContext final : public URLRequestContext {
     return &storage_;
   }
 
-  scoped_refptr<base::SingleThreadTaskRunner>& GetFileTaskRunner() {
-    // Create a new thread to run file tasks, if needed.
-    if (!file_task_runner_) {
-      DCHECK(!file_thread_);
-      file_thread_.reset(new base::Thread("Network File Thread"));
-      file_thread_->StartWithOptions(
-          base::Thread::Options(base::MessageLoop::TYPE_DEFAULT, 0));
-      file_task_runner_ = file_thread_->task_runner();
-    }
-    return file_task_runner_;
-  }
-
   void set_transport_security_persister(
       std::unique_ptr<TransportSecurityPersister>
           transport_security_persister) {
@@ -185,10 +175,6 @@ class ContainerURLRequestContext final : public URLRequestContext {
   }
 
  private:
-  // The thread should be torn down last.
-  std::unique_ptr<base::Thread> file_thread_;
-  scoped_refptr<base::SingleThreadTaskRunner> file_task_runner_;
-
   URLRequestContextStorage storage_;
   std::unique_ptr<TransportSecurityPersister> transport_security_persister_;
 
@@ -277,10 +263,12 @@ void URLRequestContextBuilder::SetCertVerifier(
   cert_verifier_ = std::move(cert_verifier);
 }
 
+#if BUILDFLAG(ENABLE_REPORTING)
 void URLRequestContextBuilder::set_reporting_policy(
     std::unique_ptr<net::ReportingPolicy> reporting_policy) {
   reporting_policy_ = std::move(reporting_policy);
 }
+#endif  // BUILDFLAG(ENABLE_REPORTING)
 
 void URLRequestContextBuilder::SetInterceptors(
     std::vector<std::unique_ptr<URLRequestInterceptor>>
@@ -322,7 +310,7 @@ void URLRequestContextBuilder::SetHttpServerProperties(
 
 std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
   std::unique_ptr<ContainerURLRequestContext> context(
-      new ContainerURLRequestContext(file_task_runner_));
+      new ContainerURLRequestContext());
   URLRequestContextStorage* storage = context->storage();
 
   context->set_name(name_);
@@ -386,12 +374,19 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
   storage->set_transport_security_state(
       base::MakeUnique<TransportSecurityState>());
   if (!transport_security_persister_path_.empty()) {
+    // Use a low priority because saving this should not block anything
+    // user-visible. Block shutdown to ensure it does get persisted to disk,
+    // since it contains security-relevant information.
+    scoped_refptr<base::SequencedTaskRunner> task_runner(
+        GetFileSequencedTaskRunner(
+            {base::MayBlock(), base::TaskPriority::BACKGROUND,
+             base::TaskShutdownBehavior::BLOCK_SHUTDOWN}));
+
     context->set_transport_security_persister(
         base::WrapUnique<TransportSecurityPersister>(
             new TransportSecurityPersister(context->transport_security_state(),
                                            transport_security_persister_path_,
-                                           context->GetFileTaskRunner(),
-                                           false)));
+                                           task_runner, false)));
   }
 
   if (http_server_properties_) {
@@ -428,8 +423,7 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
     // ProxyService::CreateSystemProxyConfigService()'s signature doesn't suck.
     if (!proxy_config_service_) {
       proxy_config_service_ = ProxyService::CreateSystemProxyConfigService(
-          base::ThreadTaskRunnerHandle::Get().get(),
-          context->GetFileTaskRunner());
+          base::ThreadTaskRunnerHandle::Get().get());
     }
 #endif  // !defined(OS_LINUX) && !defined(OS_ANDROID)
     proxy_service_ =
@@ -462,7 +456,10 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
               : CACHE_BACKEND_SIMPLE;
       http_cache_backend.reset(new HttpCache::DefaultBackend(
           DISK_CACHE, backend_type, http_cache_params_.path,
-          http_cache_params_.max_size, context->GetFileTaskRunner()));
+          http_cache_params_.max_size,
+          GetFileSingleThreadTaskRunner(
+              {base::MayBlock(), base::TaskPriority::USER_BLOCKING,
+               base::TaskShutdownBehavior::BLOCK_SHUTDOWN})));
     } else {
       http_cache_backend =
           HttpCache::DefaultBackend::InMemory(http_cache_params_.max_size);
@@ -493,7 +490,9 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
   if (file_enabled_) {
     job_factory->SetProtocolHandler(
         url::kFileScheme,
-        base::MakeUnique<FileProtocolHandler>(context->GetFileTaskRunner()));
+        base::MakeUnique<FileProtocolHandler>(GetFileTaskRunner(
+            {base::MayBlock(), base::TaskPriority::USER_BLOCKING,
+             base::TaskShutdownBehavior::SKIP_ON_SHUTDOWN})));
   }
 #endif  // !BUILDFLAG(DISABLE_FILE_SUPPORT)
 
@@ -517,10 +516,12 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
   }
   storage->set_job_factory(std::move(top_job_factory));
 
+#if BUILDFLAG(ENABLE_REPORTING)
   if (reporting_policy_) {
     storage->set_reporting_service(
         ReportingService::Create(*reporting_policy_, context.get()));
   }
+#endif  // BUILDFLAG(ENABLE_REPORTING)
 
   return std::move(context);
 }
@@ -533,6 +534,29 @@ std::unique_ptr<ProxyService> URLRequestContextBuilder::CreateProxyService(
     NetLog* net_log) {
   return ProxyService::CreateUsingSystemProxyResolver(
       std::move(proxy_config_service), net_log);
+}
+
+scoped_refptr<base::TaskRunner> URLRequestContextBuilder::GetFileTaskRunner(
+    const base::TaskTraits& traits) {
+  if (file_task_runner_)
+    return file_task_runner_;
+  return base::CreateTaskRunnerWithTraits(traits);
+}
+
+scoped_refptr<base::SequencedTaskRunner>
+URLRequestContextBuilder::GetFileSequencedTaskRunner(
+    const base::TaskTraits& traits) {
+  if (file_task_runner_)
+    return file_task_runner_;
+  return base::CreateSequencedTaskRunnerWithTraits(traits);
+}
+
+scoped_refptr<base::SingleThreadTaskRunner>
+URLRequestContextBuilder::GetFileSingleThreadTaskRunner(
+    const base::TaskTraits& traits) {
+  if (file_task_runner_)
+    return file_task_runner_;
+  return base::CreateSingleThreadTaskRunnerWithTraits(traits);
 }
 
 }  // namespace net

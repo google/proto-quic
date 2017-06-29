@@ -132,6 +132,7 @@ class NET_EXPORT NetworkQualityEstimator
   base::Optional<base::TimeDelta> GetHttpRTT() const override;
   base::Optional<base::TimeDelta> GetTransportRTT() const override;
   base::Optional<int32_t> GetDownstreamThroughputKbps() const override;
+  base::Optional<int32_t> GetBandwidthDelayProductKbits() const override;
   void AddRTTAndThroughputEstimatesObserver(
       RTTAndThroughputEstimatesObserver* observer) override;
   void RemoveRTTAndThroughputEstimatesObserver(
@@ -358,6 +359,7 @@ class NET_EXPORT NetworkQualityEstimator
                            OnPrefsReadWithReadingDisabled);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest,
                            ForceEffectiveConnectionTypeThroughFieldTrial);
+  FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest, TestBDPComputation);
 
   // Value of round trip time observations is in base::TimeDelta.
   typedef nqe::internal::Observation<base::TimeDelta> RttObservation;
@@ -496,6 +498,11 @@ class NET_EXPORT NetworkQualityEstimator
   // connection type.
   bool UseTransportRTT() const;
 
+  // Computes the bandwidth delay product in kilobits. The computed value is
+  // stored in |bandwidth_delay_product_kbits_| and can be accessed using
+  // |GetBandwidthDelayProductKbits|.
+  void ComputeBandwidthDelayProduct();
+
   // Forces computation of effective connection type, and notifies observers
   // if there is a change in its value.
   void ComputeEffectiveConnectionType();
@@ -603,21 +610,24 @@ class NET_EXPORT NetworkQualityEstimator
   // Current estimate of the network quality.
   nqe::internal::NetworkQuality network_quality_;
 
+  // Current estimate of the bandwidth delay product (BDP) in kilobits.
+  base::Optional<int32_t> bandwidth_delay_product_kbits_;
+
   // Current effective connection type. It is updated on connection change
   // events. It is also updated every time there is network traffic (provided
   // the last computation was more than
   // |effective_connection_type_recomputation_interval_| ago).
   EffectiveConnectionType effective_connection_type_;
 
-  // Last known value of the wireless signal strength. Set to INT32_MIN if
-  // unavailable. |signal_strength_dbm_| is reset to INT32_MIN on connection
-  // change events.
-  int32_t signal_strength_dbm_;
+  // Last known value of the wireless signal strength level. If the signal
+  // strength level is available, the value is set to between 0 and 4, both
+  // inclusive. If the value is unavailable, |signal_strength_| has null value.
+  base::Optional<int32_t> signal_strength_;
 
-  // Minimum and maximum signal strength (in dBm) observed since last connection
+  // Minimum and maximum signal strength level observed since last connection
   // change. Updated on connection change and main frame requests.
-  int32_t min_signal_strength_since_connection_change_;
-  int32_t max_signal_strength_since_connection_change_;
+  base::Optional<int32_t> min_signal_strength_since_connection_change_;
+  base::Optional<int32_t> max_signal_strength_since_connection_change_;
 
   // Stores the qualities of different networks.
   std::unique_ptr<nqe::internal::NetworkQualityStore> network_quality_store_;

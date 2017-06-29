@@ -80,7 +80,7 @@ void RecordNoStoreHeaderHistogram(int load_flags,
                                 validation_cause_, VALIDATION_CAUSE_MAX);    \
     }                                                                        \
     if (stale_request) {                                                     \
-      UMA_HISTOGRAM_COUNTS(                                                  \
+      UMA_HISTOGRAM_COUNTS_1M(                                               \
           "HttpCache.StaleEntry.FreshnessPeriodsSinceLastUsed" type,         \
           freshness_periods_since_last_used);                                \
     }                                                                        \
@@ -168,6 +168,7 @@ HttpCache::Transaction::Transaction(RequestPriority priority, HttpCache* cache)
       vary_mismatch_(false),
       couldnt_conditionalize_request_(false),
       bypass_lock_for_test_(false),
+      bypass_lock_after_headers_for_test_(false),
       fail_conditionalization_for_test_(false),
       io_buf_len_(0),
       read_offset_(0),
@@ -853,7 +854,7 @@ int HttpCache::Transaction::DoLoop(int result) {
         rv = DoCacheReadMetadataComplete(rv);
         break;
       case STATE_HEADERS_PHASE_CANNOT_PROCEED:
-        rv = DoHeadersPhaseCannotProceed();
+        rv = DoHeadersPhaseCannotProceed(rv);
         break;
       case STATE_FINISH_HEADERS:
         rv = DoFinishHeaders(rv);
@@ -922,6 +923,10 @@ int HttpCache::Transaction::DoGetBackendComplete(int result) {
   net_log_.EndEventWithNetErrorCode(NetLogEventType::HTTP_CACHE_GET_BACKEND,
                                     result);
   cache_pending_ = false;
+
+  // Reset mode_ that might get set in this function. This is done because this
+  // function can be invoked multiple times for a transaction.
+  mode_ = NONE;
 
   if (!ShouldPassThrough()) {
     cache_key_ = cache_->GenerateCacheKey(request_);
@@ -1131,40 +1136,46 @@ int HttpCache::Transaction::DoAddToEntry() {
   DCHECK(entry_lock_waiting_since_.is_null());
   entry_lock_waiting_since_ = TimeTicks::Now();
   int rv = cache_->AddTransactionToEntry(new_entry_, this);
-  if (rv == ERR_IO_PENDING) {
-    if (bypass_lock_for_test_) {
-      base::ThreadTaskRunnerHandle::Get()->PostTask(
-          FROM_HERE,
-          base::Bind(&HttpCache::Transaction::OnAddToEntryTimeout,
-                     weak_factory_.GetWeakPtr(), entry_lock_waiting_since_));
-    } else {
-      int timeout_milliseconds = 20 * 1000;
-      if (partial_ && new_entry_->writer &&
-          new_entry_->writer->range_requested_) {
-        // Quickly timeout and bypass the cache if we're a range request and
-        // we're blocked by the reader/writer lock. Doing so eliminates a long
-        // running issue, http://crbug.com/31014, where two of the same media
-        // resources could not be played back simultaneously due to one locking
-        // the cache entry until the entire video was downloaded.
-        //
-        // Bypassing the cache is not ideal, as we are now ignoring the cache
-        // entirely for all range requests to a resource beyond the first. This
-        // is however a much more succinct solution than the alternatives, which
-        // would require somewhat significant changes to the http caching logic.
-        //
-        // Allow some timeout slack for the entry addition to complete in case
-        // the writer lock is imminently released; we want to avoid skipping
-        // the cache if at all possible. See http://crbug.com/408765
-        timeout_milliseconds = 25;
-      }
-      base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
-          FROM_HERE,
-          base::Bind(&HttpCache::Transaction::OnAddToEntryTimeout,
-                     weak_factory_.GetWeakPtr(), entry_lock_waiting_since_),
-          TimeDelta::FromMilliseconds(timeout_milliseconds));
-    }
-  }
+  if (rv == ERR_IO_PENDING)
+    AddCacheLockTimeoutHandler(new_entry_);
   return rv;
+}
+
+void HttpCache::Transaction::AddCacheLockTimeoutHandler(ActiveEntry* entry) {
+  DCHECK(next_state_ == STATE_ADD_TO_ENTRY_COMPLETE ||
+         next_state_ == STATE_FINISH_HEADERS_COMPLETE);
+  if ((bypass_lock_for_test_ && next_state_ == STATE_ADD_TO_ENTRY_COMPLETE) ||
+      (bypass_lock_after_headers_for_test_ &&
+       next_state_ == STATE_FINISH_HEADERS_COMPLETE)) {
+    base::ThreadTaskRunnerHandle::Get()->PostTask(
+        FROM_HERE,
+        base::Bind(&HttpCache::Transaction::OnCacheLockTimeout,
+                   weak_factory_.GetWeakPtr(), entry_lock_waiting_since_));
+  } else {
+    int timeout_milliseconds = 20 * 1000;
+    if (partial_ && entry->writer && entry->writer->range_requested_) {
+      // Quickly timeout and bypass the cache if we're a range request and
+      // we're blocked by the reader/writer lock. Doing so eliminates a long
+      // running issue, http://crbug.com/31014, where two of the same media
+      // resources could not be played back simultaneously due to one locking
+      // the cache entry until the entire video was downloaded.
+      //
+      // Bypassing the cache is not ideal, as we are now ignoring the cache
+      // entirely for all range requests to a resource beyond the first. This
+      // is however a much more succinct solution than the alternatives, which
+      // would require somewhat significant changes to the http caching logic.
+      //
+      // Allow some timeout slack for the entry addition to complete in case
+      // the writer lock is imminently released; we want to avoid skipping
+      // the cache if at all possible. See http://crbug.com/408765
+      timeout_milliseconds = 25;
+    }
+    base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+        FROM_HERE,
+        base::Bind(&HttpCache::Transaction::OnCacheLockTimeout,
+                   weak_factory_.GetWeakPtr(), entry_lock_waiting_since_),
+        TimeDelta::FromMilliseconds(timeout_milliseconds));
+  }
 }
 
 int HttpCache::Transaction::DoAddToEntryComplete(int result) {
@@ -1817,7 +1828,7 @@ int HttpCache::Transaction::DoPartialHeadersReceived() {
   return OK;
 }
 
-int HttpCache::Transaction::DoHeadersPhaseCannotProceed() {
+int HttpCache::Transaction::DoHeadersPhaseCannotProceed(int result) {
   // If its the Start state machine and it cannot proceed due to a cache
   // failure, restart this transaction.
   DCHECK(!reading_);
@@ -1830,6 +1841,10 @@ int HttpCache::Transaction::DoHeadersPhaseCannotProceed() {
   SetRequest(net_log_);
 
   entry_ = nullptr;
+
+  // Bypass the cache for timeout scenario.
+  if (result == ERR_CACHE_LOCK_TIMEOUT)
+    effective_load_flags_ |= LOAD_DISABLE_CACHE;
 
   TransitionToState(STATE_GET_BACKEND);
   return OK;
@@ -1854,13 +1869,20 @@ int HttpCache::Transaction::DoFinishHeaders(int result) {
   // If the transaction needs to wait because another transaction is still
   // writing the response body, it will return ERR_IO_PENDING now and the
   // io_callback_ will be invoked when the wait is done.
-  return cache_->DoneWithResponseHeaders(entry_, this, partial_ != nullptr);
+  int rv = cache_->DoneWithResponseHeaders(entry_, this, partial_ != nullptr);
+  if (rv == ERR_IO_PENDING) {
+    DCHECK(entry_lock_waiting_since_.is_null());
+    entry_lock_waiting_since_ = TimeTicks::Now();
+    AddCacheLockTimeoutHandler(entry_);
+  }
+  return rv;
 }
 
 int HttpCache::Transaction::DoFinishHeadersComplete(int rv) {
-  if (rv == ERR_CACHE_RACE) {
+  entry_lock_waiting_since_ = TimeTicks();
+  if (rv == ERR_CACHE_RACE || rv == ERR_CACHE_LOCK_TIMEOUT) {
     TransitionToState(STATE_HEADERS_PHASE_CANNOT_PROCEED);
-    return OK;
+    return rv;
   }
 
   TransitionToState(STATE_NONE);
@@ -2805,16 +2827,20 @@ int HttpCache::Transaction::OnCacheReadError(int result, bool restart) {
   return ERR_CACHE_READ_FAILURE;
 }
 
-void HttpCache::Transaction::OnAddToEntryTimeout(base::TimeTicks start_time) {
+void HttpCache::Transaction::OnCacheLockTimeout(base::TimeTicks start_time) {
   if (entry_lock_waiting_since_ != start_time)
     return;
 
-  DCHECK_EQ(next_state_, STATE_ADD_TO_ENTRY_COMPLETE);
+  DCHECK(next_state_ == STATE_ADD_TO_ENTRY_COMPLETE ||
+         next_state_ == STATE_FINISH_HEADERS_COMPLETE);
 
   if (!cache_)
     return;
 
-  cache_->RemovePendingTransaction(this);
+  if (next_state_ == STATE_ADD_TO_ENTRY_COMPLETE)
+    cache_->RemovePendingTransaction(this);
+  else
+    cache_->DoneWithEntry(entry_, this, false, partial_ != nullptr);
   OnIOComplete(ERR_CACHE_LOCK_TIMEOUT);
 }
 
@@ -2999,16 +3025,16 @@ void HttpCache::Transaction::RecordHistograms() {
       int64_t age_in_freshness_periods =
           (stale_entry_age_ * 100) / stale_entry_freshness_;
       if (cache_entry_status_ == CacheEntryStatus::ENTRY_VALIDATED) {
-        UMA_HISTOGRAM_COUNTS("HttpCache.StaleEntry.Validated.Age",
-                             stale_entry_age_.InSeconds());
-        UMA_HISTOGRAM_COUNTS(
+        UMA_HISTOGRAM_COUNTS_1M("HttpCache.StaleEntry.Validated.Age",
+                                stale_entry_age_.InSeconds());
+        UMA_HISTOGRAM_COUNTS_1M(
             "HttpCache.StaleEntry.Validated.AgeInFreshnessPeriods",
             age_in_freshness_periods);
 
       } else {
-        UMA_HISTOGRAM_COUNTS("HttpCache.StaleEntry.Updated.Age",
-                             stale_entry_age_.InSeconds());
-        UMA_HISTOGRAM_COUNTS(
+        UMA_HISTOGRAM_COUNTS_1M("HttpCache.StaleEntry.Updated.Age",
+                                stale_entry_age_.InSeconds());
+        UMA_HISTOGRAM_COUNTS_1M(
             "HttpCache.StaleEntry.Updated.AgeInFreshnessPeriods",
             age_in_freshness_periods);
       }

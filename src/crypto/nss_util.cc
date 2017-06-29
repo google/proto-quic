@@ -12,46 +12,34 @@
 #include <prtime.h>
 #include <secmod.h>
 
+#include <map>
 #include <memory>
 #include <utility>
-
-#include "base/location.h"
-#include "base/single_thread_task_runner.h"
-#include "base/threading/thread_task_runner_handle.h"
-#include "crypto/nss_util_internal.h"
-
-#if defined(OS_OPENBSD)
-#include <sys/mount.h>
-#include <sys/param.h>
-#endif
-
-#if defined(OS_CHROMEOS)
-#include <dlfcn.h>
-#endif
-
-#include <map>
 #include <vector>
 
 #include "base/base_paths.h"
 #include "base/bind.h"
-#include "base/cpu.h"
 #include "base/debug/alias.h"
 #include "base/debug/stack_trace.h"
-#include "base/environment.h"
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
 #include "base/lazy_instance.h"
+#include "base/location.h"
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
-#include "base/native_library.h"
 #include "base/path_service.h"
 #include "base/strings/stringprintf.h"
-#include "base/synchronization/lock.h"
 #include "base/threading/thread_checker.h"
 #include "base/threading/thread_restrictions.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "base/threading/worker_pool.h"
 #include "build/build_config.h"
 #include "crypto/nss_crypto_module_delegate.h"
+#include "crypto/nss_util_internal.h"
+
+#if defined(OS_CHROMEOS)
+#include <dlfcn.h>
+#endif
 
 namespace crypto {
 
@@ -133,37 +121,6 @@ char* PKCS11PasswordFunc(PK11SlotInfo* slot, PRBool retry, void* arg) {
   }
   DLOG(ERROR) << "PK11 password requested with nullptr arg";
   return nullptr;
-}
-
-// NSS creates a local cache of the sqlite database if it detects that the
-// filesystem the database is on is much slower than the local disk.  The
-// detection doesn't work with the latest versions of sqlite, such as 3.6.22
-// (NSS bug https://bugzilla.mozilla.org/show_bug.cgi?id=578561).  So we set
-// the NSS environment variable NSS_SDB_USE_CACHE to "yes" to override NSS's
-// detection when database_dir is on NFS.  See http://crbug.com/48585.
-//
-// Because this function sets an environment variable it must be run before we
-// go multi-threaded.
-void UseLocalCacheOfNSSDatabaseIfNFS(const base::FilePath& database_dir) {
-  bool db_on_nfs = false;
-#if defined(OS_LINUX)
-  base::FileSystemType fs_type = base::FILE_SYSTEM_UNKNOWN;
-  if (base::GetFileSystemType(database_dir, &fs_type))
-    db_on_nfs = (fs_type == base::FILE_SYSTEM_NFS);
-#elif defined(OS_OPENBSD)
-  struct statfs buf;
-  if (statfs(database_dir.value().c_str(), &buf) == 0)
-    db_on_nfs = (strcmp(buf.f_fstypename, MOUNT_NFS) == 0);
-#else
-  NOTIMPLEMENTED();
-#endif
-
-  if (db_on_nfs) {
-    std::unique_ptr<base::Environment> env(base::Environment::Create());
-    static const char kUseCacheEnvVar[] = "NSS_SDB_USE_CACHE";
-    if (!env->HasVar(kUseCacheEnvVar))
-      env->SetVar(kUseCacheEnvVar, "yes");
-  }
 }
 
 // A singleton to initialize/deinitialize NSPR.
@@ -652,10 +609,6 @@ class NSSInitSingleton {
   }
 #endif
 
-  base::Lock* write_lock() {
-    return &write_lock_;
-  }
-
  private:
   friend struct base::LazyInstanceTraitsBase<NSSInitSingleton>;
 
@@ -685,11 +638,6 @@ class NSSInitSingleton {
     SECStatus status = SECFailure;
     base::FilePath database_dir = GetInitialConfigDirectory();
     if (!database_dir.empty()) {
-      // This duplicates the work which should have been done in
-      // EarlySetupForNSSInit. However, this function is idempotent so
-      // there's no harm done.
-      UseLocalCacheOfNSSDatabaseIfNFS(database_dir);
-
       // Initialize with a persistent database (likely, ~/.pki/nssdb).
       // Use "sql:" which can be shared by multiple processes safely.
       std::string nss_config_dir =
@@ -815,9 +763,6 @@ class NSSInitSingleton {
   std::map<std::string, std::unique_ptr<ChromeOSUserData>> chromeos_user_map_;
   ScopedPK11Slot test_system_slot_;
 #endif
-  // TODO(davidben): When https://bugzilla.mozilla.org/show_bug.cgi?id=564011
-  // is fixed, we will no longer need the lock.
-  base::Lock write_lock_;
 
   base::ThreadChecker thread_checker_;
 };
@@ -843,12 +788,6 @@ ScopedPK11Slot OpenSoftwareNSSDB(const base::FilePath& path,
   return ScopedPK11Slot(db_slot);
 }
 
-void EarlySetupForNSSInit() {
-  base::FilePath database_dir = GetInitialConfigDirectory();
-  if (!database_dir.empty())
-    UseLocalCacheOfNSSDatabaseIfNFS(database_dir);
-}
-
 void EnsureNSPRInit() {
   g_nspr_singleton.Get();
 }
@@ -863,23 +802,6 @@ void EnsureNSSInit() {
 
 bool CheckNSSVersion(const char* version) {
   return !!NSS_VersionCheck(version);
-}
-
-base::Lock* GetNSSWriteLock() {
-  return g_nss_singleton.Get().write_lock();
-}
-
-AutoNSSWriteLock::AutoNSSWriteLock() : lock_(GetNSSWriteLock()) {
-  // May be nullptr if the lock is not needed in our version of NSS.
-  if (lock_)
-    lock_->Acquire();
-}
-
-AutoNSSWriteLock::~AutoNSSWriteLock() {
-  if (lock_) {
-    lock_->AssertAcquired();
-    lock_->Release();
-  }
 }
 
 AutoSECMODListReadLock::AutoSECMODListReadLock()

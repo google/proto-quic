@@ -153,12 +153,10 @@ class Top25SmoothPageSet(story.StorySet):
         # Why: #1 news worldwide (Alexa global)
         'http://news.yahoo.com',
         # Why: #2 news worldwide
-        # crbug.com/528474
-        #'http://www.cnn.com',
+        'http://www.cnn.com',
         # Why: #1 world commerce website by visits; #3 commerce in the US by
         # time spent
-        # crbug.com/667432
-        #'http://www.amazon.com',
+        'http://www.amazon.com',
         # Why: #1 commerce website by time spent by users in US
         'http://www.ebay.com',
         # Why: #1 Alexa recreation

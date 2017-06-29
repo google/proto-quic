@@ -1376,7 +1376,7 @@ TEST(FieldTrialListTest, SerializeSharedMemoryHandleMetadata) {
 
   std::string serialized =
       FieldTrialList::SerializeSharedMemoryHandleMetadata(shm->handle());
-#if defined(OS_WIN)
+#if defined(OS_WIN) || defined(OS_FUCHSIA)
   SharedMemoryHandle deserialized =
       FieldTrialList::DeserializeSharedMemoryHandleMetadata(serialized);
 #else

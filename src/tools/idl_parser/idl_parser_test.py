@@ -8,8 +8,6 @@ import unittest
 
 from idl_lexer import IDLLexer
 from idl_parser import IDLParser, ParseFile
-from idl_ppapi_lexer import IDLPPAPILexer
-from idl_ppapi_parser import IDLPPAPIParser
 
 def ParseCommentTest(comment):
   comment = comment.strip()
@@ -58,49 +56,5 @@ class WebIDLParser(unittest.TestCase):
         self._TestNode(node)
 
 
-class PepperIDLParser(unittest.TestCase):
-  def setUp(self):
-    self.parser = IDLPPAPIParser(IDLPPAPILexer(), mute_error=True)
-    self.filenames = glob.glob('test_parser/*_ppapi.idl')
-
-  def _TestNode(self, filename, node):
-    comments = node.GetListOf('Comment')
-    for comment in comments:
-      check, value = ParseCommentTest(comment.GetName())
-      if check == 'BUILD':
-        msg = '%s - Expecting %s, but found %s.\n' % (
-            filename, value, str(node))
-        self.assertEqual(value, str(node), msg)
-
-      if check == 'ERROR':
-        msg = node.GetLogLine('%s - Expecting\n\t%s\nbut found \n\t%s\n' % (
-                              filename, value, str(node)))
-        self.assertEqual(value, node.GetName(), msg)
-
-      if check == 'PROP':
-        key, expect = value.split('=')
-        actual = str(node.GetProperty(key))
-        msg = '%s - Mismatched property %s: %s vs %s.\n' % (
-                              filename, key, expect, actual)
-        self.assertEqual(expect, actual, msg)
-
-      if check == 'TREE':
-        quick = '\n'.join(node.Tree())
-        lineno = node.GetProperty('LINENO')
-        msg = '%s - Mismatched tree at line %d:\n%sVS\n%s' % (
-                              filename, lineno, value, quick)
-        self.assertEqual(value, quick, msg)
-
-  def testExpectedNodes(self):
-    for filename in self.filenames:
-      filenode = ParseFile(self.parser, filename)
-      children = filenode.GetChildren()
-      self.assertTrue(len(children) > 2, 'Expecting children in %s.' %
-                      filename)
-
-      for node in filenode.GetChildren()[2:]:
-        self._TestNode(filename, node)
-
 if __name__ == '__main__':
   unittest.main(verbosity=2)
-

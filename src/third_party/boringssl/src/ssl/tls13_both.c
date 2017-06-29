@@ -94,6 +94,12 @@ int tls13_handshake(SSL_HANDSHAKE *hs, int *out_early_return) {
         hs->wait = ssl_hs_ok;
         return -1;
 
+      case ssl_hs_early_data_rejected:
+        ssl->rwstate = SSL_EARLY_DATA_REJECTED;
+        /* Cause |SSL_write| to start failing immediately. */
+        hs->can_early_write = 0;
+        return -1;
+
       case ssl_hs_ok:
         break;
     }
@@ -378,9 +384,9 @@ int tls13_process_certificate_verify(SSL_HANDSHAKE *hs) {
     goto err;
   }
 
-  int al;
-  if (!tls12_check_peer_sigalg(ssl, &al, signature_algorithm)) {
-    ssl3_send_alert(ssl, SSL3_AL_FATAL, al);
+  uint8_t alert = SSL_AD_DECODE_ERROR;
+  if (!tls12_check_peer_sigalg(ssl, &alert, signature_algorithm)) {
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, alert);
     goto err;
   }
   hs->new_session->peer_signature_algorithm = signature_algorithm;
@@ -527,8 +533,7 @@ err:
   return 0;
 }
 
-enum ssl_private_key_result_t tls13_add_certificate_verify(SSL_HANDSHAKE *hs,
-                                                           int is_first_run) {
+enum ssl_private_key_result_t tls13_add_certificate_verify(SSL_HANDSHAKE *hs) {
   SSL *const ssl = hs->ssl;
   enum ssl_private_key_result_t ret = ssl_private_key_failure;
   uint8_t *msg = NULL;
@@ -558,20 +563,15 @@ enum ssl_private_key_result_t tls13_add_certificate_verify(SSL_HANDSHAKE *hs,
     goto err;
   }
 
-  enum ssl_private_key_result_t sign_result;
-  if (is_first_run) {
-    if (!tls13_get_cert_verify_signature_input(
-            hs, &msg, &msg_len,
-            ssl->server ? ssl_cert_verify_server : ssl_cert_verify_client)) {
-      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
-      goto err;
-    }
-    sign_result = ssl_private_key_sign(ssl, sig, &sig_len, max_sig_len,
-                                       signature_algorithm, msg, msg_len);
-  } else {
-    sign_result = ssl_private_key_complete(ssl, sig, &sig_len, max_sig_len);
+  if (!tls13_get_cert_verify_signature_input(
+          hs, &msg, &msg_len,
+          ssl->server ? ssl_cert_verify_server : ssl_cert_verify_client)) {
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
+    goto err;
   }
 
+  enum ssl_private_key_result_t sign_result = ssl_private_key_sign(
+      hs, sig, &sig_len, max_sig_len, signature_algorithm, msg, msg_len);
   if (sign_result != ssl_private_key_success) {
     ret = sign_result;
     goto err;

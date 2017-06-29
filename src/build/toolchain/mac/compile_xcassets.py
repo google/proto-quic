@@ -68,6 +68,8 @@ def CompileXCAssets(
       continue
     if 'Error Domain=IBMessageChannelErrorDomain Code=4' in line:
       continue
+    if 'Attempting to remove the stale service in order to add' in line:
+      continue
     sys.stderr.write(stdout)
     sys.exit(1)
 

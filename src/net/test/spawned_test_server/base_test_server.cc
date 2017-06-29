@@ -434,8 +434,15 @@ bool BaseTestServer::LoadTestRootCert() const {
   if (!GetLocalCertificatesDir(certificates_dir_, &root_certificate_path))
     return false;
 
-  return root_certs->AddFromFile(
-      root_certificate_path.AppendASCII("root_ca_cert.pem"));
+  if (ssl_options_.server_certificate == SSLOptions::CERT_AUTO ||
+      ssl_options_.server_certificate ==
+          SSLOptions::CERT_AUTO_AIA_INTERMEDIATE) {
+    return root_certs->AddFromFile(
+        root_certificate_path.AppendASCII("ocsp-test-root.pem"));
+  } else {
+    return root_certs->AddFromFile(
+        root_certificate_path.AppendASCII("root_ca_cert.pem"));
+  }
 }
 
 scoped_refptr<X509Certificate> BaseTestServer::GetCertificate() const {

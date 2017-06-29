@@ -54,6 +54,12 @@ class MultipageSkpicturePrinter(perf_benchmark.PerfBenchmark):
                                         options.page_set_base_dir)
     return story_set_class()
 
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Not tests disabled.
+    return StoryExpectations()
+
 
 class MultipageSkpicturePrinterCT(perf_benchmark.PerfBenchmark):
   """Captures mSKPs for Cluster Telemetry."""
@@ -81,3 +87,9 @@ class MultipageSkpicturePrinterCT(perf_benchmark.PerfBenchmark):
     return page_set.CTPageSet(
         options.urls_list, options.user_agent, options.archive_data_file,
         run_page_interaction_callback=repaint_helpers.WaitThenRepaint)
+
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Not tests disabled.
+    return StoryExpectations()

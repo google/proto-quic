@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 #
 # Copyright 2017 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -12,11 +12,13 @@ import os
 import sys
 import urllib
 
+
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.abspath(os.path.join(
     CURRENT_DIR, '..', '..', '..', '..', '..'))
 
 sys.path.append(os.path.join(BASE_DIR, 'build', 'android'))
+from pylib.results.presentation import standard_gtest_merge
 from pylib.utils import google_storage_helper  # pylint: disable=import-error
 
 sys.path.append(os.path.join(BASE_DIR, 'third_party'))
@@ -400,9 +402,17 @@ def main():
     builder_name = args.builder_name
 
   if args.positional:
-    if not len(args.positional) == 1:
-      raise parser.error('More than 1 json file specified.')
-    json_file = args.positional[0]
+    if len(args.positional) == 1:
+      json_file = args.positional[0]
+    else:
+      if args.output_json and args.summary_json:
+        standard_gtest_merge.standard_gtest_merge(
+            args.output_json, args.summary_json, args.positional)
+        json_file = args.output_json
+      elif not args.output_json:
+        raise Exception('output_json required by merge API is missing.')
+      else:
+        raise Exception('summary_json required by merge API is missing.')
   elif args.json_file:
     json_file = args.json_file
 

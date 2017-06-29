@@ -72,10 +72,6 @@ std::unique_ptr<SpdyFramerDecoderAdapter> DecoderAdapterFactory(
 // Used to indicate no flags in a HTTP2 flags field.
 const uint8_t kNoFlags = 0;
 
-// Wire sizes of priority payloads.
-const size_t kPriorityDependencyPayloadSize = 4;
-const size_t kPriorityWeightPayloadSize = 1;
-
 // Wire size of pad length field.
 const size_t kPadLengthFieldSize = 1;
 
@@ -215,82 +211,55 @@ SpdyFramer::SpdyState SpdyFramer::state() const {
 }
 
 size_t SpdyFramer::GetDataFrameMinimumSize() const {
-  return kDataFrameMinimumSize;
+  return size_utils::GetDataFrameMinimumSize();
 }
 
-// Size, in bytes, of the control frame header.
 size_t SpdyFramer::GetFrameHeaderSize() const {
-  return kFrameHeaderSize;
+  return size_utils::GetFrameHeaderSize();
 }
 
 size_t SpdyFramer::GetRstStreamSize() const {
-  // Size, in bytes, of a RST_STREAM frame.
-  // Calculated as:
-  // frame prefix + 4 (status code)
-  return GetFrameHeaderSize() + 4;
+  return size_utils::GetRstStreamSize();
 }
 
 size_t SpdyFramer::GetSettingsMinimumSize() const {
-  // Size, in bytes, of a SETTINGS frame not including the IDs and values
-  // from the variable-length value block.
-  return GetFrameHeaderSize();
+  return size_utils::GetSettingsMinimumSize();
 }
 
 size_t SpdyFramer::GetPingSize() const {
-  // Size, in bytes, of this PING frame.
-  // Calculated as:
-  // control frame header + 8 (id)
-  return GetFrameHeaderSize() + 8;
+  return size_utils::GetPingSize();
 }
 
 size_t SpdyFramer::GetGoAwayMinimumSize() const {
-  // Size, in bytes, of this GOAWAY frame. Calculated as:
-  // Control frame header + last stream id (4 bytes) + error code (4 bytes).
-  return GetFrameHeaderSize() + 8;
+  return size_utils::GetGoAwayMinimumSize();
 }
 
 size_t SpdyFramer::GetHeadersMinimumSize() const {
-  // Size, in bytes, of a HEADERS frame not including the variable-length
-  // header block.
-  return GetFrameHeaderSize();
+  return size_utils::GetFrameHeaderSize();
 }
 
 size_t SpdyFramer::GetWindowUpdateSize() const {
-  // Size, in bytes, of a WINDOW_UPDATE frame.
-  // Calculated as:
-  // frame prefix + 4 (delta)
-  return GetFrameHeaderSize() + 4;
+  return size_utils::GetWindowUpdateSize();
 }
 
 size_t SpdyFramer::GetPushPromiseMinimumSize() const {
-  // Size, in bytes, of a PUSH_PROMISE frame, sans the embedded header block.
-  // Calculated as frame prefix + 4 (promised stream id)
-  return GetFrameHeaderSize() + 4;
+  return size_utils::GetPushPromiseMinimumSize();
 }
 
 size_t SpdyFramer::GetContinuationMinimumSize() const {
-  // Size, in bytes, of a CONTINUATION frame not including the variable-length
-  // headers fragments.
-  return GetFrameHeaderSize();
+  return size_utils::GetContinuationMinimumSize();
 }
 
 size_t SpdyFramer::GetAltSvcMinimumSize() const {
-  // Size, in bytes, of an ALTSVC frame not including the Field-Value and
-  // (optional) Origin fields, both of which can vary in length.  Note that
-  // this gives a lower bound on the frame size rather than a true minimum;
-  // the actual frame should always be larger than this.
-  // Calculated as frame prefix + 2 (origin_len).
-  return GetFrameHeaderSize() + 2;
+  return size_utils::GetAltSvcMinimumSize();
 }
 
 size_t SpdyFramer::GetPrioritySize() const {
-  // Size, in bytes, of a PRIORITY frame.
-  return GetFrameHeaderSize() + kPriorityDependencyPayloadSize +
-         kPriorityWeightPayloadSize;
+  return size_utils::GetPrioritySize();
 }
 
 size_t SpdyFramer::GetFrameMinimumSize() const {
-  return GetFrameHeaderSize();
+  return size_utils::GetFrameMinimumSize();
 }
 
 size_t SpdyFramer::GetFrameMaximumSize() const {

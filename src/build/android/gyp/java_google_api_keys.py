@@ -99,7 +99,6 @@ def _DoMain(argv):
 
   values = {}
   values['GOOGLE_API_KEY'] = google_api_keys.GetAPIKey()
-  values['GOOGLE_API_KEY_REMOTING'] = google_api_keys.GetAPIKeyRemoting()
   values['GOOGLE_API_KEY_PHYSICAL_WEB_TEST'] = (google_api_keys.
       GetAPIKeyPhysicalWebTest())
   values['GOOGLE_CLIENT_ID_MAIN'] = google_api_keys.GetClientID('MAIN')

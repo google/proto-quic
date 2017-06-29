@@ -14,17 +14,17 @@
 
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
-#include "net/base/net_export.h"
 #include "net/http2/hpack/decoder/hpack_decoder_string_buffer.h"
 #include "net/http2/hpack/decoder/hpack_entry_decoder_listener.h"
 #include "net/http2/hpack/decoder/hpack_whole_entry_listener.h"
 #include "net/http2/hpack/http2_hpack_constants.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 
 // TODO(jamessynge): Consider renaming HpackEntryDecoderListener to
 // HpackEntryPartsListener or HpackEntryFragmentsListener.
-class NET_EXPORT_PRIVATE HpackWholeEntryBuffer
+class HTTP2_EXPORT_PRIVATE HpackWholeEntryBuffer
     : public HpackEntryDecoderListener {
  public:
   // max_string_size specifies the maximum size of an on-the-wire string (name

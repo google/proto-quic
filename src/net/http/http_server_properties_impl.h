@@ -26,10 +26,6 @@
 #include "net/http/broken_alternative_services.h"
 #include "net/http/http_server_properties.h"
 
-namespace base {
-class ListValue;
-}
-
 namespace net {
 
 // The implementation for setting/retrieving the HTTP server properties.
@@ -44,21 +40,22 @@ class NET_EXPORT HttpServerPropertiesImpl
 
   // Sets |spdy_servers_map_| with the servers (host/port) from
   // |spdy_servers| that either support SPDY or not.
-  void SetSpdyServers(std::vector<std::string>* spdy_servers,
-                      bool support_spdy);
+  void SetSpdyServers(std::unique_ptr<SpdyServersMap> spdy_servers_map);
 
   void SetAlternativeServiceServers(
-      AlternativeServiceMap* alternate_protocol_servers);
+      std::unique_ptr<AlternativeServiceMap> alternate_protocol_servers);
 
-  void SetSupportsQuic(IPAddress* last_address);
+  void SetSupportsQuic(const IPAddress& last_address);
 
-  void SetServerNetworkStats(ServerNetworkStatsMap* server_network_stats_map);
+  void SetServerNetworkStats(
+      std::unique_ptr<ServerNetworkStatsMap> server_network_stats_map);
 
-  void SetQuicServerInfoMap(QuicServerInfoMap* quic_server_info_map);
+  void SetQuicServerInfoMap(
+      std::unique_ptr<QuicServerInfoMap> quic_server_info_map);
 
   // Get the list of servers (host/port) that support SPDY. The max_size is the
   // number of MRU servers that support SPDY that are to be returned.
-  void GetSpdyServerList(base::ListValue* spdy_server_list,
+  void GetSpdyServerList(std::vector<std::string>* spdy_servers,
                          size_t max_size) const;
 
   // Returns flattened string representation of the |host_port_pair|. Used by
@@ -84,9 +81,14 @@ class NET_EXPORT HttpServerPropertiesImpl
                         SSLConfig* ssl_config) override;
   AlternativeServiceInfoVector GetAlternativeServiceInfos(
       const url::SchemeHostPort& origin) override;
-  bool SetAlternativeService(const url::SchemeHostPort& origin,
-                             const AlternativeService& alternative_service,
-                             base::Time expiration) override;
+  bool SetHttp2AlternativeService(const url::SchemeHostPort& origin,
+                                  const AlternativeService& alternative_service,
+                                  base::Time expiration) override;
+  bool SetQuicAlternativeService(
+      const url::SchemeHostPort& origin,
+      const AlternativeService& alternative_service,
+      base::Time expiration,
+      const QuicVersionVector& advertised_versions) override;
   bool SetAlternativeServices(const url::SchemeHostPort& origin,
                               const AlternativeServiceInfoVector&
                                   alternative_service_info_vector) override;
@@ -129,9 +131,6 @@ class NET_EXPORT HttpServerPropertiesImpl
   // friendness is no longer required.
   friend class HttpServerPropertiesImplPeer;
 
-  // |spdy_servers_map_| has flattened representation of servers
-  // (scheme, host, port) that either support or not support SPDY protocol.
-  typedef base::MRUCache<std::string, bool> SpdyServersMap;
   typedef std::map<url::SchemeHostPort, url::SchemeHostPort> CanonicalHostMap;
   typedef std::vector<std::string> CanonicalSufficList;
   typedef std::set<HostPortPair> Http11ServerHostPortSet;

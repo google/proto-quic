@@ -157,7 +157,7 @@ tools/binary_size/supersize archive chrome.size --elf-file out/Release/chrome -v
 Creates an interactive size breakdown (by source path) as a stand-alone html
 report.
 
-Example output: https://agrieve.github.io/supersize-chrome-android-may-16-2017/index.html
+Example output: https://agrieve.github.io/chrome/
 
 Example Usage:
 

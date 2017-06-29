@@ -814,6 +814,7 @@ class MockExpectCTReporter : public TransportSecurityState::ExpectCTReporter {
 
   void OnExpectCTFailed(const HostPortPair& host_port_pair,
                         const GURL& report_uri,
+                        base::Time expiration,
                         const X509Certificate* validated_certificate_chain,
                         const X509Certificate* served_certificate_chain,
                         const SignedCertificateTimestampAndStatusList&

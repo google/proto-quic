@@ -124,7 +124,7 @@ class SQLitePersistentCookieStore::Backend
   void DeleteCookie(const CanonicalCookie& cc);
 
   // Commit pending operations as soon as possible.
-  void Flush(const base::Closure& callback);
+  void Flush(base::OnceClosure callback);
 
   // Commit any pending operations and close the database.  This must be called
   // before the object is destructed.
@@ -182,7 +182,7 @@ class SQLitePersistentCookieStore::Backend
 
   // Flushes (Commits) pending operations on the background runner, and invokes
   // |callback| on the client thread when done.
-  void FlushAndNotifyInBackground(const base::Closure& callback);
+  void FlushAndNotifyInBackground(base::OnceClosure callback);
 
   // Sends notification when the entire store is loaded, and reports metrics
   // for the total time to load and aggregated results from any priority loads
@@ -231,9 +231,9 @@ class SQLitePersistentCookieStore::Backend
   void KillDatabase();
 
   void PostBackgroundTask(const tracked_objects::Location& origin,
-                          const base::Closure& task);
+                          base::OnceClosure task);
   void PostClientTask(const tracked_objects::Location& origin,
-                      const base::Closure& task);
+                      base::OnceClosure task);
 
   // Shared code between the different load strategies to be used after all
   // cookies have been loaded.
@@ -546,10 +546,10 @@ void SQLitePersistentCookieStore::Backend::LoadKeyAndNotifyInBackground(
 }
 
 void SQLitePersistentCookieStore::Backend::FlushAndNotifyInBackground(
-    const base::Closure& callback) {
+    base::OnceClosure callback) {
   Commit();
   if (!callback.is_null())
-    PostClientTask(FROM_HERE, callback);
+    PostClientTask(FROM_HERE, std::move(callback));
 }
 
 void SQLitePersistentCookieStore::Backend::CompleteLoadForKeyInForeground(
@@ -644,7 +644,7 @@ bool SQLitePersistentCookieStore::Backend::InitializeDatabase() {
 
   int64_t db_size = 0;
   if (base::GetFileSize(path_, &db_size))
-    UMA_HISTOGRAM_COUNTS("Cookie.DBSizeInKB", db_size / 1024);
+    UMA_HISTOGRAM_COUNTS_1M("Cookie.DBSizeInKB", db_size / 1024);
 
   db_.reset(new sql::Connection);
   db_->set_histogram_tag("Cookie");
@@ -832,7 +832,8 @@ void SQLitePersistentCookieStore::Backend::MakeCookiesFromSQLStatement(
             static_cast<DBCookiePriority>(smt.ColumnInt(13)))));  // priority
     DLOG_IF(WARNING, cc->CreationDate() > Time::Now())
         << L"CreationDate too recent";
-    cookies->push_back(std::move(cc));
+    if (cc->IsCanonical())
+      cookies->push_back(std::move(cc));
     ++num_cookies_read_;
   }
 }
@@ -1200,11 +1201,11 @@ void SQLitePersistentCookieStore::Backend::Commit() {
                             succeeded ? 0 : 1, 2);
 }
 
-void SQLitePersistentCookieStore::Backend::Flush(
-    const base::Closure& callback) {
+void SQLitePersistentCookieStore::Backend::Flush(base::OnceClosure callback) {
   DCHECK(!background_task_runner_->RunsTasksInCurrentSequence());
-  PostBackgroundTask(FROM_HERE, base::Bind(&Backend::FlushAndNotifyInBackground,
-                                           this, callback));
+  PostBackgroundTask(FROM_HERE,
+                     base::BindOnce(&Backend::FlushAndNotifyInBackground, this,
+                                    std::move(callback)));
 }
 
 // Fire off a close message to the background runner.  We could still have a
@@ -1294,8 +1295,8 @@ void SQLitePersistentCookieStore::Backend::DeleteSessionCookiesOnStartup() {
 
   UMA_HISTOGRAM_TIMES("Cookie.Startup.TimeSpentDeletingCookies",
                       base::Time::Now() - start_time);
-  UMA_HISTOGRAM_COUNTS("Cookie.Startup.NumberOfCookiesDeleted",
-                       db_->GetLastChangeCount());
+  UMA_HISTOGRAM_COUNTS_1M("Cookie.Startup.NumberOfCookiesDeleted",
+                          db_->GetLastChangeCount());
 }
 
 void SQLitePersistentCookieStore::Backend::BackgroundDeleteAllInList(
@@ -1341,8 +1342,8 @@ void SQLitePersistentCookieStore::Backend::BackgroundDeleteAllInList(
 
 void SQLitePersistentCookieStore::Backend::PostBackgroundTask(
     const tracked_objects::Location& origin,
-    const base::Closure& task) {
-  if (!background_task_runner_->PostTask(origin, task)) {
+    base::OnceClosure task) {
+  if (!background_task_runner_->PostTask(origin, std::move(task))) {
     LOG(WARNING) << "Failed to post task from " << origin.ToString()
                  << " to background_task_runner_.";
   }
@@ -1350,8 +1351,8 @@ void SQLitePersistentCookieStore::Backend::PostBackgroundTask(
 
 void SQLitePersistentCookieStore::Backend::PostClientTask(
     const tracked_objects::Location& origin,
-    const base::Closure& task) {
-  if (!client_task_runner_->PostTask(origin, task)) {
+    base::OnceClosure task) {
+  if (!client_task_runner_->PostTask(origin, std::move(task))) {
     LOG(WARNING) << "Failed to post task from " << origin.ToString()
                  << " to client_task_runner_.";
   }
@@ -1432,9 +1433,9 @@ void SQLitePersistentCookieStore::SetForceKeepSessionState() {
   // This store never discards session-only cookies, so this call has no effect.
 }
 
-void SQLitePersistentCookieStore::Flush(const base::Closure& callback) {
+void SQLitePersistentCookieStore::Flush(base::OnceClosure callback) {
   if (backend_)
-    backend_->Flush(callback);
+    backend_->Flush(std::move(callback));
 }
 
 SQLitePersistentCookieStore::~SQLitePersistentCookieStore() {

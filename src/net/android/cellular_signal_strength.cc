@@ -12,6 +12,8 @@ namespace android {
 
 namespace cellular_signal_strength {
 
+namespace {
+
 // GENERATED_JAVA_ENUM_PACKAGE: org.chromium.net
 enum CellularSignalStrengthError {
   // Value returned by CellularSignalStrength APIs when a valid value is
@@ -25,26 +27,19 @@ static_assert(
     INT32_MIN == ERROR_NOT_SUPPORTED,
     "CellularSignalStrengthError.ERROR_NOT_SUPPORTED has unexpected value");
 
-bool GetSignalStrengthDbm(int32_t* signal_strength_dbm) {
-  int32_t signal_strength_dbm_tmp =
-      Java_AndroidCellularSignalStrength_getSignalStrengthDbm(
-          base::android::AttachCurrentThread());
-  if (signal_strength_dbm_tmp == ERROR_NOT_SUPPORTED)
-    return false;
+}  // namespace
 
-  *signal_strength_dbm = signal_strength_dbm_tmp;
-  return true;
-}
-
-bool GetSignalStrengthLevel(int32_t* signal_strength_level) {
-  int32_t signal_strength_level_tmp =
+base::Optional<int32_t> GetSignalStrengthLevel() {
+  int32_t signal_strength_level =
       Java_AndroidCellularSignalStrength_getSignalStrengthLevel(
           base::android::AttachCurrentThread());
-  if (signal_strength_level_tmp == ERROR_NOT_SUPPORTED)
-    return false;
+  if (signal_strength_level == ERROR_NOT_SUPPORTED)
+    return base::Optional<int32_t>();
 
-  *signal_strength_level = signal_strength_level_tmp;
-  return true;
+  DCHECK_LE(0, signal_strength_level);
+  DCHECK_GE(4, signal_strength_level);
+
+  return signal_strength_level;
 }
 
 }  // namespace cellular_signal_strength

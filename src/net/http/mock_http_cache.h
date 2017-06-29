@@ -207,6 +207,9 @@ class MockHttpCache {
   // Wrapper to simulate cache lock timeout for new transactions.
   void SimulateCacheLockTimeout();
 
+  // Wrapper to simulate cache lock timeout for new transactions.
+  void SimulateCacheLockTimeoutAfterHeaders();
+
   // Wrapper to fail request conditionalization for new transactions.
   void FailConditionalizations();
 

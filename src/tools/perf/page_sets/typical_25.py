@@ -83,3 +83,8 @@ class Typical25PageSet(story.StorySet):
       for temp in cache_temperatures:
         self.AddStory(page_class(
           url, self, run_no_page_interactions, cache_temperature=temp))
+
+
+class Typical25StoryExpectations(story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    pass

@@ -47,6 +47,7 @@
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_tokenizer.h"
 #include "base/strings/utf_string_conversions.h"
+#include "base/task_scheduler/task_scheduler.h"
 #include "base/threading/thread.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "tools/battor_agent/battor_agent.h"
@@ -60,7 +61,6 @@ namespace battor {
 namespace {
 
 const char kIoThreadName[] = "BattOr IO Thread";
-const char kFileThreadName[] = "BattOr File Thread";
 
 const char kUsage[] =
     "Start the battor_agent shell with:\n"
@@ -111,7 +111,7 @@ std::vector<std::string> TokenizeString(std::string cmd) {
 // use a BattOrAgent to communicate with a BattOr.
 class BattOrAgentBin : public BattOrAgent::Listener {
  public:
-  BattOrAgentBin() : io_thread_(kIoThreadName), file_thread_(kFileThreadName) {}
+  BattOrAgentBin() : io_thread_(kIoThreadName) {}
 
   ~BattOrAgentBin() { DCHECK(!agent_); }
 
@@ -305,13 +305,7 @@ class BattOrAgentBin : public BattOrAgent::Listener {
       const std::string& path,
       scoped_refptr<base::SingleThreadTaskRunner> ui_thread_task_runner,
       base::WaitableEvent* done) {
-    // In Chrome, we already have a file thread running. Because the Chrome
-    // serial library relies on having it available, we have to spin up our own.
-    if (!file_thread_.Start())
-      ExitFromThreadStartFailure(kFileThreadName);
-
-    agent_.reset(new BattOrAgent(path, this, file_thread_.task_runner(),
-                                 ui_thread_task_runner));
+    agent_.reset(new BattOrAgent(path, this, ui_thread_task_runner));
     done->Signal();
   }
 
@@ -331,7 +325,6 @@ class BattOrAgentBin : public BattOrAgent::Listener {
 
   // Threads needed for serial communication.
   base::Thread io_thread_;
-  base::Thread file_thread_;
 
   // The agent capable of asynchronously communicating with the BattOr.
   std::unique_ptr<BattOrAgent> agent_;
@@ -345,5 +338,6 @@ int main(int argc, char* argv[]) {
   base::AtExitManager exit_manager;
   base::CommandLine::Init(argc, argv);
   battor::BattOrAgentBin bin;
+  base::TaskScheduler::CreateAndStartWithDefaultParams("battor_agent");
   return bin.Run(argc, argv);
 }

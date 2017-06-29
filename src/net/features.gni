@@ -27,4 +27,7 @@ declare_args() {
 
   # Multicast DNS.
   enable_mdns = is_win || is_linux
+
+  # Reporting not used on iOS.
+  enable_reporting = !is_ios
 }

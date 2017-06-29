@@ -9,6 +9,7 @@ from measurements import v8_detached_context_age_in_gc
 import page_sets
 
 from telemetry import benchmark
+from telemetry import story
 from telemetry.timeline import chrome_trace_category_filter
 from telemetry.timeline import chrome_trace_config
 from telemetry.web_perf import timeline_based_measurement
@@ -33,6 +34,11 @@ class V8DetachedContextAgeInGC(perf_benchmark.PerfBenchmark):
       return True
     return False
 
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing not disabled.
+    return StoryExpectations()
 
 class _InfiniteScrollBenchmark(perf_benchmark.PerfBenchmark):
   """ Base class for infinite scroll benchmarks.
@@ -97,6 +103,12 @@ class V8InfiniteScroll(_InfiniteScrollBenchmark):
   def Name(cls):
     return 'v8.infinite_scroll_tbmv2'
 
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+         pass # blank_page.html not disabled.
+    return StoryExpectations()
+
 
 @benchmark.Enabled('android')
 @benchmark.Owner(emails=['ulan@chromium.org'])
@@ -110,6 +122,12 @@ class V8MobileInfiniteScroll(_InfiniteScrollBenchmark):
   @classmethod
   def Name(cls):
     return 'v8.mobile_infinite_scroll_tbmv2'
+
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # blank_page.html not disabled.
+    return StoryExpectations()
 
 
 class _Top25RuntimeStats(perf_benchmark.PerfBenchmark):
@@ -170,3 +188,9 @@ class V8Top25RuntimeStats(_Top25RuntimeStats):
 
   def CreateStorySet(self, options):
     return page_sets.V8Top25StorySet()
+
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # blank_page.html not disabled.
+    return StoryExpectations()

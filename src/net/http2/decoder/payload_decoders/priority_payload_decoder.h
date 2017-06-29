@@ -7,18 +7,18 @@
 
 // Decodes the payload of a PRIORITY frame.
 
-#include "net/base/net_export.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
 #include "net/http2/decoder/frame_decoder_state.h"
 #include "net/http2/http2_structures.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 namespace test {
 class PriorityPayloadDecoderPeer;
 }  // namespace test
 
-class NET_EXPORT_PRIVATE PriorityPayloadDecoder {
+class HTTP2_EXPORT_PRIVATE PriorityPayloadDecoder {
  public:
   // Starts the decoding of a PRIORITY frame's payload, and completes it if
   // the entire payload is in the provided decode buffer.

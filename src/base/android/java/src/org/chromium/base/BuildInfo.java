@@ -9,6 +9,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.Build;
+import android.text.TextUtils;
 
 import org.chromium.base.annotations.CalledByNative;
 
@@ -25,6 +26,7 @@ public class BuildInfo {
      */
     private BuildInfo() {}
 
+    @SuppressWarnings("deprecation")
     @CalledByNative
     private static String[] getAll() {
         try {
@@ -37,6 +39,18 @@ public class BuildInfo {
             CharSequence label = pm.getApplicationLabel(pi.applicationInfo);
             String packageLabel = label == null ? "" : label.toString();
 
+            String installerPackageName = pm.getInstallerPackageName(packageName);
+            if (installerPackageName == null) {
+                installerPackageName = "";
+            }
+
+            String abiString = null;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                abiString = TextUtils.join(", ", Build.SUPPORTED_ABIS);
+            } else {
+                abiString = "ABI1: " + Build.CPU_ABI + ", ABI2: " + Build.CPU_ABI2;
+            }
+
             // Use lastUpdateTime when developing locally, since versionCode does not normally
             // change in this case.
             long version = pi.versionCode > 10 ? pi.versionCode : pi.lastUpdateTime;
@@ -47,7 +61,7 @@ public class BuildInfo {
                     Build.BRAND, Build.DEVICE, Build.ID, Build.MANUFACTURER, Build.MODEL,
                     String.valueOf(Build.VERSION.SDK_INT), Build.TYPE, packageLabel, packageName,
                     versionCode, versionName, getAndroidBuildFingerprint(), getGMSVersionCode(pm),
-                    extractedFileSuffix,
+                    installerPackageName, abiString, extractedFileSuffix,
             };
         } catch (NameNotFoundException e) {
             throw new RuntimeException(e);
@@ -81,7 +95,7 @@ public class BuildInfo {
 
     /** Returns a string that is different each time the apk changes. */
     public static String getExtractedFileSuffix() {
-        return getAll()[13];
+        return getAll()[15];
     }
 
     public static String getPackageLabel() {

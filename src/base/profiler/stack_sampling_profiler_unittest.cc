@@ -51,6 +51,13 @@
 
 namespace base {
 
+#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
+#define PROFILER_TEST_F(TestClass, TestName) TEST_F(TestClass, TestName)
+#else
+#define PROFILER_TEST_F(TestClass, TestName) \
+  TEST_F(TestClass, DISABLED_##TestName)
+#endif
+
 using SamplingParams = StackSamplingProfiler::SamplingParams;
 using Frame = StackSamplingProfiler::Frame;
 using Frames = std::vector<StackSamplingProfiler::Frame>;
@@ -651,13 +658,12 @@ class StackSamplingProfilerTest : public testing::Test {
 // Checks that the basic expected information is present in a sampled call stack
 // profile.
 // macOS ASAN is not yet supported - crbug.com/718628.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED) && \
-    !(defined(ADDRESS_SANITIZER) && defined(OS_MACOSX))
+#if !(defined(ADDRESS_SANITIZER) && defined(OS_MACOSX))
 #define MAYBE_Basic Basic
 #else
 #define MAYBE_Basic DISABLED_Basic
 #endif
-TEST_F(StackSamplingProfilerTest, MAYBE_Basic) {
+PROFILER_TEST_F(StackSamplingProfilerTest, MAYBE_Basic) {
   SamplingParams params;
   params.sampling_interval = TimeDelta::FromMilliseconds(0);
   params.samples_per_burst = 1;
@@ -696,12 +702,7 @@ TEST_F(StackSamplingProfilerTest, MAYBE_Basic) {
 }
 
 // Checks that annotations are recorded in samples.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
-#define MAYBE_Annotations Annotations
-#else
-#define MAYBE_Annotations DISABLED_Annotations
-#endif
-TEST_F(StackSamplingProfilerTest, MAYBE_Annotations) {
+PROFILER_TEST_F(StackSamplingProfilerTest, Annotations) {
   SamplingParams params;
   params.sampling_interval = TimeDelta::FromMilliseconds(0);
   params.samples_per_burst = 1;
@@ -731,13 +732,12 @@ TEST_F(StackSamplingProfilerTest, MAYBE_Annotations) {
 // Checks that the profiler handles stacks containing dynamically-allocated
 // stack memory.
 // macOS ASAN is not yet supported - crbug.com/718628.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED) && \
-    !(defined(ADDRESS_SANITIZER) && defined(OS_MACOSX))
+#if !(defined(ADDRESS_SANITIZER) && defined(OS_MACOSX))
 #define MAYBE_Alloca Alloca
 #else
 #define MAYBE_Alloca DISABLED_Alloca
 #endif
-TEST_F(StackSamplingProfilerTest, MAYBE_Alloca) {
+PROFILER_TEST_F(StackSamplingProfilerTest, MAYBE_Alloca) {
   SamplingParams params;
   params.sampling_interval = TimeDelta::FromMilliseconds(0);
   params.samples_per_burst = 1;
@@ -792,12 +792,7 @@ TEST_F(StackSamplingProfilerTest, MAYBE_Alloca) {
 
 // Checks that the expected number of profiles and samples are present in the
 // call stack profiles produced.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
-#define MAYBE_MultipleProfilesAndSamples MultipleProfilesAndSamples
-#else
-#define MAYBE_MultipleProfilesAndSamples DISABLED_MultipleProfilesAndSamples
-#endif
-TEST_F(StackSamplingProfilerTest, MAYBE_MultipleProfilesAndSamples) {
+PROFILER_TEST_F(StackSamplingProfilerTest, MultipleProfilesAndSamples) {
   SamplingParams params;
   params.burst_interval = params.sampling_interval =
       TimeDelta::FromMilliseconds(0);
@@ -813,12 +808,7 @@ TEST_F(StackSamplingProfilerTest, MAYBE_MultipleProfilesAndSamples) {
 }
 
 // Checks that a profiler can stop/destruct without ever having started.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
-#define MAYBE_StopWithoutStarting StopWithoutStarting
-#else
-#define MAYBE_StopWithoutStarting DISABLED_StopWithoutStarting
-#endif
-TEST_F(StackSamplingProfilerTest, MAYBE_StopWithoutStarting) {
+PROFILER_TEST_F(StackSamplingProfilerTest, StopWithoutStarting) {
   WithTargetThread([](PlatformThreadId target_thread_id) {
     SamplingParams params;
     params.sampling_interval = TimeDelta::FromMilliseconds(0);
@@ -839,12 +829,7 @@ TEST_F(StackSamplingProfilerTest, MAYBE_StopWithoutStarting) {
 
 // Checks that its okay to stop a profiler before it finishes even when the
 // sampling thread continues to run.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
-#define MAYBE_StopSafely StopSafely
-#else
-#define MAYBE_StopSafely DISABLED_StopSafely
-#endif
-TEST_F(StackSamplingProfilerTest, MAYBE_StopSafely) {
+PROFILER_TEST_F(StackSamplingProfilerTest, StopSafely) {
   // Test delegate that counts samples.
   class SampleRecordedCounter : public NativeStackSamplerTestDelegate {
    public:
@@ -919,12 +904,7 @@ TEST_F(StackSamplingProfilerTest, MAYBE_StopSafely) {
 
 // Checks that no call stack profiles are captured if the profiling is stopped
 // during the initial delay.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
-#define MAYBE_StopDuringInitialDelay StopDuringInitialDelay
-#else
-#define MAYBE_StopDuringInitialDelay DISABLED_StopDuringInitialDelay
-#endif
-TEST_F(StackSamplingProfilerTest, MAYBE_StopDuringInitialDelay) {
+PROFILER_TEST_F(StackSamplingProfilerTest, StopDuringInitialDelay) {
   SamplingParams params;
   params.initial_delay = TimeDelta::FromSeconds(60);
 
@@ -936,12 +916,7 @@ TEST_F(StackSamplingProfilerTest, MAYBE_StopDuringInitialDelay) {
 
 // Checks that the single completed call stack profile is captured if the
 // profiling is stopped between bursts.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
-#define MAYBE_StopDuringInterBurstInterval StopDuringInterBurstInterval
-#else
-#define MAYBE_StopDuringInterBurstInterval DISABLED_StopDuringInterBurstInterval
-#endif
-TEST_F(StackSamplingProfilerTest, MAYBE_StopDuringInterBurstInterval) {
+PROFILER_TEST_F(StackSamplingProfilerTest, StopDuringInterBurstInterval) {
   SamplingParams params;
   params.sampling_interval = TimeDelta::FromMilliseconds(0);
   params.burst_interval = TimeDelta::FromSeconds(60);
@@ -957,13 +932,7 @@ TEST_F(StackSamplingProfilerTest, MAYBE_StopDuringInterBurstInterval) {
 
 // Checks that tasks can be stopped before completion and incomplete call stack
 // profiles are captured.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
-#define MAYBE_StopDuringInterSampleInterval StopDuringInterSampleInterval
-#else
-#define MAYBE_StopDuringInterSampleInterval \
-  DISABLED_StopDuringInterSampleInterval
-#endif
-TEST_F(StackSamplingProfilerTest, MAYBE_StopDuringInterSampleInterval) {
+PROFILER_TEST_F(StackSamplingProfilerTest, StopDuringInterSampleInterval) {
   // Test delegate that counts samples.
   class SampleRecordedEvent : public NativeStackSamplerTestDelegate {
    public:
@@ -1003,13 +972,7 @@ TEST_F(StackSamplingProfilerTest, MAYBE_StopDuringInterSampleInterval) {
 }
 
 // Checks that we can destroy the profiler while profiling.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
-#define MAYBE_DestroyProfilerWhileProfiling DestroyProfilerWhileProfiling
-#else
-#define MAYBE_DestroyProfilerWhileProfiling \
-  DISABLED_DestroyProfilerWhileProfiling
-#endif
-TEST_F(StackSamplingProfilerTest, MAYBE_DestroyProfilerWhileProfiling) {
+PROFILER_TEST_F(StackSamplingProfilerTest, DestroyProfilerWhileProfiling) {
   SamplingParams params;
   params.sampling_interval = TimeDelta::FromMilliseconds(10);
 
@@ -1028,12 +991,7 @@ TEST_F(StackSamplingProfilerTest, MAYBE_DestroyProfilerWhileProfiling) {
 }
 
 // Checks that the same profiler may be run multiple times.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
-#define MAYBE_CanRunMultipleTimes CanRunMultipleTimes
-#else
-#define MAYBE_CanRunMultipleTimes DISABLED_CanRunMultipleTimes
-#endif
-TEST_F(StackSamplingProfilerTest, MAYBE_CanRunMultipleTimes) {
+PROFILER_TEST_F(StackSamplingProfilerTest, CanRunMultipleTimes) {
   WithTargetThread([](PlatformThreadId target_thread_id) {
     SamplingParams params;
     params.sampling_interval = TimeDelta::FromMilliseconds(0);
@@ -1063,12 +1021,7 @@ TEST_F(StackSamplingProfilerTest, MAYBE_CanRunMultipleTimes) {
 }
 
 // Checks that the different profilers may be run.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
-#define MAYBE_CanRunMultipleProfilers CanRunMultipleProfilers
-#else
-#define MAYBE_CanRunMultipleProfilers DISABLED_CanRunMultipleProfilers
-#endif
-TEST_F(StackSamplingProfilerTest, MAYBE_CanRunMultipleProfilers) {
+PROFILER_TEST_F(StackSamplingProfilerTest, CanRunMultipleProfilers) {
   SamplingParams params;
   params.sampling_interval = TimeDelta::FromMilliseconds(0);
   params.samples_per_burst = 1;
@@ -1083,12 +1036,7 @@ TEST_F(StackSamplingProfilerTest, MAYBE_CanRunMultipleProfilers) {
 }
 
 // Checks that a sampler can be started while another is running.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
-#define MAYBE_MultipleStart MultipleStart
-#else
-#define MAYBE_MultipleStart DISABLED_MultipleStart
-#endif
-TEST_F(StackSamplingProfilerTest, MAYBE_MultipleStart) {
+PROFILER_TEST_F(StackSamplingProfilerTest, MultipleStart) {
   WithTargetThread([](PlatformThreadId target_thread_id) {
     std::vector<SamplingParams> params(2);
 
@@ -1109,12 +1057,7 @@ TEST_F(StackSamplingProfilerTest, MAYBE_MultipleStart) {
 }
 
 // Checks that the sampling thread can shut down.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
-#define MAYBE_SamplerIdleShutdown SamplerIdleShutdown
-#else
-#define MAYBE_SamplerIdleShutdown DISABLED_SamplerIdleShutdown
-#endif
-TEST_F(StackSamplingProfilerTest, MAYBE_SamplerIdleShutdown) {
+PROFILER_TEST_F(StackSamplingProfilerTest, SamplerIdleShutdown) {
   SamplingParams params;
   params.sampling_interval = TimeDelta::FromMilliseconds(0);
   params.samples_per_burst = 1;
@@ -1139,14 +1082,8 @@ TEST_F(StackSamplingProfilerTest, MAYBE_SamplerIdleShutdown) {
 }
 
 // Checks that additional requests will restart a stopped profiler.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
-#define MAYBE_WillRestartSamplerAfterIdleShutdown \
-  WillRestartSamplerAfterIdleShutdown
-#else
-#define MAYBE_WillRestartSamplerAfterIdleShutdown \
-  DISABLED_WillRestartSamplerAfterIdleShutdown
-#endif
-TEST_F(StackSamplingProfilerTest, MAYBE_WillRestartSamplerAfterIdleShutdown) {
+PROFILER_TEST_F(StackSamplingProfilerTest,
+                WillRestartSamplerAfterIdleShutdown) {
   SamplingParams params;
   params.sampling_interval = TimeDelta::FromMilliseconds(0);
   params.samples_per_burst = 1;
@@ -1171,12 +1108,7 @@ TEST_F(StackSamplingProfilerTest, MAYBE_WillRestartSamplerAfterIdleShutdown) {
 
 // Checks that it's safe to stop a task after it's completed and the sampling
 // thread has shut-down for being idle.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
-#define MAYBE_StopAfterIdleShutdown StopAfterIdleShutdown
-#else
-#define MAYBE_StopAfterIdleShutdown DISABLED_StopAfterIdleShutdown
-#endif
-TEST_F(StackSamplingProfilerTest, MAYBE_StopAfterIdleShutdown) {
+PROFILER_TEST_F(StackSamplingProfilerTest, StopAfterIdleShutdown) {
   WithTargetThread([](PlatformThreadId target_thread_id) {
     SamplingParams params;
 
@@ -1202,15 +1134,8 @@ TEST_F(StackSamplingProfilerTest, MAYBE_StopAfterIdleShutdown) {
 
 // Checks that profilers can run both before and after the sampling thread has
 // started.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
-#define MAYBE_ProfileBeforeAndAfterSamplingThreadRunning \
-  ProfileBeforeAndAfterSamplingThreadRunning
-#else
-#define MAYBE_ProfileBeforeAndAfterSamplingThreadRunning \
-  DISABLED_ProfileBeforeAndAfterSamplingThreadRunning
-#endif
-TEST_F(StackSamplingProfilerTest,
-       MAYBE_ProfileBeforeAndAfterSamplingThreadRunning) {
+PROFILER_TEST_F(StackSamplingProfilerTest,
+                ProfileBeforeAndAfterSamplingThreadRunning) {
   WithTargetThread([](PlatformThreadId target_thread_id) {
     std::vector<SamplingParams> params(2);
 
@@ -1240,12 +1165,7 @@ TEST_F(StackSamplingProfilerTest,
 
 // Checks that an idle-shutdown task will abort if a new profiler starts
 // between when it was posted and when it runs.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
-#define MAYBE_IdleShutdownAbort IdleShutdownAbort
-#else
-#define MAYBE_IdleShutdownAbort DISABLED_IdleShutdownAbort
-#endif
-TEST_F(StackSamplingProfilerTest, MAYBE_IdleShutdownAbort) {
+PROFILER_TEST_F(StackSamplingProfilerTest, IdleShutdownAbort) {
   WithTargetThread([](PlatformThreadId target_thread_id) {
     SamplingParams params;
 
@@ -1279,12 +1199,7 @@ TEST_F(StackSamplingProfilerTest, MAYBE_IdleShutdownAbort) {
 }
 
 // Checks that synchronized multiple sampling requests execute in parallel.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
-#define MAYBE_ConcurrentProfiling_InSync ConcurrentProfiling_InSync
-#else
-#define MAYBE_ConcurrentProfiling_InSync DISABLED_ConcurrentProfiling_InSync
-#endif
-TEST_F(StackSamplingProfilerTest, MAYBE_ConcurrentProfiling_InSync) {
+PROFILER_TEST_F(StackSamplingProfilerTest, ConcurrentProfiling_InSync) {
   WithTargetThread([](PlatformThreadId target_thread_id) {
     std::vector<SamplingParams> params(2);
 
@@ -1323,12 +1238,7 @@ TEST_F(StackSamplingProfilerTest, MAYBE_ConcurrentProfiling_InSync) {
 }
 
 // Checks that several mixed sampling requests execute in parallel.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
-#define MAYBE_ConcurrentProfiling_Mixed ConcurrentProfiling_Mixed
-#else
-#define MAYBE_ConcurrentProfiling_Mixed DISABLED_ConcurrentProfiling_Mixed
-#endif
-TEST_F(StackSamplingProfilerTest, MAYBE_ConcurrentProfiling_Mixed) {
+PROFILER_TEST_F(StackSamplingProfilerTest, ConcurrentProfiling_Mixed) {
   WithTargetThread([](PlatformThreadId target_thread_id) {
     std::vector<SamplingParams> params(3);
 
@@ -1364,13 +1274,12 @@ TEST_F(StackSamplingProfilerTest, MAYBE_ConcurrentProfiling_Mixed) {
 // Checks that a stack that runs through another library produces a stack with
 // the expected functions.
 // macOS ASAN is not yet supported - crbug.com/718628.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED) && \
-    !(defined(ADDRESS_SANITIZER) && defined(OS_MACOSX))
+#if !(defined(ADDRESS_SANITIZER) && defined(OS_MACOSX))
 #define MAYBE_OtherLibrary OtherLibrary
 #else
 #define MAYBE_OtherLibrary DISABLED_OtherLibrary
 #endif
-TEST_F(StackSamplingProfilerTest, MAYBE_OtherLibrary) {
+PROFILER_TEST_F(StackSamplingProfilerTest, MAYBE_OtherLibrary) {
   SamplingParams params;
   params.sampling_interval = TimeDelta::FromMilliseconds(0);
   params.samples_per_burst = 1;
@@ -1437,35 +1346,29 @@ TEST_F(StackSamplingProfilerTest, MAYBE_OtherLibrary) {
 // Checks that a stack that runs through a library that is unloading produces a
 // stack, and doesn't crash.
 // Unloading is synchronous on the Mac, so this test is inapplicable.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED) && !defined(OS_MACOSX)
+#if !defined(OS_MACOSX)
 #define MAYBE_UnloadingLibrary UnloadingLibrary
 #else
 #define MAYBE_UnloadingLibrary DISABLED_UnloadingLibrary
 #endif
-TEST_F(StackSamplingProfilerTest, MAYBE_UnloadingLibrary) {
+PROFILER_TEST_F(StackSamplingProfilerTest, MAYBE_UnloadingLibrary) {
   TestLibraryUnload(false);
 }
 
 // Checks that a stack that runs through a library that has been unloaded
 // produces a stack, and doesn't crash.
 // macOS ASAN is not yet supported - crbug.com/718628.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED) && \
-    !(defined(ADDRESS_SANITIZER) && defined(OS_MACOSX))
+#if !(defined(ADDRESS_SANITIZER) && defined(OS_MACOSX))
 #define MAYBE_UnloadedLibrary UnloadedLibrary
 #else
 #define MAYBE_UnloadedLibrary DISABLED_UnloadedLibrary
 #endif
-TEST_F(StackSamplingProfilerTest, MAYBE_UnloadedLibrary) {
+PROFILER_TEST_F(StackSamplingProfilerTest, MAYBE_UnloadedLibrary) {
   TestLibraryUnload(true);
 }
 
 // Checks that different threads can be sampled in parallel.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
-#define MAYBE_MultipleSampledThreads MultipleSampledThreads
-#else
-#define MAYBE_MultipleSampledThreads DISABLED_MultipleSampledThreads
-#endif
-TEST_F(StackSamplingProfilerTest, MAYBE_MultipleSampledThreads) {
+PROFILER_TEST_F(StackSamplingProfilerTest, MultipleSampledThreads) {
   // Create target threads. The extra parethesis around the StackConfiguration
   // call are to avoid the most-vexing-parse problem.
   TargetThread target_thread1((StackConfiguration(StackConfiguration::NORMAL)));
@@ -1561,12 +1464,7 @@ class ProfilerThread : public SimpleThread {
 };
 
 // Checks that different threads can run samplers in parallel.
-#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
-#define MAYBE_MultipleProfilerThreads MultipleProfilerThreads
-#else
-#define MAYBE_MultipleProfilerThreads DISABLED_MultipleProfilerThreads
-#endif
-TEST_F(StackSamplingProfilerTest, MAYBE_MultipleProfilerThreads) {
+PROFILER_TEST_F(StackSamplingProfilerTest, MultipleProfilerThreads) {
   WithTargetThread([](PlatformThreadId target_thread_id) {
     // Providing an initial delay makes it more likely that both will be
     // scheduled before either starts to run. Once started, samples will

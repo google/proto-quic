@@ -59,14 +59,11 @@ class _CommonSystemHealthBenchmark(perf_benchmark.PerfBenchmark):
     return True
 
 
+@benchmark.Disabled('android')
 @benchmark.Owner(emails=['charliea@chromium.org', 'nednguyen@chromium.org'])
 class DesktopCommonSystemHealth(_CommonSystemHealthBenchmark):
   """Desktop Chrome Energy System Health Benchmark."""
   PLATFORM = 'desktop'
-
-  @classmethod
-  def ShouldDisable(cls, possible_browser):
-    return possible_browser.platform.GetDeviceTypeName() != 'Desktop'
 
   @classmethod
   def Name(cls):
@@ -127,13 +124,10 @@ class _MemorySystemHealthBenchmark(perf_benchmark.PerfBenchmark):
 
 
 @benchmark.Owner(emails=['perezju@chromium.org'])
+@benchmark.Disabled('android')
 class DesktopMemorySystemHealth(_MemorySystemHealthBenchmark):
   """Desktop Chrome Memory System Health Benchmark."""
   PLATFORM = 'desktop'
-
-  @classmethod
-  def ShouldDisable(cls, possible_browser):
-    return possible_browser.platform.GetDeviceTypeName() != 'Desktop'
 
   @classmethod
   def Name(cls):

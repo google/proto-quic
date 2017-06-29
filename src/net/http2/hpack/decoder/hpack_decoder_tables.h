@@ -22,9 +22,9 @@
 #include <vector>
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/http2/hpack/hpack_string.h"
 #include "net/http2/http2_constants.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 namespace test {
@@ -37,7 +37,7 @@ const size_t kFirstDynamicTableIndex = 62;
 // HpackDecoderTablesDebugListener supports a QUIC experiment, enabling
 // the gathering of information about the time-line of use of HPACK
 // dynamic table entries.
-class NET_EXPORT_PRIVATE HpackDecoderTablesDebugListener {
+class HTTP2_EXPORT_PRIVATE HpackDecoderTablesDebugListener {
  public:
   HpackDecoderTablesDebugListener();
   virtual ~HpackDecoderTablesDebugListener();
@@ -66,7 +66,7 @@ class NET_EXPORT_PRIVATE HpackDecoderTablesDebugListener {
 // See http://httpwg.org/specs/rfc7541.html#static.table.definition for the
 // contents, and http://httpwg.org/specs/rfc7541.html#index.address.space for
 // info about accessing the static table.
-class NET_EXPORT_PRIVATE HpackDecoderStaticTable {
+class HTTP2_EXPORT_PRIVATE HpackDecoderStaticTable {
  public:
   explicit HpackDecoderStaticTable(const std::vector<HpackStringPair>* table);
   // Uses a global table shared by all threads.
@@ -86,7 +86,7 @@ class NET_EXPORT_PRIVATE HpackDecoderStaticTable {
 // in the dynamic table. See these sections of the RFC:
 //   http://httpwg.org/specs/rfc7541.html#dynamic.table
 //   http://httpwg.org/specs/rfc7541.html#dynamic.table.management
-class NET_EXPORT_PRIVATE HpackDecoderDynamicTable {
+class HTTP2_EXPORT_PRIVATE HpackDecoderDynamicTable {
  public:
   HpackDecoderDynamicTable();
   ~HpackDecoderDynamicTable();
@@ -144,7 +144,7 @@ class NET_EXPORT_PRIVATE HpackDecoderDynamicTable {
   DISALLOW_COPY_AND_ASSIGN(HpackDecoderDynamicTable);
 };
 
-class NET_EXPORT_PRIVATE HpackDecoderTables {
+class HTTP2_EXPORT_PRIVATE HpackDecoderTables {
  public:
   HpackDecoderTables();
   ~HpackDecoderTables();

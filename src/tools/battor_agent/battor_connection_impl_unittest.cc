@@ -28,7 +28,7 @@ namespace battor {
 class TestableBattOrConnection : public BattOrConnectionImpl {
  public:
   TestableBattOrConnection(BattOrConnection::Listener* listener)
-      : BattOrConnectionImpl("/dev/test", listener, nullptr, nullptr) {}
+      : BattOrConnectionImpl("/dev/test", listener, nullptr) {}
   scoped_refptr<device::SerialIoHandler> CreateIoHandler() override {
     return device::TestSerialIoHandler::Create();
   }

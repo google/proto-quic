@@ -74,6 +74,8 @@ _DISABLED_TESTS = frozenset({
   'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_mobile.load:social:facebook', # pylint: disable=line-too-long
   'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_mobile.load:social:tumblr', # pylint: disable=line-too-long
   'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_mobile.load:social:pinterest', # pylint: disable=line-too-long
+  # crbug.com/725386
+  'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_desktop.browse:social:twitter', # pylint: disable=line-too-long
 })
 
 
@@ -115,9 +117,9 @@ def _GenerateSmokeTestCase(benchmark_class, story_to_smoke_test):
 
   # We attach the test method to SystemHealthBenchmarkSmokeTest dynamically
   # so that we can set the test method name to include
-  # '<benchmark class name>.<story display name>'.
+  # '<benchmark class name>.<story name>'.
   test_method_name = '%s.%s' % (
-      benchmark_class.Name(), story_to_smoke_test.display_name)
+      benchmark_class.Name(), story_to_smoke_test.name)
 
   class SystemHealthBenchmarkSmokeTest(unittest.TestCase):
     pass

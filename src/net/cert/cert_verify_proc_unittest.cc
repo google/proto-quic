@@ -1310,8 +1310,7 @@ TEST_P(CertVerifyProcInternalTest, PublicKeyHashes) {
                      CertificateList(), &verify_result);
   EXPECT_THAT(error, IsOk());
 
-  // There are 2 hashes each of the 3 certificates in the verified chain.
-  EXPECT_EQ(6u, verify_result.public_key_hashes.size());
+  EXPECT_EQ(3u, verify_result.public_key_hashes.size());
 
   // Convert |public_key_hashes| to strings for ease of comparison.
   std::vector<std::string> public_key_hash_strings;
@@ -1320,15 +1319,12 @@ TEST_P(CertVerifyProcInternalTest, PublicKeyHashes) {
 
   std::vector<std::string> expected_public_key_hashes = {
       // Target
-      "sha1/eykCtxdjf+9TcP+dle4RZOcuWfI=",
       "sha256/jpsUnwFFTO7e+l5zQDYhutkf7uA+dCVsWfRvv0UDX40=",
 
       // Intermediate
-      "sha1/UCuWOTyNcmLrd/Ie2jTjCHyGV7M=",
       "sha256/D9u0epgvPYlG9YiVp7V+IMT+xhUpB5BhsS/INjDXc4Y=",
 
       // Trust anchor
-      "sha1/7lRAdhiny84OU7rosLno5A+v0ls=",
       "sha256/VypP3VWL7OaqTJ7mIBehWYlv8khPuFHpWiearZI2YjI="};
 
   // |public_key_hashes| does not have an ordering guarantee.

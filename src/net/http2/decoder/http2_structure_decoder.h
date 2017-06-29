@@ -14,18 +14,18 @@
 // those rare occurrences is small, which then simplifies the callers.
 
 #include "base/logging.h"
-#include "net/base/net_export.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_http2_structures.h"
 #include "net/http2/decoder/decode_status.h"
 #include "net/http2/http2_structures.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 namespace test {
 class Http2StructureDecoderPeer;
 }  // namespace test
 
-class NET_EXPORT_PRIVATE Http2StructureDecoder {
+class HTTP2_EXPORT_PRIVATE Http2StructureDecoder {
  public:
   // The caller needs to keep track of whether to call Start or Resume.
   //

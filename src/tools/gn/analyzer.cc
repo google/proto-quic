@@ -13,12 +13,12 @@
 #include "base/json/json_writer.h"
 #include "base/memory/ptr_util.h"
 #include "base/strings/string_util.h"
-#include "base/strings/string_util.h"
 #include "base/values.h"
 #include "tools/gn/builder.h"
 #include "tools/gn/deps_iterator.h"
 #include "tools/gn/err.h"
 #include "tools/gn/filesystem_utils.h"
+#include "tools/gn/input_file.h"
 #include "tools/gn/loader.h"
 #include "tools/gn/location.h"
 #include "tools/gn/source_file.h"
@@ -54,17 +54,6 @@ LabelSet LabelsFor(const TargetSet& targets) {
   for (auto* target : targets)
     labels.insert(target->label());
   return labels;
-}
-
-bool AnyBuildFilesWereModified(const SourceFileSet& source_files) {
-  for (auto* file : source_files) {
-    if (base::EndsWith(file->value(), ".gn", base::CompareCase::SENSITIVE) ||
-        base::EndsWith(file->value(), ".gni", base::CompareCase::SENSITIVE) ||
-        base::EndsWith(file->value(), "build/vs_toolchain.py",
-                       base::CompareCase::SENSITIVE))
-      return true;
-  }
-  return false;
 }
 
 TargetSet Intersect(const TargetSet& l, const TargetSet& r) {
@@ -225,9 +214,13 @@ std::string OutputsToJSON(const Outputs& outputs,
 
 }  // namespace
 
-Analyzer::Analyzer(const Builder& builder)
+Analyzer::Analyzer(const Builder& builder,
+                   const SourceFile& build_config_file,
+                   const SourceFile& dotgn_file)
     : all_targets_(builder.GetAllResolvedTargets()),
-      default_toolchain_(builder.loader()->GetDefaultToolchain()) {
+      default_toolchain_(builder.loader()->GetDefaultToolchain()),
+      build_config_file_(build_config_file),
+      dotgn_file_(dotgn_file) {
   for (const auto* target : all_targets_) {
     labels_to_targets_[target->label()] = target;
     for (const auto& dep_pair : target->GetDeps(Target::DEPS_ALL))
@@ -262,12 +255,7 @@ std::string Analyzer::Analyze(const std::string& input, Err* err) const {
     return OutputsToJSON(outputs, default_toolchain_, err);
   }
 
-  // TODO(crbug.com/555273): We can do smarter things when we detect changes
-  // to build files. For example, if all of the ninja files are unchanged,
-  // we know that we can ignore changes to .gn* files. Also, for most .gn
-  // files, we can treat a change as simply affecting every target, config,
-  // or toolchain defined in that file.
-  if (AnyBuildFilesWereModified(inputs.source_files)) {
+  if (WereMainGNFilesModified(inputs.source_files)) {
     outputs.status = "Found dependency (all)";
     if (inputs.compile_included_all) {
       outputs.compile_includes_all = true;
@@ -360,6 +348,10 @@ void Analyzer::FilterTarget(const Target* target,
 
 bool Analyzer::TargetRefersToFile(const Target* target,
                                   const SourceFile* file) const {
+  for (const auto* cur_file : target->input_files()) {
+    if (cur_file->name() == *file)
+      return true;
+  }
   for (const auto& cur_file : target->sources()) {
     if (cur_file == *file)
       return true;
@@ -395,7 +387,9 @@ bool Analyzer::TargetRefersToFile(const Target* target,
 void Analyzer::AddTargetsDirectlyReferringToFileTo(const SourceFile* file,
                                                    TargetSet* matches) const {
   for (auto* target : all_targets_) {
-    if (TargetRefersToFile(target, file))
+    // Only handles targets in the default toolchain.
+    if ((target->label().GetToolchainLabel() == default_toolchain_) &&
+        TargetRefersToFile(target, file))
       matches->insert(target);
   }
 }
@@ -409,4 +403,13 @@ void Analyzer::AddAllRefsTo(const Target* target, TargetSet* results) const {
   auto dep_end = dep_map_.upper_bound(target);
   for (auto cur_dep = dep_begin; cur_dep != dep_end; cur_dep++)
     AddAllRefsTo(cur_dep->second, results);
+}
+
+bool Analyzer::WereMainGNFilesModified(
+    const SourceFileSet& source_files) const {
+  for (auto* file : source_files) {
+    if (*file == dotgn_file_ || *file == build_config_file_)
+      return true;
+  }
+  return false;
 }

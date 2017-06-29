@@ -168,6 +168,7 @@ void ssl_handshake_free(SSL_HANDSHAKE *hs) {
   OPENSSL_free(hs->key_share_bytes);
   OPENSSL_free(hs->ecdh_public_key);
   SSL_SESSION_free(hs->new_session);
+  SSL_SESSION_free(hs->early_session);
   OPENSSL_free(hs->peer_sigalgs);
   OPENSSL_free(hs->peer_supported_group_list);
   OPENSSL_free(hs->peer_key);
@@ -331,12 +332,14 @@ int ssl3_flush_flight(SSL *ssl) {
     return -1;
   }
 
-  /* The handshake flight buffer is mutually exclusive with application data.
-   *
-   * TODO(davidben): This will not be true when closure alerts use this. */
+  /* If there is pending data in the write buffer, it must be flushed out before
+   * any new data in pending_flight. */
   if (ssl_write_buffer_is_pending(ssl)) {
-    OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
-    return -1;
+    int ret = ssl_write_buffer_flush(ssl);
+    if (ret <= 0) {
+      ssl->rwstate = SSL_WRITING;
+      return ret;
+    }
   }
 
   /* Write the pending flight. */
@@ -675,8 +678,6 @@ static int read_v2_client_hello(SSL *ssl) {
   ssl_read_buffer_discard(ssl);
 
   ssl->s3->is_v2_hello = 1;
-  /* This is the first message, so hs must be non-NULL. */
-  ssl->s3->hs->v2_clienthello = 1;
   return 1;
 }
 

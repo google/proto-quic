@@ -181,8 +181,10 @@ config("compiler") {
     configs += [ "//build/config/aix:compiler" ]
   }
 
-  # See the definitions below.
   configs += [
+    "//build/config/c++:c++flags",
+
+    # See the definitions below.
     ":compiler_cpu_abi",
     ":compiler_codegen",
   ]
@@ -332,9 +334,7 @@ config("compiler") {
       "-Wl,-z,relro",
     ]
     if (!using_sanitizer) {
-      if (!use_cfi_diag) {
-        ldflags += [ "-Wl,-z,defs" ]
-      }
+      ldflags += [ "-Wl,-z,defs" ]
 
       # Functions interposed by the sanitizers can make ld think
       # that some libraries aren't needed when they actually are,
@@ -409,9 +409,10 @@ config("compiler") {
     # merged.  See also https://crbug.com/663886
     # `linux_use_bundled_binutils` is to avoid breaking Linux distros which may
     # still have a buggy gold.
+    # chromeos binutils has been patched with the fix, so always use icf there.
     # The bug only affects x86 and x64, so we can still use ICF when targeting
     # other architectures.
-    if ((!is_android && linux_use_bundled_binutils) ||
+    if ((!is_android && linux_use_bundled_binutils) || is_chromeos ||
         !(current_cpu == "x86" || current_cpu == "x64")) {
       ldflags += [ "-Wl,--icf=all" ]
     }
@@ -480,6 +481,8 @@ config("compiler") {
   # TODO(pcc): Make this conditional on is_official_build rather than on gn
   # flags for specific features.
   if (!is_debug && (allow_posix_link_time_opt || is_cfi) && !is_nacl) {
+    assert(use_lld || is_chromeos, "gold plugin only supported with ChromeOS")
+
     if (use_thin_lto) {
       cflags += [ "-flto=thin" ]
       ldflags += [ "-flto=thin" ]
@@ -492,6 +495,11 @@ config("compiler") {
           "-Wl,--thinlto-jobs=8",
           "-Wl,--thinlto-cache-dir=" +
               rebase_path("$root_out_dir/thinlto-cache", root_build_dir),
+
+          # Limit the size of the ThinLTO cache to 10% of available disk space.
+          # TODO(pcc): Change the limit from a percentage to an absolute size
+          # (10-20GB) once that feature lands in LLVM.
+          "-Wl,--thinlto-cache-policy,cache_size=10%",
         ]
       } else {
         ldflags += [ "-Wl,-plugin-opt,jobs=8" ]
@@ -974,6 +982,11 @@ config("default_warnings") {
       # TODO(brucedawson): fix warnings, crbug.com/554200
       "/wd4312",
 
+      # C4324 warns when padding is added to fulfill alignas requirements,
+      # but can trigger in benign cases that are difficult to individually
+      # suppress.
+      "/wd4324",
+
       # C4351: new behavior: elements of array 'array' will be default
       #        initialized
       # This is a silly "warning" that basically just alerts you that the
@@ -1065,10 +1078,8 @@ config("default_warnings") {
     if (is_clang) {
       cflags += [
         # TODO(hans): Make this list shorter eventually, http://crbug.com/504657
-        "-Wno-microsoft-enum-value",  # http://crbug.com/505296
         "-Wno-unknown-pragmas",  # http://crbug.com/505314
         "-Wno-microsoft-cast",  # http://crbug.com/550065
-        "-Wno-microsoft-enum-forward-reference",  # http://crbug.com/718880
       ]
     }
   } else {
@@ -1115,11 +1126,6 @@ config("default_warnings") {
       "-Wno-missing-field-initializers",  # "struct foo f = {0};"
       "-Wno-unused-parameter",  # Unused function parameters.
     ]
-  }
-
-  if (is_chromeos && is_clang && !is_nacl) {
-    # TODO(thakis): Enable this, crbug.com/507717
-    cflags += [ "-Wno-shift-negative-value" ]
   }
 
   if (is_clang) {
@@ -1723,14 +1729,6 @@ config("symbols") {
         # dump_syms, so this is still required (https://crbug.com/622406).
         cflags += [ "-fno-standalone-debug" ]
       }
-    } else if (is_android) {
-      # Breakpad can't handle DWARF 4 symbols properly yet, so use DWARF 3
-      # explicitly on android where we are hitting https://crbug.com/638485.
-      # The arguments MUST be in this order because of a gcc arg parsing bug.
-      cflags = [
-        "-gdwarf-3",
-        "-g2",
-      ]
     } else {
       cflags = [ "-g2" ]
     }
@@ -1764,16 +1762,16 @@ config("minimal_symbols") {
     cflags = []
     ldflags = [ "/DEBUG" ]
   } else {
+    cflags = [ "-g1" ]
     if (is_android) {
-      # Breakpad can't handle DWARF 4 symbols properly yet, so use DWARF 3
-      # explicitly on android where we are hitting https://crbug.com/638485.
-      # The arguments MUST be in this order because of a gcc arg parsing bug.
-      cflags = [
-        "-gdwarf-3",
-        "-g1",
-      ]
-    } else {
-      cflags = [ "-g1" ]
+      # Android defaults to symbol_level=1 builds in production builds
+      # (https://crbug.com/648948), but clang, unlike gcc, doesn't emit
+      # DW_AT_linkage_name in -g1 builds. -fdebug-info-for-profiling enables
+      # that (and a bunch of other things we don't need), so that we get
+      # qualified names in stacks.
+      # TODO(thakis): Consider making clang emit DW_AT_linkage_name in -g1 mode;
+      #               failing that consider doing this on non-Android too.
+      cflags += [ "-fdebug-info-for-profiling" ]
     }
 
     # Note: -gsplit-dwarf implicitly turns on -g2 with clang, so don't pass it.

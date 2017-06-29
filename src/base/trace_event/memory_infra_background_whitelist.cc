@@ -78,6 +78,7 @@ const char* const kAllocatorDumpNameWhitelist[] = {
     "leveldb/index_db/0x?",
     "leveldb/leveldb_proto/0x?",
     "leveldb/mojo/0x?",
+    "leveldb/mojo/0x?/block_cache",
     "leveldb/value_store/Extensions.Database.Open.Settings/0x?",
     "leveldb/value_store/Extensions.Database.Open.Rules/0x?",
     "leveldb/value_store/Extensions.Database.Open.State/0x?",

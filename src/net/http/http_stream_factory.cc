@@ -51,18 +51,16 @@ void HttpStreamFactory::ProcessAlternativeServices(
         !IsPortValid(alternative_service_entry.port)) {
       continue;
     }
-    // Check if QUIC version is supported.
+    // Check if QUIC version is supported. Filter supported QUIC versions.
+    QuicVersionVector advertised_versions;
     if (protocol == kProtoQUIC && !alternative_service_entry.version.empty()) {
       bool match_found = false;
       for (QuicVersion supported : session->params().quic_supported_versions) {
         for (uint16_t advertised : alternative_service_entry.version) {
           if (supported == advertised) {
             match_found = true;
-            break;
+            advertised_versions.push_back(supported);
           }
-        }
-        if (match_found) {
-          break;
         }
       }
       if (!match_found) {
@@ -75,8 +73,16 @@ void HttpStreamFactory::ProcessAlternativeServices(
     base::Time expiration =
         base::Time::Now() +
         base::TimeDelta::FromSeconds(alternative_service_entry.max_age);
-    AlternativeServiceInfo alternative_service_info(alternative_service,
-                                                    expiration);
+    AlternativeServiceInfo alternative_service_info;
+    if (protocol == kProtoQUIC) {
+      alternative_service_info =
+          AlternativeServiceInfo::CreateQuicAlternativeServiceInfo(
+              alternative_service, expiration, advertised_versions);
+    } else {
+      alternative_service_info =
+          AlternativeServiceInfo::CreateHttp2AlternativeServiceInfo(
+              alternative_service, expiration);
+    }
     alternative_service_info_vector.push_back(alternative_service_info);
   }
 

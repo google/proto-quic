@@ -50,7 +50,7 @@ class KeyLongIdlePowerPage(KeyIdlePowerPage):
         duration_seconds=90,
         shared_page_state_class=(android_screen_restoration_shared_state
             .AndroidScreenRestorationSharedState))
-    self._name = self.display_name + " (Long Idle)"
+    self._name = self.name + " (Long Idle)"
 
 
 class KeyIdlePowerCasesPageSet(story.StorySet):

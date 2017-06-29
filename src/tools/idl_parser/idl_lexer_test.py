@@ -7,7 +7,6 @@ import os
 import unittest
 
 from idl_lexer import IDLLexer
-from idl_ppapi_lexer import IDLPPAPILexer
 
 
 #
@@ -87,16 +86,6 @@ class WebIDLLexer(unittest.TestCase):
               actual_type, expect_type, tokens[index].lineno, filename)
         index += 2
         self.assertEqual(expect_type, actual_type, msg)
-
-
-class PepperIDLLexer(WebIDLLexer):
-  def setUp(self):
-    self.lexer = IDLPPAPILexer()
-    cur_dir = os.path.dirname(os.path.realpath(__file__))
-    self.filenames = [
-        os.path.join(cur_dir, 'test_lexer/values_ppapi.in'),
-        os.path.join(cur_dir, 'test_lexer/keywords_ppapi.in')
-    ]
 
 
 if __name__ == '__main__':

@@ -11,12 +11,12 @@
 
 #include <stddef.h>
 
-#include "net/base/net_export.h"
 #include "net/http2/hpack/http2_hpack_constants.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 
-class NET_EXPORT_PRIVATE HpackEntryDecoderListener {
+class HTTP2_EXPORT_PRIVATE HpackEntryDecoderListener {
  public:
   virtual ~HpackEntryDecoderListener() {}
 
@@ -64,7 +64,7 @@ class NET_EXPORT_PRIVATE HpackEntryDecoderListener {
   virtual void OnDynamicTableSizeUpdate(size_t size) = 0;
 };
 
-class NET_EXPORT_PRIVATE HpackEntryDecoderVLoggingListener
+class HTTP2_EXPORT_PRIVATE HpackEntryDecoderVLoggingListener
     : public HpackEntryDecoderListener {
  public:
   HpackEntryDecoderVLoggingListener() : wrapped_(nullptr) {}
@@ -88,7 +88,7 @@ class NET_EXPORT_PRIVATE HpackEntryDecoderVLoggingListener
 };
 
 // A no-op implementation of HpackEntryDecoderListener.
-class NET_EXPORT_PRIVATE HpackEntryDecoderNoOpListener
+class HTTP2_EXPORT_PRIVATE HpackEntryDecoderNoOpListener
     : public HpackEntryDecoderListener {
  public:
   ~HpackEntryDecoderNoOpListener() override {}

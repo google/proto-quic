@@ -89,6 +89,9 @@ const char kGuidSeedFilter[] = "filter";
 
 const char kConfigurationName[] = "GN";
 
+const char kCharSetUnicode[] = "_UNICODE";
+const char kCharSetMultiByte[] = "_MBCS";
+
 std::string GetWindowsKitsIncludeDirs(const std::string& win_kit) {
   std::string kits_path;
 
@@ -220,6 +223,18 @@ bool FilterTargets(const BuildSettings* build_settings,
     }
   }
 
+  return true;
+}
+
+bool UnicodeTarget(const Target* target) {
+  for (ConfigValuesIterator it(target); !it.done(); it.Next()) {
+    for (const std::string& define : it.cur().defines()) {
+      if (define == kCharSetUnicode)
+        return true;
+      if (define == kCharSetMultiByte)
+        return false;
+    }
+  }
   return true;
 }
 
@@ -454,7 +469,9 @@ bool VisualStudioWriter::WriteProjectFileContents(
   {
     std::unique_ptr<XmlElementWriter> configuration = project.SubElement(
         "PropertyGroup", XmlAttributes("Label", "Configuration"));
-    configuration->SubElement("CharacterSet")->Text("Unicode");
+    bool unicode_target = UnicodeTarget(target);
+    configuration->SubElement("CharacterSet")
+        ->Text(unicode_target ? "Unicode" : "MultiByte");
     std::string configuration_type = GetConfigurationType(target, err);
     if (configuration_type.empty())
       return false;

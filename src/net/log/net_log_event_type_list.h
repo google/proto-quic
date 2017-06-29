@@ -3180,3 +3180,31 @@ EVENT_TYPE(RESOURCE_SCHEDULER_REQUEST_STARTED)
 //                                  type>,
 //  }
 EVENT_TYPE(NETWORK_QUALITY_CHANGED)
+
+// -----------------------------------------------------------------------------
+// Http Server Properties Manager related events
+// -----------------------------------------------------------------------------
+
+// This event is emitted when HttpServerPropertiesManager initialization starts
+// and finishes.
+EVENT_TYPE(HTTP_SERVER_PROPERTIES_INITIALIZATION)
+
+// This event is emitted when HttpServerPropertiesManager is updating in-memory
+// version of HttpServerProperties from the serialized version from perfs/disk.
+// parameters:
+//  {
+//    "servers": <List of servers and their protocol usage information>,
+//    "supports_quic": <Local IP addresses that used QUIC>,
+//    "version": <The version number>,
+//  }
+EVENT_TYPE(HTTP_SERVER_PROPERTIES_UPDATE_CACHE)
+
+// This event is emitted when HttpServerPropertiesManager is persisting
+// in-memory version of HttpServerProperties to prefs/disk.
+// parameters:
+//  {
+//    "servers": <List of servers and their protocol usage information>,
+//    "supports_quic": <Local IP addresses that used QUIC>,
+//    "version": <The version number>,
+//  }
+EVENT_TYPE(HTTP_SERVER_PROPERTIES_UPDATE_PREFS)

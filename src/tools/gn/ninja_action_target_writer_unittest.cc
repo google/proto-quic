@@ -8,6 +8,7 @@
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "tools/gn/ninja_action_target_writer.h"
+#include "tools/gn/pool.h"
 #include "tools/gn/substitution_list.h"
 #include "tools/gn/target.h"
 #include "tools/gn/test_with_scope.h"
@@ -16,7 +17,7 @@ TEST(NinjaActionTargetWriter, WriteOutputFilesForBuildLine) {
   Err err;
   TestWithScope setup;
 
-  Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"));
+  Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"), {});
   target.set_output_type(Target::ACTION_FOREACH);
   target.action_values().outputs() = SubstitutionList::MakeForTest(
       "//out/Debug/gen/a b{{source_name_part}}.h",
@@ -40,7 +41,7 @@ TEST(NinjaActionTargetWriter, ActionNoSources) {
   Err err;
   TestWithScope setup;
 
-  Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"));
+  Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"), {});
   target.set_output_type(Target::ACTION);
 
   target.action_values().set_script(SourceFile("//foo/script.py"));
@@ -79,7 +80,7 @@ TEST(NinjaActionTargetWriter, ActionNoSourcesConsole) {
   Err err;
   TestWithScope setup;
 
-  Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"));
+  Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"), {});
   target.set_output_type(Target::ACTION);
 
   target.action_values().set_script(SourceFile("//foo/script.py"));
@@ -87,7 +88,10 @@ TEST(NinjaActionTargetWriter, ActionNoSourcesConsole) {
 
   target.action_values().outputs() =
       SubstitutionList::MakeForTest("//out/Debug/foo.out");
-  target.action_values().set_console(true);
+
+  Pool pool(setup.settings(), Label(SourceDir("//foo/"), "pool"), {});
+  pool.set_console(true);
+  target.action_values().set_pool(LabelPtrPair<Pool>(&pool));
 
   target.SetToolchain(setup.toolchain());
   ASSERT_TRUE(target.OnResolved(&err));
@@ -120,7 +124,7 @@ TEST(NinjaActionTargetWriter, ActionWithSources) {
   Err err;
   TestWithScope setup;
 
-  Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"));
+  Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"), {});
   target.set_output_type(Target::ACTION);
 
   target.action_values().set_script(SourceFile("//foo/script.py"));
@@ -163,19 +167,19 @@ TEST(NinjaActionTargetWriter, ForEach) {
   // so they have a nice platform-independent stamp file that can appear in the
   // output (rather than having to worry about how the current platform names
   // binaries).
-  Target dep(setup.settings(), Label(SourceDir("//foo/"), "dep"));
+  Target dep(setup.settings(), Label(SourceDir("//foo/"), "dep"), {});
   dep.set_output_type(Target::ACTION);
   dep.visibility().SetPublic();
   dep.SetToolchain(setup.toolchain());
   ASSERT_TRUE(dep.OnResolved(&err));
 
-  Target datadep(setup.settings(), Label(SourceDir("//foo/"), "datadep"));
+  Target datadep(setup.settings(), Label(SourceDir("//foo/"), "datadep"), {});
   datadep.set_output_type(Target::ACTION);
   datadep.visibility().SetPublic();
   datadep.SetToolchain(setup.toolchain());
   ASSERT_TRUE(datadep.OnResolved(&err));
 
-  Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"));
+  Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"), {});
   target.set_output_type(Target::ACTION_FOREACH);
   target.private_deps().push_back(LabelTargetPair(&dep));
   target.data_deps().push_back(LabelTargetPair(&datadep));
@@ -239,7 +243,7 @@ TEST(NinjaActionTargetWriter, ForEachWithDepfile) {
   Err err;
   TestWithScope setup;
 
-  Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"));
+  Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"), {});
   target.set_output_type(Target::ACTION_FOREACH);
 
   target.sources().push_back(SourceFile("//foo/input1.txt"));
@@ -301,7 +305,7 @@ TEST(NinjaActionTargetWriter, ForEachWithResponseFile) {
   Err err;
   TestWithScope setup;
 
-  Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"));
+  Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"), {});
   target.set_output_type(Target::ACTION_FOREACH);
 
   target.sources().push_back(SourceFile("//foo/input1.txt"));

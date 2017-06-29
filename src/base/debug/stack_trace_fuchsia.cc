@@ -38,71 +38,16 @@ _Unwind_Reason_Code UnwindStore(struct _Unwind_Context* context,
   return _URC_NO_REASON;
 }
 
-constexpr uint64_t kExceptionKey = 0x424144u;  // "BAD".
-bool g_in_process_exception_handler_enabled;
-
-int SelfDumpFunc(void* arg) {
-  mx_handle_t exception_port =
-      static_cast<mx_handle_t>(reinterpret_cast<uintptr_t>(arg));
-
-  mx_exception_packet_t packet;
-  mx_status_t status =
-      mx_port_wait(exception_port, MX_TIME_INFINITE, &packet, sizeof(packet));
-  if (status < 0) {
-    DLOG(ERROR) << "mx_port_wait failed: " << status;
-    return 1;
-  }
-  if (packet.hdr.key != kExceptionKey) {
-    DLOG(ERROR) << "unexpected crash key";
-    return 1;
-  }
-
-  LOG(ERROR) << "Process crashed.";
-
-  // TODO(fuchsia): Log a stack. See https://crbug.com/706592.
-
-  _exit(1);
-}
-
-bool SetInProcessExceptionHandler() {
-  if (g_in_process_exception_handler_enabled)
-    return true;
-
-  mx_status_t status;
-  mx_handle_t self_dump_port;
-  status = mx_port_create(0u, &self_dump_port);
-  if (status < 0) {
-    DLOG(ERROR) << "mx_port_create failed: " << status;
-    return false;
-  }
-
-  // A thread to wait for and process internal exceptions.
-  thrd_t self_dump_thread;
-  void* self_dump_arg =
-      reinterpret_cast<void*>(static_cast<uintptr_t>(self_dump_port));
-  int ret = thrd_create(&self_dump_thread, SelfDumpFunc, self_dump_arg);
-  if (ret != thrd_success) {
-    DLOG(ERROR) << "thrd_create failed: " << ret;
-    return false;
-  }
-
-  status = mx_task_bind_exception_port(mx_process_self(), self_dump_port,
-                                       kExceptionKey, 0);
-
-  if (status < 0) {
-    DLOG(ERROR) << "mx_task_bind_exception_port failed: " << status;
-    return false;
-  }
-
-  g_in_process_exception_handler_enabled = true;
-  return true;
-}
-
 }  // namespace
 
 // static
 bool EnableInProcessStackDumping() {
-  return SetInProcessExceptionHandler();
+  // StackTrace works to capture the current stack (e.g. for diagnostics added
+  // to code), but for local capture and print of backtraces, we just let the
+  // system crashlogger take over. It handles printing out a nicely formatted
+  // backtrace with dso information, relative offsets, etc. that we can then
+  // filter with addr2line in the run script to get file/line info.
+  return true;
 }
 
 StackTrace::StackTrace(size_t count) : count_(0) {

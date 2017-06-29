@@ -50,6 +50,7 @@ SpdySessionPool::SpdySessionPool(
     SSLConfigService* ssl_config_service,
     HttpServerProperties* http_server_properties,
     TransportSecurityState* transport_security_state,
+    const QuicVersionVector& quic_supported_versions,
     bool enable_ping_based_connection_checking,
     size_t session_max_recv_window_size,
     const SettingsMap& initial_settings,
@@ -59,6 +60,7 @@ SpdySessionPool::SpdySessionPool(
       transport_security_state_(transport_security_state),
       ssl_config_service_(ssl_config_service),
       resolver_(resolver),
+      quic_supported_versions_(quic_supported_versions),
       enable_sending_initial_data_(true),
       enable_ping_based_connection_checking_(
           enable_ping_based_connection_checking),
@@ -102,9 +104,10 @@ base::WeakPtr<SpdySession> SpdySessionPool::CreateAvailableSessionFromSocket(
 
   auto new_session = base::MakeUnique<SpdySession>(
       key, http_server_properties_, transport_security_state_,
-      enable_sending_initial_data_, enable_ping_based_connection_checking_,
-      session_max_recv_window_size_, initial_settings_, time_func_,
-      push_delegate_, proxy_delegate_, net_log.net_log());
+      quic_supported_versions_, enable_sending_initial_data_,
+      enable_ping_based_connection_checking_, session_max_recv_window_size_,
+      initial_settings_, time_func_, push_delegate_, proxy_delegate_,
+      net_log.net_log());
 
   new_session->InitializeWithSocket(std::move(connection), this, is_secure);
 
@@ -423,14 +426,14 @@ void SpdySessionPool::OnNewSpdySessionReady(
     request->Complete(was_alpn_negotiated, negotiated_protocol, using_spdy);
     RemoveRequestFromSpdySessionRequestMap(request);
     if (request->stream_type() == HttpStreamRequest::BIDIRECTIONAL_STREAM) {
-      request->OnBidirectionalStreamImplReady(
+      request->OnBidirectionalStreamImplReadyOnPooledConnection(
           used_ssl_config, used_proxy_info,
           base::MakeUnique<BidirectionalStreamSpdyImpl>(spdy_session,
                                                         source_dependency));
     } else {
       bool use_relative_url =
           direct || request->url().SchemeIs(url::kHttpsScheme);
-      request->OnStreamReady(
+      request->OnStreamReadyOnPooledConnection(
           used_ssl_config, used_proxy_info,
           base::MakeUnique<SpdyHttpStream>(spdy_session, use_relative_url,
                                            source_dependency));

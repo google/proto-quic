@@ -6,6 +6,7 @@ from benchmarks import loading
 from contrib.cluster_telemetry import ct_benchmarks_util
 from contrib.cluster_telemetry import page_set
 
+from telemetry import story
 from telemetry.page import traffic_setting
 
 
@@ -40,3 +41,9 @@ class LoadingClusterTelemetry(loading._LoadingBase):
   @classmethod
   def Name(cls):
     return 'loading.cluster_telemetry'
+
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Not tests disabled.
+    return StoryExpectations()

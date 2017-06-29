@@ -3,16 +3,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Certificate chain with 2 intermediates. The first intermediate has a basic
-constraints path length of 0. The second one is self-issued so does not count
-against the path length."""
+"""Certificate chain where the intermediate sets pathlen=0, and is followed by
+a self-issued intermediate."""
 
 import sys
 sys.path += ['..']
 
 import common
 
-# Self-signed root certificate (used as trust anchor).
+# Self-signed root certificate.
 root = common.create_self_signed_root_certificate('Root')
 
 # Intermediate with pathlen 0

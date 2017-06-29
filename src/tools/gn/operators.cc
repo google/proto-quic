@@ -228,7 +228,7 @@ Err MakeOverwriteError(const BinaryOpNode* op_node,
   Err result(op_node->left()->GetRange(),
       "Replacing nonempty " + type_name + ".",
       "This overwrites a previously-defined nonempty " + type_name +
-      "with another nonempty " + type_name + ".");
+      " with another nonempty " + type_name + ".");
   result.AppendSubErr(Err(old_value, "for previous definition",
       "Did you mean to append/modify instead? If you really want to overwrite, "
       "do:\n"

@@ -13,6 +13,89 @@ namespace net {
 const char* const kHttp2ConnectionHeaderPrefix =
     "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
 
+namespace size_utils {
+
+size_t GetDataFrameMinimumSize() {
+  return kDataFrameMinimumSize;
+}
+
+// Size, in bytes, of the control frame header.
+size_t GetFrameHeaderSize() {
+  return kFrameHeaderSize;
+}
+
+size_t GetRstStreamSize() {
+  // Size, in bytes, of a RST_STREAM frame.
+  // Calculated as:
+  // frame prefix + 4 (status code)
+  return GetFrameHeaderSize() + 4;
+}
+
+size_t GetSettingsMinimumSize() {
+  // Size, in bytes, of a SETTINGS frame not including the IDs and values
+  // from the variable-length value block.
+  return GetFrameHeaderSize();
+}
+
+size_t GetPingSize() {
+  // Size, in bytes, of this PING frame.
+  // Calculated as:
+  // control frame header + 8 (id)
+  return GetFrameHeaderSize() + 8;
+}
+
+size_t GetGoAwayMinimumSize() {
+  // Size, in bytes, of this GOAWAY frame. Calculated as:
+  // Control frame header + last stream id (4 bytes) + error code (4 bytes).
+  return GetFrameHeaderSize() + 8;
+}
+
+size_t GetHeadersMinimumSize() {
+  // Size, in bytes, of a HEADERS frame not including the variable-length
+  // header block.
+  return GetFrameHeaderSize();
+}
+
+size_t GetWindowUpdateSize() {
+  // Size, in bytes, of a WINDOW_UPDATE frame.
+  // Calculated as:
+  // frame prefix + 4 (delta)
+  return GetFrameHeaderSize() + 4;
+}
+
+size_t GetPushPromiseMinimumSize() {
+  // Size, in bytes, of a PUSH_PROMISE frame, sans the embedded header block.
+  // Calculated as frame prefix + 4 (promised stream id)
+  return GetFrameHeaderSize() + 4;
+}
+
+size_t GetContinuationMinimumSize() {
+  // Size, in bytes, of a CONTINUATION frame not including the variable-length
+  // headers fragments.
+  return GetFrameHeaderSize();
+}
+
+size_t GetAltSvcMinimumSize() {
+  // Size, in bytes, of an ALTSVC frame not including the Field-Value and
+  // (optional) Origin fields, both of which can vary in length.  Note that
+  // this gives a lower bound on the frame size rather than a true minimum;
+  // the actual frame should always be larger than this.
+  // Calculated as frame prefix + 2 (origin_len).
+  return GetFrameHeaderSize() + 2;
+}
+
+size_t GetPrioritySize() {
+  // Size, in bytes, of a PRIORITY frame.
+  return GetFrameHeaderSize() + kPriorityDependencyPayloadSize +
+         kPriorityWeightPayloadSize;
+}
+
+size_t GetFrameMinimumSize() {
+  return GetFrameHeaderSize();
+}
+
+}  // namespace size_utils
+
 std::ostream& operator<<(std::ostream& out, SpdySettingsIds id) {
   return out << static_cast<uint16_t>(id);
 }
@@ -208,6 +291,18 @@ const char* ErrorCodeToString(SpdyErrorCode error_code) {
 
 const char* const kHttp2Npn = "h2";
 
+bool SpdyFrameIR::fin() const {
+  return false;
+}
+
+int SpdyFrameIR::flow_control_window_consumed() const {
+  return 0;
+}
+
+bool SpdyFrameWithFinIR::fin() const {
+  return fin_;
+}
+
 SpdyFrameWithHeaderBlockIR::SpdyFrameWithHeaderBlockIR(
     SpdyStreamId stream_id,
     SpdyHeaderBlock header_block)
@@ -250,6 +345,10 @@ void SpdyDataIR::Visit(SpdyFrameVisitor* visitor) const {
 
 SpdyFrameType SpdyDataIR::frame_type() const {
   return SpdyFrameType::DATA;
+}
+
+int SpdyDataIR::flow_control_window_consumed() const {
+  return padded() ? 1 + padding_payload_len() + data_len() : data_len();
 }
 
 SpdyRstStreamIR::SpdyRstStreamIR(SpdyStreamId stream_id,
@@ -387,6 +486,14 @@ void SpdyUnknownIR::Visit(SpdyFrameVisitor* visitor) const {
 
 SpdyFrameType SpdyUnknownIR::frame_type() const {
   return static_cast<SpdyFrameType>(type());
+}
+
+int SpdyUnknownIR::flow_control_window_consumed() const {
+  if (frame_type() == SpdyFrameType::DATA) {
+    return payload_.size();
+  } else {
+    return 0;
+  }
 }
 
 }  // namespace net

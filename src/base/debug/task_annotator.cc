@@ -35,7 +35,7 @@ void TaskAnnotator::RunTask(const char* queue_function,
 
   tracked_objects::TaskStopwatch stopwatch;
   stopwatch.Start();
-  tracked_objects::Duration queue_duration =
+  base::TimeDelta queue_duration =
       stopwatch.StartTime() - pending_task->EffectiveTimePosted();
 
   TRACE_EVENT_WITH_FLOW1(

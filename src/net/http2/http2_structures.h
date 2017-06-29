@@ -32,12 +32,12 @@
 #include <string>
 
 #include "base/logging.h"
-#include "net/base/net_export.h"
 #include "net/http2/http2_constants.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 
-struct NET_EXPORT_PRIVATE Http2FrameHeader {
+struct HTTP2_EXPORT_PRIVATE Http2FrameHeader {
   Http2FrameHeader() {}
   Http2FrameHeader(uint32_t payload_length,
                    Http2FrameType type,
@@ -128,18 +128,18 @@ struct NET_EXPORT_PRIVATE Http2FrameHeader {
   Http2FrameFlag flags;
 };
 
-NET_EXPORT_PRIVATE bool operator==(const Http2FrameHeader& a,
-                                   const Http2FrameHeader& b);
-NET_EXPORT_PRIVATE inline bool operator!=(const Http2FrameHeader& a,
-                                          const Http2FrameHeader& b) {
+HTTP2_EXPORT_PRIVATE bool operator==(const Http2FrameHeader& a,
+                                     const Http2FrameHeader& b);
+HTTP2_EXPORT_PRIVATE inline bool operator!=(const Http2FrameHeader& a,
+                                            const Http2FrameHeader& b) {
   return !(a == b);
 }
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
-                                            const Http2FrameHeader& v);
+HTTP2_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
+                                              const Http2FrameHeader& v);
 
 // Http2PriorityFields:
 
-struct NET_EXPORT_PRIVATE Http2PriorityFields {
+struct HTTP2_EXPORT_PRIVATE Http2PriorityFields {
   Http2PriorityFields() {}
   Http2PriorityFields(uint32_t stream_dependency,
                       uint32_t weight,
@@ -172,14 +172,14 @@ struct NET_EXPORT_PRIVATE Http2PriorityFields {
   bool is_exclusive;
 };
 
-NET_EXPORT_PRIVATE bool operator==(const Http2PriorityFields& a,
-                                   const Http2PriorityFields& b);
-NET_EXPORT_PRIVATE inline bool operator!=(const Http2PriorityFields& a,
-                                          const Http2PriorityFields& b) {
+HTTP2_EXPORT_PRIVATE bool operator==(const Http2PriorityFields& a,
+                                     const Http2PriorityFields& b);
+HTTP2_EXPORT_PRIVATE inline bool operator!=(const Http2PriorityFields& a,
+                                            const Http2PriorityFields& b) {
   return !(a == b);
 }
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
-                                            const Http2PriorityFields& v);
+HTTP2_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
+                                              const Http2PriorityFields& v);
 
 // Http2RstStreamFields:
 
@@ -192,14 +192,14 @@ struct Http2RstStreamFields {
   Http2ErrorCode error_code;
 };
 
-NET_EXPORT_PRIVATE bool operator==(const Http2RstStreamFields& a,
-                                   const Http2RstStreamFields& b);
-NET_EXPORT_PRIVATE inline bool operator!=(const Http2RstStreamFields& a,
-                                          const Http2RstStreamFields& b) {
+HTTP2_EXPORT_PRIVATE bool operator==(const Http2RstStreamFields& a,
+                                     const Http2RstStreamFields& b);
+HTTP2_EXPORT_PRIVATE inline bool operator!=(const Http2RstStreamFields& a,
+                                            const Http2RstStreamFields& b) {
   return !(a == b);
 }
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
-                                            const Http2RstStreamFields& v);
+HTTP2_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
+                                              const Http2RstStreamFields& v);
 
 // Http2SettingFields:
 
@@ -216,14 +216,14 @@ struct Http2SettingFields {
   uint32_t value;
 };
 
-NET_EXPORT_PRIVATE bool operator==(const Http2SettingFields& a,
-                                   const Http2SettingFields& b);
-NET_EXPORT_PRIVATE inline bool operator!=(const Http2SettingFields& a,
-                                          const Http2SettingFields& b) {
+HTTP2_EXPORT_PRIVATE bool operator==(const Http2SettingFields& a,
+                                     const Http2SettingFields& b);
+HTTP2_EXPORT_PRIVATE inline bool operator!=(const Http2SettingFields& a,
+                                            const Http2SettingFields& b) {
   return !(a == b);
 }
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
-                                            const Http2SettingFields& v);
+HTTP2_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
+                                              const Http2SettingFields& v);
 
 // Http2PushPromiseFields:
 
@@ -233,14 +233,14 @@ struct Http2PushPromiseFields {
   uint32_t promised_stream_id;
 };
 
-NET_EXPORT_PRIVATE bool operator==(const Http2PushPromiseFields& a,
-                                   const Http2PushPromiseFields& b);
-NET_EXPORT_PRIVATE inline bool operator!=(const Http2PushPromiseFields& a,
-                                          const Http2PushPromiseFields& b) {
+HTTP2_EXPORT_PRIVATE bool operator==(const Http2PushPromiseFields& a,
+                                     const Http2PushPromiseFields& b);
+HTTP2_EXPORT_PRIVATE inline bool operator!=(const Http2PushPromiseFields& a,
+                                            const Http2PushPromiseFields& b) {
   return !(a == b);
 }
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
-                                            const Http2PushPromiseFields& v);
+HTTP2_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
+                                              const Http2PushPromiseFields& v);
 
 // Http2PingFields:
 
@@ -251,14 +251,14 @@ struct Http2PingFields {
   uint8_t opaque_data[8];
 };
 
-NET_EXPORT_PRIVATE bool operator==(const Http2PingFields& a,
-                                   const Http2PingFields& b);
-NET_EXPORT_PRIVATE inline bool operator!=(const Http2PingFields& a,
-                                          const Http2PingFields& b) {
+HTTP2_EXPORT_PRIVATE bool operator==(const Http2PingFields& a,
+                                     const Http2PingFields& b);
+HTTP2_EXPORT_PRIVATE inline bool operator!=(const Http2PingFields& a,
+                                            const Http2PingFields& b) {
   return !(a == b);
 }
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
-                                            const Http2PingFields& v);
+HTTP2_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
+                                              const Http2PingFields& v);
 
 // Http2GoAwayFields:
 
@@ -275,14 +275,14 @@ struct Http2GoAwayFields {
   Http2ErrorCode error_code;
 };
 
-NET_EXPORT_PRIVATE bool operator==(const Http2GoAwayFields& a,
-                                   const Http2GoAwayFields& b);
-NET_EXPORT_PRIVATE inline bool operator!=(const Http2GoAwayFields& a,
-                                          const Http2GoAwayFields& b) {
+HTTP2_EXPORT_PRIVATE bool operator==(const Http2GoAwayFields& a,
+                                     const Http2GoAwayFields& b);
+HTTP2_EXPORT_PRIVATE inline bool operator!=(const Http2GoAwayFields& a,
+                                            const Http2GoAwayFields& b) {
   return !(a == b);
 }
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
-                                            const Http2GoAwayFields& v);
+HTTP2_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
+                                              const Http2GoAwayFields& v);
 
 // Http2WindowUpdateFields:
 
@@ -294,14 +294,14 @@ struct Http2WindowUpdateFields {
   uint32_t window_size_increment;
 };
 
-NET_EXPORT_PRIVATE bool operator==(const Http2WindowUpdateFields& a,
-                                   const Http2WindowUpdateFields& b);
-NET_EXPORT_PRIVATE inline bool operator!=(const Http2WindowUpdateFields& a,
-                                          const Http2WindowUpdateFields& b) {
+HTTP2_EXPORT_PRIVATE bool operator==(const Http2WindowUpdateFields& a,
+                                     const Http2WindowUpdateFields& b);
+HTTP2_EXPORT_PRIVATE inline bool operator!=(const Http2WindowUpdateFields& a,
+                                            const Http2WindowUpdateFields& b) {
   return !(a == b);
 }
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
-                                            const Http2WindowUpdateFields& v);
+HTTP2_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
+                                              const Http2WindowUpdateFields& v);
 
 // Http2AltSvcFields:
 
@@ -312,14 +312,14 @@ struct Http2AltSvcFields {
   uint16_t origin_length;
 };
 
-NET_EXPORT_PRIVATE bool operator==(const Http2AltSvcFields& a,
-                                   const Http2AltSvcFields& b);
-NET_EXPORT_PRIVATE inline bool operator!=(const Http2AltSvcFields& a,
-                                          const Http2AltSvcFields& b) {
+HTTP2_EXPORT_PRIVATE bool operator==(const Http2AltSvcFields& a,
+                                     const Http2AltSvcFields& b);
+HTTP2_EXPORT_PRIVATE inline bool operator!=(const Http2AltSvcFields& a,
+                                            const Http2AltSvcFields& b) {
   return !(a == b);
 }
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
-                                            const Http2AltSvcFields& v);
+HTTP2_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
+                                              const Http2AltSvcFields& v);
 
 }  // namespace net
 

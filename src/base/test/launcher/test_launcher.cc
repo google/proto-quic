@@ -996,7 +996,7 @@ void TestLauncher::RunTests() {
     std::string test_name =
         FormatFullTestName(tests_[i].test_case_name, tests_[i].test_name);
 
-    results_tracker_.AddTest(test_name, tests_[i].file, tests_[i].line);
+    results_tracker_.AddTest(test_name);
 
     const CommandLine* command_line = CommandLine::ForCurrentProcess();
     if (test_name.find("DISABLED") != std::string::npos) {
@@ -1048,6 +1048,10 @@ void TestLauncher::RunTests() {
 
     if (Hash(test_name) % total_shards_ != static_cast<uint32_t>(shard_index_))
       continue;
+
+    // Report test locations after applying all filters, so that we report test
+    // locations only for those tests that were run as part of this shard.
+    results_tracker_.AddTestLocation(test_name, tests_[i].file, tests_[i].line);
 
     test_names.push_back(test_name);
   }

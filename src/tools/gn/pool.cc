@@ -25,6 +25,9 @@ std::string Pool::GetNinjaName(const Label& default_toolchain) const {
 }
 
 std::string Pool::GetNinjaName(bool include_toolchain) const {
+  if (console_)
+    return "console";
+
   std::ostringstream buffer;
   if (include_toolchain) {
     DCHECK(label().toolchain_dir().is_source_absolute());

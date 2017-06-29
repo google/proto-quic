@@ -181,7 +181,7 @@ int main(int argc, char* argv[]) {
   // Use the network loop as the file loop also.
   std::unique_ptr<net::ProxyConfigService> proxy_config_service(
       net::ProxyService::CreateSystemProxyConfigService(
-          network_loop.task_runner(), network_loop.task_runner()));
+          network_loop.task_runner()));
 
   // Uses |network_change_notifier|.
   net::NetworkChangeNotifier::AddIPAddressObserver(&net_watcher);

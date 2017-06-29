@@ -13,8 +13,7 @@ They were built from binutils-2.26 using the "build-all.sh" script on a
 Ubuntu Trusty.
 
 The script creates chroots for 32bit and 64bit Ubuntu Precise and then builds
-binutils inside the roots. It also builds tcmalloc and links binutils with it
-to improve the speed of LTO.
+binutils inside the roots.
 
 Version 2.26 was released on Mon, 25 Jan 2016
 

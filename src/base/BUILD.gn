@@ -134,6 +134,8 @@ component("base") {
     "android/build_info.h",
     "android/callback_android.cc",
     "android/callback_android.h",
+    "android/child_process_service_impl.cc",
+    "android/child_process_service_impl.h",
     "android/command_line_android.cc",
     "android/command_line_android.h",
     "android/content_uri_utils.cc",
@@ -197,6 +199,8 @@ component("base") {
     "android/throw_uncaught_exception.h",
     "android/time_utils.cc",
     "android/time_utils.h",
+    "android/timezone_utils.cc",
+    "android/timezone_utils.h",
     "android/trace_event_binding.cc",
     "android/trace_event_binding.h",
     "android/unguessable_token_android.cc",
@@ -701,8 +705,6 @@ component("base") {
     "profiler/scoped_tracker.h",
     "profiler/stack_sampling_profiler.cc",
     "profiler/stack_sampling_profiler.h",
-    "profiler/tracked_time.cc",
-    "profiler/tracked_time.h",
     "rand_util.cc",
     "rand_util.h",
     "rand_util_nacl.cc",
@@ -1196,7 +1198,7 @@ component("base") {
 
   # Allow more direct string conversions on platforms with native utf8
   # strings
-  if (is_mac || is_ios || is_chromeos || is_chromecast) {
+  if (is_mac || is_ios || is_chromeos || is_chromecast || is_fuchsia) {
     defines += [ "SYSTEM_NATIVE_UTF8" ]
   }
 
@@ -1247,6 +1249,8 @@ component("base") {
     # below, rather than using the generic POSIX or Linux-y ones.
     sources -= [
       "debug/stack_trace_posix.cc",
+      "memory/shared_memory_handle_posix.cc",
+      "memory/shared_memory_posix.cc",
       "message_loop/message_pump_libevent.cc",
       "message_loop/message_pump_libevent.h",
       "process/kill_posix.cc",
@@ -1260,6 +1264,8 @@ component("base") {
       "base_paths_fuchsia.cc",
       "debug/stack_trace_fuchsia.cc",
       "files/file_path_watcher_fuchsia.cc",
+      "memory/shared_memory_fuchsia.cc",
+      "memory/shared_memory_handle_fuchsia.cc",
       "message_loop/message_pump_fuchsia.cc",
       "message_loop/message_pump_fuchsia.h",
       "process/kill_fuchsia.cc",
@@ -1410,7 +1416,6 @@ component("base") {
     deps += [
       "//base/trace_event/etw_manifest:chrome_events_win",
       "//base/win:base_win_features",
-      "//base/win:eventlog_messages",
     ]
 
     if (is_component_build) {
@@ -2140,7 +2145,6 @@ test("base_unittests") {
     "process/process_unittest.cc",
     "process/process_util_unittest.cc",
     "profiler/stack_sampling_profiler_unittest.cc",
-    "profiler/tracked_time_unittest.cc",
     "rand_util_unittest.cc",
     "run_loop_unittest.cc",
     "scoped_clear_errno_unittest.cc",
@@ -2323,7 +2327,7 @@ test("base_unittests") {
 
   # Allow more direct string conversions on platforms with native utf8
   # strings
-  if (is_mac || is_ios || is_chromeos || is_chromecast) {
+  if (is_mac || is_ios || is_chromeos || is_chromecast || is_fuchsia) {
     defines += [ "SYSTEM_NATIVE_UTF8" ]
   }
 
@@ -2522,12 +2526,14 @@ if (is_android) {
       "android/java/src/org/chromium/base/ThreadUtils.java",
       "android/java/src/org/chromium/base/ThrowUncaughtException.java",
       "android/java/src/org/chromium/base/TimeUtils.java",
+      "android/java/src/org/chromium/base/TimezoneUtils.java",
       "android/java/src/org/chromium/base/TraceEvent.java",
       "android/java/src/org/chromium/base/UnguessableToken.java",
       "android/java/src/org/chromium/base/library_loader/LibraryLoader.java",
       "android/java/src/org/chromium/base/metrics/RecordHistogram.java",
       "android/java/src/org/chromium/base/metrics/RecordUserAction.java",
       "android/java/src/org/chromium/base/metrics/StatisticsRecorderAndroid.java",
+      "android/java/src/org/chromium/base/process_launcher/ChildProcessServiceImpl.java",
     ]
 
     public_deps = [
@@ -2599,6 +2605,7 @@ if (is_android) {
       "android/java/src/org/chromium/base/ThreadUtils.java",
       "android/java/src/org/chromium/base/ThrowUncaughtException.java",
       "android/java/src/org/chromium/base/TimeUtils.java",
+      "android/java/src/org/chromium/base/TimezoneUtils.java",
       "android/java/src/org/chromium/base/TraceEvent.java",
       "android/java/src/org/chromium/base/UnguessableToken.java",
       "android/java/src/org/chromium/base/VisibleForTesting.java",
@@ -2625,7 +2632,11 @@ if (is_android) {
       "android/java/src/org/chromium/base/metrics/RecordUserAction.java",
       "android/java/src/org/chromium/base/metrics/StatisticsRecorderAndroid.java",
       "android/java/src/org/chromium/base/multidex/ChromiumMultiDexInstaller.java",
+      "android/java/src/org/chromium/base/process_launcher/ChildProcessConstants.java",
       "android/java/src/org/chromium/base/process_launcher/ChildProcessCreationParams.java",
+      "android/java/src/org/chromium/base/process_launcher/ChildProcessService.java",
+      "android/java/src/org/chromium/base/process_launcher/ChildProcessServiceImpl.java",
+      "android/java/src/org/chromium/base/process_launcher/ChildProcessServiceDelegate.java",
       "android/java/src/org/chromium/base/process_launcher/FileDescriptorInfo.java",
     ]
 

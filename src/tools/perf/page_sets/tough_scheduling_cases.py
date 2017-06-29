@@ -407,10 +407,8 @@ class ToughSchedulingCasesPageSet(story.StorySet):
     self.AddStory(Page2(self))
     self.AddStory(Page3(self))
     self.AddStory(Page4(self))
-    # Disabled until crbug.com/413829 is fixed.
-    # self.AddStory(Page5(self))
-    # Disabled because of crbug.com/413829 and flakiness crbug.com/368532
-    # self.AddStory(Page6(self))
+    self.AddStory(Page5(self))
+    self.AddStory(Page6(self))
     # Why: Touch handler scrolling baseline
     self.AddStory(ToughSchedulingCasesPage(
         'file://tough_scheduling_cases/touch_handler_scrolling.html',
@@ -429,10 +427,8 @@ class ToughSchedulingCasesPageSet(story.StorySet):
     self.AddStory(ToughSchedulingCasesPage(
         'file://tough_scheduling_cases/raf_canvas.html',
         self))
-    # Disabled until crbug.com/413829 is fixed.
-    # self.AddStory(Page13(self))
-    # Disabled because of crbug.com/413829 and flakiness crbug.com/368532
-    # self.AddStory(Page14(self))
+    self.AddStory(Page13(self))
+    self.AddStory(Page14(self))
     self.AddStory(Page15(self))
     self.AddStory(Page16(self))
     # Why: Test a requestAnimationFrame handler with concurrent CSS animation

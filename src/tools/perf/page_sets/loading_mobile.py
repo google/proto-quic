@@ -163,6 +163,7 @@ class LoadingMobileExpectations(story.expectations.StoryExpectations):
                       'N5XTimeout issue: crbug.com/702175')
     self.DisableStory('163', [story.expectations.ALL],
                       'N5XTimeout issue: crbug.com/702175')
+    self.DisableStory('G1', [story.expectations.ALL], 'crbug.com/656861')
     # TODO(rnephew): Uncomment Disablings. crbug.com/728882
     # self.DisableStory(
     #     'AirHorner', [story.expectations.ALL], 'crbug.com/653775')
@@ -173,4 +174,3 @@ class LoadingMobileExpectations(story.expectations.StoryExpectations):
     # self.DisableStory('Detik', [story.expectations.ALL], 'crbug.com/653775')
     # self.DisableStory(
     #     'Blogspot', [story.expectations.ALL], 'crbug.com/653775')
-    self.DisableStory('G1', [story.expectations.ALL], 'crbug.com/656861')

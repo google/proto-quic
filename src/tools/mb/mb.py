@@ -1062,6 +1062,7 @@ class MetaBuildWrapper(object):
     asan = 'is_asan=true' in vals['gn_args']
     msan = 'is_msan=true' in vals['gn_args']
     tsan = 'is_tsan=true' in vals['gn_args']
+    cfi_diag = 'use_cfi_diag=true' in vals['gn_args']
 
     test_type = isolate_map[target]['type']
 
@@ -1096,6 +1097,7 @@ class MetaBuildWrapper(object):
         '--asan=%d' % asan,
         '--msan=%d' % msan,
         '--tsan=%d' % tsan,
+        '--cfi-diag=%d' % cfi_diag,
       ]
     elif test_type in ('windowed_test_launcher', 'console_test_launcher'):
       extra_files = [
@@ -1109,6 +1111,7 @@ class MetaBuildWrapper(object):
           '--asan=%d' % asan,
           '--msan=%d' % msan,
           '--tsan=%d' % tsan,
+          '--cfi-diag=%d' % cfi_diag,
       ]
     elif test_type == 'script':
       extra_files = [

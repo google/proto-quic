@@ -388,10 +388,11 @@ NetworkQualityEstimatorParams::NetworkQualityEstimatorParams(
                                     "throughput_min_requests_in_flight",
                                     1)),
       weight_multiplier_per_second_(GetWeightMultiplierPerSecond(params_)),
-      weight_multiplier_per_dbm_(
-          GetDoubleValueForVariationParamWithDefaultValue(params_,
-                                                          "rssi_weight_per_dbm",
-                                                          1.0)),
+      weight_multiplier_per_signal_strength_level_(
+          GetDoubleValueForVariationParamWithDefaultValue(
+              params_,
+              "rssi_weight_per_signal_strength_level",
+              1.0)),
       correlation_uma_logging_probability_(
           GetDoubleValueForVariationParamWithDefaultValue(
               params_,

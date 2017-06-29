@@ -19,7 +19,6 @@
 #include "base/strings/string_piece.h"
 #include "base/strings/sys_string_conversions.h"
 #include "base/synchronization/lock.h"
-#include "crypto/cssm_init.h"
 #include "crypto/mac_security_services_lock.h"
 #include "net/cert/x509_util_mac.h"
 

@@ -101,6 +101,10 @@ class BASE_EXPORT BuildInfo {
     return build_type_;
   }
 
+  const char* installer_package_name() const { return installer_package_name_; }
+
+  const char* abi_name() const { return abi_name_; }
+
   std::string extracted_file_suffix() const { return extracted_file_suffix_; }
 
   int sdk_int() const {
@@ -137,6 +141,8 @@ class BASE_EXPORT BuildInfo {
   const char* const package_version_name_;
   const char* const android_build_fp_;
   const char* const gms_version_code_;
+  const char* const installer_package_name_;
+  const char* const abi_name_;
   // Not needed by breakpad.
   const std::string extracted_file_suffix_;
   // This is set via set_java_exception_info, not at constructor time.

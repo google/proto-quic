@@ -339,8 +339,8 @@ def _GetDesiredVsToolchainHashes():
   to build with."""
   env_version = GetVisualStudioVersion()
   if env_version == '2015':
-    # Update 3 final with fixed 10.0.15063.0 SDK and patched event.h.
-    return ['a11b39300bafe01d9d46bbc16483e373503acc29']
+    # Update 3 final with 10.0.15063.468 SDK and no vctip.exe.
+    return ['f53e4598951162bad6330f7a167486c7ae5db1e5']
   if env_version == '2017':
     # VS 2017 Update 3 Preview 2 with 10.0.15063.0 SDK and patched event.h.
     return ['425bd64734a387734dfcf445b285a7c5073e4262']

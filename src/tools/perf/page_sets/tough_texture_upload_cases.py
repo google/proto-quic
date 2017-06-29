@@ -36,10 +36,7 @@ class ToughTextureUploadCasesPageSet(story.StorySet):
       'file://tough_texture_upload_cases/small_texture_uploads.html',
       'file://tough_texture_upload_cases/medium_texture_uploads.html',
       'file://tough_texture_upload_cases/large_texture_uploads.html',
-      # http://crbug.com/453131 - Our memory usage on low memory devices are
-      # not constrained enough to run this page, disable until we are more
-      # bounded on memory usage.
-      # 'file://tough_texture_upload_cases/extra_large_texture_uploads.html',
+      'file://tough_texture_upload_cases/extra_large_texture_uploads.html',
     ]
     for url in urls_list:
       self.AddStory(ToughTextureUploadCasesPage(url, self))

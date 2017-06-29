@@ -21,10 +21,11 @@ const char kTestPartLesultsLimitExceeded[] =
     "increase or disable limit.";
 }  // namespace
 
-XmlUnitTestResultPrinter::XmlUnitTestResultPrinter() : output_file_(NULL) {}
+XmlUnitTestResultPrinter::XmlUnitTestResultPrinter()
+    : output_file_(NULL), open_failed_(false) {}
 
 XmlUnitTestResultPrinter::~XmlUnitTestResultPrinter() {
-  if (output_file_) {
+  if (output_file_ && !open_failed_) {
     fprintf(output_file_, "</testsuites>\n");
     fflush(output_file_);
     CloseFile(output_file_);
@@ -34,8 +35,16 @@ XmlUnitTestResultPrinter::~XmlUnitTestResultPrinter() {
 bool XmlUnitTestResultPrinter::Initialize(const FilePath& output_file_path) {
   DCHECK(!output_file_);
   output_file_ = OpenFile(output_file_path, "w");
-  if (!output_file_)
+  if (!output_file_) {
+    // If the file open fails, we set the output location to stderr. This is
+    // because in current usage our caller CHECKs the result of this function.
+    // But that in turn causes a LogMessage that comes back to this object,
+    // which in turn causes a (double) crash. By pointing at stderr, there might
+    // be some indication what's going wrong. See https://crbug.com/736783.
+    output_file_ = stderr;
+    open_failed_ = true;
     return false;
+  }
 
   fprintf(output_file_,
           "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuites>\n");

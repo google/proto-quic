@@ -11,6 +11,16 @@ directory.
 A landmine is tripped when a builder checks out a different revision, and the
 diff between the new landmines and the old ones is non-null. At this point, the
 build is clobbered.
+
+Before adding or changing a landmine consider the consequences of doing so.
+Doing so will wipe out every output directory on every Chrome developer's
+machine. This can be particularly problematic on Windows where the directory
+deletion may well fail (locked files, command prompt in the directory, etc.),
+and generated .sln and .vcxproj files will be deleted.
+
+This output directory deletion will be repated when going back and forth across
+the change that added the landmine, adding to the cost. There are usually less
+troublesome alternatives.
 """
 
 import difflib

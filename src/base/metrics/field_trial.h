@@ -564,15 +564,13 @@ class BASE_EXPORT FieldTrialList {
       const char* disable_features_switch,
       FeatureList* feature_list);
 
-#if defined(OS_WIN)
+#if defined(OS_WIN) || defined(OS_FUCHSIA)
   // On Windows, we need to explicitly pass down any handles to be inherited.
   // This function adds the shared memory handle to field trial state to the
   // list of handles to be inherited.
   static void AppendFieldTrialHandleIfNeeded(
       base::HandlesToInheritVector* handles);
-#endif
-
-#if defined(OS_POSIX) && !defined(OS_NACL)
+#elif defined(OS_POSIX) && !defined(OS_NACL)
   // On POSIX, we also need to explicitly pass down this file descriptor that
   // should be shared with the child process. Returns an invalid handle if it
   // was not initialized properly.
@@ -655,7 +653,7 @@ class BASE_EXPORT FieldTrialList {
   // underlying OS resource - that must be done by the Process launcher.
   static std::string SerializeSharedMemoryHandleMetadata(
       const SharedMemoryHandle& shm);
-#if defined(OS_WIN)
+#if defined(OS_WIN) || defined(OS_FUCHSIA)
   static SharedMemoryHandle DeserializeSharedMemoryHandleMetadata(
       const std::string& switch_value);
 #elif defined(OS_POSIX) && !defined(OS_NACL)
@@ -664,15 +662,13 @@ class BASE_EXPORT FieldTrialList {
       const std::string& switch_value);
 #endif
 
-#if defined(OS_WIN)
+#if defined(OS_WIN) || defined(OS_FUCHSIA)
   // Takes in |handle_switch| from the command line which represents the shared
   // memory handle for field trials, parses it, and creates the field trials.
   // Returns true on success, false on failure.
   // |switch_value| also contains the serialized GUID.
   static bool CreateTrialsFromSwitchValue(const std::string& switch_value);
-#endif
-
-#if defined(OS_POSIX) && !defined(OS_NACL)
+#elif defined(OS_POSIX) && !defined(OS_NACL)
   // On POSIX systems that use the zygote, we look up the correct fd that backs
   // the shared memory segment containing the field trials by looking it up via
   // an fd key in GlobalDescriptors. Returns true on success, false on failure.

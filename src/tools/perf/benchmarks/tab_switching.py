@@ -48,3 +48,9 @@ class TabSwitchingTypical25(perf_benchmark.PerfBenchmark):
   @classmethod
   def ShouldTearDownStateAfterEachStoryRun(cls):
     return False
+
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # No tests disabled.
+    return StoryExpectations()

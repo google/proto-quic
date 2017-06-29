@@ -44,10 +44,10 @@ def build_and_upload(script_path, distro, release, arch, lock):
   run_script([script_path, 'BuildSysroot%s' % arch])
   run_script([script_path, 'UploadSysroot%s' % arch, revision])
 
-  tarball = '%s_%s_%s_sysroot.tgz' % (distro, release, arch.lower())
-  tgz_path = os.path.join(script_dir, "..", "..", "..", "out", "sysroot-build",
-                          release, tarball)
-  sha1sum = sha1sumfile(tgz_path)
+  tarball = '%s_%s_%s_sysroot.tar.xz' % (distro, release, arch.lower())
+  tarxz_path = os.path.join(script_dir, "..", "..", "..", "out",
+                            "sysroot-build", release, tarball)
+  sha1sum = sha1sumfile(tarxz_path)
   sysroot_dir = '%s_%s_%s-sysroot' % (distro, release, arch.lower())
 
   sysroot_metadata = {

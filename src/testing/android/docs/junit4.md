@@ -145,6 +145,25 @@ public class MyRule implements TestRule {
 }
 ```
 
+## Command Line Flags
+
+In our Junit3 tests command line flags (set by the CommandLineFlag annotations) were inherited from the
+test base classes. As an example, ChromeActivityTestBase is annotated with:
+
+```java
+@CommandLineFlags.Add({ChromeSwitches.DISABLE_FIRST_RUN_EXPERIENCE, ...
+```
+
+and as a result any test in a class derived from ChromeActivityTestBase will disable the first run experience.
+
+The Junit4 tests classes are not however, derived from test base classes; instead their behavior is defined by
+test rules. To support this our Junit4 test runner will examine the command line flag annotations on all rules
+referenced with @Rule annotations in the test class. In addition, where one rule is derived from another, the
+command line flags propogate through the hierarchy of rules. See, for example, [BottomSheetTestRule][11]
+
+Note:- This has only recently been implemented, so is not yet used in all tests. See [this bug][12]
+
+The CommandLineFlags annonations are more fully documented in the [CommandLineFlags class][13]
 
 ## Common Errors
 
@@ -263,3 +282,6 @@ If you have any other questions, feel free to report in [this bug][7].
 [8]: http://junit.org/junit4/javadoc/4.12/org/junit/rules/RuleChain.html
 [9]: https://developer.android.com/reference/android/app/Instrumentation.html#runOnMainSync(java.lang.Runnable)
 [10]: https://developer.android.com/reference/android/support/test/rule/UiThreadTestRule.html#runOnUiThread(java.lang.Runnable)
+[11]: /chrome/test/android/javatests/src/org/chromium/chrome/test/BottomSheetTestRule.java
+[12]: https://bugs.chromium.org/p/chromium/issues/detail?id=734553
+[13]: /base/test/android/javatests/src/org/chromium/base/test/util/CommandLineFlags.java

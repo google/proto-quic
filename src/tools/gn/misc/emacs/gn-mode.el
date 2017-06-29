@@ -23,7 +23,6 @@
 
 
 
-(eval-when-compile (require 'cl))       ;For the `case' macro.
 (require 'smie)
 
 (defgroup gn nil
@@ -58,9 +57,12 @@
 variable name or the '{{' and '}}' which surround it."
   :group 'gn-faces)
 
+(defvar gn-font-lock-reserved-keywords
+  '("true" "false" "if" "else"))
+
 (defvar gn-font-lock-target-declaration-keywords
   '("action" "action_foreach" "copy" "executable" "group" "loadable_module"
-    "shared_library" "source_set" "static_library" "if" "else"))
+    "shared_library" "source_set" "static_library"))
 
 (defvar gn-font-lock-buildfile-fun-keywords
   '("assert" "config" "declare_args" "defined" "exec_script" "foreach"
@@ -83,8 +85,10 @@ variable name or the '{{' and '}}' which surround it."
     "public_deps" "script" "sources" "testonly" "visibility"))
 
 (defconst gn-font-lock-keywords
-  `((,(regexp-opt gn-font-lock-target-declaration-keywords 'words) .
+  `((,(regexp-opt gn-font-lock-reserved-keywords 'words) .
      font-lock-keyword-face)
+    (,(regexp-opt gn-font-lock-target-declaration-keywords 'words) .
+     font-lock-type-face)
     (,(regexp-opt gn-font-lock-buildfile-fun-keywords 'words) .
      font-lock-function-name-face)
     (,(regexp-opt gn-font-lock-predefined-var-keywords 'words) .

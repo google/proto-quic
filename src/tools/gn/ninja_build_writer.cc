@@ -242,6 +242,7 @@ bool NinjaBuildWriter::RunAndWriteFile(
 }
 
 void NinjaBuildWriter::WriteNinjaRules() {
+  out_ << "ninja_required_version = 1.1.0\n\n";
   out_ << "rule gn\n";
   out_ << "  command = " << GetSelfInvocationCommand(build_settings_) << "\n";
   out_ << "  description = Regenerating ninja files\n\n";
@@ -282,6 +283,14 @@ void NinjaBuildWriter::WriteAllPools() {
       const Tool* tool = pair.second->GetTool(tool_type);
       if (tool && tool->pool().ptr)
         used_pools.insert(tool->pool().ptr);
+    }
+  }
+
+  for (const Target* target : default_toolchain_targets_) {
+    if (target->output_type() == Target::ACTION) {
+      const LabelPtrPair<Pool>& pool = target->action_values().pool();
+      if (pool.ptr)
+        used_pools.insert(pool.ptr);
     }
   }
 

@@ -8,8 +8,11 @@ from telemetry import story
 class ToughAnimationCasesPage(page_module.Page):
 
   def __init__(self, url, page_set, need_measurement_ready):
-    super(ToughAnimationCasesPage, self).__init__(url=url, page_set=page_set,
-                                                  name=url.split('/')[-1])
+    name = url.split('/')[-1]
+    if not name:
+      name = url.split('/')[-2]
+    super(ToughAnimationCasesPage, self).__init__(
+        url=url, page_set=page_set, name=name)
     self.archive_data_file = 'data/tough_animation_cases.json'
     self._need_measurement_ready = need_measurement_ready
 
@@ -265,11 +268,15 @@ class ToughAnimationCasesPageSet(story.StorySet):
       # leaf.
       'file://tough_animation_cases/mix_blend_mode_propagating_isolation.html',
 
-      # Disabled: crbug.com/350692
       # Why: Login page is slow because of ineffecient transform operations.
-      # 'http://ie.microsoft.com/testdrive/performance/robohornetpro/',
+      'http://ie.microsoft.com/testdrive/performance/robohornetpro/',
     ]
 
     for url in urls_list_two:
       self.AddStory(ToughAnimationCasesPage(url, self,
-                                           need_measurement_ready=False))
+                                            need_measurement_ready=False))
+
+class ToughAnimationCasesStoryExpectations(
+    story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    pass # No tests disabled.

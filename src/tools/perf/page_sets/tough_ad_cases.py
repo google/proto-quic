@@ -202,13 +202,11 @@ class ToughAdCasesPageSet(story.StorySet):
     self.AddStory(AdPage(('http://www.cnn.com/2015/01/09/politics/'
                           'nebraska-keystone-pipeline/index.html'),
                          self, scroll=scroll))
-    # Disabled: crbug.com/520509
-    #self.AddStory(AdPage('http://time.com/3977891/'
-    #    'donald-trump-debate-republican/', self, scroll=scroll))
+    self.AddStory(AdPage('http://time.com/3977891/'
+        'donald-trump-debate-republican/', self, scroll=scroll))
     self.AddStory(AdPage('http://www.theguardian.com/uk', self, scroll=scroll))
-    # Disabled: http://crbug.com/597656
-    # self.AddStory(AdPage('http://m.tmz.com', self, scroll=scroll,
-    #     y_scroll_distance_multiplier=0.25))
+    self.AddStory(AdPage('http://m.tmz.com', self, scroll=scroll,
+        y_scroll_distance_multiplier=0.25))
     self.AddStory(AdPage('http://androidpolice.com', self, scroll=scroll,
         wait_for_interactive_or_better=True))
 

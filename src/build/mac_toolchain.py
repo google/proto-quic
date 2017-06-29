@@ -14,6 +14,7 @@ date:
 """
 
 import os
+import platform
 import plistlib
 import shutil
 import subprocess
@@ -24,10 +25,14 @@ import tempfile
 import urllib2
 
 # This can be changed after running /build/package_mac_toolchain.py.
-MAC_TOOLCHAIN_VERSION = '5B1008'
+MAC_TOOLCHAIN_VERSION = '8E2002'
 MAC_TOOLCHAIN_SUB_REVISION = 3
 MAC_TOOLCHAIN_VERSION = '%s-%s' % (MAC_TOOLCHAIN_VERSION,
                                    MAC_TOOLCHAIN_SUB_REVISION)
+# The toolchain will not be downloaded if the minimum OS version is not met.
+# 16 is the major version number for macOS 10.12.
+MAC_MINIMUM_OS_VERSION = 16
+
 IOS_TOOLCHAIN_VERSION = '8C1002'
 IOS_TOOLCHAIN_SUB_REVISION = 1
 IOS_TOOLCHAIN_VERSION = '%s-%s' % (IOS_TOOLCHAIN_VERSION,
@@ -43,6 +48,13 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 TOOLCHAIN_BUILD_DIR = os.path.join(BASE_DIR, '%s_files', 'Xcode.app')
 STAMP_FILE = os.path.join(BASE_DIR, '%s_files', 'toolchain_build_revision')
 TOOLCHAIN_URL = 'gs://chrome-mac-sdk/'
+
+
+def PlatformMeetsHermeticXcodeRequirements(target_os):
+  if target_os == 'ios':
+    return True
+  return int(platform.release().split('.')[0]) >= MAC_MINIMUM_OS_VERSION
+
 
 def GetPlatforms():
   default_target_os = ["mac"]
@@ -232,6 +244,10 @@ def main():
     return 0
 
   for target_os in GetPlatforms():
+    if not PlatformMeetsHermeticXcodeRequirements(target_os):
+      print 'OS version does not support toolchain.'
+      continue
+
     if target_os == 'ios':
       default_version = IOS_TOOLCHAIN_VERSION
       toolchain_filename = 'ios-toolchain-%s.tgz'

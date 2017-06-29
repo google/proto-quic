@@ -24,6 +24,7 @@
 #include "base/time/time.h"
 #include "base/trace_event/trace_event.h"
 #include "base/values.h"
+#include "build/buildflag.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/load_flags.h"
 #include "net/base/net_errors.h"
@@ -51,11 +52,11 @@
 #include "net/http/http_util.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_with_source.h"
+#include "net/net_features.h"
 #include "net/nqe/network_quality_estimator.h"
 #include "net/proxy/proxy_info.h"
 #include "net/proxy/proxy_retry_info.h"
 #include "net/proxy/proxy_service.h"
-#include "net/reporting/reporting_service.h"
 #include "net/ssl/channel_id_service.h"
 #include "net/ssl/ssl_cert_request_info.h"
 #include "net/ssl/ssl_config_service.h"
@@ -72,6 +73,10 @@
 #if defined(OS_ANDROID)
 #include "net/android/network_library.h"
 #endif
+
+#if BUILDFLAG(ENABLE_REPORTING)
+#include "net/reporting/reporting_service.h"
+#endif  // BUILDFLAG(ENABLE_REPORTING)
 
 static const char kAvailDictionaryHeader[] = "Avail-Dictionary";
 
@@ -852,6 +857,7 @@ void URLRequestHttpJob::ProcessExpectCTHeader() {
 void URLRequestHttpJob::ProcessReportToHeader() {
   DCHECK(response_info_);
 
+#if BUILDFLAG(ENABLE_REPORTING)
   ReportingService* service = request_->context()->reporting_service();
   if (!service)
     return;
@@ -869,6 +875,7 @@ void URLRequestHttpJob::ProcessReportToHeader() {
     return;
 
   service->ProcessHeader(request_info_.url.GetOrigin(), value);
+#endif  // BUILDFLAG(ENABLE_REPORTING)
 }
 
 void URLRequestHttpJob::OnStartCompleted(int result) {
@@ -1522,15 +1529,16 @@ void URLRequestHttpJob::RecordPerfHistograms(CompletionCause reason) {
                                   prefilter_bytes_read(), 1, 50000000, 50);
 
       if (response_info_->unused_since_prefetch)
-        UMA_HISTOGRAM_COUNTS("Net.Prefetch.HitBytes", prefilter_bytes_read());
+        UMA_HISTOGRAM_COUNTS_1M("Net.Prefetch.HitBytes",
+                                prefilter_bytes_read());
     } else {
       UMA_HISTOGRAM_TIMES("Net.HttpJob.TotalTimeNotCached", total_time);
       UMA_HISTOGRAM_CUSTOM_COUNTS("Net.HttpJob.PrefilterBytesRead.Net",
                                   prefilter_bytes_read(), 1, 50000000, 50);
 
       if (request_info_.load_flags & LOAD_PREFETCH) {
-        UMA_HISTOGRAM_COUNTS("Net.Prefetch.PrefilterBytesReadFromNetwork",
-                             prefilter_bytes_read());
+        UMA_HISTOGRAM_COUNTS_1M("Net.Prefetch.PrefilterBytesReadFromNetwork",
+                                prefilter_bytes_read());
       }
       if (is_https_google) {
         if (used_quic) {

@@ -34,13 +34,13 @@ namespace {
 class RemoteTestServerTracker {
  public:
   void StartingServer() {
-    base::AutoLock l(lock_);
+    base::AutoLock lock(lock_);
     CHECK_EQ(count_, 0);
     count_++;
   }
 
   void StoppingServer() {
-    base::AutoLock l(lock_);
+    base::AutoLock lock(lock_);
     CHECK_EQ(count_, 1);
     count_--;
   }

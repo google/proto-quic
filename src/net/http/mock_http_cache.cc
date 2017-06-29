@@ -586,7 +586,11 @@ int MockHttpCache::CreateTransaction(std::unique_ptr<HttpTransaction>* trans) {
 }
 
 void MockHttpCache::SimulateCacheLockTimeout() {
-  http_cache_.SimulateCacheLockTimeout();
+  http_cache_.SimulateCacheLockTimeoutForTesting();
+}
+
+void MockHttpCache::SimulateCacheLockTimeoutAfterHeaders() {
+  http_cache_.SimulateCacheLockTimeoutAfterHeadersForTesting();
 }
 
 void MockHttpCache::FailConditionalizations() {

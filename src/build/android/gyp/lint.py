@@ -23,7 +23,7 @@ _SRC_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__),
 
 def _OnStaleMd5(lint_path, config_path, processed_config_path,
                 manifest_path, result_path, product_dir, sources, jar_path,
-                cache_dir, android_sdk_version, resource_sources,
+                cache_dir, android_sdk_version, srcjars, resource_sources,
                 disable=None, classpath=None, can_fail_build=False,
                 silent=False):
   def _RebasePath(path):
@@ -149,6 +149,14 @@ def _OnStaleMd5(lint_path, config_path, processed_config_path,
         src_dirs.append(src_dir)
         cmd.extend(['--sources', _RebasePath(src_dir)])
       os.symlink(os.path.abspath(src), PathInDir(src_dir, src))
+
+    if srcjars:
+      srcjar_paths = build_utils.ParseGnList(srcjars)
+      if srcjar_paths:
+        srcjar_dir = _NewTempSubdir('SRC_ROOT')
+        cmd.extend(['--sources', _RebasePath(srcjar_dir)])
+        for srcjar in srcjar_paths:
+          build_utils.ExtractAll(srcjar, path=srcjar_dir)
 
     if disable:
       cmd.extend(['--disable', ','.join(disable)])
@@ -287,6 +295,8 @@ def main():
                       help='Directories containing java files.')
   parser.add_argument('--stamp',
                       help='Path to touch on success.')
+  parser.add_argument('--srcjars',
+                      help='GN list of included srcjars.')
 
   args = parser.parse_args(build_utils.ExpandFileArgs(sys.argv[1:]))
 
@@ -358,6 +368,7 @@ def main():
                           args.jar_path,
                           args.cache_dir,
                           args.android_sdk_version,
+                          args.srcjars,
                           resource_sources,
                           disable=disable,
                           classpath=classpath,

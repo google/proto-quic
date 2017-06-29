@@ -74,6 +74,7 @@ def print_landmines():
     print 'Clobber to get past mojo gen build error (crbug.com/679607)'
   if platform() == 'win':
     print 'Clobber Windows to fix strange PCH-not-rebuilt errors.'
+  print 'CLobber all to fix GN breakage (crbug.com/736215)'
 
 def main():
   print_landmines()

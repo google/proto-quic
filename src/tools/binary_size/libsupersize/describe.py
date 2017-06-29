@@ -122,17 +122,18 @@ class Describer(object):
 
     if sym.IsDelta():
       if sym.IsGroup():
-        b = sum(s.before_symbol.size_without_padding if s.before_symbol else 0
-                for s in sym)
-        a = sum(s.after_symbol.size_without_padding if s.after_symbol else 0
-                for s in sym)
+        b = sum(s.before_symbol.pss_without_padding if s.before_symbol else 0
+                for s in sym.IterLeafSymbols())
+        a = sum(s.after_symbol.pss_without_padding if s.after_symbol else 0
+                for s in sym.IterLeafSymbols())
       else:
-        b = sym.before_symbol.size_without_padding if sym.before_symbol else 0
-        a = sym.after_symbol.size_without_padding if sym.after_symbol else 0
+        b = sym.before_symbol.pss_without_padding if sym.before_symbol else 0
+        a = sym.after_symbol.pss_without_padding if sym.after_symbol else 0
       pss_with_sign = _FormatPss(sym.pss)
       if pss_with_sign[0] not in '~-':
         pss_with_sign = '+' + pss_with_sign
-      pss_field = '{} ({}->{})'.format(pss_with_sign, b, a)
+      pss_field = '{} ({}->{})'.format(
+          pss_with_sign, _FormatPss(b), _FormatPss(a))
     elif sym.num_aliases > 1:
       pss_field = '{} (size={})'.format(_FormatPss(sym.pss), sym.size)
     else:

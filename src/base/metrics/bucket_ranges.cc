@@ -109,12 +109,6 @@ BucketRanges::BucketRanges(size_t num_ranges)
 
 BucketRanges::~BucketRanges() {}
 
-void BucketRanges::set_range(size_t i, HistogramBase::Sample value) {
-  DCHECK_LT(i, ranges_.size());
-  CHECK_GE(value, 0);
-  ranges_[i] = value;
-}
-
 uint32_t BucketRanges::CalculateChecksum() const {
   // Seed checksum.
   uint32_t checksum = static_cast<uint32_t>(ranges_.size());

@@ -227,7 +227,7 @@ class _BlinkPerfMeasurement(legacy_page_test.LegacyPageTest):
       parts = line.split()
       values = [float(v.replace(',', '')) for v in parts[1:-1]]
       units = parts[-1]
-      metric = page.display_name.split('.')[0].replace('/', '_')
+      metric = page.name.split('.')[0].replace('/', '_')
       results.AddValue(list_of_scalar_values.ListOfScalarValues(
           results.current_page, metric, units, values))
 
@@ -261,7 +261,22 @@ class BlinkPerfBindings(_BlinkPerfBenchmark):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # Nothing disabled.
+        self.DisableStory(
+            'structured-clone-long-string-deserialize.html',
+            [story.expectations.ALL_ANDROID],
+            'crbug.com/528472')
+        self.DisableStory(
+            'structured-clone-long-string-serialize.html',
+            [story.expectations.ALL_ANDROID],
+            'crbug.com/528472')
+        self.DisableStory(
+            'structured-clone-json-serialize.html',
+            [story.expectations.ANDROID_ONE],
+            'crbug.com/736123')
+        self.DisableStory(
+            'structured-clone-json-deserialize.html',
+            [story.expectations.ANDROID_ONE],
+            'crbug.com/736123')
     return StoryExpectations()
 
 
@@ -384,7 +399,25 @@ class BlinkPerfSVG(_BlinkPerfBenchmark):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # Nothing disabled.
+        self.DisableStory('Debian.html', [story.expectations.ANDROID_NEXUS5X],
+                          'crbug.com/736817')
+        self.DisableStory('FlowerFromMyGarden.html',
+                          [story.expectations.ANDROID_NEXUS5X],
+                          'crbug.com/736817')
+        self.DisableStory('HarveyRayner.html',
+                          [story.expectations.ANDROID_NEXUS5X],
+                          'crbug.com/736817')
+        self.DisableStory('SvgCubics.html',
+                          [story.expectations.ANDROID_NEXUS5X],
+                          'crbug.com/736817')
+        self.DisableStory('SvgNestedUse.html',
+                          [story.expectations.ANDROID_NEXUS5X],
+                          'crbug.com/736817')
+        self.DisableStory('Worldcup.html', [story.expectations.ANDROID_NEXUS5X],
+                          'crbug.com/736817')
+        self.DisableStory('CrawFishGanson.html',
+                          [story.expectations.ANDROID_NEXUS5X],
+                          'crbug.com/736817')
     return StoryExpectations()
 
 
@@ -398,5 +431,17 @@ class BlinkPerfShadowDOM(_BlinkPerfBenchmark):
       def SetExpectations(self):
         self.PermanentlyDisableBenchmark(
             [story.expectations.ANDROID_NEXUS5X], 'crbug.com/702319')
+        self.DisableStory(
+            'v1-large-deep-layout.html',
+            [story.expectations.ANDROID_ONE],
+            'crbug.com/736512')
+        self.DisableStory(
+            'v1-large-deep-distribution.html',
+            [story.expectations.ANDROID_ONE],
+            'crbug.com/736512')
+        self.DisableStory(
+            'v1-distribution-disconnected-and-reconnected.html',
+            [story.expectations.ANDROID_ONE],
+            'crbug.com/736512')
     return StoryExpectations()
 

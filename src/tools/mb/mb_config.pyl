@@ -88,7 +88,6 @@
     'chromium.chromiumos': {
       'ChromiumOS amd64-generic Compile': 'cros_chrome_sdk',
       'ChromiumOS daisy Compile': 'cros_chrome_sdk',
-      'ChromiumOS x86-generic Compile': 'cros_chrome_sdk',
       'Linux ChromiumOS Builder': 'chromeos_with_codecs_release_bot',
       'Linux ChromiumOS Builder (dbg)': 'chromeos_with_codecs_debug_bot',
       'Linux ChromiumOS Full': 'chromeos_with_codecs_release_bot',
@@ -105,7 +104,7 @@
       'CFI Linux CF': 'cfi_full_cfi_diag_recover_release_static',
       'CFI Linux ToT': 'cfi_full_clang_tot_release_static',
       'CFI Linux': 'cfi_release_static',
-      'CFI Linux Full': 'cfi_thin_lto_full_release_static_use_lld',
+      'CFI Linux Full': 'cfi_full_cfi_diag_thin_lto_release_static_dcheck_always_on_goma',
       'CFI ThinLTO Linux ToT': 'cfi_thin_lto_clang_tot_full_symbols_release_static_use_lld',
       'Chromium Linux Goma Canary': 'release_bot',
       'Chromium Linux Goma Canary': 'release_bot',
@@ -213,8 +212,8 @@
       'Site Isolation Win': 'release_trybot_x86',
       'ThinLTO Linux ToT': 'thin_lto_clang_tot_full_symbols_release_static_use_lld',
       'UBSanVptr Linux': 'ubsan_vptr_release_bot',
-      'WebKit Linux - RandomOrder': 'release_bot',
-      'WebKit Mac - RandomOrder': 'release_bot',
+      'WebKit Linux - RandomOrder': 'release_trybot',
+      'WebKit Mac - RandomOrder': 'release_trybot',
       'WebKit Win - RandomOrder': 'release_bot_x86_minimal_symbols',
       'Win 10 Fast Ring': 'release_trybot',
       'Windows deterministic': 'release_bot_x86_minimal_symbols',
@@ -340,7 +339,7 @@
       'Android arm64 Builder': 'official_goma_minimal_symbols_android_arm64',
       'Android Compile': 'official_goma_minimal_symbols_android',
       'Android arm64 Compile': 'official_goma_minimal_symbols_android_arm64',
-      'Linux Builder': 'official_goma',
+      'Linux Builder': 'official_goma_perf',
       'Mac Builder': 'official_goma',
       'Win Builder': 'official_goma_x86',
       'Win x64 Builder': 'official_goma',
@@ -348,6 +347,7 @@
 
     'chromium.perf.fyi': {
       'Android Builder FYI': 'official_goma_minimal_symbols_android',
+      'Android arm64 Builder FYI': 'official_goma_minimal_symbols_android_arm64',
       'Win Builder FYI': 'official_goma',
       'Win Clang Builder': 'official_goma_minimal_symbols_clang',
       'Battor Agent Linux': 'official_goma_minimal_symbols_clang',
@@ -385,6 +385,7 @@
       'Linux ASAN Builder': 'asan_lsan_release_bot',
       'Linux Debug Builder': 'debug_bot',
       'Linux Release (NVIDIA)': 'gpu_tests_release_trybot',
+      'Linux Release - concurrent marking (NVIDIA)': 'gpu_tests_release_trybot_cm',
       'Linux Snapshot Builder': 'release_bot',
       'Mac Release (Intel)': 'gpu_tests_release_trybot',
       'V8 Android GN (dbg)': 'android_debug_bot',
@@ -518,7 +519,6 @@
       'cast_shell_audio_linux': 'cast_audio_release_trybot',
       'chromeos_amd64-generic_chromium_compile_only_ng': 'cros_chrome_sdk',
       'chromeos_daisy_chromium_compile_only_ng': 'cros_chrome_sdk',
-      'chromeos_x86-generic_chromium_compile_only_ng': 'cros_chrome_sdk',
       'closure_compilation': 'closure_compilation',
       'fuchsia': 'release_trybot_fuchsia',
       # TODO(kjellander): Remove linux_arm after tryserver restart.
@@ -530,7 +530,7 @@
       'linux_chromium_archive_rel_ng': 'release_bot',
       'linux_chromium_asan_rel_ng': 'asan_lsan_release_trybot',
       'linux_chromium_browser_side_navigation_rel': 'release_trybot',
-      'linux_chromium_cfi_rel_ng': 'cfi_full_release_static_dcheck_always_on',
+      'linux_chromium_cfi_rel_ng': 'cfi_full_cfi_diag_thin_lto_release_static_dcheck_always_on_goma',
       'linux_chromium_chromeos_asan_rel_ng': 'asan_lsan_chromeos_release_trybot',
       'linux_chromium_chromeos_compile_dbg_ng': 'chromeos_with_codecs_debug_trybot',
       'linux_chromium_chromeos_compile_rel_ng': 'chromeos_with_codecs_release_trybot',
@@ -582,7 +582,6 @@
       'ios-simulator-eg': 'ios',
       'ios-simulator-cronet': 'ios',
       'ios-simulator-xcode-clang': 'ios',
-      'mac_chromium_10.10_rel_ng': 'gpu_tests_release_trybot',
       'mac_chromium_10.10_macviews': 'mac_views_browser_release_trybot',
       'mac_chromium_10.12_rel_ng': 'gpu_tests_release_trybot',
       'mac_chromium_archive_rel_ng': 'release_bot_mac_strip',
@@ -761,7 +760,7 @@
     ],
 
     'android_cronet_release_bot_minimal_symbols_arm_no_neon_clang_asan': [
-      'android', 'cronet', 'official_optimize', 'release_bot', 'minimal_symbols', 'arm_no_neon', 'clang', 'asan',
+      'android', 'cronet', 'release_bot', 'minimal_symbols', 'arm_no_neon', 'clang', 'asan',
     ],
 
     'android_cronet_release_bot_minimal_symbols_mipsel': [
@@ -992,8 +991,8 @@
       'cfi_full', 'clang_tot', 'release', 'static',
     ],
 
-    'cfi_full_release_static_dcheck_always_on': [
-      'cfi_full', 'release', 'static', 'dcheck_always_on',
+    'cfi_full_cfi_diag_thin_lto_release_static_dcheck_always_on_goma': [
+      'cfi_full', 'cfi_diag', 'thin_lto', 'release', 'static', 'dcheck_always_on', 'goma',
     ],
 
     'cfi_release_static': [
@@ -1002,10 +1001,6 @@
 
     'cfi_thin_lto_clang_tot_full_symbols_release_static_use_lld': [
       'cfi', 'thin_lto', 'clang_tot', 'full_symbols', 'release', 'static', 'use_lld',
-    ],
-
-    'cfi_thin_lto_full_release_static_use_lld': [
-      'cfi', 'thin_lto', 'release', 'static', 'use_lld',
     ],
 
     'chrome_with_codecs_blink_logging_release_trybot': [
@@ -1298,6 +1293,10 @@
       'gpu_tests', 'release_trybot',
     ],
 
+    'gpu_tests_release_trybot_cm': [
+      'gpu_tests', 'release_trybot', 'v8_concurrent_marking',
+    ],
+
     'gpu_tests_release_trybot_x86_minimal_symbols': [
       'gpu_tests', 'release_trybot', 'x86', 'minimal_symbols',
     ],
@@ -1359,6 +1358,10 @@
 
     'official_goma': [
       'official', 'goma',
+    ],
+
+    'official_goma_perf': [
+      'official', 'goma', 'no_gnome_keyring',
     ],
 
     'official_goma_chromeos': [
@@ -1673,7 +1676,7 @@
     'cronet': {
       'gn_args': ('disable_file_support=true disable_ftp_support=true '
                   'enable_websockets=false use_platform_icu_alternatives=true '
-                  'use_partition_alloc=false'),
+                  'use_partition_alloc=false enable_reporting=false'),
     },
 
     'cros_chrome_sdk': {
@@ -1833,6 +1836,10 @@
       'gn_args': 'android_ndk_version="r13b" android_ndk_major_version=13',
     },
 
+    'no_gnome_keyring': {
+      'gn_args': 'use_gnome_keyring=false',
+    },
+
     'no_pch': {
       'gn_args': 'enable_precompiled_headers=false',
     },
@@ -1945,6 +1952,10 @@
 
     'use_lld': {
       'gn_args': 'use_lld=true',
+    },
+
+    'v8_concurrent_marking': {
+      'gn_args': 'v8_enable_concurrent_marking=true',
     },
 
     'v8_future': {

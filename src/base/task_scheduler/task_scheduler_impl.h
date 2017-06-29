@@ -30,6 +30,10 @@
 #include "base/task_scheduler/task_tracker_posix.h"
 #endif
 
+#if defined(OS_WIN)
+#include "base/win/com_init_check_hook.h"
+#endif
+
 namespace base {
 
 class HistogramBase;
@@ -97,6 +101,11 @@ class BASE_EXPORT TaskSchedulerImpl : public TaskScheduler {
 #if DCHECK_IS_ON()
   // Set once JoinForTesting() has returned.
   AtomicFlag join_for_testing_returned_;
+#endif
+
+#if defined(OS_WIN) && defined(COM_INIT_CHECK_HOOK_ENABLED)
+  // Provides COM initialization verification for supported builds.
+  base::win::ComInitCheckHook com_init_check_hook_;
 #endif
 
   DISALLOW_COPY_AND_ASSIGN(TaskSchedulerImpl);

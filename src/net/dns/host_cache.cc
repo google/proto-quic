@@ -145,7 +145,7 @@ void HostCache::Entry::GetStaleness(base::TimeTicks now,
 }
 
 HostCache::HostCache(size_t max_entries)
-    : max_entries_(max_entries), network_changes_(0) {}
+    : max_entries_(max_entries), network_changes_(0), delegate_(nullptr) {}
 
 HostCache::~HostCache() {
   DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
@@ -210,21 +210,31 @@ void HostCache::Set(const Key& key,
   if (caching_is_disabled())
     return;
 
+  bool result_changed = false;
   auto it = entries_.find(key);
   if (it != entries_.end()) {
     bool is_stale = it->second.IsStale(now, network_changes_);
+    AddressListDeltaType delta =
+        FindAddressListDeltaType(it->second.addresses(), entry.addresses());
     RecordSet(is_stale ? SET_UPDATE_STALE : SET_UPDATE_VALID, now, &it->second,
-              entry);
+              entry, delta);
     // TODO(juliatuttle): Remember some old metadata (hit count or frequency or
     // something like that) if it's useful for better eviction algorithms?
+    result_changed =
+        entry.error() == OK &&
+        (it->second.error() != entry.error() || delta != DELTA_IDENTICAL);
     entries_.erase(it);
   } else {
+    result_changed = true;
     if (size() == max_entries_)
       EvictOneEntry(now);
-    RecordSet(SET_INSERT, now, nullptr, entry);
+    RecordSet(SET_INSERT, now, nullptr, entry, DELTA_DISJOINT);
   }
 
   AddEntry(Key(key), Entry(entry, now, ttl, network_changes_));
+
+  if (delegate_ && result_changed)
+    delegate_->ScheduleWrite();
 }
 
 void HostCache::AddEntry(const Key& key, const Entry& entry) {
@@ -238,10 +248,24 @@ void HostCache::OnNetworkChange() {
   ++network_changes_;
 }
 
+void HostCache::set_persistence_delegate(PersistenceDelegate* delegate) {
+  // A PersistenceDelegate shouldn't be added if there already was one, and
+  // shouldn't be removed (by setting to nullptr) if it wasn't previously there.
+  DCHECK_NE(delegate == nullptr, delegate_ == nullptr);
+  delegate_ = delegate;
+}
+
 void HostCache::clear() {
   DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   RecordEraseAll(ERASE_CLEAR, base::TimeTicks::Now());
+
+  // Don't bother scheduling a write if there's nothing to clear.
+  if (size() == 0)
+    return;
+
   entries_.clear();
+  if (delegate_)
+    delegate_->ScheduleWrite();
 }
 
 void HostCache::ClearForHosts(
@@ -253,6 +277,7 @@ void HostCache::ClearForHosts(
     return;
   }
 
+  bool changed = false;
   base::TimeTicks now = base::TimeTicks::Now();
   for (EntryMap::iterator it = entries_.begin(); it != entries_.end();) {
     EntryMap::iterator next_it = std::next(it);
@@ -260,15 +285,20 @@ void HostCache::ClearForHosts(
     if (host_filter.Run(it->first.hostname)) {
       RecordErase(ERASE_CLEAR, now, it->second);
       entries_.erase(it);
+      changed = true;
     }
 
     it = next_it;
   }
+
+  if (delegate_ && changed)
+    delegate_->ScheduleWrite();
 }
 
-std::unique_ptr<base::ListValue> HostCache::GetAsListValue(
-    bool include_staleness) const {
-  std::unique_ptr<base::ListValue> entry_list(new base::ListValue());
+void HostCache::GetAsListValue(base::ListValue* entry_list,
+                               bool include_staleness) const {
+  DCHECK(entry_list);
+  entry_list->Clear();
 
   for (const auto& pair : entries_) {
     const Key& key = pair.first;
@@ -310,8 +340,6 @@ std::unique_ptr<base::ListValue> HostCache::GetAsListValue(
 
     entry_list->Append(std::move(entry_dict));
   }
-
-  return entry_list;
 }
 
 // TODO(mgersh): Add histograms to track failures.
@@ -417,7 +445,8 @@ void HostCache::EvictOneEntry(base::TimeTicks now) {
 void HostCache::RecordSet(SetOutcome outcome,
                           base::TimeTicks now,
                           const Entry* old_entry,
-                          const Entry& new_entry) {
+                          const Entry& new_entry,
+                          AddressListDeltaType delta) {
   CACHE_HISTOGRAM_ENUM("Set", outcome, MAX_SET_OUTCOME);
   switch (outcome) {
     case SET_INSERT:
@@ -432,8 +461,6 @@ void HostCache::RecordSet(SetOutcome outcome,
                             stale.network_changes);
       CACHE_HISTOGRAM_COUNT("UpdateStale.StaleHits", stale.stale_hits);
       if (old_entry->error() == OK && new_entry.error() == OK) {
-        AddressListDeltaType delta = FindAddressListDeltaType(
-            old_entry->addresses(), new_entry.addresses());
         RecordUpdateStale(delta, stale);
       }
       break;

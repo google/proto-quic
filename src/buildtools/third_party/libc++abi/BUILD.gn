@@ -4,6 +4,11 @@
 
 source_set("libc++abi") {
   visibility = [ "//buildtools/third_party/libc++" ]
+  if (is_linux && current_cpu == "arm") {
+    deps = [
+      "//buildtools/third_party/libunwind",
+    ]
+  }
   sources = [
     "trunk/src/abort_message.cpp",
     "trunk/src/cxa_aux_runtime.cpp",
@@ -24,7 +29,6 @@ source_set("libc++abi") {
     "trunk/src/fallback_malloc.cpp",
     "trunk/src/private_typeinfo.cpp",
     "trunk/src/stdlib_exception.cpp",
-    "trunk/src/stdlib_new_delete.cpp",
     "trunk/src/stdlib_stdexcept.cpp",
     "trunk/src/stdlib_typeinfo.cpp",
   ]

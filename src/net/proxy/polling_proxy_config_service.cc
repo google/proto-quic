@@ -34,7 +34,7 @@ class PollingProxyConfigService::Core
   // Called when the parent PollingProxyConfigService is destroyed
   // (observers should not be called past this point).
   void Orphan() {
-    base::AutoLock l(lock_);
+    base::AutoLock lock(lock_);
     origin_task_runner_ = NULL;
   }
 
@@ -104,7 +104,7 @@ class PollingProxyConfigService::Core
     ProxyConfig config;
     func(&config);
 
-    base::AutoLock l(lock_);
+    base::AutoLock lock(lock_);
     if (origin_task_runner_.get()) {
       origin_task_runner_->PostTask(
           FROM_HERE, base::Bind(&Core::GetConfigCompleted, this, config));

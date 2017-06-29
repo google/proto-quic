@@ -400,6 +400,46 @@
         "test": "components_unittests"
       },
       {
+        "merge": {
+          "args": [
+            "--bucket",
+            "chromium-result-details",
+            "--test-name",
+            "content_browsertests"
+          ],
+          "script": "//build/android/pylib/results/presentation/test_results_presentation.py"
+        },
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "cipd_packages": [
+            {
+              "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
+              "location": "bin",
+              "revision": "git_revision:ff387eadf445b24c935f1cf7d6ddd279f8a6b04c"
+            }
+          ],
+          "dimension_sets": [
+            {
+              "android_devices": "4",
+              "device_os": "MMB29Q",
+              "device_type": "bullhead"
+            }
+          ],
+          "hard_timeout": 1200,
+          "output_links": [
+            {
+              "link": [
+                "https://luci-logdog.appspot.com/v/?s",
+                "=android%2Fswarming%2Flogcats%2F",
+                "${TASK_ID}%2F%2B%2Funified_logcats"
+              ],
+              "name": "shard #${SHARD_INDEX} logcats"
+            }
+          ]
+        },
+        "test": "content_browsertests"
+      },
+      {
         "args": [
           "--gs-results-bucket=chromium-result-details"
         ],
@@ -3966,7 +4006,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "6",
+              "android_devices": "1",
               "device_os": "LMY48I",
               "device_type": "hammerhead"
             }
