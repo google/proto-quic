@@ -3,16 +3,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Certificate chain with 1 intermediate, but the trust anchor used is
-incorrect (neither subject nor signature matches). Verification is expected to
-fail."""
+"""Certificate chain where the supposed root certificate is wrong:
+
+  * The intermediate's "issuer" does not match the root's "subject"
+  * The intermediate's signature was not generated using the root's key
+"""
 
 import sys
 sys.path += ['..']
 
 import common
 
-# Self-signed root certificate, which is NOT saved as the trust anchor.
+# Self-signed root certificate, which actually signed the intermediate.
 root = common.create_self_signed_root_certificate('Root')
 
 # Intermediate certificate.
@@ -21,8 +23,8 @@ intermediate = common.create_intermediate_certificate('Intermediate', root)
 # Target certificate.
 target = common.create_end_entity_certificate('Target', intermediate)
 
-# Self-signed root certificate, not part of chain, which is saved as trust
-# anchor.
+# Self-signed root certificate that has nothing to do with this chain, but will
+# be saved as its root certificate.
 bogus_root = common.create_self_signed_root_certificate('BogusRoot')
 
 chain = [target, intermediate, bogus_root]

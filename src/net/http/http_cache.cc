@@ -312,6 +312,7 @@ HttpCache::HttpCache(std::unique_ptr<HttpTransactionFactory> network_layer,
       backend_factory_(std::move(backend_factory)),
       building_backend_(false),
       bypass_lock_for_test_(false),
+      bypass_lock_after_headers_for_test_(false),
       fail_conditionalization_for_test_(false),
       mode_(NORMAL),
       network_layer_(std::move(network_layer)),
@@ -465,6 +466,8 @@ int HttpCache::CreateTransaction(RequestPriority priority,
       new HttpCache::Transaction(priority, this);
    if (bypass_lock_for_test_)
     transaction->BypassLockForTest();
+   if (bypass_lock_after_headers_for_test_)
+     transaction->BypassLockAfterHeadersForTest();
    if (fail_conditionalization_for_test_)
      transaction->FailConditionalizationForTest();
 

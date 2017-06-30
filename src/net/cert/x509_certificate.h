@@ -32,7 +32,6 @@
 #elif defined(USE_OPENSSL_CERTS)
 // Forward declaration; real one in <x509.h>
 typedef struct x509_st X509;
-typedef struct x509_store_st X509_STORE;
 #elif defined(USE_NSS_CERTS)
 // Forward declaration; real one in <cert.h>
 struct CERTCertificateStr;
@@ -235,12 +234,6 @@ class NET_EXPORT X509Certificate
   // |valid_issuers| is a list of DER-encoded X.509 DistinguishedNames.
   bool IsIssuedByEncoded(const std::vector<std::string>& valid_issuers);
 
-#if defined(USE_OPENSSL_CERTS)
-  // Returns a handle to a global, in-memory certificate store. We
-  // use it for test code, e.g. importing the test server's certificate.
-  static X509_STORE* cert_store();
-#endif
-
   // Verifies that |hostname| matches this certificate.
   // Does not verify that the certificate is valid, only that the certificate
   // matches this host.
@@ -352,12 +345,6 @@ class NET_EXPORT X509Certificate
 
   // Common object initialization code.  Called by the constructors only.
   bool Initialize();
-
-#if defined(USE_OPENSSL_CERTS)
-  // Resets the store returned by cert_store() to default state. Used by
-  // TestRootCerts to undo modifications.
-  static void ResetCertStore();
-#endif
 
   // Verifies that |hostname| matches one of the certificate names or IP
   // addresses supplied, based on TLS name matching rules - specifically,

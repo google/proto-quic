@@ -3,9 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/buildflag_header.gni")
-import("//build/config/sanitizers/sanitizers.gni")
-import("//build/win/message_compiler.gni")
-import("//chrome/process_version_rc_template.gni")
 
 declare_args() {
   # Indicates if the handle verifier should operate in a single module mode. By
@@ -23,43 +20,6 @@ buildflag_header("base_win_features") {
   header = "base_features.h"
   header_dir = "base/win"
   flags = [ "SINGLE_MODULE_MODE_HANDLE_VERIFIER=$single_module_mode_handle_verifier" ]
-}
-
-message_compiler("eventlog_messages") {
-  visibility = [
-    "//base:base",
-    ":eventlog_provider",
-  ]
-
-  sources = [
-    "eventlog_messages.mc",
-  ]
-
-  user_mode_logging = false
-  compile_generated_code = false
-}
-
-process_version_rc_template("eventlog_provider_dll_version") {
-  sources = [
-    "eventlog_provider.ver",
-  ]
-  output = "$target_gen_dir/eventlog_provider_dll_version.rc"
-}
-
-shared_library("eventlog_provider") {
-  sources = [
-    "$root_gen_dir/base/win/eventlog_messages.rc",
-    "eventlog_provider.cc",
-  ]
-
-  if (!is_asan) {
-    ldflags = [ "/NOENTRY" ]
-  }
-
-  deps = [
-    "//base/win:eventlog_messages",
-    "//base/win:eventlog_provider_dll_version",
-  ]
 }
 
 static_library("pe_image") {

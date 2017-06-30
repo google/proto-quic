@@ -189,7 +189,10 @@ def AddCommonOptions(parser):
 def ProcessCommonOptions(args):
   """Processes and handles all common options."""
   run_tests_helper.SetLogLevel(args.verbose_count, add_handler=False)
-  handler = logging_utils.ColorStreamHandler()
+  if args.verbose_count > 0:
+    handler = logging_utils.ColorStreamHandler()
+  else:
+    handler = logging.StreamHandler(sys.stdout)
   handler.setFormatter(run_tests_helper.CustomFormatter())
   logging.getLogger().addHandler(handler)
 
@@ -213,9 +216,9 @@ def AddDeviceOptions(parser):
       type=os.path.realpath,
       help='Device blacklist file.')
   parser.add_argument(
-      '-d', '--device',
-      dest='test_device',
-      help='Target device for the test suite to run on.')
+      '-d', '--device', nargs='+',
+      dest='test_devices',
+      help='Target device(s) for the test suite to run on.')
   parser.add_argument(
       '--enable-concurrent-adb',
       action='store_true',

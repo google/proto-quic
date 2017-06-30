@@ -10,6 +10,7 @@
 #include "base/memory/ptr_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/threading/thread_task_runner_handle.h"
+#include "base/time/time.h"
 #include "device/serial/buffer.h"
 #include "device/serial/serial_io_handler.h"
 #include "net/base/io_buffer.h"
@@ -61,11 +62,9 @@ size_t GetMaxBytesForMessageType(BattOrMessageType type) {
 BattOrConnectionImpl::BattOrConnectionImpl(
     const std::string& path,
     BattOrConnection::Listener* listener,
-    scoped_refptr<base::SingleThreadTaskRunner> file_thread_task_runner,
     scoped_refptr<base::SingleThreadTaskRunner> ui_thread_task_runner)
     : BattOrConnection(listener),
       path_(path),
-      file_thread_task_runner_(file_thread_task_runner),
       ui_thread_task_runner_(ui_thread_task_runner) {
   std::string serial_log_path =
       base::CommandLine::ForCurrentProcess()->GetSwitchValueASCII(
@@ -184,6 +183,7 @@ void BattOrConnectionImpl::ReadMessage(BattOrMessageType type) {
 }
 
 void BattOrConnectionImpl::CancelReadMessage() {
+  LogSerial("Canceling read due to timeout.");
   io_handler_->CancelRead(device::serial::ReceiveError::TIMEOUT);
 }
 
@@ -193,8 +193,7 @@ void BattOrConnectionImpl::Flush() {
 }
 
 scoped_refptr<device::SerialIoHandler> BattOrConnectionImpl::CreateIoHandler() {
-  return device::SerialIoHandler::Create(file_thread_task_runner_,
-                                         ui_thread_task_runner_);
+  return device::SerialIoHandler::Create(ui_thread_task_runner_);
 }
 
 void BattOrConnectionImpl::BeginReadBytes(size_t max_bytes_to_read) {
@@ -351,7 +350,7 @@ void BattOrConnectionImpl::OnBytesSent(int bytes_sent,
 }
 
 void BattOrConnectionImpl::LogSerial(const std::string& str) {
-  serial_log_ << str << std::endl << std::endl;
+  serial_log_ << base::Time::Now() << ": " << str << std::endl << std::endl;
 }
 
 }  // namespace battor

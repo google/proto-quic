@@ -27,7 +27,7 @@ class Screenshot(legacy_page_test.LegacyPageTest):
       tab.WaitForDocumentReadyStateToBeComplete()
     except py_utils.TimeoutException:
       logging.warning("WaitForDocumentReadyStateToBeComplete() timeout, " +
-                      "page: %s", page.display_name)
+                      "page: %s", page.name)
       return
 
     time.sleep(self._wait_time)

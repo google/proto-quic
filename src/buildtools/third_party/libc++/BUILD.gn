@@ -18,6 +18,22 @@ config("config") {
     defines += [
       "_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
       "_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+
+      # This resets the visibility to default only for the various
+      # flavors of operator new and operator delete.  These symbols
+      # are weak and get overriden by Chromium-provided ones, but if
+      # these symbols had hidden visibility, this would make the
+      # Chromium symbols hidden too because elf visibility rules
+      # require that linkers use the least visible form when merging,
+      # and if this is hidden, then when we merge it with tcmalloc's
+      # operator new, hidden visibility would win. However, tcmalloc
+      # needs a visible operator new to also override operator new
+      # references from system libraries.
+      # TODO(lld): Ask lld for a --force-public-visibility flag or
+      # similar to that overrides the default elf merging rules, and
+      # make tcmalloc's gn config pass that to all its dependencies,
+      # then remove this override here.
+      "_LIBCPP_OVERRIDABLE_FUNC_VIS=__attribute__((__visibility__(\"default\")))",
     ]
   }
   cflags = [
@@ -30,6 +46,12 @@ config("config") {
     "-isystem" + rebase_path("../libc++abi/trunk/include", root_build_dir),
     "-std=c++11",
   ]
+  if (is_linux && current_cpu == "arm") {
+    cflags_c = [ "-isystem" +
+                 rebase_path("../libunwind/trunk/include", root_build_dir) ]
+    cflags_cc += [ "-isystem" +
+                   rebase_path("../libunwind/trunk/include", root_build_dir) ]
+  }
 }
 
 config("no_libstdcpp") {
@@ -121,24 +143,5 @@ group("libcxx_proxy") {
   deps = [
     ":libc++",
   ]
-  public_configs = [ ":link_helper" ]
-}
-
-# This config is only used by binaries and shared library targets.
-# //build/config/sanitizers:default_sanitizer_flags sets the include paths for
-# everything else.
-config("link_helper") {
-  configs = [ ":no_libstdcpp" ]
-
-  if (!is_mac) {
-    ldflags = [
-      # Normally the generator takes care of RPATH. Our case is special because
-      # the generator is unaware of the libc++.so dependency. Note that setting
-      # RPATH here is a potential security issue. See the following for another
-      # example of this issue: https://code.google.com/p/gyp/issues/detail?id=315
-      "-Wl,-rpath,\$ORIGIN/",
-    ]
-  }
-
-  lib_dirs = [ root_build_dir ]
+  public_configs = [ ":no_libstdcpp" ]
 }

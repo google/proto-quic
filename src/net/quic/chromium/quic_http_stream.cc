@@ -65,61 +65,12 @@ QuicHttpStream::QuicHttpStream(
       user_buffer_len_(0),
       session_error_(ERR_UNEXPECTED),
       found_promise_(false),
-      push_handle_(nullptr),
       in_loop_(false),
       weak_factory_(this) {}
 
 QuicHttpStream::~QuicHttpStream() {
   CHECK(!in_loop_);
   Close(false);
-}
-
-bool QuicHttpStream::CheckVary(const SpdyHeaderBlock& client_request,
-                               const SpdyHeaderBlock& promise_request,
-                               const SpdyHeaderBlock& promise_response) {
-  HttpResponseInfo promise_response_info;
-
-  HttpRequestInfo promise_request_info;
-  ConvertHeaderBlockToHttpRequestHeaders(promise_request,
-                                         &promise_request_info.extra_headers);
-  HttpRequestInfo client_request_info;
-  ConvertHeaderBlockToHttpRequestHeaders(client_request,
-                                         &client_request_info.extra_headers);
-
-  if (!SpdyHeadersToHttpResponse(promise_response, &promise_response_info)) {
-    DLOG(WARNING) << "Invalid headers";
-    return false;
-  }
-
-  HttpVaryData vary_data;
-  if (!vary_data.Init(promise_request_info,
-                      *promise_response_info.headers.get())) {
-    // Promise didn't contain valid vary info, so URL match was sufficient.
-    return true;
-  }
-  // Now compare the client request for matching.
-  return vary_data.MatchesRequest(client_request_info,
-                                  *promise_response_info.headers.get());
-}
-
-void QuicHttpStream::OnRendezvousResult(QuicSpdyStream* stream) {
-  push_handle_ = nullptr;
-  if (stream) {
-    stream_ = static_cast<QuicChromiumClientStream*>(stream)->CreateHandle();
-  }
-
-  // callback_ should only be non-null in the case of asynchronous
-  // rendezvous; i.e. |Try()| returned QUIC_PENDING.
-  if (callback_.is_null())
-    return;
-
-  DCHECK_EQ(STATE_HANDLE_PROMISE_COMPLETE, next_state_);
-  if (!stream) {
-    // rendezvous has failed so proceed as with a non-push request.
-    next_state_ = STATE_REQUEST_STREAM;
-  }
-
-  OnIOComplete(OK);
 }
 
 HttpResponseInfo::ConnectionInfo QuicHttpStream::ConnectionInfoFromQuicVersion(
@@ -194,27 +145,22 @@ int QuicHttpStream::InitializeStream(const HttpRequestInfo* request_info,
 }
 
 int QuicHttpStream::DoHandlePromise() {
-  QuicAsyncStatus push_status = quic_session()->GetPushPromiseIndex()->Try(
-      request_headers_, this, &this->push_handle_);
-
-  switch (push_status) {
-    case QUIC_FAILURE:
-      // Push rendezvous failed.
-      next_state_ = STATE_REQUEST_STREAM;
-      break;
-    case QUIC_SUCCESS:
-      next_state_ = STATE_HANDLE_PROMISE_COMPLETE;
-      break;
-    case QUIC_PENDING:
-      next_state_ = STATE_HANDLE_PROMISE_COMPLETE;
-      return ERR_IO_PENDING;
-  }
-  return OK;
+  next_state_ = STATE_HANDLE_PROMISE_COMPLETE;
+  return quic_session()->RendezvousWithPromised(
+      request_headers_,
+      base::Bind(&QuicHttpStream::OnIOComplete, weak_factory_.GetWeakPtr()));
 }
 
 int QuicHttpStream::DoHandlePromiseComplete(int rv) {
-  if (rv != OK)
-    return rv;
+  DCHECK_NE(ERR_IO_PENDING, rv);
+  DCHECK_GE(OK, rv);
+  if (rv != OK) {
+    // rendezvous has failed so proceed as with a non-push request.
+    next_state_ = STATE_REQUEST_STREAM;
+    return OK;
+  }
+
+  stream_ = quic_session()->ReleasePromisedStream();
 
   next_state_ = STATE_OPEN;
   stream_net_log_.AddEvent(
@@ -511,7 +457,6 @@ int QuicHttpStream::DoLoop(int rv) {
         rv = DoHandlePromise();
         break;
       case STATE_HANDLE_PROMISE_COMPLETE:
-        CHECK_EQ(OK, rv);
         rv = DoHandlePromiseComplete(rv);
         break;
       case STATE_REQUEST_STREAM:
@@ -741,11 +686,6 @@ int QuicHttpStream::HandleReadComplete(int rv) {
 }
 
 void QuicHttpStream::ResetStream() {
-  if (push_handle_) {
-    push_handle_->Cancel();
-    push_handle_ = nullptr;
-  }
-
   // If |request_body_stream_| is non-NULL, Reset it, to abort any in progress
   // read.
   if (request_body_stream_)

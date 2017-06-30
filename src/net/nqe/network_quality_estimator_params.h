@@ -79,10 +79,10 @@ class NET_EXPORT NetworkQualityEstimatorParams {
   }
 
   // Returns the factor by which the weight of an observation reduces for every
-  // dBm difference between the current signal strength (in dBm), and the signal
-  // strength at the time when the observation was taken.
-  double weight_multiplier_per_dbm() const {
-    return weight_multiplier_per_dbm_;
+  // signal strength level difference between the current signal strength, and
+  // the signal strength at the time when the observation was taken.
+  double weight_multiplier_per_signal_strength_level() const {
+    return weight_multiplier_per_signal_strength_level_;
   }
 
   // Returns the fraction of URL requests that should record the correlation
@@ -124,7 +124,7 @@ class NET_EXPORT NetworkQualityEstimatorParams {
 
   const size_t throughput_min_requests_in_flight_;
   const double weight_multiplier_per_second_;
-  const double weight_multiplier_per_dbm_;
+  const double weight_multiplier_per_signal_strength_level_;
   const double correlation_uma_logging_probability_;
   const base::Optional<EffectiveConnectionType>
       forced_effective_connection_type_;

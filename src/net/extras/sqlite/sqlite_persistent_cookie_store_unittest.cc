@@ -14,6 +14,7 @@
 #include "base/files/file_util.h"
 #include "base/files/scoped_temp_dir.h"
 #include "base/location.h"
+#include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted.h"
 #include "base/run_loop.h"
 #include "base/sequenced_task_runner.h"
@@ -480,7 +481,7 @@ TEST_F(SQLitePersistentCookieStoreTest, DISABLED_TestLoadOldSessionCookies) {
   cookies.clear();
 }
 
-// Test loading old session cookies from the disk.
+// Test refusing to load old session cookies from the disk.
 // TODO(mattcary): disabled for possibly causing iOS timeouts: crbug.com/727566.
 TEST_F(SQLitePersistentCookieStoreTest,
        DISABLED_TestDontLoadOldSessionCookies) {
@@ -509,6 +510,58 @@ TEST_F(SQLitePersistentCookieStoreTest,
   // cookie is gone.
   CreateAndLoad(false, true, &cookies);
   ASSERT_EQ(0U, cookies.size());
+}
+
+// Confirm bad cookies on disk don't get looaded
+TEST_F(SQLitePersistentCookieStoreTest, FilterBadCookies) {
+  // Create an on-disk store.
+  InitializeStore(false, true);
+  DestroyStore();
+
+  // Add some cookies in by hand.
+  base::FilePath store_name(temp_dir_.GetPath().Append(kCookieFilename));
+  std::unique_ptr<sql::Connection> db(base::MakeUnique<sql::Connection>());
+  ASSERT_TRUE(db->Open(store_name));
+  sql::Statement stmt(db->GetUniqueStatement(
+      "INSERT INTO cookies (creation_utc, host_key, name, value, "
+      "encrypted_value, path, expires_utc, secure, httponly, "
+      "firstpartyonly, last_access_utc, has_expires, persistent, priority) "
+      "VALUES (?,'google.izzle',?,?,'',?,0,0,0,0,0,1,1,0)"));
+  ASSERT_TRUE(stmt.is_valid());
+
+  struct CookieInfo {
+    const char* name;
+    const char* value;
+    const char* path;
+  } cookies_info[] = {// A couple non-canonical cookies.
+                      {"A=", "B", "/path"},
+                      {"C ", "D", "/path"},
+
+                      // A canonical cookie.
+                      {"E", "F", "/path"}};
+
+  int64_t creation_time = 1;
+  for (auto& cookie_info : cookies_info) {
+    stmt.Reset(true);
+
+    stmt.BindInt64(0, creation_time++);
+    stmt.BindString(1, cookie_info.name);
+    stmt.BindString(2, cookie_info.value);
+    stmt.BindString(3, cookie_info.path);
+    ASSERT_TRUE(stmt.Run());
+  }
+  stmt.Clear();
+  db.reset();
+
+  // Reopen the store and confirm that the only cookie loaded is the
+  // canonical one.
+  CanonicalCookieVector cookies;
+  CreateAndLoad(false, false, &cookies);
+  ASSERT_EQ(1U, cookies.size());
+  EXPECT_STREQ("E", cookies[0]->Name().c_str());
+  EXPECT_STREQ("F", cookies[0]->Value().c_str());
+  EXPECT_STREQ("/path", cookies[0]->Path().c_str());
+  DestroyStore();
 }
 
 // TODO(mattcary): disabled for possibly causing iOS timeouts: crbug.com/727566.

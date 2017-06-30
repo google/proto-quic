@@ -127,7 +127,6 @@ if (current_toolchain != default_toolchain) {
   use_afl = false
   use_cfi_diag = false
   use_cfi_recover = false
-  use_custom_libcxx = false
   use_drfuzz = false
   use_libfuzzer = false
   use_prebuilt_instrumented_libraries = false
@@ -139,14 +138,6 @@ if (current_toolchain != default_toolchain) {
 # declare_args block. User overrides are only applied at the end of a
 # declare_args block.
 declare_args() {
-  # Use libc++ (buildtools/third_party/libc++ and
-  # buildtools/third_party/libc++abi) instead of stdlibc++ as standard library.
-  # This is intended to be used for instrumented builds.
-  use_custom_libcxx =
-      (is_asan && is_linux && !is_chromeos &&
-       (!is_chromecast || is_cast_desktop_build)) || is_tsan || is_msan ||
-      is_ubsan || is_ubsan_security || (use_libfuzzer && !is_mac) || use_afl
-
   # Enable -fsanitize-coverage.
   use_sanitizer_coverage =
       use_libfuzzer || use_afl || sanitizer_coverage_flags != ""
@@ -163,9 +154,12 @@ if ((use_afl || use_libfuzzer) && sanitizer_coverage_flags == "") {
   sanitizer_coverage_flags = "trace-pc-guard,indirect-calls"
 }
 
+# Whether we are linking against a sanitizer runtime library. Among other
+# things, this changes the default symbol level and other settings in order to
+# prepare to create stack traces "live" using the sanitizer runtime.
 using_sanitizer =
     is_asan || is_lsan || is_tsan || is_msan || is_ubsan || is_ubsan_null ||
-    is_ubsan_vptr || is_ubsan_security || use_sanitizer_coverage
+    is_ubsan_vptr || is_ubsan_security || use_sanitizer_coverage || use_cfi_diag
 
 assert(!using_sanitizer || is_clang,
        "Sanitizers (is_*san) require setting is_clang = true in 'gn args'")

@@ -226,6 +226,7 @@ std::unique_ptr<CanonicalCookie> CanonicalCookie::Create(
   if (options.has_server_time())
     server_time = options.server_time();
 
+  DCHECK(!creation_time.is_null());
   Time cookie_expires = CanonicalCookie::CanonExpiration(parsed_cookie,
                                                          creation_time,
                                                          server_time);
@@ -403,14 +404,12 @@ bool CanonicalCookie::FullCompare(const CanonicalCookie& other) const {
 }
 
 bool CanonicalCookie::IsCanonical() const {
-  // Not checking domain against ParsedCookie as it may have come purely
-  // from the URL.
+  // Not checking domain or path against ParsedCookie as it may have
+  // come purely from the URL.
   if (ParsedCookie::ParseTokenString(name_) != name_ ||
       ParsedCookie::ParseValueString(value_) != value_ ||
-      ParsedCookie::ParseValueString(path_) != path_ ||
       !ParsedCookie::IsValidCookieAttributeValue(name_) ||
-      !ParsedCookie::IsValidCookieAttributeValue(value_) ||
-      !ParsedCookie::IsValidCookieAttributeValue(path_)) {
+      !ParsedCookie::IsValidCookieAttributeValue(value_)) {
     return false;
   }
 
@@ -445,6 +444,11 @@ bool CanonicalCookie::IsCanonical() const {
   }
 
   return true;
+}
+
+void CanonicalCookie::SetCreationDate(base::Time new_creation_date) {
+  DCHECK(CreationDate().is_null());
+  creation_date_ = new_creation_date;
 }
 
 // static

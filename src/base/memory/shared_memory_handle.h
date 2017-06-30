@@ -125,6 +125,19 @@ class BASE_EXPORT SharedMemoryHandle {
   // On success, |memory| is an output variable that contains the start of the
   // mapped memory.
   bool MapAt(off_t offset, size_t bytes, void** memory, bool read_only);
+#elif defined(OS_FUCHSIA)
+  // Takes implicit ownership of |h|.
+  // |guid| uniquely identifies the shared memory region pointed to by the
+  // underlying OS resource. If the mx_handle_t is associated with another
+  // SharedMemoryHandle, the caller must pass the |guid| of that
+  // SharedMemoryHandle. Otherwise, the caller should generate a new
+  // UnguessableToken.
+  // Passing the wrong |size| has no immediate consequence, but may cause errors
+  // when trying to map the SharedMemoryHandle at a later point in time.
+  SharedMemoryHandle(mx_handle_t h,
+                     size_t size,
+                     const base::UnguessableToken& guid);
+  mx_handle_t GetHandle() const;
 #elif defined(OS_WIN)
   // Takes implicit ownership of |h|.
   // |guid| uniquely identifies the shared memory region pointed to by the
@@ -183,6 +196,9 @@ class BASE_EXPORT SharedMemoryHandle {
       bool ownership_passes_to_ipc_ = false;
     };
   };
+#elif defined(OS_FUCHSIA)
+  mx_handle_t handle_ = MX_HANDLE_INVALID;
+  bool ownership_passes_to_ipc_ = false;
 #elif defined(OS_WIN)
   HANDLE handle_ = nullptr;
 

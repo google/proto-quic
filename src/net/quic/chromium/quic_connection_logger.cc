@@ -306,20 +306,20 @@ QuicConnectionLogger::QuicConnectionLogger(
       socket_performance_watcher_(std::move(socket_performance_watcher)) {}
 
 QuicConnectionLogger::~QuicConnectionLogger() {
-  UMA_HISTOGRAM_COUNTS("Net.QuicSession.OutOfOrderPacketsReceived",
-                       num_out_of_order_received_packets_);
-  UMA_HISTOGRAM_COUNTS("Net.QuicSession.OutOfOrderLargePacketsReceived",
-                       num_out_of_order_large_received_packets_);
-  UMA_HISTOGRAM_COUNTS("Net.QuicSession.IncorrectConnectionIDsReceived",
-                       num_incorrect_connection_ids_);
-  UMA_HISTOGRAM_COUNTS("Net.QuicSession.UndecryptablePacketsReceived",
-                       num_undecryptable_packets_);
-  UMA_HISTOGRAM_COUNTS("Net.QuicSession.DuplicatePacketsReceived",
-                       num_duplicate_packets_);
-  UMA_HISTOGRAM_COUNTS("Net.QuicSession.BlockedFrames.Received",
-                       num_blocked_frames_received_);
-  UMA_HISTOGRAM_COUNTS("Net.QuicSession.BlockedFrames.Sent",
-                       num_blocked_frames_sent_);
+  UMA_HISTOGRAM_COUNTS_1M("Net.QuicSession.OutOfOrderPacketsReceived",
+                          num_out_of_order_received_packets_);
+  UMA_HISTOGRAM_COUNTS_1M("Net.QuicSession.OutOfOrderLargePacketsReceived",
+                          num_out_of_order_large_received_packets_);
+  UMA_HISTOGRAM_COUNTS_1M("Net.QuicSession.IncorrectConnectionIDsReceived",
+                          num_incorrect_connection_ids_);
+  UMA_HISTOGRAM_COUNTS_1M("Net.QuicSession.UndecryptablePacketsReceived",
+                          num_undecryptable_packets_);
+  UMA_HISTOGRAM_COUNTS_1M("Net.QuicSession.DuplicatePacketsReceived",
+                          num_duplicate_packets_);
+  UMA_HISTOGRAM_COUNTS_1M("Net.QuicSession.BlockedFrames.Received",
+                          num_blocked_frames_received_);
+  UMA_HISTOGRAM_COUNTS_1M("Net.QuicSession.BlockedFrames.Sent",
+                          num_blocked_frames_sent_);
 
   const QuicConnectionStats& stats = session_->connection()->GetStats();
   UMA_HISTOGRAM_TIMES("Net.QuicSession.MinRTT",
@@ -491,8 +491,9 @@ void QuicConnectionLogger::OnPacketHeader(const QuicPacketHeader& header) {
       // There is a gap between the largest packet previously received and
       // the current packet.  This indicates either loss, or out-of-order
       // delivery.
-      UMA_HISTOGRAM_COUNTS("Net.QuicSession.PacketGapReceived",
-                           static_cast<base::HistogramBase::Sample>(delta - 1));
+      UMA_HISTOGRAM_COUNTS_1M(
+          "Net.QuicSession.PacketGapReceived",
+          static_cast<base::HistogramBase::Sample>(delta - 1));
     }
     largest_received_packet_number_ = header.packet_number;
   }
@@ -503,12 +504,12 @@ void QuicConnectionLogger::OnPacketHeader(const QuicPacketHeader& header) {
     ++num_out_of_order_received_packets_;
     if (previous_received_packet_size_ < last_received_packet_size_)
       ++num_out_of_order_large_received_packets_;
-    UMA_HISTOGRAM_COUNTS(
+    UMA_HISTOGRAM_COUNTS_1M(
         "Net.QuicSession.OutOfOrderGapReceived",
         static_cast<base::HistogramBase::Sample>(last_received_packet_number_ -
                                                  header.packet_number));
   } else if (no_packet_received_after_ping_) {
-    UMA_HISTOGRAM_COUNTS(
+    UMA_HISTOGRAM_COUNTS_1M(
         "Net.QuicSession.PacketGapReceivedNearPing",
         static_cast<base::HistogramBase::Sample>(header.packet_number -
                                                  last_received_packet_number_));

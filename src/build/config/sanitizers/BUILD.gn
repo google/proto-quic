@@ -259,6 +259,8 @@ config("common_sanitizer_flags") {
   # it's explicitly asked for by setting |sanitizer_keep_symbols| to true).
   if (using_sanitizer) {
     assert(is_clang, "sanitizers only supported with clang")
+    assert(!is_official_build, "sanitizers not supported in official builds")
+
     if (!sanitizer_keep_symbols) {
       cflags += [ "-gline-tables-only" ]
     }
@@ -269,29 +271,13 @@ config("common_sanitizer_flags") {
       # of reports to CLs, so turn it on there.
       "-gcolumn-info",
     ]
-  }
 
-  # Common options for AddressSanitizer, LeakSanitizer, ThreadSanitizer,
-  # MemorySanitizer and non-official CFI builds.
-  if (using_sanitizer || (is_cfi && !is_official_build)) {
+    # Disable frame pointer elimination for better stack traces.
     if (is_posix) {
       cflags += [ "-fno-omit-frame-pointer" ]
     } else {
       cflags += [ "/Oy-" ]
     }
-  }
-}
-
-# TODO(thomasanderson): Move this out of build/config/sanitizers.
-config("libcxx_flags") {
-  if (use_custom_libcxx) {
-    prefix = "//buildtools/third_party"
-    include = "trunk/include"
-    cflags_cc = [
-      "-nostdinc++",
-      "-isystem" + rebase_path("$prefix/libc++/$include", root_build_dir),
-      "-isystem" + rebase_path("$prefix/libc++abi/$include", root_build_dir),
-    ]
   }
 }
 
@@ -540,7 +526,6 @@ config("fuzzing_build_mode") {
 
 all_sanitizer_configs = [
   ":common_sanitizer_flags",
-  ":libcxx_flags",
   ":coverage_flags",
   ":default_sanitizer_ldflags",
   ":asan_flags",

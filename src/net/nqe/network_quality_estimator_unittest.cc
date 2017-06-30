@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <cmath>
 #include <limits>
 #include <map>
 #include <memory>
@@ -3071,6 +3072,42 @@ TEST(NetworkQualityEstimatorTest, OnPrefsReadWithReadingDisabled) {
   estimator.RemoveRTTAndThroughputEstimatesObserver(&rtt_throughput_observer);
   estimator.RemoveEffectiveConnectionTypeObserver(
       &effective_connection_type_observer);
+}
+
+// Tests that |ComputeBandwidthDelayProduct| calculates the
+// BDP correctly and records histogram data.
+TEST(NetworkQualityEstimatorTest, TestBDPComputation) {
+  TestNetworkQualityEstimator estimator;
+  base::HistogramTester histogram_tester;
+  base::TimeTicks now = base::TimeTicks::Now();
+  for (int i = 1; i <= std::pow(2, 10); i *= 2) {
+    estimator.rtt_observations_.AddObservation(
+        NetworkQualityEstimator::RttObservation(
+            base::TimeDelta::FromMilliseconds(i), now, INT32_MIN,
+            NETWORK_QUALITY_OBSERVATION_SOURCE_TCP));
+  }
+  for (int i = 1; i <= std::pow(3, 10); i *= 3) {
+    estimator.downstream_throughput_kbps_observations_.AddObservation(
+        NetworkQualityEstimator::ThroughputObservation(
+            i, now, INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+  }
+  estimator.RunOneRequest();
+
+  // Histograms must contain at least one entry each.
+  EXPECT_GE(
+      1u, histogram_tester
+              .GetAllSamples("NQE.BDPComputationTransportRTT.OnECTComputation")
+              .size());
+  EXPECT_GE(1u, histogram_tester
+                    .GetAllSamples("NQE.BDPComputationKbps.OnECTComputation")
+                    .size());
+  EXPECT_GE(
+      1u,
+      histogram_tester.GetAllSamples("NQE.BDPKbits.OnECTComputation").size());
+
+  EXPECT_TRUE(estimator.GetBandwidthDelayProductKbits().has_value());
+  EXPECT_EQ(estimator.GetBandwidthDelayProductKbits().value(),
+            (int32_t)(std::pow(2, 2) * std::pow(3, 8) / 1000));
 }
 
 }  // namespace net

@@ -67,6 +67,7 @@ class RasterizeAndRecordMicro(legacy_page_test.LegacyPageTest):
     pixels_recorded = data['pixels_recorded']
     record_time = data['record_time_ms']
     pixels_rasterized = data['pixels_rasterized']
+    pixels_rasterized_non_solid = data['pixels_rasterized_with_non_solid_color']
     rasterize_time = data['rasterize_time_ms']
     picture_memory_usage = data['picture_memory_usage']
 
@@ -74,6 +75,9 @@ class RasterizeAndRecordMicro(legacy_page_test.LegacyPageTest):
         results.current_page, 'pixels_recorded', 'pixels', pixels_recorded))
     results.AddValue(scalar.ScalarValue(
         results.current_page, 'pixels_rasterized', 'pixels', pixels_rasterized))
+    results.AddValue(scalar.ScalarValue(
+        results.current_page, 'pixels_rasterized_non_solid', 'pixels',
+        pixels_rasterized_non_solid))
     results.AddValue(scalar.ScalarValue(
         results.current_page, 'rasterize_time', 'ms', rasterize_time))
     results.AddValue(scalar.ScalarValue(

@@ -37,6 +37,59 @@ TEST(FunctionsTarget, CheckUnused) {
   ASSERT_TRUE(err.has_error());
 }
 
+// Checks that we find uses of identifiers marked as not needed.
+TEST(FunctionsTarget, CheckNotNeeded) {
+  Scheduler scheduler;
+  TestWithScope setup;
+
+  // The target generator needs a place to put the targets or it will fail.
+  Scope::ItemVector item_collector;
+  setup.scope()->set_item_collector(&item_collector);
+
+  TestParseInput nonscoped_input(
+      "source_set(\"foo\") {\n"
+      "  a = 1\n"
+      "  not_needed([ \"a\" ])\n"
+      "}\n");
+  ASSERT_FALSE(nonscoped_input.has_error());
+  Err err;
+  nonscoped_input.parsed()->Execute(setup.scope(), &err);
+  ASSERT_FALSE(err.has_error()) << err.message();
+
+  TestParseInput scoped_input(
+      "source_set(\"foo\") {\n"
+      "  a = {x = 1 y = 2}\n"
+      "  not_needed(a, \"*\")\n"
+      "}\n");
+  ASSERT_FALSE(scoped_input.has_error());
+  err = Err();
+  scoped_input.parsed()->Execute(setup.scope(), &err);
+  ASSERT_FALSE(err.has_error()) << err.message();
+
+  TestParseInput exclusion_input(
+      "source_set(\"foo\") {\n"
+      "  x = 1\n"
+      "  y = 2\n"
+      "  not_needed(\"*\", [ \"y\" ])\n"
+      "}\n");
+  ASSERT_FALSE(exclusion_input.has_error());
+  err = Err();
+  exclusion_input.parsed()->Execute(setup.scope(), &err);
+  ASSERT_TRUE(err.has_error()) << err.message();
+  EXPECT_EQ("Assignment had no effect.", err.message());
+
+  TestParseInput error_input(
+      "source_set(\"foo\") {\n"
+      "  a = {x = 1 y = 2}\n"
+      "  not_needed(a, [ \"x \"], [ \"y\" ])\n"
+      "}\n");
+  ASSERT_FALSE(error_input.has_error());
+  err = Err();
+  error_input.parsed()->Execute(setup.scope(), &err);
+  ASSERT_TRUE(err.has_error());
+  EXPECT_EQ("Not supported with a variable list.", err.message());
+}
+
 // Checks that the defaults applied to a template invoked by target() use
 // the name of the template, rather than the string "target" (which is the
 // name of the actual function being called).

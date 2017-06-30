@@ -157,6 +157,6 @@ std::wstring SysNativeMBToWide(const StringPiece& native_mb) {
   return out;
 }
 
-#endif  // OS_CHROMEOS
+#endif  // defined(SYSTEM_NATIVE_UTF8) || defined(OS_ANDROID)
 
 }  // namespace base

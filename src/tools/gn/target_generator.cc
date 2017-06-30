@@ -88,7 +88,8 @@ void TargetGenerator::GenerateTarget(Scope* scope,
   if (g_scheduler->verbose_logging())
     g_scheduler->Log("Defining target", label.GetUserVisibleName(true));
 
-  std::unique_ptr<Target> target(new Target(scope->settings(), label));
+  std::unique_ptr<Target> target(
+      new Target(scope->settings(), label, scope->input_files()));
   target->set_defined_from(function_call);
 
   // Create and call out to the proper generator.

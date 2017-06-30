@@ -47,8 +47,8 @@ class NET_EXPORT CanonicalCookie {
   // Supports the default copy constructor.
 
   // Creates a new |CanonicalCookie| from the |cookie_line| and the
-  // |creation_time|. Canonicalizes and validates inputs. May return NULL if
-  // an attribute value is invalid.
+  // |creation_time|.  Canonicalizes and validates inputs. May return NULL if
+  // an attribute value is invalid.  |creation_time| may not be null.
   static std::unique_ptr<CanonicalCookie> Create(
       const GURL& url,
       const std::string& cookie_line,
@@ -158,6 +158,11 @@ class NET_EXPORT CanonicalCookie {
   // access time is non-null, the creation time must also be non-null and
   // greater than the last access time.
   bool IsCanonical() const;
+
+  // Sets the creation date of the cookie to the specified value.  It
+  // is only valid to call this method if the existing creation date
+  // is null.
+  void SetCreationDate(base::Time new_creation_date);
 
  private:
   FRIEND_TEST_ALL_PREFIXES(CanonicalCookieTest, TestPrefixHistograms);

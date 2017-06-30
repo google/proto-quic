@@ -21,7 +21,6 @@
 
 #include "base/logging.h"
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
 #include "net/http2/decoder/frame_decoder_state.h"
@@ -39,13 +38,14 @@
 #include "net/http2/decoder/payload_decoders/unknown_payload_decoder.h"
 #include "net/http2/decoder/payload_decoders/window_update_payload_decoder.h"
 #include "net/http2/http2_structures.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 namespace test {
 class Http2FrameDecoderPeer;
 }  // namespace test
 
-class NET_EXPORT_PRIVATE Http2FrameDecoder {
+class HTTP2_EXPORT_PRIVATE Http2FrameDecoder {
  public:
   explicit Http2FrameDecoder(Http2FrameDecoderListener* listener);
   Http2FrameDecoder() : Http2FrameDecoder(nullptr) {}

@@ -568,43 +568,58 @@ TEST_F(CertDatabaseNSSTest, ImportCACertNotHierarchy) {
   EXPECT_EQ("Test Root CA", cert_list[0]->subject().common_name);
 }
 
-// http://crbug.com/108009 - Disabled, as google.chain.pem is an expired
-// certificate.
-TEST_F(CertDatabaseNSSTest, DISABLED_ImportServerCert) {
-  // Need to import intermediate cert for the verify of google cert, otherwise
-  // it will try to fetch it automatically with cert_pi_useAIACertFetch, which
-  // will cause OCSPCreateSession on the main thread, which is not allowed.
-  CertificateList certs = CreateCertificateListFromFile(
-      GetTestCertsDirectory(), "google.chain.pem",
-      X509Certificate::FORMAT_AUTO);
-  ASSERT_EQ(2U, certs.size());
+// Test importing a server cert + chain to the NSS DB with default trust. After
+// importing, all the certs should be found in the DB and should have default
+// trust flags.
+TEST_F(CertDatabaseNSSTest, ImportServerCert) {
+  scoped_refptr<X509Certificate> input_server_cert = ImportCertFromFile(
+      GetTestCertsDirectory(), "ok_cert_by_intermediate.pem");
+  scoped_refptr<X509Certificate> input_intermediate_cert =
+      ImportCertFromFile(GetTestCertsDirectory(), "intermediate_ca_cert.pem");
+  scoped_refptr<X509Certificate> input_root_cert =
+      ImportCertFromFile(GetTestCertsDirectory(), "root_ca_cert.pem");
+
+  // Import the server and its chain.
+  CertificateList certs_to_import = {input_server_cert, input_intermediate_cert,
+                                     input_root_cert};
+  ASSERT_EQ(3U, certs_to_import.size());
 
   NSSCertDatabase::ImportCertFailureList failed;
-  EXPECT_TRUE(cert_db_->ImportServerCert(certs, NSSCertDatabase::TRUST_DEFAULT,
-                                         &failed));
-
+  EXPECT_TRUE(cert_db_->ImportServerCert(
+      certs_to_import, NSSCertDatabase::TRUST_DEFAULT, &failed));
   EXPECT_EQ(0U, failed.size());
 
+  // All the certs in the imported list should now be found in the NSS DB.
   CertificateList cert_list = ListCerts();
-  ASSERT_EQ(2U, cert_list.size());
-  scoped_refptr<X509Certificate> goog_cert(cert_list[0]);
-  scoped_refptr<X509Certificate> thawte_cert(cert_list[1]);
-  EXPECT_EQ("www.google.com", goog_cert->subject().common_name);
-  EXPECT_EQ("Thawte SGC CA", thawte_cert->subject().common_name);
+  ASSERT_EQ(3U, cert_list.size());
+  scoped_refptr<X509Certificate> found_server_cert(cert_list[1]);
+  scoped_refptr<X509Certificate> found_intermediate_cert(cert_list[2]);
+  scoped_refptr<X509Certificate> found_root_cert(cert_list[0]);
+  EXPECT_EQ("127.0.0.1", found_server_cert->subject().common_name);
+  EXPECT_EQ("Test Intermediate CA",
+            found_intermediate_cert->subject().common_name);
+  EXPECT_EQ("Test Root CA", found_root_cert->subject().common_name);
 
   EXPECT_EQ(NSSCertDatabase::TRUST_DEFAULT,
-            cert_db_->GetCertTrust(goog_cert.get(), SERVER_CERT));
+            cert_db_->GetCertTrust(found_server_cert.get(), SERVER_CERT));
+  EXPECT_EQ(0U, found_server_cert->os_cert_handle()->trust->sslFlags);
+  EXPECT_EQ(NSSCertDatabase::TRUST_DEFAULT,
+            cert_db_->GetCertTrust(found_intermediate_cert.get(), CA_CERT));
+  EXPECT_EQ(0U, found_intermediate_cert->os_cert_handle()->trust->sslFlags);
+  EXPECT_EQ(NSSCertDatabase::TRUST_DEFAULT,
+            cert_db_->GetCertTrust(found_root_cert.get(), CA_CERT));
+  EXPECT_EQ(0U, found_root_cert->os_cert_handle()->trust->sslFlags);
 
-  EXPECT_EQ(0U, goog_cert->os_cert_handle()->trust->sslFlags);
-
+  // Verification fails, as the intermediate & CA certs are imported without
+  // trust.
   scoped_refptr<CertVerifyProc> verify_proc(new CertVerifyProcNSS());
   int flags = 0;
   CertVerifyResult verify_result;
   int error =
-      verify_proc->Verify(goog_cert.get(), "www.google.com", std::string(),
+      verify_proc->Verify(found_server_cert.get(), "127.0.0.1", std::string(),
                           flags, NULL, empty_cert_list_, &verify_result);
-  EXPECT_THAT(error, IsOk());
-  EXPECT_EQ(0U, verify_result.cert_status);
+  EXPECT_THAT(error, IsError(ERR_CERT_AUTHORITY_INVALID));
+  EXPECT_EQ(CERT_STATUS_AUTHORITY_INVALID, verify_result.cert_status);
 }
 
 TEST_F(CertDatabaseNSSTest, ImportServerCert_SelfSigned) {

@@ -103,8 +103,8 @@ class ObserverListThreadSafe
       if (current_notification) {
         task_runner->PostTask(
             current_notification->from_here,
-            Bind(&ObserverListThreadSafe<ObserverType>::NotifyWrapper, this,
-                 observer, *current_notification));
+            BindOnce(&ObserverListThreadSafe<ObserverType>::NotifyWrapper, this,
+                     observer, *current_notification));
       }
     }
   }

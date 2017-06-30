@@ -44,3 +44,8 @@ class IntlArFaHePageSet(story.StorySet):
     for url in urls_list:
       for temp in cache_temperatures:
         self.AddStory(IntlArFaHePage(url, self, cache_temperature=temp))
+
+
+class IntlArFaHeStoryExpectations(story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    pass

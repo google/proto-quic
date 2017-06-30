@@ -26,10 +26,6 @@ int CompareSHA1Hashes(const void* a, const void* b) {
 }  // namespace
 
 
-HashValue::HashValue(const SHA1HashValue& hash) : HashValue(HASH_VALUE_SHA1) {
-  fingerprint.sha1 = hash;
-}
-
 HashValue::HashValue(const SHA256HashValue& hash)
     : HashValue(HASH_VALUE_SHA256) {
   fingerprint.sha256 = hash;
@@ -37,10 +33,7 @@ HashValue::HashValue(const SHA256HashValue& hash)
 
 bool HashValue::FromString(const base::StringPiece value) {
   base::StringPiece base64_str;
-  if (value.starts_with("sha1/")) {
-    tag = HASH_VALUE_SHA1;
-    base64_str = value.substr(5);
-  } else if (value.starts_with("sha256/")) {
+  if (value.starts_with("sha256/")) {
     tag = HASH_VALUE_SHA256;
     base64_str = value.substr(7);
   } else {
@@ -60,8 +53,6 @@ std::string HashValue::ToString() const {
   base::Base64Encode(base::StringPiece(reinterpret_cast<const char*>(data()),
                                        size()), &base64_str);
   switch (tag) {
-  case HASH_VALUE_SHA1:
-    return std::string("sha1/") + base64_str;
   case HASH_VALUE_SHA256:
     return std::string("sha256/") + base64_str;
   default:
@@ -72,8 +63,6 @@ std::string HashValue::ToString() const {
 
 size_t HashValue::size() const {
   switch (tag) {
-    case HASH_VALUE_SHA1:
-      return sizeof(fingerprint.sha1.data);
     case HASH_VALUE_SHA256:
       return sizeof(fingerprint.sha256.data);
     default:
@@ -91,8 +80,6 @@ unsigned char* HashValue::data() {
 
 const unsigned char* HashValue::data() const {
   switch (tag) {
-    case HASH_VALUE_SHA1:
-      return fingerprint.sha1.data;
     case HASH_VALUE_SHA256:
       return fingerprint.sha256.data;
     default:

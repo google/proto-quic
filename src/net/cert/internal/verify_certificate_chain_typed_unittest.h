@@ -125,14 +125,20 @@ TYPED_TEST_P(VerifyCertificateChainSingleRootTest, KeyUsage) {
 }
 
 TYPED_TEST_P(VerifyCertificateChainSingleRootTest, ExtendedKeyUsage) {
-  this->RunTest("target-lacks-eku/main.test");
-  this->RunTest("target-restricts-eku-fail/main.test");
-  this->RunTest("intermediate-restricts-eku-fail/main.test");
-  this->RunTest("intermediate-restricts-eku-ok/main.test");
-  this->RunTest("intermediate-sets-eku-any/main.test");
-  this->RunTest("target-sets-eku-any/main.test");
-  this->RunTest("root-bad-eku/main.test");
-  this->RunTest("root-bad-eku/ta-with-constraints.test");
+  this->RunTest("intermediate-eku-clientauth/any.test");
+  this->RunTest("intermediate-eku-clientauth/serverauth.test");
+  this->RunTest("intermediate-eku-clientauth/clientauth.test");
+  this->RunTest("intermediate-eku-any-and-clientauth/any.test");
+  this->RunTest("intermediate-eku-any-and-clientauth/serverauth.test");
+  this->RunTest("intermediate-eku-any-and-clientauth/clientauth.test");
+  this->RunTest("target-eku-clientauth/any.test");
+  this->RunTest("target-eku-clientauth/serverauth.test");
+  this->RunTest("target-eku-clientauth/clientauth.test");
+  this->RunTest("target-eku-none/any.test");
+  this->RunTest("target-eku-none/serverauth.test");
+  this->RunTest("target-eku-none/clientauth.test");
+  this->RunTest("root-eku-clientauth/serverauth.test");
+  this->RunTest("root-eku-clientauth/serverauth-ta-with-constraints.test");
 }
 
 TYPED_TEST_P(VerifyCertificateChainSingleRootTest,

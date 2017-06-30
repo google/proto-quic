@@ -84,13 +84,10 @@ class GrdContentHandler(xml.sax.handler.ContentHandler):
       partnode = self.stack[-1]
       partnode.started_inclusion = True
       # Add the contents of the sub-grd file as children of the <part> node.
-      partname = partnode.GetInputPath()
-      if os.path.dirname(partname):
-        # TODO(benrg): Remove this limitation. (The problem is that GRIT
-        # assumes that files referenced from the GRD file are relative to
-        # a path stored in the root <grit> node.)
-        raise exception.GotPathExpectedFilenameOnly()
-      partname = os.path.join(self.dir, partname)
+      partname = os.path.join(self.dir, partnode.GetInputPath())
+      # Check the GRDP file exists.
+      if not os.path.exists(partname):
+        raise exception.FileNotFound()
       # Exceptions propagate to the handler in grd_reader.Parse().
       xml.sax.parse(partname, GrdPartContentHandler(self))
 

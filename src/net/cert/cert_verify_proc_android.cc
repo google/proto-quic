@@ -309,11 +309,6 @@ bool VerifyFromAndroidTrustManager(
       continue;
     }
 
-    HashValue sha1(HASH_VALUE_SHA1);
-    base::SHA1HashBytes(reinterpret_cast<const uint8_t*>(spki_bytes.data()),
-                        spki_bytes.size(), sha1.data());
-    verify_result->public_key_hashes.push_back(sha1);
-
     HashValue sha256(HASH_VALUE_SHA256);
     crypto::SHA256HashString(spki_bytes, sha256.data(), crypto::kSHA256Length);
     verify_result->public_key_hashes.push_back(sha256);

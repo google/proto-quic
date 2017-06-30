@@ -108,11 +108,9 @@ bool ParseSampleFrame(BattOrMessageType type,
 BattOrAgent::BattOrAgent(
     const std::string& path,
     Listener* listener,
-    scoped_refptr<base::SingleThreadTaskRunner> file_thread_task_runner,
     scoped_refptr<base::SingleThreadTaskRunner> ui_thread_task_runner)
     : connection_(new BattOrConnectionImpl(path,
                                            this,
-                                           file_thread_task_runner,
                                            ui_thread_task_runner)),
       listener_(listener),
       last_action_(Action::INVALID),

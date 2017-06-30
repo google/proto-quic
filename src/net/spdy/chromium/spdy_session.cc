@@ -729,6 +729,7 @@ bool SpdySession::CanPool(TransportSecurityState* transport_security_state,
 SpdySession::SpdySession(const SpdySessionKey& spdy_session_key,
                          HttpServerProperties* http_server_properties,
                          TransportSecurityState* transport_security_state,
+                         const QuicVersionVector& quic_supported_versions,
                          bool enable_sending_initial_data,
                          bool enable_ping_based_connection_checking,
                          size_t session_max_recv_window_size,
@@ -780,6 +781,7 @@ SpdySession::SpdySession(const SpdySessionKey& spdy_session_key,
           initial_settings.at(SETTINGS_INITIAL_WINDOW_SIZE)),
       net_log_(
           NetLogWithSource::Make(net_log, NetLogSourceType::HTTP2_SESSION)),
+      quic_supported_versions_(quic_supported_versions),
       enable_sending_initial_data_(enable_sending_initial_data),
       enable_ping_based_connection_checking_(
           enable_ping_based_connection_checking),
@@ -3012,17 +3014,50 @@ void SpdySession::OnAltSvc(
   AlternativeServiceInfoVector alternative_service_info_vector;
   alternative_service_info_vector.reserve(altsvc_vector.size());
   const base::Time now(base::Time::Now());
+  DCHECK(!quic_supported_versions_.empty());
   for (const SpdyAltSvcWireFormat::AlternativeService& altsvc : altsvc_vector) {
     const NextProto protocol = NextProtoFromString(altsvc.protocol_id);
     if (protocol == kProtoUnknown)
       continue;
+
+    // TODO(zhongyi): refactor the QUIC version filtering to a single function
+    // so that SpdySession::OnAltSvc and
+    // HttpStreamFactory::ProcessAlternativeServices
+    // could use the the same function.
+    // Check if QUIC version is supported. Filter supported QUIC versions.
+    QuicVersionVector advertised_versions;
+    if (protocol == kProtoQUIC && !altsvc.version.empty()) {
+      bool match_found = false;
+      for (const QuicVersion& supported : quic_supported_versions_) {
+        for (const uint16_t& advertised : altsvc.version) {
+          if (supported == advertised) {
+            match_found = true;
+            advertised_versions.push_back(supported);
+          }
+        }
+      }
+      if (!match_found) {
+        continue;
+      }
+    }
+
     const AlternativeService alternative_service(protocol, altsvc.host,
                                                  altsvc.port);
     const base::Time expiration =
         now + base::TimeDelta::FromSeconds(altsvc.max_age);
-    alternative_service_info_vector.push_back(
-        AlternativeServiceInfo(alternative_service, expiration));
+    AlternativeServiceInfo alternative_service_info;
+    if (protocol == kProtoQUIC) {
+      alternative_service_info =
+          AlternativeServiceInfo::CreateQuicAlternativeServiceInfo(
+              alternative_service, expiration, advertised_versions);
+    } else {
+      alternative_service_info =
+          AlternativeServiceInfo::CreateHttp2AlternativeServiceInfo(
+              alternative_service, expiration);
+    }
+    alternative_service_info_vector.push_back(alternative_service_info);
   }
+
   http_server_properties_->SetAlternativeServices(
       scheme_host_port, alternative_service_info_vector);
 }

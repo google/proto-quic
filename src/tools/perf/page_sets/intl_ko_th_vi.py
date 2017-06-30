@@ -57,3 +57,8 @@ class IntlKoThViPageSet(story.StorySet):
     for url in urls_list:
       for temp in cache_temperatures:
         self.AddStory(IntlKoThViPage(url, self, cache_temperature=temp))
+
+
+class IntlKoThViStoryExpectations(story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    pass

@@ -382,10 +382,6 @@ void AppendPublicKeyHashes(CFArrayRef chain,
     if (!asn1::ExtractSPKIFromDERCert(der_bytes, &spki_bytes))
       continue;
 
-    HashValue sha1(HASH_VALUE_SHA1);
-    CC_SHA1(spki_bytes.data(), spki_bytes.size(), sha1.data());
-    hashes->push_back(sha1);
-
     HashValue sha256(HASH_VALUE_SHA256);
     CC_SHA256(spki_bytes.data(), spki_bytes.size(), sha256.data());
     hashes->push_back(sha256);

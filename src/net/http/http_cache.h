@@ -193,7 +193,14 @@ class NET_EXPORT HttpCache : public HttpTransactionFactory {
 
   // Causes all transactions created after this point to simulate lock timeout
   // and effectively bypass the cache lock whenever there is lock contention.
-  void SimulateCacheLockTimeout() { bypass_lock_for_test_ = true; }
+  void SimulateCacheLockTimeoutForTesting() { bypass_lock_for_test_ = true; }
+
+  // Causes all transactions created after this point to simulate lock timeout
+  // and effectively bypass the cache lock whenever there is lock contention
+  // after the transaction has completed its headers phase.
+  void SimulateCacheLockTimeoutAfterHeadersForTesting() {
+    bypass_lock_after_headers_for_test_ = true;
+  }
 
   // Causes all transactions created after this point to generate a failure
   // when attempting to conditionalize a network request.
@@ -513,6 +520,7 @@ class NET_EXPORT HttpCache : public HttpTransactionFactory {
   std::unique_ptr<BackendFactory> backend_factory_;
   bool building_backend_;
   bool bypass_lock_for_test_;
+  bool bypass_lock_after_headers_for_test_;
   bool fail_conditionalization_for_test_;
 
   Mode mode_;

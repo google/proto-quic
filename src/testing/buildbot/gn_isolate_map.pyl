@@ -159,6 +159,15 @@
       "-v",
     ],
   },
+  "vrcore_fps_test": {
+    "label": "//chrome/test/vr/perf:vrcore_fps_test",
+    "type": "script",
+    "script": "//chrome/test/vr/perf/vrcore_fps/run_vrcore_fps_test.py",
+    "args": [
+      "--output-dir=${ISOLATED_OUTDIR}",
+      "-v",
+    ],
+  },
   "base_junit_tests": {
     "label": "//base:base_junit_tests",
     "type": "junit_test",
@@ -1125,6 +1134,10 @@
   },
   "wtf_unittests": {
     "label": "//third_party/WebKit/Source/platform/wtf:wtf_unittests",
+    "type": "console_test_launcher",
+  },
+  "zucchini_unittests": {
+    "label": "//chrome/installer/zucchini:zucchini_unittests",
     "type": "console_test_launcher",
   },
 }

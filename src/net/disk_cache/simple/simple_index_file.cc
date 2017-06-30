@@ -438,7 +438,7 @@ void SimpleIndexFile::SyncLoadIndexEntries(
   SyncRestoreFromDisk(cache_directory, index_file_path, out_result);
   SIMPLE_CACHE_UMA(MEDIUM_TIMES, "IndexRestoreTime", cache_type,
                    base::TimeTicks::Now() - start);
-  SIMPLE_CACHE_UMA(COUNTS, "IndexEntriesRestored", cache_type,
+  SIMPLE_CACHE_UMA(COUNTS_1M, "IndexEntriesRestored", cache_type,
                    out_result->entries.size());
   if (index_file_existed) {
     out_result->init_method = SimpleIndex::INITIALIZE_METHOD_RECOVERED;
@@ -457,7 +457,7 @@ void SimpleIndexFile::SyncLoadIndexEntries(
                                cache_type);
   } else {
     out_result->init_method = SimpleIndex::INITIALIZE_METHOD_NEWCACHE;
-    SIMPLE_CACHE_UMA(COUNTS,
+    SIMPLE_CACHE_UMA(COUNTS_1M,
                      "IndexCreatedEntryCount", cache_type,
                      out_result->entries.size());
   }

@@ -18,7 +18,7 @@
 #include <string>
 
 #include "base/strings/string_piece.h"
-#include "net/base/net_export.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 
@@ -37,7 +37,7 @@ typedef size_t HuffmanAccumulatorBitCount;
 
 // HuffmanBitBuffer stores the leading edge of bits to be decoded. The high
 // order bit of accumulator_ is the next bit to be decoded.
-class NET_EXPORT_PRIVATE HuffmanBitBuffer {
+class HTTP2_EXPORT_PRIVATE HuffmanBitBuffer {
  public:
   HuffmanBitBuffer();
 
@@ -84,7 +84,7 @@ inline std::ostream& operator<<(std::ostream& out, const HuffmanBitBuffer& v) {
   return out << v.DebugString();
 }
 
-class NET_EXPORT_PRIVATE HpackHuffmanDecoder {
+class HTTP2_EXPORT_PRIVATE HpackHuffmanDecoder {
  public:
   HpackHuffmanDecoder();
   ~HpackHuffmanDecoder();

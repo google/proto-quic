@@ -149,18 +149,19 @@ class NET_EXPORT CookieMonster : public CookieStore {
 
   ~CookieMonster() override;
 
-  // Replaces all the cookies by |list|. This method does not flush the backend.
-  // This method does not support setting secure cookies, which need source
-  // URLs.
-  // TODO(mmenke): This method is only used on iOS. Consider removing it.
-  void SetAllCookiesAsync(const CookieList& list,
-                          const SetCookiesCallback& callback);
+  // Writes all the cookies in |list| into the store, replacing existing
+  // cookies that collide.  Does not affect cookies not listed in |list|.
+  // This method does not flush the backend.
+  // TODO(rdsmith, mmenke): Do not use this function; it is deprecated
+  // and should be removed.
+  // See https://codereview.chromium.org/2882063002/#msg64.
+  void SetAllCookiesAsync(const CookieList& list, SetCookiesCallback callback);
 
   // CookieStore implementation.
   void SetCookieWithOptionsAsync(const GURL& url,
                                  const std::string& cookie_line,
                                  const CookieOptions& options,
-                                 const SetCookiesCallback& callback) override;
+                                 SetCookiesCallback callback) override;
   void SetCookieWithDetailsAsync(const GURL& url,
                                  const std::string& name,
                                  const std::string& value,
@@ -173,30 +174,33 @@ class NET_EXPORT CookieMonster : public CookieStore {
                                  bool http_only,
                                  CookieSameSite same_site,
                                  CookiePriority priority,
-                                 const SetCookiesCallback& callback) override;
+                                 SetCookiesCallback callback) override;
+  void SetCanonicalCookieAsync(std::unique_ptr<CanonicalCookie> cookie,
+                               bool secure_source,
+                               bool modify_http_only,
+                               SetCookiesCallback callback) override;
   void GetCookiesWithOptionsAsync(const GURL& url,
                                   const CookieOptions& options,
-                                  const GetCookiesCallback& callback) override;
-  void GetCookieListWithOptionsAsync(
-      const GURL& url,
-      const CookieOptions& options,
-      const GetCookieListCallback& callback) override;
-  void GetAllCookiesAsync(const GetCookieListCallback& callback) override;
+                                  GetCookiesCallback callback) override;
+  void GetCookieListWithOptionsAsync(const GURL& url,
+                                     const CookieOptions& options,
+                                     GetCookieListCallback callback) override;
+  void GetAllCookiesAsync(GetCookieListCallback callback) override;
   void DeleteCookieAsync(const GURL& url,
                          const std::string& cookie_name,
-                         const base::Closure& callback) override;
+                         base::OnceClosure callback) override;
   void DeleteCanonicalCookieAsync(const CanonicalCookie& cookie,
-                                  const DeleteCallback& callback) override;
+                                  DeleteCallback callback) override;
   void DeleteAllCreatedBetweenAsync(const base::Time& delete_begin,
                                     const base::Time& delete_end,
-                                    const DeleteCallback& callback) override;
+                                    DeleteCallback callback) override;
   void DeleteAllCreatedBetweenWithPredicateAsync(
       const base::Time& delete_begin,
       const base::Time& delete_end,
       const base::Callback<bool(const CanonicalCookie&)>& predicate,
-      const DeleteCallback& callback) override;
-  void DeleteSessionCookiesAsync(const DeleteCallback&) override;
-  void FlushStore(const base::Closure& callback) override;
+      DeleteCallback callback) override;
+  void DeleteSessionCookiesAsync(DeleteCallback) override;
+  void FlushStore(base::OnceClosure callback) override;
   void SetForceKeepSessionState() override;
 
   // Resets the list of cookieable schemes to the supplied schemes. Does
@@ -245,6 +249,7 @@ class NET_EXPORT CookieMonster : public CookieStore {
   class SetAllCookiesTask;
   class SetCookieWithDetailsTask;
   class SetCookieWithOptionsTask;
+  class SetCanonicalCookieTask;
   class DeleteSessionCookiesTask;
 
   // Testing support.
@@ -425,6 +430,15 @@ class NET_EXPORT CookieMonster : public CookieStore {
                             CookieSameSite same_site,
                             CookiePriority priority);
 
+  // Sets a canonical cookie, deletes equivalents and performs garbage
+  // collection.  |source_secure| indicates if the cookie is being set
+  // from a secure source (e.g. a cryptographic scheme).
+  // |modify_http_only| indicates if this setting operation is allowed
+  // to affect http_only cookies.
+  bool SetCanonicalCookie(std::unique_ptr<CanonicalCookie> cookie,
+                          bool secure_source,
+                          bool can_modify_httponly);
+
   CookieList GetAllCookies();
 
   CookieList GetCookieListWithOptions(const GURL& url,
@@ -515,7 +529,8 @@ class NET_EXPORT CookieMonster : public CookieStore {
                          std::vector<CanonicalCookie*>* cookies);
 
   // Delete any cookies that are equivalent to |ecc| (same path, domain, etc).
-  // |source_url| is the URL that is attempting to set the cookie.
+  // |source_secure| indicates if the source may override existing secure
+  // cookies.
   // If |skip_httponly| is true, httponly cookies will not be deleted.  The
   // return value will be true if |skip_httponly| skipped an httponly cookie or
   // the cookie to delete was Secure and the scheme of |ecc| is insecure.  |key|
@@ -524,7 +539,7 @@ class NET_EXPORT CookieMonster : public CookieStore {
   // NOTE: There should never be more than a single matching equivalent cookie.
   bool DeleteAnyEquivalentCookie(const std::string& key,
                                  const CanonicalCookie& ecc,
-                                 const GURL& source_url,
+                                 bool source_secure,
                                  bool skip_httponly,
                                  bool already_expired);
 
@@ -532,7 +547,6 @@ class NET_EXPORT CookieMonster : public CookieStore {
   // cookie in cookies_. Guarantee: all iterators to cookies_ remain valid.
   CookieMap::iterator InternalInsertCookie(const std::string& key,
                                            std::unique_ptr<CanonicalCookie> cc,
-                                           const GURL& source_url,
                                            bool sync_to_store);
 
   // Helper function that sets cookies with more control.
@@ -543,15 +557,10 @@ class NET_EXPORT CookieMonster : public CookieStore {
                                            const base::Time& creation_time,
                                            const CookieOptions& options);
 
-  // Helper function that sets a canonical cookie, deleting equivalents and
-  // performing garbage collection.
-  // |source_url| is the URL that's attempting to set the cookie.
-  bool SetCanonicalCookie(std::unique_ptr<CanonicalCookie> cc,
-                          const GURL& source_url,
-                          const CookieOptions& options);
-
-  // Helper function calling SetCanonicalCookie() for all cookies in |list|.
-  bool SetCanonicalCookies(const CookieList& list);
+  // Sets all cookies from |list| after deleting any equivalent cookie.
+  // For data gathering purposes, this routine is treated as if it is
+  // restoring saved cookies; some statistics are not gathered in this case.
+  bool SetAllCookies(const CookieList& list);
 
   void InternalUpdateCookieAccessTime(CanonicalCookie* cc,
                                       const base::Time& current_time);
@@ -656,7 +665,7 @@ class NET_EXPORT CookieMonster : public CookieStore {
 
   // Runs the given callback. Used to avoid running callbacks after the store
   // has been destroyed.
-  void RunCallback(const base::Closure& callback);
+  void RunCallback(base::OnceClosure callback);
 
   // Run all cookie changed callbacks that are monitoring |cookie|.
   // |removed| is true if the cookie was deleted.
@@ -814,7 +823,7 @@ class NET_EXPORT CookieMonster::PersistentCookieStore
 
   // Flushes the store and posts |callback| when complete. |callback| may be
   // NULL.
-  virtual void Flush(const base::Closure& callback) = 0;
+  virtual void Flush(base::OnceClosure callback) = 0;
 
  protected:
   PersistentCookieStore() {}

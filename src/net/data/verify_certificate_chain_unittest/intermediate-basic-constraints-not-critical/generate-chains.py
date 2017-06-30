@@ -3,20 +3,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Certificate chain with 1 intermediate and a trusted root. The intermediate
-has a basic constraints extension but does not mark it as critical.
-Verification is expected to succeed, since although not critical, the
-basicConstraints indicates CA=true as expected."""
+"""Certificate chain where the intermediate's Basic Constraints extension is
+not marked as critical."""
 
 import sys
 sys.path += ['..']
 
 import common
 
-# Self-signed root certificate (used as trust anchor).
+# Self-signed root certificate.
 root = common.create_self_signed_root_certificate('Root')
 
-# Intermediate with non-critical basic constarints.
+# Intermediate with non-critical basic constraints.
 intermediate = common.create_intermediate_certificate('Intermediate', root)
 intermediate.get_extensions().set_property('basicConstraints', 'CA:true')
 

@@ -245,10 +245,8 @@ int RunHelp(const std::vector<std::string>& args) {
   // Check functions.
   const functions::FunctionInfoMap& function_map = functions::GetFunctions();
   auto found_function = function_map.find(what);
-  if (found_function != function_map.end()) {
+  if (found_function != function_map.end())
     PrintLongHelp(found_function->second.help);
-    return 0;
-  }
   for (const auto& entry : function_map)
     all_help_topics.push_back(entry.first);
 
@@ -256,10 +254,8 @@ int RunHelp(const std::vector<std::string>& args) {
   const variables::VariableInfoMap& builtin_vars =
       variables::GetBuiltinVariables();
   auto found_builtin_var = builtin_vars.find(what);
-  if (found_builtin_var != builtin_vars.end()) {
+  if (found_builtin_var != builtin_vars.end())
     PrintLongHelp(found_builtin_var->second.help);
-    return 0;
-  }
   for (const auto& entry : builtin_vars)
     all_help_topics.push_back(entry.first);
 
@@ -267,12 +263,15 @@ int RunHelp(const std::vector<std::string>& args) {
   const variables::VariableInfoMap& target_vars =
       variables::GetTargetVariables();
   auto found_target_var = target_vars.find(what);
-  if (found_target_var != target_vars.end()) {
+  if (found_target_var != target_vars.end())
     PrintLongHelp(found_target_var->second.help);
-    return 0;
-  }
   for (const auto& entry : target_vars)
     all_help_topics.push_back(entry.first);
+
+  if (found_function != function_map.end() ||
+      found_builtin_var != builtin_vars.end() ||
+      found_target_var != target_vars.end())
+    return 0;
 
   // Random other topics.
   std::map<std::string, void(*)()> random_topics;

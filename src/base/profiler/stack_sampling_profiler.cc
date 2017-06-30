@@ -346,9 +346,9 @@ void StackSamplingProfiler::SamplingThread::TestAPI::ShutdownAssumingIdle(
                          WaitableEvent::InitialState::NOT_SIGNALED);
   // PostTaskAndReply won't work because thread and associated message-loop may
   // be shut down.
-  task_runner->PostTask(FROM_HERE,
-                        Bind(&ShutdownTaskAndSignalEvent, Unretained(sampler),
-                             add_events, Unretained(&executed)));
+  task_runner->PostTask(
+      FROM_HERE, BindOnce(&ShutdownTaskAndSignalEvent, Unretained(sampler),
+                          add_events, Unretained(&executed)));
   executed.Wait();
 }
 
@@ -382,8 +382,9 @@ int StackSamplingProfiler::SamplingThread::Add(
   scoped_refptr<SingleThreadTaskRunner> task_runner =
       GetOrCreateTaskRunnerForAdd();
 
-  task_runner->PostTask(FROM_HERE, Bind(&SamplingThread::AddCollectionTask,
-                                        Unretained(this), Passed(&collection)));
+  task_runner->PostTask(
+      FROM_HERE, BindOnce(&SamplingThread::AddCollectionTask, Unretained(this),
+                          Passed(&collection)));
 
   return id;
 }
@@ -400,8 +401,9 @@ void StackSamplingProfiler::SamplingThread::Remove(int id) {
   // This can fail if the thread were to exit between acquisition of the task
   // runner above and the call below. In that case, however, everything has
   // stopped so there's no need to try to stop it.
-  task_runner->PostTask(FROM_HERE, Bind(&SamplingThread::RemoveCollectionTask,
-                                        Unretained(this), id));
+  task_runner->PostTask(
+      FROM_HERE,
+      BindOnce(&SamplingThread::RemoveCollectionTask, Unretained(this), id));
 }
 
 scoped_refptr<SingleThreadTaskRunner>
@@ -551,7 +553,7 @@ void StackSamplingProfiler::SamplingThread::ScheduleShutdownIfIdle() {
 
   GetTaskRunnerOnSamplingThread()->PostDelayedTask(
       FROM_HERE,
-      Bind(&SamplingThread::ShutdownTask, Unretained(this), add_events),
+      BindOnce(&SamplingThread::ShutdownTask, Unretained(this), add_events),
       TimeDelta::FromSeconds(60));
 }
 
@@ -567,8 +569,8 @@ void StackSamplingProfiler::SamplingThread::AddCollectionTask(
 
   GetTaskRunnerOnSamplingThread()->PostDelayedTask(
       FROM_HERE,
-      Bind(&SamplingThread::PerformCollectionTask, Unretained(this),
-           collection_id),
+      BindOnce(&SamplingThread::PerformCollectionTask, Unretained(this),
+               collection_id),
       initial_delay);
 
   // Another increment of "add events" serves to invalidate any pending
@@ -613,7 +615,7 @@ void StackSamplingProfiler::SamplingThread::PerformCollectionTask(int id) {
   if (UpdateNextSampleTime(collection)) {
     bool success = GetTaskRunnerOnSamplingThread()->PostDelayedTask(
         FROM_HERE,
-        Bind(&SamplingThread::PerformCollectionTask, Unretained(this), id),
+        BindOnce(&SamplingThread::PerformCollectionTask, Unretained(this), id),
         std::max(collection->next_sample_time - Time::Now(), TimeDelta()));
     DCHECK(success);
   } else {

@@ -210,6 +210,38 @@ void HttpStreamFactoryImpl::JobController::SetPriority(
   }
 }
 
+void HttpStreamFactoryImpl::JobController::OnStreamReadyOnPooledConnection(
+    const SSLConfig& used_ssl_config,
+    const ProxyInfo& proxy_info,
+    std::unique_ptr<HttpStream> stream) {
+  DCHECK(request_->completed());
+  DCHECK(!factory_->for_websockets_);
+  DCHECK_EQ(HttpStreamRequest::HTTP_STREAM, request_->stream_type());
+
+  main_job_.reset();
+  alternative_job_.reset();
+
+  factory_->OnStreamReady(proxy_info, request_info_.privacy_mode);
+
+  delegate_->OnStreamReady(used_ssl_config, proxy_info, std::move(stream));
+}
+
+void HttpStreamFactoryImpl::JobController::
+    OnBidirectionalStreamImplReadyOnPooledConnection(
+        const SSLConfig& used_ssl_config,
+        const ProxyInfo& used_proxy_info,
+        std::unique_ptr<BidirectionalStreamImpl> stream) {
+  DCHECK(request_->completed());
+  DCHECK(!factory_->for_websockets_);
+  DCHECK_EQ(HttpStreamRequest::BIDIRECTIONAL_STREAM, request_->stream_type());
+
+  main_job_.reset();
+  alternative_job_.reset();
+
+  delegate_->OnBidirectionalStreamImplReady(used_ssl_config, used_proxy_info,
+                                            std::move(stream));
+}
+
 void HttpStreamFactoryImpl::JobController::OnStreamReady(
     Job* job,
     const SSLConfig& used_ssl_config) {
@@ -233,8 +265,9 @@ void HttpStreamFactoryImpl::JobController::OnStreamReady(
   DCHECK(!factory_->for_websockets_);
   DCHECK_EQ(HttpStreamRequest::HTTP_STREAM, request_->stream_type());
   OnJobSucceeded(job);
-  request_->OnStreamReady(used_ssl_config, job->proxy_info(),
-                          std::move(stream));
+  DCHECK(request_->completed());
+  delegate_->OnStreamReady(used_ssl_config, job->proxy_info(),
+                           std::move(stream));
 }
 
 void HttpStreamFactoryImpl::JobController::OnBidirectionalStreamImplReady(
@@ -261,8 +294,9 @@ void HttpStreamFactoryImpl::JobController::OnBidirectionalStreamImplReady(
   DCHECK_EQ(HttpStreamRequest::BIDIRECTIONAL_STREAM, request_->stream_type());
 
   OnJobSucceeded(job);
-  request_->OnBidirectionalStreamImplReady(used_ssl_config, used_proxy_info,
-                                           std::move(stream));
+  DCHECK(request_->completed());
+  delegate_->OnBidirectionalStreamImplReady(used_ssl_config, used_proxy_info,
+                                            std::move(stream));
 }
 
 void HttpStreamFactoryImpl::JobController::OnWebSocketHandshakeStreamReady(
@@ -281,8 +315,9 @@ void HttpStreamFactoryImpl::JobController::OnWebSocketHandshakeStreamReady(
   DCHECK(stream);
 
   OnJobSucceeded(job);
-  request_->OnWebSocketHandshakeStreamReady(used_ssl_config, used_proxy_info,
-                                            std::move(stream));
+  DCHECK(request_->completed());
+  delegate_->OnWebSocketHandshakeStreamReady(used_ssl_config, used_proxy_info,
+                                             std::move(stream));
 }
 
 void HttpStreamFactoryImpl::JobController::OnStreamFailed(
@@ -335,7 +370,7 @@ void HttpStreamFactoryImpl::JobController::OnStreamFailed(
     RunLoop(status);
     return;
   }
-  request_->OnStreamFailed(status, used_ssl_config);
+  delegate_->OnStreamFailed(status, used_ssl_config);
 }
 
 void HttpStreamFactoryImpl::JobController::OnCertificateError(
@@ -357,7 +392,7 @@ void HttpStreamFactoryImpl::JobController::OnCertificateError(
   if (!bound_job_)
     BindJob(job);
 
-  request_->OnCertificateError(status, used_ssl_config, ssl_info);
+  delegate_->OnCertificateError(status, used_ssl_config, ssl_info);
 }
 
 void HttpStreamFactoryImpl::JobController::OnHttpsProxyTunnelResponse(
@@ -378,8 +413,8 @@ void HttpStreamFactoryImpl::JobController::OnHttpsProxyTunnelResponse(
     BindJob(job);
   if (!request_)
     return;
-  request_->OnHttpsProxyTunnelResponse(response_info, used_ssl_config,
-                                       used_proxy_info, std::move(stream));
+  delegate_->OnHttpsProxyTunnelResponse(response_info, used_ssl_config,
+                                        used_proxy_info, std::move(stream));
 }
 
 void HttpStreamFactoryImpl::JobController::OnNeedsClientAuth(
@@ -398,7 +433,7 @@ void HttpStreamFactoryImpl::JobController::OnNeedsClientAuth(
   if (!bound_job_)
     BindJob(job);
 
-  request_->OnNeedsClientAuth(used_ssl_config, cert_info);
+  delegate_->OnNeedsClientAuth(used_ssl_config, cert_info);
 }
 
 void HttpStreamFactoryImpl::JobController::OnNeedsProxyAuth(
@@ -419,8 +454,8 @@ void HttpStreamFactoryImpl::JobController::OnNeedsProxyAuth(
     return;
   if (!bound_job_)
     BindJob(job);
-  request_->OnNeedsProxyAuth(proxy_response, used_ssl_config, used_proxy_info,
-                             auth_controller);
+  delegate_->OnNeedsProxyAuth(proxy_response, used_ssl_config, used_proxy_info,
+                              auth_controller);
 }
 
 bool HttpStreamFactoryImpl::JobController::OnInitConnection(
@@ -1005,7 +1040,7 @@ void HttpStreamFactoryImpl::JobController::MaybeNotifyFactoryOfCompletion() {
 void HttpStreamFactoryImpl::JobController::NotifyRequestFailed(int rv) {
   if (!request_)
     return;
-  request_->OnStreamFailed(rv, server_ssl_config_);
+  delegate_->OnStreamFailed(rv, server_ssl_config_);
 }
 
 GURL HttpStreamFactoryImpl::JobController::ApplyHostMappingRules(

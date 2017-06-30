@@ -241,7 +241,7 @@ bool Eviction::ShouldTrim() {
     return false;
   }
 
-  UMA_HISTOGRAM_COUNTS("DiskCache.TrimDelays", trim_delays_);
+  UMA_HISTOGRAM_COUNTS_1M("DiskCache.TrimDelays", trim_delays_);
   trim_delays_ = 0;
   return true;
 }

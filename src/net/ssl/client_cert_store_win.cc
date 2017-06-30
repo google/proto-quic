@@ -22,6 +22,7 @@
 #include "crypto/wincrypt_shim.h"
 #include "net/cert/x509_util.h"
 #include "net/cert/x509_util_win.h"
+#include "net/ssl/ssl_platform_key_util.h"
 #include "net/ssl/ssl_platform_key_win.h"
 #include "net/ssl/ssl_private_key.h"
 
@@ -105,10 +106,9 @@ static BOOL WINAPI ClientCertFindCallback(PCCERT_CONTEXT cert_context,
   return TRUE;
 }
 
-void GetClientCertsImpl(HCERTSTORE cert_store,
-                        const SSLCertRequestInfo& request,
-                        ClientCertIdentityList* selected_identities) {
-  selected_identities->clear();
+ClientCertIdentityList GetClientCertsImpl(HCERTSTORE cert_store,
+                                          const SSLCertRequestInfo& request) {
+  ClientCertIdentityList selected_identities;
 
   scoped_refptr<base::SingleThreadTaskRunner> current_thread =
       base::ThreadTaskRunnerHandle::Get();
@@ -198,7 +198,7 @@ void GetClientCertsImpl(HCERTSTORE cert_store,
         x509_util::CreateX509CertificateFromCertContexts(cert_context2,
                                                          intermediates);
     if (cert) {
-      selected_identities->push_back(base::MakeUnique<ClientCertIdentityWin>(
+      selected_identities.push_back(base::MakeUnique<ClientCertIdentityWin>(
           std::move(cert),
           cert_context2,     // Takes ownership of |cert_context2|.
           current_thread));  // The key must be acquired on the same thread, as
@@ -208,8 +208,9 @@ void GetClientCertsImpl(HCERTSTORE cert_store,
       CertFreeCertificateContext(intermediates[i]);
   }
 
-  std::sort(selected_identities->begin(), selected_identities->end(),
+  std::sort(selected_identities.begin(), selected_identities.end(),
             ClientCertIdentitySorter());
+  return selected_identities;
 }
 
 }  // namespace
@@ -226,16 +227,39 @@ ClientCertStoreWin::~ClientCertStoreWin() {}
 void ClientCertStoreWin::GetClientCerts(
     const SSLCertRequestInfo& request,
     const ClientCertListCallback& callback) {
-  ClientCertIdentityList selected_identities;
   if (cert_store_) {
     // Use the existing client cert store. Note: Under some situations,
     // it's possible for this to return certificates that aren't usable
     // (see below).
-    GetClientCertsImpl(cert_store_, request, &selected_identities);
-    callback.Run(std::move(selected_identities));
+    // When using caller provided HCERTSTORE, assume that it should be accessed
+    // on the current thread.
+    callback.Run(GetClientCertsImpl(cert_store_, request));
     return;
   }
 
+#if BUILDFLAG(USE_BYTE_CERTS)
+  if (base::PostTaskAndReplyWithResult(
+          GetSSLPlatformKeyTaskRunner().get(), FROM_HERE,
+          // Caller is responsible for keeping the |request| alive
+          // until the callback is run, so ConstRef is safe.
+          base::Bind(&ClientCertStoreWin::GetClientCertsWithMyCertStore,
+                     base::ConstRef(request)),
+          callback)) {
+    return;
+  }
+
+  // If the task could not be posted, behave as if there were no certificates.
+  callback.Run(ClientCertIdentityList());
+#else
+  // When using PCERT_CONTEXT based X509Certificate, must do this on the same
+  // thread.
+  callback.Run(GetClientCertsWithMyCertStore(request));
+#endif
+}
+
+// static
+ClientCertIdentityList ClientCertStoreWin::GetClientCertsWithMyCertStore(
+    const SSLCertRequestInfo& request) {
   // Always open a new instance of the "MY" store, to ensure that there
   // are no previously cached certificates being reused after they're
   // no longer available (some smartcard providers fail to update the "MY"
@@ -243,12 +267,9 @@ void ClientCertStoreWin::GetClientCerts(
   ScopedHCERTSTORE my_cert_store(CertOpenSystemStore(NULL, L"MY"));
   if (!my_cert_store) {
     PLOG(ERROR) << "Could not open the \"MY\" system certificate store: ";
-    callback.Run(ClientCertIdentityList());
-    return;
+    return ClientCertIdentityList();
   }
-
-  GetClientCertsImpl(my_cert_store, request, &selected_identities);
-  callback.Run(std::move(selected_identities));
+  return GetClientCertsImpl(my_cert_store, request);
 }
 
 bool ClientCertStoreWin::SelectClientCertsForTesting(
@@ -287,7 +308,7 @@ bool ClientCertStoreWin::SelectClientCertsForTesting(
     }
   }
 
-  GetClientCertsImpl(test_store.get(), request, selected_identities);
+  *selected_identities = GetClientCertsImpl(test_store.get(), request);
   return true;
 }
 

@@ -268,6 +268,8 @@ Still reading?
     <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-sv/android_chrome_strings.xml"/>
     <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-tl/android_chrome_strings.xml"/>
   </issue>
+  <!-- We have many C++ enums that we don't care about in java -->
+  <issue id="SwitchIntDef" severity="ignore"/>
   <issue id="TextFields" severity="Error">
     <ignore regexp="chromecast/internal"/>
   </issue>
@@ -290,6 +292,8 @@ Still reading?
     <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-zh-rCN/android_chrome_strings.xml"/>
     <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-zh-rTW/android_chrome_strings.xml"/>
   </issue>
+  <!-- Our generated enums are allowed to have the same values. -->
+  <issue id="UniqueConstants" severity="ignore"/>
   <!-- TODO(crbug.com/635567): Fix this properly. -->
   <issue id="UnusedResources" severity="ignore"/>
   <issue id="UnusedResources">

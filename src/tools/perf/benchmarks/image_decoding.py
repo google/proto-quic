@@ -26,3 +26,11 @@ class ImageDecodingToughImageCases(perf_benchmark.PerfBenchmark):
 
   def GetExpectations(self):
     return page_sets.ImageDecodingMeasurementStoryExpectations()
+
+  def SetExtraBrowserOptions(self, options):
+    options.AppendExtraBrowserArgs([
+        # Disable asynchronous decodes in the renderer since these test
+        # rely on images have been decoded between consecutive
+        # requestAnimationFrames.
+        '--disable-checker-imaging'
+    ])

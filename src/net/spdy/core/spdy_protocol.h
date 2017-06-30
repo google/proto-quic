@@ -277,6 +277,31 @@ const int32_t kInitialSessionWindowSize = 64 * 1024 - 1;
 // The NPN string for HTTP2, "h2".
 extern const char* const kHttp2Npn;
 
+// Wire sizes of priority payloads.
+const size_t kPriorityDependencyPayloadSize = 4;
+const size_t kPriorityWeightPayloadSize = 1;
+
+namespace size_utils {
+
+// Returns the (minimum) size of frames (sans variable-length portions).
+size_t GetDataFrameMinimumSize();
+size_t GetFrameHeaderSize();
+size_t GetRstStreamSize();
+size_t GetSettingsMinimumSize();
+size_t GetPingSize();
+size_t GetGoAwayMinimumSize();
+size_t GetHeadersMinimumSize();
+size_t GetWindowUpdateSize();
+size_t GetPushPromiseMinimumSize();
+size_t GetContinuationMinimumSize();
+size_t GetAltSvcMinimumSize();
+size_t GetPrioritySize();
+
+// Returns the minimum size a frame can be (data or control).
+size_t GetFrameMinimumSize();
+
+}  // namespace size_utils
+
 // Variant type (i.e. tagged union) that is either a SPDY 3.x priority value,
 // or else an HTTP/2 stream dependency tuple {parent stream ID, weight,
 // exclusive bit}. Templated to allow for use by QUIC code; SPDY and HTTP/2
@@ -383,6 +408,11 @@ class SPDY_EXPORT_PRIVATE SpdyFrameIR {
   virtual void Visit(SpdyFrameVisitor* visitor) const = 0;
   virtual SpdyFrameType frame_type() const = 0;
   SpdyStreamId stream_id() const { return stream_id_; }
+  virtual bool fin() const;
+
+  // Returns the number of bytes of flow control window that would be consumed
+  // by this frame if written to the wire.
+  virtual int flow_control_window_consumed() const;
 
  protected:
   SpdyFrameIR() : stream_id_(0) {}
@@ -399,7 +429,7 @@ class SPDY_EXPORT_PRIVATE SpdyFrameIR {
 class SPDY_EXPORT_PRIVATE SpdyFrameWithFinIR : public SpdyFrameIR {
  public:
   ~SpdyFrameWithFinIR() override {}
-  bool fin() const { return fin_; }
+  bool fin() const override;
   void set_fin(bool fin) { fin_ = fin; }
 
  protected:
@@ -498,6 +528,8 @@ class SPDY_EXPORT_PRIVATE SpdyDataIR
   void Visit(SpdyFrameVisitor* visitor) const override;
 
   SpdyFrameType frame_type() const override;
+
+  int flow_control_window_consumed() const override;
 
  private:
   // Used to store data that this SpdyDataIR should own.
@@ -811,6 +843,8 @@ class SPDY_EXPORT_PRIVATE SpdyUnknownIR : public SpdyFrameIR {
   void Visit(SpdyFrameVisitor* visitor) const override;
 
   SpdyFrameType frame_type() const override;
+
+  int flow_control_window_consumed() const override;
 
  private:
   uint8_t type_;

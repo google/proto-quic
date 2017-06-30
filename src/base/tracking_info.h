@@ -12,7 +12,6 @@
 #define BASE_TRACKING_INFO_H_
 
 #include "base/base_export.h"
-#include "base/profiler/tracked_time.h"
 #include "base/time/time.h"
 
 namespace tracked_objects {
@@ -35,10 +34,8 @@ struct BASE_EXPORT TrackingInfo {
   // means that queuing delay for such tasks will show how long they went
   // unserviced, after they *could* be serviced.  This is the same stat as we
   // have for non-delayed tasks, and we consistently call it queuing delay.
-  tracked_objects::TrackedTime EffectiveTimePosted() const {
-    return delayed_run_time.is_null()
-               ? time_posted
-               : tracked_objects::TrackedTime(delayed_run_time);
+  base::TimeTicks EffectiveTimePosted() const {
+    return delayed_run_time.is_null() ? time_posted : delayed_run_time;
   }
 
   // Record of location and thread that the task came from.
@@ -47,7 +44,7 @@ struct BASE_EXPORT TrackingInfo {
   // Time when the related task was posted. Note that this value may be empty
   // if task profiling is disabled, and should only be used in conjunction with
   // profiling-related reporting.
-  tracked_objects::TrackedTime time_posted;
+  base::TimeTicks time_posted;
 
   // The time when the task should be run.
   base::TimeTicks delayed_run_time;

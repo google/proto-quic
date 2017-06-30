@@ -8,6 +8,7 @@
 #include <resolv.h>
 
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/message_loop/message_loop.h"
 #include "base/threading/thread.h"
 #include "base/threading/thread_restrictions.h"
@@ -48,10 +49,10 @@ NetworkChangeNotifierMac::NetworkChangeNotifierMac()
       connection_type_initialized_(false),
       initial_connection_type_cv_(&connection_type_lock_),
       forwarder_(this),
-      dns_config_service_thread_(new DnsConfigServiceThread()) {
+      dns_config_service_thread_(base::MakeUnique<DnsConfigServiceThread>()) {
   // Must be initialized after the rest of this object, as it may call back into
   // SetInitialConnectionType().
-  config_watcher_.reset(new NetworkConfigWatcherMac(&forwarder_));
+  config_watcher_ = base::MakeUnique<NetworkConfigWatcherMac>(&forwarder_);
   dns_config_service_thread_->StartWithOptions(
       base::Thread::Options(base::MessageLoop::TYPE_IO, 0));
 }
@@ -104,16 +105,15 @@ NetworkChangeNotifier::ConnectionType
 NetworkChangeNotifierMac::CalculateConnectionType(
     SCNetworkConnectionFlags flags) {
   bool reachable = CalculateReachability(flags);
-  if (reachable) {
-#if defined(OS_IOS)
-    return (flags & kSCNetworkReachabilityFlagsIsWWAN) ? CONNECTION_3G
-                                                       : CONNECTION_WIFI;
-#else
-    return ConnectionTypeFromInterfaces();
-#endif  // defined(OS_IOS)
-  } else {
+  if (!reachable)
     return CONNECTION_NONE;
-  }
+
+#if defined(OS_IOS)
+  return (flags & kSCNetworkReachabilityFlagsIsWWAN) ? CONNECTION_3G
+                                                     : CONNECTION_WIFI;
+#else
+  return ConnectionTypeFromInterfaces();
+#endif
 }
 
 void NetworkChangeNotifierMac::Forwarder::StartReachabilityNotifications() {

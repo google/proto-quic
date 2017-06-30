@@ -24,10 +24,10 @@ class BASE_EXPORT SharedMemoryTracker : public trace_event::MemoryDumpProvider {
   // Returns a singleton instance.
   static SharedMemoryTracker* GetInstance();
 
-  static trace_event::MemoryAllocatorDumpGuid GetDumpGUIDForTracing(
+  static trace_event::MemoryAllocatorDumpGuid GetDumpIdForTracing(
       const UnguessableToken& id);
 
-  static trace_event::MemoryAllocatorDumpGuid GetGlobalDumpGUIDForTracing(
+  static trace_event::MemoryAllocatorDumpGuid GetGlobalDumpIdForTracing(
       const UnguessableToken& id);
 
   // Records shared memory usage on mapping.

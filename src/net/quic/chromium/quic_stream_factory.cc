@@ -1555,7 +1555,7 @@ void QuicStreamFactory::ActivateSession(const QuicSessionKey& key,
                                         QuicChromiumClientSession* session) {
   const QuicServerId& server_id(key.server_id());
   DCHECK(!HasActiveSession(server_id));
-  UMA_HISTOGRAM_COUNTS("Net.QuicActiveSessions", active_sessions_.size());
+  UMA_HISTOGRAM_COUNTS_1M("Net.QuicActiveSessions", active_sessions_.size());
   active_sessions_[server_id] = session;
   session_aliases_[session].insert(key);
   const IPEndPoint peer_address =
@@ -1697,8 +1697,8 @@ void QuicStreamFactory::ProcessGoingAwaySession(
 
   http_server_properties_->ClearServerNetworkStats(server);
 
-  UMA_HISTOGRAM_COUNTS("Net.QuicHandshakeNotConfirmedNumPacketsReceived",
-                       stats.packets_received);
+  UMA_HISTOGRAM_COUNTS_1M("Net.QuicHandshakeNotConfirmedNumPacketsReceived",
+                          stats.packets_received);
 
   if (!session_was_active)
     return;

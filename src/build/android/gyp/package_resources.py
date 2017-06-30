@@ -135,9 +135,14 @@ def _ParseArgs(args):
                     help='GN list of languages to include. All other language '
                          'configs will be stripped out. List may include '
                          'a combination of Android locales or Chrome locales.')
-
   parser.add_option('--apk-path',
                     help='Path to output (partial) apk.')
+  parser.add_option('--exclude-xxxhdpi', action='store_true',
+                    help='Do not include xxxhdpi drawables.')
+  parser.add_option('--xxxhdpi-whitelist',
+                    default='[]',
+                    help='GN list of globs that say which xxxhdpi images to '
+                         'include even when --exclude-xxxhdpi is set.')
 
   options, positional_args = parser.parse_args(args)
 
@@ -154,6 +159,7 @@ def _ParseArgs(args):
   options.resource_zips = build_utils.ParseGnList(options.resource_zips)
   options.language_splits = build_utils.ParseGnList(options.language_splits)
   options.locale_whitelist = build_utils.ParseGnList(options.locale_whitelist)
+  options.xxxhdpi_whitelist = build_utils.ParseGnList(options.xxxhdpi_whitelist)
   return options
 
 
@@ -208,7 +214,7 @@ def PackageArgsForExtractedZip(d):
   """
   subdirs = [os.path.join(d, s) for s in os.listdir(d)]
   subdirs = [s for s in subdirs if os.path.isdir(s)]
-  is_multi = '0' in [os.path.basename(s) for s in subdirs]
+  is_multi = any(os.path.basename(s).isdigit() for s in subdirs)
   if is_multi:
     res_dirs = sorted(subdirs, key=lambda p : int(os.path.basename(p)))
   else:
@@ -302,16 +308,46 @@ def _ConstructMostAaptArgs(options):
   return package_command
 
 
+def _ResourceNameFromPath(path):
+  return os.path.splitext(os.path.basename(path))[0]
+
+
+def _CreateExtractPredicate(dep_zips, exclude_xxxhdpi, xxxhdpi_whitelist):
+  if not exclude_xxxhdpi:
+    # Do not extract dotfiles (e.g. ".gitkeep"). aapt ignores them anyways.
+    return lambda path: os.path.basename(path)[0] != '.'
+
+  # Returns False only for xxxhdpi non-mipmap, non-whitelisted drawables.
+  naive_predicate = lambda path: (
+      not re.search(r'[/-]xxxhdpi[/-]', path) or
+      re.search(r'[/-]mipmap[/-]', path) or
+      build_utils.MatchesGlob(path, xxxhdpi_whitelist))
+
+  # Build a set of all non-xxxhdpi drawables to ensure that we never exclude any
+  # xxxhdpi drawable that does not exist in other densities.
+  non_xxxhdpi_drawables = set()
+  for resource_zip_path in dep_zips:
+    with zipfile.ZipFile(resource_zip_path) as zip_file:
+      for path in zip_file.namelist():
+        if re.search(r'[/-]drawable[/-]', path) and naive_predicate(path):
+          non_xxxhdpi_drawables.add(_ResourceNameFromPath(path))
+
+  return lambda path: (naive_predicate(path) or
+                       _ResourceNameFromPath(path) not in non_xxxhdpi_drawables)
+
+
 def _OnStaleMd5(package_command, options):
   with build_utils.TempDir() as temp_dir:
     if options.resource_zips:
       dep_zips = options.resource_zips
+      extract_predicate = _CreateExtractPredicate(
+          dep_zips, options.exclude_xxxhdpi, options.xxxhdpi_whitelist)
       for z in dep_zips:
         subdir = os.path.join(temp_dir, os.path.basename(z))
         if os.path.exists(subdir):
           raise Exception('Resource zip name conflict: ' + os.path.basename(z))
-        build_utils.ExtractAll(z, path=subdir)
-        package_command += PackageArgsForExtractedZip(subdir)
+        if build_utils.ExtractAll(z, path=subdir, predicate=extract_predicate):
+          package_command += PackageArgsForExtractedZip(subdir)
 
     build_utils.CheckOutput(
         package_command, print_stdout=False, print_stderr=False)

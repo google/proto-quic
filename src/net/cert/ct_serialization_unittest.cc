@@ -153,6 +153,18 @@ TEST_F(CtSerializationTest, FailsDecodingInvalidSCTList) {
   ASSERT_FALSE(ct::DecodeSCTList(encoded, &decoded));
 }
 
+TEST_F(CtSerializationTest, EncodeSignedCertificateTimestamp) {
+  std::string encoded_test_sct(ct::GetTestSignedCertificateTimestamp());
+  base::StringPiece encoded_sct(encoded_test_sct);
+
+  scoped_refptr<ct::SignedCertificateTimestamp> sct;
+  ASSERT_TRUE(ct::DecodeSignedCertificateTimestamp(&encoded_sct, &sct));
+
+  std::string serialized;
+  ct::EncodeSignedCertificateTimestamp(sct, &serialized);
+  EXPECT_EQ(serialized, encoded_test_sct);
+}
+
 TEST_F(CtSerializationTest, DecodesSignedCertificateTimestamp) {
   std::string encoded_test_sct(ct::GetTestSignedCertificateTimestamp());
   base::StringPiece encoded_sct(encoded_test_sct);

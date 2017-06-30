@@ -336,7 +336,7 @@ void SimpleIndex::StartEvictionIfNeeded() {
     ++it;
   }
 
-  SIMPLE_CACHE_UMA(COUNTS,
+  SIMPLE_CACHE_UMA(COUNTS_1M,
                    "Eviction.EntryCount", cache_type_, entry_hashes.size());
   SIMPLE_CACHE_UMA(TIMES,
                    "Eviction.TimeToSelectEntries", cache_type_,

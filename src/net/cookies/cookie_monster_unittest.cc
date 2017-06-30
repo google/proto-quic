@@ -59,9 +59,10 @@ class NewMockPersistentCookieStore
   MOCK_METHOD1(AddCookie, void(const CanonicalCookie& cc));
   MOCK_METHOD1(UpdateCookieAccessTime, void(const CanonicalCookie& cc));
   MOCK_METHOD1(DeleteCookie, void(const CanonicalCookie& cc));
-  virtual void Flush(const base::Closure& callback) {
+  virtual void Flush(base::OnceClosure callback) {
     if (!callback.is_null())
-      base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, callback);
+      base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE,
+                                                    std::move(callback));
   }
   MOCK_METHOD0(SetForceKeepSessionState, void());
 
@@ -144,6 +145,20 @@ class CookieMonsterTestBase : public CookieStoreTest<T> {
     cm->SetAllCookiesAsync(list,
                            base::Bind(&ResultSavingCookieCallback<bool>::Run,
                                       base::Unretained(&callback)));
+    callback.WaitUntilDone();
+    return callback.result();
+  }
+
+  bool SetCanonicalCookie(std::unique_ptr<CookieMonster> cm,
+                          std::unique_ptr<CanonicalCookie> cookie,
+                          bool secure_source,
+                          bool modify_http_only) {
+    DCHECK(cm);
+    ResultSavingCookieCallback<bool> callback;
+    cm->SetCanonicalCookieAsync(
+        std::move(cookie), secure_source, modify_http_only,
+        base::Bind(&ResultSavingCookieCallback<bool>::Run,
+                   base::Unretained(&callback)));
     callback.WaitUntilDone();
     return callback.result();
   }
@@ -2303,7 +2318,7 @@ TEST_F(CookieMonsterTest, WhileLoadingDeleteAllGetForURL) {
   // When passed to the CookieMonster, it takes ownership of the pointed to
   // cookies.
   cookies.push_back(
-      CanonicalCookie::Create(kUrl, "a=b", base::Time(), CookieOptions()));
+      CanonicalCookie::Create(kUrl, "a=b", base::Time::Now(), CookieOptions()));
   ASSERT_TRUE(cookies[0]);
   store->commands()[0].loaded_callback.Run(std::move(cookies));
 
@@ -2441,10 +2456,10 @@ class FlushablePersistentStore : public CookieMonster::PersistentCookieStore {
   void DeleteCookie(const CanonicalCookie&) override {}
   void SetForceKeepSessionState() override {}
 
-  void Flush(const base::Closure& callback) override {
+  void Flush(base::OnceClosure callback) override {
     ++flush_count_;
     if (!callback.is_null())
-      callback.Run();
+      std::move(callback).Run();
   }
 
   int flush_count() { return flush_count_; }

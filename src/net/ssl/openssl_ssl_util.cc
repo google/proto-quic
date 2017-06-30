@@ -173,26 +173,26 @@ int MapOpenSSLErrorWithDetails(int err,
       return ERR_FAILED;
     case SSL_ERROR_SSL:
       // Walk down the error stack to find an SSL or net error.
-      uint32_t error_code;
-      const char* file;
-      int line;
-      do {
-        error_code = ERR_get_error_line(&file, &line);
-        if (ERR_GET_LIB(error_code) == ERR_LIB_SSL) {
-          out_error_info->error_code = error_code;
-          out_error_info->file = file;
-          out_error_info->line = line;
-          return MapOpenSSLErrorSSL(error_code);
-        } else if (ERR_GET_LIB(error_code) == OpenSSLNetErrorLib()) {
-          out_error_info->error_code = error_code;
-          out_error_info->file = file;
-          out_error_info->line = line;
+      while (true) {
+        OpenSSLErrorInfo error_info;
+        error_info.error_code =
+            ERR_get_error_line(&error_info.file, &error_info.line);
+        if (error_info.error_code == 0) {
+          // Map errors to ERR_SSL_PROTOCOL_ERROR by default, reporting the most
+          // recent error in |*out_error_info|.
+          return ERR_SSL_PROTOCOL_ERROR;
+        }
+
+        *out_error_info = error_info;
+        if (ERR_GET_LIB(error_info.error_code) == ERR_LIB_SSL) {
+          return MapOpenSSLErrorSSL(error_info.error_code);
+        }
+        if (ERR_GET_LIB(error_info.error_code) == OpenSSLNetErrorLib()) {
           // Net error codes are negative but encoded in OpenSSL as positive
           // numbers.
-          return -ERR_GET_REASON(error_code);
+          return -ERR_GET_REASON(error_info.error_code);
         }
-      } while (error_code != 0);
-      return ERR_FAILED;
+      }
     default:
       // TODO(joth): Implement full mapping.
       LOG(WARNING) << "Unknown OpenSSL error " << err;

@@ -55,7 +55,7 @@ class FakeTab(object):
 class CustomResultsWrapperUnitTest(unittest.TestCase):
 
   def testOnlyOneInteractionRecordPerPage(self):
-    test_page = page.Page('http://dummy', None)
+    test_page = page.Page('http://dummy', None, name='http://dummy')
 
     # pylint: disable=protected-access
     results_wrapper = smoothness._CustomResultsWrapper()
@@ -82,7 +82,7 @@ class SmoothnessUnitTest(page_test_test_case.PageTestTestCase):
     self._options.browser_options.wpr_mode = wpr_modes.WPR_OFF
 
   def testSyntheticDelayConfiguration(self):
-    test_page = page.Page('http://dummy', None)
+    test_page = page.Page('http://dummy', None, name='http://dummy')
     test_page.synthetic_delays = {
         'cc.BeginMainFrame': {'target_duration': 0.012},
         'cc.DrawAndSwap': {'target_duration': 0.012, 'mode': 'alternating'},

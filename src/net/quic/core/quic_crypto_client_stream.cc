@@ -641,8 +641,8 @@ void QuicCryptoClientStream::DoInitializeServerConfigUpdate(
     update_ignored = true;
     next_state_ = STATE_NONE;
   }
-  UMA_HISTOGRAM_COUNTS("Net.QuicNumServerConfig.UpdateMessagesIgnored",
-                       update_ignored);
+  UMA_HISTOGRAM_COUNTS_1M("Net.QuicNumServerConfig.UpdateMessagesIgnored",
+                          update_ignored);
 }
 
 void QuicCryptoClientStream::SetCachedProofValid(

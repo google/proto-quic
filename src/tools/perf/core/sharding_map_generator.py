@@ -108,22 +108,25 @@ def shard_benchmarks(num_shards, all_benchmarks):
      benchmark_to_shard_dict[benchmark.Name()] = device_affinity
   return benchmark_to_shard_dict
 
-
-def regenerate(benchmarks, waterfall_configs, buildernames=None):
+def regenerate(
+    benchmarks, waterfall_configs, dry_run, verbose, builder_names=None):
   """Regenerate the shard mapping file.
 
   This overwrites the current file with fresh data.
   """
+  if not builder_names:
+    builder_names = []
+
   with open(get_sharding_map_path()) as f:
     sharding_map = json.load(f)
   sharding_map[u'all_benchmarks'] = [b.Name() for b in benchmarks]
 
   for name, config in waterfall_configs.items():
-    for buildername, tester in config['testers'].items():
+    for builder, tester in config['testers'].items():
       if not tester.get('swarming'):
         continue
 
-      if buildernames and buildername not in buildernames:
+      if builder not in builder_names:
         continue
       per_builder = {}
 
@@ -136,7 +139,7 @@ def regenerate(benchmarks, waterfall_configs, buildernames=None):
         device_map = per_builder.get(device, {'benchmarks': []})
         device_map['benchmarks'].append(name)
         per_builder[device] = device_map
-      sharding_map[buildername] = per_builder
+      sharding_map[builder] = per_builder
 
 
   for name, builder_values in sharding_map.items():
@@ -147,8 +150,17 @@ def regenerate(benchmarks, waterfall_configs, buildernames=None):
     for value in builder_values.values():
       value['benchmarks'].sort()
 
-  with open(get_sharding_map_path(), 'w') as f:
-    json.dump(sharding_map, f, indent=2, sort_keys=True, separators=(',', ': '))
+  if not dry_run:
+    with open(get_sharding_map_path(), 'w') as f:
+      dump_json(sharding_map, f)
+  else:
+    f_string = 'Would have dumped new json file to %s.'
+    if verbose:
+      f_string += ' File contents:\n %s'
+      print f_string % (get_sharding_map_path(), dumps_json(sharding_map))
+    else:
+      f_string += ' To see full file contents, pass in --verbose.'
+      print f_string % get_sharding_map_path()
 
   return 0
 
@@ -159,11 +171,29 @@ def get_args():
                    'This needs to be done anytime you add/remove any existing'
                    'benchmarks in tools/perf/benchmarks.'))
 
-  parser.add_argument('mode', choices=['regenerate'])
-  parser.add_argument('--buildernames', '-b', action='append', default=None)
+  parser.add_argument(
+      '--builder-names', '-b', action='append', default=None,
+      help='Specifies a subset of builders which should be affected by commands'
+           '. By default, commands affect all builders.')
+  parser.add_argument(
+      '--dry-run', action='store_true',
+      help='If the current run should be a dry run. A dry run means that any'
+      ' action which would be taken (write out data to a file, for example) is'
+      ' instead simulated.')
+  parser.add_argument(
+      '--verbose', action='store_true',
+      help='Determines how verbose the script is.')
   return parser
 
 
+def dump_json(data, f):
+  """Utility method to dump json which is indented, sorted, and readable"""
+  return json.dump(data, f, indent=2, sort_keys=True, separators=(',', ': '))
+
+def dumps_json(data):
+  """Utility method to dump json which is indented, sorted, and readable"""
+  return json.dumps(data, indent=2, sort_keys=True, separators=(',', ': '))
+
 def main(args, benchmarks, configs):
-  if args.mode == 'regenerate':
-    return regenerate(benchmarks, configs, args.buildernames)
+  return regenerate(
+      benchmarks, configs, args.dry_run, args.verbose, args.builder_names)

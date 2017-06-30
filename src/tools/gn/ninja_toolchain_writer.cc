@@ -46,6 +46,8 @@ void NinjaToolchainWriter::Run(
   for (int i = Toolchain::TYPE_NONE + 1; i < Toolchain::TYPE_NUMTYPES; i++) {
     Toolchain::ToolType tool_type = static_cast<Toolchain::ToolType>(i);
     const Tool* tool = toolchain_->GetTool(tool_type);
+    if (tool_type == Toolchain::TYPE_ACTION)
+      continue;
     if (tool)
       WriteToolRule(tool_type, tool, rule_prefix);
   }

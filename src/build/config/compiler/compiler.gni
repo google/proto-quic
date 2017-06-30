@@ -120,6 +120,14 @@ declare_args() {
 }
 
 declare_args() {
+  # Set to true to use lld, the LLVM linker. This flag may be used on Windows,
+  # Linux or Fuchsia.
+  use_lld = (is_win && host_os != "win") || is_fuchsia ||
+            ((allow_posix_link_time_opt || is_cfi) && target_os == "linux" &&
+             !is_chromeos && target_cpu == "x64")
+}
+
+declare_args() {
   # Whether to use the gold linker from binutils instead of lld or bfd.
   use_gold =
       (!use_lld && !(is_chromecast && is_linux &&

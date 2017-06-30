@@ -282,3 +282,9 @@ class KeyMobileSitesSmoothPageSet(story.StorySet):
 
     for url in urls_list:
       self.AddStory(KeyMobileSitesSmoothPage(url, self))
+
+
+class KeyMobileSitesSmoothStoryExpectations(
+    story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    pass # No tests disabled.

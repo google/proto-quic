@@ -4,9 +4,6 @@
 
 package org.chromium.base;
 
-import android.os.Parcel;
-import android.os.Parcelable;
-
 import org.chromium.base.annotations.CalledByNative;
 import org.chromium.base.annotations.JNINamespace;
 
@@ -14,18 +11,21 @@ import org.chromium.base.annotations.JNINamespace;
  * Contains the result of a native main method that ran in a child process.
  */
 @JNINamespace("base::android")
-public final class MainReturnCodeResult implements Parcelable {
+public final class MainReturnCodeResult {
     private final int mMainReturnCode;
     private final boolean mTimedOut;
 
-    public MainReturnCodeResult(int mainReturnCode, boolean timedOut) {
-        mMainReturnCode = mainReturnCode;
-        mTimedOut = timedOut;
+    public static MainReturnCodeResult createMainResult(int returnCode) {
+        return new MainReturnCodeResult(returnCode, false /* timedOut */);
     }
 
-    MainReturnCodeResult(Parcel in) {
-        mMainReturnCode = in.readInt();
-        mTimedOut = (in.readInt() != 0);
+    public static MainReturnCodeResult createTimeoutMainResult() {
+        return new MainReturnCodeResult(0, true /* timedOut */);
+    }
+
+    private MainReturnCodeResult(int mainReturnCode, boolean timedOut) {
+        mMainReturnCode = mainReturnCode;
+        mTimedOut = timedOut;
     }
 
     @CalledByNative
@@ -37,28 +37,4 @@ public final class MainReturnCodeResult implements Parcelable {
     public boolean hasTimedOut() {
         return mTimedOut;
     }
-
-    @Override
-    public int describeContents() {
-        return 0;
-    }
-
-    @Override
-    public void writeToParcel(Parcel dest, int flags) {
-        dest.writeInt(mMainReturnCode);
-        dest.writeInt(mTimedOut ? 1 : 0);
-    }
-
-    public static final Parcelable.Creator<MainReturnCodeResult> CREATOR =
-            new Parcelable.Creator<MainReturnCodeResult>() {
-                @Override
-                public MainReturnCodeResult createFromParcel(Parcel in) {
-                    return new MainReturnCodeResult(in);
-                }
-
-                @Override
-                public MainReturnCodeResult[] newArray(int size) {
-                    return new MainReturnCodeResult[size];
-                }
-            };
 }

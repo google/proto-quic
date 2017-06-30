@@ -12,6 +12,8 @@
 #include <utility>
 
 #include "base/base64.h"
+#include "base/bind.h"
+#include "base/bind_helpers.h"
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
 #include "base/format_macros.h"
@@ -600,7 +602,7 @@ std::unique_ptr<HttpResponse> HandleSlowServer(const HttpRequest& request) {
 }
 
 // Never returns a response.
-class HungHttpResponse : public BasicHttpResponse {
+class HungHttpResponse : public HttpResponse {
  public:
   HungHttpResponse() {}
 
@@ -615,6 +617,27 @@ class HungHttpResponse : public BasicHttpResponse {
 // Never returns a response.
 std::unique_ptr<HttpResponse> HandleHungResponse(const HttpRequest& request) {
   return base::MakeUnique<HungHttpResponse>();
+}
+
+// Return headers, then hangs.
+class HungAfterHeadersHttpResponse : public HttpResponse {
+ public:
+  HungAfterHeadersHttpResponse() {}
+
+  void SendResponse(const SendBytesCallback& send,
+                    const SendCompleteCallback& done) override {
+    send.Run("HTTP/1.1 OK\r\n\r\n", base::Bind(&base::DoNothing));
+  }
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(HungAfterHeadersHttpResponse);
+};
+
+// /hung-after-headers
+// Never returns a response.
+std::unique_ptr<HttpResponse> HandleHungAfterHeadersResponse(
+    const HttpRequest& request) {
+  return base::MakeUnique<HungAfterHeadersHttpResponse>();
 }
 
 }  // anonymous namespace
@@ -662,6 +685,8 @@ void RegisterDefaultHandlers(EmbeddedTestServer* server) {
   server->RegisterDefaultHandler(PREFIXED_HANDLER("/slow", &HandleSlowServer));
   server->RegisterDefaultHandler(
       PREFIXED_HANDLER("/hung", &HandleHungResponse));
+  server->RegisterDefaultHandler(
+      PREFIXED_HANDLER("/hung-after-headers", &HandleHungAfterHeadersResponse));
 
   // TODO(svaldez): HandleDownload
   // TODO(svaldez): HandleDownloadFinish

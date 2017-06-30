@@ -56,6 +56,12 @@ class NET_EXPORT NetworkQualityProvider {
   // null.
   virtual base::Optional<int32_t> GetDownstreamThroughputKbps() const;
 
+  // Returns the current bandwidth delay product estimate (in kilobits). If the
+  // estimate is not available, the returned optional value is null. The
+  // bandwidth delay product is calculated from the transport RTT and the
+  // downlink bandwidth estimates.
+  virtual base::Optional<int32_t> GetBandwidthDelayProductKbits() const;
+
   // Adds |observer| to the list of RTT and throughput estimate observers.
   // The observer must register and unregister itself on the same thread.
   // |observer| would be notified on the thread on which it registered.

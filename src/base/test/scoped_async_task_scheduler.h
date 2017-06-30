@@ -6,6 +6,7 @@
 #define BASE_TEST_SCOPED_ASYNC_TASK_SCHEDULER_H_
 
 #include "base/macros.h"
+#include "base/task_scheduler/lazy_task_runner.h"
 
 namespace base {
 
@@ -34,6 +35,10 @@ class ScopedAsyncTaskScheduler {
 
  private:
   const TaskScheduler* task_scheduler_ = nullptr;
+
+  // Ensures destruction of lazy TaskRunners when this is destroyed.
+  internal::ScopedLazyTaskRunnerListForTesting
+      scoped_lazy_task_runner_list_for_testing_;
 
   DISALLOW_COPY_AND_ASSIGN(ScopedAsyncTaskScheduler);
 };

@@ -410,10 +410,10 @@ void BidirectionalStream::UpdateHistograms() {
     UMA_HISTOGRAM_TIMES(
         "Net.BidirectionalStream.TimeToSendEnd.HTTP2",
         load_timing_info_.send_end - load_timing_info_.request_start);
-    UMA_HISTOGRAM_COUNTS("Net.BidirectionalStream.ReceivedBytes.HTTP2",
-                         stream_impl_->GetTotalReceivedBytes());
-    UMA_HISTOGRAM_COUNTS("Net.BidirectionalStream.SentBytes.HTTP2",
-                         stream_impl_->GetTotalSentBytes());
+    UMA_HISTOGRAM_COUNTS_1M("Net.BidirectionalStream.ReceivedBytes.HTTP2",
+                            stream_impl_->GetTotalReceivedBytes());
+    UMA_HISTOGRAM_COUNTS_1M("Net.BidirectionalStream.SentBytes.HTTP2",
+                            stream_impl_->GetTotalSentBytes());
   } else if (GetProtocol() == kProtoQUIC) {
     UMA_HISTOGRAM_TIMES("Net.BidirectionalStream.TimeToReadStart.QUIC",
                         load_timing_info_.receive_headers_end -
@@ -426,10 +426,10 @@ void BidirectionalStream::UpdateHistograms() {
     UMA_HISTOGRAM_TIMES(
         "Net.BidirectionalStream.TimeToSendEnd.QUIC",
         load_timing_info_.send_end - load_timing_info_.request_start);
-    UMA_HISTOGRAM_COUNTS("Net.BidirectionalStream.ReceivedBytes.QUIC",
-                         stream_impl_->GetTotalReceivedBytes());
-    UMA_HISTOGRAM_COUNTS("Net.BidirectionalStream.SentBytes.QUIC",
-                         stream_impl_->GetTotalSentBytes());
+    UMA_HISTOGRAM_COUNTS_1M("Net.BidirectionalStream.ReceivedBytes.QUIC",
+                            stream_impl_->GetTotalReceivedBytes());
+    UMA_HISTOGRAM_COUNTS_1M("Net.BidirectionalStream.SentBytes.QUIC",
+                            stream_impl_->GetTotalSentBytes());
   }
 }
 

@@ -417,6 +417,8 @@ def main(argv):
     if options.bundled_srcjars:
       gradle['bundled_srcjars'] = (
           build_utils.ParseGnList(options.bundled_srcjars))
+    else:
+      gradle['bundled_srcjars'] = []
 
     gradle['dependent_android_projects'] = []
     gradle['dependent_java_projects'] = []

@@ -255,7 +255,7 @@ TEST_F(RunLoopTest, IsRunningOnCurrentThread) {
   EXPECT_FALSE(RunLoop::IsRunningOnCurrentThread());
   ThreadTaskRunnerHandle::Get()->PostTask(
       FROM_HERE,
-      Bind([]() { EXPECT_TRUE(RunLoop::IsRunningOnCurrentThread()); }));
+      BindOnce([]() { EXPECT_TRUE(RunLoop::IsRunningOnCurrentThread()); }));
   ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, run_loop_.QuitClosure());
   run_loop_.Run();
 }
@@ -264,14 +264,15 @@ TEST_F(RunLoopTest, IsNestedOnCurrentThread) {
   EXPECT_FALSE(RunLoop::IsNestedOnCurrentThread());
 
   ThreadTaskRunnerHandle::Get()->PostTask(
-      FROM_HERE, Bind([]() {
+      FROM_HERE, BindOnce([]() {
         EXPECT_FALSE(RunLoop::IsNestedOnCurrentThread());
 
         RunLoop nested_run_loop;
 
         ThreadTaskRunnerHandle::Get()->PostTask(
-            FROM_HERE,
-            Bind([]() { EXPECT_TRUE(RunLoop::IsNestedOnCurrentThread()); }));
+            FROM_HERE, BindOnce([]() {
+              EXPECT_TRUE(RunLoop::IsNestedOnCurrentThread());
+            }));
         ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE,
                                                 nested_run_loop.QuitClosure());
 
@@ -306,7 +307,7 @@ TEST_F(RunLoopTest, NestingObservers) {
   const RepeatingClosure run_nested_loop = Bind([]() {
     RunLoop nested_run_loop;
     ThreadTaskRunnerHandle::Get()->PostTask(
-        FROM_HERE, Bind([]() {
+        FROM_HERE, BindOnce([]() {
           EXPECT_TRUE(RunLoop::IsNestingAllowedOnCurrentThread());
         }));
     ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE,
@@ -334,7 +335,7 @@ TEST_F(RunLoopTest, DisallowWaitingDeathTest) {
   RunLoop::DisallowNestingOnCurrentThread();
   EXPECT_FALSE(RunLoop::IsNestingAllowedOnCurrentThread());
 
-  ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, Bind([]() {
+  ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, BindOnce([]() {
                                             RunLoop nested_run_loop;
                                             nested_run_loop.RunUntilIdle();
                                           }));

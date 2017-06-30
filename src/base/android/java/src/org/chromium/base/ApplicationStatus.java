@@ -55,6 +55,8 @@ public class ApplicationStatus {
     }
 
     private static final Object sCachedApplicationStateLock = new Object();
+
+    @SuppressLint("SupportAnnotationUsage")
     @ApplicationState
     private static Integer sCachedApplicationState;
 

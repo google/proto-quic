@@ -3,9 +3,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Certificate chain with a root, intermediate and target. The root has a
-smaller validity range than the other certificates, making it easy to violate
-just its validity.
+"""Certificate chain where the root has a smaller validity range than the other
+certificates, making it easy to violate just its validity.
 
   Root:          2015/03/01 -> 2015/09/01
   Intermediate:  2015/01/01 -> 2016/01/01

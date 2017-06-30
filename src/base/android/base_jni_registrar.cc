@@ -6,6 +6,7 @@
 
 #include "base/android/animation_frame_time_histogram.h"
 #include "base/android/application_status_listener.h"
+#include "base/android/child_process_service_impl.h"
 #include "base/android/command_line_android.h"
 #include "base/android/cpu_features.h"
 #include "base/android/early_trace_event_binding.h"
@@ -36,6 +37,7 @@ static RegistrationMethod kBaseRegisteredMethods[] = {
      base::android::RegisterAnimationFrameTimeHistogram},
     {"ApplicationStatusListener",
      base::android::ApplicationStatusListener::RegisterBindings},
+    {"ChildProcessServiceImpl", base::android::RegisterChildProcessServiceImpl},
     {"CommandLine", base::android::RegisterCommandLine},
     {"CpuFeatures", base::android::RegisterCpuFeatures},
     {"EarlyTraceEvent", base::android::RegisterEarlyTraceEvent},

@@ -212,19 +212,23 @@ void TestResultsTracker::OnTestIterationStarting() {
   per_iteration_data_.push_back(PerIterationData());
 }
 
-void TestResultsTracker::AddTest(
-    const std::string& test_name, const std::string& file, int line) {
+void TestResultsTracker::AddTest(const std::string& test_name) {
   // Record disabled test names without DISABLED_ prefix so that they are easy
   // to compare with regular test names, e.g. before or after disabling.
   all_tests_.insert(TestNameWithoutDisabledPrefix(test_name));
-
-  test_locations_.insert(std::make_pair(test_name, CodeLocation(file, line)));
 }
 
 void TestResultsTracker::AddDisabledTest(const std::string& test_name) {
   // Record disabled test names without DISABLED_ prefix so that they are easy
   // to compare with regular test names, e.g. before or after disabling.
   disabled_tests_.insert(TestNameWithoutDisabledPrefix(test_name));
+}
+
+void TestResultsTracker::AddTestLocation(const std::string& test_name,
+                                         const std::string& file,
+                                         int line) {
+  test_locations_.insert(std::make_pair(
+      TestNameWithoutDisabledPrefix(test_name), CodeLocation(file, line)));
 }
 
 void TestResultsTracker::AddTestResult(const TestResult& result) {

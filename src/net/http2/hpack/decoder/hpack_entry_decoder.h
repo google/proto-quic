@@ -13,17 +13,17 @@
 #include <string>
 
 #include "base/logging.h"
-#include "net/base/net_export.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
 #include "net/http2/hpack/decoder/hpack_entry_decoder_listener.h"
 #include "net/http2/hpack/decoder/hpack_entry_type_decoder.h"
 #include "net/http2/hpack/decoder/hpack_string_decoder.h"
 #include "net/http2/hpack/http2_hpack_constants.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 
-class NET_EXPORT_PRIVATE HpackEntryDecoder {
+class HTTP2_EXPORT_PRIVATE HpackEntryDecoder {
  public:
   enum class EntryDecoderState {
     // Have started decoding the type/varint, but didn't finish on the previous
@@ -106,9 +106,9 @@ class NET_EXPORT_PRIVATE HpackEntryDecoder {
   EntryDecoderState state_ = EntryDecoderState();
 };
 
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
-                                            const HpackEntryDecoder& v);
-NET_EXPORT_PRIVATE std::ostream& operator<<(
+HTTP2_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
+                                              const HpackEntryDecoder& v);
+HTTP2_EXPORT_PRIVATE std::ostream& operator<<(
     std::ostream& out,
     HpackEntryDecoder::EntryDecoderState state);
 

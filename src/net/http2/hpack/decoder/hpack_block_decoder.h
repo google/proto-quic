@@ -14,15 +14,15 @@
 
 #include "base/logging.h"
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
 #include "net/http2/hpack/decoder/hpack_entry_decoder.h"
 #include "net/http2/hpack/decoder/hpack_entry_decoder_listener.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 
-class NET_EXPORT_PRIVATE HpackBlockDecoder {
+class HTTP2_EXPORT_PRIVATE HpackBlockDecoder {
  public:
   explicit HpackBlockDecoder(HpackEntryDecoderListener* listener)
       : listener_(listener) {
@@ -65,8 +65,8 @@ class NET_EXPORT_PRIVATE HpackBlockDecoder {
   DISALLOW_COPY_AND_ASSIGN(HpackBlockDecoder);
 };
 
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
-                                            const HpackBlockDecoder& v);
+HTTP2_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
+                                              const HpackBlockDecoder& v);
 
 }  // namespace net
 

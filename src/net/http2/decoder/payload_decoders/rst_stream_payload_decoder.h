@@ -7,18 +7,18 @@
 
 // Decodes the payload of a RST_STREAM frame.
 
-#include "net/base/net_export.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
 #include "net/http2/decoder/frame_decoder_state.h"
 #include "net/http2/http2_structures.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 namespace test {
 class RstStreamPayloadDecoderPeer;
 }  // namespace test
 
-class NET_EXPORT_PRIVATE RstStreamPayloadDecoder {
+class HTTP2_EXPORT_PRIVATE RstStreamPayloadDecoder {
  public:
   // Starts the decoding of a RST_STREAM frame's payload, and completes it if
   // the entire payload is in the provided decode buffer.

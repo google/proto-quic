@@ -15,8 +15,8 @@ import time
 
 file_dir = os.path.dirname(__file__)
 sys.path.append(os.path.join(file_dir, '..', '..', 'perf'))
-from chrome_telemetry_build import chromium_config
-sys.path.append(chromium_config.GetTelemetryDir())
+from core import path_util
+sys.path.append(path_util.GetTelemetryDir())
 
 from telemetry.internal.backends.chrome_inspector import inspector_websocket
 from telemetry.internal.backends.chrome_inspector import websocket

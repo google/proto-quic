@@ -4,7 +4,7 @@
 import os
 
 from benchmarks import blink_perf
-
+from telemetry import story
 
 # pylint: disable=protected-access
 class BlinkPerfAll(blink_perf._BlinkPerfBenchmark):
@@ -30,3 +30,9 @@ class BlinkPerfAll(blink_perf._BlinkPerfBenchmark):
     print
     print 'Running all tests in %s' % path
     return blink_perf.CreateStorySetFromPath(path, blink_perf.SKIPPED_FILE)
+
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()

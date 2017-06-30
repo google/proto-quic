@@ -10,14 +10,14 @@
 //     Implementations MUST ignore and discard any frame that has
 //     a type that is unknown.
 
-#include "net/base/net_export.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
 #include "net/http2/decoder/frame_decoder_state.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 
-class NET_EXPORT_PRIVATE UnknownPayloadDecoder {
+class HTTP2_EXPORT_PRIVATE UnknownPayloadDecoder {
  public:
   // Starts decoding a payload of unknown type; just passes it to the listener.
   DecodeStatus StartDecodingPayload(FrameDecoderState* state, DecodeBuffer* db);

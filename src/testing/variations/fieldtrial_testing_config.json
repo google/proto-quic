@@ -19,6 +19,21 @@
             ]
         }
     ],
+    "AmpBackgroundTab": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "AmpBackgroundTab",
+                    "enable_features": [
+                        "CCTBackgroundTab"
+                    ]
+                }
+            ]
+        }
+    ],
     "AndroidAIAFetching": [
         {
             "platforms": [
@@ -618,6 +633,18 @@
                     "enable_features": [
                         "DataReductionProxyMainMenu"
                     ]
+                }
+            ]
+        }
+    ],
+    "DataReductionProxyPreviewsBlacklistTransition": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled"
                 }
             ]
         }
@@ -1539,6 +1566,24 @@
             ]
         }
     ],
+    "NTPCaptureThumbnailOnLoadFinished": [
+        {
+            "platforms": [
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "CaptureThumbnailOnLoadFinished"
+                    ]
+                }
+            ]
+        }
+    ],
     "NTPFaviconsFromNewServer": [
         {
             "platforms": [
@@ -1595,11 +1640,13 @@
             ],
             "experiments": [
                 {
-                    "name": "Enabled-ClickBasedRanker",
+                    "name": "Enabled-ClickBasedRanker-InitialOrderGeneral",
                     "params": {
+                        "category_order": "general",
                         "category_ranker": "click_based"
                     },
                     "enable_features": [
+                        "ContentSuggestionsCategoryOrder",
                         "ContentSuggestionsCategoryRanker"
                     ]
                 }
@@ -1750,6 +1797,32 @@
             ]
         }
     ],
+    "NewTabInProductHelp": [
+        {
+            "platforms": [
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "params": {
+                        "availability": "any",
+                        "event_new_tab_opened": "name:new_tab_opened;comparator:==0;window:3650;storage:3650",
+                        "event_omnibox_used": "name:omnibox_used;comparator:>=1;window:3650;storage:3650",
+                        "event_session_time": "name:session_time;comparator:>=1;window:3650;storage:3650",
+                        "event_trigger": "name:new_tab_trigger;comparator:any;window:3650;storage:3650",
+                        "event_used": "name:new_tab_clicked;comparator:any;window:3650;storage:3650",
+                        "session_rate": "<=3"
+                    },
+                    "enable_features": [
+                        "IPH_NewTab"
+                    ]
+                }
+            ]
+        }
+    ],
     "NoCreditCardAbort": [
         {
             "platforms": [
@@ -1862,22 +1935,13 @@
                     "name": "SearchOrTypeUrl"
                 },
                 {
-                    "name": "SearchOrTypeWebsiteName"
+                    "name": "SearchOrTypeWebAddress"
                 },
                 {
-                    "name": "SearchTheWeb"
+                    "name": "TypeWhatYouAreLookingFor"
                 },
                 {
-                    "name": "EnterASearchOrWebsite"
-                },
-                {
-                    "name": "SearchNews"
-                },
-                {
-                    "name": "SearchRecipes"
-                },
-                {
-                    "name": "SearchWeather"
+                    "name": "FindNewsRecipesWeather"
                 },
                 {
                     "name": "Blank"
@@ -2673,7 +2737,7 @@
             ],
             "experiments": [
                 {
-                    "name": "Enabled",
+                    "name": "AdIdentifiers",
                     "params": {
                         "tag_attribute_csv": "div,id,iframe,id"
                     },
@@ -2761,6 +2825,22 @@
             "experiments": [
                 {
                     "name": "Enabled"
+                }
+            ]
+        }
+    ],
+    "SearchEnginePromo": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "SearchEnginePromo.ExistingDevice",
+                        "SearchEnginePromo.NewDevice"
+                    ]
                 }
             ]
         }
@@ -2976,6 +3056,21 @@
             ]
         }
     ],
+    "SuperfishInterstitial": [
+        {
+            "platforms": [
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "SuperfishInterstitial"
+                    ]
+                }
+            ]
+        }
+    ],
     "SyncUSSAutocomplete": [
         {
             "platforms": [
@@ -3075,6 +3170,24 @@
                     "enable_features": [
                         "TranslateCompactUI"
                     ]
+                },
+                {
+                    "name": "CompactUIAndRanker",
+                    "enable_features": [
+                        "TranslateCompactUI",
+                        "TranslateRankerEnforcement",
+                        "TranslateRankerQuery"
+                    ]
+                },
+                {
+                    "name": "RankerOnly",
+                    "enable_features": [
+                        "TranslateRankerEnforcement",
+                        "TranslateRankerQuery"
+                    ],
+                    "disable_features": [
+                        "TranslateCompactUI"
+                    ]
                 }
             ]
         }
@@ -3082,7 +3195,6 @@
     "TranslateRankerModel": [
         {
             "platforms": [
-                "android",
                 "chromeos",
                 "ios",
                 "linux",
@@ -3223,6 +3335,25 @@
             ]
         }
     ],
+    "V8AsmJSToWasm": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "AsmJsToWebAssembly",
+                    "enable_features": [
+                        "AsmJsToWebAssembly"
+                    ]
+                }
+            ]
+        }
+    ],
     "V8CacheStrategiesForCacheStorage": [
         {
             "platforms": [
@@ -3267,6 +3398,24 @@
             ]
         }
     ],
+    "VideoCaptureService": [
+        {
+            "platforms": [
+                "linux",
+                "mac",
+                "win",
+                "ios"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "MojoVideoCapture"
+                    ]
+                }
+            ]
+        }
+    ],
     "ViewsSimplifiedFullscreenUI": [
         {
             "platforms": [
@@ -3282,6 +3431,26 @@
             ]
         }
     ],
+    "VsyncAlignedInput": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enable",
+                    "enable_features": [
+                        "RequestUnbufferedDispatch",
+                        "VsyncAlignedInput"
+                    ]
+                }
+            ]
+        }
+    ],
     "WebApkGooglePlay": [
         {
             "platforms": [
@@ -3290,6 +3459,9 @@
             "experiments": [
                 {
                     "name": "Enabled",
+                    "params": {
+                        "play_install": "true"
+                    },
                     "enable_features": [
                         "ImprovedA2HS"
                     ]

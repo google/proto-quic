@@ -841,9 +841,9 @@ TEST_F(TimerSequenceTest, OneShotTimerUsedOnPoolThread) {
 
   // Task will be scheduled from a pool thread.
   task_runner->PostTask(
-      FROM_HERE, Bind(&TimerSequenceTest::StartTimer, Unretained(this),
-                      TimeDelta::FromMilliseconds(1),
-                      Bind(&TimerSequenceTest::Signal, Unretained(this))));
+      FROM_HERE, BindOnce(&TimerSequenceTest::StartTimer, Unretained(this),
+                          TimeDelta::FromMilliseconds(1),
+                          Bind(&TimerSequenceTest::Signal, Unretained(this))));
   Wait();
 
   // Timer must be destroyed on pool thread, too.
@@ -872,9 +872,9 @@ TEST_F(TimerSequenceTest, OneShotTimerTwoPoolsAbandonTask) {
   Wait();
 
   // Task will be scheduled from pool #1.
-  task_runner1->PostTask(FROM_HERE,
-                         Bind(&TimerSequenceTest::StartTimer, Unretained(this),
-                              TimeDelta::FromHours(1), Bind(&DoNothing)));
+  task_runner1->PostTask(
+      FROM_HERE, BindOnce(&TimerSequenceTest::StartTimer, Unretained(this),
+                          TimeDelta::FromHours(1), Bind(&DoNothing)));
 
   // Abandon task - must be called from scheduling pool (#1).
   task_runner1->PostTask(
@@ -909,10 +909,11 @@ TEST_F(TimerSequenceTest, OneShotTimerUsedAndTaskedOnDifferentPools) {
 
   // Task will be scheduled from pool #1.
   task_runner1->PostTask(
-      FROM_HERE, Bind(&TimerSequenceTest::StartTimer, Unretained(this),
-                      TimeDelta::FromMilliseconds(1),
-                      TaskWithSignal(Bind(&TimerSequenceTest::VerifyAffinity,
-                                          Unretained(task_runner2.get())))));
+      FROM_HERE,
+      BindOnce(&TimerSequenceTest::StartTimer, Unretained(this),
+               TimeDelta::FromMilliseconds(1),
+               TaskWithSignal(Bind(&TimerSequenceTest::VerifyAffinity,
+                                   Unretained(task_runner2.get())))));
 
   Wait();
 

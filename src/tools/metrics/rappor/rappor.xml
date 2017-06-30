@@ -2172,6 +2172,17 @@ now we are only interested in H264, VP8 and VP9.
   </summary>
 </rappor-metric>
 
+<rappor-metric
+    name="ServiceWorker.ContextRequestHandlerStatus.UninstalledScriptImport"
+    type="ETLD_PLUS_ONE">
+  <owner>falken@chromium.org</owner>
+  <summary>
+    The domain and registry of the URL of service worker script which used
+    importScripts() to import a script that was not previously installed.
+    Recorded when importScripts() is called.
+  </summary>
+</rappor-metric>
+
 <rappor-metric name="ServiceWorker.ControlledPageUrl" type="ETLD_PLUS_ONE">
   <owner>horo@chromium.org</owner>
   <summary>

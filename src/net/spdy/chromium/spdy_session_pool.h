@@ -58,6 +58,7 @@ class NET_EXPORT SpdySessionPool
                   SSLConfigService* ssl_config_service,
                   HttpServerProperties* http_server_properties,
                   TransportSecurityState* transport_security_state,
+                  const QuicVersionVector& quic_supported_versions,
                   bool enable_ping_based_connection_checking,
                   size_t session_max_recv_window_size,
                   const SettingsMap& initial_settings,
@@ -267,6 +268,9 @@ class NET_EXPORT SpdySessionPool
 
   const scoped_refptr<SSLConfigService> ssl_config_service_;
   HostResolver* const resolver_;
+
+  // Versions of QUIC which may be used.
+  const QuicVersionVector quic_supported_versions_;
 
   // Defaults to true. May be controlled via SpdySessionPoolPeer for tests.
   bool enable_sending_initial_data_;

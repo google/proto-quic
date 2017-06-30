@@ -281,6 +281,8 @@ class NET_EXPORT URLRequestContext
   void set_name(const char* name) { name_ = name; }
 
   // MemoryDumpProvider implementation:
+  // This is reported as
+  // "memory:chrome:all_processes:reported_by_chrome:net:effective_size_avg."
   bool OnMemoryDump(const base::trace_event::MemoryDumpArgs& args,
                     base::trace_event::ProcessMemoryDump* pmd) override;
 

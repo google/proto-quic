@@ -89,14 +89,9 @@ void AddIntermediatesToIssuerSource(X509Certificate* x509_cert,
   }
 }
 
-// Appends the SHA1 and SHA256 hashes of |spki_bytes| to |*hashes|.
+// Appends the SHA256 hashes of |spki_bytes| to |*hashes|.
 void AppendPublicKeyHashes(const der::Input& spki_bytes,
                            HashValueVector* hashes) {
-  HashValue sha1(HASH_VALUE_SHA1);
-  base::SHA1HashBytes(spki_bytes.UnsafeData(), spki_bytes.Length(),
-                      sha1.data());
-  hashes->push_back(sha1);
-
   HashValue sha256(HASH_VALUE_SHA256);
   crypto::SHA256HashString(spki_bytes.AsStringPiece(), sha256.data(),
                            crypto::kSHA256Length);

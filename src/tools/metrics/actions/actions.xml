@@ -1122,7 +1122,18 @@ should be able to be added at any place in this file.
   <description>User closed the Chrome Home bottom sheet.</description>
 </action>
 
+<action name="Android.ChromeHome.ClosedByBackPress">
+  <owner>mdjones@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User closed the Chrome Home bottom sheet by pressing the system back button.
+  </description>
+</action>
+
 <action name="Android.ChromeHome.ClosedByNTPCloseButton">
+  <obsolete>
+    Deprecated 6/2017. There is no longer an NTP UI with a close button.
+  </obsolete>
   <owner>mdjones@chromium.org</owner>
   <owner>twellington@chromium.org</owner>
   <description>
@@ -1167,6 +1178,16 @@ should be able to be added at any place in this file.
   <owner>twellington@chromium.org</owner>
   <description>
     User put the Chrome Home bottom sheet in the half-open state.
+  </description>
+</action>
+
+<action name="Android.ChromeHome.NativeNTPShown">
+  <owner>mdjones@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <description>
+    A user navigation instructed the NativePageFactory to create a native page
+    for the NTP. This may occur if the user has NTP URLs in a tab's navigation
+    history.
   </description>
 </action>
 
@@ -3221,6 +3242,18 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="ClearBrowsingData_SwitchTo_AdvancedTab">
+  <owner>dullweber@chromium.org</owner>
+  <owner>msramek@chromium.org</owner>
+  <description>User switched to advanced tab.</description>
+</action>
+
+<action name="ClearBrowsingData_SwitchTo_BasicTab">
+  <owner>dullweber@chromium.org</owner>
+  <owner>msramek@chromium.org</owner>
+  <description>User switched to basic tab.</description>
+</action>
+
 <action name="ClearBrowsingData_TimePeriodChanged_Everything">
   <owner>dullweber@chromium.org</owner>
   <owner>msramek@chromium.org</owner>
@@ -5209,6 +5242,12 @@ should be able to be added at any place in this file.
   <description>The user triggered an event in in-product help.</description>
 </action>
 
+<action name="InProductHelp.NotifyEvent.IPH_IncognitoWindow">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>The user triggered an event in in-product help.</description>
+</action>
+
 <action name="InProductHelp.NotifyEvent.IPH_NewTab">
   <owner>nyquist@chromium.org</owner>
   <owner>xingliu@chromium.org</owner>
@@ -5234,6 +5273,12 @@ should be able to be added at any place in this file.
 </action>
 
 <action name="InProductHelp.NotifyUsedEvent.IPH_DownloadPage">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>The user triggered a used event in in-product help.</description>
+</action>
+
+<action name="InProductHelp.NotifyUsedEvent.IPH_IncognitoWindow">
   <owner>nyquist@chromium.org</owner>
   <owner>xingliu@chromium.org</owner>
   <description>The user triggered a used event in in-product help.</description>
@@ -5281,6 +5326,15 @@ should be able to be added at any place in this file.
   </description>
 </action>
 
+<action name="InProductHelp.ShouldTriggerHelpUI.IPH_IncognitoWindow">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>
+    The feature engagement tracker tried to determine whether in-product help
+    should be shown to the user.
+  </description>
+</action>
+
 <action name="InProductHelp.ShouldTriggerHelpUI.IPH_NewTab">
   <owner>nyquist@chromium.org</owner>
   <owner>xingliu@chromium.org</owner>
@@ -5288,6 +5342,100 @@ should be able to be added at any place in this file.
     The feature engagement tracker tried to determine whether in-product help
     should be shown to the user.
   </description>
+</action>
+
+<action
+    name="InProductHelp.ShouldTriggerHelpUIResult.NotTriggered.IPH_DataSaverDetail">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>
+    A user action that could have triggered In-Product Help did not.
+  </description>
+</action>
+
+<action
+    name="InProductHelp.ShouldTriggerHelpUIResult.NotTriggered.IPH_DataSaverPreview">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>
+    A user action that could have triggered In-Product Help did not.
+  </description>
+</action>
+
+<action
+    name="InProductHelp.ShouldTriggerHelpUIResult.NotTriggered.IPH_DownloadHome">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>
+    A user action that could have triggered In-Product Help did not.
+  </description>
+</action>
+
+<action
+    name="InProductHelp.ShouldTriggerHelpUIResult.NotTriggered.IPH_DownloadPage">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>
+    A user action that could have triggered In-Product Help did not.
+  </description>
+</action>
+
+<action
+    name="InProductHelp.ShouldTriggerHelpUIResult.NotTriggered.IPH_IncognitoWindow">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>
+    A user action that could have triggered In-Product Help did not.
+  </description>
+</action>
+
+<action name="InProductHelp.ShouldTriggerHelpUIResult.NotTriggered.IPH_NewTab">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>
+    A user action that could have triggered In-Product Help did not.
+  </description>
+</action>
+
+<action
+    name="InProductHelp.ShouldTriggerHelpUIResult.Triggered.IPH_DataSaverDetail">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>A user action triggered In-Product Help.</description>
+</action>
+
+<action
+    name="InProductHelp.ShouldTriggerHelpUIResult.Triggered.IPH_DataSaverPreview">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>A user action triggered In-Product Help.</description>
+</action>
+
+<action
+    name="InProductHelp.ShouldTriggerHelpUIResult.Triggered.IPH_DownloadHome">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>A user action triggered In-Product Help.</description>
+</action>
+
+<action
+    name="InProductHelp.ShouldTriggerHelpUIResult.Triggered.IPH_DownloadPage">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>A user action triggered In-Product Help.</description>
+</action>
+
+<action
+    name="InProductHelp.ShouldTriggerHelpUIResult.Triggered.IPH_IncognitoWindow">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>A user action triggered In-Product Help.</description>
+</action>
+
+<action name="InProductHelp.ShouldTriggerHelpUIResult.Triggered.IPH_NewTab">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>A user action triggered In-Product Help.</description>
 </action>
 
 <action name="Indent">

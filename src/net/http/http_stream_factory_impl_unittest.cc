@@ -1109,20 +1109,6 @@ TEST_F(HttpStreamFactoryTest, UsePreConnectIfNoZeroRTT) {
   for (int num_streams = 1; num_streams < 3; ++num_streams) {
     GURL url = GURL("https://www.google.com");
 
-    // Set up QUIC as alternative_service.
-    HttpServerPropertiesImpl http_server_properties;
-    const AlternativeService alternative_service(kProtoQUIC, url.host().c_str(),
-                                                 url.IntPort());
-    AlternativeServiceInfoVector alternative_service_info_vector;
-    base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
-    alternative_service_info_vector.push_back(
-        AlternativeServiceInfo(alternative_service, expiration));
-    HostPortPair host_port_pair(alternative_service.host_port_pair());
-    url::SchemeHostPort server("https", host_port_pair.host(),
-                               host_port_pair.port());
-    http_server_properties.SetAlternativeServices(
-        server, alternative_service_info_vector);
-
     SpdySessionDependencies session_deps(
         ProxyService::CreateFixed("http_proxy"));
 
@@ -1130,6 +1116,18 @@ TEST_F(HttpStreamFactoryTest, UsePreConnectIfNoZeroRTT) {
     HttpNetworkSession::Params session_params =
         SpdySessionDependencies::CreateSessionParams(&session_deps);
     session_params.enable_quic = true;
+
+    // Set up QUIC as alternative_service.
+    HttpServerPropertiesImpl http_server_properties;
+    const AlternativeService alternative_service(kProtoQUIC, url.host().c_str(),
+                                                 url.IntPort());
+    base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
+    HostPortPair host_port_pair(alternative_service.host_port_pair());
+    url::SchemeHostPort server("https", host_port_pair.host(),
+                               host_port_pair.port());
+    http_server_properties.SetQuicAlternativeService(
+        server, alternative_service, expiration,
+        session_params.quic_supported_versions);
 
     HttpNetworkSession::Context session_context =
         SpdySessionDependencies::CreateSessionContext(&session_deps);
@@ -2272,12 +2270,10 @@ class HttpStreamFactoryBidirectionalQuicTest
   void AddQuicAlternativeService() {
     const AlternativeService alternative_service(kProtoQUIC, "www.example.org",
                                                  443);
-    AlternativeServiceInfoVector alternative_service_info_vector;
     base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
-    alternative_service_info_vector.push_back(
-        AlternativeServiceInfo(alternative_service, expiration));
-    http_server_properties_.SetAlternativeServices(
-        url::SchemeHostPort(default_url_), alternative_service_info_vector);
+    http_server_properties_.SetQuicAlternativeService(
+        url::SchemeHostPort(default_url_), alternative_service, expiration,
+        session_->params().quic_supported_versions);
   }
 
   test::QuicTestPacketMaker& client_packet_maker() {
@@ -2352,8 +2348,8 @@ TEST_P(HttpStreamFactoryBidirectionalQuicTest,
   socket_factory().AddSSLSocketDataProvider(&ssl_data);
 
   // Set up QUIC as alternative_service.
-  AddQuicAlternativeService();
   Initialize();
+  AddQuicAlternativeService();
 
   // Now request a stream.
   SSLConfig ssl_config;
@@ -2416,9 +2412,9 @@ TEST_P(HttpStreamFactoryBidirectionalQuicTest,
   socket_factory().AddSSLSocketDataProvider(&ssl_data);
 
   // Set up QUIC as alternative_service.
-  AddQuicAlternativeService();
   DisableQuicBidirectionalStream();
   Initialize();
+  AddQuicAlternativeService();
 
   // Now request a stream.
   SSLConfig ssl_config;
@@ -2478,8 +2474,8 @@ TEST_P(HttpStreamFactoryBidirectionalQuicTest,
   socket_factory().AddSSLSocketDataProvider(&ssl_data);
 
   // Set up QUIC as alternative_service.
-  AddQuicAlternativeService();
   Initialize();
+  AddQuicAlternativeService();
 
   // Now request a stream.
   SSLConfig ssl_config;

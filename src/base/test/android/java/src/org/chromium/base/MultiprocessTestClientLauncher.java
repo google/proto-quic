@@ -12,9 +12,11 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
+import android.util.SparseArray;
 
 import org.chromium.base.annotations.CalledByNative;
 import org.chromium.base.annotations.JNINamespace;
+import org.chromium.base.process_launcher.ChildProcessConstants;
 import org.chromium.base.process_launcher.FileDescriptorInfo;
 import org.chromium.base.process_launcher.ICallbackInt;
 import org.chromium.base.process_launcher.IChildProcessService;
@@ -25,6 +27,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.annotation.concurrent.GuardedBy;
 
@@ -35,7 +40,9 @@ import javax.annotation.concurrent.GuardedBy;
 public final class MultiprocessTestClientLauncher {
     private static final String TAG = "cr_MProcTCLauncher";
 
-    private static ConnectionAllocator sConnectionAllocator = new ConnectionAllocator();
+    private static final ConnectionAllocator sConnectionAllocator = new ConnectionAllocator();
+
+    private static final SparseArray<Integer> sPidToMainResult = new SparseArray<>();
 
     // Not supposed to be instantiated.
     private MultiprocessTestClientLauncher() {}
@@ -108,11 +115,22 @@ public final class MultiprocessTestClientLauncher {
         private final CountDownLatch mPidReceived = new CountDownLatch(1);
         private final int mSlot;
         private IChildProcessService mService = null;
+
         @GuardedBy("mConnectedLock")
         private boolean mConnected;
+
         private int mPid;
         private ITestController mTestController;
+
+        private final ReentrantLock mMainReturnCodeLock = new ReentrantLock();
+        private final Condition mMainReturnCodeCondition = mMainReturnCodeLock.newCondition();
+        // The return code returned by the service's main method.
+        // null if the service has not sent it yet.
+        @GuardedBy("mMainReturnCodeLock")
+        private Integer mMainReturnCode;
+
         private final ITestCallback.Stub mCallback = new ITestCallback.Stub() {
+            @Override
             public void childConnected(ITestController controller) {
                 mTestController = controller;
                 // This method can be called before onServiceConnected below has set the PID.
@@ -128,6 +146,22 @@ public final class MultiprocessTestClientLauncher {
                     mConnected = true;
                     mConnectedLock.notifyAll();
                 }
+            }
+
+            @Override
+            public void mainReturned(int returnCode) {
+                mMainReturnCodeLock.lock();
+                try {
+                    mMainReturnCode = returnCode;
+                    mMainReturnCodeCondition.signal();
+                } finally {
+                    mMainReturnCodeLock.unlock();
+                }
+
+                // Also store the return code in a map as the connection might get disconnected
+                // before waitForMainToReturn is called and then we would not have a way to retrieve
+                // the connection.
+                sPidToMainResult.put(mPid, returnCode);
             }
         };
 
@@ -147,6 +181,26 @@ public final class MultiprocessTestClientLauncher {
                         Log.e(TAG, "Interrupted while waiting for connection.");
                     }
                 }
+            }
+        }
+
+        public Integer getMainReturnCode(long timeoutMs) {
+            long timeoutNs = TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+            mMainReturnCodeLock.lock();
+            try {
+                while (mMainReturnCode == null) {
+                    if (timeoutNs <= 0L) {
+                        return null;
+                    }
+                    try {
+                        timeoutNs = mMainReturnCodeCondition.awaitNanos(timeoutNs);
+                    } catch (InterruptedException ie) {
+                        Log.e(TAG, "Interrupted while waiting for main return code.");
+                    }
+                }
+                return mMainReturnCode;
+            } finally {
+                mMainReturnCodeLock.unlock();
             }
         }
 
@@ -250,19 +304,23 @@ public final class MultiprocessTestClientLauncher {
     @CalledByNative
     private static MainReturnCodeResult waitForMainToReturn(int pid, int timeoutMs) {
         ClientServiceConnection connection = sConnectionAllocator.getConnectionByPid(pid);
-        if (connection == null) {
+        if (connection != null) {
+            try {
+                Integer mainResult = connection.getMainReturnCode(timeoutMs);
+                return mainResult == null ? MainReturnCodeResult.createTimeoutMainResult()
+                                          : MainReturnCodeResult.createMainResult(mainResult);
+            } finally {
+                freeConnection(connection);
+            }
+        }
+
+        Integer mainResult = sPidToMainResult.get(pid);
+        if (mainResult == null) {
             Log.e(TAG, "waitForMainToReturn called on unknown connection for pid " + pid);
             return null;
         }
-        try {
-            ITestController testController = connection.getTestController();
-            return testController.waitForMainToReturn(timeoutMs);
-        } catch (RemoteException e) {
-            Log.e(TAG, "Remote call to waitForMainToReturn failed.");
-            return null;
-        } finally {
-            freeConnection(connection);
-        }
+        sPidToMainResult.remove(pid);
+        return MainReturnCodeResult.createMainResult(mainResult);
     }
 
     @CalledByNative

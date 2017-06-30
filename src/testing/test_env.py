@@ -52,7 +52,7 @@ def fix_python_path(cmd):
   return out
 
 
-def get_sanitizer_env(cmd, asan, lsan, msan, tsan):
+def get_sanitizer_env(cmd, asan, lsan, msan, tsan, cfi_diag):
   """Returns the envirnoment flags needed for sanitizer tools."""
 
   extra_env = {}
@@ -73,7 +73,7 @@ def get_sanitizer_env(cmd, asan, lsan, msan, tsan):
     # fact, it needs symbolization to be able to apply suppressions.
     symbolization_options = ['symbolize=1',
                              'external_symbolizer_path=%s' % symbolizer_path]
-  elif (asan or msan) and sys.platform not in ['win32', 'cygwin']:
+  elif (asan or msan or cfi_diag) and sys.platform not in ['win32', 'cygwin']:
     # ASan uses a script for offline symbolization, except on Windows.
     # Important note: when running ASan with leak detection enabled, we must use
     # the LSan symbolization options above.
@@ -119,6 +119,11 @@ def get_sanitizer_env(cmd, asan, lsan, msan, tsan):
   if tsan:
     tsan_options = symbolization_options[:]
     extra_env['TSAN_OPTIONS'] = ' '.join(tsan_options)
+
+  # CFI uses the UBSan runtime to provide diagnostics.
+  if cfi_diag:
+    ubsan_options = symbolization_options[:] + ['print_stacktrace=1']
+    extra_env['UBSAN_OPTIONS'] = ' '.join(ubsan_options)
 
   return extra_env
 
@@ -185,16 +190,17 @@ def run_executable(cmd, env):
   lsan = '--lsan=1' in cmd
   msan = '--msan=1' in cmd
   tsan = '--tsan=1' in cmd
+  cfi_diag = '--cfi-diag=1' in cmd
   if sys.platform in ['win32', 'cygwin']:
     # Symbolization works in-process on Windows even when sandboxed.
     use_symbolization_script = False
   else:
     # LSan doesn't support sandboxing yet, so we use the in-process symbolizer.
     # Note that ASan and MSan can work together with LSan.
-    use_symbolization_script = (asan or msan) and not lsan
+    use_symbolization_script = (asan or msan or cfi_diag) and not lsan
 
-  if asan or lsan or msan or tsan:
-    extra_env.update(get_sanitizer_env(cmd, asan, lsan, msan, tsan))
+  if asan or lsan or msan or tsan or cfi_diag:
+    extra_env.update(get_sanitizer_env(cmd, asan, lsan, msan, tsan, cfi_diag))
 
   if lsan or tsan:
     # LSan and TSan are not sandbox-friendly.

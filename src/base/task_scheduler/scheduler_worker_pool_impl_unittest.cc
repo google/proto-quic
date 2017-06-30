@@ -414,13 +414,15 @@ TEST_F(TaskSchedulerWorkerPoolImplPostTaskBeforeStartTest,
                         WaitableEvent::InitialState::NOT_SIGNALED);
 
   worker_pool_->CreateTaskRunnerWithTraits({WithBaseSyncPrimitives()})
-      ->PostTask(FROM_HERE,
-                 Bind(&TaskPostedBeforeStart, Unretained(&task_1_thread_ref),
-                      Unretained(&task_1_scheduled), Unretained(&barrier)));
+      ->PostTask(
+          FROM_HERE,
+          BindOnce(&TaskPostedBeforeStart, Unretained(&task_1_thread_ref),
+                   Unretained(&task_1_scheduled), Unretained(&barrier)));
   worker_pool_->CreateTaskRunnerWithTraits({WithBaseSyncPrimitives()})
-      ->PostTask(FROM_HERE,
-                 Bind(&TaskPostedBeforeStart, Unretained(&task_2_thread_ref),
-                      Unretained(&task_2_scheduled), Unretained(&barrier)));
+      ->PostTask(
+          FROM_HERE,
+          BindOnce(&TaskPostedBeforeStart, Unretained(&task_2_thread_ref),
+                   Unretained(&task_2_scheduled), Unretained(&barrier)));
 
   // Workers should not be created and tasks should not run before the pool is
   // started.

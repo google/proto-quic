@@ -83,9 +83,29 @@ bool ContainsKey(const Collection& collection, const Key& key) {
   return collection.find(key) != collection.end();
 }
 
+namespace internal {
+
+template <typename Collection>
+class HasKeyType {
+  template <typename C>
+  static std::true_type test(typename C::key_type*);
+  template <typename C>
+  static std::false_type test(...);
+
+ public:
+  static constexpr bool value = decltype(test<Collection>(nullptr))::value;
+};
+
+}  // namespace internal
+
 // Test to see if a collection like a vector contains a particular value.
 // Returns true if the value is in the collection.
-template <typename Collection, typename Value>
+// Don't use this on collections such as sets or maps. This is enforced by
+// disabling this method if the collection defines a key_type.
+template <typename Collection,
+          typename Value,
+          typename std::enable_if<!internal::HasKeyType<Collection>::value,
+                                  int>::type = 0>
 bool ContainsValue(const Collection& collection, const Value& value) {
   return std::find(std::begin(collection), std::end(collection), value) !=
          std::end(collection);

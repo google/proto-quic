@@ -14,7 +14,6 @@
 #include "crypto/crypto_export.h"
 
 namespace base {
-class Lock;
 class Time;
 }  // namespace base
 
@@ -22,11 +21,6 @@ class Time;
 // is included by various (non-crypto) parts of chrome to call the
 // initialization functions.
 namespace crypto {
-
-// EarlySetupForNSSInit performs lightweight setup which must occur before the
-// process goes multithreaded. This does not initialise NSS. For test, see
-// EnsureNSSInit.
-CRYPTO_EXPORT void EarlySetupForNSSInit();
 
 // Initialize NRPR if it isn't already initialized.  This function is
 // thread-safe, and NSPR will only ever be initialized once.
@@ -77,27 +71,6 @@ CRYPTO_EXPORT base::Time PRTimeToBaseTime(int64_t prtime);
 // Convert a base::Time object into a PRTime value.
 // We use a int64_t instead of PRTime here to avoid depending on NSPR headers.
 CRYPTO_EXPORT int64_t BaseTimeToPRTime(base::Time time);
-
-// NSS has a bug which can cause a deadlock or stall in some cases when writing
-// to the certDB and keyDB. It also has a bug which causes concurrent key pair
-// generations to scribble over each other. To work around this, we synchronize
-// writes to the NSS databases with a global lock. The lock is hidden beneath a
-// function for easy disabling when the bug is fixed. Callers should allow for
-// it to return NULL in the future.
-//
-// See https://bugzilla.mozilla.org/show_bug.cgi?id=564011
-base::Lock* GetNSSWriteLock();
-
-// A helper class that acquires the NSS write Lock while the AutoNSSWriteLock
-// is in scope.
-class CRYPTO_EXPORT AutoNSSWriteLock {
- public:
-  AutoNSSWriteLock();
-  ~AutoNSSWriteLock();
- private:
-  base::Lock *lock_;
-  DISALLOW_COPY_AND_ASSIGN(AutoNSSWriteLock);
-};
 
 }  // namespace crypto
 

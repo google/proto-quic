@@ -35,6 +35,98 @@ be describing additional metrics about the same event.
   <metric name="DeveloperEngagement"/>
 </event>
 
+<event name="Autofill.FieldFillStatus">
+  <owner>rogerm@chromium.org</owner>
+  <summary>
+    Recorded when Chrome validates field type predictions (on submit, on leaving
+    a form, on receiving a form with autocomplete attributes).
+  </summary>
+  <metric name="FieldSignature">
+    <summary>
+      The signature of the field. This is the hash identifier used to denote
+      this field for query and voting purposes. See
+      components/autofill/core/common/signatures_util.cc for more details.
+    </summary>
+  </metric>
+  <metric name="FormSignature">
+    <summary>
+      The signature of the form. This is the hash identifier used to denote this
+      form for query and voting purposes. See
+      components/autofill/core/common/signatures_util.cc for more details.
+    </summary>
+  </metric>
+  <metric name="IsAutofilled">
+    <summary>
+      The field is currently autofilled.
+    </summary>
+  </metric>
+  <metric name="MillisecondsSinceFormParsed">
+    <summary>
+      Time since form parse.
+    </summary>
+  </metric>
+  <metric name="PredictionSource">
+    <summary>
+      The system which generated the prediction: heuristics, server, overall.
+    </summary>
+  </metric>
+  <metric name="ValidationEvent">
+    <summary>
+      The event which triggered the validation: Submission, Left Form, Form has
+      Autocomplete attributes.
+    </summary>
+  </metric>
+  <metric name="WasPreviouslyAutofilled">
+    <summary>
+      The field was autofilled and subsequently edited.
+    </summary>
+  </metric>
+</event>
+
+<event name="Autofill.FieldTypeValidation">
+  <owner>rogerm@chromium.org</owner>
+  <summary>
+    Recorded when Chrome validates field type predictions (on submit, on leaving
+    a form, on receiving a form with autocomplete attributes).
+  </summary>
+  <metric name="ActualType">
+    <summary>
+      The observed type of the field. See: autofill::ServerFieldType
+    </summary>
+  </metric>
+  <metric name="FieldSignature">
+    <summary>
+      The signature of the field
+    </summary>
+  </metric>
+  <metric name="FormSignature">
+    <summary>
+      The signature of the form.
+    </summary>
+  </metric>
+  <metric name="MillisecondsSinceFormParsed">
+    <summary>
+      Time since form parse.
+    </summary>
+  </metric>
+  <metric name="PredictedType">
+    <summary>
+      The predicted type of the field. See: autofill::ServerFieldType
+    </summary>
+  </metric>
+  <metric name="PredictionSource">
+    <summary>
+      The system which generated the prediction: heuristics, server, overall.
+    </summary>
+  </metric>
+  <metric name="ValidationEvent">
+    <summary>
+      The event which triggered the validation: Submission, Left Form, Form has
+      Autocomplete attributes.
+    </summary>
+  </metric>
+</event>
+
 <event name="Autofill.FormSubmitted">
   <owner>jiahuiguo@google.com</owner>
   <summary>
@@ -341,6 +433,9 @@ be describing additional metrics about the same event.
   <metric name="AudioVideo.Background.MSE"/>
   <metric name="AudioVideo.Background.SRC"/>
   <metric name="AudioVideo.Battery"/>
+  <metric name="AudioVideo.DisplayFullscreen"/>
+  <metric name="AudioVideo.DisplayInline"/>
+  <metric name="AudioVideo.DisplayPictureInPicture"/>
   <metric name="AudioVideo.EME"/>
   <metric name="AudioVideo.MSE"/>
   <metric name="AudioVideo.NativeControlsOff"/>
@@ -438,6 +533,35 @@ be describing additional metrics about the same event.
     <summary>
       Measures the time in milliseconds from navigation timing's navigation
       start to the time the parser started, for main frame documents.
+    </summary>
+  </metric>
+</event>
+
+<event name="PasswordForm">
+  <owner>battre@chromium.org</owner>
+  <summary>
+    Metrics about password forms on websites and the user's interactions with
+    them. A separate event is generated for each password form discovered on a
+    site.
+  </summary>
+  <metric name="Submission.Observed">
+    <summary>
+      Records whether a submission of a password form has been observered. The
+      values 0 and 1 correspond to false and true respectively.
+    </summary>
+  </metric>
+  <metric name="Submission.SubmissionResult">
+    <summary>
+      Records the outcome of a password form submission. The values are numbered
+      according to PasswordFormMetricsRecorder::SubmitResult. Note that no
+      metric is recorded for kSubmitResultNotSubmitted.
+    </summary>
+  </metric>
+  <metric name="Submission.SubmittedFormType">
+    <summary>
+      Records the classification of a form at submission time. The values
+      correspond to PasswordFormMetricsRecorder::SubmittedFormType. Note that no
+      metric is recorded for kSubmittedFormTypeUnspecified.
     </summary>
   </metric>
 </event>

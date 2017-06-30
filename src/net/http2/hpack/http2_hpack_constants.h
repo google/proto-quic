@@ -13,7 +13,7 @@
 #include <ostream>
 #include <string>
 
-#include "net/base/net_export.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 
@@ -50,11 +50,11 @@ enum class HpackEntryType {
 };
 
 // Returns the name of the enum member.
-NET_EXPORT_PRIVATE std::string HpackEntryTypeToString(HpackEntryType v);
+HTTP2_EXPORT_PRIVATE std::string HpackEntryTypeToString(HpackEntryType v);
 
 // Inserts the name of the enum member into |out|.
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
-                                            HpackEntryType v);
+HTTP2_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
+                                              HpackEntryType v);
 
 }  // namespace net
 

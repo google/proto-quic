@@ -778,16 +778,14 @@ void FieldTrialList::CreateTrialsFromCommandLine(
     int fd_key) {
   global_->create_trials_from_command_line_called_ = true;
 
-#if defined(OS_WIN)
+#if defined(OS_WIN) || defined(OS_FUCHSIA)
   if (cmd_line.HasSwitch(field_trial_handle_switch)) {
     std::string switch_value =
         cmd_line.GetSwitchValueASCII(field_trial_handle_switch);
     bool result = CreateTrialsFromSwitchValue(switch_value);
     DCHECK(result);
   }
-#endif
-
-#if defined(OS_POSIX) && !defined(OS_NACL)
+#elif defined(OS_POSIX) && !defined(OS_NACL)
   // On POSIX, we check if the handle is valid by seeing if the browser process
   // sent over the switch (we don't care about the value). Invalid handles
   // occur in some browser tests which don't initialize the allocator.
@@ -825,7 +823,7 @@ void FieldTrialList::CreateFeaturesFromCommandLine(
       global_->field_trial_allocator_.get());
 }
 
-#if defined(OS_WIN)
+#if defined(OS_WIN) || defined(OS_FUCHSIA)
 // static
 void FieldTrialList::AppendFieldTrialHandleIfNeeded(
     HandlesToInheritVector* handles) {
@@ -837,9 +835,7 @@ void FieldTrialList::AppendFieldTrialHandleIfNeeded(
       handles->push_back(global_->readonly_allocator_handle_.GetHandle());
   }
 }
-#endif
-
-#if defined(OS_POSIX) && !defined(OS_NACL)
+#elif defined(OS_POSIX) && !defined(OS_NACL)
 // static
 SharedMemoryHandle FieldTrialList::GetFieldTrialHandle() {
   if (global_ && kUseSharedMemoryForFieldTrials) {
@@ -1120,6 +1116,8 @@ std::string FieldTrialList::SerializeSharedMemoryHandleMetadata(
   // Tell the child process the name of the inherited HANDLE.
   uintptr_t uintptr_handle = reinterpret_cast<uintptr_t>(shm.GetHandle());
   ss << uintptr_handle << ",";
+#elif defined(OS_FUCHSIA)
+  ss << shm.GetHandle() << ",";
 #elif !defined(OS_POSIX)
 #error Unsupported OS
 #endif
@@ -1130,10 +1128,10 @@ std::string FieldTrialList::SerializeSharedMemoryHandleMetadata(
   return ss.str();
 }
 
-#if defined(OS_WIN)
-// static
-SharedMemoryHandle FieldTrialList::DeserializeSharedMemoryHandleMetadata(
-    const std::string& switch_value) {
+#if defined(OS_WIN) || defined(OS_FUCHSIA)
+
+template <class RawHandle>
+SharedMemoryHandle DeserializeImpl(const std::string& switch_value) {
   std::vector<base::StringPiece> tokens = base::SplitStringPiece(
       switch_value, ",", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
 
@@ -1143,7 +1141,7 @@ SharedMemoryHandle FieldTrialList::DeserializeSharedMemoryHandleMetadata(
   int field_trial_handle = 0;
   if (!base::StringToInt(tokens[0], &field_trial_handle))
     return SharedMemoryHandle();
-  HANDLE handle = reinterpret_cast<HANDLE>(field_trial_handle);
+  RawHandle handle = reinterpret_cast<RawHandle>(field_trial_handle);
 
   base::UnguessableToken guid;
   if (!DeserializeGUIDFromStringPieces(tokens[1], tokens[2], &guid))
@@ -1155,9 +1153,19 @@ SharedMemoryHandle FieldTrialList::DeserializeSharedMemoryHandleMetadata(
 
   return SharedMemoryHandle(handle, static_cast<size_t>(size), guid);
 }
-#endif  // defined(OS_WIN)
 
-#if defined(OS_POSIX) && !defined(OS_NACL)
+// static
+SharedMemoryHandle FieldTrialList::DeserializeSharedMemoryHandleMetadata(
+    const std::string& switch_value) {
+#if defined(OS_WIN)
+  return DeserializeImpl<HANDLE>(switch_value);
+#else
+  return DeserializeImpl<mx_handle_t>(switch_value);
+#endif
+}
+
+#elif defined(OS_POSIX) && !defined(OS_NACL)
+
 // static
 SharedMemoryHandle FieldTrialList::DeserializeSharedMemoryHandleMetadata(
     int fd,
@@ -1179,9 +1187,10 @@ SharedMemoryHandle FieldTrialList::DeserializeSharedMemoryHandleMetadata(
   return SharedMemoryHandle(FileDescriptor(fd, true), static_cast<size_t>(size),
                             guid);
 }
-#endif  // defined(OS_POSIX) && !defined(OS_NACL)
 
-#if defined(OS_WIN)
+#endif
+
+#if defined(OS_WIN) || defined(OS_FUCHSIA)
 // static
 bool FieldTrialList::CreateTrialsFromSwitchValue(
     const std::string& switch_value) {
@@ -1190,9 +1199,7 @@ bool FieldTrialList::CreateTrialsFromSwitchValue(
     return false;
   return FieldTrialList::CreateTrialsFromSharedMemoryHandle(shm);
 }
-#endif  // defined(OS_WIN)
-
-#if defined(OS_POSIX) && !defined(OS_NACL)
+#elif defined(OS_POSIX) && !defined(OS_NACL)
 // static
 bool FieldTrialList::CreateTrialsFromDescriptor(
     int fd_key,

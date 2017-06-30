@@ -9,7 +9,9 @@
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
+#include "build/buildflag.h"
 #include "net/base/net_export.h"
+#include "net/net_features.h"
 
 namespace net {
 
@@ -79,8 +81,11 @@ class NET_EXPORT URLRequestContextStorage {
   void set_http_user_agent_settings(
       std::unique_ptr<HttpUserAgentSettings> http_user_agent_settings);
   void set_sdch_manager(std::unique_ptr<SdchManager> sdch_manager);
+
+#if BUILDFLAG(ENABLE_REPORTING)
   void set_reporting_service(
       std::unique_ptr<ReportingService> reporting_service);
+#endif  // BUILDFLAG(ENABLE_REPORTING)
 
   // Everything else can be access through the URLRequestContext, but this
   // cannot.  Having an accessor for it makes usage a little cleaner.
@@ -119,7 +124,9 @@ class NET_EXPORT URLRequestContextStorage {
   std::unique_ptr<URLRequestJobFactory> job_factory_;
   std::unique_ptr<URLRequestThrottlerManager> throttler_manager_;
   std::unique_ptr<SdchManager> sdch_manager_;
+#if BUILDFLAG(ENABLE_REPORTING)
   std::unique_ptr<ReportingService> reporting_service_;
+#endif  // BUILDFLAG(ENABLE_REPORTING)
 
   DISALLOW_COPY_AND_ASSIGN(URLRequestContextStorage);
 };

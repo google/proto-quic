@@ -21,8 +21,6 @@
 #include "base/trace_event/trace_event.h"
 #include "base/tracked_objects.h"
 
-using tracked_objects::TrackedTime;
-
 namespace base {
 
 namespace {

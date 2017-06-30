@@ -398,10 +398,10 @@ void BlockFiles::ReportStats() {
   for (int i = 0; i < kFirstAdditionalBlockFile; i++) {
     GetFileStats(i, &used_blocks[i], &load[i]);
   }
-  UMA_HISTOGRAM_COUNTS("DiskCache.Blocks_0", used_blocks[0]);
-  UMA_HISTOGRAM_COUNTS("DiskCache.Blocks_1", used_blocks[1]);
-  UMA_HISTOGRAM_COUNTS("DiskCache.Blocks_2", used_blocks[2]);
-  UMA_HISTOGRAM_COUNTS("DiskCache.Blocks_3", used_blocks[3]);
+  UMA_HISTOGRAM_COUNTS_1M("DiskCache.Blocks_0", used_blocks[0]);
+  UMA_HISTOGRAM_COUNTS_1M("DiskCache.Blocks_1", used_blocks[1]);
+  UMA_HISTOGRAM_COUNTS_1M("DiskCache.Blocks_2", used_blocks[2]);
+  UMA_HISTOGRAM_COUNTS_1M("DiskCache.Blocks_3", used_blocks[3]);
 
   UMA_HISTOGRAM_ENUMERATION("DiskCache.BlockLoad_0", load[0], 101);
   UMA_HISTOGRAM_ENUMERATION("DiskCache.BlockLoad_1", load[1], 101);
@@ -630,7 +630,7 @@ bool BlockFiles::RemoveEmptyFile(FileType block_type) {
       block_files_[file_index] = NULL;
 
       int failure = DeleteCacheFile(name) ? 0 : 1;
-      UMA_HISTOGRAM_COUNTS("DiskCache.DeleteFailed2", failure);
+      UMA_HISTOGRAM_COUNTS_1M("DiskCache.DeleteFailed2", failure);
       if (failure)
         LOG(ERROR) << "Failed to delete " << name.value() << " from the cache.";
       continue;

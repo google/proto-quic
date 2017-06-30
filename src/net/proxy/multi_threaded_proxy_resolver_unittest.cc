@@ -152,19 +152,19 @@ class BlockableProxyResolverFactory : public ProxyResolverFactory {
       std::unique_ptr<Request>* request) override {
     BlockableProxyResolver* resolver = new BlockableProxyResolver;
     result->reset(resolver);
-    base::AutoLock l(lock_);
+    base::AutoLock lock(lock_);
     resolvers_.push_back(resolver);
     script_data_.push_back(script_data);
     return OK;
   }
 
   std::vector<BlockableProxyResolver*> resolvers() {
-    base::AutoLock l(lock_);
+    base::AutoLock lock(lock_);
     return resolvers_;
   }
 
   const std::vector<scoped_refptr<ProxyResolverScriptData>> script_data() {
-    base::AutoLock l(lock_);
+    base::AutoLock lock(lock_);
     return script_data_;
   }
 

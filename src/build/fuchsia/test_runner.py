@@ -6,11 +6,11 @@
 
 """Packages a user.bootfs for a Fuchsia QEMU image, pulling in the runtime
 dependencies of a test binary, and then uses QEMU from the Fuchsia SDK to run
-it. Does not yet implement running on real hardware, or symbolization of
-crashes."""
+it. Does not yet implement running on real hardware."""
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -198,7 +198,7 @@ def BuildBootfs(output_directory, runtime_deps_path, test_name, gtest_filter,
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('--dry-run', '-n', action='store_true', default=False,
-                      help="Just print commands, don't execute them.")
+                      help='Just print commands, don\'t execute them.')
   parser.add_argument('--output-directory',
                       type=os.path.realpath,
                       help=('Path to the directory in which build files are'
@@ -215,6 +215,8 @@ def main():
                       help='GTest repeat value to use')
   parser.add_argument('--test-launcher-filter-file',
                       help='Pass filter file through to target process')
+  parser.add_argument('--test_launcher_summary_output',
+                      help='Currently ignored for 2-sided roll.')
   args = parser.parse_args()
 
   bootfs = BuildBootfs(args.output_directory, args.runtime_deps_path,
@@ -240,17 +242,38 @@ def main():
   if args.dry_run:
     print 'Run:', qemu_command
   else:
+    prefix = r'^.*> '
+    bt_with_offset_re = re.compile(prefix +
+        'bt#(\d+): pc 0x[0-9a-f]+ sp (0x[0-9a-f]+) \((\S+),(0x[0-9a-f]+)\)$')
+    bt_end_re = re.compile(prefix + 'bt#(\d+): end')
     qemu_popen = subprocess.Popen(qemu_command, stdout=subprocess.PIPE)
+    processed_lines = []
     success = False
-    # TODO(scottmg): Pipe through magenta/scripts/symbolize too, once that's
-    # available in the SDK.
     while True:
       line = qemu_popen.stdout.readline()
       if not line:
         break
+      print line,
       if 'SUCCESS: all tests passed.' in line:
         success = True
-      print line,
+      if bt_end_re.match(line.strip()):
+        if processed_lines:
+          print '----- start symbolized stack'
+          for processed in processed_lines:
+            print processed
+          print '----- end symbolized stack'
+        processed_lines = []
+      else:
+        m = bt_with_offset_re.match(line.strip())
+        if m:
+          addr2line_output = subprocess.check_output(
+              ['addr2line', '-Cipf', '--exe=' + args.test_name, m.group(4)])
+          prefix = '#%s: ' % m.group(1)
+          # addr2line outputs a second line for inlining information, offset
+          # that to align it properly after the frame index.
+          addr2line_filtered = addr2line_output.strip().replace(
+              '(inlined', ' ' * len(prefix) + '(inlined')
+          processed_lines.append('%s%s' % (prefix, addr2line_filtered))
     qemu_popen.wait()
     return 0 if success else 1
 

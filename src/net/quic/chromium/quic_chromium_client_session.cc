@@ -199,12 +199,19 @@ QuicChromiumClientSession::Handle::Handle(
       error_(OK),
       port_migration_detected_(false),
       server_id_(session_->server_id()),
-      quic_version_(session->connection()->version()) {
+      quic_version_(session->connection()->version()),
+      push_handle_(nullptr) {
   DCHECK(session_);
   session_->AddHandle(this);
 }
 
 QuicChromiumClientSession::Handle::~Handle() {
+  if (push_handle_) {
+    auto* push_handle = push_handle_;
+    push_handle_ = nullptr;
+    push_handle->Cancel();
+  }
+
   if (session_)
     session_->RemoveHandle(this);
 }
@@ -223,6 +230,7 @@ void QuicChromiumClientSession::Handle::OnSessionClosed(
   error_ = error;
   quic_version_ = quic_version;
   connect_timing_ = connect_timing;
+  push_handle_ = nullptr;
 }
 
 bool QuicChromiumClientSession::Handle::IsConnected() const {
@@ -289,6 +297,28 @@ bool QuicChromiumClientSession::Handle::SharesSameSession(
   return session_.get() == other.session_.get();
 }
 
+int QuicChromiumClientSession::Handle::RendezvousWithPromised(
+    const SpdyHeaderBlock& headers,
+    const CompletionCallback& callback) {
+  if (!session_)
+    return ERR_CONNECTION_CLOSED;
+
+  QuicAsyncStatus push_status =
+      session_->push_promise_index()->Try(headers, this, &push_handle_);
+
+  switch (push_status) {
+    case QUIC_FAILURE:
+      return ERR_FAILED;
+    case QUIC_SUCCESS:
+      return OK;
+    case QUIC_PENDING:
+      push_callback_ = callback;
+      return ERR_IO_PENDING;
+  }
+  NOTREACHED();
+  return ERR_UNEXPECTED;
+}
+
 int QuicChromiumClientSession::Handle::RequestStream(
     bool requires_confirmation,
     const CompletionCallback& callback) {
@@ -311,6 +341,12 @@ QuicChromiumClientSession::Handle::ReleaseStream() {
   auto handle = stream_request_->ReleaseStream();
   stream_request_.reset();
   return handle;
+}
+
+std::unique_ptr<QuicChromiumClientStream::Handle>
+QuicChromiumClientSession::Handle::ReleasePromisedStream() {
+  DCHECK(push_stream_);
+  return std::move(push_stream_);
 }
 
 int QuicChromiumClientSession::Handle::WaitForHandshakeConfirmation(
@@ -348,6 +384,51 @@ int QuicChromiumClientSession::Handle::GetPeerAddress(
 
   *address = session_->peer_address().impl().socket_address();
   return OK;
+}
+
+bool QuicChromiumClientSession::Handle::CheckVary(
+    const SpdyHeaderBlock& client_request,
+    const SpdyHeaderBlock& promise_request,
+    const SpdyHeaderBlock& promise_response) {
+  HttpRequestInfo promise_request_info;
+  ConvertHeaderBlockToHttpRequestHeaders(promise_request,
+                                         &promise_request_info.extra_headers);
+  HttpRequestInfo client_request_info;
+  ConvertHeaderBlockToHttpRequestHeaders(client_request,
+                                         &client_request_info.extra_headers);
+
+  HttpResponseInfo promise_response_info;
+  if (!SpdyHeadersToHttpResponse(promise_response, &promise_response_info)) {
+    DLOG(WARNING) << "Invalid headers";
+    return false;
+  }
+
+  HttpVaryData vary_data;
+  if (!vary_data.Init(promise_request_info,
+                      *promise_response_info.headers.get())) {
+    // Promise didn't contain valid vary info, so URL match was sufficient.
+    return true;
+  }
+  // Now compare the client request for matching.
+  return vary_data.MatchesRequest(client_request_info,
+                                  *promise_response_info.headers.get());
+}
+
+void QuicChromiumClientSession::Handle::OnRendezvousResult(
+    QuicSpdyStream* stream) {
+  DCHECK(!push_stream_);
+  int rv = ERR_FAILED;
+  if (stream) {
+    rv = OK;
+    push_stream_ =
+        static_cast<QuicChromiumClientStream*>(stream)->CreateHandle();
+  }
+
+  if (push_callback_) {
+    DCHECK(push_handle_);
+    push_handle_ = nullptr;
+    base::ResetAndReturn(&push_callback_).Run(rv);
+  }
 }
 
 QuicChromiumClientSession::StreamRequest::StreamRequest(
@@ -592,12 +673,13 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
   else
     RecordHandshakeState(STATE_FAILED);
 
-  UMA_HISTOGRAM_COUNTS("Net.QuicSession.NumTotalStreams", num_total_streams_);
-  UMA_HISTOGRAM_COUNTS("Net.QuicNumSentClientHellos",
-                       crypto_stream_->num_sent_client_hellos());
-  UMA_HISTOGRAM_COUNTS("Net.QuicSession.Pushed", streams_pushed_count_);
-  UMA_HISTOGRAM_COUNTS("Net.QuicSession.PushedAndClaimed",
-                       streams_pushed_and_claimed_count_);
+  UMA_HISTOGRAM_COUNTS_1M("Net.QuicSession.NumTotalStreams",
+                          num_total_streams_);
+  UMA_HISTOGRAM_COUNTS_1M("Net.QuicNumSentClientHellos",
+                          crypto_stream_->num_sent_client_hellos());
+  UMA_HISTOGRAM_COUNTS_1M("Net.QuicSession.Pushed", streams_pushed_count_);
+  UMA_HISTOGRAM_COUNTS_1M("Net.QuicSession.PushedAndClaimed",
+                          streams_pushed_and_claimed_count_);
   UMA_HISTOGRAM_COUNTS_1M("Net.QuicSession.PushedBytes", bytes_pushed_count_);
   DCHECK_LE(bytes_pushed_and_unclaimed_count_, bytes_pushed_count_);
   UMA_HISTOGRAM_COUNTS_1M("Net.QuicSession.PushedAndUnclaimedBytes",
@@ -636,8 +718,8 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
   UMA_HISTOGRAM_SPARSE_SLOWLY("Net.QuicSession.ServerSideMtu",
                               stats.max_received_packet_size);
 
-  UMA_HISTOGRAM_COUNTS("Net.QuicSession.MtuProbesSent",
-                       connection()->mtu_probe_count());
+  UMA_HISTOGRAM_COUNTS_1M("Net.QuicSession.MtuProbesSent",
+                          connection()->mtu_probe_count());
 
   if (stats.packets_sent >= 100) {
     // Used to monitor for regressions that effect large uploads.
@@ -660,7 +742,7 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
     UMA_HISTOGRAM_CUSTOM_COUNTS("Net.QuicSession.MaxReorderingTimeLongRtt",
                                 reordering, 1, kMaxReordering, 50);
   }
-  UMA_HISTOGRAM_COUNTS(
+  UMA_HISTOGRAM_COUNTS_1M(
       "Net.QuicSession.MaxReordering",
       static_cast<base::HistogramBase::Sample>(stats.max_sequence_reordering));
 }
@@ -688,10 +770,10 @@ void QuicChromiumClientSession::OnHeadersHeadOfLineBlocking(
 
 void QuicChromiumClientSession::OnStreamFrame(const QuicStreamFrame& frame) {
   // Record total number of stream frames.
-  UMA_HISTOGRAM_COUNTS("Net.QuicNumStreamFramesInPacket", 1);
+  UMA_HISTOGRAM_COUNTS_1M("Net.QuicNumStreamFramesInPacket", 1);
 
   // Record number of frames per stream in packet.
-  UMA_HISTOGRAM_COUNTS("Net.QuicNumStreamFramesPerStreamInPacket", 1);
+  UMA_HISTOGRAM_COUNTS_1M("Net.QuicNumStreamFramesPerStreamInPacket", 1);
 
   return QuicSpdySession::OnStreamFrame(frame);
 }
@@ -810,8 +892,8 @@ QuicChromiumClientSession::CreateOutgoingReliableStreamImpl() {
       new QuicChromiumClientStream(GetNextOutgoingStreamId(), this, net_log_);
   ActivateStream(base::WrapUnique(stream));
   ++num_total_streams_;
-  UMA_HISTOGRAM_COUNTS("Net.QuicSession.NumOpenStreams",
-                       GetNumOpenOutgoingStreams());
+  UMA_HISTOGRAM_COUNTS_1M("Net.QuicSession.NumOpenStreams",
+                          GetNumOpenOutgoingStreams());
   // The previous histogram puts 100 in a bucket betweeen 86-113 which does
   // not shed light on if chrome ever things it has more than 100 streams open.
   UMA_HISTOGRAM_BOOLEAN("Net.QuicSession.TooManyOpenStreams",
@@ -1207,7 +1289,7 @@ void QuicChromiumClientSession::OnConnectionClosed(
   }
 
   if (error == QUIC_NETWORK_IDLE_TIMEOUT) {
-    UMA_HISTOGRAM_COUNTS(
+    UMA_HISTOGRAM_COUNTS_1M(
         "Net.QuicSession.ConnectionClose.NumOpenStreams.TimedOut",
         GetNumOpenOutgoingStreams());
     if (IsCryptoHandshakeConfirmed()) {
@@ -1215,10 +1297,10 @@ void QuicChromiumClientSession::OnConnectionClosed(
         UMA_HISTOGRAM_BOOLEAN(
             "Net.QuicSession.TimedOutWithOpenStreams.HasUnackedPackets",
             connection()->sent_packet_manager().HasUnackedPackets());
-        UMA_HISTOGRAM_COUNTS(
+        UMA_HISTOGRAM_COUNTS_1M(
             "Net.QuicSession.TimedOutWithOpenStreams.ConsecutiveRTOCount",
             connection()->sent_packet_manager().GetConsecutiveRtoCount());
-        UMA_HISTOGRAM_COUNTS(
+        UMA_HISTOGRAM_COUNTS_1M(
             "Net.QuicSession.TimedOutWithOpenStreams.ConsecutiveTLPCount",
             connection()->sent_packet_manager().GetConsecutiveTlpCount());
         UMA_HISTOGRAM_SPARSE_SLOWLY(
@@ -1226,10 +1308,10 @@ void QuicChromiumClientSession::OnConnectionClosed(
             connection()->self_address().port());
       }
     } else {
-      UMA_HISTOGRAM_COUNTS(
+      UMA_HISTOGRAM_COUNTS_1M(
           "Net.QuicSession.ConnectionClose.NumOpenStreams.HandshakeTimedOut",
           GetNumOpenOutgoingStreams());
-      UMA_HISTOGRAM_COUNTS(
+      UMA_HISTOGRAM_COUNTS_1M(
           "Net.QuicSession.ConnectionClose.NumTotalStreams.HandshakeTimedOut",
           num_total_streams_);
     }

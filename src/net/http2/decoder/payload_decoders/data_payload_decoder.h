@@ -7,17 +7,17 @@
 
 // Decodes the payload of a DATA frame.
 
-#include "net/base/net_export.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
 #include "net/http2/decoder/frame_decoder_state.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 namespace test {
 class DataPayloadDecoderPeer;
 }  // namespace test
 
-class NET_EXPORT_PRIVATE DataPayloadDecoder {
+class HTTP2_EXPORT_PRIVATE DataPayloadDecoder {
  public:
   // States during decoding of a DATA frame.
   enum class PayloadState {

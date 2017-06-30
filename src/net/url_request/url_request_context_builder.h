@@ -26,7 +26,9 @@
 #include "base/files/file_path.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
+#include "base/task_scheduler/task_traits.h"
 #include "build/build_config.h"
+#include "build/buildflag.h"
 #include "net/base/net_export.h"
 #include "net/base/network_delegate.h"
 #include "net/base/proxy_delegate.h"
@@ -42,6 +44,8 @@
 
 namespace base {
 class SingleThreadTaskRunner;
+class SequencedTaskRunner;
+class TaskRunner;
 }
 
 namespace net {
@@ -304,10 +308,10 @@ class NET_EXPORT URLRequestContextBuilder {
 
   void SetCertVerifier(std::unique_ptr<CertVerifier> cert_verifier);
 
-  // Sets the reporting policy of the created request context. If not set, or
-  // set to nullptr, reporting is disabled.
+#if BUILDFLAG(ENABLE_REPORTING)
   void set_reporting_policy(
       std::unique_ptr<net::ReportingPolicy> reporting_policy);
+#endif  // BUILDFLAG(ENABLE_REPORTING)
 
   void SetInterceptors(std::vector<std::unique_ptr<URLRequestInterceptor>>
                            url_request_interceptors);
@@ -325,8 +329,8 @@ class NET_EXPORT URLRequestContextBuilder {
       std::unique_ptr<CookieStore> cookie_store,
       std::unique_ptr<ChannelIDService> channel_id_service);
 
-  // Sets the task runner used to perform file operations. If not set, one will
-  // be created.
+  // Sets the task runner used to perform file operations. If not set,
+  // TaskSchedulers will be used instead.
   void SetFileTaskRunner(
       const scoped_refptr<base::SingleThreadTaskRunner>& task_runner);
 
@@ -357,6 +361,16 @@ class NET_EXPORT URLRequestContextBuilder {
       HostResolver* host_resolver,
       NetworkDelegate* network_delegate,
       NetLog* net_log);
+
+  // Returns a TaskRunner with the specified traits. If |file_task_runner_| is
+  // non-NULL, uses that. Otherwise, uses base/task_scheduler/ and the specified
+  // traits.
+  scoped_refptr<base::TaskRunner> GetFileTaskRunner(
+      const base::TaskTraits& traits);
+  scoped_refptr<base::SequencedTaskRunner> GetFileSequencedTaskRunner(
+      const base::TaskTraits& traits);
+  scoped_refptr<base::SingleThreadTaskRunner> GetFileSingleThreadTaskRunner(
+      const base::TaskTraits& traits);
 
  private:
   const char* name_;
@@ -398,7 +412,9 @@ class NET_EXPORT URLRequestContextBuilder {
   std::unique_ptr<HttpAuthHandlerFactory> http_auth_handler_factory_;
   std::unique_ptr<CertVerifier> cert_verifier_;
   std::unique_ptr<CTVerifier> ct_verifier_;
+#if BUILDFLAG(ENABLE_REPORTING)
   std::unique_ptr<net::ReportingPolicy> reporting_policy_;
+#endif  // BUILDFLAG(ENABLE_REPORTING)
   std::vector<std::unique_ptr<URLRequestInterceptor>> url_request_interceptors_;
   std::unique_ptr<HttpServerProperties> http_server_properties_;
   std::map<std::string, std::unique_ptr<URLRequestJobFactory::ProtocolHandler>>

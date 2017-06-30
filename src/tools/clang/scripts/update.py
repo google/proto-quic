@@ -34,7 +34,7 @@ if use_head_revision:
   CLANG_REVISION = 'HEAD'
 
 # This is incremented when pushing a new build of Clang at the same revision.
-CLANG_SUB_REVISION=1
+CLANG_SUB_REVISION=2
 
 PACKAGE_VERSION = "%s-%s" % (CLANG_REVISION, CLANG_SUB_REVISION)
 
@@ -46,7 +46,7 @@ LLVM_DIR = os.path.join(THIRD_PARTY_DIR, 'llvm')
 LLVM_BOOTSTRAP_DIR = os.path.join(THIRD_PARTY_DIR, 'llvm-bootstrap')
 LLVM_BOOTSTRAP_INSTALL_DIR = os.path.join(THIRD_PARTY_DIR,
                                           'llvm-bootstrap-install')
-LLVM_LTO_GOLD_PLUGIN_DIR = os.path.join(THIRD_PARTY_DIR, 'llvm-lto-gold-plugin')
+LLVM_LTO_LLD_DIR = os.path.join(THIRD_PARTY_DIR, 'llvm-lto-lld')
 CHROME_TOOLS_SHIM_DIR = os.path.join(LLVM_DIR, 'tools', 'chrometools')
 LLVM_BUILD_DIR = os.path.join(CHROMIUM_DIR, 'third_party', 'llvm-build',
                               'Release+Asserts')
@@ -66,10 +66,6 @@ LLVM_BUILD_TOOLS_DIR = os.path.abspath(
     os.path.join(LLVM_DIR, '..', 'llvm-build-tools'))
 STAMP_FILE = os.path.normpath(
     os.path.join(LLVM_DIR, '..', 'llvm-build', 'cr_build_revision'))
-BINUTILS_DIR = os.path.join(THIRD_PARTY_DIR, 'binutils', 'Linux_x64', 'Release')
-BINUTILS_BIN_DIR = os.path.join(BINUTILS_DIR, 'bin')
-BINUTILS_LIB_DIR = os.path.join(BINUTILS_DIR, 'lib')
-BFD_PLUGINS_DIR = os.path.join(BINUTILS_LIB_DIR, 'bfd-plugins')
 VERSION = '5.0.0'
 ANDROID_NDK_DIR = os.path.join(
     CHROMIUM_DIR, 'third_party', 'android_tools', 'ndk')
@@ -396,15 +392,9 @@ def VeryifyVersionOfBuiltClangMatchesVERSION():
 def UpdateClang(args):
   print 'Updating Clang to %s...' % PACKAGE_VERSION
 
-  need_gold_plugin = 'LLVM_DOWNLOAD_GOLD_PLUGIN' in os.environ or (
-      sys.platform.startswith('linux') and
-      'buildtype=Official' in os.environ.get('GYP_DEFINES', ''))
-
   if ReadStampFile() == PACKAGE_VERSION and not args.force_local_build:
     print 'Clang is already up to date.'
-    if not need_gold_plugin or os.path.exists(
-        os.path.join(LLVM_BUILD_DIR, "lib/LLVMgold.so")):
-      return 0
+    return 0
 
   # Reset the stamp file in case the build is unsuccessful.
   WriteStampFile('')
@@ -427,11 +417,6 @@ def UpdateClang(args):
       print 'clang %s unpacked' % PACKAGE_VERSION
       if sys.platform == 'win32':
         CopyDiaDllTo(os.path.join(LLVM_BUILD_DIR, 'bin'))
-      # Download the gold plugin if requested to by an environment variable.
-      # This is used by the CFI ClusterFuzz bot, and it's required for official
-      # builds on linux.
-      if need_gold_plugin:
-        RunCommand(['python', CHROMIUM_DIR+'/build/download_gold_plugin.py'])
       WriteStampFile(PACKAGE_VERSION)
       return 0
     except urllib2.URLError:
@@ -500,16 +485,11 @@ def UpdateClang(args):
                      '-DLLVM_USE_CRT_RELEASE=MT',
                      ]
 
-  binutils_incdir = ''
-  if sys.platform.startswith('linux'):
-    binutils_incdir = os.path.join(BINUTILS_DIR, 'include')
-
   if args.bootstrap:
     print 'Building bootstrap compiler'
     EnsureDirExists(LLVM_BOOTSTRAP_DIR)
     os.chdir(LLVM_BOOTSTRAP_DIR)
     bootstrap_args = base_cmake_args + [
-        '-DLLVM_BINUTILS_INCDIR=' + binutils_incdir,
         '-DLLVM_TARGETS_TO_BUILD=host',
         '-DCMAKE_INSTALL_PREFIX=' + LLVM_BOOTSTRAP_INSTALL_DIR,
         '-DCMAKE_C_FLAGS=' + ' '.join(cflags),
@@ -548,52 +528,35 @@ def UpdateClang(args):
       cxxflags = ['--gcc-toolchain=' + args.gcc_toolchain]
     print 'Building final compiler'
 
-  # Build LLVM gold plugin with LTO. That speeds up the linker by ~10%.
+  # Build lld with LTO. That speeds up the linker by ~10%.
   # We only use LTO for Linux now.
-  if args.bootstrap and args.lto_gold_plugin:
-    print 'Building LTO LLVM Gold plugin'
-    if os.path.exists(LLVM_LTO_GOLD_PLUGIN_DIR):
-      RmTree(LLVM_LTO_GOLD_PLUGIN_DIR)
-    EnsureDirExists(LLVM_LTO_GOLD_PLUGIN_DIR)
-    os.chdir(LLVM_LTO_GOLD_PLUGIN_DIR)
+  if args.bootstrap and args.lto_lld:
+    print 'Building LTO lld'
+    if os.path.exists(LLVM_LTO_LLD_DIR):
+      RmTree(LLVM_LTO_LLD_DIR)
+    EnsureDirExists(LLVM_LTO_LLD_DIR)
+    os.chdir(LLVM_LTO_LLD_DIR)
 
-    # Create a symlink to LLVMgold.so build in the previous step so that ar
-    # and ranlib could find it while linking LLVMgold.so with LTO.
-    EnsureDirExists(BFD_PLUGINS_DIR)
-    RunCommand(['ln', '-sf',
-                os.path.join(LLVM_BOOTSTRAP_INSTALL_DIR, 'lib', 'LLVMgold.so'),
-                os.path.join(BFD_PLUGINS_DIR, 'LLVMgold.so')])
+    # The linker expects all archive members to have symbol tables, so the
+    # archiver needs to be able to create symbol tables for bitcode files.
+    # GNU ar and ranlib don't understand bitcode files, but llvm-ar and
+    # llvm-ranlib do, so use them.
+    ar = os.path.join(LLVM_BOOTSTRAP_INSTALL_DIR, 'bin', 'llvm-ar')
+    ranlib = os.path.join(LLVM_BOOTSTRAP_INSTALL_DIR, 'bin', 'llvm-ranlib')
 
-    # Link against binutils's copy of tcmalloc to speed up the linker by ~10%.
-    # In package.py we copy the .so into our package.
-    tcmalloc_ldflags = ['-L' + BINUTILS_LIB_DIR, '-ltcmalloc_minimal']
-    # Make sure that tblgen and the test suite can find tcmalloc.
-    os.environ['LD_LIBRARY_PATH'] = \
-        BINUTILS_LIB_DIR + os.pathsep + os.environ.get('LD_LIBRARY_PATH', '')
-
-    lto_cflags = ['-flto=thin']
-    lto_ldflags = ['-fuse-ld=lld']
-    if args.gcc_toolchain:
-      # Tell the bootstrap compiler to use a specific gcc prefix to search
-      # for standard library headers and shared object files.
-      lto_cflags += ['--gcc-toolchain=' + args.gcc_toolchain]
     lto_cmake_args = base_cmake_args + [
-        '-DLLVM_BINUTILS_INCDIR=' + binutils_incdir,
         '-DCMAKE_C_COMPILER=' + cc,
         '-DCMAKE_CXX_COMPILER=' + cxx,
-        '-DCMAKE_C_FLAGS=' + ' '.join(lto_cflags),
-        '-DCMAKE_CXX_FLAGS=' + ' '.join(lto_cflags),
-        '-DCMAKE_EXE_LINKER_FLAGS=' + ' '.join(lto_ldflags + tcmalloc_ldflags),
-        '-DCMAKE_SHARED_LINKER_FLAGS=' + ' '.join(lto_ldflags),
-        '-DCMAKE_MODULE_LINKER_FLAGS=' + ' '.join(lto_ldflags)]
-
-    # We need to use the proper binutils which support LLVM Gold plugin.
-    lto_env = os.environ.copy()
-    lto_env['PATH'] = BINUTILS_BIN_DIR + os.pathsep + lto_env.get('PATH', '')
+        '-DCMAKE_AR=' + ar,
+        '-DCMAKE_RANLIB=' + ranlib,
+        '-DLLVM_ENABLE_LTO=thin',
+        '-DLLVM_USE_LINKER=lld',
+        '-DCMAKE_C_FLAGS=' + ' '.join(cflags),
+        '-DCMAKE_CXX_FLAGS=' + ' '.join(cxxflags)]
 
     RmCmakeCache('.')
-    RunCommand(['cmake'] + lto_cmake_args + [LLVM_DIR], env=lto_env)
-    RunCommand(['ninja', 'LLVMgold', 'lld'], env=lto_env)
+    RunCommand(['cmake'] + lto_cmake_args + [LLVM_DIR])
+    RunCommand(['ninja', 'lld'])
 
 
   # LLVM uses C++11 starting in llvm 3.5. On Linux, this means libstdc++4.7+ is
@@ -647,7 +610,6 @@ def UpdateClang(args):
   chrome_tools = list(set(default_tools + args.extra_tools))
   cmake_args += base_cmake_args + [
       '-DLLVM_ENABLE_THREADS=OFF',
-      '-DLLVM_BINUTILS_INCDIR=' + binutils_incdir,
       '-DCMAKE_C_FLAGS=' + ' '.join(cflags),
       '-DCMAKE_CXX_FLAGS=' + ' '.join(cxxflags),
       '-DCMAKE_EXE_LINKER_FLAGS=' + ' '.join(ldflags),
@@ -674,8 +636,8 @@ def UpdateClang(args):
   RunCommand(['ninja'], msvc_arch='x64')
 
   # Copy LTO-optimized lld, if any.
-  if args.bootstrap and args.lto_gold_plugin:
-    CopyFile(os.path.join(LLVM_LTO_GOLD_PLUGIN_DIR, 'bin', 'lld'),
+  if args.bootstrap and args.lto_lld:
+    CopyFile(os.path.join(LLVM_LTO_LLD_DIR, 'bin', 'lld'),
              os.path.join(LLVM_BUILD_DIR, 'bin'))
 
   if chrome_tools:
@@ -852,8 +814,8 @@ def main():
   parser.add_argument('--gcc-toolchain', help='set the version for which gcc '
                       'version be used for building; --gcc-toolchain=/opt/foo '
                       'picks /opt/foo/bin/gcc')
-  parser.add_argument('--lto-gold-plugin', action='store_true',
-                      help='build LLVM Gold plugin with LTO')
+  parser.add_argument('--lto-lld', action='store_true',
+                      help='build lld with LTO')
   parser.add_argument('--llvm-force-head-revision', action='store_true',
                       help=('use the revision in the repo when printing '
                             'the revision'))
@@ -871,12 +833,12 @@ def main():
                       default=sys.platform.startswith('linux'))
   args = parser.parse_args()
 
-  if args.lto_gold_plugin and not args.bootstrap:
-    print '--lto-gold-plugin requires --bootstrap'
+  if args.lto_lld and not args.bootstrap:
+    print '--lto-lld requires --bootstrap'
     return 1
-  if args.lto_gold_plugin and not sys.platform.startswith('linux'):
-    print '--lto-gold-plugin is only effective on Linux. Ignoring the option.'
-    args.lto_gold_plugin = False
+  if args.lto_lld and not sys.platform.startswith('linux'):
+    print '--lto-lld is only effective on Linux. Ignoring the option.'
+    args.lto_lld = False
 
   if args.if_needed:
     # TODO(thakis): Can probably remove this and --if-needed altogether.

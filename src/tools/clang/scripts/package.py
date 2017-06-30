@@ -25,9 +25,7 @@ LLVM_BOOTSTRAP_INSTALL_DIR = os.path.join(THIRD_PARTY_DIR,
                                           'llvm-bootstrap-install')
 LLVM_BUILD_DIR = os.path.join(THIRD_PARTY_DIR, 'llvm-build')
 LLVM_RELEASE_DIR = os.path.join(LLVM_BUILD_DIR, 'Release+Asserts')
-LLVM_LTO_GOLD_PLUGIN_DIR = os.path.join(THIRD_PARTY_DIR, 'llvm-lto-gold-plugin')
-BINUTILS_LIB_DIR = os.path.join(THIRD_PARTY_DIR, 'binutils', 'Linux_x64',
-                                'Release', 'lib')
+LLVM_LTO_LLD_DIR = os.path.join(THIRD_PARTY_DIR, 'llvm-lto-lld')
 STAMP_FILE = os.path.join(LLVM_BUILD_DIR, 'cr_build_revision')
 
 
@@ -176,7 +174,6 @@ def main():
 
   expected_stamp = GetExpectedStamp()
   pdir = 'clang-' + expected_stamp
-  golddir = 'llvmgold-' + expected_stamp
   print pdir
 
   if sys.platform == 'darwin':
@@ -187,15 +184,10 @@ def main():
     platform = 'Linux_x64'
 
   # Check if Google Cloud Storage already has the artifacts we want to build.
-  if (args.upload and GsutilArchiveExists(pdir, platform) and
-      (not sys.platform.startswith('linux') or
-      GsutilArchiveExists(golddir, platform))):
+  if args.upload and GsutilArchiveExists(pdir, platform):
     print ('Desired toolchain revision %s is already available '
            'in Google Cloud Storage:') % expected_stamp
     print 'gs://chromium-browser-clang-staging/%s/%s.tgz' % (platform, pdir)
-    if sys.platform.startswith('linux'):
-      print 'gs://chromium-browser-clang-staging/%s/%s.tgz' % (platform,
-                                                               golddir)
     return 0
 
   with open('buildlog.txt', 'w') as log:
@@ -230,7 +222,7 @@ def main():
 
     opt_flags = []
     if sys.platform.startswith('linux'):
-      opt_flags += ['--lto-gold-plugin']
+      opt_flags += ['--lto-lld']
     build_cmd = [sys.executable, os.path.join(THIS_DIR, 'update.py'),
                  '--bootstrap', '--force-local-build',
                  '--run-tests'] + opt_flags
@@ -318,17 +310,12 @@ def main():
 
   if sys.platform.startswith('linux'):
     os.symlink('lld', os.path.join(pdir, 'bin', 'ld.lld'))
+    os.symlink('lld', os.path.join(pdir, 'bin', 'lld-link'))
 
   # Copy libc++ headers.
   if sys.platform == 'darwin':
     shutil.copytree(os.path.join(LLVM_BOOTSTRAP_INSTALL_DIR, 'include', 'c++'),
                     os.path.join(pdir, 'include', 'c++'))
-
-  # Copy tcmalloc from the binutils package.
-  # FIXME: We should eventually be building our own copy.
-  if sys.platform.startswith('linux'):
-    shutil.copy(os.path.join(BINUTILS_LIB_DIR, 'libtcmalloc_minimal.so.4'),
-                os.path.join(pdir, 'lib'))
 
   # Copy buildlog over.
   shutil.copy('buildlog.txt', pdir)
@@ -342,17 +329,6 @@ def main():
       tar.add(os.path.join(pdir, entry), arcname=entry, filter=PrintTarProgress)
 
   MaybeUpload(args, pdir, platform)
-
-  # Zip up gold plugin on Linux.
-  if sys.platform.startswith('linux'):
-    shutil.rmtree(golddir, ignore_errors=True)
-    os.makedirs(os.path.join(golddir, 'lib'))
-    shutil.copy(os.path.join(LLVM_LTO_GOLD_PLUGIN_DIR, 'lib', 'LLVMgold.so'),
-                os.path.join(golddir, 'lib'))
-    with tarfile.open(golddir + '.tgz', 'w:gz') as tar:
-      tar.add(os.path.join(golddir, 'lib'), arcname='lib',
-              filter=PrintTarProgress)
-    MaybeUpload(args, golddir, platform)
 
   # Zip up llvm-objdump for sanitizer coverage.
   objdumpdir = 'llvmobjdump-' + stamp

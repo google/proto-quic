@@ -5,11 +5,16 @@
 package org.chromium.customtabs.test;
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.support.customtabs.CustomTabsCallback;
@@ -17,12 +22,17 @@ import android.support.customtabs.CustomTabsClient;
 import android.support.customtabs.CustomTabsIntent;
 import android.support.customtabs.CustomTabsServiceConnection;
 import android.support.customtabs.CustomTabsSession;
+import android.support.v4.app.BundleCompat;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.RadioButton;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /** Activity used to benchmark Custom Tabs PLT.
  *
@@ -35,6 +45,7 @@ import android.widget.RadioButton;
  */
 public class MainActivity extends Activity implements View.OnClickListener {
     static final String TAG = "CUSTOMTABSBENCH";
+    private static final String MEMORY_TAG = "CUSTOMTABSMEMORY";
     private static final String DEFAULT_URL = "https://www.android.com";
     private static final String DEFAULT_PACKAGE = "com.google.android.apps.chrome";
     private static final int NONE = -1;
@@ -46,14 +57,14 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private static final String USE_WEBVIEW_KEY = "use_webview";
     private static final String WARMUP_KEY = "warmup";
 
-    // Keep in sync with the same constants in CustomTabsConnection.
-    private static final String DEBUG_OVERRIDE_KEY =
-            "android.support.customtabs.maylaunchurl.DEBUG_OVERRIDE";
-    private static final int NO_OVERRIDE = 0;
-    private static final int NO_PRERENDERING = 1;
-    private static final int PREFETCH_ONLY = 2;
-    // Only for reporting.
-    private static final int NO_STATE_PREFETCH = 3;
+    // extraCommand related constants.
+    private static final String SET_PRERENDER_ON_CELLULAR = "setPrerenderOnCellularForSession";
+    private static final String SET_SPECULATION_MODE = "setSpeculationModeForSession";
+    private static final String SET_IGNORE_URL_FRAGMENTS_FOR_SESSION =
+            "setIgnoreUrlFragmentsForSession";
+    private static final int NO_SPECULATION = 0;
+    private static final int PRERENDER = 2;
+    private static final int HIDDEN_TAB = 3;
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
 
@@ -217,41 +228,25 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private void startCustomTabsBenchmark(Intent intent) {
         String url = intent.getStringExtra(URL_KEY);
         if (url == null) url = DEFAULT_URL;
+        String speculatedUrl = intent.getStringExtra("speculated_url");
+        if (speculatedUrl == null) speculatedUrl = url;
         String packageName = intent.getStringExtra("package_name");
         if (packageName == null) packageName = DEFAULT_PACKAGE;
         boolean warmup = intent.getBooleanExtra("warmup", false);
         int delayToMayLaunchUrl = intent.getIntExtra("delay_to_may_launch_url", NONE);
         int delayToLaunchUrl = intent.getIntExtra("delay_to_launch_url", NONE);
-
-        int speculationMode = 0;
-        String speculationModeValue = intent.getStringExtra("speculation_mode");
-        switch (speculationModeValue) {
-            case "prerender":
-                speculationMode = NO_OVERRIDE;
-                break;
-            case "disabled":
-                speculationMode = NO_PRERENDERING;
-                break;
-            case "speculative_prefetch":
-                speculationMode = PREFETCH_ONLY;
-                break;
-            case "no_state_prefetch":
-                speculationMode = NO_STATE_PREFETCH;
-                break;
-            default:
-                throw new IllegalArgumentException(
-                        "Invalid prerender mode: " + speculationModeValue);
-        }
-
+        String speculationMode = intent.getStringExtra("speculation_mode");
+        if (speculationMode == null) speculationMode = "prerender";
         int timeoutSeconds = intent.getIntExtra("timeout", NONE);
 
-        launchCustomTabs(packageName, url, warmup, speculationMode, delayToMayLaunchUrl,
-                delayToLaunchUrl, timeoutSeconds);
+        launchCustomTabs(packageName, speculatedUrl, url, warmup, speculationMode,
+                delayToMayLaunchUrl, delayToLaunchUrl, timeoutSeconds);
     }
 
     private final class CustomCallback extends CustomTabsCallback {
+        private final String mPackageName;
         private final boolean mWarmup;
-        private final int mSpeculationMode;
+        private final String mSpeculationMode;
         private final int mDelayToMayLaunchUrl;
         private final int mDelayToLaunchUrl;
         private long mIntentSentMs = NONE;
@@ -259,8 +254,9 @@ public class MainActivity extends Activity implements View.OnClickListener {
         private long mPageLoadFinishedMs = NONE;
         private long mFirstContentfulPaintMs = NONE;
 
-        public CustomCallback(boolean warmup, int speculationMode, int delayToMayLaunchUrl,
-                int delayToLaunchUrl) {
+        public CustomCallback(String packageName, boolean warmup, String speculationMode,
+                int delayToMayLaunchUrl, int delayToLaunchUrl) {
+            mPackageName = packageName;
             mWarmup = warmup;
             mSpeculationMode = speculationMode;
             mDelayToMayLaunchUrl = delayToMayLaunchUrl;
@@ -311,6 +307,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
                     + mPageLoadStartedMs + "," + mPageLoadFinishedMs + ","
                     + mFirstContentfulPaintMs;
             Log.w(TAG, logLine);
+            logMemory(mPackageName, "AfterMetrics");
             MainActivity.this.finish();
         }
 
@@ -325,14 +322,102 @@ public class MainActivity extends Activity implements View.OnClickListener {
         }
     }
 
-    private void onCustomTabsServiceConnected(CustomTabsClient client, final Uri uri,
-            final CustomCallback cb, boolean warmup, final int prerenderMode,
-            int delayToMayLaunchUrl, final int delayToLaunchUrl, final int timeoutSeconds) {
+    /**
+     * Sums all the memory usage of a package, and returns (PSS, Private Dirty).
+     *
+     * Only works for packages where a service is exported by each process, which is the case for
+     * Chrome. Also, doesn't work on O and above, as {@link ActivityManager.getRunningServices} is
+     * restricted.
+     *
+     * @param context Application context
+     * @param packageName the package to query
+     * @return {pss, privateDirty} in kB, or null.
+     */
+    private static int[] getPackagePssAndPrivateDirty(Context context, String packageName) {
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N_MR1) return null;
+
+        ActivityManager am = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        List<ActivityManager.RunningServiceInfo> services = am.getRunningServices(1000);
+        if (services == null) return null;
+
+        Set<Integer> pids = new HashSet<>();
+        for (ActivityManager.RunningServiceInfo info : services) {
+            if (packageName.equals(info.service.getPackageName())) pids.add(info.pid);
+        }
+
+        int[] pidsArray = new int[pids.size()];
+        int i = 0;
+        for (int pid : pids) pidsArray[i++] = pid;
+        Debug.MemoryInfo infos[] = am.getProcessMemoryInfo(pidsArray);
+        if (infos == null || infos.length == 0) return null;
+
+        int pss = 0;
+        int privateDirty = 0;
+        for (Debug.MemoryInfo info : infos) {
+            pss += info.getTotalPss();
+            privateDirty += info.getTotalPrivateDirty();
+        }
+
+        return new int[] {pss, privateDirty};
+    }
+
+    private void logMemory(String packageName, String message) {
+        int[] pssAndPrivateDirty = getPackagePssAndPrivateDirty(
+                getApplicationContext(), packageName);
+        if (pssAndPrivateDirty == null) return;
+        Log.w(MEMORY_TAG, message + "," + pssAndPrivateDirty[0] + "," + pssAndPrivateDirty[1]);
+    }
+
+    private static void forceSpeculationMode(
+            CustomTabsClient client, IBinder sessionBinder, String speculationMode) {
+        // The same bundle can be used for all calls, as the commands only look for their own
+        // arguments in it.
+        Bundle params = new Bundle();
+        BundleCompat.putBinder(params, "session", sessionBinder);
+        params.putBoolean("ignoreFragments", true);
+        params.putBoolean("prerender", true);
+
+        int speculationModeValue = 0;
+        switch (speculationMode) {
+            case "disabled":
+                speculationModeValue = NO_SPECULATION;
+                break;
+            case "prerender":
+                speculationModeValue = PRERENDER;
+                break;
+            case "hidden_tab":
+                speculationModeValue = HIDDEN_TAB;
+                break;
+            default:
+                throw new RuntimeException("Invalid speculation mode");
+        }
+        params.putInt("speculationMode", speculationModeValue);
+
+        boolean ok = client.extraCommand(SET_PRERENDER_ON_CELLULAR, params) != null;
+        if (!ok) throw new RuntimeException("Cannot set cellular prerendering");
+        ok = client.extraCommand(SET_IGNORE_URL_FRAGMENTS_FOR_SESSION, params) != null;
+        if (!ok) throw new RuntimeException("Cannot set ignoreFragments");
+        ok = client.extraCommand(SET_SPECULATION_MODE, params) != null;
+        if (!ok) throw new RuntimeException("Cannot set the speculation mode");
+    }
+
+    private void onCustomTabsServiceConnected(CustomTabsClient client, final Uri speculatedUri,
+            final Uri uri, final CustomCallback cb, boolean warmup, String speculationMode,
+            int delayToMayLaunchUrl, final int delayToLaunchUrl, final int timeoutSeconds,
+            final String packageName) {
         final CustomTabsSession session = client.newSession(cb);
         final CustomTabsIntent intent = (new CustomTabsIntent.Builder(session)).build();
+        logMemory(packageName, "OnServiceConnected");
+
+        IBinder sessionBinder =
+                BundleCompat.getBinder(intent.intent.getExtras(), CustomTabsIntent.EXTRA_SESSION);
+        assert sessionBinder != null;
+        forceSpeculationMode(client, sessionBinder, speculationMode);
+
         final Runnable launchRunnable = new Runnable() {
             @Override
             public void run() {
+                logMemory(packageName, "BeforeLaunch");
                 intent.launchUrl(MainActivity.this, uri);
                 cb.recordIntentHasBeenSent();
                 if (timeoutSeconds != NONE) cb.logMetricsAndFinishDelayed(timeoutSeconds * 1000);
@@ -341,14 +426,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
         Runnable mayLaunchRunnable = new Runnable() {
             @Override
             public void run() {
-                Bundle extras = new Bundle();
-                if (prerenderMode == NO_PRERENDERING) {
-                    extras.putInt(DEBUG_OVERRIDE_KEY, NO_PRERENDERING);
-                } else if (prerenderMode != NO_STATE_PREFETCH) {
-                    extras.putInt(DEBUG_OVERRIDE_KEY, prerenderMode);
-                }
-
-                session.mayLaunchUrl(uri, extras, null);
+                logMemory(packageName, "BeforeMayLaunchUrl");
+                session.mayLaunchUrl(speculatedUri, null, null);
                 mHandler.postDelayed(launchRunnable, delayToLaunchUrl);
             }
         };
@@ -361,20 +440,21 @@ public class MainActivity extends Activity implements View.OnClickListener {
         }
     }
 
-    private void launchCustomTabs(String packageName, String url, final boolean warmup,
-            final int speculationMode, final int delayToMayLaunchUrl, final int delayToLaunchUrl,
-            final int timeoutSeconds) {
-        final CustomCallback cb =
-                new CustomCallback(warmup, speculationMode, delayToMayLaunchUrl, delayToLaunchUrl);
+    private void launchCustomTabs(final String packageName, String speculatedUrl, String url,
+            final boolean warmup, final String speculationMode, final int delayToMayLaunchUrl,
+            final int delayToLaunchUrl, final int timeoutSeconds) {
+        final CustomCallback cb = new CustomCallback(
+                packageName, warmup, speculationMode, delayToMayLaunchUrl, delayToLaunchUrl);
+        final Uri speculatedUri = Uri.parse(speculatedUrl);
         final Uri uri = Uri.parse(url);
         CustomTabsClient.bindCustomTabsService(
                 this, packageName, new CustomTabsServiceConnection() {
                     @Override
                     public void onCustomTabsServiceConnected(
                             ComponentName name, final CustomTabsClient client) {
-                        MainActivity.this.onCustomTabsServiceConnected(client, uri, cb, warmup,
-                                speculationMode, delayToMayLaunchUrl, delayToLaunchUrl,
-                                timeoutSeconds);
+                        MainActivity.this.onCustomTabsServiceConnected(client, speculatedUri, uri,
+                                cb, warmup, speculationMode, delayToMayLaunchUrl, delayToLaunchUrl,
+                                timeoutSeconds, packageName);
                     }
 
                     @Override

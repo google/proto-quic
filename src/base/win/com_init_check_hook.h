@@ -20,15 +20,13 @@ namespace win {
 #if DCHECK_IS_ON() && defined(ARCH_CPU_X86_FAMILY) &&             \
     defined(ARCH_CPU_32_BITS) && !defined(GOOGLE_CHROME_BUILD) && \
     !defined(OFFICIAL_BUILD)
-#define COM_INIT_CHECK_HOOK_ENABLED() 1
-#else
-#define COM_INIT_CHECK_HOOK_ENABLED() 0
+#define COM_INIT_CHECK_HOOK_ENABLED
 #endif
 
 // Manages the installation of consistency DCHECK hooks of COM APIs that require
-// COM to be initialized and only works if COM_INIT_CHECK_HOOK_ENABLED(). Care
-// should be taken if this is instantiated with multiple threads running as the
-// hotpatch does not apply atomically.
+// COM to be initialized and only works if COM_INIT_CHECK_HOOK_ENABLED is
+// defined. Care should be taken if this is instantiated with multiple threads
+// running as the hotpatch does not apply atomically.
 class BASE_EXPORT ComInitCheckHook {
  public:
   ComInitCheckHook();

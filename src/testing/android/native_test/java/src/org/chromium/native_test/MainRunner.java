@@ -14,14 +14,13 @@ import org.chromium.base.annotations.JNINamespace;
  */
 @JNINamespace("testing::android")
 public final class MainRunner {
-    // Prevent instanciation.
+    // Prevents instantiation.
     private MainRunner() {
     }
 
     // Maps the file descriptors and executes the main method with the passed in command line.
-    public static int runMain(String[] commandLine, int[] fdsToMapKeys, int[] fdsToMapFds) {
-        return nativeRunMain(commandLine, fdsToMapKeys, fdsToMapFds);
+    public static int runMain(String[] commandLine) {
+        return nativeRunMain(commandLine);
     }
-    private static native int nativeRunMain(
-            String[] commandLine, int[] fdsToMapKeys, int[] fdsToMapFds);
+    private static native int nativeRunMain(String[] commandLine);
 }

@@ -26,7 +26,6 @@
 #include "base/location.h"
 #include "base/macros.h"
 #include "base/process/process_handle.h"
-#include "base/profiler/tracked_time.h"
 #include "base/synchronization/lock.h"
 #include "base/threading/thread_local_storage.h"
 
@@ -346,8 +345,8 @@ class BASE_EXPORT DeathData {
 
   // Update stats for a task destruction (death) that had a Run() time of
   // |duration|, and has had a queueing delay of |queue_duration|.
-  void RecordDurations(const int32_t queue_duration,
-                       const int32_t run_duration,
+  void RecordDurations(const base::TimeDelta queue_duration,
+                       const base::TimeDelta run_duration,
                        const uint32_t random_number);
 
   // Update stats for a task destruction that performed |alloc_ops|
@@ -609,9 +608,10 @@ class BASE_EXPORT ThreadData {
   // the task.
   // The |end_of_run| was just obtained by a call to Now() (just after the task
   // finished).
-  static void TallyRunOnWorkerThreadIfTracking(const Births* births,
-                                               const TrackedTime& time_posted,
-                                               const TaskStopwatch& stopwatch);
+  static void TallyRunOnWorkerThreadIfTracking(
+      const Births* births,
+      const base::TimeTicks& time_posted,
+      const TaskStopwatch& stopwatch);
 
   // Record the end of execution in region, generally corresponding to a scope
   // being exited.
@@ -644,7 +644,7 @@ class BASE_EXPORT ThreadData {
   // the profiler enabled.  It will generally be optimized away when it is
   // ifdef'ed to be small enough (allowing the profiler to be "compiled out" of
   // the code).
-  static TrackedTime Now();
+  static base::TimeTicks Now();
 
   // This function can be called at process termination to validate that thread
   // cleanup routines have been called for at least some number of named
@@ -689,7 +689,7 @@ class BASE_EXPORT ThreadData {
 
   // Find a place to record a death on this thread.
   void TallyADeath(const Births& births,
-                   int32_t queue_duration,
+                   base::TimeDelta queue_duration,
                    const TaskStopwatch& stopwatch);
 
   // Snapshots (under a lock) the profiled data for the tasks for this thread
@@ -845,13 +845,13 @@ class BASE_EXPORT TaskStopwatch {
   void Stop();
 
   // Returns the start time.
-  TrackedTime StartTime() const;
+  base::TimeTicks StartTime() const;
 
   // Task's duration is calculated as the wallclock duration between starting
   // and stopping this stopwatch, minus the wallclock durations of any other
   // instances that are immediately nested in this one, started and stopped on
   // this thread during that period.
-  int32_t RunDurationMs() const;
+  base::TimeDelta RunDuration() const;
 
 #if BUILDFLAG(USE_ALLOCATOR_SHIM)
   const base::debug::ThreadHeapUsageTracker& heap_usage() const {
@@ -865,7 +865,7 @@ class BASE_EXPORT TaskStopwatch {
 
  private:
   // Time when the stopwatch was started.
-  TrackedTime start_time_;
+  base::TimeTicks start_time_;
 
 #if BUILDFLAG(USE_ALLOCATOR_SHIM)
   base::debug::ThreadHeapUsageTracker heap_usage_;
@@ -873,14 +873,14 @@ class BASE_EXPORT TaskStopwatch {
 #endif
 
   // Wallclock duration of the task.
-  int32_t wallclock_duration_ms_;
+  base::TimeDelta wallclock_duration_;
 
   // Tracking info for the current thread.
   ThreadData* current_thread_data_;
 
   // Sum of wallclock durations of all stopwatches that were directly nested in
   // this one.
-  int32_t excluded_duration_ms_;
+  base::TimeDelta excluded_duration_;
 
   // Stopwatch which was running on our thread when this stopwatch was started.
   // That preexisting stopwatch must be adjusted to the exclude the wallclock

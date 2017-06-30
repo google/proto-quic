@@ -132,8 +132,8 @@ void RunLoop::Quit() {
   // proxies through ProxyToTaskRunner() as it can only deref its WeakPtr on
   // |origin_task_runner_|).
   if (!origin_task_runner_->RunsTasksInCurrentSequence()) {
-    origin_task_runner_->PostTask(FROM_HERE,
-                                  base::Bind(&RunLoop::Quit, Unretained(this)));
+    origin_task_runner_->PostTask(
+        FROM_HERE, base::BindOnce(&RunLoop::Quit, Unretained(this)));
     return;
   }
 
@@ -152,7 +152,7 @@ void RunLoop::QuitWhenIdle() {
   // deref its WeakPtr on |origin_task_runner_|).
   if (!origin_task_runner_->RunsTasksInCurrentSequence()) {
     origin_task_runner_->PostTask(
-        FROM_HERE, base::Bind(&RunLoop::QuitWhenIdle, Unretained(this)));
+        FROM_HERE, base::BindOnce(&RunLoop::QuitWhenIdle, Unretained(this)));
     return;
   }
 

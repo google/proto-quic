@@ -22,7 +22,7 @@ class _ColorFormatter(logging.Formatter):
     logging.DEBUG: colorama.Fore.CYAN,
     logging.WARNING: colorama.Fore.YELLOW,
     logging.ERROR: colorama.Fore.RED,
-    logging.CRITICAL: colorama.Back.RED + colorama.Style.BRIGHT,
+    logging.CRITICAL: colorama.Back.RED,
   }
 
   def __init__(self, wrapped_formatter=None):

@@ -50,13 +50,13 @@ class DnsReloader : public NetworkChangeNotifier::DNSObserver {
   // NetworkChangeNotifier::DNSObserver:
   void OnDNSChanged() override {
     DCHECK(base::MessageLoopForIO::IsCurrent());
-    base::AutoLock l(lock_);
+    base::AutoLock lock(lock_);
     resolver_generation_++;
   }
 
   void MaybeReload() {
     ReloadState* reload_state = static_cast<ReloadState*>(tls_index_.Get());
-    base::AutoLock l(lock_);
+    base::AutoLock lock(lock_);
 
     if (!reload_state) {
       reload_state = new ReloadState();

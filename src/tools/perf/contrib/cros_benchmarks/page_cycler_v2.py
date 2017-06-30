@@ -58,6 +58,8 @@ class PageCyclerV2Typical25(_PageCyclerV2):
         cache_temperatures=[
           cache_temperature.PCV1_COLD, cache_temperature.PCV1_WARM])
 
+  def GetExpectations(self):
+    return page_sets.Typical25StoryExpectations()
 
 @benchmark.Owner(emails=['kouhei@chromium.org', 'ksakamoto@chromium.org'])
 class PageCyclerV2IntlArFaHe(_PageCyclerV2):
@@ -74,6 +76,9 @@ class PageCyclerV2IntlArFaHe(_PageCyclerV2):
   def CreateStorySet(self, options):
     return page_sets.IntlArFaHePageSet(cache_temperatures=[
           cache_temperature.PCV1_COLD, cache_temperature.PCV1_WARM])
+
+  def GetExpectations(self):
+    return page_sets.IntlArFaHeStoryExpectations()
 
 
 @benchmark.Owner(emails=['kouhei@chromium.org', 'ksakamoto@chromium.org'])
@@ -92,6 +97,9 @@ class PageCyclerV2IntlEsFrPtBr(_PageCyclerV2):
     return page_sets.IntlEsFrPtBrPageSet(cache_temperatures=[
           cache_temperature.PCV1_COLD, cache_temperature.PCV1_WARM])
 
+  def GetExpectations(self):
+    return page_sets.IntlEsFrPtBrStoryExpectations()
+
 
 @benchmark.Owner(emails=['kouhei@chromium.org', 'ksakamoto@chromium.org'])
 class PageCyclerV2IntlHiRu(_PageCyclerV2):
@@ -108,6 +116,9 @@ class PageCyclerV2IntlHiRu(_PageCyclerV2):
   def CreateStorySet(self, options):
     return page_sets.IntlHiRuPageSet(cache_temperatures=[
           cache_temperature.PCV1_COLD, cache_temperature.PCV1_WARM])
+
+  def GetExpectations(self):
+    return page_sets.IntlHiRuStoryExpectations()
 
 
 @benchmark.Disabled('android')  # crbug.com/666898
@@ -126,6 +137,9 @@ class PageCyclerV2IntlJaZh(_PageCyclerV2):
     return page_sets.IntlJaZhPageSet(cache_temperatures=[
           cache_temperature.PCV1_COLD, cache_temperature.PCV1_WARM])
 
+  def GetExpectations(self):
+    return page_sets.IntlJaZhStoryExpectations()
+
 
 @benchmark.Owner(emails=['kouhei@chromium.org', 'ksakamoto@chromium.org'])
 class PageCyclerV2IntlKoThVi(_PageCyclerV2):
@@ -143,6 +157,9 @@ class PageCyclerV2IntlKoThVi(_PageCyclerV2):
     return page_sets.IntlKoThViPageSet(cache_temperatures=[
           cache_temperature.PCV1_COLD, cache_temperature.PCV1_WARM])
 
+  def GetExpectations(self):
+    return page_sets.IntlKoThViStoryExpectations()
+
 
 @benchmark.Enabled('android')
 @benchmark.Owner(emails=['kouhei@chromium.org', 'ksakamoto@chromium.org'])
@@ -159,3 +176,6 @@ class PageCyclerV2Top10Mobile(_PageCyclerV2):
   def CreateStorySet(self, options):
     return page_sets.Top10MobilePageSet(cache_temperatures=[
         cache_temperature.PCV1_COLD, cache_temperature.PCV1_WARM])
+
+  def GetExpectations(self):
+    return page_sets.Top10MobileStoryExpectations()

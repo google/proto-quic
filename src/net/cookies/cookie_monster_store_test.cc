@@ -87,9 +87,10 @@ void MockPersistentCookieStore::DeleteCookie(const CanonicalCookie& cookie) {
   commands_.push_back(CookieStoreCommand(CookieStoreCommand::REMOVE, cookie));
 }
 
-void MockPersistentCookieStore::Flush(const base::Closure& callback) {
+void MockPersistentCookieStore::Flush(base::OnceClosure callback) {
   if (!callback.is_null())
-    base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, callback);
+    base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE,
+                                                  std::move(callback));
 }
 
 void MockPersistentCookieStore::SetForceKeepSessionState() {
@@ -195,9 +196,10 @@ void MockSimplePersistentCookieStore::DeleteCookie(
   cookies_.erase(it);
 }
 
-void MockSimplePersistentCookieStore::Flush(const base::Closure& callback) {
+void MockSimplePersistentCookieStore::Flush(base::OnceClosure callback) {
   if (!callback.is_null())
-    base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, callback);
+    base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE,
+                                                  std::move(callback));
 }
 
 void MockSimplePersistentCookieStore::SetForceKeepSessionState() {

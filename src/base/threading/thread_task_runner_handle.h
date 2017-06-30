@@ -17,7 +17,7 @@ namespace base {
 // in thread-local storage.  Callers can then retrieve the TaskRunner
 // for the current thread by calling ThreadTaskRunnerHandle::Get().
 // At most one TaskRunner may be bound to each thread at a time.
-// Prefer SequenceTaskRunnerHandle to this unless thread affinity is required.
+// Prefer SequencedTaskRunnerHandle to this unless thread affinity is required.
 class BASE_EXPORT ThreadTaskRunnerHandle {
  public:
   // Gets the SingleThreadTaskRunner for the current thread.

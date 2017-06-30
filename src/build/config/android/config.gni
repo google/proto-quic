@@ -43,8 +43,8 @@ if (is_android) {
 
   if (!defined(default_android_sdk_root)) {
     default_android_sdk_root = "//third_party/android_tools/sdk"
-    default_android_sdk_version = "25"
-    default_android_sdk_build_tools_version = "25.0.2"
+    default_android_sdk_version = "26"
+    default_android_sdk_build_tools_version = "26.0.0"
   }
 
   if (!defined(default_lint_android_sdk_root)) {

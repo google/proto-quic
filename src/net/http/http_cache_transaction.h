@@ -128,6 +128,10 @@ class HttpCache::Transaction : public HttpTransaction {
     bypass_lock_for_test_ = true;
   }
 
+  void BypassLockAfterHeadersForTest() {
+    bypass_lock_after_headers_for_test_ = true;
+  }
+
   // Generates a failure when attempting to conditionalize a network request.
   void FailConditionalizationForTest() {
     fail_conditionalization_for_test_ = true;
@@ -189,14 +193,6 @@ class HttpCache::Transaction : public HttpTransaction {
         value.clear();
     }
     bool initialized;
-  };
-
-  // A snapshot of pieces of the transaction before entering the state machine
-  // so that the state can be restored when restarting the state machine.
-  struct RestartInfo {
-    Mode mode = NONE;
-    HttpResponseInfo::CacheEntryStatus cache_entry_status =
-        HttpResponseInfo::CacheEntryStatus::ENTRY_UNDEFINED;
   };
 
   enum State {
@@ -312,7 +308,7 @@ class HttpCache::Transaction : public HttpTransaction {
   int DoPartialHeadersReceived();
   int DoCacheReadMetadata();
   int DoCacheReadMetadataComplete(int result);
-  int DoHeadersPhaseCannotProceed();
+  int DoHeadersPhaseCannotProceed(int result);
   int DoFinishHeaders(int result);
   int DoFinishHeadersComplete(int result);
   int DoNetworkRead();
@@ -323,6 +319,10 @@ class HttpCache::Transaction : public HttpTransaction {
   int DoCacheWriteDataComplete(int result);
   int DoCacheWriteTruncatedResponse();
   int DoCacheWriteTruncatedResponseComplete(int result);
+
+  // Adds time out handling while waiting to be added to entry or after headers
+  // phase is complete.
+  void AddCacheLockTimeoutHandler(ActiveEntry* entry);
 
   // Sets request_ and fields derived from it.
   void SetRequest(const NetLogWithSource& net_log);
@@ -413,7 +413,7 @@ class HttpCache::Transaction : public HttpTransaction {
   int OnCacheReadError(int result, bool restart);
 
   // Called when the cache lock timeout fires.
-  void OnAddToEntryTimeout(base::TimeTicks start_time);
+  void OnCacheLockTimeout(base::TimeTicks start_time);
 
   // Deletes the current partial cache entry (sparse), and optionally removes
   // the control object (partial_).
@@ -505,6 +505,8 @@ class HttpCache::Transaction : public HttpTransaction {
   bool vary_mismatch_;  // The request doesn't match the stored vary data.
   bool couldnt_conditionalize_request_;
   bool bypass_lock_for_test_;  // A test is exercising the cache lock.
+  bool bypass_lock_after_headers_for_test_;  // A test is exercising the cache
+                                             // lock.
   bool fail_conditionalization_for_test_;  // Fail ConditionalizeRequest.
   scoped_refptr<IOBuffer> read_buf_;
   int io_buf_len_;

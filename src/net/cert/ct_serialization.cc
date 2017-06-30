@@ -428,6 +428,22 @@ bool DecodeSignedCertificateTimestamp(
   return true;
 }
 
+void EncodeSignedCertificateTimestamp(
+    const scoped_refptr<ct::SignedCertificateTimestamp>& input,
+    std::string* output) {
+  // This function only supports serialization of V1 SCTs.
+  DCHECK_EQ(SignedCertificateTimestamp::V1, input->version);
+  WriteUint(kVersionLength, input->version, output);
+  DCHECK_EQ(kLogIdLength, input->log_id.size());
+  WriteEncodedBytes(
+      base::StringPiece(reinterpret_cast<const char*>(input->log_id.data()),
+                        kLogIdLength),
+      output);
+  WriteTimeSinceEpoch(input->timestamp, output);
+  WriteVariableBytes(kExtensionsLengthBytes, input->extensions, output);
+  EncodeDigitallySigned(input->signature, output);
+}
+
 bool EncodeSCTListForTesting(const base::StringPiece& sct,
                              std::string* output) {
   std::string encoded_sct;

@@ -1810,6 +1810,19 @@ void SSLClientSocketImpl::MessageCallback(int is_write,
                    : NetLogEventType::SSL_HANDSHAKE_MESSAGE_RECEIVED,
           base::Bind(&NetLogSSLMessageCallback, !!is_write, buf, len));
       break;
+    case SSL3_RT_HEADER: {
+      if (is_write)
+        return;
+      if (len != 5) {
+        NOTREACHED();
+        return;
+      }
+      const uint8_t* buf_bytes = reinterpret_cast<const uint8_t*>(buf);
+      uint16_t record_len = (uint16_t(buf_bytes[3]) << 8) | buf_bytes[4];
+      // See RFC 5246 section 6.2.3 for the maximum record size in TLS.
+      UMA_HISTOGRAM_CUSTOM_COUNTS("Net.SSLRecordSizeRead", record_len, 1,
+                                  16384 + 2048, 50);
+    }
     default:
       return;
   }

@@ -53,3 +53,7 @@ class IntlHiRuPageSet(story.StorySet):
     for url in urls_list:
       for temp in cache_temperatures:
         self.AddStory(IntlHiRuPage(url, self, cache_temperature=temp))
+
+class IntlHiRuStoryExpectations(story.expectations.StoryExpectations):
+  def SetExpectations(self):
+    pass

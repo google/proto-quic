@@ -3,9 +3,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Certificate chain with 1 intermediate and a trusted root. The trusted root
-is NOT self signed, however its issuer is not included in the chain or root
-store. Verification is expected to succeed since the root is trusted."""
+"""Certificate chain where the root certificate is not self-signed (or
+self-issued for that matter)."""
 
 import sys
 sys.path += ['..']
@@ -14,7 +13,7 @@ import common
 
 shadow_root = common.create_self_signed_root_certificate('ShadowRoot')
 
-# Non-self-signed root (part of trust store).
+# Non-self-signed root certificate.
 root = common.create_intermediate_certificate('Root', shadow_root)
 
 # Intermediate certificate.

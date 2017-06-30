@@ -3,16 +3,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Certificate chain with 1 intermediate and a trust anchor. The trust anchor
-lacks the basic constraints extension. This is not a problem and verification
-should succeed."""
+"""Certificate chain where the root certificate lacks a basic constraints
+extension."""
 
 import sys
 sys.path += ['..']
 
 import common
 
-# Self-signed root certificate (used as trust anchor).
+# Self-signed root certificate.
 root = common.create_self_signed_root_certificate('Root')
 root.get_extensions().remove_property('basicConstraints')
 

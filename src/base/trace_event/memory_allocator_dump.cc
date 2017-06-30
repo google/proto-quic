@@ -22,6 +22,13 @@ const char MemoryAllocatorDump::kTypeString[] = "string";
 const char MemoryAllocatorDump::kUnitsBytes[] = "bytes";
 const char MemoryAllocatorDump::kUnitsObjects[] = "objects";
 
+// static
+MemoryAllocatorDumpGuid MemoryAllocatorDump::GetDumpIdFromName(
+    const std::string& absolute_name) {
+  return MemoryAllocatorDumpGuid(StringPrintf(
+      "%d:%s", TraceLog::GetInstance()->process_id(), absolute_name.c_str()));
+}
+
 MemoryAllocatorDump::MemoryAllocatorDump(const std::string& absolute_name,
                                          ProcessMemoryDump* process_memory_dump,
                                          const MemoryAllocatorDumpGuid& guid)
@@ -47,10 +54,7 @@ MemoryAllocatorDump::MemoryAllocatorDump(const std::string& absolute_name,
                                          ProcessMemoryDump* process_memory_dump)
     : MemoryAllocatorDump(absolute_name,
                           process_memory_dump,
-                          MemoryAllocatorDumpGuid(StringPrintf(
-                              "%d:%s",
-                              TraceLog::GetInstance()->process_id(),
-                              absolute_name.c_str()))) {
+                          GetDumpIdFromName(absolute_name)) {
   string_conversion_buffer_.reserve(16);
 }
 

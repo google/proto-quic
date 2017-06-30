@@ -367,6 +367,15 @@ chrome.automation.TreeChangeObserverFilter = {
 };
 
 /**
+ * @typedef {{
+ *   id: number,
+ *   description: string
+ * }}
+ * @see https://developer.chrome.com/extensions/automation#type-CustomAction
+ */
+chrome.automation.CustomAction;
+
+/**
  * @constructor
  * @private
  * @see https://developer.chrome.com/extensions/automation#type-AutomationNode
@@ -530,6 +539,13 @@ chrome.automation.AutomationNode.prototype.activeDescendant;
  * @see https://developer.chrome.com/extensions/automation#type-inPageLinkTarget
  */
 chrome.automation.AutomationNode.prototype.inPageLinkTarget;
+
+/**
+ * An array of custom actions.
+ * @type {(!Array<!chrome.automation.CustomAction>|undefined)}
+ * @see https://developer.chrome.com/extensions/automation#type-customActions
+ */
+chrome.automation.AutomationNode.prototype.customActions;
 
 /**
  * The URL that this link will navigate to.
@@ -1075,6 +1091,13 @@ chrome.automation.AutomationNode.prototype.hitTest = function(x, y, eventToFire)
  * @see https://developer.chrome.com/extensions/automation#method-makeVisible
  */
 chrome.automation.AutomationNode.prototype.makeVisible = function() {};
+
+/**
+ * Performs custom action.
+ * @param {number} customActionId
+ * @see https://developer.chrome.com/extensions/automation#method-performCustomAction
+ */
+chrome.automation.AutomationNode.prototype.performCustomAction = function(customActionId) {};
 
 /**
  * Sets selection within a text field.

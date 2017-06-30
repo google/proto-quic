@@ -14,6 +14,7 @@
 #include "base/memory/ptr_util.h"
 #include "base/run_loop.h"
 #include "base/stl_util.h"
+#include "base/strings/string_number_conversions.h"
 #include "base/strings/stringprintf.h"
 #include "base/test/histogram_tester.h"
 #include "net/base/chunked_upload_data_stream.h"
@@ -126,6 +127,17 @@ struct PoolingTestParams {
   QuicVersion version;
   DestinationType destination_type;
 };
+
+std::string GenerateQuicVersionsListForAltSvcHeader(
+    const QuicVersionVector& versions) {
+  std::string result = "";
+  for (const QuicVersion& version : versions) {
+    if (!result.empty())
+      result.append(",");
+    result.append(base::IntToString(version));
+  }
+  return result;
+}
 
 std::vector<PoolingTestParams> GetPoolingTestParams() {
   std::vector<PoolingTestParams> params;
@@ -499,9 +511,9 @@ class QuicNetworkTransactionTest
         std::move(headers), offset);
   }
 
-  void CreateSession() {
+  void CreateSession(const QuicVersionVector& supported_versions) {
     session_params_.enable_quic = true;
-    session_params_.quic_supported_versions = SupportedVersions(version_);
+    session_params_.quic_supported_versions = supported_versions;
 
     session_context_.quic_clock = &clock_;
     session_context_.quic_random = &random_generator_;
@@ -525,6 +537,8 @@ class QuicNetworkTransactionTest
     session_.reset(new HttpNetworkSession(session_params_, session_context_));
     session_->quic_stream_factory()->set_require_confirmation(false);
   }
+
+  void CreateSession() { return CreateSession(SupportedVersions(version_)); }
 
   void CheckWasQuicResponse(HttpNetworkTransaction* trans) {
     const HttpResponseInfo* response = trans->GetResponseInfo();
@@ -611,8 +625,9 @@ class QuicNetworkTransactionTest
     url::SchemeHostPort server(request_.url);
     AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
     base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
-    http_server_properties_.SetAlternativeService(server, alternative_service,
-                                                  expiration);
+    http_server_properties_.SetQuicAlternativeService(
+        server, alternative_service, expiration,
+        HttpNetworkSession::Params().quic_supported_versions);
   }
 
   void AddQuicRemoteAlternativeServiceMapping(
@@ -623,8 +638,9 @@ class QuicNetworkTransactionTest
     AlternativeService alternative_service(kProtoQUIC, alternative.host(),
                                            alternative.port());
     base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
-    http_server_properties_.SetAlternativeService(server, alternative_service,
-                                                  expiration);
+    http_server_properties_.SetQuicAlternativeService(
+        server, alternative_service, expiration,
+        HttpNetworkSession::Params().quic_supported_versions);
   }
 
   void ExpectBrokenAlternateProtocolMapping() {
@@ -1187,8 +1203,9 @@ TEST_P(QuicNetworkTransactionTest, RetryMisdirectedRequest) {
   AlternativeService alternative_service(kProtoQUIC, kDefaultServerHostName,
                                          443);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
-  http_server_properties_.SetAlternativeService(server, alternative_service,
-                                                expiration);
+  http_server_properties_.SetQuicAlternativeService(
+      server, alternative_service, expiration,
+      HttpNetworkSession::Params().quic_supported_versions);
 
   // First try: The alternative job uses QUIC and reports an HTTP 421
   // Misdirected Request error.  The main job uses TCP, but |http_data| below is
@@ -1446,6 +1463,74 @@ TEST_P(QuicNetworkTransactionTest, DoNotGetAltSvcForDifferentOrigin) {
   // use QUIC.
   request_.url = GURL("http://mail.example.org:443");
   SendRequestAndExpectHttpResponse("hello world");
+}
+
+TEST_P(QuicNetworkTransactionTest,
+       StoreMutuallySupportedVersionsWhenProcessAltSvc) {
+  std::string advertised_versions_list_str =
+      GenerateQuicVersionsListForAltSvcHeader(AllSupportedVersions());
+  std::string altsvc_header =
+      base::StringPrintf("Alt-Svc: quic=\":443\"; v=\"%s\"\r\n\r\n",
+                         advertised_versions_list_str.c_str());
+  MockRead http_reads[] = {
+      MockRead("HTTP/1.1 200 OK\r\n"), MockRead(altsvc_header.c_str()),
+      MockRead("hello world"),
+      MockRead(SYNCHRONOUS, ERR_TEST_PEER_CLOSE_AFTER_NEXT_MOCK_READ),
+      MockRead(ASYNC, OK)};
+
+  StaticSocketDataProvider http_data(http_reads, arraysize(http_reads), nullptr,
+                                     0);
+  socket_factory_.AddSocketDataProvider(&http_data);
+  socket_factory_.AddSSLSocketDataProvider(&ssl_data_);
+
+  MockQuicData mock_quic_data;
+  QuicStreamOffset header_stream_offset = 0;
+  mock_quic_data.AddWrite(
+      ConstructInitialSettingsPacket(1, &header_stream_offset));
+  mock_quic_data.AddWrite(ConstructClientRequestHeadersPacket(
+      2, GetNthClientInitiatedStreamId(0), true, true,
+      GetRequestHeaders("GET", "https", "/"), &header_stream_offset));
+  mock_quic_data.AddRead(ConstructServerResponseHeadersPacket(
+      1, GetNthClientInitiatedStreamId(0), false, false,
+      GetResponseHeaders("200 OK")));
+  mock_quic_data.AddRead(ConstructServerDataPacket(
+      2, GetNthClientInitiatedStreamId(0), false, true, 0, "hello!"));
+  mock_quic_data.AddWrite(ConstructClientAckPacket(3, 2, 1, 1));
+  mock_quic_data.AddRead(ASYNC, ERR_IO_PENDING);  // No more data to read
+  mock_quic_data.AddRead(ASYNC, 0);               // EOF
+
+  mock_quic_data.AddSocketDataToFactory(&socket_factory_);
+
+  AddHangingNonAlternateProtocolSocketData();
+
+  // Generate a list of QUIC versions suppored by netstack.
+  QuicVersionVector current_supported_versions = SupportedVersions(version_);
+  if (version_ != QUIC_VERSION_40) {
+    current_supported_versions.push_back(QUIC_VERSION_40);
+  } else {
+    current_supported_versions.push_back(QUIC_VERSION_37);
+  }
+
+  CreateSession(current_supported_versions);
+
+  SendRequestAndExpectHttpResponse("hello world");
+  SendRequestAndExpectQuicResponse("hello!");
+
+  // Check alternative service is set with only mutually supported versions.
+  const url::SchemeHostPort https_server(request_.url);
+  const AlternativeServiceInfoVector alt_svc_info_vector =
+      session_->http_server_properties()->GetAlternativeServiceInfos(
+          https_server);
+  EXPECT_EQ(1u, alt_svc_info_vector.size());
+  EXPECT_EQ(kProtoQUIC, alt_svc_info_vector[0].alternative_service().protocol);
+  EXPECT_EQ(2u, alt_svc_info_vector[0].advertised_versions().size());
+  // Advertised versions will be lised in a sorted order.
+  std::sort(current_supported_versions.begin(),
+            current_supported_versions.end());
+  EXPECT_EQ(current_supported_versions[0],
+            alt_svc_info_vector[0].advertised_versions()[0]);
+  EXPECT_EQ(current_supported_versions[1],
+            alt_svc_info_vector[0].advertised_versions()[1]);
 }
 
 TEST_P(QuicNetworkTransactionTest, UseAlternativeServiceAllSupportedVersion) {
@@ -2777,15 +2862,17 @@ TEST_P(QuicNetworkTransactionTest,
 
   // Set up alternative service for |origin1|.
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
-  http_server_properties_.SetAlternativeService(
+  http_server_properties_.SetQuicAlternativeService(
       url::SchemeHostPort(origin1),
-      AlternativeService(kProtoQUIC, "mail.example.com", 443), expiration);
+      AlternativeService(kProtoQUIC, "mail.example.com", 443), expiration,
+      HttpNetworkSession::Params().quic_supported_versions);
 
   // Set up alternative service for |origin2|.
   AlternativeServiceInfoVector alternative_services;
-  http_server_properties_.SetAlternativeService(
+  http_server_properties_.SetQuicAlternativeService(
       url::SchemeHostPort(origin2),
-      AlternativeService(kProtoQUIC, "www.example.com", 443), expiration);
+      AlternativeService(kProtoQUIC, "www.example.com", 443), expiration,
+      HttpNetworkSession::Params().quic_supported_versions);
   // First request opens connection to |destination1|
   // with QuicServerId.host() == origin1.host().
   SendRequestAndExpectQuicResponse("hello!");
@@ -3008,16 +3095,18 @@ TEST_P(QuicNetworkTransactionTest, PoolByOrigin) {
   url::SchemeHostPort server(request_.url);
   AlternativeService alternative_service(kProtoQUIC, destination1, 443);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
-  http_server_properties_.SetAlternativeService(server, alternative_service,
-                                                expiration);
+  http_server_properties_.SetQuicAlternativeService(
+      server, alternative_service, expiration,
+      HttpNetworkSession::Params().quic_supported_versions);
   // First request opens connection to |destination1|
   // with QuicServerId.host() == kDefaultServerHostName.
   SendRequestAndExpectQuicResponse("hello!");
 
   // Set up alternative service entry to a different destination.
   alternative_service = AlternativeService(kProtoQUIC, destination2, 443);
-  http_server_properties_.SetAlternativeService(server, alternative_service,
-                                                expiration);
+  http_server_properties_.SetQuicAlternativeService(
+      server, alternative_service, expiration,
+      HttpNetworkSession::Params().quic_supported_versions);
   // Second request pools to existing connection with same QuicServerId,
   // even though alternative service destination is different.
   SendRequestAndExpectQuicResponse("hello!");
@@ -3080,8 +3169,9 @@ TEST_P(QuicNetworkTransactionTest, PoolByDestination) {
   // Set up alternative service for |origin1|.
   AlternativeService alternative_service1(kProtoQUIC, destination1, 443);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
-  http_server_properties_.SetAlternativeService(
-      url::SchemeHostPort(origin1), alternative_service1, expiration);
+  http_server_properties_.SetQuicAlternativeService(
+      url::SchemeHostPort(origin1), alternative_service1, expiration,
+      HttpNetworkSession::Params().quic_supported_versions);
 
   // Set up multiple alternative service entries for |origin2|,
   // the first one with a different destination as for |origin1|,
@@ -3090,9 +3180,13 @@ TEST_P(QuicNetworkTransactionTest, PoolByDestination) {
   AlternativeService alternative_service2(kProtoQUIC, destination2, 443);
   AlternativeServiceInfoVector alternative_services;
   alternative_services.push_back(
-      AlternativeServiceInfo(alternative_service2, expiration));
+      AlternativeServiceInfo::CreateQuicAlternativeServiceInfo(
+          alternative_service2, expiration,
+          session_->params().quic_supported_versions));
   alternative_services.push_back(
-      AlternativeServiceInfo(alternative_service1, expiration));
+      AlternativeServiceInfo::CreateQuicAlternativeServiceInfo(
+          alternative_service1, expiration,
+          session_->params().quic_supported_versions));
   http_server_properties_.SetAlternativeServices(url::SchemeHostPort(origin2),
                                                  alternative_services);
   // First request opens connection to |destination1|
@@ -4300,6 +4394,77 @@ TEST_P(QuicNetworkTransactionTest, QuicServerPush) {
   EXPECT_LT(0, pos);
 }
 
+// Regression test for http://crbug.com/719461 in which a promised stream
+// is closed before the pushed headers arrive, but after the connection
+// is closed and before the callbacks are executed.
+TEST_P(QuicNetworkTransactionTest, CancelServerPushAfterConnectionClose) {
+  session_params_.origins_to_force_quic_on.insert(
+      HostPortPair::FromString("mail.example.org:443"));
+
+  MockQuicData mock_quic_data;
+  QuicStreamOffset header_stream_offset = 0;
+  // Initial SETTINGS frame.
+  mock_quic_data.AddWrite(
+      ConstructInitialSettingsPacket(1, &header_stream_offset));
+  // First request: GET https://mail.example.org/
+  mock_quic_data.AddWrite(ConstructClientRequestHeadersPacket(
+      2, GetNthClientInitiatedStreamId(0), true, true,
+      GetRequestHeaders("GET", "https", "/"), &header_stream_offset));
+  QuicStreamOffset server_header_offset = 0;
+  // Server promise for: https://mail.example.org/pushed.jpg
+  mock_quic_data.AddRead(ConstructServerPushPromisePacket(
+      1, GetNthClientInitiatedStreamId(0), GetNthServerInitiatedStreamId(0),
+      false, GetRequestHeaders("GET", "https", "/pushed.jpg"),
+      &server_header_offset, &server_maker_));
+  // Response headers for first request.
+  mock_quic_data.AddRead(ConstructServerResponseHeadersPacket(
+      2, GetNthClientInitiatedStreamId(0), false, false,
+      GetResponseHeaders("200 OK"), &server_header_offset));
+  // Client ACKs the response headers.
+  mock_quic_data.AddWrite(ConstructClientAckPacket(3, 2, 1, 1));
+  // Response body for first request.
+  mock_quic_data.AddRead(ConstructServerDataPacket(
+      3, GetNthClientInitiatedStreamId(0), false, true, 0, "hello!"));
+  // Write error for the third request.
+  mock_quic_data.AddWrite(SYNCHRONOUS, ERR_FAILED);
+  mock_quic_data.AddRead(ASYNC, ERR_IO_PENDING);  // No more data to read
+  mock_quic_data.AddRead(ASYNC, 0);               // EOF
+  mock_quic_data.AddSocketDataToFactory(&socket_factory_);
+
+  CreateSession();
+
+  // Send a request which triggers a push promise from the server.
+  SendRequestAndExpectQuicResponse("hello!");
+
+  // Start a push transaction that will be cancelled after the connection
+  // is closed, but before the callback is executed.
+  request_.url = GURL("https://mail.example.org/pushed.jpg");
+  auto trans2 = base::MakeUnique<HttpNetworkTransaction>(DEFAULT_PRIORITY,
+                                                         session_.get());
+  TestCompletionCallback callback2;
+  int rv = trans2->Start(&request_, callback2.callback(), net_log_.bound());
+  EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
+  base::RunLoop().RunUntilIdle();
+
+  // Cause the connection to close on a write error.
+  HttpRequestInfo request3;
+  request3.method = "GET";
+  request3.url = GURL("https://mail.example.org/");
+  request3.load_flags = 0;
+  HttpNetworkTransaction trans3(DEFAULT_PRIORITY, session_.get());
+  TestCompletionCallback callback3;
+  EXPECT_THAT(trans3.Start(&request3, callback3.callback(), net_log_.bound()),
+              IsError(ERR_IO_PENDING));
+
+  base::RunLoop().RunUntilIdle();
+
+  // When |trans2| is destroyed, the underlying stream will be closed.
+  EXPECT_FALSE(callback2.have_result());
+  trans2 = nullptr;
+
+  EXPECT_THAT(callback3.WaitForResult(), IsError(ERR_QUIC_PROTOCOL_ERROR));
+}
+
 TEST_P(QuicNetworkTransactionTest, QuicForceHolBlocking) {
   session_params_.quic_force_hol_blocking = true;
   session_params_.origins_to_force_quic_on.insert(
@@ -4582,7 +4747,7 @@ class QuicNetworkTransactionWithDestinationTest
     session_.reset();
   }
 
-  void SetAlternativeService(const std::string& origin) {
+  void SetQuicAlternativeService(const std::string& origin) {
     HostPortPair destination;
     switch (destination_type_) {
       case SAME_AS_FIRST:
@@ -4597,9 +4762,9 @@ class QuicNetworkTransactionWithDestinationTest
     }
     AlternativeService alternative_service(kProtoQUIC, destination);
     base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
-    http_server_properties_.SetAlternativeService(
+    http_server_properties_.SetQuicAlternativeService(
         url::SchemeHostPort("https", origin, 443), alternative_service,
-        expiration);
+        expiration, session_->params().quic_supported_versions);
   }
 
   std::unique_ptr<QuicEncryptedPacket> ConstructClientRequestHeadersPacket(
@@ -4770,7 +4935,7 @@ TEST_P(QuicNetworkTransactionWithDestinationTest, InvalidCertificate) {
   // is valid for the hostname of the alternative service.
   origin2_ = "mail.example.org";
 
-  SetAlternativeService(origin1_);
+  SetQuicAlternativeService(origin1_);
 
   scoped_refptr<X509Certificate> cert(
       ImportCertFromFile(GetTestCertsDirectory(), "wildcard.pem"));
@@ -4808,8 +4973,8 @@ TEST_P(QuicNetworkTransactionWithDestinationTest, PoolIfCertificateValid) {
   origin1_ = "mail.example.org";
   origin2_ = "news.example.org";
 
-  SetAlternativeService(origin1_);
-  SetAlternativeService(origin2_);
+  SetQuicAlternativeService(origin1_);
+  SetQuicAlternativeService(origin2_);
 
   scoped_refptr<X509Certificate> cert(
       ImportCertFromFile(GetTestCertsDirectory(), "wildcard.pem"));
@@ -4880,8 +5045,8 @@ TEST_P(QuicNetworkTransactionWithDestinationTest,
   origin1_ = "news.example.org";
   origin2_ = "mail.example.com";
 
-  SetAlternativeService(origin1_);
-  SetAlternativeService(origin2_);
+  SetQuicAlternativeService(origin1_);
+  SetQuicAlternativeService(origin2_);
 
   scoped_refptr<X509Certificate> cert1(
       ImportCertFromFile(GetTestCertsDirectory(), "wildcard.pem"));

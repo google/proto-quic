@@ -84,8 +84,8 @@
 //  CACHE_UMA(COUNTS, "MyName", 0, 20);
 //  CACHE_UMA(COUNTS, "MyExperiment", 530, 55);
 // which roughly translates to:
-//  UMA_HISTOGRAM_COUNTS("DiskCache.2.MyName", 20);  // "2" is the CacheType.
-//  UMA_HISTOGRAM_COUNTS("DiskCache.2.MyExperiment_530", 55);
+//  UMA_HISTOGRAM_COUNTS_1M("DiskCache.2.MyName", 20);  // "2" is the CacheType.
+//  UMA_HISTOGRAM_COUNTS_1M("DiskCache.2.MyExperiment_530", 55);
 //
 #define CACHE_UMA(type, name, experiment, sample) {\
     const std::string my_name =\

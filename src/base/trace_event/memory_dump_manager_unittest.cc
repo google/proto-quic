@@ -251,8 +251,8 @@ class MemoryDumpManagerTest : public testing::Test {
     ProcessMemoryDumpCallback callback = Bind(
         [](bool* curried_success, Closure curried_quit_closure,
            uint64_t curried_expected_guid,
-           Optional<MemoryDumpCallbackResult>* curried_result,
-           uint64_t dump_guid, bool success,
+           Optional<MemoryDumpCallbackResult>* curried_result, bool success,
+           uint64_t dump_guid,
            const Optional<MemoryDumpCallbackResult>& callback_result) {
           *curried_success = success;
           EXPECT_EQ(curried_expected_guid, dump_guid);

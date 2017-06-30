@@ -315,7 +315,7 @@ TEST(ProcessMemoryDumpTest, OldSharedMemoryOwnershipTest) {
   MemoryAllocatorDumpGuid client_global_guid1(1);
   auto shm_token1 = UnguessableToken::Create();
   MemoryAllocatorDumpGuid shm_global_guid1 =
-      SharedMemoryTracker::GetGlobalDumpGUIDForTracing(shm_token1);
+      SharedMemoryTracker::GetGlobalDumpIdForTracing(shm_token1);
   pmd->AddOverridableOwnershipEdge(shm_dump1->guid(), shm_global_guid1,
                                    0 /* importance */);
 
@@ -344,9 +344,9 @@ TEST(ProcessMemoryDumpTest, NewSharedMemoryOwnershipTest) {
   MemoryAllocatorDumpGuid client_global_guid2(2);
   auto shm_token2 = UnguessableToken::Create();
   MemoryAllocatorDumpGuid shm_local_guid2 =
-      SharedMemoryTracker::GetDumpGUIDForTracing(shm_token2);
+      SharedMemoryTracker::GetDumpIdForTracing(shm_token2);
   MemoryAllocatorDumpGuid shm_global_guid2 =
-      SharedMemoryTracker::GetGlobalDumpGUIDForTracing(shm_token2);
+      SharedMemoryTracker::GetGlobalDumpIdForTracing(shm_token2);
   pmd->AddOverridableOwnershipEdge(shm_local_guid2, shm_global_guid2,
                                    0 /* importance */);
 

@@ -28,9 +28,9 @@ from pylib import constants
 from video_recorder import video_recorder
 
 sys.path.append(os.path.join(_SRC_DIR, 'tools', 'perf'))
-from chrome_telemetry_build import chromium_config
+from core import path_util
+sys.path.append(path_util.GetTelemetryDir())
 
-sys.path.append(chromium_config.GetTelemetryDir())
 from telemetry.internal.image_processing import video
 from telemetry.internal.util import wpr_server
 

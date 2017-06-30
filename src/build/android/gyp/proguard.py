@@ -102,7 +102,8 @@ def main(args):
       options,
       input_paths=input_paths,
       input_strings=proguard.build(),
-      output_paths=[options.output_path])
+      output_paths=[options.output_path],
+      depfile_deps=proguard.GetDepfileDeps())
 
 
 if __name__ == '__main__':

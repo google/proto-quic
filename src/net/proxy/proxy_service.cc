@@ -1523,8 +1523,7 @@ void ProxyService::ForceReloadProxyConfig() {
 // static
 std::unique_ptr<ProxyConfigService>
 ProxyService::CreateSystemProxyConfigService(
-    const scoped_refptr<base::SingleThreadTaskRunner>& io_task_runner,
-    const scoped_refptr<base::SingleThreadTaskRunner>& file_task_runner) {
+    const scoped_refptr<base::SequencedTaskRunner>& io_task_runner) {
 #if defined(OS_WIN)
   return base::MakeUnique<ProxyConfigServiceWin>();
 #elif defined(OS_IOS)
@@ -1548,10 +1547,10 @@ ProxyService::CreateSystemProxyConfigService(
 
   // Synchronously fetch the current proxy config (since we are running on
   // glib_default_loop). Additionally register for notifications (delivered in
-  // either |glib_default_loop| or |file_task_runner|) to keep us updated when
-  // the proxy config changes.
-  linux_config_service->SetupAndFetchInitialConfig(
-      glib_thread_task_runner, io_task_runner, file_task_runner);
+  // either |glib_default_loop| or an internal sequenced task runner) to
+  // keep us updated when the proxy config changes.
+  linux_config_service->SetupAndFetchInitialConfig(glib_thread_task_runner,
+                                                   io_task_runner);
 
   return std::move(linux_config_service);
 #elif defined(OS_ANDROID)

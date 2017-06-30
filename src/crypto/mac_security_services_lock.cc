@@ -10,8 +10,6 @@
 
 namespace {
 
-// This singleton pertains to Apple's wrappers over their own CSSM handles,
-// as opposed to our own CSSM_CSP_HANDLE in cssm_init.cc.
 class SecurityServicesSingleton {
  public:
   static SecurityServicesSingleton* GetInstance() {

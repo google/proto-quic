@@ -393,7 +393,7 @@ void SdchOwner::OnDictionaryFetched(base::Time last_used,
   };
 
   if (!was_from_cache)
-    UMA_HISTOGRAM_COUNTS("Sdch3.NetworkBytesSpent", dictionary_text.size());
+    UMA_HISTOGRAM_COUNTS_1M("Sdch3.NetworkBytesSpent", dictionary_text.size());
 
   // Figure out if there is space for the incoming dictionary; evict
   // stale dictionaries if needed to make space.

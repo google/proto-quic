@@ -41,6 +41,18 @@ class HttpStreamFactoryImpl::Request : public HttpStreamRequest {
 
     // Called when the priority of transaction changes.
     virtual void SetPriority(RequestPriority priority) = 0;
+
+    // Called when SpdySessionPool notifies the Request
+    // that it can be served on a SpdySession created by another Request,
+    // therefore the Jobs can be destroyed.
+    virtual void OnStreamReadyOnPooledConnection(
+        const SSLConfig& used_ssl_config,
+        const ProxyInfo& proxy_info,
+        std::unique_ptr<HttpStream> stream) = 0;
+    virtual void OnBidirectionalStreamImplReadyOnPooledConnection(
+        const SSLConfig& used_ssl_config,
+        const ProxyInfo& used_proxy_info,
+        std::unique_ptr<BidirectionalStreamImpl> stream) = 0;
   };
 
   // Request will notify |job_controller| when it's destructed.
@@ -90,34 +102,13 @@ class HttpStreamFactoryImpl::Request : public HttpStreamRequest {
     return websocket_handshake_stream_create_helper_;
   }
 
-  // HttpStreamRequest::Delegate methods which we implement. Note we don't
-  // actually subclass HttpStreamRequest::Delegate.
-  void OnStreamReady(const SSLConfig& used_ssl_config,
-                     const ProxyInfo& used_proxy_info,
-                     std::unique_ptr<HttpStream> stream);
-  void OnBidirectionalStreamImplReady(
+  void OnStreamReadyOnPooledConnection(const SSLConfig& used_ssl_config,
+                                       const ProxyInfo& used_proxy_info,
+                                       std::unique_ptr<HttpStream> stream);
+  void OnBidirectionalStreamImplReadyOnPooledConnection(
       const SSLConfig& used_ssl_config,
       const ProxyInfo& used_proxy_info,
       std::unique_ptr<BidirectionalStreamImpl> stream);
-
-  void OnWebSocketHandshakeStreamReady(
-      const SSLConfig& used_ssl_config,
-      const ProxyInfo& used_proxy_info,
-      std::unique_ptr<WebSocketHandshakeStreamBase> stream);
-  void OnStreamFailed(int status, const SSLConfig& used_ssl_config);
-  void OnCertificateError(int status,
-                          const SSLConfig& used_ssl_config,
-                          const SSLInfo& ssl_info);
-  void OnNeedsProxyAuth(const HttpResponseInfo& proxy_response,
-                        const SSLConfig& used_ssl_config,
-                        const ProxyInfo& used_proxy_info,
-                        HttpAuthController* auth_controller);
-  void OnNeedsClientAuth(const SSLConfig& used_ssl_config,
-                         SSLCertRequestInfo* cert_info);
-  void OnHttpsProxyTunnelResponse(const HttpResponseInfo& response_info,
-                                  const SSLConfig& used_ssl_config,
-                                  const ProxyInfo& used_proxy_info,
-                                  std::unique_ptr<HttpStream> stream);
 
   // HttpStreamRequest methods.
   int RestartTunnelWithProxyAuth() override;
@@ -128,6 +119,8 @@ class HttpStreamFactoryImpl::Request : public HttpStreamRequest {
   bool using_spdy() const override;
   const ConnectionAttempts& connection_attempts() const override;
 
+  bool completed() const { return completed_; }
+
  private:
   const GURL url_;
 
@@ -136,7 +129,6 @@ class HttpStreamFactoryImpl::Request : public HttpStreamRequest {
 
   WebSocketHandshakeStreamBase::CreateHelper* const
       websocket_handshake_stream_create_helper_;
-  HttpStreamRequest::Delegate* const delegate_;
   const NetLogWithSource net_log_;
 
   base::Optional<SpdySessionKey> spdy_session_key_;

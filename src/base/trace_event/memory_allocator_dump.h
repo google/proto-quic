@@ -33,6 +33,9 @@ class BASE_EXPORT MemoryAllocatorDump {
     WEAK = 1 << 0,
   };
 
+  static MemoryAllocatorDumpGuid GetDumpIdFromName(
+      const std::string& absolute_name);
+
   // MemoryAllocatorDump is owned by ProcessMemoryDump.
   MemoryAllocatorDump(const std::string& absolute_name,
                       ProcessMemoryDump* process_memory_dump,

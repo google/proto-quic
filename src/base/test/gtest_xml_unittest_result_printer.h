@@ -45,6 +45,7 @@ class XmlUnitTestResultPrinter : public testing::EmptyTestEventListener {
                            const std::string& message);
 
   FILE* output_file_;
+  bool open_failed_;
 
   DISALLOW_COPY_AND_ASSIGN(XmlUnitTestResultPrinter);
 };

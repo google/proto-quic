@@ -181,6 +181,20 @@ class CookieStoreTest : public testing::Test {
     return callback.result();
   }
 
+  bool SetCanonicalCookie(CookieStore* cs,
+                          std::unique_ptr<CanonicalCookie> cookie,
+                          bool secure_source,
+                          bool can_modify_httponly) {
+    DCHECK(cs);
+    ResultSavingCookieCallback<bool> callback;
+    cs->SetCanonicalCookieAsync(
+        std::move(cookie), secure_source, can_modify_httponly,
+        base::Bind(&ResultSavingCookieCallback<bool>::Run,
+                   base::Unretained(&callback)));
+    callback.WaitUntilDone();
+    return callback.result();
+  }
+
   bool SetCookieWithServerTime(CookieStore* cs,
                                const GURL& url,
                                const std::string& cookie_line,
@@ -463,6 +477,131 @@ TYPED_TEST_P(CookieStoreTest, SetCookieWithDetailsAsync) {
   EXPECT_FALSE(it->IsHttpOnly());
 
   EXPECT_TRUE(++it == cookies.end());
+}
+
+TYPED_TEST_P(CookieStoreTest, SetCanonicalCookieTest) {
+  CookieStore* cs = this->GetCookieStore();
+
+  base::Time two_hours_ago = base::Time::Now() - base::TimeDelta::FromHours(2);
+  base::Time one_hour_ago = base::Time::Now() - base::TimeDelta::FromHours(1);
+  base::Time one_hour_from_now =
+      base::Time::Now() + base::TimeDelta::FromHours(1);
+
+  std::string foo_foo_host(this->www_foo_foo_.url().host());
+  std::string foo_bar_domain(this->www_foo_bar_.domain());
+  std::string http_foo_host(this->http_www_foo_.url().host());
+  std::string https_foo_host(this->https_www_foo_.url().host());
+
+  EXPECT_TRUE(this->SetCanonicalCookie(
+      cs,
+      base::MakeUnique<CanonicalCookie>(
+          "A", "B", foo_foo_host, "/foo", one_hour_ago, one_hour_from_now,
+          base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
+          COOKIE_PRIORITY_DEFAULT),
+      false, true));
+  // Note that for the creation time to be set exactly, without modification,
+  // it must be different from the one set by the line above.
+  EXPECT_TRUE(this->SetCanonicalCookie(
+      cs,
+      base::MakeUnique<CanonicalCookie>(
+          "C", "D", "." + foo_bar_domain, "/bar", two_hours_ago, base::Time(),
+          one_hour_ago, false, true, CookieSameSite::DEFAULT_MODE,
+          COOKIE_PRIORITY_DEFAULT),
+      false, true));
+
+  // A secure source is required for creating secure cookies.
+  EXPECT_FALSE(this->SetCanonicalCookie(
+      cs,
+      base::MakeUnique<CanonicalCookie>(
+          "E", "F", http_foo_host, "/", base::Time(), base::Time(),
+          base::Time(), true, false, CookieSameSite::DEFAULT_MODE,
+          COOKIE_PRIORITY_DEFAULT),
+      false, true));
+
+  // A secure source is also required for overwriting secure cookies.  Writing
+  // a secure cookie then overwriting it from a non-secure source should fail.
+  EXPECT_TRUE(this->SetCanonicalCookie(
+      cs,
+      base::MakeUnique<CanonicalCookie>(
+          "E", "F", http_foo_host, "/", base::Time(), base::Time(),
+          base::Time(), true, false, CookieSameSite::DEFAULT_MODE,
+          COOKIE_PRIORITY_DEFAULT),
+      true, true));
+
+  EXPECT_FALSE(this->SetCanonicalCookie(
+      cs,
+      base::MakeUnique<CanonicalCookie>(
+          "E", "F", http_foo_host, "/", base::Time(), base::Time(),
+          base::Time(), true, false, CookieSameSite::DEFAULT_MODE,
+          COOKIE_PRIORITY_DEFAULT),
+      false, true));
+
+  // Get all the cookies for a given URL, regardless of properties. This 'get()'
+  // operation shouldn't update the access time, as the test checks that the
+  // access time is set properly upon creation. Updating the access time would
+  // make that difficult.
+  CookieOptions options;
+  options.set_include_httponly();
+  options.set_same_site_cookie_mode(
+      CookieOptions::SameSiteCookieMode::INCLUDE_STRICT_AND_LAX);
+  options.set_do_not_update_access_time();
+
+  CookieList cookies =
+      this->GetCookieListWithOptions(cs, this->www_foo_foo_.url(), options);
+  CookieList::iterator it = cookies.begin();
+
+  ASSERT_EQ(1u, cookies.size());
+  EXPECT_EQ("A", it->Name());
+  EXPECT_EQ("B", it->Value());
+  EXPECT_EQ(this->www_foo_foo_.host(), it->Domain());
+  EXPECT_EQ("/foo", it->Path());
+  EXPECT_EQ(one_hour_ago, it->CreationDate());
+  EXPECT_TRUE(it->IsPersistent());
+  // Expect expiration date is in the right range.  Some cookie implementations
+  // may not record it with millisecond accuracy.
+  EXPECT_LE((one_hour_from_now - it->ExpiryDate()).magnitude().InSeconds(), 5);
+  // Some CookieStores don't store last access date.
+  if (!it->LastAccessDate().is_null())
+    EXPECT_EQ(one_hour_ago, it->LastAccessDate());
+  EXPECT_FALSE(it->IsSecure());
+  EXPECT_FALSE(it->IsHttpOnly());
+
+  // Get the cookie using the wide open |options|:
+  cookies =
+      this->GetCookieListWithOptions(cs, this->www_foo_bar_.url(), options);
+  ASSERT_EQ(1u, cookies.size());
+  it = cookies.begin();
+
+  EXPECT_EQ("C", it->Name());
+  EXPECT_EQ("D", it->Value());
+  EXPECT_EQ(this->www_foo_bar_.Format(".%D"), it->Domain());
+  EXPECT_EQ("/bar", it->Path());
+  EXPECT_EQ(two_hours_ago, it->CreationDate());
+  EXPECT_FALSE(it->IsPersistent());
+  // Some CookieStores don't store last access date.
+  if (!it->LastAccessDate().is_null())
+    EXPECT_EQ(one_hour_ago, it->LastAccessDate());
+  EXPECT_FALSE(it->IsSecure());
+  EXPECT_TRUE(it->IsHttpOnly());
+
+  cookies =
+      this->GetCookieListWithOptions(cs, this->https_www_foo_.url(), options);
+  ASSERT_EQ(1u, cookies.size());
+  it = cookies.begin();
+
+  EXPECT_EQ("E", it->Name());
+  EXPECT_EQ("F", it->Value());
+  EXPECT_EQ("/", it->Path());
+  EXPECT_EQ(this->https_www_foo_.host(), it->Domain());
+  // Cookie should have its creation time set, and be in a reasonable range.
+  EXPECT_LE((base::Time::Now() - it->CreationDate()).magnitude().InMinutes(),
+            2);
+  EXPECT_FALSE(it->IsPersistent());
+  // Some CookieStores don't store last access date.
+  if (!it->LastAccessDate().is_null())
+    EXPECT_EQ(it->CreationDate(), it->LastAccessDate());
+  EXPECT_TRUE(it->IsSecure());
+  EXPECT_FALSE(it->IsHttpOnly());
 }
 
 // Test enforcement around setting secure cookies.
@@ -1476,6 +1615,7 @@ TYPED_TEST_P(CookieStoreTest, DeleteSessionCookie) {
 
 REGISTER_TYPED_TEST_CASE_P(CookieStoreTest,
                            SetCookieWithDetailsAsync,
+                           SetCanonicalCookieTest,
                            SetCookieWithDetailsSecureEnforcement,
                            EmptyKeyTest,
                            DomainTest,

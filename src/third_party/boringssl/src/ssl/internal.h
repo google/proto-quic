@@ -548,21 +548,19 @@ typedef struct ssl_handshake_st SSL_HANDSHAKE;
  * configured and zero otherwise. */
 int ssl_has_private_key(const SSL *ssl);
 
-/* ssl_private_key_* call the corresponding function on the
- * |SSL_PRIVATE_KEY_METHOD| for |ssl|, if configured. Otherwise, they implement
- * the operation with |EVP_PKEY|. */
+/* ssl_private_key_* perform the corresponding operation on
+ * |SSL_PRIVATE_KEY_METHOD|. If there is a custom private key configured, they
+ * call the corresponding function or |complete| depending on whether there is a
+ * pending operation. Otherwise, they implement the operation with
+ * |EVP_PKEY|. */
 
 enum ssl_private_key_result_t ssl_private_key_sign(
-    SSL *ssl, uint8_t *out, size_t *out_len, size_t max_out,
+    SSL_HANDSHAKE *hs, uint8_t *out, size_t *out_len, size_t max_out,
     uint16_t signature_algorithm, const uint8_t *in, size_t in_len);
 
 enum ssl_private_key_result_t ssl_private_key_decrypt(
-    SSL *ssl, uint8_t *out, size_t *out_len, size_t max_out,
+    SSL_HANDSHAKE *hs, uint8_t *out, size_t *out_len, size_t max_out,
     const uint8_t *in, size_t in_len);
-
-enum ssl_private_key_result_t ssl_private_key_complete(SSL *ssl, uint8_t *out,
-                                                       size_t *out_len,
-                                                       size_t max_out);
 
 /* ssl_private_key_supports_signature_algorithm returns one if |hs|'s private
  * key supports |sigalg| and zero otherwise. */
@@ -925,6 +923,7 @@ enum ssl_hs_wait_t {
   ssl_hs_channel_id_lookup,
   ssl_hs_private_key_operation,
   ssl_hs_pending_ticket,
+  ssl_hs_early_data_rejected,
   ssl_hs_read_end_of_early_data,
 };
 
@@ -950,6 +949,14 @@ struct ssl_handshake_st {
   /* tls13_state is the internal state for the TLS 1.3 handshake. Its values
    * depend on |do_tls13_handshake| but the starting state is always zero. */
   int tls13_state;
+
+  /* min_version is the minimum accepted protocol version, taking account both
+   * |SSL_OP_NO_*| and |SSL_CTX_set_min_proto_version| APIs. */
+  uint16_t min_version;
+
+  /* max_version is the maximum accepted protocol version, taking account both
+   * |SSL_OP_NO_*| and |SSL_CTX_set_max_proto_version| APIs. */
+  uint16_t max_version;
 
   size_t hash_len;
   uint8_t secret[EVP_MAX_MD_SIZE];
@@ -1022,8 +1029,9 @@ struct ssl_handshake_st {
   uint8_t *peer_key;
   size_t peer_key_len;
 
-  /* server_params, in TLS 1.2, stores the ServerKeyExchange parameters to be
-   * signed while the signature is being computed. */
+  /* server_params, in a TLS 1.2 server, stores the ServerKeyExchange
+   * parameters. It has client and server randoms prepended for signing
+   * convenience. */
   uint8_t *server_params;
   size_t server_params_len;
 
@@ -1056,6 +1064,10 @@ struct ssl_handshake_st {
   /* new_session is the new mutable session being established by the current
    * handshake. It should not be cached. */
   SSL_SESSION *new_session;
+
+  /* early_session is the session corresponding to the current 0-RTT state on
+   * the client if |in_early_data| is true. */
+  SSL_SESSION *early_session;
 
   /* new_cipher is the cipher being negotiated in this handshake. */
   const SSL_CIPHER *new_cipher;
@@ -1097,6 +1109,10 @@ struct ssl_handshake_st {
    * Start. The client may write data at this point. */
   unsigned in_false_start:1;
 
+  /* in_early_data is one if there is a pending handshake that has progressed
+   * enough to send and receive early data. */
+  unsigned in_early_data:1;
+
   /* early_data_offered is one if the client sent the early_data extension. */
   unsigned early_data_offered:1;
 
@@ -1115,12 +1131,13 @@ struct ssl_handshake_st {
    * or received. */
   unsigned ticket_expected:1;
 
-  /* v2_clienthello is one if we received a V2ClientHello. */
-  unsigned v2_clienthello:1;
-
   /* extended_master_secret is one if the extended master secret extension is
    * negotiated in this handshake. */
   unsigned extended_master_secret:1;
+
+  /* pending_private_key_op is one if there is a pending private key operation
+   * in progress. */
+  unsigned pending_private_key_op:1;
 
   /* client_version is the value sent or received in the ClientHello version. */
   uint16_t client_version;
@@ -1128,6 +1145,10 @@ struct ssl_handshake_st {
   /* early_data_read is the amount of early data that has been read by the
    * record layer. */
   uint16_t early_data_read;
+
+  /* early_data_written is the amount of early data that has been written by the
+   * record layer. */
+  uint16_t early_data_written;
 } /* SSL_HANDSHAKE */;
 
 SSL_HANDSHAKE *ssl_handshake_new(SSL *ssl);
@@ -1162,8 +1183,12 @@ int tls13_process_certificate_verify(SSL_HANDSHAKE *hs);
 int tls13_process_finished(SSL_HANDSHAKE *hs, int use_saved_value);
 
 int tls13_add_certificate(SSL_HANDSHAKE *hs);
-enum ssl_private_key_result_t tls13_add_certificate_verify(SSL_HANDSHAKE *hs,
-                                                           int is_first_run);
+
+/* tls13_add_certificate_verify adds a TLS 1.3 CertificateVerify message to the
+ * handshake. If it returns |ssl_private_key_retry|, it should be called again
+ * to retry when the signing operation is completed. */
+enum ssl_private_key_result_t tls13_add_certificate_verify(SSL_HANDSHAKE *hs);
+
 int tls13_add_finished(SSL_HANDSHAKE *hs);
 int tls13_process_new_session_ticket(SSL *ssl);
 
@@ -1292,7 +1317,7 @@ int tls12_add_verify_sigalgs(const SSL *ssl, CBB *out);
 /* tls12_check_peer_sigalg checks if |sigalg| is acceptable for the peer
  * signature. It returns one on success and zero on error, setting |*out_alert|
  * to an alert to send. */
-int tls12_check_peer_sigalg(SSL *ssl, int *out_alert, uint16_t sigalg);
+int tls12_check_peer_sigalg(SSL *ssl, uint8_t *out_alert, uint16_t sigalg);
 
 
 /* Underdocumented functions.
@@ -1421,7 +1446,8 @@ struct ssl_protocol_method_st {
                        int peek);
   int (*read_change_cipher_spec)(SSL *ssl);
   void (*read_close_notify)(SSL *ssl);
-  int (*write_app_data)(SSL *ssl, const uint8_t *buf, int len);
+  int (*write_app_data)(SSL *ssl, int *out_needs_handshake, const uint8_t *buf,
+                        int len);
   int (*dispatch_alert)(SSL *ssl);
   /* supports_cipher returns one if |cipher| is supported by this protocol and
    * zero otherwise. */
@@ -1632,6 +1658,9 @@ typedef struct ssl3_state_st {
    * outstanding. */
   unsigned key_update_pending:1;
 
+  /* wpend_pending is one if we have a pending write outstanding. */
+  unsigned wpend_pending:1;
+
   uint8_t send_alert[2];
 
   /* pending_flight is the pending outgoing flight. This is used to flush each
@@ -1819,13 +1848,15 @@ struct ssl_st {
   /* version is the protocol version. */
   int version;
 
-  /* max_version is the maximum acceptable protocol version. Note this version
-   * is normalized in DTLS. */
-  uint16_t max_version;
+  /* conf_max_version is the maximum acceptable protocol version configured by
+   * |SSL_set_max_proto_version|. Note this version is normalized in DTLS and is
+   * further constrainted by |SSL_OP_NO_*|. */
+  uint16_t conf_max_version;
 
-  /* min_version is the minimum acceptable protocol version. Note this version
-   * is normalized in DTLS. */
-  uint16_t min_version;
+  /* conf_min_version is the minimum acceptable protocol version configured by
+   * |SSL_set_min_proto_version|. Note this version is normalized in DTLS and is
+   * further constrainted by |SSL_OP_NO_*|. */
+  uint16_t conf_min_version;
 
   uint16_t max_send_fragment;
 
@@ -2088,7 +2119,8 @@ int ssl3_read_app_data(SSL *ssl, int *out_got_handshake, uint8_t *buf, int len,
 int ssl3_read_change_cipher_spec(SSL *ssl);
 void ssl3_read_close_notify(SSL *ssl);
 int ssl3_read_handshake_bytes(SSL *ssl, uint8_t *buf, int len);
-int ssl3_write_app_data(SSL *ssl, const uint8_t *buf, int len);
+int ssl3_write_app_data(SSL *ssl, int *out_needs_handshake, const uint8_t *buf,
+                        int len);
 int ssl3_output_cert_chain(SSL *ssl);
 
 int ssl3_new(SSL *ssl);
@@ -2129,7 +2161,8 @@ int dtls1_read_app_data(SSL *ssl, int *out_got_handshake, uint8_t *buf, int len,
 int dtls1_read_change_cipher_spec(SSL *ssl);
 void dtls1_read_close_notify(SSL *ssl);
 
-int dtls1_write_app_data(SSL *ssl, const uint8_t *buf, int len);
+int dtls1_write_app_data(SSL *ssl, int *out_needs_handshake, const uint8_t *buf,
+                         int len);
 
 /* dtls1_write_record sends a record. It returns one on success and <= 0 on
  * error. */

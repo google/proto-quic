@@ -3,15 +3,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Certificate chain with a trusted root using RSA, and intermediate using EC,
-and a target certificate using RSA. Verification is expected to succeed."""
+"""Certificate chain where the root certificate holds an RSA key, intermediate
+certificate holds an EC key, and target certificate holds an RSA key. The
+target certificate has a valid signature using ECDSA."""
 
 import sys
 sys.path += ['..']
 
 import common
 
-# Self-signed root certificate (used as trust anchor). using RSA.
+# Self-signed root certificate using an RSA key.
 root = common.create_self_signed_root_certificate('Root')
 
 # Intermediate using an EC key for the P-384 curve.

@@ -4,12 +4,12 @@
 
 #include <algorithm>
 
-#include "base/sha1.h"
 #include "base/time/time.h"
-#include "crypto/sha2.h"
 #include "net/cert/internal/cert_errors.h"
 #include "net/cert/internal/parse_ocsp.h"
 #include "net/der/encode_values.h"
+#include "third_party/boringssl/src/include/openssl/digest.h"
+#include "third_party/boringssl/src/include/openssl/sha.h"
 
 namespace net {
 
@@ -215,18 +215,16 @@ bool ParseResponderID(const der::Input& raw_tlv,
     out->name = id_input;
   } else if (id_tag == der::ContextSpecificConstructed(2)) {
     der::Parser key_parser(id_input);
-    der::Input responder_key;
-    if (!key_parser.ReadTag(der::kOctetString, &responder_key))
+    der::Input key_hash;
+    if (!key_parser.ReadTag(der::kOctetString, &key_hash))
       return false;
     if (key_parser.HasMore())
       return false;
-
-    SHA1HashValue key_hash;
-    if (responder_key.Length() != sizeof(key_hash.data))
+    if (key_hash.Length() != SHA_DIGEST_LENGTH)
       return false;
-    memcpy(key_hash.data, responder_key.UnsafeData(), sizeof(key_hash.data));
+
     out->type = OCSPResponseData::ResponderType::KEY_HASH;
-    out->key_hash = HashValue(key_hash);
+    out->key_hash = key_hash;
   } else {
     return false;
   }
@@ -425,25 +423,17 @@ bool ParseOCSPResponse(const der::Input& raw_tlv, OCSPResponse* out) {
 namespace {
 
 // Checks that the |type| hash of |value| is equal to |hash|
-bool VerifyHash(HashValueTag type,
+bool VerifyHash(const EVP_MD* type,
                 const der::Input& hash,
                 const der::Input& value) {
-  HashValue target(type);
-  if (target.size() != hash.Length())
-    return false;
-  memcpy(target.data(), hash.UnsafeData(), target.size());
-
-  HashValue value_hash(type);
-  if (type == HASH_VALUE_SHA1) {
-    base::SHA1HashBytes(value.UnsafeData(), value.Length(), value_hash.data());
-  } else if (type == HASH_VALUE_SHA256) {
-    std::string hash_string = crypto::SHA256HashString(value.AsString());
-    memcpy(value_hash.data(), hash_string.data(), value_hash.size());
-  } else {
+  unsigned value_hash_len;
+  uint8_t value_hash[EVP_MAX_MD_SIZE];
+  if (!EVP_Digest(value.UnsafeData(), value.Length(), value_hash,
+                  &value_hash_len, type, nullptr)) {
     return false;
   }
 
-  return target == value_hash;
+  return hash == der::Input(value_hash, value_hash_len);
 }
 
 // Checks that the input |id_tlv| parses to a valid CertID and matches the
@@ -456,7 +446,7 @@ bool CheckCertID(const der::Input& id_tlv,
   if (!ParseOCSPCertID(id_tlv, &id))
     return false;
 
-  HashValueTag type = HASH_VALUE_SHA1;
+  const EVP_MD* type = nullptr;
   switch (id.hash_algorithm) {
     case DigestAlgorithm::Md2:
     case DigestAlgorithm::Md4:
@@ -464,15 +454,17 @@ bool CheckCertID(const der::Input& id_tlv,
       // Unsupported.
       return false;
     case DigestAlgorithm::Sha1:
-      type = HASH_VALUE_SHA1;
+      type = EVP_sha1();
       break;
     case DigestAlgorithm::Sha256:
-      type = HASH_VALUE_SHA256;
+      type = EVP_sha256();
       break;
     case DigestAlgorithm::Sha384:
+      type = EVP_sha384();
+      break;
     case DigestAlgorithm::Sha512:
-      NOTIMPLEMENTED();
-      return false;
+      type = EVP_sha512();
+      break;
   }
 
   if (!VerifyHash(type, id.issuer_name_hash, certificate.issuer_tlv))

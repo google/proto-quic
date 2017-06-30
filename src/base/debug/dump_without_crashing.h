@@ -15,8 +15,14 @@ namespace debug {
 
 // Handler to silently dump the current process without crashing.
 // Before calling this function, call SetDumpWithoutCrashingFunction to pass a
-// function pointer, typically chrome!DumpProcessWithoutCrash.  See example code
-// in chrome_main.cc that does this for chrome.dll.
+// function pointer.
+// Windows:
+// This must be done for each instance of base (i.e. module) and is normally
+// chrome_elf!DumpProcessWithoutCrash. See example code in chrome_main.cc that
+// does this for chrome.dll and chrome_child.dll. Note: Crashpad sets this up
+// for main chrome.exe as part of calling crash_reporter::InitializeCrashpad.
+// Mac/Linux:
+// Crashpad does this as part of crash_reporter::InitializeCrashpad.
 // Returns false if called before SetDumpWithoutCrashingFunction.
 BASE_EXPORT bool DumpWithoutCrashing();
 

@@ -17,7 +17,8 @@ namespace {
 std::string GetDumpNameForTracing(const UnguessableToken& id) {
   return "shared_memory/" + id.ToString();
 }
-}
+
+}  // namespace
 
 // static
 SharedMemoryTracker* SharedMemoryTracker::GetInstance() {
@@ -26,27 +27,31 @@ SharedMemoryTracker* SharedMemoryTracker::GetInstance() {
 }
 
 // static
-trace_event::MemoryAllocatorDumpGuid SharedMemoryTracker::GetDumpGUIDForTracing(
+trace_event::MemoryAllocatorDumpGuid SharedMemoryTracker::GetDumpIdForTracing(
     const UnguessableToken& id) {
   std::string dump_name = GetDumpNameForTracing(id);
-  return trace_event::MemoryAllocatorDumpGuid(dump_name);
+  return trace_event::MemoryAllocatorDump::GetDumpIdFromName(
+      std::move(dump_name));
 }
 
 // static
 trace_event::MemoryAllocatorDumpGuid
-SharedMemoryTracker::GetGlobalDumpGUIDForTracing(const UnguessableToken& id) {
-  return GetDumpGUIDForTracing(id);
+SharedMemoryTracker::GetGlobalDumpIdForTracing(const UnguessableToken& id) {
+  std::string dump_name = GetDumpNameForTracing(id);
+  return trace_event::MemoryAllocatorDumpGuid(dump_name);
 }
 
 void SharedMemoryTracker::IncrementMemoryUsage(
     const SharedMemory& shared_memory) {
   AutoLock hold(usages_lock_);
+  DCHECK(usages_.find(&shared_memory) == usages_.end());
   usages_[&shared_memory] = shared_memory.mapped_size();
 }
 
 void SharedMemoryTracker::DecrementMemoryUsage(
     const SharedMemory& shared_memory) {
   AutoLock hold(usages_lock_);
+  DCHECK(usages_.find(&shared_memory) != usages_.end());
   usages_.erase(&shared_memory);
 }
 
@@ -75,7 +80,6 @@ bool SharedMemoryTracker::OnMemoryDump(const trace_event::MemoryDumpArgs& args,
     } else {
       dump_name = GetDumpNameForTracing(memory_guid);
     }
-    auto dump_guid = GetDumpGUIDForTracing(memory_guid);
     // Discard duplicates that might be seen in single-process mode.
     if (pmd->GetAllocatorDump(dump_name))
       continue;
@@ -85,8 +89,9 @@ bool SharedMemoryTracker::OnMemoryDump(const trace_event::MemoryDumpArgs& args,
     // Fix this to record resident size.
     local_dump->AddScalar(trace_event::MemoryAllocatorDump::kNameSize,
                           trace_event::MemoryAllocatorDump::kUnitsBytes, size);
+    auto global_dump_guid = GetGlobalDumpIdForTracing(memory_guid);
     trace_event::MemoryAllocatorDump* global_dump =
-        pmd->CreateSharedGlobalAllocatorDump(dump_guid);
+        pmd->CreateSharedGlobalAllocatorDump(global_dump_guid);
     global_dump->AddScalar(trace_event::MemoryAllocatorDump::kNameSize,
                            trace_event::MemoryAllocatorDump::kUnitsBytes, size);
 

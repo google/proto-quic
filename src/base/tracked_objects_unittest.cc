@@ -80,8 +80,8 @@ class TrackedObjectsTest : public testing::Test {
                                const std::string& birth_thread,
                                const std::string& death_thread,
                                int count,
-                               int run_ms,
-                               int queue_ms) {
+                               int run_duration,
+                               int queue_duration) {
     ASSERT_EQ(1u, process_data.phased_snapshots.size());
     auto it = process_data.phased_snapshots.find(0);
     ASSERT_TRUE(it != process_data.phased_snapshots.end());
@@ -99,16 +99,17 @@ class TrackedObjectsTest : public testing::Test {
               process_data_phase.tasks[0].birth.sanitized_thread_name);
 
     EXPECT_EQ(count, process_data_phase.tasks[0].death_data.count);
-    EXPECT_EQ(count * run_ms,
+    EXPECT_EQ(count * run_duration,
               process_data_phase.tasks[0].death_data.run_duration_sum);
-    EXPECT_EQ(run_ms, process_data_phase.tasks[0].death_data.run_duration_max);
-    EXPECT_EQ(run_ms,
+    EXPECT_EQ(run_duration,
+              process_data_phase.tasks[0].death_data.run_duration_max);
+    EXPECT_EQ(run_duration,
               process_data_phase.tasks[0].death_data.run_duration_sample);
-    EXPECT_EQ(count * queue_ms,
+    EXPECT_EQ(count * queue_duration,
               process_data_phase.tasks[0].death_data.queue_duration_sum);
-    EXPECT_EQ(queue_ms,
+    EXPECT_EQ(queue_duration,
               process_data_phase.tasks[0].death_data.queue_duration_max);
-    EXPECT_EQ(queue_ms,
+    EXPECT_EQ(queue_duration,
               process_data_phase.tasks[0].death_data.queue_duration_sample);
 
     EXPECT_EQ(death_thread,
@@ -275,27 +276,29 @@ TEST_F(TrackedObjectsTest, DeathDataTestRecordDurations) {
   EXPECT_EQ(data->count(), 0);
   EXPECT_EQ(nullptr, data->last_phase_snapshot());
 
-  int32_t run_ms = 42;
-  int32_t queue_ms = 8;
+  base::TimeDelta run_duration = base::TimeDelta::FromMilliseconds(42);
+  base::TimeDelta queue_duration = base::TimeDelta::FromMilliseconds(8);
 
   const int kUnrandomInt = 0;  // Fake random int that ensure we sample data.
-  data->RecordDurations(queue_ms, run_ms, kUnrandomInt);
-  EXPECT_EQ(data->run_duration_sum(), run_ms);
-  EXPECT_EQ(data->run_duration_max(), run_ms);
-  EXPECT_EQ(data->run_duration_sample(), run_ms);
-  EXPECT_EQ(data->queue_duration_sum(), queue_ms);
-  EXPECT_EQ(data->queue_duration_max(), queue_ms);
-  EXPECT_EQ(data->queue_duration_sample(), queue_ms);
+  data->RecordDurations(queue_duration, run_duration, kUnrandomInt);
+  EXPECT_EQ(data->run_duration_sum(), run_duration.InMilliseconds());
+  EXPECT_EQ(data->run_duration_max(), run_duration.InMilliseconds());
+  EXPECT_EQ(data->run_duration_sample(), run_duration.InMilliseconds());
+  EXPECT_EQ(data->queue_duration_sum(), queue_duration.InMilliseconds());
+  EXPECT_EQ(data->queue_duration_max(), queue_duration.InMilliseconds());
+  EXPECT_EQ(data->queue_duration_sample(), queue_duration.InMilliseconds());
   EXPECT_EQ(data->count(), 1);
   EXPECT_EQ(nullptr, data->last_phase_snapshot());
 
-  data->RecordDurations(queue_ms, run_ms, kUnrandomInt);
-  EXPECT_EQ(data->run_duration_sum(), run_ms + run_ms);
-  EXPECT_EQ(data->run_duration_max(), run_ms);
-  EXPECT_EQ(data->run_duration_sample(), run_ms);
-  EXPECT_EQ(data->queue_duration_sum(), queue_ms + queue_ms);
-  EXPECT_EQ(data->queue_duration_max(), queue_ms);
-  EXPECT_EQ(data->queue_duration_sample(), queue_ms);
+  data->RecordDurations(queue_duration, run_duration, kUnrandomInt);
+  EXPECT_EQ(data->run_duration_sum(),
+            (run_duration + run_duration).InMilliseconds());
+  EXPECT_EQ(data->run_duration_max(), run_duration.InMilliseconds());
+  EXPECT_EQ(data->run_duration_sample(), run_duration.InMilliseconds());
+  EXPECT_EQ(data->queue_duration_sum(),
+            (queue_duration + queue_duration).InMilliseconds());
+  EXPECT_EQ(data->queue_duration_max(), queue_duration.InMilliseconds());
+  EXPECT_EQ(data->queue_duration_sample(), queue_duration.InMilliseconds());
   EXPECT_EQ(data->count(), 2);
   EXPECT_EQ(nullptr, data->last_phase_snapshot());
 }
@@ -383,23 +386,25 @@ TEST_F(TrackedObjectsTest, DeathDataTest2Phases) {
   std::unique_ptr<DeathData> data(new DeathData());
   ASSERT_NE(data, nullptr);
 
-  const int32_t run_ms = 42;
-  const int32_t queue_ms = 8;
+  const base::TimeDelta run_duration = base::TimeDelta::FromMilliseconds(42);
+  const base::TimeDelta queue_duration = base::TimeDelta::FromMilliseconds(8);
 
   const int kUnrandomInt = 0;  // Fake random int that ensure we sample data.
-  data->RecordDurations(queue_ms, run_ms, kUnrandomInt);
-  data->RecordDurations(queue_ms, run_ms, kUnrandomInt);
+  data->RecordDurations(queue_duration, run_duration, kUnrandomInt);
+  data->RecordDurations(queue_duration, run_duration, kUnrandomInt);
 
   data->RecordAllocations(kAllocOps, kFreeOps, kAllocatedBytes, kFreedBytes,
                           kAllocOverheadBytes, kMaxAllocatedBytes);
 
   data->OnProfilingPhaseCompleted(123);
-  EXPECT_EQ(data->run_duration_sum(), run_ms + run_ms);
+  EXPECT_EQ(data->run_duration_sum(),
+            (run_duration + run_duration).InMilliseconds());
   EXPECT_EQ(data->run_duration_max(), 0);
-  EXPECT_EQ(data->run_duration_sample(), run_ms);
-  EXPECT_EQ(data->queue_duration_sum(), queue_ms + queue_ms);
+  EXPECT_EQ(data->run_duration_sample(), run_duration.InMilliseconds());
+  EXPECT_EQ(data->queue_duration_sum(),
+            (queue_duration + queue_duration).InMilliseconds());
   EXPECT_EQ(data->queue_duration_max(), 0);
-  EXPECT_EQ(data->queue_duration_sample(), queue_ms);
+  EXPECT_EQ(data->queue_duration_sample(), queue_duration.InMilliseconds());
   EXPECT_EQ(data->count(), 2);
 
   EXPECT_EQ(data->alloc_ops(), kAllocOps);
@@ -412,16 +417,17 @@ TEST_F(TrackedObjectsTest, DeathDataTest2Phases) {
   ASSERT_NE(nullptr, data->last_phase_snapshot());
   EXPECT_EQ(123, data->last_phase_snapshot()->profiling_phase);
   EXPECT_EQ(2, data->last_phase_snapshot()->death_data.count);
-  EXPECT_EQ(2 * run_ms,
+  EXPECT_EQ(2 * run_duration.InMilliseconds(),
             data->last_phase_snapshot()->death_data.run_duration_sum);
-  EXPECT_EQ(run_ms, data->last_phase_snapshot()->death_data.run_duration_max);
-  EXPECT_EQ(run_ms,
+  EXPECT_EQ(run_duration.InMilliseconds(),
+            data->last_phase_snapshot()->death_data.run_duration_max);
+  EXPECT_EQ(run_duration.InMilliseconds(),
             data->last_phase_snapshot()->death_data.run_duration_sample);
-  EXPECT_EQ(2 * queue_ms,
+  EXPECT_EQ(2 * queue_duration.InMilliseconds(),
             data->last_phase_snapshot()->death_data.queue_duration_sum);
-  EXPECT_EQ(queue_ms,
+  EXPECT_EQ(queue_duration.InMilliseconds(),
             data->last_phase_snapshot()->death_data.queue_duration_max);
-  EXPECT_EQ(queue_ms,
+  EXPECT_EQ(queue_duration.InMilliseconds(),
             data->last_phase_snapshot()->death_data.queue_duration_sample);
 
   EXPECT_EQ(kAllocOps, data->last_phase_snapshot()->death_data.alloc_ops);
@@ -436,19 +442,22 @@ TEST_F(TrackedObjectsTest, DeathDataTest2Phases) {
 
   EXPECT_EQ(nullptr, data->last_phase_snapshot()->prev);
 
-  const int32_t run_ms1 = 21;
-  const int32_t queue_ms1 = 4;
+  const base::TimeDelta run_duration1 = base::TimeDelta::FromMilliseconds(21);
+  const base::TimeDelta queue_duration1 = base::TimeDelta::FromMilliseconds(4);
 
-  data->RecordDurations(queue_ms1, run_ms1, kUnrandomInt);
+  data->RecordDurations(queue_duration1, run_duration1, kUnrandomInt);
   data->RecordAllocations(kAllocOps, kFreeOps, kAllocatedBytes, kFreedBytes,
                           kAllocOverheadBytes, kMaxAllocatedBytes);
 
-  EXPECT_EQ(data->run_duration_sum(), run_ms + run_ms + run_ms1);
-  EXPECT_EQ(data->run_duration_max(), run_ms1);
-  EXPECT_EQ(data->run_duration_sample(), run_ms1);
-  EXPECT_EQ(data->queue_duration_sum(), queue_ms + queue_ms + queue_ms1);
-  EXPECT_EQ(data->queue_duration_max(), queue_ms1);
-  EXPECT_EQ(data->queue_duration_sample(), queue_ms1);
+  EXPECT_EQ(data->run_duration_sum(),
+            (run_duration + run_duration + run_duration1).InMilliseconds());
+  EXPECT_EQ(data->run_duration_max(), run_duration1.InMilliseconds());
+  EXPECT_EQ(data->run_duration_sample(), run_duration1.InMilliseconds());
+  EXPECT_EQ(
+      data->queue_duration_sum(),
+      (queue_duration + queue_duration + queue_duration1).InMilliseconds());
+  EXPECT_EQ(data->queue_duration_max(), queue_duration1.InMilliseconds());
+  EXPECT_EQ(data->queue_duration_sample(), queue_duration1.InMilliseconds());
   EXPECT_EQ(data->count(), 3);
 
   EXPECT_EQ(data->alloc_ops(), 2 * kAllocOps);
@@ -461,16 +470,17 @@ TEST_F(TrackedObjectsTest, DeathDataTest2Phases) {
   ASSERT_NE(nullptr, data->last_phase_snapshot());
   EXPECT_EQ(123, data->last_phase_snapshot()->profiling_phase);
   EXPECT_EQ(2, data->last_phase_snapshot()->death_data.count);
-  EXPECT_EQ(2 * run_ms,
+  EXPECT_EQ(2 * run_duration.InMilliseconds(),
             data->last_phase_snapshot()->death_data.run_duration_sum);
-  EXPECT_EQ(run_ms, data->last_phase_snapshot()->death_data.run_duration_max);
-  EXPECT_EQ(run_ms,
+  EXPECT_EQ(run_duration.InMilliseconds(),
+            data->last_phase_snapshot()->death_data.run_duration_max);
+  EXPECT_EQ(run_duration.InMilliseconds(),
             data->last_phase_snapshot()->death_data.run_duration_sample);
-  EXPECT_EQ(2 * queue_ms,
+  EXPECT_EQ(2 * queue_duration.InMilliseconds(),
             data->last_phase_snapshot()->death_data.queue_duration_sum);
-  EXPECT_EQ(queue_ms,
+  EXPECT_EQ(queue_duration.InMilliseconds(),
             data->last_phase_snapshot()->death_data.queue_duration_max);
-  EXPECT_EQ(queue_ms,
+  EXPECT_EQ(queue_duration.InMilliseconds(),
             data->last_phase_snapshot()->death_data.queue_duration_sample);
 
   EXPECT_EQ(kAllocOps, data->last_phase_snapshot()->death_data.alloc_ops);
@@ -615,7 +625,7 @@ TEST_F(TrackedObjectsTest, LifeCycleToSnapshotMainThread) {
   Location location(kFunction, kFile, kLineNumber, NULL);
   TallyABirth(location, kMainThreadName);
 
-  const TrackedTime kTimePosted = TrackedTime::FromMilliseconds(1);
+  const base::TimeTicks kTimePosted = base::TimeTicks::FromInternalValue(1000);
   const base::TimeTicks kDelayedStartTime = base::TimeTicks();
   // TrackingInfo will call TallyABirth() during construction.
   base::TrackingInfo pending_task(location, kDelayedStartTime);
@@ -644,7 +654,7 @@ TEST_F(TrackedObjectsTest, TwoPhases) {
   Location location(kFunction, kFile, kLineNumber, NULL);
   TallyABirth(location, kMainThreadName);
 
-  const TrackedTime kTimePosted = TrackedTime::FromMilliseconds(1);
+  const base::TimeTicks kTimePosted = base::TimeTicks::FromInternalValue(1000);
   const base::TimeTicks kDelayedStartTime = base::TimeTicks();
   // TrackingInfo will call TallyABirth() during construction.
   base::TrackingInfo pending_task(location, kDelayedStartTime);
@@ -664,7 +674,7 @@ TEST_F(TrackedObjectsTest, TwoPhases) {
 
   TallyABirth(location, kMainThreadName);
 
-  const TrackedTime kTimePosted1 = TrackedTime::FromMilliseconds(9);
+  const base::TimeTicks kTimePosted1 = base::TimeTicks::FromInternalValue(9000);
   const base::TimeTicks kDelayedStartTime1 = base::TimeTicks();
   // TrackingInfo will call TallyABirth() during construction.
   base::TrackingInfo pending_task1(location, kDelayedStartTime1);
@@ -894,7 +904,8 @@ TEST_F(TrackedObjectsTest, TwoPhasesSecondEmpty) {
   Location location(kFunction, kFile, kLineNumber, NULL);
   ThreadData::InitializeThreadContext(kMainThreadName);
 
-  const TrackedTime kTimePosted = TrackedTime::FromMilliseconds(1);
+  const base::TimeTicks kTimePosted =
+      base::TimeTicks() + base::TimeDelta::FromMilliseconds(1);
   const base::TimeTicks kDelayedStartTime = base::TimeTicks();
   // TrackingInfo will call TallyABirth() during construction.
   base::TrackingInfo pending_task(location, kDelayedStartTime);
@@ -961,7 +972,8 @@ TEST_F(TrackedObjectsTest, TwoPhasesFirstEmpty) {
   Location location(kFunction, kFile, kLineNumber, NULL);
   ThreadData::InitializeThreadContext(kMainThreadName);
 
-  const TrackedTime kTimePosted = TrackedTime::FromMilliseconds(1);
+  const base::TimeTicks kTimePosted =
+      base::TimeTicks() + base::TimeDelta::FromMilliseconds(1);
   const base::TimeTicks kDelayedStartTime = base::TimeTicks();
   // TrackingInfo will call TallyABirth() during construction.
   base::TrackingInfo pending_task(location, kDelayedStartTime);
@@ -1022,7 +1034,8 @@ TEST_F(TrackedObjectsTest, LifeCycleMidDeactivatedToSnapshotMainThread) {
   Location location(kFunction, kFile, kLineNumber, NULL);
   TallyABirth(location, kMainThreadName);
 
-  const TrackedTime kTimePosted = TrackedTime::FromMilliseconds(1);
+  const base::TimeTicks kTimePosted =
+      base::TimeTicks() + base::TimeDelta::FromMilliseconds(1);
   const base::TimeTicks kDelayedStartTime = base::TimeTicks();
   // TrackingInfo will call TallyABirth() during construction.
   base::TrackingInfo pending_task(location, kDelayedStartTime);
@@ -1057,7 +1070,8 @@ TEST_F(TrackedObjectsTest, LifeCyclePreDeactivatedToSnapshotMainThread) {
   Location location(kFunction, kFile, kLineNumber, NULL);
   TallyABirth(location, kMainThreadName);
 
-  const TrackedTime kTimePosted = TrackedTime::FromMilliseconds(1);
+  const base::TimeTicks kTimePosted =
+      base::TimeTicks() + base::TimeDelta::FromMilliseconds(1);
   const base::TimeTicks kDelayedStartTime = base::TimeTicks();
   // TrackingInfo will call TallyABirth() during construction.
   base::TrackingInfo pending_task(location, kDelayedStartTime);
@@ -1094,7 +1108,8 @@ TEST_F(TrackedObjectsTest, TwoLives) {
   Location location(kFunction, kFile, kLineNumber, NULL);
   TallyABirth(location, kMainThreadName);
 
-  const TrackedTime kTimePosted = TrackedTime::FromMilliseconds(1);
+  const base::TimeTicks kTimePosted =
+      base::TimeTicks() + base::TimeDelta::FromMilliseconds(1);
   const base::TimeTicks kDelayedStartTime = base::TimeTicks();
   // TrackingInfo will call TallyABirth() during construction.
   base::TrackingInfo pending_task(location, kDelayedStartTime);
@@ -1135,7 +1150,8 @@ TEST_F(TrackedObjectsTest, DifferentLives) {
   const char kFunction[] = "DifferentLives";
   Location location(kFunction, kFile, kLineNumber, NULL);
 
-  const TrackedTime kTimePosted = TrackedTime::FromMilliseconds(1);
+  const base::TimeTicks kTimePosted =
+      base::TimeTicks() + base::TimeDelta::FromMilliseconds(1);
   const base::TimeTicks kDelayedStartTime = base::TimeTicks();
   // TrackingInfo will call TallyABirth() during construction.
   base::TrackingInfo pending_task(location, kDelayedStartTime);
@@ -1210,7 +1226,8 @@ TEST_F(TrackedObjectsTest, TaskWithNestedExclusion) {
   Location location(kFunction, kFile, kLineNumber, NULL);
   TallyABirth(location, kMainThreadName);
 
-  const TrackedTime kTimePosted = TrackedTime::FromMilliseconds(1);
+  const base::TimeTicks kTimePosted =
+      base::TimeTicks() + base::TimeDelta::FromMilliseconds(1);
   const base::TimeTicks kDelayedStartTime = base::TimeTicks();
   // TrackingInfo will call TallyABirth() during construction.
   base::TrackingInfo pending_task(location, kDelayedStartTime);
@@ -1244,7 +1261,8 @@ TEST_F(TrackedObjectsTest, TaskWith2NestedExclusions) {
   Location location(kFunction, kFile, kLineNumber, NULL);
   TallyABirth(location, kMainThreadName);
 
-  const TrackedTime kTimePosted = TrackedTime::FromMilliseconds(1);
+  const base::TimeTicks kTimePosted =
+      base::TimeTicks() + base::TimeDelta::FromMilliseconds(1);
   const base::TimeTicks kDelayedStartTime = base::TimeTicks();
   // TrackingInfo will call TallyABirth() during construction.
   base::TrackingInfo pending_task(location, kDelayedStartTime);
@@ -1287,7 +1305,8 @@ TEST_F(TrackedObjectsTest, TaskWithNestedExclusionWithNestedTask) {
 
   TallyABirth(location, kMainThreadName);
 
-  const TrackedTime kTimePosted = TrackedTime::FromMilliseconds(1);
+  const base::TimeTicks kTimePosted =
+      base::TimeTicks() + base::TimeDelta::FromMilliseconds(1);
   const base::TimeTicks kDelayedStartTime = base::TimeTicks();
   // TrackingInfo will call TallyABirth() during construction.
   base::TrackingInfo pending_task(location, kDelayedStartTime);
@@ -1304,7 +1323,8 @@ TEST_F(TrackedObjectsTest, TaskWithNestedExclusionWithNestedTask) {
       Location second_location(kFunction, kFile, kSecondFakeLineNumber, NULL);
       base::TrackingInfo nested_task(second_location, kDelayedStartTime);
        // Overwrite implied Now().
-      nested_task.time_posted = TrackedTime::FromMilliseconds(8);
+      nested_task.time_posted =
+          base::TimeTicks() + base::TimeDelta::FromMilliseconds(8);
       SetTestTime(9);
       TaskStopwatch nested_task_stopwatch;
       nested_task_stopwatch.Start();

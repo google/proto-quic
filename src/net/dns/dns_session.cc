@@ -252,11 +252,11 @@ void DnsSession::RecordServerStats() {
   for (size_t index = 0; index < server_stats_.size(); ++index) {
     if (server_stats_[index]->last_failure_count) {
       if (server_stats_[index]->last_success.is_null()) {
-        UMA_HISTOGRAM_COUNTS("AsyncDNS.ServerFailuresWithoutSuccess",
-                             server_stats_[index]->last_failure_count);
+        UMA_HISTOGRAM_COUNTS_1M("AsyncDNS.ServerFailuresWithoutSuccess",
+                                server_stats_[index]->last_failure_count);
       } else {
-        UMA_HISTOGRAM_COUNTS("AsyncDNS.ServerFailuresAfterSuccess",
-                             server_stats_[index]->last_failure_count);
+        UMA_HISTOGRAM_COUNTS_1M("AsyncDNS.ServerFailuresAfterSuccess",
+                                server_stats_[index]->last_failure_count);
       }
     }
   }

@@ -13,7 +13,6 @@
 /util/LASTCHANGE*
 /util/support
 /x64/
-/linux/bin/eu-strip
 /linux/debian_*-sysroot/
 /linux/ubuntu_*-sysroot/
 /ios_files

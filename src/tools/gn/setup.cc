@@ -98,6 +98,11 @@ Variables
       build file containing this target name. This defaults to "//:" which will
       cause the file //BUILD.gn to be loaded.
 
+  script_executable [optional]
+      Path to specific Python executable or potentially a different language
+      interpreter that is used to execute scripts in action targets and
+      exec_script calls.
+
   secondary_source [optional]
       Label of an alternate directory tree to find input files. When searching
       for a BUILD.gn file (or the build config file discussed above), the file
@@ -276,7 +281,7 @@ Setup::Setup()
       root_build_file_("//BUILD.gn"),
       check_public_headers_(false),
       dotfile_settings_(&build_settings_, std::string()),
-      dotfile_scope_(&dotfile_settings_),
+      dotfile_scope_(&dotfile_settings_, {}),
       default_args_(nullptr),
       fill_arguments_(true) {
   dotfile_settings_.set_toolchain_label(Label());
@@ -314,13 +319,6 @@ bool Setup::DoSetup(const std::string& build_dir, bool force_create) {
   if (!FillBuildDir(build_dir, !force_create))
     return false;
 
-  // Check for unused variables in the .gn file.
-  Err err;
-  if (!dotfile_scope_.CheckForUnusedVars(&err)) {
-    err.PrintToStdout();
-    return false;
-  }
-
   // Apply project-specific default (if specified).
   // Must happen before FillArguments().
   if (default_args_) {
@@ -333,7 +331,15 @@ bool Setup::DoSetup(const std::string& build_dir, bool force_create) {
     if (!FillArguments(*cmdline))
       return false;
   }
-  FillPythonPath(*cmdline);
+  if (!FillPythonPath(*cmdline))
+    return false;
+
+  // Check for unused variables in the .gn file.
+  Err err;
+  if (!dotfile_scope_.CheckForUnusedVars(&err)) {
+    err.PrintToStdout();
+    return false;
+  }
 
   return true;
 }
@@ -465,7 +471,7 @@ bool Setup::FillArgsFromArgsInputFile() {
     return false;
   }
 
-  Scope arg_scope(&dotfile_settings_);
+  Scope arg_scope(&dotfile_settings_, {args_input_file_.get()});
   // Set soure dir so relative imports in args work.
   SourceDir root_source_dir =
       SourceDirForCurrentDirectory(build_settings_.root_path());
@@ -626,12 +632,21 @@ bool Setup::FillBuildDir(const std::string& build_dir, bool require_exists) {
   return true;
 }
 
-void Setup::FillPythonPath(const base::CommandLine& cmdline) {
+bool Setup::FillPythonPath(const base::CommandLine& cmdline) {
   // Trace this since it tends to be a bit slow on Windows.
   ScopedTrace setup_trace(TraceItem::TRACE_SETUP, "Fill Python Path");
+  const Value* value = dotfile_scope_.GetValue("script_executable", true);
   if (cmdline.HasSwitch(switches::kScriptExecutable)) {
     build_settings_.set_python_path(
         cmdline.GetSwitchValuePath(switches::kScriptExecutable));
+  } else if (value) {
+    Err err;
+    if (!value->VerifyTypeIs(Value::STRING, &err)) {
+      err.PrintToStdout();
+      return false;
+    }
+    build_settings_.set_python_path(
+        base::FilePath(UTF8ToFilePath(value->string_value())));
   } else {
 #if defined(OS_WIN)
     base::FilePath python_path = FindWindowsPython();
@@ -645,6 +660,7 @@ void Setup::FillPythonPath(const base::CommandLine& cmdline) {
     build_settings_.set_python_path(base::FilePath("python"));
 #endif
   }
+  return true;
 }
 
 bool Setup::RunConfigFile() {
@@ -652,6 +668,7 @@ bool Setup::RunConfigFile() {
     scheduler_.Log("Got dotfile", FilePathToUTF8(dotfile_name_));
 
   dotfile_input_file_.reset(new InputFile(SourceFile("//.gn")));
+  dotfile_scope_.AddInputFile(dotfile_input_file_.get());
   if (!dotfile_input_file_->Load(dotfile_name_)) {
     Err(Location(), "Could not load dotfile.",
         "The file \"" + FilePathToUTF8(dotfile_name_) + "\" couldn't be loaded")

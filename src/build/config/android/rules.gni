@@ -1525,6 +1525,10 @@ if (enable_java_templates) {
   #   never_incremental: If true, |incremental_apk_by_default| will be ignored.
   #   aapt_locale_whitelist: If set, all locales not in this list will be
   #     stripped from resources.arsc.
+  #   exclude_xxxhdpi: Causes all drawable-xxxhdpi images to be excluded
+  #     (mipmaps are still included).
+  #   xxxhdpi_whitelist: A list of globs used when exclude_xxxhdpi=true. Files
+  #     that match this whitelist will still be included.
   #
   # Example
   #   android_apk("foo_apk") {
@@ -2169,6 +2173,7 @@ if (enable_java_templates) {
                                "android_aapt_path",
                                "app_as_shared_lib",
                                "deps",
+                               "exclude_xxxhdpi",
                                "extensions_to_not_compress",
                                "language_splits",
                                "public_deps",
@@ -2176,6 +2181,7 @@ if (enable_java_templates) {
                                "shared_resources",
                                "uncompress_shared_libraries",
                                "write_asset_list",
+                               "xxxhdpi_whitelist",
                              ])
       if (!defined(deps)) {
         deps = []

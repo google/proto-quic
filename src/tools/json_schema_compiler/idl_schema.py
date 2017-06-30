@@ -315,6 +315,10 @@ class Typeref(object):
     elif self.typeref == 'ArrayBuffer':
       properties['type'] = 'binary'
       properties['isInstanceOf'] = 'ArrayBuffer'
+    elif self.typeref == 'ArrayBufferView':
+      properties['type'] = 'binary'
+      # We force the APIs to specify instanceOf since ArrayBufferView isn't an
+      # instantiable type, therefore we don't specify isInstanceOf here.
     elif self.typeref == 'FileEntry':
       properties['type'] = 'object'
       properties['isInstanceOf'] = 'FileEntry'

@@ -12,13 +12,13 @@
 #include <stddef.h>
 
 #include "base/strings/string_piece.h"
-#include "net/base/net_export.h"
 #include "net/http2/hpack/decoder/hpack_decoder_string_buffer.h"
 #include "net/http2/hpack/http2_hpack_constants.h"
+#include "net/http2/platform/api/http2_export.h"
 
 namespace net {
 
-class NET_EXPORT_PRIVATE HpackWholeEntryListener {
+class HTTP2_EXPORT_PRIVATE HpackWholeEntryListener {
  public:
   virtual ~HpackWholeEntryListener();
 

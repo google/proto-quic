@@ -168,8 +168,8 @@ DeathData::~DeathData() {
 #define CONDITIONAL_ASSIGN(assign_it, target, source) \
   ((target) ^= ((target) ^ (source)) & -static_cast<int32_t>(assign_it))
 
-void DeathData::RecordDurations(const int32_t queue_duration,
-                                const int32_t run_duration,
+void DeathData::RecordDurations(const base::TimeDelta queue_duration,
+                                const base::TimeDelta run_duration,
                                 const uint32_t random_number) {
   // We'll just clamp at INT_MAX, but we should note this in the UI as such.
   if (count_ < INT_MAX)
@@ -182,15 +182,18 @@ void DeathData::RecordDurations(const int32_t queue_duration,
   base::subtle::NoBarrier_Store(&sample_probability_count_,
                                 sample_probability_count);
 
-  base::subtle::NoBarrier_Store(&queue_duration_sum_,
-                                queue_duration_sum_ + queue_duration);
-  base::subtle::NoBarrier_Store(&run_duration_sum_,
-                                run_duration_sum_ + run_duration);
+  base::subtle::NoBarrier_Store(
+      &queue_duration_sum_,
+      queue_duration_sum_ + queue_duration.InMilliseconds());
+  base::subtle::NoBarrier_Store(
+      &run_duration_sum_, run_duration_sum_ + run_duration.InMilliseconds());
 
-  if (queue_duration_max() < queue_duration)
-    base::subtle::NoBarrier_Store(&queue_duration_max_, queue_duration);
-  if (run_duration_max() < run_duration)
-    base::subtle::NoBarrier_Store(&run_duration_max_, run_duration);
+  if (queue_duration_max() < queue_duration.InMilliseconds())
+    base::subtle::NoBarrier_Store(&queue_duration_max_,
+                                  queue_duration.InMilliseconds());
+  if (run_duration_max() < run_duration.InMilliseconds())
+    base::subtle::NoBarrier_Store(&run_duration_max_,
+                                  run_duration.InMilliseconds());
 
   // Take a uniformly distributed sample over all durations ever supplied during
   // the current profiling phase.
@@ -202,8 +205,10 @@ void DeathData::RecordDurations(const int32_t queue_duration,
   // used them to generate random_number).
   CHECK_GT(sample_probability_count, 0);
   if (0 == (random_number % sample_probability_count)) {
-    base::subtle::NoBarrier_Store(&queue_duration_sample_, queue_duration);
-    base::subtle::NoBarrier_Store(&run_duration_sample_, run_duration);
+    base::subtle::NoBarrier_Store(&queue_duration_sample_,
+                                  queue_duration.InMilliseconds());
+    base::subtle::NoBarrier_Store(&run_duration_sample_,
+                                  run_duration.InMilliseconds());
   }
 }
 
@@ -533,7 +538,8 @@ void ThreadData::PushToHeadOfList() {
                                                  sizeof(random_number_));
   MSAN_UNPOISON(&random_number_, sizeof(random_number_));
   random_number_ += static_cast<uint32_t>(this - static_cast<ThreadData*>(0));
-  random_number_ ^= (Now() - TrackedTime()).InMilliseconds();
+  random_number_ ^=
+      static_cast<uint32_t>((Now() - base::TimeTicks()).InMilliseconds());
 
   DCHECK(!next_);
   base::AutoLock lock(*list_lock_.Pointer());
@@ -678,13 +684,14 @@ Births* ThreadData::TallyABirth(const Location& location) {
 }
 
 void ThreadData::TallyADeath(const Births& births,
-                             int32_t queue_duration,
+                             const base::TimeDelta queue_duration,
                              const TaskStopwatch& stopwatch) {
-  int32_t run_duration = stopwatch.RunDurationMs();
+  base::TimeDelta run_duration = stopwatch.RunDuration();
 
   // Stir in some randomness, plus add constant in case durations are zero.
   const uint32_t kSomePrimeNumber = 2147483647;
-  random_number_ += queue_duration + run_duration + kSomePrimeNumber;
+  random_number_ += queue_duration.InMilliseconds() +
+                    run_duration.InMilliseconds() + kSomePrimeNumber;
   // An address is going to have some randomness to it as well ;-).
   random_number_ ^=
       static_cast<uint32_t>(&births - reinterpret_cast<Births*>(0));
@@ -743,11 +750,10 @@ void ThreadData::TallyRunOnNamedThreadIfTracking(
   // get a time value since we "weren't tracking" and we were trying to be
   // efficient by not calling for a genuine time value.  For simplicity, we'll
   // use a default zero duration when we can't calculate a true value.
-  TrackedTime start_of_run = stopwatch.StartTime();
-  int32_t queue_duration = 0;
+  base::TimeTicks start_of_run = stopwatch.StartTime();
+  base::TimeDelta queue_duration;
   if (!start_of_run.is_null()) {
-    queue_duration = (start_of_run - completed_task.EffectiveTimePosted())
-        .InMilliseconds();
+    queue_duration = start_of_run - completed_task.EffectiveTimePosted();
   }
   current_thread_data->TallyADeath(*births, queue_duration, stopwatch);
 }
@@ -755,7 +761,7 @@ void ThreadData::TallyRunOnNamedThreadIfTracking(
 // static
 void ThreadData::TallyRunOnWorkerThreadIfTracking(
     const Births* births,
-    const TrackedTime& time_posted,
+    const base::TimeTicks& time_posted,
     const TaskStopwatch& stopwatch) {
   // Even if we have been DEACTIVATED, we will process any pending births so
   // that our data structures (which counted the outstanding births) remain
@@ -776,10 +782,10 @@ void ThreadData::TallyRunOnWorkerThreadIfTracking(
   if (!current_thread_data)
     return;
 
-  TrackedTime start_of_run = stopwatch.StartTime();
-  int32_t queue_duration = 0;
+  base::TimeTicks start_of_run = stopwatch.StartTime();
+  base::TimeDelta queue_duration;
   if (!start_of_run.is_null()) {
-    queue_duration = (start_of_run - time_posted).InMilliseconds();
+    queue_duration = start_of_run - time_posted;
   }
   current_thread_data->TallyADeath(*births, queue_duration, stopwatch);
 }
@@ -798,7 +804,7 @@ void ThreadData::TallyRunInAScopedRegionIfTracking(
   if (!current_thread_data)
     return;
 
-  int32_t queue_duration = 0;
+  base::TimeDelta queue_duration;
   current_thread_data->TallyADeath(*births, queue_duration, stopwatch);
 }
 
@@ -927,12 +933,13 @@ void ThreadData::EnableProfilerTiming() {
 }
 
 // static
-TrackedTime ThreadData::Now() {
+base::TimeTicks ThreadData::Now() {
   if (now_function_for_testing_)
-    return TrackedTime::FromMilliseconds((*now_function_for_testing_)());
+    return base::TimeTicks() +
+           base::TimeDelta::FromMilliseconds((*now_function_for_testing_)());
   if (IsProfilerTimingEnabled() && TrackingStatus())
-    return TrackedTime::Now();
-  return TrackedTime();  // Super fast when disabled, or not compiled.
+    return base::TimeTicks::Now();
+  return base::TimeTicks();  // Super fast when disabled, or not compiled.
 }
 
 // static
@@ -1036,9 +1043,9 @@ ThreadData* ThreadData::GetRetiredOrCreateThreadData(
 
 //------------------------------------------------------------------------------
 TaskStopwatch::TaskStopwatch()
-    : wallclock_duration_ms_(0),
+    : wallclock_duration_(),
       current_thread_data_(NULL),
-      excluded_duration_ms_(0),
+      excluded_duration_(),
       parent_(NULL) {
 #if DCHECK_IS_ON()
   state_ = CREATED;
@@ -1085,7 +1092,7 @@ void TaskStopwatch::Start() {
 }
 
 void TaskStopwatch::Stop() {
-  const TrackedTime end_time = ThreadData::Now();
+  const base::TimeTicks end_time = ThreadData::Now();
 #if DCHECK_IS_ON()
   DCHECK(state_ == RUNNING);
   state_ = STOPPED;
@@ -1097,7 +1104,7 @@ void TaskStopwatch::Stop() {
 #endif
 
   if (!start_time_.is_null() && !end_time.is_null()) {
-    wallclock_duration_ms_ = (end_time - start_time_).InMilliseconds();
+    wallclock_duration_ = end_time - start_time_;
   }
 
   if (!current_thread_data_)
@@ -1113,11 +1120,11 @@ void TaskStopwatch::Stop() {
   DCHECK(parent_->child_ == this);
   parent_->child_ = NULL;
 #endif
-  parent_->excluded_duration_ms_ += wallclock_duration_ms_;
+  parent_->excluded_duration_ += wallclock_duration_;
   parent_ = NULL;
 }
 
-TrackedTime TaskStopwatch::StartTime() const {
+base::TimeTicks TaskStopwatch::StartTime() const {
 #if DCHECK_IS_ON()
   DCHECK(state_ != CREATED);
 #endif
@@ -1125,12 +1132,12 @@ TrackedTime TaskStopwatch::StartTime() const {
   return start_time_;
 }
 
-int32_t TaskStopwatch::RunDurationMs() const {
+base::TimeDelta TaskStopwatch::RunDuration() const {
 #if DCHECK_IS_ON()
   DCHECK(state_ == STOPPED);
 #endif
 
-  return wallclock_duration_ms_ - excluded_duration_ms_;
+  return wallclock_duration_ - excluded_duration_;
 }
 
 ThreadData* TaskStopwatch::GetThreadData() const {

@@ -13,6 +13,7 @@
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
+using ::testing::AtMost;
 using ::testing::Invoke;
 using ::testing::_;
 
@@ -131,30 +132,44 @@ TEST_F(MemoryDumpSchedulerTest, MultipleTriggers) {
 
 TEST_F(MemoryDumpSchedulerTest, StartStopQuickly) {
   const uint32_t kPeriodMs = 1;
-  const uint32_t kTicks = 10;
+  const uint32_t kQuickIterations = 5;
+  const uint32_t kDetailedTicks = 10;
   WaitableEvent evt(WaitableEvent::ResetPolicy::MANUAL,
                     WaitableEvent::InitialState::NOT_SIGNALED);
-  MemoryDumpScheduler::Config config;
-  config.triggers.push_back({MemoryDumpLevelOfDetail::DETAILED, kPeriodMs});
-  config.callback = Bind(&CallbackWrapper::OnTick, Unretained(&on_tick_));
+
+  MemoryDumpScheduler::Config light_config;
+  light_config.triggers.push_back({MemoryDumpLevelOfDetail::LIGHT, kPeriodMs});
+  light_config.callback = Bind(&CallbackWrapper::OnTick, Unretained(&on_tick_));
+
+  MemoryDumpScheduler::Config detailed_config;
+  detailed_config.triggers.push_back(
+      {MemoryDumpLevelOfDetail::DETAILED, kPeriodMs});
+  detailed_config.callback =
+      Bind(&CallbackWrapper::OnTick, Unretained(&on_tick_));
 
   testing::InSequence sequence;
-  EXPECT_CALL(on_tick_, OnTick(_)).Times(kTicks - 1);
-  EXPECT_CALL(on_tick_, OnTick(_))
+  EXPECT_CALL(on_tick_, OnTick(MemoryDumpLevelOfDetail::LIGHT))
+      .Times(AtMost(kQuickIterations));
+  EXPECT_CALL(on_tick_, OnTick(MemoryDumpLevelOfDetail::DETAILED))
+      .Times(kDetailedTicks - 1);
+  EXPECT_CALL(on_tick_, OnTick(MemoryDumpLevelOfDetail::DETAILED))
       .WillRepeatedly(
           Invoke([&evt](MemoryDumpLevelOfDetail) { evt.Signal(); }));
 
   const TimeTicks tstart = TimeTicks::Now();
-  for (int i = 0; i < 5; i++) {
+  for (unsigned int i = 0; i < kQuickIterations; i++) {
+    scheduler_->Start(light_config, bg_thread_->task_runner());
     scheduler_->Stop();
-    scheduler_->Start(config, bg_thread_->task_runner());
   }
+
+  scheduler_->Start(detailed_config, bg_thread_->task_runner());
+
   evt.Wait();
   const double time_ms = (TimeTicks::Now() - tstart).InMillisecondsF();
   scheduler_->Stop();
 
   // It takes N-1 ms to perform N ticks of 1ms each.
-  EXPECT_GE(time_ms, kPeriodMs * (kTicks - 1));
+  EXPECT_GE(time_ms, kPeriodMs * (kDetailedTicks - 1));
 }
 
 TEST_F(MemoryDumpSchedulerTest, StopAndStartOnAnotherThread) {

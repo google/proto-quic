@@ -64,6 +64,7 @@
       "third_party/web-animations-js/.*(css|html|js)",
       "third_party/zlib/google/test/data/.*",
       "tools/clang/scripts/update.py",
+      "tools/grit/.*",
       "tools/mb/.*",
       "tools/metrics/histograms/histograms.xml",
       "tools/perf/.*",

@@ -415,6 +415,27 @@ TEST(RefCountedUnitTest, MoveAssignmentDifferentInstances) {
   EXPECT_EQ(2, ScopedRefPtrCountBase::destructor_count());
 }
 
+TEST(RefCountedUnitTest, MoveAssignmentSelfMove) {
+  ScopedRefPtrCountBase::reset_count();
+
+  {
+    ScopedRefPtrCountBase* raw = new ScopedRefPtrCountBase;
+    scoped_refptr<ScopedRefPtrCountBase> p1(raw);
+    scoped_refptr<ScopedRefPtrCountBase>& p1_ref = p1;
+
+    EXPECT_EQ(1, ScopedRefPtrCountBase::constructor_count());
+    EXPECT_EQ(0, ScopedRefPtrCountBase::destructor_count());
+
+    p1 = std::move(p1_ref);
+
+    // |p1| is "valid but unspecified", so don't bother inspecting its
+    // contents, just ensure that we don't crash.
+  }
+
+  EXPECT_EQ(1, ScopedRefPtrCountBase::constructor_count());
+  EXPECT_EQ(1, ScopedRefPtrCountBase::destructor_count());
+}
+
 TEST(RefCountedUnitTest, MoveAssignmentDerived) {
   ScopedRefPtrCountBase::reset_count();
   ScopedRefPtrCountDerived::reset_count();

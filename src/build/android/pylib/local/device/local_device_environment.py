@@ -82,7 +82,7 @@ class LocalDeviceEnvironment(environment.Environment):
     self._blacklist = (device_blacklist.Blacklist(args.blacklist_file)
                        if args.blacklist_file
                        else None)
-    self._device_serial = args.test_device
+    self._device_serials = args.test_devices
     self._devices_lock = threading.Lock()
     self._devices = None
     self._concurrent_adb = args.enable_concurrent_adb
@@ -124,8 +124,8 @@ class LocalDeviceEnvironment(environment.Environment):
       else:
         logging.info(
             'Read device list %s from target devices file.', str(device_arg))
-    elif self._device_serial:
-      device_arg = self._device_serial
+    elif self._device_serials:
+      device_arg = self._device_serials
 
     self._devices = device_utils.DeviceUtils.HealthyDevices(
         self._blacklist, enable_device_files_cache=self._enable_device_cache,

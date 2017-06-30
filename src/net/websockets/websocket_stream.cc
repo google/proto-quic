@@ -14,6 +14,7 @@
 #include "base/time/time.h"
 #include "base/timer/timer.h"
 #include "net/base/load_flags.h"
+#include "net/base/url_util.h"
 #include "net/http/http_request_headers.h"
 #include "net/http/http_response_headers.h"
 #include "net/http/http_status_code.h"
@@ -315,6 +316,14 @@ void Delegate::OnResponseStarted(URLRequest* request, int net_error) {
   // All error codes, including OK and ABORTED, as with
   // Net.ErrorCodesForMainFrame3
   UMA_HISTOGRAM_SPARSE_SLOWLY("Net.WebSocket.ErrorCodes", -net_error);
+  if (net::IsLocalhost(request->url().HostNoBrackets())) {
+    UMA_HISTOGRAM_SPARSE_SLOWLY("Net.WebSocket.ErrorCodes_Localhost",
+                                -net_error);
+  } else {
+    UMA_HISTOGRAM_SPARSE_SLOWLY("Net.WebSocket.ErrorCodes_NotLocalhost",
+                                -net_error);
+  }
+
   if (net_error != OK) {
     DVLOG(3) << "OnResponseStarted (request failed)";
     owner_->ReportFailure(net_error);

@@ -46,12 +46,11 @@ class ToughCanvasCasesPageSet(story.StorySet):
       cloud_storage_bucket=story.PARTNER_BUCKET)
 
     # Crashes on Galaxy Nexus. crbug.com/314131
+    # TODO(rnephew): Rerecord this story.
     # self.AddStory(MicrosofFirefliesPage(self))
 
-    # Failing on Nexus 5 (http://crbug.com/364248):
-    # 'http://geoapis.appspot.com/agdnZW9hcGlzchMLEgtFeGFtcGxlQ29kZRjh1wIM',
-
     urls_list = [
+      'http://geoapis.appspot.com/agdnZW9hcGlzchMLEgtFeGFtcGxlQ29kZRjh1wIM',
       'http://runway.countlessprojects.com/prototype/performance_test.html',
       # pylint: disable=line-too-long
       'http://ie.microsoft.com/testdrive/Performance/FishIETank/Default.html',

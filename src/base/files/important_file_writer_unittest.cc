@@ -335,7 +335,7 @@ TEST_F(ImportantFileWriterTest, WriteFileAtomicallyHistogramSuffixTest) {
   histogram_tester.ExpectTotalCount("ImportantFile.FileCreateError", 0);
   histogram_tester.ExpectTotalCount("ImportantFile.FileCreateError.test", 0);
 
-  FilePath invalid_file_ = FilePath().AppendASCII("bad/../path");
+  FilePath invalid_file_ = FilePath().AppendASCII("bad/../non_existent/path");
   EXPECT_FALSE(PathExists(invalid_file_));
   EXPECT_FALSE(
       ImportantFileWriter::WriteFileAtomically(invalid_file_, nullptr));

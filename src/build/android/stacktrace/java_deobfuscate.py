@@ -10,28 +10,23 @@ mangled by ProGuard. Takes stack traces from stdin (eg. adb logcat |
 java_deobfuscate.py proguard.mapping) and files.
 """
 
-# Can just run:
-# java -jar third_party/proguard/lib/retrace.jar -regex \
-# "(?:.*?\bat\s+%c\.%m\s*\(%s(?::%l)?\)\s*)|(?:(?:.*?[:\"]\s+)?%c(?::.*)?)" \
-# ~/mapping
-# in terminal to achieve same effect as this tool.
-
 import argparse
 import os
-import subprocess
-import sys
 
-_THIRD_PARTY_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                os.pardir, os.pardir, os.pardir,
-                                                'third_party'))
-sys.path.append(os.path.join(_THIRD_PARTY_DIR, 'catapult', 'devil'))
-from devil.utils import cmd_helper
+_SRC_DIR = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
 
-
-# This regex is taken from
+# This regex is based on the one from:
 # http://proguard.sourceforge.net/manual/retrace/usage.html.
+# But with the "at" part changed to "(?::|\bat)", to account for lines like:
+#     06-22 13:58:02.895  4674  4674 E THREAD_STATE:     bLA.a(PG:173)
+# Normal stack trace lines look like:
+# java.lang.RuntimeException: Intentional Java Crash
+#     at org.chromium.chrome.browser.tab.Tab.handleJavaCrash(Tab.java:682)
+#     at org.chromium.chrome.browser.tab.Tab.loadUrl(Tab.java:644)
 _LINE_PARSE_REGEX = (
-    r'(?:.*?\bat\s+%c\.%m\s*\(%s(?::%l)?\)\s*)|(?:(?:.*?[:"]\s+)?%c(?::.*)?)')
+    r'(?:.*?(?::|\bat)\s+%c\.%m\s*\(%s(?::%l)?\)\s*)|'
+    r'(?:(?:.*?[:"]\s+)?%c(?::.*)?)')
 
 
 def main():
@@ -44,16 +39,14 @@ def main():
       help='Stacktrace file to be deobfuscated.')
   args = parser.parse_args()
 
-  retrace_path = os.path.join(_THIRD_PARTY_DIR, 'proguard',
-                              'lib', 'retrace.jar')
+  retrace_path = os.path.join(
+      _SRC_DIR, 'third_party', 'proguard', 'lib', 'retrace.jar')
 
-  base_args = ['java', '-jar', retrace_path, '-regex', _LINE_PARSE_REGEX,
-               args.mapping_file]
+  cmd = ['java', '-jar', retrace_path, '-regex', _LINE_PARSE_REGEX,
+         args.mapping_file]
   if args.stacktrace:
-    subprocess.call(base_args + [args.stacktrace])
-  else:
-    for line in cmd_helper.IterCmdOutputLines(base_args):
-      print line
+    cmd.append(args.stacktrace)
+  os.execvp('java', cmd)
 
 
 if __name__ == '__main__':

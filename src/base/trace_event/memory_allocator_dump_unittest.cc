@@ -117,6 +117,7 @@ TEST(MemoryAllocatorDumpTest, GuidGeneration) {
   ASSERT_FALSE(guid_bar.empty());
   ASSERT_FALSE(guid_bar.ToString().empty());
   ASSERT_EQ(guid_bar, mad->guid());
+  ASSERT_EQ(guid_bar, MemoryAllocatorDump::GetDumpIdFromName("bar"));
 
   mad.reset(new MemoryAllocatorDump("bar", nullptr));
   const MemoryAllocatorDumpGuid guid_bar_2 = mad->guid();

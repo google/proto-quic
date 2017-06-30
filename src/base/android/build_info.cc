@@ -67,7 +67,9 @@ BuildInfo::BuildInfo(const std::vector<std::string>& params)
       package_version_name_(StrDupParam(params, 10)),
       android_build_fp_(StrDupParam(params, 11)),
       gms_version_code_(StrDupParam(params, 12)),
-      extracted_file_suffix_(params[13]),
+      installer_package_name_(StrDupParam(params, 13)),
+      abi_name_(StrDupParam(params, 14)),
+      extracted_file_suffix_(params[15]),
       java_exception_info_(NULL) {}
 
 // static

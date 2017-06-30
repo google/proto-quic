@@ -26,11 +26,12 @@ const char* Toolchain::kToolStamp = "stamp";
 const char* Toolchain::kToolCopy = "copy";
 const char* Toolchain::kToolCopyBundleData = "copy_bundle_data";
 const char* Toolchain::kToolCompileXCAssets = "compile_xcassets";
+const char* Toolchain::kToolAction = "action";
 
-Toolchain::Toolchain(const Settings* settings, const Label& label)
-    : Item(settings, label),
-      setup_complete_(false) {
-}
+Toolchain::Toolchain(const Settings* settings,
+                     const Label& label,
+                     const InputFileSet& input_files)
+    : Item(settings, label, input_files), setup_complete_(false) {}
 
 Toolchain::~Toolchain() {
 }
@@ -59,6 +60,7 @@ Toolchain::ToolType Toolchain::ToolNameToType(const base::StringPiece& str) {
   if (str == kToolCopy) return TYPE_COPY;
   if (str == kToolCopyBundleData) return TYPE_COPY_BUNDLE_DATA;
   if (str == kToolCompileXCAssets) return TYPE_COMPILE_XCASSETS;
+  if (str == kToolAction) return TYPE_ACTION;
   return TYPE_NONE;
 }
 
@@ -79,6 +81,7 @@ std::string Toolchain::ToolTypeToName(ToolType type) {
     case TYPE_COPY: return kToolCopy;
     case TYPE_COPY_BUNDLE_DATA: return kToolCopyBundleData;
     case TYPE_COMPILE_XCASSETS: return kToolCompileXCAssets;
+    case TYPE_ACTION: return kToolAction;
     default:
       NOTREACHED();
       return std::string();

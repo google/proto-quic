@@ -3,17 +3,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Certificate chain with 1 intermediate, a trusted root, and a target
-certificate that is not a CA, and yet has the keyCertSign bit set. Verification
-is expected to fail, since keyCertSign should only be asserted when CA is
-true."""
+"""Certificate chain where the leaf certificate asserts the keyCertSign key
+usage, however does not have CA=true in the basic constraints extension to
+indicate it is a CA."""
 
 import sys
 sys.path += ['..']
 
 import common
 
-# Self-signed root certificate (used as trust anchor).
+# Self-signed root certificate.
 root = common.create_self_signed_root_certificate('Root')
 
 # Intermediate certificate.

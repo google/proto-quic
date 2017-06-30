@@ -68,13 +68,6 @@ class TooManyExamples(Parsing):
   pass
 
 
-class GotPathExpectedFilenameOnly(Parsing):
-  '''The 'filename' attribute of <output> and the 'file' attribute of <part>
-  must be bare filenames, not paths.
-  '''
-  pass
-
-
 class FileNotFound(Parsing):
   '''The resource file was not found.
   '''

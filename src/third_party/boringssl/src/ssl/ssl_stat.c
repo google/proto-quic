@@ -142,11 +142,7 @@ const char *SSL_state_string_long(const SSL *ssl) {
     case SSL3_ST_CW_CERT_VRFY_A:
       return "SSLv3 write certificate verify A";
 
-    case SSL3_ST_CW_CERT_VRFY_B:
-      return "SSLv3 write certificate verify B";
-
     case SSL3_ST_CW_CHANGE:
-    case SSL3_ST_SW_CHANGE:
       return "SSLv3 write change cipher spec";
 
     case SSL3_ST_CW_FINISHED_A:
@@ -182,12 +178,6 @@ const char *SSL_state_string_long(const SSL *ssl) {
 
     case SSL3_ST_SW_KEY_EXCH_A:
       return "SSLv3 write key exchange A";
-
-    case SSL3_ST_SW_CERT_REQ_A:
-      return "SSLv3 write certificate request A";
-
-    case SSL3_ST_SW_SESSION_TICKET_A:
-      return "SSLv3 write session ticket A";
 
     case SSL3_ST_SW_SRVR_DONE_A:
       return "SSLv3 write server done A";
@@ -256,10 +246,6 @@ const char *SSL_state_string(const SSL *ssl) {
     case SSL3_ST_CW_CERT_VRFY_A:
       return "3WCV_A";
 
-    case SSL3_ST_CW_CERT_VRFY_B:
-      return "3WCV_B";
-
-    case SSL3_ST_SW_CHANGE:
     case SSL3_ST_CW_CHANGE:
       return "3WCCS_";
 
@@ -292,12 +278,6 @@ const char *SSL_state_string(const SSL *ssl) {
 
     case SSL3_ST_SW_KEY_EXCH_A:
       return "3WSKEA";
-
-    case SSL3_ST_SW_KEY_EXCH_B:
-      return "3WSKEB";
-
-    case SSL3_ST_SW_CERT_REQ_A:
-      return "3WCR_A";
 
     case SSL3_ST_SW_SRVR_DONE_A:
       return "3WSD_A";
