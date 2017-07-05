@@ -14,6 +14,8 @@
 #include "base/logging.h"
 #include "base/metrics/field_trial_param_associator.h"
 #include "base/process/memory.h"
+#include "base/process/process_handle.h"
+#include "base/process/process_info.h"
 #include "base/rand_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
@@ -1142,6 +1144,17 @@ SharedMemoryHandle DeserializeImpl(const std::string& switch_value) {
   if (!base::StringToInt(tokens[0], &field_trial_handle))
     return SharedMemoryHandle();
   RawHandle handle = reinterpret_cast<RawHandle>(field_trial_handle);
+#if defined(OS_WIN)
+  if (base::IsCurrentProcessElevated()) {
+    // base::LaunchElevatedProcess doesn't have a way to duplicate the handle,
+    // but this process can since by definition it's not sandboxed.
+    base::ProcessId parent_pid = base::GetParentProcessId(GetCurrentProcess());
+    HANDLE parent_handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, parent_pid);
+    DuplicateHandle(parent_handle, handle, GetCurrentProcess(), &handle, 0,
+                    FALSE, DUPLICATE_SAME_ACCESS);
+    CloseHandle(parent_handle);
+  }
+#endif
 
   base::UnguessableToken guid;
   if (!DeserializeGUIDFromStringPieces(tokens[1], tokens[2], &guid))

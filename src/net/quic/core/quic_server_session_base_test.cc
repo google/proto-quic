@@ -410,10 +410,6 @@ class MockQuicCryptoServerStream : public QuicCryptoServerStream {
   MOCK_METHOD1(SendServerConfigUpdate,
                void(const CachedNetworkParameters* cached_network_parameters));
 
-  void set_encryption_established(bool has_established) {
-    encryption_established_ = has_established;
-  }
-
  private:
   DISALLOW_COPY_AND_ASSIGN(MockQuicCryptoServerStream);
 };

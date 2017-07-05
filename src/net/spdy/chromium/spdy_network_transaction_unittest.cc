@@ -6685,4 +6685,33 @@ TEST_F(SpdyNetworkTransactionTLSUsageCheckTest, TLSCipherSuiteSucky) {
   RunTLSUsageCheckTest(std::move(ssl_provider));
 }
 
+// Regression test for https://crbug.com/737143.
+// This test sets up an old TLS version just like in TLSVersionTooOld,
+// and makes sure that it results in an ERROR_CODE_INADEQUATE_SECURITY
+// even for a non-secure request URL.
+TEST_F(SpdyNetworkTransactionTest, InsecureUrlCreatesSecureSpdySession) {
+  auto ssl_provider = base::MakeUnique<SSLSocketDataProvider>(ASYNC, OK);
+  SSLConnectionStatusSetVersion(SSL_CONNECTION_VERSION_SSL3,
+                                &ssl_provider->connection_status);
+
+  SpdySerializedFrame goaway(
+      spdy_util_.ConstructSpdyGoAway(0, ERROR_CODE_INADEQUATE_SECURITY, ""));
+  MockWrite writes[] = {CreateMockWrite(goaway)};
+  StaticSocketDataProvider data(nullptr, 0, writes, arraysize(writes));
+
+  HttpRequestInfo request;
+  request.method = "GET";
+  request.url = GURL("http://www.example.org/");
+
+  // Need secure proxy so that insecure URL can use HTTP/2.
+  auto session_deps = base::MakeUnique<SpdySessionDependencies>(
+      ProxyService::CreateFixedFromPacResult("HTTPS myproxy:70"));
+  NormalSpdyTransactionHelper helper(
+      request, DEFAULT_PRIORITY, NetLogWithSource(), std::move(session_deps));
+
+  helper.RunToCompletionWithSSLData(&data, std::move(ssl_provider));
+  TransactionHelperResult out = helper.output();
+  EXPECT_THAT(out.rv, IsError(ERR_SPDY_INADEQUATE_TRANSPORT_SECURITY));
+};
+
 }  // namespace net

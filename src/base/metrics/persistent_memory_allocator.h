@@ -850,8 +850,8 @@ class BASE_EXPORT DelayedPersistentAllocation {
   // The desired type and size of the allocated segment plus the offset
   // within it for the defined request.
   const uint32_t type_;
-  const size_t size_;
-  const size_t offset_;
+  const uint32_t size_;
+  const uint32_t offset_;
 
   // Flag indicating if allocation should be made iterable when done.
   const bool make_iterable_;

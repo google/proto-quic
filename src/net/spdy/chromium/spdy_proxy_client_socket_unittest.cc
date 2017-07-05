@@ -197,8 +197,8 @@ void SpdyProxyClientSocketTest::Initialize(MockRead* reads,
   session_ = SpdySessionDependencies::SpdyCreateSession(&session_deps_);
 
   // Creates the SPDY session and stream.
-  spdy_session_ = CreateSecureSpdySession(
-      session_.get(), endpoint_spdy_session_key_, NetLogWithSource());
+  spdy_session_ = CreateSpdySession(session_.get(), endpoint_spdy_session_key_,
+                                    NetLogWithSource());
   base::WeakPtr<SpdyStream> spdy_stream(
       CreateStreamSynchronously(
           SPDY_BIDIRECTIONAL_STREAM, spdy_session_, url_, LOWEST,

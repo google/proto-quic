@@ -10,7 +10,7 @@ mojom("url_mojom_gurl") {
   ]
 
   # TODO(crbug.com/699569): Convert to use the new JS bindings.
-  use_new_js_bindings = false
+  js_bindings_mode = "both"
 }
 
 mojom("url_mojom_origin") {
@@ -23,7 +23,7 @@ mojom("url_mojom_origin") {
   ]
 
   # TODO(crbug.com/699569): Convert to use the new JS bindings.
-  use_new_js_bindings = false
+  js_bindings_mode = "both"
 }
 
 mojom("test_url_mojom_gurl") {

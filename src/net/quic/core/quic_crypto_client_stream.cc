@@ -102,7 +102,10 @@ QuicCryptoClientStream::QuicCryptoClientStream(
       proof_handler_(proof_handler),
       verify_ok_(false),
       stateless_reject_received_(false),
-      num_scup_messages_received_(0) {
+      num_scup_messages_received_(0),
+      encryption_established_(false),
+      handshake_confirmed_(false),
+      crypto_negotiated_params_(new QuicCryptoNegotiatedParameters) {
   DCHECK_EQ(Perspective::IS_CLIENT, session->connection()->perspective());
 }
 
@@ -164,6 +167,19 @@ bool QuicCryptoClientStream::WasChannelIDSent() const {
 
 bool QuicCryptoClientStream::WasChannelIDSourceCallbackRun() const {
   return channel_id_source_callback_run_;
+}
+
+bool QuicCryptoClientStream::encryption_established() const {
+  return encryption_established_;
+}
+
+bool QuicCryptoClientStream::handshake_confirmed() const {
+  return handshake_confirmed_;
+}
+
+const QuicCryptoNegotiatedParameters&
+QuicCryptoClientStream::crypto_negotiated_params() const {
+  return *crypto_negotiated_params_;
 }
 
 void QuicCryptoClientStream::HandleServerConfigUpdateMessage(

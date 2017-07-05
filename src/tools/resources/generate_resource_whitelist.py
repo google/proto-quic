@@ -3,12 +3,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import argparse
-import os
-import re
-import sys
-
-USAGE = """generate_resource_whitelist.py [-h] [-i INPUT] [-o OUTPUT]
+__doc__ = """generate_resource_whitelist.py [-h] [--input INPUT]
+[--output OUTPUT]
 
 INPUT specifies a file containing existing resource IDs that should be
 whitelisted, where each line of INPUT contains a single resource ID.
@@ -27,8 +23,13 @@ E.g. foo.cc:22:0: warning: ignoring #pragma whitelisted_resource_12345
 [-Wunknown-pragmas]
 
 On Windows, the message is simply a message via __pragma(message(...)).
-
 """
+
+import argparse
+import os
+import re
+import sys
+
 
 COMPONENTS_STRINGS_HEADER = 'gen/components/strings/grit/components_strings.h'
 
@@ -56,22 +57,22 @@ def _FindResourceIds(header, resource_names):
 
 
 def main():
-  parser = argparse.ArgumentParser(usage=USAGE)
+  parser = argparse.ArgumentParser(usage=__doc__)
   parser.add_argument(
-      '-i', '--input', type=argparse.FileType('r'), default=sys.stdin,
+      '--input', type=argparse.FileType('r'), default=sys.stdin,
       help='A resource whitelist where each line contains one resource ID')
   parser.add_argument(
-      '-o', '--output', type=argparse.FileType('w'), default=sys.stdout,
+      '--output', type=argparse.FileType('w'), default=sys.stdout,
       help='The resource list path to write (default stdout)')
   parser.add_argument(
-      '--out-dir', required=True,
-      help='The out target directory, for example out/Release')
+      '--output-directory', required=True,
+      help='The output target directory, for example out/Release')
 
   args = parser.parse_args()
 
   used_resources = set(int(resource_id) for resource_id in args.input)
   used_resources |= _FindResourceIds(
-      os.path.join(args.out_dir, COMPONENTS_STRINGS_HEADER),
+      os.path.join(args.output_directory, COMPONENTS_STRINGS_HEADER),
       ARCH_SPECIFIC_RESOURCES)
 
   for resource_id in sorted(used_resources):

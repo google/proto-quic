@@ -211,7 +211,7 @@ class _ProjectEntry(object):
 
   def JavaFiles(self):
     if self._java_files is None:
-      java_sources_file = self.Gradle().get('java_sources_file')
+      java_sources_file = self.DepsInfo().get('java_sources_file')
       java_files = []
       if java_sources_file:
         java_sources_file = _RebasePath(java_sources_file)

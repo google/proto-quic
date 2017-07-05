@@ -491,6 +491,7 @@ SSLClientSocketImpl::SSLClientSocketImpl(
       transport_security_state_(context.transport_security_state),
       policy_enforcer_(context.ct_policy_enforcer),
       pkp_bypassed_(false),
+      connect_error_details_(SSLErrorDetails::kOther),
       net_log_(transport_->socket()->NetLog()),
       weak_factory_(this) {
   CHECK(cert_verifier_);
@@ -579,6 +580,10 @@ Error SSLClientSocketImpl::GetTokenBindingSignature(crypto::ECPrivateKey* key,
 
 crypto::ECPrivateKey* SSLClientSocketImpl::GetChannelIDKey() const {
   return channel_id_key_.get();
+}
+
+SSLErrorDetails SSLClientSocketImpl::GetConnectErrorDetails() const {
+  return connect_error_details_;
 }
 
 int SSLClientSocketImpl::ExportKeyingMaterial(const base::StringPiece& label,
@@ -1066,6 +1071,38 @@ int SSLClientSocketImpl::DoHandshake() {
       // If not done, stay in this state
       next_handshake_state_ = STATE_HANDSHAKE;
       return ERR_IO_PENDING;
+    }
+
+    switch (net_error) {
+      case ERR_CONNECTION_CLOSED:
+        connect_error_details_ = SSLErrorDetails::kConnectionClosed;
+        break;
+      case ERR_CONNECTION_RESET:
+        connect_error_details_ = SSLErrorDetails::kConnectionReset;
+        break;
+      case ERR_SSL_PROTOCOL_ERROR: {
+        int lib = ERR_GET_LIB(error_info.error_code);
+        int reason = ERR_GET_REASON(error_info.error_code);
+        if (lib == ERR_LIB_SSL && reason == SSL_R_TLSV1_ALERT_ACCESS_DENIED) {
+          connect_error_details_ = SSLErrorDetails::kAccessDeniedAlert;
+        } else if (lib == ERR_LIB_SSL &&
+                   reason == SSL_R_APPLICATION_DATA_INSTEAD_OF_HANDSHAKE) {
+          connect_error_details_ =
+              SSLErrorDetails::kApplicationDataInsteadOfHandshake;
+        } else {
+          connect_error_details_ = SSLErrorDetails::kProtocolError;
+        }
+        break;
+      }
+      case ERR_SSL_BAD_RECORD_MAC_ALERT:
+        connect_error_details_ = SSLErrorDetails::kBadRecordMACAlert;
+        break;
+      case ERR_SSL_VERSION_OR_CIPHER_MISMATCH:
+        connect_error_details_ = SSLErrorDetails::kVersionOrCipherMismatch;
+        break;
+      default:
+        connect_error_details_ = SSLErrorDetails::kOther;
+        break;
     }
 
     LOG(ERROR) << "handshake failed; returned " << rv << ", SSL error code "

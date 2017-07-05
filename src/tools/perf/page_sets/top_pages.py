@@ -4,6 +4,8 @@
 from telemetry.page import page as page_module
 from telemetry.page import shared_page_state
 
+from page_sets.login_helpers import google_login
+
 
 class TopPages(page_module.Page):
 
@@ -56,10 +58,11 @@ class GmailPage(TopPages):
     super(GmailPage, self).__init__(
         url='https://mail.google.com/mail/',
         page_set=page_set,
-        credentials='google',
         shared_page_state_class=shared_page_state_class)
 
   def RunNavigateSteps(self, action_runner):
+    google_login.LoginGoogleAccount(action_runner, 'googletest',
+                                    self.credentials_path)
     super(GmailPage, self).RunNavigateSteps(action_runner)
     action_runner.WaitForJavaScriptCondition(
         'window.gmonkey !== undefined &&'

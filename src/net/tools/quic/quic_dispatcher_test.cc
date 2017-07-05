@@ -670,12 +670,17 @@ class MockQuicCryptoServerStream : public QuicCryptoServerStream {
             compressed_certs_cache,
             FLAGS_quic_reloadable_flag_enable_quic_stateless_reject_support,
             session,
-            helper) {}
+            helper),
+        handshake_confirmed_(false) {}
+
   void set_handshake_confirmed_for_testing(bool handshake_confirmed) {
     handshake_confirmed_ = handshake_confirmed;
   }
 
+  bool handshake_confirmed() const override { return handshake_confirmed_; }
+
  private:
+  bool handshake_confirmed_;
   DISALLOW_COPY_AND_ASSIGN(MockQuicCryptoServerStream);
 };
 

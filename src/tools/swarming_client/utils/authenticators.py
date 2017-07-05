@@ -9,8 +9,6 @@ import threading
 
 from utils import oauth
 
-from libs import luci_context
-
 
 class Authenticator(object):
   """Base class for objects that know how to authenticate into http services."""
@@ -100,7 +98,7 @@ class LuciContextAuthenticator(Authenticator):
           self._access_token = access_token
 
     if access_token:
-      request.headers['Authorization'] = ('Bearer %s' % access_token.token)
+      request.headers['Authorization'] = 'Bearer %s' % access_token.token
 
   def login(self, allow_user_interaction):
     """Run interactive authentication flow refreshing the token."""

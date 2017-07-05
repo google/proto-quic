@@ -134,7 +134,8 @@ SSLConnectJob::SSLConnectJob(const std::string& group_name,
       callback_(
           base::Bind(&SSLConnectJob::OnIOComplete, base::Unretained(this))),
       version_interference_probe_(false),
-      version_interference_error_(OK) {}
+      version_interference_error_(OK),
+      version_interference_details_(SSLErrorDetails::kOther) {}
 
 SSLConnectJob::~SSLConnectJob() {
 }
@@ -378,10 +379,12 @@ int SSLConnectJob::DoSSLConnectComplete(int result) {
                                   std::abs(result));
       net_log().AddEventWithNetErrorCode(
           NetLogEventType::SSL_VERSION_INTERFERENCE_PROBE, result);
+      SSLErrorDetails details = ssl_socket_->GetConnectErrorDetails();
 
       ResetStateForRetry();
       version_interference_probe_ = true;
       version_interference_error_ = result;
+      version_interference_details_ = details;
       next_state_ = GetInitialState(params_->GetConnectionType());
       return OK;
     }
@@ -395,8 +398,8 @@ int SSLConnectJob::DoSSLConnectComplete(int result) {
   // These are hosts that we intend to use in the initial TLS 1.3 deployment.
   // TLS connections to them, whether or not this browser is in the experiment
   // group, form the basis of our comparisons.
-  bool tls13_supported =
-      (host == "drive.google.com" || host == "mail.google.com");
+  bool tls13_supported = (host == "inbox.google.com" ||
+                          host == "mail.google.com" || host == "gmail.com");
 
   if (result == OK ||
       ssl_socket_->IgnoreCertError(result, params_->load_flags())) {
@@ -497,6 +500,12 @@ int SSLConnectJob::DoSSLConnectComplete(int result) {
     DCHECK_NE(OK, version_interference_error_);
     UMA_HISTOGRAM_SPARSE_SLOWLY("Net.SSLVersionInterferenceError",
                                 std::abs(version_interference_error_));
+
+    if (tls13_supported) {
+      UMA_HISTOGRAM_ENUMERATION(
+          "Net.SSLVersionInterferenceDetails_TLS13Experiment",
+          version_interference_details_, SSLErrorDetails::kLastValue);
+    }
   }
 
   if (result == OK || IsCertificateError(result)) {

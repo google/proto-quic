@@ -82,7 +82,6 @@ class Speedometer2Measurement(legacy_page_test.LegacyPageTest):
               key=suite_name), important=False))
 
 
-@benchmark.Disabled('all')  # Schedule this benchmark in crbug.com/734061
 @benchmark.Owner(emails=['verwaest@chromium.org, mvstanton@chromium.org'])
 class Speedometer2(perf_benchmark.PerfBenchmark):
   test = Speedometer2Measurement

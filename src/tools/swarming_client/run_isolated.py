@@ -105,6 +105,41 @@ ISOLATED_OUT_DIR = u'io'
 ISOLATED_TMP_DIR = u'it'
 
 
+OUTLIVING_ZOMBIE_MSG = """\
+*** Swarming tried multiple times to delete the %s directory and failed ***
+*** Hard failing the task ***
+
+Swarming detected that your testing script ran an executable, which may have
+started a child executable, and the main script returned early, leaving the
+children executables playing around unguided.
+
+You don't want to leave children processes outliving the task on the Swarming
+bot, do you? The Swarming bot doesn't.
+
+How to fix?
+- For any process that starts children processes, make sure all children
+  processes terminated properly before each parent process exits. This is
+  especially important in very deep process trees.
+  - This must be done properly both in normal successful task and in case of
+    task failure. Cleanup is very important.
+- The Swarming bot sends a SIGTERM in case of timeout.
+  - You have %s seconds to comply after the signal was sent to the process
+    before the process is forcibly killed.
+- To achieve not leaking children processes in case of signals on timeout, you
+  MUST handle signals in each executable / python script and propagate them to
+  children processes.
+  - When your test script (python or binary) receives a signal like SIGTERM or
+    CTRL_BREAK_EVENT on Windows), send it to all children processes and wait for
+    them to terminate before quitting.
+
+See
+https://github.com/luci/luci-py/blob/master/appengine/swarming/doc/Bot.md#graceful-termination-aka-the-sigterm-and-sigkill-dance
+for more information.
+
+*** May the SIGKILL force be with you ***
+"""
+
+
 def get_as_zip_package(executable=True):
   """Returns ZipPackage with this module and all its dependencies.
 
@@ -332,10 +367,13 @@ def link_outputs_to_outdir(run_dir, out_dir, outputs):
   isolateserver.create_directories(out_dir, outputs)
   for o in outputs:
     try:
-      file_path.link_file(
-          os.path.join(out_dir, o),
-          os.path.join(run_dir, o),
-          file_path.HARDLINK_WITH_FALLBACK)
+      infile = os.path.join(run_dir, o)
+      outfile = os.path.join(out_dir, o)
+      if fs.islink(infile):
+        # TODO(aludwin): handle directories
+        fs.copy2(infile, outfile)
+      else:
+        file_path.link_file(outfile, infile, file_path.HARDLINK_WITH_FALLBACK)
     except OSError as e:
       logging.info("Couldn't collect output file %s: %s", o, e)
 
@@ -547,11 +585,7 @@ def map_and_run(
             logging.error('Failure with %s', e)
             success = False
           if not success:
-            print >> sys.stderr, (
-                'Failed to delete the run directory, thus failing the task.\n'
-                'This may be due to a subprocess outliving the main task\n'
-                'process, holding on to resources. Please fix the task so\n'
-                'that it releases resources and cleans up subprocesses.')
+            sys.stderr.write(OUTLIVING_ZOMBIE_MSG % ('run', grace_period))
             if result['exit_code'] == 0:
               result['exit_code'] = 1
         if fs.isdir(tmp_dir):
@@ -561,11 +595,7 @@ def map_and_run(
             logging.error('Failure with %s', e)
             success = False
           if not success:
-            print >> sys.stderr, (
-                'Failed to delete the temp directory, thus failing the task.\n'
-                'This may be due to a subprocess outliving the main task\n'
-                'process, holding on to resources. Please fix the task so\n'
-                'that it releases resources and cleans up subprocesses.')
+            sys.stderr.write(OUTLIVING_ZOMBIE_MSG % ('temp', grace_period))
             if result['exit_code'] == 0:
               result['exit_code'] = 1
 

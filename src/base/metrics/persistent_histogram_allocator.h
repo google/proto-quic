@@ -435,6 +435,16 @@ class BASE_EXPORT GlobalHistogramAllocator
                                  FilePath* out_active_path,
                                  FilePath* out_spare_path);
 
+  // As above but puts the base files in a different "upload" directory. This
+  // is useful when moving all completed files into a single directory for easy
+  // upload management.
+  static void ConstructFilePathsForUploadDir(const FilePath& active_dir,
+                                             const FilePath& upload_dir,
+                                             const std::string& name,
+                                             FilePath* out_upload_path,
+                                             FilePath* out_active_path,
+                                             FilePath* out_spare_path);
+
   // Create a "spare" file that can later be made the "active" file. This
   // should be done on a background thread if possible.
   static bool CreateSpareFile(const FilePath& spare_path, size_t size);
@@ -503,6 +513,9 @@ class BASE_EXPORT GlobalHistogramAllocator
   // this method resumes from the last entry it saw; it costs nothing if
   // nothing new has been added.
   void ImportHistogramsToStatisticsRecorder();
+
+  // Builds a FilePath for a metrics file.
+  static FilePath MakeMetricsFilePath(const FilePath& dir, StringPiece name);
 
   // Import always continues from where it left off, making use of a single
   // iterator to continue the work.

@@ -37,11 +37,11 @@ template("generate_resource_whitelist") {
     ]
 
     args = [
-      "-i",
+      "--input",
       rebase_path(invoker.input, root_build_dir),
-      "-o",
+      "--output",
       rebase_path(invoker.output, root_build_dir),
-      "--out-dir=.",
+      "--output-directory=.",
     ]
   }
 }

@@ -21,6 +21,7 @@
 #include "base/metrics/sparse_histogram.h"
 #include "base/metrics/statistics_recorder.h"
 #include "base/pickle.h"
+#include "base/strings/stringprintf.h"
 #include "base/synchronization/lock.h"
 
 namespace base {
@@ -819,19 +820,43 @@ void GlobalHistogramAllocator::ConstructFilePaths(const FilePath& dir,
                                                   FilePath* out_base_path,
                                                   FilePath* out_active_path,
                                                   FilePath* out_spare_path) {
-  if (out_base_path) {
-    *out_base_path = dir.AppendASCII(name).AddExtension(
-        PersistentMemoryAllocator::kFileExtension);
-  }
+  if (out_base_path)
+    *out_base_path = MakeMetricsFilePath(dir, name);
+
   if (out_active_path) {
     *out_active_path =
-        dir.AppendASCII(name.as_string() + std::string("-active"))
-            .AddExtension(PersistentMemoryAllocator::kFileExtension);
+        MakeMetricsFilePath(dir, name.as_string().append("-active"));
   }
+
   if (out_spare_path) {
     *out_spare_path =
-        dir.AppendASCII(name.as_string() + std::string("-spare"))
-            .AddExtension(PersistentMemoryAllocator::kFileExtension);
+        MakeMetricsFilePath(dir, name.as_string().append("-spare"));
+  }
+}
+
+// static
+void GlobalHistogramAllocator::ConstructFilePathsForUploadDir(
+    const FilePath& active_dir,
+    const FilePath& upload_dir,
+    const std::string& name,
+    FilePath* out_upload_path,
+    FilePath* out_active_path,
+    FilePath* out_spare_path) {
+  if (out_upload_path) {
+    std::string name_stamp =
+        StringPrintf("%s-%X", name.c_str(),
+                     static_cast<unsigned int>(Time::Now().ToTimeT()));
+    *out_upload_path = MakeMetricsFilePath(upload_dir, name_stamp);
+  }
+
+  if (out_active_path) {
+    *out_active_path =
+        MakeMetricsFilePath(active_dir, name + std::string("-active"));
+  }
+
+  if (out_spare_path) {
+    *out_spare_path =
+        MakeMetricsFilePath(active_dir, name + std::string("-spare"));
   }
 }
 
@@ -1019,6 +1044,13 @@ void GlobalHistogramAllocator::ImportHistogramsToStatisticsRecorder() {
       break;
     StatisticsRecorder::RegisterOrDeleteDuplicate(histogram.release());
   }
+}
+
+// static
+FilePath GlobalHistogramAllocator::MakeMetricsFilePath(const FilePath& dir,
+                                                       StringPiece name) {
+  return dir.AppendASCII(name).AddExtension(
+      PersistentMemoryAllocator::kFileExtension);
 }
 
 }  // namespace base

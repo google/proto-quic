@@ -29,6 +29,8 @@
 #include "testing/gtest/include/gtest/gtest.h"
 #include "testing/platform_test.h"
 
+// TODO(eroman): Convert these to parameterized tests using TEST_P().
+
 namespace net {
 namespace {
 
@@ -1157,6 +1159,33 @@ TEST_F(ProxyConfigServiceLinuxTest, KDEConfigParser) {
           GURL(),  // pac_url
           ProxyRulesExpectation::Empty(),
       },
+      {
+          TEST_DESC("Invalid proxy type (ProxyType=-3)"),
+
+          // Input.
+          "[Proxy Settings]\nProxyType=-3\n",
+          {},  // env_values
+
+          // Expected result.
+          ProxyConfigService::CONFIG_VALID,
+          false,   // auto_detect
+          GURL(),  // pac_url
+          ProxyRulesExpectation::Empty(),
+      },
+
+      {
+          TEST_DESC("Invalid proxy type (ProxyType=AB-)"),
+
+          // Input.
+          "[Proxy Settings]\nProxyType=AB-\n",
+          {},  // env_values
+
+          // Expected result.
+          ProxyConfigService::CONFIG_VALID,
+          false,   // auto_detect
+          GURL(),  // pac_url
+          ProxyRulesExpectation::Empty(),
+      },
 
       {
           TEST_DESC("Auto detect"),
@@ -1313,7 +1342,7 @@ TEST_F(ProxyConfigServiceLinuxTest, KDEConfigParser) {
       },
 
       {
-          TEST_DESC("Correctly parse bypass list with ReversedException"),
+          TEST_DESC("Correctly parse bypass list with ReversedException=true"),
 
           // Input.
           "[Proxy Settings]\nProxyType=1\nhttpProxy=www.google.com\n"
@@ -1329,6 +1358,79 @@ TEST_F(ProxyConfigServiceLinuxTest, KDEConfigParser) {
               "",                   // https
               "",                   // ftp
               "*.google.com"),      // bypass rules
+      },
+
+      {
+          TEST_DESC("Correctly parse bypass list with ReversedException=false"),
+
+          // Input.
+          "[Proxy Settings]\nProxyType=1\nhttpProxy=www.google.com\n"
+          "NoProxyFor=.google.com\nReversedException=false\n",
+          {},  // env_values
+
+          // Expected result.
+          ProxyConfigService::CONFIG_VALID,
+          false,                                                 // auto_detect
+          GURL(),                                                // pac_url
+          ProxyRulesExpectation::PerScheme("www.google.com:80",  // http
+                                           "",                   // https
+                                           "",                   // ftp
+                                           "*.google.com"),      // bypass rules
+      },
+
+      {
+          TEST_DESC("Correctly parse bypass list with ReversedException=1"),
+
+          // Input.
+          "[Proxy Settings]\nProxyType=1\nhttpProxy=www.google.com\n"
+          "NoProxyFor=.google.com\nReversedException=1\n",
+          {},  // env_values
+
+          // Expected result.
+          ProxyConfigService::CONFIG_VALID,
+          false,   // auto_detect
+          GURL(),  // pac_url
+          ProxyRulesExpectation::PerSchemeWithBypassReversed(
+              "www.google.com:80",  // http
+              "",                   // https
+              "",                   // ftp
+              "*.google.com"),      // bypass rules
+      },
+
+      {
+          TEST_DESC("Overflow: ReversedException=18446744073709551617"),
+
+          // Input.
+          "[Proxy Settings]\nProxyType=1\nhttpProxy=www.google.com\n"
+          "NoProxyFor=.google.com\nReversedException=18446744073709551617\n",
+          {},  // env_values
+
+          // Expected result.
+          ProxyConfigService::CONFIG_VALID,
+          false,                                                 // auto_detect
+          GURL(),                                                // pac_url
+          ProxyRulesExpectation::PerScheme("www.google.com:80",  // http
+                                           "",                   // https
+                                           "",                   // ftp
+                                           "*.google.com"),      // bypass rules
+      },
+
+      {
+          TEST_DESC("Not a number: ReversedException=noitpecxE"),
+
+          // Input.
+          "[Proxy Settings]\nProxyType=1\nhttpProxy=www.google.com\n"
+          "NoProxyFor=.google.com\nReversedException=noitpecxE\n",
+          {},  // env_values
+
+          // Expected result.
+          ProxyConfigService::CONFIG_VALID,
+          false,                                                 // auto_detect
+          GURL(),                                                // pac_url
+          ProxyRulesExpectation::PerScheme("www.google.com:80",  // http
+                                           "",                   // https
+                                           "",                   // ftp
+                                           "*.google.com"),      // bypass rules
       },
 
       {

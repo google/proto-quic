@@ -1601,6 +1601,8 @@ def CMDterminate(parser, args):
     return collect(
         options.swarming, [request['task_id']], 0., False, False, None, None,
         False)
+  else:
+    print request['task_id']
   return 0
 
 

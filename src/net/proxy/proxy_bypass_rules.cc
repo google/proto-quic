@@ -101,7 +101,7 @@ class BypassIPBlockRule : public ProxyBypassRules::Rule {
 
     // Parse the input IP literal to a number.
     IPAddress ip_address;
-    if (!ip_address.AssignFromIPLiteral(url.HostNoBrackets()))
+    if (!ip_address.AssignFromIPLiteral(url.HostNoBracketsPiece()))
       return false;
 
     // Test if it has the expected prefix.

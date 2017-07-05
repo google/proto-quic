@@ -253,7 +253,7 @@ Process LaunchProcess(const string16& cmdline,
   if (options.empty_desktop_name)
     startup_info->lpDesktop = const_cast<wchar_t*>(L"");
   startup_info->dwFlags = STARTF_USESHOWWINDOW;
-  startup_info->wShowWindow = options.start_hidden ? SW_HIDE : SW_SHOW;
+  startup_info->wShowWindow = options.start_hidden ? SW_HIDE : SW_SHOWNORMAL;
 
   if (options.stdin_handle || options.stdout_handle || options.stderr_handle) {
     DCHECK(inherit_handles);
@@ -350,7 +350,7 @@ Process LaunchElevatedProcess(const CommandLine& cmdline,
   shex_info.lpFile = file.c_str();
   shex_info.lpParameters = arguments.c_str();
   shex_info.lpDirectory = nullptr;
-  shex_info.nShow = options.start_hidden ? SW_HIDE : SW_SHOW;
+  shex_info.nShow = options.start_hidden ? SW_HIDE : SW_SHOWNORMAL;
   shex_info.hInstApp = nullptr;
 
   if (!ShellExecuteEx(&shex_info)) {

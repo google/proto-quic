@@ -163,17 +163,9 @@
         "Entrust_G2",
         "Entrust_EV",
         "Entrust_2048",
-        "GeoTrustGlobal",
-        "GeoTrustPrimary_G2",
-        "GeoTrustPrimary_G3",
-        "GeoTrustPrimary",
         "TheGoDaddyGroupClass2",
         "GoDaddyRoot_G2",
-        "GoDaddySecure",
-        "ThawtePremiumServer",
-        "ThawtePrimaryRootCA_G2",
-        "ThawtePrimaryRootCA_G3",
-        "ThawtePrimaryRootCA"
+        "GoDaddySecure"
       ],
       "report_uri": "https://log.getdropbox.com/hpkp"
     },

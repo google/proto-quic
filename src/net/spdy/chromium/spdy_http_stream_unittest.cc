@@ -155,8 +155,7 @@ class SpdyHttpStreamTest : public testing::Test {
     session_deps_.socket_factory->AddSSLSocketDataProvider(&ssl_);
 
     http_session_ = SpdySessionDependencies::SpdyCreateSession(&session_deps_);
-    session_ =
-        CreateSecureSpdySession(http_session_.get(), key_, NetLogWithSource());
+    session_ = CreateSpdySession(http_session_.get(), key_, NetLogWithSource());
   }
 
   void TestSendCredentials(ChannelIDService* channel_id_service,

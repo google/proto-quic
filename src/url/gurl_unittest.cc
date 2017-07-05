@@ -584,6 +584,7 @@ TEST(GURLTest, HostNoBrackets) {
     GURL url(cases[i].input);
     EXPECT_EQ(cases[i].expected_host, url.host());
     EXPECT_EQ(cases[i].expected_plainhost, url.HostNoBrackets());
+    EXPECT_EQ(cases[i].expected_plainhost, url.HostNoBracketsPiece());
   }
 }
 

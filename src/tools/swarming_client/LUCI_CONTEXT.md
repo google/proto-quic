@@ -31,7 +31,8 @@ Example contents:
 {
   "local_auth": {
     "rpc_port": 10000,
-    "secret": "aGVsbG8gd29ybGQK"
+    "secret": "aGVsbG8gd29ybGQK",
+    ...
   },
   "swarming": {
     "secret_bytes": "cmFkaWNhbGx5IGNvb2wgc2VjcmV0IHN0dWZmCg=="
@@ -59,17 +60,34 @@ equivalent to specifying the 'OrigName' parameter in the Marshaller.
 
 ## `local_auth`
 
-Local auth specifies how where subprocesses can obtain OAuth2 tokens to use when
-calling other services.
-
-TODO(vadimsh): Fill this in.
+Local auth specifies where subprocesses can obtain OAuth2 tokens to use when
+calling other services. It is a reference to a local RPC port, along with
+some configuration of what this RPC service (called "local auth service") can
+provide.
 
 ```
 message LocalAuth {
+  message Account {
+    string id = 1;
+  }
+
   int rpc_port = 1;
   bytes secret = 2;
+
+  repeated Account accounts = 3;
+  string default_account_id = 4;
 }
 ```
+
+...
+
+The returned tokens MUST have expiration duration longer than 150 sec. Clients
+of the protocol rely on this.
+
+...
+
+TODO(vadimsh): Finish this.
+
 
 ## `swarming`
 

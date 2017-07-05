@@ -967,33 +967,6 @@ class Foo {
                                              test_options)
     self.assertGoldenTextEquals(h.GetContent())
 
-  def testMainDexFile(self):
-    test_data = """
-    package org.chromium.example.jni_generator;
-
-    @MainDex
-    class Test {
-        private static native int nativeStaticMethod(long nativeTest, int arg1);
-    }
-    """
-    options = TestOptions()
-    jni_from_java = jni_generator.JNIFromJavaSource(
-      test_data, 'org/chromium/foo/Bar', options)
-    self.assertGoldenTextEquals(jni_from_java.GetContent())
-
-  def testNonMainDexFile(self):
-    test_data = """
-    package org.chromium.example.jni_generator;
-
-    class Test {
-        private static native int nativeStaticMethod(long nativeTest, int arg1);
-    }
-    """
-    options = TestOptions()
-    jni_from_java = jni_generator.JNIFromJavaSource(
-      test_data, 'org/chromium/foo/Bar', options)
-    self.assertGoldenTextEquals(jni_from_java.GetContent())
-
   def testMainDexAnnotation(self):
     mainDexEntries = [
       '@MainDex public class Test {',
@@ -1021,7 +994,7 @@ class Foo {
       '@MainDex public class Test extends Testable<java.io.Serializable> {',
     ]
     for entry in mainDexEntries:
-      self.assertEquals("true", IsMainDexJavaClass(entry))
+      self.assertEquals(True, IsMainDexJavaClass(entry))
 
   def testNoMainDexAnnotation(self):
     noMainDexEntries = [
@@ -1031,7 +1004,7 @@ class Foo {
       'public class Test extends BaseTest {'
     ]
     for entry in noMainDexEntries:
-      self.assertEquals("false", IsMainDexJavaClass(entry))
+      self.assertEquals(False, IsMainDexJavaClass(entry))
 
   def testNativeExportsOnlyOption(self):
     test_data = """

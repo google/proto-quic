@@ -51,20 +51,18 @@ class VideoCall(WebrtcPage):
 
 
 class DataChannel(WebrtcPage):
-  """Why: Transfer as much data as possible through a data channel in 20s."""
+  """Why: Transfer as much data as possible through a data channel in 10s."""
 
   def __init__(self, page_set, tags):
     super(DataChannel, self).__init__(
         url='file://webrtc_cases/datatransfer.html',
-        name='30s_datachannel_transfer',
+        name='10s_datachannel_transfer',
         page_set=page_set, tags=tags)
 
   def RunPageInteractions(self, action_runner):
-    # It won't have time to finish the 512 MB, but we're only interested in
-    # cpu + memory anyway rather than how much data we manage to transfer.
-    action_runner.ExecuteJavaScript('megsToSend.value = 512;')
+    action_runner.ExecuteJavaScript('megsToSend.value = 100;')
     action_runner.ClickElement('button[id="sendTheData"]')
-    action_runner.Wait(30)
+    action_runner.Wait(10)
 
 
 class AudioCall(WebrtcPage):
@@ -152,7 +150,3 @@ class WebrtcExpectations(story.expectations.StoryExpectations):
     self.DisableStory('audio_call_isac/1600_10s',
                       [story.expectations.ALL],
                       'crbug.com/468732')
-
-    self.DisableStory('30s_datachannel_transfer',
-                      [story.expectations.ALL_DESKTOP],
-                      'crbug.com/726811')

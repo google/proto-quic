@@ -52,6 +52,12 @@ QuicStreamFrame::QuicStreamFrame(QuicStreamId stream_id,
 QuicStreamFrame::QuicStreamFrame(QuicStreamId stream_id,
                                  bool fin,
                                  QuicStreamOffset offset,
+                                 QuicPacketLength data_length)
+    : QuicStreamFrame(stream_id, fin, offset, nullptr, data_length, nullptr) {}
+
+QuicStreamFrame::QuicStreamFrame(QuicStreamId stream_id,
+                                 bool fin,
+                                 QuicStreamOffset offset,
                                  const char* data_buffer,
                                  QuicPacketLength data_length,
                                  UniqueStreamBuffer buffer)

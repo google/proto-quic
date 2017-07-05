@@ -7,6 +7,8 @@
 #include <memory>
 #include <vector>
 
+#include "net/quic/platform/api/quic_flag_utils.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_map_util.h"
 #include "net/quic/platform/api/quic_string_piece.h"
@@ -96,6 +98,8 @@ bool SpdyUtils::CopyAndValidateHeaders(const QuicHeaderList& header_list,
 bool SpdyUtils::CopyAndValidateTrailers(const QuicHeaderList& header_list,
                                         size_t* final_byte_offset,
                                         SpdyHeaderBlock* trailers) {
+  const bool handle_duplicate_trailers =
+      FLAGS_quic_reloadable_flag_quic_handle_duplicate_trailers;
   bool found_final_byte_offset = false;
   for (const auto& p : header_list) {
     const string& name = p.first;
@@ -121,13 +125,22 @@ bool SpdyUtils::CopyAndValidateTrailers(const QuicHeaderList& header_list,
       return false;
     }
 
-    if (trailers->find(name) != trailers->end()) {
-      QUIC_DLOG(ERROR) << "Duplicate header '" << name
-                       << "' found in trailers.";
-      return false;
+    if (handle_duplicate_trailers) {
+      QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_handle_duplicate_trailers, 1,
+                        3);
+      trailers->AppendValueOrAddHeader(name, p.second);
+    } else {
+      QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_handle_duplicate_trailers, 2,
+                        3);
+      if (trailers->find(name) != trailers->end()) {
+        QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_handle_duplicate_trailers,
+                          3, 3);
+        QUIC_DLOG(ERROR) << "Duplicate header '" << name
+                         << "' found in trailers.";
+        return false;
+      }
+      (*trailers)[name] = p.second;
     }
-
-    (*trailers)[name] = p.second;
   }
 
   if (!found_final_byte_offset) {

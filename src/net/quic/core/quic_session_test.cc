@@ -51,7 +51,11 @@ const SpdyPriority kHighestPriority = kV3HighestPriority;
 
 class TestCryptoStream : public QuicCryptoStream {
  public:
-  explicit TestCryptoStream(QuicSession* session) : QuicCryptoStream(session) {}
+  explicit TestCryptoStream(QuicSession* session)
+      : QuicCryptoStream(session),
+        encryption_established_(false),
+        handshake_confirmed_(false),
+        params_(new QuicCryptoNegotiatedParameters) {}
 
   void OnHandshakeMessage(const CryptoHandshakeMessage& /*message*/) override {
     encryption_established_ = true;
@@ -76,7 +80,22 @@ class TestCryptoStream : public QuicCryptoStream {
     encryption_established_ = value;
   }
 
+  // QuicCryptoStream implementation
+  bool encryption_established() const override {
+    return encryption_established_;
+  }
+  bool handshake_confirmed() const override { return handshake_confirmed_; }
+  const QuicCryptoNegotiatedParameters& crypto_negotiated_params()
+      const override {
+    return *params_;
+  }
+
   MOCK_METHOD0(OnCanWrite, void());
+
+ private:
+  bool encryption_established_;
+  bool handshake_confirmed_;
+  QuicReferenceCountedPointer<QuicCryptoNegotiatedParameters> params_;
 };
 
 class TestHeadersStream : public QuicHeadersStream {
@@ -1256,7 +1275,7 @@ TEST_P(QuicSessionTestServer, TestMaxIncomingAndOutgoingStreamsAllowed) {
 TEST_P(QuicSessionTestServer, EnableFHOLThroughConfigOption) {
   QuicConfigPeer::SetReceivedForceHolBlocking(session_.config());
   session_.OnConfigNegotiated();
-  if (version() != QUIC_VERSION_36) {
+  if (version() != QUIC_VERSION_36 || session_.use_stream_notifier()) {
     EXPECT_FALSE(session_.force_hol_blocking());
   } else {
     EXPECT_TRUE(session_.force_hol_blocking());
@@ -1341,7 +1360,7 @@ TEST_P(QuicSessionTestClient, EnableDHDTThroughConnectionOption) {
 TEST_P(QuicSessionTestClient, EnableFHOLThroughConfigOption) {
   session_.config()->SetForceHolBlocking();
   session_.OnConfigNegotiated();
-  if (version() != QUIC_VERSION_36) {
+  if (version() != QUIC_VERSION_36 || session_.use_stream_notifier()) {
     EXPECT_FALSE(session_.force_hol_blocking());
   } else {
     EXPECT_TRUE(session_.force_hol_blocking());

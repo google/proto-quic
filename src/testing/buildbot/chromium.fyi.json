@@ -947,7 +947,8 @@
       },
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--no-xvfb"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -10290,7 +10291,6 @@
   },
   "Fuchsia": {
     "additional_compile_targets": [
-      "base_unittests",
       "d8"
     ],
     "gtest_tests": [
@@ -10302,12 +10302,20 @@
           "can_use_on_swarming_builders": false
         },
         "test": "base_unittests"
+      },
+      {
+        "args": [
+          "--test-launcher-filter-file=../../testing/buildbot/filters/fuchsia.ipc_tests.filter"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "ipc_tests"
       }
     ]
   },
   "Fuchsia (dbg)": {
     "additional_compile_targets": [
-      "base_unittests",
       "d8"
     ],
     "gtest_tests": [
@@ -10319,6 +10327,15 @@
           "can_use_on_swarming_builders": false
         },
         "test": "base_unittests"
+      },
+      {
+        "args": [
+          "--test-launcher-filter-file=../../testing/buildbot/filters/fuchsia.ipc_tests.filter"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "ipc_tests"
       }
     ]
   },

@@ -74,7 +74,7 @@ class SpdyStreamTest : public ::testing::Test {
   base::WeakPtr<SpdySession> CreateDefaultSpdySession() {
     SpdySessionKey key(HostPortPair::FromURL(url_), ProxyServer::Direct(),
                        PRIVACY_MODE_DISABLED);
-    return CreateSecureSpdySession(session_.get(), key, NetLogWithSource());
+    return CreateSpdySession(session_.get(), key, NetLogWithSource());
   }
 
   void TearDown() override { base::RunLoop().RunUntilIdle(); }

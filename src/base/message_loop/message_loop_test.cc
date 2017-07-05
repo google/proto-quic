@@ -368,7 +368,7 @@ void RunTest_Nesting(MessagePumpFactory factory) {
   std::unique_ptr<MessagePump> pump(factory());
   MessageLoop loop(std::move(pump));
 
-  int depth = 50;
+  int depth = 100;
   ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE,
                                           BindOnce(&NestingFunc, &depth));
   RunLoop().Run();

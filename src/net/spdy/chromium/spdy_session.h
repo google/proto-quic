@@ -343,10 +343,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // not claimed and active, sends RST to the server to cancel the stream.
   void CancelPush(const GURL& url);
 
-  // Initialize the session with the given connection. |is_secure|
-  // must indicate whether |connection| uses an SSL socket or not; it
-  // is usually true, but it can be false for testing or when SPDY is
-  // configured to work with non-secure sockets.
+  // Initialize the session with the given connection.
   //
   // |pool| is the SpdySessionPool that owns us.  Its lifetime must
   // strictly be greater than |this|.
@@ -355,8 +352,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // iteration, so the SpdySession may close immediately afterwards if the first
   // read of |connection| fails.
   void InitializeWithSocket(std::unique_ptr<ClientSocketHandle> connection,
-                            SpdySessionPool* pool,
-                            bool is_secure);
+                            SpdySessionPool* pool);
 
   // Check to see if this SPDY session can support an additional domain.
   // If the session is un-authenticated, then this call always returns true.
@@ -415,9 +411,6 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // The LoadState is used for informing the user of the current network
   // status, such as "resolving host", "connecting", etc.
   LoadState GetLoadState() const;
-
-  // Returns server infomation in the form of (scheme/host/port).
-  url::SchemeHostPort GetServer();
 
   // MultiplexedSession methods:
   bool GetRemoteEndpoint(IPEndPoint* endpoint) override;
@@ -1089,9 +1082,6 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // The stream to notify when |in_flight_write_| has been written to
   // the socket completely.
   base::WeakPtr<SpdyStream> in_flight_write_stream_;
-
-  // Flag if we're using an SSL connection for this SpdySession.
-  bool is_secure_;
 
   // Spdy Frame state.
   std::unique_ptr<BufferedSpdyFramer> buffered_spdy_framer_;

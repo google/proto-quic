@@ -52,8 +52,6 @@ class Smoothness(legacy_page_test.LegacyPageTest):
     options = timeline_based_measurement.Options(category_filter)
     options.config.enable_platform_display_trace = True
     options.SetLegacyTimelineBasedMetrics([smoothness.SmoothnessMetric()])
-    for delay in page.GetSyntheticDelayCategories():
-      options.category_filter.AddSyntheticDelay(delay)
     self._tbm = timeline_based_measurement.TimelineBasedMeasurement(
         options, self._results_wrapper)
     self._tbm.WillRunStory(tab.browser.platform)

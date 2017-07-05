@@ -18,4 +18,9 @@ bool FileEnumerator::ShouldSkip(const FilePath& path) {
           !(INCLUDE_DOT_DOT & file_type_));
 }
 
+bool FileEnumerator::IsTypeMatched(bool is_dir) const {
+  return (file_type_ &
+          (is_dir ? FileEnumerator::DIRECTORIES : FileEnumerator::FILES)) != 0;
+}
+
 }  // namespace base

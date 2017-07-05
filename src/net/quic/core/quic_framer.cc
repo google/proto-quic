@@ -18,6 +18,7 @@
 #include "net/quic/core/quic_data_reader.h"
 #include "net/quic/core/quic_data_writer.h"
 #include "net/quic/core/quic_socket_address_coder.h"
+#include "net/quic/core/quic_stream_frame_data_producer.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_aligned.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
@@ -312,7 +313,8 @@ QuicFramer::AckFrameInfo::~AckFrameInfo() {}
 size_t QuicFramer::BuildDataPacket(const QuicPacketHeader& header,
                                    const QuicFrames& frames,
                                    char* buffer,
-                                   size_t packet_length) {
+                                   size_t packet_length,
+                                   QuicStreamFrameDataProducer* data_producer) {
   QuicDataWriter writer(packet_length, buffer, perspective_, endianness());
   if (!AppendPacketHeader(header, &writer)) {
     QUIC_BUG << "AppendPacketHeader failed";
@@ -338,7 +340,7 @@ size_t QuicFramer::BuildDataPacket(const QuicPacketHeader& header,
         break;
       case STREAM_FRAME:
         if (!AppendStreamFrame(*frame.stream_frame, no_stream_frame_length,
-                               &writer)) {
+                               &writer, data_producer)) {
           QUIC_BUG << "AppendStreamFrame failed";
           return 0;
         }
@@ -1316,7 +1318,10 @@ bool QuicFramer::ProcessStopWaitingFrame(QuicDataReader* reader,
     set_detailed_error("Unable to read least unacked delta.");
     return false;
   }
-  DCHECK_GE(header.packet_number, least_unacked_delta);
+  if (header.packet_number < least_unacked_delta) {
+    set_detailed_error("Invalid unacked delta.");
+    return false;
+  }
   stop_waiting->least_unacked = header.packet_number - least_unacked_delta;
 
   return true;
@@ -1788,7 +1793,8 @@ bool QuicFramer::AppendAckBlock(uint8_t gap,
 
 bool QuicFramer::AppendStreamFrame(const QuicStreamFrame& frame,
                                    bool no_stream_frame_length,
-                                   QuicDataWriter* writer) {
+                                   QuicDataWriter* writer,
+                                   QuicStreamFrameDataProducer* data_producer) {
   if (!AppendStreamId(GetStreamIdSize(frame.stream_id), frame.stream_id,
                       writer)) {
     QUIC_BUG << "Writing stream id size failed.";
@@ -1805,6 +1811,19 @@ bool QuicFramer::AppendStreamFrame(const QuicStreamFrame& frame,
       QUIC_BUG << "Writing stream frame length failed";
       return false;
     }
+  }
+
+  if (data_producer != nullptr) {
+    DCHECK_EQ(nullptr, frame.data_buffer);
+    if (frame.data_length == 0) {
+      return true;
+    }
+    if (!data_producer->WriteStreamData(frame.stream_id, frame.offset,
+                                        frame.data_length, writer)) {
+      QUIC_BUG << "Writing frame data failed.";
+      return false;
+    }
+    return true;
   }
 
   if (!writer->WriteBytes(frame.data_buffer, frame.data_length)) {

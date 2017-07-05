@@ -9,6 +9,7 @@
 
 #include "base/macros.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/core/quic_stream_send_buffer.h"
 #include "net/quic/core/quic_stream_sequencer.h"
 #include "net/quic/platform/api/quic_string_piece.h"
 
@@ -42,6 +43,8 @@ class QuicStreamPeer {
 
   static QuicStreamSequencer* sequencer(QuicStream* stream);
   static QuicSession* session(QuicStream* stream);
+
+  static QuicStreamSendBuffer& SendBuffer(QuicStream* stream);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicStreamPeer);

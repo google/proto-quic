@@ -57,12 +57,10 @@ class BASE_EXPORT TraceConfigCategoryFilter {
 
   const StringList& included_categories() const { return included_categories_; }
   const StringList& excluded_categories() const { return excluded_categories_; }
-  const StringList& synthetic_delays() const { return synthetic_delays_; }
 
  private:
   void SetCategoriesFromIncludedList(const ListValue& included_list);
   void SetCategoriesFromExcludedList(const ListValue& excluded_list);
-  void SetSyntheticDelaysFromList(const ListValue& list);
 
   void AddCategoriesToDict(const StringList& categories,
                            const char* param,
@@ -71,13 +69,10 @@ class BASE_EXPORT TraceConfigCategoryFilter {
   void WriteCategoryFilterString(const StringList& values,
                                  std::string* out,
                                  bool included) const;
-  void WriteCategoryFilterString(const StringList& delays,
-                                 std::string* out) const;
 
   StringList included_categories_;
   StringList disabled_categories_;
   StringList excluded_categories_;
-  StringList synthetic_delays_;
 };
 
 }  // namespace trace_event

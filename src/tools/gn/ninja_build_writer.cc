@@ -242,7 +242,7 @@ bool NinjaBuildWriter::RunAndWriteFile(
 }
 
 void NinjaBuildWriter::WriteNinjaRules() {
-  out_ << "ninja_required_version = 1.1.0\n\n";
+  out_ << "ninja_required_version = 1.7.2\n\n";
   out_ << "rule gn\n";
   out_ << "  command = " << GetSelfInvocationCommand(build_settings_) << "\n";
   out_ << "  description = Regenerating ninja files\n\n";

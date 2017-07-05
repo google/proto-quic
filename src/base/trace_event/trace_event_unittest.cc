@@ -36,7 +36,6 @@
 #include "base/trace_event/trace_event.h"
 #include "base/trace_event/trace_event_filter.h"
 #include "base/trace_event/trace_event_filter_test_utils.h"
-#include "base/trace_event/trace_event_synthetic_delay.h"
 #include "base/values.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -2941,49 +2940,6 @@ TEST_F(TraceEventTestFixture, TimeOffset) {
     EXPECT_LE(timestamp, end_time);
     last_timestamp = timestamp;
   }
-}
-
-TEST_F(TraceEventTestFixture, ConfigureSyntheticDelays) {
-  BeginSpecificTrace("DELAY(test.Delay;0.05)");
-
-  base::TimeTicks start = base::TimeTicks::Now();
-  {
-    TRACE_EVENT_SYNTHETIC_DELAY("test.Delay");
-  }
-  base::TimeDelta duration = base::TimeTicks::Now() - start;
-  EXPECT_GE(duration.InMilliseconds(), 50);
-
-  EndTraceAndFlush();
-}
-
-TEST_F(TraceEventTestFixture, BadSyntheticDelayConfigurations) {
-  const char* const filters[] = {
-    "",
-    "DELAY(",
-    "DELAY(;",
-    "DELAY(;)",
-    "DELAY(test.Delay)",
-    "DELAY(test.Delay;)"
-  };
-  for (size_t i = 0; i < arraysize(filters); i++) {
-    BeginSpecificTrace(filters[i]);
-    EndTraceAndFlush();
-    TraceConfig trace_config = TraceLog::GetInstance()->GetCurrentTraceConfig();
-    EXPECT_EQ(0u, trace_config.GetSyntheticDelayValues().size());
-  }
-}
-
-TEST_F(TraceEventTestFixture, SyntheticDelayConfigurationMerging) {
-  TraceConfig config1("DELAY(test.Delay1;16)", "");
-  TraceConfig config2("DELAY(test.Delay2;32)", "");
-  config1.Merge(config2);
-  EXPECT_EQ(2u, config1.GetSyntheticDelayValues().size());
-}
-
-TEST_F(TraceEventTestFixture, SyntheticDelayConfigurationToString) {
-  const char filter[] = "DELAY(test.Delay;16;oneshot)";
-  TraceConfig config(filter, "");
-  EXPECT_EQ(filter, config.ToCategoryFilterString());
 }
 
 TEST_F(TraceEventTestFixture, TraceFilteringMode) {

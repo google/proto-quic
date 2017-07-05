@@ -16,8 +16,6 @@
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/memory/weak_ptr.h"
-#include "base/metrics/histogram_macros.h"
-#include "base/metrics/sparse_histogram.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_util.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -863,17 +861,13 @@ class ProxyService::PacRequest
   int QueryDidComplete(int result_code) {
     DCHECK(!was_cancelled());
 
-    // This state is cleared when resolve_job_ is reset below.
-    bool script_executed = is_started();
-
     // Clear |resolve_job_| so is_started() returns false while
     // DidFinishResolvingProxy() runs.
     resolve_job_.reset();
 
     // Note that DidFinishResolvingProxy might modify |results_|.
     int rv = service_->DidFinishResolvingProxy(url_, method_, proxy_delegate_,
-                                               results_, result_code, net_log_,
-                                               creation_time_, script_executed);
+                                               results_, result_code, net_log_);
 
     // Make a note in the results which configuration was in use at the
     // time of the resolve.
@@ -1065,9 +1059,8 @@ int ProxyService::ResolveProxyHelper(const GURL& raw_url,
   // using a direct connection for example).
   int rv = TryToCompleteSynchronously(url, proxy_delegate, result);
   if (rv != ERR_IO_PENDING) {
-    rv = DidFinishResolvingProxy(
-        url, method, proxy_delegate, result, rv, net_log,
-        callback.is_null() ? TimeTicks() : TimeTicks::Now(), false);
+    rv = DidFinishResolvingProxy(url, method, proxy_delegate, result, rv,
+                                 net_log);
     return rv;
   }
 
@@ -1233,12 +1226,6 @@ void ProxyService::OnInitProxyResolverComplete(int result) {
 
   init_proxy_resolver_.reset();
 
-  // When using the out-of-process resolver, creating the resolver can complete
-  // with the ERR_PAC_SCRIPT_TERMINATED result code, which indicates the
-  // resolver process crashed.
-  UMA_HISTOGRAM_BOOLEAN("Net.ProxyService.ScriptTerminatedOnInit",
-                        result == ERR_PAC_SCRIPT_TERMINATED);
-
   if (result != OK) {
     if (fetched_config_.pac_mandatory()) {
       VLOG(1) << "Failed configuring with mandatory PAC script, blocking all "
@@ -1371,32 +1358,7 @@ int ProxyService::DidFinishResolvingProxy(const GURL& url,
                                           ProxyDelegate* proxy_delegate,
                                           ProxyInfo* result,
                                           int result_code,
-                                          const NetLogWithSource& net_log,
-                                          base::TimeTicks start_time,
-                                          bool script_executed) {
-  // Don't track any metrics if start_time is 0, which will happen when the user
-  // calls |TryResolveProxySynchronously|.
-  if (!start_time.is_null()) {
-    TimeDelta diff = TimeTicks::Now() - start_time;
-    if (script_executed) {
-      // This function "fixes" the result code, so make sure script terminated
-      // errors are tracked. Only track result codes that were a result of
-      // script execution.
-      UMA_HISTOGRAM_BOOLEAN("Net.ProxyService.ScriptTerminated",
-                            result_code == ERR_PAC_SCRIPT_TERMINATED);
-      UMA_HISTOGRAM_CUSTOM_TIMES("Net.ProxyService.GetProxyUsingScriptTime",
-                                 diff, base::TimeDelta::FromMicroseconds(100),
-                                 base::TimeDelta::FromSeconds(20), 50);
-      UMA_HISTOGRAM_SPARSE_SLOWLY("Net.ProxyService.GetProxyUsingScriptResult",
-                                  std::abs(result_code));
-    }
-    UMA_HISTOGRAM_BOOLEAN("Net.ProxyService.ResolvedUsingScript",
-                          script_executed);
-    UMA_HISTOGRAM_CUSTOM_TIMES("Net.ProxyService.ResolveProxyTime", diff,
-                               base::TimeDelta::FromMicroseconds(100),
-                               base::TimeDelta::FromSeconds(20), 50);
-  }
-
+                                          const NetLogWithSource& net_log) {
   // Log the result of the proxy resolution.
   if (result_code == OK) {
     // Allow the proxy delegate to interpose on the resolution decision,

@@ -81,5 +81,10 @@ QuicSession* QuicStreamPeer::session(QuicStream* stream) {
   return stream->session();
 }
 
+// static
+QuicStreamSendBuffer& QuicStreamPeer::SendBuffer(QuicStream* stream) {
+  return stream->send_buffer_;
+}
+
 }  // namespace test
 }  // namespace net

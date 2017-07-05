@@ -160,6 +160,19 @@ class QUIC_EXPORT_PRIVATE QuicConnectionVisitorInterface {
   // Called to ask if any streams are open in this visitor, excluding the
   // reserved crypto and headers stream.
   virtual bool HasOpenDynamicStreams() const = 0;
+
+  // Save |data_length| data starts at |iov_offset| in |iov|.
+  virtual void SaveStreamData(QuicStreamId id,
+                              QuicIOVector iov,
+                              size_t iov_offset,
+                              QuicStreamOffset offset,
+                              QuicByteCount data_length) = 0;
+
+  // Write |data_length| data with |offset| of stream |id| to |writer|.
+  virtual bool WriteStreamData(QuicStreamId id,
+                               QuicStreamOffset offset,
+                               QuicByteCount data_length,
+                               QuicDataWriter* writer) = 0;
 };
 
 // Interface which gets callbacks from the QuicConnection at interesting
@@ -464,6 +477,17 @@ class QUIC_EXPORT_PRIVATE QuicConnection
   // QuicPacketCreator::DelegateInterface
   void OnSerializedPacket(SerializedPacket* packet) override;
 
+  // QuicStreamFrameDataProducer methods:
+  void SaveStreamData(QuicStreamId id,
+                      QuicIOVector iov,
+                      size_t iov_offset,
+                      QuicStreamOffset offset,
+                      QuicByteCount data_length) override;
+  bool WriteStreamData(QuicStreamId id,
+                       QuicStreamOffset offset,
+                       QuicByteCount data_length,
+                       QuicDataWriter* writer) override;
+
   // QuicSentPacketManager::NetworkChangeVisitor
   void OnCongestionChange() override;
   void OnPathDegrading() override;
@@ -661,6 +685,11 @@ class QUIC_EXPORT_PRIVATE QuicConnection
 
   // Sets the stream notifer on the SentPacketManager.
   void SetStreamNotifier(StreamNotifierInterface* stream_notifier);
+
+  // Enable/disable delegate saves data in PacketCreator.
+  // TODO(fayang): Remove this method when deprecating
+  // quic_reloadable_flag_quic_stream_owns_data.
+  void SetDelegateSavesData(bool delegate_saves_data);
 
   // Return the name of the cipher of the primary decrypter of the framer.
   const char* cipher_name() const { return framer_.decrypter()->cipher_name(); }

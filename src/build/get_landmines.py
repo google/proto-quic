@@ -28,6 +28,16 @@ def print_landmines():
   # need to be cleaned up. If you're writing a new CL that causes build
   # dependency problems, fix the dependency problems instead of adding a
   # landmine.
+  #
+  # Before adding or changing a landmine consider the consequences of doing so.
+  # Doing so will wipe out every output directory on every Chrome developer's
+  # machine. This can be particularly problematic on Windows where the directory
+  # deletion may well fail (locked files, command prompt in the directory,
+  # etc.), and generated .sln and .vcxproj files will be deleted.
+  #
+  # This output directory deletion will be repeated when going back and forth
+  # across the change that added the landmine, adding to the cost. There are
+  # usually less troublesome alternatives.
 
   if distributor() == 'goma' and platform() == 'win32':
     print 'Need to clobber winja goma due to backend cwd cache fix.'

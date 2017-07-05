@@ -194,10 +194,6 @@ class SendAlgorithmTest : public QuicTestWithParam<TestParams> {
                   "QUIC sender",
                   Perspective::IS_SERVER,
                   42) {
-    FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode = true;
-    FLAGS_quic_reloadable_flag_quic_fix_cubic_bytes_quantization = true;
-    FLAGS_quic_reloadable_flag_quic_fix_beta_last_max = true;
-    FLAGS_quic_reloadable_flag_quic_enable_cubic_per_ack_updates = true;
     rtt_stats_ = quic_sender_.connection()->sent_packet_manager().GetRttStats();
     sender_ = SendAlgorithmInterface::Create(
         simulator_.GetClock(), rtt_stats_,

@@ -402,7 +402,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
@@ -563,12 +563,12 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
           ],
-          "hard_timeout": 1920,
+          "hard_timeout": 600,
           "output_links": [
             {
               "link": [
@@ -578,7 +578,8 @@
               ],
               "name": "shard #${SHARD_INDEX} logcats"
             }
-          ]
+          ],
+          "shards": 3
         },
         "test": "content_shell_test_apk"
       },
@@ -603,11 +604,12 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
           ],
+          "hard_timeout": 600,
           "output_links": [
             {
               "link": [
@@ -1272,7 +1274,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
@@ -2003,7 +2005,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
@@ -2018,7 +2020,8 @@
               ],
               "name": "shard #${SHARD_INDEX} logcats"
             }
-          ]
+          ],
+          "shards": 2
         },
         "test": "chrome_sync_shell_test_apk"
       },
@@ -2164,12 +2167,12 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
           ],
-          "hard_timeout": 1920,
+          "hard_timeout": 600,
           "output_links": [
             {
               "link": [
@@ -2179,7 +2182,8 @@
               ],
               "name": "shard #${SHARD_INDEX} logcats"
             }
-          ]
+          ],
+          "shards": 3
         },
         "test": "content_shell_test_apk"
       },
@@ -2204,11 +2208,12 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
           ],
+          "hard_timeout": 600,
           "output_links": [
             {
               "link": [
@@ -2873,7 +2878,7 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
@@ -3219,7 +3224,15 @@
       }
     ]
   },
+  "Cast Android (dbg)": {
+    "additional_compile_targets": [
+      "cast_shell_apk"
+    ]
+  },
   "Cast Audio Linux": {
+    "additional_compile_targets": [
+      "cast_shell"
+    ],
     "gtest_tests": [
       {
         "swarming": {
@@ -3401,6 +3414,9 @@
     ]
   },
   "Cast Linux": {
+    "additional_compile_targets": [
+      "cast_shell"
+    ],
     "gtest_tests": [
       {
         "swarming": {
@@ -3589,6 +3605,12 @@
   "Linux Builder (dbg)": {
     "additional_compile_targets": [
       "all"
+    ]
+  },
+  "Linux Builder (dbg)(32)": {
+    "additional_compile_targets": [
+      "google_apis_unittests",
+      "sync_integration_tests"
     ]
   },
   "Linux Tests": {

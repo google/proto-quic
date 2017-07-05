@@ -1,7 +1,6 @@
 # Copyright 2013 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-import sys
 import unittest
 
 from telemetry import decorators
@@ -80,35 +79,6 @@ class SmoothnessUnitTest(page_test_test_case.PageTestTestCase):
   def setUp(self):
     self._options = options_for_unittests.GetCopy()
     self._options.browser_options.wpr_mode = wpr_modes.WPR_OFF
-
-  def testSyntheticDelayConfiguration(self):
-    test_page = page.Page('http://dummy', None, name='http://dummy')
-    test_page.synthetic_delays = {
-        'cc.BeginMainFrame': {'target_duration': 0.012},
-        'cc.DrawAndSwap': {'target_duration': 0.012, 'mode': 'alternating'},
-        'gpu.PresentingFrame': {'target_duration': 0.012}
-    }
-
-    tab = FakeTab()
-    measurement = smoothness.Smoothness()
-    measurement.WillStartBrowser(tab.browser.platform)
-    measurement.WillNavigateToPage(test_page, tab)
-
-    expected_synthetic_delay = set([
-        'DELAY(cc.BeginMainFrame;0.012000;static)',
-        'DELAY(cc.DrawAndSwap;0.012000;alternating)',
-        'DELAY(gpu.PresentingFrame;0.012000;static)',
-    ])
-    config = tab.browser.platform.tracing_controller.config
-    actual_synthetic_delay = (
-        config.chrome_trace_config.category_filter.synthetic_delays)
-
-    if expected_synthetic_delay != actual_synthetic_delay:
-      sys.stderr.write('Expected category filter: %s\n' %
-                       repr(expected_synthetic_delay))
-      sys.stderr.write('Actual category filter filter: %s\n' %
-                       repr(actual_synthetic_delay))
-    self.assertEquals(expected_synthetic_delay, actual_synthetic_delay)
 
   # crbug.com/483212
   @decorators.Disabled('chromeos')

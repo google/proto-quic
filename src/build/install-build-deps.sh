@@ -112,7 +112,7 @@ fi
 
 distro_codename=$(lsb_release --codename --short)
 distro_id=$(lsb_release --id --short)
-supported_codenames="(trusty|xenial|yakkety)"
+supported_codenames="(trusty|xenial|yakkety|zesty)"
 supported_ids="(Debian)"
 if [ 0 -eq "${do_unsupported-0}" ] && [ 0 -eq "${do_quick_check-0}" ] ; then
   if [[ ! $distro_codename =~ $supported_codenames &&
@@ -121,6 +121,7 @@ if [ 0 -eq "${do_unsupported-0}" ] && [ 0 -eq "${do_quick_check-0}" ] ; then
       "\tUbuntu 14.04 (trusty)\n" \
       "\tUbuntu 16.04 (xenial)\n" \
       "\tUbuntu 16.10 (yakkety)\n" \
+      "\tUbuntu 17.04 (zesty)\n" \
       "\tDebian 8 (jessie) or later" >&2
     exit 1
   fi
@@ -359,7 +360,7 @@ case $distro_codename in
     arm_list+=" g++-4.8-multilib-arm-linux-gnueabihf
                 gcc-4.8-multilib-arm-linux-gnueabihf"
     ;;
-  xenial|yakkety)
+  xenial|yakkety|zesty)
     arm_list+=" g++-5-multilib-arm-linux-gnueabihf
                 gcc-5-multilib-arm-linux-gnueabihf
                 gcc-arm-linux-gnueabihf"

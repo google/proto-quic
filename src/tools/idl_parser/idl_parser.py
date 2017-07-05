@@ -205,7 +205,6 @@ class IDLParser(object):
     """Definition : CallbackOrInterface
                   | Partial
                   | Dictionary
-                  | Exception
                   | Enum
                   | Typedef
                   | ImplementsStatement"""
@@ -349,24 +348,6 @@ class IDLParser(object):
                             self.BuildAttribute('NAME', p[1]))
     else:
       p[0] = p[1]
-
-  # Not specified in the current spec
-  def p_Exception(self, p):
-    """Exception : EXCEPTION identifier Inheritance '{' ExceptionMembers '}' ';'"""
-    p[0] = self.BuildNamed('Exception', p, 2, ListFromConcat(p[3], p[5]))
-
-  # Not specified in the current spec
-  def p_ExceptionMembers(self, p):
-    """ExceptionMembers : ExtendedAttributeList ExceptionMember ExceptionMembers
-                        |"""
-    if len(p) > 1:
-      p[2].AddChildren(p[1])
-      p[0] = ListFromConcat(p[2], p[3])
-
-  # Error recovery for ExceptionMembers - Not specified in the current spec
-  def p_ExceptionMembersError(self, p):
-    """ExceptionMembers : error"""
-    p[0] = self.BuildError(p, 'ExceptionMembers')
 
   def p_Inheritance(self, p):
     """Inheritance : ':' identifier
@@ -680,39 +661,6 @@ class IDLParser(object):
       p[0] = self.BuildNamed('Argument', p, 1)
       p[0].AddChildren(self.BuildTrue('ELLIPSIS'))
 
-  # Not specified in the current spec
-  def p_ExceptionMember(self, p):
-    """ExceptionMember : Const
-                       | ExceptionField
-                       | ExceptionAttribute
-                       | ExceptionOperation"""
-    p[0] = p[1]
-
-  # Not specified in the current spec
-  def p_ExceptionField(self, p):
-    """ExceptionField : Type identifier ';'"""
-    p[0] = self.BuildNamed('ExceptionField', p, 2, p[1])
-
-  # Error recovery for ExceptionMembers - Not specified in the current spec
-  def p_ExceptionFieldError(self, p):
-    """ExceptionField : error"""
-    p[0] = self.BuildError(p, 'ExceptionField')
-
-  # Not specified in the current spec
-  def p_ExceptionAttribute(self, p):
-    """ExceptionAttribute : ReadOnly ATTRIBUTE Type identifier ';'"""
-    p[0] = self.BuildNamed('Attribute', p, 4,
-                           ListFromConcat(p[1], p[3]))
-
-  # Not specified in the current spec
-  def p_ExceptionOperation(self, p):
-    """ExceptionOperation : Type identifier '(' ')' ';'"""
-    # Needed to handle one case in DOMException.idl:
-    # // Override in a Mozilla compatible format
-    # [NotEnumerable] DOMString toString();
-    # Limited form of Operation to prevent others from being added.
-    p[0] = self.BuildNamed('ExceptionOperation', p, 2, p[1])
-
   def p_Iterable(self, p):
     """Iterable : ITERABLE '<' Type OptionalType '>' ';'"""
     childlist = ListFromConcat(p[3], p[4])
@@ -788,7 +736,6 @@ class IDLParser(object):
                            | DELETER
                            | DICTIONARY
                            | ENUM
-                           | EXCEPTION
                            | GETTER
                            | IMPLEMENTS
                            | INHERIT

@@ -4739,7 +4739,7 @@ TEST_F(HttpNetworkTransactionTest, HttpsProxySpdyGetWithSessionRace) {
   SpdySessionKey key(
       HostPortPair("proxy", 70), ProxyServer::Direct(), PRIVACY_MODE_DISABLED);
   base::WeakPtr<SpdySession> spdy_session =
-      CreateSecureSpdySession(session.get(), key, log.bound());
+      CreateSpdySession(session.get(), key, log.bound());
 
   // Unstall the resolution begun by the transaction.
   session_deps_.host_resolver->set_ondemand_mode(true);
@@ -11418,7 +11418,7 @@ TEST_F(HttpNetworkTransactionTest,
   SpdySessionKey key(host_port_pair, ProxyServer::Direct(),
                      PRIVACY_MODE_DISABLED);
   base::WeakPtr<SpdySession> spdy_session =
-      CreateSecureSpdySession(session.get(), key, NetLogWithSource());
+      CreateSpdySession(session.get(), key, NetLogWithSource());
 
   trans =
       base::MakeUnique<HttpNetworkTransaction>(DEFAULT_PRIORITY, session.get());
@@ -13069,7 +13069,7 @@ TEST_F(HttpNetworkTransactionTest, PreconnectWithExistingSpdySession) {
   SpdySessionKey key(host_port_pair, ProxyServer::Direct(),
                      PRIVACY_MODE_DISABLED);
   base::WeakPtr<SpdySession> spdy_session =
-      CreateSecureSpdySession(session.get(), key, NetLogWithSource());
+      CreateSpdySession(session.get(), key, NetLogWithSource());
 
   HttpRequestInfo request;
   request.method = "GET";

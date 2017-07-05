@@ -18,6 +18,7 @@
 #include "base/memory/shared_memory.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/metrics/sparse_histogram.h"
+#include "base/numerics/safe_conversions.h"
 #include "base/threading/thread_restrictions.h"
 
 namespace {
@@ -1123,8 +1124,8 @@ DelayedPersistentAllocation::DelayedPersistentAllocation(
     bool make_iterable)
     : allocator_(allocator),
       type_(type),
-      size_(size),
-      offset_(offset),
+      size_(checked_cast<uint32_t>(size)),
+      offset_(checked_cast<uint32_t>(offset)),
       make_iterable_(make_iterable),
       reference_(ref) {
   DCHECK(allocator_);

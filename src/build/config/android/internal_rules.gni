@@ -2058,7 +2058,11 @@ if (enable_java_templates) {
     }
 
     group(target_name) {
-      forward_variables_from(invoker, [ "data_deps" ])
+      forward_variables_from(invoker,
+                             [
+                               "data",
+                               "data_deps",
+                             ])
       public_deps = [
         ":$_ijar_target_name",
         ":$_process_jar_target_name",

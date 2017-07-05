@@ -239,6 +239,7 @@ class QuicNetworkTransactionTest
  protected:
   QuicNetworkTransactionTest()
       : version_(GetParam()),
+        supported_versions_(SupportedVersions(version_)),
         client_maker_(version_,
                       0,
                       &clock_,
@@ -538,7 +539,7 @@ class QuicNetworkTransactionTest
     session_->quic_stream_factory()->set_require_confirmation(false);
   }
 
-  void CreateSession() { return CreateSession(SupportedVersions(version_)); }
+  void CreateSession() { return CreateSession(supported_versions_); }
 
   void CheckWasQuicResponse(HttpNetworkTransaction* trans) {
     const HttpResponseInfo* response = trans->GetResponseInfo();
@@ -626,8 +627,7 @@ class QuicNetworkTransactionTest
     AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
     base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
     http_server_properties_.SetQuicAlternativeService(
-        server, alternative_service, expiration,
-        HttpNetworkSession::Params().quic_supported_versions);
+        server, alternative_service, expiration, supported_versions_);
   }
 
   void AddQuicRemoteAlternativeServiceMapping(
@@ -639,8 +639,7 @@ class QuicNetworkTransactionTest
                                            alternative.port());
     base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
     http_server_properties_.SetQuicAlternativeService(
-        server, alternative_service, expiration,
-        HttpNetworkSession::Params().quic_supported_versions);
+        server, alternative_service, expiration, supported_versions_);
   }
 
   void ExpectBrokenAlternateProtocolMapping() {
@@ -748,6 +747,7 @@ class QuicNetworkTransactionTest
   }
 
   const QuicVersion version_;
+  QuicVersionVector supported_versions_;
   QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   MockClock clock_;
   QuicTestPacketMaker client_maker_;
@@ -1204,8 +1204,7 @@ TEST_P(QuicNetworkTransactionTest, RetryMisdirectedRequest) {
                                          443);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
   http_server_properties_.SetQuicAlternativeService(
-      server, alternative_service, expiration,
-      HttpNetworkSession::Params().quic_supported_versions);
+      server, alternative_service, expiration, supported_versions_);
 
   // First try: The alternative job uses QUIC and reports an HTTP 421
   // Misdirected Request error.  The main job uses TCP, but |http_data| below is
@@ -1467,6 +1466,14 @@ TEST_P(QuicNetworkTransactionTest, DoNotGetAltSvcForDifferentOrigin) {
 
 TEST_P(QuicNetworkTransactionTest,
        StoreMutuallySupportedVersionsWhenProcessAltSvc) {
+  // Add support for another QUIC version besides |version_|.
+  for (const QuicVersion& version : AllSupportedVersions()) {
+    if (version == version_)
+      continue;
+    supported_versions_.push_back(version);
+    break;
+  }
+
   std::string advertised_versions_list_str =
       GenerateQuicVersionsListForAltSvcHeader(AllSupportedVersions());
   std::string altsvc_header =
@@ -1503,15 +1510,7 @@ TEST_P(QuicNetworkTransactionTest,
 
   AddHangingNonAlternateProtocolSocketData();
 
-  // Generate a list of QUIC versions suppored by netstack.
-  QuicVersionVector current_supported_versions = SupportedVersions(version_);
-  if (version_ != QUIC_VERSION_40) {
-    current_supported_versions.push_back(QUIC_VERSION_40);
-  } else {
-    current_supported_versions.push_back(QUIC_VERSION_37);
-  }
-
-  CreateSession(current_supported_versions);
+  CreateSession(supported_versions_);
 
   SendRequestAndExpectHttpResponse("hello world");
   SendRequestAndExpectQuicResponse("hello!");
@@ -1525,11 +1524,10 @@ TEST_P(QuicNetworkTransactionTest,
   EXPECT_EQ(kProtoQUIC, alt_svc_info_vector[0].alternative_service().protocol);
   EXPECT_EQ(2u, alt_svc_info_vector[0].advertised_versions().size());
   // Advertised versions will be lised in a sorted order.
-  std::sort(current_supported_versions.begin(),
-            current_supported_versions.end());
-  EXPECT_EQ(current_supported_versions[0],
+  std::sort(supported_versions_.begin(), supported_versions_.end());
+  EXPECT_EQ(supported_versions_[0],
             alt_svc_info_vector[0].advertised_versions()[0]);
-  EXPECT_EQ(current_supported_versions[1],
+  EXPECT_EQ(supported_versions_[1],
             alt_svc_info_vector[0].advertised_versions()[1]);
 }
 
@@ -2865,14 +2863,14 @@ TEST_P(QuicNetworkTransactionTest,
   http_server_properties_.SetQuicAlternativeService(
       url::SchemeHostPort(origin1),
       AlternativeService(kProtoQUIC, "mail.example.com", 443), expiration,
-      HttpNetworkSession::Params().quic_supported_versions);
+      supported_versions_);
 
   // Set up alternative service for |origin2|.
   AlternativeServiceInfoVector alternative_services;
   http_server_properties_.SetQuicAlternativeService(
       url::SchemeHostPort(origin2),
       AlternativeService(kProtoQUIC, "www.example.com", 443), expiration,
-      HttpNetworkSession::Params().quic_supported_versions);
+      supported_versions_);
   // First request opens connection to |destination1|
   // with QuicServerId.host() == origin1.host().
   SendRequestAndExpectQuicResponse("hello!");
@@ -3096,8 +3094,7 @@ TEST_P(QuicNetworkTransactionTest, PoolByOrigin) {
   AlternativeService alternative_service(kProtoQUIC, destination1, 443);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
   http_server_properties_.SetQuicAlternativeService(
-      server, alternative_service, expiration,
-      HttpNetworkSession::Params().quic_supported_versions);
+      server, alternative_service, expiration, supported_versions_);
   // First request opens connection to |destination1|
   // with QuicServerId.host() == kDefaultServerHostName.
   SendRequestAndExpectQuicResponse("hello!");
@@ -3105,8 +3102,7 @@ TEST_P(QuicNetworkTransactionTest, PoolByOrigin) {
   // Set up alternative service entry to a different destination.
   alternative_service = AlternativeService(kProtoQUIC, destination2, 443);
   http_server_properties_.SetQuicAlternativeService(
-      server, alternative_service, expiration,
-      HttpNetworkSession::Params().quic_supported_versions);
+      server, alternative_service, expiration, supported_versions_);
   // Second request pools to existing connection with same QuicServerId,
   // even though alternative service destination is different.
   SendRequestAndExpectQuicResponse("hello!");
@@ -3171,7 +3167,7 @@ TEST_P(QuicNetworkTransactionTest, PoolByDestination) {
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
   http_server_properties_.SetQuicAlternativeService(
       url::SchemeHostPort(origin1), alternative_service1, expiration,
-      HttpNetworkSession::Params().quic_supported_versions);
+      supported_versions_);
 
   // Set up multiple alternative service entries for |origin2|,
   // the first one with a different destination as for |origin1|,
@@ -4691,6 +4687,7 @@ class QuicNetworkTransactionWithDestinationTest
  protected:
   QuicNetworkTransactionWithDestinationTest()
       : version_(GetParam().version),
+        supported_versions_(SupportedVersions(version_)),
         destination_type_(GetParam().destination_type),
         cert_transparency_verifier_(new MultiLogCTVerifier()),
         ssl_config_service_(new SSLConfigServiceDefaults),
@@ -4706,7 +4703,7 @@ class QuicNetworkTransactionWithDestinationTest
 
     HttpNetworkSession::Params session_params;
     session_params.enable_quic = true;
-    session_params.quic_supported_versions = SupportedVersions(version_);
+    session_params.quic_supported_versions = supported_versions_;
 
     HttpNetworkSession::Context session_context;
 
@@ -4764,7 +4761,7 @@ class QuicNetworkTransactionWithDestinationTest
     base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
     http_server_properties_.SetQuicAlternativeService(
         url::SchemeHostPort("https", origin, 443), alternative_service,
-        expiration, session_->params().quic_supported_versions);
+        expiration, supported_versions_);
   }
 
   std::unique_ptr<QuicEncryptedPacket> ConstructClientRequestHeadersPacket(
@@ -4895,6 +4892,7 @@ class QuicNetworkTransactionWithDestinationTest
 
   MockClock clock_;
   QuicVersion version_;
+  QuicVersionVector supported_versions_;
   DestinationType destination_type_;
   std::string origin1_;
   std::string origin2_;

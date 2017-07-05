@@ -29,17 +29,16 @@ int LaunchUnitTestsSerially(int argc,
                             const RunTestSuiteCallback& run_test_suite);
 
 // Launches unit tests in given test suite. Returns exit code.
-// |default_jobs| is the default number of parallel test jobs.
+// |parallel_jobs| is the number of parallel test jobs.
 // |default_batch_limit| is the default size of test batch
 // (use 0 to disable batching).
 // |use_job_objects| determines whether to use job objects.
-int LaunchUnitTestsWithOptions(
-    int argc,
-    char** argv,
-    int default_jobs,
-    int default_batch_limit,
-    bool use_job_objects,
-    const RunTestSuiteCallback& run_test_suite);
+int LaunchUnitTestsWithOptions(int argc,
+                               char** argv,
+                               size_t parallel_jobs,
+                               int default_batch_limit,
+                               bool use_job_objects,
+                               const RunTestSuiteCallback& run_test_suite);
 
 #if defined(OS_WIN)
 // Launches unit tests in given test suite. Returns exit code.

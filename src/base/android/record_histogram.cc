@@ -315,6 +315,20 @@ jint GetHistogramValueCountForTesting(
   return samples->GetCount(static_cast<int>(sample));
 }
 
+jint GetHistogramTotalCountForTesting(
+    JNIEnv* env,
+    const JavaParamRef<jclass>& clazz,
+    const JavaParamRef<jstring>& histogram_name) {
+  HistogramBase* histogram = StatisticsRecorder::FindHistogram(
+      android::ConvertJavaStringToUTF8(env, histogram_name));
+  if (histogram == nullptr) {
+    // No samples have been recorded for this histogram.
+    return 0;
+  }
+
+  return histogram->SnapshotSamples()->TotalCount();
+}
+
 bool RegisterRecordHistogram(JNIEnv* env) {
   return RegisterNativesImpl(env);
 }

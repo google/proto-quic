@@ -973,7 +973,8 @@ TEST_P(QuicSpdyStreamTest, HeaderStreamNotiferCorrespondingSpdyStream) {
   }
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
       .Times(AnyNumber())
-      .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
+      .WillRepeatedly(
+          Invoke(session_.get(), &MockQuicSpdySession::ConsumeAndSaveAllData));
   testing::InSequence s;
   QuicReferenceCountedPointer<MockAckListener> ack_listener1(
       new MockAckListener());

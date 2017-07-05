@@ -54,14 +54,6 @@ void PacketNumberQueue::Add(QuicPacketNumber lower, QuicPacketNumber higher) {
   packet_number_intervals_.Add(lower, higher);
 }
 
-void PacketNumberQueue::Remove(QuicPacketNumber packet_number) {
-  packet_number_intervals_.Difference(packet_number, packet_number + 1);
-}
-
-void PacketNumberQueue::Remove(QuicPacketNumber lower,
-                               QuicPacketNumber higher) {
-  packet_number_intervals_.Difference(lower, higher);
-}
 
 bool PacketNumberQueue::RemoveUpTo(QuicPacketNumber higher) {
   if (Empty()) {

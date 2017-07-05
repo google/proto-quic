@@ -45,12 +45,12 @@ a single object with the following fields:
     reflect the stuff we might want to build *in addition to* the list
     passed in `test_targets`. Targets in this list will be treated 
     specially, in the following way: if a given target is a "meta"
-    (GN: group, GYP: none) target like 'blink_tests' or
-    'chromium_builder_tests', or even the ninja-specific 'all' target, 
-    then only the *dependencies* of the target that are affected by
-    the modified files will be rebuilt (not the target itself, which
-    might also cause unaffected dependencies to be rebuilt). An empty
-    list will be treated as if there are no additional targets to build.
+    (GN: group, GYP: none) target like 'blink_tests' or or even the
+    ninja-specific 'all' target, then only the *dependencies* of the
+    target that are affected by the modified files will be rebuilt
+    (not the target itself, which might also cause unaffected dependencies
+    to be rebuilt). An empty list will be treated as if there are no additional
+    targets to build.
     Empty lists for both `test_targets` and `additional_compile_targets`
     would cause no work to be done, so will result in an error.
   * `targets`: a legacy field that resembled a union of `compile_targets`

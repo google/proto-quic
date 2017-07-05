@@ -9,7 +9,6 @@ import logging
 import os
 import socket
 import sys
-import tempfile
 import time
 import unittest
 
@@ -91,7 +90,7 @@ class LocalAuthServerTest(auto_stub.TestCase):
       del calls[:]
 
       # Reuses cached token until it is close to expiration.
-      self.mock_time(200)
+      self.mock_time(60)
       resp = call_rpc(['B', 'A', 'C'])
       self.assertEqual(
           {u'access_token': u'tok', u'expiry': self.epoch + 300}, resp)

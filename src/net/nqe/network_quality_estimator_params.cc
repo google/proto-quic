@@ -422,7 +422,6 @@ NetworkQualityEstimatorParams::NetworkQualityEstimatorParams(
 }
 
 NetworkQualityEstimatorParams::~NetworkQualityEstimatorParams() {
-  DCHECK(thread_checker_.CalledOnValidThread());
 }
 
 // static
@@ -466,27 +465,27 @@ const char* NetworkQualityEstimatorParams::GetNameForConnectionType(
 const nqe::internal::NetworkQuality&
 NetworkQualityEstimatorParams::DefaultObservation(
     NetworkChangeNotifier::ConnectionType type) const {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   return default_observations_[type];
 }
 
 const nqe::internal::NetworkQuality&
 NetworkQualityEstimatorParams::TypicalNetworkQuality(
     EffectiveConnectionType type) const {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   return typical_network_quality_[type];
 }
 
 const nqe::internal::NetworkQuality&
 NetworkQualityEstimatorParams::ConnectionThreshold(
     EffectiveConnectionType type) const {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   return connection_thresholds_[type];
 }
 
 NetworkQualityEstimatorParams::EffectiveConnectionTypeAlgorithm
 NetworkQualityEstimatorParams::GetEffectiveConnectionTypeAlgorithm() const {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   return effective_connection_type_algorithm_;
 }
 

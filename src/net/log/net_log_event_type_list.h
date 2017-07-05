@@ -3208,3 +3208,22 @@ EVENT_TYPE(HTTP_SERVER_PROPERTIES_UPDATE_CACHE)
 //    "version": <The version number>,
 //  }
 EVENT_TYPE(HTTP_SERVER_PROPERTIES_UPDATE_PREFS)
+
+// -----------------------------------------------------------------------------
+// HostCachePersistenceManager related events
+// -----------------------------------------------------------------------------
+
+// The start/end of getting the persisted HostCache value and restoring it.
+// The END phase contains the following parameters:
+//  {
+//    "success": <Whether the persisted HostCache was restored successfully>,
+//  }
+EVENT_TYPE(HOST_CACHE_PREF_READ)
+
+// This event is created when the HostCachePersistenceManager writes the cache
+// contents to prefs.
+EVENT_TYPE(HOST_CACHE_PREF_WRITE)
+
+// This event is created when the HostCachePersistenceManager starts the timer
+// for writing a cache change to prefs.
+EVENT_TYPE(HOST_CACHE_PERSISTENCE_START_TIMER)

@@ -142,7 +142,31 @@ class BASE_EXPORT RefCountedThreadSafeBase {
 
   ~RefCountedThreadSafeBase();
 
-  void AddRef() const {
+// Release and AddRef are suitable for inlining on X86 because they generate
+// very small code sequences. On other platforms (ARM), it causes a size
+// regression and is probably not worth it.
+#if defined(ARCH_CPU_X86_FAMILY)
+  // Returns true if the object should self-delete.
+  bool Release() const { return ReleaseImpl(); }
+  void AddRef() const { AddRefImpl(); }
+#else
+  // Returns true if the object should self-delete.
+  bool Release() const;
+  void AddRef() const;
+#endif
+
+ private:
+  template <typename U>
+  friend scoped_refptr<U> base::AdoptRef(U*);
+
+  void Adopted() const {
+#if DCHECK_IS_ON()
+    DCHECK(needs_adopt_ref_);
+    needs_adopt_ref_ = false;
+#endif
+  }
+
+  ALWAYS_INLINE void AddRefImpl() const {
 #if DCHECK_IS_ON()
     DCHECK(!in_dtor_);
     DCHECK(!needs_adopt_ref_)
@@ -153,8 +177,7 @@ class BASE_EXPORT RefCountedThreadSafeBase {
     AtomicRefCountInc(&ref_count_);
   }
 
-  // Returns true if the object should self-delete.
-  bool Release() const {
+  ALWAYS_INLINE bool ReleaseImpl() const {
 #if DCHECK_IS_ON()
     DCHECK(!in_dtor_);
     DCHECK(!AtomicRefCountIsZero(&ref_count_));
@@ -166,17 +189,6 @@ class BASE_EXPORT RefCountedThreadSafeBase {
       return true;
     }
     return false;
-  }
-
- private:
-  template <typename U>
-  friend scoped_refptr<U> base::AdoptRef(U*);
-
-  void Adopted() const {
-#if DCHECK_IS_ON()
-    DCHECK(needs_adopt_ref_);
-    needs_adopt_ref_ = false;
-#endif
   }
 
   mutable AtomicRefCount ref_count_{0};

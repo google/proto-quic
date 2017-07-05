@@ -29,7 +29,6 @@ class BucketRanges;
 
 class BASE_EXPORT SampleVectorBase : public HistogramSamples {
  public:
-  SampleVectorBase(uint64_t id, const BucketRanges* bucket_ranges);
   SampleVectorBase(uint64_t id,
                    Metadata* meta,
                    const BucketRanges* bucket_ranges);

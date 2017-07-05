@@ -13,6 +13,10 @@
 #include "base/logging.h"
 #include "build/build_config.h"
 
+#if defined(OS_MACOSX)
+#include <mach/mach.h>
+#endif
+
 #if defined(OS_POSIX)
 
 #include <errno.h>
@@ -61,10 +65,19 @@ static void* SystemAllocPages(
   if (!ret)
     s_allocPageErrorCode = GetLastError();
 #else
+
+#if defined(OS_MACOSX)
+  // Use a custom tag to make it easier to distinguish partition alloc regions
+  // in vmmap.
+  int fd = VM_MAKE_TAG(254);
+#else
+  int fd = -1;
+#endif
+
   int access_flag = page_accessibility == PageAccessible
                         ? (PROT_READ | PROT_WRITE)
                         : PROT_NONE;
-  ret = mmap(hint, length, access_flag, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  ret = mmap(hint, length, access_flag, MAP_ANONYMOUS | MAP_PRIVATE, fd, 0);
   if (ret == MAP_FAILED) {
     s_allocPageErrorCode = errno;
     ret = 0;

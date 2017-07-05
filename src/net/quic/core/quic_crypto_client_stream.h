@@ -101,6 +101,11 @@ class QUIC_EXPORT_PRIVATE QuicCryptoClientStream
 
   std::string chlo_hash() const { return chlo_hash_; }
 
+  bool encryption_established() const override;
+  bool handshake_confirmed() const override;
+  const QuicCryptoNegotiatedParameters& crypto_negotiated_params()
+      const override;
+
  private:
   // ChannelIDSourceCallbackImpl is passed as the callback method to
   // GetChannelIDKey. The ChannelIDSource calls this class with the result of
@@ -270,6 +275,11 @@ class QUIC_EXPORT_PRIVATE QuicCryptoClientStream
   base::TimeTicks proof_verify_start_time_;
 
   int num_scup_messages_received_;
+
+  bool encryption_established_;
+  bool handshake_confirmed_;
+  QuicReferenceCountedPointer<QuicCryptoNegotiatedParameters>
+      crypto_negotiated_params_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicCryptoClientStream);
 };

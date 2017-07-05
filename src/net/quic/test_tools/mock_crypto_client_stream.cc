@@ -30,6 +30,9 @@ MockCryptoClientStream::MockCryptoClientStream(
                              crypto_config,
                              session),
       handshake_mode_(handshake_mode),
+      encryption_established_(false),
+      handshake_confirmed_(false),
+      crypto_negotiated_params_(new QuicCryptoNegotiatedParameters),
       server_id_(server_id),
       proof_verify_details_(proof_verify_details),
       config_(config) {}
@@ -108,6 +111,19 @@ bool MockCryptoClientStream::CryptoConnect() {
   }
 
   return session()->connection()->connected();
+}
+
+bool MockCryptoClientStream::encryption_established() const {
+  return encryption_established_;
+}
+
+bool MockCryptoClientStream::handshake_confirmed() const {
+  return handshake_confirmed_;
+}
+
+const QuicCryptoNegotiatedParameters&
+MockCryptoClientStream::crypto_negotiated_params() const {
+  return *crypto_negotiated_params_;
 }
 
 void MockCryptoClientStream::SendOnCryptoHandshakeEvent(

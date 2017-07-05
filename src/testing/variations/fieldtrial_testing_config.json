@@ -1566,24 +1566,6 @@
             ]
         }
     ],
-    "NTPCaptureThumbnailOnLoadFinished": [
-        {
-            "platforms": [
-                "chromeos",
-                "linux",
-                "mac",
-                "win"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled",
-                    "enable_features": [
-                        "CaptureThumbnailOnLoadFinished"
-                    ]
-                }
-            ]
-        }
-    ],
     "NTPFaviconsFromNewServer": [
         {
             "platforms": [
@@ -1801,7 +1783,6 @@
         {
             "platforms": [
                 "linux",
-                "mac",
                 "win"
             ],
             "experiments": [
@@ -3086,6 +3067,25 @@
                     "name": "Enabled",
                     "enable_features": [
                         "SyncUSSAutocomplete"
+                    ]
+                }
+            ]
+        }
+    ],
+    "SyncUserEvents": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "SyncUserEvents"
                     ]
                 }
             ]

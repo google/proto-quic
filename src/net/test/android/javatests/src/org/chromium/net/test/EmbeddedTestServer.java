@@ -279,6 +279,21 @@ public class EmbeddedTestServer {
         }
     }
 
+    /** Get the full URLs for the given relative URLs.
+     *
+     *  @see #getURL(String)
+     *
+     *  @param relativeUrls The relative URLs for which full URLs will be obtained.
+     *  @return The URLs as a String array.
+     */
+    public String[] getURLs(String... relativeUrls) {
+        String[] absoluteUrls = new String[relativeUrls.length];
+
+        for (int i = 0; i < relativeUrls.length; ++i) absoluteUrls[i] = getURL(relativeUrls[i]);
+
+        return absoluteUrls;
+    }
+
     /** Shutdown the server.
      *
      *  @return Whether the server was successfully shut down.

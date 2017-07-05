@@ -1,10 +1,3 @@
-# TODO: fix these. They fail because wm::CursorManager isn't created.
-# http://crbug.com/734806.
-# The following fail as they use wm::CursorManager:
--LockStateControllerTest.LegacyLockAndShutDown
--LockStateControllerTest.RequestShutdownFromLockScreen
--LockStateControllerTest.RequestShutdownFromLoginScreen
-
 # TODO: fix these. They fail because ShellPortMash::IsMouseEventsEnabled() isn't
 # implemented. http://crbug.com/734808.
 -ImmersiveFullscreenControllerTest.EndRevealViaGesture

@@ -24,10 +24,7 @@ namespace net {
                                                                      " ")
 
 QuicCryptoStream::QuicCryptoStream(QuicSession* session)
-    : QuicStream(kCryptoStreamId, session),
-      encryption_established_(false),
-      handshake_confirmed_(false),
-      crypto_negotiated_params_(new QuicCryptoNegotiatedParameters) {
+    : QuicStream(kCryptoStreamId, session) {
   crypto_framer_.set_visitor(this);
   // The crypto stream is exempt from connection level flow control.
   DisableConnectionFlowControlForThisStream();
@@ -71,7 +68,7 @@ void QuicCryptoStream::OnDataAvailable() {
       return;
     }
     sequencer()->MarkConsumed(iov.iov_len);
-    if (handshake_confirmed_ && crypto_framer_.InputBytesRemaining() == 0 &&
+    if (handshake_confirmed() && crypto_framer_.InputBytesRemaining() == 0 &&
         FLAGS_quic_reloadable_flag_quic_release_crypto_stream_buffer) {
       QUIC_FLAG_COUNT(quic_reloadable_flag_quic_release_crypto_stream_buffer);
       // If the handshake is complete and the current message has been fully
@@ -103,7 +100,7 @@ bool QuicCryptoStream::ExportKeyingMaterial(QuicStringPiece label,
     return false;
   }
   return CryptoUtils::ExportKeyingMaterial(
-      crypto_negotiated_params_->subkey_secret, label, context, result_len,
+      crypto_negotiated_params().subkey_secret, label, context, result_len,
       result);
 }
 
@@ -114,14 +111,9 @@ bool QuicCryptoStream::ExportTokenBindingKeyingMaterial(string* result) const {
     return false;
   }
   return CryptoUtils::ExportKeyingMaterial(
-      crypto_negotiated_params_->initial_subkey_secret,
+      crypto_negotiated_params().initial_subkey_secret,
       "EXPORTER-Token-Binding",
       /* context= */ "", 32, result);
-}
-
-const QuicCryptoNegotiatedParameters&
-QuicCryptoStream::crypto_negotiated_params() const {
-  return *crypto_negotiated_params_;
 }
 
 }  // namespace net

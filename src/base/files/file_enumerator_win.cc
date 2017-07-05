@@ -4,6 +4,7 @@
 
 #include "base/files/file_enumerator.h"
 
+#include <shlwapi.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -11,6 +12,25 @@
 #include "base/threading/thread_restrictions.h"
 
 namespace base {
+
+namespace {
+
+FilePath BuildSearchFilter(FileEnumerator::FolderSearchPolicy policy,
+                           const FilePath& root_path,
+                           const FilePath::StringType& pattern) {
+  // MATCH_ONLY policy filters incoming files by pattern on OS side. ALL policy
+  // collects all files and filters them manually.
+  switch (policy) {
+    case FileEnumerator::FolderSearchPolicy::MATCH_ONLY:
+      return root_path.Append(pattern);
+    case FileEnumerator::FolderSearchPolicy::ALL:
+      return root_path.Append(L"*");
+  }
+  NOTREACHED();
+  return {};
+}
+
+}  // namespace
 
 // FileEnumerator::FileInfo ----------------------------------------------------
 
@@ -44,25 +64,31 @@ base::Time FileEnumerator::FileInfo::GetLastModifiedTime() const {
 FileEnumerator::FileEnumerator(const FilePath& root_path,
                                bool recursive,
                                int file_type)
-    : has_find_data_(false),
-      find_handle_(INVALID_HANDLE_VALUE),
-      recursive_(recursive),
-      file_type_(file_type) {
-  // INCLUDE_DOT_DOT must not be specified if recursive.
-  DCHECK(!(recursive && (INCLUDE_DOT_DOT & file_type_)));
-  memset(&find_data_, 0, sizeof(find_data_));
-  pending_paths_.push(root_path);
-}
+    : FileEnumerator(root_path,
+                     recursive,
+                     file_type,
+                     FilePath::StringType(),
+                     FolderSearchPolicy::MATCH_ONLY) {}
 
 FileEnumerator::FileEnumerator(const FilePath& root_path,
                                bool recursive,
                                int file_type,
                                const FilePath::StringType& pattern)
-    : has_find_data_(false),
-      find_handle_(INVALID_HANDLE_VALUE),
-      recursive_(recursive),
+    : FileEnumerator(root_path,
+                     recursive,
+                     file_type,
+                     pattern,
+                     FolderSearchPolicy::MATCH_ONLY) {}
+
+FileEnumerator::FileEnumerator(const FilePath& root_path,
+                               bool recursive,
+                               int file_type,
+                               const FilePath::StringType& pattern,
+                               FolderSearchPolicy folder_search_policy)
+    : recursive_(recursive),
       file_type_(file_type),
-      pattern_(pattern) {
+      pattern_(!pattern.empty() ? pattern : L"*"),
+      folder_search_policy_(folder_search_policy) {
   // INCLUDE_DOT_DOT must not be specified if recursive.
   DCHECK(!(recursive && (INCLUDE_DOT_DOT & file_type_)));
   memset(&find_data_, 0, sizeof(find_data_));
@@ -94,21 +120,12 @@ FilePath FileEnumerator::Next() {
       pending_paths_.pop();
 
       // Start a new find operation.
-      FilePath src = root_path_;
-
-      if (pattern_.empty())
-        src = src.Append(L"*");  // No pattern = match everything.
-      else
-        src = src.Append(pattern_);
-
-      // Use a "large fetch" which should speed up large enumerations (we seldom
-      // abort in the middle).
+      const FilePath src =
+          BuildSearchFilter(folder_search_policy_, root_path_, pattern_);
       find_handle_ = FindFirstFileEx(src.value().c_str(),
                                      FindExInfoBasic,  // Omit short name.
-                                     &find_data_,
-                                     FindExSearchNameMatch,
-                                     NULL,
-                                     FIND_FIRST_EX_LARGE_FETCH);
+                                     &find_data_, FindExSearchNameMatch,
+                                     nullptr, FIND_FIRST_EX_LARGE_FETCH);
       has_find_data_ = true;
     } else {
       // Search for the next file/directory.
@@ -121,41 +138,58 @@ FilePath FileEnumerator::Next() {
     if (INVALID_HANDLE_VALUE == find_handle_) {
       has_find_data_ = false;
 
-      // This is reached when we have finished a directory and are advancing to
-      // the next one in the queue. We applied the pattern (if any) to the files
-      // in the root search directory, but for those directories which were
-      // matched, we want to enumerate all files inside them. This will happen
-      // when the handle is empty.
-      pattern_ = FilePath::StringType();
-
-      continue;
-    }
-
-    FilePath cur_file(find_data_.cFileName);
-    if (ShouldSkip(cur_file))
-      continue;
-
-    // Construct the absolute filename.
-    cur_file = root_path_.Append(find_data_.cFileName);
-
-    if (find_data_.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-      if (recursive_) {
-        // If |cur_file| is a directory, and we are doing recursive searching,
-        // add it to pending_paths_ so we scan it after we finish scanning this
-        // directory. However, don't do recursion through reparse points or we
-        // may end up with an infinite cycle.
-        DWORD attributes = GetFileAttributes(cur_file.value().c_str());
-        if (!(attributes & FILE_ATTRIBUTE_REPARSE_POINT))
-          pending_paths_.push(cur_file);
+      // MATCH_ONLY policy clears pattern for matched subfolders. ALL policy
+      // applies pattern for all subfolders.
+      if (folder_search_policy_ == FolderSearchPolicy::MATCH_ONLY) {
+        // This is reached when we have finished a directory and are advancing
+        // to the next one in the queue. We applied the pattern (if any) to the
+        // files in the root search directory, but for those directories which
+        // were matched, we want to enumerate all files inside them. This will
+        // happen when the handle is empty.
+        pattern_ = L"*";
       }
-      if (file_type_ & FileEnumerator::DIRECTORIES)
-        return cur_file;
-    } else if (file_type_ & FileEnumerator::FILES) {
-      return cur_file;
-    }
-  }
 
+      continue;
+    }
+
+    const FilePath filename(find_data_.cFileName);
+    if (ShouldSkip(filename))
+      continue;
+
+    const bool is_dir =
+        (find_data_.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+    const FilePath abs_path = root_path_.Append(filename);
+
+    // Check if directory should be processed recursive.
+    if (is_dir && recursive_) {
+      // If |cur_file| is a directory, and we are doing recursive searching,
+      // add it to pending_paths_ so we scan it after we finish scanning this
+      // directory. However, don't do recursion through reparse points or we
+      // may end up with an infinite cycle.
+      DWORD attributes = GetFileAttributes(abs_path.value().c_str());
+      if (!(attributes & FILE_ATTRIBUTE_REPARSE_POINT))
+        pending_paths_.push(abs_path);
+    }
+
+    if (IsTypeMatched(is_dir) && IsPatternMatched(filename))
+      return abs_path;
+  }
   return FilePath();
+}
+
+bool FileEnumerator::IsPatternMatched(const FilePath& src) const {
+  switch (folder_search_policy_) {
+    case FolderSearchPolicy::MATCH_ONLY:
+      // MATCH_ONLY policy filters by pattern on search request, so all found
+      // files already fits to pattern.
+      return true;
+    case FolderSearchPolicy::ALL:
+      // ALL policy enumerates all files, we need to check pattern match
+      // manually.
+      return PathMatchSpec(src.value().c_str(), pattern_.c_str()) == TRUE;
+  }
+  NOTREACHED();
+  return false;
 }
 
 }  // namespace base

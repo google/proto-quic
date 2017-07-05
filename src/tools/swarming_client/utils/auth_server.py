@@ -257,7 +257,9 @@ def constant_time_equals(a, b):
 
 def should_refresh(tok):
   """Returns True if the token must be refreshed because it expires soon."""
-  return time.time() > tok.expiry - 60
+  # LUCI_CONTEXT protocol requires that returned tokens are alive for at least
+  # 2.5 min. See LUCI_CONTEXT.md. Add 30 sec extra of leeway.
+  return time.time() > tok.expiry - 3*60
 
 
 class _HTTPServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):

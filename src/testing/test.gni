@@ -63,7 +63,7 @@ template("test") {
         # the default shared_library configs rather than executable configs.
         configs -= [
           "//build/config:shared_library_config",
-          "//build/config/android:hide_all_but_jni_onload",
+          "//build/config/android:hide_all_but_jni",
         ]
         configs += [ "//build/config:executable_config" ]
 
@@ -321,6 +321,8 @@ template("test") {
 set_defaults("test") {
   if (is_android) {
     configs = default_shared_library_configs
+    configs -= [ "//build/config/android:hide_all_but_jni_onload" ]
+    configs += [ "//build/config/android:hide_all_but_jni" ]
   } else {
     configs = default_executable_configs
   }

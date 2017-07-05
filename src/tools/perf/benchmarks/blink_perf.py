@@ -292,8 +292,6 @@ class BlinkPerfCSS(_BlinkPerfBenchmark):
     return StoryExpectations()
 
 
-@benchmark.Disabled('android', # http://crbug.com/685320
-                    'android-webview') # http://crbug.com/593200
 @benchmark.Owner(emails=['junov@chromium.org'])
 class BlinkPerfCanvas(_BlinkPerfBenchmark):
   tag = 'canvas'
@@ -316,6 +314,8 @@ class BlinkPerfCanvas(_BlinkPerfBenchmark):
       def SetExpectations(self):
         self.PermanentlyDisableBenchmark(
             [story.expectations.ANDROID_SVELTE], 'crbug.com/593973')
+        self.DisableStory('putImageData.html',
+            [story.expectations.ANDROID_NEXUS6], 'crbug.com/738453')
     return StoryExpectations()
 
   def SetExtraBrowserOptions(self, options):
@@ -349,7 +349,6 @@ class BlinkPerfEvents(_BlinkPerfBenchmark):
     return StoryExpectations()
 
 
-@benchmark.Disabled('win8')  # http://crbug.com/462350
 @benchmark.Owner(emails=['eae@chromium.org'])
 class BlinkPerfLayout(_BlinkPerfBenchmark):
   tag = 'layout'
@@ -376,7 +375,6 @@ class BlinkPerfPaint(_BlinkPerfBenchmark):
     return StoryExpectations()
 
 
-@benchmark.Disabled('win')  # crbug.com/488493
 @benchmark.Owner(emails=['jbroman@chromium.org',
                          'yukishiino@chromium.org',
                          'haraken@chromium.org'])

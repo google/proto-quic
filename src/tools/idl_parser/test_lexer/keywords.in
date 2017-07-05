@@ -12,7 +12,6 @@ DICTIONARY dictionary
 DOMSTRING DOMString
 DOUBLE double
 ENUM enum
-EXCEPTION exception
 FALSE false
 FLOAT float
 GETTER getter

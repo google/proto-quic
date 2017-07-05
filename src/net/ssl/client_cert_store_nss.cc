@@ -84,7 +84,7 @@ void ClientCertStoreNSS::GetClientCerts(
                      // Caller is responsible for keeping the ClientCertStore
                      // alive until the callback is run.
                      base::Unretained(this), std::move(password_delegate),
-                     &request),
+                     base::Unretained(&request)),
           callback)) {
     return;
   }

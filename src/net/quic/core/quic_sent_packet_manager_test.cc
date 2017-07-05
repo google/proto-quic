@@ -262,11 +262,20 @@ class QuicSentPacketManagerTest : public QuicTest {
     return frame;
   }
 
-  // Explicitly nack packet [lower, higher).
-  void NackPackets(QuicPacketNumber lower,
-                   QuicPacketNumber higher,
-                   QuicAckFrame* frame) {
-    frame->packets.Remove(lower, higher);
+  // Creates an ackframe that contains up to two ranges of packets
+  QuicAckFrame ConstructAckFrame(QuicPacketNumber range1_start,
+                                 QuicPacketNumber range1_end,
+                                 QuicPacketNumber range2_start,
+                                 QuicPacketNumber range2_end) {
+    QuicAckFrame ack_frame;
+    if (range1_start < range1_end) {
+      ack_frame.packets.Add(range1_start, range1_end);
+    }
+    if (range2_start <= range2_end) {
+      ack_frame.packets.Add(range2_start, range2_end + 1);
+    }
+    ack_frame.largest_observed = range2_end;
+    return ack_frame;
   }
 
   QuicSentPacketManager manager_;
@@ -302,8 +311,8 @@ TEST_F(QuicSentPacketManagerTest, RetransmitThenAck) {
   RetransmitAndSendPacket(1, 2);
 
   // Ack 2 but not 1.
-  QuicAckFrame ack_frame = InitAckFrame(2);
-  NackPackets(1, 2, &ack_frame);
+  QuicAckFrame ack_frame = ConstructAckFrame(1, 1, 2, 2);
+
   ExpectAck(2);
   manager_.OnIncomingAck(ack_frame, clock_.Now());
 
@@ -388,18 +397,16 @@ TEST_F(QuicSentPacketManagerTest, RetransmitThenAckPreviousThenNackRetransmit) {
   clock_.AdvanceTime(rtt);
 
   // Next, NACK packet 2 three times.
-  ack_frame = InitAckFrame(3);
-  NackPackets(2, 3, &ack_frame);
+  ack_frame = ConstructAckFrame(1, 2, 3, 3);
+
   ExpectAck(3);
   manager_.OnIncomingAck(ack_frame, clock_.ApproximateNow());
 
-  ack_frame = InitAckFrame(4);
-  NackPackets(2, 3, &ack_frame);
+  ack_frame = ConstructAckFrame(1, 2, 3, 4);
   ExpectAck(4);
   manager_.OnIncomingAck(ack_frame, clock_.ApproximateNow());
 
-  ack_frame = InitAckFrame(5);
-  NackPackets(2, 3, &ack_frame);
+  ack_frame = ConstructAckFrame(1, 2, 3, 5);
   ExpectAckAndLoss(true, 5, 2);
   manager_.OnIncomingAck(ack_frame, clock_.ApproximateNow());
 
@@ -469,8 +476,7 @@ TEST_F(QuicSentPacketManagerTest, RetransmitTwiceThenAckFirst) {
 
   // Ensure packet 2 is lost when 4 is sent and 3 and 4 are acked.
   SendDataPacket(4);
-  ack_frame = InitAckFrame(4);
-  NackPackets(2, 3, &ack_frame);
+  ack_frame = ConstructAckFrame(1, 2, 3, 4);
   QuicPacketNumber acked[] = {3, 4};
   ExpectAcksAndLosses(true, acked, arraysize(acked), nullptr, 0);
   manager_.OnIncomingAck(ack_frame, clock_.ApproximateNow());
@@ -480,8 +486,7 @@ TEST_F(QuicSentPacketManagerTest, RetransmitTwiceThenAckFirst) {
   EXPECT_TRUE(QuicSentPacketManagerPeer::HasPendingPackets(&manager_));
 
   SendDataPacket(5);
-  ack_frame = InitAckFrame(5);
-  NackPackets(2, 3, &ack_frame);
+  ack_frame = ConstructAckFrame(1, 2, 3, 5);
   ExpectAckAndLoss(true, 5, 2);
   EXPECT_CALL(debug_delegate, OnPacketLoss(2, LOSS_RETRANSMISSION, _));
   manager_.OnIncomingAck(ack_frame, clock_.ApproximateNow());
@@ -511,8 +516,7 @@ TEST_F(QuicSentPacketManagerTest, AckOriginalTransmission) {
   SendDataPacket(4);
   // Ack 4, which causes 3 to be retransmitted.
   {
-    QuicAckFrame ack_frame = InitAckFrame(4);
-    NackPackets(2, 4, &ack_frame);
+    QuicAckFrame ack_frame = ConstructAckFrame(1, 2, 4, 4);
     ExpectAck(4);
     EXPECT_CALL(*loss_algorithm, DetectLosses(_, _, _, _, _));
     manager_.OnIncomingAck(ack_frame, clock_.Now());
@@ -520,10 +524,7 @@ TEST_F(QuicSentPacketManagerTest, AckOriginalTransmission) {
   }
 
   // Ack 3, which causes SpuriousRetransmitDetected to be called.
-  {
-    QuicAckFrame ack_frame = InitAckFrame(4);
-    NackPackets(2, 3, &ack_frame);
-  }
+  { QuicAckFrame ack_frame = ConstructAckFrame(1, 2, 3, 4); }
 }
 
 TEST_F(QuicSentPacketManagerTest, GetLeastUnacked) {
@@ -648,8 +649,7 @@ TEST_F(QuicSentPacketManagerTest, TailLossProbeTimeout) {
   // Ack the third and ensure the first two are still pending.
   ExpectAck(3);
 
-  QuicAckFrame ack_frame = InitAckFrame(3);
-  NackPackets(1, 3, &ack_frame);
+  QuicAckFrame ack_frame = ConstructAckFrame(1, 1, 3, 3);
   manager_.OnIncomingAck(ack_frame, clock_.ApproximateNow());
 
   EXPECT_TRUE(QuicSentPacketManagerPeer::HasPendingPackets(&manager_));
@@ -657,8 +657,7 @@ TEST_F(QuicSentPacketManagerTest, TailLossProbeTimeout) {
   // Acking two more packets will lose both of them due to nacks.
   SendDataPacket(4);
   SendDataPacket(5);
-  ack_frame = InitAckFrame(5);
-  NackPackets(1, 3, &ack_frame);
+  ack_frame = ConstructAckFrame(1, 1, 3, 5);
   QuicPacketNumber acked[] = {4, 5};
   QuicPacketNumber lost[] = {1, 2};
   ExpectAcksAndLosses(true, acked, arraysize(acked), lost, arraysize(lost));
@@ -724,8 +723,7 @@ TEST_F(QuicSentPacketManagerTest, TailLossProbeThenRTO) {
             QuicSentPacketManagerPeer::GetBytesInFlight(&manager_));
 
   RetransmitNextPacket(103);
-  QuicAckFrame ack_frame = InitAckFrame(103);
-  NackPackets(0, 103, &ack_frame);
+  QuicAckFrame ack_frame = ConstructAckFrame(1, 0, 103, 103);
   EXPECT_CALL(*send_algorithm_, OnRetransmissionTimeout(true));
   EXPECT_CALL(*send_algorithm_,
               OnCongestionEvent(true, _, _, ElementsAre(Pair(103, _)), _));
@@ -767,9 +765,10 @@ TEST_F(QuicSentPacketManagerTest, CryptoHandshakeTimeout) {
   // and ensure the first four crypto packets get abandoned, but not lost.
   QuicPacketNumber acked[] = {3, 4, 5, 8, 9};
   ExpectAcksAndLosses(true, acked, arraysize(acked), nullptr, 0);
-  QuicAckFrame ack_frame = InitAckFrame(9);
-  NackPackets(1, 3, &ack_frame);
-  NackPackets(6, 8, &ack_frame);
+  QuicAckFrame ack_frame;
+  ack_frame.packets.Add(3, 6);
+  ack_frame.packets.Add(8, 10);
+  ack_frame.largest_observed = 9;
   manager_.OnIncomingAck(ack_frame, clock_.ApproximateNow());
 
   EXPECT_FALSE(QuicSentPacketManagerPeer::HasUnackedCryptoPackets(&manager_));
@@ -817,10 +816,7 @@ TEST_F(QuicSentPacketManagerTest, CryptoHandshakeTimeoutVersionNegotiation) {
   // crypto packets.
   QuicPacketNumber acked[] = {8, 9};
   ExpectAcksAndLosses(true, acked, arraysize(acked), nullptr, 0);
-  QuicAckFrame ack_frame = InitAckFrame(9);
-  for (QuicPacketNumber i = 1; i < 8; ++i) {
-    NackPackets(i, i + 1, &ack_frame);
-  }
+  QuicAckFrame ack_frame = ConstructAckFrame(1, 1, 8, 9);
   manager_.OnIncomingAck(ack_frame, clock_.ApproximateNow());
   EXPECT_EQ(10u, manager_.GetLeastUnacked());
 }
@@ -841,8 +837,7 @@ TEST_F(QuicSentPacketManagerTest, CryptoHandshakeSpuriousRetransmission) {
   // Now ack the second crypto packet, and ensure the first gets removed, but
   // the third does not.
   ExpectUpdatedRtt(2);
-  QuicAckFrame ack_frame = InitAckFrame(2);
-  NackPackets(1, 2, &ack_frame);
+  QuicAckFrame ack_frame = ConstructAckFrame(1, 1, 2, 2);
   manager_.OnIncomingAck(ack_frame, clock_.ApproximateNow());
 
   EXPECT_FALSE(QuicSentPacketManagerPeer::HasUnackedCryptoPackets(&manager_));
@@ -915,8 +910,7 @@ TEST_F(QuicSentPacketManagerTest,
   EXPECT_FALSE(QuicSentPacketManagerPeer::HasPendingPackets(&manager_));
 
   // Ensure both packets get discarded when packet 2 is acked.
-  QuicAckFrame ack_frame = InitAckFrame(3);
-  NackPackets(1, 3, &ack_frame);
+  QuicAckFrame ack_frame = ConstructAckFrame(1, 1, 3, 3);
   ExpectUpdatedRtt(3);
   manager_.OnIncomingAck(ack_frame, clock_.ApproximateNow());
   VerifyUnackedPackets(nullptr, 0);
@@ -943,8 +937,7 @@ TEST_F(QuicSentPacketManagerTest, RetransmissionTimeout) {
   EXPECT_FALSE(manager_.HasPendingRetransmissions());
 
   // Ack a retransmission.
-  QuicAckFrame ack_frame = InitAckFrame(102);
-  NackPackets(0, 102, &ack_frame);
+  QuicAckFrame ack_frame = ConstructAckFrame(1, 0, 102, 102);
   ack_frame.ack_delay_time = QuicTime::Delta::Zero();
   // Ensure no packets are lost.
   EXPECT_CALL(*send_algorithm_,
@@ -992,8 +985,7 @@ TEST_F(QuicSentPacketManagerTest, NewRetransmissionTimeout) {
   EXPECT_FALSE(manager_.HasPendingRetransmissions());
 
   // Ack a retransmission and expect no call to OnRetransmissionTimeout.
-  QuicAckFrame ack_frame = InitAckFrame(102);
-  NackPackets(0, 102, &ack_frame);
+  QuicAckFrame ack_frame = ConstructAckFrame(1, 0, 102, 102);
   ack_frame.ack_delay_time = QuicTime::Delta::Zero();
   // This will include packets in the lost packet map.
   EXPECT_CALL(*send_algorithm_,
@@ -1025,8 +1017,7 @@ TEST_F(QuicSentPacketManagerTest, TwoRetransmissionTimeoutsAckSecond) {
 
   // Ack a retransmission and ensure OnRetransmissionTimeout is called.
   EXPECT_CALL(*send_algorithm_, OnRetransmissionTimeout(true));
-  QuicAckFrame ack_frame = InitAckFrame(2);
-  NackPackets(1, 2, &ack_frame);
+  QuicAckFrame ack_frame = ConstructAckFrame(1, 1, 2, 2);
   ack_frame.ack_delay_time = QuicTime::Delta::Zero();
   ExpectAck(2);
   manager_.OnIncomingAck(ack_frame, clock_.Now());
@@ -1058,8 +1049,7 @@ TEST_F(QuicSentPacketManagerTest, TwoRetransmissionTimeoutsAckFirst) {
 
   // Ack a retransmission and ensure OnRetransmissionTimeout is called.
   EXPECT_CALL(*send_algorithm_, OnRetransmissionTimeout(true));
-  QuicAckFrame ack_frame = InitAckFrame(3);
-  NackPackets(1, 3, &ack_frame);
+  QuicAckFrame ack_frame = ConstructAckFrame(1, 1, 3, 3);
   ack_frame.ack_delay_time = QuicTime::Delta::Zero();
   ExpectAck(3);
   manager_.OnIncomingAck(ack_frame, clock_.Now());
@@ -1226,8 +1216,7 @@ TEST_F(QuicSentPacketManagerTest, GetTransmissionTimeSpuriousRTO) {
 
   // Ack a packet before the first RTO and ensure the RTO timeout returns to the
   // original value and OnRetransmissionTimeout is not called or reverted.
-  QuicAckFrame ack_frame = InitAckFrame(2);
-  NackPackets(1, 2, &ack_frame);
+  QuicAckFrame ack_frame = ConstructAckFrame(1, 1, 2, 2);
   ExpectAck(2);
   manager_.OnIncomingAck(ack_frame, clock_.ApproximateNow());
   EXPECT_FALSE(manager_.HasPendingRetransmissions());
@@ -1337,8 +1326,7 @@ TEST_F(QuicSentPacketManagerTest, GetLossDelay) {
   // set the loss timeout.
   ExpectAck(2);
   EXPECT_CALL(*loss_algorithm, DetectLosses(_, _, _, _, _));
-  QuicAckFrame ack_frame = InitAckFrame(2);
-  NackPackets(1, 2, &ack_frame);
+  QuicAckFrame ack_frame = ConstructAckFrame(1, 1, 2, 2);
   manager_.OnIncomingAck(ack_frame, clock_.Now());
 
   QuicTime timeout(clock_.Now() + QuicTime::Delta::FromMilliseconds(10));
@@ -1661,8 +1649,8 @@ TEST_F(QuicSentPacketManagerTest, NegotiateUndoFromOptionsAtServer) {
   }
   EXPECT_CALL(*loss_algorithm, DetectLosses(_, _, _, _, _))
       .WillOnce(SetArgPointee<4>(lost_packets));
-  QuicAckFrame ack_frame = InitAckFrame(kNumSentPackets);
-  NackPackets(1, kNumSentPackets, &ack_frame);
+  QuicAckFrame ack_frame =
+      ConstructAckFrame(1, 1, kNumSentPackets, kNumSentPackets);
   // Congestion block the sending right before losing the packets.
   EXPECT_CALL(*send_algorithm_, TimeUntilSend(_, _))
       .WillRepeatedly(Return(QuicTime::Delta::Infinite()));
@@ -1672,8 +1660,7 @@ TEST_F(QuicSentPacketManagerTest, NegotiateUndoFromOptionsAtServer) {
 
   // Ack 1 and ensure the retransmissions are cancelled and put back in flight.
   EXPECT_CALL(*loss_algorithm, DetectLosses(_, _, _, _, _));
-  ack_frame = InitAckFrame(5);
-  NackPackets(2, kNumSentPackets, &ack_frame);
+  ack_frame = ConstructAckFrame(1, 2, kNumSentPackets, 5);
   manager_.OnIncomingAck(ack_frame, clock_.Now());
   EXPECT_FALSE(manager_.HasPendingRetransmissions());
   EXPECT_EQ(3u * kDefaultLength, BytesInFlight());

@@ -21,6 +21,7 @@
 #include "net/quic/core/quic_iovector.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_pending_retransmission.h"
+#include "net/quic/core/quic_stream_frame_data_producer.h"
 #include "net/quic/platform/api/quic_export.h"
 
 namespace net {
@@ -32,7 +33,8 @@ class QUIC_EXPORT_PRIVATE QuicPacketCreator {
  public:
   // A delegate interface for further processing serialized packet.
   class QUIC_EXPORT_PRIVATE DelegateInterface
-      : public QuicConnectionCloseDelegateInterface {
+      : public QuicConnectionCloseDelegateInterface,
+        public QuicStreamFrameDataProducer {
    public:
     ~DelegateInterface() override {}
     // Called when a packet is serialized. Delegate does not take the ownership
@@ -216,6 +218,10 @@ class QUIC_EXPORT_PRIVATE QuicPacketCreator {
 
   QuicByteCount pending_padding_bytes() const { return pending_padding_bytes_; }
 
+  void set_delegate_saves_data(bool delegate_saves_data) {
+    delegate_saves_data_ = delegate_saves_data;
+  }
+
  private:
   friend class test::QuicPacketCreatorPeer;
 
@@ -260,6 +266,11 @@ class QUIC_EXPORT_PRIVATE QuicPacketCreator {
   // Returns true if a diversification nonce should be included in the current
   // packet's public header.
   bool IncludeNonceInPublicHeader();
+
+  // Returns true if |frame| starts with CHLO.
+  bool StreamFrameStartsWithChlo(QuicIOVector iov,
+                                 size_t iov_offset,
+                                 const QuicStreamFrame& frame) const;
 
   // Does not own these delegates or the framer.
   DelegateInterface* delegate_;
@@ -309,6 +320,10 @@ class QUIC_EXPORT_PRIVATE QuicPacketCreator {
   // packet size. Please note, full padding does not consume pending padding
   // bytes.
   bool needs_full_padding_;
+
+  // Indicates whether frame data is saved by delegate_. TODO(fayang): Remove
+  // this boolean when deprecating quic_reloadable_flag_quic_stream_owns_data.
+  bool delegate_saves_data_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicPacketCreator);
 };

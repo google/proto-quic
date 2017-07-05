@@ -717,45 +717,110 @@ TEST_F(QuicStreamTest, EarlyResponseFinHandling) {
 TEST_F(QuicStreamTest, StreamWaitsForAcks) {
   Initialize(kShouldProcessData);
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
-      .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
+      .WillRepeatedly(
+          Invoke(session_.get(), &MockQuicSession::ConsumeAndSaveAllData));
   // Stream is not waiting for acks initially.
   EXPECT_FALSE(stream_->IsWaitingForAcks());
+  EXPECT_EQ(0u, QuicStreamPeer::SendBuffer(stream_).size());
 
   // Send kData1.
   stream_->WriteOrBufferData(kData1, false, nullptr);
+  if (session_->streams_own_data()) {
+    EXPECT_EQ(1u, QuicStreamPeer::SendBuffer(stream_).size());
+  } else {
+    EXPECT_EQ(0u, QuicStreamPeer::SendBuffer(stream_).size());
+  }
   EXPECT_TRUE(stream_->IsWaitingForAcks());
   QuicStreamFrame frame1(stream_->id(), false, 0, kData1);
   stream_->OnStreamFrameAcked(frame1, QuicTime::Delta::Zero());
   // Stream is not waiting for acks as all sent data is acked.
   EXPECT_FALSE(stream_->IsWaitingForAcks());
+  EXPECT_EQ(0u, QuicStreamPeer::SendBuffer(stream_).size());
 
   // Send kData2.
   stream_->WriteOrBufferData(kData2, false, nullptr);
   EXPECT_TRUE(stream_->IsWaitingForAcks());
+  if (session_->streams_own_data()) {
+    EXPECT_EQ(1u, QuicStreamPeer::SendBuffer(stream_).size());
+  } else {
+    EXPECT_EQ(0u, QuicStreamPeer::SendBuffer(stream_).size());
+  }
   // Send FIN.
   stream_->WriteOrBufferData("", true, nullptr);
+  if (session_->streams_own_data()) {
+    // Fin only frame is not stored in send buffer.
+    EXPECT_EQ(1u, QuicStreamPeer::SendBuffer(stream_).size());
+  } else {
+    EXPECT_EQ(0u, QuicStreamPeer::SendBuffer(stream_).size());
+  }
 
   // kData2 is acked.
   QuicStreamFrame frame2(stream_->id(), false, 9, kData2);
   stream_->OnStreamFrameAcked(frame2, QuicTime::Delta::Zero());
   // Stream is waiting for acks as FIN is not acked.
   EXPECT_TRUE(stream_->IsWaitingForAcks());
+  EXPECT_EQ(0u, QuicStreamPeer::SendBuffer(stream_).size());
 
   // FIN is acked.
   QuicStreamFrame frame3(stream_->id(), true, 18, "");
   stream_->OnStreamFrameAcked(frame3, QuicTime::Delta::Zero());
+  EXPECT_FALSE(stream_->IsWaitingForAcks());
+  EXPECT_EQ(0u, QuicStreamPeer::SendBuffer(stream_).size());
+}
+
+TEST_F(QuicStreamTest, StreamDataGetAckedOutOfOrder) {
+  Initialize(kShouldProcessData);
+  EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
+      .WillRepeatedly(
+          Invoke(session_.get(), &MockQuicSession::ConsumeAndSaveAllData));
+  // Send data.
+  stream_->WriteOrBufferData(kData1, false, nullptr);
+  stream_->WriteOrBufferData(kData1, false, nullptr);
+  stream_->WriteOrBufferData(kData1, false, nullptr);
+  stream_->WriteOrBufferData("", true, nullptr);
+  if (session_->streams_own_data()) {
+    EXPECT_EQ(3u, QuicStreamPeer::SendBuffer(stream_).size());
+  } else {
+    EXPECT_EQ(0u, QuicStreamPeer::SendBuffer(stream_).size());
+  }
+  EXPECT_TRUE(stream_->IsWaitingForAcks());
+
+  QuicStreamFrame frame1(stream_->id(), false, 0, kData1);
+  QuicStreamFrame frame2(stream_->id(), false, 9, kData1);
+  QuicStreamFrame frame3(stream_->id(), false, 18, kData1);
+  QuicStreamFrame frame4(stream_->id(), true, 27, "");
+  stream_->OnStreamFrameAcked(frame2, QuicTime::Delta::Zero());
+  if (session_->streams_own_data()) {
+    EXPECT_EQ(3u, QuicStreamPeer::SendBuffer(stream_).size());
+  }
+  stream_->OnStreamFrameAcked(frame3, QuicTime::Delta::Zero());
+  if (session_->streams_own_data()) {
+    EXPECT_EQ(3u, QuicStreamPeer::SendBuffer(stream_).size());
+  }
+  stream_->OnStreamFrameDiscarded(frame1);
+  EXPECT_EQ(0u, QuicStreamPeer::SendBuffer(stream_).size());
+  // FIN is not acked yet.
+  EXPECT_TRUE(stream_->IsWaitingForAcks());
+  stream_->OnStreamFrameAcked(frame4, QuicTime::Delta::Zero());
   EXPECT_FALSE(stream_->IsWaitingForAcks());
 }
 
 TEST_F(QuicStreamTest, CancelStream) {
   Initialize(kShouldProcessData);
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
-      .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
+      .WillRepeatedly(
+          Invoke(session_.get(), &MockQuicSession::ConsumeAndSaveAllData));
   EXPECT_FALSE(stream_->IsWaitingForAcks());
+  EXPECT_EQ(0u, QuicStreamPeer::SendBuffer(stream_).size());
 
   stream_->WriteOrBufferData(kData1, false, nullptr);
   QuicStreamFrame frame(stream_->id(), 0, false, kData1);
   EXPECT_TRUE(stream_->IsWaitingForAcks());
+  if (session_->streams_own_data()) {
+    EXPECT_EQ(1u, QuicStreamPeer::SendBuffer(stream_).size());
+  } else {
+    EXPECT_EQ(0u, QuicStreamPeer::SendBuffer(stream_).size());
+  }
   // Cancel stream.
   stream_->Reset(QUIC_STREAM_NO_ERROR);
   // stream still waits for acks as the error code is QUIC_STREAM_NO_ERROR, and
@@ -768,18 +833,26 @@ TEST_F(QuicStreamTest, CancelStream) {
     stream_->OnStreamFrameDiscarded(frame);
     // Stream stops waiting for acks as data is not going to be retransmitted.
     EXPECT_FALSE(stream_->IsWaitingForAcks());
+    EXPECT_EQ(0u, QuicStreamPeer::SendBuffer(stream_).size());
   }
 }
 
 TEST_F(QuicStreamTest, RstFrameReceivedStreamNotFinishSending) {
   Initialize(kShouldProcessData);
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
-      .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
+      .WillRepeatedly(
+          Invoke(session_.get(), &MockQuicSession::ConsumeAndSaveAllData));
   EXPECT_FALSE(stream_->IsWaitingForAcks());
+  EXPECT_EQ(0u, QuicStreamPeer::SendBuffer(stream_).size());
 
   stream_->WriteOrBufferData(kData1, false, nullptr);
   QuicStreamFrame frame(stream_->id(), 0, false, kData1);
   EXPECT_TRUE(stream_->IsWaitingForAcks());
+  if (session_->streams_own_data()) {
+    EXPECT_EQ(1u, QuicStreamPeer::SendBuffer(stream_).size());
+  } else {
+    EXPECT_EQ(0u, QuicStreamPeer::SendBuffer(stream_).size());
+  }
 
   // RST_STREAM received.
   QuicRstStreamFrame rst_frame(stream_->id(), QUIC_STREAM_CANCELLED, 9);
@@ -791,14 +864,17 @@ TEST_F(QuicStreamTest, RstFrameReceivedStreamNotFinishSending) {
     // Stream stops waiting for acks as it does not finish sending and rst is
     // sent.
     EXPECT_FALSE(stream_->IsWaitingForAcks());
+    EXPECT_EQ(0u, QuicStreamPeer::SendBuffer(stream_).size());
   }
 }
 
 TEST_F(QuicStreamTest, RstFrameReceivedStreamFinishSending) {
   Initialize(kShouldProcessData);
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
-      .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
+      .WillRepeatedly(
+          Invoke(session_.get(), &MockQuicSession::ConsumeAndSaveAllData));
   EXPECT_FALSE(stream_->IsWaitingForAcks());
+  EXPECT_EQ(0u, QuicStreamPeer::SendBuffer(stream_).size());
 
   stream_->WriteOrBufferData(kData1, true, nullptr);
   EXPECT_TRUE(stream_->IsWaitingForAcks());
@@ -809,13 +885,20 @@ TEST_F(QuicStreamTest, RstFrameReceivedStreamFinishSending) {
   stream_->OnStreamReset(rst_frame);
   // Stream stops waiting for acks as it has unacked data.
   EXPECT_TRUE(stream_->IsWaitingForAcks());
+  if (session_->streams_own_data()) {
+    EXPECT_EQ(1u, QuicStreamPeer::SendBuffer(stream_).size());
+  } else {
+    EXPECT_EQ(0u, QuicStreamPeer::SendBuffer(stream_).size());
+  }
 }
 
 TEST_F(QuicStreamTest, ConnectionClosed) {
   Initialize(kShouldProcessData);
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
-      .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
+      .WillRepeatedly(
+          Invoke(session_.get(), &MockQuicSession::ConsumeAndSaveAllData));
   EXPECT_FALSE(stream_->IsWaitingForAcks());
+  EXPECT_EQ(0u, QuicStreamPeer::SendBuffer(stream_).size());
 
   stream_->WriteOrBufferData(kData1, false, nullptr);
   QuicStreamFrame frame(stream_->id(), 0, false, kData1);
@@ -829,6 +912,7 @@ TEST_F(QuicStreamTest, ConnectionClosed) {
     stream_->OnStreamFrameDiscarded(frame);
     // Stream stops waiting for acks as connection is going to close.
     EXPECT_FALSE(stream_->IsWaitingForAcks());
+    EXPECT_EQ(0u, QuicStreamPeer::SendBuffer(stream_).size());
   }
 }
 

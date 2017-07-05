@@ -483,7 +483,10 @@ def get_waterfall_config():
        'pool': 'Chrome-perf',
        'device_ids': [
            'build158-m1', 'build159-m1', 'build160-m1',
-           'build161-m1', 'build162-m1']
+           'build161-m1', 'build162-m1'],
+       'perf_tests': [
+         ('net_perftests', 'build159-m1'),
+       ]
       }
     ])
   waterfall = add_tester(
@@ -754,6 +757,8 @@ BENCHMARK_SWARMING_TIMEOUTS = {
 # Please add a comment with a bug for replacing the device.
 BLACKLISTED_DEVICES = [
     'build152-m1',  # crbug.com/736593
+    # All Linux perf bots (crbug.com/732463)
+    'build148-m1', 'build149-m1', 'build150-m1', 'build151-m1', 'build152-m1',
 ]
 
 

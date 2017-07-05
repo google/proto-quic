@@ -388,9 +388,7 @@ class NET_EXPORT ProxyService : public NetworkChangeNotifier::IPAddressObserver,
                               ProxyDelegate* proxy_delegate,
                               ProxyInfo* result,
                               int result_code,
-                              const NetLogWithSource& net_log,
-                              base::TimeTicks start_time,
-                              bool script_executed);
+                              const NetLogWithSource& net_log);
 
   // Start initialization using |fetched_config_|.
   void InitializeUsingLastFetchedConfig();

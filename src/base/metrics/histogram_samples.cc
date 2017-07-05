@@ -164,17 +164,6 @@ HistogramSamples::LocalMetadata::LocalMetadata() {
   memset(this, 0, sizeof(*this));
 }
 
-// Don't try to delegate behavior to the constructor below that accepts a
-// Matadata pointer by passing &local_meta_. Such cannot be reliably passed
-// because it has not yet been constructed -- no member variables have; the
-// class itself is in the middle of being constructed. Using it to
-// initialize meta_ is okay because the object now exists and local_meta_
-// is before meta_ in the construction order.
-HistogramSamples::HistogramSamples(uint64_t id)
-    : meta_(&local_meta_) {
-  meta_->id = id;
-}
-
 HistogramSamples::HistogramSamples(uint64_t id, Metadata* meta)
     : meta_(meta) {
   DCHECK(meta_->id == 0 || meta_->id == id);
@@ -185,6 +174,8 @@ HistogramSamples::HistogramSamples(uint64_t id, Metadata* meta)
     meta_->id = id;
 }
 
+// This mustn't do anything with |meta_|. It was passed to the ctor and may
+// be invalid by the time this dtor gets called.
 HistogramSamples::~HistogramSamples() {}
 
 void HistogramSamples::Add(const HistogramSamples& other) {

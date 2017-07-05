@@ -44,6 +44,13 @@ class BASE_EXPORT MessagePumpFuchsia : public MessagePump {
     }
 
    private:
+    // Start watching the FD.
+    bool WaitBegin();
+
+    // Stop watching the FD. Returns the set of events the watcher is interested
+    // in based on the observed bits from the underlying packet.
+    uint32_t WaitEnd(uint32_t observed);
+
     friend class MessagePumpFuchsia;
 
     const tracked_objects::Location created_from_location_;
@@ -61,6 +68,10 @@ class BASE_EXPORT MessagePumpFuchsia : public MessagePump {
     // is destroyed by the first one. The bool points to the stack, and is set
     // to true in ~FileDescriptorWatcher() to handle this case.
     bool* was_destroyed_ = nullptr;
+
+    // A watch may be marked as persistent, which means it remains active even
+    // after triggering.
+    bool persistent_ = false;
 
     DISALLOW_COPY_AND_ASSIGN(FileDescriptorWatcher);
   };

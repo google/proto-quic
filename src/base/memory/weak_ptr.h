@@ -96,59 +96,16 @@ class BASE_EXPORT WeakReference {
    public:
     Flag();
 
-    // Get a pointer to the "Null Flag", a sentinel object used by WeakReference
-    // objects that don't point to a valid Flag, either because they're default
-    // constructed or because they have been invalidated. This can be used like
-    // any other Flag object, but it is invalidated already from the start, and
-    // its refcount will never reach zero.
-    static Flag* NullFlag();
-
-    void Invalidate() {
-#if DCHECK_IS_ON()
-      if (this == NullFlag()) {
-        // The Null Flag does not participate in the sequence checks below.
-        // Since its state never changes, it can be accessed from any thread.
-        DCHECK(!is_valid_);
-        return;
-      }
-      // The flag being invalidated with a single ref implies that there are no
-      // weak pointers in existence. Allow deletion on other thread in this
-      // case.
-      DCHECK(sequence_checker_.CalledOnValidSequence() || HasOneRef())
-          << "WeakPtrs must be invalidated on the same sequenced thread.";
-#endif
-      is_valid_ = 0;
-    }
-
-    // Returns a pointer-sized bitmask of all 1s if valid or all 0s otherwise.
-    uintptr_t IsValid() const {
-#if DCHECK_IS_ON()
-      if (this == NullFlag()) {
-        // The Null Flag does not participate in the sequence checks below.
-        // Since its state never changes, it can be accessed from any thread.
-        DCHECK(!is_valid_);
-        return 0;
-      }
-      DCHECK(sequence_checker_.CalledOnValidSequence())
-          << "WeakPtrs must be checked on the same sequenced thread.";
-#endif
-      return is_valid_;
-    }
+    void Invalidate();
+    bool IsValid() const;
 
    private:
     friend class base::RefCountedThreadSafe<Flag>;
 
-    enum NullFlagTag { kNullFlagTag };
-    Flag(NullFlagTag);
-
     ~Flag();
 
-    uintptr_t is_valid_;
-#if DCHECK_IS_ON()
-    // Even if SequenceChecker is an empty class in non-dcheck builds, it still
-    // takes up space in the class.
     SequenceChecker sequence_checker_;
-#endif
+    bool is_valid_;
   };
 
   WeakReference();
@@ -160,11 +117,9 @@ class BASE_EXPORT WeakReference {
   WeakReference& operator=(WeakReference&& other) = default;
   WeakReference& operator=(const WeakReference& other) = default;
 
-  uintptr_t is_valid() const { return flag_->IsValid(); }
+  bool is_valid() const;
 
  private:
-  // Note: To avoid null-checks, flag_ always points to either Flag::NullFlag()
-  // or some other object.
   scoped_refptr<const Flag> flag_;
 };
 
@@ -176,7 +131,7 @@ class BASE_EXPORT WeakReferenceOwner {
   WeakReference GetRef() const;
 
   bool HasRefs() const {
-    return flag_ != WeakReference::Flag::NullFlag() && !flag_->HasOneRef();
+    return flag_.get() && !flag_->HasOneRef();
   }
 
   void Invalidate();
@@ -200,9 +155,13 @@ class BASE_EXPORT WeakPtrBase {
   WeakPtrBase& operator=(WeakPtrBase&& other) = default;
 
  protected:
-  explicit WeakPtrBase(const WeakReference& ref);
+  WeakPtrBase(const WeakReference& ref, uintptr_t ptr);
 
   WeakReference ref_;
+
+  // This pointer is only valid when ref_.is_valid() is true.  Otherwise, its
+  // value is undefined (as opposed to nullptr).
+  uintptr_t ptr_;
 };
 
 // This class provides a common implementation of common functions that would
@@ -230,7 +189,8 @@ class SupportsWeakPtrBase {
   static WeakPtr<Derived> AsWeakPtrImpl(
       Derived* t, const SupportsWeakPtr<Base>&) {
     WeakPtr<Base> ptr = t->Base::AsWeakPtr();
-    return WeakPtr<Derived>(ptr.ref_, static_cast<Derived*>(ptr.ptr_));
+    return WeakPtr<Derived>(
+        ptr.ref_, static_cast<Derived*>(reinterpret_cast<Base*>(ptr.ptr_)));
   }
 };
 
@@ -254,25 +214,29 @@ template <typename T> class WeakPtrFactory;
 template <typename T>
 class WeakPtr : public internal::WeakPtrBase {
  public:
-  WeakPtr() : ptr_(nullptr) {}
+  WeakPtr() {}
 
-  WeakPtr(std::nullptr_t) : ptr_(nullptr) {}
+  WeakPtr(std::nullptr_t) {}
 
   // Allow conversion from U to T provided U "is a" T. Note that this
   // is separate from the (implicit) copy and move constructors.
   template <typename U>
-  WeakPtr(const WeakPtr<U>& other) : WeakPtrBase(other), ptr_(other.ptr_) {
+  WeakPtr(const WeakPtr<U>& other) : WeakPtrBase(other) {
+    // Need to cast from U* to T* to do pointer adjustment in case of multiple
+    // inheritance. This also enforces the "U is a T" rule.
+    T* t = reinterpret_cast<U*>(other.ptr_);
+    ptr_ = reinterpret_cast<uintptr_t>(t);
   }
   template <typename U>
-  WeakPtr(WeakPtr<U>&& other)
-      : WeakPtrBase(std::move(other)), ptr_(other.ptr_) {}
+  WeakPtr(WeakPtr<U>&& other) : WeakPtrBase(std::move(other)) {
+    // Need to cast from U* to T* to do pointer adjustment in case of multiple
+    // inheritance. This also enforces the "U is a T" rule.
+    T* t = reinterpret_cast<U*>(other.ptr_);
+    ptr_ = reinterpret_cast<uintptr_t>(t);
+  }
 
   T* get() const {
-    // Intentionally bitwise and; see command on Flag::IsValid(). This provides
-    // a fast way of conditionally retrieving the pointer, and conveniently sets
-    // EFLAGS for any null-check performed by the caller.
-    return reinterpret_cast<T*>(ref_.is_valid() &
-                                reinterpret_cast<uintptr_t>(ptr_));
+    return ref_.is_valid() ? reinterpret_cast<T*>(ptr_) : nullptr;
   }
 
   T& operator*() const {
@@ -286,7 +250,7 @@ class WeakPtr : public internal::WeakPtrBase {
 
   void reset() {
     ref_ = internal::WeakReference();
-    ptr_ = nullptr;
+    ptr_ = 0;
   }
 
   // Allow conditionals to test validity, e.g. if (weak_ptr) {...};
@@ -299,13 +263,7 @@ class WeakPtr : public internal::WeakPtrBase {
   friend class WeakPtrFactory<T>;
 
   WeakPtr(const internal::WeakReference& ref, T* ptr)
-      : WeakPtrBase(ref),
-        ptr_(ptr) {
-  }
-
-  // This pointer is only valid when ref_.is_valid() is true.  Otherwise, its
-  // value is undefined (as opposed to nullptr).
-  T* ptr_;
+      : WeakPtrBase(ref, reinterpret_cast<uintptr_t>(ptr)) {}
 };
 
 // Allow callers to compare WeakPtrs against nullptr to test validity.

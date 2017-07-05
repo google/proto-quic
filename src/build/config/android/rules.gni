@@ -192,7 +192,6 @@ if (enable_java_templates) {
         "--depfile",
         rebase_path(depfile, root_build_dir),
         "--input_file={{source}}",
-        "--optimize_generation=1",
         "--ptr_type=long",
         "--output_dir",
         rebase_path(jni_output_dir, root_build_dir),
@@ -302,7 +301,6 @@ if (enable_java_templates) {
           rebase_path(jar_file, root_build_dir),
           "--input_file",
           class,
-          "--optimize_generation=1",
           "--ptr_type=long",
           "--output_dir",
           rebase_path(jni_output_dir, root_build_dir),
@@ -331,6 +329,61 @@ if (enable_java_templates) {
                              ])
       public_deps += jni_actions
       public_configs = [ ":jni_includes_${target_name}" ]
+    }
+  }
+
+  # Declare a jni registration target.
+  #
+  # This target generates a header file calling JNI registration functions
+  # created by generate_jni and generate_jar_jni.
+  #
+  # See base/android/jni_generator/jni_registration_generator.py for more info
+  # about the format of the header file.
+  #
+  # Variables
+  #   target: The Apk target to generate registrations for.
+  #   output: Path to the generated .h file.
+  #   exception_files: List of .java files that should be ignored when searching
+  #   for native methods. (optional)
+  #
+  # Example
+  #   generate_jni_registration("chrome_jni_registration") {
+  #     target = ":chrome_public_apk"
+  #     output = "$root_gen_dir/chrome/browser/android/${target_name}.h"
+  #     exception_files = [
+  #       "//base/android/java/src/org/chromium/base/library_loader/LegacyLinker.java",
+  #       "//base/android/java/src/org/chromium/base/library_loader/Linker.java",
+  #       "//base/android/java/src/org/chromium/base/library_loader/ModernLinker.java",
+  #     ]
+  #   }
+  template("generate_jni_registration") {
+    action(target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+      _build_config = get_label_info(invoker.target, "target_gen_dir") + "/" +
+                      get_label_info(invoker.target, "name") + ".build_config"
+      _rebased_build_config = rebase_path(_build_config, root_build_dir)
+
+      _rebase_exception_java_files =
+          rebase_path(invoker.exception_files, root_build_dir)
+
+      script = "//base/android/jni_generator/jni_registration_generator.py"
+      deps = [
+        "${invoker.target}__build_config",
+      ]
+      inputs = [
+        _build_config,
+      ]
+      outputs = [
+        invoker.output,
+      ]
+
+      args = [
+        # This is a list of .sources files.
+        "--sources_files=@FileArg($_rebased_build_config:jni:all_source)",
+        "--output",
+        rebase_path(invoker.output, root_build_dir),
+        "--no_register_java=$_rebase_exception_java_files",
+      ]
     }
   }
 

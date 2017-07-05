@@ -127,8 +127,6 @@ class BASE_EXPORT TraceConfig {
   // All the same rules apply above, so for example, having both included and
   // excluded categories in the same list would not be supported.
   //
-  // Category filters can also be used to configure synthetic delays.
-  //
   // |trace_options_string| is a comma-delimited list of trace options.
   // Possible options are: "record-until-full", "record-continuously",
   // "record-as-much-as-possible", "trace-to-console", "enable-systrace" and
@@ -154,15 +152,6 @@ class BASE_EXPORT TraceConfig {
   //          would disable everything but webkit; and use default options.
   // Example: TraceConfig("-webkit", "");
   //          would enable everything but webkit; and use default options.
-  // Example: TraceConfig("DELAY(gpu.PresentingFrame;16)", "");
-  //          would make swap buffers always take at least 16 ms; and use
-  //          default options.
-  // Example: TraceConfig("DELAY(gpu.PresentingFrame;16;oneshot)", "");
-  //          would make swap buffers take at least 16 ms the first time it is
-  //          called; and use default options.
-  // Example: TraceConfig("DELAY(gpu.PresentingFrame;16;alternating)", "");
-  //          would make swap buffers take at least 16 ms every other time it
-  //          is called; and use default options.
   TraceConfig(StringPiece category_filter_string,
               StringPiece trace_options_string);
 
@@ -182,7 +171,6 @@ class BASE_EXPORT TraceConfig {
   //                             "inc_pattern*",
   //                             "disabled-by-default-memory-infra"],
   //     "excluded_categories": ["excluded", "exc_pattern*"],
-  //     "synthetic_delays": ["test.Delay1;16", "test.Delay2;32"],
   //     "memory_dump_config": {
   //       "triggers": [
   //         {
@@ -206,9 +194,6 @@ class BASE_EXPORT TraceConfig {
   ~TraceConfig();
 
   TraceConfig& operator=(const TraceConfig& rhs);
-
-  // Return a list of the synthetic delays specified in this category filter.
-  const StringList& GetSyntheticDelayValues() const;
 
   TraceRecordMode GetTraceRecordMode() const { return record_mode_; }
   bool IsSystraceEnabled() const { return enable_systrace_; }

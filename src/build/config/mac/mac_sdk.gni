@@ -14,8 +14,9 @@ declare_args() {
   # Minimum supported version of the Mac SDK.
   mac_sdk_min = mac_sdk_min_build_override
 
-  # Minimum supported version of OSX.
-  mac_deployment_target = "10.9"
+  # Minimum supported version of macOS. Must be of the form x.x.x for
+  # Info.plist files.
+  mac_deployment_target = "10.9.0"
 
   # Path to a specific version of the Mac SDK, not including a slash at the end.
   # If empty, the path to the lowest version greater than or equal to

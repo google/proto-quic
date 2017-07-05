@@ -1048,7 +1048,7 @@ TEST_P(QuicHeadersStreamTest, AckSentData) {
   EXPECT_CALL(session_,
               WritevData(headers_stream_, kHeadersStreamId, _, _, NO_FIN, _))
       .WillRepeatedly(
-          WithArgs<2>(Invoke(this, &QuicHeadersStreamTest::SaveIov)));
+          Invoke(&session_, &MockQuicSpdySession::ConsumeAndSaveAllData));
   InSequence s;
   QuicReferenceCountedPointer<MockAckListener> ack_listener1(
       new MockAckListener());
