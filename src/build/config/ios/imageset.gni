@@ -1,0 +1,114 @@
+# Copyright 2017 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This template declares a bundle_data target that references an .imageset
+# so that it is compiled to the asset catalog of the generated bundle.
+#
+# The create_bundle target requires that all .imageset are part of an
+# .xcasset bundle. This requirement comes from actool that only receives
+# the path to the .xcasset bundle directory and not to the individual
+# .imageset directories.
+#
+# The requirement is a bit problematic as it prevents compiling only a
+# subset of the .imageset that are contained in a .xcasset. This template
+# fixes that by instead copying the content of the .imageset to temporary
+# .xcasset directory (below $root_out_dir) and defining a bundle_data
+# target that refers to those copies (this is efficient as the "copy" is
+# implemented by hardlinking if possible on macOS).
+#
+# Since the create_data target will only refer to the .xcasset directory
+# and additional "action" target that runs a dummy script is defined. It
+# does nothing but pretends to generate the .xcassets directory (while
+# it is really created as a side-effect of the "copy" step). This allows
+# to workaround the check in "gn" that all inputs below $root_out_dir have
+# to be outputs of another target with a public dependency path.
+#
+# This template also ensures that the file are only copied once when the
+# build targets multiple architectures at the same time (aka "fat build").
+#
+# Arguments
+#
+#     sources:
+#       required, list of strings, paths to the file contained in the
+#       .imageset directory; this must contain the Contents.json file
+#       and all the image referenced by it (not enforced by the template).
+#
+template("imageset") {
+  assert(defined(invoker.sources) && invoker.sources != [],
+         "sources must be defined and not empty for $target_name")
+
+  if (current_toolchain != default_toolchain) {
+    group(target_name) {
+      public_deps = [
+        ":$target_name($default_toolchain)",
+      ]
+    }
+  } else {
+    _copy_target_name = target_name + "__copy"
+    _fake_target_name = target_name + "__fake"
+    _data_target_name = target_name
+
+    foreach(_source, invoker.sources) {
+      _dir = get_path_info(_source, "dir")
+      assert(get_path_info(_dir, "extension") == "imageset",
+             "$_source dirname must have .imageset extension")
+    }
+
+    _sources = invoker.sources
+    _imageset_dir = get_path_info(get_path_info(_sources[0], "dir"), "file")
+    _xcassets_dir = "$target_gen_dir/$target_name.xcassets"
+
+    copy(_copy_target_name) {
+      # Forward "deps", "public_deps" and "testonly" in case some of the
+      # source files are generated.
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "public_deps",
+                               "testonly",
+                             ])
+
+      visibility = [ ":$_fake_target_name" ]
+      sources = _sources
+      outputs = [
+        "$_xcassets_dir/$_imageset_dir/{{source_file_part}}",
+      ]
+    }
+
+    action(_fake_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      visibility = [ ":$_data_target_name" ]
+      script = "//build/config/ios/dummy.py"
+      sources = _sources
+      outputs = [
+        "$_xcassets_dir",
+      ]
+      public_deps = [
+        ":$_copy_target_name",
+      ]
+      args = rebase_path(sources, root_build_dir) +
+             rebase_path(outputs, root_build_dir)
+    }
+
+    bundle_data(_data_target_name) {
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "deps",
+                               "outputs",
+                               "public_deps",
+                               "sources",
+                             ])
+
+      sources = get_target_outputs(":$_copy_target_name")
+      outputs = [
+        "{{bundle_resources_dir}}/{{source_file_part}}",
+      ]
+      public_deps = [
+        ":$_fake_target_name",
+      ]
+    }
+  }
+}

@@ -856,6 +856,15 @@ bool SettingGetterImplGSettings::LoadAndCheckVersion(
 }
 #endif  // defined(USE_GIO)
 
+// Converts |value| from a decimal string to an int. If there was a failure
+// parsing, returns |default_value|.
+int StringToIntOrDefault(base::StringPiece value, int default_value) {
+  int result;
+  if (base::StringToInt(value, &result))
+    return result;
+  return default_value;
+}
+
 // This is the KDE version that reads kioslaverc and simulates gconf.
 // Doing this allows the main Delegate code, as well as the unit tests
 // for it, to stay the same - and the settings map fairly well besides.
@@ -1088,11 +1097,8 @@ class SettingGetterImplKDE : public ProxyConfigServiceLinux::SettingGetter {
       const char* mode = "none";
       indirect_manual_ = false;
       auto_no_pac_ = false;
-      int int_value;
-      base::StringToInt(value, &int_value);
+      int int_value = StringToIntOrDefault(value, 0);
       switch (int_value) {
-        case 0:  // No proxy, or maybe kioslaverc syntax error.
-          break;
         case 1:  // Manual configuration.
           mode = "manual";
           break;
@@ -1106,6 +1112,8 @@ class SettingGetterImplKDE : public ProxyConfigServiceLinux::SettingGetter {
         case 4:  // Indirect manual via environment variables.
           mode = "manual";
           indirect_manual_ = true;
+          break;
+        default:  // No proxy, or maybe kioslaverc syntax error.
           break;
       }
       string_table_[PROXY_MODE] = mode;
@@ -1124,17 +1132,14 @@ class SettingGetterImplKDE : public ProxyConfigServiceLinux::SettingGetter {
       AddProxy(PROXY_SOCKS_HOST, value);
     } else if (key == "ReversedException") {
       // We count "true" or any nonzero number as true, otherwise false.
-      // Note that if the value is not actually numeric StringToInt()
-      // will return 0, which we count as false.
-      int int_value;
-      base::StringToInt(value, &int_value);
-      reversed_bypass_list_ = (value == "true" || int_value);
+      // A failure parsing the integer will also mean false.
+      reversed_bypass_list_ =
+          (value == "true" || StringToIntOrDefault(value, 0) != 0);
     } else if (key == "NoProxyFor") {
       AddHostList(PROXY_IGNORE_HOSTS, value);
     } else if (key == "AuthMode") {
       // Check for authentication, just so we can warn.
-      int mode;
-      base::StringToInt(value, &mode);
+      int mode = StringToIntOrDefault(value, 0);
       if (mode) {
         // ProxyConfig does not support authentication parameters, but
         // Chrome will prompt for the password later. So we ignore this.

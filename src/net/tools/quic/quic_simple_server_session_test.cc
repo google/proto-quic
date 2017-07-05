@@ -103,10 +103,17 @@ class MockQuicCryptoServerStream : public QuicCryptoServerStream {
                void(const CachedNetworkParameters* cached_network_parameters));
 
   void set_encryption_established(bool has_established) {
-    encryption_established_ = has_established;
+    encryption_established_override_ = has_established;
+  }
+
+  bool encryption_established() const override {
+    return QuicCryptoServerStream::encryption_established() ||
+           encryption_established_override_;
   }
 
  private:
+  bool encryption_established_override_ = false;
+
   DISALLOW_COPY_AND_ASSIGN(MockQuicCryptoServerStream);
 };
 

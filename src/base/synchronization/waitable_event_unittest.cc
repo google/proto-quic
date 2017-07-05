@@ -35,6 +35,25 @@ TEST(WaitableEventTest, ManualBasics) {
   EXPECT_TRUE(event.TimedWait(TimeDelta::FromMilliseconds(10)));
 }
 
+TEST(WaitableEventTest, ManualInitiallySignaled) {
+  WaitableEvent event(WaitableEvent::ResetPolicy::MANUAL,
+                      WaitableEvent::InitialState::SIGNALED);
+
+  EXPECT_TRUE(event.IsSignaled());
+  EXPECT_TRUE(event.IsSignaled());
+
+  event.Reset();
+
+  EXPECT_FALSE(event.IsSignaled());
+  EXPECT_FALSE(event.IsSignaled());
+
+  event.Signal();
+
+  event.Wait();
+  EXPECT_TRUE(event.IsSignaled());
+  EXPECT_TRUE(event.IsSignaled());
+}
+
 TEST(WaitableEventTest, AutoBasics) {
   WaitableEvent event(WaitableEvent::ResetPolicy::AUTOMATIC,
                       WaitableEvent::InitialState::NOT_SIGNALED);
@@ -55,6 +74,19 @@ TEST(WaitableEventTest, AutoBasics) {
 
   event.Signal();
   EXPECT_TRUE(event.TimedWait(TimeDelta::FromMilliseconds(10)));
+}
+
+TEST(WaitableEventTest, AutoInitiallySignaled) {
+  WaitableEvent event(WaitableEvent::ResetPolicy::AUTOMATIC,
+                      WaitableEvent::InitialState::SIGNALED);
+
+  EXPECT_TRUE(event.IsSignaled());
+  EXPECT_FALSE(event.IsSignaled());
+
+  event.Signal();
+
+  EXPECT_TRUE(event.IsSignaled());
+  EXPECT_FALSE(event.IsSignaled());
 }
 
 TEST(WaitableEventTest, WaitManyShortcut) {

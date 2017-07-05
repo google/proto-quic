@@ -76,7 +76,8 @@
         "jetstream",
         "page_cycler_v2.intl_hi_ru",
         "smoothness.tough_texture_upload_cases",
-        "speedometer"
+        "speedometer",
+        "speedometer2"
       ]
     },
     "build14-b1--device3": {
@@ -306,7 +307,8 @@
         "jetstream",
         "page_cycler_v2.intl_hi_ru",
         "smoothness.tough_texture_upload_cases",
-        "speedometer"
+        "speedometer",
+        "speedometer2"
       ]
     },
     "build74-b1--device3": {
@@ -617,6 +619,7 @@
         "smoothness.desktop_tough_pinch_zoom_cases",
         "smoothness.sync_scroll.key_mobile_sites_smooth",
         "speedometer",
+        "speedometer2",
         "tab_switching.typical_25"
       ]
     },
@@ -741,7 +744,8 @@
         "jetstream",
         "page_cycler_v2.intl_hi_ru",
         "smoothness.tough_texture_upload_cases",
-        "speedometer"
+        "speedometer",
+        "speedometer2"
       ]
     },
     "build16-b1--device3": {
@@ -1052,6 +1056,7 @@
         "smoothness.desktop_tough_pinch_zoom_cases",
         "smoothness.sync_scroll.key_mobile_sites_smooth",
         "speedometer",
+        "speedometer2",
         "tab_switching.typical_25"
       ]
     },
@@ -1122,6 +1127,7 @@
         "smoothness.tough_scrolling_cases",
         "smoothness.tough_texture_upload_cases",
         "speedometer",
+        "speedometer2",
         "storage.indexeddb_endure_tracing"
       ]
     },
@@ -1480,6 +1486,7 @@
         "media.android.tough_video_cases_tbmv2",
         "power.trivial_pages",
         "speedometer",
+        "speedometer2",
         "thread_times.tough_compositor_cases",
         "v8.infinite_scroll_tbmv2"
       ]
@@ -1636,7 +1643,8 @@
         "jetstream",
         "page_cycler_v2.intl_hi_ru",
         "smoothness.tough_texture_upload_cases",
-        "speedometer"
+        "speedometer",
+        "speedometer2"
       ]
     },
     "build248-m4--device3": {
@@ -1869,6 +1877,7 @@
         "smoothness.tough_path_rendering_cases",
         "smoothness.tough_scrolling_cases",
         "speedometer",
+        "speedometer2",
         "speedometer-turbo",
         "tab_switching.typical_25",
         "thread_times.tough_compositor_cases",
@@ -2037,6 +2046,7 @@
         "smoothness.tough_path_rendering_cases",
         "smoothness.tough_scrolling_cases",
         "speedometer",
+        "speedometer2",
         "speedometer-turbo",
         "tab_switching.typical_25",
         "thread_times.tough_compositor_cases",
@@ -2204,6 +2214,7 @@
         "smoothness.tough_path_rendering_cases",
         "smoothness.tough_scrolling_cases",
         "speedometer",
+        "speedometer2",
         "speedometer-turbo",
         "tab_switching.typical_25",
         "thread_times.tough_compositor_cases",
@@ -2369,6 +2380,7 @@
         "smoothness.tough_path_rendering_cases",
         "smoothness.tough_scrolling_cases",
         "speedometer",
+        "speedometer2",
         "speedometer-turbo",
         "tab_switching.typical_25",
         "thread_times.tough_compositor_cases",
@@ -2536,6 +2548,7 @@
         "smoothness.tough_path_rendering_cases",
         "smoothness.tough_scrolling_cases",
         "speedometer",
+        "speedometer2",
         "speedometer-turbo",
         "tab_switching.typical_25",
         "thread_times.tough_compositor_cases",
@@ -2702,6 +2715,7 @@
         "smoothness.tough_path_rendering_cases",
         "smoothness.tough_scrolling_cases",
         "speedometer",
+        "speedometer2",
         "speedometer-turbo",
         "tab_switching.typical_25",
         "thread_times.tough_compositor_cases",
@@ -2906,6 +2920,7 @@
         "smoothness.tough_path_rendering_cases",
         "smoothness.tough_scrolling_cases",
         "speedometer",
+        "speedometer2",
         "speedometer-turbo",
         "tab_switching.typical_25",
         "thread_times.tough_compositor_cases",
@@ -3180,6 +3195,7 @@
         "smoothness.tough_filters_cases",
         "smoothness.tough_scrolling_cases",
         "speedometer",
+        "speedometer2",
         "startup.warm.chrome_signin",
         "v8.runtimestats.browsing_mobile_turbo"
       ]
@@ -3268,6 +3284,7 @@
         "smoothness.tough_path_rendering_cases",
         "smoothness.tough_scrolling_cases",
         "speedometer",
+        "speedometer2",
         "speedometer-turbo",
         "tab_switching.typical_25",
         "thread_times.tough_compositor_cases",
@@ -3580,6 +3597,7 @@
         "smoothness.tough_filters_cases",
         "smoothness.tough_scrolling_cases",
         "speedometer",
+        "speedometer2",
         "startup.warm.chrome_signin",
         "v8.runtimestats.browsing_mobile_turbo"
       ]
@@ -3669,6 +3687,7 @@
         "smoothness.tough_path_rendering_cases",
         "smoothness.tough_scrolling_cases",
         "speedometer",
+        "speedometer2",
         "speedometer-turbo",
         "tab_switching.typical_25",
         "thread_times.tough_compositor_cases",
@@ -3833,6 +3852,7 @@
         "smoothness.tough_path_rendering_cases",
         "smoothness.tough_scrolling_cases",
         "speedometer",
+        "speedometer2",
         "speedometer-turbo",
         "tab_switching.typical_25",
         "thread_times.tough_compositor_cases",
@@ -4000,6 +4020,7 @@
         "smoothness.tough_path_rendering_cases",
         "smoothness.tough_scrolling_cases",
         "speedometer",
+        "speedometer2",
         "speedometer-turbo",
         "tab_switching.typical_25",
         "thread_times.tough_compositor_cases",
@@ -4166,6 +4187,7 @@
         "smoothness.tough_path_rendering_cases",
         "smoothness.tough_scrolling_cases",
         "speedometer",
+        "speedometer2",
         "speedometer-turbo",
         "tab_switching.typical_25",
         "thread_times.tough_compositor_cases",
@@ -4331,6 +4353,7 @@
         "smoothness.tough_path_rendering_cases",
         "smoothness.tough_scrolling_cases",
         "speedometer",
+        "speedometer2",
         "speedometer-turbo",
         "tab_switching.typical_25",
         "thread_times.tough_compositor_cases",
@@ -4495,6 +4518,7 @@
         "smoothness.tough_path_rendering_cases",
         "smoothness.tough_scrolling_cases",
         "speedometer",
+        "speedometer2",
         "speedometer-turbo",
         "tab_switching.typical_25",
         "thread_times.tough_compositor_cases",
@@ -4664,6 +4688,7 @@
         "smoothness.tough_path_rendering_cases",
         "smoothness.tough_scrolling_cases",
         "speedometer",
+        "speedometer2",
         "speedometer-turbo",
         "tab_switching.typical_25",
         "thread_times.tough_compositor_cases",
@@ -4830,6 +4855,7 @@
     "smoothness.tough_webgl_ad_cases",
     "smoothness.tough_webgl_cases",
     "speedometer",
+    "speedometer2",
     "start_with_ext.cold.blank_page",
     "start_with_ext.warm.blank_page",
     "start_with_url.cold.startup_pages",

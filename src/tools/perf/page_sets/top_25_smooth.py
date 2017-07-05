@@ -5,7 +5,6 @@ from telemetry.page import page as page_module
 from telemetry.page import shared_page_state
 from telemetry import story
 
-from page_sets.login_helpers import google_login
 from page_sets import top_pages
 
 
@@ -39,30 +38,15 @@ class TopSmoothPage(page_module.Page):
     _IssueMarkerAndScroll(action_runner)
 
 
-class GmailSmoothPage(top_pages.TopPages):
+class GmailSmoothPage(top_pages.GmailPage):
 
   """ Why: productivity, top google properties """
 
   def __init__(self, page_set,
                shared_page_state_class=shared_page_state.SharedPageState):
-    # TODO(flackr): This is duplicating page logic from top_pages.py but is
-    # the only way to update https://mail.google.com/mail/ for this test without
-    # updating the 14 other recordings, as the gmail login flow has changed.
-    # https://crbug.com/590766 tracks updating google_login.py to support
-    # legacy and new login flow.
     super(GmailSmoothPage, self).__init__(
-        url='https://mail.google.com/mail/',
         page_set=page_set,
         shared_page_state_class=shared_page_state_class)
-
-  def RunNavigateSteps(self, action_runner):
-    google_login.LoginGoogleAccount(action_runner, 'google3',
-                                    self.credentials_path)
-    super(GmailSmoothPage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition(
-        'window.gmonkey !== undefined &&'
-        'document.getElementById("gb") !== null',
-        timeout=120)
 
   def RunPageInteractions(self, action_runner):
     action_runner.ExecuteJavaScript('''

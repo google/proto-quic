@@ -180,6 +180,9 @@ class QUIC_EXPORT_PRIVATE QuicPacketGenerator {
   // when there are frames queued in the creator.
   void SetMaxPacketLength(QuicByteCount length);
 
+  // Let delegate save stream data in creator.
+  void SetDelegateSavesData(bool delegate_saves_data);
+
   void set_debug_delegate(QuicPacketCreator::DebugDelegate* debug_delegate) {
     packet_creator_.set_debug_delegate(debug_delegate);
   }

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (c) 2012 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -10,6 +9,7 @@ from json import JSONEncoder
 import re
 import types
 
+from grit import constants
 from grit import util
 from grit.node import message
 
@@ -30,6 +30,13 @@ def Format(root, lang='en', output_dir='.'):
       id = child.attrs['name']
       if id.startswith('IDR_') or id.startswith('IDS_'):
         id = id[4:]
+
+      translation_missing = child.GetCliques()[0].clique.get(lang) is None;
+      if (child.ShouldFallbackToEnglish() and translation_missing and
+          lang != constants.FAKE_BIDI):
+          # Skip the string if it's not translated. Chrome will fallback
+          # to English automatically.
+          continue
 
       loc_message = encoder.encode(child.ws_at_start + child.Translate(lang) +
                                    child.ws_at_end)

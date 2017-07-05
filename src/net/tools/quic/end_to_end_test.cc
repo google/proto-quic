@@ -384,16 +384,13 @@ class EndToEndTest : public QuicTestWithParam<TestParams> {
     // TODO(nimia): Consider setting the congestion control algorithm for the
     // client as well according to the test parameter.
     copt.push_back(GetParam().congestion_control_tag);
-    if (GetParam().congestion_control_tag == kQBIC &&
-        FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode) {
+    if (GetParam().congestion_control_tag == kQBIC) {
       copt.push_back(kCCVX);
     }
-    if (GetParam().congestion_control_tag == kQBIC &&
-        FLAGS_quic_reloadable_flag_quic_fix_cubic_bytes_quantization) {
+    if (GetParam().congestion_control_tag == kQBIC) {
       copt.push_back(kCBQT);
     }
-    if (GetParam().congestion_control_tag == kQBIC &&
-        FLAGS_quic_reloadable_flag_quic_enable_cubic_per_ack_updates) {
+    if (GetParam().congestion_control_tag == kQBIC) {
       copt.push_back(kCPAU);
     }
     if (GetParam().congestion_control_tag == kTPCC &&
@@ -2218,9 +2215,6 @@ TEST_P(EndToEndTest, BadEncryptedData) {
 
 TEST_P(EndToEndTest, CanceledStreamDoesNotBecomeZombie) {
   ASSERT_TRUE(Initialize());
-  if (GetParam().force_hol_blocking) {
-    return;
-  }
   EXPECT_TRUE(client_->client()->WaitForCryptoHandshakeConfirmed());
   // Lose the request.
   SetPacketLossPercentage(100);

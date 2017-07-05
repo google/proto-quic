@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
   std::vector<traffic_annotation_auditor::AnnotationInstance>
       annotation_instances;
   std::vector<traffic_annotation_auditor::CallInstance> call_instances;
-  std::vector<std::string> errors;
+  std::vector<traffic_annotation_auditor::AuditorResult> errors;
 
   if (!traffic_annotation_auditor::ParseClangToolRawOutput(
           raw_output, &annotation_instances, &call_instances, &errors)) {
@@ -119,11 +119,14 @@ int main(int argc, char* argv[]) {
     std::vector<std::string> items;
 
     report = "[Errors]\n";
-    std::sort(errors.begin(), errors.end());
-    for (const std::string& error : errors)
-      report += error + "\n";
+    for (const auto& error : errors)
+      items.push_back(error.ToText());
+    std::sort(items.begin(), items.end());
+    for (const std::string& item : items)
+      report += item + "\n";
 
     report += "\n[Annotations]\n";
+    items.clear();
     for (const auto& instance : annotation_instances) {
       std::string serialized;
       google::protobuf::TextFormat::PrintToString(instance.proto, &serialized);
@@ -184,9 +187,15 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  LOG(INFO) << "Extracted " << annotation_instances.size() << " annotations & "
-            << call_instances.size() << " calls, with " << errors.size()
-            << " errors.";
+  // Dump Errors and Warnings to stdout.
+  // TODO(rhalavati@): The outputs are now limited to syntax errors. Will be
+  // expanded when repository is full compatible.
+  for (const auto& error : errors) {
+    if (error.type() ==
+        traffic_annotation_auditor::AuditorResult::ResultType::ERROR_SYNTAX) {
+      printf("Error: %s\n", error.ToText().c_str());
+    }
+  }
 
   return 0;
 }

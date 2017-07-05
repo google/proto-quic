@@ -108,6 +108,15 @@ class QUIC_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface,
   bool HasPendingHandshake() const override;
   bool HasOpenDynamicStreams() const override;
   void OnPathDegrading() override;
+  void SaveStreamData(QuicStreamId id,
+                      QuicIOVector iov,
+                      size_t iov_offset,
+                      QuicStreamOffset offset,
+                      QuicByteCount data_length) override;
+  bool WriteStreamData(QuicStreamId id,
+                       QuicStreamOffset offset,
+                       QuicByteCount data_length,
+                       QuicDataWriter* writer) override;
 
   // StreamNotifierInterface methods:
   void OnStreamFrameAcked(const QuicStreamFrame& frame,
@@ -268,6 +277,8 @@ class QUIC_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface,
   }
 
   bool use_stream_notifier() const { return use_stream_notifier_; }
+
+  bool streams_own_data() const { return streams_own_data_; }
 
  protected:
   using StaticStreamMap = QuicSmallMap<QuicStreamId, QuicStream*, 2>;
@@ -515,6 +526,10 @@ class QUIC_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface,
 
   // This session is notified on every ack or loss.
   const bool use_stream_notifier_;
+
+  // Streams of this session own their outstanding data. Outstanding data here
+  // means sent data waiting to be acked.
+  const bool streams_own_data_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicSession);
 };

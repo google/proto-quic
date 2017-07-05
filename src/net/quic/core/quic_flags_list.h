@@ -27,9 +27,6 @@ QUIC_FLAG(bool,
           FLAGS_quic_reloadable_flag_enable_quic_stateless_reject_support,
           true)
 
-// If true, multipath is enabled for the connection.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_multipath, false)
-
 // If true, require handshake confirmation for QUIC connections, functionally
 // disabling 0-rtt handshakes.
 // TODO(rtenneti): Enable this flag after CryptoServerTest's are fixed.
@@ -86,21 +83,9 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_force_hol_blocking, true)
 // allow CHLO packets to be buffered until next iteration of the event loop.
 QUIC_FLAG(bool, FLAGS_quic_allow_chlo_buffering, true)
 
-// If true, fix some casts that were causing off-by-one errors in QUIC's cubic
-// "convex" increases.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode, true)
-
 // If true, GFE sends SETTINGS_MAX_HEADER_LIST_SIZE to the client at the
 // beginning of a connection.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_send_max_header_list_size, true)
-
-// If true, fix quantization of CubicBytes while performing convex increases.
-QUIC_FLAG(bool,
-          FLAGS_quic_reloadable_flag_quic_fix_cubic_bytes_quantization,
-          true)
-
-// If true, fix Cubic\'s use of kBetaLastMax for n-connection emulation.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_fix_beta_last_max, true)
 
 // If greater than zero, mean RTT variation is multiplied by the specified
 // factor and added to the congestion window limit.
@@ -119,12 +104,6 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_allow_one_address_change, false)
 // If true, QUIC BBR stores a max filtered number of bytes delivered at a rate
 // faster than the sending rate.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes, true)
-
-// If true, allow cubic updates on every ack, rather than occasionally limiting
-// the frequency to once every 30ms.
-QUIC_FLAG(bool,
-          FLAGS_quic_reloadable_flag_quic_enable_cubic_per_ack_updates,
-          true)
 
 // Support bandwidth resumption in QUIC BBR.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_bandwidth_resumption, false)
@@ -172,7 +151,7 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_fix_conservation2, true)
 // client IP for proxied session.
 QUIC_FLAG(bool,
           FLAGS_quic_reloadable_flag_quic_use_client_address_for_stk_in_proxy,
-          false)
+          true)
 
 // If true, export a varz mapping QUIC non 0-rtt handshake with corresponding
 // frontend service.
@@ -189,7 +168,7 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_pcc, false)
 QUIC_FLAG(bool, FLAGS_quic_enable_version_40, false)
 
 // If true, use the more CPU efficient bandwidth sampler datastructure.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_faster_bandwidth_sampler, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_faster_bandwidth_sampler, true)
 
 // In QUIC, QuicSession gets notified when stream frames are acked, discarded or
 // retransmitted.
@@ -197,3 +176,22 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_use_stream_notifier2, false)
 
 // When true, defaults to BBR congestion control instead of Cubic.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_default_to_bbr, false)
+
+// If true, stream sent data is saved in streams rather than stream frames.
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_stream_owns_data, false)
+
+// Allow a new rate based recovery in QUIC BBR to be enabled via connection
+// option.
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_rate_recovery, false)
+
+// If true, allow trailing headers with duplicate keys, and combine the values
+// from duplicate keys into a single delimted header.
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_handle_duplicate_trailers,
+          false)
+
+// Allows QUIC BBR up to twice the previously measured ack aggregation to be
+// added to the CWND as long as bytes_in_flight goes below the target recently.
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes2,
+          false)

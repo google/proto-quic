@@ -79,8 +79,7 @@
   },
   "accessibility_unittests":  {
     "label": "//ui/accessibility:accessibility_unittests",
-    "type": "raw",
-    "args": [],
+    "type": "console_test_launcher",
   },
   "android_webview_unittests": {
     "label": "//android_webview/test:android_webview_unittests",
@@ -118,8 +117,7 @@
   },
   "angle_unittests": {
     "label": "//third_party/angle/src/tests:angle_unittests",
-    "type": "raw",
-    "args": [],
+    "type": "console_test_launcher",
   },
   "app_list_unittests": {
     "label": "//ui/app_list:app_list_unittests",
@@ -210,10 +208,7 @@
   },
   "cacheinvalidation_unittests": {
     "label": "//third_party/cacheinvalidation:cacheinvalidation_unittests",
-    "type": "raw",
-    "args": [
-      "--test-launcher-bot-mode",
-    ],
+    "type": "console_test_launcher",
   },
   "capture_unittests": {
     "label": "//media/capture:capture_unittests",
@@ -321,10 +316,6 @@
   },
   "chromium_builder_perf": {
     "label": "//:chromium_builder_perf",
-    "type": "additional_compile_target",
-  },
-  "chromium_builder_tests": {
-    "label": "//:chromium_builder_tests",
     "type": "additional_compile_target",
   },
   "chromium_swarm_tests": {
@@ -478,8 +469,7 @@
   },
   "gfx_unittests": {
     "label": "//ui/gfx:gfx_unittests",
-    "type": "raw",
-    "args": [],
+    "type": "console_test_launcher",
   },
   "gin_unittests": {
     "label": "//gin:gin_unittests",
@@ -496,8 +486,7 @@
   },
   "gl_unittests": {
     "label": "//ui/gl:gl_unittests",
-    "type": "raw",
-    "args": [],
+    "type": "console_test_launcher",
   },
   "gl_unittests_ozone": {
     "label": "//ui/gl:gl_unittests_ozone",
@@ -507,8 +496,7 @@
   },
   "gn_unittests": {
     "label": "//tools/gn:gn_unittests",
-    "type": "raw",
-    "args": [],
+    "type": "console_test_launcher",
   },
   "google_apis_unittests": {
     "label": "//google_apis:google_apis_unittests",
@@ -770,8 +758,7 @@
   },
   "nacl_loader_unittests": {
     "label": "//components/nacl/loader:nacl_loader_unittests",
-    "type": "raw",
-    "args": [],
+    "type": "console_test_launcher",
   },
   "net_junit_tests": {
     "label": "//net/android:net_junit_tests",
@@ -827,8 +814,7 @@
   },
   "sandbox_linux_unittests": {
     "label": "//sandbox/linux:sandbox_linux_unittests",
-    "type": "raw",
-    "args": [],
+    "type": "console_test_launcher",
   },
   "sandbox_mac_unittests": {
     "label": "//sandbox/mac:sandbox_mac_unittests",

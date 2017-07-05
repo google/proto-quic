@@ -36,8 +36,6 @@ _DISABLED_TESTS = frozenset({
   'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_mobile.browse:news:cnn',  # pylint: disable=line-too-long
   # cburg.com/721549
   'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_mobile.browse:news:toi',  # pylint: disable=line-too-long
-  # crbug.com/702455
-  'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_desktop.browse:media:youtube',  # pylint: disable=line-too-long
   # crbug.com/637230
   'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_desktop.browse:news:cnn',  # pylint: disable=line-too-long
   # Permenently disabled from smoke test for being long-running.

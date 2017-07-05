@@ -128,7 +128,6 @@ class BASE_EXPORT HistogramSamples {
     LocalMetadata();
   };
 
-  explicit HistogramSamples(uint64_t id);
   HistogramSamples(uint64_t id, Metadata* meta);
   virtual ~HistogramSamples();
 
@@ -180,11 +179,9 @@ class BASE_EXPORT HistogramSamples {
     return meta_->single_sample;
   }
 
+  Metadata* meta() { return meta_; }
+
  private:
-  // In order to support histograms shared through an external memory segment,
-  // meta values may be the local storage or external storage depending on the
-  // wishes of the derived class.
-  LocalMetadata local_meta_;
   Metadata* meta_;
 
   DISALLOW_COPY_AND_ASSIGN(HistogramSamples);

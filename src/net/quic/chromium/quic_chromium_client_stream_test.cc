@@ -145,7 +145,7 @@ MockQuicClientSessionBase::MockQuicClientSessionBase(
     : QuicClientSessionBase(connection,
                             push_promise_index,
                             DefaultQuicConfig()) {
-  crypto_stream_.reset(new QuicCryptoStream(this));
+  crypto_stream_.reset(new MockQuicCryptoStream(this));
   Initialize();
   ON_CALL(*this, WritevData(_, _, _, _, _, _))
       .WillByDefault(testing::Return(QuicConsumedData(0, false)));

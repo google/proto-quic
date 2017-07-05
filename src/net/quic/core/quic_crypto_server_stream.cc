@@ -98,7 +98,10 @@ QuicCryptoServerStream::QuicCryptoServerStream(
       zero_rtt_attempted_(false),
       chlo_packet_size_(0),
       validate_client_hello_cb_(nullptr),
-      process_client_hello_cb_(nullptr) {
+      process_client_hello_cb_(nullptr),
+      encryption_established_(false),
+      handshake_confirmed_(false),
+      crypto_negotiated_params_(new QuicCryptoNegotiatedParameters) {
   DCHECK_EQ(Perspective::IS_SERVER, session->connection()->perspective());
 }
 
@@ -389,7 +392,7 @@ void QuicCryptoServerStream::SetPreviousCachedNetworkParams(
 
 bool QuicCryptoServerStream::GetBase64SHA256ClientChannelID(
     string* output) const {
-  if (!encryption_established_ ||
+  if (!encryption_established() ||
       crypto_negotiated_params_->channel_id.empty()) {
     return false;
   }
@@ -401,6 +404,19 @@ bool QuicCryptoServerStream::GetBase64SHA256ClientChannelID(
 
   QuicTextUtils::Base64Encode(digest, arraysize(digest), output);
   return true;
+}
+
+bool QuicCryptoServerStream::encryption_established() const {
+  return encryption_established_;
+}
+
+bool QuicCryptoServerStream::handshake_confirmed() const {
+  return handshake_confirmed_;
+}
+
+const QuicCryptoNegotiatedParameters&
+QuicCryptoServerStream::crypto_negotiated_params() const {
+  return *crypto_negotiated_params_;
 }
 
 void QuicCryptoServerStream::ProcessClientHello(

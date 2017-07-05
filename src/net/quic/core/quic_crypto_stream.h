@@ -73,17 +73,15 @@ class QUIC_EXPORT_PRIVATE QuicCryptoStream
   // value.
   bool ExportTokenBindingKeyingMaterial(std::string* result) const;
 
-  bool encryption_established() const { return encryption_established_; }
-  bool handshake_confirmed() const { return handshake_confirmed_; }
+  // Returns true once an encrypter has been set for the connection.
+  virtual bool encryption_established() const = 0;
 
-  const QuicCryptoNegotiatedParameters& crypto_negotiated_params() const;
+  // Returns true once the crypto handshake has completed.
+  virtual bool handshake_confirmed() const = 0;
 
- protected:
-  bool encryption_established_;
-  bool handshake_confirmed_;
-
-  QuicReferenceCountedPointer<QuicCryptoNegotiatedParameters>
-      crypto_negotiated_params_;
+  // Returns the parameters negotiated in the crypto handshake.
+  virtual const QuicCryptoNegotiatedParameters& crypto_negotiated_params()
+      const = 0;
 
  private:
   CryptoFramer crypto_framer_;

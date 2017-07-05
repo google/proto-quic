@@ -246,6 +246,9 @@
   "ios/web/ios_web_resources.grd": {
     "includes": [20000],
   },
+  "ios/web/shell/shell_resources.grd": {
+    "includes": [21500],
+  },
   "ios/web/test/test_resources.grd": {
     "includes": [22000],
   },

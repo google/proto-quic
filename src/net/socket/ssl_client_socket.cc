@@ -38,6 +38,10 @@ bool SSLClientSocket::IgnoreCertError(int error, int load_flags) {
          IsCertificateError(error);
 }
 
+SSLErrorDetails SSLClientSocket::GetConnectErrorDetails() const {
+  return SSLErrorDetails::kOther;
+}
+
 // static
 std::vector<uint8_t> SSLClientSocket::SerializeNextProtos(
     const NextProtoVector& next_protos) {

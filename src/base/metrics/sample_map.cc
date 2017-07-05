@@ -79,9 +79,11 @@ void SampleMapIterator::SkipEmptyBuckets() {
 
 SampleMap::SampleMap() : SampleMap(0) {}
 
-SampleMap::SampleMap(uint64_t id) : HistogramSamples(id) {}
+SampleMap::SampleMap(uint64_t id) : HistogramSamples(id, new LocalMetadata()) {}
 
-SampleMap::~SampleMap() {}
+SampleMap::~SampleMap() {
+  delete static_cast<LocalMetadata*>(meta());
+}
 
 void SampleMap::Accumulate(Sample value, Count count) {
   sample_counts_[value] += count;

@@ -60,8 +60,7 @@ const char kCustomTraceConfigString[] =
     "}"
     "]"
     "},"
-    "\"record_mode\":\"record-continuously\","
-    "\"synthetic_delays\":[\"test.Delay1;16\",\"test.Delay2;32\"]"
+    "\"record_mode\":\"record-continuously\""
     "}";
 
 void CheckDefaultTraceConfigBehavior(const TraceConfig& tc) {
@@ -186,10 +185,6 @@ TEST(TraceConfigTest, TraceConfigFromValidLegacyFormat) {
   EXPECT_STREQ("included,disabled-by-default-cc",
                config.ToCategoryFilterString().c_str());
 
-  config = TraceConfig("DELAY(test.Delay1;16),included", "");
-  EXPECT_STREQ("included,DELAY(test.Delay1;16)",
-               config.ToCategoryFilterString().c_str());
-
   // From both trace options and category filter strings
   config = TraceConfig("", "");
   EXPECT_EQ(RECORD_UNTIL_FULL, config.GetTraceRecordMode());
@@ -245,19 +240,6 @@ TEST(TraceConfigTest, TraceConfigFromInvalidLegacyStrings) {
   EXPECT_STREQ("arbitrary-category", config.ToCategoryFilterString().c_str());
   EXPECT_STREQ("record-until-full,enable-systrace",
                config.ToTraceOptionsString().c_str());
-
-  const char* const configs[] = {
-    "",
-    "DELAY(",
-    "DELAY(;",
-    "DELAY(;)",
-    "DELAY(test.Delay)",
-    "DELAY(test.Delay;)"
-  };
-  for (size_t i = 0; i < arraysize(configs); i++) {
-    TraceConfig tc(configs[i], "");
-    EXPECT_EQ(0u, tc.GetSyntheticDelayValues().size());
-  }
 }
 
 TEST(TraceConfigTest, ConstructDefaultTraceConfig) {
@@ -366,11 +348,11 @@ TEST(TraceConfigTest, TraceConfigFromDict) {
   EXPECT_EQ(RECORD_CONTINUOUSLY, custom_tc.GetTraceRecordMode());
   EXPECT_TRUE(custom_tc.IsSystraceEnabled());
   EXPECT_TRUE(custom_tc.IsArgumentFilterEnabled());
-  EXPECT_STREQ("included,inc_pattern*,"
-               "disabled-by-default-cc,disabled-by-default-memory-infra,"
-               "-excluded,-exc_pattern*,"
-               "DELAY(test.Delay1;16),DELAY(test.Delay2;32)",
-               custom_tc.ToCategoryFilterString().c_str());
+  EXPECT_STREQ(
+      "included,inc_pattern*,"
+      "disabled-by-default-cc,disabled-by-default-memory-infra,"
+      "-excluded,-exc_pattern*",
+      custom_tc.ToCategoryFilterString().c_str());
 }
 
 TEST(TraceConfigTest, TraceConfigFromValidString) {
@@ -391,8 +373,7 @@ TEST(TraceConfigTest, TraceConfigFromValidString) {
       "\"included_categories\":[\"included\","
       "\"inc_pattern*\","
       "\"disabled-by-default-cc\"],"
-      "\"record_mode\":\"record-continuously\","
-      "\"synthetic_delays\":[\"test.Delay1;16\",\"test.Delay2;32\"]"
+      "\"record_mode\":\"record-continuously\""
       "}";
   TraceConfig tc(config_string);
 
@@ -400,9 +381,10 @@ TEST(TraceConfigTest, TraceConfigFromValidString) {
   EXPECT_EQ(RECORD_CONTINUOUSLY, tc.GetTraceRecordMode());
   EXPECT_TRUE(tc.IsSystraceEnabled());
   EXPECT_TRUE(tc.IsArgumentFilterEnabled());
-  EXPECT_STREQ("included,inc_pattern*,disabled-by-default-cc,-excluded,"
-               "-exc_pattern*,DELAY(test.Delay1;16),DELAY(test.Delay2;32)",
-               tc.ToCategoryFilterString().c_str());
+  EXPECT_STREQ(
+      "included,inc_pattern*,disabled-by-default-cc,-excluded,"
+      "-exc_pattern*",
+      tc.ToCategoryFilterString().c_str());
 
   EXPECT_TRUE(tc.category_filter().IsCategoryEnabled("included"));
   EXPECT_TRUE(tc.category_filter().IsCategoryEnabled("inc_pattern_category"));
@@ -424,12 +406,7 @@ TEST(TraceConfigTest, TraceConfigFromValidString) {
 
   EXPECT_TRUE(tc.IsCategoryGroupEnabled("included,excluded"));
   EXPECT_FALSE(tc.IsCategoryGroupEnabled("excluded,exc_pattern_category"));
-  EXPECT_TRUE(tc.IsCategoryGroupEnabled("included,DELAY(test.Delay1;16)"));
-  EXPECT_FALSE(tc.IsCategoryGroupEnabled("DELAY(test.Delay1;16)"));
-
-  EXPECT_EQ(2u, tc.GetSyntheticDelayValues().size());
-  EXPECT_STREQ("test.Delay1;16", tc.GetSyntheticDelayValues()[0].c_str());
-  EXPECT_STREQ("test.Delay2;32", tc.GetSyntheticDelayValues()[1].c_str());
+  EXPECT_TRUE(tc.IsCategoryGroupEnabled("included"));
 
   EXPECT_EQ(tc.event_filters().size(), 1u);
   const TraceConfig::EventFilterConfig& event_filter = tc.event_filters()[0];
@@ -524,21 +501,16 @@ TEST(TraceConfigTest, TraceConfigFromInvalidString) {
   CheckDefaultTraceConfigBehavior(tc);
 
   const char invalid_config_string[] =
-    "{"
+      "{"
       "\"enable_systrace\":1,"
       "\"excluded_categories\":[\"excluded\"],"
       "\"included_categories\":\"not a list\","
-      "\"record_mode\":\"arbitrary-mode\","
-      "\"synthetic_delays\":[\"test.Delay1;16\","
-                            "\"invalid-delay\","
-                            "\"test.Delay2;32\"]"
-    "}";
+      "\"record_mode\":\"arbitrary-mode\""
+      "}";
   tc = TraceConfig(invalid_config_string);
   EXPECT_EQ(RECORD_UNTIL_FULL, tc.GetTraceRecordMode());
   EXPECT_FALSE(tc.IsSystraceEnabled());
   EXPECT_FALSE(tc.IsArgumentFilterEnabled());
-  EXPECT_STREQ("-excluded,DELAY(test.Delay1;16),DELAY(test.Delay2;32)",
-               tc.ToCategoryFilterString().c_str());
 
   const char invalid_config_string_2[] =
     "{"
@@ -565,13 +537,6 @@ TEST(TraceConfigTest, MergingTraceConfigs) {
                  "\"record_mode\":\"record-until-full\""
                "}",
                tc.ToString().c_str());
-
-  tc = TraceConfig("DELAY(test.Delay1;16)", "");
-  tc2 = TraceConfig("DELAY(test.Delay2;32)", "");
-  tc.Merge(tc2);
-  EXPECT_EQ(2u, tc.GetSyntheticDelayValues().size());
-  EXPECT_STREQ("test.Delay1;16", tc.GetSyntheticDelayValues()[0].c_str());
-  EXPECT_STREQ("test.Delay2;32", tc.GetSyntheticDelayValues()[1].c_str());
 }
 
 TEST(TraceConfigTest, IsCategoryGroupEnabled) {

@@ -46,7 +46,6 @@ using testing::DoAll;
 using testing::InSequence;
 using testing::Invoke;
 using testing::InvokeWithoutArgs;
-using testing::NiceMock;
 using testing::Ref;
 using testing::Return;
 using testing::SaveArg;
@@ -827,8 +826,9 @@ class QuicConnectionTest : public QuicTestWithParam<TestParams> {
     QuicPacketHeader header;
     QuicPacketCreatorPeer::FillPacketHeader(&peer_creator_, &header);
     char encrypted_buffer[kMaxPacketSize];
+    // TODO(fayang): Use data producer to produce data.
     size_t length = peer_framer_.BuildDataPacket(
-        header, frames, encrypted_buffer, kMaxPacketSize);
+        header, frames, encrypted_buffer, kMaxPacketSize, nullptr);
     DCHECK_GT(length, 0u);
 
     const size_t encrypted_length = peer_framer_.EncryptInPlace(
@@ -1009,9 +1009,21 @@ class QuicConnectionTest : public QuicTestWithParam<TestParams> {
     return frame;
   }
 
-  // Explicitly nack a packet.
-  void NackPacket(QuicPacketNumber missing, QuicAckFrame* frame) {
-    frame->packets.Remove(missing);
+  // Construct ack_frame containing up to two ranges
+  // [1, missing) and (missing, end_range]
+  QuicAckFrame ConstructAckFrame(QuicPacketNumber largest_acked,
+                                 QuicPacketNumber missing) {
+    QuicAckFrame ack_frame;
+    if (largest_acked > missing) {
+      ack_frame.packets.Add(1, missing);
+      ack_frame.packets.Add(missing + 1, largest_acked + 1);
+      ack_frame.largest_observed = largest_acked;
+    }
+    if (largest_acked == missing) {
+      ack_frame.packets.Add(1, missing);
+      ack_frame.largest_observed = largest_acked;
+    }
+    return ack_frame;
   }
 
   // Undo nacking a packet within the frame.
@@ -1447,8 +1459,7 @@ TEST_P(QuicConnectionTest, AckReceiptCausesAckSend) {
       .WillOnce(
           DoAll(SaveArg<2>(&original), SaveArg<3>(&packet_size), Return(true)));
   connection_.SendStreamDataWithString(3, "foo", 0, NO_FIN, nullptr);
-  QuicAckFrame frame = InitAckFrame(original);
-  NackPacket(original, &frame);
+  QuicAckFrame frame = ConstructAckFrame(original, original);
   // First nack triggers early retransmit.
   SendAlgorithmInterface::CongestionVector lost_packets;
   lost_packets.push_back(std::make_pair(1, kMaxPacketSize));
@@ -1462,8 +1473,7 @@ TEST_P(QuicConnectionTest, AckReceiptCausesAckSend) {
 
   ProcessAckPacket(&frame);
 
-  QuicAckFrame frame2 = InitAckFrame(retransmission);
-  NackPacket(original, &frame2);
+  QuicAckFrame frame2 = ConstructAckFrame(retransmission, original);
   EXPECT_CALL(*send_algorithm_, OnCongestionEvent(true, _, _, _, _));
   EXPECT_CALL(*loss_algorithm_, DetectLosses(_, _, _, _, _));
   ProcessAckPacket(&frame2);
@@ -1616,8 +1626,7 @@ TEST_P(QuicConnectionTest, TooManySentPackets) {
   EXPECT_CALL(*send_algorithm_, OnCongestionEvent(true, _, _, _, _));
 
   // Nack the first packet and ack the rest, leaving a huge gap.
-  QuicAckFrame frame1 = InitAckFrame(num_packets);
-  NackPacket(1, &frame1);
+  QuicAckFrame frame1 = ConstructAckFrame(num_packets, 1);
   ProcessAckPacket(&frame1);
 }
 
@@ -1759,7 +1768,7 @@ TEST_P(QuicConnectionTest, BasicSending) {
   }
 }
 
-// QuicConnection should record the the packet sent-time prior to sending the
+// QuicConnection should record the packet sent-time prior to sending the
 // packet.
 TEST_P(QuicConnectionTest, RecordSentTimeBeforePacketSent) {
   // We're using a MockClock for the tests, so we have complete control over the
@@ -1899,13 +1908,13 @@ TEST_P(QuicConnectionTest, FramePackingSendv) {
   // using writev.
   EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _));
 
-  char data[] = "ABCD";
+  char data[] = "ABCDEF";
   struct iovec iov[2];
   iov[0].iov_base = data;
-  iov[0].iov_len = 2;
-  iov[1].iov_base = data + 2;
+  iov[0].iov_len = 4;
+  iov[1].iov_base = data + 4;
   iov[1].iov_len = 2;
-  connection_.SendStreamData(1, QuicIOVector(iov, 2, 4), 0, NO_FIN, nullptr);
+  connection_.SendStreamData(1, QuicIOVector(iov, 2, 6), 0, NO_FIN, nullptr);
 
   EXPECT_EQ(0u, connection_.NumQueuedPackets());
   EXPECT_FALSE(connection_.HasQueuedData());
@@ -1917,7 +1926,7 @@ TEST_P(QuicConnectionTest, FramePackingSendv) {
   EXPECT_EQ(1u, writer_->padding_frames().size());
   QuicStreamFrame* frame = writer_->stream_frames()[0].get();
   EXPECT_EQ(1u, frame->stream_id);
-  EXPECT_EQ("ABCD", QuicStringPiece(frame->data_buffer, frame->data_length));
+  EXPECT_EQ("ABCDEF", QuicStringPiece(frame->data_buffer, frame->data_length));
 }
 
 TEST_P(QuicConnectionTest, FramePackingSendvQueued) {
@@ -1925,13 +1934,13 @@ TEST_P(QuicConnectionTest, FramePackingSendvQueued) {
   EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _));
 
   BlockOnNextWrite();
-  char data[] = "ABCD";
+  char data[] = "ABCDEF";
   struct iovec iov[2];
   iov[0].iov_base = data;
-  iov[0].iov_len = 2;
-  iov[1].iov_base = data + 2;
+  iov[0].iov_len = 4;
+  iov[1].iov_base = data + 4;
   iov[1].iov_len = 2;
-  connection_.SendStreamData(1, QuicIOVector(iov, 2, 4), 0, NO_FIN, nullptr);
+  connection_.SendStreamData(1, QuicIOVector(iov, 2, 6), 0, NO_FIN, nullptr);
 
   EXPECT_EQ(1u, connection_.NumQueuedPackets());
   EXPECT_TRUE(connection_.HasQueuedData());
@@ -2044,8 +2053,7 @@ TEST_P(QuicConnectionTest, RetransmitOnNack) {
   ProcessAckPacket(&ack_one);
 
   // Lose a packet and ensure it triggers retransmission.
-  QuicAckFrame nack_two = InitAckFrame(3);
-  NackPacket(2, &nack_two);
+  QuicAckFrame nack_two = ConstructAckFrame(3, 2);
   SendAlgorithmInterface::CongestionVector lost_packets;
   lost_packets.push_back(std::make_pair(2, kMaxPacketSize));
   EXPECT_CALL(*loss_algorithm_, DetectLosses(_, _, _, _, _))
@@ -2105,8 +2113,7 @@ TEST_P(QuicConnectionTest, DoNotRetransmitForResetStreamOnNack) {
   connection_.SendRstStream(stream_id, QUIC_ERROR_PROCESSING_STREAM, 14);
 
   // Lose a packet and ensure it does not trigger retransmission.
-  QuicAckFrame nack_two = InitAckFrame(last_packet);
-  NackPacket(last_packet - 1, &nack_two);
+  QuicAckFrame nack_two = ConstructAckFrame(last_packet, last_packet - 1);
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   EXPECT_CALL(*loss_algorithm_, DetectLosses(_, _, _, _, _));
   EXPECT_CALL(*send_algorithm_, OnCongestionEvent(true, _, _, _, _));
@@ -2125,8 +2132,7 @@ TEST_P(QuicConnectionTest, RetransmitForQuicRstStreamNoErrorOnNack) {
   connection_.SendRstStream(stream_id, QUIC_STREAM_NO_ERROR, 14);
 
   // Lose a packet, ensure it triggers retransmission.
-  QuicAckFrame nack_two = InitAckFrame(last_packet);
-  NackPacket(last_packet - 1, &nack_two);
+  QuicAckFrame nack_two = ConstructAckFrame(last_packet, last_packet - 1);
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   SendAlgorithmInterface::CongestionVector lost_packets;
   lost_packets.push_back(std::make_pair(last_packet - 1, kMaxPacketSize));
@@ -2168,8 +2174,8 @@ TEST_P(QuicConnectionTest, CancelRetransmissionAlarmAfterResetStream) {
 
   // Ack the RST_STREAM frame (since it's retransmittable), but not the data
   // packet, which is no longer retransmittable since the stream was cancelled.
-  QuicAckFrame nack_stream_data = InitAckFrame(rst_packet);
-  NackPacket(last_data_packet, &nack_stream_data);
+  QuicAckFrame nack_stream_data =
+      ConstructAckFrame(rst_packet, last_data_packet);
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   EXPECT_CALL(*send_algorithm_, OnCongestionEvent(true, _, _, _, _));
   EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _)).Times(0);
@@ -2210,8 +2216,7 @@ TEST_P(QuicConnectionTest, DoNotSendPendingRetransmissionForResetStream) {
   connection_.SendStreamDataWithString(stream_id, "fooos", 7, NO_FIN, nullptr);
 
   // Lose a packet which will trigger a pending retransmission.
-  QuicAckFrame ack = InitAckFrame(last_packet);
-  NackPacket(last_packet - 1, &ack);
+  QuicAckFrame ack = ConstructAckFrame(last_packet, last_packet - 1);
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   EXPECT_CALL(*loss_algorithm_, DetectLosses(_, _, _, _, _));
   EXPECT_CALL(*send_algorithm_, OnCongestionEvent(true, _, _, _, _));
@@ -2239,8 +2244,7 @@ TEST_P(QuicConnectionTest, SendPendingRetransmissionForQuicRstStreamNoError) {
   connection_.SendStreamDataWithString(stream_id, "fooos", 7, NO_FIN, nullptr);
 
   // Lose a packet which will trigger a pending retransmission.
-  QuicAckFrame ack = InitAckFrame(last_packet);
-  NackPacket(last_packet - 1, &ack);
+  QuicAckFrame ack = ConstructAckFrame(last_packet, last_packet - 1);
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   SendAlgorithmInterface::CongestionVector lost_packets;
   lost_packets.push_back(std::make_pair(last_packet - 1, kMaxPacketSize));
@@ -2270,8 +2274,7 @@ TEST_P(QuicConnectionTest, RetransmitAckedPacket) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
 
   // Instigate a loss with an ack.
-  QuicAckFrame nack_two = InitAckFrame(3);
-  NackPacket(2, &nack_two);
+  QuicAckFrame nack_two = ConstructAckFrame(3, 2);
   // The first nack should trigger a fast retransmission, but we'll be
   // write blocked, so the packet will be queued.
   BlockOnNextWrite();
@@ -2310,8 +2313,7 @@ TEST_P(QuicConnectionTest, RetransmitNackedLargestObserved) {
                       Return(true)));
   connection_.SendStreamDataWithString(3, "foo", 0, NO_FIN, nullptr);
 
-  QuicAckFrame frame = InitAckFrame(1);
-  NackPacket(largest_observed, &frame);
+  QuicAckFrame frame = ConstructAckFrame(1, largest_observed);
   // The first nack should retransmit the largest observed packet.
   SendAlgorithmInterface::CongestionVector lost_packets;
   lost_packets.push_back(std::make_pair(1, kMaxPacketSize));
@@ -2432,10 +2434,9 @@ TEST_P(QuicConnectionTest, NoLimitPacketsPerNack) {
 
   // Ack 15, nack 1-14.
 
-  QuicAckFrame nack = InitAckFrame(15);
-  for (int i = 1; i < 15; ++i) {
-    NackPacket(i, &nack);
-  }
+  QuicAckFrame nack;
+  nack.packets.Add(15);
+  nack.largest_observed = 15;
 
   // 14 packets have been NACK'd and lost.
   SendAlgorithmInterface::CongestionVector lost_packets;
@@ -2466,8 +2467,7 @@ TEST_P(QuicConnectionTest, MultipleAcks) {
 
   // Client will ack packets 1, 2, [!3], 4, 5.
   EXPECT_CALL(*send_algorithm_, OnCongestionEvent(true, _, _, _, _));
-  QuicAckFrame frame1 = InitAckFrame(5);
-  NackPacket(3, &frame1);
+  QuicAckFrame frame1 = ConstructAckFrame(5, 3);
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   ProcessAckPacket(&frame1);
 
@@ -2540,9 +2540,9 @@ TEST_P(QuicConnectionTest, DontLatchUnackedPacket) {
   SendStreamDataToPeer(1, "bar", 9, NO_FIN, nullptr);  // Packet 7
 
   EXPECT_CALL(*send_algorithm_, OnCongestionEvent(true, _, _, _, _));
-  frame = InitAckFrame(7);
-  NackPacket(5, &frame);
-  NackPacket(6, &frame);
+  frame = InitAckFrame(4);
+  frame.packets.Add(7);
+  frame.largest_observed = 7;
   ProcessAckPacket(&frame);
 
   EXPECT_EQ(6u, stop_waiting()->least_unacked);
@@ -3100,7 +3100,8 @@ TEST_P(QuicConnectionTest, MtuDiscoveryEnabled) {
 
   // Send more packets, and ensure that none of them sets the alarm.
   for (QuicPacketCount i = 0; i < 4 * kPacketsBetweenMtuProbesBase; i++) {
-    SendStreamDataToPeer(3, ".", i, NO_FIN, nullptr);
+    SendStreamDataToPeer(3, ".", kPacketsBetweenMtuProbesBase + 1 + i, NO_FIN,
+                         nullptr);
     ASSERT_FALSE(connection_.GetMtuDiscoveryAlarm()->IsSet());
   }
 
@@ -3143,10 +3144,23 @@ TEST_P(QuicConnectionTest, MtuDiscoveryFailed) {
 
     // Receive an ACK, which marks all data packets as received, and all MTU
     // discovery packets as missing.
-    QuicAckFrame ack = InitAckFrame(creator_->packet_number());
-    for (QuicPacketNumber& packet : mtu_discovery_packets) {
-      NackPacket(packet, &ack);
+
+    QuicAckFrame ack;
+
+    if (!mtu_discovery_packets.empty()) {
+      QuicPacketNumber min_packet = *min_element(mtu_discovery_packets.begin(),
+                                                 mtu_discovery_packets.end());
+      QuicPacketNumber max_packet = *max_element(mtu_discovery_packets.begin(),
+                                                 mtu_discovery_packets.end());
+      ack.packets.Add(1, min_packet);
+      ack.packets.Add(max_packet + 1, creator_->packet_number() + 1);
+      ack.largest_observed = creator_->packet_number();
+
+    } else {
+      ack.packets.Add(1, creator_->packet_number() + 1);
+      ack.largest_observed = creator_->packet_number();
     }
+
     ProcessAckPacket(&ack);
 
     // Trigger MTU probe if it would be scheduled now.
@@ -3216,7 +3230,8 @@ TEST_P(QuicConnectionTest, MtuDiscoveryWriterLimited) {
 
   // Send more packets, and ensure that none of them sets the alarm.
   for (QuicPacketCount i = 0; i < 4 * kPacketsBetweenMtuProbesBase; i++) {
-    SendStreamDataToPeer(3, ".", i, NO_FIN, nullptr);
+    SendStreamDataToPeer(3, ".", kPacketsBetweenMtuProbesBase + 1 + i, NO_FIN,
+                         nullptr);
     ASSERT_FALSE(connection_.GetMtuDiscoveryAlarm()->IsSet());
   }
 
@@ -3256,8 +3271,8 @@ TEST_P(QuicConnectionTest, MtuDiscoveryWriterFailed) {
   }
 
   // Acknowledge all packets sent so far, except for the lost probe.
-  QuicAckFrame probe_ack = InitAckFrame(creator_->packet_number());
-  NackPacket(probe_number, &probe_ack);
+  QuicAckFrame probe_ack =
+      ConstructAckFrame(creator_->packet_number(), probe_number);
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   EXPECT_CALL(*send_algorithm_, OnCongestionEvent(true, _, _, _, _));
   ProcessAckPacket(&probe_ack);
@@ -3315,7 +3330,7 @@ TEST_P(QuicConnectionTest, TimeoutAfterSend) {
   // Now send more data. This will not move the timeout becase
   // no data has been recieved since the previous write.
   clock_.AdvanceTime(five_ms);
-  SendStreamDataToPeer(kClientDataStreamId1, "foo", 0, FIN, nullptr);
+  SendStreamDataToPeer(kClientDataStreamId1, "foo", 3, FIN, nullptr);
   EXPECT_EQ(default_timeout, connection_.GetTimeoutAlarm()->deadline());
 
   // The original alarm will fire.  We should not time out because we had a
@@ -3454,7 +3469,7 @@ TEST_P(QuicConnectionTest, NewTimeoutAfterSendSilentClose) {
   // Now send more data. This will not move the timeout becase
   // no data has been recieved since the previous write.
   clock_.AdvanceTime(five_ms);
-  SendStreamDataToPeer(kClientDataStreamId1, "foo", 0, FIN, nullptr);
+  SendStreamDataToPeer(kClientDataStreamId1, "foo", 3, FIN, nullptr);
   EXPECT_EQ(default_timeout, connection_.GetTimeoutAlarm()->deadline());
 
   // The original alarm will fire.  We should not time out because we had a
@@ -4367,8 +4382,7 @@ TEST_P(QuicConnectionTest, BundleAckWithDataOnIncomingAck) {
   connection_.SendStreamDataWithString(kClientDataStreamId1, "foo", 3, NO_FIN,
                                        nullptr);
   // Ack the second packet, which will retransmit the first packet.
-  QuicAckFrame ack = InitAckFrame(2);
-  NackPacket(1, &ack);
+  QuicAckFrame ack = ConstructAckFrame(2, 1);
   SendAlgorithmInterface::CongestionVector lost_packets;
   lost_packets.push_back(std::make_pair(1, kMaxPacketSize));
   EXPECT_CALL(*loss_algorithm_, DetectLosses(_, _, _, _, _))
@@ -4381,8 +4395,7 @@ TEST_P(QuicConnectionTest, BundleAckWithDataOnIncomingAck) {
 
   // Now ack the retransmission, which will both raise the high water mark
   // and see if there is more data to send.
-  ack = InitAckFrame(3);
-  NackPacket(1, &ack);
+  ack = ConstructAckFrame(3, 1);
   EXPECT_CALL(*loss_algorithm_, DetectLosses(_, _, _, _, _));
   EXPECT_CALL(*send_algorithm_, OnCongestionEvent(true, _, _, _, _));
   ProcessAckPacket(&ack);
@@ -4393,8 +4406,7 @@ TEST_P(QuicConnectionTest, BundleAckWithDataOnIncomingAck) {
   writer_->Reset();
 
   // Send the same ack, but send both data and an ack together.
-  ack = InitAckFrame(3);
-  NackPacket(1, &ack);
+  ack = ConstructAckFrame(3, 1);
   EXPECT_CALL(*loss_algorithm_, DetectLosses(_, _, _, _, _));
   EXPECT_CALL(visitor_, OnCanWrite())
       .WillOnce(IgnoreResult(InvokeWithoutArgs(
@@ -4676,9 +4688,11 @@ TEST_P(QuicConnectionTest, CheckSendStats) {
   connection_.GetRetransmissionAlarm()->Fire();
 
   // Retransmit due to explicit nacks.
-  QuicAckFrame nack_three = InitAckFrame(4);
-  NackPacket(3, &nack_three);
-  NackPacket(1, &nack_three);
+  QuicAckFrame nack_three;
+  nack_three.packets.Add(2);
+  nack_three.packets.Add(4);
+  nack_three.largest_observed = 4;
+
   SendAlgorithmInterface::CongestionVector lost_packets;
   lost_packets.push_back(std::make_pair(1, kMaxPacketSize));
   lost_packets.push_back(std::make_pair(3, kMaxPacketSize));
@@ -4717,7 +4731,7 @@ TEST_P(QuicConnectionTest, ProcessFramesIfPacketClosedConnection) {
   frames.push_back(QuicFrame(&frame1_));
   frames.push_back(QuicFrame(&qccf));
   std::unique_ptr<QuicPacket> packet(ConstructPacket(header, frames));
-  EXPECT_TRUE(nullptr != packet.get());
+  EXPECT_TRUE(nullptr != packet);
   char buffer[kMaxPacketSize];
   size_t encrypted_length = peer_framer_.EncryptPayload(
       ENCRYPTION_NONE, 1, *packet, buffer, kMaxPacketSize);
@@ -4824,8 +4838,7 @@ TEST_P(QuicConnectionTest, AckNotifierFailToTriggerCallback) {
 
   // Now we receive ACK for packets 2 and 3, but importantly missing packet 1
   // which we registered to be notified about.
-  QuicAckFrame frame = InitAckFrame(3);
-  NackPacket(1, &frame);
+  QuicAckFrame frame = ConstructAckFrame(3, 1);
   SendAlgorithmInterface::CongestionVector lost_packets;
   lost_packets.push_back(std::make_pair(1, kMaxPacketSize));
   EXPECT_CALL(*loss_algorithm_, DetectLosses(_, _, _, _, _))
@@ -4850,8 +4863,7 @@ TEST_P(QuicConnectionTest, AckNotifierCallbackAfterRetransmission) {
   connection_.SendStreamDataWithString(3, "qux", 0, NO_FIN, nullptr);
 
   // Now we receive ACK for packets 1, 3, and 4 and lose 2.
-  QuicAckFrame frame = InitAckFrame(4);
-  NackPacket(2, &frame);
+  QuicAckFrame frame = ConstructAckFrame(4, 2);
   SendAlgorithmInterface::CongestionVector lost_packets;
   lost_packets.push_back(std::make_pair(2, kMaxPacketSize));
   EXPECT_CALL(*loss_algorithm_, DetectLosses(_, _, _, _, _))
@@ -4924,8 +4936,7 @@ TEST_P(QuicConnectionTest, AckNotifierCallbackForAckOfNackedPacket) {
   connection_.SendStreamDataWithString(3, "qux", 0, NO_FIN, nullptr);
 
   // Now we receive ACK for packets 1, 3, and 4 and lose 2.
-  QuicAckFrame frame = InitAckFrame(4);
-  NackPacket(2, &frame);
+  QuicAckFrame frame = ConstructAckFrame(4, 2);
   EXPECT_CALL(*listener, OnPacketRetransmitted(_));
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   SendAlgorithmInterface::CongestionVector lost_packets;

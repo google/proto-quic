@@ -77,15 +77,20 @@ QuicStream::QuicStream(QuicStreamId id, QuicSession* session)
       stream_contributes_to_connection_flow_control_(true),
       busy_counter_(0),
       add_random_padding_after_fin_(false),
-      ack_listener_(nullptr) {
+      ack_listener_(nullptr),
+      send_buffer_(session->connection()->helper()->GetBufferAllocator()) {
   SetFromConfig();
 }
 
 QuicStream::~QuicStream() {
-  QUIC_DLOG_IF(WARNING, session_ != nullptr &&
-                            session_->use_stream_notifier() &&
-                            IsWaitingForAcks())
-      << "Stream destroyed while waiting for acks.";
+  if (session_ != nullptr && session_->use_stream_notifier() &&
+      IsWaitingForAcks()) {
+    QUIC_DVLOG(1)
+        << ENDPOINT << "Stream " << id_
+        << " gets destroyed while waiting for acks. stream_bytes_outstanding = "
+        << stream_bytes_outstanding_
+        << ", fin_outstanding: " << fin_outstanding_;
+  }
 }
 
 void QuicStream::SetFromConfig() {}
@@ -528,6 +533,9 @@ void QuicStream::OnStreamFrameDiscarded(const QuicStreamFrame& frame) {
   if (frame.fin) {
     fin_outstanding_ = false;
   }
+  if (session_->streams_own_data() && frame.data_length > 0) {
+    send_buffer_.RemoveStreamFrame(frame.offset, frame.data_length);
+  }
   if (!IsWaitingForAcks()) {
     session_->OnStreamDoneWaitingForAcks(id_);
   }
@@ -535,6 +543,21 @@ void QuicStream::OnStreamFrameDiscarded(const QuicStreamFrame& frame) {
 
 bool QuicStream::IsWaitingForAcks() const {
   return stream_bytes_outstanding_ || fin_outstanding_;
+}
+
+void QuicStream::SaveStreamData(QuicIOVector iov,
+                                size_t iov_offset,
+                                QuicStreamOffset offset,
+                                QuicByteCount data_length) {
+  DCHECK_LT(0u, data_length);
+  send_buffer_.SaveStreamData(iov, iov_offset, offset, data_length);
+}
+
+bool QuicStream::WriteStreamData(QuicStreamOffset offset,
+                                 QuicByteCount data_length,
+                                 QuicDataWriter* writer) {
+  DCHECK_LT(0u, data_length);
+  return send_buffer_.WriteStreamData(offset, data_length, writer);
 }
 
 }  // namespace net

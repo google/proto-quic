@@ -854,8 +854,8 @@ TEST_F(SSLClientSocketPoolTest, IPPooling) {
   socket_factory_.AddSSLSocketDataProvider(&ssl);
 
   CreatePool(true /* tcp pool */, false, false);
-  base::WeakPtr<SpdySession> spdy_session = CreateSecureSpdySession(
-      session_.get(), test_hosts[0].key, NetLogWithSource());
+  base::WeakPtr<SpdySession> spdy_session =
+      CreateSpdySession(session_.get(), test_hosts[0].key, NetLogWithSource());
 
   EXPECT_TRUE(
       HasSpdySession(session_->spdy_session_pool(), test_hosts[0].key));
@@ -909,8 +909,8 @@ void SSLClientSocketPoolTest::TestIPPoolingDisabled(
   socket_factory_.AddSSLSocketDataProvider(ssl);
 
   CreatePool(true /* tcp pool */, false, false);
-  base::WeakPtr<SpdySession> spdy_session = CreateSecureSpdySession(
-      session_.get(), test_hosts[0].key, NetLogWithSource());
+  base::WeakPtr<SpdySession> spdy_session =
+      CreateSpdySession(session_.get(), test_hosts[0].key, NetLogWithSource());
 
   EXPECT_TRUE(
       HasSpdySession(session_->spdy_session_pool(), test_hosts[0].key));

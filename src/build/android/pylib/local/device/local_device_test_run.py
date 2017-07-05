@@ -10,6 +10,7 @@ import signal
 import thread
 import threading
 
+from devil.android import crash_handler
 from devil.utils import signal_handler
 from pylib import valgrind_tools
 from pylib.base import base_test_result
@@ -86,7 +87,9 @@ class LocalDeviceTestRun(test_run.TestRun):
         result = None
         rerun = None
         try:
-          result, rerun = self._RunTest(dev, test)
+          result, rerun = crash_handler.RetryOnSystemCrash(
+              lambda d, t=test: self._RunTest(d, t),
+              device=dev)
           if isinstance(result, base_test_result.BaseTestResult):
             results.AddResult(result)
           elif isinstance(result, list):
@@ -215,6 +218,7 @@ class LocalDeviceTestRun(test_run.TestRun):
 
   def _GetTests(self):
     raise NotImplementedError
+
   def _RunTest(self, device, test):
     raise NotImplementedError
 

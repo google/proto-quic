@@ -26,9 +26,9 @@ MessagePumpFuchsia::FileDescriptorWatcher::~FileDescriptorWatcher() {
 }
 
 bool MessagePumpFuchsia::FileDescriptorWatcher::StopWatchingFileDescriptor() {
-  uint64_t controller_as_key =
+  uint64_t this_as_key =
       static_cast<uint64_t>(reinterpret_cast<uintptr_t>(this));
-  return mx_port_cancel(port_, handle_, controller_as_key) == MX_OK;
+  return mx_port_cancel(port_, handle_, this_as_key) == MX_OK;
 }
 
 MessagePumpFuchsia::MessagePumpFuchsia() : keep_running_(true) {
@@ -50,7 +50,9 @@ bool MessagePumpFuchsia::WatchFileDescriptor(int fd,
   DCHECK_GE(fd, 0);
   DCHECK(controller);
   DCHECK(delegate);
-  DCHECK(!persistent);  // TODO(fuchsia): Not yet implemented.
+  controller->watcher_ = delegate;
+  controller->port_ = port_;
+
   DCHECK(mode == WATCH_READ || mode == WATCH_WRITE || mode == WATCH_READ_WRITE);
 
   uint32_t events;
@@ -69,30 +71,45 @@ bool MessagePumpFuchsia::WatchFileDescriptor(int fd,
       return false;
   }
 
+  controller->desired_events_ = events;
+
   controller->io_ = __mxio_fd_to_io(fd);
   if (!controller->io_)
     return false;
 
-  controller->watcher_ = delegate;
   controller->fd_ = fd;
-  controller->desired_events_ = events;
+  controller->persistent_ = persistent;
 
-  uint32_t signals;
-  __mxio_wait_begin(controller->io_, events, &controller->handle_, &signals);
-  if (controller->handle_ == MX_HANDLE_INVALID)
+  return controller->WaitBegin();
+}
+
+bool MessagePumpFuchsia::FileDescriptorWatcher::WaitBegin() {
+  uint32_t signals = 0u;
+  __mxio_wait_begin(io_, desired_events_, &handle_, &signals);
+  if (handle_ == MX_HANDLE_INVALID)
     return false;
-  controller->port_ = port_;
 
-  uint64_t controller_as_key =
-      static_cast<uint64_t>(reinterpret_cast<uintptr_t>(controller));
-  mx_status_t status =
-      mx_object_wait_async(controller->handle_, port_, controller_as_key,
-                           signals, MX_WAIT_ASYNC_ONCE);
+  uint64_t this_as_key =
+      static_cast<uint64_t>(reinterpret_cast<uintptr_t>(this));
+  mx_status_t status = mx_object_wait_async(handle_, port_, this_as_key,
+                                            signals, MX_WAIT_ASYNC_ONCE);
   if (status != MX_OK) {
     DLOG(ERROR) << "mx_object_wait_async failed: " << status;
     return false;
   }
   return true;
+}
+
+uint32_t MessagePumpFuchsia::FileDescriptorWatcher::WaitEnd(uint32_t observed) {
+  uint32_t events;
+  __mxio_wait_end(io_, observed, &events);
+  // |observed| can include other spurious things, in particular, that the fd
+  // is writable, when we only asked to know when it was readable. In that
+  // case, we don't want to call both the CanWrite and CanRead callback,
+  // when the caller asked for only, for example, readable callbacks. So,
+  // mask with the events that we actually wanted to know about.
+  events &= desired_events_;
+  return events;
 }
 
 void MessagePumpFuchsia::Run(Delegate* delegate) {
@@ -137,34 +154,31 @@ void MessagePumpFuchsia::Run(Delegate* delegate) {
 
       DCHECK(packet.signal.trigger & packet.signal.observed);
 
-      uint32_t events;
-      __mxio_wait_end(controller->io_, packet.signal.observed, &events);
-      // .observed can include other spurious things, in particular, that the fd
-      // is writable, when we only asked to know when it was readable. In that
-      // case, we don't want to call both the CanWrite and CanRead callback,
-      // when the caller asked for only, for example, readable callbacks. So,
-      // mask with the events that we actually wanted to know about.
-      events &= controller->desired_events_;
+      uint32_t events = controller->WaitEnd(packet.signal.observed);
 
+      // Multiple callbacks may be called, must check controller destruction
+      // after the first callback is run, which is done by letting the
+      // destructor set a bool here (which is located on the stack). If it's set
+      // during the first callback, then the controller was destroyed during the
+      // first callback so we do not call the second one, as the controller
+      // pointer is now invalid.
+      bool controller_was_destroyed = false;
+      controller->was_destroyed_ = &controller_was_destroyed;
       if ((events & (MXIO_EVT_READABLE | MXIO_EVT_WRITABLE)) ==
           (MXIO_EVT_READABLE | MXIO_EVT_WRITABLE)) {
-        // Both callbacks to be called, must check controller destruction after
-        // the first callback is run, which is done by letting the destructor
-        // set a bool here (which is located on the stack). If it's set during
-        // the first callback, then the controller was destroyed during the
-        // first callback so we do not call the second one, as the controller
-        // pointer is now invalid.
-        bool controller_was_destroyed = false;
-        controller->was_destroyed_ = &controller_was_destroyed;
         controller->watcher_->OnFileCanWriteWithoutBlocking(controller->fd_);
         if (!controller_was_destroyed)
           controller->watcher_->OnFileCanReadWithoutBlocking(controller->fd_);
-        if (!controller_was_destroyed)
-          controller->was_destroyed_ = nullptr;
       } else if (events & MXIO_EVT_WRITABLE) {
         controller->watcher_->OnFileCanWriteWithoutBlocking(controller->fd_);
       } else if (events & MXIO_EVT_READABLE) {
         controller->watcher_->OnFileCanReadWithoutBlocking(controller->fd_);
+      }
+      if (!controller_was_destroyed) {
+        controller->was_destroyed_ = nullptr;
+      }
+      if (!controller_was_destroyed && controller->persistent_) {
+        controller->WaitBegin();
       }
     } else {
       // Wakeup caused by ScheduleWork().

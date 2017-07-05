@@ -128,6 +128,11 @@ class QUIC_EXPORT_PRIVATE QuicCryptoServerStream
     return signed_config_->proof.send_expect_ct_header;
   }
 
+  bool encryption_established() const override;
+  bool handshake_confirmed() const override;
+  const QuicCryptoNegotiatedParameters& crypto_negotiated_params()
+      const override;
+
  protected:
   virtual void ProcessClientHello(
       QuicReferenceCountedPointer<ValidateClientHelloResultCallback::Result>
@@ -284,6 +289,11 @@ class QUIC_EXPORT_PRIVATE QuicCryptoServerStream
   // FinishProcessingHandshakeMessageAfterProcessClientHello.  Note that this
   // field is mutually exclusive with validate_client_hello_cb_.
   ProcessClientHelloCallback* process_client_hello_cb_;
+
+  bool encryption_established_;
+  bool handshake_confirmed_;
+  QuicReferenceCountedPointer<QuicCryptoNegotiatedParameters>
+      crypto_negotiated_params_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicCryptoServerStream);
 };

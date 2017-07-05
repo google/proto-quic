@@ -24,12 +24,6 @@ typedef HistogramBase::Count Count;
 typedef HistogramBase::Sample Sample;
 
 SampleVectorBase::SampleVectorBase(uint64_t id,
-                                   const BucketRanges* bucket_ranges)
-    : HistogramSamples(id), bucket_ranges_(bucket_ranges) {
-  CHECK_GE(bucket_ranges_->bucket_count(), 1u);
-}
-
-SampleVectorBase::SampleVectorBase(uint64_t id,
                                    Metadata* meta,
                                    const BucketRanges* bucket_ranges)
     : HistogramSamples(id, meta), bucket_ranges_(bucket_ranges) {
@@ -286,9 +280,11 @@ SampleVector::SampleVector(const BucketRanges* bucket_ranges)
     : SampleVector(0, bucket_ranges) {}
 
 SampleVector::SampleVector(uint64_t id, const BucketRanges* bucket_ranges)
-    : SampleVectorBase(id, bucket_ranges) {}
+    : SampleVectorBase(id, new LocalMetadata(), bucket_ranges) {}
 
-SampleVector::~SampleVector() {}
+SampleVector::~SampleVector() {
+  delete static_cast<LocalMetadata*>(meta());
+}
 
 bool SampleVector::MountExistingCountsStorage() const {
   // There is never any existing storage other than what is already in use.

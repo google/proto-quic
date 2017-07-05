@@ -366,7 +366,7 @@ def main(args):
 
   package_command = _ConstructMostAaptArgs(options)
 
-  output_paths = [ options.apk_path ]
+  output_paths = [options.apk_path]
 
   if options.create_density_splits:
     for _, dst_path in _GenerateDensitySplitPaths(options.apk_path):
@@ -375,9 +375,9 @@ def main(args):
       _GenerateLanguageSplitOutputPaths(options.apk_path,
                                         options.language_splits))
 
-  input_paths = [ options.android_manifest ] + options.resource_zips
+  input_paths = [options.android_manifest] + options.resource_zips
 
-  input_strings = []
+  input_strings = [options.exclude_xxxhdpi] + options.xxxhdpi_whitelist
   input_strings.extend(package_command)
 
   # The md5_check.py doesn't count file path in md5 intentionally,

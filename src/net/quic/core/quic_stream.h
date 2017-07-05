@@ -27,6 +27,7 @@
 #include "net/quic/core/quic_flow_controller.h"
 #include "net/quic/core/quic_iovector.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/core/quic_stream_send_buffer.h"
 #include "net/quic/core/quic_stream_sequencer.h"
 #include "net/quic/core/quic_types.h"
 #include "net/quic/core/stream_notifier_interface.h"
@@ -196,6 +197,17 @@ class QUIC_EXPORT_PRIVATE QuicStream : public StreamNotifierInterface {
   // Adds random padding after the fin is consumed for this stream.
   void AddRandomPaddingAfterFin();
 
+  // Save |data_length| of data starts at |iov_offset| in |iov| to send buffer.
+  void SaveStreamData(QuicIOVector iov,
+                      size_t iov_offset,
+                      QuicStreamOffset offset,
+                      QuicByteCount data_length);
+
+  // Write |data_length| of data starts at |offset| from send buffer.
+  bool WriteStreamData(QuicStreamOffset offset,
+                       QuicByteCount data_length,
+                       QuicDataWriter* writer);
+
   // StreamNotifierInterface methods:
   void OnStreamFrameAcked(const QuicStreamFrame& frame,
                           QuicTime::Delta ack_delay_time) override;
@@ -349,6 +361,10 @@ class QUIC_EXPORT_PRIVATE QuicStream : public StreamNotifierInterface {
   // Ack listener of this stream, and it is notified when any of written bytes
   // are acked.
   QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener_;
+
+  // Send buffer of this stream. Send buffer is cleaned up when data gets acked
+  // or discarded.
+  QuicStreamSendBuffer send_buffer_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicStream);
 };

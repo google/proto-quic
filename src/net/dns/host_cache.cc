@@ -342,7 +342,6 @@ void HostCache::GetAsListValue(base::ListValue* entry_list,
   }
 }
 
-// TODO(mgersh): Add histograms to track failures.
 bool HostCache::RestoreFromListValue(const base::ListValue& old_cache) {
   for (auto it = old_cache.begin(); it != old_cache.end(); it++) {
     const base::DictionaryValue* entry_dict;

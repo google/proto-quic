@@ -22,10 +22,12 @@
 
 using std::numeric_limits;
 using base::CheckedNumeric;
+using base::ClampedNumeric;
 using base::IsValidForType;
 using base::ValueOrDieForType;
 using base::ValueOrDefaultForType;
 using base::MakeCheckedNum;
+using base::MakeClampedNum;
 using base::CheckMax;
 using base::CheckMin;
 using base::CheckAdd;
@@ -35,9 +37,20 @@ using base::CheckDiv;
 using base::CheckMod;
 using base::CheckLsh;
 using base::CheckRsh;
+using base::ClampMax;
+using base::ClampMin;
+using base::ClampAdd;
+using base::ClampSub;
+using base::ClampMul;
+using base::ClampDiv;
+using base::ClampMod;
+using base::ClampLsh;
+using base::ClampRsh;
+using base::as_unsigned;
 using base::checked_cast;
 using base::IsValueInRangeForNumericType;
 using base::IsValueNegative;
+using base::SaturationDefaultLimits;
 using base::SizeT;
 using base::StrictNumeric;
 using base::MakeStrictNum;
@@ -131,6 +144,17 @@ template <typename U>
 U GetNumericValueForTest(const CheckedNumeric<U>& src) {
   return src.state_.value();
 }
+
+template <typename U>
+U GetNumericValueForTest(const ClampedNumeric<U>& src) {
+  return static_cast<U>(src);
+}
+
+template <typename U>
+U GetNumericValueForTest(const U& src) {
+  return src;
+}
+
 }  // namespace internal.
 }  // namespace base.
 
@@ -145,6 +169,36 @@ struct LogOnFailure {
   }
 };
 
+template <typename T>
+constexpr T GetValue(const T& src) {
+  return src;
+}
+
+template <typename T, typename U>
+constexpr T GetValueAsDest(const U& src) {
+  return static_cast<T>(src);
+}
+
+template <typename T>
+constexpr T GetValue(const CheckedNumeric<T>& src) {
+  return src.template ValueOrDie<T, LogOnFailure>();
+}
+
+template <typename T, typename U>
+constexpr T GetValueAsDest(const CheckedNumeric<U>& src) {
+  return src.template ValueOrDie<T, LogOnFailure>();
+}
+
+template <typename T>
+constexpr T GetValue(const ClampedNumeric<T>& src) {
+  return static_cast<T>(src);
+}
+
+template <typename T, typename U>
+constexpr T GetValueAsDest(const ClampedNumeric<U>& src) {
+  return static_cast<T>(src);
+}
+
 // Helper macros to wrap displaying the conversion types and line numbers.
 #define TEST_EXPECTED_VALIDITY(expected, actual)                           \
   EXPECT_EQ(expected, (actual).template Cast<Dst>().IsValid())             \
@@ -156,12 +210,7 @@ struct LogOnFailure {
 
 // We have to handle promotions, so infer the underlying type below from actual.
 #define TEST_EXPECTED_VALUE(expected, actual)                               \
-  EXPECT_EQ(static_cast<typename std::decay<decltype(actual)>::type::type>( \
-                expected),                                                  \
-            ((actual)                                                       \
-                 .template ValueOrDie<                                      \
-                     typename std::decay<decltype(actual)>::type::type,     \
-                     LogOnFailure>()))                                      \
+  EXPECT_EQ(GetValue(expected), GetValueAsDest<decltype(expected)>(actual)) \
       << "Result test: Value " << GetNumericValueForTest(actual) << " as "  \
       << dst << " on line " << line
 
@@ -190,17 +239,33 @@ static void TestSpecializedArithmetic(
     typename std::enable_if<numeric_limits<Dst>::is_integer &&
                                 numeric_limits<Dst>::is_signed,
                             int>::type = 0) {
-  using DstLimits = numeric_limits<Dst>;
+  using DstLimits = SaturationDefaultLimits<Dst>;
   TEST_EXPECTED_FAILURE(-CheckedNumeric<Dst>(DstLimits::lowest()));
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::lowest()).Abs());
   TEST_EXPECTED_VALUE(1, CheckedNumeric<Dst>(-1).Abs());
   TEST_EXPECTED_VALUE(DstLimits::max(),
                       MakeCheckedNum(-DstLimits::max()).Abs());
 
+  TEST_EXPECTED_VALUE(DstLimits::Overflow(),
+                      -ClampedNumeric<Dst>(DstLimits::lowest()));
+  TEST_EXPECTED_VALUE(DstLimits::Overflow(),
+                      ClampedNumeric<Dst>(DstLimits::lowest()).Abs());
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(-1).Abs());
+  TEST_EXPECTED_VALUE(DstLimits::max(),
+                      MakeClampedNum(-DstLimits::max()).Abs());
+
   TEST_EXPECTED_SUCCESS(CheckedNumeric<Dst>(DstLimits::max()) + -1);
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::lowest()) + -1);
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::lowest()) +
                         DstLimits::lowest());
+
+  TEST_EXPECTED_VALUE(DstLimits::max() - 1,
+                      ClampedNumeric<Dst>(DstLimits::max()) + -1);
+  TEST_EXPECTED_VALUE(DstLimits::Underflow(),
+                      ClampedNumeric<Dst>(DstLimits::lowest()) + -1);
+  TEST_EXPECTED_VALUE(
+      DstLimits::Underflow(),
+      ClampedNumeric<Dst>(DstLimits::lowest()) + DstLimits::lowest());
 
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::lowest()) - 1);
   TEST_EXPECTED_SUCCESS(CheckedNumeric<Dst>(DstLimits::lowest()) - -1);
@@ -209,7 +274,20 @@ static void TestSpecializedArithmetic(
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::lowest()) -
                         DstLimits::max());
 
+  TEST_EXPECTED_VALUE(DstLimits::Underflow(),
+                      ClampedNumeric<Dst>(DstLimits::lowest()) - 1);
+  TEST_EXPECTED_VALUE(DstLimits::lowest() + 1,
+                      ClampedNumeric<Dst>(DstLimits::lowest()) - -1);
+  TEST_EXPECTED_VALUE(
+      DstLimits::Overflow(),
+      ClampedNumeric<Dst>(DstLimits::max()) - DstLimits::lowest());
+  TEST_EXPECTED_VALUE(
+      DstLimits::Underflow(),
+      ClampedNumeric<Dst>(DstLimits::lowest()) - DstLimits::max());
+
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::lowest()) * 2);
+  TEST_EXPECTED_VALUE(DstLimits::Underflow(),
+                      ClampedNumeric<Dst>(DstLimits::lowest()) * 2);
 
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::lowest()) / -1);
   TEST_EXPECTED_VALUE(0, CheckedNumeric<Dst>(-1) / 2);
@@ -222,19 +300,42 @@ static void TestSpecializedArithmetic(
                       CheckedNumeric<Dst>(DstLimits::lowest()) * Dst(1));
   TEST_EXPECTED_VALUE(DstLimits::lowest(),
                       CheckedNumeric<Dst>(1) * Dst(DstLimits::lowest()));
-  TEST_EXPECTED_VALUE(DstLimits::lowest(),
-                      MakeCheckedNum(DstLimits::lowest()).UnsignedAbs());
+  TEST_EXPECTED_VALUE(
+      typename std::make_unsigned<Dst>::type(0) - DstLimits::lowest(),
+      MakeCheckedNum(DstLimits::lowest()).UnsignedAbs());
   TEST_EXPECTED_VALUE(DstLimits::max(),
                       MakeCheckedNum(DstLimits::max()).UnsignedAbs());
   TEST_EXPECTED_VALUE(0, CheckedNumeric<Dst>(0).UnsignedAbs());
   TEST_EXPECTED_VALUE(1, CheckedNumeric<Dst>(1).UnsignedAbs());
   TEST_EXPECTED_VALUE(1, CheckedNumeric<Dst>(-1).UnsignedAbs());
 
+  TEST_EXPECTED_VALUE(DstLimits::Overflow(),
+                      ClampedNumeric<Dst>(DstLimits::lowest()) / -1);
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(-1) / 2);
+  TEST_EXPECTED_VALUE(DstLimits::Overflow(),
+                      ClampedNumeric<Dst>(DstLimits::lowest()) * -1);
+  TEST_EXPECTED_VALUE(DstLimits::max(),
+                      ClampedNumeric<Dst>(DstLimits::lowest() + 1) * Dst(-1));
+  TEST_EXPECTED_VALUE(DstLimits::max(),
+                      ClampedNumeric<Dst>(-1) * Dst(DstLimits::lowest() + 1));
+  TEST_EXPECTED_VALUE(DstLimits::lowest(),
+                      ClampedNumeric<Dst>(DstLimits::lowest()) * Dst(1));
+  TEST_EXPECTED_VALUE(DstLimits::lowest(),
+                      ClampedNumeric<Dst>(1) * Dst(DstLimits::lowest()));
+  TEST_EXPECTED_VALUE(
+      typename std::make_unsigned<Dst>::type(0) - DstLimits::lowest(),
+      MakeClampedNum(DstLimits::lowest()).UnsignedAbs());
+  TEST_EXPECTED_VALUE(DstLimits::max(),
+                      MakeClampedNum(DstLimits::max()).UnsignedAbs());
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(0).UnsignedAbs());
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(1).UnsignedAbs());
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(-1).UnsignedAbs());
+
   // Modulus is legal only for integers.
   TEST_EXPECTED_VALUE(0, CheckedNumeric<Dst>() % 1);
   TEST_EXPECTED_VALUE(0, CheckedNumeric<Dst>(1) % 1);
   TEST_EXPECTED_VALUE(-1, CheckedNumeric<Dst>(-1) % 2);
-  TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(-1) % -2);
+  TEST_EXPECTED_VALUE(-1, CheckedNumeric<Dst>(-1) % -2);
   TEST_EXPECTED_VALUE(0, CheckedNumeric<Dst>(DstLimits::lowest()) % 2);
   TEST_EXPECTED_VALUE(1, CheckedNumeric<Dst>(DstLimits::max()) % 2);
   // Test all the different modulus combinations.
@@ -266,6 +367,44 @@ static void TestSpecializedArithmetic(
       0, CheckedNumeric<Dst>(1) >> (IntegerBitsPlusSign<Dst>::value - 1));
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(1) >> negative_one);
 
+  // Modulus is legal only for integers.
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>() % 1);
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(1) % 1);
+  TEST_EXPECTED_VALUE(-1, ClampedNumeric<Dst>(-1) % 2);
+  TEST_EXPECTED_VALUE(-1, ClampedNumeric<Dst>(-1) % -2);
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(DstLimits::lowest()) % 2);
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(DstLimits::max()) % 2);
+  // Test all the different modulus combinations.
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(1) % ClampedNumeric<Dst>(1));
+  TEST_EXPECTED_VALUE(0, 1 % ClampedNumeric<Dst>(1));
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(1) % 1);
+  ClampedNumeric<Dst> clamped_dst = 1;
+  TEST_EXPECTED_VALUE(0, clamped_dst %= 1);
+  TEST_EXPECTED_VALUE(Dst(1), ClampedNumeric<Dst>(1) % 0);
+  // Test bit shifts.
+  TEST_EXPECTED_VALUE(DstLimits::Overflow(),
+                      ClampedNumeric<Dst>(1)
+                          << (IntegerBitsPlusSign<Dst>::value - 1U));
+  TEST_EXPECTED_VALUE(Dst(0), ClampedNumeric<Dst>(0)
+                                  << (IntegerBitsPlusSign<Dst>::value + 0U));
+  TEST_EXPECTED_VALUE(DstLimits::Overflow(),
+                      ClampedNumeric<Dst>(DstLimits::max()) << 1U);
+  TEST_EXPECTED_VALUE(
+      static_cast<Dst>(1) << (IntegerBitsPlusSign<Dst>::value - 2U),
+      ClampedNumeric<Dst>(1) << (IntegerBitsPlusSign<Dst>::value - 2U));
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(0)
+                             << (IntegerBitsPlusSign<Dst>::value - 1U));
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(1) << 0U);
+  TEST_EXPECTED_VALUE(2, ClampedNumeric<Dst>(1) << 1U);
+  TEST_EXPECTED_VALUE(
+      0, ClampedNumeric<Dst>(1) >> (IntegerBitsPlusSign<Dst>::value + 0U));
+  TEST_EXPECTED_VALUE(
+      0, ClampedNumeric<Dst>(1) >> (IntegerBitsPlusSign<Dst>::value - 1U));
+  TEST_EXPECTED_VALUE(
+      -1, ClampedNumeric<Dst>(-1) >> (IntegerBitsPlusSign<Dst>::value - 1U));
+  TEST_EXPECTED_VALUE(-1, ClampedNumeric<Dst>(DstLimits::lowest()) >>
+                              (IntegerBitsPlusSign<Dst>::value - 0U));
+
   TestStrictPointerMath<Dst>();
 }
 
@@ -277,7 +416,7 @@ static void TestSpecializedArithmetic(
     typename std::enable_if<numeric_limits<Dst>::is_integer &&
                                 !numeric_limits<Dst>::is_signed,
                             int>::type = 0) {
-  using DstLimits = numeric_limits<Dst>;
+  using DstLimits = SaturationDefaultLimits<Dst>;
   TEST_EXPECTED_SUCCESS(-CheckedNumeric<Dst>(DstLimits::lowest()));
   TEST_EXPECTED_SUCCESS(CheckedNumeric<Dst>(DstLimits::lowest()).Abs());
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::lowest()) + -1);
@@ -295,6 +434,29 @@ static void TestSpecializedArithmetic(
                       MakeCheckedNum(DstLimits::max()).UnsignedAbs());
   TEST_EXPECTED_VALUE(0, CheckedNumeric<Dst>(0).UnsignedAbs());
   TEST_EXPECTED_VALUE(1, CheckedNumeric<Dst>(1).UnsignedAbs());
+
+  TEST_EXPECTED_VALUE(0, -ClampedNumeric<Dst>(DstLimits::lowest()));
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(DstLimits::lowest()).Abs());
+  TEST_EXPECTED_VALUE(DstLimits::Underflow(),
+                      ClampedNumeric<Dst>(DstLimits::lowest()) + -1);
+  TEST_EXPECTED_VALUE(DstLimits::Underflow(),
+                      ClampedNumeric<Dst>(DstLimits::lowest()) - 1);
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(DstLimits::lowest()) * 2);
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(1) / 2);
+  TEST_EXPECTED_VALUE(0,
+                      ClampedNumeric<Dst>(DstLimits::lowest()).UnsignedAbs());
+  TEST_EXPECTED_VALUE(
+      as_unsigned(
+          std::numeric_limits<typename std::make_signed<Dst>::type>::lowest()),
+      ClampedNumeric<typename std::make_signed<Dst>::type>(
+          std::numeric_limits<typename std::make_signed<Dst>::type>::lowest())
+          .UnsignedAbs());
+  TEST_EXPECTED_VALUE(DstLimits::lowest(),
+                      MakeClampedNum(DstLimits::lowest()).UnsignedAbs());
+  TEST_EXPECTED_VALUE(DstLimits::max(),
+                      MakeClampedNum(DstLimits::max()).UnsignedAbs());
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(0).UnsignedAbs());
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(1).UnsignedAbs());
 
   // Modulus is legal only for integers.
   TEST_EXPECTED_VALUE(0, CheckedNumeric<Dst>() % 1);
@@ -350,6 +512,57 @@ static void TestSpecializedArithmetic(
                       CheckedNumeric<Dst>(0) ^ static_cast<Dst>(-1));
   TEST_EXPECTED_VALUE(DstLimits::max(), ~CheckedNumeric<Dst>(0));
 
+  // Modulus is legal only for integers.
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>() % 1);
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(1) % 1);
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(1) % 2);
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(DstLimits::lowest()) % 2);
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(DstLimits::max()) % 2);
+  // Test all the different modulus combinations.
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(1) % ClampedNumeric<Dst>(1));
+  TEST_EXPECTED_VALUE(0, 1 % ClampedNumeric<Dst>(1));
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(1) % 1);
+  ClampedNumeric<Dst> clamped_dst = 1;
+  TEST_EXPECTED_VALUE(0, clamped_dst %= 1);
+  // Test that div by 0 is avoided but returns invalid result.
+  TEST_EXPECTED_VALUE(Dst(1), ClampedNumeric<Dst>(1) % 0);
+  // Test bit shifts.
+  TEST_EXPECTED_VALUE(DstLimits::Overflow(),
+                      ClampedNumeric<Dst>(1)
+                          << as_unsigned(IntegerBitsPlusSign<Dst>::value));
+  TEST_EXPECTED_VALUE(Dst(0), ClampedNumeric<Dst>(0) << as_unsigned(
+                                  IntegerBitsPlusSign<Dst>::value));
+  TEST_EXPECTED_VALUE(DstLimits::Overflow(),
+                      ClampedNumeric<Dst>(DstLimits::max()) << 1U);
+  TEST_EXPECTED_VALUE(
+      static_cast<Dst>(1) << (IntegerBitsPlusSign<Dst>::value - 1U),
+      ClampedNumeric<Dst>(1) << (IntegerBitsPlusSign<Dst>::value - 1U));
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(1) << 0U);
+  TEST_EXPECTED_VALUE(2, ClampedNumeric<Dst>(1) << 1U);
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(1) >>
+                             as_unsigned(IntegerBitsPlusSign<Dst>::value));
+  TEST_EXPECTED_VALUE(
+      0, ClampedNumeric<Dst>(1) >> (IntegerBitsPlusSign<Dst>::value - 1U));
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(1) & 1);
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(1) & 0);
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(0) & 1);
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(1) & 0);
+  TEST_EXPECTED_VALUE(std::numeric_limits<Dst>::max(),
+                      MakeClampedNum(DstLimits::max()) & -1);
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(1) | 1);
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(1) | 0);
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(0) | 1);
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(0) | 0);
+  TEST_EXPECTED_VALUE(std::numeric_limits<Dst>::max(),
+                      ClampedNumeric<Dst>(0) | static_cast<Dst>(-1));
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(1) ^ 1);
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(1) ^ 0);
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(0) ^ 1);
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(0) ^ 0);
+  TEST_EXPECTED_VALUE(std::numeric_limits<Dst>::max(),
+                      ClampedNumeric<Dst>(0) ^ static_cast<Dst>(-1));
+  TEST_EXPECTED_VALUE(DstLimits::max(), ~ClampedNumeric<Dst>(0));
+
   TestStrictPointerMath<Dst>();
 }
 
@@ -359,7 +572,7 @@ void TestSpecializedArithmetic(
     const char* dst,
     int line,
     typename std::enable_if<numeric_limits<Dst>::is_iec559, int>::type = 0) {
-  using DstLimits = numeric_limits<Dst>;
+  using DstLimits = SaturationDefaultLimits<Dst>;
   TEST_EXPECTED_SUCCESS(-CheckedNumeric<Dst>(DstLimits::lowest()));
 
   TEST_EXPECTED_SUCCESS(CheckedNumeric<Dst>(DstLimits::lowest()).Abs());
@@ -378,12 +591,39 @@ void TestSpecializedArithmetic(
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::lowest()) * 2);
 
   TEST_EXPECTED_VALUE(-0.5, CheckedNumeric<Dst>(-1.0) / 2);
+
+  TEST_EXPECTED_VALUE(DstLimits::max(),
+                      -ClampedNumeric<Dst>(DstLimits::lowest()));
+
+  TEST_EXPECTED_VALUE(DstLimits::max(),
+                      ClampedNumeric<Dst>(DstLimits::lowest()).Abs());
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(-1).Abs());
+
+  TEST_EXPECTED_VALUE(DstLimits::lowest() - 1,
+                      ClampedNumeric<Dst>(DstLimits::lowest()) + -1);
+  TEST_EXPECTED_VALUE(DstLimits::max() + 1,
+                      ClampedNumeric<Dst>(DstLimits::max()) + 1);
+  TEST_EXPECTED_VALUE(
+      DstLimits::Underflow(),
+      ClampedNumeric<Dst>(DstLimits::lowest()) + DstLimits::lowest());
+
+  TEST_EXPECTED_VALUE(
+      DstLimits::Overflow(),
+      ClampedNumeric<Dst>(DstLimits::max()) - DstLimits::lowest());
+  TEST_EXPECTED_VALUE(
+      DstLimits::Underflow(),
+      ClampedNumeric<Dst>(DstLimits::lowest()) - DstLimits::max());
+
+  TEST_EXPECTED_VALUE(DstLimits::Underflow(),
+                      ClampedNumeric<Dst>(DstLimits::lowest()) * 2);
+
+  TEST_EXPECTED_VALUE(-0.5, ClampedNumeric<Dst>(-1.0) / 2);
 }
 
 // Generic arithmetic tests.
 template <typename Dst>
 static void TestArithmetic(const char* dst, int line) {
-  using DstLimits = numeric_limits<Dst>;
+  using DstLimits = SaturationDefaultLimits<Dst>;
 
   EXPECT_EQ(true, CheckedNumeric<Dst>().IsValid());
   EXPECT_EQ(false,
@@ -417,6 +657,27 @@ static void TestArithmetic(const char* dst, int line) {
   checked_dst = 1;
   TEST_EXPECTED_VALUE(1, checked_dst /= 1);
 
+  TEST_EXPECTED_VALUE(2, ClampedNumeric<Dst>(1) + ClampedNumeric<Dst>(1));
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(1) - ClampedNumeric<Dst>(1));
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(1) * ClampedNumeric<Dst>(1));
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(1) / ClampedNumeric<Dst>(1));
+  TEST_EXPECTED_VALUE(2, 1 + ClampedNumeric<Dst>(1));
+  TEST_EXPECTED_VALUE(0, 1 - ClampedNumeric<Dst>(1));
+  TEST_EXPECTED_VALUE(1, 1 * ClampedNumeric<Dst>(1));
+  TEST_EXPECTED_VALUE(1, 1 / ClampedNumeric<Dst>(1));
+  TEST_EXPECTED_VALUE(2, ClampedNumeric<Dst>(1) + 1);
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(1) - 1);
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(1) * 1);
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(1) / 1);
+  ClampedNumeric<Dst> clamped_dst = 1;
+  TEST_EXPECTED_VALUE(2, clamped_dst += 1);
+  clamped_dst = 1;
+  TEST_EXPECTED_VALUE(0, clamped_dst -= 1);
+  clamped_dst = 1;
+  TEST_EXPECTED_VALUE(1, clamped_dst *= 1);
+  clamped_dst = 1;
+  TEST_EXPECTED_VALUE(1, clamped_dst /= 1);
+
   // Generic negation.
   if (DstLimits::is_signed) {
     TEST_EXPECTED_VALUE(0, -CheckedNumeric<Dst>());
@@ -424,6 +685,12 @@ static void TestArithmetic(const char* dst, int line) {
     TEST_EXPECTED_VALUE(1, -CheckedNumeric<Dst>(-1));
     TEST_EXPECTED_VALUE(static_cast<Dst>(DstLimits::max() * -1),
                         -CheckedNumeric<Dst>(DstLimits::max()));
+
+    TEST_EXPECTED_VALUE(0, -ClampedNumeric<Dst>());
+    TEST_EXPECTED_VALUE(-1, -ClampedNumeric<Dst>(1));
+    TEST_EXPECTED_VALUE(1, -ClampedNumeric<Dst>(-1));
+    TEST_EXPECTED_VALUE(static_cast<Dst>(DstLimits::max() * -1),
+                        -ClampedNumeric<Dst>(DstLimits::max()));
   }
 
   // Generic absolute value.
@@ -431,6 +698,11 @@ static void TestArithmetic(const char* dst, int line) {
   TEST_EXPECTED_VALUE(1, CheckedNumeric<Dst>(1).Abs());
   TEST_EXPECTED_VALUE(DstLimits::max(),
                       CheckedNumeric<Dst>(DstLimits::max()).Abs());
+
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>().Abs());
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(1).Abs());
+  TEST_EXPECTED_VALUE(DstLimits::max(),
+                      ClampedNumeric<Dst>(DstLimits::max()).Abs());
 
   // Generic addition.
   TEST_EXPECTED_VALUE(1, (CheckedNumeric<Dst>() + 1));
@@ -441,6 +713,15 @@ static void TestArithmetic(const char* dst, int line) {
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::max()) +
                         DstLimits::max());
 
+  TEST_EXPECTED_VALUE(1, (ClampedNumeric<Dst>() + 1));
+  TEST_EXPECTED_VALUE(2, (ClampedNumeric<Dst>(1) + 1));
+  if (numeric_limits<Dst>::is_signed)
+    TEST_EXPECTED_VALUE(0, (ClampedNumeric<Dst>(-1) + 1));
+  TEST_EXPECTED_VALUE(DstLimits::lowest() + 1,
+                      ClampedNumeric<Dst>(DstLimits::lowest()) + 1);
+  TEST_EXPECTED_VALUE(DstLimits::Overflow(),
+                      ClampedNumeric<Dst>(DstLimits::max()) + DstLimits::max());
+
   // Generic subtraction.
   TEST_EXPECTED_VALUE(0, (CheckedNumeric<Dst>(1) - 1));
   TEST_EXPECTED_SUCCESS(CheckedNumeric<Dst>(DstLimits::max()) - 1);
@@ -449,6 +730,17 @@ static void TestArithmetic(const char* dst, int line) {
     TEST_EXPECTED_VALUE(-2, (CheckedNumeric<Dst>(-1) - 1));
   } else {
     TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::max()) - -1);
+  }
+
+  TEST_EXPECTED_VALUE(0, (ClampedNumeric<Dst>(1) - 1));
+  TEST_EXPECTED_VALUE(DstLimits::max() - 1,
+                      ClampedNumeric<Dst>(DstLimits::max()) - 1);
+  if (numeric_limits<Dst>::is_signed) {
+    TEST_EXPECTED_VALUE(-1, (ClampedNumeric<Dst>() - 1));
+    TEST_EXPECTED_VALUE(-2, (ClampedNumeric<Dst>(-1) - 1));
+  } else {
+    TEST_EXPECTED_VALUE(DstLimits::max(),
+                        ClampedNumeric<Dst>(DstLimits::max()) - -1);
   }
 
   // Generic multiplication.
@@ -467,6 +759,22 @@ static void TestArithmetic(const char* dst, int line) {
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::max()) *
                         DstLimits::max());
 
+  TEST_EXPECTED_VALUE(0, (ClampedNumeric<Dst>() * 1));
+  TEST_EXPECTED_VALUE(1, (ClampedNumeric<Dst>(1) * 1));
+  TEST_EXPECTED_VALUE(0, (ClampedNumeric<Dst>(0) * 0));
+  if (numeric_limits<Dst>::is_signed) {
+    TEST_EXPECTED_VALUE(0, (ClampedNumeric<Dst>(-1) * 0));
+    TEST_EXPECTED_VALUE(0, (ClampedNumeric<Dst>(0) * -1));
+    TEST_EXPECTED_VALUE(-2, (ClampedNumeric<Dst>(-1) * 2));
+  } else {
+    TEST_EXPECTED_VALUE(DstLimits::Underflow(),
+                        ClampedNumeric<Dst>(DstLimits::max()) * -2);
+    TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(DstLimits::max()) *
+                               ClampedNumeric<uintmax_t>(-2));
+  }
+  TEST_EXPECTED_VALUE(DstLimits::Overflow(),
+                      ClampedNumeric<Dst>(DstLimits::max()) * DstLimits::max());
+
   // Generic division.
   TEST_EXPECTED_VALUE(0, CheckedNumeric<Dst>() / 1);
   TEST_EXPECTED_VALUE(1, CheckedNumeric<Dst>(1) / 1);
@@ -474,6 +782,17 @@ static void TestArithmetic(const char* dst, int line) {
                       CheckedNumeric<Dst>(DstLimits::lowest()) / 2);
   TEST_EXPECTED_VALUE(DstLimits::max() / 2,
                       CheckedNumeric<Dst>(DstLimits::max()) / 2);
+  TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(1) / 0);
+
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>() / 1);
+  TEST_EXPECTED_VALUE(1, ClampedNumeric<Dst>(1) / 1);
+  TEST_EXPECTED_VALUE(DstLimits::lowest() / 2,
+                      ClampedNumeric<Dst>(DstLimits::lowest()) / 2);
+  TEST_EXPECTED_VALUE(DstLimits::max() / 2,
+                      ClampedNumeric<Dst>(DstLimits::max()) / 2);
+  TEST_EXPECTED_VALUE(DstLimits::Overflow(), ClampedNumeric<Dst>(1) / 0);
+  TEST_EXPECTED_VALUE(DstLimits::Underflow(), ClampedNumeric<Dst>(-1) / 0);
+  TEST_EXPECTED_VALUE(0, ClampedNumeric<Dst>(0) / 0);
 
   TestSpecializedArithmetic<Dst>(dst, line);
 }
@@ -605,8 +924,8 @@ void TestStrictComparison() {
 template <typename Dst, typename Src>
 struct TestNumericConversion<Dst, Src, SIGN_PRESERVING_VALUE_PRESERVING> {
   static void Test(const char *dst, const char *src, int line) {
-    using SrcLimits = numeric_limits<Src>;
-    using DstLimits = numeric_limits<Dst>;
+    using SrcLimits = SaturationDefaultLimits<Src>;
+    using DstLimits = SaturationDefaultLimits<Dst>;
     // Integral to floating.
     static_assert((DstLimits::is_iec559 && SrcLimits::is_integer) ||
                       // Not floating to integral and...
@@ -622,18 +941,26 @@ struct TestNumericConversion<Dst, Src, SIGN_PRESERVING_VALUE_PRESERVING> {
     TestStrictComparison<Dst, Src>();
 
     const CheckedNumeric<Dst> checked_dst = SrcLimits::max();
+    const ClampedNumeric<Dst> clamped_dst = SrcLimits::max();
     TEST_EXPECTED_SUCCESS(checked_dst);
+    TEST_EXPECTED_VALUE(Dst(SrcLimits::max()), clamped_dst);
     if (MaxExponent<Dst>::value > MaxExponent<Src>::value) {
       if (MaxExponent<Dst>::value >= MaxExponent<Src>::value * 2 - 1) {
         // At least twice larger type.
         TEST_EXPECTED_SUCCESS(SrcLimits::max() * checked_dst);
-
+        TEST_EXPECTED_VALUE(SrcLimits::max() * clamped_dst,
+                            Dst(SrcLimits::max()) * SrcLimits::max());
       } else {  // Larger, but not at least twice as large.
         TEST_EXPECTED_FAILURE(SrcLimits::max() * checked_dst);
         TEST_EXPECTED_SUCCESS(checked_dst + 1);
+        TEST_EXPECTED_VALUE(DstLimits::Overflow(),
+                            SrcLimits::max() * clamped_dst);
+        TEST_EXPECTED_VALUE(Dst(SrcLimits::max()) + Dst(1),
+                            clamped_dst + Dst(1));
       }
     } else {  // Same width type.
       TEST_EXPECTED_FAILURE(checked_dst + 1);
+      TEST_EXPECTED_VALUE(DstLimits::Overflow(), clamped_dst + Dst(1));
     }
 
     TEST_EXPECTED_RANGE(RANGE_VALID, SrcLimits::max());
@@ -653,8 +980,8 @@ struct TestNumericConversion<Dst, Src, SIGN_PRESERVING_VALUE_PRESERVING> {
 template <typename Dst, typename Src>
 struct TestNumericConversion<Dst, Src, SIGN_PRESERVING_NARROW> {
   static void Test(const char *dst, const char *src, int line) {
-    using SrcLimits = numeric_limits<Src>;
-    using DstLimits = numeric_limits<Dst>;
+    using SrcLimits = SaturationDefaultLimits<Src>;
+    using DstLimits = SaturationDefaultLimits<Dst>;
     static_assert(SrcLimits::is_signed == DstLimits::is_signed,
                   "Destination and source sign must be the same");
     static_assert(MaxExponent<Dst>::value <= MaxExponent<Src>::value,
@@ -664,8 +991,13 @@ struct TestNumericConversion<Dst, Src, SIGN_PRESERVING_NARROW> {
 
     const CheckedNumeric<Dst> checked_dst;
     TEST_EXPECTED_FAILURE(checked_dst + SrcLimits::max());
-    TEST_EXPECTED_VALUE(1, checked_dst + static_cast<Src>(1));
+    TEST_EXPECTED_VALUE(1, checked_dst + Src(1));
     TEST_EXPECTED_FAILURE(checked_dst - SrcLimits::max());
+
+    const ClampedNumeric<Dst> clamped_dst;
+    TEST_EXPECTED_VALUE(DstLimits::Overflow(), clamped_dst + SrcLimits::max());
+    TEST_EXPECTED_VALUE(1, clamped_dst + Src(1));
+    TEST_EXPECTED_VALUE(DstLimits::Underflow(), clamped_dst - SrcLimits::max());
 
     TEST_EXPECTED_RANGE(RANGE_OVERFLOW, SrcLimits::max());
     TEST_EXPECTED_RANGE(RANGE_VALID, static_cast<Src>(1));
@@ -689,10 +1021,12 @@ struct TestNumericConversion<Dst, Src, SIGN_PRESERVING_NARROW> {
       }
     } else if (SrcLimits::is_signed) {
       TEST_EXPECTED_VALUE(-1, checked_dst - static_cast<Src>(1));
+      TEST_EXPECTED_VALUE(-1, clamped_dst - static_cast<Src>(1));
       TEST_EXPECTED_RANGE(RANGE_UNDERFLOW, SrcLimits::lowest());
       TEST_EXPECTED_RANGE(RANGE_VALID, static_cast<Src>(-1));
     } else {
       TEST_EXPECTED_FAILURE(checked_dst - static_cast<Src>(1));
+      TEST_EXPECTED_VALUE(Dst(0), clamped_dst - static_cast<Src>(1));
       TEST_EXPECTED_RANGE(RANGE_VALID, SrcLimits::lowest());
     }
   }
@@ -701,8 +1035,8 @@ struct TestNumericConversion<Dst, Src, SIGN_PRESERVING_NARROW> {
 template <typename Dst, typename Src>
 struct TestNumericConversion<Dst, Src, SIGN_TO_UNSIGN_WIDEN_OR_EQUAL> {
   static void Test(const char *dst, const char *src, int line) {
-    using SrcLimits = numeric_limits<Src>;
-    using DstLimits = numeric_limits<Dst>;
+    using SrcLimits = SaturationDefaultLimits<Src>;
+    using DstLimits = SaturationDefaultLimits<Dst>;
     static_assert(MaxExponent<Dst>::value >= MaxExponent<Src>::value,
                   "Destination must be equal or wider than source.");
     static_assert(SrcLimits::is_signed, "Source must be signed");
@@ -713,7 +1047,16 @@ struct TestNumericConversion<Dst, Src, SIGN_TO_UNSIGN_WIDEN_OR_EQUAL> {
     const CheckedNumeric<Dst> checked_dst;
     TEST_EXPECTED_VALUE(SrcLimits::max(), checked_dst + SrcLimits::max());
     TEST_EXPECTED_FAILURE(checked_dst + static_cast<Src>(-1));
+    TEST_EXPECTED_SUCCESS(checked_dst * static_cast<Src>(-1));
     TEST_EXPECTED_FAILURE(checked_dst + SrcLimits::lowest());
+
+    const ClampedNumeric<Dst> clamped_dst;
+    TEST_EXPECTED_VALUE(SrcLimits::max(), clamped_dst + SrcLimits::max());
+    TEST_EXPECTED_VALUE(DstLimits::Underflow(),
+                        clamped_dst + static_cast<Src>(-1));
+    TEST_EXPECTED_VALUE(0, clamped_dst * static_cast<Src>(-1));
+    TEST_EXPECTED_VALUE(DstLimits::Underflow(),
+                        clamped_dst + SrcLimits::lowest());
 
     TEST_EXPECTED_RANGE(RANGE_UNDERFLOW, SrcLimits::lowest());
     TEST_EXPECTED_RANGE(RANGE_VALID, SrcLimits::max());
@@ -725,8 +1068,8 @@ struct TestNumericConversion<Dst, Src, SIGN_TO_UNSIGN_WIDEN_OR_EQUAL> {
 template <typename Dst, typename Src>
 struct TestNumericConversion<Dst, Src, SIGN_TO_UNSIGN_NARROW> {
   static void Test(const char *dst, const char *src, int line) {
-    using SrcLimits = numeric_limits<Src>;
-    using DstLimits = numeric_limits<Dst>;
+    using SrcLimits = SaturationDefaultLimits<Src>;
+    using DstLimits = SaturationDefaultLimits<Dst>;
     static_assert(MaxExponent<Dst>::value < MaxExponent<Src>::value,
                   "Destination must be narrower than source.");
     static_assert(SrcLimits::is_signed, "Source must be signed.");
@@ -740,12 +1083,20 @@ struct TestNumericConversion<Dst, Src, SIGN_TO_UNSIGN_NARROW> {
     TEST_EXPECTED_FAILURE(checked_dst + static_cast<Src>(-1));
     TEST_EXPECTED_FAILURE(checked_dst + SrcLimits::lowest());
 
+    const ClampedNumeric<Dst> clamped_dst;
+    TEST_EXPECTED_VALUE(1, clamped_dst + static_cast<Src>(1));
+    TEST_EXPECTED_VALUE(DstLimits::Overflow(), clamped_dst + SrcLimits::max());
+    TEST_EXPECTED_VALUE(DstLimits::Underflow(),
+                        clamped_dst + static_cast<Src>(-1));
+    TEST_EXPECTED_VALUE(DstLimits::Underflow(),
+                        clamped_dst + SrcLimits::lowest());
+
     TEST_EXPECTED_RANGE(RANGE_OVERFLOW, SrcLimits::max());
     TEST_EXPECTED_RANGE(RANGE_VALID, static_cast<Src>(1));
     TEST_EXPECTED_RANGE(RANGE_UNDERFLOW, static_cast<Src>(-1));
 
     // Additional saturation tests.
-    EXPECT_EQ(DstLimits::max(), saturated_cast<Dst>(SrcLimits::max())) << src;
+    EXPECT_EQ(DstLimits::max(), saturated_cast<Dst>(SrcLimits::max()));
     EXPECT_EQ(DstLimits::lowest(), saturated_cast<Dst>(SrcLimits::lowest()));
 
     if (SrcLimits::is_iec559) {
@@ -776,8 +1127,8 @@ struct TestNumericConversion<Dst, Src, SIGN_TO_UNSIGN_NARROW> {
 template <typename Dst, typename Src>
 struct TestNumericConversion<Dst, Src, UNSIGN_TO_SIGN_NARROW_OR_EQUAL> {
   static void Test(const char *dst, const char *src, int line) {
-    using SrcLimits = numeric_limits<Src>;
-    using DstLimits = numeric_limits<Dst>;
+    using SrcLimits = SaturationDefaultLimits<Src>;
+    using DstLimits = SaturationDefaultLimits<Dst>;
     static_assert(MaxExponent<Dst>::value <= MaxExponent<Src>::value,
                   "Destination must be narrower or equal to source.");
     static_assert(!SrcLimits::is_signed, "Source must be unsigned.");
@@ -789,6 +1140,11 @@ struct TestNumericConversion<Dst, Src, UNSIGN_TO_SIGN_NARROW_OR_EQUAL> {
     TEST_EXPECTED_VALUE(1, checked_dst + static_cast<Src>(1));
     TEST_EXPECTED_FAILURE(checked_dst + SrcLimits::max());
     TEST_EXPECTED_VALUE(SrcLimits::lowest(), checked_dst + SrcLimits::lowest());
+
+    const ClampedNumeric<Dst> clamped_dst;
+    TEST_EXPECTED_VALUE(1, clamped_dst + static_cast<Src>(1));
+    TEST_EXPECTED_VALUE(DstLimits::Overflow(), clamped_dst + SrcLimits::max());
+    TEST_EXPECTED_VALUE(SrcLimits::lowest(), clamped_dst + SrcLimits::lowest());
 
     TEST_EXPECTED_RANGE(RANGE_VALID, SrcLimits::lowest());
     TEST_EXPECTED_RANGE(RANGE_OVERFLOW, SrcLimits::max());
@@ -1167,20 +1523,41 @@ TEST(SafeNumerics, CompoundNumericOperations) {
 }
 
 TEST(SafeNumerics, VariadicNumericOperations) {
-  auto a = CheckAdd(1, 2UL, MakeCheckedNum(3LL), 4).ValueOrDie();
-  EXPECT_EQ(static_cast<decltype(a)::type>(10), a);
-  auto b = CheckSub(MakeCheckedNum(20.0), 2UL, 4).ValueOrDie();
-  EXPECT_EQ(static_cast<decltype(b)::type>(14.0), b);
-  auto c = CheckMul(20.0, MakeCheckedNum(1), 5, 3UL).ValueOrDie();
-  EXPECT_EQ(static_cast<decltype(c)::type>(300.0), c);
-  auto d = CheckDiv(20.0, 2.0, MakeCheckedNum(5LL), -4).ValueOrDie();
-  EXPECT_EQ(static_cast<decltype(d)::type>(-.5), d);
-  auto e = CheckMod(MakeCheckedNum(20), 3).ValueOrDie();
-  EXPECT_EQ(static_cast<decltype(e)::type>(2), e);
-  auto f = CheckLsh(1, MakeCheckedNum(2)).ValueOrDie();
-  EXPECT_EQ(static_cast<decltype(f)::type>(4), f);
-  auto g = CheckRsh(4, MakeCheckedNum(2)).ValueOrDie();
-  EXPECT_EQ(static_cast<decltype(g)::type>(1), g);
-  auto h = CheckRsh(CheckAdd(1, 1, 1, 1), CheckSub(4, 2)).ValueOrDie();
-  EXPECT_EQ(static_cast<decltype(h)::type>(1), h);
+  {  // Synthetic scope to avoid variable naming collisions.
+    auto a = CheckAdd(1, 2UL, MakeCheckedNum(3LL), 4).ValueOrDie();
+    EXPECT_EQ(static_cast<decltype(a)::type>(10), a);
+    auto b = CheckSub(MakeCheckedNum(20.0), 2UL, 4).ValueOrDie();
+    EXPECT_EQ(static_cast<decltype(b)::type>(14.0), b);
+    auto c = CheckMul(20.0, MakeCheckedNum(1), 5, 3UL).ValueOrDie();
+    EXPECT_EQ(static_cast<decltype(c)::type>(300.0), c);
+    auto d = CheckDiv(20.0, 2.0, MakeCheckedNum(5LL), -4).ValueOrDie();
+    EXPECT_EQ(static_cast<decltype(d)::type>(-.5), d);
+    auto e = CheckMod(MakeCheckedNum(20), 3).ValueOrDie();
+    EXPECT_EQ(static_cast<decltype(e)::type>(2), e);
+    auto f = CheckLsh(1, MakeCheckedNum(2)).ValueOrDie();
+    EXPECT_EQ(static_cast<decltype(f)::type>(4), f);
+    auto g = CheckRsh(4, MakeCheckedNum(2)).ValueOrDie();
+    EXPECT_EQ(static_cast<decltype(g)::type>(1), g);
+    auto h = CheckRsh(CheckAdd(1, 1, 1, 1), CheckSub(4, 2)).ValueOrDie();
+    EXPECT_EQ(static_cast<decltype(h)::type>(1), h);
+  }
+
+  {
+    auto a = ClampAdd(1, 2UL, MakeClampedNum(3LL), 4);
+    EXPECT_EQ(static_cast<decltype(a)::type>(10), a);
+    auto b = ClampSub(MakeClampedNum(20.0), 2UL, 4);
+    EXPECT_EQ(static_cast<decltype(b)::type>(14.0), b);
+    auto c = ClampMul(20.0, MakeClampedNum(1), 5, 3UL);
+    EXPECT_EQ(static_cast<decltype(c)::type>(300.0), c);
+    auto d = ClampDiv(20.0, 2.0, MakeClampedNum(5LL), -4);
+    EXPECT_EQ(static_cast<decltype(d)::type>(-.5), d);
+    auto e = ClampMod(MakeClampedNum(20), 3);
+    EXPECT_EQ(static_cast<decltype(e)::type>(2), e);
+    auto f = ClampLsh(1, MakeClampedNum(2U));
+    EXPECT_EQ(static_cast<decltype(f)::type>(4), f);
+    auto g = ClampRsh(4, MakeClampedNum(2U));
+    EXPECT_EQ(static_cast<decltype(g)::type>(1), g);
+    auto h = ClampRsh(ClampAdd(1, 1, 1, 1), ClampSub(4U, 2));
+    EXPECT_EQ(static_cast<decltype(h)::type>(1), h);
+  }
 }

@@ -66,7 +66,6 @@ class IDLLexer(object):
     'DOMString' : 'DOMSTRING',
     'double' : 'DOUBLE',
     'enum'  : 'ENUM',
-    'exception' : 'EXCEPTION',
     'false' : 'FALSE',
     'float' : 'FLOAT',
     'FrozenArray' : 'FROZENARRAY',

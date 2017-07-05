@@ -2371,7 +2371,8 @@
       {
         "args": [
           "--use-gpu-in-tests",
-          "--test-launcher-retry-limit=0"
+          "--test-launcher-retry-limit=0",
+          "--no-xvfb"
         ],
         "swarming": {
           "can_use_on_swarming_builders": false,
@@ -2411,7 +2412,8 @@
       {
         "args": [
           "--use-gpu-in-tests",
-          "--test-launcher-retry-limit=0"
+          "--test-launcher-retry-limit=0",
+          "--no-xvfb"
         ],
         "swarming": {
           "can_use_on_swarming_builders": false,
@@ -2459,7 +2461,8 @@
       },
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--no-xvfb"
         ],
         "swarming": {
           "can_use_on_swarming_builders": false,
@@ -2840,7 +2843,8 @@
       {
         "args": [
           "--use-gpu-in-tests",
-          "--test-launcher-retry-limit=0"
+          "--test-launcher-retry-limit=0",
+          "--no-xvfb"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -2888,7 +2892,8 @@
       },
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--no-xvfb"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -3326,7 +3331,8 @@
       {
         "args": [
           "--use-gpu-in-tests",
-          "--test-launcher-retry-limit=0"
+          "--test-launcher-retry-limit=0",
+          "--no-xvfb"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -3374,7 +3380,8 @@
       },
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--no-xvfb"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -3459,7 +3466,8 @@
       {
         "args": [
           "--use-gpu-in-tests",
-          "--test-launcher-retry-limit=0"
+          "--test-launcher-retry-limit=0",
+          "--no-xvfb"
         ],
         "swarming": {
           "can_use_on_swarming_builders": false,
@@ -3521,7 +3529,8 @@
       },
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--no-xvfb"
         ],
         "swarming": {
           "can_use_on_swarming_builders": false,
@@ -3929,7 +3938,8 @@
       {
         "args": [
           "--use-gpu-in-tests",
-          "--test-launcher-retry-limit=0"
+          "--test-launcher-retry-limit=0",
+          "--no-xvfb"
         ],
         "swarming": {
           "can_use_on_swarming_builders": false,
@@ -3991,7 +4001,8 @@
       },
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--no-xvfb"
         ],
         "swarming": {
           "can_use_on_swarming_builders": false,
@@ -4426,7 +4437,8 @@
       {
         "args": [
           "--use-gpu-in-tests",
-          "--test-launcher-retry-limit=0"
+          "--test-launcher-retry-limit=0",
+          "--no-xvfb"
         ],
         "swarming": {
           "can_use_on_swarming_builders": false,
@@ -4488,7 +4500,8 @@
       },
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--no-xvfb"
         ],
         "swarming": {
           "can_use_on_swarming_builders": false,
@@ -4953,7 +4966,8 @@
       {
         "args": [
           "--use-gpu-in-tests",
-          "--test-launcher-retry-limit=0"
+          "--test-launcher-retry-limit=0",
+          "--no-xvfb"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -5022,7 +5036,8 @@
       },
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--no-xvfb"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true,

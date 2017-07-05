@@ -180,6 +180,10 @@ class SSLConnectJob : public ConnectJob {
   // none was triggered.
   int version_interference_error_;
 
+  // Details for the error which triggered a TLS 1.3 interference probe, or
+  // kOther if not applicable.
+  SSLErrorDetails version_interference_details_;
+
   DISALLOW_COPY_AND_ASSIGN(SSLConnectJob);
 };
 

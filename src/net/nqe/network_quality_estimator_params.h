@@ -10,7 +10,7 @@
 
 #include "base/macros.h"
 #include "base/optional.h"
-#include "base/threading/thread_checker.h"
+#include "base/sequence_checker.h"
 #include "net/base/net_export.h"
 #include "net/base/network_change_notifier.h"
 #include "net/nqe/effective_connection_type.h"
@@ -96,12 +96,26 @@ class NET_EXPORT NetworkQualityEstimatorParams {
   // the effective connection type that has been forced.
   base::Optional<EffectiveConnectionType> forced_effective_connection_type()
       const {
+    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
     return forced_effective_connection_type_;
+  }
+
+  void SetForcedEffectiveConnectionType(
+      EffectiveConnectionType forced_effective_connection_type) {
+    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+    forced_effective_connection_type_ = forced_effective_connection_type;
   }
 
   // Returns true if reading from the persistent cache is enabled.
   bool persistent_cache_reading_enabled() const {
+    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
     return persistent_cache_reading_enabled_;
+  }
+
+  void set_persistent_cache_reading_enabled(
+      bool persistent_cache_reading_enabled) {
+    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+    persistent_cache_reading_enabled_ = persistent_cache_reading_enabled;
   }
 
   // Returns the the minimum interval betweeen consecutive notifications to a
@@ -117,6 +131,12 @@ class NET_EXPORT NetworkQualityEstimatorParams {
   GetEffectiveConnectionTypeAlgorithmFromString(
       const std::string& algorithm_param_value);
 
+  void SetEffectiveConnectionTypeAlgorithm(
+      EffectiveConnectionTypeAlgorithm algorithm) {
+    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+    effective_connection_type_algorithm_ = algorithm;
+  }
+
  private:
   // Map containing all field trial parameters related to
   // NetworkQualityEstimator field trial.
@@ -126,9 +146,8 @@ class NET_EXPORT NetworkQualityEstimatorParams {
   const double weight_multiplier_per_second_;
   const double weight_multiplier_per_signal_strength_level_;
   const double correlation_uma_logging_probability_;
-  const base::Optional<EffectiveConnectionType>
-      forced_effective_connection_type_;
-  const bool persistent_cache_reading_enabled_;
+  base::Optional<EffectiveConnectionType> forced_effective_connection_type_;
+  bool persistent_cache_reading_enabled_;
   const base::TimeDelta min_socket_watcher_notification_interval_;
 
   EffectiveConnectionTypeAlgorithm effective_connection_type_algorithm_;
@@ -148,7 +167,7 @@ class NET_EXPORT NetworkQualityEstimatorParams {
   nqe::internal::NetworkQuality connection_thresholds_
       [EffectiveConnectionType::EFFECTIVE_CONNECTION_TYPE_LAST];
 
-  base::ThreadChecker thread_checker_;
+  SEQUENCE_CHECKER(sequence_checker_);
 
   DISALLOW_COPY_AND_ASSIGN(NetworkQualityEstimatorParams);
 };

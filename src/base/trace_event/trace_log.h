@@ -364,10 +364,6 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
 
   void CreateFiltersForTraceConfig();
 
-  // Configure synthetic delays based on the values set in the current
-  // trace config.
-  void UpdateSyntheticDelaysFromTraceConfig();
-
   InternalTraceOptions GetInternalOptionsFromTraceConfig(
       const TraceConfig& config);
 

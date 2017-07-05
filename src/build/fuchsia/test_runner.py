@@ -136,8 +136,8 @@ def BuildBootfs(output_directory, runtime_deps_path, test_name, gtest_filter,
   if int(os.environ.get('CHROME_HEADLESS', 0)) != 0:
     # When running on bots (without KVM) execution is quite slow. The test
     # launcher times out a subprocess after 45s which can be too short. Make the
-    # timeout 10x longer.
-    autorun_file.write(' --test-launcher-timeout=450000')
+    # timeout twice as long.
+    autorun_file.write(' --test-launcher-timeout=90000')
   if test_launcher_filter_file:
     test_launcher_filter_file = os.path.normpath(
             os.path.join(output_directory, test_launcher_filter_file))

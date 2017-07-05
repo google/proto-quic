@@ -452,13 +452,17 @@ std::string GURL::PathForRequest() const {
 }
 
 std::string GURL::HostNoBrackets() const {
+  return HostNoBracketsPiece().as_string();
+}
+
+base::StringPiece GURL::HostNoBracketsPiece() const {
   // If host looks like an IPv6 literal, strip the square brackets.
   url::Component h(parsed_.host);
   if (h.len >= 2 && spec_[h.begin] == '[' && spec_[h.end() - 1] == ']') {
     h.begin++;
     h.len -= 2;
   }
-  return ComponentString(h);
+  return ComponentStringPiece(h);
 }
 
 std::string GURL::GetContent() const {

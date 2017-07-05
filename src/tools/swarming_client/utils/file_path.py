@@ -22,6 +22,7 @@ import time
 import unicodedata
 
 from utils import fs
+from utils import subprocess42
 from utils import tools
 
 
@@ -246,6 +247,7 @@ if sys.platform == 'win32':
     if not (os.stat(path).st_mode & stat.S_IWUSR):
       os.chmod(path, 0777)
 
+
   def isabs(path):
     """Accepts X: as an absolute path, unlike python's os.path.isabs()."""
     return os.path.isabs(path) or len(path) == 2 and path[1] == ':'
@@ -307,70 +309,6 @@ if sys.platform == 'win32':
     return out[0].upper() + out[1:] + suffix
 
 
-  def enum_processes_win():
-    """Returns all processes on the system that are accessible to this process.
-
-    Returns:
-      Win32_Process COM objects. See
-      http://msdn.microsoft.com/library/aa394372.aspx for more details.
-    """
-    import win32com.client  # pylint: disable=F0401
-    wmi_service = win32com.client.Dispatch('WbemScripting.SWbemLocator')
-    wbem = wmi_service.ConnectServer('.', 'root\\cimv2')
-    return [proc for proc in wbem.ExecQuery('SELECT * FROM Win32_Process')]
-
-
-  def filter_processes_dir_win(processes, root_dir):
-    """Returns all processes which has their main executable located inside
-    root_dir.
-    """
-    def normalize_path(filename):
-      try:
-        return GetLongPathName(unicode(filename)).lower()
-      except:  # pylint: disable=W0702
-        return unicode(filename).lower()
-
-    root_dir = normalize_path(root_dir)
-
-    def process_name(proc):
-      if proc.ExecutablePath:
-        return normalize_path(proc.ExecutablePath)
-      # proc.ExecutablePath may be empty if the process hasn't finished
-      # initializing, but the command line may be valid.
-      if proc.CommandLine is None:
-        return None
-      parsed_line = shlex.split(proc.CommandLine)
-      if len(parsed_line) >= 1 and os.path.isabs(parsed_line[0]):
-        return normalize_path(parsed_line[0])
-      return None
-
-    long_names = ((process_name(proc), proc) for proc in processes)
-
-    return [
-      proc for name, proc in long_names
-      if name is not None and name.startswith(root_dir)
-    ]
-
-
-  def filter_processes_tree_win(processes):
-    """Returns all the processes under the current process."""
-    # Convert to dict.
-    processes = dict((p.ProcessId, p) for p in processes)
-    root_pid = os.getpid()
-    out = {root_pid: processes[root_pid]}
-    while True:
-      found = set()
-      for pid in out:
-        found.update(
-            p.ProcessId for p in processes.itervalues()
-            if p.ParentProcessId == pid)
-      found -= set(out)
-      if not found:
-        break
-      out.update((p, processes[p]) for p in found)
-    return out.values()
-
-
   def get_process_token():
     """Get the current process token."""
     TOKEN_ALL_ACCESS = 0xF01FF
@@ -427,47 +365,128 @@ if sys.platform == 'win32':
     return enable_privilege(u'SeCreateSymbolicLinkPrivilege')
 
 
+  def kill_children_processes(root):
+    """Try to kill all children processes indistriminately and prints updates to
+    stderr.
+
+    Returns:
+      True if at least one child process was found.
+    """
+    processes = _get_children_processes_win(root)
+    if not processes:
+      return False
+    sys.stderr.write('Enumerating processes:\n')
+    for _, proc in sorted(processes.iteritems()):
+      sys.stderr.write(
+          '- pid %d; Handles: %d; Exe: %s; Cmd: %s\n' % (
+            proc.ProcessId,
+            proc.HandleCount,
+            proc.ExecutablePath,
+            proc.CommandLine))
+    sys.stderr.write('Terminating %d processes:\n' % len(processes))
+    for pid in sorted(processes):
+      try:
+        # Killing is asynchronous.
+        os.kill(pid, 9)
+        sys.stderr.write('- %d killed\n' % pid)
+      except OSError:
+        sys.stderr.write('- failed to kill %s\n' % pid)
+    return True
+
+
+  ## Windows private code.
+
+
+  def _enum_processes_win():
+    """Returns all processes on the system that are accessible to this process.
+
+    Returns:
+      Win32_Process COM objects. See
+      http://msdn.microsoft.com/library/aa394372.aspx for more details.
+    """
+    import win32com.client  # pylint: disable=F0401
+    wmi_service = win32com.client.Dispatch('WbemScripting.SWbemLocator')
+    wbem = wmi_service.ConnectServer('.', 'root\\cimv2')
+    return [proc for proc in wbem.ExecQuery('SELECT * FROM Win32_Process')]
+
+
+  def _filter_processes_dir_win(processes, root_dir):
+    """Returns all processes which has their main executable located inside
+    root_dir.
+    """
+    def normalize_path(filename):
+      try:
+        return GetLongPathName(unicode(filename)).lower()
+      except:  # pylint: disable=W0702
+        return unicode(filename).lower()
+
+    root_dir = normalize_path(root_dir)
+
+    def process_name(proc):
+      if proc.ExecutablePath:
+        return normalize_path(proc.ExecutablePath)
+      # proc.ExecutablePath may be empty if the process hasn't finished
+      # initializing, but the command line may be valid.
+      if proc.CommandLine is None:
+        return None
+      parsed_line = shlex.split(proc.CommandLine)
+      if len(parsed_line) >= 1 and os.path.isabs(parsed_line[0]):
+        return normalize_path(parsed_line[0])
+      return None
+
+    long_names = ((process_name(proc), proc) for proc in processes)
+
+    return [
+      proc for name, proc in long_names
+      if name is not None and name.startswith(root_dir)
+    ]
+
+
+  def _filter_processes_tree_win(processes):
+    """Returns all the processes under the current process."""
+    # Convert to dict.
+    processes = dict((p.ProcessId, p) for p in processes)
+    root_pid = os.getpid()
+    out = {root_pid: processes[root_pid]}
+    while True:
+      found = set()
+      for pid in out:
+        found.update(
+            p.ProcessId for p in processes.itervalues()
+            if p.ParentProcessId == pid)
+      found -= set(out)
+      if not found:
+        break
+      out.update((p, processes[p]) for p in found)
+    return out.values()
+
+
+  def _get_children_processes_win(root):
+    """Returns a list of processes.
+
+    Enumerates both:
+    - all child processes from this process.
+    - processes where the main executable in inside 'root'. The reason is that
+      the ancestry may be broken so stray grand-children processes could be
+      undetected by the first technique.
+
+    This technique is not fool-proof but gets mostly there.
+    """
+    processes = _enum_processes_win()
+    tree_processes = _filter_processes_tree_win(processes)
+    dir_processes = _filter_processes_dir_win(processes, root)
+    # Convert to dict to remove duplicates.
+    processes = dict((p.ProcessId, p) for p in tree_processes)
+    processes.update((p.ProcessId, p) for p in dir_processes)
+    processes.pop(os.getpid())
+    return processes
+
+
 elif sys.platform == 'darwin':
 
 
   # On non-windows, keep the stdlib behavior.
   isabs = os.path.isabs
-
-
-  def _native_case(p):
-    """Gets the native path case. Warning: this function resolves symlinks."""
-    try:
-      rel_ref, _ = Carbon.File.FSPathMakeRef(p.encode('utf-8'))
-      # The OSX underlying code uses NFD but python strings are in NFC. This
-      # will cause issues with os.listdir() for example. Since the dtrace log
-      # *is* in NFC, normalize it here.
-      out = unicodedata.normalize(
-          'NFC', rel_ref.FSRefMakePath().decode('utf-8'))
-      if p.endswith(os.path.sep) and not out.endswith(os.path.sep):
-        return out + os.path.sep
-      return out
-    except MacOS.Error, e:
-      if e.args[0] in (-43, -120):
-        # The path does not exist. Try to recurse and reconstruct the path.
-        # -43 means file not found.
-        # -120 means directory not found.
-        base = os.path.dirname(p)
-        rest = os.path.basename(p)
-        return os.path.join(_native_case(base), rest)
-      raise OSError(
-          e.args[0], 'Failed to get native path for %s' % p, p, e.args[1])
-
-
-  def _split_at_symlink_native(base_path, rest):
-    """Returns the native path for a symlink."""
-    base, symlink, rest = split_at_symlink(base_path, rest)
-    if symlink:
-      if not base_path:
-        base_path = base
-      else:
-        base_path = safe_join(base_path, base)
-      symlink = find_item_native_case(base_path, symlink)
-    return base, symlink, rest
 
 
   def find_item_native_case(root_path, item):
@@ -535,6 +554,45 @@ elif sys.platform == 'darwin':
 
   def enable_symlink():
     return True
+
+
+  ## OSX private code.
+
+
+  def _native_case(p):
+    """Gets the native path case. Warning: this function resolves symlinks."""
+    try:
+      rel_ref, _ = Carbon.File.FSPathMakeRef(p.encode('utf-8'))
+      # The OSX underlying code uses NFD but python strings are in NFC. This
+      # will cause issues with os.listdir() for example. Since the dtrace log
+      # *is* in NFC, normalize it here.
+      out = unicodedata.normalize(
+          'NFC', rel_ref.FSRefMakePath().decode('utf-8'))
+      if p.endswith(os.path.sep) and not out.endswith(os.path.sep):
+        return out + os.path.sep
+      return out
+    except MacOS.Error, e:
+      if e.args[0] in (-43, -120):
+        # The path does not exist. Try to recurse and reconstruct the path.
+        # -43 means file not found.
+        # -120 means directory not found.
+        base = os.path.dirname(p)
+        rest = os.path.basename(p)
+        return os.path.join(_native_case(base), rest)
+      raise OSError(
+          e.args[0], 'Failed to get native path for %s' % p, p, e.args[1])
+
+
+  def _split_at_symlink_native(base_path, rest):
+    """Returns the native path for a symlink."""
+    base, symlink, rest = split_at_symlink(base_path, rest)
+    if symlink:
+      if not base_path:
+        base_path = base
+      else:
+        base_path = safe_join(base_path, base)
+      symlink = find_item_native_case(base_path, symlink)
+    return base, symlink, rest
 
 
 else:  # OSes other than Windows and OSX.
@@ -652,6 +710,12 @@ if sys.platform != 'win32':  # All non-Windows OSes.
     return relfile, None, None
 
 
+  def kill_children_processes(root):
+    """Not yet implemented on posix."""
+    # pylint: disable=unused-argument
+    return False
+
+
 def relpath(path, root):
   """os.path.relpath() that keeps trailing os.path.sep."""
   out = os.path.relpath(path, root)
@@ -691,17 +755,6 @@ def posix_relpath(path, root):
   if path.endswith('/'):
     out += '/'
   return out
-
-
-def cleanup_path(x):
-  """Cleans up a relative path. Converts any os.path.sep to '/' on Windows."""
-  if x:
-    x = x.rstrip(os.path.sep).replace(os.path.sep, '/')
-  if x == '.':
-    x = ''
-  if x:
-    x += '/'
-  return x
 
 
 def is_url(path):
@@ -824,7 +877,12 @@ def set_read_only(path, read_only):
   """
   mode = fs.lstat(path).st_mode
   # TODO(maruel): Stop removing GO bits.
-  mode = (mode & 0500) if read_only else (mode | 0200)
+  if read_only:
+    mode &= stat.S_IRUSR|stat.S_IXUSR # 0500
+  else:
+    mode |= stat.S_IRUSR|stat.S_IWUSR # 0600
+    if sys.platform != 'win32' and stat.S_ISDIR(mode):
+      mode |= stat.S_IXUSR # 0100
   if hasattr(os, 'lchmod'):
     fs.lchmod(path, mode)  # pylint: disable=E1101
   else:
@@ -1045,8 +1103,23 @@ def make_tree_deleteable(root):
   """
   logging.debug('make_tree_deleteable(%s)', root)
   err = None
+  sudo_failed = False
+
+  def try_sudo(p):
+    if sys.platform == 'linux2' and not sudo_failed:
+      # Try passwordless sudo, just in case. In practice, it is preferable
+      # to use linux capabilities.
+      with open(os.devnull, 'rb') as f:
+        if not subprocess42.call(
+            ['sudo', '-n', 'chmod', 'a+rwX', p], stdin=f):
+          return False
+      logging.debug('sudo chmod %s failed', p)
+    return True
+
   if sys.platform != 'win32':
     e = set_read_only_swallow(root, False)
+    if e:
+      sudo_failed = try_sudo(root)
     if not err:
       err = e
   for dirpath, dirnames, filenames in fs.walk(root, topdown=True):
@@ -1057,7 +1130,10 @@ def make_tree_deleteable(root):
           err = e
     else:
       for dirname in dirnames:
-        e = set_read_only_swallow(os.path.join(dirpath, dirname), False)
+        p = os.path.join(dirpath, dirname)
+        e = set_read_only_swallow(p, False)
+        if e:
+          sudo_failed = try_sudo(p)
         if not err:
           err = e
   if err:
@@ -1076,8 +1152,8 @@ def rmtree(root):
     processes) had to be used.
   """
   logging.info('rmtree(%s)', root)
-  assert sys.getdefaultencoding() == 'utf-8', sys.getdefaultencoding()
-  # Do not assert here yet because this would break too much code.
+  assert isinstance(root, unicode) or sys.getdefaultencoding() == 'utf-8', (
+      repr(root), sys.getdefaultencoding())
   root = unicode(root)
   try:
     make_tree_deleteable(root)
@@ -1092,21 +1168,18 @@ def rmtree(root):
     # errors is a list of tuple(function, path, excinfo).
     errors = []
     fs.rmtree(root, onerror=lambda *args: errors.append(args))
-    if not errors:
+    if not errors or not fs.exists(root):
+      if i:
+        sys.stderr.write('Succeeded.\n')
       return True
     if not i and sys.platform == 'win32':
-      for _, path, _ in errors:
+      for path in sorted(set(path for _, path, _ in errors)):
         try:
           change_acl_for_delete(path)
         except Exception as e:
           sys.stderr.write('- %s (failed to update ACL: %s)\n' % (path, e))
 
-    if i == max_tries - 1:
-      sys.stderr.write(
-          'Failed to delete %s. The following files remain:\n' % root)
-      for _, path, _ in errors:
-        sys.stderr.write('- %s\n' % path)
-    else:
+    if i != max_tries - 1:
       delay = (i+1)*2
       sys.stderr.write(
           'Failed to delete %s (%d files remaining).\n'
@@ -1115,50 +1188,24 @@ def rmtree(root):
           (root, len(errors), delay))
       time.sleep(delay)
 
+  sys.stderr.write(
+      'Failed to delete %s. The following files remain:\n' % root)
+  # The same path may be listed multiple times.
+  for path in sorted(set(path for _, path, _ in errors)):
+    sys.stderr.write('- %s\n' % path)
+
   # If soft retries fail on Linux, there's nothing better we can do.
   if sys.platform != 'win32':
     raise errors[0][2][0], errors[0][2][1], errors[0][2][2]
 
-  # The soft way was not good enough. Try the hard way. Enumerates both:
-  # - all child processes from this process.
-  # - processes where the main executable in inside 'root'. The reason is that
-  #   the ancestry may be broken so stray grand-children processes could be
-  #   undetected by the first technique.
-  # This technique is not fool-proof but gets mostly there.
-  def get_processes():
-    processes = enum_processes_win()
-    tree_processes = filter_processes_tree_win(processes)
-    dir_processes = filter_processes_dir_win(processes, root)
-    # Convert to dict to remove duplicates.
-    processes = dict((p.ProcessId, p) for p in tree_processes)
-    processes.update((p.ProcessId, p) for p in dir_processes)
-    processes.pop(os.getpid())
-    return processes
-
-  for i in xrange(3):
-    sys.stderr.write('Enumerating processes:\n')
-    processes = get_processes()
-    if not processes:
+  # The soft way was not good enough. Try the hard way.
+  for i in xrange(max_tries):
+    if not kill_children_processes(root):
       break
-    for _, proc in sorted(processes.iteritems()):
-      sys.stderr.write(
-          '- pid %d; Handles: %d; Exe: %s; Cmd: %s\n' % (
-            proc.ProcessId,
-            proc.HandleCount,
-            proc.ExecutablePath,
-            proc.CommandLine))
-    sys.stderr.write('Terminating %d processes.\n' % len(processes))
-    for pid in sorted(processes):
-      try:
-        # Killing is asynchronous.
-        os.kill(pid, 9)
-        sys.stderr.write('- %d killed\n' % pid)
-      except OSError:
-        sys.stderr.write('- failed to kill %s\n' % pid)
-    if i < 2:
+    if i != max_tries - 1:
       time.sleep((i+1)*2)
   else:
-    processes = get_processes()
+    processes = _get_children_processes_win(root)
     if processes:
       sys.stderr.write('Failed to terminate processes.\n')
       raise errors[0][2][0], errors[0][2][1], errors[0][2][2]
@@ -1166,11 +1213,16 @@ def rmtree(root):
   # Now that annoying processes in root are evicted, try again.
   errors = []
   fs.rmtree(root, onerror=lambda *args: errors.append(args))
-  if errors:
-    # There's no hope.
+  if errors and fs.exists(root):
+    # There's no hope: the directory was tried to be removed 4 times. Give up
+    # and raise an exception.
     sys.stderr.write(
         'Failed to delete %s. The following files remain:\n' % root)
-    for _, path, _ in errors:
+    # The same path may be listed multiple times.
+    for path in sorted(set(path for _, path, _ in errors)):
       sys.stderr.write('- %s\n' % path)
     raise errors[0][2][0], errors[0][2][1], errors[0][2][2]
   return False
+
+
+## Private code.

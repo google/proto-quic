@@ -76,8 +76,12 @@ def _ParseAndMergeResultFile(result_path, issues_dict):
     issue_id = issue.attributes['id'].value
     severity = issue.attributes['severity'].value
     path = issue.getElementsByTagName('location')[0].attributes['file'].value
-    # Strip temporary file path and use regex instead of path.
-    regexp = re.sub(_TMP_DIR_RE, '', path)
+    # Strip temporary file path.
+    path = re.sub(_TMP_DIR_RE, '', path)
+    # Escape Java inner class name separator and suppress with regex instead
+    # of path. Doesn't use re.escape() as it is a bit too aggressive and
+    # escapes '_', causing trouble with PRODUCT_DIR.
+    regexp = path.replace('$', r'\$')
     if issue_id not in issues_dict:
       issues_dict[issue_id] = _Issue(severity, set(), set())
     issues_dict[issue_id].regexps.add(regexp)

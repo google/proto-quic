@@ -276,7 +276,6 @@ third_party/WebKit/Source/platform/scroll/ScrollerSizeMetrics.h
 third_party/WebKit/Source/platform/text/TabSize.h
 third_party/WebKit/Source/platform/text/TextDirection.h
 third_party/WebKit/Source/platform/transforms/TransformOperation.h
-third_party/WebKit/public/platform/WebFeature.h
 third_party/WebKit/public/platform/WebFeaturePolicyFeature.h
 third_party/WebKit/public/platform/WebSourceLocation.h
 third_party/WebKit/public/platform/WebTouchInfo.h

@@ -42,7 +42,6 @@
 #include "base/trace_event/process_memory_dump.h"
 #include "base/trace_event/trace_buffer.h"
 #include "base/trace_event/trace_event.h"
-#include "base/trace_event/trace_event_synthetic_delay.h"
 #include "build/build_config.h"
 
 #if defined(OS_WIN)
@@ -523,35 +522,6 @@ void TraceLog::CreateFiltersForTraceConfig() {
   }
 }
 
-void TraceLog::UpdateSyntheticDelaysFromTraceConfig() {
-  ResetTraceEventSyntheticDelays();
-  const TraceConfig::StringList& delays =
-      trace_config_.GetSyntheticDelayValues();
-  TraceConfig::StringList::const_iterator ci;
-  for (ci = delays.begin(); ci != delays.end(); ++ci) {
-    StringTokenizer tokens(*ci, ";");
-    if (!tokens.GetNext())
-      continue;
-    TraceEventSyntheticDelay* delay =
-        TraceEventSyntheticDelay::Lookup(tokens.token());
-    while (tokens.GetNext()) {
-      std::string token = tokens.token();
-      char* duration_end;
-      double target_duration = strtod(token.c_str(), &duration_end);
-      if (duration_end != token.c_str()) {
-        delay->SetTargetDuration(TimeDelta::FromMicroseconds(
-            static_cast<int64_t>(target_duration * 1e6)));
-      } else if (token == "static") {
-        delay->SetMode(TraceEventSyntheticDelay::STATIC);
-      } else if (token == "oneshot") {
-        delay->SetMode(TraceEventSyntheticDelay::ONE_SHOT);
-      } else if (token == "alternating") {
-        delay->SetMode(TraceEventSyntheticDelay::ALTERNATING);
-      }
-    }
-  }
-}
-
 void TraceLog::GetKnownCategoryGroups(
     std::vector<std::string>* category_groups) {
   for (const auto& category : CategoryRegistry::GetAllCategories()) {
@@ -636,7 +606,6 @@ void TraceLog::SetEnabled(const TraceConfig& trace_config,
     num_traces_recorded_++;
 
     UpdateCategoryRegistry();
-    UpdateSyntheticDelaysFromTraceConfig();
 
     dispatching_to_observer_list_ = true;
     observer_list = enabled_state_observer_list_;

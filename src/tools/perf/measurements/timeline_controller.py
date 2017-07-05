@@ -28,6 +28,7 @@ class TimelineController(object):
     """Starts gathering timeline data.
 
     """
+    del page  # unused
     # Resets these member variables incase this object is reused.
     self._model = None
     self._renderer_process = None
@@ -36,9 +37,6 @@ class TimelineController(object):
     config = tracing_config.TracingConfig()
     config.chrome_trace_config.category_filter.AddFilterString(
         self.trace_categories)
-    for delay in page.GetSyntheticDelayCategories():
-      config.chrome_trace_config.category_filter.AddSyntheticDelay(
-          delay)
     config.enable_chrome_trace = True
     tab.browser.platform.tracing_controller.StartTracing(config)
 

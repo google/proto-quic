@@ -118,6 +118,7 @@ class Histogram::Factory {
   virtual BucketRanges* CreateRanges() {
     BucketRanges* ranges = new BucketRanges(bucket_count_ + 1);
     Histogram::InitializeBucketRanges(minimum_, maximum_, ranges);
+    base::debug::Alias(&ranges);  // TODO(bcwhite): Remove after crbug/586622.
     return ranges;
   }
 
@@ -782,6 +783,7 @@ class LinearHistogram::Factory : public Histogram::Factory {
   BucketRanges* CreateRanges() override {
     BucketRanges* ranges = new BucketRanges(bucket_count_ + 1);
     LinearHistogram::InitializeBucketRanges(minimum_, maximum_, ranges);
+    base::debug::Alias(&ranges);  // TODO(bcwhite): Remove after crbug/586622.
     return ranges;
   }
 
@@ -977,6 +979,7 @@ class BooleanHistogram::Factory : public Histogram::Factory {
   BucketRanges* CreateRanges() override {
     BucketRanges* ranges = new BucketRanges(3 + 1);
     LinearHistogram::InitializeBucketRanges(1, 2, ranges);
+    base::debug::Alias(&ranges);  // TODO(bcwhite): Remove after crbug/586622.
     return ranges;
   }
 

@@ -234,14 +234,6 @@ class SpdyURLRequestContext : public URLRequestContext {
 // NULL.
 bool HasSpdySession(SpdySessionPool* pool, const SpdySessionKey& key);
 
-// Creates a SPDY session for the given key and puts it in the SPDY
-// session pool in |http_session|. A SPDY session for |key| must not
-// already exist.
-base::WeakPtr<SpdySession> CreateInsecureSpdySession(
-    HttpNetworkSession* http_session,
-    const SpdySessionKey& key,
-    const NetLogWithSource& net_log);
-
 // Tries to create a SPDY session for the given key but expects the
 // attempt to fail with the given error. A SPDY session for |key| must
 // not already exist. The session will be created but close in the
@@ -252,13 +244,14 @@ base::WeakPtr<SpdySession> TryCreateSpdySessionExpectingFailure(
     Error expected_error,
     const NetLogWithSource& net_log);
 
-// Like CreateInsecureSpdySession(), but uses TLS.
-base::WeakPtr<SpdySession> CreateSecureSpdySession(
-    HttpNetworkSession* http_session,
-    const SpdySessionKey& key,
-    const NetLogWithSource& net_log);
+// Creates a SPDY session for the given key and puts it in the SPDY
+// session pool in |http_session|. A SPDY session for |key| must not
+// already exist.
+base::WeakPtr<SpdySession> CreateSpdySession(HttpNetworkSession* http_session,
+                                             const SpdySessionKey& key,
+                                             const NetLogWithSource& net_log);
 
-// Like CreateSecureSpdySession(), but does not fail if there is already an IP
+// Like CreateSpdySession(), but does not fail if there is already an IP
 // pooled session for |key|.
 base::WeakPtr<SpdySession> CreateSecureSpdySessionWithIpBasedPoolingDisabled(
     HttpNetworkSession* http_session,

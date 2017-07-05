@@ -28,6 +28,15 @@ RefCountedThreadSafeBase::~RefCountedThreadSafeBase() {
 #endif
 }
 
+#if !defined(ARCH_CPU_X86_FAMILY)
+bool RefCountedThreadSafeBase::Release() const {
+  return ReleaseImpl();
+}
+void RefCountedThreadSafeBase::AddRef() const {
+  AddRefImpl();
+}
+#endif
+
 #if DCHECK_IS_ON()
 bool RefCountedBase::CalledOnValidSequence() const {
   return sequence_checker_.CalledOnValidSequence() ||

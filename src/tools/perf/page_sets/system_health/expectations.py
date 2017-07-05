@@ -88,6 +88,10 @@ class SystemHealthMobileCommonExpectations(expectations.StoryExpectations):
                       [expectations.ALL], 'crbug.com/728152')
     self.DisableStory('browse:media:flickr_infinite_scroll',
                       [expectations.ALL], 'crbug.com/728785')
+    self.DisableStory(
+        'load:tools:drive',
+        [expectations.ANDROID_NEXUS5X, expectations.ANDROID_WEBVIEW],
+        'crbug.com/738854')
     # TODO(rnephew): This disabling should move to CanRunOnBrowser.
     self.DisableStory('browse:chrome:omnibox',
                       [expectations.ANDROID_WEBVIEW],
@@ -124,6 +128,10 @@ class SystemHealthMobileMemoryExpectations(expectations.StoryExpectations):
                       [expectations.ALL], 'crbug.com/728152')
     self.DisableStory('browse:media:flickr_infinite_scroll',
                       [expectations.ALL], 'crbug.com/728785')
+    self.DisableStory(
+        'load:tools:drive',
+        [expectations.ANDROID_NEXUS5X, expectations.ANDROID_WEBVIEW],
+        'crbug.com/738854')
     # TODO(rnephew): This disabling should move to CanRunOnBrowser.
     self.DisableStory('browse:chrome:omnibox',
                       [expectations.ANDROID_WEBVIEW],

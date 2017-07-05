@@ -346,6 +346,11 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="157" label="UMA_API_UNSELECT_ROW">unselectRow</int>
 </enum>
 
+<enum name="AccessPasswordInSettingsEvent">
+  <int value="0" label="Viewed"/>
+  <int value="1" label="Copied"/>
+</enum>
+
 <enum name="AccountChooserDismissalReason">
   <int value="0" label="Canceled"/>
   <int value="1" label="Credential chosen"/>
@@ -7136,6 +7141,25 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="3" label="Enabled from second screen"/>
 </enum>
 
+<enum name="DataReductionProxyProtocolAcceptTransformEvent">
+  <int value="0" label="Lite page requested"/>
+  <int value="1" label="Lite page transform received"/>
+  <int value="2" label="Empty image page policy directive received"/>
+  <int value="3" label="Empty image requested"/>
+  <int value="4" label="Empty image transform received"/>
+  <int value="5" label="Compressed-video requested"/>
+</enum>
+
+<enum name="DataReductionProxyProtocolNotAcceptingTransformReason">
+  <int value="0"
+      label="Not accepting proxy transforms, transforms disabled on client"/>
+  <int value="1"
+      label="Not accepting proxy transforms, page blacklisted on client"/>
+  <int value="2"
+      label="Not accepting proxy transforms, not on cellular in cellular-only
+             mode"/>
+</enum>
+
 <enum name="DataReductionProxyProxyPrefMigrationResult">
   <int value="0" label="Proxy pref not cleared"/>
   <int value="1" label="Empty proxy pref was cleared"/>
@@ -7814,6 +7838,8 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="8" label="Resumed migration failed (file error)"/>
   <int value="9" label="New migration failed (file error EIO on open)"/>
   <int value="10" label="Resumed migration failed (file error EIO on open)"/>
+  <int value="11" label="New migration cancelled"/>
+  <int value="12" label="Resumed migration cancelled"/>
 </enum>
 
 <enum name="DircryptoMigrationFailedOperationType">
@@ -10830,6 +10856,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="372" label="DeviceSecondFactorAuthentication"/>
   <int value="373" label="UseSystemDefaultPrinterAsDefault"/>
   <int value="374" label="DeviceEcryptfsMigrationStrategy"/>
+  <int value="375" label="SafeBrowsingForTrustedSourcesEnabled"/>
 </enum>
 
 <enum name="EnterprisePolicyInvalidations">
@@ -13545,7 +13572,7 @@ uploading your change for review.  These are checked by presubmit scripts.
 </enum>
 
 <enum name="FeatureObserver">
-<!-- Generated from third_party/WebKit/public/platform/WebFeature.h -->
+<!-- Generated from third_party/WebKit/public/platform/web_feature.mojom -->
 
   <int value="0" label="OBSOLETE_PageDestruction"/>
   <int value="1" label="LegacyNotifications"/>
@@ -15625,6 +15652,24 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="2031" label="MIDIMessageEvent"/>
   <int value="2032" label="FetchEventIsReload"/>
   <int value="2033" label="ServiceWorkerClientFrameType"/>
+  <int value="2034" label="QuirksModeDocument"/>
+  <int value="2035" label="LimitedQuirksModeDocument"/>
+  <int value="2036" label="EncryptedMediaCrossOriginIframe"/>
+  <int value="2037" label="CSSSelectorWebkitMediaControls"/>
+  <int value="2038" label="CSSSelectorWebkitMediaControlsOverlayEnclosure"/>
+  <int value="2039" label="CSSSelectorWebkitMediaControlsOverlayPlayButton"/>
+  <int value="2040" label="CSSSelectorWebkitMediaControlsEnclosure"/>
+  <int value="2041" label="CSSSelectorWebkitMediaControlsPanel"/>
+  <int value="2042" label="CSSSelectorWebkitMediaControlsPlayButton"/>
+  <int value="2043" label="CSSSelectorWebkitMediaControlsCurrentTimeDisplay"/>
+  <int value="2044" label="CSSSelectorWebkitMediaControlsTimeRemainingDisplay"/>
+  <int value="2045" label="CSSSelectorWebkitMediaControlsTimeline"/>
+  <int value="2046" label="CSSSelectorWebkitMediaControlsTimelineContainer"/>
+  <int value="2047" label="CSSSelectorWebkitMediaControlsMuteButton"/>
+  <int value="2048" label="CSSSelectorWebkitMediaControlsVolumeSlider"/>
+  <int value="2049" label="CSSSelectorWebkitMediaControlsFullscreenButton"/>
+  <int value="2050"
+      label="CSSSelectorWebkitMediaControlsToggleClosedCaptionsButton"/>
 </enum>
 
 <enum name="FeedbackSource">
@@ -18806,7 +18851,16 @@ uploading your change for review.  These are checked by presubmit scripts.
   <summary>
     These numbers are the lower 32 bits of the hash of the metric name.
   </summary>
+  <int value="-2055973512" label="Login.ConsumerNewUsersAllowed"/>
+  <int value="-1286300074"
+      label="Network.Shill.Wifi.ExpiredLeaseLengthSeconds"/>
   <int value="0" label="Missing hash value"/>
+  <int value="424952287"
+      label="Network.Shill.Wifi.LinkMonitorResponseTimeSample"/>
+  <int value="628921860"
+      label="Network.Shill.Ethernet.LinkMonitorResponseTimeSample"/>
+  <int value="662206917"
+      label="Network.Shill.Ethernet.ExpiredLeaseLengthSeconds"/>
 </enum>
 
 <enum name="HistoryFaviconsRecoveryEnum">
@@ -22117,6 +22171,7 @@ from previous Chrome versions.
   <int value="-2143328006"
       label="enable-fill-on-account-select-no-highlighting"/>
   <int value="-2143113994" label="enable-ephemeral-apps-in-webstore"/>
+  <int value="-2134717874" label="Multidevice:disabled"/>
   <int value="-2134333982" label="ShowArcFilesApp:enabled"/>
   <int value="-2134244069" label="HttpFormWarning:enabled"/>
   <int value="-2132591642" label="enable-input-view"/>
@@ -22467,6 +22522,7 @@ from previous Chrome versions.
   <int value="-1033738911" label="enable-mac-views-dialogs"/>
   <int value="-1029920490" label="IdleTimeSpellChecking:enabled"/>
   <int value="-1028733699" label="MacViewsWebUIDialogs:disabled"/>
+  <int value="-1027022706" label="ContentSuggestionsVideoOverlay:disabled"/>
   <int value="-1022971520" label="enable-search-button-in-omnibox-for-str"/>
   <int value="-1020450980" label="gesture-deletion"/>
   <int value="-1016202433" label="disable-add-to-shelf"/>
@@ -22780,6 +22836,7 @@ from previous Chrome versions.
   <int value="98134240" label="material-design-ink-drop-animation-speed"/>
   <int value="103932290" label="show-autofill-type-predictions"/>
   <int value="106840653" label="mus"/>
+  <int value="112420129" label="ContentSuggestionsVideoOverlay:enabled"/>
   <int value="118991027" label="enable-accelerated-fixed-root-background"/>
   <int value="119185738"
       label="OmniboxUIExperimentMaxAutocompleteMatches:disabled"/>
@@ -23189,8 +23246,10 @@ from previous Chrome versions.
   <int value="1510476448" label="disable-prefixed-encrypted-media"/>
   <int value="1511140997" label="OfflinePagesAsyncDownload:disabled"/>
   <int value="1511161758" label="BackgroundLoader:enabled"/>
+  <int value="1512249489" label="ModuleScripts:disabled"/>
   <int value="1515196403" label="fast-user-switching"/>
   <int value="1517863401" label="history-entry-requires-user-gesture"/>
+  <int value="1533111748" label="Multidevice:enabled"/>
   <int value="1538690515" label="OneGoogleBarOnLocalNtp:enabled"/>
   <int value="1541723759" label="ServiceWorkerNavigationPreload:disabled"/>
   <int value="1548776701" label="AllBookmarks:disabled"/>
@@ -23293,6 +23352,7 @@ from previous Chrome versions.
   <int value="1900529524" label="disable-touch-drag-drop"/>
   <int value="1905465678" label="ContextualSearchSingleActions:enabled"/>
   <int value="1906942630" label="enable-easy-unlock"/>
+  <int value="1910240042" label="enable-experimental-fullscreen-exit-ui"/>
   <int value="1913298816" label="OverlayScrollbar:enabled"/>
   <int value="1915178511" label="disable-blink-features"/>
   <int value="1927259098" label="TranslateLanguageByULP:enabled"/>
@@ -23332,6 +23392,7 @@ from previous Chrome versions.
   <int value="2059322877" label="new-avatar-menu"/>
   <int value="2063091429" label="OfflinePagesSharing:enabled"/>
   <int value="2067634730" label="LsdPermissionPrompt:disabled"/>
+  <int value="2067923510" label="ModuleScripts:enabled"/>
   <int value="2071340353" label="progress-bar-completion"/>
   <int value="2071461362" label="disable-credit-card-scan"/>
   <int value="2076787478" label="OmniboxDisplayTitleForCurrentUrl:disabled"/>
@@ -26904,6 +26965,20 @@ from previous Chrome versions.
   <int value="1" label="Store init failed"/>
   <int value="2" label="Store load failed"/>
   <int value="3" label="Data parsing failed"/>
+</enum>
+
+<enum name="OfflinePagesOfflineUsage">
+  <int value="0" label="Not used">Not used at all during whole day.</int>
+  <int value="1" label="Started, but no pages loaded successfully">
+    Started, but failed to successfully navigate.
+  </int>
+  <int value="2" label="Offline pages loaded only">
+    Only navigated to offline pages locally saved on the device.
+  </int>
+  <int value="3" label="Online pages loaded only">Only navigated online.</int>
+  <int value="4" label="Both offlilne and online pages loaded">
+    Navigated to both online and offline pages.
+  </int>
 </enum>
 
 <enum name="OfflinePagesRedirectResult">
@@ -30574,6 +30649,7 @@ from previous Chrome versions.
   <int value="5" label="INVALID_FORM"/>
   <int value="6" label="AUTOCOMPLETE_OFF"/>
   <int value="7" label="SYNC_CREDENTIALS"/>
+  <int value="8" label="SAVING_ON_HTTP_AFTER_HTTPS"/>
 </enum>
 
 <enum name="ProxyStatus">
@@ -30895,6 +30971,7 @@ from previous Chrome versions.
   <int value="7" label="Service Worker unregistered"/>
   <int value="8" label="subscribe() storage corrupt"/>
   <int value="9" label="getSubscription() storage corrupt"/>
+  <int value="10" label="Service Worker database got wiped"/>
 </enum>
 
 <enum name="PushUnregistrationStatus">
@@ -31339,6 +31416,12 @@ from previous Chrome versions.
   <int value="0" label="Success"/>
   <int value="1" label="Failure"/>
   <int value="2" label="Will retry"/>
+</enum>
+
+<enum name="ReauthToAccessPasswordInSettingsEvent">
+  <int value="0" label="Success"/>
+  <int value="1" label="Failure"/>
+  <int value="2" label="Skipped"/>
 </enum>
 
 <enum name="RecentTabsAction">
@@ -33093,6 +33176,7 @@ from previous Chrome versions.
   <int value="12" label="ForeignFetchHeadersWithoutOrigin"/>
   <int value="13" label="ForeignFetchMismatchedOrigin"/>
   <int value="14" label="RedirectedResponseForNotFollowRequest"/>
+  <int value="15" label="DataPipeCreationFailed (insufficient resources)"/>
 </enum>
 
 <enum name="ServiceWorkerSite">
@@ -33938,6 +34022,12 @@ from previous Chrome versions.
   <int value="1" label="Stale"/>
   <int value="2" label="Fresh"/>
   <int value="3" label="Fresh index with cache updated since backend start"/>
+</enum>
+
+<enum name="SinglePageAppNavigationType">
+  <int value="0" label="History push state or replace state"/>
+  <int value="1" label="Same document backward or forward"/>
+  <int value="2" label="Other fragment navigation"/>
 </enum>
 
 <enum name="SiteEngagementServiceEngagementType">
@@ -35116,6 +35206,17 @@ from previous Chrome versions.
   <int value="2054" label="rsa_pss_sha512"/>
 </enum>
 
+<enum name="SSLVersionInterferenceDetails">
+  <int value="0" label="Other"/>
+  <int value="1" label="Connection closed"/>
+  <int value="2" label="Connection reset"/>
+  <int value="3" label="access_denied alert"/>
+  <int value="4" label="bad_record_mac alert"/>
+  <int value="5" label="application data instead of handshake"/>
+  <int value="6" label="Version or cipher negotiation failed"/>
+  <int value="7" label="Protocol error"/>
+</enum>
+
 <enum name="StarsLaunchLocation">
   <int value="0" label="All Items"/>
   <int value="1" label="Uncategorized"/>
@@ -35965,6 +36066,12 @@ from previous Chrome versions.
       label="Discarded a tab playing audio (included in the previous one)"/>
 </enum>
 
+<enum name="TabLoadingState">
+  <int value="0" label="Tab is not loading"/>
+  <int value="1" label="Tab is loading"/>
+  <int value="2" label="Tab is loaded"/>
+</enum>
+
 <enum name="TabRendererCrashStatus">
   <int value="0" label="Shown in foreground app"/>
   <int value="1" label="Hidden in foreground app"/>
@@ -36480,6 +36587,20 @@ from previous Chrome versions.
   <int value="2049" label="TPM_E_NEEDS_SELFTEST"/>
   <int value="2050" label="TPM_E_DOING_SELFTEST"/>
   <int value="2051" label="TPM_E_DEFEND_LOCK_RUNNING"/>
+</enum>
+
+<enum name="TPMVersionFingerprint">
+  <int value="305524852" label="IFX 4.32 build 0x36f variant 1"/>
+  <int value="517482723" label="IFX 4.32 build 0x36f variant 2"/>
+  <int value="987235505" label="CROS 0dc5c85b01a68fe6"/>
+  <int value="987973414" label="IFX 6.40 build 0xbe"/>
+  <int value="1353576267" label="IFX 3.18 build 0x9"/>
+  <int value="1437720528" label="IFX 133.32 build 0x5 variant 1"/>
+  <int value="1451134301" label="IFX 147.18 build 0xf"/>
+  <int value="1490841853" label="IFX 133.32 build 0x5 variant 2"/>
+  <int value="1716634300" label="IFX 133.32 build 0x5 variant 3"/>
+  <int value="1828625721" label="IFX 4.31 build 0x2c2"/>
+  <int value="1887455524" label="CROS 0fd788bd01a68fe6"/>
 </enum>
 
 <enum name="TrackedPreference">
@@ -37748,6 +37869,136 @@ from previous Chrome versions.
   <int value="57" label=".torrent"/>
   <int value="58" label=".txt"/>
   <int value="59" label=".zip"/>
+</enum>
+
+<enum name="VirtualKeyboardControllerStateTransition">
+  <int value="-7007" label="Invalid_HIDDEN_to_HIDDEN"/>
+  <int value="-7006" label="Invalid_HIDDEN_to_HIDING"/>
+  <int value="-7005" label="Invalid_HIDDEN_to_WILL_HIDE"/>
+  <int value="-7004" label="Invalid_HIDDEN_to_SHOWN"/>
+  <int value="-7003" label="Invalid_HIDDEN_to_SHOWING"/>
+  <int value="-7002" label="Invalid_HIDDEN_to_LOADING_EXTENSION"/>
+  <int value="-7001" label="Invalid_HIDDEN_to_INITIAL"/>
+  <int value="-7000" label="Invalid_HIDDEN_to_UNKNOWN"/>
+  <int value="-6007" label="Invalid_HIDING_to_HIDDEN"/>
+  <int value="-6006" label="Invalid_HIDING_to_HIDING"/>
+  <int value="-6005" label="Invalid_HIDING_to_WILL_HIDE"/>
+  <int value="-6004" label="Invalid_HIDING_to_SHOWN"/>
+  <int value="-6003" label="Invalid_HIDING_to_SHOWING"/>
+  <int value="-6002" label="Invalid_HIDING_to_LOADING_EXTENSION"/>
+  <int value="-6001" label="Invalid_HIDING_to_INITIAL"/>
+  <int value="-6000" label="Invalid_HIDING_to_UNKNOWN"/>
+  <int value="-5007" label="Invalid_WILL_HIDE_to_HIDDEN"/>
+  <int value="-5006" label="Invalid_WILL_HIDE_to_HIDING"/>
+  <int value="-5005" label="Invalid_WILL_HIDE_to_WILL_HIDE"/>
+  <int value="-5004" label="Invalid_WILL_HIDE_to_SHOWN"/>
+  <int value="-5003" label="Invalid_WILL_HIDE_to_SHOWING"/>
+  <int value="-5002" label="Invalid_WILL_HIDE_to_LOADING_EXTENSION"/>
+  <int value="-5001" label="Invalid_WILL_HIDE_to_INITIAL"/>
+  <int value="-5000" label="Invalid_WILL_HIDE_to_UNKNOWN"/>
+  <int value="-4007" label="Invalid_SHOWN_to_HIDDEN"/>
+  <int value="-4006" label="Invalid_SHOWN_to_HIDING"/>
+  <int value="-4005" label="Invalid_SHOWN_to_WILL_HIDE"/>
+  <int value="-4004" label="Invalid_SHOWN_to_SHOWN"/>
+  <int value="-4003" label="Invalid_SHOWN_to_SHOWING"/>
+  <int value="-4002" label="Invalid_SHOWN_to_LOADING_EXTENSION"/>
+  <int value="-4001" label="Invalid_SHOWN_to_INITIAL"/>
+  <int value="-4000" label="Invalid_SHOWN_to_UNKNOWN"/>
+  <int value="-3007" label="Invalid_SHOWING_to_HIDDEN"/>
+  <int value="-3006" label="Invalid_SHOWING_to_HIDING"/>
+  <int value="-3005" label="Invalid_SHOWING_to_WILL_HIDE"/>
+  <int value="-3004" label="Invalid_SHOWING_to_SHOWN"/>
+  <int value="-3003" label="Invalid_SHOWING_to_SHOWING"/>
+  <int value="-3002" label="Invalid_SHOWING_to_LOADING_EXTENSION"/>
+  <int value="-3001" label="Invalid_SHOWING_to_INITIAL"/>
+  <int value="-3000" label="Invalid_SHOWING_to_UNKNOWN"/>
+  <int value="-2007" label="Invalid_LOADING_EXTENSION_to_HIDDEN"/>
+  <int value="-2006" label="Invalid_LOADING_EXTENSION_to_HIDING"/>
+  <int value="-2005" label="Invalid_LOADING_EXTENSION_to_WILL_HIDE"/>
+  <int value="-2004" label="Invalid_LOADING_EXTENSION_to_SHOWN"/>
+  <int value="-2003" label="Invalid_LOADING_EXTENSION_to_SHOWING"/>
+  <int value="-2002" label="Invalid_LOADING_EXTENSION_to_LOADING_EXTENSION"/>
+  <int value="-2001" label="Invalid_LOADING_EXTENSION_to_INITIAL"/>
+  <int value="-2000" label="Invalid_LOADING_EXTENSION_to_UNKNOWN"/>
+  <int value="-1007" label="Invalid_INITIAL_to_HIDDEN"/>
+  <int value="-1006" label="Invalid_INITIAL_to_HIDING"/>
+  <int value="-1005" label="Invalid_INITIAL_to_WILL_HIDE"/>
+  <int value="-1004" label="Invalid_INITIAL_to_SHOWN"/>
+  <int value="-1003" label="Invalid_INITIAL_to_SHOWING"/>
+  <int value="-1002" label="Invalid_INITIAL_to_LOADING_EXTENSION"/>
+  <int value="-1001" label="Invalid_INITIAL_to_INITIAL"/>
+  <int value="-1000" label="Invalid_INITIAL_to_UNKNOWN"/>
+  <int value="-7" label="Invalid_UNKNOWN_to_HIDDEN"/>
+  <int value="-6" label="Invalid_UNKNOWN_to_HIDING"/>
+  <int value="-5" label="Invalid_UNKNOWN_to_WILL_HIDE"/>
+  <int value="-4" label="Invalid_UNKNOWN_to_SHOWN"/>
+  <int value="-3" label="Invalid_UNKNOWN_to_SHOWING"/>
+  <int value="-2" label="Invalid_UNKNOWN_to_LOADING_EXTENSION"/>
+  <int value="-1" label="Invalid_UNKNOWN_to_INITIAL"/>
+  <int value="0" label="Invalid_UNKNOWN_to_UNKNOWN"/>
+  <int value="1" label="UNKNOWN_to_INITIAL"/>
+  <int value="2" label="UNKNOWN_to_LOADING_EXTENSION"/>
+  <int value="3" label="UNKNOWN_to_SHOWING"/>
+  <int value="4" label="UNKNOWN_to_SHOWN"/>
+  <int value="5" label="UNKNOWN_to_WILL_HIDE"/>
+  <int value="6" label="UNKNOWN_to_HIDING"/>
+  <int value="7" label="UNKNOWN_to_HIDDEN"/>
+  <int value="1000" label="INITIAL_to_UNKNOWN"/>
+  <int value="1001" label="INITIAL_to_INITIAL"/>
+  <int value="1002" label="INITIAL_to_LOADING_EXTENSION"/>
+  <int value="1003" label="INITIAL_to_SHOWING"/>
+  <int value="1004" label="INITIAL_to_SHOWN"/>
+  <int value="1005" label="INITIAL_to_WILL_HIDE"/>
+  <int value="1006" label="INITIAL_to_HIDING"/>
+  <int value="1007" label="INITIAL_to_HIDDEN"/>
+  <int value="2000" label="LOADING_EXTENSION_to_UNKNOWN"/>
+  <int value="2001" label="LOADING_EXTENSION_to_INITIAL"/>
+  <int value="2002" label="LOADING_EXTENSION_to_LOADING_EXTENSION"/>
+  <int value="2003" label="LOADING_EXTENSION_to_SHOWING"/>
+  <int value="2004" label="LOADING_EXTENSION_to_SHOWN"/>
+  <int value="2005" label="LOADING_EXTENSION_to_WILL_HIDE"/>
+  <int value="2006" label="LOADING_EXTENSION_to_HIDING"/>
+  <int value="2007" label="LOADING_EXTENSION_to_HIDDEN"/>
+  <int value="3000" label="SHOWING_to_UNKNOWN"/>
+  <int value="3001" label="SHOWING_to_INITIAL"/>
+  <int value="3002" label="SHOWING_to_LOADING_EXTENSION"/>
+  <int value="3003" label="SHOWING_to_SHOWING"/>
+  <int value="3004" label="SHOWING_to_SHOWN"/>
+  <int value="3005" label="SHOWING_to_WILL_HIDE"/>
+  <int value="3006" label="SHOWING_to_HIDING"/>
+  <int value="3007" label="SHOWING_to_HIDDEN"/>
+  <int value="4000" label="SHOWN_to_UNKNOWN"/>
+  <int value="4001" label="SHOWN_to_INITIAL"/>
+  <int value="4002" label="SHOWN_to_LOADING_EXTENSION"/>
+  <int value="4003" label="SHOWN_to_SHOWING"/>
+  <int value="4004" label="SHOWN_to_SHOWN"/>
+  <int value="4005" label="SHOWN_to_WILL_HIDE"/>
+  <int value="4006" label="SHOWN_to_HIDING"/>
+  <int value="4007" label="SHOWN_to_HIDDEN"/>
+  <int value="5000" label="WILL_HIDE_to_UNKNOWN"/>
+  <int value="5001" label="WILL_HIDE_to_INITIAL"/>
+  <int value="5002" label="WILL_HIDE_to_LOADING_EXTENSION"/>
+  <int value="5003" label="WILL_HIDE_to_SHOWING"/>
+  <int value="5004" label="WILL_HIDE_to_SHOWN"/>
+  <int value="5005" label="WILL_HIDE_to_WILL_HIDE"/>
+  <int value="5006" label="WILL_HIDE_to_HIDING"/>
+  <int value="5007" label="WILL_HIDE_to_HIDDEN"/>
+  <int value="6000" label="HIDING_to_UNKNOWN"/>
+  <int value="6001" label="HIDING_to_INITIAL"/>
+  <int value="6002" label="HIDING_to_LOADING_EXTENSION"/>
+  <int value="6003" label="HIDING_to_SHOWING"/>
+  <int value="6004" label="HIDING_to_SHOWN"/>
+  <int value="6005" label="HIDING_to_WILL_HIDE"/>
+  <int value="6006" label="HIDING_to_HIDING"/>
+  <int value="6007" label="HIDING_to_HIDDEN"/>
+  <int value="7000" label="HIDDEN_to_UNKNOWN"/>
+  <int value="7001" label="HIDDEN_to_INITIAL"/>
+  <int value="7002" label="HIDDEN_to_LOADING_EXTENSION"/>
+  <int value="7003" label="HIDDEN_to_SHOWING"/>
+  <int value="7004" label="HIDDEN_to_SHOWN"/>
+  <int value="7005" label="HIDDEN_to_WILL_HIDE"/>
+  <int value="7006" label="HIDDEN_to_HIDING"/>
+  <int value="7007" label="HIDDEN_to_HIDDEN"/>
 </enum>
 
 <enum name="VisibleTab">

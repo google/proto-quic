@@ -39,6 +39,7 @@ class LuciContextAuthTest(auto_stub.TestCase):
         data = json.loads(body)
         self.assertEqual('secret', data['secret'])
         self.assertEqual(1, len(data['scopes']))
+        self.assertEqual('acc_a', data['account_id'])
         self.assertEqual('https://www.googleapis.com/auth/userinfo.email',
                          data['scopes'][0])
         response = collections.namedtuple('HttpResponse', ['status'])
@@ -54,7 +55,11 @@ class LuciContextAuthTest(auto_stub.TestCase):
 
   def mock_local_auth(self, server):
     def load_local_auth():
-      return oauth.LocalAuthParameters(rpc_port=0, secret='secret')
+      return oauth.LocalAuthParameters(
+          rpc_port=0,
+          secret='secret',
+          accounts=[oauth.LocalAuthAccount('acc_a')],
+          default_account_id='acc_a')
     self.mock(oauth, '_load_local_auth', load_local_auth)
     def http_server():
       return server

@@ -66,6 +66,32 @@ struct SSLClientSocketContext {
   const std::string ssl_session_cache_shard;
 };
 
+// Details on a failed operation. This enum is used to diagnose causes of TLS
+// version interference by buggy middleboxes. The values are histogramed so they
+// must not be changed.
+enum class SSLErrorDetails {
+  kOther = 0,
+  // The failure was due to ERR_CONNECTION_CLOSED. BlueCoat has a bug with this
+  // failure mode. https://crbug.com/694593.
+  kConnectionClosed = 1,
+  // The failure was due to ERR_CONNECTION_RESET.
+  kConnectionReset = 2,
+  // The failure was due to receiving an access_denied alert. Fortinet has a
+  // bug with this failure mode. https://crbug.com/676969.
+  kAccessDeniedAlert = 3,
+  // The failure was due to receiving a bad_record_mac alert.
+  kBadRecordMACAlert = 4,
+  // The failure was due to receiving an unencrypted application_data record
+  // during the handshake. Watchguard has a bug with this failure
+  // mode. https://crbug.com/733223.
+  kApplicationDataInsteadOfHandshake = 5,
+  // The failure was due to failing to negotiate a version or cipher suite.
+  kVersionOrCipherMismatch = 6,
+  // The failure was due to some other protocol error.
+  kProtocolError = 7,
+  kLastValue = kProtocolError,
+};
+
 // A client socket that uses SSL as the transport layer.
 //
 // NOTE: The SSL handshake occurs within the Connect method after a TCP
@@ -115,6 +141,10 @@ class NET_EXPORT SSLClientSocket : public SSLSocket {
   // that bug is closed. This returns the channel ID key that was used when
   // establishing the connection (or NULL if no channel ID was used).
   virtual crypto::ECPrivateKey* GetChannelIDKey() const = 0;
+
+  // Returns details for a failed Connect() operation. This method is used to
+  // track causes of TLS version interference by buggy middleboxes.
+  virtual SSLErrorDetails GetConnectErrorDetails() const;
 
  protected:
   void set_signed_cert_timestamps_received(

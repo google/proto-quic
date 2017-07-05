@@ -58,18 +58,6 @@ std::vector<TestParams> GetTestParams() {
   for (bool fix_convex_mode : {true, false}) {
     for (bool fix_beta_last_max : {true, false}) {
       for (bool allow_per_ack_updates : {true, false}) {
-        if (!FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode &&
-            fix_convex_mode) {
-          continue;
-        }
-        if (!FLAGS_quic_reloadable_flag_quic_fix_beta_last_max &&
-            fix_beta_last_max) {
-          continue;
-        }
-        if (!FLAGS_quic_reloadable_flag_quic_enable_cubic_per_ack_updates &&
-            allow_per_ack_updates) {
-          continue;
-        }
         TestParams param(fix_convex_mode, fix_beta_last_max,
                          allow_per_ack_updates);
         params.push_back(param);

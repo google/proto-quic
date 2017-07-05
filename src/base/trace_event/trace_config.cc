@@ -248,10 +248,6 @@ TraceConfig& TraceConfig::operator=(const TraceConfig& rhs) {
   return *this;
 }
 
-const TraceConfig::StringList& TraceConfig::GetSyntheticDelayValues() const {
-  return category_filter_.synthetic_delays();
-}
-
 std::string TraceConfig::ToString() const {
   std::unique_ptr<DictionaryValue> dict = ToDict();
   std::string json;

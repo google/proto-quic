@@ -15,82 +15,6 @@
 namespace base {
 namespace internal {
 
-// CheckedNumeric<> implements all the logic and operators for detecting integer
-// boundary conditions such as overflow, underflow, and invalid conversions.
-// The CheckedNumeric type implicitly converts from floating point and integer
-// data types, and contains overloads for basic arithmetic operations (i.e.: +,
-// -, *, / for all types and %, <<, >>, &, |, ^ for integers). Type promotions
-// are a slightly modified version of the standard C arithmetic rules with the
-// two differences being that there is no default promotion to int and bitwise
-// logical operations always return an unsigned of the wider type.
-//
-// You may also use one of the variadic convenience functions, which accept
-// standard arithmetic or CheckedNumeric types, perform arithmetic operations,
-// and return a CheckedNumeric result. The supported functions are:
-//  CheckAdd() - Addition.
-//  CheckSub() - Subtraction.
-//  CheckMul() - Multiplication.
-//  CheckDiv() - Division.
-//  CheckMod() - Modulous (integer only).
-//  CheckLsh() - Left integer shift (integer only).
-//  CheckRsh() - Right integer shift (integer only).
-//  CheckAnd() - Bitwise AND (integer only with unsigned result).
-//  CheckOr()  - Bitwise OR (integer only with unsigned result).
-//  CheckXor() - Bitwise XOR (integer only with unsigned result).
-//  CheckMax() - Maximum of supplied arguments.
-//  CheckMin() - Minimum of supplied arguments.
-//
-// The unary negation, increment, and decrement operators are supported, along
-// with the following unary arithmetic methods, which return a new
-// CheckedNumeric as a result of the operation:
-//  Abs() - Absolute value.
-//  UnsignedAbs() - Absolute value as an equal-width unsigned underlying type
-//          (valid for only integral types).
-//  Max() - Returns whichever is greater of the current instance or argument.
-//          The underlying return type is whichever has the greatest magnitude.
-//  Min() - Returns whichever is lowest of the current instance or argument.
-//          The underlying return type is whichever has can represent the lowest
-//          number in the smallest width (e.g. int8_t over unsigned, int over
-//          int8_t, and float over int).
-//
-// The following methods convert from CheckedNumeric to standard numeric values:
-//  AssignIfValid() - Assigns the underlying value to the supplied destination
-//          pointer if the value is currently valid and within the range
-//          supported by the destination type. Returns true on success.
-//  ****************************************************************************
-//  *  WARNING: All of the following functions return a StrictNumeric, which   *
-//  *  is valid for comparison and assignment operations, but will trigger a   *
-//  *  compile failure on attempts to assign to a type of insufficient range.  *
-//  ****************************************************************************
-//  IsValid() - Returns true if the underlying numeric value is valid (i.e. has
-//          has not wrapped and is not the result of an invalid conversion).
-//  ValueOrDie() - Returns the underlying value. If the state is not valid this
-//          call will crash on a CHECK.
-//  ValueOrDefault() - Returns the current value, or the supplied default if the
-//          state is not valid (will not trigger a CHECK).
-//
-// The following wrapper functions can be used to avoid the template
-// disambiguator syntax when converting a destination type.
-//   IsValidForType<>() in place of: a.template IsValid<Dst>()
-//   ValueOrDieForType<>() in place of: a.template ValueOrDie()
-//   ValueOrDefaultForType<>() in place of: a.template ValueOrDefault(default)
-//
-// The following are general utility methods that are useful for converting
-// between arithmetic types and CheckedNumeric types:
-//  CheckedNumeric::Cast<Dst>() - Instance method returning a CheckedNumeric
-//          derived from casting the current instance to a CheckedNumeric of
-//          the supplied destination type.
-//  MakeCheckedNum() - Creates a new CheckedNumeric from the underlying type of
-//          the supplied arithmetic, CheckedNumeric, or StrictNumeric type.
-//
-// Comparison operations are explicitly not supported because they could result
-// in a crash on an unexpected CHECK condition. You should use patterns like the
-// following for comparisons:
-//   CheckedNumeric<size_t> checked_size = untrusted_input_value;
-//   checked_size += HEADER LENGTH;
-//   if (checked_size.IsValid() && checked_size.ValueOrDie() < buffer_size)
-//     Do stuff...
-
 template <typename T>
 class CheckedNumeric {
   static_assert(std::is_arithmetic<T>::value,
@@ -377,8 +301,8 @@ constexpr CheckedNumeric<typename UnderlyingType<T>::type> MakeCheckedNum(
 template <template <typename, typename, typename> class M,
           typename L,
           typename R>
-CheckedNumeric<typename MathWrapper<M, L, R>::type> ChkMathOp(const L lhs,
-                                                              const R rhs) {
+CheckedNumeric<typename MathWrapper<M, L, R>::type> CheckMathOp(const L lhs,
+                                                                const R rhs) {
   using Math = typename MathWrapper<M, L, R>::math;
   return CheckedNumeric<typename Math::result_type>::template MathOp<M>(lhs,
                                                                         rhs);
@@ -390,10 +314,10 @@ template <template <typename, typename, typename> class M,
           typename R,
           typename... Args>
 CheckedNumeric<typename ResultType<M, L, R, Args...>::type>
-ChkMathOp(const L lhs, const R rhs, const Args... args) {
-  auto tmp = ChkMathOp<M>(lhs, rhs);
-  return tmp.IsValid() ? ChkMathOp<M>(tmp, args...)
-                       : decltype(ChkMathOp<M>(tmp, args...))(tmp);
+CheckMathOp(const L lhs, const R rhs, const Args... args) {
+  auto tmp = CheckMathOp<M>(lhs, rhs);
+  return tmp.IsValid() ? CheckMathOp<M>(tmp, args...)
+                       : decltype(CheckMathOp<M>(tmp, args...))(tmp);
 }
 
 BASE_NUMERIC_ARITHMETIC_OPERATORS(Checked, Check, Add, +, +=)

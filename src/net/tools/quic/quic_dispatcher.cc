@@ -52,6 +52,8 @@ class DeleteSessionsAlarm : public QuicAlarm::Delegate {
 // to be handed off to the time wait list manager.
 class PacketCollector : public QuicPacketCreator::DelegateInterface {
  public:
+  explicit PacketCollector(QuicBufferAllocator* allocator)
+      : send_buffer_(allocator) {}
   ~PacketCollector() override {}
 
   void OnSerializedPacket(SerializedPacket* serialized_packet) override {
@@ -68,12 +70,32 @@ class PacketCollector : public QuicPacketCreator::DelegateInterface {
                             const string& error_details,
                             ConnectionCloseSource source) override {}
 
+  void SaveStreamData(QuicStreamId id,
+                      QuicIOVector iov,
+                      size_t iov_offset,
+                      QuicStreamOffset offset,
+                      QuicByteCount data_length) override {
+    DCHECK_EQ(kCryptoStreamId, id);
+    send_buffer_.SaveStreamData(iov, iov_offset, offset, data_length);
+  }
+
+  bool WriteStreamData(QuicStreamId id,
+                       QuicStreamOffset offset,
+                       QuicByteCount data_length,
+                       QuicDataWriter* writer) override {
+    DCHECK_EQ(kCryptoStreamId, id);
+    return send_buffer_.WriteStreamData(offset, data_length, writer);
+  }
+
   std::vector<std::unique_ptr<QuicEncryptedPacket>>* packets() {
     return &packets_;
   }
 
  private:
   std::vector<std::unique_ptr<QuicEncryptedPacket>> packets_;
+  // This is only needed until the packets are encrypted. Once packets are
+  // encrypted, the stream data is no longer required.
+  QuicStreamSendBuffer send_buffer_;
 };
 
 // Helper for statelessly closing connections by generating the
@@ -87,6 +109,7 @@ class StatelessConnectionTerminator {
                                 QuicTimeWaitListManager* time_wait_list_manager)
       : connection_id_(connection_id),
         framer_(framer),
+        collector_(helper->GetBufferAllocator()),
         creator_(connection_id,
                  framer,
                  helper->GetBufferAllocator(),

@@ -60,6 +60,12 @@ class MockCryptoClientStream : public QuicCryptoClientStream {
   // QuicCryptoClientStream implementation.
   bool CryptoConnect() override;
 
+  // QuicCryptoStream implementation.
+  bool encryption_established() const override;
+  bool handshake_confirmed() const override;
+  const QuicCryptoNegotiatedParameters& crypto_negotiated_params()
+      const override;
+
   // Invokes the sessions's CryptoHandshakeEvent method with the specified
   // event.
   void SendOnCryptoHandshakeEvent(QuicSession::CryptoHandshakeEvent event);
@@ -68,6 +74,11 @@ class MockCryptoClientStream : public QuicCryptoClientStream {
 
  private:
   void SetConfigNegotiated();
+
+  bool encryption_established_;
+  bool handshake_confirmed_;
+  QuicReferenceCountedPointer<QuicCryptoNegotiatedParameters>
+      crypto_negotiated_params_;
 
   const QuicServerId server_id_;
   const ProofVerifyDetailsChromium* proof_verify_details_;

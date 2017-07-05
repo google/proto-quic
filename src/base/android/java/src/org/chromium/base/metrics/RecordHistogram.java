@@ -270,6 +270,15 @@ public class RecordHistogram {
     }
 
     /**
+     * Returns the number of samples recorded for the given histogram.
+     * @param name name of the histogram to look up.
+     */
+    @VisibleForTesting
+    public static int getHistogramTotalCountForTesting(String name) {
+        return nativeGetHistogramTotalCountForTesting(name);
+    }
+
+    /**
      * Initializes the metrics system.
      */
     public static void initialize() {
@@ -290,5 +299,6 @@ public class RecordHistogram {
     private static native long nativeRecordSparseHistogram(String name, long key, int sample);
 
     private static native int nativeGetHistogramValueCountForTesting(String name, int sample);
+    private static native int nativeGetHistogramTotalCountForTesting(String name);
     private static native void nativeInitialize();
 }

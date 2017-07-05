@@ -775,10 +775,20 @@ class RunIsolatedTestOutputFiles(RunIsolatedTestBase):
     # back after the task completed.
     server = isolateserver_mock.MockIsolateServer()
     try:
+      # Output two files. If we're on Linux, we'll try to make one of them a
+      # symlink to ensure that we correctly follow symlinks. Note that this only
+      # tests file symlinks, not directory symlinks.
+      # TODO(aludwin): follow directory symlinks
       script = (
+        'import os\n'
         'import sys\n'
         'open(sys.argv[1], "w").write("bar")\n'
-        'open(sys.argv[2], "w").write("baz")\n')
+        'if sys.platform.startswith("linux"):\n'
+        '  realpath = os.path.abspath("contents_of_symlink")\n'
+        '  open(realpath, "w").write("baz")\n'
+        '  os.symlink(realpath, sys.argv[2])\n'
+        'else:\n'
+        '  open(sys.argv[2], "w").write("baz")\n')
       script_hash = isolateserver_mock.hash_content(script)
       isolated['files']['cmd.py'] = {
         'h': script_hash,

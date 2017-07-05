@@ -4,7 +4,7 @@
             "DEFAULT": "key_desktop_move_cases_000.wpr"
         },
         "https://mail.google.com/mail/": {
-            "DEFAULT": "key_desktop_move_cases_001.wpr"
+            "DEFAULT": "key_desktop_move_cases_002.wpr"
         }
     },
     "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",

@@ -118,26 +118,27 @@ struct ResultType {
   template <typename L, typename R, typename... Args>                          \
   CLASS##Numeric<typename ResultType<CLASS##OP_NAME##Op, L, R, Args...>::type> \
       CL_ABBR##OP_NAME(const L lhs, const R rhs, const Args... args) {         \
-    return ChkMathOp<CLASS##OP_NAME##Op, L, R, Args...>(lhs, rhs, args...);    \
+    return CL_ABBR##MathOp<CLASS##OP_NAME##Op, L, R, Args...>(lhs, rhs,        \
+                                                              args...);        \
   }
 
 #define BASE_NUMERIC_ARITHMETIC_OPERATORS(CLASS, CL_ABBR, OP_NAME, OP, CMP_OP) \
-  /* Binary arithmetic operator for all CheckedNumeric operations. */          \
+  /* Binary arithmetic operator for all CLASS##Numeric operations. */          \
   template <typename L, typename R,                                            \
-            typename std::enable_if<IsCheckedOp<L, R>::value>::type* =         \
+            typename std::enable_if<Is##CLASS##Op<L, R>::value>::type* =       \
                 nullptr>                                                       \
-  CheckedNumeric<typename MathWrapper<CLASS##OP_NAME##Op, L, R>::type>         \
+  CLASS##Numeric<typename MathWrapper<CLASS##OP_NAME##Op, L, R>::type>         \
   operator OP(const L lhs, const R rhs) {                                      \
     return decltype(lhs OP rhs)::template MathOp<CLASS##OP_NAME##Op>(lhs,      \
                                                                      rhs);     \
   }                                                                            \
-  /* Assignment arithmetic operator implementation from CheckedNumeric. */     \
+  /* Assignment arithmetic operator implementation from CLASS##Numeric. */     \
   template <typename L>                                                        \
   template <typename R>                                                        \
-  CheckedNumeric<L>& CheckedNumeric<L>::operator CMP_OP(const R rhs) {         \
+  CLASS##Numeric<L>& CLASS##Numeric<L>::operator CMP_OP(const R rhs) {         \
     return MathOp<CLASS##OP_NAME##Op>(rhs);                                    \
   }                                                                            \
-  /* Variadic arithmetic functions that return CheckedNumeric. */              \
+  /* Variadic arithmetic functions that return CLASS##Numeric. */              \
   BASE_NUMERIC_ARITHMETIC_VARIADIC(CLASS, CL_ABBR, OP_NAME)
 
 }  // namespace internal

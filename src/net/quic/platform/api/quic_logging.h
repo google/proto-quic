@@ -25,4 +25,6 @@
 
 #define QUIC_NOTREACHED() QUIC_NOTREACHED_IMPL()
 
+#define QUIC_PLOG(severity) QUIC_PLOG_IMPL(severity)
+
 #endif  // NET_QUIC_PLATFORM_API_QUIC_LOGGING_H_

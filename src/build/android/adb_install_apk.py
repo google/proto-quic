@@ -115,12 +115,12 @@ def main():
                        timeout=args.timeout)
     except (device_errors.CommandFailedError,
             device_errors.DeviceUnreachableError):
-      logging.exception('Failed to install %s', args.apk_name)
+      logging.exception('Failed to install %s', apk)
       if blacklist:
         blacklist.Extend([str(device)], reason='install_failure')
         logging.warning('Blacklisting %s', str(device))
     except device_errors.CommandTimeoutError:
-      logging.exception('Timed out while installing %s', args.apk_name)
+      logging.exception('Timed out while installing %s', apk)
       if blacklist:
         blacklist.Extend([str(device)], reason='install_timeout')
         logging.warning('Blacklisting %s', str(device))

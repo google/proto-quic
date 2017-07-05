@@ -45,18 +45,15 @@ TcpCubicSenderPackets::~TcpCubicSenderPackets() {}
 void TcpCubicSenderPackets::SetFromConfig(const QuicConfig& config,
                                           Perspective perspective) {
   TcpCubicSenderBase::SetFromConfig(config, perspective);
-  if (FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode &&
-      config.HasReceivedConnectionOptions() &&
+  if (config.HasReceivedConnectionOptions() &&
       ContainsQuicTag(config.ReceivedConnectionOptions(), kCCVX)) {
     cubic_.SetFixConvexMode(true);
   }
-  if (FLAGS_quic_reloadable_flag_quic_fix_beta_last_max &&
-      config.HasReceivedConnectionOptions() &&
+  if (config.HasReceivedConnectionOptions() &&
       ContainsQuicTag(config.ReceivedConnectionOptions(), kBLMX)) {
     cubic_.SetFixBetaLastMax(true);
   }
-  if (FLAGS_quic_reloadable_flag_quic_enable_cubic_per_ack_updates &&
-      config.HasReceivedConnectionOptions() &&
+  if (config.HasReceivedConnectionOptions() &&
       ContainsQuicTag(config.ReceivedConnectionOptions(), kCPAU)) {
     cubic_.SetAllowPerAckUpdates(true);
   }

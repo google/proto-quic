@@ -9,6 +9,7 @@
 #include "net/quic/core/crypto/null_encrypter.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/test_tools/simple_data_producer.h"
 #include "net/quic/test_tools/simulator/link.h"
 #include "net/quic/test_tools/simulator/queue.h"
 #include "net/tools/quic/quic_default_packet_writer.h"
@@ -90,6 +91,15 @@ class QuicEndpoint : public Endpoint,
   void OnPathDegrading() override {}
   void PostProcessAfterData() override {}
   void OnAckNeedsRetransmittableFrame() override {}
+  void SaveStreamData(QuicStreamId id,
+                      QuicIOVector iov,
+                      size_t iov_offset,
+                      QuicStreamOffset offset,
+                      QuicByteCount data_length) override;
+  bool WriteStreamData(QuicStreamId id,
+                       QuicStreamOffset offset,
+                       QuicByteCount data_length,
+                       QuicDataWriter* writer) override;
   // End QuicConnectionVisitorInterface implementation.
 
  private:
@@ -140,6 +150,8 @@ class QuicEndpoint : public Endpoint,
   bool wrong_data_received_;
 
   std::unique_ptr<char[]> transmission_buffer_;
+
+  test::SimpleDataProducer producer_;
 };
 
 // Multiplexes multiple connections at the same host on the network.

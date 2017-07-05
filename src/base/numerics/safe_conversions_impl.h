@@ -549,6 +549,7 @@ struct UnderlyingType {
   using type = typename ArithmeticOrUnderlyingEnum<T>::type;
   static const bool is_numeric = std::is_arithmetic<type>::value;
   static const bool is_checked = false;
+  static const bool is_clamped = false;
   static const bool is_strict = false;
 };
 
@@ -590,14 +591,17 @@ template <typename L, typename R>
 struct IsClampedOp {
   static const bool value =
       UnderlyingType<L>::is_numeric && UnderlyingType<R>::is_numeric &&
-      (UnderlyingType<L>::is_clamped || UnderlyingType<R>::is_clamped);
+      (UnderlyingType<L>::is_clamped || UnderlyingType<R>::is_clamped) &&
+      !(UnderlyingType<L>::is_checked || UnderlyingType<R>::is_checked);
 };
 
 template <typename L, typename R>
 struct IsStrictOp {
   static const bool value =
       UnderlyingType<L>::is_numeric && UnderlyingType<R>::is_numeric &&
-      (UnderlyingType<L>::is_strict || UnderlyingType<R>::is_strict);
+      (UnderlyingType<L>::is_strict || UnderlyingType<R>::is_strict) &&
+      !(UnderlyingType<L>::is_checked || UnderlyingType<R>::is_checked) &&
+      !(UnderlyingType<L>::is_clamped || UnderlyingType<R>::is_clamped);
 };
 
 template <typename L, typename R>

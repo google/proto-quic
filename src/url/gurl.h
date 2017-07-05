@@ -380,6 +380,9 @@ class URL_EXPORT GURL {
   // literals. This can be useful for passing to getaddrinfo().
   std::string HostNoBrackets() const;
 
+  // Returns the same characters as HostNoBrackets(), avoiding a copy.
+  base::StringPiece HostNoBracketsPiece() const;
+
   // Returns true if this URL's host matches or is in the same domain as
   // the given input string. For example, if the hostname of the URL is
   // "www.google.com", this will return true for "com", "google.com", and

@@ -2079,6 +2079,47 @@ TEST_P(QuicFramerTest, NewStopWaitingFrame) {
   }
 }
 
+TEST_P(QuicFramerTest, InvalidNewStopWaitingFrame) {
+  // clang-format off
+  unsigned char packet[] = {
+    // public flags (8 byte connection_id)
+    0x3C,
+    // connection_id
+    0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
+    // packet number
+    0xA8, 0x9A, 0x78, 0x56,
+    0x34, 0x12,
+    // frame type (stop waiting frame)
+    0x06,
+    // least packet number awaiting an ack, delta from packet number.
+    0xA8, 0x9A, 0x78, 0x56,
+    0x34, 0x13,
+  };
+
+  unsigned char packet39[] = {
+    // public flags (8 byte connection_id)
+    0x3C,
+    // connection_id
+    0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
+    // packet number
+    0x12, 0x34, 0x56, 0x78,
+    0x9A, 0xA8,
+    // frame type (stop waiting frame)
+    0x06,
+    // least packet number awaiting an ack, delta from packet number.
+    0x13, 0x34, 0x56, 0x78,
+    0x9A, 0xA8,
+  };
+  // clang-format on
+
+  QuicEncryptedPacket encrypted(
+      AsChars(framer_.version() <= QUIC_VERSION_38 ? packet : packet39),
+      arraysize(packet), false);
+  EXPECT_FALSE(framer_.ProcessPacket(encrypted));
+  EXPECT_EQ(QUIC_INVALID_STOP_WAITING_DATA, framer_.error());
+  EXPECT_EQ("Invalid unacked delta.", framer_.detailed_error());
+}
+
 TEST_P(QuicFramerTest, RstStreamFrameQuic) {
   // clang-format off
   unsigned char packet[] = {

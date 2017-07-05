@@ -244,6 +244,9 @@ class TestLauncher {
   DISALLOW_COPY_AND_ASSIGN(TestLauncher);
 };
 
+// Return the number of parallel jobs to use, or 0U in case of error.
+size_t NumParallelJobs();
+
 // Extract part from |full_output| that applies to |result|.
 std::string GetTestOutputSnippet(const TestResult& result,
                                  const std::string& full_output);

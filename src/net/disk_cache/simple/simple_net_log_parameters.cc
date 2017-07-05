@@ -45,14 +45,16 @@ namespace disk_cache {
 net::NetLogParametersCallback CreateNetLogSimpleEntryConstructionCallback(
     const SimpleEntryImpl* entry) {
   DCHECK(entry);
-  return base::Bind(&NetLogSimpleEntryConstructionCallback, entry);
+  return base::Bind(&NetLogSimpleEntryConstructionCallback,
+                    base::Unretained(entry));
 }
 
 net::NetLogParametersCallback CreateNetLogSimpleEntryCreationCallback(
     const SimpleEntryImpl* entry,
     int net_error) {
   DCHECK(entry);
-  return base::Bind(&NetLogSimpleEntryCreationCallback, entry, net_error);
+  return base::Bind(&NetLogSimpleEntryCreationCallback, base::Unretained(entry),
+                    net_error);
 }
 
 }  // namespace disk_cache

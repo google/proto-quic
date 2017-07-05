@@ -183,7 +183,7 @@ bool GetSwitchValueAsInt(const std::string& switch_name, int* result) {
 }
 
 int LaunchUnitTestsInternal(const RunTestSuiteCallback& run_test_suite,
-                            int default_jobs,
+                            size_t parallel_jobs,
                             int default_batch_limit,
                             bool use_job_objects,
                             const Closure& gtest_init) {
@@ -246,7 +246,7 @@ int LaunchUnitTestsInternal(const RunTestSuiteCallback& run_test_suite,
   DefaultUnitTestPlatformDelegate platform_delegate;
   UnitTestLauncherDelegate delegate(
       &platform_delegate, batch_limit, use_job_objects);
-  base::TestLauncher launcher(&delegate, default_jobs);
+  base::TestLauncher launcher(&delegate, parallel_jobs);
   bool success = launcher.Run();
 
   fprintf(stdout, "Tests took %" PRId64 " seconds.\n",
@@ -455,40 +455,33 @@ int LaunchUnitTests(int argc,
                     char** argv,
                     const RunTestSuiteCallback& run_test_suite) {
   CommandLine::Init(argc, argv);
-  return LaunchUnitTestsInternal(
-      run_test_suite,
-      SysInfo::NumberOfProcessors(),
-      kDefaultTestBatchLimit,
-      true,
-      Bind(&InitGoogleTestChar, &argc, argv));
+  size_t parallel_jobs = NumParallelJobs();
+  if (parallel_jobs == 0U) {
+    return 1;
+  }
+  return LaunchUnitTestsInternal(run_test_suite, parallel_jobs,
+                                 kDefaultTestBatchLimit, true,
+                                 Bind(&InitGoogleTestChar, &argc, argv));
 }
 
 int LaunchUnitTestsSerially(int argc,
                             char** argv,
                             const RunTestSuiteCallback& run_test_suite) {
   CommandLine::Init(argc, argv);
-  return LaunchUnitTestsInternal(
-      run_test_suite,
-      1,
-      kDefaultTestBatchLimit,
-      true,
-      Bind(&InitGoogleTestChar, &argc, argv));
+  return LaunchUnitTestsInternal(run_test_suite, 1U, kDefaultTestBatchLimit,
+                                 true, Bind(&InitGoogleTestChar, &argc, argv));
 }
 
-int LaunchUnitTestsWithOptions(
-    int argc,
-    char** argv,
-    int default_jobs,
-    int default_batch_limit,
-    bool use_job_objects,
-    const RunTestSuiteCallback& run_test_suite) {
+int LaunchUnitTestsWithOptions(int argc,
+                               char** argv,
+                               size_t parallel_jobs,
+                               int default_batch_limit,
+                               bool use_job_objects,
+                               const RunTestSuiteCallback& run_test_suite) {
   CommandLine::Init(argc, argv);
-  return LaunchUnitTestsInternal(
-      run_test_suite,
-      default_jobs,
-      default_batch_limit,
-      use_job_objects,
-      Bind(&InitGoogleTestChar, &argc, argv));
+  return LaunchUnitTestsInternal(run_test_suite, parallel_jobs,
+                                 default_batch_limit, use_job_objects,
+                                 Bind(&InitGoogleTestChar, &argc, argv));
 }
 
 #if defined(OS_WIN)
@@ -498,12 +491,13 @@ int LaunchUnitTests(int argc,
                     const RunTestSuiteCallback& run_test_suite) {
   // Windows CommandLine::Init ignores argv anyway.
   CommandLine::Init(argc, NULL);
-  return LaunchUnitTestsInternal(
-      run_test_suite,
-      SysInfo::NumberOfProcessors(),
-      kDefaultTestBatchLimit,
-      use_job_objects,
-      Bind(&InitGoogleTestWChar, &argc, argv));
+  size_t parallel_jobs = NumParallelJobs();
+  if (parallel_jobs == 0U) {
+    return 1;
+  }
+  return LaunchUnitTestsInternal(run_test_suite, parallel_jobs,
+                                 kDefaultTestBatchLimit, use_job_objects,
+                                 Bind(&InitGoogleTestWChar, &argc, argv));
 }
 #endif  // defined(OS_WIN)
 

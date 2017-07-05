@@ -123,8 +123,8 @@ TEST_F(QuicFramesTest, IsAwaitingPacket) {
   EXPECT_TRUE(IsAwaitingPacket(ack_frame1, 11u, 0u));
   EXPECT_FALSE(IsAwaitingPacket(ack_frame1, 1u, 0u));
 
-  ack_frame1.packets.Remove(10);
-  EXPECT_TRUE(IsAwaitingPacket(ack_frame1, 10u, 0u));
+  ack_frame1.packets.Add(12);
+  EXPECT_TRUE(IsAwaitingPacket(ack_frame1, 11u, 0u));
 
   QuicAckFrame ack_frame2;
   ack_frame2.largest_observed = 100u;
@@ -133,8 +133,8 @@ TEST_F(QuicFramesTest, IsAwaitingPacket) {
   EXPECT_FALSE(IsAwaitingPacket(ack_frame2, 80u, 20u));
   EXPECT_TRUE(IsAwaitingPacket(ack_frame2, 101u, 20u));
 
-  ack_frame2.packets.Remove(50);
-  EXPECT_TRUE(IsAwaitingPacket(ack_frame2, 50u, 20u));
+  ack_frame2.packets.Add(102, 200);
+  EXPECT_TRUE(IsAwaitingPacket(ack_frame2, 101u, 20u));
 }
 
 TEST_F(QuicFramesTest, RemoveSmallestInterval) {
@@ -178,31 +178,24 @@ TEST_F(PacketNumberQueueTest, AddRange) {
   EXPECT_EQ(70u, queue.Max());
 }
 
-// Tests that a queue contains the expected data after calls to Remove().
+// Tests that a queue contains the expected data after calls to RemoveUpTo().
 TEST_F(PacketNumberQueueTest, Removal) {
   PacketNumberQueue queue;
   queue.Add(0, 100);
 
   EXPECT_TRUE(queue.RemoveUpTo(51));
   EXPECT_FALSE(queue.RemoveUpTo(51));
-  queue.Remove(53);
 
   EXPECT_FALSE(queue.Contains(0));
   for (int i = 1; i < 51; ++i) {
     EXPECT_FALSE(queue.Contains(i));
   }
-  EXPECT_TRUE(queue.Contains(51));
-  EXPECT_TRUE(queue.Contains(52));
-  EXPECT_FALSE(queue.Contains(53));
-  EXPECT_TRUE(queue.Contains(54));
-  EXPECT_EQ(48u, queue.NumPacketsSlow());
+  for (int i = 51; i < 100; ++i) {
+    EXPECT_TRUE(queue.Contains(i));
+  }
+  EXPECT_EQ(49u, queue.NumPacketsSlow());
   EXPECT_EQ(51u, queue.Min());
   EXPECT_EQ(99u, queue.Max());
-
-  queue.Remove(51);
-  EXPECT_EQ(52u, queue.Min());
-  queue.Remove(99);
-  EXPECT_EQ(98u, queue.Max());
 }
 
 // Tests that a queue is empty when all of its elements are removed.
@@ -249,10 +242,12 @@ TEST_F(PacketNumberQueueTest, IntervalLengthAndRemoveInterval) {
   queue.Add(40, 50);
   EXPECT_EQ(3u, queue.NumIntervals());
   EXPECT_EQ(10u, queue.LastIntervalLength());
-  queue.Remove(9, 21);
-  EXPECT_EQ(3u, queue.NumIntervals());
-  EXPECT_FALSE(queue.Contains(9));
-  EXPECT_FALSE(queue.Contains(20));
+
+  EXPECT_TRUE(queue.RemoveUpTo(25));
+  EXPECT_EQ(2u, queue.NumIntervals());
+  EXPECT_EQ(10u, queue.LastIntervalLength());
+  EXPECT_EQ(25u, queue.Min());
+  EXPECT_EQ(49u, queue.Max());
 }
 
 }  // namespace

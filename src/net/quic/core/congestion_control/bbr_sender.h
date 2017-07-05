@@ -249,6 +249,10 @@ class QUIC_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
   QuicTime aggregation_epoch_start_time_;
   QuicByteCount aggregation_epoch_bytes_;
 
+  // The number of bytes acknowledged since the last time bytes in flight
+  // dropped below the target window.
+  QuicByteCount bytes_acked_since_queue_drained_;
+
   // Minimum RTT estimate.  Automatically expires within 10 seconds (and
   // triggers PROBE_RTT mode) if no new value is sampled during that period.
   QuicTime::Delta min_rtt_;
@@ -333,6 +337,9 @@ class QUIC_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
   // recently seen ack rate over a short period in the past.
   std::deque<DataDelivered> recently_acked_;
   QuicByteCount bytes_recently_acked_;
+
+  // When true, recovery is rate based rather than congestion window based.
+  bool rate_based_recovery_;
 
   DISALLOW_COPY_AND_ASSIGN(BbrSender);
 };

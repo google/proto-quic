@@ -108,7 +108,8 @@ class ChromeMessagesJsonFormatUnittest(unittest.TestCase):
     """)
 
     buf = StringIO.StringIO()
-    build.RcBuilder.ProcessNode(root, DummyOutput('chrome_messages_json', 'fr'), buf)
+    build.RcBuilder.ProcessNode(root, DummyOutput('chrome_messages_json', 'fr'),
+                                buf)
     output = buf.getvalue()
     test = u"""
 {
@@ -118,6 +119,31 @@ class ChromeMessagesJsonFormatUnittest(unittest.TestCase):
   "ID_HELLO_USER": {
     "message": "H\\u00e9P\\u00e9ll\\u00f4P\\u00f4 %s"
   }
+}
+"""
+    self.assertEqual(test.strip(), output.strip())
+
+  def testSkipMissingTranslations(self):
+    grd = """<?xml version="1.0" encoding="UTF-8"?>
+<grit latest_public_release="2" current_release="3" source_lang_id="en"
+    base_dir="%s">
+  <outputs>
+  </outputs>
+  <release seq="3" allow_pseudo="False">
+    <messages fallback_to_english="true">
+      <message name="ID_HELLO_NO_TRANSLATION">Hello not translated</message>
+    </messages>
+  </release>
+</grit>"""
+    root = grd_reader.Parse(StringIO.StringIO(grd), dir=".")
+
+    buf = StringIO.StringIO()
+    build.RcBuilder.ProcessNode(root, DummyOutput('chrome_messages_json', 'fr'),
+                                buf)
+    output = buf.getvalue()
+    test = u"""
+{
+
 }
 """
     self.assertEqual(test.strip(), output.strip())

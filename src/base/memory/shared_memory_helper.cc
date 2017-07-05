@@ -4,6 +4,13 @@
 
 #include "base/memory/shared_memory_helper.h"
 
+#if defined(OS_CHROMEOS)
+#include <sys/resource.h>
+#include <sys/time.h>
+
+#include "base/debug/alias.h"
+#endif  // defined(OS_CHROMEOS)
+
 #include "base/threading/thread_restrictions.h"
 
 namespace base {
@@ -90,6 +97,56 @@ bool PrepareMapFile(ScopedFILE fp,
   *mapped_file = HANDLE_EINTR(dup(fileno(fp.get())));
   if (*mapped_file == -1) {
     NOTREACHED() << "Call to dup failed, errno=" << errno;
+
+#if defined(OS_CHROMEOS)
+    if (errno == EMFILE) {
+      // We're out of file descriptors and are probably about to crash somewhere
+      // else in Chrome anyway. Let's collect what FD information we can and
+      // crash.
+      // Added for debugging crbug.com/733718
+      int original_fd_limit = 16384;
+      struct rlimit rlim;
+      if (getrlimit(RLIMIT_NOFILE, &rlim) == 0) {
+        original_fd_limit = rlim.rlim_cur;
+        if (rlim.rlim_max > rlim.rlim_cur) {
+          // Increase fd limit so breakpad has a chance to write a minidump.
+          rlim.rlim_cur = rlim.rlim_max;
+          if (setrlimit(RLIMIT_NOFILE, &rlim) != 0) {
+            PLOG(ERROR) << "setrlimit() failed";
+          }
+        }
+      } else {
+        PLOG(ERROR) << "getrlimit() failed";
+      }
+
+      const char kFileDataMarker[] = "FDATA";
+      char buf[PATH_MAX];
+      char fd_path[PATH_MAX];
+      char crash_buffer[32 * 1024] = {0};
+      char* crash_ptr = crash_buffer;
+      base::debug::Alias(crash_buffer);
+
+      // Put a marker at the start of our data so we can confirm where it
+      // begins.
+      crash_ptr = strncpy(crash_ptr, kFileDataMarker, strlen(kFileDataMarker));
+      for (int i = original_fd_limit; i >= 0; --i) {
+        memset(buf, 0, arraysize(buf));
+        memset(fd_path, 0, arraysize(fd_path));
+        snprintf(fd_path, arraysize(fd_path) - 1, "/proc/self/fd/%d", i);
+        ssize_t count = readlink(fd_path, buf, arraysize(buf) - 1);
+        if (count < 0) {
+          PLOG(ERROR) << "readlink failed for: " << fd_path;
+          continue;
+        }
+
+        if (crash_ptr + count + 1 < crash_buffer + arraysize(crash_buffer)) {
+          crash_ptr = strncpy(crash_ptr, buf, count + 1);
+        }
+        LOG(ERROR) << i << ": " << buf;
+      }
+      LOG(FATAL) << "Logged for file descriptor exhaustion, crashing now";
+    }
+#endif  // defined(OS_CHROMEOS)
   }
   *readonly_mapped_file = readonly_fd.release();
 

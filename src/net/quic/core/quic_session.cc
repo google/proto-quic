@@ -47,12 +47,17 @@ QuicSession::QuicSession(QuicConnection* connection,
       currently_writing_stream_id_(0),
       respect_goaway_(true),
       use_stream_notifier_(
-          FLAGS_quic_reloadable_flag_quic_use_stream_notifier2) {}
+          FLAGS_quic_reloadable_flag_quic_use_stream_notifier2),
+      streams_own_data_(use_stream_notifier_ &&
+                        FLAGS_quic_reloadable_flag_quic_stream_owns_data) {}
 
 void QuicSession::Initialize() {
   connection_->set_visitor(this);
   if (use_stream_notifier_) {
     connection_->SetStreamNotifier(this);
+  }
+  if (streams_own_data_) {
+    connection_->SetDelegateSavesData(true);
   }
   connection_->SetFromConfig(config_);
 
@@ -1020,6 +1025,36 @@ void QuicSession::OnStreamFrameDiscarded(const QuicStreamFrame& frame) {
     return;
   }
   stream->OnStreamFrameDiscarded(frame);
+}
+
+void QuicSession::SaveStreamData(QuicStreamId id,
+                                 QuicIOVector iov,
+                                 size_t iov_offset,
+                                 QuicStreamOffset offset,
+                                 QuicByteCount data_length) {
+  QuicStream* stream = GetStream(id);
+  if (stream == nullptr) {
+    QUIC_BUG << "Stream " << id << " does not exist when trying to save data.";
+    connection()->CloseConnection(
+        QUIC_INTERNAL_ERROR, "Attempt to save data of a closed stream",
+        ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
+    return;
+  }
+  stream->SaveStreamData(iov, iov_offset, offset, data_length);
+}
+
+bool QuicSession::WriteStreamData(QuicStreamId id,
+                                  QuicStreamOffset offset,
+                                  QuicByteCount data_length,
+                                  QuicDataWriter* writer) {
+  QuicStream* stream = GetStream(id);
+  if (stream == nullptr) {
+    // This causes the connection to be closed because of failed to serialize
+    // packet.
+    QUIC_BUG << "Stream " << id << " does not exist when trying to write data.";
+    return false;
+  }
+  return stream->WriteStreamData(offset, data_length, writer);
 }
 
 }  // namespace net

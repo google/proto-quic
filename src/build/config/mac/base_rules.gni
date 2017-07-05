@@ -196,6 +196,11 @@ template("info_plist") {
       "XCODE_BUILD=$xcode_build",
       "XCODE_VERSION=$xcode_version",
     ]
+    if (is_mac) {
+      substitutions += [ "MACOSX_DEPLOYMENT_TARGET=$mac_deployment_target" ]
+    } else if (is_ios) {
+      substitutions += [ "IOS_DEPLOYMENT_TARGET=$ios_deployment_target" ]
+    }
     if (defined(invoker.extra_substitutions)) {
       substitutions += invoker.extra_substitutions
     }

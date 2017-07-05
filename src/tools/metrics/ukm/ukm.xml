@@ -564,6 +564,102 @@ be describing additional metrics about the same event.
       metric is recorded for kSubmittedFormTypeUnspecified.
     </summary>
   </metric>
+  <metric name="SuppressedAccount.Generated.HTTPSNotHTTP">
+    <summary>
+      Records, for each password form seen by the password manager, whether
+      there were `suppressed` credentials, meaning stored credentials that were
+      not filled, that were suppressed because they were stored for an HTTPS
+      origin while the password form was seen on an HTTP origin. If there were
+      such credentials, the histogram also records whether the username and
+      password of such suppressed credentials matched those submitted. This
+      recording happens only for credentials that were originally auto-generated
+      (as opposed to user typed). Recorded values correspond to the enum
+      SuppressedAccountExistence.
+    </summary>
+  </metric>
+  <metric name="SuppressedAccount.Generated.PSLMatching">
+    <summary>
+      Records, for each password form seen by the password manager, whether
+      there were `suppressed` credentials, meaning stored credentials that were
+      not filled, that were suppressed because they were for an origin that was
+      only PSL-matching the origin of the observed form (see the suffix
+      description for the possible classes of such near-matches). If there were
+      such credentials, the histogram also records whether the username and
+      password of such suppressed credentials matched those submitted. This
+      recording happens only for credentials that were originally auto-generated
+      (as opposed to user typed). Recorded values correspond to the enum
+      SuppressedAccountExistence.
+    </summary>
+  </metric>
+  <metric name="SuppressedAccount.Generated.SameOrganizationName">
+    <summary>
+      Records, for each password form seen by the password manager, whether
+      there were `suppressed` credentials, meaning stored credentials that were
+      not filled, that were suppressed because they were for an origin that was
+      only matching the visited origin if the TLD is stripped. If there were
+      such credentials, the histogram also records whether the username and
+      password of such suppressed credentials matched those submitted. This
+      recording happens only for credentials that were originally auto-generated
+      (as opposed to user typed). Recorded values correspond to the enum
+      SuppressedAccountExistence.
+    </summary>
+  </metric>
+  <metric name="SuppressedAccount.Manual.HTTPSNotHTTP">
+    <summary>
+      Records, for each password form seen by the password manager, whether
+      there were `suppressed` credentials, meaning stored credentials that were
+      not filled, that were suppressed because they were stored for an HTTPS
+      origin while the password form was seen on an HTTP origin. If there were
+      such credentials, the histogram also records whether the username and
+      password of such suppressed credentials matched those submitted. This
+      recording happens only for credentials that were originally entered by the
+      user (as opposed to auto-generated). Recorded values correspond to the
+      enum SuppressedAccountExistence.
+    </summary>
+  </metric>
+  <metric name="SuppressedAccount.Manual.PSLMatching">
+    <summary>
+      Records, for each password form seen by the password manager, whether
+      there were `suppressed` credentials, meaning stored credentials that were
+      not filled, that were suppressed because they were for an origin that was
+      only PSL-matching the origin of the observed form (see the suffix
+      description for the possible classes of such near-matches). If there were
+      such credentials, the histogram also records whether the username and
+      password of such suppressed credentials matched those submitted. This
+      recording happens only for credentials that were originally entered by the
+      user (as opposed to auto-generated). Recorded values correspond to the
+      enum SuppressedAccountExistence.
+    </summary>
+  </metric>
+  <metric name="SuppressedAccount.Manual.SameOrganizationName">
+    <summary>
+      Records, for each password form seen by the password manager, whether
+      there were `suppressed` credentials, meaning stored credentials that were
+      not filled, that were suppressed because they were for an origin that was
+      only matching the visited origin if the TLD is stripped. If there were
+      such credentials, the histogram also records whether the username and
+      password of such suppressed credentials matched those submitted. This
+      recording happens only for credentials that were originally entered by the
+      user (as opposed to auto-generated). Recorded values correspond to the
+      enum SuppressedAccountExistence.
+    </summary>
+  </metric>
+</event>
+
+<event name="PageWithPassword">
+  <owner>battre@chromium.org</owner>
+  <summary>
+    Metrics about websites that contain password forms and the user's
+    interactions with them. No events are created for pages that don't contain
+    password forms.
+  </summary>
+  <metric name="UserModifiedPasswordField">
+    <summary>
+      Records a 1 for every page on which a user has modified a password text
+      field - regardless of how many password fields a page contains or the user
+      modifies.
+    </summary>
+  </metric>
 </event>
 
 <event name="PaymentRequest.CheckoutEvents">

@@ -27,6 +27,7 @@ class QuicDataWriter;
 class QuicDecrypter;
 class QuicEncrypter;
 class QuicFramer;
+class QuicStreamFrameDataProducer;
 
 // Number of bytes reserved for the frame type preceding each frame.
 const size_t kQuicFrameTypeSize = 1;
@@ -241,7 +242,8 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
   size_t BuildDataPacket(const QuicPacketHeader& header,
                          const QuicFrames& frames,
                          char* buffer,
-                         size_t packet_length);
+                         size_t packet_length,
+                         QuicStreamFrameDataProducer* data_producer);
 
   // Returns a new public reset packet.
   static std::unique_ptr<QuicEncryptedPacket> BuildPublicResetPacket(
@@ -262,7 +264,8 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
                       QuicDataWriter* writer);
   bool AppendStreamFrame(const QuicStreamFrame& frame,
                          bool last_frame_in_packet,
-                         QuicDataWriter* builder);
+                         QuicDataWriter* writer,
+                         QuicStreamFrameDataProducer* data_producer);
 
   // SetDecrypter sets the primary decrypter, replacing any that already exists,
   // and takes ownership. If an alternative decrypter is in place then the
