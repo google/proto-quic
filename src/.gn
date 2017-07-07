@@ -22,6 +22,7 @@ secondary_source = "//build/secondary/"
 # values declared in the main Chrome repository.
 default_args = {
   is_proto_quic = true
+  use_custom_libcxx = false
 }
 
 # These are the targets to check headers for by default. The files in targets
