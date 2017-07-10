@@ -29,8 +29,6 @@ namespace {
 TEST(NetworkQualityEstimatorUtilTest, ReservedHost) {
   std::unique_ptr<BoundTestNetLog> net_log =
       base::MakeUnique<BoundTestNetLog>();
-  BoundTestNetLog* net_log_ptr = net_log.get();
-
   MockCachingHostResolver mock_host_resolver;
 
   scoped_refptr<net::RuleBasedHostResolverProc> rules(
@@ -75,28 +73,23 @@ TEST(NetworkQualityEstimatorUtilTest, ReservedHost) {
   EXPECT_EQ(2u, mock_host_resolver.num_resolve());
 
   EXPECT_FALSE(IsPrivateHost(&mock_host_resolver,
-                             HostPortPair("2607:f8b0:4006:819::200e", 80),
-                             net_log_ptr->bound()));
+                             HostPortPair("2607:f8b0:4006:819::200e", 80)));
   EXPECT_EQ(1u, mock_host_resolver.num_resolve_from_cache());
 
-  EXPECT_TRUE(IsPrivateHost(&mock_host_resolver,
-                            HostPortPair("192.168.0.1", 443),
-                            net_log_ptr->bound()));
+  EXPECT_TRUE(
+      IsPrivateHost(&mock_host_resolver, HostPortPair("192.168.0.1", 443)));
   EXPECT_EQ(2u, mock_host_resolver.num_resolve_from_cache());
 
-  EXPECT_FALSE(IsPrivateHost(&mock_host_resolver,
-                             HostPortPair("92.168.0.1", 443),
-                             net_log_ptr->bound()));
+  EXPECT_FALSE(
+      IsPrivateHost(&mock_host_resolver, HostPortPair("92.168.0.1", 443)));
   EXPECT_EQ(3u, mock_host_resolver.num_resolve_from_cache());
 
-  EXPECT_TRUE(IsPrivateHost(&mock_host_resolver,
-                            HostPortPair("example1.com", 443),
-                            net_log_ptr->bound()));
+  EXPECT_TRUE(
+      IsPrivateHost(&mock_host_resolver, HostPortPair("example1.com", 443)));
   EXPECT_EQ(4u, mock_host_resolver.num_resolve_from_cache());
 
-  EXPECT_FALSE(IsPrivateHost(&mock_host_resolver,
-                             HostPortPair("example2.com", 443),
-                             net_log_ptr->bound()));
+  EXPECT_FALSE(
+      IsPrivateHost(&mock_host_resolver, HostPortPair("example2.com", 443)));
   EXPECT_EQ(5u, mock_host_resolver.num_resolve_from_cache());
 
   // IsPrivateHost() should have queried only the resolver's cache.
@@ -109,8 +102,6 @@ TEST(NetworkQualityEstimatorUtilTest, ReservedHost) {
 TEST(NetworkQualityEstimatorUtilTest, ReservedHostUncached) {
   std::unique_ptr<BoundTestNetLog> net_log =
       base::MakeUnique<BoundTestNetLog>();
-  BoundTestNetLog* net_log_ptr = net_log.get();
-
   MockCachingHostResolver mock_host_resolver;
 
   scoped_refptr<net::RuleBasedHostResolverProc> rules(
@@ -121,9 +112,8 @@ TEST(NetworkQualityEstimatorUtilTest, ReservedHostUncached) {
   mock_host_resolver.set_rules(rules.get());
 
   // Not in DNS host cache, so should not be marked as private.
-  EXPECT_FALSE(IsPrivateHost(&mock_host_resolver,
-                             HostPortPair("example3.com", 443),
-                             net_log_ptr->bound()));
+  EXPECT_FALSE(
+      IsPrivateHost(&mock_host_resolver, HostPortPair("example3.com", 443)));
   EXPECT_EQ(0u, mock_host_resolver.num_resolve());
   EXPECT_EQ(1u, mock_host_resolver.num_resolve_from_cache());
 
@@ -140,9 +130,8 @@ TEST(NetworkQualityEstimatorUtilTest, ReservedHostUncached) {
     EXPECT_EQ(OK, callback.WaitForResult());
     EXPECT_EQ(1u, mock_host_resolver.num_resolve());
   }
-  EXPECT_TRUE(IsPrivateHost(&mock_host_resolver,
-                            HostPortPair("example3.com", 443),
-                            net_log_ptr->bound()));
+  EXPECT_TRUE(
+      IsPrivateHost(&mock_host_resolver, HostPortPair("example3.com", 443)));
 
   // IsPrivateHost() should have queried only the resolver's cache.
   EXPECT_EQ(1u, mock_host_resolver.num_resolve());
@@ -163,18 +152,12 @@ TEST(NetworkQualityEstimatorUtilTest, Localhost) {
   scoped_refptr<net::RuleBasedHostResolverProc> rules(
       new net::RuleBasedHostResolverProc(nullptr));
 
-  EXPECT_TRUE(IsPrivateHost(&resolver, HostPortPair("localhost", 443),
-                            net_log_ptr->bound()));
-  EXPECT_TRUE(IsPrivateHost(&resolver, HostPortPair("localhost6", 443),
-                            net_log_ptr->bound()));
-  EXPECT_TRUE(IsPrivateHost(&resolver, HostPortPair("127.0.0.1", 80),
-                            net_log_ptr->bound()));
-  EXPECT_TRUE(IsPrivateHost(&resolver, HostPortPair("0.0.0.0", 80),
-                            net_log_ptr->bound()));
-  EXPECT_TRUE(
-      IsPrivateHost(&resolver, HostPortPair("::1", 80), net_log_ptr->bound()));
-  EXPECT_FALSE(IsPrivateHost(&resolver, HostPortPair("google.com", 80),
-                             net_log_ptr->bound()));
+  EXPECT_TRUE(IsPrivateHost(&resolver, HostPortPair("localhost", 443)));
+  EXPECT_TRUE(IsPrivateHost(&resolver, HostPortPair("localhost6", 443)));
+  EXPECT_TRUE(IsPrivateHost(&resolver, HostPortPair("127.0.0.1", 80)));
+  EXPECT_TRUE(IsPrivateHost(&resolver, HostPortPair("0.0.0.0", 80)));
+  EXPECT_TRUE(IsPrivateHost(&resolver, HostPortPair("::1", 80)));
+  EXPECT_FALSE(IsPrivateHost(&resolver, HostPortPair("google.com", 80)));
 }
 
 }  // namespace

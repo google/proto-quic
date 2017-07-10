@@ -125,7 +125,7 @@ FilePath FileEnumerator::Next() {
     FileInfo dotdot;
     dotdot.stat_.st_mode = S_IFDIR;
     dotdot.filename_ = FilePath("..");
-    directory_entries_->push_back(dotdot);
+    directory_entries_.push_back(dotdot);
 #endif  // OS_FUCHSIA
 
     current_directory_entry_ = 0;

@@ -9,9 +9,9 @@ import sys
 from core import path_util
 from core import perf_benchmark
 
-from telemetry.core import discover
 from telemetry import benchmark as benchmark_module
 
+from py_utils import discover
 
 def GetClassFilePath(clazz):
   """ Return the absolute file path to |clazz|. """

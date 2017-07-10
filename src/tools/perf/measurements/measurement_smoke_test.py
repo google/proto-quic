@@ -8,11 +8,12 @@ import os
 import unittest
 
 from telemetry import benchmark as benchmark_module
-from telemetry.core import discover
 from telemetry.internal.browser import browser_options
 from telemetry.page import legacy_page_test
 from telemetry.testing import options_for_unittests
 from telemetry.web_perf import timeline_based_measurement
+
+from py_utils import discover
 
 
 def _GetAllPossiblePageTestInstances():

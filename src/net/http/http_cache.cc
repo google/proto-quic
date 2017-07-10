@@ -952,6 +952,32 @@ void HttpCache::DoneReadingFromEntry(ActiveEntry* entry,
   ProcessQueuedTransactions(entry);
 }
 
+void HttpCache::DoomEntryValidationNoMatch(ActiveEntry* entry) {
+  // Validating transaction received a non-matching response.
+  DCHECK(entry->headers_transaction);
+
+  entry->headers_transaction = nullptr;
+  if (entry->HasNoTransactions() && !entry->will_process_queued_transactions) {
+    entry->disk_entry->Doom();
+    DestroyEntry(entry);
+    return;
+  }
+
+  DoomActiveEntry(entry->disk_entry->GetKey());
+
+  // Restart only add_to_entry_queue transactions.
+  // Post task here to avoid a race in creating the entry between |transaction|
+  // and the add_to_entry_queue transactions. Reset the queued transaction's
+  // cache pending state so that in case it's destructor is invoked, it's ok
+  // for the transaction to not be found in this entry.
+  for (auto* transaction : entry->add_to_entry_queue) {
+    transaction->ResetCachePendingState();
+    base::ThreadTaskRunnerHandle::Get()->PostTask(
+        FROM_HERE, base::Bind(transaction->io_callback(), net::ERR_CACHE_RACE));
+  }
+  entry->add_to_entry_queue.clear();
+}
+
 void HttpCache::RemoveAllQueuedTransactions(ActiveEntry* entry,
                                             TransactionList* list) {
   // Process done_headers_queue before add_to_entry_queue to maintain FIFO
@@ -968,8 +994,8 @@ void HttpCache::RemoveAllQueuedTransactions(ActiveEntry* entry,
 
 void HttpCache::ProcessEntryFailure(ActiveEntry* entry,
                                     Transaction* transaction) {
-  // Failure case is either writer failing to completely write the response to
-  // the cache or validating transaction received a non-304 response.
+  // The writer failed to completely write the response to
+  // the cache.
 
   if (entry->headers_transaction && transaction != entry->headers_transaction)
     RestartHeadersTransaction(entry);

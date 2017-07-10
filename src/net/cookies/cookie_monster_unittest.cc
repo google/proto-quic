@@ -4,6 +4,8 @@
 
 #include "net/cookies/cookie_monster.h"
 
+#include <stdint.h>
+
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -163,28 +165,29 @@ class CookieMonsterTestBase : public CookieStoreTest<T> {
     return callback.result();
   }
 
-  int DeleteAllCreatedBetween(CookieMonster* cm,
-                              const base::Time& delete_begin,
-                              const base::Time& delete_end) {
+  uint32_t DeleteAllCreatedBetween(CookieMonster* cm,
+                                   const base::Time& delete_begin,
+                                   const base::Time& delete_end) {
     DCHECK(cm);
-    ResultSavingCookieCallback<int> callback;
+    ResultSavingCookieCallback<uint32_t> callback;
     cm->DeleteAllCreatedBetweenAsync(
         delete_begin, delete_end,
-        base::Bind(&ResultSavingCookieCallback<int>::Run,
+        base::Bind(&ResultSavingCookieCallback<uint32_t>::Run,
                    base::Unretained(&callback)));
     callback.WaitUntilDone();
     return callback.result();
   }
 
-  int DeleteAllCreatedBetweenWithPredicate(CookieMonster* cm,
-                                           const base::Time delete_begin,
-                                           const base::Time delete_end,
-                                           const CookiePredicate& predicate) {
+  uint32_t DeleteAllCreatedBetweenWithPredicate(
+      CookieMonster* cm,
+      const base::Time delete_begin,
+      const base::Time delete_end,
+      const CookiePredicate& predicate) {
     DCHECK(cm);
-    ResultSavingCookieCallback<int> callback;
+    ResultSavingCookieCallback<uint32_t> callback;
     cm->DeleteAllCreatedBetweenWithPredicateAsync(
         delete_begin, delete_end, predicate,
-        base::Bind(&ResultSavingCookieCallback<int>::Run,
+        base::Bind(&ResultSavingCookieCallback<uint32_t>::Run,
                    base::Unretained(&callback)));
     callback.WaitUntilDone();
     return callback.result();
@@ -1356,7 +1359,7 @@ TEST_F(CookieMonsterTest, TestCookieDeleteAll) {
   EXPECT_EQ("A=B; C=D",
             GetCookiesWithOptions(cm.get(), http_www_foo_.url(), options));
 
-  EXPECT_EQ(2, DeleteAll(cm.get()));
+  EXPECT_EQ(2u, DeleteAll(cm.get()));
   EXPECT_EQ("", GetCookiesWithOptions(cm.get(), http_www_foo_.url(), options));
   EXPECT_EQ(0u, store->commands().size());
 
@@ -1367,7 +1370,7 @@ TEST_F(CookieMonsterTest, TestCookieDeleteAll) {
   ASSERT_EQ(1u, store->commands().size());
   EXPECT_EQ(CookieStoreCommand::ADD, store->commands()[0].type);
 
-  EXPECT_EQ(1, DeleteAll(cm.get()));  // sync_to_store = true.
+  EXPECT_EQ(1u, DeleteAll(cm.get()));  // sync_to_store = true.
   ASSERT_EQ(2u, store->commands().size());
   EXPECT_EQ(CookieStoreCommand::REMOVE, store->commands()[1].type);
 
@@ -1379,8 +1382,8 @@ TEST_F(CookieMonsterTest, TestCookieDeleteAllCreatedBetweenTimestamps) {
   Time now = Time::Now();
 
   // Nothing has been added so nothing should be deleted.
-  EXPECT_EQ(0, DeleteAllCreatedBetween(cm.get(), now - TimeDelta::FromDays(99),
-                                       Time()));
+  EXPECT_EQ(0u, DeleteAllCreatedBetween(cm.get(), now - TimeDelta::FromDays(99),
+                                        Time()));
 
   // Create 5 cookies with different creation dates.
   EXPECT_TRUE(
@@ -1395,23 +1398,23 @@ TEST_F(CookieMonsterTest, TestCookieDeleteAllCreatedBetweenTimestamps) {
                                             now - TimeDelta::FromDays(7)));
 
   // Try to delete threedays and the daybefore.
-  EXPECT_EQ(2, DeleteAllCreatedBetween(cm.get(), now - TimeDelta::FromDays(3),
-                                       now - TimeDelta::FromDays(1)));
+  EXPECT_EQ(2u, DeleteAllCreatedBetween(cm.get(), now - TimeDelta::FromDays(3),
+                                        now - TimeDelta::FromDays(1)));
 
   // Try to delete yesterday, also make sure that delete_end is not
   // inclusive.
   EXPECT_EQ(
-      1, DeleteAllCreatedBetween(cm.get(), now - TimeDelta::FromDays(2), now));
+      1u, DeleteAllCreatedBetween(cm.get(), now - TimeDelta::FromDays(2), now));
 
   // Make sure the delete_begin is inclusive.
   EXPECT_EQ(
-      1, DeleteAllCreatedBetween(cm.get(), now - TimeDelta::FromDays(7), now));
+      1u, DeleteAllCreatedBetween(cm.get(), now - TimeDelta::FromDays(7), now));
 
   // Delete the last (now) item.
-  EXPECT_EQ(1, DeleteAllCreatedBetween(cm.get(), Time(), Time()));
+  EXPECT_EQ(1u, DeleteAllCreatedBetween(cm.get(), Time(), Time()));
 
   // Really make sure everything is gone.
-  EXPECT_EQ(0, DeleteAll(cm.get()));
+  EXPECT_EQ(0u, DeleteAll(cm.get()));
 }
 
 TEST_F(CookieMonsterTest,
@@ -1428,8 +1431,8 @@ TEST_F(CookieMonsterTest,
 
   // Nothing has been added so nothing should be deleted.
   EXPECT_EQ(
-      0, DeleteAllCreatedBetweenWithPredicate(
-             cm.get(), now - TimeDelta::FromDays(99), Time(), true_predicate));
+      0u, DeleteAllCreatedBetweenWithPredicate(
+              cm.get(), now - TimeDelta::FromDays(99), Time(), true_predicate));
 
   // Create 5 cookies with different creation dates.
   EXPECT_TRUE(
@@ -1445,24 +1448,24 @@ TEST_F(CookieMonsterTest,
 
   // Try to delete threedays and the daybefore, but we should do nothing due
   // to the predicate.
-  EXPECT_EQ(0, DeleteAllCreatedBetweenWithPredicate(
-                   cm.get(), now - TimeDelta::FromDays(3),
-                   now - TimeDelta::FromDays(1), false_predicate));
+  EXPECT_EQ(0u, DeleteAllCreatedBetweenWithPredicate(
+                    cm.get(), now - TimeDelta::FromDays(3),
+                    now - TimeDelta::FromDays(1), false_predicate));
   // Same as above with a null predicate, so it shouldn't delete anything.
-  EXPECT_EQ(0, DeleteAllCreatedBetweenWithPredicate(
-                   cm.get(), now - TimeDelta::FromDays(3),
-                   now - TimeDelta::FromDays(1), CookiePredicate()));
+  EXPECT_EQ(0u, DeleteAllCreatedBetweenWithPredicate(
+                    cm.get(), now - TimeDelta::FromDays(3),
+                    now - TimeDelta::FromDays(1), CookiePredicate()));
   // Same as above, but we use the true_predicate, so it works.
-  EXPECT_EQ(2, DeleteAllCreatedBetweenWithPredicate(
-                   cm.get(), now - TimeDelta::FromDays(3),
-                   now - TimeDelta::FromDays(1), true_predicate));
+  EXPECT_EQ(2u, DeleteAllCreatedBetweenWithPredicate(
+                    cm.get(), now - TimeDelta::FromDays(3),
+                    now - TimeDelta::FromDays(1), true_predicate));
 
   // Try to delete yesterday, also make sure that delete_end is not
   // inclusive.
-  EXPECT_EQ(0,
+  EXPECT_EQ(0u,
             DeleteAllCreatedBetweenWithPredicate(
                 cm.get(), now - TimeDelta::FromDays(2), now, false_predicate));
-  EXPECT_EQ(1,
+  EXPECT_EQ(1u,
             DeleteAllCreatedBetweenWithPredicate(
                 cm.get(), now - TimeDelta::FromDays(2), now, true_predicate));
   // Check our cookie values.
@@ -1475,18 +1478,18 @@ TEST_F(CookieMonsterTest,
       << expected_cookie->DebugString();
 
   // Make sure the delete_begin is inclusive.
-  EXPECT_EQ(0,
+  EXPECT_EQ(0u,
             DeleteAllCreatedBetweenWithPredicate(
                 cm.get(), now - TimeDelta::FromDays(7), now, false_predicate));
-  EXPECT_EQ(1,
+  EXPECT_EQ(1u,
             DeleteAllCreatedBetweenWithPredicate(
                 cm.get(), now - TimeDelta::FromDays(7), now, true_predicate));
 
   // Delete the last (now) item.
-  EXPECT_EQ(0, DeleteAllCreatedBetweenWithPredicate(cm.get(), Time(), Time(),
-                                                    false_predicate));
-  EXPECT_EQ(1, DeleteAllCreatedBetweenWithPredicate(cm.get(), Time(), Time(),
-                                                    true_predicate));
+  EXPECT_EQ(0u, DeleteAllCreatedBetweenWithPredicate(cm.get(), Time(), Time(),
+                                                     false_predicate));
+  EXPECT_EQ(1u, DeleteAllCreatedBetweenWithPredicate(cm.get(), Time(), Time(),
+                                                     true_predicate));
   expected_cookie = CanonicalCookie::Create(http_www_foo_.url(), "T-0=Now", now,
                                             CookieOptions());
   EXPECT_THAT(test_cookie, CookieEquals(*expected_cookie))
@@ -1495,7 +1498,7 @@ TEST_F(CookieMonsterTest,
       << expected_cookie->DebugString();
 
   // Really make sure everything is gone.
-  EXPECT_EQ(0, DeleteAll(cm.get()));
+  EXPECT_EQ(0u, DeleteAll(cm.get()));
 }
 
 static const base::TimeDelta kLastAccessThreshold =
@@ -1937,8 +1940,8 @@ TEST_F(CookieMonsterTest, PredicateSeesAllCookies) {
   CookiePredicate value_matcher = base::Bind(&CookieValuePredicate, kTrueValue);
 
   PopulateCmForPredicateCheck(cm.get());
-  EXPECT_EQ(7, DeleteAllCreatedBetweenWithPredicate(
-                   cm.get(), base::Time(), base::Time::Now(), value_matcher));
+  EXPECT_EQ(7u, DeleteAllCreatedBetweenWithPredicate(
+                    cm.get(), base::Time(), base::Time::Now(), value_matcher));
 
   EXPECT_EQ("dom_2=B; dom_3=C; host_3=C",
             GetCookies(cm.get(), GURL(kTopLevelDomainPlus3)));
@@ -2300,8 +2303,8 @@ TEST_F(CookieMonsterTest, WhileLoadingDeleteAllGetForURL) {
   store->set_store_load_commands(true);
   std::unique_ptr<CookieMonster> cm(new CookieMonster(store.get(), nullptr));
 
-  ResultSavingCookieCallback<int> delete_callback;
-  cm->DeleteAllAsync(base::Bind(&ResultSavingCookieCallback<int>::Run,
+  ResultSavingCookieCallback<uint32_t> delete_callback;
+  cm->DeleteAllAsync(base::Bind(&ResultSavingCookieCallback<uint32_t>::Run,
                                 base::Unretained(&delete_callback)));
 
   GetCookieListCallback get_cookie_list_callback;
@@ -2323,7 +2326,7 @@ TEST_F(CookieMonsterTest, WhileLoadingDeleteAllGetForURL) {
   store->commands()[0].loaded_callback.Run(std::move(cookies));
 
   delete_callback.WaitUntilDone();
-  EXPECT_EQ(1, delete_callback.result());
+  EXPECT_EQ(1u, delete_callback.result());
 
   get_cookie_list_callback.WaitUntilDone();
   EXPECT_EQ(0u, get_cookie_list_callback.cookies().size());
@@ -2764,7 +2767,7 @@ TEST_F(CookieMonsterTest, DeleteAll) {
   EXPECT_TRUE(SetCookie(cm.get(), http_www_foo_.url(), "X=Y; path=/"));
 
   ASSERT_EQ(0, store->flush_count());
-  EXPECT_EQ(1, DeleteAll(cm.get()));
+  EXPECT_EQ(1u, DeleteAll(cm.get()));
   EXPECT_EQ(1, store->flush_count());
 }
 

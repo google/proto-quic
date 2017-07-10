@@ -3810,6 +3810,65 @@
       },
       {
         "args": [
+          "tab_switching.typical_25",
+          "-v",
+          "--upload-results",
+          "--output-format=chartjson",
+          "--browser=android-chromium"
+        ],
+        "isolate_name": "telemetry_perf_tests",
+        "name": "tab_switching.typical_25",
+        "override_compile_targets": [
+          "telemetry_perf_tests"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "id": "build249-m4--device1",
+              "os": "Android",
+              "pool": "Chrome-perf-fyi"
+            }
+          ],
+          "expiration": 36000,
+          "hard_timeout": 10800,
+          "ignore_task_failure": false,
+          "io_timeout": 3600
+        }
+      },
+      {
+        "args": [
+          "tab_switching.typical_25",
+          "-v",
+          "--upload-results",
+          "--output-format=chartjson",
+          "--browser=reference",
+          "--output-trace-tag=_ref"
+        ],
+        "isolate_name": "telemetry_perf_tests",
+        "name": "tab_switching.typical_25.reference",
+        "override_compile_targets": [
+          "telemetry_perf_tests"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "id": "build249-m4--device1",
+              "os": "Android",
+              "pool": "Chrome-perf-fyi"
+            }
+          ],
+          "expiration": 36000,
+          "hard_timeout": 10800,
+          "ignore_task_failure": true,
+          "io_timeout": 3600
+        }
+      },
+      {
+        "args": [
           "thread_times.key_hit_test_cases",
           "-v",
           "--upload-results",
@@ -4749,6 +4808,31 @@
           "expiration": 36000,
           "hard_timeout": 10800,
           "ignore_task_failure": true,
+          "io_timeout": 3600
+        }
+      }
+    ]
+  },
+  "Mojo Linux Perf": {
+    "isolated_scripts": [
+      {
+        "args": [
+          "loading.desktop.network_service",
+          "-v",
+          "--upload-results",
+          "--output-format=chartjson",
+          "--browser=release"
+        ],
+        "isolate_name": "telemetry_perf_tests",
+        "name": "loading.desktop.network_service",
+        "override_compile_targets": [
+          "telemetry_perf_tests"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "expiration": 36000,
+          "hard_timeout": 10800,
+          "ignore_task_failure": false,
           "io_timeout": 3600
         }
       }

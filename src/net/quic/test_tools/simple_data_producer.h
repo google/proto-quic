@@ -5,11 +5,10 @@
 #ifndef NET_QUIC_TEST_TOOLS_SIMPLE_DATA_PRODUCER_H_
 #define NET_QUIC_TEST_TOOLS_SIMPLE_DATA_PRODUCER_H_
 
-#include <unordered_map>
-
 #include "net/quic/core/quic_simple_buffer_allocator.h"
 #include "net/quic/core/quic_stream_frame_data_producer.h"
 #include "net/quic/core/quic_stream_send_buffer.h"
+#include "net/quic/platform/api/quic_containers.h"
 
 namespace net {
 
@@ -35,7 +34,7 @@ class SimpleDataProducer : public QuicStreamFrameDataProducer {
 
  private:
   using SendBufferMap =
-      std::unordered_map<QuicStreamId, std::unique_ptr<QuicStreamSendBuffer>>;
+      QuicUnorderedMap<QuicStreamId, std::unique_ptr<QuicStreamSendBuffer>>;
 
   SimpleBufferAllocator allocator_;
 

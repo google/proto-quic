@@ -13,13 +13,13 @@ import sys
 import tempfile
 
 from profile_creators import profile_extender
-from telemetry.core import discover
 from telemetry.core import util
 from telemetry.internal import story_runner
 from telemetry.internal.browser import browser_finder
 from telemetry.internal.browser import browser_options
 from telemetry.internal.util import binary_manager
 
+from py_utils import discover
 
 def _DiscoverProfileExtenderClasses():
   profile_extenders_dir = (

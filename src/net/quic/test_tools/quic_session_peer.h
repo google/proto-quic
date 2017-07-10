@@ -13,6 +13,7 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_session.h"
 #include "net/quic/core/quic_write_blocked_list.h"
+#include "net/quic/platform/api/quic_containers.h"
 
 namespace net {
 
@@ -41,7 +42,7 @@ class QuicSessionPeer {
   static const QuicSession::ClosedStreams& closed_streams(QuicSession* session);
   static const QuicSession::ZombieStreamMap& zombie_streams(
       QuicSession* session);
-  static std::unordered_set<QuicStreamId>* GetDrainingStreams(
+  static QuicUnorderedSet<QuicStreamId>* GetDrainingStreams(
       QuicSession* session);
   static void ActivateStream(QuicSession* session,
                              std::unique_ptr<QuicStream> stream);

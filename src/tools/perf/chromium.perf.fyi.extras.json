@@ -1,0 +1,31 @@
+{
+  "comment": [
+    "This file contains manually-specified tests that should be merged into",
+    "testing/buildbot/chromium.perf.fyi.json."
+  ],
+  "Mojo Linux Perf": {
+    "isolated_scripts": [
+      {
+        "args": [
+          "loading.desktop.network_service",
+          "-v",
+          "--upload-results",
+          "--output-format=chartjson",
+          "--browser=release"
+        ],
+        "isolate_name": "telemetry_perf_tests",
+        "name": "loading.desktop.network_service",
+        "override_compile_targets": [
+          "telemetry_perf_tests"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "expiration": 36000,
+          "hard_timeout": 10800,
+          "ignore_task_failure": false,
+          "io_timeout": 3600
+        }
+      }
+    ]
+  }
+}

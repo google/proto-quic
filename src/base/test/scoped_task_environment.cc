@@ -92,9 +92,15 @@ ScopedTaskEnvironment::ScopedTaskEnvironment(
       task_tracker_(new TestTaskTracker()) {
   CHECK(!TaskScheduler::GetInstance());
 
-  // Instantiate a TaskScheduler with 1 thread in each of its 4 pools. Threads
+  // Instantiate a TaskScheduler with 2 threads in each of its 4 pools. Threads
   // stay alive even when they don't have work.
-  constexpr int kMaxThreads = 1;
+  // Each pool uses two threads to prevent deadlocks in unit tests that have a
+  // sequence that uses WithBaseSyncPrimitives() to wait on the result of
+  // another sequence. This isn't perfect (doesn't solve wait chains) but solves
+  // the basic use case for now.
+  // TODO(fdoray/jeffreyhe): Make the TaskScheduler dynamically replace blocked
+  // threads and get rid of this limitation. http://crbug.com/738104
+  constexpr int kMaxThreads = 2;
   const TimeDelta kSuggestedReclaimTime = TimeDelta::Max();
   const SchedulerWorkerPoolParams worker_pool_params(
       SchedulerWorkerPoolParams::StandbyThreadPolicy::ONE, kMaxThreads,

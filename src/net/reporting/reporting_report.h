@@ -21,6 +21,22 @@ namespace net {
 // An undelivered report.
 struct NET_EXPORT ReportingReport {
  public:
+  // Used in histograms; please add new items at end and do not reorder.
+  enum class Outcome {
+    UNKNOWN = 0,
+    DISCARDED_NO_URL_REQUEST_CONTEXT = 1,
+    DISCARDED_NO_REPORTING_SERVICE = 2,
+    ERASED_FAILED = 3,
+    ERASED_EXPIRED = 4,
+    ERASED_EVICTED = 5,
+    ERASED_NETWORK_CHANGED = 6,
+    ERASED_BROWSING_DATA_REMOVED = 7,
+    ERASED_REPORTING_SHUT_DOWN = 8,
+    DELIVERED = 9,
+
+    MAX
+  };
+
   ReportingReport(const GURL& url,
                   const std::string& group,
                   const std::string& type,
@@ -28,6 +44,11 @@ struct NET_EXPORT ReportingReport {
                   base::TimeTicks queued,
                   int attempts);
   ~ReportingReport();
+
+  static void RecordReportDiscardedForNoURLRequestContext();
+  static void RecordReportDiscardedForNoReportingService();
+
+  void RecordOutcome(base::TimeTicks now);
 
   // The URL of the document that triggered the report. (Included in the
   // delivered report.)
@@ -51,7 +72,11 @@ struct NET_EXPORT ReportingReport {
   // attempt. (Not included in the delivered report.)
   int attempts = 0;
 
+  Outcome outcome;
+
  private:
+  bool recorded_outcome;
+
   DISALLOW_COPY_AND_ASSIGN(ReportingReport);
 };
 

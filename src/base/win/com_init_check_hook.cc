@@ -235,7 +235,7 @@ class HookManager {
                                                     DWORD dwClsContext,
                                                     REFIID riid,
                                                     void** ppv) {
-    // Chrome COM callers need to make sure that their thread is configured to
+    // Chromium COM callers need to make sure that their thread is configured to
     // process COM objects to avoid creating an implicit MTA or silently failing
     // STA object creation call due to the SUCCEEDED() pattern for COM calls.
     //
@@ -244,7 +244,11 @@ class HookManager {
     // base::CreateCOMSTATaskRunnerWithTraits().
     //
     // If you need MTA support, ping //base/task_scheduler/OWNERS.
-    AssertComInitialized();
+    AssertComInitialized(
+        "CoCreateInstance calls in Chromium require explicit COM "
+        "initialization via base::CreateCOMSTATaskRunnerWithTraits() or "
+        "ScopedCOMInitializer. See the comment in DCheckedCoCreateInstance for "
+        "more details.");
     return original_co_create_instance_body_function_(rclsid, pUnkOuter,
                                                       dwClsContext, riid, ppv);
   }

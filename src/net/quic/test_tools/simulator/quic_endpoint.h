@@ -9,6 +9,7 @@
 #include "net/quic/core/crypto/null_encrypter.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_containers.h"
 #include "net/quic/test_tools/simple_data_producer.h"
 #include "net/quic/test_tools/simulator/link.h"
 #include "net/quic/test_tools/simulator/queue.h"
@@ -173,7 +174,7 @@ class QuicEndpointMultiplexer : public Endpoint,
   void Act() override {}
 
  private:
-  std::unordered_map<std::string, QuicEndpoint*> mapping_;
+  QuicUnorderedMap<std::string, QuicEndpoint*> mapping_;
 };
 
 }  // namespace simulator

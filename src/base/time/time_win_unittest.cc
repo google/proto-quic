@@ -300,4 +300,41 @@ TEST(TimeDelta, ConstexprInitialization) {
   EXPECT_EQ(kExpectedDeltaInMilliseconds, kConstexprTimeDelta.InMilliseconds());
 }
 
+TEST(HighResolutionTimer, GetUsage) {
+  EXPECT_EQ(0.0, Time::GetHighResolutionTimerUsage());
+
+  Time::ResetHighResolutionTimerUsage();
+
+  // 0% usage since the timer isn't activated regardless of how much time has
+  // elapsed.
+  EXPECT_EQ(0.0, Time::GetHighResolutionTimerUsage());
+  Sleep(10);
+  EXPECT_EQ(0.0, Time::GetHighResolutionTimerUsage());
+
+  Time::ActivateHighResolutionTimer(true);
+  Time::ResetHighResolutionTimerUsage();
+
+  Sleep(20);
+  // 100% usage since the timer has been activated entire time.
+  EXPECT_EQ(100.0, Time::GetHighResolutionTimerUsage());
+
+  Time::ActivateHighResolutionTimer(false);
+  Sleep(20);
+  double usage1 = Time::GetHighResolutionTimerUsage();
+  // usage1 should be about 50%.
+  EXPECT_LT(usage1, 100.0);
+  EXPECT_GT(usage1, 0.0);
+
+  Time::ActivateHighResolutionTimer(true);
+  Sleep(10);
+  Time::ActivateHighResolutionTimer(false);
+  double usage2 = Time::GetHighResolutionTimerUsage();
+  // usage2 should be about 60%.
+  EXPECT_LT(usage2, 100.0);
+  EXPECT_GT(usage2, usage1);
+
+  Time::ResetHighResolutionTimerUsage();
+  EXPECT_EQ(0.0, Time::GetHighResolutionTimerUsage());
+}
+
 }  // namespace base

@@ -278,9 +278,9 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
         on_failure=self._env.BlacklistDevice)
     @trace_event.traced
     def individual_device_set_up(dev, host_device_tuples):
-      def install_apk():
+      def install_apk(d):
         # Install test APK.
-        self._delegate.Install(dev)
+        self._delegate.Install(d)
 
       def push_test_data():
         # Push data dependencies.
@@ -309,7 +309,9 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
         for s in self._servers[str(dev)]:
           s.SetUp()
 
-      steps = (install_apk, push_test_data, init_tool_and_start_servers)
+      steps = (
+          lambda: crash_handler.RetryOnSystemCrash(install_apk, dev),
+          push_test_data, init_tool_and_start_servers)
       if self._env.concurrent_adb:
         reraiser_thread.RunAsync(steps)
       else:

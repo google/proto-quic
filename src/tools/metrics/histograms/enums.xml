@@ -4136,6 +4136,96 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="5" label="Timeout"/>
 </enum>
 
+<enum name="ChromeOSRecoveryReason">
+  <summary>
+    Reason for entering Recovery Mode. See
+    platform/vboot_reference/firmware/2lib/include/2recovery_reasons.h
+  </summary>
+  <int value="0" label="Recovery not requested."/>
+  <int value="1" label="Recovery requested from legacy utility."/>
+  <int value="2" label="User manually requested recovery via recovery button"/>
+  <int value="3"
+      label="RW firmware failed signature check (neither RW firmware slot was
+             valid)"/>
+  <int value="4" label="S3 resume failed"/>
+  <int value="5" label="TPM error in read-only firmware (deprecated)"/>
+  <int value="6" label="Shared data error in read-only firmware"/>
+  <int value="7" label="Test error from S3Resume()"/>
+  <int value="8" label="Test error from LoadFirmwareSetup() (deprecated)"/>
+  <int value="9" label="Test error from LoadFirmware() (deprecated)"/>
+  <int value="19"
+      label="Latest tried RW firmware keyblock verification failed"/>
+  <int value="20" label="Latest tried RW firmware key version too old"/>
+  <int value="22"
+      label="Latest tried RW firmware preamble verification failed"/>
+  <int value="23" label="Latest tried RW firmware version too old"/>
+  <int value="27" label="Latest tried RW firmware body verification failed"/>
+  <int value="32"
+      label="Firmware boot failure outside of verified boot (RAM init,
+             missing SSD, etc.)."/>
+  <int value="33"
+      label="Recovery mode TPM initialization requires a system reboot. The
+             system was already in recovery mode for some other reason when
+             this happened."/>
+  <int value="34" label="EC software sync - other error"/>
+  <int value="35"
+      label="EC software sync - unable to determine active EC image"/>
+  <int value="36"
+      label="EC software sync - error obtaining EC image hash (deprecated)"/>
+  <int value="37" label="EC software sync - error obtaining expected EC image"/>
+  <int value="38" label="EC software sync - error updating EC"/>
+  <int value="39" label="EC software sync - unable to jump to EC-RW"/>
+  <int value="40"
+      label="EC software sync - unable to protect / unprotect EC-RW"/>
+  <int value="41" label="EC software sync - error obtaining expected EC hash"/>
+  <int value="42"
+      label="EC software sync - expected EC image doesn't match hash"/>
+  <int value="43" label="Secure data inititalization error"/>
+  <int value="44" label="GBB header is bad"/>
+  <int value="45" label="Unable to clear TPM owner"/>
+  <int value="46" label="Error determining/updating virtual dev switch"/>
+  <int value="47" label="Error determining firmware slot"/>
+  <int value="63" label="Unspecified/unknown error in read-only firmware"/>
+  <int value="65"
+      label="User manually requested recovery by pressing a key at developer
+             warning screen"/>
+  <int value="66" label="No OS kernel detected"/>
+  <int value="67" label="OS kernel failed signature check"/>
+  <int value="68" label="TPM error in rewritable firmware (deprecated)"/>
+  <int value="69" label="RW firmware in dev mode, but dev switch is off"/>
+  <int value="70" label="Shared data error in rewritable firmware"/>
+  <int value="71" label="Test error from LoadKernel()"/>
+  <int value="72" label="No bootable disk found (deprecated)"/>
+  <int value="73"
+      label="Rebooting did not correct TPM_E_FAIL or TPM_E_FAILEDSELFTEST"/>
+  <int value="80" label="TPM setup error in read-only firmware"/>
+  <int value="81" label="TPM write error in read-only firmware"/>
+  <int value="82" label="TPM lock error in read-only firmware"/>
+  <int value="83" label="TPM update error in read-only firmware"/>
+  <int value="84" label="TPM read error in rewritable firmware"/>
+  <int value="85" label="TPM write error in rewritable firmware"/>
+  <int value="86" label="TPM lock error in rewritable firmware"/>
+  <int value="87" label="EC software sync unable to get EC image hash"/>
+  <int value="88" label="EC software sync invalid image hash size"/>
+  <int value="89" label="Unspecified error while trying to load kernel"/>
+  <int value="90" label="No bootable storage device in system"/>
+  <int value="91" label="No bootable kernel found on disk"/>
+  <int value="92" label="BCB related error in RW firmware"/>
+  <int value="93" label="Secure data inititalization error"/>
+  <int value="94" label="Fastboot mode requested in firmware"/>
+  <int value="95" label="Recovery hash space lock error in RO firmware"/>
+  <int value="127" label="Unspecified/unknown error in rewritable firmware"/>
+  <int value="129" label="DM-verity error"/>
+  <int value="143" label="Unspecified/unknown error in kernel."/>
+  <int value="191" label="Unspecified/unknown error in kernel"/>
+  <int value="193" label="Recovery mode test from user-mode"/>
+  <int value="194" label="Recovery requested by user-mode via BCB"/>
+  <int value="195" label="Fastboot mode requested by user-mode"/>
+  <int value="196"
+      label="User requested recovery for training memory and rebooting."/>
+  <int value="255" label="Unspecified/unknown error in user-mode"/>
+</enum>
+
 <enum name="ChromeOSUserImageId">
   <summary>
     Indices of the default images as defined in
@@ -9035,7 +9125,7 @@ uploading your change for review.  These are checked by presubmit scripts.
 <enum name="EmbeddedWorkerStartingPhase">
   <int value="0" label="NOT_STARTING"/>
   <int value="1" label="ALLOCATING_PROCESS"/>
-  <int value="2" label="REGISTERING_TO_DEVTOOLS"/>
+  <int value="2" label="REGISTERING_TO_DEVTOOLS (obsolete)"/>
   <int value="3" label="SENT_START_WORKER"/>
   <int value="4" label="SCRIPT_DOWNLOADING"/>
   <int value="5" label="SCRIPT_LOADED"/>
@@ -14440,7 +14530,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="854" label="V8XPathEvaluator_CreateExpression_Method"/>
   <int value="855" label="V8XPathEvaluator_CreateNSResolver_Method"/>
   <int value="856" label="V8XPathEvaluator_Evaluate_Method"/>
-  <int value="857" label="RequestMIDIAccess"/>
+  <int value="857" label="RequestMIDIAccess_ObscuredByFootprinting"/>
   <int value="858" label="V8MouseEvent_LayerX_AttributeGetter"/>
   <int value="859" label="V8MouseEvent_LayerY_AttributeGetter"/>
   <int value="860" label="InnerTextWithShadowTree"/>
@@ -14737,7 +14827,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="1140" label="EventComposed"/>
   <int value="1141" label="GeolocationInsecureOriginIframe"/>
   <int value="1142" label="GeolocationSecureOriginIframe"/>
-  <int value="1143" label="RequestMIDIAccessIframe"/>
+  <int value="1143" label="RequestMIDIAccessIframe_ObscuredByFootprinting"/>
   <int value="1144" label="GetUserMediaInsecureOriginIframe"/>
   <int value="1145" label="GetUserMediaSecureOriginIframe"/>
   <int value="1146" label="ElementRequestPointerLockIframe"/>
@@ -15577,8 +15667,10 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="1959" label="MediaStreamConstraintsGoogNoiseReduction"/>
   <int value="1960" label="MediaStreamConstraintsGoogPowerLineFrequency"/>
   <int value="1961" label="ViewportFixedPositionUnderFilter"/>
-  <int value="1962" label="RequestMIDIAccessWithSysExOption"/>
-  <int value="1963" label="RequestMIDIAccessIframeWithSysExOption"/>
+  <int value="1962"
+      label="RequestMIDIAccessWithSysExOption_ObscuredByFootprinting"/>
+  <int value="1963"
+      label="RequestMIDIAccessIframeWithSysExOption_ObscuredByFootprinting"/>
   <int value="1964" label="GamepadAxes"/>
   <int value="1965" label="GamepadButtons"/>
   <int value="1966" label="VibrateWithoutUserGesture"/>
@@ -15670,6 +15762,9 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="2049" label="CSSSelectorWebkitMediaControlsFullscreenButton"/>
   <int value="2050"
       label="CSSSelectorWebkitMediaControlsToggleClosedCaptionsButton"/>
+  <int value="2051" label="LinearAccelerationSensorConstructor"/>
+  <int value="2052" label="ReportUriMultipleEndpoints"/>
+  <int value="2053" label="ReportUriSingleEndpoint"/>
 </enum>
 
 <enum name="FeedbackSource">
@@ -17968,6 +18063,15 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="1" label="Google CAPTCHA solved"/>
 </enum>
 
+<enum name="GoogleFaviconServerRequestStatus">
+  <int value="0" label="Success"/>
+  <int value="1" label="Failure (connection error, no HTTP response)"/>
+  <int value="2" label="Failure (HTTP error)"/>
+  <int value="3" label="Failure (previous HTTP error cached)"/>
+  <int value="4" label="Failure (on write to database)"/>
+  <int value="5" label="Failure (invalid request)"/>
+</enum>
+
 <enum name="GoogleNowCardTypeId">
   <summary>
     Represents a card type ID. See cardTypeId in
@@ -18959,7 +19063,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="3" label="Create tables"/>
   <int value="4"
       label="Version check and migration (check
-             History.MigrateFailureToVersion)"/>
+             History.MigrateFailureFromVersion)"/>
   <int value="5" label="Commit"/>
 </enum>
 
@@ -19417,6 +19521,28 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="0" label="Connecting"/>
   <int value="1" label="Connected"/>
   <int value="2" label="Disconnected"/>
+</enum>
+
+<enum name="IcingContextReportingStatus">
+  <int value="0" label="Success"/>
+  <int value="1" label="GSA not available"/>
+  <int value="2" label="Sync not initialized"/>
+  <int value="3" label="Sync not syncing urls"/>
+  <int value="4" label="Sync no keystore passphrase"/>
+  <int value="5" label="Sync failed due to other reason (unexpected)"/>
+  <int value="6" label="Disabled on svelte devices"/>
+  <int value="7" label="No current tab found"/>
+  <int value="8" label="Current tab is incognito"/>
+  <int value="9" label="Invalid URL scheme"/>
+  <int value="10" label="Current tab ID doesn't match expected tab ID"/>
+  <int value="11" label="Duplicate title changed notification"/>
+  <int value="12" label="Connection to GMS failed"/>
+  <int value="13" label="Sync not ready at report time"/>
+  <int value="14" label="Not signed in at report time"/>
+  <int value="15" label="GSA account not present in Chrome"/>
+  <int value="16" label="GSA account doesn't match Chrome's"/>
+  <int value="17" label="GMS call result status is null"/>
+  <int value="18" label="GMS call result status is not successful"/>
 </enum>
 
 <enum name="IDBContextForcedCloseReason">
@@ -20408,6 +20534,38 @@ uploading your change for review.  These are checked by presubmit scripts.
 <enum name="InstantSessionStorageNamespace">
   <int value="0" label="different"/>
   <int value="1" label="identical"/>
+</enum>
+
+<enum name="InstantTethering_ConnectionToHostResult_Failure">
+  <int value="0" label="Unknown error"/>
+  <int value="1" label="Tethering timed out"/>
+  <int value="2" label="Client connection error"/>
+</enum>
+
+<enum name="InstantTethering_ConnectionToHostResult_Failure_ClientConnection">
+  <int value="0" label="Timeout while waiting to connect"/>
+  <int value="1" label="Canceled by a new connection attempt"/>
+</enum>
+
+<enum name="InstantTethering_ConnectionToHostResult_Failure_TetheringTimeout">
+  <int value="0" label="First-time setup was required"/>
+  <int value="1" label="First-time setup was not required"/>
+</enum>
+
+<enum name="InstantTethering_ConnectionToHostResult_ProvisioningFailureRate">
+  <int value="0" label="Provisioning failed"/>
+  <int value="1" label="Other"/>
+</enum>
+
+<enum name="InstantTethering_ConnectionToHostResult_SuccessRate">
+  <int value="0" label="Success"/>
+  <int value="1" label="Failure"/>
+</enum>
+
+<enum name="InstantTethering_HostScanResult">
+  <int value="0" label="Notification not shown"/>
+  <int value="1" label="Notification shown for single host"/>
+  <int value="2" label="Notification shown for multiple hosts"/>
 </enum>
 
 <enum name="IntelMaxMicroArchitecture">
@@ -22306,6 +22464,8 @@ from previous Chrome versions.
   <int value="-1797739460" label="brotli-encoding:disabled"/>
   <int value="-1790227231" label="show-autofill-signatures"/>
   <int value="-1784788154" label="NewRemotePlaybackPipeline:disabled"/>
+  <int value="-1780306716"
+      label="OmniboxSpeculativeServiceWorkerStartOnQueryInput:enabled"/>
   <int value="-1772172557" label="enable-osk-overscroll"/>
   <int value="-1767470652" label="out-of-process-pdf"/>
   <int value="-1751928267" label="disable-icon-ntp"/>
@@ -22529,6 +22689,8 @@ from previous Chrome versions.
   <int value="-1015006759" label="ImportantSitesInCBD:disabled"/>
   <int value="-998255750" label="ExperimentalKeyboardLockUI:enabled"/>
   <int value="-996673716" label="enable-web-app-frame"/>
+  <int value="-991253797"
+      label="OmniboxSpeculativeServiceWorkerStartOnQueryInput:disabled"/>
   <int value="-980260493" label="NTPSnippets:disabled"/>
   <int value="-979313250" label="enable-google-branded-context-menu"/>
   <int value="-979057409" label="enable-seccomp-filter-sandbox"/>
@@ -22568,7 +22730,9 @@ from previous Chrome versions.
   <int value="-879031960" label="FetchKeepaliveTimeoutSetting:disabled"/>
   <int value="-876148583" label="ArcBootCompletedBroadcast:disabled"/>
   <int value="-867087281" label="enable-virtual-keyboard"/>
+  <int value="-866993841" label="OfflinePagesCTV2:disabled"/>
   <int value="-864266073" label="cros-regions-mode"/>
+  <int value="-864234985" label="UseDdljsonApi:enabled"/>
   <int value="-864205629" label="enable-offline-load-stale-cache"/>
   <int value="-861678473" label="disable-offer-upload-credit-cards"/>
   <int value="-861343291" label="ChromeHome:disabled"/>
@@ -22706,6 +22870,7 @@ from previous Chrome versions.
   <int value="-353182790" label="ConsistentOmniboxGeolocation:disabled"/>
   <int value="-351552989" label="disable-hosted-apps-in-windows"/>
   <int value="-351127770" label="enable-offline-pages-as-bookmarks"/>
+  <int value="-349437334" label="UseDdljsonApi:disabled"/>
   <int value="-349057743" label="extensions-on-chrome-urls"/>
   <int value="-345838366" label="enable-hosted-apps-in-windows"/>
   <int value="-345324571" label="enable-quirks-client"/>
@@ -22964,6 +23129,7 @@ from previous Chrome versions.
   <int value="598827460" label="enable-roboto-font-ui"/>
   <int value="602117675" label="NTPBookmarkSuggestions:enabled"/>
   <int value="603326800" label="UsePasswordSeparatedSigninFlow:enabled"/>
+  <int value="603988014" label="NetworkService:enabled"/>
   <int value="605150752" label="WebUSB:disabled"/>
   <int value="606288133" label="enable-print-preview-register-promos"/>
   <int value="606512202" label="AutofillCreditCardPopupLayout:enabled"/>
@@ -23047,6 +23213,8 @@ from previous Chrome versions.
   <int value="900614020" label="ContentSuggestionsShowSummary:disabled"/>
   <int value="902608487" label="AutofillUpstreamRequestCvcIfMissing:enabled"/>
   <int value="903267263" label="disable-offline-pages"/>
+  <int value="908302031"
+      label="OmniboxUIExperimentElideSuggestionUrlAfterHost:enabled"/>
   <int value="908523940" label="PassiveEventListenersDueToFling:disabled"/>
   <int value="909439558" label="disable-device-discovery"/>
   <int value="916316159" label="disable-new-app-list-mixer"/>
@@ -23207,6 +23375,7 @@ from previous Chrome versions.
   <int value="1386300777"
       label="OmniboxUIExperimentHideSuggestionUrlTrivialSubdomains:disabled"/>
   <int value="1389729816" label="data-reduction-proxy-lo-fi"/>
+  <int value="1397069250" label="NetworkService:disabled"/>
   <int value="1405459667" label="enable-fast-text-autosizing"/>
   <int value="1406354320" label="MacViewsWebUIDialogs:enabled"/>
   <int value="1407625309"
@@ -23247,6 +23416,8 @@ from previous Chrome versions.
   <int value="1511140997" label="OfflinePagesAsyncDownload:disabled"/>
   <int value="1511161758" label="BackgroundLoader:enabled"/>
   <int value="1512249489" label="ModuleScripts:disabled"/>
+  <int value="1514036945"
+      label="OmniboxUIExperimentElideSuggestionUrlAfterHost:disabled"/>
   <int value="1515196403" label="fast-user-switching"/>
   <int value="1517863401" label="history-entry-requires-user-gesture"/>
   <int value="1533111748" label="Multidevice:enabled"/>
@@ -23289,6 +23460,7 @@ from previous Chrome versions.
   <int value="1702821235" label="WebAssembly:enabled"/>
   <int value="1705724232" label="use-android-midi-api"/>
   <int value="1713230497" label="ColorCorrectRendering:disabled"/>
+  <int value="1716104463" label="enable-fullscreen-app-list"/>
   <int value="1723601083" label="enable-app-window-controls"/>
   <int value="1724800383" label="AsmJsToWebAssembly:disabled"/>
   <int value="1730094138" label="enable-md-storage-manager"/>
@@ -23328,6 +23500,7 @@ from previous Chrome versions.
   <int value="1839740266" label="LocationHardReload:disabled"/>
   <int value="1844110073" label="enable-app-view"/>
   <int value="1847024354" label="enable-hotword-hardware"/>
+  <int value="1849379463" label="OfflinePagesCTV2:enabled"/>
   <int value="1852630189" label="NTPBookmarkSuggestions:disabled"/>
   <int value="1855524566" label="allow-insecure-websocket-from-https-origin"/>
   <int value="1860597983" label="AndroidSpellChecker:disabled"/>
@@ -31658,6 +31831,42 @@ from previous Chrome versions.
   <int value="88" label="IDC_CONTENT_CONTEXT_EXIT_FULLSCREEN"/>
 </enum>
 
+<enum name="ReportingHeaderEndpointOutcome">
+  <int value="0" label="Discarded: not a dictionary"/>
+  <int value="1" label="Discarded: endpoint missing"/>
+  <int value="2" label="Discarded: endpoint not a string"/>
+  <int value="3" label="Discarded: endpoint URL invalid"/>
+  <int value="4" label="Discarded: endpoint URL insecure"/>
+  <int value="5" label="Discarded: TTL missing"/>
+  <int value="6" label="Discarded: TTL not an integer"/>
+  <int value="7" label="Discarded: TTL negative"/>
+  <int value="8" label="Discarded: group not a string"/>
+  <int value="9" label="Removed (max-age = 0)"/>
+  <int value="10" label="Set rejected by delegate (max-age &gt; 0)"/>
+  <int value="11" label="Set (max-age &gt; 0)"/>
+</enum>
+
+<enum name="ReportingHeaderOutcome">
+  <int value="0" label="Discarded: no ReportingService"/>
+  <int value="1" label="Discarded: invalid SSLInfo"/>
+  <int value="2" label="Discarded: cert status error"/>
+  <int value="3" label="Discarded: invalid JSON"/>
+  <int value="4" label="Parsed"/>
+</enum>
+
+<enum name="ReportingReportOutcome">
+  <int value="0" label="Unknown"/>
+  <int value="1" label="Discarded: no URLRequestContext"/>
+  <int value="2" label="Discarded: no ReportingService"/>
+  <int value="3" label="Erased: failed"/>
+  <int value="4" label="Erased: expired"/>
+  <int value="5" label="Erased: evicted"/>
+  <int value="6" label="Erased: network changed"/>
+  <int value="7" label="Erased: browsing data removed"/>
+  <int value="8" label="Erased: Reporting shut down"/>
+  <int value="9" label="Delivered"/>
+</enum>
+
 <enum name="ReportProcessingResult">
   <int value="0" label="Success">A report was created and uploaded</int>
   <int value="1" label="Suppressed">
@@ -33134,6 +33343,7 @@ from previous Chrome versions.
   <int value="24" label="BACKGROUND_FETCH_CLICK"/>
   <int value="25" label="BACKGROUND_FETCH_FAIL"/>
   <int value="26" label="BACKGROUND_FETCHED"/>
+  <int value="27" label="NAVIGATION_HINT"/>
 </enum>
 
 <enum name="ServiceWorkerPreparationType">
@@ -35946,6 +36156,12 @@ from previous Chrome versions.
   <int value="3" label="CUSTOM_PASSPHRASE"/>
 </enum>
 
+<enum name="SyncPasswordHashChange">
+  <int value="0" label="Saved on Chrome sign-in"/>
+  <int value="1" label="Saved in the content area"/>
+  <int value="2" label="Cleared on Chrome sign-out"/>
+</enum>
+
 <enum name="SyncPromoAction">
   <int value="0" label="The promo was shown to the user"/>
   <int value="1" label="The user clicked the promo to sign in"/>
@@ -36591,9 +36807,12 @@ from previous Chrome versions.
 
 <enum name="TPMVersionFingerprint">
   <int value="305524852" label="IFX 4.32 build 0x36f variant 1"/>
+  <int value="368058567" label="STM 0xd08"/>
   <int value="517482723" label="IFX 4.32 build 0x36f variant 2"/>
+  <int value="639195905" label="IFX 4.32 build 0x36f variant 3"/>
   <int value="987235505" label="CROS 0dc5c85b01a68fe6"/>
   <int value="987973414" label="IFX 6.40 build 0xbe"/>
+  <int value="1311411160" label="WEC 0x345"/>
   <int value="1353576267" label="IFX 3.18 build 0x9"/>
   <int value="1437720528" label="IFX 133.32 build 0x5 variant 1"/>
   <int value="1451134301" label="IFX 147.18 build 0xf"/>
@@ -36733,6 +36952,7 @@ from previous Chrome versions.
   <int value="13" label="Aborted by translate ranker"/>
   <int value="14" label="Aborted by too often denied rule"/>
   <int value="15" label="Aborted by matches previous language"/>
+  <int value="16" label="Decision made to create infobar on Android"/>
 </enum>
 
 <enum name="TranslateLanguage">
@@ -36907,6 +37127,18 @@ from previous Chrome versions.
   <int value="8" label="Can not write the extracted file on disk"/>
   <int value="9" label="Can not set the extract time to file"/>
   <int value="10" label="Can not close extracted file"/>
+</enum>
+
+<enum name="UnsupportedContainers">
+  <int value="0" label="3GP"/>
+  <int value="1" label="TS"/>
+  <int value="2" label="MID"/>
+  <int value="3" label="XMF"/>
+  <int value="4" label="MXMF"/>
+  <int value="5" label="RTTTL"/>
+  <int value="6" label="RTX"/>
+  <int value="7" label="OTA"/>
+  <int value="8" label="IMY"/>
 </enum>
 
 <enum name="UpdateEngineAttemptResult">
@@ -37594,6 +37826,17 @@ from previous Chrome versions.
   <int value="2" label="Stopping video capture due to error"/>
   <int value="3" label="Video capture device stopped. No frames produced."/>
   <int value="4" label="Desktop/Tab capture stopped. No frames produced."/>
+</enum>
+
+<enum name="VideoCaptureServiceEvent">
+  <int value="0" label="Browser is using legacy video capture stack"/>
+  <int value="1" label="Browser connecting to video capture service"/>
+  <int value="2" label="Video capture service started"/>
+  <int value="3"
+      label="Video capture service closing because last client disconnected"/>
+  <int value="4" label="Video capture service lost connection to Browser"/>
+  <int value="5" label="Browser lost connection to video capture service"/>
+  <int value="6" label="Browser closing connection to video capture service"/>
 </enum>
 
 <enum name="VideoCodec">

@@ -387,6 +387,24 @@ def AddInstrumentationTestOptions(parser):
       '--render-results-directory',
       dest='render_results_dir',
       help='Directory to pull render test result images off of the device to.')
+  def package_replacement(arg):
+    split_arg = arg.split(',')
+    if len(split_arg) != 2:
+      raise argparse.ArgumentError(
+          'Expected two comma-separated strings for --replace-system-package, '
+          'received %d' % len(split_arg))
+    PackageReplacement = collections.namedtuple('PackageReplacement',
+                                                ['package', 'replacement_apk'])
+    return PackageReplacement(package=split_arg[0],
+                              replacement_apk=os.path.realpath(split_arg[1]))
+  parser.add_argument(
+      '--replace-system-package',
+      type=package_replacement, default=None,
+      help='Specifies a system package to replace with a given APK for the '
+           'duration of the test. Given as a comma-separated pair of strings, '
+           'the first element being the package and the second the path to the '
+           'replacement APK. Only supports replacing one package. Example: '
+           '--replace-system-package com.example.app,path/to/some.apk')
   parser.add_argument(
       '--runtime-deps-path',
       dest='runtime_deps_path', type=os.path.realpath,
@@ -929,6 +947,14 @@ def main():
       args.command_line_flags = unknown_args
     else:
       parser.error('unrecognized arguments: %s' % ' '.join(unknown_args))
+
+  # --replace-system-package has the potential to cause issues if
+  # --enable-concurrent-adb is set, so disallow that combination
+  if (hasattr(args, 'replace_system_package') and
+      hasattr(args, 'enable_concurrent_adb') and args.replace_system_package and
+      args.enable_concurrent_adb):
+    parser.error('--replace-system-package and --enable-concurrent-adb cannot '
+                 'be used together')
 
   try:
     return RunTestsCommand(args)

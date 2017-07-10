@@ -6,8 +6,8 @@
 #define TOOLS_ANDROID_FORWARDER2_FORWARDERS_MANAGER_H_
 
 #include <memory>
+#include <vector>
 
-#include "base/memory/scoped_vector.h"
 #include "base/threading/thread.h"
 #include "tools/android/forwarder2/pipe_notifier.h"
 
@@ -35,7 +35,7 @@ class ForwardersManager {
   void WaitForEventsOnInternalThreadSoon();
   void WaitForEventsOnInternalThread();
 
-  ScopedVector<Forwarder> forwarders_;
+  std::vector<std::unique_ptr<Forwarder>> forwarders_;
   PipeNotifier deletion_notifier_;
   PipeNotifier wakeup_notifier_;
   base::Thread thread_;

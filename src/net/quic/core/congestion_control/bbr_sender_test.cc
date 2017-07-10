@@ -314,7 +314,6 @@ TEST_F(BbrSenderTest, SimpleTransfer2RTTAggregationBytes) {
             sender_->ExportDebugState().max_bandwidth);
   // TODO(ianswett): Expect 0 packets are lost once BBR no longer measures
   // bandwidth higher than the link rate.
-  EXPECT_FALSE(sender_->ExportDebugState().last_sample_is_app_limited);
   // The margin here is high, because the aggregation greatly increases
   // smoothed rtt.
   EXPECT_GE(kTestRtt * 4, rtt_stats_->smoothed_rtt());
@@ -378,11 +377,10 @@ TEST_F(BbrSenderTest, SimpleTransfer2RTTAggregationBytes2) {
             sender_->ExportDebugState().max_bandwidth);
   // TODO(ianswett): Expect 0 packets are lost once BBR no longer measures
   // bandwidth higher than the link rate.
-  EXPECT_FALSE(sender_->ExportDebugState().last_sample_is_app_limited);
   // The margin here is high, because the aggregation greatly increases
   // smoothed rtt.
   EXPECT_GE(kTestRtt * 4, rtt_stats_->smoothed_rtt());
-  ExpectApproxEq(kTestRtt, rtt_stats_->min_rtt(), 0.12f);
+  ExpectApproxEq(kTestRtt, rtt_stats_->min_rtt(), 0.33f);
 }
 
 // Test a simple long data transfer with 2 rtts of aggregation.

@@ -8,8 +8,9 @@ from contrib.cluster_telemetry import ct_benchmarks_util
 from contrib.cluster_telemetry import page_set
 from contrib.cluster_telemetry import repaint_helpers
 
-from telemetry.core import discover
 from telemetry import story
+
+from py_utils import discover
 
 from measurements import multipage_skpicture_printer
 

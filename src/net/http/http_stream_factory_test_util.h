@@ -116,6 +116,7 @@ class MockHttpStreamFactoryImplJob : public HttpStreamFactoryImpl::Job {
                                HostPortPair destination,
                                GURL origin_url,
                                NextProto alternative_protocol,
+                               QuicVersion quic_version,
                                const ProxyServer& alternative_proxy_server,
                                bool enable_ip_based_pooling,
                                NetLog* net_log);
@@ -159,6 +160,7 @@ class TestJobFactory : public HttpStreamFactoryImpl::JobFactory {
       HostPortPair destination,
       GURL origin_url,
       NextProto alternative_protocol,
+      QuicVersion quic_version,
       bool enable_ip_based_pooling,
       NetLog* net_log) override;
 

@@ -15,10 +15,11 @@ from core import perf_benchmark
 
 from telemetry import benchmark as benchmark_module
 from telemetry import decorators
-from telemetry.core import discover
 from telemetry.internal.browser import browser_finder
 from telemetry.testing import options_for_unittests
 from telemetry.testing import progress_reporter
+
+from py_utils import discover
 
 from benchmarks import system_health
 

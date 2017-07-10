@@ -28,11 +28,6 @@ class SystemHealthDesktopCommonExpectations(expectations.StoryExpectations):
                       [expectations.ALL_WIN], 'crbug.com/728152')
     self.DisableStory('browse:news:cnn',
                       [expectations.ALL_MAC], 'crbug.com/728576')
-    self.DisableStory('browse:social:twitter_infinite_scroll',
-                      [expectations.ALL], 'crbug.com/728464')
-    self.DisableStory('browse:media:flickr_infinite_scroll',
-                      [expectations.ALL],
-                      'crbug.com/728785')
 
 
 class SystemHealthDesktopMemoryExpectations(expectations.StoryExpectations):
@@ -62,10 +57,7 @@ class SystemHealthDesktopMemoryExpectations(expectations.StoryExpectations):
     self.DisableStory('browse:news:cnn',
                       [expectations.ALL_MAC], 'crbug.com/728576')
     self.DisableStory('browse:social:twitter_infinite_scroll',
-                      [expectations.ALL], 'crbug.com/728464')
-    self.DisableStory('browse:media:flickr_infinite_scroll',
-                      [expectations.ALL],
-                      'crbug.com/728785')
+                      [expectations.ALL_WIN], 'crbug.com/728464')
 
 
 class SystemHealthMobileCommonExpectations(expectations.StoryExpectations):
@@ -86,8 +78,6 @@ class SystemHealthMobileCommonExpectations(expectations.StoryExpectations):
                       'crbug.com/728081')
     self.DisableStory('browse:social:facebook_infinite_scroll',
                       [expectations.ALL], 'crbug.com/728152')
-    self.DisableStory('browse:media:flickr_infinite_scroll',
-                      [expectations.ALL], 'crbug.com/728785')
     self.DisableStory(
         'load:tools:drive',
         [expectations.ANDROID_NEXUS5X, expectations.ANDROID_WEBVIEW],
@@ -126,8 +116,6 @@ class SystemHealthMobileMemoryExpectations(expectations.StoryExpectations):
                       'crbug.com/728081')
     self.DisableStory('browse:social:facebook_infinite_scroll',
                       [expectations.ALL], 'crbug.com/728152')
-    self.DisableStory('browse:media:flickr_infinite_scroll',
-                      [expectations.ALL], 'crbug.com/728785')
     self.DisableStory(
         'load:tools:drive',
         [expectations.ANDROID_NEXUS5X, expectations.ANDROID_WEBVIEW],
@@ -167,9 +155,6 @@ class V8BrowsingDesktopExpecations(expectations.StoryExpectations):
                       [expectations.ALL_MAC], 'crbug.com/728576')
     self.DisableStory('browse:social:twitter_infinite_scroll',
                       [expectations.ALL], 'crbug.com/728464')
-    self.DisableStory('browse:media:flickr_infinite_scroll',
-                      [expectations.ALL, expectations.ALL_WIN],
-                      'crbug.com/728785')
 
 # Should only include browse:*:* stories.
 class V8BrowsingMobileExpecations(expectations.StoryExpectations):
@@ -182,8 +167,6 @@ class V8BrowsingMobileExpecations(expectations.StoryExpectations):
                       'crbug.com/728081')
     self.DisableStory('browse:social:facebook_infinite_scroll',
                       [expectations.ALL], 'crbug.com/728152')
-    self.DisableStory('browse:media:flickr_infinite_scroll',
-                      [expectations.ALL], 'crbug.com/728785')
     # TODO(rnephew): This disabling should move to CanRunOnBrowser.
     self.DisableStory('browse:chrome:omnibox',
                       [expectations.ANDROID_WEBVIEW],

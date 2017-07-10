@@ -8,6 +8,12 @@ config("c++flags") {
   if (use_custom_libcxx) {
     prefix = "//buildtools/third_party"
     include = "trunk/include"
+    if (!is_clang) {
+      # Gcc has a built-in abs() definition with default visibility.
+      # If it was not disabled, it would conflict with libc++'s abs()
+      # with hidden visibility.
+      cflags = [ "-fno-builtin-abs" ]
+    }
     cflags_cc = [
       "-nostdinc++",
       "-isystem" + rebase_path("$prefix/libc++/$include", root_build_dir),

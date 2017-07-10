@@ -176,6 +176,10 @@ class HttpCache::Transaction : public HttpTransaction {
   // and this transaction needs to be restarted.
   void SetValidatingCannotProceed();
 
+  // Invoked to remove the association between a transaction waiting to be
+  // added to an entry and the entry.
+  void ResetCachePendingState() { cache_pending_ = false; }
+
   // Returns the estimate of dynamically allocated memory in bytes.
   size_t EstimateMemoryUsage() const;
 
@@ -211,6 +215,7 @@ class HttpCache::Transaction : public HttpTransaction {
     STATE_CREATE_ENTRY_COMPLETE,
     STATE_ADD_TO_ENTRY,
     STATE_ADD_TO_ENTRY_COMPLETE,
+    STATE_DONE_HEADERS_ADD_TO_ENTRY_COMPLETE,
     STATE_CACHE_READ_RESPONSE,
     STATE_CACHE_READ_RESPONSE_COMPLETE,
     STATE_TOGGLE_UNUSED_SINCE_PREFETCH,
@@ -282,6 +287,7 @@ class HttpCache::Transaction : public HttpTransaction {
   int DoCreateEntryComplete(int result);
   int DoAddToEntry();
   int DoAddToEntryComplete(int result);
+  int DoDoneHeadersAddToEntryComplete(int result);
   int DoCacheReadResponse();
   int DoCacheReadResponseComplete(int result);
   int DoCacheToggleUnusedSincePrefetch();
@@ -502,6 +508,11 @@ class HttpCache::Transaction : public HttpTransaction {
   bool handling_206_;  // We must deal with this 206 response.
   bool cache_pending_;  // We are waiting for the HttpCache.
   bool done_reading_;  // All available data was read.
+
+  // Headers have been received from the network and it's not a match with the
+  // existing entry.
+  bool done_headers_create_new_entry_;
+
   bool vary_mismatch_;  // The request doesn't match the stored vary data.
   bool couldnt_conditionalize_request_;
   bool bypass_lock_for_test_;  // A test is exercising the cache lock.

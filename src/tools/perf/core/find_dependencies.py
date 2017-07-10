@@ -11,10 +11,11 @@ import sys
 import zipfile
 
 from telemetry import benchmark
-from telemetry.core import discover
 from telemetry.internal.util import command_line
 from telemetry.internal.util import path
 from telemetry.internal.util import path_set
+
+from py_utils import discover
 
 try:
   from modulegraph import modulegraph  # pylint: disable=import-error

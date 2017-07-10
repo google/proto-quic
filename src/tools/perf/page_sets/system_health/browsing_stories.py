@@ -10,7 +10,6 @@ from page_sets.system_health import system_health_story
 from page_sets.login_helpers import facebook_login
 from page_sets.login_helpers import pinterest_login
 
-from telemetry.core import exceptions
 from telemetry.util import js_template
 
 
@@ -788,7 +787,6 @@ class _InfiniteScrollStory(system_health_story.SystemHealthStory):
   SCROLL_DISTANCE = 25000
   SCROLL_STEP = 1000
   MAX_SCROLL_RETRIES = 3
-  TIME_BEFORE_SCROLL_RETRY_IN_SECONDS = 1
   TIME_TO_WAIT_BEFORE_STARTING_IN_SECONDS = 5
 
   def __init__(self, story_set, take_memory_measurement):
@@ -812,26 +810,25 @@ class _InfiniteScrollStory(system_health_story.SystemHealthStory):
     """ This function scrolls the webpage by the given scroll distance in
     multiple steps, where each step (except the last one) has the given size.
 
-    If scrolling gets stuck, the functions retries scrolling MAX_SCROLL_RETRIES
-    times waiting TIME_BEFORE_SCROLL_RETRY_IN_SECONDS seconds between retries.
+    If scrolling gets stuck, the function waits for the page's scroll height to
+    expand then retries scrolling.
     """
     remaining = distance - action_runner.EvaluateJavaScript('window.scrollY')
-    retry_count = 0
     # Scroll until the window.scrollY is within 1 pixel of the target distance.
     while remaining > 1:
+      last_scroll_height = action_runner.EvaluateJavaScript(
+          'document.body.scrollHeight')
       action_runner.ScrollPage(distance=min(remaining, step_size) + 1)
       new_remaining = (distance -
           action_runner.EvaluateJavaScript('window.scrollY'))
       if remaining <= new_remaining:
         # Scrolling is stuck. This can happen if the page is loading
-        # resources. Give the page some time and retry scrolling.
-        if retry_count == self.MAX_SCROLL_RETRIES:
-          raise exceptions.StoryActionError(
-              'Scrolling stuck at %d' % remaining)
-        retry_count += 1
-        action_runner.Wait(self.TIME_BEFORE_SCROLL_RETRY_IN_SECONDS)
+        # resources. Wait for the page's scrollheight to expand and retry
+        # scrolling.
+        action_runner.WaitForJavaScriptCondition(
+            'document.body.scrollHeight > {{ last_scroll_height }} ',
+            last_scroll_height=last_scroll_height)
       else:
-        retry_count = 0
         remaining = new_remaining
 
   @classmethod

@@ -21,25 +21,13 @@ SUBST_RE = re.compile(r'\$\{(?P<id>[^}]*?)(?P<modifier>:[^}]*)?\}')
 IDENT_RE = re.compile(r'[_/\s]')
 
 
-def InterpolateList(values, substitutions):
-  """Interpolates variable references into |value| using |substitutions|.
+class SubstitutionError(Exception):
+  def __init__(self, key):
+    super(SubstitutionError, self).__init__()
+    self.key = key
 
-  Inputs:
-    values: a list of values
-    substitutions: a mapping of variable names to values
-
-  Returns:
-    A new list of values with all variables references ${VARIABLE} replaced
-    by their value in |substitutions| or None if any of the variable has no
-    subsitution.
-  """
-  result = []
-  for value in values:
-    interpolated = InterpolateValue(value, substitutions)
-    if interpolated is None:
-      return None
-    result.append(interpolated)
-  return result
+  def __str__(self):
+    return "SubstitutionError: {}".format(self.key)
 
 
 def InterpolateString(value, substitutions):
@@ -51,29 +39,28 @@ def InterpolateString(value, substitutions):
 
   Returns:
     A new string with all variables references ${VARIABLES} replaced by their
-    value in |substitutions| or None if any of the variable has no substitution.
+    value in |substitutions|. Raises SubstitutionError if a variable has no
+    substitution.
   """
-  result = value
-  for match in reversed(list(SUBST_RE.finditer(value))):
+  def repl(match):
     variable = match.group('id')
     if variable not in substitutions:
-      return None
+      raise SubstitutionError(variable)
     # Some values need to be identifier and thus the variables references may
     # contains :modifier attributes to indicate how they should be converted
     # to identifiers ("identifier" replaces all invalid characters by '_' and
     # "rfc1034identifier" replaces them by "-" to make valid URI too).
     modifier = match.group('modifier')
     if modifier == ':identifier':
-      interpolated = IDENT_RE.sub('_', substitutions[variable])
+      return IDENT_RE.sub('_', substitutions[variable])
     elif modifier == ':rfc1034identifier':
-      interpolated = IDENT_RE.sub('-', substitutions[variable])
+      return IDENT_RE.sub('-', substitutions[variable])
     else:
-      interpolated = substitutions[variable]
-    result = result[:match.start()] + interpolated + result[match.end():]
-  return result
+      return substitutions[variable]
+  return SUBST_RE.sub(repl, value)
 
 
-def InterpolateValue(value, substitutions):
+def Interpolate(value, substitutions):
   """Interpolates variable references into |value| using |substitutions|.
 
   Inputs:
@@ -82,36 +69,16 @@ def InterpolateValue(value, substitutions):
 
   Returns:
     A new value with all variables references ${VARIABLES} replaced by their
-    value in |substitutions| or None if any of the variable has no substitution.
+    value in |substitutions|. Raises SubstitutionError if a variable has no
+    substitution.
   """
   if isinstance(value, dict):
-    return Interpolate(value, substitutions)
+      return {k: Interpolate(v, substitutions) for k, v in value.iteritems()}
   if isinstance(value, list):
-    return InterpolateList(value, substitutions)
+    return [Interpolate(v, substitutions) for v in value]
   if isinstance(value, str):
     return InterpolateString(value, substitutions)
   return value
-
-
-def Interpolate(plist, substitutions):
-  """Interpolates variable references into |value| using |substitutions|.
-
-  Inputs:
-    plist: a dictionary representing a Property List (.plist) file
-    substitutions: a mapping of variable names to values
-
-  Returns:
-    A new plist with all variables references ${VARIABLES} replaced by their
-    value in |substitutions|. All values that contains references with no
-    substitutions will be removed and the corresponding key will be cleared
-    from the plist (not recursively).
-  """
-  result = {}
-  for key in plist:
-    value = InterpolateValue(plist[key], substitutions)
-    if value is not None:
-      result[key] = value
-  return result
 
 
 def LoadPList(path):
@@ -153,19 +120,12 @@ def MergePList(plist1, plist2):
     recursively, otherwise |plist2| value is used. If values are list, they
     are concatenated.
   """
-  if not isinstance(plist1, dict) or not isinstance(plist2, dict):
-    if plist2 is not None:
-      return plist2
-    else:
-      return plist1
-  result = {}
-  for key in set(plist1) | set(plist2):
-    if key in plist2:
-      value = plist2[key]
-    else:
-      value = plist1[key]
+  result = plist1.copy()
+  for key, value in plist2.iteritems():
     if isinstance(value, dict):
-      value = MergePList(plist1.get(key, None), plist2.get(key, None))
+      old_value = result.get(key)
+      if isinstance(old_value, dict):
+        value = MergePList(old_value, value)
     if isinstance(value, list):
       value = plist1.get(key, []) + plist2.get(key, [])
     result[key] = value

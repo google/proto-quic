@@ -359,7 +359,7 @@ TEST(ProcessMemoryDumpTest, NewSharedMemoryOwnershipTest) {
   EXPECT_EQ(1, edges.find(shm_local_guid2)->second.importance);
   EXPECT_FALSE(edges.find(shm_local_guid2)->second.overridable);
   EXPECT_EQ(shm_local_guid2, edges.find(client_dump2->guid())->second.target);
-  EXPECT_EQ(0, edges.find(client_dump2->guid())->second.importance);
+  EXPECT_EQ(1, edges.find(client_dump2->guid())->second.importance);
   EXPECT_FALSE(edges.find(client_dump2->guid())->second.overridable);
 }
 

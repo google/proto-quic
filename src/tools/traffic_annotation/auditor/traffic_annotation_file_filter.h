@@ -26,7 +26,9 @@ class TrafficAnnotationFileFilter {
   // Returns the list of relevant files in the given |directory_name| into the
   // |file_paths|. If |directory_name| is empty, all files are returned.
   // |source_path| should be the repository source directory, e.g. C:/src.
+  // |ignore_list| provides a list of partial paths to ignore.
   void GetRelevantFiles(const base::FilePath& source_path,
+                        const std::vector<std::string>& ignore_list,
                         std::string directory_name,
                         std::vector<std::string>* file_paths);
 

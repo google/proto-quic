@@ -127,11 +127,29 @@ TEST_F(QuicVersionsTest, QuicVersionToString) {
   }
 }
 
+TEST_F(QuicVersionsTest, FilterSupportedVersionsNo36) {
+  QuicVersionVector all_versions = {QUIC_VERSION_35, QUIC_VERSION_36,
+                                    QUIC_VERSION_37, QUIC_VERSION_38,
+                                    QUIC_VERSION_39};
+
+  FLAGS_quic_reloadable_flag_quic_disable_version_36 = true;
+  FLAGS_quic_reloadable_flag_quic_enable_version_38 = true;
+  FLAGS_quic_reloadable_flag_quic_enable_version_39 = true;
+
+  QuicVersionVector filtered_versions = FilterSupportedVersions(all_versions);
+  ASSERT_EQ(4u, filtered_versions.size());
+  EXPECT_EQ(QUIC_VERSION_35, filtered_versions[0]);
+  EXPECT_EQ(QUIC_VERSION_37, filtered_versions[1]);
+  EXPECT_EQ(QUIC_VERSION_38, filtered_versions[2]);
+  EXPECT_EQ(QUIC_VERSION_39, filtered_versions[3]);
+}
+
 TEST_F(QuicVersionsTest, FilterSupportedVersionsNo38) {
   QuicVersionVector all_versions = {QUIC_VERSION_35, QUIC_VERSION_36,
                                     QUIC_VERSION_37, QUIC_VERSION_38,
                                     QUIC_VERSION_39};
 
+  FLAGS_quic_reloadable_flag_quic_disable_version_36 = false;
   FLAGS_quic_reloadable_flag_quic_enable_version_38 = false;
 
   QuicVersionVector filtered_versions = FilterSupportedVersions(all_versions);
@@ -146,6 +164,7 @@ TEST_F(QuicVersionsTest, FilterSupportedVersionsNo39) {
                                     QUIC_VERSION_37, QUIC_VERSION_38,
                                     QUIC_VERSION_39};
 
+  FLAGS_quic_reloadable_flag_quic_disable_version_36 = false;
   FLAGS_quic_reloadable_flag_quic_enable_version_38 = true;
   FLAGS_quic_reloadable_flag_quic_enable_version_39 = false;
 
@@ -162,6 +181,7 @@ TEST_F(QuicVersionsTest, FilterSupportedVersionsAllVersions) {
                                     QUIC_VERSION_37, QUIC_VERSION_38,
                                     QUIC_VERSION_39};
 
+  FLAGS_quic_reloadable_flag_quic_disable_version_36 = false;
   FLAGS_quic_reloadable_flag_quic_enable_version_38 = true;
   FLAGS_quic_reloadable_flag_quic_enable_version_39 = true;
 

@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <utility>
+
+#include "base/memory/ptr_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "tools/gn/functions.h"
 #include "tools/gn/target.h"
@@ -57,13 +60,14 @@ class GetTargetOutputsTest : public testing::Test {
 }  // namespace
 
 TEST_F(GetTargetOutputsTest, Copy) {
-  Target* action = new Target(setup_.settings(), GetLabel("//foo/", "bar"), {});
+  auto action = base::MakeUnique<Target>(
+      setup_.settings(), GetLabel("//foo/", "bar"), InputFileSet{});
   action->set_output_type(Target::COPY_FILES);
   action->sources().push_back(SourceFile("//file.txt"));
   action->action_values().outputs() =
       SubstitutionList::MakeForTest("//out/Debug/{{source_file_part}}.one");
 
-  items_.push_back(action);
+  items_.push_back(std::move(action));
 
   Err err;
   Value result = GetTargetOutputs("//foo:bar", &err);
@@ -72,13 +76,14 @@ TEST_F(GetTargetOutputsTest, Copy) {
 }
 
 TEST_F(GetTargetOutputsTest, Action) {
-  Target* action = new Target(setup_.settings(), GetLabel("//foo/", "bar"), {});
+  auto action = base::MakeUnique<Target>(
+      setup_.settings(), GetLabel("//foo/", "bar"), InputFileSet{});
   action->set_output_type(Target::ACTION);
   action->action_values().outputs() = SubstitutionList::MakeForTest(
       "//output1.txt",
       "//output2.txt");
 
-  items_.push_back(action);
+  items_.push_back(std::move(action));
 
   Err err;
   Value result = GetTargetOutputs("//foo:bar", &err);
@@ -87,14 +92,15 @@ TEST_F(GetTargetOutputsTest, Action) {
 }
 
 TEST_F(GetTargetOutputsTest, ActionForeach) {
-  Target* action = new Target(setup_.settings(), GetLabel("//foo/", "bar"), {});
+  auto action = base::MakeUnique<Target>(
+      setup_.settings(), GetLabel("//foo/", "bar"), InputFileSet{});
   action->set_output_type(Target::ACTION_FOREACH);
   action->sources().push_back(SourceFile("//file.txt"));
   action->action_values().outputs() = SubstitutionList::MakeForTest(
       "//out/Debug/{{source_file_part}}.one",
       "//out/Debug/{{source_file_part}}.two");
 
-  items_.push_back(action);
+  items_.push_back(std::move(action));
 
   Err err;
   Value result = GetTargetOutputs("//foo:bar", &err);

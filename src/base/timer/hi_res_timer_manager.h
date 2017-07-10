@@ -7,7 +7,10 @@
 
 #include "base/base_export.h"
 #include "base/macros.h"
+#include "base/memory/ref_counted.h"
 #include "base/power_monitor/power_observer.h"
+#include "base/timer/timer.h"
+#include "build/build_config.h"
 
 namespace base {
 
@@ -18,8 +21,10 @@ class BASE_EXPORT HighResolutionTimerManager : public base::PowerObserver {
   HighResolutionTimerManager();
   ~HighResolutionTimerManager() override;
 
-  // base::PowerObserver method.
+  // base::PowerObserver methods.
   void OnPowerStateChange(bool on_battery_power) override;
+  void OnSuspend() override;
+  void OnResume() override;
 
   // Returns true if the hi resolution clock could be used right now.
   bool hi_res_clock_available() const { return hi_res_clock_available_; }
@@ -29,6 +34,11 @@ class BASE_EXPORT HighResolutionTimerManager : public base::PowerObserver {
   void UseHiResClock(bool use);
 
   bool hi_res_clock_available_;
+
+#if defined(OS_WIN)
+  // Timer for polling the high resolution timer usage.
+  base::RepeatingTimer timer_;
+#endif
 
   DISALLOW_COPY_AND_ASSIGN(HighResolutionTimerManager);
 };

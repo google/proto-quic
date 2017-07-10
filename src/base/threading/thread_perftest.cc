@@ -227,8 +227,8 @@ class EventPerfTest : public ThreadPerfTest {
 // using WaitableEvents. We only test four threads (worst-case), but we
 // might want to craft a way to test the best-case (where the thread doesn't
 // end up blocking because the event is already signalled).
-typedef EventPerfTest<base::WaitableEvent> WaitableEventPerfTest;
-TEST_F(WaitableEventPerfTest, EventPingPong) {
+typedef EventPerfTest<base::WaitableEvent> WaitableEventThreadPerfTest;
+TEST_F(WaitableEventThreadPerfTest, EventPingPong) {
   RunPingPongTest("4_WaitableEvent_Threads", 4);
 }
 

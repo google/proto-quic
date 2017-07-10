@@ -116,6 +116,7 @@ bool TrafficAnnotationFileFilter::IsFileRelevant(const std::string& file_path) {
 
 void TrafficAnnotationFileFilter::GetRelevantFiles(
     const base::FilePath& source_path,
+    const std::vector<std::string>& ignore_list,
     std::string directory_name,
     std::vector<std::string>* file_paths) {
   if (!git_files_.size())
@@ -127,7 +128,17 @@ void TrafficAnnotationFileFilter::GetRelevantFiles(
 
   size_t name_length = directory_name.length();
   for (const std::string& file_path : git_files_) {
-    if (!strncmp(file_path.c_str(), directory_name.c_str(), name_length))
-      file_paths->push_back(file_path);
+    if (!strncmp(file_path.c_str(), directory_name.c_str(), name_length)) {
+      bool ignore = false;
+      for (const std::string& ignore_path : ignore_list) {
+        if (!strncmp(file_path.c_str(), ignore_path.c_str(),
+                     ignore_path.length())) {
+          ignore = true;
+          break;
+        }
+      }
+      if (!ignore)
+        file_paths->push_back(file_path);
+    }
   }
 }

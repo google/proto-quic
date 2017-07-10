@@ -133,6 +133,10 @@ class V8MobileInfiniteScroll(_InfiniteScrollBenchmark):
 class _Top25RuntimeStats(perf_benchmark.PerfBenchmark):
   options = {'pageset_repeat': 3}
 
+  def SetExtraBrowserOptions(self, options):
+    options.AppendExtraBrowserArgs(
+      '--enable-blink-features=BlinkRuntimeCallStats')
+
   def CreateTimelineBasedMeasurementOptions(self):
     # TODO(fmeawad): most of the cat_filter information is extracted from
     # page_cycler_v2 TimelineBasedMeasurementOptionsForLoadingMetric because

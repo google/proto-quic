@@ -21,6 +21,7 @@
 #include "base/message_loop/message_loop.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
+#include "base/task_scheduler/task_scheduler.h"
 #include "base/threading/thread.h"
 #include "base/values.h"
 #include "net/base/test_completion_callback.h"
@@ -159,21 +160,16 @@ class FileNetLogObserverTest : public ::testing::TestWithParam<bool> {
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
     bounded_log_dir_ = temp_dir_.GetPath();
     unbounded_log_path_ = bounded_log_dir_.AppendASCII("net-log.json");
-    file_thread_.reset(new base::Thread("NetLog File Thread"));
-    file_thread_->StartWithOptions(
-        base::Thread::Options(base::MessageLoop::TYPE_DEFAULT, 0));
-    ASSERT_TRUE(file_thread_->WaitUntilThreadStarted());
   }
 
   void CreateAndStartObserving(std::unique_ptr<base::Value> constants) {
     bool bounded = GetParam();
     if (bounded) {
       logger_ = FileNetLogObserver::CreateBounded(
-          file_thread_->task_runner(), bounded_log_dir_, kLargeFileSize,
-          kTotalNumFiles, std::move(constants));
+          bounded_log_dir_, kLargeFileSize, kTotalNumFiles,
+          std::move(constants));
     } else {
-      logger_ = FileNetLogObserver::CreateUnbounded(file_thread_->task_runner(),
-                                                    unbounded_log_path_,
+      logger_ = FileNetLogObserver::CreateUnbounded(unbounded_log_path_,
                                                     std::move(constants));
     }
 
@@ -194,6 +190,11 @@ class FileNetLogObserverTest : public ::testing::TestWithParam<bool> {
   }
 
   bool LogFilesExist() {
+    // The log files are written by a sequenced task runner. Drain all the
+    // scheduled tasks to ensure that the file writing ones have run before
+    // checking if they exist.
+    base::TaskScheduler::GetInstance()->FlushForTesting();
+
     bool bounded = GetParam();
     if (bounded) {
       if (base::PathExists(bounded_log_dir_.AppendASCII("constants.json")) ||
@@ -212,7 +213,6 @@ class FileNetLogObserverTest : public ::testing::TestWithParam<bool> {
 
  protected:
   NetLog net_log_;
-  std::unique_ptr<base::Thread> file_thread_;
   std::unique_ptr<FileNetLogObserver> logger_;
 
  private:
@@ -227,18 +227,13 @@ class FileNetLogObserverBoundedTest : public ::testing::Test {
   void SetUp() override {
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
     bounded_log_dir_ = temp_dir_.GetPath();
-    file_thread_.reset(new base::Thread("NetLog File Thread"));
-    file_thread_->StartWithOptions(
-        base::Thread::Options(base::MessageLoop::TYPE_DEFAULT, 0));
-    ASSERT_TRUE(file_thread_->WaitUntilThreadStarted());
   }
 
   void CreateAndStartObserving(std::unique_ptr<base::Value> constants,
                                int total_file_size,
                                int num_files) {
     logger_ = FileNetLogObserver::CreateBounded(
-        file_thread_->task_runner(), bounded_log_dir_, total_file_size,
-        num_files, std::move(constants));
+        bounded_log_dir_, total_file_size, num_files, std::move(constants));
     logger_->StartObserving(&net_log_, NetLogCaptureMode::Default());
   }
 
@@ -263,7 +258,6 @@ class FileNetLogObserverBoundedTest : public ::testing::Test {
 
  protected:
   NetLog net_log_;
-  std::unique_ptr<base::Thread> file_thread_;
   std::unique_ptr<FileNetLogObserver> logger_;
 
  private:
@@ -276,16 +270,39 @@ INSTANTIATE_TEST_CASE_P(,
                         FileNetLogObserverTest,
                         ::testing::Values(true, false));
 
+// Tests deleting a FileNetLogObserver without first calling StopObserving().
 TEST_P(FileNetLogObserverTest, ObserverDestroyedWithoutStopObserving) {
   CreateAndStartObserving(nullptr);
 
   // Send dummy event
   AddEntries(logger_.get(), 1, kDummyEventSize);
 
-  logger_.reset();
-  file_thread_.reset();
+  // The log files should have been started.
+  ASSERT_TRUE(LogFilesExist());
 
+  logger_.reset();
+
+  // When the logger is re-set without having called StopObserving(), the
+  // partially written log files are deleted.
   ASSERT_FALSE(LogFilesExist());
+}
+
+// Tests calling StopObserving() with a null closure.
+TEST_P(FileNetLogObserverTest, StopObservingNullClosure) {
+  CreateAndStartObserving(nullptr);
+
+  // Send dummy event
+  AddEntries(logger_.get(), 1, kDummyEventSize);
+
+  // The log files should have been started.
+  ASSERT_TRUE(LogFilesExist());
+
+  logger_->StopObserving(nullptr, base::OnceClosure());
+
+  logger_.reset();
+
+  // Since the logger was explicitly stopped, its files should still exist.
+  ASSERT_TRUE(LogFilesExist());
 }
 
 TEST_P(FileNetLogObserverTest, GeneratesValidJSONWithNoEvents) {
@@ -801,7 +818,7 @@ void AddEntriesViaNetLog(NetLog* net_log, int num_entries) {
 TEST_P(FileNetLogObserverTest, AddEventsFromMultipleThreadsWithStopObserving) {
   const size_t kNumThreads = 10;
   std::vector<std::unique_ptr<base::Thread>> threads(kNumThreads);
-  // Start all the threads. Waiting for them to start is to hopefuly improve
+  // Start all the threads. Waiting for them to start is to hopefully improve
   // the odds of hitting interesting races once events start being added.
   for (size_t i = 0; i < threads.size(); ++i) {
     threads[i] = base::MakeUnique<base::Thread>(
@@ -828,13 +845,15 @@ TEST_P(FileNetLogObserverTest, AddEventsFromMultipleThreadsWithStopObserving) {
 
   // Join all the threads.
   threads.clear();
+
+  ASSERT_TRUE(LogFilesExist());
 }
 
 TEST_P(FileNetLogObserverTest,
        AddEventsFromMultipleThreadsWithoutStopObserving) {
   const size_t kNumThreads = 10;
   std::vector<std::unique_ptr<base::Thread>> threads(kNumThreads);
-  // Start all the threads. Waiting for them to start is to hopefuly improve
+  // Start all the threads. Waiting for them to start is to hopefully improve
   // the odds of hitting interesting races once events start being added.
   for (size_t i = 0; i < threads.size(); ++i) {
     threads[i] = base::MakeUnique<base::Thread>(
@@ -859,6 +878,9 @@ TEST_P(FileNetLogObserverTest,
 
   // Join all the threads.
   threads.clear();
+
+  // The log file doesn't exist since StopObserving() was not called.
+  ASSERT_FALSE(LogFilesExist());
 }
 
 }  // namespace

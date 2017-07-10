@@ -16,10 +16,10 @@
 #include "base/files/file_util.h"
 #include "base/json/json_writer.h"
 #include "base/logging.h"
-#include "base/single_thread_task_runner.h"
+#include "base/sequenced_task_runner.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/synchronization/lock.h"
-#include "base/threading/thread.h"
+#include "base/task_scheduler/post_task.h"
 #include "base/values.h"
 #include "net/log/net_log_capture_mode.h"
 #include "net/log/net_log_entry.h"
@@ -28,9 +28,20 @@
 
 namespace {
 
-// Number of events that can build up in |write_queue_| before file thread
-// is triggered to drain the queue.
+// Number of events that can build up in |write_queue_| before a task is posted
+// to the file task runner to flush them to disk.
 const int kNumWriteQueueEvents = 15;
+
+scoped_refptr<base::SequencedTaskRunner> CreateFileTaskRunner() {
+  // The tasks posted to this sequenced task runner do synchronous File I/O for
+  // the purposes of writing NetLog files.
+  //
+  // These intentionally block shutdown to ensure the log file has finished
+  // being written.
+  return base::CreateSequencedTaskRunnerWithTraits(
+      {base::MayBlock(), base::TaskPriority::USER_VISIBLE,
+       base::TaskShutdownBehavior::BLOCK_SHUTDOWN});
+}
 
 }  // namespace
 
@@ -41,14 +52,14 @@ using EventQueue = std::queue<std::unique_ptr<std::string>>;
 
 // WriteQueue receives events from FileNetLogObserver on the main thread and
 // holds them in a queue until they are drained from the queue and written to
-// file on the file thread.
+// file on the file task runner.
 //
 // WriteQueue contains the resources shared between the main thread and the
-// file thread. |lock_| must be acquired to read or write to |queue_| and
+// file task runner. |lock_| must be acquired to read or write to |queue_| and
 // |memory_|.
 //
 // WriteQueue is refcounted and should be destroyed once all events on the
-// file thread have finished executing.
+// file task runner have finished executing.
 class FileNetLogObserver::WriteQueue
     : public base::RefCountedThreadSafe<WriteQueue> {
  public:
@@ -73,17 +84,17 @@ class FileNetLogObserver::WriteQueue
 
   ~WriteQueue();
 
-  // Queue of events to be written shared between main thread and file thread.
-  // Main thread adds events to the queue and the file thread drains them and
-  // writes the events to file.
+  // Queue of events to be written, shared between main thread and file task
+  // runner. Main thread adds events to the queue and the file task runner
+  // drains them and writes the events to file.
   //
   // |lock_| must be acquired to read or write to this.
   EventQueue queue_;
 
   // Tracks how much memory is being used by the virtual write queue.
   // Incremented in AddEntryToQueue() when events are added to the
-  // buffer, and decremented when SwapQueue() is called and the file thread's
-  // local queue is swapped with the shared write queue.
+  // buffer, and decremented when SwapQueue() is called and the file task
+  // runner's local queue is swapped with the shared write queue.
   //
   // |lock_| must be acquired to read or write to this.
   size_t memory_;
@@ -95,14 +106,14 @@ class FileNetLogObserver::WriteQueue
   // Protects access to |queue_| and |memory_|.
   //
   // A lock is necessary because |queue_| and |memory_| are shared between the
-  // file thread and the main thread. NetLog's lock protects OnAddEntry(),
+  // file task runner and the main thread. NetLog's lock protects OnAddEntry(),
   // which calls AddEntryToQueue(), but it does not protect access to the
   // observer's member variables. Thus, a race condition exists if a thread is
-  // calling OnAddEntry() at the same time that the file thread is accessing
-  // |memory_| and |queue_| to write events to file. The |queue_| and |memory_|
-  // counter are necessary to bound the amount of memory that is used for the
-  // queue in the event that the file thread lags significantly behind the main
-  // thread in writing events to file.
+  // calling OnAddEntry() at the same time that the file task runner is
+  // accessing |memory_| and |queue_| to write events to file. The |queue_| and
+  // |memory_| counter are necessary to bound the amount of memory that is used
+  // for the queue in the event that the file task runner lags significantly
+  // behind the main thread in writing events to file.
   base::Lock lock_;
 
   DISALLOW_COPY_AND_ASSIGN(WriteQueue);
@@ -138,14 +149,14 @@ class FileNetLogObserver::FileWriter {
 // This implementation of FileWriter is used when the observer is in bounded
 // mode.
 // BoundedFileWriter can be constructed on any thread, and afterwards is only
-// accessed on the file thread.
+// accessed on the file task runner.
 class FileNetLogObserver::BoundedFileWriter
     : public FileNetLogObserver::FileWriter {
  public:
   BoundedFileWriter(const base::FilePath& directory,
                     size_t max_file_size,
                     size_t total_num_files,
-                    scoped_refptr<base::SingleThreadTaskRunner> task_runner);
+                    scoped_refptr<base::SequencedTaskRunner> task_runner);
 
   ~BoundedFileWriter() override;
 
@@ -180,8 +191,8 @@ class FileNetLogObserver::BoundedFileWriter
   // the constant file.
   const size_t max_file_size_;
 
-  // Task runner from the file thread.
-  const scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
+  // Task runner for doing file operations.
+  const scoped_refptr<base::SequencedTaskRunner> task_runner_;
 
   DISALLOW_COPY_AND_ASSIGN(BoundedFileWriter);
 };
@@ -189,12 +200,12 @@ class FileNetLogObserver::BoundedFileWriter
 // This implementation of FileWriter is used when the observer is in unbounded
 // mode.
 // UnboundedFileWriter can be constructed on any thread, and afterwards is only
-// accessed on the file thread.
+// accessed on the file task runner.
 class FileNetLogObserver::UnboundedFileWriter
     : public FileNetLogObserver::FileWriter {
  public:
   UnboundedFileWriter(const base::FilePath& path,
-                      scoped_refptr<base::SingleThreadTaskRunner> task_runner);
+                      scoped_refptr<base::SequencedTaskRunner> task_runner);
 
   ~UnboundedFileWriter() override;
 
@@ -211,19 +222,22 @@ class FileNetLogObserver::UnboundedFileWriter
   // Is set to true after the first event is written to the log file.
   bool first_event_written_;
 
-  // Task runner from the file thread.
-  const scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
+  // Task runner for doing file operations.
+  const scoped_refptr<base::SequencedTaskRunner> task_runner_;
 
   DISALLOW_COPY_AND_ASSIGN(UnboundedFileWriter);
 };
 
 std::unique_ptr<FileNetLogObserver> FileNetLogObserver::CreateBounded(
-    scoped_refptr<base::SingleThreadTaskRunner> file_task_runner,
     const base::FilePath& directory,
     size_t max_total_size,
     size_t total_num_files,
     std::unique_ptr<base::Value> constants) {
   DCHECK_GT(total_num_files, 0u);
+
+  scoped_refptr<base::SequencedTaskRunner> file_task_runner =
+      CreateFileTaskRunner();
+
   // The BoundedFileWriter uses a soft limit to write events to file that allows
   // the size of the file to exceed the limit, but the WriteQueue uses a hard
   // limit which the size of |WriteQueue::queue_| cannot exceed. Thus, the
@@ -248,9 +262,11 @@ std::unique_ptr<FileNetLogObserver> FileNetLogObserver::CreateBounded(
 }
 
 std::unique_ptr<FileNetLogObserver> FileNetLogObserver::CreateUnbounded(
-    scoped_refptr<base::SingleThreadTaskRunner> file_task_runner,
     const base::FilePath& log_path,
     std::unique_ptr<base::Value> constants) {
+  scoped_refptr<base::SequencedTaskRunner> file_task_runner =
+      CreateFileTaskRunner();
+
   std::unique_ptr<FileWriter> file_writer(
       new UnboundedFileWriter(log_path, file_task_runner));
 
@@ -268,9 +284,9 @@ FileNetLogObserver::~FileNetLogObserver() {
     net_log()->DeprecatedRemoveObserver(this);
     file_task_runner_->PostTask(
         FROM_HERE, base::Bind(&FileNetLogObserver::FileWriter::DeleteAllFiles,
-                              base::Unretained(file_writer_)));
+                              base::Unretained(file_writer_.get())));
   }
-  file_task_runner_->DeleteSoon(FROM_HERE, file_writer_);
+  file_task_runner_->DeleteSoon(FROM_HERE, file_writer_.release());
 }
 
 void FileNetLogObserver::StartObserving(NetLog* net_log,
@@ -279,14 +295,22 @@ void FileNetLogObserver::StartObserving(NetLog* net_log,
 }
 
 void FileNetLogObserver::StopObserving(std::unique_ptr<base::Value> polled_data,
-                                       const base::Closure& callback) {
+                                       base::OnceClosure optional_callback) {
   net_log()->DeprecatedRemoveObserver(this);
 
-  file_task_runner_->PostTaskAndReply(
-      FROM_HERE, base::Bind(&FileNetLogObserver::FileWriter::FlushThenStop,
-                            base::Unretained(file_writer_), write_queue_,
-                            base::Passed(&polled_data)),
-      callback);
+  base::OnceClosure bound_flush_then_stop =
+      base::Bind(&FileNetLogObserver::FileWriter::FlushThenStop,
+                 base::Unretained(file_writer_.get()), write_queue_,
+                 base::Passed(&polled_data));
+
+  // Note that PostTaskAndReply() requires a non-null closure.
+  if (!optional_callback.is_null()) {
+    file_task_runner_->PostTaskAndReply(FROM_HERE,
+                                        std::move(bound_flush_then_stop),
+                                        std::move(optional_callback));
+  } else {
+    file_task_runner_->PostTask(FROM_HERE, std::move(bound_flush_then_stop));
+  }
 }
 
 void FileNetLogObserver::OnAddEntry(const NetLogEntry& entry) {
@@ -298,31 +322,32 @@ void FileNetLogObserver::OnAddEntry(const NetLogEntry& entry) {
 
   size_t queue_size = write_queue_->AddEntryToQueue(std::move(json));
 
-  // If events build up in |write_queue_|, trigger the file thread to drain
+  // If events build up in |write_queue_|, trigger the file task runner to drain
   // the queue. Because only 1 item is added to the queue at a time, if
   // queue_size > kNumWriteQueueEvents a task has already been posted, or will
   // be posted.
   if (queue_size == kNumWriteQueueEvents) {
     file_task_runner_->PostTask(
-        FROM_HERE, base::Bind(&FileNetLogObserver::FileWriter::Flush,
-                              base::Unretained(file_writer_), write_queue_));
+        FROM_HERE,
+        base::Bind(&FileNetLogObserver::FileWriter::Flush,
+                   base::Unretained(file_writer_.get()), write_queue_));
   }
 }
 
 FileNetLogObserver::FileNetLogObserver(
-    scoped_refptr<base::SingleThreadTaskRunner> file_task_runner,
+    scoped_refptr<base::SequencedTaskRunner> file_task_runner,
     std::unique_ptr<FileWriter> file_writer,
     scoped_refptr<WriteQueue> write_queue,
     std::unique_ptr<base::Value> constants)
     : file_task_runner_(std::move(file_task_runner)),
       write_queue_(std::move(write_queue)),
-      file_writer_(file_writer.release()) {
+      file_writer_(std::move(file_writer)) {
   if (!constants)
     constants = GetNetConstants();
   file_task_runner_->PostTask(
-      FROM_HERE,
-      base::Bind(&FileNetLogObserver::FileWriter::Initialize,
-                 base::Unretained(file_writer_), base::Passed(&constants)));
+      FROM_HERE, base::Bind(&FileNetLogObserver::FileWriter::Initialize,
+                            base::Unretained(file_writer_.get()),
+                            base::Passed(&constants)));
 }
 
 FileNetLogObserver::WriteQueue::WriteQueue(size_t memory_max)
@@ -367,12 +392,12 @@ FileNetLogObserver::BoundedFileWriter::BoundedFileWriter(
     const base::FilePath& directory,
     size_t max_file_size,
     size_t total_num_files,
-    scoped_refptr<base::SingleThreadTaskRunner> task_runner)
+    scoped_refptr<base::SequencedTaskRunner> task_runner)
     : directory_(directory),
       total_num_files_(total_num_files),
       current_file_idx_(0),
       max_file_size_(max_file_size),
-      task_runner_(task_runner) {
+      task_runner_(std::move(task_runner)) {
   event_files_.resize(total_num_files_);
 }
 
@@ -473,8 +498,8 @@ void FileNetLogObserver::BoundedFileWriter::DeleteAllFiles() {
 
 FileNetLogObserver::UnboundedFileWriter::UnboundedFileWriter(
     const base::FilePath& path,
-    scoped_refptr<base::SingleThreadTaskRunner> task_runner)
-    : file_path_(path), task_runner_(task_runner) {}
+    scoped_refptr<base::SequencedTaskRunner> task_runner)
+    : file_path_(path), task_runner_(std::move(task_runner)) {}
 
 FileNetLogObserver::UnboundedFileWriter::~UnboundedFileWriter() {}
 

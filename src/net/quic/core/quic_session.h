@@ -11,7 +11,6 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 #include "base/compiler_specific.h"
@@ -487,12 +486,12 @@ class QUIC_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface,
 
   // Set of stream ids that are less than the largest stream id that has been
   // received, but are nonetheless available to be created.
-  std::unordered_set<QuicStreamId> available_streams_;
+  QuicUnorderedSet<QuicStreamId> available_streams_;
 
   // Set of stream ids that are "draining" -- a FIN has been sent and received,
   // but the stream object still exists because not all the received data has
   // been consumed.
-  std::unordered_set<QuicStreamId> draining_streams_;
+  QuicUnorderedSet<QuicStreamId> draining_streams_;
 
   // A list of streams which need to write more data.
   QuicWriteBlockedList write_blocked_streams_;

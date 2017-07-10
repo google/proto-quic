@@ -23,7 +23,8 @@ enum class ComApartmentType {
 #if DCHECK_IS_ON()
 
 // DCHECKs if COM is not initialized on this thread as an STA or MTA.
-BASE_EXPORT void AssertComInitialized();
+// |message| is optional and is used for the DCHECK if specified.
+BASE_EXPORT void AssertComInitialized(const char* message = nullptr);
 
 // DCHECKs if |apartment_type| is not the same as the current thread's apartment
 // type.

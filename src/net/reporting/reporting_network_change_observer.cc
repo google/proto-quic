@@ -9,6 +9,7 @@
 #include "net/reporting/reporting_cache.h"
 #include "net/reporting/reporting_context.h"
 #include "net/reporting/reporting_policy.h"
+#include "net/reporting/reporting_report.h"
 
 namespace net {
 
@@ -38,7 +39,8 @@ class ReportingNetworkChangeObserverImpl
       return;
 
     if (context_->policy().clear_reports_on_network_changes)
-      context_->cache()->RemoveAllReports();
+      context_->cache()->RemoveAllReports(
+          ReportingReport::Outcome::ERASED_NETWORK_CHANGED);
 
     if (context_->policy().clear_clients_on_network_changes)
       context_->cache()->RemoveAllClients();

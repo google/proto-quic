@@ -57,6 +57,13 @@ import subprocess
 import sys
 
 
+def _FindSection(section_list, section_name):
+  for i in range(len(section_list)):
+    if section_name == section_list[i][0]:
+      return i
+  return -1
+
+
 def main():
   if len(sys.argv) < 2:
     print r'Usage: %s PEFileName [OtherPeFileNames...]' % sys.argv[0]
@@ -119,16 +126,25 @@ def main():
       print 'Memory size change from %s to %s' % (last_pe_path, pe_path)
       total_delta = 0
       for i in range(len(results)):
-        # Make sure the current/last section names match or else the deltas
-        # will be meaningless. Mismatches can occur when comparing 32-bit and
-        # 64-bit binaries.
-        if results[i][0] != last_results[i][0]:
-          print "Names for section[%d] don't match. Aborting." % i
-          return 0
-        delta = results[i][1] - last_results[i][1]
+        section_name = results[i][0]
+        # Find a matching section name. Mismatches can occur when comparing
+        # 32-bit and 64-bit binaries. They can also occur when one of the
+        # binaries pulls in code that defines custom sections such as .rodata.
+        last_i = _FindSection(last_results, section_name)
+        delta = results[i][1]
+        if last_i >= 0:
+          delta -= last_results[last_i][1]
         total_delta += delta
         if delta:
-          print '%12s: %7d bytes change' % (results[i][0], delta)
+          print '%12s: %7d bytes change' % (section_name, delta)
+      for last_i in range(len(last_results)):
+        section_name = last_results[last_i][0]
+        # Find sections that exist only in last_results.
+        i = _FindSection(results, section_name)
+        if i < 0:
+          delta = -last_results[last_i][1]
+          total_delta += delta
+          print '%12s: %7d bytes change' % (section_name, delta)
       print 'Total change: %7d bytes' % total_delta
     last_pe_filepart = pe_filepart
     last_pe_path = pe_path

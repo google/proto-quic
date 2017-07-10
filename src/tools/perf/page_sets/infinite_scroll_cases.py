@@ -6,10 +6,11 @@ import sys
 
 from page_sets.login_helpers import facebook_login
 from page_sets.system_health import platforms
-from telemetry.core import discover
 from telemetry.page import page
 from telemetry.page import shared_page_state
 from telemetry import story
+
+from py_utils import discover
 
 class _InfiniteScrollStory(page.Page):
   """ Base class for infinite scroll stories."""

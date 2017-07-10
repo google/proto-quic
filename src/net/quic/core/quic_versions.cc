@@ -45,6 +45,10 @@ QuicVersionVector FilterSupportedVersions(QuicVersionVector versions) {
       if (FLAGS_quic_reloadable_flag_quic_enable_version_38) {
         filtered_versions.push_back(version);
       }
+    } else if (version == QUIC_VERSION_36) {
+      if (!FLAGS_quic_reloadable_flag_quic_disable_version_36) {
+        filtered_versions.push_back(version);
+      }
     } else {
       filtered_versions.push_back(version);
     }

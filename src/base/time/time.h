@@ -549,7 +549,19 @@ class BASE_EXPORT Time : public time_internal::TimeBase<Time> {
   // This is provided for testing only, and is not tracked in a thread-safe
   // way.
   static bool IsHighResolutionTimerInUse();
-#endif
+
+  // The following two functions are used to report the fraction of elapsed time
+  // that the high resolution timer is activated.
+  // ResetHighResolutionTimerUsage() resets the cumulative usage and starts the
+  // measurement interval and GetHighResolutionTimerUsage() returns the
+  // percentage of time since the reset that the high resolution timer was
+  // activated.
+  // ResetHighResolutionTimerUsage() must be called at least once before calling
+  // GetHighResolutionTimerUsage(); otherwise the usage result would be
+  // undefined.
+  static void ResetHighResolutionTimerUsage();
+  static double GetHighResolutionTimerUsage();
+#endif  // defined(OS_WIN)
 
   // Converts an exploded structure representing either the local time or UTC
   // into a Time class. Returns false on a failure when, for example, a day of

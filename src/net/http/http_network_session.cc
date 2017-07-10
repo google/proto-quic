@@ -129,7 +129,7 @@ HttpNetworkSession::Params::Params()
       quic_estimate_initial_rtt(false),
       enable_token_binding(false),
       http_09_on_non_default_ports_enabled(false) {
-  quic_supported_versions.push_back(QUIC_VERSION_37);
+  quic_supported_versions.push_back(QUIC_VERSION_39);
 }
 
 HttpNetworkSession::Params::Params(const Params& other) = default;
@@ -190,7 +190,6 @@ HttpNetworkSession::HttpNetworkSession(const Params& params,
                              : QuicChromiumClock::GetInstance(),
           params.quic_max_packet_length,
           params.quic_user_agent_id,
-          params.quic_supported_versions,
           params.quic_max_server_configs_stored_in_properties > 0,
           params.quic_close_sessions_on_ip_change,
           params.mark_quic_broken_when_network_blackholes,

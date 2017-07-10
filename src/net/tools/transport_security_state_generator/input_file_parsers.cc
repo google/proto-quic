@@ -167,6 +167,12 @@ enum class CertificateParserState {
 }  // namespace
 
 bool ParseCertificatesFile(base::StringPiece certs_input, Pinsets* pinsets) {
+  if (certs_input.find("\r\n") != base::StringPiece::npos) {
+    LOG(ERROR) << "CRLF line-endings found in the pins file. All files must "
+                  "use LF (unix style) line-endings.";
+    return false;
+  }
+
   std::string line;
   CertificateParserState current_state = CertificateParserState::PRE_NAME;
 

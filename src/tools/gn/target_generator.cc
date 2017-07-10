@@ -6,6 +6,8 @@
 
 #include <stddef.h>
 
+#include <utility>
+
 #include "tools/gn/action_target_generator.h"
 #include "tools/gn/binary_target_generator.h"
 #include "tools/gn/build_settings.h"
@@ -149,7 +151,7 @@ void TargetGenerator::GenerateTarget(Scope* scope,
     *err = Err(function_call, "Can't define a target in this context.");
     return;
   }
-  collector->push_back(target.release());
+  collector->push_back(std::move(target));
 }
 
 const BuildSettings* TargetGenerator::GetBuildSettings() const {

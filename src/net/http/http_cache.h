@@ -424,6 +424,11 @@ class NET_EXPORT HttpCache : public HttpTransactionFactory {
   // Called when the transaction has finished reading from this entry.
   void DoneReadingFromEntry(ActiveEntry* entry, Transaction* transaction);
 
+  // Called when the transaction has received a non-matching response to
+  // validation and it's not the transaction responsible for writing the
+  // response body.
+  void DoomEntryValidationNoMatch(ActiveEntry* entry);
+
   // Removes and returns all queued transactions in |entry| in FIFO order. This
   // includes transactions that have completed the headers phase and those that
   // have not been added to the entry yet in that order. |list| is the output
@@ -431,8 +436,7 @@ class NET_EXPORT HttpCache : public HttpTransactionFactory {
   void RemoveAllQueuedTransactions(ActiveEntry* entry, TransactionList* list);
 
   // Processes either writer's failure to write response body or
-  // headers_transactions's failure to write headers. Also invoked when headers
-  // transaction's validation result is not a match.
+  // headers_transactions's failure to write headers.
   void ProcessEntryFailure(ActiveEntry* entry, Transaction* transaction);
 
   // Restarts headers_transaction and done_headers_queue transactions.

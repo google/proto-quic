@@ -7,6 +7,8 @@
 #ifndef NET_COOKIES_COOKIE_STORE_H_
 #define NET_COOKIES_COOKIE_STORE_H_
 
+#include <stdint.h>
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -69,7 +71,7 @@ class NET_EXPORT CookieStore {
   typedef base::OnceCallback<void(const std::string& cookie)>
       GetCookiesCallback;
   typedef base::OnceCallback<void(bool success)> SetCookiesCallback;
-  typedef base::OnceCallback<void(int num_deleted)> DeleteCallback;
+  typedef base::OnceCallback<void(uint32_t num_deleted)> DeleteCallback;
 
   typedef base::Callback<void(const CanonicalCookie& cookie, ChangeCause cause)>
       CookieChangedCallback;

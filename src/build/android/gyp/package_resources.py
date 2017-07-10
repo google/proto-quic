@@ -13,10 +13,12 @@ https://android.googlesource.com/platform/sdk/+/master/files/ant/build.xml
 """
 # pylint: enable=C0301
 
+import multiprocessing.pool
 import optparse
 import os
 import re
 import shutil
+import subprocess
 import sys
 import zipfile
 
@@ -88,6 +90,10 @@ DENSITY_SPLITS = {
 }
 
 
+_PNG_TO_WEBP_ARGS = [
+    '-mt', '-quiet', '-m', '6', '-q', '100', '-lossless', '-o']
+
+
 def _ParseArgs(args):
   """Parses command line options.
 
@@ -143,6 +149,10 @@ def _ParseArgs(args):
                     default='[]',
                     help='GN list of globs that say which xxxhdpi images to '
                          'include even when --exclude-xxxhdpi is set.')
+  parser.add_option('--png-to-webp', action='store_true',
+                    help='Convert png files to webp format.')
+  parser.add_option('--webp-binary', default='',
+                    help='Path to the cwebp binary.')
 
   options, positional_args = parser.parse_args(args)
 
@@ -336,18 +346,41 @@ def _CreateExtractPredicate(dep_zips, exclude_xxxhdpi, xxxhdpi_whitelist):
                        _ResourceNameFromPath(path) not in non_xxxhdpi_drawables)
 
 
+def _ConvertToWebP(webp_binary, png_files):
+  pool = multiprocessing.pool.ThreadPool(10)
+  def convert_image(png_path):
+    root = os.path.splitext(png_path)[0]
+    webp_path = root + '.webp'
+    args = [webp_binary, png_path] + _PNG_TO_WEBP_ARGS + [webp_path]
+    subprocess.check_call(args)
+    os.remove(png_path)
+  # Android requires pngs for 9-patch images.
+  pool.map(convert_image, [f for f in png_files if not f.endswith('.9.png')])
+  pool.close()
+  pool.join()
+
+
 def _OnStaleMd5(package_command, options):
   with build_utils.TempDir() as temp_dir:
     if options.resource_zips:
       dep_zips = options.resource_zips
       extract_predicate = _CreateExtractPredicate(
           dep_zips, options.exclude_xxxhdpi, options.xxxhdpi_whitelist)
+      png_paths = []
+      package_subdirs = []
       for z in dep_zips:
         subdir = os.path.join(temp_dir, os.path.basename(z))
         if os.path.exists(subdir):
           raise Exception('Resource zip name conflict: ' + os.path.basename(z))
-        if build_utils.ExtractAll(z, path=subdir, predicate=extract_predicate):
-          package_command += PackageArgsForExtractedZip(subdir)
+        extracted_files = build_utils.ExtractAll(
+            z, path=subdir, predicate=extract_predicate)
+        if extracted_files:
+          package_subdirs.append(subdir)
+          png_paths.extend(f for f in extracted_files if f.endswith('.png'))
+      if png_paths and options.png_to_webp:
+        _ConvertToWebP(options.webp_binary, png_paths)
+      for subdir in package_subdirs:
+        package_command += PackageArgsForExtractedZip(subdir)
 
     build_utils.CheckOutput(
         package_command, print_stdout=False, print_stderr=False)
@@ -379,6 +412,9 @@ def main(args):
 
   input_strings = [options.exclude_xxxhdpi] + options.xxxhdpi_whitelist
   input_strings.extend(package_command)
+  if options.png_to_webp:
+    # This is necessary to ensure conversion if the option is toggled.
+    input_strings.extend("png_to_webp")
 
   # The md5_check.py doesn't count file path in md5 intentionally,
   # in order to repackage resources when assets' name changed, we need

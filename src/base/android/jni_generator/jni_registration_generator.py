@@ -161,19 +161,20 @@ def main(argv):
   args = arg_parser.parse_args(build_utils.ExpandFileArgs(argv[1:]))
   args.sources_files = build_utils.ParseGnList(args.sources_files)
 
-  if args.sources_files:
-    java_file_paths = []
-    for f in args.sources_files:
-      # java_file_paths stores each Java file path as a string.
-      java_file_paths += build_utils.ReadSourcesList(f)
-  else:
+  if not args.sources_files:
     print '\nError: Must specify --sources_files.'
     return 1
+
+  java_file_paths = []
+  for f in args.sources_files:
+    # java_file_paths stores each Java file path as a string.
+    java_file_paths += build_utils.ReadSourcesList(f)
   output_file = args.output
   GenerateJNIHeader(java_file_paths, output_file, args)
 
   if args.depfile:
-    build_utils.WriteDepfile(args.depfile, output_file)
+    build_utils.WriteDepfile(args.depfile, output_file,
+                             args.sources_files + java_file_paths)
 
 
 if __name__ == '__main__':

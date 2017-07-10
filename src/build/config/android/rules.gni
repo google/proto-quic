@@ -376,6 +376,7 @@ if (enable_java_templates) {
       outputs = [
         invoker.output,
       ]
+      depfile = "$target_gen_dir/$target_name.d"
 
       args = [
         # This is a list of .sources files.
@@ -383,6 +384,8 @@ if (enable_java_templates) {
         "--output",
         rebase_path(invoker.output, root_build_dir),
         "--no_register_java=$_rebase_exception_java_files",
+        "--depfile",
+        rebase_path(depfile, root_build_dir),
       ]
     }
   }
@@ -1522,6 +1525,8 @@ if (enable_java_templates) {
   #   android_manifest: Path to AndroidManifest.xml.
   #   android_manifest_dep: Target that generates AndroidManifest (if applicable)
   #   chromium_code: If true, extra analysis warning/errors will be enabled.
+  #   png_to_webp: If true, pngs (with the exception of 9-patch) are
+  #     converted to webp during resource packaging.
   #   dist_ijar_path: Path to create "${target_name}_dist_ijar" target
   #     (used by instrumentation_test_apk).
   #   data_deps: List of dependencies needed at runtime. These will be built but
@@ -2225,6 +2230,7 @@ if (enable_java_templates) {
                                "alternative_android_sdk_jar",
                                "android_aapt_path",
                                "app_as_shared_lib",
+                               "png_to_webp",
                                "deps",
                                "exclude_xxxhdpi",
                                "extensions_to_not_compress",

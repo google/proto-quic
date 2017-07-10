@@ -34,6 +34,10 @@ should be able to be added at any place in this file.
 </action>
 
 <action name="AboutConflicts">
+  <obsolete>
+    Deprecated since the conflicts page is changing. TODO(pmonette): Update this
+    to refer to the action for the new conflicts page.
+  </obsolete>
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
 </action>
@@ -17289,6 +17293,10 @@ should be able to be added at any place in this file.
 </action>
 
 <action name="ViewAboutConflicts">
+  <obsolete>
+    Deprecated since the conflicts page is changing. TODO(pmonette): Update this
+    to refer to the action for the new conflicts page.
+  </obsolete>
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
 </action>

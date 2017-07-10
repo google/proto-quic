@@ -56,7 +56,6 @@ import re
 import subprocess
 import sys
 
-
 script_dir = os.path.dirname(os.path.realpath(__file__))
 tool_dir = os.path.abspath(os.path.join(script_dir, '../pylib'))
 sys.path.insert(0, tool_dir)
@@ -70,15 +69,15 @@ def _PruneGitFiles(git_files, paths):
 
   Args:
     git_files: List of all repository files.
-    paths: Prefix filter for the returned paths. May contain multiple entries.
+    paths: Prefix filter for the returned paths. May contain multiple entries,
+        and the contents should be absolute paths.
 
   Returns:
     Pruned list of files.
   """
   pruned_list = []
-  paths = [os.path.realpath(p) for p in sorted(paths)]
   git_index = 0
-  for path in paths:
+  for path in sorted(paths):
     least = git_index
     most = len(git_files) - 1
     while least <= most:
@@ -99,23 +98,35 @@ def _PruneGitFiles(git_files, paths):
 
 
 def _GetFilesFromGit(paths=None):
-  """Gets the list of files in the git repository.
+  """Gets the list of files in the git repository if |paths| includes prefix
+  path filters or is empty. All complete filenames in |paths| are also included
+  in the output.
 
   Args:
     paths: Prefix filter for the returned paths. May contain multiple entries.
   """
-  args = []
-  if sys.platform == 'win32':
-    args.append('git.bat')
-  else:
-    args.append('git')
-  args.append('ls-files')
-  command = subprocess.Popen(args, stdout=subprocess.PIPE)
-  output, _ = command.communicate()
-  git_files = [os.path.realpath(p) for p in output.splitlines()]
-  if paths:
-    git_files = _PruneGitFiles(git_files, paths)
-  return git_files
+  partial_paths = []
+  files = []
+  for p in paths:
+    real_path = os.path.realpath(p)
+    if os.path.isfile(real_path):
+      files.append(real_path)
+    else:
+      partial_paths.append(real_path)
+  if partial_paths or not files:
+    args = []
+    if sys.platform == 'win32':
+      args.append('git.bat')
+    else:
+      args.append('git')
+    args.append('ls-files')
+    command = subprocess.Popen(args, stdout=subprocess.PIPE)
+    output, _ = command.communicate()
+    git_files = [os.path.realpath(p) for p in output.splitlines()]
+    if partial_paths:
+      git_files = _PruneGitFiles(git_files, partial_paths)
+    files.extend(git_files)
+  return files
 
 
 def _GetFilesFromCompileDB(build_directory):

@@ -250,56 +250,6 @@ class NET_EXPORT URLRequestContextBuilder {
   void SetSpdyAndQuicEnabled(bool spdy_enabled,
                              bool quic_enabled);
 
-  void set_quic_connection_options(
-      const QuicTagVector& quic_connection_options) {
-    http_network_session_params_.quic_connection_options =
-        quic_connection_options;
-  }
-
-  void set_quic_user_agent_id(const std::string& quic_user_agent_id) {
-    http_network_session_params_.quic_user_agent_id = quic_user_agent_id;
-  }
-
-  void set_quic_max_server_configs_stored_in_properties(
-      int quic_max_server_configs_stored_in_properties) {
-    http_network_session_params_.quic_max_server_configs_stored_in_properties =
-        quic_max_server_configs_stored_in_properties;
-  }
-
-  void set_quic_idle_connection_timeout_seconds(
-      int quic_idle_connection_timeout_seconds) {
-    http_network_session_params_.quic_idle_connection_timeout_seconds =
-        quic_idle_connection_timeout_seconds;
-  }
-
-  void set_quic_close_sessions_on_ip_change(
-      bool quic_close_sessions_on_ip_change) {
-    http_network_session_params_.quic_close_sessions_on_ip_change =
-        quic_close_sessions_on_ip_change;
-  }
-
-  void set_quic_migrate_sessions_on_network_change(
-      bool quic_migrate_sessions_on_network_change) {
-    http_network_session_params_.quic_migrate_sessions_on_network_change =
-        quic_migrate_sessions_on_network_change;
-  }
-
-  void set_quic_migrate_sessions_early(bool quic_migrate_sessions_early) {
-    http_network_session_params_.quic_migrate_sessions_early =
-        quic_migrate_sessions_early;
-  }
-
-  void set_quic_disable_bidirectional_streams(
-      bool quic_disable_bidirectional_streams) {
-    http_network_session_params_.quic_disable_bidirectional_streams =
-        quic_disable_bidirectional_streams;
-  }
-
-  void set_quic_race_cert_verification(bool quic_race_cert_verification) {
-    http_network_session_params_.quic_race_cert_verification =
-        quic_race_cert_verification;
-  }
-
   void set_throttling_enabled(bool throttling_enabled) {
     throttling_enabled_ = throttling_enabled;
   }

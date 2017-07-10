@@ -29,8 +29,8 @@ BarrierInfo::BarrierInfo(int num_callbacks, OnceClosure done_closure)
       done_closure_(std::move(done_closure)) {}
 
 void BarrierInfo::Run() {
-  DCHECK(!AtomicRefCountIsZero(&num_callbacks_left_));
-  if (!AtomicRefCountDec(&num_callbacks_left_))
+  DCHECK(!num_callbacks_left_.IsZero());
+  if (!num_callbacks_left_.Decrement())
     std::move(done_closure_).Run();
 }
 

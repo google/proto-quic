@@ -136,7 +136,7 @@ File name handling
 R"(
 Variables
 
-  args, console, data, data_deps, depfile, deps, inputs, outputs*,
+  args, data, data_deps, depfile, deps, inputs, outputs*, pool,
   response_file_contents, script*, sources
   * = required
 
@@ -209,7 +209,7 @@ File name handling
 R"(
 Variables
 
-  args, console, data, data_deps, depfile, deps, inputs, outputs*,
+  args, data, data_deps, depfile, deps, inputs, outputs*, pool,
   response_file_contents, script*, sources*
   * = required
 

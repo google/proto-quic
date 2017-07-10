@@ -27,6 +27,7 @@ MockHttpStreamFactoryImplJob::MockHttpStreamFactoryImplJob(
     HostPortPair destination,
     GURL origin_url,
     NextProto alternative_protocol,
+    QuicVersion quic_version,
     const ProxyServer& alternative_proxy_server,
     bool enable_ip_based_pooling,
     NetLog* net_log)
@@ -41,6 +42,7 @@ MockHttpStreamFactoryImplJob::MockHttpStreamFactoryImplJob(
                                  destination,
                                  origin_url,
                                  alternative_protocol,
+                                 quic_version,
                                  alternative_proxy_server,
                                  enable_ip_based_pooling,
                                  net_log) {
@@ -75,7 +77,8 @@ std::unique_ptr<HttpStreamFactoryImpl::Job> TestJobFactory::CreateMainJob(
   auto main_job = base::MakeUnique<MockHttpStreamFactoryImplJob>(
       delegate, job_type, session, request_info, priority, proxy_info,
       SSLConfig(), SSLConfig(), destination, origin_url, kProtoUnknown,
-      ProxyServer(), enable_ip_based_pooling, net_log);
+      QUIC_VERSION_UNSUPPORTED, ProxyServer(), enable_ip_based_pooling,
+      net_log);
 
   // Keep raw pointer to Job but pass ownership.
   main_job_ = main_job.get();
@@ -95,12 +98,13 @@ std::unique_ptr<HttpStreamFactoryImpl::Job> TestJobFactory::CreateAltSvcJob(
     HostPortPair destination,
     GURL origin_url,
     NextProto alternative_protocol,
+    QuicVersion quic_version,
     bool enable_ip_based_pooling,
     NetLog* net_log) {
   auto alternative_job = base::MakeUnique<MockHttpStreamFactoryImplJob>(
       delegate, job_type, session, request_info, priority, proxy_info,
       SSLConfig(), SSLConfig(), destination, origin_url, alternative_protocol,
-      ProxyServer(), enable_ip_based_pooling, net_log);
+      quic_version, ProxyServer(), enable_ip_based_pooling, net_log);
 
   // Keep raw pointer to Job but pass ownership.
   alternative_job_ = alternative_job.get();
@@ -125,7 +129,8 @@ std::unique_ptr<HttpStreamFactoryImpl::Job> TestJobFactory::CreateAltProxyJob(
   auto alternative_job = base::MakeUnique<MockHttpStreamFactoryImplJob>(
       delegate, job_type, session, request_info, priority, proxy_info,
       SSLConfig(), SSLConfig(), destination, origin_url, kProtoUnknown,
-      alternative_proxy_server, enable_ip_based_pooling, net_log);
+      QUIC_VERSION_UNSUPPORTED, alternative_proxy_server,
+      enable_ip_based_pooling, net_log);
 
   // Keep raw pointer to Job but pass ownership.
   alternative_job_ = alternative_job.get();
